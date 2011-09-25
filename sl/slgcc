@@ -40,6 +40,11 @@ if test x1 = "x$SL_PLOT"; then
     rm -f *.dot *.svg
 fi
 
+pidfile="$(mktemp)"
+test -w "$pidfile" || die "mktemp failed"
+export pidfile
+trap "rm -f '$pidfile'" EXIT
+
 # run the gcc
 run_gcc() {
     printf "Trying to compile \033[1;37m%s\033[0m ... " "$*" >/dev/tty
@@ -62,10 +67,17 @@ run_gcc() {
 
     "$GCC" -o /dev/null -O0 -m32 -DPREDATOR                         \
         -I../cl -I../cl/gcc -I../include -I../include/gcc           \
-        -fplugin="$SL_PLUG"                                         \
+        -fplugin="$SL_PLUG" -fplugin-arg-libsl-pid-file="$pidfile"  \
         -fplugin-arg-libsl-verbose="$SL_VERBOSE" $SL_OPTS -c "$@"   \
         2>&1 | stdbuf --output=L grep -E                            \
         ' \[-fplugin-libsl\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error'
+}
+
+forward_signal() {
+    cc_pid="$(<$pidfile)"
+    test 0 -le "$cc_pid" || die "invalid pidfile"
+    kill "-$1" "$cc_pid"
+    wait
 }
 
 # colorize the output
@@ -76,6 +88,7 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin-libsl\]$||'            \
         -e 's|(: note:) (.*)$|\1 \o033[1;32m\2\o033[0m|'                       \
         -e 's|(current memory usage:) ([0-9]+ MB)|\1 \o033[1;34m\2\o033[0m|'   \
         -e 's|(!!! executing insn #[0-9]+ ...) (.*)$|\1 \o033[1;32m\2\o033[0m|'\
+        -e 's|(#[0-9]+)|\o033[1;37m\1\o033[0m|'                                \
         -e 's|took ([0-9.]+ s)|took \o033[1;34m\1\o033[0m|'                    \
         -e 's|(internal compiler error:) (.*)$|\1 \o033[1;31m\2\o033[0m|'      \
         -e 's/(CL_BREAK_IF|INT3|SIGTRAP)/\o033[1;31m\1\o033[0m/'               \
@@ -87,8 +100,9 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin-libsl\]$||'            \
         -e 's/(: debug:) ___ (entering|we are)/\1 \o033[1;32m___\o033[0m \2/'  \
         &
 
-# FIXME: this kills _all_ the cc1 processes we are permitted to kill !!!
-trap "killall --wait cc1" SIGINT
+# redirect terminating signals to our plug-in
+trap "forward_signal SIGTERM" SIGTERM
+trap "forward_signal SIGINT"  SIGINT
 wait
 
 if test x1 = "x$SL_PLOT"; then

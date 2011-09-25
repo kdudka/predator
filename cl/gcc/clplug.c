@@ -154,6 +154,7 @@ static struct plugin_info cl_info = {
 "    -fplugin-arg-%s-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
 "    -fplugin-arg-%s-dump-types                     dump also type info\n"
 "    -fplugin-arg-%s-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
+"    -fplugin-arg-%s-pid-file=FILE                  write PID of self to FILE\n"
 "    -fplugin-arg-%s-preserve-ec                    do not affect exit code\n"
 "    -fplugin-arg-%s-type-dot=TYPE_GRAPH_FILE       generate type graphs\n"
 "    -fplugin-arg-%s-verbose[=VERBOSITY_LEVEL]      turn on verbose mode\n"
@@ -191,7 +192,8 @@ static void init_plugin_name(const struct plugin_name_args *info)
     if (-1 == asprintf(&msg, cl_info.help,
                        name, name, name, name,
                        name, name, name, name,
-                       name, name, name, name))
+                       name, name, name, name,
+                       name))
         // OOM
         abort();
     else
@@ -1817,6 +1819,7 @@ struct cl_plug_options {
     const char              *pp_out_file;
     const char              *peer_args;
     const char              *type_dot_file;
+    const char              *pid_file;
 };
 
 static int clplug_init(const struct plugin_name_args *info,
@@ -1878,6 +1881,14 @@ static int clplug_init(const struct plugin_name_args *info,
             // FIXME: do not use gl variable, use the pointer user_data instead
             preserve_ec = true;
             // TODO: warn about ignoring extra value?
+
+        } else if (STREQ(key, "pid-file")) {
+            if (value) {
+                opt->pid_file = value;
+            } else {
+                CL_ERROR("mandatory value omitted for pid-file");
+                return EXIT_FAILURE;
+            }
 
         } else if (STREQ(key, "type-dot")) {
             if (value) {
@@ -1979,6 +1990,30 @@ create_cl_chain(const struct cl_plug_options *opt)
     return chain;
 }
 
+static bool write_pid_file(const char *pid_file)
+{
+    if (!pid_file)
+        // no PID file --> OK
+        return true;
+
+    FILE *fpid = fopen(pid_file, "w");
+    if (!fpid) {
+        fprintf(stderr, "failed to open '%s' for writing\n", pid_file);
+        return false;
+    }
+
+    // write the PID
+    fprintf(fpid, "%d\n", getpid());
+
+    if (fclose(fpid)) {
+        fprintf(stderr, "failed to write to '%s'\n", pid_file);
+        return false;
+    }
+
+    // all OK
+    return true;
+}
+
 // plug-in initialization according to gcc plug-in API
 int plugin_init (struct plugin_name_args *plugin_info,
                  struct plugin_gcc_version *version)
@@ -1990,6 +2025,10 @@ int plugin_init (struct plugin_name_args *plugin_info,
     int rv = clplug_init(plugin_info, &opt);
     if (rv)
         return rv;
+
+    if (!write_pid_file(opt.pid_file))
+        // error already printed out
+        return 1;
 
     // print something like "hello world!"
     CL_DEBUG("initializing code listener [SHA1 %s]", CL_GIT_SHA1);
@@ -2029,8 +2068,8 @@ int plugin_init (struct plugin_name_args *plugin_info,
     var_db = var_db_create();
     CL_ASSERT(type_db && var_db);
 
-    // try to register callbacks (and virtual callbacks)
-    cl_regcb (plugin_info->base_name);
+    // register callbacks (and virtual callbacks)
+    cl_regcb(plugin_info->base_name);
     CL_DEBUG("plug-in successfully initialized");
 
     return 0;

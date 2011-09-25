@@ -710,7 +710,8 @@ bool /* complete */ SymExecEngine::execBlock() {
 
     if (insnIdx_ || heapIdx_) {
         // some debugging output of the resume process
-        CL_DEBUG_MSG(lw_, "___ we are back in " << name
+        CL_DEBUG_MSG(lw_, "___ we are back in " << fncName_
+                << "(), block " << name
                 << ", insn #" << insnIdx_
                 << ", heap #" << (heapIdx_ - 1)
                 << ", " << sched_.cntWaiting()

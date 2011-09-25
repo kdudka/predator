@@ -350,7 +350,7 @@ void SymCallCtx::flushCallResults(SymState &dst) {
     for (unsigned i = 0; i < cnt; ++i) {
         if (1 < cnt) {
             CL_DEBUG("*** SymCallCtx::flushCallResults() is processing heap #"
-                     << i);
+                     << i << " of " << cnt << " heaps total");
         }
 
         // first join the heap with its original surround
