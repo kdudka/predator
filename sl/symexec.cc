@@ -252,6 +252,7 @@ class SymExecEngine: public IStatsProvider {
     public:
         bool /* complete */ run();
 
+        virtual void printStatsHelper(const BlockScheduler::TBlock bb) const;
         virtual void printStats() const;
         void dumpStateMap();
 
@@ -816,13 +817,34 @@ bool /* complete */ SymExecEngine::run() {
     return true;
 }
 
-void SymExecEngine::printStats() const {
-    BlockScheduler::TBlockSet bset(sched_.todo());
-    if (block_)
-        // include the basic block just being computed into the statistics
-        bset.insert(block_);
+void SymExecEngine::printStatsHelper(const BlockScheduler::TBlock bb) const {
+    const std::string &name = bb->name();
 
+    // query total count of heaps
+    SymExecEngine *self = const_cast<SymExecEngine *>(this);
+    const SymStateMarked &state = self->stateMap_[bb];
+    const unsigned total = state.size();
+
+    // compute heaps pending for execution
+    unsigned waiting = 0;
+    for (unsigned i = 0; i < total; ++i)
+        if (!state.isDone(i))
+            ++waiting;
+
+    const char *status = (bb == block_)
+        ? " in progress"
+        : " scheduled";
+
+    const CodeStorage::Insn *first = bb->front();
+    CL_NOTE_MSG(&first->loc,
+            "___ block " << name << status <<
+            ", " << total << " heap(s) total"
+            ", " << waiting << " heap(s) pending");
+}
+
+void SymExecEngine::printStats() const {
     // per function statistics
+    const BlockScheduler::TBlockSet &bset = sched_.todo();
     CL_NOTE_MSG(lw_,
             "... while executing " << fncName_ << "()"
             ", " << dst_.size() << " result(s) already computed"
@@ -832,34 +854,24 @@ void SymExecEngine::printStats() const {
             ", insn #" << insnIdx_ <<
             ", heap #" << heapIdx_);
 
+    if (block_)
+        // print statistics for the basic block just being computed
+        this->printStatsHelper(block_);
+
     // go through scheduled basic blocks
     BOOST_FOREACH(const BlockScheduler::TBlock bb, bset) {
-        const std::string &name = bb->name();
+        if (bb == block_)
+            // already handled
+            continue;
 
-        // query total count of heaps
-        SymExecEngine *self = const_cast<SymExecEngine *>(this);
-        const SymStateMarked &state = self->stateMap_[bb];
-        const unsigned total = state.size();
-
-        // compute heaps pending for execution
-        unsigned waiting = 0;
-        for (unsigned i = 0; i < total; ++i)
-            if (!state.isDone(i))
-                ++waiting;
-
-        const char *status = (bb == block_)
-            ? " in progress"
-            : " scheduled";
-
-        const CodeStorage::Insn *first = bb->front();
-        CL_NOTE_MSG(&first->loc,
-                "___ block " << name << status <<
-                ", " << total << " heap(s) total"
-                ", " << waiting << " heap(s) pending");
+        this->printStatsHelper(bb);
     }
 
+    // TODO: a separate compile-time option for this?
+#if DEBUG_SE_END_NOT_REACHED
     // finally print the statistics provided by BlockScheduler
     sched_.printStats();
+#endif
 }
 
 void SymExecEngine::dumpStateMap() {
@@ -929,6 +941,7 @@ SymExec::~SymExec() {
 
         // delete engine
         delete item.eng;
+        printMemUsage("SymExecEngine::~SymExecEngine");
     }
 }
 
