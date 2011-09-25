@@ -274,23 +274,16 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     TValList live;
     sh.gatherRootObjects(live, isProgramVar);
     BOOST_FOREACH(const TValId root, live) {
-        const CVar cv(sh.cVarByRoot(root));
-
         const EValueTarget code = sh.valTarget(root);
-        if (VT_ON_STACK == code) {
-            // local variable
-            if (!hasKey(this->fnc->vars, cv.uid) || cv.inst != this->nestLevel)
-                // a local variable that is not here-local
-                continue;
-        }
-        else {
+        if (VT_STATIC == code)
             // gl variable
-            CL_BREAK_IF(cv.inst);
+            continue;
 
-            if (isVarAlive(sh, root) || hasKey(this->hints, cv.uid))
-                // preserve live gl variable
-                continue;
-        }
+        // local variable
+        const CVar cv(sh.cVarByRoot(root));
+        if (!hasKey(this->fnc->vars, cv.uid) || cv.inst != this->nestLevel)
+            // a local variable that is not here-local
+            continue;
 
         const struct cl_loc *loc = 0;
         std::string varString = varToString(sh.stor(), cv.uid, &loc);
@@ -530,10 +523,6 @@ void SymCallCache::Private::resolveHeapCut(
 #endif
             continue;
         }
-
-        if (!isVarAlive(sh, cv))
-            // var inactive
-            continue;
 
         if (hasKey(fncVars, cv.uid) && cv.inst == nestLevel)
             cut.push_back(cv);
