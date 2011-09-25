@@ -399,6 +399,8 @@ Call cache
 
     test-0186.c - regression test focused on a fixed bug in gl vars optimization
 
+    test-0187.c - test-0186 narrowed down to a minimal example
+
 
 Tests taken from Forester
 =========================
