@@ -28,13 +28,13 @@
  */
 
 /// provide the raw amount of currently allocated memory (as glibc reports it)
-bool rawMemUsage(size_t *pDst);
+bool rawMemUsage(ssize_t *pDst);
 
 /// initialize memory debugging, taking the current memory state as state zero
 bool initMemDrif();
 
 /// provide relative amount of currently allocated memory (subtracting drift)
-bool currentMemUsage(size_t *pDst);
+bool currentMemUsage(ssize_t *pDst);
 
 /// print the current amount of allocated memory
 bool printMemUsage(const char *justCompletedFncName);

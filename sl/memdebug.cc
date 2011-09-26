@@ -28,14 +28,14 @@
 #   include <malloc.h>
 
 static bool overflowDetected;
-static size_t peak;
+static ssize_t peak;
 
-bool rawMemUsage(size_t *pDst) {
+bool rawMemUsage(ssize_t *pDst) {
     if (::overflowDetected)
         return false;
 
     struct mallinfo info = mallinfo();
-    const size_t raw = info.uordblks;
+    const ssize_t raw = info.uordblks;
     const unsigned mib = raw >> /* MiB */ 20;
     if (2048U < mib) {
         // mallinfo() is broken by design <https://bugzilla.redhat.com/173813>
@@ -51,7 +51,7 @@ bool rawMemUsage(size_t *pDst) {
     return true;
 }
 
-static size_t memDrift;
+static ssize_t memDrift;
 
 bool initMemDrif() {
     if (rawMemUsage(&::memDrift))
@@ -62,7 +62,7 @@ bool initMemDrif() {
     return false;
 }
 
-bool currentMemUsage(size_t *pDst) {
+bool currentMemUsage(ssize_t *pDst) {
     if (!rawMemUsage(pDst))
         // failed to get current memory usage
         return false;
@@ -94,7 +94,7 @@ std::ostream& operator<<(std::ostream &str, const AmountFormatter &fmt) {
 
 #include <iostream>
 bool printMemUsage(const char *fnc) {
-    size_t cb;
+    ssize_t cb;
     if (!currentMemUsage(&cb))
         // instead of printing misleading numbers, we rather print nothing
         return false;
@@ -112,7 +112,8 @@ bool printPeakMemUsage() {
     if (::overflowDetected)
         return false;
 
-    CL_NOTE("peak memory usage: " << AmountFormatter(peak,
+    const ssize_t diff = ::peak - ::memDrift;
+    CL_NOTE("peak memory usage: " << AmountFormatter(diff,
                 /* MiB */ 20,
                 /* int digits */ 0,
                 /* dec digits */ 2)
@@ -123,7 +124,7 @@ bool printPeakMemUsage() {
 
 #else // DEBUG_MEM_USAGE
 
-bool rawMemUsage(size_t *) {
+bool rawMemUsage(ssize_t *) {
     return false;
 }
 
@@ -131,7 +132,7 @@ bool initMemDrif() {
     return false;
 }
 
-bool currentMemUsage(size_t *) {
+bool currentMemUsage(ssize_t *) {
     return false;
 }
 
