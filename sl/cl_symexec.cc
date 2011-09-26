@@ -185,14 +185,8 @@ void execVirtualRoots(const CodeStorage::FncDb &fncs, const SymExecParams &ep) {
     }
 }
 
-// /////////////////////////////////////////////////////////////////////////////
-// see easy.hh for details
-void clEasyRun(const CodeStorage::Storage &stor, const char *configString) {
+void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep) {
     using namespace CodeStorage;
-
-    // read parameters of symbolic execution
-    SymExecParams ep;
-    parseConfigString(ep, configString);
 
     // look for main() by name
     CL_DEBUG("looking for 'main()' at gl scope...");
@@ -216,4 +210,16 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *configString) {
     // just execute the main() function
     execFnc(*main, ep, /* lookForGlJunk */ true);
     printMemUsage("execFnc");
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// see easy.hh for details
+void clEasyRun(const CodeStorage::Storage &stor, const char *configString) {
+    // read parameters of symbolic execution
+    SymExecParams ep;
+    parseConfigString(ep, configString);
+
+    // run symbolic execution
+    launchSymExec(stor, ep);
+    printPeakMemUsage();
 }

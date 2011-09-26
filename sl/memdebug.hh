@@ -39,4 +39,7 @@ bool currentMemUsage(size_t *pDst);
 /// print the current amount of allocated memory
 bool printMemUsage(const char *justCompletedFncName);
 
+/// print the peak over all calls of rawMemUsage(), but relative to the drift
+bool printPeakMemUsage();
+
 #endif /* H_GUARD_MEM_DEBUG_H */

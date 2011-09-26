@@ -27,9 +27,11 @@
 #if DEBUG_MEM_USAGE
 #   include <malloc.h>
 
+static bool overflowDetected;
+static size_t peak;
+
 bool rawMemUsage(size_t *pDst) {
-    static bool overflowDetected;
-    if (overflowDetected)
+    if (::overflowDetected)
         return false;
 
     struct mallinfo info = mallinfo();
@@ -37,11 +39,15 @@ bool rawMemUsage(size_t *pDst) {
     const unsigned mib = raw >> /* MiB */ 20;
     if (2048U < mib) {
         // mallinfo() is broken by design <https://bugzilla.redhat.com/173813>
-        overflowDetected = true;
+        ::overflowDetected = true;
         return false;
     }
 
     *pDst = raw;
+    if (peak < raw)
+        // update the current peak
+        peak = raw;
+
     return true;
 }
 
@@ -65,16 +71,52 @@ bool currentMemUsage(size_t *pDst) {
     return true;
 }
 
+struct AmountFormatter {
+    float       value;
+    unsigned    width;
+    unsigned    pre;
+
+    AmountFormatter(ssize_t value_, unsigned div, unsigned dig, unsigned dec):
+        value(value_),
+        width(dig + 1 + dec),
+        pre(dec)
+    {
+        const float ratio = static_cast<float>(1U << div);
+        value /= ratio;
+    }
+};
+
+std::ostream& operator<<(std::ostream &str, const AmountFormatter &fmt) {
+    using namespace std;
+    str << std::fixed << setw(fmt.width) << setprecision(fmt.pre) << fmt.value;
+    return str;
+}
+
+#include <iostream>
 bool printMemUsage(const char *fnc) {
     size_t cb;
     if (!currentMemUsage(&cb))
         // instead of printing misleading numbers, we rather print nothing
         return false;
 
-    const float amount = /* MiB */ static_cast<float>(cb >> 10) / 1024.0;
-    CL_DEBUG("current memory usage: "
-             << std::fixed << std::setw(7) << std::setprecision(2)
-             << amount << " MB" << " (just completed " << fnc << "())");
+    CL_DEBUG("current memory usage: " << AmountFormatter(cb,
+                /* MiB */ 20,
+                /* int digits */ 4,
+                /* dec digits */ 2)
+            << " MB (just completed " << fnc << "())");
+
+    return true;
+}
+
+bool printPeakMemUsage() {
+    if (::overflowDetected)
+        return false;
+
+    CL_NOTE("peak memory usage: " << AmountFormatter(peak,
+                /* MiB */ 20,
+                /* int digits */ 0,
+                /* dec digits */ 2)
+            << " MB");
 
     return true;
 }
@@ -94,6 +136,10 @@ bool currentMemUsage(size_t *) {
 }
 
 bool printMemUsage(const char *) {
+    return false;
+}
+
+bool printPeakMemUsage() {
     return false;
 }
 
