@@ -25,6 +25,7 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "memdebug.hh"
 #include "symabstract.hh"
 #include "symbin.hh"
 #include "symbt.hh"

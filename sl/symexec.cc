@@ -25,6 +25,7 @@
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
+#include "memdebug.hh"
 #include "sigcatch.hh"
 #include "symabstract.hh"
 #include "symbt.hh"
@@ -44,44 +45,6 @@
 #include <boost/foreach.hpp>
 
 LOCAL_DEBUG_PLOTTER(nondetCond, DEBUG_SE_NONDET_COND)
-
-#if DEBUG_MEM_USAGE
-#   include <malloc.h>
-static unsigned memDrift;
-void initMemDrif() {
-    struct mallinfo info = mallinfo();
-    ::memDrift = info.uordblks >> /* KiB */ 10;
-    if ((2048U << /* KiB */ 10) <= ::memDrift)
-        // apparently already overflown
-        ::memDrift = 0U;
-}
-
-void printMemUsage(const char *fnc) {
-    static bool overflowDetected;
-    if (overflowDetected)
-        // instead of printing misleading numbers, we rather print nothing
-        return;
-
-    struct mallinfo info = mallinfo();
-    unsigned cnt = info.uordblks >> /* KiB */ 10;
-    if ((2048U << /* KiB */ 10) <= cnt) {
-        // mallinfo() is broken by design <https://bugzilla.redhat.com/173813>
-        overflowDetected = true;
-        return;
-    }
-
-    // do not include the memory allocated by Code Listener into our statistics
-    cnt -= ::memDrift;
-
-    const float amount = /* MiB */ static_cast<float>(cnt) / 1024.0;
-    CL_DEBUG("current memory usage: "
-             << std::fixed << std::setw(7) << std::setprecision(2)
-             << amount << " MB" << " (just completed " << fnc << "())");
-}
-#else
-void initMemDrif() { }
-void printMemUsage(const char *) { }
-#endif
 
 bool installSignalHandlers(void) {
     // will be processed in SymExecEngine::processPendingSignals() eventually

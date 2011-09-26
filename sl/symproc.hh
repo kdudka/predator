@@ -226,7 +226,4 @@ class SymExecCore: public SymProc {
         const SymExecCoreParams ep_;
 };
 
-// TODO: move the implementation of printMemUsage() to symproc?
-void printMemUsage(const char *fnc);
-
 #endif /* H_GUARD_SYM_PROC_H */
