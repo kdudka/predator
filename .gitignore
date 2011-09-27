@@ -14,3 +14,5 @@
 /sl_build/
 tags
 .*.swp
+*-bare-gcc.err
+*-predator.err

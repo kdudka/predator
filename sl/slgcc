@@ -5,7 +5,7 @@ export SELF="$0"
 export LC_ALL=C
 
 die() {
-    printf "%s: %s\n" "$SELF" "$*"
+    printf "%s: %s\n" "$SELF" "$*" >&2
     exit 1
 }
 
