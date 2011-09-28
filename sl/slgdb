@@ -8,16 +8,19 @@ self="`readlink -f "$0"`"
 topdir="`dirname "$self"`/.."
 
 # basic setup
+CL_DIR="$topdir/cl"
 SL_DIR="$topdir/sl"
 SL_BUILD="$topdir/sl_build"
 SL_PLUG="$SL_BUILD/libsl.so"
 CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[5-7]*/cc1"
-COPTS="-D CL_DEBUG=ON -D SL_DEBUG=ON -D USE_INT3_AS_BRK=ON"
-MOPTS="-s -j3 'CMAKE=cmake $COPTS'"
 
 # attempt to make
-eval make -C "$SL_DIR" "$MOPTS" || exit 1
-test -x "$SL_PLUG"              || exit 1
+make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D CL_DEBUG=ON' \
+    || exit 1
+make -C "$SL_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D SL_DEBUG=ON' \
+    || exit 1
+test -x "$SL_PLUG" \
+    || exit 1
 
 # use gdb by default
 test -z "$GDB" && GDB=gdb

@@ -32,9 +32,6 @@ test -x "$SL_PLUG" \
     || make -s $MAKEOPTS -C "$topdir/sl" \
     || exit 1
 
-# use verbose level 0 by default
-test -z "$SL_VERBOSE" && SL_VERBOSE=0
-
 # use chromium as default SVG_VIEWER
 test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
 
@@ -71,7 +68,7 @@ run_gcc() {
     "$GCC" -o /dev/null -O0 -m32 -DPREDATOR                         \
         -I../cl -I../cl/gcc -I../include -I../include/gcc           \
         -fplugin="$SL_PLUG" -fplugin-arg-libsl-pid-file="$pidfile"  \
-        -fplugin-arg-libsl-verbose="$SL_VERBOSE" $SL_OPTS -c "$@"   \
+        -fplugin-arg-libsl-args=error_label:ERROR $SL_OPTS -c "$@"  \
         2>&1 | stdbuf --output=L grep -E                            \
         ' \[-fplugin-libsl\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'
 }

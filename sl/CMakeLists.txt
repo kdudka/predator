@@ -167,7 +167,7 @@ macro(test_sym_exec_regre name_suff ext arg1)
     endforeach()
 endmacro(test_sym_exec_regre)
 
-test_sym_exec_regre("" ".fast" "")
+test_sym_exec_regre("" ".fast" "-fplugin-arg-libsl-args=error_label:ERROR")
 if(TEST_ONLY_FAST)
 else()
     test_sym_exec_regre("-OOM" "" "-fplugin-arg-libsl-args=oom")

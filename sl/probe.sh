@@ -4,8 +4,9 @@ export SELF="$0"
 export LC_ALL=C
 export TIMEOUT="timeout 4"
 
-export CFLAGS="-c -o /dev/null -O0 -m32"
-export PFLAGS="error_label:ERROR"
+export CFLAGS="$CFLAGS -c -o /dev/null -O0 -m32"
+test -n "$PFLAGS" || PFLAGS="error_label:ERROR"
+export PFLAGS
 
 export MSG_INTERNAL_ERROR='internal compiler error'
 export MSG_LABEL_FOUND=': error: error label "ERROR" has been reached'

@@ -1,47 +1,40 @@
 #!/bin/sh
-TIMEOUT="timeout 16"
 
-LC_ALL=C
-export LC_ALL
+# check whether stdout is connected to a terminal
+if tty 0>&1 >/dev/null; then
+    # initialize coloring escape sequences
+    export R="\033[1;31m"
+    export G="\033[1;32m"
+    export Y="\033[1;33m"
+    export B="\033[1;34m"
+    export N="\033[0m"
+fi
 
-ALL=data/test-0???.c
-test -n "$1" && ALL="$*"
-export ALL
+printf "${R}ATTENTION:${N} This script is not intended to be run !!!\n"
+echo "Please do not commit the generated files to prevent a disaster..."
 
-echo "ATTENTION: This script is not intended to be run !!!"
-echo "           Please do not commit the generated files to prevent" \
-                 "a disaster..."
+do_sync() {
+    ./probe.sh $1
+    printf "\n${B}Processing the results...${N}\n" >&2
+    for i in $1; do
+        c="$(printf %s "$i" | sed 's|\.c$||')"
+        raw="${i}-predator.err"
+        err="${c}.err$2"
+        grep '\[-fplugin-libsl\]$' "$raw" \
+            | grep -v 'note: .*\[internal location\]' \
+            | sed 's| \[-fplugin-libsl\]$||' \
+            | sed 's|data/||' \
+            > "$err"
 
-ticks(){
-    while sleep .5; do
-        printf .
+        rm -f "$raw" "${i}-bare-gcc.err"
     done
+    printf "\n\n" >&2
 }
 
-gen(){
-    for i in $ALL; do
-      printf -- "--- "
-      printf "%s" "`basename $i .c` "
-      test -n "$1" && printf "%s " "$1"
-      $TIMEOUT ../gcc-install/bin/gcc \
-        -m32 \
-        -c $i \
-        -o /dev/null \
-        -DPREDATOR \
-        -I../cl -I../cl/gcc -I../include -I../include/gcc \
-        -fplugin=../sl_build/libsl.so $1 \
-        -fplugin-arg-libsl-preserve-ec \
-        2>&1 \
-        | grep '\[-fplugin-libsl\]$' \
-        | grep -v 'note: .*\[internal location\]' \
-        | sed 's| \[-fplugin-libsl\]$||' \
-        | sed 's|data/||' \
-        > data/`basename $i .c`.err$2
-      printf "\n"
-    done
-}
+printf "\n${G}Basic analysis...${N}\n" >&2
+export CFLAGS="-DPREDATOR"
+do_sync "$*" .fast
 
-ticks &
-gen "" .fast
-gen "-fplugin-arg-libsl-args=oom"
-kill $!
+printf "\n${Y}OOM simulation mode analysis...${N}\n" >&2
+export PFLAGS="oom"
+do_sync "$*"
