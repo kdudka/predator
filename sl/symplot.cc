@@ -722,6 +722,10 @@ void describeInt(PlotData &plot, const long num) {
     plot.out << ", fontcolor=red, label=\"[int] " << num << "\"";
 }
 
+void describeReal(PlotData &plot, const float fpn) {
+    plot.out << ", fontcolor=red, label=\"[real] " << fpn << "\"";
+}
+
 void describeFnc(PlotData &plot, const int uid) {
     TStorRef stor = plot.sh.stor();
     const CodeStorage::Fnc *fnc = stor.fncs[uid];
@@ -752,6 +756,10 @@ void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
 
         case CV_INT:
             describeInt(plot, data.num);
+            break;
+
+        case CV_REAL:
+            describeReal(plot, data.fpn);
             break;
 
         case CV_FNC:

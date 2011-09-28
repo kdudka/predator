@@ -90,6 +90,7 @@ enum ECustomValue {
     CV_INVALID,             ///< reserved for signalling error states
     CV_FNC,                 ///< code pointer
     CV_INT,                 ///< constant integral number
+    CV_REAL,                ///< floating-point number
     CV_STRING               ///< string literal
 };
 
@@ -97,6 +98,7 @@ enum ECustomValue {
 union CustomValueData {
     int         uid;        ///< unique ID as assigned by Code Listener
     long        num;        ///< integral number
+    double      fpn;        ///< floating-point number
     const char *str;        ///< zero-terminated string
 };
 

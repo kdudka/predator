@@ -334,10 +334,12 @@ class CustomValueMapper {
     private:
         typedef std::map<int, TValId>                           TCustomByInt;
         typedef std::map<long, TValId>                          TCustomByLong;
+        typedef std::map<double, TValId>                        TCustomByReal;
         typedef std::map<std::string, TValId>                   TCustomByString;
 
         TCustomByInt        fncMap;
         TCustomByLong       numMap;
+        TCustomByReal       fpnMap;
         TCustomByString     strMap;
 
     public:
@@ -356,6 +358,9 @@ class CustomValueMapper {
 
                 case CV_INT:
                     return assignInvalidIfNotFound(numMap, item.data.num);
+
+                case CV_REAL:
+                    return assignInvalidIfNotFound(fpnMap, item.data.fpn);
 
                 case CV_STRING:
                     return assignInvalidIfNotFound(strMap, item.data.str);

@@ -78,6 +78,12 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
             cv.data.num = cst.data.cst_int.value;
             break;
 
+        case CL_TYPE_REAL:
+            // floating-point value
+            cv.code = CV_REAL;
+            cv.data.fpn = cst.data.cst_real.value;
+            break;
+
         case CL_TYPE_FNC:
             // code pointer
             cv.code = CV_FNC;
