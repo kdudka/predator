@@ -944,6 +944,35 @@ static struct cl_var* add_var_if_needed(tree t)
     return var;
 }
 
+static void read_cst_fnc(struct cl_operand *op, tree t)
+{
+    op->code                            = CL_OPERAND_CST;
+    op->scope                           = get_decl_scope(t);
+    op->data.cst.code                   = CL_TYPE_FNC;
+    op->data.cst.data.cst_fnc.name      = get_decl_name(t);
+    op->data.cst.data.cst_fnc.is_extern = DECL_EXTERNAL(t);
+    op->data.cst.data.cst_fnc.uid       = DECL_UID(t);
+    read_gcc_location(&op->data.cst.data.cst_fnc.loc, DECL_SOURCE_LOCATION(t));
+}
+
+static void read_cst_int(struct cl_operand *op, tree t)
+{
+    // I don't understand the following code, see gcc/print-tree.c
+    CL_BREAK_IF(TREE_INT_CST_HIGH (t) != 0 && (TREE_INT_CST_LOW (t) == 0
+                || TREE_INT_CST_HIGH (t) != -1));
+
+    op->code                            = CL_OPERAND_CST;
+    op->data.cst.code                   = CL_TYPE_INT;
+    op->data.cst.data.cst_int.value     = TREE_INT_CST_LOW(t);
+}
+
+static void read_cst_real(struct cl_operand *op, tree t)
+{
+    CL_WARN_UNHANDLED_EXPR(t, "REAL_CST");
+    CL_BREAK_IF("please implement");
+    (void) op;
+}
+
 static void read_raw_operand(struct cl_operand *op, tree t)
 {
     op->code = CL_OPERAND_VOID;
@@ -958,39 +987,22 @@ static void read_raw_operand(struct cl_operand *op, tree t)
             op->data.var                        = add_var_if_needed(t);
             break;
 
-        case FUNCTION_DECL:
-            op->code                            = CL_OPERAND_CST;
-            op->scope                           = get_decl_scope(t);
-            op->data.cst.code                   = CL_TYPE_FNC;
-            op->data.cst.data.cst_fnc.name      = get_decl_name(t);
-            op->data.cst.data.cst_fnc.is_extern = DECL_EXTERNAL(t);
-            op->data.cst.data.cst_fnc.uid       = DECL_UID(t);
-            read_gcc_location(&op->data.cst.data.cst_fnc.loc,
-                              DECL_SOURCE_LOCATION(t));
-            break;
-
-        case INTEGER_CST:
-            op->code                            = CL_OPERAND_CST;
-            op->data.cst.code                   = CL_TYPE_INT;
-
-            // I don't understand the following code, see gcc/print-tree.c
-            if (TREE_INT_CST_HIGH (t) == 0 || (TREE_INT_CST_LOW (t) != 0
-                        && TREE_INT_CST_HIGH (t) == -1))
-                op->data.cst.data.cst_int.value = TREE_INT_CST_LOW (t);
-            else
-                // FIXME: this would probably overflow...
-                CL_TRAP;
-
-            break;
-
         case STRING_CST:
             op->code                            = CL_OPERAND_CST;
             op->data.cst.code                   = CL_TYPE_STRING;
             op->data.cst.data.cst_string.value  = TREE_STRING_POINTER(t);
             break;
 
+        case FUNCTION_DECL:
+            read_cst_fnc(op, t);
+            break;
+
+        case INTEGER_CST:
+            read_cst_int(op, t);
+            break;
+
         case REAL_CST:
-            CL_WARN_UNHANDLED_EXPR(t, "REAL_CST");
+            read_cst_real(op, t);
             break;
 
         default:
