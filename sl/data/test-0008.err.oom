@@ -13,11 +13,6 @@ test-0008.c:37:5: note: from call of main()
 test-0008.c:28:11: error: dereference of NULL value
 test-0008.c:39:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
-test-0008.c:17:33: warning: recursive function call, depth = 2
-test-0008.c:17:33: note: from call of dispose_list_recursively()
-test-0008.c:29:17: note: from call of dispose_list_recursively()
-test-0008.c:39:9: note: from call of test()
-test-0008.c:37:5: note: from call of main()
 test-0008.c:32:11: error: dereference of NULL value
 test-0008.c:39:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
@@ -25,16 +20,5 @@ test-0008.c:32:11: error: dereference of NULL value
 test-0008.c:39:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()
 test-0008.c:33:24: error: dereference of NULL value
-test-0008.c:39:9: note: from call of test()
-test-0008.c:37:5: note: from call of main()
-test-0008.c:17:33: warning: recursive function call, depth = 2
-test-0008.c:17:33: note: from call of dispose_list_recursively()
-test-0008.c:34:17: note: from call of dispose_list_recursively()
-test-0008.c:39:9: note: from call of test()
-test-0008.c:37:5: note: from call of main()
-test-0008.c:17:33: warning: recursive function call, depth = 3
-test-0008.c:17:33: note: from call of dispose_list_recursively()
-test-0008.c:17:33: note: from call of dispose_list_recursively()
-test-0008.c:34:17: note: from call of dispose_list_recursively()
 test-0008.c:39:9: note: from call of test()
 test-0008.c:37:5: note: from call of main()

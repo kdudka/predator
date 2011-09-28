@@ -650,10 +650,8 @@ SymCallCtx* SymCallCache::getCallCtx(
 
     // check recursion depth (if any)
     const int nestLevel = d->bt.countOccurrencesOfFnc(uid);
-    if (1 != nestLevel) {
-        CL_WARN_MSG(loc, "recursive function call, depth = " << nestLevel);
-        d->bt.printBackTrace();
-    }
+    if (1 != nestLevel)
+        CL_DEBUG_MSG(loc, "recursive function call, depth = " << nestLevel);
 
     // initialize local variables of the called fnc
     LDP_INIT(symcall, "pre-processing");
