@@ -1,0 +1,16 @@
+test-0119.c:14:29: error: dereference of NULL value
+test-0119.c:26:18: note: from call of create_sll()
+test-0119.c:37:18: note: from call of create_longer_sll()
+test-0119.c:35:5: note: from call of main()
+test-0119.c:16:29: error: dereference of NULL value
+test-0119.c:26:18: note: from call of create_sll()
+test-0119.c:37:18: note: from call of create_longer_sll()
+test-0119.c:35:5: note: from call of main()
+test-0119.c:18:29: error: dereference of NULL value
+test-0119.c:26:18: note: from call of create_sll()
+test-0119.c:37:18: note: from call of create_longer_sll()
+test-0119.c:35:5: note: from call of main()
+test-0119.c:29:29: error: dereference of NULL value
+test-0119.c:37:18: note: from call of create_longer_sll()
+test-0119.c:35:5: note: from call of main()
+test-0119.c:38:9: warning: memory leak detected while destroying a heap object

@@ -1,6 +1,0 @@
-test-0028.c:25:15: error: dereferencing object of size 8B out of bounds
-test-0028.c:25:15: note: the target object ends 4B beyond a heap object of size 4B
-test-0028.c:25:15: warning: memory leak detected while destroying a variable on stack
-test-0028.c:16:17: error: dereference of non-existing non-heap object
-test-0028.c:26:14: note: from call of free_list()
-test-0028.c:22:5: note: from call of main()

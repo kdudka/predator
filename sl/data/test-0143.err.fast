@@ -1,3 +1,0 @@
-test-0143.c:11:18: warning: memory leak detected while destroying a variable on stack
-test-0143.c:22:21: note: from call of insert_list_item()
-test-0143.c:14:5: note: from call of main()

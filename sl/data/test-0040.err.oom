@@ -1,0 +1,34 @@
+test-0040.c:22:13: error: dereference of NULL value
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: error: dereference of NULL value with offset 4B
+test-0040.c:47:18: error: dereference of NULL value
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:47:18: error: dereference of NULL value
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:47:18: error: dereference of NULL value
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:47:18: error: dereference of NULL value
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:47:18: error: dereference of NULL value
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:47:18: error: dereference of NULL value
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:47:18: error: dereference of NULL value
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:47:18: error: dereference of NULL value
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:53:8: warning: memory leak detected while destroying a variable on stack
+test-0040.c:54:7: warning: memory leak detected while destroying a variable on stack
+test-0040.c:47:18: error: dereference of NULL value

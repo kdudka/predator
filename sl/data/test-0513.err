@@ -1,2 +1,0 @@
-test-0513.c:37:25: error: dereference of NULL value
-test-0513.c:34:25: error: dereference of NULL value

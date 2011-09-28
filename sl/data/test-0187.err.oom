@@ -1,0 +1,19 @@
+test-0187.c:1:13: warning: end of function error() has not been reached
+test-0187.c:19:18: note: from call of error()
+test-0187.c:25:13: note: from call of gl_write()
+test-0187.c:32:17: note: from call of gl_proc1()
+test-0187.c:51:12: note: from call of gl_eval()
+test-0187.c:41:5: note: from call of main()
+test-0187.c:11:13: warning: end of function gl_write() has not been reached
+test-0187.c:25:13: note: from call of gl_write()
+test-0187.c:32:17: note: from call of gl_proc1()
+test-0187.c:51:12: note: from call of gl_eval()
+test-0187.c:41:5: note: from call of main()
+test-0187.c:23:13: warning: end of function gl_proc1() has not been reached
+test-0187.c:32:17: note: from call of gl_proc1()
+test-0187.c:51:12: note: from call of gl_eval()
+test-0187.c:41:5: note: from call of main()
+test-0187.c:29:13: warning: end of function gl_eval() has not been reached
+test-0187.c:51:12: note: from call of gl_eval()
+test-0187.c:41:5: note: from call of main()
+test-0187.c:41:5: warning: end of function main() has not been reached

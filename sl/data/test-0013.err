@@ -1,0 +1,4 @@
+test-0013.c:20:6: warning: end of function test_complex() has not been reached
+test-0013.c:58:17: note: from call of test_complex()
+test-0013.c:56:5: note: from call of main()
+test-0013.c:56:5: warning: end of function main() has not been reached

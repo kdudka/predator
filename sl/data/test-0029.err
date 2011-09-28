@@ -1,3 +1,0 @@
-test-0029.c:9:11: error: dereference of NULL value
-test-0029.c:25:15: note: from call of chain_item()
-test-0029.c:22:5: note: from call of main()

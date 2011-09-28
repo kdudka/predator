@@ -1,3 +1,0 @@
-test-0030.c:16:9: error: invalid free()
-test-0030.c:22:12: note: from call of alloc_triple()
-test-0030.c:21:5: note: from call of main()

@@ -1,0 +1,5 @@
+test-0037.c:20:13: error: dereference of NULL value
+test-0037.c:21:13: error: dereference of NULL value with offset 4B
+test-0037.c:28:8: warning: memory leak detected while destroying a variable on stack
+test-0037.c:29:13: warning: memory leak detected while destroying a heap object
+test-0037.c:31:13: error: double free()

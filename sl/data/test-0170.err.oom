@@ -1,0 +1,6 @@
+test-0170.c:43:16: warning: ignoring call of undefined function: DLError()
+test-0170.c:73:18: note: from call of DLInsertFirst()
+test-0170.c:69:5: note: from call of main()
+test-0170.c:43:16: warning: ignoring call of undefined function: DLError()
+test-0170.c:74:18: note: from call of DLInsertFirst()
+test-0170.c:69:5: note: from call of main()

@@ -1,6 +1,0 @@
-test-0517.c:21:15: error: dereference of NULL value
-test-0517.c:26:15: error: dereference of NULL value
-test-0517.c:31:15: error: dereference of NULL value
-test-0517.c:36:15: error: dereference of NULL value
-test-0517.c:41:15: error: dereference of NULL value
-test-0517.c:46:15: error: dereference of NULL value

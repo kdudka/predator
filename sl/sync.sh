@@ -33,8 +33,8 @@ do_sync() {
 
 printf "\n${G}Basic analysis...${N}\n" >&2
 export CFLAGS="-DPREDATOR"
-do_sync "$*" .fast
+do_sync "$*"
 
 printf "\n${Y}OOM simulation mode analysis...${N}\n" >&2
 export PFLAGS="oom"
-do_sync "$*"
+do_sync "$*" .oom

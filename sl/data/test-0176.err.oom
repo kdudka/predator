@@ -1,0 +1,9 @@
+test-0176.c:11:16: error: dereference of NULL value
+test-0176.c:18:20: note: from call of create_nonsense()
+test-0176.c:15:5: note: from call of main()
+test-0176.c:11:16: error: dereference of NULL value
+test-0176.c:18:20: note: from call of create_nonsense()
+test-0176.c:15:5: note: from call of main()
+test-0176.c:11:16: error: dereference of NULL value
+test-0176.c:18:20: note: from call of create_nonsense()
+test-0176.c:15:5: note: from call of main()
