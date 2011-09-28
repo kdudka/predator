@@ -192,10 +192,7 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
             break;
 
         default:
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
-            break;
+            CL_BREAK_IF("operandToStreamCstInt() got an unhandled literal");
     }
 }
 
@@ -206,6 +203,12 @@ void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
         case CL_TYPE_INT:
             operandToStreamCstInt(str, op);
             break;
+
+        case CL_TYPE_REAL: {
+            const double value = cst.data.cst_real.value;
+            str << value;
+            break;
+        }
 
         case CL_TYPE_FNC: {
             const char *name = cst.data.cst_fnc.name;
@@ -224,9 +227,7 @@ void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
         }
 
         default:
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
+            CL_BREAK_IF("operandToStreamCst() got an unhandled literal");
             break;
     }
 }
