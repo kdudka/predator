@@ -94,12 +94,8 @@ void emitPlotError(const struct cl_loc *lw, const std::string &plotName) {
 void insertCoreHeap(
         SymState                                    &dst,
         SymProc                                     &core,
-        const CodeStorage::Insn                     &insn,
-        const bool                                  printBt = false)
+        const CodeStorage::Insn                     &insn)
 {
-    if (printBt)
-        printBackTrace(core);
-
     if (core.hasFatalError())
         return;
 
@@ -312,7 +308,8 @@ bool handleMemset(
     }
     if (!size) {
         CL_WARN_MSG(lw, "ignoring call of memset() with size == 0");
-        insertCoreHeap(dst, core, insn, /* printBt */ true);
+        printBackTrace(core);
+        insertCoreHeap(dst, core, insn);
         return true;
     }
 
@@ -382,34 +379,35 @@ bool handlePrintf(
         if ('%' != *(fmt++))
             continue;
 
+        const char c = *fmt;
+        if ('%' == c) {
+            // %% -> keep going...
+            ++fmt;
+            continue;
+        }
+
+        if (opList.size() <= opIdx) {
+            CL_ERROR_MSG(lw, "insufficient count of arguments given to printf()");
+            goto fail;
+        }
+
         // skip [0-9.l]+
         while (isdigit(*fmt) || '.' == *fmt || 'l' == *fmt)
             ++fmt;
 
-        const char c = *fmt;
         switch (c) {
-            case '%':
-                // %% -> keep going...
-                ++fmt;
-                continue;
-
             case 'A': case 'E': case 'F': case 'G':
             case 'a': case 'c': case 'd': case 'e': case 'f': case 'g':
             case 'i': case 'o': case 'p': case 'u': case 'x': case 'X':
                 // we are not interested in numbers when checking memory safety
-                if (opList.size() <= opIdx)
-                    goto incorrect_count_of_args;
-                else
-                    break;
+                break;
 
             case 's':
                 // %s
-                if (opList.size() <= opIdx)
-                    goto incorrect_count_of_args;
-                else if (!validateStringOp(core, opList[opIdx]))
-                    goto fail;
-                else
+                if (validateStringOp(core, opList[opIdx]))
                     break;
+                else
+                    goto fail;
 
             default:
                 CL_ERROR_MSG(lw, "unhandled conversion given to printf()");
@@ -428,9 +426,6 @@ bool handlePrintf(
 
     insertCoreHeap(dst, core, insn);
     return true;
-
-incorrect_count_of_args:
-    CL_ERROR_MSG(lw, "insufficient count of arguments given to printf()");
 
 fail:
     core.failWithBackTrace();
