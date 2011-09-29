@@ -54,6 +54,21 @@ bool numFromVal(long *pDst, const SymHeap &sh, const TValId val) {
     return true;
 }
 
+bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val) {
+    if (VT_CUSTOM != sh.valTarget(val))
+        // not a custom value
+        return false;
+
+    CustomValue cv = sh.valUnwrapCustom(val);
+    if (CV_STRING != cv.code)
+        // not a string literal
+        return false;
+
+    *pDst = cv.data.str;
+    CL_BREAK_IF(!*pDst);
+    return true;
+}
+
 void moveKnownValueToLeft(
         const SymHeapCore           &sh,
         TValId                      &valA,

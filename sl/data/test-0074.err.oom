@@ -1,6 +1,0 @@
-test-0074.c:36:5: warning: ignoring call of undefined function: printf()
-test-0074.c:37:5: warning: ignoring call of undefined function: printf()
-test-0074.c:38:5: warning: ignoring call of undefined function: printf()
-test-0074.c:39:5: warning: ignoring call of undefined function: printf()
-test-0074.c:40:5: warning: ignoring call of undefined function: printf()
-test-0074.c:41:5: warning: ignoring call of undefined function: printf()

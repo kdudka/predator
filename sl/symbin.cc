@@ -96,6 +96,9 @@ void insertCoreHeap(
         const CodeStorage::Insn                     &insn,
         const bool                                  printBt = false)
 {
+    if (core.hasFatalError())
+        return;
+
     if (printBt)
         printBackTrace(core);
 
@@ -194,6 +197,26 @@ void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
 
     const struct cl_loc *loc = proc.lw();
     CL_NOTE_MSG(loc, "user message: " << cVal.data.str);
+}
+
+bool validateStringOp(SymProc &proc, const struct cl_operand &op) {
+    const TValId val = proc.valFromOperand(op);
+
+    SymHeap &sh = proc.sh();
+    const EValueTarget code = sh.valTarget(val);
+
+    if (VT_CUSTOM == code) {
+        if (CV_STRING == sh.valUnwrapCustom(val).code)
+            // string literal
+            return true;
+
+        // TODO
+    }
+
+    // TODO
+    CL_ERROR_MSG(proc.lw(), "string validation not implemented yet");
+    CL_BREAK_IF("please implement");
+    return false;
 }
 
 bool handleAbort(
@@ -350,9 +373,7 @@ bool handleMemset(
     if (core.checkForInvalidDeref(addr, size)) {
         // error message already printed out
         core.failWithBackTrace();
-        if (!core.hasFatalError())
-            insertCoreHeap(dst, core, insn);
-
+        insertCoreHeap(dst, core, insn);
         return true;
     }
 
@@ -380,6 +401,97 @@ bool handleMemset(
 
     // leave monitor and write the result
     lm.leave();
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
+bool handlePrintf(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    SymHeap &sh = core.sh();
+    const struct cl_loc *lw = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() < 3) {
+        emitPrototypeError(lw, name);
+        return false;
+    }
+
+    const TValId valFmt = core.valFromOperand(opList[/* fmt */ 2]);
+    const char *fmt;
+    if (!stringFromVal(&fmt, sh, valFmt)) {
+        CL_ERROR_MSG(lw, "fmt arg of printf() is not a string literal");
+        core.failWithBackTrace();
+        insertCoreHeap(dst, core, insn);
+        return true;
+    }
+
+    unsigned opIdx = /* 1st vararg */ 3;
+
+    while (*fmt) {
+        if ('%' != *(fmt++))
+            continue;
+
+        // skip [0-9.l]+
+        while (isdigit(*fmt) || '.' == *fmt || 'l' == *fmt)
+            ++fmt;
+
+        const char c = *fmt;
+        switch (c) {
+            case '%':
+                // %% -> keep going...
+                ++fmt;
+                continue;
+
+            case 'A': case 'E': case 'F': case 'G':
+            case 'a': case 'c': case 'd': case 'e': case 'f': case 'g':
+            case 'i': case 'o': case 'p': case 'x': case 'X':
+                // we are not interested in numbers when checking memory safety
+                break;
+
+            case 's':
+                // %s
+                if (validateStringOp(core, opList[opIdx]))
+                    break;
+                else
+                    goto fail;
+
+            default:
+                CL_ERROR_MSG(lw, "unhandled conversion given to printf()");
+                goto fail;
+        }
+
+        // next conversion -> next operand
+        ++opIdx;
+    }
+
+    insertCoreHeap(dst, core, insn);
+    return true;
+
+fail:
+    core.failWithBackTrace();
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
+bool handlePuts(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const struct cl_loc *lw = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() != 3) {
+        emitPrototypeError(lw, name);
+        return false;
+    }
+
+    if (!validateStringOp(core, opList[/* s */ 2]))
+        core.failWithBackTrace();
+
     insertCoreHeap(dst, core, insn);
     return true;
 }
@@ -555,6 +667,8 @@ BuiltInTable::BuiltInTable() {
     tbl_["free"]                                    = handleFree;
     tbl_["malloc"]                                  = handleMalloc;
     tbl_["memset"]                                  = handleMemset;
+    tbl_["printf"]                                  = handlePrintf;
+    tbl_["puts"]                                    = handlePuts;
     tbl_["___sl_break"]                             = handleBreak;
     tbl_["___sl_error"]                             = handleError;
     tbl_["___sl_get_nondet_int"]                    = handleNondetInt;
@@ -563,6 +677,10 @@ BuiltInTable::BuiltInTable() {
 
     // used in Competition on Software Verification held at TACAS 2012
     tbl_["__VERIFIER_nondet_int"]                   = handleNondetInt;
+
+    // just to make life easier to our competitors (TODO: check for collisions)
+    tbl_["__nondet"]                                = handleNondetInt;
+    tbl_["undef_int"]                               = handleNondetInt;
 
     // initialize lookForDerefs() look-up table
     der_["free"]        .push_back(/* addr */ 2);
