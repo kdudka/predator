@@ -96,11 +96,11 @@ void insertCoreHeap(
         const CodeStorage::Insn                     &insn,
         const bool                                  printBt = false)
 {
-    if (core.hasFatalError())
-        return;
-
     if (printBt)
         printBackTrace(core);
+
+    if (core.hasFatalError())
+        return;
 
     core.killInsn(insn);
 
@@ -182,21 +182,16 @@ bool resolveCallocSize(
 
 void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
 {
+    const TValId valMsg = proc.valFromOperand(opMsg);
+
+    const char *msg;
     const SymHeap &sh = proc.sh();
-
-    const TValId valDesc = proc.valFromOperand(opMsg);
-    const EValueTarget code = sh.valTarget(valDesc);
-    if (VT_CUSTOM != code)
-        // not a custom value
-        return;
-
-    const CustomValue cVal = sh.valUnwrapCustom(valDesc);
-    if (CV_STRING != cVal.code)
-        // not a string custom value
+    if (stringFromVal(&msg, sh, valMsg))
+        // no user message available
         return;
 
     const struct cl_loc *loc = proc.lw();
-    CL_NOTE_MSG(loc, "user message: " << cVal.data.str);
+    CL_NOTE_MSG(loc, "user message: " << msg);
 }
 
 bool validateStringOp(SymProc &proc, const struct cl_operand &op) {
@@ -357,9 +352,7 @@ bool handleMemset(
     if (!numFromVal(&size, sh, valSize)) {
         CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
         core.failWithBackTrace();
-        if (!core.hasFatalError())
-            insertCoreHeap(dst, core, insn);
-
+        insertCoreHeap(dst, core, insn);
         return true;
     }
     if (!size) {
@@ -391,7 +384,7 @@ bool handleMemset(
     // write the block!
     TValSet killedPtrs;
     CL_DEBUG_MSG(lw, "executing memset() as a built-in function");
-    sh.writeUniformBlock(addr, VAL_NULL, size, &killedPtrs);
+    sh.writeUniformBlock(addr, tplValue, size, &killedPtrs);
 
     // check for memory leaks
     if (lm.collectJunkFrom(killedPtrs)) {
@@ -447,7 +440,7 @@ bool handlePrintf(
 
             case 'A': case 'E': case 'F': case 'G':
             case 'a': case 'c': case 'd': case 'e': case 'f': case 'g':
-            case 'i': case 'o': case 'p': case 'x': case 'X':
+            case 'i': case 'o': case 'p': case 'u': case 'x': case 'X':
                 // we are not interested in numbers when checking memory safety
                 break;
 
