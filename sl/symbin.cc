@@ -42,11 +42,12 @@
 #include <libgen.h>
 #include <map>
 
-template <int NTH, class TOpList>
-bool readPlotName(std::string *dst, const TOpList opList,
-                  const struct cl_loc *loc)
+bool readPlotName(
+        std::string                                 *dst,
+        const CodeStorage::TOperandList             &opList,
+        const struct cl_loc                         *loc)
 {
-    const cl_operand &op = opList[NTH + /* dst + fnc */ 2];
+    const cl_operand &op = opList[/* dst + fnc */ 2];
     if (CL_OPERAND_CST != op.code)
         return false;
 
@@ -106,52 +107,6 @@ void insertCoreHeap(
 
     const SymHeap &sh = core.sh();
     dst.insert(sh);
-}
-
-bool callPlot(const CodeStorage::Insn &insn, SymProc &proc) {
-    const CodeStorage::TOperandList &opList = insn.operands;
-    const struct cl_loc *lw = &insn.loc;
-
-    const int cntArgs = opList.size() - /* dst + fnc */ 2;
-    if (cntArgs < 1) {
-        emitPrototypeError(lw, "___sl_plot");
-        // insufficient count of arguments
-        return false;
-    }
-
-    if (CL_OPERAND_VOID != opList[/* dst */ 0].code) {
-        // not a function returning void
-        emitPrototypeError(lw, "___sl_plot");
-        return false;
-    }
-
-    std::string plotName;
-    if (!readPlotName<0>(&plotName, opList, proc.lw())) {
-        emitPrototypeError(lw, "___sl_plot");
-        return false;
-    }
-
-    const SymHeap &sh = proc.sh();
-
-    if (1 == cntArgs) {
-        if (!plotHeap(sh, plotName))
-            emitPlotError(lw, plotName);
-    }
-    else {
-        // starting points were given
-        TValList startingPoints;
-        for (int i = 1; i < cntArgs; ++i) {
-            const struct cl_operand &op = opList[i + /* dst + fnc */ 2];
-            const TValId val = proc.valFromOperand(op);
-            startingPoints.push_back(val);
-        }
-
-        if (!plotHeap(sh, plotName, startingPoints))
-            emitPlotError(lw, plotName);
-    }
-
-    // built-in processed, we do not care if successfully at this point
-    return true;
 }
 
 bool resolveCallocSize(
@@ -529,13 +484,54 @@ bool handlePlot(
         const CodeStorage::Insn                     &insn,
         const char                                  *name)
 {
-    const SymExecCoreParams &ep = core.params();
-    if (ep.skipPlot)
-        CL_DEBUG_MSG(&insn.loc, name << "() skipped per user's request");
+    const CodeStorage::TOperandList &opList = insn.operands;
+    const struct cl_loc *lw = &insn.loc;
 
-    else if (!(callPlot(insn, core)))
+    const int cntArgs = opList.size() - /* dst + fnc */ 2;
+    if (cntArgs < 1) {
+        emitPrototypeError(lw, "___sl_plot");
+        // insufficient count of arguments
         return false;
+    }
 
+    if (CL_OPERAND_VOID != opList[/* dst */ 0].code) {
+        // not a function returning void
+        emitPrototypeError(lw, "___sl_plot");
+        return false;
+    }
+
+    std::string plotName;
+    if (!readPlotName(&plotName, opList, core.lw())) {
+        emitPrototypeError(lw, "___sl_plot");
+        return false;
+    }
+
+    const SymExecCoreParams &ep = core.params();
+    if (ep.skipPlot) {
+        CL_DEBUG_MSG(&insn.loc, name << "() skipped per user's request");
+        return true;
+    }
+
+    const SymHeap &sh = core.sh();
+
+    if (1 == cntArgs) {
+        if (!plotHeap(sh, plotName))
+            emitPlotError(lw, plotName);
+    }
+    else {
+        // starting points were given
+        TValList startingPoints;
+        for (int i = 1; i < cntArgs; ++i) {
+            const struct cl_operand &op = opList[i + /* dst + fnc */ 2];
+            const TValId val = core.valFromOperand(op);
+            startingPoints.push_back(val);
+        }
+
+        if (!plotHeap(sh, plotName, startingPoints))
+            emitPlotError(lw, plotName);
+    }
+
+    // built-in processed, we do not care if successfully at this point
     insertCoreHeap(dst, core, insn);
     return true;
 }
