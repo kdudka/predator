@@ -144,7 +144,7 @@ macro(test_sym_exec_regre name_suff ext arg1)
         set(cmd "${cmd} 2>&1")
 
         # filter out messages that are unrelated to our plug-in
-        set(cmd "${cmd} | grep '\\\\[-fplugin-libsl\\\\]\$'")
+        set(cmd "${cmd} | grep -E '\\\\[-fplugin-libsl\\\\]\$|compiler error'")
         set(cmd "${cmd} | sed 's/ \\\\[-fplugin-libsl\\\\]\$//'")
 
         # filter out NOTE messages with internal location

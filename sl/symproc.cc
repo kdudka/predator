@@ -833,6 +833,48 @@ bool describeCmpOp(
     }
 }
 
+bool compareIntCsts(
+        TValId                      *pDst,
+        const enum cl_binop_e       code,
+        const long                  num1,
+        const long                  num2)
+{
+    bool result;
+
+    switch (code) {
+        case CL_BINOP_NE:
+            // TODO: improve SymHeapCore to handle it actually :-)
+            // fall through!
+
+        case CL_BINOP_EQ:
+            // this should have been already handled by the caller
+            return false;
+
+        case CL_BINOP_LE:
+            result = (num1 <= num2);
+            break;
+
+        case CL_BINOP_GE:
+            result = (num1 >= num2);
+            break;
+
+        case CL_BINOP_LT:
+            result = (num1 <  num2);
+            break;
+
+        case CL_BINOP_GT:
+            result = (num1 >  num2);
+            break;
+
+        default:
+            CL_BREAK_IF("unhandled binary operator in compareIntCsts()");
+            return false;
+    }
+
+    *pDst = boolToVal(result);
+    return true;
+}
+
 TValId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
@@ -858,12 +900,12 @@ TValId compareValues(
     if (sh.proveNeq(v1, v2) && preserveEq)
         return boolToVal(neg);
 
-    // forward unknown bool values if possible
-    if (CL_TYPE_BOOL == clt->code) {
-        if (v1 == boolToVal(!neg))
-            return v2;
-        if (v2 == boolToVal(!neg))
-            return v1;
+    long num1, num2;
+    if (numFromVal(&num1, sh, v1) && numFromVal(&num2, sh, v2)) {
+        // both values are integral constants
+        TValId result;
+        if (compareIntCsts(&result, code, num1, num2))
+            return result;
     }
 
     // propagate UV_UNINITIALIZED

@@ -8,8 +8,7 @@
     static void dummy_printf(void) { }
     static int dymmy_scanf(int *ptr)
     {
-        int a = 1, b = 2;
-        if (a < b)
+        if (___sl_get_nondet_int())
             return 0;
 
         *ptr = ___sl_get_nondet_int();

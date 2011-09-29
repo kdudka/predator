@@ -110,7 +110,11 @@ handle_output() {
     fi
 
     # print basic status
-    if match "$MSG_INTERNAL_ERROR" "$1"; then
+    if test xyes = "x$ERR_LABEL_REACHED"; then
+        # this needs to be the top priority according to TACAS2012 sv-comp rules
+        printf "${Y}label ERROR has been reached${N}"
+
+    elif match "$MSG_INTERNAL_ERROR" "$1"; then
         printf "${R}internal error${N}              "
 
     elif test 0 -lt $ERRORS; then
@@ -118,9 +122,6 @@ handle_output() {
 
     elif match "$MSG_SIGNALLED" "$1"; then
         printf "${R}signalled to die${N}            "
-
-    elif test xyes = "x$ERR_LABEL_REACHED"; then
-        printf "${Y}label ERROR has been reached${N}"
 
     elif test 0 -lt $WARNINGS; then
         NO_LEAK_WARNS="`grep -v "$MSG_SOME_WARNINGS" "$1" | grep -v "$MSG_MEMLEAK" \

@@ -4,8 +4,7 @@
 // return VAL_UNKNOWN of type CL_TYPE_BOOL while running symbolic execution
 bool synthesize_unknown_bool_value(void)
 {
-    int a = 1, b = 2;
-    return (a < b);
+    return !!___sl_get_nondet_int();
 }
 
 int main() {

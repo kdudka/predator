@@ -6,8 +6,7 @@ void** synthesize_unknown_ptr_value(void)
     int a = 1, b = 2;
     void *pa = &a, *pb = &b;
 
-    // our analysis gets confused at this point because of weak support of ints
-    return (a < b)
+    return (___sl_get_nondet_int())
         ? &pa
         : &pb;
 }

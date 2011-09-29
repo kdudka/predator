@@ -1,6 +1,6 @@
-test-0138.c:65:13: error: free() called with offset 4B
-test-0138.c:115:15: note: from call of gl_destroy()
-test-0138.c:105:5: note: from call of main()
-test-0138.c:65:13: error: free() called with offset 4B
-test-0138.c:115:15: note: from call of gl_destroy()
-test-0138.c:105:5: note: from call of main()
+test-0138.c:64:13: error: free() called with offset 4B
+test-0138.c:114:15: note: from call of gl_destroy()
+test-0138.c:104:5: note: from call of main()
+test-0138.c:64:13: error: free() called with offset 4B
+test-0138.c:114:15: note: from call of gl_destroy()
+test-0138.c:104:5: note: from call of main()
