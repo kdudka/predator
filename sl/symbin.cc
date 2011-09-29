@@ -397,14 +397,19 @@ bool handlePrintf(
             case 'a': case 'c': case 'd': case 'e': case 'f': case 'g':
             case 'i': case 'o': case 'p': case 'u': case 'x': case 'X':
                 // we are not interested in numbers when checking memory safety
-                break;
+                if (opList.size() <= opIdx)
+                    goto incorrect_count_of_args;
+                else
+                    break;
 
             case 's':
                 // %s
-                if (validateStringOp(core, opList[opIdx]))
-                    break;
-                else
+                if (opList.size() <= opIdx)
+                    goto incorrect_count_of_args;
+                else if (!validateStringOp(core, opList[opIdx]))
                     goto fail;
+                else
+                    break;
 
             default:
                 CL_ERROR_MSG(lw, "unhandled conversion given to printf()");
@@ -415,8 +420,17 @@ bool handlePrintf(
         ++opIdx;
     }
 
+    if (opIdx < opList.size()) {
+        // this is quite suspicious, but would not crash the program
+        CL_WARN_MSG(lw, "too many arguments given to printf()");
+        printBackTrace(core);
+    }
+
     insertCoreHeap(dst, core, insn);
     return true;
+
+incorrect_count_of_args:
+    CL_ERROR_MSG(lw, "insufficient count of arguments given to printf()");
 
 fail:
     core.failWithBackTrace();

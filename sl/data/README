@@ -673,6 +673,8 @@ Tests taken from Forester
 
     test-0185.c - a regression test focused on a fixed SIGSEGV bug in SymProc
 
+    test-0188.c - wrong count of arguments given to printf()
+
 
 Tiny DLL library written on scratch
 ===================================

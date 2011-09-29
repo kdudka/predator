@@ -132,7 +132,7 @@ handle_output() {
         fi
 
     elif test 0 -eq "$2"; then
-        if echo "$1" | match -F "BUG|unsafe"; then
+        if echo "$1" | match -E "BUG|unsafe"; then
             printf "${R}[seems broken]${N} "
         fi
         printf "${G}proven safe${N}                 "
