@@ -369,12 +369,11 @@ void BlockScheduler::printStats() const {
 // /////////////////////////////////////////////////////////////////////////////
 // SymStateMap implementation
 struct SymStateMap::Private {
-    typedef const CodeStorage::Block    *TBlock;
-    typedef std::set<TBlock>            TInbound;
+    typedef BlockScheduler::TBlock      TBlock;
 
     struct BlockState {
         SymStateMarked                  state;
-        TInbound                        inbound;
+        BlockScheduler                  inbound;
     };
 
     std::map<TBlock, BlockState>        cont;
@@ -415,7 +414,7 @@ bool SymStateMap::Private::insert(
 
     if (src)
         // store inbound edge
-        ref.inbound.insert(src);
+        ref.inbound.schedule(src);
 
     return changed;
 }
@@ -442,6 +441,9 @@ void SymStateMap::gatherInboundEdges(TContBlock                  &dst,
                                      const CodeStorage::Block    *ofBlock)
     const
 {
-    const Private::TInbound &inbound = d->cont[ofBlock].inbound;
-    std::copy(inbound.begin(), inbound.end(), std::back_inserter(dst));
+    BlockScheduler shed(d->cont[ofBlock].inbound);
+
+    BlockScheduler::TBlock bb;
+    while (shed.getNext(&bb))
+        dst.push_back(bb);
 }
