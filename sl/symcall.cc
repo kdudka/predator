@@ -175,8 +175,6 @@ struct SymCallCache::Private {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCtx
 struct SymCallCtx::Private {
-    typedef std::map<int /* uid */, TCVarSet>               TCutHints;
-
     SymCallCache::Private       *cd;
     const CodeStorage::Fnc      *fnc;
     SymHeap                     entry;
@@ -186,7 +184,6 @@ struct SymCallCtx::Private {
     int                         nestLevel;
     bool                        computed;
     bool                        flushed;
-    TCutHints                   hints;
 
     void assignReturnValue(SymHeap &sh);
     void destroyStackFrame(SymHeap &sh);
@@ -442,6 +439,11 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         return;
     }
 
+    TStorRef stor = entry.stor();
+    const struct cl_loc *loc = 0;
+    std::string varString = varToString(stor, cv.uid, &loc);
+    CL_DEBUG_MSG(loc, "<G> importGlVar() imports variable " << varString);
+
     // seek the gl var going through the ctx stack backward
     int idx;
     for (idx = cnt - 1; 0 < idx; --idx) {
@@ -452,14 +454,8 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
             break;
     }
 
-    TStorRef stor = entry.stor();
-    const struct cl_loc *loc = 0;
-    std::string varString = varToString(stor, cv.uid, &loc);
-    CL_DEBUG_MSG(loc, "<G> importGlVar() imports variable " << varString);
-    const int idxOrigin = idx;
-
     // 'origin' is the heap that we are importing the gl var from
-    const SymHeap &origin = this->ctxStack[idxOrigin]->d->surround;
+    const SymHeap &origin = this->ctxStack[idx]->d->surround;
 
     // pull the designated gl var from 'origin'
     SymHeap glSubHeap(stor);
@@ -468,14 +464,6 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     // go through all heaps above the 'origin' up to the current call level
     for (; idx < cnt; ++idx) {
         SymCallCtx *ctx = this->ctxStack[idx];
-        const int uid = uidOf(*ctx->d->fnc);
-
-        if (idx) {
-            // teach the caller to always include 'cv' into the cut for this fnc
-            SymCallCtx *ctxCaller = this->ctxStack[idx - 1];
-            SymCallCtx::Private::TCutHints &hints = ctxCaller->d->hints;
-            hints[uid].insert(cv);
-        }
 
         // import gl variable at the current level
         const SymHeap src(ctx->d->entry);
@@ -483,6 +471,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         pushGlVar(dst, glSubHeap, cv);
 
         // update the corresponding cache entry
+        const int uid = uidOf(*ctx->d->fnc);
         PerFncCache &pfc = this->cache[uid];
         pfc.updateCacheEntry(src, dst);
         CL_DEBUG_MSG(loc, "<G> importGlVar() updates a call cache entry for "
@@ -503,22 +492,6 @@ void SymCallCache::Private::resolveHeapCut(
 #if SE_ENABLE_CALL_CACHE
     TStorRef stor = sh.stor();
 
-    TCVarSet snap;
-    if (!this->ctxStack.empty()) {
-        // we will cut the heap better this time
-        SymCallCtx *ctxBase = this->ctxStack.back();
-        /* const */ SymCallCtx::Private::TCutHints &hints = ctxBase->d->hints;
-        snap = hints[uidOf(fnc)];
-    }
-
-    BOOST_FOREACH(const CVar &cv, snap) {
-        const struct cl_loc *loc = 0;
-        std::string varString = varToString(stor, cv.uid, &loc);
-        CL_DEBUG_MSG(loc, "<G> importGlVar() recently suggested variable "
-                << varString);
-        cut.push_back(cv);
-    }
-
     // start with all gl variables that are accessible from this function
     BOOST_FOREACH(const int uid, fncVars) {
         const CodeStorage::Var &var = stor.vars[uid];
@@ -526,15 +499,10 @@ void SymCallCache::Private::resolveHeapCut(
             continue;
 
         const CVar cv(uid, /* gl var */ 0);
-        if (hasKey(snap, cv))
-            // already in
-            continue;
-
         if (!isVarAlive(sh, cv))
             // the var we need does not exist at this level yet --> lazy import
             this->importGlVar(sh, cv);
 
-        // no matter if importGlVar succeeded, we need the variable here and now
         cut.push_back(cv);
     }
 #endif

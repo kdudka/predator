@@ -19,13 +19,3 @@ test-0186.c:51:13: note: from call of gl_write()
 test-0186.c:123:21: note: from call of gl_proc1()
 test-0186.c:172:16: note: from call of gl_eval()
 test-0186.c:157:5: note: from call of main()
-test-0186.c:26:13: warning: end of function gl_write() has not been reached
-test-0186.c:51:13: note: from call of gl_write()
-test-0186.c:123:21: note: from call of gl_proc1()
-test-0186.c:172:16: note: from call of gl_eval()
-test-0186.c:157:5: note: from call of main()
-test-0186.c:26:13: warning: end of function gl_write() has not been reached
-test-0186.c:51:13: note: from call of gl_write()
-test-0186.c:123:21: note: from call of gl_proc1()
-test-0186.c:172:16: note: from call of gl_eval()
-test-0186.c:157:5: note: from call of main()
