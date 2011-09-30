@@ -25,6 +25,7 @@
  * @todo update dox
  */
 
+#include <set>
 #include <vector>
 
 #include "symheap.hh"
@@ -288,5 +289,41 @@ class SymStateMap {
         Private *d;
 };
 
+class IStatsProvider {
+    public:
+        virtual ~IStatsProvider() { }
+        virtual void printStats() const = 0;
+};
+
+class BlockScheduler: public IStatsProvider {
+    public:
+        typedef const CodeStorage::Block       *TBlock;
+        typedef std::set<TBlock>                TBlockSet;
+        typedef std::vector<TBlock>             TBlockList;
+
+    public:
+        BlockScheduler();
+        BlockScheduler(const BlockScheduler &);
+        ~BlockScheduler();
+
+        const TBlockSet& todo() const;
+
+        TBlockList done() const;
+
+        unsigned cntWaiting() const;
+
+        bool schedule(const TBlock bb);
+
+        bool getNext(TBlock *dst);
+
+        virtual void printStats() const;
+
+    private:
+        // not implemented
+        BlockScheduler& operator=(const BlockScheduler &);
+
+        struct Private;
+        Private *d;
+};
 
 #endif /* H_GUARD_SYM_STATE_H */

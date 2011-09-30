@@ -21,7 +21,7 @@
 #include "symstate.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/code_listener.h>
+#include <cl/storage.hh>
 
 #include "symcmp.hh"
 #include "symjoin.hh"
@@ -33,6 +33,7 @@
 #include <algorithm>            // for std::copy_if
 #include <iomanip>
 #include <map>
+#include <queue>
 
 #include <boost/foreach.hpp>
 
@@ -269,6 +270,99 @@ bool SymStateWithJoin::insert(const SymHeap &sh) {
 
 bool SymStateWithJoin::insertFast(SymHeap &sh) {
     return this->insertCore(sh, /* feelFreeToOverwrite */ true);
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// BlockScheduler implementation
+struct BlockScheduler::Private {
+    typedef std::queue<TBlock>                              TFifo;
+    typedef std::map<TBlock, unsigned /* cnt */>            TDone;
+
+    TBlockSet           todo;
+    TFifo               fifo;
+    TDone               done;
+};
+
+BlockScheduler::BlockScheduler():
+    d(new Private)
+{
+}
+
+BlockScheduler::BlockScheduler(const BlockScheduler &tpl):
+    d(new Private(*tpl.d))
+{
+}
+
+BlockScheduler::~BlockScheduler() {
+    delete d;
+}
+
+unsigned BlockScheduler::cntWaiting() const {
+    return d->todo.size();
+}
+
+const BlockScheduler::TBlockSet& BlockScheduler::todo() const {
+    return d->todo;
+}
+
+BlockScheduler::TBlockList BlockScheduler::done() const {
+    TBlockList dst;
+    BOOST_FOREACH(Private::TDone::const_reference item, d->done)
+        dst.push_back(/* bb */ item.first);
+
+    return dst;
+}
+
+bool BlockScheduler::schedule(const TBlock bb) {
+    if (!insertOnce(d->todo, bb))
+        // already in the queue
+        return false;
+
+    d->fifo.push(bb);
+    return true;
+}
+
+bool BlockScheduler::getNext(TBlock *dst) {
+    if (d->todo.empty())
+        return false;
+
+    // take the first block in the queue
+    const TBlock bb = d->fifo.front();
+    d->fifo.pop();
+    if (1 != d->todo.erase(bb))
+        CL_BREAK_IF("BlockScheduler malfunction");
+
+    *dst = bb;
+    d->done[bb]++;
+    return true;
+}
+
+void BlockScheduler::printStats() const {
+    typedef std::map<unsigned /* cnt */, TBlockList> TRMap;
+
+    // sort d->todo by cnt
+    TRMap rMap;
+    BOOST_FOREACH(Private::TDone::const_reference item, d->done) {
+        rMap[/* cnt */ item.second].push_back(/* bb */ item.first);
+    }
+
+    BOOST_FOREACH(TRMap::const_reference item, rMap) {
+        const unsigned cnt = item.first;
+        BOOST_FOREACH(const TBlock bb, /* TBlockList */ item.second) {
+            const CodeStorage::Insn *first = bb->front();
+            const std::string &name = bb->name();
+
+            const char *suffix = "";
+            if (hasKey(d->todo, bb))
+                suffix = " [still in the queue]";
+
+            CL_NOTE_MSG(&first->loc,
+                    "___ block " << name
+                    << " examined " << cnt
+                    << " times" << suffix);
+        }
+    }
 }
 
 

@@ -878,7 +878,7 @@ bool compareIntCsts(
 TValId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
-        const TObjType              clt,
+        const TObjType              /* clt */,
         const TValId                v1,
         const TValId                v2)
 {
