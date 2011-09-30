@@ -152,7 +152,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
             CL_DEBUG("addObjectIfNeeded() is enlarging the cut by cVar #"
                     << cv.uid << ", nestlevel = " << cv.inst);
 #endif
-        const TValId rootDstAt = dst.addrOfVar(cv);
+        const TValId rootDstAt = dst.addrOfVar(cv, /* createIfNeeded */ true);
         dc.valMap[rootSrcAt] = rootDstAt;
         digSubObjs(dc, rootSrcAt, rootDstAt);
         return rootDstAt;
@@ -323,8 +323,8 @@ void prune(const SymHeap &src, SymHeap &dst,
 
     // go through all program variables
     BOOST_FOREACH(CVar cv, snap) {
-        const TValId srcAt = dc.src.addrOfVar(cv);
-        const TValId dstAt = dc.dst.addrOfVar(cv);
+        const TValId srcAt = dc.src.addrOfVar(cv, /* createIfNeeded */ true);
+        const TValId dstAt = dc.dst.addrOfVar(cv, /* createIfNeeded */ true);
         dc.valMap[srcAt] = dstAt;
         digSubObjs(dc, srcAt, dstAt);
     }

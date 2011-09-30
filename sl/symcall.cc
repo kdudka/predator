@@ -306,21 +306,7 @@ void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
     LDP_PLOT(symcall, sh);
     LDP_PLOT(symcall, surround);
 
-    TValList liveGlVars;
-    sh.gatherRootObjects(liveGlVars, isGlVar);
-    BOOST_FOREACH(const TValId root, liveGlVars) {
-        if (!isVarAlive(sh, root))
-            // not a live variable
-            continue;
-
-        const CVar cv = sh.cVarByRoot(root);
-        if (cv.inst)
-            // not a gl variable
-            continue;
-
-        const TValId addr = surround.addrOfVar(cv);
-        surround.valDestroyTarget(addr);
-    }
+    // TODO: resolve conflicts caused by lazy import of gl variables
 
     joinHeapsByCVars(&sh, &surround);
     LDP_PLOT(symcall, sh);
@@ -565,7 +551,7 @@ void setCallArgs(
         // cVar lookup
         const int nestLevel = bt.countOccurrencesOfFnc(uidOf(fnc));
         const CVar cVar(arg, nestLevel);
-        const TValId argAddr = sh.addrOfVar(cVar);
+        const TValId argAddr = sh.addrOfVar(cVar, /* createIfNeeded */ true);
 
         // object instantiation
         TStorRef stor = *fnc.stor;

@@ -84,16 +84,9 @@ inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {
     return valOfPtrAt(sh, ptrAt);
 }
 
-inline bool isVarAlive(const SymHeap &sh, const TValId at) {
-    TObjList live;
-    sh.gatherLiveObjects(live, at);
-    return !live.empty()
-        || sh.pointedByCount(at);
-}
-
 inline bool isVarAlive(SymHeap &sh, const CVar &cv) {
-    const TValId at = sh.addrOfVar(cv);
-    return isVarAlive(sh, at);
+    const TValId at = sh.addrOfVar(cv, /* createIfNeeded */ false);
+    return 0 < at;
 }
 
 void getPtrValues(TValList &dst, SymHeap &heap, TValId at);
@@ -155,7 +148,6 @@ template <class TDst, typename TInserter>
 void gatherProgramVarsCore(
         TDst                    &dst,
         const SymHeap           &sh,
-        const bool              liveOnly,
         TInserter               ins)
 {
     TValList live;
@@ -165,28 +157,25 @@ void gatherProgramVarsCore(
         if (VAL_ADDR_OF_RET == root)
             continue;
 
-        if (!liveOnly || isVarAlive(sh, root))
-            (dst.*ins)(sh.cVarByRoot(root));
+        (dst.*ins)(sh.cVarByRoot(root));
     }
 }
 
 inline void gatherProgramVars(
         TCVarList               &dst,
-        const SymHeap           &sh,
-        const bool              liveOnly = false)
+        const SymHeap           &sh)
 {
     void (TCVarList::*ins)(const CVar &) = &TCVarList::push_back;
-    gatherProgramVarsCore(dst, sh, liveOnly, ins);
+    gatherProgramVarsCore(dst, sh, ins);
 }
 
 inline void gatherProgramVars(
         TCVarSet                &dst,
-        const SymHeap           &sh,
-        const bool              liveOnly = false)
+        const SymHeap           &sh)
 {
     typedef std::pair<TCVarSet::iterator, bool> TRet;
     TRet (TCVarSet::*ins)(const CVar &) = &TCVarSet::insert;
-    gatherProgramVarsCore(dst, sh, liveOnly, ins);
+    gatherProgramVarsCore(dst, sh, ins);
 }
 
 /// take the given visitor through all live pointers
@@ -371,14 +360,8 @@ bool /* complete */ traverseProgramVarsGeneric(
                 continue;
 
             const CVar cv(sh.cVarByRoot(root));
-            if (!insertOnce(all, cv))
-                // matches seamlessly
-                continue;
-
-            const EValueTarget code = sh.valTarget(root);
-            if (VT_ON_STACK == code)
-                // local variable mismatch, giving up
-                // FIXME: this behavior should be better documented
+            if (insertOnce(all, cv))
+                // variable mismatch in src heaps
                 return false;
         }
     }
@@ -388,7 +371,7 @@ bool /* complete */ traverseProgramVarsGeneric(
         TValId roots[N_TOTAL];
         for (unsigned i = 0; i < N_TOTAL; ++i) {
             SymHeap &sh = *heaps[i];
-            roots[i] = sh.addrOfVar(cv);
+            roots[i] = sh.addrOfVar(cv, /* createIfNeeded */ !i);
         }
 
         if (!visitor(roots))

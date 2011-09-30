@@ -418,8 +418,8 @@ class SymHeapCore {
         /// mark the object ID externally unused (still NOP if used internally)
         void objReleaseId(TObjId);
 
-        /// return address of the given program variable (create it if needed)
-        TValId addrOfVar(CVar);
+        /// return address of the given program variable
+        TValId addrOfVar(CVar, bool createIfNeeded);
 
         /// clone of the given value (deep copy)
         virtual TValId valClone(TValId);

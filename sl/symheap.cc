@@ -2011,10 +2011,14 @@ CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
     return rootData->cVar;
 }
 
-TValId SymHeapCore::addrOfVar(CVar cv) {
+TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
     TValId addr = d->cVarMap->find(cv);
     if (0 < addr)
         return addr;
+
+    if (!createIfNeeded)
+        // the variable does not exist and we are not asked to create the var
+        return VAL_INVALID;
 
     // lazy creation of a program variable
     const CodeStorage::Var &var = stor_.vars[cv.uid];

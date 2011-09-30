@@ -293,7 +293,7 @@ TValId SymProc::varAt(const struct cl_operand &op) {
     const CVar cVar(uid, nestLevel);
 
     // get the address (SymHeapCore is responsible for lazy creation)
-    const TValId at = sh_.addrOfVar(cVar);
+    const TValId at = sh_.addrOfVar(cVar, /* createIfNeeded */ true);
     CL_BREAK_IF(at <= 0);
 
     // resolve Var
@@ -635,7 +635,10 @@ void SymProc::killVar(const CodeStorage::KillVar &kv) {
     // get the address (SymHeapCore is responsible for lazy creation)
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
     const CVar cVar(uid, nestLevel);
-    const TValId addr = sh_.addrOfVar(cVar);
+    const TValId addr = sh_.addrOfVar(cVar, /* createIfNeeded */ false);
+    if (VAL_INVALID == addr)
+        // the var is dead already
+        return;
 
     if (kv.onlyIfNotPointed && sh_.pointedByCount(addr))
         // somebody points at the var, please wait with its destruction
