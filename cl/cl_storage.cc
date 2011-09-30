@@ -330,9 +330,10 @@ struct ClStorageBuilder::Private {
 
     typedef struct cl_operand TOp;
 
+    void digInitials(Var &var, const struct cl_var *clv);
     Var& digOperandVar(const TOp *, bool isArgDecl);
     void digOperandCst(const struct cl_operand *);
-    void digOperand(const struct cl_operand *);
+    void digOperand(const TOp *, bool skipVarInit = false);
     void openInsn(Insn *);
     void closeInsn();
 };
@@ -351,12 +352,16 @@ void ClStorageBuilder::acknowledge() {
     this->run(d->stor);
 }
 
-void digInitials(Var &var, const struct cl_var *clv) {
+void ClStorageBuilder::Private::digInitials(Var &var, const struct cl_var *clv)
+{
     const struct cl_initializer *initial;
     for (initial = clv->initial; initial; initial = initial->next) {
         ControlFlow *cfg = /* XXX */ 0;
         Insn *insn = createInsn(&initial->insn, /* XXX */ *cfg);
         var.initials.push_back(insn);
+
+        BOOST_FOREACH(const struct cl_operand &op, insn->operands)
+            this->digOperand(&op, /* skipVarInit */ true);
     }
 }
 
@@ -452,7 +457,7 @@ void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
     nameMap[name] = uid;
 }
 
-void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
+void ClStorageBuilder::Private::digOperand(const TOp *op, bool skipVarInit) {
     if (!op || CL_OPERAND_VOID == op->code)
         return;
 
@@ -483,12 +488,16 @@ void ClStorageBuilder::Private::digOperand(const struct cl_operand *op) {
     }
 
     Var &var = this->digOperandVar(op, /* isArgDecl */ false);
-    digInitials(var, op->data.var);
 
     ac = op->accessor;
     if (ac && ac->code != CL_ACCESSOR_DEREF && seekRefAccessor(ac))
         // we are taking a reference to the variable by this operand!
         var.mayBePointed = true;
+
+    if (skipVarInit)
+        return;
+
+    this->digInitials(var, op->data.var);
 }
 
 void ClStorageBuilder::Private::openInsn(Insn *newInsn) {
