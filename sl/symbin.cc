@@ -518,6 +518,7 @@ bool handlePlot(
     const SymExecCoreParams &ep = core.params();
     if (ep.skipPlot) {
         CL_DEBUG_MSG(&insn.loc, name << "() skipped per user's request");
+        insertCoreHeap(dst, core, insn);
         return true;
     }
 
