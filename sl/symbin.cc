@@ -137,7 +137,7 @@ void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
 
     const char *msg;
     const SymHeap &sh = proc.sh();
-    if (stringFromVal(&msg, sh, valMsg))
+    if (!stringFromVal(&msg, sh, valMsg))
         // no user message available
         return;
 
