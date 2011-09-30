@@ -306,7 +306,28 @@ void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
     LDP_PLOT(symcall, sh);
     LDP_PLOT(symcall, surround);
 
-    // TODO: resolve conflicts caused by lazy import of gl variables
+    // first off, we need to make sure that a gl variable from surround will not
+    // overwrite the result of just completed function call since the var could
+    // have already been imported from there
+    TCVarList preserveGlVars;
+
+    TValList liveGlVars;
+    surround.gatherRootObjects(liveGlVars, isGlVar);
+    BOOST_FOREACH(const TValId root, liveGlVars) {
+        const CVar cv = surround.cVarByRoot(root);
+        CL_BREAK_IF(cv.inst);
+
+        // check whether the var from 'surround' is alive in 'sh'
+        if (isVarAlive(sh, cv))
+            preserveGlVars.push_back(cv);
+    }
+
+    if (!preserveGlVars.empty()) {
+        // conflict resolution: yield the gl vars from just completed fnc call
+        SymHeap arena(surround.stor());
+        surround.swap(arena);
+        splitHeapByCVars(&arena, preserveGlVars, &surround);
+    }
 
     joinHeapsByCVars(&sh, &surround);
     LDP_PLOT(symcall, sh);
@@ -379,24 +400,47 @@ SymBackTrace& SymCallCache::bt() {
     return d->bt;
 }
 
-void pullGlVar(SymHeap &result, SymHeap &origin, const CVar &cv) {
+void pullGlVar(SymHeap &result, SymHeap origin, const CVar &cv) {
     // do not try to combine things, it causes problems
     CL_BREAK_IF(!areEqual(result, SymHeap(origin.stor())));
 
-    // cut by one gl var
-    CL_BREAK_IF(cv.inst);
-    const TCVarList cut(1, cv);
+    if (!isVarAlive(origin, cv)) {
+        // not found in origin, create a fresh instance
+        (void) result.addrOfVar(cv, /* createIfNeeded */ true);
+        return;
+    }
 
-    // perform the cut
+    // cut by one gl var
+    const TCVarList cut(1, cv);
+    splitHeapByCVars(&origin, cut);
     result.swap(origin);
-    splitHeapByCVars(&result, cut, &origin);
+}
+
+void pushGlVar(SymHeap &dst, const SymHeap &glSubHeap, const CVar &cv) {
+    // make sure the gl var is alive in 'glSubHeap'
+    CL_BREAK_IF(!isVarAlive(const_cast<SymHeap &>(glSubHeap), cv));
+
+    if (isVarAlive(dst, cv)) {
+#ifndef NDEBUG
+        // the gl var is alive in 'dst' --> check there is no conflict there
+        SymHeap real(dst.stor());
+        pullGlVar(real, dst, cv);
+        CL_BREAK_IF(!areEqual(real, glSubHeap));
+#endif
+        return;
+    }
+
+    // should be safe to join now
+    joinHeapsByCVars(&dst, &glSubHeap);
 }
 
 void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     const int cnt = this->ctxStack.size();
-    if (!cnt)
+    if (!cnt) {
         // empty ctx stack --> no heap to import the var from
+        (void) entry.addrOfVar(cv, /* createIfNeeded */ true);
         return;
+    }
 
     // seek the gl var going through the ctx stack backward
     int idx;
@@ -415,14 +459,14 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     const int idxOrigin = idx;
 
     // 'origin' is the heap that we are importing the gl var from
-    SymHeap &origin = this->ctxStack[idxOrigin]->d->surround;
+    const SymHeap &origin = this->ctxStack[idxOrigin]->d->surround;
 
     // pull the designated gl var from 'origin'
     SymHeap glSubHeap(stor);
     pullGlVar(glSubHeap, origin, cv);
 
     // go through all heaps above the 'origin' up to the current call level
-    for (unsigned i = 0; idx < cnt; ++idx, ++i) {
+    for (; idx < cnt; ++idx) {
         SymCallCtx *ctx = this->ctxStack[idx];
         const int uid = uidOf(*ctx->d->fnc);
 
@@ -436,7 +480,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
         // import gl variable at the current level
         const SymHeap src(ctx->d->entry);
         SymHeap &dst = ctx->d->entry;
-        joinHeapsByCVars(&dst, &glSubHeap);
+        pushGlVar(dst, glSubHeap, cv);
 
         // update the corresponding cache entry
         PerFncCache &pfc = this->cache[uid];
@@ -446,7 +490,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     }
 
     // finally import the gl var to the current call level
-    joinHeapsByCVars(&entry, &glSubHeap);
+    pushGlVar(entry, glSubHeap, cv);
 }
 
 void SymCallCache::Private::resolveHeapCut(
