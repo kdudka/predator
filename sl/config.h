@@ -159,6 +159,11 @@
 #define SE_ERROR_RECOVERY_MODE              1
 
 /**
+ * the highest integral number we can count to (only partial implementation atm)
+ */
+#define SE_INT_ARITHMETIC_LIMIT             8
+
+/**
  * maximal call depth
  */
 #define SE_MAX_CALL_DEPTH                   0x40

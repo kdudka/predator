@@ -1239,6 +1239,43 @@ bool joinReturnAddrs(SymJoinCtx &ctx) {
             VAL_ADDR_OF_RET);
 }
 
+bool joinCustomValues(
+        SymJoinCtx              &ctx,
+        const TValId            v1,
+        const TValId            v2)
+{
+    const CustomValue cVal1 = ctx.sh1.valUnwrapCustom(v1);
+    const CustomValue cVal2 = ctx.sh2.valUnwrapCustom(v2);
+    if (cVal1 == cVal2) {
+        // full match
+        const TValId vDst = ctx.dst.valWrapCustom(cVal1);
+        return defineValueMapping(ctx, v1, v2, vDst);
+    }
+
+    const ECustomValue code = cVal1.code;
+    if (cVal2.code != code || CV_INT != code) {
+        SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
+        return false;
+    }
+
+#if SE_INT_ARITHMETIC_LIMIT
+    const long abs1 = std::abs(cVal1.data.num);
+    const long abs2 = std::abs(cVal2.data.num);
+    const long max = std::max(abs1, abs2);
+    if (max <= (SE_INT_ARITHMETIC_LIMIT)) {
+        SJ_DEBUG("<-- integral values preserved by SE_INT_ARITHMETIC_LIMIT "
+                << SJ_VALP(v1, v2));
+
+        return false;
+    }
+#endif
+
+    // throw custom values away and abstract them by a fresh unknown value
+    const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    updateJoinStatus(ctx, JS_THREE_WAY);
+    return defineValueMapping(ctx, v1, v2, vDst);
+}
+
 bool followRootValues(
         SymJoinCtx              &ctx,
         const TValId            root1,
@@ -1310,23 +1347,7 @@ bool followValuePair(
             return false;
         }
 
-        const CustomValue cVal1 = ctx.sh1.valUnwrapCustom(v1);
-        const CustomValue cVal2 = ctx.sh2.valUnwrapCustom(v2);
-        TValId vDst;
-        if (cVal1 == cVal2) {
-            vDst = ctx.dst.valWrapCustom(cVal1);
-        }
-        else {
-#if SE_ALLOW_CST_INT_PLUS_MINUS
-            vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-            updateJoinStatus(ctx, JS_THREE_WAY);
-#else
-            SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
-            return false;
-#endif
-        }
-
-        return defineValueMapping(ctx, v1, v2, vDst);
+        return joinCustomValues(ctx, v1, v2);
     }
 
     // follow the roots
