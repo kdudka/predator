@@ -330,7 +330,7 @@ struct ClStorageBuilder::Private {
 
     typedef struct cl_operand TOp;
 
-    void digInitials(Var &var, const struct cl_var *clv);
+    void digInitials(const TOp *);
     Var& digOperandVar(const TOp *, bool isArgDecl);
     void digOperandCst(const struct cl_operand *);
     void digOperand(const TOp *, bool skipVarInit = false);
@@ -352,13 +352,18 @@ void ClStorageBuilder::acknowledge() {
     this->run(d->stor);
 }
 
-void ClStorageBuilder::Private::digInitials(Var &var, const struct cl_var *clv)
+void ClStorageBuilder::Private::digInitials(const TOp *op)
 {
+    const int id = varIdFromOperand(op);
+    const struct cl_var *clv = op->data.var;
+
     const struct cl_initializer *initial;
     for (initial = clv->initial; initial; initial = initial->next) {
         ControlFlow *cfg = /* XXX */ 0;
         Insn *insn = createInsn(&initial->insn, /* XXX */ *cfg);
-        var.initials.push_back(insn);
+
+        // NOTE: keeping a reference for this may cause a SIGSEGV or lockup
+        stor.vars[id].initials.push_back(insn);
 
         BOOST_FOREACH(const struct cl_operand &op, insn->operands)
             this->digOperand(&op, /* skipVarInit */ true);
@@ -497,7 +502,7 @@ void ClStorageBuilder::Private::digOperand(const TOp *op, bool skipVarInit) {
     if (skipVarInit)
         return;
 
-    this->digInitials(var, op->data.var);
+    this->digInitials(op);
 }
 
 void ClStorageBuilder::Private::openInsn(Insn *newInsn) {
