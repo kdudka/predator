@@ -192,10 +192,11 @@
 #define SE_SYMCUT_PRESERVES_MIN_LENGTHS     1
 
 /**
- * if 1, support partial tracking of non-pointer values, which may result into
- * significant state explosion in some cases
+ * - 0 ... disable tracking non-pointer values
+ * - 1 ... basic tracking of non-pointer values
+ * - 2 ... expensive tracking of pointer values
  */
-#define SE_TRACK_NON_POINTER_VALUES         0
+#define SE_TRACK_NON_POINTER_VALUES         1
 
 /**
  * if 1, track uninitialized values, which may result into significant state

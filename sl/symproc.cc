@@ -1114,7 +1114,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     const TValId valResult =
         OpHandler<ARITY>::handleOp(*this, insn.subCode, rhs, clt);
 
-#if !SE_TRACK_NON_POINTER_VALUES
+#if SE_TRACK_NON_POINTER_VALUES < 2
     // avoid creation of live object in case we are not interested in its value
     if (!isDataPtr(dst.type) && VO_UNKNOWN == sh_.valOrigin(valResult)) {
         const TValId root = sh_.valRoot(sh_.placedAt(varLhs));
