@@ -256,6 +256,34 @@ bool handleFree(
     return true;
 }
 
+bool handleKzalloc(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const struct cl_loc *lw = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (4 != opList.size()) {
+        emitPrototypeError(lw, name);
+        return false;
+    }
+
+    // amount of allocated memory must be known (TODO: relax this?)
+    const TValId valSize = core.valFromOperand(opList[/* size */ 2]);
+    long size;
+    if (!numFromVal(&size, core.sh(), valSize)) {
+        CL_ERROR_MSG(lw, "size arg of " << name << "() is not a known integer");
+        core.failWithBackTrace();
+        return true;
+    }
+
+    CL_DEBUG("FIXME: flags given to " << name << "() are ignored for now");
+    CL_DEBUG_MSG(lw, "executing calloc(/* total size */ " << size << ")");
+    core.execHeapAlloc(dst, insn, size, /* nullified */ true);
+    return true;
+}
+
 bool handleMalloc(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -659,8 +687,9 @@ class BuiltInTable {
 
 BuiltInTable *BuiltInTable::inst_;
 
+/// register built-ins
 BuiltInTable::BuiltInTable() {
-    // register built-ins
+    // C run-time
     tbl_["abort"]                                   = handleAbort;
     tbl_["calloc"]                                  = handleCalloc;
     tbl_["free"]                                    = handleFree;
@@ -668,6 +697,11 @@ BuiltInTable::BuiltInTable() {
     tbl_["memset"]                                  = handleMemset;
     tbl_["printf"]                                  = handlePrintf;
     tbl_["puts"]                                    = handlePuts;
+
+    // Linux kernel
+    tbl_["kzalloc"]                                 = handleKzalloc;
+
+    // Predator-specific
     tbl_["___sl_break"]                             = handleBreak;
     tbl_["___sl_error"]                             = handleError;
     tbl_["___sl_get_nondet_int"]                    = handleNondetInt;
@@ -675,10 +709,15 @@ BuiltInTable::BuiltInTable() {
     tbl_["___sl_enable_debugging_of"]               = handleDebuggingOf;
 
     // used in Competition on Software Verification held at TACAS 2012
+    tbl_["__VERIFIER_nondet_char"]                  = handleNondetInt;
+    tbl_["__VERIFIER_nondet_float"]                 = handleNondetInt;
     tbl_["__VERIFIER_nondet_int"]                   = handleNondetInt;
+    tbl_["__VERIFIER_nondet_pointer"]               = handleNondetInt;
+    tbl_["__VERIFIER_nondet_short"]                 = handleNondetInt;
 
     // just to make life easier to our competitors (TODO: check for collisions)
     tbl_["__nondet"]                                = handleNondetInt;
+    tbl_["nondet_int"]                              = handleNondetInt;
     tbl_["undef_int"]                               = handleNondetInt;
 
     // initialize lookForDerefs() look-up table
