@@ -42,13 +42,12 @@ extern "C" { int plugin_is_GPL_compatible; }
 // FIXME: the implementation is amusing
 void parseConfigString(SymExecParams &sep, std::string cnf) {
     using std::string;
-    sep.fastMode = true;
     if (cnf.empty())
         return;
 
     if (string("oom") == cnf) {
         CL_DEBUG("parseConfigString: \"OOM simulation\" mode requested");
-        sep.fastMode = false;
+        sep.oomSimulation = true;
         return;
     }
 

@@ -158,13 +158,13 @@ void describeUnknownVal(
         const char                  *action);
 
 struct SymExecCoreParams {
-    bool fastMode;          ///< enable/disable OOM state simulation
+    bool oomSimulation;     ///< enable/disable @b oom @b simulation mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
     bool skipVarInit;       ///< used internally
     std::string errLabel;   ///< if not empty, treat reaching the label as error
 
     SymExecCoreParams():
-        fastMode(false),
+        oomSimulation(false),
         skipPlot(false),
         skipVarInit(false)
     {

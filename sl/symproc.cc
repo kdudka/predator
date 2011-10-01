@@ -771,7 +771,7 @@ malloc/calloc is implementation-defined");
         return;
     }
 
-    if (!ep_.fastMode) {
+    if (ep_.oomSimulation) {
         // clone the heap and core
         SymHeap oomHeap(sh_);
         SymExecCore oomCore(oomHeap, bt_, ep_);

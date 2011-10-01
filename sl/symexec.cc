@@ -496,7 +496,7 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
 
     // set some properties of the execution
     SymExecCoreParams ep;
-    ep.fastMode         = params_.fastMode;
+    ep.oomSimulation    = params_.oomSimulation;
     ep.skipPlot         = params_.skipPlot;
     ep.errLabel         = params_.errLabel;
 

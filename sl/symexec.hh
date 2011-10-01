@@ -36,13 +36,13 @@ namespace CodeStorage {
 }
 
 struct SymExecParams {
-    bool fastMode;          ///< enable/disable the @b fast @b mode
+    bool oomSimulation;     ///< enable/disable @b oom @b simulation mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
     bool ptrace;            ///< enable path tracing (a bit chatty)
     std::string errLabel;   ///< if not empty, treat reaching the label as error
 
     SymExecParams():
-        fastMode(false),
+        oomSimulation(false),
         skipPlot(false),
         ptrace(false)
     {
