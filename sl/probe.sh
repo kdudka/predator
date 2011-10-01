@@ -9,14 +9,17 @@ test -n "$PFLAGS" || PFLAGS="error_label:ERROR"
 export PFLAGS
 
 export MSG_INTERNAL_ERROR='internal compiler error'
+export MSG_INFLOOP=': warning: end of function .*() has not been reached'
 export MSG_LABEL_FOUND=': error: error label "ERROR" has been reached'
 export MSG_LINKING_PROB='linker input file unused because linking not done'
 export MSG_MEMLEAK=': warning: memory leak detected'
+export MSG_OUR_WARNINGS='\[-fplugin-libsl\]$'
 export MSG_PEAK_MEM_USAGE=': note: peak memory usage: '
 export MSG_SIGNALLED=': note: signalled to die'
 export MSG_SOME_ERROR='error: .* has detected some errors'
 export MSG_SOME_WARNINGS='warning: .* has reported some warnings'
 export MSG_TIME_ELAPSED=': note: clEasyRun\(\) took '
+export MSG_UNHANDLED_CALL=': warning: ignoring call of undefined function: '
 
 # check whether stdout is connected to a terminal
 if tty 0>&1 >/dev/null; then
@@ -110,8 +113,11 @@ handle_output() {
     fi
 
     # print basic status
-    if test xyes = "x$ERR_LABEL_REACHED"; then
+    if match "$MSG_UNHANDLED_CALL" "$1"; then
         # this needs to be the top priority according to TACAS2012 sv-comp rules
+        printf "${R}unhandled function call${N}     "
+
+    elif test xyes = "x$ERR_LABEL_REACHED"; then
         printf "${Y}label ERROR has been reached${N}"
 
     elif match "$MSG_INTERNAL_ERROR" "$1"; then
@@ -124,12 +130,21 @@ handle_output() {
         printf "${R}signalled to die${N}            "
 
     elif test 0 -lt $WARNINGS; then
-        NO_LEAK_WARNS="`grep -v "$MSG_SOME_WARNINGS" "$1" | grep -v "$MSG_MEMLEAK" \
-            | grep ': warning: ' | wc -l`"
-        if test 0 -lt "$NO_LEAK_WARNS"; then
-            printf "${Y}%d warning(s)${N}               " $WARNINGS
-        else
+        OUR_WARNINGS="`grep "$MSG_OUR_WARNINGS" "$1" | grep ': warning: ' \
+            | wc -l`"
+        NO_INFL_WARNS="`grep "$MSG_OUR_WARNINGS" "$1" | grep ': warning: ' \
+            | grep -v "$MSG_SOME_WARNINGS" | grep -v "$MSG_INFLOOP" | wc -l`"
+        NO_LEAK_WARNS="`grep "$MSG_OUR_WARNINGS" "$1" | grep ': warning: ' \
+            | grep -v "$MSG_SOME_WARNINGS" | grep -v "$MSG_MEMLEAK" | wc -l`"
+
+        if test 0 -eq "$OUR_WARNINGS";then
+            printf "${B}gcc warnings only${N}           "
+        elif test 0 -eq "$NO_LEAK_WARNS"; then
             printf "${B}leaks memory${N}                "
+        elif test 0 -eq "$NO_INFL_WARNS"; then
+            printf "${B}infinite loop${N}               "
+        else
+            printf "${Y}%d warning(s)${N}               " $WARNINGS
         fi
 
     elif test 0 -eq "$2"; then
