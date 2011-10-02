@@ -37,7 +37,7 @@ die() {
 }
 
 usage() {
-    printf "Usage: %s test-00.c [test-01.c [...]]\n" "$SELF" 2>&1
+    printf "Usage: %s test-00.c [test-01.c [...]]\n" "$SELF" >&2
     exit 1
 }
 
