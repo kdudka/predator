@@ -2217,9 +2217,6 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
                 this->objDestroy(obj, /* removeVal */ true, /* detach */ false);
         }
     }
-    else
-        // inactive VAL_ADDR_OF_RET stash
-        CL_BREAK_IF(VAL_ADDR_OF_RET != root);
 
     // wipe rootData
     rootData->size = 0;

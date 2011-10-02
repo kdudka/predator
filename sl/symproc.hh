@@ -119,6 +119,9 @@ class SymProc {
         /// if true, the current state is not going to be inserted into dst
         bool hasFatalError() const;
 
+        /// compute the result of a CL_BINOP_POINTER_PLUS operation
+        TValId handlePointerPlus(TValId at, TValId off, bool negOffset = false);
+
     protected:
         TValId varAt(const struct cl_operand &op);
         TValId targetAt(const struct cl_operand &op);
@@ -132,7 +135,6 @@ class SymProc {
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
         TValId handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code);
-        TValId handlePointerPlus(TValId at, TValId off, bool negOffset);
         void killVar(const CodeStorage::KillVar &kv);
 
     protected:

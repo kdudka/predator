@@ -490,7 +490,8 @@ bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op) {
 }
 
 void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
-    if (!isPossibleToDeref(sh_.valTarget(rhs)))
+    const EValueTarget code = sh_.valTarget(rhs);
+    if (!isPossibleToDeref(code))
         // no valid target anyway
         return;
 
@@ -510,7 +511,7 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
         return;
 
     const int rootSize = sh_.valSizeOfTarget(rhs);
-    CL_BREAK_IF(rootSize <= 0);
+    CL_BREAK_IF(rootSize <= 0 && isOnHeap(code));
     if (cltLast && cltLast->size == rootSize && cltTarget->size != rootSize)
         // basically the same rule as above but now we check the size of target
         return;
@@ -975,6 +976,62 @@ void printBackTrace(SymProc &proc) {
     bt->printBackTrace();
 }
 
+// TODO: move this to symutil?
+bool isIntCst(const SymHeap &sh, const TValId val) {
+    switch (val) {
+        case VAL_NULL:
+        case VAL_TRUE:
+            return true;
+
+        default:
+            if (VT_CUSTOM == sh.valTarget(val))
+                break;
+
+            return false;
+    }
+
+    const CustomValue &cv = sh.valUnwrapCustom(val);
+    return (CV_INT == cv.code);
+}
+
+bool decryptCIL(
+        TValId                     *pResult,
+        SymProc                    &proc,
+        const TValId                v1,
+        const TValId                v2,
+        const enum cl_binop_e       code)
+{
+    CL_BREAK_IF(CL_BINOP_PLUS != code && CL_BINOP_MINUS != code);
+
+    // these are no-ops (and I would bet they come from CIL anyway)
+    if (VAL_NULL == v1) {
+        *pResult =  v2;
+        return true;
+    }
+    if (VAL_NULL == v2) {
+        *pResult =  v1;
+        return true;
+    }
+
+    const SymHeap &sh = proc.sh();
+    const bool isMinus = (CL_BINOP_MINUS == code);
+
+    if (isPossibleToDeref(sh.valTarget(v1)) && isIntCst(sh, v2)) {
+        CL_DEBUG("Using CIL code obfuscator? No problem...");
+        *pResult = proc.handlePointerPlus(v1, v2, /* negOffset */ isMinus);
+        return true;
+    }
+
+    if (isPossibleToDeref(sh.valTarget(v2)) && isIntCst(sh, v1)) {
+        CL_DEBUG("Using CIL code obfuscator? No problem...");
+        *pResult = proc.handlePointerPlus(v2, v1, /* negOffset */ isMinus);
+        return true;
+    }
+
+    // no CIL-generated nonsense detected
+    return false;
+}
+
 // template for generic (unary, binary, ...) operator handlers
 template <int ARITY>
 struct OpHandler {
@@ -1036,7 +1093,7 @@ struct OpHandler</* binary */ 2> {
     {
         CL_BREAK_IF(!clt[0] || !clt[1] || !clt[2]);
         SymHeap &sh = proc.sh_;
-        const struct cl_loc *lw = proc.lw();
+        TValId vRes;
 
         const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);
         switch (code) {
@@ -1050,23 +1107,21 @@ struct OpHandler</* binary */ 2> {
                 return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
 
             case CL_BINOP_MULT:
+                if (VAL_NULL == rhs[0] || VAL_NULL == rhs[1])
+                    // whatever we got as the second operand, the result is zero
+                    return VAL_NULL;
+
                 goto handle_int;
 
             case CL_BINOP_PLUS:
             case CL_BINOP_MINUS:
-                if (!isPossibleToDeref(sh.valTarget(rhs[0])))
+                if (decryptCIL(&vRes, proc, rhs[0], rhs[1], code))
+                    return vRes;
+                else
                     goto handle_int;
-
-                if (VAL_NULL != rhs[1] && VAL_TRUE != rhs[1]
-                        && VT_CUSTOM != sh.valTarget(rhs[1]))
-                    goto handle_int;
-
-                CL_DEBUG_MSG(lw, "Using CIL code obfuscator? No problem...");
-                // fall through!
 
             case CL_BINOP_POINTER_PLUS:
-                return proc.handlePointerPlus(rhs[0], rhs[1],
-                        /* negOffset */ (CL_BINOP_MINUS == code));
+                return proc.handlePointerPlus(rhs[0], rhs[1]);
 
             default:
                 // over-approximate anything else
