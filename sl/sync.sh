@@ -10,8 +10,8 @@ if tty 0>&1 >/dev/null; then
     export N="\033[0m"
 fi
 
-printf "${R}ATTENTION:${N} This script is not intended to be run !!!\n"
-echo "Please do not commit the generated files to prevent a disaster..."
+printf "${R}ATTENTION:${N} This script is not intended to be run !!!
+Please do not commit the generated files to prevent a disaster...\n"
 
 do_sync() {
     ./probe.sh $1

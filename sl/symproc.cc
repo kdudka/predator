@@ -1023,8 +1023,12 @@ bool decryptCIL(
     }
 
     if (isPossibleToDeref(sh.valTarget(v2)) && isIntCst(sh, v1)) {
+        if (isMinus)
+            // CL_BINOP_MINUS makes no sense here, it would mean e.g. (4 - &foo)
+            return false;
+
         CL_DEBUG("Using CIL code obfuscator? No problem...");
-        *pResult = proc.handlePointerPlus(v2, v1, /* negOffset */ isMinus);
+        *pResult = proc.handlePointerPlus(v2, v1, /* negOffset */ false);
         return true;
     }
 

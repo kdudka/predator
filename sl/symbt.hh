@@ -48,6 +48,7 @@ class SymBackTrace {
         /**
          * @param stor reference to storage object, later used for resolving fnc
          * IDs
+         * @param ptrace if true, print path trace with @b each backtrace
          */
         SymBackTrace(const CodeStorage::Storage &stor, bool ptrace = false);
         ~SymBackTrace();

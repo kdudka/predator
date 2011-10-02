@@ -1,5 +1,5 @@
 diff --git a/README b/README
-index 301a3ce..d14c048 100644
+index fccc202..3b0846c 100644
 --- a/README
 +++ b/README
 @@ -1,17 +1,21 @@
@@ -9,8 +9,8 @@ index 301a3ce..d14c048 100644
 -structures using *separation logic*.  It can be loaded directly into *GCC* as a
 -*plug-in*.  This way you can easily analyse C code sources, using the existing
 -build system, without any manual preprocessing of them etc.  The analysis itself
--is, however, not yet ready for complex projects yet.  The plug-in is based on
--Code Listener infrastructure (included).  Although Predator is intended to be as
+-is, however, not ready for complex projects yet.  The plug-in is based on Code
+-Listener infrastructure (included).  Although Predator is intended to be as
 -portable as GCC is, we support only Linux for now.  You can find the latest news
 -on the following project page:
 -
@@ -49,16 +49,7 @@ index 301a3ce..d14c048 100644
     * CMake 2.8+
       - available at http://www.cmake.org
       - the executable is called 'cmake'
-@@ -43,7 +47,7 @@ Building from sources against a local build of GCC (recommended for end users)
-      - though minimal required version of CMake is 2.6, known to work is 2.8+,
-        please report any issues with other CMake versions
- 
--   * Boost libraries 1.46+
-+   * Boost libraries 1.37+
-      - available at http://www.boost.org/
-      - package is usually called 'boost'
-      - on binary distros you may need also the 'boost-devel' sub-package
-@@ -68,41 +72,20 @@ giving the option '-jN' to 'make', where N is the number of CPU cores plus one
+@@ -70,41 +74,20 @@ giving the option '-jN' to 'make', where N is the number of CPU cores plus one
  (a commonly used heuristic, there exist several others).  But first make sure
  that your machine has enough resources for building GCC in parallel.
  
@@ -105,20 +96,20 @@ index 301a3ce..d14c048 100644
 -    gcc -fplugin=libsl.so ...
 -
  
- Building from sources against a system GCC (only for experts)
- =============================================================
-@@ -110,7 +93,7 @@ This method is intended for people that already have experience with building
+ Building from sources against the system GCC (only for experts)
+ ===============================================================
+@@ -112,7 +95,7 @@ This method is intended for people that already have experience with building
  GCC plug-ins.  It requires plug-in enabled GCC 4.5+ installed on your system,
  including the headers that are necessary to build GCC plug-ins.  The currently
- supported version of GCC is 4.6.0 and the test-suite is guaranteed to fully
+ supported version of GCC is 4.6.1 and the test-suite is guaranteed to fully
 -succeed only against this version of GCC.  However, the Predator plug-in itself
 +succeed only against this version of GCC.  However, the Code Listener itself
  is known to work with GCC 4.5.x equally well.
  
  The first step is to create a symlink to GCC plug-in headers.  Assuming you have
-@@ -118,8 +101,8 @@ Gentoo Linux using gcc-4.5.2 as a system compiler, you need to do this:
+@@ -130,8 +113,8 @@ follow this path (note that the path is /usr/lib even on x86_64):
  
-     ln -sfT /usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/plugin/include include/gcc
+     ln -sfT /usr/lib/gcc/x86_64-redhat-linux/4.6.0/plugin/include include/gcc
  
 -Then you can build Predator without building GCC locally.  If you want to run
 -the test-suite, you need to tell CMake which GCC should be used to load the

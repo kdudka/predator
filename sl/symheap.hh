@@ -291,6 +291,7 @@ class SymHeapCore {
          * collect all objects having the given value inside
          * @param dst reference to a container to store the result to
          * @param val ID of the value to look for
+         * @param liveOnly if true, exclude objects that are no longer alive
          * @note The operation may return from 0 to n objects.
          */
         void usedBy(TObjList &dst, TValId val, bool liveOnly = false) const;

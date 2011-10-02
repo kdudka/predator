@@ -28,7 +28,7 @@ all:
 	$(MAKE) -C ../fa_build
 
 check: all
-	cd ../fa_build && $(CTEST) --output-on-failure; true
+	cd ../fa_build && $(CTEST) --output-on-failure
 
 clean:
 	if test -e ../fa_build/Makefile; then \
@@ -39,4 +39,4 @@ distclean: clean
 	rm -rf ../fa_build
 
 distcheck: distclean
-	$(MAKE) check
+	$(MAKE) check; true

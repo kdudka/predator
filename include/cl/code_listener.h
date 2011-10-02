@@ -128,7 +128,7 @@ void cl_global_init(struct cl_init_data *init_data);
  * global initialization - it sets built-in functions to print messages
  * @param app_name - name of the application which appears in all messages. If
  * NULL is given, no application name will be printed.
- * @param verbose - debugging level, the greater number the more output, 0
+ * @param debug_level - debugging level, the greater number the more output, 0
  * means no debugging
  * @note You should call cl_global_cleanup() to free resources before exit.
  */
