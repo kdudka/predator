@@ -115,7 +115,7 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin-libsl\]$||'            \
         -e "s/(: debug:) \\(x\\) (.*)\$/\1 $Y(x)$N \2/"                        \
         -e "s/(: debug:) (spliceOutListSegment)/\1 $B\2$N/"                    \
         -e "s/(: debug:) (<<<|>>>)/\1 $B\2$N/"                                 \
-        -e "s/(: debug:) ___ (entering|we are)/\1 $G___$N \2/"                 \
+        -e "s/(: debug: ___) (entering|we are)/\1 $G___$N \2/"                 \
         &
 
 # redirect terminating signals to our plug-in

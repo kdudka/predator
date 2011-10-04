@@ -93,7 +93,8 @@ performance.  Now the '-jN' parameter needs to go to 'ctest' instead of make:
 Running Predator
 ================
 To employ the Predator plug-in in a build of an arbitrary project fully
-transparently, it is recommended to set certain environment variables:
+transparently, it is recommended to set certain environment variables (you need
+to be in the same directory as this README is):
 
     PATH="`readlink -f gcc-install/bin`:$PATH"
     LD_LIBRARY_PATH="`readlink -f sl_build`:$LD_LIBRARY_PATH"

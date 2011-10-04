@@ -17,6 +17,7 @@ PRUNE_ALWAYS="dev-util invader-extras make-tgz.sh ocaml seplog .git \
     sl/linux-drivers cl/cl-readme.patch sl/README-ubuntu.patch"
 
 chlog_watch=
+drop_fwnull=no
 drop_fa=no
 drop_sl=no
 readme_cl=no
@@ -33,11 +34,13 @@ case "$PROJECT" in
 
     forester)
         chlog_watch="fa fa_analysis"
+        drop_fwnull=yes
         drop_sl=yes
         ;;
 
     predator)
         chlog_watch="sl"
+        drop_fwnull=yes
         drop_fa=yes
         readme_sl=yes
         ;;
@@ -106,12 +109,12 @@ case "$PROJECT" in
         ;;
 
     forester)
-        sed -i 's/cl fwnull sl/cl fwnull/' Makefile \
+        sed -i 's/cl fwnull sl fa/cl fa/' Makefile \
             || die "failed to adapt Makefile"
         ;;
 
     predator)
-        sed -i 's/cl fwnull sl fa/cl fwnull sl/' Makefile \
+        sed -i 's/cl fwnull sl fa/cl sl/' Makefile \
             || die "failed to adapt Makefile"
         ;;
 
@@ -122,6 +125,7 @@ esac
 
 # remove all directories and files we do not want to distribute
 rm -rf $PRUNE_ALWAYS
+test xyes = "x$drop_fwnull" && rm -rf fwnull
 test xyes = "x$drop_fa" && rm -rf fa
 test xyes = "x$drop_sl" && rm -rf sl
 
