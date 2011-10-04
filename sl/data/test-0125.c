@@ -101,10 +101,8 @@ void insert_top(struct list_head *head)
     top->sub.prev = &top->sub;
     top->sub.next = &top->sub;
 
-    static int cnt = 0;
-    while (++cnt % 7) {
+    while (___sl_get_nondet_int())
         insert_sub(&top->sub);
-    }
 
     list_add_tail(&top->link, head);
 }
@@ -115,12 +113,8 @@ void create_top(struct list_head *top)
     insert_top(top);
     insert_top(top);
 
-    // NOTE: running this on bare metal may cause the machine to swap a bit
-    int i;
-    for (i = 1; i; ++i) {
+    while (___sl_get_nondet_int())
         insert_top(top);
-        insert_top(top);
-    }
 }
 
 int main()
