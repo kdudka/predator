@@ -2,6 +2,17 @@
 export SELF="$0"
 export LC_ALL=C
 
+# this is an emergency fall-back, which is known to break in certain cases
+topdir="`dirname "$(readlink -f "$SELF")"`"
+
+# if you are _NOT_ in a git repository, the 'build_gcc' target of the root
+# Makefile takes care of setting $GCC_HOST to a valid absolute path to gcc
+export GCC_HOST="${topdir}/gcc-install/bin/gcc"
+
+# if you are _NOT_ in a git repository, sl/Makefile takes care of setting
+# $SL_PLUG to a valid absolute path to libsl.so
+export SL_PLUG="${topdir}/sl_build/libsl.so"
+
 export MSG_INFLOOP=': warning: end of function .*() has not been reached'
 export MSG_LABEL_FOUND=': error: error label "ERROR" has been reached'
 export MSG_MEMLEAK=': warning: memory leak detected'
@@ -30,17 +41,16 @@ EOF
 
 test -r "$1" || usage
 
+# initial checks
+test -x "$GCC_HOST" || die "host GCC not found: ${GCC_HOST}"
+test -r "$SL_PLUG"  || die "Predator GCC plug-in not found: ${SL_PLUG}"
+
 match() {
     line="$1"
     shift
     printf "%s" "$line" | grep "$@" >/dev/null
     return $?
 }
-
-# check GCC version
-GCC_VER="`gcc --version | head -1`"
-match "gcc (GCC) 4.6.1" "$GCC_VER" || die "unexpected GCC version: ${GCC_VER}
-*** Please set the environment variables according to README."
 
 fail() {
     # exit now, it makes no sense to continue at this point
@@ -95,7 +105,8 @@ parse_gcc_output() {
     fi
 }
 
-gcc -fplugin="libsl.so"                                 \
+"$GCC_HOST"                                             \
+    -fplugin="${SL_PLUG}"                               \
     -fplugin-arg-libsl-args="error_label:ERROR"         \
     -o /dev/null -O0 -c "$@" 2>&1                       \
     | tee /dev/fd/2                                     \
