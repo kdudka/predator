@@ -69,8 +69,8 @@ parse_gcc_output() {
             report_unsafe
 
         elif match "$line" ": error: "; then
-            # all other errors mean UNKNOWN unless we find an ERROR label first
-            ERROR_DETECTED=yes
+            # errors already reported, better to fail now
+            fail
 
         elif match "$line" -E "$MSG_INFLOOP|$MSG_MEMLEAK"; then
             # memory leakage and infinite loop do not mean UNSAFE, ignore them
