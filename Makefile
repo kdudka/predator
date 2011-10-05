@@ -142,7 +142,7 @@ build_gcc: $(GCC_SRC)
 		fi
 	cd $(GCC_BUILD) && $(MAKE)
 	cd $(GCC_BUILD) && $(MAKE) -j1 install
-	$(MAKE) include/gcc
+	$(MAKE) lnk_gcc_headers
 	@test -d .git || sed \
 		"s|GCC_HOST=.*$$|GCC_HOST='`readlink -f gcc-install/bin/gcc`'|" -i \
 		chk-error-label-reachability.sh register-paths.sh sl/probe.sh sl/slgcc
@@ -174,10 +174,6 @@ build_gcc_svn:
 	if test -e "$(GCC_SRC)"; then exit 1; fi
 	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $(GCC_SRC)
 	$(MAKE) build_gcc
-
-# fallback for buggy configurations
-include/gcc:
-	@test -r include/gcc/gcc-plugin.h || $(MAKE) lnk_gcc_headers
 
 lnk_gcc_headers: gcc-install/lib/gcc
 	cd include && ln -fsvT \
