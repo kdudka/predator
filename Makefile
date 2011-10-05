@@ -144,8 +144,8 @@ build_gcc: $(GCC_SRC)
 	cd $(GCC_BUILD) && $(MAKE) -j1 install
 	$(MAKE) include/gcc
 	@test -d .git || sed \
-		"s|GCC_HOST=.*$$|GCC_HOST='`readlink -f gcc-install/bin/gcc`'|" \
-		-i chk-error-label-reachability.sh sl/probe.sh sl/slgcc
+		"s|GCC_HOST=.*$$|GCC_HOST='`readlink -f gcc-install/bin/gcc`'|" -i \
+		chk-error-label-reachability.sh register-paths.sh sl/probe.sh sl/slgcc
 
 # updated SVN working directory of gcc
 update_gcc_src_only:
