@@ -28,7 +28,7 @@ all: version.h configure ../cl_build
 	$(MAKE) -C ../sl_build
 	@test -d ../.git || sed \
 		"s|SL_PLUG=.*$$|SL_PLUG='`readlink -f ../sl_build/libsl.so`'|" \
-		-i slgcc ../chk-error-label-reachability.sh
+		-i probe.sh slgcc ../chk-error-label-reachability.sh
 
 ../cl_build:
 	test -d $@ || $(MAKE) -C ../cl

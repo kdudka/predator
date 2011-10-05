@@ -43,18 +43,16 @@ usage() {
 
 test -r "$1" || usage
 
-# find gcc
-self="`readlink -f "$0"`"
-topdir="`dirname "$self"`/.."
-GCC="$topdir/gcc-install/bin/gcc"
-test -x "$GCC" || die "gcc not found: $GCC"
+# basic setup
+topdir="`dirname "$(readlink -f "$SELF")"`/.."
+export SL_PLUG="$topdir/sl_build/libsl.so"
+export GCC_HOST="$topdir/gcc-install/bin/gcc"
 
 # try to run gcc
-$TIMEOUT "$GCC" --version >&2 \
-    || die "unable to run gcc: $TIMEOUT $GCC --version"
+$TIMEOUT "$GCC_HOST" --version >&2 \
+    || die "unable to run gcc: $TIMEOUT $GCC_HOST --version"
 
-# find libsl.so
-SL_PLUG="$topdir/sl_build/libsl.so"
+# check the presence of libsl.so
 test -r "$SL_PLUG" || die "libsl.so not found: $SL_PLUG"
 
 wait_for_pid() {
@@ -182,7 +180,7 @@ try_one() {
     trap "forward_signal '$GCC_PID_FILE' QUIT; exit 130" SIGQUIT
     trap "forward_signal '$GCC_PID_FILE' TERM; exit 142" SIGTERM
 
-    CMD="$TIMEOUT $GCC $CFLAGS $SRC"
+    CMD="$TIMEOUT $GCC_HOST $CFLAGS $SRC"
     if eval "$CMD" >"$BARE_GCC_OUT" 2>&1; then
         if match "$MSG_LINKING_PROB" "$BARE_GCC_OUT"; then
             printf "${R}attempt to run linker${N}"

@@ -13,8 +13,8 @@ usage(){
     exit 1
 }
 
-PRUNE_ALWAYS="dev-util invader-extras make-tgz.sh ocaml seplog .git \
-    sl/linux-drivers cl/cl-readme.patch sl/README-ubuntu.patch"
+PRUNE_ALWAYS=".git invader-extras make-tgz.sh ocaml seplog cl/cl-readme.patch \
+    sl/README-ubuntu.patch sl/linux-drivers sl/rank.sh"
 
 chlog_watch=
 drop_fwnull=no
