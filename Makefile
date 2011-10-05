@@ -175,6 +175,10 @@ build_gcc_svn:
 	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $(GCC_SRC)
 	$(MAKE) build_gcc
 
+# fallback for buggy configurations
+include/gcc:
+	@test -r include/gcc/gcc-plugin.h || $(MAKE) lnk_gcc_headers
+
 lnk_gcc_headers: gcc-install/lib/gcc
 	cd include && ln -fsvT \
 		`ls -td ../gcc-install/lib/gcc/*/4.[5-7]*/plugin/include|head -1` gcc
