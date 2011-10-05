@@ -82,13 +82,9 @@ bool readPlotName(
     return true;
 }
 
-void emitPrototypeError(const struct cl_loc *lw, const std::string &fnc) {
-    CL_WARN_MSG(lw, "incorrectly called "
-            << fnc << "() not recognized as built-in");
-}
-
-void emitPlotError(const struct cl_loc *lw, const std::string &plotName) {
-    CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
+void emitPrototypeError(const struct cl_loc *lw, const char *name) {
+    CL_WARN_MSG(lw, "incorrectly called " << name
+            << "() not recognized as built-in");
 }
 
 void insertCoreHeap(
@@ -526,36 +522,36 @@ bool handlePlot(
 
     const int cntArgs = opList.size() - /* dst + fnc */ 2;
     if (cntArgs < 1) {
-        emitPrototypeError(lw, "___sl_plot");
+        emitPrototypeError(lw, name);
         // insufficient count of arguments
         return false;
     }
 
     if (CL_OPERAND_VOID != opList[/* dst */ 0].code) {
         // not a function returning void
-        emitPrototypeError(lw, "___sl_plot");
+        emitPrototypeError(lw, name);
         return false;
     }
 
     std::string plotName;
     if (!readPlotName(&plotName, opList, core.lw())) {
-        emitPrototypeError(lw, "___sl_plot");
+        emitPrototypeError(lw, name);
         return false;
     }
 
     const SymExecCoreParams &ep = core.params();
     if (ep.skipPlot) {
-        CL_DEBUG_MSG(&insn.loc, name << "() skipped per user's request");
+        CL_DEBUG_MSG(lw, name << "() skipped per user's request");
         insertCoreHeap(dst, core, insn);
         return true;
     }
 
     const SymHeap &sh = core.sh();
+    bool ok;
 
-    if (1 == cntArgs) {
-        if (!plotHeap(sh, plotName))
-            emitPlotError(lw, plotName);
-    }
+    if (1 == cntArgs)
+        ok = plotHeap(sh, plotName);
+
     else {
         // starting points were given
         TValList startingPoints;
@@ -565,9 +561,11 @@ bool handlePlot(
             startingPoints.push_back(val);
         }
 
-        if (!plotHeap(sh, plotName, startingPoints))
-            emitPlotError(lw, plotName);
+        ok = plotHeap(sh, plotName, startingPoints);
     }
+
+    if (!ok)
+        CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
 
     // built-in processed, we do not care if successfully at this point
     insertCoreHeap(dst, core, insn);

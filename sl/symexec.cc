@@ -1019,7 +1019,7 @@ void execTopCall(
         const SymExecParams             &ep)
 {
     // do not include the memory allocated by Code Listener into our statistics
-    initMemDrif();
+    initMemDrift();
 
     try {
         SymExec se(entry.stor(), ep);

@@ -272,13 +272,14 @@ void SymProc::varInit(TValId at) {
     ep.skipVarInit = /* avoid an infinite recursion */ true;
     SymExecCore core(sh_, bt_, ep);
     BOOST_FOREACH(const CodeStorage::Insn *insn, var.initials) {
-        core.setLocation(&insn->loc);
-        CL_DEBUG_MSG(&insn->loc,
+        const struct cl_loc *loc = &insn->loc;
+        core.setLocation(loc);
+        CL_DEBUG_MSG(loc,
                 "(I) executing an explicit var initializer: " << *insn);
         SymHeapList dst;
 
         if (!core.exec(dst, *insn))
-            CL_BREAK_IF("initVariable() malfunction");
+            CL_BREAK_IF("varInit() malfunction");
 
         CL_BREAK_IF(1 != dst.size());
         SymHeap &result = const_cast<SymHeap &>(dst[/* the only result */ 0]);
