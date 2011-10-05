@@ -17,7 +17,7 @@ printf "GCC_HOST = %s\n" "$GCC_HOST"
 SL_PLUG="$PWD/sl_build/libsl.so"
 printf "SL_PLUG = %s\n" "$SL_PLUG"
 
-PATH="`dirname "$GCC_HOST"`:$PATH"
+test -x "$GCC_HOST" && PATH="`dirname "$GCC_HOST"`:$PATH"
 LD_LIBRARY_PATH="`dirname "$SL_PLUG"`:$LD_LIBRARY_PATH"
 export PATH LD_LIBRARY_PATH
 

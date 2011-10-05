@@ -42,7 +42,7 @@ EOF
 test -r "$1" || usage
 
 # initial checks
-test -x "$GCC_HOST" || die "host GCC not found: ${GCC_HOST}"
+"$GCC_HOST" --version >/dev/null || die "unable to run gcc: $GCC_HOST --version"
 test -r "$SL_PLUG"  || die "Predator GCC plug-in not found: ${SL_PLUG}"
 
 match() {
