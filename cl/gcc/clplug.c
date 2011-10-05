@@ -50,6 +50,7 @@
 #include <gcc/function.h>
 #include <gcc/gimple.h>
 #include <gcc/input.h>
+#include <gcc/real.h>
 #include <gcc/toplev.h>
 #include <gcc/tree-pass.h>
 
@@ -62,6 +63,9 @@
 // required by realpath(3)
 #include <limits.h>
 #include <stdlib.h>
+
+// required by basename(3)
+#include <libgen.h>
 
 #ifndef STREQ
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
@@ -144,7 +148,7 @@ static struct plugin_info cl_info = {
     .version = "%s [code listener SHA1 " CL_GIT_SHA1 "]",
     .help    = "%s [code listener SHA1 " CL_GIT_SHA1 "]\n"
 "\n"
-"Usage: gcc -fplugin=%s.so [OPTIONS] ...\n"
+"Usage: gcc -fplugin=%s [OPTIONS] ...\n"
 "\n"
 "OPTIONS:\n"
 "    -fplugin-arg-%s-help\n"
@@ -176,8 +180,10 @@ static void init_plugin_name(const struct plugin_name_args *info)
     if (plugin_name_alloc)
         plugin_name = plugin_name_alloc;
 
+    plugin_base_name = basename((char *) plugin_name);
+
     // read plug-in base name
-    const char *name = plugin_base_name = info->base_name;
+    const char *name = info->base_name;
     char *msg;
 
     // substitute name in 'version' string
@@ -189,11 +195,10 @@ static void init_plugin_name(const struct plugin_name_args *info)
 
     // substitute name in 'help' string
     // FIXME: error-prone approach, this should be automated somehow!
-    if (-1 == asprintf(&msg, cl_info.help,
+    if (-1 == asprintf(&msg, cl_info.help, plugin_base_name,
                        name, name, name, name,
                        name, name, name, name,
-                       name, name, name, name,
-                       name))
+                       name, name, name, name))
         // OOM
         abort();
     else
@@ -224,7 +229,7 @@ static void dummy_printer(const char *msg)
 
 static void trivial_printer(const char *msg)
 {
-    fprintf(stderr, "%s [-fplugin-%s]\n", msg, plugin_base_name);
+    fprintf(stderr, "%s [-fplugin=%s]\n", msg, plugin_base_name);
 }
 
 static void cl_warn(const char *msg)

@@ -73,7 +73,7 @@ run_gcc() {
         -fplugin="$SL_PLUG" -fplugin-arg-libsl-pid-file="$pidfile"  \
         -fplugin-arg-libsl-args=error_label:ERROR $SL_OPTS -c "$@"  \
         2>&1 | stdbuf --output=L grep -E                            \
-        ' \[-fplugin-libsl\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'
+        ' \[-fplugin=libsl\.so\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'
 }
 
 forward_signal() {
@@ -84,7 +84,7 @@ forward_signal() {
 }
 
 # colorize the output
-run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin-libsl\]$||'            \
+run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin=libsl\.so\]$||'        \
         -e "s|(^.*) \[internal location\]\$|$S\1$N|"                           \
         -e "s|(: error:) (.*)\$|\1 $R\2$N|"                                    \
         -e "s|(: warning:) (.*)\$|\1 $Y\2$N|"                                  \

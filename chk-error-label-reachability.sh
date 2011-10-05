@@ -16,7 +16,7 @@ export SL_PLUG="${topdir}/sl_build/libsl.so"
 export MSG_INFLOOP=': warning: end of function .*() has not been reached'
 export MSG_LABEL_FOUND=': error: error label "ERROR" has been reached'
 export MSG_MEMLEAK=': warning: memory leak detected'
-export MSG_OUR_WARNINGS=': warning: .*\[-fplugin-libsl\]$'
+export MSG_OUR_WARNINGS=': warning: .*\[-fplugin=libsl.so\]$'
 export MSG_TIME_ELAPSED=': note: clEasyRun() took '
 export MSG_UNHANDLED_CALL=': warning: ignoring call of undefined function: '
 
