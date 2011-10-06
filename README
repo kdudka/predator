@@ -89,22 +89,22 @@ performance.  Now the '-jN' parameter needs to go to 'ctest' instead of make:
 
     make check CTEST="ctest -j9"
 
-
-Running Predator
-================
+(5) Prepare environment for running Predator transparently [optional]
+---------------------------------------------------------------------
 To employ the Predator plug-in in a build of an arbitrary project fully
-transparently, it is recommended to set certain environment variables (you need
-to be in the same directory as this README is):
+transparently, it is recommended to set certain environment variables.  You can
+use the script register-paths.sh to do this automatically.
 
-    PATH="`readlink -f gcc-install/bin`:$PATH"
-    LD_LIBRARY_PATH="`readlink -f sl_build`:$LD_LIBRARY_PATH"
-    export PATH LD_LIBRARY_PATH
+    . register-paths.sh
 
-Then you can simply use the GCC options '-fplugin' and '-fplugin-arg' as
-documented in the gcc(1) man page:
+Then you can simply use the '-fplugin' option of GCC as documented in the gcc(1)
+man page:
 
-    gcc -fplugin=libsl.so -o /dev/null -c cl/version.c -fplugin-arg-libsl-help
     gcc -fplugin=libsl.so ...
+
+This will show you the available options of the Predator plug-in itself:
+
+    echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
 
 
 Building from sources against the system GCC (only for experts)
