@@ -14,7 +14,7 @@ usage(){
 }
 
 PRUNE_ALWAYS=".git invader-extras make-tgz.sh ocaml seplog cl/cl-readme.patch \
-    sl/README-ubuntu.patch sl/linux-drivers sl/rank.sh"
+    sl/README-fedora.patch sl/README-ubuntu.patch sl/linux-drivers sl/rank.sh"
 
 chlog_watch=
 drop_fwnull=no
@@ -98,6 +98,7 @@ fi
 
 # adapt README-ubuntu
 if test xyes = "x$readme_sl"; then
+    patch README-fedora < "sl/README-fedora.patch"
     patch README-ubuntu < "sl/README-ubuntu.patch"
 fi
 

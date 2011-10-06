@@ -1,0 +1,22 @@
+diff --git a/README-fedora b/README-fedora
+index 4b21272..3b21eb4 100644
+--- a/README-fedora
++++ b/README-fedora
+@@ -1,17 +1,9 @@
+ Building Predator on Fedora
+ ===========================
+-Please replace XXXXXX by the latest release of Predator (for example
+-predator-2011-07-29-d38c348).
+ 
+     sudo yum install cmake gcc-c++ glibc-devel.i686 gmp-devel libmpc-devel \
+         mpfr-devel
+ 
+-    curl http://www.fit.vutbr.cz/~idudka/download/XXXXXX.tar.gz \
+-        | gzip -cd \
+-        | tar x
+-
+-    cd XXXXXX
+-
+     make -j3 build_boost build_gcc
+ 
+     make -j3
