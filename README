@@ -14,7 +14,7 @@ on the following project page:
 Predator and Code Listener are licensed as GPLv3+, see COPYING for details.
 
 
-Building from sources against a local build of GCC (recommended for end users)
+Building from sources against a local build of GCC [recommended for end users]
 ==============================================================================
 
 (1) Install all dependences of GCC
@@ -107,32 +107,17 @@ This will show you the available options of the Predator plug-in itself:
     echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
 
 
-Building from sources against the system GCC (only for experts)
+Building from sources against the system GCC [only for experts]
 ===============================================================
 This method is intended for people that already have experience with building
-GCC plug-ins.  It requires plug-in enabled GCC 4.5+ installed on your system,
-including the headers that are necessary to build GCC plug-ins.  The currently
-supported version of GCC is 4.6.1 and the test-suite is guaranteed to fully
-succeed only against this version of GCC.  However, the Predator plug-in itself
-is known to work with GCC 4.5.x equally well.
+GCC plug-ins.  It requires a build of GCC with plug-in support compiled in (not
+necessarily the system one).  The currently supported version of GCC is 4.6.1
+and the test-suite is guaranteed to fully succeed only against this version of
+GCC.  However, the Predator plug-in itself is known to work with GCC 4.5.x
+equally well.
 
-The first step is to create a symlink to GCC plug-in headers.  Assuming you have
-Gentoo Linux using gcc-4.5.2 as the system compiler, you need to do this:
-
-    ln -sfT /usr/lib64/gcc/x86_64-pc-linux-gnu/4.5.2/plugin/include include/gcc
-
-If you are on a Debian system you need to install gcc-4.5-plugin-dev package and
-then:
-
-    ln -sfT /usr/lib/x86_64-linux-gnu/gcc/x86_64-linux-gnu/4.5.2/plugin/include include/gcc
-
-For Fedora, the package name is gcc-plugin-devel, and the symlink needs to
-follow this path (note that the path is /usr/lib even on x86_64):
-
-    ln -sfT /usr/lib/gcc/x86_64-redhat-linux/4.6.0/plugin/include include/gcc
-
-Then you can build Predator without building GCC locally.  If you want to run
-the test-suite, you need to tell CMake which GCC should be used to load the
-plug-in to:
-
-    make check CMAKE="cmake -D GCC_HOST=gcc-4.5.2"
+You can use the 'switch-host-gcc.sh' script to rebuild Code Listener and
+Predator against a GCC build of your choice.  For details, please run
+'switch-host-gcc.sh' without any arguments.  The script needs to be run in the
+same directory as this README is.  If it fails, make sure your environment is
+sane.  Especially check the PATH and LD_LIBRARY_PATH environment variables.

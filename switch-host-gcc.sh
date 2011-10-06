@@ -8,22 +8,23 @@ die() {
 }
 
 usage() {
-    printf "Usage: %s HOST_GCC_BINARY GCC_PLUGIN_INCLUDE_DIR\n\n" "$SELF" >&2
+    printf "Usage: %s HOST_GCC_EXECUTABLE GCC_PLUGIN_INCLUDE_DIR\n" "$SELF" >&2
     cat >&2 << EOF
+
     Use this script to re-build Predator against an arbitrary build of host GCC.
     The host GCC needs to be built with support for GCC plug-ins.  The currently
     supported version of host GCC is 4.6.1, but feel free to use any other
     version of GCC at your own responsibility.
 
-    HOST_GCC_BINARY is an exectuable of gcc(1).  This can be given either with
-    absolute path (e.g. /home/bob/gcc-4.7.0/bin/gcc) or, if it can be reached
-    from \$PATH, only the basename is sufficient (e.g. gcc).
+    HOST_GCC_EXECUTABLE is an exectuable of gcc(1).  This can be given either
+    with absolute path (e.g. /home/bob/gcc-4.7.0/bin/gcc) or, if it can be
+    reached from \$PATH, only the basename is sufficient (e.g. gcc, or gcc-4.6).
 
     GCC_PLUGIN_INCLUDE_DIR is the path to GCC headers for building GCC plug-ins.
     The path is distribution-specific.  You can guess the path by looking for a
-    file named 'gcc-plugin.h'.  Some distributions do not have such a directory
-    installed by default.  A brief summary of distributions we have tried
-    follows:
+    file named 'gcc-plugin.h'.  Some distributions do not have such an include
+    directory installed by default.  A brief summary of experience with
+    distributions we have tried follows:
 
     On Debian, you need to install a package named gcc-4.5-plugin-dev.  Then use
     /usr/lib/x86_64-linux-gnu/gcc/x86_64-linux-gnu/4.5.2/plugin/include as
