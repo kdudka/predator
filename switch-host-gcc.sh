@@ -31,7 +31,7 @@ usage() {
     GCC_PLUGIN_INCLUDE_DIR.
 
     On Fedora, you need to install a package named gcc-plugin-devel.  Then use
-    /usr/lib/gcc/x86_64-redhat-linux/4.6.0/plugin/include include/gcc as
+    /usr/lib/gcc/x86_64-redhat-linux/4.6.1/plugin/include include/gcc as
     GCC_PLUGIN_INCLUDE_DIR.
 
     On Gentoo, you only need to have installed >=sys-devel/gcc-4.5.0.  Then use
