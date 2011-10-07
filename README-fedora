@@ -19,5 +19,6 @@ predator-2011-07-29-d38c348).
     make check
 
 
+Note you need approximately 2 GB of free disk space to unpack and build GCC.
 The steps above were successfully tested on a fresh installation
 of Fedora 15 x86_64.

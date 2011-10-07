@@ -57,8 +57,9 @@ Building from sources against a local build of GCC [recommended for end users]
 
 (3) Build the GCC compiler from sources
 ---------------------------------------
-The following command downloads the sources of a stable GCC release, builds them
-in a minimalistic way and install them into a local directory:
+This step requires approximately 2 GB of free disk space.  The following command
+downloads the sources of a stable GCC release, builds them in a minimalistic way
+and install them into a local directory:
 
     make build_gcc
 
