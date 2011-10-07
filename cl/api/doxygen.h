@@ -7,10 +7,10 @@
  
 /**
  * @mainpage
- * @author Kamil Dudka <kdudka@redhat.com>
+ * @note See the
+ * <A HREF="http://www.fit.vutbr.cz/research/groups/verifit/tools/code-listener/"><B>project page</B></A>
+ * for details about the <B>Code Listener</B> project, new releases, etc.
  * @version @include version_cl.h
- * @note The @b up2date @b sources are available (among other ways) via
- * <A HREF="http://github.com/kdudka/predator"><B>github</B></A>.
  *
  * @remark
  *
