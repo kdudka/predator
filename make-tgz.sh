@@ -14,7 +14,8 @@ usage(){
 }
 
 PRUNE_ALWAYS=".git invader-extras make-tgz.sh ocaml seplog cl/cl-readme.patch \
-    sl/README-fedora.patch sl/README-ubuntu.patch sl/linux-drivers sl/rank.sh"
+    cl/cl-switch-host.patch sl/README-fedora.patch sl/README-ubuntu.patch     \
+    sl/linux-drivers sl/rank.sh"
 
 chlog_watch=
 drop_fwnull=no
@@ -94,6 +95,7 @@ make ChangeLog "CHLOG_WATCH=$chlog_watch" \
 # adapt README
 if test xyes = "x$readme_cl"; then
     patch README < "cl/cl-readme.patch"
+    patch "switch-host-gcc.sh" < "cl/cl-switch-host.patch"
 fi
 
 # adapt README-ubuntu
@@ -128,7 +130,10 @@ esac
 rm -rf $PRUNE_ALWAYS
 test xyes = "x$drop_fwnull" && rm -rf fwnull
 test xyes = "x$drop_fa" && rm -rf fa
-test xyes = "x$drop_sl" && rm -rf sl
+test xyes = "x$drop_sl" && rm -rf sl    \
+    "README-sv-comp-TACAS-2012"         \
+    "chk-error-label-reachability.sh"   \
+    "register-paths.sh"
 
 # make a tarball
 cd ..
