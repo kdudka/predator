@@ -80,7 +80,7 @@ The following command builds Code Listener and Predator from sources:
 Again, the build can be accelerated using the '-j' option of 'make', as stated
 above.  After a successful build of Predator, it is suggested (but not required)
 to run the test-suite shipped with Predator to ensure the plug-in works as the
-authors intended to.  The test-suite consists of nearly 200 regression tests
+authors intended to.  The test-suite consists of more than 200 regression tests
 that can be run using the following command:
 
     make check

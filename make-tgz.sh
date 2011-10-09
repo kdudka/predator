@@ -107,17 +107,22 @@ fi
 # adapt Makefile
 case "$PROJECT" in
     code-listener)
-        sed -i 's/cl fwnull.*/cl fwnull/' Makefile \
+        sed -i Makefile                         \
+            -e 's|cl fwnull.*|cl fwnull|'       \
+            -e 's|cl/api sl/api|cl/api|'        \
             || die "failed to adapt Makefile"
         ;;
 
     forester)
-        sed -i 's/cl fwnull sl fa/cl fa/' Makefile \
+        sed -i Makefile                         \
+            -e 's|cl fwnull sl fa|cl fa|'       \
+            -e 's|cl/api sl/api|cl/api|'        \
             || die "failed to adapt Makefile"
         ;;
 
     predator)
-        sed -i 's/cl fwnull sl fa/cl sl/' Makefile \
+        sed -i Makefile                         \
+            -e 's|cl fwnull sl fa|cl sl|'       \
             || die "failed to adapt Makefile"
         ;;
 
