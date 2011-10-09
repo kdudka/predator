@@ -2,18 +2,17 @@ Building Predator on Ubuntu
 ===========================
 Note I do not use Ubuntu myself, so this howto may become outdated as time
 passes by.  Any suggestions from real Ubuntu users on how to improve this howto
-are welcome.  Please replace XXXXXX by the latest release of Predator (for
-example predator-2011-07-29-d38c348).
+are welcome.
 
     sudo apt-get install cmake curl         \
         libgmp3-dev libmpc-dev libmpfr-dev  \
         gcc-multilib
 
-    curl http://www.fit.vutbr.cz/~idudka/download/XXXXXX.tar.gz \
+    curl http://www.fit.vutbr.cz/~idudka/download/predator-2011-10-10-e280e28.tar.gz \
         | gzip -cd \
         | tar x
 
-    cd XXXXXX
+    cd predator-2011-10-10-e280e28
 
     make -j3 build_boost build_gcc
 
