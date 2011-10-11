@@ -6,11 +6,11 @@ index 3f0c8f9..b091a35 100644
          libgmp3-dev libmpc-dev libmpfr-dev  \
          gcc-multilib
  
--    curl http://www.fit.vutbr.cz/~idudka/download/predator-2011-10-10-e280e28.tar.gz \
+-    curl http://www.fit.vutbr.cz/~idudka/download/predator-2011-10-11-8a7846b.tar.gz \
 -        | gzip -cd \
 -        | tar x
 -
--    cd predator-2011-10-10-e280e28
+-    cd predator-2011-10-11-8a7846b
 -
      make -j3 build_boost build_gcc
  
