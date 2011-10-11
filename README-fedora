@@ -14,7 +14,7 @@ Building Predator on Fedora
 
     make -j3
 
-    make check
+    make -i check
 
 
 Note you need approximately 2 GB of free disk space to unpack and build GCC.

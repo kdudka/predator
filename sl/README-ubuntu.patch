@@ -2,7 +2,7 @@ diff --git a/README-ubuntu b/README-ubuntu
 index 3f0c8f9..b091a35 100644
 --- a/README-ubuntu
 +++ b/README-ubuntu
-@@ -8,12 +8,6 @@ are welcome.
+@@ -15,12 +15,6 @@
          libgmp3-dev libmpc-dev libmpfr-dev  \
          gcc-multilib
  

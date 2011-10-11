@@ -4,7 +4,14 @@ Note I do not use Ubuntu myself, so this howto may become outdated as time
 passes by.  Any suggestions from real Ubuntu users on how to improve this howto
 are welcome.
 
-    sudo apt-get install cmake curl         \
+Please start with this, ONLY if you are on Ubuntu 10.04:
+
+    sudo apt-get install timeout
+
+
+This part is common for all versions of Ubuntu we have tried:
+
+    sudo apt-get install cmake curl g++     \
         libgmp3-dev libmpc-dev libmpfr-dev  \
         gcc-multilib
 
@@ -18,7 +25,7 @@ are welcome.
 
     make -j3
 
-    make check
+    make -i check
 
 
 Note you need approximately 2 GB of free disk space to unpack and build GCC.
