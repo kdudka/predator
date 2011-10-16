@@ -1308,7 +1308,7 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
     }
 }
 
-void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
+void SymHeapCore::gatherLiveObjectsXXX(TObjList &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
@@ -1328,6 +1328,14 @@ void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
                 CL_BREAK_IF("gatherLiveObjects sees something special");
         }
     }
+}
+
+void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const {
+    TObjList rawList;
+    this->gatherLiveObjectsXXX(rawList, root);
+
+    BOOST_FOREACH(const TObjId obj, rawList)
+        dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
 }
 
 bool SymHeapCore::findCoveringUniBlock(

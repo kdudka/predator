@@ -150,7 +150,7 @@ typedef short                                           TOffset;
 /// a container to store offsets to
 typedef std::vector<TOffset>                            TOffList;
 
-/// container used to store object IDs to
+/// @todo remove this from the public API
 typedef std::vector<TObjId>                             TObjList;
 
 /// container used to store value IDs to
@@ -242,6 +242,8 @@ inline bool operator<(const CVar &a, const CVar &b) {
         // we know (a.uid == b.uid) at this point, let's compare .inst
         return a.inst < b.inst;
 }
+
+class ObjList;
 
 /// base of @b symbolic @b heap representation (one disjunct of symbolic state)
 class SymHeapCore {
@@ -430,7 +432,8 @@ class SymHeapCore {
         void gatherRootObjects(TValList &dst, bool (*)(EValueTarget) = 0) const;
 
         /// list of live objects (including ptrs) owned by the given root entity
-        void gatherLiveObjects(TObjList &dst, TValId root) const;
+        void gatherLiveObjects(ObjList &dst, TValId root) const;
+        void gatherLiveObjectsXXX(TObjList &dst, TValId root) const;
 
         /// list of live pointers owned by the given root entity
         void gatherLivePointers(TObjList &dst, TValId root) const;
@@ -504,6 +507,7 @@ class SymHeapCore {
 
         /// ObjHandle takes care of external reference count
         friend class ObjHandle;
+        friend class PtrHandle;
 
     protected:
         TStorRef stor_;
@@ -591,6 +595,8 @@ class ObjHandle {
         {
         }
 
+        friend class SymHeapCore;
+
     protected:
         SymHeapCore     *sh_;
         TObjId           id_;
@@ -601,6 +607,35 @@ class PtrHandle: public ObjHandle {
         PtrHandle(SymHeapCore &sh, TValId addr):
             ObjHandle(sh, sh.ptrAt(addr))
         {
+        }
+};
+
+/// ugly, but typedefs do not support partial declarations
+class ObjList: public std::vector<ObjHandle> { };
+
+class ObjLookup {
+    private:
+        std::set<TObjId>            idSet_;
+        ObjList                     hList_;
+
+    public:
+        bool insert(const ObjHandle &hdl) {
+            const TObjId obj = hdl.objId();
+            if (hasKey(idSet_, obj))
+                return false;
+
+            idSet_.insert(obj);
+            hList_.push_back(hdl);
+            return true;
+        }
+
+        bool lookup(const TObjId obj) const {
+            return hasKey(idSet_, obj);
+        }
+
+        bool lookup(const ObjHandle &hdl) const {
+            const TObjId obj = hdl.objId();
+            return hasKey(idSet_, obj);
         }
 };
 

@@ -120,8 +120,8 @@ struct SymJoinCtx {
     std::set<TValId>            sset1;
     std::set<TValId>            sset2;
 
-    std::vector<TObjId>         liveList1;
-    std::vector<TObjId>         liveList2;
+    ObjList                     liveList1;
+    ObjList                     liveList2;
 
     TValMapBidir                valMap1;
     TValMapBidir                valMap2;
@@ -2115,7 +2115,8 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
 
     // reverse mapping for ctx.liveList1
     const TValMap &vMap1 = ctx.valMap1[0];
-    BOOST_FOREACH(const TObjId objSrc, ctx.liveList1) {
+    BOOST_FOREACH(const ObjHandle &hdlSrc, ctx.liveList1) {
+        const TObjId objSrc = /* FIXME */ hdlSrc.objId();
         const TValId rootSrcAt = sh1.valRoot(sh1.placedAt(objSrc));
         const TValId rootDstAt = roMapLookup(vMap1, rootSrcAt);
         const TObjId objDst = translateObjId(dst, sh1, rootDstAt, objSrc);
@@ -2128,7 +2129,8 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
 
     // reverse mapping for ctx.liveList2
     const TValMap &vMap2 = ctx.valMap2[0];
-    BOOST_FOREACH(const TObjId objSrc, ctx.liveList2) {
+    BOOST_FOREACH(const ObjHandle &hdlSrc, ctx.liveList2) {
+        const TObjId objSrc = /* FIXME */ hdlSrc.objId();
         const TValId rootSrcAt = sh2.valRoot(sh2.placedAt(objSrc));
         const TValId rootDstAt = roMapLookup(vMap2, rootSrcAt);
         const TObjId objDst = translateObjId(dst, sh2, rootDstAt, objSrc);
@@ -2586,14 +2588,14 @@ void transferContentsOfGhost(
         const TValId            dst,
         const TValId            ghost)
 {
-    std::set<TObjId> ignoreList;
+    ObjLookup ignoreList;
     buildIgnoreList(ignoreList, sh, dst);
 
     TObjList live;
-    sh.gatherLiveObjects(live, ghost);
+    sh.gatherLiveObjectsXXX(live, ghost);
     BOOST_FOREACH(const TObjId objGhost, live) {
         const TObjId objDst = translateObjId(sh, sh, dst, objGhost);
-        if (hasKey(ignoreList, objDst))
+        if (ignoreList.lookup(objDst))
             // preserve binding pointers
             continue;
 

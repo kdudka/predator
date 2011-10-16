@@ -149,7 +149,7 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
 
         // traverse the root
         TObjList liveObjs;
-        sh.gatherLiveObjects(liveObjs, root);
+        sh.gatherLiveObjectsXXX(liveObjs, root);
         BOOST_FOREACH(const TObjId obj, liveObjs) {
             const TValId valInside = sh.valueOf(obj);
             if (0 < valInside)
@@ -617,7 +617,7 @@ void plotDlSeg(PlotData &plot, const TValId seg, const TObjList &liveObjs) {
     const TValId peer = dlSegPeer(sh, seg);
     if (OK_DLS == sh.valTargetKind(peer)) {
         TObjList liveObjsAtPeer;
-        sh.gatherLiveObjects(liveObjsAtPeer, peer);
+        sh.gatherLiveObjectsXXX(liveObjsAtPeer, peer);
         plotCompositeObj(plot, peer, liveObjsAtPeer);
     }
 
@@ -641,7 +641,7 @@ void plotRootObjects(PlotData &plot) {
 
         // gather live objects
         TObjList liveObjs;
-        sh.gatherLiveObjects(liveObjs, root);
+        sh.gatherLiveObjectsXXX(liveObjs, root);
 
         const EObjKind kind = sh.valTargetKind(root);
         switch (kind) {

@@ -148,15 +148,14 @@ TValId segClone(SymHeap &sh, const TValId seg);
 /// destroy the given list segment object (including DLS peer in case of DLS)
 void segDestroy(SymHeap &sh, TObjId seg);
 
-template <class TIgnoreList>
-void buildIgnoreList(
-        TIgnoreList             &ignoreList,
+inline void buildIgnoreList(
+        ObjLookup               &ignoreList,
         const SymHeap           &sh,
         const TValId            at)
 {
     SymHeap &writable = const_cast<SymHeap &>(sh);
     TOffset off;
-    TObjId tmp;
+    ObjHandle tmp;
 
     const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
@@ -166,7 +165,7 @@ void buildIgnoreList(
         case OK_DLS:
             // preserve 'peer' field
             off = sh.segBinding(at).prev;
-            tmp = writable.ptrAt(writable.valByOffset(at, off));
+            tmp = PtrHandle(writable, writable.valByOffset(at, off));
             ignoreList.insert(tmp);
             // fall through!
 
@@ -174,7 +173,7 @@ void buildIgnoreList(
         case OK_MAY_EXIST:
             // preserve 'next' field
             off = sh.segBinding(at).next;
-            tmp = writable.ptrAt(writable.valByOffset(at, off));
+            tmp = PtrHandle(writable, writable.valByOffset(at, off));
             ignoreList.insert(tmp);
     }
 }

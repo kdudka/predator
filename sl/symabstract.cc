@@ -65,10 +65,10 @@ static const unsigned dlsThreshold = 1;
 
 // visitor
 struct UnknownValuesDuplicator {
-    std::set<TObjId> ignoreList;
+    ObjLookup ignoreList;
 
     bool operator()(SymHeap &sh, TObjId obj) const {
-        if (hasKey(ignoreList, obj))
+        if (ignoreList.lookup(obj))
             return /* continue */ true;
 
         const TValId valOld = sh.valueOf(obj);
@@ -255,12 +255,12 @@ void cloneGenericPrototype(
 
 // visitor
 struct ProtoCloner {
-    std::set<TObjId> ignoreList;
+    ObjLookup ignoreList;
     TValId rootDst;
     TValId rootSrc;
 
     bool operator()(SymHeap &sh, TObjId obj) const {
-        if (hasKey(ignoreList, obj))
+        if (ignoreList.lookup(obj))
             return /* continue */ true;
 
         const TValId val = sh.valueOf(obj);
@@ -280,14 +280,14 @@ struct ProtoCloner {
 
 struct ValueSynchronizer {
     SymHeap            &sh;
-    std::set<TObjId>    ignoreList;
+    ObjLookup           ignoreList;
 
     ValueSynchronizer(SymHeap &sh_): sh(sh_) { }
 
     bool operator()(TObjId item[2]) const {
         const TObjId src = item[0];
         const TObjId dst = item[1];
-        if (hasKey(ignoreList, src))
+        if (ignoreList.lookup(src))
             return /* continue */ true;
 
         // store value of 'src' into 'dst'
@@ -311,8 +311,11 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
     // if there was "a pointer to self", it should remain "a pointer to self";
     TObjList refs;
     sh.pointedBy(refs, dls);
-    std::copy(refs.begin(), refs.end(),
-              std::inserter(visitor.ignoreList, visitor.ignoreList.begin()));
+    BOOST_FOREACH(const TObjId obj, refs) {
+        // FIXME: avoid this double-wrapper
+        const ObjHandle hdl(sh, sh.placedAt(obj), sh.objType(obj));
+        visitor.ignoreList.insert(hdl);
+    }
 
     const TValId roots[] = { dls, peer };
     traverseLiveObjs<2>(sh, roots, visitor);
