@@ -444,10 +444,9 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
 
     // store the pointer DLS -> VAR
     const BindingOff &off = sh.segBinding(dls);
-    const TObjId nextPtr = sh.ptrAt(sh.valByOffset(dls, off.next));
+    const PtrHandle nextPtr(sh, sh.valByOffset(dls, off.next));
     const TValId valNext = valOfPtrAt(sh, var, off.next);
-    sh.objSetValue(nextPtr, valNext);
-    sh.objLeave(nextPtr);
+    nextPtr.setValue(valNext);
 
     // replace VAR by DLS
     const TValId headAt = sh.valByOffset(var, off.head);
@@ -479,9 +478,8 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
 
     // preserve backLink
     const TValId valNext1 = nextValFromSeg(sh, seg1);
-    const TObjId ptrNext2 = nextPtrFromSeg(sh, seg2);
-    sh.objSetValue(ptrNext2, valNext1);
-    sh.objLeave(ptrNext2);
+    const PtrHandle ptrNext2 = nextPtrFromSeg(sh, seg2);
+    ptrNext2.setValue(valNext1);
 
     // replace both parts point-wise
     const TValId headAt = segHeadAt(sh,  seg1);
@@ -677,10 +675,9 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // take the value of 'next' pointer from peer
-    const TObjId peerPtr = prevPtrFromSeg(sh, seg);
+    const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
     const TValId valNext = nextValFromSeg(sh, peer);
-    sh.objSetValue(peerPtr, valNext);
-    sh.objLeave(peerPtr);
+    peerPtr.setValue(valNext);
 
     // redirect all references originally pointing to peer to the current object
     redirectRefs(sh,
@@ -804,9 +801,8 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     const TValId dupHead = segHeadAt(sh, dup);
     if (OK_DLS == kind) {
         // DLS relink
-        const TObjId ptr = prevPtrFromSeg(sh, peer);
-        sh.objSetValue(ptr, dupHead);
-        sh.objLeave(ptr);
+        const PtrHandle ptr = prevPtrFromSeg(sh, peer);
+        ptr.setValue(dupHead);
     }
 
     // duplicate all unknown values, to keep the prover working
@@ -820,16 +816,14 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
 
     // concretize self and recover the list
     sh.valTargetSetConcrete(seg);
-    const TObjId nextPtr = sh.ptrAt(sh.valByOffset(seg, offNext));
-    sh.objSetValue(nextPtr, dupHead);
-    sh.objLeave(nextPtr);
+    const PtrHandle nextPtr(sh, sh.valByOffset(seg, offNext));
+    nextPtr.setValue(dupHead);
 
     if (OK_DLS == kind) {
         // update DLS back-link
-        const TObjId backLink = sh.ptrAt(sh.valByOffset(dup, off.next));
+        const PtrHandle backLink(sh, sh.valByOffset(dup, off.next));
         const TValId headAddr = sh.valByOffset(seg, off.head);
-        sh.objSetValue(backLink, headAddr);
-        sh.objLeave(backLink);
+        backLink.setValue(headAddr);
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 

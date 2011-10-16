@@ -501,10 +501,9 @@ bool handleNondetInt(
 
     // set the returned value to a new unknown value
     const struct cl_operand &opDst = opList[0];
-    const TObjId objDst = core.objByOperand(opDst);
+    const ObjHandle objDst = core.objByOperand(opDst);
     const TValId val = sh.valCreate(VT_UNKNOWN, origin);
     core.objSetValue(objDst, val);
-    sh.objLeave(objDst);
 
     // insert the resulting heap
     dst.insert(sh);

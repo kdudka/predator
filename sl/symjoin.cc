@@ -534,8 +534,8 @@ void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TValId root) {
     if (OK_DLS != kind)
         return;
 
-    const TObjId prevPtr = prevPtrFromSeg(sh, root);
-    dst.insert(prevPtr);
+    const PtrHandle prevPtr = prevPtrFromSeg(sh, root);
+    dst.insert(prevPtr.objId());
 }
 
 struct SegMatchVisitor {
@@ -1207,14 +1207,11 @@ bool dlSegHandleShared(
     CL_BREAK_IF(peer != vMap2[peer2]);
 
     SymHeap &sh = ctx.dst;
-    const TObjId prev1 = prevPtrFromSeg(sh,  seg);
-    const TObjId prev2 = prevPtrFromSeg(sh, peer);
+    const PtrHandle prev1 = prevPtrFromSeg(sh,  seg);
+    const PtrHandle prev2 = prevPtrFromSeg(sh, peer);
 
-    sh.objSetValue(prev1, segHeadAt(sh, peer));
-    sh.objSetValue(prev2, segHeadAt(sh,  seg));
-
-    sh.objLeave(prev1);
-    sh.objLeave(prev2);
+    prev1.setValue(segHeadAt(sh, peer));
+    prev2.setValue(segHeadAt(sh,  seg));
 
     CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
     return true;
@@ -1589,12 +1586,9 @@ bool insertSegmentClone(
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
-    const TObjId nextPtr = (off)
-        ? shGt.ptrAt(shGt.valByOffset(seg, off->next))
-        : nextPtrFromSeg(shGt, peer);
-
-    const TValId nextGt = shGt.valueOf(nextPtr);
-    shGt.objLeave(nextPtr);
+    const TValId nextGt = (off)
+        ? valOfPtrAt(shGt, seg, off->next)
+        : nextValFromSeg(shGt, peer);
 
     const TValId nextLt = (isGt2) ? v1 : v2;
     if (!off && !checkValueMapping(ctx, 

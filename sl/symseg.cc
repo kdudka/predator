@@ -127,16 +127,12 @@ TValId segClone(SymHeap &sh, const TValId seg) {
         const TOffset offpPeer = sh.segBinding(dupPeer).prev;
 
         // resolve selectors -> sub-objects
-        const TObjId ppSeg  = sh.ptrAt(sh.valByOffset(dup, offpSeg));
-        const TObjId ppPeer = sh.ptrAt(sh.valByOffset(dupPeer, offpPeer));
+        const PtrHandle ppSeg (sh, sh.valByOffset(dup, offpSeg));
+        const PtrHandle ppPeer(sh, sh.valByOffset(dupPeer, offpPeer));
 
         // now cross the 'peer' pointers
-        sh.objSetValue(ppSeg, segHeadAt(sh, dupPeer));
-        sh.objSetValue(ppPeer, segHeadAt(sh, dup));
-
-        // release object IDs
-        sh.objLeave(ppSeg);
-        sh.objLeave(ppPeer);
+        ppSeg .setValue(segHeadAt(sh, dupPeer));
+        ppPeer.setValue(segHeadAt(sh, dup));
     }
 
     return dup;

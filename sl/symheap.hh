@@ -416,12 +416,6 @@ class SymHeapCore {
         /// return an object of the given type at the given address
         TObjId objAt(TValId at, TObjType clt);
 
-        /// increment the external reference count of the given object
-        void objEnter(TObjId);
-
-        /// decrement the external reference count (may trigger its destruction)
-        void objLeave(TObjId);
-
         /// return address of the given program variable
         TValId addrOfVar(CVar, bool createIfNeeded);
 
@@ -502,6 +496,16 @@ class SymHeapCore {
         void valTargetSetProto(TValId root, bool isProto);
 
     protected:
+        /// increment the external reference count of the given object
+        void objEnter(TObjId);
+
+        /// decrement the external reference count (may trigger its destruction)
+        void objLeave(TObjId);
+
+        /// ObjHandle takes care of external reference count
+        friend class ObjHandle;
+
+    protected:
         TStorRef stor_;
 
         /// return true if the given value points to/inside an abstract object
@@ -513,6 +517,91 @@ class SymHeapCore {
     private:
         struct Private;
         Private *d;
+};
+
+class ObjHandle {
+    public:
+        ObjHandle():
+            sh_(0),
+            id_(OBJ_INVALID)
+        {
+        }
+
+        ObjHandle(const TObjId special):
+            sh_(0),
+            id_(special)
+        {
+            CL_BREAK_IF(0 < special);
+        }
+
+        ObjHandle(SymHeapCore &sh, TValId addr, TObjType clt):
+            sh_(&sh),
+            id_(sh.objAt(addr, clt))
+        {
+        }
+
+        ObjHandle(const ObjHandle &tpl):
+            sh_(tpl.sh_),
+            id_(tpl.id_)
+        {
+            if (0 < id_)
+                sh_->objEnter(id_);
+        }
+
+        ObjHandle(SymHeapCore &sh, const ObjHandle &tpl):
+            sh_(&sh),
+            id_(tpl.id_)
+        {
+            if (0 < id_)
+                sh_->objEnter(id_);
+        }
+
+        ~ObjHandle() {
+            if (0 < id_)
+                sh_->objLeave(id_);
+        }
+
+        ObjHandle& operator=(const ObjHandle &tpl) {
+            if (0 < id_)
+                sh_->objLeave(id_);
+
+            sh_ = tpl.sh_;
+            id_ = tpl.id_;
+            if (0 < id_)
+                sh_->objEnter(id_);
+
+            return *this;
+        }
+
+    public:
+        SymHeapCore*    sh()        const { return sh_; }
+        TObjId          objId()     const { return id_; }
+        TObjType        objType()   const { return sh_->objType(id_); }
+        TValId          value()     const { return sh_->valueOf(id_); }
+        TValId          placedAt()  const { return sh_->placedAt(id_); }
+
+        void setValue(const TValId val, TValSet *killedPtrs = 0) const {
+            sh_->objSetValue(id_, val, killedPtrs);
+        }
+
+    protected:
+        ObjHandle(SymHeapCore &sh, TObjId id):
+            sh_(&sh),
+            id_(id)
+        {
+        }
+
+    protected:
+        SymHeapCore     *sh_;
+        TObjId           id_;
+};
+
+class PtrHandle: public ObjHandle {
+    public:
+        PtrHandle(SymHeapCore &sh, TValId addr):
+            ObjHandle(sh, sh.ptrAt(addr))
+        {
+        }
 };
 
 /// enumeration of abstract object (although OK_CONCRETE is not abstract)

@@ -49,31 +49,29 @@ bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
 bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr);
 
 /// return 'next' pointer in the given segment (given by root)
-inline TObjId nextPtrFromSeg(const SymHeap &sh, TValId seg) {
+inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
     const BindingOff &off = sh.segBinding(seg);
     const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.next);
-    return const_cast<SymHeap &>(sh).ptrAt(addr);
+    return PtrHandle(const_cast<SymHeap &>(sh), addr);
 }
 
 /// return 'prev' pointer in the given segment (given by root)
-inline TObjId prevPtrFromSeg(const SymHeap &sh, TValId seg) {
+inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
     const BindingOff &off = sh.segBinding(seg);
     const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.prev);
-    return const_cast<SymHeap &>(sh).ptrAt(addr);
+    return PtrHandle(const_cast<SymHeap &>(sh), addr);
 }
 
 /// return the value of 'next' in the given segment (given by root)
 inline TValId nextValFromSeg(SymHeap &sh, TValId seg) {
-    const TObjId ptrNext = nextPtrFromSeg(sh, seg);
-    const TValId valNext = sh.valueOf(ptrNext);
-    sh.objLeave(ptrNext);
-    return valNext;
+    const ObjHandle ptrNext = nextPtrFromSeg(sh, seg);
+    return ptrNext.value();
 }
 
 /// return DLS peer object of the given DLS

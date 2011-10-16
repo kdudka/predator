@@ -89,7 +89,7 @@ class SymProc {
 
     public:
         /// obtain a heap object corresponding to the given operand
-        TObjId objByOperand(const struct cl_operand &op);
+        ObjHandle objByOperand(const struct cl_operand &op);
 
         /// obtain a heap value corresponding to the given operand
         TValId valFromOperand(const struct cl_operand &op);
@@ -98,7 +98,7 @@ class SymProc {
         bool fncFromOperand(int *pUid, const struct cl_operand &op);
 
         /// high-level interface to SymHeap::objSetValue()
-        void objSetValue(TObjId lhs, TValId rhs);
+        void objSetValue(const ObjHandle &lhs, TValId rhs);
 
         /// high-level interface to SymHeap::valDestroyTarget()
         void valDestroyTarget(TValId at);
@@ -129,8 +129,8 @@ class SymProc {
     private:
         bool addOffDerefArray(TOffset &off, const struct cl_accessor *ac);
         void reportMemLeak(const EValueTarget code, const char *reason);
-        void heapSetSingleVal(TObjId lhs, TValId rhs);
-        void heapObjDefineType(TObjId lhs, TValId rhs);
+        void heapSetSingleVal(const ObjHandle &lhs, TValId rhs);
+        void heapObjDefineType(const ObjHandle &lhs, TValId rhs);
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
         TValId handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code);

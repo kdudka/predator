@@ -69,13 +69,8 @@ void translateValProto(
 inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
     CL_BREAK_IF(!canWriteDataPtrAt(sh, at));
 
-    const TObjId ptr = sh.ptrAt(at);
-    const TValId val = sh.valueOf(ptr);
-
-    if (0 < ptr)
-        sh.objLeave(ptr);
-
-    return val;
+    const PtrHandle ptr(sh, at);
+    return ptr.value();
 }
 
 inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {

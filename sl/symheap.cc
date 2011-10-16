@@ -777,7 +777,8 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
     BlockEntity *blData;
     this->ents.getEntRW(&blData, obj);
 
-    if (removeVal && BK_UNIFORM != blData->code) {
+    const EBlockKind code = blData->code;
+    if (removeVal && BK_UNIFORM != code) {
         // release value of the object
         const TValId val = blData->value;
         this->releaseValueOf(obj, val);
@@ -799,6 +800,14 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
     }
 
     // release the corresponding HeapObject instance
+    if (BK_UNIFORM != code) {
+        HeapObject *objData = DCAST<HeapObject *>(blData);
+        if (0 < objData->extRefCnt) {
+            CL_DEBUG("objDestroy() preserves an externally referenced object");
+            return;
+        }
+    }
+
     this->ents.releaseEnt(obj);
 }
 
@@ -1967,6 +1976,13 @@ update_best:
     // create the object
     const TValId root = valData->valRoot;
     return d->objCreate(root, off, clt, /* hasExtRef */ true);
+}
+
+void SymHeapCore::objEnter(TObjId obj) {
+    HeapObject *objData;
+    d->ents.getEntRW(&objData, obj);
+    CL_BREAK_IF(objData->extRefCnt < 1);
+    ++(objData->extRefCnt);
 }
 
 void SymHeapCore::objLeave(TObjId obj) {

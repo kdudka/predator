@@ -450,8 +450,8 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
 {
     SymHeap &sh = plot.sh;
 
-    TObjId next = OBJ_INVALID;
-    TObjId prev = OBJ_INVALID;
+    ObjHandle next;
+    ObjHandle prev;
     const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
@@ -472,9 +472,9 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
     TAtomByOff objByOff;
     BOOST_FOREACH(const TObjId obj, liveObjs) {
         EObjectClass code;
-        if (obj == next)
+        if (obj == next.objId())
             code = OC_NEXT;
-        else if (obj == prev)
+        else if (obj == prev.objId())
             code = OC_PREV;
         else if (isDataPtr(sh.objType(obj)))
             code = OC_PTR;
