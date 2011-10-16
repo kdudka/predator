@@ -411,10 +411,10 @@ class SymHeapCore {
         int valSizeOfTarget(TValId) const;
 
         /// return a @b data pointer placed at the given address
-        TObjId ptrAt(TValId at, /* TODO: document this */ bool *exclusive = 0);
+        TObjId ptrAt(TValId at);
 
         /// return an object of the given type at the given address
-        TObjId objAt(TValId at, TObjType clt, bool *exclusive = 0);
+        TObjId objAt(TValId at, TObjType clt);
 
         /// increment the external reference count of the given object
         void objEnter(TObjId);

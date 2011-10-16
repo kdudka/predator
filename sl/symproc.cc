@@ -387,18 +387,16 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
 
     if (isDeref) {
         // read the value inside the pointer
-        bool exclusive;
-        const TObjId ptr = sh_.ptrAt(addr, &exclusive);
+        const TObjId ptr = sh_.ptrAt(addr);
         addr = sh_.valueOf(ptr);
-        if (exclusive)
-            sh_.objLeave(ptr);
+        sh_.objLeave(ptr);
     }
 
     // apply the offset
     return sh_.valByOffset(addr, off);
 }
 
-TObjId SymProc::objByOperand(const struct cl_operand &op, bool *exclusive) {
+TObjId SymProc::objByOperand(const struct cl_operand &op) {
     CL_BREAK_IF(seekRefAccessor(op.accessor));
 
     // resolve address of the target object
@@ -416,7 +414,7 @@ TObjId SymProc::objByOperand(const struct cl_operand &op, bool *exclusive) {
     }
 
     // resolve the target object
-    const TObjId obj = sh_.objAt(at, op.type, exclusive);
+    const TObjId obj = sh_.objAt(at, op.type);
     if (obj <= 0)
         CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
 
@@ -428,8 +426,7 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
     if (seekRefAccessor(op.accessor))
         return this->targetAt(op);
 
-    bool exclusive;
-    const TObjId obj = this->objByOperand(op, &exclusive);
+    const TObjId obj = this->objByOperand(op);
     switch (obj) {
         case OBJ_UNKNOWN:
             return sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
@@ -443,9 +440,7 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
     }
 
     const TValId val = sh_.valueOf(obj);
-    if (exclusive)
-        sh_.objLeave(obj);
-
+    sh_.objLeave(obj);
     return val;
 }
 

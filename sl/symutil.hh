@@ -69,11 +69,10 @@ void translateValProto(
 inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
     CL_BREAK_IF(!canWriteDataPtrAt(sh, at));
 
-    bool exclusive;
-    const TObjId ptr = sh.ptrAt(at, &exclusive);
+    const TObjId ptr = sh.ptrAt(at);
     const TValId val = sh.valueOf(ptr);
 
-    if (0 < ptr && exclusive)
+    if (0 < ptr)
         sh.objLeave(ptr);
 
     return val;

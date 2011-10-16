@@ -392,7 +392,7 @@ struct SymHeapCore::Private {
     bool valsEqual(TValId, TValId);
 
     TObjId objCreate(TValId root, TOffset off, TObjType clt, bool hasExtRef);
-    TObjId objExport(TObjId obj, bool *pExcl = 0);
+    TObjId objExport(TObjId obj);
     TValId objInit(TObjId obj);
     void objDestroy(TObjId, bool removeVal, bool detach);
 
@@ -802,13 +802,11 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
     this->ents.releaseEnt(obj);
 }
 
-TObjId SymHeapCore::Private::objExport(TObjId obj, bool *pExcl) {
+TObjId SymHeapCore::Private::objExport(TObjId obj) {
     HeapObject *data;
     this->ents.getEntRW(&data, obj);
-    if (pExcl)
-        *pExcl = !data->extRefCnt;
 
-    data->extRefCnt = true;
+    ++(data->extRefCnt);
     return obj;
 }
 
@@ -1820,7 +1818,7 @@ TValId SymHeapCore::placedAt(TObjId obj) {
     return this->valByOffset(root, objData->off);
 }
 
-TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
+TObjId SymHeapCore::ptrAt(TValId at) {
     if (at <= 0)
         return OBJ_INVALID;
 
@@ -1860,7 +1858,7 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
         const HeapObject *objData = DCAST<const HeapObject *>(blData);
         const TObjType clt = objData->clt;
         if (isDataPtr(clt))
-            return d->objExport(obj, pExcl);
+            return d->objExport(obj);
     }
 
     // check whether we have enough space allocated for the pointer
@@ -1872,16 +1870,12 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     // resolve root
     const TValId root = valData->valRoot;
 
-    if (pExcl)
-        // a newly created object cannot be already externally referenced
-        *pExcl = true;
-
     // create the pointer
     return d->objCreate(root, off, clt, /* hasExtRef */ true);
 }
 
 // TODO: simplify the code
-TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
+TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     if (at <= 0)
         return OBJ_INVALID;
 
@@ -1936,7 +1930,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
         if (cltNow == clt) {
             // exact match
             if (isLive)
-                return d->objExport(obj, pExcl);
+                return d->objExport(obj);
 
             CL_BREAK_IF(cltExactMatch);
             cltExactMatch = true;
@@ -1964,15 +1958,11 @@ update_best:
     }
 
     if (OBJ_INVALID != bestMatch)
-        return d->objExport(bestMatch, pExcl);
+        return d->objExport(bestMatch);
 
     if (this->valSizeOfTarget(at) < clt->size)
         // out of bounds
         return OBJ_UNKNOWN;
-
-    if (pExcl)
-        // a newly created object cannot be already externally referenced
-        *pExcl = true;
 
     // create the object
     const TValId root = valData->valRoot;
@@ -1983,7 +1973,9 @@ void SymHeapCore::objLeave(TObjId obj) {
     HeapObject *objData;
     d->ents.getEntRW(&objData, obj);
     CL_BREAK_IF(!objData->extRefCnt);
-    objData->extRefCnt = false;
+    if (--(objData->extRefCnt))
+        // still externally referenced
+        return;
 
     if (isComposite(objData->clt, /* includingArray */ false)
             && VAL_INVALID != objData->value)
