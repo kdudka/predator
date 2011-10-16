@@ -248,12 +248,12 @@ struct BlockEntity: public AbstractHeapEntity {
 
 struct HeapObject: public BlockEntity {
     TObjType                    clt;
-    bool                        hasExtRef;
+    int                         extRefCnt;
 
-    HeapObject(TValId root_, TOffset off_, TObjType clt_, bool hasExtRef_):
+    HeapObject(TValId root_, TOffset off_, TObjType clt_, bool hasExtRef):
         BlockEntity(bkFromClt(clt_), root_, off_, clt_->size, VAL_INVALID),
         clt(clt_),
-        hasExtRef(hasExtRef_)
+        extRefCnt(static_cast<int>(hasExtRef))
     {
     }
 
@@ -676,7 +676,7 @@ void SymHeapCore::Private::reinterpretObjData(
     if (rootData->liveObjs.erase(old))
         CL_DEBUG("reinterpretObjData() kills a live object");
 
-    if (!oldData->hasExtRef) {
+    if (!oldData->extRefCnt) {
         CL_DEBUG("reinterpretObjData() destroys a dead object");
         this->objDestroy(old, /* removeVal */ false, /* detach */ true);
         return;
@@ -806,9 +806,9 @@ TObjId SymHeapCore::Private::objExport(TObjId obj, bool *pExcl) {
     HeapObject *data;
     this->ents.getEntRW(&data, obj);
     if (pExcl)
-        *pExcl = !data->hasExtRef;
+        *pExcl = !data->extRefCnt;
 
-    data->hasExtRef = true;
+    data->extRefCnt = true;
     return obj;
 }
 
@@ -991,7 +991,7 @@ SymHeapCore::Private::~Private() {
 TValId SymHeapCore::Private::objInit(TObjId obj) {
     HeapObject *objData;
     this->ents.getEntRW(&objData, obj);
-    CL_BREAK_IF(!objData->hasExtRef);
+    CL_BREAK_IF(!objData->extRefCnt);
 
     // resolve root
     const TValId root = objData->root;
@@ -1979,16 +1979,16 @@ update_best:
     return d->objCreate(root, off, clt, /* hasExtRef */ true);
 }
 
-void SymHeapCore::objReleaseId(TObjId obj) {
+void SymHeapCore::objLeave(TObjId obj) {
     HeapObject *objData;
     d->ents.getEntRW(&objData, obj);
-    CL_BREAK_IF(!objData->hasExtRef);
-    objData->hasExtRef = false;
+    CL_BREAK_IF(!objData->extRefCnt);
+    objData->extRefCnt = false;
 
     if (isComposite(objData->clt, /* includingArray */ false)
             && VAL_INVALID != objData->value)
     {
-        CL_DEBUG("SymHeapCore::objReleaseId() preserves a composite object");
+        CL_DEBUG("SymHeapCore::objLeave() preserves a composite object");
         return;
     }
 
@@ -1997,7 +1997,7 @@ void SymHeapCore::objReleaseId(TObjId obj) {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     if (!hasKey(rootData->liveObjs, obj)) {
-        CL_DEBUG("SymHeapCore::objReleaseId() destroys a dead object");
+        CL_DEBUG("SymHeapCore::objLeave() destroys a dead object");
         d->objDestroy(obj, /* removeVal */ true, /* detach */ true);
     }
 #endif

@@ -416,8 +416,11 @@ class SymHeapCore {
         /// return an object of the given type at the given address
         TObjId objAt(TValId at, TObjType clt, bool *exclusive = 0);
 
-        /// mark the object ID externally unused (still NOP if used internally)
-        void objReleaseId(TObjId);
+        /// increment the external reference count of the given object
+        void objEnter(TObjId);
+
+        /// decrement the external reference count (may trigger its destruction)
+        void objLeave(TObjId);
 
         /// return address of the given program variable
         TValId addrOfVar(CVar, bool createIfNeeded);

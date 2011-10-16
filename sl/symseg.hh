@@ -72,7 +72,7 @@ inline TObjId prevPtrFromSeg(const SymHeap &sh, TValId seg) {
 inline TValId nextValFromSeg(SymHeap &sh, TValId seg) {
     const TObjId ptrNext = nextPtrFromSeg(sh, seg);
     const TValId valNext = sh.valueOf(ptrNext);
-    sh.objReleaseId(ptrNext);
+    sh.objLeave(ptrNext);
     return valNext;
 }
 

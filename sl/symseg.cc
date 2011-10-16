@@ -135,8 +135,8 @@ TValId segClone(SymHeap &sh, const TValId seg) {
         sh.objSetValue(ppPeer, segHeadAt(sh, dup));
 
         // release object IDs
-        sh.objReleaseId(ppSeg);
-        sh.objReleaseId(ppPeer);
+        sh.objLeave(ppSeg);
+        sh.objLeave(ppPeer);
     }
 
     return dup;

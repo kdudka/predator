@@ -504,7 +504,7 @@ bool handleNondetInt(
     const TObjId objDst = core.objByOperand(opDst);
     const TValId val = sh.valCreate(VT_UNKNOWN, origin);
     core.objSetValue(objDst, val);
-    sh.objReleaseId(objDst);
+    sh.objLeave(objDst);
 
     // insert the resulting heap
     dst.insert(sh);

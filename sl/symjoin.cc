@@ -1213,8 +1213,8 @@ bool dlSegHandleShared(
     sh.objSetValue(prev1, segHeadAt(sh, peer));
     sh.objSetValue(prev2, segHeadAt(sh,  seg));
 
-    sh.objReleaseId(prev1);
-    sh.objReleaseId(prev2);
+    sh.objLeave(prev1);
+    sh.objLeave(prev2);
 
     CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
     return true;
@@ -1594,7 +1594,7 @@ bool insertSegmentClone(
         : nextPtrFromSeg(shGt, peer);
 
     const TValId nextGt = shGt.valueOf(nextPtr);
-    shGt.objReleaseId(nextPtr);
+    shGt.objLeave(nextPtr);
 
     const TValId nextLt = (isGt2) ? v1 : v2;
     if (!off && !checkValueMapping(ctx, 

@@ -74,7 +74,7 @@ inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
     const TValId val = sh.valueOf(ptr);
 
     if (0 < ptr && exclusive)
-        sh.objReleaseId(ptr);
+        sh.objLeave(ptr);
 
     return val;
 }

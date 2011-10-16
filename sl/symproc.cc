@@ -391,7 +391,7 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
         const TObjId ptr = sh_.ptrAt(addr, &exclusive);
         addr = sh_.valueOf(ptr);
         if (exclusive)
-            sh_.objReleaseId(ptr);
+            sh_.objLeave(ptr);
     }
 
     // apply the offset
@@ -444,7 +444,7 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
 
     const TValId val = sh_.valueOf(obj);
     if (exclusive)
-        sh_.objReleaseId(obj);
+        sh_.objLeave(obj);
 
     return val;
 }
@@ -767,7 +767,7 @@ malloc/calloc is implementation-defined");
         CL_NOTE_MSG(lw_, "assuming NULL as the result");
         bt_->printBackTrace();
         this->objSetValue(lhs, VAL_NULL);
-        sh_.objReleaseId(lhs);
+        sh_.objLeave(lhs);
         this->killInsn(insn);
         dst.insert(sh_);
         return;
@@ -781,7 +781,7 @@ malloc/calloc is implementation-defined");
 
         // OOM state simulation
         oomCore.objSetValue(lhs, VAL_NULL);
-        oomHeap.objReleaseId(lhs);
+        oomHeap.objLeave(lhs);
         oomCore.killInsn(insn);
         dst.insert(oomHeap);
     }
@@ -794,7 +794,7 @@ malloc/calloc is implementation-defined");
 
     // store the result of malloc
     this->objSetValue(lhs, val);
-    sh_.objReleaseId(lhs);
+    sh_.objLeave(lhs);
     this->killInsn(insn);
     dst.insert(sh_);
 }
@@ -1164,7 +1164,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
             // we're already on an error path
             const TValId vFail = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
             this->objSetValue(varLhs, vFail);
-            sh_.objReleaseId(varLhs);
+            sh_.objLeave(varLhs);
             return;
         }
 
@@ -1185,14 +1185,14 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
             if (obj == varLhs)
                 goto already_alive;
 
-        sh_.objReleaseId(varLhs);
+        sh_.objLeave(varLhs);
         return;
     }
 already_alive:
 #endif
     // store the result
     this->objSetValue(varLhs, valResult);
-    sh_.objReleaseId(varLhs);
+    sh_.objLeave(varLhs);
 }
 
 void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {

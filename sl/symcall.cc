@@ -250,14 +250,14 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     TValId val;
     if (0 < objSrc) {
         val = sh.valueOf(objSrc);
-        sh.objReleaseId(objSrc);
+        sh.objLeave(objSrc);
     }
     else
         val = sh.valCreate(VT_UNKNOWN, VO_STACK);
 
     // assign the return value in the current symbolic heap
     proc.objSetValue(objDst, val);
-    sh.objReleaseId(objDst);
+    sh.objLeave(objDst);
 }
 
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
@@ -585,7 +585,7 @@ void setCallArgs(
         // set the value of lhs accordingly
         const TObjId argObj = sh.objAt(argAddr, clt);
         proc.objSetValue(argObj, val);
-        sh.objReleaseId(argObj);
+        sh.objLeave(argObj);
     }
 
     srcProc.killInsn(insn);

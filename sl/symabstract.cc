@@ -447,7 +447,7 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     const TObjId nextPtr = sh.ptrAt(sh.valByOffset(dls, off.next));
     const TValId valNext = valOfPtrAt(sh, var, off.next);
     sh.objSetValue(nextPtr, valNext);
-    sh.objReleaseId(nextPtr);
+    sh.objLeave(nextPtr);
 
     // replace VAR by DLS
     const TValId headAt = sh.valByOffset(var, off.head);
@@ -481,7 +481,7 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     const TValId valNext1 = nextValFromSeg(sh, seg1);
     const TObjId ptrNext2 = nextPtrFromSeg(sh, seg2);
     sh.objSetValue(ptrNext2, valNext1);
-    sh.objReleaseId(ptrNext2);
+    sh.objLeave(ptrNext2);
 
     // replace both parts point-wise
     const TValId headAt = segHeadAt(sh,  seg1);
@@ -680,7 +680,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     const TObjId peerPtr = prevPtrFromSeg(sh, seg);
     const TValId valNext = nextValFromSeg(sh, peer);
     sh.objSetValue(peerPtr, valNext);
-    sh.objReleaseId(peerPtr);
+    sh.objLeave(peerPtr);
 
     // redirect all references originally pointing to peer to the current object
     redirectRefs(sh,
@@ -806,7 +806,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
         // DLS relink
         const TObjId ptr = prevPtrFromSeg(sh, peer);
         sh.objSetValue(ptr, dupHead);
-        sh.objReleaseId(ptr);
+        sh.objLeave(ptr);
     }
 
     // duplicate all unknown values, to keep the prover working
@@ -822,14 +822,14 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     sh.valTargetSetConcrete(seg);
     const TObjId nextPtr = sh.ptrAt(sh.valByOffset(seg, offNext));
     sh.objSetValue(nextPtr, dupHead);
-    sh.objReleaseId(nextPtr);
+    sh.objLeave(nextPtr);
 
     if (OK_DLS == kind) {
         // update DLS back-link
         const TObjId backLink = sh.ptrAt(sh.valByOffset(dup, off.next));
         const TValId headAddr = sh.valByOffset(seg, off.head);
         sh.objSetValue(backLink, headAddr);
-        sh.objReleaseId(backLink);
+        sh.objLeave(backLink);
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
