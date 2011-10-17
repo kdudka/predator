@@ -61,9 +61,9 @@ class UniBlockWriter {
 };
 
 struct DeepCopyData {
-    typedef std::map<TValId   /* seg */, unsigned /* len */>    TSegLengths;
-    typedef std::map<TValId   /* src */, TValId   /* dst */>    TValMap;
-    typedef std::pair<TObjId  /* src */, TObjId   /* dst */>    TItem;
+    typedef std::map<TValId     /* seg */, unsigned  /* len */> TSegLengths;
+    typedef std::map<TValId     /* src */, TValId    /* dst */> TValMap;
+    typedef std::pair<ObjHandle /* src */, ObjHandle /* dst */> TItem;
     typedef std::set<CVar>                                      TCut;
 
     SymHeap             &src;
@@ -93,12 +93,12 @@ class DCopyObjVisitor {
     public:
         DCopyObjVisitor(DeepCopyData &dc): dc_(dc) { }
 
-        bool operator()(const TObjId item[2]) {
-            const TObjId objSrc = item[/* src */ 0];
-            const TObjId objDst = item[/* dst */ 1];
+        bool operator()(const ObjHandle item[2]) {
+            const ObjHandle &objSrc = item[/* src */ 0];
+            const ObjHandle &objDst = item[/* dst */ 1];
 
-            const TValId srcAt = dc_.src.placedAt(objSrc);
-            const TValId dstAt = dc_.dst.placedAt(objDst);
+            const TValId srcAt = objSrc.placedAt();
+            const TValId dstAt = objDst.placedAt();
             dc_.valMap[srcAt] = dstAt;
 
             // FIXME: schedule by values instead
@@ -281,19 +281,19 @@ void deepCopy(DeepCopyData &dc) {
 
     DeepCopyData::TItem item;
     while (dc.wl.next(item)) {
-        const TObjId objSrc = item.first;
-        const TObjId objDst = item.second;
-        CL_BREAK_IF(objSrc < 0 || objDst < 0);
+        const ObjHandle &objSrc = item.first;
+        const ObjHandle &objDst = item.second;
+        CL_BREAK_IF(objSrc.objId() < 0 || objDst.objId() < 0);
 
         // read the address
-        const TValId atSrc = src.placedAt(objSrc);
+        const TValId atSrc = objSrc.placedAt();
         CL_BREAK_IF(atSrc <= 0);
         trackUses(dc, atSrc);
 
         // read the original value
-        TValId valSrc = src.valueOf(objSrc);
+        TValId valSrc = objSrc.value();
         CL_BREAK_IF(VAL_INVALID == valSrc);
-        if (isComposite(dst.objType(objDst)))
+        if (isComposite(objDst.objType()))
             continue;
 
         // do whatever we need to do with the value
@@ -301,7 +301,7 @@ void deepCopy(DeepCopyData &dc) {
         CL_BREAK_IF(VAL_INVALID == valDst);
 
         // now set object's value
-        dst.objSetValue(objDst, valDst);
+        objDst.setValue(valDst);
     }
 
     // finally copy all relevant Neq predicates

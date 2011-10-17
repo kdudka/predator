@@ -602,6 +602,17 @@ class ObjHandle {
         TObjId           id_;
 };
 
+/// this allows to insert ObjHandle instances into std::set
+inline bool operator<(const ObjHandle &a, const ObjHandle &b) {
+    if (a.sh() < b.sh())
+        return true;
+
+    if (b.sh() < a.sh())
+        return false;
+
+    return (a.objId() < b.objId());
+}
+
 class PtrHandle: public ObjHandle {
     public:
         PtrHandle(SymHeapCore &sh, TValId addr):

@@ -515,16 +515,19 @@ struct ObjJoinVisitor {
     {
     }
 
-    bool operator()(const TObjId item[3]) {
-        const TObjId obj1   = item[0];
-        const TObjId obj2   = item[1];
-        const TObjId objDst = item[2];
+    bool operator()(const ObjHandle item[3]) {
+        const ObjHandle &obj1   = item[0];
+        const ObjHandle &obj2   = item[1];
+        const ObjHandle &objDst = item[2];
 
         // check black-list
         if (blackList1.lookup(obj1) || blackList2.lookup(obj2))
             return /* continue */ true;
 
-        return /* continue */ joinFreshObjTripple(ctx, obj1, obj2, objDst);
+        return /* continue */ joinFreshObjTripple(ctx,
+                obj1.objId(),
+                obj2.objId(),
+                objDst.objId());
     }
 };
 
@@ -549,15 +552,15 @@ struct SegMatchVisitor {
         {
         }
 
-        bool operator()(const TObjId item[2]) {
-            const TObjId obj1 = item[0];
-            const TObjId obj2 = item[1];
+        bool operator()(const ObjHandle item[2]) {
+            const ObjHandle &obj1 = item[0];
+            const ObjHandle &obj2 = item[1];
 
             if (blackList1.lookup(obj1) || blackList2.lookup(obj2))
                 // black-listed
                 return true;
 
-            return joinFreshObjTripple(ctx, obj1, obj2,
+            return joinFreshObjTripple(ctx, obj1.objId(), obj2.objId(),
                                        /* read-only */ OBJ_INVALID);
         }
 };

@@ -284,16 +284,16 @@ struct ValueSynchronizer {
 
     ValueSynchronizer(SymHeap &sh_): sh(sh_) { }
 
-    bool operator()(TObjId item[2]) const {
-        const TObjId src = item[0];
-        const TObjId dst = item[1];
+    bool operator()(ObjHandle item[2]) const {
+        const ObjHandle &src = item[0];
+        const ObjHandle &dst = item[1];
         if (ignoreList.lookup(src))
             return /* continue */ true;
 
         // store value of 'src' into 'dst'
-        TValId valSrc = sh.valueOf(src);
-        TValId valDst = sh.valueOf(dst);
-        sh.objSetValue(dst, valSrc);
+        const TValId valSrc = src.value();
+        const TValId valDst = dst.value();
+        dst.setValue(valSrc);
 
         // if the last reference is gone, we have a problem
         if (collectJunk(sh, valDst))

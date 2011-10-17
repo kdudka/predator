@@ -291,12 +291,12 @@ bool /* complete */ traverseLiveObjsGeneric(
         const TOffset  off = item.first;
         const TObjType clt = item.second;
 
-        TObjId objs[N];
+        ObjHandle objs[N];
         for (unsigned i = 0; i < N; ++i) {
             SymHeap &sh = *heaps[i];
 
             const TValId addr = sh.valByOffset(roots[i], offs[i] + off);
-            objs[i] = sh.objAt(addr, clt);
+            objs[i] = ObjHandle(sh, addr, clt);
         }
 
         if (!visitor(objs))
