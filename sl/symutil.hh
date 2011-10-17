@@ -373,9 +373,9 @@ bool /* complete */ traverseProgramVarsGeneric(
     // go through all program variables
     BOOST_FOREACH(const CVar &cv, all) {
         TValId roots[N_TOTAL];
-        for (unsigned i = 0; i < N_TOTAL; ++i) {
+        for (signed i = 0; i < (signed)N_TOTAL; ++i) {
             SymHeap &sh = *heaps[i];
-            roots[i] = sh.addrOfVar(cv, /* createIfNeeded */ !i);
+            roots[i] = sh.addrOfVar(cv, /* createIfNeeded */ i < (signed)N_DST);
         }
 
         if (!visitor(roots))
