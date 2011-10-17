@@ -427,11 +427,9 @@ class SymHeapCore {
 
         /// list of live objects (including ptrs) owned by the given root entity
         void gatherLiveObjects(ObjList &dst, TValId root) const;
-        void gatherLiveObjectsXXX(TObjList &dst, TValId root) const;
 
         /// list of live pointers owned by the given root entity
         void gatherLivePointers(ObjList &dst, TValId root) const;
-        void gatherLivePointersXXX(TObjList &dst, TValId root) const;
 
         /// list of uninitialized and nullified uniform blocks
         void gatherUniformBlocks(TUniBlockMap &dst, TValId root) const;
@@ -543,6 +541,8 @@ class ObjHandle {
             sh_(&sh),
             id_(sh.objAt(addr, clt))
         {
+            if (0 < id_)
+                sh_->objEnter(id_);
         }
 
         ObjHandle(const ObjHandle &tpl):
@@ -595,6 +595,8 @@ class ObjHandle {
             sh_(&sh),
             id_(id)
         {
+            if (0 < id_)
+                sh_->objEnter(id_);
         }
 
         friend class SymHeapCore;

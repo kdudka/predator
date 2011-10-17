@@ -392,7 +392,6 @@ struct SymHeapCore::Private {
     bool valsEqual(TValId, TValId);
 
     TObjId objCreate(TValId root, TOffset off, TObjType clt, bool hasExtRef);
-    TObjId objExport(TObjId obj);
     TValId objInit(TObjId obj);
     void objDestroy(TObjId, bool removeVal, bool detach);
 
@@ -810,14 +809,6 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
     }
 
     this->ents.releaseEnt(obj);
-}
-
-TObjId SymHeapCore::Private::objExport(TObjId obj) {
-    HeapObject *data;
-    this->ents.getEntRW(&data, obj);
-
-    ++(data->extRefCnt);
-    return obj;
 }
 
 TValId SymHeapCore::Private::valCreate(
@@ -1278,22 +1269,18 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     return imageAt;
 }
 
-void SymHeapCore::gatherLivePointersXXX(TObjList &dst, TValId root) const {
+void SymHeapCore::gatherLivePointers(ObjList &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
+
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         const EBlockKind code = item.second;
-        if (BK_DATA_PTR == code)
-            dst.push_back(d->objExport(/* obj */ item.first));
-    }
-}
+        if (BK_DATA_PTR != code)
+            continue;
 
-void SymHeapCore::gatherLivePointers(ObjList &dst, TValId root) const {
-    TObjList rawList;
-    this->gatherLivePointersXXX(rawList, root);
-
-    BOOST_FOREACH(const TObjId obj, rawList)
+        const TObjId obj = item.first;
         dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
+    }
 }
 
 void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
@@ -1317,9 +1304,10 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
     }
 }
 
-void SymHeapCore::gatherLiveObjectsXXX(TObjList &dst, TValId root) const {
+void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
+
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         const EBlockKind code = item.second;
 
@@ -1329,22 +1317,16 @@ void SymHeapCore::gatherLiveObjectsXXX(TObjList &dst, TValId root) const {
 
             case BK_DATA_PTR:
             case BK_DATA_OBJ:
-                dst.push_back(d->objExport(/* obj */ item.first));
-                continue;
+                break;
 
             case BK_INVALID:
             default:
                 CL_BREAK_IF("gatherLiveObjects sees something special");
         }
-    }
-}
 
-void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const {
-    TObjList rawList;
-    this->gatherLiveObjectsXXX(rawList, root);
-
-    BOOST_FOREACH(const TObjId obj, rawList)
+        const TObjId obj = item.first;
         dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
+    }
 }
 
 bool SymHeapCore::findCoveringUniBlock(
@@ -1884,7 +1866,7 @@ TObjId SymHeapCore::ptrAt(TValId at) {
         const HeapObject *objData = DCAST<const HeapObject *>(blData);
         const TObjType clt = objData->clt;
         if (isDataPtr(clt))
-            return d->objExport(obj);
+            return obj;
     }
 
     // check whether we have enough space allocated for the pointer
@@ -1956,7 +1938,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
         if (cltNow == clt) {
             // exact match
             if (isLive)
-                return d->objExport(obj);
+                return obj;
 
             CL_BREAK_IF(cltExactMatch);
             cltExactMatch = true;
@@ -1984,7 +1966,7 @@ update_best:
     }
 
     if (OBJ_INVALID != bestMatch)
-        return d->objExport(bestMatch);
+        return bestMatch;
 
     if (this->valSizeOfTarget(at) < clt->size)
         // out of bounds
@@ -1998,14 +1980,14 @@ update_best:
 void SymHeapCore::objEnter(TObjId obj) {
     HeapObject *objData;
     d->ents.getEntRW(&objData, obj);
-    CL_BREAK_IF(objData->extRefCnt < 1);
+    CL_BREAK_IF(objData->extRefCnt < 0);
     ++(objData->extRefCnt);
 }
 
 void SymHeapCore::objLeave(TObjId obj) {
     HeapObject *objData;
     d->ents.getEntRW(&objData, obj);
-    CL_BREAK_IF(!objData->extRefCnt);
+    CL_BREAK_IF(objData->extRefCnt < 1);
     if (--(objData->extRefCnt))
         // still externally referenced
         return;
@@ -2119,7 +2101,7 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     CL_BREAK_IF(VT_COMPOSITE != valData->code);
 
     const CompValue *compData = DCAST<const CompValue *>(valData);
-    return d->objExport(compData->compObj);
+    return compData->compObj;
 }
 
 TValId SymHeapCore::heapAlloc(int cbSize) {
