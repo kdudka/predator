@@ -2058,27 +2058,29 @@ TValId joinDstValue(
         return VAL_INVALID;
 }
 
+typedef std::pair<ObjHandle, ObjHandle> THdlPair;
+
 template <class TItem, class TBlackList>
 bool setDstValuesCore(
         SymJoinCtx              &ctx,
         const TItem             &rItem,
         const TBlackList        &blackList)
 {
-    const TObjId objDst = rItem.first;
-    CL_BREAK_IF(objDst < 0);
+    const ObjHandle &objDst = rItem.first;
+    CL_BREAK_IF(objDst.objId() < 0);
     if (blackList.lookup(objDst))
         return true;
 
-    const TObjPair &orig = rItem.second;
-    const TObjId obj1 = orig.first;
-    const TObjId obj2 = orig.second;
+    const THdlPair &orig = rItem.second;
+    const ObjHandle &obj1 = orig.first;
+    const ObjHandle &obj2 = orig.second;
     CL_BREAK_IF(OBJ_INVALID == obj1 && OBJ_INVALID == obj2);
 
-    const TValId v1 = ctx.sh1.valueOf(obj1);
-    const TValId v2 = ctx.sh2.valueOf(obj2);
+    const TValId v1 = obj1.value();
+    const TValId v2 = obj2.value();
 
-    const bool isComp1 = (isComposite(ctx.sh1.objType(obj1)));
-    const bool isComp2 = (isComposite(ctx.sh2.objType(obj2)));
+    const bool isComp1 = (isComposite(obj1.objType()));
+    const bool isComp2 = (isComposite(obj2.objType()));
     if (isComp1 || isComp2) {
         // do not bother by composite values
         CL_BREAK_IF(OBJ_INVALID != obj1 && !isComp1);
@@ -2091,7 +2093,7 @@ bool setDstValuesCore(
         CL_BREAK_IF(v1 != v2);
         if (ctx.joiningDataReadWrite())
             // read-write mode
-            ctx.dst.objSetValue(objDst, v1);
+            objDst.setValue(v1);
 
         return true;
     }
@@ -2104,7 +2106,7 @@ bool setDstValuesCore(
         return false;
 
     // set the value
-    ctx.dst.objSetValue(objDst, vDst);
+    objDst.setValue(vDst);
     return true;
 }
 
@@ -2113,16 +2115,15 @@ bool setDstValues(SymJoinCtx &ctx, const ObjLookup *blackList = 0) {
     SymHeap &sh1 = ctx.sh1;
     SymHeap &sh2 = ctx.sh2;
 
-    typedef std::map<TObjId /* objDst */, TObjPair> TMap;
+    typedef std::map<ObjHandle /* objDst */, THdlPair> TMap;
     TMap rMap;
 
     // reverse mapping for ctx.liveList1
     const TValMap &vMap1 = ctx.valMap1[0];
-    BOOST_FOREACH(const ObjHandle &hdlSrc, ctx.liveList1) {
-        const TObjId objSrc = /* FIXME */ hdlSrc.objId();
-        const TValId rootSrcAt = sh1.valRoot(sh1.placedAt(objSrc));
+    BOOST_FOREACH(const ObjHandle &objSrc, ctx.liveList1) {
+        const TValId rootSrcAt = sh1.valRoot(objSrc.placedAt());
         const TValId rootDstAt = roMapLookup(vMap1, rootSrcAt);
-        const TObjId objDst = translateObjId(dst, sh1, rootDstAt, objSrc);
+        const ObjHandle objDst = translateObjId(dst, sh1, rootDstAt, objSrc);
         if (!hasKey(rMap, objDst))
             rMap[objDst].second = OBJ_INVALID;
 
@@ -2132,11 +2133,10 @@ bool setDstValues(SymJoinCtx &ctx, const ObjLookup *blackList = 0) {
 
     // reverse mapping for ctx.liveList2
     const TValMap &vMap2 = ctx.valMap2[0];
-    BOOST_FOREACH(const ObjHandle &hdlSrc, ctx.liveList2) {
-        const TObjId objSrc = /* FIXME */ hdlSrc.objId();
-        const TValId rootSrcAt = sh2.valRoot(sh2.placedAt(objSrc));
+    BOOST_FOREACH(const ObjHandle &objSrc, ctx.liveList2) {
+        const TValId rootSrcAt = sh2.valRoot(objSrc.placedAt());
         const TValId rootDstAt = roMapLookup(vMap2, rootSrcAt);
-        const TObjId objDst = translateObjId(dst, sh2, rootDstAt, objSrc);
+        const ObjHandle objDst = translateObjId(dst, sh2, rootDstAt, objSrc);
         if (!hasKey(rMap, objDst))
             rMap[objDst].first = OBJ_INVALID;
 
@@ -2149,7 +2149,7 @@ bool setDstValues(SymJoinCtx &ctx, const ObjLookup *blackList = 0) {
         blackList = &emptyBlackList;
 
     BOOST_FOREACH(TMap::const_reference rItem, rMap) {
-        if (!ctx.dst.objType(rItem.first))
+        if (!rItem.first.objType())
             // do not set value of anonymous objects
             continue;
 
@@ -2594,17 +2594,17 @@ void transferContentsOfGhost(
     ObjLookup ignoreList;
     buildIgnoreList(ignoreList, sh, dst);
 
-    TObjList live;
-    sh.gatherLiveObjectsXXX(live, ghost);
-    BOOST_FOREACH(const TObjId objGhost, live) {
-        const TObjId objDst = translateObjId(sh, sh, dst, objGhost);
+    ObjList live;
+    sh.gatherLiveObjects(live, ghost);
+    BOOST_FOREACH(const ObjHandle objGhost, live) {
+        const ObjHandle objDst = translateObjId(sh, sh, dst, objGhost);
         if (ignoreList.lookup(objDst))
             // preserve binding pointers
             continue;
 
-        const TValId valOld = sh.valueOf(objDst);
-        const TValId valNew = sh.valueOf(objGhost);
-        sh.objSetValue(objDst, valNew);
+        const TValId valOld = objDst.value();
+        const TValId valNew = objGhost.value();
+        objDst.setValue(valNew);
 
         if (collectJunk(sh, valOld))
             CL_DEBUG("    transferContentsOfGhost() drops a sub-heap (valOld)");

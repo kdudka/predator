@@ -55,16 +55,26 @@ bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
 
-TObjId translateObjId(
-        SymHeap                 &dst,
-        SymHeap                 &src,
-        const TValId            dstRootAt,
-        const TObjId            srcObj);
-
 void translateValProto(
         TValId                  *pValProto,
         SymHeap                 &dst,
         const SymHeap           &src);
+
+inline ObjHandle translateObjId(
+        SymHeap                 &dst,
+        SymHeap                 &src,
+        const TValId            dstRootAt,
+        const ObjHandle         &srcObj)
+{
+    // gather properties of the object in 'src'
+    const TValId srcAt = srcObj.placedAt();
+    const TOffset  off = src.valOffset(srcAt);
+    const TObjType clt = srcObj.objType();
+
+    // use them to obtain the corresponding object in 'dst'
+    const TValId dstAt = dst.valByOffset(dstRootAt, off);
+    return ObjHandle(dst, dstAt, clt);
+}
 
 inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
     CL_BREAK_IF(!canWriteDataPtrAt(sh, at));

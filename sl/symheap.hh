@@ -412,12 +412,6 @@ class SymHeapCore {
         /// return size (in bytes) that we can safely write at the given addr
         int valSizeOfTarget(TValId) const;
 
-        /// return a @b data pointer placed at the given address
-        TObjId ptrAt(TValId at);
-
-        /// return an object of the given type at the given address
-        TObjId objAt(TValId at, TObjType clt);
-
         /// return address of the given program variable
         TValId addrOfVar(CVar, bool createIfNeeded);
 
@@ -499,6 +493,12 @@ class SymHeapCore {
         void valTargetSetProto(TValId root, bool isProto);
 
     protected:
+        /// return a @b data pointer placed at the given address
+        TObjId ptrAt(TValId at);
+
+        /// return an object of the given type at the given address
+        TObjId objAt(TValId at, TObjType clt);
+
         /// increment the external reference count of the given object
         void objEnter(TObjId);
 
@@ -611,6 +611,15 @@ inline bool operator<(const ObjHandle &a, const ObjHandle &b) {
         return false;
 
     return (a.objId() < b.objId());
+}
+
+inline bool operator==(const ObjHandle &a, const ObjHandle &b) {
+    return (a.sh()    == b.sh())
+        && (a.objId() == b.objId());
+}
+
+inline bool operator!=(const ObjHandle &a, const ObjHandle &b) {
+    return !operator==(a, b);
 }
 
 class PtrHandle: public ObjHandle {

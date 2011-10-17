@@ -116,22 +116,6 @@ bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val) {
     return (ptrSize <= sh.valSizeOfTarget(val));
 }
 
-TObjId translateObjId(
-        SymHeap                 &dst,
-        SymHeap                 &src,
-        const TValId            dstRootAt,
-        const TObjId            srcObj)
-{
-    // gather properties of the object in 'src'
-    const TValId srcAt = src.placedAt(srcObj);
-    const TOffset  off = src.valOffset(srcAt);
-    const TObjType clt = src.objType(srcObj);
-
-    // use them to obtain the corresponding object in 'dst'
-    const TValId dstAt = dst.valByOffset(dstRootAt, off);
-    return dst.objAt(dstAt, clt);
-}
-
 void translateValProto(
         TValId                  *pValProto,
         SymHeap                 &dst,
