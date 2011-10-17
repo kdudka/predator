@@ -145,9 +145,6 @@ void segSetProto(SymHeap &sh, TValId seg, bool isProto);
 
 TValId segClone(SymHeap &sh, const TValId seg);
 
-/// destroy the given list segment object (including DLS peer in case of DLS)
-void segDestroy(SymHeap &sh, TObjId seg);
-
 inline void buildIgnoreList(
         ObjLookup               &ignoreList,
         const SymHeap           &sh,

@@ -589,7 +589,8 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
     }
 
     // FIXME: Should we check for overlapping?  What does the C standard say??
-    const TValId rhsAt = sh_.placedAt(sh_.valGetComposite(rhs));
+    const ObjHandle compObj(sh_, sh_.valGetComposite(rhs));
+    const TValId rhsAt = compObj.placedAt();
 
     LeakMonitor lm(sh_);
     lm.enter();

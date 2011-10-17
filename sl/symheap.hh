@@ -268,25 +268,6 @@ class SymHeapCore {
 
     public:
         /**
-         * return a value @b stored @b in the given object
-         * @param obj ID of the object to look into
-         * @return A valid value ID in case of success, invalid otherwise.
-         * @note It may also return @b unknown, @b composite or @b custom value,
-         * depending on kind of the queried object.
-         * @note It may acquire a new value ID in case the value is not known.
-         */
-        TValId valueOf(TObjId obj);
-
-        /**
-         * return a value corresponding to @b symbolic @b address of the given
-         * object
-         * @param obj ID of the object to look for
-         * @return A valid value ID when a valid object ID is given, VAL_INVALID
-         * otherwise.
-         */
-        TValId placedAt(TObjId obj);
-
-        /**
          * collect all objects having the given value inside
          * @param dst reference to a container to store the result to
          * @param val ID of the value to look for
@@ -303,19 +284,6 @@ class SymHeapCore {
 
         /// return how many objects point at/inside the given root entity
         unsigned pointedByCount(TValId root) const;
-
-        /**
-         * @b set @b value of the given object, which has to be @b valid and may
-         * @b not be a composite object
-         * @param obj ID of the object to set value of
-         * @param val ID requested to be stored into the object
-         * @param killedPtrs if not NULL, insert killed pointer values there
-         * @note This is really @b low-level @b implementation.  It does not
-         * check for junk, delayed type-info definition, etc.  If you are
-         * interested in such abilities, you are looking for
-         * SymProc::objSetValue().
-         */
-        void objSetValue(TObjId obj, TValId val, TValSet *killedPtrs = 0);
 
         /// write an uninitialized or nullified block of memory
         void writeUniformBlock(
@@ -383,14 +351,6 @@ class SymHeapCore {
         bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
 
     public:
-        /**
-         * look for static type-info of the given object
-         * @param obj ID of the object to look for
-         * @return pointer to the instance cl_type in case of success, 0
-         * otherwise
-         */
-        TObjType objType(TObjId obj) const;
-
         /// translate the given address by the given offset
         TValId valByOffset(TValId, TOffset offset);
 
@@ -445,7 +405,10 @@ class SymHeapCore {
          */
         CVar cVarByRoot(TValId root) const;
 
-        /// composite object given by val (applicable only on VT_COMPOSITE vals)
+        /**
+         * composite object given by val (applicable only on VT_COMPOSITE vals)
+         * @todo should we operate on ObjHandle instead?
+         */
         TObjId valGetComposite(TValId val) const;
 
     public:
@@ -504,6 +467,13 @@ class SymHeapCore {
         /// ObjHandle takes care of external reference count
         friend class ObjHandle;
         friend class PtrHandle;
+
+    protected:
+        // these should be accessed indirectly via ObjHandle
+        TValId valueOf(TObjId obj);
+        TValId placedAt(TObjId obj);
+        TObjType objType(TObjId obj) const;
+        void objSetValue(TObjId obj, TValId val, TValSet *killedPtrs = 0);
 
     protected:
         TStorRef stor_;
@@ -578,11 +548,50 @@ class ObjHandle {
     public:
         SymHeapCore*    sh()        const { return sh_; }
         TObjId          objId()     const { return id_; }
-        TObjType        objType()   const { return sh_->objType(id_); }
-        TValId          value()     const { return sh_->valueOf(id_); }
-        TValId          placedAt()  const { return sh_->placedAt(id_); }
         bool            isValid()   const { return 0 < id_; }
 
+        /**
+         * return a value @b stored @b in the given object
+         * @param obj ID of the object to look into
+         * @return A valid value ID in case of success, invalid otherwise.
+         * @note It may also return @b unknown, @b composite or @b custom value,
+         * depending on kind of the queried object.
+         * @note It may acquire a new value ID in case the value is not known.
+         */
+        TValId          value()     const { return sh_->valueOf(id_); }
+
+        /**
+         * return a value corresponding to @b symbolic @b address of the given
+         * object
+         * @param obj ID of the object to look for
+         * @return A valid value ID when a valid object ID is given, VAL_INVALID
+         * otherwise.
+         */
+        TValId          placedAt()  const { return sh_->placedAt(id_); }
+
+        /**
+         * look for static type-info of the given object
+         * @param obj ID of the object to look for
+         * @return pointer to the instance cl_type in case of success, 0
+         * otherwise
+         */
+        TObjType objType()const {
+            return (sh_)
+                ? sh_->objType(id_)
+                : 0;
+        }
+
+        /**
+         * @b set @b value of the given object, which has to be @b valid and may
+         * @b not be a composite object
+         * @param obj ID of the object to set value of
+         * @param val ID requested to be stored into the object
+         * @param killedPtrs if not NULL, insert killed pointer values there
+         * @note This is really @b low-level @b implementation.  It does not
+         * check for junk, delayed type-info definition, etc.  If you are
+         * interested in such abilities, you are looking for
+         * SymProc::objSetValue().
+         */
         void setValue(const TValId val, TValSet *killedPtrs = 0) const {
             sh_->objSetValue(id_, val, killedPtrs);
         }
@@ -597,6 +606,12 @@ class ObjHandle {
         }
 
         friend class SymHeapCore;
+
+        // TODO: remove this
+        friend class SymProc;
+
+        // TODO: remove this
+        friend const char* valNullLabel(const SymHeapCore &, const TObjId);
 
     protected:
         SymHeapCore     *sh_;

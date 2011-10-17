@@ -46,25 +46,6 @@ void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
     }
 }
 
-void segDestroy(SymHeap &sh, TObjId seg) {
-    const TValId segAt = sh.valRoot(sh.placedAt(seg));
-
-    const EObjKind kind = sh.valTargetKind(segAt);
-    switch (kind) {
-        case OK_CONCRETE:
-            // invalid call of segDestroy()
-            CL_TRAP;
-
-        case OK_DLS:
-            sh.valDestroyTarget(dlSegPeer(sh, segAt));
-            // fall through!
-
-        case OK_MAY_EXIST:
-        case OK_SLS:
-            sh.valDestroyTarget(segAt);
-    }
-}
-
 bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
              const EObjKind kind)
 {

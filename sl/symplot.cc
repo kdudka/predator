@@ -885,8 +885,9 @@ void plotNonRootValues(PlotData &plot) {
     }
 }
 
-const char* valNullLabel(const SymHeap &sh, const TObjId obj) {
-    const TObjType clt = sh.objType(obj);
+const char* valNullLabel(const SymHeapCore &sh, const TObjId obj) {
+    const ObjHandle hdl(const_cast<SymHeapCore &>(sh), obj);
+    const TObjType clt = hdl.objType();
     if (!clt)
         return "[type-free] 0";
 
