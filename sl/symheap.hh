@@ -527,7 +527,7 @@ class ObjHandle {
         {
         }
 
-        ObjHandle(const TObjId special):
+        explicit ObjHandle(const TObjId special):
             sh_(0),
             id_(special)
         {

@@ -403,13 +403,13 @@ ObjHandle SymProc::objByOperand(const struct cl_operand &op) {
     const EValueOrigin origin = sh_.valOrigin(at);
     if (VO_DEREF_FAILED == origin)
         // we are already on the error path
-        return OBJ_DEREF_FAILED;
+        return ObjHandle(OBJ_DEREF_FAILED);
 
     // check for invalid dereference
     const TObjType cltTarget = op.type;
     if (this->checkForInvalidDeref(at, cltTarget->size)) {
         this->failWithBackTrace();
-        return OBJ_DEREF_FAILED;
+        return ObjHandle(OBJ_DEREF_FAILED);
     }
 
     // resolve the target object

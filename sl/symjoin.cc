@@ -2075,7 +2075,7 @@ bool setDstValuesCore(
     const THdlPair &orig = rItem.second;
     const ObjHandle &obj1 = orig.first;
     const ObjHandle &obj2 = orig.second;
-    CL_BREAK_IF(OBJ_INVALID == obj1 && OBJ_INVALID == obj2);
+    CL_BREAK_IF(!obj1.isValid() && !obj2.isValid());
 
     const TValId v1 = obj1.value();
     const TValId v2 = obj2.value();
@@ -2084,8 +2084,8 @@ bool setDstValuesCore(
     const bool isComp2 = (isComposite(obj2.objType()));
     if (isComp1 || isComp2) {
         // do not bother by composite values
-        CL_BREAK_IF(OBJ_INVALID != obj1 && !isComp1);
-        CL_BREAK_IF(OBJ_INVALID != obj2 && !isComp2);
+        CL_BREAK_IF(obj1.isValid() && !isComp1);
+        CL_BREAK_IF(obj2.isValid() && !isComp2);
         return true;
     }
 
@@ -2100,8 +2100,8 @@ bool setDstValuesCore(
     }
 
     // compute the resulting value
-    const bool validObj1 = (OBJ_INVALID != obj1);
-    const bool validObj2 = (OBJ_INVALID != obj2);
+    const bool validObj1 = (obj1.isValid());
+    const bool validObj2 = (obj2.isValid());
     const TValId vDst = joinDstValue(ctx, v1, v2, validObj1, validObj2);
     if (VAL_INVALID == vDst)
         return false;
@@ -2126,7 +2126,7 @@ bool setDstValues(SymJoinCtx &ctx, const ObjLookup *blackList = 0) {
         const TValId rootDstAt = roMapLookup(vMap1, rootSrcAt);
         const ObjHandle objDst = translateObjId(dst, sh1, rootDstAt, objSrc);
         if (!hasKey(rMap, objDst))
-            rMap[objDst].second = OBJ_INVALID;
+            rMap[objDst].second = ObjHandle(OBJ_INVALID);
 
         // objDst -> obj1
         rMap[objDst].first = objSrc;
@@ -2139,7 +2139,7 @@ bool setDstValues(SymJoinCtx &ctx, const ObjLookup *blackList = 0) {
         const TValId rootDstAt = roMapLookup(vMap2, rootSrcAt);
         const ObjHandle objDst = translateObjId(dst, sh2, rootDstAt, objSrc);
         if (!hasKey(rMap, objDst))
-            rMap[objDst].first = OBJ_INVALID;
+            rMap[objDst].first = ObjHandle(OBJ_INVALID);
 
         // objDst -> obj2
         rMap[objDst].second = objSrc;
