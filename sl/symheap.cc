@@ -799,15 +799,11 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
         CL_BREAK_IF(!this->chkArenaConsistency(rootData));
     }
 
-    // release the corresponding HeapObject instance
-    if (BK_UNIFORM != code) {
-        HeapObject *objData = DCAST<HeapObject *>(blData);
-        if (0 < objData->extRefCnt) {
-            CL_DEBUG("objDestroy() preserves an externally referenced object");
-            return;
-        }
-    }
+    if (BK_UNIFORM != code && 0 < DCAST<HeapObject *>(blData)->extRefCnt)
+        // preserve an externally referenced object
+        return;
 
+    // release the corresponding HeapObject instance
     this->ents.releaseEnt(obj);
 }
 

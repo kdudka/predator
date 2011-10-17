@@ -576,7 +576,7 @@ class ObjHandle {
          * otherwise
          */
         TObjType objType()const {
-            return (sh_)
+            return (this->isValid())
                 ? sh_->objType(id_)
                 : 0;
         }
