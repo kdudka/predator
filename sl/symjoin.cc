@@ -505,8 +505,8 @@ bool joinFreshObjTripple(
 
 struct ObjJoinVisitor {
     SymJoinCtx              &ctx;
-    std::set<TObjId>        blackList1;
-    std::set<TObjId>        blackList2;
+    ObjLookup               blackList1;
+    ObjLookup               blackList2;
     bool                    noFollow;
 
     ObjJoinVisitor(SymJoinCtx &ctx_):
@@ -521,7 +521,7 @@ struct ObjJoinVisitor {
         const TObjId objDst = item[2];
 
         // check black-list
-        if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
+        if (blackList1.lookup(obj1) || blackList2.lookup(obj2))
             return /* continue */ true;
 
         return /* continue */ joinFreshObjTripple(ctx, obj1, obj2, objDst);
@@ -535,13 +535,13 @@ void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TValId root) {
         return;
 
     const PtrHandle prevPtr = prevPtrFromSeg(sh, root);
-    dst.insert(prevPtr.objId());
+    dst.insert(prevPtr);
 }
 
 struct SegMatchVisitor {
     SymJoinCtx              &ctx;
-    std::set<TObjId>        blackList1;
-    std::set<TObjId>        blackList2;
+    ObjLookup               blackList1;
+    ObjLookup               blackList2;
 
     public:
         SegMatchVisitor(SymJoinCtx &ctx_):
@@ -553,7 +553,7 @@ struct SegMatchVisitor {
             const TObjId obj1 = item[0];
             const TObjId obj2 = item[1];
 
-            if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
+            if (blackList1.lookup(obj1) || blackList2.lookup(obj2))
                 // black-listed
                 return true;
 
@@ -2063,7 +2063,7 @@ bool setDstValuesCore(
 {
     const TObjId objDst = rItem.first;
     CL_BREAK_IF(objDst < 0);
-    if (hasKey(blackList, objDst))
+    if (blackList.lookup(objDst))
         return true;
 
     const TObjPair &orig = rItem.second;
@@ -2105,7 +2105,7 @@ bool setDstValuesCore(
     return true;
 }
 
-bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
+bool setDstValues(SymJoinCtx &ctx, const ObjLookup *blackList = 0) {
     SymHeap &dst = ctx.dst;
     SymHeap &sh1 = ctx.sh1;
     SymHeap &sh2 = ctx.sh2;
@@ -2141,7 +2141,7 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
         rMap[objDst].second = objSrc;
     }
 
-    std::set<TObjId> emptyBlackList;
+    ObjLookup emptyBlackList;
     if (!blackList)
         blackList = &emptyBlackList;
 
@@ -2150,7 +2150,7 @@ bool setDstValues(SymJoinCtx &ctx, const std::set<TObjId> *blackList = 0) {
             // do not set value of anonymous objects
             continue;
 
-        if (!setDstValuesCore(ctx, rItem, blackList))
+        if (!setDstValuesCore(ctx, rItem, *blackList))
             return false;
     }
 
@@ -2443,7 +2443,7 @@ bool joinDataCore(
         return false;
 
     // batch assignment of all values in ctx.dst
-    std::set<TObjId> blackList;
+    ObjLookup blackList;
     buildIgnoreList(blackList, ctx.dst, rootDstAt, off);
     if (!setDstValues(ctx, &blackList))
         return false;

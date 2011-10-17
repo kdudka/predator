@@ -178,19 +178,18 @@ inline void buildIgnoreList(
     }
 }
 
-template <class TIgnoreList>
-void buildIgnoreList(
-        TIgnoreList             &ignoreList,
+inline void buildIgnoreList(
+        ObjLookup               &ignoreList,
         SymHeap                 &sh,
         const TValId            at,
         const BindingOff        &off)
 {
-    const TObjId next = sh.ptrAt(sh.valByOffset(at, off.next));
-    if (OBJ_INVALID != next)
+    const PtrHandle next(sh, sh.valByOffset(at, off.next));
+    if (OBJ_INVALID != next.objId())
         ignoreList.insert(next);
 
-    const TObjId prev = sh.ptrAt(sh.valByOffset(at, off.prev));
-    if (OBJ_INVALID != prev)
+    const PtrHandle prev(sh, sh.valByOffset(at, off.prev));
+    if (OBJ_INVALID != prev.objId())
         ignoreList.insert(prev);
 }
 
