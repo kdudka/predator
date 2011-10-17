@@ -438,17 +438,17 @@ bool checkNullConsistency(
 /// (OBJ_INVALID == objDst) means read-only!!!
 bool joinFreshObjTripple(
         SymJoinCtx              &ctx,
-        const TObjId            obj1,
-        const TObjId            obj2,
-        const TObjId            objDst)
+        const ObjHandle         &obj1,
+        const ObjHandle         &obj2,
+        const ObjHandle         &objDst)
 {
-    const bool segClone = (OBJ_INVALID == obj1 || OBJ_INVALID == obj2);
-    const bool readOnly = (OBJ_INVALID == objDst);
+    const bool segClone = (!obj1.isValid() || !obj2.isValid());
+    const bool readOnly = (!objDst.isValid());
     CL_BREAK_IF(segClone && readOnly);
-    CL_BREAK_IF(obj1 < 0 && obj2 < 0);
+    CL_BREAK_IF(!obj1.isValid() && !obj2.isValid());
 
-    const TValId v1 = ctx.sh1.valueOf(obj1);
-    const TValId v2 = ctx.sh2.valueOf(obj2);
+    const TValId v1 = obj1.value();
+    const TValId v2 = obj2.value();
     if (VAL_NULL == v1 && VAL_NULL == v2)
         // both values are VAL_NULL, nothing more to join here
         return true;
@@ -470,7 +470,7 @@ bool joinFreshObjTripple(
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
     if (segClone) {
-        const bool isGt1 = (OBJ_INVALID == obj2);
+        const bool isGt1 = !obj2.isValid();
         const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
         const TValId val = (isGt1)
             ? ctx.sh1.valRoot(v1)
@@ -498,7 +498,8 @@ bool joinFreshObjTripple(
     }
 
     if (ctx.wl.schedule(TValPair(v1, v2)))
-        SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " <- " << SJ_OBJP(obj1, obj2));
+        SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
+                << " <- " << SJ_OBJP(obj1.objId(), obj2.objId()));
 
     return true;
 }
@@ -524,10 +525,7 @@ struct ObjJoinVisitor {
         if (blackList1.lookup(obj1) || blackList2.lookup(obj2))
             return /* continue */ true;
 
-        return /* continue */ joinFreshObjTripple(ctx,
-                obj1.objId(),
-                obj2.objId(),
-                objDst.objId());
+        return /* continue */ joinFreshObjTripple(ctx, obj1, obj2, objDst);
     }
 };
 
@@ -560,8 +558,8 @@ struct SegMatchVisitor {
                 // black-listed
                 return true;
 
-            return joinFreshObjTripple(ctx, obj1.objId(), obj2.objId(),
-                                       /* read-only */ OBJ_INVALID);
+            return joinFreshObjTripple(ctx, obj1, obj2,
+                    /* read-only */ ObjHandle(OBJ_INVALID));
         }
 };
 
