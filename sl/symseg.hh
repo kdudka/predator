@@ -185,11 +185,11 @@ inline void buildIgnoreList(
         const BindingOff        &off)
 {
     const PtrHandle next(sh, sh.valByOffset(at, off.next));
-    if (OBJ_INVALID != next.objId())
+    if (next.isValid())
         ignoreList.insert(next);
 
     const PtrHandle prev(sh, sh.valByOffset(at, off.prev));
-    if (OBJ_INVALID != prev.objId())
+    if (prev.isValid())
         ignoreList.insert(prev);
 }
 

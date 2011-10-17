@@ -246,7 +246,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     const ObjHandle objDst = proc.objByOperand(op);
     const ObjHandle objSrc(sh, VAL_ADDR_OF_RET, op.type);
     TValId val;
-    if (0 < objSrc.objId()) {
+    if (objSrc.isValid()) {
         val = objSrc.value();
     }
     else

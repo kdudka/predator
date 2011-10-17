@@ -2067,7 +2067,7 @@ bool setDstValuesCore(
         const TBlackList        &blackList)
 {
     const ObjHandle &objDst = rItem.first;
-    CL_BREAK_IF(objDst.objId() < 0);
+    CL_BREAK_IF(!objDst.isValid());
     if (blackList.lookup(objDst))
         return true;
 

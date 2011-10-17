@@ -414,7 +414,7 @@ ObjHandle SymProc::objByOperand(const struct cl_operand &op) {
 
     // resolve the target object
     const ObjHandle obj(sh_, at, op.type);
-    if (obj.objId() <= 0)
+    if (!obj.isValid())
         CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
 
     // all OK
@@ -426,6 +426,10 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
         return this->targetAt(op);
 
     const ObjHandle handle = this->objByOperand(op);
+    if (handle.isValid())
+        return handle.value();
+
+    // failed to resolve object handle
     const TObjId obj = handle.objId();
     switch (obj) {
         case OBJ_UNKNOWN:
@@ -435,11 +439,8 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
             return sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
 
         default:
-            if (obj < 0)
-                return VAL_INVALID;
+            return VAL_INVALID;
     }
-
-    return handle.value();
 }
 
 TValId SymProc::valFromOperand(const struct cl_operand &op) {
@@ -521,7 +522,7 @@ void SymProc::reportMemLeak(const EValueTarget code, const char *reason) {
 }
 
 void SymProc::heapSetSingleVal(const ObjHandle &lhs, TValId rhs) {
-    if (lhs.objId() < 0) {
+    if (!lhs.isValid()) {
         CL_ERROR_MSG(lw_, "invalid L-value");
         this->failWithBackTrace();
         return;

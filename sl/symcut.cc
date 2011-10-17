@@ -283,7 +283,7 @@ void deepCopy(DeepCopyData &dc) {
     while (dc.wl.next(item)) {
         const ObjHandle &objSrc = item.first;
         const ObjHandle &objDst = item.second;
-        CL_BREAK_IF(objSrc.objId() < 0 || objDst.objId() < 0);
+        CL_BREAK_IF(!objSrc.isValid() || !objDst.isValid());
 
         // read the address
         const TValId atSrc = objSrc.placedAt();

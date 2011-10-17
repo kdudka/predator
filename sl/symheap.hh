@@ -583,6 +583,7 @@ class ObjHandle {
         TObjType        objType()   const { return sh_->objType(id_); }
         TValId          value()     const { return sh_->valueOf(id_); }
         TValId          placedAt()  const { return sh_->placedAt(id_); }
+        bool            isValid()   const { return 0 < id_; }
 
         void setValue(const TValId val, TValSet *killedPtrs = 0) const {
             sh_->objSetValue(id_, val, killedPtrs);
