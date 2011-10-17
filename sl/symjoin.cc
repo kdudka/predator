@@ -1761,8 +1761,9 @@ class MayExistVisitor {
             lookThrough_ = enable;
         }
 
-        bool operator()(SymHeap &sh, const TObjId sub) {
-            TValId val = sh.valueOf(sub);
+        bool operator()(const ObjHandle &sub) {
+            SymHeap &sh = *static_cast<SymHeap *>(sub.sh());
+            TValId val = sub.value();
 
             for (;;) {
                 const TValId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
@@ -1784,7 +1785,7 @@ class MayExistVisitor {
                 val = nextValFromSeg(sh, seg);
             }
 
-            offNext_ = sh.valOffset(sh.placedAt(sub));
+            offNext_ = sh.valOffset(sub.placedAt());
             return /* continue */ false;
         }
 };

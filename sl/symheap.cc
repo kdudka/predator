@@ -780,8 +780,9 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
     const EBlockKind code = blData->code;
     if (removeVal && BK_UNIFORM != code) {
         // release value of the object
-        const TValId val = blData->value;
+        TValId &val = blData->value;
         this->releaseValueOf(obj, val);
+        val = VAL_INVALID;
     }
 
     if (detach) {
@@ -1277,7 +1278,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     return imageAt;
 }
 
-void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
+void SymHeapCore::gatherLivePointersXXX(TObjList &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
@@ -1285,6 +1286,14 @@ void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
         if (BK_DATA_PTR == code)
             dst.push_back(d->objExport(/* obj */ item.first));
     }
+}
+
+void SymHeapCore::gatherLivePointers(ObjList &dst, TValId root) const {
+    TObjList rawList;
+    this->gatherLivePointersXXX(rawList, root);
+
+    BOOST_FOREACH(const TObjId obj, rawList)
+        dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
 }
 
 void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {

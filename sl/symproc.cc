@@ -308,8 +308,8 @@ TValId SymProc::varAt(const struct cl_operand &op) {
         // in this case, we do not care if the var is initialized or not
         return at;
 
-    TObjList liveObjs;
-    sh_.gatherLiveObjectsXXX(liveObjs, at);
+    ObjList liveObjs;
+    sh_.gatherLiveObjects(liveObjs, at);
     if (!liveObjs.empty())
         // not a fresh variable --> preserve its contents
         return at;
@@ -1170,10 +1170,10 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     if (!isDataPtr(dst.type) && VO_UNKNOWN == sh_.valOrigin(valResult)) {
         const TValId root = sh_.valRoot(lhs.placedAt());
 
-        TObjList liveObjs;
-        sh_.gatherLiveObjectsXXX(liveObjs, root);
-        BOOST_FOREACH(const TObjId obj, liveObjs)
-            if (obj == lhs.objId())
+        ObjList liveObjs;
+        sh_.gatherLiveObjects(liveObjs, root);
+        BOOST_FOREACH(const ObjHandle &obj, liveObjs)
+            if (obj == lhs)
                 goto already_alive;
 
         return;

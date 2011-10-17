@@ -135,10 +135,10 @@ void translateValProto(
 }
 
 void getPtrValues(TValList &dst, SymHeap &sh, TValId at) {
-    TObjList ptrs;
+    ObjList ptrs;
     sh.gatherLivePointers(ptrs, at);
-    BOOST_FOREACH(const TObjId obj, ptrs) {
-        const TValId val = sh.valueOf(obj);
+    BOOST_FOREACH(const ObjHandle &obj, ptrs) {
+        const TValId val = obj.value();
         if (0 < val)
             dst.push_back(val);
     }

@@ -430,7 +430,8 @@ class SymHeapCore {
         void gatherLiveObjectsXXX(TObjList &dst, TValId root) const;
 
         /// list of live pointers owned by the given root entity
-        void gatherLivePointers(TObjList &dst, TValId root) const;
+        void gatherLivePointers(ObjList &dst, TValId root) const;
+        void gatherLivePointersXXX(TObjList &dst, TValId root) const;
 
         /// list of uninitialized and nullified uniform blocks
         void gatherUniformBlocks(TUniBlockMap &dst, TValId root) const;

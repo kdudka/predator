@@ -447,8 +447,8 @@ class PtrFinder {
             return offFound_;
         }
 
-    bool operator()(SymHeap &sh, TObjId sub) {
-        const TValId val = sh.valueOf(sub);
+    bool operator()(const ObjHandle &sub) {
+        const TValId val = sub.value();
         if (val <= 0)
             return /* continue */ true;
 
@@ -456,7 +456,8 @@ class PtrFinder {
             return /* continue */ true;
 
         // target found!
-        offFound_ = sh.valOffset(sh.placedAt(sub));
+        SymHeapCore *sh = sub.sh();
+        offFound_ = sh->valOffset(sub.placedAt());
         return /* break */ false;
     }
 };
@@ -497,9 +498,10 @@ class ProbeEntryVisitor {
         {
         }
 
-        bool operator()(SymHeap &sh, TObjId sub) const
+        bool operator()(const ObjHandle &sub) const
         {
-            const TValId next = sh.valueOf(sub);
+            SymHeap &sh = *static_cast<SymHeap *>(sub.sh());
+            const TValId next = sub.value();
             if (!canWriteDataPtrAt(sh, next))
                 return /* continue */ true;
 
@@ -508,7 +510,7 @@ class ProbeEntryVisitor {
             off.head = sh.valOffset(next);
 
             // entry candidate found, check the back-link in case of DLL
-            off.next = sh.valOffset(sh.placedAt(sub));
+            off.next = sh.valOffset(sub.placedAt());
             off.prev = off.next;
 #if !SE_DISABLE_DLS
             digBackLink(&off, sh, root_, next);

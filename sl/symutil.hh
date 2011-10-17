@@ -195,15 +195,15 @@ bool /* complete */ traverseCore(
     const TValId rootAt = sh.valRoot(at);
     const TOffset offRoot = sh.valOffset(at);
 
-    TObjList objs;
+    ObjList objs;
     (sh.*method)(objs, rootAt);
-    BOOST_FOREACH(const TObjId obj, objs) {
-        const TOffset off = sh.valOffset(sh.placedAt(obj));
+    BOOST_FOREACH(const ObjHandle &obj, objs) {
+        const TOffset off = sh.valOffset(obj.placedAt());
         if (off < offRoot)
             // do not go above the starting point
             continue;
 
-        if (!visitor(sh, obj))
+        if (!visitor(obj))
             // traversal cancelled by visitor
             return false;
     }
@@ -229,7 +229,7 @@ bool /* complete */ traverseLiveObjs(
         const TValId                rootAt,
         TVisitor                    &visitor)
 {
-    return traverseCore(sh, rootAt, visitor, &SymHeap::gatherLiveObjectsXXX);
+    return traverseCore(sh, rootAt, visitor, &SymHeap::gatherLiveObjects);
 }
 
 /// take the given visitor through all uniform blocks
@@ -281,16 +281,16 @@ bool /* complete */ traverseLiveObjsGeneric(
         if (root < 0)
             continue;
 
-        TObjList objs;
-        sh.gatherLiveObjectsXXX(objs, root);
-        BOOST_FOREACH(const TObjId obj, objs) {
-            const TValId addr = sh.placedAt(obj);
+        ObjList objs;
+        sh.gatherLiveObjects(objs, root);
+        BOOST_FOREACH(const ObjHandle &obj, objs) {
+            const TValId addr = obj.placedAt();
             const TOffset off = sh.valOffset(addr) - offs[i];
             if (off < 0)
                 // do not go above the starting point
                 continue;
 
-            const TObjType clt = sh.objType(obj);
+            const TObjType clt = obj.objType();
             const TItem item(off, clt);
             all.insert(item);
         }

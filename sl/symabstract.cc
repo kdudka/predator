@@ -67,21 +67,22 @@ static const unsigned dlsThreshold = 1;
 struct UnknownValuesDuplicator {
     ObjLookup ignoreList;
 
-    bool operator()(SymHeap &sh, TObjId obj) const {
+    bool operator()(const ObjHandle &obj) const {
         if (ignoreList.lookup(obj))
             return /* continue */ true;
 
-        const TValId valOld = sh.valueOf(obj);
+        const TValId valOld = obj.value();
         if (valOld <= 0)
             return /* continue */ true;
 
-        const EValueTarget code = sh.valTarget(valOld);
+        SymHeapCore *sh = obj.sh();
+        const EValueTarget code = sh->valTarget(valOld);
         if (isPossibleToDeref(code) || (VT_CUSTOM == code))
             return /* continue */ true;
 
         // duplicate unknown value
-        const TValId valNew = sh.valClone(valOld);
-        sh.objSetValue(obj, valNew);
+        const TValId valNew = sh->valClone(valOld);
+        obj.setValue(valNew);
 
         return /* continue */ true;
     }
@@ -152,16 +153,17 @@ TValId protoClone(SymHeap &sh, const TValId proto) {
 struct ProtoFinder {
     std::set<TValId> protos;
 
-    bool operator()(SymHeap &sh, TObjId sub) {
-        const TValId val = sh.valueOf(sub);
+    bool operator()(const ObjHandle &sub) {
+        const TValId val = sub.value();
         if (val <= 0)
             return /* continue */ true;
 
-        if (sh.valOffset(val))
+        SymHeapCore *sh = sub.sh();
+        if (sh->valOffset(val))
             // TODO: support for prototypes not pointed by roots?
             return /* continue */ true;
 
-        if (sh.valTargetIsProto(val))
+        if (sh->valTargetIsProto(val))
             protos.insert(val);
 
         return /* continue */ true;
@@ -259,14 +261,15 @@ struct ProtoCloner {
     TValId rootDst;
     TValId rootSrc;
 
-    bool operator()(SymHeap &sh, TObjId obj) const {
+    bool operator()(const ObjHandle &obj) const {
         if (ignoreList.lookup(obj))
             return /* continue */ true;
 
-        const TValId val = sh.valueOf(obj);
+        const TValId val = obj.value();
         if (val <= 0)
             return /* continue */ true;
 
+        SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
         if (!isPossibleToDeref(sh.valTarget(val)))
             return /* continue */ true;
 
