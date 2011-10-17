@@ -103,7 +103,7 @@ bool validatePointingObjects(
 
     // collect all objects pointing at/inside the object
     // NOTE: we really intend to pass toInsideOnly == false at this point!
-    TObjList refs;
+    ObjList refs;
     sh.pointedBy(refs, root);
 
     // consider also up-links from nested prototypes
@@ -127,15 +127,15 @@ bool validatePointingObjects(
     if (isDls)
         whiteList.insert(sh.valByOffset(next, off.prev));
 
-    BOOST_FOREACH(const TObjId obj, refs) {
-        const TValId at = sh.placedAt(obj);
+    BOOST_FOREACH(const ObjHandle &obj, refs) {
+        const TValId at = obj.placedAt();
         if (hasKey(blackList, at))
             return false;
 
         if (hasKey(whiteList, at))
             continue;
 
-        if (toInsideOnly && (sh.valueOf(obj) == headAddr))
+        if (toInsideOnly && (obj.value() == headAddr))
             continue;
 
         if (hasKey(allowedReferers, sh.valRoot(at)))

@@ -1092,7 +1092,7 @@ TValId SymHeapCore::valueOf(TObjId obj) {
     return d->objInit(obj);
 }
 
-void SymHeapCore::usedBy(TObjList &dst, TValId val, bool liveOnly) const {
+void SymHeapCore::usedBy(ObjList &dst, TValId val, bool liveOnly) const {
     if (VAL_NULL == val)
         // we do not track uses of special values
         return;
@@ -1102,7 +1102,9 @@ void SymHeapCore::usedBy(TObjList &dst, TValId val, bool liveOnly) const {
     const TObjSet &usedBy = valData->usedBy;
     if (!liveOnly) {
         // dump everything
-        std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
+        BOOST_FOREACH(const TObjId obj, usedBy)
+            dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
+
         return;
     }
 
@@ -1118,7 +1120,7 @@ void SymHeapCore::usedBy(TObjList &dst, TValId val, bool liveOnly) const {
 
         // check if the object is alive
         if (hasKey(rootData->liveObjs, obj))
-            dst.push_back(obj);
+            dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
     }
 }
 
@@ -1131,14 +1133,15 @@ unsigned SymHeapCore::usedByCount(TValId val) const {
     return valData->usedBy.size();
 }
 
-void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
+void SymHeapCore::pointedBy(ObjList &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     CL_BREAK_IF(rootData->offRoot);
     CL_BREAK_IF(!isPossibleToDeref(rootData->code));
 
     const TObjSet &usedBy = rootData->usedByGl;
-    std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
+    BOOST_FOREACH(const TObjId obj, usedBy)
+        dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
 }
 
 unsigned SymHeapCore::pointedByCount(TValId root) const {

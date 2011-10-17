@@ -152,22 +152,22 @@ void redirectRefs(
         const TOffset           offHead)
 {
     // go through all objects pointing at/inside pointingTo
-    TObjList refs;
+    ObjList refs;
     sh.pointedBy(refs, pointingTo);
-    BOOST_FOREACH(const TObjId obj, refs) {
+    BOOST_FOREACH(const ObjHandle &obj, refs) {
         if (VAL_INVALID != pointingFrom) {
-            const TValId referrerAt = sh.valRoot(sh.placedAt(obj));
+            const TValId referrerAt = sh.valRoot(obj.placedAt());
             if (pointingFrom != referrerAt)
                 // pointed from elsewhere, keep going
                 continue;
         }
 
         // check the current link
-        const TValId nowAt = sh.valueOf(obj);
+        const TValId nowAt = obj.value();
         const TOffset offToRoot = sh.valOffset(nowAt);
 
         // redirect accordingly
         const TValId result = sh.valByOffset(redirectTo, offToRoot - offHead);
-        sh.objSetValue(obj, result);
+        obj.setValue(result);
     }
 }

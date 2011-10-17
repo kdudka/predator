@@ -312,12 +312,10 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
     buildIgnoreList(visitor.ignoreList, sh, dls);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
-    TObjList refs;
+    ObjList refs;
     sh.pointedBy(refs, dls);
-    BOOST_FOREACH(const TObjId obj, refs) {
-        // FIXME: avoid this double-wrapper
-        const ObjHandle hdl(sh, sh.placedAt(obj), sh.objType(obj));
-        visitor.ignoreList.insert(hdl);
+    BOOST_FOREACH(const ObjHandle &obj, refs) {
+        visitor.ignoreList.insert(obj);
     }
 
     const TValId roots[] = { dls, peer };

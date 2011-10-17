@@ -853,10 +853,10 @@ bool considerImplicitPrototype(
     SymHeap &sh = (isProto2) ? ctx.sh1 : ctx.sh2;
     const TValId root = (isProto2) ? root1 : root2;
 
-    TObjList refs;
+    ObjList refs;
     sh.pointedBy(refs, root);
-    BOOST_FOREACH(const TObjId obj, refs) {
-        const TValId at = sh.placedAt(obj);
+    BOOST_FOREACH(const ObjHandle &obj, refs) {
+        const TValId at = obj.placedAt();
         if (OK_CONCRETE != sh.valTargetKind(at))
             return false;
     }

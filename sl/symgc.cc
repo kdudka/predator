@@ -36,9 +36,9 @@
 template <class TWL>
 void digPointingObjects(TWL &wl, const SymHeap &sh, TValId val) {
     // go through all objects having the value
-    TObjList cont;
+    ObjList cont;
     sh.usedBy(cont, val);
-    BOOST_FOREACH(TObjId obj, cont) {
+    BOOST_FOREACH(const ObjHandle &obj, cont) {
         wl.schedule(obj);
     }
 
@@ -48,9 +48,9 @@ void digPointingObjects(TWL &wl, const SymHeap &sh, TValId val) {
         return;
 
     // traverse all subobjects
-    TObjList refs;
+    ObjList refs;
     sh.pointedBy(refs, root);
-    BOOST_FOREACH(const TObjId obj, refs) {
+    BOOST_FOREACH(const ObjHandle &obj, refs) {
         wl.schedule(obj);
     }
 }
@@ -67,12 +67,12 @@ bool digJunk(SymHeap &heap, TValId *ptrVal) {
     // only root objects can be destroyed
     *ptrVal = heap.valRoot(*ptrVal);
 
-    WorkList<TObjId> wl;
+    WorkList<ObjHandle> wl;
     digPointingObjects(wl, heap, *ptrVal);
 
-    TObjId obj;
+    ObjHandle obj;
     while (wl.next(obj)) {
-        const TValId val = heap.placedAt(obj);
+        const TValId val = obj.placedAt();
         if (!isOnHeap(heap.valTarget(val)))
             // non-heap object simply can't be JUNK
             return false;

@@ -150,9 +150,6 @@ typedef short                                           TOffset;
 /// a container to store offsets to
 typedef std::vector<TOffset>                            TOffList;
 
-/// @todo remove this from the public API
-typedef std::vector<TObjId>                             TObjList;
-
 /// container used to store value IDs to
 typedef std::vector<TValId>                             TValList;
 
@@ -296,13 +293,13 @@ class SymHeapCore {
          * @param liveOnly if true, exclude objects that are no longer alive
          * @note The operation may return from 0 to n objects.
          */
-        void usedBy(TObjList &dst, TValId val, bool liveOnly = false) const;
+        void usedBy(ObjList &dst, TValId val, bool liveOnly = false) const;
 
         /// return how many objects have the value inside
         unsigned usedByCount(TValId val) const;
 
         /// return all objects that point at/inside the given root entity
-        void pointedBy(TObjList &dst, TValId root) const;
+        void pointedBy(ObjList &dst, TValId root) const;
 
         /// return how many objects point at/inside the given root entity
         unsigned pointedByCount(TValId root) const;

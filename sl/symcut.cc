@@ -214,7 +214,7 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
         return;
 
     SymHeap &sh = dc.src;
-    TObjList uses;
+    ObjList uses;
 
     const TValId rootSrcAt = sh.valRoot(valSrc);
     if (VAL_NULL == rootSrcAt)
@@ -228,8 +228,8 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
         sh.usedBy(uses, valSrc, /* liveOnly */ true);
 
     // go from the value backward
-    BOOST_FOREACH(TObjId objSrc, uses) {
-        const TValId srcAt = sh.placedAt(objSrc);
+    BOOST_FOREACH(const ObjHandle &objSrc, uses) {
+        const TValId srcAt = objSrc.placedAt();
         const EValueTarget code = sh.valTarget(srcAt);
         if (!isPossibleToDeref(code))
             continue;
