@@ -420,9 +420,6 @@ bool checkNullConsistency(
         : ctx.sh2.valTarget(v2);
 
     switch (code) {
-#if 0
-        case VT_ABSTRACT:
-#endif
         case VT_STATIC:
         case VT_ON_STACK:
         case VT_ON_HEAP:
@@ -466,7 +463,8 @@ bool joinFreshObjTripple(
             // mapping already inconsistent
             return false;
     }
-    else if (readOnly)
+
+    if (readOnly)
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
     if (segClone) {
@@ -1149,10 +1147,6 @@ bool followRootValuesCore(
     if (hasKey(ctx.valMap1[0], root1) && hasKey(ctx.valMap2[0], root2))
         return true;
 
-    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(root1);
-    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(root2);
-    const TObjType clt = joinClt(ctx, clt1, clt2);
-
     if (readOnly)
         // do not create any object, just check if it was possible
         return segMatchLookAhead(ctx, root1, root2);
@@ -1160,6 +1154,10 @@ bool followRootValuesCore(
     if (ctx.joiningDataReadWrite() && root1 == root2)
         // we are on the way from joinData() and hit shared data
         return traverseRoots(ctx, root1, root1, root1);
+
+    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(root1);
+    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(root2);
+    const TObjType clt = joinClt(ctx, clt1, clt2);
 
     return createObject(ctx, clt, root1, root2, action);
 }
