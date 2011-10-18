@@ -199,6 +199,8 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0184.c - test-0183 with an injected programming mistake
 
+    test-0191.c - an easy test for joinSymHeaps(), once used as a demo
+
 
 Linux lists
 ===========
