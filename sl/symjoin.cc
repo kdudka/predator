@@ -219,9 +219,9 @@ void dump_ctx(const SymJoinCtx &ctx) {
     cout << "    ctx.liveList1      .size() = " << ctx.liveList1.size() << "\n";
     cout << "    ctx.liveList2      .size() = " << ctx.liveList2.size()
         << "\n\n";
-    cout << "    ctx.valMap1[0]     .size() = " << ctx.valMap1[0].size()
+    cout << "    ctx.valMap1[0]     .size() = " << (ctx.valMap1[0].size() - 1)
         << "\n";
-    cout << "    ctx.valMap2[0]     .size() = " << ctx.valMap2[0].size()
+    cout << "    ctx.valMap2[0]     .size() = " << (ctx.valMap2[0].size() - 1)
         << "\n\n";
 
     // sumarize aux containers

@@ -244,9 +244,10 @@ void describeVar(PlotData &plot, const TValId rootAt) {
     CVar cv = sh.cVarByRoot(rootAt);
 
     // write identity of the var
-    plot.out << "CL" << varToString(stor, cv.uid);
+    plot.out << "CL" << varToString(stor, cv.uid) << " [root = #" << rootAt;
     if (1 < cv.inst)
-        plot.out << " [inst = " << cv.inst << "]";
+        plot.out << ", inst = " << cv.inst;
+    plot.out << "]";
 }
 
 void describeFieldPlacement(PlotData &plot, const ObjHandle &obj, TObjType clt)
@@ -289,16 +290,19 @@ void describeObject(PlotData &plot, const ObjHandle &obj, const bool lonely) {
     // check root
     const TValId at = obj.placedAt();
     const TValId root = sh.valRoot(at);
-
     const EValueTarget code = sh.valTarget(at);
-    if (lonely && isProgramVar(code))
+
+    const char *tag = "";
+    if (lonely && isProgramVar(code)) {
         describeVar(plot, root);
+        tag = "obj";
+    }
 
     const TObjType cltRoot = sh.valLastKnownTypeOfTarget(root);
     if (cltRoot)
         describeFieldPlacement(plot, obj, cltRoot);
 
-    plot.out << " #" << obj.objId();
+    plot.out << " " << tag << "#" << obj.objId();
 }
 
 void plotRootValue(PlotData &plot, const TValId val, const char *color) {
