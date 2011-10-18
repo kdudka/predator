@@ -1028,12 +1028,6 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
         rootData->liveObjs[obj] = BK_DATA_OBJ;
 #endif
 
-    // mark the owning root entity as live (if not already)
-    if (!hasKey(this->liveRoots, root)) {
-        RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
-        this->liveRoots->insert(root);
-    }
-
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // store backward reference
@@ -1433,12 +1427,6 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     RootValue *rootData;
     d->ents.getEntRW(&rootData, root);
     rootData->liveObjs[obj] = bkFromClt(clt);
-
-    // mark the owning root entity as live (if not already)
-    if (!hasKey(d->liveRoots, root)) {
-        RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
-        d->liveRoots->insert(root);
-    }
 
     // now set the value
     d->setValueOf(obj, val, killedPtrs);
@@ -2072,6 +2060,10 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
     }
 #endif
 
+    // mark the root as live
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
+    d->liveRoots->insert(addr);
+
     // store the address for next wheel
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cVarMap);
     d->cVarMap->insert(cv, addr);
@@ -2108,6 +2100,10 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
 
     // assign an address
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
+
+    // mark the root as live
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
+    d->liveRoots->insert(addr);
 
     // initialize meta-data
     RootValue *rootData;
