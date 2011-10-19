@@ -2398,10 +2398,6 @@ bool joinDataCore(
     CL_BREAK_IF(!ctx.joiningData());
     SymHeap &sh = ctx.sh1;
 
-    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(addr1);
-    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(addr2);
-    const TObjType clt = joinClt(ctx, clt1, clt2);
-
     int size;
     if (!joinObjSize(&size, ctx, addr1, addr2))
         return false;
@@ -2414,6 +2410,9 @@ bool joinDataCore(
         // failed to complement uniform blocks
         return false;
 
+    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(addr1);
+    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(addr2);
+    const TObjType clt = joinClt(ctx, clt1, clt2);
     if (clt)
         // preserve estimated type-info of the root
         ctx.dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
