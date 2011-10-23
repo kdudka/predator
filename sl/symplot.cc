@@ -459,13 +459,14 @@ void plotInnerObjects(PlotData &plot, const TValId at, const ObjList &liveObjs)
     const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
+        case OK_OBJ_OR_NULL:
             break;
 
         case OK_DLS:
             prev = prevPtrFromSeg(sh, at);
             // fall through!
 
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
         case OK_SLS:
             next = nextPtrFromSeg(sh, at);
     }
@@ -513,7 +514,8 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
         case OK_CONCRETE:
             return label;
 
-        case OK_MAY_EXIST:
+        case OK_OBJ_OR_NULL:
+        case OK_SEE_THROUGH:
             label += "0..1";
             return label;
 
@@ -563,7 +565,8 @@ void plotCompositeObj(PlotData &plot, const TValId at, const ObjList &liveObjs)
         case OK_CONCRETE:
             break;
 
-        case OK_MAY_EXIST:
+        case OK_OBJ_OR_NULL:
+        case OK_SEE_THROUGH:
             color = "green";
             pw = "3.0";
             break;
@@ -678,7 +681,8 @@ void plotRootObjects(PlotData &plot) {
                 // fall through!
 
             case OK_SLS:
-            case OK_MAY_EXIST:
+            case OK_SEE_THROUGH:
+            case OK_OBJ_OR_NULL:
                 break;
         }
 

@@ -37,7 +37,7 @@ void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
             // fall through
 
         case OK_SLS:
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
             sh.valTargetSetProto(seg, isProto);
             break;
 

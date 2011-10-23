@@ -157,6 +157,7 @@ inline void buildIgnoreList(
     const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
+        case OK_OBJ_OR_NULL:
             return;
 
         case OK_DLS:
@@ -167,7 +168,7 @@ inline void buildIgnoreList(
             // fall through!
 
         case OK_SLS:
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
             // preserve 'next' field
             off = sh.segBinding(at).next;
             tmp = PtrHandle(writable, writable.valByOffset(at, off));

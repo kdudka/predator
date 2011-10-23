@@ -53,7 +53,7 @@ bool matchSegBinding(
     if (!isDlsBinding(offDiscover)) {
         // OK_SLS
         switch (kind) {
-            case OK_MAY_EXIST:
+            case OK_SEE_THROUGH:
             case OK_SLS:
                 return (off.next == offDiscover.next);
 
@@ -64,7 +64,7 @@ bool matchSegBinding(
 
     // OK_DLS
     switch (kind) {
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
             return (off.next == offDiscover.next);
 
         case OK_DLS:

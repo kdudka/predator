@@ -2477,16 +2477,16 @@ void SymHeap::valTargetSetAbstract(
         CL_BREAK_IF(OK_SLS != kind);
 
         AbstractRoot *aData = d->absRoots.getEntRW(root);
-        CL_BREAK_IF(OK_MAY_EXIST != aData->kind || off != aData->bOff);
+        CL_BREAK_IF(OK_SEE_THROUGH != aData->kind || off != aData->bOff);
 
-        // OK_MAY_EXIST -> OK_SLS
+        // OK_SEE_THROUGH -> OK_SLS
         aData->kind = kind;
         return;
     }
 
     AbstractRoot *aData = new AbstractRoot(kind, off);
-    if (OK_MAY_EXIST == kind)
-        // there is no 'prev' offset in OK_MAY_EXIST
+    if (OK_SEE_THROUGH == kind)
+        // there is no 'prev' offset in OK_SEE_THROUGH
         aData->bOff.prev = off.next;
 
     // register a new abstract root
@@ -2583,8 +2583,8 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
         v2 = segNextRootObj(*this, v1);
 
     TValId seg;
-    if (haveSegBidir(&seg, this, OK_MAY_EXIST, v1, v2)) {
-        // replace OK_MAY_EXIST by OK_CONCRETE
+    if (haveSegBidir(&seg, this, OK_SEE_THROUGH, v1, v2)) {
+        // replace OK_SEE_THROUGH by OK_CONCRETE
         this->valTargetSetConcrete(seg);
         return;
     }
@@ -2709,7 +2709,7 @@ unsigned SymHeap::segMinLength(TValId seg) const {
 
     const EObjKind kind = aData->kind;
     switch (kind) {
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
             return 0;
 
         case OK_SLS:
@@ -2732,9 +2732,9 @@ void SymHeap::segSetMinLength(TValId seg, unsigned len) {
 
     const EObjKind kind = aData->kind;
     switch (kind) {
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
             if (len)
-                CL_BREAK_IF("OK_MAY_EXIST is supposed to have zero minLength");
+                CL_BREAK_IF("OK_SEE_THROUGH is supposed to have zero minLength");
             return;
 
         case OK_SLS:

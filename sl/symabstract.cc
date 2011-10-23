@@ -398,7 +398,7 @@ void slSegAbstractionStep(
 void enlargeMayExist(SymHeap &sh, const TValId at) {
     const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
             sh.valTargetSetConcrete(at);
             // fall through!
 
@@ -414,7 +414,7 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     // compute resulting segment's length
     const unsigned len = objMinLength(sh, a1) + objMinLength(sh, a2);
 
-    // OK_MAY_EXIST -> OK_CONCRETE if necessary
+    // OK_SEE_THROUGH -> OK_CONCRETE if necessary
     enlargeMayExist(sh, a1);
     enlargeMayExist(sh, a2);
 
@@ -427,14 +427,14 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     // introduce some UV_UNKNOWN values if necessary
     abstractNonMatchingValues(sh, a1, a2, /* bidir */ true);
 
-    // just created DLS is said to be 2+ as long as no OK_MAY_EXIST are involved
+    // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
     sh.segSetMinLength(a1, len);
 }
 
 void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
-    // handle DLS Neq predicates and OK_MAY_EXIST
+    // handle DLS Neq predicates and OK_SEE_THROUGH
     const unsigned len = sh.segMinLength(dls) + objMinLength(sh, var);
     sh.segSetMinLength(dls, /* DLS 0+ */ 0);
     enlargeMayExist(sh, var);
@@ -793,7 +793,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     const unsigned lenRemains = spliceOutSegmentIfNeeded(sh, seg, peer, todo);
 
     const EObjKind kind = sh.valTargetKind(seg);
-    if (OK_MAY_EXIST == kind) {
+    if (OK_SEE_THROUGH == kind) {
         // this kind is much easier than regular list segments
         sh.valTargetSetConcrete(seg);
         LDP_PLOT(symabstract, sh);

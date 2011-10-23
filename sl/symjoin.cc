@@ -742,10 +742,10 @@ bool joinSegBindingOfMayExist(
         const TValId            seg1,
         const TValId            seg2)
 {
-    const bool isMayExist1 = (OK_MAY_EXIST == ctx.sh1.valTargetKind(seg1));
-    const bool isMayExist2 = (OK_MAY_EXIST == ctx.sh2.valTargetKind(seg2));
+    const bool isMayExist1 = (OK_SEE_THROUGH == ctx.sh1.valTargetKind(seg1));
+    const bool isMayExist2 = (OK_SEE_THROUGH == ctx.sh2.valTargetKind(seg2));
     if (!isMayExist1 && !isMayExist2)
-        // no OK_MAY_EXIST involved
+        // no OK_SEE_THROUGH involved
         return false;
 
     const BindingOff off1 = ctx.sh1.segBinding(seg1);
@@ -787,7 +787,7 @@ bool joinSegBindingOfMayExist(
     return true;
 
 match:
-    SJ_DEBUG("non-trivial match of 'next' offset of OK_MAY_EXIST");
+    SJ_DEBUG("non-trivial match of 'next' offset of OK_SEE_THROUGH");
     *pResult = true;
     return true;
 }
@@ -1074,7 +1074,7 @@ write_them:
     return true;
 }
 
-/// (NULL != offMayExist) means 'create OK_MAY_EXIST'
+/// (NULL != offMayExist) means 'create OK_SEE_THROUGH'
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
@@ -1096,9 +1096,9 @@ bool createObject(
         return false;
 
     if (offMayExist) {
-        // we are asked to introduce OK_MAY_EXIST
-        CL_BREAK_IF(OK_CONCRETE != kind && OK_MAY_EXIST != kind);
-        kind = OK_MAY_EXIST;
+        // we are asked to introduce OK_SEE_THROUGH
+        CL_BREAK_IF(OK_CONCRETE != kind && OK_SEE_THROUGH != kind);
+        kind = OK_SEE_THROUGH;
         off = *offMayExist;
     }
 
@@ -1481,7 +1481,7 @@ bool joinSegmentWithAny(
     return true;
 }
 
-/// (NULL != off) means 'introduce OK_MAY_EXIST'
+/// (NULL != off) means 'introduce OK_SEE_THROUGH'
 bool segmentCloneCore(
         SymJoinCtx                  &ctx,
         SymHeap                     &shGt,
@@ -1559,7 +1559,7 @@ bool handleUnknownValues(
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 
-/// (NULL != off) means 'introduce OK_MAY_EXIST'
+/// (NULL != off) means 'introduce OK_SEE_THROUGH'
 bool insertSegmentClone(
         bool                    *pResult,
         SymJoinCtx              &ctx,
@@ -1626,7 +1626,7 @@ bool insertSegmentClone(
             continue;
 
         if (seg != valGt)
-            // OK_MAY_EXIST is applicable only on the first object
+            // OK_SEE_THROUGH is applicable only on the first object
             off = 0;
 
         const EValueTarget code = shGt.valTarget(valGt);
@@ -1672,10 +1672,10 @@ void resolveMayExist(
         // kind of abstract object matches in both cases
         return;
 
-    if (OK_MAY_EXIST == kind1)
+    if (OK_SEE_THROUGH == kind1)
         *isAbs1 = false;
 
-    if (OK_MAY_EXIST == kind2)
+    if (OK_SEE_THROUGH == kind2)
         *isAbs2 = false;
 }
 
@@ -1813,7 +1813,7 @@ bool mayExistFallback(
 
     const TValId valRoot = (use1) ? root1 : root2;
     if (OK_CONCRETE != sh.valTargetKind(valRoot))
-        // only concrete objects/prototypes are candidates for OK_MAY_EXIST
+        // only concrete objects/prototypes are candidates for OK_SEE_THROUGH
         return false;
 
     const TValId ref = (use2) ? v1 : v2;
