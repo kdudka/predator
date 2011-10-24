@@ -2042,24 +2042,6 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
     const unsigned size = clt->size;
     rootData->size = size;
 
-    // initialize to zero?
-    bool nullify = var.initialized;
-#if SE_ASSUME_FRESH_STATIC_DATA
-    nullify |= (VT_STATIC == code);
-#endif
-
-    if (nullify) {
-        // initialize to zero
-        this->writeUniformBlock(addr, VAL_NULL, size);
-    }
-#if SE_TRACK_UNINITIALIZED
-    else if (VT_ON_STACK == code) {
-        // uninitialized stack variable
-        const TValId tpl = this->valCreate(VT_UNKNOWN, VO_STACK);
-        this->writeUniformBlock(addr, tpl, size);
-    }
-#endif
-
     // mark the root as live
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
     d->liveRoots->insert(addr);
