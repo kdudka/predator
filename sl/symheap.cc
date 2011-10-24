@@ -2470,6 +2470,9 @@ void SymHeap::valTargetSetAbstract(
     CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(OK_CONCRETE == kind);
 
+    // there is no 'prev' offset in OK_SEE_THROUGH
+    CL_BREAK_IF(OK_SEE_THROUGH == kind && off.prev != off.next);
+
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // clone the data
@@ -2484,10 +2487,9 @@ void SymHeap::valTargetSetAbstract(
         return;
     }
 
-    AbstractRoot *aData = new AbstractRoot(kind, off);
-    if (OK_SEE_THROUGH == kind)
-        // there is no 'prev' offset in OK_SEE_THROUGH
-        aData->bOff.prev = off.next;
+    AbstractRoot *aData = new AbstractRoot(kind, (OK_OBJ_OR_NULL == kind)
+            ? BindingOff(OK_OBJ_OR_NULL)
+            : off);
 
     // register a new abstract root
     d->absRoots.assignId(root, aData);
@@ -2583,8 +2585,9 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
         v2 = segNextRootObj(*this, v1);
 
     TValId seg;
-    if (haveSegBidir(&seg, this, OK_SEE_THROUGH, v1, v2)) {
-        // replace OK_SEE_THROUGH by OK_CONCRETE
+    if (haveSegBidir(&seg, this, OK_SEE_THROUGH, v1, v2)
+            || haveSegBidir(&seg, this, OK_OBJ_OR_NULL, v1, v2)) {
+        // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
         this->valTargetSetConcrete(seg);
         return;
     }
@@ -2710,6 +2713,7 @@ unsigned SymHeap::segMinLength(TValId seg) const {
     const EObjKind kind = aData->kind;
     switch (kind) {
         case OK_SEE_THROUGH:
+        case OK_OBJ_OR_NULL:
             return 0;
 
         case OK_SLS:
@@ -2735,6 +2739,11 @@ void SymHeap::segSetMinLength(TValId seg, unsigned len) {
         case OK_SEE_THROUGH:
             if (len)
                 CL_BREAK_IF("OK_SEE_THROUGH is supposed to have zero minLength");
+            return;
+
+        case OK_OBJ_OR_NULL:
+            if (len)
+                CL_BREAK_IF("OK_OBJ_OR_NULL is supposed to have zero minLength");
             return;
 
         case OK_SLS:

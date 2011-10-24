@@ -696,6 +696,15 @@ struct BindingOff {
         prev(0)
     {
     }
+
+    BindingOff(EObjKind kind):
+        head(-1),
+        next(-1),
+        prev(-1)
+    {
+        CL_BREAK_IF(OK_OBJ_OR_NULL != kind);
+        (void) kind;
+    }
 };
 
 /// point-wise comparison of BindingOff

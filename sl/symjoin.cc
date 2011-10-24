@@ -411,10 +411,6 @@ bool checkNullConsistency(
     if (isNull2 && hasKey(ctx.valMap1[/* lrt */ 0], root1))
         return false;
 
-    if (ctx.joiningData())
-        // TODO: explain exactly why we need it to digest test-0116.c
-        return true;
-
     const EValueTarget code = (isNull2)
         ? ctx.sh1.valTarget(v1)
         : ctx.sh2.valTarget(v2);
@@ -423,12 +419,12 @@ bool checkNullConsistency(
         case VT_STATIC:
         case VT_ON_STACK:
         case VT_ON_HEAP:
-            // implies inconsistency
-            return false;
+        case VT_ABSTRACT:
+            return true;
 
         default:
-            // OK
-            return true;
+            // implies inconsistency
+            return false;
     }
 }
 
@@ -462,6 +458,10 @@ bool joinFreshObjTripple(
         if (!checkNullConsistency(ctx, v1, v2))
             // mapping already inconsistent
             return false;
+
+        if (readOnly)
+            // act optimistically for now
+            return true;
     }
 
     if (readOnly)
@@ -742,27 +742,34 @@ bool joinSegBindingOfMayExist(
         const TValId            seg1,
         const TValId            seg2)
 {
-    const bool isMayExist1 = (OK_SEE_THROUGH == ctx.sh1.valTargetKind(seg1));
-    const bool isMayExist2 = (OK_SEE_THROUGH == ctx.sh2.valTargetKind(seg2));
+    const EObjKind kind1 = ctx.sh1.valTargetKind(seg1);
+    const EObjKind kind2 = ctx.sh2.valTargetKind(seg2);
+
+    const bool isMayExist1 = (OK_SEE_THROUGH == kind1);
+    const bool isMayExist2 = (OK_SEE_THROUGH == kind2);
     if (!isMayExist1 && !isMayExist2)
         // no OK_SEE_THROUGH involved
         return false;
 
     const BindingOff off1 = ctx.sh1.segBinding(seg1);
     const BindingOff off2 = ctx.sh2.segBinding(seg2);
-    if (off1.head != off2.head) {
-        // head mismatch
-        *pResult = false;
-        return true;
-    }
-
     *pOff = (isMayExist2) ? off1 : off2;
 
     const TOffset offNext1 = off1.next;
     const TOffset offNext2 = off2.next;
-    if (offNext1 == offNext2) {
+    if (offNext1 == offNext2 && off1.head == off2.head) {
         // the 'next' offset matches trivially
         *pResult = true;
+        return true;
+    }
+
+    if (OK_OBJ_OR_NULL == kind2) {
+        *pResult = (VAL_NULL == valOfPtrAt(ctx.sh1, seg1, offNext1));
+        return true;
+    }
+
+    if (OK_OBJ_OR_NULL == kind1) {
+        *pResult = (VAL_NULL == valOfPtrAt(ctx.sh2, seg2, offNext2));
         return true;
     }
 
@@ -1074,7 +1081,9 @@ write_them:
     return true;
 }
 
-/// (NULL != offMayExist) means 'create OK_SEE_THROUGH'
+static const BindingOff ObjOrNull(OK_OBJ_OR_NULL);
+
+/// (NULL != offMayExist) means 'create OK_SEE_THROUGH/OK_OBJ_OR_NULL'
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
@@ -1096,10 +1105,23 @@ bool createObject(
         return false;
 
     if (offMayExist) {
-        // we are asked to introduce OK_SEE_THROUGH
-        CL_BREAK_IF(OK_CONCRETE != kind && OK_SEE_THROUGH != kind);
-        kind = OK_SEE_THROUGH;
-        off = *offMayExist;
+        // we are asked to introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL
+        switch (kind) {
+            case OK_CONCRETE:
+            case OK_SEE_THROUGH:
+            case OK_OBJ_OR_NULL:
+                break;
+
+            default:
+                CL_BREAK_IF("invalid call of createObject()");
+        }
+
+        if (ObjOrNull == *offMayExist)
+            kind = OK_OBJ_OR_NULL;
+        else {
+            kind = OK_SEE_THROUGH;
+            off = *offMayExist;
+        }
     }
 
     int size;
@@ -1445,28 +1467,34 @@ bool joinSegmentWithAny(
         return false;
     }
 
-    // BindingOff is assumed to be already matching at this point
-    BindingOff off = (JS_USE_SH1 == action)
-        ? ctx.sh1.segBinding(peer1)
-        : ctx.sh2.segBinding(peer2);
+    const EObjKind kind = (JS_USE_SH1 == action)
+        ? ctx.sh1.valTargetKind(root1)
+        : ctx.sh2.valTargetKind(root2);
 
-    const TValId valNext1 = valOfPtrAt(ctx.sh1, peer1, off.next);
-    const TValId valNext2 = valOfPtrAt(ctx.sh2, peer2, off.next);
-    if (firstTryReadOnly && !checkValueMapping(ctx, valNext1, valNext2,
-                           /* allowUnknownMapping */ true))
-    {
-        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
-        return false;
-    }
+    if (OK_OBJ_OR_NULL != kind) {
+        // BindingOff is assumed to be already matching at this point
+        const BindingOff off = (JS_USE_SH1 == action)
+            ? ctx.sh1.segBinding(peer1)
+            : ctx.sh2.segBinding(peer2);
 
-    if (firstTryReadOnly && haveDls) {
-        const TValId valPrev1 = valOfPtrAt(ctx.sh1, root1, off.prev);
-        const TValId valPrev2 = valOfPtrAt(ctx.sh2, root2, off.prev);
-        if (!checkValueMapping(ctx, valPrev1, valPrev2,
+        const TValId valNext1 = valOfPtrAt(ctx.sh1, peer1, off.next);
+        const TValId valNext2 = valOfPtrAt(ctx.sh2, peer2, off.next);
+        if (firstTryReadOnly && !checkValueMapping(ctx, valNext1, valNext2,
                                /* allowUnknownMapping */ true))
         {
             SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
             return false;
+        }
+
+        if (firstTryReadOnly && haveDls) {
+            const TValId valPrev1 = valOfPtrAt(ctx.sh1, root1, off.prev);
+            const TValId valPrev2 = valOfPtrAt(ctx.sh2, root2, off.prev);
+            if (!checkValueMapping(ctx, valPrev1, valPrev2,
+                                   /* allowUnknownMapping */ true))
+            {
+                SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
+                return false;
+            }
         }
     }
 
@@ -1481,7 +1509,7 @@ bool joinSegmentWithAny(
     return true;
 }
 
-/// (NULL != off) means 'introduce OK_SEE_THROUGH'
+/// (NULL != off) means 'introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL'
 bool segmentCloneCore(
         SymJoinCtx                  &ctx,
         SymHeap                     &shGt,
@@ -1559,7 +1587,7 @@ bool handleUnknownValues(
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 
-/// (NULL != off) means 'introduce OK_SEE_THROUGH'
+/// (NULL != off) means 'introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL'
 bool insertSegmentClone(
         bool                    *pResult,
         SymJoinCtx              &ctx,
@@ -1585,9 +1613,13 @@ bool insertSegmentClone(
         peer = dlSegPeer(shGt, seg);
 
     // resolve the 'next' pointer and check its validity
-    const TValId nextGt = (off)
-        ? valOfPtrAt(shGt, seg, off->next)
-        : nextValFromSeg(shGt, peer);
+    TValId nextGt;
+    if (off)
+        nextGt = (ObjOrNull == *off)
+            ? VAL_NULL
+            : valOfPtrAt(shGt, seg, off->next);
+    else
+        nextGt = nextValFromSeg(shGt, peer);
 
     const TValId nextLt = (isGt2) ? v1 : v2;
     if (!off && !checkValueMapping(ctx, 
@@ -1626,7 +1658,7 @@ bool insertSegmentClone(
             continue;
 
         if (seg != valGt)
-            // OK_SEE_THROUGH is applicable only on the first object
+            // OK_SEE_THROUGH/OK_OBJ_OR_NULL is applicable only on the first obj
             off = 0;
 
         const EValueTarget code = shGt.valTarget(valGt);
@@ -1817,22 +1849,32 @@ bool mayExistFallback(
         return false;
 
     const TValId ref = (use2) ? v1 : v2;
+
     MayExistVisitor visitor(ctx, action, ref, /* root */ valRoot);
-    if (traverseLivePtrs(sh, valRoot, visitor)) {
+
+    bool found = !traverseLivePtrs(sh, valRoot, visitor);
+    if (!found) {
         // reference value not matched directly, try to look through
         visitor.enableLookThroughMode();
-        if (traverseLivePtrs(sh, valRoot, visitor))
-            // no match
-            return false;
+        found = !traverseLivePtrs(sh, valRoot, visitor);
     }
+
+    BindingOff off;
+    if (found) {
+        // introduce OK_SEE_THROUGH
+        off.head = sh.valOffset(val);
+        off.next = off.prev = visitor.offNext();
+    }
+    else if (VAL_NULL == ref)
+        // introduce OK_OBJ_OR_NULL
+        off = ObjOrNull;
+    else
+        // no match
+        return false;
 
     // mayExistFallback() always implies JS_THREE_WAY
     if (!updateJoinStatus(ctx, JS_THREE_WAY))
         return false;
-
-    BindingOff off;
-    off.head = sh.valOffset(val);
-    off.next = visitor.offNext();
 
     bool result;
     if (!insertSegmentClone(&result, ctx, v1, v2, action, &off))

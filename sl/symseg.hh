@@ -70,6 +70,9 @@ inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg) {
 
 /// return the value of 'next' in the given segment (given by root)
 inline TValId nextValFromSeg(SymHeap &sh, TValId seg) {
+    if (OK_OBJ_OR_NULL == sh.valTargetKind(seg))
+        return VAL_NULL;
+
     const ObjHandle ptrNext = nextPtrFromSeg(sh, seg);
     return ptrNext.value();
 }
@@ -111,9 +114,12 @@ inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext) {
     return nextRootObj(sh, at, offNext);
 }
 
-/// we DO require the root to be a segment
+/// we DO require the root to be an abstract object
 inline TValId segNextRootObj(SymHeap &sh, TValId root) {
     CL_BREAK_IF(sh.valOffset(root));
+
+    if (OK_OBJ_OR_NULL == sh.valTargetKind(root))
+        return VAL_NULL;
 
     const BindingOff off = sh.segBinding(root);
     const TOffset offNext = (OK_DLS == sh.valTargetKind(root))

@@ -41,6 +41,12 @@ bool matchSegBinding(
         const BindingOff            &offDiscover)
 {
     const EObjKind kind = sh.valTargetKind(seg);
+
+    // TODO
+#if 0
+    CL_BREAK_IF(OK_OBJ_OR_NULL == kind);
+#endif
+
     if (OK_CONCRETE == kind)
         // nothing to match actually
         return true;

@@ -38,12 +38,15 @@ void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
 
         case OK_SLS:
         case OK_SEE_THROUGH:
+        case OK_OBJ_OR_NULL:
             sh.valTargetSetProto(seg, isProto);
-            break;
+            return;
 
-        default:
-            CL_BREAK_IF("ivalid call of segSetProto()");
+        case OK_CONCRETE:
+            break;
     }
+
+    CL_BREAK_IF("ivalid call of segSetProto()");
 }
 
 bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,

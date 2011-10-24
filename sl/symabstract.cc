@@ -707,6 +707,9 @@ void spliceOutListSegment(
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
 
+    // TODO
+    CL_BREAK_IF(OK_OBJ_OR_NULL == sh.valTargetKind(seg));
+
     const TOffset offHead = sh.segBinding(seg).head;
 
     if (OK_DLS == sh.valTargetKind(seg)) {
@@ -793,6 +796,10 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     const unsigned lenRemains = spliceOutSegmentIfNeeded(sh, seg, peer, todo);
 
     const EObjKind kind = sh.valTargetKind(seg);
+
+    // TODO
+    CL_BREAK_IF(OK_OBJ_OR_NULL == kind);
+
     if (OK_SEE_THROUGH == kind) {
         // this kind is much easier than regular list segments
         sh.valTargetSetConcrete(seg);
