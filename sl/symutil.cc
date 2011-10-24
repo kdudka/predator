@@ -22,7 +22,9 @@
 
 #include <cl/storage.hh>
 
+#include "symbt.hh"
 #include "symheap.hh"
+#include "symproc.hh"
 #include "symstate.hh"
 #include "util.hh"
 
@@ -132,6 +134,15 @@ void translateValProto(
     // create an equivalent unknown value in dst
     CL_BREAK_IF(VT_UNKNOWN != code);
     *pValProto = dst.valCreate(code, origin);
+}
+
+void initGlVar(SymHeap &sh, const CVar &cv) {
+    CL_BREAK_IF(cv.inst);
+    CL_BREAK_IF(isVarAlive(sh, cv));
+
+    SymBackTrace dummyBt(sh.stor());
+    SymProc proc(sh, &dummyBt);
+    (void) proc.varAt(cv);
 }
 
 void getPtrValues(TValList &dst, SymHeap &sh, TValId at) {

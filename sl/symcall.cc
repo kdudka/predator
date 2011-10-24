@@ -399,7 +399,7 @@ void pullGlVar(SymHeap &result, SymHeap origin, const CVar &cv) {
 
     if (!isVarAlive(origin, cv)) {
         // not found in origin, create a fresh instance
-        (void) result.addrOfVar(cv, /* createIfNeeded */ true);
+        initGlVar(result, cv);
         return;
     }
 
@@ -431,7 +431,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     const int cnt = this->ctxStack.size();
     if (!cnt) {
         // empty ctx stack --> no heap to import the var from
-        (void) entry.addrOfVar(cv, /* createIfNeeded */ true);
+        initGlVar(entry, cv);
         return;
     }
 

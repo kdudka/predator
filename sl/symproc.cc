@@ -287,19 +287,19 @@ void SymProc::varInit(TValId at) {
     }
 }
 
-TValId SymProc::varAt(const struct cl_operand &op) {
-    // resolve CVar
-    const int uid = varIdFromOperand(&op);
-    const int nestLevel = bt_->countOccurrencesOfTopFnc();
-    const CVar cVar(uid, nestLevel);
+TValId SymProc::varAt(const CVar &cv) {
+    TValId at = sh_.addrOfVar(cv, /* createIfNeeded */ false);
+    if (0 < at)
+        // var already alive
+        return at;
 
-    // get the address (SymHeapCore is responsible for lazy creation)
-    const TValId at = sh_.addrOfVar(cVar, /* createIfNeeded */ true);
+    // lazy var creation
+    at = sh_.addrOfVar(cv, /* createIfNeeded */ true);
     CL_BREAK_IF(at <= 0);
 
     // resolve Var
     const CodeStorage::Storage &stor = sh_.stor();
-    const CodeStorage::Var &var = stor.vars[uid];
+    const CodeStorage::Var &var = stor.vars[cv.uid];
     bool needInit = !var.initials.empty();
 #if !SE_ASSUME_FRESH_STATIC_DATA
     needInit &= isOnStack(var);
@@ -308,15 +308,17 @@ TValId SymProc::varAt(const struct cl_operand &op) {
         // in this case, we do not care if the var is initialized or not
         return at;
 
-    ObjList liveObjs;
-    sh_.gatherLiveObjects(liveObjs, at);
-    if (!liveObjs.empty())
-        // not a fresh variable --> preserve its contents
-        return at;
-
     // delayed initialization
     this->varInit(at);
     return at;
+}
+
+TValId SymProc::varAt(const struct cl_operand &op) {
+    // resolve CVar
+    const int uid = varIdFromOperand(&op);
+    const int nestLevel = bt_->countOccurrencesOfTopFnc();
+    const CVar cv(uid, nestLevel);
+    return this->varAt(cv);
 }
 
 bool SymProc::addOffDerefArray(TOffset &off, const struct cl_accessor *ac) {

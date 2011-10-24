@@ -122,9 +122,11 @@ class SymProc {
         TValId handlePointerPlus(TValId at, TValId off, bool negOffset = false);
 
     protected:
+        TValId varAt(const CVar &cv);
         TValId varAt(const struct cl_operand &op);
         TValId targetAt(const struct cl_operand &op);
         virtual void varInit(TValId at);
+        friend void initGlVar(SymHeap &sh, const CVar &cv);
 
     private:
         bool addOffDerefArray(TOffset &off, const struct cl_accessor *ac);

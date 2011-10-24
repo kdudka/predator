@@ -93,6 +93,8 @@ inline bool isVarAlive(SymHeap &sh, const CVar &cv) {
     return 0 < at;
 }
 
+void initGlVar(SymHeap &sh, const CVar &cv);
+
 void getPtrValues(TValList &dst, SymHeap &heap, TValId at);
 
 inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
