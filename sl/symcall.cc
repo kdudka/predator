@@ -180,7 +180,7 @@ struct SymCallCtx::Private {
     SymHeap                     entry;
     SymHeap                     surround;
     const struct cl_operand     *dst;
-    SymStateWithJoin            rawResults;
+    SymHeapUnion                rawResults;
     int                         nestLevel;
     bool                        computed;
     bool                        flushed;

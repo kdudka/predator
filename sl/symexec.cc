@@ -167,7 +167,7 @@ class SymExecEngine: public IStatsProvider {
 
         SymHeapList                     localState_;
         SymHeapList                     nextLocalState_;
-        SymStateWithJoin                callResults_;
+        SymHeapList                     callResults_;
         const struct cl_loc             *lw_;
 
     private:
@@ -641,7 +641,11 @@ void joinNewResults(
         SymHeapList             &dst,
         const SymState          &src)
 {
+#if SE_ABSTRACT_ON_CALL_DONE
     SymStateWithJoin all;
+#else
+    SymHeapUnion all;
+#endif
     all.swap(dst);
     all.SymState::insert(src);
     all.swap(dst);

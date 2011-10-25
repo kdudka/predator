@@ -134,7 +134,8 @@
 #define SE_DISABLE_SYMCUT                   0
 
 /**
- * if 1, do not use the @b symjoin module for symbolic state management
+ * if 1, do not use the @b symjoin module for symbolic state management (this
+ * implies SE_ALLOW_CST_INT_PLUS_MINUS == 0 unless you intend to loop forever)
  */
 #define SE_DISABLE_SYMJOIN_IN_SYMSTATE      0
 
@@ -146,7 +147,7 @@
 
 /**
  * - 0 ... call cache completely disabled (saves a lot of memory)
- * - 1 ... call cache enabled, use graph isomorphism for lookup
+ * - 1 ... call cache enabled, use graph isomorphism for lookup (hungry on mem)
  * - 2 ... call cache enabled, use join operator for lookup [experimental]
  */
 #define SE_ENABLE_CALL_CACHE                1
