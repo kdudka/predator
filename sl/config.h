@@ -205,7 +205,8 @@
 
 /**
  * if 1, track uninitialized values, which may result into significant state
- * explosion in some cases
+ * explosion in some cases (especially when used together with
+ * SE_TRACK_NON_POINTER_VALUES)
  */
 #define SE_TRACK_UNINITIALIZED              0
 

@@ -296,10 +296,11 @@ TValId SymProc::varAt(const CVar &cv) {
     // resolve Var
     const CodeStorage::Storage &stor = sh_.stor();
     const CodeStorage::Var &var = stor.vars[cv.uid];
+    const bool isLcVar = isOnStack(var);
 
     // initialize to zero?
     bool nullify = var.initialized;
-    if (!isOnStack(var))
+    if (!isLcVar)
 #if SE_ASSUME_FRESH_STATIC_DATA
         nullify = true;
 #else
@@ -312,10 +313,10 @@ TValId SymProc::varAt(const CVar &cv) {
         sh_.writeUniformBlock(at, VAL_NULL, size);
     }
 #if SE_TRACK_UNINITIALIZED
-    else if (VT_ON_STACK == code) {
+    else if (isLcVar) {
         // uninitialized stack variable
         const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
-        sh_.writeUniformBlock(addr, tpl, size);
+        sh_.writeUniformBlock(at, tpl, size);
     }
 #endif
 
