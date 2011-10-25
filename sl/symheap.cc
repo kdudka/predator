@@ -250,10 +250,10 @@ struct HeapObject: public BlockEntity {
     TObjType                    clt;
     int                         extRefCnt;
 
-    HeapObject(TValId root_, TOffset off_, TObjType clt_, bool hasExtRef):
+    HeapObject(TValId root_, TOffset off_, TObjType clt_):
         BlockEntity(bkFromClt(clt_), root_, off_, clt_->size, VAL_INVALID),
         clt(clt_),
-        extRefCnt(static_cast<int>(hasExtRef))
+        extRefCnt(0)
     {
     }
 
@@ -391,7 +391,7 @@ struct SymHeapCore::Private {
     TValId valDup(TValId);
     bool valsEqual(TValId, TValId);
 
-    TObjId objCreate(TValId root, TOffset off, TObjType clt, bool hasExtRef);
+    TObjId objCreate(TValId root, TOffset off, TObjType clt);
     TValId objInit(TObjId obj);
     void objDestroy(TObjId, bool removeVal, bool detach);
 
@@ -755,11 +755,10 @@ void SymHeapCore::Private::setValueOf(
 TObjId SymHeapCore::Private::objCreate(
         TValId                      root,
         TOffset                     off,
-        TObjType                    clt,
-        bool                        hasExtRef)
+        TObjType                    clt)
 {
     // acquire object ID
-    HeapObject *objData = new HeapObject(root, off, clt, hasExtRef);
+    HeapObject *objData = new HeapObject(root, off, clt);
     const TObjId obj = this->assignId(objData);
 
     // register the object by the owning root value
@@ -1223,7 +1222,7 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
 
         const TOffset off = objDataSrc->off + shift;
         const TObjType clt = objDataSrc->clt;
-        dst = this->objCreate(rootDst, off, clt, /* hasExtRef */ false);
+        dst = this->objCreate(rootDst, off, clt);
         this->setValueOf(dst, objDataSrc->value);
     }
 
@@ -1864,7 +1863,7 @@ TObjId SymHeapCore::ptrAt(TValId at) {
     const TValId root = valData->valRoot;
 
     // create the pointer
-    return d->objCreate(root, off, clt, /* hasExtRef */ true);
+    return d->objCreate(root, off, clt);
 }
 
 // TODO: simplify the code
@@ -1959,7 +1958,7 @@ update_best:
 
     // create the object
     const TValId root = valData->valRoot;
-    return d->objCreate(root, off, clt, /* hasExtRef */ true);
+    return d->objCreate(root, off, clt);
 }
 
 void SymHeapCore::objEnter(TObjId obj) {
