@@ -33,6 +33,7 @@
 #include "symheap.hh"
 #include "symstate.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 
 #include <stack>
@@ -984,6 +985,9 @@ TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
 void printBackTrace(SymProc &proc, bool forcePtrace) {
     const SymBackTrace *bt = proc.bt();
     bt->printBackTrace(forcePtrace);
+#if SE_DUMP_TRACE_GRAPHS
+    Trace::plotTrace(proc.sh().traceNode());
+#endif
 }
 
 // TODO: move this to symutil?

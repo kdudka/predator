@@ -140,6 +140,11 @@
 #define SE_DISABLE_SYMJOIN_IN_SYMSTATE      0
 
 /**
+ * if 1, plot a trace graph per each print of backtrace [not yet implemented]
+ */
+#define SE_DUMP_TRACE_GRAPHS                0
+
+/**
  * - 0 ... kill local variables only on stack frame destruction
  * - 1 ... kill local variables as soon as they become dead
  */

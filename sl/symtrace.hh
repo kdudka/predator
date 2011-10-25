@@ -153,6 +153,9 @@ class MsgNode: public Node {
     // insn
 };
 
+/// plot a trace graph named "symtrace-NNNN.dot" leading to the given node
+bool plotTrace(Node *endPoint);
+
 } // namespace Trace
 
 #endif /* H_GUARD_SYM_TRACE_H */
