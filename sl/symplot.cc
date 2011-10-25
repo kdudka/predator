@@ -726,26 +726,34 @@ const char* labelByTarget(const EValueTarget code) {
     return "";
 }
 
-void describeInt(PlotData &plot, const long num) {
-    plot.out << ", fontcolor=red, label=\"[int] " << num << "\"";
+void describeInt(PlotData &plot, const long num, const TValId val) {
+    plot.out << ", fontcolor=red, label=\"[int] "
+        << num << " (#"
+        << val << ")\"";
 }
 
-void describeReal(PlotData &plot, const float fpn) {
-    plot.out << ", fontcolor=red, label=\"[real] " << fpn << "\"";
+void describeReal(PlotData &plot, const float fpn, const TValId val) {
+    plot.out << ", fontcolor=red, label=\"[real] "
+        << fpn << " (#"
+        << val << ")\"";
 }
 
-void describeFnc(PlotData &plot, const int uid) {
+void describeFnc(PlotData &plot, const int uid, const TValId val) {
     TStorRef stor = plot.sh.stor();
     const CodeStorage::Fnc *fnc = stor.fncs[uid];
     CL_BREAK_IF(!fnc);
 
     const std::string name = nameOf(*fnc);
-    plot.out << ", fontcolor=green, label=\"" << name << "()\"";
+    plot.out << ", fontcolor=green, label=\""
+        << name << "() (#"
+        << val << ")\"";
 }
 
-void describeStr(PlotData &plot, const char *str) {
+void describeStr(PlotData &plot, const char *str, const TValId val) {
     // we need to escape twice, once for the C compiler and once for graphviz
-    plot.out << ", fontcolor=blue, label=\"\\\"" << str << "\\\"\"";
+    plot.out << ", fontcolor=blue, label=\"\\\""
+        << str << "\\\" (#"
+        << val << ")\"";
 }
 
 void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
@@ -763,19 +771,19 @@ void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
             break;
 
         case CV_INT:
-            describeInt(plot, data.num);
+            describeInt(plot, data.num, val);
             break;
 
         case CV_REAL:
-            describeReal(plot, data.fpn);
+            describeReal(plot, data.fpn, val);
             break;
 
         case CV_FNC:
-            describeFnc(plot, data.uid);
+            describeFnc(plot, data.uid, val);
             break;
 
         case CV_STRING:
-            describeStr(plot, data.str);
+            describeStr(plot, data.str, val);
             break;
     }
 
