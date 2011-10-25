@@ -707,10 +707,9 @@ void spliceOutListSegment(
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
 
-    // TODO
-    CL_BREAK_IF(OK_OBJ_OR_NULL == sh.valTargetKind(seg));
-
-    const TOffset offHead = sh.segBinding(seg).head;
+    TOffset offHead = 0;
+    if (OK_OBJ_OR_NULL != sh.valTargetKind(seg))
+        offHead = sh.segBinding(seg).head;
 
     if (OK_DLS == sh.valTargetKind(seg)) {
         // OK_DLS --> unlink peer
@@ -896,9 +895,12 @@ bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo) {
         return true;
     }
 
-    // if atAddr is above/bellow head, we need to shift pointingTo accordingly
-    const TOffset off = sh.valOffset(atAddr) - sh.segBinding(seg).head;
-    const TValId endPoint = sh.valByOffset(pointingTo, off);
+    TValId endPoint = pointingTo;
+    if (OK_OBJ_OR_NULL != sh.valTargetKind(seg)) {
+        // if atAddr is above/bellow head, we need to shift endPoint accordingly
+        const TOffset off = sh.valOffset(atAddr) - sh.segBinding(seg).head;
+        endPoint = sh.valByOffset(pointingTo, off);
+    }
 
     if (!spliceOutAbstractPathCore(sh, seg, endPoint, /* readOnlyMode */ true))
         // giving up
