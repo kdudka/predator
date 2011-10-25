@@ -129,10 +129,6 @@ void describeUnknownVal(
             what = "a result of an unsupported data reinterpretation";
             break;
 
-        case VO_STATIC:
-            what = "an untouched contents of static data";
-            break;
-
         case VO_STACK:
             what = "an untouched contents of stack";
             break;

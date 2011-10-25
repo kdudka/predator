@@ -1618,8 +1618,6 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
 
 bool isUninitialized(EValueOrigin code) {
     switch (code) {
-        case VO_STATIC:
-            // this may be subject for discussion
         case VO_HEAP:
         case VO_STACK:
             return true;

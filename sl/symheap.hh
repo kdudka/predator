@@ -45,12 +45,11 @@ enum EValueOrigin {
     VO_UNKNOWN,             ///< unknown result of an operation (e.g. < >)
     VO_REINTERPRET,         ///< a result of unsupported data reinterpretation
     VO_DEREF_FAILED,        ///< a result of invalid dereference
-    VO_STATIC,              ///< untouched contents of static data
     VO_STACK,               ///< untouched contents of stack
     VO_HEAP                 ///< untouched contents of heap
 };
 
-/// true for VO_HEAP, VO_STACK, and maybe VO_STATIC
+/// true for VO_HEAP and VO_STACK
 bool isUninitialized(EValueOrigin);
 
 /// classification of kind of objects a value may point to

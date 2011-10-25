@@ -699,7 +699,6 @@ const char* labelByOrigin(const EValueOrigin code) {
         GEN_labelByCode(VO_UNKNOWN);
         GEN_labelByCode(VO_REINTERPRET);
         GEN_labelByCode(VO_DEREF_FAILED);
-        GEN_labelByCode(VO_STATIC);
         GEN_labelByCode(VO_STACK);
         GEN_labelByCode(VO_HEAP);
     }
