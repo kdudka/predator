@@ -28,7 +28,6 @@
 #include "memdebug.hh"
 #include "sigcatch.hh"
 #include "symabstract.hh"
-#include "symbt.hh"
 #include "symcall.hh"
 #include "symdebug.hh"
 #include "sympath.hh"
@@ -443,7 +442,7 @@ void SymExecEngine::execCondInsn() {
     if (isUninitialized(origin)) {
         CL_WARN_MSG(lw_, "conditional jump depends on uninitialized value");
         describeUnknownVal(proc, val, "use");
-        bt_.printBackTrace();
+        printBackTrace(proc);
     }
 
     std::ostringstream str;
@@ -882,9 +881,6 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
     return fnc;
 
 fail:
-    // something wrong happened, print the backtrace
-    bt.printBackTrace();
-
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
@@ -898,6 +894,9 @@ fail:
         const ObjHandle obj = proc.objByOperand(dst);
         proc.objSetValue(obj, val);
     }
+
+    // something wrong happened, print the backtrace
+    proc.failWithBackTrace();
 
     // call failed, so that we have exactly one resulting heap
     results.insert(entry);

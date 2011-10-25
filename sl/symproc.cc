@@ -45,7 +45,7 @@
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
 void SymProc::failWithBackTrace() {
-    bt_->printBackTrace();
+    printBackTrace(*this);
     printMemUsage("SymBackTrace::printBackTrace");
 
 #if SE_ERROR_RECOVERY_MODE
@@ -534,7 +534,7 @@ void SymProc::heapObjDefineType(const ObjHandle &lhs, TValId rhs) {
 void SymProc::reportMemLeak(const EValueTarget code, const char *reason) {
     const char *const what = describeRootObj(code);
     CL_WARN_MSG(lw_, "memory leak detected while " << reason << "ing " << what);
-    bt_->printBackTrace();
+    printBackTrace(*this);
 }
 
 void SymProc::heapSetSingleVal(const ObjHandle &lhs, TValId rhs) {
@@ -776,7 +776,7 @@ void SymExecCore::execHeapAlloc(
         CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
 malloc/calloc is implementation-defined");
         CL_NOTE_MSG(lw_, "assuming NULL as the result");
-        bt_->printBackTrace();
+        printBackTrace(*this);
         this->objSetValue(lhs, VAL_NULL);
         this->killInsn(insn);
         dst.insert(sh_);
@@ -981,9 +981,9 @@ TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
     return sh_.valByOffset(at, offRequested);
 }
 
-void printBackTrace(SymProc &proc) {
+void printBackTrace(SymProc &proc, bool forcePtrace) {
     const SymBackTrace *bt = proc.bt();
-    bt->printBackTrace();
+    bt->printBackTrace(forcePtrace);
 }
 
 // TODO: move this to symutil?
@@ -1226,7 +1226,7 @@ void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
     CL_ERROR_MSG(lw_, "error label \"" << name << "\" has been reached");
 
     // print the backtrace and leave
-    bt_->printBackTrace(/* forcePtrace */ true);
+    printBackTrace(*this, /* forcePtrace */ true);
     printMemUsage("SymBackTrace::printBackTrace");
     throw std::runtime_error("an error label has been reached");
 }

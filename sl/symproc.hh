@@ -152,7 +152,7 @@ class SymProc {
         friend class ValueMirror;
 };
 
-void printBackTrace(SymProc &);
+void printBackTrace(SymProc &, bool forcePtrace = false);
 
 /// @todo make the API more generic and better documented
 void describeUnknownVal(

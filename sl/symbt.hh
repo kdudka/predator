@@ -27,6 +27,7 @@
 
 struct CVar;
 class SymHeap;
+class SymProc;
 
 namespace CodeStorage {
     struct Fnc;
@@ -63,12 +64,6 @@ class SymBackTrace {
         const CodeStorage::Storage& stor() const;
 
     public:
-        /**
-         * stream out the backtrace, using CL_NOTE_MSG; or do nothing if the
-         * backtrace is trivial
-         */
-        void printBackTrace(bool forcePtrace = false) const;
-
         /**
          * enter a call of function, thus enlarge the backtrace by one
          * @param fncId ID of function, which is being called
@@ -116,6 +111,15 @@ class SymBackTrace {
 
         /// unregister the path tracer associated with the topmost function call
         void popPathTracer(const IPathTracer *);
+
+    protected:
+        /**
+         * stream out the backtrace, using CL_NOTE_MSG; or do nothing if the
+         * backtrace is trivial
+         */
+        void printBackTrace(bool forcePtrace = false) const;
+        friend void printBackTrace(SymProc &, bool forcePtrace);
+        friend class SymExecEngine;
 
     private:
         struct Private;
