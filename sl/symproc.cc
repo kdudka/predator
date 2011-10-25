@@ -1233,8 +1233,7 @@ void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
 
 bool SymExecCore::execCore(
         SymState                    &dst,
-        const CodeStorage::Insn     &insn,
-        const bool                  feelFreeToOverwrite)
+        const CodeStorage::Insn     &insn)
 {
     const enum cl_insn_e code = insn.code;
     switch (code) {
@@ -1266,12 +1265,7 @@ bool SymExecCore::execCore(
     // kill variables
     this->killInsn(insn);
 
-    if (feelFreeToOverwrite)
-        // aggressive optimization
-        dst.insertFast(sh_);
-    else
-        dst.insert(sh_);
-
+    dst.insert(sh_);
     return true;
 }
 
@@ -1310,7 +1304,7 @@ bool SymExecCore::concretizeLoop(
         }
 
         // process the current heap and move to the next one (if any)
-        slave.execCore(dst, insn, /* aggressive optimization */1 == todo.size());
+        slave.execCore(dst, insn);
 
         if (slave.errorDetected_)
             // propagate the 'error detected' flag
@@ -1350,7 +1344,7 @@ bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
     }
 
     if (derefs.empty())
-        return this->execCore(dst, insn, /* aggressive optimization */ true);
+        return this->execCore(dst, insn);
 
     // handle dereferences
     this->concretizeLoop(dst, insn, derefs);

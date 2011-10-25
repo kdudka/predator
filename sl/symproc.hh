@@ -220,7 +220,7 @@ class SymExecCore: public SymProc {
 
         void handleLabel(const CodeStorage::Insn &);
 
-        bool execCore(SymState &dst, const CodeStorage::Insn &insn, const bool);
+        bool execCore(SymState &dst, const CodeStorage::Insn &insn);
 
     protected:
         virtual void varInit(TValId at);

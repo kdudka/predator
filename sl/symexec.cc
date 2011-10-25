@@ -242,11 +242,12 @@ void SymExecEngine::execReturn() {
     }
 
     // commit one of the function results
-    dst_.insertFast(heap);
+    dst_.insert(heap);
     endReached_ = true;
 }
 
-void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) {
+void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
+{
     const std::string &name = ofBlock->name();
 
     // time to consider abstraction
@@ -263,7 +264,7 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) 
 #endif
 
     // update _target_ state and check if anything has changed
-    if (!stateMap_.insertFast(ofBlock, block_, sh)) {
+    if (!stateMap_.insert(ofBlock, block_, sh)) {
         CL_DEBUG_MSG(lw_, "--- block " << name
                      << " left intact (size of target is "
                      << stateMap_[ofBlock].size() << ")");
@@ -397,7 +398,6 @@ void SymExecEngine::execCondInsn() {
     CL_BREAK_IF(!cltSrc || !op2.type || cltSrc->code != op2.type->code);
 
     // a working area in case of VAL_TRUE and VAL_FALSE
-    // FIXME: unnecessary deep copy of the heap in case of non-deterministic cnd
     SymHeap sh(localState_[heapIdx_]);
     SymProc proc(sh, &bt_);
     proc.setLocation(lw_);
@@ -896,7 +896,7 @@ fail:
     }
 
     // call failed, so that we have exactly one resulting heap
-    results.insertFast(entry);
+    results.insert(entry);
     return 0;
 }
 

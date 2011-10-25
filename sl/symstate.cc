@@ -86,15 +86,6 @@ bool SymState::insert(const SymHeap &sh) {
     return false;
 }
 
-bool SymState::insertFast(SymHeap &sh) {
-    const int idx = this->lookup(sh);
-    if (-1 != idx)
-        return false;
-
-    this->insertNewFast(sh);
-    return true;
-}
-
 void SymState::insert(const SymState &huni) {
     BOOST_FOREACH(const SymHeap &current, huni) {
         this->insert(current);
@@ -174,22 +165,14 @@ void SymStateWithJoin::packSuffix(unsigned idx) {
     }
 }
 
-bool SymStateWithJoin::insertCore(
-        SymHeap                 &shNew,
-        const bool              feelFreeToOverwrite)
-{
+bool SymStateWithJoin::insert(const SymHeap &shNew) {
 #if SE_DISABLE_SYMJOIN_IN_SYMSTATE
     return SymHeapUnion::insert(shNew);
 #endif
     const int cnt = this->size();
     if (!cnt) {
         // no heaps inside, insert the first now
-        if (feelFreeToOverwrite)
-            // aggressive optimization
-            this->insertNewFast(shNew);
-        else
-            this->insertNew(shNew);
-
+        this->insertNew(shNew);
         return true;
     }
 
@@ -207,13 +190,7 @@ bool SymStateWithJoin::insertCore(
 
     if (idx == cnt) {
         // nothing to join here
-
-        if (feelFreeToOverwrite)
-            // aggressive optimization
-            this->insertNewFast(shNew);
-        else
-            this->insertNew(shNew);
-
+        this->insertNew(shNew);
         return true;
     }
 
@@ -234,14 +211,8 @@ bool SymStateWithJoin::insertCore(
             debugPlot("join", 0, this->operator[](idx));
             debugPlot("join", 1, shNew);
 
-            if (feelFreeToOverwrite) {
-                // aggressive optimization
-                this->swapExisting(idx, shNew);
-            }
-            else {
-                result = shNew;
-                this->swapExisting(idx, result);
-            }
+            result = shNew;
+            this->swapExisting(idx, result);
 
             this->packSuffix(idx);
             return true;
@@ -260,16 +231,6 @@ bool SymStateWithJoin::insertCore(
 
     // nothing changed actually
     return false;
-}
-
-bool SymStateWithJoin::insert(const SymHeap &sh) {
-    return this->insertCore(
-            const_cast<SymHeap &>(sh),
-            /* feelFreeToOverwrite */ false);
-}
-
-bool SymStateWithJoin::insertFast(SymHeap &sh) {
-    return this->insertCore(sh, /* feelFreeToOverwrite */ true);
 }
 
 
@@ -377,12 +338,6 @@ struct SymStateMap::Private {
     };
 
     std::map<TBlock, BlockState>        cont;
-
-    bool insert(
-            const CodeStorage::Block    *dst,
-            const CodeStorage::Block    *src,
-            SymHeap                     &sh,
-            const bool                  feelFreeToOverwrite);
 };
 
 SymStateMap::SymStateMap():
@@ -398,43 +353,22 @@ SymStateMarked& SymStateMap::operator[](const CodeStorage::Block *bb) {
     return d->cont[bb].state;
 }
 
-bool SymStateMap::Private::insert(
+bool SymStateMap::insert(
         const CodeStorage::Block        *dst,
         const CodeStorage::Block        *src,
-        SymHeap                         &sh,
-        const bool                      feelFreeToOverwrite)
+        const SymHeap                   &sh)
 {
     // look for the _target_ block
-    BlockState &ref = this->cont[dst];
+    Private::BlockState &ref = d->cont[dst];
 
     // insert the given symbolic heap
-    const bool changed = (feelFreeToOverwrite)
-        ? ref.state.insertFast(sh)
-        : ref.state.insert(sh);
+    const bool changed = ref.state.insert(sh);
 
     if (src)
         // store inbound edge
         ref.inbound.schedule(src);
 
     return changed;
-}
-
-bool SymStateMap::insert(
-        const CodeStorage::Block        *dst,
-        const CodeStorage::Block        *src,
-        const SymHeap                   &sh)
-{
-    return d->insert(dst, src,
-            const_cast<SymHeap &>(sh),
-            /* feelFreeToOverwrite */ false);
-}
-
-bool SymStateMap::insertFast(
-        const CodeStorage::Block        *dst,
-        const CodeStorage::Block        *src,
-        SymHeap                         &sh)
-{
-    return d->insert(dst, src, sh, /* feelFreeToOverwrite */ true);
 }
 
 void SymStateMap::gatherInboundEdges(TContBlock                  &dst,

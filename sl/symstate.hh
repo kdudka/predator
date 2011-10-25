@@ -62,9 +62,6 @@ class SymState {
         /// insert given SymHeap object into the state
         virtual bool insert(const SymHeap &heap);
 
-        /// insert a heap and replace the given one by some garbage eventually
-        virtual bool insertFast(SymHeap &heap);
-
         /// merge the content of the given SymState object into the state
         void insert(const SymState &huni);
 
@@ -92,13 +89,6 @@ class SymState {
         /// insert @b new SymHeap that @ must be guaranteed to be not yet in
         virtual void insertNew(const SymHeap &sh) {
             heaps_.push_back(sh);
-        }
-
-        /// aggressive optimization
-        virtual void insertNewFast(SymHeap &sh) {
-            const unsigned last = heaps_.size();
-            heaps_.push_back(SymHeap(sh.stor()));
-            heaps_[last].swap(sh);
         }
 
         virtual void eraseExisting(int nth) {
@@ -156,11 +146,9 @@ class SymHeapUnion: public SymState {
 class SymStateWithJoin: public SymHeapUnion {
     public:
         virtual bool insert(const SymHeap &sh);
-        virtual bool insertFast(SymHeap &sh);
 
     private:
         void packSuffix(unsigned idx);
-        bool insertCore(SymHeap &sh, const bool feelFreeToOverwrite);
 };
 
 /**
@@ -193,13 +181,6 @@ class SymStateMarked: public SymStateWithJoin {
     protected:
         virtual void insertNew(const SymHeap &sh) {
             SymStateWithJoin::insertNew(sh);
-
-            // schedule the just inserted SymHeap for processing
-            done_.push_back(false);
-        }
-
-        virtual void insertNewFast(SymHeap &sh) {
-            SymStateWithJoin::insertNewFast(sh);
 
             // schedule the just inserted SymHeap for processing
             done_.push_back(false);
@@ -258,12 +239,6 @@ class SymStateMap {
         bool insert(const CodeStorage::Block                *dst,
                     const CodeStorage::Block                *src,
                     const SymHeap                           &sh);
-
-        /// aggressive optimization
-        bool insertFast(
-                    const CodeStorage::Block                *dst,
-                    const CodeStorage::Block                *src,
-                    SymHeap                                 &sh);
 
         /**
          * returns all blocks that inserted something to the given state
