@@ -215,6 +215,11 @@
 #define SH_COPY_ON_WRITE                    1
 
 /**
+ * if 1, do not destroy objects immediately as they become unused
+ */
+#define SH_DELAYED_OBJECTS_DESTRUCTION      1
+
+/**
  * if 1, allow to assign unused heap IDs to newly created heap entities
  */
 #define SH_REUSE_FREE_IDS                   0

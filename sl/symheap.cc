@@ -1976,6 +1976,10 @@ void SymHeapCore::objLeave(TObjId obj) {
         // still externally referenced
         return;
 
+#if SH_DELAYED_OBJECTS_DESTRUCTION
+    return;
+#endif
+
     if (isComposite(objData->clt, /* includingArray */ false)
             && VAL_INVALID != objData->value)
     {
