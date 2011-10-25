@@ -22,6 +22,7 @@
 #include <cl/cl_msg.hh>
 
 #include "plotenum.hh"
+#include "worklist.hh"
 
 #include <algorithm>
 #include <fstream>
@@ -65,9 +66,16 @@ void NodeHandle::notifyDeath(Node *) {
     CL_BREAK_IF("NodeHandle::notifyDeath() is not supposed to be called");
 }
 
+void NodeHandle::plotNode(TracePlotter &) const {
+    CL_BREAK_IF("NodeHandle::plotNode() is not supposed to be called");
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::plotTrace()
+
+typedef const Node                     *TNode;
+typedef std::pair<TNode, TNode>         TNodePair;
 
 struct TracePlotter {
     std::ostream                        &out;
@@ -81,10 +89,43 @@ struct TracePlotter {
 // FIXME: copy-pasted from symplot.cc
 #define SL_QUOTE(what) "\"" << what << "\""
 
-void plotTraceCore(TracePlotter &tplot, Node *endPoint) {
+void NullNode::plotNode(TracePlotter &tplot) const {
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=red, fontcolor=red, label=\"NULL\"];\n";
+}
+
+void RootNode::plotNode(TracePlotter &tplot) const {
     CL_BREAK_IF("please implement");
     (void) tplot;
-    (void) endPoint;
+}
+
+void CloneNode::plotNode(TracePlotter &tplot) const {
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=black, fontcolor=black, label=\"clone\"];\n";
+}
+
+void plotTraceCore(TracePlotter &tplot, Node *endPoint) {
+    TNodePair item(/* from */ endPoint, /* to */ 0);
+
+    WorkList<TNodePair> wl(item);
+    while (wl.next(item)) {
+        const TNode now = /* from */ item.first;
+        const TNode to  = /* to   */ item.second;
+        item.second = now;
+
+        BOOST_FOREACH(TNode from, now->parents()) {
+            item.first = from;
+            wl.schedule(item);
+        }
+
+        now->plotNode(tplot);
+        if (!to)
+            continue;
+
+        tplot.out << "\t" << SL_QUOTE(now)
+            << " -> " << SL_QUOTE(to)
+            << " [color=black, fontcolor=black];\n";
+    }
 }
 
 // FIXME: copy-pasted from symplot.cc

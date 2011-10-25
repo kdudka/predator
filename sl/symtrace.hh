@@ -36,9 +36,12 @@ namespace CodeStorage {
 /// directed acyclic graph of the symbolic execution trace
 namespace Trace {
 
+class Node;
+
+struct TracePlotter;
+
 typedef const CodeStorage::Fnc                     *TFnc;
 
-class Node;
 typedef std::vector<Node *>                         TNodeList;
 
 /// an abstract node of the symbolic execution trace graph
@@ -67,6 +70,9 @@ class Node {
 
     public:
         virtual ~Node();
+        void virtual plotNode(TracePlotter &) const = 0;
+
+    public:
         const TNodeList& parents()      const { return parents_;    }
         const TNodeList& children()     const { return children_;   }
 
@@ -91,12 +97,17 @@ class NodeHandle: public Node {
             return parents_.front();
         }
 
+    public:
+        // do not call these
+        void virtual plotNode(TracePlotter &) const;
         void notifyBirth(Node *);
         void notifyDeath(Node *);
 };
 
 // TODO: remove this
 class NullNode: public Node {
+    public:
+        void virtual plotNode(TracePlotter &) const;
 };
 
 /// root node of the trace graph (a call of the root function)
@@ -110,8 +121,7 @@ class RootNode: public Node {
         {
         }
 
-    public:
-        // TODO
+        void virtual plotNode(TracePlotter &) const;
 };
 
 // FIXME: these nodes should not be created by default but only when debugging
@@ -122,6 +132,8 @@ class CloneNode: public Node {
         {
             ref->notifyBirth(this);
         }
+
+        void virtual plotNode(TracePlotter &) const;
 };
 
 class LinearNode: public Node {
