@@ -2211,7 +2211,19 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
 }
 
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
-    CL_BREAK_IF(isPossibleToDeref(code));
+    switch (code) {
+        case VT_UNKNOWN:
+            // this is the most common case
+
+        case VT_DELETED:
+        case VT_LOST:
+            // these are used by symcut
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of SymHeapCore::valCreate()");
+    }
+
     return d->valCreate(code, origin);
 }
 

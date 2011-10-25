@@ -67,7 +67,11 @@ SLS abstraction
 
     test-0176.c - a possibly infinite SLL where nodes are just void pointers
 
+    test-0193.c - a trivial example on use of joinData(), once used as a demo
+
     test-0194.c - a trivial example on use of joinData(), once used as a demo
+
+    test-0195.c - a simplification of test-0193 that revealed a bug in symjoin
 
 
 DLS abstraction

@@ -1661,14 +1661,20 @@ bool insertSegmentClone(
             // OK_SEE_THROUGH/OK_OBJ_OR_NULL is applicable only on the first obj
             off = 0;
 
-        const EValueTarget code = shGt.valTarget(valGt);
+        EValueTarget code = shGt.valTarget(valGt);
         if (isPossibleToDeref(code)) {
             if (segmentCloneCore(ctx, shGt, valGt, valMapGt, action, off))
                 continue;
         }
         else {
+            EValueOrigin vo = shGt.valOrigin(valGt);
+            if (VT_CUSTOM == code) {
+                // throw away an unmatched custom value
+                code = VT_UNKNOWN;
+                vo = VO_UNKNOWN;
+            }
+
             // clone unknown value
-            const EValueOrigin vo = shGt.valOrigin(valGt);
             const TValId vDst = ctx.dst.valCreate(code, vo);
             if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
                 continue;

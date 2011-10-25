@@ -3,10 +3,10 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
-#define BREAK_PREDATOR 0
+#define BREAK_IMMATURE_VERSION_OF_PREDATOR 1
 
 struct data {
-#if !BREAK_PREDATOR
+#if !BREAK_IMMATURE_VERSION_OF_PREDATOR
     void *etc;
 #endif
     int  len;
@@ -19,7 +19,7 @@ static struct data* alloc_char(char c)
     if (!d)
         abort();
 
-#if !BREAK_PREDATOR
+#if !BREAK_IMMATURE_VERSION_OF_PREDATOR
     d->etc = NULL;
 #endif
 
@@ -63,7 +63,7 @@ static struct node* create_shape(void)
 int main() {
     struct node *shape = create_shape();
     ___sl_plot(NULL, &shape);
-#if BREAK_PREDATOR
+
     while (shape) {
         struct node *next = shape->next;
         struct data *data = shape->data;
@@ -76,7 +76,6 @@ int main() {
         free(shape);
         shape = next;
     }
-#endif
 
     return 0;
 }
