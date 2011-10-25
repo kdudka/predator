@@ -27,6 +27,7 @@
 #include "symjoin.hh"
 #include "symplot.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 #include "worklist.hh"
 
@@ -137,7 +138,7 @@ void SymStateWithJoin::packSuffix(unsigned idx) {
         CL_BREAK_IF(&stor != &shOld.stor());
 
         EJoinStatus     status;
-        SymHeap         result(stor);
+        SymHeap         result(stor, /* TODO */ new Trace::NullNode);
         if (!joinSymHeaps(&status, &result, shNew, shOld)) {
             ++idx;
             continue;
@@ -177,7 +178,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
     }
 
     EJoinStatus     status;
-    SymHeap         result(shNew.stor());
+    SymHeap         result(shNew.stor(), /* TODO */ new Trace::NullNode);
     int             idx;
 
     ++::cntLookups;

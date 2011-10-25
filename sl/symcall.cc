@@ -33,6 +33,7 @@
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 
 #include <vector>
@@ -191,8 +192,8 @@ struct SymCallCtx::Private {
     Private(SymCallCache::Private *cd_):
         cd(cd_),
         fnc(0),
-        entry(cd_->bt.stor()),
-        surround(cd_->bt.stor()),
+        entry(cd_->bt.stor(), new Trace::NullNode),
+        surround(cd_->bt.stor(), new Trace::NullNode),
         computed(false),
         flushed(false)
     {
@@ -317,7 +318,7 @@ void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
 
     if (!preserveGlVars.empty()) {
         // conflict resolution: yield the gl vars from just completed fnc call
-        SymHeap arena(surround.stor());
+        SymHeap arena(surround.stor(), new Trace::NullNode);
         surround.swap(arena);
         splitHeapByCVars(&arena, preserveGlVars, &surround);
     }
@@ -395,7 +396,7 @@ SymBackTrace& SymCallCache::bt() {
 
 void pullGlVar(SymHeap &result, SymHeap origin, const CVar &cv) {
     // do not try to combine things, it causes problems
-    CL_BREAK_IF(!areEqual(result, SymHeap(origin.stor())));
+    CL_BREAK_IF(!areEqual(result, SymHeap(origin.stor(), new Trace::NullNode)));
 
     if (!isVarAlive(origin, cv)) {
         // not found in origin, create a fresh instance
@@ -416,7 +417,7 @@ void pushGlVar(SymHeap &dst, const SymHeap &glSubHeap, const CVar &cv) {
     if (isVarAlive(dst, cv)) {
 #ifndef NDEBUG
         // the gl var is alive in 'dst' --> check there is no conflict there
-        SymHeap real(dst.stor());
+        SymHeap real(dst.stor(), new Trace::NullNode);
         pullGlVar(real, dst, cv);
         CL_BREAK_IF(!areEqual(real, glSubHeap));
 #endif
@@ -454,7 +455,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     const SymHeap &origin = this->ctxStack[idx]->d->surround;
 
     // pull the designated gl var from 'origin'
-    SymHeap glSubHeap(stor);
+    SymHeap glSubHeap(stor, new Trace::NullNode);
     pullGlVar(glSubHeap, origin, cv);
 
     // go through all heaps above the 'origin' up to the current call level
@@ -660,7 +661,7 @@ SymCallCtx* SymCallCache::getCallCtx(
     // prune heap
     LDP_INIT(symcall, "split");
     LDP_PLOT(symcall, entry);
-    SymHeap surround(entry.stor());
+    SymHeap surround(entry.stor(), new Trace::NullNode);
     splitHeapByCVars(&entry, cut, &surround);
     surround.valDestroyTarget(VAL_ADDR_OF_RET);
     LDP_PLOT(symcall, entry);

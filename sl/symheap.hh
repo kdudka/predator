@@ -143,6 +143,10 @@ namespace CodeStorage {
     struct Storage;
 }
 
+namespace Trace {
+    class Node;
+}
+
 /// a type used by SymHeap for byte offsets
 typedef short                                           TOffset;
 
@@ -245,7 +249,7 @@ class ObjList;
 class SymHeapCore {
     public:
         /// create an empty symbolic heap
-        SymHeapCore(TStorRef);
+        SymHeapCore(TStorRef, Trace::Node *);
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
         virtual ~SymHeapCore();
@@ -261,6 +265,9 @@ class SymHeapCore {
 
         /// each symbolic heap is associated with a CodeStorage model of code
         TStorRef stor() const { return stor_; }
+
+        /// each symbolic heap is associated with a trace graph node
+        Trace::Node* traceNode() const;
 
         /// the last assigned ID of a heap entity (not necessarily still valid)
         unsigned lastId() const;
@@ -724,7 +731,7 @@ inline bool operator!=(const BindingOff &off1, const BindingOff &off2)
 class SymHeap: public SymHeapCore {
     public:
         /// create an empty symbolic heap
-        SymHeap(TStorRef);
+        SymHeap(TStorRef, Trace::Node *);
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
         virtual ~SymHeap();

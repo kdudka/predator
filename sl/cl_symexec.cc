@@ -30,6 +30,7 @@
 #include "symexec.hh"
 #include "symproc.hh"
 #include "symstate.hh"
+#include "symtrace.hh"
 #include "util.hh"
 
 #include <string>
@@ -111,9 +112,11 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
     CL_DEBUG_MSG(lw, "creating fresh initial state for "
             << nameOf(fnc) << "()...");
 
+    Trace::RootNode *traceRoot = new Trace::RootNode(&fnc);
+
     // run the symbolic execution
     SymStateWithJoin results;
-    execute(results, SymHeap(stor), fnc, ep);
+    execute(results, SymHeap(stor, traceRoot), fnc, ep);
     if (!lookForGlJunk)
         return;
 

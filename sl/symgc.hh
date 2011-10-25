@@ -55,7 +55,7 @@ class LeakMonitor {
     public:
         LeakMonitor(SymHeap &sh):
             sh_(sh),
-            snap_(sh.stor())
+            snap_(sh.stor(), sh.traceNode())
         {
         }
 

@@ -54,6 +54,7 @@ add_library(sl SHARED
     symproc.cc
     symseg.cc
     symstate.cc
+    symtrace.cc
     symutil.cc
     version.c)
 

@@ -28,6 +28,7 @@
 #include "symplot.hh"
 #include "symseg.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "worklist.hh"
 
 #include <iomanip>
@@ -364,7 +365,7 @@ void splitHeapByCVars(
 #if DEBUG_SYMCUT || !defined NDEBUG
     const unsigned cntOrig = cset.size();
 #endif
-    SymHeap dst(srcDst->stor());
+    SymHeap dst(srcDst->stor(), new Trace::NullNode);
     prune(*srcDst, dst, cset);
 
     if (!saveSurroundTo) {

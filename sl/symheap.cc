@@ -31,6 +31,7 @@
 #include "symneq.hh"
 #include "symseg.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 #include "worklist.hh"
 
@@ -374,10 +375,11 @@ struct TValSetWrapper: public TValSet {
 };
 
 struct SymHeapCore::Private {
-    Private();
+    Private(Trace::Node *);
     Private(const Private &);
     ~Private();
 
+    Trace::NodeHandle               traceHandle;
     EntStore<AbstractHeapEntity>    ents;
     TValSetWrapper                 *liveRoots;
     CVarMap                        *cVarMap;
@@ -952,7 +954,8 @@ void SymHeapCore::Private::transferBlock(
 }
 
 
-SymHeapCore::Private::Private():
+SymHeapCore::Private::Private(Trace::Node *trace):
+    traceHandle (trace),
     liveRoots   (new TValSetWrapper),
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
@@ -963,6 +966,7 @@ SymHeapCore::Private::Private():
 }
 
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
+    traceHandle (new Trace::CloneNode(ref.traceHandle.node())),
     ents        (ref.ents),
     liveRoots   (ref.liveRoots),
     cVarMap     (ref.cVarMap),
@@ -1373,9 +1377,9 @@ bool SymHeapCore::findCoveringUniBlock(
     return false;
 }
 
-SymHeapCore::SymHeapCore(TStorRef stor):
+SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
     stor_(stor),
-    d(new Private)
+    d(new Private(trace))
 {
     CL_BREAK_IF(!&stor_);
 
@@ -1407,6 +1411,10 @@ SymHeapCore& SymHeapCore::operator=(const SymHeapCore &ref) {
 void SymHeapCore::swap(SymHeapCore &ref) {
     CL_BREAK_IF(&stor_ != &ref.stor_);
     swapValues(this->d, ref.d);
+}
+
+Trace::Node* SymHeapCore::traceNode() const {
+    return d->traceHandle.node();
 }
 
 void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
@@ -2374,8 +2382,8 @@ struct SymHeap::Private {
     EntStore<AbstractRoot>          absRoots;
 };
 
-SymHeap::SymHeap(TStorRef stor):
-    SymHeapCore(stor),
+SymHeap::SymHeap(TStorRef stor, Trace::Node *trace):
+    SymHeapCore(stor, trace),
     d(new Private)
 {
 }
