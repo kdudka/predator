@@ -24,6 +24,7 @@
 #include <cl/storage.hh>
 #include <cl/clutil.hh>
 
+#include "plotenum.hh"
 #include "symheap.hh"
 #include "symneq.hh"
 #include "symseg.hh"
@@ -37,62 +38,6 @@
 #include <string>
 
 #include <boost/foreach.hpp>
-
-// singleton
-class PlotEnumerator {
-    public:
-        static PlotEnumerator* instance() {
-            return (inst_)
-                ? (inst_)
-                : (inst_ = new PlotEnumerator);
-        }
-
-        // generate kind of more unique name
-        std::string decorate(std::string name);
-
-    private:
-        static PlotEnumerator *inst_;
-        PlotEnumerator() { }
-        // FIXME: should we care about the destruction?
-
-    private:
-        typedef std::map<std::string, int> TMap;
-        TMap map_;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-// implementation of PlotEnumerator
-PlotEnumerator *PlotEnumerator::inst_ = 0;
-
-std::string PlotEnumerator::decorate(std::string name) {
-    // obtain a unique ID for the given name
-    const int id = map_[name] ++;
-#if SYMPLOT_STOP_AFTER_N_STATES
-    if (SYMPLOT_STOP_AFTER_N_STATES < id) {
-        CL_ERROR("SYMPLOT_STOP_AFTER_N_STATES (" << SYMPLOT_STOP_AFTER_N_STATES
-                << ") exceeded, now stopping per user's request...");
-        CL_TRAP;
-    }
-#endif
-
-    // convert the ID to string
-    std::ostringstream str;
-    str << std::fixed
-        << std::setfill('0')
-        << std::setw(/* width of the ID suffix */ 4)
-        << id;
-
-    // merge name with ID
-    name += "-";
-    name += str.str();
-
-#ifdef SYMPLOT_STOP_CONDITION
-    if (SYMPLOT_STOP_CONDITION(name))
-        CL_TRAP;
-#endif
-
-    return name;
-}
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of plotHeap()

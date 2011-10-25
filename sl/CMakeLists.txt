@@ -35,6 +35,7 @@ endif()
 add_library(sl SHARED
     cl_symexec.cc
     memdebug.cc
+    plotenum.cc
     sigcatch.cc
     symabstract.cc
     symbin.cc
