@@ -20,6 +20,7 @@
 #include "symtrace.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/cldebug.hh>
 #include <cl/storage.hh>
 
 #include "plotenum.hh"
@@ -110,6 +111,12 @@ void RootNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, color=blue, fontcolor=blue, label="
         << SL_QUOTE(nameOf(*rootFnc_)) << "];\n";
+}
+
+void InsnNode::plotNode(TracePlotter &tplot) const {
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=black, fontcolor=black, label="
+        << SL_QUOTE((*insn_)) << "];\n";
 }
 
 void CloneNode::plotNode(TracePlotter &tplot) const {

@@ -33,6 +33,7 @@ struct cl_loc;
 
 namespace CodeStorage {
     struct Fnc;
+    struct Insn;
 }
 
 /// directed acyclic graph of the symbolic execution trace
@@ -44,6 +45,7 @@ struct TracePlotter;
 
 typedef const struct cl_loc                        *TLoc;
 typedef const CodeStorage::Fnc                     *TFnc;
+typedef const CodeStorage::Insn                    *TInsn;
 
 typedef std::vector<Node *>                         TNodeList;
 
@@ -139,6 +141,20 @@ class RootNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+class InsnNode: public Node {
+    private:
+        const TInsn insn_;
+
+    public:
+        InsnNode(Node *ref, TInsn insn):
+            Node(ref),
+            insn_(insn)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
 // FIXME: these nodes should not be created by default but only when debugging
 class CloneNode: public Node {
     public:
@@ -168,12 +184,6 @@ class CallSurroundNode: public Node {
         }
 
         void virtual plotNode(TracePlotter &) const;
-};
-
-class LinearNode: public Node {
-    // ref
-    // first insn
-    // last insn
 };
 
 class DecisionNode: public Node {

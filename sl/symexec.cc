@@ -499,9 +499,13 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
     ep.errLabel         = params_.errLabel;
 
     // working area for non-terminal instructions
-    SymHeap workingHeap(localState_[heapIdx_]);
-    SymExecCore core(workingHeap, &bt_, ep);
+    const SymHeap &origin = localState_[heapIdx_];
+    SymHeap sh(origin);
+    SymExecCore core(sh, &bt_, ep);
     core.setLocation(lw_);
+
+    // drop the unnecessary Trace::CloneNode node in the trace graph
+    sh.traceUpdate(origin.traceNode());
 
     // execute the instruction
     if (!core.exec(nextLocalState_, *insn)) {
