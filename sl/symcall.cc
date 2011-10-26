@@ -192,8 +192,10 @@ struct SymCallCtx::Private {
     Private(SymCallCache::Private *cd_):
         cd(cd_),
         fnc(0),
-        entry(cd_->bt.stor(), new Trace::NullNode),
-        surround(cd_->bt.stor(), new Trace::NullNode),
+        entry(cd_->bt.stor(),
+                new Trace::NullNode("SymCallCtx::Private::entry")),
+        surround(cd_->bt.stor(),
+                new Trace::NullNode("SymCallCtx::Private::surround")),
         computed(false),
         flushed(false)
     {
@@ -318,7 +320,8 @@ void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
 
     if (!preserveGlVars.empty()) {
         // conflict resolution: yield the gl vars from just completed fnc call
-        SymHeap arena(surround.stor(), new Trace::NullNode);
+        SymHeap arena(surround.stor(),
+                new Trace::NullNode("joinHeapsWithCare()"));
         surround.swap(arena);
         splitHeapByCVars(&arena, preserveGlVars, &surround);
     }
@@ -455,7 +458,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     const SymHeap &origin = this->ctxStack[idx]->d->surround;
 
     // pull the designated gl var from 'origin'
-    SymHeap glSubHeap(stor, new Trace::NullNode);
+    SymHeap glSubHeap(stor, new Trace::NullNode("importGlVar()"));
     pullGlVar(glSubHeap, origin, cv);
 
     // go through all heaps above the 'origin' up to the current call level
@@ -661,7 +664,8 @@ SymCallCtx* SymCallCache::getCallCtx(
     // prune heap
     LDP_INIT(symcall, "split");
     LDP_PLOT(symcall, entry);
-    SymHeap surround(entry.stor(), new Trace::NullNode);
+    SymHeap surround(entry.stor(),
+            new Trace::NullNode("SymCallCache::getCallCtx()"));
     splitHeapByCVars(&entry, cut, &surround);
     surround.valDestroyTarget(VAL_ADDR_OF_RET);
     LDP_PLOT(symcall, entry);

@@ -29,6 +29,8 @@
 
 #include <vector>
 
+struct cl_loc;
+
 namespace CodeStorage {
     struct Fnc;
 }
@@ -40,6 +42,7 @@ class Node;
 
 struct TracePlotter;
 
+typedef const struct cl_loc                        *TLoc;
 typedef const CodeStorage::Fnc                     *TFnc;
 
 typedef std::vector<Node *>                         TNodeList;
@@ -107,7 +110,15 @@ class NodeHandle: public Node {
 // TODO: remove this
 class NullNode: public Node {
     public:
+        NullNode(const char *origin):
+            origin_(origin)
+        {
+        }
+
         void virtual plotNode(TracePlotter &) const;
+
+    private:
+        const char *origin_;
 };
 
 /// root node of the trace graph (a call of the root function)
@@ -166,7 +177,7 @@ class MsgNode: public Node {
 };
 
 /// plot a trace graph named "symtrace-NNNN.dot" leading to the given node
-bool plotTrace(Node *endPoint);
+bool plotTrace(Node *endPoint, TLoc loc = 0);
 
 } // namespace Trace
 

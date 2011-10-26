@@ -91,7 +91,8 @@ struct TracePlotter {
 
 void NullNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=red, fontcolor=red, label=\"NULL\"];\n";
+        << " [shape=box, color=red, fontcolor=red, label="
+        << SL_QUOTE(origin_) << "];\n";
 }
 
 void RootNode::plotNode(TracePlotter &tplot) const {
@@ -129,7 +130,7 @@ void plotTraceCore(TracePlotter &tplot, Node *endPoint) {
 }
 
 // FIXME: copy-pasted from symplot.cc
-bool plotTrace(Node *endPoint) {
+bool plotTrace(Node *endPoint, TLoc loc) {
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string plotName(pe->decorate("symtrace"));
     std::string fileName(plotName + ".dot");
@@ -154,7 +155,6 @@ bool plotTrace(Node *endPoint) {
     }
 
     // initialize an instance of PlotData
-    CL_NOTE("symtrace: trace graph dumped to '" << fileName << "'");
     TracePlotter tplot(out);
 
     // do our stuff
@@ -163,6 +163,11 @@ bool plotTrace(Node *endPoint) {
     // close graph
     out << "}\n";
     out.close();
+    if (loc)
+        CL_NOTE_MSG(loc, "trace graph dumped to '" << fileName << "'");
+    else
+        CL_DEBUG("symtrace: trace graph dumped to '" << fileName << "'");
+
     return !!out;
 }
 

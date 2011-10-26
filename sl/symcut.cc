@@ -365,7 +365,7 @@ void splitHeapByCVars(
 #if DEBUG_SYMCUT || !defined NDEBUG
     const unsigned cntOrig = cset.size();
 #endif
-    SymHeap dst(srcDst->stor(), new Trace::NullNode);
+    SymHeap dst(srcDst->stor(), new Trace::NullNode("splitHeapByCVars()"));
     prune(*srcDst, dst, cset);
 
     if (!saveSurroundTo) {

@@ -986,7 +986,9 @@ void printBackTrace(SymProc &proc, bool forcePtrace) {
     const SymBackTrace *bt = proc.bt();
     bt->printBackTrace(forcePtrace);
 #if SE_DUMP_TRACE_GRAPHS
-    Trace::plotTrace(proc.sh().traceNode());
+    const struct cl_loc *loc = proc.lw();
+    const SymHeap &sh = proc.sh();
+    Trace::plotTrace(sh.traceNode(), loc);
 #endif
 }
 

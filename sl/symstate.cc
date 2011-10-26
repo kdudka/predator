@@ -138,7 +138,8 @@ void SymStateWithJoin::packSuffix(unsigned idx) {
         CL_BREAK_IF(&stor != &shOld.stor());
 
         EJoinStatus     status;
-        SymHeap         result(stor, /* TODO */ new Trace::NullNode);
+        SymHeap         result(stor, 
+                new Trace::NullNode("SymStateWithJoin::packSuffix()"));
         if (!joinSymHeaps(&status, &result, shNew, shOld)) {
             ++idx;
             continue;
@@ -178,7 +179,8 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
     }
 
     EJoinStatus     status;
-    SymHeap         result(shNew.stor(), /* TODO */ new Trace::NullNode);
+    SymHeap         result(shNew.stor(),
+            new Trace::NullNode("SymStateWithJoin::insert()"));
     int             idx;
 
     ++::cntLookups;
