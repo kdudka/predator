@@ -2353,7 +2353,7 @@ bool joinSymHeaps(
     SJ_DEBUG("--> joinSymHeaps()");
     TStorRef stor = sh1.stor();
     CL_BREAK_IF(&stor != &sh2.stor());
-    *pDst = SymHeap(stor, /* TODO */ new Trace::NullNode("joinSymHeaps()"));
+    *pDst = SymHeap(stor, new Trace::NullNode("joinSymHeaps()"));
 
     // initialize symbolic join ctx
     SymJoinCtx ctx(*pDst, sh1, sh2);
@@ -2387,6 +2387,13 @@ bool joinSymHeaps(
         CL_BREAK_IF((JS_USE_ANY == ctx.status) != areEqual(sh1, sh2));
         CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh1, ctx.dst));
         CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
+    }
+
+    if (JS_THREE_WAY == ctx.status) {
+        // create a new trace graph node for JS_THREE_WAY
+        Trace::Node *tr1 = sh1.traceNode();
+        Trace::Node *tr2 = sh2.traceNode();
+        pDst->traceUpdate(new Trace::JoinNode(tr1, tr2));
     }
 
     // all OK

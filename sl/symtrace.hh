@@ -158,6 +158,16 @@ class InsnNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+class JoinNode: public Node {
+    public:
+        JoinNode(Node *ref1, Node *ref2):
+            Node(ref1, ref2)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
 // FIXME: these nodes should not be created by default but only when debugging
 class CloneNode: public Node {
     public:
@@ -202,13 +212,6 @@ class CallDoneNode: public Node {
 class DecisionNode: public Node {
     // ref
     // branch (true/false)
-};
-
-// TODO: move this one to symjoin.hh (missing declaration of EJoinStatus)
-class JoinNode: public Node {
-    // ref1
-    // ref2
-    // status (EJoinStatus)
 };
 
 class CallCacheHitNode: public Node {

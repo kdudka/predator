@@ -124,6 +124,11 @@ void InsnNode::plotNode(TracePlotter &tplot) const {
         << SL_QUOTE((*insn_)) << "];\n";
 }
 
+void JoinNode::plotNode(TracePlotter &tplot) const {
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=red, fontcolor=red, label=\"join\"];\n";
+}
+
 void CloneNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, color=black, fontcolor=black, label=\"clone\"];\n";
