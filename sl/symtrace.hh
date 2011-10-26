@@ -88,6 +88,9 @@ class Node {
         void virtual plotNode(TracePlotter &) const = 0;
 
     public:
+        /// this can be called only on nodes with exactly one parent
+        Node* parent() const;
+
         const TNodeList& parents()      const { return parents_;    }
         const TNodeList& children()     const { return children_;   }
 };
@@ -180,6 +183,16 @@ class CallSurroundNode: public Node {
     public:
         CallSurroundNode(Node *ref):
             Node(ref)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
+class CallDoneNode: public Node {
+    public:
+        CallDoneNode(Node *result, Node *surround):
+            Node(result, surround)
         {
         }
 

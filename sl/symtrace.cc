@@ -56,6 +56,11 @@ void Node::notifyDeath(Node *child) {
         delete this;
 }
 
+Node* Node::parent() const {
+    CL_BREAK_IF(1 != parents_.size());
+    return parents_.front();
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::NodeHandle
@@ -132,6 +137,11 @@ void CallEntryNode::plotNode(TracePlotter &tplot) const {
 void CallSurroundNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, color=blue, fontcolor=blue, label=\"call frame\"];\n";
+}
+
+void CallDoneNode::plotNode(TracePlotter &tplot) const {
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=blue, fontcolor=blue, label=\"call done\"];\n";
 }
 
 void plotTraceCore(TracePlotter &tplot, Node *endPoint) {

@@ -302,6 +302,10 @@ void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
     LDP_PLOT(symcall, sh);
     LDP_PLOT(symcall, surround);
 
+    // create a new trace graph node
+    Trace::Node *trFrame = surround.traceNode()->parent();
+    Trace::Node *trDone = new Trace::CallDoneNode(sh.traceNode(), trFrame);
+
     // first off, we need to make sure that a gl variable from surround will not
     // overwrite the result of just completed function call since the var could
     // have already been imported from there
@@ -327,6 +331,7 @@ void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
     }
 
     joinHeapsByCVars(&sh, &surround);
+    sh.traceUpdate(trDone);
     LDP_PLOT(symcall, sh);
 }
 
