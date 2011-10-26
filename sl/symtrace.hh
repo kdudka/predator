@@ -27,6 +27,8 @@
 
 #include "config.h"
 
+#include "symheap.hh"               // needed for EObjKind
+
 #include <vector>
 
 struct cl_loc;
@@ -152,6 +154,20 @@ class InsnNode: public Node {
         InsnNode(Node *ref, TInsn insn):
             Node(ref),
             insn_(insn)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
+class AbstractionNode: public Node {
+    private:
+        const EObjKind kind_;
+
+    public:
+        AbstractionNode(Node *ref, EObjKind kind):
+            Node(ref),
+            kind_(kind)
         {
         }
 

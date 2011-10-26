@@ -124,6 +124,27 @@ void InsnNode::plotNode(TracePlotter &tplot) const {
         << SL_QUOTE((*insn_)) << "];\n";
 }
 
+void AbstractionNode::plotNode(TracePlotter &tplot) const {
+    const char *label;
+    switch (kind_) {
+        case OK_SLS:
+            label = "SLS abstraction";
+            break;
+
+        case OK_DLS:
+            label = "DLS abstraction";
+            break;
+
+        default:
+            label = "XXX unknown abstraction";
+            CL_BREAK_IF("unknown abstraction");
+    }
+
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=red, fontcolor=red, label="
+        << SL_QUOTE(label) << "];\n";
+}
+
 void JoinNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, color=red, fontcolor=red, label=\"join\"];\n";

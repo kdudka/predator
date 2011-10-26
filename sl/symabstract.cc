@@ -32,6 +32,7 @@
 #include "symgc.hh"
 #include "symseg.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 
 #include <iomanip>
@@ -616,15 +617,18 @@ bool considerAbstraction(
         const TValId                entry,
         const unsigned              lenTotal)
 {
+    EObjKind kind;
     unsigned thr;
     const char *name;
 
     if (isDlsBinding(off)) {
-        thr = dlsThreshold;
+        kind = OK_DLS;
+        thr  = dlsThreshold;
         name = "DLS";
     }
     else {
-        thr = slsThreshold;
+        kind = OK_SLS;
+        thr  = slsThreshold;
         name = "SLS";
     }
 
@@ -661,6 +665,9 @@ bool considerAbstraction(
             CL_BREAK_IF("segAbstractionStep() failed, nothing has been done");
             return false;
         }
+
+        Trace::Node *trAbs = new Trace::AbstractionNode(sh.traceNode(), kind);
+        sh.traceUpdate(trAbs);
 
         LDP_PLOT(symabstract, sh);
     }
