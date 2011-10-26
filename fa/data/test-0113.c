@@ -1,3 +1,9 @@
+/*
+ * Doubly linked list destroing from the middle
+ *
+ * boxes:
+ */
+
 #include <stdlib.h>
 
 struct node {

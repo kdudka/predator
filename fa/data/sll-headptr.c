@@ -1,39 +1,44 @@
+/*
+ * Singly linked list with head pointers
+ *
+ * boxes:
+ */
 
 #include <stdlib.h>
 
 struct T {
-    struct T* next;
-    struct T* head;
+	struct T* next;
+	struct T* head;
 };
 
 int main() {
 
-    struct T* head = malloc(sizeof(struct T));
-    
-    head->next = NULL;
-    head->head = head;
+	struct T* head = malloc(sizeof(struct T));
 
-    struct T* x = head;
+	head->next = NULL;
+	head->head = head;
 
-    while (__nondet()) {
-	x->next = malloc(sizeof(struct T));
-	x->next->next = NULL;
-	x->next->head = head;
-	x = x->next;
-    }
+	struct T* x = head;
 
-    x = head;
+	while (__nondet()) {
+		x->next = malloc(sizeof(struct T));
+		x->next->next = NULL;
+		x->next->head = head;
+		x = x->next;
+	}
 
-    while (x != NULL)
-	x = x->next;
+	x = head;
 
-    x = head;
+	while (x != NULL)
+		x = x->next;
 
-    while (x != NULL) {
-	struct T* y = x;
-	x = x->next;
-	free(y);
-    }
+	x = head;
 
-    return 0;
+	while (x != NULL) {
+		struct T* y = x;
+		x = x->next;
+		free(y);
+	}
+
+	return 0;
 }

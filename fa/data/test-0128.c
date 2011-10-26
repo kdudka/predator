@@ -1,3 +1,9 @@
+/*
+ * Linux driver snippet
+ *
+ * boxes:
+ */
+
 #include <stdlib.h>
 
 int __nondet();
@@ -19,32 +25,32 @@ int main()
     top->data = NULL;
     if (__nondet()) {
         struct node_low *ptr = malloc(sizeof *ptr);
-	ptr->next = NULL;
-	top->data = ptr;
+        ptr->next = NULL;
+        top->data = ptr;
     }
 
     while (__nondet()) {
         struct node_top *pi = malloc(sizeof *pi);
-	pi->next = NULL;
-	pi->data = NULL;
+        pi->next = NULL;
+        pi->data = NULL;
 
-	if (__nondet()) {
-	    struct node_low *ptr = malloc(sizeof *ptr);
-	    ptr->next = NULL;
-	    pi->data = ptr;
-        }
+      if (__nondet()) {
+        struct node_low *ptr = malloc(sizeof *ptr);
+        ptr->next = NULL;
+        pi->data = ptr;
+      }
 	
-        now->next = pi;
-        now = now->next;
+      now->next = pi;
+      now = now->next;
     }
 
     while (top) {
-	now = top;
-	top = top->next;
-	if (now->data) {
-	    free(now->data);
-	}
-	free(now);
+      now = top;
+      top = top->next;
+      if (now->data) {
+        free(now->data);
+      }
+      free(now);
     }
 
     return 0;
