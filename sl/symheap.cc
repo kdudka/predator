@@ -1417,6 +1417,10 @@ Trace::Node* SymHeapCore::traceNode() const {
     return d->traceHandle.node();
 }
 
+void SymHeapCore::traceUpdate(Trace::Node *node) {
+    d->traceHandle.reset(node);
+}
+
 void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     // we allow to set values of atomic types only
     const HeapObject *objData;

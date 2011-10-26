@@ -269,6 +269,9 @@ class SymHeapCore {
         /// each symbolic heap is associated with a trace graph node
         Trace::Node* traceNode() const;
 
+        /// update the current trace graph node that the heap is associated with
+        void traceUpdate(Trace::Node *);
+
         /// the last assigned ID of a heap entity (not necessarily still valid)
         unsigned lastId() const;
 

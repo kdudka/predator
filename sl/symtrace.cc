@@ -20,6 +20,7 @@
 #include "symtrace.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/storage.hh>
 
 #include "plotenum.hh"
 #include "worklist.hh"
@@ -57,6 +58,16 @@ void Node::notifyDeath(Node *child) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::NodeHandle
+
+void NodeHandle::reset(Node *node) {
+    // release the old node
+    Node *&ref = parents_.front();
+    ref->notifyDeath(this);
+
+    // register the new node
+    ref = node;
+    ref->notifyBirth(this);
+}
 
 void NodeHandle::notifyBirth(Node *) {
     CL_BREAK_IF("NodeHandle::notifyBirth() is not supposed to be called");
@@ -96,13 +107,24 @@ void NullNode::plotNode(TracePlotter &tplot) const {
 }
 
 void RootNode::plotNode(TracePlotter &tplot) const {
-    CL_BREAK_IF("please implement");
-    (void) tplot;
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=blue, fontcolor=blue, label="
+        << SL_QUOTE(nameOf(*rootFnc_)) << "];\n";
 }
 
 void CloneNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, color=black, fontcolor=black, label=\"clone\"];\n";
+}
+
+void CallEntryNode::plotNode(TracePlotter &tplot) const {
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=blue, fontcolor=blue, label=\"call entry\"];\n";
+}
+
+void CallSurroundNode::plotNode(TracePlotter &tplot) const {
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=blue, fontcolor=blue, label=\"call frame\"];\n";
 }
 
 void plotTraceCore(TracePlotter &tplot, Node *endPoint) {

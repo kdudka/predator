@@ -49,6 +49,13 @@ typedef std::vector<Node *>                         TNodeList;
 
 /// an abstract node of the symbolic execution trace graph
 class Node {
+    public:
+        /// birth notification from a child node
+        void notifyBirth(Node *child);
+
+        /// death notification from a child node
+        void notifyDeath(Node *child);
+
     private:
         TNodeList children_;
 
@@ -62,6 +69,7 @@ class Node {
         Node(Node *ref):
             parents_(1, ref)
         {
+            ref->notifyBirth(this);
         }
 
         /// constructor for nodes with exactly two parents
@@ -69,6 +77,8 @@ class Node {
             parents_(1, ref1)
         {
             parents_.push_back(ref2);
+            ref1->notifyBirth(this);
+            ref2->notifyBirth(this);
         }
 
     public:
@@ -78,13 +88,6 @@ class Node {
     public:
         const TNodeList& parents()      const { return parents_;    }
         const TNodeList& children()     const { return children_;   }
-
-    public:
-        /// birth notification from a child node
-        void notifyBirth(Node *child);
-
-        /// death notification from a child node
-        void notifyDeath(Node *child);
 };
 
 /// useful to prevent a trace sub-graph from being destroyed too early
@@ -93,15 +96,16 @@ class NodeHandle: public Node {
         NodeHandle(Node *ref):
             Node(ref)
         {
-            ref->notifyBirth(this);
         }
 
         Node* node() const {
             return parents_.front();
         }
 
-    public:
-        // do not call these
+        void reset(Node *);
+
+    private:
+        // do not call these methods on NodeHandle (no children are allowed)
         void virtual plotNode(TracePlotter &) const;
         void notifyBirth(Node *);
         void notifyDeath(Node *);
@@ -141,7 +145,26 @@ class CloneNode: public Node {
         CloneNode(Node *ref):
             Node(ref)
         {
-            ref->notifyBirth(this);
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
+class CallEntryNode: public Node {
+    public:
+        CallEntryNode(Node *ref):
+            Node(ref)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
+class CallSurroundNode: public Node {
+    public:
+        CallSurroundNode(Node *ref):
+            Node(ref)
+        {
         }
 
         void virtual plotNode(TracePlotter &) const;

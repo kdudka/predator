@@ -399,7 +399,7 @@ SymBackTrace& SymCallCache::bt() {
 
 void pullGlVar(SymHeap &result, SymHeap origin, const CVar &cv) {
     // do not try to combine things, it causes problems
-    CL_BREAK_IF(!areEqual(result, SymHeap(origin.stor(), new Trace::NullNode)));
+    CL_BREAK_IF(!areEqual(result, SymHeap(origin.stor(), origin.traceNode())));
 
     if (!isVarAlive(origin, cv)) {
         // not found in origin, create a fresh instance
@@ -420,7 +420,7 @@ void pushGlVar(SymHeap &dst, const SymHeap &glSubHeap, const CVar &cv) {
     if (isVarAlive(dst, cv)) {
 #ifndef NDEBUG
         // the gl var is alive in 'dst' --> check there is no conflict there
-        SymHeap real(dst.stor(), new Trace::NullNode);
+        SymHeap real(dst.stor(), dst.traceNode());
         pullGlVar(real, dst, cv);
         CL_BREAK_IF(!areEqual(real, glSubHeap));
 #endif
@@ -637,6 +637,11 @@ SymCallCtx* SymCallCache::getCallCtx(
     const struct cl_loc *loc = &insn.loc;
     CL_DEBUG_MSG(loc, "SymCallCache is looking for " << nameOf(fnc) << "()...");
 
+    // build two new nodes of the trace graph
+    Trace::Node *trCall = entry.traceNode();
+    Trace::Node *trEntry = new Trace::CallEntryNode(trCall);
+    Trace::Node *trSurround = new Trace::CallSurroundNode(trCall);
+
     // enlarge the backtrace
     const int uid = uidOf(fnc);
     d->bt.pushCall(uid, loc);
@@ -664,10 +669,12 @@ SymCallCtx* SymCallCache::getCallCtx(
     // prune heap
     LDP_INIT(symcall, "split");
     LDP_PLOT(symcall, entry);
-    SymHeap surround(entry.stor(),
-            new Trace::NullNode("SymCallCache::getCallCtx()"));
+
+    SymHeap surround(entry.stor(), trSurround);
     splitHeapByCVars(&entry, cut, &surround);
     surround.valDestroyTarget(VAL_ADDR_OF_RET);
+    entry.traceUpdate(trEntry);
+
     LDP_PLOT(symcall, entry);
     LDP_PLOT(symcall, surround);
     
