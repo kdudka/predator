@@ -65,19 +65,20 @@ target_link_libraries(fa ${CL_LIB})
 #    <test file>:<boxes directory>
 #
 set (forester_tests
-  "sll-delete.c:"
-  "sll-rev.c:"
-  "sll-bubblesort.c:"
-  "sll-mergesort.c:"
-  "sll-listofclists.c:listofclists.sll.boxes"
-  "recursion.c:"
   "cdll.c:genericdll.boxes"
-  "dll-insert.c:listofclists.dll.boxes"
-  "dll-rev.c:genericdll.boxes"
-  "dll-listofclists.c:listofclists.dll.boxes"
+  "dll-insert.c:genericdll.boxes"
   "dll-insertsort.c:genericdll.boxes"
   "dll-insertsort_v2.c:genericdll.boxes"
-  "test-0080.c:genericdll.boxes"
+  "dll-listofclists.c:listofclists.dll.boxes"
+  "dll-rev.c:genericdll.boxes"
+  "dsw.c:"
+  "recursion.c:"
+  "sll-bubblesort.c:"
+  "sll-delete.c:"
+  "sll-insertsort.c:"
+  "sll-listofclists.c:listofclists.sll.boxes"
+  "sll-mergesort.c:"
+  "sll-rev.c:"
   "test-0080.c:"
   "test-0098.c:test-0098.boxes"
   "test-0124.inline.c:"
@@ -85,7 +86,17 @@ set (forester_tests
   "treecons.c:"
   "tree_stack.c:"
   "treetraversal.c:treewpp.boxes"
-  "dsw.c:"
+
+  # currently not working test cases
+  #
+  #"listeven.c:"
+  #"listref.c:"
+  #"test-0061.c:genericdll.boxes"
+  #"test-0113.c:"
+  #"treecraziness.c:"
+  #"rb_insert_rebalance.c:"
+  #"dfs.c:treewpp.boxes"
+  #"sll-headptr.c:"
 )
 
 foreach (testcase ${forester_tests})
