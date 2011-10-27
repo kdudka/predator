@@ -160,6 +160,26 @@ class InsnNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+class CondNode: public Node {
+    private:
+        const TInsn inCmp_;
+        const TInsn inCnd_;
+        const bool determ_;
+        const bool branch_;
+
+    public:
+        CondNode(Node *ref, TInsn inCmp, TInsn inCnd, bool determ, bool branch):
+            Node(ref),
+            inCmp_(inCmp),
+            inCnd_(inCnd),
+            determ_(determ),
+            branch_(branch)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
 class AbstractionNode: public Node {
     private:
         const EObjKind kind_;
@@ -223,11 +243,6 @@ class CallDoneNode: public Node {
         }
 
         void virtual plotNode(TracePlotter &) const;
-};
-
-class DecisionNode: public Node {
-    // ref
-    // branch (true/false)
 };
 
 class CallCacheHitNode: public Node {

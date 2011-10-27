@@ -115,7 +115,7 @@ void NullNode::plotNode(TracePlotter &tplot) const {
 void RootNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, color=blue, fontcolor=blue, label="
-        << SL_QUOTE(nameOf(*rootFnc_)) << "];\n";
+        << SL_QUOTE(nameOf(*rootFnc_) << "()") << "];\n";
 }
 
 void InsnNode::plotNode(TracePlotter &tplot) const {
@@ -168,6 +168,34 @@ void CallSurroundNode::plotNode(TracePlotter &tplot) const {
 void CallDoneNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, color=blue, fontcolor=blue, label=\"call done\"];\n";
+}
+
+void CondNode::plotNode(TracePlotter &tplot) const {
+    tplot.out << "\t" << SL_QUOTE(this) << " [shape=box";
+
+    if (branch_)
+        tplot.out << ", color=green";
+    else
+        tplot.out << ", color=red";
+
+    if (determ_)
+        tplot.out << ", fontcolor=black";
+    else
+        tplot.out << ", fontcolor=red";
+
+    tplot.out << ", label=\"" << (*inCmp_) << " ... ";
+
+    if (determ_)
+        tplot.out << "evaluated as ";
+    else
+        tplot.out << "assuming ";
+
+    if (branch_)
+        tplot.out << "TRUE";
+    else
+        tplot.out << "FALSE";
+
+    tplot.out << "\"];\n";
 }
 
 void plotTraceCore(TracePlotter &tplot, Node *endPoint) {

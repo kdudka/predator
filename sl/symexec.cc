@@ -34,6 +34,7 @@
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 
 #include <queue>
@@ -245,6 +246,18 @@ void SymExecEngine::execReturn() {
     endReached_ = true;
 }
 
+void traceCond(
+        SymHeap                    &sh,
+        const CodeStorage::Insn    &inCmp,
+        const CodeStorage::Insn    &inCnd,
+        const bool                  det,
+        const bool                  br)
+{
+    Trace::Node *trOrig = sh.traceNode()->parent();
+    Trace::Node *trCond = new Trace::CondNode(trOrig, &inCmp, &inCnd, det, br);
+    sh.traceUpdate(trCond);
+}
+
 void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
 {
     const std::string &name = ofBlock->name();
@@ -312,6 +325,8 @@ void SymExecEngine::updateStateInBranch(
     LDP_PLOT(nondetCond, sh);
 
 fallback:
+    traceCond(sh, insnCmp, insnCnd, /* deterministic */ false, branch);
+
     SymProc proc(sh, &bt_);
     proc.setLocation(lw_);
     proc.killInsn(insnCmp);
@@ -357,6 +372,7 @@ bool SymExecEngine::bypassNonPointers(
     proc.killInsn(insnCmp);
 
     SymHeap sh1(sh);
+    traceCond(sh1, insnCmp, insnCnd, /* determ */ false, /* branch */ true);
     SymProc proc1(sh1, proc.bt());
     proc1.setLocation(proc.lw());
 
@@ -365,6 +381,7 @@ bool SymExecEngine::bypassNonPointers(
     this->updateState(sh1, insnCnd.targets[/* then label */ 0]);
 
     SymHeap sh2(sh);
+    traceCond(sh2, insnCmp, insnCnd, /* determ */ false, /* branch */ false);
     SymProc proc2(sh2, proc.bt());
     proc2.setLocation(proc.lw());
 
@@ -411,6 +428,8 @@ void SymExecEngine::execCondInsn() {
     switch (val) {
         case VAL_TRUE:
             CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
+            traceCond(sh, *insnCmp, *insnCnd, /* det */ true, /* br */ true);
+
             proc.killInsn(*insnCmp);
             proc.killPerTarget(*insnCnd, /* then label */ 0);
             this->updateState(sh, insnCnd->targets[/* then label */ 0]);
@@ -418,6 +437,8 @@ void SymExecEngine::execCondInsn() {
 
         case VAL_FALSE:
             CL_DEBUG_MSG(lw_, ".F. CL_INSN_COND got VAL_FALSE");
+            traceCond(sh, *insnCmp, *insnCnd, /* det */ true, /* br */ false);
+
             proc.killInsn(*insnCmp);
             proc.killPerTarget(*insnCnd, /* else label */ 1);
             this->updateState(sh, insnCnd->targets[/* else label */ 1]);
