@@ -52,34 +52,52 @@ typedef const CodeStorage::Insn                    *TInsn;
 
 typedef std::vector<Node *>                         TNodeList;
 
-/// an abstract node of the symbolic execution trace graph
-class Node {
-    public:
-        /// birth notification from a child node
-        void notifyBirth(Node *child);
-
-        /// death notification from a child node
-        void notifyDeath(Node *child);
-
-    private:
-        TNodeList children_;
-
+/// an abstract base for Node and NodeHandle (externally not much useful)
+class NodeBase {
     protected:
         TNodeList parents_;
 
+        /// this is an abstract class, its instantiation is @b not allowed
+        NodeBase() { }
+
+        NodeBase(Node *node):
+            parents_(1, node)
+        {
+        }
+
+    public:
+        virtual ~NodeBase();
+
+        /// this can be called only on nodes with exactly one parent
+        Node* parent() const;
+
+        /// reference to list of parents (containing 0..n pointers)
+        const TNodeList& parents() const { return parents_; }
+};
+
+/// an abstract node of the symbolic execution trace graph
+class Node: public NodeBase {
+    public:
+        /// birth notification from a child node
+        void notifyBirth(NodeBase *child);
+
+        /// death notification from a child node
+        void notifyDeath(NodeBase *child);
+
+    protected:
         /// this is an abstract class, its instantiation is @b not allowed
         Node() { }
 
         /// constructor for nodes with exactly one parent
         Node(Node *ref):
-            parents_(1, ref)
+            NodeBase(ref)
         {
             ref->notifyBirth(this);
         }
 
         /// constructor for nodes with exactly two parents
         Node(Node *ref1, Node *ref2):
-            parents_(1, ref1)
+            NodeBase(ref1)
         {
             parents_.push_back(ref2);
             ref1->notifyBirth(this);
@@ -87,36 +105,33 @@ class Node {
         }
 
     public:
-        virtual ~Node();
+        /// serialize this node to the given plot (externally not much useful)
         void virtual plotNode(TracePlotter &) const = 0;
 
-    public:
-        /// this can be called only on nodes with exactly one parent
-        Node* parent() const;
+        /// used to store a list of children
+        typedef std::vector<NodeBase *> TBaseList;
 
-        const TNodeList& parents()      const { return parents_;    }
-        const TNodeList& children()     const { return children_;   }
+        /// reference to list of children (containing 0..n pointers)
+        const TBaseList& children()     const { return children_;   }
+
+    private:
+        TBaseList children_;
 };
 
 /// useful to prevent a trace sub-graph from being destroyed too early
-class NodeHandle: public Node {
+class NodeHandle: public NodeBase {
     public:
         NodeHandle(Node *ref):
-            Node(ref)
+            NodeBase(ref)
         {
+            ref->notifyBirth(this);
         }
 
         Node* node() const {
-            return parents_.front();
+            return this->parent();
         }
 
         void reset(Node *);
-
-    private:
-        // do not call these methods on NodeHandle (no children are allowed)
-        void virtual plotNode(TracePlotter &) const;
-        void notifyBirth(Node *);
-        void notifyDeath(Node *);
 };
 
 // TODO: remove this

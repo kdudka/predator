@@ -34,18 +34,27 @@
 namespace Trace {
 
 // /////////////////////////////////////////////////////////////////////////////
-// implementation of Trace::Node
+// implementation of Trace::NodeBase
 
-Node::~Node() {
+NodeBase::~NodeBase() {
     BOOST_FOREACH(Node *parent, parents_)
         parent->notifyDeath(this);
 }
 
-void Node::notifyBirth(Node *child) {
+Node* NodeBase::parent() const {
+    CL_BREAK_IF(1 != parents_.size());
+    return parents_.front();
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of Trace::Node
+
+void Node::notifyBirth(NodeBase *child) {
     children_.push_back(child);
 }
 
-void Node::notifyDeath(Node *child) {
+void Node::notifyDeath(NodeBase *child) {
     // remove the dead child from the list
     children_.erase(
             std::remove(children_.begin(), children_.end(), child),
@@ -54,11 +63,6 @@ void Node::notifyDeath(Node *child) {
     if (children_.empty())
         // FIXME: this may cause stack overflow on complex trace graphs
         delete this;
-}
-
-Node* Node::parent() const {
-    CL_BREAK_IF(1 != parents_.size());
-    return parents_.front();
 }
 
 
@@ -73,18 +77,6 @@ void NodeHandle::reset(Node *node) {
     // register the new node
     ref = node;
     ref->notifyBirth(this);
-}
-
-void NodeHandle::notifyBirth(Node *) {
-    CL_BREAK_IF("NodeHandle::notifyBirth() is not supposed to be called");
-}
-
-void NodeHandle::notifyDeath(Node *) {
-    CL_BREAK_IF("NodeHandle::notifyDeath() is not supposed to be called");
-}
-
-void NodeHandle::plotNode(TracePlotter &) const {
-    CL_BREAK_IF("NodeHandle::plotNode() is not supposed to be called");
 }
 
 

@@ -95,7 +95,7 @@ class PerFncCache {
 int PerFncCache::lookupCore(const SymHeap &sh) {
 #if 1 < SE_ENABLE_CALL_CACHE
     EJoinStatus     status;
-    SymHeap         result(sh.stor());
+    SymHeap         result(sh.stor(), new Trace::NullNode("PerFncCache"));
     const int       cnt = huni_.size();
     int             idx;
 
