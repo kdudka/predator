@@ -172,6 +172,7 @@ class SymExecEngine: public IStatsProvider {
 
     private:
         void initEngine(const SymHeap &init);
+        void execJump();
         void execReturn();
         void updateState(SymHeap &sh, const CodeStorage::Block *ofBlock);
         void updateStateInBranch(
@@ -221,28 +222,43 @@ void SymExecEngine::initEngine(const SymHeap &init)
     sched_.schedule(entry);
 }
 
+void SymExecEngine::execJump() {
+    const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
+    const CodeStorage::TTargetList &tlist = insn->targets;
+
+    // make a copy in case we needed to perform an abstraction
+    const SymHeap &origin = localState_[heapIdx_];
+    SymHeap sh(origin);
+    sh.traceUpdate(origin.traceNode());
+
+    this->updateState(sh, tlist[/* target */ 0]);
+}
+
 void SymExecEngine::execReturn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
     const CodeStorage::TOperandList &opList = insn->operands;
     CL_BREAK_IF(1 != opList.size());
 
-    SymHeap heap(localState_[heapIdx_]);
+    // create a local copy of the heap
+    const SymHeap &origin = localState_[heapIdx_];
+    SymHeap sh(origin);
+    sh.traceUpdate(origin.traceNode());
 
     const struct cl_operand &src = opList[0];
     if (CL_OPERAND_VOID != src.code) {
-        SymProc proc(heap, &bt_);
+        SymProc proc(sh, &bt_);
         proc.setLocation(lw_);
 
         const TValId val = proc.valFromOperand(src);
         CL_BREAK_IF(VAL_INVALID == val);
 
-        heap.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, src.type);
-        const ObjHandle ret(heap, VAL_ADDR_OF_RET, src.type);
+        sh.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, src.type);
+        const ObjHandle ret(sh, VAL_ADDR_OF_RET, src.type);
         proc.objSetValue(ret, val);
     }
 
     // commit one of the function results
-    dst_.insert(heap);
+    dst_.insert(sh);
     endReached_ = true;
 }
 
@@ -480,12 +496,15 @@ void SymExecEngine::execCondInsn() {
 
 void SymExecEngine::execTermInsn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
-    const CodeStorage::TTargetList &tlist = insn->targets;
 
     const enum cl_insn_e code = insn->code;
     switch (code) {
         case CL_INSN_RET:
             this->execReturn();
+            break;
+
+        case CL_INSN_JMP:
+            this->execJump();
             break;
 
         case CL_INSN_COND:
@@ -497,16 +516,8 @@ void SymExecEngine::execTermInsn() {
             endReached_ = true;
             break;
 
-        case CL_INSN_JMP:
-            if (1 == tlist.size()) {
-                SymHeap sh(localState_[heapIdx_]);
-                this->updateState(sh, tlist[/* target */ 0]);
-                break;
-            }
-            // go through!
-
         default:
-            CL_TRAP;
+            CL_BREAK_IF("SymExecEngine::execTermInsn() got something special");
     }
 }
 
@@ -626,9 +637,17 @@ bool /* complete */ SymExecEngine::execBlock() {
                 << ", " << sched_.cntWaiting()
                 << " basic block(s) in the queue");
     }
-    else
+    else {
         // fresh run, let's initialize the local state by the BB entry
-        localState_ = stateMap_[block_];
+        const SymState &origin = stateMap_[block_];
+        localState_ = origin;
+
+        // eliminate the unneeded Trace::CloneNode instances
+        for (unsigned i = 0; i < origin.size(); ++i) {
+            SymHeap &local = const_cast<SymHeap &>(localState_[i]);
+            local.traceUpdate(origin[i].traceNode());
+        }
+    }
 
     // go through the remainder of BB insns
     for (; insnIdx_ < block_->size(); ++insnIdx_) {

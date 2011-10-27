@@ -87,9 +87,7 @@ class SymState {
 
     protected:
         /// insert @b new SymHeap that @ must be guaranteed to be not yet in
-        virtual void insertNew(const SymHeap &sh) {
-            heaps_.push_back(sh);
-        }
+        virtual void insertNew(const SymHeap &sh);
 
         virtual void eraseExisting(int nth) {
             heaps_.erase(heaps_.begin() + nth);

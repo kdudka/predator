@@ -609,6 +609,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
         ctx = new SymCallCtx(this);
         ctx->d->fnc     = &fnc;
         ctx->d->entry   = entry;
+        ctx->d->entry.traceUpdate(entry.traceNode());
 
         // enter ctx stack
         this->ctxStack.push_back(ctx);

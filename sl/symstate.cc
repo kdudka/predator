@@ -67,6 +67,14 @@ namespace {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymState implementation
+void SymState::insertNew(const SymHeap &sh) {
+    Trace::Node *trOrig = sh.traceNode();
+    heaps_.push_back(sh);
+
+    // drop the unneeded Trace::CloneNode
+    heaps_.back().traceUpdate(trOrig);
+}
+
 bool SymState::insert(const SymHeap &sh) {
     int idx = this->lookup(sh);
     if (-1 == idx) {
@@ -138,8 +146,7 @@ void SymStateWithJoin::packSuffix(unsigned idx) {
         CL_BREAK_IF(&stor != &shOld.stor());
 
         EJoinStatus     status;
-        SymHeap         result(stor, 
-                new Trace::NullNode("SymStateWithJoin::packSuffix()"));
+        SymHeap         result(stor, new Trace::NullNode("packSuffix()"));
         if (!joinSymHeaps(&status, &result, shNew, shOld)) {
             ++idx;
             continue;
@@ -215,6 +222,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
             debugPlot("join", 1, shNew);
 
             result = shNew;
+            result.traceUpdate(shNew.traceNode());
             this->swapExisting(idx, result);
 
             this->packSuffix(idx);
