@@ -29,13 +29,13 @@
 #undef PREDATOR
 
 #include "symabstract.hh"
-#include "symbt.hh"
 #include "symgc.hh"
 #include "symjoin.hh"
 #include "symplot.hh"
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 
 #include <cstring>
@@ -82,13 +82,9 @@ bool readPlotName(
     return true;
 }
 
-void emitPrototypeError(const struct cl_loc *lw, const std::string &fnc) {
-    CL_WARN_MSG(lw, "incorrectly called "
-            << fnc << "() not recognized as built-in");
-}
-
-void emitPlotError(const struct cl_loc *lw, const std::string &plotName) {
-    CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
+void emitPrototypeError(const struct cl_loc *lw, const char *name) {
+    CL_WARN_MSG(lw, "incorrectly called " << name
+            << "() not recognized as built-in");
 }
 
 void insertCoreHeap(
@@ -197,7 +193,7 @@ bool handleBreak(
     // print what happened
     CL_WARN_MSG(&insn.loc, name << "() reached, stopping per user's request");
     printUserMessage(core, opList[/* msg */ 2]);
-    printBackTrace(core);
+    printBackTrace(core, ML_WARN);
 
     // trap to debugger
     CL_TRAP;
@@ -336,7 +332,7 @@ bool handleMemset(
     }
     if (!size) {
         CL_WARN_MSG(lw, "ignoring call of memset() with size == 0");
-        printBackTrace(core);
+        printBackTrace(core, ML_WARN);
         insertCoreHeap(dst, core, insn);
         return true;
     }
@@ -369,7 +365,7 @@ bool handleMemset(
     // check for memory leaks
     if (lm.collectJunkFrom(killedPtrs)) {
         CL_WARN_MSG(lw, "memory leak detected while executing memset()");
-        printBackTrace(core);
+        printBackTrace(core, ML_WARN);
     }
 
     // leave monitor and write the result
@@ -449,7 +445,7 @@ bool handlePrintf(
     if (opIdx < opList.size()) {
         // this is quite suspicious, but would not crash the program
         CL_WARN_MSG(lw, "too many arguments given to printf()");
-        printBackTrace(core);
+        printBackTrace(core, ML_WARN);
     }
 
     insertCoreHeap(dst, core, insn);
@@ -505,10 +501,9 @@ bool handleNondetInt(
 
     // set the returned value to a new unknown value
     const struct cl_operand &opDst = opList[0];
-    const TObjId objDst = core.objByOperand(opDst);
+    const ObjHandle objDst = core.objByOperand(opDst);
     const TValId val = sh.valCreate(VT_UNKNOWN, origin);
     core.objSetValue(objDst, val);
-    sh.objReleaseId(objDst);
 
     // insert the resulting heap
     dst.insert(sh);
@@ -526,36 +521,36 @@ bool handlePlot(
 
     const int cntArgs = opList.size() - /* dst + fnc */ 2;
     if (cntArgs < 1) {
-        emitPrototypeError(lw, "___sl_plot");
+        emitPrototypeError(lw, name);
         // insufficient count of arguments
         return false;
     }
 
     if (CL_OPERAND_VOID != opList[/* dst */ 0].code) {
         // not a function returning void
-        emitPrototypeError(lw, "___sl_plot");
+        emitPrototypeError(lw, name);
         return false;
     }
 
     std::string plotName;
     if (!readPlotName(&plotName, opList, core.lw())) {
-        emitPrototypeError(lw, "___sl_plot");
+        emitPrototypeError(lw, name);
         return false;
     }
 
     const SymExecCoreParams &ep = core.params();
     if (ep.skipPlot) {
-        CL_DEBUG_MSG(&insn.loc, name << "() skipped per user's request");
+        CL_DEBUG_MSG(lw, name << "() skipped per user's request");
         insertCoreHeap(dst, core, insn);
         return true;
     }
 
     const SymHeap &sh = core.sh();
+    bool ok;
 
-    if (1 == cntArgs) {
-        if (!plotHeap(sh, plotName))
-            emitPlotError(lw, plotName);
-    }
+    if (1 == cntArgs)
+        ok = plotHeap(sh, plotName);
+
     else {
         // starting points were given
         TValList startingPoints;
@@ -565,9 +560,11 @@ bool handlePlot(
             startingPoints.push_back(val);
         }
 
-        if (!plotHeap(sh, plotName, startingPoints))
-            emitPlotError(lw, plotName);
+        ok = plotHeap(sh, plotName, startingPoints);
     }
+
+    if (!ok)
+        CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
 
     // built-in processed, we do not care if successfully at this point
     insertCoreHeap(dst, core, insn);
@@ -641,7 +638,7 @@ bool handleError(
 
     // print the user message and backtrace
     printUserMessage(core, opList[/* msg */ 2]);
-    printBackTrace(core);
+    printBackTrace(core, ML_ERROR);
     return true;
 }
 
@@ -736,6 +733,9 @@ bool BuiltInTable::handleBuiltIn(
     if (tbl_.end() == it)
         // no fnc name matched as built-in
         return false;
+
+    SymHeap &sh = core.sh();
+    sh.traceUpdate(new Trace::InsnNode(sh.traceNode(), &insn, /* bin */ true));
 
     const THandler hdl = it->second;
     return hdl(dst, core, insn, name);

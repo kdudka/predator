@@ -28,13 +28,13 @@
 #include "memdebug.hh"
 #include "sigcatch.hh"
 #include "symabstract.hh"
-#include "symbt.hh"
 #include "symcall.hh"
 #include "symdebug.hh"
 #include "sympath.hh"
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 
 #include <queue>
@@ -88,7 +88,7 @@ class SymExec: public IStatsProvider {
 
         void execFnc(
                 SymState                    &results,
-                SymHeap                     entry,
+                const SymHeap               &entry,
                 const CodeStorage::Insn     &insn,
                 const CodeStorage::Fnc      &fnc);
 
@@ -167,11 +167,12 @@ class SymExecEngine: public IStatsProvider {
 
         SymHeapList                     localState_;
         SymHeapList                     nextLocalState_;
-        SymStateWithJoin                callResults_;
+        SymHeapList                     callResults_;
         const struct cl_loc             *lw_;
 
     private:
         void initEngine(const SymHeap &init);
+        void execJump();
         void execReturn();
         void updateState(SymHeap &sh, const CodeStorage::Block *ofBlock);
         void updateStateInBranch(
@@ -221,33 +222,60 @@ void SymExecEngine::initEngine(const SymHeap &init)
     sched_.schedule(entry);
 }
 
+void SymExecEngine::execJump() {
+    const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
+    const CodeStorage::TTargetList &tlist = insn->targets;
+
+    // make a copy in case we needed to perform an abstraction
+    const SymHeap &origin = localState_[heapIdx_];
+    SymHeap sh(origin);
+    sh.traceUpdate(origin.traceNode());
+
+    this->updateState(sh, tlist[/* target */ 0]);
+}
+
 void SymExecEngine::execReturn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
     const CodeStorage::TOperandList &opList = insn->operands;
     CL_BREAK_IF(1 != opList.size());
 
-    SymHeap heap(localState_[heapIdx_]);
+    // create a local copy of the heap
+    const SymHeap &origin = localState_[heapIdx_];
+    SymHeap sh(origin);
+    sh.traceUpdate(origin.traceNode());
 
     const struct cl_operand &src = opList[0];
     if (CL_OPERAND_VOID != src.code) {
-        SymProc proc(heap, &bt_);
+        SymProc proc(sh, &bt_);
         proc.setLocation(lw_);
 
         const TValId val = proc.valFromOperand(src);
         CL_BREAK_IF(VAL_INVALID == val);
 
-        heap.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, src.type);
-        const TObjId ret = heap.objAt(VAL_ADDR_OF_RET, src.type);
+        sh.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, src.type);
+        const ObjHandle ret(sh, VAL_ADDR_OF_RET, src.type);
         proc.objSetValue(ret, val);
-        heap.objReleaseId(ret);
     }
 
     // commit one of the function results
-    dst_.insertFast(heap);
+    dst_.insert(sh);
     endReached_ = true;
 }
 
-void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) {
+void traceCond(
+        SymHeap                    &sh,
+        const CodeStorage::Insn    &inCmp,
+        const CodeStorage::Insn    &inCnd,
+        const bool                  det,
+        const bool                  br)
+{
+    Trace::Node *trOrig = sh.traceNode()->parent();
+    Trace::Node *trCond = new Trace::CondNode(trOrig, &inCmp, &inCnd, det, br);
+    sh.traceUpdate(trCond);
+}
+
+void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
+{
     const std::string &name = ofBlock->name();
 
     // time to consider abstraction
@@ -264,7 +292,7 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock) 
 #endif
 
     // update _target_ state and check if anything has changed
-    if (!stateMap_.insertFast(ofBlock, block_, sh)) {
+    if (!stateMap_.insert(ofBlock, block_, sh)) {
         CL_DEBUG_MSG(lw_, "--- block " << name
                      << " left intact (size of target is "
                      << stateMap_[ofBlock].size() << ")");
@@ -313,6 +341,8 @@ void SymExecEngine::updateStateInBranch(
     LDP_PLOT(nondetCond, sh);
 
 fallback:
+    traceCond(sh, insnCmp, insnCnd, /* deterministic */ false, branch);
+
     SymProc proc(sh, &bt_);
     proc.setLocation(lw_);
     proc.killInsn(insnCmp);
@@ -358,6 +388,7 @@ bool SymExecEngine::bypassNonPointers(
     proc.killInsn(insnCmp);
 
     SymHeap sh1(sh);
+    traceCond(sh1, insnCmp, insnCnd, /* determ */ false, /* branch */ true);
     SymProc proc1(sh1, proc.bt());
     proc1.setLocation(proc.lw());
 
@@ -366,6 +397,7 @@ bool SymExecEngine::bypassNonPointers(
     this->updateState(sh1, insnCnd.targets[/* then label */ 0]);
 
     SymHeap sh2(sh);
+    traceCond(sh2, insnCmp, insnCnd, /* determ */ false, /* branch */ false);
     SymProc proc2(sh2, proc.bt());
     proc2.setLocation(proc.lw());
 
@@ -398,7 +430,6 @@ void SymExecEngine::execCondInsn() {
     CL_BREAK_IF(!cltSrc || !op2.type || cltSrc->code != op2.type->code);
 
     // a working area in case of VAL_TRUE and VAL_FALSE
-    // FIXME: unnecessary deep copy of the heap in case of non-deterministic cnd
     SymHeap sh(localState_[heapIdx_]);
     SymProc proc(sh, &bt_);
     proc.setLocation(lw_);
@@ -413,6 +444,8 @@ void SymExecEngine::execCondInsn() {
     switch (val) {
         case VAL_TRUE:
             CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
+            traceCond(sh, *insnCmp, *insnCnd, /* det */ true, /* br */ true);
+
             proc.killInsn(*insnCmp);
             proc.killPerTarget(*insnCnd, /* then label */ 0);
             this->updateState(sh, insnCnd->targets[/* then label */ 0]);
@@ -420,6 +453,8 @@ void SymExecEngine::execCondInsn() {
 
         case VAL_FALSE:
             CL_DEBUG_MSG(lw_, ".F. CL_INSN_COND got VAL_FALSE");
+            traceCond(sh, *insnCmp, *insnCnd, /* det */ true, /* br */ false);
+
             proc.killInsn(*insnCmp);
             proc.killPerTarget(*insnCnd, /* else label */ 1);
             this->updateState(sh, insnCnd->targets[/* else label */ 1]);
@@ -444,7 +479,7 @@ void SymExecEngine::execCondInsn() {
     if (isUninitialized(origin)) {
         CL_WARN_MSG(lw_, "conditional jump depends on uninitialized value");
         describeUnknownVal(proc, val, "use");
-        bt_.printBackTrace();
+        printBackTrace(proc, ML_WARN);
     }
 
     std::ostringstream str;
@@ -461,12 +496,15 @@ void SymExecEngine::execCondInsn() {
 
 void SymExecEngine::execTermInsn() {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
-    const CodeStorage::TTargetList &tlist = insn->targets;
 
     const enum cl_insn_e code = insn->code;
     switch (code) {
         case CL_INSN_RET:
             this->execReturn();
+            break;
+
+        case CL_INSN_JMP:
+            this->execJump();
             break;
 
         case CL_INSN_COND:
@@ -478,16 +516,8 @@ void SymExecEngine::execTermInsn() {
             endReached_ = true;
             break;
 
-        case CL_INSN_JMP:
-            if (1 == tlist.size()) {
-                SymHeap sh(localState_[heapIdx_]);
-                this->updateState(sh, tlist[/* target */ 0]);
-                break;
-            }
-            // go through!
-
         default:
-            CL_TRAP;
+            CL_BREAK_IF("SymExecEngine::execTermInsn() got something special");
     }
 }
 
@@ -501,9 +531,13 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
     ep.errLabel         = params_.errLabel;
 
     // working area for non-terminal instructions
-    SymHeap workingHeap(localState_[heapIdx_]);
-    SymExecCore core(workingHeap, &bt_, ep);
+    const SymHeap &origin = localState_[heapIdx_];
+    SymHeap sh(origin);
+    SymExecCore core(sh, &bt_, ep);
     core.setLocation(lw_);
+
+    // drop the unnecessary Trace::CloneNode node in the trace graph
+    sh.traceUpdate(origin.traceNode());
 
     // execute the instruction
     if (!core.exec(nextLocalState_, *insn)) {
@@ -603,9 +637,17 @@ bool /* complete */ SymExecEngine::execBlock() {
                 << ", " << sched_.cntWaiting()
                 << " basic block(s) in the queue");
     }
-    else
+    else {
         // fresh run, let's initialize the local state by the BB entry
-        localState_ = stateMap_[block_];
+        const SymState &origin = stateMap_[block_];
+        localState_ = origin;
+
+        // eliminate the unneeded Trace::CloneNode instances
+        for (unsigned i = 0; i < origin.size(); ++i) {
+            SymHeap &local = const_cast<SymHeap &>(localState_[i]);
+            local.traceUpdate(origin[i].traceNode());
+        }
+    }
 
     // go through the remainder of BB insns
     for (; insnIdx_ < block_->size(); ++insnIdx_) {
@@ -642,7 +684,11 @@ void joinNewResults(
         SymHeapList             &dst,
         const SymState          &src)
 {
+#if SE_ABSTRACT_ON_CALL_DONE
     SymStateWithJoin all;
+#else
+    SymHeapUnion all;
+#endif
     all.swap(dst);
     all.SymState::insert(src);
     all.swap(dst);
@@ -879,9 +925,6 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
     return fnc;
 
 fail:
-    // something wrong happened, print the backtrace
-    bt.printBackTrace();
-
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
@@ -892,13 +935,15 @@ fail:
             origin = VO_ASSIGNED;
 #endif
         const TValId val = entry.valCreate(VT_UNKNOWN, origin);
-        const TObjId obj = proc.objByOperand(dst);
+        const ObjHandle obj = proc.objByOperand(dst);
         proc.objSetValue(obj, val);
-        entry.objReleaseId(obj);
     }
 
+    // something wrong happened, print the backtrace
+    proc.failWithBackTrace();
+
     // call failed, so that we have exactly one resulting heap
-    results.insertFast(entry);
+    results.insert(entry);
     return 0;
 }
 
@@ -924,7 +969,7 @@ void SymExec::enterCall(SymCallCtx *ctx, SymState &results) {
 
 void SymExec::execFnc(
         SymState                        &results,
-        SymHeap                         entry,
+        const SymHeap                   &entry,
         const CodeStorage::Insn         &insn,
         const CodeStorage::Fnc          &fnc)
 {
@@ -1019,7 +1064,7 @@ void execTopCall(
         const SymExecParams             &ep)
 {
     // do not include the memory allocated by Code Listener into our statistics
-    initMemDrif();
+    initMemDrift();
 
     try {
         SymExec se(entry.stor(), ep);

@@ -20,9 +20,9 @@ do_sync() {
         c="$(printf %s "$i" | sed 's|\.c$||')"
         raw="${i}-predator.err"
         err="${c}.err$2"
-        grep '\[-fplugin-libsl\]$' "$raw" \
+        grep '\[-fplugin=libsl\.so\]$' "$raw" \
             | grep -v 'note: .*\[internal location\]' \
-            | sed 's| \[-fplugin-libsl\]$||' \
+            | sed 's| \[-fplugin=libsl\.so\]$||' \
             | sed 's|data/||' \
             > "$err"
 

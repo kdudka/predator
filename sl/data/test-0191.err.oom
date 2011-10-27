@@ -1,0 +1,1 @@
+test-0191.c:32:4: warning: memory leak detected while destroying a static variable

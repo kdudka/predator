@@ -55,28 +55,32 @@ bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
 
-TObjId translateObjId(
-        SymHeap                 &dst,
-        SymHeap                 &src,
-        const TValId            dstRootAt,
-        const TObjId            srcObj);
-
 void translateValProto(
         TValId                  *pValProto,
         SymHeap                 &dst,
         const SymHeap           &src);
 
+inline ObjHandle translateObjId(
+        SymHeap                 &dst,
+        SymHeap                 &src,
+        const TValId            dstRootAt,
+        const ObjHandle         &srcObj)
+{
+    // gather properties of the object in 'src'
+    const TValId srcAt = srcObj.placedAt();
+    const TOffset  off = src.valOffset(srcAt);
+    const TObjType clt = srcObj.objType();
+
+    // use them to obtain the corresponding object in 'dst'
+    const TValId dstAt = dst.valByOffset(dstRootAt, off);
+    return ObjHandle(dst, dstAt, clt);
+}
+
 inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
     CL_BREAK_IF(!canWriteDataPtrAt(sh, at));
 
-    bool exclusive;
-    const TObjId ptr = sh.ptrAt(at, &exclusive);
-    const TValId val = sh.valueOf(ptr);
-
-    if (0 < ptr && exclusive)
-        sh.objReleaseId(ptr);
-
-    return val;
+    const PtrHandle ptr(sh, at);
+    return ptr.value();
 }
 
 inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {
@@ -88,6 +92,8 @@ inline bool isVarAlive(SymHeap &sh, const CVar &cv) {
     const TValId at = sh.addrOfVar(cv, /* createIfNeeded */ false);
     return 0 < at;
 }
+
+void initGlVar(SymHeap &sh, const CVar &cv);
 
 void getPtrValues(TValList &dst, SymHeap &heap, TValId at);
 
@@ -191,15 +197,15 @@ bool /* complete */ traverseCore(
     const TValId rootAt = sh.valRoot(at);
     const TOffset offRoot = sh.valOffset(at);
 
-    TObjList objs;
+    ObjList objs;
     (sh.*method)(objs, rootAt);
-    BOOST_FOREACH(const TObjId obj, objs) {
-        const TOffset off = sh.valOffset(sh.placedAt(obj));
+    BOOST_FOREACH(const ObjHandle &obj, objs) {
+        const TOffset off = sh.valOffset(obj.placedAt());
         if (off < offRoot)
             // do not go above the starting point
             continue;
 
-        if (!visitor(sh, obj))
+        if (!visitor(obj))
             // traversal cancelled by visitor
             return false;
     }
@@ -277,16 +283,16 @@ bool /* complete */ traverseLiveObjsGeneric(
         if (root < 0)
             continue;
 
-        TObjList objs;
+        ObjList objs;
         sh.gatherLiveObjects(objs, root);
-        BOOST_FOREACH(const TObjId obj, objs) {
-            const TValId addr = sh.placedAt(obj);
+        BOOST_FOREACH(const ObjHandle &obj, objs) {
+            const TValId addr = obj.placedAt();
             const TOffset off = sh.valOffset(addr) - offs[i];
             if (off < 0)
                 // do not go above the starting point
                 continue;
 
-            const TObjType clt = sh.objType(obj);
+            const TObjType clt = obj.objType();
             const TItem item(off, clt);
             all.insert(item);
         }
@@ -297,12 +303,12 @@ bool /* complete */ traverseLiveObjsGeneric(
         const TOffset  off = item.first;
         const TObjType clt = item.second;
 
-        TObjId objs[N];
+        ObjHandle objs[N];
         for (unsigned i = 0; i < N; ++i) {
             SymHeap &sh = *heaps[i];
 
             const TValId addr = sh.valByOffset(roots[i], offs[i] + off);
-            objs[i] = sh.objAt(addr, clt);
+            objs[i] = ObjHandle(sh, addr, clt);
         }
 
         if (!visitor(objs))
@@ -369,9 +375,9 @@ bool /* complete */ traverseProgramVarsGeneric(
     // go through all program variables
     BOOST_FOREACH(const CVar &cv, all) {
         TValId roots[N_TOTAL];
-        for (unsigned i = 0; i < N_TOTAL; ++i) {
+        for (signed i = 0; i < (signed)N_TOTAL; ++i) {
             SymHeap &sh = *heaps[i];
-            roots[i] = sh.addrOfVar(cv, /* createIfNeeded */ !i);
+            roots[i] = sh.addrOfVar(cv, /* createIfNeeded */ i < (signed)N_DST);
         }
 
         if (!visitor(roots))

@@ -33,6 +33,7 @@
 #include "symheap.hh"
 #include "symstate.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 
 #include <stack>
@@ -45,7 +46,7 @@
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
 void SymProc::failWithBackTrace() {
-    bt_->printBackTrace();
+    printBackTrace(*this, ML_ERROR);
     printMemUsage("SymBackTrace::printBackTrace");
 
 #if SE_ERROR_RECOVERY_MODE
@@ -127,10 +128,6 @@ void describeUnknownVal(
 
         case VO_REINTERPRET:
             what = "a result of an unsupported data reinterpretation";
-            break;
-
-        case VO_STATIC:
-            what = "an untouched contents of static data";
             break;
 
         case VO_STACK:
@@ -272,13 +269,14 @@ void SymProc::varInit(TValId at) {
     ep.skipVarInit = /* avoid an infinite recursion */ true;
     SymExecCore core(sh_, bt_, ep);
     BOOST_FOREACH(const CodeStorage::Insn *insn, var.initials) {
-        core.setLocation(&insn->loc);
-        CL_DEBUG_MSG(&insn->loc,
+        const struct cl_loc *loc = &insn->loc;
+        core.setLocation(loc);
+        CL_DEBUG_MSG(loc,
                 "(I) executing an explicit var initializer: " << *insn);
         SymHeapList dst;
 
         if (!core.exec(dst, *insn))
-            CL_BREAK_IF("initVariable() malfunction");
+            CL_BREAK_IF("varInit() malfunction");
 
         CL_BREAK_IF(1 != dst.size());
         SymHeap &result = const_cast<SymHeap &>(dst[/* the only result */ 0]);
@@ -286,36 +284,56 @@ void SymProc::varInit(TValId at) {
     }
 }
 
+TValId SymProc::varAt(const CVar &cv) {
+    TValId at = sh_.addrOfVar(cv, /* createIfNeeded */ false);
+    if (0 < at)
+        // var already alive
+        return at;
+
+    // lazy var creation
+    at = sh_.addrOfVar(cv, /* createIfNeeded */ true);
+    const TOffset size = sh_.valSizeOfTarget(at);
+
+    // resolve Var
+    const CodeStorage::Storage &stor = sh_.stor();
+    const CodeStorage::Var &var = stor.vars[cv.uid];
+    const bool isLcVar = isOnStack(var);
+
+    // initialize to zero?
+    bool nullify = var.initialized;
+    if (!isLcVar)
+#if SE_ASSUME_FRESH_STATIC_DATA
+        nullify = true;
+#else
+        // do not initialize static variables
+        return at;
+#endif
+
+    if (nullify) {
+        // initialize to zero
+        sh_.writeUniformBlock(at, VAL_NULL, size);
+    }
+#if SE_TRACK_UNINITIALIZED
+    else if (isLcVar) {
+        // uninitialized stack variable
+        const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
+        sh_.writeUniformBlock(at, tpl, size);
+    }
+#endif
+
+    if (!var.initials.empty())
+        // go through explicit initializers
+        this->varInit(at);
+
+    return at;
+}
+
 TValId SymProc::varAt(const struct cl_operand &op) {
     // resolve CVar
     const int uid = varIdFromOperand(&op);
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
-    const CVar cVar(uid, nestLevel);
-
-    // get the address (SymHeapCore is responsible for lazy creation)
-    const TValId at = sh_.addrOfVar(cVar, /* createIfNeeded */ true);
-    CL_BREAK_IF(at <= 0);
-
-    // resolve Var
-    const CodeStorage::Storage &stor = sh_.stor();
-    const CodeStorage::Var &var = stor.vars[uid];
-    bool needInit = !var.initials.empty();
-#if !SE_ASSUME_FRESH_STATIC_DATA
-    needInit &= isOnStack(var);
-#endif
-    if (!needInit)
-        // in this case, we do not care if the var is initialized or not
-        return at;
-
-    TObjList liveObjs;
-    sh_.gatherLiveObjects(liveObjs, at);
-    if (!liveObjs.empty())
-        // not a fresh variable --> preserve its contents
-        return at;
-
-    // delayed initialization
-    this->varInit(at);
-    return at;
+    const CVar cv(uid, nestLevel);
+    return this->varAt(cv);
 }
 
 bool SymProc::addOffDerefArray(TOffset &off, const struct cl_accessor *ac) {
@@ -386,18 +404,15 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
 
     if (isDeref) {
         // read the value inside the pointer
-        bool exclusive;
-        const TObjId ptr = sh_.ptrAt(addr, &exclusive);
-        addr = sh_.valueOf(ptr);
-        if (exclusive)
-            sh_.objReleaseId(ptr);
+        const PtrHandle ptr(sh_, addr);
+        addr = ptr.value();
     }
 
     // apply the offset
     return sh_.valByOffset(addr, off);
 }
 
-TObjId SymProc::objByOperand(const struct cl_operand &op, bool *exclusive) {
+ObjHandle SymProc::objByOperand(const struct cl_operand &op) {
     CL_BREAK_IF(seekRefAccessor(op.accessor));
 
     // resolve address of the target object
@@ -405,18 +420,18 @@ TObjId SymProc::objByOperand(const struct cl_operand &op, bool *exclusive) {
     const EValueOrigin origin = sh_.valOrigin(at);
     if (VO_DEREF_FAILED == origin)
         // we are already on the error path
-        return OBJ_DEREF_FAILED;
+        return ObjHandle(OBJ_DEREF_FAILED);
 
     // check for invalid dereference
     const TObjType cltTarget = op.type;
     if (this->checkForInvalidDeref(at, cltTarget->size)) {
         this->failWithBackTrace();
-        return OBJ_DEREF_FAILED;
+        return ObjHandle(OBJ_DEREF_FAILED);
     }
 
     // resolve the target object
-    const TObjId obj = sh_.objAt(at, op.type, exclusive);
-    if (obj <= 0)
+    const ObjHandle obj(sh_, at, op.type);
+    if (!obj.isValid())
         CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
 
     // all OK
@@ -427,8 +442,12 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
     if (seekRefAccessor(op.accessor))
         return this->targetAt(op);
 
-    bool exclusive;
-    const TObjId obj = this->objByOperand(op, &exclusive);
+    const ObjHandle handle = this->objByOperand(op);
+    if (handle.isValid())
+        return handle.value();
+
+    // failed to resolve object handle
+    const TObjId obj = handle.objId();
     switch (obj) {
         case OBJ_UNKNOWN:
             return sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
@@ -437,15 +456,8 @@ TValId SymProc::heapValFromObj(const struct cl_operand &op) {
             return sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
 
         default:
-            if (obj < 0)
-                return VAL_INVALID;
+            return VAL_INVALID;
     }
-
-    const TValId val = sh_.valueOf(obj);
-    if (exclusive)
-        sh_.objReleaseId(obj);
-
-    return val;
 }
 
 TValId SymProc::valFromOperand(const struct cl_operand &op) {
@@ -489,7 +501,7 @@ bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op) {
     return true;
 }
 
-void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
+void SymProc::heapObjDefineType(const ObjHandle &lhs, TValId rhs) {
     const EValueTarget code = sh_.valTarget(rhs);
     if (!isPossibleToDeref(code))
         // no valid target anyway
@@ -499,7 +511,7 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
         // not a pointer to root
         return;
 
-    const TObjType cltTarget = targetTypeOfPtr(sh_.objType(lhs));
+    const TObjType cltTarget = targetTypeOfPtr(lhs.objType());
     if (!cltTarget || CL_TYPE_VOID == cltTarget->code)
         // no type-info given for the target
         return;
@@ -523,17 +535,17 @@ void SymProc::heapObjDefineType(TObjId lhs, TValId rhs) {
 void SymProc::reportMemLeak(const EValueTarget code, const char *reason) {
     const char *const what = describeRootObj(code);
     CL_WARN_MSG(lw_, "memory leak detected while " << reason << "ing " << what);
-    bt_->printBackTrace();
+    printBackTrace(*this, ML_WARN);
 }
 
-void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
-    if (lhs < 0) {
+void SymProc::heapSetSingleVal(const ObjHandle &lhs, TValId rhs) {
+    if (!lhs.isValid()) {
         CL_ERROR_MSG(lw_, "invalid L-value");
         this->failWithBackTrace();
         return;
     }
 
-    const TValId lhsAt = sh_.placedAt(lhs);
+    const TValId lhsAt = lhs.placedAt();
     const EValueTarget code = sh_.valTarget(lhsAt);
     CL_BREAK_IF(!isPossibleToDeref(code));
 
@@ -557,7 +569,7 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     lm.enter();
 
     TValSet killedPtrs;
-    sh_.objSetValue(lhs, rhs, &killedPtrs);
+    lhs.setValue(rhs, &killedPtrs);
 
     if (lm.collectJunkFrom(killedPtrs))
         this->reportMemLeak(code, "assign");
@@ -565,12 +577,12 @@ void SymProc::heapSetSingleVal(TObjId lhs, TValId rhs) {
     lm.leave();
 }
 
-void SymProc::objSetValue(TObjId lhs, TValId rhs) {
-    const TValId lhsAt = sh_.placedAt(lhs);
+void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
+    const TValId lhsAt = lhs.placedAt();
     const EValueTarget code = sh_.valTarget(lhsAt);
     CL_BREAK_IF(!isPossibleToDeref(code));
 
-    const TObjType clt = sh_.objType(lhs);
+    const TObjType clt = lhs.objType();
     const bool isComp = isComposite(clt, /* includingArray */ false);
     const unsigned size = clt->size;
     CL_BREAK_IF(!size);
@@ -581,7 +593,7 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
         if (isComp)
             sh_.writeUniformBlock(lhsAt, tplValue, size);
         else
-            sh_.objSetValue(lhs, tplValue);
+            lhs.setValue(tplValue);
 
         return;
     }
@@ -594,7 +606,8 @@ void SymProc::objSetValue(TObjId lhs, TValId rhs) {
     }
 
     // FIXME: Should we check for overlapping?  What does the C standard say??
-    const TValId rhsAt = sh_.placedAt(sh_.valGetComposite(rhs));
+    const ObjHandle compObj(sh_, sh_.valGetComposite(rhs));
+    const TValId rhsAt = compObj.placedAt();
 
     LeakMonitor lm(sh_);
     lm.enter();
@@ -755,8 +768,8 @@ void SymExecCore::execHeapAlloc(
         const bool                      nullified)
 {
     // resolve lhs
-    const TObjId lhs = this->objByOperand(insn.operands[/* dst */ 0]);
-    if (OBJ_DEREF_FAILED == lhs)
+    const ObjHandle lhs = this->objByOperand(insn.operands[/* dst */ 0]);
+    if (OBJ_DEREF_FAILED == lhs.objId())
         // error alredy emitted
         return;
 
@@ -764,9 +777,8 @@ void SymExecCore::execHeapAlloc(
         CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
 malloc/calloc is implementation-defined");
         CL_NOTE_MSG(lw_, "assuming NULL as the result");
-        bt_->printBackTrace();
+        printBackTrace(*this, ML_WARN);
         this->objSetValue(lhs, VAL_NULL);
-        sh_.objReleaseId(lhs);
         this->killInsn(insn);
         dst.insert(sh_);
         return;
@@ -779,8 +791,8 @@ malloc/calloc is implementation-defined");
         oomCore.setLocation(lw_);
 
         // OOM state simulation
-        oomCore.objSetValue(lhs, VAL_NULL);
-        oomHeap.objReleaseId(lhs);
+        const ObjHandle oomLhs(oomHeap, lhs);
+        oomCore.objSetValue(oomLhs, VAL_NULL);
         oomCore.killInsn(insn);
         dst.insert(oomHeap);
     }
@@ -793,7 +805,6 @@ malloc/calloc is implementation-defined");
 
     // store the result of malloc
     this->objSetValue(lhs, val);
-    sh_.objReleaseId(lhs);
     this->killInsn(insn);
     dst.insert(sh_);
 }
@@ -971,9 +982,17 @@ TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
     return sh_.valByOffset(at, offRequested);
 }
 
-void printBackTrace(SymProc &proc) {
+void printBackTrace(SymProc &proc, EMsgLevel level, bool forcePtrace) {
+    SymHeap &sh = proc.sh();
+    const struct cl_loc *loc = proc.lw();
+    Trace::MsgNode *trMsg = new Trace::MsgNode(sh.traceNode(), level, loc);
+    sh.traceUpdate(trMsg);
+
     const SymBackTrace *bt = proc.bt();
-    bt->printBackTrace();
+    bt->printBackTrace(forcePtrace);
+#if SE_DUMP_TRACE_GRAPHS
+    Trace::plotTrace(sh.traceNode(), loc);
+#endif
 }
 
 // TODO: move this to symutil?
@@ -1141,8 +1160,8 @@ template <int ARITY>
 void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
-    const TObjId varLhs = this->objByOperand(dst);
-    if (OBJ_DEREF_FAILED == varLhs)
+    const ObjHandle lhs = this->objByOperand(dst);
+    if (OBJ_DEREF_FAILED == lhs.objId())
         // error alredy emitted
         return;
 
@@ -1162,8 +1181,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
         if (VO_DEREF_FAILED == sh_.valOrigin(val)) {
             // we're already on an error path
             const TValId vFail = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
-            this->objSetValue(varLhs, vFail);
-            sh_.objReleaseId(varLhs);
+            lhs.setValue(vFail);
             return;
         }
 
@@ -1176,22 +1194,20 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn) {
 #if SE_TRACK_NON_POINTER_VALUES < 2
     // avoid creation of live object in case we are not interested in its value
     if (!isDataPtr(dst.type) && VO_UNKNOWN == sh_.valOrigin(valResult)) {
-        const TValId root = sh_.valRoot(sh_.placedAt(varLhs));
+        const TValId root = sh_.valRoot(lhs.placedAt());
 
-        TObjList liveObjs;
+        ObjList liveObjs;
         sh_.gatherLiveObjects(liveObjs, root);
-        BOOST_FOREACH(const TObjId obj, liveObjs)
-            if (obj == varLhs)
+        BOOST_FOREACH(const ObjHandle &obj, liveObjs)
+            if (obj == lhs)
                 goto already_alive;
 
-        sh_.objReleaseId(varLhs);
         return;
     }
 already_alive:
 #endif
     // store the result
-    this->objSetValue(varLhs, valResult);
-    sh_.objReleaseId(varLhs);
+    this->objSetValue(lhs, valResult);
 }
 
 void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
@@ -1219,15 +1235,14 @@ void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
     CL_ERROR_MSG(lw_, "error label \"" << name << "\" has been reached");
 
     // print the backtrace and leave
-    bt_->printBackTrace(/* forcePtrace */ true);
+    printBackTrace(*this, ML_ERROR, /* forcePtrace */ true);
     printMemUsage("SymBackTrace::printBackTrace");
     throw std::runtime_error("an error label has been reached");
 }
 
 bool SymExecCore::execCore(
         SymState                    &dst,
-        const CodeStorage::Insn     &insn,
-        const bool                  feelFreeToOverwrite)
+        const CodeStorage::Insn     &insn)
 {
     const enum cl_insn_e code = insn.code;
     switch (code) {
@@ -1259,12 +1274,10 @@ bool SymExecCore::execCore(
     // kill variables
     this->killInsn(insn);
 
-    if (feelFreeToOverwrite)
-        // aggressive optimization
-        dst.insertFast(sh_);
-    else
-        dst.insert(sh_);
-
+    Trace::Node *trOrig = sh_.traceNode();
+    Trace::Node *trInsn = new Trace::InsnNode(trOrig, &insn, /* bin */ false);
+    sh_.traceUpdate(trInsn);
+    dst.insert(sh_);
     return true;
 }
 
@@ -1278,6 +1291,8 @@ bool SymExecCore::concretizeLoop(
 
     TSymHeapList todo;
     todo.push_back(sh_);
+    todo.front().traceUpdate(sh_.traceNode());
+
     while (!todo.empty()) {
         SymHeap &sh = todo.front();
         SymExecCore slave(sh, bt_, ep_);
@@ -1303,7 +1318,7 @@ bool SymExecCore::concretizeLoop(
         }
 
         // process the current heap and move to the next one (if any)
-        slave.execCore(dst, insn, /* aggressive optimization */1 == todo.size());
+        slave.execCore(dst, insn);
 
         if (slave.errorDetected_)
             // propagate the 'error detected' flag
@@ -1343,7 +1358,7 @@ bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
     }
 
     if (derefs.empty())
-        return this->execCore(dst, insn, /* aggressive optimization */ true);
+        return this->execCore(dst, insn);
 
     // handle dereferences
     this->concretizeLoop(dst, insn, derefs);

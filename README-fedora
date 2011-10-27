@@ -1,0 +1,22 @@
+Building Predator on Fedora
+===========================
+
+    sudo yum install cmake gcc-c++ glibc-devel.i686 gmp-devel libmpc-devel \
+        mpfr-devel
+
+    curl http://www.fit.vutbr.cz/~idudka/download/predator-2011-10-11-8a7846b.tar.gz \
+        | gzip -cd \
+        | tar x
+
+    cd predator-2011-10-11-8a7846b
+
+    make -j3 build_boost build_gcc
+
+    make -j3
+
+    make -i check
+
+
+Note you need approximately 2 GB of free disk space to unpack and build GCC.
+The steps above were successfully tested on a fresh installation
+of Fedora 15 x86_64.

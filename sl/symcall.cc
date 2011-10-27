@@ -33,6 +33,7 @@
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 
 #include <vector>
@@ -180,7 +181,7 @@ struct SymCallCtx::Private {
     SymHeap                     entry;
     SymHeap                     surround;
     const struct cl_operand     *dst;
-    SymStateWithJoin            rawResults;
+    SymHeapUnion                rawResults;
     int                         nestLevel;
     bool                        computed;
     bool                        flushed;
@@ -191,8 +192,10 @@ struct SymCallCtx::Private {
     Private(SymCallCache::Private *cd_):
         cd(cd_),
         fnc(0),
-        entry(cd_->bt.stor()),
-        surround(cd_->bt.stor()),
+        entry(cd_->bt.stor(),
+                new Trace::NullNode("SymCallCtx::Private::entry")),
+        surround(cd_->bt.stor(),
+                new Trace::NullNode("SymCallCtx::Private::surround")),
         computed(false),
         flushed(false)
     {
@@ -243,21 +246,17 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     SymProc proc(sh, &callerSiteBt);
     proc.setLocation(&op.data.var->loc);
 
-    const TObjId objDst = proc.objByOperand(op);
-    CL_BREAK_IF(OBJ_INVALID == objDst);
-
-    const TObjId objSrc = sh.objAt(VAL_ADDR_OF_RET, op.type);
+    const ObjHandle objDst = proc.objByOperand(op);
+    const ObjHandle objSrc(sh, VAL_ADDR_OF_RET, op.type);
     TValId val;
-    if (0 < objSrc) {
-        val = sh.valueOf(objSrc);
-        sh.objReleaseId(objSrc);
+    if (objSrc.isValid()) {
+        val = objSrc.value();
     }
     else
         val = sh.valCreate(VT_UNKNOWN, VO_STACK);
 
     // assign the return value in the current symbolic heap
     proc.objSetValue(objDst, val);
-    sh.objReleaseId(objDst);
 }
 
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
@@ -298,10 +297,18 @@ bool isGlVar(EValueTarget code) {
     return (VT_STATIC == code);
 }
 
-void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
+void joinHeapsWithCare(
+        SymHeap                        &sh,
+        SymHeap                         surround,
+        const CodeStorage::Fnc         *fnc)
+{
     LDP_INIT(symcall, "join");
     LDP_PLOT(symcall, sh);
     LDP_PLOT(symcall, surround);
+
+    // create a new trace graph node
+    Trace::Node *trFrame = surround.traceNode()->parent();
+    Trace::Node *trDone = new Trace::CallDoneNode(sh.traceNode(), trFrame, fnc);
 
     // first off, we need to make sure that a gl variable from surround will not
     // overwrite the result of just completed function call since the var could
@@ -321,12 +328,14 @@ void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
 
     if (!preserveGlVars.empty()) {
         // conflict resolution: yield the gl vars from just completed fnc call
-        SymHeap arena(surround.stor());
+        SymHeap arena(surround.stor(),
+                new Trace::NullNode("joinHeapsWithCare()"));
         surround.swap(arena);
         splitHeapByCVars(&arena, preserveGlVars, &surround);
     }
 
     joinHeapsByCVars(&sh, &surround);
+    sh.traceUpdate(trDone);
     LDP_PLOT(symcall, sh);
 }
 
@@ -352,7 +361,7 @@ void SymCallCtx::flushCallResults(SymState &dst) {
 
         // first join the heap with its original surround
         SymHeap sh(d->rawResults[i]);
-        joinHeapsWithCare(sh, d->surround);
+        joinHeapsWithCare(sh, d->surround, d->fnc);
 
         LDP_INIT(symcall, "post-processing");
         LDP_PLOT(symcall, sh);
@@ -399,11 +408,11 @@ SymBackTrace& SymCallCache::bt() {
 
 void pullGlVar(SymHeap &result, SymHeap origin, const CVar &cv) {
     // do not try to combine things, it causes problems
-    CL_BREAK_IF(!areEqual(result, SymHeap(origin.stor())));
+    CL_BREAK_IF(!areEqual(result, SymHeap(origin.stor(), origin.traceNode())));
 
     if (!isVarAlive(origin, cv)) {
         // not found in origin, create a fresh instance
-        (void) result.addrOfVar(cv, /* createIfNeeded */ true);
+        initGlVar(result, cv);
         return;
     }
 
@@ -420,7 +429,7 @@ void pushGlVar(SymHeap &dst, const SymHeap &glSubHeap, const CVar &cv) {
     if (isVarAlive(dst, cv)) {
 #ifndef NDEBUG
         // the gl var is alive in 'dst' --> check there is no conflict there
-        SymHeap real(dst.stor());
+        SymHeap real(dst.stor(), dst.traceNode());
         pullGlVar(real, dst, cv);
         CL_BREAK_IF(!areEqual(real, glSubHeap));
 #endif
@@ -435,7 +444,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     const int cnt = this->ctxStack.size();
     if (!cnt) {
         // empty ctx stack --> no heap to import the var from
-        (void) entry.addrOfVar(cv, /* createIfNeeded */ true);
+        initGlVar(entry, cv);
         return;
     }
 
@@ -458,7 +467,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     const SymHeap &origin = this->ctxStack[idx]->d->surround;
 
     // pull the designated gl var from 'origin'
-    SymHeap glSubHeap(stor);
+    SymHeap glSubHeap(stor, new Trace::NullNode("importGlVar()"));
     pullGlVar(glSubHeap, origin, cv);
 
     // go through all heaps above the 'origin' up to the current call level
@@ -583,9 +592,8 @@ void setCallArgs(
         CL_BREAK_IF(VAL_INVALID == val);
 
         // set the value of lhs accordingly
-        const TObjId argObj = sh.objAt(argAddr, clt);
+        const ObjHandle argObj(sh, argAddr, clt);
         proc.objSetValue(argObj, val);
-        sh.objReleaseId(argObj);
     }
 
     srcProc.killInsn(insn);
@@ -601,6 +609,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
         ctx = new SymCallCtx(this);
         ctx->d->fnc     = &fnc;
         ctx->d->entry   = entry;
+        ctx->d->entry.traceUpdate(entry.traceNode());
 
         // enter ctx stack
         this->ctxStack.push_back(ctx);
@@ -638,6 +647,11 @@ SymCallCtx* SymCallCache::getCallCtx(
     const struct cl_loc *loc = &insn.loc;
     CL_DEBUG_MSG(loc, "SymCallCache is looking for " << nameOf(fnc) << "()...");
 
+    // build two new nodes of the trace graph
+    Trace::Node *trCall = entry.traceNode()->parent();
+    Trace::Node *trEntry = new Trace::CallEntryNode(trCall, &insn);
+    Trace::Node *trSurround = new Trace::CallSurroundNode(trCall, &insn);
+
     // enlarge the backtrace
     const int uid = uidOf(fnc);
     d->bt.pushCall(uid, loc);
@@ -665,9 +679,12 @@ SymCallCtx* SymCallCache::getCallCtx(
     // prune heap
     LDP_INIT(symcall, "split");
     LDP_PLOT(symcall, entry);
-    SymHeap surround(entry.stor());
+
+    SymHeap surround(entry.stor(), trSurround);
     splitHeapByCVars(&entry, cut, &surround);
     surround.valDestroyTarget(VAL_ADDR_OF_RET);
+    entry.traceUpdate(trEntry);
+
     LDP_PLOT(symcall, entry);
     LDP_PLOT(symcall, surround);
     
@@ -683,5 +700,6 @@ SymCallCtx* SymCallCache::getCallCtx(
     ctx->d->dst         = &insn.operands[/* dst */ 0];
     ctx->d->nestLevel   = nestLevel;
     ctx->d->surround    = surround;
+    ctx->d->surround.traceUpdate(trSurround);
     return ctx;
 }

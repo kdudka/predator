@@ -22,7 +22,9 @@
 
 #include <cl/storage.hh>
 
+#include "symbt.hh"
 #include "symheap.hh"
+#include "symproc.hh"
 #include "symstate.hh"
 #include "util.hh"
 
@@ -116,22 +118,6 @@ bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val) {
     return (ptrSize <= sh.valSizeOfTarget(val));
 }
 
-TObjId translateObjId(
-        SymHeap                 &dst,
-        SymHeap                 &src,
-        const TValId            dstRootAt,
-        const TObjId            srcObj)
-{
-    // gather properties of the object in 'src'
-    const TValId srcAt = src.placedAt(srcObj);
-    const TOffset  off = src.valOffset(srcAt);
-    const TObjType clt = src.objType(srcObj);
-
-    // use them to obtain the corresponding object in 'dst'
-    const TValId dstAt = dst.valByOffset(dstRootAt, off);
-    return dst.objAt(dstAt, clt);
-}
-
 void translateValProto(
         TValId                  *pValProto,
         SymHeap                 &dst,
@@ -150,11 +136,20 @@ void translateValProto(
     *pValProto = dst.valCreate(code, origin);
 }
 
+void initGlVar(SymHeap &sh, const CVar &cv) {
+    CL_BREAK_IF(cv.inst);
+    CL_BREAK_IF(isVarAlive(sh, cv));
+
+    SymBackTrace dummyBt(sh.stor());
+    SymProc proc(sh, &dummyBt);
+    (void) proc.varAt(cv);
+}
+
 void getPtrValues(TValList &dst, SymHeap &sh, TValId at) {
-    TObjList ptrs;
+    ObjList ptrs;
     sh.gatherLivePointers(ptrs, at);
-    BOOST_FOREACH(const TObjId obj, ptrs) {
-        const TValId val = sh.valueOf(obj);
+    BOOST_FOREACH(const ObjHandle &obj, ptrs) {
+        const TValId val = obj.value();
         if (0 < val)
             dst.push_back(val);
     }
@@ -168,22 +163,22 @@ void redirectRefs(
         const TOffset           offHead)
 {
     // go through all objects pointing at/inside pointingTo
-    TObjList refs;
+    ObjList refs;
     sh.pointedBy(refs, pointingTo);
-    BOOST_FOREACH(const TObjId obj, refs) {
+    BOOST_FOREACH(const ObjHandle &obj, refs) {
         if (VAL_INVALID != pointingFrom) {
-            const TValId referrerAt = sh.valRoot(sh.placedAt(obj));
+            const TValId referrerAt = sh.valRoot(obj.placedAt());
             if (pointingFrom != referrerAt)
                 // pointed from elsewhere, keep going
                 continue;
         }
 
         // check the current link
-        const TValId nowAt = sh.valueOf(obj);
+        const TValId nowAt = obj.value();
         const TOffset offToRoot = sh.valOffset(nowAt);
 
         // redirect accordingly
         const TValId result = sh.valByOffset(redirectTo, offToRoot - offHead);
-        sh.objSetValue(obj, result);
+        obj.setValue(result);
     }
 }

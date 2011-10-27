@@ -35,6 +35,7 @@ endif()
 add_library(sl SHARED
     cl_symexec.cc
     memdebug.cc
+    plotenum.cc
     sigcatch.cc
     symabstract.cc
     symbin.cc
@@ -54,6 +55,7 @@ add_library(sl SHARED
     symproc.cc
     symseg.cc
     symstate.cc
+    symtrace.cc
     symutil.cc
     version.c)
 
@@ -87,19 +89,19 @@ set(examples
     0090 0091 0092 0093 0094 0095 0096 0097 0098 0099
     0100 0101 0102 0103 0104 0105      0107 0108 0109
     0110 0111 0112      0114 0115 0116 0117 0118 0119
-    0120 0121 0122 0123           0126 0127 0128 0129
+    0120 0121 0122 0123      0125 0126 0127 0128 0129
     0130 0131 0132 0133 0134 0135 0136 0137 0138 0139
     0140 0141 0142 0143 0144 0145 0146 0147 0148 0149
     0150 0151 0152 0153 0154 0155 0156      0158 0159
     0160 0161 0162 0163 0164      0166      0168
     0170 0171 0172 0173 0174 0175 0176 0177 0178 0179
     0180 0181 0182 0183 0184 0185 0186 0187 0188 0189
-    0190
+    0190 0191 0192 0193 0194 0195
     0300      0302
     0500 0501 0502 0503 0504 0505           0508 0509
     0510 0511 0512 0513 0514 0515 0516 0517 0518
-    0520 0521
-    0125 0157 0167 0124)
+    0520
+    0167 0157 0124 0521)
 
 set(cost 1048576)
 
@@ -144,8 +146,8 @@ macro(test_sym_exec_regre name_suff ext arg1)
         set(cmd "${cmd} 2>&1")
 
         # filter out messages that are unrelated to our plug-in
-        set(cmd "${cmd} | grep -E '\\\\[-fplugin-libsl\\\\]\$|compiler error'")
-        set(cmd "${cmd} | sed 's/ \\\\[-fplugin-libsl\\\\]\$//'")
+        set(cmd "${cmd} | grep -E '\\\\[-fplugin=libsl.so\\\\]\$|compiler error|undefined symbol'")
+        set(cmd "${cmd} | sed 's/ \\\\[-fplugin=libsl.so\\\\]\$//'")
 
         # filter out NOTE messages with internal location
         set(cmd "${cmd} | grep -v 'note: .*\\\\[internal location\\\\]'")

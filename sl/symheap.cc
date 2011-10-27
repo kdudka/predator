@@ -31,6 +31,7 @@
 #include "symneq.hh"
 #include "symseg.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 #include "worklist.hh"
 
@@ -248,12 +249,12 @@ struct BlockEntity: public AbstractHeapEntity {
 
 struct HeapObject: public BlockEntity {
     TObjType                    clt;
-    bool                        hasExtRef;
+    int                         extRefCnt;
 
-    HeapObject(TValId root_, TOffset off_, TObjType clt_, bool hasExtRef_):
+    HeapObject(TValId root_, TOffset off_, TObjType clt_):
         BlockEntity(bkFromClt(clt_), root_, off_, clt_->size, VAL_INVALID),
         clt(clt_),
-        hasExtRef(hasExtRef_)
+        extRefCnt(0)
     {
     }
 
@@ -374,10 +375,11 @@ struct TValSetWrapper: public TValSet {
 };
 
 struct SymHeapCore::Private {
-    Private();
+    Private(Trace::Node *);
     Private(const Private &);
     ~Private();
 
+    Trace::NodeHandle               traceHandle;
     EntStore<AbstractHeapEntity>    ents;
     TValSetWrapper                 *liveRoots;
     CVarMap                        *cVarMap;
@@ -391,8 +393,7 @@ struct SymHeapCore::Private {
     TValId valDup(TValId);
     bool valsEqual(TValId, TValId);
 
-    TObjId objCreate(TValId root, TOffset off, TObjType clt, bool hasExtRef);
-    TObjId objExport(TObjId obj, bool *pExcl = 0);
+    TObjId objCreate(TValId root, TOffset off, TObjType clt);
     TValId objInit(TObjId obj);
     void objDestroy(TObjId, bool removeVal, bool detach);
 
@@ -676,7 +677,7 @@ void SymHeapCore::Private::reinterpretObjData(
     if (rootData->liveObjs.erase(old))
         CL_DEBUG("reinterpretObjData() kills a live object");
 
-    if (!oldData->hasExtRef) {
+    if (!oldData->extRefCnt) {
         CL_DEBUG("reinterpretObjData() destroys a dead object");
         this->objDestroy(old, /* removeVal */ false, /* detach */ true);
         return;
@@ -756,11 +757,10 @@ void SymHeapCore::Private::setValueOf(
 TObjId SymHeapCore::Private::objCreate(
         TValId                      root,
         TOffset                     off,
-        TObjType                    clt,
-        bool                        hasExtRef)
+        TObjType                    clt)
 {
     // acquire object ID
-    HeapObject *objData = new HeapObject(root, off, clt, hasExtRef);
+    HeapObject *objData = new HeapObject(root, off, clt);
     const TObjId obj = this->assignId(objData);
 
     // register the object by the owning root value
@@ -777,10 +777,12 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
     BlockEntity *blData;
     this->ents.getEntRW(&blData, obj);
 
-    if (removeVal && BK_UNIFORM != blData->code) {
+    const EBlockKind code = blData->code;
+    if (removeVal && BK_UNIFORM != code) {
         // release value of the object
-        const TValId val = blData->value;
+        TValId &val = blData->value;
         this->releaseValueOf(obj, val);
+        val = VAL_INVALID;
     }
 
     if (detach) {
@@ -798,18 +800,12 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
         CL_BREAK_IF(!this->chkArenaConsistency(rootData));
     }
 
+    if (BK_UNIFORM != code && 0 < DCAST<HeapObject *>(blData)->extRefCnt)
+        // preserve an externally referenced object
+        return;
+
     // release the corresponding HeapObject instance
     this->ents.releaseEnt(obj);
-}
-
-TObjId SymHeapCore::Private::objExport(TObjId obj, bool *pExcl) {
-    HeapObject *data;
-    this->ents.getEntRW(&data, obj);
-    if (pExcl)
-        *pExcl = !data->hasExtRef;
-
-    data->hasExtRef = true;
-    return obj;
 }
 
 TValId SymHeapCore::Private::valCreate(
@@ -958,7 +954,8 @@ void SymHeapCore::Private::transferBlock(
 }
 
 
-SymHeapCore::Private::Private():
+SymHeapCore::Private::Private(Trace::Node *trace):
+    traceHandle (trace),
     liveRoots   (new TValSetWrapper),
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
@@ -969,6 +966,7 @@ SymHeapCore::Private::Private():
 }
 
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
+    traceHandle (new Trace::CloneNode(ref.traceHandle.node())),
     ents        (ref.ents),
     liveRoots   (ref.liveRoots),
     cVarMap     (ref.cVarMap),
@@ -991,7 +989,7 @@ SymHeapCore::Private::~Private() {
 TValId SymHeapCore::Private::objInit(TObjId obj) {
     HeapObject *objData;
     this->ents.getEntRW(&objData, obj);
-    CL_BREAK_IF(!objData->hasExtRef);
+    CL_BREAK_IF(!objData->extRefCnt);
 
     // resolve root
     const TValId root = objData->root;
@@ -1032,12 +1030,6 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     else
         rootData->liveObjs[obj] = BK_DATA_OBJ;
 #endif
-
-    // mark the owning root entity as live (if not already)
-    if (!hasKey(this->liveRoots, root)) {
-        RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
-        this->liveRoots->insert(root);
-    }
 
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
@@ -1093,7 +1085,7 @@ TValId SymHeapCore::valueOf(TObjId obj) {
     return d->objInit(obj);
 }
 
-void SymHeapCore::usedBy(TObjList &dst, TValId val, bool liveOnly) const {
+void SymHeapCore::usedBy(ObjList &dst, TValId val, bool liveOnly) const {
     if (VAL_NULL == val)
         // we do not track uses of special values
         return;
@@ -1103,7 +1095,9 @@ void SymHeapCore::usedBy(TObjList &dst, TValId val, bool liveOnly) const {
     const TObjSet &usedBy = valData->usedBy;
     if (!liveOnly) {
         // dump everything
-        std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
+        BOOST_FOREACH(const TObjId obj, usedBy)
+            dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
+
         return;
     }
 
@@ -1119,7 +1113,7 @@ void SymHeapCore::usedBy(TObjList &dst, TValId val, bool liveOnly) const {
 
         // check if the object is alive
         if (hasKey(rootData->liveObjs, obj))
-            dst.push_back(obj);
+            dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
     }
 }
 
@@ -1132,14 +1126,15 @@ unsigned SymHeapCore::usedByCount(TValId val) const {
     return valData->usedBy.size();
 }
 
-void SymHeapCore::pointedBy(TObjList &dst, TValId root) const {
+void SymHeapCore::pointedBy(ObjList &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     CL_BREAK_IF(rootData->offRoot);
     CL_BREAK_IF(!isPossibleToDeref(rootData->code));
 
     const TObjSet &usedBy = rootData->usedByGl;
-    std::copy(usedBy.begin(), usedBy.end(), std::back_inserter(dst));
+    BOOST_FOREACH(const TObjId obj, usedBy)
+        dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
 }
 
 unsigned SymHeapCore::pointedByCount(TValId root) const {
@@ -1231,7 +1226,7 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
 
         const TOffset off = objDataSrc->off + shift;
         const TObjType clt = objDataSrc->clt;
-        dst = this->objCreate(rootDst, off, clt, /* hasExtRef */ false);
+        dst = this->objCreate(rootDst, off, clt);
         this->setValueOf(dst, objDataSrc->value);
     }
 
@@ -1270,13 +1265,17 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     return imageAt;
 }
 
-void SymHeapCore::gatherLivePointers(TObjList &dst, TValId root) const {
+void SymHeapCore::gatherLivePointers(ObjList &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
+
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         const EBlockKind code = item.second;
-        if (BK_DATA_PTR == code)
-            dst.push_back(d->objExport(/* obj */ item.first));
+        if (BK_DATA_PTR != code)
+            continue;
+
+        const TObjId obj = item.first;
+        dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
     }
 }
 
@@ -1301,9 +1300,10 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
     }
 }
 
-void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
+void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
+
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         const EBlockKind code = item.second;
 
@@ -1313,13 +1313,15 @@ void SymHeapCore::gatherLiveObjects(TObjList &dst, TValId root) const {
 
             case BK_DATA_PTR:
             case BK_DATA_OBJ:
-                dst.push_back(d->objExport(/* obj */ item.first));
-                continue;
+                break;
 
             case BK_INVALID:
             default:
                 CL_BREAK_IF("gatherLiveObjects sees something special");
         }
+
+        const TObjId obj = item.first;
+        dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
     }
 }
 
@@ -1375,9 +1377,9 @@ bool SymHeapCore::findCoveringUniBlock(
     return false;
 }
 
-SymHeapCore::SymHeapCore(TStorRef stor):
+SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
     stor_(stor),
-    d(new Private)
+    d(new Private(trace))
 {
     CL_BREAK_IF(!&stor_);
 
@@ -1411,6 +1413,14 @@ void SymHeapCore::swap(SymHeapCore &ref) {
     swapValues(this->d, ref.d);
 }
 
+Trace::Node* SymHeapCore::traceNode() const {
+    return d->traceHandle.node();
+}
+
+void SymHeapCore::traceUpdate(Trace::Node *node) {
+    d->traceHandle.reset(node);
+}
+
 void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     // we allow to set values of atomic types only
     const HeapObject *objData;
@@ -1428,12 +1438,6 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     RootValue *rootData;
     d->ents.getEntRW(&rootData, root);
     rootData->liveObjs[obj] = bkFromClt(clt);
-
-    // mark the owning root entity as live (if not already)
-    if (!hasKey(d->liveRoots, root)) {
-        RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
-        d->liveRoots->insert(root);
-    }
 
     // now set the value
     d->setValueOf(obj, val, killedPtrs);
@@ -1625,8 +1629,6 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
 
 bool isUninitialized(EValueOrigin code) {
     switch (code) {
-        case VO_STATIC:
-            // this may be subject for discussion
         case VO_HEAP:
         case VO_STACK:
             return true;
@@ -1820,7 +1822,7 @@ TValId SymHeapCore::placedAt(TObjId obj) {
     return this->valByOffset(root, objData->off);
 }
 
-TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
+TObjId SymHeapCore::ptrAt(TValId at) {
     if (at <= 0)
         return OBJ_INVALID;
 
@@ -1860,7 +1862,7 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
         const HeapObject *objData = DCAST<const HeapObject *>(blData);
         const TObjType clt = objData->clt;
         if (isDataPtr(clt))
-            return d->objExport(obj, pExcl);
+            return obj;
     }
 
     // check whether we have enough space allocated for the pointer
@@ -1872,16 +1874,12 @@ TObjId SymHeapCore::ptrAt(TValId at, bool *pExcl) {
     // resolve root
     const TValId root = valData->valRoot;
 
-    if (pExcl)
-        // a newly created object cannot be already externally referenced
-        *pExcl = true;
-
     // create the pointer
-    return d->objCreate(root, off, clt, /* hasExtRef */ true);
+    return d->objCreate(root, off, clt);
 }
 
 // TODO: simplify the code
-TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
+TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     if (at <= 0)
         return OBJ_INVALID;
 
@@ -1936,7 +1934,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt, bool *pExcl) {
         if (cltNow == clt) {
             // exact match
             if (isLive)
-                return d->objExport(obj, pExcl);
+                return obj;
 
             CL_BREAK_IF(cltExactMatch);
             cltExactMatch = true;
@@ -1964,31 +1962,40 @@ update_best:
     }
 
     if (OBJ_INVALID != bestMatch)
-        return d->objExport(bestMatch, pExcl);
+        return bestMatch;
 
     if (this->valSizeOfTarget(at) < clt->size)
         // out of bounds
         return OBJ_UNKNOWN;
 
-    if (pExcl)
-        // a newly created object cannot be already externally referenced
-        *pExcl = true;
-
     // create the object
     const TValId root = valData->valRoot;
-    return d->objCreate(root, off, clt, /* hasExtRef */ true);
+    return d->objCreate(root, off, clt);
 }
 
-void SymHeapCore::objReleaseId(TObjId obj) {
+void SymHeapCore::objEnter(TObjId obj) {
     HeapObject *objData;
     d->ents.getEntRW(&objData, obj);
-    CL_BREAK_IF(!objData->hasExtRef);
-    objData->hasExtRef = false;
+    CL_BREAK_IF(objData->extRefCnt < 0);
+    ++(objData->extRefCnt);
+}
+
+void SymHeapCore::objLeave(TObjId obj) {
+    HeapObject *objData;
+    d->ents.getEntRW(&objData, obj);
+    CL_BREAK_IF(objData->extRefCnt < 1);
+    if (--(objData->extRefCnt))
+        // still externally referenced
+        return;
+
+#if SH_DELAYED_OBJECTS_DESTRUCTION
+    return;
+#endif
 
     if (isComposite(objData->clt, /* includingArray */ false)
             && VAL_INVALID != objData->value)
     {
-        CL_DEBUG("SymHeapCore::objReleaseId() preserves a composite object");
+        CL_DEBUG("SymHeapCore::objLeave() preserves a composite object");
         return;
     }
 
@@ -1997,7 +2004,7 @@ void SymHeapCore::objReleaseId(TObjId obj) {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     if (!hasKey(rootData->liveObjs, obj)) {
-        CL_DEBUG("SymHeapCore::objReleaseId() destroys a dead object");
+        CL_DEBUG("SymHeapCore::objLeave() destroys a dead object");
         d->objDestroy(obj, /* removeVal */ true, /* detach */ true);
     }
 #endif
@@ -2048,23 +2055,9 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
     const unsigned size = clt->size;
     rootData->size = size;
 
-    // initialize to zero?
-    bool nullify = var.initialized;
-#if SE_ASSUME_FRESH_STATIC_DATA
-    nullify |= (VT_STATIC == code);
-#endif
-
-    if (nullify) {
-        // initialize to zero
-        this->writeUniformBlock(addr, VAL_NULL, size);
-    }
-#if SE_TRACK_UNINITIALIZED
-    else if (VT_ON_STACK == code) {
-        // uninitialized stack variable
-        const TValId tpl = this->valCreate(VT_UNKNOWN, VO_STACK);
-        this->writeUniformBlock(addr, tpl, size);
-    }
-#endif
+    // mark the root as live
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
+    d->liveRoots->insert(addr);
 
     // store the address for next wheel
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cVarMap);
@@ -2094,7 +2087,7 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     CL_BREAK_IF(VT_COMPOSITE != valData->code);
 
     const CompValue *compData = DCAST<const CompValue *>(valData);
-    return d->objExport(compData->compObj);
+    return compData->compObj;
 }
 
 TValId SymHeapCore::heapAlloc(int cbSize) {
@@ -2102,6 +2095,10 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
 
     // assign an address
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
+
+    // mark the root as live
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
+    d->liveRoots->insert(addr);
 
     // initialize meta-data
     RootValue *rootData;
@@ -2226,7 +2223,19 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
 }
 
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
-    CL_BREAK_IF(isPossibleToDeref(code));
+    switch (code) {
+        case VT_UNKNOWN:
+            // this is the most common case
+
+        case VT_DELETED:
+        case VT_LOST:
+            // these are used by symcut
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of SymHeapCore::valCreate()");
+    }
+
     return d->valCreate(code, origin);
 }
 
@@ -2377,8 +2386,8 @@ struct SymHeap::Private {
     EntStore<AbstractRoot>          absRoots;
 };
 
-SymHeap::SymHeap(TStorRef stor):
-    SymHeapCore(stor),
+SymHeap::SymHeap(TStorRef stor, Trace::Node *trace):
+    SymHeapCore(stor, trace),
     d(new Private)
 {
 }
@@ -2468,6 +2477,9 @@ void SymHeap::valTargetSetAbstract(
     CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(OK_CONCRETE == kind);
 
+    // there is no 'prev' offset in OK_SEE_THROUGH
+    CL_BREAK_IF(OK_SEE_THROUGH == kind && off.prev != off.next);
+
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // clone the data
@@ -2475,17 +2487,16 @@ void SymHeap::valTargetSetAbstract(
         CL_BREAK_IF(OK_SLS != kind);
 
         AbstractRoot *aData = d->absRoots.getEntRW(root);
-        CL_BREAK_IF(OK_MAY_EXIST != aData->kind || off != aData->bOff);
+        CL_BREAK_IF(OK_SEE_THROUGH != aData->kind || off != aData->bOff);
 
-        // OK_MAY_EXIST -> OK_SLS
+        // OK_SEE_THROUGH -> OK_SLS
         aData->kind = kind;
         return;
     }
 
-    AbstractRoot *aData = new AbstractRoot(kind, off);
-    if (OK_MAY_EXIST == kind)
-        // there is no 'prev' offset in OK_MAY_EXIST
-        aData->bOff.prev = off.next;
+    AbstractRoot *aData = new AbstractRoot(kind, (OK_OBJ_OR_NULL == kind)
+            ? BindingOff(OK_OBJ_OR_NULL)
+            : off);
 
     // register a new abstract root
     d->absRoots.assignId(root, aData);
@@ -2581,8 +2592,9 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
         v2 = segNextRootObj(*this, v1);
 
     TValId seg;
-    if (haveSegBidir(&seg, this, OK_MAY_EXIST, v1, v2)) {
-        // replace OK_MAY_EXIST by OK_CONCRETE
+    if (haveSegBidir(&seg, this, OK_SEE_THROUGH, v1, v2)
+            || haveSegBidir(&seg, this, OK_OBJ_OR_NULL, v1, v2)) {
+        // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
         this->valTargetSetConcrete(seg);
         return;
     }
@@ -2707,7 +2719,8 @@ unsigned SymHeap::segMinLength(TValId seg) const {
 
     const EObjKind kind = aData->kind;
     switch (kind) {
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
+        case OK_OBJ_OR_NULL:
             return 0;
 
         case OK_SLS:
@@ -2730,9 +2743,14 @@ void SymHeap::segSetMinLength(TValId seg, unsigned len) {
 
     const EObjKind kind = aData->kind;
     switch (kind) {
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
             if (len)
-                CL_BREAK_IF("OK_MAY_EXIST is supposed to have zero minLength");
+                CL_BREAK_IF("OK_SEE_THROUGH is supposed to have zero minLength");
+            return;
+
+        case OK_OBJ_OR_NULL:
+            if (len)
+                CL_BREAK_IF("OK_OBJ_OR_NULL is supposed to have zero minLength");
             return;
 
         case OK_SLS:

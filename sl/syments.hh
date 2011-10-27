@@ -177,7 +177,9 @@ class EntStore {
         template <typename TId> inline bool isValidEnt(const TId id) const;
 
         template <typename TId> TId lastId() const {
-            return static_cast<TId>(this->ents_.size() - 1);
+            // we need to be careful with integral arithmetic on enums
+            const long last = -1L + ents_.size();
+            return static_cast<TId>(last);
         }
 
         template <typename TId> bool outOfRange(const TId id) const {

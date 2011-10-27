@@ -237,9 +237,9 @@ class ValueComparator {
         {
         }
 
-        bool operator()(TObjId item[2]) {
-            const TValId v1 = sh1_.valueOf(item[0]);
-            const TValId v2 = sh2_.valueOf(item[1]);
+        bool operator()(ObjHandle item[2]) {
+            const TValId v1 = item[0].value();
+            const TValId v2 = item[1].value();
 
             bool follow;
             if (!cmpValues(&follow, vMap_, sh1_, sh2_, v1, v2))

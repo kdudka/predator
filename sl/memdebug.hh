@@ -31,7 +31,7 @@
 bool rawMemUsage(ssize_t *pDst);
 
 /// initialize memory debugging, taking the current memory state as state zero
-bool initMemDrif();
+bool initMemDrift();
 
 /// provide relative amount of currently allocated memory (subtracting drift)
 bool currentMemUsage(ssize_t *pDst);

@@ -50,6 +50,7 @@
 #include <gcc/function.h>
 #include <gcc/gimple.h>
 #include <gcc/input.h>
+#include <gcc/real.h>
 #include <gcc/toplev.h>
 #include <gcc/tree-pass.h>
 
@@ -62,6 +63,9 @@
 // required by realpath(3)
 #include <limits.h>
 #include <stdlib.h>
+
+// required by basename(3)
+#include <libgen.h>
 
 #ifndef STREQ
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
@@ -144,13 +148,13 @@ static struct plugin_info cl_info = {
     .version = "%s [code listener SHA1 " CL_GIT_SHA1 "]",
     .help    = "%s [code listener SHA1 " CL_GIT_SHA1 "]\n"
 "\n"
-"Usage: gcc -fplugin=%s.so [OPTIONS] ...\n"
+"Usage: gcc -fplugin=%s [OPTIONS] ...\n"
 "\n"
 "OPTIONS:\n"
 "    -fplugin-arg-%s-help\n"
 "    -fplugin-arg-%s-version\n"
-"    -fplugin-arg-%s-args=PEER_ARGS                 args given to peer\n"
-"    -fplugin-arg-%s-dry-run                        do not call peer\n"
+"    -fplugin-arg-%s-args=PEER_ARGS                 args given to analyzer\n"
+"    -fplugin-arg-%s-dry-run                        do not run the analyzer\n"
 "    -fplugin-arg-%s-dump-pp[=OUTPUT_FILE]          dump linearized code\n"
 "    -fplugin-arg-%s-dump-types                     dump also type info\n"
 "    -fplugin-arg-%s-gen-dot[=GLOBAL_CG_FILE]       generate CFGs\n"
@@ -176,12 +180,14 @@ static void init_plugin_name(const struct plugin_name_args *info)
     if (plugin_name_alloc)
         plugin_name = plugin_name_alloc;
 
+    plugin_base_name = basename((char *) plugin_name);
+
     // read plug-in base name
-    const char *name = plugin_base_name = info->base_name;
+    const char *name = info->base_name;
     char *msg;
 
     // substitute name in 'version' string
-    if (-1 == asprintf(&msg, cl_info.version, name))
+    if (-1 == asprintf(&msg, cl_info.version, plugin_base_name))
         // OOM
         abort();
     else
@@ -189,11 +195,10 @@ static void init_plugin_name(const struct plugin_name_args *info)
 
     // substitute name in 'help' string
     // FIXME: error-prone approach, this should be automated somehow!
-    if (-1 == asprintf(&msg, cl_info.help,
+    if (-1 == asprintf(&msg, cl_info.help, plugin_base_name,
                        name, name, name, name,
                        name, name, name, name,
-                       name, name, name, name,
-                       name))
+                       name, name, name, name))
         // OOM
         abort();
     else
@@ -224,7 +229,7 @@ static void dummy_printer(const char *msg)
 
 static void trivial_printer(const char *msg)
 {
-    fprintf(stderr, "%s [-fplugin-%s]\n", msg, plugin_base_name);
+    fprintf(stderr, "%s [-fplugin=%s]\n", msg, plugin_base_name);
 }
 
 static void cl_warn(const char *msg)
@@ -446,7 +451,8 @@ static void read_base_type(struct cl_type *clt, tree type)
     if (IDENTIFIER_NODE == TREE_CODE(name)) {
         clt->name = IDENTIFIER_POINTER(name);
         // read_gcc_location(&clt->loc, DECL_SOURCE_LOCATION(type));
-    } else {
+    }
+    else {
         read_gcc_location(&clt->loc, DECL_SOURCE_LOCATION(name));
         name = DECL_NAME(name);
         if (name)
@@ -1759,7 +1765,7 @@ static void cb_finish (void *gcc_data, void *user_data)
         CL_WARN("some errors already detected, "
                 "additional passes will be skipped");
     else
-        // this should trigger the code listener peer (if any)
+        // this should trigger the code listener analyzer (if any)
         cl->acknowledge(cl);
 
     // FIXME: suboptimal interface of CL messaging
@@ -1831,11 +1837,11 @@ struct cl_plug_options {
     bool                    dump_types;
     bool                    use_dotgen;
     bool                    use_pp;
-    bool                    use_peer;
+    bool                    use_analyzer;
     bool                    use_typedot;
     const char              *gl_dot_file;
     const char              *pp_out_file;
-    const char              *peer_args;
+    const char              *analyzer_args;
     const char              *type_dot_file;
     const char              *pid_file;
 };
@@ -1845,8 +1851,8 @@ static int clplug_init(const struct plugin_name_args *info,
 {
     // initialize opt data
     memset (opt, 0, sizeof(*opt));
-    opt->use_peer         = true;
-    opt->peer_args        = "";
+    opt->use_analyzer       = true;
+    opt->analyzer_args      = "";
 
     // obtain arg list
     const int argc                      = info->argc;
@@ -1863,61 +1869,63 @@ static int clplug_init(const struct plugin_name_args *info,
             verbose = (value)
                 ? atoi(value)
                 : 1;
-
-        } else if (STREQ(key, "version")) {
+        }
+        else if (STREQ(key, "version")) {
             // do not use info->version yet
             printf("\n%s\n", cl_info.version);
             return EXIT_FAILURE;
-
-        } else if (STREQ(key, "help")) {
+        }
+        else if (STREQ(key, "help")) {
             // do not use info->help yet
             printf ("\n%s\n", cl_info.help);
             return EXIT_FAILURE;
-
-        } else if (STREQ(key, "args")) {
-            opt->peer_args = (value)
+        }
+        else if (STREQ(key, "args")) {
+            opt->analyzer_args = (value)
                 ? value
                 : "";
-
-        } else if (STREQ(key, "dry-run")) {
-            opt->use_peer       = false;
+        }
+        else if (STREQ(key, "dry-run")) {
+            opt->use_analyzer   = false;
             // TODO: warn about ignoring extra value?
-
-        } else if (STREQ(key, "dump-pp")) {
+        }
+        else if (STREQ(key, "dump-pp")) {
             opt->use_pp         = true;
             opt->pp_out_file    = value;
-
-        } else if (STREQ(key, "dump-types")) {
+        }
+        else if (STREQ(key, "dump-types")) {
             opt->dump_types     = true;
             // TODO: warn about ignoring extra value?
-
-        } else if (STREQ(key, "gen-dot")) {
+        }
+        else if (STREQ(key, "gen-dot")) {
             opt->use_dotgen     = true;
             opt->gl_dot_file    = value;
-
-        } else if (STREQ(key, "preserve-ec")) {
+        }
+        else if (STREQ(key, "preserve-ec")) {
             // FIXME: do not use gl variable, use the pointer user_data instead
             preserve_ec = true;
             // TODO: warn about ignoring extra value?
-
-        } else if (STREQ(key, "pid-file")) {
-            if (value) {
+        }
+        else if (STREQ(key, "pid-file")) {
+            if (value)
                 opt->pid_file = value;
-            } else {
+            else {
                 CL_ERROR("mandatory value omitted for pid-file");
                 return EXIT_FAILURE;
             }
 
-        } else if (STREQ(key, "type-dot")) {
+        }
+        else if (STREQ(key, "type-dot")) {
             if (value) {
                 opt->use_typedot    = true;
                 opt->type_dot_file  = value;
-            } else {
+            }
+            else {
                 CL_ERROR("mandatory value omitted for type-dot");
                 return EXIT_FAILURE;
             }
-
-        } else {
+        }
+        else {
             CL_ERROR("unhandled plug-in argument: %s", key);
             return EXIT_FAILURE;
         }
@@ -1954,7 +1962,7 @@ static bool cl_append_def_listener(struct cl_code_listener *chain,
                                    const char *listener, const char *args,
                                    const struct cl_plug_options *opt)
 {
-    const char *clf = (opt->use_peer)
+    const char *clf = (opt->use_analyzer)
         ? "unfold_switch,unify_labels_gl"
         : "unify_labels_fnc";
 
@@ -1997,12 +2005,12 @@ create_cl_chain(const struct cl_plug_options *opt)
             return NULL;
     }
 
-    if (opt->use_typedot
-            && !cl_append_def_listener(chain, "typedot", opt->type_dot_file, opt))
+    if (opt->use_typedot && !cl_append_def_listener(chain, "typedot",
+                opt->type_dot_file, opt))
         return NULL;
 
-    if (opt->use_peer
-            && !cl_append_def_listener(chain, "easy", opt->peer_args, opt))
+    if (opt->use_analyzer
+            && !cl_append_def_listener(chain, "easy", opt->analyzer_args, opt))
         return NULL;
 
     return chain;

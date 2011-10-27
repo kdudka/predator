@@ -6,11 +6,10 @@
     static void dummy_printf(void) { }
     static int dymmy_scanf(int *ptr)
     {
-        int a = 1, b = 2, x;
-        if (a < b)
+        if (___sl_get_nondet_int())
             return 0;
 
-        *ptr = x;
+        *ptr = ___sl_get_nondet_int();
         return 1;
     }
 #   define printf(...)      dummy_printf()

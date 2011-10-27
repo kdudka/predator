@@ -7,16 +7,16 @@
  
 /**
  * @mainpage
- * @author Kamil Dudka <kdudka@redhat.com>
+ * @note See the
+ * <A HREF="http://www.fit.vutbr.cz/research/groups/verifit/tools/predator/"><B>project page</B></A>
+ * for details about the <B>Predator</B> project, new releases, etc.
  * @version @include version.h
- * @note The @b up2date @b sources are available (among other ways) via
- * <A HREF="http://github.com/kdudka/predator"><B>github</B></A>.
  *
  * @remark
  *
  * - symbolic heap: symid.hh, SymHeapCore, SymHeap
  *
- * - garbage collector: collectJunk(), destroyRootAndCollectJunk()
+ * - garbage collector: collectJunk(), destroyRootAndCollectJunk(), LeakMonitor
  *
  * - generic join algorithm: joinSymHeaps(), joinDataReadOnly(), joinData()
  *

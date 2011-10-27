@@ -49,31 +49,32 @@ bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
 bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr);
 
 /// return 'next' pointer in the given segment (given by root)
-inline TObjId nextPtrFromSeg(const SymHeap &sh, TValId seg) {
+inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
     const BindingOff &off = sh.segBinding(seg);
     const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.next);
-    return const_cast<SymHeap &>(sh).ptrAt(addr);
+    return PtrHandle(const_cast<SymHeap &>(sh), addr);
 }
 
 /// return 'prev' pointer in the given segment (given by root)
-inline TObjId prevPtrFromSeg(const SymHeap &sh, TValId seg) {
+inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg) {
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
     const BindingOff &off = sh.segBinding(seg);
     const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.prev);
-    return const_cast<SymHeap &>(sh).ptrAt(addr);
+    return PtrHandle(const_cast<SymHeap &>(sh), addr);
 }
 
 /// return the value of 'next' in the given segment (given by root)
 inline TValId nextValFromSeg(SymHeap &sh, TValId seg) {
-    const TObjId ptrNext = nextPtrFromSeg(sh, seg);
-    const TValId valNext = sh.valueOf(ptrNext);
-    sh.objReleaseId(ptrNext);
-    return valNext;
+    if (OK_OBJ_OR_NULL == sh.valTargetKind(seg))
+        return VAL_NULL;
+
+    const ObjHandle ptrNext = nextPtrFromSeg(sh, seg);
+    return ptrNext.value();
 }
 
 /// return DLS peer object of the given DLS
@@ -113,9 +114,12 @@ inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext) {
     return nextRootObj(sh, at, offNext);
 }
 
-/// we DO require the root to be a segment
+/// we DO require the root to be an abstract object
 inline TValId segNextRootObj(SymHeap &sh, TValId root) {
     CL_BREAK_IF(sh.valOffset(root));
+
+    if (OK_OBJ_OR_NULL == sh.valTargetKind(root))
+        return VAL_NULL;
 
     const BindingOff off = sh.segBinding(root);
     const TOffset offNext = (OK_DLS == sh.valTargetKind(root))
@@ -147,53 +151,49 @@ void segSetProto(SymHeap &sh, TValId seg, bool isProto);
 
 TValId segClone(SymHeap &sh, const TValId seg);
 
-/// destroy the given list segment object (including DLS peer in case of DLS)
-void segDestroy(SymHeap &sh, TObjId seg);
-
-template <class TIgnoreList>
-void buildIgnoreList(
-        TIgnoreList             &ignoreList,
+inline void buildIgnoreList(
+        ObjLookup               &ignoreList,
         const SymHeap           &sh,
         const TValId            at)
 {
     SymHeap &writable = const_cast<SymHeap &>(sh);
     TOffset off;
-    TObjId tmp;
+    ObjHandle tmp;
 
     const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
+        case OK_OBJ_OR_NULL:
             return;
 
         case OK_DLS:
             // preserve 'peer' field
             off = sh.segBinding(at).prev;
-            tmp = writable.ptrAt(writable.valByOffset(at, off));
+            tmp = PtrHandle(writable, writable.valByOffset(at, off));
             ignoreList.insert(tmp);
             // fall through!
 
         case OK_SLS:
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
             // preserve 'next' field
             off = sh.segBinding(at).next;
-            tmp = writable.ptrAt(writable.valByOffset(at, off));
+            tmp = PtrHandle(writable, writable.valByOffset(at, off));
             ignoreList.insert(tmp);
     }
 }
 
-template <class TIgnoreList>
-void buildIgnoreList(
-        TIgnoreList             &ignoreList,
+inline void buildIgnoreList(
+        ObjLookup               &ignoreList,
         SymHeap                 &sh,
         const TValId            at,
         const BindingOff        &off)
 {
-    const TObjId next = sh.ptrAt(sh.valByOffset(at, off.next));
-    if (OBJ_INVALID != next)
+    const PtrHandle next(sh, sh.valByOffset(at, off.next));
+    if (next.isValid())
         ignoreList.insert(next);
 
-    const TObjId prev = sh.ptrAt(sh.valByOffset(at, off.prev));
-    if (OBJ_INVALID != prev)
+    const PtrHandle prev(sh, sh.valByOffset(at, off.prev));
+    if (prev.isValid())
         ignoreList.insert(prev);
 }
 

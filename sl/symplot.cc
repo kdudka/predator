@@ -24,6 +24,7 @@
 #include <cl/storage.hh>
 #include <cl/clutil.hh>
 
+#include "plotenum.hh"
 #include "symheap.hh"
 #include "symneq.hh"
 #include "symseg.hh"
@@ -38,67 +39,11 @@
 
 #include <boost/foreach.hpp>
 
-// singleton
-class PlotEnumerator {
-    public:
-        static PlotEnumerator* instance() {
-            return (inst_)
-                ? (inst_)
-                : (inst_ = new PlotEnumerator);
-        }
-
-        // generate kind of more unique name
-        std::string decorate(std::string name);
-
-    private:
-        static PlotEnumerator *inst_;
-        PlotEnumerator() { }
-        // FIXME: should we care about the destruction?
-
-    private:
-        typedef std::map<std::string, int> TMap;
-        TMap map_;
-};
-
-// /////////////////////////////////////////////////////////////////////////////
-// implementation of PlotEnumerator
-PlotEnumerator *PlotEnumerator::inst_ = 0;
-
-std::string PlotEnumerator::decorate(std::string name) {
-    // obtain a unique ID for the given name
-    const int id = map_[name] ++;
-#if SYMPLOT_STOP_AFTER_N_STATES
-    if (SYMPLOT_STOP_AFTER_N_STATES < id) {
-        CL_ERROR("SYMPLOT_STOP_AFTER_N_STATES (" << SYMPLOT_STOP_AFTER_N_STATES
-                << ") exceeded, now stopping per user's request...");
-        CL_TRAP;
-    }
-#endif
-
-    // convert the ID to string
-    std::ostringstream str;
-    str << std::fixed
-        << std::setfill('0')
-        << std::setw(/* width of the ID suffix */ 4)
-        << id;
-
-    // merge name with ID
-    name += "-";
-    name += str.str();
-
-#ifdef SYMPLOT_STOP_CONDITION
-    if (SYMPLOT_STOP_CONDITION(name))
-        CL_TRAP;
-#endif
-
-    return name;
-}
-
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of plotHeap()
 struct PlotData {
     typedef std::map<TValId, bool /* isRoot */>             TValues;
-    typedef std::map<TValId, TObjList>                      TLiveObjs;
+    typedef std::map<TValId, ObjList>                       TLiveObjs;
     typedef std::pair<int /* ID */, TValId>                 TDangVal;
     typedef std::vector<TDangVal>                           TDangValues;
 
@@ -148,10 +93,10 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
             continue;
 
         // traverse the root
-        TObjList liveObjs;
+        ObjList liveObjs;
         sh.gatherLiveObjects(liveObjs, root);
-        BOOST_FOREACH(const TObjId obj, liveObjs) {
-            const TValId valInside = sh.valueOf(obj);
+        BOOST_FOREACH(const ObjHandle &obj, liveObjs) {
+            const TValId valInside = obj.value();
             if (0 < valInside)
                 // schedule the value inside for processing
                 todo.schedule(valInside);
@@ -244,21 +189,23 @@ void describeVar(PlotData &plot, const TValId rootAt) {
     CVar cv = sh.cVarByRoot(rootAt);
 
     // write identity of the var
-    plot.out << "CL" << varToString(stor, cv.uid);
+    plot.out << "CL" << varToString(stor, cv.uid) << " [root = #" << rootAt;
     if (1 < cv.inst)
-        plot.out << " [inst = " << cv.inst << "]";
+        plot.out << ", inst = " << cv.inst;
+    plot.out << "]";
 }
 
-void describeFieldPlacement(PlotData &plot, const TObjId obj, TObjType clt) {
+void describeFieldPlacement(PlotData &plot, const ObjHandle &obj, TObjType clt)
+{
     SymHeap &sh = plot.sh;
 
-    const TObjType cltField = sh.objType(obj);
+    const TObjType cltField = obj.objType();
     if (!cltField || *cltField == *clt)
         // nothing interesting here
         return;
 
     // read field offset
-    const TValId at = sh.placedAt(obj);
+    const TValId at = obj.placedAt();
     const TOffset off = sh.valOffset(at);
 
     TFieldIdxChain ic;
@@ -282,22 +229,25 @@ void describeFieldPlacement(PlotData &plot, const TObjId obj, TObjType clt) {
     }
 }
 
-void describeObject(PlotData &plot, const TObjId obj, const bool lonely) {
+void describeObject(PlotData &plot, const ObjHandle &obj, const bool lonely) {
     SymHeap &sh = plot.sh;
 
     // check root
-    const TValId at = sh.placedAt(obj);
+    const TValId at = obj.placedAt();
     const TValId root = sh.valRoot(at);
-
     const EValueTarget code = sh.valTarget(at);
-    if (lonely && isProgramVar(code))
+
+    const char *tag = "";
+    if (lonely && isProgramVar(code)) {
         describeVar(plot, root);
+        tag = "obj";
+    }
 
     const TObjType cltRoot = sh.valLastKnownTypeOfTarget(root);
     if (cltRoot)
         describeFieldPlacement(plot, obj, cltRoot);
 
-    plot.out << " #" << obj;
+    plot.out << " " << tag << "#" << obj.objId();
 }
 
 void plotRootValue(PlotData &plot, const TValId val, const char *color) {
@@ -330,24 +280,23 @@ enum EObjectClass {
 };
 
 struct AtomicObject {
-    TObjId          obj;
+    ObjHandle       obj;
     EObjectClass    code;
 
     AtomicObject():
-        obj(OBJ_INVALID),
         code(OC_VOID)
     {
     }
 
-    AtomicObject(TObjId obj_, EObjectClass code_):
+    AtomicObject(const ObjHandle obj_, EObjectClass code_):
         obj(obj_),
         code(code_)
     {
     }
 
-    AtomicObject(TObjId obj_, SymHeap &sh):
+    AtomicObject(const ObjHandle &obj_):
         obj(obj_),
-        code(isDataPtr(sh.objType(obj))
+        code(isDataPtr(obj.objType())
             ? OC_PTR
             : OC_DATA)
     {
@@ -358,13 +307,13 @@ void plotAtomicObj(PlotData &plot, const AtomicObject ao, const bool lonely)
 {
     SymHeap &sh = plot.sh;
 
-    const TObjId obj = ao.obj;
-    CL_BREAK_IF(obj <= 0);
+    const ObjHandle &obj = ao.obj;
+    CL_BREAK_IF(!obj.isValid());
 
     // store address mapping for the live object (FIXME: this may trigger
     // unnecessary assignment of a fresh address, which is inappropriate
     // as long as we take a _const_ reference to SymHeap)
-    const TValId at = sh.placedAt(obj);
+    const TValId at = obj.placedAt();
     plot.liveObjs[at].push_back(obj);
 
     const char *color = "black";
@@ -406,7 +355,7 @@ void plotAtomicObj(PlotData &plot, const AtomicObject ao, const bool lonely)
         }
     }
 
-    plot.out << "\t" << SL_QUOTE(obj)
+    plot.out << "\t" << SL_QUOTE(obj.objId())
         << " [shape=box, color=" << color
         << ", fontcolor=" << color << props
         << ", label=\"";
@@ -446,22 +395,23 @@ void plotUniformBlocks(PlotData &plot, const TValId root) {
     }
 }
 
-void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
+void plotInnerObjects(PlotData &plot, const TValId at, const ObjList &liveObjs)
 {
     SymHeap &sh = plot.sh;
 
-    TObjId next = OBJ_INVALID;
-    TObjId prev = OBJ_INVALID;
+    ObjHandle next;
+    ObjHandle prev;
     const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
+        case OK_OBJ_OR_NULL:
             break;
 
         case OK_DLS:
             prev = prevPtrFromSeg(sh, at);
             // fall through!
 
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
         case OK_SLS:
             next = nextPtrFromSeg(sh, at);
     }
@@ -470,18 +420,18 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
     typedef std::vector<AtomicObject>           TAtomList;
     typedef std::map<TOffset, TAtomList>        TAtomByOff;
     TAtomByOff objByOff;
-    BOOST_FOREACH(const TObjId obj, liveObjs) {
+    BOOST_FOREACH(const ObjHandle &obj, liveObjs) {
         EObjectClass code;
         if (obj == next)
             code = OC_NEXT;
         else if (obj == prev)
             code = OC_PREV;
-        else if (isDataPtr(sh.objType(obj)))
+        else if (isDataPtr(obj.objType()))
             code = OC_PTR;
         else
             code = OC_DATA;
 
-        const TOffset off = sh.valOffset(sh.placedAt(obj));
+        const TOffset off = sh.valOffset(obj.placedAt());
         AtomicObject ao(obj, code);
         objByOff[off].push_back(ao);
     }
@@ -494,7 +444,7 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TObjList &liveObjs)
             plotAtomicObj(plot, ao, /* lonely */ false);
 
             // connect the inner object with the root by an offset edge
-            plotOffset(plot, off, at, ao.obj);
+            plotOffset(plot, off, at, ao.obj.objId());
         }
     }
 }
@@ -509,7 +459,8 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
         case OK_CONCRETE:
             return label;
 
-        case OK_MAY_EXIST:
+        case OK_OBJ_OR_NULL:
+        case OK_SEE_THROUGH:
             label += "0..1";
             return label;
 
@@ -531,7 +482,7 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
     return label;
 }
 
-void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
+void plotCompositeObj(PlotData &plot, const TValId at, const ObjList &liveObjs)
 {
     SymHeap &sh = plot.sh;
 
@@ -559,7 +510,8 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
         case OK_CONCRETE:
             break;
 
-        case OK_MAY_EXIST:
+        case OK_OBJ_OR_NULL:
+        case OK_SEE_THROUGH:
             color = "green";
             pw = "3.0";
             break;
@@ -599,7 +551,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TObjList &liveObjs)
     plot.out << "}\n";
 }
 
-void plotDlSeg(PlotData &plot, const TValId seg, const TObjList &liveObjs) {
+void plotDlSeg(PlotData &plot, const TValId seg, const ObjList &liveObjs) {
     SymHeap &sh = plot.sh;
 
     const std::string label = labelOfCompObj(sh, seg);
@@ -616,7 +568,7 @@ void plotDlSeg(PlotData &plot, const TValId seg, const TObjList &liveObjs) {
     // plot the corresponding peer
     const TValId peer = dlSegPeer(sh, seg);
     if (OK_DLS == sh.valTargetKind(peer)) {
-        TObjList liveObjsAtPeer;
+        ObjList liveObjsAtPeer;
         sh.gatherLiveObjects(liveObjsAtPeer, peer);
         plotCompositeObj(plot, peer, liveObjsAtPeer);
     }
@@ -640,7 +592,7 @@ void plotRootObjects(PlotData &plot) {
             continue;
 
         // gather live objects
-        TObjList liveObjs;
+        ObjList liveObjs;
         sh.gatherLiveObjects(liveObjs, root);
 
         const EObjKind kind = sh.valTargetKind(root);
@@ -652,8 +604,8 @@ void plotRootObjects(PlotData &plot) {
 
             case OK_CONCRETE:
                 if (1 == liveObjs.size()) {
-                    const TObjId obj = liveObjs.front();
-                    if (sh.valOffset(sh.placedAt(obj)))
+                    const ObjHandle &obj = liveObjs.front();
+                    if (sh.valOffset(obj.placedAt()))
                         // offset detected
                         break;
 
@@ -661,20 +613,21 @@ void plotRootObjects(PlotData &plot) {
                         // root pointed
                         break;
 
-                    const TObjType clt = sh.objType(obj);
+                    const TObjType clt = obj.objType();
                     CL_BREAK_IF(!clt);
                     if (clt->size != sh.valSizeOfTarget(root))
                         // size mismatch detected
                         break;
 
-                    const AtomicObject ao(obj, sh);
+                    const AtomicObject ao(obj);
                     plotAtomicObj(plot, ao, /* lonely */ true);
                     continue;
                 }
                 // fall through!
 
             case OK_SLS:
-            case OK_MAY_EXIST:
+            case OK_SEE_THROUGH:
+            case OK_OBJ_OR_NULL:
                 break;
         }
 
@@ -691,7 +644,6 @@ const char* labelByOrigin(const EValueOrigin code) {
         GEN_labelByCode(VO_UNKNOWN);
         GEN_labelByCode(VO_REINTERPRET);
         GEN_labelByCode(VO_DEREF_FAILED);
-        GEN_labelByCode(VO_STATIC);
         GEN_labelByCode(VO_STACK);
         GEN_labelByCode(VO_HEAP);
     }
@@ -718,26 +670,34 @@ const char* labelByTarget(const EValueTarget code) {
     return "";
 }
 
-void describeInt(PlotData &plot, const long num) {
-    plot.out << ", fontcolor=red, label=\"[int] " << num << "\"";
+void describeInt(PlotData &plot, const long num, const TValId val) {
+    plot.out << ", fontcolor=red, label=\"[int] "
+        << num << " (#"
+        << val << ")\"";
 }
 
-void describeReal(PlotData &plot, const float fpn) {
-    plot.out << ", fontcolor=red, label=\"[real] " << fpn << "\"";
+void describeReal(PlotData &plot, const float fpn, const TValId val) {
+    plot.out << ", fontcolor=red, label=\"[real] "
+        << fpn << " (#"
+        << val << ")\"";
 }
 
-void describeFnc(PlotData &plot, const int uid) {
+void describeFnc(PlotData &plot, const int uid, const TValId val) {
     TStorRef stor = plot.sh.stor();
     const CodeStorage::Fnc *fnc = stor.fncs[uid];
     CL_BREAK_IF(!fnc);
 
     const std::string name = nameOf(*fnc);
-    plot.out << ", fontcolor=green, label=\"" << name << "()\"";
+    plot.out << ", fontcolor=green, label=\""
+        << name << "() (#"
+        << val << ")\"";
 }
 
-void describeStr(PlotData &plot, const char *str) {
+void describeStr(PlotData &plot, const char *str, const TValId val) {
     // we need to escape twice, once for the C compiler and once for graphviz
-    plot.out << ", fontcolor=blue, label=\"\\\"" << str << "\\\"\"";
+    plot.out << ", fontcolor=blue, label=\"\\\""
+        << str << "\\\" (#"
+        << val << ")\"";
 }
 
 void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
@@ -755,19 +715,19 @@ void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
             break;
 
         case CV_INT:
-            describeInt(plot, data.num);
+            describeInt(plot, data.num, val);
             break;
 
         case CV_REAL:
-            describeReal(plot, data.fpn);
+            describeReal(plot, data.fpn, val);
             break;
 
         case CV_FNC:
-            describeFnc(plot, data.uid);
+            describeFnc(plot, data.uid, val);
             break;
 
         case CV_STRING:
-            describeStr(plot, data.str);
+            describeStr(plot, data.str, val);
             break;
     }
 
@@ -862,8 +822,8 @@ void plotNonRootValues(PlotData &plot) {
         PlotData::TLiveObjs::const_iterator it = plot.liveObjs.find(val);
         if ((plot.liveObjs.end() != it) && (1 == it->second.size())) {
             // exactly one target
-            const TObjId target = it->second.front();
-            plotPointsTo(plot, val, target);
+            const ObjHandle &target = it->second.front();
+            plotPointsTo(plot, val, target.objId());
             continue;
         }
 
@@ -885,8 +845,9 @@ void plotNonRootValues(PlotData &plot) {
     }
 }
 
-const char* valNullLabel(const SymHeap &sh, const TObjId obj) {
-    const TObjType clt = sh.objType(obj);
+const char* valNullLabel(const SymHeapCore &sh, const TObjId obj) {
+    const ObjHandle hdl(const_cast<SymHeapCore &>(sh), obj);
+    const TObjType clt = hdl.objType();
     if (!clt)
         return "[type-free] 0";
 
@@ -946,22 +907,22 @@ void plotAuxValue(PlotData &plot, const int node, const TValId val, bool isObj)
         << " [color=blue];\n";
 }
 
-void plotHasValue(PlotData &plot, const TObjId obj) {
+void plotHasValue(PlotData &plot, const ObjHandle &obj) {
     SymHeap &sh = plot.sh;
 
-    const TValId val = sh.valueOf(obj);
+    const TValId val = obj.value();
     if (val <= 0) {
-        plotAuxValue(plot, obj, val, /* isObj */ true);
+        plotAuxValue(plot, obj.objId(), val, /* isObj */ true);
         return;
     }
 
     const EValueTarget code = sh.valTarget(val);
     if (VT_CUSTOM == code) {
-        plotCustomValue(plot, obj, val);
+        plotCustomValue(plot, obj.objId(), val);
         return;
     }
 
-    plot.out << "\t" << SL_QUOTE(obj)
+    plot.out << "\t" << SL_QUOTE(obj.objId())
         << " -> " << SL_QUOTE(val)
         << " [color=blue, fontcolor=blue];\n";
 }
@@ -1007,7 +968,7 @@ void plotEverything(PlotData &plot) {
 
     // plot "hasValue" edges
     BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
-        BOOST_FOREACH(const TObjId obj, /* TObjList */ item.second)
+        BOOST_FOREACH(const ObjHandle &obj, /* ObjList */ item.second)
             plotHasValue(plot, obj);
 
     // plot "hasValue" edges for uniform block prototypes

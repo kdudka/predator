@@ -13,10 +13,12 @@ usage(){
     exit 1
 }
 
-PRUNE_ALWAYS="dev-util invader-extras make-tgz.sh ocaml seplog .git \
-    sl/linux-drivers cl/cl-readme.patch sl/README-ubuntu.patch"
+PRUNE_ALWAYS=".git invader-extras make-tgz.sh ocaml seplog cl/cl-readme.patch \
+    cl/cl-switch-host.patch sl/README-fedora.patch sl/README-ubuntu.patch     \
+    sl/linux-drivers sl/rank.sh"
 
 chlog_watch=
+drop_fwnull=no
 drop_fa=no
 drop_sl=no
 readme_cl=no
@@ -33,11 +35,13 @@ case "$PROJECT" in
 
     forester)
         chlog_watch="fa fa_analysis"
+        drop_fwnull=yes
         drop_sl=yes
         ;;
 
     predator)
         chlog_watch="sl"
+        drop_fwnull=yes
         drop_fa=yes
         readme_sl=yes
         ;;
@@ -91,27 +95,34 @@ make ChangeLog "CHLOG_WATCH=$chlog_watch" \
 # adapt README
 if test xyes = "x$readme_cl"; then
     patch README < "cl/cl-readme.patch"
+    patch "switch-host-gcc.sh" < "cl/cl-switch-host.patch"
 fi
 
 # adapt README-ubuntu
 if test xyes = "x$readme_sl"; then
+    patch README-fedora < "sl/README-fedora.patch"
     patch README-ubuntu < "sl/README-ubuntu.patch"
 fi
 
 # adapt Makefile
 case "$PROJECT" in
     code-listener)
-        sed -i 's/cl fwnull.*/cl fwnull/' Makefile \
+        sed -i Makefile                         \
+            -e 's|cl fwnull.*|cl fwnull|'       \
+            -e 's|cl/api sl/api|cl/api|'        \
             || die "failed to adapt Makefile"
         ;;
 
     forester)
-        sed -i 's/cl fwnull sl/cl fwnull/' Makefile \
+        sed -i Makefile                         \
+            -e 's|cl fwnull sl fa|cl fa|'       \
+            -e 's|cl/api sl/api|cl/api|'        \
             || die "failed to adapt Makefile"
         ;;
 
     predator)
-        sed -i 's/cl fwnull sl fa/cl fwnull sl/' Makefile \
+        sed -i Makefile                         \
+            -e 's|cl fwnull sl fa|cl sl|'       \
             || die "failed to adapt Makefile"
         ;;
 
@@ -122,8 +133,12 @@ esac
 
 # remove all directories and files we do not want to distribute
 rm -rf $PRUNE_ALWAYS
+test xyes = "x$drop_fwnull" && rm -rf fwnull
 test xyes = "x$drop_fa" && rm -rf fa
-test xyes = "x$drop_sl" && rm -rf sl
+test xyes = "x$drop_sl" && rm -rf sl    \
+    "README-sv-comp-TACAS-2012"         \
+    "chk-error-label-reachability.sh"   \
+    "register-paths.sh"
 
 # make a tarball
 cd ..

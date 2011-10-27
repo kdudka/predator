@@ -1,24 +1,16 @@
 diff --git a/README-ubuntu b/README-ubuntu
-index ce1df77..fdc97a5 100644
+index 3f0c8f9..b091a35 100644
 --- a/README-ubuntu
 +++ b/README-ubuntu
-@@ -2,19 +2,12 @@ Building Predator on Ubuntu
- ===========================
- Note I do not use Ubuntu myself, so this howto may become outdated as time
- passes by.  Any suggestions from real Ubuntu users on how to improve this howto
--are welcome.  Please replace XXXXXX by the latest release of Predator (for
--example predator-2011-07-29-d38c348).
-+are welcome.
- 
-     sudo apt-get install cmake curl         \
+@@ -15,12 +15,6 @@
          libgmp3-dev libmpc-dev libmpfr-dev  \
          gcc-multilib
  
--    curl http://www.fit.vutbr.cz/~idudka/download/XXXXXX.tar.gz \
+-    curl http://www.fit.vutbr.cz/~idudka/download/predator-2011-10-11-8a7846b.tar.gz \
 -        | gzip -cd \
 -        | tar x
 -
--    cd XXXXXX
+-    cd predator-2011-10-11-8a7846b
 -
      make -j3 build_boost build_gcc
  

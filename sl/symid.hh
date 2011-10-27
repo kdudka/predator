@@ -107,7 +107,6 @@ enum TValId {
     VAL_MAX_ID        = /* XXX */ UINT_MAX
 };
 
-typedef std::pair<TObjId, TObjId>           TObjPair;
 typedef std::pair<TValId, TValId>           TValPair;
 
 #endif /* H_GUARD_SYM_ID_H */

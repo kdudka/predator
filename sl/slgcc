@@ -14,21 +14,14 @@ if test -z "$1" || test ! -e "$1"; then
     exit 1
 fi
 
-self="`readlink -f "$0"`"
-topdir="`dirname "$self"`/.."
-
 # basic setup
-SL_BUILD="$topdir/sl_build"
-SL_PLUG="$SL_BUILD/libsl.so"
-GCC="$topdir/gcc-install/bin/gcc"
+topdir="`dirname "$(readlink -f "$SELF")"`/.."
+export SL_PLUG="$topdir/sl_build/libsl.so"
+export GCC_HOST="$topdir/gcc-install/bin/gcc"
 
 # initial checks
-test -x "$GCC" || exit 1
-
-# attempt to make
-test -x "$SL_PLUG" \
-    || make -s $MAKEOPTS -C "$topdir/sl" \
-    || exit 1
+"$GCC_HOST" --version >/dev/null || die "unable to run gcc: $GCC_HOST --version"
+test -r "$SL_PLUG"  || die "Predator GCC plug-in not found: ${SL_PLUG}"
 
 # use chromium as default SVG_VIEWER
 test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
@@ -62,7 +55,7 @@ run_gcc() {
     test -w "$tmp" || die "mktemp failed"
     trap "rm -f '$tmp'" RETURN
 
-    if "$GCC" -o /dev/null -O0 -m32 -DPREDATOR                      \
+    if "$GCC_HOST" -o /dev/null -O0 -m32 -DPREDATOR                 \
         -I../cl -I../cl/gcc -I../include -I../include/gcc -c "$@"   \
         > "$tmp" 2>&1
     then
@@ -75,12 +68,12 @@ run_gcc() {
         return 1
     fi
 
-    "$GCC" -o /dev/null -O0 -m32 -DPREDATOR                         \
+    "$GCC_HOST" -o /dev/null -O0 -m32 -DPREDATOR                    \
         -I../cl -I../cl/gcc -I../include -I../include/gcc           \
         -fplugin="$SL_PLUG" -fplugin-arg-libsl-pid-file="$pidfile"  \
         -fplugin-arg-libsl-args=error_label:ERROR $SL_OPTS -c "$@"  \
         2>&1 | stdbuf --output=L grep -E                            \
-        ' \[-fplugin-libsl\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'
+        ' \[-fplugin=libsl\.so\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'
 }
 
 forward_signal() {
@@ -91,7 +84,7 @@ forward_signal() {
 }
 
 # colorize the output
-run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin-libsl\]$||'            \
+run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin=libsl\.so\]$||'        \
         -e "s|(^.*) \[internal location\]\$|$S\1$N|"                           \
         -e "s|(: error:) (.*)\$|\1 $R\2$N|"                                    \
         -e "s|(: warning:) (.*)\$|\1 $Y\2$N|"                                  \
@@ -115,7 +108,7 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin-libsl\]$||'            \
         -e "s/(: debug:) \\(x\\) (.*)\$/\1 $Y(x)$N \2/"                        \
         -e "s/(: debug:) (spliceOutListSegment)/\1 $B\2$N/"                    \
         -e "s/(: debug:) (<<<|>>>)/\1 $B\2$N/"                                 \
-        -e "s/(: debug:) ___ (entering|we are)/\1 $G___$N \2/"                 \
+        -e "s/(: debug: ___) (entering|we are)/\1 $G___$N \2/"                 \
         &
 
 # redirect terminating signals to our plug-in
@@ -129,5 +122,5 @@ if test x1 = "x$SL_PLOT"; then
     make $MAKEOPTS -s -f "$topdir/sl/data/Makefile" TIMEOUT="timeout 2" \
         || exit $?
     printf "done\n"
-    "$SVG_VIEWER" *.svg
+    "$SVG_VIEWER" *.svg &
 fi

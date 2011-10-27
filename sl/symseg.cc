@@ -37,32 +37,16 @@ void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
             // fall through
 
         case OK_SLS:
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
+        case OK_OBJ_OR_NULL:
             sh.valTargetSetProto(seg, isProto);
-            break;
+            return;
 
-        default:
-            CL_BREAK_IF("ivalid call of segSetProto()");
-    }
-}
-
-void segDestroy(SymHeap &sh, TObjId seg) {
-    const TValId segAt = sh.valRoot(sh.placedAt(seg));
-
-    const EObjKind kind = sh.valTargetKind(segAt);
-    switch (kind) {
         case OK_CONCRETE:
-            // invalid call of segDestroy()
-            CL_TRAP;
-
-        case OK_DLS:
-            sh.valDestroyTarget(dlSegPeer(sh, segAt));
-            // fall through!
-
-        case OK_MAY_EXIST:
-        case OK_SLS:
-            sh.valDestroyTarget(segAt);
+            break;
     }
+
+    CL_BREAK_IF("ivalid call of segSetProto()");
 }
 
 bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
@@ -127,16 +111,12 @@ TValId segClone(SymHeap &sh, const TValId seg) {
         const TOffset offpPeer = sh.segBinding(dupPeer).prev;
 
         // resolve selectors -> sub-objects
-        const TObjId ppSeg  = sh.ptrAt(sh.valByOffset(dup, offpSeg));
-        const TObjId ppPeer = sh.ptrAt(sh.valByOffset(dupPeer, offpPeer));
+        const PtrHandle ppSeg (sh, sh.valByOffset(dup, offpSeg));
+        const PtrHandle ppPeer(sh, sh.valByOffset(dupPeer, offpPeer));
 
         // now cross the 'peer' pointers
-        sh.objSetValue(ppSeg, segHeadAt(sh, dupPeer));
-        sh.objSetValue(ppPeer, segHeadAt(sh, dup));
-
-        // release object IDs
-        sh.objReleaseId(ppSeg);
-        sh.objReleaseId(ppPeer);
+        ppSeg .setValue(segHeadAt(sh, dupPeer));
+        ppPeer.setValue(segHeadAt(sh, dup));
     }
 
     return dup;

@@ -67,6 +67,12 @@ SLS abstraction
 
     test-0176.c - a possibly infinite SLL where nodes are just void pointers
 
+    test-0193.c - a trivial example on use of joinData(), once used as a demo
+
+    test-0194.c - a trivial example on use of joinData(), once used as a demo
+
+    test-0195.c - a simplification of test-0193 that revealed a bug in symjoin
+
 
 DLS abstraction
 ===============
@@ -198,6 +204,10 @@ Higher level SLS/DLS abstraction, etc.
     test-0183.c - test-0061 extended by explicit checks of certain shape props
 
     test-0184.c - test-0183 with an injected programming mistake
+
+    test-0191.c - an easy test for joinSymHeaps(), once used as a demo
+
+    test-0192.c - modified test-0191, works with SE_ALLOW_THREE_WAY_JOIN == 3
 
 
 Linux lists

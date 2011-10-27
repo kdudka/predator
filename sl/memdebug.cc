@@ -53,7 +53,7 @@ bool rawMemUsage(ssize_t *pDst) {
 
 static ssize_t memDrift;
 
-bool initMemDrif() {
+bool initMemDrift() {
     if (rawMemUsage(&::memDrift))
         return true;
 
@@ -128,7 +128,7 @@ bool rawMemUsage(ssize_t *) {
     return false;
 }
 
-bool initMemDrif() {
+bool initMemDrift() {
     return false;
 }
 

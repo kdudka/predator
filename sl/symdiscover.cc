@@ -41,6 +41,12 @@ bool matchSegBinding(
         const BindingOff            &offDiscover)
 {
     const EObjKind kind = sh.valTargetKind(seg);
+
+    // TODO
+#if 0
+    CL_BREAK_IF(OK_OBJ_OR_NULL == kind);
+#endif
+
     if (OK_CONCRETE == kind)
         // nothing to match actually
         return true;
@@ -53,7 +59,7 @@ bool matchSegBinding(
     if (!isDlsBinding(offDiscover)) {
         // OK_SLS
         switch (kind) {
-            case OK_MAY_EXIST:
+            case OK_SEE_THROUGH:
             case OK_SLS:
                 return (off.next == offDiscover.next);
 
@@ -64,7 +70,7 @@ bool matchSegBinding(
 
     // OK_DLS
     switch (kind) {
-        case OK_MAY_EXIST:
+        case OK_SEE_THROUGH:
             return (off.next == offDiscover.next);
 
         case OK_DLS:
@@ -103,7 +109,7 @@ bool validatePointingObjects(
 
     // collect all objects pointing at/inside the object
     // NOTE: we really intend to pass toInsideOnly == false at this point!
-    TObjList refs;
+    ObjList refs;
     sh.pointedBy(refs, root);
 
     // consider also up-links from nested prototypes
@@ -127,15 +133,15 @@ bool validatePointingObjects(
     if (isDls)
         whiteList.insert(sh.valByOffset(next, off.prev));
 
-    BOOST_FOREACH(const TObjId obj, refs) {
-        const TValId at = sh.placedAt(obj);
+    BOOST_FOREACH(const ObjHandle &obj, refs) {
+        const TValId at = obj.placedAt();
         if (hasKey(blackList, at))
             return false;
 
         if (hasKey(whiteList, at))
             continue;
 
-        if (toInsideOnly && (sh.valueOf(obj) == headAddr))
+        if (toInsideOnly && (obj.value() == headAddr))
             continue;
 
         if (hasKey(allowedReferers, sh.valRoot(at)))
@@ -447,8 +453,8 @@ class PtrFinder {
             return offFound_;
         }
 
-    bool operator()(SymHeap &sh, TObjId sub) {
-        const TValId val = sh.valueOf(sub);
+    bool operator()(const ObjHandle &sub) {
+        const TValId val = sub.value();
         if (val <= 0)
             return /* continue */ true;
 
@@ -456,7 +462,8 @@ class PtrFinder {
             return /* continue */ true;
 
         // target found!
-        offFound_ = sh.valOffset(sh.placedAt(sub));
+        SymHeapCore *sh = sub.sh();
+        offFound_ = sh->valOffset(sub.placedAt());
         return /* break */ false;
     }
 };
@@ -497,9 +504,10 @@ class ProbeEntryVisitor {
         {
         }
 
-        bool operator()(SymHeap &sh, TObjId sub) const
+        bool operator()(const ObjHandle &sub) const
         {
-            const TValId next = sh.valueOf(sub);
+            SymHeap &sh = *static_cast<SymHeap *>(sub.sh());
+            const TValId next = sub.value();
             if (!canWriteDataPtrAt(sh, next))
                 return /* continue */ true;
 
@@ -508,7 +516,7 @@ class ProbeEntryVisitor {
             off.head = sh.valOffset(next);
 
             // entry candidate found, check the back-link in case of DLL
-            off.next = sh.valOffset(sh.placedAt(sub));
+            off.next = sh.valOffset(sub.placedAt());
             off.prev = off.next;
 #if !SE_DISABLE_DLS
             digBackLink(&off, sh, root_, next);

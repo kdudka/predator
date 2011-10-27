@@ -2,25 +2,32 @@ Building Predator on Ubuntu
 ===========================
 Note I do not use Ubuntu myself, so this howto may become outdated as time
 passes by.  Any suggestions from real Ubuntu users on how to improve this howto
-are welcome.  Please replace XXXXXX by the latest release of Predator (for
-example predator-2011-07-29-d38c348).
+are welcome.
 
-    sudo apt-get install cmake curl         \
+Please start with this, ONLY if you are on Ubuntu 10.04:
+
+    sudo apt-get install timeout
+
+
+This part is common for all versions of Ubuntu we have tried:
+
+    sudo apt-get install cmake curl g++     \
         libgmp3-dev libmpc-dev libmpfr-dev  \
         gcc-multilib
 
-    curl http://www.fit.vutbr.cz/~idudka/download/XXXXXX.tar.gz \
+    curl http://www.fit.vutbr.cz/~idudka/download/predator-2011-10-11-8a7846b.tar.gz \
         | gzip -cd \
         | tar x
 
-    cd XXXXXX
+    cd predator-2011-10-11-8a7846b
 
     make -j3 build_boost build_gcc
 
     make -j3
 
-    make check
+    make -i check
 
 
+Note you need approximately 2 GB of free disk space to unpack and build GCC.
 The steps above were successfully tested on Ubuntu 11.04 Desktop (i386 and
 amd64) and Ubuntu 10.04.3 LTS (Lucid Lynx).

@@ -134,9 +134,15 @@
 #define SE_DISABLE_SYMCUT                   0
 
 /**
- * if 1, do not use the @b symjoin module for symbolic state management
+ * if 1, do not use the @b symjoin module for symbolic state management (this
+ * implies SE_ALLOW_CST_INT_PLUS_MINUS == 0 unless you intend to loop forever)
  */
 #define SE_DISABLE_SYMJOIN_IN_SYMSTATE      0
+
+/**
+ * if 1, plot a trace graph per each print of backtrace [not yet implemented]
+ */
+#define SE_DUMP_TRACE_GRAPHS                0
 
 /**
  * - 0 ... kill local variables only on stack frame destruction
@@ -146,7 +152,7 @@
 
 /**
  * - 0 ... call cache completely disabled (saves a lot of memory)
- * - 1 ... call cache enabled, use graph isomorphism for lookup
+ * - 1 ... call cache enabled, use graph isomorphism for lookup (hungry on mem)
  * - 2 ... call cache enabled, use join operator for lookup [experimental]
  */
 #define SE_ENABLE_CALL_CACHE                1
@@ -205,7 +211,8 @@
 
 /**
  * if 1, track uninitialized values, which may result into significant state
- * explosion in some cases
+ * explosion in some cases (especially when used together with
+ * SE_TRACK_NON_POINTER_VALUES)
  */
 #define SE_TRACK_UNINITIALIZED              0
 
@@ -213,6 +220,11 @@
  * if 1, do not make deep copy on copy of SymHeap [experimental]
  */
 #define SH_COPY_ON_WRITE                    1
+
+/**
+ * if 1, do not destroy objects immediately as they become unused
+ */
+#define SH_DELAYED_OBJECTS_DESTRUCTION      1
 
 /**
  * if 1, allow to assign unused heap IDs to newly created heap entities

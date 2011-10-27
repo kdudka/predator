@@ -45,12 +45,11 @@ enum EValueOrigin {
     VO_UNKNOWN,             ///< unknown result of an operation (e.g. < >)
     VO_REINTERPRET,         ///< a result of unsupported data reinterpretation
     VO_DEREF_FAILED,        ///< a result of invalid dereference
-    VO_STATIC,              ///< untouched contents of static data
     VO_STACK,               ///< untouched contents of stack
     VO_HEAP                 ///< untouched contents of heap
 };
 
-/// true for VO_HEAP, VO_STACK, and maybe VO_STATIC
+/// true for VO_HEAP and VO_STACK
 bool isUninitialized(EValueOrigin);
 
 /// classification of kind of objects a value may point to
@@ -144,14 +143,15 @@ namespace CodeStorage {
     struct Storage;
 }
 
+namespace Trace {
+    class Node;
+}
+
 /// a type used by SymHeap for byte offsets
 typedef short                                           TOffset;
 
 /// a container to store offsets to
 typedef std::vector<TOffset>                            TOffList;
-
-/// container used to store object IDs to
-typedef std::vector<TObjId>                             TObjList;
 
 /// container used to store value IDs to
 typedef std::vector<TValId>                             TValList;
@@ -243,11 +243,13 @@ inline bool operator<(const CVar &a, const CVar &b) {
         return a.inst < b.inst;
 }
 
+class ObjList;
+
 /// base of @b symbolic @b heap representation (one disjunct of symbolic state)
 class SymHeapCore {
     public:
         /// create an empty symbolic heap
-        SymHeapCore(TStorRef);
+        SymHeapCore(TStorRef, Trace::Node *);
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
         virtual ~SymHeapCore();
@@ -264,29 +266,16 @@ class SymHeapCore {
         /// each symbolic heap is associated with a CodeStorage model of code
         TStorRef stor() const { return stor_; }
 
+        /// each symbolic heap is associated with a trace graph node
+        Trace::Node* traceNode() const;
+
+        /// update the current trace graph node that the heap is associated with
+        void traceUpdate(Trace::Node *);
+
         /// the last assigned ID of a heap entity (not necessarily still valid)
         unsigned lastId() const;
 
     public:
-        /**
-         * return a value @b stored @b in the given object
-         * @param obj ID of the object to look into
-         * @return A valid value ID in case of success, invalid otherwise.
-         * @note It may also return @b unknown, @b composite or @b custom value,
-         * depending on kind of the queried object.
-         * @note It may acquire a new value ID in case the value is not known.
-         */
-        TValId valueOf(TObjId obj);
-
-        /**
-         * return a value corresponding to @b symbolic @b address of the given
-         * object
-         * @param obj ID of the object to look for
-         * @return A valid value ID when a valid object ID is given, VAL_INVALID
-         * otherwise.
-         */
-        TValId placedAt(TObjId obj);
-
         /**
          * collect all objects having the given value inside
          * @param dst reference to a container to store the result to
@@ -294,29 +283,16 @@ class SymHeapCore {
          * @param liveOnly if true, exclude objects that are no longer alive
          * @note The operation may return from 0 to n objects.
          */
-        void usedBy(TObjList &dst, TValId val, bool liveOnly = false) const;
+        void usedBy(ObjList &dst, TValId val, bool liveOnly = false) const;
 
         /// return how many objects have the value inside
         unsigned usedByCount(TValId val) const;
 
         /// return all objects that point at/inside the given root entity
-        void pointedBy(TObjList &dst, TValId root) const;
+        void pointedBy(ObjList &dst, TValId root) const;
 
         /// return how many objects point at/inside the given root entity
         unsigned pointedByCount(TValId root) const;
-
-        /**
-         * @b set @b value of the given object, which has to be @b valid and may
-         * @b not be a composite object
-         * @param obj ID of the object to set value of
-         * @param val ID requested to be stored into the object
-         * @param killedPtrs if not NULL, insert killed pointer values there
-         * @note This is really @b low-level @b implementation.  It does not
-         * check for junk, delayed type-info definition, etc.  If you are
-         * interested in such abilities, you are looking for
-         * SymProc::objSetValue().
-         */
-        void objSetValue(TObjId obj, TValId val, TValSet *killedPtrs = 0);
 
         /// write an uninitialized or nullified block of memory
         void writeUniformBlock(
@@ -384,14 +360,6 @@ class SymHeapCore {
         bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
 
     public:
-        /**
-         * look for static type-info of the given object
-         * @param obj ID of the object to look for
-         * @return pointer to the instance cl_type in case of success, 0
-         * otherwise
-         */
-        TObjType objType(TObjId obj) const;
-
         /// translate the given address by the given offset
         TValId valByOffset(TValId, TOffset offset);
 
@@ -410,15 +378,6 @@ class SymHeapCore {
         /// return size (in bytes) that we can safely write at the given addr
         int valSizeOfTarget(TValId) const;
 
-        /// return a @b data pointer placed at the given address
-        TObjId ptrAt(TValId at, /* TODO: document this */ bool *exclusive = 0);
-
-        /// return an object of the given type at the given address
-        TObjId objAt(TValId at, TObjType clt, bool *exclusive = 0);
-
-        /// mark the object ID externally unused (still NOP if used internally)
-        void objReleaseId(TObjId);
-
         /// return address of the given program variable
         TValId addrOfVar(CVar, bool createIfNeeded);
 
@@ -433,10 +392,10 @@ class SymHeapCore {
         void gatherRootObjects(TValList &dst, bool (*)(EValueTarget) = 0) const;
 
         /// list of live objects (including ptrs) owned by the given root entity
-        void gatherLiveObjects(TObjList &dst, TValId root) const;
+        void gatherLiveObjects(ObjList &dst, TValId root) const;
 
         /// list of live pointers owned by the given root entity
-        void gatherLivePointers(TObjList &dst, TValId root) const;
+        void gatherLivePointers(ObjList &dst, TValId root) const;
 
         /// list of uninitialized and nullified uniform blocks
         void gatherUniformBlocks(TUniBlockMap &dst, TValId root) const;
@@ -455,7 +414,10 @@ class SymHeapCore {
          */
         CVar cVarByRoot(TValId root) const;
 
-        /// composite object given by val (applicable only on VT_COMPOSITE vals)
+        /**
+         * composite object given by val (applicable only on VT_COMPOSITE vals)
+         * @todo should we operate on ObjHandle instead?
+         */
         TObjId valGetComposite(TValId val) const;
 
     public:
@@ -499,6 +461,30 @@ class SymHeapCore {
         void valTargetSetProto(TValId root, bool isProto);
 
     protected:
+        /// return a @b data pointer placed at the given address
+        TObjId ptrAt(TValId at);
+
+        /// return an object of the given type at the given address
+        TObjId objAt(TValId at, TObjType clt);
+
+        /// increment the external reference count of the given object
+        void objEnter(TObjId);
+
+        /// decrement the external reference count (may trigger its destruction)
+        void objLeave(TObjId);
+
+        /// ObjHandle takes care of external reference count
+        friend class ObjHandle;
+        friend class PtrHandle;
+
+    protected:
+        // these should be accessed indirectly via ObjHandle
+        TValId valueOf(TObjId obj);
+        TValId placedAt(TObjId obj);
+        TObjType objType(TObjId obj) const;
+        void objSetValue(TObjId obj, TValId val, TValSet *killedPtrs = 0);
+
+    protected:
         TStorRef stor_;
 
         /// return true if the given value points to/inside an abstract object
@@ -512,12 +498,199 @@ class SymHeapCore {
         Private *d;
 };
 
+class ObjHandle {
+    public:
+        ObjHandle():
+            sh_(0),
+            id_(OBJ_INVALID)
+        {
+        }
+
+        explicit ObjHandle(const TObjId special):
+            sh_(0),
+            id_(special)
+        {
+            CL_BREAK_IF(0 < special);
+        }
+
+        ObjHandle(SymHeapCore &sh, TValId addr, TObjType clt):
+            sh_(&sh),
+            id_(sh.objAt(addr, clt))
+        {
+            if (0 < id_)
+                sh_->objEnter(id_);
+        }
+
+        ObjHandle(const ObjHandle &tpl):
+            sh_(tpl.sh_),
+            id_(tpl.id_)
+        {
+            if (0 < id_)
+                sh_->objEnter(id_);
+        }
+
+        ObjHandle(SymHeapCore &sh, const ObjHandle &tpl):
+            sh_(&sh),
+            id_(tpl.id_)
+        {
+            if (0 < id_)
+                sh_->objEnter(id_);
+        }
+
+        ~ObjHandle() {
+            if (0 < id_)
+                sh_->objLeave(id_);
+        }
+
+        ObjHandle& operator=(const ObjHandle &tpl) {
+            if (0 < id_)
+                sh_->objLeave(id_);
+
+            sh_ = tpl.sh_;
+            id_ = tpl.id_;
+            if (0 < id_)
+                sh_->objEnter(id_);
+
+            return *this;
+        }
+
+    public:
+        SymHeapCore*    sh()        const { return sh_; }
+        TObjId          objId()     const { return id_; }
+        bool            isValid()   const { return 0 < id_; }
+
+        /**
+         * return a value @b stored @b in the given object
+         * @param obj ID of the object to look into
+         * @return A valid value ID in case of success, invalid otherwise.
+         * @note It may also return @b unknown, @b composite or @b custom value,
+         * depending on kind of the queried object.
+         * @note It may acquire a new value ID in case the value is not known.
+         */
+        TValId          value()     const { return sh_->valueOf(id_); }
+
+        /**
+         * return a value corresponding to @b symbolic @b address of the given
+         * object
+         * @param obj ID of the object to look for
+         * @return A valid value ID when a valid object ID is given, VAL_INVALID
+         * otherwise.
+         */
+        TValId          placedAt()  const { return sh_->placedAt(id_); }
+
+        /**
+         * look for static type-info of the given object
+         * @param obj ID of the object to look for
+         * @return pointer to the instance cl_type in case of success, 0
+         * otherwise
+         */
+        TObjType objType()const {
+            return (this->isValid())
+                ? sh_->objType(id_)
+                : 0;
+        }
+
+        /**
+         * @b set @b value of the given object, which has to be @b valid and may
+         * @b not be a composite object
+         * @param obj ID of the object to set value of
+         * @param val ID requested to be stored into the object
+         * @param killedPtrs if not NULL, insert killed pointer values there
+         * @note This is really @b low-level @b implementation.  It does not
+         * check for junk, delayed type-info definition, etc.  If you are
+         * interested in such abilities, you are looking for
+         * SymProc::objSetValue().
+         */
+        void setValue(const TValId val, TValSet *killedPtrs = 0) const {
+            sh_->objSetValue(id_, val, killedPtrs);
+        }
+
+    protected:
+        ObjHandle(SymHeapCore &sh, TObjId id):
+            sh_(&sh),
+            id_(id)
+        {
+            if (0 < id_)
+                sh_->objEnter(id_);
+        }
+
+        friend class SymHeapCore;
+
+        // TODO: remove this
+        friend class SymProc;
+
+        // TODO: remove this
+        friend const char* valNullLabel(const SymHeapCore &, const TObjId);
+
+    protected:
+        SymHeapCore     *sh_;
+        TObjId           id_;
+};
+
+/// this allows to insert ObjHandle instances into std::set
+inline bool operator<(const ObjHandle &a, const ObjHandle &b) {
+    if (a.sh() < b.sh())
+        return true;
+
+    if (b.sh() < a.sh())
+        return false;
+
+    return (a.objId() < b.objId());
+}
+
+inline bool operator==(const ObjHandle &a, const ObjHandle &b) {
+    return (a.sh()    == b.sh())
+        && (a.objId() == b.objId());
+}
+
+inline bool operator!=(const ObjHandle &a, const ObjHandle &b) {
+    return !operator==(a, b);
+}
+
+class PtrHandle: public ObjHandle {
+    public:
+        PtrHandle(SymHeapCore &sh, TValId addr):
+            ObjHandle(sh, sh.ptrAt(addr))
+        {
+        }
+};
+
+/// ugly, but typedefs do not support partial declarations
+class ObjList: public std::vector<ObjHandle> { };
+
+class ObjLookup {
+    private:
+        std::set<TObjId>            idSet_;
+        ObjList                     hList_;
+
+    public:
+        bool insert(const ObjHandle &hdl) {
+            const TObjId obj = hdl.objId();
+            if (hasKey(idSet_, obj))
+                return false;
+
+            idSet_.insert(obj);
+            hList_.push_back(hdl);
+            return true;
+        }
+
+        bool lookup(const TObjId obj) const {
+            return hasKey(idSet_, obj);
+        }
+
+        bool lookup(const ObjHandle &hdl) const {
+            const TObjId obj = hdl.objId();
+            return hasKey(idSet_, obj);
+        }
+};
+
 /// enumeration of abstract object (although OK_CONCRETE is not abstract)
 enum EObjKind {
     OK_CONCRETE = 0,        ///< concrete object (not a segment)
     OK_SLS,                 ///< singly-linked list segment
     OK_DLS,                 ///< doubly-linked list segment
-    OK_MAY_EXIST
+    OK_SEE_THROUGH,         ///< 0..1 object, see through if not allocated
+    OK_OBJ_OR_NULL          ///< 0..1 object, assume NULL if not allocated
 };
 
 /// tuple of binding offsets assigned to abstract objects
@@ -531,6 +704,15 @@ struct BindingOff {
         next(0),
         prev(0)
     {
+    }
+
+    BindingOff(EObjKind kind):
+        head(-1),
+        next(-1),
+        prev(-1)
+    {
+        CL_BREAK_IF(OK_OBJ_OR_NULL != kind);
+        (void) kind;
     }
 };
 
@@ -552,7 +734,7 @@ inline bool operator!=(const BindingOff &off1, const BindingOff &off2)
 class SymHeap: public SymHeapCore {
     public:
         /// create an empty symbolic heap
-        SymHeap(TStorRef);
+        SymHeap(TStorRef, Trace::Node *);
 
         /// destruction of the symbolic heap invalidates all IDs of its entities
         virtual ~SymHeap();
