@@ -35,6 +35,7 @@
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symutil.hh"
+#include "symtrace.hh"
 #include "util.hh"
 
 #include <cstring>
@@ -732,6 +733,9 @@ bool BuiltInTable::handleBuiltIn(
     if (tbl_.end() == it)
         // no fnc name matched as built-in
         return false;
+
+    SymHeap &sh = core.sh();
+    sh.traceUpdate(new Trace::InsnNode(sh.traceNode(), &insn, /* bin */ true));
 
     const THandler hdl = it->second;
     return hdl(dst, core, insn, name);

@@ -150,11 +150,13 @@ class RootNode: public Node {
 class InsnNode: public Node {
     private:
         const TInsn insn_;
+        const bool  isBuiltin_;
 
     public:
-        InsnNode(Node *ref, TInsn insn):
+        InsnNode(Node *ref, TInsn insn, const bool isBuiltin):
             Node(ref),
-            insn_(insn)
+            insn_(insn),
+            isBuiltin_(isBuiltin)
         {
         }
 

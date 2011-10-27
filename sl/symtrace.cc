@@ -118,8 +118,13 @@ void RootNode::plotNode(TracePlotter &tplot) const {
 }
 
 void InsnNode::plotNode(TracePlotter &tplot) const {
+    const char *color = (isBuiltin_)
+        ? "blue"
+        : "black";
+
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=black, fontcolor=black, label="
+        << " [shape=box, color=black, fontcolor="
+        << color << ", label="
         << SL_QUOTE((*insn_)) << "];\n";
 }
 

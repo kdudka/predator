@@ -1274,7 +1274,9 @@ bool SymExecCore::execCore(
     // kill variables
     this->killInsn(insn);
 
-    sh_.traceUpdate(new Trace::InsnNode(sh_.traceNode(), &insn));
+    Trace::Node *trOrig = sh_.traceNode();
+    Trace::Node *trInsn = new Trace::InsnNode(trOrig, &insn, /* bin */ false);
+    sh_.traceUpdate(trInsn);
     dst.insert(sh_);
     return true;
 }
