@@ -73,6 +73,11 @@ class NodeBase {
 
         /// reference to list of parents (containing 0..n pointers)
         const TNodeList& parents() const { return parents_; }
+
+    private:
+        // not yet implemented/tested --> disabled globally
+        NodeBase(const NodeBase &);
+        NodeBase& operator=(const NodeBase &);
 };
 
 /// an abstract node of the symbolic execution trace graph

@@ -10,4 +10,4 @@ printf "graph visualization in progress ... "
 make $MAKEOPTS -s -f "$topdir/sl/data/Makefile.in" TIMEOUT="timeout 2" \
     || exit $?
 printf "done\n"
-"$SVG_VIEWER" *.svg
+"$SVG_VIEWER" *.svg &

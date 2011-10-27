@@ -307,8 +307,9 @@ void joinHeapsWithCare(
     LDP_PLOT(symcall, surround);
 
     // create a new trace graph node
+    Trace::Node *trResult = sh.traceNode()->parent();
     Trace::Node *trFrame = surround.traceNode()->parent();
-    Trace::Node *trDone = new Trace::CallDoneNode(sh.traceNode(), trFrame, fnc);
+    Trace::Node *trDone = new Trace::CallDoneNode(trResult, trFrame, fnc);
 
     // first off, we need to make sure that a gl variable from surround will not
     // overwrite the result of just completed function call since the var could

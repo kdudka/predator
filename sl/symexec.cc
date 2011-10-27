@@ -242,7 +242,10 @@ void SymExecEngine::execReturn() {
     // create a local copy of the heap
     const SymHeap &origin = localState_[heapIdx_];
     SymHeap sh(origin);
-    sh.traceUpdate(origin.traceNode());
+
+    Trace::Node *trOrig = origin.traceNode();
+    Trace::Node *trRet = new Trace::InsnNode(trOrig, insn, /* bin */ false);
+    sh.traceUpdate(trRet);
 
     const struct cl_operand &src = opList[0];
     if (CL_OPERAND_VOID != src.code) {
@@ -270,6 +273,9 @@ void traceCond(
         const bool                  br)
 {
     Trace::Node *trOrig = sh.traceNode()->parent();
+    if (!det)
+        trOrig = trOrig->parent();
+
     Trace::Node *trCond = new Trace::CondNode(trOrig, &inCmp, &inCnd, det, br);
     sh.traceUpdate(trCond);
 }

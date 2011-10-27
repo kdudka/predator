@@ -27,7 +27,7 @@
  * debugging
  */
 
-#include "symheap.hh"
+#include "symtrace.hh"
 
 struct cl_type;
 class SymHeap;
@@ -65,5 +65,8 @@ void dump_plot(const SymHeapCore &sh);
 
 /// plot the given heap to file "NAME-NNNN.dot"
 void dump_plot(const SymHeapCore &sh, const char *name);
+
+/// plot a trace graph with the given end-point
+void dump_trace(Trace::Node *endPoint);
 
 #endif /* H_GUARD_SYM_DUMP_H */
