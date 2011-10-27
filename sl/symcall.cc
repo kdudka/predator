@@ -308,8 +308,12 @@ void joinHeapsWithCare(
 
     // create a new trace graph node
     Trace::Node *trResult = sh.traceNode()->parent();
+#if SE_TRACE_CALL_FRAMES
     Trace::Node *trFrame = surround.traceNode()->parent();
     Trace::Node *trDone = new Trace::CallDoneNode(trResult, trFrame, fnc);
+#else
+    Trace::Node *trDone = trResult;
+#endif
 
     // first off, we need to make sure that a gl variable from surround will not
     // overwrite the result of just completed function call since the var could

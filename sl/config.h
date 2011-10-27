@@ -217,6 +217,11 @@
 #define SE_TRACK_UNINITIALIZED              0
 
 /**
+ * if 1, track split/merge while execution function calls
+ */
+#define SE_TRACE_CALL_FRAMES                1
+
+/**
  * if 1, do not make deep copy on copy of SymHeap [experimental]
  */
 #define SH_COPY_ON_WRITE                    1
