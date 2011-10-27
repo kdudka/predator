@@ -760,7 +760,12 @@ unsigned /* len */ spliceOutSegmentIfNeeded(
         SymHeap sh0(sh);
         const TValId valNext = nextValFromSeg(sh0, peer);
         spliceOutListSegment(sh0, seg, peer, valNext);
+
+        const EObjKind kind = sh.valTargetKind(seg);
+        Trace::Node *tr = new Trace::SpliceOutNode(sh.traceNode(), kind, true);
+
         todo.push_back(sh0);
+        todo.back().traceUpdate(tr);
     }
 
     LDP_INIT(symabstract, "concretizeObj");
@@ -802,6 +807,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     const unsigned lenRemains = spliceOutSegmentIfNeeded(sh, seg, peer, todo);
 
     const EObjKind kind = sh.valTargetKind(seg);
+    sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
 
     // TODO
     CL_BREAK_IF(OK_OBJ_OR_NULL == kind);
@@ -899,22 +905,23 @@ bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo) {
     if (pointingTo == peer && peer != seg) {
         // assume identity over the two parts of a DLS
         dlSegReplaceByConcrete(sh, seg, peer);
+        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), OK_DLS, true));
         return true;
     }
 
     TValId endPoint = pointingTo;
-    if (OK_OBJ_OR_NULL != sh.valTargetKind(seg)) {
+
+    const EObjKind kind = sh.valTargetKind(seg);
+    if (OK_OBJ_OR_NULL != kind) {
         // if atAddr is above/bellow head, we need to shift endPoint accordingly
         const TOffset off = sh.valOffset(atAddr) - sh.segBinding(seg).head;
         endPoint = sh.valByOffset(pointingTo, off);
     }
 
-    if (!spliceOutAbstractPathCore(sh, seg, endPoint, /* readOnlyMode */ true))
-        // giving up
-        return false;
-
-    if (!spliceOutAbstractPathCore(sh, seg, endPoint, /* readOnlyMode */ false))
+    const bool ok = spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ true);
+    if (ok && !spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ false))
         CL_BREAK_IF("spliceOutAbstractPathCore() completely broken");
 
-    return true;
+    sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), kind, ok));
+    return ok;
 }

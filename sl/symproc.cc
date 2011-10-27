@@ -1291,6 +1291,8 @@ bool SymExecCore::concretizeLoop(
 
     TSymHeapList todo;
     todo.push_back(sh_);
+    todo.front().traceUpdate(sh_.traceNode());
+
     while (!todo.empty()) {
         SymHeap &sh = todo.front();
         SymExecCore slave(sh, bt_, ep_);

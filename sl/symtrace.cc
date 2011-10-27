@@ -149,6 +149,20 @@ void AbstractionNode::plotNode(TracePlotter &tplot) const {
         << SL_QUOTE(label) << "];\n";
 }
 
+void ConcretizationNode::plotNode(TracePlotter &tplot) const {
+    // TODO: kind_
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=red, fontcolor=blue, label="
+        << SL_QUOTE("concretizeObj()") << "];\n";
+}
+
+void SpliceOutNode::plotNode(TracePlotter &tplot) const {
+    // TODO: kind_, successful_
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color=red, fontcolor=blue, label="
+        << SL_QUOTE("spliceOut*()") << "];\n";
+}
+
 void JoinNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, color=red, fontcolor=red, label=\"join\"];\n";

@@ -197,6 +197,36 @@ class AbstractionNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+class ConcretizationNode: public Node {
+    private:
+        const EObjKind kind_;
+
+    public:
+        ConcretizationNode(Node *ref, EObjKind kind):
+            Node(ref),
+            kind_(kind)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
+class SpliceOutNode: public Node {
+    private:
+        const EObjKind          kind_;
+        const bool              successful_;
+
+    public:
+        SpliceOutNode(Node *ref, const EObjKind kind, const bool successful):
+            Node(ref),
+            kind_(kind),
+            successful_(successful)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
 class JoinNode: public Node {
     public:
         JoinNode(Node *ref1, Node *ref2):
