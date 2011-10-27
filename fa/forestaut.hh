@@ -142,15 +142,19 @@ public:
 
 	static bool updateO(o_map_type& o, size_t state, const std::vector<std::pair<size_t, bool> >& v) {
 		std::pair<o_map_type::iterator, bool> p = o.insert(std::make_pair(state, v));
+
 		if (p.second)
 			return true;
-		if (p.first->second.size() >= v.size())
+
+		assert(p.first->second.size() <= v.size());
+
+		if (p.first->second == v)
 			return false;
-		if (p.first->second != v) {
-			p.first->second = v;
-			return true;
-		}
-		return false;
+
+		p.first->second = v;
+
+		return true;
+
 	}
 
 	// computes downward 'o' function
@@ -248,7 +252,7 @@ public:
 
 //	FA(TA<label_type>::Manager& taMan) : taMan(&taMan) {}
 	FA(TA<label_type>::Backend& backend) : backend(&backend) {}
-	
+
 	FA(const FA& src) : backend(src.backend), variables(src.variables), roots(src.roots), rootMap(src.rootMap) {
 /*		for (std::vector<TA<label_type>*>::iterator i = this->roots.begin(); i != this->roots.end(); ++i) {
 			if (*i)
@@ -265,9 +269,9 @@ public:
 			if (*i)
 				this->taMan->addRef(*i);
 		}*/
-		return *this;		
+		return *this;
 	}
-	
+
 	void clear() {
 //		this->releaseRoots();
 		this->roots.clear();
@@ -287,7 +291,7 @@ public:
 	void appendRoot(TA<label_type>* ta) {
 		this->roots.push_back(std::shared_ptr<TA<label_type>>(ta));
 	}
-	
+
 };
 
 std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta);
