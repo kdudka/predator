@@ -13,9 +13,8 @@ usage(){
     exit 1
 }
 
-PRUNE_ALWAYS=".git invader-extras make-tgz.sh ocaml cl/cl-readme.patch        \
-    cl/cl-switch-host.patch sl/README-fedora.patch sl/README-ubuntu.patch     \
-    sl/linux-drivers sl/rank.sh"
+PRUNE_ALWAYS=".git make-tgz.sh cl/cl-readme.patch cl/cl-switch-host.patch     \
+    sl/README-fedora.patch sl/README-ubuntu.patch sl/linux-drivers sl/rank.sh"
 
 chlog_watch=
 drop_fwnull=no

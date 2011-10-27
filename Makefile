@@ -37,8 +37,6 @@ MPFR_LIB        ?= $(GCC_LIBS_PREFIX)#      # location of -lmpfr
 
 INVADER         ?= invader.zip
 INVADER_DIR     ?= invader-1_1
-INVADER_SRC     ?= $(INVADER_DIR)/sources
-INVADER_CIL     ?= $(INVADER_SRC)/cil
 
 CURL            ?= curl --location -v#      # URL grabber command-line
 GIT             ?= git#                     # use this to override git(1)
@@ -48,8 +46,7 @@ DIRS_BUILD      ?= cl fwnull sl fa
 
 .PHONY: all check clean distcheck distclean api cl/api sl/api ChangeLog \
 	build_boost \
-	build_gcc build_gcc_svn update_gcc update_gcc_src_only lnk_gcc_headers \
-	build_inv
+	build_gcc build_gcc_svn update_gcc update_gcc_src_only lnk_gcc_headers
 
 all: include/gcc
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
@@ -84,24 +81,9 @@ $(BOOST_STABLE): $(BOOST_STABLE_TGZ)
 $(GCC_STABLE): $(GCC_STABLE_TGZ)
 	test -d $(GCC_STABLE) || tar xf $(GCC_STABLE_TGZ)
 
-# initialize a git repo for Invader and apply downstream patches
+# upack the release of Invader
 $(INVADER_DIR): $(INVADER)
 	unzip -o $(INVADER)
-	cd $(INVADER_DIR) \
-		&& $(GIT) init \
-		&& $(GIT) add * \
-		&& $(GIT) commit -m "initial import of $(INVADER)" \
-		&& $(GIT) branch orig \
-		&& $(GIT) am ../invader-extras/00*.patch \
-		&& $(GIT) checkout -b next
-	cd $(INVADER_SRC) && ../../ocaml/mltags
-
-# build Invader from sources
-build_inv: $(INVADER_DIR)
-	cd $(INVADER_CIL) && ./configure # TODO: --prefix=...
-	$(MAKE) -C $(INVADER_CIL) -j1 # oops, we don't support parallel build?
-	# TODO: make check ... challenge? :-)
-	# TODO: make install
 
 # build gcc from the released tarball, instead of the SVN sources
 $(GCC_SRC):
