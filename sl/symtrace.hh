@@ -216,9 +216,13 @@ class CloneNode: public Node {
 };
 
 class CallEntryNode: public Node {
+    private:
+        const TInsn insn_;
+
     public:
-        CallEntryNode(Node *ref):
-            Node(ref)
+        CallEntryNode(Node *ref, const TInsn insn):
+            Node(ref),
+            insn_(insn)
         {
         }
 
@@ -226,9 +230,13 @@ class CallEntryNode: public Node {
 };
 
 class CallSurroundNode: public Node {
+    private:
+        const TInsn insn_;
+
     public:
-        CallSurroundNode(Node *ref):
-            Node(ref)
+        CallSurroundNode(Node *ref, const TInsn insn):
+            Node(ref),
+            insn_(insn)
         {
         }
 
@@ -236,9 +244,13 @@ class CallSurroundNode: public Node {
 };
 
 class CallDoneNode: public Node {
+    private:
+        const TFnc fnc_;
+
     public:
-        CallDoneNode(Node *result, Node *surround):
-            Node(result, surround)
+        CallDoneNode(Node *result, Node *surround, const TFnc fnc):
+            Node(result, surround),
+            fnc_(fnc)
         {
         }
 

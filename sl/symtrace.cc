@@ -114,8 +114,7 @@ void NullNode::plotNode(TracePlotter &tplot) const {
 
 void RootNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=blue, fontcolor=blue, label="
-        << SL_QUOTE(nameOf(*rootFnc_) << "()") << "];\n";
+        << " [shape=circle, color=black, fontcolor=black, label=\"start\"];\n";
 }
 
 void InsnNode::plotNode(TracePlotter &tplot) const {
@@ -157,17 +156,20 @@ void CloneNode::plotNode(TracePlotter &tplot) const {
 
 void CallEntryNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=blue, fontcolor=blue, label=\"call entry\"];\n";
+        << " [shape=box, color=blue, fontcolor=blue, label=\"call entry: "
+        << (*insn_) << "\"];\n";
 }
 
 void CallSurroundNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=blue, fontcolor=blue, label=\"call frame\"];\n";
+        << " [shape=box, color=blue, fontcolor=blue, label=\"call frame: "
+        << (*insn_) << "\"];\n";
 }
 
 void CallDoneNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=blue, fontcolor=blue, label=\"call done\"];\n";
+        << " [shape=box, color=blue, fontcolor=blue, label=\"call done: "
+        << (nameOf(*fnc_)) << "()\"];\n";
 }
 
 void CondNode::plotNode(TracePlotter &tplot) const {

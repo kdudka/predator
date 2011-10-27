@@ -297,14 +297,18 @@ bool isGlVar(EValueTarget code) {
     return (VT_STATIC == code);
 }
 
-void joinHeapsWithCare(SymHeap &sh, SymHeap surround) {
+void joinHeapsWithCare(
+        SymHeap                        &sh,
+        SymHeap                         surround,
+        const CodeStorage::Fnc         *fnc)
+{
     LDP_INIT(symcall, "join");
     LDP_PLOT(symcall, sh);
     LDP_PLOT(symcall, surround);
 
     // create a new trace graph node
     Trace::Node *trFrame = surround.traceNode()->parent();
-    Trace::Node *trDone = new Trace::CallDoneNode(sh.traceNode(), trFrame);
+    Trace::Node *trDone = new Trace::CallDoneNode(sh.traceNode(), trFrame, fnc);
 
     // first off, we need to make sure that a gl variable from surround will not
     // overwrite the result of just completed function call since the var could
@@ -357,7 +361,7 @@ void SymCallCtx::flushCallResults(SymState &dst) {
 
         // first join the heap with its original surround
         SymHeap sh(d->rawResults[i]);
-        joinHeapsWithCare(sh, d->surround);
+        joinHeapsWithCare(sh, d->surround, d->fnc);
 
         LDP_INIT(symcall, "post-processing");
         LDP_PLOT(symcall, sh);
@@ -643,9 +647,9 @@ SymCallCtx* SymCallCache::getCallCtx(
     CL_DEBUG_MSG(loc, "SymCallCache is looking for " << nameOf(fnc) << "()...");
 
     // build two new nodes of the trace graph
-    Trace::Node *trCall = entry.traceNode();
-    Trace::Node *trEntry = new Trace::CallEntryNode(trCall);
-    Trace::Node *trSurround = new Trace::CallSurroundNode(trCall);
+    Trace::Node *trCall = entry.traceNode()->parent();
+    Trace::Node *trEntry = new Trace::CallEntryNode(trCall, &insn);
+    Trace::Node *trSurround = new Trace::CallSurroundNode(trCall, &insn);
 
     // enlarge the backtrace
     const int uid = uidOf(fnc);
@@ -695,5 +699,6 @@ SymCallCtx* SymCallCache::getCallCtx(
     ctx->d->dst         = &insn.operands[/* dst */ 0];
     ctx->d->nestLevel   = nestLevel;
     ctx->d->surround    = surround;
+    ctx->d->surround.traceUpdate(trSurround);
     return ctx;
 }

@@ -88,7 +88,7 @@ class SymExec: public IStatsProvider {
 
         void execFnc(
                 SymState                    &results,
-                SymHeap                     entry,
+                const SymHeap               &entry,
                 const CodeStorage::Insn     &insn,
                 const CodeStorage::Fnc      &fnc);
 
@@ -950,7 +950,7 @@ void SymExec::enterCall(SymCallCtx *ctx, SymState &results) {
 
 void SymExec::execFnc(
         SymState                        &results,
-        SymHeap                         entry,
+        const SymHeap                   &entry,
         const CodeStorage::Insn         &insn,
         const CodeStorage::Fnc          &fnc)
 {
