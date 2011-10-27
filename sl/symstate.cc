@@ -67,12 +67,42 @@ namespace {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymState implementation
+void SymState::clear() {
+    BOOST_FOREACH(SymHeap *sh, heaps_)
+        delete sh;
+
+    heaps_.clear();
+}
+
+SymState::~SymState() {
+    this->clear();
+}
+
+SymState& SymState::operator=(const SymState &ref) {
+    // wipe the existing contents (if any)
+    this->clear();
+
+    // clone all heaps one by one
+    BOOST_FOREACH(const SymHeap *sh, ref.heaps_)
+        heaps_.push_back(new SymHeap(*sh));
+
+    return *this;
+}
+
+SymState::SymState(const SymState &ref) {
+    SymState::operator=(ref);
+}
+
 void SymState::insertNew(const SymHeap &sh) {
-    Trace::Node *trOrig = sh.traceNode();
-    heaps_.push_back(sh);
+    // clone the given heap
+    SymHeap *dup = new SymHeap(sh);
 
     // drop the unneeded Trace::CloneNode
-    heaps_.back().traceUpdate(trOrig);
+    Trace::Node *trOrig = sh.traceNode();
+    dup->traceUpdate(trOrig);
+
+    // append the pointer to our container
+    heaps_.push_back(dup);
 }
 
 bool SymState::insert(const SymHeap &sh) {
@@ -96,8 +126,8 @@ bool SymState::insert(const SymHeap &sh) {
 }
 
 void SymState::insert(const SymState &huni) {
-    BOOST_FOREACH(const SymHeap &current, huni) {
-        this->insert(current);
+    BOOST_FOREACH(const SymHeap *current, huni) {
+        this->insert(*current);
     }
 }
 

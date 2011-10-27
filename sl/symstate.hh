@@ -36,18 +36,20 @@ namespace CodeStorage {
 
 class SymState {
     private:
-        typedef std::vector<SymHeap> TList;
+        typedef std::vector<SymHeap *> TList;
 
     public:
         typedef TList::const_iterator           const_iterator;
         typedef TList::iterator                 iterator;
 
     public:
-        virtual ~SymState() { }
+        SymState() { }
+        virtual ~SymState();
 
-        virtual void clear() {
-            heaps_.clear();
-        }
+        SymState(const SymState &);
+        SymState& operator=(const SymState &);
+
+        virtual void clear();
 
         virtual void swap(SymState &other) {
             heaps_.swap(other.heaps_);
@@ -70,7 +72,7 @@ class SymState {
 
         /// return nth SymHeap object, 0 <= nth < size()
         const SymHeap& operator[](int nth) const {
-            return heaps_.at(nth);
+            return *heaps_[nth];
         }
 
         /// return STL-like iterator to go through the container
@@ -90,11 +92,12 @@ class SymState {
         virtual void insertNew(const SymHeap &sh);
 
         virtual void eraseExisting(int nth) {
+            delete heaps_[nth];
             heaps_.erase(heaps_.begin() + nth);
         }
 
         virtual void swapExisting(int nth, SymHeap &sh) {
-            SymHeap &existing = heaps_.at(nth);
+            SymHeap &existing = *heaps_.at(nth);
             existing.swap(sh);
         }
 

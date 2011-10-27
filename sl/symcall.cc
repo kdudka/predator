@@ -75,7 +75,7 @@ class PerFncCache {
             }
 
             CL_BREAK_IF(!areEqual(of, huni_[idx]));
-            huni_.heaps_[idx] = by;
+            *huni_.heaps_[idx] = by;
         }
 
         /**

@@ -815,8 +815,8 @@ void SymExecEngine::dumpStateMap() {
         const std::string name = block->name();
 
         const SymState &state = stateMap_[block];
-        BOOST_FOREACH(const SymHeap &sh, state)
-            plotHeap(sh, name);
+        BOOST_FOREACH(const SymHeap *sh, state)
+            plotHeap(*sh, name);
     }
 }
 
