@@ -200,6 +200,35 @@ void CondNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\"];\n";
 }
 
+void MsgNode::plotNode(TracePlotter &tplot) const {
+    const char *color = "red";
+    const char *label;
+    switch (level_) {
+        case ML_DEBUG:
+            color = "black";
+            label = "ML_DEBUG";
+            break;
+
+        case ML_WARN:
+            color = "gold";
+            label = "ML_WARN";
+            break;
+
+        case ML_ERROR:
+            label = "ML_ERROR";
+            break;
+
+        default:
+            label = "ML_XXX";
+            CL_BREAK_IF("unhandled EMsgLevel in MsgNode");
+    }
+
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, color="
+        << color << ", fontcolor=red, label="
+        << SL_QUOTE((*loc_) << label) << "];\n";
+}
+
 void plotTraceCore(TracePlotter &tplot, Node *endPoint) {
     TNodePair item(/* from */ endPoint, /* to */ 0);
 

@@ -29,6 +29,12 @@ struct CVar;
 class SymHeap;
 class SymProc;
 
+enum EMsgLevel {
+    ML_DEBUG,
+    ML_WARN,
+    ML_ERROR
+};
+
 namespace CodeStorage {
     struct Fnc;
     struct Storage;
@@ -118,7 +124,7 @@ class SymBackTrace {
          * backtrace is trivial
          */
         void printBackTrace(bool forcePtrace = false) const;
-        friend void printBackTrace(SymProc &, bool forcePtrace);
+        friend void printBackTrace(SymProc &, EMsgLevel, bool forcePtrace);
         friend class SymExecEngine;
 
     private:

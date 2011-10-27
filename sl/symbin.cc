@@ -192,7 +192,7 @@ bool handleBreak(
     // print what happened
     CL_WARN_MSG(&insn.loc, name << "() reached, stopping per user's request");
     printUserMessage(core, opList[/* msg */ 2]);
-    printBackTrace(core);
+    printBackTrace(core, ML_WARN);
 
     // trap to debugger
     CL_TRAP;
@@ -331,7 +331,7 @@ bool handleMemset(
     }
     if (!size) {
         CL_WARN_MSG(lw, "ignoring call of memset() with size == 0");
-        printBackTrace(core);
+        printBackTrace(core, ML_WARN);
         insertCoreHeap(dst, core, insn);
         return true;
     }
@@ -364,7 +364,7 @@ bool handleMemset(
     // check for memory leaks
     if (lm.collectJunkFrom(killedPtrs)) {
         CL_WARN_MSG(lw, "memory leak detected while executing memset()");
-        printBackTrace(core);
+        printBackTrace(core, ML_WARN);
     }
 
     // leave monitor and write the result
@@ -444,7 +444,7 @@ bool handlePrintf(
     if (opIdx < opList.size()) {
         // this is quite suspicious, but would not crash the program
         CL_WARN_MSG(lw, "too many arguments given to printf()");
-        printBackTrace(core);
+        printBackTrace(core, ML_WARN);
     }
 
     insertCoreHeap(dst, core, insn);
@@ -637,7 +637,7 @@ bool handleError(
 
     // print the user message and backtrace
     printUserMessage(core, opList[/* msg */ 2]);
-    printBackTrace(core);
+    printBackTrace(core, ML_ERROR);
     return true;
 }
 

@@ -30,6 +30,7 @@
 
 #include <cl/storage.hh>
 
+#include "symbt.hh"
 #include "symid.hh"
 #include "symheap.hh"
 
@@ -152,7 +153,7 @@ class SymProc {
         friend class ValueMirror;
 };
 
-void printBackTrace(SymProc &, bool forcePtrace = false);
+void printBackTrace(SymProc &, EMsgLevel level, bool forcePtrace = false);
 
 /// @todo make the API more generic and better documented
 void describeUnknownVal(

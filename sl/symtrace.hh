@@ -27,6 +27,7 @@
 
 #include "config.h"
 
+#include "symbt.hh"                 // needed for EMsgLevel
 #include "symheap.hh"               // needed for EObjKind
 
 #include <vector>
@@ -257,15 +258,20 @@ class CallDoneNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
-class CallCacheHitNode: public Node {
-    // ref - cache entry
-    // ref - cached result (a particular heap)
-};
-
 class MsgNode: public Node {
-    // ref
-    // kind of message (warning, error)
-    // insn
+    private:
+        const EMsgLevel     level_;
+        const TLoc          loc_;
+
+    public:
+        MsgNode(Node *ref, const EMsgLevel level, const TLoc loc):
+            Node(ref),
+            level_(level),
+            loc_(loc)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
 };
 
 /// plot a trace graph named "symtrace-NNNN.dot" leading to the given node

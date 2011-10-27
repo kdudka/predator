@@ -46,7 +46,7 @@
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
 void SymProc::failWithBackTrace() {
-    printBackTrace(*this);
+    printBackTrace(*this, ML_ERROR);
     printMemUsage("SymBackTrace::printBackTrace");
 
 #if SE_ERROR_RECOVERY_MODE
@@ -535,7 +535,7 @@ void SymProc::heapObjDefineType(const ObjHandle &lhs, TValId rhs) {
 void SymProc::reportMemLeak(const EValueTarget code, const char *reason) {
     const char *const what = describeRootObj(code);
     CL_WARN_MSG(lw_, "memory leak detected while " << reason << "ing " << what);
-    printBackTrace(*this);
+    printBackTrace(*this, ML_WARN);
 }
 
 void SymProc::heapSetSingleVal(const ObjHandle &lhs, TValId rhs) {
@@ -777,7 +777,7 @@ void SymExecCore::execHeapAlloc(
         CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
 malloc/calloc is implementation-defined");
         CL_NOTE_MSG(lw_, "assuming NULL as the result");
-        printBackTrace(*this);
+        printBackTrace(*this, ML_WARN);
         this->objSetValue(lhs, VAL_NULL);
         this->killInsn(insn);
         dst.insert(sh_);
@@ -982,12 +982,15 @@ TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
     return sh_.valByOffset(at, offRequested);
 }
 
-void printBackTrace(SymProc &proc, bool forcePtrace) {
+void printBackTrace(SymProc &proc, EMsgLevel level, bool forcePtrace) {
+    SymHeap &sh = proc.sh();
+    const struct cl_loc *loc = proc.lw();
+    Trace::MsgNode *trMsg = new Trace::MsgNode(sh.traceNode(), level, loc);
+    sh.traceUpdate(trMsg);
+
     const SymBackTrace *bt = proc.bt();
     bt->printBackTrace(forcePtrace);
 #if SE_DUMP_TRACE_GRAPHS
-    const struct cl_loc *loc = proc.lw();
-    const SymHeap &sh = proc.sh();
     Trace::plotTrace(sh.traceNode(), loc);
 #endif
 }
@@ -1232,7 +1235,7 @@ void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
     CL_ERROR_MSG(lw_, "error label \"" << name << "\" has been reached");
 
     // print the backtrace and leave
-    printBackTrace(*this, /* forcePtrace */ true);
+    printBackTrace(*this, ML_ERROR, /* forcePtrace */ true);
     printMemUsage("SymBackTrace::printBackTrace");
     throw std::runtime_error("an error label has been reached");
 }
