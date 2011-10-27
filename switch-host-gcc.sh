@@ -30,6 +30,10 @@ usage() {
     /usr/lib/x86_64-linux-gnu/gcc/x86_64-linux-gnu/4.5.2/plugin/include as
     GCC_PLUGIN_INCLUDE_DIR.
 
+    On Debian unstable, you need to install a package named gcc-4.6-plugin-dev.
+    Then use /usr/lib/gcc/x86_64-linux-gnu/4.6/plugin/include as
+    GCC_PLUGIN_INCLUDE_DIR.
+ 
     On Fedora, you need to install a package named gcc-plugin-devel.  Then use
     /usr/lib/gcc/x86_64-redhat-linux/4.6.1/plugin/include as
     GCC_PLUGIN_INCLUDE_DIR.
