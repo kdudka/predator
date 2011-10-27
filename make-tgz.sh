@@ -13,7 +13,7 @@ usage(){
     exit 1
 }
 
-PRUNE_ALWAYS=".git invader-extras make-tgz.sh ocaml seplog cl/cl-readme.patch \
+PRUNE_ALWAYS=".git invader-extras make-tgz.sh ocaml cl/cl-readme.patch        \
     cl/cl-switch-host.patch sl/README-fedora.patch sl/README-ubuntu.patch     \
     sl/linux-drivers sl/rank.sh"
 
