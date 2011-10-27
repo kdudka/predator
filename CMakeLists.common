@@ -74,7 +74,13 @@ if(USE_INT3_AS_BRK)
     add_definitions("-DUSE_INT3_AS_BRK")
 endif()
 
-set(GCC_HOST "../gcc-install/bin/gcc"
-    CACHE STRING "host gcc executable")
+if($ENV{GCC_HOST} STREQUAL "")
+  set(GCC_HOST "../gcc-install/bin/gcc"
+      CACHE STRING "host gcc executable")
+else()
+  set(GCC_HOST $ENV{GCC_HOST}
+      CACHE STRING "host gcc executable")
+endif()
+
 
 option(TEST_WITH_VALGRIND "Set to ON to enable valgrind tests" OFF)
