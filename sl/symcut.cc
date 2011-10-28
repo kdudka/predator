@@ -341,7 +341,7 @@ void prune(const SymHeap &src, SymHeap &dst,
 void splitHeapByCVars(
         SymHeap                     *srcDst,
         const TCVarList             &cut,
-        SymHeap                     *saveSurroundTo)
+        SymHeap                     *saveFrameTo)
 {
 #if SE_DISABLE_SYMCUT
     return;
@@ -368,13 +368,13 @@ void splitHeapByCVars(
     SymHeap dst(srcDst->stor(), new Trace::NullNode("splitHeapByCVars()"));
     prune(*srcDst, dst, cset);
 
-    if (!saveSurroundTo) {
+    if (!saveFrameTo) {
         // we're done
         *srcDst = dst;
         return;
     }
 #if DEBUG_SYMCUT
-    CL_DEBUG("splitHeapByCVars() is computing the surround...");
+    CL_DEBUG("splitHeapByCVars() is computing the frame...");
 #endif
     // get the complete list of program variables
     TCVarList all;
@@ -387,8 +387,8 @@ void splitHeapByCVars(
         if (!hasKey(cset, cv))
             complement.insert(cv);
 
-    // compute the surrounding part of heap
-    prune(*srcDst, *saveSurroundTo, complement);
+    // compute the corresponding frame
+    prune(*srcDst, *saveFrameTo, complement);
 
     // print some statistics
 #if DEBUG_SYMCUT || !defined NDEBUG
@@ -411,9 +411,9 @@ void splitHeapByCVars(
     // basic sanity check
     if (cntA < cntOrig || cntA + cntB != cntTotal) {
         CL_ERROR("symcut: splitHeapByCVars() failed, attempt to plot heaps...");
-        plotHeap(*srcDst,         "prune-input");
-        plotHeap( dst,            "prune-output");
-        plotHeap(*saveSurroundTo, "prune-surround");
+        plotHeap(*srcDst,         "cut-input");
+        plotHeap( dst,            "cut-output");
+        plotHeap(*saveFrameTo,    "cut-frame");
         CL_NOTE("symcut: plot done, please consider analyzing the results");
         CL_TRAP;
     }

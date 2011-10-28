@@ -342,7 +342,7 @@ class CallEntryNode: public Node {
 };
 
 /// trace graph node representing a call frame (used by SE_TRACE_CALL_FRAMES)
-class CallSurroundNode: public Node {
+class CallFrameNode: public Node {
     private:
         const TInsn insn_;
 
@@ -351,7 +351,7 @@ class CallSurroundNode: public Node {
          * @param ref trace representing the call entry as seen by the @b caller
          * @param insn a CodeStorage::Insn object representing the call
          */
-        CallSurroundNode(Node *ref, const TInsn insn):
+        CallFrameNode(Node *ref, const TInsn insn):
             Node(ref),
             insn_(insn)
         {
@@ -379,11 +379,11 @@ class CallDoneNode: public Node {
         /**
          * @note used by SE_TRACE_CALL_FRAMES
          * @param result trace representing the result as seen by the @b callee
-         * @param surround trace representing the call frame of the call
+         * @param callFrame trace representing the call frame of the call
          * @param fnc a CodeStorage::Fnc obj representing the called function
          */
-        CallDoneNode(Node *result, Node *surround, const TFnc fnc):
-            Node(result, surround),
+        CallDoneNode(Node *result, Node *callFrame, const TFnc fnc):
+            Node(result, callFrame),
             fnc_(fnc)
         {
         }

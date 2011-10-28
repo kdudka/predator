@@ -176,7 +176,7 @@ void CallEntryNode::plotNode(TracePlotter &tplot) const {
         ", penwidth=3.0, label=\"--> call entry: " << (*insn_) << "\"];\n";
 }
 
-void CallSurroundNode::plotNode(TracePlotter &tplot) const {
+void CallFrameNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
         ", label=\"--- call frame: " << (*insn_) << "\"];\n";

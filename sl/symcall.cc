@@ -179,7 +179,7 @@ struct SymCallCtx::Private {
     SymCallCache::Private       *cd;
     const CodeStorage::Fnc      *fnc;
     SymHeap                     entry;
-    SymHeap                     surround;
+    SymHeap                     callFrame;
     const struct cl_operand     *dst;
     SymHeapUnion                rawResults;
     int                         nestLevel;
@@ -194,8 +194,8 @@ struct SymCallCtx::Private {
         fnc(0),
         entry(cd_->bt.stor(),
                 new Trace::NullNode("SymCallCtx::Private::entry")),
-        surround(cd_->bt.stor(),
-                new Trace::NullNode("SymCallCtx::Private::surround")),
+        callFrame(cd_->bt.stor(),
+                new Trace::NullNode("SymCallCtx::Private::callFrame")),
         computed(false),
         flushed(false)
     {
@@ -299,47 +299,47 @@ bool isGlVar(EValueTarget code) {
 
 void joinHeapsWithCare(
         SymHeap                        &sh,
-        SymHeap                         surround,
+        SymHeap                         callFrame,
         const CodeStorage::Fnc         *fnc)
 {
     LDP_INIT(symcall, "join");
     LDP_PLOT(symcall, sh);
-    LDP_PLOT(symcall, surround);
+    LDP_PLOT(symcall, callFrame);
 
     // create a new trace graph node
     Trace::Node *trResult = sh.traceNode()->parent();
 #if SE_TRACE_CALL_FRAMES
-    Trace::Node *trFrame = surround.traceNode()->parent();
+    Trace::Node *trFrame = callFrame.traceNode()->parent();
     Trace::Node *trDone = new Trace::CallDoneNode(trResult, trFrame, fnc);
 #else
     Trace::Node *trDone = new Trace::CallDoneNode(trResult, fnc);
 #endif
 
-    // first off, we need to make sure that a gl variable from surround will not
-    // overwrite the result of just completed function call since the var could
-    // have already been imported from there
+    // first off, we need to make sure that a gl variable from callFrame will
+    // not overwrite the result of just completed function call since the var
+    // could have already been imported from there
     TCVarList preserveGlVars;
 
     TValList liveGlVars;
-    surround.gatherRootObjects(liveGlVars, isGlVar);
+    callFrame.gatherRootObjects(liveGlVars, isGlVar);
     BOOST_FOREACH(const TValId root, liveGlVars) {
-        const CVar cv = surround.cVarByRoot(root);
+        const CVar cv = callFrame.cVarByRoot(root);
         CL_BREAK_IF(cv.inst);
 
-        // check whether the var from 'surround' is alive in 'sh'
+        // check whether the var from 'callFrame' is alive in 'sh'
         if (isVarAlive(sh, cv))
             preserveGlVars.push_back(cv);
     }
 
     if (!preserveGlVars.empty()) {
         // conflict resolution: yield the gl vars from just completed fnc call
-        SymHeap arena(surround.stor(),
+        SymHeap arena(callFrame.stor(),
                 new Trace::NullNode("joinHeapsWithCare()"));
-        surround.swap(arena);
-        splitHeapByCVars(&arena, preserveGlVars, &surround);
+        callFrame.swap(arena);
+        splitHeapByCVars(&arena, preserveGlVars, &callFrame);
     }
 
-    joinHeapsByCVars(&sh, &surround);
+    joinHeapsByCVars(&sh, &callFrame);
     sh.traceUpdate(trDone);
     LDP_PLOT(symcall, sh);
 }
@@ -364,9 +364,9 @@ void SymCallCtx::flushCallResults(SymState &dst) {
                      << i << " of " << cnt << " heaps total");
         }
 
-        // first join the heap with its original surround
+        // first join the heap with its original callFrame
         SymHeap sh(d->rawResults[i]);
-        joinHeapsWithCare(sh, d->surround, d->fnc);
+        joinHeapsWithCare(sh, d->callFrame, d->fnc);
 
         LDP_INIT(symcall, "post-processing");
         LDP_PLOT(symcall, sh);
@@ -462,14 +462,14 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     int idx;
     for (idx = cnt - 1; 0 < idx; --idx) {
         SymCallCtx *ctx = this->ctxStack[idx];
-        SymHeap &sh = ctx->d->surround;
+        SymHeap &sh = ctx->d->callFrame;
 
         if (isVarAlive(sh, cv))
             break;
     }
 
     // 'origin' is the heap that we are importing the gl var from
-    const SymHeap &origin = this->ctxStack[idx]->d->surround;
+    const SymHeap &origin = this->ctxStack[idx]->d->callFrame;
 
     // pull the designated gl var from 'origin'
     SymHeap glSubHeap(stor, new Trace::NullNode("importGlVar()"));
@@ -655,7 +655,7 @@ SymCallCtx* SymCallCache::getCallCtx(
     // build two new nodes of the trace graph
     Trace::Node *trCall = entry.traceNode()->parent();
     Trace::Node *trEntry = new Trace::CallEntryNode(trCall, &insn);
-    Trace::Node *trSurround = new Trace::CallSurroundNode(trCall, &insn);
+    Trace::Node *trFrame = new Trace::CallFrameNode(trCall, &insn);
 
     // enlarge the backtrace
     const int uid = uidOf(fnc);
@@ -685,13 +685,13 @@ SymCallCtx* SymCallCache::getCallCtx(
     LDP_INIT(symcall, "split");
     LDP_PLOT(symcall, entry);
 
-    SymHeap surround(entry.stor(), trSurround);
-    splitHeapByCVars(&entry, cut, &surround);
-    surround.valDestroyTarget(VAL_ADDR_OF_RET);
+    SymHeap callFrame(entry.stor(), trFrame);
+    splitHeapByCVars(&entry, cut, &callFrame);
+    callFrame.valDestroyTarget(VAL_ADDR_OF_RET);
     entry.traceUpdate(trEntry);
 
     LDP_PLOT(symcall, entry);
-    LDP_PLOT(symcall, surround);
+    LDP_PLOT(symcall, callFrame);
     
     // get either an existing ctx, or create a new one
     SymCallCtx *ctx = d->getCallCtx(entry, fnc);
@@ -704,8 +704,8 @@ SymCallCtx* SymCallCache::getCallCtx(
     // keep some properties later required to process the results
     ctx->d->dst         = &insn.operands[/* dst */ 0];
     ctx->d->nestLevel   = nestLevel;
-    ctx->d->surround    = surround;
-    Trace::waiveCloneOperation(ctx->d->surround);
+    ctx->d->callFrame   = callFrame;
+    Trace::waiveCloneOperation(ctx->d->callFrame);
 
     return ctx;
 }

@@ -33,18 +33,18 @@ class SymBackTrace;
 /**
  * split symbolic heap into two parts regarding the list of program variables
  * @note In the corner case, the result may be identical to the input.  Then
- * the heap pointed by saveSurroundTo will be empty.
+ * the heap pointed by saveFrameTo will be empty.
  * @param srcDst the instance of heap to operate on, it has to contain all
  * program variables that are specified by cut.
  * @param cut list of program variables to cut the heap by
- * @param saveSurroundTo if not null, it must point to a fresh instance of
+ * @param saveFrameTo if not null, it must point to a fresh instance of
  * SymHeap; it will be used to stored the (possibly empty) part of heap that is
  * cut off
  */
 void splitHeapByCVars(
         SymHeap                     *srcDst,
         const TCVarList             &cut,
-        SymHeap                     *saveSurroundTo = 0);
+        SymHeap                     *saveFrameTo = 0);
 
 /**
  * split two disjunct symbolic heaps together, going from program variables
