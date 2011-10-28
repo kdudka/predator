@@ -31,6 +31,7 @@
 #include "symheap.hh"               // needed for EObjKind
 
 #include <vector>
+#include <string>
 
 struct cl_loc;
 
@@ -399,8 +400,8 @@ class MsgNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
-/// plot a trace graph named "symtrace-NNNN.dot" leading to the given node
-bool plotTrace(Node *endPoint, TLoc loc = 0);
+/// plot a trace graph named "name-NNNN.dot" leading to the given node
+bool plotTrace(Node *endPoint, const std::string &name);
 
 /// this runs in the debug build only
 bool isRootNodeReachble(Node *const from);

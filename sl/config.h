@@ -219,7 +219,7 @@
 /**
  * if 1, track split/merge while execution function calls
  */
-#define SE_TRACE_CALL_FRAMES                1
+#define SE_TRACE_CALL_FRAMES                0
 
 /**
  * if 1, do not make deep copy on copy of SymHeap [experimental]

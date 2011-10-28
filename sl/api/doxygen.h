@@ -34,6 +34,8 @@
  *
  * - symbolic heap plotter: symplot.hh, symdebug.hh
  *
+ * - trace graph maintenance and visualization: Trace, Trace::Node
+ *
  * - utilities: symutil.hh, symseg.hh
  *
  * - built-in dispatcher: handleBuiltIn()

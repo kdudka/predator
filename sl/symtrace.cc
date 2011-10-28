@@ -261,9 +261,9 @@ void plotTraceCore(TracePlotter &tplot, Node *endPoint) {
 }
 
 // FIXME: copy-pasted from symplot.cc
-bool plotTrace(Node *endPoint, TLoc loc) {
+bool plotTrace(Node *endPoint, const std::string &name) {
     PlotEnumerator *pe = PlotEnumerator::instance();
-    std::string plotName(pe->decorate("symtrace"));
+    std::string plotName(pe->decorate(name));
     std::string fileName(plotName + ".dot");
 
     // create a dot file
@@ -294,11 +294,7 @@ bool plotTrace(Node *endPoint, TLoc loc) {
     // close graph
     out << "}\n";
     out.close();
-    if (loc)
-        CL_NOTE_MSG(loc, "trace graph dumped to '" << fileName << "'");
-    else
-        CL_DEBUG("symtrace: trace graph dumped to '" << fileName << "'");
-
+    CL_NOTE("trace graph dumped to '" << fileName << "'");
     return !!out;
 }
 
@@ -315,7 +311,7 @@ bool isRootNodeReachble(Node *const from) {
     }
 
     CL_ERROR("isRootNodeReachble() returns false");
-    plotTrace(from);
+    plotTrace(from, "lost-trace");
     return false;
 }
 

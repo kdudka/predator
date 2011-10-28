@@ -73,7 +73,7 @@ set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include/gcc")
 
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
-set(GCC_EXEC_PREFIX "timeout 64"
+set(GCC_EXEC_PREFIX "timeout 300"
     CACHE STRING "Set to empty string if not sure")
 
 set(examples

@@ -992,7 +992,7 @@ void printBackTrace(SymProc &proc, EMsgLevel level, bool forcePtrace) {
     const SymBackTrace *bt = proc.bt();
     bt->printBackTrace(forcePtrace);
 #if SE_DUMP_TRACE_GRAPHS
-    Trace::plotTrace(sh.traceNode(), loc);
+    Trace::plotTrace(sh.traceNode(), "symtrace");
 #endif
 }
 

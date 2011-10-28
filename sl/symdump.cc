@@ -83,7 +83,7 @@ void dump_plot_core(const SymHeapCore *core, const char *name) {
 }
 
 void dump_plot(const SymHeapCore *sh) {
-    dump_plot_core(sh, "symdump");
+    dump_plot_core(sh, "dump_plot");
 }
 
 void dump_plot(const SymHeapCore &sh, const char *name) {
@@ -95,5 +95,5 @@ void dump_plot(const SymHeapCore &sh) {
 }
 
 void dump_trace(Trace::Node *endPoint) {
-    Trace::plotTrace(endPoint);
+    Trace::plotTrace(endPoint, "dump_trace");
 }
