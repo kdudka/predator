@@ -309,7 +309,7 @@ void joinHeapsWithCare(
     LDP_PLOT(symcall, callFrame);
 
     // create a new trace graph node
-    NodeHandle trResult(sh.traceNode()->parent());
+    NodeHandle trResult(sh.traceNode());
     NodeHandle trFrame(callFrame.traceNode()->parent());
 
     // first off, we need to make sure that a gl variable from callFrame will
@@ -352,6 +352,8 @@ void joinHeapsWithCare(
 }
 
 void SymCallCtx::flushCallResults(SymState &dst) {
+    using namespace Trace;
+
     // are we really ready for this?
     CL_BREAK_IF(d->flushed);
 
@@ -370,18 +372,18 @@ void SymCallCtx::flushCallResults(SymState &dst) {
         // clone the heap from the result currently being processed
         const SymHeap &origin = d->rawResults[i];
         SymHeap sh(origin);
-        if (!d->computed) {
-            using namespace Trace;
+        waiveCloneOperation(sh);
 
+        // first join the heap with its original callFrame
+        joinHeapsWithCare(sh, d->callFrame, d->fnc);
+
+        if (!d->computed) {
             // the first flush --> tag the raw result as cached for next wheel
             Node *trEntry = d->entry.traceNode();
             Node *trOrig = origin.traceNode();
             SymHeap &writable = const_cast<SymHeap &>(origin);
             writable.traceUpdate(new CallCacheHitNode(trEntry, trOrig, d->fnc));
         }
-
-        // first join the heap with its original callFrame
-        joinHeapsWithCare(sh, d->callFrame, d->fnc);
 
         LDP_INIT(symcall, "post-processing");
         LDP_PLOT(symcall, sh);
