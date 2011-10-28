@@ -302,18 +302,15 @@ void joinHeapsWithCare(
         SymHeap                         callFrame,
         const CodeStorage::Fnc         *fnc)
 {
+    using namespace Trace;
+
     LDP_INIT(symcall, "join");
     LDP_PLOT(symcall, sh);
     LDP_PLOT(symcall, callFrame);
 
     // create a new trace graph node
-    Trace::Node *trResult = sh.traceNode()->parent();
-#if SE_TRACE_CALL_FRAMES
-    Trace::Node *trFrame = callFrame.traceNode()->parent();
-    Trace::Node *trDone = new Trace::CallDoneNode(trResult, trFrame, fnc);
-#else
-    Trace::Node *trDone = new Trace::CallDoneNode(trResult, fnc);
-#endif
+    NodeHandle trResult(sh.traceNode()->parent());
+    NodeHandle trFrame(callFrame.traceNode()->parent());
 
     // first off, we need to make sure that a gl variable from callFrame will
     // not overwrite the result of just completed function call since the var
@@ -333,11 +330,21 @@ void joinHeapsWithCare(
 
     if (!preserveGlVars.empty()) {
         // conflict resolution: yield the gl vars from just completed fnc call
-        SymHeap arena(callFrame.stor(),
-                new Trace::NullNode("joinHeapsWithCare()"));
+        SymHeap arena(callFrame.stor(), new NullNode("joinHeapsWithCare()"));
         callFrame.swap(arena);
         splitHeapByCVars(&arena, preserveGlVars, &callFrame);
     }
+
+    bool isFrameAlive = !liveGlVars.empty();
+    if (!isFrameAlive) {
+        TValList liveVars;
+        callFrame.gatherRootObjects(liveGlVars, isProgramVar);
+        isFrameAlive = !liveVars.empty();
+    }
+
+    Node *trDone = (isFrameAlive)
+        ? new CallDoneNode(trResult.node(), trFrame.node(), fnc)
+        : new CallDoneNode(trResult.node(), fnc);
 
     joinHeapsByCVars(&sh, &callFrame);
     sh.traceUpdate(trDone);
