@@ -115,7 +115,7 @@ void InsnNode::plotNode(TracePlotter &tplot) const {
         : "black";
 
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=black, fontcolor="
+        << " [shape=plaintext, fontname=monospace, fontcolor="
         << color << ", label="
         << SL_QUOTE((*insn_)) << "];\n";
 }
@@ -137,66 +137,62 @@ void AbstractionNode::plotNode(TracePlotter &tplot) const {
     }
 
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=red, fontcolor=red, label="
+        << " [shape=ellipse, color=red, fontcolor=red, label="
         << SL_QUOTE(label) << "];\n";
 }
 
 void ConcretizationNode::plotNode(TracePlotter &tplot) const {
     // TODO: kind_
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=red, fontcolor=blue, label="
+        << " [shape=ellipse, color=red, fontcolor=blue, label="
         << SL_QUOTE("concretizeObj()") << "];\n";
 }
 
 void SpliceOutNode::plotNode(TracePlotter &tplot) const {
     // TODO: kind_, successful_
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=red, fontcolor=blue, label="
+        << " [shape=ellipse, color=red, fontcolor=blue, label="
         << SL_QUOTE("spliceOut*()") << "];\n";
 }
 
 void JoinNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=red, fontcolor=red, label=\"join\"];\n";
+        << " [shape=circle, color=red, fontcolor=red, label=\"join\"];\n";
 }
 
 void CloneNode::plotNode(TracePlotter &tplot) const {
-    tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=black, fontcolor=black, label=\"clone\"];\n";
+    tplot.out << "\t" << SL_QUOTE(this) << " [shape=doubleoctagon, color=black"
+        ", fontcolor=black, label=\"clone\"];\n";
 }
 
 void CallEntryNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=blue, fontcolor=blue, label=\"call entry: "
-        << (*insn_) << "\"];\n";
+        << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
+        ", penwidth=3.0, label=\"--> call entry: " << (*insn_) << "\"];\n";
 }
 
 void CallSurroundNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=blue, fontcolor=blue, label=\"call frame: "
-        << (*insn_) << "\"];\n";
+        << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
+        ", label=\"--- call frame: " << (*insn_) << "\"];\n";
 }
 
 void CallDoneNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color=blue, fontcolor=blue, label=\"call done: "
+        << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
+        ", penwidth=3.0, label=\"<-- call done: "
         << (nameOf(*fnc_)) << "()\"];\n";
 }
 
 void CondNode::plotNode(TracePlotter &tplot) const {
-    tplot.out << "\t" << SL_QUOTE(this) << " [shape=box";
+    tplot.out << "\t" << SL_QUOTE(this) << " [shape=box, fontname=monospace";
 
-    if (branch_)
+    if (determ_)
         tplot.out << ", color=green";
     else
         tplot.out << ", color=red";
 
-    if (determ_)
-        tplot.out << ", fontcolor=black";
-    else
-        tplot.out << ", fontcolor=red";
-
-    tplot.out << ", label=\"" << (*inCmp_) << " ... ";
+    tplot.out << ", fontcolor=black, label=\"" << (*inCmp_) << " ... ";
 
     if (determ_)
         tplot.out << "evaluated as ";
@@ -235,7 +231,7 @@ void MsgNode::plotNode(TracePlotter &tplot) const {
     }
 
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=box, color="
+        << " [shape=tripleoctagon, fontcolor=monospace, color="
         << color << ", fontcolor=red, label="
         << SL_QUOTE((*loc_) << label) << "];\n";
 }
@@ -280,7 +276,7 @@ bool plotTrace(Node *endPoint, TLoc loc) {
     // open graph
     out << "digraph " << SL_QUOTE(plotName)
         << " {\n\tlabel=<<FONT POINT-SIZE=\"18\">" << plotName
-        << "</FONT>>;\n\tclusterrank=local;\n\tlabelloc=t;\n";
+        << "</FONT>>;\n\tlabelloc=t;\n";
 
     // check whether we can write to stream
     if (!out.flush()) {
