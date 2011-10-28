@@ -355,10 +355,6 @@ void SymCallCtx::flushCallResults(SymState &dst) {
     // are we really ready for this?
     CL_BREAK_IF(d->flushed);
 
-    // mark as done
-    d->computed = true;
-    d->flushed = true;
-
     // leave ctx stack
     CL_BREAK_IF(this != d->cd->ctxStack.back());
     d->cd->ctxStack.pop_back();
@@ -371,8 +367,20 @@ void SymCallCtx::flushCallResults(SymState &dst) {
                      << i << " of " << cnt << " heaps total");
         }
 
+        // clone the heap from the result currently being processed
+        const SymHeap &origin = d->rawResults[i];
+        SymHeap sh(origin);
+        if (!d->computed) {
+            using namespace Trace;
+
+            // the first flush --> tag the raw result as cached for next wheel
+            Node *trEntry = d->entry.traceNode();
+            Node *trOrig = origin.traceNode();
+            SymHeap &writable = const_cast<SymHeap &>(origin);
+            writable.traceUpdate(new CallCacheHitNode(trEntry, trOrig, d->fnc));
+        }
+
         // first join the heap with its original callFrame
-        SymHeap sh(d->rawResults[i]);
         joinHeapsWithCare(sh, d->callFrame, d->fnc);
 
         LDP_INIT(symcall, "post-processing");
@@ -392,6 +400,10 @@ void SymCallCtx::flushCallResults(SymState &dst) {
         // flush the result
         dst.insert(sh);
     }
+
+    // mark as done
+    d->computed = true;
+    d->flushed = true;
 
     // leave backtrace
     d->cd->bt.popCall();

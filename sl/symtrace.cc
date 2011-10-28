@@ -176,6 +176,13 @@ void CallEntryNode::plotNode(TracePlotter &tplot) const {
         ", penwidth=3.0, label=\"--> call entry: " << (*insn_) << "\"];\n";
 }
 
+void CallCacheHitNode::plotNode(TracePlotter &tplot) const {
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=box, fontname=monospace, color=gold, fontcolor=blue"
+        ", penwidth=3.0, label=\"(x) call cache hit: "
+        << (nameOf(*fnc_)) << "()\"];\n";
+}
+
 void CallFrameNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"

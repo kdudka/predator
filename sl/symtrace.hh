@@ -341,6 +341,26 @@ class CallEntryNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// trace graph node representing a cached call result
+class CallCacheHitNode: public Node {
+    private:
+        const TFnc fnc_;
+
+    public:
+        /**
+         * @param entry trace representing the call cache entry
+         * @param result trace representing a cached call result (without frame)
+         * @param fnc a CodeStorage::Fnc obj representing the called function
+         */
+        CallCacheHitNode(Node *entry, Node *result, const TFnc fnc):
+            Node(entry, result),
+            fnc_(fnc)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
 /// trace graph node representing a call frame (used by SE_TRACE_CALL_FRAMES)
 class CallFrameNode: public Node {
     private:
