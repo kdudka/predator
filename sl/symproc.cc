@@ -991,8 +991,11 @@ void printBackTrace(SymProc &proc, EMsgLevel level, bool forcePtrace) {
 
     const SymBackTrace *bt = proc.bt();
     bt->printBackTrace(forcePtrace);
-#if SE_DUMP_TRACE_GRAPHS
+#if 2 == SE_DUMP_TRACE_GRAPHS
     Trace::plotTrace(sh.traceNode(), "symtrace");
+#elif 1 == SE_DUMP_TRACE_GRAPHS
+    Trace::GraphProxy *glProxy = Trace::Globals::instance()->glProxy();
+    glProxy->insert(sh.traceNode(), "symtrace");
 #endif
 }
 

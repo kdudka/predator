@@ -87,12 +87,15 @@ void NodeHandle::reset(Node *node) {
 
 typedef const Node                     *TNode;
 typedef std::pair<TNode, TNode>         TNodePair;
+typedef WorkList<TNodePair>             TWorkList;
 
 struct TracePlotter {
     std::ostream                        &out;
+    TWorkList                           &wl;
 
-    TracePlotter(std::ostream &out_):
-        out(out_)
+    TracePlotter(std::ostream &out_, TWorkList &wl_):
+        out(out_),
+        wl(wl_)
     {
     }
 };
@@ -238,18 +241,18 @@ void MsgNode::plotNode(TracePlotter &tplot) const {
         << SL_QUOTE((*loc_) << label) << "];\n";
 }
 
-void plotTraceCore(TracePlotter &tplot, Node *endPoint) {
-    TNodePair item(/* from */ endPoint, /* to */ 0);
+void plotTraceCore(TracePlotter &tplot) {
+    CL_DEBUG("plotTraceCore() is traversing a trace graph...");
 
-    WorkList<TNodePair> wl(item);
-    while (wl.next(item)) {
+    TNodePair item;
+    while (tplot.wl.next(item)) {
         const TNode now = /* from */ item.first;
         const TNode to  = /* to   */ item.second;
         item.second = now;
 
         BOOST_FOREACH(TNode from, now->parents()) {
             item.first = from;
-            wl.schedule(item);
+            tplot.wl.schedule(item);
         }
 
         now->plotNode(tplot);
@@ -263,7 +266,7 @@ void plotTraceCore(TracePlotter &tplot, Node *endPoint) {
 }
 
 // FIXME: copy-pasted from symplot.cc
-bool plotTrace(Node *endPoint, const std::string &name) {
+bool plotTrace(const std::string &name, TWorkList &wl) {
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string plotName(pe->decorate(name));
     std::string fileName(plotName + ".dot");
@@ -287,11 +290,9 @@ bool plotTrace(Node *endPoint, const std::string &name) {
         return false;
     }
 
-    // initialize an instance of PlotData
-    TracePlotter tplot(out);
-
     // do our stuff
-    plotTraceCore(tplot, endPoint);
+    TracePlotter tplot(out, wl);
+    plotTraceCore(tplot);
 
     // close graph
     out << "}\n";
@@ -300,6 +301,11 @@ bool plotTrace(Node *endPoint, const std::string &name) {
     return !!out;
 }
 
+bool plotTrace(Node *endPoint, const std::string &name) {
+    const TNodePair item(/* from */ endPoint, /* to */ 0);
+    TWorkList wl(item);
+    return plotTrace(name, wl);
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::isRootNodeReachble()
@@ -366,9 +372,15 @@ bool /* any change */ EndPointConsolidator::insert(Node *endPoint) {
 bool EndPointConsolidator::plotAll(const std::string &name) {
     d->dirty = false;
 
-    CL_BREAK_IF("please implement");
-    (void) name;
-    return false;
+    // schedule all end-points
+    TWorkList wl;
+    BOOST_FOREACH(Node *endPoint, d->nset) {
+        const TNodePair item(/* from */ endPoint, /* to */ 0);
+        wl.schedule(item);
+    }
+
+    // plot everything
+    return plotTrace(name, wl);
 }
 
 

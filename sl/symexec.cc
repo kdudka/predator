@@ -1096,7 +1096,7 @@ void execute(
         CL_WARN("unable to install signal handlers");
 
     // XXX: synthesize CL_INSN_CALL
-    CodeStorage::Insn insn;
+    static CodeStorage::Insn insn;
     insn.stor = fnc.stor;
     insn.code = CL_INSN_CALL;
     insn.loc  = *locationOf(fnc);
