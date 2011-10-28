@@ -466,6 +466,33 @@ class GraphProxy {
         Private *d;
 };
 
+/// a singleton holding global GraphProxy (may be extended later)
+class Globals {
+    private:
+        GraphProxy              glProxy_;
+        static Globals         *inst_;
+
+    public:
+        static bool alive() {
+            return !!inst_;
+        }
+
+        static Globals* instance() {
+            return (alive())
+                ? (inst_)
+                : (inst_ = new Globals);
+        }
+
+        GraphProxy* glProxy() {
+            return &glProxy_;
+        }
+
+        static void cleanup() {
+            delete inst_;
+            inst_ = 0;
+        }
+};
+
 
 } // namespace Trace
 

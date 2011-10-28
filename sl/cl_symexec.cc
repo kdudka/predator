@@ -212,6 +212,16 @@ void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep) {
     // just execute the main() function
     execFnc(*main, ep, /* lookForGlJunk */ true);
     printMemUsage("execFnc");
+
+    if (Trace::Globals::alive()) {
+        // plot all pending trace graphs
+        Trace::GraphProxy *glProxy = Trace::Globals::instance()->glProxy();
+        glProxy->plotAll();
+
+        // kill Trace::Globals, which may trigger the final trace graph cleanup
+        Trace::Globals::cleanup();
+        printMemUsage("Trace::Globals::cleanup");
+    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -423,4 +423,10 @@ bool GraphProxy::plotAll() {
 }
 
 
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of Trace::Globals
+
+Globals *Globals::inst_;
+
+
 } // namespace Trace
