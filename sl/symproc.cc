@@ -1295,7 +1295,7 @@ bool SymExecCore::concretizeLoop(
 
     TSymHeapList todo;
     todo.push_back(sh_);
-    todo.front().traceUpdate(sh_.traceNode());
+    Trace::waiveCloneOperation(todo.back());
 
     while (!todo.empty()) {
         SymHeap &sh = todo.front();

@@ -493,6 +493,9 @@ class Globals {
         }
 };
 
+/// mark the just completed @b clone operation as @b intended and unimportant
+void waiveCloneOperation(SymHeap &sh);
+
 
 } // namespace Trace
 

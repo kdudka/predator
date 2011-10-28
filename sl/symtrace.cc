@@ -441,4 +441,17 @@ bool GraphProxy::plotAll() {
 Globals *Globals::inst_;
 
 
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of Trace::waiveCloneOperation()
+
+void waiveCloneOperation(SymHeap &sh) {
+    // just make sure the caller knows what is going on...
+    Node *cnode = sh.traceNode();
+    CL_BREAK_IF(!dynamic_cast<CloneNode *>(cnode));
+
+    // bypass the parental node
+    sh.traceUpdate(cnode->parent());
+}
+
+
 } // namespace Trace

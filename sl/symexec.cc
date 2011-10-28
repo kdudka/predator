@@ -229,7 +229,7 @@ void SymExecEngine::execJump() {
     // make a copy in case we needed to perform an abstraction
     const SymHeap &origin = localState_[heapIdx_];
     SymHeap sh(origin);
-    sh.traceUpdate(origin.traceNode());
+    Trace::waiveCloneOperation(sh);
 
     this->updateState(sh, tlist[/* target */ 0]);
 }
@@ -263,21 +263,6 @@ void SymExecEngine::execReturn() {
     // commit one of the function results
     dst_.insert(sh);
     endReached_ = true;
-}
-
-void traceCond(
-        SymHeap                    &sh,
-        const CodeStorage::Insn    &inCmp,
-        const CodeStorage::Insn    &inCnd,
-        const bool                  det,
-        const bool                  br)
-{
-    Trace::Node *trOrig = sh.traceNode()->parent();
-    if (!det)
-        trOrig = trOrig->parent();
-
-    Trace::Node *trCond = new Trace::CondNode(trOrig, &inCmp, &inCnd, det, br);
-    sh.traceUpdate(trCond);
 }
 
 void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
@@ -323,6 +308,9 @@ void SymExecEngine::updateStateInBranch(
         const TValId                v1,
         const TValId                v2)
 {
+    sh.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
+                &insnCmp, &insnCnd, /* det */ false, branch));
+
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
 
     // resolve binary operator
@@ -347,8 +335,6 @@ void SymExecEngine::updateStateInBranch(
     LDP_PLOT(nondetCond, sh);
 
 fallback:
-    traceCond(sh, insnCmp, insnCnd, /* deterministic */ false, branch);
-
     SymProc proc(sh, &bt_);
     proc.setLocation(lw_);
     proc.killInsn(insnCmp);
@@ -394,20 +380,22 @@ bool SymExecEngine::bypassNonPointers(
     proc.killInsn(insnCmp);
 
     SymHeap sh1(sh);
-    traceCond(sh1, insnCmp, insnCnd, /* determ */ false, /* branch */ true);
-    SymProc proc1(sh1, proc.bt());
-    proc1.setLocation(proc.lw());
+    sh1.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
+                &insnCmp, &insnCnd, /* det */ false, /* branch */ true));
 
     CL_DEBUG_MSG(lw_, "-T- CL_INSN_COND updates TRUE branch");
+    SymProc proc1(sh1, proc.bt());
+    proc1.setLocation(proc.lw());
     proc1.killPerTarget(insnCnd, /* then label */ 0);
     this->updateState(sh1, insnCnd.targets[/* then label */ 0]);
 
     SymHeap sh2(sh);
-    traceCond(sh2, insnCmp, insnCnd, /* determ */ false, /* branch */ false);
-    SymProc proc2(sh2, proc.bt());
-    proc2.setLocation(proc.lw());
+    sh2.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
+                &insnCmp, &insnCnd, /* det */ false, /* branch */ false));
 
     CL_DEBUG_MSG(lw_, "-F- CL_INSN_COND updates FALSE branch");
+    SymProc proc2(sh2, proc.bt());
+    proc2.setLocation(proc.lw());
     proc2.killPerTarget(insnCnd, /* else label */ 1);
     this->updateState(sh2, insnCnd.targets[/* else label */ 1]);
 
@@ -437,6 +425,7 @@ void SymExecEngine::execCondInsn() {
 
     // a working area in case of VAL_TRUE and VAL_FALSE
     SymHeap sh(localState_[heapIdx_]);
+    Trace::waiveCloneOperation(sh);
     SymProc proc(sh, &bt_);
     proc.setLocation(lw_);
 
@@ -449,18 +438,20 @@ void SymExecEngine::execCondInsn() {
     // check whether we know where to go
     switch (val) {
         case VAL_TRUE:
-            CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
-            traceCond(sh, *insnCmp, *insnCnd, /* det */ true, /* br */ true);
+            sh.traceUpdate(new Trace::CondNode(sh.traceNode(),
+                        insnCmp, insnCnd, /* det */ true, /* branch */ true));
 
+            CL_DEBUG_MSG(lw_, ".T. CL_INSN_COND got VAL_TRUE");
             proc.killInsn(*insnCmp);
             proc.killPerTarget(*insnCnd, /* then label */ 0);
             this->updateState(sh, insnCnd->targets[/* then label */ 0]);
             return;
 
         case VAL_FALSE:
-            CL_DEBUG_MSG(lw_, ".F. CL_INSN_COND got VAL_FALSE");
-            traceCond(sh, *insnCmp, *insnCnd, /* det */ true, /* br */ false);
+            sh.traceUpdate(new Trace::CondNode(sh.traceNode(),
+                        insnCmp, insnCnd, /* det */ true, /* branch */ false));
 
+            CL_DEBUG_MSG(lw_, ".F. CL_INSN_COND got VAL_FALSE");
             proc.killInsn(*insnCmp);
             proc.killPerTarget(*insnCnd, /* else label */ 1);
             this->updateState(sh, insnCnd->targets[/* else label */ 1]);
@@ -543,7 +534,7 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
     core.setLocation(lw_);
 
     // drop the unnecessary Trace::CloneNode node in the trace graph
-    sh.traceUpdate(origin.traceNode());
+    Trace::waiveCloneOperation(sh);
 
     // execute the instruction
     if (!core.exec(nextLocalState_, *insn)) {
@@ -649,10 +640,8 @@ bool /* complete */ SymExecEngine::execBlock() {
         localState_ = origin;
 
         // eliminate the unneeded Trace::CloneNode instances
-        for (unsigned i = 0; i < origin.size(); ++i) {
-            SymHeap &local = const_cast<SymHeap &>(localState_[i]);
-            local.traceUpdate(origin[i].traceNode());
-        }
+        BOOST_FOREACH(SymHeap *sh, localState_)
+            Trace::waiveCloneOperation(*sh);
     }
 
     // go through the remainder of BB insns

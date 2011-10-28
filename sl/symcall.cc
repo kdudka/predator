@@ -614,7 +614,7 @@ SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
         ctx = new SymCallCtx(this);
         ctx->d->fnc     = &fnc;
         ctx->d->entry   = entry;
-        ctx->d->entry.traceUpdate(entry.traceNode());
+        Trace::waiveCloneOperation(ctx->d->entry);
 
         // enter ctx stack
         this->ctxStack.push_back(ctx);
@@ -705,6 +705,7 @@ SymCallCtx* SymCallCache::getCallCtx(
     ctx->d->dst         = &insn.operands[/* dst */ 0];
     ctx->d->nestLevel   = nestLevel;
     ctx->d->surround    = surround;
-    ctx->d->surround.traceUpdate(trSurround);
+    Trace::waiveCloneOperation(ctx->d->surround);
+
     return ctx;
 }

@@ -98,8 +98,7 @@ void SymState::insertNew(const SymHeap &sh) {
     SymHeap *dup = new SymHeap(sh);
 
     // drop the unneeded Trace::CloneNode
-    Trace::Node *trOrig = sh.traceNode();
-    dup->traceUpdate(trOrig);
+    Trace::waiveCloneOperation(*dup);
 
     // append the pointer to our container
     heaps_.push_back(dup);
@@ -252,7 +251,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
             debugPlot("join", 1, shNew);
 
             result = shNew;
-            result.traceUpdate(shNew.traceNode());
+            Trace::waiveCloneOperation(result);
             this->swapExisting(idx, result);
 
             this->packSuffix(idx);
