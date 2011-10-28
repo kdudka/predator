@@ -81,12 +81,15 @@ class NodeBase {
 
 /// an abstract node of the symbolic execution trace graph
 class Node: public NodeBase {
-    public:
+    private:
         /// birth notification from a child node
         void notifyBirth(NodeBase *child);
 
         /// death notification from a child node
         void notifyDeath(NodeBase *child);
+
+        friend class NodeBase;
+        friend class NodeHandle;
 
     protected:
         /// this is an abstract class, its instantiation is @b not allowed
@@ -108,10 +111,12 @@ class Node: public NodeBase {
             ref2->notifyBirth(this);
         }
 
-    public:
         /// serialize this node to the given plot (externally not much useful)
         void virtual plotNode(TracePlotter &) const = 0;
 
+        friend void plotTraceCore(TracePlotter &);
+
+    public:
         /// used to store a list of child nodes
         typedef std::vector<NodeBase *> TBaseList;
 
@@ -168,6 +173,7 @@ class TransientNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 
     private:
@@ -186,6 +192,7 @@ class RootNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -208,6 +215,7 @@ class InsnNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -236,6 +244,7 @@ class CondNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -255,6 +264,7 @@ class AbstractionNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -274,6 +284,7 @@ class ConcretizationNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -296,6 +307,7 @@ class SpliceOutNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -308,6 +320,7 @@ class JoinNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -319,6 +332,7 @@ class CloneNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -338,6 +352,7 @@ class CallEntryNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -358,10 +373,11 @@ class CallCacheHitNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
-/// trace graph node representing a call frame (used by SE_TRACE_CALL_FRAMES)
+/// trace graph node representing a call frame
 class CallFrameNode: public Node {
     private:
         const TInsn insn_;
@@ -377,6 +393,7 @@ class CallFrameNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -397,7 +414,6 @@ class CallDoneNode: public Node {
         }
 
         /**
-         * @note used by SE_TRACE_CALL_FRAMES
          * @param result trace representing the result as seen by the @b callee
          * @param callFrame trace representing the call frame of the call
          * @param fnc a CodeStorage::Fnc obj representing the called function
@@ -408,6 +424,7 @@ class CallDoneNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -430,6 +447,7 @@ class MsgNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
@@ -452,6 +470,7 @@ class UserNode: public Node {
         {
         }
 
+    protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
