@@ -160,10 +160,10 @@ class NodeHandle: public NodeBase {
 };
 
 /// used to explicitly highlight trace graph nodes that should not be reachable
-class NullNode: public Node {
+class TransientNode: public Node {
     public:
         /// @param origin describe where the unreachable node originates from
-        NullNode(const char *origin):
+        TransientNode(const char *origin):
             origin_(origin)
         {
         }

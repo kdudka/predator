@@ -95,7 +95,7 @@ class PerFncCache {
 int PerFncCache::lookupCore(const SymHeap &sh) {
 #if 1 < SE_ENABLE_CALL_CACHE
     EJoinStatus     status;
-    SymHeap         result(sh.stor(), new Trace::NullNode("PerFncCache"));
+    SymHeap         result(sh.stor(), new Trace::TransientNode("PerFncCache"));
     const int       cnt = huni_.size();
     int             idx;
 
@@ -193,9 +193,9 @@ struct SymCallCtx::Private {
         cd(cd_),
         fnc(0),
         entry(cd_->bt.stor(),
-                new Trace::NullNode("SymCallCtx::Private::entry")),
+                new Trace::TransientNode("SymCallCtx::Private::entry")),
         callFrame(cd_->bt.stor(),
-                new Trace::NullNode("SymCallCtx::Private::callFrame")),
+                new Trace::TransientNode("SymCallCtx::Private::callFrame")),
         computed(false),
         flushed(false)
     {
@@ -330,7 +330,7 @@ void joinHeapsWithCare(
 
     if (!preserveGlVars.empty()) {
         // conflict resolution: yield the gl vars from just completed fnc call
-        SymHeap arena(callFrame.stor(), new NullNode("joinHeapsWithCare()"));
+        SymHeap arena(callFrame.stor(), new TransientNode("preserveGlVars"));
         callFrame.swap(arena);
         splitHeapByCVars(&arena, preserveGlVars, &callFrame);
     }
@@ -493,7 +493,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
     const SymHeap &origin = this->ctxStack[idx]->d->callFrame;
 
     // pull the designated gl var from 'origin'
-    SymHeap glSubHeap(stor, new Trace::NullNode("importGlVar()"));
+    SymHeap glSubHeap(stor, new Trace::TransientNode("importGlVar()"));
     pullGlVar(glSubHeap, origin, cv);
 
     // go through all heaps above the 'origin' up to the current call level

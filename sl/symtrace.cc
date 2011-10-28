@@ -103,7 +103,7 @@ struct TracePlotter {
 // FIXME: copy-pasted from symplot.cc
 #define SL_QUOTE(what) "\"" << what << "\""
 
-void NullNode::plotNode(TracePlotter &tplot) const {
+void TransientNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, color=red, fontcolor=red, label="
         << SL_QUOTE(origin_) << "];\n";

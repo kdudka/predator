@@ -2353,7 +2353,7 @@ bool joinSymHeaps(
     SJ_DEBUG("--> joinSymHeaps()");
     TStorRef stor = sh1.stor();
     CL_BREAK_IF(&stor != &sh2.stor());
-    *pDst = SymHeap(stor, new Trace::NullNode("joinSymHeaps()"));
+    *pDst = SymHeap(stor, new Trace::TransientNode("joinSymHeaps()"));
 
     // initialize symbolic join ctx
     SymJoinCtx ctx(*pDst, sh1, sh2);
@@ -2525,7 +2525,7 @@ bool joinDataReadOnly(
     SJ_DEBUG("--> joinDataReadOnly" << SJ_VALP(addr1, addr2));
 
     // go through the commont part of joinData()/joinDataReadOnly()
-    SymHeap tmp(sh.stor(), new Trace::NullNode("joinDataReadOnly()"));
+    SymHeap tmp(sh.stor(), new Trace::TransientNode("joinDataReadOnly()"));
     SymJoinCtx ctx(tmp, sh);
     
     if (!joinDataCore(ctx, off, addr1, addr2))
