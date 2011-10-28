@@ -89,6 +89,8 @@ typedef const Node                     *TNode;
 typedef std::pair<TNode, TNode>         TNodePair;
 typedef WorkList<TNodePair>             TWorkList;
 
+static Node *const nullNode = 0;
+
 struct TracePlotter {
     std::ostream                        &out;
     TWorkList                           &wl;
@@ -314,7 +316,7 @@ bool plotTrace(const std::string &name, TWorkList &wl) {
 }
 
 bool plotTrace(Node *endPoint, const std::string &name) {
-    const TNodePair item(/* from */ endPoint, /* to */ 0);
+    const TNodePair item(/* from */ endPoint, /* to */ nullNode);
     TWorkList wl(item);
     return plotTrace(name, wl);
 }
@@ -387,7 +389,7 @@ bool EndPointConsolidator::plotAll(const std::string &name) {
     // schedule all end-points
     TWorkList wl;
     BOOST_FOREACH(Node *endPoint, d->nset) {
-        const TNodePair item(/* from */ endPoint, /* to */ 0);
+        const TNodePair item(/* from */ endPoint, /* to */ nullNode);
         wl.schedule(item);
     }
 
