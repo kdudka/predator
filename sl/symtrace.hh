@@ -77,11 +77,6 @@ class NodeBase {
 
         /// reference to list of parents (containing 0..n pointers)
         const TNodeList& parents() const { return parents_; }
-
-    private:
-        // not yet implemented/tested --> disabled globally
-        NodeBase(const NodeBase &);
-        NodeBase& operator=(const NodeBase &);
 };
 
 /// an abstract node of the symbolic execution trace graph
@@ -124,6 +119,11 @@ class Node: public NodeBase {
         const TBaseList& children() const { return children_; }
 
     private:
+        // copying NOT allowed
+        Node(const Node &);
+        Node& operator=(const Node &);
+
+    private:
         TBaseList children_;
 };
 
@@ -144,6 +144,19 @@ class NodeHandle: public NodeBase {
 
         /// release the old node and re-initialize the handle with the new one
         void reset(Node *);
+
+        /// overridden copy constructor keeping the semantics of a handle
+        NodeHandle(const NodeHandle &tpl):
+            NodeBase(tpl.node())
+        {
+            this->parent()->notifyBirth(this);
+        }
+
+        /// overridden assignment operator keeping the semantics of a handle
+        NodeHandle& operator=(const NodeHandle &tpl) {
+            this->reset(tpl.node());
+            return *this;
+        }
 };
 
 /// used to explicitly highlight trace graph nodes that should not be reachable
@@ -405,6 +418,54 @@ bool plotTrace(Node *endPoint, const std::string &name);
 
 /// this runs in the debug build only
 bool isRootNodeReachble(Node *const from);
+
+/// a container maintaining a set of trace graph end-points
+class EndPointConsolidator {
+    public:
+        EndPointConsolidator();
+        ~EndPointConsolidator();
+
+        /// insert a new trace graph end-point
+        bool /* any change */ insert(Node *);
+
+        /// plot a common graph leading to all end-points inside the container
+        bool plotAll(const std::string &name);
+
+    private:
+        // copying NOT allowed
+        EndPointConsolidator(const EndPointConsolidator &);
+        EndPointConsolidator& operator=(const EndPointConsolidator &);
+
+    private:
+        struct Private;
+        Private *d;
+};
+
+/// a container maintaining a set of trace graph being built on the fly
+class GraphProxy {
+    public:
+        GraphProxy();
+        ~GraphProxy();
+
+        /// insert a new trace graph end-point into the specified trace graph
+        bool /* any change */ insert(Node *, const std::string &graphName);
+
+        /// plot the specified graph
+        bool plotGraph(const std::string &name);
+
+        /// plot all graphs being maintained by this proxy
+        bool plotAll();
+
+    private:
+        // copying NOT allowed
+        GraphProxy(const GraphProxy &);
+        GraphProxy& operator=(const GraphProxy &);
+
+    private:
+        struct Private;
+        Private *d;
+};
+
 
 } // namespace Trace
 

@@ -28,6 +28,8 @@
 
 #include <algorithm>
 #include <fstream>
+#include <map>
+#include <set>
 
 #include <boost/foreach.hpp>
 
@@ -298,7 +300,10 @@ bool plotTrace(Node *endPoint, const std::string &name) {
     return !!out;
 }
 
-/// this runs in the debug build only
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of Trace::isRootNodeReachble()
+
 bool isRootNodeReachble(Node *const from) {
     Node *node = from;
     WorkList<Node *> wl(node);
@@ -313,6 +318,108 @@ bool isRootNodeReachble(Node *const from) {
     CL_ERROR("isRootNodeReachble() returns false");
     plotTrace(from, "lost-trace");
     return false;
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of Trace::EndPointConsolidator
+
+struct EndPointConsolidator::Private {
+    typedef std::set<Node *>                                    TNodeSet;
+    typedef std::vector<NodeHandle>                             THandleList;
+
+    bool                        dirty;
+    TNodeSet                    nset;
+    THandleList                 handles;
+
+    Private():
+        dirty(false)
+    {
+    }
+};
+
+EndPointConsolidator::EndPointConsolidator():
+    d(new Private)
+{
+}
+
+EndPointConsolidator::~EndPointConsolidator() {
+    if (d->dirty)
+        CL_DEBUG("WARNING: EndPointConsolidator is destructed dirty");
+
+    // release all handles
+    d->handles.clear();
+
+    delete d;
+}
+
+bool /* any change */ EndPointConsolidator::insert(Node *endPoint) {
+    if (!insertOnce(d->nset, endPoint))
+        return false;
+
+    // keep a handle for the newly inserted node
+    d->handles.push_back(NodeHandle(endPoint));
+
+    return ((d->dirty = true));
+}
+
+bool EndPointConsolidator::plotAll(const std::string &name) {
+    d->dirty = false;
+
+    CL_BREAK_IF("please implement");
+    (void) name;
+    return false;
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of Trace::GraphProxy
+
+struct GraphProxy::Private {
+    typedef std::map<std::string, EndPointConsolidator *>       TMap;
+    TMap gmap;
+};
+
+GraphProxy::GraphProxy():
+    d(new Private)
+{
+}
+
+GraphProxy::~GraphProxy() {
+    BOOST_FOREACH(Private::TMap::const_reference item, d->gmap)
+        delete /* (EndPointConsolidator *) */ item.second;
+
+    delete d;
+}
+
+bool /* any change */ GraphProxy::insert(Node *node, const std::string &name) {
+    Private::TMap::const_iterator it = d->gmap.find(name);
+
+    EndPointConsolidator *const epc = (d->gmap.end() == it)
+        ? (d->gmap[name] = new EndPointConsolidator)
+        : (it->second);
+
+    return /* any change */ epc->insert(node);
+}
+
+bool GraphProxy::plotGraph(const std::string &name) {
+    CL_BREAK_IF(!hasKey(d->gmap, name));
+
+    return d->gmap[name]->plotAll(name);
+}
+
+bool GraphProxy::plotAll() {
+    bool ok = true;
+
+    BOOST_FOREACH(Private::TMap::const_reference item, d->gmap) {
+        const std::string &name = item.first;
+        EndPointConsolidator *const epc = item.second;
+
+        if (!epc->plotAll(name))
+            ok = false;
+    }
+
+    return ok;
 }
 
 
