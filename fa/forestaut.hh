@@ -146,14 +146,36 @@ public:
 		if (p.second)
 			return true;
 
-		assert(p.first->second.size() <= v.size());
-
-		if (p.first->second == v)
+		if (v.size() < p.first->second.size())
 			return false;
 
-		p.first->second = v;
+		if (v.size() > p.first->second.size()) {
 
-		return true;
+			p.first->second = v;
+
+			return true;
+
+		}
+
+		bool changed = false;
+
+		for (size_t i = 0; i < v.size(); ++i) {
+
+			assert(v[i].first == p.first->second[i].first);
+
+			if (v[i].second == p.first->second[i].second)
+				continue;
+
+			if (!v[i].second)
+				continue;
+
+			p.first->second[i].second = true;
+
+			changed = true;
+
+		}
+
+		return changed;
 
 	}
 
@@ -213,7 +235,10 @@ public:
 	}
 
 	bool hasReference(size_t root, size_t target) const {
+
+		assert(root < this->roots.size());
 		assert(this->roots[root]);
+
 		for (std::vector<std::pair<size_t, bool> >::const_iterator i = this->rootMap[root].begin(); i != this->rootMap[root].end(); ++i) {
 			if (i->first == target)
 				return true;

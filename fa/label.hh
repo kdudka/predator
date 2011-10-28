@@ -170,7 +170,7 @@ struct NodeLabel {
 		switch (label.type) {
 			case node_type::n_unknown:
 				os << "unknown";
-				break;			
+				break;
 			case node_type::n_data:
 				assert(label.data.data);
 				os << *label.data.data;
@@ -186,7 +186,8 @@ struct NodeLabel {
 			}
 			case node_type::n_node: {
 				assert(label.node.v);
-				assert(label.node.v->size());
+				if (label.node.v->empty())
+					break;
 				std::vector<const AbstractBox*>::const_iterator i = label.node.v->begin();
 				os << **i;
 				for (++i; i != label.node.v->end(); ++i)
@@ -235,7 +236,7 @@ struct label_type {
 	friend std::ostream& operator<<(std::ostream& os, const label_type& label) {
 		return os << *label._obj;
 	}
-	
+
 };
 
 namespace std {

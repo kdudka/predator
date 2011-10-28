@@ -62,7 +62,7 @@ public:
 		Index<size_t>& index;
 
 		size_t offset;
-		
+
 		RenameNonleafF(Index<size_t>& index, size_t offset = 0)
 			: index(index), offset(offset) {}
 
@@ -151,7 +151,7 @@ public:
 						break;
 				}
 				if (!f(j, *fae->roots[j], *ta))
-					break; 
+					break;
 			}
 			if (j < (*i)->lhs().size()) {
 //			if (j != (*i)->lhs().end()) {
@@ -222,8 +222,14 @@ public:
 	}
 
 	void unreachableFree() {
-		for (auto& ta : this->roots)
-			this->unreachableFree(ta);
+
+		for (auto& ta : this->roots) {
+
+			if (ta)
+				this->unreachableFree(ta);
+
+		}
+
 	}
 
 public:
@@ -231,11 +237,11 @@ public:
 	void newState() {
 		++this->stateOffset;
 	}
-	
+
 	size_t nextState() {
 		return this->stateOffset;
 	}
-	
+
 	size_t freshState() {
 		return this->stateOffset++;
 	}
@@ -243,7 +249,7 @@ public:
 	void incrementStateOffset(size_t amount) {
 		this->stateOffset += amount;
 	}
-	
+
 	void setStateOffset(size_t offset) {
 		this->stateOffset = offset;
 	}
@@ -340,7 +346,7 @@ public:
 					} else {
 						lhs.push_back(this->addData(dst, *data));
 					}
-					
+
 				} else
 					lhs.push_back(*j);
 			}
@@ -429,13 +435,13 @@ public:
 	}
 
 	~FAE() { this->clear(); }
-	
+
 	FAE& operator=(const FAE& x) {
 		FA::operator=(x);
 		this->boxMan = x.boxMan;
 		this->stateOffset = x.stateOffset;
 //		this->selectorMap = x.selectorMap;
-		return *this;		
+		return *this;
 	}
 
 	void clear() {

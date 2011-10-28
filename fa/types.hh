@@ -180,6 +180,11 @@ struct Data {
 		 	data.d_ref.displ = atol(args[3].c_str());
 		 	return data;
 		}
+		if (args[1] == "undef") {
+			if (args.size() != 2)
+				throw std::runtime_error("incorrect number of arguments");
+		 	return Data(data_type_e::t_undef);
+		}
 		throw std::runtime_error("non-parsable arguments");
 	}
 

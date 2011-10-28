@@ -102,6 +102,38 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	VirtualMachine vm(*fae);
 
+	Abstraction abstraction(*fae);
+
+	Folding folding(*fae);
+
+	fae->unreachableFree();
+
+	bool matched = false;
+
+	// fold
+
+	// do not fold at 0
+	for (size_t i = 1; i < fae->getRootCount(); ++i) {
+
+		if (!fae->roots[i])
+			continue;
+
+		// we are normalized so we don't have to check whether root is not null
+		for (auto box : this->boxes) {
+
+			CL_CDEBUG(3, "trying " << *(const AbstractBox*)box << " at " << i);
+
+			if (folding.foldBox(i, box)) {
+
+				matched = true;
+				CL_CDEBUG(3, "match");
+
+			}
+
+		}
+
+	}
+
 	const Data& abp = vm.varGet(ABP_INDEX);
 
 	vm.getNearbyReferences(abp.d_ref.root, tmp);
@@ -110,10 +142,20 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	norm.normalize(tmp);
 
-	bool matched = false;
+	fae->unreachableFree();
+
+	// abstract
+
+//	CL_CDEBUG("abstracting ... " << 1);
+	for (size_t i = 1; i < fae->getRootCount(); ++i)
+		abstraction.heightAbstraction(i, 1, SmartTMatchF());
+
+	// test inclusion
+	fae->unreachableFree();
+
+	matched = false;
 
 	// fold
-	Folding folding(*fae);
 
 	// do not fold at 0
 	for (size_t i = 1; i < fae->getRootCount(); ++i) {
@@ -134,6 +176,8 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	}
 
+//	CL_CDEBUG(1, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after folding:" ) << std::endl << *fae);
+
 	if (matched) {
 
 		tmp.clear();
@@ -144,7 +188,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	fae->unreachableFree();
 
-//	CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after normalization:" ) << std::endl << *fae);
+//	CL_CDEBUG(1, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after normalization:" ) << std::endl << *fae);
 
 	// merge fixpoint
 	std::vector<FAE*> tmp2;
@@ -161,7 +205,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 //	CL_CDEBUG("fused " << std::endl << *fae);
 
 	// abstract
-	Abstraction abstraction(*fae);
+//	Abstraction abstraction(*fae);
 
 //	CL_CDEBUG("abstracting ... " << 1);
 	for (size_t i = 1; i < fae->getRootCount(); ++i)
@@ -186,7 +230,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	}
 
-//	CL_CDEBUG("extending fixpoint with:" << std::endl << fae);
+	CL_CDEBUG(1, "extending fixpoint with:" << std::endl << *fae);
 
 	this->fwdConfWrapper.join(ta, index);
 	ta.clear();
@@ -209,6 +253,35 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	VirtualMachine vm(*fae);
 
+	Folding folding(*fae);
+
+	fae->unreachableFree();
+
+	bool matched = false;
+
+	// fold
+	// do not fold at 0
+	for (size_t i = 1; i < fae->getRootCount(); ++i) {
+
+		if (!fae->roots[i])
+			continue;
+
+		// we are normalized so we don't have to check whether root is not null
+		for (auto box : this->boxes) {
+
+			CL_CDEBUG(3, "trying " << *(const AbstractBox*)box << " at " << i);
+
+			if (folding.foldBox(i, box)) {
+
+				matched = true;
+				CL_CDEBUG(3, "match");
+
+			}
+
+		}
+
+	}
+
 	const Data& abp = vm.varGet(ABP_INDEX);
 
 	vm.getNearbyReferences(abp.d_ref.root, tmp);
@@ -216,12 +289,10 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 	Normalization norm(*fae);
 
 	norm.normalize(tmp);
-/*
-	bool matched = false;
+
+	matched = false;
 
 	// fold
-	Folding folding(*fae);
-
 	// do not fold at 0
 	for (size_t i = 1; i < fae->getRootCount(); ++i) {
 
@@ -248,7 +319,7 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 		norm.normalize(tmp);
 
 	}
-
+/*
 	fae->unreachableFree();
 
 	// merge fixpoint

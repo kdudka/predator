@@ -43,7 +43,7 @@ class BoxMan {
 	TA<std::string>::Backend sBackend;
 
 	boost::unordered_map<Data, NodeLabel*> dataStore;
-	std::vector<const Data*> dataIndex; 
+	std::vector<const Data*> dataIndex;
 	boost::unordered_map<std::vector<const AbstractBox*>, NodeLabel*> nodeStore;
 	boost::unordered_set<std::pair<const TypeBox*, std::vector<size_t> > > tagStore;
 	boost::unordered_map<std::pair<size_t, std::vector<Data> >, NodeLabel*> vDataStore;
@@ -86,7 +86,7 @@ public:
 					const SelBox* sBox = (const SelBox*)aBox;
 					this->label.addMapItem(sBox->getData().offset, aBox, index, offset);
 					this->tag.push_back(sBox->getData().offset);
-					break;				
+					break;
 				}
 				case box_type_e::bBox: {
 					const Box* bBox = (const Box*)aBox;
@@ -94,7 +94,7 @@ public:
 						this->label.addMapItem(*i, aBox, index, offset);
 						this->tag.push_back(*i);
 					}
-					break;				
+					break;
 				}
 				case box_type_e::bTypeInfo:
 					this->label.addMapItem((size_t)(-1), aBox, index, (size_t)(-1));
@@ -171,6 +171,8 @@ protected:
 		boost::split(strs, t.label(), boost::is_from_range(',', ','));
 		std::vector<const AbstractBox*> label;
 		for (vector<std::string>::iterator j = strs.begin(); j != strs.end(); ++j) {
+			if (*j == "")
+				continue;
 			std::vector<std::string> args;
 			boost::split(args, *j, boost::is_from_range('_', '_'));
 			if (args[0] == "data") {
@@ -202,7 +204,7 @@ public:
 	struct RenameSelectedF {
 
 		const boost::unordered_map<size_t, size_t>& index;
-		
+
 		RenameSelectedF(const boost::unordered_map<size_t, size_t>& index)
 			: index(index) {}
 

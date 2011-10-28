@@ -48,7 +48,7 @@ struct TAIsom {
 	bool matchLabels(const std::vector<const TT<label_type>*>& v1, const std::vector<const TT<label_type>*>& v2) {
 		for (size_t i = 0; i < v1.size(); ++i) {
 			if (!this->f(*v1[i], *v2[i]))
-				return false;				
+				return false;
 		}
 		return true;
 	}
@@ -92,7 +92,7 @@ struct TAIsom {
 						if (this->matchLhs(*v1[i], *v2[i]))
 							continue;
 					default:
-						break;	
+						break;
 				}
 				break;
 			}
@@ -112,7 +112,7 @@ struct TAIsom {
 };
 
 struct RootSentry {
-		
+
 	FAE* fae;
 	size_t expectedRoots;
 	size_t stateOffset;
@@ -143,7 +143,7 @@ struct IsomRootF {
 	FAE& fae;
 	size_t root;
 	std::vector<size_t>& index;
-	
+
 	IsomRootF(FAE& fae, size_t root, std::vector<size_t>& index)
 		: fae(fae), root(root), index(index) {
 		assert(root < this->fae.roots.size());
@@ -194,7 +194,7 @@ struct IsomF {
 
 	const FAE& fae;
 	std::vector<size_t>& index;
-	
+
 	IsomF(const FAE& fae, std::vector<size_t>& index) : fae(fae), index(index) {}
 
 	match_result_e matchStates(size_t s1, size_t s2) {
@@ -377,6 +377,7 @@ public:
 			return false;
 
 		const std::vector<size_t>& sig = box->getSig(0);
+
 		std::vector<size_t> cSig(sig.size());
 		for (size_t i = 0; i < sig.size(); ++i) {
 			assert(sig[i] < index.size());
@@ -393,6 +394,8 @@ public:
 			iTmp.push_back(std::make_pair(std::shared_ptr<TA<label_type>>(this->fae.allocTA()), TA<label_type>(*this->fae.backend)));
 			if (cSig[i] == root)
 				continue;
+			assert(cSig[i] < this->fae.roots.size());
+			assert(sig[i] <= box->getArity());
 			assert(this->fae.roots[cSig[i]]);
 			if (!this->boxCut(*iTmp.back().first, iTmp.back().second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i])))
 				return false;
@@ -402,18 +405,19 @@ public:
 			std::vector<std::pair<size_t, bool> > cISig = o[iTmp.back().second.getFinalState()];
 			if (iSig.size() != cISig.size())
 				return false;
-			for (size_t i = 0; i < sig.size(); ++i) {
+			for (size_t i = 0; i < iSig.size(); ++i) {
+				assert(iSig[i] < index.size());
 				if (index[iSig[i]] != cISig[i].first)
 					return false;
 			}
 		}
 
 		for (size_t i = 0; i < cSig.size(); ++i) {
-			if (cSig[i] == root)
+			if ((cSig[i] == root) || (cSig[i] > box->getArity()))
 				continue;
 			if (!TAIsom<label_type, IsomF>(iTmp[i].second, *box->getRoot(sig[i]), IsomF(this->fae, index)).run())
 				return false;
-		}		
+		}
 
 		rs.release();
 
@@ -440,11 +444,13 @@ public:
 		// replace
 		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(ta);
 		this->fae.updateRootMap(root);
-		
+
 		for (size_t i = 0; i < cSig.size(); ++i) {
+			assert(cSig[i] < this->fae.roots.size());
 			if (cSig[i] == root) {
 				if (sig[i] == 0)
 					continue;
+				assert(sig[i] <= box->getArity());
 				bool b = this->boxCut(*iTmp[i].first, iTmp[i].second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i]));
 				assert(b);
 			}

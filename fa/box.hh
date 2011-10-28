@@ -51,7 +51,7 @@ public:
 };
 
 class TypeBox : public AbstractBox {
-	
+
 	std::string name;
 	std::vector<size_t> selectors;
 
@@ -214,7 +214,7 @@ public:
 			}
 		}
 	}
-	
+
 	static void getDownwardCoverage(const TA<label_type>& ta, std::vector<size_t>& v) {
 		bool b = false;
 		for (TA<label_type>::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i) {
@@ -226,7 +226,7 @@ public:
 			} else {
 				if (v != v2)
 					throw std::runtime_error("Box::getDownwardCoverage(): Inconsistent accepting rules while computing selector coverage!");
-			}			
+			}
 		}
 	}
 
@@ -234,7 +234,7 @@ public:
 		assert(this->selCoverage.size());
 		return this->selCoverage.front().count(offset) > 0;
 	}
-	
+
 	virtual const std::set<size_t>& outputCoverage() const {
 		assert(this->selCoverage.size());
 		return this->selCoverage.front();
@@ -255,8 +255,8 @@ public:
 			std::vector<size_t> v;
 			Box::getDownwardCoverage(*root, v);
 			std::set<size_t> s(v.begin(), v.end());
-			if (v.empty())
-				throw std::runtime_error("Box::computeCoverage(): No outgoing selectors found!");
+/*			if (v.empty())
+				throw std::runtime_error("Box::computeCoverage(): No outgoing selectors found!");*/
 			if (v.size() != s.size())
 				throw std::runtime_error("Box::computeCoverage(): A selector was defined more than once!");
 			this->selCoverage.push_back(s);
@@ -306,7 +306,7 @@ public:
 
 		this->initialized = true;
 		this->arity = this->roots.size() - 1;
-		
+
 		for (auto root : this->roots) {
 			o_map_type o;
 			FA::computeDownwardO(*root, o);
@@ -334,7 +334,7 @@ public:
 			utils::printCont(std::cerr, *i);
 			std::cerr << std::endl;
 		}
-		
+
 	}
 
 };
