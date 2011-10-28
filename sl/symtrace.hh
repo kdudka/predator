@@ -117,7 +117,7 @@ class Node: public NodeBase {
         typedef std::vector<NodeBase *> TBaseList;
 
         /// reference to list of children (containing 0..n pointers)
-        const TBaseList& children()     const { return children_;   }
+        const TBaseList& children() const { return children_; }
 
     private:
         TBaseList children_;
@@ -301,6 +301,12 @@ class CallDoneNode: public Node {
         const TFnc fnc_;
 
     public:
+        CallDoneNode(Node *result, const TFnc fnc):
+            Node(result),
+            fnc_(fnc)
+        {
+        }
+
         CallDoneNode(Node *result, Node *surround, const TFnc fnc):
             Node(result, surround),
             fnc_(fnc)
@@ -328,6 +334,9 @@ class MsgNode: public Node {
 
 /// plot a trace graph named "symtrace-NNNN.dot" leading to the given node
 bool plotTrace(Node *endPoint, TLoc loc = 0);
+
+/// this runs in the debug build only
+bool isRootNodeReachble(Node *const from);
 
 } // namespace Trace
 

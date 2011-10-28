@@ -948,8 +948,10 @@ fail:
     // something wrong happened, print the backtrace
     proc.failWithBackTrace();
 
-    // call failed, so that we have exactly one resulting heap
-    results.insert(entry);
+    if (!proc.hasFatalError())
+        // the call failed, so that we have exactly one resulting heap
+        results.insert(entry);
+
     return 0;
 }
 

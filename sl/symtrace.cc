@@ -302,5 +302,22 @@ bool plotTrace(Node *endPoint, TLoc loc) {
     return !!out;
 }
 
+/// this runs in the debug build only
+bool isRootNodeReachble(Node *const from) {
+    Node *node = from;
+    WorkList<Node *> wl(node);
+    while (wl.next(node)) {
+        if (dynamic_cast<RootNode *>(node))
+            return true;
+
+        BOOST_FOREACH(Node *pred, node->parents())
+            wl.schedule(pred);
+    }
+
+    CL_ERROR("isRootNodeReachble() returns false");
+    plotTrace(from);
+    return false;
+}
+
 
 } // namespace Trace

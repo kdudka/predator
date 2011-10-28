@@ -312,7 +312,7 @@ void joinHeapsWithCare(
     Trace::Node *trFrame = surround.traceNode()->parent();
     Trace::Node *trDone = new Trace::CallDoneNode(trResult, trFrame, fnc);
 #else
-    Trace::Node *trDone = trResult;
+    Trace::Node *trDone = new Trace::CallDoneNode(trResult, fnc);
 #endif
 
     // first off, we need to make sure that a gl variable from surround will not
