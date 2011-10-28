@@ -433,6 +433,28 @@ class MsgNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// trace graph node representing something important for the user
+class UserNode: public Node {
+    private:
+        const TInsn         insn_;
+        const std::string   label_;
+
+    public:
+        /**
+         * @param ref a trace leading to this use node
+         * @param insn a CodeStorage::Insn object that caused the node to appear
+         * @param label a label describing what this node actually means
+         */
+        UserNode(Node *ref, const TInsn insn, const char *label):
+            Node(ref),
+            insn_(insn),
+            label_(label)
+        {
+        }
+
+        void virtual plotNode(TracePlotter &) const;
+};
+
 /// plot a trace graph named "name-NNNN.dot" leading to the given node
 bool plotTrace(Node *endPoint, const std::string &name);
 

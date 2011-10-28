@@ -161,6 +161,72 @@ bool validateStringOp(SymProc &proc, const struct cl_operand &op) {
     return false;
 }
 
+bool handlePlotTraceGeneric(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name,
+        const bool                                   now)
+{
+    const CodeStorage::TOperandList &opList = insn.operands;
+    const struct cl_loc *lw = &insn.loc;
+
+    if (/* dst + fnc + plot_name + node_name */ 4 != opList.size()) {
+        emitPrototypeError(lw, name);
+        // insufficient count of arguments
+        return false;
+    }
+
+    if (CL_OPERAND_VOID != opList[/* dst */ 0].code) {
+        // not a function returning void
+        emitPrototypeError(lw, name);
+        return false;
+    }
+
+    std::string plotName;
+    if (!readPlotName(&plotName, opList, core.lw())) {
+        // failed to read plot name
+        emitPrototypeError(lw, name);
+        return false;
+    }
+
+    // resolve name of the user node
+    const char *nodeName;
+    const SymHeap &sh = core.sh();
+    const TValId valNodeName = core.valFromOperand(opList[/* node_name */ 3]);
+    if (!stringFromVal(&nodeName, sh, valNodeName)) {
+        CL_WARN_MSG(lw, name << "() failed to read node_name");
+        nodeName = "NULL";
+    }
+
+    const SymExecCoreParams &ep = core.params();
+    if (ep.skipPlot) {
+        // we are explicitly asked to plot nothing
+        CL_DEBUG_MSG(lw, name << "() skipped per user's request");
+        insertCoreHeap(dst, core, insn);
+        return true;
+    }
+
+    // create a user node with the specified label
+    Trace::Node *trOrig = sh.traceNode();
+    Trace::NodeHandle trHandle(new Trace::UserNode(trOrig, &insn, nodeName));
+
+    if (now) {
+        // dump the plot now!
+        if (!Trace::plotTrace(trHandle.node(), plotName))
+            CL_WARN_MSG(lw, "error while plotting '" << plotName << "'");
+    }
+    else {
+        // just schedule the user node as a new end-point, will be plot later...
+        Trace::GraphProxy *glProxy = Trace::Globals::instance()->glProxy();
+        glProxy->insert(trHandle.node(), plotName);
+    }
+
+    // built-in processed, we do not care if successfully at this point
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
 bool handleAbort(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -571,6 +637,24 @@ bool handlePlot(
     return true;
 }
 
+bool handlePlotTraceNow(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    return handlePlotTraceGeneric(dst, core, insn, name, /* now */ true);
+}
+
+bool handlePlotTraceOnce(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    return handlePlotTraceGeneric(dst, core, insn, name, /* now */ false);
+}
+
 bool handleDebuggingOf(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -703,6 +787,8 @@ BuiltInTable::BuiltInTable() {
     tbl_["___sl_error"]                             = handleError;
     tbl_["___sl_get_nondet_int"]                    = handleNondetInt;
     tbl_["___sl_plot"]                              = handlePlot;
+    tbl_["___sl_plot_trace_now"]                    = handlePlotTraceNow;
+    tbl_["___sl_plot_trace_once"]                   = handlePlotTraceOnce;
     tbl_["___sl_enable_debugging_of"]               = handleDebuggingOf;
 
     // used in Competition on Software Verification held at TACAS 2012

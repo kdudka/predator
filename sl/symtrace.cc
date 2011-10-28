@@ -248,6 +248,11 @@ void MsgNode::plotNode(TracePlotter &tplot) const {
         << SL_QUOTE((*loc_) << label) << "];\n";
 }
 
+void UserNode::plotNode(TracePlotter &tplot) const {
+    tplot.out << "\t" << SL_QUOTE(this) << " [shape=octagon, penwidth=3.0"
+        ", color=green, fontcolor=black, label=\"" << label_ << "\"];\n";
+}
+
 void plotTraceCore(TracePlotter &tplot) {
     CL_DEBUG("plotTraceCore() is traversing a trace graph...");
 
