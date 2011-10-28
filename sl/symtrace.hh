@@ -22,7 +22,7 @@
 
 /**
  * @file symtrace.hh
- * @todo some dox
+ * directed acyclic graph of the symbolic execution trace, see namespace Trace
  */
 
 #include "config.h"
@@ -55,17 +55,20 @@ typedef std::vector<Node *>                         TNodeList;
 /// an abstract base for Node and NodeHandle (externally not much useful)
 class NodeBase {
     protected:
+        /// list of all (0..n) parent nodes
         TNodeList parents_;
 
         /// this is an abstract class, its instantiation is @b not allowed
         NodeBase() { }
 
+        /// construct Node with exactly one parent, can be extended later
         NodeBase(Node *node):
             parents_(1, node)
         {
         }
 
     public:
+        /// force virtual destructor
         virtual ~NodeBase();
 
         /// this can be called only on nodes with exactly one parent
@@ -113,10 +116,10 @@ class Node: public NodeBase {
         /// serialize this node to the given plot (externally not much useful)
         void virtual plotNode(TracePlotter &) const = 0;
 
-        /// used to store a list of children
+        /// used to store a list of child nodes
         typedef std::vector<NodeBase *> TBaseList;
 
-        /// reference to list of children (containing 0..n pointers)
+        /// reference to list of child nodes (containing 0..n pointers)
         const TBaseList& children() const { return children_; }
 
     private:
@@ -126,22 +129,26 @@ class Node: public NodeBase {
 /// useful to prevent a trace sub-graph from being destroyed too early
 class NodeHandle: public NodeBase {
     public:
+        /// initialize the handle with the given node, can be reset later
         NodeHandle(Node *ref):
             NodeBase(ref)
         {
             ref->notifyBirth(this);
         }
 
+        /// return the node stored within this handle
         Node* node() const {
             return this->parent();
         }
 
+        /// release the old node and re-initialize the handle with the new one
         void reset(Node *);
 };
 
-// TODO: remove this
+/// used to explicitly highlight trace graph nodes that should not be reachable
 class NullNode: public Node {
     public:
+        /// @param origin describe where the unreachable node originates from
         NullNode(const char *origin):
             origin_(origin)
         {
@@ -153,12 +160,13 @@ class NullNode: public Node {
         const char *origin_;
 };
 
-/// root node of the trace graph (a call of the root function)
+/// root node of the trace graph (usually a call of the root function)
 class RootNode: public Node {
     private:
         const TFnc rootFnc_;
 
     public:
+        /// @param rootFnc a CodeStorage::Fnc object used for the root call
         RootNode(const TFnc rootFnc):
             rootFnc_(rootFnc)
         {
@@ -167,12 +175,18 @@ class RootNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// a trace graph node that represents a non-terminal instruction
 class InsnNode: public Node {
     private:
         const TInsn insn_;
         const bool  isBuiltin_;
 
     public:
+        /**
+         * @param ref a reference to a trace leading to this instruction
+         * @param insn a CodeStorage::Insn object representing the instruction
+         * @param isBuiltin true, if the instruction is recognized as a built-in
+         */
         InsnNode(Node *ref, TInsn insn, const bool isBuiltin):
             Node(ref),
             insn_(insn),
@@ -183,6 +197,7 @@ class InsnNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// a trace graph node that represents a conditional insn being traversed
 class CondNode: public Node {
     private:
         const TInsn inCmp_;
@@ -191,6 +206,13 @@ class CondNode: public Node {
         const bool branch_;
 
     public:
+        /**
+         * @param ref a reference to a trace leading to this instruction
+         * @param inCmp a comparison instruction occurring prior to inCnd
+         * @param inCnd a conditional jump instruction being traversed
+         * @param determ true if the branch being taken was known in advance
+         * @param branch true if the 'then' branch was taken, false for 'else'
+         */
         CondNode(Node *ref, TInsn inCmp, TInsn inCnd, bool determ, bool branch):
             Node(ref),
             inCmp_(inCmp),
@@ -203,11 +225,16 @@ class CondNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// a trace graph node that represents a @b single abstraction step
 class AbstractionNode: public Node {
     private:
         const EObjKind kind_;
 
     public:
+        /**
+         * @param ref a trace leading to this abstraction step
+         * @param kind the kind of abstraction step being performed
+         */
         AbstractionNode(Node *ref, EObjKind kind):
             Node(ref),
             kind_(kind)
@@ -217,11 +244,16 @@ class AbstractionNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// a trace graph node that represents a @b single concretization step
 class ConcretizationNode: public Node {
     private:
         const EObjKind kind_;
 
     public:
+        /**
+         * @param ref a trace leading to this concretization step
+         * @param kind the kind of concretization step being performed
+         */
         ConcretizationNode(Node *ref, EObjKind kind):
             Node(ref),
             kind_(kind)
@@ -231,12 +263,18 @@ class ConcretizationNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// a trace graph node that represents a @b single splice-out operation
 class SpliceOutNode: public Node {
     private:
         const EObjKind          kind_;
         const bool              successful_;
 
     public:
+        /**
+         * @param ref a trace leading to this splice-out operation
+         * @param kind kind of segment the splice-out operation is applied on
+         * @param successful true, if the splice-out operation succeeded
+         */
         SpliceOutNode(Node *ref, const EObjKind kind, const bool successful):
             Node(ref),
             kind_(kind),
@@ -247,8 +285,10 @@ class SpliceOutNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// a trace graph node that represents a @b single join operation
 class JoinNode: public Node {
     public:
+        /// takes references to both traces being joined by this operation
         JoinNode(Node *ref1, Node *ref2):
             Node(ref1, ref2)
         {
@@ -257,7 +297,7 @@ class JoinNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
-// FIXME: these nodes should not be created by default but only when debugging
+/// trace graph nodes inserted automatically per each SymHeap clone operation
 class CloneNode: public Node {
     public:
         CloneNode(Node *ref):
@@ -268,11 +308,16 @@ class CloneNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// trace graph node representing a call entry point
 class CallEntryNode: public Node {
     private:
         const TInsn insn_;
 
     public:
+        /**
+         * @param ref trace representing the call entry as seen by the @b caller
+         * @param insn a CodeStorage::Insn object representing the call
+         */
         CallEntryNode(Node *ref, const TInsn insn):
             Node(ref),
             insn_(insn)
@@ -282,11 +327,16 @@ class CallEntryNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// trace graph node representing a call frame (used by SE_TRACE_CALL_FRAMES)
 class CallSurroundNode: public Node {
     private:
         const TInsn insn_;
 
     public:
+        /**
+         * @param ref trace representing the call entry as seen by the @b caller
+         * @param insn a CodeStorage::Insn object representing the call
+         */
         CallSurroundNode(Node *ref, const TInsn insn):
             Node(ref),
             insn_(insn)
@@ -296,17 +346,28 @@ class CallSurroundNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// trace graph node representing a call result
 class CallDoneNode: public Node {
     private:
         const TFnc fnc_;
 
     public:
+        /**
+         * @param result trace representing the result as seen by the @b callee
+         * @param fnc a CodeStorage::Fnc obj representing the called function
+         */
         CallDoneNode(Node *result, const TFnc fnc):
             Node(result),
             fnc_(fnc)
         {
         }
 
+        /**
+         * @note used by SE_TRACE_CALL_FRAMES
+         * @param result trace representing the result as seen by the @b callee
+         * @param surround trace representing the call frame of the call
+         * @param fnc a CodeStorage::Fnc obj representing the called function
+         */
         CallDoneNode(Node *result, Node *surround, const TFnc fnc):
             Node(result, surround),
             fnc_(fnc)
@@ -316,12 +377,18 @@ class CallDoneNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// trace graph node representing an error/warning message
 class MsgNode: public Node {
     private:
         const EMsgLevel     level_;
         const TLoc          loc_;
 
     public:
+        /**
+         * @param ref a trace leading to this error/warning message
+         * @param level classification of the message (error, warning, ...)
+         * @param loc a location info the message was emitted with
+         */
         MsgNode(Node *ref, const EMsgLevel level, const TLoc loc):
             Node(ref),
             level_(level),

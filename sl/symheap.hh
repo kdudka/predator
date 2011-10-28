@@ -561,7 +561,6 @@ class ObjHandle {
 
         /**
          * return a value @b stored @b in the given object
-         * @param obj ID of the object to look into
          * @return A valid value ID in case of success, invalid otherwise.
          * @note It may also return @b unknown, @b composite or @b custom value,
          * depending on kind of the queried object.
@@ -572,7 +571,6 @@ class ObjHandle {
         /**
          * return a value corresponding to @b symbolic @b address of the given
          * object
-         * @param obj ID of the object to look for
          * @return A valid value ID when a valid object ID is given, VAL_INVALID
          * otherwise.
          */
@@ -580,11 +578,10 @@ class ObjHandle {
 
         /**
          * look for static type-info of the given object
-         * @param obj ID of the object to look for
          * @return pointer to the instance cl_type in case of success, 0
          * otherwise
          */
-        TObjType objType()const {
+        TObjType objType() const {
             return (this->isValid())
                 ? sh_->objType(id_)
                 : 0;
@@ -593,7 +590,6 @@ class ObjHandle {
         /**
          * @b set @b value of the given object, which has to be @b valid and may
          * @b not be a composite object
-         * @param obj ID of the object to set value of
          * @param val ID requested to be stored into the object
          * @param killedPtrs if not NULL, insert killed pointer values there
          * @note This is really @b low-level @b implementation.  It does not
