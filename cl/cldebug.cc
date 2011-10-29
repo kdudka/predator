@@ -22,6 +22,8 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include <boost/algorithm/string/replace.hpp>
+
 namespace {
 
 void cltToStreamCore(std::ostream &out, const struct cl_type *clt) {
@@ -219,8 +221,12 @@ void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
         }
 
         case CL_TYPE_STRING: {
-            const char *text = cst.data.cst_string.value;
-            CL_BREAK_IF(!text);
+            using boost::algorithm::replace_all;
+            std::string text(cst.data.cst_string.value);
+
+            replace_all(text,  "\\", "\\\\" );
+            replace_all(text,  "\"", "\\\"" );
+            replace_all(text,  "\n", "\\n" );
 
             str << "\"" << text << "\"";
             break;
