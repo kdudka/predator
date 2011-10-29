@@ -374,15 +374,15 @@ void SymCallCtx::flushCallResults(SymState &dst) {
         SymHeap sh(origin);
         waiveCloneOperation(sh);
 
-        // first join the heap with its original callFrame
-        joinHeapsWithCare(sh, d->callFrame, d->fnc);
-
         if (d->computed) {
             // call cache hit --> tag the raw result as cached
             Node *trEntry = d->entry.traceNode();
             Node *trOrig = origin.traceNode();
             sh.traceUpdate(new CallCacheHitNode(trEntry, trOrig, d->fnc));
         }
+
+        // first join the heap with its original callFrame
+        joinHeapsWithCare(sh, d->callFrame, d->fnc);
 
         LDP_INIT(symcall, "post-processing");
         LDP_PLOT(symcall, sh);
