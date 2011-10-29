@@ -30,7 +30,9 @@
 #include <fstream>
 #include <map>
 #include <set>
+#include <sstream>
 
+#include <boost/algorithm/string/replace.hpp>
 #include <boost/foreach.hpp>
 
 namespace Trace {
@@ -102,6 +104,21 @@ struct TracePlotter {
     }
 };
 
+std::string insnToLabel(const TInsn insn) {
+    using boost::algorithm::replace_all;
+
+    // dump the instruction to a string stream
+    std::ostringstream str;
+    str << (*insn);
+
+    // extract the string and escape all double quotes
+    std::string label(str.str());
+    replace_all(label,  "\\", "\\\\" );
+    replace_all(label,  "\"", "\\\"" );
+
+    return label;
+}
+
 // FIXME: copy-pasted from symplot.cc
 #define SL_QUOTE(what) "\"" << what << "\""
 
@@ -124,7 +141,7 @@ void InsnNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=plaintext, fontname=monospace, fontcolor="
         << color << ", label="
-        << SL_QUOTE((*insn_)) << "];\n";
+        << SL_QUOTE(insnToLabel(insn_)) << "];\n";
 }
 
 void AbstractionNode::plotNode(TracePlotter &tplot) const {
@@ -175,7 +192,8 @@ void CloneNode::plotNode(TracePlotter &tplot) const {
 void CallEntryNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
-        ", penwidth=3.0, label=\"--> call entry: " << (*insn_) << "\"];\n";
+        ", penwidth=3.0, label=\"--> call entry: " << (insnToLabel(insn_))
+        << "\"];\n";
 }
 
 void CallCacheHitNode::plotNode(TracePlotter &tplot) const {
@@ -188,7 +206,7 @@ void CallCacheHitNode::plotNode(TracePlotter &tplot) const {
 void CallFrameNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
-        ", label=\"--- call frame: " << (*insn_) << "\"];\n";
+        ", label=\"--- call frame: " << (insnToLabel(insn_)) << "\"];\n";
 }
 
 void CallDoneNode::plotNode(TracePlotter &tplot) const {
