@@ -377,12 +377,11 @@ void SymCallCtx::flushCallResults(SymState &dst) {
         // first join the heap with its original callFrame
         joinHeapsWithCare(sh, d->callFrame, d->fnc);
 
-        if (!d->computed) {
-            // the first flush --> tag the raw result as cached for next wheel
+        if (d->computed) {
+            // call cache hit --> tag the raw result as cached
             Node *trEntry = d->entry.traceNode();
             Node *trOrig = origin.traceNode();
-            SymHeap &writable = const_cast<SymHeap &>(origin);
-            writable.traceUpdate(new CallCacheHitNode(trEntry, trOrig, d->fnc));
+            sh.traceUpdate(new CallCacheHitNode(trEntry, trOrig, d->fnc));
         }
 
         LDP_INIT(symcall, "post-processing");
@@ -727,7 +726,10 @@ SymCallCtx* SymCallCache::getCallCtx(
     ctx->d->dst         = &insn.operands[/* dst */ 0];
     ctx->d->nestLevel   = nestLevel;
     ctx->d->callFrame   = callFrame;
+
+    // update trace graph
     Trace::waiveCloneOperation(ctx->d->callFrame);
+    ctx->d->entry.traceUpdate(trEntry);
 
     return ctx;
 }
