@@ -40,7 +40,7 @@
 struct OpWrapper {
 
 	const cl_operand* op_;
-	
+
 	OpWrapper(const cl_operand& op) : op_(&op) {}
 
 	friend std::ostream& operator<<(std::ostream& os, const OpWrapper& op) {
@@ -56,17 +56,17 @@ struct OpWrapper {
 			cltToStream(os, acc->type, false);
 			acc = acc->next;
 		}
-	
+
 		return os;
-	
+
 	}
-	
+
 };
 
 struct LoopAnalyser {
 
 	struct BlockListItem {
-		
+
 		BlockListItem* prev;
 		const CodeStorage::Block* block;
 
@@ -97,9 +97,9 @@ struct LoopAnalyser {
 
 		for (auto target : block->targets())
 			this->visit(target, visited, &item);
-		
+
 	}
-	
+
 	void init(const CodeStorage::Block* block) {
 
 		std::unordered_set<const CodeStorage::Block*> visited;
@@ -111,10 +111,10 @@ struct LoopAnalyser {
 	bool isEntryPoint(const CodeStorage::Insn* insn) const {
 		return this->entryPoints.find(insn) != this->entryPoints.end();
 	}
-	
+
 };
 
-typedef enum { biNone, biMalloc, biFree, biNondet, biFix } builtin_e;
+typedef enum { biNone, biMalloc, biFree, biNondet, biFix, biPrintHeap } builtin_e;
 
 struct BuiltinTable {
 
@@ -127,6 +127,7 @@ public:
 		this->_table["free"] = builtin_e::biFree;
 		this->_table["__nondet"] = builtin_e::biNondet;
 		this->_table["__fix"] = builtin_e::biFix;
+		this->_table["__print_heap"] = builtin_e::biPrintHeap;
 	}
 
 	builtin_e operator[](const std::string& key) {
@@ -202,8 +203,12 @@ protected:
 		);
 	}
 
+	void cPrintHeap() {
+		this->append(new FI_print_heap(this->curCtx));
+	}
+
 	void cLoadCst(size_t dst, const cl_operand& op) {
-		
+
 		switch (op.type->code) {
 
 			case cl_type_e::CL_TYPE_INT:
@@ -245,7 +250,7 @@ protected:
 			if (src != dst)
 				this->append(new FI_move_reg(dst, src));
 
-		}				
+		}
 
 	}
 
@@ -343,7 +348,7 @@ protected:
 			}
 
 			this->append(new FI_check());
-			
+
 			return true;
 
 		} else {
@@ -374,9 +379,9 @@ protected:
 
 					// stack variable
 					const cl_accessor* acc = op.accessor;
-			
+
 					int offset = 0;
-			
+
 					if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
 
 						assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
@@ -386,7 +391,7 @@ protected:
 						acc = Core::computeOffset(offset, acc->next);
 
 						if (acc && (acc->code == CL_ACCESSOR_REF)) {
-			
+
 							assert(op.type->code == cl_type_e::CL_TYPE_PTR);
 
 							assert(acc->next == NULL);
@@ -395,50 +400,50 @@ protected:
 								this->append(new FI_move_reg_offs(dst, dst, offset));
 
 							break;
-			
+
 						}
 
 						assert(acc == NULL);
 
 						if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
-			
+
 							std::vector<size_t> offs;
 							NodeBuilder::buildNode(offs, op.type);
-			
+
 							this->append(new FI_acc_set(dst, offset, offs));
 							this->append(new FI_loads(dst, dst, offset, offs));
-			
+
 						} else {
-			
+
 							this->append(new FI_acc_sel(dst, offset));
 							this->append(new FI_load(dst, dst, offset));
-			
+
 						}
-			
+
 					} else {
 
 						offset = (int)varInfo.second;
-			
+
 						acc = Core::computeOffset(offset, acc);
-			
+
 						if (acc && (acc->code == CL_ACCESSOR_REF)) {
-							
+
 							assert(acc->next == NULL);
 							this->append(new FI_get_ABP(dst, offset));
 							break;
 
 						}
-					
+
 						assert(acc == NULL);
-			
+
 						this->append(new FI_load_ABP(dst, offset));
 //						this->cMoveReg(dst, src, offset);
-			
+
 					}
 
 
 				} else {
-					
+
 					// register
 					if (canOverride) {
 						dst = varInfo.second;
@@ -450,7 +455,7 @@ protected:
 				}
 
 				break;
-				
+
 			}
 
 			case cl_operand_e::CL_OPERAND_CST:
@@ -463,7 +468,7 @@ protected:
 		}
 
 		return dst;
-		
+
 	}
 
 	size_t lookupStoreReg(const cl_operand& op, size_t src) {
@@ -482,16 +487,16 @@ protected:
 					return src;
 
 				} else {
-					
+
 					// register
 					tmp = varInfo.second;
 
 				}
 
 				const cl_accessor* acc = op.accessor;
-		
+
 				return (acc && (acc->code == CL_ACCESSOR_DEREF))?(src):(tmp);
-				
+
 			}
 
 			default:
@@ -516,7 +521,7 @@ protected:
 					this->append(new FI_get_ABP(tmp, 0));
 
 					const cl_accessor* acc = op.accessor;
-			
+
 					int offset = (int)varInfo.second;
 
 					bool needsAcc = false;
@@ -541,39 +546,39 @@ protected:
 						acc = Core::computeOffset(offset, acc);
 
 					}
-			
+
 					assert(acc == NULL);
-					
+
 					if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
-			
+
 						std::vector<size_t> offs;
 						NodeBuilder::buildNode(offs, op.type);
-			
+
 						if (needsAcc)
 							this->append(new FI_acc_set(tmp, offset, offs));
 						this->append(new FI_stores(tmp, src, offset));
 
 					} else {
-			
+
 						if (needsAcc)
 							this->append(new FI_acc_sel(tmp, offset));
 						this->append(new FI_store(tmp, src, offset));
-			
+
 					}
 
 					this->append(new FI_check());
 
 					return true;
-			
+
 				} else {
-					
+
 					// register
 					return this->cStoreReg(op, src, varInfo.second);
 
 				}
 
 				break;
-				
+
 			}
 
 			default:
@@ -594,7 +599,7 @@ protected:
 				continue;
 
 			const std::pair<bool, size_t>& varInfo = this->curCtx->getVarInfo(var.uid);
-			
+
 			if (!varInfo.first)
 				continue;
 
@@ -647,7 +652,7 @@ protected:
 
 			std::vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
-		
+
 			std::string typeName;
 			if (dst.type->items[0].type->name)
 				typeName = std::string(dst.type->items[0].type->name);
@@ -666,7 +671,7 @@ protected:
 					sels
 				)
 			);
-			
+
 		}
 
 		this->cStoreOperand(dst, srcReg, 1);
@@ -701,7 +706,7 @@ protected:
 
 		this->cStoreOperand(dst, srcReg, 1);
 		this->cKillDeadVariables(insn.varsToKill);
-		
+
 	}
 
 	void compileMalloc(const CodeStorage::Insn& insn) {
@@ -721,7 +726,7 @@ protected:
 
 			std::vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
-		
+
 			std::string typeName;
 			if (dst.type->items[0].type->name)
 				typeName = std::string(dst.type->items[0].type->name);
@@ -797,7 +802,7 @@ protected:
 		this->append(new FI_iadd(dstReg, src1Reg, src2Reg));
 		this->cStoreOperand(dst, dstReg, 1);
 		this->cKillDeadVariables(insn.varsToKill);
-		
+
 	}
 
 	void compilePointerPlus(const CodeStorage::Insn& insn) {
@@ -817,7 +822,7 @@ protected:
 		this->append(new FI_move_reg_inc(dstReg, src1Reg, src2Reg));
 		this->cStoreOperand(dst, dstReg, 1);
 		this->cKillDeadVariables(insn.varsToKill);
-		
+
 	}
 
 	void compileJmp(const CodeStorage::Insn& insn) {
@@ -852,7 +857,7 @@ protected:
 			}
 
 		}
-	
+
 		// kill dead variables
 		this->cKillDeadVariables(varsToKill);
 
@@ -868,7 +873,7 @@ protected:
 		this->append(new FI_get_ABP(1, 0));
 
 		// isolate adjacent nodes (current ABP)
-		this->append(new FI_acc_all(1));		
+		this->append(new FI_acc_all(1));
 
 		size_t head2 = this->assembly->code_.size();
 
@@ -913,7 +918,7 @@ protected:
 
 		// move return address into r0
 		this->append(new FI_load(0, 1, RET_OFFSET));
-		
+
 		// delete stack frame (r1)
 		this->append(new FI_node_free(1));
 
@@ -947,7 +952,7 @@ protected:
 
 		}
 
-		this->assembly->code_[sentinel] = new FI_cond(srcReg, tmp); 
+		this->assembly->code_[sentinel] = new FI_cond(srcReg, tmp);
 
 	}
 
@@ -980,6 +985,9 @@ protected:
 			case builtin_e::biFix:
 				this->cFixpoint();
 				return;
+			case builtin_e::biPrintHeap:
+				this->cPrintHeap();
+				return;
 			default:
 				break;
 		}
@@ -1001,7 +1009,7 @@ protected:
 	void compileInstruction(const CodeStorage::Insn& insn) {
 
 		CL_DEBUG_AT(3, insn.loc << ' ' << insn);
-		
+
 		switch (insn.code) {
 
 			case cl_insn_e::CL_INSN_UNOP:
@@ -1065,7 +1073,7 @@ protected:
 				throw std::runtime_error("feature not implemented");
 
 		}
-		
+
 	}
 
 	void compileBlock(const CodeStorage::Block* block, bool abstract) {
@@ -1081,6 +1089,9 @@ protected:
 
 			this->compileInstruction(*insn);
 
+			if (head == this->assembly->code_.size())
+				continue;
+
 			this->assembly->code_[head]->insn(insn);
 /*
 			for (size_t i = head; i < this->assembly->code_.size(); ++i)
@@ -1089,7 +1100,7 @@ protected:
 			head = this->assembly->code_.size();
 
 		}
-		
+
 	}
 
 	void compileFunction(const CodeStorage::Fnc& fnc) {
@@ -1111,7 +1122,7 @@ protected:
 
 		// store entry point
 		this->codeIndex.insert(std::make_pair(&fncInfo.second, this->assembly->code_.back()));
-		
+
 		// gather arguments
 		std::vector<size_t> offsets = { ABP_OFFSET, RET_OFFSET };
 
@@ -1197,7 +1208,7 @@ public:
 
 			if (isDefined(*fnc))
 				this->fncIndex.insert(std::make_pair(fnc, std::make_pair(SymCtx(*fnc), CodeStorage::Block())));
-			
+
 		}
 
 		// compile entry call
@@ -1235,7 +1246,7 @@ public:
 		this->append(new FI_assert(1, Data::createInt(0)));
 
 		// abort
-		this->append(new FI_abort());		
+		this->append(new FI_abort());
 
 		for (auto fnc : stor.fncs) {
 

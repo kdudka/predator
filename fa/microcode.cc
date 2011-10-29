@@ -62,7 +62,7 @@ void FI_cond::finalize(
 		this->next_[i]->setTarget();
 
 	}
-	
+
 }
 
 // FI_acc_sel
@@ -350,7 +350,7 @@ void FI_alloc::execute(ExecutionManager& execMan, const AbstractInstruction::Sta
 
 	(*state.first)[this->dst_] =
 		Data::createVoidPtr((*state.first)[this->src_].d_int);
-	
+
 	execMan.enqueue(state, this->next_);
 
 }
@@ -495,5 +495,68 @@ void FI_pop_greg::execute(ExecutionManager& execMan, const AbstractInstruction::
 	VirtualMachine(*fae).varPop((*state.first)[this->dst_]);
 
 	execMan.enqueue(state.second, state.first, fae, this->next_);
+
+}
+
+struct DumpCtx {
+
+	const SymCtx& ctx;
+	const FAE& fae;
+
+	DumpCtx(const SymCtx& ctx, const FAE& fae) : ctx(ctx), fae(fae) {}
+
+	friend std::ostream& operator<<(std::ostream& os, const DumpCtx& cd) {
+
+		VirtualMachine vm(cd.fae);
+
+		std::vector<size_t> offs;
+
+		for (std::vector<SelData>::const_iterator i = cd.ctx.sfLayout.begin(); i != cd.ctx.sfLayout.end(); ++i)
+			offs.push_back((*i).offset);
+
+		Data data;
+
+		vm.nodeLookupMultiple(vm.varGet(ABP_INDEX).d_ref.root, 0, offs, data);
+
+		boost::unordered_map<size_t, Data> tmp;
+		for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin(); i != data.d_struct->end(); ++i)
+			tmp.insert(make_pair(i->first, i->second));
+
+		for (CodeStorage::TVarSet::const_iterator i = cd.ctx.fnc.vars.begin(); i != cd.ctx.fnc.vars.end(); ++i) {
+
+			const CodeStorage::Var& var = cd.ctx.fnc.stor->vars[*i];
+
+			SymCtx::var_map_type::const_iterator j = cd.ctx.varMap.find(var.uid);
+			assert(j != cd.ctx.varMap.end());
+
+			switch (var.code) {
+				case CodeStorage::EVar::VAR_LC:
+					if (SymCtx::isStacked(var)) {
+						boost::unordered_map<size_t, Data>::iterator k = tmp.find(j->second.second);
+						assert(k != tmp.end());
+						os << '#' << var.uid << ':' << var.name << " = " << k->second << std::endl;
+					} else {
+//							os << '#' << var.uid << " = " << fae.varGet(j->second.second) << std::endl;
+					}
+					break;
+				default:
+					break;
+			}
+
+		}
+
+		return os;
+
+	}
+
+};
+
+// FI_print_heap
+void FI_print_heap::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+
+	CL_NOTE("local variables: " << DumpCtx(*this->ctx_, *state.second->fae));
+	CL_NOTE("heap:" << *state.second->fae);
+
+	execMan.enqueue(state, this->next_);
 
 }

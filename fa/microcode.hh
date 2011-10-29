@@ -322,7 +322,7 @@ public:
 	}
 
 };
-*/ 
+*/
 /*
 class FI_inc_off : public SequentialInstruction {
 
@@ -658,7 +658,23 @@ public:
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "gpop  ";
+		return os << "gpop \tr" << this->dst_;
+	}
+
+};
+
+class FI_print_heap : public SequentialInstruction {
+
+	const struct SymCtx* ctx_;
+
+public:
+
+	FI_print_heap(const struct SymCtx* ctx) : SequentialInstruction(), ctx_(ctx) {}
+
+	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "prh ";
 	}
 
 };
