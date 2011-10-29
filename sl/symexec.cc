@@ -920,6 +920,9 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
     return fnc;
 
 fail:
+    // failed to resolve fnc call, so that we have exactly one resulting heap
+    Trace::waiveCloneOperation(entry);
+
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
@@ -938,7 +941,6 @@ fail:
     proc.failWithBackTrace();
 
     if (!proc.hasFatalError())
-        // the call failed, so that we have exactly one resulting heap
         results.insert(entry);
 
     return 0;

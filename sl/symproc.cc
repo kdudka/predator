@@ -789,6 +789,7 @@ malloc/calloc is implementation-defined");
         SymHeap oomHeap(sh_);
         SymExecCore oomCore(oomHeap, bt_, ep_);
         oomCore.setLocation(lw_);
+        Trace::waiveCloneOperation(oomHeap);
 
         // OOM state simulation
         const ObjHandle oomLhs(oomHeap, lhs);
