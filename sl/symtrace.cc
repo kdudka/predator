@@ -322,22 +322,44 @@ bool plotTrace(Node *endPoint, const std::string &name) {
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// implementation of Trace::isRootNodeReachble()
+// implementation of Trace::chkTraceGraphConsistency()
 
-bool isRootNodeReachble(Node *const from) {
+template <class TNodeKind>
+bool isNodeKindReachble(Node *const from) {
     Node *node = from;
     WorkList<Node *> wl(node);
     while (wl.next(node)) {
-        if (dynamic_cast<RootNode *>(node))
+        if (dynamic_cast<TNodeKind *>(node))
             return true;
 
         BOOST_FOREACH(Node *pred, node->parents())
             wl.schedule(pred);
     }
 
-    CL_ERROR("isRootNodeReachble() returns false");
-    plotTrace(from, "lost-trace");
+    // not reachable
     return false;
+}
+
+bool chkTraceGraphConsistency(Node *const from) {
+    if (isNodeKindReachble<CloneNode>(from)) {
+        CL_WARN("CloneNode reachable from the given trace graph node");
+        plotTrace(from, "symtrace-CloneNode-reachable");
+    }
+
+    if (!isNodeKindReachble<RootNode>(from)) {
+        CL_ERROR("RootNode not reachable from the given trace graph node");
+        plotTrace(from, "symtrace-RootNode-not-reachable");
+        return false;
+    }
+
+    if (isNodeKindReachble<TransientNode>(from)) {
+        CL_ERROR("TransientNode reachable from the given trace graph node");
+        plotTrace(from, "symtrace-TransientNode-reachable");
+        return false;
+    }
+
+    // no problems encountered
+    return true;
 }
 
 

@@ -674,7 +674,8 @@ SymCallCtx* SymCallCache::getCallCtx(
     CL_DEBUG_MSG(loc, "SymCallCache is looking for " << nameOf(fnc) << "()...");
 
     // build two new nodes of the trace graph
-    Trace::Node *trCall = entry.traceNode()->parent();
+    Trace::waiveCloneOperation(entry);
+    Trace::Node *trCall = entry.traceNode();
     Trace::Node *trEntry = new Trace::CallEntryNode(trCall, &insn);
     Trace::Node *trFrame = new Trace::CallFrameNode(trCall, &insn);
 

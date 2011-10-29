@@ -478,7 +478,7 @@ class UserNode: public Node {
 bool plotTrace(Node *endPoint, const std::string &name);
 
 /// this runs in the debug build only
-bool isRootNodeReachble(Node *const from);
+bool chkTraceGraphConsistency(Node *const from);
 
 /// a container maintaining a set of trace graph end-points
 class EndPointConsolidator {

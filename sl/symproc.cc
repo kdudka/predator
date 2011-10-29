@@ -987,7 +987,7 @@ void printBackTrace(SymProc &proc, EMsgLevel level, bool forcePtrace) {
     const struct cl_loc *loc = proc.lw();
     Trace::MsgNode *trMsg = new Trace::MsgNode(sh.traceNode(), level, loc);
     sh.traceUpdate(trMsg);
-    CL_BREAK_IF(!isRootNodeReachble(trMsg));
+    CL_BREAK_IF(!chkTraceGraphConsistency(trMsg));
 
     const SymBackTrace *bt = proc.bt();
     bt->printBackTrace(forcePtrace);

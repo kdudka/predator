@@ -210,6 +210,7 @@ bool handlePlotTraceGeneric(
     // create a user node with the specified label
     Trace::Node *trOrig = sh.traceNode();
     Trace::NodeHandle trHandle(new Trace::UserNode(trOrig, &insn, nodeName));
+    CL_BREAK_IF(!chkTraceGraphConsistency(trOrig));
 
     if (now) {
         // dump the plot now!
