@@ -60,5 +60,7 @@ distclean: clean
 	rm -rf ../sl_build
 
 distcheck: distclean
+	$(MAKE) -C ../cl CMAKE='cmake -D CL_DEBUG=ON'
 	$(MAKE) check CMAKE='cmake -D TEST_ONLY_FAST=OFF -D SL_DEBUG=ON'
+	$(MAKE) -C ../cl CMAKE='cmake -D CL_DEBUG=OFF'
 	$(MAKE) all CMAKE='cmake -D TEST_ONLY_FAST=ON -D SL_DEBUG=OFF'

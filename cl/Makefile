@@ -45,4 +45,5 @@ distclean: clean
 	rm -rf ../cl_build
 
 distcheck: distclean
-	$(MAKE) check
+	$(MAKE) check CMAKE='cmake -D CL_DEBUG=ON'
+	$(MAKE) all CMAKE='cmake -D CL_DEBUG=OFF'
