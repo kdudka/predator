@@ -105,7 +105,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 	Abstraction abstraction(*fae);
 
 	Folding folding(*fae);
-
+/*
 	fae->unreachableFree();
 
 	bool matched = false;
@@ -133,7 +133,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 		}
 
 	}
-
+*/
 	const Data& abp = vm.varGet(ABP_INDEX);
 
 	vm.getNearbyReferences(abp.d_ref.root, tmp);
@@ -143,7 +143,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 	norm.normalize(tmp);
 
 	fae->unreachableFree();
-
+/*
 	// abstract
 
 //	CL_CDEBUG("abstracting ... " << 1);
@@ -152,8 +152,8 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	// test inclusion
 	fae->unreachableFree();
-
-	matched = false;
+*/
+	bool matched = false;
 
 	// fold
 
@@ -254,7 +254,7 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 	VirtualMachine vm(*fae);
 
 	Folding folding(*fae);
-
+/*
 	fae->unreachableFree();
 
 	bool matched = false;
@@ -281,7 +281,7 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 		}
 
 	}
-
+*/
 	const Data& abp = vm.varGet(ABP_INDEX);
 
 	vm.getNearbyReferences(abp.d_ref.root, tmp);
@@ -290,7 +290,7 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	norm.normalize(tmp);
 
-	matched = false;
+	bool matched = false;
 
 	// fold
 	// do not fold at 0
