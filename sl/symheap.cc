@@ -1005,8 +1005,8 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     TObjSet overlaps;
     if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
         BOOST_FOREACH(const TObjId other, overlaps) {
-            BlockEntity *blockData;
-            this->ents.getEntRW(&blockData, other);
+            const BlockEntity *blockData;
+            this->ents.getEntRO(&blockData, other);
 
             const EBlockKind code = blockData->code;
             if (BK_UNIFORM != code && !hasKey(rootData->liveObjs, other))

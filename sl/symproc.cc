@@ -1313,6 +1313,8 @@ bool SymExecCore::concretizeLoop(
             // we expect a pointer at this point
             const TValId val = valOfPtrAt(sh, slave.varAt(op));
             if (VT_ABSTRACT == sh.valTarget(val)) {
+                CL_BREAK_IF(CL_INSN_UNOP != insn.code);
+                CL_BREAK_IF(CL_UNOP_ASSIGN != (enum cl_unop_e) insn.subCode);
 #ifndef NDEBUG
                 CL_BREAK_IF(hitLocal);
                 hitLocal = true;
@@ -1347,17 +1349,25 @@ bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
         // look for dereferences
         for (unsigned idx = 0; idx < opList.size(); ++idx) {
             const struct cl_accessor *ac = opList[idx].accessor;
-
-            if (!ac || CL_ACCESSOR_DEREF != ac->code)
-                // we expect the dereference only as the first accessor
+            if (!ac)
                 continue;
+
+            // we expect the dereference only as the first accessor
+            const enum cl_accessor_e code = ac->code;
+            switch (code) {
+                case CL_ACCESSOR_DEREF:
+                case CL_ACCESSOR_DEREF_ARRAY:
+                    break;
+
+                default:
+                    // no dereference in this operand
+                    continue;
+            }
 
             if (seekRefAccessor(ac))
                 // not a dereference, only an address is being computed
                 continue;
 
-            CL_BREAK_IF(CL_INSN_UNOP != insn.code);
-            CL_BREAK_IF(CL_UNOP_ASSIGN != static_cast<cl_unop_e>(insn.subCode));
             derefs.push_back(idx);
         }
     }
