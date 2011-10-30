@@ -51,7 +51,7 @@ class ClEasy: public ClStorageBuilder {
 
     protected:
         virtual void run(CodeStorage::Storage &stor) {
-            if (!stor.types.size() && !stor.vars.size()) {
+            if (!stor.fncs.size() && !stor.vars.size()) {
                 // avoid confusing the ccache wrapper when called on empty input
                 CL_DEBUG("CodeStorage::Storage appears empty, giving up...");
                 return;
