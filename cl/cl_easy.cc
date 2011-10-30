@@ -24,6 +24,7 @@
 
 #include <cl/cl_msg.hh>
 #include <cl/easy.hh>
+#include <cl/storage.hh>
 
 #include "cl_storage.hh"
 #include "killer.hh"
@@ -50,13 +51,19 @@ class ClEasy: public ClStorageBuilder {
 
     protected:
         virtual void run(CodeStorage::Storage &stor) {
+            if (!stor.types.size() && !stor.vars.size()) {
+                // avoid confusing the ccache wrapper when called on empty input
+                CL_DEBUG("CodeStorage::Storage appears empty, giving up...");
+                return;
+            }
+
             CL_DEBUG("scanning CFG for loop-closing edges...");
             findLoopClosingEdges(stor);
 
             CL_DEBUG("killing local variables...");
             killLocalVariables(stor);
 
-            CL_DEBUG("ClEasy is calling peer...");
+            CL_DEBUG("ClEasy is calling the analyzer...");
             StopWatch watch;
             clEasyRun(stor, configString_.c_str());
             CL_PRINT_TIME(watch);
