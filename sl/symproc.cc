@@ -963,6 +963,7 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
             break;
 
         default:
+            CL_BREAK_IF("unhandled binary integral operation");
             return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 
@@ -970,6 +971,35 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
     CustomValue cv(CV_INT);
     cv.data.num = result;
     return sh_.valWrapCustom(cv);
+}
+
+TValId handleBitNot(SymHeap &sh, const TValId val) {
+    // check whether the value is an integral constant
+    long num;
+    if (!numFromVal(&num, sh, val))
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    // compute the integral result
+    const long result = ~num;
+
+    // wrap the result as a heap value expressing a constant integer
+    CustomValue cv(CV_INT);
+    cv.data.num = result;
+    return sh.valWrapCustom(cv);
+}
+
+TValId SymProc::handleIntegralOp(TValId val, enum cl_unop_e code) {
+    switch (code) {
+        case CL_UNOP_MINUS:
+            return this->handleIntegralOp(VAL_NULL, val, CL_BINOP_MINUS);
+
+        case CL_UNOP_BIT_NOT:
+            return handleBitNot(sh_, val);
+
+        default:
+            CL_BREAK_IF("unhandled unary integral operation");
+            return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    }
 }
 
 TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
@@ -1091,7 +1121,7 @@ struct OpHandler</* unary */ 1> {
             case CL_UNOP_BIT_NOT:
                 if (!clt[0] || CL_TYPE_BOOL != clt[0]->code
                         || !clt[1] || CL_TYPE_BOOL != clt[1]->code)
-                    goto unknown_result;
+                    return proc.handleIntegralOp(val, code);
                 // gcc 4.7.x uses CL_UNOP_BIT_NOT for bools with truth semantics
                 // fall through!
 
@@ -1099,7 +1129,7 @@ struct OpHandler</* unary */ 1> {
                 return compareValues(sh, CL_BINOP_EQ, clt[0], VAL_FALSE, val);
 
             case CL_UNOP_MINUS:
-                return proc.handleIntegralOp(VAL_NULL, rhs[0], CL_BINOP_MINUS);
+                return proc.handleIntegralOp(rhs[0], code);
 
             case CL_UNOP_ASSIGN:
                 return val;

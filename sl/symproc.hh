@@ -136,6 +136,7 @@ class SymProc {
         void heapObjDefineType(const ObjHandle &lhs, TValId rhs);
         TValId heapValFromObj(const struct cl_operand &op);
         TValId heapValFromCst(const struct cl_operand &op);
+        TValId handleIntegralOp(TValId val, enum cl_unop_e code);
         TValId handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code);
         void killVar(const CodeStorage::KillVar &kv);
 
