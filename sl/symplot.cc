@@ -1040,7 +1040,7 @@ bool plotHeap(
     }
 
     // initialize an instance of PlotData
-    CL_DEBUG("symplot: created dot file '" << fileName << "'");
+    CL_NOTE("symplot: created dot file '" << fileName << "'");
     PlotData plot(sh, out);
 
     // do our stuff
