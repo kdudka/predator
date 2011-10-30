@@ -358,6 +358,23 @@ bool isTrackableValue(const SymHeap &sh, const TValId val) {
     return false;
 }
 
+inline bool areComparableTypes(const TObjType clt1, const TObjType clt2) {
+    if (!clt1 || !clt2)
+        return false;
+
+    enum cl_type_e code1 = clt1->code;
+    enum cl_type_e code2 = clt2->code;
+    if (code1 == code2)
+        return true;
+
+    if (CL_TYPE_ENUM == code1)
+        code1 = CL_TYPE_INT;
+    if (CL_TYPE_ENUM == code2)
+        code2 = CL_TYPE_INT;
+
+    return (code1 == code2);
+}
+
 bool SymExecEngine::bypassNonPointers(
         SymProc                                     &proc,
         const CodeStorage::Insn                     &insnCmp,
@@ -421,7 +438,7 @@ void SymExecEngine::execCondInsn() {
     const struct cl_operand &op1 = insnCmp->operands[/* src1 */ 1];
     const struct cl_operand &op2 = insnCmp->operands[/* src2 */ 2];
     const struct cl_type *cltSrc = op1.type;
-    CL_BREAK_IF(!cltSrc || !op2.type || cltSrc->code != op2.type->code);
+    CL_BREAK_IF(!areComparableTypes(cltSrc, op2.type));
 
     // a working area in case of VAL_TRUE and VAL_FALSE
     SymHeap sh(localState_[heapIdx_]);
