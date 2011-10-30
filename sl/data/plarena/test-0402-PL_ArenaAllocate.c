@@ -1,5 +1,6 @@
-# 2 "test-0401.c"
+# 2 "test-0402.c"
 #include "plarena-decls.h"
+#include "plarena-harness.h"
 #include "../sl.h"
 
 /* # 52 "../../../mozilla/nsprpub/lib/ds/plarena.c" 2 */
@@ -256,12 +257,8 @@ int main()
     ___sl_plot("PL_InitArenaPool");
 
     // this should be OK
-    PL_FreeArenaPool(&pool);
-    ___sl_plot("PL_FreeArenaPool-01");
-    PL_FreeArenaPool(&pool);
-    ___sl_plot("PL_FreeArenaPool-02");
-    PL_FinishArenaPool(&pool);
-    ___sl_plot("PL_FinishArenaPool-00");
+    PL_ArenaAllocate(&pool, 0x100);
+    ___sl_plot("PL_InitArenaPool");
 
     PL_ArenaFinish();
     return 0;
