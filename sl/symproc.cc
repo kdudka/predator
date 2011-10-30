@@ -954,6 +954,10 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
             result = num1 - num2;
             break;
 #endif
+        case CL_BINOP_BIT_AND:
+            result = num1 & num2;
+            break;
+
         case CL_BINOP_MULT:
             result = num1 * num2;
             break;
@@ -1135,6 +1139,7 @@ struct OpHandler</* binary */ 2> {
                 return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
 
             case CL_BINOP_MULT:
+            case CL_BINOP_BIT_AND:
                 if (VAL_NULL == rhs[0] || VAL_NULL == rhs[1])
                     // whatever we got as the second operand, the result is zero
                     return VAL_NULL;
@@ -1313,8 +1318,6 @@ bool SymExecCore::concretizeLoop(
             // we expect a pointer at this point
             const TValId val = valOfPtrAt(sh, slave.varAt(op));
             if (VT_ABSTRACT == sh.valTarget(val)) {
-                CL_BREAK_IF(CL_INSN_UNOP != insn.code);
-                CL_BREAK_IF(CL_UNOP_ASSIGN != (enum cl_unop_e) insn.subCode);
 #ifndef NDEBUG
                 CL_BREAK_IF(hitLocal);
                 hitLocal = true;
