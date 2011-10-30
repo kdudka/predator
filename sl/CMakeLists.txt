@@ -129,7 +129,7 @@ endif()
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_sym_exec_regre name_suff ext arg1)
     foreach (num ${examples})
-        set(cmd "LC_ALL=C ${GCC_EXEC_PREFIX} ${GCC_HOST}")
+        set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_EXEC_PREFIX} ${GCC_HOST}")
 
         # needed for test-0000
         foreach (inc ${clplug_incs})

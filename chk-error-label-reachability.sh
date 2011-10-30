@@ -1,6 +1,7 @@
 #!/bin/bash
 export SELF="$0"
 export LC_ALL=C
+export CCACHE_DISABLE=1
 
 # this is an emergency fall-back, which is known to break in certain cases
 topdir="`dirname "$(readlink -f "$SELF")"`"

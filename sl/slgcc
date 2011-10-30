@@ -4,6 +4,8 @@ export SELF="$0"
 # this makes 7x speedup in case 'grep' was compiled with multi-byte support
 export LC_ALL=C
 
+export CCACHE_DISABLE=1
+
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
     exit 1

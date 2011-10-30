@@ -2,6 +2,7 @@
 export SELF="$0"
 
 export LC_ALL=C
+export CCACHE_DISABLE=1
 export TIMEOUT="timeout 4"
 
 export CFLAGS="$CFLAGS -c -o /dev/null -O0 -m32"

@@ -73,18 +73,19 @@ target_link_libraries(cl_test cl)
 install(TARGETS cl DESTINATION lib)
 install(DIRECTORY ../include/cl DESTINATION include)
 
-add_test("compile-self" ${GCC_HOST}
-    ${CFLAGS}
-    -I${cl_SOURCE_DIR}
-    -I${cl_SOURCE_DIR}/../include
-    -I${cl_SOURCE_DIR}/../include/gcc
-    -I${cl_SOURCE_DIR}/gcc
-    -c ${cl_SOURCE_DIR}/gcc/clplug.c
-    -o /dev/null
-    -fplugin=${cl_BINARY_DIR}/libcl_test.so
-    -fplugin-arg-libcl_test-dry-run)
+set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_HOST}")
+set(cmd "${cmd} ${CFLAGS}")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include/gcc")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}/gcc")
+set(cmd "${cmd} -c ${cl_SOURCE_DIR}/gcc/clplug.c")
+set(cmd "${cmd} -o /dev/null")
+set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
+set(cmd "${cmd} -fplugin-arg-libcl_test-dry-run")
+add_test("compile-self" sh -c "${cmd}")
 
-set(cmd "${GCC_HOST}")
+set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_HOST}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include/gcc")
@@ -94,28 +95,24 @@ set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
 set(cmd "${cmd} | diff -up ${cl_SOURCE_DIR}/cl_test.out -")
 add_test("cl_test" sh -c "${cmd}")
 
-set(self_extra_opts
-    ${CFLAGS}
-    -I${cl_SOURCE_DIR}
-    -I${cl_SOURCE_DIR}/../include
-    -I${cl_SOURCE_DIR}/../include/gcc
-    -I${cl_SOURCE_DIR}/gcc
-    -c ${cl_SOURCE_DIR}/gcc/clplug.c
-    -fplugin=${cl_BINARY_DIR}/libcl_test.so
-    -fplugin-arg-libcl_test-dump-pp=/dev/null
-    -fplugin-arg-libcl_test-dump-types
-    -fplugin-arg-libcl_test-gen-dot=/dev/null
-    -fplugin-arg-libcl_test-type-dot=/dev/null
-    -fplugin-arg-libcl_test-verbose=15
-    -fplugin-arg-libcl_test-dry-run)
+set(cmd "${GCC_HOST} ${CFLAGS}")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include/gcc")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}/gcc")
+set(cmd "${cmd} -c ${cl_SOURCE_DIR}/gcc/clplug.c")
+set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
+set(cmd "${cmd} -fplugin-arg-libcl_test-dump-pp=/dev/null")
+set(cmd "${cmd} -fplugin-arg-libcl_test-dump-types")
+set(cmd "${cmd} -fplugin-arg-libcl_test-gen-dot=/dev/null")
+set(cmd "${cmd} -fplugin-arg-libcl_test-type-dot=/dev/null")
+set(cmd "${cmd} -fplugin-arg-libcl_test-verbose=15")
+set(cmd "${cmd} -fplugin-arg-libcl_test-dry-run")
 
-add_test("compile-self-extra" ${GCC_HOST} ${self_extra_opts})
+add_test("compile-self-extra" sh -c "LC_ALL=C CCACHE_DISABLE=1 ${cmd}")
 if(TEST_WITH_VALGRIND)
-    add_test("compile-self-valgrind" valgrind
-        --trace-children=yes
-        --error-exitcode=7
-        ${GCC_HOST}
-        ${self_extra_opts})
+    set(cmd "valgrind --trace-children=yes --error-exitcode=7 ${cmd}")
+    add_test("compile-self-valgrind" sh -c "${cmd}")
 endif()
 
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
