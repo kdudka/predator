@@ -962,6 +962,14 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
             result = num1 * num2;
             break;
 
+        case CL_BINOP_MIN:
+            result = std::min(num1, num2);
+            break;
+
+        case CL_BINOP_MAX:
+            result = std::max(num1, num2);
+            break;
+
         default:
             CL_BREAK_IF("unhandled binary integral operation");
             return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
@@ -1174,6 +1182,10 @@ struct OpHandler</* binary */ 2> {
                     // whatever we got as the second operand, the result is zero
                     return VAL_NULL;
 
+                // fall through!
+
+            case CL_BINOP_MIN:
+            case CL_BINOP_MAX:
                 goto handle_int;
 
             case CL_BINOP_PLUS:
