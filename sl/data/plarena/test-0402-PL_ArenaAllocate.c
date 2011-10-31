@@ -258,7 +258,7 @@ int main()
 
     // this should be OK
     PL_ArenaAllocate(&pool, 0x100);
-    ___sl_plot("PL_InitArenaPool");
+    ___sl_plot("PL_ArenaAllocate");
 
     PL_ArenaFinish();
     return 0;

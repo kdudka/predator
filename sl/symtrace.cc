@@ -139,9 +139,10 @@ void InsnNode::plotNode(TracePlotter &tplot) const {
         : "black";
 
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=plaintext, fontname=monospace, fontcolor="
-        << color << ", label="
-        << SL_QUOTE(insnToLabel(insn_)) << "];\n";
+        << " [shape=plaintext, fontname=monospace, fontcolor=" << color
+        << ", label=" << SL_QUOTE(insnToLabel(insn_))
+        << ", tooltip=" << SL_QUOTE(insn_->loc << insn_->bb->name())
+        << "];\n";
 }
 
 void AbstractionNode::plotNode(TracePlotter &tplot) const {
@@ -193,7 +194,7 @@ void CallEntryNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
         ", penwidth=3.0, label=\"--> call entry: " << (insnToLabel(insn_))
-        << "\"];\n";
+        << "\", tooltip=\"" << insn_->loc << insn_->bb->name() << "\"];\n";
 }
 
 void CallCacheHitNode::plotNode(TracePlotter &tplot) const {
@@ -206,7 +207,8 @@ void CallCacheHitNode::plotNode(TracePlotter &tplot) const {
 void CallFrameNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
-        ", label=\"--- call frame: " << (insnToLabel(insn_)) << "\"];\n";
+        ", label=\"--- call frame: " << (insnToLabel(insn_))
+        << "\", tooltip=\"" << insn_->loc << insn_->bb->name() << "\"];\n";
 }
 
 void CallDoneNode::plotNode(TracePlotter &tplot) const {
@@ -217,7 +219,8 @@ void CallDoneNode::plotNode(TracePlotter &tplot) const {
 }
 
 void CondNode::plotNode(TracePlotter &tplot) const {
-    tplot.out << "\t" << SL_QUOTE(this) << " [shape=box, fontname=monospace";
+    tplot.out << "\t" << SL_QUOTE(this) << " [shape=box, fontname=monospace"
+        ", tooltip=" << SL_QUOTE(inCnd_->loc << inCnd_->bb->name());
 
     if (determ_)
         tplot.out << ", color=green";

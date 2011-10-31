@@ -1106,6 +1106,7 @@ void execute(
     // XXX: synthesize CL_INSN_CALL
     static CodeStorage::Insn insn;
     insn.stor = fnc.stor;
+    insn.bb   = const_cast<CodeStorage::Block *>(fnc.cfg.entry());
     insn.code = CL_INSN_CALL;
     insn.loc  = *locationOf(fnc);
     insn.operands.resize(2);
