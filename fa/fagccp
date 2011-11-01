@@ -10,7 +10,7 @@ topdir="`dirname "$self"`/.."
 # basic setup
 FA_BUILD="$topdir/fa_build"
 FA_PLUG="$FA_BUILD/libfa.so"
-GCC=gcc
+GCC=/usr/bin/gcc
 
 # initial checks
 #test -x "$GCC"                              || exit 1
