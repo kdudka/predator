@@ -78,7 +78,6 @@ struct NodeLabel {
 		assert(this->node.m->find(key) == this->node.m->end());
 
 		this->node.m->insert(std::make_pair(key, NodeItem(aBox, index, offset)));
-
 	}
 
 	bool isData() const {

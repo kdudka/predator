@@ -211,7 +211,7 @@ protected:
 			} else ta->addTransition(*i);
 		}
 //		std::cerr << joinState << std::endl;
-		assert(hit);
+		if (!hit) {assert(false);}
 		// avoid screwing up things
 		src.unfoldAtRoot(*ta, joinStatesMap, false);
 		return ta;

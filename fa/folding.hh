@@ -242,7 +242,6 @@ protected:
 					);
 
 					break;
-
 				}
 
 				case box_type_e::bBox: {
@@ -346,7 +345,6 @@ protected:
 			inputMap[index[cutpointSelectorPair.first] - 1] = cutpointSelectorPair.second;
 
 			++count;
-
 		}
 
 		inputMap.resize(count);
@@ -602,7 +600,6 @@ public:
 				this->fae.popStateOffset();
 
 				continue;
-
 			}
 
 			size_t selectorToRoot = ConnectionGraph::getSelectorToTarget(
