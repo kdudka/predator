@@ -1,6 +1,6 @@
 # Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
 #
-# This file is part of sl.
+# This file is part of forester.
 #
 # sl is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
