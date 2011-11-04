@@ -699,8 +699,8 @@ struct Storage {
     TypeDb                      types;      ///< type info lookup container
     VarDb                       vars;       ///< variables lookup container
     FncDb                       fncs;       ///< functions lookup container
-    NameDb                      varNames;   ///< fnc names lookup container
-    NameDb                      fncNames;   ///< var names lookup container
+    NameDb                      varNames;   ///< var names lookup container
+    NameDb                      fncNames;   ///< fnc names lookup container
 };
 
 } // namespace CodeStorage
