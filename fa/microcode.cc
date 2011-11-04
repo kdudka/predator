@@ -360,7 +360,7 @@ void FI_node_create::execute(ExecutionManager& execMan, const AbstractInstructio
 
 	assert((*state.first)[this->src_].isVoidPtr());
 
-	if ((*state.first)[this->src_].d_void_ptr != this->size_)
+	if ((*state.first)[this->src_].d_void_ptr_size != this->size_)
 		throw ProgramError("allocated block size mismatch");
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));

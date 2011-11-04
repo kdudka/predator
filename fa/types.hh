@@ -122,7 +122,7 @@ struct Data {
 	/// Union with additional information about the data
 	union {
 		void*	  d_native_ptr;               ///< real memory pointer
-		size_t	d_void_ptr;                 ///< void pointer size
+		size_t	d_void_ptr_size;            ///< void pointer size
 
 		/// information about reference
 		struct {
@@ -157,7 +157,7 @@ struct Data {
 			case data_type_e::t_native_ptr:
 				this->d_native_ptr = data.d_native_ptr; break;
 			case data_type_e::t_void_ptr:
-				this->d_void_ptr = data.d_void_ptr; break;
+				this->d_void_ptr_size = data.d_void_ptr_size; break;
 			case data_type_e::t_ref:
 				this->d_ref.root = data.d_ref.root;
 				this->d_ref.displ = data.d_ref.displ; break;
@@ -198,7 +198,7 @@ struct Data {
 			case data_type_e::t_native_ptr:
 				this->d_native_ptr = rhs.d_native_ptr; break;
 			case data_type_e::t_void_ptr:
-				this->d_void_ptr = rhs.d_void_ptr; break;
+				this->d_void_ptr_size = rhs.d_void_ptr_size; break;
 			case data_type_e::t_ref:
 				this->d_ref.root = rhs.d_ref.root;
 				this->d_ref.displ = rhs.d_ref.displ; break;
@@ -291,7 +291,7 @@ struct Data {
 	 */
 	static Data createVoidPtr(size_t size = 0) {
 		Data data(data_type_e::t_void_ptr);
-		data.d_void_ptr = size;
+		data.d_void_ptr_size = size;
 		return data;
 	}
 
@@ -444,7 +444,7 @@ struct Data {
 	 * @returns  @p true if the type is @p NULL @p t_void_ptr, @p false otherwise
 	 */
 	bool isNull() const {
-		return this->type == data_type_e::t_void_ptr && this->d_void_ptr == 0;
+		return this->type == data_type_e::t_void_ptr && this->d_void_ptr_size == 0;
 	}
 
 	/**
@@ -526,7 +526,7 @@ struct Data {
 			case data_type_e::t_native_ptr:
 				return boost::hash_value(v.type + boost::hash_value(v.d_native_ptr));
 			case data_type_e::t_void_ptr:
-				return boost::hash_value(v.type + v.d_void_ptr);
+				return boost::hash_value(v.type + v.d_void_ptr_size);
 			case data_type_e::t_ref:
 				return boost::hash_value(v.type + v.d_ref.root + v.d_ref.displ);
 			case data_type_e::t_int:
@@ -536,7 +536,7 @@ struct Data {
 			case data_type_e::t_struct:
 				return boost::hash_value(v.type + boost::hash_value(*v.d_struct));
 			default:
-				return boost::hash_value(v.type + v.d_void_ptr);
+				return boost::hash_value(v.type + v.d_void_ptr_size);
 		}
 	}
 
@@ -561,7 +561,7 @@ struct Data {
 			case data_type_e::t_unknw:
 				return true;
 			case data_type_e::t_void_ptr:
-				return this->d_void_ptr == rhs.d_void_ptr;
+				return this->d_void_ptr_size == rhs.d_void_ptr_size;
 			case data_type_e::t_native_ptr:
 				return this->d_native_ptr == rhs.d_native_ptr;
 			case data_type_e::t_ref:
@@ -608,7 +608,7 @@ struct Data {
 			case data_type_e::t_native_ptr:
 				os << "(native_ptr)" << x.d_native_ptr; break;
 			case data_type_e::t_void_ptr:
-				os << "(void_ptr)" << x.d_void_ptr; break;
+				os << "(void_ptr)" << x.d_void_ptr_size; break;
 			case data_type_e::t_ref:
 				os << "(ref)" << x.d_ref.root << '+' << x.d_ref.displ; break;
 			case data_type_e::t_int:
