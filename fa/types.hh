@@ -223,7 +223,7 @@ struct Data {
 	 *
 	 * @returns  Type and value information for undefined value
 	 */
-	static Data createUndef() { return Data(); }
+	static Data createUndef() { return Data(data_type_e::t_undef); }
 
 	/**
 	 * @brief  Creates an unknown value
@@ -348,7 +348,7 @@ struct Data {
 			data.d_int = atol(args[2].c_str());
 			return data;
 		}
-		if (args[1] == "ref") {
+		else if (args[1] == "ref") {
 			if (args.size() != 4) {
 				throw std::runtime_error("incorrect number of arguments");
 			}
@@ -360,14 +360,17 @@ struct Data {
 			data.d_ref.displ = atol(args[3].c_str());
 			return data;
 		}
-		if (args[1] == "undef") {
+		else if (args[1] == "undef") {
 			if (args.size() != 2) {
 				throw std::runtime_error("incorrect number of arguments");
 			}
 
 			return Data(data_type_e::t_undef);
 		}
-		throw std::runtime_error("non-parsable arguments");
+		else
+		{
+			throw std::runtime_error("non-parsable arguments");
+		}
 	}
 
 	/**
@@ -390,7 +393,7 @@ struct Data {
 	 * @returns  @p false if the type is @p t_undef, @p true otherwise
 	 */
 	bool isDefined() const {
-		return this->type != data_type_e::t_undef;
+		return !isUndef();
 	}
 
 	/**
