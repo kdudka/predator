@@ -188,6 +188,8 @@ struct Data {
 	 * @returns  Copy of the object
 	 */
 	Data& operator=(const Data& rhs) {
+		if (this == &rhs) { return *this; }
+
 		this->clear();
 		this->type = rhs.type;
 		this->size = rhs.size;
