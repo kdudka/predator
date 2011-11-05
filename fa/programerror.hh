@@ -48,17 +48,41 @@ class ProgramError : public std::exception {
 
 public:
 
-	/// Constructs and assigns value to a new object
-	ProgramError(const std::string& msg = "", const cl_loc* loc = NULL) :
+	/**
+	 * @brief  Constructor
+	 *
+	 * Constructs and assigns value to a new object.
+	 *
+	 * @param[in]  msg  The error message
+	 * @param[in]  loc  The location in the program that caused the error
+	 */
+	ProgramError(const std::string& msg = "", const cl_loc* loc = nullptr) :
 		msg(msg), loc(loc) {}
 
-	/// Virtual destructor
+	/**
+	 * @brief  Destructor
+	 *
+	 * Virtual destructor.
+	 */
 	virtual ~ProgramError() throw() {}
 
-	/// Overrides the std::exception what() method
+	/**
+	 * @brief  Description of error
+	 *
+	 * Retrieves the description of the error (overrides the
+	 * std::exception::what() method)
+	 *
+	 * @returns  The description of the error
+	 */
 	virtual const char* what() const throw() { return this->msg.c_str(); }
 
-	/// Retrieves the Code Listener location
+	/**
+	 * @brief  Location of the error
+	 *
+	 * Retrieves the location of the error in the analyzed program.
+	 *
+	 * @returns  The location of the error
+	 */
 	const cl_loc* location() const throw() { return this->loc; }
 };
 
