@@ -38,17 +38,36 @@
  *
  * This structure describes data selectors.
  *
- * @todo: write documentation
+ * @todo: write documentation... what the hell is 'displ'???
  */
 struct SelData {
 
-	size_t  offset;
-	int     size;
-	int     displ;
+	size_t  offset;      ///< offset in a structure
+	int     size;        ///< size of the type
+	int     displ;       ///< @todo write dox
 
+	/**
+	 * @brief  Constructor
+	 *
+	 * Constructs an object from its components.
+	 *
+	 * @param[in]  offset  Offset of the selector
+	 * @param[in]  size    Size of the selector
+	 * @param[in]  displ   TODO write dox
+	 */
 	SelData(size_t offset, int size, int displ) :
 		offset(offset), size(size), displ(displ) { }
 
+	/**
+	 * @brief  Construct selector information from arguments
+	 *
+	 * Constructs selector information from a list of arguments.
+	 * @todo: see xxxx for the format
+	 *
+	 * @param[in]  args  The list of arguments
+	 *
+	 * @returns  Constructed selector information
+	 */
 	static SelData fromArgs(const std::vector<std::string>& args) {
 		if (args.size() != 4) {
 			throw std::runtime_error("incorrect number of arguments");
@@ -59,17 +78,47 @@ struct SelData {
 			atol(args[3].c_str()));
 	}
 
-	/// @todo  Hash function with a better distribution
+	/**
+	 * @brief  Computes the hash value
+	 *
+	 * Overloaded function for computation of hash value of an object of type
+	 * SelData.
+	 *
+	 * @param[in]  v  The object to be hashed
+	 *
+	 * @returns  The hash of the object
+	 *
+	 * @todo  Improve the distribution of the hash function
+	 */
 	friend size_t hash_value(const SelData& v) {
 		return boost::hash_value(v.offset + v.size + v.displ);
 	}
 
+	/**
+	 * @brief  Equality operator
+	 *
+	 * Operator checking equality.
+	 *
+	 * @param[in]  rhs  The object to check equality with
+	 *
+	 * @returns  @p true if the object is equal to @p rhs, @p false otherwise
+	 */
 	bool operator==(const SelData& rhs) const {
 		return this->offset == rhs.offset &&
 			this->size == rhs.size &&
 			this->displ == rhs.displ;
 	}
 
+	/**
+	 * @brief  The output stream operator
+	 *
+	 * The std::ostream << operator for conversion to a string.
+	 *
+	 * @param[in,out]  os  The output stream
+	 * @param[in]      x   The value to be appended to the stream  
+	 *
+	 * @returns  The modified output stream
+	 */
 	friend std::ostream& operator<<(std::ostream& os, const SelData& x) {
 		os << "sel" << x.offset << ':' << x.size << '[';
 		if (x.displ >= 0) {
@@ -77,7 +126,6 @@ struct SelData {
 		}
 		return os << x.displ << ']';
 	}
-
 };
 
 /**
