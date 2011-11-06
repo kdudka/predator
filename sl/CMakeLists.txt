@@ -71,6 +71,8 @@ option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 set(GCC_EXEC_PREFIX "timeout 300"
     CACHE STRING "Set to empty string if not sure")
 
+set(testdir "${sl_SOURCE_DIR}/../tests/predator-regre")
+
 set(examples
          0001 0002 0003 0004 0005 0006 0007 0008 0009
     0010 0011 0012 0013 0014 0015 0016 0017 0018 0019
@@ -106,7 +108,7 @@ macro(test_sym_exec label tool arg1 arg2 arg3)
     foreach (num ${examples})
         set(test_name "${label}___example-${num}")
         add_test(${test_name} ${tool} ${arg1} ${arg2} ${arg3}
-            -c ${sl_SOURCE_DIR}/data/test-${num}.c
+            -c "${testdir}/test-${num}.c"
             -I../include/predator-builtins -DPREDATOR
             -fplugin=${sl_BINARY_DIR}/libsl.so
             -fplugin-arg-libsl-args=noplot
@@ -136,7 +138,7 @@ macro(test_sym_exec_regre name_suff ext arg1)
         # in the error output, which is checked for exact match
         set(cmd "${cmd} -m32")
 
-        set(cmd "${cmd} -c ${sl_SOURCE_DIR}/data/test-${num}.c")
+        set(cmd "${cmd} -c ${testdir}/test-${num}.c")
         set(cmd "${cmd} -I../include/predator-builtins -DPREDATOR")
         set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
         set(cmd "${cmd} -fplugin-arg-libsl-preserve-ec")
@@ -149,16 +151,11 @@ macro(test_sym_exec_regre name_suff ext arg1)
         # filter out NOTE messages with internal location
         set(cmd "${cmd} | grep -v 'note: .*\\\\[internal location\\\\]'")
 
-        # FIXME: the doubly-nested triply-escaped sed magic might look a bit
-        # scary
-        set(cmd "${cmd} | sed s/`echo ${sl_SOURCE_DIR}/data/ ")
-        set(cmd "${cmd} | sed 's/\\\\\\\\//\\\\\\\\\\\\\\\\\\\\\\\\//g'`//")
-        set(cmd "${cmd} | sed s/`echo ${sl_SOURCE_DIR}/ ")
-        set(cmd "${cmd} | sed 's/\\\\\\\\//\\\\\\\\\\\\\\\\\\\\\\\\//g'`//")
+        # drop absolute paths
+        set(cmd "${cmd} | sed 's|^[^:]*/||'")
 
         # ... and finally diff with the expected output
-        set(cmd
-            "${cmd} | diff -up ${sl_SOURCE_DIR}/data/test-${num}.err${ext} -")
+        set(cmd "${cmd} | diff -up ${testdir}/test-${num}.err${ext} -")
         set(test_name "test-${num}.c${name_suff}")
         add_test(${test_name} sh -c "${cmd}")
 

@@ -50,7 +50,6 @@ version.h:
 
 clean:
 	if test -d ../.git; then rm -f version.h; fi
-	$(MAKE) clean -C data -f Makefile.in
 	if test -e ../sl_build/Makefile; then $(MAKE) clean -C ../sl_build; fi
 
 distclean: clean

@@ -23,7 +23,7 @@ do_sync() {
         grep '\[-fplugin=libsl\.so\]$' "$raw" \
             | grep -v 'note: .*\[internal location\]' \
             | sed 's| \[-fplugin=libsl\.so\]$||' \
-            | sed 's|data/||' \
+            | sed 's|^[^:]*/||' \
             > "$err"
 
         rm -f "$raw" "${i}-bare-gcc.err"

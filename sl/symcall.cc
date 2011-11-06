@@ -264,7 +264,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
 
     // We need to look for junk since there can be a function returning an
     // allocated object.  Then ignoring the return value on the caller's
-    // side can trigger a memory leak.  See data/test-0090.c for a use case.
+    // side can trigger a memory leak.  See test-0090.c for a use case.
     proc.valDestroyTarget(VAL_ADDR_OF_RET);
 
     TValList live;
