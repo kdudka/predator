@@ -1,6 +1,6 @@
 // Creating a SLL with one data pointer being all the time NULL---to be remembered by the abstraction.
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 #include <stdlib.h>
 
 struct item {

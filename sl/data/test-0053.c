@@ -1,6 +1,6 @@
 // Creating and destroying a cyclic SLL. The creation is by repeated insertion.
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 #include <stdlib.h>
 
 #define SLL_NEW(type) \

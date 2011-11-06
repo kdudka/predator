@@ -9,7 +9,7 @@
  *
  */
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 #include <stdlib.h>
 
 #define __nondet ___sl_get_nondet_int

@@ -66,11 +66,6 @@ target_link_libraries(sl ${CL_LIB})
 # make install
 install(TARGETS sl DESTINATION lib)
 
-# the following include dirs are needed to compile cl/gcc/clplug.c
-set(clplug_incs "-I${sl_SOURCE_DIR}/../cl" "-I${sl_SOURCE_DIR}/../cl/gcc")
-set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include")
-set(clplug_incs ${clplug_incs} "-I${sl_SOURCE_DIR}/../include/gcc")
-
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
 set(GCC_EXEC_PREFIX "timeout 300"
@@ -112,7 +107,7 @@ macro(test_sym_exec label tool arg1 arg2 arg3)
         set(test_name "${label}___example-${num}")
         add_test(${test_name} ${tool} ${arg1} ${arg2} ${arg3}
             -c ${sl_SOURCE_DIR}/data/test-${num}.c
-            -DPREDATOR ${clplug_incs}
+            -I../include/predator-builtins -DPREDATOR
             -fplugin=${sl_BINARY_DIR}/libsl.so
             -fplugin-arg-libsl-args=noplot
             -fplugin-arg-libsl-preserve-ec
@@ -142,7 +137,8 @@ macro(test_sym_exec_regre name_suff ext arg1)
         set(cmd "${cmd} -m32")
 
         set(cmd "${cmd} -c ${sl_SOURCE_DIR}/data/test-${num}.c")
-        set(cmd "${cmd} -DPREDATOR -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
+        set(cmd "${cmd} -I../include/predator-builtins -DPREDATOR")
+        set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
         set(cmd "${cmd} -fplugin-arg-libsl-preserve-ec")
         set(cmd "${cmd} 2>&1")
 

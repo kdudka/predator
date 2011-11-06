@@ -1,7 +1,7 @@
 // Linux lists: a test of writing into a non-existing envelope of a list head,
 // resulting into stack smashing (since the head is on the stack).
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 
 #include <linux/stddef.h>
 #include <stddef.h>

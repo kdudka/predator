@@ -1,13 +1,19 @@
 #!/bin/bash
 export SELF="$0"
 
+# basic setup
+topdir="`dirname "$(readlink -f "$SELF")"`/.."
+export SL_PLUG="$topdir/sl_build/libsl.so"
+export GCC_HOST="$topdir/gcc-install/bin/gcc"
+
 export LC_ALL=C
 export CCACHE_DISABLE=1
 export TIMEOUT="timeout 4"
 
-export CFLAGS="$CFLAGS -c -o /dev/null -O0 -m32"
+CFLAGS="$CFLAGS -c -o /dev/null -O0 -m32"
+CFLAGS="$CFLAGS -I$topdir/include/predator-builtins -DPREDATOR"
 test -n "$PFLAGS" || PFLAGS="error_label:ERROR"
-export PFLAGS
+export CFLAGS PFLAGS
 
 export MSG_INTERNAL_ERROR='internal compiler error'
 export MSG_INFLOOP=': warning: end of function .*() has not been reached'
@@ -43,11 +49,6 @@ usage() {
 }
 
 test -r "$1" || usage
-
-# basic setup
-topdir="`dirname "$(readlink -f "$SELF")"`/.."
-export SL_PLUG="$topdir/sl_build/libsl.so"
-export GCC_HOST="$topdir/gcc-install/bin/gcc"
 
 # try to run gcc
 $TIMEOUT "$GCC_HOST" --version >&2 \

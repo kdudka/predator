@@ -28,12 +28,13 @@ seek_input_file "$@" || usage
 
 # basic setup
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
+export SINK="/dev/null"
 export SL_PLUG="$topdir/sl_build/libsl.so"
 export GCC_HOST="$topdir/gcc-install/bin/gcc"
-export GCC_OPTS="-c -o /dev/null -O0 -DPREDATOR"
+export GCC_OPTS="-c -o $SINK -O0 -I$topdir/include/predator-builtins -DPREDATOR"
 
 # initial checks
-"$GCC_HOST" --version >/dev/null || die "unable to run gcc: $GCC_HOST --version"
+"$GCC_HOST" --version >"$SINK" || die "unable to run gcc: $GCC_HOST --version"
 test -r "$SL_PLUG"  || die "Predator GCC plug-in not found: ${SL_PLUG}"
 
 # use chromium as default SVG_VIEWER
@@ -50,7 +51,7 @@ export pidfile
 trap "rm -f '$pidfile'" EXIT
 
 # check whether stdout is connected to a terminal
-if tty 0>&1 >/dev/null; then
+if tty 0>&1 >"$SINK"; then
     # initialize coloring escape sequences
     export S='\o033[1;30m'
     export R='\o033[1;31m'

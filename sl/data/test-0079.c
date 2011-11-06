@@ -6,7 +6,7 @@
  * pointed from anywhere.
  */
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 #include <stdlib.h>
 
 struct list_head {

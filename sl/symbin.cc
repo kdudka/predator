@@ -25,7 +25,7 @@
 
 // we are mainly interested in the declaration of enum ___sl_module_id
 #define PREDATOR
-#include "sl.h"
+#include "../include/predator-builtins/verifier-builtins.h"
 #undef PREDATOR
 
 #include "symabstract.hh"

@@ -2,7 +2,7 @@
  Jonathan Cederberg:  example based on the eternally confuzzled web tutorial 
  */
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 
 #include <stdio.h>
 #include <stdlib.h>

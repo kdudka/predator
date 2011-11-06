@@ -17,8 +17,8 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_SL_H
-#define H_GUARD_SL_H
+#ifndef H_GUARD_PREDATOR_BUILTINS_H
+#define H_GUARD_PREDATOR_BUILTINS_H
 
 #define ___SL_ASSERT(cond) do {                                             \
     if (!(cond))                                                            \
@@ -119,4 +119,4 @@ static /* inline */ int ___sl_get_nondet_int(void)
 }
 #endif
 
-#endif /* H_GUARD_SL_H */
+#endif /* H_GUARD_PREDATOR_BUILTINS_H */

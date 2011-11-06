@@ -1,6 +1,6 @@
 // Creating and then deleting a cyclic DLL.
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 #include <stdlib.h>
 
 #define DLL_NEW(type) \

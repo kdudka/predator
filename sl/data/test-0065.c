@@ -1,7 +1,7 @@
 // Creating an SLL with two marked successor nodes (via non-null data elements),
 // and then reversing the list.
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 #include <stdlib.h>
 
 struct item {

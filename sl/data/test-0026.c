@@ -1,4 +1,4 @@
-#include "../sl.h"
+#include <verifier-builtins.h>
 
 int main() {
     void **p1;

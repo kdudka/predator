@@ -1,7 +1,7 @@
 # 2 "test-0402.c"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
-#include "../sl.h"
+#include <verifier-builtins.h>
 
 /* # 52 "../../../mozilla/nsprpub/lib/ds/plarena.c" 2 */
 

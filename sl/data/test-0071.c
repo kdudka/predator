@@ -1,6 +1,6 @@
 // Creating an SLL with elements pointing to a shared SLL.
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 #include <stdlib.h>
 
 struct item {

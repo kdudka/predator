@@ -1,7 +1,7 @@
 #define TRIGGER_INVALID_WRITE       1
 #define GIVE_CHANCE_TO_INVADER      1
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 
 #include <linux/stddef.h>
 #include <stddef.h>

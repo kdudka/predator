@@ -1,4 +1,4 @@
-#include "../sl.h"
+#include <verifier-builtins.h>
 #include <stdbool.h>
 
 // return VAL_UNKNOWN of type CL_TYPE_BOOL while running symbolic execution

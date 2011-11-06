@@ -1,6 +1,6 @@
 // Creating and then traversing a DLL.
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 #include <stdlib.h>
 
 struct item {

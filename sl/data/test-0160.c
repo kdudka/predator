@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include "../sl.h"
+#include <verifier-builtins.h>
 
 int main() {
     char *buf = NULL;

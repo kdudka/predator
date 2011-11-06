@@ -1,7 +1,7 @@
 // Creating a DLL from the middle, then going to the beginning (wrt. next),
 // deleting the DLL.
 
-#include "../sl.h"
+#include <verifier-builtins.h>
 #include <stdlib.h>
 
 struct item {

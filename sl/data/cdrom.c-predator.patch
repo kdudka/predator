@@ -12,7 +12,7 @@ index ddbf2d2..9a78a02 100644
 -# 1 "acdrom.c"
 -
 -
-+#include "../sl.h"
++#include <verifier-builtins.h>
  
  void *malloc(int);
 +void *calloc(int, int);
