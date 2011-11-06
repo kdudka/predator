@@ -18,9 +18,9 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all clean configure distclean distcheck fast version.h
+.PHONY: all clean distclean distcheck fast version.h
 
-all: version.h configure ../cl_build
+all: version.h ../cl_build
 	# make sure the libcl.so is up2date
 	$(MAKE) -C ../cl_build
 	mkdir -p ../sl_build
@@ -52,9 +52,6 @@ clean:
 	if test -d ../.git; then rm -f version.h; fi
 	$(MAKE) clean -C data -f Makefile.in
 	if test -e ../sl_build/Makefile; then $(MAKE) clean -C ../sl_build; fi
-
-configure:
-	@cd data >/dev/null && ./configure
 
 distclean: clean
 	rm -rf ../sl_build

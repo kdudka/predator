@@ -154,7 +154,7 @@ handle_output() {
         printf "${G}proven safe${N}                 "
 
     else
-        printf "${R}exit code was${N}               " "$2"
+        printf "${R}exit code was %d${N}            " "$2"
     fi
 
     # print timing information and memory usage if available
