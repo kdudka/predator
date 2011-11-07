@@ -67,7 +67,7 @@ struct Config {
 			boost::split(data, *i, boost::is_from_range(':', ':'));
 			if (data.size() == 2)
 				this->processArg(data[0], data[1]);
-		}			
+		}
 	}
 
 };
@@ -104,10 +104,10 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 
     using namespace CodeStorage;
 
-	CL_CDEBUG(1, "config: " << configString);
+	CL_DEBUG("config: " << configString);
 
     // look for main() by name
-    CL_CDEBUG(2, "looking for 'main()' at gl scope...");
+    CL_DEBUG("looking for 'main()' at gl scope...");
     const NameDb::TNameMap &glNames = stor.fncNames.glNames;
     const NameDb::TNameMap::const_iterator iter = glNames.find("main");
     if (glNames.end() == iter) {
@@ -126,15 +126,15 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
         return;
     }
 
-    CL_CDEBUG(2, "starting verification stuff ...");
+    CL_DEBUG("starting verification stuff ...");
     try {
 		signal(SIGUSR1, setDbgFlag);
 		se.loadTypes(stor);
-		Config c(configString);
+/*		Config c(configString);
 		if (!c.dbRoot.empty()){
 			BoxDb db(c.dbRoot, "index");
 			se.loadBoxes(db.store);
-		}
+		}*/
 		se.compile(stor, *main);
 		se.run();
 		CL_NOTE("the program is safe ...");

@@ -37,7 +37,7 @@ public:
 	~SymExec();
 
 	void loadTypes(const CodeStorage::Storage& stor);
-	void loadBoxes(const std::unordered_map<std::string, std::string>& db);
+//	void loadBoxes(const std::unordered_map<std::string, std::string>& db);
 	void compile(const CodeStorage::Storage &stor, const CodeStorage::Fnc& entry);
 	void run();
 	void setDbgFlag();

@@ -45,7 +45,7 @@ class TimbukScanner {
 	std::string val;
 	int lineno;
 	bool frozen;
-	
+
 public:
 
 	static const int tt_eof = 0x100;
@@ -69,7 +69,7 @@ private:
 		this->keywords["Final"] = tt_fin;
 		this->keywords["Transitions"] = tt_trans;
 	}
-	
+
 	int keywordLookup(const std::string& s) const {
 		std::map<std::string, int>::const_iterator i = this->keywords.find(s);
 		return (i != this->keywords.end())?(i->second):(tt_id);
@@ -96,7 +96,7 @@ public:
 			int c = this->input->get();
 
 			switch (state) {
-		
+
 				case 0:
 
 					switch (c) {
@@ -107,7 +107,7 @@ public:
 						case '<': state = 4; break;
 						case '#': state = 5; break;
 						default:
-							
+
 							if (isalpha(c) || c == '_') {
 								this->val += c;
 								state = 2;
@@ -120,11 +120,11 @@ public:
 							}
 
 							break;
-					
+
 					}
 
 					break;
-					
+
 				case 1:
 
 					if (c != '>') {
@@ -224,7 +224,7 @@ protected:
 		this->scanner.assertToken(TimbukScanner::tt_ops, "'Ops'");
 		this->r_sym_list();
 	}
-	
+
 	// sym_list -> sym sim_list | eps
 	void r_sym_list() {
 		this->clearLabels();
@@ -241,13 +241,13 @@ protected:
 		int arity = std::atoi(this->scanner.getVal().c_str());
 		this->newLabel(label, arity, this->addLabel(label, arity));
 	}
-	
+
 	// aut_list -> aut aut_list | eps
 	void r_aut_list() {
 		while (this->scanner.peekToken() == TimbukScanner::tt_aut)
 			this->r_aut();
 	}
-	
+
 	// aut -> AUT ID decl transitions
 	void r_aut() {
 		this->scanner.assertToken(TimbukScanner::tt_aut, "'Automaton'");
@@ -258,7 +258,7 @@ protected:
 		this->r_transitions();
 		this->endModel();
 	}
-	
+
 	// decl -> STAT decl_list FIN STAT final_list
 	void r_decl() {
 		this->scanner.assertToken(TimbukScanner::tt_stat, "'States'");
@@ -267,14 +267,14 @@ protected:
 		this->scanner.assertToken(TimbukScanner::tt_stat, "'States'");
 		this->r_final_list();
 	}
-	
+
 	// decl_list -> state_decl decl_list | eps
 	void r_decl_list() {
 		this->clearStates();
 		while (this->scanner.peekToken() == TimbukScanner::tt_id)
 			this->r_state_decl();
 	}
-	
+
 	// state_decl -> ID | ID COL NUM
 	void r_state_decl() {
 		this->scanner.assertToken(TimbukScanner::tt_id, "identifier");
@@ -285,26 +285,26 @@ protected:
 			this->scanner.freezeToken();
 		this->newState(name, this->addState(name));
 	}
-	
+
 	// final_list -> ID final_list | eps
 	void r_final_list() {
 		while (this->scanner.nextToken() == TimbukScanner::tt_id)
 			this->newFinalState(this->getState(this->scanner.getVal()));
 		this->scanner.freezeToken();
 	}
-	
+
 	// transitions -> TRANS trans_list
 	void r_transitions() {
 		this->scanner.assertToken(TimbukScanner::tt_trans, "'Transitions'");
 		this->r_trans_list();
 	}
-	
+
 	// trans_list -> trans trans_list | eps
 	void r_trans_list() {
 		while (this->scanner.peekToken() == TimbukScanner::tt_id)
 			this->r_trans();
 	}
-	
+
 	// trans -> ID state_list_par ARR state
 	void r_trans() {
 		this->scanner.assertToken(TimbukScanner::tt_id, "identifier");
@@ -316,14 +316,14 @@ protected:
 		if (lhs.size() != label.second)
 			Error::general(this->scanner.getName(), this->scanner.getLine(), "label arity mismatch");
 		this->newTransition(lhs, label.first, this->getState(this->scanner.getVal()));
-	}	
-	
+	}
+
 	// state_list_par -> state_list | eps
 	void r_state_list_par(vector<size_t>& lhs) {
 		if (this->scanner.peekToken() == '(')
 			this->r_state_list(lhs);
 	}
-	
+
 	// state_list
 	void r_state_list(vector<size_t>& lhs) {
 		this->scanner.assertToken('(', "(");
@@ -331,7 +331,7 @@ protected:
 			lhs.push_back(this->getState(this->scanner.getVal()));
 			while (this->scanner.nextToken() == ',') {
 				this->scanner.assertToken(TimbukScanner::tt_id, "identifier");
-				lhs.push_back(this->getState(this->scanner.getVal()));			
+				lhs.push_back(this->getState(this->scanner.getVal()));
 			}
 		}
 		this->scanner.freezeToken();
@@ -408,7 +408,7 @@ public:
 			this->stateNames.push_back(name);
 		return p.first->second;
 	}
-	
+
 	string getStateName(size_t id) {
 		return this->stateNames[id];
 	}
@@ -424,7 +424,7 @@ public:
 		this->r_aut();
 		return true;
 	}
-	
+
 	void readOne() {
 		this->r_simple();
 	}
@@ -438,15 +438,15 @@ public:
 class TimbukWriter {
 
 	std::ostream& out;
-	
+
 public:
 
 	TimbukWriter(std::ostream& out) : out(out) {}
-	
+
 	void startAlphabet() {
 		this->out << "Ops";
 	}
-	
+
 	void writeLabel(size_t label, size_t arity) {
 		this->out << " l" << label << ':' << arity;
 	}
@@ -454,15 +454,15 @@ public:
 	void writeLabel(const std::string& label, size_t arity) {
 		this->out << ' ' << label << ':' << arity;
 	}
-	
+
 	void newModel(const std::string& name) {
 		this->out << "Automaton " << name;
 	}
-	
+
 	void startStates() {
 		this->out << "States";
 	}
-	
+
 	void writeState(size_t state) {
 		this->out << " q" << state;
 	}
@@ -475,56 +475,60 @@ public:
 	void writeState(const std::string& state) {
 		this->out << ' ' << state;
 	}
-	
+
 	void startFinalStates() {
 		this->out << "Final States";
 	}
-	
+
 	void startTransitions() {
 		this->out << "Transitions";
 	}
-	
+
 	void writeTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs) {
-		this->out << 'l' << label << '(';
+		this->out << 'l' << label;
 		if (lhs.size() > 0) {
-			this->out << 's' << lhs[0];
+			this->out << "(s" << lhs[0];
 			for (size_t i = 1; i < lhs.size(); ++i)
 				this->out << ",q" << lhs[i];
+			this->out << ')';
 		}
-		this->out << ")->q" << rhs;
+		this->out << "->q" << rhs;
 	}
 
 	void writeTransition(const std::vector<size_t>& lhs, const std::string& label, size_t rhs) {
-		this->out << label << '(';
+		this->out << label;
 		if (lhs.size() > 0) {
-			this->out << 'q' << lhs[0];
+			this->out << "(q" << lhs[0];
 			for (size_t i = 1; i < lhs.size(); ++i)
 				this->out << ",q" << lhs[i];
+			this->out << ')';
 		}
-		this->out << ")->q" << rhs;
+		this->out << "->q" << rhs;
 	}
 
 	template <class F>
 	void writeTransition(const std::vector<size_t>& lhs, const std::string& label, size_t rhs, F f) {
-		this->out << label << '(';
+		this->out << label;
 		if (lhs.size() > 0) {
-			this->out << f(lhs[0]);
+			this->out << '(' << f(lhs[0]);
 			for (size_t i = 1; i < lhs.size(); ++i)
 				this->out << ',' << f(lhs[i]);
+			this->out << ')';
 		}
-		this->out << ")->" << f(rhs);
+		this->out << "->" << f(rhs);
 	}
 
 	void writeTransition(const std::vector<string>& lhs, const std::string& label, const std::string& rhs) {
-		this->out << label << '(';
+		this->out << label;
 		if (lhs.size() > 0) {
-			this->out << lhs[0];
+			this->out << '(' << lhs[0];
 			for (size_t i = 1; i < lhs.size(); ++i)
 				this->out << ',' << lhs[i];
+			this->out << ')';
 		}
-		this->out << ")->" << rhs;
+		this->out << "->" << rhs;
 	}
-	
+
 	void endl() {
 		this->out << std::endl;
 	}

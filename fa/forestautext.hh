@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2010 Jiri Simacek
  *
- * This file is part of predator.
+ * This file is part of forester.
  *
  * predator is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,14 +46,15 @@ class FAE : public FA {
 
 	friend class Normalization;
 	friend class Folding;
+	friend class Unfolding;
 	friend class Abstraction;
 	friend class Splitting;
 	friend class VirtualMachine;
 
 	BoxMan* boxMan;
-//	mutable LabMan* labMan;
 
 	size_t stateOffset;
+	size_t savedStateOffset;
 
 public:
 
@@ -92,23 +93,29 @@ public:
 public:
 
 	void loadTA(const TA<label_type>& src, const TA<label_type>::td_cache_type& cache, const TT<label_type>* top, size_t stateOffset) {
+
 		this->clear();
+
 		this->variables = top->label()->getVData();
+
 		this->stateOffset = stateOffset;
+
 		for (vector<size_t>::const_iterator i = top->lhs().begin(); i != top->lhs().end(); ++i) {
-			TA<label_type>* ta = this->allocTA();//this->taMan->alloc();
-			this->appendRoot(ta);
+
+			TA<label_type>* ta = this->allocTA();
+
 			// add reachable transitions
 			for (TA<label_type>::td_iterator j = src.tdStart(cache, itov(*i)); j.isValid(); j.next())
 				ta->addTransition(*j);
+
 			ta->addFinalState(*i);
-			// recompute 'o'
-			FA::o_map_type o;
-			FAE::computeDownwardO(*ta, o);
-			FA::o_map_type::iterator j = o.find(*i);
-			assert(j != o.end());
-			this->rootMap.push_back(j->second);
+
+			this->appendRoot(ta);
+
+			this->connectionGraph.newRoot();
+
 		}
+
 	}
 
 	template <class F>
@@ -139,15 +146,19 @@ public:
 					ta->addTransition(*k);
 				}
 				ta->addFinalState((*i)->lhs()[j]);
-				// recompute 'o'
-				FA::o_map_type o;
-				FA::computeDownwardO(*ta, o);
-				FA::o_map_type::iterator k = o.find((*i)->lhs()[j]);
-				if (k == o.end()) {
-					if (!fae->rootMap[roots.size() - 1].empty())
+
+				// compute signatures
+				ConnectionGraph::StateToCutpointSignatureMap stateMap;
+
+				ConnectionGraph::computeSignatures(stateMap, *ta);
+
+				auto k = stateMap.find((*i)->lhs()[j]);
+
+				if (k == stateMap.end()) {
+					if (!fae->connectionGraph.data[roots.size() - 1].signature.empty())
 						break;
 				} else {
-					if (k->second != fae->rootMap[roots.size() - 1])
+					if (k->second != fae->connectionGraph.data[roots.size() - 1].signature)
 						break;
 				}
 				if (!f(j, *fae->roots[j], *ta))
@@ -163,7 +174,7 @@ public:
 			dst.push_back(tmp);
 			tmp->variables = fae->variables;
 			tmp->roots = roots;
-			tmp->rootMap = fae->rootMap;
+			tmp->connectionGraph = fae->connectionGraph;
 			tmp->stateOffset = stateOffset;
 //			std::cerr << "accelerator " << std::endl << *tmp;
 		}
@@ -254,6 +265,14 @@ public:
 		this->stateOffset = offset;
 	}
 
+	void pushStateOffset() {
+		this->savedStateOffset = this->stateOffset;
+	}
+
+	void popStateOffset() {
+		this->stateOffset = this->savedStateOffset;
+	}
+
 	size_t addData(TA<label_type>& dst, const Data& data) {
 		label_type label = this->boxMan->lookupLabel(data);
 		size_t state = _MSB_ADD(label->getDataId());
@@ -268,6 +287,14 @@ public:
 		return true;
 	}
 
+	const Data& getData(size_t state) const {
+
+		assert(FA::isData(state));
+
+		return this->boxMan->getData(_MSB_GET(state));
+
+	}
+
 	bool getRef(size_t state, size_t& ref) const {
 		if (!FA::isData(state))
 			return false;
@@ -276,6 +303,18 @@ public:
 			return false;
 		ref = data.d_ref.root;
 		return true;
+	}
+
+	size_t getRef(size_t state) const {
+
+		assert(FA::isData(state));
+
+		const Data& data = this->boxMan->getData(_MSB_GET(state));
+
+		assert(data.isRef());
+
+		return data.d_ref.root;
+
 	}
 
 	static bool isRef(label_type label) {
@@ -299,6 +338,7 @@ public:
 		ref = label->getData().d_ref.root;
 		return true;
 	}
+
 /*
 	static void renameVector(std::vector<size_t>& dst, const std::vector<size_t>& index) {
 		for (std::vector<size_t>::iterator i = dst.begin(); i != dst.end(); ++i) {
@@ -306,29 +346,43 @@ public:
 			*i = index[*i];
 		}
 	}
-*/
-	static void renameVector(std::vector<std::pair<size_t, bool> >& dst, const std::vector<size_t>& index) {
-		for (std::vector<std::pair<size_t, bool> >::iterator i = dst.begin(); i != dst.end(); ++i) {
-			assert(index[i->first] != (size_t)(-1));
-			i->first = index[i->first];
+
+	static void renameVector(FA::RootSignature& dst, const std::vector<size_t>& index) {
+
+		for (auto& rootInfo : dst) {
+
+			assert(rootInfo.root < index.size());
+			assert(index[rootInfo.root] != (size_t)(-1));
+
+			rootInfo.root = index[rootInfo.root];
+
 		}
+
 	}
 
-	static void updateMap(std::vector<std::pair<size_t, bool> >& dst, size_t ref, const std::vector<std::pair<size_t, bool> >& src) {
-		std::vector<std::pair<size_t, bool> > res;
-		std::vector<std::pair<size_t, bool> >::iterator i;
+	static void updateMap(FA::RootSignature& dst, size_t ref, const FA::RootSignature& src) {
+
+		RootSignature res;
+		RootSignature::iterator i;
+
 		for (i = dst.begin(); i != dst.end(); ++i) {
-			if (i->first == ref)
+
+			if (i->root == ref)
 				break;
+
 		}
+
 		assert(i != dst.end());
 		res.insert(res.end(), dst.begin(), i);
 		res.insert(res.end(), src.begin(), src.end());
 		res.insert(res.end(), i + 1, dst.end());
-		FAE::removeMultOcc(res);
-		std::swap(dst, res);
-	}
 
+		FAE::removeMultOcc(res);
+
+		std::swap(dst, res);
+
+	}
+*/
 	TA<label_type>& relabelReferences(TA<label_type>& dst, const TA<label_type>& src, const vector<size_t>& index) {
 		dst.addFinalStates(src.getFinalStates());
 		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
@@ -380,15 +434,22 @@ public:
 	TA<label_type>* invalidateReference(TA<label_type>* src, size_t root) {
 		return &this->invalidateReference(*this->allocTA(), *src, root);
 	}
+/*
+	static void invalidateReference(RootSignature& dst, size_t root) {
 
-	static void invalidateReference(std::vector<std::pair<size_t, bool> >& dst, size_t root) {
-		for (std::vector<std::pair<size_t, bool> >::iterator i = dst.begin(); i != dst.end(); ++i) {
-			if (i->first != root)
+		for (auto i = dst.begin(); i != dst.end(); ++i) {
+
+			if (i->root != root)
 				continue;
+
 			dst.erase(i);
+
 			return;
+
 		}
+
 	}
+*/
 
 public:
 
@@ -415,24 +476,15 @@ public:
 			*this->roots[target]->getFinalStates().begin()
 		)->label()->boxLookup((size_t)(-1)).aBox;
 	}
-/*
-public:
 
-	void selfCheck() const {
-		for (size_t i = 0; i < this->roots.size(); ++i)
-			assert(this->taMan->isAlive(this->roots[i]));
-	}
-*/
 public:
 
 	// state 0 should never be allocated by FAE (?)
 	FAE(TA<label_type>::Backend& backend, BoxMan& boxMan)
-	 : FA(backend), boxMan(&boxMan), stateOffset(1) {}
+	 : FA(backend), boxMan(&boxMan), stateOffset(1), savedStateOffset() {}
 
-	FAE(const FAE& x)
-		: FA(x), boxMan(x.boxMan), stateOffset(x.stateOffset)/*,
-		selectorMap(x.selectorMap)*/ {
-	}
+	FAE(const FAE& x) : FA(x), boxMan(x.boxMan), stateOffset(x.stateOffset)
+		{}
 
 	~FAE() { this->clear(); }
 
@@ -440,14 +492,14 @@ public:
 		FA::operator=(x);
 		this->boxMan = x.boxMan;
 		this->stateOffset = x.stateOffset;
-//		this->selectorMap = x.selectorMap;
 		return *this;
 	}
 
 	void clear() {
-//		FA::clear();
+
+		FA::clear();
 		this->stateOffset = 1;
-//		this->selectorMap.clear();
+
 	}
 
 };

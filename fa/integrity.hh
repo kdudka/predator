@@ -24,35 +24,35 @@
 
 #include "forestautext.hh"
 
-struct LeafEnumF {
-
-	const FAE& fae;
-	const TT<label_type>& t;
-	size_t target;
-	std::set<size_t>& selectors;
-
-	LeafEnumF(const FAE& fae, const TT<label_type>& t, size_t target, std::set<size_t>& selectors)
-		: fae(fae), t(t), target(target), selectors(selectors) {}
-
-	bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
-		if (!aBox->isType(box_type_e::bBox))
-			return true;
-		const Box* box = (const Box*)aBox;
-		for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
-			size_t ref;
-			if (fae.getRef(this->t.lhs()[offset], ref) && ref == this->target)
-				this->selectors.insert(box->inputCoverage(k).begin(), box->inputCoverage(k).end());
-		}
-		return true;
-	}
-
-};
-
 class Integrity {
 
 	const FAE& fae;
 
 public:
+
+	struct LeafEnumF {
+
+		const FAE& fae;
+		const TT<label_type>& t;
+		size_t target;
+		std::set<size_t>& selectors;
+
+		LeafEnumF(const FAE& fae, const TT<label_type>& t, size_t target, std::set<size_t>& selectors)
+			: fae(fae), t(t), target(target), selectors(selectors) {}
+
+		bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
+			if (!aBox->isType(box_type_e::bBox))
+				return true;
+			const Box* box = (const Box*)aBox;
+			for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
+				size_t ref;
+				if (fae.getRef(this->t.lhs()[offset], ref) && ref == this->target)
+					this->selectors.insert(box->inputCoverage(k).begin(), box->inputCoverage(k).end());
+			}
+			return true;
+		}
+
+	};
 
 	// enumerates upwards selectors
 	void enumerateSelectorsAtLeaf(std::set<size_t>& selectors, size_t target) const {
@@ -79,8 +79,7 @@ public:
 
 		CheckIntegrityF(const Integrity& integrity, const TA<label_type>& ta, const TT<label_type>& t,
 			std::set<size_t>* required, std::vector<bool>& bitmap, std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states)
-			: integrity(integrity), ta(ta), t(t), required(required), bitmap(bitmap), states(states) {
-		}
+			: integrity(integrity), ta(ta), t(t), required(required), bitmap(bitmap), states(states) {}
 
 		bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
 
@@ -93,6 +92,11 @@ public:
 					for (size_t i = 0; i < tmp->getArity(); ++i) {
 
 						assert(offset + i < this->t.lhs().size());
+
+						const Data* data;
+
+						if (this->integrity.fae.isData(this->t.lhs()[offset + i], data) && !data->isRef() && !data->isUndef())
+							return false;
 
 						if (!this->integrity.checkState(this->ta, this->t.lhs()[offset + i], tmp->inputCoverage(i), this->bitmap, states))
 							return false;
@@ -227,8 +231,13 @@ public:
 			if (!this->fae.roots[i])
 				continue;
 
-			if (!this->checkRoot(i, bitmap, states))
+			if (!this->checkRoot(i, bitmap, states)) {
+
+				CL_CDEBUG(1, "inconsistent heap: " << std::endl << this->fae);
+
 				return false;
+
+			}
 
 		}
 

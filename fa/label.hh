@@ -74,8 +74,11 @@ struct NodeLabel {
 	}
 
 	void addMapItem(size_t key, const AbstractBox* aBox, size_t index, size_t offset) {
-		bool b = this->node.m->insert(std::make_pair(key, NodeItem(aBox, index, offset))).second;
-		assert(b);
+
+		assert(this->node.m->find(key) == this->node.m->end());
+
+		this->node.m->insert(std::make_pair(key, NodeItem(aBox, index, offset)));
+
 	}
 
 	bool isData() const {
@@ -141,14 +144,23 @@ struct NodeLabel {
 	}
 
 	template <class F>
-	void iterate(F f) const {
+	bool iterate(F f) const {
+
 		assert(this->type == node_type::n_node);
+
 		for (size_t i = 0, offset = 0; i < this->node.v->size(); ++i) {
+
 			const AbstractBox* aBox = (*this->node.v)[i];
+
 			if (!f(aBox, i, offset))
-				break;
+				return false;
+
 			offset += aBox->getArity();
+
 		}
+
+		return true;
+
 	}
 
 	bool operator<(const NodeLabel& rhs) const {

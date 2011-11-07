@@ -32,6 +32,7 @@
 #include "types.hh"
 #include "forestautext.hh"
 #include "abstractinstruction.hh"
+#include "integrity.hh"
 
 struct SymState {
 
@@ -43,8 +44,8 @@ struct SymState {
 			os << ' ' << reg;
 
 		os << ", heap:" << std::endl << *state.second->fae;
-		return os << "instruction (" << state.second->instr << "): " << *state.second->instr;		
-		
+		return os << "instruction (" << state.second->instr << "): " << *state.second->instr;
+
 	}
 
 	typedef std::list<AbstractInstruction::StateType> QueueType;
@@ -75,6 +76,8 @@ struct SymState {
 
 	void init(SymState* parent, AbstractInstruction* instr, const std::shared_ptr<const FAE>& fae, QueueType::iterator queueTag) {
 
+		assert(Integrity(*fae).check());
+
 		this->parent = parent;
 		this->instr = instr;
 		this->fae = fae;
@@ -104,7 +107,7 @@ struct SymState {
 
 			state->children.clear();
 			recycler.recycle(state);
-			
+
 		}
 
 	}

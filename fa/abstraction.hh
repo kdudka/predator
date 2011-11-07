@@ -39,14 +39,16 @@ public:
 		std::vector<std::vector<bool> > rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), true));
 		this->fae.roots[root]->heightAbstraction(rel, height, f, stateIndex);
 //		utils::relPrint(std::cerr, rel);
-		FA::o_map_type o;
-		FA::computeDownwardO(*this->fae.roots[root], o);
+		ConnectionGraph::StateToCutpointSignatureMap stateMap;
+		ConnectionGraph::computeSignatures(stateMap, *this->fae.roots[root]);
 		for (Index<size_t>::iterator j = stateIndex.begin(); j != stateIndex.end(); ++j) {
 			for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k) {
 				if (k == j)
 					continue;
-				if (o[j->first] != o[k->first])
+				if (stateMap[j->first] != stateMap[k->first]) {
+//					std::cerr << j->first << " != " << k->first << " because " << stateMap[j->first] << " !=  " << stateMap[k->first] << std::endl;
 					rel[j->second][k->second] = false;
+				}
 			}
 		}
 //		utils::relPrint(std::cerr, rel);

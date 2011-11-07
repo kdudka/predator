@@ -25,450 +25,619 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
-
 #include "forestautext.hh"
 #include "abstractbox.hh"
-#include "utils.hh"
-
-typedef enum { mFail, mSuccess, mDunno } match_result_e;
-
-template <class T, class F>
-struct TAIsom {
-
-	const TA<T>& ta1;
-	const TA<T>& ta2;
-	F f;
-	boost::unordered_map<size_t, size_t> sMatching;
-	std::vector<boost::unordered_map<size_t, size_t>::iterator> sStack;
-
-	TAIsom(const TA<T>& ta1, const TA<T>& ta2, F f) : ta1(ta1), ta2(ta2), f(f) {}
-/*
-	bool matchLabels(const std::vector<const TT<label_type>*>& v1, const std::vector<const TT<label_type>*>& v2) {
-		for (size_t i = 0; i < v1.size(); ++i) {
-			if (!this->f(*v1[i], *v2[i]))
-				return false;
-		}
-		return true;
-	}
-*/
-	bool matchLhs(const TT<T>& t1, const TT<T>& t2) {
-		assert(t1.lhs().size() == t2.lhs().size());
-		for  (size_t i = 0; i < t1.lhs().size(); ++i) {
-			if (!this->matchStates(t1.lhs()[i], t2.lhs()[i]))
-				return false;
-		}
-		return true;
-	}
-
-	bool matchStates(size_t s1, size_t s2) {
-		switch (f.matchStates(s1, s2)) {
-			case match_result_e::mSuccess: return true;
-			case match_result_e::mFail: return false;
-			default: break;
-		}
-		std::pair<typename boost::unordered_map<size_t, size_t>::iterator, bool> p
-			= this->sMatching.insert(std::make_pair(s1, s2));
-		if (!p.second)
-			return p.first->second == s2;
-		this->sStack.push_back(p.first);
-		size_t mark = this->sStack.size();
-		std::vector<const TT<label_type>*> v1, v2;
-		for (typename TA<T>::iterator i = this->ta1.begin(s1); i != this->ta1.end(s1); ++i)
-			v1.push_back(&*i);
-		for (typename TA<T>::iterator i = this->ta2.begin(s2); i != this->ta2.end(s2); ++i)
-			v2.push_back(&*i);
-		if (v1.size() != v2.size())
-			return false;
-		std::sort(v2.begin(), v2.end());
-		do {
-			size_t i;
-			for (i = 0; i < v1.size(); ++i) {
-				switch (this->f.matchTransitions(*v1[i], *v2[i])) {
-					case match_result_e::mSuccess:
-						continue;
-					case match_result_e::mDunno:
-						if (this->matchLhs(*v1[i], *v2[i]))
-							continue;
-					default:
-						break;
-				}
-				break;
-			}
-			if (i == v1.size())
-				return true;
-			for (i = mark; i < this->sStack.size(); ++i)
-				this->sMatching.erase(this->sStack[i]);
-			this->sStack.resize(mark);
-		} while (std::next_permutation(v2.begin(), v2.end()));
-		return false;
-	}
-
-	bool run() {
-		return this->matchStates(this->ta1.getFinalState(), this->ta2.getFinalState());
-	}
-
-};
-
-struct RootSentry {
-
-	FAE* fae;
-	size_t expectedRoots;
-	size_t stateOffset;
-
-	RootSentry(FAE& fae) : fae(&fae), expectedRoots(fae.roots.size()), stateOffset(fae.nextState()) {}
-
-	~RootSentry() {
-		if (!this->fae)
-			return;
-		if (this->expectedRoots == this->fae->roots.size())
-			return;
-/*		for (size_t i = this->expectedRoots; i < this->fae->roots.size(); ++i)
-			this->fae->taMan->release(this->fae->roots[i]);*/
-		this->fae->roots.resize(this->expectedRoots);
-		this->fae->rootMap.resize(this->expectedRoots);
-		this->fae->setStateOffset(this->stateOffset);
-	}
-
-	void release() {
-		this->fae = NULL;
-	}
-
-};
-
-// matches root against box output while adding necessary roots on the fly!!!
-struct IsomRootF {
-
-	FAE& fae;
-	size_t root;
-	std::vector<size_t>& index;
-
-	IsomRootF(FAE& fae, size_t root, std::vector<size_t>& index)
-		: fae(fae), root(root), index(index) {
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
-	}
-
-	match_result_e matchStates(size_t s1, size_t s2) {
-		const Data* data1, * data2;
-		if (this->fae.isData(s1, data1)) {
-			if (!this->fae.isData(s2, data2))
-				return match_result_e::mFail;
-			if (!data1->isRef() || !data2->isRef())
-				return (data1 == data2)?(match_result_e::mSuccess):(match_result_e::mFail);
-			assert(data2->d_ref.root < this->index.size());
-			size_t ref1 = data1->d_ref.root, ref2 = data2->d_ref.root;
-			if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
-				return match_result_e::mFail;
-			this->index[ref2] = ref1;
-			return match_result_e::mSuccess;
-		}
-		if (!this->fae.isData(s2, data2))
-			return match_result_e::mDunno;
-		if (!data2->isRef())
-			return match_result_e::mFail;
-		size_t ref2 = data2->d_ref.root;
-		assert(ref2 < this->index.size());
-		if (this->index[ref2] != (size_t)(-1))
-			return match_result_e::mFail;
-		this->index[ref2] = this->fae.roots.size();
-		this->fae.appendRoot(this->fae.allocTA());
-		Index<size_t> stateIndex;
-		size_t offset = this->fae.nextState();
-		this->fae.unique(*this->fae.roots.back(), *this->fae.roots[this->root], stateIndex, false);
-		this->fae.roots.back()->addFinalState(stateIndex[s1] + offset);
-		fae.incrementStateOffset(stateIndex.size());
-		this->fae.rootMap.push_back(std::vector<std::pair<size_t, bool> >());
-		this->fae.updateRootMap(this->fae.rootMap.size() - 1);
-		return match_result_e::mSuccess;
-	}
-
-	match_result_e matchTransitions(const TT<label_type>& t1, const TT<label_type>& t2) {
-		return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
-	}
-
-};
-
-struct IsomF {
-
-	const FAE& fae;
-	std::vector<size_t>& index;
-
-	IsomF(const FAE& fae, std::vector<size_t>& index) : fae(fae), index(index) {}
-
-	match_result_e matchStates(size_t s1, size_t s2) {
-		const Data* data1, * data2;
-		if (this->fae.isData(s1, data1)) {
-			if (!this->fae.isData(s2, data2))
-				return match_result_e::mFail;
-			if (!data1->isRef() || !data2->isRef())
-				return (data1 == data2)?(match_result_e::mSuccess):(match_result_e::mFail);
-			assert(data2->d_ref.root < this->index.size());
-			size_t ref1 = data1->d_ref.root, ref2 = data2->d_ref.root;
-			if ((this->index[ref2] != (size_t)(-1)) && (this->index[ref2] != ref1))
-				return match_result_e::mFail;
-			this->index[ref2] = ref1;
-			return match_result_e::mSuccess;
-		}
-		if (!this->fae.isData(s2, data2))
-			return match_result_e::mDunno;
-		return match_result_e::mFail;
-	}
-
-	match_result_e matchTransitions(const TT<label_type>& t1, const TT<label_type>& t2) {
-		return (t1.label() == t2.label())?(match_result_e::mDunno):(match_result_e::mFail);
-	}
-
-};
+#include "boxman.hh"
+#include "connection_graph.hh"
 
 class Folding {
 
 	FAE& fae;
+	BoxMan& boxMan;
 
 protected:
 
-	void boxMerge(TA<label_type>& dst, const TA<label_type>& src, const TA<label_type>& boxRoot, const Box* box, const std::vector<size_t>& rootIndex) {
-		TA<label_type> tmp(*this->fae.backend), tmp2(*this->fae.backend);
-//		this->fae.boxMan->adjustLeaves(tmp2, boxRoot);
-		this->fae.relabelReferences(tmp, boxRoot, rootIndex);
-		this->fae.unique(tmp2, tmp);
-		src.copyTransitions(dst, TA<label_type>::NonAcceptingF(src));
-		tmp2.copyTransitions(dst, TA<label_type>::NonAcceptingF(tmp2));
-		dst.addFinalStates(tmp2.getFinalStates());
-		for (std::set<size_t>::const_iterator j = src.getFinalStates().begin(); j != src.getFinalStates().end(); ++j) {
-			for (TA<label_type>::iterator i = src.begin(*j); i != src.end(*j, i); ++i) {
-				std::vector<size_t> lhs;
-				std::vector<const AbstractBox*> label;
-				size_t lhsOffset = 0;
-				if (box) {
-					bool found = false;
-					for (std::vector<const AbstractBox*>::const_iterator j = i->label()->getNode().begin(); j != i->label()->getNode().end(); ++j) {
-						if (!(*j)->isStructural()) {
-							label.push_back(*j);
-							continue;
-						}
-						StructuralBox* b = (StructuralBox*)(*j);
-						if (b != (const StructuralBox*)box) {
-							// this box is not interesting
-							for (size_t k = 0; k < b->getArity(); ++k, ++lhsOffset)
-								lhs.push_back(i->lhs()[lhsOffset]);
-							label.push_back(b);
-							continue;
-						}
-						lhsOffset += box->getArity();
-						assert(!found);
-						found = true;
-					}
-					assert(found);
-				} else {
-					lhs = i->lhs();
-					label = i->label()->getNode();
-				}
-				for (TA<label_type>::iterator j = tmp2.accBegin(); j != tmp2.accEnd(j); ++j) {
-					std::vector<size_t> lhs2 = lhs;
-					std::vector<const AbstractBox*> label2 = label;
-					lhs2.insert(lhs2.end(), j->lhs().begin(), j->lhs().end());
-					label2.insert(label2.end(), j->label()->getNode().begin(), j->label()->getNode().end());
-					FA::reorderBoxes(label2, lhs2);
-					dst.addTransition(lhs2, this->fae.boxMan->lookupLabel(label2), j->rhs());
-				}
-			}
-		}
-	}
+	static void copyBox(std::vector<size_t>& lhs, std::vector<const AbstractBox*>& label,
+		const AbstractBox* box, const std::vector<size_t>& srcLhs, size_t& srcOffset) {
 
-	static void copyBox(std::vector<size_t>& lhs, std::vector<const AbstractBox*>& label, const AbstractBox* box, const std::vector<size_t>& srcLhs, size_t& srcOffset) {
 		for (size_t i = 0; i < box->getArity(); ++i, ++srcOffset)
 			lhs.push_back(srcLhs[srcOffset]);
+
 		label.push_back(box);
+
 	}
 
-	bool boxCut(TA<label_type>& dst, TA<label_type>& complement, const TA<label_type>& src, const std::set<const AbstractBox*>& trigger) {
-		for (std::set<size_t>::const_iterator k = src.getFinalStates().begin(); k != src.getFinalStates().end(); ++k) {
-			for (TA<label_type>::Iterator i = src.begin(*k); i != src.end(*k, i); ++i) {
+	void cutBox(TA<label_type>& res, TA<label_type>& complement,
+		ConnectionGraph::CutpointSignature& complementSignature, size_t root, size_t target,
+		const ConnectionGraph::StateToCutpointSignatureMap& signatures) {
+
+		assert(root < this->fae.roots.size());
+		assert(this->fae.roots[root]);
+
+		const TA<label_type>& src = *this->fae.roots[root];
+
+		ConnectionGraph::CutpointSignature tmp;
+
+		for (auto k = src.getFinalStates().begin(); k != src.getFinalStates().end(); ++k) {
+
+			size_t freshFinalState = this->fae.freshState();
+
+			for (auto i = src.begin(*k); i != src.end(*k, i); ++i) {
+
 				std::vector<size_t> lhs, cLhs;
 				std::vector<const AbstractBox*> label, cLabel;
+
 				size_t lhsOffset = 0;
+
 				const TT<label_type>& t = *i;
-				size_t matched = 0;
-				for (std::vector<const AbstractBox*>::const_iterator j = t.label()->getNode().begin(); j != t.label()->getNode().end(); ++j) {
-					if (trigger.count(*j)) {
-						Folding::copyBox(cLhs, cLabel, *j, t.lhs(), lhsOffset);
-						++matched;
-					} else {
-						Folding::copyBox(lhs, label, *j, t.lhs(), lhsOffset);
+
+				tmp.clear();
+
+				for (auto& box : t.label()->getNode()) {
+
+					bool found = false;
+
+					for (size_t j = 0; j < box->getArity(); ++j) {
+
+						assert(lhsOffset + j < t.lhs().size());
+
+						auto iter = signatures.find(t.lhs()[lhsOffset + j]);
+
+						if (iter == signatures.end())
+							continue;
+
+						if (!found && !ConnectionGraph::containsCutpoint(iter->second, target))
+							continue;
+
+						found = true;
+
+						ConnectionGraph::processStateSignature(
+							tmp, (StructuralBox*)box, j, t.lhs()[lhsOffset + j], iter->second
+						);
+
 					}
+
+					if (found) {
+
+						Folding::copyBox(cLhs, cLabel, box, t.lhs(), lhsOffset);
+
+					} else {
+
+						Folding::copyBox(lhs, label, box, t.lhs(), lhsOffset);
+
+					}
+
 				}
-				if (matched == trigger.size()) {
-					FAE::reorderBoxes(label, lhs);
-					dst.addTransition(lhs, this->fae.boxMan->lookupLabel(label), *k);
-					FAE::reorderBoxes(cLabel, cLhs);
-					complement.addTransition(cLhs, this->fae.boxMan->lookupLabel(cLabel), this->fae.nextState());
-				} else return false;
+
+				ConnectionGraph::normalizeSignature(tmp);
+
+				assert(tmp.size());
+
+				if (complementSignature.empty())
+					complementSignature = tmp;
+
+				assert(complementSignature == tmp);
+
+				assert(label.size());
+				FAE::reorderBoxes(label, lhs);
+				res.addTransition(lhs, this->fae.boxMan->lookupLabel(label), freshFinalState);
+
+				assert(cLabel.size());
+				FAE::reorderBoxes(cLabel, cLhs);
+				complement.addTransition(cLhs, this->fae.boxMan->lookupLabel(cLabel), freshFinalState);
+
 			}
+
+			res.addFinalState(freshFinalState);
+			complement.addFinalState(freshFinalState);
+
 		}
-		dst.addFinalStates(src.getFinalStates());
-		complement.addFinalState(this->fae.nextState());
-		src.copyTransitions(dst, TA<label_type>::NonAcceptingF(src));
-		src.copyTransitions(complement, TA<label_type>::NonAcceptingF(src));
-		return true;
+
+		src.copyTransitions(res);
+		src.copyTransitions(complement);
+
 	}
 
-public:
+	std::pair<std::shared_ptr<TA<label_type>>, std::shared_ptr<TA<label_type>>> separateCutpoint(
+		ConnectionGraph::CutpointSignature& boxSignature, size_t root, size_t cutpoint,
+		const ConnectionGraph::StateToCutpointSignatureMap& signatures) {
 
-	void unfoldBox(size_t root, const Box* box) {
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
-		assert(box);
-		const TT<label_type>& t = this->fae.roots[root]->getAcceptingTransition();
-		size_t lhsOffset = 0;
-		std::vector<size_t> bSig = box->getSig(0);
-		std::vector<size_t> sig;
-		for (std::vector<const AbstractBox*>::const_iterator i = t.label()->getNode().begin(); i != t.label()->getNode().end(); ++i) {
-			if ((const AbstractBox*)box != *i) {
-				lhsOffset += (*i)->getArity();
-				continue;
-			}
-			for (size_t j = 0; j < box->getArity(); ++j) {
-				size_t ref;
-				bool b = this->fae.getRef(t.lhs()[lhsOffset + j], ref);
-				assert(b);
-				sig.push_back(ref);
-			}
-			break;
-		}
-		// compute index
-		std::vector<size_t> index(box->getArity() + 1, (size_t)(-1));
-		index[0] = root;
-		for (size_t i = 0; i < sig.size(); ++i) {
-			assert(bSig[i] < index.size());
-			index[bSig[i]] = sig[i];
-		}
 		auto ta = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
-//		TA<label_type>* ta = this->fae.taMan->alloc();
-		this->boxMerge(*ta, *this->fae.roots[root], *box->getRoot(0), box, index);
-		this->fae.roots[root] = ta;
-		this->fae.updateRootMap(root);
-		for (size_t i = 0; i < box->getArity(); ++i) {
-			TA<label_type> tmp(*this->fae.backend);
-			this->fae.roots[index[i + 1]]->unfoldAtRoot(tmp, this->fae.freshState());
-			this->fae.roots[index[i + 1]] = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
-			this->boxMerge(*this->fae.roots[index[i + 1]], tmp, *box->getRoot(i + 1), NULL, index);
-			this->fae.updateRootMap(index[i + 1]);
-		}
+		auto tmp = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+
+		this->cutBox(*ta, *tmp, boxSignature, root, cutpoint, signatures);
+
+		auto tmp2 = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+
+		tmp->unreachableFree(*tmp2);
+
+		return std::make_pair(ta, tmp2);
+
 	}
 
-	bool foldBox(size_t root, const Box* box) {
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
-		assert(box);
+	std::shared_ptr<TA<label_type>> relabelReferences(const TA<label_type>& ta,
+		std::vector<size_t>& index) {
 
-		TA<label_type> tmp(*this->fae.backend), cTmp(*this->fae.backend);
-		if (!this->boxCut(tmp, cTmp, *this->fae.roots[root], box->getTrigger(0)))
-			return false;
+		auto tmp = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
 
-		RootSentry rs(this->fae);
+		this->fae.relabelReferences(*tmp, ta, index);
 
-		std::vector<size_t> index(box->getArity() + 1, (size_t)(-1));
-		index[0] = root;
+		return tmp;
 
-		// match automata
-		if (!TAIsom<label_type, IsomRootF>(cTmp, *box->getRoot(0), IsomRootF(this->fae, root, index)).run())
-			return false;
+	}
 
-		const std::vector<size_t>& sig = box->getSig(0);
+	std::shared_ptr<TA<label_type>> joinBox(const TA<label_type>& source, size_t root,
+		const Box* box, const ConnectionGraph::CutpointSignature& signature) {
 
-		std::vector<size_t> cSig(sig.size());
-		for (size_t i = 0; i < sig.size(); ++i) {
-			assert(sig[i] < index.size());
-			cSig[i] = index[sig[i]];
-			if (sig[i] != 0 && cSig[i] == root)
-				return false;
-		}
+		auto ta = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
 
-		FA::o_map_type o;
-
-		// match inputs
-		std::vector<std::pair<std::shared_ptr<TA<label_type>>, TA<label_type> > > iTmp;
-		for (size_t i = 0; i < cSig.size(); ++i) {
-			iTmp.push_back(std::make_pair(std::shared_ptr<TA<label_type>>(this->fae.allocTA()), TA<label_type>(*this->fae.backend)));
-			if (cSig[i] == root)
-				continue;
-			assert(cSig[i] < this->fae.roots.size());
-			assert(sig[i] <= box->getArity());
-			assert(this->fae.roots[cSig[i]]);
-			if (!this->boxCut(*iTmp.back().first, iTmp.back().second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i])))
-				return false;
-			o.clear();
-			FA::computeDownwardO(iTmp.back().second, o);
-			const std::vector<size_t>& iSig = box->getSig(sig[i]);
-			std::vector<std::pair<size_t, bool> > cISig = o[iTmp.back().second.getFinalState()];
-			if (iSig.size() != cISig.size())
-				return false;
-			for (size_t i = 0; i < iSig.size(); ++i) {
-				assert(iSig[i] < index.size());
-				if (index[iSig[i]] != cISig[i].first)
-					return false;
-			}
-		}
-
-		for (size_t i = 0; i < cSig.size(); ++i) {
-			if ((cSig[i] == root) || (cSig[i] > box->getArity()))
-				continue;
-			if (!TAIsom<label_type, IsomF>(iTmp[i].second, *box->getRoot(sig[i]), IsomF(this->fae, index)).run())
-				return false;
-		}
-
-		rs.release();
-
-		// append box
-		TA<label_type>* ta = this->fae.allocTA();
-		size_t state = tmp.getFinalState();
+		size_t state = source.getFinalState();
 
 		ta->addFinalState(state);
 
-		for (TA<label_type>::Iterator i = tmp.begin(); i != tmp.end(); ++i) {
+		for (auto i = source.begin(); i != source.end(); ++i) {
+
 			if (i->rhs() != state) {
+
 				ta->addTransition(*i);
+
 				continue;
+
 			}
+
 			std::vector<const AbstractBox*> label(i->label()->getNode());
 			std::vector<size_t> lhs(i->lhs());
+
 			label.push_back(box);
-			for (size_t j = 0; j < cSig.size(); ++j)
-				lhs.push_back(this->fae.addData(*ta, Data::createRef(cSig[j])));
+
+			for (auto& cutpoint : signature) {
+
+				if (cutpoint.root == root)
+					continue;
+
+				lhs.push_back(
+					this->fae.addData(*ta, Data::createRef(cutpoint.root))
+				);
+
+			}
+
 			FAE::reorderBoxes(label, lhs);
+
 			ta->addTransition(lhs, this->fae.boxMan->lookupLabel(label), state);
+
 		}
 
-		// replace
-		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(ta);
-		this->fae.updateRootMap(root);
+		return ta;
 
-		for (size_t i = 0; i < cSig.size(); ++i) {
-			assert(cSig[i] < this->fae.roots.size());
-			if (cSig[i] == root) {
-				if (sig[i] == 0)
-					continue;
-				assert(sig[i] <= box->getArity());
-				bool b = this->boxCut(*iTmp[i].first, iTmp[i].second, *this->fae.roots[cSig[i]], box->getTrigger(sig[i]));
-				assert(b);
+	}
+
+	static void updateSelectorMap(std::unordered_map<size_t, size_t>& m, size_t selector,
+		const ConnectionGraph::CutpointSignature& signature) {
+
+		for (auto& cutpoint : signature)
+
+			m.insert(std::make_pair(cutpoint.root, selector));
+
+	}
+
+	// compute cutpoint-to-selector mapping, i.e. tell which selector one needs to take
+	// in order to reach a given cutpoint
+	static void computeSelectorMap(std::unordered_map<size_t, size_t>& selectorMap,
+		const TT<label_type>& t, const ConnectionGraph::StateToCutpointSignatureMap& stateMap) {
+
+		size_t lhsOffset = 0;
+
+		for (auto& absBox : t.label()->getNode()) {
+
+			switch (absBox->getType()) {
+
+				case box_type_e::bSel: {
+
+					auto iter = stateMap.find(t.lhs()[lhsOffset]);
+
+					assert(iter != stateMap.end());
+
+					Folding::updateSelectorMap(
+						selectorMap, ((const SelBox*)absBox)->getData().offset, iter->second
+					);
+
+					break;
+
+				}
+
+				case box_type_e::bBox: {
+
+					const Box* box = (const Box*)absBox;
+
+					for (size_t i = 0; i < box->getArity(); ++i) {
+
+						auto iter = stateMap.find(t.lhs()[lhsOffset + i]);
+
+						assert(iter != stateMap.end());
+
+						Folding::updateSelectorMap(
+							selectorMap, box->getSelector(i), iter->second
+						);
+
+					}
+
+					break;
+
+				}
+
+				default: break;
+
 			}
-			this->fae.roots[cSig[i]] = iTmp[i].first;
-			this->fae.updateRootMap(cSig[i]);
+
+			lhsOffset += absBox->getArity();
+
+		}
+
+	}
+
+	static bool checkSelectorMap(const std::unordered_map<size_t, size_t>& selectorMap,
+		const TA<label_type>& ta, const ConnectionGraph::StateToCutpointSignatureMap& stateMap) {
+
+		for (TA<label_type>::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i) {
+
+			std::unordered_map<size_t, size_t> m;
+
+			Folding::computeSelectorMap(m, *i, stateMap);
+
+			if (m != selectorMap)
+				return false;
+
 		}
 
 		return true;
+
 	}
 
-	void unfoldBoxes(size_t root, const std::set<const Box*>& boxes) {
-		for (std::set<const Box*>::const_iterator i = boxes.begin(); i != boxes.end(); ++i)
-			this->unfoldBox(root, *i);
+	static void computeSelectorMap(std::unordered_map<size_t, size_t>& selectorMap,
+		const TA<label_type>& ta, const ConnectionGraph::StateToCutpointSignatureMap& stateMap) {
+
+		assert(ta.accBegin() != ta.accEnd());
+
+		Folding::computeSelectorMap(selectorMap, *ta.accBegin(), stateMap);
+
+		assert(Folding::checkSelectorMap(selectorMap, ta, stateMap));
+
+	}
+
+	static size_t extractSelector(const std::unordered_map<size_t, size_t>& selectorMap,
+		size_t target) {
+
+		auto iter = selectorMap.find(target);
+
+		assert(iter != selectorMap.end());
+
+		return iter->second;
+
+	}
+
+	// transform
+	static void extractInputMap(std::vector<size_t>& inputMap,
+		const std::unordered_map<size_t, size_t>& selectorMap, size_t root,
+		const std::vector<size_t>& index) {
+
+		assert(index[root] == 0);
+
+		inputMap.resize(selectorMap.size());
+
+		size_t count = 0;
+
+		for (auto& cutpointSelectorPair : selectorMap) {
+
+			if (cutpointSelectorPair.first == root) {
+
+				// reference to root does not appear in the box interface
+				continue;
+
+			}
+
+			assert(cutpointSelectorPair.first < index.size());
+
+			if (index[cutpointSelectorPair.first] == (size_t)(-1))
+				continue;
+
+			assert(index[cutpointSelectorPair.first] >= 1);
+			assert(index[cutpointSelectorPair.first] < inputMap.size() + 1);
+
+			inputMap[index[cutpointSelectorPair.first] - 1] = cutpointSelectorPair.second;
+
+			++count;
+
+		}
+
+		inputMap.resize(count);
+
+	}
+
+	static bool checkSingular(const TA<label_type>& ta, bool result,
+		const ConnectionGraph::StateToCutpointSignatureMap& stateMap) {
+
+		for (auto& state : ta.getFinalStates()) {
+
+			auto iter = stateMap.find(state);
+
+			assert(iter != stateMap.end());
+
+			if (iter->second.empty() != result)
+				return false;
+
+		}
+
+		return true;
+
+	}
+
+	static bool isSingular(const TA<label_type>& ta) {
+
+		ConnectionGraph::StateToCutpointSignatureMap stateMap;
+
+		ConnectionGraph::computeSignatures(stateMap, ta);
+
+		assert(ta.getFinalStates().size());
+
+		auto iter = stateMap.find(*ta.getFinalStates().begin());
+
+		assert(iter != stateMap.end());
+
+		bool result = iter->second.empty();
+
+		assert(Folding::checkSingular(ta, result, stateMap));
+
+		return result;
+
+	}
+
+	bool makeType1Box(size_t root, size_t aux, const std::set<size_t>& forbidden) {
+
+		if (forbidden.count(aux))
+			return false;
+
+		assert(root < this->fae.roots.size());
+
+		std::vector<size_t> index(this->fae.roots.size(), (size_t)(-1)), inputMap;
+		std::unordered_map<size_t, size_t> selectorMap;
+		ConnectionGraph::StateToCutpointSignatureMap signatures;
+		ConnectionGraph::CutpointSignature outputSignature;
+
+		size_t start = 0;
+
+		ConnectionGraph::computeSignatures(signatures, *this->fae.roots[root]);
+
+		auto p = this->separateCutpoint(outputSignature, root, aux, signatures);
+
+		index[root] = start++;
+
+		for (auto& cutpoint : outputSignature) {
+
+			if (forbidden.count(cutpoint.root))
+				return false;
+
+			assert(cutpoint.root < index.size());
+
+			if (cutpoint.root != root)
+				index[cutpoint.root] = start++;
+
+		}
+
+		Folding::computeSelectorMap(selectorMap, *this->fae.roots[root], signatures);
+		Folding::extractInputMap(inputMap, selectorMap, root, index);
+
+		std::unique_ptr<Box> boxPtr(
+			this->boxMan.createType1Box(
+				root,
+				this->relabelReferences(*p.second, index),
+				outputSignature,
+				inputMap,
+				index
+			)
+		);
+
+		const Box* box = this->boxMan.lookupBox(*boxPtr);
+
+		if (!box)
+			return false;
+
+		this->fae.roots[root] = this->joinBox(*p.first, root, box, outputSignature);
+		this->fae.connectionGraph.invalidate(root);
+
+		CL_CDEBUG(3, "after folding: " << this->fae);
+
+		return true;
+
+	}
+
+	bool makeType2Box(size_t root, size_t aux, const std::set<size_t>& forbidden) {
+
+		if (forbidden.count(aux))
+			return false;
+
+		assert(root < this->fae.roots.size());
+		assert(aux < this->fae.roots.size());
+
+		std::vector<size_t> index(this->fae.roots.size(), (size_t)(-1)), index2, inputMap;
+		std::vector<bool> rootMask(this->fae.roots.size(), false);
+		std::unordered_map<size_t, size_t> selectorMap;
+		ConnectionGraph::StateToCutpointSignatureMap signatures;
+		ConnectionGraph::CutpointSignature outputSignature, inputSignature;
+
+		size_t start = 0;
+
+		ConnectionGraph::computeSignatures(signatures, *this->fae.roots[root]);
+
+		auto p = this->separateCutpoint(outputSignature, root, aux, signatures);
+
+		index[root] = start++;
+
+		for (auto& cutpoint : outputSignature) {
+/*
+			// we assume type 1 box is not present
+			assert(cutpoint.root != root);
+*/
+			if (cutpoint.root == root)
+				return false;
+
+			if (forbidden.count(cutpoint.root))
+				return false;
+
+			assert(cutpoint.root < index.size());
+
+			if (cutpoint.root != root)
+				index[cutpoint.root] = start++;
+
+		}
+
+		Folding::computeSelectorMap(selectorMap, *this->fae.roots[root], signatures);
+		Folding::extractInputMap(inputMap, selectorMap, root, index);
+
+		signatures.clear();
+
+		ConnectionGraph::computeSignatures(signatures, *this->fae.roots[aux]);
+
+		auto auxP = this->separateCutpoint(inputSignature, aux, root, signatures);
+/*
+		if (Folding::isSingular(*auxP.first))
+			return false;
+*/
+		index2 = index;
+
+		for (auto& cutpoint : inputSignature) {
+
+			if (forbidden.count(cutpoint.root))
+				return false;
+
+			assert(cutpoint.root < index.size());
+
+			if (index[cutpoint.root] == (size_t)(-1)) {
+
+				assert(index2[cutpoint.root] == (size_t)(-1));
+
+				index2[cutpoint.root] = start++;
+
+			}
+
+		}
+
+		selectorMap.clear();
+
+		Folding::computeSelectorMap(selectorMap, *this->fae.roots[aux], signatures);
+
+		size_t selector = Folding::extractSelector(selectorMap, root);
+
+		std::unique_ptr<Box> boxPtr(
+			this->boxMan.createType2Box(
+				root,
+				this->relabelReferences(*p.second, index),
+				outputSignature,
+				inputMap,
+				aux,
+				this->relabelReferences(*auxP.second, index2),
+				inputSignature,
+				selector,
+				index
+			)
+		);
+
+		const Box* box = this->boxMan.lookupBox(*boxPtr);
+
+		if (!box)
+			return false;
+
+		this->fae.roots[root] = this->joinBox(*p.first, root, box, outputSignature);
+		this->fae.connectionGraph.invalidate(root);
+
+		this->fae.roots[aux] = auxP.first;
+		this->fae.connectionGraph.invalidate(aux);
+
+		return true;
+
 	}
 
 public:
 
-	Folding(FAE& fae) : fae(fae) {}
+	bool discover(size_t root, const std::set<size_t>& forbidden = std::set<size_t>()) {
+
+		assert(this->fae.roots.size() == this->fae.connectionGraph.data.size());
+		assert(root < this->fae.roots.size());
+		assert(this->fae.roots[root]);
+
+		std::vector<size_t> aux;
+
+		this->fae.updateConnectionGraph();
+
+		CL_CDEBUG(3, "folding: " << this->fae);
+
+		// save state offset
+		this->fae.pushStateOffset();
+
+		for (auto& cutpoint : this->fae.connectionGraph.data[root].signature) {
+
+			if (cutpoint.root == root) {
+
+				CL_CDEBUG(3, "type 1 cutpoint detected at root " << root);
+
+				if (this->makeType1Box(root, root, forbidden))
+					return true;
+
+				CL_CDEBUG(3, "bailing out ...");
+
+				this->fae.popStateOffset();
+
+				continue;
+
+			}
+
+			if (cutpoint.joint) {
+
+				CL_CDEBUG(3, "type 2 cutpoint detected at root " << root);
+
+				if (this->makeType1Box(root, cutpoint.root, forbidden))
+					return true;
+
+				CL_CDEBUG(3, "bailing out ...");
+
+				this->fae.popStateOffset();
+
+				continue;
+
+			}
+
+			size_t selectorToRoot = ConnectionGraph::getSelectorToTarget(
+				this->fae.connectionGraph.data[cutpoint.root].signature, root
+			);
+
+			if (selectorToRoot == (size_t)(-1))
+				continue;
+/*
+			if (selectorToRoot == cutpoint.forwardSelector)
+				continue;
+*/
+			size_t root1 = root, root2 = cutpoint.root;
+
+			if (selectorToRoot < cutpoint.forwardSelector)
+				std::swap(root1, root2);
+
+			CL_CDEBUG(3, "type 3 cutpoint detected at roots " << root1 << " and " << root2);
+
+			if (this->makeType2Box(root1, root2, forbidden))
+				return true;
+
+			CL_CDEBUG(3, "bailing out ...");
+
+			this->fae.popStateOffset();
+
+		}
+
+		return false;
+
+	}
+
+public:
+
+	Folding(FAE& fae, BoxMan& boxMan) : fae(fae), boxMan(boxMan) {}
 
 };
 

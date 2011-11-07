@@ -21,6 +21,7 @@
 #define ABSTRACT_BOX_H
 
 #include <ostream>
+#include <set>
 
 typedef enum { bBox, bHead, bTypeInfo, bSel } box_type_e;
 
@@ -33,7 +34,7 @@ protected:
 	size_t arity;
 	size_t order;
 
-	AbstractBox(box_type_e type) : type(type), arity(0), order(0) {
+	AbstractBox(box_type_e type, size_t arity) : type(type), arity(arity), order(0) {
 	}
 
 public:
@@ -68,6 +69,28 @@ public:
 		rhs.toStream(os);
 		return os;
 	}
+
+};
+
+class StructuralBox : public AbstractBox {
+
+protected:
+
+	StructuralBox(box_type_e type, size_t arity) : AbstractBox(type, arity) {
+	}
+
+public:
+
+	virtual bool outputCovers(size_t offset) const = 0;
+
+	virtual const std::set<size_t>& outputCoverage() const = 0;
+
+	virtual const std::set<size_t>& inputCoverage(size_t input) const = 0;
+
+	virtual size_t selectorToInput(size_t input) const = 0;
+
+	// returns (size_t)(-1) if not
+	virtual size_t outputReachable(size_t input) const = 0;
 
 };
 

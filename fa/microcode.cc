@@ -437,6 +437,8 @@ void FI_iadd::execute(ExecutionManager& execMan, const AbstractInstruction::Stat
 // FI_check
 void FI_check::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
+	state.second->fae->updateConnectionGraph();
+
 	Normalization((FAE&)*state.second->fae).check();
 
 	execMan.enqueue(state, this->next_);

@@ -42,7 +42,7 @@ struct NormInfo {
 		void initRoots(FAE& fae) const {
 			fae.roots[this->index] = fae.taMan->alloc();
 			for (std::vector<std::pair<size_t, std::vector<size_t> > >::const_iterator i = this->mergedRoots.begin(); i != this->mergedRoots.end(); ++i)
-				fae.roots[i->first] = fae.taMan->alloc();				
+				fae.roots[i->first] = fae.taMan->alloc();
 		}
 
 		friend std::ostream& operator<<(std::ostream& os, const RootInfo& rootInfo) {
@@ -108,11 +108,11 @@ struct NormInfo {
 		size_t i = 0;
 		for (std::map<size_t, RootInfo>::const_iterator j = this->data.begin(); j != this->data.end(); ++j)
 			i += j->second.mergedRoots.size() + 1;
-		assert(i == this->rootCount);			
+		assert(i == this->rootCount);
 	}
-	
-};*/
 
+};*/
+/*
 struct IntersectAndRelabelF {
 
 	FAE& fae;
@@ -151,7 +151,7 @@ struct IntersectAndRelabelSpecialF {
 	const TA<label_type>& src1;
 	const TA<label_type>& src2;
 	boost::unordered_map<size_t, size_t> rootMap;
-/*	
+
 	IntersectAndRelabelSpecialF(FAE& fae, TA<label_type>& dst, std::set<std::pair<size_t, size_t> >& splitPoints, const std::vector<size_t>& index, const TA<label_type>& src1, const TA<label_type>& src2, const NormInfo::RootInfo& rootInfo)
 		: fae(fae), dst(dst), index(index), splitPoints(splitPoints), src1(src1), src2(src2) {
 		for (std::vector<std::pair<size_t, std::vector<size_t> > >::const_iterator i = rootInfo.mergedRoots.begin(); i != rootInfo.mergedRoots.end(); ++i) {
@@ -161,7 +161,7 @@ struct IntersectAndRelabelSpecialF {
 			}
 		}
 	}
-*/
+
 	void operator()(const TT<label_type>* t1, const TT<label_type>* t2, const std::vector<size_t>& lhs, size_t& rhs) {
 		const Data* data;
 		if (this->fae.isData(t1->rhs(), data)) {
@@ -181,7 +181,7 @@ struct IntersectAndRelabelSpecialF {
 	}
 
 };
-
+*/
 class Normalization {
 
 	FAE& fae;
@@ -217,166 +217,223 @@ protected:
 		return ta;
 	}
 
-	void visitDown(size_t c, std::vector<bool>& visited, std::vector<size_t>& order, std::vector<bool>& marked) const {
-		if (visited[c]) {
-			marked[c] = true;
-			return;
-		}
-		visited[c] = true;
-		order.push_back(c);
-		for (std::vector<std::pair<size_t, bool> >::const_iterator i = this->fae.rootMap[c].begin(); i != this->fae.rootMap[c].end(); ++i) {
-			this->visitDown(i->first, visited, order, marked);
-			if (i->second)
-				marked[i->first] = true;
-		}
-	}
-
-	void visitDown(size_t c, std::vector<bool>& visited) const {
-		if (visited[c])
-			return;
-		visited[c] = true;
-		for (std::vector<std::pair<size_t, bool> >::const_iterator i = this->fae.rootMap[c].begin(); i != this->fae.rootMap[c].end(); ++i)
-			this->visitDown(i->first, visited);
-	}
-
 	void traverse(std::vector<bool>& visited, std::vector<size_t>& order, std::vector<bool>& marked) const {
-		// TODO: upward traversal
+
 		visited = std::vector<bool>(this->fae.roots.size(), false);
 		marked = std::vector<bool>(this->fae.roots.size(), false);
+
 		order.clear();
+
 		for (std::vector<Data>::const_iterator i = this->fae.variables.begin(); i != this->fae.variables.end(); ++i) {
+
 			// skip everything what is not a root reference
 			if (!i->isRef())
 				continue;
+
 			size_t root = i->d_ref.root;
 			// mark rootpoint pointed by a variable
+
 			marked[root] = true;
 			// check whether we traversed this one before
+
 			if (visited[root])
 				continue;
-			this->visitDown(root, visited, order, marked);
+
+			this->fae.connectionGraph.visit(root, visited, order, marked);
+
 		}
+
 	}
 
 	void traverse(std::vector<bool>& visited) const {
-		// TODO: upward traversal
+
 		visited = std::vector<bool>(this->fae.roots.size(), false);
+
 		for (std::vector<Data>::const_iterator i = this->fae.variables.begin(); i != this->fae.variables.end(); ++i) {
+
 			// skip everything what is not a root reference
 			if (!i->isRef())
 				continue;
+
 			size_t root = i->d_ref.root;
+
 			// check whether we traversed this one before
 			if (visited[root])
 				continue;
-			this->visitDown(root, visited);
+
+			this->fae.connectionGraph.visit(root, visited);
+
 		}
 	}
 
 	void checkGarbage(const std::vector<bool>& visited) const {
+
+		bool garbage = false;
+
 		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
-			if (!visited[i] && (this->fae.roots[i] != NULL)) {
-//				std::cerr << "the root " << i << " is not referenced anymore ... " << std::endl;
-				throw ProgramError("garbage detected");
+
+			if (!this->fae.roots[i])
+				continue;
+
+			if (!visited[i]) {
+
+				CL_CDEBUG(1, "the root " << i << " is not referenced anymore ... " << this->fae.connectionGraph.data[i]);
+
+				garbage = true;
+
 			}
+
 		}
+
+		if (garbage)
+			throw ProgramError("garbage detected");
+
 	}
 
 public:
 
 	// check garbage
 	void check() const {
+
 		// compute reachable roots
 		std::vector<bool> visited(this->fae.roots.size(), false);
+
 		this->traverse(visited);
+
 		// check garbage
 		this->checkGarbage(visited);
+
 	}
 
-	void normalizeRoot(/*NormInfo& normInfo, */std::vector<bool>& normalized, size_t root, const std::vector<bool>& marked) {
+	void normalizeRoot(std::vector<bool>& normalized, size_t root, std::vector<bool>& marked) {
+
 		if (normalized[root])
 			return;
+
 		normalized[root] = true;
-		std::vector<std::pair<size_t, bool> > tmp = this->fae.rootMap[root];
-//		normInfo.addRoot(root);
-		for (std::vector<std::pair<size_t, bool> >::iterator i = tmp.begin(); i != tmp.end(); ++i) {
-			this->normalizeRoot(/*normInfo, */normalized, i->first, marked);
-			if (!marked[i->first]) {
-//				std::cerr << "merging " << *i << '(' << this->fae.roots[*i] << ')' << " into " << root << '(' << this->fae.roots[root] << ')' << std::endl;
-				std::vector<size_t> refStates;
-				TA<label_type>* ta = this->mergeRoot(*this->fae.roots[root], i->first, *this->fae.roots[i->first], refStates);
-				this->fae.roots[root] = std::shared_ptr<TA<label_type>>(ta);
-				this->fae.roots[i->first] = NULL;
-				FAE::updateMap(this->fae.rootMap[root], i->first, this->fae.rootMap[i->first]);
-//				normInfo.mergeRoots(root, i->first, refStates);
+
+		auto tmp = this->fae.connectionGraph.data[root].signature;
+
+		for (auto& cutpoint : tmp) {
+
+			this->normalizeRoot(normalized, cutpoint.root, marked);
+
+			if (marked[cutpoint.root])
+				continue;
+/*
+			if (!this->fae.connectionGraph.isMergable(root, cutpoint.root)) {
+
+				marked[cutpoint.root] = true;
+
+				continue;
+
 			}
+*/
+			std::vector<size_t> refStates;
+
+			TA<label_type>* ta = this->mergeRoot(
+				*this->fae.roots[root],
+				cutpoint.root,
+				*this->fae.roots[cutpoint.root],
+				refStates
+			);
+
+			this->fae.roots[root] = std::shared_ptr<TA<label_type>>(ta);
+			this->fae.roots[cutpoint.root] = nullptr;
+
+			this->fae.connectionGraph.mergeCutpoint(root, cutpoint.root);
+
 		}
+
 	}
 
-	// normalize representation
-	void normalize(/*NormInfo& normInfo, */const std::set<size_t>& forbidden = std::set<size_t>()) {
+	void scan(std::vector<bool>& marked, std::vector<size_t>& order, const std::set<size_t>& forbidden = std::set<size_t>()) {
+
+		std::vector<bool> visited(this->fae.roots.size(), false);
+
+		marked = std::vector<bool>(this->fae.roots.size(), false);
+
+		order.clear();
+
+		this->fae.connectionGraph.updateIfNeeded(this->fae.roots);
 
 		// compute canonical root ordering
-		std::vector<size_t> order;
-		std::vector<bool> visited(this->fae.roots.size(), false), marked(this->fae.roots.size(), false);
-
 		this->traverse(visited, order, marked);
 
 		// check garbage
 		this->checkGarbage(visited);
 
 		// prevent merging of forbidden roots
-		for (std::set<size_t>::const_iterator i = forbidden.begin(); i != forbidden.end(); ++i)
+		for (auto i = forbidden.begin(); i != forbidden.end(); ++i)
 			marked[*i] = true;
 
-		bool normalizationNeeded = false;
-		for (size_t i = 0; i < order.size(); ++i) {
-			if (marked[i] && (order[i] == i))
-				continue;
-			normalizationNeeded = true;
-			break;
+	}
+
+	// normalize representation
+	void normalize(std::vector<bool>& marked, const std::vector<size_t>& order) {
+
+		size_t i;
+
+		for (i = 0; i < order.size(); ++i) {
+
+			if (!marked[i] || (order[i] != i))
+				break;
+
 		}
 
-		if (!normalizationNeeded) {
+		if (i == order.size()) {
+
 			this->fae.roots.resize(order.size());
-			this->fae.rootMap.resize(order.size());
+			this->fae.connectionGraph.data.resize(order.size());
+
 			return;
+
 		}
 
 		// reindex roots
 		std::vector<size_t> index(this->fae.roots.size(), (size_t)(-1));
 		std::vector<bool> normalized(this->fae.roots.size(), false);
 		std::vector<std::shared_ptr<TA<label_type>>> newRoots;
-		std::vector<std::vector<std::pair<size_t, bool> > > newRootMap;
 		size_t offset = 0;
-		for (std::vector<size_t>::iterator i = order.begin(); i < order.end(); ++i) {
-			this->normalizeRoot(/*normInfo, */normalized, *i, marked);
+
+		for (auto& i : order) {
+
+			this->normalizeRoot(normalized, i, marked);
 //			assert(marked[*i] || (this->fae.roots[*i] == NULL));
-			if (!marked[*i])
+
+			if (!marked[i])
 				continue;
-			newRoots.push_back(this->fae.roots[*i]);
-			newRootMap.push_back(this->fae.rootMap[*i]);
-			index[*i] = offset++;
-//			normInfo.addRoot(*i);
+
+			newRoots.push_back(this->fae.roots[i]);
+
+			index[i] = offset++;
+
 		}
-//		normInfo.rootCount = this->fae.roots.size();
-//		normInfo.reindex(index);
+
 		// update representation
-		this->fae.roots = newRoots;
-		this->fae.rootMap = newRootMap;
-		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
-			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(this->fae.relabelReferences(this->fae.roots[i].get(), index));
-			FAE::renameVector(this->fae.rootMap[i], index);
-		}
+		std::swap(this->fae.roots, newRoots);
+
+		for (size_t i = 0; i < this->fae.roots.size(); ++i)
+			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(
+				this->fae.relabelReferences(this->fae.roots[i].get(), index)
+			);
+
+		this->fae.connectionGraph.finishNormalization(this->fae.roots.size(), index);
+
 		// update variables
 		for (std::vector<Data>::iterator i = this->fae.variables.begin(); i != this->fae.variables.end(); ++i) {
-			if (i->isRef()) {
-				assert(index[i->d_ref.root] != (size_t)(-1));
-				i->d_ref.root = index[i->d_ref.root];
-			}
-		}
-	}
 
+			if (!i->isRef())
+				continue;
+
+			assert(index[i->d_ref.root] != (size_t)(-1));
+
+			i->d_ref.root = index[i->d_ref.root];
+
+		}
+
+	}
+/*
 	// single accepting in, (single accepting out?)
 	void split(std::vector<TA<label_type>*>& dst, const TA<label_type>& src, size_t baseIndex, const std::set<std::pair<size_t, size_t> >& splitPoints) {
 
@@ -434,11 +491,11 @@ public:
 
 		this->fae.incrementStateOffset(stateIndex.size());
 	}
-/*
+
 	bool denormalize(const FAE& fae, const NormInfo& normInfo) {
 		assert(fae.roots.size() == normInfo.data.size());
 		assert(this->fae.roots.size() == fae.roots.size());
-		
+
 		FAE tmp(this->fae);
 		for (std::vector<TA<label_type>*>::iterator i = this->fae.roots.begin(); i != this->fae.roots.end(); ++i)
 			this->fae.updateRoot(*i, NULL);

@@ -43,7 +43,7 @@ class ExecutionManager {
 	struct RecycleRegisterF {
 
 		Recycler<std::vector<Data>>& recycler_;
-		
+
 		RecycleRegisterF(Recycler<std::vector<Data>>& recycler)
 			: recycler_(recycler) {}
 
@@ -58,19 +58,19 @@ class ExecutionManager {
 public:
 
 	struct DestroySimpleF {
-	
+
 		DestroySimpleF() {}
-	
+
 		void operator()(SymState* state) {
-	
+
 			AbstractInstruction* instr = state->instr;
 			if (instr->computesFixpoint())
 				((FixpointInstruction*)instr)->extendFixpoint(state->fae);
 	//			else
-	//				CFG_FROM_FAE(*node->fae)->invalidate(node->fae);			
-	
+	//				CFG_FROM_FAE(*node->fae)->invalidate(node->fae);
+
 		}
-	
+
 	};
 */
 public:
@@ -97,7 +97,7 @@ public:
 
 		this->statesExecuted_ = 0;
 		this->tracesEvaluated_ = 0;
-		
+
 	}
 
 	SymState* enqueue(SymState* parent, const std::shared_ptr<std::vector<Data>>& registers,
@@ -137,7 +137,7 @@ public:
 			return false;
 
 		state = this->queue_.front();
-		
+
 		this->queue_.pop_front();
 
 		state.second->queueTag = this->queue_.end();
@@ -152,7 +152,7 @@ public:
 			return false;
 
 		state = this->queue_.back();
-		
+
 		this->queue_.pop_back();
 
 		state.second->queueTag = this->queue_.end();
@@ -184,7 +184,7 @@ public:
 		++this->statesExecuted_;
 
 		state.second->instr->execute(*this, state);
-		
+
 	}
 
 //	template <class F>
@@ -192,7 +192,7 @@ public:
 
 		++this->tracesEvaluated_;
 
-		this->destroyBranch(state);		
+		this->destroyBranch(state);
 
 	}
 

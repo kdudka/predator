@@ -114,7 +114,7 @@ protected:
 
 		list<SymState*>& queue;
 		set<CfgStateExt*>& s;
-		
+
 		InvalidateF(list<SymState*>& queue, set<CfgStateExt*>& s) : queue(queue), s(s) {}
 
 		void operator()(SymState* state) {
@@ -204,7 +204,7 @@ protected:
 			this->traceRecorder.invalidateChildren(item, InvalidateF(this->queue, s));
 
 			const FAE* tmp2 = item->fae;
-			
+
 			TraceRecorder::Item* parent = item->parent;
 
 			InvalidateF(this->queue, s)(item);
@@ -257,7 +257,7 @@ protected:
 		FAE tmp(fae);
 
 		SymState* state = NULL;
-		
+
 		while (item->parent) {
 
 			CL_CDEBUG(std::endl << SymCtx::Dump(*STATE_FROM_FAE(*item->fae)->ctx, *item->fae));
@@ -353,7 +353,7 @@ protected:
 		CL_NOTE("trace:");
 
 		for (auto s : trace) {
-			
+
 			if (s->instr->insn()) {
 				CL_NOTE_MSG(&s->instr->insn()->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *s->instr->insn()));
 				CL_DEBUG_AT(2, std::endl << *s->fae);
@@ -365,6 +365,13 @@ protected:
 
 	}
 
+	void printBoxes() const {
+
+		for (auto& box : this->boxMan.getBoxes())
+			CL_DEBUG_AT(1, *(AbstractBox*)&box << ':' << std::endl << box);
+
+	}
+
 	void mainLoop() {
 
 		AbstractInstruction::StateType state;
@@ -372,8 +379,6 @@ protected:
 		try {
 
 			while (this->execMan.dequeueDFS(state)) {
-
-//				assert(Splitting(*state.second->fae).checkIntegrity());
 
 				if (state.second->instr->insn()) {
 
@@ -385,14 +390,14 @@ protected:
 					CL_CDEBUG(3, state);
 
 				}
-	
+
 				this->execMan.execute(state);
-	
+
 			}
 
 		} catch (ProgramError& e) {
 
-			Engine::printTrace(state);
+//			Engine::printTrace(state);
 
 			throw;
 
@@ -402,7 +407,7 @@ protected:
 
 public:
 
-	Engine() : boxMan(this->taBackend),
+	Engine() : boxMan(),
 		compiler_(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes),
 		dbgFlag(false) {}
 
@@ -432,7 +437,7 @@ public:
 					}
 
 					CL_DEBUG_AT(3, name);
-					
+
 					this->boxMan.createTypeInfo(name, v);
 					break;
 
@@ -454,13 +459,13 @@ public:
 			ss << nameOf(*fnc) << ':' << uidOf(*fnc);
 
 			CL_DEBUG_AT(3, ss.str());
-					
+
 			this->boxMan.createTypeInfo(ss.str(), v);
 
 		}
 
 	}
-
+/*
 	void loadBoxes(const std::unordered_map<std::string, std::string>& db) {
 
 	    CL_DEBUG_AT(2, "loading boxes ...");
@@ -474,16 +479,16 @@ public:
 		}
 
 		this->boxMan.buildBoxHierarchy(this->hierarchy, this->basicBoxes);
-		
-	}
 
+	}
+*/
 	void compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry) {
 
 		CL_DEBUG_AT(2, "compiling ...");
 
 		this->compiler_.compile(this->assembly_, stor, entry);
 
-		CL_DEBUG_AT(2, "assembly:" << std::endl << this->assembly_);		
+		CL_DEBUG_AT(2, "assembly:" << std::endl << this->assembly_);
 
 	}
 
@@ -509,6 +514,8 @@ public:
 
 			this->mainLoop();
 
+			this->printBoxes();
+
 			for (auto instr : this->assembly_.code_) {
 
 				if (instr->getType() != fi_type_e::fiFix)
@@ -521,20 +528,22 @@ public:
 			CL_DEBUG_AT(1, "forester has evaluated " << this->execMan.statesEvaluated() << " state(s) in " << this->execMan.tracesEvaluated() << " trace(s)");
 
 		} catch (std::exception& e) {
-	
+
 			CL_DEBUG(e.what());
+
+			this->printBoxes();
 
 			throw;
 
 		}
-		
+
 	}
 
 	void setDbgFlag() {
 
 		this->dbgFlag = 1;
 
-	}	
+	}
 
 };
 
@@ -547,11 +556,11 @@ SymExec::~SymExec() {
 void SymExec::loadTypes(const CodeStorage::Storage& stor) {
 	this->engine->loadTypes(stor);
 }
-
+/*
 void SymExec::loadBoxes(const std::unordered_map<std::string, std::string>& db) {
 	this->engine->loadBoxes(db);
 }
-
+*/
 void SymExec::compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& main) {
 	this->engine->compile(stor, main);
 }

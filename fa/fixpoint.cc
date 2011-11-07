@@ -92,154 +92,159 @@ struct FuseNonZeroF {
 	}
 };
 
+inline bool normalizeAndFold(FAE& fae, BoxMan& boxMan) {
+
+	std::set<size_t> tmp;
+
+	VirtualMachine vm(fae);
+
+	Normalization norm(fae);
+
+	Folding folding(fae, boxMan);
+
+	const Data& abp = vm.varGet(ABP_INDEX);
+
+	std::vector<size_t> order;
+	std::vector<bool> marked;
+
+	fae.updateConnectionGraph();
+
+//	vm.getNearbyReferences(abp.d_ref.root, tmp);
+
+	norm.scan(marked, order);
+//	norm.normalize(marked, order);
+
+//	CL_CDEBUG(3, "after normalization: " << std::endl << fae);
+
+	tmp.clear();
+
+//	vm.getNearbyReferences(abp.d_ref.root, tmp);
+
+//	norm.scan(marked, order);
+
+	// folding
+
+	bool matched = false;
+
+	// do not touch root 0
+	tmp.insert(abp.d_ref.root);
+
+	// never fold at root 0
+	for (size_t i = 1; i < order.size(); ++i) {
+
+		assert(fae.roots[order[i]]);
+
+		if (folding.discover(order[i], tmp))
+			matched = true;
+
+	}
+
+	boxMan.clearBoxCache();
+
+	CL_CDEBUG(3, "after folding: " << std::endl << fae);
+
+	vm.getNearbyReferences(abp.d_ref.root, tmp);
+
+	norm.scan(marked, order, tmp);
+	norm.normalize(marked, order);
+
+	CL_CDEBUG(3, "after normalization: " << std::endl << fae);
+
+	return matched;
+
+}
+
+inline bool testInclusion(FAE& fae, TA<label_type>& fwdConf, UFAE& fwdConfWrapper) {
+
+	TA<label_type> ta(*fwdConf.backend);
+	Index<size_t> index;
+
+	fwdConfWrapper.fae2ta(ta, index, fae);
+
+//	CL_CDEBUG("challenge" << std::endl << ta);
+//	CL_CDEBUG("response" << std::endl << this->fwdConf);
+
+	if (TA<label_type>::subseteq(ta, fwdConf))
+		return true;
+
+	CL_CDEBUG(1, "extending fixpoint with:" << std::endl << fae);
+
+	fwdConfWrapper.join(ta, index);
+
+	ta.clear();
+
+	fwdConf.minimized(ta);
+	fwdConf = ta;
+
+	return false;
+
+}
+
+inline void abstract(FAE& fae, TA<label_type>& fwdConf, TA<label_type>::Backend& backend, BoxMan& boxMan) {
+
+	fae.unreachableFree();
+
+//	CL_CDEBUG(1, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after normalization:" ) << std::endl << *fae);
+
+	// merge fixpoint
+	std::vector<FAE*> tmp;
+
+	ContainerGuard<std::vector<FAE*> > g(tmp);
+
+	FAE::loadCompatibleFAs(
+		tmp, fwdConf, backend, boxMan, &fae, 0, CompareVariablesF()
+	);
+
+	for (size_t i = 0; i < tmp.size(); ++i)
+		CL_CDEBUG(3, "accelerator " << std::endl << *tmp[i]);
+
+	fae.fuse(tmp, FuseNonZeroF());
+
+//	fae.fuse(target->fwdConf, FuseNonZeroF());
+
+	CL_CDEBUG(3, "fused " << std::endl << fae);
+
+	// abstract
+//	CL_CDEBUG("abstracting ... " << 1);
+
+	Abstraction abstraction(fae);
+
+	for (size_t i = 1; i < fae.getRootCount(); ++i)
+		abstraction.heightAbstraction(i, 1, SmartTMatchF());
+
+	fae.unreachableFree();
+
+	CL_CDEBUG(3, "after abstraction: " << std::endl << fae);
+
+}
+
 // FI_fix
 void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
 
-	// normalize
-	std::set<size_t> tmp;
+	normalizeAndFold(*fae, this->boxMan);
 
-	VirtualMachine vm(*fae);
+	do {
 
-	Abstraction abstraction(*fae);
+		abstract(*fae, this->fwdConf, this->taBackend, this->boxMan);
 
-	Folding folding(*fae);
-/*
-	fae->unreachableFree();
-
-	bool matched = false;
-
-	// fold
-
-	// do not fold at 0
-	for (size_t i = 1; i < fae->getRootCount(); ++i) {
-
-		if (!fae->roots[i])
-			continue;
-
-		// we are normalized so we don't have to check whether root is not null
-		for (auto box : this->boxes) {
-
-			CL_CDEBUG(3, "trying " << *(const AbstractBox*)box << " at " << i);
-
-			if (folding.foldBox(i, box)) {
-
-				matched = true;
-				CL_CDEBUG(3, "match");
-
-			}
-
-		}
-
-	}
-*/
-	const Data& abp = vm.varGet(ABP_INDEX);
-
-	vm.getNearbyReferences(abp.d_ref.root, tmp);
-
-	Normalization norm(*fae);
-
-	norm.normalize(tmp);
-
-	fae->unreachableFree();
-/*
-	// abstract
-
-//	CL_CDEBUG("abstracting ... " << 1);
-	for (size_t i = 1; i < fae->getRootCount(); ++i)
-		abstraction.heightAbstraction(i, 1, SmartTMatchF());
-
-	// test inclusion
-	fae->unreachableFree();
-*/
-	bool matched = false;
-
-	// fold
-
-	// do not fold at 0
-	for (size_t i = 1; i < fae->getRootCount(); ++i) {
-
-		// we are normalized so we don't have to check whether root is not null
-		for (auto box : this->boxes) {
-
-			CL_CDEBUG(3, "trying " << *(const AbstractBox*)box << " at " << i);
-
-			if (folding.foldBox(i, box)) {
-
-				matched = true;
-				CL_CDEBUG(3, "match");
-
-			}
-
-		}
-
-	}
-
-//	CL_CDEBUG(1, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after folding:" ) << std::endl << *fae);
-
-	if (matched) {
-
-		tmp.clear();
-		vm.getNearbyReferences(abp.d_ref.root, tmp);
-		norm.normalize(tmp);
-
-	}
-
-	fae->unreachableFree();
-
-//	CL_CDEBUG(1, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after normalization:" ) << std::endl << *fae);
-
-	// merge fixpoint
-	std::vector<FAE*> tmp2;
-
-	ContainerGuard<std::vector<FAE*> > g(tmp2);
-
-	FAE::loadCompatibleFAs(tmp2, this->fwdConf, this->taBackend, this->boxMan, fae.get(), 0, CompareVariablesF());
-
-//	for (size_t i = 0; i < tmp.size(); ++i)
-//		CL_CDEBUG("accelerator " << std::endl << *tmp[i]);
-	fae->fuse(tmp2, FuseNonZeroF());
-//	fae.fuse(target->fwdConf, FuseNonZeroF());
-
-//	CL_CDEBUG("fused " << std::endl << *fae);
-
-	// abstract
-//	Abstraction abstraction(*fae);
-
-//	CL_CDEBUG("abstracting ... " << 1);
-	for (size_t i = 1; i < fae->getRootCount(); ++i)
-		abstraction.heightAbstraction(i, 1, SmartTMatchF());
+	} while (normalizeAndFold(*fae, this->boxMan));
 
 	// test inclusion
 	fae->unreachableFree();
 
-	TA<label_type> ta(*this->fwdConf.backend);
-	Index<size_t> index;
-
-	this->fwdConfWrapper.fae2ta(ta, index, *fae);
-
-//	CL_CDEBUG("challenge" << std::endl << ta);
-//	CL_CDEBUG("response" << std::endl << this->fwdConf);
-
-	if (TA<label_type>::subseteq(ta, this->fwdConf)) {
+	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper)) {
 
 		CL_CDEBUG(3, "hit");
+
 		execMan.traceFinished(state.second);
-		return;
+
+	} else {
+
+		execMan.enqueue(state.second, state.first, fae, this->next_);
 
 	}
-
-	CL_CDEBUG(1, "extending fixpoint with:" << std::endl << *fae);
-
-	this->fwdConfWrapper.join(ta, index);
-	ta.clear();
-	this->fwdConf.minimized(ta);
-	this->fwdConf = ta;
-
-//	CL_DEBUG_AT(2, "fixpoint at " << this->insn()->loc << std::endl << ta);
-
-	execMan.enqueue(state.second, state.first, fae, this->next_);
 
 }
 
@@ -248,129 +253,18 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
 
-	// normalize
-	std::set<size_t> tmp;
+	normalizeAndFold(*fae, this->boxMan);
 
-	VirtualMachine vm(*fae);
-
-	Folding folding(*fae);
-/*
-	fae->unreachableFree();
-
-	bool matched = false;
-
-	// fold
-	// do not fold at 0
-	for (size_t i = 1; i < fae->getRootCount(); ++i) {
-
-		if (!fae->roots[i])
-			continue;
-
-		// we are normalized so we don't have to check whether root is not null
-		for (auto box : this->boxes) {
-
-			CL_CDEBUG(3, "trying " << *(const AbstractBox*)box << " at " << i);
-
-			if (folding.foldBox(i, box)) {
-
-				matched = true;
-				CL_CDEBUG(3, "match");
-
-			}
-
-		}
-
-	}
-*/
-	const Data& abp = vm.varGet(ABP_INDEX);
-
-	vm.getNearbyReferences(abp.d_ref.root, tmp);
-
-	Normalization norm(*fae);
-
-	norm.normalize(tmp);
-
-	bool matched = false;
-
-	// fold
-	// do not fold at 0
-	for (size_t i = 1; i < fae->getRootCount(); ++i) {
-
-		// we are normalized so we don't have to check whether root is not null
-		for (auto box : this->boxes) {
-
-			CL_CDEBUG(3, "trying " << *(const AbstractBox*)box << " at " << i);
-
-			if (folding.foldBox(i, box)) {
-
-				matched = true;
-				CL_CDEBUG(3, "match");
-
-			}
-
-		}
-
-	}
-
-	if (matched) {
-
-		tmp.clear();
-		vm.getNearbyReferences(abp.d_ref.root, tmp);
-		norm.normalize(tmp);
-
-	}
-/*
-	fae->unreachableFree();
-
-	// merge fixpoint
-	std::vector<FAE*> tmp2;
-
-	ContainerGuard<std::vector<FAE*> > g(tmp2);
-
-	FAE::loadCompatibleFAs(tmp2, this->fwdConf, this->taBackend, this->boxMan, fae.get(), 0, CompareVariablesF());
-
-//	for (size_t i = 0; i < tmp.size(); ++i)
-//		CL_CDEBUG("accelerator " << std::endl << *tmp[i]);
-	fae->fuse(tmp2, FuseNonZeroF());
-//	fae.fuse(target->fwdConf, FuseNonZeroF());
-
-//	CL_CDEBUG("fused " << std::endl << *fae);
-
-	// abstract
-	Abstraction abstraction(*fae);
-
-//	CL_CDEBUG("abstracting ... " << 1);
-	for (size_t i = 1; i < fae->getRootCount(); ++i)
-		abstraction.heightAbstraction(i, 1, SmartTMatchF());
-*/
-	// test inclusion
-	fae->unreachableFree();
-
-	TA<label_type> ta(*this->fwdConf.backend);
-	Index<size_t> index;
-
-	this->fwdConfWrapper.fae2ta(ta, index, *fae);
-
-//	CL_CDEBUG("challenge" << std::endl << ta);
-//	CL_CDEBUG("response" << std::endl << this->fwdConf);
-
-	if (TA<label_type>::subseteq(ta, this->fwdConf)) {
+	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper)) {
 
 		CL_CDEBUG(3, "hit");
+
 		execMan.traceFinished(state.second);
-		return;
+
+	} else {
+
+		execMan.enqueue(state.second, state.first, fae, this->next_);
 
 	}
-
-//	CL_CDEBUG("extending fixpoint with:" << std::endl << fae);
-
-	this->fwdConfWrapper.join(ta, index);
-	ta.clear();
-	this->fwdConf.minimized(ta);
-	this->fwdConf = ta;
-
-//	CL_DEBUG_AT(2, "fixpoint at " << this->insn()->loc << std::endl << ta);
-
-	execMan.enqueue(state.second, state.first, fae, this->next_);
 
 }

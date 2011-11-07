@@ -23,7 +23,10 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
+#include <sstream>
 #include <fstream>
+
+#include <unordered_map>
 
 #include <boost/unordered_map.hpp>
 #include <boost/algorithm/string.hpp>
@@ -38,9 +41,9 @@
 class BoxMan {
 
 //	TA<label_type>::Manager& taMan;
-	TA<label_type>::Backend& backend;
+//	TA<label_type>::Backend& backend;
 
-	TA<std::string>::Backend sBackend;
+//	TA<std::string>::Backend sBackend;
 
 	boost::unordered_map<Data, NodeLabel*> dataStore;
 	std::vector<const Data*> dataIndex;
@@ -50,7 +53,16 @@ class BoxMan {
 
 	boost::unordered_map<SelData, const SelBox*> selIndex;
 	boost::unordered_map<std::string, const TypeBox*> typeIndex;
-	boost::unordered_map<std::string, const Box*> boxIndex;
+//	boost::unordered_map<std::string, const Box*> boxIndex;
+
+//	typedef std::pair<size_t, std::vector<FA::RootSignature>> BoxSignature;
+
+	size_t boxCount;
+
+//	std::unordered_map<BoxSignature, std::vector<BoxPtr>, boost::hash<BoxSignature>> boxMap;
+
+	std::unordered_set<Box, boost::hash<Box>> boxes;
+	std::unordered_set<Box, boost::hash<Box>> boxCache;
 
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data) {
 		std::pair<boost::unordered_map<Data, NodeLabel*>::iterator, bool> p
@@ -60,6 +72,16 @@ class BoxMan {
 			this->dataIndex.push_back(&p.first->first);
 		}
 		return *p.first;
+	}
+
+	std::string getBoxName() const {
+
+		std::stringstream sstr;
+
+		sstr << "box" << this->boxCount;
+
+		return sstr.str();
+
 	}
 
 public:
@@ -164,8 +186,154 @@ public:
 		return p.second;
 	}
 
-protected:
+	static size_t translateSignature(ConnectionGraph::CutpointSignature& result,
+		std::vector<std::pair<size_t, size_t>>& selectors, size_t root,
+		const ConnectionGraph::CutpointSignature& signature, size_t aux,
+		const std::vector<size_t>& index) {
 
+		size_t auxSelector = (size_t)(-1);
+
+		for (auto& cutpoint : signature) {
+
+			assert(cutpoint.root < index.size());
+
+			result.push_back(cutpoint);
+			result.back().root = index[cutpoint.root];
+
+			if (cutpoint.root == aux)
+				auxSelector = cutpoint.forwardSelector;
+
+			if (cutpoint.root != root) {
+
+				selectors.push_back(
+					std::make_pair(cutpoint.forwardSelector, cutpoint.backwardSelector)
+				);
+
+			}
+
+		}
+
+		return auxSelector;
+
+	}
+
+	Box* createType1Box(size_t root, const std::shared_ptr<TA<label_type>>& output,
+		const ConnectionGraph::CutpointSignature& signature, std::vector<size_t>& inputMap,
+		const std::vector<size_t>& index) {
+
+		ConnectionGraph::CutpointSignature outputSignature;
+		std::vector<std::pair<size_t, size_t>> selectors;
+
+		BoxMan::translateSignature(
+			outputSignature, selectors, root, signature, (size_t)(-1), index
+		);
+
+		return new Box(
+			this->getBoxName(),
+			output,
+			outputSignature,
+			inputMap,
+			std::shared_ptr<TA<label_type>>(nullptr),
+			0,
+			ConnectionGraph::CutpointSignature(),
+			selectors
+		);
+
+	}
+
+	Box* createType2Box(size_t root, const std::shared_ptr<TA<label_type>>& output,
+		const ConnectionGraph::CutpointSignature& signature, std::vector<size_t>& inputMap,
+		size_t aux, const std::shared_ptr<TA<label_type>>& input,
+		const ConnectionGraph::CutpointSignature& signature2, size_t inputSelector,
+		std::vector<size_t>& index) {
+
+		assert(aux < index.size());
+		assert(index[aux] >= 1);
+
+		ConnectionGraph::CutpointSignature outputSignature, inputSignature;
+		std::vector<std::pair<size_t, size_t>> selectors;
+
+		size_t auxSelector = BoxMan::translateSignature(
+			outputSignature, selectors, root, signature, aux, index
+		);
+
+		size_t start = selectors.size();
+
+		for (auto& cutpoint : signature2) {
+
+			assert(cutpoint.root < index.size());
+
+			if (index[cutpoint.root] == (size_t)(-1)) {
+
+				index[cutpoint.root] = start++;
+
+//				backwardSelectors.push_back(cutpoint.backwardSelector);
+				selectors.push_back(std::make_pair(auxSelector, (size_t)(-1)));
+
+			}
+
+			inputSignature.push_back(cutpoint);
+			inputSignature.back().root = index[cutpoint.root];
+
+		}
+
+		size_t inputIndex = index[aux] - 1;
+
+		assert(inputIndex < selectors.size());
+
+		if (selectors[inputIndex].second > inputSelector)
+			selectors[inputIndex].second = inputSelector;
+
+		return new Box(
+			this->getBoxName(),
+			output,
+			outputSignature,
+			inputMap,
+			input,
+			inputIndex,
+			inputSignature,
+			selectors
+		);
+
+	}
+
+	const Box* lookupBox(const Box& box) {
+
+		auto p = this->boxes.insert(box);
+
+		if (!p.second)
+			return (const Box*)&*p.first;
+
+		auto p2 = this->boxCache.insert(box);
+
+		if (p2.second) {
+
+			this->boxes.erase(p.first);
+
+			return nullptr;
+
+		}
+
+		this->boxCache.erase(p2.first);
+
+		const_cast<Box*>(&*p.first)->initialize();
+
+		CL_CDEBUG(1, "new box identified (" << *(AbstractBox*)&*p.first << "): " << std::endl << *p.first);
+
+		++this->boxCount;
+
+		return (const Box*)&*p.first;
+
+	}
+
+	void clearBoxCache() {
+
+		this->boxCache.clear();
+
+	}
+
+protected:
+/*
 	void translateLabel(TA<label_type>& dst, const TT<std::string>& t, bool& composed, const std::unordered_map<std::string, std::string>& database) {
 		std::vector<std::string> strs;
 		boost::split(strs, t.label(), boost::is_from_range(',', ','));
@@ -198,9 +366,9 @@ protected:
 		dst.addFinalState(src.getFinalState());
 		return dst;
 	}
-
+*/
 public:
-
+/*
 	struct RenameSelectedF {
 
 		const boost::unordered_map<size_t, size_t>& index;
@@ -281,22 +449,23 @@ public:
 		}
 
 		box->composed = composed;
-		box->initialize();
+		box->initialize(box->roots.size() - 1);
 
 		return box;
 
 	}
-
+*/
 public:
 
-	BoxMan(TA<label_type>::Backend& backend)
-		: backend(backend) {}
+	BoxMan(/*TA<label_type>::Backend& backend*/)
+		: /*backend(backend),*/ boxCount() {}
 
 	~BoxMan() {
 		this->clear();
 	}
 
 	void clear() {
+
 		utils::eraseMap(this->dataStore);
 		this->dataIndex.clear();
 		utils::eraseMap(this->nodeStore);
@@ -304,14 +473,20 @@ public:
 		utils::eraseMap(this->vDataStore);
 		utils::eraseMap(this->selIndex);
 		utils::eraseMap(this->typeIndex);
-		utils::eraseMap(this->boxIndex);
+//		utils::eraseMap(this->boxIndex);
+
 	}
+
+	const std::unordered_set<Box, boost::hash<Box>>& getBoxes() const {
+		return this->boxes;
+	}
+
 /*
 	void loadTemplates(const boost::unordered_map<string, string>& database) {
 		for (boost::unordered_map<string, string>::const_iterator i = database.begin(); i != database.end(); ++i)
 			this->loadBox(i->first, database);
 	}
-*/
+*//*
 	std::vector<const Box*> getBoxList() const {
 		std::vector<const Box*> result;
 		for (boost::unordered_map<std::string, const Box*>::const_iterator i = this->boxIndex.begin(); i != this->boxIndex.end(); ++i)
@@ -319,7 +494,7 @@ public:
 		return result;
 	}
 
-	 void buildBoxHierarchy(boost::unordered_map<const Box*, std::vector<const Box*> >& hierarchy, std::vector<const Box*>& basic) const {
+	void buildBoxHierarchy(boost::unordered_map<const Box*, std::vector<const Box*> >& hierarchy, std::vector<const Box*>& basic) const {
 		for (boost::unordered_map<std::string, const Box*>::const_iterator i = this->boxIndex.begin(); i != this->boxIndex.end(); ++i) {
 			const std::set<const AbstractBox*>& trigger = i->second->getTrigger(0);
 			bool composed = false;
@@ -333,6 +508,8 @@ public:
 				basic.push_back(i->second);
 		}
 	}
+
+*/
 
 public:
 

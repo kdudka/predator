@@ -184,7 +184,6 @@ public:
 		ta->addFinalState(f);
 		std::vector<const AbstractBox*> label;
 		std::vector<size_t> lhs;
-		std::vector<std::pair<size_t, bool> > o;
 		if (typeInfo)
 			label.push_back(typeInfo);
 		for (std::vector<std::pair<SelData, Data> >::const_iterator i = nodeInfo.begin(); i != nodeInfo.end(); ++i) {
@@ -195,14 +194,11 @@ public:
 			label.push_back(this->fae.boxMan->getSelector(sel));
 			// lhs
 			lhs.push_back(this->fae.addData(*ta, data));
-			// o
-			if (data.isRef())
-				o.push_back(std::make_pair(i->second.d_ref.root, false));
 		}
 		FAE::reorderBoxes(label, lhs);
 		ta->addTransition(lhs, this->fae.boxMan->lookupLabel(label), f);
 		this->fae.appendRoot(ta);
-		this->fae.rootMap.push_back(o);
+		this->fae.connectionGraph.newRoot();
 		return root;
 	}
 
@@ -224,7 +220,7 @@ public:
 		// fill the rest
 		ta->addTransition(lhs, this->fae.boxMan->lookupLabel(label), f);
 		this->fae.appendRoot(ta);
-		this->fae.rootMap.push_back(std::vector<std::pair<size_t, bool> >());
+		this->fae.connectionGraph.newRoot();
 		return root;
 	}
 
@@ -237,24 +233,24 @@ public:
 				*i = Data::createUndef();
 		}
 		// erase node
-		this->fae.roots[root] = NULL;
+		this->fae.roots[root] = nullptr;
 		// make all references to this rootpoint dangling
 		size_t i = 0;
 		for (; i < root; ++i) {
 			if (!this->fae.roots[i])
 				continue;
 			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(this->fae.invalidateReference(this->fae.roots[i].get(), root));
-			FAE::invalidateReference(this->fae.rootMap[i], root);
+			this->fae.connectionGraph.invalidate(i);
 		}
 		// skip 'root'
-		++i;
+		this->fae.connectionGraph.invalidate(i++);
 		for (; i < this->fae.roots.size(); ++i) {
 			if (!this->fae.roots[i])
 				continue;
 			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(this->fae.invalidateReference(this->fae.roots[i].get(), root));
-			FAE::invalidateReference(this->fae.rootMap[i], root);
+			this->fae.connectionGraph.invalidate(i);
 		}
-		
+
 	}
 
 	void unsafeNodeDelete(size_t root) {
@@ -268,34 +264,31 @@ public:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 		this->transitionLookup(this->fae.roots[root]->getAcceptingTransition(), offset, data);
-	}	
+	}
 
 	void nodeLookup(size_t root, std::vector<std::pair<SelData, Data> >& data) const {
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 		this->transitionLookup(this->fae.roots[root]->getAcceptingTransition(), data);
-	}	
+	}
 
 	void nodeLookupMultiple(size_t root, size_t base, const std::vector<size_t>& offsets, Data& data) const {
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 		this->transitionLookup(this->fae.roots[root]->getAcceptingTransition(), base, offsets, data);
-	}	
+	}
 
 	void nodeModify(size_t root, size_t offset, const Data& in, Data& out) {
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
-		CL_CDEBUG(2, std::endl << *this->fae.roots[root]);
 		TA<label_type> ta(*this->fae.backend);
 		this->transitionModify(ta, this->fae.roots[root]->getAcceptingTransition(), offset, in, out);
 		this->fae.roots[root]->copyTransitions(ta);
 		TA<label_type>* tmp = this->fae.allocTA();
 		ta.unreachableFree(*tmp);
 		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
-		FA::o_map_type o;
-		FAE::computeDownwardO(*tmp, o);
-		this->fae.rootMap[root] = o[tmp->getFinalState()];
-	}	
+		this->fae.connectionGraph.invalidate(root);
+	}
 
 	void nodeModifyMultiple(size_t root, size_t offset, const Data& in, Data& out) {
 		assert(root < this->fae.roots.size());
@@ -307,10 +300,8 @@ public:
 		TA<label_type>* tmp = this->fae.allocTA();
 		ta.unreachableFree(*tmp);
 		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
-		FA::o_map_type o;
-		FAE::computeDownwardO(*tmp, o);
-		this->fae.rootMap[root] = o[tmp->getFinalState()];
-	}	
+		this->fae.connectionGraph.invalidate(root);
+	}
 
 	void getNearbyReferences(size_t root, std::set<size_t>& out) const {
 		assert(root < this->fae.roots.size());
@@ -321,7 +312,7 @@ public:
 			if (this->fae.isData(*i, data) && data->isRef())
 				out.insert(data->d_ref.root);
 		}
-	}	
+	}
 
 public:
 
