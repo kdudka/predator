@@ -40,6 +40,7 @@
  */
 class VirtualMachine {
 
+	/// Reference to the forest automaton representing the environment
 	FAE& fae;
 
 protected:
@@ -221,20 +222,27 @@ protected:
 	}
 #endif
 
+	/// @todo: add documentation
 	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition,
 		size_t offset, const Data& in, Data& out) {
 
+		// Create a new final state
 		size_t state = this->fae.freshState();
 		dst.addFinalState(state);
+
 		std::vector<size_t> lhs = transition.lhs();
+
+		// Retrieve the item with given offset from the transition
 		std::vector<const AbstractBox*> label = transition.label()->getNode();
 		const NodeLabel::NodeItem& ni = transition.label()->boxLookup(offset);
+		// Assertions
 		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, offset));
 
 		const Data* tmp = nullptr;
 		if (!this->fae.isData(transition.lhs()[ni.offset], tmp)) {
 			throw ProgramError("transitionModify(): destination is not a leaf!");
 		}
+
 		out = *tmp;
 		SelData s = VirtualMachine::readSelector(ni.aBox);
 		VirtualMachine::displToData(s, out);
@@ -246,18 +254,31 @@ protected:
 		dst.addTransition(lhs, this->fae.boxMan->lookupLabel(label), state);
 	}
 
-	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition, size_t base, const std::vector<std::pair<size_t, Data> >& in, Data& out) {
+	/// @todo: add documentation
+	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition,
+		size_t base, const std::vector<std::pair<size_t, Data> >& in, Data& out) {
+
+		// Create a new final state
 		size_t state = this->fae.freshState();
 		dst.addFinalState(state);
+
 		std::vector<size_t> lhs = transition.lhs();
+
+		// Get the label
 		std::vector<const AbstractBox*> label = transition.label()->getNode();
+
 		out = Data::createStruct();
-		for (std::vector<std::pair<size_t, Data>>::const_iterator i = in.begin(); i != in.end(); ++i) {
+		for (auto i = in.begin(); i != in.end(); ++i) {
+			// Retrieve the item with the given offset
 			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(i->first);
+			// Assertions
 			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, i->first));
-			const Data* tmp;
-			if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
+
+			const Data* tmp = nullptr;
+			if (!this->fae.isData(transition.lhs()[ni.offset], tmp)) {
 				throw ProgramError("transitionModify(): destination is not a leaf!");
+			}
+
 			out.d_struct->push_back(Data::item_info(i->first - base, *tmp));
 			SelData s = VirtualMachine::readSelector(ni.aBox);
 			VirtualMachine::displToData(s, out.d_struct->back().second);
@@ -266,6 +287,7 @@ protected:
 			lhs[ni.offset] = this->fae.addData(dst, d);
 			label[ni.index] = this->fae.boxMan->getSelector(s);
 		}
+
 		FAE::reorderBoxes(label, lhs);
 		dst.addTransition(lhs, this->fae.boxMan->lookupLabel(label), state);
 	}
@@ -396,7 +418,7 @@ public:
 			label.push_back(typeInfo);
 		}
 
-		for (std::vector<std::pair<SelData, Data> >::const_iterator i = nodeInfo.begin(); i != nodeInfo.end(); ++i) {
+		for (auto i = nodeInfo.begin(); i != nodeInfo.end(); ++i) {
 			SelData sel = i->first;
 			Data data = i->second;
 			VirtualMachine::displToSel(sel, data);
@@ -582,9 +604,13 @@ public:
 			base, offsets, data);
 	}
 
+	/// @todo add documentation
 	void nodeModify(size_t root, size_t offset, const Data& in, Data& out) {
+
+		// Assertions
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
+
 		TA<label_type> ta(*this->fae.backend);
 		this->transitionModify(ta, this->fae.roots[root]->getAcceptingTransition(),
 			offset, in, out);
@@ -595,10 +621,14 @@ public:
 		this->fae.connectionGraph.invalidate(root);
 	}
 
+	/// @todo add documentation
 	void nodeModifyMultiple(size_t root, size_t offset, const Data& in, Data& out) {
+
+		// Assertions
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 		assert(in.isStruct());
+
 		TA<label_type> ta(*this->fae.backend);
 		this->transitionModify(ta, this->fae.roots[root]->getAcceptingTransition(),
 			offset, *in.d_struct, out);
@@ -609,12 +639,16 @@ public:
 		this->fae.connectionGraph.invalidate(root);
 	}
 
+	/// @todo add documentation
 	void getNearbyReferences(size_t root, std::set<size_t>& out) const {
+
+		// Assertions
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
+
 		const TT<label_type>& t = this->fae.roots[root]->getAcceptingTransition();
-		for (std::vector<size_t>::const_iterator i = t.lhs().begin(); i != t.lhs().end(); ++i) {
-			const Data* data;
+		for (auto i = t.lhs().begin(); i != t.lhs().end(); ++i) {
+			const Data* data = nullptr;
 			if (this->fae.isData(*i, data) && data->isRef())
 				out.insert(data->d_ref.root);
 		}
