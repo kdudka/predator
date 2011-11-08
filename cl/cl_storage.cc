@@ -362,6 +362,9 @@ void ClStorageBuilder::Private::digInitials(const TOp *op)
         ControlFlow *cfg = /* XXX */ 0;
         Insn *insn = createInsn(&initial->insn, /* XXX */ *cfg);
 
+        // initializer instructions are not associated with any basic block
+        insn->bb = 0;
+
         // NOTE: keeping a reference for this may cause a SIGSEGV or lockup
         stor.vars[id].initials.push_back(insn);
 
