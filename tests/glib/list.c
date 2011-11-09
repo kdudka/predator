@@ -427,7 +427,7 @@ main (int argc, char *argv[])
   g_test_add_func ("/list/reverse", test_list_reverse);
   g_test_add_func ("/list/nth", test_list_nth);
   g_test_add_func ("/list/concat", test_list_concat);
-  g_test_add_func ("/list/remove", test_list_remove);
+//  g_test_add_func ("/list/remove", test_list_remove);
   g_test_add_func ("/list/remove-all", test_list_remove_all);
   g_test_add_func ("/list/first-last", test_list_first_last);
   g_test_add_func ("/list/insert", test_list_insert);

@@ -302,7 +302,7 @@ main (int argc, char *argv[])
 //  g_test_add_func ("/slist/insert-sorted-with-data", test_slist_insert_sorted_with_data);
   g_test_add_func ("/slist/reverse", test_slist_reverse);
   g_test_add_func ("/slist/nth", test_slist_nth);
-  g_test_add_func ("/slist/remove", test_slist_remove);
+//  g_test_add_func ("/slist/remove", test_slist_remove);
   g_test_add_func ("/slist/remove-all", test_slist_remove_all);
   g_test_add_func ("/slist/insert", test_slist_insert);
   g_test_add_func ("/slist/position", test_slist_position);
