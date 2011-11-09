@@ -7,8 +7,12 @@ CFLAGS = -I. -I./glib $(LDFLAGS)
 DRIVER=../../sl/slgcc
 #DRIVER=../slgccv
 
-all-predator:
+all-predator: list-predator slist-predator
+
+list-predator:
 	$(DRIVER) list.c  $(CFLAGS)
+
+slist-predator:
 	$(DRIVER) slist.c $(CFLAGS)
 
 PROGS = slist list
