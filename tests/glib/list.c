@@ -141,7 +141,7 @@ test_list_reverse (void)
   for (i = 0; i < 4; i++)       // Edit: Predator: s/10/4/
     {
       st = g_list_nth (list, i);
-      g_assert (*((gint*) st->data) == (9 - i));
+      g_assert (*((gint*) st->data) == (3 - i));
     }
 
   g_list_free (list);

@@ -138,10 +138,10 @@ test_slist_reverse (void)
 
   slist = g_slist_reverse (slist);
 
-  for (i = 0; i < 10; i++)      // Edit: Predator: s/10/4/
+  for (i = 0; i < 4; i++)       // Edit: Predator: s/10/4/
     {
       st = g_slist_nth (slist, i);
-      g_assert (*((gint*) st->data) == (9 - i));
+      g_assert (*((gint*) st->data) == (3 - i));
     }
 
   g_slist_free (slist);
