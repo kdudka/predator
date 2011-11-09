@@ -502,7 +502,7 @@ class EndPointConsolidator {
         Private *d;
 };
 
-/// a container maintaining a set of trace graph being built on the fly
+/// a container maintaining a set of trace graphs being built on the fly
 class GraphProxy {
     public:
         GraphProxy();

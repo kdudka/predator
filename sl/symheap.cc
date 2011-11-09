@@ -2043,8 +2043,6 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
     // assign an address
     const EValueTarget code = isOnStack(var) ? VT_ON_STACK : VT_STATIC;
     addr = d->valCreate(code, VO_ASSIGNED);
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
-    d->liveRoots->insert(addr);
 
     RootValue *rootData;
     d->ents.getEntRW(&rootData, addr);
