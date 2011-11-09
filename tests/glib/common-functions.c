@@ -3,6 +3,7 @@
 // 2) eliminates printing of messages (string manipulation)
 
 // extern declarations: TODO: use stdlib.h ?
+extern void * calloc (size_t, size_t);
 extern void * malloc (size_t);
 extern void free(void *);
 extern void __attribute__((noreturn)) abort(void);
@@ -11,6 +12,12 @@ extern void __attribute__((noreturn)) abort(void);
 #if 1
 void *my_checked_malloc(size_t sz) {
     void *ptr = malloc(sz);
+    if(!ptr)
+        abort();
+    return ptr;
+}
+void *my_checked_calloc(size_t sz) {
+    void *ptr = calloc(1, sz);
     if(!ptr)
         abort();
     return ptr;
@@ -26,7 +33,7 @@ void *my_checked_malloc(size_t sz) {
 
 // allocation macros replacement
 #undef g_slice_new0
-#define  g_slice_new0(type)     ((type*) my_checked_malloc (sizeof (type)))
+#define  g_slice_new0(type)     ((type*) my_checked_calloc (sizeof (type)))
 #undef g_slice_new
 #define  g_slice_new(type)      ((type*) my_checked_malloc (sizeof (type)))
 #undef g_slice_free
