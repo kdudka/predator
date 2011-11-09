@@ -1,3 +1,9 @@
+/*
+ * Singly linked list merge-sort
+ *
+ * boxes:
+ */
+
 #include <stdlib.h>
 
 int __nondet();
@@ -9,7 +15,7 @@ struct DItem {
 
 struct TLItem {
 	struct TLItem* next;
-	struct DItem* data;	
+	struct DItem* data;
 };
 
 int main() {
@@ -21,64 +27,64 @@ int main() {
 	// fill top level list with single data items
 	while (__nondet()) {
 
-          item = malloc(sizeof *item);
-          item->next = NULL;
-          item->value = __nondet();
+		item = malloc(sizeof *item);
+		item->next = NULL;
+		item->value = __nondet();
 
-          lItem = malloc(sizeof *lItem);
-	  if (data) {
-            lItem->next = data->next;
-	    data->next = lItem;
-	  } else {
-	    lItem->next = lItem;
-	    data = lItem;
-	  }
-          lItem->data = item;
+		lItem = malloc(sizeof *lItem);
+		if (data) {
+			lItem->next = data->next;
+			data->next = lItem;
+		} else {
+			lItem->next = lItem;
+			data = lItem;
+		}
+		lItem->data = item;
 
-	  item = NULL;
-	  lItem = NULL;
+		item = NULL;
+		lItem = NULL;
 
-        }
-	
+	}
+
 	if (!data)
-	  return 0;
+		return 0;
 
 	// merge subsequent pairs
 	while (data->next != data) {
 
-	  item = data->data;
-	  item2 = data->next->data;
+		item = data->data;
+		item2 = data->next->data;
 
-	  lItem = data->next;
-	  data->next = lItem->next;
-	  free(lItem);
+		lItem = data->next;
+		data->next = lItem->next;
+		free(lItem);
 
-	  struct DItem** dst = &data->data;
+		struct DItem** dst = &data->data;
 
-	  while (item && item2) {
+		while (item && item2) {
 
-	    if (item->value < item2->value) {
-	      *dst = item;
-	      item = item->next;
-	    } else {
-	      *dst = item2;
-	      item2 = item2->next;
-	    }
+			if (item->value < item2->value) {
+				*dst = item;
+				item = item->next;
+			} else {
+				*dst = item2;
+				item2 = item2->next;
+			}
 
-	    dst = &(*dst)->next;
+			dst = &(*dst)->next;
 
-	  }
+		}
 
-	  if (item) {
-	    *dst = item;
-	    item = NULL;
-	  } else if (item2) {
-	    *dst = item2;
-	    item2 = NULL;
-	  }
+		if (item) {
+			*dst = item;
+			item = NULL;
+		} else if (item2) {
+			*dst = item2;
+			item2 = NULL;
+		}
 
-	  dst = NULL;
-	  data = data->next;
+		dst = NULL;
+		data = data->next;
 
 	}
 
@@ -87,9 +93,9 @@ int main() {
 	free(data);
 
 	while (item) {
-	  item2 = item;
-	  item = item->next;
-	  free(item2);
+		item2 = item;
+		item = item->next;
+		free(item2);
 	}
 
 	return 0;

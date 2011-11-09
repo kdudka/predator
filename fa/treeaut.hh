@@ -714,7 +714,8 @@ public:
 
 		PredicateF(std::vector<size_t>& dst, const TA<T>& predicate) : dst(dst), predicate(predicate) {}
 
-		void operator()(const TT<T>* t1, const TT<T>* t2, const std::vector<size_t>& lhs, size_t rhs) {
+		void operator()(const TT<T>* /* t1 */, const TT<T>* t2,
+			const std::vector<size_t>& /* lhs */, size_t /* rhs */) {
 			if (predicate.isFinalState(t2->_rhs))
 				this->dst.push_back(t2->_rhs);
 		}

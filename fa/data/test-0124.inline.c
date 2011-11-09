@@ -1,3 +1,9 @@
+/*
+ * Linux driver snippet
+ *
+ * boxes:
+ */
+
 #include <stdlib.h>
 
 int __nondet();
@@ -25,7 +31,7 @@ int main()
 
     // seq_read(&data);
     // static void seq_read(struct list **data)
-    { 
+    {
       while (__nondet())
         // seq_insert(data, value);
         // static void seq_insert(struct list **data, int value)
@@ -47,12 +53,12 @@ int main()
 
     // seq_write(data);
     // static void seq_write(struct list *data)
-    { 
+    {
       struct iterator iter;
       
       // setup_iterator(&iter, data);
       // static void setup_iterator(struct iterator *iter, struct list *list)
-      { 
+      {
         struct list *list = data;
 
         if ((iter.list = list))
@@ -79,9 +85,9 @@ int main()
         }
       }
 
-      while ((node)) 
+      while ((node))
       {
-      
+
         // node = get_next(&iter)
         // static struct node* get_next(struct iterator *iter)
         {
@@ -136,7 +142,7 @@ int main()
           { struct node **dst = &list->slist;
             struct node *sub1 = list->slist;
             struct node *sub2 = next->slist;
-        
+
             // merge two sorted sub-lists into one
             while (sub1 || sub2) {
               // if (!sub2 || (sub1 && sub1->value < sub2->value)) 
@@ -149,7 +155,7 @@ int main()
               struct node ***pdst = &dst;
               struct node **pdata;
 //              if (!sub2 || (sub1 && sub1->value < sub2->value)) 
-              if (!sub2 || (sub1 && __nondet())) 
+              if (!sub2 || (sub1 && __nondet()))
                 pdata = &sub1;
               else
                 pdata = &sub2;
@@ -187,12 +193,12 @@ int main()
 
     // seq_write(data);
     // static void seq_write(struct list *data)
-    { 
+    {
       struct iterator iter;
-      
+
       // setup_iterator(&iter, data);
       // static void setup_iterator(struct iterator *iter, struct list *list)
-      { 
+      {
         struct list *list = data;
 
         if ((iter.list = list))
@@ -219,9 +225,9 @@ int main()
         }
       }
 
-      while ((node)) 
+      while ((node))
       {
-      
+
         // node = get_next(&iter)
         // static struct node* get_next(struct iterator *iter)
         {

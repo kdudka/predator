@@ -80,7 +80,7 @@ public:
 	AntichainExt(const vector<vector<bool> >& rel)
 		: Antichain(rel) {}
 	
-	void initIndex(size_t aSize, size_t bSize) {
+	void initIndex(size_t aSize, size_t /* bSize */) {
 		this->aTransIndex.resize(aSize);
 	}
 	
@@ -216,7 +216,7 @@ public:
 		// main loop
 //		antichain_type::value_type* el;
 		pair<size_t, state_cache_type::value_type*> el;
-		size_t iter = 0;
+		//size_t iter = 0;
 		while (antichain.nextElement(el)) {
 
 //			std::cout << iter++ << ": ";

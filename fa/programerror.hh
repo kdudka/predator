@@ -25,15 +25,65 @@
 
 #include <cl/code_listener.h>
 
+/**
+ * @file programerror.hh
+ * ProgramError class declaration (and definition)
+ */
+
+
+/**
+ * @brief  An exception class for program analysis
+ *
+ * This exception class is used for program analysis using the Code Listener
+ * interface. It contains an error message and a Code Listener provided
+ * location.
+ */
 class ProgramError : public std::exception {
+
+	/// Error message
 	std::string msg;
+
+	/// Code Listener location to provide further information about the error
 	const cl_loc* loc;
+
 public:
-	ProgramError(const std::string& msg = "", const cl_loc* loc = NULL) : msg(msg), loc(loc) {}
+
+	/**
+	 * @brief  Constructor
+	 *
+	 * Constructs and assigns value to a new object.
+	 *
+	 * @param[in]  msg  The error message
+	 * @param[in]  loc  The location in the program that caused the error
+	 */
+	ProgramError(const std::string& msg = "", const cl_loc* loc = nullptr) :
+		msg(msg), loc(loc) {}
+
+	/**
+	 * @brief  Destructor
+	 *
+	 * Virtual destructor.
+	 */
 	virtual ~ProgramError() throw() {}
+
+	/**
+	 * @brief  Description of error
+	 *
+	 * Retrieves the description of the error (overrides the
+	 * std::exception::what() method)
+	 *
+	 * @returns  The description of the error
+	 */
 	virtual const char* what() const throw() { return this->msg.c_str(); }
+
+	/**
+	 * @brief  Location of the error
+	 *
+	 * Retrieves the location of the error in the analyzed program.
+	 *
+	 * @returns  The location of the error
+	 */
 	const cl_loc* location() const throw() { return this->loc; }
-	
 };
 
 #endif

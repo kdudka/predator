@@ -1,3 +1,8 @@
+/*
+ * Simple tail recursion
+ *
+ * boxes:
+ */
 
 #include <stdlib.h>
 
@@ -8,6 +13,7 @@ struct list_type {
 
 };
 
+// creates a list of arbitrary length
 struct list_type* build_list() {
 
 	struct list_type* x = NULL, *y;
@@ -22,6 +28,7 @@ struct list_type* build_list() {
 
 }
 
+// frees a list
 void free_list(struct list_type* list) {
 
 	struct list_type* x;
@@ -34,6 +41,7 @@ void free_list(struct list_type* list) {
 
 }
 
+// non-deterministically finds an element in a list
 struct list_type* lookup_list(struct list_type* list) {
 
 	if (!list)

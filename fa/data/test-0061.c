@@ -1,3 +1,9 @@
+/*
+ * Doubly linked list reconstruction from a singly linked list
+ *
+ * boxes: genericdll.boxes
+ */
+
 #include <stdlib.h>
 
 struct item {

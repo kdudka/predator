@@ -65,13 +65,17 @@ struct SymState {
 	}
 
 	void addChild(SymState* child) {
-		bool b = this->children.insert(child).second;
-		assert(b);
+		if (!this->children.insert(child).second)
+		{
+			assert(false);
+		}
 	}
 
 	void removeChild(SymState* child) {
-		size_t s = this->children.erase(child);
-		assert(s == 1);
+		if (this->children.erase(child) != 1)
+		{
+			assert(false);
+		}
 	}
 
 	void init(SymState* parent, AbstractInstruction* instr, const std::shared_ptr<const FAE>& fae, QueueType::iterator queueTag) {

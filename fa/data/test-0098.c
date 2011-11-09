@@ -1,3 +1,8 @@
+/*
+ * Linux kernel doubly linked lists
+ *
+ * boxes: test-0098.boxes
+ */
 
 #include <stdlib.h>
 
@@ -142,7 +147,7 @@ int main()
         create_sll_item(sll);
 
     while (sll)
-	destroy_sll_item(sll);
+        destroy_sll_item(sll);
 
     return 0;
 }
