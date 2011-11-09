@@ -2,6 +2,9 @@
 How to preprocess all *.c files in Linux kernel
 ===============================================
 
+[TODO: not needed --- we can use predator directly]
+
+
 Do some (minimal) configuration (file 0-kernel-config is my .config):
   $ make ARCH=i386 menuconfig
 
