@@ -45,9 +45,27 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
-void SymProc::failWithBackTrace() {
-    printBackTrace(*this, ML_ERROR);
+void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace) {
+    // update trace graph
+    Trace::MsgNode *trMsg = new Trace::MsgNode(sh_.traceNode(), level, lw_);
+    sh_.traceUpdate(trMsg);
+    CL_BREAK_IF(!chkTraceGraphConsistency(trMsg));
+
+    // print the backtrace
+    bt_->printBackTrace(forcePtrace);
+
+    // dump trace graph, or schedule and endpoint for batch trace graph dump
+#if 2 == SE_DUMP_TRACE_GRAPHS
+    Trace::plotTrace(sh_.traceNode(), "symtrace");
+#elif 1 == SE_DUMP_TRACE_GRAPHS
+    Trace::GraphProxy *glProxy = Trace::Globals::instance()->glProxy();
+    glProxy->insert(sh_.traceNode(), "symtrace");
+#endif
+
     printMemUsage("SymBackTrace::printBackTrace");
+    if (ML_ERROR != level)
+        // do not panic for now
+        return;
 
 #if SE_ERROR_RECOVERY_MODE
     errorDetected_ = true;
@@ -425,7 +443,7 @@ ObjHandle SymProc::objByOperand(const struct cl_operand &op) {
     // check for invalid dereference
     const TObjType cltTarget = op.type;
     if (this->checkForInvalidDeref(at, cltTarget->size)) {
-        this->failWithBackTrace();
+        this->printBackTrace(ML_ERROR);
         return ObjHandle(OBJ_DEREF_FAILED);
     }
 
@@ -535,13 +553,13 @@ void SymProc::heapObjDefineType(const ObjHandle &lhs, TValId rhs) {
 void SymProc::reportMemLeak(const EValueTarget code, const char *reason) {
     const char *const what = describeRootObj(code);
     CL_WARN_MSG(lw_, "memory leak detected while " << reason << "ing " << what);
-    printBackTrace(*this, ML_WARN);
+    this->printBackTrace(ML_WARN);
 }
 
 void SymProc::heapSetSingleVal(const ObjHandle &lhs, TValId rhs) {
     if (!lhs.isValid()) {
         CL_ERROR_MSG(lw_, "invalid L-value");
-        this->failWithBackTrace();
+        this->printBackTrace(ML_ERROR);
         return;
     }
 
@@ -557,7 +575,7 @@ void SymProc::heapSetSingleVal(const ObjHandle &lhs, TValId rhs) {
             CL_ERROR_MSG(lw_, "not enough space to store value of a pointer");
             CL_NOTE_MSG(lw_, "dstSize: " << dstSize << " B");
             CL_NOTE_MSG(lw_, "ptrSize: " << ptrSize << " B");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             rhs = sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
         }
     }
@@ -712,23 +730,23 @@ void SymExecCore::execFree(TValId val) {
     switch (code) {
         case VT_DELETED:
             CL_ERROR_MSG(lw_, "double free()");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             return;
 
         case VT_LOST:
             CL_ERROR_MSG(lw_, "attempt to free a non-existing non-heap object");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             return;
 
         case VT_STATIC:
         case VT_ON_STACK:
             CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             return;
 
         case VT_CUSTOM:
             CL_ERROR_MSG(lw_, "free() called on non-pointer value");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             return;
 
         case VT_INVALID:
@@ -743,7 +761,7 @@ void SymExecCore::execFree(TValId val) {
 
             CL_ERROR_MSG(lw_, "invalid free()");
             describeUnknownVal(*this, val, "free");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             return;
 
         case VT_ON_HEAP:
@@ -753,7 +771,7 @@ void SymExecCore::execFree(TValId val) {
     const TOffset off = sh_.valOffset(val);
     if (off) {
         CL_ERROR_MSG(lw_, "free() called with offset " << off << "B");
-        this->failWithBackTrace();
+        this->printBackTrace(ML_ERROR);
         return;
     }
 
@@ -777,7 +795,7 @@ void SymExecCore::execHeapAlloc(
         CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
 malloc/calloc is implementation-defined");
         CL_NOTE_MSG(lw_, "assuming NULL as the result");
-        printBackTrace(*this, ML_WARN);
+        this->printBackTrace(ML_WARN);
         this->objSetValue(lhs, VAL_NULL);
         this->killInsn(insn);
         dst.insert(sh_);
@@ -1053,23 +1071,6 @@ TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
     return sh_.valByOffset(at, offRequested);
 }
 
-void printBackTrace(SymProc &proc, EMsgLevel level, bool forcePtrace) {
-    SymHeap &sh = proc.sh();
-    const struct cl_loc *loc = proc.lw();
-    Trace::MsgNode *trMsg = new Trace::MsgNode(sh.traceNode(), level, loc);
-    sh.traceUpdate(trMsg);
-    CL_BREAK_IF(!chkTraceGraphConsistency(trMsg));
-
-    const SymBackTrace *bt = proc.bt();
-    bt->printBackTrace(forcePtrace);
-#if 2 == SE_DUMP_TRACE_GRAPHS
-    Trace::plotTrace(sh.traceNode(), "symtrace");
-#elif 1 == SE_DUMP_TRACE_GRAPHS
-    Trace::GraphProxy *glProxy = Trace::Globals::instance()->glProxy();
-    glProxy->insert(sh.traceNode(), "symtrace");
-#endif
-}
-
 // TODO: move this to symutil?
 bool isIntCst(const SymHeap &sh, const TValId val) {
     switch (val) {
@@ -1315,7 +1316,7 @@ void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
     CL_ERROR_MSG(lw_, "error label \"" << name << "\" has been reached");
 
     // print the backtrace and leave
-    printBackTrace(*this, ML_ERROR, /* forcePtrace */ true);
+    this->printBackTrace(ML_ERROR, /* forcePtrace */ true);
     printMemUsage("SymBackTrace::printBackTrace");
     throw std::runtime_error("an error label has been reached");
 }

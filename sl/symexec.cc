@@ -493,7 +493,7 @@ void SymExecEngine::execCondInsn() {
     if (isUninitialized(origin)) {
         CL_WARN_MSG(lw_, "conditional jump depends on uninitialized value");
         describeUnknownVal(proc, val, "use");
-        printBackTrace(proc, ML_WARN);
+        proc.printBackTrace(ML_WARN);
     }
 
     std::ostringstream str;
@@ -955,7 +955,7 @@ fail:
     }
 
     // something wrong happened, print the backtrace
-    proc.failWithBackTrace();
+    proc.printBackTrace(ML_ERROR);
 
     if (!proc.hasFatalError())
         results.insert(entry);

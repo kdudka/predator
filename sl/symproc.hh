@@ -113,8 +113,8 @@ class SymProc {
         /// check whether we can safely access sizeOfTarget at the given address
         bool checkForInvalidDeref(TValId val, const TOffset sizeOfTarget);
 
-        /// print backtrace and remember that an error happened
-        void failWithBackTrace();
+        /// print backtrace and update the current error level correspondingly
+        void printBackTrace(EMsgLevel level, bool forcePtrace = false);
 
         /// if true, the current state is not going to be inserted into dst
         bool hasFatalError() const;
@@ -153,8 +153,6 @@ class SymProc {
         friend class DerefFailedWriter;
         friend class ValueMirror;
 };
-
-void printBackTrace(SymProc &, EMsgLevel level, bool forcePtrace = false);
 
 /// @todo make the API more generic and better documented
 void describeUnknownVal(

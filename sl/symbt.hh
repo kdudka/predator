@@ -124,7 +124,7 @@ class SymBackTrace {
          * backtrace is trivial
          */
         void printBackTrace(bool forcePtrace = false) const;
-        friend void printBackTrace(SymProc &, EMsgLevel, bool forcePtrace);
+        friend class SymProc;
         friend class SymExecEngine;
 
     private:

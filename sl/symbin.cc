@@ -260,7 +260,7 @@ bool handleBreak(
     // print what happened
     CL_WARN_MSG(&insn.loc, name << "() reached, stopping per user's request");
     printUserMessage(core, opList[/* msg */ 2]);
-    printBackTrace(core, ML_WARN);
+    core.printBackTrace(ML_WARN);
 
     // trap to debugger
     CL_TRAP;
@@ -284,7 +284,7 @@ bool handleCalloc(
 
     unsigned size;
     if (!resolveCallocSize(&size, core, opList)) {
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
         return true;
     }
 
@@ -337,7 +337,7 @@ bool handleKzalloc(
     long size;
     if (!numFromVal(&size, core.sh(), valSize)) {
         CL_ERROR_MSG(lw, "size arg of " << name << "() is not a known integer");
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
         return true;
     }
 
@@ -365,7 +365,7 @@ bool handleMalloc(
     long size;
     if (!numFromVal(&size, core.sh(), valSize)) {
         CL_ERROR_MSG(lw, "size arg of malloc() is not a known integer");
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
         return true;
     }
 
@@ -393,13 +393,13 @@ bool handleMemset(
     long size;
     if (!numFromVal(&size, sh, valSize)) {
         CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
         insertCoreHeap(dst, core, insn);
         return true;
     }
     if (!size) {
         CL_WARN_MSG(lw, "ignoring call of memset() with size == 0");
-        printBackTrace(core, ML_WARN);
+        core.printBackTrace(ML_WARN);
         insertCoreHeap(dst, core, insn);
         return true;
     }
@@ -408,7 +408,7 @@ bool handleMemset(
     const TValId addr = core.valFromOperand(opList[/* addr */ 2]);
     if (core.checkForInvalidDeref(addr, size)) {
         // error message already printed out
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
         insertCoreHeap(dst, core, insn);
         return true;
     }
@@ -432,7 +432,7 @@ bool handleMemset(
     // check for memory leaks
     if (lm.collectJunkFrom(killedPtrs)) {
         CL_WARN_MSG(lw, "memory leak detected while executing memset()");
-        printBackTrace(core, ML_WARN);
+        core.printBackTrace(ML_WARN);
     }
 
     // leave monitor and write the result
@@ -459,7 +459,7 @@ bool handlePrintf(
     const char *fmt;
     if (!stringFromVal(&fmt, sh, valFmt)) {
         CL_ERROR_MSG(lw, "fmt arg of printf() is not a string literal");
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
         insertCoreHeap(dst, core, insn);
         return true;
     }
@@ -512,14 +512,14 @@ bool handlePrintf(
     if (opIdx < opList.size()) {
         // this is quite suspicious, but would not crash the program
         CL_WARN_MSG(lw, "too many arguments given to printf()");
-        printBackTrace(core, ML_WARN);
+        core.printBackTrace(ML_WARN);
     }
 
     insertCoreHeap(dst, core, insn);
     return true;
 
 fail:
-    core.failWithBackTrace();
+    core.printBackTrace(ML_ERROR);
     insertCoreHeap(dst, core, insn);
     return true;
 }
@@ -538,7 +538,7 @@ bool handlePuts(
     }
 
     if (!validateStringOp(core, opList[/* s */ 2]))
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
 
     insertCoreHeap(dst, core, insn);
     return true;
@@ -723,7 +723,7 @@ bool handleError(
 
     // print the user message and backtrace
     printUserMessage(core, opList[/* msg */ 2]);
-    printBackTrace(core, ML_ERROR);
+    core.printBackTrace(ML_ERROR);
     return true;
 }
 
