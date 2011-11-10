@@ -9,29 +9,21 @@ extern void free(void *);
 extern void __attribute__((noreturn)) abort(void);
 
 // malloc with check
-#if 1
 void *my_checked_malloc(size_t sz) {
     void *ptr = malloc(sz);
     if(!ptr)
         abort();
     return ptr;
 }
+// calloc with check
 void *my_checked_calloc(size_t sz) {
     void *ptr = calloc(1, sz);
     if(!ptr)
         abort();
     return ptr;
 }
-#else
-#define my_checked_malloc(size) ({      \
-    void *ptr = malloc(size);           \
-    if (!ptr)                           \
-        abort();                        \
-    ptr;                                \
-})
-#endif
 
-// allocation macros replacement
+// GLIB allocation macros replacement
 #undef g_slice_new0
 #define  g_slice_new0(type)     ((type*) my_checked_calloc (sizeof (type)))
 #undef g_slice_new
