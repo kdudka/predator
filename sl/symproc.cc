@@ -888,6 +888,28 @@ bool compareIntCsts(
     return true;
 }
 
+TValId comparePointers(
+        SymHeap                     &sh,
+        const enum cl_binop_e       code,
+        const TValId                v1,
+        const TValId                v2)
+{
+    const TValId root1 = sh.valRoot(v1);
+    const TValId root2 = sh.valRoot(v2);
+    if (root1 != root2)
+        // TODO: not much info, but we can still deduce at least something
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    TValId result;
+    const long off1 = sh.valOffset(v1);
+    const long off2 = sh.valOffset(v2);
+    if (compareIntCsts(&result, code, off1, off2))
+        return result;
+
+    CL_BREAK_IF("please implement");
+    return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+}
+
 TValId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
@@ -912,6 +934,12 @@ TValId compareValues(
         return boolToVal(!neg);
     if (sh.proveNeq(v1, v2) && preserveEq)
         return boolToVal(neg);
+
+    const EValueTarget code1 = sh.valTarget(v1);
+    const EValueTarget code2 = sh.valTarget(v2);
+    if (isPossibleToDeref(code1) && isPossibleToDeref(code2))
+        // both values are pointers
+        return comparePointers(sh, code, v1, v2);
 
     long num1, num2;
     if (numFromVal(&num1, sh, v1) && numFromVal(&num2, sh, v2)) {
