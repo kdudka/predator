@@ -205,23 +205,23 @@ test_list_remove (void)
   GList *st;
   gint   nums[10] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
   gint   i;
-
-  for (i = 0; i < 10; i++)
+#define N 4     // Predator edit (max 10 = performance problem)
+  for (i = 0; i < N; i++)
     {
       list = g_list_append (list, &nums[i]);
       list = g_list_append (list, &nums[i]);
     }
 
-  g_assert_cmpint (g_list_length (list), ==, 20);
+  g_assert_cmpint (g_list_length (list), ==, 2*N);
 
-  for (i = 0; i < 10; i++)
+  for (i = 0; i < N; i++)
     {
       list = g_list_remove (list, &nums[i]);
     }
 
-  g_assert_cmpint (g_list_length (list), ==, 10);
+  g_assert_cmpint (g_list_length (list), ==, N);
 
-  for (i = 0; i < 10; i++)
+  for (i = 0; i < N; i++)
     {
       st = g_list_nth (list, i);
       g_assert (*((gint*) st->data) == i);
@@ -427,7 +427,7 @@ main (int argc, char *argv[])
   g_test_add_func ("/list/reverse", test_list_reverse);
   g_test_add_func ("/list/nth", test_list_nth);
   g_test_add_func ("/list/concat", test_list_concat);
-//  g_test_add_func ("/list/remove", test_list_remove);
+  g_test_add_func ("/list/remove", test_list_remove);
   g_test_add_func ("/list/remove-all", test_list_remove_all);
   g_test_add_func ("/list/first-last", test_list_first_last);
   g_test_add_func ("/list/insert", test_list_insert);
