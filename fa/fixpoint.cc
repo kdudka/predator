@@ -107,6 +107,8 @@ inline bool normalizeAndFold(FAE& fae, BoxMan& boxMan) {
 	std::vector<size_t> order;
 	std::vector<bool> marked;
 
+//	fae.unreachableFree();
+
 	fae.updateConnectionGraph();
 
 //	vm.getNearbyReferences(abp.d_ref.root, tmp);
@@ -129,17 +131,49 @@ inline bool normalizeAndFold(FAE& fae, BoxMan& boxMan) {
 	// do not touch root 0
 	tmp.insert(abp.d_ref.root);
 
+	std::unordered_map<Box, std::set<size_t>, boost::hash<Box>> cache;
+
+	std::vector<std::shared_ptr<const Box>> boxes;
+
 	// never fold at root 0
 	for (size_t i = 1; i < order.size(); ++i) {
 
 		assert(fae.roots[order[i]]);
 
-		if (folding.discover(order[i], tmp))
+		if (folding.discover(order[i], tmp, &boxes)) {
+
 			matched = true;
 
-	}
+			continue;
 
-	boxMan.clearBoxCache();
+		}
+
+		for (auto& aBox : boxes) {
+
+			auto iter = cache.insert(std::make_pair(*aBox, std::set<size_t>())).first;
+
+			iter->second.insert(order[i]);
+
+			if (iter->second.count(order[i - 1])) {
+
+				auto newBox = boxMan.getBox(*aBox);
+
+				CL_CDEBUG(3, "learned " << *(AbstractBox*)newBox << ":" << std::endl << *newBox);
+
+				for (auto& j : iter->second)
+					folding.discover(j, tmp);
+
+				matched = true;
+
+				cache.erase(iter);
+
+			}
+
+		}
+
+		boxes.clear();
+
+	}
 
 	CL_CDEBUG(3, "after folding: " << std::endl << fae);
 
