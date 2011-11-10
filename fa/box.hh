@@ -374,55 +374,6 @@ public:
 		return this->selCoverage[index + 1];
 
 	}
-/*
-	void computeCoverage() {
-		for (auto root : this->roots) {
-			std::vector<size_t> v;
-			Box::getDownwardCoverage(*root, v);
-			std::set<size_t> s(v.begin(), v.end());
-			if (v.empty())
-				throw std::runtime_error("Box::computeCoverage(): No outgoing selectors found!");
-			if (v.size() != s.size())
-				throw std::runtime_error("Box::computeCoverage(): A selector was defined more than once!");
-			this->selCoverage.push_back(s);
-		}
-	}
-*//*
-	void computeUpwardCoverage() {
-
-		for (size_t i = 0; i < this->roots.size(); ++i) {
-
-			for (auto& rootInfo : this->rootMap[i])
-				this->enumerateSelectorsAtLeaf(this->selCoverage[rootInfo.root], i, rootInfo.root);
-
-		}
-
-	}
-
-	void computeTriggers() {
-		for (size_t i = 0; i < this->roots.size(); ++i) {
-			this->triggers.push_back(std::set<const AbstractBox*>());
-			for (TA<label_type>::iterator j = this->roots[i]->accBegin(); j != this->roots[i]->accEnd(j); ++j)
-				this->triggers.back().insert(j->label()->getNode().begin(), j->label()->getNode().end());
-		}
-	}
-
-	const std::set<const AbstractBox*>& getTrigger(size_t root) const {
-		assert(root < this->triggers.size());
-		return this->triggers[root];
-	}
-*//*
-	const ConnectionGraph::CutpointSignature& getSignature() const {
-
-		return this->outputSignature;
-
-	}
-*//*
-	const std::vector<size_t>& getSig(size_t root) const {
-		assert(root < this->rootSig.size());
-		return this->rootSig[root];
-	}
-*/
 
 	virtual size_t selectorToInput(size_t input) const {
 
@@ -539,20 +490,6 @@ public:
 		this->enumerateSelectorsAtLeaves(this->selCoverage, *this->input);
 
 	}
-/*
-	bool isComposed() const {
-		return this->composed;
-	}
-
-	void dumpSelectorCoverage() const {
-
-		for (std::vector<std::set<size_t> >::const_iterator i = this->selCoverage.begin(); i != this->selCoverage.end(); ++i) {
-			utils::printCont(std::cerr, *i);
-			std::cerr << std::endl;
-		}
-
-	}
-*/
 
 	friend std::ostream& operator<<(std::ostream& os, const Box& box) {
 
