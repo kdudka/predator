@@ -909,6 +909,8 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
 
     const struct cl_operand &opFnc = opList[/* fnc */ 1];
 
+    EMsgLevel ml = ML_ERROR;
+
     int uid;
     if (!proc.fncFromOperand(&uid, opFnc)) {
         CL_BREAK_IF(CL_OPERAND_CST == opFnc.code);
@@ -930,6 +932,9 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
 
         CL_WARN_MSG(lw, "ignoring call of undefined function: "
                 << name << "()");
+
+        // do not treat this as a real error
+        ml = ML_WARN;
         goto fail;
     }
 
@@ -955,7 +960,7 @@ fail:
     }
 
     // something wrong happened, print the backtrace
-    proc.printBackTrace(ML_ERROR);
+    proc.printBackTrace(ml);
 
     if (!proc.hasFatalError())
         results.insert(entry);
