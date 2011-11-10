@@ -47,8 +47,8 @@ public:
 		size_t root; // cutpoint number
 		bool joint; // multiple times
 		size_t forwardSelector; // lowest selector which reaches the given cutpoint
-		size_t backwardSelector; // lowest selector from which the state can be reached in the opposite direction
-		std::set<size_t> defines; // set of selectors of the cutpoint hidden in the subtree (includes backwardSelector)
+		size_t backwardSelector; // lowest selector of 'root' from which the state can be reached in the opposite direction
+		std::set<size_t> defines; // set of selectors of the cutpoint hidden in the subtree (includes backwardSelector if exists)
 
 		CutpointInfo(size_t root = 0) : root(root), joint(false), forwardSelector((size_t)(-1)),
 			backwardSelector((size_t)(-1)) {}
@@ -75,6 +75,9 @@ public:
 
 		}
 
+		/**
+		 * @todo improve signature printing
+		 */
 		friend std::ostream& operator<<(std::ostream& os, const CutpointInfo& info) {
 
 			os << info.root << '(' << info.joint << ',';
@@ -167,6 +170,19 @@ public:
 
 	}
 
+	static bool containsCutpoints(const CutpointSignature& signature, const std::set<size_t>& cutpoints) {
+
+		for (auto& cutpoint : signature) {
+
+			if (cutpoints.count(cutpoint.root))
+				return true;
+
+		}
+
+		return false;
+
+	}
+
 	static size_t getSelectorToTarget(const CutpointSignature& signature, size_t target) {
 
 		for (auto& cutpoint : signature) {
@@ -199,11 +215,9 @@ public:
 
 	static bool areDisjoint(const std::set<size_t>& s1, const std::set<size_t>& s2) {
 
-		std::vector<size_t> v;
+		std::vector<size_t> v(s1.size());
 
-		std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), v.end());
-
-		return v.empty();
+		return std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), v.begin()) == v.begin();
 
 	}
 /*
@@ -228,6 +242,8 @@ public:
 				signature[offset++] = signature[i];
 
 			else {
+
+				assert(p.first->second);
 
 				p.first->second->joint = true;
 
@@ -260,59 +276,6 @@ public:
 
 		stateMap.insert(std::make_pair(state, v));
 
-/*
-		if (v.size() > p.first->second.size()) {
-
-			p.first->second = v;
-
-			return true;
-
-		}
-
-		bool changed = false;
-
-		for (size_t i = 0; i < v.size(); ++i) {
-
-			assert(v[i].root == p.first->second[i].root);
-
-			if (v[i].joint && !p.first->second[i].joint) {
-
-				p.first->second[i].joint = true;
-
-				changed = true;
-
-			}
-
-			if (p.first->second[i].backwardSelector > v[i].backwardSelector) {
-
-				p.first->second[i].backwardSelector = v[i].backwardSelector;
-
-				changed = true;
-
-			}
-
-			if (v[i].defines.size() <= p.first->second[i].defines.size()) {
-
-				assert(ConnectionGraph::isSubset(v[i].defines, p.first->second[i].defines));
-
-				continue;
-
-			}
-
-			if (v[i].defines.size() > p.first->second[i].defines.size()) {
-
-				assert(ConnectionGraph::isSubset(p.first->second[i].defines, v[i].defines));
-
-				p.first->second[i].defines = v[i].defines;
-
-				changed = true;
-
-			}
-
-		}
-
-		return changed;
-*/
 	}
 
 	static void processStateSignature(CutpointSignature& result, StructuralBox* box, size_t input,
@@ -367,7 +330,7 @@ public:
 
 			for (size_t j = 0; j < sBox->getArity(); ++j) {
 
-				auto k = stateMap.find(t.lhs()[lhsOffset]);
+				auto k = stateMap.find(t.lhs()[lhsOffset + j]);
 
 				if (k == stateMap.end())
 					return false;
@@ -446,6 +409,8 @@ public:
 					continue;
 
 				}
+
+				std::cerr << 'q' << t.rhs() << ": " << v << std::endl;
 
 				ConnectionGraph::normalizeSignature(v);
 
@@ -719,6 +684,7 @@ public:
 				for (auto& tmp : srcSignature) {
 
 					signature.push_back(tmp);
+					signature.back().forwardSelector = cutpoint.forwardSelector;
 
 					if (tmp.backwardSelector == (size_t)(-1))
 						continue;
@@ -742,6 +708,7 @@ public:
 				for (auto& tmp : srcSignature) {
 
 					signature.push_back(tmp);
+					signature.back().forwardSelector = cutpoint.forwardSelector;
 
 					if (tmp.backwardSelector == (size_t)(-1))
 						continue;
@@ -753,7 +720,7 @@ public:
 					assert(iter != this->data[tmp.root].backwardMap.end());
 					assert(iter->second == src);
 
-					std::map<size_t, size_t>::iterator i = this->data[tmp.root].backwardMap.begin();
+					auto i = this->data[tmp.root].backwardMap.begin();
 
 					for (; i != this->data[tmp.root].backwardMap.end(); ++i) {
 
