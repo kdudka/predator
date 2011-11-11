@@ -1029,7 +1029,38 @@ bool computeIntCstResult(
     return true;
 }
 
+TValId diffPointers(
+        SymHeap                     &sh,
+        const TValId                v1,
+        const TValId                v2)
+{
+    const TValId root1 = sh.valRoot(v1);
+    const TValId root2 = sh.valRoot(v2);
+    if (root1 != root2)
+        // TODO: allow to see through segments here?
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    TValId result;
+    const long off1 = sh.valOffset(v1);
+    const long off2 = sh.valOffset(v2);
+    if (computeIntCstResult(&result, sh, CL_BINOP_MINUS, off1, off2))
+        return result;
+
+    CL_BREAK_IF("diffPointers() malfunction");
+    return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+}
+
 TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
+    if (CL_BINOP_MINUS == code) {
+        // chances are this could be a pointer difference
+        const EValueTarget code1 = sh_.valTarget(v1);
+        const EValueTarget code2 = sh_.valTarget(v2);
+
+        if (isPossibleToDeref(code1) && isPossibleToDeref(code2))
+            // ... and it indeed is a pointer difference
+            return diffPointers(sh_, v1, v2);
+    }
+
     // check whether we both values are integral constant
     long num1, num2;
     if (numFromVal(&num1, sh_, v1) && numFromVal(&num2, sh_, v2)) {
