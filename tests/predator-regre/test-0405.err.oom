@@ -1,5 +1,0 @@
-plarena-harness.h:59:5: error: dereference of NULL value
-test-0405.c:29:16: note: from call of PR_Lock()
-test-0405.c:99:37: note: from call of LockArena()
-test-0405.c:263:34: note: from call of PL_ArenaAllocate()
-test-0405.c:253:5: note: from call of main()

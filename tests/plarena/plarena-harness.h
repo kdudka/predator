@@ -30,10 +30,16 @@ __attribute__((visibility("default"))) PRStatus PR_CallOnce(
     PRCallOnceFN func)
 {
     if (once->initialized)
-        return PR_SUCCESS;
+        return once->status;
 
+    // call the function we are requested to call
+    const PRStatus status = func();
+
+    // update state info
     once->initialized = 1;
-    return func();
+    once->status = status;
+
+    return status;
 }
 
 /* ATTENTION: do not use this simplified model for concurrency analyzers */
