@@ -982,12 +982,13 @@ TValId compareValues(
     return sh.valCreate(VT_UNKNOWN, vo);
 }
 
-TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
-    // check whether we both values are integral constant
-    long num1, num2;
-    if (!numFromVal(&num1, sh_, v1) || !numFromVal(&num2, sh_, v2))
-        return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-
+bool computeIntCstResult(
+        TValId                      *pDst,
+        SymHeap                     &sh,
+        const enum cl_binop_e       code,
+        const long                  num1,
+        const long                  num2)
+{
     // compute the result of an integral binary operation
     long result;
     switch (code) {
@@ -1018,13 +1019,26 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
 
         default:
             CL_BREAK_IF("unhandled binary integral operation");
-            return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+            return false;
     }
 
     // wrap the result as a heap value expressing a constant integer
     CustomValue cv(CV_INT);
     cv.data.num = result;
-    return sh_.valWrapCustom(cv);
+    *pDst = sh.valWrapCustom(cv);
+    return true;
+}
+
+TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
+    // check whether we both values are integral constant
+    long num1, num2;
+    if (numFromVal(&num1, sh_, v1) && numFromVal(&num2, sh_, v2)) {
+        TValId result;
+        if (computeIntCstResult(&result, sh_, code, num1, num2))
+            return result;
+    }
+
+    return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
 TValId handleBitNot(SymHeap &sh, const TValId val) {
