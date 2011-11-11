@@ -59,6 +59,7 @@ bool operator==(const struct cl_type &a, const struct cl_type &b) {
             case CL_TYPE_CHAR:
             case CL_TYPE_BOOL:
             case CL_TYPE_REAL:
+            case CL_TYPE_ENUM:
                 if (cltA->size == cltB->size)
                     // FIXME: we simply ignore differences that gcc seems
                     //        important!
@@ -66,7 +67,6 @@ bool operator==(const struct cl_type &a, const struct cl_type &b) {
 
                 // fall through!
 
-            case CL_TYPE_ENUM:
             case CL_TYPE_UNKNOWN:
                 return false;
 
