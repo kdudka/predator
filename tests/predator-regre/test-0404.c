@@ -1,1 +1,1 @@
-../plarena/test-0404-oom.c
+../plarena/test-0404-simple.c
