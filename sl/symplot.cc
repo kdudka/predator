@@ -663,6 +663,7 @@ const char* labelByTarget(const EValueTarget code) {
         GEN_labelByCode(VT_ON_HEAP);
         GEN_labelByCode(VT_LOST);
         GEN_labelByCode(VT_DELETED);
+        GEN_labelByCode(VT_RANGE);
         GEN_labelByCode(VT_ABSTRACT);
     }
 
@@ -729,6 +730,9 @@ void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
         case CV_STRING:
             describeStr(plot, data.str, val);
             break;
+
+        case CV_INT_RANGE:
+            CL_BREAK_IF("please implement");
     }
 
     plot.out << "];\n\t" << SL_QUOTE(obj)
@@ -745,6 +749,9 @@ void plotValue(PlotData &plot, const TValId val)
 
     const EValueTarget code = sh.valTarget(val);
     switch (code) {
+        case VT_RANGE:
+            CL_BREAK_IF("please implement");
+
         case VT_CUSTOM:
             // skipt it, custom values are now handled in plotHasValue()
             return;

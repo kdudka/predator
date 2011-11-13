@@ -242,6 +242,9 @@ bool SymProc::checkForInvalidDeref(TValId val, const TOffset sizeOfTarget) {
 
     const EValueTarget code = sh_.valTarget(val);
     switch (code) {
+        case VT_RANGE:
+            CL_BREAK_IF("please implement");
+
         case VT_INVALID:
         case VT_COMPOSITE:
         case VT_CUSTOM:
@@ -748,6 +751,9 @@ void SymExecCore::execFree(TValId val) {
             CL_ERROR_MSG(lw_, "free() called on non-pointer value");
             this->printBackTrace(ML_ERROR);
             return;
+
+        case VT_RANGE:
+            CL_BREAK_IF("please implement");
 
         case VT_INVALID:
         case VT_ABSTRACT:

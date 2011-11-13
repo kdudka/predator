@@ -828,6 +828,9 @@ TValId SymHeapCore::Private::valCreate(
             val = this->assignId(new InternalCustomValue(code, origin));
             break;
 
+        case VT_RANGE:
+            CL_BREAK_IF("please implement");
+
         case VT_ABSTRACT:
             CL_BREAK_IF("invalid call of SymHeapCore::Private::valCreate()");
             // fall through!

@@ -91,6 +91,7 @@ void moveKnownValueToLeft(
         case VT_DELETED:
             return;
 
+        case VT_RANGE:
         case VT_ABSTRACT:
         case VT_INVALID:
         case VT_UNKNOWN:
