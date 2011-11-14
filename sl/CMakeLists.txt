@@ -129,11 +129,6 @@ macro(test_sym_exec_regre name_suff ext arg1)
     foreach (num ${examples})
         set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_EXEC_PREFIX} ${GCC_HOST}")
 
-        # needed for test-0000
-        foreach (inc ${clplug_incs})
-            set(cmd "${cmd} ${inc}")
-        endforeach()
-
         # we use the following flag to avoid differences on 32bit vs 64bit archs
         # in the error output, which is checked for exact match
         set(cmd "${cmd} -m32")

@@ -15,10 +15,10 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
-CMAKE           ?= cmake
-CTEST           ?= ctest
+CMAKE ?= cmake
+CTEST ?= ctest
 
-.PHONY: all clean distclean distcheck fast version.h
+.PHONY: all check clean distclean distcheck fast version.h
 
 all: version.h ../cl_build
 	# make sure the libcl.so is up2date

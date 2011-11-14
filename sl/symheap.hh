@@ -63,7 +63,7 @@ enum EValueTarget {
     VT_ON_HEAP,             ///< target is on heap
     VT_LOST,                ///< target was on stack, but it is no longer valid
     VT_DELETED,             ///< target was on heap, but it is no longer valid
-    VT_RANGE,               ///< an offset value given by an right-open interval
+    VT_RANGE,               ///< an offset value given by a right-open interval
     VT_ABSTRACT             ///< abstract object (segment)
 };
 
@@ -263,10 +263,10 @@ class SymHeapCore {
         /// destruction of the symbolic heap invalidates all IDs of its entities
         virtual ~SymHeapCore();
 
-        /// @note there is no such thing like COW implemented for now
+        /// relatively cheap operation as long as SH_COPY_ON_WRITE is enabled
         SymHeapCore(const SymHeapCore &);
 
-        /// @note there is no such thing like COW implemented for now
+        /// relatively cheap operation as long as SH_COPY_ON_WRITE is enabled
         SymHeapCore& operator=(const SymHeapCore &);
 
         /// exchange the contents with the other heap (works in constant time)
@@ -750,10 +750,10 @@ class SymHeap: public SymHeapCore {
         /// destruction of the symbolic heap invalidates all IDs of its entities
         virtual ~SymHeap();
 
-        /// @note there is no such thing like COW implemented for now
+        /// relatively cheap operation as long as SH_COPY_ON_WRITE is enabled
         SymHeap(const SymHeap &);
 
-        /// @note there is no such thing like COW implemented for now
+        /// relatively cheap operation as long as SH_COPY_ON_WRITE is enabled
         SymHeap& operator=(const SymHeap &);
 
         virtual void swap(SymHeapCore &);
