@@ -29,7 +29,159 @@
 #include "forestautext.hh"
 #include "abstractbox.hh"
 #include "utils.hh"
+/*
+struct NormInfo {
 
+	struct RootInfo {
+
+		size_t index;
+		std::vector<std::pair<size_t, std::vector<size_t> > > mergedRoots;
+
+		RootInfo(size_t index) : index(index) {}
+
+		void initRoots(FAE& fae) const {
+			fae.roots[this->index] = fae.taMan->alloc();
+			for (std::vector<std::pair<size_t, std::vector<size_t> > >::const_iterator i = this->mergedRoots.begin(); i != this->mergedRoots.end(); ++i)
+				fae.roots[i->first] = fae.taMan->alloc();
+		}
+
+		friend std::ostream& operator<<(std::ostream& os, const RootInfo& rootInfo) {
+			os << rootInfo.index << '|';
+			for (std::vector<std::pair<size_t, std::vector<size_t> > >::const_iterator i = rootInfo.mergedRoots.begin(); i != rootInfo.mergedRoots.end(); ++i) {
+				os << i->first << ':';
+				for (std::vector<size_t>::const_iterator j = i->second.begin(); j != i->second.end(); ++j)
+					os << ' ' << *j;
+			}
+			return os;
+		}
+
+	};
+
+	size_t rootCount;
+//		std::vector<RootInfo> data;
+	std::map<size_t, RootInfo> data;
+
+	NormInfo() {}
+
+	void clear() {
+		this->rootCount = 0;
+		this->data.clear();
+	}
+
+	void addRoot(size_t index) {
+		bool b = this->data.insert(std::make_pair(index, RootInfo(index))).second;
+		assert(b);
+	}
+
+	void mergeRoots(size_t dst, size_t src, const std::vector<size_t>& refStates) {
+		std::map<size_t, RootInfo>::iterator i = this->data.find(dst);
+		assert(i != this->data.end());
+		std::map<size_t, RootInfo>::iterator j = this->data.find(src);
+		assert(j != this->data.end());
+		i->second.mergedRoots.push_back(std::make_pair(src, refStates));
+		for (std::vector<std::pair<size_t, std::vector<size_t> > >::iterator k = j->second.mergedRoots.begin(); k != j->second.mergedRoots.end(); ++k)
+			i->second.mergedRoots.push_back(*k);
+		this->data.erase(j);
+	}
+
+	void reindex(const std::vector<size_t>& index) {
+		std::map<size_t, RootInfo> tmp(this->data);
+		this->data.clear();
+		for (std::map<size_t, RootInfo>::iterator i = tmp.begin(); i != tmp.end(); ++i)
+			this->data.insert(std::make_pair(index[i->first], i->second));
+	}
+
+	void initRoots(FAE& fae) const {
+		fae.roots.resize(this->rootCount, NULL);
+		for (std::map<size_t, RootInfo>::const_iterator i = this->data.begin(); i != this->data.end(); ++i)
+			i->second.initRoots(fae);
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const NormInfo& normInfo) {
+		os << "roots " << normInfo.rootCount << std::endl;
+		for (std::map<size_t, RootInfo>::const_iterator i = normInfo.data.begin(); i != normInfo.data.end(); ++i)
+			os << i->first << ':' << i->second << std::endl;
+		return os;
+	}
+
+	void check() const {
+		size_t i = 0;
+		for (std::map<size_t, RootInfo>::const_iterator j = this->data.begin(); j != this->data.end(); ++j)
+			i += j->second.mergedRoots.size() + 1;
+		assert(i == this->rootCount);
+	}
+
+};*/
+/*
+struct IntersectAndRelabelF {
+
+	FAE& fae;
+	TA<label_type>& dst;
+	const std::vector<size_t>& index;
+	const TA<label_type>& src1;
+	const TA<label_type>& src2;
+
+	IntersectAndRelabelF(FAE& fae, TA<label_type>& dst, const std::vector<size_t>& index, const TA<label_type>& src1, const TA<label_type>& src2)
+		: fae(fae), dst(dst), index(index), src1(src1), src2(src2) {}
+
+	void operator()(const TT<label_type>* t1, const TT<label_type>* t2, const std::vector<size_t>& lhs, size_t& rhs) {
+//			std::cerr << *t1 << " vs " << *t2 << std::endl;
+		const Data* data;
+		if (this->fae.isData(t1->rhs(), data)) {
+			if (data->isRef()) {
+				if (data->d_ref.root < this->index.size())
+					rhs = fae.addData(this->dst, Data::createRef(this->index[data->d_ref.root], data->d_ref.displ));
+				return;
+			}
+			rhs = t1->rhs();
+		}
+		this->dst.addTransition(lhs, t1->_label, rhs);
+		if (this->src1.isFinalState(t1->rhs()) && this->src2.isFinalState(t2->rhs()))
+			this->dst.addFinalState(rhs);
+	}
+
+};
+
+struct IntersectAndRelabelSpecialF {
+
+	FAE& fae;
+	TA<label_type>& dst;
+	const std::vector<size_t>& index;
+	std::set<std::pair<size_t, size_t> >& splitPoints;
+	const TA<label_type>& src1;
+	const TA<label_type>& src2;
+	boost::unordered_map<size_t, size_t> rootMap;
+
+	IntersectAndRelabelSpecialF(FAE& fae, TA<label_type>& dst, std::set<std::pair<size_t, size_t> >& splitPoints, const std::vector<size_t>& index, const TA<label_type>& src1, const TA<label_type>& src2, const NormInfo::RootInfo& rootInfo)
+		: fae(fae), dst(dst), index(index), splitPoints(splitPoints), src1(src1), src2(src2) {
+		for (std::vector<std::pair<size_t, std::vector<size_t> > >::const_iterator i = rootInfo.mergedRoots.begin(); i != rootInfo.mergedRoots.end(); ++i) {
+			for (std::vector<size_t>::const_iterator j = i->second.begin(); j != i->second.end(); ++j) {
+				bool b = this->rootMap.insert(std::make_pair(*j, i->first)).second;
+				assert(b);
+			}
+		}
+	}
+
+	void operator()(const TT<label_type>* t1, const TT<label_type>* t2, const std::vector<size_t>& lhs, size_t& rhs) {
+		const Data* data;
+		if (this->fae.isData(t1->rhs(), data)) {
+			if (data->isRef()) {
+				if (data->d_ref.root < this->index.size())
+					rhs = fae.addData(this->dst, Data::createRef(this->index[data->d_ref.root], data->d_ref.displ));
+				return;
+			}
+			rhs = t1->rhs();
+		}
+		this->dst.addTransition(lhs, t1->_label, rhs);
+		if (this->src1.isFinalState(t1->rhs()) && this->src2.isFinalState(t2->rhs()))
+			this->dst.addFinalState(rhs);
+		boost::unordered_map<size_t, size_t>::iterator i = rootMap.find(t2->rhs());
+		if (i != this->rootMap.end())
+			this->splitPoints.insert(std::make_pair(rhs, i->second));
+	}
+
+};
+*/
 class Normalization {
 
 	FAE& fae;
@@ -79,11 +231,11 @@ protected:
 				continue;
 
 			size_t root = i->d_ref.root;
-
 			// mark rootpoint pointed by a variable
-			marked[root] = true;
 
+			marked[root] = true;
 			// check whether we traversed this one before
+
 			if (visited[root])
 				continue;
 
@@ -112,7 +264,6 @@ protected:
 			this->fae.connectionGraph.visit(root, visited);
 
 		}
-
 	}
 
 	void checkGarbage(const std::vector<bool>& visited) const {
@@ -282,7 +433,133 @@ public:
 		}
 
 	}
+/*
+	// single accepting in, (single accepting out?)
+	void split(std::vector<TA<label_type>*>& dst, const TA<label_type>& src, size_t baseIndex, const std::set<std::pair<size_t, size_t> >& splitPoints) {
 
+		Index<size_t> stateIndex;
+
+		TA<label_type>::td_cache_type cache;
+		src.buildTDCache(cache);
+
+		boost::unordered_map<size_t, size_t> splitMap;
+
+		for (std::set<size_t>::const_iterator i = src.getFinalStates().begin(); i != src.getFinalStates().end(); ++i)
+			dst[baseIndex]->addFinalState(stateIndex.translateOTF(*i) + this->fae.stateOffset);
+		for (std::set<std::pair<size_t, size_t> >::const_iterator i = splitPoints.begin(); i != splitPoints.end(); ++i) {
+			splitMap.insert(std::make_pair(i->first, i->second));
+			dst[i->second]->addFinalState(stateIndex.translateOTF(i->first) + this->fae.stateOffset);
+		}
+
+//		std::cerr << src;
+
+		std::vector<std::pair<size_t, size_t> > stack;
+		for (std::set<size_t>::const_iterator i = src.getFinalStates().begin(); i != src.getFinalStates().end(); ++i)
+			stack.push_back(std::make_pair(*i, baseIndex));
+
+		boost::unordered_set<std::pair<size_t, size_t> > visited;
+		while (!stack.empty()) {
+			std::pair<size_t, size_t> p = stack.back();
+			stack.pop_back();
+			if (!visited.insert(p).second)
+				continue;
+			TA<label_type>::td_cache_type::iterator i = cache.find(p.first);
+			assert(i != cache.end());
+			for (std::vector<const TT<label_type>*>::const_iterator j = i->second.begin(); j != i->second.end(); ++j) {
+				std::vector<size_t> lhs;
+				for (std::vector<size_t>::const_iterator k = (*j)->lhs().begin(); k != (*j)->lhs().end(); ++k) {
+					boost::unordered_map<size_t, size_t>::iterator l = splitMap.find(*k);
+					size_t state;
+					if (l != splitMap.end()) {
+						stack.push_back(std::make_pair(*k, l->second));
+						state = this->fae.addData(*dst[p.second], Data::createRef(l->second));
+					} else {
+						stack.push_back(std::make_pair(*k, p.second));
+						if (FA::isData(*k))
+							state = *k;
+						else
+							state = stateIndex.translateOTF(*k) + this->fae.stateOffset;
+					}
+					lhs.push_back(state);
+				}
+				size_t rhs = (*j)->rhs();
+				if (!FA::isData(rhs))
+					rhs = stateIndex.translateOTF(rhs) + this->fae.stateOffset;
+				dst[p.second]->addTransition(lhs, (*j)->label(), rhs);
+			}
+		}
+
+		this->fae.incrementStateOffset(stateIndex.size());
+	}
+
+	bool denormalize(const FAE& fae, const NormInfo& normInfo) {
+		assert(fae.roots.size() == normInfo.data.size());
+		assert(this->fae.roots.size() == fae.roots.size());
+
+		FAE tmp(this->fae);
+		for (std::vector<TA<label_type>*>::iterator i = this->fae.roots.begin(); i != this->fae.roots.end(); ++i)
+			this->fae.updateRoot(*i, NULL);
+
+		this->fae.rootMap.resize(normInfo.rootCount);
+
+		std::vector<size_t> index(normInfo.data.size(), (size_t)(-1));
+
+		size_t ii = 0;
+
+		for (std::map<size_t, NormInfo::RootInfo>::const_iterator i = normInfo.data.begin(); i != normInfo.data.end(); ++i, ++ii) {
+			index[ii] = i->second.index;
+			this->fae.rootMap[i->second.index] = tmp.rootMap[ii];
+		}
+
+		for (size_t i = 0; i < this->fae.rootMap.size(); ++i)
+			FAE::renameVector(this->fae.rootMap[i], index);
+
+		normInfo.initRoots(this->fae);
+
+		for (size_t i = 0; i != normInfo.data.size(); ++i) {
+			TA<label_type>::lt_cache_type cache1, cache2;
+			tmp.roots[i]->buildLTCache(cache1);
+			fae.roots[i]->buildLTCache(cache2);
+			std::map<size_t, NormInfo::RootInfo>::const_iterator j = normInfo.data.find(i);
+			assert(j != normInfo.data.end());
+			size_t stateCount;
+			if (j->second.mergedRoots.size() == 0) {
+				stateCount = TA<label_type>::buProduct(
+					cache1,
+					cache2,
+					IntersectAndRelabelF(
+						this->fae, *this->fae.roots[index[i]], index, *tmp.roots[i], *fae.roots[i]
+					),
+					this->fae.nextState()
+				);
+			} else {
+				TA<label_type> ta(this->fae.taMan->getBackend());
+				std::set<std::pair<size_t, size_t> > splitPoints;
+				stateCount = TA<label_type>::buProduct(
+					cache1,
+					cache2,
+					IntersectAndRelabelSpecialF(
+						this->fae, ta, splitPoints, index, *tmp.roots[i], *fae.roots[i], j->second
+					),
+					this->fae.nextState()
+				);
+				this->split(this->fae.roots, ta, index[i], splitPoints);
+			}
+			this->fae.incrementStateOffset(stateCount);
+		}
+
+		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
+			if (!this->fae.roots[i])
+				continue;
+			this->fae.updateRoot(this->fae.roots[i], &this->fae.roots[i]->uselessAndUnreachableFree(*this->fae.taMan->alloc()));
+			if (this->fae.roots[i]->getFinalStates().empty())
+				return false;
+		}
+
+		return true;
+
+	}
+*/
 public:
 
 	Normalization(FAE& fae) : fae(fae) {}
