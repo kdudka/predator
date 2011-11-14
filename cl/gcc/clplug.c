@@ -975,14 +975,16 @@ static void read_cst_int(struct cl_operand *op, tree t)
 static void read_cst_real(struct cl_operand *op, tree t)
 {
     // TODO: a proper implementation of this
-    long l[1];
-    real_to_target_fmt(l, TREE_REAL_CST_PTR(t), &ieee_single_format);
-    const void *v = l;
-    const float f = *(const float *)v;
+    union {
+        float       f;
+        long        l[1];
+    } u;
+
+    real_to_target_fmt(u.l, TREE_REAL_CST_PTR(t), &ieee_single_format);
 
     op->code                            = CL_OPERAND_CST;
     op->data.cst.code                   = CL_TYPE_REAL;
-    op->data.cst.data.cst_real.value    = (double)f;
+    op->data.cst.data.cst_real.value    = (double) u.f;
 }
 
 static void read_raw_operand(struct cl_operand *op, tree t)
