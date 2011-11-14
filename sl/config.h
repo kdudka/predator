@@ -99,6 +99,11 @@
 #define SE_ALLOW_CST_INT_PLUS_MINUS         1
 
 /**
+ * if 1, allow values where the offset is specified by int ranges (VT_RANGE)
+ */
+#define SE_ALLOW_OFF_RANGES                 0
+
+/**
  * how much do we allow to use three-way join
  * - 0 ... never ever
  * - 1 ... only when joining prototypes

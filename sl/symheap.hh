@@ -63,7 +63,7 @@ enum EValueTarget {
     VT_ON_HEAP,             ///< target is on heap
     VT_LOST,                ///< target was on stack, but it is no longer valid
     VT_DELETED,             ///< target was on heap, but it is no longer valid
-    VT_RANGE,               ///< an offset value given by a right-open interval
+    VT_RANGE,               ///< an offset value given by a closed interval
     VT_ABSTRACT             ///< abstract object (segment)
 };
 
@@ -90,15 +90,15 @@ enum ECustomValue {
     CV_INVALID,             ///< reserved for signalling error states
     CV_FNC,                 ///< code pointer
     CV_INT,                 ///< constant integral number
-    CV_INT_RANGE,           ///< a right-open interval over integral domain
+    CV_INT_RANGE,           ///< a closed interval over integral domain
     CV_REAL,                ///< floating-point number
     CV_STRING               ///< string literal
 };
 
-/// a right-open interval over integral domain
+/// a closed interval over integral domain
 struct IntRange {
     long        lo;         ///< lower bound of the interval (included)
-    long        hi;         ///< upper bound of the interval (excluded)
+    long        hi;         ///< upper bound of the interval (included)
 };
 
 /// @attention SymHeap is not responsible for any deep copies of strings
@@ -107,7 +107,7 @@ union CustomValueData {
     long        num;        ///< integral number
     double      fpn;        ///< floating-point number
     const char *str;        ///< zero-terminated string
-    IntRange    rng;        ///< right-open interval over integral domain
+    IntRange    rng;        ///< closed interval over integral domain
 };
 
 /// representation of a custom value, such as integer literal, or code pointer

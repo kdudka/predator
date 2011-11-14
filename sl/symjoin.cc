@@ -1763,6 +1763,55 @@ bool joinAbstractValues(
     return true;
 }
 
+bool offRangeFallback(
+        SymJoinCtx              &ctx,
+        const TValId            v1,
+        const TValId            v2)
+{
+#if !SE_ALLOW_OFF_RANGES
+    return false;
+#endif
+
+    const TValId root1 = ctx.sh1.valRoot(v1);
+    const TValId root2 = ctx.sh2.valRoot(v2);
+    if (!checkValueMapping(ctx, root1, root2, /* allowUnknownMapping */ false))
+        // not really a suitable candidate for offRangeFallback()
+        return false;
+
+    // check we got different offsets
+    const TOffset off1 = ctx.sh1.valOffset(v1);
+    const TOffset off2 = ctx.sh2.valOffset(v2);
+    CL_BREAK_IF(off1 == off2);
+
+    EJoinStatus action;
+    if (!off2)
+        action = JS_USE_SH1;
+    else if (!off1)
+        action = JS_USE_SH2;
+    else {
+        // TODO: take the action that does not change ctx.status if possible
+        // TODO: then create a VT_RANGE that does not start at the zero offset
+        CL_BREAK_IF("please implement");
+        return false;
+    }
+
+    // resolve root in ctx.dst
+    const TValId rootDst = roMapLookup(ctx.valMap1[/* ltr */ 0], root1);
+    CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[/* ltr */ 0], root2));
+
+    IntRange rng;
+    rng.lo = std::min(off1, off2);
+    rng.hi = std::max(off1, off2);
+
+    const TValId vDst = ctx.dst.valByRange(rootDst, rng);
+
+    // TODO
+    (void) action;
+    (void) vDst;
+    CL_BREAK_IF("please implement");
+    return false;
+}
+
 class MayExistVisitor {
     private:
         SymJoinCtx              ctx_;
@@ -2005,7 +2054,8 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     if (followValuePair(ctx, v1, v2, /* read-only */ true))
         return followValuePair(ctx, v1, v2, /* read-only */ false);
 
-    return mayExistFallback(ctx, v1, v2, JS_USE_SH1)
+    return offRangeFallback(ctx, v1, v2)
+        || mayExistFallback(ctx, v1, v2, JS_USE_SH1)
         || mayExistFallback(ctx, v1, v2, JS_USE_SH2);
 }
 

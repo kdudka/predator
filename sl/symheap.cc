@@ -1599,6 +1599,13 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     return val;
 }
 
+TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
+    CL_BREAK_IF("please implement");
+    (void) root;
+    (void) range;
+    return VAL_INVALID;
+}
+
 EValueOrigin SymHeapCore::valOrigin(TValId val) const {
     switch (val) {
         case VAL_INVALID:
