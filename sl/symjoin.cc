@@ -140,6 +140,10 @@ struct SymJoinCtx {
 
     std::set<TValId /* dst */>  protoRoots;
 
+    // XXX: experimental
+    typedef std::map<TValPair /* (v1, v2) */, TValId /* dst */> TMatchLookup;
+    TMatchLookup                matchLookup;
+
     void initValMaps() {
         // VAL_NULL should be always mapped to VAL_NULL
         valMap1[0][VAL_NULL] = VAL_NULL;
@@ -1783,33 +1787,26 @@ bool offRangeFallback(
     const TOffset off2 = ctx.sh2.valOffset(v2);
     CL_BREAK_IF(off1 == off2);
 
-    EJoinStatus action;
-    if (!off2)
-        action = JS_USE_SH1;
-    else if (!off1)
-        action = JS_USE_SH2;
-    else {
-        // TODO: take the action that does not change ctx.status if possible
-        // TODO: then create a VT_RANGE that does not start at the zero offset
-        CL_BREAK_IF("please implement");
+    // check whether the values are not matched already
+    const TValPair vp(v1, v2);
+    CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
+
+    if (!updateJoinStatus(ctx, /* intentionally! */ JS_THREE_WAY))
         return false;
-    }
 
     // resolve root in ctx.dst
     const TValId rootDst = roMapLookup(ctx.valMap1[/* ltr */ 0], root1);
     CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[/* ltr */ 0], root2));
 
+    // resolve a VT_RANGE value in ctx.dst
     IntRange rng;
     rng.lo = std::min(off1, off2);
     rng.hi = std::max(off1, off2);
-
     const TValId vDst = ctx.dst.valByRange(rootDst, rng);
 
-    // TODO
-    (void) action;
-    (void) vDst;
-    CL_BREAK_IF("please implement");
-    return false;
+    // store the mapping (v1, v2) -> vDst
+    ctx.matchLookup[vp] = vDst;
+    return true;
 }
 
 class MayExistVisitor {
@@ -2117,6 +2114,14 @@ TValId joinDstValue(
         const bool              validObj1,
         const bool              validObj2)
 {
+    const TValPair vp(v1, v2);
+    SymJoinCtx::TMatchLookup::const_iterator mit = ctx.matchLookup.find(vp);
+    if (ctx.matchLookup.end() != mit) {
+        // XXX: experimental
+        CL_BREAK_IF(debuggingSymJoin);
+        return mit->second;
+    }
+
     // translate the roots into 'dst'
     const TValId root1 = ctx.sh1.valRoot(v1);
     const TValId root2 = ctx.sh2.valRoot(v2);

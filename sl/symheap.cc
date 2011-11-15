@@ -141,7 +141,8 @@ class CVarMap {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
 typedef std::set<TObjId>                                TObjSet;
-typedef std::map<TOffset, TValId>                       TOffMap;
+typedef std::pair<TOffset /* lo */, TOffset /* hi */>   TOffPair;
+typedef std::map<TOffPair, TValId>                      TOffMap;
 typedef IntervalArena<TOffset, TObjId>                  TArena;
 typedef TArena::key_type                                TMemChunk;
 typedef TArena::value_type                              TMemItem;
@@ -279,6 +280,20 @@ struct BaseValue: public AbstractHeapEntity {
 
     virtual BaseValue* clone() const {
         return new BaseValue(*this);
+    }
+};
+
+struct RangeValue: public BaseValue {
+    IntRange                        range;
+
+    RangeValue(const IntRange &range_):
+        BaseValue(VT_RANGE, VO_ASSIGNED),
+        range(range_)
+    {
+    }
+
+    virtual RangeValue* clone() const {
+        return new RangeValue(*this);
     }
 };
 
@@ -829,8 +844,6 @@ TValId SymHeapCore::Private::valCreate(
             break;
 
         case VT_RANGE:
-            CL_BREAK_IF("please implement");
-
         case VT_ABSTRACT:
             CL_BREAK_IF("invalid call of SymHeapCore::Private::valCreate()");
             // fall through!
@@ -1156,6 +1169,11 @@ TValId SymHeapCore::valClone(TValId val) {
     const EValueTarget code = valData->code;
     if (VT_CUSTOM == code) {
         CL_BREAK_IF("custom values are not supposed to be cloned");
+        return val;
+    }
+
+    if (VT_RANGE == code) {
+        CL_BREAK_IF("VT_RANGE values are not supposed to be cloned");
         return val;
     }
 
@@ -1559,6 +1577,10 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, at);
+    if (VT_RANGE == valData->code) {
+        CL_BREAK_IF("valByOffset() does not support VT_RANGE yet");
+        return VAL_INVALID;
+    }
 
     // subtract the root
     const TValId valRoot = valData->valRoot;
@@ -1580,7 +1602,8 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, valRoot);
     const TOffMap &offMap = rootData->offMap;
-    TOffMap::const_iterator it = offMap.find(off);
+    const TOffPair offPair(/* lo */ off, /* hi */ off);
+    TOffMap::const_iterator it = offMap.find(offPair);
     if (offMap.end() != it)
         return it->second;
 
@@ -1595,15 +1618,37 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     // store the mapping for next wheel
     RootValue *rootDataRW;
     d->ents.getEntRW(&rootDataRW, valRoot);
-    rootDataRW->offMap[off] = val;
+    rootDataRW->offMap[offPair] = val;
     return val;
 }
 
 TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
-    CL_BREAK_IF("please implement");
-    (void) root;
-    (void) range;
-    return VAL_INVALID;
+    // we require a valid range consisting of at least two values
+    CL_BREAK_IF(range.hi <= range.lo);
+    const TOffPair offPair(range.lo, range.hi);
+
+    // read-only root extraction
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, root);
+
+    // read-only map lookup
+    const TOffMap &offMap = rootData->offMap;
+    TOffMap::const_iterator it = offMap.find(offPair);
+    if (offMap.end() != it)
+        return it->second;
+
+    // create a new range value
+    BaseValue *offVal = new RangeValue(range);
+    const TValId val = d->assignId(offVal);
+
+    // offVal->valRoot needs to be set after the call of Private::assignId()
+    offVal->valRoot = root;
+
+    // store the mapping for next wheel
+    RootValue *rootDataRW;
+    d->ents.getEntRW(&rootDataRW, root);
+    rootDataRW->offMap[offPair] = val;
+    return val;
 }
 
 EValueOrigin SymHeapCore::valOrigin(TValId val) const {
@@ -1717,6 +1762,11 @@ TOffset SymHeapCore::valOffset(TValId val) const {
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
+    if (VT_RANGE == valData->code) {
+        CL_BREAK_IF("valOffset() called on VT_RANGE, which is not supported");
+        return -1;
+    }
+
     return valData->offRoot;
 }
 
@@ -1840,6 +1890,7 @@ TObjId SymHeapCore::ptrAt(TValId at) {
     d->ents.getEntRO(&valData, at);
 
     const EValueTarget code = valData->code;
+    CL_BREAK_IF(VT_RANGE == code);
     if (!isPossibleToDeref(code))
         return OBJ_INVALID;
 
@@ -1897,6 +1948,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     d->ents.getEntRO(&valData, at);
 
     const EValueTarget code = valData->code;
+    CL_BREAK_IF(VT_RANGE == code);
     if (!isPossibleToDeref(code))
         return OBJ_INVALID;
 
