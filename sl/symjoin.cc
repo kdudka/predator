@@ -346,6 +346,65 @@ bool defineValueMapping(
     return true;
 }
 
+bool isCoveredByRange(const IntRange &small, const IntRange &big) {
+    return (big.lo <= small.lo)
+        && (small.hi <= big.hi);
+}
+
+bool matchRanges(
+        const SymJoinCtx        &ctx,
+        const TValId            v1,
+        const TValId            v2,
+        const bool              allowUnknownMapping)
+{
+    const bool isRange1 = (VT_RANGE == ctx.sh1.valTarget(v1));
+    const bool isRange2 = (VT_RANGE == ctx.sh2.valTarget(v2));
+    if (!isRange1 && !isRange2)
+        // no VT_RANGE values involved here
+        return false;
+
+    if (allowUnknownMapping)
+        return true;
+
+    // the mapping should have already been defined
+    const TValPair vp(v1, v2);
+    return hasKey(ctx.matchLookup, vp);
+}
+
+bool joinRangeValues(
+        SymJoinCtx             &ctx,
+        const TValId            v1,
+        const TValId            v2,
+        const TValId            root1,
+        const TValId            root2)
+{
+    // check whether the values are not matched already
+    const TValPair vp(v1, v2);
+    CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
+
+    const IntRange rng1 = valToRange(ctx.sh1, v1);
+    const IntRange rng2 = valToRange(ctx.sh2, v2);
+
+    if (!isCoveredByRange(rng1, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
+        return false;
+    if (!isCoveredByRange(rng2, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
+        return false;
+
+    // resolve root in ctx.dst
+    const TValId rootDst = roMapLookup(ctx.valMap1[/* ltr */ 0], root1);
+    CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[/* ltr */ 0], root2));
+
+    // resolve a VT_RANGE value in ctx.dst
+    IntRange rng;
+    rng.lo = std::min(rng1.lo, rng2.lo);
+    rng.hi = std::max(rng1.hi, rng2.hi);
+    const TValId vDst = ctx.dst.valByRange(rootDst, rng);
+
+    // store the mapping (v1, v2) -> vDst
+    ctx.matchLookup[vp] = vDst;
+    return true;
+}
+
 /// read-only (in)consistency check among value pair (v1, v2)
 bool checkValueMapping(
         const SymJoinCtx        &ctx,
@@ -356,7 +415,8 @@ bool checkValueMapping(
     if (!checkNonPosValues(v1, v2))
         return false;
 
-    if (!matchOffsets(ctx.sh1, ctx.sh2, v1, v2))
+    if (!matchOffsets(ctx.sh1, ctx.sh2, v1, v2)
+            && !matchRanges(ctx, v1, v2, allowUnknownMapping))
         return false;
 
     // read-only value lookup
@@ -1355,7 +1415,10 @@ bool followValuePair(
         // shallow scan only!
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
-    if (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2)) {
+    const bool isRange = (VT_RANGE == ctx.sh1.valTarget(v1))
+                      || (VT_RANGE == ctx.sh2.valTarget(v2));
+
+    if (!isRange && (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2))) {
         SJ_DEBUG("<-- value offset mismatch: " << SJ_VALP(v1, v2));
         return false;
     }
@@ -1374,7 +1437,13 @@ bool followValuePair(
     // follow the roots
     const TValId root1 = ctx.sh1.valRoot(v1);
     const TValId root2 = ctx.sh2.valRoot(v2);
-    return followRootValues(ctx, root1, root2, JS_USE_ANY);
+    if (!followRootValues(ctx, root1, root2, JS_USE_ANY))
+        return false;
+
+    if (isRange)
+        return joinRangeValues(ctx, v1, v2, root1, root2);
+
+    return true;
 }
 
 void considerValSchedule(
@@ -1956,11 +2025,10 @@ bool joinValuesByCode(
     // classify the targets
     const EValueTarget code1 = ctx.sh1.valTarget(v1);
     const EValueTarget code2 = ctx.sh2.valTarget(v2);
-    if (VT_RANGE == code1 || VT_RANGE == code2) {
-        // TODO: tweak this?
-        CL_BREAK_IF(debuggingSymJoin);
+
+    if (VT_RANGE == code1 || VT_RANGE == code2)
+        // these have to be handled in followValuePair()
         return false;
-    }
 
     const TOffset off1 = ctx.sh1.valOffset(v1);
     const TOffset off2 = ctx.sh2.valOffset(v2);
@@ -2043,8 +2111,8 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
         return result;
 
     if (VAL_NULL != v1 && VAL_NULL != v2) {
-        const bool haveTarget1 = isPossibleToDeref(vt1);
-        const bool haveTarget2 = isPossibleToDeref(vt2);
+        const bool haveTarget1 = (isPossibleToDeref(vt1) || VT_RANGE == vt1);
+        const bool haveTarget2 = (isPossibleToDeref(vt2) || VT_RANGE == vt2);
         if (haveTarget1 != haveTarget2) {
             SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
             return false;
@@ -2119,11 +2187,9 @@ TValId joinDstValue(
 {
     const TValPair vp(v1, v2);
     SymJoinCtx::TMatchLookup::const_iterator mit = ctx.matchLookup.find(vp);
-    if (ctx.matchLookup.end() != mit) {
+    if (ctx.matchLookup.end() != mit)
         // XXX: experimental
-        CL_BREAK_IF(debuggingSymJoin);
         return mit->second;
-    }
 
     // translate the roots into 'dst'
     const TValId root1 = ctx.sh1.valRoot(v1);
