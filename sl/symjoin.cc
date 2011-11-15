@@ -356,9 +356,7 @@ bool checkValueMapping(
     if (!checkNonPosValues(v1, v2))
         return false;
 
-    const TOffset off1 = ctx.sh1.valOffset(v1);
-    const TOffset off2 = ctx.sh2.valOffset(v2);
-    if (off1 != off2)
+    if (!matchOffsets(ctx.sh1, ctx.sh2, v1, v2))
         return false;
 
     // read-only value lookup

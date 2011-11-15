@@ -58,6 +58,34 @@ bool matchPlainValuesCore(
     return true;
 }
 
+bool matchOffsets(
+        const SymHeap           &sh1,
+        const SymHeap           &sh2,
+        const TValId            v1,
+        const TValId            v2)
+{
+    const EValueTarget code1 = sh1.valTarget(v1);
+    const EValueTarget code2 = sh2.valTarget(v2);
+
+    const bool isRange = (VT_RANGE == code1);
+    if (isRange != (VT_RANGE == code2))
+        // range vs. scalar offset
+        return false;
+
+    if (isRange) {
+        // compare offset ranges
+        const IntRange offRange1 = sh1.valRange(v1);
+        const IntRange offRange2 = sh2.valRange(v2);
+        return (offRange1 == offRange2);
+    }
+    else {
+        // compare scalar offset
+        const TOffset off1 = sh1.valOffset(v1);
+        const TOffset off2 = sh2.valOffset(v2);
+        return (off1 == off2);
+    }
+}
+
 bool matchPlainValues(
         TValMapBidir            valMapping,
         const SymHeap           &sh1,
@@ -73,9 +101,7 @@ bool matchPlainValues(
         // no need to save mapping of special values, they're fixed anyway
         return true;
 
-    const TOffset off1 = sh1.valOffset(v1);
-    const TOffset off2 = sh2.valOffset(v2);
-    if (off1 != off2)
+    if (!matchOffsets(sh1, sh2, v1, v2))
         // offset mismatch
         return false;
 

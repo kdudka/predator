@@ -101,6 +101,15 @@ struct IntRange {
     long        hi;         ///< upper bound of the interval (included)
 };
 
+inline bool operator==(const IntRange &a, const IntRange &b) {
+    return (a.lo == b.lo)
+        && (a.hi == b.hi);
+}
+
+inline bool operator!=(const IntRange &a, const IntRange &b) {
+    return !operator==(a, b);
+}
+
 /// @attention SymHeap is not responsible for any deep copies of strings
 union CustomValueData {
     int         uid;        ///< unique ID as assigned by Code Listener

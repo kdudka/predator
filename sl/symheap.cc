@@ -1770,6 +1770,12 @@ TOffset SymHeapCore::valOffset(TValId val) const {
     return valData->offRoot;
 }
 
+const IntRange& SymHeapCore::valRange(TValId val) const {
+    const RangeValue *valData;
+    d->ents.getEntRO(&valData, val);
+    return valData->range;
+}
+
 void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
