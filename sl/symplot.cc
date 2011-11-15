@@ -104,22 +104,25 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
     }
 }
 
-void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
-{
-    const bool isAboveRoot = (off < 0);
-    const char *color = (isAboveRoot)
-        ? "red"
-        : "black";
-
-    const char *prefix = (isAboveRoot)
+inline const char* offPrefix(const TOffset off) {
+    return (off < 0)
         ? ""
         : "+";
+}
+
+#define SIGNED_OFF(off) offPrefix(off) << (off)
+
+void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
+{
+    const char *color = (off < 0)
+        ? "red"
+        : "black";
 
     plot.out << "\t" << SL_QUOTE(from)
         << " -> " << SL_QUOTE(to)
         << " [color=" << color
         << ", fontcolor=" << color
-        << ", label=\"[" << prefix << off
+        << ", label=\"[" << SIGNED_OFF(off)
         << "]\"];\n";
 }
 
@@ -749,9 +752,6 @@ void plotValue(PlotData &plot, const TValId val)
 
     const EValueTarget code = sh.valTarget(val);
     switch (code) {
-        case VT_RANGE:
-            CL_BREAK_IF("please implement");
-
         case VT_CUSTOM:
             // skipt it, custom values are now handled in plotHasValue()
             return;
@@ -760,6 +760,7 @@ void plotValue(PlotData &plot, const TValId val)
         case VT_COMPOSITE:
         case VT_LOST:
         case VT_DELETED:
+        case VT_RANGE:
             color = "red";
             break;
 
@@ -792,10 +793,17 @@ preserve_suffix:
     if (suffix)
         plot.out << " " << suffix;
 
-    const TOffset off = sh.valOffset(val);
-    if (off) {
-        const TValId root = sh.valRoot(val);
-        plot.out << " [root = #" << root << ", off = " << off << "]";
+    const TValId root = sh.valRoot(val);
+
+    if (VT_RANGE == code) {
+        const IntRange &offRange = sh.valRange(val);
+        plot.out << " [root = #" << root
+            << ", off = " << offRange.lo << ".." << offRange.hi << "]";
+    }
+    else {
+        const TOffset off = sh.valOffset(val);
+        if (off)
+            plot.out << " [root = #" << root << ", off = " << off << "]";
     }
 
     plot.out << "\"];\n";
@@ -805,6 +813,14 @@ void plotPointsTo(PlotData &plot, const TValId val, const TObjId target) {
     plot.out << "\t" << SL_QUOTE(val)
         << " -> " << SL_QUOTE(target)
         << " [color=green, fontcolor=green];\n";
+}
+
+void plotRangePtr(PlotData &plot, TValId val, TValId root, const IntRange &rng)
+{
+    plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE(root)
+        << " [color=red, fontcolor=red, label=\"["
+        << SIGNED_OFF(rng.lo) << ".." << rng.hi
+        << "]\"];\n";
 }
 
 void plotNonRootValues(PlotData &plot) {
@@ -820,8 +836,13 @@ void plotNonRootValues(PlotData &plot) {
         plotValue(plot, val);
 
         const TValId root = sh.valRoot(val);
-        const EValueTarget code = sh.valTarget(root);
-        if (!isPossibleToDeref(code))
+        const EValueTarget code = sh.valTarget(val);
+        if (VT_RANGE == code) {
+            const IntRange &rng = sh.valRange(val);
+            plotRangePtr(plot, val, root, rng);
+            continue;
+        }
+        else if (!isPossibleToDeref(code))
             // no valid target
             continue;
 
