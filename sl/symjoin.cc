@@ -1953,12 +1953,17 @@ bool joinValuesByCode(
         const TValId            v1,
         const TValId            v2)
 {
-    const TOffset off1 = ctx.sh1.valOffset(v1);
-    const TOffset off2 = ctx.sh2.valOffset(v2);
-
     // classify the targets
     const EValueTarget code1 = ctx.sh1.valTarget(v1);
     const EValueTarget code2 = ctx.sh2.valTarget(v2);
+    if (VT_RANGE == code1 || VT_RANGE == code2) {
+        // TODO: tweak this?
+        CL_BREAK_IF(debuggingSymJoin);
+        return false;
+    }
+
+    const TOffset off1 = ctx.sh1.valOffset(v1);
+    const TOffset off2 = ctx.sh2.valOffset(v2);
 
     // check for VT_DELETED/VT_LOST
     const bool gone1 = isGone(code1)

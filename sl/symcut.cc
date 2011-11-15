@@ -200,6 +200,14 @@ TValId handleValueCore(DeepCopyData &dc, TValId srcAt) {
     const TValId rootSrcAt = dc.src.valRoot(srcAt);
     const TValId rootDstAt = addObjectIfNeeded(dc, rootSrcAt);
 
+    if (VT_RANGE == dc.src.valTarget(srcAt)) {
+        // range offset value
+        const IntRange range = dc.src.valRange(srcAt);
+        const TValId dstAt = dc.dst.valByRange(rootDstAt, range);
+        dc.valMap[srcAt] = dstAt;
+        return dstAt;
+    }
+
     const TOffset off = dc.src.valOffset(srcAt);
     if (!off)
         return rootDstAt;
@@ -264,16 +272,17 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
         return valDst;
     }
 
-    if (!isPossibleToDeref(code) && VAL_NULL != src.valRoot(valSrc)) {
-        // an unkonwn value
-        const EValueOrigin vo = src.valOrigin(valSrc);
-        const TValId valDst = dst.valCreate(code, vo);
-        valMap[valSrc] = valDst;
-        return valDst;
-    }
+    if (isPossibleToDeref(code)
+            || VT_RANGE == code
+            || VAL_NULL == src.valRoot(valSrc))
+        // create the target object, if it does not exist already
+        return handleValueCore(dc, valSrc);
 
-    // create the target object, if it does not exist already
-    return handleValueCore(dc, valSrc);
+    // an unkonwn value
+    const EValueOrigin vo = src.valOrigin(valSrc);
+    const TValId valDst = dst.valCreate(code, vo);
+    valMap[valSrc] = valDst;
+    return valDst;
 }
 
 void deepCopy(DeepCopyData &dc) {
