@@ -374,9 +374,7 @@ bool matchRanges(
 bool joinRangeValues(
         SymJoinCtx             &ctx,
         const TValId            v1,
-        const TValId            v2,
-        const TValId            root1,
-        const TValId            root2)
+        const TValId            v2)
 {
     // check whether the values are not matched already
     const TValPair vp(v1, v2);
@@ -391,8 +389,8 @@ bool joinRangeValues(
         return false;
 
     // resolve root in ctx.dst
-    const TValId rootDst = roMapLookup(ctx.valMap1[/* ltr */ 0], root1);
-    CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[/* ltr */ 0], root2));
+    const TValId rootDst = roMapLookup(ctx.valMap1[0], ctx.sh1.valRoot(v1));
+    CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[0], ctx.sh2.valRoot(v2)));
 
     // resolve a VT_RANGE value in ctx.dst
     IntRange rng;
@@ -1440,8 +1438,9 @@ bool followValuePair(
     if (!followRootValues(ctx, root1, root2, JS_USE_ANY))
         return false;
 
-    if (isRange)
-        return joinRangeValues(ctx, v1, v2, root1, root2);
+    // ranges cannot be joint unless the root exists in ctx.dst, join them now!
+    if (isRange && !joinRangeValues(ctx, v1, v2))
+        return false;
 
     return true;
 }
