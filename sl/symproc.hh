@@ -38,11 +38,13 @@ class SymBackTrace;
 class SymHeap;
 class SymState;
 
-bool describeCmpOp(
-        const enum cl_binop_e       code,
-        bool                        *pNegative,
-        bool                        *pPreserveEq,
-        bool                        *pPreserveNeq);
+struct CmpOpTraits {
+    bool negative;
+    bool preserveEq;
+    bool preserveNeq;
+};
+
+bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code);
 
 TValId compareValues(
         SymHeap                     &sh,

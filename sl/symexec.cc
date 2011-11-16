@@ -314,17 +314,17 @@ void SymExecEngine::updateStateInBranch(
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
 
     // resolve binary operator
-    bool neg, preserveEq, preserveNeq;
-    if (describeCmpOp(code, &neg, &preserveEq, &preserveNeq)) {
-        if (branch == neg) {
-            if (!preserveNeq)
+    CmpOpTraits cTraits;
+    if (describeCmpOp(&cTraits, code)) {
+        if (branch == cTraits.negative) {
+            if (!cTraits.preserveNeq)
                 goto fallback;
 
             // introduce a Neq predicate over v1 and v2
             sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
         }
         else {
-            if (!preserveEq)
+            if (!cTraits.preserveEq)
                 goto fallback;
 
             // we have deduced that v1 and v2 is actually the same value

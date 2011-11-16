@@ -834,34 +834,29 @@ malloc/calloc is implementation-defined");
     dst.insert(sh_);
 }
 
-bool describeCmpOp(
-        const enum cl_binop_e       code,
-        bool                        *pNegative,
-        bool                        *pPreserveEq,
-        bool                        *pPreserveNeq)
-{
-    *pNegative = false;
-    *pPreserveEq = false;
-    *pPreserveNeq = false;
+bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code) {
+    pTraits->negative = false;
+    pTraits->preserveEq = false;
+    pTraits->preserveNeq = false;
 
     switch (code) {
         case CL_BINOP_EQ:
-            *pPreserveEq = true;
+            pTraits->preserveEq = true;
             // fall through!
 
         case CL_BINOP_LE:
         case CL_BINOP_GE:
-            *pPreserveNeq = true;
+            pTraits->preserveNeq = true;
             return true;
 
         case CL_BINOP_NE:
-            *pPreserveEq = true;
+            pTraits->preserveEq = true;
             // fall through!
 
         case CL_BINOP_LT:
         case CL_BINOP_GT:
-            *pNegative = true;
-            *pPreserveNeq = true;
+            pTraits->negative = true;
+            pTraits->preserveNeq = true;
             return true;
 
         default:
@@ -970,16 +965,17 @@ TValId compareValues(
         return sh.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
 
     // resolve binary operator
-    bool neg, preserveEq, preserveNeq;
-    if (!describeCmpOp(code, &neg, &preserveEq, &preserveNeq)) {
+    CmpOpTraits cTraits;
+    if (!describeCmpOp(&cTraits, code)) {
         CL_WARN("binary operator not implemented yet");
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 
     // inconsistency check
-    if ((v1 == v2) && preserveNeq)
+    const bool neg = cTraits.negative;
+    if ((v1 == v2) && cTraits.preserveNeq)
         return boolToVal(!neg);
-    if (sh.proveNeq(v1, v2) && preserveEq)
+    if (sh.proveNeq(v1, v2) && cTraits.preserveEq)
         return boolToVal(neg);
 
     const EValueTarget code1 = sh.valTarget(v1);
