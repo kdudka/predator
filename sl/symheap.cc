@@ -1678,13 +1678,20 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
     if (val <= 0)
         return VT_INVALID;
 
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
+
+    const EValueTarget code = valData->code;
+    if (VT_RANGE == code)
+        // VT_RANGE takes precedence over VT_ABSTRACT
+        return VT_RANGE;
+
     if (this->hasAbstractTarget(val))
         // the overridden implementation claims the target is abstract
         return VT_ABSTRACT;
 
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, val);
-    return valData->code;
+    // just return the native code we track in BaseValue
+    return code;
 }
 
 bool isUninitialized(EValueOrigin code) {
