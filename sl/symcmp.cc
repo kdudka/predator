@@ -211,9 +211,7 @@ bool cmpValues(
         // already checked by matchPlainValues()/checkNonPosValues()
         return true;
 
-    const TOffset off1 = sh1.valOffset(v1);
-    const TOffset off2 = sh2.valOffset(v2);
-    if (off1 != off2)
+    if (!matchOffsets(sh1, sh2, v1, v2))
         // value offset mismatch
         return false;
 
