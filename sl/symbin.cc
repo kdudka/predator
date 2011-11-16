@@ -616,7 +616,7 @@ bool handlePlot(
     bool ok;
 
     if (1 == cntArgs)
-        ok = plotHeap(sh, plotName);
+        ok = plotHeap(sh, plotName, lw);
 
     else {
         // starting points were given
@@ -627,7 +627,7 @@ bool handlePlot(
             startingPoints.push_back(val);
         }
 
-        ok = plotHeap(sh, plotName, startingPoints);
+        ok = plotHeap(sh, plotName, lw, startingPoints);
     }
 
     if (!ok)

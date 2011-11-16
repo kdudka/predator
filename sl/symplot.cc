@@ -1041,6 +1041,7 @@ void plotEverything(PlotData &plot) {
 bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
+        const struct cl_loc             *loc,
         const TValList                  &startingPoints,
         const bool                      digForward)
 {
@@ -1067,8 +1068,12 @@ bool plotHeap(
         return false;
     }
 
+    if (loc)
+        CL_NOTE_MSG(loc, "writing heap graph to '" << fileName << "'...");
+    else
+        CL_DEBUG("writing heap graph to '" << fileName << "'...");
+
     // initialize an instance of PlotData
-    CL_NOTE("symplot: created dot file '" << fileName << "'");
     PlotData plot(sh, out);
 
     // do our stuff
@@ -1084,9 +1089,10 @@ bool plotHeap(
 
 bool plotHeap(
         const SymHeap                   &sh,
-        const std::string               &name)
+        const std::string               &name,
+        const struct cl_loc             *loc)
 {
     TValList roots;
     sh.gatherRootObjects(roots);
-    return plotHeap(sh, name, roots);
+    return plotHeap(sh, name, loc, roots);
 }
