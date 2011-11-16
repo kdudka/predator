@@ -2120,8 +2120,8 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
         return result;
 
     if (VAL_NULL != v1 && VAL_NULL != v2) {
-        const bool haveTarget1 = (isPossibleToDeref(vt1) || VT_RANGE == vt1);
-        const bool haveTarget2 = (isPossibleToDeref(vt2) || VT_RANGE == vt2);
+        const bool haveTarget1 = isAnyDataArea(vt1);
+        const bool haveTarget2 = isAnyDataArea(vt2);
         if (haveTarget1 != haveTarget2) {
             SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
             return false;

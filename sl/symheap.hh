@@ -85,6 +85,9 @@ bool isProgramVar(EValueTarget);
 /// true for VT_STATIC, VT_ON_STACK, VT_ON_STACK, and VT_ABSTRACT
 bool isPossibleToDeref(EValueTarget);
 
+/// true for VT_STATIC, VT_ON_STACK, VT_ON_STACK, VT_ABSTRACT, and VT_RANGE
+bool isAnyDataArea(EValueTarget);
+
 /// enumeration of custom values, such as integer literals, or code pointers
 enum ECustomValue {
     CV_INVALID,             ///< reserved for signalling error states

@@ -481,7 +481,7 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
 
     const EValueTarget code = valData->code;
-    if (!isPossibleToDeref(code) && VT_RANGE != code)
+    if (!isAnyDataArea(code))
         return /* wasPtr */ false;
 
     // jump to root
@@ -505,7 +505,7 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
     valData->usedBy.insert(obj);
 
     const EValueTarget code = valData->code;
-    if (!isPossibleToDeref(code) && VT_RANGE != code)
+    if (!isAnyDataArea(code))
         return;
 
     // update usedByGl
@@ -1760,6 +1760,11 @@ bool isProgramVar(EValueTarget code) {
 bool isPossibleToDeref(EValueTarget code) {
     return isOnHeap(code)
         || isProgramVar(code);
+}
+
+bool isAnyDataArea(EValueTarget code) {
+    return isPossibleToDeref(code)
+        || (VT_RANGE == code);
 }
 
 TValId SymHeapCore::valRoot(TValId val) const {

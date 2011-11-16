@@ -272,9 +272,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
         return valDst;
     }
 
-    if (isPossibleToDeref(code)
-            || VT_RANGE == code
-            || VAL_NULL == src.valRoot(valSrc))
+    if (isAnyDataArea(code) || VAL_NULL == src.valRoot(valSrc))
         // create the target object, if it does not exist already
         return handleValueCore(dc, valSrc);
 
