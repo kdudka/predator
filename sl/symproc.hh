@@ -42,6 +42,8 @@ struct CmpOpTraits {
     bool negative;
     bool preserveEq;
     bool preserveNeq;
+    bool leftToRight;
+    bool rightToLeft;
 };
 
 bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code);
@@ -50,6 +52,13 @@ TValId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
         const TObjType              clt,
+        const TValId                v1,
+        const TValId                v2);
+
+bool reflectCmpResult(
+        SymHeap                     &sh,
+        const enum cl_binop_e       code,
+        const bool                  branch,
         const TValId                v1,
         const TValId                v2);
 

@@ -835,9 +835,23 @@ malloc/calloc is implementation-defined");
 }
 
 bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code) {
-    pTraits->negative = false;
-    pTraits->preserveEq = false;
-    pTraits->preserveNeq = false;
+    memset(pTraits, 0, sizeof *pTraits);
+
+    switch (code) {
+        case CL_BINOP_LE:
+        case CL_BINOP_LT:
+            pTraits->leftToRight = true;
+            break;
+
+        case CL_BINOP_GE:
+        case CL_BINOP_GT:
+            pTraits->rightToLeft = true;
+            break;
+
+        default:
+            // no ordering traits here...
+            break;
+    }
 
     switch (code) {
         case CL_BINOP_EQ:
@@ -1005,6 +1019,36 @@ TValId compareValues(
         vo = vo2;
 
     return sh.valCreate(VT_UNKNOWN, vo);
+}
+
+bool reflectCmpResult(
+        SymHeap                     &sh,
+        const enum cl_binop_e       code,
+        const bool                  branch,
+        const TValId                v1,
+        const TValId                v2)
+{
+    // resolve binary operator
+    CmpOpTraits cTraits;
+    if (!describeCmpOp(&cTraits, code))
+        return false;
+
+    if (branch == cTraits.negative) {
+        if (!cTraits.preserveNeq)
+            return false;
+
+        // introduce a Neq predicate over v1 and v2
+        sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
+    }
+    else {
+        if (!cTraits.preserveEq)
+            return false;
+
+        // we have deduced that v1 and v2 is actually the same value
+        sh.valMerge(v1, v2);
+    }
+
+    return true;
 }
 
 bool computeIntCstResult(

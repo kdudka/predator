@@ -312,29 +312,11 @@ void SymExecEngine::updateStateInBranch(
                 &insnCmp, &insnCnd, /* det */ false, branch));
 
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
-
-    // resolve binary operator
-    CmpOpTraits cTraits;
-    if (describeCmpOp(&cTraits, code)) {
-        if (branch == cTraits.negative) {
-            if (!cTraits.preserveNeq)
-                goto fallback;
-
-            // introduce a Neq predicate over v1 and v2
-            sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
-        }
-        else {
-            if (!cTraits.preserveEq)
-                goto fallback;
-
-            // we have deduced that v1 and v2 is actually the same value
-            sh.valMerge(v1, v2);
-        }
-    }
+    if (!reflectCmpResult(sh, code, branch, v1, v2))
+        CL_DEBUG_MSG(lw_, "unable to reflect comparison result");
 
     LDP_PLOT(nondetCond, sh);
 
-fallback:
     SymProc proc(sh, &bt_);
     proc.setLocation(lw_);
     proc.killInsn(insnCmp);
