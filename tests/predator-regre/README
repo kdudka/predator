@@ -689,6 +689,8 @@ Tests taken from Forester
 
     test-0188.c - wrong count of arguments given to printf()
 
+    test-0196.c - a training example for the introduction of VT_RANGE
+
 
 Tiny DLL library written on scratch
 ===================================

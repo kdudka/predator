@@ -176,10 +176,23 @@ void redirectRefs(
 
         // check the current link
         const TValId nowAt = obj.value();
-        const TOffset offToRoot = sh.valOffset(nowAt);
+        TValId result;
 
-        // redirect accordingly
-        const TValId result = sh.valByOffset(redirectTo, offToRoot - offHead);
+        const EValueTarget code = sh.valTarget(nowAt);
+        if (VT_RANGE == code) {
+            // redirect a value with range offset
+            IntRange offRange = sh.valRange(nowAt);
+            offRange.lo -= offHead;
+            offRange.hi -= offHead;
+            result = sh.valByRange(redirectTo, offRange);
+        }
+        else {
+            // redirect a value with scalar offset
+            const TOffset offToRoot = sh.valOffset(nowAt);
+            result = sh.valByOffset(redirectTo, offToRoot - offHead);
+        }
+
+        // store the redirected value
         obj.setValue(result);
     }
 }

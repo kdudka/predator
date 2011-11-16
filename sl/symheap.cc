@@ -480,7 +480,8 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
     if (1 != valData->usedBy.erase(obj))
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
 
-    if (!isPossibleToDeref(valData->code))
+    const EValueTarget code = valData->code;
+    if (!isPossibleToDeref(code) && VT_RANGE != code)
         return /* wasPtr */ false;
 
     // jump to root
@@ -502,7 +503,9 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
     BaseValue *valData;
     this->ents.getEntRW(&valData, val);
     valData->usedBy.insert(obj);
-    if (!isPossibleToDeref(valData->code))
+
+    const EValueTarget code = valData->code;
+    if (!isPossibleToDeref(code) && VT_RANGE != code)
         return;
 
     // update usedByGl

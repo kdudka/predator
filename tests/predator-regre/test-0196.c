@@ -18,7 +18,7 @@ static void *zalloc(size_t nelem, size_t elsize)
 static void* create_shape(bool simple)
 {
     void **root = NULL;
-    while (___sl_get_nondet_int()) {
+    do {
         void **node = ZNEW_ARRAY(2, void *);
         void **next = ADVANCE_PTR_BY_OFF(node, sizeof(void *));
         *next = root;
@@ -28,6 +28,7 @@ static void* create_shape(bool simple)
             ? next
             : node;
     }
+    while (___sl_get_nondet_int());
 
     return root;
 }
