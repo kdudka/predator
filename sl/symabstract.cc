@@ -78,8 +78,16 @@ struct UnknownValuesDuplicator {
 
         SymHeapCore *sh = obj.sh();
         const EValueTarget code = sh->valTarget(valOld);
-        if (isPossibleToDeref(code) || (VT_CUSTOM == code))
-            return /* continue */ true;
+        switch (code) {
+            default:
+                if (!isPossibleToDeref(code))
+                    break;
+                // fall through!
+
+            case VT_CUSTOM:
+            case VT_RANGE:
+                return /* continue */ true;
+        }
 
         // duplicate unknown value
         const TValId valNew = sh->valClone(valOld);
