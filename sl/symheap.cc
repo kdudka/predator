@@ -35,6 +35,11 @@
 #include "util.hh"
 #include "worklist.hh"
 
+#ifndef NDEBUG
+    // just for debugging purposes
+#   include "symcmp.hh"
+#endif
+
 #include <algorithm>
 #include <map>
 #include <set>
@@ -427,8 +432,6 @@ struct SymHeapCore::Private {
     void splitBlockByObject(TObjId block, TObjId obj);
     void reinterpretObjData(TObjId old, TObjId obj, TValSet *killedPtrs = 0);
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
-
-    void neqOpWrap(SymHeapCore::ENeqOp, TValId, TValId);
 
     // runs only in debug build
     bool chkArenaConsistency(const RootValue *);
@@ -1798,41 +1801,22 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     }
 }
 
-void SymHeapCore::Private::neqOpWrap(ENeqOp op, TValId valA, TValId valB) {
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->neqDb);
+void SymHeapCore::neqOp(ENeqOp op, TValId v1, TValId v2) {
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
 
     switch (op) {
         case NEQ_NOP:
-            CL_BREAK_IF("invalid call of SymHeapCore::Private::neqOpWrap()");
+            CL_BREAK_IF("invalid call of SymHeapCore::neqOp()");
             return;
 
         case NEQ_ADD:
-            this->neqDb->add(valA, valB);
+            d->neqDb->add(v1, v2);
             return;
 
         case NEQ_DEL:
-            this->neqDb->del(valA, valB);
+            d->neqDb->del(v1, v2);
             return;
     }
-}
-
-void SymHeapCore::neqOp(ENeqOp op, TValId v1, TValId v2) {
-    const TOffset off1 = this->valOffset(v1);
-    const TOffset off2 = this->valOffset(v2);
-
-    const TValId root1 = this->valRoot(v1);
-    const TValId root2 = this->valRoot(v2);
-
-    const TOffset diff = off2 - off1;
-    if (!diff) {
-        // if both values have the same offset, connect the roots
-        d->neqOpWrap(op, root1, root2);
-        return;
-    }
-
-    // if the values have different offsets, associate both roots
-    d->neqOpWrap(op, root1, this->valByOffset(root2,  diff));
-    d->neqOpWrap(op, root2, this->valByOffset(root1, -diff));
 }
 
 void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {
@@ -2408,7 +2392,7 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     const TValId root2 = this->valRoot(valB);
     if (root1 == root2) {
         // same root, different offsets
-        CL_BREAK_IF(this->valOffset(valA) == this->valOffset(valB));
+        CL_BREAK_IF(matchOffsets(*this, *this, valA, valB));
         return true;
     }
 

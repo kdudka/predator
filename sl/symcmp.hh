@@ -55,8 +55,8 @@ bool matchPlainValues(
         const TValId            v2);
 
 bool matchOffsets(
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
+        const SymHeapCore       &sh1,
+        const SymHeapCore       &sh2,
         const TValId            v1,
         const TValId            v2);
 
