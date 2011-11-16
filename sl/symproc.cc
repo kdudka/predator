@@ -871,13 +871,11 @@ bool describeCmpOp(
 }
 
 bool compareIntCsts(
-        TValId                      *pDst,
+        bool                        *pDst,
         const enum cl_binop_e       code,
         const long                  num1,
         const long                  num2)
 {
-    bool result;
-
     switch (code) {
         case CL_BINOP_NE:
             // TODO: improve SymHeapCore to handle it actually :-)
@@ -888,28 +886,49 @@ bool compareIntCsts(
             return false;
 
         case CL_BINOP_LE:
-            result = (num1 <= num2);
-            break;
+            *pDst = (num1 <= num2);
+            return true;
 
         case CL_BINOP_GE:
-            result = (num1 >= num2);
-            break;
+            *pDst = (num1 >= num2);
+            return true;
 
         case CL_BINOP_LT:
-            result = (num1 <  num2);
-            break;
+            *pDst = (num1 <  num2);
+            return true;
 
         case CL_BINOP_GT:
-            result = (num1 >  num2);
-            break;
+            *pDst = (num1 >  num2);
+            return true;
 
         default:
             CL_BREAK_IF("unhandled binary operator in compareIntCsts()");
             return false;
     }
+}
 
-    *pDst = boolToVal(result);
-    return true;
+bool compareIntRanges(
+        bool                        *pDst,
+        const enum cl_binop_e       code,
+        const IntRange              &range1,
+        const IntRange              &range2)
+{
+    bool loResult;
+    if (!compareIntCsts(&loResult, code, range1.lo, range2.lo))
+        return false;
+
+    bool hiResult;
+    if (!compareIntCsts(&hiResult, code, range1.hi, range2.hi))
+        return false;
+
+    if (loResult == hiResult) {
+        // we got the same results for both boundaries --> pick any
+        *pDst = loResult;
+        return true;
+    }
+
+    CL_BREAK_IF("please implement");
+    return false;
 }
 
 TValId comparePointers(
@@ -924,11 +943,11 @@ TValId comparePointers(
         // TODO: not much info, but we can still deduce at least something
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
-    TValId result;
-    const long off1 = sh.valOffset(v1);
-    const long off2 = sh.valOffset(v2);
-    if (compareIntCsts(&result, code, off1, off2))
-        return result;
+    bool result;
+    const IntRange range1 = valToRange(sh, v1);
+    const IntRange range2 = valToRange(sh, v2);
+    if (compareIntRanges(&result, code, range1, range2))
+        return boolToVal(result);
 
     CL_BREAK_IF("please implement");
     return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
@@ -961,16 +980,16 @@ TValId compareValues(
 
     const EValueTarget code1 = sh.valTarget(v1);
     const EValueTarget code2 = sh.valTarget(v2);
-    if (isPossibleToDeref(code1) && isPossibleToDeref(code2))
+    if (isAnyDataArea(code1) && isAnyDataArea(code2))
         // both values are pointers
         return comparePointers(sh, code, v1, v2);
 
     long num1, num2;
     if (numFromVal(&num1, sh, v1) && numFromVal(&num2, sh, v2)) {
         // both values are integral constants
-        TValId result;
+        bool result;
         if (compareIntCsts(&result, code, num1, num2))
-            return result;
+            return boolToVal(result);
     }
 
     // propagate UV_UNINITIALIZED
