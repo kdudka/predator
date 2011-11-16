@@ -352,6 +352,7 @@ bool isCoveredByRange(const IntRange &small, const IntRange &big) {
 }
 
 bool matchRanges(
+        bool                    *pResult,
         const SymJoinCtx        &ctx,
         const TValId            v1,
         const TValId            v2,
@@ -359,16 +360,25 @@ bool matchRanges(
 {
     const bool isRange1 = (VT_RANGE == ctx.sh1.valTarget(v1));
     const bool isRange2 = (VT_RANGE == ctx.sh2.valTarget(v2));
-    if (!isRange1 && !isRange2)
-        // no VT_RANGE values involved here
+    if (isRange1 || isRange2) {
+        if (allowUnknownMapping)
+            return false;
+
+        // the mapping should have already been defined
+        const TValPair vp(v1, v2);
+        if (hasKey(ctx.matchLookup, vp))
+            return false;
+
+        goto fail;
+    }
+
+    // no VT_RANGE values involved here
+    if (matchOffsets(ctx.sh1, ctx.sh2, v1, v2))
         return false;
 
-    if (allowUnknownMapping)
-        return true;
-
-    // the mapping should have already been defined
-    const TValPair vp(v1, v2);
-    return hasKey(ctx.matchLookup, vp);
+fail:
+    *pResult = false;
+    return true;
 }
 
 bool joinRangeValues(
@@ -413,9 +423,9 @@ bool checkValueMapping(
     if (!checkNonPosValues(v1, v2))
         return false;
 
-    if (!matchOffsets(ctx.sh1, ctx.sh2, v1, v2)
-            && !matchRanges(ctx, v1, v2, allowUnknownMapping))
-        return false;
+    bool result;
+    if (matchRanges(&result, ctx, v1, v2, allowUnknownMapping))
+        return result;
 
     // read-only value lookup
     const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
