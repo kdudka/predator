@@ -1585,13 +1585,17 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, at);
+    const TValId valRoot = valData->valRoot;
+
     if (VT_RANGE == valData->code) {
-        CL_BREAK_IF("valByOffset() does not support VT_RANGE yet");
-        return VAL_INVALID;
+        // shift VT_RANGE by the given offset
+        IntRange rng = DCAST<const RangeValue *>(valData)->range;
+        rng.lo += off;
+        rng.hi += off;
+        return this->valByRange(valRoot, rng);
     }
 
     // subtract the root
-    const TValId valRoot = valData->valRoot;
     off += valData->offRoot;
     if (!off)
         return valRoot;

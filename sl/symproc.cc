@@ -927,7 +927,9 @@ bool compareIntRanges(
         return true;
     }
 
+#if !SE_ALLOW_OFF_RANGES
     CL_BREAK_IF("please implement");
+#endif
     return false;
 }
 
@@ -949,7 +951,9 @@ TValId comparePointers(
     if (compareIntRanges(&result, code, range1, range2))
         return boolToVal(result);
 
+#if !SE_ALLOW_OFF_RANGES
     CL_BREAK_IF("please implement");
+#endif
     return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
@@ -1081,7 +1085,7 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
         const EValueTarget code1 = sh_.valTarget(v1);
         const EValueTarget code2 = sh_.valTarget(v2);
 
-        if (isPossibleToDeref(code1) && isPossibleToDeref(code2))
+        if (isAnyDataArea(code1) && isAnyDataArea(code2))
             // ... and it indeed is a pointer difference
             return diffPointers(sh_, v1, v2);
     }
@@ -1181,13 +1185,13 @@ bool decryptCIL(
     const SymHeap &sh = proc.sh();
     const bool isMinus = (CL_BINOP_MINUS == code);
 
-    if (isPossibleToDeref(sh.valTarget(v1)) && isIntCst(sh, v2)) {
+    if (isAnyDataArea(sh.valTarget(v1)) && isIntCst(sh, v2)) {
         CL_DEBUG("Using CIL code obfuscator? No problem...");
         *pResult = proc.handlePointerPlus(v1, v2, /* negOffset */ isMinus);
         return true;
     }
 
-    if (isPossibleToDeref(sh.valTarget(v2)) && isIntCst(sh, v1)) {
+    if (isAnyDataArea(sh.valTarget(v2)) && isIntCst(sh, v1)) {
         if (isMinus)
             // CL_BINOP_MINUS makes no sense here, it would mean e.g. (4 - &foo)
             return false;
