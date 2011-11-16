@@ -480,10 +480,12 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
     if (1 != valData->usedBy.erase(obj))
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
 
-    const TValId root = valData->valRoot;
-    this->ents.getEntRW(&valData, root);
     if (!isPossibleToDeref(valData->code))
         return /* wasPtr */ false;
+
+    // jump to root
+    const TValId root = valData->valRoot;
+    this->ents.getEntRW(&valData, root);
 
     RootValue *rootData = DCAST<RootValue *>(valData);
     if (1 != rootData->usedByGl.erase(obj))
