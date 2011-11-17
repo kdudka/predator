@@ -1165,17 +1165,22 @@ TValId diffPointers(
     const TValId root1 = sh.valRoot(v1);
     const TValId root2 = sh.valRoot(v2);
     if (root1 != root2)
-        // TODO: allow to see through segments here?
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
-    TValId result;
-    const long off1 = sh.valOffset(v1);
-    const long off2 = sh.valOffset(v2);
-    if (computeIntCstResult(&result, sh, CL_BINOP_MINUS, off1, off2))
-        return result;
+    // get offset ranges for both pointers
+    const IntRange off1 = sh.valOffsetRange(v1);
+    const IntRange off2 = sh.valOffsetRange(v2);
 
-    CL_BREAK_IF("diffPointers() malfunction");
-    return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    // prepare a custom value for the result
+    CustomValue cv(CV_INT_RANGE);
+    IntRange &diff = cv.data.rng;
+
+    // compute the diff boundaries
+    diff.lo = off1.lo - off2.hi;
+    diff.hi = off1.hi - off2.lo;
+
+    // return the difference as a custom value
+    return sh.valWrapCustom(cv);
 }
 
 TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
