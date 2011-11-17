@@ -275,6 +275,7 @@ struct BaseValue: public AbstractHeapEntity {
     TValId                          valRoot;
     TOffset                         offRoot;
     TObjSet                         usedBy;
+    TValId                          anchor;     ///< used only by VT_RANGE
 
     BaseValue(EValueTarget code_, EValueOrigin origin_):
         code(code_),
@@ -288,11 +289,24 @@ struct BaseValue: public AbstractHeapEntity {
     }
 };
 
-struct RangeValue: public BaseValue {
+struct AnchorValue: public BaseValue {
+    TOffMap                         offMap;
+
+    AnchorValue(EValueTarget code_, EValueOrigin origin_):
+        BaseValue(code_, origin_)
+    {
+    }
+
+    virtual AnchorValue* clone() const {
+        return new AnchorValue(*this);
+    }
+};
+
+struct RangeValue: public AnchorValue {
     IntRange                        range;
 
     RangeValue(const IntRange &range_):
-        BaseValue(VT_RANGE, VO_ASSIGNED),
+        AnchorValue(VT_RANGE, VO_ASSIGNED),
         range(range_)
     {
     }
@@ -328,10 +342,9 @@ struct InternalCustomValue: public BaseValue {
     }
 };
 
-struct RootValue: public BaseValue {
+struct RootValue: public AnchorValue {
     CVar                            cVar;
     TOffset                         size;
-    TOffMap                         offMap;
     TLiveObjs                       liveObjs;
     TObjSet                         usedByGl;
     TArena                          arena;
@@ -339,14 +352,14 @@ struct RootValue: public BaseValue {
     bool                            isProto;
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
-        BaseValue(code_, origin_),
+        AnchorValue(code_, origin_),
         size(0),
         lastKnownClt(0),
         isProto(false)
     {
     }
 
-    virtual BaseValue* clone() const {
+    virtual RootValue* clone() const {
         return new RootValue(*this);
     }
 };
@@ -1586,21 +1599,17 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, at);
     const TValId valRoot = valData->valRoot;
+    const EValueTarget code = valData->code;
 
-    if (VT_RANGE == valData->code) {
-        // shift VT_RANGE by the given offset
-        IntRange rng = DCAST<const RangeValue *>(valData)->range;
-        rng.lo += off;
-        rng.hi += off;
-        return this->valByRange(valRoot, rng);
-    }
+    TValId anchor = valRoot;
+    if (VT_RANGE == code)
+        anchor = valData->anchor;
 
     // subtract the root
     off += valData->offRoot;
     if (!off)
-        return valRoot;
+        return anchor;
 
-    const EValueTarget code = valData->code;
     if (VT_UNKNOWN == code)
         // do not track off-value for invalid targets
         return d->valDup(at);
@@ -1611,9 +1620,9 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     }
 
     // off-value lookup
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, valRoot);
-    const TOffMap &offMap = rootData->offMap;
+    const AnchorValue *anchorData;
+    d->ents.getEntRO(&anchorData, anchor);
+    const TOffMap &offMap = anchorData->offMap;
     const TOffPair offPair(/* lo */ off, /* hi */ off);
     TOffMap::const_iterator it = offMap.find(offPair);
     if (offMap.end() != it)
@@ -1625,12 +1634,13 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
 
     // offVal->valRoot needs to be set after the call of Private::assignId()
     offVal->valRoot = valRoot;
+    offVal->anchor  = anchor;
     offVal->offRoot = off;
 
     // store the mapping for next wheel
-    RootValue *rootDataRW;
-    d->ents.getEntRW(&rootDataRW, valRoot);
-    rootDataRW->offMap[offPair] = val;
+    AnchorValue *anchorDataRW;
+    d->ents.getEntRW(&anchorDataRW, anchor);
+    anchorDataRW->offMap[offPair] = val;
     return val;
 }
 
@@ -1658,18 +1668,18 @@ TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
 #endif
 
     // create a new range value
-    BaseValue *offVal = new RangeValue(range);
-    const TValId val = d->assignId(offVal);
+    RangeValue *rangeData = new RangeValue(range);
+    const TValId val = d->assignId(rangeData);
 
     // offVal->valRoot needs to be set after the call of Private::assignId()
-    offVal->valRoot = root;
-
-    // store the mapping for next wheel
-    RootValue *rootDataRW;
-    d->ents.getEntRW(&rootDataRW, root);
+    rangeData->valRoot = root;
+    rangeData->anchor = val;
 
     // FIXME: recycling VT_RANGE values was actually a really bad idea
 #if 0
+    // store the mapping for next wheel
+    RootValue *rootDataRW;
+    d->ents.getEntRW(&rootDataRW, root);
     rootDataRW->offMap[offPair] = val;
 #endif
 
@@ -1808,9 +1818,31 @@ TOffset SymHeapCore::valOffset(TValId val) const {
 }
 
 IntRange SymHeapCore::valOffsetRange(TValId val) const {
-    const RangeValue *valData;
+    const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
-    return valData->range;
+
+    const TValId anchor = valData->anchor;
+    CL_BREAK_IF(VT_RANGE != valData->code);
+
+    if (valData->anchor == val) {
+        // we got the VT_RANGE anchor directly
+        const RangeValue *rangeData = DCAST<const RangeValue *>(valData);
+        return rangeData->range;
+    }
+
+    // we need to resolve an off-value to VT_RANGE anchor
+    const RangeValue *rangeData;
+    d->ents.getEntRO(&rangeData, anchor);
+
+    // check the offset we need to shift the anchor by
+    const TOffset off = valData->offRoot;
+    CL_BREAK_IF(!off);
+
+    // shift the range and return the result
+    IntRange range = rangeData->range;
+    range.lo += off;
+    range.hi += off;
+    return range;
 }
 
 void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
