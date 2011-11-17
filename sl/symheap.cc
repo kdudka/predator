@@ -1635,10 +1635,17 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
 }
 
 TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
+    if (range.lo == range.hi) {
+        CL_DEBUG("valByRange() got a singular range, passing to valByOffset()");
+        return this->valByOffset(root, range.lo);
+    }
+
     // we require a valid range consisting of at least two values
     CL_BREAK_IF(range.hi <= range.lo);
     const TOffPair offPair(range.lo, range.hi);
 
+    // FIXME: recycling VT_RANGE values was actually a really bad idea
+#if 0
     // read-only root extraction
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
@@ -1648,6 +1655,7 @@ TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
     TOffMap::const_iterator it = offMap.find(offPair);
     if (offMap.end() != it)
         return it->second;
+#endif
 
     // create a new range value
     BaseValue *offVal = new RangeValue(range);
@@ -1659,7 +1667,12 @@ TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
     // store the mapping for next wheel
     RootValue *rootDataRW;
     d->ents.getEntRW(&rootDataRW, root);
+
+    // FIXME: recycling VT_RANGE values was actually a really bad idea
+#if 0
     rootDataRW->offMap[offPair] = val;
+#endif
+
     return val;
 }
 
