@@ -1,1 +1,1 @@
-../plarena/test-0406-plist.c
+../plarena/test-0406-plist-simplified.c
