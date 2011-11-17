@@ -1262,15 +1262,35 @@ bool isIntCst(const SymHeap &sh, const TValId val) {
     return (CV_INT == cv.code);
 }
 
-bool decryptCIL(
+TValId handlePtrOperator(
+        SymProc                    &proc,
+        const TValId                vPtr,
+        const TValId                vInt,
+        const enum cl_binop_e       code)
+{
+    SymHeap &sh = proc.sh();
+
+    switch (code) {
+        case CL_BINOP_PLUS:
+            return proc.handlePointerPlus(vPtr, vInt, /* negOffset */ false);
+
+        case CL_BINOP_MINUS:
+            return proc.handlePointerPlus(vPtr, vInt, /* negOffset */ true);
+
+        default:
+            CL_BREAK_IF("unhandled binary operator in handlePtrOperator()");
+            return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    }
+}
+
+/// ptr arithmetic is sometimes (with CIL always) masked as integral arithmetic
+bool reconstructPtrArithmetic(
         TValId                     *pResult,
         SymProc                    &proc,
         const TValId                v1,
         const TValId                v2,
         const enum cl_binop_e       code)
 {
-    CL_BREAK_IF(CL_BINOP_PLUS != code && CL_BINOP_MINUS != code);
-
     // these are no-ops (and I would bet they come from CIL anyway)
     if (VAL_NULL == v1) {
         *pResult =  v2;
@@ -1282,25 +1302,24 @@ bool decryptCIL(
     }
 
     const SymHeap &sh = proc.sh();
-    const bool isMinus = (CL_BINOP_MINUS == code);
 
     if (isAnyDataArea(sh.valTarget(v1)) && isIntCst(sh, v2)) {
-        CL_DEBUG("Using CIL code obfuscator? No problem...");
-        *pResult = proc.handlePointerPlus(v1, v2, /* negOffset */ isMinus);
+        CL_DEBUG("integral operator applied on ptr handled as ptr operator...");
+        *pResult = handlePtrOperator(proc, /* vPtr */ v1, /* vInt */ v2, code);
         return true;
     }
 
     if (isAnyDataArea(sh.valTarget(v2)) && isIntCst(sh, v1)) {
-        if (isMinus)
+        if (CL_BINOP_MINUS == code)
             // CL_BINOP_MINUS makes no sense here, it would mean e.g. (4 - &foo)
             return false;
 
-        CL_DEBUG("Using CIL code obfuscator? No problem...");
-        *pResult = proc.handlePointerPlus(v2, v1, /* negOffset */ false);
+        CL_DEBUG("integral operator applied on ptr handled as ptr operator...");
+        *pResult = handlePtrOperator(proc, /* vPtr */ v2, /* vInt */ v1, code);
         return true;
     }
 
-    // no CIL-generated nonsense detected
+    // looks like a real integral operation
     return false;
 }
 
@@ -1392,7 +1411,7 @@ struct OpHandler</* binary */ 2> {
 
             case CL_BINOP_PLUS:
             case CL_BINOP_MINUS:
-                if (decryptCIL(&vRes, proc, rhs[0], rhs[1], code))
+                if (reconstructPtrArithmetic(&vRes, proc, rhs[0], rhs[1], code))
                     return vRes;
                 else
                     goto handle_int;
