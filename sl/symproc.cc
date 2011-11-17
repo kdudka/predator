@@ -1021,6 +1021,63 @@ TValId compareValues(
     return sh.valCreate(VT_UNKNOWN, vo);
 }
 
+bool trimRangesIfPossible(
+        SymHeap                     &sh,
+        const CmpOpTraits           &cTraits,
+        const bool                  branch,
+        const TValId                v1,
+        const TValId                v2)
+{
+    const bool ltr = cTraits.leftToRight;
+    const bool rtl = cTraits.rightToLeft;
+    CL_BREAK_IF(ltr && rtl);
+
+    if (!ltr && !rtl)
+        // not a suitable binary operator (modulo some corner cases)
+        return false;
+
+    const bool isRange1 = (VT_RANGE == sh.valTarget(v1));
+    const bool isRange2 = (VT_RANGE == sh.valTarget(v2));
+    if (isRange1 == isRange2)
+        // not a suitable value pair for trimming
+        return false;
+
+    const TValId root = sh.valRoot(v1);
+    if (root != sh.valRoot(v2))
+        // root mismatch
+        return false;
+
+    // FIXME: the following code must be full of bugs
+    CL_DEBUG("trimRangesIfPossible() is taking place...");
+
+    // should we include the boundary to the result?
+    const bool isOpen = (branch == cTraits.negative);
+
+    // which boundary are we going to trim?
+    const bool neg = (branch == isRange2);
+    const bool trimLo = (neg == ltr);
+
+    // pick the values in the appropriate order
+    const TValId valRange = (isRange1) ? v1 : v2;
+    const TValId valTrim  = (isRange2) ? v1 : v2;
+
+    // extract the current offset range and trimming offset
+    IntRange offRange = sh.valRange(valRange);
+    const TOffset offTrim = sh.valOffset(valTrim);
+
+    if (trimLo)
+        // shift the lower bound up
+        offRange.lo = offTrim + isOpen;
+    else
+        // shift the upper bound down
+        offRange.hi = offTrim - isOpen;
+
+    // replace the VT_RANGE by the trimmed VT_RANGE value
+    const TValId valResult = sh.valByRange(root, offRange);
+    sh.valReplace(valRange, valResult);
+    return true;
+}
+
 bool reflectCmpResult(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
@@ -1032,6 +1089,9 @@ bool reflectCmpResult(
     CmpOpTraits cTraits;
     if (!describeCmpOp(&cTraits, code))
         return false;
+
+    if (trimRangesIfPossible(sh, cTraits, branch, v1, v2))
+        return true;
 
     if (branch == cTraits.negative) {
         if (!cTraits.preserveNeq)
