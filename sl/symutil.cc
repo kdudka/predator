@@ -56,6 +56,23 @@ bool numFromVal(long *pDst, const SymHeap &sh, const TValId val) {
     return true;
 }
 
+bool rangeFromVal(IntRange *pDst, const SymHeap &sh, const TValId val) {
+    long num;
+    if (numFromVal(&num, sh, val)) {
+        // a single number
+        pDst->lo = num;
+        pDst->hi = num;
+        return true;
+    }
+
+    CustomValue cv = sh.valUnwrapCustom(val);
+    if (CV_INT_RANGE != cv.code)
+        return false;
+
+    *pDst = cv.data.rng;
+    return true;
+}
+
 bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val) {
     if (VT_CUSTOM != sh.valTarget(val))
         // not a custom value

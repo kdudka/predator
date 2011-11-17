@@ -374,6 +374,8 @@ bool handleMalloc(
     return true;
 }
 
+// FIXME: this is only proof of concept, it needs to be completely rewritten
+//        such that we can share most of the code with memmove, memcpy, etc.
 bool handleMemset(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -390,44 +392,83 @@ bool handleMemset(
 
     // how much we are going to write?
     const TValId valSize = core.valFromOperand(opList[/* size */ 4]);
-    long size;
-    if (!numFromVal(&size, sh, valSize)) {
+    IntRange sizeRange;
+    if (!rangeFromVal(&sizeRange, sh, valSize) || sizeRange.lo < 0) {
         CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
         core.printBackTrace(ML_ERROR);
         insertCoreHeap(dst, core, insn);
         return true;
     }
-    if (!size) {
+    if (!sizeRange.hi) {
         CL_WARN_MSG(lw, "ignoring call of memset() with size == 0");
         core.printBackTrace(ML_WARN);
         insertCoreHeap(dst, core, insn);
         return true;
     }
 
-    // check the pointer - is it valid? do we have enough allocated memory?
+    // resolve address
     const TValId addr = core.valFromOperand(opList[/* addr */ 2]);
-    if (core.checkForInvalidDeref(addr, size)) {
+    const TValId root = sh.valRoot(addr);
+    const IntRange beg = sh.valOffsetRange(addr);
+
+    // how much memory are we going to touch in the worst case?
+    IntRange total;
+    total.lo = beg.lo;
+    total.hi = beg.hi + sizeRange.hi;
+
+    // check the pointer - is it valid? do we have enough allocated memory?
+    const TValId valBegTotal = sh.valByOffset(root, total.lo);
+    if (core.checkForInvalidDeref(valBegTotal, total.hi - total.lo)) {
         // error message already printed out
         core.printBackTrace(ML_ERROR);
         insertCoreHeap(dst, core, insn);
         return true;
     }
 
-    // what are we going to write?
-    TValId tplValue = core.valFromOperand(opList[/* char */ 3]);
-    if (VAL_NULL != tplValue) {
-        CL_DEBUG_MSG(lw, "memset() writing nonzero value writes unknown value");
-        tplValue = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
-    }
+    // FIXME: the following code is full of off-by-one errors
+    CL_DEBUG_MSG(lw, "executing memset() as a built-in function");
+    const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    // how much memory can we guarantee the content of?
+    IntRange safeRange;
+    safeRange.lo = beg.hi;
+    safeRange.hi = beg.lo + sizeRange.lo;
 
     // enter leak monitor
     LeakMonitor lm(sh);
     lm.enter();
-
-    // write the block!
     TValSet killedPtrs;
-    CL_DEBUG_MSG(lw, "executing memset() as a built-in function");
-    sh.writeUniformBlock(addr, tplValue, size, &killedPtrs);
+
+    const long prefixWidth = safeRange.lo - total.lo;
+    if (0 < prefixWidth) {
+        // invalidate prefix
+        CL_DEBUG_MSG(lw, "memset() called with addr given as range");
+        sh.writeUniformBlock(valBegTotal, valUnknown, prefixWidth, &killedPtrs);
+    }
+
+    if (safeRange.lo < safeRange.hi) {
+        // what are we going to write?
+        TValId tplValue = core.valFromOperand(opList[/* char */ 3]);
+        if (VAL_NULL != tplValue) {
+            CL_DEBUG_MSG(lw, "memset() writing nonzero value just invalidates");
+            tplValue = valUnknown;
+        }
+
+        // write the block we know the content of!
+        const TValId valBegSafe = sh.valByOffset(root, safeRange.lo);
+        const long safeWidth = safeRange.hi - safeRange.lo;
+        sh.writeUniformBlock(valBegSafe, tplValue, safeWidth, &killedPtrs);
+    }
+
+    const long suffixWidth = total.hi - safeRange.hi;
+    if (0 < suffixWidth) {
+        // invalidate suffix
+        CL_DEBUG_MSG(lw, "memset() called with addr/size given as range");
+        const TValId valEndSafe = sh.valByOffset(root, safeRange.hi);
+
+        // pick a fresh unknown value and invalidate the area
+        sh.writeUniformBlock(valEndSafe, valUnknown, suffixWidth, &killedPtrs);
+    }
 
     // check for memory leaks
     if (lm.collectJunkFrom(killedPtrs)) {

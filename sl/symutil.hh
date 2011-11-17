@@ -47,6 +47,8 @@ inline TValId boolToVal(const bool b) {
 
 bool numFromVal(long *pDst, const SymHeap &, const TValId);
 
+bool rangeFromVal(IntRange *pDst, const SymHeap &, const TValId);
+
 bool stringFromVal(const char **pDst, const SymHeap &, const TValId);
 
 void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
