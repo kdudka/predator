@@ -101,7 +101,7 @@
 /**
  * if 1, allow values where the offset is specified by int ranges (VT_RANGE)
  */
-#define SE_ALLOW_OFF_RANGES                 0
+#define SE_ALLOW_OFF_RANGES                 1
 
 /**
  * how much do we allow to use three-way join
