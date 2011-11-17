@@ -1857,21 +1857,33 @@ bool joinAbstractValues(
             if (!joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY))
                 *pResult = false;
 
-            return true;
+            goto done;
         }
 
         else if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
-            return true;
+            goto done;
     }
 
     if (!insertSegmentClone(pResult, ctx, v1, v2, subStatus)) {
         if (ctx.joiningData()) {
-            return joinSegmentWithAny(pResult, ctx, root1, root2, subStatus,
-                        /* firstTryReadOnly */ false);
+            if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus,
+                        /* firstTryReadOnly */ false))
+                goto done;
+
+            return false;
         }
 
         *pResult = false;
     }
+
+done:
+    if (!*pResult)
+        // we have failed anyway
+        return true;
+
+    if (VT_RANGE == code1 || VT_RANGE == code2)
+        // no VT_RANGE values involved
+        *pResult = joinRangeValues(ctx, v1, v2);
 
     return true;
 }
