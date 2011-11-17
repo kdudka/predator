@@ -541,11 +541,12 @@ bool joinFreshObjTripple(
     if (segClone) {
         const bool isGt1 = !obj2.isValid();
         const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
-        const TValId val = (isGt1)
-            ? ctx.sh1.valRoot(v1)
-            : ctx.sh2.valRoot(v2);
+        const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
+        const TValId valGt = (isGt1) ? v1 : v2;
+        const TValId root = shGt.valRoot(valGt);
+        const EValueTarget code = shGt.valTarget(valGt);
 
-        if (val <= 0 || hasKey(vm[/* lrt */ 0], val))
+        if (root <= 0 || (VT_RANGE != code && hasKey(vm[/* ltr */ 0], root)))
             return true;
 
         // XXX
@@ -1668,6 +1669,47 @@ bool handleUnknownValues(
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 
+bool cloneSpecialValue(
+        SymJoinCtx              &ctx,
+        SymHeap                 &shGt,
+        const TValId            valGt,
+        const TValMapBidir      &valMapGt,
+        const TValPair          vp,
+        EValueTarget            code)
+{
+    const TValId rootGt = shGt.valRoot(valGt);
+    EValueOrigin vo = shGt.valOrigin(valGt);
+    TValId vDst;
+
+    switch (code) {
+        case VT_RANGE:
+            if (hasKey(valMapGt[/* ltr */ 0], rootGt))
+                break;
+
+            CL_BREAK_IF("unable to transfer a VT_RANGE value");
+            // fall through!
+
+        case VT_CUSTOM:
+            code = VT_UNKNOWN;
+            vo = VO_UNKNOWN;
+            // fall through!
+
+        default:
+            vDst = ctx.dst.valCreate(code, shGt.valOrigin(valGt));
+            return handleUnknownValues(ctx, vp.first, vp.second, vDst);
+    }
+
+    // VT_RANGE
+    const TValId rootDst = roMapLookup(valMapGt[/* ltr */ 0], rootGt);
+    const IntRange range = shGt.valOffsetRange(valGt);
+    vDst = ctx.dst.valByRange(rootDst, range);
+    if (!handleUnknownValues(ctx, vp.first, vp.second, vDst))
+        return false;
+
+    ctx.matchLookup[vp] = vDst;
+    return true;
+}
+
 /// (NULL != off) means 'introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL'
 bool insertSegmentClone(
         bool                    *pResult,
@@ -1748,16 +1790,7 @@ bool insertSegmentClone(
                 continue;
         }
         else {
-            EValueOrigin vo = shGt.valOrigin(valGt);
-            if (VT_CUSTOM == code) {
-                // throw away an unmatched custom value
-                code = VT_UNKNOWN;
-                vo = VO_UNKNOWN;
-            }
-
-            // clone unknown value
-            const TValId vDst = ctx.dst.valCreate(code, vo);
-            if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
+            if (cloneSpecialValue(ctx, shGt, valGt, valMapGt, vp, code))
                 continue;
         }
 

@@ -2573,7 +2573,7 @@ void SymHeap::swap(SymHeapCore &baseRef) {
 
 TValId SymHeap::valClone(TValId val) {
     const TValId dup = SymHeapCore::valClone(val);
-    if (dup <= 0)
+    if (dup <= 0 || VT_RANGE == this->valTarget(val))
         return dup;
 
     const TValId valRoot = this->valRoot(val);
