@@ -1186,14 +1186,10 @@ unsigned SymHeapCore::lastId() const {
 TValId SymHeapCore::valClone(TValId val) {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
+
     const EValueTarget code = valData->code;
     if (VT_CUSTOM == code) {
         CL_BREAK_IF("custom values are not supposed to be cloned");
-        return val;
-    }
-
-    if (VT_RANGE == code) {
-        CL_BREAK_IF("VT_RANGE values are not supposed to be cloned");
         return val;
     }
 
@@ -1206,6 +1202,12 @@ TValId SymHeapCore::valClone(TValId val) {
     if (VAL_NULL == root) {
         CL_BREAK_IF("VAL_NULL is not supposed to be cloned");
         return val;
+    }
+
+    if (VT_RANGE == code) {
+        CL_DEBUG("support for VT_RANGE in valClone() is experimental");
+        const IntRange range = this->valOffsetRange(val);
+        return this->valByRange(valData->valRoot, range);
     }
 
     if (!isPossibleToDeref(code))
