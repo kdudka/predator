@@ -400,7 +400,7 @@ class SymHeapCore {
         TOffset valOffset(TValId) const;
 
         /// return the offset range associated with the given VT_RANGE value
-        const IntRange& valRange(TValId) const;
+        IntRange valOffsetRange(TValId) const;
 
         /// return size (in bytes) that we can safely write at the given addr
         int valSizeOfTarget(TValId) const;

@@ -1807,7 +1807,7 @@ TOffset SymHeapCore::valOffset(TValId val) const {
     return valData->offRoot;
 }
 
-const IntRange& SymHeapCore::valRange(TValId val) const {
+IntRange SymHeapCore::valOffsetRange(TValId val) const {
     const RangeValue *valData;
     d->ents.getEntRO(&valData, val);
     return valData->range;

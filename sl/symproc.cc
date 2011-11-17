@@ -1062,7 +1062,7 @@ bool trimRangesIfPossible(
     const TValId valTrim  = (isRange2) ? v1 : v2;
 
     // extract the current offset range and trimming offset
-    IntRange offRange = sh.valRange(valRange);
+    IntRange offRange = sh.valOffsetRange(valRange);
     const TOffset offTrim = sh.valOffset(valTrim);
 
     if (trimLo)

@@ -796,7 +796,7 @@ preserve_suffix:
     const TValId root = sh.valRoot(val);
 
     if (VT_RANGE == code) {
-        const IntRange &offRange = sh.valRange(val);
+        const IntRange &offRange = sh.valOffsetRange(val);
         plot.out << " [root = #" << root
             << ", off = " << offRange.lo << ".." << offRange.hi << "]";
     }
@@ -838,7 +838,7 @@ void plotNonRootValues(PlotData &plot) {
         const TValId root = sh.valRoot(val);
         const EValueTarget code = sh.valTarget(val);
         if (VT_RANGE == code) {
-            const IntRange &rng = sh.valRange(val);
+            const IntRange &rng = sh.valOffsetRange(val);
             plotRangePtr(plot, val, root, rng);
             continue;
         }

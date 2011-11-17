@@ -49,7 +49,7 @@ inline TValId boolToVal(const bool b) {
 inline const IntRange valToRange(const SymHeap &sh, const TValId val) {
     const EValueTarget code = sh.valTarget(val);
     if (VT_RANGE == code)
-        return sh.valRange(val);
+        return sh.valOffsetRange(val);
 
     // read scalar offset
     const TOffset off = sh.valOffset(val);

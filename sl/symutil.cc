@@ -181,7 +181,7 @@ void redirectRefs(
         const EValueTarget code = sh.valTarget(nowAt);
         if (VT_RANGE == code) {
             // redirect a value with range offset
-            IntRange offRange = sh.valRange(nowAt);
+            IntRange offRange = sh.valOffsetRange(nowAt);
             offRange.lo -= offHead;
             offRange.hi -= offHead;
             result = sh.valByRange(redirectTo, offRange);

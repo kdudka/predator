@@ -202,7 +202,7 @@ TValId handleValueCore(DeepCopyData &dc, TValId srcAt) {
 
     if (VT_RANGE == dc.src.valTarget(srcAt)) {
         // range offset value
-        const IntRange range = dc.src.valRange(srcAt);
+        const IntRange range = dc.src.valOffsetRange(srcAt);
         const TValId dstAt = dc.dst.valByRange(rootDstAt, range);
         dc.valMap[srcAt] = dstAt;
         return dstAt;
