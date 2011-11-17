@@ -680,6 +680,13 @@ void describeInt(PlotData &plot, const long num, const TValId val) {
         << val << ")\"";
 }
 
+void describeIntRange(PlotData &plot, const IntRange &range, const TValId val) {
+    plot.out << ", fontcolor=blue, label=\"[int range] "
+        << range.lo << " .. "
+        << range.hi << " (#"
+        << val << ")\"";
+}
+
 void describeReal(PlotData &plot, const float fpn, const TValId val) {
     plot.out << ", fontcolor=red, label=\"[real] "
         << fpn << " (#"
@@ -722,6 +729,10 @@ void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
             describeInt(plot, data.num, val);
             break;
 
+        case CV_INT_RANGE:
+            describeIntRange(plot, data.rng, val);
+            break;
+
         case CV_REAL:
             describeReal(plot, data.fpn, val);
             break;
@@ -733,9 +744,6 @@ void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
         case CV_STRING:
             describeStr(plot, data.str, val);
             break;
-
-        case CV_INT_RANGE:
-            CL_BREAK_IF("please implement");
     }
 
     plot.out << "];\n\t" << SL_QUOTE(obj)

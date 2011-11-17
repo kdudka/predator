@@ -2397,21 +2397,40 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
     return d->valCreate(code, origin);
 }
 
-TValId SymHeapCore::valWrapCustom(const CustomValue &cVal) {
-    const ECustomValue code = cVal.code;
-    if (CV_INT == code) {
-        // short-circuit for special integral values
-        const long num = cVal.data.num;
-        switch (num) {
-            case 0:
-                return VAL_NULL;
+TValId SymHeapCore::valWrapCustom(CustomValue cVal) {
+    ECustomValue &code = cVal.code;
+    long &num = cVal.data.num;
 
-            case 1:
-                return VAL_TRUE;
+    switch (code) {
+        case CV_INT_RANGE:
+            if (!isSingular(cVal.data.rng)) {
+                // CV_INT_RANGE with a valid range (do not recycle these)
+                const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
+                InternalCustomValue *valData;
+                d->ents.getEntRW(&valData, val);
+                valData->customData = cVal;
+                return val;
+            }
 
-            default:
-                break;
-        }
+            code = CV_INT;
+            num = cVal.data.rng.lo;
+            // fall through!
+
+        case CV_INT:
+            // short-circuit for special integral values
+            switch (num) {
+                case 0:
+                    return VAL_NULL;
+
+                case 1:
+                    return VAL_TRUE;
+
+                default:
+                    break;
+            }
+
+        default:
+            break;
     }
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cValueMap);
@@ -2433,8 +2452,9 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
     const InternalCustomValue *valData;
     d->ents.getEntRO(&valData, val);
 
-    // check the consistency of backward mapping
-    CL_BREAK_IF(val != d->cValueMap->lookup(valData->customData));
+    if (CV_INT_RANGE != valData->customData.code)
+        // check the consistency of backward mapping
+        CL_BREAK_IF(val != d->cValueMap->lookup(valData->customData));
 
     return valData->customData;
 }
@@ -2810,7 +2830,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
     std::set<TValId> haveSeen;
 
     EValueTarget code = this->valTarget(val);
-    TOffset off;
+    TOffset off /* just to silence gcc */ = -1;
     if (VT_RANGE != code)
         off = this->valOffset(val);
 

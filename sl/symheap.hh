@@ -473,7 +473,7 @@ class SymHeapCore {
         TValId valCreate(EValueTarget code, EValueOrigin origin);
 
         /// wrap a custom value, such as integer literal, or code pointer
-        TValId valWrapCustom(const CustomValue &data);
+        TValId valWrapCustom(CustomValue data);
 
         /// unwrap a custom value, such as integer literal, or code pointer
         const CustomValue& valUnwrapCustom(TValId) const;
