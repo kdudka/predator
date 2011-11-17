@@ -1267,6 +1267,31 @@ bool isIntCst(const SymHeap &sh, const TValId val) {
     return (CV_INT == cv.code);
 }
 
+TValId handlePtrBitAnd(
+        SymProc                    &proc,
+        const TValId                vPtr,
+        const TValId                vInt)
+{
+    SymHeap &sh = proc.sh();
+
+    long mask;
+    if (!numFromVal(&mask, sh, vInt) || 0 < mask)
+        // giving up
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    if (!mask)
+        // the whole pointer has been masked
+        return VAL_NULL;
+
+    // include all possible scenarios into consideration
+    IntRange range;
+    range.lo = mask;
+    range.hi = 0;
+
+    // create the appropriate VT_RANGE value
+    return sh.valByRange(vPtr, range);
+}
+
 TValId handlePtrOperator(
         SymProc                    &proc,
         const TValId                vPtr,
@@ -1281,6 +1306,9 @@ TValId handlePtrOperator(
 
         case CL_BINOP_MINUS:
             return proc.handlePointerPlus(vPtr, vInt, /* negOffset */ true);
+
+        case CL_BINOP_BIT_AND:
+            return handlePtrBitAnd(proc, vPtr, vInt);
 
         default:
             CL_BREAK_IF("unhandled binary operator in handlePtrOperator()");
@@ -1403,7 +1431,6 @@ struct OpHandler</* binary */ 2> {
                 return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
 
             case CL_BINOP_MULT:
-            case CL_BINOP_BIT_AND:
                 if (VAL_NULL == rhs[0] || VAL_NULL == rhs[1])
                     // whatever we got as the second operand, the result is zero
                     return VAL_NULL;
@@ -1413,6 +1440,13 @@ struct OpHandler</* binary */ 2> {
             case CL_BINOP_MIN:
             case CL_BINOP_MAX:
                 goto handle_int;
+
+            case CL_BINOP_BIT_AND:
+                if (VAL_NULL == rhs[0] || VAL_NULL == rhs[1])
+                    // whatever we got as the second operand, the result is zero
+                    return VAL_NULL;
+
+                // fall through!
 
             case CL_BINOP_PLUS:
             case CL_BINOP_MINUS:
