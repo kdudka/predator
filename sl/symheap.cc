@@ -1664,7 +1664,7 @@ TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
     return val;
 }
 
-void SymHeapCore::valRestricOffsetRange(TValId val, IntRange win) {
+void SymHeapCore::valRestrictOffsetRange(TValId val, IntRange win) {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     CL_BREAK_IF(VT_RANGE != valData->code);
@@ -1692,7 +1692,7 @@ void SymHeapCore::valRestricOffsetRange(TValId val, IntRange win) {
         return;
 
     // the range has been restricted to a single off-value, trow it away!
-    CL_DEBUG("valRestricOffsetRange() throws away a singular offset range...");
+    CL_DEBUG("valRestrictOffsetRange() throws away a singular offset range...");
     const TValId valRoot = rangeData->valRoot;
     const TOffset offRoot = range.lo;
     const TValId valSubst = this->valByOffset(valRoot, offRoot);
