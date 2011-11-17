@@ -146,8 +146,7 @@ class CVarMap {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
 typedef std::set<TObjId>                                TObjSet;
-typedef std::pair<TOffset /* lo */, TOffset /* hi */>   TOffPair;
-typedef std::map<TOffPair, TValId>                      TOffMap;
+typedef std::map<TOffset, TValId>                       TOffMap;
 typedef IntervalArena<TOffset, TObjId>                  TArena;
 typedef TArena::key_type                                TMemChunk;
 typedef TArena::value_type                              TMemItem;
@@ -1628,8 +1627,7 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     const AnchorValue *anchorData;
     d->ents.getEntRO(&anchorData, anchor);
     const TOffMap &offMap = anchorData->offMap;
-    const TOffPair offPair(/* lo */ off, /* hi */ off);
-    TOffMap::const_iterator it = offMap.find(offPair);
+    TOffMap::const_iterator it = offMap.find(off);
     if (offMap.end() != it)
         return it->second;
 
@@ -1645,7 +1643,7 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     // store the mapping for next wheel
     AnchorValue *anchorDataRW;
     d->ents.getEntRW(&anchorDataRW, anchor);
-    anchorDataRW->offMap[offPair] = val;
+    anchorDataRW->offMap[off] = val;
     return val;
 }
 
@@ -1655,23 +1653,6 @@ TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
         return this->valByOffset(root, range.lo);
     }
 
-    // we require a valid range consisting of at least two values
-    CL_BREAK_IF(range.hi <= range.lo);
-    const TOffPair offPair(range.lo, range.hi);
-
-    // FIXME: recycling VT_RANGE values was actually a really bad idea
-#if 0
-    // read-only root extraction
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, root);
-
-    // read-only map lookup
-    const TOffMap &offMap = rootData->offMap;
-    TOffMap::const_iterator it = offMap.find(offPair);
-    if (offMap.end() != it)
-        return it->second;
-#endif
-
     // create a new range value
     RangeValue *rangeData = new RangeValue(range);
     const TValId val = d->assignId(rangeData);
@@ -1679,14 +1660,6 @@ TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
     // offVal->valRoot needs to be set after the call of Private::assignId()
     rangeData->valRoot = root;
     rangeData->anchor = val;
-
-    // FIXME: recycling VT_RANGE values was actually a really bad idea
-#if 0
-    // store the mapping for next wheel
-    RootValue *rootDataRW;
-    d->ents.getEntRW(&rootDataRW, root);
-    rootDataRW->offMap[offPair] = val;
-#endif
 
     return val;
 }
@@ -1726,7 +1699,7 @@ void SymHeapCore::valRestricOffsetRange(TValId val, IntRange win) {
     this->valReplace(anchor, valSubst);
 
     BOOST_FOREACH(TOffMap::const_reference item, rangeData->offMap) {
-        const TOffset offRel = item.first/* TODO: drop this */.first;
+        const TOffset offRel = item.first;
         const TValId valOld = item.second;
 
         const TOffset offTotal = offRoot + offRel;
