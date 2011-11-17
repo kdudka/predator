@@ -955,8 +955,8 @@ TValId comparePointers(
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
     bool result;
-    const IntRange range1 = valToRange(sh, v1);
-    const IntRange range2 = valToRange(sh, v2);
+    const IntRange range1 = sh.valOffsetRange(v1);
+    const IntRange range2 = sh.valOffsetRange(v2);
     if (compareIntRanges(&result, code, range1, range2))
         return boolToVal(result);
 

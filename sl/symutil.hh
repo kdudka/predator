@@ -45,22 +45,6 @@ inline TValId boolToVal(const bool b) {
         : VAL_FALSE;
 }
 
-// TODO: extend the SymHeapCore API to do this natively?
-inline const IntRange valToRange(const SymHeap &sh, const TValId val) {
-    const EValueTarget code = sh.valTarget(val);
-    if (VT_RANGE == code)
-        return sh.valOffsetRange(val);
-
-    // read scalar offset
-    const TOffset off = sh.valOffset(val);
-
-    // convert the scalar offset to a singular range
-    IntRange range;
-    range.lo = off;
-    range.hi = off;
-    return range;
-}
-
 bool numFromVal(long *pDst, const SymHeap &, const TValId);
 
 bool stringFromVal(const char **pDst, const SymHeap &, const TValId);

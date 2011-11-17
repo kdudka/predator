@@ -390,8 +390,8 @@ bool joinRangeValues(
     const TValPair vp(v1, v2);
     CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
 
-    const IntRange rng1 = valToRange(ctx.sh1, v1);
-    const IntRange rng2 = valToRange(ctx.sh2, v2);
+    const IntRange rng1 = ctx.sh1.valOffsetRange(v1);
+    const IntRange rng2 = ctx.sh2.valOffsetRange(v2);
 
     if (!isCoveredByRange(rng1, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
         return false;

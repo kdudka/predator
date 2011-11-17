@@ -1870,10 +1870,18 @@ IntRange SymHeapCore::valOffsetRange(TValId val) const {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
 
-    const TValId anchor = valData->anchor;
-    CL_BREAK_IF(VT_RANGE != valData->code);
+    if (VT_RANGE != valData->code) {
+        // this is going to be a singular range
+        const TOffset off = valData->offRoot;
 
-    if (valData->anchor == val) {
+        IntRange single;
+        single.lo = off;
+        single.hi = off;
+        return single;
+    }
+
+    const TValId anchor = valData->anchor;
+    if (anchor == val) {
         // we got the VT_RANGE anchor directly
         const RangeValue *rangeData = DCAST<const RangeValue *>(valData);
         return rangeData->range;
