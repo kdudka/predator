@@ -386,8 +386,8 @@ class SymHeapCore {
         /// translate the given address by the given offset
         TValId valByOffset(TValId, TOffset offset);
 
-        /// create (or recycle) a VT_RANGE value at the given root value
-        TValId valByRange(TValId root, const IntRange &range);
+        /// create (or recycle) a VT_RANGE value at the given allocated address
+        TValId valByRange(TValId at, IntRange range);
 
         /// classify the object the given value points to
         EValueTarget valTarget(TValId) const;

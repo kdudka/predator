@@ -1649,19 +1649,29 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     return val;
 }
 
-TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
+TValId SymHeapCore::valByRange(TValId at, IntRange range) {
     if (isSingular(range)) {
         CL_DEBUG("valByRange() got a singular range, passing to valByOffset()");
-        return this->valByOffset(root, range.lo);
+        return this->valByOffset(at, range.lo);
     }
+
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, at);
+    CL_BREAK_IF(!isPossibleToDeref(valData->code));
+
+    // subtract the root offset
+    const TValId valRoot = valData->valRoot;
+    const TOffset offset = valData->offRoot;
+    range.lo += offset;
+    range.hi += offset;
 
     // create a new range value
     RangeValue *rangeData = new RangeValue(range);
     const TValId val = d->assignId(rangeData);
 
     // offVal->valRoot needs to be set after the call of Private::assignId()
-    rangeData->valRoot = root;
-    rangeData->anchor = val;
+    rangeData->valRoot  = valRoot;
+    rangeData->anchor   = val;
 
     return val;
 }

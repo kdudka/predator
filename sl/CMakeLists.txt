@@ -68,7 +68,7 @@ install(TARGETS sl DESTINATION lib)
 
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
-set(GCC_EXEC_PREFIX "timeout 300"
+set(GCC_EXEC_PREFIX "timeout 600"
     CACHE STRING "Set to empty string if not sure")
 
 set(testdir "${sl_SOURCE_DIR}/../tests/predator-regre")

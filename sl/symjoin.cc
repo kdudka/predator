@@ -1695,7 +1695,7 @@ bool cloneSpecialValue(
             // fall through!
 
         default:
-            vDst = ctx.dst.valCreate(code, shGt.valOrigin(valGt));
+            vDst = ctx.dst.valCreate(code, vo);
             return handleUnknownValues(ctx, vp.first, vp.second, vDst);
     }
 
