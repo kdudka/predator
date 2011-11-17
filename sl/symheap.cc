@@ -1592,6 +1592,11 @@ TObjType SymHeapCore::objType(TObjId obj) const {
     return objData->clt;
 }
 
+bool isSingular(const IntRange &range) {
+    CL_BREAK_IF(range.hi < range.lo);
+    return (range.lo == range.hi);
+}
+
 TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     if (!off || at < 0)
         return at;
@@ -1645,7 +1650,7 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
 }
 
 TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
-    if (range.lo == range.hi) {
+    if (isSingular(range)) {
         CL_DEBUG("valByRange() got a singular range, passing to valByOffset()");
         return this->valByOffset(root, range.lo);
     }
@@ -1684,6 +1689,50 @@ TValId SymHeapCore::valByRange(TValId root, const IntRange &range) {
 #endif
 
     return val;
+}
+
+void SymHeapCore::valRestricOffsetRange(TValId val, IntRange win) {
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
+    CL_BREAK_IF(VT_RANGE != valData->code);
+
+    const TValId anchor = valData->anchor;
+    const TOffset shift = valData->offRoot;
+    CL_BREAK_IF((!!shift) == (anchor == val));
+
+    RangeValue *rangeData;
+    d->ents.getEntRW(&rangeData, anchor);
+    IntRange &range = rangeData->range;
+
+    // translate the given window to our root coords
+    win.lo -= shift;
+    win.hi -= shift;
+
+    // first check that the caller uses the SymHeapCore API correctly
+    CL_BREAK_IF(win == range);
+    CL_BREAK_IF(win.lo < range.lo);
+    CL_BREAK_IF(range.hi < win.hi);
+
+    // restrict the offset range now!
+    range = win;
+    if (!isSingular(range))
+        return;
+
+    // the range has been restricted to a single off-value, trow it away!
+    CL_DEBUG("valRestricOffsetRange() throws away a singular offset range...");
+    const TValId valRoot = rangeData->valRoot;
+    const TOffset offRoot = range.lo;
+    const TValId valSubst = this->valByOffset(valRoot, offRoot);
+    this->valReplace(anchor, valSubst);
+
+    BOOST_FOREACH(TOffMap::const_reference item, rangeData->offMap) {
+        const TOffset offRel = item.first/* TODO: drop this */.first;
+        const TValId valOld = item.second;
+
+        const TOffset offTotal = offRoot + offRel;
+        const TValId valNew = this->valByOffset(valRoot, offTotal);
+        this->valReplace(valOld, valNew);
+    }
 }
 
 EValueOrigin SymHeapCore::valOrigin(TValId val) const {

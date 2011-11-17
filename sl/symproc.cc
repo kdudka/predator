@@ -1072,9 +1072,8 @@ bool trimRangesIfPossible(
         // shift the upper bound down
         offRange.hi = offTrim - isOpen;
 
-    // replace the VT_RANGE by the trimmed VT_RANGE value
-    const TValId valResult = sh.valByRange(root, offRange);
-    sh.valReplace(valRange, valResult);
+    // trim the designated VT_RANGE value
+    sh.valRestricOffsetRange(valRange, offRange);
     return true;
 }
 

@@ -113,6 +113,8 @@ inline bool operator!=(const IntRange &a, const IntRange &b) {
     return !operator==(a, b);
 }
 
+bool isSingular(const IntRange &);
+
 /// @attention SymHeap is not responsible for any deep copies of strings
 union CustomValueData {
     int         uid;        ///< unique ID as assigned by Code Listener
@@ -401,6 +403,9 @@ class SymHeapCore {
 
         /// return the offset range associated with the given VT_RANGE value
         IntRange valOffsetRange(TValId) const;
+
+        /// narrow down the offset range of the given VT_RANGE value
+        void valRestricOffsetRange(TValId, IntRange win);
 
         /// return size (in bytes) that we can safely write at the given addr
         int valSizeOfTarget(TValId) const;
