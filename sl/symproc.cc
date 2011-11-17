@@ -136,7 +136,7 @@ void describeUnknownVal(
     const EValueOrigin code = sh.valOrigin(val);
     switch (code) {
         case VO_DEREF_FAILED:
-            CL_BREAK_IF("invalid call of reportDerefOfUnknownVal()");
+            CL_BREAK_IF("invalid call of describeUnknownVal()");
             // fall through!
 
         case VO_INVALID:
@@ -758,7 +758,7 @@ void SymExecCore::execFree(TValId val) {
         case VT_INVALID:
         case VT_ABSTRACT:
         case VT_COMPOSITE:
-            CL_BREAK_IF("invalid call of SymExecCore::execFreeCore()");
+            CL_BREAK_IF("invalid call of SymExecCore::execFree()");
             // fall through!
 
         case VT_UNKNOWN:

@@ -2797,10 +2797,12 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
 
     std::set<TValId> haveSeen;
 
-    const TOffset off = this->valOffset(val);
+    EValueTarget code = this->valTarget(val);
+    TOffset off;
+    if (VT_RANGE != code)
+        off = this->valOffset(val);
 
     while (0 < val && insertOnce(haveSeen, val)) {
-        const EValueTarget code = this->valTarget(val);
         switch (code) {
             case VT_ON_STACK:
             case VT_ON_HEAP:
@@ -2810,6 +2812,10 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             case VT_CUSTOM:
                 // concrete object reached --> prove done
                 return (val != ref);
+
+            case VT_RANGE:
+                // TODO: improve the reasoning about VT_RANGE values
+                return (VAL_NULL == ref);
 
             case VT_ABSTRACT:
                 break;
@@ -2838,6 +2844,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
         const BindingOff &bOff = this->segBinding(seg);
         const TValId valNext = nextValFromSeg(writable, seg);
         val = writable.valByOffset(valNext, off - bOff.head);
+        code = this->valTarget(val);
     }
 
     return false;
