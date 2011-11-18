@@ -1388,8 +1388,12 @@ bool followRootValues(
         // postpone it till the read-write attempt
         return true;
 
-    const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
-    const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
+    const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1))
+        && !hasKey(ctx.sset1, root1);
+
+    const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2))
+        && !hasKey(ctx.sset2, root2);
+
     if (isDls1 == isDls2)
         return true;
 
@@ -1881,7 +1885,8 @@ done:
         // we have failed anyway
         return true;
 
-    if (VT_RANGE == code1 || VT_RANGE == code2)
+    // we intentionally do not use code1/code2 here (see realValTarget())
+    if (VT_RANGE == ctx.sh1.valTarget(v1) || VT_RANGE == ctx.sh2.valTarget(v2))
         // we came here from a VT_RANGE value, remember to join the entry
         *pResult = joinRangeValues(ctx, v1, v2);
 
@@ -2141,6 +2146,14 @@ bool joinValuesByCode(
         return true;
 }
 
+/// needed because of VT_RANGE vs. VT_ABSTRACT (suboptimal design?)
+EValueTarget realValTarget(const SymHeap &sh, const TValId val) {
+    const EValueTarget code = sh.valTarget(val);
+    return (VT_RANGE == code)
+        ? sh.valTarget(sh.valRoot(val))
+        : code;
+}
+
 bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
         // already joined
@@ -2150,12 +2163,12 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     if (joinValuesByCode(&result, ctx, v1, v2))
         return result;
 
-    EValueTarget vt1 = ctx.sh1.valTarget(v1);
+    EValueTarget vt1 = realValTarget(ctx.sh1, v1);
     if ((VT_ABSTRACT == vt1) && hasKey(ctx.sset1, ctx.sh1.valRoot(v1)))
         // do not treat the starting point as encountered segment
         vt1 = VT_ON_HEAP;
 
-    EValueTarget vt2 = ctx.sh2.valTarget(v2);
+    EValueTarget vt2 = realValTarget(ctx.sh2, v2);
     if ((VT_ABSTRACT == vt2) && hasKey(ctx.sset2, ctx.sh2.valRoot(v2)))
         // do not treat the starting point as encountered segment
         vt2 = VT_ON_HEAP;
