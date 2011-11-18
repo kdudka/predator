@@ -451,6 +451,13 @@ struct TValSetWrapper: public TValSet {
     RefCounter refCnt;
 };
 
+struct CoincidenceDb {
+    typedef NeqDb       TPreds[/* positive + negative */ 2];
+
+    RefCounter          refCnt;
+    TPreds              preds;
+};
+
 struct SymHeapCore::Private {
     Private(Trace::Node *);
     Private(const Private &);
@@ -461,6 +468,7 @@ struct SymHeapCore::Private {
     TValSetWrapper                 *liveRoots;
     CVarMap                        *cVarMap;
     CustomValueMapper              *cValueMap;
+    CoincidenceDb                  *coinDb;
     FriendlyNeqDb                  *neqDb;
 
     inline TObjId assignId(BlockEntity *);
@@ -1042,6 +1050,7 @@ SymHeapCore::Private::Private(Trace::Node *trace):
     liveRoots   (new TValSetWrapper),
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
+    coinDb      (new CoincidenceDb),
     neqDb       (new FriendlyNeqDb)
 {
     // allocate a root-value for VAL_NULL
@@ -1054,11 +1063,13 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     liveRoots   (ref.liveRoots),
     cVarMap     (ref.cVarMap),
     cValueMap   (ref.cValueMap),
+    coinDb      (ref.coinDb),
     neqDb       (ref.neqDb)
 {
     RefCntLib<RCO_NON_VIRT>::enter(this->liveRoots);
     RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->cValueMap);
+    RefCntLib<RCO_NON_VIRT>::enter(this->coinDb);
     RefCntLib<RCO_NON_VIRT>::enter(this->neqDb);
 }
 
@@ -1066,6 +1077,7 @@ SymHeapCore::Private::~Private() {
     RefCntLib<RCO_NON_VIRT>::leave(this->liveRoots);
     RefCntLib<RCO_NON_VIRT>::leave(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cValueMap);
+    RefCntLib<RCO_NON_VIRT>::leave(this->coinDb);
     RefCntLib<RCO_NON_VIRT>::leave(this->neqDb);
 }
 
@@ -1763,10 +1775,11 @@ void SymHeapCore::valRestrictOffsetRange(TValId val, IntRange win) {
 }
 
 void SymHeapCore::Private::bindValues(TValId v1, TValId v2, bool neg) {
-    CL_BREAK_IF("please implement");
-    (void) v1;
-    (void) v2;
-    (void) neg;
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->coinDb);
+    NeqDb &db = this->coinDb->preds[neg];
+
+    CL_BREAK_IF(db.areNeq(v1, v2));
+    db.add(v1, v2);
 }
 
 TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
@@ -1803,11 +1816,24 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
     return valDiff;
 }
 
+// FIXME: this implementation is a stub, it could be improved in several ways
 bool SymHeapCore::areBound(bool *pNeg, TValId v1, TValId v2) {
-    CL_BREAK_IF("please implement");
-    (void) pNeg;
-    (void) v1;
-    (void) v2;
+    const CoincidenceDb::TPreds &preds = d->coinDb->preds;
+    const NeqDb &dbPos = preds[/* positive */ 0];
+    const NeqDb &dbNeg = preds[/* negative */ 1];
+
+    if (dbPos.areNeq(v1, v2)) {
+        CL_BREAK_IF(dbNeg.areNeq(v1, v2));
+        *pNeg = false;
+        return true;
+    }
+
+    if (dbNeg.areNeq(v1, v2)) {
+        *pNeg = true;
+        return true;
+    }
+
+    CL_DEBUG("SymHeapCore::areBound() returns false");
     return false;
 }
 

@@ -24,6 +24,7 @@
 
 #include <set>
 
+/// @todo give this class (and consequently this module) a more generic name
 class NeqDb {
     public:
         bool empty() const {
@@ -32,6 +33,8 @@ class NeqDb {
 
         void add(TValId valLt, TValId valGt);
         void del(TValId valLt, TValId valGt);
+
+        /// @todo give this method a more generic name
         bool areNeq(TValId valLt, TValId valGt) const;
 
     protected:
