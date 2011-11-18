@@ -23,8 +23,7 @@
 
 /**
  * @file symheap.hh
- * SymHeapCore - @b symbolic @b heap representation, the core part of "symexec"
- * code listener
+ * SymHeap - the elementary representation of the state of program memory
  */
 
 #include "config.h"
@@ -63,7 +62,7 @@ enum EValueTarget {
     VT_ON_HEAP,             ///< target is on heap
     VT_LOST,                ///< target was on stack, but it is no longer valid
     VT_DELETED,             ///< target was on heap, but it is no longer valid
-    VT_RANGE,               ///< an offset value given by a closed interval
+    VT_RANGE,               ///< an offset value where offset is given by range
     VT_ABSTRACT             ///< abstract object (segment)
 };
 
@@ -129,7 +128,10 @@ struct CustomValue {
     ECustomValue    code;   ///< custom value classification
     CustomValueData data;   ///< custom data
 
-    CustomValue() { }
+    CustomValue():
+        code(CV_INVALID)
+    {
+    }
 
     CustomValue(ECustomValue code_):
         code(code_)
@@ -137,26 +139,7 @@ struct CustomValue {
     }
 };
 
-inline bool operator==(const CustomValue &a, const CustomValue &b) {
-    const ECustomValue code = a.code;
-    if (b.code != code)
-        return false;
-
-    switch (code) {
-        case CV_FNC:
-            return (a.data.uid == b.data.uid);
-
-        case CV_INT:
-            return (a.data.num == b.data.num);
-
-        case CV_STRING:
-            return STREQ(a.data.str, b.data.str);
-
-        case CV_INVALID:
-        default:
-            return false;
-    }
-}
+bool operator==(const CustomValue &a, const CustomValue &b);
 
 inline bool operator!=(const CustomValue &a, const CustomValue &b) {
     return !operator==(a, b);
@@ -268,7 +251,7 @@ inline bool operator<(const CVar &a, const CVar &b) {
 
 class ObjList;
 
-/// base of @b symbolic @b heap representation (one disjunct of symbolic state)
+/// SymHeapCore - the elementary representation of the state of program memory
 class SymHeapCore {
     public:
         /// create an empty symbolic heap

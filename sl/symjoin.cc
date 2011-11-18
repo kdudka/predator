@@ -1882,7 +1882,7 @@ done:
         return true;
 
     if (VT_RANGE == code1 || VT_RANGE == code2)
-        // no VT_RANGE values involved
+        // we came here from a VT_RANGE value, remember to join the entry
         *pResult = joinRangeValues(ctx, v1, v2);
 
     return true;

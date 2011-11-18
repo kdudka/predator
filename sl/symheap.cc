@@ -143,6 +143,47 @@ class CVarMap {
         }
 };
 
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of IntRange
+bool isSingular(const IntRange &range) {
+    CL_BREAK_IF(range.hi < range.lo);
+    return (range.lo == range.hi);
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of CustomValue
+bool operator==(const CustomValue &a, const CustomValue &b) {
+    const ECustomValue code = a.code;
+    if (b.code != code)
+        return false;
+
+    switch (code) {
+        case CV_INVALID:
+            return true;
+
+        case CV_FNC:
+            return (a.data.uid == b.data.uid);
+
+        case CV_INT:
+            return (a.data.num == b.data.num);
+
+        case CV_REAL:
+            return (a.data.fpn == b.data.fpn);
+
+        case CV_STRING:
+            return STREQ(a.data.str, b.data.str);
+
+        case CV_INT_RANGE:
+            return (a.data.rng == b.data.rng);
+    }
+
+    CL_BREAK_IF("CustomValue::operator==() got something special");
+    return false;
+}
+
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
 typedef std::set<TObjId>                                TObjSet;
@@ -1591,11 +1632,6 @@ TObjType SymHeapCore::objType(TObjId obj) const {
     const HeapObject *objData;
     d->ents.getEntRO(&objData, obj);
     return objData->clt;
-}
-
-bool isSingular(const IntRange &range) {
-    CL_BREAK_IF(range.hi < range.lo);
-    return (range.lo == range.hi);
 }
 
 TValId SymHeapCore::valByOffset(TValId at, TOffset off) {

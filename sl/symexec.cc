@@ -137,9 +137,7 @@ class SymExecEngine: public IStatsProvider {
     public:
         bool /* complete */ run();
 
-        virtual void printStatsHelper(const BlockScheduler::TBlock bb) const;
         virtual void printStats() const;
-        void dumpStateMap();
 
         // TODO: describe the interface briefly
         const SymHeap&                  callEntry() const;
@@ -172,9 +170,9 @@ class SymExecEngine: public IStatsProvider {
 
     private:
         void initEngine(const SymHeap &init);
-        void execJump();
-        void execReturn();
+
         void updateState(SymHeap &sh, const CodeStorage::Block *ofBlock);
+
         void updateStateInBranch(
                 SymHeap                             sh,
                 const bool                          branch,
@@ -190,12 +188,18 @@ class SymExecEngine: public IStatsProvider {
                 const TValId                        v1,
                 const TValId                        v2);
 
+        void execJump();
+        void execReturn();
         void execCondInsn();
         void execTermInsn();
         bool execNontermInsn();
         bool execInsn();
         bool execBlock();
         void processPendingSignals();
+
+        void dumpStateMap();
+
+        void printStatsHelper(const BlockScheduler::TBlock bb) const;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
