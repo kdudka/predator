@@ -700,6 +700,10 @@ class ObjLookup {
             const TObjId obj = hdl.objId();
             return hasKey(idSet_, obj);
         }
+
+        const ObjList& objList() const {
+            return hList_;
+        }
 };
 
 /// enumeration of abstract object (although OK_CONCRETE is not abstract)

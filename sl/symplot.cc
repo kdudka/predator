@@ -571,9 +571,15 @@ void plotDlSeg(PlotData &plot, const TValId seg, const ObjList &liveObjs) {
     // plot the corresponding peer
     const TValId peer = dlSegPeer(sh, seg);
     if (OK_DLS == sh.valTargetKind(peer)) {
+#if SYMPLOT_OMIT_NEQ_EDGES
+        ObjLookup bindPtrs;
+        buildIgnoreList(bindPtrs, sh, peer);
+        plotCompositeObj(plot, peer, bindPtrs.objList());
+#else
         ObjList liveObjsAtPeer;
         sh.gatherLiveObjects(liveObjsAtPeer, peer);
         plotCompositeObj(plot, peer, liveObjsAtPeer);
+#endif
     }
 
     // close the cluster
