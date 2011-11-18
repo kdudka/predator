@@ -1157,32 +1157,6 @@ bool computeIntCstResult(
     return true;
 }
 
-TValId diffPointers(
-        SymHeap                     &sh,
-        const TValId                v1,
-        const TValId                v2)
-{
-    const TValId root1 = sh.valRoot(v1);
-    const TValId root2 = sh.valRoot(v2);
-    if (root1 != root2)
-        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-
-    // get offset ranges for both pointers
-    const IntRange off1 = sh.valOffsetRange(v1);
-    const IntRange off2 = sh.valOffsetRange(v2);
-
-    // prepare a custom value for the result
-    CustomValue cv(CV_INT_RANGE);
-    IntRange &diff = cv.data.rng;
-
-    // compute the diff boundaries
-    diff.lo = off1.lo - off2.hi;
-    diff.hi = off1.hi - off2.lo;
-
-    // return the difference as a custom value
-    return sh.valWrapCustom(cv);
-}
-
 TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
     if (CL_BINOP_MINUS == code) {
         // chances are this could be a pointer difference
@@ -1191,7 +1165,7 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
 
         if (isAnyDataArea(code1) && isAnyDataArea(code2))
             // ... and it indeed is a pointer difference
-            return diffPointers(sh_, v1, v2);
+            return sh_.diffPointers(v1, v2);
     }
 
     // check whether we both values are integral constant

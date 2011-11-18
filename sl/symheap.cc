@@ -512,6 +512,8 @@ struct SymHeapCore::Private {
             const unsigned          size,
             TValSet                 *killedPtrs);
 
+    void bindValues(TValId v1, TValId v2, bool neg);
+
     private:
         // intentionally not implemented
         Private& operator=(const Private &);
@@ -1758,6 +1760,47 @@ void SymHeapCore::valRestrictOffsetRange(TValId val, IntRange win) {
         const TValId valNew = this->valByOffset(valRoot, offTotal);
         this->valReplace(valOld, valNew);
     }
+}
+
+void SymHeapCore::Private::bindValues(TValId v1, TValId v2, bool neg) {
+    CL_BREAK_IF("please implement");
+    (void) v1;
+    (void) v2;
+    (void) neg;
+}
+
+TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
+    const TValId root1 = this->valRoot(v1);
+    const TValId root2 = this->valRoot(v2);
+    if (root1 != root2)
+        return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    // get offset ranges for both pointers
+    const IntRange off1 = this->valOffsetRange(v1);
+    const IntRange off2 = this->valOffsetRange(v2);
+
+    // prepare a custom value for the result
+    CustomValue cv(CV_INT_RANGE);
+    IntRange &diff = cv.data.rng;
+
+    // TODO: check for an already existing coincidence to improve the precision
+
+    // compute the diff boundaries
+    diff.lo = off1.lo - off2.hi;
+    diff.hi = off1.hi - off2.lo;
+
+    const TValId valDiff = this->valWrapCustom(cv);
+    if (isSingular(diff))
+        // good luck, the difference is a scalar
+        return valDiff;
+
+    if (isSingular(off2))
+        d->bindValues(valDiff, v1, /* neg */ false);
+
+    if (isSingular(off1))
+        d->bindValues(valDiff, v2, /* neg */ true);
+
+    return valDiff;
 }
 
 bool SymHeapCore::areBound(bool *pNeg, TValId v1, TValId v2) {
