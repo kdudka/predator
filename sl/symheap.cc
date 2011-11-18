@@ -151,6 +151,10 @@ bool isSingular(const IntRange &range) {
     return (range.lo == range.hi);
 }
 
+long widthOf(const IntRange &range) {
+    return /* closed interval */ 1 + range.hi - range.lo;
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of CustomValue
@@ -1693,7 +1697,7 @@ TValId SymHeapCore::valByRange(TValId at, IntRange range) {
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, at);
-    CL_BREAK_IF(!isPossibleToDeref(valData->code));
+    CL_BREAK_IF(VAL_NULL != at && !isPossibleToDeref(valData->code));
 
     // subtract the root offset
     const TValId valRoot = valData->valRoot;
@@ -1754,6 +1758,14 @@ void SymHeapCore::valRestrictOffsetRange(TValId val, IntRange win) {
         const TValId valNew = this->valByOffset(valRoot, offTotal);
         this->valReplace(valOld, valNew);
     }
+}
+
+bool SymHeapCore::areBound(bool *pNeg, TValId v1, TValId v2) {
+    CL_BREAK_IF("please implement");
+    (void) pNeg;
+    (void) v1;
+    (void) v2;
+    return false;
 }
 
 EValueOrigin SymHeapCore::valOrigin(TValId val) const {

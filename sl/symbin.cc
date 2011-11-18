@@ -411,10 +411,20 @@ bool handleMemset(
     const TValId root = sh.valRoot(addr);
     const IntRange beg = sh.valOffsetRange(addr);
 
+    // deduce whether the end is fixed or not
+    bool isEndFixed = isSingular(beg) && isSingular(sizeRange);
+    if (!isEndFixed && (widthOf(beg) == widthOf(sizeRange))) {
+        bool neg;
+        if (sh.areBound(&neg, addr, valSize) && neg)
+            isEndFixed = true;
+    }
+
     // how much memory are we going to touch in the worst case?
     IntRange total;
     total.lo = beg.lo;
-    total.hi = beg.hi + sizeRange.hi;
+    total.hi = beg.hi + ((isEndFixed)
+        ? sizeRange.lo
+        : sizeRange.hi);
 
     // check the pointer - is it valid? do we have enough allocated memory?
     const TValId valBegTotal = sh.valByOffset(root, total.lo);

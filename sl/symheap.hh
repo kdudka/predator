@@ -113,6 +113,7 @@ inline bool operator!=(const IntRange &a, const IntRange &b) {
 }
 
 bool isSingular(const IntRange &);
+long widthOf(const IntRange &);
 
 /// @attention SymHeap is not responsible for any deep copies of strings
 union CustomValueData {
@@ -389,6 +390,9 @@ class SymHeapCore {
 
         /// narrow down the offset range of the given VT_RANGE value
         void valRestrictOffsetRange(TValId, IntRange win);
+
+        /// check coincidence among two values (any of VT_RANGE or CV_INT_RANGE)
+        bool areBound(bool /* only +/-1 for now */ *pNeg, TValId v1, TValId v2);
 
         /// return size (in bytes) that we can safely write at the given addr
         int valSizeOfTarget(TValId) const;
