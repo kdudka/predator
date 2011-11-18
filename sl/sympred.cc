@@ -17,30 +17,29 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_SYM_NEQ_H
-#define H_GUARD_SYM_NEQ_H
+#include "config.h"
+#include "sympred.hh"
 
-#include "symid.hh"
+#include "util.hh"
 
-#include <set>
+bool NeqDb::areNeq(TValId valLt, TValId valGt) const {
+    sortValues(valLt, valGt);
+    TItem item(valLt, valGt);
+    return hasKey(cont_, item);
+}
 
-/// @todo give this class (and consequently this module) a more generic name
-class NeqDb {
-    public:
-        bool empty() const {
-            return cont_.empty();
-        }
+void NeqDb::add(TValId valLt, TValId valGt) {
+    CL_BREAK_IF(valLt == valGt);
 
-        void add(TValId valLt, TValId valGt);
-        void del(TValId valLt, TValId valGt);
+    sortValues(valLt, valGt);
+    TItem item(valLt, valGt);
+    cont_.insert(item);
+}
 
-        /// @todo give this method a more generic name
-        bool areNeq(TValId valLt, TValId valGt) const;
+void NeqDb::del(TValId valLt, TValId valGt) {
+    CL_BREAK_IF(valLt == valGt);
 
-    protected:
-        typedef std::pair<TValId /* valLt */, TValId /* valGt */> TItem;
-        typedef std::set<TItem> TCont;
-        TCont cont_;
-};
-
-#endif /* H_GUARD_SYM_NEQ_H */
+    sortValues(valLt, valGt);
+    TItem item(valLt, valGt);
+    cont_.erase(item);
+}

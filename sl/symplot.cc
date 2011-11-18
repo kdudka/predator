@@ -26,7 +26,7 @@
 
 #include "plotenum.hh"
 #include "symheap.hh"
-#include "symneq.hh"
+#include "sympred.hh"
 #include "symseg.hh"
 #include "util.hh"
 #include "worklist.hh"

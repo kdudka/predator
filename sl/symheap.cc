@@ -28,7 +28,7 @@
 #include "intarena.hh"
 #include "symabstract.hh"
 #include "syments.hh"
-#include "symneq.hh"
+#include "sympred.hh"
 #include "symseg.hh"
 #include "symutil.hh"
 #include "symtrace.hh"
