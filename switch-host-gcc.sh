@@ -13,7 +13,7 @@ usage() {
 
     Use this script to (re)build Predator against an arbitrary build of host
     GCC.  The host GCC needs to be built with the support for GCC plug-ins.  The
-    currently supported version of host GCC is 4.6.1, but feel free to use any
+    currently supported version of host GCC is 4.6.2, but feel free to use any
     other version of GCC at your own responsibility.
 
     HOST_GCC_EXECUTABLE is an exectuable of gcc(1).  It can be given either with
@@ -35,7 +35,7 @@ usage() {
     GCC_PLUGIN_INCLUDE_DIR.
  
     On Fedora, you need to install a package named gcc-plugin-devel.  Then use
-    /usr/lib/gcc/x86_64-redhat-linux/4.6.1/plugin/include as
+    /usr/lib/gcc/x86_64-redhat-linux/4.6.2/plugin/include as
     GCC_PLUGIN_INCLUDE_DIR.
 
     On Gentoo, you only need to have installed >=sys-devel/gcc-4.5.0.  Then use
