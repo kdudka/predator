@@ -2146,14 +2146,6 @@ bool joinValuesByCode(
         return true;
 }
 
-/// needed because of VT_RANGE vs. VT_ABSTRACT (suboptimal design?)
-EValueTarget realValTarget(const SymHeap &sh, const TValId val) {
-    const EValueTarget code = sh.valTarget(val);
-    return (VT_RANGE == code)
-        ? sh.valTarget(sh.valRoot(val))
-        : code;
-}
-
 bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
         // already joined

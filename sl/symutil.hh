@@ -152,6 +152,14 @@ inline bool areUniBlocksEqual(
     return areValProtosEqual(sh1, sh2, bl1.tplValue, bl2.tplValue);
 }
 
+/// needed because of VT_RANGE vs. VT_ABSTRACT (suboptimal design?)
+inline EValueTarget realValTarget(const SymHeap &sh, const TValId val) {
+    const EValueTarget code = sh.valTarget(val);
+    return (VT_RANGE == code)
+        ? sh.valTarget(sh.valRoot(val))
+        : code;
+}
+
 template <class TDst, typename TInserter>
 void gatherProgramVarsCore(
         TDst                    &dst,
