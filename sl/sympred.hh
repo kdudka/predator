@@ -21,7 +21,9 @@
 #define H_GUARD_SYM_PRED_H
 
 #include "symid.hh"
+#include "util.hh"
 
+#include <map>
 #include <set>
 
 /// @todo give this class (and consequently this module) a more generic name
@@ -41,6 +43,35 @@ class NeqDb {
         typedef std::pair<TValId /* valLt */, TValId /* valGt */> TItem;
         typedef std::set<TItem> TCont;
         TCont cont_;
+};
+
+template <class TKey, class TVal>
+class PairMap {
+    protected:
+        typedef std::pair<TKey /* lt */, TKey /* gt */>     TItem;
+        typedef std::map<TItem, TVal>                       TMap;
+        TMap db_;
+
+    public:
+        void add(TKey k1, TKey k2, TVal val) {
+            sortValues(k1, k2);
+            const TItem key(k1, k2);
+
+            CL_BREAK_IF(hasKey(db_, key));
+            db_[key] = val;
+        }
+
+        bool chk(TVal *pDst, TKey k1, TKey k2) const {
+            sortValues(k1, k2);
+            const TItem key(k1, k2);
+
+            typename TMap::const_iterator it = db_.find(key);
+            if (db_.end() == it)
+                return false;
+
+            *pDst = it->second;
+            return true;
+        }
 };
 
 #endif /* H_GUARD_SYM_PRED_H */

@@ -20,8 +20,6 @@
 #include "config.h"
 #include "sympred.hh"
 
-#include "util.hh"
-
 bool NeqDb::areNeq(TValId valLt, TValId valGt) const {
     sortValues(valLt, valGt);
     TItem item(valLt, valGt);

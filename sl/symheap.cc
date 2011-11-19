@@ -452,10 +452,8 @@ struct TValSetWrapper: public TValSet {
 };
 
 struct CoincidenceDb {
-    typedef NeqDb       TPreds[/* positive + negative */ 2];
-
-    RefCounter          refCnt;
-    TPreds              preds;
+    RefCounter                      refCnt;
+    PairMap<TValId, bool>           db;
 };
 
 struct SymHeapCore::Private {
@@ -1776,10 +1774,7 @@ void SymHeapCore::valRestrictOffsetRange(TValId val, IntRange win) {
 
 void SymHeapCore::Private::bindValues(TValId v1, TValId v2, bool neg) {
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->coinDb);
-    NeqDb &db = this->coinDb->preds[neg];
-
-    CL_BREAK_IF(db.areNeq(v1, v2));
-    db.add(v1, v2);
+    this->coinDb->db.add(v1, v2, neg);
 }
 
 TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
@@ -1818,20 +1813,8 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
 
 // FIXME: this implementation is a stub, it could be improved in several ways
 bool SymHeapCore::areBound(bool *pNeg, TValId v1, TValId v2) {
-    const CoincidenceDb::TPreds &preds = d->coinDb->preds;
-    const NeqDb &dbPos = preds[/* positive */ 0];
-    const NeqDb &dbNeg = preds[/* negative */ 1];
-
-    if (dbPos.areNeq(v1, v2)) {
-        CL_BREAK_IF(dbNeg.areNeq(v1, v2));
-        *pNeg = false;
+    if (d->coinDb->db.chk(pNeg, v1, v2))
         return true;
-    }
-
-    if (dbNeg.areNeq(v1, v2)) {
-        *pNeg = true;
-        return true;
-    }
 
     CL_DEBUG("SymHeapCore::areBound() returns false");
     return false;
