@@ -1,1 +1,1 @@
-../plarena/test-0404-simple.c
+../nspr-arena-32bit/test-0404-simple.c
