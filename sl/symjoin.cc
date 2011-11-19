@@ -1518,13 +1518,15 @@ bool joinSegmentWithAny(
         return true;
     }
 
-    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
-    if (root1 <= 0 || root2 <= 0) {
+    const EValueTarget code1 = ctx.sh1.valTarget(root1);
+    const EValueTarget code2 = ctx.sh2.valTarget(root2);
+    if (!isPossibleToDeref(code1) || !isPossibleToDeref(code2)) {
         CL_BREAK_IF(firstTryReadOnly);
         *pResult = false;
         return true;
     }
 
+    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
     const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
     const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
 
