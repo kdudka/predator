@@ -394,6 +394,7 @@ struct RootValue: public AnchorValue {
     TArena                          arena;
     TObjType                        lastKnownClt;
     bool                            isProto;
+    TValList                        rangeValues;
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
         AnchorValue(code_, origin_),
@@ -1709,7 +1710,10 @@ TValId SymHeapCore::valByRange(TValId at, IntRange range) {
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, at);
-    CL_BREAK_IF(VAL_NULL != at && !isPossibleToDeref(valData->code));
+    if (VAL_NULL == at || isGone(valData->code))
+        return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    CL_BREAK_IF(!isPossibleToDeref(valData->code));
 
     // subtract the root offset
     const TValId valRoot = valData->valRoot;
@@ -1724,6 +1728,11 @@ TValId SymHeapCore::valByRange(TValId at, IntRange range) {
     // offVal->valRoot needs to be set after the call of Private::assignId()
     rangeData->valRoot  = valRoot;
     rangeData->anchor   = val;
+
+    // register the VT_RANGE value by the owning root entity
+    RootValue *rootData;
+    d->ents.getEntRW(&rootData, valRoot);
+    rootData->rangeValues.push_back(val);
 
     return val;
 }
@@ -2446,15 +2455,27 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
         code = VT_LOST;
     }
 
-    // mark the root value as deleted/lost
-    rootData->code = code;
+    // start with the root itself as anchor
+    std::vector<AnchorValue *> refs(1, rootData);
 
-    // mark all associated off-values as deleted/lost
-    BOOST_FOREACH(TOffMap::const_reference item, rootData->offMap) {
-        const TValId val = item.second;
-        BaseValue *valData;
-        this->ents.getEntRW(&valData, val);
-        valData->code = code;
+    // collect all VT_RANGE anchors
+    BOOST_FOREACH(const TValId rVal, rootData->rangeValues) {
+        AnchorValue *anchorData;
+        this->ents.getEntRW(&anchorData, rVal);
+        refs.push_back(anchorData);
+    }
+
+    BOOST_FOREACH(AnchorValue *anchorData, refs) {
+        // mark the anchor value as deleted/lost
+        anchorData->code = code;
+
+        // mark all associated off-values as deleted/lost
+        BOOST_FOREACH(TOffMap::const_reference item, anchorData->offMap) {
+            const TValId val = item.second;
+            BaseValue *valData;
+            this->ents.getEntRW(&valData, val);
+            valData->code = code;
+        }
     }
 
     // release the root
