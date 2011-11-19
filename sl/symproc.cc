@@ -714,6 +714,56 @@ void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
 }
 
 // TODO: simplify the code
+void execMemsetCore(
+        SymHeap                     &sh,
+        const TValId                 root,
+        const TValId                 valToWrite,
+        const IntRange              &addrRange,
+        const IntRange              &sizeRange,
+        const IntRange              &totalRange,
+        TValSet                     *killedPtrs)
+{
+    // how much memory can we guarantee the content of?
+    IntRange safeRange;
+    safeRange.lo = addrRange.hi;
+    safeRange.hi = addrRange.lo + sizeRange.lo;
+
+    // FIXME: the following code is full of off-by-one errors
+    const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    const TValId valBegTotal = sh.valByOffset(root, totalRange.lo);
+
+    const long prefixWidth = safeRange.lo - totalRange.lo;
+    if (0 < prefixWidth) {
+        // invalidate prefix
+        CL_DEBUG("memset() called with addr given as range");
+        sh.writeUniformBlock(valBegTotal, valUnknown, prefixWidth, killedPtrs);
+    }
+
+    if (safeRange.lo < safeRange.hi) {
+        // what are we going to write?
+        TValId tplValue = valToWrite;
+        if (VAL_NULL != tplValue) {
+            CL_DEBUG("memset() writing nonzero value just invalidates");
+            tplValue = valUnknown;
+        }
+
+        // write the block we know the content of!
+        const TValId valBegSafe = sh.valByOffset(root, safeRange.lo);
+        const long safeWidth = safeRange.hi - safeRange.lo;
+        sh.writeUniformBlock(valBegSafe, tplValue, safeWidth, killedPtrs);
+    }
+
+    const long suffixWidth = totalRange.hi - safeRange.hi;
+    if (0 < suffixWidth) {
+        // invalidate suffix
+        CL_DEBUG("memset() called with addr/size given as range");
+        const TValId valEndSafe = sh.valByOffset(root, safeRange.hi);
+
+        // pick a fresh unknown value and invalidate the area
+        sh.writeUniformBlock(valEndSafe, valUnknown, suffixWidth, killedPtrs);
+    }
+}
+
 void executeMemset(
         SymProc                     &proc,
         const TValId                 addr,
@@ -736,76 +786,42 @@ void executeMemset(
         return;
     }
 
-    // resolve address
-    const TValId root = sh.valRoot(addr);
-    const IntRange beg = sh.valOffsetRange(addr);
+    // resolve address range
+    const IntRange addrRange = sh.valOffsetRange(addr);
 
     // deduce whether the end is fixed or not
-    bool isEndFixed = isSingular(beg) && isSingular(sizeRange);
-    if (!isEndFixed && (widthOf(beg) == widthOf(sizeRange))) {
+    bool isEndFixed = isSingular(addrRange) && isSingular(sizeRange);
+    if (!isEndFixed && (widthOf(addrRange) == widthOf(sizeRange))) {
         bool neg;
         if (sh.areBound(&neg, addr, valSize) && neg)
             isEndFixed = true;
     }
 
     // how much memory are we going to touch in the worst case?
-    IntRange total;
-    total.lo = beg.lo;
-    total.hi = beg.hi + ((isEndFixed)
+    IntRange totalRange;
+    totalRange.lo = addrRange.lo;
+    totalRange.hi = addrRange.hi + ((isEndFixed)
         ? sizeRange.lo
         : sizeRange.hi);
 
     // check the pointer - is it valid? do we have enough allocated memory?
-    const TValId valBegTotal = sh.valByOffset(root, total.lo);
-    if (proc.checkForInvalidDeref(valBegTotal, total.hi - total.lo)) {
+    const TValId root = sh.valRoot(addr);
+    const TValId valBegTotal = sh.valByOffset(root, totalRange.lo);
+    if (proc.checkForInvalidDeref(valBegTotal, widthOf(totalRange) - 1)) {
         // error message already printed out
         proc.printBackTrace(ML_ERROR);
         return;
     }
-
-    // FIXME: the following code is full of off-by-one errors
-    const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-
-    // how much memory can we guarantee the content of?
-    IntRange safeRange;
-    safeRange.lo = beg.hi;
-    safeRange.hi = beg.lo + sizeRange.lo;
 
     // enter leak monitor
     LeakMonitor lm(sh);
     lm.enter();
     TValSet killedPtrs;
 
-    const long prefixWidth = safeRange.lo - total.lo;
-    if (0 < prefixWidth) {
-        // invalidate prefix
-        CL_DEBUG_MSG(lw, "memset() called with addr given as range");
-        sh.writeUniformBlock(valBegTotal, valUnknown, prefixWidth, &killedPtrs);
-    }
-
-    if (safeRange.lo < safeRange.hi) {
-        // what are we going to write?
-        TValId tplValue = valToWrite;
-        if (VAL_NULL != tplValue) {
-            CL_DEBUG_MSG(lw, "memset() writing nonzero value just invalidates");
-            tplValue = valUnknown;
-        }
-
-        // write the block we know the content of!
-        const TValId valBegSafe = sh.valByOffset(root, safeRange.lo);
-        const long safeWidth = safeRange.hi - safeRange.lo;
-        sh.writeUniformBlock(valBegSafe, tplValue, safeWidth, &killedPtrs);
-    }
-
-    const long suffixWidth = total.hi - safeRange.hi;
-    if (0 < suffixWidth) {
-        // invalidate suffix
-        CL_DEBUG_MSG(lw, "memset() called with addr/size given as range");
-        const TValId valEndSafe = sh.valByOffset(root, safeRange.hi);
-
-        // pick a fresh unknown value and invalidate the area
-        sh.writeUniformBlock(valEndSafe, valUnknown, suffixWidth, &killedPtrs);
-    }
+    // write the data
+    execMemsetCore(sh, root, valToWrite,
+            addrRange, sizeRange, totalRange,
+            &killedPtrs);
 
     // check for memory leaks
     if (lm.collectJunkFrom(killedPtrs)) {
@@ -813,7 +829,7 @@ void executeMemset(
         proc.printBackTrace(ML_WARN);
     }
 
-    // leave monitor and write the result
+    // leave leak monitor
     lm.leave();
 }
 
