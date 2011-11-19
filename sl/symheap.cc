@@ -61,7 +61,7 @@ assignInvalidIfNotFound(
 
 // /////////////////////////////////////////////////////////////////////////////
 // Neq predicates store
-class FriendlyNeqDb: public NeqDb {
+class NeqDb: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
     public:
         RefCounter refCnt;
 
@@ -454,7 +454,7 @@ struct TValSetWrapper: public TValSet {
 
 struct CoincidenceDb {
     RefCounter                      refCnt;
-    PairMap<TValId, bool>           db;
+    SymPairMap<TValId, bool>        db;
 };
 
 struct SymHeapCore::Private {
@@ -468,7 +468,7 @@ struct SymHeapCore::Private {
     CVarMap                        *cVarMap;
     CustomValueMapper              *cValueMap;
     CoincidenceDb                  *coinDb;
-    FriendlyNeqDb                  *neqDb;
+    NeqDb                          *neqDb;
 
     inline TObjId assignId(BlockEntity *);
     inline TValId assignId(BaseValue *);
@@ -1050,7 +1050,7 @@ SymHeapCore::Private::Private(Trace::Node *trace):
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
     coinDb      (new CoincidenceDb),
-    neqDb       (new FriendlyNeqDb)
+    neqDb       (new NeqDb)
 {
     // allocate a root-value for VAL_NULL
     this->assignId(new RootValue(VT_INVALID, VO_INVALID));
@@ -2068,7 +2068,7 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
             // seems like a dangling predicate, which we are not interested in
             continue;
 
-        if (!ref.d->neqDb->areNeq(valLt, valGt))
+        if (!ref.d->neqDb->chk(valLt, valGt))
             // Neq predicate not matched
             return false;
     }
@@ -2630,7 +2630,7 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
         return true;
 
     // check for a Neq predicate
-    if (d->neqDb->areNeq(valA, valB))
+    if (d->neqDb->chk(valA, valB))
         return true;
 
     if (valA <= 0 || valB <= 0)
@@ -2651,11 +2651,11 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     const TOffset diff = offB - offA;
     if (!diff)
         // check for Neq between the roots
-        return d->neqDb->areNeq(root1, root2);
+        return d->neqDb->chk(root1, root2);
 
     SymHeapCore &writable = /* XXX */ *const_cast<SymHeapCore *>(this);
-    return d->neqDb->areNeq(root1, writable.valByOffset(root2,  diff))
-        && d->neqDb->areNeq(root2, writable.valByOffset(root1, -diff));
+    return d->neqDb->chk(root1, writable.valByOffset(root2,  diff))
+        && d->neqDb->chk(root2, writable.valByOffset(root1, -diff));
 }
 
 

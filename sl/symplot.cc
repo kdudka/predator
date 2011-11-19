@@ -987,7 +987,7 @@ void plotNeq(std::ostream &out, const TValId v1, const TValId v2) {
         ", label=neq, fontcolor=gold, constraint=false];\n";
 }
 
-class NeqPlotter: public NeqDb {
+class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
     public:
         void plotNeqEdges(PlotData &plot) {
             BOOST_FOREACH(const TItem &item, cont_) {

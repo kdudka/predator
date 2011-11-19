@@ -20,33 +20,50 @@
 #ifndef H_GUARD_SYM_PRED_H
 #define H_GUARD_SYM_PRED_H
 
-#include "symid.hh"
+#include "config.h"
 #include "util.hh"
 
 #include <map>
 #include <set>
 
-/// @todo give this class (and consequently this module) a more generic name
-class NeqDb {
+/// a symmetric relation
+template <class TKey, bool IREFLEXIVE>
+class SymPairSet {
+    protected:
+        typedef std::pair<TKey /* lt */, TKey /* gt */>     TItem;
+        typedef std::set<TItem>                             TCont;
+        TCont cont_;
+
     public:
         bool empty() const {
             return cont_.empty();
         }
 
-        void add(TValId valLt, TValId valGt);
-        void del(TValId valLt, TValId valGt);
+        bool chk(TKey k1, TKey k2) const {
+            sortValues(k1, k2);
+            const TItem item(k1, k2);
+            return hasKey(cont_, item);
+        }
 
-        /// @todo give this method a more generic name
-        bool areNeq(TValId valLt, TValId valGt) const;
+        bool add(TKey k1, TKey k2) {
+            CL_BREAK_IF(IREFLEXIVE && k1 == k2);
 
-    protected:
-        typedef std::pair<TValId /* valLt */, TValId /* valGt */> TItem;
-        typedef std::set<TItem> TCont;
-        TCont cont_;
+            sortValues(k1, k2);
+            const TItem item(k1, k2);
+            return cont_.insert(item)./* inserted */second;
+        }
+
+        bool del(TKey k1, TKey k2) {
+            CL_BREAK_IF(IREFLEXIVE && k1 == k2);
+
+            sortValues(k1, k2);
+            const TItem item(k1, k2);
+            return !!cont_.erase(item);
+        }
 };
 
 template <class TKey, class TVal>
-class PairMap {
+class SymPairMap {
     protected:
         typedef std::pair<TKey /* lt */, TKey /* gt */>     TItem;
         typedef std::map<TItem, TVal>                       TMap;

@@ -51,7 +51,6 @@ add_library(sl SHARED
     symjoin.cc
     sympath.cc
     symplot.cc
-    sympred.cc
     symproc.cc
     symseg.cc
     symstate.cc
