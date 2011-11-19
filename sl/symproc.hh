@@ -171,6 +171,12 @@ void describeUnknownVal(
         const TValId                 val,
         const char                  *action);
 
+void executeMemset(
+        SymProc                     &proc,
+        const TValId                 addr,
+        const TValId                 valToWrite,
+        const TValId                 valSize);
+
 struct SymExecCoreParams {
     bool oomSimulation;     ///< enable/disable @b oom @b simulation mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls

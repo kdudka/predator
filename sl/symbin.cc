@@ -87,6 +87,7 @@ void emitPrototypeError(const struct cl_loc *lw, const char *name) {
             << "() not recognized as built-in");
 }
 
+/// insert the given heap to dst if sane (after killing the given instruction)
 void insertCoreHeap(
         SymState                                    &dst,
         SymProc                                     &core,
@@ -374,15 +375,12 @@ bool handleMalloc(
     return true;
 }
 
-// FIXME: this is only proof of concept, it needs to be completely rewritten
-//        such that we can share most of the code with memmove, memcpy, etc.
 bool handleMemset(
         SymState                                    &dst,
         SymExecCore                                 &core,
         const CodeStorage::Insn                     &insn,
         const char                                  *name)
 {
-    SymHeap &sh = core.sh();
     const struct cl_loc *lw = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
     if (5 != opList.size() || opList[0].code != CL_OPERAND_VOID) {
@@ -390,104 +388,13 @@ bool handleMemset(
         return false;
     }
 
-    // how much we are going to write?
-    const TValId valSize = core.valFromOperand(opList[/* size */ 4]);
-    IntRange sizeRange;
-    if (!rangeFromVal(&sizeRange, sh, valSize) || sizeRange.lo < 0) {
-        CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
-        core.printBackTrace(ML_ERROR);
-        insertCoreHeap(dst, core, insn);
-        return true;
-    }
-    if (!sizeRange.hi) {
-        CL_WARN_MSG(lw, "ignoring call of memset() with size == 0");
-        core.printBackTrace(ML_WARN);
-        insertCoreHeap(dst, core, insn);
-        return true;
-    }
+    // read the values of memset parameters
+    const TValId addr       = core.valFromOperand(opList[/* addr */ 2]);
+    const TValId valToWrite = core.valFromOperand(opList[/* char */ 3]);
+    const TValId valSize    = core.valFromOperand(opList[/* size */ 4]);
 
-    // resolve address
-    const TValId addr = core.valFromOperand(opList[/* addr */ 2]);
-    const TValId root = sh.valRoot(addr);
-    const IntRange beg = sh.valOffsetRange(addr);
-
-    // deduce whether the end is fixed or not
-    bool isEndFixed = isSingular(beg) && isSingular(sizeRange);
-    if (!isEndFixed && (widthOf(beg) == widthOf(sizeRange))) {
-        bool neg;
-        if (sh.areBound(&neg, addr, valSize) && neg)
-            isEndFixed = true;
-    }
-
-    // how much memory are we going to touch in the worst case?
-    IntRange total;
-    total.lo = beg.lo;
-    total.hi = beg.hi + ((isEndFixed)
-        ? sizeRange.lo
-        : sizeRange.hi);
-
-    // check the pointer - is it valid? do we have enough allocated memory?
-    const TValId valBegTotal = sh.valByOffset(root, total.lo);
-    if (core.checkForInvalidDeref(valBegTotal, total.hi - total.lo)) {
-        // error message already printed out
-        core.printBackTrace(ML_ERROR);
-        insertCoreHeap(dst, core, insn);
-        return true;
-    }
-
-    // FIXME: the following code is full of off-by-one errors
     CL_DEBUG_MSG(lw, "executing memset() as a built-in function");
-    const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-
-    // how much memory can we guarantee the content of?
-    IntRange safeRange;
-    safeRange.lo = beg.hi;
-    safeRange.hi = beg.lo + sizeRange.lo;
-
-    // enter leak monitor
-    LeakMonitor lm(sh);
-    lm.enter();
-    TValSet killedPtrs;
-
-    const long prefixWidth = safeRange.lo - total.lo;
-    if (0 < prefixWidth) {
-        // invalidate prefix
-        CL_DEBUG_MSG(lw, "memset() called with addr given as range");
-        sh.writeUniformBlock(valBegTotal, valUnknown, prefixWidth, &killedPtrs);
-    }
-
-    if (safeRange.lo < safeRange.hi) {
-        // what are we going to write?
-        TValId tplValue = core.valFromOperand(opList[/* char */ 3]);
-        if (VAL_NULL != tplValue) {
-            CL_DEBUG_MSG(lw, "memset() writing nonzero value just invalidates");
-            tplValue = valUnknown;
-        }
-
-        // write the block we know the content of!
-        const TValId valBegSafe = sh.valByOffset(root, safeRange.lo);
-        const long safeWidth = safeRange.hi - safeRange.lo;
-        sh.writeUniformBlock(valBegSafe, tplValue, safeWidth, &killedPtrs);
-    }
-
-    const long suffixWidth = total.hi - safeRange.hi;
-    if (0 < suffixWidth) {
-        // invalidate suffix
-        CL_DEBUG_MSG(lw, "memset() called with addr/size given as range");
-        const TValId valEndSafe = sh.valByOffset(root, safeRange.hi);
-
-        // pick a fresh unknown value and invalidate the area
-        sh.writeUniformBlock(valEndSafe, valUnknown, suffixWidth, &killedPtrs);
-    }
-
-    // check for memory leaks
-    if (lm.collectJunkFrom(killedPtrs)) {
-        CL_WARN_MSG(lw, "memory leak detected while executing memset()");
-        core.printBackTrace(ML_WARN);
-    }
-
-    // leave monitor and write the result
-    lm.leave();
+    executeMemset(core, addr, valToWrite, valSize);
     insertCoreHeap(dst, core, insn);
     return true;
 }
