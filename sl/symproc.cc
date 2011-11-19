@@ -713,7 +713,6 @@ void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
         this->killVar(kv);
 }
 
-// TODO: simplify the code
 void execMemsetCore(
         SymHeap                     &sh,
         const TValId                 root,
@@ -723,44 +722,45 @@ void execMemsetCore(
         const IntRange              &totalRange,
         TValSet                     *killedPtrs)
 {
+    const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    const TValId valBegTotal = sh.valByOffset(root, totalRange.lo);
+
     // how much memory can we guarantee the content of?
     IntRange safeRange;
     safeRange.lo = addrRange.hi;
     safeRange.hi = addrRange.lo + sizeRange.lo;
 
-    // FIXME: the following code is full of off-by-one errors
-    const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-    const TValId valBegTotal = sh.valByOffset(root, totalRange.lo);
-
-    const long prefixWidth = safeRange.lo - totalRange.lo;
-    if (0 < prefixWidth) {
-        // invalidate prefix
-        CL_DEBUG("memset() called with addr given as range");
-        sh.writeUniformBlock(valBegTotal, valUnknown, prefixWidth, killedPtrs);
+    // check whether we are able to write something specific at all
+    if (VAL_NULL != valToWrite || safeRange.hi <= safeRange.lo) {
+        CL_DEBUG("memset() only invalidates the given range");
+        const long totalSize = widthOf(totalRange) - /* closed int */ 1;
+        sh.writeUniformBlock(valBegTotal, valUnknown, totalSize, killedPtrs);
+        return;
     }
 
-    if (safeRange.lo < safeRange.hi) {
-        // what are we going to write?
-        TValId tplValue = valToWrite;
-        if (VAL_NULL != tplValue) {
-            CL_DEBUG("memset() writing nonzero value just invalidates");
-            tplValue = valUnknown;
-        }
+    // compute the size we can write precisely
+    const long safeSize = widthOf(safeRange) - /* closed int */ 1;
+    CL_BREAK_IF(safeSize <= 0);
 
-        // write the block we know the content of!
-        const TValId valBegSafe = sh.valByOffset(root, safeRange.lo);
-        const long safeWidth = safeRange.hi - safeRange.lo;
-        sh.writeUniformBlock(valBegSafe, tplValue, safeWidth, killedPtrs);
+    // valToWrite is VAL_NULL (we do not support writing arbitrary values yet)
+    const TValId valBegSafe = sh.valByOffset(root, safeRange.lo);
+    sh.writeUniformBlock(valBegSafe, valToWrite, safeSize, killedPtrs);
+
+    // compute size of the prefix we _have_ to invalidate
+    const long prefixSize = safeRange.lo - totalRange.lo;
+    CL_BREAK_IF(prefixSize < 0);
+    if (0 < prefixSize) {
+        CL_DEBUG("memset() invalidates ambiguous prefix");
+        sh.writeUniformBlock(valBegTotal, valUnknown, prefixSize, killedPtrs);
     }
 
-    const long suffixWidth = totalRange.hi - safeRange.hi;
-    if (0 < suffixWidth) {
-        // invalidate suffix
-        CL_DEBUG("memset() called with addr/size given as range");
-        const TValId valEndSafe = sh.valByOffset(root, safeRange.hi);
-
-        // pick a fresh unknown value and invalidate the area
-        sh.writeUniformBlock(valEndSafe, valUnknown, suffixWidth, killedPtrs);
+    // compute size of the suffix we _have_ to invalidate
+    const long suffixSize = safeRange.lo - totalRange.lo;
+    CL_BREAK_IF(suffixSize < 0);
+    if (0 < suffixSize) {
+        CL_DEBUG("memset() invalidates ambiguous suffix");
+        const TValId suffixAddr = sh.valByOffset(root, safeRange.hi);
+        sh.writeUniformBlock(suffixAddr, valUnknown, suffixSize, killedPtrs);
     }
 }
 
