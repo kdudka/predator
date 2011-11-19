@@ -383,7 +383,7 @@ bool handleMemset(
 {
     const struct cl_loc *lw = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (5 != opList.size() || opList[0].code != CL_OPERAND_VOID) {
+    if (5 != opList.size()) {
         emitPrototypeError(lw, name);
         return false;
     }
@@ -395,6 +395,14 @@ bool handleMemset(
 
     CL_DEBUG_MSG(lw, "executing memset() as a built-in function");
     executeMemset(core, addr, valToWrite, valSize);
+
+    const struct cl_operand &opDst = opList[/* dst */ 0];
+    if (CL_OPERAND_VOID != opDst.code) {
+        // POSIX says that memset() returns the value of the first argument
+        const ObjHandle objDst = core.objByOperand(opDst);
+        core.objSetValue(objDst, addr);
+    }
+
     insertCoreHeap(dst, core, insn);
     return true;
 }
