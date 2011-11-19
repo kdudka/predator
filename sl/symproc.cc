@@ -1694,8 +1694,9 @@ bool SymExecCore::concretizeLoop(
         const CodeStorage::Insn     &insn,
         const TDerefs               &derefs)
 {
+#ifndef NDEBUG
     bool hit = false;
-
+#endif
     TSymHeapList todo;
     todo.push_back(sh_);
     Trace::waiveCloneOperation(todo.back());
@@ -1705,7 +1706,6 @@ bool SymExecCore::concretizeLoop(
         SymExecCore slave(sh, bt_, ep_);
         slave.setLocation(lw_);
 
-        // TODO: implement full version of the alg (complexity m*n)
 #ifndef NDEBUG
         bool hitLocal = false;
 #endif
@@ -1718,14 +1718,21 @@ bool SymExecCore::concretizeLoop(
 #ifndef NDEBUG
                 CL_BREAK_IF(hitLocal);
                 hitLocal = true;
-#endif
                 hit = true;
+#endif
                 concretizeObj(sh, val, todo);
             }
         }
 
         // process the current heap and move to the next one (if any)
-        slave.execCore(dst, insn);
+        if (!slave.execCore(dst, insn)) {
+            // hit a real function call, this has to be handled by SymExec
+            CL_BREAK_IF(CL_INSN_CALL != insn.code);
+
+            // FIXME: are we ready for this?
+            CL_BREAK_IF(hit);
+            return false;
+        }
 
         if (slave.errorDetected_)
             // propagate the 'error detected' flag
@@ -1734,7 +1741,7 @@ bool SymExecCore::concretizeLoop(
         todo.pop_front();
     }
 
-    return hit;
+    return true;
 }
 
 bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
@@ -1742,40 +1749,38 @@ bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
 
     const cl_insn_e code = insn.code;
     if (CL_INSN_CALL == code)
+        // certain built-ins dereference certain operands (free, memset, ...)
         derefs = opsWithDerefSemanticsInCallInsn(insn);
-    else {
-        const CodeStorage::TOperandList &opList = insn.operands;
 
-        // look for dereferences
-        for (unsigned idx = 0; idx < opList.size(); ++idx) {
-            const struct cl_accessor *ac = opList[idx].accessor;
-            if (!ac)
+    // look for explicit dereferences in operands of the instruction
+    const CodeStorage::TOperandList &opList = insn.operands;
+    for (unsigned idx = 0; idx < opList.size(); ++idx) {
+        const struct cl_accessor *ac = opList[idx].accessor;
+        if (!ac)
+            continue;
+
+        // we expect the dereference only as the first accessor
+        const enum cl_accessor_e code = ac->code;
+        switch (code) {
+            case CL_ACCESSOR_DEREF:
+            case CL_ACCESSOR_DEREF_ARRAY:
+                break;
+
+            default:
+                // no dereference in this operand
                 continue;
-
-            // we expect the dereference only as the first accessor
-            const enum cl_accessor_e code = ac->code;
-            switch (code) {
-                case CL_ACCESSOR_DEREF:
-                case CL_ACCESSOR_DEREF_ARRAY:
-                    break;
-
-                default:
-                    // no dereference in this operand
-                    continue;
-            }
-
-            if (seekRefAccessor(ac))
-                // not a dereference, only an address is being computed
-                continue;
-
-            derefs.push_back(idx);
         }
+
+        if (seekRefAccessor(ac))
+            // not a dereference, only an address is being computed
+            continue;
+
+        derefs.push_back(idx);
     }
 
     if (derefs.empty())
         return this->execCore(dst, insn);
 
     // handle dereferences
-    this->concretizeLoop(dst, insn, derefs);
-    return true;
+    return this->concretizeLoop(dst, insn, derefs);
 }
