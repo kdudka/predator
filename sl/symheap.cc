@@ -1807,8 +1807,30 @@ void SymHeapCore::valRestrictOffsetRange(TValId val, IntRange win) {
 }
 
 void SymHeapCore::Private::bindValues(TValId v1, TValId v2, bool neg) {
+    const BaseValue *valData1, *valData2;
+    this->ents.getEntRO(&valData1, v1);
+    this->ents.getEntRO(&valData2, v2);
+
+    const TValId anchor1 = valData1->anchor;
+    const TValId anchor2 = valData2->anchor;
+
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->coinDb);
-    this->coinDb->db.add(v1, v2, neg);
+    this->coinDb->db.add(anchor1, anchor2, neg);
+}
+
+bool SymHeapCore::areBound(bool *pNeg, TValId v1, TValId v2) {
+    const BaseValue *valData1, *valData2;
+    d->ents.getEntRO(&valData1, v1);
+    d->ents.getEntRO(&valData2, v2);
+
+    const TValId anchor1 = valData1->anchor;
+    const TValId anchor2 = valData2->anchor;
+
+    if (d->coinDb->db.chk(pNeg, anchor1, anchor2))
+        return true;
+
+    CL_DEBUG("SymHeapCore::areBound() returns false");
+    return false;
 }
 
 TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
@@ -1843,15 +1865,6 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
         d->bindValues(valDiff, v2, /* neg */ true);
 
     return valDiff;
-}
-
-// FIXME: this implementation is a stub, it could be improved in several ways
-bool SymHeapCore::areBound(bool *pNeg, TValId v1, TValId v2) {
-    if (d->coinDb->db.chk(pNeg, v1, v2))
-        return true;
-
-    CL_DEBUG("SymHeapCore::areBound() returns false");
-    return false;
 }
 
 EValueOrigin SymHeapCore::valOrigin(TValId val) const {
