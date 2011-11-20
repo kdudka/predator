@@ -165,6 +165,10 @@ endmacro(test_predator_regre)
 # default mode
 test_predator_regre("" "" "-fplugin-arg-libsl-args=error_label:ERROR")
 
+# track_uninit mode
+test_predator_regre("-TRACK_UNINIT" ".uninit"
+    "-fplugin-arg-libsl-args=track_uninit")
+
 if(TEST_ONLY_FAST)
 else()
     # OOM simulation mode

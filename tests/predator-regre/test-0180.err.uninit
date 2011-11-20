@@ -1,0 +1,36 @@
+test-0180.c:58:5: warning: conditional jump depends on uninitialized value
+test-0180.c:58:5: note: the value being used is an untouched contents of heap
+test-0180.c:165:12: note: from call of inspect()
+test-0180.c:162:5: note: from call of main()
+test-0180.c:7:13: warning: end of function fail() has not been reached
+test-0180.c:58:5: note: from call of fail()
+test-0180.c:165:12: note: from call of inspect()
+test-0180.c:162:5: note: from call of main()
+test-0180.c:58:5: warning: conditional jump depends on uninitialized value
+test-0180.c:58:5: note: the value being used is an untouched contents of heap
+test-0180.c:165:12: note: from call of inspect()
+test-0180.c:162:5: note: from call of main()
+test-0180.c:58:5: warning: conditional jump depends on uninitialized value
+test-0180.c:58:5: note: the value being used is an untouched contents of heap
+test-0180.c:168:12: note: from call of inspect()
+test-0180.c:162:5: note: from call of main()
+test-0180.c:58:5: warning: conditional jump depends on uninitialized value
+test-0180.c:58:5: note: the value being used is an untouched contents of heap
+test-0180.c:168:12: note: from call of inspect()
+test-0180.c:162:5: note: from call of main()
+test-0180.c:58:5: warning: conditional jump depends on uninitialized value
+test-0180.c:58:5: note: the value being used is an untouched contents of heap
+test-0180.c:168:12: note: from call of inspect()
+test-0180.c:162:5: note: from call of main()
+test-0180.c:58:5: warning: conditional jump depends on uninitialized value
+test-0180.c:58:5: note: the value being used is an untouched contents of heap
+test-0180.c:168:12: note: from call of inspect()
+test-0180.c:162:5: note: from call of main()
+test-0180.c:58:5: warning: conditional jump depends on uninitialized value
+test-0180.c:58:5: note: the value being used is an untouched contents of heap
+test-0180.c:168:12: note: from call of inspect()
+test-0180.c:162:5: note: from call of main()
+test-0180.c:58:5: warning: conditional jump depends on uninitialized value
+test-0180.c:58:5: note: the value being used is an untouched contents of heap
+test-0180.c:168:12: note: from call of inspect()
+test-0180.c:162:5: note: from call of main()

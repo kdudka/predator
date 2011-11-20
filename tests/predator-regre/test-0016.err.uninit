@@ -1,0 +1,2 @@
+test-0016.c:33:14: warning: memory leak detected while assigning a variable on stack
+test-0016.c:22:17: warning: memory leak detected while destroying a variable on stack

@@ -1,0 +1,2 @@
+test-0159.c:22:11: error: dereferencing object of size 1B out of bounds
+test-0159.c:22:11: note: the pointer being dereferenced points 3B beyond a variable on stack of size 16B

@@ -1,0 +1,5 @@
+test-0037.c:28:8: warning: conditional jump depends on uninitialized value
+test-0037.c:28:8: note: the value being used is an untouched contents of heap
+test-0037.c:28:8: warning: memory leak detected while destroying a variable on stack
+test-0037.c:29:13: warning: memory leak detected while destroying a heap object
+test-0037.c:31:13: error: double free()

@@ -1,0 +1,10 @@
+test-0178.c:5:13: warning: end of function fail() has not been reached
+test-0178.c:93:5: note: from call of fail()
+test-0178.c:132:19: note: from call of inspect_before()
+test-0178.c:109:5: note: from call of main()
+test-0178.c:77:13: warning: end of function inspect_before() has not been reached
+test-0178.c:132:19: note: from call of inspect_before()
+test-0178.c:109:5: note: from call of main()
+test-0178.c:77:13: warning: end of function inspect_before() has not been reached
+test-0178.c:132:19: note: from call of inspect_before()
+test-0178.c:109:5: note: from call of main()
