@@ -2306,7 +2306,6 @@ void SymHeapCore::objLeave(TObjId obj) {
         return;
     }
 
-#if !SE_TRACK_UNINITIALIZED
     const TValId root = objData->root;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
@@ -2314,7 +2313,6 @@ void SymHeapCore::objLeave(TObjId obj) {
         CL_DEBUG("SymHeapCore::objLeave() destroys a dead object");
         d->objDestroy(obj, /* removeVal */ true, /* detach */ true);
     }
-#endif
 
     // TODO: pack the representation if possible
 }
@@ -2409,12 +2407,6 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
     RootValue *rootData;
     d->ents.getEntRW(&rootData, addr);
     rootData->size = cbSize;
-
-#if SE_TRACK_UNINITIALIZED
-    // uninitialized heap block
-    const TValId tplValue = this->valCreate(VT_UNKNOWN, VO_HEAP);
-    this->writeUniformBlock(addr, tplValue, cbSize);
-#endif
 
     return addr;
 }

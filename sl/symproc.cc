@@ -285,6 +285,9 @@ void SymProc::varInit(TValId at) {
     const CVar cv = sh_.cVarByRoot(at);
     const CodeStorage::Storage &stor = sh_.stor();
     const CodeStorage::Var &var = stor.vars[cv.uid];
+    if (var.initials.empty())
+        // nothing to do at this level (already handled by SymExecCore)
+        return;
 
     SymExecCoreParams ep;
     ep.skipVarInit = /* avoid an infinite recursion */ true;
@@ -330,19 +333,15 @@ TValId SymProc::varAt(const CVar &cv) {
         return at;
 #endif
 
+    bool needInit = !var.initials.empty();
     if (nullify) {
         // initialize to zero
         sh_.writeUniformBlock(at, VAL_NULL, size);
     }
-#if SE_TRACK_UNINITIALIZED
-    else if (isLcVar) {
-        // uninitialized stack variable
-        const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
-        sh_.writeUniformBlock(at, tpl, size);
-    }
-#endif
+    else if (isLcVar)
+        needInit = true;
 
-    if (!var.initials.empty())
+    if (needInit)
         // go through explicit initializers
         this->varInit(at);
 
@@ -841,6 +840,13 @@ void SymExecCore::varInit(TValId at) {
         // we are explicitly asked to not initialize any vars
         return;
 
+    if (ep_.trackUninit && VT_ON_STACK == sh_.valTarget(at)) {
+        // uninitialized stack variable
+        const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
+        const TOffset size = sh_.valSizeOfTarget(at);
+        sh_.writeUniformBlock(at, tpl, size);
+    }
+
     SymProc::varInit(at);
 }
 
@@ -945,9 +951,16 @@ malloc/calloc is implementation-defined");
 
     // now create a heap object
     const TValId val = sh_.heapAlloc(size);
-    if (nullified)
+
+    if (nullified) {
         // initilize to zero as we are doing calloc()
         sh_.writeUniformBlock(val, VAL_NULL, size);
+    }
+    else if (ep_.trackUninit) {
+        // uninitialized heap block
+        const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
+        sh_.writeUniformBlock(val, tplValue, size);
+    }
 
     // store the result of malloc
     this->objSetValue(lhs, val);

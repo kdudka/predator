@@ -52,6 +52,12 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
         return;
     }
 
+    if (string("track_uninit") == cnf) {
+        CL_DEBUG("parseConfigString: \"track_uninit\" mode requested");
+        sep.trackUninit = true;
+        return;
+    }
+
     // TODO: make it possible to handle both parameters together (comma
     // separated list or whatever)
     // TODO: document all the parameters somewhere

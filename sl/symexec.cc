@@ -383,7 +383,7 @@ bool SymExecEngine::bypassNonPointers(
     proc.killInsn(insnCmp);
 
     SymHeap sh1(sh);
-    sh1.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
+    sh1.traceUpdate(new Trace::CondNode(sh.traceNode(),
                 &insnCmp, &insnCnd, /* det */ false, /* branch */ true));
 
     CL_DEBUG_MSG(lw_, "-T- CL_INSN_COND updates TRUE branch");
@@ -393,7 +393,7 @@ bool SymExecEngine::bypassNonPointers(
     this->updateState(sh1, insnCnd.targets[/* then label */ 0]);
 
     SymHeap sh2(sh);
-    sh2.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
+    sh2.traceUpdate(new Trace::CondNode(sh.traceNode(),
                 &insnCmp, &insnCnd, /* det */ false, /* branch */ false));
 
     CL_DEBUG_MSG(lw_, "-F- CL_INSN_COND updates FALSE branch");
@@ -526,6 +526,7 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
 
     // set some properties of the execution
     SymExecCoreParams ep;
+    ep.trackUninit      = params_.trackUninit;
     ep.oomSimulation    = params_.oomSimulation;
     ep.skipPlot         = params_.skipPlot;
     ep.errLabel         = params_.errLabel;

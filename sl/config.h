@@ -214,14 +214,7 @@
  * - 1 ... basic tracking of non-pointer values
  * - 2 ... expensive tracking of pointer values
  */
-#define SE_TRACK_NON_POINTER_VALUES         1
-
-/**
- * if 1, track uninitialized values, which may result into significant state
- * explosion in some cases (especially when used together with
- * SE_TRACK_NON_POINTER_VALUES)
- */
-#define SE_TRACK_UNINITIALIZED              0
+#define SE_TRACK_NON_POINTER_VALUES         0
 
 /**
  * if 1, do not make deep copy on copy of SymHeap [experimental]
