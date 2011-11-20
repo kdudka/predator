@@ -190,7 +190,7 @@ bool operator==(const CustomValue &a, const CustomValue &b) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
-typedef std::set<TObjId>                                TObjSet;
+typedef std::set<TObjId>                                TObjIdSet;
 typedef std::map<TOffset, TValId>                       TOffMap;
 typedef IntervalArena<TOffset, TObjId>                  TArena;
 typedef TArena::key_type                                TMemChunk;
@@ -206,7 +206,7 @@ inline TMemItem createArenaItem(
 }
 
 inline bool arenaLookup(
-        TObjSet                     *dst,
+        TObjIdSet                   *dst,
         const TArena                &arena,
         const TMemChunk             &chunk,
         const TObjId                obj)
@@ -222,7 +222,7 @@ inline bool arenaLookup(
 }
 
 inline void arenaLookForExactMatch(
-        TObjSet                     *dst,
+        TObjIdSet                   *dst,
         const TArena                &arena,
         const TMemChunk             &chunk)
 {
@@ -318,7 +318,7 @@ struct BaseValue: public AbstractHeapEntity {
     EValueOrigin                    origin;
     TValId                          valRoot;
     TOffset                         offRoot;
-    TObjSet                         usedBy;
+    TObjIdSet                       usedBy;
     TValId                          anchor;
 
     BaseValue(EValueTarget code_, EValueOrigin origin_):
@@ -390,7 +390,7 @@ struct RootValue: public AnchorValue {
     CVar                            cVar;
     TOffset                         size;
     TLiveObjs                       liveObjs;
-    TObjSet                         usedByGl;
+    TObjIdSet                       usedByGl;
     TArena                          arena;
     TObjType                        lastKnownClt;
     bool                            isProto;
@@ -598,7 +598,7 @@ bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
     const TArena &arena = rootData->arena;
     const TMemChunk chunk(0, rootData->size);
 
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (arenaLookup(&overlaps, arena, chunk, OBJ_INVALID)) {
         BOOST_FOREACH(const TObjId obj, overlaps)
             all.erase(obj);
@@ -837,7 +837,7 @@ void SymHeapCore::Private::setValueOf(
     arena += createArenaItem(off, clt->size, obj);
 
     // invalidate contents of the objects we are overwriting
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
         BOOST_FOREACH(const TObjId old, overlaps)
             this->reinterpretObjData(old, obj, killedPtrs);
@@ -1010,7 +1010,7 @@ void SymHeapCore::Private::transferBlock(
     const TOffset winEnd = winBeg + winSize;
     const TMemChunk chunk (winBeg, winEnd);
 
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (!arenaLookup(&overlaps, arena, chunk, OBJ_INVALID))
         // no data to copy in here
         return;
@@ -1099,7 +1099,7 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     const TObjType clt = objData->clt;
 
     // first check for data reinterpretation
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
         BOOST_FOREACH(const TObjId other, overlaps) {
             const BlockEntity *blockData;
@@ -1189,7 +1189,7 @@ void SymHeapCore::usedBy(ObjList &dst, TValId val, bool liveOnly) const {
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
-    const TObjSet &usedBy = valData->usedBy;
+    const TObjIdSet &usedBy = valData->usedBy;
     if (!liveOnly) {
         // dump everything
         BOOST_FOREACH(const TObjId obj, usedBy)
@@ -1229,7 +1229,7 @@ void SymHeapCore::pointedBy(ObjList &dst, TValId root) const {
     CL_BREAK_IF(rootData->offRoot);
     CL_BREAK_IF(!isPossibleToDeref(rootData->code));
 
-    const TObjSet &usedBy = rootData->usedByGl;
+    const TObjIdSet &usedBy = rootData->usedByGl;
     BOOST_FOREACH(const TObjId obj, usedBy)
         dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
 }
@@ -1444,7 +1444,7 @@ bool SymHeapCore::findCoveringUniBlock(
     const TOffset end = beg + size;
     const TMemChunk chunk(beg, end);
 
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (!arenaLookup(&overlaps, arena, chunk, OBJ_INVALID))
         // not found
         return false;
@@ -1577,7 +1577,7 @@ TObjId SymHeapCore::Private::writeUniformBlock(
     const TMemChunk chunk(beg, end);
 
     // invalidate contents of the objects we are overwriting
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (arenaLookup(&overlaps, arena, chunk, obj)) {
         BOOST_FOREACH(const TObjId old, overlaps)
             this->reinterpretObjData(old, obj, killedPtrs);
@@ -2047,7 +2047,7 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     }
 
     // we intentionally do not use a reference here (tight loop otherwise)
-    TObjSet usedBy = valData->usedBy;
+    TObjIdSet usedBy = valData->usedBy;
     BOOST_FOREACH(const TObjId obj, usedBy) {
         // this used to happen with with test-0037 running in OOM mode [fixed]
         CL_BREAK_IF(isGone(this->valTarget(this->placedAt(obj))));
@@ -2151,7 +2151,7 @@ TObjId SymHeapCore::ptrAt(TValId at) {
     CL_BREAK_IF(size <= 0);
 
     // arena lookup
-    TObjSet candidates;
+    TObjIdSet candidates;
     const TArena &arena = rootData->arena;
     const TOffset off = valData->offRoot;
     const TMemChunk chunk(off, off + size);
@@ -2206,7 +2206,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     d->ents.getEntRO(&rootData, valRoot);
 
     // arena lookup
-    TObjSet candidates;
+    TObjIdSet candidates;
     const TArena &arena = rootData->arena;
     const TOffset off = valData->offRoot;
     const TMemChunk chunk(off, off + size);
@@ -2516,7 +2516,7 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     if (size) {
         // look for inner objects
         const TMemChunk chunk(0, size);
-        TObjSet allObjs;
+        TObjIdSet allObjs;
         if (arenaLookup(&allObjs, rootData->arena, chunk, OBJ_INVALID)) {
             // destroy all inner objects
             BOOST_FOREACH(const TObjId obj, allObjs)
