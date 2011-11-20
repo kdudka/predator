@@ -2667,10 +2667,6 @@ bool joinDataCore(
     // create an image in ctx.dst
     const TValId rootDstAt = ctx.dst.heapAlloc(size);
 
-    if (!joinUniBlocks(ctx, rootDstAt, addr1, addr2))
-        // failed to complement uniform blocks
-        return false;
-
     const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(addr1);
     const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(addr2);
     const TObjType clt = joinClt(ctx, clt1, clt2);
@@ -2706,6 +2702,10 @@ bool joinDataCore(
     ObjLookup blackList;
     buildIgnoreList(blackList, ctx.dst, rootDstAt, off);
     if (!setDstValues(ctx, &blackList))
+        return false;
+
+    if (!joinUniBlocks(ctx, rootDstAt, addr1, addr2))
+        // failed to complement uniform blocks
         return false;
 
     // check consistency of DLS prototype peers
