@@ -755,7 +755,7 @@ void execMemsetCore(
     }
 
     // compute size of the suffix we _have_ to invalidate
-    const long suffixSize = safeRange.lo - totalRange.lo;
+    const long suffixSize = totalRange.hi - safeRange.hi;
     CL_BREAK_IF(suffixSize < 0);
     if (0 < suffixSize) {
         CL_DEBUG("memset() invalidates ambiguous suffix");
@@ -1380,8 +1380,8 @@ TValId handlePtrBitAnd(
 
     // include all possible scenarios into consideration
     IntRange range;
-    range.lo = mask;
-    range.hi = 0;
+    range.lo = 1L + mask;
+    range.hi = 0L;
 
     // create the appropriate VT_RANGE value
     return sh.valByRange(vPtr, range);
