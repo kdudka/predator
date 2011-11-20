@@ -691,6 +691,8 @@ Tests taken from Forester
 
     test-0196.c - a training example for the introduction of VT_RANGE
 
+    test-0197.c - a regression test for execution of memset() on ranges
+
 
 Tiny DLL library written on scratch
 ===================================
