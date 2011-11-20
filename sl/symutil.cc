@@ -65,8 +65,13 @@ bool rangeFromVal(IntRange *pDst, const SymHeap &sh, const TValId val) {
         return true;
     }
 
+    if (VT_CUSTOM != sh.valTarget(val))
+        // not a custom value
+        return false;
+
     CustomValue cv = sh.valUnwrapCustom(val);
     if (CV_INT_RANGE != cv.code)
+        // not an integral range
         return false;
 
     *pDst = cv.data.rng;
