@@ -676,35 +676,8 @@ class PtrHandle: public ObjHandle {
 /// ugly, but typedefs do not support partial declarations
 class ObjList: public std::vector<ObjHandle> { };
 
-class ObjLookup {
-    private:
-        std::set<TObjId>            idSet_;
-        ObjList                     hList_;
-
-    public:
-        bool insert(const ObjHandle &hdl) {
-            const TObjId obj = hdl.objId();
-            if (hasKey(idSet_, obj))
-                return false;
-
-            idSet_.insert(obj);
-            hList_.push_back(hdl);
-            return true;
-        }
-
-        bool lookup(const TObjId obj) const {
-            return hasKey(idSet_, obj);
-        }
-
-        bool lookup(const ObjHandle &hdl) const {
-            const TObjId obj = hdl.objId();
-            return hasKey(idSet_, obj);
-        }
-
-        const ObjList& objList() const {
-            return hList_;
-        }
-};
+/// set of object handles
+typedef std::set<ObjHandle>                             TObjSet;
 
 /// enumeration of abstract object (although OK_CONCRETE is not abstract)
 enum EObjKind {

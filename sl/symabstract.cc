@@ -66,10 +66,10 @@ static const unsigned dlsThreshold = 1;
 
 // visitor
 struct UnknownValuesDuplicator {
-    ObjLookup ignoreList;
+    TObjSet ignoreList;
 
     bool operator()(const ObjHandle &obj) const {
-        if (ignoreList.lookup(obj))
+        if (hasKey(ignoreList, obj))
             return /* continue */ true;
 
         const TValId valOld = obj.value();
@@ -258,12 +258,12 @@ void cloneGenericPrototype(
 
 // visitor
 struct ProtoCloner {
-    ObjLookup ignoreList;
+    TObjSet ignoreList;
     TValId rootDst;
     TValId rootSrc;
 
     bool operator()(const ObjHandle &obj) const {
-        if (ignoreList.lookup(obj))
+        if (hasKey(ignoreList, obj))
             return /* continue */ true;
 
         const TValId val = obj.value();
@@ -284,14 +284,14 @@ struct ProtoCloner {
 
 struct ValueSynchronizer {
     SymHeap            &sh;
-    ObjLookup           ignoreList;
+    TObjSet             ignoreList;
 
     ValueSynchronizer(SymHeap &sh_): sh(sh_) { }
 
     bool operator()(ObjHandle item[2]) const {
         const ObjHandle &src = item[0];
         const ObjHandle &dst = item[1];
-        if (ignoreList.lookup(src))
+        if (hasKey(ignoreList, src))
             return /* continue */ true;
 
         // store value of 'src' into 'dst'

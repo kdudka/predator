@@ -576,8 +576,8 @@ bool joinFreshObjTripple(
 
 struct ObjJoinVisitor {
     SymJoinCtx              &ctx;
-    ObjLookup               blackList1;
-    ObjLookup               blackList2;
+    TObjSet                 blackList1;
+    TObjSet                 blackList2;
     bool                    noFollow;
 
     ObjJoinVisitor(SymJoinCtx &ctx_):
@@ -592,7 +592,7 @@ struct ObjJoinVisitor {
         const ObjHandle &objDst = item[2];
 
         // check black-list
-        if (blackList1.lookup(obj1) || blackList2.lookup(obj2))
+        if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
             return /* continue */ true;
 
         return /* continue */ joinFreshObjTripple(ctx, obj1, obj2, objDst);
@@ -611,8 +611,8 @@ void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TValId root) {
 
 struct SegMatchVisitor {
     SymJoinCtx              &ctx;
-    ObjLookup               blackList1;
-    ObjLookup               blackList2;
+    TObjSet                 blackList1;
+    TObjSet                 blackList2;
 
     public:
         SegMatchVisitor(SymJoinCtx &ctx_):
@@ -624,7 +624,7 @@ struct SegMatchVisitor {
             const ObjHandle &obj1 = item[0];
             const ObjHandle &obj2 = item[1];
 
-            if (blackList1.lookup(obj1) || blackList2.lookup(obj2))
+            if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
                 // black-listed
                 return true;
 
@@ -2315,7 +2315,7 @@ bool setDstValuesCore(
 {
     const ObjHandle &objDst = rItem.first;
     CL_BREAK_IF(!objDst.isValid());
-    if (blackList.lookup(objDst))
+    if (hasKey(blackList, objDst))
         return true;
 
     const THdlPair &orig = rItem.second;
@@ -2357,7 +2357,7 @@ bool setDstValuesCore(
     return true;
 }
 
-bool setDstValues(SymJoinCtx &ctx, const ObjLookup *blackList = 0) {
+bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0) {
     SymHeap &dst = ctx.dst;
     SymHeap &sh1 = ctx.sh1;
     SymHeap &sh2 = ctx.sh2;
@@ -2391,7 +2391,7 @@ bool setDstValues(SymJoinCtx &ctx, const ObjLookup *blackList = 0) {
         rMap[objDst].second = objSrc;
     }
 
-    ObjLookup emptyBlackList;
+    TObjSet emptyBlackList;
     if (!blackList)
         blackList = &emptyBlackList;
 
@@ -2699,7 +2699,7 @@ bool joinDataCore(
         return false;
 
     // batch assignment of all values in ctx.dst
-    ObjLookup blackList;
+    TObjSet blackList;
     buildIgnoreList(blackList, ctx.dst, rootDstAt, off);
     if (!setDstValues(ctx, &blackList))
         return false;
@@ -2848,14 +2848,14 @@ void transferContentsOfGhost(
         const TValId            dst,
         const TValId            ghost)
 {
-    ObjLookup ignoreList;
+    TObjSet ignoreList;
     buildIgnoreList(ignoreList, sh, dst);
 
     ObjList live;
     sh.gatherLiveObjects(live, ghost);
     BOOST_FOREACH(const ObjHandle objGhost, live) {
         const ObjHandle objDst = translateObjId(sh, sh, dst, objGhost);
-        if (ignoreList.lookup(objDst))
+        if (hasKey(ignoreList, objDst))
             // preserve binding pointers
             continue;
 

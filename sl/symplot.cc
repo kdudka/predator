@@ -398,7 +398,8 @@ void plotUniformBlocks(PlotData &plot, const TValId root) {
     }
 }
 
-void plotInnerObjects(PlotData &plot, const TValId at, const ObjList &liveObjs)
+template <class TCont>
+void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
 {
     SymHeap &sh = plot.sh;
 
@@ -485,7 +486,8 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
     return label;
 }
 
-void plotCompositeObj(PlotData &plot, const TValId at, const ObjList &liveObjs)
+template <class TCont>
+void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
 {
     SymHeap &sh = plot.sh;
 
@@ -572,9 +574,9 @@ void plotDlSeg(PlotData &plot, const TValId seg, const ObjList &liveObjs) {
     const TValId peer = dlSegPeer(sh, seg);
     if (OK_DLS == sh.valTargetKind(peer)) {
 #if SYMPLOT_OMIT_NEQ_EDGES
-        ObjLookup bindPtrs;
+        TObjSet bindPtrs;
         buildIgnoreList(bindPtrs, sh, peer);
-        plotCompositeObj(plot, peer, bindPtrs.objList());
+        plotCompositeObj(plot, peer, bindPtrs);
 #else
         ObjList liveObjsAtPeer;
         sh.gatherLiveObjects(liveObjsAtPeer, peer);

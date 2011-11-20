@@ -152,7 +152,7 @@ void segSetProto(SymHeap &sh, TValId seg, bool isProto);
 TValId segClone(SymHeap &sh, const TValId seg);
 
 inline void buildIgnoreList(
-        ObjLookup               &ignoreList,
+        TObjSet                 &ignoreList,
         const SymHeap           &sh,
         const TValId            at)
 {
@@ -183,7 +183,7 @@ inline void buildIgnoreList(
 }
 
 inline void buildIgnoreList(
-        ObjLookup               &ignoreList,
+        TObjSet                 &ignoreList,
         SymHeap                 &sh,
         const TValId            at,
         const BindingOff        &off)
