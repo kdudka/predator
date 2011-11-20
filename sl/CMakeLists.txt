@@ -72,7 +72,8 @@ set(GCC_EXEC_PREFIX "timeout 600"
 
 set(testdir "${sl_SOURCE_DIR}/../tests/predator-regre")
 
-set(examples
+# basic tests
+set(tests
          0001 0002 0003 0004 0005 0006 0007 0008 0009
     0010 0011 0012 0013 0014 0015 0016 0017 0018 0019
     0020 0021 0022 0023 0024 0025 0026 0027 0028 0029
@@ -98,14 +99,20 @@ set(examples
               0432
     0500 0501 0502 0503 0504 0505           0508 0509
     0510 0511 0512 0513 0514 0515 0516 0517 0518
-    0520
-    0167 0124 0157 0521 0405 0409 0407 0410)
+    0520)
+
+if(TEST_ONLY_FAST)
+else()
+    # expensive tests
+    set(tests ${tests}
+        0167 0124 0157 0521 0405 0409 0407 0410)
+endif()
 
 set(cost 1048576)
 
 # FIXME: define this macro more generically, in particular the count of args
-macro(test_sym_exec label tool arg1 arg2 arg3)
-    foreach (num ${examples})
+macro(test_predator_smoke label tool arg1 arg2 arg3)
+    foreach (num ${tests})
         set(test_name "${label}___example-${num}")
         add_test(${test_name} ${tool} ${arg1} ${arg2} ${arg3}
             -c "${testdir}/test-${num}.c"
@@ -119,14 +126,10 @@ macro(test_sym_exec label tool arg1 arg2 arg3)
         MATH(EXPR cost "${cost} - 1")
     endforeach()
 endmacro()
-if(TEST_ONLY_FAST)
-else()
-    test_sym_exec("smoke-test" ${GCC_HOST} "" "" "")
-endif()
 
 # FIXME: define this macro more generically, in particular the count of args
-macro(test_sym_exec_regre name_suff ext arg1)
-    foreach (num ${examples})
+macro(test_predator_regre name_suff ext arg1)
+    foreach (num ${tests})
         set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_EXEC_PREFIX} ${GCC_HOST}")
 
         # we use the following flag to avoid differences on 32bit vs 64bit archs
@@ -157,17 +160,20 @@ macro(test_sym_exec_regre name_suff ext arg1)
         SET_TESTS_PROPERTIES(${test_name} PROPERTIES COST ${cost})
         MATH(EXPR cost "${cost} - 1")
     endforeach()
-endmacro(test_sym_exec_regre)
+endmacro(test_predator_regre)
 
-test_sym_exec_regre("" "" "-fplugin-arg-libsl-args=error_label:ERROR")
+# default mode
+test_predator_regre("" "" "-fplugin-arg-libsl-args=error_label:ERROR")
+
 if(TEST_ONLY_FAST)
 else()
-    test_sym_exec_regre("-OOM" ".oom" "-fplugin-arg-libsl-args=oom")
+    # OOM simulation mode
+    test_predator_regre("-OOM" ".oom" "-fplugin-arg-libsl-args=oom")
 endif()
 
 if(TEST_WITH_VALGRIND)
     message (STATUS "valgrind enabled for testing...")
-    test_sym_exec("valgrind-test" valgrind
+    test_predator_smoke("valgrind-test" valgrind
         --trace-children=yes
         --error-exitcode=7
         ${GCC_HOST})
