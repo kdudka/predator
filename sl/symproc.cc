@@ -1302,6 +1302,25 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
     // check whether we both values are integral constant
     IntRange rng1, rng2;
     if (rangeFromVal(&rng1, sh_, v1) && rangeFromVal(&rng2, sh_, v2)) {
+
+        // first try to preserve range coincidence if we can
+        switch (code) {
+            case CL_BINOP_PLUS:
+                if (!isSingular(rng1) && isSingular(rng2))
+                    return sh_.valByOffset(v1, rng2.lo);
+                else if (isSingular(rng1) && !isSingular(rng2))
+                    return sh_.valByOffset(v2, rng1.lo);
+                break;
+
+            case CL_BINOP_MINUS:
+                if (!isSingular(rng1) && isSingular(rng2))
+                    return sh_.valByOffset(v1, -rng2.lo);
+                break;
+
+            default:
+                break;
+        }
+
         TValId result;
         if (computeIntRngResult(&result, sh_, code, rng1, rng2))
             return result;

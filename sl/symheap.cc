@@ -319,7 +319,7 @@ struct BaseValue: public AbstractHeapEntity {
     TValId                          valRoot;
     TOffset                         offRoot;
     TObjSet                         usedBy;
-    TValId                          anchor;     ///< used only by VT_RANGE
+    TValId                          anchor;
 
     BaseValue(EValueTarget code_, EValueOrigin origin_):
         code(code_),
@@ -521,6 +521,8 @@ struct SymHeapCore::Private {
 
     void bindValues(TValId v1, TValId v2, bool neg);
 
+    TValId shiftCustomValue(TValId val, TOffset shift);
+
     private:
         // intentionally not implemented
         Private& operator=(const Private &);
@@ -529,6 +531,7 @@ struct SymHeapCore::Private {
 inline TValId SymHeapCore::Private::assignId(BaseValue *valData) {
     const TValId val = this->ents.assignId<TValId>(valData);
     valData->valRoot = val;
+    valData->anchor  = val;
     return val;
 }
 
@@ -1651,6 +1654,28 @@ TObjType SymHeapCore::objType(TObjId obj) const {
     return objData->clt;
 }
 
+// FIXME: this feature needs to be better documented
+TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
+    const InternalCustomValue *customDataRef;
+    this->ents.getEntRO(&customDataRef, ref);
+
+    CL_BREAK_IF(CV_INT_RANGE != customDataRef->customData.code);
+    const IntRange &rngRef = customDataRef->customData.data.rng;
+
+    // compute the shift
+    CustomValue cv(CV_INT_RANGE);
+    cv.data.rng.lo = rngRef.lo + shift;
+    cv.data.rng.hi = rngRef.hi + shift;
+
+    // create a new CV_INT_RANGE custom value (do not recycle existing)
+    const TValId val = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
+    InternalCustomValue *customData;
+    this->ents.getEntRW(&customData, val);
+    customData->anchor      = customDataRef->anchor;
+    customData->customData  = cv;
+    return val;
+}
+
 TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     if (!off || at < 0)
         return at;
@@ -1674,8 +1699,8 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
         return d->valDup(at);
 
     if (VT_CUSTOM == code) {
-        CL_BREAK_IF("valByOffset() is NOT supposed to be applied on VT_CUSTOM");
-        return at;
+        // FIXME: this feature needs to be better documented
+        return d->shiftCustomValue(at, off);
     }
 
     // off-value lookup
