@@ -2205,12 +2205,20 @@ bool joinPendingValues(SymJoinCtx &ctx) {
 }
 
 class JoinVarVisitor {
+    public:
+        enum EMode {
+            JVM_LIVE_OBJS,
+            JVM_UNI_BLOCKS
+        };
+
     private:
-        SymJoinCtx &ctx_;
+        SymJoinCtx              &ctx_;
+        const EMode             mode_;
 
     public:
-        JoinVarVisitor(SymJoinCtx &ctx):
-            ctx_(ctx)
+        JoinVarVisitor(SymJoinCtx &ctx, const EMode mode):
+            ctx_(ctx),
+            mode_(mode)
         {
         }
 
@@ -2219,12 +2227,20 @@ class JoinVarVisitor {
             const TValId root1     = roots[/* sh1 */ 1];
             const TValId root2     = roots[/* sh2 */ 2];
 
-            return joinUniBlocks(ctx_, rootDst, root1, root2)
-                && traverseRoots(ctx_, rootDst, root1, root2);
+            switch (mode_) {
+                case JVM_LIVE_OBJS:
+                    return traverseRoots(ctx_, rootDst, root1, root2);
+
+                case JVM_UNI_BLOCKS:
+                    return joinUniBlocks(ctx_, rootDst, root1, root2);
+            }
+
+            CL_BREAK_IF("stack smashing detected");
+            return false;
         }
 };
 
-bool joinCVars(SymJoinCtx &ctx) {
+bool joinCVars(SymJoinCtx &ctx, const JoinVarVisitor::EMode mode) {
     SymHeap *const heaps[] = {
         &ctx.dst,
         &ctx.sh1,
@@ -2232,7 +2248,7 @@ bool joinCVars(SymJoinCtx &ctx) {
     };
 
     // go through all program variables
-    JoinVarVisitor visitor(ctx);
+    JoinVarVisitor visitor(ctx, mode);
     return traverseProgramVarsGeneric<
         /* N_DST */ 1,
         /* N_SRC */ 2>
@@ -2548,7 +2564,7 @@ bool joinSymHeaps(
         goto fail;
 
     // start with program variables
-    if (!joinCVars(ctx))
+    if (!joinCVars(ctx, JoinVarVisitor::JVM_LIVE_OBJS))
         goto fail;
 
     // go through all values in them
@@ -2557,6 +2573,10 @@ bool joinSymHeaps(
 
     // time to preserve all 'hasValue' edges
     if (!setDstValues(ctx))
+        goto fail;
+
+    // join uniform blocks
+    if (!joinCVars(ctx, JoinVarVisitor::JVM_UNI_BLOCKS))
         goto fail;
 
     // go through shared Neq predicates and set minimal segment lengths
