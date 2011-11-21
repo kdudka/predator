@@ -244,6 +244,7 @@ bool SymProc::checkForInvalidDeref(TValId val, const TOffset sizeOfTarget) {
     switch (code) {
         case VT_RANGE:
             CL_BREAK_IF("please implement");
+            // fall through!
 
         case VT_INVALID:
         case VT_COMPOSITE:
@@ -881,6 +882,7 @@ void SymExecCore::execFree(TValId val) {
 
         case VT_RANGE:
             CL_BREAK_IF("please implement");
+            // fall through!
 
         case VT_INVALID:
         case VT_ABSTRACT:

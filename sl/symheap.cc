@@ -420,6 +420,7 @@ class CustomValueMapper {
         TCustomByLong       numMap;
         TCustomByReal       fpnMap;
         TCustomByString     strMap;
+        TValId              inval_;
 
     public:
         RefCounter          refCnt;
@@ -431,6 +432,7 @@ class CustomValueMapper {
                 case CV_INVALID:
                 default:
                     CL_BREAK_IF("invalid call of CustomValueMapper::lookup()");
+                    return inval_ = VAL_INVALID;
 
                 case CV_FNC:
                     return assignInvalidIfNotFound(fncMap, item.data.uid);

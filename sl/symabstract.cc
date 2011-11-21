@@ -339,9 +339,6 @@ void abstractNonMatchingValues(
 
     if (OK_DLS == sh.valTargetKind(dstAt))
         dlSegSyncPeerData(sh, dstAt);
-
-    if (bidir && OK_DLS == sh.valTargetKind(srcAt))
-        dlSegSyncPeerData(sh, srcAt);
 }
 
 void clonePrototypes(SymHeap &sh, TValId addr, TValId dup) {
