@@ -1015,66 +1015,79 @@ bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code) {
     }
 }
 
-bool compareIntCsts(
-        bool                        *pDst,
-        const enum cl_binop_e       code,
-        const long                  num1,
-        const long                  num2)
-{
-    switch (code) {
-        case CL_BINOP_NE:
-            // TODO: improve SymHeapCore to handle it actually :-)
-            // fall through!
-
-        case CL_BINOP_EQ:
-            // this should have been already handled by the caller
-            return false;
-
-        case CL_BINOP_LE:
-            *pDst = (num1 <= num2);
-            return true;
-
-        case CL_BINOP_GE:
-            *pDst = (num1 >= num2);
-            return true;
-
-        case CL_BINOP_LT:
-            *pDst = (num1 <  num2);
-            return true;
-
-        case CL_BINOP_GT:
-            *pDst = (num1 >  num2);
-            return true;
-
-        default:
-            CL_BREAK_IF("unhandled binary operator in compareIntCsts()");
-            return false;
-    }
-}
-
 bool compareIntRanges(
         bool                        *pDst,
         const enum cl_binop_e       code,
         const IntRange              &range1,
         const IntRange              &range2)
 {
-    bool loResult;
-    if (!compareIntCsts(&loResult, code, range1.lo, range2.lo))
+    CmpOpTraits ct;
+    if (!describeCmpOp(&ct, code))
         return false;
 
-    bool hiResult;
-    if (!compareIntCsts(&hiResult, code, range1.hi, range2.hi))
-        return false;
+    // check for interval overlapping (strict)
+    const bool ltr = (range1.hi < range2.lo);
+    const bool rtl = (range2.hi < range1.lo);
 
-    if (loResult == hiResult) {
-        // we got the same results for both boundaries --> pick any
-        *pDst = loResult;
-        return true;
+    if (ct.preserveEq && ct.preserveNeq) {
+        // either == or !=
+
+        if (ltr || rtl) {
+            // no overlaps on the given intervals
+            *pDst = ct.negative;
+            return true;
+        }
+
+        if (isSingular(range1) && isSingular(range2)) {
+            // we got two integral constants and both are equal
+            CL_BREAK_IF(range1.lo != range2.hi);
+            *pDst = !ct.negative;
+            return true;
+        }
+
+        // we got something ambiguous
+        return false;
     }
 
-#if !SE_ALLOW_OFF_RANGES
-    CL_BREAK_IF("please implement");
-#endif
+    if (ct.negative) {
+        // either < or >
+
+        if ((ltr     && ct.leftToRight) || (rtl     && ct.rightToLeft)) {
+            *pDst = true;
+            return true;
+        }
+    }
+    else {
+        // either <= or >=
+
+        if ((rtl     && ct.leftToRight) || (ltr     && ct.rightToLeft)) {
+            *pDst = false;
+            return true;
+        }
+    }
+
+    // check for interval overlapping (weak)
+    const bool ltrWeak = (range1.hi <= range2.lo);
+    const bool rtlWeak = (range2.hi <= range1.lo);
+
+    if (ct.negative) {
+        // either < or >
+
+        if ((rtlWeak && ct.leftToRight) || (ltrWeak && ct.rightToLeft)) {
+            *pDst = false;
+            return true;
+        }
+    }
+    else {
+        // either <= or >=
+
+        if ((ltrWeak && ct.leftToRight) || (rtlWeak && ct.rightToLeft)) {
+            *pDst = true;
+            return true;
+        }
+    }
+
+    // we got something ambiguous
     return false;
 }
 
@@ -1134,11 +1147,11 @@ TValId compareValues(
         // both values are pointers
         return comparePointers(sh, code, v1, v2);
 
-    long num1, num2;
-    if (numFromVal(&num1, sh, v1) && numFromVal(&num2, sh, v2)) {
+    IntRange rng1, rng2;
+    if (rangeFromVal(&rng1, sh, v1) && rangeFromVal(&rng2, sh, v2)) {
         // both values are integral constants
         bool result;
-        if (compareIntCsts(&result, code, num1, num2))
+        if (compareIntRanges(&result, code, rng1, rng2))
             return boolToVal(result);
     }
 
