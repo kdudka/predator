@@ -392,15 +392,15 @@ struct CompValue: public BaseValue {
     }
 };
 
-struct InternalCustomValue: public BaseValue {
+struct InternalCustomValue: public ReferableValue {
     CustomValue                     customData;
 
     InternalCustomValue(EValueTarget code_, EValueOrigin origin_):
-        BaseValue(code_, origin_)
+        ReferableValue(code_, origin_)
     {
     }
 
-    virtual BaseValue* clone() const {
+    virtual InternalCustomValue* clone() const {
         return new InternalCustomValue(*this);
     }
 };
@@ -542,6 +542,8 @@ struct SymHeapCore::Private {
     void bindValues(TValId v1, TValId v2, bool neg);
 
     TValId shiftCustomValue(TValId val, TOffset shift);
+
+    TValId trimCustomValue(TValId val, const IntRange &win);
 
     private:
         // intentionally not implemented
@@ -1693,7 +1695,20 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     this->ents.getEntRW(&customData, val);
     customData->anchor      = customDataRef->anchor;
     customData->customData  = cv;
+
+    // register this value as a dependent value by the anchor
+    ReferableValue *refData;
+    this->ents.getEntRW(&refData, customData->anchor);
+    refData->dependentValues.push_back(val);
+
     return val;
+}
+
+TValId SymHeapCore::Private::trimCustomValue(TValId val, const IntRange &win) {
+    CL_BREAK_IF("please implement");
+    (void) val;
+    (void) win;
+    return VAL_INVALID;
 }
 
 TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
@@ -1790,6 +1805,10 @@ void SymHeapCore::valRestrictRange(TValId val, IntRange win) {
     switch (code) {
         case VT_RANGE:
             break;
+
+        case VT_CUSTOM:
+            d->trimCustomValue(val, win);
+            return;
 
         case VT_UNKNOWN:
             if (!isSingular(win)) {
