@@ -1,0 +1,7 @@
+test-0199.c:80:9: warning: memory leak detected while destroying a heap object
+test-0199.c:110:14: note: from call of stack_clear()
+test-0199.c:86:5: note: from call of main()
+test-0199.c:81:30: error: dereference of already deleted heap object
+test-0199.c:110:14: note: from call of stack_clear()
+test-0199.c:86:5: note: from call of main()
+test-0199.c:107:11: warning: ignoring call of undefined function: __builtin_putchar()

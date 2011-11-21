@@ -73,6 +73,8 @@ SLS abstraction
 
     test-0195.c - a simplification of test-0193 that revealed a bug in symjoin
 
+    test-0199.c - a stack implementation (contributed by Daniela Ďuričeková)
+
 
 DLS abstraction
 ===============
