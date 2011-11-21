@@ -78,6 +78,26 @@ bool rangeFromVal(IntRange *pDst, const SymHeap &sh, const TValId val) {
     return true;
 }
 
+bool anyRangeFromVal(
+        IntRange                    *pDst,
+        const SymHeap               &sh,
+        const TValId                 val)
+{
+    const EValueTarget code = sh.valTarget(val);
+    if (VT_CUSTOM == code)
+        // try to extract an integral range
+        return rangeFromVal(pDst, sh, val);
+
+    if (VAL_NULL == val || isAnyDataArea(code)) {
+        // extract offset range
+        *pDst = sh.valOffsetRange(val);
+        return true;
+    }
+
+    // there is no range we could extract
+    return false;
+}
+
 bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val) {
     if (VT_CUSTOM != sh.valTarget(val))
         // not a custom value

@@ -1185,18 +1185,33 @@ bool trimRangesIfPossible(
         // not a suitable binary operator (modulo some corner cases)
         return false;
 
-    const bool isRange1 = (VT_RANGE == sh.valTarget(v1));
-    const bool isRange2 = (VT_RANGE == sh.valTarget(v2));
+    IntRange rng1;
+    if (!anyRangeFromVal(&rng1, sh, v1))
+        return false;
+
+    IntRange rng2;
+    if (!anyRangeFromVal(&rng2, sh, v2))
+        return false;
+
+    const bool isRange1 = !isSingular(rng1);
+    const bool isRange2 = !isSingular(rng2);
     if (isRange1 == isRange2)
         // not a suitable value pair for trimming
         return false;
 
-    const TValId root = sh.valRoot(v1);
-    if (root != sh.valRoot(v2))
-        // root mismatch
-        return false;
+    // one of the values holds a range inside
+    const TValId valRange = (isRange1) ? v1 : v2;
 
-    // FIXME: the following code must be full of bugs
+    const EValueTarget code = sh.valTarget(valRange);
+    if (VT_RANGE == code) {
+        // comparing the offsets makes sense only if both values shares the root
+        const TValId root1 = sh.valRoot(v1);
+        const TValId root2 = sh.valRoot(v2);
+        if (root1 != root2)
+            // root mismatch
+            return false;
+    }
+
     CL_DEBUG("trimRangesIfPossible() is taking place...");
 
     // should we include the boundary to the result?
@@ -1206,23 +1221,19 @@ bool trimRangesIfPossible(
     const bool neg = (branch == isRange2);
     const bool trimLo = (neg == ltr);
 
-    // pick the values in the appropriate order
-    const TValId valRange = (isRange1) ? v1 : v2;
-    const TValId valTrim  = (isRange2) ? v1 : v2;
-
-    // extract the current offset range and trimming offset
-    IntRange offRange = sh.valOffsetRange(valRange);
-    const TOffset offTrim = sh.valOffset(valTrim);
+    // use the offsets in the appropriate order
+    IntRange win     = (isRange1) ? rng1    : rng2;
+    const long limit = (isRange2) ? rng1.lo : rng2.lo;
 
     if (trimLo)
         // shift the lower bound up
-        offRange.lo = offTrim + isOpen;
+        win.lo = limit + isOpen;
     else
         // shift the upper bound down
-        offRange.hi = offTrim - isOpen;
+        win.hi = limit - isOpen;
 
     // trim the designated VT_RANGE value
-    sh.valRestrictOffsetRange(valRange, offRange);
+    sh.valRestrictOffsetRange(valRange, win);
     return true;
 }
 
