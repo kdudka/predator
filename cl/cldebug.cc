@@ -22,6 +22,8 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include <iomanip>
+
 #include <boost/algorithm/string/replace.hpp>
 
 namespace {
@@ -187,7 +189,7 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
 
         case CL_TYPE_PTR:
             if (val)
-                str << "0x" << std::hex << val;
+                str << "0x" << std::hex << val << std::resetiosflags;
             else
                 str << "NULL";
 
