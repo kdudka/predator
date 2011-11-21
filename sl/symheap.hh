@@ -389,7 +389,7 @@ class SymHeapCore {
         IntRange valOffsetRange(TValId) const;
 
         /// narrow down the offset range of the given VT_RANGE value
-        void valRestrictOffsetRange(TValId, IntRange win);
+        void valRestrictRange(TValId, IntRange win);
 
         /// difference between two pointers (makes sense only for shared roots)
         TValId diffPointers(const TValId v1, const TValId v2);

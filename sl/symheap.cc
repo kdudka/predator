@@ -333,11 +333,25 @@ struct BaseValue: public AbstractHeapEntity {
     }
 };
 
-struct AnchorValue: public BaseValue {
+/// maintains a list of dependent values
+struct ReferableValue: public BaseValue {
+    TValList                        dependentValues;
+
+    ReferableValue(EValueTarget code_, EValueOrigin origin_):
+        BaseValue(code_, origin_)
+    {
+    }
+
+    virtual ReferableValue* clone() const {
+        return new ReferableValue(*this);
+    }
+};
+
+struct AnchorValue: public ReferableValue {
     TOffMap                         offMap;
 
     AnchorValue(EValueTarget code_, EValueOrigin origin_):
-        BaseValue(code_, origin_)
+        ReferableValue(code_, origin_)
     {
     }
 
@@ -394,7 +408,6 @@ struct RootValue: public AnchorValue {
     TArena                          arena;
     TObjType                        lastKnownClt;
     bool                            isProto;
-    TValList                        rangeValues;
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
         AnchorValue(code_, origin_),
@@ -1759,12 +1772,12 @@ TValId SymHeapCore::valByRange(TValId at, IntRange range) {
     // register the VT_RANGE value by the owning root entity
     RootValue *rootData;
     d->ents.getEntRW(&rootData, valRoot);
-    rootData->rangeValues.push_back(val);
+    rootData->dependentValues.push_back(val);
 
     return val;
 }
 
-void SymHeapCore::valRestrictOffsetRange(TValId val, IntRange win) {
+void SymHeapCore::valRestrictRange(TValId val, IntRange win) {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     CL_BREAK_IF(VT_RANGE != valData->code);
@@ -1792,7 +1805,7 @@ void SymHeapCore::valRestrictOffsetRange(TValId val, IntRange win) {
         return;
 
     // the range has been restricted to a single off-value, trow it away!
-    CL_DEBUG("valRestrictOffsetRange() throws away a singular offset range...");
+    CL_DEBUG("valRestrictRange() throws away a singular offset range...");
     const TValId valRoot = rangeData->valRoot;
     const TOffset offRoot = range.lo;
     const TValId valSubst = this->valByOffset(valRoot, offRoot);
@@ -2491,7 +2504,7 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     std::vector<AnchorValue *> refs(1, rootData);
 
     // collect all VT_RANGE anchors
-    BOOST_FOREACH(const TValId rVal, rootData->rangeValues) {
+    BOOST_FOREACH(const TValId rVal, rootData->dependentValues) {
         AnchorValue *anchorData;
         this->ents.getEntRW(&anchorData, rVal);
         refs.push_back(anchorData);

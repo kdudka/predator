@@ -1233,7 +1233,7 @@ bool trimRangesIfPossible(
         win.hi = limit - isOpen;
 
     // trim the designated VT_RANGE value
-    sh.valRestrictOffsetRange(valRange, win);
+    sh.valRestrictRange(valRange, win);
     return true;
 }
 
