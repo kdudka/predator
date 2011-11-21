@@ -103,6 +103,9 @@ struct IntRange {
     long        hi;         ///< upper bound of the interval (included)
 };
 
+/// FIXME: this way we are asking for overflow (build vs. host arch mismatch)
+extern struct IntRange IntRangeDomain;
+
 inline bool operator==(const IntRange &a, const IntRange &b) {
     return (a.lo == b.lo)
         && (a.hi == b.hi);

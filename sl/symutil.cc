@@ -94,6 +94,12 @@ bool anyRangeFromVal(
         return true;
     }
 
+    // FIXME: this way we are asking for overflow (build vs. host arch mismatch)
+    if (VT_UNKNOWN == code) {
+        *pDst = IntRangeDomain;
+        return true;
+    }
+
     // there is no range we could extract
     return false;
 }

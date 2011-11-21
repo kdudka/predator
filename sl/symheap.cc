@@ -146,6 +146,11 @@ class CVarMap {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of IntRange
+struct IntRange IntRangeDomain = {
+    LONG_MIN,
+    LONG_MAX
+};
+
 bool isSingular(const IntRange &range) {
     CL_BREAK_IF(range.hi < range.lo);
     return (range.lo == range.hi);
@@ -1780,7 +1785,25 @@ TValId SymHeapCore::valByRange(TValId at, IntRange range) {
 void SymHeapCore::valRestrictRange(TValId val, IntRange win) {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
-    CL_BREAK_IF(VT_RANGE != valData->code);
+
+    const EValueTarget code = valData->code;
+    switch (code) {
+        case VT_RANGE:
+            break;
+
+        case VT_UNKNOWN:
+            if (!isSingular(win)) {
+                CustomValue cv(CV_INT_RANGE);
+                cv.data.rng = win;
+                this->valReplace(val, this->valWrapCustom(cv));
+                return;
+            }
+            // fall through!
+
+        default:
+            CL_BREAK_IF("invalid call of valRestrictRange()");
+            return;
+    }
 
     const TValId anchor = valData->anchor;
     const TOffset shift = valData->offRoot;
