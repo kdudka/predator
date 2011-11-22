@@ -471,7 +471,12 @@ bool checkNullConsistency(
         ? ctx.sh1.valTarget(v1)
         : ctx.sh2.valTarget(v2);
 
+    // NOTE: this is only a heuristic
     switch (code) {
+        case VT_UNKNOWN:
+            // [experimental] reduce state explosion on test-0300
+            return !ctx.joiningData();
+
         case VT_STATIC:
         case VT_ON_STACK:
         case VT_ON_HEAP:
@@ -1653,8 +1658,17 @@ bool handleUnknownValues(
 {
     const bool isNull1 = (VAL_NULL == v1);
     const bool isNull2 = (VAL_NULL == v2);
-    if (isNull1 != isNull2)
-        return false;
+    if (isNull1 != isNull2) {
+        const TValPair vp(v1, v2);
+        CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
+        ctx.matchLookup[vp] = vDst;
+
+        SymHeap &shGt      = (isNull2) ? ctx.sh1 : ctx.sh2;
+        const TValId valGt = (isNull2) ? v1 : v2;
+        TValMapBidir &vMap = (isNull2) ? ctx.valMap1 : ctx.valMap2;
+
+        return matchPlainValues(vMap, shGt, ctx.dst, valGt, vDst);
+    }
 
     CL_BREAK_IF(isNull1 && isNull2);
     return defineValueMapping(ctx, v1, v2, vDst);
