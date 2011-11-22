@@ -173,17 +173,28 @@ bool translateValId(
         const SymHeapCore       &src,
         const TValMap           &valMap)
 {
-    if (*pVal <= VAL_NULL)
+    const TValId valSrc = *pVal;
+    if (valSrc <= VAL_NULL)
         // special values always match, no need for mapping
         return true;
 
-    typename TValMap::const_iterator iter = valMap.find(*pVal);
-    if (valMap.end() == iter)
-        // mapping not found
+    const TValId rootSrc = src.valRoot(valSrc);
+    const TValId rootDst = roMapLookup(valMap, rootSrc);
+    if (VAL_INVALID == rootDst)
+        // rootSrc not found in valMap
         return false;
 
+    if (rootSrc == valSrc) {
+        // no offset used
+        *pVal = rootDst;
+    }
+    else {
+        // translate the lookup result by the original offset
+        const IntRange &off = src.valOffsetRange(valSrc);
+        *pVal = dst.valByRange(rootDst, off);
+    }
+
     // match
-    *pVal = iter->second;
     return true;
 }
 

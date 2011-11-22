@@ -63,6 +63,21 @@ bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
 
+/// known to work only with TObjId/TValId
+template <class TMap>
+typename TMap::mapped_type roMapLookup(
+        const TMap                          &roMap,
+        const typename TMap::key_type       id)
+{
+    if (id <= 0)
+        return id;
+
+    typename TMap::const_iterator iter = roMap.find(id);
+    return (roMap.end() == iter)
+        ? static_cast<typename TMap::mapped_type>(-1)
+        : iter->second;
+}
+
 bool translateValId(
         TValId                  *pVal,
         SymHeapCore             &dst,

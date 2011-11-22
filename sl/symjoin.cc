@@ -96,21 +96,6 @@ class WorkListWithUndo: public WorkList<T> {
         }
 };
 
-/// known to work only with TObjId/TValId
-template <class TMap>
-typename TMap::mapped_type roMapLookup(
-        const TMap                          &roMap,
-        const typename TMap::key_type       id)
-{
-    if (id <= 0)
-        return id;
-
-    typename TMap::const_iterator iter = roMap.find(id);
-    return (roMap.end() == iter)
-        ? static_cast<typename TMap::mapped_type>(-1)
-        : iter->second;
-}
-
 /// current state, common for joinSymHeaps(), joinDataReadOnly() and joinData()
 struct SymJoinCtx {
     SymHeap                     &dst;
