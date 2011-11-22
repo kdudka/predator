@@ -570,8 +570,19 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
 
     BaseValue *valData;
     this->ents.getEntRW(&valData, val);
-    if (1 != valData->usedBy.erase(obj))
+    TObjIdSet &usedBy = valData->usedBy;
+    if (1 != usedBy.erase(obj))
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
+
+    if (usedBy.empty()) {
+        // kill all related Neq predicates
+        TValList neqs;
+        this->neqDb->gatherRelatedValues(neqs, val);
+        BOOST_FOREACH(const TValId valNeq, neqs) {
+            CL_DEBUG("releaseValueOf() kills an orphan Neq predicate");
+            this->neqDb->del(valNeq, val);
+        }
+    }
 
     const EValueTarget code = valData->code;
     if (!isAnyDataArea(code))
