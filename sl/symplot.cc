@@ -719,13 +719,10 @@ void describeStr(PlotData &plot, const char *str, const TValId val) {
         << val << ")\"";
 }
 
-void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
+void describeCustomValue(PlotData &plot, const TValId val) {
     SymHeap &sh = plot.sh;
     const CustomValue cVal = sh.valUnwrapCustom(val);
     const CustomValueData &data = cVal.data;
-
-    const int id = ++plot.last;
-    plot.out << "\t" << SL_QUOTE("lonely" << id) << " [shape=plaintext";
 
     const ECustomValue code = cVal.code;
     switch (code) {
@@ -753,6 +750,13 @@ void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
             describeStr(plot, data.str, val);
             break;
     }
+}
+
+void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
+    const int id = ++plot.last;
+    plot.out << "\t" << SL_QUOTE("lonely" << id) << " [shape=plaintext";
+
+    describeCustomValue(plot, val);
 
     plot.out << "];\n\t" << SL_QUOTE(obj)
         << " -> " << SL_QUOTE("lonely" << id)
@@ -982,6 +986,19 @@ void plotNeqZero(PlotData &plot, const TValId val) {
         ", penwidth=2.0];\n";
 }
 
+void plotNeqCustom(PlotData &plot, const TValId val, const TValId valCustom) {
+    const int id = ++plot.last;
+    plot.out << "\t" << SL_QUOTE("lonely" << id)
+        << " [shape=plaintext";
+
+    describeCustomValue(plot, valCustom);
+
+    plot.out << "];\n\t" << SL_QUOTE(val)
+        << " -> " << SL_QUOTE("lonely" << id)
+        << " [color=red, fontcolor=gold, label=neq style=dashed"
+        ", penwidth=2.0];\n";
+}
+
 void plotNeq(std::ostream &out, const TValId v1, const TValId v2) {
     out << "\t" << SL_QUOTE(v1)
         << " -> " << SL_QUOTE(v2)
@@ -998,6 +1015,10 @@ class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
 
                 if (VAL_NULL == v1)
                     plotNeqZero(plot, v2);
+                else if (VT_CUSTOM == plot.sh.valTarget(v2))
+                    plotNeqCustom(plot, v1, v2);
+                else if (VT_CUSTOM == plot.sh.valTarget(v1))
+                    plotNeqCustom(plot, v2, v1);
                 else
                     plotNeq(plot.out, v1, v2);
             }
@@ -1046,7 +1067,9 @@ void plotEverything(PlotData &plot) {
         TValList relatedVals;
         sh.gatherRelatedValues(relatedVals, val);
         BOOST_FOREACH(const TValId rel, relatedVals)
-            if (VAL_NULL == rel || hasKey(plot.values, rel))
+            if (VAL_NULL == rel
+                    || hasKey(plot.values, rel)
+                    || VT_CUSTOM == sh.valTarget(rel))
                 np.add(val, rel);
     }
 
