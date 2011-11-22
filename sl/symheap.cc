@@ -543,7 +543,9 @@ struct SymHeapCore::Private {
 
     TValId shiftCustomValue(TValId val, TOffset shift);
 
-    TValId trimCustomValue(TValId val, const IntRange &win);
+    void replaceRngByInt(const InternalCustomValue *valData);
+
+    void trimCustomValue(TValId val, const IntRange &win);
 
     private:
         // intentionally not implemented
@@ -1704,11 +1706,90 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     return val;
 }
 
-TValId SymHeapCore::Private::trimCustomValue(TValId val, const IntRange &win) {
-    CL_BREAK_IF("please implement");
-    (void) val;
-    (void) win;
-    return VAL_INVALID;
+void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData) {
+    CL_DEBUG("replaceRngByInt() is taking place...");
+
+    // we already expect CV_INT at this point
+    const CustomValue &cvRng = valData->customData;
+    CL_BREAK_IF(CV_INT != cvRng.code);
+
+    TValId replaceBy;
+    if (0L == cvRng.data.num)
+        replaceBy = VAL_NULL;
+    else if (1L == cvRng.data.num)
+        replaceBy = VAL_TRUE;
+    else {
+        // CV_INT values are supposed to be reused if they exist already
+        RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->cValueMap);
+        TValId &valInt = this->cValueMap->lookup(cvRng);
+        if (VAL_INVALID == valInt) {
+            // CV_INT_RANGE not found, wrap it as a new heap value
+            valInt = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
+            InternalCustomValue *intData;
+            this->ents.getEntRW(&intData, valInt);
+            intData->customData = cvRng;
+        }
+        replaceBy = valInt;
+    }
+
+    // we intentionally do not use a reference here (tight loop otherwise)
+    TObjIdSet usedBy = valData->usedBy;
+    BOOST_FOREACH(const TObjId obj, usedBy)
+        this->setValueOf(obj, replaceBy);
+}
+
+void SymHeapCore::Private::trimCustomValue(TValId val, const IntRange &win) {
+    const InternalCustomValue *customData;
+    this->ents.getEntRO(&customData, val);
+
+    // extract the custom value and check we get CV_INT_RANGE
+    const CustomValue &cv = customData->customData;
+    if (CV_INT_RANGE != cv.code) {
+        CL_BREAK_IF("only CV_INT_RANGE custom values can be restricted");
+        return;
+    }
+
+    // extract the original integral ragne
+    const IntRange &refRange = cv.data.rng;
+    CL_BREAK_IF(isSingular(refRange));
+
+    // compute the difference between the original and desired ranges
+    IntRange diff;
+    diff.lo = refRange.lo - win.lo;
+    diff.hi = win.hi - refRange.hi;
+    if (0 < diff.lo && diff.hi < 0) {
+        CL_BREAK_IF("attempt to use trimCustomValue() to enlarge the interval");
+        return;
+    }
+
+    // jump to anchor
+    const TValId anchor = customData->anchor;
+    const ReferableValue *refData;
+    this->ents.getEntRO(&refData, anchor);
+
+    // go through all dependent values including the anchor itself
+    TValList deps = refData->dependentValues;
+    deps.push_back(anchor);
+    BOOST_FOREACH(const TValId depVal, deps) {
+        // FIXME: are custom values the only allowed dependent values here?
+        InternalCustomValue *depData;
+        this->ents.getEntRW(&depData, depVal);
+
+        CustomValue &cvDep = depData->customData;
+        CL_BREAK_IF(CV_INT_RANGE != cvDep.code);
+
+        // FIXME: this can easily trigger integral overflow
+        IntRange &rngDep = cvDep.data.rng;
+        rngDep.lo += diff.lo;
+        rngDep.hi += diff.hi;
+
+        if (isSingular(rngDep)) {
+            // CV_INT_RANGE reduced to CV_INT
+            cvDep.code = CV_INT;
+            cvDep.data.num = rngDep.lo;
+            this->replaceRngByInt(depData);
+        }
+    }
 }
 
 TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
