@@ -1317,22 +1317,6 @@ TValId SymHeapCore::valClone(TValId val) {
     return this->valByOffset(dupAt, valData->offRoot);
 }
 
-template <class TValMap>
-bool valMapLookup(const TValMap &valMap, TValId *pVal) {
-    if (*pVal <= VAL_NULL)
-        // special values always match, no need for mapping
-        return true;
-
-    typename TValMap::const_iterator iter = valMap.find(*pVal);
-    if (valMap.end() == iter)
-        // mapping not found
-        return false;
-
-    // match
-    *pVal = iter->second;
-    return true;
-}
-
 TObjId SymHeapCore::Private::copySingleLiveBlock(
         const TValId                rootDst,
         RootValue                  *rootDataDst,
@@ -2235,7 +2219,11 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
         TValId valLt = item.first;
         TValId valGt = item.second;
 
-        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
+        if (!translateValId(&valLt, dst, *this, valMap))
+            // not relevant
+            continue;
+
+        if (!translateValId(&valGt, dst, *this, valMap))
             // not relevant
             continue;
 
@@ -2247,12 +2235,20 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
 bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
     const
 {
+    SymHeapCore &src = const_cast<SymHeapCore &>(*this);
+    SymHeapCore &dst = const_cast<SymHeapCore &>(ref);
+
     // go through NeqDb
     BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb->cont_) {
         TValId valLt = item.first;
         TValId valGt = item.second;
-        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
-            // seems like a dangling predicate, which we are not interested in
+
+        if (!translateValId(&valLt, dst, src, valMap))
+            // FIXME
+            continue;
+
+        if (!translateValId(&valGt, dst, src, valMap))
+            // FIXME
             continue;
 
         if (!ref.d->neqDb->chk(valLt, valGt))

@@ -167,6 +167,26 @@ bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val) {
     return (ptrSize <= sh.valSizeOfTarget(val));
 }
 
+bool translateValId(
+        TValId                  *pVal,
+        SymHeapCore             &dst,
+        const SymHeapCore       &src,
+        const TValMap           &valMap)
+{
+    if (*pVal <= VAL_NULL)
+        // special values always match, no need for mapping
+        return true;
+
+    typename TValMap::const_iterator iter = valMap.find(*pVal);
+    if (valMap.end() == iter)
+        // mapping not found
+        return false;
+
+    // match
+    *pVal = iter->second;
+    return true;
+}
+
 void translateValProto(
         TValId                  *pValProto,
         SymHeap                 &dst,

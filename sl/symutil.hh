@@ -63,6 +63,12 @@ bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
 
+bool translateValId(
+        TValId                  *pVal,
+        SymHeapCore             &dst,
+        const SymHeapCore       &src,
+        const TValMap           &valMap);
+
 void translateValProto(
         TValId                  *pValProto,
         SymHeap                 &dst,
