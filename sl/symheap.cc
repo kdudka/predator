@@ -2244,12 +2244,12 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
         TValId valGt = item.second;
 
         if (!translateValId(&valLt, dst, src, valMap))
-            // FIXME
-            continue;
+            // failed to translate value ID, better to give up
+            return false;
 
         if (!translateValId(&valGt, dst, src, valMap))
-            // FIXME
-            continue;
+            // failed to translate value ID, better to give up
+            return false;
 
         if (!ref.d->neqDb->chk(valLt, valGt))
             // Neq predicate not matched

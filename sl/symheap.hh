@@ -358,15 +358,7 @@ class SymHeapCore {
          */
         void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
 
-        /**
-         * pick up all explicit Neq predicates that can be fully mapped by
-         * valMap into ref and check if they have their own image in ref
-         * @param ref instance of another symbolic heap
-         * @param valMap an (injective) mapping of values from this symbolic
-         * heap into the symbolic heap that is given by ref
-         * @return return true if all such predicates have their image in ref,
-         * false otherwise
-         */
+        /// true if all Neq predicates can be mapped to Neq predicates in ref
         bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
 
     public:
