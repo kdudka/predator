@@ -93,7 +93,8 @@ set(tests
     0160 0161 0162 0163 0164      0166      0168
     0170 0171 0172 0173 0174 0175 0176 0177 0178 0179
     0180 0181 0182 0183 0184 0185 0186 0187 0188 0189
-    0190 0191 0192 0193 0194 0195 0196 0197      0199
+    0190 0191 0192 0193 0194 0195 0196 0197 0198 0199
+    0200
     0300      0302
     0400 0401 0402 0403 0404      0406      0408
               0432
@@ -169,11 +170,8 @@ test_predator_regre("" "" "-fplugin-arg-libsl-args=error_label:ERROR")
 test_predator_regre("-TRACK_UNINIT" ".uninit"
     "-fplugin-arg-libsl-args=track_uninit")
 
-if(TEST_ONLY_FAST)
-else()
-    # OOM simulation mode
-    test_predator_regre("-OOM" ".oom" "-fplugin-arg-libsl-args=oom")
-endif()
+# OOM simulation mode
+test_predator_regre("-OOM" ".oom" "-fplugin-arg-libsl-args=oom")
 
 if(TEST_WITH_VALGRIND)
     message (STATUS "valgrind enabled for testing...")

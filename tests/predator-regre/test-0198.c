@@ -7,8 +7,10 @@ int main()
         ___sl_plot("less-than-zero", &i);
     else if (0 < i)
         ___sl_plot("more-than-zero", &i);
-    else
+    else {
         ___sl_plot("equal-to-zero", &i);
+        ___SL_ASSERT(!i);
+    }
 
     return 0;
 }

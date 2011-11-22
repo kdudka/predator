@@ -214,7 +214,7 @@
  * - 1 ... basic tracking of non-pointer values
  * - 2 ... expensive tracking of pointer values
  */
-#define SE_TRACK_NON_POINTER_VALUES         0
+#define SE_TRACK_NON_POINTER_VALUES         2
 
 /**
  * if 1, do not make deep copy on copy of SymHeap [experimental]

@@ -1,4 +1,58 @@
+test-0300.c:269:10: warning: conditional jump depends on uninitialized value
+test-0300.c:269:10: note: the value being used is an untouched contents of stack
+test-0300.c:269:10: warning: conditional jump depends on uninitialized value
+test-0300.c:269:10: note: the value being used is an untouched contents of stack
+test-0300.c:275:10: warning: conditional jump depends on uninitialized value
+test-0300.c:275:10: note: the value being used is an untouched contents of stack
+test-0300.c:147:8: warning: conditional jump depends on uninitialized value
+test-0300.c:147:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
 test-0300.c:147:8: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:150:12: warning: conditional jump depends on uninitialized value
+test-0300.c:150:12: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:161:8: warning: conditional jump depends on uninitialized value
+test-0300.c:161:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:164:8: warning: conditional jump depends on uninitialized value
+test-0300.c:164:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:167:8: warning: conditional jump depends on uninitialized value
+test-0300.c:167:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:170:8: warning: conditional jump depends on uninitialized value
+test-0300.c:170:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:173:8: warning: conditional jump depends on uninitialized value
+test-0300.c:173:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:176:8: warning: conditional jump depends on uninitialized value
+test-0300.c:176:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:179:8: warning: conditional jump depends on uninitialized value
+test-0300.c:179:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:182:8: warning: conditional jump depends on uninitialized value
+test-0300.c:182:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:185:8: warning: conditional jump depends on uninitialized value
+test-0300.c:185:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:188:8: warning: conditional jump depends on uninitialized value
+test-0300.c:188:8: note: the value being used is an untouched contents of heap
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
 test-0300.c:218:8: warning: conditional jump depends on uninitialized value
@@ -11,7 +65,61 @@ test-0300.c:266:5: note: from call of main()
 test-0300.c:141:10: warning: memory leak detected while destroying a variable on stack
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
+test-0300.c:269:10: warning: conditional jump depends on uninitialized value
+test-0300.c:269:10: note: the value being used is an untouched contents of stack
+test-0300.c:275:10: warning: conditional jump depends on uninitialized value
+test-0300.c:275:10: note: the value being used is an untouched contents of stack
+test-0300.c:275:10: warning: conditional jump depends on uninitialized value
+test-0300.c:275:10: note: the value being used is an untouched contents of stack
+test-0300.c:147:8: warning: conditional jump depends on uninitialized value
+test-0300.c:147:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
 test-0300.c:147:8: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:150:12: warning: conditional jump depends on uninitialized value
+test-0300.c:150:12: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:161:8: warning: conditional jump depends on uninitialized value
+test-0300.c:161:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:164:8: warning: conditional jump depends on uninitialized value
+test-0300.c:164:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:167:8: warning: conditional jump depends on uninitialized value
+test-0300.c:167:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:170:8: warning: conditional jump depends on uninitialized value
+test-0300.c:170:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:173:8: warning: conditional jump depends on uninitialized value
+test-0300.c:173:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:176:8: warning: conditional jump depends on uninitialized value
+test-0300.c:176:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:179:8: warning: conditional jump depends on uninitialized value
+test-0300.c:179:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:182:8: warning: conditional jump depends on uninitialized value
+test-0300.c:182:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:185:8: warning: conditional jump depends on uninitialized value
+test-0300.c:185:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:188:8: warning: conditional jump depends on uninitialized value
+test-0300.c:188:8: note: the value being used is an untouched contents of heap
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
 test-0300.c:218:8: warning: conditional jump depends on uninitialized value
@@ -24,7 +132,55 @@ test-0300.c:266:5: note: from call of main()
 test-0300.c:141:10: warning: memory leak detected while destroying a variable on stack
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
+test-0300.c:147:8: warning: conditional jump depends on uninitialized value
+test-0300.c:147:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
 test-0300.c:147:8: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:150:12: warning: conditional jump depends on uninitialized value
+test-0300.c:150:12: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:161:8: warning: conditional jump depends on uninitialized value
+test-0300.c:161:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:164:8: warning: conditional jump depends on uninitialized value
+test-0300.c:164:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:167:8: warning: conditional jump depends on uninitialized value
+test-0300.c:167:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:170:8: warning: conditional jump depends on uninitialized value
+test-0300.c:170:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:173:8: warning: conditional jump depends on uninitialized value
+test-0300.c:173:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:176:8: warning: conditional jump depends on uninitialized value
+test-0300.c:176:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:179:8: warning: conditional jump depends on uninitialized value
+test-0300.c:179:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:182:8: warning: conditional jump depends on uninitialized value
+test-0300.c:182:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:185:8: warning: conditional jump depends on uninitialized value
+test-0300.c:185:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:188:8: warning: conditional jump depends on uninitialized value
+test-0300.c:188:8: note: the value being used is an untouched contents of heap
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
 test-0300.c:218:8: warning: conditional jump depends on uninitialized value
@@ -37,7 +193,61 @@ test-0300.c:266:5: note: from call of main()
 test-0300.c:141:10: warning: memory leak detected while destroying a variable on stack
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
+test-0300.c:275:10: warning: conditional jump depends on uninitialized value
+test-0300.c:275:10: note: the value being used is an untouched contents of stack
+test-0300.c:275:10: warning: conditional jump depends on uninitialized value
+test-0300.c:275:10: note: the value being used is an untouched contents of stack
+test-0300.c:275:10: warning: conditional jump depends on uninitialized value
+test-0300.c:275:10: note: the value being used is an untouched contents of stack
+test-0300.c:147:8: warning: conditional jump depends on uninitialized value
+test-0300.c:147:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
 test-0300.c:147:8: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:150:12: warning: conditional jump depends on uninitialized value
+test-0300.c:150:12: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:161:8: warning: conditional jump depends on uninitialized value
+test-0300.c:161:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:164:8: warning: conditional jump depends on uninitialized value
+test-0300.c:164:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:167:8: warning: conditional jump depends on uninitialized value
+test-0300.c:167:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:170:8: warning: conditional jump depends on uninitialized value
+test-0300.c:170:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:173:8: warning: conditional jump depends on uninitialized value
+test-0300.c:173:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:176:8: warning: conditional jump depends on uninitialized value
+test-0300.c:176:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:179:8: warning: conditional jump depends on uninitialized value
+test-0300.c:179:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:182:8: warning: conditional jump depends on uninitialized value
+test-0300.c:182:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:185:8: warning: conditional jump depends on uninitialized value
+test-0300.c:185:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:188:8: warning: conditional jump depends on uninitialized value
+test-0300.c:188:8: note: the value being used is an untouched contents of heap
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
 test-0300.c:218:8: warning: conditional jump depends on uninitialized value
@@ -50,7 +260,55 @@ test-0300.c:266:5: note: from call of main()
 test-0300.c:141:10: warning: memory leak detected while destroying a variable on stack
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
+test-0300.c:147:8: warning: conditional jump depends on uninitialized value
+test-0300.c:147:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
 test-0300.c:147:8: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:150:12: warning: conditional jump depends on uninitialized value
+test-0300.c:150:12: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:161:8: warning: conditional jump depends on uninitialized value
+test-0300.c:161:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:164:8: warning: conditional jump depends on uninitialized value
+test-0300.c:164:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:167:8: warning: conditional jump depends on uninitialized value
+test-0300.c:167:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:170:8: warning: conditional jump depends on uninitialized value
+test-0300.c:170:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:173:8: warning: conditional jump depends on uninitialized value
+test-0300.c:173:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:176:8: warning: conditional jump depends on uninitialized value
+test-0300.c:176:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:179:8: warning: conditional jump depends on uninitialized value
+test-0300.c:179:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:182:8: warning: conditional jump depends on uninitialized value
+test-0300.c:182:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:185:8: warning: conditional jump depends on uninitialized value
+test-0300.c:185:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:188:8: warning: conditional jump depends on uninitialized value
+test-0300.c:188:8: note: the value being used is an untouched contents of heap
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
 test-0300.c:218:8: warning: conditional jump depends on uninitialized value
@@ -63,7 +321,55 @@ test-0300.c:266:5: note: from call of main()
 test-0300.c:141:10: warning: memory leak detected while destroying a variable on stack
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
+test-0300.c:147:8: warning: conditional jump depends on uninitialized value
+test-0300.c:147:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
 test-0300.c:147:8: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:150:12: warning: conditional jump depends on uninitialized value
+test-0300.c:150:12: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:161:8: warning: conditional jump depends on uninitialized value
+test-0300.c:161:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:164:8: warning: conditional jump depends on uninitialized value
+test-0300.c:164:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:167:8: warning: conditional jump depends on uninitialized value
+test-0300.c:167:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:170:8: warning: conditional jump depends on uninitialized value
+test-0300.c:170:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:173:8: warning: conditional jump depends on uninitialized value
+test-0300.c:173:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:176:8: warning: conditional jump depends on uninitialized value
+test-0300.c:176:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:179:8: warning: conditional jump depends on uninitialized value
+test-0300.c:179:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:182:8: warning: conditional jump depends on uninitialized value
+test-0300.c:182:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:185:8: warning: conditional jump depends on uninitialized value
+test-0300.c:185:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:188:8: warning: conditional jump depends on uninitialized value
+test-0300.c:188:8: note: the value being used is an untouched contents of heap
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
 test-0300.c:218:8: warning: conditional jump depends on uninitialized value
@@ -76,7 +382,57 @@ test-0300.c:266:5: note: from call of main()
 test-0300.c:141:10: warning: memory leak detected while destroying a variable on stack
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
+test-0300.c:275:10: warning: conditional jump depends on uninitialized value
+test-0300.c:275:10: note: the value being used is an untouched contents of stack
+test-0300.c:147:8: warning: conditional jump depends on uninitialized value
+test-0300.c:147:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
 test-0300.c:147:8: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:150:12: warning: conditional jump depends on uninitialized value
+test-0300.c:150:12: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:161:8: warning: conditional jump depends on uninitialized value
+test-0300.c:161:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:164:8: warning: conditional jump depends on uninitialized value
+test-0300.c:164:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:167:8: warning: conditional jump depends on uninitialized value
+test-0300.c:167:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:170:8: warning: conditional jump depends on uninitialized value
+test-0300.c:170:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:173:8: warning: conditional jump depends on uninitialized value
+test-0300.c:173:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:176:8: warning: conditional jump depends on uninitialized value
+test-0300.c:176:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:179:8: warning: conditional jump depends on uninitialized value
+test-0300.c:179:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:182:8: warning: conditional jump depends on uninitialized value
+test-0300.c:182:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:185:8: warning: conditional jump depends on uninitialized value
+test-0300.c:185:8: note: the value being used is an untouched contents of heap
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:188:8: warning: conditional jump depends on uninitialized value
+test-0300.c:188:8: note: the value being used is an untouched contents of heap
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
 test-0300.c:218:8: warning: conditional jump depends on uninitialized value
