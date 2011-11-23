@@ -1370,18 +1370,32 @@ bool joinCustomValues(
     }
 #endif
 
+#if !SE_ALLOW_INT_RANGES
     // avoid creation of a CV_INT_RANGE value from two CV_INT values
     if (isSingular(rng1) && isSingular(rng2)) {
         const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         return updateJoinStatus(ctx, JS_THREE_WAY)
             && defineValueMapping(ctx, v1, v2, vDst);
     }
+#endif
 
     // compute the resulting range that covers both
     CustomValue cv(CV_INT_RANGE);
     IntRange &rng = cv.data.rng;
     rng.lo = std::min(rng1.lo, rng2.lo);
     rng.hi = std::max(rng1.hi, rng2.hi);
+
+    // [experimental] widening on intervals
+#if 1 < SE_ALLOW_INT_RANGES
+    if (!isSingular(rng1) && !isSingular(rng2)) {
+        if (rng.lo == rng1.lo || rng.lo == rng2.lo)
+            rng.hi = IntRangeDomain.hi;
+#   if 2 < SE_ALLOW_INT_RANGES
+        if (rng.hi == rng1.hi || rng.hi == rng2.hi)
+            rng.lo = IntRangeDomain.lo;
+#   endif
+    }
+#endif
 
     if (!isCoveredByRange(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
         return false;

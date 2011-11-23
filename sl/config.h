@@ -99,6 +99,14 @@
 #define SE_ALLOW_CST_INT_PLUS_MINUS         1
 
 /**
+ * - 0 ... avoid creation of a new integral range from two integral constants
+ * - 1 ... allow to create integral ranges from integral constants if needed
+ * - 2 ... same as above, additionally use widening in upward direction [broken]
+ * - 3 ... same as above, additionally use widening in both directions [broken]
+ */
+#define SE_ALLOW_INT_RANGES                 0
+
+/**
  * - 0 ... do not use values with offset specified by int ranges (VT_RANGE)
  * - 1 ... allow to use values with offset specified by int ranges (VT_RANGE)
  * - 2 ... same as above, additionally use widening in upward direction [broken]
