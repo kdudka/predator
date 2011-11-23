@@ -269,25 +269,37 @@ void SymExecEngine::execReturn() {
     endReached_ = true;
 }
 
+bool isLoopClosingEdge(
+        const CodeStorage::Insn     *term,
+        const CodeStorage::Block    *ofBlock)
+{
+    BOOST_FOREACH(const unsigned idxTarget, term->loopClosingTargets)
+        if (term->targets[idxTarget] == ofBlock)
+            return true;
+
+    return false;
+}
+
 void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
 {
     const std::string &name = ofBlock->name();
 
+    bool closingLoop = isLoopClosingEdge(/* term */ block_->back(), ofBlock);
+    if (closingLoop)
+        CL_DEBUG_MSG(lw_, "-L- traversing a loop-closing edge");
+
     // time to consider abstraction
 #if SE_ABSTRACT_ON_LOOP_EDGES_ONLY
-    const CodeStorage::Insn *term = block_->back();
-    BOOST_FOREACH(const unsigned idxTarget, term->loopClosingTargets) {
-        if (term->targets[idxTarget] == ofBlock) {
-            abstractIfNeeded(sh);
-            break;
-        }
-    }
-#else
-    abstractIfNeeded(sh);
+    if (closingLoop)
+#endif
+        abstractIfNeeded(sh);
+
+#if !SE_JOIN_ON_LOOP_EDGES_ONLY
+    closingLoop = true;
 #endif
 
     // update _target_ state and check if anything has changed
-    if (!stateMap_.insert(ofBlock, block_, sh)) {
+    if (!stateMap_.insert(ofBlock, block_, sh, closingLoop)) {
         CL_DEBUG_MSG(lw_, "--- block " << name
                      << " left intact (size of target is "
                      << stateMap_[ofBlock].size() << ")");

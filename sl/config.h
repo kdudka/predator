@@ -188,6 +188,11 @@
 #define SE_INT_ARITHMETIC_LIMIT             8
 
 /**
+ * if 1, do not allow three-way join on each state update, but only when looping
+ */
+#define SE_JOIN_ON_LOOP_EDGES_ONLY          0
+
+/**
  * maximal call depth
  */
 #define SE_MAX_CALL_DEPTH                   0x40

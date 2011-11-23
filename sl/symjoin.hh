@@ -69,7 +69,8 @@ bool joinSymHeaps(
         EJoinStatus             *pStatus,
         SymHeap                 *dst,
         const SymHeap           &sh1,
-        const SymHeap           &sh2);
+        const SymHeap           &sh2,
+        const bool              allowThreeWay = true);
 
 /// enable/disable debugging of symjoin
 void debugSymJoin(const bool enable);

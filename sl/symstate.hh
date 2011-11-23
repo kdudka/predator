@@ -62,7 +62,7 @@ class SymState {
         virtual int lookup(const SymHeap &heap) const = 0;
 
         /// insert given SymHeap object into the state
-        virtual bool insert(const SymHeap &heap);
+        virtual bool insert(const SymHeap &sh, bool allowThreeWay = true);
 
         /// merge the content of the given SymState object into the state
         void insert(const SymState &huni);
@@ -146,7 +146,7 @@ class SymHeapUnion: public SymState {
 
 class SymStateWithJoin: public SymHeapUnion {
     public:
-        virtual bool insert(const SymHeap &sh);
+        virtual bool insert(const SymHeap &sh, bool allowThreeWay = true);
 
     private:
         void packSuffix(unsigned idx);
@@ -236,10 +236,13 @@ class SymStateMap {
          * @param src @b source basic block (where the state has grown), may be
          * zero when inserting an initial state to the entry block
          * @param sh an instance of symbolic heap that should be inserted
+         * @param allowThreeWay if true, three-way join is allowed
          */
         bool insert(const CodeStorage::Block                *dst,
                     const CodeStorage::Block                *src,
-                    const SymHeap                           &sh);
+                    const SymHeap                           &sh,
+                    const bool                              allowThreeWay = true
+                    );
 
         /**
          * returns all blocks that inserted something to the given state

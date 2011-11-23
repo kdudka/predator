@@ -138,12 +138,13 @@ struct SymJoinCtx {
     }
 
     /// constructor used by joinSymHeaps()
-    SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_):
+    SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_,
+            const bool allowThreeWay_):
         dst(dst_),
         sh1(/* XXX */ const_cast<SymHeap &>(sh1_)),
         sh2(/* XXX */ const_cast<SymHeap &>(sh2_)),
         status(JS_USE_ANY),
-        allowThreeWay(1 < (SE_ALLOW_THREE_WAY_JOIN))
+        allowThreeWay((1 < (SE_ALLOW_THREE_WAY_JOIN)) && allowThreeWay_)
     {
         initValMaps();
     }
@@ -2599,7 +2600,8 @@ bool joinSymHeaps(
         EJoinStatus             *pStatus,
         SymHeap                 *pDst,
         const SymHeap           &sh1,
-        const SymHeap           &sh2)
+        const SymHeap           &sh2,
+        const bool              allowThreeWay)
 {
     SJ_DEBUG("--> joinSymHeaps()");
     TStorRef stor = sh1.stor();
@@ -2607,7 +2609,7 @@ bool joinSymHeaps(
     *pDst = SymHeap(stor, new Trace::TransientNode("joinSymHeaps()"));
 
     // initialize symbolic join ctx
-    SymJoinCtx ctx(*pDst, sh1, sh2);
+    SymJoinCtx ctx(*pDst, sh1, sh2, allowThreeWay);
 
     // first try to join return addresses (if in use)
     if (!joinReturnAddrs(ctx))
