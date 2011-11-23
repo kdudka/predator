@@ -1270,20 +1270,6 @@ bool reflectCmpResult(
     return true;
 }
 
-// FIXME: avoid using a macro definition for this
-// FIXME: this works corectly only for CL_BINOP_PLUS anyway
-#define INT_RAGNE_BINOP(dst, src1, op, src2) do {           \
-    const TInt min = IntRangeDomain.lo;                     \
-    const TInt max = IntRangeDomain.hi;                     \
-                                                            \
-    (dst).lo = (min == (src1).lo || min == (src2).lo) ? min \
-        : ((src1).lo op (src2).lo);                         \
-                                                            \
-    (dst).hi = (max == (src1).hi || max == (src2).hi) ? max \
-        : ((src1).hi op (src2).hi);                         \
-                                                            \
-} while (0)
-
 bool computeIntRngResult(
         TValId                      *pDst,
         SymHeap                     &sh,
@@ -1296,19 +1282,22 @@ bool computeIntRngResult(
     switch (code) {
 #if SE_ALLOW_CST_INT_PLUS_MINUS
         case CL_BINOP_PLUS:
-            INT_RAGNE_BINOP(result, rng1, +, rng2);
+            result = rng1 + rng2;
             break;
 
         case CL_BINOP_MINUS:
-            INT_RAGNE_BINOP(result, rng1, -, rng2);
+            result = rng1 - rng2;
             break;
 #endif
         case CL_BINOP_BIT_AND:
-            INT_RAGNE_BINOP(result, rng1, &, rng2);
+            if (!isSingular(rng1) || !isSingular(rng2))
+                return false;
+
+            result = rngFromNum(rng1.lo & rng2.lo);
             break;
 
         case CL_BINOP_MULT:
-            INT_RAGNE_BINOP(result, rng1, *, rng2);
+            result = rng1 * rng2;
             break;
 
         case CL_BINOP_MIN:

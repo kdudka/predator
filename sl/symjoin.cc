@@ -332,11 +332,6 @@ bool defineValueMapping(
     return true;
 }
 
-bool isCoveredByRange(const IntRange &small, const IntRange &big) {
-    return (big.lo <= small.lo)
-        && (small.hi <= big.hi);
-}
-
 bool matchRanges(
         bool                    *pResult,
         const SymJoinCtx        &ctx,
@@ -400,9 +395,9 @@ bool joinRangeValues(
     }
 #endif
 
-    if (!isCoveredByRange(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
+    if (!isCovered(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
         return false;
-    if (!isCoveredByRange(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
+    if (!isCovered(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
         return false;
 
     // create a VT_RANGE value in ctx.dst
@@ -1398,10 +1393,10 @@ bool joinCustomValues(
     }
 #endif
 
-    if (!isCoveredByRange(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
+    if (!isCovered(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
         return false;
 
-    if (!isCoveredByRange(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
+    if (!isCovered(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
         return false;
 
     const TValId vDst = ctx.dst.valWrapCustom(cv);

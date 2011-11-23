@@ -1664,17 +1664,9 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     CL_BREAK_IF(CV_INT_RANGE != customDataRef->customData.code);
     const IntRange &rngRef = customDataRef->customData.data.rng;
 
-    // prepare a custom value template
+    // prepare a custom value template and compute the shifted range
     CustomValue cv(CV_INT_RANGE);
-    IntRange &rng = cv.data.rng;
-    rng.lo = rngRef.lo;
-    rng.hi = rngRef.hi;
-
-    // compute the shift while being carefully with boundaries
-    if (IntRangeDomain.lo != rng.lo)
-        rng.lo += shift;
-    if (IntRangeDomain.hi != rng.hi)
-        rng.hi += shift;
+    cv.data.rng = rngRef + rngFromNum(shift);
 
     // create a new CV_INT_RANGE custom value (do not recycle existing)
     const TValId val = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
@@ -1739,10 +1731,9 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IntRange &win) {
     CL_BREAK_IF(isSingular(refRange));
 
     // compute the difference between the original and desired ranges
-    IntRange diff;
-    diff.lo = refRange.lo - win.lo;
-    diff.hi = win.hi - refRange.hi;
-    if (0 < diff.lo && diff.hi < 0) {
+    const TInt loShift = win.lo - refRange.lo;
+    const TInt hiShift = refRange.hi - win.hi;
+    if (0 < loShift && hiShift < 0) {
         CL_BREAK_IF("attempt to use trimCustomValue() to enlarge the interval");
         return;
     }
@@ -1763,10 +1754,10 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IntRange &win) {
         CustomValue &cvDep = depData->customData;
         CL_BREAK_IF(CV_INT_RANGE != cvDep.code);
 
-        // FIXME: this can easily trigger integral overflow
+        // shift the bounds accordingly
         IntRange &rngDep = cvDep.data.rng;
-        rngDep.lo += diff.lo;
-        rngDep.hi += diff.hi;
+        rngDep.lo -= loShift;
+        rngDep.hi -= hiShift;
 
         if (isSingular(rngDep)) {
             // CV_INT_RANGE reduced to CV_INT
@@ -1844,8 +1835,7 @@ TValId SymHeapCore::valByRange(TValId at, IntRange range) {
     // subtract the root offset
     const TValId valRoot = valData->valRoot;
     const TOffset offset = valData->offRoot;
-    range.lo += offset;
-    range.hi += offset;
+    range += rngFromNum(offset);
 
     // create a new range value
     RangeValue *rangeData = new RangeValue(range);
@@ -1899,8 +1889,7 @@ void SymHeapCore::valRestrictRange(TValId val, IntRange win) {
     IntRange &range = rangeData->range;
 
     // translate the given window to our root coords
-    win.lo -= shift;
-    win.hi -= shift;
+    win -= rngFromNum(shift);
 
     // first check that the caller uses the SymHeapCore API correctly
     CL_BREAK_IF(win == range);
@@ -1972,9 +1961,8 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
 
     // TODO: check for an already existing coincidence to improve the precision
 
-    // compute the diff boundaries
-    diff.lo = off1.lo - off2.hi;
-    diff.hi = off1.hi - off2.lo;
+    // compute the difference and wrap it as a heap value
+    diff = off1 - off2;
 
     const TValId valDiff = this->valWrapCustom(cv);
     if (isSingular(diff))
@@ -2125,15 +2113,9 @@ IntRange SymHeapCore::valOffsetRange(TValId val) const {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
 
-    if (VT_RANGE != valData->code) {
+    if (VT_RANGE != valData->code)
         // this is going to be a singular range
-        const TOffset off = valData->offRoot;
-
-        IntRange single;
-        single.lo = off;
-        single.hi = off;
-        return single;
-    }
+        return rngFromNum(valData->offRoot);
 
     const TValId anchor = valData->anchor;
     if (anchor == val) {
@@ -2152,13 +2134,7 @@ IntRange SymHeapCore::valOffsetRange(TValId val) const {
 
     // shift the range (if not already saturated) and return the result
     IntRange range = rangeData->range;
-
-    if (IntRangeDomain.lo != range.lo)
-        range.lo += off;
-
-    if (IntRangeDomain.hi != range.hi)
-        range.hi += off;
-
+    range += rngFromNum(off);
     return range;
 }
 

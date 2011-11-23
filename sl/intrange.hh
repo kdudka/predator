@@ -22,7 +22,13 @@
 
 #include "config.h"
 
+#include <climits>
+
 typedef signed long TInt;
+
+#define IntMin  (LONG_MIN)
+#define Int0    (0L)
+#define IntMax  (LONG_MAX)
 
 /// a closed interval over integral domain
 struct IntRange {
@@ -31,6 +37,13 @@ struct IntRange {
 
     // NOTE: there is no constructor, becase we put IntRange to unions
 };
+
+inline IntRange rngFromNum(TInt num) {
+    IntRange rng;
+    rng.lo = num;
+    rng.hi = num;
+    return rng;
+}
 
 /// FIXME: this way we are asking for overflow (build vs. host arch mismatch)
 extern const struct IntRange IntRangeDomain;
@@ -43,6 +56,47 @@ inline bool operator==(const IntRange &a, const IntRange &b) {
 inline bool operator!=(const IntRange &a, const IntRange &b) {
     return !operator==(a, b);
 }
+
+/// invert polarity of the number
+TInt invertInt(const TInt);
+
+/// invert polarity of the range
+inline IntRange operator-(IntRange rng) {
+    const TInt hi = invertInt(rng.lo);
+    rng.lo = invertInt(rng.hi);
+    rng.hi = hi;
+
+    return rng;
+}
+
+/// add another range, but preserve boundary values if already reached
+IntRange& operator+=(IntRange &rng, const IntRange &other);
+
+/// multiply by another range, but preserve boundary values if already reached
+IntRange& operator*=(IntRange &rng, const IntRange &other);
+
+/// subtract another range, but preserve boundary values if already reached
+inline IntRange& operator-=(IntRange &rng, const IntRange &other) {
+    rng += (-other);
+    return rng;
+}
+
+inline IntRange operator+(IntRange rng, const IntRange &other) {
+    rng += other;
+    return rng;
+}
+
+inline IntRange operator*(IntRange rng, const IntRange &other) {
+    rng *= other;
+    return rng;
+}
+
+inline IntRange operator-(IntRange rng, const IntRange &other) {
+    rng -= other;
+    return rng;
+}
+
+bool isCovered(const IntRange &small, const IntRange &big);
 
 /// return true if the range contain exactly one number; break if no one at all
 bool isSingular(const IntRange &);
