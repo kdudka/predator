@@ -1360,9 +1360,9 @@ bool joinCustomValues(
     }
 
 #if SE_INT_ARITHMETIC_LIMIT
-    const long abs1 = std::max(std::abs(rng1.lo), std::abs(rng1.hi));
-    const long abs2 = std::max(std::abs(rng2.lo), std::abs(rng2.hi));
-    const long max = std::max(abs1, abs2);
+    const TInt abs1 = std::max(std::abs(rng1.lo), std::abs(rng1.hi));
+    const TInt abs2 = std::max(std::abs(rng2.lo), std::abs(rng2.hi));
+    const TInt max = std::max(abs1, abs2);
     if (max <= (SE_INT_ARITHMETIC_LIMIT)) {
         SJ_DEBUG("<-- integral values preserved by SE_INT_ARITHMETIC_LIMIT "
                 << SJ_VALP(v1, v2));

@@ -30,7 +30,7 @@
 
 #include <boost/foreach.hpp>
 
-bool numFromVal(long *pDst, const SymHeap &sh, const TValId val) {
+bool numFromVal(TInt *pDst, const SymHeap &sh, const TValId val) {
     switch (val) {
         case VAL_NULL:
             *pDst = 0L;
@@ -57,7 +57,7 @@ bool numFromVal(long *pDst, const SymHeap &sh, const TValId val) {
 }
 
 bool rangeFromVal(IntRange *pDst, const SymHeap &sh, const TValId val) {
-    long num;
+    TInt num;
     if (numFromVal(&num, sh, val)) {
         // a single number
         pDst->lo = num;

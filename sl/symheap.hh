@@ -28,6 +28,7 @@
 
 #include "config.h"
 
+#include "intrange.hh"
 #include "symid.hh"
 #include "util.hh"
 
@@ -97,31 +98,10 @@ enum ECustomValue {
     CV_STRING               ///< string literal
 };
 
-/// a closed interval over integral domain
-struct IntRange {
-    long        lo;         ///< lower bound of the interval (included)
-    long        hi;         ///< upper bound of the interval (included)
-};
-
-/// FIXME: this way we are asking for overflow (build vs. host arch mismatch)
-extern const struct IntRange IntRangeDomain;
-
-inline bool operator==(const IntRange &a, const IntRange &b) {
-    return (a.lo == b.lo)
-        && (a.hi == b.hi);
-}
-
-inline bool operator!=(const IntRange &a, const IntRange &b) {
-    return !operator==(a, b);
-}
-
-bool isSingular(const IntRange &);
-long widthOf(const IntRange &);
-
 /// @attention SymHeap is not responsible for any deep copies of strings
 union CustomValueData {
     int         uid;        ///< unique ID as assigned by Code Listener
-    long        num;        ///< integral number
+    TInt        num;        ///< integral number
     double      fpn;        ///< floating-point number
     const char *str;        ///< zero-terminated string
     IntRange    rng;        ///< closed interval over integral domain

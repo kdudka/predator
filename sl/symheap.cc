@@ -145,23 +145,6 @@ class CVarMap {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// implementation of IntRange
-const struct IntRange IntRangeDomain = {
-    LONG_MIN,
-    LONG_MAX
-};
-
-bool isSingular(const IntRange &range) {
-    CL_BREAK_IF(range.hi < range.lo);
-    return (range.lo == range.hi);
-}
-
-long widthOf(const IntRange &range) {
-    return /* closed interval */ 1 + range.hi - range.lo;
-}
-
-
-// /////////////////////////////////////////////////////////////////////////////
 // implementation of CustomValue
 bool operator==(const CustomValue &a, const CustomValue &b) {
     const ECustomValue code = a.code;
@@ -430,7 +413,7 @@ struct RootValue: public AnchorValue {
 class CustomValueMapper {
     private:
         typedef std::map<int, TValId>                           TCustomByInt;
-        typedef std::map<long, TValId>                          TCustomByLong;
+        typedef std::map<TInt, TValId>                          TCustomByLong;
         typedef std::map<double, TValId>                        TCustomByReal;
         typedef std::map<std::string, TValId>                   TCustomByString;
 
@@ -2707,7 +2690,7 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
 
 TValId SymHeapCore::valWrapCustom(CustomValue cVal) {
     ECustomValue &code = cVal.code;
-    long &num = cVal.data.num;
+    TInt &num = cVal.data.num;
 
     switch (code) {
         case CV_INT_RANGE:

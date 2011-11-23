@@ -682,7 +682,7 @@ const char* labelByTarget(const EValueTarget code) {
     return "";
 }
 
-void describeInt(PlotData &plot, const long num, const TValId val) {
+void describeInt(PlotData &plot, const TInt num, const TValId val) {
     plot.out << ", fontcolor=red, label=\"[int] "
         << num << " (#"
         << val << ")\"";

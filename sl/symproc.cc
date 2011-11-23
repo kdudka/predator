@@ -363,7 +363,7 @@ bool SymProc::addOffDerefArray(TOffset &off, const struct cl_accessor *ac) {
     const TValId valIdx = this->valFromOperand(*opIdx);
 
     // unwrap the integral value inside the heap value (if available)
-    long idx;
+    TInt idx;
     if (!numFromVal(&idx, sh_, valIdx))
         return false;
 
@@ -733,13 +733,13 @@ void execMemsetCore(
     // check whether we are able to write something specific at all
     if (VAL_NULL != valToWrite || safeRange.hi <= safeRange.lo) {
         CL_DEBUG("memset() only invalidates the given range");
-        const long totalSize = widthOf(totalRange) - /* closed int */ 1;
+        const TInt totalSize = widthOf(totalRange) - /* closed int */ 1;
         sh.writeUniformBlock(valBegTotal, valUnknown, totalSize, killedPtrs);
         return;
     }
 
     // compute the size we can write precisely
-    const long safeSize = widthOf(safeRange) - /* closed int */ 1;
+    const TInt safeSize = widthOf(safeRange) - /* closed int */ 1;
     CL_BREAK_IF(safeSize <= 0);
 
     // valToWrite is VAL_NULL (we do not support writing arbitrary values yet)
@@ -747,7 +747,7 @@ void execMemsetCore(
     sh.writeUniformBlock(valBegSafe, valToWrite, safeSize, killedPtrs);
 
     // compute size of the prefix we _have_ to invalidate
-    const long prefixSize = safeRange.lo - totalRange.lo;
+    const TInt prefixSize = safeRange.lo - totalRange.lo;
     CL_BREAK_IF(prefixSize < 0);
     if (0 < prefixSize) {
         CL_DEBUG("memset() invalidates ambiguous prefix");
@@ -755,7 +755,7 @@ void execMemsetCore(
     }
 
     // compute size of the suffix we _have_ to invalidate
-    const long suffixSize = totalRange.hi - safeRange.hi;
+    const TInt suffixSize = totalRange.hi - safeRange.hi;
     CL_BREAK_IF(suffixSize < 0);
     if (0 < suffixSize) {
         CL_DEBUG("memset() invalidates ambiguous suffix");
@@ -1223,7 +1223,7 @@ bool trimRangesIfPossible(
 
     // use the offsets in the appropriate order
     IntRange win     = (isRange1) ? rng1    : rng2;
-    const long limit = (isRange2) ? rng1.lo : rng2.lo;
+    const TInt limit = (isRange2) ? rng1.lo : rng2.lo;
 
     if (trimLo)
         // shift the lower bound up
@@ -1273,8 +1273,8 @@ bool reflectCmpResult(
 // FIXME: avoid using a macro definition for this
 // FIXME: this works corectly only for CL_BINOP_PLUS anyway
 #define INT_RAGNE_BINOP(dst, src1, op, src2) do {           \
-    const long min = IntRangeDomain.lo;                     \
-    const long max = IntRangeDomain.hi;                     \
+    const TInt min = IntRangeDomain.lo;                     \
+    const TInt max = IntRangeDomain.hi;                     \
                                                             \
     (dst).lo = (min == (src1).lo || min == (src2).lo) ? min \
         : ((src1).lo op (src2).lo);                         \
@@ -1378,12 +1378,12 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
 
 TValId handleBitNot(SymHeap &sh, const TValId val) {
     // check whether the value is an integral constant
-    long num;
+    TInt num;
     if (!numFromVal(&num, sh, val))
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
     // compute the integral result
-    const long result = ~num;
+    const TInt result = ~num;
 
     // wrap the result as a heap value expressing a constant integer
     CustomValue cv(CV_INT);
@@ -1406,7 +1406,7 @@ TValId SymProc::handleIntegralOp(TValId val, enum cl_unop_e code) {
 }
 
 TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
-    long num;
+    TInt num;
     if (!numFromVal(&num, sh_, off)) {
         CL_DEBUG_MSG(lw_, "pointer plus offset not a known integer");
         return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
@@ -1445,7 +1445,7 @@ TValId handlePtrBitAnd(
 {
     SymHeap &sh = proc.sh();
 
-    long mask;
+    TInt mask;
     if (!numFromVal(&mask, sh, vInt) || 0 < mask)
         // giving up
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);

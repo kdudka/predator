@@ -34,6 +34,7 @@ endif()
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
+    intrange.cc
     memdebug.cc
     plotenum.cc
     sigcatch.cc
