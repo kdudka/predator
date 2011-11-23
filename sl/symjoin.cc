@@ -1338,23 +1338,26 @@ bool joinCustomValues(
         const TValId            v1,
         const TValId            v2)
 {
-    const CustomValue cVal1 = ctx.sh1.valUnwrapCustom(v1);
-    const CustomValue cVal2 = ctx.sh2.valUnwrapCustom(v2);
+    SymHeap &sh1 = ctx.sh1;
+    SymHeap &sh2 = ctx.sh2;
+
+    const CustomValue cVal1 = sh1.valUnwrapCustom(v1);
+    const CustomValue cVal2 = sh2.valUnwrapCustom(v2);
     if (cVal1 == cVal2) {
         // full match
         const TValId vDst = ctx.dst.valWrapCustom(cVal1);
         return defineValueMapping(ctx, v1, v2, vDst);
     }
 
-    const ECustomValue code = cVal1.code;
-    if (cVal2.code != code || CV_INT != code) {
+    IntRange rng1, rng2;
+    if (!rangeFromVal(&rng1, sh1, v1) || !rangeFromVal(&rng2, sh2, v2)) {
         SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
         return false;
     }
 
 #if SE_INT_ARITHMETIC_LIMIT
-    const long abs1 = std::abs(cVal1.data.num);
-    const long abs2 = std::abs(cVal2.data.num);
+    const long abs1 = std::max(std::abs(rng1.lo), std::abs(rng1.hi));
+    const long abs2 = std::max(std::abs(rng2.lo), std::abs(rng2.hi));
     const long max = std::max(abs1, abs2);
     if (max <= (SE_INT_ARITHMETIC_LIMIT)) {
         SJ_DEBUG("<-- integral values preserved by SE_INT_ARITHMETIC_LIMIT "
@@ -1364,9 +1367,26 @@ bool joinCustomValues(
     }
 #endif
 
-    // throw custom values away and abstract them by a fresh unknown value
-    const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-    updateJoinStatus(ctx, JS_THREE_WAY);
+    // avoid creation of a CV_INT_RANGE value from two CV_INT values
+    if (isSingular(rng1) && isSingular(rng2)) {
+        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        return updateJoinStatus(ctx, JS_THREE_WAY)
+            && defineValueMapping(ctx, v1, v2, vDst);
+    }
+
+    // compute the resulting range that covers both
+    CustomValue cv(CV_INT_RANGE);
+    IntRange &rng = cv.data.rng;
+    rng.lo = std::min(rng1.lo, rng2.lo);
+    rng.hi = std::max(rng1.hi, rng2.hi);
+
+    if (!isCoveredByRange(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
+        return false;
+
+    if (!isCoveredByRange(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
+        return false;
+
+    const TValId vDst = ctx.dst.valWrapCustom(cv);
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 
