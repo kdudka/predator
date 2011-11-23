@@ -378,19 +378,33 @@ bool joinRangeValues(
     const IntRange rng1 = ctx.sh1.valOffsetRange(v1);
     const IntRange rng2 = ctx.sh2.valOffsetRange(v2);
 
-    if (!isCoveredByRange(rng1, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
-        return false;
-    if (!isCoveredByRange(rng2, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
-        return false;
-
     // resolve root in ctx.dst
     const TValId rootDst = roMapLookup(ctx.valMap1[0], ctx.sh1.valRoot(v1));
     CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[0], ctx.sh2.valRoot(v2)));
 
-    // resolve a VT_RANGE value in ctx.dst
+    // compute the join of ranges
     IntRange rng;
     rng.lo = std::min(rng1.lo, rng2.lo);
     rng.hi = std::max(rng1.hi, rng2.hi);
+
+    // [experimental] widening on offset ranges
+#if 1 < SE_ALLOW_OFF_RANGES
+    if (!isSingular(rng1) && !isSingular(rng2)) {
+        if (rng.lo == rng1.lo || rng.lo == rng2.lo)
+            rng.hi = IntRangeDomain.hi;
+#   if 2 < SE_ALLOW_OFF_RANGES
+        if (rng.hi == rng1.hi || rng.hi == rng2.hi)
+            rng.lo = IntRangeDomain.lo;
+#   endif
+    }
+#endif
+
+    if (!isCoveredByRange(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
+        return false;
+    if (!isCoveredByRange(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
+        return false;
+
+    // create a VT_RANGE value in ctx.dst
     const TValId vDst = ctx.dst.valByRange(rootDst, rng);
 
     // store the mapping (v1, v2) -> vDst

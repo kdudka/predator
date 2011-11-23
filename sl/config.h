@@ -99,7 +99,10 @@
 #define SE_ALLOW_CST_INT_PLUS_MINUS         1
 
 /**
- * if 1, allow values where the offset is specified by int ranges (VT_RANGE)
+ * - 0 ... do not use values with offset specified by int ranges (VT_RANGE)
+ * - 1 ... allow to use values with offset specified by int ranges (VT_RANGE)
+ * - 2 ... same as above, additionally use widening in upward direction [broken]
+ * - 3 ... same as above, additionally use widening in both directions [broken]
  */
 #define SE_ALLOW_OFF_RANGES                 1
 
