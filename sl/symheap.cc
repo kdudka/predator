@@ -146,7 +146,7 @@ class CVarMap {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of IntRange
-struct IntRange IntRangeDomain = {
+const struct IntRange IntRangeDomain = {
     LONG_MIN,
     LONG_MAX
 };
@@ -1681,10 +1681,17 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     CL_BREAK_IF(CV_INT_RANGE != customDataRef->customData.code);
     const IntRange &rngRef = customDataRef->customData.data.rng;
 
-    // compute the shift
+    // prepare a custom value template
     CustomValue cv(CV_INT_RANGE);
-    cv.data.rng.lo = rngRef.lo + shift;
-    cv.data.rng.hi = rngRef.hi + shift;
+    IntRange &rng = cv.data.rng;
+    rng.lo = rngRef.lo;
+    rng.hi = rngRef.hi;
+
+    // compute the shift while being carefully with boundaries
+    if (IntRangeDomain.lo != rng.lo)
+        rng.lo += shift;
+    if (IntRangeDomain.hi != rng.hi)
+        rng.hi += shift;
 
     // create a new CV_INT_RANGE custom value (do not recycle existing)
     const TValId val = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
@@ -2160,10 +2167,15 @@ IntRange SymHeapCore::valOffsetRange(TValId val) const {
     const TOffset off = valData->offRoot;
     CL_BREAK_IF(!off);
 
-    // shift the range and return the result
+    // shift the range (if not already saturated) and return the result
     IntRange range = rangeData->range;
-    range.lo += off;
-    range.hi += off;
+
+    if (IntRangeDomain.lo != range.lo)
+        range.lo += off;
+
+    if (IntRangeDomain.hi != range.hi)
+        range.hi += off;
+
     return range;
 }
 

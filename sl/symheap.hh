@@ -104,7 +104,7 @@ struct IntRange {
 };
 
 /// FIXME: this way we are asking for overflow (build vs. host arch mismatch)
-extern struct IntRange IntRangeDomain;
+extern const struct IntRange IntRangeDomain;
 
 inline bool operator==(const IntRange &a, const IntRange &b) {
     return (a.lo == b.lo)

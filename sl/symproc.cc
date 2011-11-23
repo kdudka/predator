@@ -1271,9 +1271,17 @@ bool reflectCmpResult(
 }
 
 // FIXME: avoid using a macro definition for this
-#define INT_RAGNE_BINOP(dst, src1, op, src2) do {   \
-    (dst).lo = (src1).lo op (src2).lo;              \
-    (dst).hi = (src1).hi op (src2).hi;              \
+// FIXME: this works corectly only for CL_BINOP_PLUS anyway
+#define INT_RAGNE_BINOP(dst, src1, op, src2) do {           \
+    const long min = IntRangeDomain.lo;                     \
+    const long max = IntRangeDomain.hi;                     \
+                                                            \
+    (dst).lo = (min == (src1).lo || min == (src2).lo) ? min \
+        : ((src1).lo op (src2).lo);                         \
+                                                            \
+    (dst).hi = (max == (src1).hi || max == (src2).hi) ? max \
+        : ((src1).hi op (src2).hi);                         \
+                                                            \
 } while (0)
 
 bool computeIntRngResult(
