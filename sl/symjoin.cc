@@ -1351,8 +1351,11 @@ bool joinCustomValues(
 
     IntRange rng1, rng2;
     if (!rangeFromVal(&rng1, sh1, v1) || !rangeFromVal(&rng2, sh2, v2)) {
-        SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
-        return false;
+        // throw custom values away and abstract them by a fresh unknown value
+        SJ_DEBUG("throwing away unmatched custom values " << SJ_VALP(v1, v2));
+        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        return updateJoinStatus(ctx, JS_THREE_WAY)
+            && defineValueMapping(ctx, v1, v2, vDst);
     }
 
 #if SE_INT_ARITHMETIC_LIMIT
