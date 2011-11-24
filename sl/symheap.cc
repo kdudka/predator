@@ -2262,7 +2262,11 @@ TObjId SymHeapCore::ptrAt(TValId at) {
 
     // generic pointer, (void *) if available
     const TObjType clt = stor_.types.genericDataPtr();
-    CL_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
+    if (!clt || clt->code != CL_TYPE_PTR) {
+        CL_BREAK_IF("Code Listener failed to capture a type of data pointer");
+        return OBJ_INVALID;
+    }
+
     const TOffset size = clt->size;
     CL_BREAK_IF(size <= 0);
 
