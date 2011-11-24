@@ -371,15 +371,15 @@ bool joinRangeValues(
     const TValPair vp(v1, v2);
     CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
 
-    const IntRange rng1 = ctx.sh1.valOffsetRange(v1);
-    const IntRange rng2 = ctx.sh2.valOffsetRange(v2);
+    const IR::Range rng1 = ctx.sh1.valOffsetRange(v1);
+    const IR::Range rng2 = ctx.sh2.valOffsetRange(v2);
 
     // resolve root in ctx.dst
     const TValId rootDst = roMapLookup(ctx.valMap1[0], ctx.sh1.valRoot(v1));
     CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[0], ctx.sh2.valRoot(v2)));
 
     // compute the join of ranges
-    IntRange rng;
+    IR::Range rng;
     rng.lo = std::min(rng1.lo, rng2.lo);
     rng.hi = std::max(rng1.hi, rng2.hi);
 
@@ -387,10 +387,10 @@ bool joinRangeValues(
 #if 1 < SE_ALLOW_OFF_RANGES
     if (!isSingular(rng1) && !isSingular(rng2)) {
         if (rng.lo == rng1.lo || rng.lo == rng2.lo)
-            rng.hi = IntRangeDomain.hi;
+            rng.hi = IR::IntMax;
 #   if 2 < SE_ALLOW_OFF_RANGES
         if (rng.hi == rng1.hi || rng.hi == rng2.hi)
-            rng.lo = IntRangeDomain.lo;
+            rng.lo = IR::IntMin;
 #   endif
     }
 #endif
@@ -1345,7 +1345,7 @@ bool joinCustomValues(
         return defineValueMapping(ctx, v1, v2, vDst);
     }
 
-    IntRange rng1, rng2;
+    IR::Range rng1, rng2;
     if (!rangeFromVal(&rng1, sh1, v1) || !rangeFromVal(&rng2, sh2, v2)) {
         // throw custom values away and abstract them by a fresh unknown value
         SJ_DEBUG("throwing away unmatched custom values " << SJ_VALP(v1, v2));
@@ -1355,9 +1355,9 @@ bool joinCustomValues(
     }
 
 #if SE_INT_ARITHMETIC_LIMIT
-    const TInt abs1 = std::max(std::abs(rng1.lo), std::abs(rng1.hi));
-    const TInt abs2 = std::max(std::abs(rng2.lo), std::abs(rng2.hi));
-    const TInt max = std::max(abs1, abs2);
+    const IR::TInt abs1 = std::max(std::abs(rng1.lo), std::abs(rng1.hi));
+    const IR::TInt abs2 = std::max(std::abs(rng2.lo), std::abs(rng2.hi));
+    const IR::TInt max = std::max(abs1, abs2);
     if (max <= (SE_INT_ARITHMETIC_LIMIT)) {
         SJ_DEBUG("<-- integral values preserved by SE_INT_ARITHMETIC_LIMIT "
                 << SJ_VALP(v1, v2));
@@ -1377,7 +1377,7 @@ bool joinCustomValues(
 
     // compute the resulting range that covers both
     CustomValue cv(CV_INT_RANGE);
-    IntRange &rng = cv.data.rng;
+    IR::Range &rng = cv.data.rng;
     rng.lo = std::min(rng1.lo, rng2.lo);
     rng.hi = std::max(rng1.hi, rng2.hi);
 
@@ -1385,10 +1385,10 @@ bool joinCustomValues(
 #if 1 < SE_ALLOW_INT_RANGES
     if (!isSingular(rng1) && !isSingular(rng2)) {
         if (rng.lo == rng1.lo || rng.lo == rng2.lo)
-            rng.hi = IntRangeDomain.hi;
+            rng.hi = IR::IntMax;
 #   if 2 < SE_ALLOW_INT_RANGES
         if (rng.hi == rng1.hi || rng.hi == rng2.hi)
-            rng.lo = IntRangeDomain.lo;
+            rng.lo = IR::IntMin;
 #   endif
     }
 #endif
@@ -1753,7 +1753,7 @@ bool cloneSpecialValue(
 
     // VT_RANGE
     const TValId rootDst = roMapLookup(valMapGt[/* ltr */ 0], rootGt);
-    const IntRange range = shGt.valOffsetRange(valGt);
+    const IR::Range range = shGt.valOffsetRange(valGt);
     vDst = ctx.dst.valByRange(rootDst, range);
     if (!handleUnknownValues(ctx, vp.first, vp.second, vDst))
         return false;
@@ -1973,7 +1973,7 @@ bool offRangeFallback(
     CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[/* ltr */ 0], root2));
 
     // resolve a VT_RANGE value in ctx.dst
-    IntRange rng;
+    IR::Range rng;
     rng.lo = std::min(off1, off2);
     rng.hi = std::max(off1, off2);
     const TValId vDst = ctx.dst.valByRange(rootDst, rng);

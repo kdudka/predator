@@ -349,9 +349,9 @@ struct AnchorValue: public ReferableValue {
 };
 
 struct RangeValue: public AnchorValue {
-    IntRange                        range;
+    IR::Range                       range;
 
-    RangeValue(const IntRange &range_):
+    RangeValue(const IR::Range &range_):
         AnchorValue(VT_RANGE, VO_ASSIGNED),
         range(range_)
     {
@@ -413,7 +413,7 @@ struct RootValue: public AnchorValue {
 class CustomValueMapper {
     private:
         typedef std::map<int, TValId>                           TCustomByInt;
-        typedef std::map<TInt, TValId>                          TCustomByLong;
+        typedef std::map<IR::TInt, TValId>                      TCustomByLong;
         typedef std::map<double, TValId>                        TCustomByReal;
         typedef std::map<std::string, TValId>                   TCustomByString;
 
@@ -528,7 +528,7 @@ struct SymHeapCore::Private {
 
     void replaceRngByInt(const InternalCustomValue *valData);
 
-    void trimCustomValue(TValId val, const IntRange &win);
+    void trimCustomValue(TValId val, const IR::Range &win);
 
     private:
         // intentionally not implemented
@@ -1285,7 +1285,7 @@ TValId SymHeapCore::valClone(TValId val) {
 
     if (VT_RANGE == code) {
         CL_DEBUG("support for VT_RANGE in valClone() is experimental");
-        const IntRange range = this->valOffsetRange(val);
+        const IR::Range range = this->valOffsetRange(val);
         return this->valByRange(valData->valRoot, range);
     }
 
@@ -1662,11 +1662,11 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     this->ents.getEntRO(&customDataRef, ref);
 
     CL_BREAK_IF(CV_INT_RANGE != customDataRef->customData.code);
-    const IntRange &rngRef = customDataRef->customData.data.rng;
+    const IR::Range &rngRef = customDataRef->customData.data.rng;
 
     // prepare a custom value template and compute the shifted range
     CustomValue cv(CV_INT_RANGE);
-    cv.data.rng = rngRef + rngFromNum(shift);
+    cv.data.rng = rngRef + IR::rngFromNum(shift);
 
     // create a new CV_INT_RANGE custom value (do not recycle existing)
     const TValId val = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
@@ -1715,7 +1715,7 @@ void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData) {
         this->setValueOf(obj, replaceBy);
 }
 
-void SymHeapCore::Private::trimCustomValue(TValId val, const IntRange &win) {
+void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
     const InternalCustomValue *customData;
     this->ents.getEntRO(&customData, val);
 
@@ -1727,12 +1727,12 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IntRange &win) {
     }
 
     // extract the original integral ragne
-    const IntRange &refRange = cv.data.rng;
+    const IR::Range &refRange = cv.data.rng;
     CL_BREAK_IF(isSingular(refRange));
 
     // compute the difference between the original and desired ranges
-    const TInt loShift = win.lo - refRange.lo;
-    const TInt hiShift = refRange.hi - win.hi;
+    const IR::TInt loShift = win.lo - refRange.lo;
+    const IR::TInt hiShift = refRange.hi - win.hi;
     if (0 < loShift && hiShift < 0) {
         CL_BREAK_IF("attempt to use trimCustomValue() to enlarge the interval");
         return;
@@ -1755,7 +1755,7 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IntRange &win) {
         CL_BREAK_IF(CV_INT_RANGE != cvDep.code);
 
         // shift the bounds accordingly
-        IntRange &rngDep = cvDep.data.rng;
+        IR::Range &rngDep = cvDep.data.rng;
         rngDep.lo -= loShift;
         rngDep.hi -= hiShift;
 
@@ -1819,7 +1819,7 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     return val;
 }
 
-TValId SymHeapCore::valByRange(TValId at, IntRange range) {
+TValId SymHeapCore::valByRange(TValId at, IR::Range range) {
     if (isSingular(range)) {
         CL_DEBUG("valByRange() got a singular range, passing to valByOffset()");
         return this->valByOffset(at, range.lo);
@@ -1835,7 +1835,7 @@ TValId SymHeapCore::valByRange(TValId at, IntRange range) {
     // subtract the root offset
     const TValId valRoot = valData->valRoot;
     const TOffset offset = valData->offRoot;
-    range += rngFromNum(offset);
+    range += IR::rngFromNum(offset);
 
     // create a new range value
     RangeValue *rangeData = new RangeValue(range);
@@ -1853,7 +1853,7 @@ TValId SymHeapCore::valByRange(TValId at, IntRange range) {
     return val;
 }
 
-void SymHeapCore::valRestrictRange(TValId val, IntRange win) {
+void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
 
@@ -1886,10 +1886,10 @@ void SymHeapCore::valRestrictRange(TValId val, IntRange win) {
 
     RangeValue *rangeData;
     d->ents.getEntRW(&rangeData, anchor);
-    IntRange &range = rangeData->range;
+    IR::Range &range = rangeData->range;
 
     // translate the given window to our root coords
-    win -= rngFromNum(shift);
+    win -= IR::rngFromNum(shift);
 
     // first check that the caller uses the SymHeapCore API correctly
     CL_BREAK_IF(win == range);
@@ -1952,12 +1952,12 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
         return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
     // get offset ranges for both pointers
-    const IntRange off1 = this->valOffsetRange(v1);
-    const IntRange off2 = this->valOffsetRange(v2);
+    const IR::Range off1 = this->valOffsetRange(v1);
+    const IR::Range off2 = this->valOffsetRange(v2);
 
     // prepare a custom value for the result
     CustomValue cv(CV_INT_RANGE);
-    IntRange &diff = cv.data.rng;
+    IR::Range &diff = cv.data.rng;
 
     // TODO: check for an already existing coincidence to improve the precision
 
@@ -2109,13 +2109,13 @@ TOffset SymHeapCore::valOffset(TValId val) const {
     return valData->offRoot;
 }
 
-IntRange SymHeapCore::valOffsetRange(TValId val) const {
+IR::Range SymHeapCore::valOffsetRange(TValId val) const {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
 
     if (VT_RANGE != valData->code)
         // this is going to be a singular range
-        return rngFromNum(valData->offRoot);
+        return IR::rngFromNum(valData->offRoot);
 
     const TValId anchor = valData->anchor;
     if (anchor == val) {
@@ -2133,8 +2133,8 @@ IntRange SymHeapCore::valOffsetRange(TValId val) const {
     CL_BREAK_IF(!off);
 
     // shift the range (if not already saturated) and return the result
-    IntRange range = rangeData->range;
-    range += rngFromNum(off);
+    IR::Range range = rangeData->range;
+    range += IR::rngFromNum(off);
     return range;
 }
 
@@ -2666,7 +2666,7 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
 
 TValId SymHeapCore::valWrapCustom(CustomValue cVal) {
     ECustomValue &code = cVal.code;
-    TInt &num = cVal.data.num;
+    IR::TInt &num = cVal.data.num;
 
     switch (code) {
         case CV_INT_RANGE:

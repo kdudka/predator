@@ -24,36 +24,40 @@
 
 #include <climits>
 
+namespace IR {
+
 typedef signed long TInt;
 
-#define IntMin  (LONG_MIN)
-#define Int0    (0L)
-#define IntMax  (LONG_MAX)
+extern const TInt Int0;
+extern const TInt IntMin;
+extern const TInt IntMax;
 
 /// a closed interval over integral domain
-struct IntRange {
+struct Range {
     TInt        lo;         ///< lower bound of the interval (included)
     TInt        hi;         ///< upper bound of the interval (included)
 
-    // NOTE: there is no constructor, becase we put IntRange to unions
+    // NOTE: there is no constructor, becase we put Range to unions
 };
 
-inline IntRange rngFromNum(TInt num) {
-    IntRange rng;
+inline Range rngFromNum(TInt num) {
+    Range rng;
     rng.lo = num;
     rng.hi = num;
     return rng;
 }
 
-/// FIXME: this way we are asking for overflow (build vs. host arch mismatch)
-extern const struct IntRange IntRangeDomain;
+extern const Range FullRange;
 
-inline bool operator==(const IntRange &a, const IntRange &b) {
+/// this does nothing unless running a debug build
+void chkRange(const Range &rng);
+
+inline bool operator==(const Range &a, const Range &b) {
     return (a.lo == b.lo)
         && (a.hi == b.hi);
 }
 
-inline bool operator!=(const IntRange &a, const IntRange &b) {
+inline bool operator!=(const Range &a, const Range &b) {
     return !operator==(a, b);
 }
 
@@ -61,7 +65,7 @@ inline bool operator!=(const IntRange &a, const IntRange &b) {
 TInt invertInt(const TInt);
 
 /// invert polarity of the range
-inline IntRange operator-(IntRange rng) {
+inline Range operator-(Range rng) {
     const TInt hi = invertInt(rng.lo);
     rng.lo = invertInt(rng.hi);
     rng.hi = hi;
@@ -70,39 +74,40 @@ inline IntRange operator-(IntRange rng) {
 }
 
 /// add another range, but preserve boundary values if already reached
-IntRange& operator+=(IntRange &rng, const IntRange &other);
+Range& operator+=(Range &rng, const Range &other);
 
 /// multiply by another range, but preserve boundary values if already reached
-IntRange& operator*=(IntRange &rng, const IntRange &other);
+Range& operator*=(Range &rng, const Range &other);
 
 /// subtract another range, but preserve boundary values if already reached
-inline IntRange& operator-=(IntRange &rng, const IntRange &other) {
+inline Range& operator-=(Range &rng, const Range &other) {
     rng += (-other);
     return rng;
 }
 
-inline IntRange operator+(IntRange rng, const IntRange &other) {
+inline Range operator+(Range rng, const Range &other) {
     rng += other;
     return rng;
 }
 
-inline IntRange operator*(IntRange rng, const IntRange &other) {
+inline Range operator*(Range rng, const Range &other) {
     rng *= other;
     return rng;
 }
 
-inline IntRange operator-(IntRange rng, const IntRange &other) {
+inline Range operator-(Range rng, const Range &other) {
     rng -= other;
     return rng;
 }
 
-bool isCovered(const IntRange &small, const IntRange &big);
+bool isCovered(const Range &small, const Range &big);
 
 /// return true if the range contain exactly one number; break if no one at all
-bool isSingular(const IntRange &);
+bool isSingular(const Range &);
 
 /// return the count of integral numbers that beTInt the given range
-TInt widthOf(const IntRange &);
+TInt widthOf(const Range &);
 
+} // namespace IR
 
 #endif /* H_GUARD_INTRANGE_H */

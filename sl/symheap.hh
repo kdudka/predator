@@ -101,10 +101,10 @@ enum ECustomValue {
 /// @attention SymHeap is not responsible for any deep copies of strings
 union CustomValueData {
     int         uid;        ///< unique ID as assigned by Code Listener
-    TInt        num;        ///< integral number
+    IR::TInt    num;        ///< integral number
     double      fpn;        ///< floating-point number
     const char *str;        ///< zero-terminated string
-    IntRange    rng;        ///< closed interval over integral domain
+    IR::Range   rng;        ///< closed interval over integral domain
 };
 
 /// representation of a custom value, such as integer literal, or code pointer
@@ -346,7 +346,7 @@ class SymHeapCore {
         TValId valByOffset(TValId, TOffset offset);
 
         /// create (or recycle) a VT_RANGE value at the given allocated address
-        TValId valByRange(TValId at, IntRange range);
+        TValId valByRange(TValId at, IR::Range range);
 
         /// classify the object the given value points to
         EValueTarget valTarget(TValId) const;
@@ -361,10 +361,10 @@ class SymHeapCore {
         TOffset valOffset(TValId) const;
 
         /// return the offset range associated with the given VT_RANGE value
-        IntRange valOffsetRange(TValId) const;
+        IR::Range valOffsetRange(TValId) const;
 
         /// narrow down the offset range of the given VT_RANGE value
-        void valRestrictRange(TValId, IntRange win);
+        void valRestrictRange(TValId, IR::Range win);
 
         /// difference between two pointers (makes sense only for shared roots)
         TValId diffPointers(const TValId v1, const TValId v2);

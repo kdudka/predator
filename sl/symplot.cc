@@ -682,13 +682,14 @@ const char* labelByTarget(const EValueTarget code) {
     return "";
 }
 
-void describeInt(PlotData &plot, const TInt num, const TValId val) {
+void describeInt(PlotData &plot, const IR::TInt num, const TValId val) {
     plot.out << ", fontcolor=red, label=\"[int] "
         << num << " (#"
         << val << ")\"";
 }
 
-void describeIntRange(PlotData &plot, const IntRange &range, const TValId val) {
+void describeIntRange(PlotData &plot, const IR::Range &range, const TValId val)
+{
     plot.out << ", fontcolor=blue, label=\"[int range] "
         << range.lo << " .. "
         << range.hi << " (#"
@@ -816,7 +817,7 @@ preserve_suffix:
     const TValId root = sh.valRoot(val);
 
     if (VT_RANGE == code) {
-        const IntRange &offRange = sh.valOffsetRange(val);
+        const IR::Range &offRange = sh.valOffsetRange(val);
         plot.out << " [root = #" << root
             << ", off = " << offRange.lo << ".." << offRange.hi << "]";
     }
@@ -835,7 +836,7 @@ void plotPointsTo(PlotData &plot, const TValId val, const TObjId target) {
         << " [color=green, fontcolor=green];\n";
 }
 
-void plotRangePtr(PlotData &plot, TValId val, TValId root, const IntRange &rng)
+void plotRangePtr(PlotData &plot, TValId val, TValId root, const IR::Range &rng)
 {
     plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE(root)
         << " [color=red, fontcolor=red, label=\"["
@@ -858,7 +859,7 @@ void plotNonRootValues(PlotData &plot) {
         const TValId root = sh.valRoot(val);
         const EValueTarget code = sh.valTarget(val);
         if (VT_RANGE == code) {
-            const IntRange &rng = sh.valOffsetRange(val);
+            const IR::Range &rng = sh.valOffsetRange(val);
             plotRangePtr(plot, val, root, rng);
             continue;
         }

@@ -111,14 +111,14 @@ bool resolveCallocSize(
     const struct cl_loc *lw = core.lw();
 
     const TValId valNelem = core.valFromOperand(opList[/* nelem */ 2]);
-    TInt nelem;
+    IR::TInt nelem;
     if (!numFromVal(&nelem, sh, valNelem)) {
         CL_ERROR_MSG(lw, "'nelem' arg of calloc() is not a known integer");
         return false;
     }
 
     const TValId valElsize = core.valFromOperand(opList[/* elsize */ 3]);
-    TInt elsize;
+    IR::TInt elsize;
     if (!numFromVal(&elsize, sh, valElsize)) {
         CL_ERROR_MSG(lw, "'elsize' arg of calloc() is not a known integer");
         return false;
@@ -335,7 +335,7 @@ bool handleKzalloc(
 
     // amount of allocated memory must be known (TODO: relax this?)
     const TValId valSize = core.valFromOperand(opList[/* size */ 2]);
-    TInt size;
+    IR::TInt size;
     if (!numFromVal(&size, core.sh(), valSize)) {
         CL_ERROR_MSG(lw, "size arg of " << name << "() is not a known integer");
         core.printBackTrace(ML_ERROR);
@@ -363,7 +363,7 @@ bool handleMalloc(
 
     // amount of allocated memory must be known (TODO: relax this?)
     const TValId valSize = core.valFromOperand(opList[/* size */ 2]);
-    TInt size;
+    IR::TInt size;
     if (!numFromVal(&size, core.sh(), valSize)) {
         CL_ERROR_MSG(lw, "size arg of malloc() is not a known integer");
         core.printBackTrace(ML_ERROR);
@@ -636,7 +636,7 @@ bool handleDebuggingOf(
         return false;
     }
 
-    TInt module;
+    IR::TInt module;
     const SymHeap &sh = core.sh();
     const TValId valModule = core.valFromOperand(opList[/* module */ 2]);
     if (!numFromVal(&module, sh, valModule))

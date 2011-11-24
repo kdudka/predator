@@ -363,7 +363,7 @@ bool SymProc::addOffDerefArray(TOffset &off, const struct cl_accessor *ac) {
     const TValId valIdx = this->valFromOperand(*opIdx);
 
     // unwrap the integral value inside the heap value (if available)
-    TInt idx;
+    IR::TInt idx;
     if (!numFromVal(&idx, sh_, valIdx))
         return false;
 
@@ -717,29 +717,29 @@ void execMemsetCore(
         SymHeap                     &sh,
         const TValId                 root,
         const TValId                 valToWrite,
-        const IntRange              &addrRange,
-        const IntRange              &sizeRange,
-        const IntRange              &totalRange,
+        const IR::Range             &addrRange,
+        const IR::Range             &sizeRange,
+        const IR::Range             &totalRange,
         TValSet                     *killedPtrs)
 {
     const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     const TValId valBegTotal = sh.valByOffset(root, totalRange.lo);
 
     // how much memory can we guarantee the content of?
-    IntRange safeRange;
+    IR::Range safeRange;
     safeRange.lo = addrRange.hi;
     safeRange.hi = addrRange.lo + sizeRange.lo;
 
     // check whether we are able to write something specific at all
     if (VAL_NULL != valToWrite || safeRange.hi <= safeRange.lo) {
         CL_DEBUG("memset() only invalidates the given range");
-        const TInt totalSize = widthOf(totalRange) - /* closed int */ 1;
+        const IR::TInt totalSize = widthOf(totalRange) - /* closed int */ 1;
         sh.writeUniformBlock(valBegTotal, valUnknown, totalSize, killedPtrs);
         return;
     }
 
     // compute the size we can write precisely
-    const TInt safeSize = widthOf(safeRange) - /* closed int */ 1;
+    const IR::TInt safeSize = widthOf(safeRange) - /* closed int */ 1;
     CL_BREAK_IF(safeSize <= 0);
 
     // valToWrite is VAL_NULL (we do not support writing arbitrary values yet)
@@ -747,7 +747,7 @@ void execMemsetCore(
     sh.writeUniformBlock(valBegSafe, valToWrite, safeSize, killedPtrs);
 
     // compute size of the prefix we _have_ to invalidate
-    const TInt prefixSize = safeRange.lo - totalRange.lo;
+    const IR::TInt prefixSize = safeRange.lo - totalRange.lo;
     CL_BREAK_IF(prefixSize < 0);
     if (0 < prefixSize) {
         CL_DEBUG("memset() invalidates ambiguous prefix");
@@ -755,7 +755,7 @@ void execMemsetCore(
     }
 
     // compute size of the suffix we _have_ to invalidate
-    const TInt suffixSize = totalRange.hi - safeRange.hi;
+    const IR::TInt suffixSize = totalRange.hi - safeRange.hi;
     CL_BREAK_IF(suffixSize < 0);
     if (0 < suffixSize) {
         CL_DEBUG("memset() invalidates ambiguous suffix");
@@ -774,7 +774,7 @@ void executeMemset(
     const struct cl_loc *lw = proc.lw();
 
     // how much we are going to write?
-    IntRange sizeRange;
+    IR::Range sizeRange;
     if (!rangeFromVal(&sizeRange, sh, valSize) || sizeRange.lo < 0) {
         CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
         proc.printBackTrace(ML_ERROR);
@@ -787,7 +787,7 @@ void executeMemset(
     }
 
     // resolve address range
-    const IntRange addrRange = sh.valOffsetRange(addr);
+    const IR::Range addrRange = sh.valOffsetRange(addr);
 
     // deduce whether the end is fixed or not
     bool isEndFixed = isSingular(addrRange) && isSingular(sizeRange);
@@ -798,7 +798,7 @@ void executeMemset(
     }
 
     // how much memory are we going to touch in the worst case?
-    IntRange totalRange;
+    IR::Range totalRange;
     totalRange.lo = addrRange.lo;
     totalRange.hi = addrRange.hi + ((isEndFixed)
         ? sizeRange.lo
@@ -1018,8 +1018,8 @@ bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code) {
 bool compareIntRanges(
         bool                        *pDst,
         const enum cl_binop_e       code,
-        const IntRange              &range1,
-        const IntRange              &range2)
+        const IR::Range             &range1,
+        const IR::Range             &range2)
 {
     CmpOpTraits ct;
     if (!describeCmpOp(&ct, code))
@@ -1104,8 +1104,8 @@ TValId comparePointers(
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
     bool result;
-    const IntRange range1 = sh.valOffsetRange(v1);
-    const IntRange range2 = sh.valOffsetRange(v2);
+    const IR::Range range1 = sh.valOffsetRange(v1);
+    const IR::Range range2 = sh.valOffsetRange(v2);
     if (compareIntRanges(&result, code, range1, range2))
         return boolToVal(result);
 
@@ -1147,7 +1147,7 @@ TValId compareValues(
         // both values are pointers
         return comparePointers(sh, code, v1, v2);
 
-    IntRange rng1, rng2;
+    IR::Range rng1, rng2;
     if (rangeFromVal(&rng1, sh, v1) && rangeFromVal(&rng2, sh, v2)) {
         // both values are integral constants
         bool result;
@@ -1185,11 +1185,11 @@ bool trimRangesIfPossible(
         // not a suitable binary operator (modulo some corner cases)
         return false;
 
-    IntRange rng1;
+    IR::Range rng1;
     if (!anyRangeFromVal(&rng1, sh, v1))
         return false;
 
-    IntRange rng2;
+    IR::Range rng2;
     if (!anyRangeFromVal(&rng2, sh, v2))
         return false;
 
@@ -1222,8 +1222,8 @@ bool trimRangesIfPossible(
     const bool trimLo = (neg == ltr);
 
     // use the offsets in the appropriate order
-    IntRange win     = (isRange1) ? rng1    : rng2;
-    const TInt limit = (isRange2) ? rng1.lo : rng2.lo;
+    IR::Range win        = (isRange1) ? rng1    : rng2;
+    const IR::TInt limit = (isRange2) ? rng1.lo : rng2.lo;
 
     if (trimLo)
         // shift the lower bound up
@@ -1274,11 +1274,11 @@ bool computeIntRngResult(
         TValId                      *pDst,
         SymHeap                     &sh,
         const enum cl_binop_e       code,
-        const IntRange              rng1,
-        const IntRange              rng2)
+        const IR::Range             rng1,
+        const IR::Range             rng2)
 {
     // compute the result of an integral binary operation
-    IntRange result;
+    IR::Range result;
     switch (code) {
 #if SE_ALLOW_CST_INT_PLUS_MINUS
         case CL_BINOP_PLUS:
@@ -1293,7 +1293,7 @@ bool computeIntRngResult(
             if (!isSingular(rng1) || !isSingular(rng2))
                 return false;
 
-            result = rngFromNum(rng1.lo & rng2.lo);
+            result = IR::rngFromNum(rng1.lo & rng2.lo);
             break;
 
         case CL_BINOP_MULT:
@@ -1336,7 +1336,7 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
     }
 
     // check whether we both values are integral constant
-    IntRange rng1, rng2;
+    IR::Range rng1, rng2;
     if (rangeFromVal(&rng1, sh_, v1) && rangeFromVal(&rng2, sh_, v2)) {
 
         // first try to preserve range coincidence if we can
@@ -1367,12 +1367,12 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
 
 TValId handleBitNot(SymHeap &sh, const TValId val) {
     // check whether the value is an integral constant
-    TInt num;
+    IR::TInt num;
     if (!numFromVal(&num, sh, val))
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
     // compute the integral result
-    const TInt result = ~num;
+    const IR::TInt result = ~num;
 
     // wrap the result as a heap value expressing a constant integer
     CustomValue cv(CV_INT);
@@ -1395,7 +1395,7 @@ TValId SymProc::handleIntegralOp(TValId val, enum cl_unop_e code) {
 }
 
 TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
-    TInt num;
+    IR::TInt num;
     if (!numFromVal(&num, sh_, off)) {
         CL_DEBUG_MSG(lw_, "pointer plus offset not a known integer");
         return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
@@ -1434,7 +1434,7 @@ TValId handlePtrBitAnd(
 {
     SymHeap &sh = proc.sh();
 
-    TInt mask;
+    IR::TInt mask;
     if (!numFromVal(&mask, sh, vInt) || 0 < mask)
         // giving up
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
@@ -1444,7 +1444,7 @@ TValId handlePtrBitAnd(
         return VAL_NULL;
 
     // include all possible scenarios into consideration
-    IntRange range;
+    IR::Range range;
     range.lo = 1L + mask;
     range.hi = 0L;
 

@@ -30,7 +30,7 @@
 
 #include <boost/foreach.hpp>
 
-bool numFromVal(TInt *pDst, const SymHeap &sh, const TValId val) {
+bool numFromVal(IR::TInt *pDst, const SymHeap &sh, const TValId val) {
     switch (val) {
         case VAL_NULL:
             *pDst = 0L;
@@ -56,8 +56,8 @@ bool numFromVal(TInt *pDst, const SymHeap &sh, const TValId val) {
     return true;
 }
 
-bool rangeFromVal(IntRange *pDst, const SymHeap &sh, const TValId val) {
-    TInt num;
+bool rangeFromVal(IR::Range *pDst, const SymHeap &sh, const TValId val) {
+    IR::TInt num;
     if (numFromVal(&num, sh, val)) {
         // a single number
         pDst->lo = num;
@@ -79,7 +79,7 @@ bool rangeFromVal(IntRange *pDst, const SymHeap &sh, const TValId val) {
 }
 
 bool anyRangeFromVal(
-        IntRange                    *pDst,
+        IR::Range                   *pDst,
         const SymHeap               &sh,
         const TValId                 val)
 {
@@ -96,7 +96,7 @@ bool anyRangeFromVal(
 
     // FIXME: this way we are asking for overflow (build vs. host arch mismatch)
     if (VT_UNKNOWN == code) {
-        *pDst = IntRangeDomain;
+        *pDst = IR::FullRange;
         return true;
     }
 
@@ -190,7 +190,7 @@ bool translateValId(
     }
     else {
         // translate the lookup result by the original offset
-        const IntRange &off = src.valOffsetRange(valSrc);
+        const IR::Range &off = src.valOffsetRange(valSrc);
         *pVal = dst.valByRange(rootDst, off);
     }
 
@@ -260,7 +260,7 @@ void redirectRefs(
         const EValueTarget code = sh.valTarget(nowAt);
         if (VT_RANGE == code) {
             // redirect a value with range offset
-            IntRange offRange = sh.valOffsetRange(nowAt);
+            IR::Range offRange = sh.valOffsetRange(nowAt);
             offRange.lo -= offHead;
             offRange.hi -= offHead;
             result = sh.valByRange(redirectTo, offRange);

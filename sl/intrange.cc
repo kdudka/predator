@@ -19,8 +19,19 @@
 
 #include "intrange.hh"
 
+namespace IR {
+
 // /////////////////////////////////////////////////////////////////////////////
-// implementation of IntRange
+// implementation of Range
+
+const TInt Int0   = 0L;
+const TInt IntMin = LONG_MIN;
+const TInt IntMax = LONG_MAX;
+
+const Range FullRange = {
+    IntMin,
+    IntMax
+};
 
 #define RZ_MIN (IntMin >> 1)
 #define RZ_MAX (IntMax >> 1)
@@ -29,7 +40,7 @@
         (IntMin != (n) && (n) < RZ_MIN) || \
         (IntMax != (n) && RZ_MAX < (n)))
 
-inline void chkRange(const IntRange &rng) {
+void chkRange(const Range &rng) {
     CL_BREAK_IF(RZ_CORRUPTION(rng.lo));
     CL_BREAK_IF(RZ_CORRUPTION(rng.hi));
     CL_BREAK_IF(IntMax == rng.lo);
@@ -39,12 +50,12 @@ inline void chkRange(const IntRange &rng) {
     CL_BREAK_IF(rng.hi < rng.lo);
 }
 
-const struct IntRange IntRangeDomain = {
+const struct Range RangeDomain = {
     LONG_MIN,
     LONG_MAX
 };
 
-bool isCovered(const IntRange &small, const IntRange &big) {
+bool isCovered(const Range &small, const Range &big) {
     chkRange(small);
     chkRange(big);
 
@@ -52,12 +63,12 @@ bool isCovered(const IntRange &small, const IntRange &big) {
         && (small.hi <= big.hi);
 }
 
-bool isSingular(const IntRange &range) {
+bool isSingular(const Range &range) {
     chkRange(range);
     return (range.lo == range.hi);
 }
 
-TInt widthOf(const IntRange &range) {
+TInt widthOf(const Range &range) {
     chkRange(range);
     return /* closed interval */ 1 + range.hi - range.lo;
 }
@@ -91,8 +102,7 @@ inline void intBinOp(TInt &dst, const TInt other, const EIntBinOp code) {
 }
 
 // the real arithmetic actually work only for "small" numbers this way
-inline void rngBinOp(IntRange &rng, const IntRange &other, const EIntBinOp code)
-{
+inline void rngBinOp(Range &rng, const Range &other, const EIntBinOp code) {
     chkRange(rng);
     chkRange(other);
 
@@ -113,12 +123,14 @@ inline void rngBinOp(IntRange &rng, const IntRange &other, const EIntBinOp code)
     chkRange(rng);
 }
 
-IntRange& operator+=(IntRange &rng, const IntRange &other) {
+Range& operator+=(Range &rng, const Range &other) {
     rngBinOp(rng, other, IBO_ADD);
     return rng;
 }
 
-IntRange& operator*=(IntRange &rng, const IntRange &other) {
+Range& operator*=(Range &rng, const Range &other) {
     rngBinOp(rng, other, IBO_MUL);
     return rng;
 }
+
+} // namespace IR

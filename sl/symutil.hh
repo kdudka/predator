@@ -46,13 +46,13 @@ inline TValId boolToVal(const bool b) {
 }
 
 /// extract integral constant from the given value if possible, fail otherwise
-bool numFromVal(TInt *pDst, const SymHeap &, const TValId);
+bool numFromVal(IR::TInt *pDst, const SymHeap &, const TValId);
 
 /// extract integral range from the given value if possible, fail otherwise
-bool rangeFromVal(IntRange *pDst, const SymHeap &, const TValId);
+bool rangeFromVal(IR::Range *pDst, const SymHeap &, const TValId);
 
 /// extract either offset range, or integral range from the given value
-bool anyRangeFromVal(IntRange *pDst, const SymHeap &, const TValId);
+bool anyRangeFromVal(IR::Range *pDst, const SymHeap &, const TValId);
 
 /// extract string literal from the given value if possible, fail otherwise
 bool stringFromVal(const char **pDst, const SymHeap &, const TValId);

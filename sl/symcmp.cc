@@ -74,8 +74,8 @@ bool matchOffsets(
 
     if (isRange) {
         // compare offset ranges
-        const IntRange offRange1 = sh1.valOffsetRange(v1);
-        const IntRange offRange2 = sh2.valOffsetRange(v2);
+        const IR::Range offRange1 = sh1.valOffsetRange(v1);
+        const IR::Range offRange2 = sh2.valOffsetRange(v2);
         return (offRange1 == offRange2);
     }
     else {
