@@ -101,6 +101,7 @@ inline Range operator-(Range rng, const Range &other) {
     return rng;
 }
 
+/// true if the small range is inside the big one (sharing endpoints is fine)
 bool isCovered(const Range &small, const Range &big);
 
 /// return true if the range contain exactly one number; break if no one at all

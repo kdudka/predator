@@ -34,9 +34,11 @@ const Range FullRange = {
     IntMax
 };
 
+// we use the bit next to MSB to detect improper handling of IntMin/IntMax
 #define RZ_MIN (IntMin >> 1)
 #define RZ_MAX (IntMax >> 1)
 
+// return true if the given number is located somewhere in the Red Zone (RZ)
 #define RZ_CORRUPTION(n) (\
         (IntMin != (n) && (n) < RZ_MIN) || \
         (IntMax != (n) && RZ_MAX < (n)))
@@ -47,16 +49,11 @@ void chkRange(const Range &rng) {
     CL_BREAK_IF(IntMax == rng.lo);
     CL_BREAK_IF(IntMin == rng.hi);
 
-    // FIXME: should we allow an empty range?
+    // we do not allow empty ranges
     CL_BREAK_IF(rng.hi < rng.lo);
 
     (void) rng;
 }
-
-const struct Range RangeDomain = {
-    LONG_MIN,
-    LONG_MAX
-};
 
 bool isCovered(const Range &small, const Range &big) {
     chkRange(small);
@@ -92,19 +89,19 @@ enum EIntBinOp {
     IBO_MUL
 };
 
-inline void intBinOp(TInt &dst, const TInt other, const EIntBinOp code) {
+inline void intBinOp(TInt *pDst, const TInt other, const EIntBinOp code) {
     switch (code) {
         case IBO_ADD:
-            dst += other;
+            (*pDst) += other;
             break;
 
         case IBO_MUL:
-            dst *= other;
+            (*pDst) *= other;
             break;
     }
 }
 
-// the real arithmetic actually work only for "small" numbers this way
+// the real arithmetic actually works only for "small" numbers this way
 inline void rngBinOp(Range &rng, const Range &other, const EIntBinOp code) {
     chkRange(rng);
     chkRange(other);
@@ -113,14 +110,14 @@ inline void rngBinOp(Range &rng, const Range &other, const EIntBinOp code) {
         if (IntMin == other.lo)
             rng.lo = IntMin;
         else
-            intBinOp(rng.lo, other.lo, code);
+            intBinOp(&rng.lo, other.lo, code);
     }
 
     if (IntMax != rng.hi) {
         if (IntMax == other.hi)
             rng.hi = IntMax;
         else
-            intBinOp(rng.hi, other.hi, code);
+            intBinOp(&rng.hi, other.hi, code);
     }
 
     chkRange(rng);
