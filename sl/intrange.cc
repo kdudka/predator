@@ -25,6 +25,7 @@ namespace IR {
 // implementation of Range
 
 const TInt Int0   = 0L;
+const TInt Int1   = 1L;
 const TInt IntMin = LONG_MIN;
 const TInt IntMax = LONG_MAX;
 
@@ -48,6 +49,8 @@ void chkRange(const Range &rng) {
 
     // FIXME: should we allow an empty range?
     CL_BREAK_IF(rng.hi < rng.lo);
+
+    (void) rng;
 }
 
 const struct Range RangeDomain = {

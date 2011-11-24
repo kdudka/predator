@@ -29,6 +29,7 @@ namespace IR {
 typedef signed long TInt;
 
 extern const TInt Int0;
+extern const TInt Int1;
 extern const TInt IntMin;
 extern const TInt IntMax;
 

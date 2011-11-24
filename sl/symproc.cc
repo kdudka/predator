@@ -1445,8 +1445,8 @@ TValId handlePtrBitAnd(
 
     // include all possible scenarios into consideration
     IR::Range range;
-    range.lo = 1L + mask;
-    range.hi = 0L;
+    range.lo = IR::Int1 + mask;
+    range.hi = IR::Int0;
 
     // create the appropriate VT_RANGE value
     return sh.valByRange(vPtr, range);
