@@ -475,9 +475,12 @@ void ClStorageBuilder::Private::digOperand(const TOp *op, bool skipVarInit) {
 
     // read type of each array index in the chain
     const struct cl_accessor *ac = op->accessor;
-    for (; ac; ac = ac->next)
+    for (; ac; ac = ac->next) {
+        readTypeTree(typeDb, ac->type);
+
         if (ac->code == CL_ACCESSOR_DEREF_ARRAY)
             readTypeTree(typeDb, ac->data.array.index->type);
+    }
 
     enum cl_operand_e code = op->code;
     switch (code) {
