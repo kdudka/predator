@@ -1325,6 +1325,30 @@ bool computeIntRngResult(
     return true;
 }
 
+/// if v1 is scalar and v2 is range (or vice versa), call the given fnc on them
+template <typename TFnc>
+inline bool handleRangeByScalarOp(
+        TValId                     *pResult,
+        SymHeapCore                &sh,
+        const TValId                v1,
+        const TValId                v2,
+        const IR::Range            &rng1,
+        const IR::Range            &rng2,
+        const TFnc                  fnc)
+{
+    const bool isRange1 = !isSingular(rng1);
+    const bool isRange2 = !isSingular(rng2);
+    if (isRange1 == isRange2)
+        return false;
+
+    if (isRange1)
+        *pResult = (sh.*fnc)(v1, /* num */ rng2.lo);
+    else
+        *pResult = (sh.*fnc)(v2, /* num */ rng1.lo);
+
+    return true;
+}
+
 TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
     if (CL_BINOP_MINUS == code) {
         // chances are this could be a pointer difference
@@ -1336,6 +1360,8 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
             return sh_.diffPointers(v1, v2);
     }
 
+    TValId result;
+
     // check whether we both values are integral constant
     IR::Range rng1, rng2;
     if (rangeFromVal(&rng1, sh_, v1) && rangeFromVal(&rng2, sh_, v2)) {
@@ -1343,17 +1369,15 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
         // first try to preserve range coincidence if we can
         switch (code) {
             case CL_BINOP_MULT:
-                if (!isSingular(rng1) && isSingular(rng2))
-                    return sh_.valMultiplyRange(v1, rng2.lo);
-                else if (isSingular(rng1) && !isSingular(rng2))
-                    return sh_.valMultiplyRange(v2, rng1.lo);
+                if (handleRangeByScalarOp(&result, sh_, v1, v2, rng1, rng2,
+                            &SymHeapCore::valMultiplyRange))
+                    return result;
                 break;
 
             case CL_BINOP_PLUS:
-                if (!isSingular(rng1) && isSingular(rng2))
-                    return sh_.valByOffset(v1, rng2.lo);
-                else if (isSingular(rng1) && !isSingular(rng2))
-                    return sh_.valByOffset(v2, rng1.lo);
+                if (handleRangeByScalarOp(&result, sh_, v1, v2, rng1, rng2,
+                            &SymHeapCore::valByOffset))
+                    return result;
                 break;
 
             case CL_BINOP_MINUS:
@@ -1365,7 +1389,6 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
                 break;
         }
 
-        TValId result;
         if (computeIntRngResult(&result, sh_, code, rng1, rng2))
             return result;
     }
