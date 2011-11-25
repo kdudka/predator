@@ -89,6 +89,26 @@ class NeqDb: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
 };
 
 // /////////////////////////////////////////////////////////////////////////////
+// CoincidenceDb lookup container
+class CoincidenceDb: public SymPairMap<TValId, IR::TInt> {
+    public:
+        RefCounter refCnt;
+
+    public:
+        template <class TDst>
+        void gatherRelatedValues(TDst &dst, TValId val) const {
+            // FIXME: suboptimal due to performance
+            BOOST_FOREACH(TMap::const_reference ref, db_) {
+                const TItem &item = ref.first;
+                if (item.first == val)
+                    dst.push_back(item.second);
+                else if (item.second == val)
+                    dst.push_back(item.first);
+            }
+        }
+};
+
+// /////////////////////////////////////////////////////////////////////////////
 // CVar lookup container
 class CVarMap {
     public:
@@ -453,11 +473,6 @@ class CustomValueMapper {
 // FIXME: std::set is not a good candidate for base class
 struct TValSetWrapper: public TValSet {
     RefCounter refCnt;
-};
-
-struct CoincidenceDb {
-    RefCounter                      refCnt;
-    SymPairMap<TValId, IR::TInt>    db;
 };
 
 struct SymHeapCore::Private {
@@ -1927,7 +1942,7 @@ void SymHeapCore::Private::bindValues(TValId v1, TValId v2, IR::TInt coef) {
     const TValId anchor2 = valData2->anchor;
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->coinDb);
-    this->coinDb->db.add(anchor1, anchor2, coef);
+    this->coinDb->add(anchor1, anchor2, coef);
 }
 
 bool SymHeapCore::areBound(IR::TInt *pCoef, TValId v1, TValId v2) {
@@ -1938,7 +1953,7 @@ bool SymHeapCore::areBound(IR::TInt *pCoef, TValId v1, TValId v2) {
     const TValId anchor1 = valData1->anchor;
     const TValId anchor2 = valData2->anchor;
 
-    if (d->coinDb->db.chk(pCoef, anchor1, anchor2))
+    if (d->coinDb->chk(pCoef, anchor1, anchor2))
         return true;
 
     CL_DEBUG("SymHeapCore::areBound() returns false");
@@ -2198,6 +2213,7 @@ void SymHeapCore::neqOp(ENeqOp op, TValId v1, TValId v2) {
 
 void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {
     d->neqDb->gatherRelatedValues(dst, val);
+    d->coinDb->gatherRelatedValues(dst, val);
 }
 
 void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)

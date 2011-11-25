@@ -317,13 +317,7 @@ class SymHeapCore {
         /// return true if the given pair of values is proven to be non-equal
         virtual bool proveNeq(TValId valA, TValId valB) const;
 
-        /**
-         * return the list of values that are connected to the given value by an
-         * explicit Neq predicate
-         * @param dst a container to place the result in
-         * @param val the reference value, used to search the predicates and
-         * then all the related values accordingly
-         */
+        /// collect values connect with the given value via an extra predicate
         void gatherRelatedValues(TValList &dst, TValId val) const;
 
         /**
