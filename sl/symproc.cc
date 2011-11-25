@@ -1342,6 +1342,13 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
 
         // first try to preserve range coincidence if we can
         switch (code) {
+            case CL_BINOP_MULT:
+                if (!isSingular(rng1) && isSingular(rng2))
+                    return sh_.valMultiplyRange(v1, rng2.lo);
+                else if (isSingular(rng1) && !isSingular(rng2))
+                    return sh_.valMultiplyRange(v2, rng1.lo);
+                break;
+
             case CL_BINOP_PLUS:
                 if (!isSingular(rng1) && isSingular(rng2))
                     return sh_.valByOffset(v1, rng2.lo);

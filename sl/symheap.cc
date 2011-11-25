@@ -1945,6 +1945,24 @@ bool SymHeapCore::areBound(IR::TInt *pCoef, TValId v1, TValId v2) {
     return false;
 }
 
+// this is implemented only for CV_INT_RANGE for now
+TValId SymHeapCore::valMultiplyRange(const TValId val, const IR::TInt coef) {
+    // load custom value data
+    const InternalCustomValue *customData;
+    d->ents.getEntRO(&customData, val);
+    CustomValue cv = customData->customData;
+
+    // compute the multiplication on the range and wrap it as fresh custom value
+    CL_BREAK_IF(CV_INT_RANGE != cv.code);
+    cv.data.rng *= IR::rngFromNum(coef);
+    const TValId result = this->valWrapCustom(cv);
+
+    // store the linear dependency of the just computed value with the anchor
+    const TValId anchor = customData->anchor;
+    d->bindValues(anchor, result, coef);
+    return result;
+}
+
 TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
     const TValId root1 = this->valRoot(v1);
     const TValId root2 = this->valRoot(v2);
