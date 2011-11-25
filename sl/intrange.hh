@@ -22,8 +22,6 @@
 
 #include "config.h"
 
-#include <climits>
-
 namespace IR {
 
 typedef signed long TInt;

@@ -744,7 +744,6 @@ class SymHeap: public SymHeapCore {
          */
         void valMerge(TValId v1, TValId v2);
 
-
         /// read the minimal segment length of the given abstract object
         unsigned segMinLength(TValId seg) const;
 
