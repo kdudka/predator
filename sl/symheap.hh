@@ -369,8 +369,8 @@ class SymHeapCore {
         /// difference between two pointers (makes sense only for shared roots)
         TValId diffPointers(const TValId v1, const TValId v2);
 
-        /// check coincidence among two values (any of VT_RANGE or CV_INT_RANGE)
-        bool areBound(bool /* only +/-1 for now */ *pNeg, TValId v1, TValId v2);
+        /// query a linear dependency of a pair of VT_RANGE/VT_CUSTOM values
+        bool areBound(IR::TInt *pCoef, TValId v1, TValId v2);
 
         /// return size (in bytes) that we can safely write at the given addr
         int valSizeOfTarget(TValId) const;

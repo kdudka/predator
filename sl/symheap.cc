@@ -457,7 +457,7 @@ struct TValSetWrapper: public TValSet {
 
 struct CoincidenceDb {
     RefCounter                      refCnt;
-    SymPairMap<TValId, bool>        db;
+    SymPairMap<TValId, IR::TInt>    db;
 };
 
 struct SymHeapCore::Private {
@@ -522,7 +522,7 @@ struct SymHeapCore::Private {
             const unsigned          size,
             TValSet                 *killedPtrs);
 
-    void bindValues(TValId v1, TValId v2, bool neg);
+    void bindValues(TValId v1, TValId v2, IR::TInt coef);
 
     TValId shiftCustomValue(TValId val, TOffset shift);
 
@@ -1918,7 +1918,7 @@ void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {
     }
 }
 
-void SymHeapCore::Private::bindValues(TValId v1, TValId v2, bool neg) {
+void SymHeapCore::Private::bindValues(TValId v1, TValId v2, IR::TInt coef) {
     const BaseValue *valData1, *valData2;
     this->ents.getEntRO(&valData1, v1);
     this->ents.getEntRO(&valData2, v2);
@@ -1927,10 +1927,10 @@ void SymHeapCore::Private::bindValues(TValId v1, TValId v2, bool neg) {
     const TValId anchor2 = valData2->anchor;
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->coinDb);
-    this->coinDb->db.add(anchor1, anchor2, neg);
+    this->coinDb->db.add(anchor1, anchor2, coef);
 }
 
-bool SymHeapCore::areBound(bool *pNeg, TValId v1, TValId v2) {
+bool SymHeapCore::areBound(IR::TInt *pCoef, TValId v1, TValId v2) {
     const BaseValue *valData1, *valData2;
     d->ents.getEntRO(&valData1, v1);
     d->ents.getEntRO(&valData2, v2);
@@ -1938,7 +1938,7 @@ bool SymHeapCore::areBound(bool *pNeg, TValId v1, TValId v2) {
     const TValId anchor1 = valData1->anchor;
     const TValId anchor2 = valData2->anchor;
 
-    if (d->coinDb->db.chk(pNeg, anchor1, anchor2))
+    if (d->coinDb->db.chk(pCoef, anchor1, anchor2))
         return true;
 
     CL_DEBUG("SymHeapCore::areBound() returns false");
@@ -1970,10 +1970,10 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
         return valDiff;
 
     if (isSingular(off2))
-        d->bindValues(valDiff, v1, /* neg */ false);
+        d->bindValues(valDiff, v1, /* coefficient */ 1);
 
     if (isSingular(off1))
-        d->bindValues(valDiff, v2, /* neg */ true);
+        d->bindValues(valDiff, v2, /* coefficient */ -1);
 
     return valDiff;
 }
