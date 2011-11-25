@@ -217,6 +217,14 @@ TValId handleValueCore(DeepCopyData &dc, TValId srcAt) {
     return dstAt;
 }
 
+TValId handleCustomValue(DeepCopyData &dc, const TValId valSrc) {
+    // custom value, e.g. fnc pointer
+    const CustomValue custom = dc.src.valUnwrapCustom(valSrc);
+    const TValId valDst = dc.dst.valWrapCustom(custom);
+    dc.valMap[valSrc] = valDst;
+    return valDst;
+}
+
 void trackUses(DeepCopyData &dc, TValId valSrc) {
     if (!dc.digBackward)
         // optimization
@@ -245,6 +253,29 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
 
         handleValueCore(dc, srcAt);
     }
+
+    // try to preserve related range values
+    TValList related;
+    sh.gatherRelatedValues(related, valSrc);
+    BOOST_FOREACH(const TValId valDep, related) {
+        IR::TInt coef;
+        if (!sh.areBound(&coef, valSrc, valDep))
+            continue;
+
+        const EValueTarget code = realValTarget(sh, valDep);
+        switch (code) {
+            case VT_RANGE:
+                handleValueCore(dc, valDep);
+                continue;
+
+            case VT_CUSTOM:
+                handleCustomValue(dc, valDep);
+                continue;
+
+            default:
+                CL_BREAK_IF("please implement");
+        }
+    }
 }
 
 TValId handleValue(DeepCopyData &dc, TValId valSrc) {
@@ -264,13 +295,9 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     trackUses(dc, valSrc);
 
     const EValueTarget code = realValTarget(src, valSrc);
-    if (VT_CUSTOM == code) {
+    if (VT_CUSTOM == code)
         // custom value, e.g. fnc pointer
-        const CustomValue custom = src.valUnwrapCustom(valSrc);
-        const TValId valDst = dst.valWrapCustom(custom);
-        valMap[valSrc] = valDst;
-        return valDst;
-    }
+        return handleCustomValue(dc, valSrc);
 
     if (isAnyDataArea(code) || VAL_NULL == src.valRoot(valSrc))
         // create the target object, if it does not exist already
@@ -312,7 +339,7 @@ void deepCopy(DeepCopyData &dc) {
         objDst.setValue(valDst);
     }
 
-    // finally copy all relevant Neq predicates
+    // finally copy all relevant predicates
     src.copyRelevantPreds(dst, dc.valMap);
 
     typedef DeepCopyData::TSegLengths TSegLengths;
