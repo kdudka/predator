@@ -2235,6 +2235,25 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
         // create the image now!
         dst.neqOp(NEQ_ADD, valLt, valGt);
     }
+
+    // go through CoincidenceDb
+    const CoincidenceDb &coinDb = *d->coinDb;
+    BOOST_FOREACH(CoincidenceDb::const_reference &ref, coinDb) {
+        TValId valLt = ref/* key */.first/* lt */.first;
+        TValId valGt = ref/* key */.first/* gt */.second;
+
+        if (!translateValId(&valLt, dst, *this, valMap))
+            // not relevant
+            continue;
+
+        if (!translateValId(&valGt, dst, *this, valMap))
+            // not relevant
+            continue;
+
+        // create the image now!
+        RefCntLib<RCO_NON_VIRT>::requireExclusivity(dst.d->coinDb);
+        dst.d->coinDb->add(valLt, valGt, /* coefficient */ ref.second);
+    }
 }
 
 bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)

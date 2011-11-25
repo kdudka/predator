@@ -70,6 +70,17 @@ class SymPairMap {
         TMap db_;
 
     public:
+        // for compatibility with STL and Boost libraries
+        typedef typename TMap::const_iterator               const_iterator;
+        typedef typename TMap::const_reference              const_reference;
+
+        /// return STL-like iterator to go through the container
+        const_iterator begin() const { return db_.begin(); }
+
+        /// return STL-like iterator to go through the container
+        const_iterator end()   const { return db_.end();   }
+
+    public:
         void add(TKey k1, TKey k2, TVal val) {
             sortValues(k1, k2);
             const TItem key(k1, k2);

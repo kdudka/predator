@@ -320,16 +320,7 @@ class SymHeapCore {
         /// collect values connect with the given value via an extra predicate
         void gatherRelatedValues(TValList &dst, TValId val) const;
 
-        /**
-         * copy all @b relevant explicit Neq predicates from the symbolic heap
-         * to another symbolic heap, using the given (injective) value IDs
-         * mapping.  Here @b relevant means that there exists a suitable mapping
-         * for all the values which are connected by the predicate
-         * @param dst destination heap, there will be added the relevant
-         * predicates
-         * @param valMap an (injective) value mapping, used for translation
-         * of value IDs between heaps
-         */
+        /// transfer as many as possible extra heap predicates from this to dst
         void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
 
         /// true if all Neq predicates can be mapped to Neq predicates in ref
