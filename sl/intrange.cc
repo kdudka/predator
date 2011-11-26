@@ -235,4 +235,38 @@ Range& operator*=(Range &rng, const Range &other) {
     return rng;
 }
 
+bool isZeroIntersection(TInt alignment, TInt mask) {
+    CL_BREAK_IF(alignment < Int1);
+
+    if (mask)
+        --alignment;
+    else
+        return true;
+
+    while (alignment & 1) {
+        alignment >>= 1;
+        mask >>= 1;
+        if (!mask)
+            return true;
+    }
+
+    return false;
+}
+
+Range& operator&=(Range &rng, TInt mask) {
+    if (isZeroIntersection(rng.alignment, mask))
+        // the whole range was masked, we are back to zero
+        return (rng = rngFromNum(Int0));
+
+    if (Int0 < mask)
+        // TODO
+        return (rng = FullRange);
+
+    // include all possible scenarios into consideration
+    rng.lo       &= mask;
+    rng.hi       &= mask;
+    rng.alignment = -mask;
+    return rng;
+}
+
 } // namespace IR

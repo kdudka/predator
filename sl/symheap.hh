@@ -356,9 +356,6 @@ class SymHeapCore {
         /// multiply range of the given CV_INT_RANGE value by an integer
         TValId valMultiplyRange(const TValId val, const IR::TInt by);
 
-        /// bitwise mask operation on the given CV_INT_RANGE value by an integer
-        TValId valBitMaskRange(const TValId val, const IR::TInt mask);
-
         /// difference between two pointers (makes sense only for shared roots)
         TValId diffPointers(const TValId v1, const TValId v2);
 

@@ -1366,6 +1366,32 @@ inline bool handleRangeByScalarOp(
     return true;
 }
 
+bool handleRangeBitMask(
+        TValId                     *pResult,
+        SymHeapCore                &sh,
+        const TValId                v1,
+        const TValId                v2,
+        const IR::Range            &rng1,
+        const IR::Range            &rng2)
+{
+    bool isRange1;
+    if (!isRangeByNum(&isRange1, rng1, rng2))
+        return false;
+
+    IR::TInt mask;
+    const TValId valMask  = (isRange1) ?   v2 :   v1;
+    if (!numFromVal(&mask, sh, valMask))
+        CL_BREAK_IF("handleRangeBitMask() malfunction");
+
+    CustomValue cv(CV_INT_RANGE);
+    IR::Range &rng = cv.data.rng;
+    rng = (isRange1) ? rng1 : rng2;
+    rng &= mask;
+
+    *pResult = sh.valWrapCustom(cv);
+    return true;
+}
+
 TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
     if (CL_BINOP_MINUS == code) {
         // chances are this could be a pointer difference
@@ -1386,8 +1412,7 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
         // first try to preserve range coincidence if we can
         switch (code) {
             case CL_BINOP_BIT_AND:
-                if (handleRangeByScalarOp(&result, sh_, v1, v2, rng1, rng2,
-                            &SymHeapCore::valBitMaskRange))
+                if (handleRangeBitMask(&result, sh_, v1, v2, rng1, rng2))
                     return result;
                 break;
 

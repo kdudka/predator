@@ -30,7 +30,7 @@
 
 #include <boost/foreach.hpp>
 
-bool numFromVal(IR::TInt *pDst, const SymHeap &sh, const TValId val) {
+bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val) {
     switch (val) {
         case VAL_NULL:
             *pDst = 0L;
