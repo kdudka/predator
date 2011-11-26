@@ -253,29 +253,6 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
 
         handleValueCore(dc, srcAt);
     }
-
-    // try to preserve related range values
-    TValList related;
-    sh.gatherRelatedValues(related, valSrc);
-    BOOST_FOREACH(const TValId valDep, related) {
-        IR::TInt coef;
-        if (!sh.areBound(&coef, valSrc, valDep))
-            continue;
-
-        const EValueTarget code = realValTarget(sh, valDep);
-        switch (code) {
-            case VT_RANGE:
-                handleValueCore(dc, valDep);
-                continue;
-
-            case VT_CUSTOM:
-                handleCustomValue(dc, valDep);
-                continue;
-
-            default:
-                CL_BREAK_IF("please implement");
-        }
-    }
 }
 
 TValId handleValue(DeepCopyData &dc, TValId valSrc) {

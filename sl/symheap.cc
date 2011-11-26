@@ -90,7 +90,7 @@ class NeqDb: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
 
 // /////////////////////////////////////////////////////////////////////////////
 // CoincidenceDb lookup container
-class CoincidenceDb: public SymPairMap<TValId, IR::TInt> {
+class CoincidenceDb: public SymPairMap<TValId, bool> {
     public:
         RefCounter refCnt;
 
@@ -537,7 +537,7 @@ struct SymHeapCore::Private {
             const unsigned          size,
             TValSet                 *killedPtrs);
 
-    void bindValues(TValId v1, TValId v2, IR::TInt coef);
+    void bindValues(TValId v1, TValId v2, bool neg);
 
     TValId shiftCustomValue(TValId val, TOffset shift);
 
@@ -1933,7 +1933,7 @@ void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {
     }
 }
 
-void SymHeapCore::Private::bindValues(TValId v1, TValId v2, IR::TInt coef) {
+void SymHeapCore::Private::bindValues(TValId v1, TValId v2, bool neg) {
     const BaseValue *valData1, *valData2;
     this->ents.getEntRO(&valData1, v1);
     this->ents.getEntRO(&valData2, v2);
@@ -1942,10 +1942,10 @@ void SymHeapCore::Private::bindValues(TValId v1, TValId v2, IR::TInt coef) {
     const TValId anchor2 = valData2->anchor;
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->coinDb);
-    this->coinDb->add(anchor1, anchor2, coef);
+    this->coinDb->add(anchor1, anchor2, neg);
 }
 
-bool SymHeapCore::areBound(IR::TInt *pCoef, TValId v1, TValId v2) {
+bool SymHeapCore::areBound(bool *pNeg, TValId v1, TValId v2) {
     const BaseValue *valData1, *valData2;
     d->ents.getEntRO(&valData1, v1);
     d->ents.getEntRO(&valData2, v2);
@@ -1953,7 +1953,7 @@ bool SymHeapCore::areBound(IR::TInt *pCoef, TValId v1, TValId v2) {
     const TValId anchor1 = valData1->anchor;
     const TValId anchor2 = valData2->anchor;
 
-    if (d->coinDb->chk(pCoef, anchor1, anchor2))
+    if (d->coinDb->chk(pNeg, anchor1, anchor2))
         return true;
 
     CL_DEBUG("SymHeapCore::areBound() returns false");
@@ -1990,20 +1990,6 @@ TValId SymHeapCore::valBitMaskRange(const TValId val, const IR::TInt mask) {
         return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 
-    // go through all dependent values and find the multiplication coefficient
-    IR::TInt coef = IR::Int0;
-    TValList related;
-    d->coinDb->gatherRelatedValues(related, valData->anchor);
-    BOOST_FOREACH(const TValId valDep, related) {
-        CL_BREAK_IF(IR::Int0 != coef);
-        if (!d->coinDb->chk(&coef, val, valDep))
-            coef = IR::Int0;
-    }
-
-    if (IR::Int0 == coef)
-        // multiplication coefficient not found
-        return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
-
     CL_BREAK_IF("please implement");
     return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
@@ -2033,10 +2019,10 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
         return valDiff;
 
     if (isSingular(off2))
-        d->bindValues(valDiff, v1, /* coefficient */ 1);
+        d->bindValues(valDiff, v1, /* neg */ false);
 
     if (isSingular(off1))
-        d->bindValues(valDiff, v2, /* coefficient */ -1);
+        d->bindValues(valDiff, v2, /* neg */ true);
 
     return valDiff;
 }

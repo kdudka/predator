@@ -792,8 +792,8 @@ void executeMemset(
     // deduce whether the end is fixed or not
     bool isEndFixed = isSingular(addrRange) && isSingular(sizeRange);
     if (!isEndFixed && (widthOf(addrRange) == widthOf(sizeRange))) {
-        IR::TInt coef;
-        if (sh.areBound(&coef, addr, valSize) && (-1 == coef))
+        bool neg;
+        if (sh.areBound(&neg, addr, valSize) && neg)
             // size grows in the opposite direction than address --> fixed end
             isEndFixed = true;
     }
