@@ -691,9 +691,12 @@ void describeInt(PlotData &plot, const IR::TInt num, const TValId val) {
 void describeIntRange(PlotData &plot, const IR::Range &range, const TValId val)
 {
     plot.out << ", fontcolor=blue, label=\"[int range] "
-        << range.lo << " .. "
-        << range.hi << " (#"
-        << val << ")\"";
+        << range.lo << " .. " << range.hi;
+
+    if (isAligned(range))
+        plot.out << ", alignment = " << range.alignment;
+    
+    plot.out << " (#" << val << ")\"";
 }
 
 void describeReal(PlotData &plot, const float fpn, const TValId val) {
@@ -819,7 +822,12 @@ preserve_suffix:
     if (VT_RANGE == code) {
         const IR::Range &offRange = sh.valOffsetRange(val);
         plot.out << " [root = #" << root
-            << ", off = " << offRange.lo << ".." << offRange.hi << "]";
+            << ", off = " << offRange.lo << ".." << offRange.hi;
+
+        if (isAligned(offRange))
+            plot.out << ", alignment = " << offRange.alignment;
+    
+        plot.out << "]";
     }
     else {
         const TOffset off = sh.valOffset(val);
@@ -840,8 +848,12 @@ void plotRangePtr(PlotData &plot, TValId val, TValId root, const IR::Range &rng)
 {
     plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE(root)
         << " [color=red, fontcolor=red, label=\"["
-        << SIGNED_OFF(rng.lo) << ".." << rng.hi
-        << "]\"];\n";
+        << SIGNED_OFF(rng.lo) << ".." << rng.hi;
+
+    if (isAligned(rng))
+        plot.out << ", alignment = " << rng.alignment;
+    
+    plot.out << "]\"];\n";
 }
 
 void plotNonRootValues(PlotData &plot) {

@@ -727,6 +727,7 @@ void execMemsetCore(
 
     // how much memory can we guarantee the content of?
     IR::Range safeRange;
+    safeRange.alignment = IR::Int1;
     safeRange.lo = addrRange.hi;
     safeRange.hi = addrRange.lo + sizeRange.lo;
 
@@ -764,6 +765,11 @@ void execMemsetCore(
     }
 }
 
+inline void wipeAlignment(IR::Range &rng) {
+    CL_BREAK_IF(isAligned(rng));
+    rng.alignment = IR::Int1;
+}
+
 void executeMemset(
         SymProc                     &proc,
         const TValId                 addr,
@@ -787,7 +793,7 @@ void executeMemset(
     }
 
     // resolve address range
-    const IR::Range addrRange = sh.valOffsetRange(addr);
+    IR::Range addrRange = sh.valOffsetRange(addr);
 
     // deduce whether the end is fixed or not
     bool isEndFixed = isSingular(addrRange) && isSingular(sizeRange);
@@ -800,6 +806,7 @@ void executeMemset(
 
     // how much memory are we going to touch in the worst case?
     IR::Range totalRange;
+    totalRange.alignment = IR::Int1;
     totalRange.lo = addrRange.lo;
     totalRange.hi = addrRange.hi + ((isEndFixed)
         ? sizeRange.lo
@@ -818,6 +825,10 @@ void executeMemset(
     LeakMonitor lm(sh);
     lm.enter();
     TValSet killedPtrs;
+
+    wipeAlignment(addrRange);
+    wipeAlignment(sizeRange);
+    wipeAlignment(totalRange);
 
     // write the data
     execMemsetCore(sh, root, valToWrite,
@@ -1025,6 +1036,11 @@ bool compareIntRanges(
     CmpOpTraits ct;
     if (!describeCmpOp(&ct, code))
         return false;
+
+    if (isAligned(range1) || isAligned(range2)) {
+        CL_DEBUG("compareIntRanges() does not support alignment yet");
+        return false;
+    }
 
     // check for interval overlapping (strict)
     const bool ltr = (range1.hi < range2.lo);
@@ -1280,6 +1296,8 @@ bool computeIntRngResult(
 {
     // compute the result of an integral binary operation
     IR::Range result;
+    result.alignment = IR::Int1;
+
     switch (code) {
 #if SE_ALLOW_CST_INT_PLUS_MINUS
         case CL_BINOP_PLUS:
@@ -1482,8 +1500,9 @@ TValId handlePtrBitAnd(
 
     // include all possible scenarios into consideration
     IR::Range range;
-    range.lo = IR::Int1 + mask;
-    range.hi = IR::Int0;
+    range.lo        = IR::Int1 + mask;
+    range.hi        = IR::Int0;
+    range.alignment = IR::Int1;
 
     // create the appropriate VT_RANGE value
     return sh.valByRange(vPtr, range);

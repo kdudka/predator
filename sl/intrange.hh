@@ -35,14 +35,18 @@ extern const TInt IntMax;
 struct Range {
     TInt        lo;         ///< lower bound of the interval (included)
     TInt        hi;         ///< upper bound of the interval (included)
+    TInt        alignment;  ///< target alignment, values below Int1 are invalid
 
-    // NOTE: there is no constructor, becase we put Range to unions
+    // NOTE: there is no constructor because we put Range to unions
 };
 
 inline Range rngFromNum(TInt num) {
     Range rng;
-    rng.lo = num;
-    rng.hi = num;
+
+    rng.lo          = num;
+    rng.hi          = num;
+    rng.alignment   = Int1;
+
     return rng;
 }
 
@@ -52,8 +56,9 @@ extern const Range FullRange;
 void chkRange(const Range &rng);
 
 inline bool operator==(const Range &a, const Range &b) {
-    return (a.lo == b.lo)
-        && (a.hi == b.hi);
+    return (a.lo        == b.lo)
+        && (a.hi        == b.hi)
+        && (a.alignment == b.alignment);
 }
 
 inline bool operator!=(const Range &a, const Range &b) {
@@ -104,6 +109,9 @@ bool isCovered(const Range &small, const Range &big);
 
 /// return true if the range contain exactly one number; break if no one at all
 bool isSingular(const Range &);
+
+/// return true if the range is non-trivially aligned
+bool isAligned(const Range &);
 
 /// return the count of integral numbers that beTInt the given range
 TInt widthOf(const Range &);

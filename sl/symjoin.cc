@@ -382,6 +382,7 @@ bool joinRangeValues(
     IR::Range rng;
     rng.lo = std::min(rng1.lo, rng2.lo);
     rng.hi = std::max(rng1.hi, rng2.hi);
+    rng.alignment = IR::Int1;
 
     // [experimental] widening on offset ranges
 #if 1 < SE_ALLOW_OFF_RANGES
@@ -1972,10 +1973,13 @@ bool offRangeFallback(
     const TValId rootDst = roMapLookup(ctx.valMap1[/* ltr */ 0], root1);
     CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[/* ltr */ 0], root2));
 
-    // resolve a VT_RANGE value in ctx.dst
+    // compute the resulting range
     IR::Range rng;
     rng.lo = std::min(off1, off2);
     rng.hi = std::max(off1, off2);
+    rng.alignment = IR::Int1;
+
+    // create a VT_RANGE value in ctx.dst
     const TValId vDst = ctx.dst.valByRange(rootDst, rng);
 
     // store the mapping (v1, v2) -> vDst

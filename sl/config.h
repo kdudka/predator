@@ -135,6 +135,11 @@
 #define SE_DEFER_SLS_INTRO                  0
 
 /**
+ * if 1, do not use alignment tracking unless we get it for free
+ */
+#define SE_DISABLE_ALIGNMENT_TRACKING       0
+
+/**
  * if 1, do not use DLS (Doubly-linked List Segment) abstraction
  */
 #define SE_DISABLE_DLS                      0

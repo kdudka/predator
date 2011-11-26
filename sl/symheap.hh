@@ -120,6 +120,8 @@ struct CustomValue {
     CustomValue(ECustomValue code_):
         code(code_)
     {
+        if (CV_INT_RANGE == code_)
+            this->data.rng = IR::FullRange;
     }
 };
 

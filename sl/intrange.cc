@@ -32,8 +32,9 @@ const TInt IntMin = LONG_MIN;
 const TInt IntMax = LONG_MAX;
 
 const Range FullRange = {
-    IntMin,
-    IntMax
+    /* lo        */ IntMin,
+    /* hi        */ IntMax,
+    /* alignment */ Int1
 };
 
 // we use the bit next to MSB to detect improper handling of IntMin/IntMax
@@ -46,6 +47,7 @@ const Range FullRange = {
         (IntMax != (n) && RZ_MAX < (n)))
 
 void chkRange(const Range &rng) {
+    // check red zone
     CL_BREAK_IF(RZ_CORRUPTION(rng.lo));
     CL_BREAK_IF(RZ_CORRUPTION(rng.hi));
     CL_BREAK_IF(IntMax == rng.lo);
@@ -54,7 +56,37 @@ void chkRange(const Range &rng) {
     // we do not allow empty ranges
     CL_BREAK_IF(rng.hi < rng.lo);
 
-    (void) rng;
+    // check alignment
+    CL_BREAK_IF(rng.alignment < Int1);
+    CL_BREAK_IF(rng.lo % rng.alignment);
+    CL_BREAK_IF(rng.hi % rng.alignment);
+    if (IntMin != rng.lo && IntMax != rng.hi)
+        CL_BREAK_IF(1 + rng.hi - rng.lo < rng.alignment);
+}
+
+// TODO: replace this implementation by something useful (it can loop badly)
+TInt greatestCommonDivisor(TInt a, TInt b) {
+    CL_BREAK_IF(a < RZ_MIN || RZ_MAX < a);
+    CL_BREAK_IF(b < RZ_MIN || RZ_MAX < b);
+
+#if SE_DISABLE_ALIGNMENT_TRACKING
+    return Int1;
+#endif
+
+    if (a < Int0)
+        a = -a;
+    if (b < Int0)
+        b = -b;
+
+    while (a != b) {
+        if (a < b)
+            b -= a;
+        else
+            a -= b;
+    }
+
+    CL_BREAK_IF(a < Int1);
+    return a;
 }
 
 bool isCovered(const Range &small, const Range &big) {
@@ -62,12 +94,19 @@ bool isCovered(const Range &small, const Range &big) {
     chkRange(big);
 
     return (big.lo <= small.lo)
-        && (small.hi <= big.hi);
+        && (small.hi <= big.hi)
+        && (Int1 == big.alignment || big.alignment ==
+                greatestCommonDivisor(small.alignment, big.alignment));
 }
 
 bool isSingular(const Range &range) {
     chkRange(range);
     return (range.lo == range.hi);
+}
+
+bool isAligned(const Range &range) {
+    chkRange(range);
+    return (Int1 < range.alignment);
 }
 
 TInt widthOf(const Range &range) {
@@ -127,11 +166,13 @@ inline void rngBinOp(Range &rng, const Range &other, const EIntBinOp code) {
 
 Range& operator+=(Range &rng, const Range &other) {
     rngBinOp(rng, other, IBO_ADD);
+    rng.alignment = greatestCommonDivisor(rng.alignment, other.alignment);
     return rng;
 }
 
 Range& operator*=(Range &rng, const Range &other) {
     rngBinOp(rng, other, IBO_MUL);
+    rng.alignment *= other.alignment;
     return rng;
 }
 

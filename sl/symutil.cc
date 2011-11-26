@@ -60,8 +60,7 @@ bool rangeFromVal(IR::Range *pDst, const SymHeap &sh, const TValId val) {
     IR::TInt num;
     if (numFromVal(&num, sh, val)) {
         // a single number
-        pDst->lo = num;
-        pDst->hi = num;
+        *pDst = IR::rngFromNum(num);
         return true;
     }
 

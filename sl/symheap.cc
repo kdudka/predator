@@ -1852,6 +1852,11 @@ TValId SymHeapCore::valByRange(TValId at, IR::Range range) {
     const TOffset offset = valData->offRoot;
     range += IR::rngFromNum(offset);
 
+    if (isAligned(range)) {
+        CL_BREAK_IF("TODO: deal better with alignment");
+        range.alignment = IR::Int1;
+    }
+
     // create a new range value
     RangeValue *rangeData = new RangeValue(range);
     const TValId val = d->assignId(rangeData);
@@ -2184,6 +2189,12 @@ IR::Range SymHeapCore::valOffsetRange(TValId val) const {
     // shift the range (if not already saturated) and return the result
     IR::Range range = rangeData->range;
     range += IR::rngFromNum(off);
+
+    if (isAligned(range)) {
+        CL_BREAK_IF("TODO: deal better with alignment");
+        range.alignment = IR::Int1;
+    }
+
     return range;
 }
 
