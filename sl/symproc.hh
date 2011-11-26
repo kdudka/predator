@@ -130,9 +130,6 @@ class SymProc {
         /// if true, the current state is not going to be inserted into dst
         bool hasFatalError() const;
 
-        /// compute the result of a CL_BINOP_POINTER_PLUS operation
-        TValId handlePointerPlus(TValId at, TValId off, bool negOffset = false);
-
     protected:
         TValId varAt(const CVar &cv);
         TValId varAt(const struct cl_operand &op);

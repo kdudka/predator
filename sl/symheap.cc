@@ -1845,9 +1845,14 @@ TValId SymHeapCore::valByRange(TValId at, IR::Range range) {
     if (VAL_NULL == at || isGone(valData->code))
         return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
-    CL_BREAK_IF(!isPossibleToDeref(valData->code));
+    const EValueTarget code = valData->code;
+    CL_BREAK_IF(!isAnyDataArea(code));
 
-    // subtract the root offset
+    // include the offset range of the anchor
+    if (VT_RANGE == code)
+        range += DCAST<const RangeValue *>(valData)->range;
+
+    // include the relative offset of the starting point
     const TValId valRoot = valData->valRoot;
     const TOffset offset = valData->offRoot;
     range += IR::rngFromNum(offset);

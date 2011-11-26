@@ -1473,23 +1473,25 @@ TValId SymProc::handleIntegralOp(TValId val, enum cl_unop_e code) {
     }
 }
 
-TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
-    IR::TInt num;
-    if (!numFromVal(&num, sh_, off)) {
-        CL_DEBUG_MSG(lw_, "pointer plus offset not a known integer");
-        return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+TValId handlePointerPlus(
+        SymHeap                     &sh,
+        const TValId                vPtr,
+        const TValId                vInt,
+        const bool                  negOffset = false)
+{
+    IR::Range rng;
+    if (!rangeFromVal(&rng, sh, vInt)) {
+        CL_DEBUG("pointer plus offset not a known integer");
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 
-    TOffset offRequested = static_cast<TOffset>(num);
     if (negOffset)
-        offRequested = -offRequested;
+        rng = -rng;
 
-    CL_DEBUG("handlePointerPlus(): " << offRequested << "b offset requested");
-    return sh_.valByOffset(at, offRequested);
+    return sh.valByRange(vPtr, rng);
 }
 
-// TODO: move this to symutil?
-bool isIntCst(const SymHeap &sh, const TValId val) {
+bool isAnyIntValue(const SymHeap &sh, const TValId val) {
     switch (val) {
         case VAL_NULL:
         case VAL_TRUE:
@@ -1503,7 +1505,15 @@ bool isIntCst(const SymHeap &sh, const TValId val) {
     }
 
     const CustomValue &cv = sh.valUnwrapCustom(val);
-    return (CV_INT == cv.code);
+    const ECustomValue code = cv.code;
+    switch (code) {
+        case CV_INT:
+        case CV_INT_RANGE:
+            return true;
+
+        default:
+            return false;
+    }
 }
 
 TValId handlePtrBitAnd(
@@ -1542,10 +1552,10 @@ TValId handlePtrOperator(
 
     switch (code) {
         case CL_BINOP_PLUS:
-            return proc.handlePointerPlus(vPtr, vInt, /* negOffset */ false);
+            return handlePointerPlus(sh, vPtr, vInt, /* negOffset */ false);
 
         case CL_BINOP_MINUS:
-            return proc.handlePointerPlus(vPtr, vInt, /* negOffset */ true);
+            return handlePointerPlus(sh, vPtr, vInt, /* negOffset */ true);
 
         case CL_BINOP_BIT_AND:
             return handlePtrBitAnd(proc, vPtr, vInt);
@@ -1576,13 +1586,13 @@ bool reconstructPtrArithmetic(
 
     const SymHeap &sh = proc.sh();
 
-    if (isAnyDataArea(sh.valTarget(v1)) && isIntCst(sh, v2)) {
+    if (isAnyDataArea(sh.valTarget(v1)) && isAnyIntValue(sh, v2)) {
         CL_DEBUG("integral operator applied on ptr handled as ptr operator...");
         *pResult = handlePtrOperator(proc, /* vPtr */ v1, /* vInt */ v2, code);
         return true;
     }
 
-    if (isAnyDataArea(sh.valTarget(v2)) && isIntCst(sh, v1)) {
+    if (isAnyDataArea(sh.valTarget(v2)) && isAnyIntValue(sh, v1)) {
         if (CL_BINOP_MINUS == code)
             // CL_BINOP_MINUS makes no sense here, it would mean e.g. (4 - &foo)
             return false;
@@ -1696,7 +1706,7 @@ struct OpHandler</* binary */ 2> {
                     goto handle_int;
 
             case CL_BINOP_POINTER_PLUS:
-                return proc.handlePointerPlus(rhs[0], rhs[1]);
+                return handlePointerPlus(sh, rhs[0], rhs[1]);
 
             default:
                 // over-approximate anything else
