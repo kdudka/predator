@@ -508,10 +508,11 @@ void insnToStream(std::ostream &str, const CodeStorage::Insn &insn) {
 
         case CL_INSN_LABEL:
             if (CL_OPERAND_VOID == opList[0].code)
-                break;
-
-            CL_BREAK_IF(CL_TYPE_STRING != opList[0].data.cst.code);
-            str << opList[/* name */ 0].data.cst.data.cst_string.value << ":";
+                str << "<anon_label>:";
+            else {
+                CL_BREAK_IF(CL_TYPE_STRING != opList[0].data.cst.code);
+                str << opList[/* name */ 0].data.cst.data.cst_string.value << ":";
+            }
             break;
     }
 }
