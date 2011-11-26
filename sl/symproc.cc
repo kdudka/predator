@@ -1354,9 +1354,8 @@ inline bool handleRangeByScalarOp(
         const IR::Range            &rng2,
         const TFnc                  fnc)
 {
-    const bool isRange1 = !isSingular(rng1);
-    const bool isRange2 = !isSingular(rng2);
-    if (isRange1 == isRange2)
+    bool isRange1;
+    if (!isRangeByNum(&isRange1, rng1, rng2))
         return false;
 
     if (isRange1)

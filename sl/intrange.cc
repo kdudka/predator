@@ -89,6 +89,16 @@ TInt greatestCommonDivisor(TInt a, TInt b) {
     return a;
 }
 
+bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range rng2) {
+    const bool isRange1 = !isSingular(rng1);
+    const bool isRange2 = !isSingular(rng2);
+    if (isRange1 == isRange2)
+        return false;
+
+    *pIsRange1 = isRange1;
+    return true;
+}
+
 bool isCovered(const Range &small, const Range &big) {
     chkRange(small);
     chkRange(big);
@@ -160,19 +170,68 @@ inline void rngBinOp(Range &rng, const Range &other, const EIntBinOp code) {
         else
             intBinOp(&rng.hi, other.hi, code);
     }
+}
 
+// TODO: expose for public?
+TInt alignmentOf(const Range &rng) {
     chkRange(rng);
+
+    if (!isSingular(rng))
+        return rng.alignment;
+
+    CL_BREAK_IF(Int1 != rng.alignment);
+    const TInt num = rng.lo;
+    if (!num)
+        return Int1;
+    else if (num < Int0)
+        return -num;
+    else
+        return num;
 }
 
 Range& operator+=(Range &rng, const Range &other) {
+    // this needs to be done before rng is modified
+    const TInt al1 = alignmentOf(rng);
+    const TInt al2 = alignmentOf(other);
+
+    // perform the actual range operation
     rngBinOp(rng, other, IBO_ADD);
-    rng.alignment = greatestCommonDivisor(rng.alignment, other.alignment);
+
+    // compute the resulting alignment
+    rng.alignment = Int1;
+    if (!isSingular(rng))
+        rng.alignment = greatestCommonDivisor(al1, al2);
+
+    chkRange(rng);
     return rng;
 }
 
 Range& operator*=(Range &rng, const Range &other) {
+    // this needs to be done before rng is modified
+    TInt coef = Int1;
+    bool isRange1;
+    if (isRangeByNum(&isRange1, rng, other))
+        coef = (isRange1) ? other.lo : rng.lo;
+
+    if (Int0 == coef)
+        // the result is going to be zero anyway
+        coef = Int1;
+    else if (coef < Int0)
+        // TODO: double check if we are still on the safe side here
+        coef = -coef;
+
+    // perform the actual range operation
     rngBinOp(rng, other, IBO_MUL);
-    rng.alignment *= other.alignment;
+
+    if (rng.lo == rng.hi)
+        rng.alignment = Int1;
+    else {
+        // compute the resulting alignment
+        rng.alignment *= other.alignment;
+        rng.alignment *= coef;
+    }
+
+    chkRange(rng);
     return rng;
 }
 
