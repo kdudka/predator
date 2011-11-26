@@ -1978,6 +1978,36 @@ TValId SymHeapCore::valMultiplyRange(const TValId val, const IR::TInt coef) {
     return result;
 }
 
+TValId SymHeapCore::valBitMaskRange(const TValId val, const IR::TInt mask) {
+    if (!mask)
+        // everything masked, we are back to zero
+        return VAL_NULL;
+
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
+    if (VT_CUSTOM != valData->code) {
+        CL_BREAK_IF("valBitMaskRange() needs to be improved");
+        return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    }
+
+    // go through all dependent values and find the multiplication coefficient
+    IR::TInt coef = IR::Int0;
+    TValList related;
+    d->coinDb->gatherRelatedValues(related, valData->anchor);
+    BOOST_FOREACH(const TValId valDep, related) {
+        CL_BREAK_IF(IR::Int0 != coef);
+        if (!d->coinDb->chk(&coef, val, valDep))
+            coef = IR::Int0;
+    }
+
+    if (IR::Int0 == coef)
+        // multiplication coefficient not found
+        return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    CL_BREAK_IF("please implement");
+    return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+}
+
 TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
     const TValId root1 = this->valRoot(v1);
     const TValId root2 = this->valRoot(v2);

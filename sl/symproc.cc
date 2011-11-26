@@ -1368,6 +1368,12 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
 
         // first try to preserve range coincidence if we can
         switch (code) {
+            case CL_BINOP_BIT_AND:
+                if (handleRangeByScalarOp(&result, sh_, v1, v2, rng1, rng2,
+                            &SymHeapCore::valBitMaskRange))
+                    return result;
+                break;
+
             case CL_BINOP_MULT:
                 if (handleRangeByScalarOp(&result, sh_, v1, v2, rng1, rng2,
                             &SymHeapCore::valMultiplyRange))
