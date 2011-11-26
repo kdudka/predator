@@ -172,7 +172,6 @@ inline void rngBinOp(Range &rng, const Range &other, const EIntBinOp code) {
     }
 }
 
-// TODO: expose for public?
 TInt alignmentOf(const Range &rng) {
     chkRange(rng);
 
@@ -253,6 +252,21 @@ bool isZeroIntersection(TInt alignment, TInt mask) {
     return false;
 }
 
+TInt maskToAlignment(TInt mask) {
+    if (!mask) {
+        CL_BREAK_IF("invalid call of maskToAlignment()");
+        return Int1;
+    }
+
+    TInt alignment = Int1;
+    while (!(mask & 1)) {
+        alignment <<= 1;
+        mask >>= 1;
+    }
+
+    return alignment;
+}
+
 Range& operator&=(Range &rng, TInt mask) {
     if (isZeroIntersection(rng.alignment, mask))
         // the whole range was masked, we are back to zero
@@ -265,7 +279,9 @@ Range& operator&=(Range &rng, TInt mask) {
     // include all possible scenarios into consideration
     rng.lo       &= mask;
     rng.hi       &= mask;
-    rng.alignment = -mask;
+    rng.alignment = maskToAlignment(mask);
+
+    chkRange(rng);
     return rng;
 }
 

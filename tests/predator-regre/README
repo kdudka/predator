@@ -697,6 +697,8 @@ Tests taken from Forester
 
     test-0201.c - a regression test for alignment of integral ranges
 
+    test-0202.c - a tiny regression test for alignment of integral ranges
+
 
 Tiny DLL library written on scratch
 ===================================
