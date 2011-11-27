@@ -90,7 +90,7 @@ class NeqDb: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
 
 // /////////////////////////////////////////////////////////////////////////////
 // CoincidenceDb lookup container
-class CoincidenceDb: public SymPairMap<TValId, bool> {
+class CoincidenceDb: public SymPairMap</* v1, v2 */ TValId, TValId /* sum */> {
     public:
         RefCounter refCnt;
 
@@ -325,7 +325,7 @@ struct BaseValue: public AbstractHeapEntity {
     EValueTarget                    code;
     EValueOrigin                    origin;
     TValId                          valRoot;
-    TOffset                         offRoot;
+    TOffset /* FIXME: misleading */ offRoot;
     TObjIdSet                       usedBy;
     TValId                          anchor;
 
@@ -537,7 +537,7 @@ struct SymHeapCore::Private {
             const unsigned          size,
             TValSet                 *killedPtrs);
 
-    void bindValues(TValId v1, TValId v2, bool neg);
+    void bindValues(TValId v1, TValId v2, TValId valSum);
 
     TValId shiftCustomValue(TValId val, TOffset shift);
 
@@ -1674,9 +1674,23 @@ TObjType SymHeapCore::objType(TObjId obj) const {
 TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     const InternalCustomValue *customDataRef;
     this->ents.getEntRO(&customDataRef, ref);
+    const CustomValue &cvRef = customDataRef->customData;
 
-    CL_BREAK_IF(CV_INT_RANGE != customDataRef->customData.code);
-    const IR::Range &rngRef = customDataRef->customData.data.rng;
+    // TODO: move the following hunk to a generic function
+    IR::Range rngRef;
+    const ECustomValue code = cvRef.code;
+    switch (code) {
+        case CV_INT:
+            rngRef = IR::rngFromNum(cvRef.data.num);
+            break;
+
+        case CV_INT_RANGE:
+            rngRef = cvRef.data.rng;
+            break;
+
+        default:
+            CL_BREAK_IF("shiftCustomValue() got something special");
+    }
 
     // prepare a custom value template and compute the shifted range
     CustomValue cv(CV_INT_RANGE);
@@ -1687,6 +1701,7 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     InternalCustomValue *customData;
     this->ents.getEntRW(&customData, val);
     customData->anchor      = customDataRef->anchor;
+    customData->offRoot     = customDataRef->offRoot + shift;
     customData->customData  = cv;
 
     // register this value as a dependent value by the anchor
@@ -1889,6 +1904,7 @@ TValId SymHeapCore::valShift(TValId valToShift, TValId shiftBy) {
     const EValueTarget code = valData->code;
 
     if (isSingular(rng)) {
+        // the value is going the be shifted by a known integer (not a range)
         const IR::TInt off = rng.lo;
 
         if (VT_CUSTOM == code)
@@ -1900,8 +1916,31 @@ TValId SymHeapCore::valShift(TValId valToShift, TValId shiftBy) {
     if (isPossibleToDeref(code))
         return this->valByRange(valToShift, rng);
 
+    if (VT_RANGE != code) {
+        CL_BREAK_IF("unhandled call of SymHeapCore::valShift()");
+        return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    }
+
+    // split valToShift to anchor/offset
+    const TValId anchor1 = valData->anchor;
+    const TOffset off1   = valData->offRoot;
+
+    // split shiftBy to anchor/offset
+    const BaseValue *shiftData;
+    d->ents.getEntRO(&shiftData, shiftBy);
+    const TValId anchor2 = shiftData->anchor;
+    const TOffset off2   = shiftData->offRoot;
+
+    // lookup on anchors, then subtract the offsets if succeeded
+    TValId valResult;
+    if (d->coinDb->chk(&valResult, anchor1, anchor2))
+        return this->valByOffset(valResult, off1 + off2);
+
+    // TODO: a better implementation of this
     CL_BREAK_IF("please implement");
-    return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    IR::Range rngResult = this->valOffsetRange(valToShift);
+    rngResult += rng;
+    return this->valByRange(valData->valRoot, rngResult);
 }
 
 void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {
@@ -1969,31 +2008,23 @@ void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {
     }
 }
 
-void SymHeapCore::Private::bindValues(TValId v1, TValId v2, bool neg) {
+void SymHeapCore::Private::bindValues(TValId v1, TValId v2, TValId valSum) {
     const BaseValue *valData1, *valData2;
     this->ents.getEntRO(&valData1, v1);
     this->ents.getEntRO(&valData2, v2);
+
+    const TOffset off1 = valData1->offRoot;
+    const TOffset off2 = valData2->offRoot;
+    if (off1 || off2) {
+        CL_BREAK_IF("bindValues() does not support offsets yet");
+        return;
+    }
 
     const TValId anchor1 = valData1->anchor;
     const TValId anchor2 = valData2->anchor;
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->coinDb);
-    this->coinDb->add(anchor1, anchor2, neg);
-}
-
-bool SymHeapCore::areBound(bool *pNeg, TValId v1, TValId v2) {
-    const BaseValue *valData1, *valData2;
-    d->ents.getEntRO(&valData1, v1);
-    d->ents.getEntRO(&valData2, v2);
-
-    const TValId anchor1 = valData1->anchor;
-    const TValId anchor2 = valData2->anchor;
-
-    if (d->coinDb->chk(pNeg, anchor1, anchor2))
-        return true;
-
-    CL_DEBUG("SymHeapCore::areBound() returns false");
-    return false;
+    this->coinDb->add(anchor1, anchor2, valSum);
 }
 
 TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
@@ -2020,12 +2051,7 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
         // good luck, the difference is a scalar
         return valDiff;
 
-    if (isSingular(off2))
-        d->bindValues(valDiff, v1, /* neg */ false);
-
-    if (isSingular(off1))
-        d->bindValues(valDiff, v2, /* neg */ true);
-
+    d->bindValues(v2, valDiff, /* sum */ v1);
     return valDiff;
 }
 
@@ -2152,12 +2178,20 @@ TOffset SymHeapCore::valOffset(TValId val) const {
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
-    if (VT_RANGE == valData->code) {
-        CL_BREAK_IF("valOffset() called on VT_RANGE, which is not supported");
-        return -1;
-    }
 
-    return valData->offRoot;
+    const EValueTarget code = valData->code;
+    switch (code) {
+        case VT_RANGE:
+            CL_BREAK_IF("valOffset() called on VT_RANGE, which is not supported");
+            // fall through!
+
+        case VT_CUSTOM:
+            // FIXME: valData->offRoot is used internally for unrelated purposes
+            return 0;
+
+        default:
+            return valData->offRoot;
+    }
 }
 
 IR::Range SymHeapCore::valOffsetRange(TValId val) const {

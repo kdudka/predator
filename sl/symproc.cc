@@ -795,22 +795,10 @@ void executeMemset(
     // resolve address range
     IR::Range addrRange = sh.valOffsetRange(addr);
 
-    // deduce whether the end is fixed or not
-    bool isEndFixed = isSingular(addrRange) && isSingular(sizeRange);
-    if (!isEndFixed && (widthOf(addrRange) == widthOf(sizeRange))) {
-        bool neg;
-        if (sh.areBound(&neg, addr, valSize) && neg)
-            // size grows in the opposite direction than address --> fixed end
-            isEndFixed = true;
-    }
-
     // how much memory are we going to touch in the worst case?
-    IR::Range totalRange;
-    totalRange.alignment = IR::Int1;
+    const TValId valLimit = sh.valShift(addr, valSize);
+    IR::Range totalRange = sh.valOffsetRange(valLimit);
     totalRange.lo = addrRange.lo;
-    totalRange.hi = addrRange.hi + ((isEndFixed)
-        ? sizeRange.lo
-        : sizeRange.hi);
 
     // check the pointer - is it valid? do we have enough allocated memory?
     const TValId root = sh.valRoot(addr);
