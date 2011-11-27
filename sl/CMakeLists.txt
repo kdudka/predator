@@ -108,7 +108,7 @@ if(TEST_ONLY_FAST)
 else()
     # expensive tests
     set(tests ${tests}
-        0167 0124 0157 0521 0412 0405 0409 0407 0410 0413)
+        0167 0414 0124 0157 0521 0412 0405 0409 0407 0410 0413)
 endif()
 
 set(cost 1048576)
