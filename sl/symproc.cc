@@ -1289,7 +1289,7 @@ bool reflectCmpResult(
 
 bool computeIntRngResult(
         TValId                      *pDst,
-        SymHeap                     &sh,
+        SymHeapCore                 &sh,
         const enum cl_binop_e       code,
         const IR::Range             rng1,
         const IR::Range             rng2)
@@ -1387,52 +1387,57 @@ bool handleRangeBitMask(
     return true;
 }
 
-TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
+TValId handleIntegralOp(
+        SymHeapCore                &sh,
+        const TValId                v1,
+        const TValId                v2,
+        const enum cl_binop_e       code)
+{
     if (CL_BINOP_MINUS == code) {
         // chances are this could be a pointer difference
-        const EValueTarget code1 = sh_.valTarget(v1);
-        const EValueTarget code2 = sh_.valTarget(v2);
+        const EValueTarget code1 = sh.valTarget(v1);
+        const EValueTarget code2 = sh.valTarget(v2);
 
         if (isAnyDataArea(code1) && isAnyDataArea(code2))
             // ... and it indeed is a pointer difference
-            return sh_.diffPointers(v1, v2);
+            return sh.diffPointers(v1, v2);
     }
 
     TValId result;
 
     // check whether we both values are integral constant
     IR::Range rng1, rng2;
-    if (rangeFromVal(&rng1, sh_, v1) && rangeFromVal(&rng2, sh_, v2)) {
+    if (rangeFromVal(&rng1, sh, v1) && rangeFromVal(&rng2, sh, v2)) {
 
         // first try to preserve range coincidence if we can
         switch (code) {
             case CL_BINOP_BIT_AND:
-                if (handleRangeBitMask(&result, sh_, v1, v2, rng1, rng2))
+                if (handleRangeBitMask(&result, sh, v1, v2, rng1, rng2))
                     return result;
                 break;
 
             case CL_BINOP_PLUS:
-                if (handleRangeByScalarPlus(&result, sh_, v1, v2, rng1, rng2))
+                if (handleRangeByScalarPlus(&result, sh, v1, v2, rng1, rng2))
                     return result;
                 break;
 
             case CL_BINOP_MINUS:
                 if (!isSingular(rng1) && isSingular(rng2))
-                    return sh_.valByOffset(v1, -rng2.lo);
+                    return sh.valByOffset(v1, -rng2.lo);
                 break;
 
             default:
                 break;
         }
 
-        if (computeIntRngResult(&result, sh_, code, rng1, rng2))
+        if (computeIntRngResult(&result, sh, code, rng1, rng2))
             return result;
     }
 
-    return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
-TValId handleBitNot(SymHeap &sh, const TValId val) {
+TValId handleBitNot(SymHeapCore &sh, const TValId val) {
     // check whether the value is an integral constant
     IR::TInt num;
     if (!numFromVal(&num, sh, val))
@@ -1447,39 +1452,25 @@ TValId handleBitNot(SymHeap &sh, const TValId val) {
     return sh.valWrapCustom(cv);
 }
 
-TValId SymProc::handleIntegralOp(TValId val, enum cl_unop_e code) {
+TValId handleIntegralOp(
+        SymHeapCore                 &sh,
+        const TValId                val,
+        const enum cl_unop_e        code)
+{
     switch (code) {
         case CL_UNOP_MINUS:
-            return this->handleIntegralOp(VAL_NULL, val, CL_BINOP_MINUS);
+            return handleIntegralOp(sh, VAL_NULL, val, CL_BINOP_MINUS);
 
         case CL_UNOP_BIT_NOT:
-            return handleBitNot(sh_, val);
+            return handleBitNot(sh, val);
 
         default:
             CL_BREAK_IF("unhandled unary integral operation");
-            return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+            return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 }
 
-TValId handlePointerPlus(
-        SymHeap                     &sh,
-        const TValId                vPtr,
-        const TValId                vInt,
-        const bool                  negOffset = false)
-{
-    IR::Range rng;
-    if (!rangeFromVal(&rng, sh, vInt)) {
-        CL_DEBUG("pointer plus offset not a known integer");
-        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-    }
-
-    if (negOffset)
-        rng = -rng;
-
-    return sh.valByRange(vPtr, rng);
-}
-
-bool isAnyIntValue(const SymHeap &sh, const TValId val) {
+bool isAnyIntValue(const SymHeapCore &sh, const TValId val) {
     switch (val) {
         case VAL_NULL:
         case VAL_TRUE:
@@ -1505,12 +1496,10 @@ bool isAnyIntValue(const SymHeap &sh, const TValId val) {
 }
 
 TValId handlePtrBitAnd(
-        SymProc                    &proc,
+        SymHeapCore                &sh,
         const TValId                vPtr,
         const TValId                vInt)
 {
-    SymHeap &sh = proc.sh();
-
     IR::TInt mask;
     if (!numFromVal(&mask, sh, vInt) || 0 < mask)
         // giving up
@@ -1531,33 +1520,33 @@ TValId handlePtrBitAnd(
 }
 
 TValId handlePtrOperator(
-        SymProc                    &proc,
+        SymHeapCore                &sh,
         const TValId                vPtr,
-        const TValId                vInt,
+        TValId                      vInt,
         const enum cl_binop_e       code)
 {
-    SymHeap &sh = proc.sh();
-
     switch (code) {
-        case CL_BINOP_PLUS:
-            return handlePointerPlus(sh, vPtr, vInt, /* negOffset */ false);
-
         case CL_BINOP_MINUS:
-            return handlePointerPlus(sh, vPtr, vInt, /* negOffset */ true);
+            vInt = handleIntegralOp(sh, vInt, CL_UNOP_MINUS);
+            // fall through!
+
+        case CL_BINOP_PLUS:
+            return sh.valShift(vPtr, vInt);
 
         case CL_BINOP_BIT_AND:
-            return handlePtrBitAnd(proc, vPtr, vInt);
+            return handlePtrBitAnd(sh, vPtr, vInt);
 
         default:
             CL_BREAK_IF("unhandled binary operator in handlePtrOperator()");
-            return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
+
+    return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
 /// ptr arithmetic is sometimes (with CIL always) masked as integral arithmetic
 bool reconstructPtrArithmetic(
         TValId                     *pResult,
-        SymProc                    &proc,
+        SymHeapCore                &sh,
         const TValId                v1,
         const TValId                v2,
         const enum cl_binop_e       code)
@@ -1572,11 +1561,9 @@ bool reconstructPtrArithmetic(
         return true;
     }
 
-    const SymHeap &sh = proc.sh();
-
     if (isAnyDataArea(sh.valTarget(v1)) && isAnyIntValue(sh, v2)) {
         CL_DEBUG("integral operator applied on ptr handled as ptr operator...");
-        *pResult = handlePtrOperator(proc, /* vPtr */ v1, /* vInt */ v2, code);
+        *pResult = handlePtrOperator(sh, /* vPtr */ v1, /* vInt */ v2, code);
         return true;
     }
 
@@ -1586,7 +1573,7 @@ bool reconstructPtrArithmetic(
             return false;
 
         CL_DEBUG("integral operator applied on ptr handled as ptr operator...");
-        *pResult = handlePtrOperator(proc, /* vPtr */ v2, /* vInt */ v1, code);
+        *pResult = handlePtrOperator(sh, /* vPtr */ v2, /* vInt */ v1, code);
         return true;
     }
 
@@ -1621,7 +1608,7 @@ struct OpHandler</* unary */ 1> {
             case CL_UNOP_BIT_NOT:
                 if (!clt[0] || CL_TYPE_BOOL != clt[0]->code
                         || !clt[1] || CL_TYPE_BOOL != clt[1]->code)
-                    return proc.handleIntegralOp(val, code);
+                    return handleIntegralOp(sh, val, code);
                 // gcc 4.7.x uses CL_UNOP_BIT_NOT for bools with truth semantics
                 // fall through!
 
@@ -1629,7 +1616,7 @@ struct OpHandler</* unary */ 1> {
                 return compareValues(sh, CL_BINOP_EQ, clt[0], VAL_FALSE, val);
 
             case CL_UNOP_MINUS:
-                return proc.handleIntegralOp(rhs[0], code);
+                return handleIntegralOp(sh, rhs[0], code);
 
             case CL_UNOP_ASSIGN:
                 return val;
@@ -1688,7 +1675,7 @@ struct OpHandler</* binary */ 2> {
 
             case CL_BINOP_PLUS:
             case CL_BINOP_MINUS:
-                if (reconstructPtrArithmetic(&vRes, proc, rhs[0], rhs[1], code))
+                if (reconstructPtrArithmetic(&vRes, sh, rhs[0], rhs[1], code))
                     return vRes;
                 else
                     goto handle_int;
@@ -1702,7 +1689,7 @@ struct OpHandler</* binary */ 2> {
         }
 
 handle_int:
-        return proc.handleIntegralOp(rhs[0], rhs[1], code);
+        return handleIntegralOp(sh, rhs[0], rhs[1], code);
     }
 };
 
