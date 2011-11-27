@@ -1322,8 +1322,7 @@ bool computeIntRngResult(
     }
 
     // wrap the result as a heap value
-    CustomValue cv(CV_INT_RANGE);
-    cv.data.rng = result;
+    const CustomValue cv(result);
     *pDst = sh.valWrapCustom(cv);
     return true;
 }

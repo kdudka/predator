@@ -1675,11 +1675,9 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     const InternalCustomValue *customDataRef;
     this->ents.getEntRO(&customDataRef, ref);
 
-    const IR::Range rngRef = rngFromCustom(customDataRef->customData);
-
     // prepare a custom value template and compute the shifted range
-    CustomValue cv(CV_INT_RANGE);
-    cv.data.rng = rngRef + IR::rngFromNum(shift);
+    const IR::Range rngRef = rngFromCustom(customDataRef->customData);
+    const CustomValue cv(rngRef + IR::rngFromNum(shift));
 
     // create a new CV_INT_RANGE custom value (do not recycle existing)
     const TValId val = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
@@ -1945,8 +1943,7 @@ void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {
 
         case VT_UNKNOWN:
             if (!isSingular(win)) {
-                CustomValue cv(CV_INT_RANGE);
-                cv.data.rng = win;
+                const CustomValue cv(win);
                 this->valReplace(val, this->valWrapCustom(cv));
                 return;
             }
@@ -2024,17 +2021,12 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
     const IR::Range off1 = this->valOffsetRange(v1);
     const IR::Range off2 = this->valOffsetRange(v2);
 
-    // prepare a custom value for the result
-    CustomValue cv(CV_INT_RANGE);
-    IR::Range &diff = cv.data.rng;
-
     // TODO: check for an already existing coincidence to improve the precision
 
     // compute the difference and wrap it as a heap value
-    diff = off1 - off2;
-
+    const CustomValue cv(off1 - off2);
     const TValId valDiff = this->valWrapCustom(cv);
-    if (isSingular(diff))
+    if (CV_INT == cv.code)
         // good luck, the difference is a scalar
         return valDiff;
 
@@ -2850,11 +2842,18 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
     const InternalCustomValue *valData;
     d->ents.getEntRO(&valData, val);
 
-    if (CV_INT_RANGE != valData->customData.code)
+    const CustomValue &cv = valData->customData;
+    const ECustomValue code = cv.code;
+
+    if (CV_INT_RANGE != code)
         // check the consistency of backward mapping
         CL_BREAK_IF(val != d->cValueMap->lookup(valData->customData));
 
-    return valData->customData;
+    if (CV_INT == code)
+        // VAL_FALSE/VAL_TRUE are not supposed to be wrapped as custom values
+        CL_BREAK_IF(IR::Int0 == cv.data.num || IR::Int1 == cv.data.num);
+
+    return cv;
 }
 
 bool SymHeapCore::valTargetIsProto(TValId val) const {

@@ -123,6 +123,17 @@ struct CustomValue {
         if (CV_INT_RANGE == code_)
             this->data.rng = IR::FullRange;
     }
+
+    CustomValue(const IR::Range &rng):
+        code(CV_INT_RANGE)
+    {
+        if (isSingular(rng)) {
+            code = CV_INT;
+            data.num = rng.lo;
+        }
+        else
+            data.rng = rng;
+    }
 };
 
 bool operator==(const CustomValue &a, const CustomValue &b);
