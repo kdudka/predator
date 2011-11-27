@@ -176,7 +176,7 @@ bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val) {
     if (!isPossibleToDeref(sh.valTarget(val)))
         return false;
 
-    static TOffset ptrSize;
+    static TSizeOf ptrSize;
     if (!ptrSize)
         ptrSize = sh.stor().types.dataPtrSizeof();
 

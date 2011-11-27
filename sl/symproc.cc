@@ -183,7 +183,7 @@ const char* describeRootObj(const EValueTarget code) {
 void reportDerefOutOfBounds(
         SymProc                         &proc,
         const TValId                    val,
-        const TOffset                   sizeOfTarget)
+        const TSizeOf                   sizeOfTarget)
 {
     const struct cl_loc *loc = proc.lw();
     SymHeap &sh = proc.sh();
@@ -197,7 +197,7 @@ void reportDerefOutOfBounds(
     const char *const what = describeRootObj(code);
 
     const TValId root = sh.valRoot(val);
-    const int rootSize = sh.valSizeOfTarget(root);
+    const TSizeOf rootSize = sh.valSizeOfTarget(root);
     CL_BREAK_IF(rootSize <= 0);
 
     const TOffset off = sh.valOffset(val);
@@ -209,7 +209,7 @@ void reportDerefOutOfBounds(
         return;
     }
 
-    int beyond = off - rootSize;
+    TOffset beyond = off - rootSize;
     if (0 <= beyond) {
         CL_NOTE_MSG(loc, "the pointer being dereferenced points "
                 << beyond << "B beyond " << what
@@ -226,7 +226,7 @@ void reportDerefOutOfBounds(
     }
 }
 
-bool SymProc::checkForInvalidDeref(TValId val, const TOffset sizeOfTarget) {
+bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget) {
     if (VAL_NULL == val) {
         CL_ERROR_MSG(lw_, "dereference of NULL value");
         return true;
@@ -317,7 +317,7 @@ TValId SymProc::varAt(const CVar &cv) {
 
     // lazy var creation
     at = sh_.addrOfVar(cv, /* createIfNeeded */ true);
-    const TOffset size = sh_.valSizeOfTarget(at);
+    const TSizeOf size = sh_.valSizeOfTarget(at);
 
     // resolve Var
     const CodeStorage::Storage &stor = sh_.stor();
@@ -543,7 +543,7 @@ void SymProc::heapObjDefineType(const ObjHandle &lhs, TValId rhs) {
         // type but it yet does not mean that we are changing the root type-info
         return;
 
-    const int rootSize = sh_.valSizeOfTarget(rhs);
+    const TSizeOf rootSize = sh_.valSizeOfTarget(rhs);
     CL_BREAK_IF(rootSize <= 0 && isOnHeap(code));
     if (cltLast && cltLast->size == rootSize && cltTarget->size != rootSize)
         // basically the same rule as above but now we check the size of target
@@ -572,8 +572,8 @@ void SymProc::heapSetSingleVal(const ObjHandle &lhs, TValId rhs) {
 
     if (isPossibleToDeref(sh_.valTarget(rhs))) {
         // we are going to write a pointer, check if we have enough space for it
-        const TOffset dstSize = sh_.valSizeOfTarget(lhsAt);
-        const TOffset ptrSize = sh_.stor().types.dataPtrSizeof();
+        const TSizeOf dstSize = sh_.valSizeOfTarget(lhsAt);
+        const TSizeOf ptrSize = sh_.stor().types.dataPtrSizeof();
         if (dstSize < ptrSize) {
             CL_ERROR_MSG(lw_, "not enough space to store value of a pointer");
             CL_NOTE_MSG(lw_, "dstSize: " << dstSize << " B");
@@ -605,7 +605,7 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
 
     const TObjType clt = lhs.objType();
     const bool isComp = isComposite(clt, /* includingArray */ false);
-    const unsigned size = clt->size;
+    const TSizeOf size = clt->size;
     CL_BREAK_IF(!size);
 
     if (VO_DEREF_FAILED == sh_.valOrigin(rhs)) {
@@ -844,7 +844,7 @@ void SymExecCore::varInit(TValId at) {
     if (ep_.trackUninit && VT_ON_STACK == sh_.valTarget(at)) {
         // uninitialized stack variable
         const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
-        const TOffset size = sh_.valSizeOfTarget(at);
+        const TSizeOf size = sh_.valSizeOfTarget(at);
         sh_.writeUniformBlock(at, tpl, size);
     }
 
@@ -917,7 +917,7 @@ void SymExecCore::execFree(TValId val) {
 void SymExecCore::execHeapAlloc(
         SymState                        &dst,
         const CodeStorage::Insn         &insn,
-        const unsigned                  size,
+        const TSizeOf                   size,
         const bool                      nullified)
 {
     // resolve lhs

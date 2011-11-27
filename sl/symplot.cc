@@ -255,7 +255,7 @@ void describeObject(PlotData &plot, const ObjHandle &obj, const bool lonely) {
 
 void plotRootValue(PlotData &plot, const TValId val, const char *color) {
     SymHeap &sh = plot.sh;
-    const unsigned size = sh.valSizeOfTarget(val);
+    const TSizeOf size = sh.valSizeOfTarget(val);
 
     // visualize the count of references as pen width
     const float pw = static_cast<float>(1U + sh.usedByCount(val));

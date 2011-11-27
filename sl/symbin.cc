@@ -103,7 +103,7 @@ void insertCoreHeap(
 }
 
 bool resolveCallocSize(
-        unsigned                                    *pDst,
+        TSizeOf                                     *pDst,
         SymExecCore                                 &core,
         const CodeStorage::TOperandList             &opList)
 {
@@ -283,7 +283,7 @@ bool handleCalloc(
         return false;
     }
 
-    unsigned size;
+    TSizeOf size;
     if (!resolveCallocSize(&size, core, opList)) {
         core.printBackTrace(ML_ERROR);
         return true;

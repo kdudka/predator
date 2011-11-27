@@ -122,7 +122,7 @@ class SymProc {
         void killPerTarget(const CodeStorage::Insn &, unsigned target);
 
         /// check whether we can safely access sizeOfTarget at the given address
-        bool checkForInvalidDeref(TValId val, const TOffset sizeOfTarget);
+        bool checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget);
 
         /// print backtrace and update the current error level correspondingly
         void printBackTrace(EMsgLevel level, bool forcePtrace = false);
@@ -220,7 +220,7 @@ class SymExecCore: public SymProc {
         bool exec(SymState &dst, const CodeStorage::Insn &insn);
 
         void execHeapAlloc(SymState &dst, const CodeStorage::Insn &,
-                           const unsigned size, const bool nullified);
+                           const TSizeOf size, const bool nullified);
 
         void execFree(TValId val);
 
