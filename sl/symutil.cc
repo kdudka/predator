@@ -56,7 +56,7 @@ bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val) {
     return true;
 }
 
-bool rangeFromVal(IR::Range *pDst, const SymHeapCore &sh, const TValId val) {
+bool rngFromVal(IR::Range *pDst, const SymHeapCore &sh, const TValId val) {
     IR::TInt num;
     if (numFromVal(&num, sh, val)) {
         // a single number
@@ -85,7 +85,7 @@ bool anyRangeFromVal(
     const EValueTarget code = sh.valTarget(val);
     if (VT_CUSTOM == code)
         // try to extract an integral range
-        return rangeFromVal(pDst, sh, val);
+        return rngFromVal(pDst, sh, val);
 
     if (VAL_NULL == val || isAnyDataArea(code)) {
         // extract offset range

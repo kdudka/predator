@@ -1347,7 +1347,7 @@ bool joinCustomValues(
     }
 
     IR::Range rng1, rng2;
-    if (!rangeFromVal(&rng1, sh1, v1) || !rangeFromVal(&rng2, sh2, v2)) {
+    if (!rngFromVal(&rng1, sh1, v1) || !rngFromVal(&rng2, sh2, v2)) {
         // throw custom values away and abstract them by a fresh unknown value
         SJ_DEBUG("throwing away unmatched custom values " << SJ_VALP(v1, v2));
         const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);

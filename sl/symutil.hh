@@ -49,7 +49,7 @@ inline TValId boolToVal(const bool b) {
 bool numFromVal(IR::TInt *pDst, const SymHeapCore &, const TValId);
 
 /// extract integral range from the given value if possible, fail otherwise
-bool rangeFromVal(IR::Range *pDst, const SymHeapCore &, const TValId);
+bool rngFromVal(IR::Range *pDst, const SymHeapCore &, const TValId);
 
 /// extract either offset range, or integral range from the given value
 bool anyRangeFromVal(IR::Range *pDst, const SymHeap &, const TValId);

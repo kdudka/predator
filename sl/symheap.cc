@@ -1896,7 +1896,7 @@ TValId SymHeapCore::valShift(TValId valToShift, TValId shiftBy) {
     d->ents.getEntRO(&valData, valToShift);
 
     IR::Range rng;
-    if (!rangeFromVal(&rng, *this, shiftBy)) {
+    if (!rngFromVal(&rng, *this, shiftBy)) {
         CL_BREAK_IF("valShift() needs at least integral range as shiftBy");
         return VAL_INVALID;
     }

@@ -781,7 +781,7 @@ void executeMemset(
 
     // how much we are going to write?
     IR::Range sizeRange;
-    if (!rangeFromVal(&sizeRange, sh, valSize) || sizeRange.lo < 0) {
+    if (!rngFromVal(&sizeRange, sh, valSize) || sizeRange.lo < 0) {
         CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
         proc.printBackTrace(ML_ERROR);
         return;
@@ -1153,7 +1153,7 @@ TValId compareValues(
         return comparePointers(sh, code, v1, v2);
 
     IR::Range rng1, rng2;
-    if (rangeFromVal(&rng1, sh, v1) && rangeFromVal(&rng2, sh, v2)) {
+    if (rngFromVal(&rng1, sh, v1) && rngFromVal(&rng2, sh, v2)) {
         // both values are integral constants
         bool result;
         if (compareIntRanges(&result, code, rng1, rng2))
@@ -1395,7 +1395,7 @@ TValId handleIntegralOp(
 
     // check whether we both values are integral constant
     IR::Range rng1, rng2;
-    if (rangeFromVal(&rng1, sh, v1) && rangeFromVal(&rng2, sh, v2)) {
+    if (rngFromVal(&rng1, sh, v1) && rngFromVal(&rng2, sh, v2)) {
 
         // first try to preserve range coincidence if we can
         switch (code) {
