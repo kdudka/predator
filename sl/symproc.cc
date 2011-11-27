@@ -1416,12 +1416,6 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
                     return result;
                 break;
 
-            case CL_BINOP_MULT:
-                if (handleRangeByScalarOp(&result, sh_, v1, v2, rng1, rng2,
-                            &SymHeapCore::valMultiplyRange))
-                    return result;
-                break;
-
             case CL_BINOP_PLUS:
                 if (handleRangeByScalarOp(&result, sh_, v1, v2, rng1, rng2,
                             &SymHeapCore::valByOffset))
