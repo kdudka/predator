@@ -206,7 +206,7 @@ typedef TArena::value_type                              TMemItem;
 
 inline TMemItem createArenaItem(
         const TOffset               off,
-        const unsigned              size,
+        const TSizeOf               size,
         const TObjId                obj)
 {
     const TMemChunk chunk(off, off + size);
@@ -283,14 +283,14 @@ struct BlockEntity: public AbstractHeapEntity {
     EBlockKind                  code;
     TValId                      root;
     TOffset                     off;
-    TOffset                     size;
+    TSizeOf                     size;
     TValId                      value;
 
     BlockEntity(
             const EBlockKind        code_,
             const TValId            root_,
             const TOffset           off_,
-            const TOffset           size_,
+            const TSizeOf           size_,
             const TValId            value_):
         code(code_),
         root(root_),
@@ -402,7 +402,7 @@ struct InternalCustomValue: public ReferableValue {
 
 struct RootValue: public AnchorValue {
     CVar                            cVar;
-    TOffset                         size;
+    TSizeOf                         size;
     TLiveObjs                       liveObjs;
     TObjIdSet                       usedByGl;
     TArena                          arena;
@@ -424,13 +424,13 @@ struct RootValue: public AnchorValue {
 
 class CustomValueMapper {
     private:
-        typedef std::map<int, TValId>                           TCustomByInt;
-        typedef std::map<IR::TInt, TValId>                      TCustomByLong;
+        typedef std::map<int /* uid */, TValId>                 TCustomByUid;
+        typedef std::map<IR::TInt, TValId>                      TCustomByNum;
         typedef std::map<double, TValId>                        TCustomByReal;
         typedef std::map<std::string, TValId>                   TCustomByString;
 
-        TCustomByInt        fncMap;
-        TCustomByLong       numMap;
+        TCustomByUid        fncMap;
+        TCustomByNum        numMap;
         TCustomByReal       fpnMap;
         TCustomByString     strMap;
         TValId              inval_;
@@ -513,7 +513,7 @@ struct SymHeapCore::Private {
     void shiftBlockAt(
             const TValId            dstRoot,
             const TOffset           off,
-            const TOffset           size,
+            const TSizeOf           size,
             const TValSet          *killedPtrs);
 
     void transferBlock(
@@ -521,12 +521,12 @@ struct SymHeapCore::Private {
             const TValId            srcRoot, 
             const TOffset           dstOff,
             const TOffset           srcOff,
-            const TOffset           size);
+            const TSizeOf           size);
 
     TObjId writeUniformBlock(
             const TValId            addr,
             const TValId            tplValue,
-            const unsigned          size,
+            const TSizeOf           size,
             TValSet                 *killedPtrs);
 
     void bindValues(TValId v1, TValId v2, TValId valSum);
@@ -670,8 +670,8 @@ void SymHeapCore::Private::splitBlockByObject(
     // dig offsets and sizes
     const TOffset blOff = blData->off;
     const TOffset objOff = hbData->off;
-    const TOffset blSize = blData->size;
-    const TOffset objSize = hbData->size;
+    const TSizeOf blSize = blData->size;
+    const TSizeOf objSize = hbData->size;
 
     // check overlapping
     const TOffset blBegToObjBeg = objOff - blOff;
@@ -910,7 +910,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
 
         // remove the object from arena unless we are destroying everything
         const TOffset off = blData->off;
-        const TOffset size = blData->size;
+        const TSizeOf size = blData->size;
         rootData->arena -= createArenaItem(off, size, obj);
 
         CL_BREAK_IF(hasKey(rootData->liveObjs, obj));
@@ -1012,7 +1012,7 @@ bool SymHeapCore::Private::valsEqual(TValId v1, TValId v2) {
 void SymHeapCore::Private::shiftBlockAt(
         const TValId                dstRoot,
         const TOffset               off,
-        const TOffset               size,
+        const TSizeOf               size,
         const TValSet              *killedPtrs)
 {
     CL_BREAK_IF("please implement");
@@ -1027,7 +1027,7 @@ void SymHeapCore::Private::transferBlock(
         const TValId                srcRoot, 
         const TOffset               dstOff,
         const TOffset               winBeg,
-        const TOffset               winSize)
+        const TSizeOf               winSize)
 {
     const RootValue *rootDataSrc;
     this->ents.getEntRO(&rootDataSrc, srcRoot);
@@ -1559,7 +1559,7 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
 TObjId SymHeapCore::Private::writeUniformBlock(
         const TValId                addr,
         const TValId                tplVal,
-        const unsigned              size,
+        const TSizeOf               size,
         TValSet                     *killedPtrs)
 {
     const BaseValue *valData;
@@ -2378,7 +2378,7 @@ TObjId SymHeapCore::ptrAt(TValId at) {
         return OBJ_INVALID;
     }
 
-    const TOffset size = clt->size;
+    const TSizeOf size = clt->size;
     CL_BREAK_IF(size <= 0);
 
     // arena lookup
@@ -2429,7 +2429,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
         return OBJ_INVALID;
 
     CL_BREAK_IF(!clt || !clt->size);
-    const TOffset size = clt->size;
+    const TSizeOf size = clt->size;
 
     // jump to root
     const TValId valRoot = valData->valRoot;
@@ -2586,7 +2586,7 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
     rootData->lastKnownClt = clt;
 
     // read size from the type-info
-    const unsigned size = clt->size;
+    const TSizeOf size = clt->size;
     rootData->size = size;
 
     // mark the root as live
@@ -2743,7 +2743,7 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
     this->liveRoots->erase(root);
 
-    const TOffset size = rootData->size;
+    const TSizeOf size = rootData->size;
     if (size) {
         // look for inner objects
         const TMemChunk chunk(0, size);
