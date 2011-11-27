@@ -2310,7 +2310,7 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
 
         // create the image now!
         RefCntLib<RCO_NON_VIRT>::requireExclusivity(dst.d->coinDb);
-        dst.d->coinDb->add(valLt, valGt, /* coefficient */ ref.second);
+        dst.d->coinDb->add(valLt, valGt, /* sum */ ref.second);
     }
 }
 
@@ -2335,6 +2335,35 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
 
         if (!ref.d->neqDb->chk(valLt, valGt))
             // Neq predicate not matched
+            return false;
+    }
+
+    // go through CoincidenceDb
+    const CoincidenceDb &coinDb = *d->coinDb;
+    BOOST_FOREACH(CoincidenceDb::const_reference &ref, coinDb) {
+        TValId valLt = ref/* key */.first/* lt */.first;
+        TValId valGt = ref/* key */.first/* gt */.second;
+
+        if (!translateValId(&valLt, dst, *this, valMap))
+            // failed to translate value ID, better to give up
+            return false;
+
+        if (!translateValId(&valGt, dst, *this, valMap))
+            // failed to translate value ID, better to give up
+            return false;
+
+        TValId sum;
+        if (!dst.d->coinDb->chk(&sum, valLt, valGt))
+            // coincidence not matched
+            return false;
+
+        SymHeapCore &writable = *const_cast<SymHeapCore *>(this);
+        if (!translateValId(&sum, writable, dst, valMap))
+            // failed to translate value ID, better to give up
+            return false;
+
+        if (sum != /* sum */ ref.second)
+            // target value ID not matched
             return false;
     }
 
