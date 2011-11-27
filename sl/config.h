@@ -94,11 +94,6 @@
 #define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
 
 /**
- * if 1, allow exact execution of addition and subtraction of constant integers
- */
-#define SE_ALLOW_CST_INT_PLUS_MINUS         1
-
-/**
  * - 0 ... avoid creation of a new integral range from two integral constants
  * - 1 ... allow to create integral ranges from integral constants if needed
  * - 2 ... same as above, additionally use widening in upward direction [broken]
@@ -153,12 +148,6 @@
  * if 1, do not use the @b symcut module at all
  */
 #define SE_DISABLE_SYMCUT                   0
-
-/**
- * if 1, do not use the @b symjoin module for symbolic state management (this
- * implies SE_ALLOW_CST_INT_PLUS_MINUS == 0 unless you intend to loop forever)
- */
-#define SE_DISABLE_SYMJOIN_IN_SYMSTATE      0
 
 /**
  * - 0 ... do not dump trace graphs unless explicitly asked to do so

@@ -947,12 +947,10 @@ fail:
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
-        EValueOrigin origin = VO_UNKNOWN;
-#if SE_ALLOW_CST_INT_PLUS_MINUS
-        if (CL_TYPE_INT == dst.type->code)
-            // track the unknown integral result
-            origin = VO_ASSIGNED;
-#endif
+        const EValueOrigin origin = (CL_TYPE_INT == dst.type->code)
+            ? VO_ASSIGNED
+            : VO_UNKNOWN;
+
         const TValId val = entry.valCreate(VT_UNKNOWN, origin);
         const ObjHandle obj = proc.objByOperand(dst);
         proc.objSetValue(obj, val);

@@ -204,9 +204,6 @@ void SymStateWithJoin::packSuffix(unsigned idx) {
 }
 
 bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
-#if SE_DISABLE_SYMJOIN_IN_SYMSTATE
-    return SymHeapUnion::insert(shNew);
-#endif
     const int cnt = this->size();
     if (!cnt) {
         // no heaps inside, insert the first now

@@ -1299,7 +1299,6 @@ bool computeIntRngResult(
     result.alignment = IR::Int1;
 
     switch (code) {
-#if SE_ALLOW_CST_INT_PLUS_MINUS
         case CL_BINOP_PLUS:
             result = rng1 + rng2;
             break;
@@ -1307,7 +1306,7 @@ bool computeIntRngResult(
         case CL_BINOP_MINUS:
             result = rng1 - rng2;
             break;
-#endif
+
         case CL_BINOP_BIT_AND:
             if (!isSingular(rng1) || !isSingular(rng2))
                 return false;
@@ -1330,9 +1329,7 @@ bool computeIntRngResult(
             break;
 
         default:
-#if SE_ALLOW_CST_INT_PLUS_MINUS
             CL_BREAK_IF("unhandled binary integral operation");
-#endif
             return false;
     }
 

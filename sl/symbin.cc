@@ -516,13 +516,6 @@ bool handleNondetInt(
         const CodeStorage::Insn                     &insn,
         const char                                  *name)
 {
-    static const EValueOrigin origin = /* TODO: a separate option for this? */
-#if SE_ALLOW_CST_INT_PLUS_MINUS
-        /* more accurate, but slow */ VO_ASSIGNED;
-#else
-        /* less accurate, but fast */ VO_UNKNOWN;
-#endif
-
     const CodeStorage::TOperandList &opList = insn.operands;
     if (2 != opList.size()) {
         emitPrototypeError(&insn.loc, name);
@@ -535,7 +528,7 @@ bool handleNondetInt(
     // set the returned value to a new unknown value
     const struct cl_operand &opDst = opList[0];
     const ObjHandle objDst = core.objByOperand(opDst);
-    const TValId val = sh.valCreate(VT_UNKNOWN, origin);
+    const TValId val = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
     core.objSetValue(objDst, val);
 
     // insert the resulting heap
