@@ -349,10 +349,6 @@ struct ReferableValue: public BaseValue {
         BaseValue(code_, origin_)
     {
     }
-
-    virtual ReferableValue* clone() const {
-        return new ReferableValue(*this);
-    }
 };
 
 struct AnchorValue: public ReferableValue {
@@ -361,10 +357,6 @@ struct AnchorValue: public ReferableValue {
     AnchorValue(EValueTarget code_, EValueOrigin origin_):
         ReferableValue(code_, origin_)
     {
-    }
-
-    virtual AnchorValue* clone() const {
-        return new AnchorValue(*this);
     }
 };
 
@@ -678,8 +670,8 @@ void SymHeapCore::Private::splitBlockByObject(
     // dig offsets and sizes
     const TOffset blOff = blData->off;
     const TOffset objOff = hbData->off;
-    const unsigned blSize = blData->size;
-    const unsigned objSize = hbData->size;
+    const TOffset blSize = blData->size;
+    const TOffset objSize = hbData->size;
 
     // check overlapping
     const TOffset blBegToObjBeg = objOff - blOff;

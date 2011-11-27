@@ -150,7 +150,7 @@ namespace Trace {
     class Node;
 }
 
-/// a type used by SymHeap for byte offsets
+/// a type used for integral offsets (changing this is known to cause problems)
 typedef IR::TInt                                        TOffset;
 
 /// a container to store offsets to
