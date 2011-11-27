@@ -118,6 +118,23 @@ bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val) {
     return true;
 }
 
+IR::Range rngFromCustom(const CustomValue &cv) {
+    const ECustomValue code = cv.code;
+    switch (code) {
+        case CV_INT:
+            return IR::rngFromNum(cv.data.num);
+            break;
+
+        case CV_INT_RANGE:
+            return cv.data.rng;
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of rngFromVal()");
+            return IR::FullRange;
+    }
+}
+
 void moveKnownValueToLeft(
         const SymHeapCore           &sh,
         TValId                      &valA,

@@ -63,6 +63,9 @@ bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
 
+/// extract an integral range from an unwrapped CV_INT/CV_INT_RANGE custom value
+IR::Range rngFromCustom(const CustomValue &);
+
 /// known to work only with TObjId/TValId
 template <class TMap>
 typename TMap::mapped_type roMapLookup(

@@ -1674,23 +1674,8 @@ TObjType SymHeapCore::objType(TObjId obj) const {
 TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     const InternalCustomValue *customDataRef;
     this->ents.getEntRO(&customDataRef, ref);
-    const CustomValue &cvRef = customDataRef->customData;
 
-    // TODO: move the following hunk to a generic function
-    IR::Range rngRef;
-    const ECustomValue code = cvRef.code;
-    switch (code) {
-        case CV_INT:
-            rngRef = IR::rngFromNum(cvRef.data.num);
-            break;
-
-        case CV_INT_RANGE:
-            rngRef = cvRef.data.rng;
-            break;
-
-        default:
-            CL_BREAK_IF("shiftCustomValue() got something special");
-    }
+    const IR::Range rngRef = rngFromCustom(customDataRef->customData);
 
     // prepare a custom value template and compute the shifted range
     CustomValue cv(CV_INT_RANGE);
@@ -1748,15 +1733,8 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
     const InternalCustomValue *customData;
     this->ents.getEntRO(&customData, val);
 
-    // extract the custom value and check we get CV_INT_RANGE
-    const CustomValue &cv = customData->customData;
-    if (CV_INT_RANGE != cv.code) {
-        CL_BREAK_IF("only CV_INT_RANGE custom values can be restricted");
-        return;
-    }
-
     // extract the original integral ragne
-    const IR::Range &refRange = cv.data.rng;
+    const IR::Range &refRange = rngFromCustom(customData->customData);
     CL_BREAK_IF(isSingular(refRange));
 
     // compute the difference between the original and desired ranges
