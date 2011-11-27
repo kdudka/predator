@@ -365,7 +365,7 @@ void slSegAbstractionStep(
         const BindingOff            &off)
 {
     // read minimal length of 'obj' and set it temporarily to zero
-    unsigned len = objMinLength(sh, at);
+    TMinLen len = objMinLength(sh, at);
     if (isAbstract(sh.valTarget(at)))
         sh.segSetMinLength(at, /* SLS 0+ */ 0);
 
@@ -410,7 +410,7 @@ void enlargeMayExist(SymHeap &sh, const TValId at) {
 
 void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     // compute resulting segment's length
-    const unsigned len = objMinLength(sh, a1) + objMinLength(sh, a2);
+    const TMinLen len = objMinLength(sh, a1) + objMinLength(sh, a2);
 
     // OK_SEE_THROUGH -> OK_CONCRETE if necessary
     enlargeMayExist(sh, a1);
@@ -433,7 +433,7 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
     // handle DLS Neq predicates and OK_SEE_THROUGH
-    const unsigned len = sh.segMinLength(dls) + objMinLength(sh, var);
+    const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, var);
     sh.segSetMinLength(dls, /* DLS 0+ */ 0);
     enlargeMayExist(sh, var);
 
@@ -463,7 +463,7 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
 
 void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     // handle DLS Neq predicates
-    const unsigned len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
+    const TMinLen len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
     sh.segSetMinLength(seg1, /* DLS 0+ */ 0);
     sh.segSetMinLength(seg2, /* DLS 0+ */ 0);
 
@@ -745,13 +745,13 @@ void spliceOutListSegment(
     LDP_PLOT(symabstract, sh);
 }
 
-unsigned /* len */ spliceOutSegmentIfNeeded(
+TMinLen /* len */ spliceOutSegmentIfNeeded(
         SymHeap                 &sh,
         const TValId            seg,
         const TValId            peer,
         TSymHeapList            &todo)
 {
-    const unsigned len = sh.segMinLength(seg);
+    const TMinLen len = sh.segMinLength(seg);
     if (!len) {
         // possibly empty LS
         SymHeap sh0(sh);
@@ -801,7 +801,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     const TValId peer = segPeer(sh, seg);
 
     // handle the possibly empty variant (if exists)
-    const unsigned lenRemains = spliceOutSegmentIfNeeded(sh, seg, peer, todo);
+    const TMinLen lenRemains = spliceOutSegmentIfNeeded(sh, seg, peer, todo);
 
     const EObjKind kind = sh.valTargetKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));

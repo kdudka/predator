@@ -116,7 +116,7 @@ struct SymJoinCtx {
     EJoinStatus                 status;
     bool                        allowThreeWay;
 
-    typedef std::map<TValId /* seg */, unsigned /* len */>      TSegLengths;
+    typedef std::map<TValId /* seg */, TMinLen /* len */>       TSegLengths;
     TSegLengths                 segLengths;
     std::set<TValPair>          sharedNeqs;
 
@@ -971,7 +971,7 @@ bool joinProtoFlag(
     return false;
 }
 
-unsigned joinMinLength(
+TMinLen joinMinLength(
         SymJoinCtx              &ctx,
         const TValId            root1,
         const TValId            root2)
@@ -987,8 +987,8 @@ unsigned joinMinLength(
         return 0;
     }
 
-    const int len1 = objMinLength(ctx.sh1, root1);
-    const int len2 = objMinLength(ctx.sh2, root2);
+    const TMinLen len1 = objMinLength(ctx.sh1, root1);
+    const TMinLen len2 = objMinLength(ctx.sh2, root2);
     if (len1 < len2) {
         updateJoinStatus(ctx, JS_USE_SH1);
         return len1;
@@ -2464,7 +2464,7 @@ bool handleDstPreds(SymJoinCtx &ctx) {
     BOOST_FOREACH(SymJoinCtx::TSegLengths::const_reference ref, ctx.segLengths)
     {
         const TValId    seg = ref.first;
-        const unsigned  len = ref.second;
+        const TMinLen   len = ref.second;
         ctx.dst.segSetMinLength(seg, len);
     }
 
@@ -2502,9 +2502,9 @@ bool handleDstPreds(SymJoinCtx &ctx) {
         const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
         const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoDst);
 
-        const unsigned len1 = objMinLength(ctx.sh1, proto1);
-        const unsigned len2 = objMinLength(ctx.sh2, proto2);
-        const unsigned lenDst = objMinLength(ctx.dst, protoDst);
+        const TMinLen len1   = objMinLength(ctx.sh1, proto1);
+        const TMinLen len2   = objMinLength(ctx.sh2, proto2);
+        const TMinLen lenDst = objMinLength(ctx.dst, protoDst);
 
         if ((lenDst < len1) && !updateJoinStatus(ctx, JS_USE_SH2))
             return false;
@@ -2881,7 +2881,7 @@ void restorePrototypeLengths(SymJoinCtx &ctx) {
         if (lens.end() == it)
             continue;
 
-        const unsigned len = it->second;
+        const TMinLen len = it->second;
         if (len)
             sh.segSetMinLength(protoDst, len);
     }

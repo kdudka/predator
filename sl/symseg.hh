@@ -129,7 +129,7 @@ inline TValId segNextRootObj(SymHeap &sh, TValId root) {
     return segNextRootObj(sh, root, offNext);
 }
 
-inline unsigned objMinLength(const SymHeap &sh, TValId root) {
+inline TMinLen objMinLength(const SymHeap &sh, TValId root) {
     CL_BREAK_IF(sh.valOffset(root));
 
     const EValueTarget code = sh.valTarget(root);

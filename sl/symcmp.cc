@@ -182,8 +182,8 @@ bool matchRoots(
     if (bf1 != bf2)
         return false;
 
-    const unsigned len1 = sh1.segMinLength(root1);
-    const unsigned len2 = sh2.segMinLength(root2);
+    const TMinLen len1 = sh1.segMinLength(root1);
+    const TMinLen len2 = sh2.segMinLength(root2);
     if (len1 != len2)
         // minimal length mismatch
         return false;

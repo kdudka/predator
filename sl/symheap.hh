@@ -651,6 +651,9 @@ class ObjList: public std::vector<ObjHandle> { };
 /// set of object handles
 typedef std::set<ObjHandle>                             TObjSet;
 
+/// a type used for minimal segment length (0+, 1+, ...)
+typedef short                                           TMinLen;
+
 /// enumeration of abstract object (although OK_CONCRETE is not abstract)
 enum EObjKind {
     OK_CONCRETE = 0,        ///< concrete object (not a segment)
@@ -742,10 +745,10 @@ class SymHeap: public SymHeapCore {
         void valMerge(TValId v1, TValId v2);
 
         /// read the minimal segment length of the given abstract object
-        unsigned segMinLength(TValId seg) const;
+        TMinLen segMinLength(TValId seg) const;
 
         /// re-initialize the minimal segment length of the given list segment
-        void segSetMinLength(TValId seg, unsigned len);
+        void segSetMinLength(TValId seg, TMinLen len);
 
     public:
         // just overrides (inherits the dox)
@@ -761,7 +764,7 @@ class SymHeap: public SymHeapCore {
         struct Private;
         Private *d;
 
-        void segMinLengthOp(ENeqOp op, TValId at, unsigned len);
+        void segMinLengthOp(ENeqOp op, TValId at, TMinLen len);
 };
 
 #endif /* H_GUARD_SYM_HEAP_H */

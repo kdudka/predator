@@ -2934,7 +2934,7 @@ struct AbstractRoot {
 
     EObjKind                        kind;
     BindingOff                      bOff;
-    unsigned                        minLength;
+    TMinLen                         minLength;
 
     AbstractRoot(EObjKind kind_, BindingOff bOff_):
         kind(kind_),
@@ -3106,7 +3106,7 @@ void SymHeap::valMerge(TValId v1, TValId v2) {
     CL_DEBUG("failed to splice-out list segment, has to over-approximate");
 }
 
-void SymHeap::segMinLengthOp(ENeqOp op, TValId at, unsigned len) {
+void SymHeap::segMinLengthOp(ENeqOp op, TValId at, TMinLen len) {
     CL_BREAK_IF(!len);
 
     if (NEQ_DEL == op) {
@@ -3115,7 +3115,7 @@ void SymHeap::segMinLengthOp(ENeqOp op, TValId at, unsigned len) {
     }
 
     CL_BREAK_IF(NEQ_ADD != op);
-    const unsigned current = this->segMinLength(at);
+    const TMinLen current = this->segMinLength(at);
     if (len <= current)
         return;
 
@@ -3285,7 +3285,7 @@ void SymHeap::valDestroyTarget(TValId root) {
     d->absRoots.releaseEnt(root);
 }
 
-unsigned SymHeap::segMinLength(TValId seg) const {
+TMinLen SymHeap::segMinLength(TValId seg) const {
     CL_BREAK_IF(this->valOffset(seg));
     CL_BREAK_IF(!d->absRoots.isValidEnt(seg));
 
@@ -3307,7 +3307,7 @@ unsigned SymHeap::segMinLength(TValId seg) const {
     }
 }
 
-void SymHeap::segSetMinLength(TValId seg, unsigned len) {
+void SymHeap::segSetMinLength(TValId seg, TMinLen len) {
     CL_BREAK_IF(this->valOffset(seg));
     CL_BREAK_IF(!d->absRoots.isValidEnt(seg));
 

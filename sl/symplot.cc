@@ -478,7 +478,7 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
     }
 
     // append minimal segment length
-    const unsigned len = sh.segMinLength(root);
+    const TMinLen len = sh.segMinLength(root);
     std::ostringstream str;
     str << " " << len << "+";
     label += str.str();

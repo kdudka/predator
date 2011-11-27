@@ -62,7 +62,7 @@ class UniBlockWriter {
 };
 
 struct DeepCopyData {
-    typedef std::map<TValId     /* seg */, unsigned  /* len */> TSegLengths;
+    typedef std::map<TValId     /* seg */, TMinLen   /* len */> TSegLengths;
     typedef std::map<TValId     /* src */, TValId    /* dst */> TValMap;
     typedef std::pair<ObjHandle /* src */, ObjHandle /* dst */> TItem;
     typedef std::set<CVar>                                      TCut;
@@ -177,7 +177,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
         dst.valTargetSetAbstract(rootDstAt, kind, off);
 
 #if SE_SYMCUT_PRESERVES_MIN_LENGTHS
-        const unsigned minLength = objMinLength(src, rootSrcAt);
+        const TMinLen minLength = objMinLength(src, rootSrcAt);
         dc.segLengths[rootDstAt] = minLength;
 #endif
     }
@@ -322,7 +322,7 @@ void deepCopy(DeepCopyData &dc) {
     typedef DeepCopyData::TSegLengths TSegLengths;
     BOOST_FOREACH(TSegLengths::const_reference item, dc.segLengths) {
         const TValId seg = item.first;
-        const unsigned minLength = item.second;
+        const TMinLen minLength = item.second;
         dst.segSetMinLength(seg, minLength);
     }
 }
