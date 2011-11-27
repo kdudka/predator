@@ -19,6 +19,7 @@
 
 #include "intrange.hh"
 
+#include <algorithm>                // for std::min and std::max
 #include <climits>
 
 namespace IR {
@@ -87,6 +88,18 @@ TInt greatestCommonDivisor(TInt a, TInt b) {
 
     CL_BREAK_IF(a < Int1);
     return a;
+}
+
+Range join(const Range &rng1, const Range &rng2) {
+    Range result;
+    result.lo = std::min(rng1.lo, rng2.lo);
+    result.hi = std::max(rng1.hi, rng2.hi);
+
+    // TODO
+    result.alignment = Int1;
+
+    chkRange(result);
+    return result;
 }
 
 bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range rng2) {

@@ -112,6 +112,9 @@ inline Range operator&(Range rng, const TInt mask) {
     return rng;
 }
 
+/// return a range that covers both given ranges, preserve alignment if possible
+Range join(const Range &rng1, const Range &rng2);
+
 /// return true if exactly one of the given ranges represents a single number
 bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range rng2);
 

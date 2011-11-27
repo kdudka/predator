@@ -379,10 +379,7 @@ bool joinRangeValues(
     CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[0], ctx.sh2.valRoot(v2)));
 
     // compute the join of ranges
-    IR::Range rng;
-    rng.lo = std::min(rng1.lo, rng2.lo);
-    rng.hi = std::max(rng1.hi, rng2.hi);
-    rng.alignment = IR::Int1;
+    IR::Range rng = join(rng1, rng2);
 
     // [experimental] widening on offset ranges
 #if 1 < SE_ALLOW_OFF_RANGES
@@ -1355,10 +1352,11 @@ bool joinCustomValues(
             && defineValueMapping(ctx, v1, v2, vDst);
     }
 
+    // compute the resulting range that covers both
+    IR::Range rng = join(rng1, rng2);
+
 #if SE_INT_ARITHMETIC_LIMIT
-    const IR::TInt abs1 = std::max(std::abs(rng1.lo), std::abs(rng1.hi));
-    const IR::TInt abs2 = std::max(std::abs(rng2.lo), std::abs(rng2.hi));
-    const IR::TInt max = std::max(abs1, abs2);
+    const IR::TInt max = std::max(std::abs(rng.lo), std::abs(rng.hi));
     if (max <= (SE_INT_ARITHMETIC_LIMIT)) {
         SJ_DEBUG("<-- integral values preserved by SE_INT_ARITHMETIC_LIMIT "
                 << SJ_VALP(v1, v2));
@@ -1375,12 +1373,6 @@ bool joinCustomValues(
             && defineValueMapping(ctx, v1, v2, vDst);
     }
 #endif
-
-    // compute the resulting range that covers both
-    CustomValue cv(CV_INT_RANGE);
-    IR::Range &rng = cv.data.rng;
-    rng.lo = std::min(rng1.lo, rng2.lo);
-    rng.hi = std::max(rng1.hi, rng2.hi);
 
     // [experimental] widening on intervals
 #if 1 < SE_ALLOW_INT_RANGES
@@ -1400,6 +1392,7 @@ bool joinCustomValues(
     if (!isCovered(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
         return false;
 
+    const CustomValue cv(rng);
     const TValId vDst = ctx.dst.valWrapCustom(cv);
     return defineValueMapping(ctx, v1, v2, vDst);
 }
