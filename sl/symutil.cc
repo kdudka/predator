@@ -56,7 +56,7 @@ bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val) {
     return true;
 }
 
-bool rangeFromVal(IR::Range *pDst, const SymHeap &sh, const TValId val) {
+bool rangeFromVal(IR::Range *pDst, const SymHeapCore &sh, const TValId val) {
     IR::TInt num;
     if (numFromVal(&num, sh, val)) {
         // a single number

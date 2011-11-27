@@ -1671,7 +1671,6 @@ TObjType SymHeapCore::objType(TObjId obj) const {
     return objData->clt;
 }
 
-// FIXME: this feature needs to be better documented
 TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     const InternalCustomValue *customDataRef;
     this->ents.getEntRO(&customDataRef, ref);
@@ -1806,8 +1805,8 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
         return d->valDup(at);
 
     if (VT_CUSTOM == code) {
-        // FIXME: this feature needs to be better documented
-        return d->shiftCustomValue(at, off);
+        CL_BREAK_IF("invalid call of valByOffset(), use valShift() instead");
+        return VAL_INVALID;
     }
 
     // off-value lookup
@@ -1845,12 +1844,7 @@ TValId SymHeapCore::valByRange(TValId at, IR::Range range) {
     if (VAL_NULL == at || isGone(valData->code))
         return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
-    const EValueTarget code = valData->code;
-    CL_BREAK_IF(!isAnyDataArea(code));
-
-    // include the offset range of the anchor
-    if (VT_RANGE == code)
-        range += DCAST<const RangeValue *>(valData)->range;
+    CL_BREAK_IF(!isPossibleToDeref(valData->code));
 
     // include the relative offset of the starting point
     const TValId valRoot = valData->valRoot;
@@ -1876,6 +1870,38 @@ TValId SymHeapCore::valByRange(TValId at, IR::Range range) {
     rootData->dependentValues.push_back(val);
 
     return val;
+}
+
+TValId SymHeapCore::valShift(TValId valToShift, TValId shiftBy) {
+    if (valToShift < 0)
+        // do not shift special values
+        return valToShift;
+
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, valToShift);
+
+    IR::Range rng;
+    if (!rangeFromVal(&rng, *this, shiftBy)) {
+        CL_BREAK_IF("valShift() needs at least integral range as shiftBy");
+        return VAL_INVALID;
+    }
+
+    const EValueTarget code = valData->code;
+
+    if (isSingular(rng)) {
+        const IR::TInt off = rng.lo;
+
+        if (VT_CUSTOM == code)
+            return d->shiftCustomValue(valToShift, off);
+        else
+            return this->valByOffset(valToShift, off);
+    }
+
+    if (isPossibleToDeref(code))
+        return this->valByRange(valToShift, rng);
+
+    CL_BREAK_IF("please implement");
+    return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
 void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {

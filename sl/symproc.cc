@@ -1340,25 +1340,23 @@ bool computeIntRngResult(
     return true;
 }
 
-/// if v1 is scalar and v2 is range (or vice versa), call the given fnc on them
-template <typename TFnc>
-inline bool handleRangeByScalarOp(
+/// if v1 is scalar and v2 is range (or vice versa), call valShift() on them
+inline bool handleRangeByScalarPlus(
         TValId                     *pResult,
         SymHeapCore                &sh,
         const TValId                v1,
         const TValId                v2,
         const IR::Range            &rng1,
-        const IR::Range            &rng2,
-        const TFnc                  fnc)
+        const IR::Range            &rng2)
 {
     bool isRange1;
     if (!isRangeByNum(&isRange1, rng1, rng2))
         return false;
 
     if (isRange1)
-        *pResult = (sh.*fnc)(v1, /* num */ rng2.lo);
+        *pResult = sh.valShift(v1, v2);
     else
-        *pResult = (sh.*fnc)(v2, /* num */ rng1.lo);
+        *pResult = sh.valShift(v2, v1);
 
     return true;
 }
@@ -1414,8 +1412,7 @@ TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
                 break;
 
             case CL_BINOP_PLUS:
-                if (handleRangeByScalarOp(&result, sh_, v1, v2, rng1, rng2,
-                            &SymHeapCore::valByOffset))
+                if (handleRangeByScalarPlus(&result, sh_, v1, v2, rng1, rng2))
                     return result;
                 break;
 
@@ -1697,7 +1694,7 @@ struct OpHandler</* binary */ 2> {
                     goto handle_int;
 
             case CL_BINOP_POINTER_PLUS:
-                return handlePointerPlus(sh, rhs[0], rhs[1]);
+                return sh.valShift(rhs[0], rhs[1]);
 
             default:
                 // over-approximate anything else
