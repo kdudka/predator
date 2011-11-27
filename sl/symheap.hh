@@ -151,7 +151,7 @@ namespace Trace {
 }
 
 /// a type used by SymHeap for byte offsets
-typedef short                                           TOffset;
+typedef IR::TInt                                        TOffset;
 
 /// a container to store offsets to
 typedef std::vector<TOffset>                            TOffList;
