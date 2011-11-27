@@ -51,6 +51,8 @@ dlSeg, dls              Doubly-linked List Segment
 
 dst                     destination
 
+ent                     entity that can be uniquely identified by sh/uid pair
+
 eq                      equal
 
 fnc                     function
@@ -136,6 +138,8 @@ rng                     range
 ro                      Read-Only
 
 rtl                     Right-To-Left
+
+rw                      Read-Write
 
 seg                     segment
 

@@ -1931,16 +1931,25 @@ TValId SymHeapCore::valShift(TValId valToShift, TValId shiftBy) {
     const TValId anchor2 = shiftData->anchor;
     const TOffset off2   = shiftData->offRoot;
 
-    // lookup on anchors, then subtract the offsets if succeeded
+    // summarize the total offset
+    const TOffset offTotal = off1 + off2;
+
+    // lookup on anchors, then shift by the total offset if succeeded
     TValId valResult;
     if (d->coinDb->chk(&valResult, anchor1, anchor2))
         return this->valByOffset(valResult, off1 + off2);
 
-    // TODO: a better implementation of this
-    CL_BREAK_IF("please implement");
-    IR::Range rngResult = this->valOffsetRange(valToShift);
-    rngResult += rng;
-    return this->valByRange(valData->valRoot, rngResult);
+    // compute the resulting range and wrap it as a heap value
+    const IR::Range rngResult = rng + this->valOffsetRange(valToShift);
+    valResult = this->valByRange(valData->valRoot, rngResult);
+
+    // store the mapping for next wheel
+    const TValId valSum = this->valByOffset(valResult, -offTotal);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->coinDb);
+    d->coinDb->add(anchor1, anchor2, valSum);
+
+    // NOTE: valResult is what the caller asks for (valSum is what we track)
+    return valResult;
 }
 
 void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {
