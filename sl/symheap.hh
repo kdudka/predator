@@ -153,6 +153,9 @@ namespace Trace {
 /// a type used for integral offsets (changing this is known to cause problems)
 typedef IR::TInt                                        TOffset;
 
+/// a type used for block sizes (do not set this to anything else than TOffset)
+typedef IR::TInt                                        TSizeOf;
+
 /// a container to store offsets to
 typedef std::vector<TOffset>                            TOffList;
 
@@ -225,7 +228,7 @@ typedef std::set<CVar>                                  TCVarSet;
 /// only uninitialized or nullified blocks; generic arrays and strings need more
 struct UniformBlock {
     TOffset     off;        ///< relative placement of the block wrt. the root
-    unsigned    size;       ///< size of the block in bytes
+    TSizeOf     size;       ///< size of the block in bytes
     TValId      tplValue;   ///< value you need to clone on object instantiation
 };
 
@@ -301,14 +304,14 @@ class SymHeapCore {
         void writeUniformBlock(
                 const TValId                addr,
                 const TValId                tplValue,
-                const unsigned              size,
+                const TSizeOf               size,
                 TValSet                     *killedPtrs = 0);
 
         /// copy 'size' bytes of raw memory from 'src' to 'dst'
         void copyBlockOfRawMemory(
                 const TValId                dst,
                 const TValId                src,
-                const unsigned              size,
+                const TSizeOf               size,
                 TValSet                     *killedPtrs = 0);
 
     public:
@@ -371,7 +374,7 @@ class SymHeapCore {
         TValId diffPointers(const TValId v1, const TValId v2);
 
         /// return size (in bytes) that we can safely write at the given addr
-        int valSizeOfTarget(TValId) const;
+        TSizeOf valSizeOfTarget(TValId) const;
 
         /// return address of the given program variable
         TValId addrOfVar(CVar, bool createIfNeeded);
@@ -400,7 +403,7 @@ class SymHeapCore {
                 UniformBlock               *pDst,
                 const TValId                root,
                 const TOffset               off,
-                unsigned                    size)
+                const TSizeOf               size)
             const;
 
         /**
@@ -416,12 +419,8 @@ class SymHeapCore {
         TObjId valGetComposite(TValId val) const;
 
     public:
-        /**
-         * create a new heap object of known size
-         * @param cbSize size of the object in @b bytes
-         * @return value ID of the acquired address
-         */
-        TValId heapAlloc(int cbSize);
+        /// allocate a chunk of heap of known size
+        TValId heapAlloc(const TSizeOf size);
 
         /// destroy target of the given root value
         virtual void valDestroyTarget(TValId root);

@@ -1442,7 +1442,7 @@ bool SymHeapCore::findCoveringUniBlock(
         UniformBlock                *pDst,
         const TValId                root,
         const TOffset               beg,
-        unsigned                    size)
+        const TSizeOf               size)
     const
 {
     const RootValue *rootData;
@@ -1473,15 +1473,15 @@ bool SymHeapCore::findCoveringUniBlock(
             // the template starts above this block
             continue;
 
-        const TOffset size = blData->size;
-        const TOffset blEnd = blBeg + size;
+        const TSizeOf blSize = blData->size;
+        const TOffset blEnd = blBeg + blSize;
         if (blEnd < end)
             // the template ends beyond this block
             continue;
 
         // covering uniform block matched!
         pDst->off       = blBeg;
-        pDst->size      = size;
+        pDst->size      = blSize;
         pDst->tplValue  = blData->value;
         return true;
     }
@@ -1600,22 +1600,22 @@ TObjId SymHeapCore::Private::writeUniformBlock(
 void SymHeapCore::writeUniformBlock(
         const TValId                addr,
         const TValId                tplValue,
-        const unsigned              size,
+        const TSizeOf               size,
         TValSet                     *killedPtrs)
 {
-    CL_BREAK_IF(this->valSizeOfTarget(addr) < static_cast<int>(size));
+    CL_BREAK_IF(this->valSizeOfTarget(addr) < size);
     d->writeUniformBlock(addr, tplValue, size, killedPtrs);
 }
 
 void SymHeapCore::copyBlockOfRawMemory(
         const TValId                dst,
         const TValId                src,
-        const unsigned              size,
+        const TSizeOf               size,
         TValSet                     *killedPtrs)
 {
     // this should have been checked by the caller
-    CL_BREAK_IF(this->valSizeOfTarget(dst) < static_cast<int>(size));
-    CL_BREAK_IF(this->valSizeOfTarget(src) < static_cast<int>(size));
+    CL_BREAK_IF(this->valSizeOfTarget(dst) < size);
+    CL_BREAK_IF(this->valSizeOfTarget(src) < size);
 
     const BaseValue *dstData;
     const BaseValue *srcData;
@@ -2624,8 +2624,8 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     return compData->compObj;
 }
 
-TValId SymHeapCore::heapAlloc(int cbSize) {
-    CL_BREAK_IF(cbSize <= 0);
+TValId SymHeapCore::heapAlloc(const TSizeOf size) {
+    CL_BREAK_IF(size <= 0);
 
     // assign an address
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
@@ -2637,7 +2637,7 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
     // initialize meta-data
     RootValue *rootData;
     d->ents.getEntRW(&rootData, addr);
-    rootData->size = cbSize;
+    rootData->size = size;
 
     return addr;
 }
@@ -2658,7 +2658,7 @@ void SymHeapCore::valDestroyTarget(TValId val) {
     d->destroyRoot(val);
 }
 
-int SymHeapCore::valSizeOfTarget(TValId val) const {
+TSizeOf SymHeapCore::valSizeOfTarget(TValId val) const {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     if (valData->offRoot < 0)
@@ -2674,7 +2674,7 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
 
-    const int rootSize = rootData->size;
+    const TSizeOf rootSize = rootData->size;
     const TOffset off = valData->offRoot;
     return rootSize - off;
 }
