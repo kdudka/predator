@@ -42,14 +42,20 @@ public:
 		ConnectionGraph::StateToCutpointSignatureMap stateMap;
 		ConnectionGraph::computeSignatures(stateMap, *this->fae.roots[root]);
 		for (Index<size_t>::iterator j = stateIndex.begin(); j != stateIndex.end(); ++j) {
+
 			for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k) {
+
 				if (k == j)
 					continue;
-				if (stateMap[j->first] != stateMap[k->first]) {
-//					std::cerr << j->first << " != " << k->first << " because " << stateMap[j->first] << " !=  " << stateMap[k->first] << std::endl;
-					rel[j->second][k->second] = false;
-				}
+
+				if (stateMap[j->first] == stateMap[k->first])
+					continue;
+
+//				std::cerr << j->first << " != " << k->first << " because " << stateMap[j->first] << " !=  " << stateMap[k->first] << std::endl;
+				rel[j->second][k->second] = false;
+
 			}
+
 		}
 //		utils::relPrint(std::cerr, rel);
 		TA<label_type> ta(*this->fae.backend);
