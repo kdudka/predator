@@ -85,7 +85,7 @@ public:
 			const std::pair<const AbstractBox*, std::vector<size_t>>& v2) {
 
 			if (v1.first->isType(box_type_e::bTypeInfo))
-				return true;
+				return !v2.first->isType(box_type_e::bTypeInfo);
 
 			return v1.first->getOrder() < v2.first->getOrder();
 
@@ -94,19 +94,31 @@ public:
 	};
 
 	static void reorderBoxes(vector<const AbstractBox*>& label, std::vector<size_t>& lhs) {
+
 		std::vector<std::pair<const AbstractBox*, std::vector<size_t> > > tmp;
 		std::vector<size_t>::iterator lhsBegin = lhs.end(), lhsEnd = lhs.begin();
+
 		for (size_t i = 0; i < label.size(); ++i) {
+
 			lhsBegin = lhsEnd;
+
 			lhsEnd += label[i]->getArity();
+
 			tmp.push_back(std::make_pair(label[i], std::vector<size_t>(lhsBegin, lhsEnd)));
+
 		}
+
 		std::sort(tmp.begin(), tmp.end(), BoxCmpF());
+
 		lhs.clear();
+
 		for (size_t i = 0; i < tmp.size(); ++i) {
+
 			label[i] = tmp[i].first;
 			lhs.insert(lhs.end(), tmp[i].second.begin(), tmp[i].second.end());
+
 		}
+
 	}
 
 	TA<label_type>* allocTA() {
