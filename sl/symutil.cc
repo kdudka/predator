@@ -82,12 +82,12 @@ bool anyRangeFromVal(
         const SymHeap               &sh,
         const TValId                 val)
 {
-    const EValueTarget code = sh.valTarget(val);
-    if (VT_CUSTOM == code)
-        // try to extract an integral range
-        return rngFromVal(pDst, sh, val);
+    // try to extract an integral range
+    if (rngFromVal(pDst, sh, val))
+        return true;
 
-    if (VAL_NULL == val || isAnyDataArea(code)) {
+    const EValueTarget code = sh.valTarget(val);
+    if (isAnyDataArea(code)) {
         // extract offset range
         *pDst = sh.valOffsetRange(val);
         return true;
