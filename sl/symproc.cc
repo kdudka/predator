@@ -606,17 +606,70 @@ TValId ptrObjectEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
     return ptrObjectEncoderCore(proc, dst, val, PK_DATA);
 }
 
+// FIXME: the following code is full of off-by-one errors and integral overflows
+// TODO: allow overflow detection for target types >= sizeof(long) on host
 TValId integralEncoder(
         SymProc                    &proc,
         const ObjHandle            &dst,
         const TValId                val,
         const IR::Range            &rngOrig)
 {
-    // TODO
-    (void) proc;
-    (void) dst;
-    (void) rng;
-    return val;
+    const struct cl_loc *loc = proc.lw();
+
+    // read type-info of the target object
+    const TObjType clt = dst.objType();
+    const TSizeOf size = clt->size;
+    CL_BREAK_IF(isComposite(clt) || !size);
+
+    // start with the given range as a candidate for result
+    IR::Range rng(rngOrig);
+
+    // TODO: check for signedness violation
+    const bool isUnsigned = clt->is_unsigned;
+#if 0
+    if (isUnsigned && rng.lo < IR::Int0 && /* FIXME */ IR::IntMin != rng.lo) {
+        CL_WARN_MSG(loc, "possible underflow of an unsigned integer");
+        rng.lo = IR::Int0;
+        rng.hi = IR::IntMax;
+    }
+#endif
+
+    if (static_cast<TSizeOf>(sizeof(IR::TInt)) < size)
+        // the program being analyzed uses wider integral type than we do, there
+        // is no chance to catch anything because of poor representation of ints
+        goto give_up;
+
+    // FIXME: following hunk is semantically invalid because of the #if 0 above
+    if (IR::IntMin != rng.lo && rng.lo < IR::Int0) {
+        // we expect a signed target object at this point
+        const IR::TInt loLimit = IR::Int1 << ((size << 3) /* sign bit */ - 1);
+        if (rng.lo < -loLimit) {
+            CL_WARN_MSG(loc, "possible underflow of a signed integer");
+            rng = IR::FullRange;
+        }
+    }
+
+    if (IR::IntMax != rng.hi) {
+        const TSizeOf hiLimitWidth = (size << 3) /* sign bit */ - !isUnsigned;
+        const IR::TInt hiLimit = IR::Int1 << hiLimitWidth;
+        if (hiLimit <= rng.hi) {
+            const char *const sig = (isUnsigned) ? "an unsigned" : "a signed";
+            CL_WARN_MSG(loc, "possible overflow of " << sig << " integer");
+            rng = IR::FullRange;
+        }
+    }
+
+give_up:
+    if (rngOrig == rng)
+        // do not create a fresh value to prevent unnecessary information lost
+        return val;
+
+    // something has changed, print the backtrace!
+    proc.printBackTrace(ML_WARN);
+
+    // wrap the resulting range as a fresh heap value
+    const CustomValue cv(rng);
+    return proc.sh().valWrapCustom(cv);
 }
 
 TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
