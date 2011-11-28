@@ -307,6 +307,12 @@ namespace {
             ? name
             : "<anon_type>";
     }
+
+    const char* strUnsig(const struct cl_type *clt) {
+        return (clt->is_unsigned)
+            ? "unsigned "
+            : "";
+    }
 }
 
 void ClPrettyPrint::printBareType(const struct cl_type *clt, bool expandFnc) {
@@ -359,7 +365,7 @@ deref_done:
             break;
 
         case CL_TYPE_INT:
-            out_ << SSD_INLINE_COLOR(C_GREEN, "int");
+            out_ << SSD_INLINE_COLOR(C_GREEN, strUnsig(clt) << "int");
             break;
 
         case CL_TYPE_CHAR:

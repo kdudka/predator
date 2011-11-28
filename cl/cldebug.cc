@@ -26,8 +26,6 @@
 
 #include <boost/algorithm/string/replace.hpp>
 
-namespace {
-
 void cltToStreamCore(std::ostream &out, const struct cl_type *clt) {
     out << "*((const struct cl_type *)"
         << static_cast<const void *>(clt)
@@ -52,13 +50,14 @@ void cltToStreamCore(std::ostream &out, const struct cl_type *clt) {
         case CL_TYPE_STRING:     out << "CL_TYPE_STRING"    ; break;
     }
 
+    if (clt->is_unsigned)
+        out << ", unsigned";
+
     if (clt->name)
         out << ", name = " << clt->name;
 
-    out << ")";
+    out << ", size = " << clt->size << " B)";
 }
-
-} // namespace
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
 

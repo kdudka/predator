@@ -60,12 +60,16 @@ bool operator==(const struct cl_type &a, const struct cl_type &b) {
             case CL_TYPE_BOOL:
             case CL_TYPE_REAL:
             case CL_TYPE_ENUM:
-                if (cltA->size == cltB->size)
-                    // FIXME: we simply ignore differences that gcc seems
-                    //        important!
-                    return true;
+                if (cltA->size != cltB->size)
+                    // size mismatch
+                    return false;
 
-                // fall through!
+                if (cltA->is_unsigned != cltB->is_unsigned)
+                    // signedness mismatch
+                    return false;
+
+                // FIXME: we simply ignore differences that gcc seems important!
+                return true;
 
             case CL_TYPE_UNKNOWN:
                 return false;

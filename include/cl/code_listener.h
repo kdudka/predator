@@ -269,6 +269,11 @@ struct cl_type {
      * valid only for @b CL_TYPE_ARRAY
      */
     int                                 array_size;
+
+    /**
+     * makes sense mainly for integral types, but should be always initialized
+     */
+    bool                                is_unsigned;
 };
 
 /**
