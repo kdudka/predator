@@ -93,6 +93,8 @@ le                      Less or Equal
 
 len                     length
 
+lhs                     Left Hand Side
+
 lo                      low
 
 loc                     location-info (file/line/column in the source program)
@@ -132,6 +134,8 @@ ptr                     pointer
 ref                     reference
 
 ret                     return
+
+rhs                     Right Hand Side
 
 rng                     range
 

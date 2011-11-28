@@ -561,31 +561,119 @@ void reportMemLeak(SymProc &proc, const EValueTarget code, const char *reason) {
     proc.printBackTrace(ML_WARN);
 }
 
-void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs) {
+/// pointer kind classification
+enum EPointerKind {
+    PK_DATA,                        ///< data pointer
+    PK_CODE                         ///< code pointer
+};
+
+// if we are going to write a pointer, check whether we have enough space for it
+TValId ptrObjectEncoderCore(
+        SymProc                    &proc,
+        const ObjHandle            &dst,
+        const TValId                val,
+        const EPointerKind          code)
+{
+    SymHeap &sh = proc.sh();
+    TStorRef &stor = sh.stor();
+
+    // read pointer's sizeof from Code Storage
+    TSizeOf ptrSize = 0;
+    switch (code) {
+        case PK_DATA:
+            ptrSize = stor.types.dataPtrSizeof();
+            break;
+
+        case PK_CODE:
+            ptrSize = stor.types.codePtrSizeof();
+            break;
+    }
+
+    const TSizeOf dstSize = dst.objType()->size;
+    CL_BREAK_IF((sh.valSizeOfTarget(dst.placedAt()) < dstSize));
+    if (ptrSize <= dstSize)
+        return val;
+
     const struct cl_loc *loc = proc.lw();
+    CL_ERROR_MSG(loc, "not enough space to store value of a pointer");
+    CL_NOTE_MSG(loc, "dstSize: " << dstSize << " B");
+    CL_NOTE_MSG(loc, "ptrSize: " << ptrSize << " B");
+    proc.printBackTrace(ML_ERROR);
+    return sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
+}
+
+TValId ptrObjectEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
+    return ptrObjectEncoderCore(proc, dst, val, PK_DATA);
+}
+
+TValId integralEncoder(
+        SymProc                    &proc,
+        const ObjHandle            &dst,
+        const TValId                val,
+        const IR::Range            &rngOrig)
+{
+    // TODO
+    (void) proc;
+    (void) dst;
+    (void) rng;
+    return val;
+}
+
+TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
+    SymHeap &sh = proc.sh();
+    const CustomValue cv = sh.valUnwrapCustom(val);
+    const ECustomValue code = cv.code;
+
+    switch (code) {
+        case CV_STRING:
+            return ptrObjectEncoderCore(proc, dst, val, PK_DATA);
+
+        case CV_FNC:
+            return ptrObjectEncoderCore(proc, dst, val, PK_CODE);
+
+        case CV_INT:
+        case CV_INT_RANGE:
+            return integralEncoder(proc, dst, val, rngFromCustom(cv));
+
+        case CV_REAL:
+            // TODO
+            CL_DEBUG_MSG(proc.lw(), "floating point numbers are not supported");
+            return val;
+
+        case CV_INVALID:
+            break;
+    }
+
+    CL_BREAK_IF("customValueEncoder() got invalid custom value");
+    return VAL_INVALID;
+}
+
+void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs) {
     if (!lhs.isValid()) {
-        CL_ERROR_MSG(loc, "invalid L-value");
+        CL_ERROR_MSG(proc.lw(), "invalid L-value");
         proc.printBackTrace(ML_ERROR);
         return;
     }
 
     SymHeap &sh = proc.sh();
-    const TValId lhsAt = lhs.placedAt();
-    const EValueTarget code = sh.valTarget(lhsAt);
-    CL_BREAK_IF(!isPossibleToDeref(code));
+    const EValueTarget codeLhs = sh.valTarget(lhs.placedAt());
+    CL_BREAK_IF(!isPossibleToDeref(codeLhs));
 
-    if (isPossibleToDeref(sh.valTarget(rhs))) {
-        // we are going to write a pointer, check if we have enough space for it
-        const TSizeOf dstSize = sh.valSizeOfTarget(lhsAt);
-        const TSizeOf ptrSize = sh.stor().types.dataPtrSizeof();
-        if (dstSize < ptrSize) {
-            CL_ERROR_MSG(loc, "not enough space to store value of a pointer");
-            CL_NOTE_MSG(loc, "dstSize: " << dstSize << " B");
-            CL_NOTE_MSG(loc, "ptrSize: " << ptrSize << " B");
-            proc.printBackTrace(ML_ERROR);
-            rhs = sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
-        }
-    }
+    // generic prototype for a value encoder
+    TValId (*encode)(SymProc &, const ObjHandle &obj, const TValId val) = 0;
+
+    const EValueTarget codeRhs = sh.valTarget(rhs);
+    if (isPossibleToDeref(codeRhs))
+        // pointer write validator
+        encode = ptrObjectEncoder;
+
+    else if (VT_CUSTOM == codeRhs)
+        // custom value write validator
+        encode = customValueEncoder;
+
+    if (encode)
+        // translate the value using the selected encoder
+        rhs = encode(proc, lhs, rhs);
 
     // update type-info of the root
     digRootTypeInfo(sh, lhs, rhs);
@@ -597,7 +685,7 @@ void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs) {
     lhs.setValue(rhs, &killedPtrs);
 
     if (lm.collectJunkFrom(killedPtrs))
-        reportMemLeak(proc, code, "assign");
+        reportMemLeak(proc, codeLhs, "assign");
 
     lm.leave();
 }
