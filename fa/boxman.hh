@@ -1,14 +1,14 @@
 /*
  * Copyright (C) 2010 Jiri Simacek
  *
- * This file is part of predator.
+ * This file is part of forester.
  *
  * predator is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * predator is distributed in the hope that it will be useful,
+ * forester is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -119,21 +119,32 @@ public:
 	};
 
 	label_type lookupLabel(const std::vector<const AbstractBox*>& x) {
+
 		std::pair<boost::unordered_map<std::vector<const AbstractBox*>, NodeLabel*>::iterator, bool> p
 			= this->nodeStore.insert(std::make_pair(x, (NodeLabel*)NULL));
+
 		if (p.second) {
+
 			NodeLabel* label = new NodeLabel(&p.first->first);
+
 			std::vector<size_t> tag;
+
 			label->iterate(EvaluateBoxF(*label, tag));
+
 			std::sort(tag.begin(), tag.end());
+
 			label->setTag(
 				(void*)&*this->tagStore.insert(
 					std::make_pair((const TypeBox*)label->boxLookup((size_t)(-1), NULL), tag)
 				).first
 			);
+
 			p.first->second = label;
+
 		}
+
 		return p.first->second;
+
 	}
 
 	const Data& getData(const Data& data) {
@@ -291,10 +302,12 @@ public:
 
 		if (p.second) {
 
-			Box& box = *const_cast<Box*>(&*p.first);
+			Box* box = const_cast<Box*>(&*p.first);
 
-			box.name = this->getBoxName();
-			box.initialize();
+			box->name = this->getBoxName();
+			box->initialize();
+
+//			std::cerr << "adding box " << *(AbstractBox*)box << ':' << std::endl << *box;
 
 		}
 
