@@ -83,7 +83,7 @@ bool SymProc::hasFatalError() const {
 #endif
 }
 
-TValId SymProc::heapValFromCst(const struct cl_operand &op) {
+TValId SymProc::valFromCst(const struct cl_operand &op) {
     const struct cl_cst &cst = op.data.cst;
 
     CustomValue cv(CV_INVALID);
@@ -116,7 +116,7 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
             break;
 
         default:
-            CL_BREAK_IF("heapValFromCst() got something special");
+            CL_BREAK_IF("valFromCst() got something special");
             break;
     }
 
@@ -357,14 +357,15 @@ TValId SymProc::varAt(const struct cl_operand &op) {
     return this->varAt(cv);
 }
 
-bool SymProc::addOffDerefArray(TOffset &off, const struct cl_accessor *ac) {
+bool addOffDerefArray(SymProc &proc, TOffset &off, const struct cl_accessor *ac)
+{
     // read value of the operand that is used as an array index
     const struct cl_operand *opIdx = ac->data.array.index;
-    const TValId valIdx = this->valFromOperand(*opIdx);
+    const TValId valIdx = proc.valFromOperand(*opIdx);
 
     // unwrap the integral value inside the heap value (if available)
     IR::TInt idx;
-    if (!numFromVal(&idx, sh_, valIdx))
+    if (!numFromVal(&idx, proc.sh(), valIdx))
         return false;
 
     // compute the resulting offset
@@ -411,7 +412,7 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
                 continue;
 
             case CL_ACCESSOR_DEREF_ARRAY:
-                if (this->addOffDerefArray(off, ac))
+                if (addOffDerefArray(*this, off, ac))
                     continue;
                 else
                     // no clue how to compute the resulting offset
@@ -459,7 +460,7 @@ ObjHandle SymProc::objByOperand(const struct cl_operand &op) {
     return obj;
 }
 
-TValId SymProc::heapValFromObj(const struct cl_operand &op) {
+TValId SymProc::valFromObj(const struct cl_operand &op) {
     if (seekRefAccessor(op.accessor))
         return this->targetAt(op);
 
@@ -485,10 +486,10 @@ TValId SymProc::valFromOperand(const struct cl_operand &op) {
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
-            return this->heapValFromObj(op);
+            return this->valFromObj(op);
 
         case CL_OPERAND_CST:
-            return this->heapValFromCst(op);
+            return this->valFromCst(op);
 
         default:
             CL_BREAK_IF("invalid call of SymProc::valFromOperand()");
@@ -522,13 +523,13 @@ bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op) {
     return true;
 }
 
-void SymProc::heapObjDefineType(const ObjHandle &lhs, TValId rhs) {
-    const EValueTarget code = sh_.valTarget(rhs);
+void digRootTypeInfo(SymHeap &sh, const ObjHandle &lhs, TValId rhs) {
+    const EValueTarget code = sh.valTarget(rhs);
     if (!isPossibleToDeref(code))
         // no valid target anyway
         return;
 
-    if (sh_.valOffset(rhs))
+    if (sh.valOffset(rhs))
         // not a pointer to root
         return;
 
@@ -537,63 +538,66 @@ void SymProc::heapObjDefineType(const ObjHandle &lhs, TValId rhs) {
         // no type-info given for the target
         return;
 
-    const TObjType cltLast = sh_.valLastKnownTypeOfTarget(rhs);
+    const TObjType cltLast = sh.valLastKnownTypeOfTarget(rhs);
     if (isComposite(cltLast) && !isComposite(cltTarget))
         // we are accessing a field that is placed at zero offset of a composite
         // type but it yet does not mean that we are changing the root type-info
         return;
 
-    const TSizeOf rootSize = sh_.valSizeOfTarget(rhs);
+    const TSizeOf rootSize = sh.valSizeOfTarget(rhs);
     CL_BREAK_IF(rootSize <= 0 && isOnHeap(code));
     if (cltLast && cltLast->size == rootSize && cltTarget->size != rootSize)
         // basically the same rule as above but now we check the size of target
         return;
 
     // update the last known type-info of the root
-    sh_.valSetLastKnownTypeOfTarget(rhs, cltTarget);
+    sh.valSetLastKnownTypeOfTarget(rhs, cltTarget);
 }
 
-void SymProc::reportMemLeak(const EValueTarget code, const char *reason) {
+void reportMemLeak(SymProc &proc, const EValueTarget code, const char *reason) {
+    const struct cl_loc *loc = proc.lw();
     const char *const what = describeRootObj(code);
-    CL_WARN_MSG(lw_, "memory leak detected while " << reason << "ing " << what);
-    this->printBackTrace(ML_WARN);
+    CL_WARN_MSG(loc, "memory leak detected while " << reason << "ing " << what);
+    proc.printBackTrace(ML_WARN);
 }
 
-void SymProc::heapSetSingleVal(const ObjHandle &lhs, TValId rhs) {
+void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs) {
+    const struct cl_loc *loc = proc.lw();
     if (!lhs.isValid()) {
-        CL_ERROR_MSG(lw_, "invalid L-value");
-        this->printBackTrace(ML_ERROR);
+        CL_ERROR_MSG(loc, "invalid L-value");
+        proc.printBackTrace(ML_ERROR);
         return;
     }
 
+    SymHeap &sh = proc.sh();
     const TValId lhsAt = lhs.placedAt();
-    const EValueTarget code = sh_.valTarget(lhsAt);
+    const EValueTarget code = sh.valTarget(lhsAt);
     CL_BREAK_IF(!isPossibleToDeref(code));
 
-    if (isPossibleToDeref(sh_.valTarget(rhs))) {
+    if (isPossibleToDeref(sh.valTarget(rhs))) {
         // we are going to write a pointer, check if we have enough space for it
-        const TSizeOf dstSize = sh_.valSizeOfTarget(lhsAt);
-        const TSizeOf ptrSize = sh_.stor().types.dataPtrSizeof();
+        const TSizeOf dstSize = sh.valSizeOfTarget(lhsAt);
+        const TSizeOf ptrSize = sh.stor().types.dataPtrSizeof();
         if (dstSize < ptrSize) {
-            CL_ERROR_MSG(lw_, "not enough space to store value of a pointer");
-            CL_NOTE_MSG(lw_, "dstSize: " << dstSize << " B");
-            CL_NOTE_MSG(lw_, "ptrSize: " << ptrSize << " B");
-            this->printBackTrace(ML_ERROR);
-            rhs = sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
+            CL_ERROR_MSG(loc, "not enough space to store value of a pointer");
+            CL_NOTE_MSG(loc, "dstSize: " << dstSize << " B");
+            CL_NOTE_MSG(loc, "ptrSize: " << ptrSize << " B");
+            proc.printBackTrace(ML_ERROR);
+            rhs = sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
         }
     }
 
-    // update type-info
-    this->heapObjDefineType(lhs, rhs);
+    // update type-info of the root
+    digRootTypeInfo(sh, lhs, rhs);
 
-    LeakMonitor lm(sh_);
+    LeakMonitor lm(sh);
     lm.enter();
 
     TValSet killedPtrs;
     lhs.setValue(rhs, &killedPtrs);
 
     if (lm.collectJunkFrom(killedPtrs))
-        this->reportMemLeak(code, "assign");
+        reportMemLeak(proc, code, "assign");
 
     lm.leave();
 }
@@ -622,7 +626,7 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
     CL_BREAK_IF(isComp != (VT_COMPOSITE == sh_.valTarget(rhs)));
     if (!isComp) {
         // not a composite object
-        this->heapSetSingleVal(lhs, rhs);
+        objSetAtomicVal(*this, lhs, rhs);
         return;
     }
 
@@ -637,7 +641,7 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
     sh_.copyBlockOfRawMemory(lhsAt, rhsAt, size, &killedPtrs);
 
     if (lm.collectJunkFrom(killedPtrs))
-        this->reportMemLeak(code, "assign");
+        reportMemLeak(*this, code, "assign");
 
     lm.leave();
 }
@@ -654,7 +658,7 @@ void SymProc::valDestroyTarget(TValId addr) {
     destroyRootAndCollectPtrs(sh_, addr, &killedPtrs);
 
     if (lm.collectJunkFrom(killedPtrs))
-        this->reportMemLeak(code, "destroy");
+        reportMemLeak(*this, code, "destroy");
 
     lm.leave();
 }
@@ -1587,7 +1591,7 @@ struct OpHandler</* unary */ 1> {
             const TValId            rhs[1],
             const TObjType          clt[1 + /* dst type */ 1])
     {
-        SymHeap &sh = proc.sh_;
+        SymHeap &sh = proc.sh();
         const TValId val = rhs[0];
 
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
@@ -1628,7 +1632,7 @@ struct OpHandler</* binary */ 2> {
             const TObjType          clt[2 + /* dst type */ 1])
     {
         CL_BREAK_IF(!clt[0] || !clt[1] || !clt[2]);
-        SymHeap &sh = proc.sh_;
+        SymHeap &sh = proc.sh();
         TValId vRes;
 
         const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);

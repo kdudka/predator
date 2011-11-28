@@ -35,7 +35,6 @@
 #include "symheap.hh"
 
 class SymBackTrace;
-class SymHeap;
 class SymState;
 
 struct CmpOpTraits {
@@ -81,9 +80,6 @@ class SymProc {
             errorDetected_(false)
         {
         }
-
-        // FIXME: class SymProc should not have any virtual methods
-        virtual ~SymProc() { }
 
         SymHeap&                    sh() { return sh_; }
         const SymBackTrace*         bt() { return bt_; }
@@ -138,26 +134,15 @@ class SymProc {
         friend void initGlVar(SymHeap &sh, const CVar &cv);
 
     private:
-        bool addOffDerefArray(TOffset &off, const struct cl_accessor *ac);
-        void reportMemLeak(const EValueTarget code, const char *reason);
-        void heapSetSingleVal(const ObjHandle &lhs, TValId rhs);
-        void heapObjDefineType(const ObjHandle &lhs, TValId rhs);
-        TValId heapValFromObj(const struct cl_operand &op);
-        TValId heapValFromCst(const struct cl_operand &op);
+        TValId valFromObj(const struct cl_operand &op);
+        TValId valFromCst(const struct cl_operand &op);
         void killVar(const CodeStorage::KillVar &kv);
 
     protected:
         SymHeap                     &sh_;
         const SymBackTrace          *bt_;
         const struct cl_loc         *lw_;
-        bool                        errorDetected_;
-
-        // internal helper of SymExecCore::execOp()
-        template <int N> friend struct OpHandler;
-
-        // internal helpers of SymProc::objSetValue()
-        friend class DerefFailedWriter;
-        friend class ValueMirror;
+        bool                         errorDetected_;
 };
 
 /// @todo make the API more generic and better documented
