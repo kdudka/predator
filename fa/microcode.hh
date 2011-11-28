@@ -599,7 +599,7 @@ class FI_abort : public SequentialInstruction {
 
 public:
 
-	FI_abort() : SequentialInstruction() {}
+	FI_abort() : SequentialInstruction(fi_type_e::fiAbort) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
