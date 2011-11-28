@@ -36,7 +36,7 @@ namespace CodeStorage {
 
 class ExecutionManager;
 
-typedef enum { fiBranch, fiCheck, fiFix, fiJump, fiUnspec } fi_type_e;
+typedef enum { fiAbort, fiBranch, fiCheck, fiFix, fiJump, fiUnspec } fi_type_e;
 
 class AbstractInstruction {
 
