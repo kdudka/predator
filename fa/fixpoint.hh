@@ -42,8 +42,6 @@ class FI_abs : public FixpointInstruction {
 	TA<label_type>::Backend& taBackend;
 
 	BoxMan& boxMan;
-	
-	const std::vector<const Box*>& boxes;
 
 public:
 
@@ -63,7 +61,7 @@ public:
 		if (!ta.getTransitions().empty()) {
 			this->fwdConfWrapper.adjust(index);
 			ta.minimized(this->fwdConf);
-		}		
+		}
 //		this->fwdConfWrapper.setStateOffset(this->fixpointWrapper.getStateOffset());
 //		this->fwdConf = this->fixpoint;
 	}
@@ -71,9 +69,9 @@ public:
 public:
 
 	FI_abs(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan, const std::vector<const Box*>& boxes)
+		BoxMan& boxMan)
 		: FixpointInstruction(), fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, boxMan),
-		taBackend(taBackend), boxMan(boxMan), boxes(boxes) {}
+		taBackend(taBackend), boxMan(boxMan) {}
 
 	virtual ~FI_abs() {}
 
@@ -101,8 +99,6 @@ class FI_fix : public FixpointInstruction {
 	TA<label_type>::Backend& taBackend;
 
 	BoxMan& boxMan;
-	
-	const std::vector<const Box*>& boxes;
 
 public:
 
@@ -122,7 +118,7 @@ public:
 		if (!ta.getTransitions().empty()) {
 			this->fwdConfWrapper.adjust(index);
 			ta.minimized(this->fwdConf);
-		}		
+		}
 //		this->fwdConfWrapper.setStateOffset(this->fixpointWrapper.getStateOffset());
 //		this->fwdConf = this->fixpoint;
 	}
@@ -130,9 +126,9 @@ public:
 public:
 
 	FI_fix(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan, const std::vector<const Box*>& boxes)
+		BoxMan& boxMan)
 		: FixpointInstruction(), fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, boxMan),
-		taBackend(taBackend), boxMan(boxMan), boxes(boxes) {}
+		taBackend(taBackend), boxMan(boxMan) {}
 
 	virtual ~FI_fix() {}
 

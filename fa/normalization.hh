@@ -154,30 +154,25 @@ public:
 
 	}
 
-	void normalizeRoot(std::vector<bool>& normalized, size_t root, std::vector<bool>& marked) {
+	void normalizeRoot(std::vector<bool>& normalized, size_t root, const std::vector<bool>& marked) {
 
 		if (normalized[root])
 			return;
 
 		normalized[root] = true;
 
-		auto tmp = this->fae.connectionGraph.data[root].signature;
+		// we need a copy here!
+		auto signature = this->fae.connectionGraph.data[root].signature;
 
-		for (auto& cutpoint : tmp) {
+		for (auto& cutpoint : signature) {
 
 			this->normalizeRoot(normalized, cutpoint.root, marked);
 
 			if (marked[cutpoint.root])
 				continue;
-/*
-			if (!this->fae.connectionGraph.isMergable(root, cutpoint.root)) {
 
-				marked[cutpoint.root] = true;
+			assert(root != cutpoint.root);
 
-				continue;
-
-			}
-*/
 			std::vector<size_t> refStates;
 
 			TA<label_type>* ta = this->mergeRoot(
@@ -196,7 +191,28 @@ public:
 
 	}
 
-	void scan(std::vector<bool>& marked, std::vector<size_t>& order, const std::set<size_t>& forbidden = std::set<size_t>()) {
+	bool selfReachable(size_t root, size_t self, const std::vector<bool>& marked) {
+
+		for (auto& cutpoint : this->fae.connectionGraph.data[root].signature) {
+
+			if (cutpoint.root == self)
+				return true;
+
+			if (marked[cutpoint.root])
+				continue;
+
+			if (this->selfReachable(cutpoint.root, self, marked))
+				return true;
+
+		}
+
+		return false;
+
+	}
+
+	void scan(std::vector<bool>& marked, std::vector<size_t>& order, const std::set<size_t>& forbidden = std::set<size_t>(), bool extended = false) {
+
+		assert(this->fae.connectionGraph.isValid());
 
 		std::vector<bool> visited(this->fae.roots.size(), false);
 
@@ -204,22 +220,42 @@ public:
 
 		order.clear();
 
-		this->fae.connectionGraph.updateIfNeeded(this->fae.roots);
-
 		// compute canonical root ordering
 		this->traverse(visited, order, marked);
 
 		// check garbage
 		this->checkGarbage(visited);
 
-		// prevent merging of forbidden roots
-		for (auto i = forbidden.begin(); i != forbidden.end(); ++i)
-			marked[*i] = true;
+		if (!extended) {
+
+			for (auto& x : forbidden)
+				marked[x] = true;
+
+			return;
+
+		}
+
+		for (auto& x : forbidden) {
+
+			marked[x] = true;
+
+			for (auto& cutpoint : this->fae.connectionGraph.data[x].signature) {
+
+				if ((cutpoint.root != x) && !this->selfReachable(cutpoint.root, x, marked))
+					continue;
+
+				marked[cutpoint.root] = true;
+
+				break;
+
+			}
+
+		}
 
 	}
 
 	// normalize representation
-	void normalize(std::vector<bool>& marked, const std::vector<size_t>& order) {
+	void normalize(const std::vector<bool>& marked, const std::vector<size_t>& order) {
 
 		size_t i;
 
@@ -234,7 +270,6 @@ public:
 
 			this->fae.roots.resize(order.size());
 			this->fae.connectionGraph.data.resize(order.size());
-
 			return;
 
 		}
@@ -262,10 +297,13 @@ public:
 		// update representation
 		std::swap(this->fae.roots, newRoots);
 
-		for (size_t i = 0; i < this->fae.roots.size(); ++i)
+		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
+
 			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(
 				this->fae.relabelReferences(this->fae.roots[i].get(), index)
 			);
+
+		}
 
 		this->fae.connectionGraph.finishNormalization(this->fae.roots.size(), index);
 
