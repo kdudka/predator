@@ -345,6 +345,8 @@ struct BaseValue: public AbstractHeapEntity {
 struct ReferableValue: public BaseValue {
     TValList                        dependentValues;
 
+    // unless clone() is properly overridden, the constructor cannot be public
+    protected:
     ReferableValue(EValueTarget code_, EValueOrigin origin_):
         BaseValue(code_, origin_)
     {
@@ -354,6 +356,8 @@ struct ReferableValue: public BaseValue {
 struct AnchorValue: public ReferableValue {
     TOffMap                         offMap;
 
+    // unless clone() is properly overridden, the constructor cannot be public
+    protected:
     AnchorValue(EValueTarget code_, EValueOrigin origin_):
         ReferableValue(code_, origin_)
     {

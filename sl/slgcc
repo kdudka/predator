@@ -82,7 +82,7 @@ run_gcc() {
     "$GCC_HOST" $GCC_OPTS                                           \
         -fplugin="$SL_PLUG" -fplugin-arg-libsl-pid-file="$pidfile"  \
         -fplugin-arg-libsl-args=error_label:ERROR $SL_OPTS "$@"     \
-        2>&1 | stdbuf --output=L grep -E                            \
+        3>&1 1>&2 2>&3 | stdbuf --output=L grep -E                  \
         ' \[-fplugin=libsl\.so\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'
     if [ $? -ne 0 ]; then
         printf "\033[1;31mFAILED\033[0m\n" >&2
