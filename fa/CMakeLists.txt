@@ -75,6 +75,7 @@ set (forester_tests
   "recursion.c:"
   "sll-bubblesort.c:"
   "sll-delete.c:"
+  "sll-headptr.c:"
   "sll-insertsort.c:"
   "sll-listofclists.c:listofclists.sll.boxes"
   "sll-mergesort.c:"
@@ -96,7 +97,6 @@ set (forester_tests
   #"treecraziness.c:"
   #"rb_insert_rebalance.c:"
   #"dfs.c:treewpp.boxes"
-  #"sll-headptr.c:"
 )
 
 foreach (testcase ${forester_tests})
@@ -111,7 +111,7 @@ foreach (testcase ${forester_tests})
   endif()
 
   add_test(
-    ${testfile} ${GCC_HOST} -o /dev/null -m32 -DFORESTER
+    ${testfile} timeout 90 ${GCC_HOST} -o /dev/null -m32 -DFORESTER
     -fplugin=${CMAKE_CURRENT_BUILD_DIR}../fa_build/libfa.so
     -c ${CMAKE_CURRENT_SOURCE_DIR}/data/${testfile} ${box_arg}
   )
