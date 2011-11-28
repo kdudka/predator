@@ -63,11 +63,11 @@ class SymExec::Engine {
 	TA<label_type>::Backend taBackend;
 	TA<label_type>::Backend fixpointBackend;
 	BoxMan boxMan;
-
+/*
 	std::vector<const Box*> boxes;
 	std::vector<const Box*> basicBoxes;
 	boost::unordered_map<const Box*, std::vector<const Box*> > hierarchy;
-
+*/
 	Compiler compiler_;
 	Compiler::Assembly assembly_;
 
@@ -408,7 +408,7 @@ protected:
 public:
 
 	Engine() : boxMan(),
-		compiler_(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes),
+		compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
 		dbgFlag(false) {}
 
 	void loadTypes(const CodeStorage::Storage& stor) {
