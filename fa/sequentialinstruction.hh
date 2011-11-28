@@ -37,7 +37,9 @@ public:
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
 		std::vector<AbstractInstruction*>::const_iterator cur
 	);
-	
+
+	AbstractInstruction* next() const { return this->next_; }
+
 };
 
 #endif
