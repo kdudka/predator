@@ -107,7 +107,7 @@ public:
 public:
 
 	Compiler(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		class BoxMan& boxMan, const std::vector<const class Box*>& boxes);
+		class BoxMan& boxMan);
 
 	~Compiler();
 

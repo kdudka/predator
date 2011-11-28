@@ -147,7 +147,6 @@ class Compiler::Core {
 	TA<label_type>::Backend& fixpointBackend;
 	TA<label_type>::Backend& taBackend;
 	BoxMan& boxMan;
-	const std::vector<const Box*>& boxes;
 
 	BuiltinTable builtinTable;
 	LoopAnalyser loopAnalyser;
@@ -193,13 +192,13 @@ protected:
 
 	void cAbstraction() {
 		this->append(
-			new FI_abs(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes)
+			new FI_abs(this->fixpointBackend, this->taBackend, this->boxMan)
 		);
 	}
 
 	void cFixpoint() {
 		this->append(
-			new FI_fix(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes)
+			new FI_fix(this->fixpointBackend, this->taBackend, this->boxMan)
 		);
 	}
 
@@ -1197,8 +1196,8 @@ protected:
 public:
 
 	Core(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan, const std::vector<const Box*>& boxes)
-		: fixpointBackend(fixpointBackend), taBackend(taBackend), boxMan(boxMan), boxes(boxes) {}
+		BoxMan& boxMan)
+		: fixpointBackend(fixpointBackend), taBackend(taBackend), boxMan(boxMan) {}
 
 	void compile(Compiler::Assembly& assembly, const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry) {
 
@@ -1263,8 +1262,8 @@ public:
 };
 
 Compiler::Compiler(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-BoxMan& boxMan, const std::vector<const Box*>& boxes)
-	: core_(new Core(fixpointBackend, taBackend, boxMan, boxes)) {}
+BoxMan& boxMan)
+	: core_(new Core(fixpointBackend, taBackend, boxMan)) {}
 
 Compiler::~Compiler() {
 	delete this->core_;
