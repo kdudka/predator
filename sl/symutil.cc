@@ -48,11 +48,16 @@ bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val) {
             return false;
     }
 
-    CustomValue cv = sh.valUnwrapCustom(val);
-    if (CV_INT != cv.code)
+    const CustomValue cv = sh.valUnwrapCustom(val);
+    if (CV_INT_RANGE != cv.code)
         return false;
 
-    *pDst = cv.data.num;
+    const IR::Range &rng = cv.data.rng;
+    if (!isSingular(rng))
+        // we are asked to return a scalar, but only integral range is available
+        return false;
+
+    *pDst = rng.lo;
     return true;
 }
 
@@ -118,13 +123,9 @@ bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val) {
     return true;
 }
 
-IR::Range rngFromCustom(const CustomValue &cv) {
+const IR::Range& rngFromCustom(const CustomValue &cv) {
     const ECustomValue code = cv.code;
     switch (code) {
-        case CV_INT:
-            return IR::rngFromNum(cv.data.num);
-            break;
-
         case CV_INT_RANGE:
             return cv.data.rng;
             break;

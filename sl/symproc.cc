@@ -93,8 +93,8 @@ TValId SymProc::valFromCst(const struct cl_operand &op) {
         case CL_TYPE_ENUM:
         case CL_TYPE_INT:
             // integral value
-            cv.code = CV_INT;
-            cv.data.num = cst.data.cst_int.value;
+            cv.code = CV_INT_RANGE;
+            cv.data.rng = IR::rngFromNum(cst.data.cst_int.value);
             break;
 
         case CL_TYPE_REAL:
@@ -684,7 +684,6 @@ TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
         case CV_FNC:
             return ptrObjectEncoderCore(proc, dst, val, PK_CODE);
 
-        case CV_INT:
         case CV_INT_RANGE:
             return integralEncoder(proc, dst, val, rngFromCustom(cv));
 
@@ -1579,8 +1578,8 @@ TValId handleBitNot(SymHeapCore &sh, const TValId val) {
     const IR::TInt result = ~num;
 
     // wrap the result as a heap value expressing a constant integer
-    CustomValue cv(CV_INT);
-    cv.data.num = result;
+    CustomValue cv(CV_INT_RANGE);
+    cv.data.rng = IR::rngFromNum(result);
     return sh.valWrapCustom(cv);
 }
 
@@ -1618,7 +1617,6 @@ bool isAnyIntValue(const SymHeapCore &sh, const TValId val) {
     const CustomValue &cv = sh.valUnwrapCustom(val);
     const ECustomValue code = cv.code;
     switch (code) {
-        case CV_INT:
         case CV_INT_RANGE:
             return true;
 

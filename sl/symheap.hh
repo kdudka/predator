@@ -92,7 +92,6 @@ bool isAnyDataArea(EValueTarget);
 enum ECustomValue {
     CV_INVALID,             ///< reserved for signalling error states
     CV_FNC,                 ///< code pointer
-    CV_INT,                 ///< constant integral number
     CV_INT_RANGE,           ///< a closed interval over integral domain
     CV_REAL,                ///< floating-point number
     CV_STRING               ///< string literal
@@ -101,7 +100,6 @@ enum ECustomValue {
 /// @attention SymHeap is not responsible for any deep copies of strings
 union CustomValueData {
     int         uid;        ///< unique ID as assigned by Code Listener
-    IR::TInt    num;        ///< integral number
     double      fpn;        ///< floating-point number
     const char *str;        ///< zero-terminated string
     IR::Range   rng;        ///< closed interval over integral domain
@@ -127,12 +125,7 @@ struct CustomValue {
     CustomValue(const IR::Range &rng):
         code(CV_INT_RANGE)
     {
-        if (isSingular(rng)) {
-            code = CV_INT;
-            data.num = rng.lo;
-        }
-        else
-            data.rng = rng;
+        data.rng = rng;
     }
 };
 

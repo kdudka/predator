@@ -178,9 +178,6 @@ bool operator==(const CustomValue &a, const CustomValue &b) {
         case CV_FNC:
             return (a.data.uid == b.data.uid);
 
-        case CV_INT:
-            return (a.data.num == b.data.num);
-
         case CV_REAL:
             return (a.data.fpn == b.data.fpn);
 
@@ -454,8 +451,9 @@ class CustomValueMapper {
                 case CV_FNC:
                     return assignInvalidIfNotFound(fncMap, item.data.uid);
 
-                case CV_INT:
-                    return assignInvalidIfNotFound(numMap, item.data.num);
+                case CV_INT_RANGE:
+                    CL_BREAK_IF(!isSingular(item.data.rng));
+                    return assignInvalidIfNotFound(numMap, item.data.rng.lo);
 
                 case CV_REAL:
                     return assignInvalidIfNotFound(fpnMap, item.data.fpn);
@@ -1694,14 +1692,15 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
 void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData) {
     CL_DEBUG("replaceRngByInt() is taking place...");
 
-    // we already expect CV_INT at this point
+    // we already expect a scalar at this point
     const CustomValue &cvRng = valData->customData;
-    CL_BREAK_IF(CV_INT != cvRng.code);
+    const IR::Range rng = rngFromCustom(cvRng);
+    CL_BREAK_IF(!isSingular(rng));
 
     TValId replaceBy;
-    if (0L == cvRng.data.num)
+    if (0L == rng.lo)
         replaceBy = VAL_NULL;
-    else if (1L == cvRng.data.num)
+    else if (1L == rng.lo)
         replaceBy = VAL_TRUE;
     else {
         // CV_INT values are supposed to be reused if they exist already
@@ -1760,12 +1759,9 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
         rngDep.lo -= loShift;
         rngDep.hi += hiShift;
 
-        if (isSingular(rngDep)) {
+        if (isSingular(rngDep))
             // CV_INT_RANGE reduced to CV_INT
-            cvDep.code = CV_INT;
-            cvDep.data.num = rngDep.lo;
             this->replaceRngByInt(depData);
-        }
     }
 }
 
@@ -2022,7 +2018,7 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
     // compute the difference and wrap it as a heap value
     const CustomValue cv(off1 - off2);
     const TValId valDiff = this->valWrapCustom(cv);
-    if (CV_INT == cv.code)
+    if (isSingular(rngFromCustom(cv)))
         // good luck, the difference is a scalar
         return valDiff;
 
@@ -2784,27 +2780,15 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
 }
 
 TValId SymHeapCore::valWrapCustom(CustomValue cVal) {
-    ECustomValue &code = cVal.code;
-    IR::TInt &num = cVal.data.num;
+    const ECustomValue code = cVal.code;
 
-    switch (code) {
-        case CV_INT_RANGE:
-            if (!isSingular(cVal.data.rng)) {
-                // CV_INT_RANGE with a valid range (do not recycle these)
-                const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
-                InternalCustomValue *valData;
-                d->ents.getEntRW(&valData, val);
-                valData->customData = cVal;
-                return val;
-            }
+    if (CV_INT_RANGE == code) {
+        // either scalar integer, or integral range
+        const IR::Range &rng = cVal.data.rng;
 
-            code = CV_INT;
-            num = cVal.data.rng.lo;
-            // fall through!
-
-        case CV_INT:
+        if (isSingular(rng)) {
             // short-circuit for special integral values
-            switch (num) {
+            switch (rng.lo) {
                 case 0:
                     return VAL_NULL;
 
@@ -2814,9 +2798,15 @@ TValId SymHeapCore::valWrapCustom(CustomValue cVal) {
                 default:
                     break;
             }
-
-        default:
-            break;
+        }
+        else {
+            // CV_INT_RANGE with a valid range (do not recycle these)
+            const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
+            InternalCustomValue *valData;
+            d->ents.getEntRW(&valData, val);
+            valData->customData = cVal;
+            return val;
+        }
     }
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cValueMap);
@@ -2841,13 +2831,17 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
     const CustomValue &cv = valData->customData;
     const ECustomValue code = cv.code;
 
-    if (CV_INT_RANGE != code)
-        // check the consistency of backward mapping
-        CL_BREAK_IF(val != d->cValueMap->lookup(valData->customData));
+    if (CV_INT_RANGE == code) {
+        const IR::Range &rng = cv.data.rng;
+        if (!isSingular(rng))
+            return cv;
 
-    if (CV_INT == code)
         // VAL_FALSE/VAL_TRUE are not supposed to be wrapped as custom values
-        CL_BREAK_IF(IR::Int0 == cv.data.num || IR::Int1 == cv.data.num);
+        CL_BREAK_IF(IR::Int0 == rng.lo || IR::Int1 == rng.lo);
+    }
+
+    // check the consistency of backward mapping
+    CL_BREAK_IF(val != d->cValueMap->lookup(valData->customData));
 
     return cv;
 }

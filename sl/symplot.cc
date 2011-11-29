@@ -734,12 +734,11 @@ void describeCustomValue(PlotData &plot, const TValId val) {
             plot.out << ", fontcolor=red, label=CV_INVALID";
             break;
 
-        case CV_INT:
-            describeInt(plot, data.num, val);
-            break;
-
         case CV_INT_RANGE:
-            describeIntRange(plot, data.rng, val);
+            if (isSingular(data.rng))
+                describeInt(plot, data.rng.lo, val);
+            else
+                describeIntRange(plot, data.rng, val);
             break;
 
         case CV_REAL:
