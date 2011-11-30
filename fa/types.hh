@@ -3,18 +3,18 @@
  *
  * This file is part of forester.
  *
- * predator is free software: you can redistribute it and/or modify
+ * forester is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * predator is distributed in the hope that it will be useful,
+ * forester is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with predator.  If not, see <http://www.gnu.org/licenses/>.
+ * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef TYPES_H
@@ -115,7 +115,7 @@ struct SelData {
 	 * The std::ostream << operator for conversion to a string.
 	 *
 	 * @param[in,out]  os  The output stream
-	 * @param[in]      x   The value to be appended to the stream  
+	 * @param[in]      x   The value to be appended to the stream
 	 *
 	 * @returns  The modified output stream
 	 */
@@ -288,7 +288,7 @@ struct Data {
 	 * Creates a type and value information for a native memory pointer.
 	 *
 	 * @param[in]  ptr  The pointer
-	 * 
+	 *
 	 * @returns  The type and value information for the pointer
 	 */
 	static Data createNativePtr(void* ptr) {
@@ -319,7 +319,7 @@ struct Data {
 	 *
 	 * Creates a type and value information about a structure
 	 *
-	 * @param[in]  items  The nested data items 
+	 * @param[in]  items  The nested data items
 	 *
 	 * @returns  The type and value information for a structure
 	 */
@@ -648,7 +648,7 @@ struct Data {
 	 * The std::ostream << operator for conversion to a string.
 	 *
 	 * @param[in,out]  os  The output stream
-	 * @param[in]      x   The value to be appended to the stream  
+	 * @param[in]      x   The value to be appended to the stream
 	 *
 	 * @returns  The modified output stream
 	 */

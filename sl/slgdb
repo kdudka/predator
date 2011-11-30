@@ -12,7 +12,7 @@ CL_DIR="$topdir/cl"
 SL_DIR="$topdir/sl"
 SL_BUILD="$topdir/sl_build"
 SL_PLUG="$SL_BUILD/libsl.so"
-CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[5-7]*/cc1"
+CC1="$topdir/gcc-install/libexec/gcc/*/4.[5-7]*/cc1"
 
 # attempt to make
 make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D CL_DEBUG=ON' \
@@ -33,7 +33,7 @@ test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
 
 # prepare the command line
 RUN="$GDB --quiet --args $CC1 \"$1\" \
-    -I../include/predator-builtins -DPREDATOR \
+    -I$topdir/include/predator-builtins -DPREDATOR \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \
     -fplugin=$SL_PLUG \

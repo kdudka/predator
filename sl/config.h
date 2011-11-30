@@ -94,9 +94,20 @@
 #define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
 
 /**
- * if 1, allow exact execution of addition and subtraction of constant integers
+ * - 0 ... avoid creation of a new integral range from two integral constants
+ * - 1 ... allow to create integral ranges from integral constants if needed
+ * - 2 ... same as above, additionally use widening in upward direction [broken]
+ * - 3 ... same as above, additionally use widening in both directions [broken]
  */
-#define SE_ALLOW_CST_INT_PLUS_MINUS         1
+#define SE_ALLOW_INT_RANGES                 0
+
+/**
+ * - 0 ... do not use values with offset specified by int ranges (VT_RANGE)
+ * - 1 ... allow to use values with offset specified by int ranges (VT_RANGE)
+ * - 2 ... same as above, additionally use widening in upward direction [broken]
+ * - 3 ... same as above, additionally use widening in both directions [broken]
+ */
+#define SE_ALLOW_OFF_RANGES                 1
 
 /**
  * how much do we allow to use three-way join
@@ -119,6 +130,11 @@
 #define SE_DEFER_SLS_INTRO                  0
 
 /**
+ * if 1, do not use alignment tracking unless we get it for free
+ */
+#define SE_DISABLE_ALIGNMENT_TRACKING       0
+
+/**
  * if 1, do not use DLS (Doubly-linked List Segment) abstraction
  */
 #define SE_DISABLE_DLS                      0
@@ -132,12 +148,6 @@
  * if 1, do not use the @b symcut module at all
  */
 #define SE_DISABLE_SYMCUT                   0
-
-/**
- * if 1, do not use the @b symjoin module for symbolic state management (this
- * implies SE_ALLOW_CST_INT_PLUS_MINUS == 0 unless you intend to loop forever)
- */
-#define SE_DISABLE_SYMJOIN_IN_SYMSTATE      0
 
 /**
  * - 0 ... do not dump trace graphs unless explicitly asked to do so
@@ -170,6 +180,11 @@
  * the highest integral number we can count to (only partial implementation atm)
  */
 #define SE_INT_ARITHMETIC_LIMIT             8
+
+/**
+ * if 1, do not allow three-way join on each state update, but only when looping
+ */
+#define SE_JOIN_ON_LOOP_EDGES_ONLY          0
 
 /**
  * maximal call depth
@@ -209,14 +224,7 @@
  * - 1 ... basic tracking of non-pointer values
  * - 2 ... expensive tracking of pointer values
  */
-#define SE_TRACK_NON_POINTER_VALUES         1
-
-/**
- * if 1, track uninitialized values, which may result into significant state
- * explosion in some cases (especially when used together with
- * SE_TRACK_NON_POINTER_VALUES)
- */
-#define SE_TRACK_UNINITIALIZED              0
+#define SE_TRACK_NON_POINTER_VALUES         2
 
 /**
  * if 1, do not make deep copy on copy of SymHeap [experimental]

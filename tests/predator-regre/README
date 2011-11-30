@@ -73,6 +73,8 @@ SLS abstraction
 
     test-0195.c - a simplification of test-0193 that revealed a bug in symjoin
 
+    test-0199.c - a stack implementation (contributed by Daniela Ďuričeková)
+
 
 DLS abstraction
 ===============
@@ -688,6 +690,20 @@ Tests taken from Forester
     test-0185.c - a regression test focused on a fixed SIGSEGV bug in SymProc
 
     test-0188.c - wrong count of arguments given to printf()
+
+    test-0196.c - a training example for the introduction of VT_RANGE
+
+    test-0197.c - a regression test for execution of memset() on ranges
+
+    test-0198.c - a regression test for reasoning about integral ranges
+
+    test-0201.c - a regression test for alignment of integral ranges
+
+    test-0202.c - a tiny regression test for alignment of integral ranges
+
+    test-0203.c - similar to test-0198, but uses values close to one
+
+    test-0204.c - same as test-0203, but uses values close to minus one
 
 
 Tiny DLL library written on scratch

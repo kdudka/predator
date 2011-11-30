@@ -1,0 +1,4 @@
+test-0131.c:122:19: error: dereferencing object of size 4B out of bounds
+test-0131.c:122:19: note: the pointer being dereferenced points 8B above a heap object of size 20B
+test-0131.c:143:13: note: from call of traverse()
+test-0131.c:127:5: note: from call of main()

@@ -1,0 +1,5 @@
+test-0411.c:180:142: error: dereferencing object of size 4112B out of bounds
+test-0411.c:180:142: note: the target object ends 1B beyond a heap object of size 4127B
+test-0411.c:222:18: note: from call of FreeArenaList()
+test-0411.c:266:21: note: from call of PL_FreeArenaPool()
+test-0411.c:253:5: note: from call of main()

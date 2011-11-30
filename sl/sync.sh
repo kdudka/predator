@@ -32,8 +32,13 @@ do_sync() {
 }
 
 printf "\n${G}Basic analysis...${N}\n" >&2
+unset PFLAGS
 do_sync "$*"
 
-printf "\n${Y}OOM simulation mode analysis...${N}\n" >&2
+printf "\n${Y}track_uninit mode...${N}\n" >&2
+export PFLAGS="track_uninit"
+do_sync "$*" .uninit
+
+printf "\n${Y}OOM simulation mode...${N}\n" >&2
 export PFLAGS="oom"
 do_sync "$*" .oom

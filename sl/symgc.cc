@@ -172,5 +172,6 @@ void LeakMonitor::leave() {
         return;
 
     if (::debuggingGarbageCollector)
-        plotHeap(snap_, "memleak", leakList_, /* digForward */ false);
+        plotHeap(snap_, "memleak", /* TODO: loc */ 0, leakList_,
+                /* digForward */ false);
 }

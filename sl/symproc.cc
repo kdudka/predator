@@ -45,9 +45,27 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
-void SymProc::failWithBackTrace() {
-    printBackTrace(*this, ML_ERROR);
+void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace) {
+    // update trace graph
+    Trace::MsgNode *trMsg = new Trace::MsgNode(sh_.traceNode(), level, lw_);
+    sh_.traceUpdate(trMsg);
+    CL_BREAK_IF(!chkTraceGraphConsistency(trMsg));
+
+    // print the backtrace
+    bt_->printBackTrace(forcePtrace);
+
+    // dump trace graph, or schedule and endpoint for batch trace graph dump
+#if 2 == SE_DUMP_TRACE_GRAPHS
+    Trace::plotTrace(sh_.traceNode(), "symtrace");
+#elif 1 == SE_DUMP_TRACE_GRAPHS
+    Trace::GraphProxy *glProxy = Trace::Globals::instance()->glProxy();
+    glProxy->insert(sh_.traceNode(), "symtrace");
+#endif
+
     printMemUsage("SymBackTrace::printBackTrace");
+    if (ML_ERROR != level)
+        // do not panic for now
+        return;
 
 #if SE_ERROR_RECOVERY_MODE
     errorDetected_ = true;
@@ -65,7 +83,7 @@ bool SymProc::hasFatalError() const {
 #endif
 }
 
-TValId SymProc::heapValFromCst(const struct cl_operand &op) {
+TValId SymProc::valFromCst(const struct cl_operand &op) {
     const struct cl_cst &cst = op.data.cst;
 
     CustomValue cv(CV_INVALID);
@@ -75,8 +93,8 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
         case CL_TYPE_ENUM:
         case CL_TYPE_INT:
             // integral value
-            cv.code = CV_INT;
-            cv.data.num = cst.data.cst_int.value;
+            cv.code = CV_INT_RANGE;
+            cv.data.rng = IR::rngFromNum(cst.data.cst_int.value);
             break;
 
         case CL_TYPE_REAL:
@@ -98,7 +116,7 @@ TValId SymProc::heapValFromCst(const struct cl_operand &op) {
             break;
 
         default:
-            CL_BREAK_IF("heapValFromCst() got something special");
+            CL_BREAK_IF("valFromCst() got something special");
             break;
     }
 
@@ -118,7 +136,7 @@ void describeUnknownVal(
     const EValueOrigin code = sh.valOrigin(val);
     switch (code) {
         case VO_DEREF_FAILED:
-            CL_BREAK_IF("invalid call of reportDerefOfUnknownVal()");
+            CL_BREAK_IF("invalid call of describeUnknownVal()");
             // fall through!
 
         case VO_INVALID:
@@ -165,7 +183,7 @@ const char* describeRootObj(const EValueTarget code) {
 void reportDerefOutOfBounds(
         SymProc                         &proc,
         const TValId                    val,
-        const TOffset                   sizeOfTarget)
+        const TSizeOf                   sizeOfTarget)
 {
     const struct cl_loc *loc = proc.lw();
     SymHeap &sh = proc.sh();
@@ -179,7 +197,7 @@ void reportDerefOutOfBounds(
     const char *const what = describeRootObj(code);
 
     const TValId root = sh.valRoot(val);
-    const int rootSize = sh.valSizeOfTarget(root);
+    const TSizeOf rootSize = sh.valSizeOfTarget(root);
     CL_BREAK_IF(rootSize <= 0);
 
     const TOffset off = sh.valOffset(val);
@@ -191,7 +209,7 @@ void reportDerefOutOfBounds(
         return;
     }
 
-    int beyond = off - rootSize;
+    TOffset beyond = off - rootSize;
     if (0 <= beyond) {
         CL_NOTE_MSG(loc, "the pointer being dereferenced points "
                 << beyond << "B beyond " << what
@@ -208,7 +226,7 @@ void reportDerefOutOfBounds(
     }
 }
 
-bool SymProc::checkForInvalidDeref(TValId val, const TOffset sizeOfTarget) {
+bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget) {
     if (VAL_NULL == val) {
         CL_ERROR_MSG(lw_, "dereference of NULL value");
         return true;
@@ -224,13 +242,17 @@ bool SymProc::checkForInvalidDeref(TValId val, const TOffset sizeOfTarget) {
 
     const EValueTarget code = sh_.valTarget(val);
     switch (code) {
+        case VT_RANGE:
+            CL_BREAK_IF("please implement");
+            // fall through!
+
         case VT_INVALID:
         case VT_COMPOSITE:
-        case VT_CUSTOM:
         case VT_ABSTRACT:
             CL_BREAK_IF("attempt to dereference something special");
             // fall through!
 
+        case VT_CUSTOM:
         case VT_UNKNOWN:
             CL_ERROR_MSG(lw_, "invalid dereference");
             describeUnknownVal(*this, val, "dereference");
@@ -264,6 +286,9 @@ void SymProc::varInit(TValId at) {
     const CVar cv = sh_.cVarByRoot(at);
     const CodeStorage::Storage &stor = sh_.stor();
     const CodeStorage::Var &var = stor.vars[cv.uid];
+    if (var.initials.empty())
+        // nothing to do at this level (already handled by SymExecCore)
+        return;
 
     SymExecCoreParams ep;
     ep.skipVarInit = /* avoid an infinite recursion */ true;
@@ -292,7 +317,7 @@ TValId SymProc::varAt(const CVar &cv) {
 
     // lazy var creation
     at = sh_.addrOfVar(cv, /* createIfNeeded */ true);
-    const TOffset size = sh_.valSizeOfTarget(at);
+    const TSizeOf size = sh_.valSizeOfTarget(at);
 
     // resolve Var
     const CodeStorage::Storage &stor = sh_.stor();
@@ -309,19 +334,15 @@ TValId SymProc::varAt(const CVar &cv) {
         return at;
 #endif
 
+    bool needInit = !var.initials.empty();
     if (nullify) {
         // initialize to zero
         sh_.writeUniformBlock(at, VAL_NULL, size);
     }
-#if SE_TRACK_UNINITIALIZED
-    else if (isLcVar) {
-        // uninitialized stack variable
-        const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
-        sh_.writeUniformBlock(at, tpl, size);
-    }
-#endif
+    else if (isLcVar)
+        needInit = true;
 
-    if (!var.initials.empty())
+    if (needInit)
         // go through explicit initializers
         this->varInit(at);
 
@@ -336,14 +357,15 @@ TValId SymProc::varAt(const struct cl_operand &op) {
     return this->varAt(cv);
 }
 
-bool SymProc::addOffDerefArray(TOffset &off, const struct cl_accessor *ac) {
+bool addOffDerefArray(SymProc &proc, TOffset &off, const struct cl_accessor *ac)
+{
     // read value of the operand that is used as an array index
     const struct cl_operand *opIdx = ac->data.array.index;
-    const TValId valIdx = this->valFromOperand(*opIdx);
+    const TValId valIdx = proc.valFromOperand(*opIdx);
 
     // unwrap the integral value inside the heap value (if available)
-    long idx;
-    if (!numFromVal(&idx, sh_, valIdx))
+    IR::TInt idx;
+    if (!numFromVal(&idx, proc.sh(), valIdx))
         return false;
 
     // compute the resulting offset
@@ -390,7 +412,7 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
                 continue;
 
             case CL_ACCESSOR_DEREF_ARRAY:
-                if (this->addOffDerefArray(off, ac))
+                if (addOffDerefArray(*this, off, ac))
                     continue;
                 else
                     // no clue how to compute the resulting offset
@@ -425,7 +447,7 @@ ObjHandle SymProc::objByOperand(const struct cl_operand &op) {
     // check for invalid dereference
     const TObjType cltTarget = op.type;
     if (this->checkForInvalidDeref(at, cltTarget->size)) {
-        this->failWithBackTrace();
+        this->printBackTrace(ML_ERROR);
         return ObjHandle(OBJ_DEREF_FAILED);
     }
 
@@ -438,7 +460,7 @@ ObjHandle SymProc::objByOperand(const struct cl_operand &op) {
     return obj;
 }
 
-TValId SymProc::heapValFromObj(const struct cl_operand &op) {
+TValId SymProc::valFromObj(const struct cl_operand &op) {
     if (seekRefAccessor(op.accessor))
         return this->targetAt(op);
 
@@ -464,10 +486,10 @@ TValId SymProc::valFromOperand(const struct cl_operand &op) {
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
-            return this->heapValFromObj(op);
+            return this->valFromObj(op);
 
         case CL_OPERAND_CST:
-            return this->heapValFromCst(op);
+            return this->valFromCst(op);
 
         default:
             CL_BREAK_IF("invalid call of SymProc::valFromOperand()");
@@ -501,13 +523,13 @@ bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op) {
     return true;
 }
 
-void SymProc::heapObjDefineType(const ObjHandle &lhs, TValId rhs) {
-    const EValueTarget code = sh_.valTarget(rhs);
+void digRootTypeInfo(SymHeap &sh, const ObjHandle &lhs, TValId rhs) {
+    const EValueTarget code = sh.valTarget(rhs);
     if (!isPossibleToDeref(code))
         // no valid target anyway
         return;
 
-    if (sh_.valOffset(rhs))
+    if (sh.valOffset(rhs))
         // not a pointer to root
         return;
 
@@ -516,63 +538,206 @@ void SymProc::heapObjDefineType(const ObjHandle &lhs, TValId rhs) {
         // no type-info given for the target
         return;
 
-    const TObjType cltLast = sh_.valLastKnownTypeOfTarget(rhs);
+    const TObjType cltLast = sh.valLastKnownTypeOfTarget(rhs);
     if (isComposite(cltLast) && !isComposite(cltTarget))
         // we are accessing a field that is placed at zero offset of a composite
         // type but it yet does not mean that we are changing the root type-info
         return;
 
-    const int rootSize = sh_.valSizeOfTarget(rhs);
+    const TSizeOf rootSize = sh.valSizeOfTarget(rhs);
     CL_BREAK_IF(rootSize <= 0 && isOnHeap(code));
     if (cltLast && cltLast->size == rootSize && cltTarget->size != rootSize)
         // basically the same rule as above but now we check the size of target
         return;
 
     // update the last known type-info of the root
-    sh_.valSetLastKnownTypeOfTarget(rhs, cltTarget);
+    sh.valSetLastKnownTypeOfTarget(rhs, cltTarget);
 }
 
-void SymProc::reportMemLeak(const EValueTarget code, const char *reason) {
+void reportMemLeak(SymProc &proc, const EValueTarget code, const char *reason) {
+    const struct cl_loc *loc = proc.lw();
     const char *const what = describeRootObj(code);
-    CL_WARN_MSG(lw_, "memory leak detected while " << reason << "ing " << what);
-    printBackTrace(*this, ML_WARN);
+    CL_WARN_MSG(loc, "memory leak detected while " << reason << "ing " << what);
+    proc.printBackTrace(ML_WARN);
 }
 
-void SymProc::heapSetSingleVal(const ObjHandle &lhs, TValId rhs) {
-    if (!lhs.isValid()) {
-        CL_ERROR_MSG(lw_, "invalid L-value");
-        this->failWithBackTrace();
-        return;
+/// pointer kind classification
+enum EPointerKind {
+    PK_DATA,                        ///< data pointer
+    PK_CODE                         ///< code pointer
+};
+
+// if we are going to write a pointer, check whether we have enough space for it
+TValId ptrObjectEncoderCore(
+        SymProc                    &proc,
+        const ObjHandle            &dst,
+        const TValId                val,
+        const EPointerKind          code)
+{
+    SymHeap &sh = proc.sh();
+    TStorRef &stor = sh.stor();
+
+    // read pointer's sizeof from Code Storage
+    TSizeOf ptrSize = 0;
+    switch (code) {
+        case PK_DATA:
+            ptrSize = stor.types.dataPtrSizeof();
+            break;
+
+        case PK_CODE:
+            ptrSize = stor.types.codePtrSizeof();
+            break;
     }
 
-    const TValId lhsAt = lhs.placedAt();
-    const EValueTarget code = sh_.valTarget(lhsAt);
-    CL_BREAK_IF(!isPossibleToDeref(code));
+    const TSizeOf dstSize = dst.objType()->size;
+    CL_BREAK_IF((sh.valSizeOfTarget(dst.placedAt()) < dstSize));
+    if (ptrSize <= dstSize)
+        return val;
 
-    if (isPossibleToDeref(sh_.valTarget(rhs))) {
-        // we are going to write a pointer, check if we have enough space for it
-        const TOffset dstSize = sh_.valSizeOfTarget(lhsAt);
-        const TOffset ptrSize = sh_.stor().types.dataPtrSizeof();
-        if (dstSize < ptrSize) {
-            CL_ERROR_MSG(lw_, "not enough space to store value of a pointer");
-            CL_NOTE_MSG(lw_, "dstSize: " << dstSize << " B");
-            CL_NOTE_MSG(lw_, "ptrSize: " << ptrSize << " B");
-            this->failWithBackTrace();
-            rhs = sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
+    const struct cl_loc *loc = proc.lw();
+    CL_ERROR_MSG(loc, "not enough space to store value of a pointer");
+    CL_NOTE_MSG(loc, "dstSize: " << dstSize << " B");
+    CL_NOTE_MSG(loc, "ptrSize: " << ptrSize << " B");
+    proc.printBackTrace(ML_ERROR);
+    return sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
+}
+
+TValId ptrObjectEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
+    return ptrObjectEncoderCore(proc, dst, val, PK_DATA);
+}
+
+// FIXME: the following code is full of off-by-one errors and integral overflows
+// TODO: allow overflow detection for target types >= sizeof(long) on host
+TValId integralEncoder(
+        SymProc                    &proc,
+        const ObjHandle            &dst,
+        const TValId                val,
+        const IR::Range            &rngOrig)
+{
+    const struct cl_loc *loc = proc.lw();
+
+    // read type-info of the target object
+    const TObjType clt = dst.objType();
+    const TSizeOf size = clt->size;
+    CL_BREAK_IF(isComposite(clt) || !size);
+
+    // start with the given range as a candidate for result
+    IR::Range rng(rngOrig);
+
+    // TODO: check for signedness violation
+    const bool isUnsigned = clt->is_unsigned;
+#if 0
+    if (isUnsigned && rng.lo < IR::Int0 && /* FIXME */ IR::IntMin != rng.lo) {
+        CL_WARN_MSG(loc, "possible underflow of an unsigned integer");
+        rng.lo = IR::Int0;
+        rng.hi = IR::IntMax;
+    }
+#endif
+
+    if (static_cast<TSizeOf>(sizeof(IR::TInt)) < size)
+        // the program being analyzed uses wider integral type than we do, there
+        // is no chance to catch anything because of poor representation of ints
+        goto give_up;
+
+    // FIXME: following hunk is semantically invalid because of the #if 0 above
+    if (IR::IntMin != rng.lo && rng.lo < IR::Int0) {
+        // we expect a signed target object at this point
+        const IR::TInt loLimit = IR::Int1 << ((size << 3) /* sign bit */ - 1);
+        if (rng.lo < -loLimit) {
+            CL_WARN_MSG(loc, "possible underflow of a signed integer");
+            rng = IR::FullRange;
         }
     }
 
-    // update type-info
-    this->heapObjDefineType(lhs, rhs);
+    if (IR::IntMax != rng.hi) {
+        const TSizeOf hiLimitWidth = (size << 3) /* sign bit */ - !isUnsigned;
+        const IR::TInt hiLimit = IR::Int1 << hiLimitWidth;
+        if (hiLimit <= rng.hi) {
+            const char *const sig = (isUnsigned) ? "an unsigned" : "a signed";
+            CL_WARN_MSG(loc, "possible overflow of " << sig << " integer");
+            rng = IR::FullRange;
+        }
+    }
 
-    LeakMonitor lm(sh_);
+give_up:
+    if (rngOrig == rng)
+        // do not create a fresh value to prevent unnecessary information lost
+        return val;
+
+    // something has changed, print the backtrace!
+    proc.printBackTrace(ML_WARN);
+
+    // wrap the resulting range as a fresh heap value
+    const CustomValue cv(rng);
+    return proc.sh().valWrapCustom(cv);
+}
+
+TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
+    SymHeap &sh = proc.sh();
+    const CustomValue cv = sh.valUnwrapCustom(val);
+    const ECustomValue code = cv.code;
+
+    switch (code) {
+        case CV_STRING:
+            return ptrObjectEncoderCore(proc, dst, val, PK_DATA);
+
+        case CV_FNC:
+            return ptrObjectEncoderCore(proc, dst, val, PK_CODE);
+
+        case CV_INT_RANGE:
+            return integralEncoder(proc, dst, val, rngFromCustom(cv));
+
+        case CV_REAL:
+            // TODO
+            CL_DEBUG_MSG(proc.lw(), "floating point numbers are not supported");
+            return val;
+
+        case CV_INVALID:
+            break;
+    }
+
+    CL_BREAK_IF("customValueEncoder() got invalid custom value");
+    return VAL_INVALID;
+}
+
+void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs) {
+    if (!lhs.isValid()) {
+        CL_ERROR_MSG(proc.lw(), "invalid L-value");
+        proc.printBackTrace(ML_ERROR);
+        return;
+    }
+
+    SymHeap &sh = proc.sh();
+    const EValueTarget codeLhs = sh.valTarget(lhs.placedAt());
+    CL_BREAK_IF(!isPossibleToDeref(codeLhs));
+
+    // generic prototype for a value encoder
+    TValId (*encode)(SymProc &, const ObjHandle &obj, const TValId val) = 0;
+
+    const EValueTarget codeRhs = sh.valTarget(rhs);
+    if (isPossibleToDeref(codeRhs))
+        // pointer write validator
+        encode = ptrObjectEncoder;
+
+    else if (VT_CUSTOM == codeRhs)
+        // custom value write validator
+        encode = customValueEncoder;
+
+    if (encode)
+        // translate the value using the selected encoder
+        rhs = encode(proc, lhs, rhs);
+
+    // update type-info of the root
+    digRootTypeInfo(sh, lhs, rhs);
+
+    LeakMonitor lm(sh);
     lm.enter();
 
     TValSet killedPtrs;
     lhs.setValue(rhs, &killedPtrs);
 
     if (lm.collectJunkFrom(killedPtrs))
-        this->reportMemLeak(code, "assign");
+        reportMemLeak(proc, codeLhs, "assign");
 
     lm.leave();
 }
@@ -584,7 +749,7 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
 
     const TObjType clt = lhs.objType();
     const bool isComp = isComposite(clt, /* includingArray */ false);
-    const unsigned size = clt->size;
+    const TSizeOf size = clt->size;
     CL_BREAK_IF(!size);
 
     if (VO_DEREF_FAILED == sh_.valOrigin(rhs)) {
@@ -601,7 +766,7 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
     CL_BREAK_IF(isComp != (VT_COMPOSITE == sh_.valTarget(rhs)));
     if (!isComp) {
         // not a composite object
-        this->heapSetSingleVal(lhs, rhs);
+        objSetAtomicVal(*this, lhs, rhs);
         return;
     }
 
@@ -616,7 +781,7 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
     sh_.copyBlockOfRawMemory(lhsAt, rhsAt, size, &killedPtrs);
 
     if (lm.collectJunkFrom(killedPtrs))
-        this->reportMemLeak(code, "assign");
+        reportMemLeak(*this, code, "assign");
 
     lm.leave();
 }
@@ -633,7 +798,7 @@ void SymProc::valDestroyTarget(TValId addr) {
     destroyRootAndCollectPtrs(sh_, addr, &killedPtrs);
 
     if (lm.collectJunkFrom(killedPtrs))
-        this->reportMemLeak(code, "destroy");
+        reportMemLeak(*this, code, "destroy");
 
     lm.leave();
 }
@@ -692,12 +857,140 @@ void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
         this->killVar(kv);
 }
 
+void execMemsetCore(
+        SymHeap                     &sh,
+        const TValId                 root,
+        const TValId                 valToWrite,
+        const IR::Range             &addrRange,
+        const IR::Range             &sizeRange,
+        const IR::Range             &totalRange,
+        TValSet                     *killedPtrs)
+{
+    const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    const TValId valBegTotal = sh.valByOffset(root, totalRange.lo);
+
+    // how much memory can we guarantee the content of?
+    IR::Range safeRange;
+    safeRange.alignment = IR::Int1;
+    safeRange.lo = addrRange.hi;
+    safeRange.hi = addrRange.lo + sizeRange.lo;
+
+    // check whether we are able to write something specific at all
+    if (VAL_NULL != valToWrite || safeRange.hi <= safeRange.lo) {
+        CL_DEBUG("memset() only invalidates the given range");
+        const IR::TInt totalSize = widthOf(totalRange) - /* closed int */ 1;
+        sh.writeUniformBlock(valBegTotal, valUnknown, totalSize, killedPtrs);
+        return;
+    }
+
+    // compute the size we can write precisely
+    const IR::TInt safeSize = widthOf(safeRange) - /* closed int */ 1;
+    CL_BREAK_IF(safeSize <= 0);
+
+    // valToWrite is VAL_NULL (we do not support writing arbitrary values yet)
+    const TValId valBegSafe = sh.valByOffset(root, safeRange.lo);
+    sh.writeUniformBlock(valBegSafe, valToWrite, safeSize, killedPtrs);
+
+    // compute size of the prefix we _have_ to invalidate
+    const IR::TInt prefixSize = safeRange.lo - totalRange.lo;
+    CL_BREAK_IF(prefixSize < 0);
+    if (0 < prefixSize) {
+        CL_DEBUG("memset() invalidates ambiguous prefix");
+        sh.writeUniformBlock(valBegTotal, valUnknown, prefixSize, killedPtrs);
+    }
+
+    // compute size of the suffix we _have_ to invalidate
+    const IR::TInt suffixSize = totalRange.hi - safeRange.hi;
+    CL_BREAK_IF(suffixSize < 0);
+    if (0 < suffixSize) {
+        CL_DEBUG("memset() invalidates ambiguous suffix");
+        const TValId suffixAddr = sh.valByOffset(root, safeRange.hi);
+        sh.writeUniformBlock(suffixAddr, valUnknown, suffixSize, killedPtrs);
+    }
+}
+
+inline void wipeAlignment(IR::Range &rng) {
+    CL_BREAK_IF(isAligned(rng));
+    rng.alignment = IR::Int1;
+}
+
+void executeMemset(
+        SymProc                     &proc,
+        const TValId                 addr,
+        const TValId                 valToWrite,
+        const TValId                 valSize)
+{
+    SymHeap &sh = proc.sh();
+    const struct cl_loc *lw = proc.lw();
+
+    // how much we are going to write?
+    IR::Range sizeRange;
+    if (!rngFromVal(&sizeRange, sh, valSize) || sizeRange.lo < 0) {
+        CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
+        proc.printBackTrace(ML_ERROR);
+        return;
+    }
+    if (!sizeRange.hi) {
+        CL_WARN_MSG(lw, "ignoring call of memset() with size == 0");
+        proc.printBackTrace(ML_WARN);
+        return;
+    }
+
+    // resolve address range
+    IR::Range addrRange = sh.valOffsetRange(addr);
+
+    // how much memory are we going to touch in the worst case?
+    const TValId valLimit = sh.valShift(addr, valSize);
+    IR::Range totalRange = sh.valOffsetRange(valLimit);
+    totalRange.lo = addrRange.lo;
+
+    // check the pointer - is it valid? do we have enough allocated memory?
+    const TValId root = sh.valRoot(addr);
+    const TValId valBegTotal = sh.valByOffset(root, totalRange.lo);
+    if (proc.checkForInvalidDeref(valBegTotal, widthOf(totalRange) - 1)) {
+        // error message already printed out
+        proc.printBackTrace(ML_ERROR);
+        return;
+    }
+
+    // enter leak monitor
+    LeakMonitor lm(sh);
+    lm.enter();
+    TValSet killedPtrs;
+
+    wipeAlignment(addrRange);
+    wipeAlignment(sizeRange);
+    wipeAlignment(totalRange);
+
+    // write the data
+    execMemsetCore(sh, root, valToWrite,
+            addrRange, sizeRange, totalRange,
+            &killedPtrs);
+
+    // check for memory leaks
+    if (lm.collectJunkFrom(killedPtrs)) {
+        CL_WARN_MSG(lw, "memory leak detected while executing memset()");
+        proc.printBackTrace(ML_WARN);
+    }
+
+    // leave leak monitor
+    lm.leave();
+}
+
+
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
 void SymExecCore::varInit(TValId at) {
     if (ep_.skipVarInit)
         // we are explicitly asked to not initialize any vars
         return;
+
+    if (ep_.trackUninit && VT_ON_STACK == sh_.valTarget(at)) {
+        // uninitialized stack variable
+        const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
+        const TSizeOf size = sh_.valSizeOfTarget(at);
+        sh_.writeUniformBlock(at, tpl, size);
+    }
 
     SymProc::varInit(at);
 }
@@ -712,29 +1005,33 @@ void SymExecCore::execFree(TValId val) {
     switch (code) {
         case VT_DELETED:
             CL_ERROR_MSG(lw_, "double free()");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             return;
 
         case VT_LOST:
             CL_ERROR_MSG(lw_, "attempt to free a non-existing non-heap object");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             return;
 
         case VT_STATIC:
         case VT_ON_STACK:
             CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             return;
 
         case VT_CUSTOM:
             CL_ERROR_MSG(lw_, "free() called on non-pointer value");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             return;
+
+        case VT_RANGE:
+            CL_BREAK_IF("please implement");
+            // fall through!
 
         case VT_INVALID:
         case VT_ABSTRACT:
         case VT_COMPOSITE:
-            CL_BREAK_IF("invalid call of SymExecCore::execFreeCore()");
+            CL_BREAK_IF("invalid call of SymExecCore::execFree()");
             // fall through!
 
         case VT_UNKNOWN:
@@ -743,7 +1040,7 @@ void SymExecCore::execFree(TValId val) {
 
             CL_ERROR_MSG(lw_, "invalid free()");
             describeUnknownVal(*this, val, "free");
-            this->failWithBackTrace();
+            this->printBackTrace(ML_ERROR);
             return;
 
         case VT_ON_HEAP:
@@ -753,7 +1050,7 @@ void SymExecCore::execFree(TValId val) {
     const TOffset off = sh_.valOffset(val);
     if (off) {
         CL_ERROR_MSG(lw_, "free() called with offset " << off << "B");
-        this->failWithBackTrace();
+        this->printBackTrace(ML_ERROR);
         return;
     }
 
@@ -764,7 +1061,7 @@ void SymExecCore::execFree(TValId val) {
 void SymExecCore::execHeapAlloc(
         SymState                        &dst,
         const CodeStorage::Insn         &insn,
-        const unsigned                  size,
+        const TSizeOf                   size,
         const bool                      nullified)
 {
     // resolve lhs
@@ -777,7 +1074,7 @@ void SymExecCore::execHeapAlloc(
         CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
 malloc/calloc is implementation-defined");
         CL_NOTE_MSG(lw_, "assuming NULL as the result");
-        printBackTrace(*this, ML_WARN);
+        this->printBackTrace(ML_WARN);
         this->objSetValue(lhs, VAL_NULL);
         this->killInsn(insn);
         dst.insert(sh_);
@@ -800,9 +1097,16 @@ malloc/calloc is implementation-defined");
 
     // now create a heap object
     const TValId val = sh_.heapAlloc(size);
-    if (nullified)
+
+    if (nullified) {
         // initilize to zero as we are doing calloc()
         sh_.writeUniformBlock(val, VAL_NULL, size);
+    }
+    else if (ep_.trackUninit) {
+        // uninitialized heap block
+        const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
+        sh_.writeUniformBlock(val, tplValue, size);
+    }
 
     // store the result of malloc
     this->objSetValue(lhs, val);
@@ -810,34 +1114,43 @@ malloc/calloc is implementation-defined");
     dst.insert(sh_);
 }
 
-bool describeCmpOp(
-        const enum cl_binop_e       code,
-        bool                        *pNegative,
-        bool                        *pPreserveEq,
-        bool                        *pPreserveNeq)
-{
-    *pNegative = false;
-    *pPreserveEq = false;
-    *pPreserveNeq = false;
+bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code) {
+    memset(pTraits, 0, sizeof *pTraits);
+
+    switch (code) {
+        case CL_BINOP_LE:
+        case CL_BINOP_LT:
+            pTraits->leftToRight = true;
+            break;
+
+        case CL_BINOP_GE:
+        case CL_BINOP_GT:
+            pTraits->rightToLeft = true;
+            break;
+
+        default:
+            // no ordering traits here...
+            break;
+    }
 
     switch (code) {
         case CL_BINOP_EQ:
-            *pPreserveEq = true;
+            pTraits->preserveEq = true;
             // fall through!
 
         case CL_BINOP_LE:
         case CL_BINOP_GE:
-            *pPreserveNeq = true;
+            pTraits->preserveNeq = true;
             return true;
 
         case CL_BINOP_NE:
-            *pPreserveEq = true;
+            pTraits->preserveEq = true;
             // fall through!
 
         case CL_BINOP_LT:
         case CL_BINOP_GT:
-            *pNegative = true;
-            *pPreserveNeq = true;
+            pTraits->negative = true;
+            pTraits->preserveNeq = true;
             return true;
 
         default:
@@ -846,46 +1159,109 @@ bool describeCmpOp(
     }
 }
 
-bool compareIntCsts(
-        TValId                      *pDst,
+bool compareIntRanges(
+        bool                        *pDst,
         const enum cl_binop_e       code,
-        const long                  num1,
-        const long                  num2)
+        const IR::Range             &range1,
+        const IR::Range             &range2)
 {
-    bool result;
+    CmpOpTraits ct;
+    if (!describeCmpOp(&ct, code))
+        return false;
 
-    switch (code) {
-        case CL_BINOP_NE:
-            // TODO: improve SymHeapCore to handle it actually :-)
-            // fall through!
-
-        case CL_BINOP_EQ:
-            // this should have been already handled by the caller
-            return false;
-
-        case CL_BINOP_LE:
-            result = (num1 <= num2);
-            break;
-
-        case CL_BINOP_GE:
-            result = (num1 >= num2);
-            break;
-
-        case CL_BINOP_LT:
-            result = (num1 <  num2);
-            break;
-
-        case CL_BINOP_GT:
-            result = (num1 >  num2);
-            break;
-
-        default:
-            CL_BREAK_IF("unhandled binary operator in compareIntCsts()");
-            return false;
+    if (isAligned(range1) || isAligned(range2)) {
+        CL_DEBUG("compareIntRanges() does not support alignment yet");
+        return false;
     }
 
-    *pDst = boolToVal(result);
-    return true;
+    // check for interval overlapping (strict)
+    const bool ltr = (range1.hi < range2.lo);
+    const bool rtl = (range2.hi < range1.lo);
+
+    if (ct.preserveEq && ct.preserveNeq) {
+        // either == or !=
+
+        if (ltr || rtl) {
+            // no overlaps on the given intervals
+            *pDst = ct.negative;
+            return true;
+        }
+
+        if (isSingular(range1) && isSingular(range2)) {
+            // we got two integral constants and both are equal
+            CL_BREAK_IF(range1.lo != range2.hi);
+            *pDst = !ct.negative;
+            return true;
+        }
+
+        // we got something ambiguous
+        return false;
+    }
+
+    if (ct.negative) {
+        // either < or >
+
+        if ((ltr     && ct.leftToRight) || (rtl     && ct.rightToLeft)) {
+            *pDst = true;
+            return true;
+        }
+    }
+    else {
+        // either <= or >=
+
+        if ((rtl     && ct.leftToRight) || (ltr     && ct.rightToLeft)) {
+            *pDst = false;
+            return true;
+        }
+    }
+
+    // check for interval overlapping (weak)
+    const bool ltrWeak = (range1.hi <= range2.lo);
+    const bool rtlWeak = (range2.hi <= range1.lo);
+
+    if (ct.negative) {
+        // either < or >
+
+        if ((rtlWeak && ct.leftToRight) || (ltrWeak && ct.rightToLeft)) {
+            *pDst = false;
+            return true;
+        }
+    }
+    else {
+        // either <= or >=
+
+        if ((ltrWeak && ct.leftToRight) || (rtlWeak && ct.rightToLeft)) {
+            *pDst = true;
+            return true;
+        }
+    }
+
+    // we got something ambiguous
+    return false;
+}
+
+TValId comparePointers(
+        SymHeap                     &sh,
+        const enum cl_binop_e       code,
+        const TValId                v1,
+        const TValId                v2)
+{
+    const TValId root1 = sh.valRoot(v1);
+    const TValId root2 = sh.valRoot(v2);
+    if (root1 != root2)
+        // TODO: not much info, but we can still deduce at least something
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    bool result;
+    const IR::Range range1 = sh.valOffsetRange(v1);
+    const IR::Range range2 = sh.valOffsetRange(v2);
+    if (compareIntRanges(&result, code, range1, range2))
+        return boolToVal(result);
+
+#if !SE_ALLOW_OFF_RANGES
+    CL_BREAK_IF("please implement");
+#endif
+    return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
 TValId compareValues(
@@ -901,24 +1277,31 @@ TValId compareValues(
         return sh.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
 
     // resolve binary operator
-    bool neg, preserveEq, preserveNeq;
-    if (!describeCmpOp(code, &neg, &preserveEq, &preserveNeq)) {
+    CmpOpTraits cTraits;
+    if (!describeCmpOp(&cTraits, code)) {
         CL_WARN("binary operator not implemented yet");
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 
     // inconsistency check
-    if ((v1 == v2) && preserveNeq)
+    const bool neg = cTraits.negative;
+    if ((v1 == v2) && cTraits.preserveNeq)
         return boolToVal(!neg);
-    if (sh.proveNeq(v1, v2) && preserveEq)
+    if (sh.proveNeq(v1, v2) && cTraits.preserveEq)
         return boolToVal(neg);
 
-    long num1, num2;
-    if (numFromVal(&num1, sh, v1) && numFromVal(&num2, sh, v2)) {
+    const EValueTarget code1 = sh.valTarget(v1);
+    const EValueTarget code2 = sh.valTarget(v2);
+    if (isAnyDataArea(code1) && isAnyDataArea(code2))
+        // both values are pointers
+        return comparePointers(sh, code, v1, v2);
+
+    IR::Range rng1, rng2;
+    if (rngFromVal(&rng1, sh, v1) && rngFromVal(&rng2, sh, v2)) {
         // both values are integral constants
-        TValId result;
-        if (compareIntCsts(&result, code, num1, num2))
-            return result;
+        bool result;
+        if (compareIntRanges(&result, code, rng1, rng2))
+            return boolToVal(result);
     }
 
     // propagate UV_UNINITIALIZED
@@ -936,114 +1319,289 @@ TValId compareValues(
     return sh.valCreate(VT_UNKNOWN, vo);
 }
 
-TValId SymProc::handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code) {
-    // check whether we both values are integral constant
-    long num1, num2;
-    if (!numFromVal(&num1, sh_, v1) || !numFromVal(&num2, sh_, v2))
-        return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+bool trimRangesIfPossible(
+        SymHeap                     &sh,
+        const CmpOpTraits           &cTraits,
+        const bool                  branch,
+        const TValId                v1,
+        const TValId                v2)
+{
+    const bool ltr = cTraits.leftToRight;
+    const bool rtl = cTraits.rightToLeft;
+    CL_BREAK_IF(ltr && rtl);
 
+    if (!ltr && !rtl)
+        // not a suitable binary operator (modulo some corner cases)
+        return false;
+
+    IR::Range rng1;
+    if (!anyRangeFromVal(&rng1, sh, v1))
+        return false;
+
+    IR::Range rng2;
+    if (!anyRangeFromVal(&rng2, sh, v2))
+        return false;
+
+    const bool isRange1 = !isSingular(rng1);
+    const bool isRange2 = !isSingular(rng2);
+    if (isRange1 == isRange2)
+        // not a suitable value pair for trimming
+        return false;
+
+    // one of the values holds a range inside
+    const TValId valRange = (isRange1) ? v1 : v2;
+
+    const EValueTarget code = sh.valTarget(valRange);
+    if (VT_RANGE == code) {
+        // comparing the offsets makes sense only if both values shares the root
+        const TValId root1 = sh.valRoot(v1);
+        const TValId root2 = sh.valRoot(v2);
+        if (root1 != root2)
+            // root mismatch
+            return false;
+    }
+
+    CL_DEBUG("trimRangesIfPossible() is taking place...");
+
+    // should we include the boundary to the result?
+    const bool isOpen = (branch == cTraits.negative);
+
+    // which boundary are we going to trim?
+    const bool neg = (branch == isRange2);
+    const bool trimLo = (neg == ltr);
+
+    // use the offsets in the appropriate order
+    IR::Range win        = (isRange1) ? rng1    : rng2;
+    const IR::TInt limit = (isRange2) ? rng1.lo : rng2.lo;
+
+    if (trimLo)
+        // shift the lower bound up
+        win.lo = limit + isOpen;
+    else
+        // shift the upper bound down
+        win.hi = limit - isOpen;
+
+    // trim the designated VT_RANGE value
+    sh.valRestrictRange(valRange, win);
+    return true;
+}
+
+bool reflectCmpResult(
+        SymHeap                     &sh,
+        const enum cl_binop_e       code,
+        const bool                  branch,
+        const TValId                v1,
+        const TValId                v2)
+{
+    // resolve binary operator
+    CmpOpTraits cTraits;
+    if (!describeCmpOp(&cTraits, code))
+        return false;
+
+    if (trimRangesIfPossible(sh, cTraits, branch, v1, v2))
+        return true;
+
+    if (branch == cTraits.negative) {
+        if (!cTraits.preserveNeq)
+            return false;
+
+        // introduce a Neq predicate over v1 and v2
+        sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
+    }
+    else {
+        if (!cTraits.preserveEq)
+            return false;
+
+        // we have deduced that v1 and v2 is actually the same value
+        sh.valMerge(v1, v2);
+    }
+
+    return true;
+}
+
+bool computeIntRngResult(
+        TValId                      *pDst,
+        SymHeapCore                 &sh,
+        const enum cl_binop_e       code,
+        const IR::Range             rng1,
+        const IR::Range             rng2)
+{
     // compute the result of an integral binary operation
-    long result;
+    IR::Range result;
+    result.alignment = IR::Int1;
+
     switch (code) {
-#if SE_ALLOW_CST_INT_PLUS_MINUS
         case CL_BINOP_PLUS:
-            result = num1 + num2;
+            result = rng1 + rng2;
             break;
 
         case CL_BINOP_MINUS:
-            result = num1 - num2;
+            result = rng1 - rng2;
             break;
-#endif
+
         case CL_BINOP_BIT_AND:
-            result = num1 & num2;
+            if (!isSingular(rng1) || !isSingular(rng2))
+                return false;
+
+            result = IR::rngFromNum(rng1.lo & rng2.lo);
             break;
 
         case CL_BINOP_MULT:
-            result = num1 * num2;
+            result = rng1 * rng2;
             break;
 
         case CL_BINOP_MIN:
-            result = std::min(num1, num2);
+            result.lo = std::min(rng1.lo, rng2.lo);
+            result.hi = std::min(rng1.hi, rng2.hi);
             break;
 
         case CL_BINOP_MAX:
-            result = std::max(num1, num2);
+            result.lo = std::max(rng1.lo, rng2.lo);
+            result.hi = std::max(rng1.hi, rng2.hi);
             break;
 
         default:
             CL_BREAK_IF("unhandled binary integral operation");
-            return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+            return false;
     }
 
-    // wrap the result as a heap value expressing a constant integer
-    CustomValue cv(CV_INT);
-    cv.data.num = result;
-    return sh_.valWrapCustom(cv);
+    // wrap the result as a heap value
+    const CustomValue cv(result);
+    *pDst = sh.valWrapCustom(cv);
+    return true;
 }
 
-TValId handleBitNot(SymHeap &sh, const TValId val) {
+/// if v1 is scalar and v2 is range (or vice versa), call valShift() on them
+inline bool handleRangeByScalarPlus(
+        TValId                     *pResult,
+        SymHeapCore                &sh,
+        const TValId                v1,
+        const TValId                v2,
+        const IR::Range            &rng1,
+        const IR::Range            &rng2)
+{
+    bool isRange1;
+    if (!isRangeByNum(&isRange1, rng1, rng2))
+        return false;
+
+    if (isRange1)
+        *pResult = sh.valShift(v1, v2);
+    else
+        *pResult = sh.valShift(v2, v1);
+
+    return true;
+}
+
+bool handleRangeBitMask(
+        TValId                     *pResult,
+        SymHeapCore                &sh,
+        const TValId                v1,
+        const TValId                v2,
+        const IR::Range            &rng1,
+        const IR::Range            &rng2)
+{
+    bool isRange1;
+    if (!isRangeByNum(&isRange1, rng1, rng2))
+        return false;
+
+    IR::TInt mask;
+    const TValId valMask  = (isRange1) ?   v2 :   v1;
+    if (!numFromVal(&mask, sh, valMask))
+        CL_BREAK_IF("handleRangeBitMask() malfunction");
+
+    CustomValue cv(CV_INT_RANGE);
+    IR::Range &rng = cv.data.rng;
+    rng = (isRange1) ? rng1 : rng2;
+    rng &= mask;
+
+    *pResult = sh.valWrapCustom(cv);
+    return true;
+}
+
+TValId handleIntegralOp(
+        SymHeapCore                &sh,
+        const TValId                v1,
+        const TValId                v2,
+        const enum cl_binop_e       code)
+{
+    if (CL_BINOP_MINUS == code) {
+        // chances are this could be a pointer difference
+        const EValueTarget code1 = sh.valTarget(v1);
+        const EValueTarget code2 = sh.valTarget(v2);
+
+        if (isAnyDataArea(code1) && isAnyDataArea(code2))
+            // ... and it indeed is a pointer difference
+            return sh.diffPointers(v1, v2);
+    }
+
+    TValId result;
+
+    // check whether we both values are integral constant
+    IR::Range rng1, rng2;
+    if (rngFromVal(&rng1, sh, v1) && rngFromVal(&rng2, sh, v2)) {
+
+        // first try to preserve range coincidence if we can
+        switch (code) {
+            case CL_BINOP_BIT_AND:
+                if (handleRangeBitMask(&result, sh, v1, v2, rng1, rng2))
+                    return result;
+                break;
+
+            case CL_BINOP_PLUS:
+                if (handleRangeByScalarPlus(&result, sh, v1, v2, rng1, rng2))
+                    return result;
+                break;
+
+            case CL_BINOP_MINUS:
+                if (!isSingular(rng1) && isSingular(rng2))
+                    return sh.valByOffset(v1, -rng2.lo);
+                break;
+
+            default:
+                break;
+        }
+
+        if (computeIntRngResult(&result, sh, code, rng1, rng2))
+            return result;
+    }
+
+    return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+}
+
+TValId handleBitNot(SymHeapCore &sh, const TValId val) {
     // check whether the value is an integral constant
-    long num;
+    IR::TInt num;
     if (!numFromVal(&num, sh, val))
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
     // compute the integral result
-    const long result = ~num;
+    const IR::TInt result = ~num;
 
     // wrap the result as a heap value expressing a constant integer
-    CustomValue cv(CV_INT);
-    cv.data.num = result;
+    CustomValue cv(CV_INT_RANGE);
+    cv.data.rng = IR::rngFromNum(result);
     return sh.valWrapCustom(cv);
 }
 
-TValId SymProc::handleIntegralOp(TValId val, enum cl_unop_e code) {
+TValId handleIntegralOp(
+        SymHeapCore                 &sh,
+        const TValId                val,
+        const enum cl_unop_e        code)
+{
     switch (code) {
         case CL_UNOP_MINUS:
-            return this->handleIntegralOp(VAL_NULL, val, CL_BINOP_MINUS);
+            return handleIntegralOp(sh, VAL_NULL, val, CL_BINOP_MINUS);
 
         case CL_UNOP_BIT_NOT:
-            return handleBitNot(sh_, val);
+            return handleBitNot(sh, val);
 
         default:
             CL_BREAK_IF("unhandled unary integral operation");
-            return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+            return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
     }
 }
 
-TValId SymProc::handlePointerPlus(TValId at, TValId off, bool negOffset) {
-    long num;
-    if (!numFromVal(&num, sh_, off)) {
-        CL_DEBUG_MSG(lw_, "pointer plus offset not a known integer");
-        return sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-    }
-
-    TOffset offRequested = static_cast<TOffset>(num);
-    if (negOffset)
-        offRequested = -offRequested;
-
-    CL_DEBUG("handlePointerPlus(): " << offRequested << "b offset requested");
-    return sh_.valByOffset(at, offRequested);
-}
-
-void printBackTrace(SymProc &proc, EMsgLevel level, bool forcePtrace) {
-    SymHeap &sh = proc.sh();
-    const struct cl_loc *loc = proc.lw();
-    Trace::MsgNode *trMsg = new Trace::MsgNode(sh.traceNode(), level, loc);
-    sh.traceUpdate(trMsg);
-    CL_BREAK_IF(!chkTraceGraphConsistency(trMsg));
-
-    const SymBackTrace *bt = proc.bt();
-    bt->printBackTrace(forcePtrace);
-#if 2 == SE_DUMP_TRACE_GRAPHS
-    Trace::plotTrace(sh.traceNode(), "symtrace");
-#elif 1 == SE_DUMP_TRACE_GRAPHS
-    Trace::GraphProxy *glProxy = Trace::Globals::instance()->glProxy();
-    glProxy->insert(sh.traceNode(), "symtrace");
-#endif
-}
-
-// TODO: move this to symutil?
-bool isIntCst(const SymHeap &sh, const TValId val) {
+bool isAnyIntValue(const SymHeapCore &sh, const TValId val) {
     switch (val) {
         case VAL_NULL:
         case VAL_TRUE:
@@ -1057,18 +1615,72 @@ bool isIntCst(const SymHeap &sh, const TValId val) {
     }
 
     const CustomValue &cv = sh.valUnwrapCustom(val);
-    return (CV_INT == cv.code);
+    const ECustomValue code = cv.code;
+    switch (code) {
+        case CV_INT_RANGE:
+            return true;
+
+        default:
+            return false;
+    }
 }
 
-bool decryptCIL(
+TValId handlePtrBitAnd(
+        SymHeapCore                &sh,
+        const TValId                vPtr,
+        const TValId                vInt)
+{
+    IR::TInt mask;
+    if (!numFromVal(&mask, sh, vInt) || 0 < mask)
+        // giving up
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    if (!mask)
+        // the whole pointer has been masked
+        return VAL_NULL;
+
+    // include all possible scenarios into consideration
+    IR::Range range;
+    range.lo        = IR::Int1 + mask;
+    range.hi        = IR::Int0;
+    range.alignment = IR::Int1;
+
+    // create the appropriate VT_RANGE value
+    return sh.valByRange(vPtr, range);
+}
+
+TValId handlePtrOperator(
+        SymHeapCore                &sh,
+        const TValId                vPtr,
+        TValId                      vInt,
+        const enum cl_binop_e       code)
+{
+    switch (code) {
+        case CL_BINOP_MINUS:
+            vInt = handleIntegralOp(sh, vInt, CL_UNOP_MINUS);
+            // fall through!
+
+        case CL_BINOP_PLUS:
+            return sh.valShift(vPtr, vInt);
+
+        case CL_BINOP_BIT_AND:
+            return handlePtrBitAnd(sh, vPtr, vInt);
+
+        default:
+            CL_BREAK_IF("unhandled binary operator in handlePtrOperator()");
+    }
+
+    return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+}
+
+/// ptr arithmetic is sometimes (with CIL always) masked as integral arithmetic
+bool reconstructPtrArithmetic(
         TValId                     *pResult,
-        SymProc                    &proc,
+        SymHeapCore                &sh,
         const TValId                v1,
         const TValId                v2,
         const enum cl_binop_e       code)
 {
-    CL_BREAK_IF(CL_BINOP_PLUS != code && CL_BINOP_MINUS != code);
-
     // these are no-ops (and I would bet they come from CIL anyway)
     if (VAL_NULL == v1) {
         *pResult =  v2;
@@ -1079,26 +1691,23 @@ bool decryptCIL(
         return true;
     }
 
-    const SymHeap &sh = proc.sh();
-    const bool isMinus = (CL_BINOP_MINUS == code);
-
-    if (isPossibleToDeref(sh.valTarget(v1)) && isIntCst(sh, v2)) {
-        CL_DEBUG("Using CIL code obfuscator? No problem...");
-        *pResult = proc.handlePointerPlus(v1, v2, /* negOffset */ isMinus);
+    if (isAnyDataArea(sh.valTarget(v1)) && isAnyIntValue(sh, v2)) {
+        CL_DEBUG("integral operator applied on ptr handled as ptr operator...");
+        *pResult = handlePtrOperator(sh, /* vPtr */ v1, /* vInt */ v2, code);
         return true;
     }
 
-    if (isPossibleToDeref(sh.valTarget(v2)) && isIntCst(sh, v1)) {
-        if (isMinus)
+    if (isAnyDataArea(sh.valTarget(v2)) && isAnyIntValue(sh, v1)) {
+        if (CL_BINOP_MINUS == code)
             // CL_BINOP_MINUS makes no sense here, it would mean e.g. (4 - &foo)
             return false;
 
-        CL_DEBUG("Using CIL code obfuscator? No problem...");
-        *pResult = proc.handlePointerPlus(v2, v1, /* negOffset */ false);
+        CL_DEBUG("integral operator applied on ptr handled as ptr operator...");
+        *pResult = handlePtrOperator(sh, /* vPtr */ v2, /* vInt */ v1, code);
         return true;
     }
 
-    // no CIL-generated nonsense detected
+    // looks like a real integral operation
     return false;
 }
 
@@ -1121,7 +1730,7 @@ struct OpHandler</* unary */ 1> {
             const TValId            rhs[1],
             const TObjType          clt[1 + /* dst type */ 1])
     {
-        SymHeap &sh = proc.sh_;
+        SymHeap &sh = proc.sh();
         const TValId val = rhs[0];
 
         const enum cl_unop_e code = static_cast<enum cl_unop_e>(iCode);
@@ -1129,7 +1738,7 @@ struct OpHandler</* unary */ 1> {
             case CL_UNOP_BIT_NOT:
                 if (!clt[0] || CL_TYPE_BOOL != clt[0]->code
                         || !clt[1] || CL_TYPE_BOOL != clt[1]->code)
-                    return proc.handleIntegralOp(val, code);
+                    return handleIntegralOp(sh, val, code);
                 // gcc 4.7.x uses CL_UNOP_BIT_NOT for bools with truth semantics
                 // fall through!
 
@@ -1137,7 +1746,7 @@ struct OpHandler</* unary */ 1> {
                 return compareValues(sh, CL_BINOP_EQ, clt[0], VAL_FALSE, val);
 
             case CL_UNOP_MINUS:
-                return proc.handleIntegralOp(rhs[0], code);
+                return handleIntegralOp(sh, rhs[0], code);
 
             case CL_UNOP_ASSIGN:
                 return val;
@@ -1162,7 +1771,7 @@ struct OpHandler</* binary */ 2> {
             const TObjType          clt[2 + /* dst type */ 1])
     {
         CL_BREAK_IF(!clt[0] || !clt[1] || !clt[2]);
-        SymHeap &sh = proc.sh_;
+        SymHeap &sh = proc.sh();
         TValId vRes;
 
         const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);
@@ -1177,7 +1786,6 @@ struct OpHandler</* binary */ 2> {
                 return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
 
             case CL_BINOP_MULT:
-            case CL_BINOP_BIT_AND:
                 if (VAL_NULL == rhs[0] || VAL_NULL == rhs[1])
                     // whatever we got as the second operand, the result is zero
                     return VAL_NULL;
@@ -1188,15 +1796,22 @@ struct OpHandler</* binary */ 2> {
             case CL_BINOP_MAX:
                 goto handle_int;
 
+            case CL_BINOP_BIT_AND:
+                if (VAL_NULL == rhs[0] || VAL_NULL == rhs[1])
+                    // whatever we got as the second operand, the result is zero
+                    return VAL_NULL;
+
+                // fall through!
+
             case CL_BINOP_PLUS:
             case CL_BINOP_MINUS:
-                if (decryptCIL(&vRes, proc, rhs[0], rhs[1], code))
+                if (reconstructPtrArithmetic(&vRes, sh, rhs[0], rhs[1], code))
                     return vRes;
                 else
                     goto handle_int;
 
             case CL_BINOP_POINTER_PLUS:
-                return proc.handlePointerPlus(rhs[0], rhs[1]);
+                return sh.valShift(rhs[0], rhs[1]);
 
             default:
                 // over-approximate anything else
@@ -1204,7 +1819,7 @@ struct OpHandler</* binary */ 2> {
         }
 
 handle_int:
-        return proc.handleIntegralOp(rhs[0], rhs[1], code);
+        return handleIntegralOp(sh, rhs[0], rhs[1], code);
     }
 };
 
@@ -1287,7 +1902,7 @@ void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
     CL_ERROR_MSG(lw_, "error label \"" << name << "\" has been reached");
 
     // print the backtrace and leave
-    printBackTrace(*this, ML_ERROR, /* forcePtrace */ true);
+    this->printBackTrace(ML_ERROR, /* forcePtrace */ true);
     printMemUsage("SymBackTrace::printBackTrace");
     throw std::runtime_error("an error label has been reached");
 }
@@ -1339,8 +1954,9 @@ bool SymExecCore::concretizeLoop(
         const CodeStorage::Insn     &insn,
         const TDerefs               &derefs)
 {
+#ifndef NDEBUG
     bool hit = false;
-
+#endif
     TSymHeapList todo;
     todo.push_back(sh_);
     Trace::waiveCloneOperation(todo.back());
@@ -1350,7 +1966,6 @@ bool SymExecCore::concretizeLoop(
         SymExecCore slave(sh, bt_, ep_);
         slave.setLocation(lw_);
 
-        // TODO: implement full version of the alg (complexity m*n)
 #ifndef NDEBUG
         bool hitLocal = false;
 #endif
@@ -1363,14 +1978,21 @@ bool SymExecCore::concretizeLoop(
 #ifndef NDEBUG
                 CL_BREAK_IF(hitLocal);
                 hitLocal = true;
-#endif
                 hit = true;
+#endif
                 concretizeObj(sh, val, todo);
             }
         }
 
         // process the current heap and move to the next one (if any)
-        slave.execCore(dst, insn);
+        if (!slave.execCore(dst, insn)) {
+            // hit a real function call, this has to be handled by SymExec
+            CL_BREAK_IF(CL_INSN_CALL != insn.code);
+
+            // FIXME: are we ready for this?
+            CL_BREAK_IF(hit);
+            return false;
+        }
 
         if (slave.errorDetected_)
             // propagate the 'error detected' flag
@@ -1379,7 +2001,7 @@ bool SymExecCore::concretizeLoop(
         todo.pop_front();
     }
 
-    return hit;
+    return true;
 }
 
 bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
@@ -1387,40 +2009,38 @@ bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
 
     const cl_insn_e code = insn.code;
     if (CL_INSN_CALL == code)
+        // certain built-ins dereference certain operands (free, memset, ...)
         derefs = opsWithDerefSemanticsInCallInsn(insn);
-    else {
-        const CodeStorage::TOperandList &opList = insn.operands;
 
-        // look for dereferences
-        for (unsigned idx = 0; idx < opList.size(); ++idx) {
-            const struct cl_accessor *ac = opList[idx].accessor;
-            if (!ac)
+    // look for explicit dereferences in operands of the instruction
+    const CodeStorage::TOperandList &opList = insn.operands;
+    for (unsigned idx = 0; idx < opList.size(); ++idx) {
+        const struct cl_accessor *ac = opList[idx].accessor;
+        if (!ac)
+            continue;
+
+        // we expect the dereference only as the first accessor
+        const enum cl_accessor_e code = ac->code;
+        switch (code) {
+            case CL_ACCESSOR_DEREF:
+            case CL_ACCESSOR_DEREF_ARRAY:
+                break;
+
+            default:
+                // no dereference in this operand
                 continue;
-
-            // we expect the dereference only as the first accessor
-            const enum cl_accessor_e code = ac->code;
-            switch (code) {
-                case CL_ACCESSOR_DEREF:
-                case CL_ACCESSOR_DEREF_ARRAY:
-                    break;
-
-                default:
-                    // no dereference in this operand
-                    continue;
-            }
-
-            if (seekRefAccessor(ac))
-                // not a dereference, only an address is being computed
-                continue;
-
-            derefs.push_back(idx);
         }
+
+        if (seekRefAccessor(ac))
+            // not a dereference, only an address is being computed
+            continue;
+
+        derefs.push_back(idx);
     }
 
     if (derefs.empty())
         return this->execCore(dst, insn);
 
     // handle dereferences
-    this->concretizeLoop(dst, insn, derefs);
-    return true;
+    return this->concretizeLoop(dst, insn, derefs);
 }

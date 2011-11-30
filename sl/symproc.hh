@@ -35,19 +35,29 @@
 #include "symheap.hh"
 
 class SymBackTrace;
-class SymHeap;
 class SymState;
 
-bool describeCmpOp(
-        const enum cl_binop_e       code,
-        bool                        *pNegative,
-        bool                        *pPreserveEq,
-        bool                        *pPreserveNeq);
+struct CmpOpTraits {
+    bool negative;
+    bool preserveEq;
+    bool preserveNeq;
+    bool leftToRight;
+    bool rightToLeft;
+};
+
+bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code);
 
 TValId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
         const TObjType              clt,
+        const TValId                v1,
+        const TValId                v2);
+
+bool reflectCmpResult(
+        SymHeap                     &sh,
+        const enum cl_binop_e       code,
+        const bool                  branch,
         const TValId                v1,
         const TValId                v2);
 
@@ -70,9 +80,6 @@ class SymProc {
             errorDetected_(false)
         {
         }
-
-        // FIXME: class SymProc should not have any virtual methods
-        virtual ~SymProc() { }
 
         SymHeap&                    sh() { return sh_; }
         const SymBackTrace*         bt() { return bt_; }
@@ -111,16 +118,13 @@ class SymProc {
         void killPerTarget(const CodeStorage::Insn &, unsigned target);
 
         /// check whether we can safely access sizeOfTarget at the given address
-        bool checkForInvalidDeref(TValId val, const TOffset sizeOfTarget);
+        bool checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget);
 
-        /// print backtrace and remember that an error happened
-        void failWithBackTrace();
+        /// print backtrace and update the current error level correspondingly
+        void printBackTrace(EMsgLevel level, bool forcePtrace = false);
 
         /// if true, the current state is not going to be inserted into dst
         bool hasFatalError() const;
-
-        /// compute the result of a CL_BINOP_POINTER_PLUS operation
-        TValId handlePointerPlus(TValId at, TValId off, bool negOffset = false);
 
     protected:
         TValId varAt(const CVar &cv);
@@ -130,31 +134,16 @@ class SymProc {
         friend void initGlVar(SymHeap &sh, const CVar &cv);
 
     private:
-        bool addOffDerefArray(TOffset &off, const struct cl_accessor *ac);
-        void reportMemLeak(const EValueTarget code, const char *reason);
-        void heapSetSingleVal(const ObjHandle &lhs, TValId rhs);
-        void heapObjDefineType(const ObjHandle &lhs, TValId rhs);
-        TValId heapValFromObj(const struct cl_operand &op);
-        TValId heapValFromCst(const struct cl_operand &op);
-        TValId handleIntegralOp(TValId val, enum cl_unop_e code);
-        TValId handleIntegralOp(TValId v1, TValId v2, enum cl_binop_e code);
+        TValId valFromObj(const struct cl_operand &op);
+        TValId valFromCst(const struct cl_operand &op);
         void killVar(const CodeStorage::KillVar &kv);
 
     protected:
         SymHeap                     &sh_;
         const SymBackTrace          *bt_;
         const struct cl_loc         *lw_;
-        bool                        errorDetected_;
-
-        // internal helper of SymExecCore::execOp()
-        template <int N> friend struct OpHandler;
-
-        // internal helpers of SymProc::objSetValue()
-        friend class DerefFailedWriter;
-        friend class ValueMirror;
+        bool                         errorDetected_;
 };
-
-void printBackTrace(SymProc &, EMsgLevel level, bool forcePtrace = false);
 
 /// @todo make the API more generic and better documented
 void describeUnknownVal(
@@ -162,13 +151,21 @@ void describeUnknownVal(
         const TValId                 val,
         const char                  *action);
 
+void executeMemset(
+        SymProc                     &proc,
+        const TValId                 addr,
+        const TValId                 valToWrite,
+        const TValId                 valSize);
+
 struct SymExecCoreParams {
+    bool trackUninit;       ///< enable/disable @b track_uninit @b mode
     bool oomSimulation;     ///< enable/disable @b oom @b simulation mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
     bool skipVarInit;       ///< used internally
     std::string errLabel;   ///< if not empty, treat reaching the label as error
 
     SymExecCoreParams():
+        trackUninit(false),
         oomSimulation(false),
         skipPlot(false),
         skipVarInit(false)
@@ -208,7 +205,7 @@ class SymExecCore: public SymProc {
         bool exec(SymState &dst, const CodeStorage::Insn &insn);
 
         void execHeapAlloc(SymState &dst, const CodeStorage::Insn &,
-                           const unsigned size, const bool nullified);
+                           const TSizeOf size, const bool nullified);
 
         void execFree(TValId val);
 

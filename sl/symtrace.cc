@@ -119,8 +119,17 @@ std::string insnToLabel(const TInsn insn) {
     return label;
 }
 
+std::string insnToBlock(const TInsn insn) {
+    CodeStorage::Block *bb = insn->bb;
+    return (bb)
+        ? bb->name()
+        : "VAR INITIALIZER";
+}
+
 // FIXME: copy-pasted from symplot.cc
 #define SL_QUOTE(what) "\"" << what << "\""
+
+#define INSN_LOC_AND_BB(insn) SL_QUOTE((insn)->loc << insnToBlock(insn))
 
 void TransientNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
@@ -141,7 +150,7 @@ void InsnNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=plaintext, fontname=monospace, fontcolor=" << color
         << ", label=" << SL_QUOTE(insnToLabel(insn_))
-        << ", tooltip=" << SL_QUOTE(insn_->loc << insn_->bb->name())
+        << ", tooltip=" << INSN_LOC_AND_BB(insn_)
         << "];\n";
 }
 
@@ -208,7 +217,7 @@ void CallFrameNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
         ", label=\"--- call frame: " << (insnToLabel(insn_))
-        << "\", tooltip=\"" << insn_->loc << insn_->bb->name() << "\"];\n";
+        << "\", tooltip=" << INSN_LOC_AND_BB(insn_) << "];\n";
 }
 
 void CallDoneNode::plotNode(TracePlotter &tplot) const {
@@ -220,7 +229,7 @@ void CallDoneNode::plotNode(TracePlotter &tplot) const {
 
 void CondNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\t" << SL_QUOTE(this) << " [shape=box, fontname=monospace"
-        ", tooltip=" << SL_QUOTE(inCnd_->loc << inCnd_->bb->name());
+        ", tooltip=" << INSN_LOC_AND_BB(inCnd_);
 
     if (determ_)
         tplot.out << ", color=green";

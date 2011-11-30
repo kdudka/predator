@@ -112,7 +112,7 @@ Building from sources against the system GCC [only for experts]
 ===============================================================
 This method is intended for people that already have experience with building
 GCC plug-ins.  It requires a build of GCC with plug-in support compiled in (not
-necessarily the system one).  The currently supported version of GCC is 4.6.1
+necessarily the system one).  The currently supported version of GCC is 4.6.2
 and the test-suite is guaranteed to fully succeed only against this version of
 GCC.  However, the Predator plug-in itself is known to work with GCC 4.5.x
 equally well.

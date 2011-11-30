@@ -104,7 +104,7 @@ void SymState::insertNew(const SymHeap &sh) {
     heaps_.push_back(dup);
 }
 
-bool SymState::insert(const SymHeap &sh) {
+bool SymState::insert(const SymHeap &sh, bool /* allowThreeWay */ ) {
     int idx = this->lookup(sh);
     if (-1 == idx) {
         idx = this->size();
@@ -203,10 +203,7 @@ void SymStateWithJoin::packSuffix(unsigned idx) {
     }
 }
 
-bool SymStateWithJoin::insert(const SymHeap &shNew) {
-#if SE_DISABLE_SYMJOIN_IN_SYMSTATE
-    return SymHeapUnion::insert(shNew);
-#endif
+bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
     const int cnt = this->size();
     if (!cnt) {
         // no heaps inside, insert the first now
@@ -222,7 +219,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
     ++::cntLookups;
     for(idx = 0; idx < cnt; ++idx) {
         const SymHeap &shOld = this->operator[](idx);
-        if (joinSymHeaps(&status, &result, shOld, shNew))
+        if (joinSymHeaps(&status, &result, shOld, shNew, allowThreeWay))
             // join succeeded
             break;
     }
@@ -232,6 +229,8 @@ bool SymStateWithJoin::insert(const SymHeap &shNew) {
         this->insertNew(shNew);
         return true;
     }
+
+    CL_BREAK_IF(!allowThreeWay && JS_THREE_WAY == status);
 
     switch (status) {
         case JS_USE_ANY:
@@ -396,13 +395,14 @@ SymStateMarked& SymStateMap::operator[](const CodeStorage::Block *bb) {
 bool SymStateMap::insert(
         const CodeStorage::Block        *dst,
         const CodeStorage::Block        *src,
-        const SymHeap                   &sh)
+        const SymHeap                   &sh,
+        const bool                      allowThreeWay)
 {
     // look for the _target_ block
     Private::BlockState &ref = d->cont[dst];
 
     // insert the given symbolic heap
-    const bool changed = ref.state.insert(sh);
+    const bool changed = ref.state.insert(sh, allowThreeWay);
 
     if (src)
         // store inbound edge

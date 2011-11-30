@@ -1,0 +1,210 @@
+diff --git a/tests/invader-cdrom/cdrom.c b/tests/invader-cdrom/cdrom.c
+index ccb3ebf..3056d39 100644
+--- a/tests/invader-cdrom/cdrom.c
++++ b/tests/invader-cdrom/cdrom.c
+@@ -2708,10 +2708,10 @@ int register_cdrom(struct cdrom_device_info *cdi )
+     if (debug == 1) {
+         HsPrintk("<6>cdrom: entering register_cdrom\n");
+     }
+-    if ((unsigned int )cdo->open == (unsigned int )((void *)0)) {
++    if (/* (unsigned int )cdo->open == (unsigned int )((void *)0) */ 0) {
+         return (-2);
+     } else {
+-        if ((unsigned int )cdo->release == (unsigned int )((void *)0)) {
++        if (/* (unsigned int )cdo->release == (unsigned int )((void *)0) */ 0) {
+             return (-2);
+         }
+     }
+@@ -2720,6 +2720,8 @@ int register_cdrom(struct cdrom_device_info *cdi )
+         banner_printed = (char)1;
+         cdrom_sysctl_register();
+     }
++    /* assumming FALSE for all these if statements */
++#if 0
+     if ((unsigned int )cdo->drive_status == (unsigned int )((void *)0)) {
+         (*change_capability) &= -2049;
+     }
+@@ -2753,11 +2755,12 @@ int register_cdrom(struct cdrom_device_info *cdi )
+     if ((unsigned int )cdo->generic_packet == (unsigned int )((void *)0)) {
+         (*change_capability) &= -4097;
+     }
++#endif
+     cdi->mc_flags = 0U;
+     cdo->n_minors = 0;
+     cdi->options = 4;
+     if (autoclose == 1) {
+-        if (((cdi->ops)->capability & (int )(~ cdi->mask)) & 1) {
++        if (/* ((cdi->ops)->capability & (int )(~ cdi->mask)) & 1 */ 1) {
+             cdi->options |= 1;
+         }
+     }
+@@ -2772,7 +2775,7 @@ int register_cdrom(struct cdrom_device_info *cdi )
+     if (check_media_type == 1) {
+         cdi->options |= 16;
+     }
+-    if (((cdi->ops)->capability & (int )(~ cdi->mask)) & 1048576) {
++    if (/* ((cdi->ops)->capability & (int )(~ cdi->mask)) & 1048576 */ 0) {
+         cdi->exit = & cdrom_mrw_exit;
+     }
+     if (cdi->disk) {
+@@ -3020,7 +3023,7 @@ static void cdrom_count_tracks(struct cdrom_device_info *cdi , tracktype *tracks
+     if (debug == 1) {
+         HsPrintk("<6>cdrom: entering cdrom_count_tracks\n");
+     }
+-    if (! (((cdi->ops)->capability & (int )(~ cdi->mask)) & 256)) {
++    if (/* ! (((cdi->ops)->capability & (int )(~ cdi->mask)) & 256) */ 1) {
+         tracks->error = 0L;
+         return;
+     }
+@@ -3071,7 +3074,7 @@ static void cdrom_count_tracks(struct cdrom_device_info *cdi , tracktype *tracks
+ 
+ static int open_for_data(struct cdrom_device_info *cdi )
+ {
+-    int ret ;
++    int ret = /* assuming */ 0;
+     struct cdrom_device_ops *cdo ;
+     tracktype tracks ;
+     struct task_struct *tmp ;
+@@ -3080,7 +3083,7 @@ static int open_for_data(struct cdrom_device_info *cdi )
+     if (debug == 1) {
+         HsPrintk("<6>cdrom: entering open_for_data\n");
+     }
+-    if ((unsigned int )cdo->drive_status != (unsigned int )((void *)0)) {
++    if (/* (unsigned int )cdo->drive_status != (unsigned int )((void *)0) */ 0) {
+ 
+         ret = get_nondet_int();
+         if (debug == 1) {
+@@ -3152,7 +3155,7 @@ _L___0:
+         goto clean_up_and_return;
+     }
+     if (tracks.data == 0) {
+-        if (cdi->options & 16) {
++        if (/* cdi->options & 16 */ 0) {
+             if (debug == 1) {
+                 HsPrintk("<6>cdrom: bummer. wrong media type.\n");
+             }
+@@ -3197,7 +3200,7 @@ clean_up_and_return:
+     if (debug == 1) {
+         HsPrintk("<6>cdrom: open failed.\n");
+     }
+-    if (((cdi->ops)->capability & (int )(~ cdi->mask)) & 4) {
++    if (/* ((cdi->ops)->capability & (int )(~ cdi->mask)) & 4 */ 0) {
+         if (cdi->options & 8) {
+ 
+             if (debug == 1) {
+@@ -3224,7 +3227,7 @@ static void cdrom_mmc3_profile(struct cdrom_device_info *cdi )
+     cgc.quiet = 1;
+ 
+     ret = get_nondet_int();
+-    if (ret) {
++    if (/* ret */ 0) {
+         mmc3_profile = 65535;
+     } else {
+         mmc3_profile = ((int )buffer[6] << 8) | (int )buffer[7];
+@@ -3254,7 +3257,7 @@ int cdrom_mode_sense(struct cdrom_device_info *cdi , struct packet_command *cgc
+     cgc->cmd[8] = (unsigned char )(cgc->buflen & 255U);
+     cgc->data_direction = (unsigned char)2;
+ 
+-    tmp = get_nondet_int();
++    tmp = /* get_nondet_int() */ 0;
+     return (tmp);
+ }
+ 
+@@ -3298,7 +3301,7 @@ static int cdrom_is_mrw(struct cdrom_device_info *cdi , int *write )
+     cgc.cmd[8] = (unsigned char )sizeof(buffer);
+     cgc.quiet = 1;
+ 
+-    ret = get_nondet_int();
++    ret = /* get_nondet_int() */ 1;
+     if (ret) {
+         return (ret);
+     }
+@@ -3397,6 +3400,19 @@ static int cdrom_mrw_set_lba_space(struct cdrom_device_info *cdi , int space )
+     int size ;
+     __u16 tmp ;
+ 
++    /*
++     * 'rbuffer' is garbage from stack at this point, right?
++     *
++     * Any sound verification tool needs to assume arbitrary contents (unless it
++     * reports use of uninitialized stack content as error on its own).  You can
++     * chose both kinds of response with Predator, of course...
++     *
++     * Writing one non-zero byte here is enough to trigger a real-world SIGSEGV.
++     */
++    char *attack_handle = (void *) &rbuffer;
++    const int attack_off = (int)&((struct mode_page_header *)0)->desc_length;
++    attack_handle[attack_off] = 0xFF;
++
+     buffer = &rbuffer;
+ 
+     init_cdrom_command(& cgc, (void *)(buffer), (int )sizeof(buffer), 2);
+@@ -3650,7 +3666,7 @@ static int cdrom_open_write(struct cdrom_device_info *cdi )
+     if (! tmp) {
+         mrw = 1;
+     }
+-    if (((cdi->ops)->capability & (int )(~ cdi->mask)) & 262144) {
++    if (/* ((cdi->ops)->capability & (int )(~ cdi->mask)) & 262144 */ 1) {
+         ram_write = 1;
+     } else {
+         cdrom_is_random_writable(cdi, & ram_write);
+@@ -3670,7 +3686,7 @@ static int cdrom_open_write(struct cdrom_device_info *cdi )
+     } else {
+         cdi->mask |= 2097152;
+     }
+-    if (((cdi->ops)->capability & (int )(~ cdi->mask)) & 1048576) {
++    if (/* ((cdi->ops)->capability & (int )(~ cdi->mask)) & 1048576 */ 1) {
+         ret = cdrom_mrw_open_write(cdi);
+     } else {
+         if (((cdi->ops)->capability & (int )(~ cdi->mask)) & 131072) {
+@@ -3706,7 +3722,7 @@ int cdrom_open(struct cdrom_device_info *cdi , struct inode *ip , struct file *f
+         HsPrintk("<6>cdrom: entering cdrom_open\n");
+     }
+     cdi->use_count ++;
+-    if (fp->f_flags & 2048U) {
++    if (/* fp->f_flags & 2048U */ 0) {
+         if (cdi->options & 4) {
+ 
+         } else {
+@@ -3719,7 +3735,7 @@ _L:
+             goto err;
+         }
+         cdrom_mmc3_profile(cdi);
+-        if ((int )fp->f_mode & 2) {
++        if (/* (int )fp->f_mode & 2 */ 1) {
+             ret = -30;
+             tmp = cdrom_open_write(cdi);
+             if (tmp) {
+@@ -6117,14 +6133,14 @@ void HsInitialize(void)
+     initialized = 0;
+ 
+     cdrom_root_table = HsCreateCtlTable(0);
+-    while(___sl_get_nondet_int()) {
++    while(/* ___sl_get_nondet_int() */ 0) {
+         tbl = HsCreateCtlTable(1);
+         tbl->child = cdrom_root_table->child;
+         cdrom_root_table->child = tbl;
+     }
+ 
+     topCdromPtr = 0;
+-    while(___sl_get_nondet_int()) {
++    while(/* ___sl_get_nondet_int() */ 0) {
+         cdi = HsCreateCdromDeviceInfo();
+         cdi->next = topCdromPtr;
+         topCdromPtr = cdi;
+@@ -6157,12 +6173,12 @@ int main_sub(void)
+         return(tmp);
+     }
+ 
+-    while (___sl_get_nondet_int()) {
+-        if (___sl_get_nondet_int()) {
++    while (/* ___sl_get_nondet_int() */ 1) {
++        if (/* ___sl_get_nondet_int() */ 0) {
+             med = get_nondet_ptr();
+             tmp = cdrom_get_media_event(cdi, med);
+         }
+-        else if (___sl_get_nondet_int()) {
++        else if (/* ___sl_get_nondet_int() */ 1) {
+             fp = (struct file *)malloc(sizeof(struct file));
+             ip = (struct inode *)malloc(sizeof(struct inode));
+             ip->i_bdev = (struct block_device *)malloc(sizeof(struct block_device));

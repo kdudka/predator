@@ -34,6 +34,7 @@ endif()
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
+    intrange.cc
     memdebug.cc
     plotenum.cc
     sigcatch.cc
@@ -49,7 +50,6 @@ add_library(sl SHARED
     symgc.cc
     symheap.cc
     symjoin.cc
-    symneq.cc
     sympath.cc
     symplot.cc
     symproc.cc
@@ -68,12 +68,13 @@ install(TARGETS sl DESTINATION lib)
 
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
-set(GCC_EXEC_PREFIX "timeout 300"
+set(GCC_EXEC_PREFIX "timeout 3600"
     CACHE STRING "Set to empty string if not sure")
 
 set(testdir "${sl_SOURCE_DIR}/../tests/predator-regre")
 
-set(examples
+# basic tests
+set(tests
          0001 0002 0003 0004 0005 0006 0007 0008 0009
     0010 0011 0012 0013 0014 0015 0016 0017 0018 0019
     0020 0021 0022 0023 0024 0025 0026 0027 0028 0029
@@ -93,19 +94,28 @@ set(examples
     0160 0161 0162 0163 0164      0166      0168
     0170 0171 0172 0173 0174 0175 0176 0177 0178 0179
     0180 0181 0182 0183 0184 0185 0186 0187 0188 0189
-    0190 0191 0192 0193 0194 0195
+    0190 0191 0192 0193 0194 0195 0196 0197 0198 0199
+    0200 0201 0202 0203 0204
     0300      0302
-    0400 0401 0402
+    0400 0401 0402 0403 0404      0406      0408
+         0411                     0416
+              0432
     0500 0501 0502 0503 0504 0505           0508 0509
     0510 0511 0512 0513 0514 0515 0516 0517 0518
-    0520
-    0167 0157 0124 0521)
+    0520)
+
+if(TEST_ONLY_FAST)
+else()
+    # expensive tests
+    set(tests ${tests}
+        0167 0414 0415 0124 0417 0157 0521 0412 0405 0409 0407 0410 0413)
+endif()
 
 set(cost 1048576)
 
 # FIXME: define this macro more generically, in particular the count of args
-macro(test_sym_exec label tool arg1 arg2 arg3)
-    foreach (num ${examples})
+macro(test_predator_smoke label tool arg1 arg2 arg3)
+    foreach (num ${tests})
         set(test_name "${label}___example-${num}")
         add_test(${test_name} ${tool} ${arg1} ${arg2} ${arg3}
             -c "${testdir}/test-${num}.c"
@@ -119,20 +129,11 @@ macro(test_sym_exec label tool arg1 arg2 arg3)
         MATH(EXPR cost "${cost} - 1")
     endforeach()
 endmacro()
-if(TEST_ONLY_FAST)
-else()
-    test_sym_exec("smoke-test" ${GCC_HOST} "" "" "")
-endif()
 
 # FIXME: define this macro more generically, in particular the count of args
-macro(test_sym_exec_regre name_suff ext arg1)
-    foreach (num ${examples})
+macro(test_predator_regre name_suff ext arg1)
+    foreach (num ${tests})
         set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_EXEC_PREFIX} ${GCC_HOST}")
-
-        # needed for test-0000
-        foreach (inc ${clplug_incs})
-            set(cmd "${cmd} ${inc}")
-        endforeach()
 
         # we use the following flag to avoid differences on 32bit vs 64bit archs
         # in the error output, which is checked for exact match
@@ -162,17 +163,21 @@ macro(test_sym_exec_regre name_suff ext arg1)
         SET_TESTS_PROPERTIES(${test_name} PROPERTIES COST ${cost})
         MATH(EXPR cost "${cost} - 1")
     endforeach()
-endmacro(test_sym_exec_regre)
+endmacro(test_predator_regre)
 
-test_sym_exec_regre("" "" "-fplugin-arg-libsl-args=error_label:ERROR")
-if(TEST_ONLY_FAST)
-else()
-    test_sym_exec_regre("-OOM" ".oom" "-fplugin-arg-libsl-args=oom")
-endif()
+# default mode
+test_predator_regre("" "" "-fplugin-arg-libsl-args=error_label:ERROR")
+
+# track_uninit mode
+test_predator_regre("-TRACK_UNINIT" ".uninit"
+    "-fplugin-arg-libsl-args=track_uninit")
+
+# OOM simulation mode
+test_predator_regre("-OOM" ".oom" "-fplugin-arg-libsl-args=oom")
 
 if(TEST_WITH_VALGRIND)
     message (STATUS "valgrind enabled for testing...")
-    test_sym_exec("valgrind-test" valgrind
+    test_predator_smoke("valgrind-test" valgrind
         --trace-children=yes
         --error-exitcode=7
         ${GCC_HOST})

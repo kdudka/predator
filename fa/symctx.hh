@@ -1,20 +1,20 @@
 /*
  * Copyright (C) 2010 Jiri Simacek
  *
- * This file is part of predator.
+ * This file is part of forester.
  *
- * predator is free software: you can redistribute it and/or modify
+ * forester is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * predator is distributed in the hope that it will be useful,
+ * forester is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with predator.  If not, see <http://www.gnu.org/licenses/>.
+ * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef SYM_CTX_H
@@ -96,7 +96,7 @@ struct SymCtx {
 				default:
 					break;
 			}
-			
+
 		}
 
 	}
@@ -106,7 +106,7 @@ struct SymCtx {
 			case CodeStorage::EVar::VAR_FNC_ARG: return true;
 			case CodeStorage::EVar::VAR_LC: return !var.name.empty();
 			case CodeStorage::EVar::VAR_GL: return false;
-			default: return false;			
+			default: return false;
 		}
 	}
 
@@ -133,7 +133,7 @@ struct SymCtx {
 		const FAE& fae;
 
 		Dump(const SymCtx& ctx, const FAE& fae) : ctx(ctx), fae(fae) {}
-		
+
 		friend std::ostream& operator<<(std::ostream& os, const Dump& cd) {
 
 			VirtualMachine vm(cd.fae);
@@ -171,7 +171,7 @@ struct SymCtx {
 					default:
 						break;
 				}
-			
+
 			}
 
 			return os;

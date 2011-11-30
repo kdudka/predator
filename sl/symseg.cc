@@ -147,8 +147,8 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
         }
 
         // check the consistency of Neq predicates
-        const unsigned len1 = sh.segMinLength(at);
-        const unsigned len2 = sh.segMinLength(peer);
+        const TMinLen len1 = sh.segMinLength(at);
+        const TMinLen len2 = sh.segMinLength(peer);
         if (len1 != len2) {
             CL_ERROR("peer of a DLS " << len1 << "+ is a DLS" << len2 << "+");
             return false;

@@ -267,6 +267,9 @@ deref_done:
             break;
 
         case CL_TYPE_INT:
+            if (clt->is_unsigned)
+                glOut_ << "unsigned ";
+
             glOut_ << "int";
             break;
 

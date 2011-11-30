@@ -62,7 +62,7 @@ class UniBlockWriter {
 };
 
 struct DeepCopyData {
-    typedef std::map<TValId     /* seg */, unsigned  /* len */> TSegLengths;
+    typedef std::map<TValId     /* seg */, TMinLen   /* len */> TSegLengths;
     typedef std::map<TValId     /* src */, TValId    /* dst */> TValMap;
     typedef std::pair<ObjHandle /* src */, ObjHandle /* dst */> TItem;
     typedef std::set<CVar>                                      TCut;
@@ -160,7 +160,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     }
 
     // create the object in 'dst'
-    const unsigned size = src.valSizeOfTarget(rootSrcAt);
+    const TSizeOf size = src.valSizeOfTarget(rootSrcAt);
     TValId rootDstAt = dst.heapAlloc(size);
 
     // preserve type-info if known
@@ -177,7 +177,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
         dst.valTargetSetAbstract(rootDstAt, kind, off);
 
 #if SE_SYMCUT_PRESERVES_MIN_LENGTHS
-        const unsigned minLength = objMinLength(src, rootSrcAt);
+        const TMinLen minLength = objMinLength(src, rootSrcAt);
         dc.segLengths[rootDstAt] = minLength;
 #endif
     }
@@ -200,6 +200,14 @@ TValId handleValueCore(DeepCopyData &dc, TValId srcAt) {
     const TValId rootSrcAt = dc.src.valRoot(srcAt);
     const TValId rootDstAt = addObjectIfNeeded(dc, rootSrcAt);
 
+    if (VT_RANGE == dc.src.valTarget(srcAt)) {
+        // range offset value
+        const IR::Range range = dc.src.valOffsetRange(srcAt);
+        const TValId dstAt = dc.dst.valByRange(rootDstAt, range);
+        dc.valMap[srcAt] = dstAt;
+        return dstAt;
+    }
+
     const TOffset off = dc.src.valOffset(srcAt);
     if (!off)
         return rootDstAt;
@@ -207,6 +215,14 @@ TValId handleValueCore(DeepCopyData &dc, TValId srcAt) {
     const TValId dstAt = dc.dst.valByOffset(rootDstAt, off);
     dc.valMap[srcAt] = dstAt;
     return dstAt;
+}
+
+TValId handleCustomValue(DeepCopyData &dc, const TValId valSrc) {
+    // custom value, e.g. fnc pointer
+    const CustomValue custom = dc.src.valUnwrapCustom(valSrc);
+    const TValId valDst = dc.dst.valWrapCustom(custom);
+    dc.valMap[valSrc] = valDst;
+    return valDst;
 }
 
 void trackUses(DeepCopyData &dc, TValId valSrc) {
@@ -255,25 +271,20 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
 
     trackUses(dc, valSrc);
 
-    const EValueTarget code = src.valTarget(valSrc);
-    if (VT_CUSTOM == code) {
+    const EValueTarget code = realValTarget(src, valSrc);
+    if (VT_CUSTOM == code)
         // custom value, e.g. fnc pointer
-        const CustomValue custom = src.valUnwrapCustom(valSrc);
-        const TValId valDst = dst.valWrapCustom(custom);
-        valMap[valSrc] = valDst;
-        return valDst;
-    }
+        return handleCustomValue(dc, valSrc);
 
-    if (!isPossibleToDeref(code) && VAL_NULL != src.valRoot(valSrc)) {
-        // an unkonwn value
-        const EValueOrigin vo = src.valOrigin(valSrc);
-        const TValId valDst = dst.valCreate(code, vo);
-        valMap[valSrc] = valDst;
-        return valDst;
-    }
+    if (isAnyDataArea(code) || VAL_NULL == src.valRoot(valSrc))
+        // create the target object, if it does not exist already
+        return handleValueCore(dc, valSrc);
 
-    // create the target object, if it does not exist already
-    return handleValueCore(dc, valSrc);
+    // an unkonwn value
+    const EValueOrigin vo = src.valOrigin(valSrc);
+    const TValId valDst = dst.valCreate(code, vo);
+    valMap[valSrc] = valDst;
+    return valDst;
 }
 
 void deepCopy(DeepCopyData &dc) {
@@ -305,13 +316,13 @@ void deepCopy(DeepCopyData &dc) {
         objDst.setValue(valDst);
     }
 
-    // finally copy all relevant Neq predicates
+    // finally copy all relevant predicates
     src.copyRelevantPreds(dst, dc.valMap);
 
     typedef DeepCopyData::TSegLengths TSegLengths;
     BOOST_FOREACH(TSegLengths::const_reference item, dc.segLengths) {
         const TValId seg = item.first;
-        const unsigned minLength = item.second;
+        const TMinLen minLength = item.second;
         dst.segSetMinLength(seg, minLength);
     }
 }

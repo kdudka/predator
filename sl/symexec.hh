@@ -36,12 +36,14 @@ namespace CodeStorage {
 }
 
 struct SymExecParams {
+    bool trackUninit;       ///< enable/disable @b track_uninit @b mode
     bool oomSimulation;     ///< enable/disable @b oom @b simulation mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
     bool ptrace;            ///< enable path tracing (a bit chatty)
     std::string errLabel;   ///< if not empty, treat reaching the label as error
 
     SymExecParams():
+        trackUninit(false),
         oomSimulation(false),
         skipPlot(false),
         ptrace(false)

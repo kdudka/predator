@@ -58,6 +58,34 @@ bool matchPlainValuesCore(
     return true;
 }
 
+bool matchOffsets(
+        const SymHeapCore       &sh1,
+        const SymHeapCore       &sh2,
+        const TValId            v1,
+        const TValId            v2)
+{
+    const EValueTarget code1 = sh1.valTarget(v1);
+    const EValueTarget code2 = sh2.valTarget(v2);
+
+    const bool isRange = (VT_RANGE == code1);
+    if (isRange != (VT_RANGE == code2))
+        // range vs. scalar offset
+        return false;
+
+    if (isRange) {
+        // compare offset ranges
+        const IR::Range offRange1 = sh1.valOffsetRange(v1);
+        const IR::Range offRange2 = sh2.valOffsetRange(v2);
+        return (offRange1 == offRange2);
+    }
+    else {
+        // compare scalar offset
+        const TOffset off1 = sh1.valOffset(v1);
+        const TOffset off2 = sh2.valOffset(v2);
+        return (off1 == off2);
+    }
+}
+
 bool matchPlainValues(
         TValMapBidir            valMapping,
         const SymHeap           &sh1,
@@ -73,9 +101,7 @@ bool matchPlainValues(
         // no need to save mapping of special values, they're fixed anyway
         return true;
 
-    const TOffset off1 = sh1.valOffset(v1);
-    const TOffset off2 = sh2.valOffset(v2);
-    if (off1 != off2)
+    if (!matchOffsets(sh1, sh2, v1, v2))
         // offset mismatch
         return false;
 
@@ -124,8 +150,8 @@ bool matchRoots(
         const TValId            root2,
         const EValueTarget      code)
 {
-    const int size1 = sh1.valSizeOfTarget(root1);
-    const int size2 = sh2.valSizeOfTarget(root2);
+    const TSizeOf size1 = sh1.valSizeOfTarget(root1);
+    const TSizeOf size2 = sh2.valSizeOfTarget(root2);
     if (size1 != size2)
         // target size mismatch
         return false;
@@ -156,8 +182,8 @@ bool matchRoots(
     if (bf1 != bf2)
         return false;
 
-    const unsigned len1 = sh1.segMinLength(root1);
-    const unsigned len2 = sh2.segMinLength(root2);
+    const TMinLen len1 = sh1.segMinLength(root1);
+    const TMinLen len2 = sh2.segMinLength(root2);
     if (len1 != len2)
         // minimal length mismatch
         return false;
@@ -185,9 +211,7 @@ bool cmpValues(
         // already checked by matchPlainValues()/checkNonPosValues()
         return true;
 
-    const TOffset off1 = sh1.valOffset(v1);
-    const TOffset off2 = sh2.valOffset(v2);
-    if (off1 != off2)
+    if (!matchOffsets(sh1, sh2, v1, v2))
         // value offset mismatch
         return false;
 

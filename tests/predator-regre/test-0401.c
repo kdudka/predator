@@ -1,1 +1,1 @@
-../plarena/test-0401-PL_InitArenaPool.c
+../nspr-arena-32bit/test-0401-PL_InitArenaPool.c

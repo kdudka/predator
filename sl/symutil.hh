@@ -45,8 +45,16 @@ inline TValId boolToVal(const bool b) {
         : VAL_FALSE;
 }
 
-bool numFromVal(long *pDst, const SymHeap &, const TValId);
+/// extract integral constant from the given value if possible, fail otherwise
+bool numFromVal(IR::TInt *pDst, const SymHeapCore &, const TValId);
 
+/// extract integral range from the given value if possible, fail otherwise
+bool rngFromVal(IR::Range *pDst, const SymHeapCore &, const TValId);
+
+/// extract either offset range, or integral range from the given value
+bool anyRangeFromVal(IR::Range *pDst, const SymHeap &, const TValId);
+
+/// extract string literal from the given value if possible, fail otherwise
 bool stringFromVal(const char **pDst, const SymHeap &, const TValId);
 
 void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
@@ -54,6 +62,30 @@ void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
 bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
+
+/// extract an integral range from an unwrapped CV_INT/CV_INT_RANGE custom value
+const IR::Range& rngFromCustom(const CustomValue &);
+
+/// known to work only with TObjId/TValId
+template <class TMap>
+typename TMap::mapped_type roMapLookup(
+        const TMap                          &roMap,
+        const typename TMap::key_type       id)
+{
+    if (id <= 0)
+        return id;
+
+    typename TMap::const_iterator iter = roMap.find(id);
+    return (roMap.end() == iter)
+        ? static_cast<typename TMap::mapped_type>(-1)
+        : iter->second;
+}
+
+bool translateValId(
+        TValId                  *pVal,
+        SymHeapCore             &dst,
+        const SymHeapCore       &src,
+        const TValMap           &valMap);
 
 void translateValProto(
         TValId                  *pValProto,
@@ -148,6 +180,14 @@ inline bool areUniBlocksEqual(
 
     // compare value prototypes
     return areValProtosEqual(sh1, sh2, bl1.tplValue, bl2.tplValue);
+}
+
+/// needed because of VT_RANGE vs. VT_ABSTRACT (suboptimal design?)
+inline EValueTarget realValTarget(const SymHeap &sh, const TValId val) {
+    const EValueTarget code = sh.valTarget(val);
+    return (VT_RANGE == code)
+        ? sh.valTarget(sh.valRoot(val))
+        : code;
 }
 
 template <class TDst, typename TInserter>

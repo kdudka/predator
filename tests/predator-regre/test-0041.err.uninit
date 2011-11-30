@@ -1,0 +1,4 @@
+test-0041.c:1:5: error: call cache entry found, but result not computed yet; perhaps a recursive function call?
+test-0041.c:1:5: warning: end of function main() has not been reached
+test-0041.c:2:5: note: from call of main()
+test-0041.c:1:5: note: from call of main()

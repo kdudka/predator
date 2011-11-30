@@ -137,9 +137,7 @@ class SymExecEngine: public IStatsProvider {
     public:
         bool /* complete */ run();
 
-        virtual void printStatsHelper(const BlockScheduler::TBlock bb) const;
         virtual void printStats() const;
-        void dumpStateMap();
 
         // TODO: describe the interface briefly
         const SymHeap&                  callEntry() const;
@@ -172,9 +170,9 @@ class SymExecEngine: public IStatsProvider {
 
     private:
         void initEngine(const SymHeap &init);
-        void execJump();
-        void execReturn();
+
         void updateState(SymHeap &sh, const CodeStorage::Block *ofBlock);
+
         void updateStateInBranch(
                 SymHeap                             sh,
                 const bool                          branch,
@@ -190,12 +188,18 @@ class SymExecEngine: public IStatsProvider {
                 const TValId                        v1,
                 const TValId                        v2);
 
+        void execJump();
+        void execReturn();
         void execCondInsn();
         void execTermInsn();
         bool execNontermInsn();
         bool execInsn();
         bool execBlock();
         void processPendingSignals();
+
+        void dumpStateMap();
+
+        void printStatsHelper(const BlockScheduler::TBlock bb) const;
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -265,25 +269,37 @@ void SymExecEngine::execReturn() {
     endReached_ = true;
 }
 
+bool isLoopClosingEdge(
+        const CodeStorage::Insn     *term,
+        const CodeStorage::Block    *ofBlock)
+{
+    BOOST_FOREACH(const unsigned idxTarget, term->loopClosingTargets)
+        if (term->targets[idxTarget] == ofBlock)
+            return true;
+
+    return false;
+}
+
 void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
 {
     const std::string &name = ofBlock->name();
 
+    bool closingLoop = isLoopClosingEdge(/* term */ block_->back(), ofBlock);
+    if (closingLoop)
+        CL_DEBUG_MSG(lw_, "-L- traversing a loop-closing edge");
+
     // time to consider abstraction
 #if SE_ABSTRACT_ON_LOOP_EDGES_ONLY
-    const CodeStorage::Insn *term = block_->back();
-    BOOST_FOREACH(const unsigned idxTarget, term->loopClosingTargets) {
-        if (term->targets[idxTarget] == ofBlock) {
-            abstractIfNeeded(sh);
-            break;
-        }
-    }
-#else
-    abstractIfNeeded(sh);
+    if (closingLoop)
+#endif
+        abstractIfNeeded(sh);
+
+#if !SE_JOIN_ON_LOOP_EDGES_ONLY
+    closingLoop = true;
 #endif
 
     // update _target_ state and check if anything has changed
-    if (!stateMap_.insert(ofBlock, block_, sh)) {
+    if (!stateMap_.insert(ofBlock, block_, sh, closingLoop)) {
         CL_DEBUG_MSG(lw_, "--- block " << name
                      << " left intact (size of target is "
                      << stateMap_[ofBlock].size() << ")");
@@ -312,29 +328,11 @@ void SymExecEngine::updateStateInBranch(
                 &insnCmp, &insnCnd, /* det */ false, branch));
 
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
-
-    // resolve binary operator
-    bool neg, preserveEq, preserveNeq;
-    if (describeCmpOp(code, &neg, &preserveEq, &preserveNeq)) {
-        if (branch == neg) {
-            if (!preserveNeq)
-                goto fallback;
-
-            // introduce a Neq predicate over v1 and v2
-            sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
-        }
-        else {
-            if (!preserveEq)
-                goto fallback;
-
-            // we have deduced that v1 and v2 is actually the same value
-            sh.valMerge(v1, v2);
-        }
-    }
+    if (!reflectCmpResult(sh, code, branch, v1, v2))
+        CL_DEBUG_MSG(lw_, "unable to reflect comparison result");
 
     LDP_PLOT(nondetCond, sh);
 
-fallback:
     SymProc proc(sh, &bt_);
     proc.setLocation(lw_);
     proc.killInsn(insnCmp);
@@ -397,7 +395,7 @@ bool SymExecEngine::bypassNonPointers(
     proc.killInsn(insnCmp);
 
     SymHeap sh1(sh);
-    sh1.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
+    sh1.traceUpdate(new Trace::CondNode(sh.traceNode(),
                 &insnCmp, &insnCnd, /* det */ false, /* branch */ true));
 
     CL_DEBUG_MSG(lw_, "-T- CL_INSN_COND updates TRUE branch");
@@ -407,7 +405,7 @@ bool SymExecEngine::bypassNonPointers(
     this->updateState(sh1, insnCnd.targets[/* then label */ 0]);
 
     SymHeap sh2(sh);
-    sh2.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
+    sh2.traceUpdate(new Trace::CondNode(sh.traceNode(),
                 &insnCmp, &insnCnd, /* det */ false, /* branch */ false));
 
     CL_DEBUG_MSG(lw_, "-F- CL_INSN_COND updates FALSE branch");
@@ -493,7 +491,7 @@ void SymExecEngine::execCondInsn() {
     if (isUninitialized(origin)) {
         CL_WARN_MSG(lw_, "conditional jump depends on uninitialized value");
         describeUnknownVal(proc, val, "use");
-        printBackTrace(proc, ML_WARN);
+        proc.printBackTrace(ML_WARN);
     }
 
     std::ostringstream str;
@@ -540,6 +538,7 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
 
     // set some properties of the execution
     SymExecCoreParams ep;
+    ep.trackUninit      = params_.trackUninit;
     ep.oomSimulation    = params_.oomSimulation;
     ep.skipPlot         = params_.skipPlot;
     ep.errLabel         = params_.errLabel;
@@ -909,6 +908,8 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
 
     const struct cl_operand &opFnc = opList[/* fnc */ 1];
 
+    EMsgLevel ml = ML_ERROR;
+
     int uid;
     if (!proc.fncFromOperand(&uid, opFnc)) {
         CL_BREAK_IF(CL_OPERAND_CST == opFnc.code);
@@ -930,6 +931,9 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
 
         CL_WARN_MSG(lw, "ignoring call of undefined function: "
                 << name << "()");
+
+        // do not treat this as a real error
+        ml = ML_WARN;
         goto fail;
     }
 
@@ -943,19 +947,17 @@ fail:
     const struct cl_operand dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         // set return value to unknown
-        EValueOrigin origin = VO_UNKNOWN;
-#if SE_ALLOW_CST_INT_PLUS_MINUS
-        if (CL_TYPE_INT == dst.type->code)
-            // track the unknown integral result
-            origin = VO_ASSIGNED;
-#endif
+        const EValueOrigin origin = (CL_TYPE_INT == dst.type->code)
+            ? VO_ASSIGNED
+            : VO_UNKNOWN;
+
         const TValId val = entry.valCreate(VT_UNKNOWN, origin);
         const ObjHandle obj = proc.objByOperand(dst);
         proc.objSetValue(obj, val);
     }
 
     // something wrong happened, print the backtrace
-    proc.failWithBackTrace();
+    proc.printBackTrace(ml);
 
     if (!proc.hasFatalError())
         results.insert(entry);

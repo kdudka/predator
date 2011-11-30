@@ -30,7 +30,7 @@
 
 #include <boost/foreach.hpp>
 
-bool numFromVal(long *pDst, const SymHeap &sh, const TValId val) {
+bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val) {
     switch (val) {
         case VAL_NULL:
             *pDst = 0L;
@@ -48,12 +48,64 @@ bool numFromVal(long *pDst, const SymHeap &sh, const TValId val) {
             return false;
     }
 
-    CustomValue cv = sh.valUnwrapCustom(val);
-    if (CV_INT != cv.code)
+    const CustomValue cv = sh.valUnwrapCustom(val);
+    if (CV_INT_RANGE != cv.code)
         return false;
 
-    *pDst = cv.data.num;
+    const IR::Range &rng = cv.data.rng;
+    if (!isSingular(rng))
+        // we are asked to return a scalar, but only integral range is available
+        return false;
+
+    *pDst = rng.lo;
     return true;
+}
+
+bool rngFromVal(IR::Range *pDst, const SymHeapCore &sh, const TValId val) {
+    IR::TInt num;
+    if (numFromVal(&num, sh, val)) {
+        // a single number
+        *pDst = IR::rngFromNum(num);
+        return true;
+    }
+
+    if (VT_CUSTOM != sh.valTarget(val))
+        // not a custom value
+        return false;
+
+    CustomValue cv = sh.valUnwrapCustom(val);
+    if (CV_INT_RANGE != cv.code)
+        // not an integral range
+        return false;
+
+    *pDst = cv.data.rng;
+    return true;
+}
+
+bool anyRangeFromVal(
+        IR::Range                   *pDst,
+        const SymHeap               &sh,
+        const TValId                 val)
+{
+    // try to extract an integral range
+    if (rngFromVal(pDst, sh, val))
+        return true;
+
+    const EValueTarget code = sh.valTarget(val);
+    if (isAnyDataArea(code)) {
+        // extract offset range
+        *pDst = sh.valOffsetRange(val);
+        return true;
+    }
+
+    // FIXME: this way we are asking for overflow (build vs. host arch mismatch)
+    if (VT_UNKNOWN == code) {
+        *pDst = IR::FullRange;
+        return true;
+    }
+
+    // there is no range we could extract
+    return false;
 }
 
 bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val) {
@@ -69,6 +121,19 @@ bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val) {
     *pDst = cv.data.str;
     CL_BREAK_IF(!*pDst);
     return true;
+}
+
+const IR::Range& rngFromCustom(const CustomValue &cv) {
+    const ECustomValue code = cv.code;
+    switch (code) {
+        case CV_INT_RANGE:
+            return cv.data.rng;
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of rngFromVal()");
+            return IR::FullRange;
+    }
 }
 
 void moveKnownValueToLeft(
@@ -91,6 +156,7 @@ void moveKnownValueToLeft(
         case VT_DELETED:
             return;
 
+        case VT_RANGE:
         case VT_ABSTRACT:
         case VT_INVALID:
         case VT_UNKNOWN:
@@ -111,11 +177,42 @@ bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val) {
     if (!isPossibleToDeref(sh.valTarget(val)))
         return false;
 
-    static TOffset ptrSize;
+    static TSizeOf ptrSize;
     if (!ptrSize)
         ptrSize = sh.stor().types.dataPtrSizeof();
 
     return (ptrSize <= sh.valSizeOfTarget(val));
+}
+
+bool translateValId(
+        TValId                  *pVal,
+        SymHeapCore             &dst,
+        const SymHeapCore       &src,
+        const TValMap           &valMap)
+{
+    const TValId valSrc = *pVal;
+    if (valSrc <= VAL_NULL)
+        // special values always match, no need for mapping
+        return true;
+
+    const TValId rootSrc = src.valRoot(valSrc);
+    const TValId rootDst = roMapLookup(valMap, rootSrc);
+    if (VAL_INVALID == rootDst)
+        // rootSrc not found in valMap
+        return false;
+
+    if (rootSrc == valSrc) {
+        // no offset used
+        *pVal = rootDst;
+    }
+    else {
+        // translate the lookup result by the original offset
+        const IR::Range &off = src.valOffsetRange(valSrc);
+        *pVal = dst.valByRange(rootDst, off);
+    }
+
+    // match
+    return true;
 }
 
 void translateValProto(
@@ -175,10 +272,23 @@ void redirectRefs(
 
         // check the current link
         const TValId nowAt = obj.value();
-        const TOffset offToRoot = sh.valOffset(nowAt);
+        TValId result;
 
-        // redirect accordingly
-        const TValId result = sh.valByOffset(redirectTo, offToRoot - offHead);
+        const EValueTarget code = sh.valTarget(nowAt);
+        if (VT_RANGE == code) {
+            // redirect a value with range offset
+            IR::Range offRange = sh.valOffsetRange(nowAt);
+            offRange.lo -= offHead;
+            offRange.hi -= offHead;
+            result = sh.valByRange(redirectTo, offRange);
+        }
+        else {
+            // redirect a value with scalar offset
+            const TOffset offToRoot = sh.valOffset(nowAt);
+            result = sh.valByOffset(redirectTo, offToRoot - offHead);
+        }
+
+        // store the redirected value
         obj.setValue(result);
     }
 }

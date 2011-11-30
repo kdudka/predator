@@ -1,0 +1,4 @@
+test-0034.c:35:14: warning: memory leak detected while assigning a static variable
+test-0034.c:42:17: note: from call of gl_pop()
+test-0034.c:48:21: note: from call of gl_destroy_until()
+test-0034.c:45:5: note: from call of main()

@@ -23,12 +23,12 @@
 
 /**
  * @file symheap.hh
- * SymHeapCore - @b symbolic @b heap representation, the core part of "symexec"
- * code listener
+ * SymHeap - the elementary representation of the state of program memory
  */
 
 #include "config.h"
 
+#include "intrange.hh"
 #include "symid.hh"
 #include "util.hh"
 
@@ -63,6 +63,7 @@ enum EValueTarget {
     VT_ON_HEAP,             ///< target is on heap
     VT_LOST,                ///< target was on stack, but it is no longer valid
     VT_DELETED,             ///< target was on heap, but it is no longer valid
+    VT_RANGE,               ///< an offset value where offset is given by range
     VT_ABSTRACT             ///< abstract object (segment)
 };
 
@@ -84,11 +85,14 @@ bool isProgramVar(EValueTarget);
 /// true for VT_STATIC, VT_ON_STACK, VT_ON_STACK, and VT_ABSTRACT
 bool isPossibleToDeref(EValueTarget);
 
+/// true for VT_STATIC, VT_ON_STACK, VT_ON_STACK, VT_ABSTRACT, and VT_RANGE
+bool isAnyDataArea(EValueTarget);
+
 /// enumeration of custom values, such as integer literals, or code pointers
 enum ECustomValue {
     CV_INVALID,             ///< reserved for signalling error states
     CV_FNC,                 ///< code pointer
-    CV_INT,                 ///< constant integral number
+    CV_INT_RANGE,           ///< a closed interval over integral domain
     CV_REAL,                ///< floating-point number
     CV_STRING               ///< string literal
 };
@@ -96,9 +100,9 @@ enum ECustomValue {
 /// @attention SymHeap is not responsible for any deep copies of strings
 union CustomValueData {
     int         uid;        ///< unique ID as assigned by Code Listener
-    long        num;        ///< integral number
     double      fpn;        ///< floating-point number
     const char *str;        ///< zero-terminated string
+    IR::Range   rng;        ///< closed interval over integral domain
 };
 
 /// representation of a custom value, such as integer literal, or code pointer
@@ -106,34 +110,26 @@ struct CustomValue {
     ECustomValue    code;   ///< custom value classification
     CustomValueData data;   ///< custom data
 
-    CustomValue() { }
+    CustomValue():
+        code(CV_INVALID)
+    {
+    }
 
     CustomValue(ECustomValue code_):
         code(code_)
     {
+        if (CV_INT_RANGE == code_)
+            this->data.rng = IR::FullRange;
+    }
+
+    CustomValue(const IR::Range &rng):
+        code(CV_INT_RANGE)
+    {
+        data.rng = rng;
     }
 };
 
-inline bool operator==(const CustomValue &a, const CustomValue &b) {
-    const ECustomValue code = a.code;
-    if (b.code != code)
-        return false;
-
-    switch (code) {
-        case CV_FNC:
-            return (a.data.uid == b.data.uid);
-
-        case CV_INT:
-            return (a.data.num == b.data.num);
-
-        case CV_STRING:
-            return STREQ(a.data.str, b.data.str);
-
-        case CV_INVALID:
-        default:
-            return false;
-    }
-}
+bool operator==(const CustomValue &a, const CustomValue &b);
 
 inline bool operator!=(const CustomValue &a, const CustomValue &b) {
     return !operator==(a, b);
@@ -147,8 +143,11 @@ namespace Trace {
     class Node;
 }
 
-/// a type used by SymHeap for byte offsets
-typedef short                                           TOffset;
+/// a type used for integral offsets (changing this is known to cause problems)
+typedef IR::TInt                                        TOffset;
+
+/// a type used for block sizes (do not set this to anything else than TOffset)
+typedef IR::TInt                                        TSizeOf;
 
 /// a container to store offsets to
 typedef std::vector<TOffset>                            TOffList;
@@ -222,7 +221,7 @@ typedef std::set<CVar>                                  TCVarSet;
 /// only uninitialized or nullified blocks; generic arrays and strings need more
 struct UniformBlock {
     TOffset     off;        ///< relative placement of the block wrt. the root
-    unsigned    size;       ///< size of the block in bytes
+    TSizeOf     size;       ///< size of the block in bytes
     TValId      tplValue;   ///< value you need to clone on object instantiation
 };
 
@@ -245,7 +244,7 @@ inline bool operator<(const CVar &a, const CVar &b) {
 
 class ObjList;
 
-/// base of @b symbolic @b heap representation (one disjunct of symbolic state)
+/// SymHeapCore - the elementary representation of the state of program memory
 class SymHeapCore {
     public:
         /// create an empty symbolic heap
@@ -254,10 +253,10 @@ class SymHeapCore {
         /// destruction of the symbolic heap invalidates all IDs of its entities
         virtual ~SymHeapCore();
 
-        /// @note there is no such thing like COW implemented for now
+        /// relatively cheap operation as long as SH_COPY_ON_WRITE is enabled
         SymHeapCore(const SymHeapCore &);
 
-        /// @note there is no such thing like COW implemented for now
+        /// relatively cheap operation as long as SH_COPY_ON_WRITE is enabled
         SymHeapCore& operator=(const SymHeapCore &);
 
         /// exchange the contents with the other heap (works in constant time)
@@ -298,14 +297,14 @@ class SymHeapCore {
         void writeUniformBlock(
                 const TValId                addr,
                 const TValId                tplValue,
-                const unsigned              size,
+                const TSizeOf               size,
                 TValSet                     *killedPtrs = 0);
 
         /// copy 'size' bytes of raw memory from 'src' to 'dst'
         void copyBlockOfRawMemory(
                 const TValId                dst,
                 const TValId                src,
-                const unsigned              size,
+                const TSizeOf               size,
                 TValSet                     *killedPtrs = 0);
 
     public:
@@ -327,41 +326,24 @@ class SymHeapCore {
         /// return true if the given pair of values is proven to be non-equal
         virtual bool proveNeq(TValId valA, TValId valB) const;
 
-        /**
-         * return the list of values that are connected to the given value by an
-         * explicit Neq predicate
-         * @param dst a container to place the result in
-         * @param val the reference value, used to search the predicates and
-         * then all the related values accordingly
-         */
+        /// collect values connect with the given value via an extra predicate
         void gatherRelatedValues(TValList &dst, TValId val) const;
 
-        /**
-         * copy all @b relevant explicit Neq predicates from the symbolic heap
-         * to another symbolic heap, using the given (injective) value IDs
-         * mapping.  Here @b relevant means that there exists a suitable mapping
-         * for all the values which are connected by the predicate
-         * @param dst destination heap, there will be added the relevant
-         * predicates
-         * @param valMap an (injective) value mapping, used for translation
-         * of value IDs between heaps
-         */
+        /// transfer as many as possible extra heap predicates from this to dst
         void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
 
-        /**
-         * pick up all explicit Neq predicates that can be fully mapped by
-         * valMap into ref and check if they have their own image in ref
-         * @param ref instance of another symbolic heap
-         * @param valMap an (injective) mapping of values from this symbolic
-         * heap into the symbolic heap that is given by ref
-         * @return return true if all such predicates have their image in ref,
-         * false otherwise
-         */
+        /// true if all Neq predicates can be mapped to Neq predicates in ref
         bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
 
     public:
         /// translate the given address by the given offset
         TValId valByOffset(TValId, TOffset offset);
+
+        /// create (or recycle) a VT_RANGE value at the given allocated address
+        TValId valByRange(TValId at, IR::Range range);
+
+        /// translate the given value by the given offset
+        TValId valShift(TValId valToShift, TValId shiftBy);
 
         /// classify the object the given value points to
         EValueTarget valTarget(TValId) const;
@@ -375,8 +357,17 @@ class SymHeapCore {
         /// return the relative placement from the root
         TOffset valOffset(TValId) const;
 
+        /// return the offset range associated with the given VT_RANGE value
+        IR::Range valOffsetRange(TValId) const;
+
+        /// narrow down the offset range of the given VT_RANGE value
+        void valRestrictRange(TValId, IR::Range win);
+
+        /// difference between two pointers (makes sense only for shared roots)
+        TValId diffPointers(const TValId v1, const TValId v2);
+
         /// return size (in bytes) that we can safely write at the given addr
-        int valSizeOfTarget(TValId) const;
+        TSizeOf valSizeOfTarget(TValId) const;
 
         /// return address of the given program variable
         TValId addrOfVar(CVar, bool createIfNeeded);
@@ -405,7 +396,7 @@ class SymHeapCore {
                 UniformBlock               *pDst,
                 const TValId                root,
                 const TOffset               off,
-                unsigned                    size)
+                const TSizeOf               size)
             const;
 
         /**
@@ -421,12 +412,8 @@ class SymHeapCore {
         TObjId valGetComposite(TValId val) const;
 
     public:
-        /**
-         * create a new heap object of known size
-         * @param cbSize size of the object in @b bytes
-         * @return value ID of the acquired address
-         */
-        TValId heapAlloc(int cbSize);
+        /// allocate a chunk of heap of known size
+        TValId heapAlloc(const TSizeOf size);
 
         /// destroy target of the given root value
         virtual void valDestroyTarget(TValId root);
@@ -441,7 +428,7 @@ class SymHeapCore {
         TValId valCreate(EValueTarget code, EValueOrigin origin);
 
         /// wrap a custom value, such as integer literal, or code pointer
-        TValId valWrapCustom(const CustomValue &data);
+        TValId valWrapCustom(CustomValue data);
 
         /// unwrap a custom value, such as integer literal, or code pointer
         const CustomValue& valUnwrapCustom(TValId) const;
@@ -654,31 +641,11 @@ class PtrHandle: public ObjHandle {
 /// ugly, but typedefs do not support partial declarations
 class ObjList: public std::vector<ObjHandle> { };
 
-class ObjLookup {
-    private:
-        std::set<TObjId>            idSet_;
-        ObjList                     hList_;
+/// set of object handles
+typedef std::set<ObjHandle>                             TObjSet;
 
-    public:
-        bool insert(const ObjHandle &hdl) {
-            const TObjId obj = hdl.objId();
-            if (hasKey(idSet_, obj))
-                return false;
-
-            idSet_.insert(obj);
-            hList_.push_back(hdl);
-            return true;
-        }
-
-        bool lookup(const TObjId obj) const {
-            return hasKey(idSet_, obj);
-        }
-
-        bool lookup(const ObjHandle &hdl) const {
-            const TObjId obj = hdl.objId();
-            return hasKey(idSet_, obj);
-        }
-};
+/// a type used for minimal segment length (0+, 1+, ...)
+typedef short                                           TMinLen;
 
 /// enumeration of abstract object (although OK_CONCRETE is not abstract)
 enum EObjKind {
@@ -735,10 +702,10 @@ class SymHeap: public SymHeapCore {
         /// destruction of the symbolic heap invalidates all IDs of its entities
         virtual ~SymHeap();
 
-        /// @note there is no such thing like COW implemented for now
+        /// relatively cheap operation as long as SH_COPY_ON_WRITE is enabled
         SymHeap(const SymHeap &);
 
-        /// @note there is no such thing like COW implemented for now
+        /// relatively cheap operation as long as SH_COPY_ON_WRITE is enabled
         SymHeap& operator=(const SymHeap &);
 
         virtual void swap(SymHeapCore &);
@@ -770,12 +737,11 @@ class SymHeap: public SymHeapCore {
          */
         void valMerge(TValId v1, TValId v2);
 
-
         /// read the minimal segment length of the given abstract object
-        unsigned segMinLength(TValId seg) const;
+        TMinLen segMinLength(TValId seg) const;
 
         /// re-initialize the minimal segment length of the given list segment
-        void segSetMinLength(TValId seg, unsigned len);
+        void segSetMinLength(TValId seg, TMinLen len);
 
     public:
         // just overrides (inherits the dox)
@@ -791,7 +757,7 @@ class SymHeap: public SymHeapCore {
         struct Private;
         Private *d;
 
-        void segMinLengthOp(ENeqOp op, TValId at, unsigned len);
+        void segMinLengthOp(ENeqOp op, TValId at, TMinLen len);
 };
 
 #endif /* H_GUARD_SYM_HEAP_H */

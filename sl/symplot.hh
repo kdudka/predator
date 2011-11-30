@@ -33,12 +33,14 @@
 /// create a plot named "name-NNNN.dot", starting from all live objects
 bool plotHeap(
         const SymHeap                   &sh,
-        const std::string               &name);
+        const std::string               &name,
+        const struct cl_loc             *loc = 0);
 
 /// create a plot named "name-NNNN.dot", starting from the given starting points
 bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
+        const struct cl_loc             *loc,
         const TValList                  &startingPoints,
         const bool                      digForward = true);
 

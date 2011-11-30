@@ -28,12 +28,17 @@
 #include "intarena.hh"
 #include "symabstract.hh"
 #include "syments.hh"
-#include "symneq.hh"
+#include "sympred.hh"
 #include "symseg.hh"
 #include "symutil.hh"
 #include "symtrace.hh"
 #include "util.hh"
 #include "worklist.hh"
+
+#ifndef NDEBUG
+    // just for debugging purposes
+#   include "symcmp.hh"
+#endif
 
 #include <algorithm>
 #include <map>
@@ -56,7 +61,7 @@ assignInvalidIfNotFound(
 
 // /////////////////////////////////////////////////////////////////////////////
 // Neq predicates store
-class FriendlyNeqDb: public NeqDb {
+class NeqDb: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
     public:
         RefCounter refCnt;
 
@@ -81,6 +86,26 @@ class FriendlyNeqDb: public NeqDb {
                 const SymHeapCore       &src,
                 const TValMap           &vMap)
             const;
+};
+
+// /////////////////////////////////////////////////////////////////////////////
+// CoincidenceDb lookup container
+class CoincidenceDb: public SymPairMap</* v1, v2 */ TValId, TValId /* sum */> {
+    public:
+        RefCounter refCnt;
+
+    public:
+        template <class TDst>
+        void gatherRelatedValues(TDst &dst, TValId val) const {
+            // FIXME: suboptimal due to performance
+            BOOST_FOREACH(TMap::const_reference ref, db_) {
+                const TItem &item = ref.first;
+                if (item.first == val)
+                    dst.push_back(item.second);
+                else if (item.second == val)
+                    dst.push_back(item.first);
+            }
+        }
 };
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -138,9 +163,39 @@ class CVarMap {
         }
 };
 
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of CustomValue
+bool operator==(const CustomValue &a, const CustomValue &b) {
+    const ECustomValue code = a.code;
+    if (b.code != code)
+        return false;
+
+    switch (code) {
+        case CV_INVALID:
+            return true;
+
+        case CV_FNC:
+            return (a.data.uid == b.data.uid);
+
+        case CV_REAL:
+            return (a.data.fpn == b.data.fpn);
+
+        case CV_STRING:
+            return STREQ(a.data.str, b.data.str);
+
+        case CV_INT_RANGE:
+            return (a.data.rng == b.data.rng);
+    }
+
+    CL_BREAK_IF("CustomValue::operator==() got something special");
+    return false;
+}
+
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
-typedef std::set<TObjId>                                TObjSet;
+typedef std::set<TObjId>                                TObjIdSet;
 typedef std::map<TOffset, TValId>                       TOffMap;
 typedef IntervalArena<TOffset, TObjId>                  TArena;
 typedef TArena::key_type                                TMemChunk;
@@ -148,7 +203,7 @@ typedef TArena::value_type                              TMemItem;
 
 inline TMemItem createArenaItem(
         const TOffset               off,
-        const unsigned              size,
+        const TSizeOf               size,
         const TObjId                obj)
 {
     const TMemChunk chunk(off, off + size);
@@ -156,7 +211,7 @@ inline TMemItem createArenaItem(
 }
 
 inline bool arenaLookup(
-        TObjSet                     *dst,
+        TObjIdSet                   *dst,
         const TArena                &arena,
         const TMemChunk             &chunk,
         const TObjId                obj)
@@ -172,7 +227,7 @@ inline bool arenaLookup(
 }
 
 inline void arenaLookForExactMatch(
-        TObjSet                     *dst,
+        TObjIdSet                   *dst,
         const TArena                &arena,
         const TMemChunk             &chunk)
 {
@@ -225,14 +280,14 @@ struct BlockEntity: public AbstractHeapEntity {
     EBlockKind                  code;
     TValId                      root;
     TOffset                     off;
-    TOffset                     size;
+    TSizeOf                     size;
     TValId                      value;
 
     BlockEntity(
             const EBlockKind        code_,
             const TValId            root_,
             const TOffset           off_,
-            const TOffset           size_,
+            const TSizeOf           size_,
             const TValId            value_):
         code(code_),
         root(root_),
@@ -267,8 +322,9 @@ struct BaseValue: public AbstractHeapEntity {
     EValueTarget                    code;
     EValueOrigin                    origin;
     TValId                          valRoot;
-    TOffset                         offRoot;
-    TObjSet                         usedBy;
+    TOffset /* FIXME: misleading */ offRoot;
+    TObjIdSet                       usedBy;
+    TValId                          anchor;
 
     BaseValue(EValueTarget code_, EValueOrigin origin_):
         code(code_),
@@ -279,6 +335,43 @@ struct BaseValue: public AbstractHeapEntity {
 
     virtual BaseValue* clone() const {
         return new BaseValue(*this);
+    }
+};
+
+/// maintains a list of dependent values
+struct ReferableValue: public BaseValue {
+    TValList                        dependentValues;
+
+    // unless clone() is properly overridden, the constructor cannot be public
+    protected:
+    ReferableValue(EValueTarget code_, EValueOrigin origin_):
+        BaseValue(code_, origin_)
+    {
+    }
+};
+
+struct AnchorValue: public ReferableValue {
+    TOffMap                         offMap;
+
+    // unless clone() is properly overridden, the constructor cannot be public
+    protected:
+    AnchorValue(EValueTarget code_, EValueOrigin origin_):
+        ReferableValue(code_, origin_)
+    {
+    }
+};
+
+struct RangeValue: public AnchorValue {
+    IR::Range                       range;
+
+    RangeValue(const IR::Range &range_):
+        AnchorValue(VT_RANGE, VO_ASSIGNED),
+        range(range_)
+    {
+    }
+
+    virtual RangeValue* clone() const {
+        return new RangeValue(*this);
     }
 };
 
@@ -295,53 +388,53 @@ struct CompValue: public BaseValue {
     }
 };
 
-struct InternalCustomValue: public BaseValue {
+struct InternalCustomValue: public ReferableValue {
     CustomValue                     customData;
 
     InternalCustomValue(EValueTarget code_, EValueOrigin origin_):
-        BaseValue(code_, origin_)
+        ReferableValue(code_, origin_)
     {
     }
 
-    virtual BaseValue* clone() const {
+    virtual InternalCustomValue* clone() const {
         return new InternalCustomValue(*this);
     }
 };
 
-struct RootValue: public BaseValue {
+struct RootValue: public AnchorValue {
     CVar                            cVar;
-    TOffset                         size;
-    TOffMap                         offMap;
+    TSizeOf                         size;
     TLiveObjs                       liveObjs;
-    TObjSet                         usedByGl;
+    TObjIdSet                       usedByGl;
     TArena                          arena;
     TObjType                        lastKnownClt;
     bool                            isProto;
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
-        BaseValue(code_, origin_),
+        AnchorValue(code_, origin_),
         size(0),
         lastKnownClt(0),
         isProto(false)
     {
     }
 
-    virtual BaseValue* clone() const {
+    virtual RootValue* clone() const {
         return new RootValue(*this);
     }
 };
 
 class CustomValueMapper {
     private:
-        typedef std::map<int, TValId>                           TCustomByInt;
-        typedef std::map<long, TValId>                          TCustomByLong;
+        typedef std::map<int /* uid */, TValId>                 TCustomByUid;
+        typedef std::map<IR::TInt, TValId>                      TCustomByNum;
         typedef std::map<double, TValId>                        TCustomByReal;
         typedef std::map<std::string, TValId>                   TCustomByString;
 
-        TCustomByInt        fncMap;
-        TCustomByLong       numMap;
+        TCustomByUid        fncMap;
+        TCustomByNum        numMap;
         TCustomByReal       fpnMap;
         TCustomByString     strMap;
+        TValId              inval_;
 
     public:
         RefCounter          refCnt;
@@ -353,12 +446,14 @@ class CustomValueMapper {
                 case CV_INVALID:
                 default:
                     CL_BREAK_IF("invalid call of CustomValueMapper::lookup()");
+                    return inval_ = VAL_INVALID;
 
                 case CV_FNC:
                     return assignInvalidIfNotFound(fncMap, item.data.uid);
 
-                case CV_INT:
-                    return assignInvalidIfNotFound(numMap, item.data.num);
+                case CV_INT_RANGE:
+                    CL_BREAK_IF(!isSingular(item.data.rng));
+                    return assignInvalidIfNotFound(numMap, item.data.rng.lo);
 
                 case CV_REAL:
                     return assignInvalidIfNotFound(fpnMap, item.data.fpn);
@@ -384,7 +479,8 @@ struct SymHeapCore::Private {
     TValSetWrapper                 *liveRoots;
     CVarMap                        *cVarMap;
     CustomValueMapper              *cValueMap;
-    FriendlyNeqDb                  *neqDb;
+    CoincidenceDb                  *coinDb;
+    NeqDb                          *neqDb;
 
     inline TObjId assignId(BlockEntity *);
     inline TValId assignId(BaseValue *);
@@ -413,15 +509,13 @@ struct SymHeapCore::Private {
     void reinterpretObjData(TObjId old, TObjId obj, TValSet *killedPtrs = 0);
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
-    void neqOpWrap(SymHeapCore::ENeqOp, TValId, TValId);
-
     // runs only in debug build
     bool chkArenaConsistency(const RootValue *);
 
     void shiftBlockAt(
             const TValId            dstRoot,
             const TOffset           off,
-            const TOffset           size,
+            const TSizeOf           size,
             const TValSet          *killedPtrs);
 
     void transferBlock(
@@ -429,13 +523,21 @@ struct SymHeapCore::Private {
             const TValId            srcRoot, 
             const TOffset           dstOff,
             const TOffset           srcOff,
-            const TOffset           size);
+            const TSizeOf           size);
 
     TObjId writeUniformBlock(
             const TValId            addr,
             const TValId            tplValue,
-            const unsigned          size,
+            const TSizeOf           size,
             TValSet                 *killedPtrs);
+
+    void bindValues(TValId v1, TValId v2, TValId valSum);
+
+    TValId shiftCustomValue(TValId val, TOffset shift);
+
+    void replaceRngByInt(const InternalCustomValue *valData);
+
+    void trimCustomValue(TValId val, const IR::Range &win);
 
     private:
         // intentionally not implemented
@@ -445,6 +547,7 @@ struct SymHeapCore::Private {
 inline TValId SymHeapCore::Private::assignId(BaseValue *valData) {
     const TValId val = this->ents.assignId<TValId>(valData);
     valData->valRoot = val;
+    valData->anchor  = val;
     return val;
 }
 
@@ -459,13 +562,27 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
 
     BaseValue *valData;
     this->ents.getEntRW(&valData, val);
-    if (1 != valData->usedBy.erase(obj))
+    TObjIdSet &usedBy = valData->usedBy;
+    if (1 != usedBy.erase(obj))
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
 
+    if (usedBy.empty()) {
+        // kill all related Neq predicates
+        TValList neqs;
+        this->neqDb->gatherRelatedValues(neqs, val);
+        BOOST_FOREACH(const TValId valNeq, neqs) {
+            CL_DEBUG("releaseValueOf() kills an orphan Neq predicate");
+            this->neqDb->del(valNeq, val);
+        }
+    }
+
+    const EValueTarget code = valData->code;
+    if (!isAnyDataArea(code))
+        return /* wasPtr */ false;
+
+    // jump to root
     const TValId root = valData->valRoot;
     this->ents.getEntRW(&valData, root);
-    if (!isPossibleToDeref(valData->code))
-        return /* wasPtr */ false;
 
     RootValue *rootData = DCAST<RootValue *>(valData);
     if (1 != rootData->usedByGl.erase(obj))
@@ -482,7 +599,9 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
     BaseValue *valData;
     this->ents.getEntRW(&valData, val);
     valData->usedBy.insert(obj);
-    if (!isPossibleToDeref(valData->code))
+
+    const EValueTarget code = valData->code;
+    if (!isAnyDataArea(code))
         return;
 
     // update usedByGl
@@ -506,7 +625,7 @@ bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
     const TArena &arena = rootData->arena;
     const TMemChunk chunk(0, rootData->size);
 
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (arenaLookup(&overlaps, arena, chunk, OBJ_INVALID)) {
         BOOST_FOREACH(const TObjId obj, overlaps)
             all.erase(obj);
@@ -553,8 +672,8 @@ void SymHeapCore::Private::splitBlockByObject(
     // dig offsets and sizes
     const TOffset blOff = blData->off;
     const TOffset objOff = hbData->off;
-    const unsigned blSize = blData->size;
-    const unsigned objSize = hbData->size;
+    const TSizeOf blSize = blData->size;
+    const TSizeOf objSize = hbData->size;
 
     // check overlapping
     const TOffset blBegToObjBeg = objOff - blOff;
@@ -745,7 +864,7 @@ void SymHeapCore::Private::setValueOf(
     arena += createArenaItem(off, clt->size, obj);
 
     // invalidate contents of the objects we are overwriting
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
         BOOST_FOREACH(const TObjId old, overlaps)
             this->reinterpretObjData(old, obj, killedPtrs);
@@ -793,7 +912,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
 
         // remove the object from arena unless we are destroying everything
         const TOffset off = blData->off;
-        const TOffset size = blData->size;
+        const TSizeOf size = blData->size;
         rootData->arena -= createArenaItem(off, size, obj);
 
         CL_BREAK_IF(hasKey(rootData->liveObjs, obj));
@@ -828,6 +947,7 @@ TValId SymHeapCore::Private::valCreate(
             val = this->assignId(new InternalCustomValue(code, origin));
             break;
 
+        case VT_RANGE:
         case VT_ABSTRACT:
             CL_BREAK_IF("invalid call of SymHeapCore::Private::valCreate()");
             // fall through!
@@ -894,7 +1014,7 @@ bool SymHeapCore::Private::valsEqual(TValId v1, TValId v2) {
 void SymHeapCore::Private::shiftBlockAt(
         const TValId                dstRoot,
         const TOffset               off,
-        const TOffset               size,
+        const TSizeOf               size,
         const TValSet              *killedPtrs)
 {
     CL_BREAK_IF("please implement");
@@ -909,7 +1029,7 @@ void SymHeapCore::Private::transferBlock(
         const TValId                srcRoot, 
         const TOffset               dstOff,
         const TOffset               winBeg,
-        const TOffset               winSize)
+        const TSizeOf               winSize)
 {
     const RootValue *rootDataSrc;
     this->ents.getEntRO(&rootDataSrc, srcRoot);
@@ -917,7 +1037,7 @@ void SymHeapCore::Private::transferBlock(
     const TOffset winEnd = winBeg + winSize;
     const TMemChunk chunk (winBeg, winEnd);
 
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (!arenaLookup(&overlaps, arena, chunk, OBJ_INVALID))
         // no data to copy in here
         return;
@@ -959,7 +1079,8 @@ SymHeapCore::Private::Private(Trace::Node *trace):
     liveRoots   (new TValSetWrapper),
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
-    neqDb       (new FriendlyNeqDb)
+    coinDb      (new CoincidenceDb),
+    neqDb       (new NeqDb)
 {
     // allocate a root-value for VAL_NULL
     this->assignId(new RootValue(VT_INVALID, VO_INVALID));
@@ -971,11 +1092,13 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     liveRoots   (ref.liveRoots),
     cVarMap     (ref.cVarMap),
     cValueMap   (ref.cValueMap),
+    coinDb      (ref.coinDb),
     neqDb       (ref.neqDb)
 {
     RefCntLib<RCO_NON_VIRT>::enter(this->liveRoots);
     RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->cValueMap);
+    RefCntLib<RCO_NON_VIRT>::enter(this->coinDb);
     RefCntLib<RCO_NON_VIRT>::enter(this->neqDb);
 }
 
@@ -983,6 +1106,7 @@ SymHeapCore::Private::~Private() {
     RefCntLib<RCO_NON_VIRT>::leave(this->liveRoots);
     RefCntLib<RCO_NON_VIRT>::leave(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cValueMap);
+    RefCntLib<RCO_NON_VIRT>::leave(this->coinDb);
     RefCntLib<RCO_NON_VIRT>::leave(this->neqDb);
 }
 
@@ -1002,7 +1126,7 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     const TObjType clt = objData->clt;
 
     // first check for data reinterpretation
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
         BOOST_FOREACH(const TObjId other, overlaps) {
             const BlockEntity *blockData;
@@ -1092,7 +1216,7 @@ void SymHeapCore::usedBy(ObjList &dst, TValId val, bool liveOnly) const {
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
-    const TObjSet &usedBy = valData->usedBy;
+    const TObjIdSet &usedBy = valData->usedBy;
     if (!liveOnly) {
         // dump everything
         BOOST_FOREACH(const TObjId obj, usedBy)
@@ -1132,7 +1256,7 @@ void SymHeapCore::pointedBy(ObjList &dst, TValId root) const {
     CL_BREAK_IF(rootData->offRoot);
     CL_BREAK_IF(!isPossibleToDeref(rootData->code));
 
-    const TObjSet &usedBy = rootData->usedByGl;
+    const TObjIdSet &usedBy = rootData->usedByGl;
     BOOST_FOREACH(const TObjId obj, usedBy)
         dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
 }
@@ -1150,6 +1274,7 @@ unsigned SymHeapCore::lastId() const {
 TValId SymHeapCore::valClone(TValId val) {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
+
     const EValueTarget code = valData->code;
     if (VT_CUSTOM == code) {
         CL_BREAK_IF("custom values are not supposed to be cloned");
@@ -1167,6 +1292,12 @@ TValId SymHeapCore::valClone(TValId val) {
         return val;
     }
 
+    if (VT_RANGE == code) {
+        CL_DEBUG("support for VT_RANGE in valClone() is experimental");
+        const IR::Range range = this->valOffsetRange(val);
+        return this->valByRange(valData->valRoot, range);
+    }
+
     if (!isPossibleToDeref(code))
         // duplicate an unknown value
         return d->valDup(val);
@@ -1176,22 +1307,6 @@ TValId SymHeapCore::valClone(TValId val) {
 
     // take the offset into consideration
     return this->valByOffset(dupAt, valData->offRoot);
-}
-
-template <class TValMap>
-bool valMapLookup(const TValMap &valMap, TValId *pVal) {
-    if (*pVal <= VAL_NULL)
-        // special values always match, no need for mapping
-        return true;
-
-    typename TValMap::const_iterator iter = valMap.find(*pVal);
-    if (valMap.end() == iter)
-        // mapping not found
-        return false;
-
-    // match
-    *pVal = iter->second;
-    return true;
 }
 
 TObjId SymHeapCore::Private::copySingleLiveBlock(
@@ -1329,7 +1444,7 @@ bool SymHeapCore::findCoveringUniBlock(
         UniformBlock                *pDst,
         const TValId                root,
         const TOffset               beg,
-        unsigned                    size)
+        const TSizeOf               size)
     const
 {
     const RootValue *rootData;
@@ -1340,7 +1455,7 @@ bool SymHeapCore::findCoveringUniBlock(
     const TOffset end = beg + size;
     const TMemChunk chunk(beg, end);
 
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (!arenaLookup(&overlaps, arena, chunk, OBJ_INVALID))
         // not found
         return false;
@@ -1360,15 +1475,15 @@ bool SymHeapCore::findCoveringUniBlock(
             // the template starts above this block
             continue;
 
-        const TOffset size = blData->size;
-        const TOffset blEnd = blBeg + size;
+        const TSizeOf blSize = blData->size;
+        const TOffset blEnd = blBeg + blSize;
         if (blEnd < end)
             // the template ends beyond this block
             continue;
 
         // covering uniform block matched!
         pDst->off       = blBeg;
-        pDst->size      = size;
+        pDst->size      = blSize;
         pDst->tplValue  = blData->value;
         return true;
     }
@@ -1446,7 +1561,7 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
 TObjId SymHeapCore::Private::writeUniformBlock(
         const TValId                addr,
         const TValId                tplVal,
-        const unsigned              size,
+        const TSizeOf               size,
         TValSet                     *killedPtrs)
 {
     const BaseValue *valData;
@@ -1473,7 +1588,7 @@ TObjId SymHeapCore::Private::writeUniformBlock(
     const TMemChunk chunk(beg, end);
 
     // invalidate contents of the objects we are overwriting
-    TObjSet overlaps;
+    TObjIdSet overlaps;
     if (arenaLookup(&overlaps, arena, chunk, obj)) {
         BOOST_FOREACH(const TObjId old, overlaps)
             this->reinterpretObjData(old, obj, killedPtrs);
@@ -1487,22 +1602,22 @@ TObjId SymHeapCore::Private::writeUniformBlock(
 void SymHeapCore::writeUniformBlock(
         const TValId                addr,
         const TValId                tplValue,
-        const unsigned              size,
+        const TSizeOf               size,
         TValSet                     *killedPtrs)
 {
-    CL_BREAK_IF(this->valSizeOfTarget(addr) < static_cast<int>(size));
+    CL_BREAK_IF(this->valSizeOfTarget(addr) < size);
     d->writeUniformBlock(addr, tplValue, size, killedPtrs);
 }
 
 void SymHeapCore::copyBlockOfRawMemory(
         const TValId                dst,
         const TValId                src,
-        const unsigned              size,
+        const TSizeOf               size,
         TValSet                     *killedPtrs)
 {
     // this should have been checked by the caller
-    CL_BREAK_IF(this->valSizeOfTarget(dst) < static_cast<int>(size));
-    CL_BREAK_IF(this->valSizeOfTarget(src) < static_cast<int>(size));
+    CL_BREAK_IF(this->valSizeOfTarget(dst) < size);
+    CL_BREAK_IF(this->valSizeOfTarget(src) < size);
 
     const BaseValue *dstData;
     const BaseValue *srcData;
@@ -1550,33 +1665,137 @@ TObjType SymHeapCore::objType(TObjId obj) const {
     return objData->clt;
 }
 
+TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
+    const InternalCustomValue *customDataRef;
+    this->ents.getEntRO(&customDataRef, ref);
+
+    // prepare a custom value template and compute the shifted range
+    const IR::Range rngRef = rngFromCustom(customDataRef->customData);
+    const CustomValue cv(rngRef + IR::rngFromNum(shift));
+
+    // create a new CV_INT_RANGE custom value (do not recycle existing)
+    const TValId val = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
+    InternalCustomValue *customData;
+    this->ents.getEntRW(&customData, val);
+    customData->anchor      = customDataRef->anchor;
+    customData->offRoot     = customDataRef->offRoot + shift;
+    customData->customData  = cv;
+
+    // register this value as a dependent value by the anchor
+    ReferableValue *refData;
+    this->ents.getEntRW(&refData, customData->anchor);
+    refData->dependentValues.push_back(val);
+
+    return val;
+}
+
+void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData) {
+    CL_DEBUG("replaceRngByInt() is taking place...");
+
+    // we already expect a scalar at this point
+    const CustomValue &cvRng = valData->customData;
+    const IR::Range rng = rngFromCustom(cvRng);
+    CL_BREAK_IF(!isSingular(rng));
+
+    TValId replaceBy;
+    if (0L == rng.lo)
+        replaceBy = VAL_NULL;
+    else if (1L == rng.lo)
+        replaceBy = VAL_TRUE;
+    else {
+        // CV_INT values are supposed to be reused if they exist already
+        RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->cValueMap);
+        TValId &valInt = this->cValueMap->lookup(cvRng);
+        if (VAL_INVALID == valInt) {
+            // CV_INT_RANGE not found, wrap it as a new heap value
+            valInt = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
+            InternalCustomValue *intData;
+            this->ents.getEntRW(&intData, valInt);
+            intData->customData = cvRng;
+        }
+        replaceBy = valInt;
+    }
+
+    // we intentionally do not use a reference here (tight loop otherwise)
+    TObjIdSet usedBy = valData->usedBy;
+    BOOST_FOREACH(const TObjId obj, usedBy)
+        this->setValueOf(obj, replaceBy);
+}
+
+void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
+    const InternalCustomValue *customData;
+    this->ents.getEntRO(&customData, val);
+
+    // extract the original integral ragne
+    const IR::Range &refRange = rngFromCustom(customData->customData);
+    CL_BREAK_IF(isSingular(refRange));
+
+    // compute the difference between the original and desired ranges
+    const IR::TInt loShift = refRange.lo - win.lo;
+    const IR::TInt hiShift = win.hi - refRange.hi;
+    if (IR::Int0 < loShift || IR::Int0 < hiShift) {
+        CL_BREAK_IF("attempt to use trimCustomValue() to enlarge the interval");
+        return;
+    }
+
+    // jump to anchor
+    const TValId anchor = customData->anchor;
+    const ReferableValue *refData;
+    this->ents.getEntRO(&refData, anchor);
+
+    // go through all dependent values including the anchor itself
+    TValList deps = refData->dependentValues;
+    deps.push_back(anchor);
+    BOOST_FOREACH(const TValId depVal, deps) {
+        // FIXME: are custom values the only allowed dependent values here?
+        InternalCustomValue *depData;
+        this->ents.getEntRW(&depData, depVal);
+
+        CustomValue &cvDep = depData->customData;
+        CL_BREAK_IF(CV_INT_RANGE != cvDep.code);
+
+        // shift the bounds accordingly
+        IR::Range &rngDep = cvDep.data.rng;
+        rngDep.lo -= loShift;
+        rngDep.hi += hiShift;
+
+        if (isSingular(rngDep))
+            // CV_INT_RANGE reduced to CV_INT
+            this->replaceRngByInt(depData);
+    }
+}
+
 TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     if (!off || at < 0)
         return at;
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, at);
+    const TValId valRoot = valData->valRoot;
+    const EValueTarget code = valData->code;
+
+    TValId anchor = valRoot;
+    if (VT_RANGE == code)
+        anchor = valData->anchor;
 
     // subtract the root
-    const TValId valRoot = valData->valRoot;
     off += valData->offRoot;
     if (!off)
-        return valRoot;
+        return anchor;
 
-    const EValueTarget code = valData->code;
     if (VT_UNKNOWN == code)
         // do not track off-value for invalid targets
         return d->valDup(at);
 
     if (VT_CUSTOM == code) {
-        CL_BREAK_IF("valByOffset() is NOT supposed to be applied on VT_CUSTOM");
-        return at;
+        CL_BREAK_IF("invalid call of valByOffset(), use valShift() instead");
+        return VAL_INVALID;
     }
 
     // off-value lookup
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, valRoot);
-    const TOffMap &offMap = rootData->offMap;
+    const AnchorValue *anchorData;
+    d->ents.getEntRO(&anchorData, anchor);
+    const TOffMap &offMap = anchorData->offMap;
     TOffMap::const_iterator it = offMap.find(off);
     if (offMap.end() != it)
         return it->second;
@@ -1587,13 +1806,224 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
 
     // offVal->valRoot needs to be set after the call of Private::assignId()
     offVal->valRoot = valRoot;
+    offVal->anchor  = anchor;
     offVal->offRoot = off;
 
     // store the mapping for next wheel
-    RootValue *rootDataRW;
-    d->ents.getEntRW(&rootDataRW, valRoot);
-    rootDataRW->offMap[off] = val;
+    AnchorValue *anchorDataRW;
+    d->ents.getEntRW(&anchorDataRW, anchor);
+    anchorDataRW->offMap[off] = val;
     return val;
+}
+
+TValId SymHeapCore::valByRange(TValId at, IR::Range range) {
+    if (isSingular(range)) {
+        CL_DEBUG("valByRange() got a singular range, passing to valByOffset()");
+        return this->valByOffset(at, range.lo);
+    }
+
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, at);
+    if (VAL_NULL == at || isGone(valData->code))
+        return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    CL_BREAK_IF(!isPossibleToDeref(valData->code));
+
+    // include the relative offset of the starting point
+    const TValId valRoot = valData->valRoot;
+    const TOffset offset = valData->offRoot;
+    range += IR::rngFromNum(offset);
+
+    if (isAligned(range)) {
+        CL_BREAK_IF("TODO: deal better with alignment");
+        range.alignment = IR::Int1;
+    }
+
+    // create a new range value
+    RangeValue *rangeData = new RangeValue(range);
+    const TValId val = d->assignId(rangeData);
+
+    // offVal->valRoot needs to be set after the call of Private::assignId()
+    rangeData->valRoot  = valRoot;
+    rangeData->anchor   = val;
+
+    // register the VT_RANGE value by the owning root entity
+    RootValue *rootData;
+    d->ents.getEntRW(&rootData, valRoot);
+    rootData->dependentValues.push_back(val);
+
+    return val;
+}
+
+TValId SymHeapCore::valShift(TValId valToShift, TValId shiftBy) {
+    if (valToShift < 0)
+        // do not shift special values
+        return valToShift;
+
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, valToShift);
+
+    IR::Range rng;
+    if (!rngFromVal(&rng, *this, shiftBy)) {
+        CL_BREAK_IF("valShift() needs at least integral range as shiftBy");
+        return VAL_INVALID;
+    }
+
+    const EValueTarget code = valData->code;
+
+    if (isSingular(rng)) {
+        // the value is going the be shifted by a known integer (not a range)
+        const IR::TInt off = rng.lo;
+
+        if (VT_CUSTOM == code)
+            return d->shiftCustomValue(valToShift, off);
+        else
+            return this->valByOffset(valToShift, off);
+    }
+
+    if (isPossibleToDeref(code))
+        return this->valByRange(valToShift, rng);
+
+    if (VT_RANGE != code) {
+        CL_BREAK_IF("unhandled call of SymHeapCore::valShift()");
+        return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    }
+
+    // split valToShift to anchor/offset
+    const TValId anchor1 = valData->anchor;
+    const TOffset off1   = valData->offRoot;
+
+    // split shiftBy to anchor/offset
+    const BaseValue *shiftData;
+    d->ents.getEntRO(&shiftData, shiftBy);
+    const TValId anchor2 = shiftData->anchor;
+    const TOffset off2   = shiftData->offRoot;
+
+    // summarize the total offset
+    const TOffset offTotal = off1 + off2;
+
+    // lookup on anchors, then shift by the total offset if succeeded
+    TValId valResult;
+    if (d->coinDb->chk(&valResult, anchor1, anchor2))
+        return this->valByOffset(valResult, off1 + off2);
+
+    // compute the resulting range and wrap it as a heap value
+    const IR::Range rngResult = rng + this->valOffsetRange(valToShift);
+    valResult = this->valByRange(valData->valRoot, rngResult);
+
+    // store the mapping for next wheel
+    const TValId valSum = this->valByOffset(valResult, -offTotal);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->coinDb);
+    d->coinDb->add(anchor1, anchor2, valSum);
+
+    // NOTE: valResult is what the caller asks for (valSum is what we track)
+    return valResult;
+}
+
+void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
+
+    const EValueTarget code = valData->code;
+    switch (code) {
+        case VT_RANGE:
+            break;
+
+        case VT_CUSTOM:
+            d->trimCustomValue(val, win);
+            return;
+
+        case VT_UNKNOWN:
+            if (!isSingular(win)) {
+                const CustomValue cv(win);
+                this->valReplace(val, this->valWrapCustom(cv));
+                return;
+            }
+            // fall through!
+
+        default:
+            CL_BREAK_IF("invalid call of valRestrictRange()");
+            return;
+    }
+
+    const TValId anchor = valData->anchor;
+    const TOffset shift = valData->offRoot;
+    CL_BREAK_IF((!!shift) == (anchor == val));
+
+    RangeValue *rangeData;
+    d->ents.getEntRW(&rangeData, anchor);
+    IR::Range &range = rangeData->range;
+
+    // translate the given window to our root coords
+    win -= IR::rngFromNum(shift);
+
+    // first check that the caller uses the SymHeapCore API correctly
+    CL_BREAK_IF(win == range);
+    CL_BREAK_IF(win.lo < range.lo);
+    CL_BREAK_IF(range.hi < win.hi);
+
+    // restrict the offset range now!
+    range = win;
+    if (!isSingular(range))
+        return;
+
+    // the range has been restricted to a single off-value, trow it away!
+    CL_DEBUG("valRestrictRange() throws away a singular offset range...");
+    const TValId valRoot = rangeData->valRoot;
+    const TOffset offRoot = range.lo;
+    const TValId valSubst = this->valByOffset(valRoot, offRoot);
+    this->valReplace(anchor, valSubst);
+
+    BOOST_FOREACH(TOffMap::const_reference item, rangeData->offMap) {
+        const TOffset offRel = item.first;
+        const TValId valOld = item.second;
+
+        const TOffset offTotal = offRoot + offRel;
+        const TValId valNew = this->valByOffset(valRoot, offTotal);
+        this->valReplace(valOld, valNew);
+    }
+}
+
+void SymHeapCore::Private::bindValues(TValId v1, TValId v2, TValId valSum) {
+    const BaseValue *valData1, *valData2;
+    this->ents.getEntRO(&valData1, v1);
+    this->ents.getEntRO(&valData2, v2);
+
+    const TOffset off1 = valData1->offRoot;
+    const TOffset off2 = valData2->offRoot;
+    if (off1 || off2) {
+        CL_BREAK_IF("bindValues() does not support offsets yet");
+        return;
+    }
+
+    const TValId anchor1 = valData1->anchor;
+    const TValId anchor2 = valData2->anchor;
+
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->coinDb);
+    this->coinDb->add(anchor1, anchor2, valSum);
+}
+
+TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
+    const TValId root1 = this->valRoot(v1);
+    const TValId root2 = this->valRoot(v2);
+    if (root1 != root2)
+        return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    // get offset ranges for both pointers
+    const IR::Range off1 = this->valOffsetRange(v1);
+    const IR::Range off2 = this->valOffsetRange(v2);
+
+    // TODO: check for an already existing coincidence to improve the precision
+
+    // compute the difference and wrap it as a heap value
+    const CustomValue cv(off1 - off2);
+    const TValId valDiff = this->valWrapCustom(cv);
+    if (isSingular(rngFromCustom(cv)))
+        // good luck, the difference is a scalar
+        return valDiff;
+
+    d->bindValues(v2, valDiff, /* sum */ v1);
+    return valDiff;
 }
 
 EValueOrigin SymHeapCore::valOrigin(TValId val) const {
@@ -1618,13 +2048,20 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
     if (val <= 0)
         return VT_INVALID;
 
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
+
+    const EValueTarget code = valData->code;
+    if (VT_RANGE == code)
+        // VT_RANGE takes precedence over VT_ABSTRACT
+        return VT_RANGE;
+
     if (this->hasAbstractTarget(val))
         // the overridden implementation claims the target is abstract
         return VT_ABSTRACT;
 
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, val);
-    return valData->code;
+    // just return the native code we track in BaseValue
+    return code;
 }
 
 bool isUninitialized(EValueOrigin code) {
@@ -1692,6 +2129,11 @@ bool isPossibleToDeref(EValueTarget code) {
         || isProgramVar(code);
 }
 
+bool isAnyDataArea(EValueTarget code) {
+    return isPossibleToDeref(code)
+        || (VT_RANGE == code);
+}
+
 TValId SymHeapCore::valRoot(TValId val) const {
     if (val <= 0)
         return val;
@@ -1707,7 +2149,55 @@ TOffset SymHeapCore::valOffset(TValId val) const {
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
-    return valData->offRoot;
+
+    const EValueTarget code = valData->code;
+    switch (code) {
+        case VT_RANGE:
+            CL_BREAK_IF("valOffset() called on VT_RANGE, which is not supported");
+            // fall through!
+
+        case VT_CUSTOM:
+            // FIXME: valData->offRoot is used internally for unrelated purposes
+            return 0;
+
+        default:
+            return valData->offRoot;
+    }
+}
+
+IR::Range SymHeapCore::valOffsetRange(TValId val) const {
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
+
+    if (VT_RANGE != valData->code)
+        // this is going to be a singular range
+        return IR::rngFromNum(valData->offRoot);
+
+    const TValId anchor = valData->anchor;
+    if (anchor == val) {
+        // we got the VT_RANGE anchor directly
+        const RangeValue *rangeData = DCAST<const RangeValue *>(valData);
+        return rangeData->range;
+    }
+
+    // we need to resolve an off-value to VT_RANGE anchor
+    const RangeValue *rangeData;
+    d->ents.getEntRO(&rangeData, anchor);
+
+    // check the offset we need to shift the anchor by
+    const TOffset off = valData->offRoot;
+    CL_BREAK_IF(!off);
+
+    // shift the range (if not already saturated) and return the result
+    IR::Range range = rangeData->range;
+    range += IR::rngFromNum(off);
+
+    if (isAligned(range)) {
+        CL_BREAK_IF("TODO: deal better with alignment");
+        range.alignment = IR::Int1;
+    }
+
+    return range;
 }
 
 void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
@@ -1723,7 +2213,7 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     }
 
     // we intentionally do not use a reference here (tight loop otherwise)
-    TObjSet usedBy = valData->usedBy;
+    TObjIdSet usedBy = valData->usedBy;
     BOOST_FOREACH(const TObjId obj, usedBy) {
         // this used to happen with with test-0037 running in OOM mode [fixed]
         CL_BREAK_IF(isGone(this->valTarget(this->placedAt(obj))));
@@ -1732,45 +2222,27 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     }
 }
 
-void SymHeapCore::Private::neqOpWrap(ENeqOp op, TValId valA, TValId valB) {
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->neqDb);
+void SymHeapCore::neqOp(ENeqOp op, TValId v1, TValId v2) {
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
 
     switch (op) {
         case NEQ_NOP:
-            CL_BREAK_IF("invalid call of SymHeapCore::Private::neqOpWrap()");
+            CL_BREAK_IF("invalid call of SymHeapCore::neqOp()");
             return;
 
         case NEQ_ADD:
-            this->neqDb->add(valA, valB);
+            d->neqDb->add(v1, v2);
             return;
 
         case NEQ_DEL:
-            this->neqDb->del(valA, valB);
+            d->neqDb->del(v1, v2);
             return;
     }
-}
-
-void SymHeapCore::neqOp(ENeqOp op, TValId v1, TValId v2) {
-    const TOffset off1 = this->valOffset(v1);
-    const TOffset off2 = this->valOffset(v2);
-
-    const TValId root1 = this->valRoot(v1);
-    const TValId root2 = this->valRoot(v2);
-
-    const TOffset diff = off2 - off1;
-    if (!diff) {
-        // if both values have the same offset, connect the roots
-        d->neqOpWrap(op, root1, root2);
-        return;
-    }
-
-    // if the values have different offsets, associate both roots
-    d->neqOpWrap(op, root1, this->valByOffset(root2,  diff));
-    d->neqOpWrap(op, root2, this->valByOffset(root1, -diff));
 }
 
 void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {
     d->neqDb->gatherRelatedValues(dst, val);
+    d->coinDb->gatherRelatedValues(dst, val);
 }
 
 void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
@@ -1781,28 +2253,88 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
         TValId valLt = item.first;
         TValId valGt = item.second;
 
-        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
+        if (!translateValId(&valLt, dst, *this, valMap))
+            // not relevant
+            continue;
+
+        if (!translateValId(&valGt, dst, *this, valMap))
             // not relevant
             continue;
 
         // create the image now!
         dst.neqOp(NEQ_ADD, valLt, valGt);
     }
+
+    // go through CoincidenceDb
+    const CoincidenceDb &coinDb = *d->coinDb;
+    BOOST_FOREACH(CoincidenceDb::const_reference &ref, coinDb) {
+        TValId valLt = ref/* key */.first/* lt */.first;
+        TValId valGt = ref/* key */.first/* gt */.second;
+
+        if (!translateValId(&valLt, dst, *this, valMap))
+            // not relevant
+            continue;
+
+        if (!translateValId(&valGt, dst, *this, valMap))
+            // not relevant
+            continue;
+
+        // create the image now!
+        RefCntLib<RCO_NON_VIRT>::requireExclusivity(dst.d->coinDb);
+        dst.d->coinDb->add(valLt, valGt, /* sum */ ref.second);
+    }
 }
 
 bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
     const
 {
+    SymHeapCore &src = const_cast<SymHeapCore &>(*this);
+    SymHeapCore &dst = const_cast<SymHeapCore &>(ref);
+
     // go through NeqDb
     BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb->cont_) {
         TValId valLt = item.first;
         TValId valGt = item.second;
-        if (!valMapLookup(valMap, &valLt) || !valMapLookup(valMap, &valGt))
-            // seems like a dangling predicate, which we are not interested in
-            continue;
 
-        if (!ref.d->neqDb->areNeq(valLt, valGt))
+        if (!translateValId(&valLt, dst, src, valMap))
+            // failed to translate value ID, better to give up
+            return false;
+
+        if (!translateValId(&valGt, dst, src, valMap))
+            // failed to translate value ID, better to give up
+            return false;
+
+        if (!ref.d->neqDb->chk(valLt, valGt))
             // Neq predicate not matched
+            return false;
+    }
+
+    // go through CoincidenceDb
+    const CoincidenceDb &coinDb = *d->coinDb;
+    BOOST_FOREACH(CoincidenceDb::const_reference &ref, coinDb) {
+        TValId valLt = ref/* key */.first/* lt */.first;
+        TValId valGt = ref/* key */.first/* gt */.second;
+
+        if (!translateValId(&valLt, dst, *this, valMap))
+            // failed to translate value ID, better to give up
+            return false;
+
+        if (!translateValId(&valGt, dst, *this, valMap))
+            // failed to translate value ID, better to give up
+            return false;
+
+        TValId sum;
+        if (!dst.d->coinDb->chk(&sum, valLt, valGt))
+            // coincidence not matched
+            return false;
+
+        SymHeapCore &writable = *const_cast<SymHeapCore *>(this);
+        if (!translateValId(&sum, writable, dst, valMap))
+            // failed to translate value ID, better to give up
+            return false;
+
+        if (sum != /* sum */ ref.second)
+            // target value ID not matched
             return false;
     }
 
@@ -1830,6 +2362,7 @@ TObjId SymHeapCore::ptrAt(TValId at) {
     d->ents.getEntRO(&valData, at);
 
     const EValueTarget code = valData->code;
+    CL_BREAK_IF(VT_RANGE == code);
     if (!isPossibleToDeref(code))
         return OBJ_INVALID;
 
@@ -1840,12 +2373,16 @@ TObjId SymHeapCore::ptrAt(TValId at) {
 
     // generic pointer, (void *) if available
     const TObjType clt = stor_.types.genericDataPtr();
-    CL_BREAK_IF(!clt || clt->code != CL_TYPE_PTR);
-    const TOffset size = clt->size;
+    if (!clt || clt->code != CL_TYPE_PTR) {
+        CL_BREAK_IF("Code Listener failed to capture a type of data pointer");
+        return OBJ_INVALID;
+    }
+
+    const TSizeOf size = clt->size;
     CL_BREAK_IF(size <= 0);
 
     // arena lookup
-    TObjSet candidates;
+    TObjIdSet candidates;
     const TArena &arena = rootData->arena;
     const TOffset off = valData->offRoot;
     const TMemChunk chunk(off, off + size);
@@ -1887,11 +2424,12 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     d->ents.getEntRO(&valData, at);
 
     const EValueTarget code = valData->code;
+    CL_BREAK_IF(VT_RANGE == code);
     if (!isPossibleToDeref(code))
         return OBJ_INVALID;
 
     CL_BREAK_IF(!clt || !clt->size);
-    const TOffset size = clt->size;
+    const TSizeOf size = clt->size;
 
     // jump to root
     const TValId valRoot = valData->valRoot;
@@ -1899,7 +2437,7 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
     d->ents.getEntRO(&rootData, valRoot);
 
     // arena lookup
-    TObjSet candidates;
+    TObjIdSet candidates;
     const TArena &arena = rootData->arena;
     const TOffset off = valData->offRoot;
     const TMemChunk chunk(off, off + size);
@@ -1999,7 +2537,6 @@ void SymHeapCore::objLeave(TObjId obj) {
         return;
     }
 
-#if !SE_TRACK_UNINITIALIZED
     const TValId root = objData->root;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
@@ -2007,7 +2544,6 @@ void SymHeapCore::objLeave(TObjId obj) {
         CL_DEBUG("SymHeapCore::objLeave() destroys a dead object");
         d->objDestroy(obj, /* removeVal */ true, /* detach */ true);
     }
-#endif
 
     // TODO: pack the representation if possible
 }
@@ -2043,8 +2579,6 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
     // assign an address
     const EValueTarget code = isOnStack(var) ? VT_ON_STACK : VT_STATIC;
     addr = d->valCreate(code, VO_ASSIGNED);
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
-    d->liveRoots->insert(addr);
 
     RootValue *rootData;
     d->ents.getEntRW(&rootData, addr);
@@ -2052,7 +2586,7 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
     rootData->lastKnownClt = clt;
 
     // read size from the type-info
-    const unsigned size = clt->size;
+    const TSizeOf size = clt->size;
     rootData->size = size;
 
     // mark the root as live
@@ -2090,8 +2624,8 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     return compData->compObj;
 }
 
-TValId SymHeapCore::heapAlloc(int cbSize) {
-    CL_BREAK_IF(cbSize <= 0);
+TValId SymHeapCore::heapAlloc(const TSizeOf size) {
+    CL_BREAK_IF(size <= 0);
 
     // assign an address
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
@@ -2103,13 +2637,7 @@ TValId SymHeapCore::heapAlloc(int cbSize) {
     // initialize meta-data
     RootValue *rootData;
     d->ents.getEntRW(&rootData, addr);
-    rootData->size = cbSize;
-
-#if SE_TRACK_UNINITIALIZED
-    // uninitialized heap block
-    const TValId tplValue = this->valCreate(VT_UNKNOWN, VO_HEAP);
-    this->writeUniformBlock(addr, tplValue, cbSize);
-#endif
+    rootData->size = size;
 
     return addr;
 }
@@ -2130,7 +2658,7 @@ void SymHeapCore::valDestroyTarget(TValId val) {
     d->destroyRoot(val);
 }
 
-int SymHeapCore::valSizeOfTarget(TValId val) const {
+TSizeOf SymHeapCore::valSizeOfTarget(TValId val) const {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     if (valData->offRoot < 0)
@@ -2146,7 +2674,7 @@ int SymHeapCore::valSizeOfTarget(TValId val) const {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
 
-    const int rootSize = rootData->size;
+    const TSizeOf rootSize = rootData->size;
     const TOffset off = valData->offRoot;
     return rootSize - off;
 }
@@ -2188,26 +2716,38 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
         code = VT_LOST;
     }
 
-    // mark the root value as deleted/lost
-    rootData->code = code;
+    // start with the root itself as anchor
+    std::vector<AnchorValue *> refs(1, rootData);
 
-    // mark all associated off-values as deleted/lost
-    BOOST_FOREACH(TOffMap::const_reference item, rootData->offMap) {
-        const TValId val = item.second;
-        BaseValue *valData;
-        this->ents.getEntRW(&valData, val);
-        valData->code = code;
+    // collect all VT_RANGE anchors
+    BOOST_FOREACH(const TValId rVal, rootData->dependentValues) {
+        AnchorValue *anchorData;
+        this->ents.getEntRW(&anchorData, rVal);
+        refs.push_back(anchorData);
+    }
+
+    BOOST_FOREACH(AnchorValue *anchorData, refs) {
+        // mark the anchor value as deleted/lost
+        anchorData->code = code;
+
+        // mark all associated off-values as deleted/lost
+        BOOST_FOREACH(TOffMap::const_reference item, anchorData->offMap) {
+            const TValId val = item.second;
+            BaseValue *valData;
+            this->ents.getEntRW(&valData, val);
+            valData->code = code;
+        }
     }
 
     // release the root
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
     this->liveRoots->erase(root);
 
-    const TOffset size = rootData->size;
+    const TSizeOf size = rootData->size;
     if (size) {
         // look for inner objects
         const TMemChunk chunk(0, size);
-        TObjSet allObjs;
+        TObjIdSet allObjs;
         if (arenaLookup(&allObjs, rootData->arena, chunk, OBJ_INVALID)) {
             // destroy all inner objects
             BOOST_FOREACH(const TObjId obj, allObjs)
@@ -2239,20 +2779,33 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
     return d->valCreate(code, origin);
 }
 
-TValId SymHeapCore::valWrapCustom(const CustomValue &cVal) {
+TValId SymHeapCore::valWrapCustom(CustomValue cVal) {
     const ECustomValue code = cVal.code;
-    if (CV_INT == code) {
-        // short-circuit for special integral values
-        const long num = cVal.data.num;
-        switch (num) {
-            case 0:
-                return VAL_NULL;
 
-            case 1:
-                return VAL_TRUE;
+    if (CV_INT_RANGE == code) {
+        // either scalar integer, or integral range
+        const IR::Range &rng = cVal.data.rng;
 
-            default:
-                break;
+        if (isSingular(rng)) {
+            // short-circuit for special integral values
+            switch (rng.lo) {
+                case 0:
+                    return VAL_NULL;
+
+                case 1:
+                    return VAL_TRUE;
+
+                default:
+                    break;
+            }
+        }
+        else {
+            // CV_INT_RANGE with a valid range (do not recycle these)
+            const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
+            InternalCustomValue *valData;
+            d->ents.getEntRW(&valData, val);
+            valData->customData = cVal;
+            return val;
         }
     }
 
@@ -2275,10 +2828,22 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
     const InternalCustomValue *valData;
     d->ents.getEntRO(&valData, val);
 
+    const CustomValue &cv = valData->customData;
+    const ECustomValue code = cv.code;
+
+    if (CV_INT_RANGE == code) {
+        const IR::Range &rng = cv.data.rng;
+        if (!isSingular(rng))
+            return cv;
+
+        // VAL_FALSE/VAL_TRUE are not supposed to be wrapped as custom values
+        CL_BREAK_IF(IR::Int0 == rng.lo || IR::Int1 == rng.lo);
+    }
+
     // check the consistency of backward mapping
     CL_BREAK_IF(val != d->cValueMap->lookup(valData->customData));
 
-    return valData->customData;
+    return cv;
 }
 
 bool SymHeapCore::valTargetIsProto(TValId val) const {
@@ -2331,7 +2896,7 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
         return true;
 
     // check for a Neq predicate
-    if (d->neqDb->areNeq(valA, valB))
+    if (d->neqDb->chk(valA, valB))
         return true;
 
     if (valA <= 0 || valB <= 0)
@@ -2342,7 +2907,7 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     const TValId root2 = this->valRoot(valB);
     if (root1 == root2) {
         // same root, different offsets
-        CL_BREAK_IF(this->valOffset(valA) == this->valOffset(valB));
+        CL_BREAK_IF(matchOffsets(*this, *this, valA, valB));
         return true;
     }
 
@@ -2352,11 +2917,11 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     const TOffset diff = offB - offA;
     if (!diff)
         // check for Neq between the roots
-        return d->neqDb->areNeq(root1, root2);
+        return d->neqDb->chk(root1, root2);
 
     SymHeapCore &writable = /* XXX */ *const_cast<SymHeapCore *>(this);
-    return d->neqDb->areNeq(root1, writable.valByOffset(root2,  diff))
-        && d->neqDb->areNeq(root2, writable.valByOffset(root1, -diff));
+    return d->neqDb->chk(root1, writable.valByOffset(root2,  diff))
+        && d->neqDb->chk(root2, writable.valByOffset(root1, -diff));
 }
 
 
@@ -2367,7 +2932,7 @@ struct AbstractRoot {
 
     EObjKind                        kind;
     BindingOff                      bOff;
-    unsigned                        minLength;
+    TMinLen                         minLength;
 
     AbstractRoot(EObjKind kind_, BindingOff bOff_):
         kind(kind_),
@@ -2425,7 +2990,7 @@ void SymHeap::swap(SymHeapCore &baseRef) {
 
 TValId SymHeap::valClone(TValId val) {
     const TValId dup = SymHeapCore::valClone(val);
-    if (dup <= 0)
+    if (dup <= 0 || VT_RANGE == this->valTarget(val))
         return dup;
 
     const TValId valRoot = this->valRoot(val);
@@ -2539,7 +3104,7 @@ void SymHeap::valMerge(TValId v1, TValId v2) {
     CL_DEBUG("failed to splice-out list segment, has to over-approximate");
 }
 
-void SymHeap::segMinLengthOp(ENeqOp op, TValId at, unsigned len) {
+void SymHeap::segMinLengthOp(ENeqOp op, TValId at, TMinLen len) {
     CL_BREAK_IF(!len);
 
     if (NEQ_DEL == op) {
@@ -2548,7 +3113,7 @@ void SymHeap::segMinLengthOp(ENeqOp op, TValId at, unsigned len) {
     }
 
     CL_BREAK_IF(NEQ_ADD != op);
-    const unsigned current = this->segMinLength(at);
+    const TMinLen current = this->segMinLength(at);
     if (len <= current)
         return;
 
@@ -2651,10 +3216,12 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
 
     std::set<TValId> haveSeen;
 
-    const TOffset off = this->valOffset(val);
+    EValueTarget code = this->valTarget(val);
+    TOffset off /* just to silence gcc */ = -1;
+    if (VT_RANGE != code)
+        off = this->valOffset(val);
 
     while (0 < val && insertOnce(haveSeen, val)) {
-        const EValueTarget code = this->valTarget(val);
         switch (code) {
             case VT_ON_STACK:
             case VT_ON_HEAP:
@@ -2664,6 +3231,10 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             case VT_CUSTOM:
                 // concrete object reached --> prove done
                 return (val != ref);
+
+            case VT_RANGE:
+                // TODO: improve the reasoning about VT_RANGE values
+                return (VAL_NULL == ref);
 
             case VT_ABSTRACT:
                 break;
@@ -2692,6 +3263,7 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
         const BindingOff &bOff = this->segBinding(seg);
         const TValId valNext = nextValFromSeg(writable, seg);
         val = writable.valByOffset(valNext, off - bOff.head);
+        code = this->valTarget(val);
     }
 
     return false;
@@ -2711,7 +3283,7 @@ void SymHeap::valDestroyTarget(TValId root) {
     d->absRoots.releaseEnt(root);
 }
 
-unsigned SymHeap::segMinLength(TValId seg) const {
+TMinLen SymHeap::segMinLength(TValId seg) const {
     CL_BREAK_IF(this->valOffset(seg));
     CL_BREAK_IF(!d->absRoots.isValidEnt(seg));
 
@@ -2733,7 +3305,7 @@ unsigned SymHeap::segMinLength(TValId seg) const {
     }
 }
 
-void SymHeap::segSetMinLength(TValId seg, unsigned len) {
+void SymHeap::segSetMinLength(TValId seg, TMinLen len) {
     CL_BREAK_IF(this->valOffset(seg));
     CL_BREAK_IF(!d->absRoots.isValidEnt(seg));
 

@@ -1,0 +1,3 @@
+test-0188.c:15:13: warning: too many arguments given to printf()
+test-0188.c:22:13: error: insufficient count of arguments given to printf()
+test-0188.c:25:13: error: insufficient count of arguments given to printf()

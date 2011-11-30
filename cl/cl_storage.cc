@@ -362,6 +362,9 @@ void ClStorageBuilder::Private::digInitials(const TOp *op)
         ControlFlow *cfg = /* XXX */ 0;
         Insn *insn = createInsn(&initial->insn, /* XXX */ *cfg);
 
+        // initializer instructions are not associated with any basic block
+        insn->bb = 0;
+
         // NOTE: keeping a reference for this may cause a SIGSEGV or lockup
         stor.vars[id].initials.push_back(insn);
 
@@ -472,9 +475,12 @@ void ClStorageBuilder::Private::digOperand(const TOp *op, bool skipVarInit) {
 
     // read type of each array index in the chain
     const struct cl_accessor *ac = op->accessor;
-    for (; ac; ac = ac->next)
+    for (; ac; ac = ac->next) {
+        readTypeTree(typeDb, ac->type);
+
         if (ac->code == CL_ACCESSOR_DEREF_ARRAY)
             readTypeTree(typeDb, ac->data.array.index->type);
+    }
 
     enum cl_operand_e code = op->code;
     switch (code) {

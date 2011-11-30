@@ -87,6 +87,7 @@ void emitPrototypeError(const struct cl_loc *lw, const char *name) {
             << "() not recognized as built-in");
 }
 
+/// insert the given heap to dst if sane (after killing the given instruction)
 void insertCoreHeap(
         SymState                                    &dst,
         SymProc                                     &core,
@@ -102,7 +103,7 @@ void insertCoreHeap(
 }
 
 bool resolveCallocSize(
-        unsigned                                    *pDst,
+        TSizeOf                                     *pDst,
         SymExecCore                                 &core,
         const CodeStorage::TOperandList             &opList)
 {
@@ -110,14 +111,14 @@ bool resolveCallocSize(
     const struct cl_loc *lw = core.lw();
 
     const TValId valNelem = core.valFromOperand(opList[/* nelem */ 2]);
-    long nelem;
+    IR::TInt nelem;
     if (!numFromVal(&nelem, sh, valNelem)) {
         CL_ERROR_MSG(lw, "'nelem' arg of calloc() is not a known integer");
         return false;
     }
 
     const TValId valElsize = core.valFromOperand(opList[/* elsize */ 3]);
-    long elsize;
+    IR::TInt elsize;
     if (!numFromVal(&elsize, sh, valElsize)) {
         CL_ERROR_MSG(lw, "'elsize' arg of calloc() is not a known integer");
         return false;
@@ -260,7 +261,7 @@ bool handleBreak(
     // print what happened
     CL_WARN_MSG(&insn.loc, name << "() reached, stopping per user's request");
     printUserMessage(core, opList[/* msg */ 2]);
-    printBackTrace(core, ML_WARN);
+    core.printBackTrace(ML_WARN);
 
     // trap to debugger
     CL_TRAP;
@@ -282,9 +283,9 @@ bool handleCalloc(
         return false;
     }
 
-    unsigned size;
+    TSizeOf size;
     if (!resolveCallocSize(&size, core, opList)) {
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
         return true;
     }
 
@@ -334,10 +335,10 @@ bool handleKzalloc(
 
     // amount of allocated memory must be known (TODO: relax this?)
     const TValId valSize = core.valFromOperand(opList[/* size */ 2]);
-    long size;
+    IR::TInt size;
     if (!numFromVal(&size, core.sh(), valSize)) {
         CL_ERROR_MSG(lw, "size arg of " << name << "() is not a known integer");
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
         return true;
     }
 
@@ -362,10 +363,10 @@ bool handleMalloc(
 
     // amount of allocated memory must be known (TODO: relax this?)
     const TValId valSize = core.valFromOperand(opList[/* size */ 2]);
-    long size;
+    IR::TInt size;
     if (!numFromVal(&size, core.sh(), valSize)) {
         CL_ERROR_MSG(lw, "size arg of malloc() is not a known integer");
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
         return true;
     }
 
@@ -380,63 +381,28 @@ bool handleMemset(
         const CodeStorage::Insn                     &insn,
         const char                                  *name)
 {
-    SymHeap &sh = core.sh();
     const struct cl_loc *lw = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (5 != opList.size() || opList[0].code != CL_OPERAND_VOID) {
+    if (5 != opList.size()) {
         emitPrototypeError(lw, name);
         return false;
     }
 
-    // how much we are going to write?
-    const TValId valSize = core.valFromOperand(opList[/* size */ 4]);
-    long size;
-    if (!numFromVal(&size, sh, valSize)) {
-        CL_ERROR_MSG(lw, "size arg of memset() is not a known integer");
-        core.failWithBackTrace();
-        insertCoreHeap(dst, core, insn);
-        return true;
-    }
-    if (!size) {
-        CL_WARN_MSG(lw, "ignoring call of memset() with size == 0");
-        printBackTrace(core, ML_WARN);
-        insertCoreHeap(dst, core, insn);
-        return true;
-    }
+    // read the values of memset parameters
+    const TValId addr       = core.valFromOperand(opList[/* addr */ 2]);
+    const TValId valToWrite = core.valFromOperand(opList[/* char */ 3]);
+    const TValId valSize    = core.valFromOperand(opList[/* size */ 4]);
 
-    // check the pointer - is it valid? do we have enough allocated memory?
-    const TValId addr = core.valFromOperand(opList[/* addr */ 2]);
-    if (core.checkForInvalidDeref(addr, size)) {
-        // error message already printed out
-        core.failWithBackTrace();
-        insertCoreHeap(dst, core, insn);
-        return true;
-    }
-
-    // what are we going to write?
-    TValId tplValue = core.valFromOperand(opList[/* char */ 3]);
-    if (VAL_NULL != tplValue) {
-        CL_DEBUG_MSG(lw, "memset() writing nonzero value writes unknown value");
-        tplValue = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
-    }
-
-    // enter leak monitor
-    LeakMonitor lm(sh);
-    lm.enter();
-
-    // write the block!
-    TValSet killedPtrs;
     CL_DEBUG_MSG(lw, "executing memset() as a built-in function");
-    sh.writeUniformBlock(addr, tplValue, size, &killedPtrs);
+    executeMemset(core, addr, valToWrite, valSize);
 
-    // check for memory leaks
-    if (lm.collectJunkFrom(killedPtrs)) {
-        CL_WARN_MSG(lw, "memory leak detected while executing memset()");
-        printBackTrace(core, ML_WARN);
+    const struct cl_operand &opDst = opList[/* dst */ 0];
+    if (CL_OPERAND_VOID != opDst.code) {
+        // POSIX says that memset() returns the value of the first argument
+        const ObjHandle objDst = core.objByOperand(opDst);
+        core.objSetValue(objDst, addr);
     }
 
-    // leave monitor and write the result
-    lm.leave();
     insertCoreHeap(dst, core, insn);
     return true;
 }
@@ -459,7 +425,7 @@ bool handlePrintf(
     const char *fmt;
     if (!stringFromVal(&fmt, sh, valFmt)) {
         CL_ERROR_MSG(lw, "fmt arg of printf() is not a string literal");
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
         insertCoreHeap(dst, core, insn);
         return true;
     }
@@ -512,14 +478,14 @@ bool handlePrintf(
     if (opIdx < opList.size()) {
         // this is quite suspicious, but would not crash the program
         CL_WARN_MSG(lw, "too many arguments given to printf()");
-        printBackTrace(core, ML_WARN);
+        core.printBackTrace(ML_WARN);
     }
 
     insertCoreHeap(dst, core, insn);
     return true;
 
 fail:
-    core.failWithBackTrace();
+    core.printBackTrace(ML_ERROR);
     insertCoreHeap(dst, core, insn);
     return true;
 }
@@ -538,7 +504,7 @@ bool handlePuts(
     }
 
     if (!validateStringOp(core, opList[/* s */ 2]))
-        core.failWithBackTrace();
+        core.printBackTrace(ML_ERROR);
 
     insertCoreHeap(dst, core, insn);
     return true;
@@ -550,13 +516,6 @@ bool handleNondetInt(
         const CodeStorage::Insn                     &insn,
         const char                                  *name)
 {
-    static const EValueOrigin origin = /* TODO: a separate option for this? */
-#if SE_ALLOW_CST_INT_PLUS_MINUS
-        /* more accurate, but slow */ VO_ASSIGNED;
-#else
-        /* less accurate, but fast */ VO_UNKNOWN;
-#endif
-
     const CodeStorage::TOperandList &opList = insn.operands;
     if (2 != opList.size()) {
         emitPrototypeError(&insn.loc, name);
@@ -569,7 +528,7 @@ bool handleNondetInt(
     // set the returned value to a new unknown value
     const struct cl_operand &opDst = opList[0];
     const ObjHandle objDst = core.objByOperand(opDst);
-    const TValId val = sh.valCreate(VT_UNKNOWN, origin);
+    const TValId val = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
     core.objSetValue(objDst, val);
 
     // insert the resulting heap
@@ -616,7 +575,7 @@ bool handlePlot(
     bool ok;
 
     if (1 == cntArgs)
-        ok = plotHeap(sh, plotName);
+        ok = plotHeap(sh, plotName, lw);
 
     else {
         // starting points were given
@@ -627,7 +586,7 @@ bool handlePlot(
             startingPoints.push_back(val);
         }
 
-        ok = plotHeap(sh, plotName, startingPoints);
+        ok = plotHeap(sh, plotName, lw, startingPoints);
     }
 
     if (!ok)
@@ -670,7 +629,7 @@ bool handleDebuggingOf(
         return false;
     }
 
-    long module;
+    IR::TInt module;
     const SymHeap &sh = core.sh();
     const TValId valModule = core.valFromOperand(opList[/* module */ 2]);
     if (!numFromVal(&module, sh, valModule))
@@ -723,7 +682,7 @@ bool handleError(
 
     // print the user message and backtrace
     printUserMessage(core, opList[/* msg */ 2]);
-    printBackTrace(core, ML_ERROR);
+    core.printBackTrace(ML_ERROR);
     return true;
 }
 

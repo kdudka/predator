@@ -1,0 +1,2 @@
+test-0044.c:26:34: error: invalid dereference
+test-0044.c:26:34: note: the value being dereferenced is an untouched contents of stack

@@ -129,7 +129,7 @@ inline TValId segNextRootObj(SymHeap &sh, TValId root) {
     return segNextRootObj(sh, root, offNext);
 }
 
-inline unsigned objMinLength(const SymHeap &sh, TValId root) {
+inline TMinLen objMinLength(const SymHeap &sh, TValId root) {
     CL_BREAK_IF(sh.valOffset(root));
 
     const EValueTarget code = sh.valTarget(root);
@@ -152,7 +152,7 @@ void segSetProto(SymHeap &sh, TValId seg, bool isProto);
 TValId segClone(SymHeap &sh, const TValId seg);
 
 inline void buildIgnoreList(
-        ObjLookup               &ignoreList,
+        TObjSet                 &ignoreList,
         const SymHeap           &sh,
         const TValId            at)
 {
@@ -183,7 +183,7 @@ inline void buildIgnoreList(
 }
 
 inline void buildIgnoreList(
-        ObjLookup               &ignoreList,
+        TObjSet                 &ignoreList,
         SymHeap                 &sh,
         const TValId            at,
         const BindingOff        &off)

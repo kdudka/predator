@@ -1,0 +1,184 @@
+Abbreviations Used in Identifiers
+=================================
+
+ac                      accessor
+
+anon                    anonymous
+
+arg                     argument
+
+bb                      Basic Block
+
+bidir                   Bi-Directional
+
+bl                      block in some allocated area (not a basic block)
+
+br                      branch
+
+bt                      backtrace
+
+cb                      either "Count of Bytes" or "Call-Back"
+
+cfg                     Control-Flow Graph
+
+cl                      Code Listener
+
+clt                     Code Listener Type
+
+cnt                     count
+
+code                    enumeration constant
+
+cond                    conditional
+
+cont                    container
+
+cst                     constant (in the C terminology, it is called "literal")
+
+ctx                     context
+
+cvar                    Code Listener Variable
+
+cv                      either "Code Listener Variable" or "Custom Value"
+
+d                       pointer to private data
+
+db                      lookup container
+
+deref                   dereference
+
+dlSeg, dls              Doubly-linked List Segment
+
+dst                     destination
+
+ent                     entity that can be uniquely identified by sh/uid pair
+
+eq                      equal
+
+fnc                     function
+
+fpn                     Floating-Point Number
+
+gc                      Garbage Collector
+
+ge                      Greater or Equal
+
+gl                      global
+
+gt                      Greater Than
+
+hdl                     handle
+
+hi                      high
+
+idx                     index (an integral number)
+
+initial                 initializer
+
+insn                    instruction
+
+inst                    instance
+
+it                      iterator
+
+jmp                     jump
+
+js                      Join Status
+
+kind                    kind of abstract object
+
+lc                      local
+
+le                      Less or Equal
+
+len                     length
+
+lhs                     Left Hand Side
+
+lo                      low
+
+loc                     location-info (file/line/column in the source program)
+
+lt                      Less Than
+
+ltr                     Left-To-Right
+
+lw                      Location Writer (nowadays equal to location)
+
+msg                     message
+
+ne                      Not Equal
+
+nop                     no-op (an operation with no effect)
+
+num                     number
+
+obj                     object
+
+off                     offset
+
+oom                     Out Of Memory
+
+op                      operand
+
+p                       pointer to
+
+peer                    the opposite part of a "dls"
+
+proc                    symbolic heap processor
+
+proto                   prototype
+
+ptr                     pointer
+
+ref                     reference
+
+ret                     return
+
+rhs                     Right Hand Side
+
+rng                     range
+
+ro                      Read-Only
+
+rtl                     Right-To-Left
+
+rw                      Read-Write
+
+seg                     segment
+
+sh                      Symbolic Heap
+
+slSeg, sls              Singly-linked List Segment
+
+src                     source
+
+stor                    instance of (or reference to) CodeStorage::Storage
+
+str                     stream (or string)
+
+sym                     either "symbolic execution" or "symmetric"
+
+T                       typedef (or template argument)
+
+tpl                     template
+
+uid                     Unique ID
+
+uni                     uniform
+
+v, val                  value
+
+var                     variable
+
+vis                     either visitor or visualization
+
+vo                      Value Origin
+
+vp                      pair of values
+
+vt                      Value Target
+
+win                     window
+
+wl                      Work-List

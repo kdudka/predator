@@ -22,9 +22,9 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
-#include <boost/algorithm/string/replace.hpp>
+#include <iomanip>
 
-namespace {
+#include <boost/algorithm/string/replace.hpp>
 
 void cltToStreamCore(std::ostream &out, const struct cl_type *clt) {
     out << "*((const struct cl_type *)"
@@ -50,13 +50,14 @@ void cltToStreamCore(std::ostream &out, const struct cl_type *clt) {
         case CL_TYPE_STRING:     out << "CL_TYPE_STRING"    ; break;
     }
 
+    if (clt->is_unsigned)
+        out << ", unsigned";
+
     if (clt->name)
         out << ", name = " << clt->name;
 
-    out << ")";
+    out << ", size = " << clt->size << " B)";
 }
-
-} // namespace
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
 
@@ -187,7 +188,8 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
 
         case CL_TYPE_PTR:
             if (val)
-                str << "0x" << std::hex << val;
+                str << "0x" << std::hex << val
+                    << std::resetiosflags(std::ios_base::showbase);
             else
                 str << "NULL";
 
@@ -505,10 +507,11 @@ void insnToStream(std::ostream &str, const CodeStorage::Insn &insn) {
 
         case CL_INSN_LABEL:
             if (CL_OPERAND_VOID == opList[0].code)
-                break;
-
-            CL_BREAK_IF(CL_TYPE_STRING != opList[0].data.cst.code);
-            str << opList[/* name */ 0].data.cst.data.cst_string.value << ":";
+                str << "<anon_label>:";
+            else {
+                CL_BREAK_IF(CL_TYPE_STRING != opList[0].data.cst.code);
+                str << opList[/* name */ 0].data.cst.data.cst_string.value << ":";
+            }
             break;
     }
 }

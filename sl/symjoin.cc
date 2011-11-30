@@ -96,21 +96,6 @@ class WorkListWithUndo: public WorkList<T> {
         }
 };
 
-/// known to work only with TObjId/TValId
-template <class TMap>
-typename TMap::mapped_type roMapLookup(
-        const TMap                          &roMap,
-        const typename TMap::key_type       id)
-{
-    if (id <= 0)
-        return id;
-
-    typename TMap::const_iterator iter = roMap.find(id);
-    return (roMap.end() == iter)
-        ? static_cast<typename TMap::mapped_type>(-1)
-        : iter->second;
-}
-
 /// current state, common for joinSymHeaps(), joinDataReadOnly() and joinData()
 struct SymJoinCtx {
     SymHeap                     &dst;
@@ -131,7 +116,7 @@ struct SymJoinCtx {
     EJoinStatus                 status;
     bool                        allowThreeWay;
 
-    typedef std::map<TValId /* seg */, unsigned /* len */>      TSegLengths;
+    typedef std::map<TValId /* seg */, TMinLen /* len */>       TSegLengths;
     TSegLengths                 segLengths;
     std::set<TValPair>          sharedNeqs;
 
@@ -139,6 +124,10 @@ struct SymJoinCtx {
     std::set<TValPair>          alreadyJoined;
 
     std::set<TValId /* dst */>  protoRoots;
+
+    // XXX: experimental
+    typedef std::map<TValPair /* (v1, v2) */, TValId /* dst */> TMatchLookup;
+    TMatchLookup                matchLookup;
 
     void initValMaps() {
         // VAL_NULL should be always mapped to VAL_NULL
@@ -149,12 +138,13 @@ struct SymJoinCtx {
     }
 
     /// constructor used by joinSymHeaps()
-    SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_):
+    SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_,
+            const bool allowThreeWay_):
         dst(dst_),
         sh1(/* XXX */ const_cast<SymHeap &>(sh1_)),
         sh2(/* XXX */ const_cast<SymHeap &>(sh2_)),
         status(JS_USE_ANY),
-        allowThreeWay(1 < (SE_ALLOW_THREE_WAY_JOIN))
+        allowThreeWay((1 < (SE_ALLOW_THREE_WAY_JOIN)) && allowThreeWay_)
     {
         initValMaps();
     }
@@ -342,6 +332,80 @@ bool defineValueMapping(
     return true;
 }
 
+bool matchRanges(
+        bool                    *pResult,
+        const SymJoinCtx        &ctx,
+        const TValId            v1,
+        const TValId            v2,
+        const bool              allowUnknownMapping)
+{
+    const bool isRange1 = (VT_RANGE == ctx.sh1.valTarget(v1));
+    const bool isRange2 = (VT_RANGE == ctx.sh2.valTarget(v2));
+    if (isRange1 || isRange2) {
+        if (allowUnknownMapping)
+            return false;
+
+        // the mapping should have already been defined
+        const TValPair vp(v1, v2);
+        if (hasKey(ctx.matchLookup, vp))
+            return false;
+
+        goto fail;
+    }
+
+    // no VT_RANGE values involved here
+    if (matchOffsets(ctx.sh1, ctx.sh2, v1, v2))
+        return false;
+
+fail:
+    *pResult = false;
+    return true;
+}
+
+bool joinRangeValues(
+        SymJoinCtx             &ctx,
+        const TValId            v1,
+        const TValId            v2)
+{
+    // check whether the values are not matched already
+    const TValPair vp(v1, v2);
+    CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
+
+    const IR::Range rng1 = ctx.sh1.valOffsetRange(v1);
+    const IR::Range rng2 = ctx.sh2.valOffsetRange(v2);
+
+    // resolve root in ctx.dst
+    const TValId rootDst = roMapLookup(ctx.valMap1[0], ctx.sh1.valRoot(v1));
+    CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[0], ctx.sh2.valRoot(v2)));
+
+    // compute the join of ranges
+    IR::Range rng = join(rng1, rng2);
+
+    // [experimental] widening on offset ranges
+#if 1 < SE_ALLOW_OFF_RANGES
+    if (!isSingular(rng1) && !isSingular(rng2)) {
+        if (rng.lo == rng1.lo || rng.lo == rng2.lo)
+            rng.hi = IR::IntMax;
+#   if 2 < SE_ALLOW_OFF_RANGES
+        if (rng.hi == rng1.hi || rng.hi == rng2.hi)
+            rng.lo = IR::IntMin;
+#   endif
+    }
+#endif
+
+    if (!isCovered(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
+        return false;
+    if (!isCovered(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
+        return false;
+
+    // create a VT_RANGE value in ctx.dst
+    const TValId vDst = ctx.dst.valByRange(rootDst, rng);
+
+    // store the mapping (v1, v2) -> vDst
+    ctx.matchLookup[vp] = vDst;
+    return true;
+}
+
 /// read-only (in)consistency check among value pair (v1, v2)
 bool checkValueMapping(
         const SymJoinCtx        &ctx,
@@ -352,10 +416,9 @@ bool checkValueMapping(
     if (!checkNonPosValues(v1, v2))
         return false;
 
-    const TOffset off1 = ctx.sh1.valOffset(v1);
-    const TOffset off2 = ctx.sh2.valOffset(v2);
-    if (off1 != off2)
-        return false;
+    bool result;
+    if (matchRanges(&result, ctx, v1, v2, allowUnknownMapping))
+        return result;
 
     // read-only value lookup
     const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
@@ -416,7 +479,12 @@ bool checkNullConsistency(
         ? ctx.sh1.valTarget(v1)
         : ctx.sh2.valTarget(v2);
 
+    // NOTE: this is only a heuristic
     switch (code) {
+        case VT_UNKNOWN:
+            // [experimental] reduce state explosion on test-0300
+            return !ctx.joiningData();
+
         case VT_STATIC:
         case VT_ON_STACK:
         case VT_ON_HEAP:
@@ -471,11 +539,12 @@ bool joinFreshObjTripple(
     if (segClone) {
         const bool isGt1 = !obj2.isValid();
         const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
-        const TValId val = (isGt1)
-            ? ctx.sh1.valRoot(v1)
-            : ctx.sh2.valRoot(v2);
+        const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
+        const TValId valGt = (isGt1) ? v1 : v2;
+        const TValId root = shGt.valRoot(valGt);
+        const EValueTarget code = shGt.valTarget(valGt);
 
-        if (val <= 0 || hasKey(vm[/* lrt */ 0], val))
+        if (root <= 0 || (VT_RANGE != code && hasKey(vm[/* ltr */ 0], root)))
             return true;
 
         // XXX
@@ -505,8 +574,8 @@ bool joinFreshObjTripple(
 
 struct ObjJoinVisitor {
     SymJoinCtx              &ctx;
-    ObjLookup               blackList1;
-    ObjLookup               blackList2;
+    TObjSet                 blackList1;
+    TObjSet                 blackList2;
     bool                    noFollow;
 
     ObjJoinVisitor(SymJoinCtx &ctx_):
@@ -521,7 +590,7 @@ struct ObjJoinVisitor {
         const ObjHandle &objDst = item[2];
 
         // check black-list
-        if (blackList1.lookup(obj1) || blackList2.lookup(obj2))
+        if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
             return /* continue */ true;
 
         return /* continue */ joinFreshObjTripple(ctx, obj1, obj2, objDst);
@@ -540,8 +609,8 @@ void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TValId root) {
 
 struct SegMatchVisitor {
     SymJoinCtx              &ctx;
-    ObjLookup               blackList1;
-    ObjLookup               blackList2;
+    TObjSet                 blackList1;
+    TObjSet                 blackList2;
 
     public:
         SegMatchVisitor(SymJoinCtx &ctx_):
@@ -553,7 +622,7 @@ struct SegMatchVisitor {
             const ObjHandle &obj1 = item[0];
             const ObjHandle &obj2 = item[1];
 
-            if (blackList1.lookup(obj1) || blackList2.lookup(obj2))
+            if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
                 // black-listed
                 return true;
 
@@ -615,8 +684,8 @@ bool segMatchLookAhead(
         const TValId            root1,
         const TValId            root2)
 {
-    const int size1 = ctx.sh1.valSizeOfTarget(root1);
-    const int size2 = ctx.sh2.valSizeOfTarget(root2);
+    const TSizeOf size1 = ctx.sh1.valSizeOfTarget(root1);
+    const TSizeOf size2 = ctx.sh2.valSizeOfTarget(root2);
     if (size1 != size2)
         // size mismatch
         return false;
@@ -902,7 +971,7 @@ bool joinProtoFlag(
     return false;
 }
 
-unsigned joinMinLength(
+TMinLen joinMinLength(
         SymJoinCtx              &ctx,
         const TValId            root1,
         const TValId            root2)
@@ -918,8 +987,8 @@ unsigned joinMinLength(
         return 0;
     }
 
-    const int len1 = objMinLength(ctx.sh1, root1);
-    const int len2 = objMinLength(ctx.sh2, root2);
+    const TMinLen len1 = objMinLength(ctx.sh1, root1);
+    const TMinLen len2 = objMinLength(ctx.sh2, root2);
     if (len1 < len2) {
         updateJoinStatus(ctx, JS_USE_SH1);
         return len1;
@@ -936,7 +1005,7 @@ unsigned joinMinLength(
 }
 
 bool joinObjSize(
-        int                     *pDst,
+        TSizeOf                 *pDst,
         SymJoinCtx              &ctx,
         const TValId            v1,
         const TValId            v2)
@@ -951,14 +1020,14 @@ bool joinObjSize(
         return true;
     }
 
-    const int cbSize1 = ctx.sh1.valSizeOfTarget(v1);
-    const int cbSize2 = ctx.sh2.valSizeOfTarget(v2);
-    if (cbSize1 != cbSize2) {
+    const TSizeOf size1 = ctx.sh1.valSizeOfTarget(v1);
+    const TSizeOf size2 = ctx.sh2.valSizeOfTarget(v2);
+    if (size1 != size2) {
         SJ_DEBUG("<-- object size mismatch " << SJ_VALP(v1, v2));
         return false;
     }
 
-    *pDst = cbSize1;
+    *pDst = size1;
     return true;
 }
 
@@ -1125,7 +1194,7 @@ bool createObject(
         }
     }
 
-    int size;
+    TSizeOf size;
     if (!joinObjSize(&size, ctx, root1, root2))
         return false;
 
@@ -1263,24 +1332,31 @@ bool joinCustomValues(
         const TValId            v1,
         const TValId            v2)
 {
-    const CustomValue cVal1 = ctx.sh1.valUnwrapCustom(v1);
-    const CustomValue cVal2 = ctx.sh2.valUnwrapCustom(v2);
+    SymHeap &sh1 = ctx.sh1;
+    SymHeap &sh2 = ctx.sh2;
+
+    const CustomValue cVal1 = sh1.valUnwrapCustom(v1);
+    const CustomValue cVal2 = sh2.valUnwrapCustom(v2);
     if (cVal1 == cVal2) {
         // full match
         const TValId vDst = ctx.dst.valWrapCustom(cVal1);
         return defineValueMapping(ctx, v1, v2, vDst);
     }
 
-    const ECustomValue code = cVal1.code;
-    if (cVal2.code != code || CV_INT != code) {
-        SJ_DEBUG("<-- custom values mismatch " << SJ_VALP(v1, v2));
-        return false;
+    IR::Range rng1, rng2;
+    if (!rngFromVal(&rng1, sh1, v1) || !rngFromVal(&rng2, sh2, v2)) {
+        // throw custom values away and abstract them by a fresh unknown value
+        SJ_DEBUG("throwing away unmatched custom values " << SJ_VALP(v1, v2));
+        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        return updateJoinStatus(ctx, JS_THREE_WAY)
+            && defineValueMapping(ctx, v1, v2, vDst);
     }
 
+    // compute the resulting range that covers both
+    IR::Range rng = join(rng1, rng2);
+
 #if SE_INT_ARITHMETIC_LIMIT
-    const long abs1 = std::abs(cVal1.data.num);
-    const long abs2 = std::abs(cVal2.data.num);
-    const long max = std::max(abs1, abs2);
+    const IR::TInt max = std::max(std::abs(rng.lo), std::abs(rng.hi));
     if (max <= (SE_INT_ARITHMETIC_LIMIT)) {
         SJ_DEBUG("<-- integral values preserved by SE_INT_ARITHMETIC_LIMIT "
                 << SJ_VALP(v1, v2));
@@ -1289,9 +1365,35 @@ bool joinCustomValues(
     }
 #endif
 
-    // throw custom values away and abstract them by a fresh unknown value
-    const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-    updateJoinStatus(ctx, JS_THREE_WAY);
+#if !SE_ALLOW_INT_RANGES
+    // avoid creation of a CV_INT_RANGE value from two CV_INT values
+    if (isSingular(rng1) && isSingular(rng2)) {
+        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        return updateJoinStatus(ctx, JS_THREE_WAY)
+            && defineValueMapping(ctx, v1, v2, vDst);
+    }
+#endif
+
+    // [experimental] widening on intervals
+#if 1 < SE_ALLOW_INT_RANGES
+    if (!isSingular(rng1) && !isSingular(rng2)) {
+        if (rng.lo == rng1.lo || rng.lo == rng2.lo)
+            rng.hi = IR::IntMax;
+#   if 2 < SE_ALLOW_INT_RANGES
+        if (rng.hi == rng1.hi || rng.hi == rng2.hi)
+            rng.lo = IR::IntMin;
+#   endif
+    }
+#endif
+
+    if (!isCovered(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
+        return false;
+
+    if (!isCovered(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
+        return false;
+
+    const CustomValue cv(rng);
+    const TValId vDst = ctx.dst.valWrapCustom(cv);
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 
@@ -1317,8 +1419,12 @@ bool followRootValues(
         // postpone it till the read-write attempt
         return true;
 
-    const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
-    const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
+    const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1))
+        && !hasKey(ctx.sset1, root1);
+
+    const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2))
+        && !hasKey(ctx.sset2, root2);
+
     if (isDls1 == isDls2)
         return true;
 
@@ -1353,7 +1459,10 @@ bool followValuePair(
         // shallow scan only!
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
-    if (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2)) {
+    const bool isRange = (VT_RANGE == ctx.sh1.valTarget(v1))
+                      || (VT_RANGE == ctx.sh2.valTarget(v2));
+
+    if (!isRange && (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2))) {
         SJ_DEBUG("<-- value offset mismatch: " << SJ_VALP(v1, v2));
         return false;
     }
@@ -1372,7 +1481,14 @@ bool followValuePair(
     // follow the roots
     const TValId root1 = ctx.sh1.valRoot(v1);
     const TValId root2 = ctx.sh2.valRoot(v2);
-    return followRootValues(ctx, root1, root2, JS_USE_ANY);
+    if (!followRootValues(ctx, root1, root2, JS_USE_ANY))
+        return false;
+
+    // ranges cannot be joint unless the root exists in ctx.dst, join them now!
+    if (isRange && !joinRangeValues(ctx, v1, v2))
+        return false;
+
+    return true;
 }
 
 void considerValSchedule(
@@ -1433,13 +1549,15 @@ bool joinSegmentWithAny(
         return true;
     }
 
-    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
-    if (root1 <= 0 || root2 <= 0) {
+    const EValueTarget code1 = ctx.sh1.valTarget(root1);
+    const EValueTarget code2 = ctx.sh2.valTarget(root2);
+    if (!isPossibleToDeref(code1) || !isPossibleToDeref(code2)) {
         CL_BREAK_IF(firstTryReadOnly);
         *pResult = false;
         return true;
     }
 
+    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
     const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
     const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
 
@@ -1581,11 +1699,61 @@ bool handleUnknownValues(
 {
     const bool isNull1 = (VAL_NULL == v1);
     const bool isNull2 = (VAL_NULL == v2);
-    if (isNull1 != isNull2)
-        return false;
+    if (isNull1 != isNull2) {
+        const TValPair vp(v1, v2);
+        CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
+        ctx.matchLookup[vp] = vDst;
+
+        SymHeap &shGt      = (isNull2) ? ctx.sh1 : ctx.sh2;
+        const TValId valGt = (isNull2) ? v1 : v2;
+        TValMapBidir &vMap = (isNull2) ? ctx.valMap1 : ctx.valMap2;
+
+        return matchPlainValues(vMap, shGt, ctx.dst, valGt, vDst);
+    }
 
     CL_BREAK_IF(isNull1 && isNull2);
     return defineValueMapping(ctx, v1, v2, vDst);
+}
+
+bool cloneSpecialValue(
+        SymJoinCtx              &ctx,
+        SymHeap                 &shGt,
+        const TValId            valGt,
+        const TValMapBidir      &valMapGt,
+        const TValPair          vp,
+        EValueTarget            code)
+{
+    const TValId rootGt = shGt.valRoot(valGt);
+    EValueOrigin vo = shGt.valOrigin(valGt);
+    TValId vDst;
+
+    switch (code) {
+        case VT_RANGE:
+            if (hasKey(valMapGt[/* ltr */ 0], rootGt))
+                break;
+
+            CL_BREAK_IF("unable to transfer a VT_RANGE value");
+            // fall through!
+
+        case VT_CUSTOM:
+            code = VT_UNKNOWN;
+            vo = VO_UNKNOWN;
+            // fall through!
+
+        default:
+            vDst = ctx.dst.valCreate(code, vo);
+            return handleUnknownValues(ctx, vp.first, vp.second, vDst);
+    }
+
+    // VT_RANGE
+    const TValId rootDst = roMapLookup(valMapGt[/* ltr */ 0], rootGt);
+    const IR::Range range = shGt.valOffsetRange(valGt);
+    vDst = ctx.dst.valByRange(rootDst, range);
+    if (!handleUnknownValues(ctx, vp.first, vp.second, vDst))
+        return false;
+
+    ctx.matchLookup[vp] = vDst;
+    return true;
 }
 
 /// (NULL != off) means 'introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL'
@@ -1668,16 +1836,7 @@ bool insertSegmentClone(
                 continue;
         }
         else {
-            EValueOrigin vo = shGt.valOrigin(valGt);
-            if (VT_CUSTOM == code) {
-                // throw away an unmatched custom value
-                code = VT_UNKNOWN;
-                vo = VO_UNKNOWN;
-            }
-
-            // clone unknown value
-            const TValId vDst = ctx.dst.valCreate(code, vo);
-            if (handleUnknownValues(ctx, vp.first, vp.second, vDst))
+            if (cloneSpecialValue(ctx, shGt, valGt, valMapGt, vp, code))
                 continue;
         }
 
@@ -1744,22 +1903,80 @@ bool joinAbstractValues(
             if (!joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY))
                 *pResult = false;
 
-            return true;
+            goto done;
         }
 
         else if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
-            return true;
+            goto done;
     }
 
     if (!insertSegmentClone(pResult, ctx, v1, v2, subStatus)) {
         if (ctx.joiningData()) {
-            return joinSegmentWithAny(pResult, ctx, root1, root2, subStatus,
-                        /* firstTryReadOnly */ false);
+            if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus,
+                        /* firstTryReadOnly */ false))
+                goto done;
+
+            return false;
         }
 
         *pResult = false;
     }
 
+done:
+    if (!*pResult)
+        // we have failed anyway
+        return true;
+
+    // we intentionally do not use code1/code2 here (see realValTarget())
+    if (VT_RANGE == ctx.sh1.valTarget(v1) || VT_RANGE == ctx.sh2.valTarget(v2))
+        // we came here from a VT_RANGE value, remember to join the entry
+        *pResult = joinRangeValues(ctx, v1, v2);
+
+    return true;
+}
+
+bool offRangeFallback(
+        SymJoinCtx              &ctx,
+        const TValId            v1,
+        const TValId            v2)
+{
+#if !SE_ALLOW_OFF_RANGES
+    return false;
+#endif
+
+    const TValId root1 = ctx.sh1.valRoot(v1);
+    const TValId root2 = ctx.sh2.valRoot(v2);
+    if (!checkValueMapping(ctx, root1, root2, /* allowUnknownMapping */ false))
+        // not really a suitable candidate for offRangeFallback()
+        return false;
+
+    // check we got different offsets
+    const TOffset off1 = ctx.sh1.valOffset(v1);
+    const TOffset off2 = ctx.sh2.valOffset(v2);
+    CL_BREAK_IF(off1 == off2);
+
+    // check whether the values are not matched already
+    const TValPair vp(v1, v2);
+    CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
+
+    if (!updateJoinStatus(ctx, /* intentionally! */ JS_THREE_WAY))
+        return false;
+
+    // resolve root in ctx.dst
+    const TValId rootDst = roMapLookup(ctx.valMap1[/* ltr */ 0], root1);
+    CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[/* ltr */ 0], root2));
+
+    // compute the resulting range
+    IR::Range rng;
+    rng.lo = std::min(off1, off2);
+    rng.hi = std::max(off1, off2);
+    rng.alignment = IR::Int1;
+
+    // create a VT_RANGE value in ctx.dst
+    const TValId vDst = ctx.dst.valByRange(rootDst, rng);
+
+    // store the mapping (v1, v2) -> vDst
+    ctx.matchLookup[vp] = vDst;
     return true;
 }
 
@@ -1909,12 +2126,16 @@ bool joinValuesByCode(
         const TValId            v1,
         const TValId            v2)
 {
-    const TOffset off1 = ctx.sh1.valOffset(v1);
-    const TOffset off2 = ctx.sh2.valOffset(v2);
-
     // classify the targets
     const EValueTarget code1 = ctx.sh1.valTarget(v1);
     const EValueTarget code2 = ctx.sh2.valTarget(v2);
+
+    if (VT_RANGE == code1 || VT_RANGE == code2)
+        // these have to be handled in followValuePair()
+        return false;
+
+    const TOffset off1 = ctx.sh1.valOffset(v1);
+    const TOffset off2 = ctx.sh2.valOffset(v2);
 
     // check for VT_DELETED/VT_LOST
     const bool gone1 = isGone(code1)
@@ -1979,12 +2200,12 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     if (joinValuesByCode(&result, ctx, v1, v2))
         return result;
 
-    EValueTarget vt1 = ctx.sh1.valTarget(v1);
+    EValueTarget vt1 = realValTarget(ctx.sh1, v1);
     if ((VT_ABSTRACT == vt1) && hasKey(ctx.sset1, ctx.sh1.valRoot(v1)))
         // do not treat the starting point as encountered segment
         vt1 = VT_ON_HEAP;
 
-    EValueTarget vt2 = ctx.sh2.valTarget(v2);
+    EValueTarget vt2 = realValTarget(ctx.sh2, v2);
     if ((VT_ABSTRACT == vt2) && hasKey(ctx.sset2, ctx.sh2.valRoot(v2)))
         // do not treat the starting point as encountered segment
         vt2 = VT_ON_HEAP;
@@ -1994,8 +2215,8 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
         return result;
 
     if (VAL_NULL != v1 && VAL_NULL != v2) {
-        const bool haveTarget1 = isPossibleToDeref(vt1);
-        const bool haveTarget2 = isPossibleToDeref(vt2);
+        const bool haveTarget1 = isAnyDataArea(vt1);
+        const bool haveTarget2 = isAnyDataArea(vt2);
         if (haveTarget1 != haveTarget2) {
             SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
             return false;
@@ -2005,7 +2226,8 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
     if (followValuePair(ctx, v1, v2, /* read-only */ true))
         return followValuePair(ctx, v1, v2, /* read-only */ false);
 
-    return mayExistFallback(ctx, v1, v2, JS_USE_SH1)
+    return offRangeFallback(ctx, v1, v2)
+        || mayExistFallback(ctx, v1, v2, JS_USE_SH1)
         || mayExistFallback(ctx, v1, v2, JS_USE_SH2);
 }
 
@@ -2026,12 +2248,20 @@ bool joinPendingValues(SymJoinCtx &ctx) {
 }
 
 class JoinVarVisitor {
+    public:
+        enum EMode {
+            JVM_LIVE_OBJS,
+            JVM_UNI_BLOCKS
+        };
+
     private:
-        SymJoinCtx &ctx_;
+        SymJoinCtx              &ctx_;
+        const EMode             mode_;
 
     public:
-        JoinVarVisitor(SymJoinCtx &ctx):
-            ctx_(ctx)
+        JoinVarVisitor(SymJoinCtx &ctx, const EMode mode):
+            ctx_(ctx),
+            mode_(mode)
         {
         }
 
@@ -2040,12 +2270,20 @@ class JoinVarVisitor {
             const TValId root1     = roots[/* sh1 */ 1];
             const TValId root2     = roots[/* sh2 */ 2];
 
-            return joinUniBlocks(ctx_, rootDst, root1, root2)
-                && traverseRoots(ctx_, rootDst, root1, root2);
+            switch (mode_) {
+                case JVM_LIVE_OBJS:
+                    return traverseRoots(ctx_, rootDst, root1, root2);
+
+                case JVM_UNI_BLOCKS:
+                    return joinUniBlocks(ctx_, rootDst, root1, root2);
+            }
+
+            CL_BREAK_IF("stack smashing detected");
+            return false;
         }
 };
 
-bool joinCVars(SymJoinCtx &ctx) {
+bool joinCVars(SymJoinCtx &ctx, const JoinVarVisitor::EMode mode) {
     SymHeap *const heaps[] = {
         &ctx.dst,
         &ctx.sh1,
@@ -2053,7 +2291,7 @@ bool joinCVars(SymJoinCtx &ctx) {
     };
 
     // go through all program variables
-    JoinVarVisitor visitor(ctx);
+    JoinVarVisitor visitor(ctx, mode);
     return traverseProgramVarsGeneric<
         /* N_DST */ 1,
         /* N_SRC */ 2>
@@ -2067,6 +2305,12 @@ TValId joinDstValue(
         const bool              validObj1,
         const bool              validObj2)
 {
+    const TValPair vp(v1, v2);
+    SymJoinCtx::TMatchLookup::const_iterator mit = ctx.matchLookup.find(vp);
+    if (ctx.matchLookup.end() != mit)
+        // XXX: experimental
+        return mit->second;
+
     // translate the roots into 'dst'
     const TValId root1 = ctx.sh1.valRoot(v1);
     const TValId root2 = ctx.sh2.valRoot(v2);
@@ -2114,7 +2358,7 @@ bool setDstValuesCore(
 {
     const ObjHandle &objDst = rItem.first;
     CL_BREAK_IF(!objDst.isValid());
-    if (blackList.lookup(objDst))
+    if (hasKey(blackList, objDst))
         return true;
 
     const THdlPair &orig = rItem.second;
@@ -2156,7 +2400,7 @@ bool setDstValuesCore(
     return true;
 }
 
-bool setDstValues(SymJoinCtx &ctx, const ObjLookup *blackList = 0) {
+bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0) {
     SymHeap &dst = ctx.dst;
     SymHeap &sh1 = ctx.sh1;
     SymHeap &sh2 = ctx.sh2;
@@ -2190,7 +2434,7 @@ bool setDstValues(SymJoinCtx &ctx, const ObjLookup *blackList = 0) {
         rMap[objDst].second = objSrc;
     }
 
-    ObjLookup emptyBlackList;
+    TObjSet emptyBlackList;
     if (!blackList)
         blackList = &emptyBlackList;
 
@@ -2220,7 +2464,7 @@ bool handleDstPreds(SymJoinCtx &ctx) {
     BOOST_FOREACH(SymJoinCtx::TSegLengths::const_reference ref, ctx.segLengths)
     {
         const TValId    seg = ref.first;
-        const unsigned  len = ref.second;
+        const TMinLen   len = ref.second;
         ctx.dst.segSetMinLength(seg, len);
     }
 
@@ -2258,9 +2502,9 @@ bool handleDstPreds(SymJoinCtx &ctx) {
         const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
         const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoDst);
 
-        const unsigned len1 = objMinLength(ctx.sh1, proto1);
-        const unsigned len2 = objMinLength(ctx.sh2, proto2);
-        const unsigned lenDst = objMinLength(ctx.dst, protoDst);
+        const TMinLen len1   = objMinLength(ctx.sh1, proto1);
+        const TMinLen len2   = objMinLength(ctx.sh2, proto2);
+        const TMinLen lenDst = objMinLength(ctx.dst, protoDst);
 
         if ((lenDst < len1) && !updateJoinStatus(ctx, JS_USE_SH2))
             return false;
@@ -2348,7 +2592,8 @@ bool joinSymHeaps(
         EJoinStatus             *pStatus,
         SymHeap                 *pDst,
         const SymHeap           &sh1,
-        const SymHeap           &sh2)
+        const SymHeap           &sh2,
+        const bool              allowThreeWay)
 {
     SJ_DEBUG("--> joinSymHeaps()");
     TStorRef stor = sh1.stor();
@@ -2356,14 +2601,14 @@ bool joinSymHeaps(
     *pDst = SymHeap(stor, new Trace::TransientNode("joinSymHeaps()"));
 
     // initialize symbolic join ctx
-    SymJoinCtx ctx(*pDst, sh1, sh2);
+    SymJoinCtx ctx(*pDst, sh1, sh2, allowThreeWay);
 
     // first try to join return addresses (if in use)
     if (!joinReturnAddrs(ctx))
         goto fail;
 
     // start with program variables
-    if (!joinCVars(ctx))
+    if (!joinCVars(ctx, JoinVarVisitor::JVM_LIVE_OBJS))
         goto fail;
 
     // go through all values in them
@@ -2372,6 +2617,10 @@ bool joinSymHeaps(
 
     // time to preserve all 'hasValue' edges
     if (!setDstValues(ctx))
+        goto fail;
+
+    // join uniform blocks
+    if (!joinCVars(ctx, JoinVarVisitor::JVM_UNI_BLOCKS))
         goto fail;
 
     // go through shared Neq predicates and set minimal segment lengths
@@ -2454,17 +2703,13 @@ bool joinDataCore(
     CL_BREAK_IF(!ctx.joiningData());
     SymHeap &sh = ctx.sh1;
 
-    int size;
+    TSizeOf size;
     if (!joinObjSize(&size, ctx, addr1, addr2))
         return false;
 
     // start with the given pair of objects and create a ghost object for them
     // create an image in ctx.dst
     const TValId rootDstAt = ctx.dst.heapAlloc(size);
-
-    if (!joinUniBlocks(ctx, rootDstAt, addr1, addr2))
-        // failed to complement uniform blocks
-        return false;
 
     const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(addr1);
     const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(addr2);
@@ -2498,9 +2743,13 @@ bool joinDataCore(
         return false;
 
     // batch assignment of all values in ctx.dst
-    ObjLookup blackList;
+    TObjSet blackList;
     buildIgnoreList(blackList, ctx.dst, rootDstAt, off);
     if (!setDstValues(ctx, &blackList))
+        return false;
+
+    if (!joinUniBlocks(ctx, rootDstAt, addr1, addr2))
+        // failed to complement uniform blocks
         return false;
 
     // check consistency of DLS prototype peers
@@ -2632,7 +2881,7 @@ void restorePrototypeLengths(SymJoinCtx &ctx) {
         if (lens.end() == it)
             continue;
 
-        const unsigned len = it->second;
+        const TMinLen len = it->second;
         if (len)
             sh.segSetMinLength(protoDst, len);
     }
@@ -2643,14 +2892,14 @@ void transferContentsOfGhost(
         const TValId            dst,
         const TValId            ghost)
 {
-    ObjLookup ignoreList;
+    TObjSet ignoreList;
     buildIgnoreList(ignoreList, sh, dst);
 
     ObjList live;
     sh.gatherLiveObjects(live, ghost);
     BOOST_FOREACH(const ObjHandle objGhost, live) {
         const ObjHandle objDst = translateObjId(sh, sh, dst, objGhost);
-        if (ignoreList.lookup(objDst))
+        if (hasKey(ignoreList, objDst))
             // preserve binding pointers
             continue;
 
