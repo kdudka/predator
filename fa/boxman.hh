@@ -1,20 +1,20 @@
 /*
  * Copyright (C) 2010 Jiri Simacek
  *
- * This file is part of predator.
+ * This file is part of forester.
  *
- * predator is free software: you can redistribute it and/or modify
+ * forester is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * predator is distributed in the hope that it will be useful,
+ * forester is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with predator.  If not, see <http://www.gnu.org/licenses/>.
+ * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef BOX_MANAGER_H
@@ -40,11 +40,6 @@
 
 class BoxMan {
 
-//	TA<label_type>::Manager& taMan;
-//	TA<label_type>::Backend& backend;
-
-//	TA<std::string>::Backend sBackend;
-
 	boost::unordered_map<Data, NodeLabel*> dataStore;
 	std::vector<const Data*> dataIndex;
 	boost::unordered_map<std::vector<const AbstractBox*>, NodeLabel*> nodeStore;
@@ -53,16 +48,8 @@ class BoxMan {
 
 	boost::unordered_map<SelData, const SelBox*> selIndex;
 	boost::unordered_map<std::string, const TypeBox*> typeIndex;
-//	boost::unordered_map<std::string, const Box*> boxIndex;
-
-//	typedef std::pair<size_t, std::vector<FA::RootSignature>> BoxSignature;
-
-	size_t boxCount;
-
-//	std::unordered_map<BoxSignature, std::vector<BoxPtr>, boost::hash<BoxSignature>> boxMap;
 
 	std::unordered_set<Box, boost::hash<Box>> boxes;
-	std::unordered_set<Box, boost::hash<Box>> boxCache;
 
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data) {
 		std::pair<boost::unordered_map<Data, NodeLabel*>::iterator, bool> p
@@ -76,9 +63,11 @@ class BoxMan {
 
 	std::string getBoxName() const {
 
+		assert(this->boxes.size());
+
 		std::stringstream sstr;
 
-		sstr << "box" << this->boxCount;
+		sstr << "box" << this->boxes.size() - 1;
 
 		return sstr.str();
 
@@ -130,21 +119,32 @@ public:
 	};
 
 	label_type lookupLabel(const std::vector<const AbstractBox*>& x) {
+
 		std::pair<boost::unordered_map<std::vector<const AbstractBox*>, NodeLabel*>::iterator, bool> p
 			= this->nodeStore.insert(std::make_pair(x, (NodeLabel*)NULL));
+
 		if (p.second) {
+
 			NodeLabel* label = new NodeLabel(&p.first->first);
+
 			std::vector<size_t> tag;
+
 			label->iterate(EvaluateBoxF(*label, tag));
+
 			std::sort(tag.begin(), tag.end());
+
 			label->setTag(
 				(void*)&*this->tagStore.insert(
 					std::make_pair((const TypeBox*)label->boxLookup((size_t)(-1), NULL), tag)
 				).first
 			);
+
 			p.first->second = label;
+
 		}
+
 		return p.first->second;
+
 	}
 
 	const Data& getData(const Data& data) {
@@ -229,7 +229,7 @@ public:
 		);
 
 		return new Box(
-			this->getBoxName(),
+			"",
 			output,
 			outputSignature,
 			inputMap,
@@ -267,7 +267,6 @@ public:
 
 				index[cutpoint.root] = start++;
 
-//				backwardSelectors.push_back(cutpoint.backwardSelector);
 				selectors.push_back(std::make_pair(auxSelector, (size_t)(-1)));
 
 			}
@@ -285,7 +284,7 @@ public:
 			selectors[inputIndex].second = inputSelector;
 
 		return new Box(
-			this->getBoxName(),
+			"",
 			output,
 			outputSignature,
 			inputMap,
@@ -297,172 +296,38 @@ public:
 
 	}
 
-	const Box* lookupBox(const Box& box) {
+	const Box* getBox(const Box& box) {
 
 		auto p = this->boxes.insert(box);
 
-		if (!p.second)
-			return (const Box*)&*p.first;
+		if (p.second) {
 
-		auto p2 = this->boxCache.insert(box);
+			Box* box = const_cast<Box*>(&*p.first);
 
-		if (p2.second) {
+			box->name = this->getBoxName();
+			box->initialize();
 
-			this->boxes.erase(p.first);
-
-			return nullptr;
+//			std::cerr << "adding box " << *(AbstractBox*)box << ':' << std::endl << *box;
 
 		}
 
-		this->boxCache.erase(p2.first);
-
-		const_cast<Box*>(&*p.first)->initialize();
-
-		CL_CDEBUG(1, "new box identified (" << *(AbstractBox*)&*p.first << "): " << std::endl << *p.first);
-
-		++this->boxCount;
-
-		return (const Box*)&*p.first;
+		return &*p.first;
 
 	}
 
-	void clearBoxCache() {
+	const Box* lookupBox(const Box& box) const {
 
-		this->boxCache.clear();
+		auto iter = this->boxes.find(box);
 
-	}
-
-protected:
-/*
-	void translateLabel(TA<label_type>& dst, const TT<std::string>& t, bool& composed, const std::unordered_map<std::string, std::string>& database) {
-		std::vector<std::string> strs;
-		boost::split(strs, t.label(), boost::is_from_range(',', ','));
-		std::vector<const AbstractBox*> label;
-		for (vector<std::string>::iterator j = strs.begin(); j != strs.end(); ++j) {
-			if (*j == "")
-				continue;
-			std::vector<std::string> args;
-			boost::split(args, *j, boost::is_from_range('_', '_'));
-			if (args[0] == "data") {
-				if (strs.size() != 1)
-					throw std::runtime_error("Only one item expected when parsing data label!");
-				dst.addTransition(std::vector<size_t>(), this->lookupLabel(Data::fromArgs(args)), t.rhs());
-				return;
-			}
-			const AbstractBox* aBox = this->loadBox(*j, database);
-			if (aBox->isType(box_type_e::bBox))
-				composed = true;
-			label.push_back(aBox);
-		}
-		std::vector<size_t> lhs(t.lhs());
-		FA::reorderBoxes(label, lhs);
-		dst.addTransition(lhs, this->lookupLabel(label), t.rhs());
-	}
-
-	TA<label_type>& translateRoot(TA<label_type>& dst, bool& composed, const TA<std::string>& src, const std::unordered_map<std::string, std::string>& database) {
-		dst.clear();
-		for (TA<std::string>::iterator i = src.begin(); i != src.end(); ++i)
-			this->translateLabel(dst, *i, composed, database);
-		dst.addFinalState(src.getFinalState());
-		return dst;
-	}
-*/
-public:
-/*
-	struct RenameSelectedF {
-
-		const boost::unordered_map<size_t, size_t>& index;
-
-		RenameSelectedF(const boost::unordered_map<size_t, size_t>& index)
-			: index(index) {}
-
-		size_t operator()(size_t s) {
-			boost::unordered_map<size_t, size_t>::const_iterator i = this->index.find(s);
-			if (i == this->index.end())
-				return s;
-			return i->second;
-		}
-
-	};
-
-	TA<label_type>& adjustLeaves(TA<label_type>& dst, const TA<label_type>& src) {
-		boost::unordered_map<size_t, size_t> leafIndex;
-		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
-			if (i->label()->isData())
-				leafIndex.insert(std::make_pair(i->rhs(), _MSB_ADD(i->label()->getDataId())));
-		}
-		TA<label_type>::rename(dst, src, RenameSelectedF(leafIndex));
-		return dst;
-	}
-
-	const AbstractBox* loadBox(const std::string& name, const std::unordered_map<std::string, std::string>& database) {
-
-		if (boost::starts_with(name, "type_"))
-			return this->getTypeInfo(name.substr(5));
-
-		std::vector<std::string> args;
-		boost::split(args, name, boost::is_from_range('_', '_'));
-
-		if (args[0] == "sel")
-			return this->getSelector(SelData::fromArgs(args));
-
-		std::pair<boost::unordered_map<std::string, const Box*>::iterator, bool> p =
-			this->boxIndex.insert(std::make_pair(name, (const Box*)NULL));
-		if (!p.second)
-			return p.first->second;
-
-		auto j = database.find(name);
-		if (j == database.end())
-			throw std::runtime_error("Source for box '" + name + "' not found!");
-
-		Box* box = new Box(this->backend, name);
-
-		p.first->second = box;
-
-		std::fstream input(j->second.c_str());
-
-		if (!input.good())
-			throw std::runtime_error("Unable to open " + j->second);
-
-		TAReader reader(input, j->second);
-
-		TA<std::string> sta(this->sBackend);
-
-		std::string autName;
-
-		reader.readFirst(sta, autName);
-
-		TA<label_type> tmp(this->backend);
-
-		bool composed = false;
-
-//		box.variables.push_back(Data::createRef(box.roots.size(), 0));
-		this->translateRoot(tmp, composed, sta, database);
-		box->appendRoot(&this->adjustLeaves(*(new TA<label_type>(this->backend)), tmp));
-
-		while (reader.readNext(sta, autName)) {
-			tmp.clear();
-			this->translateRoot(tmp, composed, sta, database);
-			box->appendRoot(&this->adjustLeaves(*(new TA<label_type>(this->backend)), tmp));
-//			if (memcmp(autName.c_str(), "in", 2) == 0)
-//				box.variables.push_back(Data::createRef(box.roots.size(), 0));
-		}
-
-		box->composed = composed;
-		box->initialize(box->roots.size() - 1);
-
-		return box;
+		return (iter == this->boxes.end())?(nullptr):(&*iter);
 
 	}
-*/
+
 public:
 
-	BoxMan(/*TA<label_type>::Backend& backend*/)
-		: /*backend(backend),*/ boxCount() {}
+	BoxMan() {}
 
-	~BoxMan() {
-		this->clear();
-	}
+	~BoxMan() { this->clear(); }
 
 	void clear() {
 
@@ -473,45 +338,13 @@ public:
 		utils::eraseMap(this->vDataStore);
 		utils::eraseMap(this->selIndex);
 		utils::eraseMap(this->typeIndex);
-//		utils::eraseMap(this->boxIndex);
+		this->boxes.clear();
 
 	}
 
 	const std::unordered_set<Box, boost::hash<Box>>& getBoxes() const {
 		return this->boxes;
 	}
-
-/*
-	void loadTemplates(const boost::unordered_map<string, string>& database) {
-		for (boost::unordered_map<string, string>::const_iterator i = database.begin(); i != database.end(); ++i)
-			this->loadBox(i->first, database);
-	}
-*//*
-	std::vector<const Box*> getBoxList() const {
-		std::vector<const Box*> result;
-		for (boost::unordered_map<std::string, const Box*>::const_iterator i = this->boxIndex.begin(); i != this->boxIndex.end(); ++i)
-			result.push_back(i->second);
-		return result;
-	}
-
-	void buildBoxHierarchy(boost::unordered_map<const Box*, std::vector<const Box*> >& hierarchy, std::vector<const Box*>& basic) const {
-		for (boost::unordered_map<std::string, const Box*>::const_iterator i = this->boxIndex.begin(); i != this->boxIndex.end(); ++i) {
-			const std::set<const AbstractBox*>& trigger = i->second->getTrigger(0);
-			bool composed = false;
-			for (std::set<const AbstractBox*>::const_iterator j = trigger.begin(); j != trigger.end(); ++j) {
-				if ((*j)->isBox()) {
-					hierarchy.insert(std::make_pair((const Box*)*j, std::vector<const Box*>())).first->second.push_back(i->second);
-					composed = true;
-				}
-			}
-			if (!composed)
-				basic.push_back(i->second);
-		}
-	}
-
-*/
-
-public:
 
 };
 

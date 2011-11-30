@@ -1,20 +1,20 @@
 /*
  * Copyright (C) 2011 Jiri Simacek
  *
- * This file is part of predator.
+ * This file is part of forester.
  *
- * predator is free software: you can redistribute it and/or modify
+ * forester is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * predator is distributed in the hope that it will be useful,
+ * forester is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with predator.  If not, see <http://www.gnu.org/licenses/>.
+ * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef MICROCODE_H
@@ -599,7 +599,7 @@ class FI_abort : public SequentialInstruction {
 
 public:
 
-	FI_abort() : SequentialInstruction() {}
+	FI_abort() : SequentialInstruction(fi_type_e::fiAbort) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 

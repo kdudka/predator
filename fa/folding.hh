@@ -3,18 +3,18 @@
  *
  * This file is part of forester.
  *
- * predator is free software: you can redistribute it and/or modify
+ * forester is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * predator is distributed in the hope that it will be useful,
+ * forester is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with predator.  If not, see <http://www.gnu.org/licenses/>.
+ * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef FOLDING_H
@@ -24,6 +24,7 @@
 #include <set>
 #include <stdexcept>
 #include <algorithm>
+#include <unordered_map>
 
 #include "forestautext.hh"
 #include "abstractbox.hh"
@@ -35,15 +36,54 @@ class Folding {
 	FAE& fae;
 	BoxMan& boxMan;
 
+	std::unordered_map<Box, std::set<std::pair<size_t, size_t>>, boost::hash<Box>> boxCache;
+
 protected:
 
 	static void copyBox(std::vector<size_t>& lhs, std::vector<const AbstractBox*>& label,
-		const AbstractBox* box, const std::vector<size_t>& srcLhs, size_t& srcOffset) {
+		const AbstractBox* box, const std::vector<size_t>& srcLhs, const size_t& srcOffset) {
 
-		for (size_t i = 0; i < box->getArity(); ++i, ++srcOffset)
-			lhs.push_back(srcLhs[srcOffset]);
+		for (size_t i = 0; i < box->getArity(); ++i)
+			lhs.push_back(srcLhs[srcOffset + i]);
 
 		label.push_back(box);
+
+	}
+
+	static const ConnectionGraph::CutpointSignature& getSignature(size_t state,
+		const ConnectionGraph::StateToCutpointSignatureMap& signatures) {
+
+		auto iter = signatures.find(state);
+
+		assert(iter != signatures.end());
+
+		return iter->second;
+
+	}
+
+	static bool isSignaturesCompatible(const ConnectionGraph::CutpointSignature& s1,
+		const ConnectionGraph::CutpointSignature& s2) {
+
+		if (s1.size() != s2.size())
+			return false;
+
+		for (size_t i = 0; i < s1.size(); ++i) {
+
+			if (s1[i].root != s2[i].root)
+				return false;
+
+			if (s1[i].forwardSelector != s2[i].forwardSelector)
+				return false;
+
+			if (s1[i].backwardSelector != s2[i].backwardSelector)
+				return false;
+
+			if (s1[i].defines != s2[i].defines)
+				return false;
+
+		}
+
+		return true;
 
 	}
 
@@ -55,6 +95,44 @@ protected:
 		assert(this->fae.roots[root]);
 
 		const TA<label_type>& src = *this->fae.roots[root];
+
+		std::unordered_set<const AbstractBox*> boxes;
+
+		// enumerate which boxes to fold
+		for (auto k = src.getFinalStates().begin(); k != src.getFinalStates().end(); ++k) {
+
+			for (auto i = src.begin(*k); i != src.end(*k, i); ++i) {
+
+				size_t lhsOffset = 0;
+
+				const TT<label_type>& t = *i;
+
+				for (auto& box : t.label()->getNode()) {
+
+					// look for target cutpoint
+					for (size_t j = 0; j < box->getArity(); ++j) {
+
+						assert(lhsOffset + j < t.lhs().size());
+
+						if (ConnectionGraph::containsCutpoint(
+							Folding::getSignature(t.lhs()[lhsOffset + j], signatures), target)
+						) {
+
+							boxes.insert(box);
+
+							break;
+
+						}
+
+					}
+
+					lhsOffset += box->getArity();
+
+				}
+
+			}
+
+		}
 
 		ConnectionGraph::CutpointSignature tmp;
 
@@ -73,39 +151,34 @@ protected:
 
 				tmp.clear();
 
+				// split transition
 				for (auto& box : t.label()->getNode()) {
 
-					bool found = false;
-
-					for (size_t j = 0; j < box->getArity(); ++j) {
-
-						assert(lhsOffset + j < t.lhs().size());
-
-						auto iter = signatures.find(t.lhs()[lhsOffset + j]);
-
-						if (iter == signatures.end())
-							continue;
-
-						if (!found && !ConnectionGraph::containsCutpoint(iter->second, target))
-							continue;
-
-						found = true;
-
-						ConnectionGraph::processStateSignature(
-							tmp, (StructuralBox*)box, j, t.lhs()[lhsOffset + j], iter->second
-						);
-
-					}
-
-					if (found) {
-
-						Folding::copyBox(cLhs, cLabel, box, t.lhs(), lhsOffset);
-
-					} else {
+					if (boxes.count(box) == 0) {
 
 						Folding::copyBox(lhs, label, box, t.lhs(), lhsOffset);
 
+					} else {
+
+						for (size_t j = 0; j < box->getArity(); ++j) {
+
+							assert(lhsOffset + j < t.lhs().size());
+
+							ConnectionGraph::processStateSignature(
+								tmp,
+								(StructuralBox*)box,
+								j,
+								t.lhs()[lhsOffset + j],
+								Folding::getSignature(t.lhs()[lhsOffset + j], signatures)
+							);
+
+						}
+
+						Folding::copyBox(cLhs, cLabel, box, t.lhs(), lhsOffset);
+
 					}
+
+					lhsOffset += box->getArity();
 
 				}
 
@@ -116,7 +189,15 @@ protected:
 				if (complementSignature.empty())
 					complementSignature = tmp;
 
-				assert(complementSignature == tmp);
+				// a bit hacky but who cares
+				assert(Folding::isSignaturesCompatible(complementSignature, tmp));
+
+				for (size_t i = 0; i < tmp.size(); ++i) {
+
+					if (complementSignature[i].joint)
+						complementSignature[i].joint = tmp[i].joint;
+
+				}
 
 				assert(label.size());
 				FAE::reorderBoxes(label, lhs);
@@ -350,7 +431,7 @@ protected:
 		inputMap.resize(count);
 
 	}
-
+/*
 	static bool checkSingular(const TA<label_type>& ta, bool result,
 		const ConnectionGraph::StateToCutpointSignatureMap& stateMap) {
 
@@ -388,8 +469,10 @@ protected:
 		return result;
 
 	}
+*/
+	bool makeType1Box(std::shared_ptr<const Box>& box, size_t root, size_t aux, const std::set<size_t>& forbidden, bool conditional = true, bool test = false) {
 
-	bool makeType1Box(size_t root, size_t aux, const std::set<size_t>& forbidden) {
+		box = nullptr;
 
 		if (forbidden.count(aux))
 			return false;
@@ -424,7 +507,7 @@ protected:
 		Folding::computeSelectorMap(selectorMap, *this->fae.roots[root], signatures);
 		Folding::extractInputMap(inputMap, selectorMap, root, index);
 
-		std::unique_ptr<Box> boxPtr(
+		box = std::shared_ptr<Box>(
 			this->boxMan.createType1Box(
 				root,
 				this->relabelReferences(*p.second, index),
@@ -434,21 +517,24 @@ protected:
 			)
 		);
 
-		const Box* box = this->boxMan.lookupBox(*boxPtr);
+		auto boxPtr = (conditional)?(this->boxMan.lookupBox(*box)):(this->boxMan.getBox(*box));
 
-		if (!box)
+		if (!boxPtr)
 			return false;
 
-		this->fae.roots[root] = this->joinBox(*p.first, root, box, outputSignature);
-		this->fae.connectionGraph.invalidate(root);
+		if (test)
+			return true;
 
-		CL_CDEBUG(3, "after folding: " << this->fae);
+		this->fae.roots[root] = this->joinBox(*p.first, root, boxPtr, outputSignature);
+		this->fae.connectionGraph.invalidate(root);
 
 		return true;
 
 	}
 
-	bool makeType2Box(size_t root, size_t aux, const std::set<size_t>& forbidden) {
+	bool makeType2Box(std::shared_ptr<const Box>& box, size_t root, size_t aux, const std::set<size_t>& forbidden, bool conditional = true, bool test = false) {
+
+		box = nullptr;
 
 		if (forbidden.count(aux))
 			return false;
@@ -525,7 +611,7 @@ protected:
 
 		size_t selector = Folding::extractSelector(selectorMap, root);
 
-		std::unique_ptr<Box> boxPtr(
+		box = std::shared_ptr<Box>(
 			this->boxMan.createType2Box(
 				root,
 				this->relabelReferences(*p.second, index),
@@ -539,12 +625,15 @@ protected:
 			)
 		);
 
-		const Box* box = this->boxMan.lookupBox(*boxPtr);
+		auto boxPtr = (conditional)?(this->boxMan.lookupBox(*box)):(this->boxMan.getBox(*box));
 
-		if (!box)
+		if (!boxPtr)
 			return false;
 
-		this->fae.roots[root] = this->joinBox(*p.first, root, box, outputSignature);
+		if (test)
+			return true;
+
+		this->fae.roots[root] = this->joinBox(*p.first, root, boxPtr, outputSignature);
 		this->fae.connectionGraph.invalidate(root);
 
 		this->fae.roots[aux] = auxP.first;
@@ -556,17 +645,16 @@ protected:
 
 public:
 
-	bool discover(size_t root, const std::set<size_t>& forbidden = std::set<size_t>()) {
+	bool discover(size_t root, const std::set<size_t>& forbidden, bool conditional) {
 
+		assert(this->fae.connectionGraph.isValid());
 		assert(this->fae.roots.size() == this->fae.connectionGraph.data.size());
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 
-		std::vector<size_t> aux;
-
-		this->fae.updateConnectionGraph();
-
 		CL_CDEBUG(3, "folding: " << this->fae);
+
+		std::shared_ptr<const Box> box;
 
 		// save state offset
 		this->fae.pushStateOffset();
@@ -577,10 +665,8 @@ public:
 
 				CL_CDEBUG(3, "type 1 cutpoint detected at root " << root);
 
-				if (this->makeType1Box(root, root, forbidden))
+				if (this->makeType1Box(box, root, root, forbidden, conditional))
 					return true;
-
-				CL_CDEBUG(3, "bailing out ...");
 
 				this->fae.popStateOffset();
 
@@ -592,14 +678,13 @@ public:
 
 				CL_CDEBUG(3, "type 2 cutpoint detected at root " << root);
 
-				if (this->makeType1Box(root, cutpoint.root, forbidden))
+				if (this->makeType1Box(box, root, cutpoint.root, forbidden, conditional))
 					return true;
-
-				CL_CDEBUG(3, "bailing out ...");
 
 				this->fae.popStateOffset();
 
 				continue;
+
 			}
 
 			size_t selectorToRoot = ConnectionGraph::getSelectorToTarget(
@@ -614,15 +699,14 @@ public:
 */
 			size_t root1 = root, root2 = cutpoint.root;
 
-			if (selectorToRoot < cutpoint.forwardSelector)
-				std::swap(root1, root2);
+			if (!conditional && (selectorToRoot < cutpoint.forwardSelector) &&
+				this->makeType2Box(box, root2, root1, forbidden, true, true))
+					continue;
 
 			CL_CDEBUG(3, "type 3 cutpoint detected at roots " << root1 << " and " << root2);
 
-			if (this->makeType2Box(root1, root2, forbidden))
+			if (this->makeType2Box(box, root1, root2, forbidden, conditional))
 				return true;
-
-			CL_CDEBUG(3, "bailing out ...");
 
 			this->fae.popStateOffset();
 

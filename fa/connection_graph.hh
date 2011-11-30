@@ -3,12 +3,12 @@
  *
  * This file is part of forester.
  *
- * predator is free software: you can redistribute it and/or modify
+ * forester is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * predator is distributed in the hope that it will be useful,
+ * forester is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
@@ -22,6 +22,9 @@
 
 #include <ostream>
 #include <vector>
+#include <set>
+#include <unordered_set>
+#include <map>
 #include <unordered_map>
 #include <algorithm>
 #include <memory>
@@ -54,6 +57,16 @@ public:
 			backwardSelector((size_t)(-1)) {}
 
 		bool operator==(const CutpointInfo& rhs) const {
+
+			return this->root == rhs.root &&
+				this->joint == rhs.joint &&
+				this->backwardSelector == rhs.backwardSelector &&
+				this->forwardSelector == rhs.forwardSelector &&
+				this->defines == rhs.defines;
+
+		}
+
+		bool operator%(const CutpointInfo& rhs) const {
 
 			return this->root == rhs.root &&
 				this->joint == rhs.joint &&
@@ -106,6 +119,39 @@ public:
 	};
 
 	typedef std::vector<CutpointInfo> CutpointSignature;
+/*
+	friend bool operator==(const CutpointSignature& lhs, const CutpointSignature& rhs) {
+
+		if (lhs.size() != rhs.size())
+			return false;
+
+		for (size_t i = 0; i < lhs.size(); ++i) {
+
+			if (!lhs[i].operator==(rhs[i]))
+				return false;
+
+		}
+
+		return true;
+
+	}
+*/
+	friend bool operator%(const CutpointSignature& lhs, const CutpointSignature& rhs) {
+
+		if (lhs.size() != rhs.size())
+			return false;
+
+		for (size_t i = 0; i < lhs.size(); ++i) {
+
+			if (!lhs[i].operator%(rhs[i]))
+				return false;
+
+		}
+
+		return true;
+
+	}
+
 	typedef std::unordered_map<size_t, CutpointSignature> StateToCutpointSignatureMap;
 
 	friend std::ostream& operator<<(std::ostream& os, const CutpointSignature& signature) {
@@ -169,7 +215,7 @@ public:
 		return false;
 
 	}
-
+/*
 	static bool containsCutpoints(const CutpointSignature& signature, const std::set<size_t>& cutpoints) {
 
 		for (auto& cutpoint : signature) {
@@ -182,7 +228,7 @@ public:
 		return false;
 
 	}
-
+*/
 	static size_t getSelectorToTarget(const CutpointSignature& signature, size_t target) {
 
 		for (auto& cutpoint : signature) {
@@ -410,8 +456,6 @@ public:
 
 				}
 
-				std::cerr << 'q' << t.rhs() << ": " << v << std::endl;
-
 				ConnectionGraph::normalizeSignature(v);
 
 				ConnectionGraph::updateStateSignature(stateMap, t.rhs(), v);
@@ -606,7 +650,7 @@ public:
 		}
 
 	}
-
+/*
 	bool isMergable(size_t dst, size_t src) {
 
 		assert(dst < this->data.size());
@@ -646,7 +690,7 @@ public:
 		return true;
 
 	}
-
+*/
 	void mergeCutpoint(size_t dst, size_t src) {
 
 		assert(dst < this->data.size());

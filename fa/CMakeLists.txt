@@ -1,19 +1,19 @@
 # Copyright (C) 2010 Jiri Simacek
 #
-# This file is part of predator.
+# This file is part of forester.
 #
-# predator is free software: you can redistribute it and/or modify
+# forester is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # any later version.
 #
-# predator is distributed in the hope that it will be useful,
+# forester is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with predator.  If not, see <http://www.gnu.org/licenses/>.
+# along with forester.  If not, see <http://www.gnu.org/licenses/>.
 
 # project metadata
 cmake_minimum_required(VERSION 2.6)
@@ -75,6 +75,7 @@ set (forester_tests
   "recursion.c:"
   "sll-bubblesort.c:"
   "sll-delete.c:"
+  "sll-headptr.c:"
   "sll-insertsort.c:"
   "sll-listofclists.c:listofclists.sll.boxes"
   "sll-mergesort.c:"
@@ -96,7 +97,6 @@ set (forester_tests
   #"treecraziness.c:"
   #"rb_insert_rebalance.c:"
   #"dfs.c:treewpp.boxes"
-  #"sll-headptr.c:"
 )
 
 foreach (testcase ${forester_tests})
@@ -111,7 +111,7 @@ foreach (testcase ${forester_tests})
   endif()
 
   add_test(
-    ${testfile} ${GCC_HOST} -o /dev/null -m32 -DFORESTER
+    ${testfile} timeout 90 ${GCC_HOST} -o /dev/null -m32 -DFORESTER
     -fplugin=${CMAKE_CURRENT_BUILD_DIR}../fa_build/libfa.so
     -c ${CMAKE_CURRENT_SOURCE_DIR}/data/${testfile} ${box_arg}
   )

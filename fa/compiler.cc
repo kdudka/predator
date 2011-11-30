@@ -1,20 +1,20 @@
 /*
  * Copyright (C) 2011 Jiri Simacek
  *
- * This file is part of predator.
+ * This file is part of forester.
  *
- * predator is free software: you can redistribute it and/or modify
+ * forester is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * predator is distributed in the hope that it will be useful,
+ * forester is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with predator.  If not, see <http://www.gnu.org/licenses/>.
+ * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #include <sstream>
@@ -147,7 +147,6 @@ class Compiler::Core {
 	TA<label_type>::Backend& fixpointBackend;
 	TA<label_type>::Backend& taBackend;
 	BoxMan& boxMan;
-	const std::vector<const Box*>& boxes;
 
 	BuiltinTable builtinTable;
 	LoopAnalyser loopAnalyser;
@@ -193,13 +192,13 @@ protected:
 
 	void cAbstraction() {
 		this->append(
-			new FI_abs(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes)
+			new FI_abs(this->fixpointBackend, this->taBackend, this->boxMan)
 		);
 	}
 
 	void cFixpoint() {
 		this->append(
-			new FI_fix(this->fixpointBackend, this->taBackend, this->boxMan, this->boxes)
+			new FI_fix(this->fixpointBackend, this->taBackend, this->boxMan)
 		);
 	}
 
@@ -1197,8 +1196,8 @@ protected:
 public:
 
 	Core(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan, const std::vector<const Box*>& boxes)
-		: fixpointBackend(fixpointBackend), taBackend(taBackend), boxMan(boxMan), boxes(boxes) {}
+		BoxMan& boxMan)
+		: fixpointBackend(fixpointBackend), taBackend(taBackend), boxMan(boxMan) {}
 
 	void compile(Compiler::Assembly& assembly, const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry) {
 
@@ -1263,8 +1262,8 @@ public:
 };
 
 Compiler::Compiler(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-BoxMan& boxMan, const std::vector<const Box*>& boxes)
-	: core_(new Core(fixpointBackend, taBackend, boxMan, boxes)) {}
+BoxMan& boxMan)
+	: core_(new Core(fixpointBackend, taBackend, boxMan)) {}
 
 Compiler::~Compiler() {
 	delete this->core_;

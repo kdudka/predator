@@ -3,18 +3,18 @@
  *
  * This file is part of forester.
  *
- * predator is free software: you can redistribute it and/or modify
+ * forester is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * predator is distributed in the hope that it will be useful,
+ * forester is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with predator.  If not, see <http://www.gnu.org/licenses/>.
+ * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef REVERSE_RUN_H
@@ -107,7 +107,7 @@ public:
 			tmp.buildLTCacheExt(*fae.roots[i], cache2);
 
 			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
-			
+
 			size_t stateCount = TA<label_type>::buProduct(
 				cache1,
 				cache2,
@@ -116,7 +116,7 @@ public:
 			);
 
 			this->fae.incrementStateOffset(stateCount);
-				
+
 			if (this->fae.roots[i]->getFinalStates().empty())
 				return false;
 
@@ -174,7 +174,7 @@ public:
 
 	template <class F>
 	static bool intersection(IntersectInfo& info, FAE& dst, const FAE& src1, const FAE& src2, F f) {
-		
+
 	}
 */
 public:

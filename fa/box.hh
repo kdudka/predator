@@ -1,20 +1,20 @@
 /*
  * Copyright (C) 2010 Jiri Simacek
  *
- * This file is part of predator.
+ * This file is part of forester.
  *
- * predator is free software: you can redistribute it and/or modify
+ * forester is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * any later version.
  *
- * predator is distributed in the hope that it will be useful,
+ * forester is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
  * GNU General Public License for more details.
  *
  * You should have received a copy of the GNU General Public License
- * along with predator.  If not, see <http://www.gnu.org/licenses/>.
+ * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 #ifndef BOX_H
@@ -157,12 +157,8 @@ class Box : public StructuralBox {
 
 	std::vector<std::set<size_t>> selCoverage;
 
-//	std::vector<std::set<const AbstractBox*> > triggers;
-//	std::vector<std::vector<size_t> > rootSig;
+	bool selfReference;
 
-
-//	bool composed;
-//	bool initialized;
 
 protected:
 
@@ -397,6 +393,12 @@ public:
 
 	}
 
+	const ConnectionGraph::CutpointSignature& getOutputSignature() const {
+
+		return this->outputSignature;
+
+	}
+
 	const TA<label_type>* getInput() const {
 
 		return this->input.get();
@@ -420,6 +422,12 @@ public:
 		assert(input < this->inputMap.size());
 
 		return this->inputMap[input];
+
+	}
+
+	bool hasSelfReference() const {
+
+		return this->selfReference;
 
 	}
 
@@ -478,6 +486,10 @@ public:
 
 		Box::getDownwardCoverage(this->selCoverage[0], *this->output);
 
+		assert(this->selCoverage[0].size());
+
+		this->order = *this->selCoverage[0].begin();
+
 		this->enumerateSelectorsAtLeaves(this->selCoverage, *this->output);
 
 		if (!this->input)
@@ -488,6 +500,8 @@ public:
 		Box::getDownwardCoverage(this->selCoverage[this->inputIndex + 1], *this->input);
 
 		this->enumerateSelectorsAtLeaves(this->selCoverage, *this->input);
+
+		this->selfReference = ConnectionGraph::containsCutpoint(this->outputSignature, 0);
 
 	}
 
