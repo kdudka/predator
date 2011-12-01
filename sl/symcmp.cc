@@ -150,8 +150,8 @@ bool matchRoots(
         const TValId            root2,
         const EValueTarget      code)
 {
-    const TSizeOf size1 = sh1.valSizeOfTarget(root1);
-    const TSizeOf size2 = sh2.valSizeOfTarget(root2);
+    const TSizeRange size1 = sh1.valSizeOfTarget(root1);
+    const TSizeRange size2 = sh2.valSizeOfTarget(root2);
     if (size1 != size2)
         // target size mismatch
         return false;

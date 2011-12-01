@@ -197,32 +197,35 @@ void reportDerefOutOfBounds(
     const char *const what = describeRootObj(code);
 
     const TValId root = sh.valRoot(val);
-    const TSizeOf rootSize = sh.valSizeOfTarget(root);
-    CL_BREAK_IF(rootSize <= 0);
+    const TSizeRange rootSizeRange = sh.valSizeOfTarget(root);
+    const TSizeOf minRootSize = rootSizeRange.lo;
+    CL_BREAK_IF(minRootSize <= 0);
 
     const TOffset off = sh.valOffset(val);
     if (off < 0) {
         CL_NOTE_MSG(loc, "the pointer being dereferenced points "
                 << (-off) << "B above " << what
-                << " of size " << rootSize << "B");
+                << " of size " << minRootSize << "B");
 
         return;
     }
 
-    TOffset beyond = off - rootSize;
+    TOffset beyond = off - minRootSize;
     if (0 <= beyond) {
         CL_NOTE_MSG(loc, "the pointer being dereferenced points "
                 << beyond << "B beyond " << what
-                << " of size " << rootSize << "B");
+                << " of size " << minRootSize << "B");
 
         return;
     }
 
-    beyond = sizeOfTarget - sh.valSizeOfTarget(val);
+    const TSizeRange dstSizeRange = sh.valSizeOfTarget(val);
+    const TSizeOf minDstSize = dstSizeRange.lo;
+    beyond = sizeOfTarget - minDstSize;
     if (0 < beyond) {
         CL_NOTE_MSG(loc, "the target object ends "
                 << beyond << "B beyond " << what
-                << " of size " << rootSize << "B");
+                << " of size " << minRootSize << "B");
     }
 }
 
@@ -272,7 +275,9 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget) {
             break;
     }
 
-    if (sh_.valOffset(val) < 0 || sh_.valSizeOfTarget(val) < sizeOfTarget) {
+    const TSizeRange dstSizeRange = sh_.valSizeOfTarget(val);
+    const TSizeOf minDstSize = dstSizeRange.lo;
+    if (sh_.valOffset(val) < 0 || minDstSize < sizeOfTarget) {
         // out of bounds
         reportDerefOutOfBounds(*this, val, sizeOfTarget);
         return true;
@@ -317,7 +322,6 @@ TValId SymProc::varAt(const CVar &cv) {
 
     // lazy var creation
     at = sh_.addrOfVar(cv, /* createIfNeeded */ true);
-    const TSizeOf size = sh_.valSizeOfTarget(at);
 
     // resolve Var
     const CodeStorage::Storage &stor = sh_.stor();
@@ -337,7 +341,9 @@ TValId SymProc::varAt(const CVar &cv) {
     bool needInit = !var.initials.empty();
     if (nullify) {
         // initialize to zero
-        sh_.writeUniformBlock(at, VAL_NULL, size);
+        const TSizeRange size = sh_.valSizeOfTarget(at);
+        CL_BREAK_IF(!isSingular(size));
+        sh_.writeUniformBlock(at, VAL_NULL, size.lo);
     }
     else if (isLcVar)
         needInit = true;
@@ -544,8 +550,14 @@ void digRootTypeInfo(SymHeap &sh, const ObjHandle &lhs, TValId rhs) {
         // type but it yet does not mean that we are changing the root type-info
         return;
 
-    const TSizeOf rootSize = sh.valSizeOfTarget(rhs);
+    const TSizeRange rootSizeRange = sh.valSizeOfTarget(rhs);
+    if (!isSingular(rootSizeRange))
+        // TODO: add support for structured object of unknown size?
+        return;
+
+    const TSizeOf rootSize = rootSizeRange.lo;
     CL_BREAK_IF(rootSize <= 0 && isOnHeap(code));
+
     if (cltLast && cltLast->size == rootSize && cltTarget->size != rootSize)
         // basically the same rule as above but now we check the size of target
         return;
@@ -590,7 +602,7 @@ TValId ptrObjectEncoderCore(
     }
 
     const TSizeOf dstSize = dst.objType()->size;
-    CL_BREAK_IF((sh.valSizeOfTarget(dst.placedAt()) < dstSize));
+    CL_BREAK_IF((sh.valSizeOfTarget(dst.placedAt()).lo < dstSize));
     if (ptrSize <= dstSize)
         return val;
 
@@ -978,8 +990,9 @@ void SymExecCore::varInit(TValId at) {
     if (ep_.trackUninit && VT_ON_STACK == sh_.valTarget(at)) {
         // uninitialized stack variable
         const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
-        const TSizeOf size = sh_.valSizeOfTarget(at);
-        sh_.writeUniformBlock(at, tpl, size);
+        const TSizeRange size = sh_.valSizeOfTarget(at);
+        CL_BREAK_IF(!isSingular(size));
+        sh_.writeUniformBlock(at, tpl, size.lo);
     }
 
     SymProc::varInit(at);
@@ -1086,10 +1099,10 @@ malloc/calloc is implementation-defined");
     }
 
     // now create a heap object
-    const TValId val = sh_.heapAlloc(size);
+    const TValId val = sh_.heapAlloc(IR::rngFromNum(size));
 
     if (nullified) {
-        // initilize to zero as we are doing calloc()
+        // initialize to zero as we are doing calloc()
         sh_.writeUniformBlock(val, VAL_NULL, size);
     }
     else if (ep_.trackUninit) {

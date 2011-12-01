@@ -253,9 +253,25 @@ void describeObject(PlotData &plot, const ObjHandle &obj, const bool lonely) {
     plot.out << " " << tag << "#" << obj.objId();
 }
 
+void printRawRange(
+        std::ostream                &str,
+        const IR::Range             &rng,
+        const char                  *suffix = "")
+{
+    if (isSingular(rng)) {
+        str << rng.lo << suffix;
+        return;
+    }
+
+    str << rng.lo << suffix << " .. " << rng.hi << suffix;
+
+    if (isAligned(rng))
+        str << ", alignment = " << rng.alignment << suffix;
+}
+
 void plotRootValue(PlotData &plot, const TValId val, const char *color) {
     SymHeap &sh = plot.sh;
-    const TSizeOf size = sh.valSizeOfTarget(val);
+    const TSizeRange size = sh.valSizeOfTarget(val);
 
     // visualize the count of references as pen width
     const float pw = static_cast<float>(1U + sh.usedByCount(val));
@@ -271,7 +287,9 @@ void plotRootValue(PlotData &plot, const TValId val, const char *color) {
     else
         plot.out << "#" << val;
 
-    plot.out << " [size = " << size << " B]\"];\n";
+    plot.out << " [size = ";
+    printRawRange(plot.out, size, " B");
+    plot.out << "]\"];\n";
 }
 
 enum EObjectClass {
@@ -624,9 +642,13 @@ void plotRootObjects(PlotData &plot) {
                         // root pointed
                         break;
 
+                    // TODO: support for objects with variable size?
+                    const TSizeRange size = sh.valSizeOfTarget(root);
+                    CL_BREAK_IF(!isSingular(size));
+
                     const TObjType clt = obj.objType();
                     CL_BREAK_IF(!clt);
-                    if (clt->size != sh.valSizeOfTarget(root))
+                    if (clt->size != size.lo)
                         // size mismatch detected
                         break;
 
@@ -688,13 +710,10 @@ void describeInt(PlotData &plot, const IR::TInt num, const TValId val) {
         << val << ")\"";
 }
 
-void describeIntRange(PlotData &plot, const IR::Range &range, const TValId val)
-{
-    plot.out << ", fontcolor=blue, label=\"[int range] "
-        << range.lo << " .. " << range.hi;
+void describeIntRange(PlotData &plot, const IR::Range &rng, const TValId val) {
+    plot.out << ", fontcolor=blue, label=\"[int range] ";
 
-    if (isAligned(range))
-        plot.out << ", alignment = " << range.alignment;
+    printRawRange(plot.out, rng);
     
     plot.out << " (#" << val << ")\"";
 }
@@ -846,11 +865,9 @@ void plotPointsTo(PlotData &plot, const TValId val, const TObjId target) {
 void plotRangePtr(PlotData &plot, TValId val, TValId root, const IR::Range &rng)
 {
     plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE(root)
-        << " [color=red, fontcolor=red, label=\"["
-        << SIGNED_OFF(rng.lo) << ".." << rng.hi;
+        << " [color=red, fontcolor=red, label=\"[";
 
-    if (isAligned(rng))
-        plot.out << ", alignment = " << rng.alignment;
+    printRawRange(plot.out, rng);
     
     plot.out << "]\"];\n";
 }

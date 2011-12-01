@@ -169,8 +169,12 @@ void moveKnownValueToLeft(
 }
 
 bool valInsideSafeRange(const SymHeapCore &sh, TValId val) {
-    return isKnownObject(sh.valTarget(val))
-        && (0 < sh.valSizeOfTarget(val));
+    const EValueTarget code = sh.valTarget(val);
+    if (!isKnownObject(code))
+        return false;
+
+    const TSizeRange size = sh.valSizeOfTarget(val);
+    return (IR::Int0 < size.lo);
 }
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val) {
@@ -181,7 +185,8 @@ bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val) {
     if (!ptrSize)
         ptrSize = sh.stor().types.dataPtrSizeof();
 
-    return (ptrSize <= sh.valSizeOfTarget(val));
+    const TSizeRange size = sh.valSizeOfTarget(val);
+    return (ptrSize <= size.lo);
 }
 
 bool translateValId(

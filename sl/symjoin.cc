@@ -684,8 +684,8 @@ bool segMatchLookAhead(
         const TValId            root1,
         const TValId            root2)
 {
-    const TSizeOf size1 = ctx.sh1.valSizeOfTarget(root1);
-    const TSizeOf size2 = ctx.sh2.valSizeOfTarget(root2);
+    const TSizeRange size1 = ctx.sh1.valSizeOfTarget(root1);
+    const TSizeRange size2 = ctx.sh2.valSizeOfTarget(root2);
     if (size1 != size2)
         // size mismatch
         return false;
@@ -1005,7 +1005,7 @@ TMinLen joinMinLength(
 }
 
 bool joinObjSize(
-        TSizeOf                 *pDst,
+        TSizeRange              *pDst,
         SymJoinCtx              &ctx,
         const TValId            v1,
         const TValId            v2)
@@ -1020,8 +1020,8 @@ bool joinObjSize(
         return true;
     }
 
-    const TSizeOf size1 = ctx.sh1.valSizeOfTarget(v1);
-    const TSizeOf size2 = ctx.sh2.valSizeOfTarget(v2);
+    const TSizeRange size1 = ctx.sh1.valSizeOfTarget(v1);
+    const TSizeRange size2 = ctx.sh2.valSizeOfTarget(v2);
     if (size1 != size2) {
         SJ_DEBUG("<-- object size mismatch " << SJ_VALP(v1, v2));
         return false;
@@ -1194,7 +1194,7 @@ bool createObject(
         }
     }
 
-    TSizeOf size;
+    TSizeRange size;
     if (!joinObjSize(&size, ctx, root1, root2))
         return false;
 
@@ -2703,7 +2703,7 @@ bool joinDataCore(
     CL_BREAK_IF(!ctx.joiningData());
     SymHeap &sh = ctx.sh1;
 
-    TSizeOf size;
+    TSizeRange size;
     if (!joinObjSize(&size, ctx, addr1, addr2))
         return false;
 

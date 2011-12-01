@@ -403,7 +403,7 @@ struct InternalCustomValue: public ReferableValue {
 
 struct RootValue: public AnchorValue {
     CVar                            cVar;
-    TSizeOf                         size;
+    IR::Range                       size;
     TLiveObjs                       liveObjs;
     TObjIdSet                       usedByGl;
     TArena                          arena;
@@ -412,7 +412,7 @@ struct RootValue: public AnchorValue {
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
         AnchorValue(code_, origin_),
-        size(0),
+        size(IR::rngFromNum(0)),
         lastKnownClt(0),
         isProto(false)
     {
@@ -615,7 +615,7 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
 bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
     TLiveObjs all(rootData->liveObjs);
     if (isGone(rootData->code)) {
-        CL_BREAK_IF(rootData->size);
+        CL_BREAK_IF(IR::rngFromNum(IR::Int0) != rootData->size);
         CL_BREAK_IF(!rootData->liveObjs.empty());
 
         // we can check nothing for VT_DELETED/VT_LOST, we do not know the size
@@ -623,7 +623,7 @@ bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
     }
 
     const TArena &arena = rootData->arena;
-    const TMemChunk chunk(0, rootData->size);
+    const TMemChunk chunk(0, rootData->size.hi);
 
     TObjIdSet overlaps;
     if (arenaLookup(&overlaps, arena, chunk, OBJ_INVALID)) {
@@ -1605,7 +1605,7 @@ void SymHeapCore::writeUniformBlock(
         const TSizeOf               size,
         TValSet                     *killedPtrs)
 {
-    CL_BREAK_IF(this->valSizeOfTarget(addr) < size);
+    CL_BREAK_IF(this->valSizeOfTarget(addr).lo < size);
     d->writeUniformBlock(addr, tplValue, size, killedPtrs);
 }
 
@@ -1616,8 +1616,8 @@ void SymHeapCore::copyBlockOfRawMemory(
         TValSet                     *killedPtrs)
 {
     // this should have been checked by the caller
-    CL_BREAK_IF(this->valSizeOfTarget(dst) < size);
-    CL_BREAK_IF(this->valSizeOfTarget(src) < size);
+    CL_BREAK_IF(this->valSizeOfTarget(dst).lo < size);
+    CL_BREAK_IF(this->valSizeOfTarget(src).lo < size);
 
     const BaseValue *dstData;
     const BaseValue *srcData;
@@ -2403,7 +2403,8 @@ TObjId SymHeapCore::ptrAt(TValId at) {
     }
 
     // check whether we have enough space allocated for the pointer
-    if (this->valSizeOfTarget(at) < clt->size) {
+    const TSizeRange avail = this->valSizeOfTarget(at);
+    if (avail.lo < clt->size) {
         CL_BREAK_IF("ptrAt() called out of bounds");
         return OBJ_UNKNOWN;
     }
@@ -2502,7 +2503,8 @@ update_best:
     if (OBJ_INVALID != bestMatch)
         return bestMatch;
 
-    if (this->valSizeOfTarget(at) < clt->size)
+    const TSizeRange avail = this->valSizeOfTarget(at);
+    if (avail.lo < clt->size)
         // out of bounds
         return OBJ_UNKNOWN;
 
@@ -2587,7 +2589,7 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
 
     // read size from the type-info
     const TSizeOf size = clt->size;
-    rootData->size = size;
+    rootData->size = IR::rngFromNum(size);
 
     // mark the root as live
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
@@ -2624,8 +2626,8 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     return compData->compObj;
 }
 
-TValId SymHeapCore::heapAlloc(const TSizeOf size) {
-    CL_BREAK_IF(size <= 0);
+TValId SymHeapCore::heapAlloc(const TSizeRange &size) {
+    CL_BREAK_IF(size.lo <= IR::Int0);
 
     // assign an address
     const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
@@ -2658,25 +2660,25 @@ void SymHeapCore::valDestroyTarget(TValId val) {
     d->destroyRoot(val);
 }
 
-TSizeOf SymHeapCore::valSizeOfTarget(TValId val) const {
+TSizeRange SymHeapCore::valSizeOfTarget(TValId val) const {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     if (valData->offRoot < 0)
         // we are above the root, so we cannot safely write anything
-        return 0;
+        return IR::rngFromNum(IR::Int0);
 
     const EValueTarget code = valData->code;
     if (isGone(code))
-        return 0;
+        return IR::rngFromNum(IR::Int0);
 
     CL_BREAK_IF(!isPossibleToDeref(valData->code));
     const TValId root = valData->valRoot;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
 
-    const TSizeOf rootSize = rootData->size;
-    const TOffset off = valData->offRoot;
-    return rootSize - off;
+    IR::Range size = rootData->size;
+    size -= IR::rngFromNum(/* off */ valData->offRoot);
+    return size;
 }
 
 void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
@@ -2689,7 +2691,7 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
 
         // allocate a new root value at VAL_ADDR_OF_RET
         rootData->code = VT_ON_STACK;
-        rootData->size = clt->size;
+        rootData->size = IR::rngFromNum(clt->size);
     }
 
     // convert a type-free object into a type-aware object
@@ -2743,10 +2745,10 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
     this->liveRoots->erase(root);
 
-    const TSizeOf size = rootData->size;
-    if (size) {
+    const TSizeRange size = rootData->size;
+    if (IR::Int0 < size.hi) {
         // look for inner objects
-        const TMemChunk chunk(0, size);
+        const TMemChunk chunk(0, size.hi);
         TObjIdSet allObjs;
         if (arenaLookup(&allObjs, rootData->arena, chunk, OBJ_INVALID)) {
             // destroy all inner objects
@@ -2756,7 +2758,7 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     }
 
     // wipe rootData
-    rootData->size = 0;
+    rootData->size = IR::rngFromNum(IR::Int0);
     rootData->lastKnownClt = 0;
     rootData->liveObjs.clear();
     rootData->arena.clear();

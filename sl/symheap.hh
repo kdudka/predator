@@ -149,6 +149,9 @@ typedef IR::TInt                                        TOffset;
 /// a type used for block sizes (do not set this to anything else than TOffset)
 typedef IR::TInt                                        TSizeOf;
 
+/// a type used for block size ranges (do not try to change this one either)
+typedef IR::Range                                       TSizeRange;
+
 /// a container to store offsets to
 typedef std::vector<TOffset>                            TOffList;
 
@@ -367,7 +370,7 @@ class SymHeapCore {
         TValId diffPointers(const TValId v1, const TValId v2);
 
         /// return size (in bytes) that we can safely write at the given addr
-        TSizeOf valSizeOfTarget(TValId) const;
+        TSizeRange valSizeOfTarget(TValId) const;
 
         /// return address of the given program variable
         TValId addrOfVar(CVar, bool createIfNeeded);
@@ -413,7 +416,7 @@ class SymHeapCore {
 
     public:
         /// allocate a chunk of heap of known size
-        TValId heapAlloc(const TSizeOf size);
+        TValId heapAlloc(const TSizeRange &size);
 
         /// destroy target of the given root value
         virtual void valDestroyTarget(TValId root);
