@@ -621,45 +621,35 @@ TValId integralEncoder(
     const TSizeOf size = clt->size;
     CL_BREAK_IF(isComposite(clt) || !size);
 
-    // start with the given range as a candidate for result
-    IR::Range rng(rngOrig);
-
-    // TODO: check for signedness violation
-    const bool isUnsigned = clt->is_unsigned;
-#if 0
-    if (isUnsigned && rng.lo < IR::Int0 && /* FIXME */ IR::IntMin != rng.lo) {
-        CL_WARN_MSG(loc, "possible underflow of an unsigned integer");
-        rng.lo = IR::Int0;
-        rng.hi = IR::IntMax;
-    }
-#endif
-
-    if (static_cast<TSizeOf>(sizeof(IR::TInt)) < size)
+    if (static_cast<TSizeOf>(sizeof(IR::TInt)) <= size)
         // the program being analyzed uses wider integral type than we do, there
         // is no chance to catch anything because of poor representation of ints
-        goto give_up;
+        return val;
 
-    // FIXME: following hunk is semantically invalid because of the #if 0 above
+    // start with the given range as a candidate for result
+    IR::Range rng(rngOrig);
+    const bool isUnsigned = clt->is_unsigned;
+    const char *const sig = (isUnsigned) ? "an unsigned" : "a signed";
+
+    // compute the count of bits we have available to store the integral value
+    const TSizeOf limitWidth = (size << 3) /* sign bit */ - !isUnsigned;
+
     if (IR::IntMin != rng.lo && rng.lo < IR::Int0) {
-        // we expect a signed target object at this point
-        const IR::TInt loLimit = IR::Int1 << ((size << 3) /* sign bit */ - 1);
+        const IR::TInt loLimit = IR::Int1 << limitWidth;
         if (rng.lo < -loLimit) {
-            CL_WARN_MSG(loc, "possible underflow of a signed integer");
+            CL_WARN_MSG(loc, "possible underflow of " << sig << " integer");
             rng = IR::FullRange;
         }
     }
 
     if (IR::IntMax != rng.hi) {
-        const TSizeOf hiLimitWidth = (size << 3) /* sign bit */ - !isUnsigned;
-        const IR::TInt hiLimit = IR::Int1 << hiLimitWidth;
+        const IR::TInt hiLimit = IR::Int1 << limitWidth;
         if (hiLimit <= rng.hi) {
-            const char *const sig = (isUnsigned) ? "an unsigned" : "a signed";
             CL_WARN_MSG(loc, "possible overflow of " << sig << " integer");
             rng = IR::FullRange;
         }
     }
 
-give_up:
     if (rngOrig == rng)
         // do not create a fresh value to prevent unnecessary information lost
         return val;
