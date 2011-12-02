@@ -403,7 +403,7 @@ struct InternalCustomValue: public ReferableValue {
 
 struct RootValue: public AnchorValue {
     CVar                            cVar;
-    IR::Range                       size;
+    TSizeRange                      size;
     TLiveObjs                       liveObjs;
     TObjIdSet                       usedByGl;
     TArena                          arena;

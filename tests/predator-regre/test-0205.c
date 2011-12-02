@@ -7,7 +7,7 @@ int main()
     size_t size = ___sl_get_nondet_int();
     if (size < 0x10)
         abort();
-    if (0x1000 < 0x10)
+    if (0x1000 < size)
         abort();
 
     void *ptr = malloc(size);
