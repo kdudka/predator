@@ -181,7 +181,21 @@ inline void learn(FAE& fae, BoxMan& boxMan) {
 	std::set<size_t> forbidden;
 
 	computeForbiddenSet(forbidden, fae);
+/*
+	Abstraction abstraction(fae);
 
+	for (size_t i = 0; i < fae.getRootCount(); ++i) {
+
+		if (!fae.roots[i])
+			continue;
+
+		if (i == VirtualMachine(fae).varGet(ABP_INDEX).d_ref.root)
+			continue;
+
+		abstraction.heightAbstraction(i, 1, SmartTMatchF());
+
+	}
+*/
 	fold(fae, boxMan, forbidden, false);
 
 }
