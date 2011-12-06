@@ -435,7 +435,7 @@ void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn) {
             break;
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("unhandled insn in handleInsnNonterm()");
     }
 }
 

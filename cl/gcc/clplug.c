@@ -690,8 +690,8 @@ static int field_lookup(tree op, tree field)
             return i;
 
     // not found
-    CL_TRAP;
-    return -1;
+    CL_BREAK_IF("field_lookup() has failed");
+    return 0;
 }
 
 static int bitfield_lookup(tree op)

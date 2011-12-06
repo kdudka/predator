@@ -41,3 +41,39 @@ target_link_libraries(fwnull ${CL_LIB})
 
 # make install
 install(TARGETS fwnull DESTINATION lib)
+
+set(cost 1048576)
+set(testdir "${fwnull_SOURCE_DIR}/../tests/fwnull-regre")
+
+macro(test_fwnull tname)
+    set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_HOST}")
+
+    # we use the following flag to avoid differences on 32bit vs 64bit archs
+    # in the error output, which is checked for exact match
+    set(cmd "${cmd} -m32")
+
+    set(cmd "${cmd} -S ${testdir}/${tname}.c")
+    set(cmd "${cmd} -fplugin=${fwnull_BINARY_DIR}/libfwnull.so")
+    set(cmd "${cmd} -fplugin-arg-libfwnull-preserve-ec")
+    set(cmd "${cmd} 2>&1")
+
+    # filter out messages that are unrelated to our plug-in
+    set(cmd "${cmd} | grep -E '\\\\[-fplugin=libfwnull.so\\\\]\$|compiler error|undefined symbol'")
+    set(cmd "${cmd} | sed 's/ \\\\[-fplugin=libfwnull.so\\\\]\$//'")
+
+    # filter out NOTE messages with internal location
+    set(cmd "${cmd} | grep -v 'note: .*\\\\[internal location\\\\]'")
+
+    # drop absolute paths
+    set(cmd "${cmd} | sed 's|^[^:]*/||'")
+
+    # ... and finally diff with the expected output
+    set(cmd "${cmd} | diff -up ${testdir}/${tname}.err -")
+    set(test_name "${tname}.c")
+    add_test(${test_name} sh -c "${cmd}")
+
+    SET_TESTS_PROPERTIES(${test_name} PROPERTIES COST ${cost})
+    MATH(EXPR cost "${cost} - 1")
+endmacro(test_fwnull)
+
+test_fwnull(fwnull-0001)
