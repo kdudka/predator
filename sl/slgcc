@@ -135,5 +135,5 @@ if test x1 = "x$SL_PLOT"; then
     make $MAKEOPTS -s -f "$topdir/tests/predator-regre/Makefile.in" \
         TIMEOUT="timeout 2" || exit $?
     printf "done\n"
-    "$SVG_VIEWER" *.svg &
+    "$SVG_VIEWER" *.svg 2>/dev/null &
 fi
