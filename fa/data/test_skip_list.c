@@ -77,8 +77,6 @@ void sl_random_insert(struct sl *sl)
     new->n1 = a1->n1;
     a1->n1 = new;
 
-    __fix();
-
     // choose whether to insert at level 2
     if (__nondet()) {
         new->n2 = a2->n2;

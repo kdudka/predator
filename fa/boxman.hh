@@ -196,17 +196,18 @@ public:
 		for (auto& cutpoint : signature) {
 
 			assert(cutpoint.root < index.size());
+			assert(cutpoint.fwdSelectors.size());
 
 			result.push_back(cutpoint);
 			result.back().root = index[cutpoint.root];
 
 			if (cutpoint.root == aux)
-				auxSelector = cutpoint.forwardSelector;
+				auxSelector = *cutpoint.fwdSelectors.begin();
 
 			if (cutpoint.root != root) {
 
 				selectors.push_back(
-					std::make_pair(cutpoint.forwardSelector, cutpoint.backwardSelector)
+					std::make_pair(*cutpoint.fwdSelectors.begin(), cutpoint.bwdSelector)
 				);
 
 			}
@@ -306,8 +307,6 @@ public:
 
 			box->name = this->getBoxName();
 			box->initialize();
-
-//			std::cerr << "adding box " << *(AbstractBox*)box << ':' << std::endl << *box;
 
 		}
 

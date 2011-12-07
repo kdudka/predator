@@ -49,19 +49,27 @@ public:
 
 		size_t root; // cutpoint number
 		bool joint; // multiple times
-		size_t forwardSelector; // lowest selector which reaches the given cutpoint
-		size_t backwardSelector; // lowest selector of 'root' from which the state can be reached in the opposite direction
+//		size_t forwardSelector; // lowest selector which reaches the given cutpoint
+		std::set<size_t> fwdSelectors; // a set of selectors which reach the given cutpoint
+		size_t bwdSelector; // lowest selector of 'root' from which the state can be reached in the opposite direction
 		std::set<size_t> defines; // set of selectors of the cutpoint hidden in the subtree (includes backwardSelector if exists)
 
-		CutpointInfo(size_t root = 0) : root(root), joint(false), forwardSelector((size_t)(-1)),
-			backwardSelector((size_t)(-1)) {}
+		CutpointInfo(size_t root = 0) : root(root), joint(false), fwdSelectors(),
+			bwdSelector((size_t)(-1)) {
+
+			this->fwdSelectors.insert((size_t)(-1));
+
+		}
 
 		bool operator==(const CutpointInfo& rhs) const {
 
+			assert(!this->fwdSelectors.empty());
+			assert(!rhs.fwdSelectors.empty());
+
 			return this->root == rhs.root &&
 				this->joint == rhs.joint &&
-				this->backwardSelector == rhs.backwardSelector &&
-				this->forwardSelector == rhs.forwardSelector &&
+				*this->fwdSelectors.begin() == *rhs.fwdSelectors.begin() &&
+				this->bwdSelector == rhs.bwdSelector &&
 				this->defines == rhs.defines;
 
 		}
@@ -70,19 +78,21 @@ public:
 
 			return this->root == rhs.root &&
 				this->joint == rhs.joint &&
-				this->backwardSelector == rhs.backwardSelector &&
-				this->forwardSelector == rhs.forwardSelector &&
+//				this->fwdSelectors == rhs.fwdSelectors &&
+				this->bwdSelector == rhs.bwdSelector &&
 				this->defines == rhs.defines;
 
 		}
 
 		friend size_t hash_value(const CutpointInfo& info) {
 
+			assert(!info.fwdSelectors.empty());
+
 			size_t seed = 0;
 			boost::hash_combine(seed, info.root);
 			boost::hash_combine(seed, info.joint);
-			boost::hash_combine(seed, info.forwardSelector);
-			boost::hash_combine(seed, info.backwardSelector);
+			boost::hash_combine(seed, *info.fwdSelectors.begin());
+			boost::hash_combine(seed, info.bwdSelector);
 			boost::hash_combine(seed, info.defines);
 			return seed;
 
@@ -93,26 +103,30 @@ public:
 		 */
 		friend std::ostream& operator<<(std::ostream& os, const CutpointInfo& info) {
 
-			os << info.root << '(' << info.joint << ',';
+			os << info.root << ((info.joint)?("+"):("")) << "({";
 
-			if (info.forwardSelector == (size_t)(-1))
+			for (auto& s : info.fwdSelectors) {
+
+				if (s == (size_t)(-1))
+					continue;
+
+				os << ' ' << s;
+
+			}
+
+			os << " }, ";
+
+			if (info.bwdSelector == (size_t)(-1))
 				os << '-';
 			else
-				os << info.forwardSelector;
+				os << info.bwdSelector;
 
-			os << ',';
-
-			if (info.backwardSelector == (size_t)(-1))
-				os << '-';
-			else
-				os << info.backwardSelector;
-
-			os << ',';
+			os << ", {";
 
 			for (auto& s : info.defines)
 				os << " +" << s;
 
-			return os << ')';
+			return os << " })";
 
 		}
 
@@ -167,15 +181,15 @@ public:
 
 		bool valid;
 		CutpointSignature signature;
-		std::map<size_t, size_t> backwardMap;
+		std::map<size_t, size_t> bwdMap;
 
-		RootInfo() : valid(), signature(), backwardMap() {}
+		RootInfo() : valid(), signature(), bwdMap() {}
 
 		size_t backwardLookup(size_t selector) const {
 
-			auto iter = this->backwardMap.find(selector);
+			auto iter = this->bwdMap.find(selector);
 
-			assert(iter != this->backwardMap.end());
+			assert(iter != this->bwdMap.end());
 
 			return iter->second;
 
@@ -188,7 +202,7 @@ public:
 
 			os << info.signature;
 
-			for (auto& p : info.backwardMap)
+			for (auto& p : info.bwdMap)
 				os << '|' << p.first << ':' << p.second;
 
 			return os;
@@ -235,9 +249,9 @@ public:
 
 			if (cutpoint.root == target) {
 
-				assert(cutpoint.forwardSelector != (size_t)(-1));
+				assert(!cutpoint.fwdSelectors.empty());
 
-				return cutpoint.forwardSelector;
+				return *cutpoint.fwdSelectors.begin();
 
 			}
 
@@ -266,13 +280,13 @@ public:
 		return std::set_intersection(s1.begin(), s1.end(), s2.begin(), s2.end(), v.begin()) == v.begin();
 
 	}
-/*
+
 	static bool isSubset(const std::set<size_t>& s1, const std::set<size_t>& s2) {
 
 		return std::includes(s1.begin(), s1.end(), s2.begin(), s2.end());
 
 	}
-*/
+
 	static void normalizeSignature(CutpointSignature& signature) {
 
 		std::unordered_map<size_t, CutpointInfo*> m;
@@ -292,12 +306,12 @@ public:
 				assert(p.first->second);
 
 				p.first->second->joint = true;
+				p.first->second->fwdSelectors.insert(
+					signature[i].fwdSelectors.begin(), signature[i].fwdSelectors.end()
+				);
 
-				if (p.first->second->forwardSelector > signature[i].forwardSelector)
-					p.first->second->forwardSelector = signature[i].forwardSelector;
-
-				if (p.first->second->backwardSelector > signature[i].backwardSelector)
-					p.first->second->backwardSelector = signature[i].backwardSelector;
+				if (p.first->second->bwdSelector > signature[i].bwdSelector)
+					p.first->second->bwdSelector = signature[i].bwdSelector;
 
 				assert(
 					ConnectionGraph::areDisjoint(p.first->second->defines, signature[i].defines)
@@ -321,7 +335,23 @@ public:
 		assert((stateMap.find(state) == stateMap.end()) || (stateMap[state] == v));
 
 		stateMap.insert(std::make_pair(state, v));
+/*
+ 		auto p = stateMap.insert(std::make_pair(state, v));
 
+		if (!p.second) {
+
+			assert(v.size() == p.first->second.size());
+
+			for (size_t i = 0; i < v.size(); ++i) {
+
+				p.first->second[i].fwdSelectors.insert(
+					v[i].fwdSelectors.begin(), v[i].fwdSelectors.end()
+				);
+
+			}
+
+		}
+*/
 	}
 
 	static void processStateSignature(CutpointSignature& result, StructuralBox* box, size_t input,
@@ -335,12 +365,14 @@ public:
 				return;
 
 			assert(signature.size() == 1);
+			assert(signature[0].fwdSelectors.size() == 1);
+			assert(*signature[0].fwdSelectors.begin() == (size_t)(-1));
 
 			result.push_back(signature[0]);
-			result.back().forwardSelector = box->selectorToInput(input);
+			result.back().fwdSelectors.insert(box->selectorToInput(input));
 
 			if (selector != (size_t)(-1))
-				result.back().backwardSelector = selector;
+				result.back().bwdSelector = selector;
 
 			result.back().defines.insert(
 				box->inputCoverage(input).begin(), box->inputCoverage(input).end()
@@ -353,10 +385,11 @@ public:
 		for (auto& cutpoint : signature) {
 
 			result.push_back(cutpoint);
-			result.back().forwardSelector = box->selectorToInput(input);
+			result.back().fwdSelectors.clear();
+			result.back().fwdSelectors.insert(box->selectorToInput(input));
 
 			if (selector == (size_t)(-1))
-				result.back().backwardSelector = (size_t)(-1);
+				result.back().bwdSelector = (size_t)(-1);
 
 		}
 
@@ -527,11 +560,11 @@ public:
 
 			assert(cutpoint.root < this->data.size());
 
-			if (cutpoint.backwardSelector != (size_t)(-1)) {
+			if (cutpoint.bwdSelector != (size_t)(-1)) {
 
-				assert(this->data[cutpoint.root].backwardLookup(cutpoint.backwardSelector) == root);
+				assert(this->data[cutpoint.root].backwardLookup(cutpoint.bwdSelector) == root);
 
-				this->data[cutpoint.root].backwardMap.erase(cutpoint.backwardSelector);
+				this->data[cutpoint.root].bwdMap.erase(cutpoint.bwdSelector);
 
 			}
 
@@ -550,17 +583,15 @@ public:
 
 			assert(cutpoint.root < this->data.size());
 
-			if (cutpoint.backwardSelector != (size_t)(-1)) {
+			if (cutpoint.bwdSelector != (size_t)(-1)) {
 
 				assert(
-					this->data[cutpoint.root].backwardMap.find(
-						cutpoint.backwardSelector
-					) == this->data[cutpoint.root].backwardMap.end()
+					this->data[cutpoint.root].bwdMap.find(
+						cutpoint.bwdSelector
+					) == this->data[cutpoint.root].bwdMap.end()
 				);
 
-				this->data[cutpoint.root].backwardMap.insert(
-					std::make_pair(cutpoint.backwardSelector, root)
-				);
+				this->data[cutpoint.root].bwdMap.insert(std::make_pair(cutpoint.bwdSelector, root));
 
 			}
 
@@ -639,7 +670,7 @@ public:
 
 			ConnectionGraph::renameSignature(root.signature, index);
 
-			for (auto& selectorRootPair : root.backwardMap) {
+			for (auto& selectorRootPair : root.bwdMap) {
 
 				assert(selectorRootPair.second < index.size());
 
@@ -722,27 +753,27 @@ public:
 
 			}
 
-			if (cutpoint.backwardSelector == (size_t)(-1)) {
+			if (cutpoint.bwdSelector == (size_t)(-1)) {
 
 				// erase backward selector
 				for (auto& tmp : srcSignature) {
 
 					signature.push_back(tmp);
-					signature.back().forwardSelector = cutpoint.forwardSelector;
+					signature.back().fwdSelectors = cutpoint.fwdSelectors;
 
-					if (tmp.backwardSelector == (size_t)(-1))
+					if (tmp.bwdSelector == (size_t)(-1))
 						continue;
 
-					signature.back().backwardSelector = (size_t)(-1);
+					signature.back().bwdSelector = (size_t)(-1);
 
 					assert(tmp.root < this->data.size());
 
-					auto iter = this->data[tmp.root].backwardMap.find(tmp.backwardSelector);
+					auto iter = this->data[tmp.root].bwdMap.find(tmp.bwdSelector);
 
-					assert(iter != this->data[tmp.root].backwardMap.end());
+					assert(iter != this->data[tmp.root].bwdMap.end());
 					assert(iter->second == src);
 
-					this->data[tmp.root].backwardMap.erase(iter);
+					this->data[tmp.root].bwdMap.erase(iter);
 
 				}
 
@@ -752,28 +783,28 @@ public:
 				for (auto& tmp : srcSignature) {
 
 					signature.push_back(tmp);
-					signature.back().forwardSelector = cutpoint.forwardSelector;
+					signature.back().fwdSelectors = cutpoint.fwdSelectors;
 
-					if (tmp.backwardSelector == (size_t)(-1))
+					if (tmp.bwdSelector == (size_t)(-1))
 						continue;
 
 					assert(tmp.root < this->data.size());
 
-					auto iter = this->data[tmp.root].backwardMap.find(tmp.backwardSelector);
+					auto iter = this->data[tmp.root].bwdMap.find(tmp.bwdSelector);
 
-					assert(iter != this->data[tmp.root].backwardMap.end());
+					assert(iter != this->data[tmp.root].bwdMap.end());
 					assert(iter->second == src);
 
-					auto i = this->data[tmp.root].backwardMap.begin();
+					auto i = this->data[tmp.root].bwdMap.begin();
 
-					for (; i != this->data[tmp.root].backwardMap.end(); ++i) {
+					for (; i != this->data[tmp.root].bwdMap.end(); ++i) {
 
 						if (i->second == dst)
 							break;
 
 					}
 
-					if (i == this->data[tmp.root].backwardMap.end()) {
+					if (i == this->data[tmp.root].bwdMap.end()) {
 
 						iter->second = dst;
 
@@ -783,13 +814,13 @@ public:
 
 					if (i->first < iter->first) {
 
-						this->data[tmp.root].backwardMap.erase(iter);
+						this->data[tmp.root].bwdMap.erase(iter);
 
 						continue;
 
 					}
 
-					this->data[tmp.root].backwardMap.erase(i);
+					this->data[tmp.root].bwdMap.erase(i);
 
 					iter->second = dst;
 
@@ -814,12 +845,12 @@ public:
 		if (mask[c])
 			return c;
 
-		if (this->data[c].backwardMap.empty())
+		if (this->data[c].bwdMap.empty())
 			return c;
 
 		mask[c] = true;
 
-		for (auto& selectorCutpointPair : this->data[c].backwardMap) {
+		for (auto& selectorCutpointPair : this->data[c].bwdMap) {
 
 			assert(selectorCutpointPair.second < visited.size());
 
@@ -857,7 +888,7 @@ public:
 
 		}
 
-		for (auto& selectorCutpointPair : this->data[c].backwardMap) {
+		for (auto& selectorCutpointPair : this->data[c].bwdMap) {
 
 			if (visited[selectorCutpointPair.second])
 				continue;
@@ -891,7 +922,7 @@ public:
 		for (auto& cutpoint : this->data[c].signature)
 			this->visit(cutpoint.root, visited);
 
-		for (auto& selectorCutpointPair : this->data[c].backwardMap) {
+		for (auto& selectorCutpointPair : this->data[c].bwdMap) {
 
 			if (visited[selectorCutpointPair.second])
 				continue;
