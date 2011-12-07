@@ -1064,7 +1064,7 @@ void SymExecCore::execFree(TValId val) {
 void SymExecCore::execHeapAlloc(
         SymState                        &dst,
         const CodeStorage::Insn         &insn,
-        const TSizeOf                   size,
+        const TSizeRange                size,
         const bool                      nullified)
 {
     // resolve lhs
@@ -1073,7 +1073,7 @@ void SymExecCore::execHeapAlloc(
         // error alredy emitted
         return;
 
-    if (!size) {
+    if (!size.hi) {
         CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
 malloc/calloc is implementation-defined");
         CL_NOTE_MSG(lw_, "assuming NULL as the result");
@@ -1099,16 +1099,16 @@ malloc/calloc is implementation-defined");
     }
 
     // now create a heap object
-    const TValId val = sh_.heapAlloc(IR::rngFromNum(size));
+    const TValId val = sh_.heapAlloc(size);
 
     if (nullified) {
         // initialize to zero as we are doing calloc()
-        sh_.writeUniformBlock(val, VAL_NULL, size);
+        sh_.writeUniformBlock(val, VAL_NULL, size.lo);
     }
     else if (ep_.trackUninit) {
         // uninitialized heap block
         const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
-        sh_.writeUniformBlock(val, tplValue, size);
+        sh_.writeUniformBlock(val, tplValue, size.lo);
     }
 
     // store the result of malloc

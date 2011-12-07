@@ -205,7 +205,7 @@ class SymExecCore: public SymProc {
         bool exec(SymState &dst, const CodeStorage::Insn &insn);
 
         void execHeapAlloc(SymState &dst, const CodeStorage::Insn &,
-                           const TSizeOf size, const bool nullified);
+                           const TSizeRange size, const bool nullified);
 
         void execFree(TValId val);
 

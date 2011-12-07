@@ -103,7 +103,7 @@ void insertCoreHeap(
 }
 
 bool resolveCallocSize(
-        TSizeOf                                     *pDst,
+        TSizeRange                                  *pDst,
         SymExecCore                                 &core,
         const CodeStorage::TOperandList             &opList)
 {
@@ -111,15 +111,15 @@ bool resolveCallocSize(
     const struct cl_loc *lw = core.lw();
 
     const TValId valNelem = core.valFromOperand(opList[/* nelem */ 2]);
-    IR::TInt nelem;
-    if (!numFromVal(&nelem, sh, valNelem)) {
+    IR::Range nelem;
+    if (!rngFromVal(&nelem, sh, valNelem) || nelem.lo < IR::Int0) {
         CL_ERROR_MSG(lw, "'nelem' arg of calloc() is not a known integer");
         return false;
     }
 
     const TValId valElsize = core.valFromOperand(opList[/* elsize */ 3]);
-    IR::TInt elsize;
-    if (!numFromVal(&elsize, sh, valElsize)) {
+    IR::Range elsize;
+    if (!rngFromVal(&elsize, sh, valElsize) || elsize.lo < IR::Int0) {
         CL_ERROR_MSG(lw, "'elsize' arg of calloc() is not a known integer");
         return false;
     }
@@ -283,14 +283,18 @@ bool handleCalloc(
         return false;
     }
 
-    TSizeOf size;
+    TSizeRange size;
     if (!resolveCallocSize(&size, core, opList)) {
         core.printBackTrace(ML_ERROR);
         return true;
     }
 
     const struct cl_loc *lw = &insn.loc;
-    CL_DEBUG_MSG(lw, "executing calloc(/* total size */ " << size << ")");
+    if (isSingular(size))
+        CL_DEBUG_MSG(lw, "executing calloc(/* total size */ "<< size.lo << ")");
+    else
+        CL_DEBUG_MSG(lw, "executing calloc(/* size given as int range */)");
+
     core.execHeapAlloc(dst, insn, size, /* nullified */ true);
     return true;
 }
@@ -335,15 +339,15 @@ bool handleKzalloc(
 
     // amount of allocated memory must be known (TODO: relax this?)
     const TValId valSize = core.valFromOperand(opList[/* size */ 2]);
-    IR::TInt size;
-    if (!numFromVal(&size, core.sh(), valSize)) {
+    IR::Range size;
+    if (!rngFromVal(&size, core.sh(), valSize)) {
         CL_ERROR_MSG(lw, "size arg of " << name << "() is not a known integer");
         core.printBackTrace(ML_ERROR);
         return true;
     }
 
     CL_DEBUG("FIXME: flags given to " << name << "() are ignored for now");
-    CL_DEBUG_MSG(lw, "executing calloc(/* total size */ " << size << ")");
+    CL_DEBUG_MSG(lw, "modelling call of kzalloc() as call of calloc()");
     core.execHeapAlloc(dst, insn, size, /* nullified */ true);
     return true;
 }
@@ -363,14 +367,18 @@ bool handleMalloc(
 
     // amount of allocated memory must be known (TODO: relax this?)
     const TValId valSize = core.valFromOperand(opList[/* size */ 2]);
-    IR::TInt size;
-    if (!numFromVal(&size, core.sh(), valSize)) {
+    IR::Range size;
+    if (!rngFromVal(&size, core.sh(), valSize) || size.lo < IR::Int0) {
         CL_ERROR_MSG(lw, "size arg of malloc() is not a known integer");
         core.printBackTrace(ML_ERROR);
         return true;
     }
 
-    CL_DEBUG_MSG(lw, "executing malloc(" << size << ")");
+    if (isSingular(size))
+        CL_DEBUG_MSG(lw, "executing malloc(" << size.lo << ")");
+    else
+        CL_DEBUG_MSG(lw, "executing malloc(/* size given as int range */)");
+
     core.execHeapAlloc(dst, insn, size, /* nullified */ false);
     return true;
 }
