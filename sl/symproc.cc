@@ -551,10 +551,6 @@ void digRootTypeInfo(SymHeap &sh, const ObjHandle &lhs, TValId rhs) {
         return;
 
     const TSizeRange rootSizeRange = sh.valSizeOfTarget(rhs);
-    if (!isSingular(rootSizeRange))
-        // TODO: add support for structured object of unknown size?
-        return;
-
     const TSizeOf rootSize = rootSizeRange.lo;
     CL_BREAK_IF(rootSize <= 0 && isOnHeap(code));
 

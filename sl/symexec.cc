@@ -329,7 +329,7 @@ void SymExecEngine::updateStateInBranch(
 
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
     if (!reflectCmpResult(sh, code, branch, v1, v2))
-        CL_DEBUG_MSG(lw_, "unable to reflect comparison result");
+        CL_DEBUG_MSG(lw_, "XXX unable to reflect comparison result");
 
     LDP_PLOT(nondetCond, sh);
 

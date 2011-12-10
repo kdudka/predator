@@ -1,0 +1,1 @@
+../nspr-arena-32bit/test-0418-var-size-below.c
