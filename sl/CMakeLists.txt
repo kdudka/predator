@@ -118,7 +118,7 @@ macro(test_predator_smoke label tool arg1 arg2 arg3)
     foreach (num ${tests})
         set(test_name "${label}___example-${num}")
         add_test(${test_name} ${tool} ${arg1} ${arg2} ${arg3}
-            -c "${testdir}/test-${num}.c"
+            -S "${testdir}/test-${num}.c"
             -I../include/predator-builtins -DPREDATOR
             -fplugin=${sl_BINARY_DIR}/libsl.so
             -fplugin-arg-libsl-args=noplot
@@ -139,7 +139,7 @@ macro(test_predator_regre name_suff ext arg1)
         # in the error output, which is checked for exact match
         set(cmd "${cmd} -m32")
 
-        set(cmd "${cmd} -c ${testdir}/test-${num}.c")
+        set(cmd "${cmd} -S ${testdir}/test-${num}.c")
         set(cmd "${cmd} -I../include/predator-builtins -DPREDATOR")
         set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
         set(cmd "${cmd} -fplugin-arg-libsl-preserve-ec")

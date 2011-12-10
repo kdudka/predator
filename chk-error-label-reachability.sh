@@ -109,6 +109,6 @@ parse_gcc_output() {
 "$GCC_HOST"                                             \
     -fplugin="${SL_PLUG}"                               \
     -fplugin-arg-libsl-args="error_label:ERROR"         \
-    -o /dev/null -O0 -c "$@" 2>&1                       \
+    -o /dev/null -O0 -S "$@" 2>&1                       \
     | tee /dev/fd/2                                     \
     | parse_gcc_output
