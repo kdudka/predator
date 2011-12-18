@@ -2888,8 +2888,16 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     moveKnownValueToLeft(*this, valA, valB);
 
     // check for known bool values
+    // NOTE: this is only an optimization to avoid calling rngFromVal() twice
     if (VAL_TRUE == valA)
         return (VAL_FALSE == valB);
+
+    IR::Range rng1, rng2;
+    if (rngFromVal(&rng1, *this, valA) && rngFromVal(&rng2, *this, valB)) {
+        // both values are integral ranges (
+        bool result;
+        return (compareIntRanges(&result, CL_BINOP_NE, rng1, rng2) && result);
+    }
 
     // we presume (0 <= valA) and (0 < valB) at this point
     CL_BREAK_IF(d->ents.outOfRange(valB));
@@ -3225,23 +3233,32 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
 
     while (0 < val && insertOnce(haveSeen, val)) {
         switch (code) {
-            case VT_ON_STACK:
-            case VT_ON_HEAP:
-            case VT_STATIC:
-            case VT_DELETED:
-            case VT_LOST:
-            case VT_CUSTOM:
-                // concrete object reached --> prove done
-                return (val != ref);
-
-            case VT_RANGE:
-                // TODO: improve the reasoning about VT_RANGE values
-                return (VAL_NULL == ref);
-
             case VT_ABSTRACT:
                 break;
 
-            default:
+            case VT_ON_STACK:
+            case VT_ON_HEAP:
+            case VT_STATIC:
+                // concrete object reached --> prove done
+                return (val != ref);
+
+            case VT_INVALID:
+            case VT_CUSTOM:
+                return SymHeapCore::proveNeq(ref, val);
+
+            case VT_RANGE:
+                // TODO: improve the reasoning about VT_RANGE values
+                // fall through!
+
+            case VT_DELETED:
+            case VT_LOST:
+                return (VAL_NULL == ref);
+
+            case VT_COMPOSITE:
+                CL_BREAK_IF("SymHeap::proveNeq() sees VT_COMPOSITE");
+                // fall through!
+
+            case VT_UNKNOWN:
                 // we can't prove much for unknown values
                 return false;
         }
