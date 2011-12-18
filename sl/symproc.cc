@@ -1158,87 +1158,6 @@ bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code) {
     }
 }
 
-bool compareIntRanges(
-        bool                        *pDst,
-        const enum cl_binop_e       code,
-        const IR::Range             &range1,
-        const IR::Range             &range2)
-{
-    CmpOpTraits ct;
-    if (!describeCmpOp(&ct, code))
-        return false;
-
-    if (isAligned(range1) || isAligned(range2)) {
-        CL_DEBUG("compareIntRanges() does not support alignment yet");
-        return false;
-    }
-
-    // check for interval overlapping (strict)
-    const bool ltr = (range1.hi < range2.lo);
-    const bool rtl = (range2.hi < range1.lo);
-
-    if (ct.preserveEq && ct.preserveNeq) {
-        // either == or !=
-
-        if (ltr || rtl) {
-            // no overlaps on the given intervals
-            *pDst = ct.negative;
-            return true;
-        }
-
-        if (isSingular(range1) && isSingular(range2)) {
-            // we got two integral constants and both are equal
-            CL_BREAK_IF(range1.lo != range2.hi);
-            *pDst = !ct.negative;
-            return true;
-        }
-
-        // we got something ambiguous
-        return false;
-    }
-
-    if (ct.negative) {
-        // either < or >
-
-        if ((ltr     && ct.leftToRight) || (rtl     && ct.rightToLeft)) {
-            *pDst = true;
-            return true;
-        }
-    }
-    else {
-        // either <= or >=
-
-        if ((rtl     && ct.leftToRight) || (ltr     && ct.rightToLeft)) {
-            *pDst = false;
-            return true;
-        }
-    }
-
-    // check for interval overlapping (weak)
-    const bool ltrWeak = (range1.hi <= range2.lo);
-    const bool rtlWeak = (range2.hi <= range1.lo);
-
-    if (ct.negative) {
-        // either < or >
-
-        if ((rtlWeak && ct.leftToRight) || (ltrWeak && ct.rightToLeft)) {
-            *pDst = false;
-            return true;
-        }
-    }
-    else {
-        // either <= or >=
-
-        if ((ltrWeak && ct.leftToRight) || (rtlWeak && ct.rightToLeft)) {
-            *pDst = true;
-            return true;
-        }
-    }
-
-    // we got something ambiguous
-    return false;
-}
-
 TValId comparePointers(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
@@ -1266,7 +1185,6 @@ TValId comparePointers(
 TValId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
-        const TObjType              /* clt */,
         const TValId                v1,
         const TValId                v2)
 {
@@ -1742,7 +1660,7 @@ struct OpHandler</* unary */ 1> {
                 // fall through!
 
             case CL_UNOP_TRUTH_NOT:
-                return compareValues(sh, CL_BINOP_EQ, clt[0], VAL_FALSE, val);
+                return compareValues(sh, CL_BINOP_EQ, VAL_FALSE, val);
 
             case CL_UNOP_MINUS:
                 return handleIntegralOp(sh, rhs[0], code);
@@ -1769,9 +1687,11 @@ struct OpHandler</* binary */ 2> {
             const TValId            rhs[2],
             const TObjType          clt[2 + /* dst type */ 1])
     {
-        CL_BREAK_IF(!clt[0] || !clt[1] || !clt[2]);
         SymHeap &sh = proc.sh();
         TValId vRes;
+
+        CL_BREAK_IF(!clt[0] || !clt[1] || !clt[2]);
+        (void) clt;
 
         const enum cl_binop_e code = static_cast<enum cl_binop_e>(iCode);
         switch (code) {
@@ -1782,7 +1702,7 @@ struct OpHandler</* binary */ 2> {
             case CL_BINOP_LE:
             case CL_BINOP_GE:
                 CL_BREAK_IF(clt[/* src1 */ 0]->code != clt[/* src2 */ 1]->code);
-                return compareValues(sh, code, clt[0], rhs[0], rhs[1]);
+                return compareValues(sh, code, rhs[0], rhs[1]);
 
             case CL_BINOP_MULT:
                 if (VAL_NULL == rhs[0] || VAL_NULL == rhs[1])

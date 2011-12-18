@@ -66,6 +66,12 @@ bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
 /// extract an integral range from an unwrapped CV_INT/CV_INT_RANGE custom value
 const IR::Range& rngFromCustom(const CustomValue &);
 
+bool compareIntRanges(
+        bool                                *pDst,
+        const enum cl_binop_e               code,
+        const IR::Range                     &range1,
+        const IR::Range                     &range2);
+
 /// known to work only with TObjId/TValId
 template <class TMap>
 typename TMap::mapped_type roMapLookup(

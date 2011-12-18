@@ -20,6 +20,7 @@
 #include "config.h"
 #include "symutil.hh"
 
+#include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
 #include "symbt.hh"
@@ -134,6 +135,87 @@ const IR::Range& rngFromCustom(const CustomValue &cv) {
             CL_BREAK_IF("invalid call of rngFromVal()");
             return IR::FullRange;
     }
+}
+
+bool compareIntRanges(
+        bool                        *pDst,
+        const enum cl_binop_e       code,
+        const IR::Range             &range1,
+        const IR::Range             &range2)
+{
+    CmpOpTraits ct;
+    if (!describeCmpOp(&ct, code))
+        return false;
+
+    if (isAligned(range1) || isAligned(range2)) {
+        CL_DEBUG("compareIntRanges() does not support alignment yet");
+        return false;
+    }
+
+    // check for interval overlapping (strict)
+    const bool ltr = (range1.hi < range2.lo);
+    const bool rtl = (range2.hi < range1.lo);
+
+    if (ct.preserveEq && ct.preserveNeq) {
+        // either == or !=
+
+        if (ltr || rtl) {
+            // no overlaps on the given intervals
+            *pDst = ct.negative;
+            return true;
+        }
+
+        if (isSingular(range1) && isSingular(range2)) {
+            // we got two integral constants and both are equal
+            CL_BREAK_IF(range1.lo != range2.hi);
+            *pDst = !ct.negative;
+            return true;
+        }
+
+        // we got something ambiguous
+        return false;
+    }
+
+    if (ct.negative) {
+        // either < or >
+
+        if ((ltr     && ct.leftToRight) || (rtl     && ct.rightToLeft)) {
+            *pDst = true;
+            return true;
+        }
+    }
+    else {
+        // either <= or >=
+
+        if ((rtl     && ct.leftToRight) || (ltr     && ct.rightToLeft)) {
+            *pDst = false;
+            return true;
+        }
+    }
+
+    // check for interval overlapping (weak)
+    const bool ltrWeak = (range1.hi <= range2.lo);
+    const bool rtlWeak = (range2.hi <= range1.lo);
+
+    if (ct.negative) {
+        // either < or >
+
+        if ((rtlWeak && ct.leftToRight) || (ltrWeak && ct.rightToLeft)) {
+            *pDst = false;
+            return true;
+        }
+    }
+    else {
+        // either <= or >=
+
+        if ((ltrWeak && ct.leftToRight) || (rtlWeak && ct.rightToLeft)) {
+            *pDst = true;
+            return true;
+        }
+    }
+
+    // we got something ambiguous
+    return false;
 }
 
 void moveKnownValueToLeft(

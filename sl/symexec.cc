@@ -435,8 +435,7 @@ void SymExecEngine::execCondInsn() {
     // read operands
     const struct cl_operand &op1 = insnCmp->operands[/* src1 */ 1];
     const struct cl_operand &op2 = insnCmp->operands[/* src2 */ 2];
-    const struct cl_type *cltSrc = op1.type;
-    CL_BREAK_IF(!areComparableTypes(cltSrc, op2.type));
+    CL_BREAK_IF(!areComparableTypes(op1.type, op2.type));
 
     // a working area in case of VAL_TRUE and VAL_FALSE
     SymHeap sh(localState_[heapIdx_]);
@@ -448,7 +447,7 @@ void SymExecEngine::execCondInsn() {
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp->subCode);
     const TValId v1 = proc.valFromOperand(op1);
     const TValId v2 = proc.valFromOperand(op2);
-    const TValId val = compareValues(sh, code, cltSrc, v1, v2);
+    const TValId val = compareValues(sh, code, v1, v2);
 
     // check whether we know where to go
     switch (val) {

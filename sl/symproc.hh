@@ -50,7 +50,6 @@ bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code);
 TValId compareValues(
         SymHeap                     &sh,
         const enum cl_binop_e       code,
-        const TObjType              clt,
         const TValId                v1,
         const TValId                v2);
 
