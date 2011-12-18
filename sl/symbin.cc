@@ -533,10 +533,15 @@ bool handleNondetInt(
     SymHeap &sh = core.sh();
     CL_DEBUG_MSG(&insn.loc, "executing " << name << "()");
 
-    // set the returned value to a new unknown value
+    // resolve dst
     const struct cl_operand &opDst = opList[0];
     const ObjHandle objDst = core.objByOperand(opDst);
-    const TValId val = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
+
+    // create a fresh value expressing full range
+    const CustomValue cv(IR::FullRange);
+    const TValId val = sh.valWrapCustom(cv);
+
+    // set the value to be returned
     core.objSetValue(objDst, val);
 
     // insert the resulting heap
