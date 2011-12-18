@@ -77,3 +77,4 @@ macro(test_fwnull tname)
 endmacro(test_fwnull)
 
 test_fwnull(fwnull-0001)
+test_fwnull(libcurl-rtsp-32bit)
