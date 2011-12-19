@@ -10,10 +10,12 @@ topdir="`dirname "$self"`/.."
 # basic setup
 FA_BUILD="$topdir/fa_build"
 FA_PLUG="$FA_BUILD/libfa.so"
-GCC="/usr/bin/gcc"
+
+# filled in by CMake
+GCC=@GCC_HOST@
 
 # initial checks
-test -x "$GCC"                              || exit 1
+#test -x "$GCC"                              || exit 1
 
 # attempt to make
 make -s $MAKEOPTS -C "$topdir/fa"  || exit 1
@@ -39,7 +41,7 @@ if [ "$2" != "" ]; then
 fi
 
 # run the gcc
-valgrind --leak-check=full --trace-children=yes "$GCC" -c "$1" -o /dev/null -O0 -m32 \
+valgrind --trace-children=yes --tool=callgrind "$GCC" -c "$1" -o /dev/null -O0 -m32 \
     -DALIEN \
     -fplugin="$FA_PLUG" \
     -fplugin-arg-libfa-verbose="$FA_VERBOSE" \
