@@ -44,7 +44,12 @@ public:
 		this->backend.addFinalState(0);
 	}
 
-	void clear() { this->stateOffset = 1; }
+	void clear() {
+
+		this->backend.addFinalState(0);
+		this->stateOffset = 1;
+
+	}
 
 	size_t getStateOffset() const {
 		return this->stateOffset;
