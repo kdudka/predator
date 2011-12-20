@@ -71,7 +71,7 @@ struct Config {
 	}
 
 };
-
+/*
 struct BoxDb {
 
 	std::unordered_map<std::string, std::string> store;
@@ -94,7 +94,7 @@ struct BoxDb {
 	}
 
 };
-
+*/
 void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 
 	ssd::ColorConsole::enableForTerm(STDERR_FILENO);

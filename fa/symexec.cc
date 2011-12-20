@@ -37,6 +37,7 @@
 #include "symctx.hh"
 #include "executionmanager.hh"
 #include "fixpointinstruction.hh"
+#include "restart_request.hh"
 
 #include "symexec.hh"
 
@@ -372,7 +373,19 @@ protected:
 
 	}
 
-	void mainLoop() {
+	bool main() {
+
+	    CL_CDEBUG(2, "creating empty heap ...");
+		// create empty heap
+		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(this->taBackend, this->boxMan));
+
+	    CL_CDEBUG(2, "sheduling initial state ...");
+		// schedule initial state for processing
+		this->execMan.init(
+			std::vector<Data>(this->assembly_.regFileSize_, Data::createUndef()),
+			fae,
+			this->assembly_.code_.front()
+		);
 
 		AbstractInstruction::StateType state;
 
@@ -395,11 +408,28 @@ protected:
 
 			}
 
+			return true;
+
 		} catch (ProgramError& e) {
 
 //			Engine::printTrace(state);
 
 			throw;
+
+		} catch (RestartRequest& e) {
+
+			for (auto instr : this->assembly_.code_) {
+
+				if (instr->getType() != fi_type_e::fiFix)
+					continue;
+
+				((FixpointInstruction*)instr)->clear();
+
+			}
+
+			CL_CDEBUG(2, e.what());
+
+			return false;
 
 		}
 
@@ -407,8 +437,7 @@ protected:
 
 public:
 
-	Engine() : boxMan(),
-		compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
+	Engine() : boxMan(), compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
 		dbgFlag(false) {}
 
 	void loadTypes(const CodeStorage::Storage& stor) {
@@ -496,23 +525,9 @@ public:
 
 		assert(this->assembly_.code_.size());
 
-		this->execMan.clear();
-
-	    CL_CDEBUG(2, "creating empty heap ...");
-		// create empty heap
-		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(this->taBackend, this->boxMan));
-
-	    CL_CDEBUG(2, "sheduling initial state ...");
-		// schedule initial state for processing
-		this->execMan.init(
-			std::vector<Data>(this->assembly_.regFileSize_, Data::createUndef()),
-			fae,
-			this->assembly_.code_.front()
-		);
-
 		try {
 
-			this->mainLoop();
+			while (!this->main()) {}
 
 			this->printBoxes();
 

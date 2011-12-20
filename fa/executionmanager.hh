@@ -92,9 +92,6 @@ public:
 
 		this->queue_.clear();
 
-		this->stateRecycler_.clear();
-		this->registerRecycler_.clear();
-
 		this->statesExecuted_ = 0;
 		this->tracesEvaluated_ = 0;
 
