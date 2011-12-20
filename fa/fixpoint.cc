@@ -34,6 +34,7 @@
 #include "splitting.hh"
 #include "utils.hh"
 #include "regdef.hh"
+#include "restart_request.hh"
 
 #include "fixpoint.hh"
 
@@ -196,7 +197,12 @@ inline void learn(FAE& fae, BoxMan& boxMan) {
 
 	}
 */
+	size_t oldCount = boxMan.getBoxes().size();
+
 	fold(fae, boxMan, forbidden, false);
+
+	if (oldCount != boxMan.getBoxes().size())
+		throw RestartRequest("a new box encountered");
 
 }
 

@@ -30,7 +30,9 @@
 
 #include "fixpointinstruction.hh"
 
-class FI_abs : public FixpointInstruction {
+class FixpointBase : public FixpointInstruction {
+
+protected:
 
 	// configuration obtained in forward run
 	TA<label_type> fwdConf;
@@ -49,9 +51,17 @@ public:
 		this->fixpoint.push_back(fae);
 	}
 
-	void recompute() {
-		this->fwdConfWrapper.clear();
+	virtual void clear() {
+
+		this->fixpoint.clear();
 		this->fwdConf.clear();
+		this->fwdConfWrapper.clear();
+
+	}
+
+	void recompute() {
+		this->fwdConf.clear();
+		this->fwdConfWrapper.clear();
 		TA<label_type> ta(*this->fwdConf.backend);
 		Index<size_t> index;
 
@@ -68,18 +78,26 @@ public:
 
 public:
 
-	FI_abs(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan)
-		: FixpointInstruction(), fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, boxMan),
-		taBackend(taBackend), boxMan(boxMan) {}
+	FixpointBase(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
+		BoxMan& boxMan) : FixpointInstruction(), fwdConf(fixpointBackend),
+		fwdConfWrapper(this->fwdConf, boxMan), taBackend(taBackend), boxMan(boxMan) {}
 
-	virtual ~FI_abs() {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual ~FixpointBase() {}
 
 	virtual const TA<label_type>& getFixPoint() const {
 		return this->fwdConf;
 	}
+
+};
+
+class FI_abs : public FixpointBase {
+
+public:
+
+	FI_abs(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
+		BoxMan& boxMan) : FixpointBase(fixpointBackend, taBackend, boxMan) {}
+
+	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "abs   ";
@@ -87,56 +105,15 @@ public:
 
 };
 
-class FI_fix : public FixpointInstruction {
-
-	// configuration obtained in forward run
-	TA<label_type> fwdConf;
-
-	UFAE fwdConfWrapper;
-
-	std::vector<std::shared_ptr<const FAE>> fixpoint;
-
-	TA<label_type>::Backend& taBackend;
-
-	BoxMan& boxMan;
-
-public:
-
-	virtual void extendFixpoint(const std::shared_ptr<const FAE>& fae) {
-		this->fixpoint.push_back(fae);
-	}
-
-	void recompute() {
-		this->fwdConfWrapper.clear();
-		this->fwdConf.clear();
-		TA<label_type> ta(*this->fwdConf.backend);
-		Index<size_t> index;
-
-		for (auto fae : this->fixpoint)
-			this->fwdConfWrapper.fae2ta(ta, index, *fae);
-
-		if (!ta.getTransitions().empty()) {
-			this->fwdConfWrapper.adjust(index);
-			ta.minimized(this->fwdConf);
-		}
-//		this->fwdConfWrapper.setStateOffset(this->fixpointWrapper.getStateOffset());
-//		this->fwdConf = this->fixpoint;
-	}
+class FI_fix : public FixpointBase {
 
 public:
 
 	FI_fix(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
 		BoxMan& boxMan)
-		: FixpointInstruction(), fwdConf(fixpointBackend), fwdConfWrapper(this->fwdConf, boxMan),
-		taBackend(taBackend), boxMan(boxMan) {}
-
-	virtual ~FI_fix() {}
+		: FixpointBase(fixpointBackend, taBackend, boxMan) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
-
-	virtual const TA<label_type>& getFixPoint() const {
-		return this->fwdConf;
-	}
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "fix   ";
