@@ -156,7 +156,7 @@ inline bool fold(FAE& fae, BoxMan& boxMan, const std::set<size_t>& forbidden, bo
 
 		assert(fae.roots[order[i]]);
 
-		if (folding.discover(order[i], forbidden, conditional)) {
+		if (folding.discover(order[i], forbidden, conditional, conditional)) {
 
 			fae.updateConnectionGraph();
 

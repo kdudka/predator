@@ -279,7 +279,7 @@ protected:
 
 		auto ta = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
 
-		ta->addFinalState(state);
+		ta->addFinalStates(src.getFinalStates());
 
 		for (auto i = src.begin(); i != src.end(); ++i) {
 
