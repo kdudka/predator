@@ -1731,12 +1731,13 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
     CL_BREAK_IF(isSingular(refRange));
 
     // compute the difference between the original and desired ranges
-    const IR::TInt loShift = refRange.lo - win.lo;
-    const IR::TInt hiShift = win.hi - refRange.hi;
-    if (IR::Int0 < loShift || IR::Int0 < hiShift) {
+    if (win.lo < refRange.lo || refRange.hi < win.hi) {
         CL_BREAK_IF("attempt to use trimCustomValue() to enlarge the interval");
         return;
     }
+
+    const IR::TUInt loShift = win.lo - refRange.lo;
+    const IR::TUInt hiShift = refRange.hi - win.hi;
 
     // jump to anchor
     const TValId anchor = customData->anchor;
@@ -1756,8 +1757,8 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
 
         // shift the bounds accordingly
         IR::Range &rngDep = cvDep.data.rng;
-        rngDep.lo -= loShift;
-        rngDep.hi += hiShift;
+        rngDep.lo += loShift;
+        rngDep.hi -= hiShift;
 
         if (isSingular(rngDep))
             // CV_INT_RANGE reduced to CV_INT

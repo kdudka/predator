@@ -24,7 +24,8 @@
 
 namespace IR {
 
-typedef signed long TInt;
+typedef signed long                 TInt;
+typedef unsigned long               TUInt;
 
 extern const TInt Int0;
 extern const TInt Int1;
