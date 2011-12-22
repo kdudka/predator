@@ -1243,14 +1243,6 @@ bool trimRangesIfPossible(
         const TValId                v1,
         const TValId                v2)
 {
-    const bool ltr = cTraits.leftToRight;
-    const bool rtl = cTraits.rightToLeft;
-    CL_BREAK_IF(ltr && rtl);
-
-    if (!ltr && !rtl)
-        // not a suitable binary operator (modulo some corner cases)
-        return false;
-
     IR::Range rng1;
     if (!anyRangeFromVal(&rng1, sh, v1))
         return false;
@@ -1264,6 +1256,36 @@ bool trimRangesIfPossible(
     if (isRange1 == isRange2)
         // not a suitable value pair for trimming
         return false;
+
+    const bool ltr = cTraits.leftToRight;
+    const bool rtl = cTraits.rightToLeft;
+    CL_BREAK_IF(ltr && rtl);
+
+    // use the offsets in the appropriate order
+    IR::Range win        = (isRange1) ? rng1    : rng2;
+    const IR::TInt limit = (isRange2) ? rng1.lo : rng2.lo;
+
+    // which boundary are we going to trim?
+    bool trimLo;
+    if (ltr || rtl) {
+        const bool neg = (branch == isRange2);
+        trimLo = (neg == ltr);
+    }
+    else {
+        if (!cTraits.preserveEq || !cTraits.preserveEq)
+            // not a suitable binary operator
+            return false;
+
+        if (limit == win.lo)
+            // cut off a single integer from the lower bound
+            trimLo = true;
+        else if (limit == win.hi)
+            // cut off a single integer from the upper bound
+            trimLo = false;
+        else
+            // no luck...
+            return false;
+    }
 
     // one of the values holds a range inside
     const TValId valRange = (isRange1) ? v1 : v2;
@@ -1282,14 +1304,6 @@ bool trimRangesIfPossible(
 
     // should we include the boundary to the result?
     const bool isOpen = (branch == cTraits.negative);
-
-    // which boundary are we going to trim?
-    const bool neg = (branch == isRange2);
-    const bool trimLo = (neg == ltr);
-
-    // use the offsets in the appropriate order
-    IR::Range win        = (isRange1) ? rng1    : rng2;
-    const IR::TInt limit = (isRange2) ? rng1.lo : rng2.lo;
 
     if (trimLo)
         // shift the lower bound up
