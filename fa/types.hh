@@ -29,7 +29,7 @@
 #include <boost/unordered_map.hpp>
 
 /**
- * @file virtualmachine.hh
+ * @file types.hh
  * Data and SelData - data types for describing program data and selectors
  */
 

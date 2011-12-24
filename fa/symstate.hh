@@ -20,66 +20,136 @@
 #ifndef SYM_STATE_H
 #define SYM_STATE_H
 
+// Standard library headers
 #include <list>
 #include <vector>
 #include <set>
 #include <memory>
 #include <cassert>
 
+// Code Listener headers
 #include <cl/cl_msg.hh>
 
+// Forester headers
 #include "recycler.hh"
 #include "types.hh"
 #include "forestautext.hh"
 #include "abstractinstruction.hh"
 #include "integrity.hh"
 
+/**
+ * @file symstate.hh
+ * SymState - structure that represents symbolic state of the execution engine
+ */
+
 struct SymState {
 
-	friend std::ostream& operator<<(std::ostream& os, const AbstractInstruction::StateType& state) {
+
+	/**
+	 * @brief  The output stream operator
+	 *
+	 * The std::ostream << operator for conversion to a string.
+	 *
+	 * @param[in,out]  os     The output stream
+	 * @param[in]      state  The value to be appended to the stream
+	 *
+	 * @returns  The modified output stream
+	 */
+	friend std::ostream& operator<<(std::ostream& os,
+		const AbstractInstruction::StateType& state) {
 
 		os << "registers:";
 
-		for (auto reg : *state.first)
+		for (auto reg : *state.first) {
 			os << ' ' << reg;
+		}
 
 		os << ", heap:" << std::endl << *state.second->fae;
-		return os << "instruction (" << state.second->instr << "): " << *state.second->instr;
 
+		return os << "instruction (" << state.second->instr << "): "
+			<< *state.second->instr;
 	}
 
 	typedef std::list<AbstractInstruction::StateType> QueueType;
 
+	/// Parent symbolic state
 	SymState* parent;
+
+	/// Instruction that the symbolic state corresponds to
 	AbstractInstruction* instr;
+
+	/// Forest automaton for the symbolic state
 	std::shared_ptr<const FAE> fae;
+
+	/// Children symbolic states
 	std::set<SymState*> children;
+
+	/// @todo: write dox
 	QueueType::iterator queueTag;
+
+	/// @todo: write dox
 	void* payload;
 
+	/**
+	 * @brief  Constructor
+	 *
+	 * Default constructor
+	 */
 	SymState() {}
 
+	/**
+	 * @brief  Destructor
+	 *
+	 * Destructor
+	 */
 	~SymState() {
-		assert(this->fae == NULL);
+		// Assertions
+		assert(this->fae == nullptr);
 		assert(this->children.empty());
 	}
 
+	/**
+	 * @brief  Add a child symbolic state
+	 *
+	 * Adds a new child symbolic state
+	 *
+	 * @param[in]  child  The child symbolic state to be added
+	 */
 	void addChild(SymState* child) {
 		if (!this->children.insert(child).second)
-		{
-			assert(false);
+		{	// in case already present state was added
+			assert(false);        // fail gracefully
 		}
 	}
 
+	/**
+	 * @brief  Remove a child symbolic state
+	 *
+	 * Removes a child symbolic state
+	 *
+	 * @param[in]  child  The child symbolic state to be removed
+	 */
 	void removeChild(SymState* child) {
 		if (this->children.erase(child) != 1)
-		{
-			assert(false);
+		{	// in case the state to be removed is not present
+			assert(false);        // fail gracefully
 		}
 	}
 
-	void init(SymState* parent, AbstractInstruction* instr, const std::shared_ptr<const FAE>& fae, QueueType::iterator queueTag) {
+	/**
+	 * @brief  Initializes the symbolic state
+	 *
+	 * Method that initializes the symbolic state.
+	 *
+	 * @param[in]  parent    The parent symbolic state
+	 * @param[in]  instr     The instruction the state corresponds to
+	 * @param[in]  fae       The forest automaton for the symbolic state
+	 * @param[in]  queueTag  @todo write dox
+	 */
+	void init(SymState* parent, AbstractInstruction* instr,
+		const std::shared_ptr<const FAE>& fae, QueueType::iterator queueTag) {
 
+		// Assertions
 		assert(Integrity(*fae).check());
 
 		this->parent = parent;
@@ -88,32 +158,40 @@ struct SymState {
 		this->queueTag = queueTag;
 		if (this->parent)
 			this->parent->addChild(this);
-
 	}
 
+	/**
+	 * @brief  Recycles the symbolic state for further use
+	 *
+	 * This method recycles the symbolic state for further use. It also recycles
+	 * recursively all children of the state.
+	 *
+	 * @param[in,out]  recycler  The Recycler object
+	 */
 	void recycle(Recycler<SymState>& recycler) {
 
-		if (this->parent)
+		if (this->parent) {
 			this->parent->removeChild(this);
+		}
 
 		std::vector<SymState*> stack = { this };
 
 		while (!stack.empty()) {
+			// recycle recursively all children
 
 			SymState* state = stack.back();
 			stack.pop_back();
 
 			assert(state->fae);
-			state->fae = NULL;
+			state->fae = nullptr;
 
-			for (auto s : state->children)
+			for (auto s : state->children) {
 				stack.push_back(s);
+			}
 
 			state->children.clear();
 			recycler.recycle(state);
-
 		}
-
 	}
 
 };
