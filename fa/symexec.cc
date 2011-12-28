@@ -17,15 +17,18 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Standard library headers
 #include <sstream>
 #include <vector>
 #include <list>
 #include <set>
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-
 #include <algorithm>
 
+// Boost headers
+//#include <boost/unordered_set.hpp>
+//#include <boost/unordered_map.hpp>
+
+// Code Listener headers
 #include <cl/code_listener.h>
 #include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
@@ -33,21 +36,20 @@
 #include <cl/storage.hh>
 #include "../cl/ssd.h"
 
+// Forester headers
 #include "forestautext.hh"
 #include "symctx.hh"
 #include "executionmanager.hh"
 #include "fixpointinstruction.hh"
 #include "restart_request.hh"
-
 #include "symexec.hh"
 
 using namespace ssd;
 using std::vector;
 using std::list;
 using std::set;
-using boost::unordered_set;
-using boost::unordered_map;
-/*
+
+#if 0
 void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 	os << "operand:" << std::endl;
 	cltToStream(os, op->type, false);
@@ -58,17 +60,20 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 		acc = acc->next;
 	}
 }
-*/
+#endif
+
 class SymExec::Engine {
 
 	TA<label_type>::Backend taBackend;
 	TA<label_type>::Backend fixpointBackend;
 	BoxMan boxMan;
-/*
+
+#if 0
 	std::vector<const Box*> boxes;
 	std::vector<const Box*> basicBoxes;
 	boost::unordered_map<const Box*, std::vector<const Box*> > hierarchy;
-*/
+#endif
+
 	Compiler compiler_;
 	Compiler::Assembly assembly_;
 
@@ -77,7 +82,8 @@ class SymExec::Engine {
 	bool dbgFlag;
 
 protected:
-/*
+
+#if 0
 	bool foldBox(SymState* target, FAE& fae, size_t root, const Box* box) {
 		CL_CDEBUG("trying " << *(const AbstractBox*)box << " at " << root);
 		if (!fae.foldBox(root, box))
@@ -245,8 +251,8 @@ protected:
 			this->dbgFlag = false;
 		}
 	}
-*/
-/*
+#endif
+#if 0
 	TraceRecorder::Item* revRun(const FAE& fae) {
 
 		CL_CDEBUG("reconstructing abstract trace ...");
@@ -332,55 +338,80 @@ protected:
 		return NULL;
 
 	}
-*/
-/*
+#endif
+#if 0
 	void printQueue() const {
 		for (SymState* state : this->queue)
 			std::cerr << *state->fae;
 	}
-*/
+#endif
 
-	static void printTrace(const AbstractInstruction::StateType& state) {
-
+	/**
+	 * @brief  Prints a trace of preceding symbolic states
+	 *
+	 * This static method prints the backtrace from the given symbolic state to
+	 * the initial state.
+	 *
+	 * @param[in]  state  The state for which the backtrace is desired
+	 */
+	static void printTrace(const AbstractInstruction::StateType& state)
+	{
 		SymState* s = state.second;
 
 		std::vector<SymState*> trace;
 
 		for ( ; s; s = s->parent)
+		{	// until we reach the initial state of the execution tree
 			trace.push_back(s);
+		}
 
+		// invert the trace so that it is in the natural order
 		std::reverse(trace.begin(), trace.end());
 
 		CL_NOTE("trace:");
 
-		for (auto s : trace) {
-
+		for (auto s : trace)
+		{	// print out the trace
 			if (s->instr->insn()) {
-				CL_NOTE_MSG(&s->instr->insn()->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *s->instr->insn()));
+				CL_NOTE_MSG(&s->instr->insn()->loc,
+					SSD_INLINE_COLOR(C_LIGHT_RED, *s->instr->insn()));
 				CL_DEBUG_AT(2, std::endl << *s->fae);
 			}
 
 			CL_DEBUG_AT(2, *s->instr);
-
 		}
-
 	}
 
-	void printBoxes() const {
-
+	/**
+	 * @brief  Prints boxes
+	 *
+	 * Method that prints all boxes from the box manager.
+	 */
+	void printBoxes() const
+	{
 		for (auto& box : this->boxMan.getBoxes())
+		{
 			CL_DEBUG_AT(1, *(AbstractBox*)&box << ':' << std::endl << box);
-
+		}
 	}
 
-	bool main() {
+	/**
+	 * @brief  The main execution loop
+	 *
+	 * This method is the main execution loop for the symbolic execution. It
+	 * assumes that the microcode is already compiled, etc.
+	 */
+	bool main()
+	{
+		CL_CDEBUG(2, "creating empty heap ...");
 
-	    CL_CDEBUG(2, "creating empty heap ...");
-		// create empty heap
-		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(this->taBackend, this->boxMan));
+		// create an empty heap
+		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(
+			new FAE(this->taBackend, this->boxMan));
 
-	    CL_CDEBUG(2, "sheduling initial state ...");
-		// schedule initial state for processing
+		CL_CDEBUG(2, "sheduling initial state ...");
+
+		// schedule the initial state for processing
 		this->execMan.init(
 			std::vector<Data>(this->assembly_.regFileSize_, Data::createUndef()),
 			fae,
@@ -389,77 +420,95 @@ protected:
 
 		AbstractInstruction::StateType state;
 
-		try {
-
-			while (this->execMan.dequeueDFS(state)) {
-
-				if (state.second->instr->insn()) {
-
-					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED, state.second->instr->insn()->loc << *state.second->instr->insn()));
+		try
+		{	// expecting problems...
+			while (this->execMan.dequeueDFS(state))
+			{	// process all states in the DFS order
+				if (state.second->instr->insn())
+				{	// in case current instruction IS an instruction
+					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED,
+						state.second->instr->insn()->loc << *(state.second->instr->insn())));
 					CL_CDEBUG(2, state);
-
-				} else {
-
+				}
+				else
+				{
 					CL_CDEBUG(3, state);
-
 				}
 
+				// run the state
 				this->execMan.execute(state);
-
 			}
 
 			return true;
-
-		} catch (ProgramError& e) {
-
+		}
+		catch (ProgramError& e)
+		{
 //			Engine::printTrace(state);
-
 			throw;
-
-		} catch (RestartRequest& e) {
-
-			for (auto instr : this->assembly_.code_) {
-
+		}
+		catch (RestartRequest& e)
+		{	// in case a restart is requested, clear all fixpoint computation points
+			for (auto instr : this->assembly_.code_)
+			{
 				if (instr->getType() != fi_type_e::fiFix)
+				{
 					continue;
+				}
 
-				((FixpointInstruction*)instr)->clear();
-
+				// clear the fixpoint
+				static_cast<FixpointInstruction*>(instr)->clear();
 			}
 
 			CL_CDEBUG(2, e.what());
 
 			return false;
-
 		}
-
 	}
 
 public:
 
-	Engine() : boxMan(), compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
-		dbgFlag(false) {}
+	/**
+	 * @brief  The default constructor
+	 *
+	 * The default constructor.
+	 */
+	Engine() :
+		boxMan(), compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
+		dbgFlag(false)
+	{ }
 
-	void loadTypes(const CodeStorage::Storage& stor) {
+	/**
+	 * @brief  Loads types from a storage
+	 *
+	 * This method loads data types and function stackframes from the provided
+	 * storage.
+	 *
+	 * @param[in]  stor  The code storage containing types
+	 */
+	void loadTypes(const CodeStorage::Storage& stor)
+	{
+		CL_DEBUG_AT(3, "loading types ...");
 
-	    CL_DEBUG_AT(3, "loading types ...");
+		// clear the box manager
+		this->boxMan.clear();
 
-	    this->boxMan.clear();
-
-		for (auto type : stor.types) {
-
+		for (auto type : stor.types)
+		{	// for each data type in the storage
 			std::vector<size_t> v;
 			std::string name;
 
-			switch (type->code) {
-
-				case cl_type_e::CL_TYPE_STRUCT:
+			switch (type->code)
+			{
+				case cl_type_e::CL_TYPE_STRUCT: // for a structure
 
 					NodeBuilder::buildNode(v, type);
 
 					if (type->name)
+					{	// in case the structure has a name
 						name = std::string(type->name);
-					else {
+					}
+					else
+					{	// in case the structure is nameless
 						std::ostringstream ss;
 						ss << type->uid;
 						name = ss.str();
@@ -470,19 +519,20 @@ public:
 					this->boxMan.createTypeInfo(name, v);
 					break;
 
-				default:
+				default: // for other types
 					break;
-
 			}
-
 		}
 
-		for (auto fnc : stor.fncs) {
-
+		for (auto fnc : stor.fncs)
+		{	// for each function in the storage, create a data structure representing
+			// its stackframe
 			std::vector<size_t> v;
 
 			for (auto sel : SymCtx(*fnc).sfLayout)
+			{	// create the stackframe
 				v.push_back(sel.offset);
+			}
 
 			std::ostringstream ss;
 			ss << nameOf(*fnc) << ':' << uidOf(*fnc);
@@ -490,14 +540,13 @@ public:
 			CL_DEBUG_AT(3, ss.str());
 
 			this->boxMan.createTypeInfo(ss.str(), v);
-
 		}
-
 	}
-/*
+
+#if 0
 	void loadBoxes(const std::unordered_map<std::string, std::string>& db) {
 
-	    CL_DEBUG_AT(2, "loading boxes ...");
+		CL_DEBUG_AT(2, "loading boxes ...");
 
 		for (auto p : db) {
 
@@ -510,80 +559,108 @@ public:
 		this->boxMan.buildBoxHierarchy(this->hierarchy, this->basicBoxes);
 
 	}
-*/
-	void compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry) {
+#endif
 
+	void compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry)
+	{
 		CL_DEBUG_AT(2, "compiling ...");
-
 		this->compiler_.compile(this->assembly_, stor, entry);
-
 		CL_DEBUG_AT(2, "assembly:" << std::endl << this->assembly_);
-
 	}
 
-	void run() {
-
+	void run()
+	{
+		// Assertions
 		assert(this->assembly_.code_.size());
 
-		try {
-
-			while (!this->main()) {}
-
-			this->printBoxes();
-
-			for (auto instr : this->assembly_.code_) {
-
-				if (instr->getType() != fi_type_e::fiFix)
-					continue;
-
-				CL_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl << ((FixpointInstruction*)instr)->getFixPoint());
-
+		try
+		{	// expect problems...
+			while (!this->main())
+			{	// while the analysis hasn't terminated
 			}
 
-			CL_DEBUG_AT(1, "forester has evaluated " << this->execMan.statesEvaluated() << " state(s) in " << this->execMan.tracesEvaluated() << " trace(s)");
+			// print out boxes
+			this->printBoxes();
 
-		} catch (std::exception& e) {
+			for (auto instr : this->assembly_.code_)
+			{	// print out all fixpoints
+				if (instr->getType() != fi_type_e::fiFix)
+				{
+					continue;
+				}
 
+				CL_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl
+					<< ((FixpointInstruction*)instr)->getFixPoint());
+			}
+
+			// print out stats
+			CL_DEBUG_AT(1, "forester has evaluated " << this->execMan.statesEvaluated()
+				<< " state(s) in " << this->execMan.tracesEvaluated() << " trace(s)");
+
+		}
+		catch (std::exception& e)
+		{
 			CL_DEBUG(e.what());
 
 			this->printBoxes();
 
 			throw;
-
 		}
-
 	}
 
-	void setDbgFlag() {
-
+	void setDbgFlag()
+	{
 		this->dbgFlag = 1;
-
 	}
-
 };
 
-SymExec::SymExec() : engine(new Engine()) {}
+SymExec::SymExec() :
+	engine(new Engine())
+{ }
 
-SymExec::~SymExec() {
+SymExec::~SymExec()
+{
+	// Assertions
+	assert(engine != nullptr);
+
 	delete this->engine;
 }
 
-void SymExec::loadTypes(const CodeStorage::Storage& stor) {
+void SymExec::loadTypes(const CodeStorage::Storage& stor)
+{
+	// Assertions
+	assert(engine != nullptr);
+
 	this->engine->loadTypes(stor);
 }
-/*
+
+#if 0
 void SymExec::loadBoxes(const std::unordered_map<std::string, std::string>& db) {
 	this->engine->loadBoxes(db);
 }
-*/
-void SymExec::compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& main) {
+#endif
+
+void SymExec::compile(const CodeStorage::Storage& stor,
+	const CodeStorage::Fnc& main)
+{
+	// Assertions
+	assert(engine != nullptr);
+
 	this->engine->compile(stor, main);
 }
 
-void SymExec::run() {
+void SymExec::run()
+{
+	// Assertions
+	assert(engine != nullptr);
+
 	this->engine->run();
 }
 
-void SymExec::setDbgFlag() {
+void SymExec::setDbgFlag()
+{
+	// Assertions
+	assert(engine != nullptr);
+
 	this->engine->setDbgFlag();
 }

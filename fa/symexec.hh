@@ -20,26 +20,81 @@
 #ifndef SYM_EXEC_H
 #define SYM_EXEC_H
 
+// Standard library headers
 #include <unordered_map>
 
+// Forester headers
 #include "compiler.hh"
 
+/**
+ * @file symexec.hh
+ * SymExec - top level algorithm of the @b symbolic @b execution
+ */
+
 namespace CodeStorage {
-    struct Fnc;
-    struct Storage;
+	struct Fnc;
+	struct Storage;
 }
 
+
+/**
+ * @brief  Top level algorithm of the @b symbolic @b execution
+ *
+ * This class provides the top level algorithm of the @b symbolic @b execution.
+ */
 class SymExec {
 
 public:
 
+	/**
+	 * @brief  Default constructor
+	 *
+	 * Default constructor.
+	 */
 	SymExec();
+
+	/**
+	 * @brief  Destructor
+	 *
+	 * Destructor.
+	 */
 	~SymExec();
 
+	/**
+	 * @brief  Loads types from given code storage
+	 *
+	 * Provided a code storage, this method loads types from the storage.
+	 *
+	 * @param[in]  stor  The code storage with the types
+	 */
 	void loadTypes(const CodeStorage::Storage& stor);
+
 //	void loadBoxes(const std::unordered_map<std::string, std::string>& db);
-	void compile(const CodeStorage::Storage &stor, const CodeStorage::Fnc& entry);
+
+	/**
+	 * @brief  Compiles the code from code storage
+	 *
+	 * Compiles the code from the code storage into assembly code, starting with
+	 * the given entry point.
+	 *
+	 * @param[in]  stor   Code storage with the code
+	 * @param[in]  entry  The entry point of the symbolic execution
+	 */
+	void compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry);
+
+	/**
+	 * @brief  Runs the symbolic execution
+	 *
+	 * This method runs the symbolic execution of the analysed program. Before
+	 * being run, the program needs to be compiled into microcode.
+	 */
 	void run();
+
+	/**
+	 * @brief  Sets the flag for debugging
+	 *
+	 * The method that sets the debugging flag.
+	 */
 	void setDbgFlag();
 
 private:
