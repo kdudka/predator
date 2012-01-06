@@ -975,6 +975,44 @@ void executeMemset(
     lm.leave();
 }
 
+void executeMemmove(
+        SymProc                     &proc,
+        const TValId                 valDst,
+        const TValId                 valSrc,
+        const TValId                 valSize)
+{
+    SymHeap &sh = proc.sh();
+    const struct cl_loc *loc = proc.lw();
+
+    IR::TInt size;
+    if (!numFromVal(&size, sh, valSize)) {
+        CL_ERROR_MSG(loc, "size arg of memmove() is not a known integer");
+        proc.printBackTrace(ML_ERROR);
+        return;
+    }
+
+    if (proc.checkForInvalidDeref(valDst, size)
+            || proc.checkForInvalidDeref(valSrc, size))
+    {
+        // error message already printed out
+        proc.printBackTrace(ML_ERROR);
+        return;
+    }
+
+    LeakMonitor lm(sh);
+    lm.enter();
+
+    TValSet killedPtrs;
+    sh.copyBlockOfRawMemory(valDst, valSrc, size, &killedPtrs);
+
+    if (lm.collectJunkFrom(killedPtrs)) {
+        CL_WARN_MSG(loc, "memory leak detected while executing memmove()");
+        proc.printBackTrace(ML_WARN);
+    }
+
+    lm.leave();
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation

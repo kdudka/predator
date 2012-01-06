@@ -401,6 +401,38 @@ bool handleMalloc(
     return true;
 }
 
+bool handleMemmove(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const struct cl_loc *loc = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (5 != opList.size()) {
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    // read the values of memset parameters
+    const TValId valDst     = core.valFromOperand(opList[/* dst  */ 2]);
+    const TValId valSrc     = core.valFromOperand(opList[/* src  */ 3]);
+    const TValId valSize    = core.valFromOperand(opList[/* size */ 4]);
+
+    CL_DEBUG_MSG(loc, "executing memMove() as a built-in function");
+    executeMemmove(core, valDst, valSrc, valSize);
+
+    const struct cl_operand &opDst = opList[/* ret */ 0];
+    if (CL_OPERAND_VOID != opDst.code) {
+        // POSIX says that memmove() returns the value of the first argument
+        const ObjHandle objDst = core.objByOperand(opDst);
+        core.objSetValue(objDst, valDst);
+    }
+
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
 bool handleMemset(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -766,6 +798,7 @@ BuiltInTable::BuiltInTable() {
     tbl_["calloc"]                                  = handleCalloc;
     tbl_["free"]                                    = handleFree;
     tbl_["malloc"]                                  = handleMalloc;
+    tbl_["memmove"]                                 = handleMemmove;
     tbl_["memset"]                                  = handleMemset;
     tbl_["printf"]                                  = handlePrintf;
     tbl_["puts"]                                    = handlePuts;
