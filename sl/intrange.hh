@@ -87,6 +87,9 @@ Range& operator*=(Range &rng, const Range &other);
 /// bitwise AND on range where the bitmask is a single number
 Range& operator&=(Range &rng, TInt mask);
 
+Range& operator<<=(Range &rng, const TUInt);
+Range& operator>>=(Range &rng, const TUInt);
+
 /// subtract another range, but preserve boundary values if already reached
 inline Range& operator-=(Range &rng, const Range &other) {
     rng += (-other);
@@ -110,6 +113,16 @@ inline Range operator-(Range rng, const Range &other) {
 
 inline Range operator&(Range rng, const TInt mask) {
     rng &= mask;
+    return rng;
+}
+
+inline Range operator<<(Range rng, const TUInt n) {
+    rng <<= n;
+    return rng;
+}
+
+inline Range operator>>(Range rng, const TUInt n) {
+    rng >>= n;
     return rng;
 }
 

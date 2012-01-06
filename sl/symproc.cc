@@ -1272,7 +1272,7 @@ bool trimRangesIfPossible(
         trimLo = (neg == ltr);
     }
     else {
-        if (!cTraits.preserveEq || !cTraits.preserveEq)
+        if (!cTraits.preserveEq || !cTraits.preserveNeq)
             // not a suitable binary operator
             return false;
 
@@ -1377,6 +1377,20 @@ bool computeIntRngResult(
             result = IR::rngFromNum(rng1.lo & rng2.lo);
             break;
 
+        case CL_BINOP_LSHIFT:
+            if (!isSingular(rng2))
+                return false;
+
+            result = rng1 << rng2.lo;
+            break;
+
+        case CL_BINOP_RSHIFT:
+            if (!isSingular(rng2))
+                return false;
+
+            result = rng1 >> rng2.lo;
+            break;
+
         case CL_BINOP_MULT:
             result = rng1 * rng2;
             break;
@@ -1467,7 +1481,7 @@ TValId handleIntegralOp(
 
     TValId result;
 
-    // check whether we both values are integral constant
+    // check whether both values are integral constant
     IR::Range rng1, rng2;
     if (rngFromVal(&rng1, sh, v1) && rngFromVal(&rng2, sh, v2)) {
 
@@ -1727,6 +1741,8 @@ struct OpHandler</* binary */ 2> {
 
             case CL_BINOP_MIN:
             case CL_BINOP_MAX:
+            case CL_BINOP_LSHIFT:
+            case CL_BINOP_RSHIFT:
                 goto handle_int;
 
             case CL_BINOP_BIT_AND:
