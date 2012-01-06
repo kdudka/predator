@@ -4632,9 +4632,9 @@ struct str_list {
 
 /* # 1 "../include/lvm-logging.h" 1 */
 /* # 19 "../include/lvm-logging.h" */
-void print_log(int level, const char *file, int line, int dm_errno,
+/* XXX void print_log(int level, const char *file, int line, int dm_errno,
         const char *format, ...)
-    __attribute__ ((format(printf, 5, 6)));
+    __attribute__ ((format(printf, 5, 6))); */
 
 
 
