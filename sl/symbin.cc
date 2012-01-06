@@ -157,11 +157,9 @@ bool validateStringOp(SymProc &proc, const struct cl_operand &op) {
         // TODO
     }
     else if (isPossibleToDeref(code)) {
-        if (proc.checkForInvalidDeref(val, sizeof(char))) {
+        if (proc.checkForInvalidDeref(val, sizeof(char)))
             // cannot access the first char (error already emitted)
-            proc.printBackTrace(ML_ERROR);
             return false;
-        }
 
         // FIXME: nasty over-approximation
         PtrHandle ptr(sh, val);
@@ -176,7 +174,6 @@ bool validateStringOp(SymProc &proc, const struct cl_operand &op) {
 
     // TODO
     CL_ERROR_MSG(loc, "string validation not implemented yet");
-    proc.printBackTrace(ML_ERROR);
     return false;
 }
 
@@ -414,12 +411,12 @@ bool handleMemmove(
         return false;
     }
 
-    // read the values of memset parameters
+    // read the values of memmove parameters
     const TValId valDst     = core.valFromOperand(opList[/* dst  */ 2]);
     const TValId valSrc     = core.valFromOperand(opList[/* src  */ 3]);
     const TValId valSize    = core.valFromOperand(opList[/* size */ 4]);
 
-    CL_DEBUG_MSG(loc, "executing memMove() as a built-in function");
+    CL_DEBUG_MSG(loc, "executing memmove() as a built-in function");
     executeMemmove(core, valDst, valSrc, valSize);
 
     const struct cl_operand &opDst = opList[/* ret */ 0];
