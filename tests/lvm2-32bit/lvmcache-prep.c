@@ -10113,7 +10113,7 @@ static int _lvmcache_update_vgid(struct lvmcache_info *info,
   return 0;
  }
 
- if (!is_orphan_vg(vginfo->vgname))
+ if (/* TODO: !is_orphan_vg(vginfo->vgname) */ 0)
   print_log(7,
 
  "cache/lvmcache.c"

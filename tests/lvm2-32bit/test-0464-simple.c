@@ -78,5 +78,7 @@ int dm_hash_insert(struct dm_hash_table *t, const char *key, void *data)
 
 int main()
 {
-    return lvmcache_add_orphan_vginfo("vgname", NULL);
+    static char vgname[32];
+    static struct format_type fmt;
+    return lvmcache_add_orphan_vginfo(/* FIXME */ vgname, &fmt);
 }

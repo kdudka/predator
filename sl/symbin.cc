@@ -143,9 +143,10 @@ void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
 }
 
 bool validateStringOp(SymProc &proc, const struct cl_operand &op) {
-    const TValId val = proc.valFromOperand(op);
-
     SymHeap &sh = proc.sh();
+    const struct cl_loc *loc = proc.lw();
+
+    const TValId val = proc.valFromOperand(op);
     const EValueTarget code = sh.valTarget(val);
 
     if (VT_CUSTOM == code) {
@@ -155,10 +156,27 @@ bool validateStringOp(SymProc &proc, const struct cl_operand &op) {
 
         // TODO
     }
+    else if (isPossibleToDeref(code)) {
+        if (proc.checkForInvalidDeref(val, sizeof(char))) {
+            // cannot access the first char (error already emitted)
+            proc.printBackTrace(ML_ERROR);
+            return false;
+        }
+
+        // FIXME: nasty over-approximation
+        PtrHandle ptr(sh, val);
+        const TValId ptrValAt = ptr.value();
+        if (VAL_NULL == ptrValAt) {
+            CL_DEBUG_MSG(loc, "validateStringOp() validates an empty string");
+            return true;
+        }
+
+        // TODO
+    }
 
     // TODO
-    CL_ERROR_MSG(proc.lw(), "string validation not implemented yet");
-    CL_BREAK_IF("please implement");
+    CL_ERROR_MSG(loc, "string validation not implemented yet");
+    proc.printBackTrace(ML_ERROR);
     return false;
 }
 
