@@ -514,13 +514,9 @@ void ClStorageBuilder::Private::openInsn(Insn *newInsn) {
     // set pointer to the owning instance of Storage
     newInsn->stor = &this->stor;
 
-    if (insn)
-        // Aiee, insn already opened
-        CL_TRAP;
-
-    if (!bb)
-        // we have actually no basic block to append the insn to
-        CL_TRAP;
+    // check there is no insn already opened
+    CL_BREAK_IF(insn);
+    CL_BREAK_IF(!bb);
 
     bb->append(newInsn);
     insn = newInsn;

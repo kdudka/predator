@@ -125,8 +125,7 @@ ClfUnfoldSwitch::~ClfUnfoldSwitch() {
 // FIXME: duplicated code from clf_uniregs.cc
 // TODO: implement shared module providing this
 void ClfUnfoldSwitch::cloneSwitchSrc(const struct cl_operand *op) {
-    if (!op)
-        CL_TRAP;
+    CL_BREAK_IF(!op);
 
     src_ = *op;
 

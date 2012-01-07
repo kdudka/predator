@@ -70,8 +70,10 @@ namespace {
     dbConstLookup(const TDb &db, const TTab &idxTab, TKey key)
     {
         typename TDb::const_iterator iter = db.find(key);
-        if (db.end() == iter)
+        if (db.end() == iter) {
             CL_BREAK_IF("can't insert anything into const object");
+            return idxTab.front();
+        }
 
         return idxTab[iter->second];
     }

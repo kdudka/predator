@@ -189,7 +189,7 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
         case CL_TYPE_PTR:
             if (val)
                 str << "0x" << std::hex << val
-                    << std::resetiosflags(std::ios_base::showbase);
+                    << std::resetiosflags(std::ios_base::basefield);
             else
                 str << "NULL";
 

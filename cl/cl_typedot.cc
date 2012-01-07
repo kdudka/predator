@@ -218,8 +218,7 @@ void ClTypeDotGenerator::acknowledge() {
 namespace {
     // FIXME: copy pasted from cl_pp.cc
     const char* typeName(const struct cl_type *clt) {
-        if (!clt)
-            CL_TRAP;
+        CL_BREAK_IF(!clt);
 
         const char *name = clt->name;
         return (name)
@@ -247,6 +246,11 @@ void ClTypeDotGenerator::printType(const struct cl_type *clt) {
         }
     }
 deref_done:
+
+    if (!clt) {
+        glOut_ << "<invalid type>";
+        return;
+    }
 
     enum cl_type_e code = clt->code;
     switch (code) {
