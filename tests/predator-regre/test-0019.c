@@ -27,4 +27,5 @@ int main() {
     TData data;
     alloc_data(&data);
     free_data(data);
+    return 0;
 }

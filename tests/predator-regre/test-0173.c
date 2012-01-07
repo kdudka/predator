@@ -49,4 +49,5 @@ int main()
     append(&head);
 
     ___sl_plot(NULL, &head);
+    return 0;
 }

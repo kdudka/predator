@@ -17,4 +17,6 @@ int main() {
         ___sl_plot("then-branch");
     else
         ___sl_plot("else-branch");
+
+    return 0;
 }

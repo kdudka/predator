@@ -48,4 +48,6 @@ int main()
 
     if (ps != &s)
         free(ps);
+
+    return 0;
 }
