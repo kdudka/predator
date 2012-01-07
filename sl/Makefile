@@ -40,8 +40,8 @@ check: all
 	cd ../sl_build && $(CTEST) --output-on-failure
 
 cppcheck: all
-	cppcheck --enable=style,performance,portability,information,missingInclude . 2>&1 \
-		| stdbuf --output=L sed 's/\[\([^]]*:[0-9]\+\)\]:\?/\1:/g' \
+	cppcheck --enable=style,performance,portability,information,missingInclude \
+		--template gcc -j5 . 2>&1 \
 		| stdbuf --output=L grep -v 'CustomValue::data'
 
 version.h:

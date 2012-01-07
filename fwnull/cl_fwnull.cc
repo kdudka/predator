@@ -56,7 +56,12 @@ struct VarState {
     const struct cl_loc *lw;    ///< location where the state became valid
     int /* uid */       peer;   ///< used only for VS_NULL_IFF, VS_NOT_NULL_IFF
 
-    VarState(): code(VS_UNDEF) { }
+    VarState():
+        code(VS_UNDEF),
+        lw(0),
+        peer(-1)
+    {
+    }
 };
 
 /// state of computation at function level

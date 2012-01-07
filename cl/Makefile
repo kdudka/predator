@@ -18,7 +18,7 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all clean distclean distcheck version_cl.h
+.PHONY: all check clean cppcheck distclean distcheck version_cl.h
 
 all: version_cl.h
 	mkdir -p ../cl_build
@@ -27,6 +27,10 @@ all: version_cl.h
 
 check: all
 	cd ../cl_build && $(CTEST) --output-on-failure
+
+cppcheck: all
+	cppcheck --enable=style,performance,portability,information,missingInclude \
+		--template gcc -j5 .
 
 version_cl.h:
 	@if test -d ../.git; then \

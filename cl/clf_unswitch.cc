@@ -33,6 +33,22 @@
 #define NULLIFY(what) \
     memset(&(what), 0, sizeof (what))
 
+int getCaseVal(const struct cl_operand *op) {
+    CL_BREAK_IF(!op || !op->type);
+
+    enum cl_type_e code = op->type->code;
+    switch (code) {
+        case CL_TYPE_ENUM:
+        case CL_TYPE_INT:
+            break;
+
+        default:
+            CL_TRAP;
+    }
+
+    return op->data.cst.data.cst_int.value;
+}
+
 class ClfUnfoldSwitch: public ClFilterBase {
     public:
         ClfUnfoldSwitch(ICodeListener *slave):
@@ -67,8 +83,8 @@ class ClfUnfoldSwitch: public ClFilterBase {
 
             loc_ = *loc;
 
-            const int lo = ClfUnfoldSwitch::getCaseVal(val_lo);
-            const int hi = ClfUnfoldSwitch::getCaseVal(val_hi);
+            const int lo = getCaseVal(val_lo);
+            const int hi = getCaseVal(val_hi);
             for (int i = lo; i <= hi; ++i)
                 this->emitCase(i, val_lo->type, label);
         }
@@ -91,7 +107,6 @@ class ClfUnfoldSwitch: public ClFilterBase {
         std::vector<struct cl_var *>    ptrs_;
 
     private:
-        static int getCaseVal(const struct cl_operand *);
         void cloneSwitchSrc(const struct cl_operand *);
         void freeClonedSwitchSrc();
         struct cl_var* acquireClVar();
@@ -105,23 +120,6 @@ ClfUnfoldSwitch::~ClfUnfoldSwitch() {
     BOOST_FOREACH(struct cl_var *clv, ptrs_) {
         delete clv;
     }
-}
-
-int ClfUnfoldSwitch::getCaseVal(const struct cl_operand *op) {
-    if (!op || !op->type)
-        CL_TRAP;
-
-    enum cl_type_e code = op->type->code;
-    switch (code) {
-        case CL_TYPE_ENUM:
-        case CL_TYPE_INT:
-            break;
-
-        default:
-            CL_TRAP;
-    }
-
-    return op->data.cst.data.cst_int.value;
 }
 
 // FIXME: duplicated code from clf_uniregs.cc

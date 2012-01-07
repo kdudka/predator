@@ -214,7 +214,7 @@ namespace CodeStorage {
         storeOperand(op, &tpl);
     }
 
-    Insn* createInsn(const struct cl_insn *cli, ControlFlow &cfg) {
+    Insn* createInsn(const struct cl_insn *cli, ControlFlow *cfg) {
         enum cl_insn_e code = cli->code;
 
         Insn *insn = new Insn;
@@ -230,7 +230,7 @@ namespace CodeStorage {
                 break;
 
             case CL_INSN_JMP:
-                targets.push_back(cfg[cli->data.insn_jmp.label]);
+                targets.push_back(cfg->operator[](cli->data.insn_jmp.label));
                 break;
 
             case CL_INSN_COND:
@@ -238,8 +238,8 @@ namespace CodeStorage {
                 storeOperand(operands[0], cli->data.insn_cond.src);
 
                 targets.resize(2);
-                targets[0] = cfg[cli->data.insn_cond.then_label];
-                targets[1] = cfg[cli->data.insn_cond.else_label];
+                targets[0] = cfg->operator[](cli->data.insn_cond.then_label);
+                targets[1] = cfg->operator[](cli->data.insn_cond.else_label);
                 break;
 
             case CL_INSN_RET:
@@ -359,8 +359,7 @@ void ClStorageBuilder::Private::digInitials(const TOp *op)
 
     const struct cl_initializer *initial;
     for (initial = clv->initial; initial; initial = initial->next) {
-        ControlFlow *cfg = /* XXX */ 0;
-        Insn *insn = createInsn(&initial->insn, /* XXX */ *cfg);
+        Insn *insn = createInsn(&initial->insn, /* cfg */ 0);
 
         // initializer instructions are not associated with any basic block
         insn->bb = 0;
@@ -617,7 +616,7 @@ void ClStorageBuilder::insn(const struct cl_insn *cli) {
         return;
 
     // serialize given insn
-    Insn *insn = createInsn(cli, d->fnc->cfg);
+    Insn *insn = createInsn(cli, &d->fnc->cfg);
     d->openInsn(insn);
 
     // current insn is actually already complete
