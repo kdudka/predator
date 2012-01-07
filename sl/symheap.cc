@@ -266,8 +266,8 @@ class AbstractHeapEntity {
     protected:
         virtual ~AbstractHeapEntity() { }
         friend class EntStore<AbstractHeapEntity>;
-        friend class RefCntLibBase;
-        friend class RefCntLib<RCO_VIRTUAL>;
+        friend struct RefCntLibBase;
+        friend struct RefCntLib<RCO_VIRTUAL>;
 
     private:
         RefCounter refCnt;
@@ -326,11 +326,10 @@ struct BaseValue: public AbstractHeapEntity {
     TOffset /* FIXME: misleading */ offRoot;
     TObjIdSet                       usedBy;
 
+    // cppcheck-suppress uninitVar
     BaseValue(EValueTarget code_, EValueOrigin origin_):
         code(code_),
         origin(origin_),
-        valRoot(/* just to silence cppcheck */ VAL_INVALID),
-        anchor( /* just to silence cppcheck */ VAL_INVALID),
         offRoot(0)
     {
     }
@@ -380,9 +379,9 @@ struct RangeValue: public AnchorValue {
 struct CompValue: public BaseValue {
     TObjId                          compObj;
 
+    // cppcheck-suppress uninitVar
     CompValue(EValueTarget code_, EValueOrigin origin_):
-        BaseValue(code_, origin_),
-        compObj(/* just to silence cppcheck */ OBJ_INVALID)
+        BaseValue(code_, origin_)
     {
     }
 
@@ -426,6 +425,7 @@ struct RootValue: public AnchorValue {
     }
 };
 
+// cppcheck-suppress noConstructor
 class CustomValueMapper {
     private:
         typedef std::map<int /* uid */, TValId>                 TCustomByUid;
@@ -441,9 +441,6 @@ class CustomValueMapper {
 
     public:
         RefCounter          refCnt;
-
-        /// just to silence cppcheck
-        CustomValueMapper(): inval_(VAL_INVALID) { }
 
     public:
         TValId& lookup(const CustomValue &item) {
@@ -1521,13 +1518,9 @@ SymHeapCore::~SymHeapCore() {
     delete d;
 }
 
+// cppcheck-suppress operatorEqToSelf
 SymHeapCore& SymHeapCore::operator=(const SymHeapCore &ref) {
-    // mainly to silence cppcheck
-    if (&ref == this) {
-        CL_BREAK_IF("SymHeapCore is being assigned to self.  Why?");
-        return *this;
-    }
-
+    CL_BREAK_IF(&ref == this);
     CL_BREAK_IF(&stor_ != &ref.stor_);
 
     delete d;

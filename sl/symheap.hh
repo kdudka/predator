@@ -110,6 +110,7 @@ struct CustomValue {
     ECustomValue    code;   ///< custom value classification
     CustomValueData data;   ///< custom data
 
+    // cppcheck-suppress uninitVar
     CustomValue():
         code(CV_INVALID)
     {

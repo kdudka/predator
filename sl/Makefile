@@ -41,8 +41,7 @@ check: all
 
 cppcheck: all
 	cppcheck --enable=style,performance,portability,information,missingInclude \
-		--template gcc -j5 . 2>&1 \
-		| stdbuf --output=L grep -v 'CustomValue::data'
+		--template gcc -j5 --inline-suppr .
 
 version.h:
 	@if test -d ../.git; then \

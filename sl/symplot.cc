@@ -1081,6 +1081,7 @@ void plotEverything(PlotData &plot) {
 #if SYMPLOT_OMIT_NEQ_EDGES
     return;
 #endif
+    // cppcheck-suppress unreachableCode
     SymHeap &sh = plot.sh;
 
     // gather relevant "neq" edges

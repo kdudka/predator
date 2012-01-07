@@ -388,6 +388,7 @@ bool SymExecEngine::bypassNonPointers(
         return false;
 
     // white-list some values that are worth tracking
+    // cppcheck-suppress unreachableCode
     SymHeap &sh = proc.sh();
     if (isTrackableValue(sh, v1) || isTrackableValue(sh, v2))
         return false;
