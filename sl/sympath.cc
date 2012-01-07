@@ -97,7 +97,6 @@ const struct cl_loc* digBlockLocation(TBlock bb, bool backward) {
 }
 
 /// print one item of the path trace
-template <class TBlock>
 void printOneBlock(TBlock bb, int level, bool backward, bool loop = false) {
     using std::string;
 
@@ -131,7 +130,6 @@ struct PStackItem {
 };
 
 void PathTracer::printPaths() const {
-    typedef const CodeStorage::Block *TBlock;
     if (!block_)
         // no idea where to start, giving up...
         return;

@@ -435,7 +435,7 @@ bool checkValueMapping(
     const TValId vDst1 = (hasMapping1) ? i1->second : VAL_INVALID;
     const TValId vDst2 = (hasMapping2) ? i2->second : VAL_INVALID;
 
-    if (hasMapping1 && hasMapping1 && (vDst1 == vDst2))
+    if (hasMapping1 && hasMapping2 && (vDst1 == vDst2))
         // mapping already known and known to be consistent
         return true;
 
@@ -1720,7 +1720,7 @@ bool cloneSpecialValue(
         SymHeap                 &shGt,
         const TValId            valGt,
         const TValMapBidir      &valMapGt,
-        const TValPair          vp,
+        const TValPair          &vp,
         EValueTarget            code)
 {
     const TValId rootGt = shGt.valRoot(valGt);
@@ -2469,7 +2469,7 @@ bool handleDstPreds(SymJoinCtx &ctx) {
     }
 
     // go through shared Neq predicates
-    BOOST_FOREACH(const TValPair neq, ctx.sharedNeqs) {
+    BOOST_FOREACH(const TValPair &neq, ctx.sharedNeqs) {
         TValId valLt, valGt;
         boost::tie(valLt, valGt) = neq;
 
@@ -2897,7 +2897,7 @@ void transferContentsOfGhost(
 
     ObjList live;
     sh.gatherLiveObjects(live, ghost);
-    BOOST_FOREACH(const ObjHandle objGhost, live) {
+    BOOST_FOREACH(const ObjHandle &objGhost, live) {
         const ObjHandle objDst = translateObjId(sh, sh, dst, objGhost);
         if (hasKey(ignoreList, objDst))
             // preserve binding pointers

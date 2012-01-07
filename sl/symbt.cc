@@ -146,12 +146,6 @@ SymBackTrace::~SymBackTrace() {
     delete d;
 }
 
-SymBackTrace& SymBackTrace::operator=(const SymBackTrace &ref) {
-    delete d;
-    d = new Private(*ref.d);
-    return *this;
-}
-
 const CodeStorage::Storage& SymBackTrace::stor() const {
     return d->stor;
 }

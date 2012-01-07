@@ -18,7 +18,7 @@
 CMAKE ?= cmake
 CTEST ?= ctest
 
-.PHONY: all check clean distclean distcheck fast version.h
+.PHONY: all check clean cppcheck distclean distcheck fast version.h
 
 all: version.h ../cl_build
 	# make sure the libcl.so is up2date
@@ -38,6 +38,11 @@ fast:
 
 check: all
 	cd ../sl_build && $(CTEST) --output-on-failure
+
+cppcheck: all
+	cppcheck --enable=style,performance,portability,information,missingInclude . 2>&1 \
+		| stdbuf --output=L sed 's/\[\([^]]*:[0-9]\+\)\]:\?/\1:/g' \
+		| stdbuf --output=L grep -v 'CustomValue::data'
 
 version.h:
 	@if test -d ../.git; then \

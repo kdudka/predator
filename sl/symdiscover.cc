@@ -445,7 +445,8 @@ class PtrFinder {
 
     public:
         PtrFinder(TValId lookFor):
-            lookFor_(lookFor)
+            lookFor_(lookFor),
+            offFound_(/* just to silence cppcheck */ -1)
         {
         }
 

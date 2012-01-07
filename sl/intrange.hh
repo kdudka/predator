@@ -130,7 +130,7 @@ inline Range operator>>(Range rng, const TUInt n) {
 Range join(const Range &rng1, const Range &rng2);
 
 /// return true if exactly one of the given ranges represents a single number
-bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range rng2);
+bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range &rng2);
 
 /// true if the small range is inside the big one (sharing endpoints is fine)
 bool isCovered(const Range &small, const Range &big);

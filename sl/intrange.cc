@@ -102,7 +102,7 @@ Range join(const Range &rng1, const Range &rng2) {
     return result;
 }
 
-bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range rng2) {
+bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range &rng2) {
     const bool isRange1 = !isSingular(rng1);
     const bool isRange2 = !isSingular(rng2);
     if (isRange1 == isRange2)

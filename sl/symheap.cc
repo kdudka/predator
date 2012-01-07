@@ -322,13 +322,15 @@ struct BaseValue: public AbstractHeapEntity {
     EValueTarget                    code;
     EValueOrigin                    origin;
     TValId                          valRoot;
+    TValId                          anchor;
     TOffset /* FIXME: misleading */ offRoot;
     TObjIdSet                       usedBy;
-    TValId                          anchor;
 
     BaseValue(EValueTarget code_, EValueOrigin origin_):
         code(code_),
         origin(origin_),
+        valRoot(/* just to silence cppcheck */ VAL_INVALID),
+        anchor( /* just to silence cppcheck */ VAL_INVALID),
         offRoot(0)
     {
     }
@@ -379,7 +381,8 @@ struct CompValue: public BaseValue {
     TObjId                          compObj;
 
     CompValue(EValueTarget code_, EValueOrigin origin_):
-        BaseValue(code_, origin_)
+        BaseValue(code_, origin_),
+        compObj(/* just to silence cppcheck */ OBJ_INVALID)
     {
     }
 
@@ -438,6 +441,9 @@ class CustomValueMapper {
 
     public:
         RefCounter          refCnt;
+
+        /// just to silence cppcheck
+        CustomValueMapper(): inval_(VAL_INVALID) { }
 
     public:
         TValId& lookup(const CustomValue &item) {
@@ -1516,6 +1522,12 @@ SymHeapCore::~SymHeapCore() {
 }
 
 SymHeapCore& SymHeapCore::operator=(const SymHeapCore &ref) {
+    // mainly to silence cppcheck
+    if (&ref == this) {
+        CL_BREAK_IF("SymHeapCore is being assigned to self.  Why?");
+        return *this;
+    }
+
     CL_BREAK_IF(&stor_ != &ref.stor_);
 
     delete d;
