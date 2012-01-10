@@ -147,33 +147,13 @@ bool validateStringOp(SymProc &proc, const struct cl_operand &op) {
     const struct cl_loc *loc = proc.lw();
 
     const TValId val = proc.valFromOperand(op);
-    const EValueTarget code = sh.valTarget(val);
+    const TSizeRange strSize = sh.valSizeOfString(val);
+    if (IR::Int0 < strSize.lo)
+        return true;
 
-    if (VT_CUSTOM == code) {
-        if (CV_STRING == sh.valUnwrapCustom(val).code)
-            // string literal
-            return true;
+    if (!proc.checkForInvalidDeref(val, sizeof(char)))
+        CL_ERROR_MSG(loc, "failed to imply a zero-terminated string");
 
-        // TODO
-    }
-    else if (isPossibleToDeref(code)) {
-        if (proc.checkForInvalidDeref(val, sizeof(char)))
-            // cannot access the first char (error already emitted)
-            return false;
-
-        // FIXME: nasty over-approximation
-        PtrHandle ptr(sh, val);
-        const TValId ptrValAt = ptr.value();
-        if (VAL_NULL == ptrValAt) {
-            CL_DEBUG_MSG(loc, "validateStringOp() validates an empty string");
-            return true;
-        }
-
-        // TODO
-    }
-
-    // TODO
-    CL_ERROR_MSG(loc, "string validation not implemented yet");
     return false;
 }
 

@@ -532,7 +532,12 @@ struct SymHeapCore::Private {
             const TValId            addr,
             const TValId            tplValue,
             const TSizeOf           size,
-            TValSet                 *killedPtrs);
+            TValSet                *killedPtrs);
+
+    bool findZeroAtOff(
+            TOffset                *offDst,
+            const TOffset           offSrc,
+            const TValId            root);
 
     void bindValues(TValId v1, TValId v2, TValId valSum);
 
@@ -1661,6 +1666,67 @@ void SymHeapCore::copyBlockOfRawMemory(
     d->transferBlock(dstRoot, srcRoot, dstOff, srcOff, size);
 }
 
+bool SymHeapCore::Private::findZeroAtOff(
+        TOffset                *offDst,
+        const TOffset           offSrc,
+        const TValId            root)
+{
+    const RootValue *rootData;
+    this->ents.getEntRO(&rootData, root);
+
+    const TArena &arena = rootData->arena;
+    const TSizeOf limit = rootData->size.hi;
+    const TMemChunk chunk(offSrc, limit);
+
+    TObjIdSet overlaps;
+    if (!arenaLookup(&overlaps, arena, chunk, OBJ_INVALID))
+        // no blocks that would serve as a trailing zero
+        return false;
+
+    // go through all intersections and find the zero that si closest to offSrc
+    TOffset first = limit;
+    BOOST_FOREACH(const TObjId obj, overlaps) {
+        const BlockEntity *blData;
+        this->ents.getEntRO(&blData, obj);
+
+        const EBlockKind code = blData->code;
+        if (BK_UNIFORM != code) {
+            // TODO: support for nullified regular objects
+            CL_BREAK_IF("please implement");
+            continue;
+        }
+
+        if (VAL_NULL != blData->value)
+            // a uniform block, but not full of zeros
+            continue;
+
+        const TOffset beg = blData->off;
+        if (first < beg)
+            // we have already found a zero closer to offSrc
+            continue;
+
+        if (beg < offSrc) {
+            // the nullified blocks begins before offSrc
+            first = offSrc;
+            break;
+        }
+
+        // update the best
+        first = beg;
+
+        // an optimization only
+        if (offSrc == first)
+            break;
+    }
+
+    if (limit == first)
+        // found nothing
+        return false;
+
+    *offDst = first;
+    return true;
+}
+
 TObjType SymHeapCore::objType(TObjId obj) const {
     if (obj < 0)
         return 0;
@@ -2685,6 +2751,43 @@ TSizeRange SymHeapCore::valSizeOfTarget(TValId val) const {
     IR::Range size = rootData->size;
     size -= IR::rngFromNum(/* off */ valData->offRoot);
     return size;
+}
+
+TSizeRange SymHeapCore::valSizeOfString(TValId addr) const {
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, addr);
+
+    const EValueTarget code = valData->code;
+    if (VT_CUSTOM == code) {
+        const InternalCustomValue *customData =
+            DCAST<const InternalCustomValue *>(valData);
+
+        const CustomValue &cv = customData->customData;
+        if (CV_STRING != cv.code)
+            return /* error */ IR::rngFromNum(IR::Int0);
+
+        // string literal
+        const unsigned len = strlen(cv.data.str) + /* trailing zero */ 1;
+        return IR::rngFromNum(len);
+    }
+
+    if (!isPossibleToDeref(code))
+        return /* error */ IR::rngFromNum(IR::Int0);
+
+    // resolve root and offset
+    const TValId root = valData->valRoot;
+    const TOffset off = valData->offRoot;
+
+    // seek the first zero byte at the given offset
+    TSizeOf len;
+    if (!d->findZeroAtOff(&len, off, root))
+        // possibly unterminated string
+        return /* error */ IR::rngFromNum(IR::Int0);
+
+    // if we get here, it means there is at least the trailing zero
+    IR::Range rng(IR::rngFromNum(IR::Int1));
+    rng.hi = len + /* trailing zero */ 1;
+    return rng;
 }
 
 void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {

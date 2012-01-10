@@ -1,4 +1,4 @@
-lvmcache-prep.c:10247:3: error: string validation not implemented yet
+lvmcache-prep.c:10247:3: error: invalid dereference
 lvmcache-prep.c:10342:22: note: from call of _insert_vginfo()
 lvmcache-prep.c:10458:2: note: from call of _lvmcache_update_vgname()
 test-0464.c:83:5: note: from call of lvmcache_add_orphan_vginfo()
