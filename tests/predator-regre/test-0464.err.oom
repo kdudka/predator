@@ -1,4 +1,9 @@
-lvmcache-prep.c:10247:3: error: invalid dereference
+lvm2-harness.h:21:12: error: dereference of NULL value
+lvmcache-prep.c:10288:417: note: from call of __strdup()
+lvmcache-prep.c:10458:2: note: from call of _lvmcache_update_vgname()
+test-0464.c:83:5: note: from call of lvmcache_add_orphan_vginfo()
+test-0464.c:79:5: note: from call of main()
+lvmcache-prep.c:10247:3: error: failed to imply a zero-terminated string
 lvmcache-prep.c:10342:22: note: from call of _insert_vginfo()
 lvmcache-prep.c:10458:2: note: from call of _lvmcache_update_vgname()
 test-0464.c:83:5: note: from call of lvmcache_add_orphan_vginfo()

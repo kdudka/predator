@@ -1683,7 +1683,7 @@ bool SymHeapCore::Private::findZeroAtOff(
         // no blocks that would serve as a trailing zero
         return false;
 
-    // go through all intersections and find the zero that si closest to offSrc
+    // go through all intersections and find the zero that is closest to offSrc
     TOffset first = limit;
     BOOST_FOREACH(const TObjId obj, overlaps) {
         const BlockEntity *blData;
@@ -1706,12 +1706,12 @@ bool SymHeapCore::Private::findZeroAtOff(
             continue;
 
         if (beg < offSrc) {
-            // the nullified blocks begins before offSrc
+            // the nullified block begins before offSrc
             first = offSrc;
             break;
         }
 
-        // update the best
+        // update the best match
         first = beg;
 
         // an optimization only

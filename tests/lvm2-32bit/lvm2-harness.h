@@ -16,8 +16,10 @@ void *dm_zalloc_aux(size_t s, const char *file, int line)
 
 char *__strdup (__const char *__string)
 {
-    puts(__string);
-    return (void *) ___sl_get_nondet_int();
+    size_t len = 1UL + strlen(__string);
+    char *dup = malloc(len);
+    memmove(dup, __string, len);
+    return dup;
 }
 
 char *strncpy (char *__restrict __dest,
@@ -26,22 +28,10 @@ char *strncpy (char *__restrict __dest,
     return memmove(__dest, __src, __n);
 }
 
-size_t strlen (__const char *__s)
-{
-    puts(__s);
-    return ___sl_get_nondet_int();
-}
-
 int strncmp (__const char *__s1, __const char *__s2, size_t __n)
 {
-    // TODO
-#if 0
-    puts(__s1);
-    puts(__s2);
-#else
-    (void) __s1;
-    (void) __s1;
-#endif
+    strlen(__s1);
+    strlen(__s2);
     (void) __n;
     return ___sl_get_nondet_int();
 }

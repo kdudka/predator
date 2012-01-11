@@ -42,6 +42,8 @@
 #include <libgen.h>
 #include <map>
 
+typedef const struct cl_operand &TOp;
+
 bool readPlotName(
         std::string                                 *dst,
         const CodeStorage::TOperandList             &opList,
@@ -142,14 +144,18 @@ void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
     CL_NOTE_MSG(loc, "user message: " << msg);
 }
 
-bool validateStringOp(SymProc &proc, const struct cl_operand &op) {
+bool validateStringOp(SymProc &proc, TOp op, TSizeRange *pSize = 0) {
     SymHeap &sh = proc.sh();
     const struct cl_loc *loc = proc.lw();
 
     const TValId val = proc.valFromOperand(op);
     const TSizeRange strSize = sh.valSizeOfString(val);
-    if (IR::Int0 < strSize.lo)
+    if (IR::Int0 < strSize.lo) {
+        if (pSize)
+            *pSize = strSize;
+
         return true;
+    }
 
     if (!proc.checkForInvalidDeref(val, sizeof(char)))
         CL_ERROR_MSG(loc, "failed to imply a zero-terminated string");
@@ -545,6 +551,36 @@ bool handlePuts(
     return true;
 }
 
+bool handleStrlen(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() != 3) {
+        emitPrototypeError(&insn.loc, name);
+        return false;
+    }
+
+    TSizeRange len;
+    if (validateStringOp(core, opList[/* s */ 2], &len)) {
+        const struct cl_operand &opDst = opList[/* ret */ 0];
+        if (CL_OPERAND_VOID != opDst.code) {
+            // store the return value of strlen()
+            const CustomValue cv(len - IR::rngFromNum(IR::Int1));
+            const TValId valResult = core.sh().valWrapCustom(cv);
+            const ObjHandle objDst = core.objByOperand(opDst);
+            core.objSetValue(objDst, valResult);
+        }
+    }
+    else
+        core.printBackTrace(ML_ERROR);
+
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
 bool handleNondetInt(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -779,6 +815,7 @@ BuiltInTable::BuiltInTable() {
     tbl_["memset"]                                  = handleMemset;
     tbl_["printf"]                                  = handlePrintf;
     tbl_["puts"]                                    = handlePuts;
+    tbl_["strlen"]                                  = handleStrlen;
 
     // Linux kernel
     tbl_["kzalloc"]                                 = handleKzalloc;
