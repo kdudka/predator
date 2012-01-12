@@ -384,11 +384,13 @@ bool handleMalloc(
     return true;
 }
 
-bool handleMemmove(
+/// common code-base for memcpy() and memmove() built-in handlers
+bool handleMemmoveCore(
         SymState                                    &dst,
         SymExecCore                                 &core,
         const CodeStorage::Insn                     &insn,
-        const char                                  *name)
+        const char                                  *name,
+        const bool                                   allowOverlap)
 {
     const struct cl_loc *loc = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
@@ -402,8 +404,8 @@ bool handleMemmove(
     const TValId valSrc     = core.valFromOperand(opList[/* src  */ 3]);
     const TValId valSize    = core.valFromOperand(opList[/* size */ 4]);
 
-    CL_DEBUG_MSG(loc, "executing memmove() as a built-in function");
-    executeMemmove(core, valDst, valSrc, valSize);
+    CL_DEBUG_MSG(loc, "executing memcpy() or memmove() as a built-in function");
+    executeMemmove(core, valDst, valSrc, valSize, allowOverlap);
 
     const struct cl_operand &opDst = opList[/* ret */ 0];
     if (CL_OPERAND_VOID != opDst.code) {
@@ -414,6 +416,24 @@ bool handleMemmove(
 
     insertCoreHeap(dst, core, insn);
     return true;
+}
+
+bool handleMemcpy(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    return handleMemmoveCore(dst, core, insn, name, /* allowOverlap */ false);
+}
+
+bool handleMemmove(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    return handleMemmoveCore(dst, core, insn, name, /* allowOverlap */ true);
 }
 
 bool handleMemset(
@@ -811,6 +831,7 @@ BuiltInTable::BuiltInTable() {
     tbl_["calloc"]                                  = handleCalloc;
     tbl_["free"]                                    = handleFree;
     tbl_["malloc"]                                  = handleMalloc;
+    tbl_["memcpy"]                                  = handleMemcpy;
     tbl_["memmove"]                                 = handleMemmove;
     tbl_["memset"]                                  = handleMemset;
     tbl_["printf"]                                  = handlePrintf;

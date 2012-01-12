@@ -25,7 +25,7 @@ char *__strdup (__const char *__string)
 char *strncpy (char *__restrict __dest,
         __const char *__restrict __src, size_t __n)
 {
-    return memmove(__dest, __src, __n);
+    return memcpy(__dest, __src, __n);
 }
 
 int strncmp (__const char *__s1, __const char *__s2, size_t __n)

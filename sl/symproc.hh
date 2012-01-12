@@ -154,7 +154,8 @@ void executeMemmove(
         SymProc                     &proc,
         const TValId                 valDst,
         const TValId                 valSrc,
-        const TValId                 valSize);
+        const TValId                 valSize,
+        const bool                   allowOverlap);
 
 void executeMemset(
         SymProc                     &proc,

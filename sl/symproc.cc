@@ -912,6 +912,24 @@ inline void wipeAlignment(IR::Range &rng) {
     rng.alignment = IR::Int1;
 }
 
+bool checkForOverlap(
+        SymHeap                                     &sh,
+        const TValId                                 valDst,
+        const TValId                                 valSrc,
+        const TSizeOf                                size)
+{
+    const TValId rootDst = sh.valRoot(valDst);
+    const TValId rootSrc = sh.valRoot(valSrc);
+    if (sh.proveNeq(rootDst, rootSrc))
+        // the roots are proven to be two distinct roots
+        return false;
+
+    // TODO
+    CL_BREAK_IF("please implement");
+    (void) size;
+    return true;
+}
+
 void executeMemset(
         SymProc                     &proc,
         const TValId                 addr,
@@ -979,7 +997,8 @@ void executeMemmove(
         SymProc                     &proc,
         const TValId                 valDst,
         const TValId                 valSrc,
-        const TValId                 valSize)
+        const TValId                 valSize,
+        const bool                   allowOverlap)
 {
     SymHeap &sh = proc.sh();
     const struct cl_loc *loc = proc.lw();
@@ -995,6 +1014,12 @@ void executeMemmove(
             || proc.checkForInvalidDeref(valSrc, size))
     {
         // error message already printed out
+        proc.printBackTrace(ML_ERROR);
+        return;
+    }
+
+    if (!allowOverlap && checkForOverlap(sh, valDst, valSrc, size)) {
+        CL_ERROR_MSG(loc, "source and destination overlap in call of memcpy()");
         proc.printBackTrace(ML_ERROR);
         return;
     }
