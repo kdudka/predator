@@ -93,15 +93,19 @@ void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
     while (itEnd != it) {
         TLine &line = it->second;
 #if !IA_AGGRESSIVE_OPTIMIZATION
-        if (line.empty())
+        if (line.empty()) {
             // skip orphans
+            ++it;
             continue;
+        }
 #endif
         typename TLine::iterator lineIt = line.begin();
         TInt beg = lineIt->first;
-        if (winEnd <= beg)
+        if (winEnd <= beg) {
             // we are beyond the window already
-            break;
+            ++it;
+            continue;
+        }
 
         const TInt end = it->first;
         bool anyHit = false;
@@ -193,7 +197,7 @@ void IntervalArena<TInt, TObj>::intersects(TSet &dst, const key_type &key) const
         TInt beg = lineIt->first;
         if (winEnd <= beg)
             // we are beyond the window already
-            break;
+            continue;
 
         const typename TLine::const_iterator lineItEnd = line.end();
         do {
