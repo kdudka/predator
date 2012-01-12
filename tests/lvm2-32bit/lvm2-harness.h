@@ -38,6 +38,32 @@ int strncmp (__const char *__s1, __const char *__s2, size_t __n)
 
 int is_orphan_vg(const char *vg_name)
 {
-    (void) vg_name;
+    strlen(vg_name);
     return ___sl_get_nondet_int();
+}
+
+/* verbatim copy from uuid-prep.c */
+int id_write_format(const struct id *id, char *buffer, size_t size)
+{
+ int i, tot;
+
+ static const unsigned group_size[] = { 6, 4, 4, 4, 4, 4, 6 };
+
+ ((32 == 32) ? (void) (0) : __assert_fail ("32 == 32", "uuid/uuid.c", 163, __PRETTY_FUNCTION__));
+
+
+ if (size < (32 + 6 + 1)) {
+  print_log(3, "uuid/uuid.c", 167 , -1,"Couldn't write uuid, buffer too small.");
+  return 0;
+ }
+
+ for (i = 0, tot = 0; i < 7; i++) {
+  memcpy(buffer, id->uuid + tot, group_size[i]);
+  buffer += group_size[i];
+  tot += group_size[i];
+  *buffer++ = '-';
+ }
+
+ *--buffer = '\0';
+ return 1;
 }

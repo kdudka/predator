@@ -98,6 +98,24 @@ int dm_hash_insert(struct dm_hash_table *t, const char *key, void *data)
     return 1;
 }
 
+void dm_hash_remove(struct dm_hash_table *t, const char *key)
+{
+    void *head = t;
+    struct dm_list *pos = head;
+    (void) key;
+
+    /* seek random list position */
+    while (___sl_get_nondet_int())
+        pos = pos->p;
+
+    if (head == pos)
+        /* not found*/
+        return;
+
+    dm_list_del(pos);
+    free(dm_list_item(pos, struct ht_node));
+}
+
 int main()
 {
     static char vgname[32];
