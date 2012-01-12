@@ -34,9 +34,14 @@
 #include <algorithm>            // for std::copy_if
 #include <iomanip>
 #include <map>
-#include <queue>
 
 #include <boost/foreach.hpp>
+
+#if SE_USE_DFS_SCHEDULER
+#   include <stack>
+#else
+#   include <queue>
+#endif
 
 #define SS_DEBUG(...) do {                                                  \
     if (::debugSymState)                                                    \
@@ -276,11 +281,15 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
 // /////////////////////////////////////////////////////////////////////////////
 // BlockScheduler implementation
 struct BlockScheduler::Private {
-    typedef std::queue<TBlock>                              TFifo;
+#if SE_USE_DFS_SCHEDULER
+    typedef std::stack<TBlock>                              TSched;
+#else
+    typedef std::queue<TBlock>                              TSched;
+#endif
     typedef std::map<TBlock, unsigned /* cnt */>            TDone;
 
     TBlockSet           todo;
-    TFifo               fifo;
+    TSched              sched;
     TDone               done;
 };
 
@@ -319,7 +328,7 @@ bool BlockScheduler::schedule(const TBlock bb) {
         // already in the queue
         return false;
 
-    d->fifo.push(bb);
+    d->sched.push(bb);
     return true;
 }
 
@@ -328,8 +337,12 @@ bool BlockScheduler::getNext(TBlock *dst) {
         return false;
 
     // take the first block in the queue
-    const TBlock bb = d->fifo.front();
-    d->fifo.pop();
+#if SE_USE_DFS_SCHEDULER
+    const TBlock bb = d->sched.top();
+#else
+    const TBlock bb = d->sched.front();
+#endif
+    d->sched.pop();
     if (1 != d->todo.erase(bb))
         CL_BREAK_IF("BlockScheduler malfunction");
 
