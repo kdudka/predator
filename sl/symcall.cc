@@ -63,7 +63,7 @@ class PerFncCache {
             }
         }
 
-        void updateCacheEntry(const SymHeap &of, const SymHeap &by) {
+        void updateCacheEntry(const SymHeap &of, SymHeap by) {
 #if !SE_ENABLE_CALL_CACHE
             CL_BREAK_IF("invalid call of PerFncCache::updateCacheEntry()");
             return;
@@ -75,7 +75,8 @@ class PerFncCache {
             }
 
             CL_BREAK_IF(!areEqual(of, huni_[idx]));
-            *huni_.heaps_[idx] = by;
+            Trace::waiveCloneOperation(by);
+            huni_.swapExisting(idx, by);
         }
 
         /**
@@ -128,9 +129,14 @@ int PerFncCache::lookupCore(const SymHeap &sh) {
         ctx = 0;
 
         // update the cache entry
-        huni_.heaps_[idx] = (JS_USE_SH2 == status)
-            ? /* JS_USE_SH2   */ sh
-            : /* JS_THREE_WAY */ result;
+        if (JS_THREE_WAY == status)
+            huni_.swapExisting(idx, result);
+        else {
+            CL_BREAK_IF(JS_USE_SH2 != status);
+            SymHeap shDup(sh);
+            Trace::waiveCloneOperation(shDup);
+            huni_.swapExisting(idx, shDup);
+        }
 
         return idx;
     }
