@@ -64,9 +64,6 @@ class SymState {
         /// insert given SymHeap object into the state
         virtual bool insert(const SymHeap &sh, bool allowThreeWay = true);
 
-        /// merge the content of the given SymState object into the state
-        void insert(const SymState &huni);
-
         /// return count of object stored in the container
         size_t size()          const { return heaps_.size();  }
 

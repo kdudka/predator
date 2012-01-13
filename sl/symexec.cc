@@ -691,7 +691,7 @@ bool /* complete */ SymExecEngine::execBlock() {
     return true;
 }
 
-void joinNewResults(
+void joinCallResults(
         SymHeapList             &dst,
         const SymState          &src)
 {
@@ -701,7 +701,17 @@ void joinNewResults(
     SymHeapUnion all;
 #endif
     all.swap(dst);
-    all.SymState::insert(src);
+
+    const unsigned cnt = src.size();
+    for (unsigned i = 0; i < cnt; ++i) {
+        if (1 < cnt) {
+            CL_DEBUG("*** joinCallResults() is processing heap #"
+                     << i << " of " << cnt << " heaps total");
+        }
+
+        all.insert(src[i]);
+    }
+
     all.swap(dst);
 }
 
@@ -710,7 +720,7 @@ bool /* complete */ SymExecEngine::run() {
 
     if (waiting_) {
         // pick up results of the pending call
-        joinNewResults(nextLocalState_, callResults_);
+        joinCallResults(nextLocalState_, callResults_);
 
         // we're on the way from a just completed function call...
         if (!this->execBlock())

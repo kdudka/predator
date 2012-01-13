@@ -129,12 +129,6 @@ bool SymState::insert(const SymHeap &sh, bool /* allowThreeWay */ ) {
     return false;
 }
 
-void SymState::insert(const SymState &huni) {
-    BOOST_FOREACH(const SymHeap *current, huni) {
-        this->insert(*current);
-    }
-}
-
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapUnion implementation
