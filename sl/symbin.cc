@@ -864,6 +864,10 @@ BuiltInTable::BuiltInTable() {
 
     // initialize lookForDerefs() look-up table
     der_["free"]        .push_back(/* addr */ 2);
+    der_["memcpy"]      .push_back(/* dst  */ 2);
+    der_["memcpy"]      .push_back(/* src  */ 3);
+    der_["memmove"]     .push_back(/* dst  */ 2);
+    der_["memmove"]     .push_back(/* src  */ 3);
     der_["memset"]      .push_back(/* addr */ 2);
 }
 
