@@ -176,3 +176,64 @@ void dm_hash_remove(struct dm_hash_table *t, const char *key)
     free(dm_list_item(pos, struct ht_node));
 }
 
+struct btree *btree_create(struct dm_pool *mem)
+{
+    (void) mem;
+    return (void *) dm_hash_create(0);
+}
+
+struct btree_iter *btree_first(const struct btree *t)
+{
+    struct dm_list *head = (struct dm_list *) t;
+    if (head->n == head)
+        /* empty tree */
+        return NULL;
+
+    return (void *) head;
+}
+
+struct btree_iter *btree_next(const struct btree_iter *it)
+{
+    struct dm_list *head = (struct dm_list *) it;
+    return (void *) head->n;
+}
+
+void *btree_get_data(const struct btree_iter *it)
+{
+    struct dm_list *head = (struct dm_list *) it;
+    return dm_list_item(head, struct ht_node)->data;
+}
+
+struct dirent {
+    __ino64_t d_ino;
+    __off64_t d_off;
+    unsigned short int d_reclen;
+    unsigned char d_type;
+    char d_name[256];
+};
+
+extern int alphasort (__const struct dirent **__e1, __const struct dirent **__e2) __asm__ ("" "alphasort64") __attribute__ ((__nothrow__))
+    __attribute__ ((__pure__)) __attribute__ ((__nonnull__ (1, 2)));
+
+int scandir (__const char *__restrict __dir, struct dirent ***__restrict __namelist, int (*__selector) (__const struct dirent *), int (*__cmp) (__const struct dirent **, __const struct dirent **))
+{
+    return -1;
+}
+
+struct dm_pool *dm_pool_create(const char *name, size_t chunk_hint) {
+    return (void *) ___sl_get_nondet_int();
+}
+
+char *dm_pool_strdup(struct dm_pool *p, const char *str) {
+    return __strdup(str);
+}
+
+const struct config_node *find_config_tree_node(struct cmd_context *cmd,
+      const char *path)
+{
+    return NULL;
+}
+
+void init_full_scan_done(int level) {
+    (void) level;
+}
