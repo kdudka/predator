@@ -22,6 +22,12 @@ char *__strdup (__const char *__string)
     return dup;
 }
 
+char *strcpy (char *__restrict __dest, __const char *__restrict __src)
+{
+    size_t len = 1UL + strlen(__src);
+    return memcpy(__dest, __src, len);
+}
+
 char *strncpy (char *__restrict __dest,
         __const char *__restrict __src, size_t __n)
 {
@@ -112,6 +118,7 @@ struct dm_hash_table *dm_hash_create(unsigned size_hint)
 
 struct ht_node {
     void *data;
+    void *owner;
     struct dm_list list;
 };
 
@@ -151,6 +158,7 @@ int dm_hash_insert(struct dm_hash_table *t, const char *key, void *data)
         return 0;
 
     node->data = data;
+    node->owner = t;
 
     /* insert the new node at a random position in the list */
     dm_list_add(pos, &node->list);
@@ -189,12 +197,15 @@ struct btree_iter *btree_first(const struct btree *t)
         /* empty tree */
         return NULL;
 
-    return (void *) head;
+    return (void *) head->n;
 }
 
 struct btree_iter *btree_next(const struct btree_iter *it)
 {
     struct dm_list *head = (struct dm_list *) it;
+    if (dm_list_item(head, struct ht_node)->owner == head->n)
+        return NULL;
+
     return (void *) head->n;
 }
 
@@ -202,6 +213,18 @@ void *btree_get_data(const struct btree_iter *it)
 {
     struct dm_list *head = (struct dm_list *) it;
     return dm_list_item(head, struct ht_node)->data;
+}
+
+void *btree_lookup(const struct btree *t, uint32_t k)
+{
+    void *ht = (void *) t;
+    return dm_hash_lookup(ht, ht);
+}
+
+int btree_insert(struct btree *t, uint32_t k, void *data)
+{
+    void *ht = (void *) t;
+    return dm_hash_insert(ht, ht, data);
 }
 
 struct dirent {
@@ -221,11 +244,15 @@ int scandir (__const char *__restrict __dir, struct dirent ***__restrict __namel
 }
 
 struct dm_pool *dm_pool_create(const char *name, size_t chunk_hint) {
-    return (void *) ___sl_get_nondet_int();
+    return malloc(1U);
 }
 
 char *dm_pool_strdup(struct dm_pool *p, const char *str) {
     return __strdup(str);
+}
+
+void *dm_pool_zalloc(struct dm_pool *p, size_t s) {
+    return calloc(s, 1U);
 }
 
 const struct config_node *find_config_tree_node(struct cmd_context *cmd,
@@ -236,4 +263,15 @@ const struct config_node *find_config_tree_node(struct cmd_context *cmd,
 
 void init_full_scan_done(int level) {
     (void) level;
+}
+
+int stat (__const char *__restrict path, struct stat *__restrict buf)
+{
+    struct stat tmp;
+    memcpy(&tmp, buf, sizeof tmp);
+    memset(buf, '\0', sizeof tmp);
+    memcpy(buf, &tmp, sizeof tmp);
+
+    strlen(path);
+    return 0;
 }
