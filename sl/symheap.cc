@@ -2784,6 +2784,10 @@ TSizeRange SymHeapCore::valSizeOfString(TValId addr) const {
         // possibly unterminated string
         return /* error */ IR::rngFromNum(IR::Int0);
 
+    // Private::findZeroAtOff() returns an absolute offset, but we need relative
+    CL_BREAK_IF(len < off);
+    len -= off;
+
     // if we get here, it means there is at least the trailing zero
     IR::Range rng(IR::rngFromNum(IR::Int1));
     rng.hi = len + /* trailing zero */ 1;
