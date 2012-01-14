@@ -1003,22 +1003,27 @@ void executeMemmove(
     SymHeap &sh = proc.sh();
     const struct cl_loc *loc = proc.lw();
 
-    IR::TInt size;
-    if (!numFromVal(&size, sh, valSize)) {
+    IR::Range size;
+    if (!rngFromVal(&size, sh, valSize) || size.lo < 0) {
         CL_ERROR_MSG(loc, "size arg of memmove() is not a known integer");
         proc.printBackTrace(ML_ERROR);
         return;
     }
+    if (!size.hi) {
+        CL_WARN_MSG(loc, "ignoring call of memcpy()/memmove() with size == 0");
+        proc.printBackTrace(ML_WARN);
+        return;
+    }
 
-    if (proc.checkForInvalidDeref(valDst, size)
-            || proc.checkForInvalidDeref(valSrc, size))
+    if (proc.checkForInvalidDeref(valDst, size.hi)
+            || proc.checkForInvalidDeref(valSrc, size.hi))
     {
         // error message already printed out
         proc.printBackTrace(ML_ERROR);
         return;
     }
 
-    if (!allowOverlap && checkForOverlap(sh, valDst, valSrc, size)) {
+    if (!allowOverlap && checkForOverlap(sh, valDst, valSrc, size.hi)) {
         CL_ERROR_MSG(loc, "source and destination overlap in call of memcpy()");
         proc.printBackTrace(ML_ERROR);
         return;
@@ -1028,7 +1033,15 @@ void executeMemmove(
     lm.enter();
 
     TValSet killedPtrs;
-    sh.copyBlockOfRawMemory(valDst, valSrc, size, &killedPtrs);
+    sh.copyBlockOfRawMemory(valDst, valSrc, size.lo, &killedPtrs);
+
+    if (!isSingular(size)) {
+        CL_DEBUG_MSG(loc, "memcpy()/memmove() invalidates ambiguous suffix");
+        const TValId suffixAddr = sh.valByOffset(valDst, size.lo);
+        const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        const TSizeOf suffWidth = widthOf(size) - /* closed int */ 1;
+        sh.writeUniformBlock(suffixAddr, valUnknown, suffWidth, &killedPtrs);
+    }
 
     if (lm.collectJunkFrom(killedPtrs)) {
         CL_WARN_MSG(loc, "memory leak detected while executing memmove()");
