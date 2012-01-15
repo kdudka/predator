@@ -501,7 +501,8 @@ struct SymHeapCore::Private {
             RootValue              *rootDataDst,
             const TObjId            objSrc,
             const EBlockKind        code,
-            const TOffset           shift = 0);
+            const TOffset           shift = 0,
+            const TSizeOf           sizeLimit = 0);
 
     TValId dupRoot(TValId root);
     void destroyRoot(TValId obj);
@@ -1059,25 +1060,31 @@ void SymHeapCore::Private::transferBlock(
         const BlockEntity *hbDataSrc;
         this->ents.getEntRO(&hbDataSrc, objSrc);
 
+        const EBlockKind code = hbDataSrc->code;
         const TOffset beg = hbDataSrc->off;
-        if (beg < winBeg)
-            // the object starts above the window, do not copy this one
-            continue;
-
         const TOffset end = beg + hbDataSrc->size;
-        if (winEnd < end)
-            // the object ends beyond the window, do not copy this one
-            continue;
 
-        const TLiveObjs &liveSrc = rootDataSrc->liveObjs;
-        const TLiveObjs::const_iterator it = liveSrc.find(objSrc);
-        if (liveSrc.end() == it)
+        TOffset realShift = shift;
+        TSizeOf sizeLimit = /* disabled */ 0;
+
+        if (beg < winBeg || winEnd < end) {
+            if (BK_UNIFORM != code)
+                // regular object that exceeds the window, do not copy this one
+                continue;
+
+            realShift -= beg - winBeg;
+
+            sizeLimit = hbDataSrc->size + beg + winEnd - winBeg - end;
+            CL_BREAK_IF(hbDataSrc->size <= sizeLimit || sizeLimit <= 0);
+        }
+
+        if (!hasKey(rootDataSrc->liveObjs, objSrc))
             // dead object anyway
             continue;
 
         // copy a single live block
-        const EBlockKind code = it->second;
-        this->copySingleLiveBlock(dstRoot, rootDataDst, objSrc, code, shift);
+        this->copySingleLiveBlock(dstRoot, rootDataDst, objSrc, code,
+                realShift, sizeLimit);
     }
 }
 
@@ -1322,7 +1329,8 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
         RootValue                  *rootDataDst,
         const TObjId                objSrc,
         const EBlockKind            code,
-        const TOffset               shift)
+        const TOffset               shift,
+        const TSizeOf               sizeLimit)
 {
     TObjId dst;
 
@@ -1334,8 +1342,10 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
         dst = this->assignId(blDst);
         blDst->root = rootDst;
 
-        // shift the block if asked to do so
+        // shift the block and limit the size if asked to do so
         blDst->off += shift;
+        if (sizeLimit)
+            blDst->size = sizeLimit;
 
         // map the cloned block
         rootDataDst->arena += createArenaItem(blDst->off, blDst->size, dst);
@@ -1343,6 +1353,7 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
     else {
         // duplicate a regular object
         CL_BREAK_IF(BK_DATA_PTR != code && BK_DATA_OBJ != code);
+        CL_BREAK_IF(sizeLimit);
 
         const HeapObject *objDataSrc;
         this->ents.getEntRO(&objDataSrc, objSrc);
