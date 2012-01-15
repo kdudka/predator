@@ -275,3 +275,80 @@ int stat (__const char *__restrict path, struct stat *__restrict buf)
     strlen(path);
     return 0;
 }
+
+int dev_open(struct device *dev)
+{
+    return ___sl_get_nondet_int();
+}
+
+int dev_read(struct device *dev, uint64_t offset, size_t len, void *buffer)
+{
+    struct device_area where;
+    int ret;
+
+    if (!dev->open_count)
+        do { print_log(7, "device/dev-io.c", 626 , 0,"<backtrace>"); return 0; } while (0);
+
+    if (!_dev_is_valid(dev))
+        return 0;
+
+    where.dev = dev;
+    where.start = offset;
+    where.size = len;
+
+    ret = _aligned_io(&where, buffer, 0);
+    if (!ret)
+        _dev_inc_error_count(dev);
+
+    return ret;
+}
+
+static int _dev_close(struct device *dev, int immediate)
+{
+    struct lvmcache_info *info;
+
+    if (dev->fd < 0) {
+        print_log(3,
+                "device/dev-io.c"
+                /* # 556 "device/dev-io.c" */
+                ,
+                557
+                /* # 556 "device/dev-io.c" */
+                , -1,"Attempt to close device '%s' " "which is not open.", dev_name(dev))
+            ;
+        return 0;
+    }
+
+
+
+
+
+
+    if (dev->open_count > 0)
+        dev->open_count--;
+
+    if (immediate && dev->open_count)
+        print_log(7,
+                "device/dev-io.c"
+                /* # 570 "device/dev-io.c" */
+                ,
+                571
+                /* # 570 "device/dev-io.c" */
+                , 0,"%s: Immediate close attempt while still referenced", dev_name(dev))
+            ;
+
+
+    if (immediate ||
+            (dev->open_count < 1 &&
+             (!(info = info_from_pvid(dev->pvid, 0)) ||
+              !info->vginfo ||
+              !vgname_is_locked(info->vginfo->vgname))))
+        _close(dev);
+
+    return 1;
+}
+
+int dev_close(struct device *dev)
+{
+    return _dev_close(dev, 0);
+}

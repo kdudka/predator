@@ -8,6 +8,7 @@
 #include "lvm2-harness.h"
 
 #include "dev-cache-bare.c"
+#include "label-bare.c"
 #include "list-bare.c"
 
 int dummy_passes_filter(struct dev_filter * f, struct device * dev) {
