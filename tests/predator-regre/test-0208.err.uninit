@@ -1,0 +1,3 @@
+test-0208.c:30:5: error: invalid dereference
+test-0208.c:39:22: note: from call of dev_name()
+test-0208.c:36:5: note: from call of main()
