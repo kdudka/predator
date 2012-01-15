@@ -219,8 +219,11 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
                     CL_DEBUG("2+ accessors by CL_OPERAND_CST pointer");
             }
 
-            if (value)
+            if (value) {
+                const std::ios_base::fmtflags oldFlags = out_.flags();
                 SSD_COLORIZE(out_, C_LIGHT_RED) << "0x" << std::hex << value;
+                out_.flags(oldFlags);
+            }
             else
                 SSD_COLORIZE(out_, C_WHITE) << "NULL";
 
