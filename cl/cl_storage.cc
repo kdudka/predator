@@ -331,9 +331,9 @@ struct ClStorageBuilder::Private {
     typedef struct cl_operand TOp;
 
     void digInitials(const TOp *);
-    Var& digOperandVar(const TOp *, bool isArgDecl);
+    bool digOperandVar(const TOp *, bool isArgDecl);
     void digOperandCst(const struct cl_operand *);
-    void digOperand(const TOp *, bool skipVarInit = false);
+    void digOperand(const TOp *);
     void openInsn(Insn *);
     void closeInsn();
 };
@@ -368,7 +368,7 @@ void ClStorageBuilder::Private::digInitials(const TOp *op)
         stor.vars[id].initials.push_back(insn);
 
         BOOST_FOREACH(const struct cl_operand &op, insn->operands)
-            this->digOperand(&op, /* skipVarInit */ true);
+            this->digOperand(&op);
     }
 }
 
@@ -390,7 +390,7 @@ EVar varCodeByScope(const enum cl_scope_e scope, const bool isArgDecl) {
     }
 }
 
-Var& ClStorageBuilder::Private::digOperandVar(const TOp *op, bool isArgDecl) {
+bool ClStorageBuilder::Private::digOperandVar(const TOp *op, bool isArgDecl) {
     const int id = varIdFromOperand(op);
 
     // mark as used in the current function
@@ -400,7 +400,7 @@ Var& ClStorageBuilder::Private::digOperandVar(const TOp *op, bool isArgDecl) {
     Var &var = stor.vars[id];
     if (VAR_VOID != var.code)
         // already processed
-        return var;
+        return false;
 
     const enum cl_scope_e scope = op->scope;
     const EVar code = varCodeByScope(scope, isArgDecl);
@@ -424,7 +424,7 @@ Var& ClStorageBuilder::Private::digOperandVar(const TOp *op, bool isArgDecl) {
             break;
     }
 
-    return var;
+    return true;
 }
 
 void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
@@ -464,7 +464,7 @@ void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
     nameMap[name] = uid;
 }
 
-void ClStorageBuilder::Private::digOperand(const TOp *op, bool skipVarInit) {
+void ClStorageBuilder::Private::digOperand(const TOp *op) {
     if (!op || CL_OPERAND_VOID == op->code)
         return;
 
@@ -497,12 +497,14 @@ void ClStorageBuilder::Private::digOperand(const TOp *op, bool skipVarInit) {
             return;
     }
 
-    Var &var = this->digOperandVar(op, /* isArgDecl */ false);
+    const bool skipVarInit = !this->digOperandVar(op, /* isArgDecl */ false);
 
     ac = op->accessor;
-    if (ac && ac->code != CL_ACCESSOR_DEREF && seekRefAccessor(ac))
+    if (ac && ac->code != CL_ACCESSOR_DEREF && seekRefAccessor(ac)) {
         // we are taking a reference to the variable by this operand!
-        var.mayBePointed = true;
+        const int id = varIdFromOperand(op);
+        stor.vars[id].mayBePointed = true;
+    }
 
     if (skipVarInit)
         return;
