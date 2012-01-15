@@ -1,5 +1,5 @@
 lvm2-harness.h:21:12: error: dereference of NULL value
-lvm2-harness.h:251:5: note: from call of __strdup()
+lvm2-harness.h:275:5: note: from call of __strdup()
 dev-cache-bare.c:617:39: note: from call of dm_pool_strdup()
 test-0467.c:28:24: note: from call of dev_cache_init()
 test-0467.c:18:5: note: from call of main()
@@ -14,7 +14,7 @@ lvmcache-prep.c:9766:5: note: from call of dev_iter_create()
 test-0467.c:35:5: note: from call of lvmcache_label_scan()
 test-0467.c:18:5: note: from call of main()
 lvm2-harness.h:21:12: error: dereference of NULL value
-lvm2-harness.h:251:5: note: from call of __strdup()
+lvm2-harness.h:275:5: note: from call of __strdup()
 dev-cache-bare.c:65:37: note: from call of dm_pool_strdup()
 dev-cache-bare.c:346:7: note: from call of dev_create_file()
 dev-cache-bare.c:446:18: note: from call of _insert_dev()

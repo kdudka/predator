@@ -42,6 +42,13 @@ int strncmp (__const char *__s1, __const char *__s2, size_t __n)
     return ___sl_get_nondet_int();
 }
 
+int strcmp (__const char *__s1, __const char *__s2)
+{
+    strlen(__s1);
+    strlen(__s2);
+    return ___sl_get_nondet_int();
+}
+
 int is_orphan_vg(const char *vg_name)
 {
     strlen(vg_name);
@@ -101,6 +108,23 @@ int id_write_format(const struct id *id, char *buffer, size_t size)
  * return the list head 'list'
  */
 #define dm_list_head(v, t, e) dm_struct_field(v, t, e, list)
+
+/*
+ * Walk a list, setting 'v' in turn to the containing structure of each item.
+ * The containing structure should be the same type as 'v'.
+ * The 'struct dm_list' variable within the containing structure is 'field'.
+ */
+#define dm_list_iterate_items_gen(v, head, field) \
+	for (v = dm_list_struct_base((head)->n, __typeof__(*v), field); \
+	     &v->field != (head); \
+	     v = dm_list_struct_base(v->field.n, __typeof__(*v), field))
+
+/*
+ * Walk a list, setting 'v' in turn to the containing structure of each item.
+ * The containing structure should be the same type as 'v'.
+ * The list should be 'struct dm_list list' within the containing structure.
+ */
+#define dm_list_iterate_items(v, head) dm_list_iterate_items_gen(v, (head), list)
 
 /* overridden simplified implementation of dm_hash_create() */
 struct dm_hash_table *dm_hash_create(unsigned size_hint)
@@ -276,9 +300,120 @@ int stat (__const char *__restrict path, struct stat *__restrict buf)
     return 0;
 }
 
+static inline int _dev_is_valid(struct device *dev)
+{
+    return (dev->max_error_count == 0 ||
+            dev->error_count < dev->max_error_count);
+}
+
+static int _get_block_size(struct device *dev, unsigned int *size)
+{
+    const char *name = dev_name(dev);
+
+    if (dev->block_size == -1) {
+        if (___sl_get_nondet_int() < 0) {
+            print_log(3, "device/dev-io.c", 131 , -1,"%s: %s failed: %s", name, "ioctl BLKBSZGET", strerror((*__errno_location ())));
+            return 0;
+        }
+        print_log(7, "device/dev-io.c", 134 , 0,"%s: block size is %u bytes", name, dev->block_size);
+    }
+
+    *size = (unsigned int) dev->block_size;
+
+    return 1;
+}
+
+static int _aligned_io(struct device_area *where, char *buffer,
+        int should_write)
+{
+    char *bounce, *bounce_buf;
+    unsigned int block_size = 0;
+    uintptr_t mask;
+    struct device_area widened;
+    int r = 0;
+
+    if (!(where->dev->flags & 0x00000002) &&
+            !_get_block_size(where->dev, &block_size))
+        do { print_log(7, "device/dev-io.c", 175 , 0,"<backtrace>"); return 0; } while (0);
+
+    /* TODO */
+#if 0
+    if (!block_size)
+        block_size = lvm_getpagesize() ___sl_get_nondet_int();
+
+    _widen_region(block_size, where, &widened);
+
+
+    mask = block_size - 1;
+    if (!memcmp(where, &widened, sizeof(widened)) &&
+            !((uintptr_t) buffer & mask))
+        return _io(where, buffer, should_write);
+
+
+    if (!(bounce_buf = bounce = dm_malloc_aux(((size_t) widened.size + block_size), "device/dev-io.c", 189))) {
+        print_log(3, "device/dev-io.c", 190 , -1,"Bounce buffer malloc failed");
+        return 0;
+    }
+
+
+
+
+    if (((uintptr_t) bounce) & mask)
+        bounce = (char *) ((((uintptr_t) bounce) + mask) & ~mask);
+
+
+    if (!_io(&widened, bounce, 0)) {
+        if (!should_write)
+            do { print_log(7, "device/dev-io.c", 203 , 0,"<backtrace>"); goto out; } while (0);
+
+        memset(bounce, '\n', widened.size);
+    }
+
+    if (should_write) {
+        memcpy(bounce + (where->start - widened.start), buffer,
+                (size_t) where->size);
+
+
+        if (!(r = _io(&widened, bounce, 1)))
+            print_log(7, "device/dev-io.c", 214 , 0,"<backtrace>");
+
+        goto out;
+    }
+
+    memcpy(buffer, bounce + (where->start - widened.start),
+            (size_t) where->size);
+
+    r = 1;
+
+out:
+    free(bounce_buf);
+#endif
+    return r;
+}
+
+static void _dev_inc_error_count(struct device *dev)
+{
+    if (++dev->error_count == dev->max_error_count)
+        print_log(4 | 128,
+
+                "device/dev-io.c"
+                /* # 615 "device/dev-io.c" */
+                ,
+
+                617
+                /* # 615 "device/dev-io.c" */
+                , 0,"WARNING: Error counts reached a limit of %d. " "Device %s was disabled", dev->max_error_count, dev_name(dev))
+
+            ;
+}
+
 int dev_open(struct device *dev)
 {
-    return ___sl_get_nondet_int();
+    if (___sl_get_nondet_int())
+        return 0;
+
+    dev->open_count ++;
+    return 1;
 }
 
 int dev_read(struct device *dev, uint64_t offset, size_t len, void *buffer)
@@ -351,4 +486,24 @@ static int _dev_close(struct device *dev, int immediate)
 int dev_close(struct device *dev)
 {
     return _dev_close(dev, 0);
+}
+
+#define MDA_IGNORED 0x00000001
+
+unsigned mda_is_ignored(struct metadata_area *mda)
+{
+    return (mda->status & MDA_IGNORED);
+}
+
+int mdas_empty_or_ignored(struct dm_list *mdas)
+{
+    struct metadata_area *mda;
+
+    if (!dm_list_size(mdas))
+        return 1;
+    dm_list_iterate_items(mda, mdas) {
+        if (mda_is_ignored(mda))
+            return 1;
+    }
+    return 0;
 }
