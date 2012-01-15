@@ -171,6 +171,8 @@ class SymExecEngine: public IStatsProvider {
     private:
         void initEngine(const SymHeap &init);
 
+        void joinCallResults();
+
         void updateState(SymHeap &sh, const CodeStorage::Block *ofBlock);
 
         void updateStateInBranch(
@@ -615,7 +617,7 @@ bool /* complete */ SymExecEngine::execInsn() {
                          << " (initial size of state was " << hCnt << ")");
         }
 
-        // terrify the user by our current schedule if he is asking for that :-)
+        // time to respond to a single pending signal
         this->processPendingSignals();
 
         if (isTerm) {
@@ -691,28 +693,28 @@ bool /* complete */ SymExecEngine::execBlock() {
     return true;
 }
 
-void joinCallResults(
-        SymHeapList             &dst,
-        const SymState          &src)
-{
+void SymExecEngine::joinCallResults() {
 #if SE_ABSTRACT_ON_CALL_DONE
     SymStateWithJoin all;
 #else
     SymHeapUnion all;
 #endif
-    all.swap(dst);
+    all.swap(nextLocalState_);
 
-    const unsigned cnt = src.size();
+    const unsigned cnt = callResults_.size();
     for (unsigned i = 0; i < cnt; ++i) {
         if (1 < cnt) {
-            CL_DEBUG("*** joinCallResults() is processing heap #"
+            CL_DEBUG("*** SymExecEngine::joinCallResults() is processing heap #"
                      << i << " of " << cnt << " heaps total");
         }
 
-        all.insert(src[i]);
+        // time to respond to a single pending signal
+        this->processPendingSignals();
+
+        all.insert(callResults_[i]);
     }
 
-    all.swap(dst);
+    all.swap(nextLocalState_);
 }
 
 bool /* complete */ SymExecEngine::run() {
@@ -720,7 +722,7 @@ bool /* complete */ SymExecEngine::run() {
 
     if (waiting_) {
         // pick up results of the pending call
-        joinCallResults(nextLocalState_, callResults_);
+        this->joinCallResults();
 
         // we're on the way from a just completed function call...
         if (!this->execBlock())
