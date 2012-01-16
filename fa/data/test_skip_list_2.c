@@ -37,8 +37,8 @@ struct sl* create_sl_with_head_and_tail(void)
     sl->head = malloc(sizeof(struct sl_item));
     sl->tail = malloc(sizeof(struct sl_item));
         
-    /*sl->head->n3 =*/ sl->head->n2 = sl->head->n1 = sl->tail;
-    /*sl->tail->n3 =*/ sl->tail->n2 = sl->tail->n1 = NULL;
+/*    sl->head->n3 =*/ sl->head->n2 = sl->head->n1 = sl->tail;
+/*    sl->tail->n3 =*/ sl->tail->n2 = sl->tail->n1 = NULL;
 
     return sl;
 
@@ -81,8 +81,8 @@ void sl_random_insert(struct sl *sl)
     if (__nondet()) {
         new->n2 = a2->n2;
         a2->n2 = new;
-/*        // choose whether to insert at level 3
-        if (__nondet()) {
+        // choose whether to insert at level 3
+/*        if (__nondet()) {
             new->n3 = a3->n3;
             a3->n3 = new;
         }*/
