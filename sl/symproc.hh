@@ -150,6 +150,13 @@ void describeUnknownVal(
         const TValId                 val,
         const char                  *action);
 
+void executeMemmove(
+        SymProc                     &proc,
+        const TValId                 valDst,
+        const TValId                 valSrc,
+        const TValId                 valSize,
+        const bool                   allowOverlap);
+
 void executeMemset(
         SymProc                     &proc,
         const TValId                 addr,

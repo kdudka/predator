@@ -5,4 +5,5 @@ int main()
     void **ptr = malloc(sizeof *ptr);
     free(ptr);
     ptr = malloc(sizeof *ptr);
+    return 0;
 }

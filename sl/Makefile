@@ -18,7 +18,7 @@
 CMAKE ?= cmake
 CTEST ?= ctest
 
-.PHONY: all check clean distclean distcheck fast version.h
+.PHONY: all check clean cppcheck distclean distcheck fast version.h
 
 all: version.h ../cl_build
 	# make sure the libcl.so is up2date
@@ -38,6 +38,10 @@ fast:
 
 check: all
 	cd ../sl_build && $(CTEST) --output-on-failure
+
+cppcheck: all
+	cppcheck --enable=style,performance,portability,information,missingInclude \
+		--template gcc -j5 --inline-suppr .
 
 version.h:
 	@if test -d ../.git; then \

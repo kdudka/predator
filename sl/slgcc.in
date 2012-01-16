@@ -30,7 +30,7 @@ seek_input_file "$@" || usage
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
 export SINK="/dev/null"
 export SL_PLUG="$topdir/sl_build/libsl.so"
-export GCC_HOST="$topdir/gcc-install/bin/gcc"
+export GCC_HOST=@GCC_HOST@
 export GCC_OPTS="-S -o $SINK -O0 -I$topdir/include/predator-builtins -DPREDATOR"
 
 # initial checks
@@ -112,6 +112,7 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin=libsl\.so\]$||'        \
         -e "s|(block L[0-9]+) (in progress)|\1 $Y\2$G|"                        \
         -e "s|(... while executing) (.*\\(\\))|\1 $Y\2$N|"                     \
         -e "s|took ([0-9.]+ s)|took $R\1$N|"                                   \
+        -e "s|(ignoring call of undefined function:) (.*)\$|\1 $R\2$N|"        \
         -e "s|(internal compiler error:) (.*)\$|\1 $R\2$N|"                    \
         -e "s|(undefined symbol:) (.*)\$|\1 $R\2$N|"                           \
         -e "s/(CL_BREAK_IF|INT3|SIGTRAP)/$R\1$N/"                              \

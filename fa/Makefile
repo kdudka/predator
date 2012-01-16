@@ -18,8 +18,7 @@
 CMAKE ?= cmake
 CTEST ?= ctest
 
-.PHONY: all clean distclean \
-	distcheck version.h
+.PHONY: all check clean distclean distcheck version.h
 
 all:
 	$(MAKE) -C ../cl_build # make sure the libcl.so is up2date
@@ -48,4 +47,4 @@ distclean: clean
 	rm -rf ../fa_build
 
 distcheck: distclean
-	$(MAKE) check; true
+	$(MAKE) check

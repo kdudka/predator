@@ -87,9 +87,14 @@ struct AmountFormatter {
 };
 
 std::ostream& operator<<(std::ostream &str, const AmountFormatter &fmt) {
+    const std::ios_base::fmtflags oldFlags = str.flags();
+    const int oldPrecision = str.precision();
+
     using namespace std;
-    str << fixed << setw(fmt.width) << setprecision(fmt.pre) << fmt.value
-        << resetiosflags(ios_base::showbase);
+    str << fixed << setw(fmt.width) << setprecision(fmt.pre) << fmt.value;
+
+    str.flags(oldFlags);
+    str.precision(oldPrecision);
     return str;
 }
 

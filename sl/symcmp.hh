@@ -30,7 +30,6 @@
 #include <vector>
 
 /// either intra-heap or inter-heap value mapping
-typedef std::map<TValId /* src */, TValId /* dst */>        TValMap;
 typedef TValMap                                             TValMapBidir[2];
 
 /// @todo some dox

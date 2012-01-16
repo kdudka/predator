@@ -21,7 +21,7 @@ static void gl_insert(void)
 
 static int foo(int value)
 {
-    (void) value;
+    return value;
 }
 
 int main()

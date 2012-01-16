@@ -266,8 +266,8 @@ class AbstractHeapEntity {
     protected:
         virtual ~AbstractHeapEntity() { }
         friend class EntStore<AbstractHeapEntity>;
-        friend class RefCntLibBase;
-        friend class RefCntLib<RCO_VIRTUAL>;
+        friend struct RefCntLibBase;
+        friend struct RefCntLib<RCO_VIRTUAL>;
 
     private:
         RefCounter refCnt;
@@ -322,10 +322,11 @@ struct BaseValue: public AbstractHeapEntity {
     EValueTarget                    code;
     EValueOrigin                    origin;
     TValId                          valRoot;
+    TValId                          anchor;
     TOffset /* FIXME: misleading */ offRoot;
     TObjIdSet                       usedBy;
-    TValId                          anchor;
 
+    // cppcheck-suppress uninitVar
     BaseValue(EValueTarget code_, EValueOrigin origin_):
         code(code_),
         origin(origin_),
@@ -378,6 +379,7 @@ struct RangeValue: public AnchorValue {
 struct CompValue: public BaseValue {
     TObjId                          compObj;
 
+    // cppcheck-suppress uninitVar
     CompValue(EValueTarget code_, EValueOrigin origin_):
         BaseValue(code_, origin_)
     {
@@ -423,6 +425,7 @@ struct RootValue: public AnchorValue {
     }
 };
 
+// cppcheck-suppress noConstructor
 class CustomValueMapper {
     private:
         typedef std::map<int /* uid */, TValId>                 TCustomByUid;
@@ -498,7 +501,8 @@ struct SymHeapCore::Private {
             RootValue              *rootDataDst,
             const TObjId            objSrc,
             const EBlockKind        code,
-            const TOffset           shift = 0);
+            const TOffset           shift = 0,
+            const TSizeOf           sizeLimit = 0);
 
     TValId dupRoot(TValId root);
     void destroyRoot(TValId obj);
@@ -529,7 +533,12 @@ struct SymHeapCore::Private {
             const TValId            addr,
             const TValId            tplValue,
             const TSizeOf           size,
-            TValSet                 *killedPtrs);
+            TValSet                *killedPtrs);
+
+    bool findZeroAtOff(
+            TOffset                *offDst,
+            const TOffset           offSrc,
+            const TValId            root);
 
     void bindValues(TValId v1, TValId v2, TValId valSum);
 
@@ -1051,25 +1060,31 @@ void SymHeapCore::Private::transferBlock(
         const BlockEntity *hbDataSrc;
         this->ents.getEntRO(&hbDataSrc, objSrc);
 
+        const EBlockKind code = hbDataSrc->code;
         const TOffset beg = hbDataSrc->off;
-        if (beg < winBeg)
-            // the object starts above the window, do not copy this one
-            continue;
-
         const TOffset end = beg + hbDataSrc->size;
-        if (winEnd < end)
-            // the object ends beyond the window, do not copy this one
-            continue;
 
-        const TLiveObjs &liveSrc = rootDataSrc->liveObjs;
-        const TLiveObjs::const_iterator it = liveSrc.find(objSrc);
-        if (liveSrc.end() == it)
+        TOffset realShift = shift;
+        TSizeOf sizeLimit = /* disabled */ 0;
+
+        if (beg < winBeg || winEnd < end) {
+            if (BK_UNIFORM != code)
+                // regular object that exceeds the window, do not copy this one
+                continue;
+
+            realShift -= beg - winBeg;
+
+            sizeLimit = hbDataSrc->size + beg + winEnd - winBeg - end;
+            CL_BREAK_IF(hbDataSrc->size <= sizeLimit || sizeLimit <= 0);
+        }
+
+        if (!hasKey(rootDataSrc->liveObjs, objSrc))
             // dead object anyway
             continue;
 
         // copy a single live block
-        const EBlockKind code = it->second;
-        this->copySingleLiveBlock(dstRoot, rootDataDst, objSrc, code, shift);
+        this->copySingleLiveBlock(dstRoot, rootDataDst, objSrc, code,
+                realShift, sizeLimit);
     }
 }
 
@@ -1314,7 +1329,8 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
         RootValue                  *rootDataDst,
         const TObjId                objSrc,
         const EBlockKind            code,
-        const TOffset               shift)
+        const TOffset               shift,
+        const TSizeOf               sizeLimit)
 {
     TObjId dst;
 
@@ -1326,8 +1342,10 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
         dst = this->assignId(blDst);
         blDst->root = rootDst;
 
-        // shift the block if asked to do so
+        // shift the block and limit the size if asked to do so
         blDst->off += shift;
+        if (sizeLimit)
+            blDst->size = sizeLimit;
 
         // map the cloned block
         rootDataDst->arena += createArenaItem(blDst->off, blDst->size, dst);
@@ -1335,6 +1353,7 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
     else {
         // duplicate a regular object
         CL_BREAK_IF(BK_DATA_PTR != code && BK_DATA_OBJ != code);
+        CL_BREAK_IF(sizeLimit);
 
         const HeapObject *objDataSrc;
         this->ents.getEntRO(&objDataSrc, objSrc);
@@ -1515,7 +1534,9 @@ SymHeapCore::~SymHeapCore() {
     delete d;
 }
 
+// cppcheck-suppress operatorEqToSelf
 SymHeapCore& SymHeapCore::operator=(const SymHeapCore &ref) {
+    CL_BREAK_IF(&ref == this);
     CL_BREAK_IF(&stor_ != &ref.stor_);
 
     delete d;
@@ -1656,6 +1677,67 @@ void SymHeapCore::copyBlockOfRawMemory(
     d->transferBlock(dstRoot, srcRoot, dstOff, srcOff, size);
 }
 
+bool SymHeapCore::Private::findZeroAtOff(
+        TOffset                *offDst,
+        const TOffset           offSrc,
+        const TValId            root)
+{
+    const RootValue *rootData;
+    this->ents.getEntRO(&rootData, root);
+
+    const TArena &arena = rootData->arena;
+    const TSizeOf limit = rootData->size.hi;
+    const TMemChunk chunk(offSrc, limit);
+
+    TObjIdSet overlaps;
+    if (!arenaLookup(&overlaps, arena, chunk, OBJ_INVALID))
+        // no blocks that would serve as a trailing zero
+        return false;
+
+    // go through all intersections and find the zero that is closest to offSrc
+    TOffset first = limit;
+    BOOST_FOREACH(const TObjId obj, overlaps) {
+        const BlockEntity *blData;
+        this->ents.getEntRO(&blData, obj);
+
+        const EBlockKind code = blData->code;
+        if (BK_UNIFORM != code) {
+            // TODO: support for nullified regular objects
+            CL_BREAK_IF("please implement");
+            continue;
+        }
+
+        if (VAL_NULL != blData->value)
+            // a uniform block, but not full of zeros
+            continue;
+
+        const TOffset beg = blData->off;
+        if (first < beg)
+            // we have already found a zero closer to offSrc
+            continue;
+
+        if (beg < offSrc) {
+            // the nullified block begins before offSrc
+            first = offSrc;
+            break;
+        }
+
+        // update the best match
+        first = beg;
+
+        // an optimization only
+        if (offSrc == first)
+            break;
+    }
+
+    if (limit == first)
+        // found nothing
+        return false;
+
+    *offDst = first;
+    return true;
+}
+
 TObjType SymHeapCore::objType(TObjId obj) const {
     if (obj < 0)
         return 0;
@@ -1731,12 +1813,13 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
     CL_BREAK_IF(isSingular(refRange));
 
     // compute the difference between the original and desired ranges
-    const IR::TInt loShift = refRange.lo - win.lo;
-    const IR::TInt hiShift = win.hi - refRange.hi;
-    if (IR::Int0 < loShift || IR::Int0 < hiShift) {
+    if (win.lo < refRange.lo || refRange.hi < win.hi) {
         CL_BREAK_IF("attempt to use trimCustomValue() to enlarge the interval");
         return;
     }
+
+    const IR::TUInt loShift = win.lo - refRange.lo;
+    const IR::TUInt hiShift = refRange.hi - win.hi;
 
     // jump to anchor
     const TValId anchor = customData->anchor;
@@ -1756,8 +1839,8 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
 
         // shift the bounds accordingly
         IR::Range &rngDep = cvDep.data.rng;
-        rngDep.lo -= loShift;
-        rngDep.hi += hiShift;
+        rngDep.lo += loShift;
+        rngDep.hi -= hiShift;
 
         if (isSingular(rngDep))
             // CV_INT_RANGE reduced to CV_INT
@@ -2679,6 +2762,47 @@ TSizeRange SymHeapCore::valSizeOfTarget(TValId val) const {
     IR::Range size = rootData->size;
     size -= IR::rngFromNum(/* off */ valData->offRoot);
     return size;
+}
+
+TSizeRange SymHeapCore::valSizeOfString(TValId addr) const {
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, addr);
+
+    const EValueTarget code = valData->code;
+    if (VT_CUSTOM == code) {
+        const InternalCustomValue *customData =
+            DCAST<const InternalCustomValue *>(valData);
+
+        const CustomValue &cv = customData->customData;
+        if (CV_STRING != cv.code)
+            return /* error */ IR::rngFromNum(IR::Int0);
+
+        // string literal
+        const unsigned len = strlen(cv.data.str) + /* trailing zero */ 1;
+        return IR::rngFromNum(len);
+    }
+
+    if (!isPossibleToDeref(code))
+        return /* error */ IR::rngFromNum(IR::Int0);
+
+    // resolve root and offset
+    const TValId root = valData->valRoot;
+    const TOffset off = valData->offRoot;
+
+    // seek the first zero byte at the given offset
+    TSizeOf len;
+    if (!d->findZeroAtOff(&len, off, root))
+        // possibly unterminated string
+        return /* error */ IR::rngFromNum(IR::Int0);
+
+    // Private::findZeroAtOff() returns an absolute offset, but we need relative
+    CL_BREAK_IF(len < off);
+    len -= off;
+
+    // if we get here, it means there is at least the trailing zero
+    IR::Range rng(IR::rngFromNum(IR::Int1));
+    rng.hi = len + /* trailing zero */ 1;
+    return rng;
 }
 
 void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {

@@ -24,7 +24,8 @@
 
 namespace IR {
 
-typedef signed long TInt;
+typedef signed long                 TInt;
+typedef unsigned long               TUInt;
 
 extern const TInt Int0;
 extern const TInt Int1;
@@ -86,6 +87,9 @@ Range& operator*=(Range &rng, const Range &other);
 /// bitwise AND on range where the bitmask is a single number
 Range& operator&=(Range &rng, TInt mask);
 
+Range& operator<<=(Range &rng, const TUInt);
+Range& operator>>=(Range &rng, const TUInt);
+
 /// subtract another range, but preserve boundary values if already reached
 inline Range& operator-=(Range &rng, const Range &other) {
     rng += (-other);
@@ -112,11 +116,21 @@ inline Range operator&(Range rng, const TInt mask) {
     return rng;
 }
 
+inline Range operator<<(Range rng, const TUInt n) {
+    rng <<= n;
+    return rng;
+}
+
+inline Range operator>>(Range rng, const TUInt n) {
+    rng >>= n;
+    return rng;
+}
+
 /// return a range that covers both given ranges, preserve alignment if possible
 Range join(const Range &rng1, const Range &rng2);
 
 /// return true if exactly one of the given ranges represents a single number
-bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range rng2);
+bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range &rng2);
 
 /// true if the small range is inside the big one (sharing endpoints is fine)
 bool isCovered(const Range &small, const Range &big);

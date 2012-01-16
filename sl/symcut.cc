@@ -63,7 +63,6 @@ class UniBlockWriter {
 
 struct DeepCopyData {
     typedef std::map<TValId     /* seg */, TMinLen   /* len */> TSegLengths;
-    typedef std::map<TValId     /* src */, TValId    /* dst */> TValMap;
     typedef std::pair<ObjHandle /* src */, ObjHandle /* dst */> TItem;
     typedef std::set<CVar>                                      TCut;
 
@@ -129,8 +128,8 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     if (VAL_NULL == rootSrcAt)
         return VAL_NULL;
 
-    DeepCopyData::TValMap &valMap = dc.valMap;
-    DeepCopyData::TValMap::iterator itRootSrc = valMap.find(rootSrcAt);
+    TValMap &valMap = dc.valMap;
+    TValMap::iterator itRootSrc = valMap.find(rootSrcAt);
     if (valMap.end() != itRootSrc)
         // good luck, we have already handled the value before
         return itRootSrc->second;
@@ -191,8 +190,8 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
 }
 
 TValId handleValueCore(DeepCopyData &dc, TValId srcAt) {
-    DeepCopyData::TValMap &valMap = dc.valMap;
-    DeepCopyData::TValMap::iterator iterValSrc = valMap.find(srcAt);
+    TValMap &valMap = dc.valMap;
+    TValMap::iterator iterValSrc = valMap.find(srcAt);
     if (valMap.end() != iterValSrc)
         // good luck, we have already handled the value before
         return iterValSrc->second;
@@ -263,8 +262,8 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
         // special value IDs always match
         return valSrc;
 
-    DeepCopyData::TValMap &valMap = dc.valMap;
-    DeepCopyData::TValMap::iterator iterValSrc = valMap.find(valSrc);
+    TValMap &valMap = dc.valMap;
+    TValMap::iterator iterValSrc = valMap.find(valSrc);
     if (valMap.end() != iterValSrc)
         // good luck, we have already handled the value before
         return iterValSrc->second;

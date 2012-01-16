@@ -444,6 +444,7 @@ class PtrFinder {
         TOffset                     offFound_;
 
     public:
+        // cppcheck-suppress uninitVar
         PtrFinder(TValId lookFor):
             lookFor_(lookFor)
         {

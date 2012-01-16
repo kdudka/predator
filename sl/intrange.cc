@@ -59,8 +59,8 @@ void chkRange(const Range &rng) {
 
     // check alignment
     CL_BREAK_IF(rng.alignment < Int1);
-    CL_BREAK_IF(rng.lo % rng.alignment);
-    CL_BREAK_IF(rng.hi % rng.alignment);
+    CL_BREAK_IF(IntMin != rng.lo && rng.lo % rng.alignment);
+    CL_BREAK_IF(IntMax != rng.hi && rng.hi % rng.alignment);
     if (IntMin != rng.lo && IntMax != rng.hi)
         CL_BREAK_IF(1 + rng.hi - rng.lo < rng.alignment);
 }
@@ -102,7 +102,7 @@ Range join(const Range &rng1, const Range &rng2) {
     return result;
 }
 
-bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range rng2) {
+bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range &rng2) {
     const bool isRange1 = !isSingular(rng1);
     const bool isRange2 = !isSingular(rng2);
     if (isRange1 == isRange2)
@@ -150,7 +150,9 @@ TInt invertInt(const TInt num) {
 
 enum EIntBinOp {
     IBO_ADD,
-    IBO_MUL
+    IBO_MUL,
+    IBO_LSHIFT,
+    IBO_RSHIFT
 };
 
 inline void intBinOp(TInt *pDst, const TInt other, const EIntBinOp code) {
@@ -161,6 +163,14 @@ inline void intBinOp(TInt *pDst, const TInt other, const EIntBinOp code) {
 
         case IBO_MUL:
             (*pDst) *= other;
+            break;
+
+        case IBO_LSHIFT:
+            (*pDst) <<= other;
+            break;
+
+        case IBO_RSHIFT:
+            (*pDst) >>= other;
             break;
     }
 }
@@ -214,6 +224,20 @@ Range& operator+=(Range &rng, const Range &other) {
     if (!isSingular(rng))
         rng.alignment = greatestCommonDivisor(al1, al2);
 
+    chkRange(rng);
+    return rng;
+}
+
+Range& operator<<=(Range &rng, const TUInt n) {
+    rngBinOp(rng, rngFromNum(n), IBO_LSHIFT);
+    rng.alignment = Int1;
+    chkRange(rng);
+    return rng;
+}
+
+Range& operator>>=(Range &rng, const TUInt n) {
+    rngBinOp(rng, rngFromNum(n), IBO_RSHIFT);
+    rng.alignment = Int1;
     chkRange(rng);
     return rng;
 }

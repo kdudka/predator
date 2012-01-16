@@ -9,15 +9,15 @@ int main() {
     switch (___sl_get_nondet_int()) {
         case 0:
             free(undef);
-            return;
+            return 0;
 
         case 1:
             free(val);
-            return;
+            return 0;
 
         case 2:
             free(ptr);
-            return;
+            return 0;
 
         default:
             break;

@@ -309,7 +309,7 @@ struct AtomicObject {
     {
     }
 
-    AtomicObject(const ObjHandle obj_, EObjectClass code_):
+    AtomicObject(const ObjHandle &obj_, EObjectClass code_):
         obj(obj_),
         code(code_)
     {
@@ -324,7 +324,7 @@ struct AtomicObject {
     }
 };
 
-void plotAtomicObj(PlotData &plot, const AtomicObject ao, const bool lonely)
+void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
 {
     SymHeap &sh = plot.sh;
 
@@ -1055,8 +1055,6 @@ class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
 };
 
 void plotEverything(PlotData &plot) {
-    SymHeap &sh = plot.sh;
-
     plotRootObjects(plot);
     plotNonRootValues(plot);
 
@@ -1083,6 +1081,9 @@ void plotEverything(PlotData &plot) {
 #if SYMPLOT_OMIT_NEQ_EDGES
     return;
 #endif
+    // cppcheck-suppress unreachableCode
+    SymHeap &sh = plot.sh;
+
     // gather relevant "neq" edges
     NeqPlotter np;
     BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {

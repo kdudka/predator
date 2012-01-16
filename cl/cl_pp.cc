@@ -219,8 +219,11 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
                     CL_DEBUG("2+ accessors by CL_OPERAND_CST pointer");
             }
 
-            if (value)
+            if (value) {
+                const std::ios_base::fmtflags oldFlags = out_.flags();
                 SSD_COLORIZE(out_, C_LIGHT_RED) << "0x" << std::hex << value;
+                out_.flags(oldFlags);
+            }
             else
                 SSD_COLORIZE(out_, C_WHITE) << "NULL";
 
@@ -299,8 +302,7 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
 
 namespace {
     const char* typeName(const struct cl_type *clt) {
-        if (!clt)
-            CL_TRAP;
+        CL_BREAK_IF(!clt);
 
         const char *name = clt->name;
         return (name)
@@ -333,6 +335,11 @@ void ClPrettyPrint::printBareType(const struct cl_type *clt, bool expandFnc) {
         }
     }
 deref_done:
+
+    if (!clt) {
+        out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "<invalid type>");
+        return;
+    }
 
     enum cl_type_e code = clt->code;
     switch (code) {

@@ -47,8 +47,14 @@ float /* sec */ StopWatch::elapsed() const {
 
 std::ostream& operator<<(std::ostream &str, const StopWatch &watch) {
     using namespace std;
+
+    const std::ios_base::fmtflags oldFlags = str.flags();
+    const int oldPrecision = str.precision();
+
     const float elapsed = watch.elapsed();
-    str << fixed << setprecision(3) << elapsed << " s"
-        << resetiosflags(ios_base::showbase);
+    str << fixed << setprecision(3) << elapsed << " s";
+
+    str.flags(oldFlags);
+    str.precision(oldPrecision);
     return str;
 }

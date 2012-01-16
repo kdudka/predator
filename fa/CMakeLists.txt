@@ -39,11 +39,11 @@ else()
 endif()
 
 # helping scripts
-configure_file( ${PROJECT_SOURCE_DIR}/fagcc.in ${PROJECT_BINARY_DIR}/fagcc @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagccp.in ${PROJECT_BINARY_DIR}/fagccp @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagccv.in ${PROJECT_BINARY_DIR}/fagccv @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagccvf.in ${PROJECT_BINARY_DIR}/fagccvf @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagdb.in ${PROJECT_BINARY_DIR}/fagdb @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/fagcc.in     ${PROJECT_BINARY_DIR}/fagcc     @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/fagccp.in    ${PROJECT_BINARY_DIR}/fagccp    @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/fagccv.in    ${PROJECT_BINARY_DIR}/fagccv    @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/fagccvf.in   ${PROJECT_BINARY_DIR}/fagccvf   @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/fagdb.in     ${PROJECT_BINARY_DIR}/fagdb     @ONLY)
 
 # libfa.so
 add_library(fa SHARED
@@ -66,6 +66,8 @@ set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 # link with code_listener
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(fa ${CL_LIB})
+
+set(testdir "${CMAKE_CURRENT_SOURCE_DIR}/../tests/forester/")
 
 # format of tests:
 #
@@ -112,7 +114,7 @@ foreach (testcase ${forester_tests})
   list(GET testcase_list 1 boxdir)
 
   if (NOT ${boxdir} STREQUAL "")
-    set(box_arg "-fplugin-arg-libfa-args=db-root:${CMAKE_CURRENT_SOURCE_DIR}/data/${boxdir}")
+    set(box_arg "-fplugin-arg-libfa-args=db-root:${testdir}/${boxdir}")
   else()
     set(box_arg "")
   endif()
@@ -120,7 +122,7 @@ foreach (testcase ${forester_tests})
   add_test(
     ${testfile} timeout 90 ${GCC_HOST} -o /dev/null -m32 -DFORESTER
     -fplugin=${CMAKE_CURRENT_BUILD_DIR}../fa_build/libfa.so
-    -c ${CMAKE_CURRENT_SOURCE_DIR}/data/${testfile} ${box_arg}
+    -c ${testdir}/${testfile} ${box_arg}
   )
 endforeach(testcase)
 

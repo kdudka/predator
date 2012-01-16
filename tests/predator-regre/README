@@ -211,6 +211,8 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0192.c - modified test-0191, works with SE_ALLOW_THREE_WAY_JOIN == 3
 
+    test-0207.c - var killer benchmark (merge of test-0168 and test-0177)
+
 
 Linux lists
 ===========

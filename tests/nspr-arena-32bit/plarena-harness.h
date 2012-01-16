@@ -21,7 +21,7 @@ __attribute__((visibility("default"))) void * PR_Realloc(void *ptr,
 
 __attribute__((visibility("default"))) void PR_Free(void *ptr)
 {
-    return free(ptr);
+    free(ptr);
 }
 
 /* ATTENTION: do not use this simplified model for concurrency analyzers */

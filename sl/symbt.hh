@@ -61,7 +61,6 @@ class SymBackTrace {
         ~SymBackTrace();
 
         SymBackTrace(const SymBackTrace &);
-        SymBackTrace& operator=(const SymBackTrace &);
 
         /**
          * @todo consider fitness of this method in the public interface of
@@ -128,6 +127,8 @@ class SymBackTrace {
         friend class SymExecEngine;
 
     private:
+        SymBackTrace& operator=(const SymBackTrace &);
+
         struct Private;
         Private *d;
 };

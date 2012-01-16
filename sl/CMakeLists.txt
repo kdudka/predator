@@ -31,6 +31,11 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
+# helping scripts
+configure_file( ${PROJECT_SOURCE_DIR}/slgcc.in     ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
+
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
@@ -95,11 +100,12 @@ set(tests
     0170 0171 0172 0173 0174 0175 0176 0177 0178 0179
     0180 0181 0182 0183 0184 0185 0186 0187 0188 0189
     0190 0191 0192 0193 0194 0195 0196 0197 0198 0199
-    0200 0201 0202 0203 0204 0205
+    0200 0201 0202 0203 0204 0205      0207 0208
     0300      0302
     0400 0401 0402 0403 0404      0406      0408
          0411                     0416
               0432
+                        0464      0466 0467
     0500 0501 0502 0503 0504 0505           0508 0509
     0510 0511 0512 0513 0514 0515 0516 0517 0518
     0520)

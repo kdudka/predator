@@ -42,6 +42,8 @@
 #include <libgen.h>
 #include <map>
 
+typedef const struct cl_operand &TOp;
+
 bool readPlotName(
         std::string                                 *dst,
         const CodeStorage::TOperandList             &opList,
@@ -142,23 +144,22 @@ void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
     CL_NOTE_MSG(loc, "user message: " << msg);
 }
 
-bool validateStringOp(SymProc &proc, const struct cl_operand &op) {
-    const TValId val = proc.valFromOperand(op);
-
+bool validateStringOp(SymProc &proc, TOp op, TSizeRange *pSize = 0) {
     SymHeap &sh = proc.sh();
-    const EValueTarget code = sh.valTarget(val);
+    const struct cl_loc *loc = proc.lw();
 
-    if (VT_CUSTOM == code) {
-        if (CV_STRING == sh.valUnwrapCustom(val).code)
-            // string literal
-            return true;
+    const TValId val = proc.valFromOperand(op);
+    const TSizeRange strSize = sh.valSizeOfString(val);
+    if (IR::Int0 < strSize.lo) {
+        if (pSize)
+            *pSize = strSize;
 
-        // TODO
+        return true;
     }
 
-    // TODO
-    CL_ERROR_MSG(proc.lw(), "string validation not implemented yet");
-    CL_BREAK_IF("please implement");
+    if (!proc.checkForInvalidDeref(val, sizeof(char)))
+        CL_ERROR_MSG(loc, "failed to imply a zero-terminated string");
+
     return false;
 }
 
@@ -383,6 +384,58 @@ bool handleMalloc(
     return true;
 }
 
+/// common code-base for memcpy() and memmove() built-in handlers
+bool handleMemmoveCore(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name,
+        const bool                                   allowOverlap)
+{
+    const struct cl_loc *loc = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (5 != opList.size()) {
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    // read the values of memmove parameters
+    const TValId valDst     = core.valFromOperand(opList[/* dst  */ 2]);
+    const TValId valSrc     = core.valFromOperand(opList[/* src  */ 3]);
+    const TValId valSize    = core.valFromOperand(opList[/* size */ 4]);
+
+    CL_DEBUG_MSG(loc, "executing memcpy() or memmove() as a built-in function");
+    executeMemmove(core, valDst, valSrc, valSize, allowOverlap);
+
+    const struct cl_operand &opDst = opList[/* ret */ 0];
+    if (CL_OPERAND_VOID != opDst.code) {
+        // POSIX says that memmove() returns the value of the first argument
+        const ObjHandle objDst = core.objByOperand(opDst);
+        core.objSetValue(objDst, valDst);
+    }
+
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
+bool handleMemcpy(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    return handleMemmoveCore(dst, core, insn, name, /* allowOverlap */ false);
+}
+
+bool handleMemmove(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    return handleMemmoveCore(dst, core, insn, name, /* allowOverlap */ true);
+}
+
 bool handleMemset(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -518,6 +571,36 @@ bool handlePuts(
     return true;
 }
 
+bool handleStrlen(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() != 3) {
+        emitPrototypeError(&insn.loc, name);
+        return false;
+    }
+
+    TSizeRange len;
+    if (validateStringOp(core, opList[/* s */ 2], &len)) {
+        const struct cl_operand &opDst = opList[/* ret */ 0];
+        if (CL_OPERAND_VOID != opDst.code) {
+            // store the return value of strlen()
+            const CustomValue cv(len - IR::rngFromNum(IR::Int1));
+            const TValId valResult = core.sh().valWrapCustom(cv);
+            const ObjHandle objDst = core.objByOperand(opDst);
+            core.objSetValue(objDst, valResult);
+        }
+    }
+    else
+        core.printBackTrace(ML_ERROR);
+
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
 bool handleNondetInt(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -533,10 +616,15 @@ bool handleNondetInt(
     SymHeap &sh = core.sh();
     CL_DEBUG_MSG(&insn.loc, "executing " << name << "()");
 
-    // set the returned value to a new unknown value
+    // resolve dst
     const struct cl_operand &opDst = opList[0];
     const ObjHandle objDst = core.objByOperand(opDst);
-    const TValId val = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
+
+    // create a fresh value expressing full range
+    const CustomValue cv(IR::FullRange);
+    const TValId val = sh.valWrapCustom(cv);
+
+    // set the value to be returned
     core.objSetValue(objDst, val);
 
     // insert the resulting heap
@@ -743,9 +831,12 @@ BuiltInTable::BuiltInTable() {
     tbl_["calloc"]                                  = handleCalloc;
     tbl_["free"]                                    = handleFree;
     tbl_["malloc"]                                  = handleMalloc;
+    tbl_["memcpy"]                                  = handleMemcpy;
+    tbl_["memmove"]                                 = handleMemmove;
     tbl_["memset"]                                  = handleMemset;
     tbl_["printf"]                                  = handlePrintf;
     tbl_["puts"]                                    = handlePuts;
+    tbl_["strlen"]                                  = handleStrlen;
 
     // Linux kernel
     tbl_["kzalloc"]                                 = handleKzalloc;
@@ -773,6 +864,10 @@ BuiltInTable::BuiltInTable() {
 
     // initialize lookForDerefs() look-up table
     der_["free"]        .push_back(/* addr */ 2);
+    der_["memcpy"]      .push_back(/* dst  */ 2);
+    der_["memcpy"]      .push_back(/* src  */ 3);
+    der_["memmove"]     .push_back(/* dst  */ 2);
+    der_["memmove"]     .push_back(/* src  */ 3);
     der_["memset"]      .push_back(/* addr */ 2);
 }
 

@@ -399,8 +399,13 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
     // check for dereference first
     const bool isDeref = (CL_ACCESSOR_DEREF == ac->code);
     if (isDeref) {
-        // jump to next accessor
+        // FIXME: This assertion is known to fail on test-0208.c using gcc-4.6.2
+        // as GCC_HOST, yet it works fine with gcc-4.5.3; for some reason, 4.6.2
+        // optimizes out the cast from (struct dm_list *) to (struct str_list *)
+#if 0
         CL_BREAK_IF(ac->next && *ac->next->type != *targetTypeOfPtr(ac->type));
+#endif
+        // jump to next accessor
         ac = ac->next;
     }
 
@@ -912,6 +917,24 @@ inline void wipeAlignment(IR::Range &rng) {
     rng.alignment = IR::Int1;
 }
 
+bool checkForOverlap(
+        SymHeap                                     &sh,
+        const TValId                                 valDst,
+        const TValId                                 valSrc,
+        const TSizeOf                                size)
+{
+    const TValId rootDst = sh.valRoot(valDst);
+    const TValId rootSrc = sh.valRoot(valSrc);
+    if (sh.proveNeq(rootDst, rootSrc))
+        // the roots are proven to be two distinct roots
+        return false;
+
+    // TODO
+    CL_BREAK_IF("please implement");
+    (void) size;
+    return true;
+}
+
 void executeMemset(
         SymProc                     &proc,
         const TValId                 addr,
@@ -972,6 +995,64 @@ void executeMemset(
     }
 
     // leave leak monitor
+    lm.leave();
+}
+
+void executeMemmove(
+        SymProc                     &proc,
+        const TValId                 valDst,
+        const TValId                 valSrc,
+        const TValId                 valSize,
+        const bool                   allowOverlap)
+{
+    SymHeap &sh = proc.sh();
+    const struct cl_loc *loc = proc.lw();
+
+    IR::Range size;
+    if (!rngFromVal(&size, sh, valSize) || size.lo < 0) {
+        CL_ERROR_MSG(loc, "size arg of memmove() is not a known integer");
+        proc.printBackTrace(ML_ERROR);
+        return;
+    }
+    if (!size.hi) {
+        CL_WARN_MSG(loc, "ignoring call of memcpy()/memmove() with size == 0");
+        proc.printBackTrace(ML_WARN);
+        return;
+    }
+
+    if (proc.checkForInvalidDeref(valDst, size.hi)
+            || proc.checkForInvalidDeref(valSrc, size.hi))
+    {
+        // error message already printed out
+        proc.printBackTrace(ML_ERROR);
+        return;
+    }
+
+    if (!allowOverlap && checkForOverlap(sh, valDst, valSrc, size.hi)) {
+        CL_ERROR_MSG(loc, "source and destination overlap in call of memcpy()");
+        proc.printBackTrace(ML_ERROR);
+        return;
+    }
+
+    LeakMonitor lm(sh);
+    lm.enter();
+
+    TValSet killedPtrs;
+    sh.copyBlockOfRawMemory(valDst, valSrc, size.lo, &killedPtrs);
+
+    if (!isSingular(size)) {
+        CL_DEBUG_MSG(loc, "memcpy()/memmove() invalidates ambiguous suffix");
+        const TValId suffixAddr = sh.valByOffset(valDst, size.lo);
+        const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        const TSizeOf suffWidth = widthOf(size) - /* closed int */ 1;
+        sh.writeUniformBlock(suffixAddr, valUnknown, suffWidth, &killedPtrs);
+    }
+
+    if (lm.collectJunkFrom(killedPtrs)) {
+        CL_WARN_MSG(loc, "memory leak detected while executing memmove()");
+        proc.printBackTrace(ML_WARN);
+    }
+
     lm.leave();
 }
 
@@ -1243,14 +1324,6 @@ bool trimRangesIfPossible(
         const TValId                v1,
         const TValId                v2)
 {
-    const bool ltr = cTraits.leftToRight;
-    const bool rtl = cTraits.rightToLeft;
-    CL_BREAK_IF(ltr && rtl);
-
-    if (!ltr && !rtl)
-        // not a suitable binary operator (modulo some corner cases)
-        return false;
-
     IR::Range rng1;
     if (!anyRangeFromVal(&rng1, sh, v1))
         return false;
@@ -1264,6 +1337,36 @@ bool trimRangesIfPossible(
     if (isRange1 == isRange2)
         // not a suitable value pair for trimming
         return false;
+
+    const bool ltr = cTraits.leftToRight;
+    const bool rtl = cTraits.rightToLeft;
+    CL_BREAK_IF(ltr && rtl);
+
+    // use the offsets in the appropriate order
+    IR::Range win        = (isRange1) ? rng1    : rng2;
+    const IR::TInt limit = (isRange2) ? rng1.lo : rng2.lo;
+
+    // which boundary are we going to trim?
+    bool trimLo;
+    if (ltr || rtl) {
+        const bool neg = (branch == isRange2);
+        trimLo = (neg == ltr);
+    }
+    else {
+        if (!cTraits.preserveEq || !cTraits.preserveNeq)
+            // not a suitable binary operator
+            return false;
+
+        if (limit == win.lo)
+            // cut off a single integer from the lower bound
+            trimLo = true;
+        else if (limit == win.hi)
+            // cut off a single integer from the upper bound
+            trimLo = false;
+        else
+            // no luck...
+            return false;
+    }
 
     // one of the values holds a range inside
     const TValId valRange = (isRange1) ? v1 : v2;
@@ -1282,14 +1385,6 @@ bool trimRangesIfPossible(
 
     // should we include the boundary to the result?
     const bool isOpen = (branch == cTraits.negative);
-
-    // which boundary are we going to trim?
-    const bool neg = (branch == isRange2);
-    const bool trimLo = (neg == ltr);
-
-    // use the offsets in the appropriate order
-    IR::Range win        = (isRange1) ? rng1    : rng2;
-    const IR::TInt limit = (isRange2) ? rng1.lo : rng2.lo;
 
     if (trimLo)
         // shift the lower bound up
@@ -1361,6 +1456,20 @@ bool computeIntRngResult(
                 return false;
 
             result = IR::rngFromNum(rng1.lo & rng2.lo);
+            break;
+
+        case CL_BINOP_LSHIFT:
+            if (!isSingular(rng2))
+                return false;
+
+            result = rng1 << rng2.lo;
+            break;
+
+        case CL_BINOP_RSHIFT:
+            if (!isSingular(rng2))
+                return false;
+
+            result = rng1 >> rng2.lo;
             break;
 
         case CL_BINOP_MULT:
@@ -1453,7 +1562,7 @@ TValId handleIntegralOp(
 
     TValId result;
 
-    // check whether we both values are integral constant
+    // check whether both values are integral constant
     IR::Range rng1, rng2;
     if (rngFromVal(&rng1, sh, v1) && rngFromVal(&rng2, sh, v2)) {
 
@@ -1713,6 +1822,8 @@ struct OpHandler</* binary */ 2> {
 
             case CL_BINOP_MIN:
             case CL_BINOP_MAX:
+            case CL_BINOP_LSHIFT:
+            case CL_BINOP_RSHIFT:
                 goto handle_int;
 
             case CL_BINOP_BIT_AND:

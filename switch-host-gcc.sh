@@ -52,6 +52,7 @@ test 2 = "$#" || usage
 
 status_update() {
     printf "\n%s...\n\n" "$*"
+    tty >/dev/null && printf "\033]0;%s\a" "$*"
 }
 
 # try to run gcc
