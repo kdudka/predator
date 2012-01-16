@@ -31,6 +31,11 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
+# helping scripts
+configure_file( ${PROJECT_SOURCE_DIR}/slgcc.in     ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
+
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
