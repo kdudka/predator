@@ -39,11 +39,11 @@ else()
 endif()
 
 # helping scripts
-configure_file( ${PROJECT_SOURCE_DIR}/fagcc.in ${PROJECT_BINARY_DIR}/fagcc @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagccp.in ${PROJECT_BINARY_DIR}/fagccp @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagccv.in ${PROJECT_BINARY_DIR}/fagccv @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagccvf.in ${PROJECT_BINARY_DIR}/fagccvf @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagdb.in ${PROJECT_BINARY_DIR}/fagdb @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/fagcc.in     ${PROJECT_BINARY_DIR}/fagcc     @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/fagccp.in    ${PROJECT_BINARY_DIR}/fagccp    @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/fagccv.in    ${PROJECT_BINARY_DIR}/fagccv    @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/fagccvf.in   ${PROJECT_BINARY_DIR}/fagccvf   @ONLY)
+configure_file( ${PROJECT_SOURCE_DIR}/fagdb.in     ${PROJECT_BINARY_DIR}/fagdb     @ONLY)
 
 # libfa.so
 add_library(fa SHARED
