@@ -90,5 +90,5 @@ if test -d .git; then
 else
     status_update "Initializing \$GCC_HOST"
     sed "s|GCC_HOST=.*\$|GCC_HOST='$GCC_HOST'|" -i \
-        chk-error-label-reachability.sh register-paths.sh sl/probe.sh sl/slgcc
+        chk-error-label-reachability.sh register-paths.sh sl/probe.sh
 fi
