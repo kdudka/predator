@@ -67,7 +67,7 @@ set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(fa ${CL_LIB})
 
-set(testdir "${CMAKE_CURRENT_SOURCE_DIR}/data/")
+set(testdir "${CMAKE_CURRENT_SOURCE_DIR}/../tests/forester/")
 
 # format of tests:
 #
