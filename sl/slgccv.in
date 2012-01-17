@@ -5,4 +5,4 @@ export SL_OPTS
 
 self="`readlink -f "$0"`"
 self_dir="`dirname "$self"`"
-"$self_dir/slgcc" "$@"
+"$self_dir/`basename "$self" | sed 's|slgccv|slgcc|'`" "$@"
