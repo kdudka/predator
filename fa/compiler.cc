@@ -50,7 +50,7 @@ const char* translUnOpCode(const unsigned code)
 		case CL_UNOP_MINUS:     return "CL_UNOP_MINUS";
 		case CL_UNOP_ABS:       return "CL_UNOP_ABS";
 		case CL_UNOP_FLOAT:     return "CL_UNOP_FLOAT";
-		default: return nullptr;
+		default: throw std::runtime_error("Invalid unary operation code");
 	}
 }
 
@@ -84,7 +84,7 @@ const char* translBinOpCode(const unsigned code)
 		case CL_BINOP_RSHIFT:        return "CL_BINOP_RSHIFT";
 		case CL_BINOP_LROTATE:       return "CL_BINOP_LROTATE";
 		case CL_BINOP_RROTATE:       return "CL_BINOP_RROTATE";
-		default: return nullptr;
+		default: throw std::runtime_error("Invalid binary operation code");
 	}
 }
 
@@ -102,7 +102,7 @@ const char* translInsnOpCode(const unsigned code)
 		case CL_INSN_CALL:    return "CL_INSN_CALL";
 		case CL_INSN_SWITCH:  return "CL_INSN_SWITCH";
 		case CL_INSN_LABEL:   return "CL_INSN_LABEL";
-		default: return nullptr;
+		default: throw std::runtime_error("Invalid instruction code");
 	}
 }
 
