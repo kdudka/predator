@@ -101,6 +101,10 @@ void FI_acc_sel::execute(ExecutionManager& execMan,
 	Splitting(*state.second->fae).isolateOne(dst, data.d_ref.root,
 		data.d_ref.displ + this->offset_);
 
+	for (auto fae : dst) {
+		execMan.enqueue(state.second, execMan.allocRegisters(*state.first),
+			std::shared_ptr<const FAE>(fae), this->next_);
+	}
 }
 
 // FI_acc_set
