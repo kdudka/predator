@@ -27,7 +27,7 @@ test -z "$GDB" && GDB=gdb
 test -z "$FA_VERBOSE" && FA_VERBOSE=1
 
 # use pp code listener by default
-test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp -fplugin-arg-libfa-dump-types"
+test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp -fplugin-arg-libfa-dump-types -I../include/predator-builtins"
 
 BOXDB=""
 if [ "$2" != "" ]; then
