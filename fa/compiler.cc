@@ -106,6 +106,28 @@ const char* translInsnOpCode(const unsigned code)
 	}
 }
 
+const char* translTypeCode(const unsigned code)
+{
+	switch (code)
+	{
+
+		case CL_TYPE_VOID:     return "CL_TYPE_VOID";
+		case CL_TYPE_UNKNOWN:  return "CL_TYPE_UNKNOWN";
+		case CL_TYPE_PTR:      return "CL_TYPE_PTR";
+		case CL_TYPE_STRUCT:   return "CL_TYPE_STRUCT";
+		case CL_TYPE_UNION:    return "CL_TYPE_UNION";
+		case CL_TYPE_ARRAY:    return "CL_TYPE_ARRAY";
+		case CL_TYPE_FNC:      return "CL_TYPE_FNC";
+		case CL_TYPE_INT:      return "CL_TYPE_INT";
+		case CL_TYPE_CHAR:     return "CL_TYPE_CHAR";
+		case CL_TYPE_BOOL:     return "CL_TYPE_BOOL";
+		case CL_TYPE_ENUM:     return "CL_TYPE_ENUM";
+		case CL_TYPE_REAL:     return "CL_TYPE_REAL";
+		case CL_TYPE_STRING:   return "CL_TYPE_STRING";
+		default: throw std::runtime_error("Invalid type code");
+	}
+}
+
 } // namespace
 
 struct OpWrapper {
@@ -300,11 +322,17 @@ protected:
 				break;
 
 			default:
-				assert(false);
-				break;
-
+				const char* ftr_name;
+				if ((ftr_name = translTypeCode(op.data.cst.code)) != nullptr)
+				{
+					throw ProgramError(std::string(ftr_name) +
+						": constant type not implemented", &insn.loc);
+				}
+				else
+				{
+					throw std::runtime_error("constant type not implemented");
+				}
 		}
-
 	}
 /*
 	void cLoadVar(size_t dst, size_t offset) {
