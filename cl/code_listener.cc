@@ -85,7 +85,7 @@ static struct cl_init_data init_data = {
     cl_def_msg,            // .debug
     cl_def_msg,            // .warn
     cl_def_msg,            // .error
-    cl_def_msg,            // .error
+    cl_def_msg,            // .note
     cl_def_die,            // .die
     0                      // .debug_level
 };
