@@ -37,6 +37,76 @@
 
 #include "compiler.hh"
 
+namespace {
+
+const char* translUnOpCode(const unsigned code)
+{
+	switch (code)
+	{
+		case CL_UNOP_ASSIGN:    return "CL_UNOP_ASSIGN";
+		case CL_UNOP_TRUTH_NOT: return "CL_UNOP_TRUTH_NOT";
+		case CL_UNOP_BIT_NOT:   return "CL_UNOP_BIT_NOT";
+		case CL_UNOP_MINUS:     return "CL_UNOP_MINUS";
+		case CL_UNOP_ABS:       return "CL_UNOP_ABS";
+		case CL_UNOP_FLOAT:     return "CL_UNOP_FLOAT";
+		default: return nullptr;
+	}
+}
+
+const char* translBinOpCode(const unsigned code)
+{
+	switch (code)
+	{
+		case CL_BINOP_EQ:            return "CL_BINOP_EQ";
+		case CL_BINOP_TRUTH_XOR:     return "CL_BINOP_TRUTH_XOR";
+		case CL_BINOP_NE:            return "CL_BINOP_NE";
+		case CL_BINOP_LT:            return "CL_BINOP_LT";
+		case CL_BINOP_GT:            return "CL_BINOP_GT";
+		case CL_BINOP_LE:            return "CL_BINOP_LE";
+		case CL_BINOP_GE:            return "CL_BINOP_GE";
+		case CL_BINOP_PLUS:          return "CL_BINOP_PLUS";
+		case CL_BINOP_MINUS:         return "CL_BINOP_MINUS";
+		case CL_BINOP_MULT:          return "CL_BINOP_MULT";
+		case CL_BINOP_RDIV:          return "CL_BINOP_RDIV";
+		case CL_BINOP_EXACT_DIV:     return "CL_BINOP_EXACT_DIV";
+		case CL_BINOP_TRUNC_DIV:     return "CL_BINOP_TRUNC_DIV";
+		case CL_BINOP_TRUNC_MOD:     return "CL_BINOP_TRUNC_MOD";
+		case CL_BINOP_POINTER_PLUS:  return "CL_BINOP_POINTER_PLUS";
+		case CL_BINOP_BIT_IOR:       return "CL_BINOP_BIT_IOR";
+		case CL_BINOP_BIT_AND:       return "CL_BINOP_BIT_AND";
+		case CL_BINOP_BIT_XOR:       return "CL_BINOP_BIT_XOR";
+		case CL_BINOP_TRUTH_AND:     return "CL_BINOP_TRUTH_AND";
+		case CL_BINOP_TRUTH_OR:      return "CL_BINOP_TRUTH_OR";
+		case CL_BINOP_MIN:           return "CL_BINOP_MIN";
+		case CL_BINOP_MAX:           return "CL_BINOP_MAX";
+		case CL_BINOP_LSHIFT:        return "CL_BINOP_LSHIFT";
+		case CL_BINOP_RSHIFT:        return "CL_BINOP_RSHIFT";
+		case CL_BINOP_LROTATE:       return "CL_BINOP_LROTATE";
+		case CL_BINOP_RROTATE:       return "CL_BINOP_RROTATE";
+		default: return nullptr;
+	}
+}
+
+const char* translInsnOpCode(const unsigned code)
+{
+	switch (code)
+	{
+		case CL_INSN_NOP:     return "CL_INSN_NOP";
+		case CL_INSN_JMP:     return "CL_INSN_JMP";
+		case CL_INSN_COND:    return "CL_INSN_COND";
+		case CL_INSN_RET:     return "CL_INSN_RET";
+		case CL_INSN_ABORT:   return "CL_INSN_ABORT";
+		case CL_INSN_UNOP:    return "CL_INSN_UNOP";
+		case CL_INSN_BINOP:   return "CL_INSN_BINOP";
+		case CL_INSN_CALL:    return "CL_INSN_CALL";
+		case CL_INSN_SWITCH:  return "CL_INSN_SWITCH";
+		case CL_INSN_LABEL:   return "CL_INSN_LABEL";
+		default: return nullptr;
+	}
+}
+
+} // namespace
+
 struct OpWrapper {
 
 	const cl_operand* op_;
@@ -1033,7 +1103,16 @@ protected:
 						this->compileTruthNot(insn);
 						break;
 					default:
-						throw std::runtime_error("feature not implemented");
+						const char* ftr_name;
+						if ((ftr_name = translUnOpCode(insn.subCode)) != nullptr)
+						{
+							throw ProgramError(std::string(ftr_name) +
+								": feature not implemented", &insn.loc);
+						}
+						else
+						{
+							throw std::runtime_error("feature not implemented");
+						}
 				}
 				break;
 
@@ -1061,7 +1140,16 @@ protected:
 						this->compilePointerPlus(insn);
 						break;
 					default:
-						throw std::runtime_error("feature not implemented");
+						const char* ftr_name;
+						if ((ftr_name = translBinOpCode(insn.subCode)) != nullptr)
+						{
+							throw ProgramError(std::string(ftr_name) +
+								": feature not implemented", &insn.loc);
+						}
+						else
+						{
+							throw std::runtime_error("feature not implemented");
+						}
 				}
 				break;
 
@@ -1082,10 +1170,17 @@ protected:
 				break;
 
 			default:
-				throw std::runtime_error("feature not implemented");
-
+				const char* ftr_name;
+				if ((ftr_name = translInsnOpCode(insn.code)) != nullptr)
+				{
+					throw ProgramError(std::string(ftr_name) +
+						": feature not implemented", &insn.loc);
+				}
+				else
+				{
+					throw std::runtime_error("feature not implemented");
+				}
 		}
-
 	}
 
 	void compileBlock(const CodeStorage::Block* block, bool abstract) {
