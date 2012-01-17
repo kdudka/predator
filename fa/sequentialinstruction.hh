@@ -30,8 +30,9 @@ protected:
 
 public:
 
-	SequentialInstruction(fi_type_e fiType = fi_type_e::fiUnspec)
-		: AbstractInstruction(fiType) {}
+	SequentialInstruction(const CodeStorage::Insn* insn = nullptr,
+		fi_type_e fiType = fi_type_e::fiUnspec)
+		: AbstractInstruction(insn, fiType) {}
 
 	virtual void finalize(
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,

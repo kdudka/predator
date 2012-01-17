@@ -46,15 +46,16 @@ public:
 
 private:
 
+	const CodeStorage::Insn* insn_;
+
 	fi_type_e fiType_;
 	bool isTarget_;
 
-	const CodeStorage::Insn* insn_;
-
 public:
 
-	AbstractInstruction(fi_type_e fiType = fi_type_e::fiUnspec)
-		: fiType_(fiType), isTarget_(false), insn_(NULL) {}
+	AbstractInstruction(const CodeStorage::Insn* insn = nullptr,
+		fi_type_e fiType = fi_type_e::fiUnspec)
+		: insn_(insn), fiType_(fiType), isTarget_(false)  {}
 
 	virtual ~AbstractInstruction() {}
 	virtual void finalize(

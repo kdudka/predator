@@ -190,23 +190,24 @@ protected:
 
 	}
 
-	void cAbstraction() {
+	void cAbstraction(const CodeStorage::Insn* insn = nullptr) {
 		this->append(
-			new FI_abs(this->fixpointBackend, this->taBackend, this->boxMan)
+			new FI_abs(insn, this->fixpointBackend, this->taBackend, this->boxMan)
 		);
 	}
 
-	void cFixpoint() {
+	void cFixpoint(const CodeStorage::Insn& insn) {
 		this->append(
-			new FI_fix(this->fixpointBackend, this->taBackend, this->boxMan)
+			new FI_fix(&insn, this->fixpointBackend, this->taBackend, this->boxMan)
 		);
 	}
 
-	void cPrintHeap() {
-		this->append(new FI_print_heap(this->curCtx));
+	void cPrintHeap(const CodeStorage::Insn& insn) {
+		this->append(new FI_print_heap(&insn, this->curCtx));
 	}
 
-	void cLoadCst(size_t dst, const cl_operand& op) {
+	void cLoadCst(size_t dst, const cl_operand& op,
+		const CodeStorage::Insn& insn) {
 
 		switch (op.type->code) {
 
@@ -214,13 +215,13 @@ protected:
 			case cl_type_e::CL_TYPE_ENUM:
 			case cl_type_e::CL_TYPE_PTR:
 				this->append(
-					new FI_load_cst(dst, Data::createInt(intCstFromOperand(&op)))
+					new FI_load_cst(&insn, dst, Data::createInt(intCstFromOperand(&op)))
 				);
 				break;
 
 			case cl_type_e::CL_TYPE_BOOL:
 				this->append(
-					new FI_load_cst(dst, Data::createBool(intCstFromOperand(&op)))
+					new FI_load_cst(&insn, dst, Data::createBool(intCstFromOperand(&op)))
 				);
 				break;
 
@@ -238,16 +239,17 @@ protected:
 
 	}
 */
-	void cMoveReg(size_t dst, size_t src, int offset) {
+	void cMoveReg(size_t dst, size_t src, int offset,
+		const CodeStorage::Insn& insn) {
 
 		if (offset > 0) {
 
-			this->append(new FI_move_reg_offs(dst, src, offset));
+			this->append(new FI_move_reg_offs(&insn, dst, src, offset));
 
 		} else {
 
 			if (src != dst)
-				this->append(new FI_move_reg(dst, src));
+				this->append(new FI_move_reg(&insn, dst, src));
 
 		}
 
@@ -266,7 +268,8 @@ protected:
 
 	}
 
-	void cLoadReg(size_t dst, size_t src, const cl_operand& op) {
+	void cLoadReg(size_t dst, size_t src, const cl_operand& op,
+		const CodeStorage::Insn& insn) {
 
 		const cl_accessor* acc = op.accessor;
 
@@ -281,7 +284,7 @@ protected:
 			if (acc && (acc->code == CL_ACCESSOR_REF)) {
 
 				assert(acc->next == NULL);
-				this->cMoveReg(dst, src, offset);
+				this->cMoveReg(dst, src, offset, insn);
 				return;
 
 			}
@@ -293,17 +296,17 @@ protected:
 				std::vector<size_t> offs;
 				NodeBuilder::buildNode(offs, op.type);
 
-				this->append(new FI_acc_set(dst, offset, offs));
-				this->append(new FI_loads(dst, dst, offset, offs));
+				this->append(new FI_acc_set(&insn, dst, offset, offs));
+				this->append(new FI_loads(&insn, dst, dst, offset, offs));
 
 			} else {
 
-				this->append(new FI_acc_sel(dst, offset));
-				this->append(new FI_load(dst, dst, offset));
+				this->append(new FI_acc_sel(&insn, dst, offset));
+				this->append(new FI_load(&insn, dst, dst, offset));
 
 			}
 
-			this->append(new FI_check());
+			this->append(new FI_check(&insn));
 
 		} else {
 
@@ -311,13 +314,14 @@ protected:
 
 			assert(acc == NULL);
 
-			this->cMoveReg(dst, src, offset);
+			this->cMoveReg(dst, src, offset, insn);
 
 		}
 
 	}
 
-	bool cStoreReg(const cl_operand& op, size_t src, size_t tmp) {
+	bool cStoreReg(const cl_operand& op, size_t src, size_t tmp,
+		const CodeStorage::Insn& insn) {
 
 		const cl_accessor* acc = op.accessor;
 
@@ -336,17 +340,17 @@ protected:
 				std::vector<size_t> offs;
 				NodeBuilder::buildNode(offs, op.type);
 
-				this->append(new FI_acc_set(tmp, offset, offs));
-				this->append(new FI_stores(tmp, src, offset));
+				this->append(new FI_acc_set(&insn, tmp, offset, offs));
+				this->append(new FI_stores(&insn, tmp, src, offset));
 
 			} else {
 
-				this->append(new FI_acc_sel(tmp, offset));
-				this->append(new FI_store(tmp, src, offset));
+				this->append(new FI_acc_sel(&insn, tmp, offset));
+				this->append(new FI_store(&insn, tmp, src, offset));
 
 			}
 
-			this->append(new FI_check());
+			this->append(new FI_check(&insn));
 
 			return true;
 
@@ -358,7 +362,7 @@ protected:
 			assert(offset == 0);
 
 			if (src != tmp)
-				this->append(new FI_move_reg(tmp, src));
+				this->append(new FI_move_reg(&insn, tmp, src));
 
 			return false;
 
@@ -366,7 +370,8 @@ protected:
 
 	}
 
-	size_t cLoadOperand(size_t dst, const cl_operand& op, bool canOverride = true) {
+	size_t cLoadOperand(size_t dst, const cl_operand& op,
+		const CodeStorage::Insn& insn, bool canOverride = true) {
 
 		switch (op.code) {
 
@@ -385,7 +390,7 @@ protected:
 
 						assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
-						this->append(new FI_load_ABP(dst, (int)varInfo.second));
+						this->append(new FI_load_ABP(&insn, dst, (int)varInfo.second));
 
 						acc = Core::computeOffset(offset, acc->next);
 
@@ -396,7 +401,7 @@ protected:
 							assert(acc->next == NULL);
 
 							if (offset)
-								this->append(new FI_move_reg_offs(dst, dst, offset));
+								this->append(new FI_move_reg_offs(&insn, dst, dst, offset));
 
 							break;
 
@@ -409,13 +414,13 @@ protected:
 							std::vector<size_t> offs;
 							NodeBuilder::buildNode(offs, op.type);
 
-							this->append(new FI_acc_set(dst, offset, offs));
-							this->append(new FI_loads(dst, dst, offset, offs));
+							this->append(new FI_acc_set(&insn, dst, offset, offs));
+							this->append(new FI_loads(&insn, dst, dst, offset, offs));
 
 						} else {
 
-							this->append(new FI_acc_sel(dst, offset));
-							this->append(new FI_load(dst, dst, offset));
+							this->append(new FI_acc_sel(&insn, dst, offset));
+							this->append(new FI_load(&insn, dst, dst, offset));
 
 						}
 
@@ -428,14 +433,14 @@ protected:
 						if (acc && (acc->code == CL_ACCESSOR_REF)) {
 
 							assert(acc->next == NULL);
-							this->append(new FI_get_ABP(dst, offset));
+							this->append(new FI_get_ABP(&insn, dst, offset));
 							break;
 
 						}
 
 						assert(acc == NULL);
 
-						this->append(new FI_load_ABP(dst, offset));
+						this->append(new FI_load_ABP(&insn, dst, offset));
 //						this->cMoveReg(dst, src, offset);
 
 					}
@@ -446,9 +451,9 @@ protected:
 					// register
 					if (canOverride) {
 						dst = varInfo.second;
-						this->cLoadReg(dst, dst, op);
+						this->cLoadReg(dst, dst, op, insn);
 					} else {
-						this->cLoadReg(dst, varInfo.second, op);
+						this->cLoadReg(dst, varInfo.second, op, insn);
 					}
 
 				}
@@ -458,7 +463,7 @@ protected:
 			}
 
 			case cl_operand_e::CL_OPERAND_CST:
-				this->cLoadCst(dst, op);
+				this->cLoadCst(dst, op, insn);
 				break;
 
 			default:
@@ -506,7 +511,8 @@ protected:
 
 	}
 
-	bool cStoreOperand(const cl_operand& op, size_t src, size_t tmp) {
+	bool cStoreOperand(const cl_operand& op, size_t src, size_t tmp,
+		const CodeStorage::Insn& insn) {
 
 		switch (op.code) {
 
@@ -517,7 +523,7 @@ protected:
 				if (varInfo.first) {
 
 					// stack variable
-					this->append(new FI_get_ABP(tmp, 0));
+					this->append(new FI_get_ABP(&insn, tmp, 0));
 
 					const cl_accessor* acc = op.accessor;
 
@@ -532,7 +538,7 @@ protected:
 							assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
 							// override previous instruction
-							this->override(new FI_load_ABP(tmp, varInfo.second));
+							this->override(new FI_load_ABP(&insn, tmp, varInfo.second));
 
 							needsAcc = true;
 
@@ -553,26 +559,28 @@ protected:
 						std::vector<size_t> offs;
 						NodeBuilder::buildNode(offs, op.type);
 
-						if (needsAcc)
-							this->append(new FI_acc_set(tmp, offset, offs));
-						this->append(new FI_stores(tmp, src, offset));
+						if (needsAcc) {
+							this->append(new FI_acc_set(&insn, tmp, offset, offs));
+						}
+						this->append(new FI_stores(&insn, tmp, src, offset));
 
 					} else {
 
-						if (needsAcc)
-							this->append(new FI_acc_sel(tmp, offset));
-						this->append(new FI_store(tmp, src, offset));
+						if (needsAcc) {
+							this->append(new FI_acc_sel(&insn, tmp, offset));
+						}
+						this->append(new FI_store(&insn, tmp, src, offset));
 
 					}
 
-					this->append(new FI_check());
+					this->append(new FI_check(&insn));
 
 					return true;
 
 				} else {
 
 					// register
-					return this->cStoreReg(op, src, varInfo.second);
+					return this->cStoreReg(op, src, varInfo.second, insn);
 
 				}
 
@@ -588,7 +596,8 @@ protected:
 
 	}
 
-	AbstractInstruction* cKillDeadVariables(const CodeStorage::TKillVarList& vars) {
+	AbstractInstruction* cKillDeadVariables(const CodeStorage::TKillVarList& vars,
+		const CodeStorage::Insn& insn) {
 
 		std::set<size_t> offs;
 
@@ -619,14 +628,15 @@ protected:
 		}
 
 		AbstractInstruction* result = this->append(
-			new FI_load_cst(0, (offs.size() > 1)?(Data::createStruct(tmp)):(Data::createUndef()))
+			new FI_load_cst(&insn, 0,
+				(offs.size() > 1)?(Data::createStruct(tmp)):(Data::createUndef()))
 		);
 
-		this->append(new FI_get_ABP(1, 0));
+		this->append(new FI_get_ABP(&insn, 1, 0));
 		this->append(
 			(offs.size() > 1)
-				?((AbstractInstruction*)new FI_stores(1, 0, 0))
-				:((AbstractInstruction*)new FI_store(1, 0, *offs.begin()))
+				?((AbstractInstruction*)new FI_stores(&insn, 1, 0, 0))
+				:((AbstractInstruction*)new FI_store(&insn, 1, 0, *offs.begin()))
 		);
 
 		return result;
@@ -641,7 +651,7 @@ protected:
 		assert(src.type->code == dst.type->code);
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t srcReg = this->cLoadOperand(dstReg, src);
+		size_t srcReg = this->cLoadOperand(dstReg, src, insn);
 
 		if (
 			src.type->code == cl_type_e::CL_TYPE_PTR &&
@@ -663,6 +673,7 @@ protected:
 
 			this->append(
 				new FI_node_create(
+					&insn,
 					srcReg,
 					srcReg,
 					dst.type->items[0].type->size,
@@ -673,8 +684,8 @@ protected:
 
 		}
 
-		this->cStoreOperand(dst, srcReg, 1);
-		this->cKillDeadVariables(insn.varsToKill);
+		this->cStoreOperand(dst, srcReg, 1, insn);
+		this->cKillDeadVariables(insn.varsToKill, insn);
 
 	}
 
@@ -686,16 +697,16 @@ protected:
 		assert(dst.type->code == cl_type_e::CL_TYPE_BOOL);
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t srcReg = this->cLoadOperand(dstReg, src);
+		size_t srcReg = this->cLoadOperand(dstReg, src, insn);
 
 		switch (src.type->code) {
 
 			case cl_type_e::CL_TYPE_BOOL:
-				this->append(new FI_bnot(srcReg));
+				this->append(new FI_bnot(&insn, srcReg));
 				break;
 
 			case cl_type_e::CL_TYPE_INT:
-				this->append(new FI_inot(srcReg));
+				this->append(new FI_inot(&insn, srcReg));
 				break;
 
 			default:
@@ -703,8 +714,8 @@ protected:
 
 		}
 
-		this->cStoreOperand(dst, srcReg, 1);
-		this->cKillDeadVariables(insn.varsToKill);
+		this->cStoreOperand(dst, srcReg, 1, insn);
+		this->cKillDeadVariables(insn.varsToKill, insn);
 
 	}
 
@@ -717,9 +728,9 @@ protected:
 		assert(dst.type->code == cl_type_e::CL_TYPE_PTR);
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t srcReg = this->cLoadOperand(dstReg, src);
+		size_t srcReg = this->cLoadOperand(dstReg, src, insn);
 
-		this->append(new FI_alloc(srcReg, srcReg));
+		this->append(new FI_alloc(&insn, srcReg, srcReg));
 
 		if (dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID) {
 
@@ -737,6 +748,7 @@ protected:
 
 			this->append(
 				new FI_node_create(
+					&insn,
 					srcReg,
 					srcReg,
 					dst.type->items[0].type->size,
@@ -747,8 +759,8 @@ protected:
 
 		}
 
-		this->cStoreOperand(dst, srcReg, 1);
-		this->cKillDeadVariables(insn.varsToKill);
+		this->cStoreOperand(dst, srcReg, 1, insn);
+		this->cKillDeadVariables(insn.varsToKill, insn);
 
 	}
 
@@ -756,12 +768,12 @@ protected:
 
 		const cl_operand& src = insn.operands[2];
 
-		size_t srcReg = this->cLoadOperand(0, src);
+		size_t srcReg = this->cLoadOperand(0, src, insn);
 
-		this->append(new FI_acc_all(srcReg));
-		this->append(new FI_node_free(srcReg));
-		this->append(new FI_check());
-		this->cKillDeadVariables(insn.varsToKill);
+		this->append(new FI_acc_all(&insn, srcReg));
+		this->append(new FI_node_free(&insn, srcReg));
+		this->append(new FI_check(&insn));
+		this->cKillDeadVariables(insn.varsToKill, insn);
 
 	}
 
@@ -775,12 +787,12 @@ protected:
 		assert(dst.type->code == cl_type_e::CL_TYPE_BOOL);
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t src1Reg = this->cLoadOperand(0, src1);
-		size_t src2Reg = this->cLoadOperand(1, src2);
+		size_t src1Reg = this->cLoadOperand(0, src1, insn);
+		size_t src2Reg = this->cLoadOperand(1, src2, insn);
 
 		this->append(new F(dstReg, src1Reg, src2Reg));
-		this->cStoreOperand(dst, dstReg, 1);
-		this->cKillDeadVariables(insn.varsToKill);
+		this->cStoreOperand(dst, dstReg, 1, insn);
+		this->cKillDeadVariables(insn.varsToKill, insn);
 
 	}
 
@@ -795,12 +807,12 @@ protected:
 		assert(src2.type->code == cl_type_e::CL_TYPE_INT);
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t src1Reg = this->cLoadOperand(0, src1);
-		size_t src2Reg = this->cLoadOperand(1, src2);
+		size_t src1Reg = this->cLoadOperand(0, src1, insn);
+		size_t src2Reg = this->cLoadOperand(1, src2, insn);
 
-		this->append(new FI_iadd(dstReg, src1Reg, src2Reg));
-		this->cStoreOperand(dst, dstReg, 1);
-		this->cKillDeadVariables(insn.varsToKill);
+		this->append(new FI_iadd(&insn, dstReg, src1Reg, src2Reg));
+		this->cStoreOperand(dst, dstReg, 1, insn);
+		this->cKillDeadVariables(insn.varsToKill, insn);
 
 	}
 
@@ -815,18 +827,18 @@ protected:
 		assert(src2.type->code == cl_type_e::CL_TYPE_INT);
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t src1Reg = this->cLoadOperand(0, src1);
-		size_t src2Reg = this->cLoadOperand(1, src2);
+		size_t src1Reg = this->cLoadOperand(0, src1, insn);
+		size_t src2Reg = this->cLoadOperand(1, src2, insn);
 
-		this->append(new FI_move_reg_inc(dstReg, src1Reg, src2Reg));
-		this->cStoreOperand(dst, dstReg, 1);
-		this->cKillDeadVariables(insn.varsToKill);
+		this->append(new FI_move_reg_inc(&insn, dstReg, src1Reg, src2Reg));
+		this->cStoreOperand(dst, dstReg, 1, insn);
+		this->cKillDeadVariables(insn.varsToKill, insn);
 
 	}
 
 	void compileJmp(const CodeStorage::Insn& insn) {
 
-		this->append(new FI_jmp(insn.targets[0]));
+		this->append(new FI_jmp(&insn, insn.targets[0]));
 
 	}
 
@@ -836,7 +848,7 @@ protected:
 
 		// feed registers with arguments (r2 ... )
 		for (size_t i = fnc.args.size() + 1; i > 1; --i)
-			this->cLoadOperand(i, insn.operands[i], false);
+			this->cLoadOperand(i, insn.operands[i], insn, false);
 
 		CodeStorage::TKillVarList varsToKill = insn.varsToKill;
 
@@ -858,7 +870,7 @@ protected:
 		}
 
 		// kill dead variables
-		this->cKillDeadVariables(varsToKill);
+		this->cKillDeadVariables(varsToKill, insn);
 
 		size_t head = this->assembly->code_.size();
 
@@ -866,31 +878,32 @@ protected:
 		this->append(NULL);
 
 		// call
-		this->append(new FI_jmp(&this->getFncInfo(&fnc).second));
+		this->append(new FI_jmp(&insn, &this->getFncInfo(&fnc).second));
 
 		// load ABP into r1
-		this->append(new FI_get_ABP(1, 0));
+		this->append(new FI_get_ABP(&insn, 1, 0));
 
 		// isolate adjacent nodes (current ABP)
-		this->append(new FI_acc_all(1));
+		this->append(new FI_acc_all(&insn, 1));
 
 		size_t head2 = this->assembly->code_.size();
 
 		// fixpoint
-		this->cFixpoint();
+		this->cFixpoint(insn);
 
 		this->assembly->code_[head2]->insn(&insn);
 
 		// pop return value into r0
-		this->append(new FI_pop_greg(0));
+		this->append(new FI_pop_greg(&insn, 0));
 
 		// collect result from r0
 		if (insn.operands[0].code != CL_OPERAND_VOID)
-			this->cStoreOperand(insn.operands[0], 0, 1);
+			this->cStoreOperand(insn.operands[0], 0, 1, insn);
 
 		// construct instruction for loading return address
 		this->assembly->code_[head] =
-			new FI_load_cst(1, Data::createNativePtr(this->assembly->code_[head + 2]));
+			new FI_load_cst(&insn, 1,
+				Data::createNativePtr(this->assembly->code_[head + 2]));
 
 		// set target flag
 		this->assembly->code_[head + 2]->setTarget();
@@ -901,28 +914,28 @@ protected:
 
 		// move return value into r0
 		if (insn.operands[0].code != CL_OPERAND_VOID)
-			this->cLoadOperand(0, insn.operands[0], false);
+			this->cLoadOperand(0, insn.operands[0], insn, false);
 
 		// push r0 to gr1
-		this->append(new FI_push_greg(0));
+		this->append(new FI_push_greg(&insn, 0));
 
 		// load previous ABP into r0
-		this->append(new FI_load_ABP(0, ABP_OFFSET));
+		this->append(new FI_load_ABP(&insn, 0, ABP_OFFSET));
 
 		// store current ABP into r1
-		this->append(new FI_get_ABP(1, 0));
+		this->append(new FI_get_ABP(&insn, 1, 0));
 
 		// restore previous ABP (r0)
-		this->append(new FI_set_greg(ABP_INDEX, 0));
+		this->append(new FI_set_greg(&insn, ABP_INDEX, 0));
 
 		// move return address into r0
-		this->append(new FI_load(0, 1, RET_OFFSET));
+		this->append(new FI_load(&insn, 0, 1, RET_OFFSET));
 
 		// delete stack frame (r1)
-		this->append(new FI_node_free(1));
+		this->append(new FI_node_free(&insn, 1));
 
 		// return to r0
-		this->append(new FI_ret(0));
+		this->append(new FI_ret(&insn, 0));
 
 	}
 
@@ -930,9 +943,9 @@ protected:
 
 		const cl_operand& src = insn.operands[0];
 
-		size_t srcReg = this->cLoadOperand(0, src);
+		size_t srcReg = this->cLoadOperand(0, src, insn);
 
-		this->cKillDeadVariables(insn.varsToKill);
+		this->cKillDeadVariables(insn.varsToKill, insn);
 
 		AbstractInstruction* tmp[2] = { NULL, NULL };
 
@@ -942,16 +955,16 @@ protected:
 
 		for (auto i : { 0, 1 }) {
 
-			tmp[i] = this->cKillDeadVariables(insn.killPerTarget[i]);
+			tmp[i] = this->cKillDeadVariables(insn.killPerTarget[i], insn);
 
-			this->append(new FI_jmp(insn.targets[i]));
+			this->append(new FI_jmp(&insn, insn.targets[i]));
 
 			if (!tmp[i])
 				tmp[i] = this->assembly->code_.back();
 
 		}
 
-		this->assembly->code_[sentinel] = new FI_cond(srcReg, tmp);
+		this->assembly->code_[sentinel] = new FI_cond(&insn, srcReg, tmp);
 
 	}
 
@@ -961,9 +974,9 @@ protected:
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
 
-		this->append(new FI_load_cst(dstReg, Data::createUnknw()));
-		this->cStoreOperand(dst, dstReg, 1);
-		this->cKillDeadVariables(insn.varsToKill);
+		this->append(new FI_load_cst(&insn, dstReg, Data::createUnknw()));
+		this->cStoreOperand(dst, dstReg, 1, insn);
+		this->cKillDeadVariables(insn.varsToKill, insn);
 
 	}
 
@@ -982,10 +995,10 @@ protected:
 				this->compileNondet(insn);
 				return;
 			case builtin_e::biFix:
-				this->cFixpoint();
+				this->cFixpoint(insn);
 				return;
 			case builtin_e::biPrintHeap:
-				this->cPrintHeap();
+				this->cPrintHeap(insn);
 				return;
 			default:
 				break;
@@ -996,8 +1009,8 @@ protected:
 		if (!isDefined(*fnc)) {
 			CL_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" << insn.operands[1].data.cst.data.cst_fnc.name << '\'');
 			if (insn.operands[0].code != CL_OPERAND_VOID) {
-				this->append(new FI_load_cst(0, Data::createUnknw()));
-				this->cStoreOperand(insn.operands[0], 0, 1);
+				this->append(new FI_load_cst(&insn, 0, Data::createUnknw()));
+				this->cStoreOperand(insn.operands[0], 0, 1, insn);
 			}
 		} else {
 			this->compileCallInternal(insn, *fnc);
@@ -1117,7 +1130,7 @@ protected:
 			this->assembly->regFileSize_ = this->curCtx->argCount + 2;
 
 		// move ABP into r0
-		this->append(new FI_get_ABP(0, 0))->setTarget();
+		this->append(new FI_get_ABP(nullptr, 0, 0))->setTarget();
 
 		// store entry point
 		this->codeIndex.insert(std::make_pair(&fncInfo.second, this->assembly->code_.back()));
@@ -1129,12 +1142,12 @@ protected:
 			offsets.push_back(this->curCtx->getVarInfo(arg).second);
 
 		// build structure in r0
-		this->append(new FI_build_struct(0, 0, offsets));
+		this->append(new FI_build_struct(nullptr, 0, 0, offsets));
 
 		// build stack frame
 
 		// move void ptr of size 1 into r1
-		this->append(new FI_load_cst(1, Data::createVoidPtr(1)));
+		this->append(new FI_load_cst(nullptr, 1, Data::createVoidPtr(1)));
 
 		// get function name
 		std::ostringstream ss;
@@ -1142,17 +1155,18 @@ protected:
 
 		// allocate stack frame to r1
 		this->append(
-			new FI_node_create(1, 1, 1, this->boxMan.getTypeInfo(ss.str()), this->curCtx->sfLayout)
+			new FI_node_create(nullptr, 1, 1, 1, this->boxMan.getTypeInfo(ss.str()),
+				this->curCtx->sfLayout)
 		);
 
 		// store arguments to the new frame (r1)
-		this->append(new FI_stores(1, 0, 0));
+		this->append(new FI_stores(nullptr, 1, 0, 0));
 
 		// set new ABP (r1)
-		this->append(new FI_set_greg(ABP_INDEX, 1));
+		this->append(new FI_set_greg(nullptr, ABP_INDEX, 1));
 
 		// jump to the beginning of the first block
-		this->append(new FI_jmp(fnc.cfg.entry()));
+		this->append(new FI_jmp(nullptr, fnc.cfg.entry()));
 
 		// compute loop entry points
 		this->loopAnalyser.init(fnc.cfg.entry());
@@ -1213,39 +1227,39 @@ public:
 		// compile entry call
 
 		// load NULL into r0
-		this->append(new FI_load_cst(0, Data::createInt(0)));
+		this->append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
 
 		// push r0 as ABP
-		this->append(new FI_push_greg(0));
+		this->append(new FI_push_greg(nullptr, 0));
 
 		// feed registers with arguments (unknown values)
 		for (size_t i = entry.args.size() + 1; i > 1; --i)
-			this->append(new FI_load_cst(i, Data::createUnknw()));
+			this->append(new FI_load_cst(nullptr, i, Data::createUnknw()));
 
-		AbstractInstruction* instr = new FI_check();
+		AbstractInstruction* instr = new FI_check(nullptr);
 
 		// set target flag
 		instr->setTarget();
 
 		// store return address into r1
-		this->append(new FI_load_cst(1, Data::createNativePtr(instr)));
+		this->append(new FI_load_cst(nullptr, 1, Data::createNativePtr(instr)));
 
 		// call
-		this->append(new FI_jmp(&this->getFncInfo(&entry).second));
+		this->append(new FI_jmp(nullptr, &this->getFncInfo(&entry).second));
 
 		this->append(instr);
 
 		// pop return value into r0
-		this->append(new FI_pop_greg(0));
+		this->append(new FI_pop_greg(nullptr, 0));
 
 		// pop ABP into r1
-		this->append(new FI_pop_greg(1));
+		this->append(new FI_pop_greg(nullptr, 1));
 
 		// check stack frame
-		this->append(new FI_assert(1, Data::createInt(0)));
+		this->append(new FI_assert(nullptr, 1, Data::createInt(0)));
 
 		// abort
-		this->append(new FI_abort());
+		this->append(new FI_abort(nullptr));
 
 		for (auto fnc : stor.fncs) {
 

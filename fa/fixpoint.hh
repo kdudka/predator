@@ -78,8 +78,10 @@ public:
 
 public:
 
-	FixpointBase(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan) : FixpointInstruction(), fwdConf(fixpointBackend),
+	FixpointBase(const CodeStorage::Insn* insn,
+		TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
+		BoxMan& boxMan) :
+		FixpointInstruction(insn), fwdConf(fixpointBackend),
 		fwdConfWrapper(this->fwdConf, boxMan), taBackend(taBackend), boxMan(boxMan) {}
 
 	virtual ~FixpointBase() {}
@@ -94,8 +96,9 @@ class FI_abs : public FixpointBase {
 
 public:
 
-	FI_abs(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan) : FixpointBase(fixpointBackend, taBackend, boxMan) {}
+	FI_abs(const CodeStorage::Insn* insn,
+		TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
+		BoxMan& boxMan) : FixpointBase(insn, fixpointBackend, taBackend, boxMan) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
@@ -109,9 +112,10 @@ class FI_fix : public FixpointBase {
 
 public:
 
-	FI_fix(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
+	FI_fix(const CodeStorage::Insn* insn,
+		TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
 		BoxMan& boxMan)
-		: FixpointBase(fixpointBackend, taBackend, boxMan) {}
+		: FixpointBase(insn, fixpointBackend, taBackend, boxMan) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 
