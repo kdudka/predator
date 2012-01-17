@@ -138,7 +138,7 @@ inline void normalize(FAE& fae, const std::set<size_t>& forbidden, bool extended
 
 }
 
-inline bool fold(FAE& fae, BoxMan& boxMan, const std::set<size_t>& forbidden, bool conditional) {
+inline bool fold(FAE& fae, BoxMan& boxMan, const std::set<size_t>& forbidden, bool conditional, bool aggressive) {
 
 	std::vector<size_t> order;
 	std::vector<bool> marked;
@@ -156,7 +156,7 @@ inline bool fold(FAE& fae, BoxMan& boxMan, const std::set<size_t>& forbidden, bo
 
 		assert(fae.roots[order[i]]);
 
-		if (folding.discover(order[i], forbidden, conditional, conditional)) {
+		if (folding.discover(order[i], forbidden, conditional, aggressive)) {
 
 			CL_CDEBUG(3, "after folding: " << std::endl << fae);
 
@@ -199,7 +199,7 @@ inline void learn(FAE& fae, BoxMan& boxMan) {
 */
 	size_t oldCount = boxMan.getBoxes().size();
 
-	fold(fae, boxMan, forbidden, false);
+	fold(fae, boxMan, forbidden, false, true);
 
 	if (oldCount != boxMan.getBoxes().size())
 		throw RestartRequest("a new box encountered");
@@ -245,7 +245,7 @@ inline bool foldAndNormalize(FAE& fae, BoxMan& boxMan) {
 
 	forbidden.insert(VirtualMachine(fae).varGet(ABP_INDEX).d_ref.root);
 
-	bool matched = fold(fae, boxMan, forbidden, true);
+	bool matched = fold(fae, boxMan, forbidden, true, true);
 
 	computeForbiddenSet(forbidden, fae);
 
@@ -254,7 +254,7 @@ inline bool foldAndNormalize(FAE& fae, BoxMan& boxMan) {
 	forbidden.clear();
 	forbidden.insert(VirtualMachine(fae).varGet(ABP_INDEX).d_ref.root);
 
-	return matched | fold(fae, boxMan, forbidden, true);
+	return matched | fold(fae, boxMan, forbidden, true, true);
 
 }
 

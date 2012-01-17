@@ -188,15 +188,15 @@ protected:
 
 		// for every offset, add an item
 		for (auto i = offsets.begin(); i != offsets.end(); ++i) {
-			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(*i);
+			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(*i + base);
 			// Assertions
-			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, *i));
+			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, *i + base));
 
 			const Data* tmp = nullptr;
 			if (!this->fae.isData(transition.lhs()[ni.offset], tmp)) {
 				throw ProgramError("transitionLookup(): destination is not a leaf!");
 			}
-			data.d_struct->push_back(Data::item_info(*i - base, *tmp));
+			data.d_struct->push_back(Data::item_info(*i, *tmp));
 			VirtualMachine::displToData(VirtualMachine::readSelector(ni.aBox),
 				data.d_struct->back().second);
 		}
@@ -270,16 +270,16 @@ protected:
 		out = Data::createStruct();
 		for (auto i = in.begin(); i != in.end(); ++i) {
 			// Retrieve the item with the given offset
-			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(i->first);
+			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(i->first + base);
 			// Assertions
-			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, i->first));
+			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, i->first + base));
 
 			const Data* tmp = nullptr;
 			if (!this->fae.isData(transition.lhs()[ni.offset], tmp)) {
 				throw ProgramError("transitionModify(): destination is not a leaf!");
 			}
 
-			out.d_struct->push_back(Data::item_info(i->first - base, *tmp));
+			out.d_struct->push_back(Data::item_info(i->first, *tmp));
 			SelData s = VirtualMachine::readSelector(ni.aBox);
 			VirtualMachine::displToData(s, out.d_struct->back().second);
 			Data d = i->second;
@@ -373,7 +373,7 @@ public:
 	 *
 	 * Returns the type and value information about the variable with the given
 	 * identifier.
-	 * 
+	 *
 	 * @param[in]  varId  Identifier of the desired variable
 	 *
 	 * @returns  Type and value information about the variable
@@ -390,7 +390,7 @@ public:
 	 *
 	 * Sets the type and value information about the variable with the given
 	 * identifier.
-	 * 
+	 *
 	 * @param[in]  varId  Identifier of the desired variable
 	 * @param[in]  data   Type and value information
 	 */
@@ -576,7 +576,7 @@ public:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 		this->transitionLookup(this->fae.roots[root]->getAcceptingTransition(), data);
-	}	
+	}
 #endif
 
 	/**

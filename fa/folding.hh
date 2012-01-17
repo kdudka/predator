@@ -748,29 +748,32 @@ public:
 
 				CL_CDEBUG(3, "type 2 cutpoint detected at root " << root);
 
-				if (
-					this->makeType1Box(
-						root,
-						this->fae.roots[root]->getFinalState(),
-						cutpoint.root,
-						forbidden,
-						conditional
+				if (!aggressiveMode) {
+
+					if (
+						this->makeType1Box(
+							root,
+							this->fae.roots[root]->getFinalState(),
+							cutpoint.root,
+							forbidden,
+							conditional
+						)
 					)
-				)
-						return true;
+							return true;
 
-				this->fae.popStateOffset();
+					this->fae.popStateOffset();
 
-				if (!aggressiveMode)
 					continue;
+
+				}
 
 				auto& signatures = this->getSignatures(root);
 
 				for (auto& stateSignaturePair : signatures) {
-
+/*
 					if (this->fae.roots[root]->getFinalState() == stateSignaturePair.first)
 						continue;
-
+*/
 					for (auto& tmp : stateSignaturePair.second) {
 
 						if (!tmp.joint || (tmp.root != cutpoint.root))
@@ -780,7 +783,7 @@ public:
 
 						if (
 							this->makeType1Box(
-								root, stateSignaturePair.first, cutpoint.root, forbidden, true
+								root, stateSignaturePair.first, cutpoint.root, forbidden, conditional
 							)
 						)
 								return true;
