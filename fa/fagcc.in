@@ -28,7 +28,7 @@ seek_input_file "$1" || usage
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
 export SINK="/dev/null"
 export FA_PLUG="$topdir/fa_build/libfa.so"
-export GCC_HOST=@GCC_HOST@
+export GCC_HOST='@GCC_HOST@'
 export GCC_OPTS="-S -o $SINK -O0 -m32 -I$topdir/include/predator-builtins -DFORESTER"
 
 # initial checks
