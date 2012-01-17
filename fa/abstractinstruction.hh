@@ -27,17 +27,28 @@
 
 #include "types.hh"
 
+/**
+ * @file abstractinstruction.hh
+ * AbstractInstruction - abstract base class for instructions
+ */
+
 namespace CodeStorage {
-    struct Fnc;
-    struct Storage;
-    struct Block;
-    struct Insn;
+	struct Fnc;
+	struct Storage;
+	struct Block;
+	struct Insn;
 }
 
 class ExecutionManager;
 
 typedef enum { fiAbort, fiBranch, fiCheck, fiFix, fiJump, fiUnspec } fi_type_e;
 
+/**
+ * @brief  An abstract base class that represents an instruction
+ *
+ * Abstract class repesenting an instruction. This class serves as the base
+ * class for all instructions.
+ */
 class AbstractInstruction {
 
 public:

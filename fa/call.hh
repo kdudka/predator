@@ -31,7 +31,8 @@ public:
 	FI_ret(const CodeStorage::Insn* insn, size_t dst)
 		: AbstractInstruction(insn), dst_(dst) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual void finalize(
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,

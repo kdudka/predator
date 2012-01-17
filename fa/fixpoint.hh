@@ -100,7 +100,8 @@ public:
 		TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
 		BoxMan& boxMan) : FixpointBase(insn, fixpointBackend, taBackend, boxMan) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "abs   ";
@@ -117,7 +118,8 @@ public:
 		BoxMan& boxMan)
 		: FixpointBase(insn, fixpointBackend, taBackend, boxMan) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "fix   ";

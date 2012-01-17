@@ -17,14 +17,16 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Standard library headers
 #include <sstream>
 #include <cstdlib>
-
 #include <list>
 #include <unordered_set>
 
+// Code Listener headers
 #include <cl/cldebug.hh>
 
+// Forester headers
 #include "programerror.hh"
 #include "symctx.hh"
 #include "nodebuilder.hh"
@@ -34,7 +36,6 @@
 #include "fixpoint.hh"
 #include "microcode.hh"
 #include "regdef.hh"
-
 #include "compiler.hh"
 
 namespace {
@@ -718,6 +719,7 @@ protected:
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src = insn.operands[1];
 
+		// Assertions
 		assert(src.type->code == dst.type->code);
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
@@ -1278,7 +1280,8 @@ protected:
 			const CodeStorage::Block* block = queue.front();
 			queue.pop_front();
 
-			auto p = this->codeIndex.insert(std::make_pair(block, (AbstractInstruction*)NULL));
+			auto p = this->codeIndex.insert(std::make_pair(block,
+				(AbstractInstruction*)NULL));
 			if (!p.second)
 				continue;
 
@@ -1308,7 +1311,8 @@ public:
 		BoxMan& boxMan)
 		: fixpointBackend(fixpointBackend), taBackend(taBackend), boxMan(boxMan) {}
 
-	void compile(Compiler::Assembly& assembly, const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry) {
+	void compile(Compiler::Assembly& assembly, const CodeStorage::Storage& stor,
+		const CodeStorage::Fnc& entry) {
 
 		this->reset(assembly);
 

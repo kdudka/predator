@@ -35,7 +35,8 @@ public:
 		: AbstractInstruction(insn, fiType) {}
 
 	virtual void finalize(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
+		const std::unordered_map<const CodeStorage::Block*,
+		AbstractInstruction*>& codeIndex,
 		std::vector<AbstractInstruction*>::const_iterator cur
 	);
 
