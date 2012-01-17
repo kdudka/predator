@@ -33,6 +33,21 @@
 
 #include "microcode.hh"
 
+namespace
+{
+
+inline const cl_loc* getLoc(const AbstractInstruction::StateType& state)
+{
+	// Assertions
+	assert(state.second != nullptr);
+	assert(state.second->instr != nullptr);
+	assert(state.second->instr->insn() != nullptr);
+
+	return &(state.second->instr->insn()->loc);
+}
+
+} // namespace
+
 // FI_cond
 void FI_cond::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
@@ -74,7 +89,7 @@ void FI_acc_sel::execute(ExecutionManager& execMan, const AbstractInstruction::S
 
 		std::stringstream ss;
 		ss << "dereferenced value is not a valid reference [" << data << ']';
-		throw ProgramError(ss.str());
+		throw ProgramError(ss.str(), getLoc(state));
 
 	}
 
@@ -96,7 +111,7 @@ void FI_acc_set::execute(ExecutionManager& execMan, const AbstractInstruction::S
 
 		std::stringstream ss;
 		ss << "dereferenced value is not a valid reference [" << data << ']';
-		throw ProgramError(ss.str());
+		throw ProgramError(ss.str(), getLoc(state));
 
 	}
 
@@ -120,7 +135,7 @@ void FI_acc_all::execute(ExecutionManager& execMan, const AbstractInstruction::S
 
 		std::stringstream ss;
 		ss << "dereferenced value is not a valid reference [" << data << ']';
-		throw ProgramError(ss.str());
+		throw ProgramError(ss.str(), getLoc(state));
 
 	}
 
@@ -184,7 +199,7 @@ void FI_move_reg_offs::execute(ExecutionManager& execMan, const AbstractInstruct
 
 		std::stringstream ss;
 		ss << "dereferenced value is not a valid reference [" << data << ']';
-		throw ProgramError(ss.str());
+		throw ProgramError(ss.str(), getLoc(state));
 
 	}
 
@@ -204,7 +219,7 @@ void FI_move_reg_inc::execute(ExecutionManager& execMan, const AbstractInstructi
 
 		std::stringstream ss;
 		ss << "dereferenced value is not a valid reference [" << data << ']';
-		throw ProgramError(ss.str());
+		throw ProgramError(ss.str(), getLoc(state));
 
 	}
 
@@ -361,7 +376,7 @@ void FI_node_create::execute(ExecutionManager& execMan, const AbstractInstructio
 	assert((*state.first)[this->src_].isVoidPtr());
 
 	if ((*state.first)[this->src_].d_void_ptr_size != this->size_)
-		throw ProgramError("allocated block size mismatch");
+		throw ProgramError("allocated block size mismatch", getLoc(state));
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
 
@@ -379,7 +394,7 @@ void FI_node_alloc::execute(ExecutionManager& execMan, const AbstractInstruction
 	assert((*state.first)[this->src_].isInt());
 
 	if ((*state.first)[this->src_].d_int != this->type_->size)
-		throw ProgramError("allocated block size mismatch");
+		throw ProgramError("allocated block size mismatch", getLoc(state));
 
 	std::vector<SelData> sels;
 	NodeBuilder::buildNode(sels, this->type_);
@@ -413,7 +428,9 @@ void FI_node_free::execute(ExecutionManager& execMan, const AbstractInstruction:
 	const Data& data = (*state.first)[this->dst_];
 
 	if (data.d_ref.displ != 0)
-		throw ProgramError("releasing a pointer which points inside an allocated block");
+		throw ProgramError(
+			"releasing a pointer which points inside an allocated block",
+			getLoc(state));
 
 	VirtualMachine(*fae).nodeDelete(data.d_ref.root);
 
