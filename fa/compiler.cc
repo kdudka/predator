@@ -280,7 +280,10 @@ protected:
 	void cLoadCst(size_t dst, const cl_operand& op,
 		const CodeStorage::Insn& insn) {
 
-		switch (op.type->code) {
+		// Assertions
+		assert(op.code == cl_operand_e::CL_OPERAND_CST);
+
+		switch (op.data.cst.code) {
 
 			case cl_type_e::CL_TYPE_INT:
 			case cl_type_e::CL_TYPE_ENUM:
