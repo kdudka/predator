@@ -881,12 +881,13 @@ protected:
 
 		this->assembly->code_[head2]->insn(&insn);
 
-		// pop return value into r0
-		this->append(new FI_pop_greg(0));
-
-		// collect result from r0
-		if (insn.operands[0].code != CL_OPERAND_VOID)
+		if (insn.operands[0].code != CL_OPERAND_VOID) {
+			// pop return value into r0
+			this->append(new FI_pop_greg(0));
+			// collect result from r0
 			this->cStoreOperand(insn.operands[0], 0, 1);
+
+		}
 
 		// construct instruction for loading return address
 		this->assembly->code_[head] =
@@ -899,12 +900,13 @@ protected:
 
 	void compileRet(const CodeStorage::Insn& insn) {
 
-		// move return value into r0
-		if (insn.operands[0].code != CL_OPERAND_VOID)
+		if (insn.operands[0].code != CL_OPERAND_VOID) {
+			// move return value into r0
 			this->cLoadOperand(0, insn.operands[0], false);
+			// push r0 to gr1
+			this->append(new FI_push_greg(0));
 
-		// push r0 to gr1
-		this->append(new FI_push_greg(0));
+		}
 
 		// load previous ABP into r0
 		this->append(new FI_load_ABP(0, ABP_OFFSET));
