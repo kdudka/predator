@@ -117,7 +117,7 @@ else()
         0167 0415 0414 0418 0124 0417 0157 0521 0412 0405 0409 0407 0410 0413)
 endif()
 
-set(cost 1048576)
+set(cost 1)
 
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_predator_smoke label tool arg1 arg2 arg3)
@@ -132,7 +132,7 @@ macro(test_predator_smoke label tool arg1 arg2 arg3)
             -fplugin-arg-libsl-verbose=1)
 
         SET_TESTS_PROPERTIES(${test_name} PROPERTIES COST ${cost})
-        MATH(EXPR cost "${cost} - 1")
+        MATH(EXPR cost "${cost} + 1")
     endforeach()
 endmacro()
 
@@ -167,7 +167,7 @@ macro(test_predator_regre name_suff ext arg1)
         add_test(${test_name} sh -c "${cmd}")
 
         SET_TESTS_PROPERTIES(${test_name} PROPERTIES COST ${cost})
-        MATH(EXPR cost "${cost} - 1")
+        MATH(EXPR cost "${cost} + 1")
     endforeach()
 endmacro(test_predator_regre)
 

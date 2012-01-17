@@ -127,7 +127,7 @@ build_gcc: $(GCC_SRC)
 	$(MAKE) lnk_gcc_headers
 	test -d .git || (test -d sl && sed \
 		"s|GCC_HOST=.*$$|GCC_HOST='`readlink -f gcc-install/bin/gcc`'|" -i \
-		chk-error-label-reachability.sh register-paths.sh sl/probe.sh sl/slgcc \
+		chk-error-label-reachability.sh register-paths.sh sl/probe.sh \
 		|| true)
 
 # updated SVN working directory of gcc
