@@ -93,8 +93,11 @@ struct SymCtx {
 					if (var.code == CodeStorage::EVar::VAR_FNC_ARG)
 						++this->argCount;
 					break;
-				default:
+				case CodeStorage::EVar::VAR_GL:
+					throw std::runtime_error("global variables not supported");
 					break;
+				default:
+					assert(false);
 			}
 
 		}
