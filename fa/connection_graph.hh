@@ -209,6 +209,15 @@ public:
 
 		}
 
+		bool operator==(const RootInfo& rhs) const {
+
+			if (!this->valid || !rhs.valid)
+				return false;
+
+			return this->signature == rhs.signature;
+
+		}
+
 	};
 
 	typedef std::vector<RootInfo> ConnectionData;
@@ -331,11 +340,11 @@ public:
 
 	static void updateStateSignature(StateToCutpointSignatureMap& stateMap, size_t state,
 		const CutpointSignature& v) {
-
+/*
 		assert((stateMap.find(state) == stateMap.end()) || (stateMap[state] == v));
 
 		stateMap.insert(std::make_pair(state, v));
-/*
+*/
  		auto p = stateMap.insert(std::make_pair(state, v));
 
 		if (!p.second) {
@@ -344,14 +353,17 @@ public:
 
 			for (size_t i = 0; i < v.size(); ++i) {
 
-				p.first->second[i].fwdSelectors.insert(
-					v[i].fwdSelectors.begin(), v[i].fwdSelectors.end()
-				);
+				assert(v[i].root == p.first->second[i].root);
+				assert(*v[i].fwdSelectors.begin() == *p.first->second[i].fwdSelectors.begin());
+				assert(v[i].defines == p.first->second[i].defines);
+
+				if (v[i].joint)
+					p.first->second[i].joint = true;
 
 			}
 
 		}
-*/
+
 	}
 
 	static void processStateSignature(CutpointSignature& result, StructuralBox* box, size_t input,
@@ -502,7 +514,129 @@ public:
 		}
 
 	}
+/*
+	static void computeSplitPoints(std::unordered_set<size_t>& splitPoints, const TA<label_type>& ta) {
 
+		std::unordered_map<size_t, std::unordered_set<std::set<size_t>>> stateInfo;
+
+		std::vector<const TT<label_type>*> transitions;
+
+		splitPoints.clear();
+
+		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
+
+			if (i->lhs().empty()) {
+
+				stateInfo.insert(
+					std::make_pair(i->rhs(), std::unordered_set<std::set<size_t>>())
+				).first->second.insert(std::set<size_t>());
+
+			} else {
+
+				transitions.push_back(&*i);
+
+				splitPoints.insert(i->rhs());
+
+			}
+
+		}
+
+		bool changed = true;
+
+		while (changed) {
+
+			changed = false;
+
+			for (auto i = transitions.begin(); i != transitions.end(); ++i) {
+
+				const TT<label_type>& t = **i;
+
+				std::vector<std::unordered_set<std::set<size_t>>*> tuple;
+
+				auto j = t.lhs().begin();
+
+				for (; j != t.lhs().end(); ++j) {
+
+					auto iter = stateInfo.find(*j);
+
+					if (iter == stateInfo.end())
+						break;
+
+					tuple.push(&iter->second);
+
+				}
+
+				if (j != stateInfo.end())
+					break;
+
+				std::vector<std::unordered_set<std::set<size_t>>::iterator> choice(tuple.size);
+
+				for (size_t j = 0; j < choice.size(); ++j) {
+
+					assert(tuple[j]->begin() != tuple[j]->end());
+
+					choice[j] = tuple[j]->begin();
+
+				}
+
+				auto next = [&tuple, &choice]() -> bool {
+
+					for (size_t i = 0; i < choice.size(); ++i) {
+
+						if (++choice[i] != tuple[i]->end())
+							return true;
+
+						choice[i] == tuple[i]->begin();
+
+					}
+
+					return false;
+
+				}
+
+				do {
+
+					std::set<size_t> tmp;
+
+					tmp.insert(t.rhs());
+
+					for (auto& v : choice)
+						tmp.insert(v->begin(), v->end());
+
+					if (stateInfo.insert(
+							std::make_pair(t.rhs(), std::unordered_set<std::set<size_t>>())
+						).first->second.insert(tmp).second)
+						changed = true;
+
+				} while (next());
+
+			}
+
+		}
+
+		for (auto& f : ta.getFinalSates()) {
+
+			auto iter =  stateInfo.find(f);
+
+			assert(iter != stateInfo.end());
+
+			for (auto& s : iter->second) {
+
+				for (auto j = splitPoints.begin(); j != splitPoints.end(); ) {
+
+					if (s.count(*j))
+						++j;
+					else
+						j = splitPoints.erase(j);
+
+				}
+
+			}
+
+		}
+
+	}
+*/
 public:
 
 	ConnectionData data;

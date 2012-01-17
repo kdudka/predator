@@ -37,8 +37,8 @@ struct sl* create_sl_with_head_and_tail(void)
     sl->head = malloc(sizeof(struct sl_item));
     sl->tail = malloc(sizeof(struct sl_item));
         
-    /*sl->head->n3 =*/ sl->head->n2 = sl->head->n1 = sl->tail;
-    /*sl->tail->n3 =*/ sl->tail->n2 = sl->tail->n1 = NULL;
+    sl->head->n3 = sl->head->n2 = sl->head->n1 = sl->tail;
+    sl->tail->n3 = sl->tail->n2 = sl->tail->n1 = NULL;
 
     return sl;
 
@@ -51,11 +51,11 @@ void sl_random_insert(struct sl *sl)
     // a1, a2, a3 remember the nodes before the inserted one at the particular levels
     struct sl_item *a1, *a2, *a3;
     struct sl_item *new;
-
+/*
     a2 = sl->head;
     while (a2->n2 != sl->tail && __nondet())
         a2 = a2->n2;
-/*
+*/
     // moving randomly on the 3rd level
     a3 = sl->head;
     while (a3->n3 != sl->tail && __nondet())
@@ -65,7 +65,7 @@ void sl_random_insert(struct sl *sl)
     a2 = a3; 
     while (a2->n2 != a3->n3 && __nondet())
         a2 = a2->n2;
-*/
+
     // moving randomly on the 1st level, not going behind a2->n2
     a1 = a2; 
     while (a1->n1 != a2->n2 && __nondet())
@@ -81,11 +81,11 @@ void sl_random_insert(struct sl *sl)
     if (__nondet()) {
         new->n2 = a2->n2;
         a2->n2 = new;
-/*        // choose whether to insert at level 3
+        // choose whether to insert at level 3
         if (__nondet()) {
             new->n3 = a3->n3;
             a3->n3 = new;
-        }*/
+        }
     }
 }
 

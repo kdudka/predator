@@ -158,6 +158,8 @@ inline bool fold(FAE& fae, BoxMan& boxMan, const std::set<size_t>& forbidden, bo
 
 		if (folding.discover(order[i], forbidden, conditional, conditional)) {
 
+			CL_CDEBUG(3, "after folding: " << std::endl << fae);
+
 			fae.updateConnectionGraph();
 
 			matched = true;
@@ -167,8 +169,6 @@ inline bool fold(FAE& fae, BoxMan& boxMan, const std::set<size_t>& forbidden, bo
 		}
 
 	}
-
-	CL_CDEBUG(3, "after folding: " << std::endl << fae);
 
 	return matched;
 
@@ -203,6 +203,26 @@ inline void learn(FAE& fae, BoxMan& boxMan) {
 
 	if (oldCount != boxMan.getBoxes().size())
 		throw RestartRequest("a new box encountered");
+
+}
+
+inline void reorder(FAE& fae) {
+
+	fae.unreachableFree();
+	fae.updateConnectionGraph();
+
+	Normalization norm(fae);
+
+	std::vector<size_t> order;
+	std::vector<bool> marked;
+
+	norm.scan(marked, order, std::set<size_t>());
+
+	std::fill(marked.begin(), marked.end(), true);
+
+	norm.normalize(marked, order);
+
+	CL_CDEBUG(3, "after reordering: " << std::endl << fae);
 
 }
 
@@ -308,15 +328,23 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
 
-	learn(*fae, boxMan);
+	reorder(*fae);
 
-	foldAndNormalize(*fae, boxMan);
+	abstract(*fae, this->fwdConf, this->taBackend, this->boxMan);
+
+	learn(*fae, this->boxMan);
+
+	foldAndNormalize(*fae, this->boxMan);
+
+	FAE old(*fae->backend, this->boxMan);
 
 	do {
 
 		abstract(*fae, this->fwdConf, this->taBackend, this->boxMan);
 
-	} while (foldAndNormalize(*fae, boxMan));
+		old = *fae;
+
+	} while (foldAndNormalize(*fae, boxMan) && !FAE::subseteq(*fae, old));
 
 	// test inclusion
 	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper)) {

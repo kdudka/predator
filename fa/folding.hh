@@ -572,6 +572,8 @@ protected:
 		if (oldSize < this->boxMan.getBoxes().size())
 			CL_CDEBUG(1, "learning " << *(AbstractBox*)boxPtr << ':' << std::endl << *boxPtr);
 
+		CL_CDEBUG(2, *(AbstractBox*)boxPtr << " found");
+
 		this->fae.roots[root] = this->joinBox(*p.first, state, root, boxPtr, outputSignature);
 		this->fae.connectionGraph.invalidate(root);
 
@@ -682,6 +684,8 @@ protected:
 		if (oldSize < this->boxMan.getBoxes().size())
 			CL_CDEBUG(1, "learning " << *(AbstractBox*)boxPtr << ':' << std::endl << *boxPtr);
 
+		CL_CDEBUG(2, *(AbstractBox*)boxPtr << " found");
+
 		this->fae.roots[root] = this->joinBox(*p.first, finalState, root, boxPtr, outputSignature);
 		this->fae.connectionGraph.invalidate(root);
 
@@ -772,7 +776,7 @@ public:
 						if (!tmp.joint || (tmp.root != cutpoint.root))
 							continue;
 
-						CL_CDEBUG(3, "type 2 cutpoint detected inside component " << root);
+						CL_CDEBUG(3, "type 2 cutpoint detected inside component " << root << " at state q" << stateSignaturePair.first);
 
 						if (
 							this->makeType1Box(

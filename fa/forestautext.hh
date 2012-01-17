@@ -92,6 +92,25 @@ public:
 
 public:
 
+	static bool subseteq(const FAE& lhs, const FAE& rhs) {
+
+		if (lhs.roots.size() != rhs.roots.size())
+			return false;
+
+		if (lhs.connectionGraph.data != rhs.connectionGraph.data)
+			return false;
+
+		for (size_t i = 0; i < lhs.roots.size(); ++i) {
+
+			if (!TA<label_type>::subseteq(*lhs.roots[i], *rhs.roots[i]))
+				return false;
+
+		}
+
+		return true;
+
+	}
+
 	void loadTA(const TA<label_type>& src, const TA<label_type>::td_cache_type& cache, const TT<label_type>* top, size_t stateOffset) {
 
 		this->clear();
