@@ -1,25 +1,39 @@
 #!/bin/bash
-if test -z "$1" || test ! -e "$1"; then
+export SELF="$0"
+
+# this makes 7x speedup in case 'grep' was compiled with multi-byte support
+export LC_ALL=C
+
+export CCACHE_DISABLE=1
+
+die() {
+    printf "%s: %s\n" "$SELF" "$*" >&2
+    exit 1
+}
+
+usage() {
     echo "Usage: $0 foo.c <box directory>"
     exit 1
-fi
+}
 
-self="`readlink -f "$0"`"
-topdir="`dirname "$self"`/.."
+seek_input_file() {
+    test -e "$1" && return 0
+
+    return 1
+}
+
+seek_input_file "$1" || usage
 
 # basic setup
-FA_BUILD="$topdir/fa_build"
-FA_PLUG="$FA_BUILD/libfa.so"
-
-# filled in by CMake
-GCC=@GCC_HOST@
+topdir="`dirname "$(readlink -f "$SELF")"`/.."
+export SINK="/dev/null"
+export FA_PLUG="$topdir/fa_build/libfa.so"
+export GCC_HOST=@GCC_HOST@
+export GCC_OPTS="-S -o $SINK -O0 -m32 -I$topdir/include/predator-builtins -DFORESTER"
 
 # initial checks
-#test -x "$GCC"                              || exit 1
-
-# attempt to make
-#make -s $MAKEOPTS -C "$topdir/fa"  || exit 1
-#test -x "$FA_PLUG"                          || exit 1
+"$GCC_HOST" --version >"$SINK" || die "unable to run gcc: $GCC_HOST --version"
+test -r "$FA_PLUG"  || die "Forester GCC plug-in not found: ${FA_PLUG}"
 
 # use verbose level 0 by default
 test -z "$FA_VERBOSE" && FA_VERBOSE=0
@@ -29,33 +43,74 @@ if [ "$FA_VERBOSE" -ge "1" ]; then
   test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp -fplugin-arg-libfa-dump-types"
 fi;
 
-# use chromium as default SVG_VIEWER
-#test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
-
-#if test x1 = "x$FA_PLOT"; then
-    # wipe all .dot and .svg
-#    rm -f *.dot *.svg
-#fi
-
 BOXDB=""
 if [ "$2" != "" ]; then
     BOXDB="-fplugin-arg-libfa-args=db-root:$2"
 fi
 
-# run the gcc
-"$GCC" -c "$1" -o /dev/null -O0 -m32 \
-    -DFORESTER \
-    -fplugin="$FA_PLUG" \
-    -fplugin-arg-libfa-verbose="$FA_VERBOSE" \
-    $BOXDB \
-    $FA_OPTS \
-    #|| exit $?
+# check whether stdout is connected to a terminal
+if tty 0>&1 >"$SINK"; then
+    # initialize coloring escape sequences
+    export S='\o033[1;30m'
+    export R='\o033[1;31m'
+    export G='\o033[1;32m'
+    export Y='\o033[1;33m'
+    export B='\o033[1;34m'
+    export W='\o033[1;37m'
+    export N='\o033[0m'
+fi
 
-#if test x1 = "x$FA_PLOT"; then
-    # visualize graphs
-#    printf "graph visualization in progress ... "
-#    make $MAKEOPTS -s -f "$topdir/sl/data/Makefile" TIMEOUT="timeout 2" \
-#        || exit $?
-#    printf "done\n"
-#    "$SVG_VIEWER" *.svg
-#fi
+# run the gcc
+run_gcc() {
+    printf "Trying to compile \033[1;37m%s\033[0m ... " "$*" >&2
+    tmp="$(mktemp)"
+    test -w "$tmp" || die "mktemp failed"
+    trap "rm -f '$tmp'" RETURN
+
+    if "$GCC_HOST" $GCC_OPTS "$@" > "$tmp" 2>&1; then
+        printf "\033[1;32mOK\033[0m\n" >&2
+        cat "$tmp" >&2
+        printf "Running \033[1;34mForester\033[0m ...\n" >&2
+    else
+        printf "\033[1;31mFAILED\033[0m\n\n" >&2
+        cat "$tmp"
+        return 1
+    fi
+
+    "$GCC_HOST" $GCC_OPTS $@                                        \
+        -fplugin="$FA_PLUG"                                         \
+        -fplugin-arg-libfa-verbose="$FA_VERBOSE"                    \
+        3>&1 1>&2 2>&3 #| stdbuf --output=L grep -E                  \
+        #' \[-fplugin=libfa\.so\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'
+    if [ $? -ne 0 ]; then
+        printf "\033[1;31mFAILED\033[0m\n" >&2
+    fi
+}
+
+run_gcc $1 ${BOXDB} | stdbuf --output=L sed -re 's| \[-fplugin=libfa\.so\]$||' \
+        -e "s|(^.*) \[internal location\]\$|$S\1$N|"                           \
+        -e "s|(: error:) (.*)\$|\1 $R\2$N|"                                    \
+        -e "s|(: warning:) (.*)\$|\1 $Y\2$N|"                                  \
+        -e "s|(: note:) (.*)\$|\1 $G\2$N|"                                     \
+        -e "s|(current memory usage: *) ([0-9.]+ MB)|\1 $B\2$N|"               \
+        -e "s|(peak memory usage: *) ([0-9.]+ MB)|\1 $R\2$N|"                  \
+        -e "s|(!!! executing insn #[0-9]+ ...) (.*)\$|\1 $G\2$N|"              \
+        -e "s|(variable[:]? #[0-9]+:)([a-zA-Z0-9_.]+)|\1$G\2$N|"               \
+        -e "s|(per target) (L[0-9]+)|\1 $G\2$N|"                               \
+        -e "s|(initial size of state was) ([0-9]+)|\1 $W\2$N|"                 \
+        -e "s|(#[0-9]+)|$W\1$N|"                                               \
+        -e "s|(block L[0-9]+) (in progress)|\1 $Y\2$G|"                        \
+        -e "s|(... while executing) (.*\\(\\))|\1 $Y\2$N|"                     \
+        -e "s|took ([0-9.]+ s)|took $R\1$N|"                                   \
+        -e "s|(ignoring call of undefined function:) (.*)\$|\1 $R\2$N|"        \
+        -e "s|(internal compiler error:) (.*)\$|\1 $R\2$N|"                    \
+        -e "s|(undefined symbol:) (.*)\$|\1 $R\2$N|"                           \
+        -e "s/(CL_BREAK_IF|INT3|SIGTRAP)/$R\1$N/"                              \
+        -e "s/(importGlVar\\(\\))/$R\1$N/"                                     \
+        -e "s/(: debug: *) ([<>]J[<>]|AAA)/\1 $R\2$N/"                         \
+        -e "s/(: debug: SymHeap::)(objSetConcrete)/\1$Y\2$N/"                  \
+        -e "s/(: debug:) \\(x\\) (.*)\$/\1 $Y(x)$N \2/"                        \
+        -e "s/(: debug:) (spliceOutListSegment)/\1 $B\2$N/"                    \
+        -e "s/(: debug:) (<<<|>>>)/\1 $B\2$N/"                                 \
+        -e "s/(: debug:) (XXX)/\1 $Y\2$N/"                                     \
+        -e "s/(: debug: ___) (entering|we are)/\1 $G___$N \2/"
