@@ -40,7 +40,7 @@
 
 namespace {
 
-const char* translUnOpCode(const unsigned code)
+std::string translUnOpCode(const unsigned code)
 {
 	switch (code)
 	{
@@ -54,7 +54,7 @@ const char* translUnOpCode(const unsigned code)
 	}
 }
 
-const char* translBinOpCode(const unsigned code)
+std::string translBinOpCode(const unsigned code)
 {
 	switch (code)
 	{
@@ -88,7 +88,7 @@ const char* translBinOpCode(const unsigned code)
 	}
 }
 
-const char* translInsnOpCode(const unsigned code)
+std::string translInsnOpCode(const unsigned code)
 {
 	switch (code)
 	{
@@ -106,7 +106,7 @@ const char* translInsnOpCode(const unsigned code)
 	}
 }
 
-const char* translTypeCode(const unsigned code)
+std::string translTypeCode(const unsigned code)
 {
 	switch (code)
 	{
@@ -322,16 +322,8 @@ protected:
 				break;
 
 			default:
-				const char* ftr_name;
-				if ((ftr_name = translTypeCode(op.data.cst.code)) != nullptr)
-				{
-					throw ProgramError(std::string(ftr_name) +
-						": constant type not implemented", &insn.loc);
-				}
-				else
-				{
-					throw std::runtime_error("constant type not implemented");
-				}
+				throw ProgramError(translTypeCode(op.data.cst.code) +
+					": constant type not implemented", &insn.loc);
 		}
 	}
 /*
@@ -1136,16 +1128,8 @@ protected:
 						this->compileTruthNot(insn);
 						break;
 					default:
-						const char* ftr_name;
-						if ((ftr_name = translUnOpCode(insn.subCode)) != nullptr)
-						{
-							throw ProgramError(std::string(ftr_name) +
-								": feature not implemented", &insn.loc);
-						}
-						else
-						{
-							throw std::runtime_error("feature not implemented");
-						}
+						throw ProgramError(translUnOpCode(insn.subCode) +
+							": feature not implemented", &insn.loc);
 				}
 				break;
 
@@ -1173,16 +1157,8 @@ protected:
 						this->compilePointerPlus(insn);
 						break;
 					default:
-						const char* ftr_name;
-						if ((ftr_name = translBinOpCode(insn.subCode)) != nullptr)
-						{
-							throw ProgramError(std::string(ftr_name) +
-								": feature not implemented", &insn.loc);
-						}
-						else
-						{
-							throw std::runtime_error("feature not implemented");
-						}
+						throw ProgramError(translBinOpCode(insn.subCode) +
+							": feature not implemented", &insn.loc);
 				}
 				break;
 
@@ -1203,16 +1179,8 @@ protected:
 				break;
 
 			default:
-				const char* ftr_name;
-				if ((ftr_name = translInsnOpCode(insn.code)) != nullptr)
-				{
-					throw ProgramError(std::string(ftr_name) +
-						": feature not implemented", &insn.loc);
-				}
-				else
-				{
-					throw std::runtime_error("feature not implemented");
-				}
+				throw ProgramError(translInsnOpCode(insn.code) +
+					": feature not implemented", &insn.loc);
 		}
 	}
 
