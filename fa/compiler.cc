@@ -318,9 +318,6 @@ protected:
 		assert(op.code == cl_operand_e::CL_OPERAND_CST);
 		assert(op.type != nullptr);
 
-		CL_NOTE("Operand type: " + translTypeCode(op.type->code));
-		CL_NOTE("Constant type: " + translTypeCode(op.data.cst.code));
-
 		switch (op.type->code) {
 			// according to the type of the operand
 			case cl_type_e::CL_TYPE_INT:
@@ -781,22 +778,6 @@ protected:
 		assert(dst.type != nullptr);
 		assert(src.type->code == dst.type->code);
 
-		CL_NOTE_MSG(&(insn.loc), "Compiling assignment");
-		CL_NOTE_MSG(&(insn.loc), "Src type: " + translOperandCode(src.code));
-		CL_NOTE_MSG(&(insn.loc), "Src operand type: " + translTypeCode(src.type->code));
-		CL_NOTE_MSG(&(insn.loc), "Dst type: " + translOperandCode(dst.code));
-		CL_NOTE_MSG(&(insn.loc), "Dst operand type: " + translTypeCode(dst.type->code));
-
-		if (src.type->code == cl_type_e::CL_TYPE_PTR) {
-			// Assertions
-			assert(src.type->item_cnt > 0);
-			assert(dst.type->item_cnt > 0);
-			assert(src.type->items[0].type != nullptr);
-			assert(dst.type->items[0].type != nullptr);
-
-			CL_NOTE_MSG(&(insn.loc), "Src ptr type: " + translTypeCode(src.type->items[0].type->code));
-			CL_NOTE_MSG(&(insn.loc), "Dst ptr type: " + translTypeCode(dst.type->items[0].type->code));
-		}
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
 		size_t srcReg = this->cLoadOperand(dstReg, src, insn);
@@ -818,7 +799,6 @@ protected:
 				typeName = ss.str();
 			}
 
-			CL_NOTE_MSG(&(insn.loc), "Appending FI_node_create");
 			this->append(
 				new FI_node_create(
 					&insn,
@@ -894,7 +874,6 @@ protected:
 				typeName = ss.str();
 			}
 
-			CL_NOTE_MSG(&(insn.loc), "Appending FI_node_create");
 			this->append(
 				new FI_node_create(
 					&insn,
