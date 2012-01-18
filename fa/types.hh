@@ -491,13 +491,13 @@ struct Data {
 	/**
 	 * @brief  Is the type a NULL void pointer?
 	 *
-	 * Returns @p true if the type is a @p NULL @p t_void_ptr, i.e., a void
-	 * pointer of size 0, @p false otherwise.
+	 * Returns @p true if the type is a @p NULL, i.e., a t_int with a
+	 * value 0, @p false otherwise.
 	 *
-	 * @returns  @p true if the type is @p NULL @p t_void_ptr, @p false otherwise
+	 * @returns  @p true if the type is @p NULL, @p false otherwise
 	 */
 	bool isNull() const {
-		return this->type == data_type_e::t_void_ptr && this->d_void_ptr_size == 0;
+		return this->type == data_type_e::t_int && this->d_int == 0;
 	}
 
 	/**

@@ -401,6 +401,16 @@ void FI_alloc::execute(ExecutionManager& execMan,
 void FI_node_create::execute(ExecutionManager& execMan,
 	const AbstractInstruction::StateType& state) {
 
+	if ((*state.first)[this->src_].isRef() || (*state.first)[this->src_].isNull()) {
+
+		(*state.first)[this->dst_] = (*state.first)[this->src_];
+
+		execMan.enqueue(state.second, state.first, state.second->fae, this->next_);
+
+		return;
+
+	}
+
 	assert((*state.first)[this->src_].isVoidPtr());
 
 	if ((*state.first)[this->src_].d_void_ptr_size != this->size_)
