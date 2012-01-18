@@ -304,8 +304,9 @@ protected:
 
 		// Assertions
 		assert(op.code == cl_operand_e::CL_OPERAND_CST);
+		assert(op.type != nullptr);
 
-		switch (op.data.cst.code) {
+		switch (op.type->code) {
 
 			case cl_type_e::CL_TYPE_INT:
 			case cl_type_e::CL_TYPE_ENUM:
