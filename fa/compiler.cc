@@ -307,14 +307,35 @@ protected:
 		assert(op.code == cl_operand_e::CL_OPERAND_CST);
 		assert(op.type != nullptr);
 
-		switch (op.type->code) {
+		CL_NOTE("Operand type: " + translTypeCode(op.type->code));
+		CL_NOTE("Constant type: " + translTypeCode(op.data.cst.code));
 
+		switch (op.type->code) {
+			// according to the type of the operand
 			case cl_type_e::CL_TYPE_INT:
 			case cl_type_e::CL_TYPE_ENUM:
-			case cl_type_e::CL_TYPE_PTR:
 				this->append(
 					new FI_load_cst(&insn, dst, Data::createInt(intCstFromOperand(&op)))
 				);
+				break;
+
+			case cl_type_e::CL_TYPE_PTR:
+				switch (op.data.cst.code) {
+					// according to the type of the constant
+					case cl_type_e::CL_TYPE_INT:
+						this->append(
+							new FI_load_cst(&insn, dst, Data::createInt(intCstFromOperand(&op)))
+						);
+						break;
+
+					case cl_type_e::CL_TYPE_STRING:
+						this->append(new FI_load_cst(&insn, dst, Data::createUnknw()));
+						break;
+
+					default:
+						throw NotImplementedException(translTypeCode(op.data.cst.code) +
+							": pointer constant type", &insn.loc);
+				}
 				break;
 
 			case cl_type_e::CL_TYPE_BOOL:
@@ -747,6 +768,8 @@ protected:
 		// Assertions
 		assert(src.type->code == dst.type->code);
 
+		CL_NOTE_MSG(&(insn.loc), "Compiling assignment");
+
 		size_t dstReg = this->lookupStoreReg(dst, 0);
 		size_t srcReg = this->cLoadOperand(dstReg, src, insn);
 
@@ -768,6 +791,7 @@ protected:
 				typeName = ss.str();
 			}
 
+		CL_NOTE_MSG(&(insn.loc), "Appending FI_node_create");
 			this->append(
 				new FI_node_create(
 					&insn,
@@ -843,6 +867,7 @@ protected:
 				typeName = ss.str();
 			}
 
+			CL_NOTE_MSG(&(insn.loc), "Appending FI_node_create");
 			this->append(
 				new FI_node_create(
 					&insn,
