@@ -129,6 +129,17 @@ std::string translTypeCode(const unsigned code)
 	}
 }
 
+std::string translOperandCode(const unsigned code)
+{
+	switch (code)
+	{
+		case CL_OPERAND_VOID:  return "CL_OPERAND_VOID";
+		case CL_OPERAND_CST:   return "CL_OPERAND_CST";
+		case CL_OPERAND_VAR:   return "CL_OPERAND_VAR";
+		default: throw std::runtime_error("Invalid operand code");
+	}
+}
+
 } // namespace
 
 struct OpWrapper {
@@ -766,9 +777,26 @@ protected:
 		const cl_operand& src = insn.operands[1];
 
 		// Assertions
+		assert(src.type != nullptr);
+		assert(dst.type != nullptr);
 		assert(src.type->code == dst.type->code);
 
 		CL_NOTE_MSG(&(insn.loc), "Compiling assignment");
+		CL_NOTE_MSG(&(insn.loc), "Src type: " + translOperandCode(src.code));
+		CL_NOTE_MSG(&(insn.loc), "Src operand type: " + translTypeCode(src.type->code));
+		CL_NOTE_MSG(&(insn.loc), "Dst type: " + translOperandCode(dst.code));
+		CL_NOTE_MSG(&(insn.loc), "Dst operand type: " + translTypeCode(dst.type->code));
+
+		if (src.type->code == cl_type_e::CL_TYPE_PTR) {
+			// Assertions
+			assert(src.type->item_cnt > 0);
+			assert(dst.type->item_cnt > 0);
+			assert(src.type->items[0].type != nullptr);
+			assert(dst.type->items[0].type != nullptr);
+
+			CL_NOTE_MSG(&(insn.loc), "Src ptr type: " + translTypeCode(src.type->items[0].type->code));
+			CL_NOTE_MSG(&(insn.loc), "Dst ptr type: " + translTypeCode(dst.type->items[0].type->code));
+		}
 
 		size_t dstReg = this->lookupStoreReg(dst, 0);
 		size_t srcReg = this->cLoadOperand(dstReg, src, insn);
@@ -778,7 +806,6 @@ protected:
 			src.type->items[0].type->code == cl_type_e::CL_TYPE_VOID &&
 			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
 		) {
-
 			std::vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
 
@@ -791,7 +818,7 @@ protected:
 				typeName = ss.str();
 			}
 
-		CL_NOTE_MSG(&(insn.loc), "Appending FI_node_create");
+			CL_NOTE_MSG(&(insn.loc), "Appending FI_node_create");
 			this->append(
 				new FI_node_create(
 					&insn,
