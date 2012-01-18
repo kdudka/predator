@@ -1,23 +1,26 @@
 #!/bin/bash
 if test -z "$1" || test ! -e "$1"; then
-    echo "Usage: $0 foo.c <box directory>"
+    echo Usage: $0 foo.c
     exit 1
 fi
 
+self="`readlink -f "$0"`"
+topdir="`dirname "$self"`/.."
+
 # basic setup
-set -x
-FA_BUILD=../fa_build
+CL_DIR="$topdir/cl"
+FA_DIR="$topdir/fa"
+FA_BUILD="$topdir/fa_build"
 FA_PLUG="$FA_BUILD/libfa.so"
 CC1='@CC1_HOST@'
 
-# initial checks
-eval test -x "$CC1"             || exit 1
-test -d "$FA_BUILD"             || exit 1
-test -f "$FA_BUILD/Makefile"    || exit 1
-
 # attempt to make
-make -C "$FA_BUILD"             || exit 1
-test -x "$FA_PLUG"              || exit 1
+make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D CL_DEBUG=ON' \
+    || exit 1
+make -C "$FA_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D FA_DEBUG=ON' \
+    || exit 1
+test -x "$FA_PLUG" \
+    || exit 1
 
 # use gdb by default
 test -z "$GDB" && GDB=gdb
@@ -26,19 +29,25 @@ test -z "$GDB" && GDB=gdb
 test -z "$FA_VERBOSE" && FA_VERBOSE=1
 
 # use pp code listener by default
-test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp -fplugin-arg-libfa-dump-types -I../include/predator-builtins"
+test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp \
+  -fplugin-arg-libfa-dump-types"
 
+# Box database
 BOXDB=""
 if [ "$2" != "" ]; then
     BOXDB="-fplugin-arg-libfa-args=db-root:$2"
 fi
 
-# run the debugger
-eval LD_PRELOAD=/lib/x86_64-linux-gnu/libpthread.so.0 "$GDB" --quiet --args "$CC1" "$1" \
-    -DFORESTER \
+# prepare the command line
+RUN="LD_PRELOAD=/lib/x86_64-linux-gnu/libpthread.so.0 \
+    $GDB --quiet --args $CC1 \"$1\" \
+    -I$topdir/include/predator-builtins -DFORESTER \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \
-    -fplugin="$FA_PLUG" \
-    -fplugin-arg-libfa-verbose="$FA_VERBOSE" \
-    $BOXDB \
-    $FA_OPTS
+    -fplugin=$FA_PLUG \
+    -fplugin-arg-libfa-verbose=$FA_VERBOSE \
+    $FA_OPTS"
+
+RUN="`printf "$RUN" | tr --squeeze-repeats ' '`"
+printf "\n\n%s\n\n" "$RUN"
+eval "$RUN"
