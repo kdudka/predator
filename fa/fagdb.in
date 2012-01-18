@@ -8,8 +8,7 @@ fi
 set -x
 FA_BUILD=../fa_build
 FA_PLUG="$FA_BUILD/libfa.so"
-#CC1="../gcc-install/libexec/gcc/`ls ../gcc-install/lib/gcc/`/4.[56]*/cc1"
-CC1=" /usr/lib/gcc/x86_64-linux-gnu/4.6/cc1"
+CC1='@CC1_HOST@'
 
 # initial checks
 eval test -x "$CC1"             || exit 1
