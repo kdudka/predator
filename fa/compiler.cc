@@ -28,6 +28,7 @@
 
 // Forester headers
 #include "programerror.hh"
+#include "notimpl_except.hh"
 #include "symctx.hh"
 #include "nodebuilder.hh"
 #include "call.hh"
@@ -323,8 +324,8 @@ protected:
 				break;
 
 			default:
-				throw ProgramError(translTypeCode(op.data.cst.code) +
-					": constant type not implemented", &insn.loc);
+				throw NotImplementedException(translTypeCode(op.data.cst.code) +
+					": constant type", &insn.loc);
 		}
 	}
 /*
@@ -1129,8 +1130,8 @@ protected:
 						this->compileTruthNot(insn);
 						break;
 					default:
-						throw ProgramError(translUnOpCode(insn.subCode) +
-							": feature not implemented", &insn.loc);
+						throw NotImplementedException(translUnOpCode(insn.subCode),
+							&insn.loc);
 				}
 				break;
 
@@ -1158,8 +1159,8 @@ protected:
 						this->compilePointerPlus(insn);
 						break;
 					default:
-						throw ProgramError(translBinOpCode(insn.subCode) +
-							": feature not implemented", &insn.loc);
+						throw NotImplementedException(translBinOpCode(insn.subCode),
+							&insn.loc);
 				}
 				break;
 
@@ -1180,8 +1181,8 @@ protected:
 				break;
 
 			default:
-				throw ProgramError(translInsnOpCode(insn.code) +
-					": feature not implemented", &insn.loc);
+				throw NotImplementedException(translInsnOpCode(insn.code),
+					&insn.loc);
 		}
 	}
 

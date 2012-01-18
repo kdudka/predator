@@ -17,6 +17,7 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Standard library headers
 #include <vector>
 #include <unordered_map>
 #include <fstream>
@@ -26,8 +27,10 @@
 #include <cstdlib>
 #include <signal.h>
 
+// Boost headers
 #include <boost/algorithm/string.hpp>
 
+// Code Listener headers
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
@@ -35,9 +38,11 @@
 #include <cl/clutil.hh>
 #include "../cl/ssd.h"
 
+// Forester headers
 #include "symctx.hh"
 #include "symexec.hh"
 #include "programerror.hh"
+#include "notimpl_except.hh"
 
 SymExec se;
 
@@ -143,6 +148,11 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 			CL_ERROR_MSG(e.location(), e.what());
 		else
 			CL_ERROR(e.what());
+	} catch (const NotImplementedException& e) {
+		if (e.location())
+			CL_ERROR_MSG(e.location(), "not implemented: " + std::string(e.what()));
+		else
+			CL_ERROR("not implemented: " + std::string(e.what()));
 	} catch (const std::exception& e) {
 		CL_ERROR(e.what());
 	}
