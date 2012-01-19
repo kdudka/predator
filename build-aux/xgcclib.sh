@@ -15,3 +15,9 @@ find_gcc_host() {
 
     die "unable to run gcc: $GCC_HOST --version"
 }
+
+find_cc1_host() {
+    CC1_HOST="$("$GCC_HOST" -print-prog-name=cc1)"
+    test -x "$CC1_HOST" && return 0
+    die "unable to find cc1: $GCC_HOST -print-prog-name=cc1"
+}
