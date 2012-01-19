@@ -481,7 +481,8 @@ public:
 
 		while (transitions.size()/* && changed*/) {
 
-			assert(changed);
+			if (!changed)
+				assert(false);      // fail gracefully
 
 			changed = false;
 

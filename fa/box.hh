@@ -119,14 +119,18 @@ public:
 
 	virtual const std::set<size_t>& inputCoverage(size_t index) const {
 
-		assert(index == 0);
+		if (!(index == 0))
+			assert(false);
+
 		return s[1];
 
 	}
 
 	virtual size_t selectorToInput(size_t index) const {
 
-		assert(index == 0);
+		if (!(index == 0))
+			assert(false);
+
 		return this->data->offset;
 
 	}
