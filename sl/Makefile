@@ -26,9 +26,6 @@ all: version.h ../cl_build
 	mkdir -p ../sl_build
 	cd ../sl_build && $(CMAKE) ../sl
 	$(MAKE) -C ../sl_build
-	@test -d ../.git || sed \
-		"s|SL_PLUG=.*$$|SL_PLUG='`readlink -f ../sl_build/libsl.so`'|" -i \
-		probe.sh
 
 ../cl_build:
 	test -d $@ || $(MAKE) -C ../cl
