@@ -6,11 +6,6 @@ export LC_ALL=C
 
 export CCACHE_DISABLE=1
 
-die() {
-    printf "%s: %s\n" "$SELF" "$*" >&2
-    exit 1
-}
-
 usage() {
     echo Usage: $0 GCC_ARGS
     exit 1
@@ -26,20 +21,18 @@ seek_input_file() {
 
 seek_input_file "$@" || usage
 
-# basic setup
+# include common code base
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
+source "$topdir/build-aux/xgcclib.sh"
+
+# basic setup
 export SINK="/dev/null"
 export SL_PLUG="$topdir/sl_build/libsl.so"
 export GCC_HOST='@GCC_HOST@'
 export GCC_OPTS="-S -o $SINK -O0 -I$topdir/include/predator-builtins -DPREDATOR"
 
 # initial checks
-"$GCC_HOST" --version >"$SINK" 2>&1 || {
-    GCC_HOST="$topdir/gcc-install/bin/gcc"
-    "$GCC_HOST" --version >"$SINK" \
-        || die "unable to run gcc: $GCC_HOST --version"
-}
-
+find_gcc_host
 test -r "$SL_PLUG"  || die "Predator GCC plug-in not found: ${SL_PLUG}"
 
 # use chromium as default SVG_VIEWER

@@ -1,0 +1,17 @@
+# common code base for fa_build/fag{cc,db} and sl_build/slg{cc,db}
+
+die() {
+    printf "%s: %s\n" "$SELF" "$*" >&2
+    exit 1
+}
+
+find_gcc_host() {
+    "$GCC_HOST" --version >/dev/null 2>&1 \
+        && return 0
+
+    GCC_HOST="$topdir/gcc-install/bin/gcc"
+    "$GCC_HOST" --version >/dev/null \
+        && return 0
+
+    die "unable to run gcc: $GCC_HOST --version"
+}
