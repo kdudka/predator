@@ -41,13 +41,25 @@ endif()
 # query GCC_INC_DIR using GCC_HOST
 message(STATUS "GCC_HOST: ${GCC_HOST}")
 execute_process(COMMAND "${GCC_HOST}" "-print-file-name=plugin"
+    RESULT_VARIABLE GCC_HOST_STATUS
     OUTPUT_VARIABLE GCC_PLUG_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (NOT "${GCC_HOST_STATUS}" EQUAL 0)
+    message(FATAL_ERROR "failed to validate GCC_HOST
+
+    Run './switch-host-gcc.sh' to build the plug-in against the system GCC.
+    If you need a local build of GCC, run 'make build_gcc'.  See the README
+    for details.  If anything goes wrong, tell the authors.")
+endif()
 
 # check the legibility of GCC_INC_DIR
 set(GCC_INC_DIR "${GCC_PLUG_DIR}/include")
 message(STATUS "GCC_INC_DIR: ${GCC_INC_DIR}")
 if (NOT EXISTS "${GCC_INC_DIR}/gcc-plugin.h")
-    message(FATAL_ERROR "unable to find GCC headers for building plug-ins")
+    message(FATAL_ERROR "unable to find GCC headers for building plug-ins
+
+    Please make sure the appropriate header files are installed.  On some Linux
+    distributions a separate package (e.g. gcc-plugin-devel on Fedora) may be
+    required for building GCC plug-ins.")
 endif()
 
 # set the path to GCC headers for buildign plug-ins
