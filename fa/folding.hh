@@ -518,7 +518,7 @@ protected:
 
 	}
 */
-	bool makeType1Box(size_t root, size_t state, size_t aux, const std::set<size_t>& forbidden,
+	const Box* makeType1Box(size_t root, size_t state, size_t aux, const std::set<size_t>& forbidden,
 		bool conditional = true, bool test = false) {
 
 		assert(root < this->fae.roots.size());
@@ -537,7 +537,7 @@ protected:
 		for (auto& cutpoint : outputSignature) {
 
 			if (forbidden.count(cutpoint.root))
-				return false;
+				return nullptr;
 
 			assert(cutpoint.root < index.size());
 
@@ -563,11 +563,11 @@ protected:
 
 		auto boxPtr = (conditional)?(this->boxMan.lookupBox(*box)):(this->boxMan.getBox(*box));
 
-		if (!boxPtr)
-			return false;
-
 		if (test)
-			return true;
+			return boxPtr;
+
+		if (!boxPtr)
+			return nullptr;
 
 		if (oldSize < this->boxMan.getBoxes().size())
 			CL_CDEBUG(1, "learning " << *(AbstractBox*)boxPtr << ':' << std::endl << *boxPtr);
@@ -579,11 +579,11 @@ protected:
 
 		this->invalidateSignatures(root);
 
-		return true;
+		return boxPtr;
 
 	}
 
-	bool makeType2Box(size_t root, size_t aux, const std::set<size_t>& forbidden,
+	const Box* makeType2Box(size_t root, size_t aux, const std::set<size_t>& forbidden,
 		bool conditional = true, bool test = false) {
 
 		assert(root < this->fae.roots.size());
@@ -610,10 +610,10 @@ protected:
 			assert(cutpoint.root != root);
 */
 			if (cutpoint.root == root)
-				return false;
+				return nullptr;
 
 			if (forbidden.count(cutpoint.root))
-				return false;
+				return nullptr;
 
 			assert(cutpoint.root < index.size());
 
@@ -637,7 +637,7 @@ protected:
 		for (auto& cutpoint : inputSignature) {
 
 			if (forbidden.count(cutpoint.root))
-				return false;
+				return nullptr;
 
 			assert(cutpoint.root < index.size());
 
@@ -675,11 +675,11 @@ protected:
 
 		auto boxPtr = (conditional)?(this->boxMan.lookupBox(*box)):(this->boxMan.getBox(*box));
 
-		if (!boxPtr)
-			return false;
-
 		if (test)
-			return true;
+			return boxPtr;
+
+		if (!boxPtr)
+			return nullptr;
 
 		if (oldSize < this->boxMan.getBoxes().size())
 			CL_CDEBUG(1, "learning " << *(AbstractBox*)boxPtr << ':' << std::endl << *boxPtr);
@@ -696,14 +696,14 @@ protected:
 
 		this->invalidateSignatures(aux);
 
-		return true;
+		return boxPtr;
 
 	}
 
 public:
 
-	bool discover(size_t root, const std::set<size_t>& forbidden, bool conditional,
-		bool aggressiveMode = false) {
+	const Box* discover(size_t root, const std::set<size_t>& forbidden, bool conditional,
+		bool aggressiveMode = false, bool test = false) {
 
 		assert(this->fae.connectionGraph.isValid());
 		assert(this->fae.roots.size() == this->fae.connectionGraph.data.size());
@@ -711,7 +711,9 @@ public:
 		assert(this->fae.roots[root]);
 
 		if (forbidden.count(root))
-			return false;
+			return nullptr;
+
+		const Box* boxPtr;
 
 		CL_CDEBUG(3, "folding: " << this->fae);
 
@@ -724,16 +726,12 @@ public:
 
 				CL_CDEBUG(3, "type 1 cutpoint detected at root " << root);
 
-				if (
-					this->makeType1Box(
-						root,
-						this->fae.roots[root]->getFinalState(),
-						root,
-						forbidden,
-						conditional
-					)
-				)
-					return true;
+				boxPtr = this->makeType1Box(
+					root, this->fae.roots[root]->getFinalState(), root, forbidden, conditional, test
+				);
+
+				if (boxPtr)
+					return boxPtr;
 
 				this->fae.popStateOffset();
 
@@ -750,16 +748,12 @@ public:
 
 				if (!aggressiveMode) {
 
-					if (
-						this->makeType1Box(
-							root,
-							this->fae.roots[root]->getFinalState(),
-							cutpoint.root,
-							forbidden,
-							conditional
-						)
-					)
-							return true;
+					boxPtr = this->makeType1Box(
+						root, this->fae.roots[root]->getFinalState(), cutpoint.root, forbidden, conditional, test
+					);
+
+					if (boxPtr)
+						return boxPtr;
 
 					this->fae.popStateOffset();
 
@@ -770,23 +764,20 @@ public:
 				auto& signatures = this->getSignatures(root);
 
 				for (auto& stateSignaturePair : signatures) {
-/*
-					if (this->fae.roots[root]->getFinalState() == stateSignaturePair.first)
-						continue;
-*/
+
 					for (auto& tmp : stateSignaturePair.second) {
 
-						if (!tmp.joint || (tmp.root != cutpoint.root))
+						if (!tmp.joint || tmp.joinInherited || (tmp.root != cutpoint.root))
 							continue;
 
 						CL_CDEBUG(3, "type 2 cutpoint detected inside component " << root << " at state q" << stateSignaturePair.first);
 
-						if (
-							this->makeType1Box(
-								root, stateSignaturePair.first, cutpoint.root, forbidden, conditional
-							)
-						)
-								return true;
+						boxPtr = this->makeType1Box(
+							root, stateSignaturePair.first, cutpoint.root, forbidden, conditional, test
+						);
+
+						if (boxPtr)
+							return boxPtr;
 
 						this->fae.popStateOffset();
 
@@ -815,8 +806,10 @@ public:
 
 				CL_CDEBUG(3, "type 3 cutpoint detected at roots " << root << " and " << cutpoint.root);
 
-				if (this->makeType2Box(root, cutpoint.root, forbidden, conditional))
-					return true;
+				boxPtr = this->makeType2Box(root, cutpoint.root, forbidden, conditional, test);
+
+				if (boxPtr)
+					return boxPtr;
 
 				this->fae.popStateOffset();
 
@@ -824,7 +817,7 @@ public:
 
 		}
 
-		return false;
+		return nullptr;
 
 	}
 
