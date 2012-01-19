@@ -67,10 +67,16 @@ protected:
 							continue;
 						}
 						lhsOffset += box->getArity();
-						assert(!found);
+
+						if (found)
+							assert(false);
+
 						found = true;
 					}
-					assert(found);
+
+					if (!found)
+						assert(false);
+
 				} else {
 					lhs = i->lhs();
 					label = i->label()->getNode();

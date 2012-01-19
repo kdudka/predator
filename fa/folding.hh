@@ -569,8 +569,9 @@ protected:
 		if (!boxPtr)
 			return nullptr;
 
-		if (oldSize < this->boxMan.getBoxes().size())
+		if (oldSize < this->boxMan.getBoxes().size()) {
 			CL_CDEBUG(1, "learning " << *(AbstractBox*)boxPtr << ':' << std::endl << *boxPtr);
+		}
 
 		CL_CDEBUG(2, *(AbstractBox*)boxPtr << " found");
 
@@ -681,8 +682,9 @@ protected:
 		if (!boxPtr)
 			return nullptr;
 
-		if (oldSize < this->boxMan.getBoxes().size())
+		if (oldSize < this->boxMan.getBoxes().size()) {
 			CL_CDEBUG(1, "learning " << *(AbstractBox*)boxPtr << ':' << std::endl << *boxPtr);
+		}
 
 		CL_CDEBUG(2, *(AbstractBox*)boxPtr << " found");
 

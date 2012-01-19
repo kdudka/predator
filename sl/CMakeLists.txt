@@ -152,11 +152,11 @@ macro(test_predator_regre name_suff ext arg1)
         set(cmd "${cmd} 2>&1")
 
         # filter out messages that are unrelated to our plug-in
-        set(cmd "${cmd} | grep -E '\\\\[-fplugin=libsl.so\\\\]\$|compiler error|undefined symbol'")
+        set(cmd "${cmd} | (grep -E '\\\\[-fplugin=libsl.so\\\\]\$|compiler error|undefined symbol'; true)")
         set(cmd "${cmd} | sed 's/ \\\\[-fplugin=libsl.so\\\\]\$//'")
 
         # filter out NOTE messages with internal location
-        set(cmd "${cmd} | grep -v 'note: .*\\\\[internal location\\\\]'")
+        set(cmd "${cmd} | (grep -v 'note: .*\\\\[internal location\\\\]'; true)")
 
         # drop absolute paths
         set(cmd "${cmd} | sed 's|^[^:]*/||'")
@@ -164,7 +164,7 @@ macro(test_predator_regre name_suff ext arg1)
         # ... and finally diff with the expected output
         set(cmd "${cmd} | diff -up ${testdir}/test-${num}.err${ext} -")
         set(test_name "test-${num}.c${name_suff}")
-        add_test(${test_name} sh -c "${cmd}")
+        add_test(${test_name} bash -o pipefail -c "${cmd}")
 
         SET_TESTS_PROPERTIES(${test_name} PROPERTIES COST ${cost})
         MATH(EXPR cost "${cost} + 1")

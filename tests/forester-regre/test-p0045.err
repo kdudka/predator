@@ -1,0 +1,1 @@
+test-p0045.c:17:5: error: dereferenced value is not a valid reference [(int)0]

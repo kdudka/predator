@@ -12,7 +12,7 @@ CL_DIR="$topdir/cl"
 SL_DIR="$topdir/sl"
 SL_BUILD="$topdir/sl_build"
 SL_PLUG="$SL_BUILD/libsl.so"
-CC1="$topdir/gcc-install/libexec/gcc/*/4.[5-7]*/cc1"
+CC1='@CC1_HOST@'
 
 # attempt to make
 make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D CL_DEBUG=ON' \
