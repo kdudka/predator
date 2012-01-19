@@ -69,6 +69,8 @@ set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(fa ${CL_LIB})
 
+option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
+
 set(GCC_EXEC_PREFIX "timeout 120"
     CACHE STRING "Set to empty string if not sure")
 
@@ -77,13 +79,23 @@ set(testdir "${fa_SOURCE_DIR}/../tests/forester-regre")
 # basic tests
 set(tests
           f0001 f0002 f0003 f0004 f0005 f0006 f0007       f0009
-    f0010 f0011 f0012 f0013 f0014 f0015 f0016             f0019
+    f0010 f0011 f0012 f0013 f0014       f0016             f0019
     f0020       f0022       f0024 f0025
 
 #Predator tests
           p0001
 #         p0061
   )
+
+if(TEST_ONLY_FAST)
+else()
+
+# expensive tests
+set(tests ${tests}
+                                  f0015
+)
+
+endif(TEST_ONLY_FAST)
 
 set(cost 1)
 
