@@ -82,9 +82,17 @@ set(tests
     f0010 f0011 f0012 f0013 f0014       f0016             f0019
     f0020       f0022       f0024 f0025
 
-#Predator tests
+# Predator tests
           p0001
-#         p0061
+                      p0023                               p0029
+          p0041 p0042                   p0046
+                                  p0075 p0076
+                      p0083
+          p0091
+
+                                        p0126
+                                  p0175
+                                                    p0198
   )
 
 if(TEST_ONLY_FAST)

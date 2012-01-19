@@ -1,0 +1,1 @@
+../predator-regre/test-0506.c
