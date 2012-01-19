@@ -20,7 +20,7 @@ cmake_minimum_required(VERSION 2.6)
 project(cl C CXX)
 enable_testing()
 
-include("../CMakeLists.common")
+include("../build-aux/common.cmake")
 
 option(CL_DEBUG "Set to ON to enable debugging support" OFF)
 if(CL_DEBUG)

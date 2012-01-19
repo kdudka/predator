@@ -1,4 +1,4 @@
-# Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2010-2012 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
