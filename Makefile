@@ -46,12 +46,12 @@ DIRS_BUILD      ?= cl fwnull sl fa
 
 .PHONY: all check clean distcheck distclean api cl/api sl/api ChangeLog \
 	build_boost \
-	build_gcc build_gcc_svn update_gcc update_gcc_src_only lnk_gcc_headers
+	build_gcc build_gcc_svn update_gcc update_gcc_src_only
 
-all: include/gcc
+all:
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
-check: include/gcc
+check:
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
 clean:
@@ -60,7 +60,7 @@ clean:
 distclean:
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
-distcheck: include/gcc
+distcheck:
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
 cl/api:
@@ -124,7 +124,6 @@ build_gcc: $(GCC_SRC)
 		fi
 	cd $(GCC_BUILD) && $(MAKE)
 	cd $(GCC_BUILD) && $(MAKE) -j1 install
-	$(MAKE) lnk_gcc_headers
 	test -d .git || (test -d sl && sed \
 		"s|GCC_HOST=.*$$|GCC_HOST='`readlink -f gcc-install/bin/gcc`'|" -i \
 		chk-error-label-reachability.sh register-paths.sh sl/probe.sh \
@@ -158,22 +157,6 @@ build_gcc_svn:
 	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $(GCC_SRC)
 	$(MAKE) build_gcc
 
-# fallback for buggy configurations
-include/gcc:
-	@test -r include/gcc/gcc-plugin.h || $(MAKE) lnk_gcc_headers
-
-lnk_gcc_headers: gcc-install/lib/gcc
-	cd include && ln -fsvT \
-		`ls -td ../gcc-install/lib/gcc/*/4.[5-7]*/plugin/include|head -1` gcc
-
 ChangeLog:
 	git log --pretty="format:%ad  %an%n%n%w(80,8,8)%B%n" --date=short -- \
 		$(CHLOG_WATCH) > $@
-
-gcc-install/lib/gcc:
-	@echo "*** 'gcc-install/lib/gcc' does not exist.  If you want to proceed"
-	@echo "*** with standalone build of gcc, try 'make build_gcc' first.  If"
-	@echo "*** it does not help, consult ./README.  If anything goes wrong,"
-	@echo "*** please submit a bug report to <idudka@fit.vutbr.cz>."
-	@echo
-	@false

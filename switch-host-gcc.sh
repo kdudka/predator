@@ -8,7 +8,7 @@ die() {
 }
 
 usage() {
-    printf "Usage: %s HOST_GCC_EXECUTABLE GCC_PLUGIN_INCLUDE_DIR\n" "$SELF" >&2
+    printf "Usage: %s HOST_GCC_EXECUTABLE\n" "$SELF" >&2
     cat >&2 << EOF
 
     Use this script to (re)build Predator against an arbitrary build of host
@@ -20,35 +20,11 @@ usage() {
     absolute path (e.g. /home/bob/gcc-4.7.0/bin/gcc) or, if it can be reached
     from \$PATH, only the basename is sufficient (e.g. gcc, or gcc-4.6).
 
-    GCC_PLUGIN_INCLUDE_DIR is the path to GCC headers for building GCC plug-ins.
-    The path is distribution-specific.  You can guess the path by looking for a
-    file named 'gcc-plugin.h'.  Some distributions do not have such an include
-    directory installed by default.  A brief summary of experience with
-    distributions we have tried follows:
-
-    On Debian, you need to install a package named gcc-4.5-plugin-dev.  Then use
-    /usr/lib/x86_64-linux-gnu/gcc/x86_64-linux-gnu/4.5.2/plugin/include as
-    GCC_PLUGIN_INCLUDE_DIR.
-
-    On Debian unstable, you need to install a package named gcc-4.6-plugin-dev.
-    Then use /usr/lib/gcc/x86_64-linux-gnu/4.6/plugin/include as
-    GCC_PLUGIN_INCLUDE_DIR.
- 
-    On Fedora, you need to install a package named gcc-plugin-devel.  Then use
-    /usr/lib/gcc/x86_64-redhat-linux/4.6.2/plugin/include as
-    GCC_PLUGIN_INCLUDE_DIR.
-
-    On Gentoo, you only need to have installed >=sys-devel/gcc-4.5.0.  Then use
-    /usr/lib64/gcc/x86_64-pc-linux-gnu/4.x.y/plugin/include as
-    GCC_PLUGIN_INCLUDE_DIR.
-
-    Corrections and extensions to this list are welcome!
-
 EOF
     exit 1
 }
 
-test 2 = "$#" || usage
+test 1 = "$#" || usage
 
 status_update() {
     printf "\n%s...\n\n" "$*"
@@ -58,13 +34,6 @@ status_update() {
 # try to run gcc
 GCC_HOST="$1"
 "$GCC_HOST" --version || die "unable to run gcc: $GCC_HOST --version"
-
-# check the include path
-GCC_INCDIR="$2"
-PLUG_HDR="$GCC_INCDIR/gcc-plugin.h"
-test -r "$PLUG_HDR" || die "unable to read: $PLUG_HDR"
-
-ln -fsvT "$GCC_INCDIR" include/gcc || die "failed to create symlink"
 
 status_update "Nuking working directory"
 make distclean \
@@ -85,10 +54,9 @@ make -C sl CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
 status_update "Checking whether Predator works"
 make -C sl check
 
-if test -d .git; then
-    die "you are in a git repository --> you need set \$GCC_HOST yourself!"
-else
-    status_update "Initializing \$GCC_HOST"
-    sed "s|GCC_HOST=.*\$|GCC_HOST='$GCC_HOST'|" -i \
-        chk-error-label-reachability.sh register-paths.sh sl/probe.sh
-fi
+status_update "Trying to build Forester"
+make -C fa CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
+    || die "failed to build Forester"
+
+status_update "Checking whether Forester works"
+make -C fa check
