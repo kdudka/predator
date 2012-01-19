@@ -1,0 +1,1 @@
+test-p0159.c:7:11: error: dereferenced value is not a valid reference [(undef)]
