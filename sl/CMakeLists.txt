@@ -75,6 +75,9 @@ configure_file(${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb   
 configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
     ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
 
+configure_file(${PROJECT_SOURCE_DIR}/chk-error-label-reachability.sh.in
+    ${PROJECT_BINARY_DIR}/chk-error-label-reachability.sh                         @ONLY)
+
 # make install
 install(TARGETS sl DESTINATION lib)
 
