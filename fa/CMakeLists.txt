@@ -123,6 +123,7 @@ macro(test_forester_regre name_suff ext arg1)
         set(cmd "${cmd} -S ${testdir}/test-${num}.c")
         set(cmd "${cmd} -I../include/predator-builtins -DFORESTER")
         set(cmd "${cmd} -fplugin=${fa_BINARY_DIR}/libfa.so ${arg1}")
+        set(cmd "${cmd} -fplugin-arg-libfa-preserve-ec")
         set(cmd "${cmd} 2>&1")
 
         # filter out messages that are unrelated to our plug-in
