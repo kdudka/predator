@@ -16,6 +16,11 @@ find_gcc_host() {
     die "unable to run gcc: $GCC_HOST --version"
 }
 
+find_gcc_plug() {
+    test -r "$GCC_PLUG" || GCC_PLUG="$topdir/${1}_build/lib${1}.so"
+    test -r "$GCC_PLUG" || die "$2 GCC plug-in not found: ${GCC_PLUG}"
+}
+
 find_cc1_host() {
     CC1_HOST="$("$GCC_HOST" -print-prog-name=cc1)"
     test -x "$CC1_HOST" && return 0

@@ -27,13 +27,13 @@ source "$topdir/build-aux/xgcclib.sh"
 
 # basic setup
 export SINK="/dev/null"
-export SL_PLUG="$topdir/sl_build/libsl.so"
+export GCC_PLUG='@GCC_PLUG@'
 export GCC_HOST='@GCC_HOST@'
 export GCC_OPTS="-S -o $SINK -O0 -I$topdir/include/predator-builtins -DPREDATOR"
 
 # initial checks
 find_gcc_host
-test -r "$SL_PLUG"  || die "Predator GCC plug-in not found: ${SL_PLUG}"
+find_gcc_plug sl Predator
 
 # use chromium as default SVG_VIEWER
 test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
@@ -78,7 +78,7 @@ run_gcc() {
     fi
 
     "$GCC_HOST" $GCC_OPTS                                           \
-        -fplugin="$SL_PLUG" -fplugin-arg-libsl-pid-file="$pidfile"  \
+        -fplugin="$GCC_PLUG" -fplugin-arg-libsl-pid-file="$pidfile" \
         -fplugin-arg-libsl-args=error_label:ERROR $SL_OPTS "$@"     \
         3>&1 1>&2 2>&3 | stdbuf --output=L grep -E                  \
         ' \[-fplugin=libsl\.so\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'

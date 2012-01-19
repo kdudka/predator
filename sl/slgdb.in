@@ -13,8 +13,7 @@ source "$topdir/build-aux/xgcclib.sh"
 # basic setup
 CL_DIR="$topdir/cl"
 SL_DIR="$topdir/sl"
-SL_BUILD="$topdir/sl_build"
-SL_PLUG="$SL_BUILD/libsl.so"
+GCC_PLUG='@GCC_PLUG@'
 GCC_HOST='@GCC_HOST@'
 
 # attempt to make
@@ -26,7 +25,7 @@ make -C "$SL_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D SL_DEBUG=ON' \
 # initial checks
 find_gcc_host
 find_cc1_host
-test -r "$SL_PLUG"  || die "Predator GCC plug-in not found: ${SL_PLUG}"
+find_gcc_plug sl Predator
 
 # use gdb by default
 test -z "$GDB" && GDB=gdb
@@ -42,7 +41,7 @@ RUN="$GDB --quiet --args $CC1_HOST \"$1\" \
     -I$topdir/include/predator-builtins -DPREDATOR \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \
-    -fplugin=$SL_PLUG \
+    -fplugin=$GCC_PLUG \
     -fplugin-arg-libsl-verbose=$SL_VERBOSE \
     $SL_OPTS"
 

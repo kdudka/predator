@@ -31,11 +31,6 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
-# helping scripts
-configure_file( ${PROJECT_SOURCE_DIR}/slgcc.in     ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
-
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
@@ -67,6 +62,15 @@ add_library(sl SHARED
 # link with code_listener
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(sl ${CL_LIB})
+
+# get the full path of libsl.so
+get_property(GCC_PLUG TARGET sl PROPERTY LOCATION)
+message (STATUS "GCC_PLUG: ${GCC_PLUG}")
+
+# helping scripts
+configure_file(${PROJECT_SOURCE_DIR}/slgcc.in     ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
 
 # make install
 install(TARGETS sl DESTINATION lib)

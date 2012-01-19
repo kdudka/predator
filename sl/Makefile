@@ -28,8 +28,7 @@ all: version.h ../cl_build
 	$(MAKE) -C ../sl_build
 	@test -d ../.git || sed \
 		"s|SL_PLUG=.*$$|SL_PLUG='`readlink -f ../sl_build/libsl.so`'|" -i \
-		probe.sh slgcc.in ../chk-error-label-reachability.sh \
-		../register-paths.sh
+		probe.sh ../chk-error-label-reachability.sh ../register-paths.sh
 
 ../cl_build:
 	test -d $@ || $(MAKE) -C ../cl
