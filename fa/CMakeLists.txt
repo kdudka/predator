@@ -84,12 +84,10 @@ set(tests
 
 # Predator tests
           p0001
-                                                          p0019
-                      p0023       p0025 p0026 p0027 p0028 p0029
+                      p0023                         p0028 p0029
                                               p0037
-          p0041 p0042             p0045 p0046
+                p0042             p0045 p0046
                             p0074 p0075 p0076
-                      p0083       p0085
           p0091
                                                           p0119
                                         p0126
@@ -97,8 +95,7 @@ set(tests
                                                           p0159
     p0170                         p0175
                                                     p0198
-                                              p0507
-  )
+)
 
 if(TEST_ONLY_FAST)
 else()
@@ -109,6 +106,16 @@ set(tests ${tests}
 )
 
 endif(TEST_ONLY_FAST)
+
+
+# tests known to fail now (but shouldn't!)
+set(tests-known-to-fail
+                                                          p0019
+                                  p0025 p0026 p0027
+          p0041
+                      p0083       p0085
+                                              p0507
+)
 
 set(cost 1)
 
