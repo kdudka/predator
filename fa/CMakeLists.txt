@@ -21,7 +21,7 @@ project(fa C CXX)
 add_definitions("-I../include")
 enable_testing()
 
-include("../CMakeLists.common")
+include("../build-aux/common.cmake")
 
 option(FA_DEBUG "Set to ON to enable debugging support" OFF)
 if(FA_DEBUG)

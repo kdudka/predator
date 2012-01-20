@@ -13,8 +13,8 @@ Instructions for TACAS 2012 Competition on Software Verification
     If the build fails, please ask for support at idudka@fit.vutbr.cz.
 
 
-(2) Use the 'chk-error-label-reachability.sh' script to verify each single
-    test-case.
+(2) Use the 'sl_build/chk-error-label-reachability.sh' script to verify each
+    single test-case.
 
     The verification result (SAFE, UNSAFE, or UNKNOWN) will be printed to
     standard output.  All other information will be printed to standard error

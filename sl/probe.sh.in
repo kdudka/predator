@@ -1,10 +1,7 @@
 #!/bin/bash
 export SELF="$0"
 
-# basic setup
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
-export SL_PLUG="$topdir/sl_build/libsl.so"
-export GCC_HOST="$topdir/gcc-install/bin/gcc"
 
 export LC_ALL=C
 export CCACHE_DISABLE=1
@@ -38,11 +35,6 @@ if tty 0>&1 >/dev/null; then
     export N="\033[0m"
 fi
 
-die() {
-    printf "%s: %s\n" "$SELF" "$*" >&2
-    exit 1
-}
-
 usage() {
     printf "Usage: %s test-00.c [test-01.c [...]]\n" "$SELF" >&2
     exit 1
@@ -50,12 +42,20 @@ usage() {
 
 test -r "$1" || usage
 
+# include common code base
+source "$topdir/build-aux/xgcclib.sh"
+
+# basic setup
+export GCC_PLUG='@GCC_PLUG@'
+export GCC_HOST='@GCC_HOST@'
+
+# initial checks
+find_gcc_host
+find_gcc_plug sl Predator
+
 # try to run gcc
 $TIMEOUT "$GCC_HOST" --version >&2 \
     || die "unable to run gcc: $TIMEOUT $GCC_HOST --version"
-
-# check the presence of libsl.so
-test -r "$SL_PLUG" || die "libsl.so not found: $SL_PLUG"
 
 wait_for_pid() {
     while test -d /proc/$1; do
@@ -190,7 +190,7 @@ try_one() {
         fi
 
         # turn on the plug-in
-        CMD="$CMD -fplugin=$SL_PLUG -fplugin-arg-libsl-args=$PFLAGS"
+        CMD="$CMD -fplugin=$GCC_PLUG -fplugin-arg-libsl-args=$PFLAGS"
 
         # run in background so that we can kill it easily
         CMD="$CMD -fplugin-arg-libsl-pid-file=$GCC_PID_FILE &"

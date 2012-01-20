@@ -21,7 +21,7 @@ project(sl C CXX)
 add_definitions("-I../include")
 enable_testing()
 
-include("../CMakeLists.common")
+include("../build-aux/common.cmake")
 
 option(SL_DEBUG "Set to ON to enable debugging support" OFF)
 if(SL_DEBUG)
@@ -30,11 +30,6 @@ if(SL_DEBUG)
 else()
     add_definitions("-O3 -DNDEBUG")
 endif()
-
-# helping scripts
-configure_file( ${PROJECT_SOURCE_DIR}/slgcc.in     ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
 
 # libsl.so
 add_library(sl SHARED
@@ -67,6 +62,22 @@ add_library(sl SHARED
 # link with code_listener
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(sl ${CL_LIB})
+
+# get the full path of libsl.so
+get_property(GCC_PLUG TARGET sl PROPERTY LOCATION)
+message (STATUS "GCC_PLUG: ${GCC_PLUG}")
+
+# helping scripts
+configure_file(${PROJECT_SOURCE_DIR}/slgcc.in     ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/probe.sh.in  ${PROJECT_BINARY_DIR}/probe.sh  @ONLY)
+
+configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
+    ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
+
+configure_file(${PROJECT_SOURCE_DIR}/chk-error-label-reachability.sh.in
+    ${PROJECT_BINARY_DIR}/chk-error-label-reachability.sh                         @ONLY)
 
 # make install
 install(TARGETS sl DESTINATION lib)

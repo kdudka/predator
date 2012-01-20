@@ -96,7 +96,7 @@ To employ the Predator plug-in in a build of an arbitrary project fully
 transparently, it is recommended to set certain environment variables.  You can
 use the script register-paths.sh to do this automatically.
 
-    . register-paths.sh
+    . sl_build/register-paths.sh
 
 Then you can simply use the '-fplugin' option of GCC as documented in the gcc(1)
 man page:
