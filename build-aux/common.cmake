@@ -74,11 +74,13 @@ if(USE_INT3_AS_BRK)
     add_definitions("-DUSE_INT3_AS_BRK")
 endif()
 
+# FIXME: the use of $GCC_HOST from the environment should be better documented
 if("$ENV{GCC_HOST}" STREQUAL "")
-    get_filename_component(gcc_host_local "../gcc-install/bin/gcc" ABSOLUTE)
-    set(GCC_HOST "${gcc_host_local}" CACHE STRING "host gcc executable")
+    get_filename_component(def_gcc_host "../gcc-install/bin/gcc" ABSOLUTE)
 else()
-    set(GCC_HOST "$ENV{GCC_HOST}" CACHE STRING "host gcc executable")
+    set(def_gcc_host "$ENV{GCC_HOST}")
 endif()
+
+set(GCC_HOST "${def_gcc_host}" CACHE STRING "absolute path to host gcc(1)")
 
 option(TEST_WITH_VALGRIND "Set to ON to enable valgrind tests" OFF)
