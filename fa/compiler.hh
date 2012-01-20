@@ -71,6 +71,8 @@ public:
 
 			size_t c = 0;
 
+			const CodeStorage::Insn* lastInsn = nullptr;
+
 			for (auto instr : as.code_) {
 
 				if ((instr->getType() == fi_type_e::fiJump) && prev) {
@@ -86,8 +88,13 @@ public:
 
 				prev = instr;
 
-				if (instr->insn())
+				if (instr->insn() && (instr->insn() != lastInsn)) {
+
 					os << instr->insn()->loc << ' ' << *instr->insn() << std::endl;
+
+					lastInsn = instr->insn();
+
+				}
 
 				if (instr->isTarget())
 					os << instr << ':' << std::endl;
