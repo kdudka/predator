@@ -101,3 +101,16 @@ int main()
     ___sl_plot(NULL);
     return 0;
 }
+
+/**
+ * @file test-0062.c
+ *
+ * @brief SLS nesting
+ *
+ * - a (possibly infinite) SLL
+ * - each node points to a standalone (possibly infinite) SLL
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

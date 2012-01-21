@@ -298,3 +298,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0157.c
+ *
+ * @brief alternation of test-0124, all functions are manually unfolded
+ *
+ * - contributed by Tomas Vojnar
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -54,3 +54,15 @@ int main() {
     return 0;
 
 }
+
+/**
+ * @file test-0505.c
+ *
+ * @brief reversion of a NULL-terminated DLL
+ *
+ * - originally taken from fa/data/dll-rev.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

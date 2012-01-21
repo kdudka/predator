@@ -46,3 +46,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0076.c
+ *
+ * @brief another test/example focused on off-values handling
+ *
+ *
+ *     test-0077b.c- a successfully caught wrong usage of an off-value
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

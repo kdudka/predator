@@ -87,3 +87,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0116.c
+ *
+ * @brief alternation of test-0111
+ *
+ * - length of the nested SLL changes periodically: 1, 3, 0, 2
+ * - no way to analyse without three-way join of prototypes
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

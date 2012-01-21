@@ -127,3 +127,18 @@ int main()
     //___sl_break();
     return 0;
 }
+
+/**
+ * @file test-0121.c
+ *
+ * @brief alternation of test-0097
+ *
+ * - once used as demo in slides about symdiscover
+ * - we needed something that is easy to plot
+ * - abstraction is triggerred only
+ *   with SE_PROTO_COST_THREEWAY == 0
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

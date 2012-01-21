@@ -52,3 +52,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0516.c
+ *
+ * @brief test-0061 once simplified for Forester
+ *
+ * - originally taken from fa/data/test-0061.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -69,3 +69,16 @@ int main() {
 
     return 0;
 }
+
+/**
+ * @file test-0512.c
+ *
+ * @brief NULL-terminated SLL at the top level
+ *
+ * - each node contains a nested (possibly empty) cyclic SLL
+ * - originally taken from fa/data/sll-listofclists.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

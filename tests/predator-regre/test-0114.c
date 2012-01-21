@@ -124,3 +124,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0114.c
+ *
+ * @brief hello-world, once used as the most trivial example for symjoin
+ *
+ *   and its insertSegmentClone() based three-way join
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

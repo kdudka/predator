@@ -72,3 +72,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0053.c
+ *
+ * @brief SLS creation/destruction
+ *
+ * - a memory leak injected into the SLL destruction routine
+ * - can be turned into a leak-less example by the '#if 0' inside
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

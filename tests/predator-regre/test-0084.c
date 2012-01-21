@@ -126,3 +126,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0084.c
+ *
+ * @brief destruction of Linux like DLL
+ *
+ * - the example itself is written a bit awkward, but works
+ * - successfully analyzed
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

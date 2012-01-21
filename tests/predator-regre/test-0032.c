@@ -65,3 +65,16 @@ int main()
     ___sl_plot("test-0032");
     return 0;
 }
+
+/**
+ * @file test-0032.c
+ *
+ * @brief a regression test for the garbage collector
+ *
+ * - focused on composite types nesting
+ * - inspired by an already fixed bug, see 2327f5c for details
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

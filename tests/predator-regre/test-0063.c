@@ -108,3 +108,17 @@ int main()
     ___sl_plot(NULL);
     return 0;
 }
+
+/**
+ * @file test-0063.c
+ *
+ * @brief SLS of SLSs at end of another SLS
+ *
+ * - connected through incompatible pointer conversion
+ * - plots some heap graphs that explain a lot
+ * - mind the [prototype] prefix used in the SLS node visualization
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -49,3 +49,15 @@ int main() {
     return 0;
 
 }
+
+/**
+ * @file test-0500.c
+ *
+ * @brief cyclic DLL containing no useful data
+ *
+ * - originally taken from fa/data/cdll.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -139,3 +139,17 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0072.c
+ *
+ * @brief DLL, each node points to a standalone DLL
+ *
+ * - indirect function call (not so synthetic use case here)
+ * - bounded recursion of depth 2
+ * - see the function dll_create_generic() for details
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */
