@@ -4,9 +4,9 @@ Instructions for TACAS 2012 Competition on Software Verification
 (1) Build GCC and Predator from sources (takes up to 10 minutes assuming you
     have a fast enough Internet connection due to download of GCC and Boost).
 
-    On Fedora, please follow the instructions in README-fedora.
+    On Fedora, please follow the instructions in docs/README-fedora.
 
-    On Ubuntu, please follow the instructions in README-ubuntu.
+    On Ubuntu, please follow the instructions in docs/README-ubuntu.
 
     On other Linux distributions, please follow the instructions in README.
 
