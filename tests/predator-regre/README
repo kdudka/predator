@@ -502,13 +502,13 @@ Tests taken from Forester
 "Hello world!" like examples
 ============================
     test-0002.c - invalid dereference
-                    - NULL value
-                    - an uninitialized value
+                - NULL value
+                - an uninitialized value
 
     test-0003.c - invalid free()
-                    - uninitialized value
-                    - non-heap object
-                    - double free
+                - uninitialized value
+                - non-heap object
+                - double free
 
     test-0004.c - infinite loop, one malloc() and one free() per each iteration
                 - the analysis stops, though the program is infinite
@@ -677,7 +677,7 @@ Tests taken from Forester
 
     test-0147.c - test-0090.c reduced to a minimal example while debugging a bug
 
-    test-0154.c - error-free variant of test-0033 
+    test-0154.c - error-free variant of test-0033
 
     test-0158.c - memory leak induced by data reinterpretation
 
