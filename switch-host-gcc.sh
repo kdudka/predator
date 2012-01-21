@@ -60,16 +60,15 @@ status_update "Checking whether Code Listener works"
 make -C cl check \
     || die "Code Listener does not work"
 
-status_update "Trying to build Predator"
-make -C sl CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
-    || die "failed to build Predator"
+build_analyzer() {
+    status_update "Trying to build $2"
+    make -C $1 CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
+        || return $?
 
-status_update "Checking whether Predator works"
-make -C sl check
+    status_update "Checking whether $2 works"
+    make -C $1 check
+}
 
-status_update "Trying to build Forester"
-make -C fa CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
-    || die "failed to build Forester"
-
-status_update "Checking whether Forester works"
-make -C fa check
+build_analyzer fwnull fwnull
+build_analyzer sl Predator
+build_analyzer fa Forester
