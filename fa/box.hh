@@ -119,14 +119,18 @@ public:
 
 	virtual const std::set<size_t>& inputCoverage(size_t index) const {
 
-		assert(index == 0);
+		if (!(index == 0))
+			assert(false);
+
 		return s[1];
 
 	}
 
 	virtual size_t selectorToInput(size_t index) const {
 
-		assert(index == 0);
+		if (!(index == 0))
+			assert(false);
+
 		return this->data->offset;
 
 	}
@@ -417,6 +421,12 @@ public:
 
 	}
 
+	static bool lessOrEqual(const TA<label_type>& a, const TA<label_type>& b) {
+
+		return TA<label_type>::subseteq(a, b);
+
+	}
+
 	size_t getSelector(size_t input) const {
 
 		assert(input < this->inputMap.size());
@@ -477,6 +487,43 @@ public:
 			return true;
 
 		return Box::equal(*this->input, *rhs.input);
+
+	}
+
+	bool operator<=(const Box& rhs) const {
+
+		if ((bool)this->input != (bool)rhs.input)
+			return false;
+
+		if (this->input) {
+
+			if (this->inputIndex != rhs.inputIndex)
+				return false;
+
+			if (this->inputSignature != rhs.inputSignature)
+				return false;
+
+			if (this->inputLabels != rhs.inputLabels)
+				return false;
+
+		}
+
+		if (this->outputSignature != rhs.outputSignature)
+			return false;
+
+		if (this->outputLabels != rhs.outputLabels)
+			return false;
+
+		if (this->selectors != rhs.selectors)
+			return false;
+
+		if (!Box::lessOrEqual(*this->output, *rhs.output))
+			return false;
+
+		if (!this->input)
+			return true;
+
+		return Box::lessOrEqual(*this->input, *rhs.input);
 
 	}
 

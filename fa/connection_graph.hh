@@ -49,13 +49,14 @@ public:
 
 		size_t root; // cutpoint number
 		bool joint; // multiple times
+		bool joinInherited;
 //		size_t forwardSelector; // lowest selector which reaches the given cutpoint
 		std::set<size_t> fwdSelectors; // a set of selectors which reach the given cutpoint
 		size_t bwdSelector; // lowest selector of 'root' from which the state can be reached in the opposite direction
 		std::set<size_t> defines; // set of selectors of the cutpoint hidden in the subtree (includes backwardSelector if exists)
 
-		CutpointInfo(size_t root = 0) : root(root), joint(false), fwdSelectors(),
-			bwdSelector((size_t)(-1)) {
+		CutpointInfo(size_t root = 0) : root(root), joint(false), joinInherited(false),
+			fwdSelectors(), bwdSelector((size_t)(-1)) {
 
 			this->fwdSelectors.insert((size_t)(-1));
 
@@ -306,15 +307,19 @@ public:
 
 			auto p = m.insert(std::make_pair(signature[i].root, &signature[offset]));
 
-			if (p.second)
+			if (p.second) {
 
-				signature[offset++] = signature[i];
+				signature[offset] = signature[i];
+				signature[offset].joinInherited = signature[offset].joint;
 
-			else {
+				++offset;
+
+			} else {
 
 				assert(p.first->second);
 
 				p.first->second->joint = true;
+				p.first->second->joinInherited = false;
 				p.first->second->fwdSelectors.insert(
 					signature[i].fwdSelectors.begin(), signature[i].fwdSelectors.end()
 				);
@@ -481,7 +486,8 @@ public:
 
 		while (transitions.size()/* && changed*/) {
 
-			assert(changed);
+			if (!changed)
+				assert(false);      // fail gracefully
 
 			changed = false;
 

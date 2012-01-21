@@ -1,0 +1,6 @@
+test-p0074.c:36:5: note: ignoring call to undefined function 'printf'
+test-p0074.c:37:5: note: ignoring call to undefined function 'printf'
+test-p0074.c:38:5: note: ignoring call to undefined function 'printf'
+test-p0074.c:39:5: note: ignoring call to undefined function 'printf'
+test-p0074.c:40:5: note: ignoring call to undefined function 'printf'
+test-p0074.c:41:5: note: ignoring call to undefined function 'printf'

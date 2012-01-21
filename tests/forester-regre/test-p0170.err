@@ -1,0 +1,1 @@
+test-p0170.c:43:16: note: ignoring call to undefined function 'DLError'
