@@ -99,8 +99,8 @@ fi
 
 # adapt README-ubuntu
 if test xyes = "x$readme_sl"; then
-    patch README-fedora < "sl/README-fedora.patch"
-    patch README-ubuntu < "sl/README-ubuntu.patch"
+    patch docs/README-fedora < "build-aux/README-fedora-release.patch"
+    patch docs/README-ubuntu < "build-aux/README-ubuntu-release.patch"
 fi
 
 # adapt Makefile
