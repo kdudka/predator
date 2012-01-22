@@ -93,8 +93,8 @@ make ChangeLog "CHLOG_WATCH=$chlog_watch" \
 
 # adapt README
 if test xyes = "x$readme_cl"; then
-    patch README < "cl/cl-readme.patch"
-    patch "switch-host-gcc.sh" < "cl/cl-switch-host.patch"
+    patch README < "build-aux/cl-readme.patch"
+    patch "switch-host-gcc.sh" < "build-aux/cl-switch-host.patch"
 fi
 
 # adapt README-ubuntu
