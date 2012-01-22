@@ -50,6 +50,9 @@ case "$PROJECT" in
         ;;
 esac
 
+test -d build-aux || die "this script needs to be run from \$PREDATOR_ROOT"
+test -x build-aux/make-tgz.sh || die "unable to find self"
+
 REPO="`git rev-parse --show-toplevel`" \
     || die "not in a git repo"
 
