@@ -44,7 +44,8 @@ trap "echo --- $SELF: removing $TMP... 2>&1; rm -rf '$TMP'" EXIT
 cd "$TMP" >/dev/null || die "mktemp failed"
 
 NV="${PKG}-$PKG_VER"
-mv -v "${REPO}/$TGZ" "$TMP" || die "internal error"
+mv -v "${REPO}/$TGZ" "$TMP"                       || die "internal error"
+cp -v "${REPO}/build-aux/cl-config.patch" "$TMP"  || die "internal error"
 
 SPEC="./$PKG.spec"
 cat > "$SPEC" << EOF
@@ -57,6 +58,7 @@ Group:      VeriFIT
 License:    GPLv3+
 URL:        http://www.fit.vutbr.cz/research/groups/verifit/tools/predator
 Source0:    $TGZ
+Patch0:     cl-config.patch
 
 BuildRequires: boost-devel
 BuildRequires: cmake
@@ -72,6 +74,7 @@ Listener infrastructure (included).
 
 %prep
 %setup -q -n $PKG-$VER
+%patch0 -p1
 
 # patch the expected output of the regression tests (if a patch is available)
 gcc_ver="\$(gcc --version | head -1 | sed -e 's|^.* ||' -e 's|-.*\$||')"
@@ -83,6 +86,7 @@ make %{?_smp_mflags} CMAKE='cmake -D GCC_HOST=/usr/bin/gcc' VERBOSE=yes
 
 %install
 install -m0755 -d \$RPM_BUILD_ROOT%{_libdir}/
+install -m0755 fwnull_build/libfwnull.so \$RPM_BUILD_ROOT%{_libdir}/
 install -m0755 sl_build/libsl.so \$RPM_BUILD_ROOT%{_libdir}/
 
 %check
@@ -90,6 +94,7 @@ make %{?_smp_mflags} check CTEST='ctest %{?_smp_mflags}'
 
 %files
 %defattr(-,root,root,-)
+%{_libdir}/libfwnull.so
 %{_libdir}/libsl.so
 EOF
 
