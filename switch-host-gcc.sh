@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 export SELF="$0"
 export LC_ALL=C
 
@@ -18,7 +18,7 @@ usage() {
 
     GCC_HOST is the absolute path to gcc(1) that is built with the support for
     GCC plug-ins.  The most common location of the system GCC is /usr/bin/gcc.
-    If you have multiple versions of gcc isntalled on the system, it can be
+    If you have multiple versions of gcc installed on the system, it can be
     something like /usr/bin/gcc-4.6.2.  You can also provide a local build of
     GCC, e.g.  /home/bob/gcc-4.7.0/bin/gcc.  Please avoid setting GCC_HOST to
     a ccache, distcc, or another GCC wrapper.  Such setups are not supported
