@@ -103,10 +103,10 @@ struct BoxDb {
 void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
 
 	ssd::ColorConsole::enableForTerm(STDERR_FILENO);
-
+#ifdef I_DONT_NEED_REPRODUCIBLE_RUNS_OF_FORESTER
 	// initialize random numbers
 	srandom(time(NULL));
-
+#endif
     using namespace CodeStorage;
 
 	CL_DEBUG("config: " << configString);
