@@ -33,28 +33,7 @@ protected:
 	size_t dst_;
 	size_t src1_;
 	size_t src2_;
-/*
-	template <class F>
-	static void dataCmp(std::vector<bool>& res, const Data& x, const Data& y, F f) {
 
-		if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
-
-			if ((float)random()/RAND_MAX < 0.5) {
-				res.push_back(false);
-				res.push_back(true);
-			} else {
-				res.push_back(true);
-				res.push_back(false);
-			}
-
-		} else {
-
-			res.push_back(f(x, y));
-
-		}
-
-	}
-*/
 public:
 
 	FI_cmp_base(size_t dst, size_t src1, size_t src2)
