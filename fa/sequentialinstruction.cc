@@ -22,10 +22,10 @@
 #include "jump.hh"
 
 void SequentialInstruction::finalize(
-	const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
-	std::vector<AbstractInstruction*>::const_iterator cur
-) {
-
+	const std::unordered_map<const CodeStorage::Block*,
+		AbstractInstruction*>& codeIndex,
+	std::vector<AbstractInstruction*>::const_iterator cur)
+{
 	this->next_ = *(cur + 1);
 
 	// shorcut jump instruction
@@ -38,5 +38,4 @@ void SequentialInstruction::finalize(
 		} while (this->next_->getType() == fi_type_e::fiJump);
 
 	}
-
 }

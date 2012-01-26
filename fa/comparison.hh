@@ -25,7 +25,8 @@
 class FI_cmp_base : public SequentialInstruction {
 
 	template <class F>
-	friend void executeGeneric(const FI_cmp_base& cmp, ExecutionManager& execMan, const AbstractInstruction::StateType& state, F f);
+	friend void executeGeneric(const FI_cmp_base& cmp, ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state, F f);
 
 protected:
 
@@ -67,10 +68,12 @@ public:
 
 	FI_eq(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "eq    \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "eq    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+			<< this->src2_;
 	}
 
 };
@@ -81,10 +84,12 @@ public:
 
 	FI_neq(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "neq   \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "neq   \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+			<< this->src2_;
 	}
 
 };
@@ -95,10 +100,12 @@ public:
 
 	FI_lt(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "lt    \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "lt    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+			<< this->src2_;
 	}
 
 };
@@ -109,10 +116,12 @@ public:
 
 	FI_gt(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "gt    \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "gt    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+			<< this->src2_;
 	}
 
 };

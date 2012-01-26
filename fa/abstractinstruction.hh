@@ -61,7 +61,8 @@ public:
 	 * The data type for the state of execution. It contains a vector of values
 	 * of variables and state of the symbolic heap.
 	 */
-	typedef std::pair<std::shared_ptr<std::vector<Data>>, struct SymState*> StateType;
+	typedef std::pair<std::shared_ptr<std::vector<Data>>,
+		struct SymState*> StateType;
 
 private:
 
@@ -86,8 +87,8 @@ public:
 	 * @param[in]  fiType  The type of the instruction (from #fi_type_e)
 	 */
 	AbstractInstruction(const CodeStorage::Insn* insn = nullptr,
-		fi_type_e fiType = fi_type_e::fiUnspec)
-		: insn_(insn), fiType_(fiType), isTarget_(false)  {}
+		fi_type_e fiType = fi_type_e::fiUnspec) :
+		insn_(insn), fiType_(fiType), isTarget_(false) {}
 
 
 	/**
@@ -112,9 +113,9 @@ public:
 	 *                        a corresponding container
 	 */
 	virtual void finalize(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
-		std::vector<AbstractInstruction*>::const_iterator cur
-	) = 0;
+		const std::unordered_map<const CodeStorage::Block*,
+			AbstractInstruction*>& codeIndex,
+		std::vector<AbstractInstruction*>::const_iterator cur) = 0;
 
 
 	/**
@@ -205,8 +206,9 @@ public:
 	 *
 	 * @returns  The modified output stream
 	 */
-	friend std::ostream& operator<<(std::ostream& os, const AbstractInstruction& instr) {
-
+	friend std::ostream& operator<<(std::ostream& os,
+		const AbstractInstruction& instr)
+	{
 		return instr.toStream(os);
 	}
 
