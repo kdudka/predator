@@ -17,9 +17,9 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "jump.hh"
-
+// Forester headers
 #include "sequentialinstruction.hh"
+#include "jump.hh"
 
 void SequentialInstruction::finalize(
 	const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,

@@ -20,11 +20,13 @@
 #ifndef ABSTRACT_INSTRUCTION_H
 #define ABSTRACT_INSTRUCTION_H
 
+// Standard library headers
 #include <ostream>
 #include <vector>
 #include <unordered_map>
 #include <memory>
 
+// Forester headers
 #include "types.hh"
 
 /**
@@ -46,50 +48,166 @@ typedef enum { fiAbort, fiBranch, fiCheck, fiFix, fiJump, fiUnspec } fi_type_e;
 /**
  * @brief  An abstract base class that represents an instruction
  *
- * Abstract class repesenting an instruction. This class serves as the base
+ * Abstract class representing an instruction. This class serves as the base
  * class for all instructions.
  */
 class AbstractInstruction {
 
 public:
 
+	/**
+	 * @brief  Type of state of execution
+	 *
+	 * The data type for the state of execution. It contains a vector of values
+	 * of variables and state of the symbolic heap.
+	 */
 	typedef std::pair<std::shared_ptr<std::vector<Data>>, struct SymState*> StateType;
 
 private:
 
+	/// pointer to the instruction in CL's code storage
 	const CodeStorage::Insn* insn_;
 
+	/// the type of the instruction
 	fi_type_e fiType_;
+
+	/// is the instruction the target of some jump?
 	bool isTarget_;
 
 public:
 
+	/**
+	 * @brief  The constructor
+	 *
+	 * ``Default'' constructor, creates a new abstract instruction of given type
+	 * for given instruction in CL's code storage.
+	 *
+	 * @param[in]  insn    Source instruction in the CL's code storage
+	 * @param[in]  fiType  The type of the instruction (from #fi_type_e)
+	 */
 	AbstractInstruction(const CodeStorage::Insn* insn = nullptr,
 		fi_type_e fiType = fi_type_e::fiUnspec)
 		: insn_(insn), fiType_(fiType), isTarget_(false)  {}
 
+
+	/**
+	 * @brief  Virtual destructor
+	 *
+	 * Virtual destructor.
+	 */
 	virtual ~AbstractInstruction() {}
+
+
+	/**
+	 * @brief  Method called for finalising the output code
+	 *
+	 * A virtual method that is to be called when all the instructions of the
+	 * program's CL's code storage have been successfully transformed into
+	 * a sequence of instructions. The overriding methods may perform some
+	 * optimisations, etc.
+	 *
+	 * @param[in]  codeIndex  The mapping of basic blocks from the CL's code
+	 *                        storage to instructions
+	 * @param[in]  cur        Iterator for pointing to the instruction in
+	 *                        a corresponding container
+	 */
 	virtual void finalize(
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
 		std::vector<AbstractInstruction*>::const_iterator cur
 	) = 0;
+
+
+	/**
+	 * @brief  Executes given instruction
+	 *
+	 * The virtual method that executes given instruction in given state of the
+	 * virtual machine.
+	 *
+	 * @param[in,out]  execMan  The execution manager
+	 * @param[in]      state    The state of the virtual machine in which the
+	 *                          instruction is executed
+	 */
 	virtual void execute(ExecutionManager& execMan, const StateType& state) = 0;
 
-	virtual std::ostream& toStream(std::ostream&) const = 0;
 
+	/**
+	 * @brief  Outputs instruction to std::ostream
+	 *
+	 * Virtual method for attaching of a representation of the instruction into
+	 * the given stream.
+	 *
+	 * @param[in,out]  os  The output stream
+	 *
+	 * @returns  The modified stream
+	 */
+	virtual std::ostream& toStream(std::ostream& os) const = 0;
+
+
+	/**
+	 * @brief  Gets the instruction from CL's code storage
+	 *
+	 * This method retrieves the corresponding instruction from the CL's code
+	 * storage.
+	 *
+	 * @returns  The corresponding instruction in the CL's code storage
+	 */
 	const CodeStorage::Insn* insn() const { return this->insn_; }
+
+
+	/**
+	 * @brief  Sets the corresponding instruction from the CL's code storage
+	 *
+	 * This method sets the instruction from CL's code storage that corresponds to
+	 * the abstract instruction.
+	 *
+	 * @param[in]  insn  The instruction from the CL's code storage
+	 */
 	void insn(const CodeStorage::Insn* insn) { this->insn_ = insn; }
 
+
+	/**
+	 * @brief  Gets the type of the instruction
+	 *
+	 * This method retrieves the type of the instruction.
+	 *
+	 * @returns  The type of the instruction
+	 */
 	fi_type_e getType() const { return this->fiType_; }
 
+
+	/**
+	 * @brief  Is the instruction a target of a jump?
+	 *
+	 * This method retrieves the information whether the instruction is a target
+	 * of a function call or a jump.
+	 *
+	 * @returns  Is the instruction a target of a jump?
+	 */
 	bool isTarget() const { return this->isTarget_; }
 
+
+	/**
+	 * @brief  Sets the instruction as a jump target
+	 *
+	 * Sets the flag of the instruction denoting that the instruction is the
+	 * target of a function call or a jump.
+	 */
 	void setTarget() { this->isTarget_ = true; }
 
+
+	/**
+	 * @brief  The output stream operator
+	 *
+	 * The std::ostream << operator for conversion to a string.
+	 *
+	 * @param[in,out]  os     The output stream
+	 * @param[in]      instr  The value to be appended to the stream
+	 *
+	 * @returns  The modified output stream
+	 */
 	friend std::ostream& operator<<(std::ostream& os, const AbstractInstruction& instr) {
 
 		return instr.toStream(os);
-
 	}
 
 };
