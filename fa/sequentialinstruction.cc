@@ -28,14 +28,10 @@ void SequentialInstruction::finalize(
 {
 	this->next_ = *(cur + 1);
 
-	// shorcut jump instruction
-	if (this->next_->getType() == fi_type_e::fiJump) {
+	while (this->next_->getType() == fi_type_e::fiJump)
+	{ // shortcut jump instruction
+		assert(dynamic_cast<FI_jmp*>(this->next_) != nullptr);
 
-		do {
-
-			this->next_ = ((FI_jmp*)this->next_)->getTarget(codeIndex);
-
-		} while (this->next_->getType() == fi_type_e::fiJump);
-
+		this->next_ = static_cast<FI_jmp*>(this->next_)->getTarget(codeIndex);
 	}
 }
