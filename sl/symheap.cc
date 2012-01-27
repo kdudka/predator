@@ -591,10 +591,14 @@ struct SymHeapCore::Private {
             const TSizeOf           size,
             TValSet                *killedPtrs);
 
-    bool findZeroInBlock(TOffset *offDst, const TObjId obj);
+    bool findZeroInBlock(
+            TOffset                *offDst,
+            bool                   *provenPrefix,
+            const TOffset           offSrc,
+            const                   TObjId obj);
 
     bool findZeroAtOff(
-            TOffset                *offDst,
+            IR::Range              *offDst,
             const TOffset           offSrc,
             const TValId            root);
 
@@ -1735,7 +1739,12 @@ void SymHeapCore::copyBlockOfRawMemory(
     d->transferBlock(dstRoot, srcRoot, dstOff, srcOff, size);
 }
 
-bool SymHeapCore::Private::findZeroInBlock(TOffset *offDst, const TObjId obj) {
+bool SymHeapCore::Private::findZeroInBlock(
+        TOffset                *offDst,
+        bool                   *provenPrefix,
+        const TOffset           offSrc,
+        const                   TObjId obj)
+{
     const BlockEntity *blData;
     this->ents.getEntRO(&blData, obj);
 
@@ -1764,9 +1773,13 @@ bool SymHeapCore::Private::findZeroInBlock(TOffset *offDst, const TObjId obj) {
         const InternalCustomValue *valData;
         this->ents.getEntRO(&valData, objData->value);
 
+        // check whether the prefix is proven to be non-zero
+        const TOffset off = blData->off;
+        *provenPrefix = (off <= offSrc);
+
         // the length of the string is equal to the offset of its trailing zero
         const std::string &str = valData->customData.str();
-        *offDst = blData->off + str.size();
+        *offDst = off + str.size();
         return true;
     }
 
@@ -1775,7 +1788,7 @@ bool SymHeapCore::Private::findZeroInBlock(TOffset *offDst, const TObjId obj) {
 }
 
 bool SymHeapCore::Private::findZeroAtOff(
-        TOffset                *offDst,
+        IR::Range              *offDst,
         const TOffset           offSrc,
         const TValId            root)
 {
@@ -1791,11 +1804,13 @@ bool SymHeapCore::Private::findZeroAtOff(
         // no blocks that would serve as a trailing zero
         return false;
 
+    bool provenPrefix = false;;
+
     // go through all intersections and find the zero that is closest to offSrc
     TOffset first = limit;
     BOOST_FOREACH(const TObjId obj, overlaps) {
         TOffset beg;
-        if (!this->findZeroInBlock(&beg, obj))
+        if (!this->findZeroInBlock(&beg, &provenPrefix, offSrc, obj))
             // failed to imply zero in this block entity
             continue;
 
@@ -1803,8 +1818,8 @@ bool SymHeapCore::Private::findZeroAtOff(
             // we have already found a zero closer to offSrc
             continue;
 
-        if (beg < offSrc) {
-            // the nullified block begins before offSrc
+        if (beg <= offSrc) {
+            // if the nullified block begins before offSrc, trim the offset
             first = offSrc;
             break;
         }
@@ -1812,8 +1827,8 @@ bool SymHeapCore::Private::findZeroAtOff(
         // update the best match
         first = beg;
 
-        // an optimization only
-        if (offSrc == first)
+        if (provenPrefix)
+            // we already know there are no zeros in the prefix
             break;
     }
 
@@ -1821,7 +1836,11 @@ bool SymHeapCore::Private::findZeroAtOff(
         // found nothing
         return false;
 
-    *offDst = first;
+    offDst->hi = first;
+    offDst->lo = (provenPrefix)
+        ? first
+        : offSrc;
+
     return true;
 }
 
@@ -2875,18 +2894,15 @@ TSizeRange SymHeapCore::valSizeOfString(TValId addr) const {
     const TOffset off = valData->offRoot;
 
     // seek the first zero byte at the given offset
-    TSizeOf len;
-    if (!d->findZeroAtOff(&len, off, root))
+    IR::Range rng;
+    rng.alignment = /* FIXME: this needs a better API */ IR::Int1;
+    if (!d->findZeroAtOff(&rng, off, root))
         // possibly unterminated string
         return /* error */ IR::rngFromNum(IR::Int0);
 
     // Private::findZeroAtOff() returns an absolute offset, but we need relative
-    CL_BREAK_IF(len < off);
-    len -= off;
-
-    // if we get here, it means there is at least the trailing zero
-    IR::Range rng(IR::rngFromNum(IR::Int1));
-    rng.hi = len + /* trailing zero */ 1;
+    CL_BREAK_IF(rng.lo < off);
+    rng += /* trailing zero */ IR::rngFromNum(IR::Int1 - off);
     return rng;
 }
 
