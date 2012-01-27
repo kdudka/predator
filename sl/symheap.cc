@@ -591,6 +591,8 @@ struct SymHeapCore::Private {
             const TSizeOf           size,
             TValSet                *killedPtrs);
 
+    bool findZeroInBlock(TOffset *offDst, const TObjId obj);
+
     bool findZeroAtOff(
             TOffset                *offDst,
             const TOffset           offSrc,
@@ -1733,6 +1735,45 @@ void SymHeapCore::copyBlockOfRawMemory(
     d->transferBlock(dstRoot, srcRoot, dstOff, srcOff, size);
 }
 
+bool SymHeapCore::Private::findZeroInBlock(TOffset *offDst, const TObjId obj) {
+    const BlockEntity *blData;
+    this->ents.getEntRO(&blData, obj);
+
+    const EBlockKind code = blData->code;
+    switch (code) {
+        case BK_DATA_OBJ:
+            break;
+
+        case BK_DATA_PTR:
+        case BK_UNIFORM:
+            if (VAL_NULL != blData->value)
+                return false;
+
+            // a uniform block full of zeros
+            *offDst = blData->off;
+            return true;
+
+        default:
+            CL_BREAK_IF("findZeroInBlock() got something special");
+            return false;
+    }
+
+    const HeapObject *objData = DCAST<const HeapObject *>(blData);
+    if (CL_TYPE_ARRAY == objData->clt->code) {
+        // assume zero-ended string
+        const InternalCustomValue *valData;
+        this->ents.getEntRO(&valData, objData->value);
+
+        // the length of the string is equal to the offset of its trailing zero
+        const std::string &str = valData->customData.str();
+        *offDst = blData->off + str.size();
+        return true;
+    }
+
+    CL_BREAK_IF("please implement");
+    return false;
+}
+
 bool SymHeapCore::Private::findZeroAtOff(
         TOffset                *offDst,
         const TOffset           offSrc,
@@ -1753,21 +1794,11 @@ bool SymHeapCore::Private::findZeroAtOff(
     // go through all intersections and find the zero that is closest to offSrc
     TOffset first = limit;
     BOOST_FOREACH(const TObjId obj, overlaps) {
-        const BlockEntity *blData;
-        this->ents.getEntRO(&blData, obj);
-
-        const EBlockKind code = blData->code;
-        if (BK_UNIFORM != code) {
-            // TODO: support for nullified regular objects
-            CL_BREAK_IF("please implement");
-            continue;
-        }
-
-        if (VAL_NULL != blData->value)
-            // a uniform block, but not full of zeros
+        TOffset beg;
+        if (!this->findZeroInBlock(&beg, obj))
+            // failed to imply zero in this block entity
             continue;
 
-        const TOffset beg = blData->off;
         if (first < beg)
             // we have already found a zero closer to offSrc
             continue;
