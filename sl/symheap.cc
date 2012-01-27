@@ -166,9 +166,64 @@ class CVarMap {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of CustomValue
+CustomValue::~CustomValue() {
+    if (CV_STRING != code_)
+        return;
+
+    CL_BREAK_IF(!data_.str);
+    delete data_.str;
+}
+
+CustomValue::CustomValue(const CustomValue &ref):
+    code_(ref.code_),
+    data_(ref.data_)
+{
+    if (CV_STRING == code_)
+        data_.str = new std::string(*ref.data_.str);
+}
+
+CustomValue& CustomValue::operator=(const CustomValue &ref) {
+    if (&ref == this)
+        return *this;
+
+    if (CV_STRING == code_) {
+        CL_BREAK_IF(!data_.str);
+        delete data_.str;
+    }
+
+    code_ = ref.code_;
+    data_ = ref.data_;
+
+    if (CV_STRING == code_)
+        data_.str = new std::string(*ref.data_.str);
+
+    return *this;
+}
+
+int CustomValue::uid() const {
+    CL_BREAK_IF(CV_FNC != code_);
+    return data_.uid;
+}
+
+IR::Range& CustomValue::rng() {
+    CL_BREAK_IF(CV_INT_RANGE != code_);
+    return data_.rng;
+}
+
+double CustomValue::fpn() const {
+    CL_BREAK_IF(CV_REAL != code_);
+    return data_.fpn;
+}
+
+const std::string& CustomValue::str() const {
+    CL_BREAK_IF(CV_STRING != code_);
+    CL_BREAK_IF(!data_.str);
+    return *data_.str;
+}
+
 bool operator==(const CustomValue &a, const CustomValue &b) {
-    const ECustomValue code = a.code;
-    if (b.code != code)
+    const ECustomValue code = a.code_;
+    if (b.code_ != code)
         return false;
 
     switch (code) {
@@ -176,16 +231,17 @@ bool operator==(const CustomValue &a, const CustomValue &b) {
             return true;
 
         case CV_FNC:
-            return (a.data.uid == b.data.uid);
+            return (a.data_.uid == b.data_.uid);
 
         case CV_REAL:
-            return (a.data.fpn == b.data.fpn);
+            return (a.data_.fpn == b.data_.fpn);
 
         case CV_STRING:
-            return STREQ(a.data.str, b.data.str);
+            CL_BREAK_IF(!a.data_.str || !b.data_.str);
+            return !a.data_.str->compare(*b.data_.str);
 
         case CV_INT_RANGE:
-            return (a.data.rng == b.data.rng);
+            return (a.data_.rng == b.data_.rng);
     }
 
     CL_BREAK_IF("CustomValue::operator==() got something special");
@@ -444,7 +500,7 @@ class CustomValueMapper {
 
     public:
         TValId& lookup(const CustomValue &item) {
-            const ECustomValue code = item.code;
+            const ECustomValue code = item.code();
             switch (code) {
                 case CV_INVALID:
                 default:
@@ -452,17 +508,17 @@ class CustomValueMapper {
                     return inval_ = VAL_INVALID;
 
                 case CV_FNC:
-                    return assignInvalidIfNotFound(fncMap, item.data.uid);
+                    return assignInvalidIfNotFound(fncMap, item.uid());
 
                 case CV_INT_RANGE:
-                    CL_BREAK_IF(!isSingular(item.data.rng));
-                    return assignInvalidIfNotFound(numMap, item.data.rng.lo);
+                    CL_BREAK_IF(!isSingular(item.rng()));
+                    return assignInvalidIfNotFound(numMap, item.rng().lo);
 
                 case CV_REAL:
-                    return assignInvalidIfNotFound(fpnMap, item.data.fpn);
+                    return assignInvalidIfNotFound(fpnMap, item.fpn());
 
                 case CV_STRING:
-                    return assignInvalidIfNotFound(strMap, item.data.str);
+                    return assignInvalidIfNotFound(strMap, item.str());
             }
         }
 };
@@ -1834,11 +1890,9 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
         InternalCustomValue *depData;
         this->ents.getEntRW(&depData, depVal);
 
-        CustomValue &cvDep = depData->customData;
-        CL_BREAK_IF(CV_INT_RANGE != cvDep.code);
-
         // shift the bounds accordingly
-        IR::Range &rngDep = cvDep.data.rng;
+        CustomValue &cvDep = depData->customData;
+        IR::Range &rngDep = cvDep.rng();
         rngDep.lo += loShift;
         rngDep.hi -= hiShift;
 
@@ -2774,11 +2828,11 @@ TSizeRange SymHeapCore::valSizeOfString(TValId addr) const {
             DCAST<const InternalCustomValue *>(valData);
 
         const CustomValue &cv = customData->customData;
-        if (CV_STRING != cv.code)
+        if (CV_STRING != cv.code())
             return /* error */ IR::rngFromNum(IR::Int0);
 
         // string literal
-        const unsigned len = strlen(cv.data.str) + /* trailing zero */ 1;
+        const unsigned len = cv.str().size() + /* trailing zero */ 1;
         return IR::rngFromNum(len);
     }
 
@@ -2906,11 +2960,11 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
 }
 
 TValId SymHeapCore::valWrapCustom(CustomValue cVal) {
-    const ECustomValue code = cVal.code;
+    const ECustomValue code = cVal.code();
 
     if (CV_INT_RANGE == code) {
         // either scalar integer, or integral range
-        const IR::Range &rng = cVal.data.rng;
+        const IR::Range &rng = cVal.rng();
 
         if (isSingular(rng)) {
             // short-circuit for special integral values
@@ -2955,10 +3009,10 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
     d->ents.getEntRO(&valData, val);
 
     const CustomValue &cv = valData->customData;
-    const ECustomValue code = cv.code;
+    const ECustomValue code = cv.code();
 
     if (CV_INT_RANGE == code) {
-        const IR::Range &rng = cv.data.rng;
+        const IR::Range &rng = cv.rng();
         if (!isSingular(rng))
             return cv;
 
