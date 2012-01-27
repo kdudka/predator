@@ -149,7 +149,7 @@ int main()
 /**
  * @file test-0154.c
  *
- * @brief error-free variant of test-0033 
+ * @brief error-free variant of test-0033
  *
  *
  * @attention

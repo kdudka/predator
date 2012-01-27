@@ -566,6 +566,7 @@ struct SymHeapCore::Private {
     bool /* wasPtr */ releaseValueOf(TObjId obj, TValId val);
     void registerValueOf(TObjId obj, TValId val);
     void splitBlockByObject(TObjId block, TObjId obj);
+    void reinterpretSingleObj(HeapObject *dstData, const BlockEntity *srcData);
     void reinterpretObjData(TObjId old, TObjId obj, TValSet *killedPtrs = 0);
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
@@ -825,6 +826,51 @@ bool isCoveredByBlock(
     return (end1 <= end2);
 }
 
+inline bool isChar(const TObjType clt) {
+    return (CL_TYPE_INT == clt->code)
+        && (1 == clt->size);
+}
+
+void SymHeapCore::Private::reinterpretSingleObj(
+        HeapObject                 *dstData,
+        const BlockEntity          *srcData)
+{
+    CL_BREAK_IF(srcData->root != dstData->root);
+
+    const EBlockKind code = srcData->code;
+    switch (code) {
+        case BK_DATA_OBJ:
+            break;
+
+        default:
+            // TODO: hook various reinterpretation drivers here
+            dstData->value = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
+            return;
+    }
+
+    const HeapObject *objData = DCAST<const HeapObject *>(srcData);
+    const TObjType cltSrc = objData->clt;
+    if (CL_TYPE_ARRAY == cltSrc->code && isChar(targetTypeOfArray(cltSrc))) {
+        const TObjType cltDst = dstData->clt;
+        if (isChar(cltDst)) {
+            // assume zero-ended string
+            const InternalCustomValue *valData;
+            this->ents.getEntRO(&valData, objData->value);
+
+            const TOffset off = dstData->off - srcData->off;
+            const std::string &str = valData->customData.str();
+            CL_BREAK_IF(static_cast<TOffset>(str.size()) < off || off < 0);
+
+            // byte-level access to zero-terminated strings
+            const IR::TInt num = str[off];
+            dstData->value = this->wrapIntVal(num);
+            return;
+        }
+    }
+
+    dstData->value = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
+}
+
 void SymHeapCore::Private::reinterpretObjData(
         TObjId                      old,
         TObjId                      obj,
@@ -879,21 +925,18 @@ void SymHeapCore::Private::reinterpretObjData(
     this->ents.getEntRW(&blData, obj);
     code = blData->code;
 
-    TValId val;
-
     switch (code) {
         case BK_UNIFORM:
             if (isCoveredByBlock(oldData, blData)) {
                 // object fully covered by the overlapping uniform block
-                val = this->valDup(blData->value);
+                oldData->value = this->valDup(blData->value);
                 break;
             }
             // fall through!
 
         case BK_DATA_PTR:
         case BK_DATA_OBJ:
-            // TODO: hook various reinterpretation drivers here
-            val = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
+            this->reinterpretSingleObj(oldData, blData);
             break;
 
         case BK_COMPOSITE:
@@ -903,9 +946,8 @@ void SymHeapCore::Private::reinterpretObjData(
             return;
     }
 
-    // assign the value to the _old_ object
-    oldData->value = val;
-    this->registerValueOf(old, val);
+    // register the newly assigned value of the _old_ object
+    this->registerValueOf(old, oldData->value);
 }
 
 void SymHeapCore::Private::setValueOf(

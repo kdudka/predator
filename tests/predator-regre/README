@@ -679,8 +679,6 @@ Tests taken from Forester
 
     test-0154.c - error-free variant of test-0033
 
-    test-0158.c - memory leak induced by data reinterpretation
-
     test-0159.c - off-values handling, delayed killing of pointed variables
 
     test-0160.c - off-values using NULL as the reference and some reasoning
@@ -706,6 +704,13 @@ Tests taken from Forester
     test-0203.c - similar to test-0198, but uses values close to one
 
     test-0204.c - same as test-0203, but uses values close to minus one
+
+
+Data reinterpretation
+=====================
+    test-0158.c - memory leak induced by data reinterpretation
+
+    test-0209.c - byte-level access to zero-terminated strings
 
 
 Tiny DLL library written on scratch

@@ -31,6 +31,7 @@
 #include "util.hh"
 #include "worklist.hh"
 
+#include <cctype>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -709,9 +710,11 @@ const char* labelByTarget(const EValueTarget code) {
 }
 
 void describeInt(PlotData &plot, const IR::TInt num, const TValId val) {
-    plot.out << ", fontcolor=red, label=\"[int] "
-        << num << " (#"
-        << val << ")\"";
+    plot.out << ", fontcolor=red, label=\"[int] " << num;
+    if (isprint(num))
+        plot.out << " = '" << static_cast<char>(num) << "'";
+
+    plot.out << " (#" << val << ")\"";
 }
 
 void describeIntRange(PlotData &plot, const IR::Range &rng, const TValId val) {
