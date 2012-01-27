@@ -606,6 +606,8 @@ struct SymHeapCore::Private {
 
     TValId shiftCustomValue(TValId val, TOffset shift);
 
+    TValId wrapIntVal(const IR::TInt);
+
     void replaceRngByInt(const InternalCustomValue *valData);
 
     void trimCustomValue(TValId val, const IR::Range &win);
@@ -1877,32 +1879,38 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     return val;
 }
 
+TValId SymHeapCore::Private::wrapIntVal(const IR::TInt num) {
+    if (IR::Int0 == num)
+        return VAL_NULL;
+
+    if (IR::Int1 == num)
+        return VAL_TRUE;
+
+    // CV_INT values are supposed to be reused if they exist already
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->cValueMap);
+    const CustomValue cvRng(IR::rngFromNum(num));
+    TValId &valInt = this->cValueMap->lookup(cvRng);
+
+    if (VAL_INVALID == valInt) {
+        // CV_INT_RANGE not found, wrap it as a new heap value
+        valInt = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
+        InternalCustomValue *intData;
+        this->ents.getEntRW(&intData, valInt);
+        intData->customData = cvRng;
+    }
+
+    return valInt;
+}
+
 void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData) {
     CL_DEBUG("replaceRngByInt() is taking place...");
 
     // we already expect a scalar at this point
     const CustomValue &cvRng = valData->customData;
-    const IR::Range rng = rngFromCustom(cvRng);
+    const IR::Range &rng = rngFromCustom(cvRng);
     CL_BREAK_IF(!isSingular(rng));
 
-    TValId replaceBy;
-    if (0L == rng.lo)
-        replaceBy = VAL_NULL;
-    else if (1L == rng.lo)
-        replaceBy = VAL_TRUE;
-    else {
-        // CV_INT values are supposed to be reused if they exist already
-        RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->cValueMap);
-        TValId &valInt = this->cValueMap->lookup(cvRng);
-        if (VAL_INVALID == valInt) {
-            // CV_INT_RANGE not found, wrap it as a new heap value
-            valInt = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
-            InternalCustomValue *intData;
-            this->ents.getEntRW(&intData, valInt);
-            intData->customData = cvRng;
-        }
-        replaceBy = valInt;
-    }
+    const TValId replaceBy = this->wrapIntVal(rng.lo);
 
     // we intentionally do not use a reference here (tight loop otherwise)
     TObjIdSet usedBy = valData->usedBy;
@@ -3010,30 +3018,17 @@ TValId SymHeapCore::valWrapCustom(CustomValue cVal) {
     const ECustomValue code = cVal.code();
 
     if (CV_INT_RANGE == code) {
-        // either scalar integer, or integral range
         const IR::Range &rng = cVal.rng();
+        if (isSingular(rng))
+            // recycle scalar values
+            return d->wrapIntVal(rng.lo);
 
-        if (isSingular(rng)) {
-            // short-circuit for special integral values
-            switch (rng.lo) {
-                case 0:
-                    return VAL_NULL;
-
-                case 1:
-                    return VAL_TRUE;
-
-                default:
-                    break;
-            }
-        }
-        else {
-            // CV_INT_RANGE with a valid range (do not recycle these)
-            const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
-            InternalCustomValue *valData;
-            d->ents.getEntRW(&valData, val);
-            valData->customData = cVal;
-            return val;
-        }
+        // CV_INT_RANGE with a valid range (do not recycle these)
+        const TValId val = d->valCreate(VT_CUSTOM, VO_ASSIGNED);
+        InternalCustomValue *valData;
+        d->ents.getEntRW(&valData, val);
+        valData->customData = cVal;
+        return val;
     }
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cValueMap);
