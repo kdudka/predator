@@ -382,6 +382,10 @@ void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
         << ", label=\"";
 
     describeObject(plot, obj, lonely);
+
+    if (OC_DATA == code)
+        plot.out << " [size = " << obj.objType()->size << "B]";
+
     plot.out << "\"];\n";
 }
 
