@@ -677,9 +677,6 @@ TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
     const ECustomValue code = cv.code();
 
     switch (code) {
-        case CV_STRING:
-            return ptrObjectEncoderCore(proc, dst, val, PK_DATA);
-
         case CV_FNC:
             return ptrObjectEncoderCore(proc, dst, val, PK_CODE);
 
@@ -687,8 +684,10 @@ TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
             return integralEncoder(proc, dst, val, rngFromCustom(cv));
 
         case CV_REAL:
-            // TODO
             CL_DEBUG_MSG(proc.lw(), "floating point numbers are not supported");
+            // fall through!
+
+        case CV_STRING:
             return val;
 
         case CV_INVALID:
@@ -1995,9 +1994,12 @@ bool SymExecCore::concretizeLoop(
 #endif
         BOOST_FOREACH(unsigned idx, derefs) {
             const struct cl_operand &op = insn.operands.at(idx);
+            const TValId at = slave.varAt(op);
+            if (!canWriteDataPtrAt(sh, at))
+                continue;
 
             // we expect a pointer at this point
-            const TValId val = valOfPtrAt(sh, slave.varAt(op));
+            const TValId val = valOfPtrAt(sh, at);
             if (VT_ABSTRACT == sh.valTarget(val)) {
 #ifndef NDEBUG
                 CL_BREAK_IF(hitLocal);
