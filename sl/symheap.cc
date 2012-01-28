@@ -853,7 +853,7 @@ void SymHeapCore::Private::reinterpretSingleObj(
     if (CL_TYPE_ARRAY == cltSrc->code && isChar(targetTypeOfArray(cltSrc))) {
         const TObjType cltDst = dstData->clt;
         if (isChar(cltDst)) {
-            // assume zero-ended string
+            // assume zero-terminated string
             const InternalCustomValue *valData;
             this->ents.getEntRO(&valData, objData->value);
 
@@ -1813,7 +1813,7 @@ bool SymHeapCore::Private::findZeroInBlock(
 
     const HeapObject *objData = DCAST<const HeapObject *>(blData);
     if (CL_TYPE_ARRAY == objData->clt->code) {
-        // assume zero-ended string
+        // assume zero-terminated string
         const InternalCustomValue *valData;
         this->ents.getEntRO(&valData, objData->value);
 

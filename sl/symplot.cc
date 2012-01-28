@@ -711,7 +711,7 @@ const char* labelByTarget(const EValueTarget code) {
 
 void describeInt(PlotData &plot, const IR::TInt num, const TValId val) {
     plot.out << ", fontcolor=red, label=\"[int] " << num;
-    if (isprint(num))
+    if (IR::Int0 < num && num < UCHAR_MAX && isprint(num))
         plot.out << " = '" << static_cast<char>(num) << "'";
 
     plot.out << " (#" << val << ")\"";

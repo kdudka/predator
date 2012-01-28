@@ -712,6 +712,8 @@ Data reinterpretation
 
     test-0209.c - byte-level access to zero-terminated strings
 
+    test-0210.c - extended version of test-0209.c with explicit assertion checks
+
 
 Tiny DLL library written on scratch
 ===================================
