@@ -566,6 +566,7 @@ struct SymHeapCore::Private {
     bool /* wasPtr */ releaseValueOf(TObjId obj, TValId val);
     void registerValueOf(TObjId obj, TValId val);
     void splitBlockByObject(TObjId block, TObjId obj);
+    bool writeCharToString(TValId *pValDst, const TValId, const TOffset);
     bool reinterpretSingleObj(HeapObject *dstData, const BlockEntity *srcData);
     void reinterpretObjData(TObjId old, TObjId obj, TValSet *killedPtrs = 0);
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
@@ -831,6 +832,71 @@ inline bool isChar(const TObjType clt) {
         && (1 == clt->size);
 }
 
+inline bool isString(const TObjType clt) {
+    return (CL_TYPE_ARRAY == clt->code)
+        && isChar(targetTypeOfArray(clt));
+}
+
+bool SymHeapCore::Private::writeCharToString(
+        TValId                     *pValDst,
+        const TValId                valToWrite,
+        const TOffset               pos)
+{
+    const TValId valDst = *pValDst;
+    if (VAL_INVALID == valDst)
+        // there is no string to write to
+        return false;
+
+    const BaseValue *dstData;
+    this->ents.getEntRO(&dstData, valDst);
+    if (VT_CUSTOM != dstData->code)
+        // there is no string to write to
+        return false;
+
+    // extract the string that is going to be modified
+    const InternalCustomValue *stringData =
+        DCAST<const InternalCustomValue *>(dstData);
+    std::string str(stringData->customData.str());
+    CL_BREAK_IF(static_cast<TOffset>(str.size()) < pos || pos < 0);
+
+    // modify the string accordingly as long as the result is still a string
+    if (VAL_NULL == valToWrite)
+        str.resize(pos);
+    else {
+        const BaseValue *valData;
+        this->ents.getEntRO(&valData, valToWrite);
+        if (VT_CUSTOM != valData->code)
+            return false;
+
+        const InternalCustomValue *numData =
+            DCAST<const InternalCustomValue *>(valData);
+
+        const IR::Range rng = numData->customData.rng();
+        if (!isSingular(rng))
+            return false;
+
+        const IR::TInt num = rng.lo;
+        str[pos] = num;
+    }
+
+    // update the mapping of the string being assigned
+    CL_DEBUG("CV_STRING replaced as a consequence of data reinterpretation");
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->cValueMap);
+    const CustomValue cvStr(str.c_str());
+    TValId &valStr = this->cValueMap->lookup(cvStr);
+
+    if (VAL_INVALID == valStr) {
+        // CV_STRING not found, wrap it as a new heap value
+        valStr = this->valCreate(VT_CUSTOM, VO_ASSIGNED);
+        InternalCustomValue *dstData;
+        this->ents.getEntRW(&dstData, valStr);
+        dstData->customData = cvStr;
+    }
+
+    *pValDst = valStr;
+    return true;
+}
+
 bool SymHeapCore::Private::reinterpretSingleObj(
         HeapObject                 *dstData,
         const BlockEntity          *srcData)
@@ -848,23 +914,33 @@ bool SymHeapCore::Private::reinterpretSingleObj(
     }
 
     const HeapObject *objData = DCAST<const HeapObject *>(srcData);
+    const TValId valSrc = objData->value;
+    if (VAL_INVALID == valSrc)
+        // invalid source
+        return false;
+
     const TObjType cltSrc = objData->clt;
-    if (CL_TYPE_ARRAY == cltSrc->code && isChar(targetTypeOfArray(cltSrc))) {
-        const TObjType cltDst = dstData->clt;
-        if (isChar(cltDst)) {
-            // assume zero-terminated string
-            const InternalCustomValue *valData;
-            this->ents.getEntRO(&valData, objData->value);
+    const TObjType cltDst = dstData->clt;
 
-            const TOffset off = dstData->off - srcData->off;
-            const std::string &str = valData->customData.str();
-            CL_BREAK_IF(static_cast<TOffset>(str.size()) < off || off < 0);
+    if (isString(cltSrc) && isChar(cltDst)) {
+        // read char from a zero-terminated string
+        const InternalCustomValue *valData;
+        this->ents.getEntRO(&valData, valSrc);
 
-            // byte-level access to zero-terminated strings
-            const IR::TInt num = str[off];
-            dstData->value = this->wrapIntVal(num);
-            return true;
-        }
+        const TOffset off = dstData->off - srcData->off;
+        const std::string &str = valData->customData.str();
+        CL_BREAK_IF(static_cast<TOffset>(str.size()) < off || off < 0);
+
+        // byte-level access to zero-terminated strings
+        const IR::TInt num = str[off];
+        dstData->value = this->wrapIntVal(num);
+        return true;
+    }
+
+    if (isChar(cltSrc) && isString(cltDst)) {
+        // write char to a zero-terminated string
+        const TOffset off = srcData->off - dstData->off;
+        return this->writeCharToString(&dstData->value, valSrc, off);
     }
 
     // TODO: hook various reinterpretation drivers here

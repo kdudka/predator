@@ -714,6 +714,9 @@ Data reinterpretation
 
     test-0210.c - extended version of test-0209.c with explicit assertion checks
 
+    test-0211.c - in-place reversal of a short zero-terminated string
+                - works fine with (0 == SE_ALLOW_OFF_RANGES)
+
 
 Tiny DLL library written on scratch
 ===================================
