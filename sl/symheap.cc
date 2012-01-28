@@ -566,7 +566,7 @@ struct SymHeapCore::Private {
     bool /* wasPtr */ releaseValueOf(TObjId obj, TValId val);
     void registerValueOf(TObjId obj, TValId val);
     void splitBlockByObject(TObjId block, TObjId obj);
-    void reinterpretSingleObj(HeapObject *dstData, const BlockEntity *srcData);
+    bool reinterpretSingleObj(HeapObject *dstData, const BlockEntity *srcData);
     void reinterpretObjData(TObjId old, TObjId obj, TValSet *killedPtrs = 0);
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
@@ -831,7 +831,7 @@ inline bool isChar(const TObjType clt) {
         && (1 == clt->size);
 }
 
-void SymHeapCore::Private::reinterpretSingleObj(
+bool SymHeapCore::Private::reinterpretSingleObj(
         HeapObject                 *dstData,
         const BlockEntity          *srcData)
 {
@@ -844,8 +844,7 @@ void SymHeapCore::Private::reinterpretSingleObj(
 
         default:
             // TODO: hook various reinterpretation drivers here
-            dstData->value = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
-            return;
+            return false;
     }
 
     const HeapObject *objData = DCAST<const HeapObject *>(srcData);
@@ -864,11 +863,12 @@ void SymHeapCore::Private::reinterpretSingleObj(
             // byte-level access to zero-terminated strings
             const IR::TInt num = str[off];
             dstData->value = this->wrapIntVal(num);
-            return;
+            return true;
         }
     }
 
-    dstData->value = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
+    // TODO: hook various reinterpretation drivers here
+    return false;
 }
 
 void SymHeapCore::Private::reinterpretObjData(
@@ -911,6 +911,33 @@ void SymHeapCore::Private::reinterpretObjData(
     this->ents.getEntRW(&rootData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
+    this->ents.getEntRW(&blData, obj);
+    code = blData->code;
+
+    switch (code) {
+        case BK_UNIFORM:
+            if (isCoveredByBlock(oldData, blData)) {
+                // object fully covered by the overlapping uniform block
+                oldData->value = this->valDup(blData->value);
+                goto data_restored;
+            }
+            // fall through!
+
+        case BK_DATA_PTR:
+        case BK_DATA_OBJ:
+            if (this->reinterpretSingleObj(oldData, blData))
+                goto data_restored;
+
+            oldData->value = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
+            break;
+
+        case BK_COMPOSITE:
+        case BK_INVALID:
+        default:
+            CL_BREAK_IF("invalid call of reinterpretObjData()");
+            return;
+    }
+
     // mark the object as dead
     if (rootData->liveObjs.erase(old))
         CL_DEBUG("reinterpretObjData() kills a live object");
@@ -921,31 +948,7 @@ void SymHeapCore::Private::reinterpretObjData(
         return;
     }
 
-    CL_DEBUG("an object being reinterpreted is still referenced from outside");
-    this->ents.getEntRW(&blData, obj);
-    code = blData->code;
-
-    switch (code) {
-        case BK_UNIFORM:
-            if (isCoveredByBlock(oldData, blData)) {
-                // object fully covered by the overlapping uniform block
-                oldData->value = this->valDup(blData->value);
-                break;
-            }
-            // fall through!
-
-        case BK_DATA_PTR:
-        case BK_DATA_OBJ:
-            this->reinterpretSingleObj(oldData, blData);
-            break;
-
-        case BK_COMPOSITE:
-        case BK_INVALID:
-        default:
-            CL_BREAK_IF("invalid call of reinterpretObjData()");
-            return;
-    }
-
+data_restored:
     // register the newly assigned value of the _old_ object
     this->registerValueOf(old, oldData->value);
 }
