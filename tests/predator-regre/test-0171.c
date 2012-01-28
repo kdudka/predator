@@ -82,8 +82,6 @@ int main () {
  *
  * @brief a modification of test-0170 that revealed a nasty bug
  *
- *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

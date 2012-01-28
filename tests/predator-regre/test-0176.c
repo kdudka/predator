@@ -32,7 +32,6 @@ int main()
  *
  * @brief a possibly infinite SLL where nodes are just void pointers
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

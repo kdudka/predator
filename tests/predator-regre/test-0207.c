@@ -156,8 +156,6 @@ int main()
  *
  * @brief var killer benchmark (merge of test-0168 and test-0177)
  *
- *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

@@ -73,7 +73,6 @@ int main()
  *
  * @brief a regression test focused on handling of 1+/2+ DLS
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

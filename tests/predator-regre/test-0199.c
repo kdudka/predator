@@ -116,8 +116,6 @@ int main(void)
  *
  * @brief a stack implementation (contributed by Daniela Ďuričeková)
  *
- *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

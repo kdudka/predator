@@ -32,7 +32,6 @@ int main()
  *
  * @brief a torture test focused on chaining of dereferences
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

@@ -45,7 +45,6 @@ int main()
  *
  * @brief simplification of test-0133.c (only some offset manipulation)
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

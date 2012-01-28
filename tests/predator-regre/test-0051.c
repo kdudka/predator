@@ -75,7 +75,6 @@ int main()
  *
  * @brief SLS, each item owns its own on heap allocated object
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

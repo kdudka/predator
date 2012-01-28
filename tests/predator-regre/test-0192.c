@@ -74,7 +74,6 @@ int main()
  *
  * @brief modified test-0191, works with SE_ALLOW_THREE_WAY_JOIN == 3
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

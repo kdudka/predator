@@ -49,7 +49,6 @@ int main()
  *
  * @brief a training example for the introduction of VT_RANGE
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

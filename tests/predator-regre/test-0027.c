@@ -27,7 +27,6 @@ int main()
  *
  * @brief regression test for detection of some errors on call of free()
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

@@ -113,7 +113,6 @@ int main()
  *
  * @brief a simplified variant of test-0084.c that is closer to reality
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

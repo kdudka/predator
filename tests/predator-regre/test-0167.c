@@ -123,7 +123,6 @@ int main()
  *
  * @brief state explosion minimal example taken from test-0124
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

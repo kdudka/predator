@@ -23,7 +23,6 @@ int main() {
  *
  * @brief alternation of test-0025.c that plots some heap graphs
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

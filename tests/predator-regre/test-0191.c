@@ -74,7 +74,6 @@ int main()
  *
  * @brief an easy test for joinSymHeaps(), once used as a demo
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

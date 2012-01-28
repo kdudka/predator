@@ -24,7 +24,6 @@ int main()
  *
  * @brief similar to test-0198, but uses values close to one
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

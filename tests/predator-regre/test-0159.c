@@ -30,7 +30,6 @@ int main() {
  *
  * @brief off-values handling, delayed killing of pointed variables
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

@@ -68,7 +68,6 @@ int main()
  *
  * @brief error-free variant of test-0038
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

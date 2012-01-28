@@ -122,7 +122,6 @@ int main()
  *
  * @brief test-0135 extended by invalid free (forgot to use list_entry)
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

@@ -150,7 +150,6 @@ int main()
  *
  * @brief combination of test-0037 and test-0073
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

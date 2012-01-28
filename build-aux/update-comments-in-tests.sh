@@ -29,9 +29,11 @@ pass_line() {
 write_desc() {
     printf " *\n * @brief %s\n *\n" "$brief_desc" >> "$output"
 
-    sed -e 's|^\(.\)| * \1|'        \
-        -e 's|^$| *|'               \
-        "$long_desc" >> "$output"
+    if match '^..*$' "$long_desc"; then 
+        sed -e 's|^\(.\)| * \1|'        \
+            -e 's|^$| *|'               \
+            "$long_desc" >> "$output"
+    fi
 
     printf "%s\n" " * @attention
  * This description is automatically imported from tests/predator-regre/README.

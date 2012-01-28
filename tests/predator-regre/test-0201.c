@@ -59,7 +59,6 @@ int main()
  *
  * @brief a regression test for alignment of integral ranges
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

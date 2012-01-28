@@ -32,7 +32,6 @@ int main() {
  *
  * @brief regression test for invalid dereference, etc.
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

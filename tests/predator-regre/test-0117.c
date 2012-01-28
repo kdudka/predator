@@ -108,7 +108,6 @@ int main()
  *
  * @brief error-free variant of test-0116 (only a destructor added)
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.
