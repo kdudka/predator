@@ -137,6 +137,18 @@ void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
     }
 }
 
+/// returns true for VS_NOT_NULL and VS_NOT_NULL_DEDUCED
+inline bool anyNotNull(const EVarState code) {
+    switch (code) {
+        case VS_NOT_NULL:
+        case VS_NOT_NULL_DEDUCED:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 /**
  * merge values (used for Y nodes of CFG)
  * @param dst destination state (used in read-write mode)
@@ -162,8 +174,8 @@ bool mergeValues(VarState &dst, const VarState &src) {
         return true;
     }
 
-    if ((VS_NULL_DEDUCED == src.code && VS_NOT_NULL == dst.code)
-            || (VS_NOT_NULL == src.code && VS_NULL_DEDUCED == dst.code))
+    if ((VS_NULL_DEDUCED == src.code && anyNotNull(dst.code))
+            || (anyNotNull(src.code) && VS_NULL_DEDUCED == dst.code))
         // merge NULL and not-NULL alternatives together
     {
         dst.code = VS_MIGHT_BE_NULL;
@@ -437,6 +449,10 @@ void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn) {
 
         case CL_INSN_CALL:
             handleInsnCall(state, insn);
+            break;
+
+        case CL_INSN_LABEL:
+            // should be safe to ignore
             break;
 
         default:
