@@ -64,6 +64,9 @@ BuildRequires: boost-devel
 BuildRequires: cmake
 BuildRequires: gcc-plugin-devel
 
+# we need 32bit glibc-devel in order to pass the test-suite
+BuildRequires: /usr/include/gnu/stubs-32.h
+
 %description
 Predator is a practical tool for checking manipulation of dynamic data
 structures using *separation logic*.  It can be loaded directly into *GCC* as a
