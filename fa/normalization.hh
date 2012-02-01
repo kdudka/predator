@@ -255,7 +255,9 @@ public:
 	}
 
 	// normalize representation
-	void normalize(const std::vector<bool>& marked, const std::vector<size_t>& order) {
+	bool normalize(const std::vector<bool>& marked, const std::vector<size_t>& order) {
+
+		bool merged = false;
 
 		size_t i;
 
@@ -270,7 +272,7 @@ public:
 
 			this->fae.roots.resize(order.size());
 			this->fae.connectionGraph.data.resize(order.size());
-			return;
+			return false;
 
 		}
 
@@ -285,8 +287,13 @@ public:
 			this->normalizeRoot(normalized, i, marked);
 //			assert(marked[*i] || (this->fae.roots[*i] == NULL));
 
-			if (!marked[i])
+			if (!marked[i]) {
+
+				merged = true;
+
 				continue;
+
+			}
 
 			newRoots.push_back(this->fae.roots[i]);
 
@@ -318,6 +325,8 @@ public:
 			i->d_ref.root = index[i->d_ref.root];
 
 		}
+
+		return merged;
 
 	}
 
