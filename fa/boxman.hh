@@ -51,6 +51,8 @@ class BoxMan {
 
 	std::unordered_set<Box, boost::hash<Box>> boxes;
 
+	bool learned_;
+
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data) {
 		std::pair<boost::unordered_map<Data, NodeLabel*>::iterator, bool> p
 			= this->dataStore.insert(std::make_pair(data, (NodeLabel*)NULL));
@@ -299,6 +301,8 @@ public:
 
 	const Box* getBox(const Box& box) {
 
+		this->learned_ = false;
+
 		auto p = this->boxes.insert(box);
 
 		if (p.second) {
@@ -307,6 +311,8 @@ public:
 
 			box->name = this->getBoxName();
 			box->initialize();
+
+			this->learned_ = true;
 
 		}
 
@@ -343,6 +349,12 @@ public:
 
 	const std::unordered_set<Box, boost::hash<Box>>& getBoxes() const {
 		return this->boxes;
+	}
+
+	bool learned() const {
+
+		return this->learned_;
+
 	}
 
 };
