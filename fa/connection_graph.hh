@@ -1086,6 +1086,15 @@ public:
 
 	ConnectionGraph(size_t size = 0) : data(size) {}
 
+	void getRelativeSignature(std::vector<std::pair<int, bool>>& signature, size_t root) const {
+
+		signature.clear();
+
+		for (auto& tmp : this->data[root].signature)
+			signature.push_back(std::make_pair(tmp.root, tmp.joint));
+
+	}
+
 };
 
 #endif
