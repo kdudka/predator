@@ -74,15 +74,29 @@ struct SmarterTMatchF {
 
 			size_t s1 = t1.lhs()[i], s2 = t2.lhs()[i], ref;
 
-			if (FA::isData(s1) && !this->fae.getRef(s1, ref)) {
+			if (FA::isData(s1)) {
 
-				if (!FA::isData(s2) || this->fae.getRef(s2, ref))
+				if (!this->fae.getRef(s1, ref)) {
+
+					if (!FA::isData(s2) || this->fae.getRef(s2, ref))
+						return false;
+
+					if (s1 != s2)
+						return false;
+
+				} else {
+
+					if (FA::isData(s2) && this->fae.getRef(s2, ref))
+						return false;
+
+				}
+
+			} else {
+
+				if (FA::isData(s2) && !this->fae.getRef(s2, ref))
 					return false;
 
 			}
-
-			if (FA::isData(s2) && !this->fae.getRef(s2, ref))
-				return false;
 
 		}
 
