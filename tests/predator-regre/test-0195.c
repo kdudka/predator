@@ -32,3 +32,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0195.c
+ *
+ * @brief a simplification of test-0193 that revealed a bug in symjoin
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

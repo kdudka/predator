@@ -79,3 +79,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0113.c
+ *
+ * @brief error-free variant of test-0106
+ *
+ * - known to work with SE_PROTO_COST_ASYM == 8
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

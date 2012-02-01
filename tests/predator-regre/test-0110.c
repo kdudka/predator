@@ -65,3 +65,17 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0110.c
+ *
+ * @brief top level SLL
+ *
+ * - odd nodes contain only one item of nested SLL (not a SLL)
+ * - even nodes contain two items of nested SLL
+ * - the same type is used at both levels, which helps negligibly
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

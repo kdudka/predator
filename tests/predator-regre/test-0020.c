@@ -32,3 +32,13 @@ int main() {
     test__cond_reasoning__with_zero_lookback_level();
     return 0;
 }
+
+/**
+ * @file test-0020.c
+ *
+ * @brief regression test of reasoning about unknown bool values
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

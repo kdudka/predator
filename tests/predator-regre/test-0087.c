@@ -94,3 +94,19 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0087.c
+ *
+ * @brief alternation of test-0086.c where the list head is placed at
+ *
+ *   zero offset within each node (surprisingly it causes the
+ *   analysis to be much more difficult as the pointer-plus
+ *   operation vanishes when the offset is zero)
+ *
+ * - plots heap graphs of Linux like DLS destruction in progress
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

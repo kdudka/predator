@@ -39,3 +39,17 @@ int main(void)
     ___sl_plot(NULL);
     return 0;
 }
+
+/**
+ * @file test-0119.c
+ *
+ * @brief a demo created as simplification of test-0118
+ *
+ * - tons of OOM errors
+ * - run with -fplugin-arg-libsl-symexec-args=fast
+ * - plots self-explaining heap graphs with DEBUG_SYMABSTRACT == 1
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

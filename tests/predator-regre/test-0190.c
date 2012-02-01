@@ -37,3 +37,13 @@ int main(void)
 
     return 0;
 }
+
+/**
+ * @file test-0190.c
+ *
+ * @brief test-0189 narrowed down to a minimal example
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -36,6 +36,7 @@
 
 #include <map>              // for TValMap
 #include <set>              // for TCVarSet
+#include <string>
 #include <vector>           // for many types
 
 /// classification of kind of origins a value may come from
@@ -97,37 +98,77 @@ enum ECustomValue {
     CV_STRING               ///< string literal
 };
 
-/// @attention SymHeap is not responsible for any deep copies of strings
 union CustomValueData {
-    int         uid;        ///< unique ID as assigned by Code Listener
-    double      fpn;        ///< floating-point number
-    const char *str;        ///< zero-terminated string
-    IR::Range   rng;        ///< closed interval over integral domain
+    int             uid;    ///< unique ID as assigned by Code Listener
+    double          fpn;    ///< floating-point number
+    std::string    *str;    ///< string literal
+    IR::Range       rng;    ///< closed interval over integral domain
 };
 
 /// representation of a custom value, such as integer literal, or code pointer
-struct CustomValue {
-    ECustomValue    code;   ///< custom value classification
-    CustomValueData data;   ///< custom data
+class CustomValue {
+    public:
+        // cppcheck-suppress uninitVar
+        CustomValue():
+            code_(CV_INVALID)
+        {
+        }
 
-    // cppcheck-suppress uninitVar
-    CustomValue():
-        code(CV_INVALID)
-    {
-    }
+        ~CustomValue();
+        CustomValue(const CustomValue &);
+        CustomValue& operator=(const CustomValue &);
 
-    CustomValue(ECustomValue code_):
-        code(code_)
-    {
-        if (CV_INT_RANGE == code_)
-            this->data.rng = IR::FullRange;
-    }
+        explicit CustomValue(int uid):
+            code_(CV_FNC)
+        {
+            data_.uid = uid;
+        }
 
-    CustomValue(const IR::Range &rng):
-        code(CV_INT_RANGE)
-    {
-        data.rng = rng;
-    }
+        explicit CustomValue(const IR::Range &rng):
+            code_(CV_INT_RANGE)
+        {
+            data_.rng = rng;
+        }
+
+        explicit CustomValue(const double fpn):
+            code_(CV_REAL)
+        {
+            data_.fpn = fpn;
+        }
+
+        explicit CustomValue(const char *str):
+            code_(CV_STRING)
+        {
+            data_.str = new std::string(str);
+        }
+
+        /// custom value classification
+        ECustomValue code() const {
+            return code_;
+        }
+
+        /// unique ID as assigned by Code Listener (only for CV_FNC)
+        int uid() const;
+
+        /// closed interval over integral domain (only for CV_INT_RANGE)
+        IR::Range& rng();
+
+        /// closed interval over integral domain (only for CV_INT_RANGE)
+        const IR::Range& rng() const {
+            return const_cast<CustomValue *>(this)->rng();
+        }
+
+        /// floating-point number (only for CV_REAL)
+        double fpn() const;
+
+        /// string literal (only for CV_STRING)
+        const std::string &str() const;
+
+    private:
+        friend bool operator==(const CustomValue &, const CustomValue &);
+
+        ECustomValue        code_;
+        CustomValueData     data_;
 };
 
 bool operator==(const CustomValue &a, const CustomValue &b);

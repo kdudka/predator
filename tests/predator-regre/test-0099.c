@@ -164,3 +164,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0099.c
+ *
+ * @brief extension of test-0097, added two-level list destruction
+ *
+ *   (implies concretization at both levels)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

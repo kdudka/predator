@@ -70,3 +70,15 @@ int main()
     //___sl_break();
     return 0;
 }
+
+/**
+ * @file test-0122.c
+ *
+ * @brief the most trivial case of Linux DLS abstraction
+ *
+ * - once used as demo in slides about symdiscover
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

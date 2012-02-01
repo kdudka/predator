@@ -18,3 +18,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0204.c
+ *
+ * @brief same as test-0203, but uses values close to minus one
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

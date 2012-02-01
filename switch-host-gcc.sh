@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 export SELF="$0"
 export LC_ALL=C
 
@@ -8,63 +8,45 @@ die() {
 }
 
 usage() {
-    printf "Usage: %s HOST_GCC_EXECUTABLE GCC_PLUGIN_INCLUDE_DIR\n" "$SELF" >&2
+    printf "Usage: %s GCC_HOST\n" "$SELF" >&2
     cat >&2 << EOF
 
-    Use this script to (re)build Predator against an arbitrary build of host
-    GCC.  The host GCC needs to be built with the support for GCC plug-ins.  The
-    currently supported version of host GCC is 4.6.2, but feel free to use any
-    other version of GCC at your own responsibility.
+    Use this script to (re)build Predator and/or Forester against an arbitrary
+    build of host GCC.  The host GCC needs to be built with the support for GCC
+    plug-ins.  The currently supported version of host GCC is 4.6.2, but feel
+    free to use any other version of GCC at your own responsibility.
 
-    HOST_GCC_EXECUTABLE is an exectuable of gcc(1).  It can be given either with
-    absolute path (e.g. /home/bob/gcc-4.7.0/bin/gcc) or, if it can be reached
-    from \$PATH, only the basename is sufficient (e.g. gcc, or gcc-4.6).
+    GCC_HOST is the absolute path to gcc(1) that is built with the support for
+    GCC plug-ins.  The most common location of the system GCC is /usr/bin/gcc.
+    If you have multiple versions of gcc installed on the system, it can be
+    something like /usr/bin/gcc-4.6.2.  You can also provide a local build of
+    GCC, e.g.  /home/bob/gcc-4.7.0/bin/gcc.  Please avoid setting GCC_HOST to
+    a ccache, distcc, or another GCC wrapper.  Such setups are not supported
+    yet.
 
-    GCC_PLUGIN_INCLUDE_DIR is the path to GCC headers for building GCC plug-ins.
-    The path is distribution-specific.  You can guess the path by looking for a
-    file named 'gcc-plugin.h'.  Some distributions do not have such an include
-    directory installed by default.  A brief summary of experience with
-    distributions we have tried follows:
-
-    On Debian, you need to install a package named gcc-4.5-plugin-dev.  Then use
-    /usr/lib/x86_64-linux-gnu/gcc/x86_64-linux-gnu/4.5.2/plugin/include as
-    GCC_PLUGIN_INCLUDE_DIR.
-
-    On Debian unstable, you need to install a package named gcc-4.6-plugin-dev.
-    Then use /usr/lib/gcc/x86_64-linux-gnu/4.6/plugin/include as
-    GCC_PLUGIN_INCLUDE_DIR.
- 
-    On Fedora, you need to install a package named gcc-plugin-devel.  Then use
-    /usr/lib/gcc/x86_64-redhat-linux/4.6.2/plugin/include as
-    GCC_PLUGIN_INCLUDE_DIR.
-
-    On Gentoo, you only need to have installed >=sys-devel/gcc-4.5.0.  Then use
-    /usr/lib64/gcc/x86_64-pc-linux-gnu/4.x.y/plugin/include as
-    GCC_PLUGIN_INCLUDE_DIR.
-
-    Corrections and extensions to this list are welcome!
+    On some Linux distributions you need to install an optional package (e.g.
+    gcc-plugin-devel on Fedora) in order to be able to build GCC plug-ins.
 
 EOF
     exit 1
 }
 
-test 2 = "$#" || usage
+test 1 = "$#" || usage
 
 status_update() {
     printf "\n%s...\n\n" "$*"
     tty >/dev/null && printf "\033]0;%s\a" "$*"
 }
 
-# try to run gcc
+# check the given GCC_HOST
 GCC_HOST="$1"
+test "/" == "${GCC_HOST:0:1}" \
+    || die "GCC_HOST is not an absolute path: $GCC_HOST"
+test -x "$GCC_HOST" \
+    || die "GCC_HOST is not an absolute path to an executable file: $GCC_HOST"
+
+# try to run GCC_HOST
 "$GCC_HOST" --version || die "unable to run gcc: $GCC_HOST --version"
-
-# check the include path
-GCC_INCDIR="$2"
-PLUG_HDR="$GCC_INCDIR/gcc-plugin.h"
-test -r "$PLUG_HDR" || die "unable to read: $PLUG_HDR"
-
-ln -fsvT "$GCC_INCDIR" include/gcc || die "failed to create symlink"
 
 status_update "Nuking working directory"
 make distclean \
@@ -78,17 +60,15 @@ status_update "Checking whether Code Listener works"
 make -C cl check \
     || die "Code Listener does not work"
 
-status_update "Trying to build Predator"
-make -C sl CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
-    || die "failed to build Predator"
+build_analyzer() {
+    status_update "Trying to build $2"
+    make -C $1 CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
+        || return $?
 
-status_update "Checking whether Predator works"
-make -C sl check
+    status_update "Checking whether $2 works"
+    make -C $1 check
+}
 
-if test -d .git; then
-    die "you are in a git repository --> you need set \$GCC_HOST yourself!"
-else
-    status_update "Initializing \$GCC_HOST"
-    sed "s|GCC_HOST=.*\$|GCC_HOST='$GCC_HOST'|" -i \
-        chk-error-label-reachability.sh register-paths.sh sl/probe.sh
-fi
+build_analyzer fwnull fwnull
+build_analyzer sl Predator
+build_analyzer fa Forester

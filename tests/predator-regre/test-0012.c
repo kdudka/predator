@@ -64,3 +64,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0012.c
+ *
+ * @brief another test-case for fixed length SLL creation/destruction
+ *
+ * - no OOM errors
+ * - no junk
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

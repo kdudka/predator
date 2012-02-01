@@ -27,3 +27,13 @@ int main()
 
     return EXIT_FAILURE;
 }
+
+/**
+ * @file test-0188.c
+ *
+ * @brief wrong count of arguments given to printf()
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

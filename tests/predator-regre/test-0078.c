@@ -135,3 +135,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0078.c
+ *
+ * @brief abstraction of Linux like DLL
+ *
+ * - operating on real macros taken from <linux/list.h>
+ * - the heap graphs explain how it works
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

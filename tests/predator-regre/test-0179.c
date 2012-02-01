@@ -171,3 +171,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0179.c
+ *
+ * @brief test-0136 extended by explicit checks of certain shape props
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

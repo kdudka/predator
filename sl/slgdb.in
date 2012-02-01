@@ -1,26 +1,31 @@
 #!/bin/bash
+export SELF="$0"
+
 if test -z "$1" || test ! -e "$1"; then
     echo Usage: $0 foo.c
     exit 1
 fi
 
-self="`readlink -f "$0"`"
-topdir="`dirname "$self"`/.."
+# include common code base
+topdir="`dirname "$(readlink -f "$SELF")"`/.."
+source "$topdir/build-aux/xgcclib.sh"
 
 # basic setup
 CL_DIR="$topdir/cl"
 SL_DIR="$topdir/sl"
-SL_BUILD="$topdir/sl_build"
-SL_PLUG="$SL_BUILD/libsl.so"
-CC1='@CC1_HOST@'
+GCC_PLUG='@GCC_PLUG@'
+GCC_HOST='@GCC_HOST@'
 
 # attempt to make
 make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D CL_DEBUG=ON' \
     || exit 1
 make -C "$SL_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D SL_DEBUG=ON' \
     || exit 1
-test -x "$SL_PLUG" \
-    || exit 1
+
+# initial checks
+find_gcc_host
+find_cc1_host
+find_gcc_plug sl Predator
 
 # use gdb by default
 test -z "$GDB" && GDB=gdb
@@ -32,11 +37,11 @@ test -z "$SL_VERBOSE" && SL_VERBOSE=1
 test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
 
 # prepare the command line
-RUN="$GDB --quiet --args $CC1 \"$1\" \
+RUN="$GDB --quiet --args $CC1_HOST \"$1\" \
     -I$topdir/include/predator-builtins -DPREDATOR \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \
-    -fplugin=$SL_PLUG \
+    -fplugin=$GCC_PLUG \
     -fplugin-arg-libsl-verbose=$SL_VERBOSE \
     $SL_OPTS"
 

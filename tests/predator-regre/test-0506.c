@@ -40,3 +40,17 @@ int main() {
 
     return 0;
 }
+
+/**
+ * @file test-0506.c
+ *
+ * @brief NULL-terminated SLL of length equal to 2n
+ *
+ * - not supported by Predator since it breaks the SLS abstraction
+ * - luckily, this one is kinda theoretical
+ * - originally taken from fa/data/listeven.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

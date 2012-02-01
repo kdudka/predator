@@ -121,3 +121,16 @@ int main()
     ___sl_plot(NULL);
     return 0;
 }
+
+/**
+ * @file test-0067.c
+ *
+ * @brief test-0066.c extended of two step destruction
+ *
+ *     1. the nested DLLs are destroyed
+ *     2. the master SLL is destroyed
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

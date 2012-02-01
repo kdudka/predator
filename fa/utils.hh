@@ -64,16 +64,16 @@ struct Index {
 	}
 
 	void set(const T& x, size_t v) {
-		if (!this->map.insert(make_pair(x, v)).second)
+		if (!this->map.insert(std::make_pair(x, v)).second)
 			throw std::runtime_error("Index::set() : value already exists");
 	}
 
 	size_t get(const T& x, size_t offset = 0) {
-		return this->map.insert(make_pair(x, this->map.size() + offset)).first->second;
+		return this->map.insert(std::make_pair(x, this->map.size() + offset)).first->second;
 	}
 
 	bool add(const T& x, size_t offset = 0) {
-		return this->map.insert(make_pair(x, this->map.size() + offset)).second;
+		return this->map.insert(std::make_pair(x, this->map.size() + offset)).second;
 	}
 	
 	size_t size() const {
@@ -96,7 +96,7 @@ struct Index {
 	
 	// HACK: better keep this static (not virtual)
 	size_t translateOTF(const T& x) {
-		return this->map.insert(make_pair(x, this->map.size())).first->second;
+		return this->map.insert(std::make_pair(x, this->map.size())).first->second;
 	}
 
 	size_t operator[](const T& x) const {
@@ -135,14 +135,14 @@ struct FullIndex : public Index<T> {
 	}
 
 	size_t add(const T& x) {
-		std::pair<typename Index<T>::map_type::iterator, bool> y = this->map.insert(make_pair(x, this->map.size()));
+		std::pair<typename Index<T>::map_type::iterator, bool> y = this->map.insert(std::make_pair(x, this->map.size()));
 		if (y.second)
 			this->index.push_back(x);
 		return y.first->second;
 	}
 
 	size_t translateOTF(const T& x) {
-		std::pair<typename Index<T>::map_type::iterator, bool> y = this->map.insert(make_pair(x, this->map.size()));
+		std::pair<typename Index<T>::map_type::iterator, bool> y = this->map.insert(std::make_pair(x, this->map.size()));
 		if (y.second)
 			this->index.push_back(x);
 		return y.first->second;
@@ -298,7 +298,7 @@ public:
 		std::unordered_map<T, size_t> m;
 		for (typename std::vector<std::vector<T> >::const_iterator i = src.begin(); i != src.end(); ++i) {
 			for (typename std::vector<T>::const_iterator j = i->begin(); j != i->end(); ++j)
-				++m.insert(make_pair(*j, 0)).first->second;
+				++m.insert(std::make_pair(*j, 0)).first->second;
 		}
 		dst.clear();
 		for (typename std::unordered_map<T, size_t>::iterator i = m.begin(); i != m.end(); ++i) {

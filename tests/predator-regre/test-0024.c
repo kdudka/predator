@@ -70,3 +70,16 @@ int main()
     ___sl_plot("test24-05");
     return 0;
 }
+
+/**
+ * @file test-0024.c
+ *
+ * @brief another test-case for SLL construction/destruction
+ *
+ * - fixed length (though some SLS may be created)
+ * - plots some heap graphs
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

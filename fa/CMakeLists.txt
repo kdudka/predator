@@ -21,7 +21,7 @@ project(fa C CXX)
 add_definitions("-I../include")
 enable_testing()
 
-include("../CMakeLists.common")
+include("../build-aux/common.cmake")
 
 option(FA_DEBUG "Set to ON to enable debugging support" OFF)
 if(FA_DEBUG)
@@ -84,21 +84,16 @@ set(tests
 
 # Predator tests
           p0001
-                                                          p0019
-                      p0023       p0025 p0026 p0027 p0028 p0029
+                      p0023                         p0028 p0029
                                               p0037
-          p0041 p0042             p0045 p0046
-                            p0074 p0075 p0076
-                      p0083       p0085
+                p0042             p0045 p0046
+                                  p0075 p0076
           p0091
                                                           p0119
                                         p0126
                       p0143
-                                                          p0159
     p0170                         p0175
-                                                    p0198
-                                              p0507
-  )
+)
 
 if(TEST_ONLY_FAST)
 else()
@@ -109,6 +104,19 @@ set(tests ${tests}
 )
 
 endif(TEST_ONLY_FAST)
+
+
+# tests known to fail now (but shouldn't!)
+set(tests-known-to-fail
+                                                          p0019
+                                  p0025 p0026 p0027
+          p0041
+                            p0074
+                      p0083       p0085
+                                                          p0159
+                                                    p0198
+                                              p0507
+)
 
 set(cost 1)
 
@@ -148,61 +156,3 @@ endmacro(test_forester_regre)
 
 # default mode
 test_forester_regre("" "" "")
-
-## format of tests:
-##
-##    <test file>:<boxes directory>
-##
-#set (forester_tests
-#  "cdll.c:genericdll.boxes"
-#  "dll-insert.c:genericdll.boxes"
-#  "dll-insertsort.c:genericdll.boxes"
-#  "dll-insertsort_v2.c:genericdll.boxes"
-#  "dll-listofclists.c:listofclists.dll.boxes"
-#  "dll-rev.c:genericdll.boxes"
-#  "dsw.c:"
-#  "recursion.c:"
-#  "sll-bubblesort.c:"
-#  "sll-delete.c:"
-#  "sll-headptr.c:"
-#  "sll-insertsort.c:"
-#  "sll-listofclists.c:listofclists.sll.boxes"
-#  "sll-mergesort.c:"
-#  "sll-rev.c:"
-#  "test-0080.c:"
-#  "test-0098.c:test-0098.boxes"
-#  "test-0124.inline.c:"
-#  "test-0128.c:"
-#  "treecons.c:"
-#  "tree_stack.c:"
-#  "treetraversal.c:treewpp.boxes"
-#
-#  # currently not working test cases
-#  #
-#  #"listeven.c:"
-#  #"listref.c:"
-#  #"test-0061.c:genericdll.boxes"
-#  #"test-0113.c:"
-#  #"treecraziness.c:"
-#  #"rb_insert_rebalance.c:"
-#  #"dfs.c:treewpp.boxes"
-#)
-#
-#foreach (testcase ${forester_tests})
-#  string(REPLACE ":" ";" testcase_list ${testcase})
-#  list(GET testcase_list 0 testfile)
-#  list(GET testcase_list 1 boxdir)
-#
-#  if (NOT ${boxdir} STREQUAL "")
-#    set(box_arg "-fplugin-arg-libfa-args=db-root:${testdir}/${boxdir}")
-#  else()
-#    set(box_arg "")
-#  endif()
-#
-#  add_test(
-#    ${testfile} timeout 90 ${GCC_HOST} -o /dev/null -m32 -DFORESTER
-#    -fplugin=${CMAKE_CURRENT_BUILD_DIR}../fa_build/libfa.so
-#    -c ${testdir}/${testfile} ${box_arg}
-#  )
-#endforeach(testcase)
-

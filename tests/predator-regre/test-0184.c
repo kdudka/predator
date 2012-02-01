@@ -137,3 +137,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0184.c
+ *
+ * @brief test-0183 with an injected programming mistake
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

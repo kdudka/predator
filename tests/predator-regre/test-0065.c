@@ -96,3 +96,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0065.c
+ *
+ * @brief SLL reversion with an ordering check
+ *
+ * - contributed by Tomas Vojnar
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

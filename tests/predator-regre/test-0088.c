@@ -47,3 +47,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0088.c
+ *
+ * @brief the core problem from test-0087.c narrowed down to a minimal
+ *
+ *   example
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

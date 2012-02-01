@@ -40,3 +40,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0194.c
+ *
+ * @brief a trivial example on use of joinData(), once used as a demo
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -51,3 +51,13 @@ int main()
 {
     return !!create_dll();
 }
+
+/**
+ * @file test-0056.c
+ *
+ * @brief a regression test focused on DLS shared data
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -75,3 +75,18 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0010.c
+ *
+ * @brief fixed length SLL creation/destruction
+ *
+ * - no OOM errors here
+ * - utilizes our garbage collector
+ * - Predator properly reports the junk, directly at the place
+ *   where it's introduced, along with full backtrace
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

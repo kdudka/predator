@@ -58,3 +58,17 @@ int main() {
     test_complex();
     return 0;
 }
+
+/**
+ * @file test-0013.c
+ *
+ * @brief regression test focused on the garbage collector
+ *
+ * - not fully automatic, some "#if 1" inside
+ * - mainly for debugging purposes
+ * - infinite loop properly detected
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

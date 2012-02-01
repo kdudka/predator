@@ -48,3 +48,13 @@ int main()
     gl_destroy_until(NULL);
     return 0;
 }
+
+/**
+ * @file test-0034.c
+ *
+ * @brief a test-case for global variables (only one pointer)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

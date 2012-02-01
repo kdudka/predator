@@ -15,3 +15,19 @@ int main() {
 
     return 0;
 }
+
+/**
+ * @file test-0005.c
+ *
+ * @brief non-recursive destruction of a SLL that consists of two nodes
+ *
+ * - OOM state is not handled properly and the analysis detects a
+ *   dereference of NULL value and possible junk as the consequence
+ *   of it
+ *
+ * - when analysed in "fast" mode, no flaws are detected
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

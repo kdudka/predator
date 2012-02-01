@@ -13,8 +13,16 @@ usage(){
     exit 1
 }
 
-PRUNE_ALWAYS=".git make-tgz.sh cl/cl-readme.patch cl/cl-switch-host.patch     \
-    sl/README-fedora.patch sl/README-ubuntu.patch sl/linux-drivers sl/rank.sh"
+PRUNE_ALWAYS=".git tests/linux-drivers \
+build-aux/xgcclib.sh \
+build-aux/make-tgz.sh \
+build-aux/README-ubuntu-release.patch \
+build-aux/cl-readme.patch \
+build-aux/cl-config.patch \
+build-aux/cl-switch-host.patch \
+build-aux/make-srpm.sh \
+build-aux/update-comments-in-tests.sh \
+build-aux/README-fedora-release.patch"
 
 chlog_watch=
 drop_fwnull=no
@@ -40,7 +48,6 @@ case "$PROJECT" in
 
     predator)
         chlog_watch="sl"
-        drop_fwnull=yes
         drop_fa=yes
         readme_sl=yes
         ;;
@@ -49,6 +56,9 @@ case "$PROJECT" in
         usage
         ;;
 esac
+
+test -d build-aux || die "this script needs to be run from \$PREDATOR_ROOT"
+test -x build-aux/make-tgz.sh || die "unable to find self"
 
 REPO="`git rev-parse --show-toplevel`" \
     || die "not in a git repo"
@@ -93,14 +103,14 @@ make ChangeLog "CHLOG_WATCH=$chlog_watch" \
 
 # adapt README
 if test xyes = "x$readme_cl"; then
-    patch README < "cl/cl-readme.patch"
-    patch "switch-host-gcc.sh" < "cl/cl-switch-host.patch"
+    patch README < "build-aux/cl-readme.patch"
+    patch "switch-host-gcc.sh" < "build-aux/cl-switch-host.patch"
 fi
 
 # adapt README-ubuntu
 if test xyes = "x$readme_sl"; then
-    patch README-fedora < "sl/README-fedora.patch"
-    patch README-ubuntu < "sl/README-ubuntu.patch"
+    patch docs/README-fedora < "build-aux/README-fedora-release.patch"
+    patch docs/README-ubuntu < "build-aux/README-ubuntu-release.patch"
 fi
 
 # adapt Makefile
@@ -121,7 +131,7 @@ case "$PROJECT" in
 
     predator)
         sed -i Makefile                         \
-            -e 's|cl fwnull sl fa|cl sl|'       \
+            -e 's|fwnull sl fa|fwnull sl|'      \
             || die "failed to adapt Makefile"
         ;;
 

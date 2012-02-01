@@ -299,3 +299,17 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0014.c
+ *
+ * @brief automatic regression test, based on dll.c/test-dll.cc
+ *
+ * - some noise that comes from unsupported handling of strings
+ * - but the DLL operations itself seem to be analysed properly
+ * - reports an artificial memory leak caused by the abstraction
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

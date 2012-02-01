@@ -131,3 +131,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0108.c
+ *
+ * @brief Linux SLS with nested Linux DLLs consisting of _two_ items
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

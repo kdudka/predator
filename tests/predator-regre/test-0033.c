@@ -151,3 +151,17 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0033.c
+ *
+ * @brief two levels of doubly-linked lists
+ *
+ * - not many of nodes, some #if 1 inside
+ * - mostly for debugging purposes
+ * - intentionally injected a bug into the example
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

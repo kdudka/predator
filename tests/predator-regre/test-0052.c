@@ -98,3 +98,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0052.c
+ *
+ * @brief regression test for SLS discovery (struct nesting, etc.)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

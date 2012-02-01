@@ -29,3 +29,17 @@ int main() {
 
     return 0;
 }
+
+/**
+ * @file test-0003.c
+ *
+ * @brief invalid free()
+ *
+ * - uninitialized value
+ * - non-heap object
+ * - double free
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

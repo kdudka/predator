@@ -135,3 +135,17 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0105.c
+ *
+ * @brief Linux DLS with nested 0+ Linux DLS
+ *
+ * - a bit time consuming test-case for now
+ * - we should probably handle cases like this one somehow more
+ *   generically
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

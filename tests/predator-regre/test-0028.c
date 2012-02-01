@@ -26,3 +26,13 @@ int main() {
     free_list(list.head);
     return 0;
 }
+
+/**
+ * @file test-0028.c
+ *
+ * @brief regression test for invalid dereference, etc.
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

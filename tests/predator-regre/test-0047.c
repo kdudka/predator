@@ -38,3 +38,19 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0047.c
+ *
+ * @brief SLL creation, starting with uninitialized list pointer
+ *
+ * - because of the injected bug, it has to explore two times more
+ *   states
+ *
+ * - plots two heap graphs per each iteration (two variants
+ *   considered because of the uninitialized value mentioned above)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

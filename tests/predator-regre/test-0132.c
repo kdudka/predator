@@ -115,3 +115,15 @@ int main(int argc, char **argv){
 
 	return 0;
 }
+
+/**
+ * @file test-0132.c
+ *
+ * @brief example of creating, adding, deleting, and traversing the list
+ *
+ * - contributed by Kulesh Shanmugasundaram
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

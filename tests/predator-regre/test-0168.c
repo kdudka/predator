@@ -103,3 +103,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0168.c
+ *
+ * @brief yet another modification of test-0124
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

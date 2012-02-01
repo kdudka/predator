@@ -86,33 +86,29 @@ bool SymProc::hasFatalError() const {
 TValId SymProc::valFromCst(const struct cl_operand &op) {
     const struct cl_cst &cst = op.data.cst;
 
-    CustomValue cv(CV_INVALID);
+    CustomValue cv;
 
     const cl_type_e code = cst.code;
     switch (code) {
         case CL_TYPE_ENUM:
         case CL_TYPE_INT:
             // integral value
-            cv.code = CV_INT_RANGE;
-            cv.data.rng = IR::rngFromNum(cst.data.cst_int.value);
+            cv = CustomValue(IR::rngFromNum(cst.data.cst_int.value));
             break;
 
         case CL_TYPE_REAL:
             // floating-point value
-            cv.code = CV_REAL;
-            cv.data.fpn = cst.data.cst_real.value;
+            cv = CustomValue(cst.data.cst_real.value);
             break;
 
         case CL_TYPE_FNC:
             // code pointer
-            cv.code = CV_FNC;
-            cv.data.uid = cst.data.cst_fnc.uid;
+            cv = CustomValue(cst.data.cst_fnc.uid);
             break;
 
         case CL_TYPE_STRING:
             // string literal
-            cv.code = CV_STRING;
-            cv.data.str = cst.data.cst_string.value;
+            cv = CustomValue(cst.data.cst_string.value);
             break;
 
         default:
@@ -526,11 +522,11 @@ bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op) {
         return false;
 
     CustomValue cv = sh_.valUnwrapCustom(val);
-    if (CV_FNC != cv.code)
+    if (CV_FNC != cv.code())
         // not a pointer to function
         return false;
 
-    *pUid = cv.data.uid;
+    *pUid = cv.uid();
     return true;
 }
 
@@ -678,12 +674,9 @@ TValId integralEncoder(
 TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
     SymHeap &sh = proc.sh();
     const CustomValue cv = sh.valUnwrapCustom(val);
-    const ECustomValue code = cv.code;
+    const ECustomValue code = cv.code();
 
     switch (code) {
-        case CV_STRING:
-            return ptrObjectEncoderCore(proc, dst, val, PK_DATA);
-
         case CV_FNC:
             return ptrObjectEncoderCore(proc, dst, val, PK_CODE);
 
@@ -691,8 +684,10 @@ TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
             return integralEncoder(proc, dst, val, rngFromCustom(cv));
 
         case CV_REAL:
-            // TODO
             CL_DEBUG_MSG(proc.lw(), "floating point numbers are not supported");
+            // fall through!
+
+        case CV_STRING:
             return val;
 
         case CV_INVALID:
@@ -1535,11 +1530,10 @@ bool handleRangeBitMask(
     if (!numFromVal(&mask, sh, valMask))
         CL_BREAK_IF("handleRangeBitMask() malfunction");
 
-    CustomValue cv(CV_INT_RANGE);
-    IR::Range &rng = cv.data.rng;
-    rng = (isRange1) ? rng1 : rng2;
+    IR::Range rng = (isRange1) ? rng1 : rng2;
     rng &= mask;
 
+    const CustomValue cv(rng);
     *pResult = sh.valWrapCustom(cv);
     return true;
 }
@@ -1604,8 +1598,7 @@ TValId handleBitNot(SymHeapCore &sh, const TValId val) {
     const IR::TInt result = ~num;
 
     // wrap the result as a heap value expressing a constant integer
-    CustomValue cv(CV_INT_RANGE);
-    cv.data.rng = IR::rngFromNum(result);
+    CustomValue cv(IR::rngFromNum(result));
     return sh.valWrapCustom(cv);
 }
 
@@ -1641,7 +1634,7 @@ bool isAnyIntValue(const SymHeapCore &sh, const TValId val) {
     }
 
     const CustomValue &cv = sh.valUnwrapCustom(val);
-    const ECustomValue code = cv.code;
+    const ECustomValue code = cv.code();
     switch (code) {
         case CV_INT_RANGE:
             return true;
@@ -2001,9 +1994,12 @@ bool SymExecCore::concretizeLoop(
 #endif
         BOOST_FOREACH(unsigned idx, derefs) {
             const struct cl_operand &op = insn.operands.at(idx);
+            const TValId at = slave.varAt(op);
+            if (!canWriteDataPtrAt(sh, at))
+                continue;
 
             // we expect a pointer at this point
-            const TValId val = valOfPtrAt(sh, slave.varAt(op));
+            const TValId val = valOfPtrAt(sh, at);
             if (VT_ABSTRACT == sh.valTarget(val)) {
 #ifndef NDEBUG
                 CL_BREAK_IF(hitLocal);

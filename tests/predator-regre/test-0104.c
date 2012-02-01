@@ -116,3 +116,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0104.c
+ *
+ * @brief Linux DLS with nested _empty_ Linux DLLs
+ *
+ * - a simplification of test-0100, which has been, surprisingly,
+ *   harder to analyse for us
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

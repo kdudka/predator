@@ -6,11 +6,6 @@ export LC_ALL=C
 
 export CCACHE_DISABLE=1
 
-die() {
-    printf "%s: %s\n" "$SELF" "$*" >&2
-    exit 1
-}
-
 usage() {
     echo Usage: $0 GCC_ARGS
     exit 1
@@ -26,21 +21,19 @@ seek_input_file() {
 
 seek_input_file "$@" || usage
 
-# basic setup
+# include common code base
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
+source "$topdir/build-aux/xgcclib.sh"
+
+# basic setup
 export SINK="/dev/null"
-export SL_PLUG="$topdir/sl_build/libsl.so"
+export GCC_PLUG='@GCC_PLUG@'
 export GCC_HOST='@GCC_HOST@'
 export GCC_OPTS="-S -o $SINK -O0 -I$topdir/include/predator-builtins -DPREDATOR"
 
 # initial checks
-"$GCC_HOST" --version >"$SINK" 2>&1 || {
-    GCC_HOST="$topdir/gcc-install/bin/gcc"
-    "$GCC_HOST" --version >"$SINK" \
-        || die "unable to run gcc: $GCC_HOST --version"
-}
-
-test -r "$SL_PLUG"  || die "Predator GCC plug-in not found: ${SL_PLUG}"
+find_gcc_host
+find_gcc_plug sl Predator
 
 # use chromium as default SVG_VIEWER
 test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
@@ -85,7 +78,7 @@ run_gcc() {
     fi
 
     "$GCC_HOST" $GCC_OPTS                                           \
-        -fplugin="$SL_PLUG" -fplugin-arg-libsl-pid-file="$pidfile"  \
+        -fplugin="$GCC_PLUG" -fplugin-arg-libsl-pid-file="$pidfile" \
         -fplugin-arg-libsl-args=error_label:ERROR $SL_OPTS "$@"     \
         3>&1 1>&2 2>&3 | stdbuf --output=L grep -E                  \
         ' \[-fplugin=libsl\.so\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'

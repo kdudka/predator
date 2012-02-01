@@ -37,3 +37,13 @@ int main()
     ___sl_plot("02-sll-ready");
     return 0;
 }
+
+/**
+ * @file test-0050.c
+ *
+ * @brief simple visualization of SLS abstraction in progress
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -87,3 +87,13 @@ int main()
     free(((char *)ptr) - __builtin_offsetof (struct sub_list, link));
     return 0;
 }
+
+/**
+ * @file test-0141.c
+ *
+ * @brief simplification of test-0103.c (only some offset manipulation)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

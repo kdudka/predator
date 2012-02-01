@@ -38,3 +38,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0112.c
+ *
+ * @brief hello-world, once used as the most trivial example for symjoin
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */
