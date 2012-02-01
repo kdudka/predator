@@ -219,7 +219,7 @@ struct LoopAnalyser {
 
 };
 
-typedef enum { biNone, biMalloc, biFree, biNondet, biFix, biPrintHeap } builtin_e;
+typedef enum { biNone, biMalloc, biFree, biNondet, biFix, biAbort, biPrintHeap } builtin_e;
 
 struct BuiltinTable {
 
@@ -233,6 +233,7 @@ public:
 		this->_table["__nondet"] = builtin_e::biNondet;
 		this->_table["__fix"] = builtin_e::biFix;
 		this->_table["__print_heap"] = builtin_e::biPrintHeap;
+		this->_table["abort"] = builtin_e::biAbort;
 	}
 
 	builtin_e operator[](const std::string& key) {
@@ -1129,6 +1130,9 @@ protected:
 				return;
 			case builtin_e::biPrintHeap:
 				this->cPrintHeap(insn);
+				return;
+			case builtin_e::biAbort:
+				this->append(new FI_abort(&insn));
 				return;
 			default:
 				break;
