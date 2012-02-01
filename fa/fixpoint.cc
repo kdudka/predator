@@ -67,25 +67,26 @@ struct SmarterTMatchF {
 		if (t1.label()->getTag() != t2.label()->getTag())
 			return false;
 
-		std::vector<size_t> tmp;
+		if (t1.lhs().size() != t2.lhs().size())
+			return false;
 
-		size_t ref;
+		for (size_t i = 0; i < t1.lhs.size(); ++i) {
 
-		for (std::vector<size_t>::const_iterator i = t1.lhs().begin(); i != t1.lhs().end(); ++i) {
-			if (FA::isData(*i) && !this->fae.getRef(*i, ref))
-				tmp.push_back(*i);
-		}
+			size_t s1 = t1.lhs()[*i], s2 = t2.lhs()[*i], ref;
 
-		size_t i = 0;
+			if (FA::isData(s1) && !this->fae.getRef(s1, ref)) {
 
-		for (std::vector<size_t>::const_iterator j = t2.lhs().begin(); j != t2.lhs().end(); ++j) {
-			if (FA::isData(*j) && !this->fae.getRef(*j, ref)) {
-				if ((i >= tmp.size()) || (*j != tmp[i++]))
+				if (!FA::isData(s2) || this->fae.getRef(s2, ref))
 					return false;
+
 			}
+
+			if (FA::isData(s2) && !this->fae.getRef(s2, ref))
+				return false;
+
 		}
 
-		return (i == tmp.size());
+		return true;
 
 	}
 };
