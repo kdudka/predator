@@ -89,3 +89,13 @@ int main()
     ___sl_plot(NULL);
     return 0;
 }
+
+/**
+ * @file test-0064.c
+ *
+ * @brief more excessive test for SLS nesting and connecting
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

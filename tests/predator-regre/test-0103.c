@@ -162,3 +162,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0103.c
+ *
+ * @brief alternation of test-0101 with some additional concretization
+ *
+ * - regression test focused on handling of segment Neq predicates
+ * - some hidden memory leaks in there
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

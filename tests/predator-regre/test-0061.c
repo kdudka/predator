@@ -102,3 +102,24 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0061.c
+ *
+ * @brief conversion of SLL to DLL and vice versa
+ *
+ *     1. creates a singly-linked list, using the 'next' selector
+ *        for biding
+ *
+ *     2. goes through the list and completes the missing values
+ *        of 'prev' selector, in order to obtain a doubly-linked
+ *        list
+ *
+ *     3. goes through the list and zero the 'next' selector
+ *        of each node, in order to get a reversed singly-linked
+ *        list
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

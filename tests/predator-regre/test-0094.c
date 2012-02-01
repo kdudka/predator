@@ -92,3 +92,15 @@ int main()
     destroy_tree(tree);
     return rv;
 }
+
+/**
+ * @file test-0094.c
+ *
+ * @brief regression test focused on named/anonymous struct/unions
+ *
+ *   and handling of function pointers (heap graph available)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -64,3 +64,13 @@ int main() {
     free(item);
     return EXIT_SUCCESS;
 }
+
+/**
+ * @file test-0120.c
+ *
+ * @brief Linux "list" of length one, based on hlist_head/hlist_node
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

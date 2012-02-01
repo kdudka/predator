@@ -128,3 +128,13 @@ int main()
 
     return EXIT_SUCCESS;
 }
+
+/**
+ * @file test-0089.c
+ *
+ * @brief regression test focused on off-values, address aliasing, etc.
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

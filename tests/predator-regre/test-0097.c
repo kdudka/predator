@@ -150,3 +150,15 @@ int main()
     //___sl_break();
     return 0;
 }
+
+/**
+ * @file test-0097.c
+ *
+ * @brief Linux like doubly-linked lists nested into plain SLS
+ *
+ * - only abstraction here, no concretization
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

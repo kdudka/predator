@@ -73,3 +73,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0060.c
+ *
+ * @brief DLS abstraction of a cyclic DLL
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -46,3 +46,15 @@ int main() {
 
     return 0;
 }
+
+/**
+ * @file test-0509.c
+ *
+ * @brief random node deletion from a NULL-terminated SLL
+ *
+ * - originally taken from fa/data/sll-delete.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -31,6 +31,7 @@
 #include "util.hh"
 #include "worklist.hh"
 
+#include <cctype>
 #include <fstream>
 #include <iomanip>
 #include <map>
@@ -382,6 +383,10 @@ void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
         << ", label=\"";
 
     describeObject(plot, obj, lonely);
+
+    if (OC_DATA == code)
+        plot.out << " [size = " << obj.objType()->size << "B]";
+
     plot.out << "\"];\n";
 }
 
@@ -705,9 +710,11 @@ const char* labelByTarget(const EValueTarget code) {
 }
 
 void describeInt(PlotData &plot, const IR::TInt num, const TValId val) {
-    plot.out << ", fontcolor=red, label=\"[int] "
-        << num << " (#"
-        << val << ")\"";
+    plot.out << ", fontcolor=red, label=\"[int] " << num;
+    if (IR::Int0 < num && num < UCHAR_MAX && isprint(num))
+        plot.out << " = '" << static_cast<char>(num) << "'";
+
+    plot.out << " (#" << val << ")\"";
 }
 
 void describeIntRange(PlotData &plot, const IR::Range &rng, const TValId val) {
@@ -735,7 +742,7 @@ void describeFnc(PlotData &plot, const int uid, const TValId val) {
         << val << ")\"";
 }
 
-void describeStr(PlotData &plot, const char *str, const TValId val) {
+void describeStr(PlotData &plot, const std::string &str, const TValId val) {
     // we need to escape twice, once for the C compiler and once for graphviz
     plot.out << ", fontcolor=blue, label=\"\\\""
         << str << "\\\" (#"
@@ -745,31 +752,32 @@ void describeStr(PlotData &plot, const char *str, const TValId val) {
 void describeCustomValue(PlotData &plot, const TValId val) {
     SymHeap &sh = plot.sh;
     const CustomValue cVal = sh.valUnwrapCustom(val);
-    const CustomValueData &data = cVal.data;
 
-    const ECustomValue code = cVal.code;
+    const ECustomValue code = cVal.code();
     switch (code) {
         case CV_INVALID:
             plot.out << ", fontcolor=red, label=CV_INVALID";
             break;
 
-        case CV_INT_RANGE:
-            if (isSingular(data.rng))
-                describeInt(plot, data.rng.lo, val);
+        case CV_INT_RANGE: {
+            const IR::Range &rng = cVal.rng();
+            if (isSingular(rng))
+                describeInt(plot, rng.lo, val);
             else
-                describeIntRange(plot, data.rng, val);
+                describeIntRange(plot, rng, val);
             break;
+        }
 
         case CV_REAL:
-            describeReal(plot, data.fpn, val);
+            describeReal(plot, cVal.fpn(), val);
             break;
 
         case CV_FNC:
-            describeFnc(plot, data.uid, val);
+            describeFnc(plot, cVal.uid(), val);
             break;
 
         case CV_STRING:
-            describeStr(plot, data.str, val);
+            describeStr(plot, cVal.str(), val);
             break;
     }
 }

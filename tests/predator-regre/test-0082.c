@@ -90,3 +90,20 @@ int main(void) {
 	
 	return EXIT_SUCCESS;
 }
+
+/**
+ * @file test-0082.c
+ *
+ * @brief a.k.a. jonathan-DLL.c
+ *
+ * - an example provided by Jonathan Cederberg
+ * - seen infinite because we abstract out integral values
+ * - does not care about the OOM state, what makes our analysis
+ *   a bit complex
+ *
+ * - works better with -fplugin-arg-libsl-symexec-args=fast
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

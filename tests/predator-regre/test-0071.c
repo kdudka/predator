@@ -125,3 +125,13 @@ int main()
     ___sl_plot(NULL);
     return 0;
 }
+
+/**
+ * @file test-0071.c
+ *
+ * @brief SLL, each node points to a shared SLL
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

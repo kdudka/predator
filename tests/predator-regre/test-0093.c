@@ -122,3 +122,15 @@ int main()
 
     return EXIT_SUCCESS;
 }
+
+/**
+ * @file test-0093.c
+ *
+ * @brief regression test focused on handling of unions
+ *
+ * - also plots some heap graphs of them
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

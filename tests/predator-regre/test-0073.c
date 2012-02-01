@@ -137,3 +137,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0073.c
+ *
+ * @brief playing with some macros from <linux/list.h>
+ *
+ * - no abstraction involved
+ * - the heap graphs should be self-explaining
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

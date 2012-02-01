@@ -44,3 +44,16 @@ int main() {
 
     return 0;
 }
+
+/**
+ * @file test-0510.c
+ *
+ * @brief traversal of a NULL-terminated SLL
+ *
+ * - each node of the SLL contains a pointer to head
+ * - originally taken from fa/data/sll-headptr.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

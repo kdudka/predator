@@ -1,11 +1,3 @@
-/**
- * @file test-0079.c
- * test-case focused on abstraction of Linux like doubly-linked lists
- *
- * The nodes are linked through a nested structure and the root objects are not
- * pointed from anywhere.
- */
-
 #include <verifier-builtins.h>
 #include <stdlib.h>
 
@@ -86,3 +78,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0079.c
+ *
+ * @brief simplified variant of test-0078.c
+ *
+ * - useful mainly for debugging purposes
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

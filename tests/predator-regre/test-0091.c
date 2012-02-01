@@ -27,3 +27,13 @@ int main()
     free(s);
     return EXIT_SUCCESS;
 }
+
+/**
+ * @file test-0091.c
+ *
+ * @brief anonymous union within a struct (minimal example)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

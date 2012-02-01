@@ -51,3 +51,16 @@ int main()
     ___sl_plot("02-sll-ready");
     return 0;
 }
+
+/**
+ * @file test-0049.c
+ *
+ * @brief abstraction of SLL, each node contains a pointer to head
+ *
+ * - a few mistakes have been done in the test
+ * - see test-0118.c for the sane variant of this test
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

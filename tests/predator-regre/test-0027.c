@@ -21,3 +21,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0027.c
+ *
+ * @brief regression test for detection of some errors on call of free()
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

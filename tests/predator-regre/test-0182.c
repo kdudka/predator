@@ -187,3 +187,13 @@ int main()
     dll_destroy_master(dll);
     return 0;
 }
+
+/**
+ * @file test-0182.c
+ *
+ * @brief test-0181 with an injected programming mistake
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -49,3 +49,17 @@ int main()
 
     return EXIT_SUCCESS;
 }
+
+/**
+ * @file test-0085.c
+ *
+ * @brief regression test focused on aliasing of a field with the root
+ *
+ * - test for address comparison and call of free()
+ * - some of the tests are a bit crazy, however being used in
+ *   handling of Linux like DLS in some way
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

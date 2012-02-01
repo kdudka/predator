@@ -27,3 +27,13 @@ int main() {
     }
     return 0;
 }
+
+/**
+ * @file test-0031.c
+ *
+ * @brief OOM error detection demo, good variant of the example
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

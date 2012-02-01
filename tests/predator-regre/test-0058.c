@@ -72,3 +72,18 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0058.c
+ *
+ * @brief alternation of test-0057.c
+ *
+ * - it creates a DLL of fixed length, though long enough to
+ *   trigger the DLS abstraction
+ *
+ * - as there is less non-determinism, it produces fewer graphs
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

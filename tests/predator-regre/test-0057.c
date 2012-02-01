@@ -65,3 +65,18 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0057.c
+ *
+ * @brief concretization of DLS
+ *
+ * - it creates a (possibly infinite) DLL
+ * - the abstraction is triggered
+ * - the list is traversed from its one end to its other end
+ *   (concretization/abstraction)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

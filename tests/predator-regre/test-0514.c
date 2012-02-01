@@ -99,3 +99,15 @@ int main() {
 
     return 0;
 }
+
+/**
+ * @file test-0514.c
+ *
+ * @brief tiny simplification of test-0513 for Predator
+ *
+ * - not needed with SE_ABSTRACT_ON_LOOP_EDGES_ONLY [now default]
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

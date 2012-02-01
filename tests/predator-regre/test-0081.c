@@ -89,3 +89,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0081.c
+ *
+ * @brief traversal of Linux like DLL
+ *
+ * - abstraction/concretization
+ * - some macros were expanded in order to make the code clear
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

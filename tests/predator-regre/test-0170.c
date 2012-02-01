@@ -80,3 +80,16 @@ int main () {
     DLDisposeList(&list);
     return 0;
 }
+
+/**
+ * @file test-0170.c
+ *
+ * @brief a NULL-terminated DLL with pointers to begin, end, and cursor
+ *
+ * - in order to not report artificial junk, needs to splice-out a
+ *   chain of DLS
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

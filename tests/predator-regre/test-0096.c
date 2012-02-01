@@ -88,3 +88,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0096.c
+ *
+ * @brief tiny modification of test-0087 that operates on infinite list
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

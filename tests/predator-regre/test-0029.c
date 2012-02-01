@@ -26,3 +26,13 @@ int main() {
     free_list(list.head);
     return 0;
 }
+
+/**
+ * @file test-0029.c
+ *
+ * @brief error-free variant of test-0028.c (a hard to find error fixed)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

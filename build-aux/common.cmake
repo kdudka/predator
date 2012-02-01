@@ -1,4 +1,4 @@
-# Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2010-2012 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -74,17 +74,13 @@ if(USE_INT3_AS_BRK)
     add_definitions("-DUSE_INT3_AS_BRK")
 endif()
 
+# FIXME: the use of $GCC_HOST from the environment should be better documented
 if("$ENV{GCC_HOST}" STREQUAL "")
-    get_filename_component(gcc_host_local "../gcc-install/bin/gcc" ABSOLUTE)
-    set(GCC_HOST "${gcc_host_local}" CACHE STRING "host gcc executable")
+    get_filename_component(def_gcc_host "../gcc-install/bin/gcc" ABSOLUTE)
 else()
-    set(GCC_HOST "$ENV{GCC_HOST}" CACHE STRING "host gcc executable")
+    set(def_gcc_host "$ENV{GCC_HOST}")
 endif()
 
-get_filename_component(gcc_host_local_libexec "../gcc-install/libexec" ABSOLUTE)
-find_path(cc1_host_local_path cc1 PATHS "${gcc_host_local_libexec}/gcc/*/4.6.2"
-    NO_DEFAULT_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_PATH
-    NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH)
-set(CC1_HOST "${cc1_host_local_path}/cc1" CACHE STRING "host cc1 executable")
+set(GCC_HOST "${def_gcc_host}" CACHE STRING "absolute path to host gcc(1)")
 
 option(TEST_WITH_VALGRIND "Set to ON to enable valgrind tests" OFF)

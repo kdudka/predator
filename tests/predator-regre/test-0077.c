@@ -65,3 +65,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0077.c
+ *
+ * @brief stack smashing detection:
+ *
+ *     test-0077.c:46:18: error: dereference of unknown value
+ *     test-0077.c:48:18: error: dereference of unknown value
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

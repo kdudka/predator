@@ -502,13 +502,13 @@ Tests taken from Forester
 "Hello world!" like examples
 ============================
     test-0002.c - invalid dereference
-                    - NULL value
-                    - an uninitialized value
+                - NULL value
+                - an uninitialized value
 
     test-0003.c - invalid free()
-                    - uninitialized value
-                    - non-heap object
-                    - double free
+                - uninitialized value
+                - non-heap object
+                - double free
 
     test-0004.c - infinite loop, one malloc() and one free() per each iteration
                 - the analysis stops, though the program is infinite
@@ -677,9 +677,7 @@ Tests taken from Forester
 
     test-0147.c - test-0090.c reduced to a minimal example while debugging a bug
 
-    test-0154.c - error-free variant of test-0033 
-
-    test-0158.c - memory leak induced by data reinterpretation
+    test-0154.c - error-free variant of test-0033
 
     test-0159.c - off-values handling, delayed killing of pointed variables
 
@@ -706,6 +704,18 @@ Tests taken from Forester
     test-0203.c - similar to test-0198, but uses values close to one
 
     test-0204.c - same as test-0203, but uses values close to minus one
+
+
+Data reinterpretation
+=====================
+    test-0158.c - memory leak induced by data reinterpretation
+
+    test-0209.c - byte-level access to zero-terminated strings
+
+    test-0210.c - extended version of test-0209.c with explicit assertion checks
+
+    test-0211.c - in-place reversal of a short zero-terminated string
+                - works fine with (0 == SE_ALLOW_OFF_RANGES)
 
 
 Tiny DLL library written on scratch

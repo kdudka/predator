@@ -1,26 +1,32 @@
 #!/bin/bash
+export SELF="$0"
+
 if test -z "$1" || test ! -e "$1"; then
     echo Usage: $0 foo.c
     exit 1
 fi
 
-self="`readlink -f "$0"`"
-topdir="`dirname "$self"`/.."
+# include common code base
+topdir="`dirname "$(readlink -f "$SELF")"`/.."
+source "$topdir/build-aux/xgcclib.sh"
 
 # basic setup
 CL_DIR="$topdir/cl"
 FA_DIR="$topdir/fa"
 FA_BUILD="$topdir/fa_build"
 FA_PLUG="$FA_BUILD/libfa.so"
-CC1='@CC1_HOST@'
+GCC_HOST='@GCC_HOST@'
 
 # attempt to make
 make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D CL_DEBUG=ON' \
     || exit 1
 make -C "$FA_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D FA_DEBUG=ON' \
     || exit 1
-test -x "$FA_PLUG" \
-    || exit 1
+
+# initial checks
+find_gcc_host
+find_cc1_host
+test -r "$FA_PLUG"  || die "Forester GCC plug-in not found: ${FA_PLUG}"
 
 # use gdb by default
 test -z "$GDB" && GDB=gdb
@@ -40,7 +46,7 @@ fi
 
 # prepare the command line
 RUN="LD_PRELOAD=/lib/x86_64-linux-gnu/libpthread.so.0 \
-    $GDB --quiet --args $CC1 \"$1\" \
+    $GDB --quiet --args $CC1_HOST \"$1\" \
     -I$topdir/include/predator-builtins -DFORESTER \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \

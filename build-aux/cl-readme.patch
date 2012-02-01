@@ -1,5 +1,5 @@
 diff --git a/README b/README
-index a66d6d4..c13d05b 100644
+index af87125..cb204fe 100644
 --- a/README
 +++ b/README
 @@ -1,17 +1,21 @@
@@ -13,6 +13,10 @@ index a66d6d4..c13d05b 100644
 -Listener infrastructure (included).  Although Predator is intended to be as
 -portable as GCC is, we support only Linux for now.  You can find the latest news
 -on the following project page:
+-
+-    http://www.fit.vutbr.cz/research/groups/verifit/tools/predator
+-
+-Predator and Code Listener are licensed as GPLv3+, see COPYING for details.
 +Code Listener
 +=============
 +Code Listener is an easy to use infrastructure for building static analysis
@@ -27,11 +31,9 @@ index a66d6d4..c13d05b 100644
 +library that can be used to build an analyser as a GCC *plug-in* (using the
 +native GCC plug-in interface).  You can find the latest news on the following
 +project page:
- 
--    http://www.fit.vutbr.cz/research/groups/verifit/tools/predator
++
 +    http://www.fit.vutbr.cz/research/groups/verifit/tools/code-listener
- 
--Predator and Code Listener are licensed as GPLv3+, see COPYING for details.
++
 +Code Listener is licensed as GPLv3+, see COPYING for details.
  
  
@@ -47,7 +49,7 @@ index a66d6d4..c13d05b 100644
     * CMake 2.8+
       - available at http://www.cmake.org
       - the executable is called 'cmake'
-@@ -71,54 +75,29 @@ giving the option '-jN' to 'make', where N is the number of CPU cores plus one
+@@ -71,50 +75,25 @@ giving the option '-jN' to 'make', where N is the number of CPU cores plus one
  (a commonly used heuristic, there exist several others).  But first make sure
  that your machine has enough resources for building GCC in parallel.
  
@@ -83,7 +85,7 @@ index a66d6d4..c13d05b 100644
 -transparently, it is recommended to set certain environment variables.  You can
 -use the script register-paths.sh to do this automatically.
 -
--    . register-paths.sh
+-    . sl_build/register-paths.sh
 -
 -Then you can simply use the '-fplugin' option of GCC as documented in the gcc(1)
 -man page:
@@ -95,23 +97,14 @@ index a66d6d4..c13d05b 100644
 -    echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
 -
  
- Building from sources against the system GCC [only for experts]
- ===============================================================
- This method is intended for people that already have experience with building
- GCC plug-ins.  It requires a build of GCC with plug-in support compiled in (not
--necessarily the system one).  The currently supported version of GCC is 4.6.1
+ Building from sources against the system GCC
+ ============================================
+ This method requires a build of GCC with plug-in support compiled in (not
+-necessarily the system one).  The currently supported version of GCC is 4.6.2
 -and the test-suite is guaranteed to fully succeed only against this version of
 -GCC.  However, the Predator plug-in itself is known to work with GCC 4.5.x
 -equally well.
 +necessarily the system one).
  
--You can use the 'switch-host-gcc.sh' script to rebuild Code Listener and
--Predator against a GCC build of your choice.  For details, please run
--'switch-host-gcc.sh' without any arguments.  The script needs to be run in the
--same directory as this README is.  If it fails, make sure your environment is
--sane.  Especially check the PATH and LD_LIBRARY_PATH environment variables.
-+You can use the 'switch-host-gcc.sh' script to rebuild Code Listener against a
-+GCC build of your choice.  For details, please run 'switch-host-gcc.sh' without
-+any arguments.  The script needs to be run in the same directory as this README
-+is.  If it fails, make sure your environment is sane.  Especially check the PATH
-+and LD_LIBRARY_PATH environment variables.
+ You can use the 'switch-host-gcc.sh' script to rebuild Code Listener, Predator,
+ and Forester against a GCC build of your choice.  For details, please run

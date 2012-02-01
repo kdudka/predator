@@ -99,3 +99,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0153.c
+ *
+ * @brief out-of-range access to array (otherwise equal to test-0152.c)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

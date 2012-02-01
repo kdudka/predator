@@ -22,12 +22,12 @@ for i in test-0???.c; do
     n="`printf %s "$i" | sed -e 's/^test-0*//' -e 's/.c$//'`"
 
     # generate the tNNNN target (t = Test)
-    printf "t%d:\n\t../../sl/slgcc -m32 %s\n\n" "$n" "$i" >> Makefile
+    printf "t%d:\n\t../../sl_build/slgcc -m32 %s\n\n" "$n" "$i" >> Makefile
 
     # generate the vNNNN target (v = Verbose)
-    printf "v%d:\n\t../../sl/slgccv -m32 %s\n\n" "$n" "$i" >> Makefile
+    printf "v%d:\n\t../../sl_build/slgccv -m32 %s\n\n" "$n" "$i" >> Makefile
 
     # generate the xNNNN target
-    printf "x%d:\n\t../../sl/slgccv -m32 %s 2>&1 | grep '^%s'\n\n" \
+    printf "x%d:\n\t../../sl_build/slgccv -m32 %s 2>&1 | grep '^%s'\n\n" \
         "$n" "$i" "$i" >> Makefile
 done

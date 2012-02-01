@@ -26,3 +26,13 @@ int main()
     const long val = (long) *******px;
     return val;
 }
+
+/**
+ * @file test-0044.c
+ *
+ * @brief a torture test focused on chaining of dereferences
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

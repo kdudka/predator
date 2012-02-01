@@ -65,3 +65,17 @@ int main()
     free(list);
     return 0;
 }
+
+/**
+ * @file test-0017.c
+ *
+ * @brief an alternation of test-0016.c
+ *
+ * - seen infinite because we abstract out integral values
+ * - the analysis terminates thanks to finite number of states
+ * - garbage collector not utilized here
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

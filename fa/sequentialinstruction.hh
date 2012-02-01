@@ -20,28 +20,60 @@
 #ifndef SEQUENTIAL_INSTRUCTION_H
 #define SEQUENTIAL_INSTRUCTION_H
 
+// Forester headers
 #include "abstractinstruction.hh"
 
+/**
+ * @file sequentialinstruction.hh
+ * SequentialInstruction - abstract base class for sequential instructions
+ */
+
+
+/**
+ * @brief  An abstract base class that represents a sequential instruction
+ *
+ * Abstract class representing a sequential instruction. This class serves as
+ * the base class for all sequential instructions.
+ */
 class SequentialInstruction : public AbstractInstruction {
 
 protected:
 
+	/// the following instruction
 	AbstractInstruction* next_;
 
 public:
 
+	/**
+	 * @brief  The constructor
+	 *
+	 * ``Default'' constructor, creates a new sequential instruction of given type
+	 * for given instruction in CL's code storage.
+	 *
+	 * @param[in]  insn    Source instruction in the CL's code storage
+	 * @param[in]  fiType  The type of the instruction (from #fi_type_e)
+	 */
 	SequentialInstruction(const CodeStorage::Insn* insn = nullptr,
 		fi_type_e fiType = fi_type_e::fiUnspec)
 		: AbstractInstruction(insn, fiType) {}
 
+	/**
+	 * @copydoc AbstractInstruction::finalize
+	 */
 	virtual void finalize(
 		const std::unordered_map<const CodeStorage::Block*,
 		AbstractInstruction*>& codeIndex,
 		std::vector<AbstractInstruction*>::const_iterator cur
 	);
 
+	/**
+	 * @brief  Gets the next instruction
+	 *
+	 * Method that retrieves the next instruction in the sequence.
+	 * 
+	 * @returns  The next instruction in the sequence
+	 */
 	AbstractInstruction* next() const { return this->next_; }
-
 };
 
 #endif

@@ -20,8 +20,8 @@
 // see http://www.delorie.com/gnu/docs/gcc/gccint_31.html
 
 // this include has to be the first (according the gcc plug-in API)
-#include <gcc/gcc-plugin.h>
-#include <gcc/plugin-version.h>
+#include <gcc-plugin.h>
+#include <plugin-version.h>
 
 #include <cl/code_listener.h>
 
@@ -39,20 +39,20 @@
 #   define ENABLE_CHECKING 0
 #endif
 
-#include <gcc/coretypes.h>
-#include <gcc/diagnostic.h>
-#include <gcc/ggc.h>
-#include <gcc/hashtab.h>
+#include <coretypes.h>
+#include <diagnostic.h>
+#include <ggc.h>
+#include <hashtab.h>
 
 // this include has to be before <gcc/function.h>; otherwise it will NOT compile
-#include <gcc/tm.h>
+#include <tm.h>
 
-#include <gcc/function.h>
-#include <gcc/gimple.h>
-#include <gcc/input.h>
-#include <gcc/real.h>
-#include <gcc/toplev.h>
-#include <gcc/tree-pass.h>
+#include <function.h>
+#include <gimple.h>
+#include <input.h>
+#include <real.h>
+#include <toplev.h>
+#include <tree-pass.h>
 
 #ifndef _GNU_SOURCE
 #   define _GNU_SOURCE

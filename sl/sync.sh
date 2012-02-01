@@ -14,7 +14,7 @@ printf "${R}ATTENTION:${N} This script is not intended to be run !!!
 Please do not commit the generated files to prevent a disaster...\n"
 
 do_sync() {
-    ./probe.sh $1
+    ../sl_build/probe.sh $1
     printf "\n${B}Processing the results...${N}\n" >&2
     for i in $1; do
         c="$(printf %s "$i" | sed 's|\.c$||')"

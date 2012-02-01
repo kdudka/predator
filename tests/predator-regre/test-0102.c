@@ -149,3 +149,22 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0102.c
+ *
+ * @brief a Linux DLS with two nested independent Linux DLSs
+ *
+ * - while destroying the whole data structure, we forgot
+ *   to destroy one of the sub-lits
+ *
+ * - Predator shows us where the call of a destructor belongs:
+ *
+ *     test-0102.c:84:13: warning: killing junk
+ *     test-0102.c:148:16: note: from call of destroy_top()
+ *     test-0102.c:141:5: note: from call of main()
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

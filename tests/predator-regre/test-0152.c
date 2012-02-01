@@ -99,3 +99,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0152.c
+ *
+ * @brief same as test-0151, but uses a static array of list heads
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

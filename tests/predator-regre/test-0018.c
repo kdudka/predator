@@ -51,3 +51,16 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0018.c
+ *
+ * @brief modification of test-0017.c
+ *
+ * - explicit destruction replaced by assignment of NULL value
+ * - garbage collector utilized
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

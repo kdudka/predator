@@ -62,3 +62,16 @@ int main()
     free(pt);
     return 0;
 }
+
+/**
+ * @file test-0519.c
+ *
+ * @brief test-0113 once simplified for Forester
+ *
+ * - originally taken from fa/data/test-0113.c
+ * - known to work with SE_PROTO_COST_ASYM == 4
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -70,3 +70,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0118.c
+ *
+ * @brief abstraction of SLL, each node contains a pointer to head
+ *
+ * - improved variant of test-0049
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

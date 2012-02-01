@@ -60,3 +60,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0080.c
+ *
+ * @brief Linux lists reduced to SLLs
+ *
+ * - traversal of the abstracted list
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

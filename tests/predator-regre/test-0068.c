@@ -66,3 +66,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0068.c
+ *
+ * @brief a regression test focused on DLS discovery/abstraction
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

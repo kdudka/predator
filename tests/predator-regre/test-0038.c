@@ -63,3 +63,16 @@ int main()
     ___sl_plot("test38-05");            // print final state
     return 0;
 }
+
+/**
+ * @file test-0038.c
+ *
+ * @brief simple SLL creation/destruction
+ *
+ * - one false alarm caused by the poor support of integral values
+ * - contributed by Petr Peringer
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

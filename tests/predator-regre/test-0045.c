@@ -45,3 +45,13 @@ int main()
     ___sl_plot("test-0045-end");
     return result;
 }
+
+/**
+ * @file test-0045.c
+ *
+ * @brief a test that checks if Neq predicates are honored by symstate
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -57,3 +57,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0075.c
+ *
+ * @brief off-values handling, aliasing of the 1st field with the root
+ *
+ * - see the checks inside and the generated graph for more info
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

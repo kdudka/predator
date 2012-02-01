@@ -25,35 +25,15 @@
 class FI_cmp_base : public SequentialInstruction {
 
 	template <class F>
-	friend void executeGeneric(const FI_cmp_base& cmp, ExecutionManager& execMan, const AbstractInstruction::StateType& state, F f);
+	friend void executeGeneric(const FI_cmp_base& cmp, ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state, F f);
 
 protected:
 
 	size_t dst_;
 	size_t src1_;
 	size_t src2_;
-/*
-	template <class F>
-	static void dataCmp(std::vector<bool>& res, const Data& x, const Data& y, F f) {
 
-		if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
-
-			if ((float)random()/RAND_MAX < 0.5) {
-				res.push_back(false);
-				res.push_back(true);
-			} else {
-				res.push_back(true);
-				res.push_back(false);
-			}
-
-		} else {
-
-			res.push_back(f(x, y));
-
-		}
-
-	}
-*/
 public:
 
 	FI_cmp_base(size_t dst, size_t src1, size_t src2)
@@ -67,10 +47,12 @@ public:
 
 	FI_eq(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "eq    \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "eq    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+			<< this->src2_;
 	}
 
 };
@@ -81,10 +63,12 @@ public:
 
 	FI_neq(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "neq   \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "neq   \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+			<< this->src2_;
 	}
 
 };
@@ -95,10 +79,12 @@ public:
 
 	FI_lt(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "lt    \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "lt    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+			<< this->src2_;
 	}
 
 };
@@ -109,10 +95,12 @@ public:
 
 	FI_gt(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
 
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan,
+		const AbstractInstruction::StateType& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "gt    \tr" << this->dst_ << ", r" << this->src1_ << ", r" << this->src2_;
+		return os << "gt    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+			<< this->src2_;
 	}
 
 };

@@ -56,3 +56,13 @@ int main()
     ___sl_plot("02-dll-ready");
     return 0;
 }
+
+/**
+ * @file test-0055.c
+ *
+ * @brief a regression test focused on DLS discovery
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -69,3 +69,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0051.c
+ *
+ * @brief SLS, each item owns its own on heap allocated object
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

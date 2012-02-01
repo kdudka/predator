@@ -24,3 +24,13 @@ int main() {
     ___sl_plot((char *) 0);
     return !!buf;
 }
+
+/**
+ * @file test-0159.c
+ *
+ * @brief off-values handling, delayed killing of pointed variables
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

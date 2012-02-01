@@ -20,7 +20,7 @@ cmake_minimum_required(VERSION 2.6)
 project(cl C CXX)
 enable_testing()
 
-include("../CMakeLists.common")
+include("../build-aux/common.cmake")
 
 option(CL_DEBUG "Set to ON to enable debugging support" OFF)
 if(CL_DEBUG)
@@ -38,8 +38,36 @@ else()
     add_definitions("-DHAVE_ISATTY=0")
 endif()
 
+# query GCC_INC_DIR using GCC_HOST
+message(STATUS "GCC_HOST: ${GCC_HOST}")
+execute_process(COMMAND "${GCC_HOST}" "-print-file-name=plugin"
+    RESULT_VARIABLE GCC_HOST_STATUS
+    OUTPUT_VARIABLE GCC_PLUG_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (NOT "${GCC_HOST_STATUS}" EQUAL 0)
+    message(FATAL_ERROR "failed to validate GCC_HOST
+
+    Run './switch-host-gcc.sh' to build the plug-in against the system GCC.
+    If you need a local build of GCC, run 'make build_gcc'.  See the README
+    for details.  If anything goes wrong, tell the authors.")
+endif()
+
+# check the legibility of GCC_INC_DIR
+set(GCC_INC_DIR "${GCC_PLUG_DIR}/include")
+message(STATUS "GCC_INC_DIR: ${GCC_INC_DIR}")
+if (NOT EXISTS "${GCC_INC_DIR}/gcc-plugin.h")
+    message(FATAL_ERROR "unable to find GCC headers for building plug-ins
+
+    Please make sure the appropriate header files are installed.  On some Linux
+    distributions a separate package (e.g. gcc-plugin-devel on Fedora) may be
+    required for building GCC plug-ins.")
+endif()
+
+# set the path to GCC headers for buildign plug-ins
+set_source_files_properties(gcc/clplug.c PROPERTIES
+    COMPILE_FLAGS "-I${GCC_INC_DIR}")
+
 # tweak include dirs, etc.
-add_definitions("-I../include -I../include/gcc -I../cl -I../cl/gcc -fPIC")
+add_definitions("-I../include -fPIC")
 
 # libcl.so
 add_library(cl STATIC
@@ -77,8 +105,7 @@ set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_HOST}")
 set(cmd "${cmd} ${CFLAGS}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include/gcc")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}/gcc")
+set(cmd "${cmd} -I${GCC_INC_DIR}")
 set(cmd "${cmd} -c ${cl_SOURCE_DIR}/gcc/clplug.c")
 set(cmd "${cmd} -o /dev/null")
 set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
@@ -88,8 +115,7 @@ add_test("compile-self" sh -c "${cmd}")
 set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_HOST}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include/gcc")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}/gcc")
+set(cmd "${cmd} -I${GCC_INC_DIR}")
 set(cmd "${cmd} -c ${cl_SOURCE_DIR}/gcc/clplug.c -o /dev/null")
 set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
 set(cmd "${cmd} | diff -up ${cl_SOURCE_DIR}/cl_test.out -")
@@ -98,8 +124,7 @@ add_test("cl_test" sh -c "${cmd}")
 set(cmd "${GCC_HOST} ${CFLAGS}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include/gcc")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}/gcc")
+set(cmd "${cmd} -I${GCC_INC_DIR}")
 set(cmd "${cmd} -c ${cl_SOURCE_DIR}/gcc/clplug.c")
 set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
 set(cmd "${cmd} -fplugin-arg-libcl_test-dump-pp=/dev/null")

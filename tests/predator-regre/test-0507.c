@@ -38,3 +38,16 @@ int main() {
 
     return 0;
 }
+
+/**
+ * @file test-0507.c
+ *
+ * @brief NULL-terminated SLL of length equal to 2
+ *
+ * - Predator reports junk unless SE_DEFER_SLS_INTRO == 4
+ * - originally taken from fa/data/listref.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

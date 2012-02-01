@@ -96,7 +96,7 @@ To employ the Predator plug-in in a build of an arbitrary project fully
 transparently, it is recommended to set certain environment variables.  You can
 use the script register-paths.sh to do this automatically.
 
-    . register-paths.sh
+    . sl_build/register-paths.sh
 
 Then you can simply use the '-fplugin' option of GCC as documented in the gcc(1)
 man page:
@@ -108,17 +108,16 @@ This will show you the available options of the Predator plug-in itself:
     echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
 
 
-Building from sources against the system GCC [only for experts]
-===============================================================
-This method is intended for people that already have experience with building
-GCC plug-ins.  It requires a build of GCC with plug-in support compiled in (not
+Building from sources against the system GCC
+============================================
+This method requires a build of GCC with plug-in support compiled in (not
 necessarily the system one).  The currently supported version of GCC is 4.6.2
 and the test-suite is guaranteed to fully succeed only against this version of
 GCC.  However, the Predator plug-in itself is known to work with GCC 4.5.x
 equally well.
 
-You can use the 'switch-host-gcc.sh' script to rebuild Code Listener and
-Predator against a GCC build of your choice.  For details, please run
+You can use the 'switch-host-gcc.sh' script to rebuild Code Listener, Predator,
+and Forester against a GCC build of your choice.  For details, please run
 'switch-host-gcc.sh' without any arguments.  The script needs to be run in the
 same directory as this README is.  If it fails, make sure your environment is
 sane.  Especially check the PATH and LD_LIBRARY_PATH environment variables.

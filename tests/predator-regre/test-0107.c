@@ -129,3 +129,15 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0107.c
+ *
+ * @brief Linux DLS with nested Linux DLLs consisting of _one_ item only
+ *
+ * - an extension of test-0104, which was even harder to deal with
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

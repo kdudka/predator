@@ -59,3 +59,15 @@ int main() {
     return 0;
 
 }
+
+/**
+ * @file test-0503.c
+ *
+ * @brief alternation of test-0502 which is easier to analyze
+ *
+ * - originally taken from fa/data/dll-insertsort_v2.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

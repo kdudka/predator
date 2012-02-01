@@ -24,8 +24,9 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
-#include <set>
 #include <map>
+#include <queue>
+#include <set>
 
 #include <boost/foreach.hpp>
 
@@ -67,11 +68,13 @@ struct VarState {
 /// state of computation at function level
 struct Data {
     typedef const CodeStorage::Block                   *TBlock;
-    typedef std::set<TBlock>                            TSched;
+    typedef std::queue<TBlock>                          TSched;
+    typedef std::set<TBlock>                            TSchedLookup;
     typedef std::map<int /* var uid */, VarState>       TState;
     typedef std::map<TBlock, TState>                    TStateMap;
 
     TSched          todo;       ///< block scheduled for processing
+    TSchedLookup    todoLookup; ///< block scheduled for processing
     TStateMap       stateMap;   ///< holds states of all vars per each block
 };
 
@@ -137,6 +140,18 @@ void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
     }
 }
 
+/// returns true for VS_NOT_NULL and VS_NOT_NULL_DEDUCED
+inline bool anyNotNull(const EVarState code) {
+    switch (code) {
+        case VS_NOT_NULL:
+        case VS_NOT_NULL_DEDUCED:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 /**
  * merge values (used for Y nodes of CFG)
  * @param dst destination state (used in read-write mode)
@@ -162,8 +177,8 @@ bool mergeValues(VarState &dst, const VarState &src) {
         return true;
     }
 
-    if ((VS_NULL_DEDUCED == src.code && VS_NOT_NULL == dst.code)
-            || (VS_NOT_NULL == src.code && VS_NULL_DEDUCED == dst.code))
+    if ((VS_NULL_DEDUCED == src.code && anyNotNull(dst.code))
+            || (anyNotNull(src.code) && VS_NULL_DEDUCED == dst.code))
         // merge NULL and not-NULL alternatives together
     {
         dst.code = VS_MIGHT_BE_NULL;
@@ -439,6 +454,10 @@ void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn) {
             handleInsnCall(state, insn);
             break;
 
+        case CL_INSN_LABEL:
+            // should be safe to ignore
+            break;
+
         default:
             CL_BREAK_IF("unhandled insn in handleInsnNonterm()");
     }
@@ -466,8 +485,8 @@ void updateState(Data                           &data,
             changed = true;
     }
 
-    if (changed)
-        data.todo.insert(block);
+    if (changed && data.todoLookup.insert(block)./* not already in */second)
+        data.todo.push(block);
 }
 
 /**
@@ -623,11 +642,14 @@ void handleFnc(const CodeStorage::Fnc &fnc) {
     const ControlFlow &cfg = fnc.cfg;
 
     // block-level scheduler
-    todo.insert(cfg.entry());
+    Data::TBlock bb = cfg.entry();
+    todo.push(bb);
+    data.todoLookup.insert(bb);
     while (!todo.empty()) {
-        Data::TSched::iterator i = todo.begin();
-        Data::TBlock bb = *i;
-        todo.erase(i);
+        Data::TBlock bb = todo.front();
+        todo.pop();
+        if (1 != data.todoLookup.erase(bb))
+            CL_BREAK_IF("BlockScheduler malfunction");
 
         // process one basic block
         CL_BREAK_IF(!bb || !bb->size());
