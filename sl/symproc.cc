@@ -1621,7 +1621,8 @@ TValId handleIntegralOp(
 }
 
 bool isAnyIntValue(const SymHeapCore &sh, const TValId val) {
-    switch (val) {
+    const TValId root = sh.valRoot(val);
+    switch (root) {
         case VAL_NULL:
         case VAL_TRUE:
             return true;

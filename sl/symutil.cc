@@ -70,6 +70,12 @@ bool rngFromVal(IR::Range *pDst, const SymHeapCore &sh, const TValId val) {
         return true;
     }
 
+    if (VAL_NULL == sh.valRoot(val)) {
+        // extract offset range of a NULL value
+        *pDst = sh.valOffsetRange(val);
+        return true;
+    }
+
     if (VT_CUSTOM != sh.valTarget(val))
         // not a custom value
         return false;
