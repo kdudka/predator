@@ -176,20 +176,20 @@ bool matchRoots(
         // kind of object mismatch
         return false;
 
-    // compare binding fields
-    const BindingOff &bf1 = sh1.segBinding(root1);
-    const BindingOff &bf2 = sh2.segBinding(root2);
-    if (bf1 != bf2)
-        return false;
-
     const TMinLen len1 = sh1.segMinLength(root1);
     const TMinLen len2 = sh2.segMinLength(root2);
     if (len1 != len2)
         // minimal length mismatch
         return false;
 
-    // abstract objects are equal
-    return true;
+    if (OK_OBJ_OR_NULL == kind1 /* == kind2 */)
+        // this kind has no binding
+        return true;
+
+    // compare binding fields
+    const BindingOff &bf1 = sh1.segBinding(root1);
+    const BindingOff &bf2 = sh2.segBinding(root2);
+    return (bf1 == bf2);
 }
 
 bool cmpValues(

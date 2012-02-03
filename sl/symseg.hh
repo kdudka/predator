@@ -146,6 +146,18 @@ inline TMinLen objMinLength(const SymHeap &sh, TValId root) {
         return 0;
 }
 
+inline bool objWithBinding(const SymHeap &sh, const TValId root) {
+    CL_BREAK_IF(sh.valOffset(root));
+
+    const EValueTarget code = sh.valTarget(root);
+    if (!isAbstract(code))
+        // not even an abstract object
+        return false;
+
+    const EObjKind kind = sh.valTargetKind(root);
+    return (OK_OBJ_OR_NULL != kind);
+}
+
 /// same as SymHeap::objSetProto(), but takes care of DLS peers
 void segSetProto(SymHeap &sh, TValId seg, bool isProto);
 
