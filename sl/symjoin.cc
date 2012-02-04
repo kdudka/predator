@@ -2295,7 +2295,8 @@ bool joinCVars(SymJoinCtx &ctx, const JoinVarVisitor::EMode mode) {
     return traverseProgramVarsGeneric<
         /* N_DST */ 1,
         /* N_SRC */ 2>
-            (heaps,visitor);
+            (heaps, visitor,
+             /* allowRecovery */ JoinVarVisitor::JVM_LIVE_OBJS == mode);
 }
 
 TValId joinDstValue(
