@@ -124,6 +124,11 @@
 #define SE_ASSUME_FRESH_STATIC_DATA         1
 
 /**
+ * call cache miss count that will trigger function removal (0 means disabled)
+ */
+#define SE_CALL_CACHE_MISS_THR              0x10
+
+/**
  * if non-zero, penalize length of SLS abstraction path by the given number in
  * case the path consists of concrete objects only
  */
