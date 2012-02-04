@@ -392,7 +392,8 @@ void redirectRefs(
 template <unsigned N_DST, unsigned N_SRC, class THeap, class TVisitor>
 bool /* complete */ traverseProgramVarsGeneric(
         THeap                *const heaps[N_DST + N_SRC],
-        TVisitor                    &visitor)
+        TVisitor                    &visitor,
+        const bool                  allowRecovery = false)
 {
     const unsigned N_TOTAL = N_DST + N_SRC;
     BOOST_STATIC_ASSERT(N_DST < N_TOTAL);
@@ -400,7 +401,9 @@ bool /* complete */ traverseProgramVarsGeneric(
     // start with all program variables of the first SRC heap
     TCVarSet all;
     gatherProgramVars(all, *heaps[/* src0 */ N_DST]);
-
+#ifndef NDEBUG
+    bool tryingRecover = false;
+#endif
     // try to match variables from the other heaps if possible
     for (unsigned i = /* src1 */ 1 + N_DST; i < N_TOTAL; ++i) {
         const SymHeap &sh = *heaps[i];
@@ -412,10 +415,30 @@ bool /* complete */ traverseProgramVarsGeneric(
                 continue;
 
             const CVar cv(sh.cVarByRoot(root));
-            if (insertOnce(all, cv))
-                // variable mismatch in src heaps
+            if (!insertOnce(all, cv))
+                continue;
+
+            // variable mismatch in src heaps
+            if (!allowRecovery)
                 return false;
+
+            if (/* gl var */ !cv.inst)
+                // asymmetric join of gl variables would break everything
+                return false;
+#ifndef NDEBUG
+            tryingRecover = true;
+#endif
         }
+
+        if (live.size() == all.size())
+            continue;
+
+        // variable mismatch in src heaps
+        if (!allowRecovery)
+            return false;
+#ifndef NDEBUG
+        tryingRecover = true;
+#endif
     }
 
     // go through all program variables
@@ -423,7 +446,29 @@ bool /* complete */ traverseProgramVarsGeneric(
         TValId roots[N_TOTAL];
         for (signed i = 0; i < (signed)N_TOTAL; ++i) {
             SymHeap &sh = *heaps[i];
-            roots[i] = sh.addrOfVar(cv, /* createIfNeeded */ i < (signed)N_DST);
+
+            const bool isDst = (i < (signed)N_DST);
+            const bool isAsym = !isDst && !isVarAlive(sh, cv);
+            if (isAsym && /* gl var */ !cv.inst)
+                // asymmetric join of gl variables would break everything
+                return false;
+
+            const bool createIfNeeded = isDst || allowRecovery;
+            const TValId at = sh.addrOfVar(cv, createIfNeeded);
+
+            if (isAsym) {
+                // we have created a local variable in a _src_ heap
+                CL_BREAK_IF(!tryingRecover);
+
+                const TValId valInval = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+                const TSizeRange size = sh.valSizeOfTarget(at);
+                CL_BREAK_IF(!isSingular(size));
+
+                // mark its contents explicitly as unknown, not (un)initialized
+                sh.writeUniformBlock(at, valInval, size.lo);
+            }
+
+            roots[i] = at;
         }
 
         if (!visitor(roots))
