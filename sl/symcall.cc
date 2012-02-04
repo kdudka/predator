@@ -449,10 +449,11 @@ void SymCallCtx::flushCallResults(SymState &dst) {
 void SymCallCtx::invalidate() {
 #if SE_ENABLE_CALL_CACHE
 #   if SE_CALL_CACHE_MISS_THR
-    SymCallCache::Private::TCache &cache = d->cd->cache;
+    typedef SymCallCache::Private::TCache TCache;
+    TCache &cache = d->cd->cache;
     const CodeStorage::Fnc &fnc = *d->fnc;
     const int uid = uidOf(fnc);
-    const SymCallCache::Private::TCache::iterator it = cache.find(uid);
+    const TCache::iterator it = cache.find(uid);
     CL_BREAK_IF(it == cache.end());
 
     const PerFncCache &pfc = it->second;
