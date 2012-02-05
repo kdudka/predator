@@ -31,7 +31,11 @@
 /**
  * if 1, print amount of allocated memory on certain places when in verbose mode
  */
-#define DEBUG_MEM_USAGE                     1
+#ifndef NDEBUG
+#   define DEBUG_MEM_USAGE                  1
+#else
+#   define DEBUG_MEM_USAGE                  0
+#endif
 
 /**
  * if 1, print block scheduler statistics whenever end of a fnc is not reached
