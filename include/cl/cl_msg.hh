@@ -50,10 +50,13 @@
  * @param to_stream whatever you need to stream out.  Stuff with defined
  * operator<<(std::ostream, ...) is a viable start.
  */
-#define CL_MSG_STREAM(fnc, to_stream) do { \
-    std::ostringstream str; \
-    str << to_stream; \
-    fnc(str.str().c_str()); \
+#define CL_MSG_STREAM(fnc, to_stream) do {          \
+    if ((cl_debug == (fnc)) && !cl_debug_level())   \
+        break;                                      \
+                                                    \
+    std::ostringstream str;                         \
+    str << to_stream;                               \
+    fnc(str.str().c_str());                         \
 } while (0)
 
 /**
