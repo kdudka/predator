@@ -67,6 +67,9 @@ struct SmarterTMatchF {
 		if (t1.label()->getTag() != t2.label()->getTag())
 			return false;
 
+		if (&t1.lhs() == &t2.lhs())
+			return true;
+
 		if (t1.lhs().size() != t2.lhs().size())
 			return false;
 
@@ -74,19 +77,18 @@ struct SmarterTMatchF {
 
 			size_t s1 = t1.lhs()[i], s2 = t2.lhs()[i], ref;
 
+			if (s1 == s2)
+				continue;
+
 			if (FA::isData(s1)) {
 
 				if (!this->fae.getRef(s1, ref)) {
 
-					if (!FA::isData(s2) || this->fae.getRef(s2, ref))
-						return false;
-
-					if (s1 != s2)
-						return false;
+					return false;
 
 				} else {
 
-					if (FA::isData(s2) && this->fae.getRef(s2, ref))
+					if (FA::isData(s2) && !this->fae.getRef(s2, ref))
 						return false;
 
 				}
@@ -251,6 +253,14 @@ inline bool testInclusion(FAE& fae, TA<label_type>& fwdConf, UFAE& fwdConfWrappe
 
 }
 
+struct CopyNonZeroRhsF {
+	bool operator()(const TT<label_type>* transition) const {
+
+		return transition->rhs() != 0;
+
+	}
+};
+
 inline void abstract(FAE& fae, TA<label_type>& fwdConf, TA<label_type>::Backend& backend, BoxMan& boxMan) {
 
 	fae.unreachableFree();
@@ -271,7 +281,7 @@ inline void abstract(FAE& fae, TA<label_type>& fwdConf, TA<label_type>::Backend&
 
 	fae.fuse(tmp, FuseNonZeroF());
 
-//	fae.fuse(target->fwdConf, FuseNonZeroF());
+//	fae.fuse(fwdConf, FuseNonZeroF(), CopyNonZeroRhsF());
 
 	CL_CDEBUG(3, "fused " << std::endl << fae);
 
