@@ -359,18 +359,117 @@ public:
 			for (size_t i = 0; i < v.size(); ++i) {
 
 				assert(v[i].root == p.first->second[i].root);
-				assert(*v[i].fwdSelectors.begin() == *p.first->second[i].fwdSelectors.begin());
+//				assert(*v[i].fwdSelectors.begin() == *p.first->second[i].fwdSelectors.begin());
 				assert(v[i].defines == p.first->second[i].defines);
 
 				if (v[i].joint)
 					p.first->second[i].joint = true;
+
+				p.first->second[i].fwdSelectors.insert(v[i].fwdSelectors.begin(), v[i].fwdSelectors.end());
 
 			}
 
 		}
 
 	}
+/*
+	static void updateStateSignature(StateToCutpointSignatureMap& stateMap,
+		StateCutpointSignatureToStateMap& signatureMap,
+		std::unordered_map<size_t, size_t>& invSignatureMap, TA<label_type>& ta,
+		std::list<const TT<label_type>*>& transitions, size_t& offset, const TT<label_type>& t,
+		const CutpointSignature& v) {
 
+ 		auto p = stateMap.insert(std::make_pair(t.rhs(), v));
+
+		if (p.second)
+			return;
+
+		auto tmp = p.first->second;
+
+		bool broken = (v.size() != tmp.size());
+
+		if (!broken) {
+
+			size_t i;
+
+			for (i = 0; i < v.size(); ++i) {
+
+				if (v[i].root != tmp[i].root)
+					break;
+
+				if (v[i].defines != tmp[i].defines)
+					break;
+
+				if (v[i].joint)
+					tmp[i].joint = true;
+
+				tmp[i].fwdSelectors.insert(v[i].fwdSelectors.begin(), v[i].fwdSelectors.end());
+
+			}
+
+			broken = (i == v.size());
+
+		}
+
+		if (!broken) {
+
+			p.first->second = tmp;
+
+			return;
+
+		}
+
+		p = stateMap.insert(std::make_pair(offset, v));
+
+		assert(p.second);
+
+		auto stateCutpointStatePairIterator = signatureMap.insert(std::make_pair(std::make_pair(t.rhs(), v), offset));
+
+		transitions.push_back(&ta.addTransition(t.lhs(), t.label(), stateCutpointStatePairIterator.first->second)->first);
+
+		if (!stateCutpointStatePairIterator.second)
+			return;
+
+		if (ta.isFinalState(t.rhs()))
+			ta.addFinalState(offset);
+
+		++offset;
+
+		std::vector<const TT<label_type>*> tlist;
+
+		for (auto i = ta.begin(); i != ta.end(); ++i) {
+
+			for (auto& s : i->lhs()) {
+
+				if (s == t.rhs()) {
+
+					tlist.push_back(&*i);
+
+					break;
+
+				}
+
+			}
+
+		}
+
+		for (auto& nt : tlist) {
+
+			std::vector<size_t> lhs = nt->lhs();
+
+			for (auto& s : lhs) {
+
+				if (s == t.rhs())
+					s = stateCutpointStatePairIterator.first->second;
+
+			}
+
+			transitions.push_back(&ta.addTransition(lhs, nt->label(), nt->rhs())->first);
+
+		}
+
+	}
+*/
 	static void processStateSignature(CutpointSignature& result, StructuralBox* box, size_t input,
 		size_t state, const CutpointSignature& signature) {
 
@@ -412,12 +511,12 @@ public:
 
 	}
 
-	static bool processNode(CutpointSignature& result, const TT<label_type>& t,
-		const StateToCutpointSignatureMap& stateMap) {
+	static bool processNode(CutpointSignature& result, const std::vector<size_t>& lhs,
+		const label_type& label, const StateToCutpointSignatureMap& stateMap) {
 
 		size_t lhsOffset = 0;
 
-		for (auto box : t.label()->getNode()) {
+		for (auto box : label->getNode()) {
 
 			if (!box->isStructural())
 				continue;
@@ -426,13 +525,13 @@ public:
 
 			for (size_t j = 0; j < sBox->getArity(); ++j) {
 
-				auto k = stateMap.find(t.lhs()[lhsOffset + j]);
+				auto k = stateMap.find(lhs[lhsOffset + j]);
 
 				if (k == stateMap.end())
 					return false;
 
 				ConnectionGraph::processStateSignature(
-					result, sBox, j, t.lhs()[lhsOffset + j], k->second
+					result, sBox, j, lhs[lhsOffset + j], k->second
 				);
 
 			}
@@ -450,7 +549,7 @@ public:
 
 		stateMap.clear();
 
-		std::vector<const TT<label_type>*> transitions;
+		std::list<const TT<label_type>*> transitions;
 
 		CutpointSignature v(1);
 
@@ -499,7 +598,7 @@ public:
 
 				v.clear();
 
-				if (!processNode(v, t, stateMap)) {
+				if (!processNode(v, t.lhs(), t.label(), stateMap)) {
 
 					++i;
 
@@ -520,6 +619,179 @@ public:
 		}
 
 	}
+
+	// computes signature for all states of ta
+	static void fixSignatures(TA<label_type>& dst, const TA<label_type>& ta, size_t& offset) {
+
+		typedef std::pair<size_t, CutpointSignature> StateCutpointSignaturePair;
+		typedef std::unordered_map<StateCutpointSignaturePair, size_t, boost::hash<StateCutpointSignaturePair>> StateCutpointSignatureToStateMap;
+
+		StateToCutpointSignatureMap stateMap;
+
+		StateCutpointSignatureToStateMap signatureMap;
+
+		typedef std::vector<CutpointSignature> CutpointSignatureList;
+
+		std::unordered_map<size_t, CutpointSignatureList> invSignatureMap;
+
+		struct ChoiceElement {
+
+			CutpointSignatureList::const_iterator begin;
+			CutpointSignatureList::const_iterator end;
+			CutpointSignatureList::const_iterator iter;
+
+			ChoiceElement(
+				CutpointSignatureList::const_iterator begin,
+				CutpointSignatureList::const_iterator end
+			) : begin(begin), end(end), iter(begin) {}
+
+		};
+
+		typedef std::vector<ChoiceElement> ChoiceType;
+
+		struct NextChoice {
+			bool operator()(ChoiceType& choice) const {
+				auto iter = choice.begin();
+				for (; (iter != choice.end()) && (++(iter->iter) == iter->end); ++iter) {
+					iter->iter = iter->begin;
+				}
+				return iter != choice.end();
+			}
+		};
+
+		std::vector<const TT<label_type>*> transitions;
+
+		CutpointSignature v;
+
+		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
+
+			const Data* data;
+
+			if (i->label()->isData(data)) {
+
+				if (data->isRef()) {
+
+					v = { CutpointInfo(data->d_ref.root) };
+
+				} else {
+
+					v.clear();
+
+				}
+
+				auto p = signatureMap.insert(std::make_pair(std::make_pair(i->rhs(), v), i->rhs()));
+
+				assert(p.second);
+
+				invSignatureMap.insert(
+					std::make_pair(i->rhs(), std::vector<CutpointSignature>())
+				).first->second.push_back(v);
+
+				ConnectionGraph::updateStateSignature(stateMap, i->rhs(), v);
+
+				dst.addTransition(*i);
+
+			} else {
+
+				transitions.push_back(&*i);
+
+			}
+
+		}
+
+		bool changed = true;
+
+		while (changed) {
+
+			changed = false;
+
+			for (auto i = transitions.begin(); i != transitions.end(); ++i) {
+
+				const TT<label_type>& t = **i;
+
+				assert(t.label()->isNode());
+
+				ChoiceType choice;
+
+				size_t i;
+
+				for (i = 0; i < t.lhs().size(); ++i) {
+
+					auto iter = invSignatureMap.find(t.lhs()[i]);
+
+					if (iter == invSignatureMap.end())
+						break;
+
+					assert(iter->second.begin() != iter->second.end());
+
+					choice.push_back(ChoiceElement(iter->second.begin(), iter->second.end()));
+
+				}
+
+				if (i < t.lhs().size())
+					continue;
+
+				std::vector<std::pair<size_t, CutpointSignature>> buffer;
+
+				do {
+
+					std::vector<size_t> lhs(t.lhs().size());
+
+					for (size_t i = 0; i < t.lhs().size(); ++i) {
+
+						assert(i < choice.size());
+
+						auto iter = signatureMap.find(std::make_pair(t.lhs()[i], *choice[i].iter));
+
+						assert(iter != signatureMap.end());
+
+						lhs[i] = iter->second;
+
+					}
+
+					v.clear();
+
+					if (!processNode(v, lhs, t.label(), stateMap)) {
+						assert(false);
+					}
+
+					ConnectionGraph::normalizeSignature(v);
+
+					auto p = signatureMap.insert(std::make_pair(std::make_pair(t.rhs(), v), offset));
+
+					if (p.second) {
+
+						++offset;
+
+						if (ta.isFinalState(t.rhs()))
+							dst.addFinalState(p.first->second);
+
+						ConnectionGraph::updateStateSignature(stateMap, p.first->second, v);
+
+						buffer.push_back(std::make_pair(t.rhs(), v));
+
+					}
+
+					dst.addTransition(lhs, t.label(), p.first->second);
+
+				} while (NextChoice()(choice));
+
+				for (auto& item : buffer) {
+
+					invSignatureMap.insert(
+						std::make_pair(item.first, std::vector<CutpointSignature>())
+					).first->second.push_back(item.second);
+
+				}
+
+				changed = changed || buffer.size();
+
+			}
+
+		}
+
+	}
+
 /*
 	static void computeSplitPoints(std::unordered_set<size_t>& splitPoints, const TA<label_type>& ta) {
 
