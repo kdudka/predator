@@ -67,10 +67,10 @@ protected:
 
 			if (s1[i].root != s2[i].root)
 				return false;
-
+/*
 			if (*s1[i].fwdSelectors.begin() != *s2[i].fwdSelectors.begin())
 				return false;
-
+*/
 			if (s1[i].bwdSelector != s2[i].bwdSelector)
 				return false;
 
@@ -962,7 +962,7 @@ start:
 
 			if (selectorToRoot == (size_t)(-1))
 				continue;
-/*
+*//*
 			if (selectorToRoot == cutpoint.forwardSelector)
 				continue;
 *//*

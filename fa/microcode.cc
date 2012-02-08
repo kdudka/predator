@@ -248,7 +248,7 @@ void FI_move_reg_inc::execute(ExecutionManager& execMan,
 
 }
 
-// FI_get_sreg
+// FI_get_greg
 void FI_get_greg::execute(ExecutionManager& execMan,
 	const AbstractInstruction::StateType& state) {
 
@@ -258,7 +258,7 @@ void FI_get_greg::execute(ExecutionManager& execMan,
 
 }
 
-// FI_set_sreg
+// FI_set_greg
 void FI_set_greg::execute(ExecutionManager& execMan,
 	const AbstractInstruction::StateType& state) {
 
@@ -268,7 +268,7 @@ void FI_set_greg::execute(ExecutionManager& execMan,
 
 }
 
-// FI_move_ABP
+// FI_get_ABP
 void FI_get_ABP::execute(ExecutionManager& execMan,
 	const AbstractInstruction::StateType& state) {
 

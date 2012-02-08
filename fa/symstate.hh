@@ -60,8 +60,10 @@ struct SymState {
 
 		os << "registers:";
 
-		for (auto reg : *state.first) {
-			os << ' ' << reg;
+		for (size_t i = 0; i < state.first->size(); ++i) {
+
+			os << " r" << i << '=' << (*state.first)[i];
+
 		}
 
 		os << ", heap:" << std::endl << *state.second->fae;
