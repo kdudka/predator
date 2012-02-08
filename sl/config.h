@@ -31,7 +31,11 @@
 /**
  * if 1, print amount of allocated memory on certain places when in verbose mode
  */
-#define DEBUG_MEM_USAGE                     1
+#ifndef NDEBUG
+#   define DEBUG_MEM_USAGE                  1
+#else
+#   define DEBUG_MEM_USAGE                  0
+#endif
 
 /**
  * if 1, print block scheduler statistics whenever end of a fnc is not reached
@@ -122,6 +126,11 @@
  * if 1, assume that the contents of static data is initialized on first access
  */
 #define SE_ASSUME_FRESH_STATIC_DATA         1
+
+/**
+ * call cache miss count that will trigger function removal (0 means disabled)
+ */
+#define SE_CALL_CACHE_MISS_THR              0x10
 
 /**
  * if non-zero, penalize length of SLS abstraction path by the given number in

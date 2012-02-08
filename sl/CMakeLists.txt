@@ -124,9 +124,10 @@ set(tests
 
 if(TEST_ONLY_FAST)
 else()
-    # expensive tests
+    # expensive tests (ordered from the fastest to the most expensive)
     set(tests ${tests}
-        0167 0415 0414 0418 0124 0417 0157 0521 0412 0405 0409 0407 0410 0413)
+        0167 0124 0415 0414 0418 0417 0471 0412 0157 0469 0405 0409 0407 0521
+        0410 0413)
 endif()
 
 set(cost 1)

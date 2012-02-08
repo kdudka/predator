@@ -806,14 +806,16 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     const EObjKind kind = sh.valTargetKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
 
-    // TODO
-    CL_BREAK_IF(OK_OBJ_OR_NULL == kind);
+    switch (kind) {
+        case OK_OBJ_OR_NULL:
+        case OK_SEE_THROUGH:
+            // these kinds are much easier than regular list segments
+            sh.valTargetSetConcrete(seg);
+            LDP_PLOT(symabstract, sh);
+            return;
 
-    if (OK_SEE_THROUGH == kind) {
-        // this kind is much easier than regular list segments
-        sh.valTargetSetConcrete(seg);
-        LDP_PLOT(symabstract, sh);
-        return;
+        default:
+            break;
     }
 
     // duplicate self as abstract object

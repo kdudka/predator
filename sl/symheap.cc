@@ -3381,6 +3381,7 @@ const BindingOff& SymHeap::segBinding(TValId root) const {
     CL_BREAK_IF(!d->absRoots.isValidEnt(root));
 
     const AbstractRoot *aData = d->absRoots.getEntRO(root);
+    CL_BREAK_IF(OK_OBJ_OR_NULL == aData->kind);
     return aData->bOff;
 }
 
@@ -3607,7 +3608,8 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
         SymHeap &writable = *const_cast<SymHeap *>(this);
 
         TValId seg = this->valRoot(val);
-        if (OK_DLS == this->valTargetKind(val))
+        const EObjKind kind = this->valTargetKind(val);
+        if (OK_DLS == kind)
             seg = dlSegPeer(writable, seg);
 
         if (seg < 0)
@@ -3620,9 +3622,17 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
                 || isKnownObject(refCode);
 
         // jump to next value while taking the 'head' offset into consideration
-        const BindingOff &bOff = this->segBinding(seg);
         const TValId valNext = nextValFromSeg(writable, seg);
-        val = writable.valByOffset(valNext, off - bOff.head);
+
+        if (OK_OBJ_OR_NULL == kind) {
+            CL_BREAK_IF(VAL_NULL != valNext);
+            val = VAL_NULL;
+        }
+        else {
+            const BindingOff &bOff = this->segBinding(seg);
+            val = writable.valByOffset(valNext, off - bOff.head);
+        }
+
         code = this->valTarget(val);
     }
 

@@ -705,7 +705,8 @@ void SymExecEngine::joinCallResults() {
     for (unsigned i = 0; i < cnt; ++i) {
         if (1 < cnt) {
             CL_DEBUG("*** SymExecEngine::joinCallResults() is processing heap #"
-                     << i << " of " << cnt << " heaps total");
+                     << i << " of " << cnt << " heaps total (size of target is "
+                     << all.size() << ")");
         }
 
         // time to respond to a single pending signal
