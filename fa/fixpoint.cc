@@ -82,16 +82,11 @@ struct SmarterTMatchF {
 
 			if (FA::isData(s1)) {
 
-				if (!this->fae.getRef(s1, ref)) {
-
+				if (!this->fae.getRef(s1, ref))
 					return false;
 
-				} else {
-
-					if (FA::isData(s2) && !this->fae.getRef(s2, ref))
-						return false;
-
-				}
+				if (FA::isData(s2))
+					return false;
 
 			} else {
 
