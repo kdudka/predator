@@ -267,20 +267,59 @@ public:
 					}
 				}
 			}
-			fae.roots[root] = std::shared_ptr<TA<label_type>>(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
-			fae.connectionGraph.invalidate(root);
+
+			TA<label_type> ta3(*fae.backend);
+
+			// ha! we can get inconsistent signatures here
+			size_t offset = fae.nextState();
+
+			ConnectionGraph::fixSignatures(ta3, ta2, offset);
+
+			assert(ta3.getFinalStates().size());
+
+			fae.setStateOffset(offset);
+
 			ta2.clear();
+
 			size_t state = fae.freshState();
+
 			ta2.addFinalState(state);
+
 			const TT<label_type>& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
+
 			ta.copyTransitions(ta2);
+
 			fae.appendRoot(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
+
 			fae.connectionGraph.newRoot();
-			std::set<const Box*> boxes;
-			splitting.isolateAtRoot(fae.roots.size() - 1, t, IsolateBoxF(i->second), boxes);
-			assert(boxes.count(i->second));
-			Unfolding(fae).unfoldBox(fae.roots.size() - 1, i->second);
-			splitting.isolateOne(dst, target, selector);
+			fae.connectionGraph.invalidate(root);
+
+			for (auto& f : ta3.getFinalStates()) {
+
+				FAE fae2(fae);
+
+				Splitting splitting2(fae2);
+
+				ta2.clear();
+
+				ta3.copyTransitions(ta2);
+
+				ta2.addFinalState(f);
+
+				fae2.roots[root] = std::shared_ptr<TA<label_type>>(&ta2.uselessAndUnreachableFree(*fae2.allocTA()));
+
+				std::set<const Box*> boxes;
+
+				splitting2.isolateAtRoot(fae2.roots.size() - 1, t, IsolateBoxF(i->second), boxes);
+
+				assert(boxes.count(i->second));
+
+				Unfolding(fae2).unfoldBox(fae2.roots.size() - 1, i->second);
+
+				splitting2.isolateOne(dst, target, selector);
+
+			}
+
 		}
 
 	}
@@ -288,13 +327,22 @@ public:
 	// adds redundant root points to allow further manipulation
 	template <class F>
 	void isolateAtRoot(size_t root, const TT<label_type>& t, F f, std::set<const Box*>& boxes) {
+
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
+
+//		std::cerr << "isolateAtRoot " << t << std::endl;
+
 		size_t newState = this->fae.freshState();
+
 		TA<label_type> ta(*this->fae.roots[root], false);
+
 		ta.addFinalState(newState);
+
 		std::vector<size_t> lhs;
+
 		size_t lhsOffset = 0;
+
 		for (std::vector<const AbstractBox*>::const_iterator j = t.label()->getNode().begin(); j != t.label()->getNode().end(); ++j) {
 			if (!(*j)->isStructural())
 				continue;
@@ -326,12 +374,19 @@ public:
 			if (b->isType(box_type_e::bBox))
 				boxes.insert((const Box*)*j);
 		}
+
 		ta.addTransition(lhs, t.label(), newState);
+
 		TA<label_type>* tmp = this->fae.allocTA();
+
 		ta.unreachableFree(*tmp);
+
 		// exchange the original automaton with the new one
 		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
 		this->fae.connectionGraph.invalidate(root);
+
+//		this->fae.updateConnectionGraph();
+
 	}
 
 	// adds redundant root points to allow further manipulation
@@ -341,7 +396,7 @@ public:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 
-		CL_CDEBUG(3, "isolating at root " << root << " : " << IsolateSetF(offsets) << std::endl << this->fae);
+//		CL_CDEBUG(3, "isolating at root " << root << " : " << IsolateSetF(offsets) << std::endl << this->fae);
 
 		for (std::set<size_t>::const_iterator j = this->fae.roots[root]->getFinalStates().begin(); j != this->fae.roots[root]->getFinalStates().end(); ++j) {
 		for (TA<label_type>::iterator i = this->fae.roots[root]->begin(*j), end = this->fae.roots[root]->end(*j, i); i != end ; ++i) {
