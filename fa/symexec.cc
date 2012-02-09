@@ -444,6 +444,11 @@ protected:
 		catch (ProgramError& e)
 		{
 //			Engine::printTrace(state);
+			if (state.second->instr->insn()) {
+				CL_NOTE_MSG(&state.second->instr->insn()->loc,
+					SSD_INLINE_COLOR(C_LIGHT_RED, *state.second->instr->insn()));
+				CL_DEBUG_AT(2, std::endl << *state.second->fae);
+			}
 			throw;
 		}
 		catch (RestartRequest& e)
