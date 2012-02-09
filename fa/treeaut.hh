@@ -824,15 +824,15 @@ public:
 					typename td_cache_type::iterator l = cache.insert(
 						std::make_pair(k->first, std::vector<const TT<T>*>())
 					).first;
-					bool match = false;
+					bool match = true;
 					for (typename std::vector<const TT<T>*>::const_iterator m = j->second.begin(); m != j->second.end(); ++m) {
 						for (typename std::vector<const TT<T>*>::const_iterator n = l->second.begin(); n != l->second.end(); ++n) {
-							if (TA<T>::transMatch(*m, *n, f, tmp, stateIndex)) {
-								match = true;
+							if (!TA<T>::transMatch(*m, *n, f, tmp, stateIndex)) {
+								match = false;
 								break;
 							}
 						}
-						if (match)
+						if (!match)
 							break;
 					}
 					if (!match)
