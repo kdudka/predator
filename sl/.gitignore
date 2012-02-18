@@ -2,3 +2,4 @@
 *.svg
 tags
 version.h
+/gdbpp.pyc
