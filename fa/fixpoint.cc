@@ -193,8 +193,9 @@ inline bool fold(FAE& fae, BoxMan& boxMan, const std::set<size_t>& forbidden) {
 
 	}
 
-	if (matched)
+	if (matched) {
 		CL_CDEBUG(3, "after folding: " << std::endl << fae);
+	}
 
 	return matched;
 
@@ -286,7 +287,8 @@ inline void abstract(FAE& fae, TA<label_type>& fwdConf, TA<label_type>::Backend&
 	Abstraction abstraction(fae);
 
 	for (size_t i = 1; i < fae.getRootCount(); ++i)
-		abstraction.heightAbstraction(i, 1, SmarterTMatchF(fae));
+//		abstraction.heightAbstraction(i, 1, SmarterTMatchF(fae));
+		abstraction.heightAbstraction(i, 1, SmartTMatchF());
 
 	CL_CDEBUG(3, "after abstraction: " << std::endl << fae);
 
@@ -295,14 +297,14 @@ inline void abstract(FAE& fae, TA<label_type>& fwdConf, TA<label_type>::Backend&
 inline void getCandidates(std::set<size_t>& candidates, const FAE& fae) {
 
 	std::unordered_map<
-		std::vector<std::pair<int, bool>>,
+		std::vector<std::pair<int, size_t>>,
 		std::set<size_t>,
-		boost::hash<std::vector<std::pair<int, bool>>>
+		boost::hash<std::vector<std::pair<int, size_t>>>
 	> partition;
 
 	for (size_t i = 0; i < fae.roots.size(); ++i) {
 
-		std::vector<std::pair<int, bool>> tmp;
+		std::vector<std::pair<int, size_t>> tmp;
 
 		fae.connectionGraph.getRelativeSignature(tmp, i);
 

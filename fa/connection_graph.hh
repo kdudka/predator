@@ -35,6 +35,8 @@
 #include "label.hh"
 #include "abstractbox.hh"
 
+#include "config.h"
+
 #define _MSBM			((~(size_t)0) >> 1)
 #define _MSB			(~_MSBM)
 #define _MSB_TEST(x)	(x & _MSB)
@@ -48,14 +50,15 @@ public:
 	struct CutpointInfo {
 
 		size_t root; // cutpoint number
-		bool joint; // multiple times
-		bool joinInherited;
+		size_t refCount; // number of references
+		bool refInherited; // inherited from different state
 //		size_t forwardSelector; // lowest selector which reaches the given cutpoint
 		std::set<size_t> fwdSelectors; // a set of selectors which reach the given cutpoint
 		size_t bwdSelector; // lowest selector of 'root' from which the state can be reached in the opposite direction
 		std::set<size_t> defines; // set of selectors of the cutpoint hidden in the subtree (includes backwardSelector if exists)
 
-		CutpointInfo(size_t root = 0) : root(root), joint(false), joinInherited(false),
+		CutpointInfo(size_t root = 0) : root(root), /*joint(false), joinInherited(false),*/
+			refCount(1), refInherited(false),
 			fwdSelectors(), bwdSelector((size_t)(-1)) {
 
 			this->fwdSelectors.insert((size_t)(-1));
@@ -68,7 +71,7 @@ public:
 			assert(!rhs.fwdSelectors.empty());
 
 			return this->root == rhs.root &&
-				this->joint == rhs.joint &&
+				this->refCount == rhs.refCount &&
 				*this->fwdSelectors.begin() == *rhs.fwdSelectors.begin() &&
 				this->bwdSelector == rhs.bwdSelector &&
 				this->defines == rhs.defines;
@@ -78,7 +81,7 @@ public:
 		bool operator%(const CutpointInfo& rhs) const {
 
 			return this->root == rhs.root &&
-				this->joint == rhs.joint &&
+				this->refCount == rhs.refCount &&
 //				this->fwdSelectors == rhs.fwdSelectors &&
 				this->bwdSelector == rhs.bwdSelector &&
 				this->defines == rhs.defines;
@@ -91,7 +94,7 @@ public:
 
 			size_t seed = 0;
 			boost::hash_combine(seed, info.root);
-			boost::hash_combine(seed, info.joint);
+			boost::hash_combine(seed, info.refCount);
 			boost::hash_combine(seed, *info.fwdSelectors.begin());
 			boost::hash_combine(seed, info.bwdSelector);
 			boost::hash_combine(seed, info.defines);
@@ -104,7 +107,7 @@ public:
 		 */
 		friend std::ostream& operator<<(std::ostream& os, const CutpointInfo& info) {
 
-			os << info.root << ((info.joint)?("+"):("")) << "({";
+			os << info.root << "x" << info.refCount << "({";
 
 			for (auto& s : info.fwdSelectors) {
 
@@ -310,7 +313,8 @@ public:
 			if (p.second) {
 
 				signature[offset] = signature[i];
-				signature[offset].joinInherited = signature[offset].joint;
+//				signature[offset].joinInherited = signature[offset].joint;
+				signature[offset].refInherited = signature[offset].refCount > 1;
 
 				++offset;
 
@@ -318,8 +322,10 @@ public:
 
 				assert(p.first->second);
 
-				p.first->second->joint = true;
-				p.first->second->joinInherited = false;
+				p.first->second->refCount = std::min(
+					p.first->second->refCount + signature[i].refCount, (size_t)FA_REF_CNT_TRESHOLD
+				);
+				p.first->second->refInherited = false;
 				p.first->second->fwdSelectors.insert(
 					signature[i].fwdSelectors.begin(), signature[i].fwdSelectors.end()
 				);
@@ -362,8 +368,7 @@ public:
 //				assert(*v[i].fwdSelectors.begin() == *p.first->second[i].fwdSelectors.begin());
 				assert(v[i].defines == p.first->second[i].defines);
 
-				if (v[i].joint)
-					p.first->second[i].joint = true;
+				p.first->second[i].refCount = std::max(p.first->second[i].refCount, v[i].refCount);
 
 				p.first->second[i].fwdSelectors.insert(v[i].fwdSelectors.begin(), v[i].fwdSelectors.end());
 
@@ -681,7 +686,9 @@ public:
 
 				auto p = signatureMap.insert(std::make_pair(std::make_pair(i->rhs(), v), i->rhs()));
 
-				assert(p.second);
+				if (!p.second){
+					assert(false);
+				}
 
 				invSignatureMap.insert(
 					std::make_pair(i->rhs(), std::vector<CutpointSignature>())
@@ -1295,7 +1302,7 @@ public:
 
 			this->visit(cutpoint.root, visited, order, marked);
 
-			if (cutpoint.joint)
+			if (cutpoint.refCount > 1)
 				marked[cutpoint.root] = true;
 
 		}
@@ -1358,12 +1365,12 @@ public:
 
 	ConnectionGraph(size_t size = 0) : data(size) {}
 
-	void getRelativeSignature(std::vector<std::pair<int, bool>>& signature, size_t root) const {
+	void getRelativeSignature(std::vector<std::pair<int, size_t>>& signature, size_t root) const {
 
 		signature.clear();
 
 		for (auto& tmp : this->data[root].signature)
-			signature.push_back(std::make_pair(tmp.root, tmp.joint));
+			signature.push_back(std::make_pair(tmp.root - root, tmp.refCount));
 
 	}
 

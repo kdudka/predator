@@ -218,6 +218,7 @@ protected:
 
 			assert(tmp.size());
 
+			// did we arrive here for the first time?
 			if (complementSignature.empty())
 				complementSignature = tmp;
 
@@ -226,8 +227,7 @@ protected:
 
 			for (size_t i = 0; i < tmp.size(); ++i) {
 
-				if (!complementSignature[i].joint)
-					complementSignature[i].joint = tmp[i].joint;
+				complementSignature[i].refCount = std::max(complementSignature[i].refCount, tmp[i].refCount);
 
 				complementSignature[i].fwdSelectors.insert(
 					tmp[i].fwdSelectors.begin(), tmp[i].fwdSelectors.end()
@@ -654,7 +654,7 @@ protected:
 
 		for (auto& cutpoint : inputSignature) {
 
-			if (cutpoint.joint)
+			if (cutpoint.refCount > 1)
 				return nullptr;
 
 			if (forbidden.count(cutpoint.root))
@@ -786,7 +786,7 @@ dis2_start:
 
 		for (auto& cutpoint : this->fae.connectionGraph.data[root].signature) {
 
-			if (!cutpoint.joint)
+			if (cutpoint.refCount < 2)
 				continue;
 
 			auto& signatures = this->getSignatures(root);
@@ -795,7 +795,7 @@ dis2_start:
 
 				for (auto& tmp : stateSignaturePair.second) {
 
-					if (!tmp.joint || tmp.joinInherited || (tmp.root != cutpoint.root))
+					if ((tmp.refCount < 2) || tmp.refInherited || (tmp.root != cutpoint.root))
 						continue;
 
 					CL_CDEBUG(3, "type 2 cutpoint detected inside component " << root << " at state q" << stateSignaturePair.first);
