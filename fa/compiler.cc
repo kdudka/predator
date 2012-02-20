@@ -41,6 +41,9 @@
 
 namespace {
 
+/**
+ * @brief  Translates operation code of unary operations to string
+ */
 std::string translUnOpCode(const unsigned code)
 {
 	switch (code)
@@ -55,6 +58,9 @@ std::string translUnOpCode(const unsigned code)
 	}
 }
 
+/**
+ * @brief  Translates operation code of binary operations to string
+ */
 std::string translBinOpCode(const unsigned code)
 {
 	switch (code)
@@ -89,6 +95,9 @@ std::string translBinOpCode(const unsigned code)
 	}
 }
 
+/**
+ * @brief  Translates operation code of instructions to string
+ */
 std::string translInsnOpCode(const unsigned code)
 {
 	switch (code)
@@ -107,6 +116,9 @@ std::string translInsnOpCode(const unsigned code)
 	}
 }
 
+/**
+ * @brief  Translates code of data types to string
+ */
 std::string translTypeCode(const unsigned code)
 {
 	switch (code)
@@ -129,6 +141,9 @@ std::string translTypeCode(const unsigned code)
 	}
 }
 
+/**
+ * @brief  Translates code of operand types to string
+ */
 std::string translOperandCode(const unsigned code)
 {
 	switch (code)
@@ -142,14 +157,24 @@ std::string translOperandCode(const unsigned code)
 
 } // namespace
 
+
+/**
+ * @brief  A wrapper of CL's operands
+ *
+ * A structure that wraps over CL's operands and provides the output stream <<
+ * operator.
+ */
 struct OpWrapper {
 
 	const cl_operand* op_;
 
+	/**
+	 * @brief  Implicit conversion operator from CL's operand
+	 */
 	OpWrapper(const cl_operand& op) : op_(&op) {}
 
-	friend std::ostream& operator<<(std::ostream& os, const OpWrapper& op) {
-
+	friend std::ostream& operator<<(std::ostream& os, const OpWrapper& op)
+	{
 		os << "operand: ";
 		cltToStream(os, op.op_->type, false);
 		os << ",";
@@ -163,63 +188,130 @@ struct OpWrapper {
 		}
 
 		return os;
-
 	}
+}; // struct OpWrapper
 
-};
 
+/**
+ * @brief  Analyser of loops
+ *
+ * This structure contains methods for analysing programs for finding and
+ * collecting entry points of loops in there.
+ *
+ * @todo rewrite to something more robust (struct is not the very best idea
+ *       here...)
+ */
 struct LoopAnalyser {
 
+	/**
+	 * @brief  A list of CL's code storage blocks
+	 *
+	 * A list of Code Listener's code storage blocks with the lookup function.
+	 */
 	struct BlockListItem {
-
 		BlockListItem* prev;
 		const CodeStorage::Block* block;
 
 		BlockListItem(BlockListItem* prev, const CodeStorage::Block* block)
-			: prev(prev), block(block) {}
+			: prev(prev), block(block)
+		{ }
 
-		static bool lookup(const BlockListItem* item, const CodeStorage::Block* block) {
+		/**
+		 * @brief  Looks up a value (block) in the list
+		 *
+		 * @param[in]  item   The list to be searched through
+		 * @param[in]  block  The searched value
+		 *
+		 * @returns  @p true if @p block is in list @p item, @p false otherwise
+		 */
+		static bool lookup(const BlockListItem* item, const CodeStorage::Block* block)
+		{
 			if (!item)
 				return false;
 			if (item->block == block)
 				return true;
 			return BlockListItem::lookup(item->prev, block);
 		}
+	}; // struct BlockListItem
 
-	};
 
+	/// The set of entry points of the analysed program
 	std::unordered_set<const CodeStorage::Insn*> entryPoints;
 
-	void visit(const CodeStorage::Block* block, std::unordered_set<const CodeStorage::Block*>& visited, BlockListItem* prev) {
 
+	/**
+	 * @brief  Visits recursively all reachable blocks
+	 *
+	 * This method visits recursively all reachable blocks of @p block and checks
+	 * whether there is a loop, i.e. whether @p block can reach @p block. In case
+	 * there is a loop, the method stores the first instruction of @p block into
+	 * the set of entry points @p entryPoints.
+	 *
+	 * @param[in]  block    The block to be visited
+	 * @param[in]  visited  Set of already visited blocks
+	 * @param[in]  prev     Pointer to a BlockListItem instance in the stack frame
+	 *                      of the callee function (these items are linked into
+	 *                      a list during recursive calls to visit())
+	 */
+	void visit(const CodeStorage::Block* block,
+		std::unordered_set<const CodeStorage::Block*>& visited, BlockListItem* prev)
+	{
+		// note that nodes of the list are on the stack, linked during recursive
+		// calls to visit()
 		BlockListItem item(prev, block);
 
-		if (!visited.insert(block).second) {
+		if (!visited.insert(block).second)
+		{	// in case 'block' was already in the container
 			if (BlockListItem::lookup(prev, block))
+			{	// if there is a loop from 'block' back to 'block', set the first
+				// instruction of 'block' as the loop's entry point
 				this->entryPoints.insert(*block->begin());
+			}
+
 			return;
 		}
 
 		for (auto target : block->targets())
+		{	// visit recursively all successors of 'block'
 			this->visit(target, visited, &item);
-
+		}
 	}
 
-	void init(const CodeStorage::Block* block) {
 
+	/**
+	 * @brief  Initialises the structure and analyses the program
+	 *
+	 * This method initialises the structure and analyses the program for loops.
+	 *
+	 * @param[in]  block  The first block of the analysed program
+	 */
+	void init(const CodeStorage::Block* block)
+	{
 		std::unordered_set<const CodeStorage::Block*> visited;
 		this->entryPoints.clear();
-		this->visit(block, visited, NULL);
-
+		this->visit(block, visited, nullptr);
 	}
 
-	bool isEntryPoint(const CodeStorage::Insn* insn) const {
+	/**
+	 * @brief  Is given instruction a loop's entry point?
+	 *
+	 * Checks whether the passed instruction is an entry point of some loop in the
+	 * program.
+	 *
+	 * @param[in]  insn  The checked instruction
+	 *
+	 * @returns  @p true if @p insn is an entry point of some loop, @p false
+	 *           otherwise
+	 */
+	bool isEntryPoint(const CodeStorage::Insn* insn) const
+	{
 		return this->entryPoints.find(insn) != this->entryPoints.end();
 	}
+}; // struct LoopAnalyser
 
-};
 
 typedef enum { biNone, biMalloc, biFree, biNondet, biFix, biPrintHeap } builtin_e;
+
 
 struct BuiltinTable {
 
@@ -242,6 +334,7 @@ public:
 
 };
 
+/// @todo: document!!!
 class Compiler::Core {
 
 	Compiler::Assembly* assembly;
