@@ -41,7 +41,9 @@ inline const cl_loc* getLoc(const AbstractInstruction::StateType& state)
 	// Assertions
 	assert(state.second != nullptr);
 	assert(state.second->instr != nullptr);
-	assert(state.second->instr->insn() != nullptr);
+
+	if (!state.second->instr->insn())
+		return nullptr;
 
 	return &(state.second->instr->insn()->loc);
 }
