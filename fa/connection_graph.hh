@@ -313,7 +313,6 @@ public:
 			if (p.second) {
 
 				signature[offset] = signature[i];
-//				signature[offset].joinInherited = signature[offset].joint;
 				signature[offset].refInherited = signature[offset].refCount > 1;
 
 				++offset;

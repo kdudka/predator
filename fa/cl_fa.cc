@@ -32,10 +32,6 @@
 
 // Code Listener headers
 #include <cl/easy.hh>
-#include <cl/cl_msg.hh>
-#include <cl/storage.hh>
-#include <cl/cldebug.hh>
-#include <cl/clutil.hh>
 #include "../cl/ssd.h"
 
 // Forester headers
@@ -52,8 +48,6 @@ void setDbgFlag(int) {
 
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
-
-std::ostream& operator<<(std::ostream& os, const cl_loc& loc);
 
 struct Config {
 

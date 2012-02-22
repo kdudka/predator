@@ -28,6 +28,7 @@
 
 #include <unordered_map>
 
+#include "tatimint.hh"
 #include "types.hh"
 //#include "forestaut.hh"
 #include "treeaut.hh"

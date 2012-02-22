@@ -24,6 +24,11 @@
 #include <vector>
 #include <unordered_map>
 
+#include <cl/storage.hh>
+#include <cl/cl_msg.hh>
+#include <cl/cldebug.hh>
+#include <cl/clutil.hh>
+
 #include "abstractinstruction.hh"
 #include "treeaut.hh"
 #include "label.hh"
@@ -33,6 +38,8 @@ namespace CodeStorage {
     struct Storage;
     struct Insn;
 }
+
+std::ostream& operator<<(std::ostream& os, const cl_loc& loc);
 
 class Compiler {
 
