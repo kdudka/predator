@@ -69,24 +69,6 @@ set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(fa ${CL_LIB})
 
-add_executable(hardwired
-	treeaut.cc
-	timbuk.cc
-	forestaut.cc
-	sequentialinstruction.cc
-	jump.cc
-	call.cc
-	comparison.cc
-	fixpoint.cc
-	microcode.cc
-	compiler.cc
-	symctx.cc
-	symexec.cc
-	hardwired.cc
-)
-
-target_link_libraries(hardwired ${CL_LIB})
-
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
 set(GCC_EXEC_PREFIX "timeout 120"
