@@ -142,6 +142,12 @@ public:
 
 	}
 
+	virtual size_t getRealRefCount(size_t) const {
+
+		return 1;
+
+	}
+
 };
 
 class Box : public StructuralBox {
@@ -164,6 +170,52 @@ class Box : public StructuralBox {
 
 	bool selfReference;
 
+public:
+
+	struct Signature {
+
+		ConnectionGraph::CutpointSignature outputSignature;
+		size_t inputIndex;
+		ConnectionGraph::CutpointSignature inputSignature;
+		std::vector<std::pair<size_t,size_t>> selectors;
+
+		Signature(
+			const ConnectionGraph::CutpointSignature& outputSignature,
+			size_t inputIndex,
+			const ConnectionGraph::CutpointSignature& inputSignature,
+			const std::vector<std::pair<size_t,size_t>>& selectors
+		) : outputSignature(outputSignature), inputIndex(inputIndex),
+		inputSignature(inputSignature), selectors(selectors) {}
+
+		bool operator==(const Signature& rhs) const {
+
+			return this->outputSignature == rhs.outputSignature &&
+				this->inputIndex == rhs.inputIndex &&
+				this->inputSignature == rhs.inputSignature &&
+				this->selectors == rhs.selectors;
+
+		}
+
+		friend size_t hash_value(const Signature& signature) {
+
+			size_t h = 0;
+			boost::hash_combine(h, signature.outputSignature);
+			boost::hash_combine(h, signature.inputIndex);
+			boost::hash_combine(h, signature.inputSignature);
+			boost::hash_combine(h, signature.selectors);
+			return h;
+
+		}
+
+	};
+
+	Signature getSignature() const {
+
+		return Signature(
+			this->outputSignature, this->inputIndex, this->inputSignature, this->selectors
+		);
+
+	}
 
 protected:
 
@@ -392,6 +444,14 @@ public:
 
 	}
 
+	virtual size_t getRealRefCount(size_t input) const {
+
+		assert(input < this->outputSignature.size());
+
+		return this->outputSignature[input].realRefCount;
+
+	}
+
 	const TA<label_type>* getOutput() const {
 
 		return this->output.get();
@@ -504,19 +564,37 @@ public:
 			if (this->inputSignature != rhs.inputSignature)
 				return false;
 
-			if (this->inputLabels != rhs.inputLabels)
-				return false;
 
 		}
 
 		if (this->outputSignature != rhs.outputSignature)
 			return false;
 
-		if (this->outputLabels != rhs.outputLabels)
-			return false;
 
 		if (this->selectors != rhs.selectors)
 			return false;
+
+		if (!Box::lessOrEqual(*this->output, *rhs.output))
+			return false;
+
+		if (!this->input)
+			return true;
+
+		return Box::lessOrEqual(*this->input, *rhs.input);
+
+	}
+
+	bool simplifiedLessThan(const Box& rhs) const {
+
+		if ((bool)this->input != (bool)rhs.input)
+			return false;
+
+		if (this->input) {
+
+			if (this->inputIndex != rhs.inputIndex)
+				return false;
+
+		}
 
 		if (!Box::lessOrEqual(*this->output, *rhs.output))
 			return false;

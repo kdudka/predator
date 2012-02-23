@@ -28,7 +28,22 @@
 /**
  * set reference count tracking treshold (default is 2)
  */
-#define FA_REF_CNT_TRESHOLD	2
+#define FA_REF_CNT_TRESHOLD					2
+
+/**
+ * set real reference count tracking treshold (default is 1)
+ */
+#define FA_REAL_REF_CNT_TRESHOLD			1
+
+/**
+ * overapproximate when folding (default is 0)
+ */
+#define FA_BOX_APPROXIMATION				0
+
+/**
+ * should we restart evry time a new box is encountered (default is 1)
+ */
+#define FA_RESTART_AFTER_BOX_DISCOVERY		(1 + FA_BOX_APPROXIMATION)
 
 
 #endif /* CONFIG_H */

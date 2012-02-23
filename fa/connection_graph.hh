@@ -51,6 +51,7 @@ public:
 
 		size_t root; // cutpoint number
 		size_t refCount; // number of references
+		size_t realRefCount; // number of real references
 		bool refInherited; // inherited from different state
 //		size_t forwardSelector; // lowest selector which reaches the given cutpoint
 		std::set<size_t> fwdSelectors; // a set of selectors which reach the given cutpoint
@@ -58,7 +59,7 @@ public:
 		std::set<size_t> defines; // set of selectors of the cutpoint hidden in the subtree (includes backwardSelector if exists)
 
 		CutpointInfo(size_t root = 0) : root(root), /*joint(false), joinInherited(false),*/
-			refCount(1), refInherited(false),
+			refCount(1), realRefCount(FA_REAL_REF_CNT_TRESHOLD), refInherited(false),
 			fwdSelectors(), bwdSelector((size_t)(-1)) {
 
 			this->fwdSelectors.insert((size_t)(-1));
@@ -72,6 +73,7 @@ public:
 
 			return this->root == rhs.root &&
 				this->refCount == rhs.refCount &&
+				this->realRefCount == rhs.realRefCount &&
 				*this->fwdSelectors.begin() == *rhs.fwdSelectors.begin() &&
 				this->bwdSelector == rhs.bwdSelector &&
 				this->defines == rhs.defines;
@@ -82,6 +84,7 @@ public:
 
 			return this->root == rhs.root &&
 				this->refCount == rhs.refCount &&
+				this->realRefCount == rhs.realRefCount &&
 //				this->fwdSelectors == rhs.fwdSelectors &&
 				this->bwdSelector == rhs.bwdSelector &&
 				this->defines == rhs.defines;
@@ -95,6 +98,7 @@ public:
 			size_t seed = 0;
 			boost::hash_combine(seed, info.root);
 			boost::hash_combine(seed, info.refCount);
+			boost::hash_combine(seed, info.realRefCount);
 			boost::hash_combine(seed, *info.fwdSelectors.begin());
 			boost::hash_combine(seed, info.bwdSelector);
 			boost::hash_combine(seed, info.defines);
@@ -107,7 +111,9 @@ public:
 		 */
 		friend std::ostream& operator<<(std::ostream& os, const CutpointInfo& info) {
 
-			os << info.root << "x" << info.refCount << "({";
+			assert(info.refCount <= FA_REF_CNT_TRESHOLD);
+
+			os << info.root << "x" << info.refCount << ':' << info.realRefCount << "({";
 
 			for (auto& s : info.fwdSelectors) {
 
@@ -324,6 +330,9 @@ public:
 				p.first->second->refCount = std::min(
 					p.first->second->refCount + signature[i].refCount, (size_t)FA_REF_CNT_TRESHOLD
 				);
+				p.first->second->realRefCount = std::min(
+					p.first->second->realRefCount + signature[i].realRefCount, (size_t)FA_REAL_REF_CNT_TRESHOLD
+				);
 				p.first->second->refInherited = false;
 				p.first->second->fwdSelectors.insert(
 					signature[i].fwdSelectors.begin(), signature[i].fwdSelectors.end()
@@ -368,6 +377,7 @@ public:
 				assert(v[i].defines == p.first->second[i].defines);
 
 				p.first->second[i].refCount = std::max(p.first->second[i].refCount, v[i].refCount);
+				p.first->second[i].realRefCount = std::max(p.first->second[i].realRefCount, v[i].realRefCount);
 
 				p.first->second[i].fwdSelectors.insert(v[i].fwdSelectors.begin(), v[i].fwdSelectors.end());
 
@@ -489,6 +499,7 @@ public:
 			assert(*signature[0].fwdSelectors.begin() == (size_t)(-1));
 
 			result.push_back(signature[0]);
+			result.back().realRefCount = std::min(signature[0].realRefCount, box->getRealRefCount(input));
 			result.back().fwdSelectors.insert(box->selectorToInput(input));
 
 			if (selector != (size_t)(-1))
@@ -505,6 +516,7 @@ public:
 		for (auto& cutpoint : signature) {
 
 			result.push_back(cutpoint);
+			result.back().realRefCount = std::min(cutpoint.realRefCount, box->getRealRefCount(input));
 			result.back().fwdSelectors.clear();
 			result.back().fwdSelectors.insert(box->selectorToInput(input));
 
