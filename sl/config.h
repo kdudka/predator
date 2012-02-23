@@ -201,6 +201,11 @@
 #define SE_MAX_CALL_DEPTH                   0x40
 
 /**
+ * if non-zero, plot each state that caused an error to be reported
+ */
+#define SE_PLOT_ERROR_STATES                0
+
+/**
  * cost of merged prototype where one case was more generic than the other case
  */
 #define SE_PROTO_COST_ASYM                  1

@@ -31,6 +31,7 @@
 #include "symbt.hh"
 #include "symgc.hh"
 #include "symheap.hh"
+#include "symplot.hh"
 #include "symstate.hh"
 #include "symutil.hh"
 #include "symtrace.hh"
@@ -66,6 +67,10 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace) {
     if (ML_ERROR != level)
         // do not panic for now
         return;
+
+#if SE_PLOT_ERROR_STATES
+    plotHeap(sh_, "error-state", lw_);
+#endif
 
 #if SE_ERROR_RECOVERY_MODE
     errorDetected_ = true;
