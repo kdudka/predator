@@ -395,7 +395,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	std::set<size_t> forbidden;
 
-	if (boxMan.getBoxes().size()) {
+	if (boxMan.boxDatabase().size()) {
 
 		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
 
@@ -415,7 +415,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	learn1(*fae, this->boxMan);
 
-	if (boxMan.getBoxes().size()) {
+	if (boxMan.boxDatabase().size()) {
 
 		FAE old(*fae->backend, this->boxMan);
 
@@ -463,7 +463,7 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	std::set<size_t> forbidden;
 
-	if (boxMan.getBoxes().size()) {
+	if (boxMan.boxDatabase().size()) {
 
 		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
 
@@ -477,7 +477,7 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	normalize(*fae, forbidden, true);
 
-	if (boxMan.getBoxes().size()) {
+	if (boxMan.boxDatabase().size()) {
 
 		forbidden.clear();
 

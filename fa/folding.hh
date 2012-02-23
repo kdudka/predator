@@ -32,6 +32,8 @@
 #include "connection_graph.hh"
 #include "restart_request.hh"
 
+#include "config.h"
+
 class Folding {
 
 protected:
@@ -521,23 +523,7 @@ protected:
 */
 	const Box* getBox(const Box& box, bool conditional) {
 
-		if (conditional)
-			return this->boxMan.lookupBox(box);
-
-		const Box* boxPtr = this->boxMan.getBox(box);
-
-		if (!boxPtr)
-			return nullptr;
-
-		if (this->boxMan.learned()) {
-
-			CL_CDEBUG(1, "learning " << *(AbstractBox*)boxPtr << ':' << std::endl << *boxPtr);
-
-			throw RestartRequest("a new box encountered");
-
-		}
-
-		return boxPtr;
+		return (conditional)?(this->boxMan.lookupBox(box)):(this->boxMan.getBox(box));
 
 	}
 

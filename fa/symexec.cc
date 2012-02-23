@@ -389,19 +389,23 @@ protected:
 	 */
 	void printBoxes() const
 	{
-		std::map<std::string, const Box*> boxes;
+		std::vector<const Box*> boxes;
+
+		this->boxMan.boxDatabase().asVector(boxes);
+
+		std::map<std::string, const Box*> orderedBoxes;
 
 		// reorder according to the name
-		for (auto& box : this->boxMan.getBoxes())
+		for (auto& box : boxes)
 		{
 			std::stringstream ss;
 
-			ss << *(const AbstractBox*)(&box);
+			ss << *(const AbstractBox*)box;
 
-			boxes.insert(std::make_pair(ss.str(), &box));
+			orderedBoxes.insert(std::make_pair(ss.str(), box));
 		}
 
-		for (auto& nameBoxPair : boxes)
+		for (auto& nameBoxPair : orderedBoxes)
 		{
 			CL_DEBUG_AT(1, nameBoxPair.first << ':' << std::endl << *nameBoxPair.second);
 		}
@@ -618,7 +622,7 @@ public:
 			// print out stats
 			CL_DEBUG_AT(1, "forester has evaluated " << this->execMan.statesEvaluated()
 				<< " state(s) in " << this->execMan.tracesEvaluated() << " trace(s) using "
-				<< this->boxMan.getBoxes().size() << " box(es)");
+				<< this->boxMan.boxDatabase().size() << " box(es)");
 
 		}
 		catch (std::exception& e)
