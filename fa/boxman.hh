@@ -31,12 +31,171 @@
 #include <boost/unordered_map.hpp>
 #include <boost/algorithm/string.hpp>
 
+#include "config.h"
+
 #include "treeaut.hh"
 #include "tatimint.hh"
 #include "label.hh"
 #include "types.hh"
 #include "box.hh"
 #include "utils.hh"
+#include "restart_request.hh"
+
+class BoxAntichain {
+
+	std::unordered_map<Box::Signature, std::list<Box>, boost::hash<Box::Signature>> boxes_;
+
+	std::list<Box> obsolete_;
+
+	bool modified_;
+
+	size_t size_;
+
+public:
+
+	BoxAntichain() : boxes_(), obsolete_(), modified_(false), size_(0) {}
+
+	const Box* get(const Box& box) {
+
+		this->modified_ = false;
+
+		auto p = this->boxes_.insert(std::make_pair(box.getSignature(), std::list<Box>()));
+
+		if (!p.second) {
+
+			for (auto iter = p.first->second.begin(); iter != p.first->second.end(); ) {
+
+				assert(!this->modified_ || !box.simplifiedLessThan(*iter));
+
+				if (!this->modified_ && box.simplifiedLessThan(*iter))
+					return &*iter;
+
+				if (iter->simplifiedLessThan(box)) {
+
+					auto tmp = iter++;
+
+					this->obsolete_.splice(this->obsolete_.end(), p.first->second, tmp);
+
+					this->modified_ = true;
+
+				} else {
+
+					++iter;
+
+				}
+
+			}
+
+		}
+
+		p.first->second.push_back(box);
+
+		this->modified_ = true;
+
+		++this->size_;
+
+		return &p.first->second.back();
+
+	}
+
+	const Box* lookup(const Box& box) const {
+
+		auto iter = this->boxes_.find(box.getSignature());
+
+		if (iter != this->boxes_.end()) {
+
+			for (auto& box2 : iter->second) {
+
+				if (box.simplifiedLessThan(box2))
+					return &box2;
+
+			}
+
+		}
+
+		return nullptr;
+
+	}
+
+	bool modified() const {
+		return this->modified_;
+	}
+
+	size_t size() const {
+		return this->size_;
+	}
+
+	void clear() {
+		this->boxes_.clear();
+	}
+
+	void asVector(std::vector<const Box*>& boxes) const {
+
+		for (auto& signatureListPair : this->boxes_) {
+
+			for (auto& box : signatureListPair.second)
+				boxes.push_back(&box);
+
+		}
+
+	}
+
+};
+
+class BoxSet {
+
+	std::unordered_set<Box, boost::hash<Box>> boxes_;
+
+	bool modified_;
+
+public:
+
+	BoxSet() : boxes_(), modified_(false) {}
+
+	const Box* get(const Box& box) {
+
+		auto p = this->boxes_.insert(box);
+
+		this->modified_ = p.second;
+
+		return &*p.first;
+
+	}
+
+	const Box* lookup(const Box& box) const {
+
+		auto iter = this->boxes_.find(box);
+
+		return (iter == this->boxes_.end())?(nullptr):(&*iter);
+
+	}
+
+	bool modified() const {
+		return this->modified_;
+	}
+
+	void clear() {
+		this->boxes_.clear();
+	}
+
+	size_t size() const {
+		return this->boxes_.size();
+	}
+
+	void asVector(std::vector<const Box*>& boxes) const {
+
+		for (auto& box : this->boxes_)
+			boxes.push_back(&box);
+
+	}
+
+};
+
+#if FA_BOX_APPROXIMATION
+	typedef BoxAntichain BoxDatabase;
+#else
+	typedef BoxSet BoxDatabase;
+#endif
 
 class BoxMan {
 
@@ -49,9 +208,7 @@ class BoxMan {
 	boost::unordered_map<SelData, const SelBox*> selIndex;
 	boost::unordered_map<std::string, const TypeBox*> typeIndex;
 
-	std::unordered_set<Box, boost::hash<Box>> boxes;
-
-	bool learned_;
+	BoxDatabase boxes;
 
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data) {
 		std::pair<boost::unordered_map<Data, NodeLabel*>::iterator, bool> p
@@ -301,30 +458,29 @@ public:
 
 	const Box* getBox(const Box& box) {
 
-		this->learned_ = false;
+		auto cpBox = this->boxes.get(box);
 
-		auto p = this->boxes.insert(box);
+		if (this->boxes.modified()) {
 
-		if (p.second) {
+			Box* pBox = const_cast<Box*>(cpBox);
 
-			Box* box = const_cast<Box*>(&*p.first);
+			pBox->name = this->getBoxName();
+			pBox->initialize();
 
-			box->name = this->getBoxName();
-			box->initialize();
+			CL_CDEBUG(1, "learning " << *(AbstractBox*)cpBox << ':' << std::endl << *cpBox);
 
-			this->learned_ = true;
-
+#if FA_RESTART_AFTER_BOX_DISCOVERY
+			throw RestartRequest("a new box encountered");
+#endif
 		}
 
-		return &*p.first;
+		return cpBox;
 
 	}
 
 	const Box* lookupBox(const Box& box) const {
 
-		auto iter = this->boxes.find(box);
-
-		return (iter == this->boxes.end())?(nullptr):(&*iter);
+		return this->boxes.lookup(box);
 
 	}
 
@@ -347,13 +503,9 @@ public:
 
 	}
 
-	const std::unordered_set<Box, boost::hash<Box>>& getBoxes() const {
+	const BoxDatabase& boxDatabase() const {
+
 		return this->boxes;
-	}
-
-	bool learned() const {
-
-		return this->learned_;
 
 	}
 

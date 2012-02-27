@@ -91,6 +91,14 @@ public:
 	void run();
 
 	/**
+	 * @brief  Runs the symbolic execution
+	 *
+	 * This method runs the symbolic execution of the analysed program. Before
+	 * being run, the program needs to be compiled into microcode.
+	 */
+	void run(const Compiler::Assembly& assembly);
+
+	/**
 	 * @brief  Sets the flag for debugging
 	 *
 	 * The method that sets the debugging flag.

@@ -51,7 +51,6 @@ namespace CodeStorage {
 	struct Insn;
 }
 
-
 std::ostream& operator<<(std::ostream& os, const cl_loc& loc);
 
 

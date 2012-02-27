@@ -25,6 +25,7 @@
 
 #include "abstractinstruction.hh"
 #include "sequentialinstruction.hh"
+#include "box.hh"
 
 class FI_cond : public AbstractInstruction {
 
@@ -34,8 +35,11 @@ class FI_cond : public AbstractInstruction {
 
 public:
 
-	FI_cond(const CodeStorage::Insn* insn, size_t src,
-		AbstractInstruction* next[2])
+	FI_cond(const CodeStorage::Insn* insn, size_t src, AbstractInstruction* next[2])
+		: AbstractInstruction(insn, fi_type_e::fiBranch),
+		src_(src), next_({ next[0], next[1] }) {}
+
+	FI_cond(const CodeStorage::Insn* insn, size_t src, const std::vector<AbstractInstruction*>& next)
 		: AbstractInstruction(insn, fi_type_e::fiBranch),
 		src_(src), next_({ next[0], next[1] }) {}
 
@@ -606,6 +610,7 @@ public:
 
 };
 
+// checks whether there is no garbage
 class FI_check : public SequentialInstruction {
 
 public:
@@ -641,12 +646,13 @@ public:
 
 };
 
-class FI_abort : public SequentialInstruction {
+// aborts the program execution (exit)
+class FI_abort : public AbstractInstruction {
 
 public:
 
 	FI_abort(const CodeStorage::Insn* insn)
-		: SequentialInstruction(insn, fi_type_e::fiAbort) {}
+		: AbstractInstruction(insn, fi_type_e::fiAbort) {}
 
 	virtual void execute(ExecutionManager& execMan,
 		const AbstractInstruction::StateType& state);
@@ -654,6 +660,14 @@ public:
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "abort ";
 	}
+
+	/**
+	 * @copydoc AbstractInstruction::finalize
+	 */
+	virtual void finalize(
+		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,
+		std::vector<AbstractInstruction*>::const_iterator
+	) {}
 
 };
 
@@ -683,6 +697,7 @@ public:
 
 };
 
+// allocate new global variable and fill it with the content of the specified register
 class FI_push_greg : public SequentialInstruction {
 
 	size_t src_;
