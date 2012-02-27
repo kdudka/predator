@@ -41,15 +41,18 @@ bool matchSegBinding(
         const BindingOff            &offDiscover)
 {
     const EObjKind kind = sh.valTargetKind(seg);
+    switch (kind) {
+        case OK_CONCRETE:
+            // nothing to match actually
+            return true;
 
-    // TODO
-#if 0
-    CL_BREAK_IF(OK_OBJ_OR_NULL == kind);
-#endif
+        case OK_OBJ_OR_NULL:
+            // OK_OBJ_OR_NULL on the path --> withdraw it!
+            return false;
 
-    if (OK_CONCRETE == kind)
-        // nothing to match actually
-        return true;
+        default:
+            break;
+    }
 
     const BindingOff off = sh.segBinding(seg);
     if (off.head != offDiscover.head)

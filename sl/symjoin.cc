@@ -875,8 +875,8 @@ bool joinSegBinding(
         const TValId            v1,
         const TValId            v2)
 {
-    const bool isSeg1 = isAbstract(ctx.sh1.valTarget(v1));
-    const bool isSeg2 = isAbstract(ctx.sh2.valTarget(v2));
+    const bool isSeg1 = objWithBinding(ctx.sh1, v1);
+    const bool isSeg2 = objWithBinding(ctx.sh2, v2);
     if (!isSeg1 && !isSeg2)
         // nothing to join here
         return true;
@@ -2295,7 +2295,8 @@ bool joinCVars(SymJoinCtx &ctx, const JoinVarVisitor::EMode mode) {
     return traverseProgramVarsGeneric<
         /* N_DST */ 1,
         /* N_SRC */ 2>
-            (heaps,visitor);
+            (heaps, visitor,
+             /* allowRecovery */ JoinVarVisitor::JVM_LIVE_OBJS == mode);
 }
 
 TValId joinDstValue(

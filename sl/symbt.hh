@@ -121,8 +121,9 @@ class SymBackTrace {
         /**
          * stream out the backtrace, using CL_NOTE_MSG; or do nothing if the
          * backtrace is trivial
+         * @return true if the backtrace is @b not trivial
          */
-        void printBackTrace(bool forcePtrace = false) const;
+        bool printBackTrace(bool forcePtrace = false) const;
         friend class SymProc;
         friend class SymExecEngine;
 

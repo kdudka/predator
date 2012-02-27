@@ -53,14 +53,39 @@ class PerFncCache {
 #if !SE_ENABLE_CALL_CACHE
         SymCallCtx     *null_;
 #endif
+        int             missCntSinceLastHit_;
 
         int lookupCore(const SymHeap &sh);
 
+        void cacheHit() {
+            if (0 < missCntSinceLastHit_)
+                missCntSinceLastHit_ = 0;
+            else
+                --missCntSinceLastHit_;
+        }
+
     public:
+        PerFncCache():
+            missCntSinceLastHit_(0)
+        {
+        }
+
         ~PerFncCache() {
             BOOST_FOREACH(SymCallCtx *ctx, ctxMap_) {
                 delete ctx;
             }
+        }
+
+        int missCntSinceLastHit() const {
+            return missCntSinceLastHit_;
+        }
+
+        bool inUse() const {
+            BOOST_FOREACH(const SymCallCtx *ctx, ctxMap_)
+                if (ctx->inUse())
+                    return true;
+
+            return false;
         }
 
         void updateCacheEntry(const SymHeap &of, SymHeap by) {
@@ -111,6 +136,7 @@ int PerFncCache::lookupCore(const SymHeap &sh) {
             case JS_USE_ANY:
             case JS_USE_SH1:
                 // already covered by the cached ctx --> cache hit!
+                this->cacheHit();
                 return idx;
 
             case JS_USE_SH2:
@@ -138,13 +164,16 @@ int PerFncCache::lookupCore(const SymHeap &sh) {
             huni_.swapExisting(idx, shDup);
         }
 
+        this->cacheHit();
         return idx;
     }
 
 #else // 1 == SE_ENABLE_CALL_CACHE means "graph isomorphism only"
     int idx = huni_.lookup(sh);
-    if (-1 != idx)
+    if (-1 != idx) {
+        this->cacheHit();
         return idx;
+    }
 #endif
 
     // cache miss
@@ -153,6 +182,7 @@ int PerFncCache::lookupCore(const SymHeap &sh) {
     ctxMap_.push_back(0);
     CL_BREAK_IF(huni_.size() != ctxMap_.size());
 
+    ++missCntSinceLastHit_;
     return idx;
 }
 
@@ -417,7 +447,32 @@ void SymCallCtx::flushCallResults(SymState &dst) {
 }
 
 void SymCallCtx::invalidate() {
-#if !SE_ENABLE_CALL_CACHE
+#if SE_ENABLE_CALL_CACHE
+#   if SE_CALL_CACHE_MISS_THR
+    typedef SymCallCache::Private::TCache TCache;
+    TCache &cache = d->cd->cache;
+    const CodeStorage::Fnc &fnc = *d->fnc;
+    const int uid = uidOf(fnc);
+    const TCache::iterator it = cache.find(uid);
+    CL_BREAK_IF(it == cache.end());
+
+    const PerFncCache &pfc = it->second;
+    const int missCnt = pfc.missCntSinceLastHit();
+    if (missCnt < (SE_CALL_CACHE_MISS_THR))
+        return;
+
+    const struct cl_loc *loc = locationOf(fnc);
+    CL_DEBUG_MSG(&loc, "SE_CALL_CACHE_MISS_THR reached for "
+            << nameOf(fnc) << "(): " << missCnt);
+
+    if (pfc.inUse()) {
+        CL_DEBUG_MSG(&loc, "... but PerFncCache is still being used!");
+        return;
+    }
+
+    cache.erase(it);
+#   endif
+#else
     delete this;
 #endif
 }

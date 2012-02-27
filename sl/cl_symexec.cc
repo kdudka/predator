@@ -127,11 +127,13 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
         return;
 
     CL_DEBUG_MSG(lw, "(g) looking for gl junk...");
-    int hCnt = 0;
+    const unsigned cnt = results.size();
+
+    unsigned i = 0;
     BOOST_FOREACH(SymHeap *sh, results) {
-        if (1 < results.size()) {
-            CL_DEBUG_MSG(lw, "*** destroying gl variables in result #"
-                    << (++hCnt));
+        if (1 < cnt) {
+            CL_DEBUG("*** destroying gl variables in heap #"
+                    << (i++) << " of " << cnt << " heaps total");
         }
 
         digGlJunk(*sh);

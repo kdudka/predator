@@ -31,6 +31,7 @@
 #include "symbt.hh"
 #include "symgc.hh"
 #include "symheap.hh"
+#include "symplot.hh"
 #include "symstate.hh"
 #include "symutil.hh"
 #include "symtrace.hh"
@@ -52,7 +53,8 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace) {
     CL_BREAK_IF(!chkTraceGraphConsistency(trMsg));
 
     // print the backtrace
-    bt_->printBackTrace(forcePtrace);
+    if (bt_->printBackTrace(forcePtrace))
+        printMemUsage("SymBackTrace::printBackTrace");
 
     // dump trace graph, or schedule and endpoint for batch trace graph dump
 #if 2 == SE_DUMP_TRACE_GRAPHS
@@ -62,10 +64,13 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace) {
     glProxy->insert(sh_.traceNode(), "symtrace");
 #endif
 
-    printMemUsage("SymBackTrace::printBackTrace");
     if (ML_ERROR != level)
         // do not panic for now
         return;
+
+#if SE_PLOT_ERROR_STATES
+    plotHeap(sh_, "error-state", lw_);
+#endif
 
 #if SE_ERROR_RECOVERY_MODE
     errorDetected_ = true;
@@ -1621,7 +1626,8 @@ TValId handleIntegralOp(
 }
 
 bool isAnyIntValue(const SymHeapCore &sh, const TValId val) {
-    switch (val) {
+    const TValId root = sh.valRoot(val);
+    switch (root) {
         case VAL_NULL:
         case VAL_TRUE:
             return true;
