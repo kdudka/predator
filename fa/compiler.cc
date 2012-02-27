@@ -17,6 +17,14 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/**
+ * @file compiler.cc
+ *
+ * File with the implementation of the compiler of microinstructions.
+ */
+
+
 // Standard library headers
 #include <sstream>
 #include <cstdlib>
@@ -38,6 +46,7 @@
 #include "microcode.hh"
 #include "regdef.hh"
 #include "compiler.hh"
+
 
 namespace {
 
@@ -339,7 +348,8 @@ class Compiler::Core {
 
 	Compiler::Assembly* assembly;
 	std::unordered_map<const CodeStorage::Block*, AbstractInstruction*> codeIndex;
-	std::unordered_map<const CodeStorage::Fnc*, std::pair<SymCtx, CodeStorage::Block>> fncIndex;
+	std::unordered_map<const CodeStorage::Fnc*, std::pair<SymCtx,
+		CodeStorage::Block>> fncIndex;
 	const SymCtx* curCtx;
 
 	TA<label_type>::Backend& fixpointBackend;
@@ -351,33 +361,31 @@ class Compiler::Core {
 
 protected:
 
-	std::pair<SymCtx, CodeStorage::Block>& getFncInfo(const CodeStorage::Fnc* fnc) {
-
+	std::pair<SymCtx, CodeStorage::Block>& getFncInfo(const CodeStorage::Fnc* fnc)
+	{
 		auto info = this->fncIndex.find(fnc);
 		assert(info != this->fncIndex.end());
 		return info->second;
-
 	}
 
-	void reset(Compiler::Assembly& assembly) {
-
+	void reset(Compiler::Assembly& assembly)
+	{
 		this->assembly = &assembly;
 		this->assembly->clear();
 		this->codeIndex.clear();
 		this->fncIndex.clear();
-
 	}
 
-	AbstractInstruction* append(AbstractInstruction* instr) {
-
+	AbstractInstruction* append(AbstractInstruction* instr)
+	{
 		this->assembly->code_.push_back(instr);
 
 		return instr;
-
 	}
 
-	AbstractInstruction* override(AbstractInstruction* instr) {
-
+	AbstractInstruction* override(AbstractInstruction* instr)
+	{
+		// Assertions
 		assert(this->assembly->code_.size());
 
 		delete this->assembly->code_.back();
@@ -385,7 +393,6 @@ protected:
 		this->assembly->code_.back() = instr;
 
 		return instr;
-
 	}
 
 	void cAbstraction(const CodeStorage::Insn* insn = nullptr) {
