@@ -17,64 +17,131 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/**
+ * @file compiler.hh
+ *
+ * Header file for the compiler of microinstructions.
+ */
+
+
 #ifndef COMPILER_H
 #define COMPILER_H
 
+// Standard library headers
 #include <ostream>
 #include <vector>
 #include <unordered_map>
 
+// Code Listener headers
+#include <cl/storage.hh>
+#include <cl/cl_msg.hh>
+#include <cl/cldebug.hh>
+#include <cl/clutil.hh>
+
+// Forester headers
 #include "abstractinstruction.hh"
 #include "treeaut.hh"
 #include "label.hh"
 
+
 namespace CodeStorage {
-    struct Fnc;
-    struct Storage;
-    struct Insn;
+	struct Fnc;
+	struct Storage;
+	struct Insn;
 }
 
-class Compiler {
 
+std::ostream& operator<<(std::ostream& os, const cl_loc& loc);
+
+
+/**
+ * @brief  The compiler class
+ *
+ * Class that represents the compiler from CodeListener's code storage to
+ * Forester's microinstructions.
+ */
+class Compiler
+{
 public:
 
-	struct Assembly {
-
+	/**
+	 * @brief  The structure that contains the assembly code
+	 *
+	 * This structure contains the compiled assembly code (in microinstructions)
+	 * of the program.
+	 *
+	 * @todo: use something more robust than a struct
+	 */
+	struct Assembly
+	{
+		/// linear code
 		std::vector<AbstractInstruction*> code_;
-		std::unordered_map<const struct CodeStorage::Fnc*, AbstractInstruction*> functionIndex_;
+
+		/// index with pointers to functions' entry points in the code
+		std::unordered_map<const struct CodeStorage::Fnc*, AbstractInstruction*>
+			functionIndex_;
+
+		/// size of the register file
 		size_t regFileSize_;
 
-		~Assembly() { this->clear(); }
 
-		void clear() {
+		/**
+		 * @brief  The destructor
+		 */
+		~Assembly() { clear(); }
 
-			for (auto instr : this->code_)
+
+		/**
+		 * @brief  Clears the assembly
+		 */
+		void clear()
+		{
+			for (auto instr : code_)
 				delete instr;
 
-			this->code_.clear();
-			this->functionIndex_.clear();
-			this->regFileSize_ = 0;
-
+			code_.clear();
+			functionIndex_.clear();
+			regFileSize_ = 0;
 		}
 
-		AbstractInstruction* getEntry(const struct CodeStorage::Fnc* f) const {
 
-			auto iter = this->functionIndex_.find(f);
-			assert(iter != this->functionIndex_.end());
+		/**
+		 * @brief  Gets the entry point of a function
+		 *
+		 * Returns a pointer to the instruction that is the entry point of the given
+		 * function @p f.
+		 *
+		 * @param[in]  f  The function @p f
+		 *
+		 * @returns  The instruction that is the entry point of @p f
+		 */
+		AbstractInstruction* getEntry(const struct CodeStorage::Fnc* f) const
+		{
+			auto iter = functionIndex_.find(f);
+			// Assertions
+			assert(iter != functionIndex_.end());
 			return iter->second;
-
 		}
 
-		friend std::ostream& operator<<(std::ostream& os, const Assembly& as) {
 
-			AbstractInstruction* prev = NULL;
-
+		/**
+		 * @brief  The output stream operator
+		 *
+		 * The std::ostream << operator for conversion to a string.
+		 *
+		 * @param[in,out]  os     The output stream
+		 * @param[in]      as     The value to be appended to the stream
+		 *
+		 * @returns  The modified output stream
+		 */
+		friend std::ostream& operator<<(std::ostream& os, const Assembly& as)
+		{
+			AbstractInstruction* prev = nullptr;
+			const CodeStorage::Insn* lastInsn = nullptr;
 			size_t c = 0;
 
-			const CodeStorage::Insn* lastInsn = nullptr;
-
 			for (auto instr : as.code_) {
-
 				if ((instr->getType() == fi_type_e::fiJump) && prev) {
 					switch (prev->getType()) {
 						case fi_type_e::fiBranch:
@@ -102,29 +169,51 @@ public:
 				os << "\t\t" << *instr << std::endl;
 
 				++c;
-
 			}
 
 			return os << "code size: " << c << " instructions" << std::endl;
-
 		}
-
 	};
 
 public:
 
-	Compiler(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		class BoxMan& boxMan);
+	/**
+	 * @brief  The constructor
+	 *
+	 * Constructs the compiler object with given backends for fixpoints, tree
+	 * automata, and given box manager.
+	 *
+	 * @param[in]  fixpointBackend  The backend for fixpoints
+	 * @param[in]  taBackend        The backend for tree automata
+	 * @param[in]  boxMan           The box manager
+	 */
+	Compiler(TA<label_type>::Backend& fixpointBackend,
+		TA<label_type>::Backend& taBackend, class BoxMan& boxMan);
 
+	/**
+	 * @brief  The destructor
+	 */
 	~Compiler();
 
-	void compile(Assembly& assembly, const CodeStorage::Storage &stor, const CodeStorage::Fnc& entry);
+	/**
+	 * @brief  Compiles code from the code storage
+	 *
+	 * @param[out]  assembly  The output assembly code
+	 * @param[in]   stor      The code storage to be compiled
+	 * @param[in]   entry     The entry point of the program
+	 */
+	void compile(Assembly& assembly, const CodeStorage::Storage &stor,
+		const CodeStorage::Fnc& entry);
 
 private:
 
+	/**
+	 * @brief  Class with the core implementation of the compiler (hidden)
+	 */
 	class Core;
-	Core *core_;
 
+	/// The core of the compiler
+	Core *core_;
 };
 
 #endif
