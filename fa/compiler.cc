@@ -319,66 +319,110 @@ struct LoopAnalyser {
 }; // struct LoopAnalyser
 
 
+/**
+ * @brief  Enumeration of built-in functions
+ */
 typedef enum { biNone, biMalloc, biFree, biNondet, biFix, biPrintHeap } builtin_e;
 
 
-struct BuiltinTable {
+/**
+ * @brief  The table with built-in functions
+ *
+ * This table serves as a translation table of function names to the @p
+ * builtin_e enumeration.
+ */
+class BuiltinTable
+{
+private:
 
+	/// the hash table that maps function name to the value of enumeration
 	boost::unordered_map<std::string, builtin_e> _table;
 
 public:
 
-	BuiltinTable() {
-		this->_table["malloc"] = builtin_e::biMalloc;
-		this->_table["free"] = builtin_e::biFree;
-		this->_table["__nondet"] = builtin_e::biNondet;
-		this->_table["__fix"] = builtin_e::biFix;
-		this->_table["__print_heap"] = builtin_e::biPrintHeap;
+	/**
+	 * @brief  The default constructor
+	 *
+	 * The default constructor. It properly initialises the translation table with
+	 * proper values.
+	 */
+	BuiltinTable()
+	{
+		this->_table["malloc"]        = builtin_e::biMalloc;
+		this->_table["free"]          = builtin_e::biFree;
+		this->_table["__nondet"]      = builtin_e::biNondet;
+		this->_table["__fix"]         = builtin_e::biFix;
+		this->_table["__print_heap"]  = builtin_e::biPrintHeap;
 	}
 
-	builtin_e operator[](const std::string& key) {
+	/**
+	 * @brief  The index operator
+	 *
+	 * Translates the function name @p key to the enumeration @p builtin_e.
+	 * Returns @p builtin_e::biNone if @p key is not a name of a built-in
+	 * function.
+	 *
+	 * @param[in]  key  The name of the function to check
+	 * 
+	 * @returns  The value of the @p builtin_e enumeration corresponding to @p key
+	 */
+	builtin_e operator[](const std::string& key)
+	{
 		boost::unordered_map<std::string, builtin_e>::iterator i = this->_table.find(key);
 		return (i == this->_table.end())?(builtin_e::biNone):(i->second);
 	}
-
 };
 
+
 /// @todo: document!!!
-class Compiler::Core {
+class Compiler::Core
+{
+private:
 
-	Compiler::Assembly* assembly;
-	std::unordered_map<const CodeStorage::Block*, AbstractInstruction*> codeIndex;
+	/// The assembly code of the program
+	Compiler::Assembly* assembly_;
+
+	/// @todo: 
+	std::unordered_map<const CodeStorage::Block*, AbstractInstruction*> codeIndex_;
+	/// The index of functions, maps function names to their code
 	std::unordered_map<const CodeStorage::Fnc*, std::pair<SymCtx,
-		CodeStorage::Block>> fncIndex;
-	const SymCtx* curCtx;
+		CodeStorage::Block>> fncIndex_;
+	/// @todo:
+	const SymCtx* curCtx_;
 
-	TA<label_type>::Backend& fixpointBackend;
-	TA<label_type>::Backend& taBackend;
-	BoxMan& boxMan;
+	/// The backend for fixpoints
+	TA<label_type>::Backend& fixpointBackend_;
+	/// The backend for tree automata
+	TA<label_type>::Backend& taBackend_;
+	/// The box manager
+	BoxMan& boxMan_;
 
-	BuiltinTable builtinTable;
-	LoopAnalyser loopAnalyser;
+	/// The table with built-in functions
+	BuiltinTable builtinTable_;
+	/// The loop analyser
+	LoopAnalyser loopAnalyser_;
 
 protected:
 
 	std::pair<SymCtx, CodeStorage::Block>& getFncInfo(const CodeStorage::Fnc* fnc)
 	{
-		auto info = this->fncIndex.find(fnc);
-		assert(info != this->fncIndex.end());
+		auto info = fncIndex_.find(fnc);
+		// Assertions
+		assert(info != fncIndex_.end());
 		return info->second;
 	}
 
 	void reset(Compiler::Assembly& assembly)
 	{
-		this->assembly = &assembly;
-		this->assembly->clear();
-		this->codeIndex.clear();
-		this->fncIndex.clear();
+		assembly_ = &assembly;
+		assembly_->clear();
+		codeIndex_.clear();
+		fncIndex_.clear();
 	}
 
 	AbstractInstruction* append(AbstractInstruction* instr)
 	{
-		this->assembly->code_.push_back(instr);
+		assembly_->code_.push_back(instr);
 
 		return instr;
 	}
@@ -1441,81 +1485,119 @@ protected:
 
 public:
 
-	Core(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan)
-		: fixpointBackend(fixpointBackend), taBackend(taBackend), boxMan(boxMan) {}
+	/**
+	 * @brief  The constructor
+	 *
+	 * The constructor sets the fixpoint backend, the tree automata backend, and
+	 * the box manager.
+	 *
+	 * @param[in,out]  fixpointBackend  The fixpoint backend
+	 * @param[in,out]  taBackend        Tree automata backend
+	 * @param[in,out]  boxMan           The box manager
+	 */
+	Core(TA<label_type>::Backend& fixpointBackend,
+		TA<label_type>::Backend& taBackend, BoxMan& boxMan)
+		: fixpointBackend(fixpointBackend), taBackend(taBackend), boxMan(boxMan)
+	{ }
 
+
+	/**
+	 * @brief  The method that compiles the code from the code storage
+	 *
+	 * Compiles the code from the entry point @p entry from the code storage @p
+	 * stor into the provided assembly @p assembly.
+	 *
+	 * @param[out]  assembly  Assembly that serves as the output
+	 * @param[in]   stor      Code storage with the code
+	 * @param[in]   entry     The entry point of the program
+	 */
 	void compile(Compiler::Assembly& assembly, const CodeStorage::Storage& stor,
-		const CodeStorage::Fnc& entry) {
+		const CodeStorage::Fnc& entry)
+	{
+		// clear the code in the assembly
+		reset(assembly);
 
-		this->reset(assembly);
-
-		for (auto fnc : stor.fncs) {
-
+		for (auto fnc : stor.fncs)
+		{
 			if (isDefined(*fnc))
-				this->fncIndex.insert(std::make_pair(fnc, std::make_pair(SymCtx(*fnc), CodeStorage::Block())));
-
+			{	// in case the function is defined and not only declared
+				fncIndex_.insert(std::make_pair(
+					fnc,
+					std::make_pair(
+						SymCtx(*fnc),
+						CodeStorage::Block()
+					)
+				));
+			}
 		}
 
-		// compile entry call
+		//              ******* compile entry call *******
 
 		// load NULL into r0
-		this->append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
+		append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
 
 		// push r0 as ABP
-		this->append(new FI_push_greg(nullptr, 0));
+		append(new FI_push_greg(nullptr, 0));
 
 		// feed registers with arguments (unknown values)
 		for (size_t i = entry.args.size() + 1; i > 1; --i)
-			this->append(new FI_load_cst(nullptr, i, Data::createUnknw()));
+			append(new FI_load_cst(nullptr, i, Data::createUnknw()));
 
 		AbstractInstruction* instr = new FI_check(nullptr);
 
-		// set target flag
+		// set target flag (the instruction is the target of some jump)
 		instr->setTarget();
 
 		// store return address into r1
-		this->append(new FI_load_cst(nullptr, 1, Data::createNativePtr(instr)));
+		append(new FI_load_cst(nullptr, 1, Data::createNativePtr(instr)));
 
-		// call
-		this->append(new FI_jmp(nullptr, &this->getFncInfo(&entry).second));
+		// call the entry point
+		append(new FI_jmp(nullptr, &getFncInfo(&entry).second));
 
-		this->append(instr);
+		// push the instruction into the assembly; the instruction is set as the
+		// target of the function call
+		append(instr);
 
 		// pop return value into r0
-		this->append(new FI_pop_greg(nullptr, 0));
+		append(new FI_pop_greg(nullptr, 0));
 
 		// pop ABP into r1
-		this->append(new FI_pop_greg(nullptr, 1));
+		append(new FI_pop_greg(nullptr, 1));
 
 		// check stack frame
-		this->append(new FI_assert(nullptr, 1, Data::createInt(0)));
+		append(new FI_assert(nullptr, 1, Data::createInt(0)));
 
 		// abort
-		this->append(new FI_abort(nullptr));
+		append(new FI_abort(nullptr));
 
-		for (auto fnc : stor.fncs) {
-
+		for (auto fnc : stor.fncs)
+		{	// compile all functions in the code storage
 			if (isDefined(*fnc))
-				this->compileFunction(*fnc);
-
+				compileFunction(*fnc);
 		}
 
-		for (auto i = this->assembly->code_.begin(); i != this->assembly->code_.end(); ++i)
-			(*i)->finalize(this->codeIndex, i);
-
+		for (auto i = assembly_->code_.begin(); i != assembly_->code_.end(); ++i)
+		{	// finalize all microinstructions
+			(*i)->finalize(codeIndex_, i);
+		}
 	}
-
 };
 
-Compiler::Compiler(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-BoxMan& boxMan)
-	: core_(new Core(fixpointBackend, taBackend, boxMan)) {}
 
-Compiler::~Compiler() {
+Compiler::Compiler(TA<label_type>::Backend& fixpointBackend,
+	TA<label_type>::Backend& taBackend, BoxMan& boxMan)
+	: core_(new Core(fixpointBackend, taBackend, boxMan))
+{ }
+
+
+Compiler::~Compiler()
+{
 	delete this->core_;
 }
 
-void Compiler::compile(Compiler::Assembly& assembly, const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry) {
+
+void Compiler::compile(Compiler::Assembly& assembly,
+	const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry)
+{
 	this->core_->compile(assembly, stor, entry);
 }
