@@ -374,7 +374,13 @@ public:
 };
 
 
-/// @todo: document!!!
+/**
+ * @brief  The compiler core
+ *
+ * The core of the compiler that performs the compilation itself. It is given
+ * a code storage and generates an (linear) assembly of microinstructions,
+ * together with pointers of functions to the assembly.
+ */
 class Compiler::Core
 {
 private:
@@ -430,29 +436,27 @@ protected:
 	AbstractInstruction* override(AbstractInstruction* instr)
 	{
 		// Assertions
-		assert(this->assembly->code_.size());
+		assert(assembly_->code_.size());
 
-		delete this->assembly->code_.back();
+		delete assembly_->code_.back();
 
-		this->assembly->code_.back() = instr;
+		assembly_->code_.back() = instr;
 
 		return instr;
 	}
 
 	void cAbstraction(const CodeStorage::Insn* insn = nullptr) {
-		this->append(
-			new FI_abs(insn, this->fixpointBackend, this->taBackend, this->boxMan)
+		append(new FI_abs(insn, fixpointBackend_, taBackend_, boxMan_)
 		);
 	}
 
 	void cFixpoint(const CodeStorage::Insn& insn) {
-		this->append(
-			new FI_fix(&insn, this->fixpointBackend, this->taBackend, this->boxMan)
+		append(new FI_fix(&insn, fixpointBackend_, taBackend_, boxMan_)
 		);
 	}
 
 	void cPrintHeap(const CodeStorage::Insn& insn) {
-		this->append(new FI_print_heap(&insn, this->curCtx));
+		append(new FI_print_heap(&insn, curCtx_));
 	}
 
 	void cLoadCst(size_t dst, const cl_operand& op,
@@ -475,13 +479,13 @@ protected:
 				switch (op.data.cst.code) {
 					// according to the type of the constant
 					case cl_type_e::CL_TYPE_INT:
-						this->append(
+						append(
 							new FI_load_cst(&insn, dst, Data::createInt(intCstFromOperand(&op)))
 						);
 						break;
 
 					case cl_type_e::CL_TYPE_STRING:
-						this->append(new FI_load_cst(&insn, dst, Data::createUnknw()));
+						append(new FI_load_cst(&insn, dst, Data::createUnknw()));
 						break;
 
 					default:
@@ -552,13 +556,13 @@ protected:
 
 			if (acc && (acc->code == CL_ACCESSOR_REF)) {
 
-				assert(acc->next == NULL);
+				assert(acc->next == nullptr);
 				this->cMoveReg(dst, src, offset, insn);
 				return;
 
 			}
 
-			assert(acc == NULL);
+			assert(acc == nullptr);
 
 			if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
 
@@ -581,7 +585,7 @@ protected:
 
 			acc = Core::computeOffset(offset, acc);
 
-			assert(acc == NULL);
+			assert(acc == nullptr);
 
 			this->cMoveReg(dst, src, offset, insn);
 
@@ -602,7 +606,7 @@ protected:
 
 			acc = Core::computeOffset(offset, acc->next);
 
-			assert(acc == NULL);
+			assert(acc == nullptr);
 
 			if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
 
@@ -627,7 +631,7 @@ protected:
 
 			acc = Core::computeOffset(offset, acc);
 
-			assert(acc == NULL);
+			assert(acc == nullptr);
 			assert(offset == 0);
 
 			if (src != tmp)
@@ -646,7 +650,7 @@ protected:
 
 			case cl_operand_e::CL_OPERAND_VAR: {
 
-				auto varInfo = this->curCtx->getVarInfo(varIdFromOperand(&op));
+				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
 				if (varInfo.first) {
 
@@ -667,7 +671,7 @@ protected:
 
 							assert(op.type->code == cl_type_e::CL_TYPE_PTR);
 
-							assert(acc->next == NULL);
+							assert(acc->next == nullptr);
 
 							if (offset)
 								this->append(new FI_move_reg_offs(&insn, dst, dst, offset));
@@ -676,7 +680,7 @@ protected:
 
 						}
 
-						assert(acc == NULL);
+						assert(acc == nullptr);
 
 						if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
 
@@ -701,13 +705,13 @@ protected:
 
 						if (acc && (acc->code == CL_ACCESSOR_REF)) {
 
-							assert(acc->next == NULL);
+							assert(acc->next == nullptr);
 							this->append(new FI_get_ABP(&insn, dst, offset));
 							break;
 
 						}
 
-						assert(acc == NULL);
+						assert(acc == nullptr);
 
 						this->append(new FI_load_ABP(&insn, dst, offset));
 //						this->cMoveReg(dst, src, offset);
@@ -752,7 +756,7 @@ protected:
 
 			case cl_operand_e::CL_OPERAND_VAR: {
 
-				auto varInfo = this->curCtx->getVarInfo(varIdFromOperand(&op));
+				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
 				if (varInfo.first) {
 
@@ -787,7 +791,7 @@ protected:
 
 			case cl_operand_e::CL_OPERAND_VAR: {
 
-				auto varInfo = this->curCtx->getVarInfo(varIdFromOperand(&op));
+				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
 				if (varInfo.first) {
 
@@ -821,7 +825,7 @@ protected:
 
 					}
 
-					assert(acc == NULL);
+					assert(acc == nullptr);
 
 					if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
 
@@ -875,7 +879,7 @@ protected:
 			if (var.onlyIfNotPointed)
 				continue;
 
-			const std::pair<bool, size_t>& varInfo = this->curCtx->getVarInfo(var.uid);
+			const std::pair<bool, size_t>& varInfo = curCtx_->getVarInfo(var.uid);
 
 			if (!varInfo.first)
 				continue;
@@ -885,7 +889,7 @@ protected:
 		}
 
 		if (offs.empty())
-			return NULL;
+			return nullptr;
 
 		std::vector<Data::item_info> tmp;
 
@@ -949,7 +953,7 @@ protected:
 					srcReg,
 					srcReg,
 					dst.type->items[0].type->size,
-					this->boxMan.getTypeInfo(typeName),
+					boxMan_.getTypeInfo(typeName),
 					sels
 				)
 			);
@@ -1024,7 +1028,7 @@ protected:
 					srcReg,
 					srcReg,
 					dst.type->items[0].type->size,
-					this->boxMan.getTypeInfo(typeName),
+					boxMan_.getTypeInfo(typeName),
 					sels
 				)
 			);
@@ -1130,7 +1134,7 @@ protected:
 
 			auto varId = varIdFromOperand(&insn.operands[0]);
 
-			if (this->curCtx->getVarInfo(varId).first) {
+			if (curCtx_->getVarInfo(varId).first) {
 
 				auto acc = insn.operands[0].accessor;
 
@@ -1142,45 +1146,43 @@ protected:
 		}
 
 		// kill dead variables
-		this->cKillDeadVariables(varsToKill, insn);
+		cKillDeadVariables(varsToKill, insn);
 
-		size_t head = this->assembly->code_.size();
+		size_t head = assembly_->code_.size();
 
 		// put placeholder for loading return address into r1
-		this->append(NULL);
+		append(nullptr);
 
 		// call
-		this->append(new FI_jmp(&insn, &this->getFncInfo(&fnc).second));
+		append(new FI_jmp(&insn, &getFncInfo(&fnc).second));
 
 		// load ABP into r1
-		this->append(new FI_get_ABP(&insn, 1, 0));
+		append(new FI_get_ABP(&insn, 1, 0));
 
 		// isolate adjacent nodes (current ABP)
-		this->append(new FI_acc_all(&insn, 1));
+		append(new FI_acc_all(&insn, 1));
 
-		size_t head2 = this->assembly->code_.size();
+		size_t head2 = assembly_->code_.size();
 
 		// fixpoint
-		this->cFixpoint(insn);
+		cFixpoint(insn);
 
-		this->assembly->code_[head2]->insn(&insn);
+		assembly_->code_[head2]->insn(&insn);
 
 		if (insn.operands[0].code != CL_OPERAND_VOID) {
 			// pop return value into r0
-			this->append(new FI_pop_greg(&insn, 0));
+			append(new FI_pop_greg(&insn, 0));
 			// collect result from r0
-			this->cStoreOperand(insn.operands[0], 0, 1, insn);
-
+			cStoreOperand(insn.operands[0], 0, 1, insn);
 		}
 
 		// construct instruction for loading return address
-		this->assembly->code_[head] =
+		assembly_->code_[head] =
 			new FI_load_cst(&insn, 1,
-				Data::createNativePtr(this->assembly->code_[head + 2]));
+				Data::createNativePtr(assembly_->code_[head + 2]));
 
 		// set target flag
-		this->assembly->code_[head + 2]->setTarget();
-
+		assembly_->code_[head + 2]->setTarget();
 	}
 
 	void compileRet(const CodeStorage::Insn& insn) {
@@ -1221,44 +1223,45 @@ protected:
 
 		this->cKillDeadVariables(insn.varsToKill, insn);
 
-		AbstractInstruction* tmp[2] = { NULL, NULL };
+		AbstractInstruction* tmp[2] = { nullptr, nullptr };
 
-		size_t sentinel = this->assembly->code_.size();
+		size_t sentinel = assembly_->code_.size();
 
-		this->append(NULL);
+		append(nullptr);
 
 		for (auto i : { 0, 1 }) {
 
-			tmp[i] = this->cKillDeadVariables(insn.killPerTarget[i], insn);
+			tmp[i] = cKillDeadVariables(insn.killPerTarget[i], insn);
 
-			this->append(new FI_jmp(&insn, insn.targets[i]));
+			append(new FI_jmp(&insn, insn.targets[i]));
 
 			if (!tmp[i])
-				tmp[i] = this->assembly->code_.back();
+				tmp[i] = assembly_->code_.back();
 
 		}
 
-		this->assembly->code_[sentinel] = new FI_cond(&insn, srcReg, tmp);
+		assembly_->code_[sentinel] = new FI_cond(&insn, srcReg, tmp);
 
 	}
 
-	void compileNondet(const CodeStorage::Insn& insn) {
-
+	void compileNondet(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 
-		size_t dstReg = this->lookupStoreReg(dst, 0);
+		size_t dstReg = lookupStoreReg(dst, 0);
 
-		this->append(new FI_load_cst(&insn, dstReg, Data::createUnknw()));
-		this->cStoreOperand(dst, dstReg, 1, insn);
-		this->cKillDeadVariables(insn.varsToKill, insn);
-
+		append(new FI_load_cst(&insn, dstReg, Data::createUnknw()));
+		cStoreOperand(dst, dstReg, 1, insn);
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
-	void compileCall(const CodeStorage::Insn& insn) {
-
+	void compileCall(const CodeStorage::Insn& insn)
+	{
+		// Assertions
 		assert(insn.operands[1].code == cl_operand_e::CL_OPERAND_CST);
 		assert(insn.operands[1].data.cst.code == cl_type_e::CL_TYPE_FNC);
-		switch (this->builtinTable[insn.operands[1].data.cst.data.cst_fnc.name]) {
+
+		switch (builtinTable_[insn.operands[1].data.cst.data.cst_fnc.name]) {
 			case builtin_e::biMalloc:
 				this->compileMalloc(insn);
 				return;
@@ -1301,10 +1304,10 @@ protected:
 			case cl_insn_e::CL_INSN_UNOP:
 				switch (insn.subCode) {
 					case cl_unop_e::CL_UNOP_ASSIGN:
-						this->compileAssignment(insn);
+						compileAssignment(insn);
 						break;
 					case cl_unop_e::CL_UNOP_TRUTH_NOT:
-						this->compileTruthNot(insn);
+						compileTruthNot(insn);
 						break;
 					default:
 						throw NotImplementedException(translUnOpCode(insn.subCode),
@@ -1315,25 +1318,25 @@ protected:
 			case cl_insn_e::CL_INSN_BINOP:
 				switch (insn.subCode) {
 					case cl_binop_e::CL_BINOP_EQ:
-						this->compileCmp<FI_eq>(insn);
+						compileCmp<FI_eq>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_NE:
-						this->compileCmp<FI_neq>(insn);
+						compileCmp<FI_neq>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_LT:
-						this->compileCmp<FI_lt>(insn);
+						compileCmp<FI_lt>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_GT:
-						this->compileCmp<FI_gt>(insn);
+						compileCmp<FI_gt>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_PLUS:
-						this->compilePlus(insn);
+						compilePlus(insn);
 						break;
 /*					case cl_binop_e::CL_BINOP_MINUS:
-						this->execMinus(state, parent, insn);
+						execMinus(state, parent, insn);
 						break;*/
 					case cl_binop_e::CL_BINOP_POINTER_PLUS:
-						this->compilePointerPlus(insn);
+						compilePointerPlus(insn);
 						break;
 					default:
 						throw NotImplementedException(translBinOpCode(insn.subCode),
@@ -1342,19 +1345,19 @@ protected:
 				break;
 
 			case cl_insn_e::CL_INSN_CALL:
-				this->compileCall(insn);
+				compileCall(insn);
 				break;
 
 			case cl_insn_e::CL_INSN_RET:
-				this->compileRet(insn);
+				compileRet(insn);
 				break;
 
 			case cl_insn_e::CL_INSN_JMP:
-				this->compileJmp(insn);
+				compileJmp(insn);
 				break;
 
 			case cl_insn_e::CL_INSN_COND:
-				this->compileCond(insn);
+				compileCond(insn);
 				break;
 
 			default:
@@ -1363,88 +1366,86 @@ protected:
 		}
 	}
 
-	void compileBlock(const CodeStorage::Block* block, bool abstract) {
+	void compileBlock(const CodeStorage::Block* block, bool abstract)
+	{
+		size_t head = assembly_->code_.size();
 
-		size_t head = this->assembly->code_.size();
+		if (abstract || loopAnalyser_.isEntryPoint(*block->begin()))
+			cAbstraction();
+//		else
+//			this->cFixpoint();
 
-		if (abstract || this->loopAnalyser.isEntryPoint(*block->begin()))
-			this->cAbstraction();
-/*		else
-			this->cFixpoint();*/
+		for (auto insn : *block)
+		{
+			compileInstruction(*insn);
 
-		for (auto insn : *block) {
-
-			this->compileInstruction(*insn);
-
-			if (head == this->assembly->code_.size())
+			if (head == assembly_->code_.size())
 				continue;
 
-			this->assembly->code_[head]->insn(insn);
-/*
-			for (size_t i = head; i < this->assembly->code_.size(); ++i)
-				CL_CDEBUG(this->assembly->code_[i] << ":\t" << *this->assembly->code_[i]);
-*/
-			head = this->assembly->code_.size();
+			assembly_->code_[head]->insn(insn);
 
+//			for (size_t i = head; i < this->assembly->code_.size(); ++i)
+//				CL_CDEBUG(this->assembly->code_[i] << ":\t" << *this->assembly->code_[i]);
+
+			head = assembly_->code_.size();
 		}
-
 	}
 
 	void compileFunction(const CodeStorage::Fnc& fnc) {
 
-		std::pair<SymCtx, CodeStorage::Block>& fncInfo = this->getFncInfo(&fnc);
+		std::pair<SymCtx, CodeStorage::Block>& fncInfo = getFncInfo(&fnc);
 
 		// get context
-		this->curCtx = &fncInfo.first;
+		curCtx_ = &fncInfo.first;
 
-		if (this->assembly->regFileSize_ < this->curCtx->regCount)
-			this->assembly->regFileSize_ = this->curCtx->regCount;
+		if (assembly_->regFileSize_ < curCtx_->regCount)
+			assembly_->regFileSize_ = curCtx_->regCount;
 
 		// we need 2 more registers in order to facilitate call
-		if (this->assembly->regFileSize_ < (this->curCtx->argCount + 2))
-			this->assembly->regFileSize_ = this->curCtx->argCount + 2;
+		if (assembly_->regFileSize_ < (curCtx_->argCount + 2))
+			assembly_->regFileSize_ = curCtx_->argCount + 2;
 
 		// move ABP into r0
-		this->append(new FI_get_ABP(nullptr, 0, 0))->setTarget();
+		append(new FI_get_ABP(nullptr, 0, 0))->setTarget();
 
 		// store entry point
-		this->codeIndex.insert(std::make_pair(&fncInfo.second, this->assembly->code_.back()));
+		codeIndex_.insert(std::make_pair(&fncInfo.second, assembly_->code_.back()));
 
 		// gather arguments
 		std::vector<size_t> offsets = { ABP_OFFSET, RET_OFFSET };
 
 		for (auto arg : fnc.args)
-			offsets.push_back(this->curCtx->getVarInfo(arg).second);
+			offsets.push_back(curCtx_->getVarInfo(arg).second);
 
 		// build structure in r0
-		this->append(new FI_build_struct(nullptr, 0, 0, offsets));
+		append(new FI_build_struct(nullptr, 0, 0, offsets));
 
 		// build stack frame
 
 		// move void ptr of size 1 into r1
-		this->append(new FI_load_cst(nullptr, 1, Data::createVoidPtr(1)));
+		append(new FI_load_cst(nullptr, 1, Data::createVoidPtr(1)));
 
 		// get function name
 		std::ostringstream ss;
 		ss << nameOf(fnc) << ':' << uidOf(fnc);
 
 		// allocate stack frame to r1
-		this->append(
-			new FI_node_create(nullptr, 1, 1, 1, this->boxMan.getTypeInfo(ss.str()),
-				this->curCtx->sfLayout)
+		append(
+			new FI_node_create(nullptr, 1, 1, 1, boxMan_.getTypeInfo(ss.str()),
+				curCtx_->sfLayout)
 		);
 
 		// store arguments to the new frame (r1)
-		this->append(new FI_stores(nullptr, 1, 0, 0));
+		append(new FI_stores(nullptr, 1, 0, 0));
 
 		// set new ABP (r1)
-		this->append(new FI_set_greg(nullptr, ABP_INDEX, 1));
+		append(new FI_set_greg(nullptr, ABP_INDEX, 1));
 
 		// jump to the beginning of the first block
-		this->append(new FI_jmp(nullptr, fnc.cfg.entry()));
+		append(new FI_jmp(nullptr, fnc.cfg.entry()));
 
 		// compute loop entry points
-		this->loopAnalyser.init(fnc.cfg.entry());
+		loopAnalyser_.init(fnc.cfg.entry());
 
 		// compile underlying CFG
 		std::list<const CodeStorage::Block*> queue;
@@ -1458,17 +1459,17 @@ protected:
 			const CodeStorage::Block* block = queue.front();
 			queue.pop_front();
 
-			auto p = this->codeIndex.insert(std::make_pair(block,
-				(AbstractInstruction*)NULL));
+			auto p = codeIndex_.insert(std::make_pair(block,
+				static_cast<AbstractInstruction*>(nullptr)));
 			if (!p.second)
 				continue;
 
-			size_t blockHead = this->assembly->code_.size();
+			size_t blockHead = assembly_->code_.size();
 
-			this->compileBlock(block, first);
+			compileBlock(block, first);
 
-			assert(blockHead < this->assembly->code_.size());
-			p.first->second = this->assembly->code_[blockHead];
+			assert(blockHead < assembly_->code_.size());
+			p.first->second = assembly_->code_[blockHead];
 
 			for (auto target : block->targets())
 				queue.push_back(target);
@@ -1477,9 +1478,9 @@ protected:
 
 		}
 
-		auto iter = this->codeIndex.find(fnc.cfg.entry());
-		assert(iter != this->codeIndex.end());
-		this->assembly->functionIndex_.insert(std::make_pair(&fnc, iter->second));
+		auto iter = codeIndex_.find(fnc.cfg.entry());
+		assert(iter != codeIndex_.end());
+		assembly_->functionIndex_.insert(std::make_pair(&fnc, iter->second));
 
 	}
 
@@ -1497,7 +1498,7 @@ public:
 	 */
 	Core(TA<label_type>::Backend& fixpointBackend,
 		TA<label_type>::Backend& taBackend, BoxMan& boxMan)
-		: fixpointBackend(fixpointBackend), taBackend(taBackend), boxMan(boxMan)
+		: fixpointBackend_(fixpointBackend), taBackend_(taBackend), boxMan_(boxMan)
 	{ }
 
 
