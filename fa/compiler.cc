@@ -469,9 +469,7 @@ protected:
 		assert(assembly_->code_.size());
 
 		delete assembly_->code_.back();
-
 		assembly_->code_.back() = instr;
-
 		return instr;
 	}
 
@@ -483,9 +481,9 @@ protected:
 	 *
 	 * @param[in]  insn  The corresponding instruction in the code storage
 	 */
-	void cAbstraction(const CodeStorage::Insn* insn = nullptr) {
-		append(new FI_abs(insn, fixpointBackend_, taBackend_, boxMan_)
-		);
+	void cAbstraction(const CodeStorage::Insn* insn = nullptr)
+	{
+		append(new FI_abs(insn, fixpointBackend_, taBackend_, boxMan_));
 	}
 
 
@@ -496,9 +494,9 @@ protected:
 	 *
 	 * @param[in]  insn  The corresponding instruction in the code storage
 	 */
-	void cFixpoint(const CodeStorage::Insn& insn) {
-		append(new FI_fix(&insn, fixpointBackend_, taBackend_, boxMan_)
-		);
+	void cFixpoint(const CodeStorage::Insn& insn)
+	{
+		append(new FI_fix(&insn, fixpointBackend_, taBackend_, boxMan_));
 	}
 
 
@@ -509,7 +507,8 @@ protected:
 	 *
 	 * @param[in]  insn  The corresponding instruction in the code storage
 	 */
-	void cPrintHeap(const CodeStorage::Insn& insn) {
+	void cPrintHeap(const CodeStorage::Insn& insn)
+	{
 		append(new FI_print_heap(&insn, curCtx_));
 	}
 
@@ -526,13 +525,14 @@ protected:
 	 * @param[in]  insn  The corresponding instruction in the code storage
 	 */
 	void cLoadCst(size_t dst, const cl_operand& op,
-		const CodeStorage::Insn& insn) {
-
+		const CodeStorage::Insn& insn)
+	{
 		// Assertions
 		assert(op.code == cl_operand_e::CL_OPERAND_CST);
 		assert(op.type != nullptr);
 
-		switch (op.type->code) {
+		switch (op.type->code)
+		{
 			// according to the type of the operand
 			case cl_type_e::CL_TYPE_INT:
 			case cl_type_e::CL_TYPE_ENUM:
@@ -571,13 +571,14 @@ protected:
 					": constant type", &insn.loc);
 		}
 	}
-/*
-	void cLoadVar(size_t dst, size_t offset) {
 
-		this->append(new FI_load_ABP(dst, (int)offset));
 
+#if 0
+	void cLoadVar(size_t dst, size_t offset)
+	{
+		append(new FI_load_ABP(dst, (int)offset));
 	}
-*/
+#endif
 
 
 	/**
@@ -591,19 +592,16 @@ protected:
 	 * @param[in]  insn    The corresponding instruction in the code storage
 	 */
 	void cMoveReg(size_t dst, size_t src, int offset,
-		const CodeStorage::Insn& insn) {
-
-		if (offset > 0) {
-
+		const CodeStorage::Insn& insn)
+	{
+		if (offset > 0)
+		{
 			this->append(new FI_move_reg_offs(&insn, dst, src, offset));
-
-		} else {
-
+		} else
+		{
 			if (src != dst)
 				this->append(new FI_move_reg(&insn, dst, src));
-
 		}
-
 	}
 
 
@@ -621,17 +619,15 @@ protected:
 	 *
 	 * @returns  Next accessor that is not a record accessor (e.g. "*", "[]", ...)
 	 */
-	static const cl_accessor* computeOffset(int& offset, const cl_accessor* acc) {
-
-		while (acc && (acc->code == CL_ACCESSOR_ITEM)) {
-
+	static const cl_accessor* computeOffset(int& offset, const cl_accessor* acc)
+	{
+		while (acc && (acc->code == CL_ACCESSOR_ITEM))
+		{	// while there are more record accessors (in C: "rec.acc")
 			offset += acc->type->items[acc->data.item.id].offset;
 			acc = acc->next;
-
 		}
 
 		return acc;
-
 	}
 
 
@@ -649,55 +645,64 @@ protected:
 	 * @param[in]  insn  The corresponding instruction in the code storage
 	 */
 	void cLoadReg(size_t dst, size_t src, const cl_operand& op,
-		const CodeStorage::Insn& insn) {
+		const CodeStorage::Insn& insn)
+	{
+		const cl_accessor* acc = op.accessor;   // the initial accessor
+		int offset = 0;                         // the initial offset
 
-		const cl_accessor* acc = op.accessor;
+		if (acc && (acc->code == CL_ACCESSOR_DEREF))
+		{	// in case there is a dereference (in C: "*op") at the start
 
-		int offset = 0;
-
-		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
-
+			// Assertions
 			assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
+			// compute offset of the accessors after the dereference
 			acc = Core::computeOffset(offset, acc->next);
+			if (acc && (acc->code == CL_ACCESSOR_REF))
+			{	// in case the next accessor is a reference (in C: "&op")
 
-			if (acc && (acc->code == CL_ACCESSOR_REF)) {
-
+				// assert that there are no more accessors
 				assert(acc->next == nullptr);
-				this->cMoveReg(dst, src, offset, insn);
-				return;
 
+				// move the register from given offset
+				cMoveReg(dst, src, offset, insn);
+				return;
 			}
 
+			// assert that there are no more accessors
 			assert(acc == nullptr);
 
-			if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
-
+			if (op.type->code == cl_type_e::CL_TYPE_STRUCT)
+			{	// in case the operand is a structure
 				std::vector<size_t> offs;
 				NodeBuilder::buildNode(offs, op.type);
 
-				this->append(new FI_acc_set(&insn, dst, offset, offs));
-				this->append(new FI_loads(&insn, dst, dst, offset, offs));
+				// add an instruction to access the set of all selectors of the structure
+				append(new FI_acc_set(&insn, dst, offset, offs));
+				// add an instruction to load all selectors of the structure
+				append(new FI_loads(&insn, dst, dst, offset, offs));
+			} else
+			{	// in case the operand is not a structure
 
-			} else {
-
-				this->append(new FI_acc_sel(&insn, dst, offset));
-				this->append(new FI_load(&insn, dst, dst, offset));
-
+				// add an instruction to access a single selector
+				append(new FI_acc_sel(&insn, dst, offset));
+				// add an instruction to load a single selector
+				append(new FI_load(&insn, dst, dst, offset));
 			}
 
-			this->append(new FI_check(&insn));
-
-		} else {
-
+			// add an instruction to check invariants of the virtual machine
+			append(new FI_check(&insn));
+		} else
+		{
+			// compute offset of the accessors
 			acc = Core::computeOffset(offset, acc);
 
+			// assert that there are no more accessors
 			assert(acc == nullptr);
 
-			this->cMoveReg(dst, src, offset, insn);
-
+			// move the register from given offset
+			cMoveReg(dst, src, offset, insn);
 		}
-
 	}
 
 	bool cStoreReg(const cl_operand& op, size_t src, size_t tmp,
