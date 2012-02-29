@@ -1,5 +1,6 @@
 SLS abstraction
 ===============
+
     test-0001.c - infinite loop creating a SLL
                 - it plots a heap graph per each iteration
 
@@ -78,6 +79,7 @@ SLS abstraction
 
 DLS abstraction
 ===============
+
     test-0054.c - simple DLL creation
                 - seen infinite because we abstract out integral values
                 - the fix-point calculation terminates thanks to DLS abstraction
@@ -123,6 +125,7 @@ DLS abstraction
 
 Higher level SLS/DLS abstraction, etc.
 ======================================
+
     test-0061.c - conversion of SLL to DLL and vice versa
                     1. creates a singly-linked list, using the 'next' selector
                        for biding
@@ -216,6 +219,7 @@ Higher level SLS/DLS abstraction, etc.
 
 Linux lists
 ===========
+
     test-0073.c - playing with some macros from <linux/list.h>
                 - no abstraction involved
                 - the heap graphs should be self-explaining
@@ -350,6 +354,12 @@ Linux lists
     test-0179.c - test-0136 extended by explicit checks of certain shape props
 
     test-0180.c - test-0179 with an injected programming mistake
+
+
+Uniform blocks
+==============
+
+    test-0212.c - playing with C-level polymorphism
 
 
 Show-case
@@ -642,12 +652,6 @@ Tests taken from Forester
 
     test-0046.c - visualization of Neq predicates
 
-          off.c - a tiny test-case for field offset retrieving from gcc
-                - no main() inside
-                - recommended options:
-                    -fplugin-arg-libsl-bypass-symexec
-                    -fplugin-arg-libsl-dump-pp
-
     test-0074.c - regression test focused on nested struct offset computation
 
     test-0090.c - regression test focused on return values leaking memory
@@ -708,6 +712,7 @@ Tests taken from Forester
 
 Data reinterpretation
 =====================
+
     test-0158.c - memory leak induced by data reinterpretation
 
     test-0209.c - byte-level access to zero-terminated strings
@@ -720,6 +725,7 @@ Data reinterpretation
 
 Tiny DLL library written on scratch
 ===================================
+
     dll.h - API
     dll.c - implementation
     test-dll.cc - Boost/test based test-suite, written in C++
@@ -728,22 +734,3 @@ Tiny DLL library written on scratch
 - there might be some bugs as it has never been used anywhere
 - no bugs encountered so far
 - consider playing with test-0014.c instead
-
-
-Implementation of skip-list
-===========================
-    jonathan-skip-list.c
-
-- contributed by Jonathan Cederberg
-- no chance to analyse by Predator as we don't support arrays yet
-
-
-Other tests
-===========
-    test-0000.c - cl/gcc/clplug.c taken as a test case
-                - a bit hungry on include search paths
-                - it ends up on evaluating current_function_decl as NULL
-                - current_function_decl is a global variable, but it belongs to
-                  another module that is responsible for making it non-NULL
-
-                - we're probably not yet ready for this one
