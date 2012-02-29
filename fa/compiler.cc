@@ -693,7 +693,8 @@ protected:
 			// add an instruction to check invariants of the virtual machine
 			append(new FI_check(&insn));
 		} else
-		{
+		{	// in case the next accessor is not a dereference
+
 			// compute offset of the accessors
 			acc = Core::computeOffset(offset, acc);
 
@@ -705,55 +706,75 @@ protected:
 		}
 	}
 
+
+	/**
+	 * @brief  Compile a store of a register value into an operand
+	 *
+	 * @param[in]  op    The target operand
+	 * @param[in]  src   The index of the source register
+	 * @param[in]  tmp   The index of the register used as destination
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 *
+	 * @returns  @p true if the target is accessed using dereference, @p false
+	 *           otherwise
+	 */
 	bool cStoreReg(const cl_operand& op, size_t src, size_t tmp,
-		const CodeStorage::Insn& insn) {
+		const CodeStorage::Insn& insn)
+	{
+		const cl_accessor* acc = op.accessor;    // the initial accessor
+		int offset = 0;                          // the initial offset
 
-		const cl_accessor* acc = op.accessor;
+		if (acc && (acc->code == CL_ACCESSOR_DEREF))
+		{	// in case there is a dereference (in C: "*op") at the start
 
-		int offset = 0;
-
-		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
-
+			// Assertions
 			assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
+			// compute offset of the accessors after the dereference
 			acc = Core::computeOffset(offset, acc->next);
 
+			// assert that there are no more accessors
 			assert(acc == nullptr);
 
-			if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
-
+			if (op.type->code == cl_type_e::CL_TYPE_STRUCT)
+			{	// in case the operand is a structure
 				std::vector<size_t> offs;
 				NodeBuilder::buildNode(offs, op.type);
 
+				// add an instruction to access the set of all selectors of the structure
 				append(new FI_acc_set(&insn, tmp, offset, offs));
+				// add an instruction to store all selectors of the structure
 				append(new FI_stores(&insn, tmp, src, offset));
+			} else
+			{	// in case the operand is not a structure
 
-			} else {
-
+				// add an instruction to access a single selector
 				append(new FI_acc_sel(&insn, tmp, offset));
+				// add an instruction to store a single selector
 				append(new FI_store(&insn, tmp, src, offset));
-
 			}
 
+			// add an instruction to check invariants of the virtual machine
 			append(new FI_check(&insn));
 
 			return true;
+		} else
+		{	// in case the next accessor is not a dereference
 
-		} else {
-
+			// compute offset of the accessors
 			acc = Core::computeOffset(offset, acc);
 
-			assert(acc == nullptr);
+			// Assertions
+			assert(acc == nullptr);   // there are no more accessors
 			assert(offset == 0);
 
 			if (src != tmp)
 				append(new FI_move_reg(&insn, tmp, src));
 
 			return false;
-
 		}
-
 	}
+
 
 	size_t cLoadOperand(size_t dst, const cl_operand& op,
 		const CodeStorage::Insn& insn, bool canOverride = true) {
