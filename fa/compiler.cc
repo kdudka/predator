@@ -466,7 +466,7 @@ protected:
 	AbstractInstruction* override(AbstractInstruction* instr)
 	{
 		// Assertions
-		assert(assembly_->code_.size());
+		assert(assembly_->code_.size() > 0);
 
 		delete assembly_->code_.back();
 		assembly_->code_.back() = instr;
@@ -1020,8 +1020,8 @@ protected:
 		append(new FI_get_ABP(&insn, 1, 0));
 		append(
 			(offs.size() > 1)
-				?((AbstractInstruction*)new FI_stores(&insn, 1, 0, 0))
-				:((AbstractInstruction*)new FI_store(&insn, 1, 0, *offs.begin()))
+				?(static_cast<AbstractInstruction*>(new FI_stores(&insn, 1, 0, 0)))
+				:(static_cast<AbstractInstruction*>(new FI_store(&insn, 1, 0, *offs.begin())))
 		);
 
 		return result;
