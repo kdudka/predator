@@ -938,10 +938,7 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
 
     fnc = stor_.fncs[uid];
     if (!isDefined(*fnc)) {
-        const struct cl_cst &cst = opFnc.data.cst;
-        const char *name = cst.data.cst_fnc.name;
-        CL_BREAK_IF(CL_TYPE_FNC != cst.code || !name);
-
+        const char *name = nameOf(*fnc);
         CL_WARN_MSG(lw, "ignoring call of undefined function: "
                 << name << "()");
 

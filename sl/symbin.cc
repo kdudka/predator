@@ -801,7 +801,10 @@ class BuiltInTable {
                 const char                          *name)
             const;
 
-        const TOpIdxList& lookForDerefs(TInsn) const;
+        const TOpIdxList& lookForDerefs(const char *name) const;
+
+        // TODO: rename and hide
+        const TOpIdxList                            emp_;
 
     private:
         BuiltInTable();
@@ -819,7 +822,6 @@ class BuiltInTable {
 
         typedef std::map<std::string, TOpIdxList>   TDerefMap;
         TDerefMap                                   der_;
-        const TOpIdxList                            emp_;
 };
 
 BuiltInTable *BuiltInTable::inst_;
@@ -890,11 +892,7 @@ bool BuiltInTable::handleBuiltIn(
     return hdl(dst, core, insn, name);
 }
 
-const TOpIdxList& BuiltInTable::lookForDerefs(TInsn insn) const {
-    const char *name;
-    if (!fncNameFromCst(&name, &insn.operands[/* fnc */ 1]))
-        return emp_;
-
+const TOpIdxList& BuiltInTable::lookForDerefs(const char *name) const {
     TDerefMap::const_iterator it = der_.find(name);
     if (der_.end() == it)
         // no fnc name matched as built-in
@@ -903,21 +901,47 @@ const TOpIdxList& BuiltInTable::lookForDerefs(TInsn insn) const {
     return it->second;
 }
 
+bool fncNameFromOp(
+        const char                                **pName,
+        SymExecCore                                 &core,
+        const struct cl_operand                     &op)
+{
+    int uid;
+    if (!core.fncFromOperand(&uid, op))
+        return false;
+
+    const TStorRef stor = core.sh().stor();
+    const CodeStorage::Fnc *fnc = stor.fncs[uid];
+    const char *name = nameOf(*fnc);
+    if (!name)
+        return false;
+
+    *pName = name;
+    return true;
+}
+
 bool handleBuiltIn(
         SymState                                    &dst,
         SymExecCore                                 &core,
         const CodeStorage::Insn                     &insn)
 {
     const char *name;
-    if (!fncNameFromCst(&name, &insn.operands[/* fnc */ 1]))
+    if (!fncNameFromOp(&name, core, insn.operands[/* fnc */ 1]))
         return false;
 
     const BuiltInTable *tbl = BuiltInTable::inst();
     return tbl->handleBuiltIn(dst, core, insn, name);
 }
 
-const TOpIdxList& opsWithDerefSemanticsInCallInsn(const CodeStorage::Insn &insn)
+const TOpIdxList& opsWithDerefSemanticsInCallInsn(
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn)
 {
     const BuiltInTable *tbl = BuiltInTable::inst();
-    return tbl->lookForDerefs(insn);
+
+    const char *name;
+    if (!fncNameFromOp(&name, core, insn.operands[/* fnc */ 1]))
+        return tbl->emp_;
+
+    return tbl->lookForDerefs(name);
 }

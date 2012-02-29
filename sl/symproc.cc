@@ -2042,7 +2042,7 @@ bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
     const cl_insn_e code = insn.code;
     if (CL_INSN_CALL == code)
         // certain built-ins dereference certain operands (free, memset, ...)
-        derefs = opsWithDerefSemanticsInCallInsn(insn);
+        derefs = opsWithDerefSemanticsInCallInsn(*this, insn);
 
     // look for explicit dereferences in operands of the instruction
     const CodeStorage::TOperandList &opList = insn.operands;
