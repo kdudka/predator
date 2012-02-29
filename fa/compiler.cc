@@ -418,6 +418,14 @@ protected:
 		return info->second;
 	}
 
+
+	/**
+	 * @brief  Resets the compiler
+	 *
+	 * Resets the compiler.
+	 *
+	 * @param[out]  assembly  The new output for the assembly
+	 */
 	void reset(Compiler::Assembly& assembly)
 	{
 		assembly_ = &assembly;
@@ -426,6 +434,17 @@ protected:
 		fncIndex_.clear();
 	}
 
+
+	/**
+	 * @brief  Append instruction to the assembly
+	 *
+	 * Appends the instruction @p instr to the assembly that is set as the output
+	 * of the compiler.
+	 *
+	 * @param[in]  instr  The instruction to be appended
+	 *
+	 * @returns  The inserted instruction (should be equal to @p instr)
+	 */
 	AbstractInstruction* append(AbstractInstruction* instr)
 	{
 		assembly_->code_.push_back(instr);
@@ -433,6 +452,17 @@ protected:
 		return instr;
 	}
 
+
+	/**
+	 * @brief  Overrides the previous instruction
+	 *
+	 * This method overrides the previous instruction in the assembly with the
+	 * provided one.
+	 *
+	 * @param[in]  instr  The new instruction
+	 *
+	 * @returns  The inserted instruction
+	 */
 	AbstractInstruction* override(AbstractInstruction* instr)
 	{
 		// Assertions
@@ -445,20 +475,56 @@ protected:
 		return instr;
 	}
 
+
+	/**
+	 * @brief  Compile abstraction
+	 *
+	 * Compiles @b Abstraction as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
 	void cAbstraction(const CodeStorage::Insn* insn = nullptr) {
 		append(new FI_abs(insn, fixpointBackend_, taBackend_, boxMan_)
 		);
 	}
 
+
+	/**
+	 * @brief  Compile fixpoint
+	 *
+	 * Compiles @b Fixpoint as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
 	void cFixpoint(const CodeStorage::Insn& insn) {
 		append(new FI_fix(&insn, fixpointBackend_, taBackend_, boxMan_)
 		);
 	}
 
+
+	/**
+	 * @brief  Compile heap print
+	 *
+	 * Compiles @b PrintHeap  as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
 	void cPrintHeap(const CodeStorage::Insn& insn) {
 		append(new FI_print_heap(&insn, curCtx_));
 	}
 
+
+	/**
+	 * @brief  Compile loading of a constant
+	 *
+	 * Compiles @b LoadConstant as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  dst   Index of the destination register (where the constant is
+	 *                   to be loaded)
+	 * @param[in]  op    The operand to be loaded (contains the value of the
+	 *                   constant)
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
 	void cLoadCst(size_t dst, const cl_operand& op,
 		const CodeStorage::Insn& insn) {
 
@@ -512,6 +578,18 @@ protected:
 
 	}
 */
+
+
+	/**
+	 * @brief  Compile a move between registers
+	 *
+	 * Compiles @b MoveRegister as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  dst     Index of the destination register
+	 * @param[in]  src     Index of the source register
+	 * @param[in]  offset  Offset of the destination
+	 * @param[in]  insn    The corresponding instruction in the code storage
+	 */
 	void cMoveReg(size_t dst, size_t src, int offset,
 		const CodeStorage::Insn& insn) {
 
@@ -528,6 +606,21 @@ protected:
 
 	}
 
+
+	/**
+	 * @brief  Computes the final offset of a chain of accessor in a record
+	 *
+	 * Given a starting offset @p offset, this function modifies the value
+	 * according to the chain of item accessors (in C: "rec.acc1.acc2.acc3...",
+	 * where "rec", "rec.acc1", "rec.acc2", ... are records), thus obtaining the
+	 * offset from the beginning of the record when we look at the flattened image
+	 * of the record.
+	 *
+	 * @param[in,out]  offset  The initial offset of the record (to be modified)
+	 * @param[in]      acc     The head of the list of accessors
+	 *
+	 * @returns  Next accessor that is not a record accessor (e.g. "*", "[]", ...)
+	 */
 	static const cl_accessor* computeOffset(int& offset, const cl_accessor* acc) {
 
 		while (acc && (acc->code == CL_ACCESSOR_ITEM)) {
@@ -541,6 +634,20 @@ protected:
 
 	}
 
+
+	/**
+	 * @brief  Compile a load of an operand into a register
+	 *
+	 * Compiles a load of an operand in the source register @p src into the
+	 * destination register @p dst. The operand is modifed according to the
+	 * accessors desribed in @p op. For instance, it may load the value given by
+	 * the accessors "reg1->acc1.acc2".
+	 *
+	 * @param[in]  dst   Index of the destination register
+	 * @param[in]  src   Index of the source register
+	 * @param[in]  op    The operand to be loaded (contains the accessors)
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
 	void cLoadReg(size_t dst, size_t src, const cl_operand& op,
 		const CodeStorage::Insn& insn) {
 
