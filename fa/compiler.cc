@@ -815,19 +815,17 @@ protected:
 
 						assert(acc == nullptr);
 
-						if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
-
+						if (op.type->code == cl_type_e::CL_TYPE_STRUCT)
+						{
 							std::vector<size_t> offs;
 							NodeBuilder::buildNode(offs, op.type);
 
 							append(new FI_acc_set(&insn, dst, offset, offs));
 							append(new FI_loads(&insn, dst, dst, offset, offs));
-
-						} else {
-
+						} else
+						{
 							append(new FI_acc_sel(&insn, dst, offset));
 							append(new FI_load(&insn, dst, dst, offset));
-
 						}
 
 					} else {
@@ -933,7 +931,7 @@ protected:
 
 					const cl_accessor* acc = op.accessor;
 
-					int offset = (int)varInfo.second;
+					int offset = static_cast<int>(varInfo.second);
 
 					bool needsAcc = false;
 
