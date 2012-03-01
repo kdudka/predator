@@ -7,6 +7,8 @@
 
 #include "list.h"
 
+static const char text[] = "text";
+
 struct interface {
     struct interface* (*clone)(void *);
     void (*destroy)(void *);
@@ -155,7 +157,7 @@ int main()
     }
 
     while (___sl_get_nondet_int()) {
-        struct data_item *str_item = data_item_from_str("");
+        struct data_item *str_item = data_item_from_str(text);
         if (!str_item)
             goto fail;
 

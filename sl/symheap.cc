@@ -1749,7 +1749,6 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
 
     const TObjType clt = objData->clt;
     CL_BREAK_IF(isComposite(clt, /* includingArray */ false));
-    CL_BREAK_IF(isComposite(clt) && objData->off);
 
     // check whether the root entity that owns this object ID is still valid
     CL_BREAK_IF(!isPossibleToDeref(this->valTarget(objData->root)));

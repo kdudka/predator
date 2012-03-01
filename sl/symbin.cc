@@ -29,6 +29,7 @@
 #undef PREDATOR
 
 #include "symabstract.hh"
+#include "symdump.hh"
 #include "symgc.hh"
 #include "symjoin.hh"
 #include "symplot.hh"
@@ -42,6 +43,7 @@
 #include <libgen.h>
 #include <map>
 
+typedef const struct cl_loc     *TLoc;
 typedef const struct cl_operand &TOp;
 
 bool readPlotName(
@@ -601,6 +603,65 @@ bool handleStrlen(
     return true;
 }
 
+bool handleStrncpy(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const TLoc loc = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() != 5) {
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    // read the values of strncpy parameters
+    const TValId valDst  = core.valFromOperand(opList[/* dst */ 2]);
+    const TValId valSrc  = core.valFromOperand(opList[/* src */ 3]);
+    const TValId valSize = core.valFromOperand(opList[/* n   */ 4]);
+
+    SymHeap &sh = core.sh();
+
+    IR::Range size;
+    if (!rngFromVal(&size, sh, valSize) || size.lo < IR::Int0) {
+        CL_ERROR_MSG(loc, "n arg of " << name << "() is not a known integer");
+        core.printBackTrace(ML_ERROR);
+        return true;
+    }
+
+    const TSizeRange strLen = sh.valSizeOfString(valSrc);
+    const bool isValidString = (IR::Int0 < strLen.lo);
+    const TSizeOf srcLimit = (isValidString)
+        ? strLen.hi
+        : size.hi;
+
+    if (core.checkForInvalidDeref(valSrc, srcLimit)) {
+        // error message already printed out
+        core.printBackTrace(ML_ERROR);
+        insertCoreHeap(dst, core, insn);
+        return true;
+    }
+
+    if (isValidString) {
+        CL_DEBUG("strncpy() writes zeros");
+        executeMemset(core, valDst, VAL_NULL, valSize);
+
+        CL_DEBUG("strncpy() transfers the data");
+        const CustomValue cVal(strLen);
+        const TValId valLen = sh.valWrapCustom(cVal);
+        executeMemmove(core, valDst, valSrc, valLen, /* allowOverlap */ false);
+    }
+    else {
+        CL_DEBUG("strncpy() only invalidates the given range");
+        const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        executeMemset(core, valDst, valUnknown, valSize);
+    }
+
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
 bool handleNondetInt(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -839,6 +900,7 @@ BuiltInTable::BuiltInTable() {
     tbl_["printf"]                                  = handlePrintf;
     tbl_["puts"]                                    = handlePuts;
     tbl_["strlen"]                                  = handleStrlen;
+    tbl_["strncpy"]                                 = handleStrncpy;
 
     // Linux kernel
     tbl_["kzalloc"]                                 = handleKzalloc;
@@ -871,6 +933,11 @@ BuiltInTable::BuiltInTable() {
     der_["memmove"]     .push_back(/* dst  */ 2);
     der_["memmove"]     .push_back(/* src  */ 3);
     der_["memset"]      .push_back(/* addr */ 2);
+    // TODO: printf
+    der_["puts"]        .push_back(/* s    */ 2);
+    der_["strlen"]      .push_back(/* s    */ 2);
+    der_["strncpy"]     .push_back(/* dst  */ 2);
+    der_["strncpy"]     .push_back(/* src  */ 3);
 }
 
 bool BuiltInTable::handleBuiltIn(
@@ -886,6 +953,7 @@ bool BuiltInTable::handleBuiltIn(
         return false;
 
     SymHeap &sh = core.sh();
+    SymDumpRefHeap shRef(&sh);
     sh.traceUpdate(new Trace::InsnNode(sh.traceNode(), &insn, /* bin */ true));
 
     const THandler hdl = it->second;
