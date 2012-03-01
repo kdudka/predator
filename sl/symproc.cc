@@ -2000,6 +2000,10 @@ bool SymExecCore::concretizeLoop(
 #endif
         BOOST_FOREACH(unsigned idx, derefs) {
             const struct cl_operand &op = insn.operands.at(idx);
+            if (CL_OPERAND_VAR != op.code)
+                // literals cannot be abstract
+                continue;
+
             const TValId at = slave.varAt(op);
             if (!canWriteDataPtrAt(sh, at))
                 continue;
