@@ -80,6 +80,9 @@ void dump_plot_core(const SymHeapCore *core, const char *name) {
         return;
     }
 
+    // paralyze SymHeap self-checks while plotting from a debugger
+    ProtectionIntrusion intrudor;
+
     // attempt to plot heap
     if (!plotHeap(*sh, name))
         cout << "dump_plot: warning: call of SymPlot::plot() has failed\n";

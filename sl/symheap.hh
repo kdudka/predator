@@ -808,4 +808,19 @@ class SymHeap: public SymHeapCore {
         void segMinLengthOp(ENeqOp op, TValId at, TMinLen len);
 };
 
+/// enable/disable built-in self-checks (takes effect only in debug build)
+void enableProtectedMode(bool enable);
+
+/// temporarily disable protected mode of SymHeap in a debug build
+class ProtectionIntrusion {
+    public:
+        ProtectionIntrusion() {
+            enableProtectedMode(false);
+        }
+
+        ~ProtectionIntrusion() {
+            enableProtectedMode(true);
+        }
+};
+
 #endif /* H_GUARD_SYM_HEAP_H */

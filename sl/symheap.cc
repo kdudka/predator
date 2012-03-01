@@ -59,6 +59,12 @@ assignInvalidIfNotFound(
     return cont[item];
 }
 
+static bool bypassSelfChecks;
+
+void enableProtectedMode(bool enable) {
+    ::bypassSelfChecks = !enable;
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // Neq predicates store
 class NeqDb: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
@@ -688,6 +694,9 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
 
 // runs only in debug build
 bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
+    if (::bypassSelfChecks)
+        return true;
+
     TLiveObjs all(rootData->liveObjs);
     if (isGone(rootData->code)) {
         CL_BREAK_IF(IR::rngFromNum(IR::Int0) != rootData->size);
@@ -1609,7 +1618,7 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
         const BlockEntity *blData;
         d->ents.getEntRO(&blData, /* obj */ item.first);
         const TOffset off = blData->off;
-        CL_BREAK_IF(hasKey(dst, off));
+        CL_BREAK_IF(hasKey(dst, off) && !::bypassSelfChecks);
         UniformBlock &block = dst[off];
 
         // export uniform block
