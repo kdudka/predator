@@ -19,6 +19,9 @@ def is_ent_of_type(type, val):
     ptr = gdb.parse_and_eval("symdump_ref_heap->d.ents.ents_[%d]" % val)
     return not not ptr.cast(lowType).dynamic_cast(reqType)
 
+def is_object_id(val):
+    return is_ent_of_type("BlockEntity", val)
+
 def is_value_id(val):
     return is_ent_of_type("BaseValue", val)
 
@@ -39,6 +42,17 @@ class pp_SymHeap(object):
     def to_string(self):
         gdb.parse_and_eval("dump_plot((class SymHeapCore *) %s)" % (self.val.address))
         return None
+
+    def display_hint(self):
+        return 'string'
+
+class pp_TObjId(object):
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        str = "((class BlockEntity *)symdump_ref_heap->d.ents.ents_[%d])->code" % self.val
+        return "%d [%s]" % (self.val, gdb.parse_and_eval(str))
 
     def display_hint(self):
         return 'string'
@@ -64,6 +78,11 @@ def predator_lookup_fnc(val):
 
     if re.compile('^SymHeap(Core)?$').match(lookup_tag):
         return pp_SymHeap(val)
+
+    if re.compile('^TObjId$').match(lookup_tag) \
+            and have_ref_heap() \
+            and is_object_id(val):
+        return pp_TObjId(val)
 
     if re.compile('^TValId$').match(lookup_tag) \
             and have_ref_heap() \
