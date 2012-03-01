@@ -11,6 +11,17 @@ class pp_ObjHandle(object):
     def display_hint(self):
         return 'string'
 
+class pp_SymHeap(object):
+    def __init__(self, val):
+        self.val = val
+
+    def to_string(self):
+        gdb.parse_and_eval("dump_plot((class SymHeapCore *) %s)" % (self.val.address))
+        return None
+
+    def display_hint(self):
+        return 'string'
+
 def predator_lookup_fnc(val):
     lookup_tag = val.type.tag
     if lookup_tag == None:
@@ -18,6 +29,9 @@ def predator_lookup_fnc(val):
 
     if re.compile('^ObjHandle|PtrHandle$').match(lookup_tag):
         return pp_ObjHandle(val)
+
+    if re.compile('^SymHeap(Core)?$').match(lookup_tag):
+        return pp_SymHeap(val)
 
     return None
 
