@@ -26,10 +26,13 @@
 
 #include "symheap.hh"
 #include "symplot.hh"
+#include "symtrace.hh"
 
 #include <iostream>
 
 using std::cout;
+
+SymHeapCore *symdump_ref_heap;
 
 void dump_clt(const struct cl_type *clt) {
     cltToStream(cout, clt, /* depth */ 3U);

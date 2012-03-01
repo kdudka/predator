@@ -27,16 +27,33 @@
  * debugging
  */
 
-#include "symtrace.hh"
-
 struct cl_type;
 class SymHeap;
+class SymHeapCore;
+
+namespace Trace {
+    class Node;
+}
 
 #ifndef BUILDING_DOX
     namespace CodeStorage {
         struct Insn;
     }
 #endif
+
+extern SymHeapCore *symdump_ref_heap;
+
+// TODO: maintain a stack?
+class SymDumpRefHeap {
+    public:
+        SymDumpRefHeap(SymHeapCore *sh) {
+            symdump_ref_heap = sh;
+        }
+
+        ~SymDumpRefHeap() {
+            symdump_ref_heap = 0;
+        }
+};
 
 /// dump @b type-info given as clt
 void dump_clt(const struct cl_type *clt);
