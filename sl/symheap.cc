@@ -578,7 +578,9 @@ struct SymHeapCore::Private {
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
     // runs only in debug build
-    bool chkArenaConsistency(const RootValue *);
+    bool chkArenaConsistency(
+            const RootValue        *rootData,
+            const bool              allowOverlap = false);
 
     void shiftBlockAt(
             const TValId            dstRoot,
@@ -693,7 +695,10 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
 }
 
 // runs only in debug build
-bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
+bool SymHeapCore::Private::chkArenaConsistency(
+        const RootValue            *rootData,
+        const bool                  allowOverlap)
+{
     if (::bypassSelfChecks)
         return true;
 
@@ -704,6 +709,25 @@ bool SymHeapCore::Private::chkArenaConsistency(const RootValue *rootData) {
 
         // we can check nothing for VT_DELETED/VT_LOST, we do not know the size
         return true;
+    }
+
+    std::set<TOffset> offs;
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
+        const BlockEntity *blData;
+        this->ents.getEntRO(&blData, /* obj */ item.first);
+        CL_BREAK_IF(!blData->size);
+
+        if (allowOverlap)
+            continue;
+
+        const EBlockKind code = item.second;
+        if (BK_UNIFORM != code)
+            continue;
+
+        // we catch this in gatherUniformBlocks(), but that is already too late
+        const TOffset off = blData->off;
+        if (!insertOnce(offs, off))
+            CL_BREAK_IF("two uniform blocks share the same offset");
     }
 
     const TArena &arena = rootData->arena;
@@ -751,7 +775,7 @@ void SymHeapCore::Private::splitBlockByObject(
     // check up to now arena consistency
     RootValue *rootData;
     this->ents.getEntRW(&rootData, root);
-    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* allowOverlap */ true));
 
     // dig offsets and sizes
     const TOffset blOff = blData->off;
@@ -994,7 +1018,7 @@ void SymHeapCore::Private::reinterpretObjData(
     const TValId root = oldData->root;
     RootValue *rootData;
     this->ents.getEntRW(&rootData, root);
-    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* allowOverlap */ true));
 
     this->ents.getEntRW(&blData, obj);
     code = blData->code;
@@ -1111,7 +1135,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
         // properly remove the object from grid and arena
         RootValue *rootData;
         this->ents.getEntRW(&rootData, blData->root);
-        CL_BREAK_IF(!this->chkArenaConsistency(rootData));
+        CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* mayOverlap */true));
 
         // remove the object from arena unless we are destroying everything
         const TOffset off = blData->off;
@@ -1119,7 +1143,7 @@ void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
         rootData->arena -= createArenaItem(off, size, obj);
 
         CL_BREAK_IF(hasKey(rootData->liveObjs, obj));
-        CL_BREAK_IF(!this->chkArenaConsistency(rootData));
+        CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* mayOverlap */true));
     }
 
     if (BK_UNIFORM != code && 0 < DCAST<HeapObject *>(blData)->extRefCnt)
@@ -1234,8 +1258,11 @@ void SymHeapCore::Private::transferBlock(
         const TOffset               winBeg,
         const TSizeOf               winSize)
 {
+    // check up to now arena consistency
     const RootValue *rootDataSrc;
     this->ents.getEntRO(&rootDataSrc, srcRoot);
+    CL_BREAK_IF(!this->chkArenaConsistency(rootDataSrc));
+
     const TArena &arena = rootDataSrc->arena;
     const TOffset winEnd = winBeg + winSize;
     const TMemChunk chunk (winBeg, winEnd);
@@ -1859,15 +1886,20 @@ void SymHeapCore::copyBlockOfRawMemory(
     const TObjId blKiller = d->writeUniformBlock(dst, /* misleading */ VAL_NULL,
                                                  size, killedPtrs);
 
-    // remove the dummy block we used just to trigger the data reinterpretation
+    // check up to now arena consistency
     RootValue *rootDataDst;
     d->ents.getEntRW(&rootDataDst, dstRoot);
+    CL_BREAK_IF(!d->chkArenaConsistency(rootDataDst));
+
+    // remove the dummy block we used just to trigger the data reinterpretation
     rootDataDst->liveObjs.erase(blKiller);
     rootDataDst->arena -= createArenaItem(dstOff, size, blKiller);
     d->ents.releaseEnt(blKiller);
+    CL_BREAK_IF(!d->chkArenaConsistency(rootDataDst));
 
     // now we need to transfer data between two distinct root entities
     d->transferBlock(dstRoot, srcRoot, dstOff, srcOff, size);
+    CL_BREAK_IF(!d->chkArenaConsistency(rootDataDst));
 }
 
 bool SymHeapCore::Private::findZeroInBlock(
