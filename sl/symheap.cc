@@ -1288,12 +1288,14 @@ void SymHeapCore::Private::transferBlock(
         TOffset realShift = shift;
         TSizeOf sizeLimit = /* disabled */ 0;
 
-        if (beg < winBeg || winEnd < end) {
+        const bool begExceeds = (beg < winBeg);
+        if (begExceeds || winEnd < end) {
             if (BK_UNIFORM != code)
                 // regular object that exceeds the window, do not copy this one
                 continue;
 
-            realShift -= beg - winBeg;
+            if (begExceeds)
+                realShift -= beg - winBeg;
 
             sizeLimit = hbDataSrc->size + beg + winEnd - winBeg - end;
             CL_BREAK_IF(hbDataSrc->size <= sizeLimit || sizeLimit <= 0);
