@@ -217,7 +217,12 @@ inline void gatherProgramVars(
         TCVarList               &dst,
         const SymHeap           &sh)
 {
+#if defined(__GNUC_MINOR__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 3)
+    // workaround for gcc-4.3.x parsing problem on std::vector::push_back()
+    void (TCVarList::*ins)(const CVar &&) = &TCVarList::push_back;
+#else
     void (TCVarList::*ins)(const CVar &) = &TCVarList::push_back;
+#endif
     gatherProgramVarsCore(dst, sh, ins);
 }
 

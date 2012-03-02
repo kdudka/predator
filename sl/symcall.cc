@@ -179,7 +179,7 @@ int PerFncCache::lookupCore(const SymHeap &sh) {
     // cache miss
     idx = ctxMap_.size();
     huni_.insertNew(sh);
-    ctxMap_.push_back(0);
+    ctxMap_.push_back((SymCallCtx *) 0);
     CL_BREAK_IF(huni_.size() != ctxMap_.size());
 
     ++missCntSinceLastHit_;
