@@ -361,6 +361,8 @@ Uniform blocks
 
     test-0212.c - playing with C-level polymorphism
 
+    test-0213.c - tiny modification of test-0212 that causes us problems
+
 
 Show-case
 =========
@@ -723,14 +725,3 @@ Data reinterpretation
                 - works fine with (0 == SE_ALLOW_OFF_RANGES)
 
 
-Tiny DLL library written on scratch
-===================================
-
-    dll.h - API
-    dll.c - implementation
-    test-dll.cc - Boost/test based test-suite, written in C++
-
-- can't be analysed on its own by Predator for now as there is no main()
-- there might be some bugs as it has never been used anywhere
-- no bugs encountered so far
-- consider playing with test-0014.c instead

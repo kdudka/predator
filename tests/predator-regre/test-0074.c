@@ -57,12 +57,6 @@ int main()
  *
  * @brief regression test focused on nested struct offset computation
  *
- * - no main() inside
- * - recommended options:
- *     -fplugin-arg-libsl-bypass-symexec
- *     -fplugin-arg-libsl-dump-pp
- *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.
