@@ -410,6 +410,7 @@ void plotUniformBlocks(PlotData &plot, const TValId root) {
 
         // plot block node
         const int id = ++plot.last;
+#if !SYMPLOT_FLAT_MODE
         plot.out << "\t" << SL_QUOTE("lonely" << id)
             << " [shape=box, color=blue, fontcolor=blue, label=\"UNIFORM_BLOCK "
             << bl.size << "B\"];\n";
@@ -421,6 +422,7 @@ void plotUniformBlocks(PlotData &plot, const TValId root) {
             << " -> " << SL_QUOTE("lonely" << id)
             << " [color=black, fontcolor=black, label=\"[+"
             << off << "]\"];\n";
+#endif
 
         // schedule hasValue edge
         const PlotData::TDangVal dv(id, bl.tplValue);
@@ -611,8 +613,15 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
     // plot all uniform blocks
     plotUniformBlocks(plot, at);
 
+#if SYMPLOT_FLAT_MODE
+    BOOST_FOREACH(const ObjHandle &obj, liveObjs) {
+        const TValId at = obj.placedAt();
+        plot.liveObjs[at].push_back(obj);
+    }
+#else
     // plot all atomic objects inside
     plotInnerObjects(plot, at, liveObjs);
+#endif
 
     // close cluster
     plot.out << "}\n";
@@ -676,6 +685,7 @@ void plotRootObjects(PlotData &plot) {
                 continue;
 
             case OK_CONCRETE:
+#if !SYMPLOT_FLAT_MODE
                 if (1 == liveObjs.size()) {
                     const ObjHandle &obj = liveObjs.front();
                     if (sh.valOffset(obj.placedAt()))
@@ -700,6 +710,7 @@ void plotRootObjects(PlotData &plot) {
                     plotAtomicObj(plot, ao, /* lonely */ true);
                     continue;
                 }
+#endif
                 // fall through!
 
             case OK_SLS:
@@ -949,6 +960,7 @@ void plotNonRootValues(PlotData &plot) {
             // no valid target
             continue;
 
+#if !SYMPLOT_FLAT_MODE
         // assume an off-value
         PlotData::TLiveObjs::const_iterator it = plot.liveObjs.find(val);
         if ((plot.liveObjs.end() != it) && (1 == it->second.size())) {
@@ -957,6 +969,7 @@ void plotNonRootValues(PlotData &plot) {
             plotPointsTo(plot, val, target.objId());
             continue;
         }
+#endif
 
         // an off-value with either no target, or too many targets
         const TOffset off = sh.valOffset(val);
@@ -1072,6 +1085,42 @@ void plotHasValue(
     plot.out << "];\n";
 }
 
+/// (0 == clt) means a uniform block because uniform blocks are type-free
+void plotHasValueFlat(
+        PlotData                       &plot,
+        const TValId                    root,
+        const TOffset                   beg,
+        const TOffset                   end,
+        const TObjType                  clt,
+        const TValId                    val)
+{
+    std::ostringstream strLabel;
+    if (clt) {
+        const cl_type_e code = clt->code;
+        switch (code) {
+            case CL_TYPE_INT:
+                strLabel << "INT";
+                break;
+
+            case CL_TYPE_PTR:
+                strLabel << "PTR";
+                break;
+
+            default:
+                // TODO
+                strLabel << "(?)";
+                break;
+        }
+    }
+    else
+        strLabel << "uni_block";
+
+    strLabel << "@<" << beg << ", " << end << ")";
+
+    const char *label = strLabel.str().c_str();
+    plotHasValue(plot, root, val, /* isObj */ false, label);
+}
+
 void plotNeqZero(PlotData &plot, const TValId val) {
     const int id = ++plot.last;
     plot.out << "\t" << SL_QUOTE("lonely" << id)
@@ -1149,6 +1198,46 @@ void plotNeqEdges(PlotData &plot) {
     np.plotNeqEdges(plot);
 }
 
+void plotFlatEdges(PlotData &plot) {
+    SymHeap &sh = plot.sh;
+
+    // plot "hasValue" edges
+    BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs) {
+        const TValId at = item.first;
+        const TValId root = sh.valRoot(at);
+        const TOffset beg = sh.valOffset(at);
+
+        BOOST_FOREACH(const ObjHandle &obj, /* ObjList */ item.second) {
+            const TObjType clt = obj.objType();
+            const TOffset end = beg + clt->size;
+            const TValId val = obj.value();
+
+            plotHasValueFlat(plot, root, beg, end, clt, val);
+        }
+    }
+
+    // go through all roots
+    BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
+        if (! /* isRoot */ item.second)
+            continue;
+
+        // get all uniform blocks inside the given root
+        TUniBlockMap bMap;
+        const TValId root = item.first;
+        sh.gatherUniformBlocks(bMap, root);
+
+        // plot flat edges for all uniform blocks at the current root
+        BOOST_FOREACH(TUniBlockMap::const_reference item, bMap) {
+            const UniformBlock &bl = item.second;
+            const TOffset beg = bl.off;
+            const TOffset end = beg + bl.size;
+            const TValId val = bl.tplValue;
+
+            plotHasValueFlat(plot, root, beg, end, /* clt */ 0, val);
+        }
+    }
+}
+
 void plotHasValueEdges(PlotData &plot) {
     // plot "hasValue" edges
     BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
@@ -1174,7 +1263,12 @@ void plotHasValueEdges(PlotData &plot) {
 void plotEverything(PlotData &plot) {
     plotRootObjects(plot);
     plotNonRootValues(plot);
+
+#if SYMPLOT_FLAT_MODE
+    plotFlatEdges(plot);
+#else
     plotHasValueEdges(plot);
+#endif
 
 #if !SYMPLOT_OMIT_NEQ_EDGES
     plotNeqEdges(plot);
