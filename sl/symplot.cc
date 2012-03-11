@@ -476,7 +476,8 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
     }
 }
 
-std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
+std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
+{
     std::string label;
     if (sh.valTargetIsProto(root))
         label = "[prototype] ";
@@ -489,7 +490,7 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
         case OK_OBJ_OR_NULL:
         case OK_SEE_THROUGH:
             label += "0..1";
-            return label;
+            break;
 
         case OK_SLS:
             label += "SLS";
@@ -500,12 +501,43 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
             break;
     }
 
-    // append minimal segment length
-    const TMinLen len = sh.segMinLength(root);
     std::ostringstream str;
-    str << " " << len << "+";
-    label += str.str();
+    switch (kind) {
+        case OK_SLS:
+        case OK_DLS:
+            // append minimal segment length
+            str << " " << sh.segMinLength(root) << "+";
 
+        default:
+            break;
+    }
+
+    if (showProps && OK_OBJ_OR_NULL != kind) {
+        const BindingOff &bf = sh.segBinding(root);
+        switch (kind) {
+            case OK_SLS:
+            case OK_DLS:
+                str << ", head [" << SIGNED_OFF(bf.head) << "]";
+
+            default:
+                break;
+        }
+
+        switch (kind) {
+            case OK_SEE_THROUGH:
+            case OK_SLS:
+            case OK_DLS:
+                str << ", next [" << SIGNED_OFF(bf.next) << "]";
+
+            default:
+                break;
+        }
+
+        if (OK_DLS == kind)
+            str << ", prev [" << SIGNED_OFF(bf.prev) << "]";
+    }
+
+    label += str.str();
     return label;
 }
 
@@ -555,7 +587,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
             break;
     }
 
-    const std::string label = labelOfCompObj(sh, at);
+    const std::string label = labelOfCompObj(sh, at, /* showProps */ true);
 
     // open cluster
     plot.out
@@ -582,7 +614,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
 void plotDlSeg(PlotData &plot, const TValId seg, const ObjList &liveObjs) {
     SymHeap &sh = plot.sh;
 
-    const std::string label = labelOfCompObj(sh, seg);
+    const std::string label = labelOfCompObj(sh, seg, /* showProps */ false);
 
     // open a cluster for the DLS pair
     plot.out
