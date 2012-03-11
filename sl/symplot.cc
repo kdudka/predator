@@ -814,13 +814,13 @@ void describeCustomValue(PlotData &plot, const TValId val) {
     }
 }
 
-void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
+void plotCustomValue(PlotData &plot, const int idFrom, const TValId val) {
     const int id = ++plot.last;
     plot.out << "\t" << SL_QUOTE("lonely" << id) << " [shape=plaintext";
 
     describeCustomValue(plot, val);
 
-    plot.out << "];\n\t" << SL_QUOTE(obj)
+    plot.out << "];\n\t" << SL_QUOTE(idFrom)
         << " -> " << SL_QUOTE("lonely" << id)
         << " [color=blue];\n";
 }
@@ -1024,22 +1024,21 @@ void plotAuxValue(PlotData &plot, const int node, const TValId val, bool isObj)
         << " [color=blue];\n";
 }
 
-void plotHasValue(PlotData &plot, const ObjHandle &obj) {
+void plotHasValue(PlotData &plot, const int idFrom, const TValId val) {
     SymHeap &sh = plot.sh;
 
-    const TValId val = obj.value();
     if (val <= 0) {
-        plotAuxValue(plot, obj.objId(), val, /* isObj */ true);
+        plotAuxValue(plot, idFrom, val, /* isObj */ true);
         return;
     }
 
     const EValueTarget code = sh.valTarget(val);
     if (VT_CUSTOM == code) {
-        plotCustomValue(plot, obj.objId(), val);
+        plotCustomValue(plot, idFrom, val);
         return;
     }
 
-    plot.out << "\t" << SL_QUOTE(obj.objId())
+    plot.out << "\t" << SL_QUOTE(idFrom)
         << " -> " << SL_QUOTE(val)
         << " [color=blue, fontcolor=blue];\n";
 }
@@ -1094,33 +1093,7 @@ class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
         }
 };
 
-void plotEverything(PlotData &plot) {
-    plotRootObjects(plot);
-    plotNonRootValues(plot);
-
-    // plot "hasValue" edges
-    BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
-        BOOST_FOREACH(const ObjHandle &obj, /* ObjList */ item.second)
-            plotHasValue(plot, obj);
-
-    // plot "hasValue" edges for uniform block prototypes
-    BOOST_FOREACH(PlotData::TDangValues::const_reference item, plot.dangVals) {
-        const int id = item.first;
-        const TValId val = item.second;
-
-        if (val <= 0) {
-            plotAuxValue(plot, id, val, /* isObj */ false);
-            continue;
-        }
-
-        plot.out << "\t" << SL_QUOTE("lonely" << id)
-            << " -> " << SL_QUOTE(val)
-            << " [color=blue, fontcolor=blue];\n";
-    }
-
-#if SYMPLOT_OMIT_NEQ_EDGES
-    return;
-#endif
+void plotNeqEdges(PlotData &plot) {
     // cppcheck-suppress unreachableCode
     SymHeap &sh = plot.sh;
 
@@ -1145,6 +1118,38 @@ void plotEverything(PlotData &plot) {
 
     // plot "neq" edges
     np.plotNeqEdges(plot);
+}
+
+void plotHasValueEdges(PlotData &plot) {
+    // plot "hasValue" edges
+    BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
+        BOOST_FOREACH(const ObjHandle &obj, /* ObjList */ item.second)
+            plotHasValue(plot, obj.objId(), obj.value());
+
+    // plot "hasValue" edges for uniform block prototypes
+    BOOST_FOREACH(PlotData::TDangValues::const_reference item, plot.dangVals) {
+        const int id = item.first;
+        const TValId val = item.second;
+
+        if (val <= 0) {
+            plotAuxValue(plot, id, val, /* isObj */ false);
+            continue;
+        }
+
+        plot.out << "\t" << SL_QUOTE("lonely" << id)
+            << " -> " << SL_QUOTE(val)
+            << " [color=blue, fontcolor=blue];\n";
+    }
+}
+
+void plotEverything(PlotData &plot) {
+    plotRootObjects(plot);
+    plotNonRootValues(plot);
+    plotHasValueEdges(plot);
+
+#if !SYMPLOT_OMIT_NEQ_EDGES
+    plotNeqEdges(plot);
+#endif
 }
 
 bool plotHeap(
