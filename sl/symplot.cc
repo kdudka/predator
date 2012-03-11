@@ -54,6 +54,7 @@ struct PlotData {
     TValues                             values;
     TLiveObjs                           liveObjs;
     TDangValues                         dangVals;
+    TValSet                             dlsPeers;
 
     PlotData(const SymHeap &sh_, std::ostream &out_):
         sh(const_cast<SymHeap &>(sh_)),
@@ -610,8 +611,11 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
     // plot the root value
     plotRootValue(plot, at, color);
 
-    // plot all uniform blocks
-    plotUniformBlocks(plot, at);
+#if !SYMPLOT_OMIT_DEBUG_DLS
+    if (!hasKey(plot.dlsPeers, at))
+#endif
+        // plot all uniform blocks
+        plotUniformBlocks(plot, at);
 
 #if SYMPLOT_FLAT_MODE
     BOOST_FOREACH(const ObjHandle &obj, liveObjs) {
@@ -644,14 +648,15 @@ void plotDlSeg(PlotData &plot, const TValId seg, const ObjList &liveObjs) {
     // plot the corresponding peer
     const TValId peer = dlSegPeer(sh, seg);
     if (OK_DLS == sh.valTargetKind(peer)) {
-#if SYMPLOT_OMIT_NEQ_EDGES
-        TObjSet bindPtrs;
-        buildIgnoreList(bindPtrs, sh, peer);
-        plotCompositeObj(plot, peer, bindPtrs);
-#else
+        plot.dlsPeers.insert(peer);
+#if SYMPLOT_DEBUG_DLS
         ObjList liveObjsAtPeer;
         sh.gatherLiveObjects(liveObjsAtPeer, peer);
         plotCompositeObj(plot, peer, liveObjsAtPeer);
+#else
+        TObjSet bindPtrs;
+        buildIgnoreList(bindPtrs, sh, peer);
+        plotCompositeObj(plot, peer, bindPtrs);
 #endif
     }
 
@@ -661,7 +666,6 @@ void plotDlSeg(PlotData &plot, const TValId seg, const ObjList &liveObjs) {
 
 void plotRootObjects(PlotData &plot) {
     SymHeap &sh = plot.sh;
-    std::set<TValId> peersDone;
 
     // go through roots
     BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
@@ -669,7 +673,7 @@ void plotRootObjects(PlotData &plot) {
             continue;
 
         const TValId root = item.first;
-        if (hasKey(peersDone, root))
+        if (hasKey(plot.dlsPeers, root))
             // already plotted
             continue;
 
@@ -680,7 +684,6 @@ void plotRootObjects(PlotData &plot) {
         const EObjKind kind = sh.valTargetKind(root);
         switch (kind) {
             case OK_DLS:
-                peersDone.insert(segPeer(sh, root));
                 plotDlSeg(plot, root, liveObjs);
                 continue;
 
@@ -1221,9 +1224,15 @@ void plotFlatEdges(PlotData &plot) {
         if (! /* isRoot */ item.second)
             continue;
 
+        const TValId root = item.first;
+#if !SYMPLOT_OMIT_DEBUG_DLS
+        if (hasKey(plot.dlsPeers, root))
+            // plot uniform blocks only once for a DLS pair
+            continue;
+#endif
+
         // get all uniform blocks inside the given root
         TUniBlockMap bMap;
-        const TValId root = item.first;
         sh.gatherUniformBlocks(bMap, root);
 
         // plot flat edges for all uniform blocks at the current root

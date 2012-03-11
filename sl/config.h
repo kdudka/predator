@@ -261,6 +261,11 @@
 #define SH_REUSE_FREE_IDS                   0
 
 /**
+ * if 1, write the contents of both parts of a DLS pair
+ */
+#define SYMPLOT_DEBUG_DLS                   0
+
+/**
  * if 1, do not plot allocated areas as clusters
  */
 #define SYMPLOT_FLAT_MODE                   0
