@@ -1106,12 +1106,15 @@ void plotHasValueFlat(
                 break;
 
             case CL_TYPE_PTR:
-                strLabel << "PTR";
-                break;
+                if (isDataPtr(clt)) {
+                    strLabel << "PTR";
+                    break;
+                }
+                // fall through!
 
             default:
                 // TODO
-                strLabel << "(?)";
+                strLabel << "OBJ";
                 break;
         }
     }
@@ -1120,8 +1123,8 @@ void plotHasValueFlat(
 
     strLabel << "@<" << beg << ", " << end << ")";
 
-    const char *label = strLabel.str().c_str();
-    plotHasValue(plot, root, val, /* isObj */ false, label);
+    const std::string label(strLabel.str());
+    plotHasValue(plot, root, val, /* isObj */ false, label.c_str());
 }
 
 void plotNeqZero(PlotData &plot, const TValId val) {
