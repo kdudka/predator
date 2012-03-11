@@ -21,8 +21,8 @@
 #include "symplot.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/storage.hh>
 #include <cl/clutil.hh>
+#include <cl/storage.hh>
 
 #include "plotenum.hh"
 #include "symheap.hh"
@@ -112,6 +112,13 @@ inline const char* offPrefix(const TOffset off) {
 }
 
 #define SIGNED_OFF(off) offPrefix(off) << (off)
+
+inline void appendLabelIf(std::ostream &str, const char *label) {
+    if (!label)
+        return;
+
+    str << ", label=\"" << label << "\"";
+}
 
 void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
 {
@@ -814,7 +821,12 @@ void describeCustomValue(PlotData &plot, const TValId val) {
     }
 }
 
-void plotCustomValue(PlotData &plot, const int idFrom, const TValId val) {
+void plotCustomValue(
+        PlotData                       &plot,
+        const int                       idFrom,
+        const TValId                    val,
+        const char                     *edgeLabel)
+{
     const int id = ++plot.last;
     plot.out << "\t" << SL_QUOTE("lonely" << id) << " [shape=plaintext";
 
@@ -822,7 +834,9 @@ void plotCustomValue(PlotData &plot, const int idFrom, const TValId val) {
 
     plot.out << "];\n\t" << SL_QUOTE(idFrom)
         << " -> " << SL_QUOTE("lonely" << id)
-        << " [color=blue];\n";
+        << " [color=blue, fontcolor=blue";
+    appendLabelIf(plot.out, edgeLabel);
+    plot.out << "];\n";
 }
 
 void plotValue(PlotData &plot, const TValId val)
@@ -984,7 +998,12 @@ const char* valNullLabel(const SymHeapCore &sh, const TObjId obj) {
     }
 }
 
-void plotAuxValue(PlotData &plot, const int node, const TValId val, bool isObj)
+void plotAuxValue(
+        PlotData                       &plot,
+        const int                       node,
+        const TValId                    val,
+        const bool                      isObj,
+        const char                     *edgeLabel = 0)
 {
     const char *color = "blue";
     const char *label = "NULL";
@@ -1015,32 +1034,42 @@ void plotAuxValue(PlotData &plot, const int node, const TValId val, bool isObj)
         << " [shape=plaintext, fontcolor=" << color
         << ", label=" << SL_QUOTE(label) << "];\n";
 
-    const char *prefix = (isObj)
-        ? ""
-        : "lonely";
+    const char *prefix = "";
+    if (!isObj && !edgeLabel)
+        prefix = "lonely";
 
     plot.out << "\t" << SL_QUOTE(prefix << node)
         << " -> " << SL_QUOTE("lonely" << id)
-        << " [color=blue];\n";
+        << " [color=blue, fontcolor=blue";
+    appendLabelIf(plot.out, edgeLabel);
+    plot.out << "];\n";
 }
 
-void plotHasValue(PlotData &plot, const int idFrom, const TValId val) {
+void plotHasValue(
+        PlotData                       &plot,
+        const int                       idFrom,
+        const TValId                    val,
+        const bool                      isObj = true,
+        const char                     *edgeLabel = 0)
+{
     SymHeap &sh = plot.sh;
 
     if (val <= 0) {
-        plotAuxValue(plot, idFrom, val, /* isObj */ true);
+        plotAuxValue(plot, idFrom, val, isObj, edgeLabel);
         return;
     }
 
     const EValueTarget code = sh.valTarget(val);
     if (VT_CUSTOM == code) {
-        plotCustomValue(plot, idFrom, val);
+        plotCustomValue(plot, idFrom, val, edgeLabel);
         return;
     }
 
     plot.out << "\t" << SL_QUOTE(idFrom)
         << " -> " << SL_QUOTE(val)
-        << " [color=blue, fontcolor=blue];\n";
+        << " [color=blue, fontcolor=blue";
+    appendLabelIf(plot.out, edgeLabel);
+    plot.out << "];\n";
 }
 
 void plotNeqZero(PlotData &plot, const TValId val) {
