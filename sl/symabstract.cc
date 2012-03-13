@@ -820,14 +820,6 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
 
     // duplicate self as abstract object
     const TValId dup = sh.valClone(seg);
-    const TValId dupHead = segHeadAt(sh, dup);
-    if (OK_DLS == kind) {
-        // DLS relink
-        const PtrHandle ptr = prevPtrFromSeg(sh, peer);
-        ptr.setValue(dupHead);
-    }
-
-    // duplicate all unknown values, to keep the prover working
     clonePrototypes(sh, seg, dup);
 
     // resolve the relative placement of the 'next' pointer
@@ -836,16 +828,24 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
         ? off.next
         : off.prev;
 
-    // concretize self and recover the list
+    // concretize self
     sh.valTargetSetConcrete(seg);
+
+    // update 'next' pointer
     const PtrHandle nextPtr(sh, sh.valByOffset(seg, offNext));
+    const TValId dupHead = segHeadAt(sh, dup);
     nextPtr.setValue(dupHead);
 
     if (OK_DLS == kind) {
-        // update DLS back-link
-        const PtrHandle backLink(sh, sh.valByOffset(dup, off.next));
+        // update 'prev' pointer going from peer to the cloned object
+        const PtrHandle prev1 = prevPtrFromSeg(sh, peer);
+        prev1.setValue(dupHead);
+
+        // update 'prev' pointer going from the cloned object to the conrete one
+        const PtrHandle prev2(sh, sh.valByOffset(dup, off.next));
         const TValId headAddr = sh.valByOffset(seg, off.head);
-        backLink.setValue(headAddr);
+        prev2.setValue(headAddr);
+
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
