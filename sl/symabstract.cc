@@ -364,15 +364,10 @@ void slSegAbstractionStep(
         const TValId                nextAt,
         const BindingOff            &off)
 {
-    // read minimal length of 'obj' and set it temporarily to zero
-    TMinLen len = objMinLength(sh, at);
-    if (isAbstract(sh.valTarget(at)))
-        sh.segSetMinLength(at, /* SLS 0+ */ 0);
+    // compute the resulting minimal length
+    const TMinLen len = objMinLength(sh, at) + objMinLength(sh, nextAt);
 
-    len += objMinLength(sh, nextAt);
-    if (OK_SLS == sh.valTargetKind(nextAt))
-        sh.segSetMinLength(nextAt, /* SLS 0+ */ 0);
-    else
+    if (OK_SLS != sh.valTargetKind(nextAt))
         // abstract the _next_ object
         sh.valTargetSetAbstract(nextAt, OK_SLS, off);
 
@@ -386,7 +381,7 @@ void slSegAbstractionStep(
     sh.valReplace(headAt, segHeadAt(sh, nextAt));
 
     // destroy self, including all prototypes
-    REQUIRE_GC_ACTIVITY(sh, headAt, slSegAbstractionStep);
+    REQUIRE_GC_ACTIVITY(sh, at, slSegAbstractionStep);
 
     if (len)
         // declare resulting segment's minimal length
@@ -432,9 +427,10 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
 void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
-    // handle DLS Neq predicates and OK_SEE_THROUGH
+    // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, var);
-    sh.segSetMinLength(dls, /* DLS 0+ */ 0);
+
+    // we allow to gobble OK_SEE_THROUGH objects (if compatible)
     enlargeMayExist(sh, var);
 
     if (!backward)
@@ -462,10 +458,8 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
 }
 
 void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
-    // handle DLS Neq predicates
+    // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
-    sh.segSetMinLength(seg1, /* DLS 0+ */ 0);
-    sh.segSetMinLength(seg2, /* DLS 0+ */ 0);
 
     // dig peers
     const TValId peer1 = dlSegPeer(sh, seg1);
@@ -676,10 +670,6 @@ bool considerAbstraction(
 void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOT(symabstract, sh);
-    CL_BREAK_IF(!dlSegCheckConsistency(sh));
-
-    // first kill any related Neq predicates, we're going to concretize anyway
-    sh.segSetMinLength(seg, /* DLS 0+ */ 0);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
 
     // take the value of 'next' pointer from peer
