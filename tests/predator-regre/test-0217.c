@@ -23,17 +23,17 @@ typedef struct {
     char text[0x100 + /* terminating zero */ 1];
 } *user_item_p;
 
-bool is_empty(list_p list)
+int is_empty(list_p list)
 {
-    bool no_beg = !(*list)[LIST_BEG];
-    bool no_end = !(*list)[LIST_END];
+    int no_beg = !(*list)[LIST_BEG];
+    int no_end = !(*list)[LIST_END];
 
     ___SL_ASSERT(no_beg == no_end);
 
     return no_beg;
 }
 
-item_p create_item(end_point_t at, item_p link)
+item_p create_item(end_point_t at, item_p *cursor)
 {
     user_item_p item = malloc(sizeof *item);
     if (!item)
@@ -53,27 +53,35 @@ item_p create_item(end_point_t at, item_p link)
             break;
     }
 
+    /* seek random position */
+    while ((*cursor) && (**cursor)[link_field] && ___sl_get_nondet_int())
+        cursor = (item_p *) &(**cursor)[link_field];
+
+    item_p link = *cursor;
     item->head[link_field] = link;
-    item->head[term_field] = NULL;
+    item->head[term_field] = link ? (*link)[term_field] : NULL;
     item->text[0] = '\0';
 
     item_p head = &item->head;
 
+    ___sl_plot(NULL);
+
     if (link)
         (*link)[term_field] = head;
 
+    *cursor = head;
     return head;
 }
 
 void append_one(list_p list, end_point_t to)
 {
-    item_p item = create_item(to, (*list)[to]);
-    (*list)[to] = item;
+    item_p *cursor = (item_p *) &(*list)[to];
+    item_p item = create_item(to, cursor);
 
-    if (NULL == (*list)[LIST_BEG])
+    if (NULL == (*item)[ITEM_PREV])
         (*list)[LIST_BEG] = item;
 
-    if (NULL == (*list)[LIST_END])
+    if (NULL == (*list)[ITEM_NEXT])
         (*list)[LIST_END] = item;
 }
 
@@ -86,7 +94,6 @@ void remove_one(list_p list, end_point_t from)
     if ((*list)[LIST_BEG] == (*list)[LIST_END]) {
         free((*list)[LIST_BEG]);
         memset(*list, 0, sizeof *list);
-        ___sl_plot(NULL);
         return;
     }
 
@@ -98,11 +105,10 @@ void remove_one(list_p list, end_point_t from)
     (*next)[term_field] = NULL;
     (*list)[from] = next;
 
-    ___sl_plot(NULL);
     free(item);
 }
 
-/* FIXME: !!___sl_get_nondet_int() should work without such a wrapper */
+/* FIXME !!___sl_get_nondet_int() should work -- minimal example in test-0216 */
 end_point_t rand_end_point(void)
 {
     if (___sl_get_nondet_int())
@@ -149,9 +155,9 @@ int main()
 }
 
 /**
- * @file test-0214.c
+ * @file test-0217.c
  *
- * @brief randomly append/remove items from begin/end of the list
+ * @brief extension of test-0214 using a random seek in random direction
  *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.

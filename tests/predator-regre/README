@@ -122,6 +122,10 @@ DLS abstraction
 
     test-0171.c - a modification of test-0170 that revealed a nasty bug
 
+    test-0214.c - randomly append/remove items from begin/end of the list
+
+    test-0217.c - extension of test-0214 using a random seek in random direction
+
 
 Higher level SLS/DLS abstraction, etc.
 ======================================
