@@ -53,7 +53,6 @@ item_p create_item(end_point_t at, item_p link)
             break;
     }
 
-    /* FIXME: Oops, cl/killer.cc kills our desperate effort at this point */
     item->head[link_field] = link;
     item->head[term_field] = NULL;
     item->text[0] = '\0';

@@ -97,8 +97,9 @@ void scanOperand(Data &data, TBlock bb, const cl_operand &op, bool dst) {
     BlockData &bData = data.blocks[bb];
     VK_DEBUG(4, "scanOperand: " << op << ((dst) ? " [dst]" : " [src]"));
 
-    const cl_accessor *ac = op.accessor;
-    if (ac) {
+    bool fieldOfComp = false;
+
+    for (const cl_accessor *ac = op.accessor; ac; ac = ac->next) {
         CL_BREAK_IF(dst && seekRefAccessor(ac));
 
         const enum cl_accessor_e code = ac->code;
@@ -114,15 +115,18 @@ void scanOperand(Data &data, TBlock bb, const cl_operand &op, bool dst) {
                 break;
 
             case CL_ACCESSOR_ITEM:
-                if (dst)
-                    // if we are writing to a field of a composite type, it yet
-                    // does not mean we are killing the whole composite variable
-                    return;
+                fieldOfComp = true;
+                // fall through!
 
             case CL_ACCESSOR_REF:
                 break;
         }
     }
+
+    if (dst && fieldOfComp)
+        // if we are writing to a field of a composite type, it yet does not
+        // mean we are killing the whole composite variable
+        return;
 
     if (!isLcVar(op))
         // not a local variable

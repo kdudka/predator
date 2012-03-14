@@ -711,6 +711,8 @@ Tests taken from Forester
 
     test-0204.c - same as test-0203, but uses values close to minus one
 
+    test-0215.c - test-0214 reduced to a minimal example showing a bug in killer
+
 
 Data reinterpretation
 =====================
