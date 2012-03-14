@@ -1,6 +1,5 @@
 #include <verifier-builtins.h>
 
-
 #include <stdlib.h>
 #include <string.h>
 
@@ -18,11 +17,6 @@ typedef enum {
     ITEM_NEXT
 } direction_t;
 
-typedef struct {
-    item_t head;
-    char text[0x100 + /* terminating zero */ 1];
-} *user_item_p;
-
 int is_empty(list_p list)
 {
     int no_beg = !(*list)[LIST_BEG];
@@ -35,7 +29,7 @@ int is_empty(list_p list)
 
 item_p create_item(end_point_t at, item_p *cursor)
 {
-    user_item_p item = malloc(sizeof *item);
+    item_p item = malloc(sizeof *item);
     if (!item)
         abort();
 
@@ -58,19 +52,16 @@ item_p create_item(end_point_t at, item_p *cursor)
         cursor = (item_p *) &(**cursor)[link_field];
 
     item_p link = *cursor;
-    item->head[link_field] = link;
-    item->head[term_field] = link ? (*link)[term_field] : NULL;
-    item->text[0] = '\0';
-
-    item_p head = &item->head;
+    (*item)[link_field] = link;
+    (*item)[term_field] = link ? (*link)[term_field] : NULL;
 
     ___sl_plot(NULL);
 
     if (link)
-        (*link)[term_field] = head;
+        (*link)[term_field] = item;
 
-    *cursor = head;
-    return head;
+    *cursor = item;
+    return item;
 }
 
 void append_one(list_p list, end_point_t to)
@@ -155,9 +146,9 @@ int main()
 }
 
 /**
- * @file test-0217.c
+ * @file test-0218.c
  *
- * @brief extension of test-0214 using a random seek in random direction
+ * @brief simplification of test-0217 not using structs at all
  *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.

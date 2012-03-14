@@ -126,6 +126,8 @@ DLS abstraction
 
     test-0217.c - extension of test-0214 using a random seek in random direction
 
+    test-0218.c - simplification of test-0217 not using structs at all
+
 
 Higher level SLS/DLS abstraction, etc.
 ======================================
