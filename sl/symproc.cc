@@ -1809,7 +1809,7 @@ struct OpHandler</* binary */ 2> {
             case CL_BINOP_GT:
             case CL_BINOP_LE:
             case CL_BINOP_GE:
-                CL_BREAK_IF(clt[/* src1 */ 0]->code != clt[/* src2 */ 1]->code);
+                CL_BREAK_IF(!areComparableTypes(clt[0], clt[1]));
                 return compareValues(sh, code, rhs[0], rhs[1]);
 
             case CL_BINOP_MULT:

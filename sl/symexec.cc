@@ -358,23 +358,6 @@ bool isTrackableValue(const SymHeap &sh, const TValId val) {
     return false;
 }
 
-inline bool areComparableTypes(const TObjType clt1, const TObjType clt2) {
-    if (!clt1 || !clt2)
-        return false;
-
-    enum cl_type_e code1 = clt1->code;
-    enum cl_type_e code2 = clt2->code;
-    if (code1 == code2)
-        return true;
-
-    if (CL_TYPE_ENUM == code1)
-        code1 = CL_TYPE_INT;
-    if (CL_TYPE_ENUM == code2)
-        code2 = CL_TYPE_INT;
-
-    return (code1 == code2);
-}
-
 bool SymExecEngine::bypassNonPointers(
         SymProc                                     &proc,
         const CodeStorage::Insn                     &insnCmp,
