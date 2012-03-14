@@ -229,14 +229,23 @@ void describeFieldPlacement(PlotData &plot, const ObjHandle &obj, TObjType clt)
     BOOST_FOREACH(const int idx, ic) {
         CL_BREAK_IF(clt->item_cnt <= idx);
         const cl_type_item *item = clt->items + idx;
+        const cl_type_e code = clt->code;
 
-        // read field name
-        const char *name = item->name;
-        if (!name)
-            name = "<anon>";
+        if (CL_TYPE_ARRAY == code) {
+            // TODO: support non-zero indexes? (not supported by CltFinder yet)
+            CL_BREAK_IF(item->offset);
+            plot.out << "[0]";
+        }
+        else {
+            // read field name
+            const char *name = item->name;
+            if (!name)
+                name = "<anon>";
 
-        // write to stream and move to the next one
-        plot.out << "." << name;
+            plot.out << "." << name;
+        }
+
+        // jump to the next item
         clt = item->type;
     }
 }
