@@ -656,8 +656,7 @@ void plotDlSeg(PlotData &plot, const TValId seg, const ObjList &liveObjs) {
 
     // plot the corresponding peer
     const TValId peer = dlSegPeer(sh, seg);
-    if (OK_DLS == sh.valTargetKind(peer)) {
-        plot.dlsPeers.insert(peer);
+    if (OK_DLS == sh.valTargetKind(peer) && insertOnce(plot.dlsPeers, peer)) {
 #if SYMPLOT_DEBUG_DLS
         ObjList liveObjsAtPeer;
         sh.gatherLiveObjects(liveObjsAtPeer, peer);
