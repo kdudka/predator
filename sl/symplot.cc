@@ -74,6 +74,12 @@ bool isDlSegPeer(const SymHeap &sh, const TValId root) {
     return (bf.prev < bf.next);
 }
 
+void dlSegJumpToBegIfNeeded(const SymHeap &sh, TValId *pRoot) {
+    const TValId root = *pRoot;
+    if (isDlSegPeer(sh, root))
+        *pRoot = dlSegPeer(sh, root);
+}
+
 #define SL_QUOTE(what) "\"" << what << "\""
 
 void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
@@ -329,22 +335,29 @@ void plotRootValue(PlotData &plot, const TValId val, const char *color) {
     if (refCnt)
         plot.out << "\"];";
 
-    plot.out << "\n\t" << SL_QUOTE("obj" << val)
-        << " [shape=box"
-        << ", color=" << color
-        << ", fontcolor=" << color
-        << ", label=\"O #" << val;
-#endif
+    TValId obj = val;
+    if (isDlSegPeer(sh, val))
+        obj = dlSegPeer(sh, val);
+    else
+        plot.out << "\n\t" << SL_QUOTE("obj" << val)
+            << " [shape=box"
+            << ", color=" << color
+            << ", fontcolor=" << color
+            << ", label=\"O #" << val;
 
-    plot.out << " [size = ";
-    printRawRange(plot.out, size, " B");
-    plot.out << "]\"];\n";
+    if (val == obj)
+#endif
+    {
+        plot.out << " [size = ";
+        printRawRange(plot.out, size, " B");
+        plot.out << "]\"];\n";
+    }
 
 #if SYMPLOT_FLAT_MODE
     if (!refCnt)
         return;
 
-    plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE("obj" << val)
+    plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE("obj" << obj)
         << " [color=" << color
         << ", fontcolor=" << color
         << ", label=\"[" << SIGNED_OFF(0)
@@ -1013,7 +1026,10 @@ void plotNonRootValues(PlotData &plot) {
             // no valid target
             continue;
 
-#if !SYMPLOT_FLAT_MODE
+        TValId offEdgeRoot = root;
+#if SYMPLOT_FLAT_MODE
+        dlSegJumpToBegIfNeeded(sh, &offEdgeRoot);
+#else
         // assume an off-value
         PlotData::TLiveObjs::const_iterator it = plot.liveObjs.find(val);
         if ((plot.liveObjs.end() != it) && (1 == it->second.size())) {
@@ -1027,7 +1043,7 @@ void plotNonRootValues(PlotData &plot) {
         // an off-value with either no target, or too many targets
         const TOffset off = sh.valOffset(val);
         CL_BREAK_IF(!off);
-        plotOffset(plot, off, root, val);
+        plotOffset(plot, off, offEdgeRoot, val);
     }
 
     // go through value prototypes used in uniform blocks
@@ -1148,12 +1164,14 @@ void plotHasValue(
 /// (0 == clt) means a uniform block because uniform blocks are type-free
 void plotHasValueFlat(
         PlotData                       &plot,
-        const TValId                    root,
+        TValId                          root,
         const TOffset                   beg,
         const TOffset                   end,
         const TObjType                  clt,
         const TValId                    val)
 {
+    dlSegJumpToBegIfNeeded(plot.sh, &root);
+
     std::ostringstream strLabel;
     if (clt) {
         const cl_type_e code = clt->code;
