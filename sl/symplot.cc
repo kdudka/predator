@@ -676,49 +676,65 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
     // plot the root value
     plotRootValue(plot, at, color);
 
-#if !SYMPLOT_OMIT_DEBUG_DLS
-    if (!isDlSegPeer(plot.sh, at))
-#endif
-        // plot all uniform blocks
-        plotUniformBlocks(plot, at);
+    // plot all uniform blocks
+    plotUniformBlocks(plot, at);
 
     // plot all atomic objects inside
     plotInnerObjects(plot, at, liveObjs);
+
+    // in case of DLS, plot the corresponding peer
+    TValId peer;
+    if (OK_DLS == sh.valTargetKind(at)
+            && OK_DLS == sh.valTargetKind((peer = dlSegPeer(sh, at))))
+    {
+        // plot peer's root value
+        plotRootValue(plot, peer, color);
+#if !SYMPLOT_DEBUG_DLS
+        // plot peer's uniform blocks
+        plotUniformBlocks(plot, at);
+#endif
+
+#if SYMPLOT_DEBUG_DLS
+        ObjList peerObjs;
+        sh.gatherLiveObjects(peerObjs, peer);
+#else
+        TObjSet peerObjs;
+        buildIgnoreList(peerObjs, sh, peer);
+#endif
+        // plot all atomic objects inside
+        plotInnerObjects(plot, peer, peerObjs);
+    }
 
     // close cluster
     plot.out << "}\n";
 }
 
-void plotDlSeg(PlotData &plot, const TValId seg, const ObjList &liveObjs) {
+bool plotSimpleRoot(PlotData &plot, const ObjHandle &obj) {
     SymHeap &sh = plot.sh;
 
-    const std::string label = labelOfCompObj(sh, seg, /* showProps */ false);
+    const TValId at = obj.placedAt();
+    if (sh.valOffset(at))
+        // offset detected
+        return false;
 
-    // open a cluster for the DLS pair
-    plot.out
-        << "subgraph \"cluster" << (++plot.last)
-        << "\" {\n\tlabel=" << SL_QUOTE(label)
-        << "\n\tcolor=gold;\n\tfontcolor=gold;\n\tstyle=dashed;\n";
+    const TValId root = sh.valRoot(at);
+    if (sh.usedByCount(root))
+        // root pointed
+        return false;
 
-    // plot the given root
-    plotCompositeObj(plot, seg, liveObjs);
+    // TODO: support for objects with variable size?
+    const TSizeRange size = sh.valSizeOfTarget(root);
+    CL_BREAK_IF(!isSingular(size));
 
-    // plot the corresponding peer
-    const TValId peer = dlSegPeer(sh, seg);
-    if (OK_DLS == sh.valTargetKind(peer)) {
-#if SYMPLOT_DEBUG_DLS
-        ObjList liveObjsAtPeer;
-        sh.gatherLiveObjects(liveObjsAtPeer, peer);
-        plotCompositeObj(plot, peer, liveObjsAtPeer);
-#else
-        TObjSet bindPtrs;
-        buildIgnoreList(bindPtrs, sh, peer);
-        plotCompositeObj(plot, peer, bindPtrs);
-#endif
-    }
+    const TObjType clt = obj.objType();
+    CL_BREAK_IF(!clt);
+    if (clt->size != size.lo)
+        // size mismatch detected
+        return false;
 
-    // close the cluster
-    plot.out << "}\n";
+    const AtomicObject ao(obj);
+    plotAtomicObj(plot, ao, /* lonely */ true);
+    return true;
 }
 
 void plotRootObjects(PlotData &plot) {
@@ -738,46 +754,13 @@ void plotRootObjects(PlotData &plot) {
         ObjList liveObjs;
         sh.gatherLiveObjects(liveObjs, root);
 
-        const EObjKind kind = sh.valTargetKind(root);
-        switch (kind) {
-            case OK_DLS:
-                plotDlSeg(plot, root, liveObjs);
-                continue;
-
-            case OK_CONCRETE:
 #if !SYMPLOT_FLAT_MODE
-                if (1 == liveObjs.size()) {
-                    const ObjHandle &obj = liveObjs.front();
-                    if (sh.valOffset(obj.placedAt()))
-                        // offset detected
-                        break;
-
-                    if (sh.usedByCount(root))
-                        // root pointed
-                        break;
-
-                    // TODO: support for objects with variable size?
-                    const TSizeRange size = sh.valSizeOfTarget(root);
-                    CL_BREAK_IF(!isSingular(size));
-
-                    const TObjType clt = obj.objType();
-                    CL_BREAK_IF(!clt);
-                    if (clt->size != size.lo)
-                        // size mismatch detected
-                        break;
-
-                    const AtomicObject ao(obj);
-                    plotAtomicObj(plot, ao, /* lonely */ true);
-                    continue;
-                }
+        if (OK_CONCRETE == sh.valTargetKind(root)
+                && (1 == liveObjs.size())
+                && plotSimpleRoot(plot, liveObjs.front()))
+            // this one went out in a simplified form
+            continue;
 #endif
-                // fall through!
-
-            case OK_SLS:
-            case OK_SEE_THROUGH:
-            case OK_OBJ_OR_NULL:
-                break;
-        }
 
         plotCompositeObj(plot, root, liveObjs);
     }
