@@ -156,10 +156,10 @@ bool matchRoots(
         // target size mismatch
         return false;
 
-    const bool isProto1 = sh1.valTargetIsProto(root1);
-    const bool isProto2 = sh2.valTargetIsProto(root2);
-    if (isProto1 != isProto2)
-        // prototype vs. shared object while called from areEqual()
+    const TProtoLevel level1 = sh1.valTargetProtoLevel(root1);
+    const TProtoLevel level2 = sh2.valTargetProtoLevel(root2);
+    if (level1 != level2)
+        // prototype level mismatch
         return false;
 
     if (!matchUniBlocks(sh1, sh2, root1, root2))

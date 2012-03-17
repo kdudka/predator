@@ -561,35 +561,35 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
 
 std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
 {
-    std::string label;
-    if (sh.valTargetIsProto(root))
-        label = "[prototype] ";
+    std::ostringstream label;
+    const TProtoLevel protoLevel= sh.valTargetProtoLevel(root);
+    if (protoLevel)
+        label << "[L" << protoLevel << " prototype] ";
 
     const EObjKind kind = sh.valTargetKind(root);
     switch (kind) {
         case OK_CONCRETE:
-            return label;
+            return label.str();
 
         case OK_OBJ_OR_NULL:
         case OK_SEE_THROUGH:
-            label += "0..1";
+            label << "0..1";
             break;
 
         case OK_SLS:
-            label += "SLS";
+            label << "SLS";
             break;
 
         case OK_DLS:
-            label += "DLS";
+            label << "DLS";
             break;
     }
 
-    std::ostringstream str;
     switch (kind) {
         case OK_SLS:
         case OK_DLS:
             // append minimal segment length
-            str << " " << sh.segMinLength(root) << "+";
+            label << " " << sh.segMinLength(root) << "+";
 
         default:
             break;
@@ -600,7 +600,7 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
         switch (kind) {
             case OK_SLS:
             case OK_DLS:
-                str << ", head [" << SIGNED_OFF(bf.head) << "]";
+                label << ", head [" << SIGNED_OFF(bf.head) << "]";
 
             default:
                 break;
@@ -610,18 +610,17 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
             case OK_SEE_THROUGH:
             case OK_SLS:
             case OK_DLS:
-                str << ", next [" << SIGNED_OFF(bf.next) << "]";
+                label << ", next [" << SIGNED_OFF(bf.next) << "]";
 
             default:
                 break;
         }
 
         if (OK_DLS == kind)
-            str << ", prev [" << SIGNED_OFF(bf.prev) << "]";
+            label << ", prev [" << SIGNED_OFF(bf.prev) << "]";
     }
 
-    label += str.str();
-    return label;
+    return label.str();
 }
 
 template <class TCont>

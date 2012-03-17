@@ -215,6 +215,9 @@ typedef enum cl_type_e                                  TObjCode;
 /// a reference to CodeStorage::Storage instance describing the analyzed code
 typedef const CodeStorage::Storage                     &TStorRef;
 
+/// a type used for prototype level (0 means not a prototype)
+typedef short                                           TProtoLevel;
+
 /**
  * bundles static identification of a variable with its instance number
  *
@@ -482,18 +485,11 @@ class SymHeapCore {
         const CustomValue& valUnwrapCustom(TValId) const;
 
     public:
-        /**
-         * true, if the target object should be cloned on concretization of the
-         * owning object
-         */
-        bool valTargetIsProto(TValId) const;
+        /// prototype level of the target root entity (0 means not a prototype)
+        TProtoLevel valTargetProtoLevel(TValId) const;
 
-        /**
-         * set it to true, if the target object should be cloned on
-         * concretization of the owning object.  By default, all nested objects
-         * are shared.
-         */
-        void valTargetSetProto(TValId root, bool isProto);
+        /// set prototype level of the given root (0 means not a prototype)
+        void valTargetSetProtoLevel(TValId root, TProtoLevel level);
 
     protected:
         /// return a @b data pointer placed at the given address

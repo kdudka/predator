@@ -27,19 +27,19 @@
 
 #include <boost/foreach.hpp>
 
-void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
+void segSetProto(SymHeap &sh, TValId seg, TProtoLevel level) {
     CL_BREAK_IF(sh.valOffset(seg));
 
     const EObjKind kind = sh.valTargetKind(seg);
     switch (kind) {
         case OK_DLS:
-            sh.valTargetSetProto(dlSegPeer(sh, seg), isProto);
+            sh.valTargetSetProtoLevel(dlSegPeer(sh, seg), level);
             // fall through
 
         case OK_SLS:
         case OK_SEE_THROUGH:
         case OK_OBJ_OR_NULL:
-            sh.valTargetSetProto(seg, isProto);
+            sh.valTargetSetProtoLevel(seg, level);
             return;
 
         case OK_CONCRETE:

@@ -158,8 +158,8 @@ inline bool objWithBinding(const SymHeap &sh, const TValId root) {
     return (OK_OBJ_OR_NULL != kind);
 }
 
-/// same as SymHeap::objSetProto(), but takes care of DLS peers
-void segSetProto(SymHeap &sh, TValId seg, bool isProto);
+/// same as SymHeap::valTargetSetProtoLevel(), but takes care of DLS peers
+void segSetProto(SymHeap &sh, TValId seg, TProtoLevel level);
 
 TValId segClone(SymHeap &sh, const TValId seg);
 

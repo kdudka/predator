@@ -472,13 +472,13 @@ struct RootValue: public AnchorValue {
     TObjIdSet                       usedByGl;
     TArena                          arena;
     TObjType                        lastKnownClt;
-    bool                            isProto;
+    TProtoLevel                     protoLevel;
 
     RootValue(EValueTarget code_, EValueOrigin origin_):
         AnchorValue(code_, origin_),
         size(IR::rngFromNum(0)),
         lastKnownClt(0),
-        isProto(false)
+        protoLevel(/* not a prototype */ 0)
     {
     }
 
@@ -1608,7 +1608,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     rootDataDst->cVar               = rootDataSrc->cVar;
     rootDataDst->size               = rootDataSrc->size;
     rootDataDst->lastKnownClt       = rootDataSrc->lastKnownClt;
-    rootDataDst->isProto            = rootDataSrc->isProto;
+    rootDataDst->protoLevel         = rootDataSrc->protoLevel;
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
     this->liveRoots->insert(imageAt);
@@ -3231,7 +3231,7 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
     return cv;
 }
 
-bool SymHeapCore::valTargetIsProto(TValId val) const {
+TProtoLevel SymHeapCore::valTargetProtoLevel(TValId val) const {
     if (val <= 0)
         // not a prototype for sure
         return false;
@@ -3246,16 +3246,17 @@ bool SymHeapCore::valTargetIsProto(TValId val) const {
     const TValId root = valData->valRoot;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
-    return rootData->isProto;
+    return rootData->protoLevel;
 }
 
-void SymHeapCore::valTargetSetProto(TValId root, bool isProto) {
+void SymHeapCore::valTargetSetProtoLevel(TValId root, TProtoLevel level) {
     CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
     CL_BREAK_IF(this->valOffset(root));
+    CL_BREAK_IF(level < 0);
 
     RootValue *rootData;
     d->ents.getEntRW(&rootData, root);
-    rootData->isProto = isProto;
+    rootData->protoLevel = level;
 }
 
 bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {

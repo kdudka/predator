@@ -135,12 +135,12 @@ TValId protoClone(SymHeap &sh, const TValId proto) {
     if (isAbstract(sh.valTarget(proto))) {
         // clone segment prototype
         clone = segClone(sh, proto);
-        segSetProto(sh, clone, false);
+        segSetProto(sh, clone, /* FIXME */ 0);
     }
     else {
         // clone bare prototype
         clone = sh.valClone(proto);
-        sh.valTargetSetProto(clone, false);
+        sh.valTargetSetProtoLevel(clone, /* FIXME */ 0);
         duplicateUnknownValues(sh, clone);
     }
 
@@ -164,7 +164,7 @@ struct ProtoFinder {
             // TODO: support for prototypes not pointed by roots?
             return /* continue */ true;
 
-        if (sh->valTargetIsProto(val))
+        if (sh->valTargetProtoLevel(val))
             protos.insert(val);
 
         return /* continue */ true;
@@ -275,7 +275,7 @@ struct ProtoCloner {
             return /* continue */ true;
 
         // check if we point to prototype, or shared data
-        if (sh.valTargetIsProto(val))
+        if (sh.valTargetProtoLevel(val))
             cloneGenericPrototype(sh, sh.valRoot(val), rootDst, rootSrc);
 
         return /* continue */ true;

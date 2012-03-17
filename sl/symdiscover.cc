@@ -129,7 +129,7 @@ bool validatePointingObjects(
     }
 
     const TValId headAddr = sh.valByOffset(root, off.head);
-    const bool rootIsProto = sh.valTargetIsProto(root);
+    const TProtoLevel rootProtoLevel = sh.valTargetProtoLevel(root);
 
     std::set<TValId> whiteList;
     whiteList.insert(sh.valByOffset(prev, off.next));
@@ -150,7 +150,7 @@ bool validatePointingObjects(
         if (hasKey(allowedReferers, sh.valRoot(at)))
             continue;
 
-        if (!rootIsProto && sh.valTargetIsProto(at))
+        if (rootProtoLevel + 1 == sh.valTargetProtoLevel(at))
             // FIXME: subtle
             continue;
 

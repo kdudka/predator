@@ -918,13 +918,15 @@ bool considerImplicitPrototype(
         const TValId            root1,
         const TValId            root2)
 {
-    const bool isProto1 = ctx.sh1.valTargetIsProto(root1);
-    const bool isProto2 = ctx.sh2.valTargetIsProto(root2);
-    CL_BREAK_IF(isProto1 == isProto2);
-    (void) isProto1;
+    const TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
+    const TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
+    CL_BREAK_IF(level1 == level2);
 
-    SymHeap &sh = (isProto2) ? ctx.sh1 : ctx.sh2;
-    const TValId root = (isProto2) ? root1 : root2;
+    // TODO
+    CL_BREAK_IF(1 < level1 || 1 < level2);
+
+    SymHeap &sh       = (level1 < level2) ? ctx.sh1 : ctx.sh2;
+    const TValId root = (level1 < level2) ?   root1 :   root2;
 
     ObjList refs;
     sh.pointedBy(refs, root);
@@ -940,30 +942,30 @@ bool considerImplicitPrototype(
 }
 
 bool joinProtoFlag(
-        bool                    *pDst,
+        TProtoLevel             *pDst,
         const SymJoinCtx        &ctx,
         const TValId            root1,
         const TValId            root2)
 {
-    const bool isProto1 = ctx.sh1.valTargetIsProto(root1);
-    const bool isProto2 = ctx.sh2.valTargetIsProto(root2);
+    const TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
+    const TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
 
     if (VAL_INVALID == root2) {
-        *pDst = isProto1;
+        *pDst = level1;
         return true;
     }
 
     if (VAL_INVALID == root1) {
-        *pDst = isProto2;
+        *pDst = level2;
         return true;
     }
 
-    *pDst = isProto1;
-    if (isProto2 == *pDst)
+    *pDst = level1;
+    if (level2 == *pDst)
         return true;
 
     if (ctx.joiningData() || considerImplicitPrototype(ctx, root1, root2)) {
-        *pDst = true;
+        *pDst = /* FIXME */ 1;
         return true;
     }
 
@@ -1170,8 +1172,8 @@ bool createObject(
     if (!joinSegBinding(&off, ctx, root1, root2))
         return false;
 
-    bool isProto;
-    if (!joinProtoFlag(&isProto, ctx, root1, root2))
+    TProtoLevel protoLevel;
+    if (!joinProtoFlag(&protoLevel, ctx, root1, root2))
         return false;
 
     if (offMayExist) {
@@ -1213,7 +1215,7 @@ bool createObject(
         ctx.dst.valSetLastKnownTypeOfTarget(rootDst, clt);
 
     // preserve 'prototype' flag
-    ctx.dst.valTargetSetProto(rootDst, isProto);
+    ctx.dst.valTargetSetProtoLevel(rootDst, protoLevel);
 
     if (OK_CONCRETE != kind) {
         // abstract object
@@ -2865,7 +2867,7 @@ void recoverPrototypes(
                 /* pointingTo   */  ghost,
                 /* redirectTo   */  dst);
 
-        sh.valTargetSetProto(protoGhost, true);
+        sh.valTargetSetProtoLevel(protoGhost, /* FIXME */ 1);
     }
 }
 
