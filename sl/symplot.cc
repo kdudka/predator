@@ -54,7 +54,6 @@ struct PlotData {
     TValues                             values;
     TLiveObjs                           liveObjs;
     TDangValues                         dangVals;
-    TValSet                             dlsPeers;
 
     PlotData(const SymHeap &sh_, std::ostream &out_):
         sh(const_cast<SymHeap &>(sh_)),
@@ -63,6 +62,17 @@ struct PlotData {
     {
     }
 };
+
+bool isDlSegPeer(const SymHeap &sh, const TValId root) {
+    CL_BREAK_IF(sh.valOffset(root));
+
+    if (OK_DLS != sh.valTargetKind(root))
+        // not a DLS
+        return false;
+
+    const BindingOff &bf = sh.segBinding(root);
+    return (bf.prev < bf.next);
+}
 
 #define SL_QUOTE(what) "\"" << what << "\""
 
@@ -667,7 +677,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
     plotRootValue(plot, at, color);
 
 #if !SYMPLOT_OMIT_DEBUG_DLS
-    if (!hasKey(plot.dlsPeers, at))
+    if (!isDlSegPeer(plot.sh, at))
 #endif
         // plot all uniform blocks
         plotUniformBlocks(plot, at);
@@ -695,7 +705,7 @@ void plotDlSeg(PlotData &plot, const TValId seg, const ObjList &liveObjs) {
 
     // plot the corresponding peer
     const TValId peer = dlSegPeer(sh, seg);
-    if (OK_DLS == sh.valTargetKind(peer) && insertOnce(plot.dlsPeers, peer)) {
+    if (OK_DLS == sh.valTargetKind(peer)) {
 #if SYMPLOT_DEBUG_DLS
         ObjList liveObjsAtPeer;
         sh.gatherLiveObjects(liveObjsAtPeer, peer);
@@ -720,8 +730,8 @@ void plotRootObjects(PlotData &plot) {
             continue;
 
         const TValId root = item.first;
-        if (hasKey(plot.dlsPeers, root))
-            // already plotted
+        if (isDlSegPeer(plot.sh, root))
+            // DLS peers are never plotted directly at this level
             continue;
 
         // gather live objects
@@ -1293,7 +1303,7 @@ void plotFlatEdges(PlotData &plot) {
 
         const TValId root = item.first;
 #if !SYMPLOT_OMIT_DEBUG_DLS
-        if (hasKey(plot.dlsPeers, root))
+        if (isDlSegPeer(plot.sh, root))
             // plot uniform blocks only once for a DLS pair
             continue;
 #endif
