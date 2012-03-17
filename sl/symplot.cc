@@ -127,8 +127,12 @@ void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
         ? "red"
         : "black";
 
-    plot.out << "\t" << SL_QUOTE(from)
-        << " -> " << SL_QUOTE(to)
+    plot.out << "\t"
+#if SYMPLOT_FLAT_MODE
+        << SL_QUOTE(to) << " -> " << SL_QUOTE("obj" << from)
+#else
+        << SL_QUOTE(from) << " -> " << SL_QUOTE(to)
+#endif
         << " [color=" << color
         << ", fontcolor=" << color
         << ", label=\"[" << SIGNED_OFF(off)
@@ -261,7 +265,7 @@ void describeObject(PlotData &plot, const ObjHandle &obj, const bool lonely) {
     const char *tag = "";
     if (lonely && isProgramVar(code)) {
         describeVar(plot, root);
-        tag = "obj";
+        tag = "field";
     }
 
     const TObjType cltRoot = sh.valLastKnownTypeOfTarget(root);
@@ -290,24 +294,52 @@ void printRawRange(
 void plotRootValue(PlotData &plot, const TValId val, const char *color) {
     SymHeap &sh = plot.sh;
     const TSizeRange size = sh.valSizeOfTarget(val);
+    const unsigned refCnt = sh.usedByCount(val);
 
-    // visualize the count of references as pen width
-    const float pw = static_cast<float>(1U + sh.usedByCount(val));
-    plot.out << "\t" << SL_QUOTE(val)
-        << " [shape=ellipse, penwidth=" << pw
+#if SYMPLOT_FLAT_MODE
+    if (refCnt)
+#endif
+    {
+        // visualize the count of references as pen width
+        const float pw = static_cast<float>(1U + refCnt);
+        plot.out << "\t" << SL_QUOTE(val)
+            << " [shape=ellipse, penwidth=" << pw
+            << ", color=" << color
+            << ", fontcolor=" << color
+            << ", label=\"";
+
+        const EValueTarget code = sh.valTarget(val);
+        if (isProgramVar(code))
+            describeVar(plot, val);
+        else
+            plot.out << "#" << val;
+    }
+
+#if SYMPLOT_FLAT_MODE
+    if (refCnt)
+        plot.out << "\"];";
+
+    plot.out << "\n\t" << SL_QUOTE("obj" << val)
+        << " [shape=box"
         << ", color=" << color
         << ", fontcolor=" << color
-        << ", label=\"";
-
-    const EValueTarget code = sh.valTarget(val);
-    if (isProgramVar(code))
-        describeVar(plot, val);
-    else
-        plot.out << "#" << val;
+        << ", label=\"O #" << val;
+#endif
 
     plot.out << " [size = ";
     printRawRange(plot.out, size, " B");
     plot.out << "]\"];\n";
+
+#if SYMPLOT_FLAT_MODE
+    if (!refCnt)
+        return;
+
+    plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE("obj" << val)
+        << " [color=" << color
+        << ", fontcolor=" << color
+        << ", label=\"[" << SIGNED_OFF(0)
+        << "]\"];\n";
+#endif
 }
 
 enum EObjectClass {
@@ -614,7 +646,12 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
         << "\" {\n\trank=same;\n\tlabel=" << SL_QUOTE(label)
         << ";\n\tcolor=" << color
         << ";\n\tfontcolor=" << color
-        << ";\n\tbgcolor=gray98;\n\tstyle=dashed;\n\tpenwidth=" << pw
+#if SYMPLOT_FLAT_MODE
+        << ";\n\tcolor=transparent;"
+#else
+        << ";\n\tbgcolor=gray98;\n\tstyle=dashed;"
+#endif
+        << "\n\tpenwidth=" << pw
         << ";\n";
 
     // plot the root value
@@ -854,7 +891,12 @@ void plotCustomValue(
 
     describeCustomValue(plot, val);
 
-    plot.out << "];\n\t" << SL_QUOTE(idFrom)
+    plot.out << "];\n\t"
+#if SYMPLOT_FLAT_MODE
+        << SL_QUOTE("obj" << idFrom)
+#else
+        << SL_QUOTE(idFrom)
+#endif
         << " -> " << SL_QUOTE("lonely" << id)
         << " [color=blue, fontcolor=blue";
     appendLabelIf(plot.out, edgeLabel);
@@ -940,7 +982,12 @@ void plotPointsTo(PlotData &plot, const TValId val, const TObjId target) {
 
 void plotRangePtr(PlotData &plot, TValId val, TValId root, const IR::Range &rng)
 {
-    plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE(root)
+    plot.out << "\t" << SL_QUOTE(val) << " -> "
+#if SYMPLOT_FLAT_MODE
+        << SL_QUOTE("obj" << root)
+#else
+        << SL_QUOTE(root)
+#endif
         << " [color=red, fontcolor=red, label=\"[";
 
     printRawRange(plot.out, rng);
@@ -1059,7 +1106,9 @@ void plotAuxValue(
         << ", label=" << SL_QUOTE(label) << "];\n";
 
     const char *prefix = "";
-    if (!isObj && !edgeLabel)
+    if (edgeLabel)
+        prefix = "obj";
+    else if (!isObj)
         prefix = "lonely";
 
     plot.out << "\t" << SL_QUOTE(prefix << node)
@@ -1089,7 +1138,12 @@ void plotHasValue(
         return;
     }
 
-    plot.out << "\t" << SL_QUOTE(idFrom)
+    plot.out << "\t"
+#if SYMPLOT_FLAT_MODE
+        << SL_QUOTE("obj" << idFrom)
+#else
+        << SL_QUOTE(idFrom)
+#endif
         << " -> " << SL_QUOTE(val)
         << " [color=blue, fontcolor=blue";
     appendLabelIf(plot.out, edgeLabel);
