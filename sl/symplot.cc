@@ -374,18 +374,12 @@ struct AtomicObject {
     }
 };
 
-void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
+bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
 {
     SymHeap &sh = plot.sh;
 
     const ObjHandle &obj = ao.obj;
     CL_BREAK_IF(!obj.isValid());
-
-    // store address mapping for the live object (FIXME: this may trigger
-    // unnecessary assignment of a fresh address, which is inappropriate
-    // as long as we take a _const_ reference to SymHeap)
-    const TValId at = obj.placedAt();
-    plot.liveObjs[at].push_back(obj);
 
     const char *color = "black";
     const char *props = ", penwidth=3.0, style=dashed";
@@ -394,7 +388,7 @@ void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
     switch (code) {
         case OC_VOID:
             CL_BREAK_IF("plotAtomicObj() got an object of class OC_VOID");
-            return;
+            return false;
 
         case OC_PTR:
             props = "";
@@ -405,6 +399,10 @@ void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
             break;
 
         case OC_PREV:
+#if !SYMPLOT_DEBUG_DLS
+            return false;
+#endif
+            // cppcheck-suppress unreachableCode
             color = "gold";
             break;
 
@@ -413,6 +411,15 @@ void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
             props = ", style=dotted";
     }
 
+    // store address mapping for the live object
+    const TValId at = obj.placedAt();
+    plot.liveObjs[at].push_back(obj);
+
+#if SYMPLOT_FLAT_MODE
+    return false;
+#endif
+
+    // cppcheck-suppress unreachableCode
     if (lonely) {
         const EValueTarget code = sh.valTarget(at);
         switch (code) {
@@ -437,6 +444,7 @@ void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
         plot.out << " [size = " << obj.objType()->size << "B]";
 
     plot.out << "\"];\n";
+    return true;
 }
 
 void plotUniformBlocks(PlotData &plot, const TValId root) {
@@ -519,7 +527,8 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
         const TOffset off = item.first;
         BOOST_FOREACH(const AtomicObject &ao, /* TAtomList */ item.second) {
             // plot a single object
-            plotAtomicObj(plot, ao, /* lonely */ false);
+            if (!plotAtomicObj(plot, ao, /* lonely */ false))
+                continue;
 
             // connect the inner object with the root by an offset edge
             plotOffset(plot, off, at, ao.obj.objId());
@@ -663,15 +672,8 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
         // plot all uniform blocks
         plotUniformBlocks(plot, at);
 
-#if SYMPLOT_FLAT_MODE
-    BOOST_FOREACH(const ObjHandle &obj, liveObjs) {
-        const TValId at = obj.placedAt();
-        plot.liveObjs[at].push_back(obj);
-    }
-#else
     // plot all atomic objects inside
     plotInnerObjects(plot, at, liveObjs);
-#endif
 
     // close cluster
     plot.out << "}\n";
