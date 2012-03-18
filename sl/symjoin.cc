@@ -997,7 +997,7 @@ bool joinProtoFlag(
     if (level2 == *pDst)
         return true;
 
-    if (ctx.joiningData() || considerImplicitPrototype(ctx, root1, root2)) {
+    if (!ctx.joiningData() && considerImplicitPrototype(ctx, root1, root2)) {
         *pDst = std::max(level1, level2);
         return true;
     }
