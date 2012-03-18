@@ -107,26 +107,33 @@ void detachClonedPrototype(
         const TValId            rootSrc,
         const bool              uplink)
 {
-    const bool isRootDls = uplink && (OK_DLS == sh.valTargetKind(rootDst));
+    const bool isRootDls = (OK_DLS == sh.valTargetKind(rootDst));
     CL_BREAK_IF(isRootDls && (OK_DLS != sh.valTargetKind(rootSrc)));
 
+    TValId rootDstPeer = VAL_INVALID;
     TValId rootSrcPeer = VAL_INVALID;
     if (isRootDls) {
+        rootDstPeer = dlSegPeer(sh, rootDst);
         rootSrcPeer = dlSegPeer(sh, rootSrc);
-        CL_BREAK_IF(dlSegPeer(sh, rootDst) != rootSrcPeer);
+        CL_BREAK_IF(uplink && (rootDstPeer != rootSrcPeer));
     }
 
     redirectRefs(sh, rootDst, proto, clone);
     redirectRefs(sh, proto, rootDst, rootSrc);
-    if (isRootDls)
-        redirectRefs(sh, clone, rootSrcPeer, rootDst);
+
+    if (isRootDls) {
+        if (uplink)
+            redirectRefs(sh, clone, rootSrcPeer, rootDst);
+        else
+            redirectRefs(sh, rootDstPeer, proto, clone);
+    }
 
     if (OK_DLS == sh.valTargetKind(proto)) {
         const TValId protoPeer = dlSegPeer(sh, proto);
         const TValId clonePeer = dlSegPeer(sh, clone);
         redirectRefs(sh, rootDst, protoPeer, clonePeer);
         redirectRefs(sh, protoPeer, rootDst, rootSrc);
-        if (isRootDls)
+        if (isRootDls && uplink)
             redirectRefs(sh, clonePeer, rootSrcPeer, rootDst);
     }
 }
