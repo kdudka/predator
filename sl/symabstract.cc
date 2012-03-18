@@ -293,6 +293,13 @@ bool collectPrototypesOf(TValList &dst, SymHeap &sh, const TValId root)
     return traverseLivePtrs(sh, root, collector);
 }
 
+void decrementProtoLevel(SymHeap &sh, const TValId at) {
+    TValList protoList;
+    collectPrototypesOf(protoList, sh, at);
+    BOOST_FOREACH(const TValId proto, protoList)
+        objDecrementProtoLevel(sh, proto);
+}
+
 struct ValueSynchronizer {
     SymHeap            &sh;
     TObjSet             ignoreList;
@@ -366,6 +373,23 @@ void clonePrototypes(SymHeap &sh, TValId rootDst, TValId rootSrc) {
     redirectRefs(sh, rootSrc, rootDst, rootSrc);
 }
 
+void enlargeMayExist(SymHeap &sh, const TValId at) {
+    const EObjKind kind = sh.valTargetKind(at);
+    switch (kind) {
+        case OK_SEE_THROUGH:
+            decrementProtoLevel(sh, at);
+            sh.valTargetSetConcrete(at);
+            // fall through!
+
+        case OK_CONCRETE:
+        case OK_SLS:
+            return;
+
+        default:
+            CL_BREAK_IF("invalid call of enlargeMayExist()");
+    }
+}
+
 void slSegAbstractionStep(
         SymHeap                     &sh,
         const TValId                at,
@@ -375,12 +399,19 @@ void slSegAbstractionStep(
     // compute the resulting minimal length
     const TMinLen len = objMinLength(sh, at) + objMinLength(sh, nextAt);
 
-    if (OK_SLS != sh.valTargetKind(nextAt))
+    enlargeMayExist(sh, at);
+    enlargeMayExist(sh, nextAt);
+
+    if (OK_SLS == sh.valTargetKind(at))
+        decrementProtoLevel(sh, at);
+
+    if (OK_SLS == sh.valTargetKind(nextAt))
+        decrementProtoLevel(sh, nextAt);
+    else
         // abstract the _next_ object
         sh.valTargetSetAbstract(nextAt, OK_SLS, off);
 
     // merge data
-    CL_BREAK_IF(OK_SLS != sh.valTargetKind(nextAt));
     abstractNonMatchingValues(sh, at, nextAt);
 
     // replace all references to 'head'
@@ -394,21 +425,6 @@ void slSegAbstractionStep(
     if (len)
         // declare resulting segment's minimal length
         sh.segSetMinLength(nextAt, len);
-}
-
-void enlargeMayExist(SymHeap &sh, const TValId at) {
-    const EObjKind kind = sh.valTargetKind(at);
-    switch (kind) {
-        case OK_SEE_THROUGH:
-            sh.valTargetSetConcrete(at);
-            // fall through!
-
-        case OK_CONCRETE:
-            return;
-
-        default:
-            CL_BREAK_IF("invalid call of enlargeMayExist()");
-    }
 }
 
 void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
@@ -425,7 +441,7 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     swapValues(off.next, off.prev);
     sh.valTargetSetAbstract(a2, OK_DLS, off);
 
-    // introduce some UV_UNKNOWN values if necessary
+    // merge data
     abstractNonMatchingValues(sh, a1, a2, /* bidir */ true);
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
@@ -445,7 +461,8 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
         // jump to peer
         dls = dlSegPeer(sh, dls);
 
-    // introduce some UV_UNKNOWN values if necessary
+    // merge data
+    decrementProtoLevel(sh, dls);
     abstractNonMatchingValues(sh, var, dls);
 
     // store the pointer DLS -> VAR
@@ -477,7 +494,9 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     CL_BREAK_IF(sh.segBinding(seg1) != sh.segBinding(seg2));
     CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2));
 
-    // introduce some UV_UNKNOWN values if necessary
+    // merge data
+    decrementProtoLevel(sh, seg1);
+    decrementProtoLevel(sh, seg2);
     abstractNonMatchingValues(sh, seg1, seg2, /* bidir */ true);
 
     // preserve backLink

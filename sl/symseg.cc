@@ -49,6 +49,22 @@ void segSetProto(SymHeap &sh, TValId seg, TProtoLevel level) {
     CL_BREAK_IF("ivalid call of segSetProto()");
 }
 
+void objDecrementProtoLevel(SymHeap &sh, TValId root) {
+    CL_BREAK_IF(sh.valOffset(root));
+
+    const TProtoLevel level = sh.valTargetProtoLevel(root);
+    sh.valTargetSetProtoLevel(root, level - 1);
+
+    const EObjKind kind = sh.valTargetKind(root);
+    if (OK_DLS != kind)
+        return;
+
+    const TValId peer = dlSegPeer(sh, root);
+    CL_BREAK_IF(sh.valTargetProtoLevel(peer) != level);
+
+    sh.valTargetSetProtoLevel(peer, level - 1);
+}
+
 bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
              const EObjKind kind)
 {

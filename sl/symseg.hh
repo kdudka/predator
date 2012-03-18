@@ -173,6 +173,9 @@ inline bool objWithBinding(const SymHeap &sh, const TValId root) {
 /// same as SymHeap::valTargetSetProtoLevel(), but takes care of DLS peers
 void segSetProto(SymHeap &sh, TValId seg, TProtoLevel level);
 
+/// decrement prototype level of a single object while taking care of DLS peers
+void objDecrementProtoLevel(SymHeap &sh, TValId root);
+
 TValId segClone(SymHeap &sh, const TValId seg);
 
 inline void buildIgnoreList(
