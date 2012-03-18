@@ -104,9 +104,10 @@ void detachClonedPrototype(
         const TValId            proto,
         const TValId            clone,
         const TValId            rootDst,
-        const TValId            rootSrc)
+        const TValId            rootSrc,
+        const bool              uplink)
 {
-    const bool isRootDls = (OK_DLS == sh.valTargetKind(rootDst));
+    const bool isRootDls = uplink && (OK_DLS == sh.valTargetKind(rootDst));
     CL_BREAK_IF(isRootDls && (OK_DLS != sh.valTargetKind(rootSrc)));
 
     TValId rootSrcPeer = VAL_INVALID;
@@ -194,18 +195,26 @@ void clonePrototypesCore(
     }
 
     // FIXME: works, but likely to kill the CPU
-    for (unsigned i = 0; i < cnt; ++i) {
-        const TValId proto = protoList[i];
-        const TValId clone = cloneList[i];
-        detachClonedPrototype(sh, proto, clone, rootDst, rootSrc);
+    for (unsigned step = 0; step < 2; ++step) {
+        for (unsigned i = 0; i < cnt; ++i) {
+            const TValId proto = protoList[i];
+            const TValId clone = cloneList[i];
 
-        for (unsigned j = 0; j < cnt; ++j) {
-            if (i == j)
+            if (!step) {
+                detachClonedPrototype(sh, proto, clone, rootDst, rootSrc,
+                        /* uplink */ true);
                 continue;
+            }
 
-            const TValId otherProto = protoList[j];
-            const TValId otherClone = cloneList[j];
-            detachClonedPrototype(sh, proto, clone, otherClone, otherProto);
+            for (unsigned j = 0; j < cnt; ++j) {
+                if (i == j)
+                    continue;
+
+                const TValId otherProto = protoList[j];
+                const TValId otherClone = cloneList[j];
+                detachClonedPrototype(sh, proto, clone, otherClone, otherProto,
+                        /* uplink */ false);
+            }
         }
     }
 
@@ -224,51 +233,65 @@ void clonePrototypesCore(
 }
 
 // visitor
-struct ProtoCloner {
-    TObjSet ignoreList;
-    TValId rootDst;
-    TValId rootSrc;
+class ProtoCollector {
+    private:
+        TValList               &protoList_;
+        TObjSet                 ignoreList_;
+        WorkList<TValId>        wl_;
 
-    bool operator()(const ObjHandle &obj) const {
-        if (hasKey(ignoreList, obj))
-            return /* continue */ true;
+    public:
+        ProtoCollector(TValList &dst):
+            protoList_(dst)
+        {
+        }
 
-        const TValId val = obj.value();
-        if (val <= 0)
-            return /* continue */ true;
+        TObjSet& ignoreList() {
+            return ignoreList_;
+        }
 
-        SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
-        if (!isPossibleToDeref(sh.valTarget(val)))
-            return /* continue */ true;
+        bool operator()(const ObjHandle &obj);
+};
 
-        // check if we point to prototype, or shared data
-        if (!sh.valTargetProtoLevel(val))
-            return /* continue */ true;
+bool ProtoCollector::operator()(const ObjHandle &obj) {
+    if (hasKey(ignoreList_, obj))
+        return /* continue */ true;
 
-        TValList protoList;
+    const TValId val = obj.value();
+    if (val <= 0)
+        return /* continue */ true;
 
-        TValId proto = sh.valRoot(val);
-        WorkList<TValId> wl(proto);
-        while (wl.next(proto)) {
-            ProtoFinder visitor;
-            traverseLivePtrs(sh, proto, visitor);
-            BOOST_FOREACH(const TValId protoAt, visitor.protos)
-                wl.schedule(protoAt);
+    SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
+    if (!isPossibleToDeref(sh.valTarget(val)))
+        return /* continue */ true;
+
+    // check if we point to prototype, or shared data
+    if (!sh.valTargetProtoLevel(val))
+        return /* continue */ true;
+
+    TValId proto = sh.valRoot(val);
+    wl_.schedule(proto);
+    while (wl_.next(proto)) {
+        ProtoFinder visitor;
+        traverseLivePtrs(sh, proto, visitor);
+        BOOST_FOREACH(const TValId protoAt, visitor.protos)
+            wl_.schedule(protoAt);
 
             if (isDlSegPeer(sh, proto))
                 // it is sufficient to process just one part of a DLS
                 continue;
 
-            protoList.push_back(proto);
-        }
-
-        if (protoList.empty())
-            return /* continue */ true;
-
-        clonePrototypesCore(sh, rootDst, rootSrc, protoList);
-        return /* continue */ true;
+        protoList_.push_back(proto);
     }
-};
+
+    return /* continue */ true;
+}
+
+bool collectPrototypesOf(TValList &dst, SymHeap &sh, const TValId root)
+{
+    ProtoCollector collector(dst);
+    buildIgnoreList(collector.ignoreList(), sh, root);
+    return traverseLivePtrs(sh, root, collector);
+}
 
 struct ValueSynchronizer {
     SymHeap            &sh;
@@ -333,13 +356,10 @@ void clonePrototypes(SymHeap &sh, TValId rootDst, TValId rootSrc) {
     CL_BREAK_IF(sh.valOffset(rootDst) || sh.valOffset(rootSrc));
     duplicateUnknownValues(sh, rootDst);
 
-    ProtoCloner visitor;
-    visitor.rootDst = rootDst;
-    visitor.rootSrc = rootSrc;
-    buildIgnoreList(visitor.ignoreList, sh, rootDst);
-
-    // traverse all live sub-objects
-    traverseLivePtrs(sh, rootDst, visitor);
+    // clone all prototypes
+    TValList protoList;
+    collectPrototypesOf(protoList, sh, rootDst);
+    clonePrototypesCore(sh, rootDst, rootSrc, protoList);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     // however "self" has been changed, so that a redirection is necessary
