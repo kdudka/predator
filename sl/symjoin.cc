@@ -103,8 +103,8 @@ struct SymJoinCtx {
     SymHeap                     &sh2;
 
     // they need to be black-listed for joinAbstractValues()
-    std::set<TValId>            sset1;
-    std::set<TValId>            sset2;
+    TValSet                     sset1;
+    TValSet                     sset2;
 
     ObjList                     liveList1;
     ObjList                     liveList2;
@@ -913,6 +913,7 @@ bool joinSegBinding(
     return false;
 }
 
+/// this runs on the way from joinSymHeaps() only
 bool considerImplicitPrototype(
         const SymJoinCtx        &ctx,
         const TValId            root1,
@@ -920,19 +921,29 @@ bool considerImplicitPrototype(
 {
     const TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
     const TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
-    CL_BREAK_IF(level1 == level2);
 
-    // TODO
-    CL_BREAK_IF(1 < level1 || 1 < level2);
+    const bool lowLevel1 = (level1 < level2);
+    const TProtoLevel diff = (lowLevel1)
+        ? (level2 - level1)
+        : (level1 - level2);
 
-    SymHeap &sh       = (level1 < level2) ? ctx.sh1 : ctx.sh2;
-    const TValId root = (level1 < level2) ?   root1 :   root2;
+    if (1 < diff)
+        // the difference is more than one level of abstraction, giving up...
+        return false;
 
+    CL_BREAK_IF(1 != diff);
+
+    SymHeap &sh                = (lowLevel1) ? ctx.sh1 : ctx.sh2;
+    const TValId root          = (lowLevel1) ?   root1 :   root2;
+    const TProtoLevel topLevel = (lowLevel1) ?  level1 :  level2;
+
+    // FIXME: this seems to be overly strict
     ObjList refs;
     sh.pointedBy(refs, root);
     BOOST_FOREACH(const ObjHandle &obj, refs) {
         const TValId at = obj.placedAt();
-        if (OK_CONCRETE != sh.valTargetKind(at))
+        const TProtoLevel refLevel = sh.valTargetProtoLevel(at);
+        if (refLevel != topLevel)
             return false;
     }
 
@@ -941,14 +952,36 @@ bool considerImplicitPrototype(
     return true;
 }
 
+bool rootNotYetAbstract(SymHeap &sh, const TValSet &sset)
+{
+    if (sset.empty()) {
+        CL_BREAK_IF("rootNotYetAbstract() got an empty set");
+        return false;
+    }
+
+    const TValId anyRoot = *sset.begin();
+    const EValueTarget code = sh.valTarget(anyRoot);
+    return !isAbstract(code);
+}
+
 bool joinProtoFlag(
         TProtoLevel             *pDst,
         const SymJoinCtx        &ctx,
         const TValId            root1,
         const TValId            root2)
 {
-    const TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
-    const TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
+    TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
+    TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
+
+    if (ctx.joiningData() && root1 != root2) {
+        // we are processing a prototype object
+        SymHeap &sh = ctx.sh1;
+        if (ctx.joiningDataReadWrite() || rootNotYetAbstract(sh, ctx.sset1))
+            ++level1;
+
+        if (ctx.joiningDataReadWrite() || rootNotYetAbstract(sh, ctx.sset2))
+            ++level2;
+    }
 
     if (VAL_INVALID == root2) {
         *pDst = level1;
@@ -965,7 +998,7 @@ bool joinProtoFlag(
         return true;
 
     if (ctx.joiningData() || considerImplicitPrototype(ctx, root1, root2)) {
-        *pDst = /* FIXME */ 1;
+        *pDst = std::max(level1, level2);
         return true;
     }
 
