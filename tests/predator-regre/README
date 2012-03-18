@@ -224,6 +224,10 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0219.c - explains why we need to track level for layered prototypes
 
+    test-0220.c - tricky white-box test focused on dealing with L2 prototypes
+
+    test-0221.c - regression test covering a fixed bug in cloning of prototypes
+
 
 Linux lists
 ===========
