@@ -177,59 +177,34 @@ void clonePrototypes(
         const TValId            rootSrc,
         const TValList          protoList)
 {
-    // allocate some space for clone IDs and minimal lengths
+    // allocate some space for clone IDs
     const unsigned cnt = protoList.size();
-    std::vector<TValId>         cloneList(cnt);
-    std::vector<int>            lengthList(cnt);
+    TValList cloneList(cnt);
 
-    // clone the prototypes while reseting the minimal size to zero
+    // clone the prototypes and reconnect them to the new root
     for (unsigned i = 0; i < cnt; ++i) {
         const TValId proto = protoList[i];
-        if (isAbstract(sh.valTarget(proto))) {
-            lengthList[i] = sh.segMinLength(proto);
-            sh.segSetMinLength(proto, /* LS 0+ */ 0);
-        }
-        else
-            lengthList[i] = -1;
+        const TValId clone = protoClone(sh, protoList[i]);
+        detachClonedPrototype(sh, proto, clone, rootDst, rootSrc,
+                /* uplink */ true);
 
-        cloneList[i] = protoClone(sh, proto);
+        cloneList[i] = clone;
     }
 
     // FIXME: works, but likely to kill the CPU
-    for (unsigned step = 0; step < 2; ++step) {
-        for (unsigned i = 0; i < cnt; ++i) {
-            const TValId proto = protoList[i];
-            const TValId clone = cloneList[i];
-
-            if (!step) {
-                detachClonedPrototype(sh, proto, clone, rootDst, rootSrc,
-                        /* uplink */ true);
-                continue;
-            }
-
-            for (unsigned j = 0; j < cnt; ++j) {
-                if (i == j)
-                    continue;
-
-                const TValId otherProto = protoList[j];
-                const TValId otherClone = cloneList[j];
-                detachClonedPrototype(sh, proto, clone, otherClone, otherProto,
-                        /* uplink */ false);
-            }
-        }
-    }
-
-    // finally restore the minimal size of all segments
     for (unsigned i = 0; i < cnt; ++i) {
         const TValId proto = protoList[i];
         const TValId clone = cloneList[i];
-        const int len = lengthList[i];
-        if (len <= 0)
-            // -1 means "not a segment"
-            continue;
 
-        sh.segSetMinLength(proto, len);
-        sh.segSetMinLength(clone, len);
+        for (unsigned j = 0; j < cnt; ++j) {
+            if (i == j)
+                continue;
+
+            const TValId otherProto = protoList[j];
+            const TValId otherClone = cloneList[j];
+            detachClonedPrototype(sh, proto, clone, otherClone, otherProto,
+                    /* uplink */ false);
+        }
     }
 }
 
