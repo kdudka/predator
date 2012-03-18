@@ -27,28 +27,6 @@
 
 #include <boost/foreach.hpp>
 
-void segSetProto(SymHeap &sh, TValId seg, TProtoLevel level) {
-    CL_BREAK_IF(sh.valOffset(seg));
-
-    const EObjKind kind = sh.valTargetKind(seg);
-    switch (kind) {
-        case OK_DLS:
-            sh.valTargetSetProtoLevel(dlSegPeer(sh, seg), level);
-            // fall through
-
-        case OK_SLS:
-        case OK_SEE_THROUGH:
-        case OK_OBJ_OR_NULL:
-            sh.valTargetSetProtoLevel(seg, level);
-            return;
-
-        case OK_CONCRETE:
-            break;
-    }
-
-    CL_BREAK_IF("ivalid call of segSetProto()");
-}
-
 void objDecrementProtoLevel(SymHeap &sh, TValId root) {
     CL_BREAK_IF(sh.valOffset(root));
 
@@ -114,12 +92,12 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
     return (segHeadAt(sh, peer) == peerAddr);
 }
 
-TValId segClone(SymHeap &sh, const TValId seg) {
-    const TValId dup = sh.valClone(seg);
+TValId objClone(SymHeap &sh, const TValId root) {
+    const TValId dup = sh.valClone(root);
 
-    if (OK_DLS == sh.valTargetKind(seg)) {
+    if (OK_DLS == sh.valTargetKind(root)) {
         // we need to clone the peer as well
-        const TValId peer = dlSegPeer(sh, seg);
+        const TValId peer = dlSegPeer(sh, root);
         const TValId dupPeer = sh.valClone(peer);
 
         // dig the 'peer' selectors of the cloned objects

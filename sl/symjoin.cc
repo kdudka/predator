@@ -2899,8 +2899,6 @@ void recoverPrototypes(
                 /* pointingFrom */  protoGhost,
                 /* pointingTo   */  ghost,
                 /* redirectTo   */  dst);
-
-        sh.valTargetSetProtoLevel(protoGhost, /* FIXME */ 1);
     }
 }
 

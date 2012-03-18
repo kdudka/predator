@@ -132,19 +132,13 @@ void detachClonedPrototype(
 }
 
 TValId protoClone(SymHeap &sh, const TValId proto) {
-    TValId clone;
+    const TValId clone = objClone(sh, proto);
+    objDecrementProtoLevel(sh, clone);
 
-    if (isAbstract(sh.valTarget(proto))) {
-        // clone segment prototype
-        clone = segClone(sh, proto);
-        segSetProto(sh, clone, /* FIXME */ 0);
-    }
-    else {
-        // clone bare prototype
-        clone = sh.valClone(proto);
-        sh.valTargetSetProtoLevel(clone, /* FIXME */ 0);
+    const EValueTarget code = sh.valTarget(proto);
+    if (!isAbstract(code))
+        // clone all unknown values in order to keep prover working
         duplicateUnknownValues(sh, clone);
-    }
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     // however "self" has been changed, so that a redirection is necessary
