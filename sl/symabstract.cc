@@ -764,9 +764,6 @@ TMinLen /* len */ spliceOutSegmentIfNeeded(
     if (!len)
         return /* LS 0+ */ 0;
 
-    // forget the current minimal length for a while
-    sh.segSetMinLength(seg, 0);
-
     // we are going to detach one node
     return len - 1;
 }

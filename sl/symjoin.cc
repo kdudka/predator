@@ -2869,33 +2869,15 @@ void recoverPointersToSelf(
 void recoverPrototypes(
         SymJoinCtx              &ctx,
         const TValId            dst,
-        const TValId            ghost,
-        const bool              bidir)
+        const TValId            ghost)
 {
-    SymHeap &sh = ctx.dst;
-
     const unsigned cntProto = ctx.protoRoots.size();
     if (cntProto)
         CL_DEBUG("    joinData() joins " << cntProto << " prototype objects");
 
     // go through prototypes
     BOOST_FOREACH(const TValId protoGhost, ctx.protoRoots) {
-        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoGhost);
-        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoGhost);
-
-        if (isAbstract(sh.valTarget(proto1)))
-            // remove Neq predicates, their targets are going to vanish soon
-            sh.segSetMinLength(proto1, 0);
-
-        if (bidir && isAbstract(sh.valTarget(proto2)))
-            // remove Neq predicates, their targets are going to vanish soon
-            sh.segSetMinLength(proto2, 0);
-
-        if (isAbstract(sh.valTarget(protoGhost)))
-            // temporarily remove Neq predicates
-            sh.segSetMinLength(protoGhost, 0);
-
-        redirectRefs(sh,
+        redirectRefs(ctx.dst,
                 /* pointingFrom */  protoGhost,
                 /* pointingTo   */  ghost,
                 /* redirectTo   */  dst);
@@ -2983,7 +2965,7 @@ bool joinData(
         transferContentsOfGhost(ctx.dst, src, ghost);
 
     // redirect some edges if necessary
-    recoverPrototypes(ctx, dst, ghost, bidir);
+    recoverPrototypes(ctx, dst, ghost);
     recoverPointersToSelf(sh, dst, src, ghost, bidir);
     restorePrototypeLengths(ctx);
 
