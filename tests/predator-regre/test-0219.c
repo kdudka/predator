@@ -28,7 +28,7 @@ static void l2_insert(struct L2 **list)
 
 static void l2_inspect(struct L2 *list)
 {
-    ___sl_plot("02-inspect", &list);
+    ___sl_plot("02-inspect");
 
     void *last = list->proto;
     struct L2 *next = list->next;

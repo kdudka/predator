@@ -164,7 +164,7 @@ struct ProtoFinder {
     }
 };
 
-void clonePrototypesCore(
+void clonePrototypes(
         SymHeap                 &sh,
         const TValId            rootDst,
         const TValId            rootSrc,
@@ -353,18 +353,22 @@ void abstractNonMatchingValues(
         dlSegSyncPeerData(sh, dstAt);
 }
 
-void clonePrototypes(SymHeap &sh, TValId rootDst, TValId rootSrc) {
-    CL_BREAK_IF(sh.valOffset(rootDst) || sh.valOffset(rootSrc));
-    duplicateUnknownValues(sh, rootDst);
-
-    // clone all prototypes
+// FIXME: the semantics of this function is quite contra-intuitive
+TValId segDeepCopy(SymHeap &sh, TValId seg) {
+    // collect the list of prototypes
     TValList protoList;
-    collectPrototypesOf(protoList, sh, rootDst);
-    clonePrototypesCore(sh, rootDst, rootSrc, protoList);
+    collectPrototypesOf(protoList, sh, seg);
+
+    const TValId dup = sh.valClone(seg);
+    duplicateUnknownValues(sh, dup);
+
+    clonePrototypes(sh, seg, dup, protoList);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh, rootSrc, rootDst, rootSrc);
+    redirectRefs(sh, dup, seg, dup);
+
+    return dup;
 }
 
 void enlargeMayExist(SymHeap &sh, const TValId at) {
@@ -829,9 +833,8 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
             break;
     }
 
-    // duplicate self as abstract object
-    const TValId dup = sh.valClone(seg);
-    clonePrototypes(sh, seg, dup);
+    // duplicate self as abstract object (including all prototypes)
+    const TValId dup = segDeepCopy(sh, seg);
 
     // resolve the relative placement of the 'next' pointer
     const BindingOff off = sh.segBinding(seg);
