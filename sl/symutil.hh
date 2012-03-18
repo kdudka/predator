@@ -393,6 +393,17 @@ bool redirectRefs(
         const TValId            redirectTo,
         const TOffset           offHead = 0);
 
+inline TValId objClone(SymHeap &sh, const TValId root)
+{
+    CL_BREAK_IF(sh.valOffset(root));
+    const TValId dup = sh.valClone(root);
+
+    // if there was "a pointer to self", it should remain "a pointer to self";
+    // however "self" has been changed, so that a redirection is necessary
+    redirectRefs(sh, dup, root, dup);
+    return dup;
+}
+
 /// take the given visitor through all live program variables in all heaps
 template <unsigned N_DST, unsigned N_SRC, class THeap, class TVisitor>
 bool /* complete */ traverseProgramVarsGeneric(

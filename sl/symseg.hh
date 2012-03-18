@@ -174,7 +174,7 @@ inline bool objWithBinding(const SymHeap &sh, const TValId root) {
 void objDecrementProtoLevel(SymHeap &sh, TValId root);
 
 /// clone a root object; in case of DLS, clone both parts of it
-TValId objClone(SymHeap &sh, const TValId root);
+TValId segClone(SymHeap &sh, const TValId root);
 
 inline void buildIgnoreList(
         TObjSet                 &ignoreList,

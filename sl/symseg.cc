@@ -92,8 +92,8 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
     return (segHeadAt(sh, peer) == peerAddr);
 }
 
-TValId objClone(SymHeap &sh, const TValId root) {
-    const TValId dup = sh.valClone(root);
+TValId segClone(SymHeap &sh, const TValId root) {
+    const TValId dup = objClone(sh, root);
 
     if (OK_DLS == sh.valTargetKind(root)) {
         // we need to clone the peer as well

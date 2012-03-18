@@ -139,17 +139,13 @@ void detachClonedPrototype(
 }
 
 TValId protoClone(SymHeap &sh, const TValId proto) {
-    const TValId clone = objClone(sh, proto);
+    const TValId clone = segClone(sh, proto);
     objDecrementProtoLevel(sh, clone);
 
     const EValueTarget code = sh.valTarget(proto);
     if (!isAbstract(code))
         // clone all unknown values in order to keep prover working
         duplicateUnknownValues(sh, clone);
-
-    // if there was "a pointer to self", it should remain "a pointer to self";
-    // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh, clone, proto, clone);
 
     return clone;
 }
@@ -341,14 +337,14 @@ TValId segDeepCopy(SymHeap &sh, TValId seg) {
     TValList protoList;
     collectPrototypesOf(protoList, sh, seg);
 
-    const TValId dup = sh.valClone(seg);
+    // clone the root itself
+    const TValId dup = objClone(sh, seg);
+
+    // clone all unknown values in order to keep prover working
     duplicateUnknownValues(sh, dup);
 
+    // clone all prototypes originally owned by seg
     clonePrototypes(sh, seg, dup, protoList);
-
-    // if there was "a pointer to self", it should remain "a pointer to self";
-    // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh, dup, seg, dup);
 
     return dup;
 }
