@@ -63,17 +63,6 @@ struct PlotData {
     }
 };
 
-bool isDlSegPeer(const SymHeap &sh, const TValId root) {
-    CL_BREAK_IF(sh.valOffset(root));
-
-    if (OK_DLS != sh.valTargetKind(root))
-        // not a DLS
-        return false;
-
-    const BindingOff &bf = sh.segBinding(root);
-    return (bf.prev < bf.next);
-}
-
 void dlSegJumpToBegIfNeeded(const SymHeap &sh, TValId *pRoot) {
     const TValId root = *pRoot;
     if (isDlSegPeer(sh, root))

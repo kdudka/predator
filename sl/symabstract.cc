@@ -34,6 +34,7 @@
 #include "symutil.hh"
 #include "symtrace.hh"
 #include "util.hh"
+#include "worklist.hh"
 
 #include <iomanip>
 #include <set>
@@ -160,58 +161,24 @@ struct ProtoFinder {
             return /* continue */ true;
 
         SymHeapCore *sh = sub.sh();
-        if (sh->valOffset(val))
-            // TODO: support for prototypes not pointed by roots?
-            return /* continue */ true;
-
-        if (sh->valTargetProtoLevel(val))
-            protos.insert(val);
+        const TValId root = sh->valRoot(val);
+        if (sh->valTargetProtoLevel(root))
+            protos.insert(root);
 
         return /* continue */ true;
     }
 };
 
-// FIXME: this completely ignores Neq predicates for instance...
-void cloneGenericPrototype(
+void clonePrototypesCore(
         SymHeap                 &sh,
-        const TValId            proto,
         const TValId            rootDst,
-        const TValId            rootSrc)
+        const TValId            rootSrc,
+        const TValList          protoList)
 {
-    std::vector<TValId>         protoList;
-    std::vector<TValId>         cloneList;
-    std::vector<int>            lengthList;
-    std::set<TValId>            haveSeen;
-    std::stack<TValId>          todo;
-    todo.push(proto);
-    haveSeen.insert(proto);
-
-    CL_DEBUG("WARNING: cloneGenericPrototype() is just a hack for now!");
-
-    while (!todo.empty()) {
-        const TValId proto = todo.top();
-        todo.pop();
-        protoList.push_back(proto);
-
-        ProtoFinder visitor;
-        traverseLivePtrs(sh, proto, visitor);
-        BOOST_FOREACH(const TValId protoAt, visitor.protos) {
-            if (!insertOnce(haveSeen, protoAt))
-                continue;
-
-            if (OK_DLS == sh.valTargetKind(protoAt) &&
-                    !insertOnce(haveSeen, dlSegPeer(sh, protoAt)))
-                continue;
-
-            todo.push(protoAt);
-        }
-    }
-
     // allocate some space for clone IDs and minimal lengths
     const unsigned cnt = protoList.size();
-    CL_BREAK_IF(!cnt);
-    cloneList.resize(cnt);
-    lengthList.resize(cnt);
+    std::vector<TValId>         cloneList(cnt);
+    std::vector<int>            lengthList(cnt);
 
     // clone the prototypes while reseting the minimal size to zero
     for (unsigned i = 0; i < cnt; ++i) {
@@ -275,9 +242,30 @@ struct ProtoCloner {
             return /* continue */ true;
 
         // check if we point to prototype, or shared data
-        if (sh.valTargetProtoLevel(val))
-            cloneGenericPrototype(sh, sh.valRoot(val), rootDst, rootSrc);
+        if (!sh.valTargetProtoLevel(val))
+            return /* continue */ true;
 
+        TValList protoList;
+
+        TValId proto = sh.valRoot(val);
+        WorkList<TValId> wl(proto);
+        while (wl.next(proto)) {
+            ProtoFinder visitor;
+            traverseLivePtrs(sh, proto, visitor);
+            BOOST_FOREACH(const TValId protoAt, visitor.protos)
+                wl.schedule(protoAt);
+
+            if (isDlSegPeer(sh, proto))
+                // it is sufficient to process just one part of a DLS
+                continue;
+
+            protoList.push_back(proto);
+        }
+
+        if (protoList.empty())
+            return /* continue */ true;
+
+        clonePrototypesCore(sh, rootDst, rootSrc, protoList);
         return /* continue */ true;
     }
 };
@@ -341,21 +329,21 @@ void abstractNonMatchingValues(
         dlSegSyncPeerData(sh, dstAt);
 }
 
-void clonePrototypes(SymHeap &sh, TValId addr, TValId dup) {
-    CL_BREAK_IF(sh.valOffset(addr) || sh.valOffset(dup));
-    duplicateUnknownValues(sh, addr);
+void clonePrototypes(SymHeap &sh, TValId rootDst, TValId rootSrc) {
+    CL_BREAK_IF(sh.valOffset(rootDst) || sh.valOffset(rootSrc));
+    duplicateUnknownValues(sh, rootDst);
 
     ProtoCloner visitor;
-    visitor.rootDst = addr;
-    visitor.rootSrc = dup;
-    buildIgnoreList(visitor.ignoreList, sh, addr);
+    visitor.rootDst = rootDst;
+    visitor.rootSrc = rootSrc;
+    buildIgnoreList(visitor.ignoreList, sh, rootDst);
 
     // traverse all live sub-objects
-    traverseLivePtrs(sh, addr, visitor);
+    traverseLivePtrs(sh, rootDst, visitor);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh, dup, addr, dup);
+    redirectRefs(sh, rootSrc, rootDst, rootSrc);
 }
 
 void slSegAbstractionStep(
