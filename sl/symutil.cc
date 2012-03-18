@@ -345,13 +345,15 @@ void getPtrValues(TValList &dst, SymHeap &sh, TValId at) {
     }
 }
 
-void redirectRefs(
+bool /* anyChange */ redirectRefs(
         SymHeap                 &sh,
         const TValId            pointingFrom,
         const TValId            pointingTo,
         const TValId            redirectTo,
         const TOffset           offHead)
 {
+    bool anyChange = false;
+
     // go through all objects pointing at/inside pointingTo
     ObjList refs;
     sh.pointedBy(refs, pointingTo);
@@ -383,5 +385,8 @@ void redirectRefs(
 
         // store the redirected value
         obj.setValue(result);
+        anyChange = true;
     }
+
+    return anyChange;
 }

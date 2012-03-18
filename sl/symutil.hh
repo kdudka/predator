@@ -386,7 +386,7 @@ bool /* complete */ traverseLiveObjs(
 }
 
 /// (VAL_INVALID != pointingFrom) means 'pointing from anywhere'
-void redirectRefs(
+bool redirectRefs(
         SymHeap                 &sh,
         const TValId            pointingFrom,
         const TValId            pointingTo,
