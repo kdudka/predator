@@ -110,23 +110,12 @@ void SymState::insertNew(const SymHeap &sh) {
 }
 
 bool SymState::insert(const SymHeap &sh, bool /* allowThreeWay */ ) {
-    int idx = this->lookup(sh);
-    if (-1 == idx) {
-        idx = this->size();
+    if (-1 != this->lookup(sh))
+        return false;
 
-        // add given heap to union
-        this->insertNew(sh);
-#if DEBUG_SYMSTATE_INSERT
-        CL_DEBUG("SymState::insert() has appended a new heap #" << idx);
-#endif
-        return true;
-    }
-
-#if DEBUG_SYMSTATE_INSERT
-    CL_DEBUG("SymState::insert() has matched the given heap with heap #"
-             << idx << " of "<< this->size() << " heaps total");
-#endif
-    return false;
+    // add given heap to union
+    this->insertNew(sh);
+    return true;
 }
 
 
