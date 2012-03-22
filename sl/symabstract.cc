@@ -313,6 +313,21 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
     traverseLiveObjs<2>(sh, roots, visitor);
 }
 
+// FIXME: this works only for nullified blocks anyway
+void killUniBlocksUnderBindingPtrs(SymHeap &sh, const TValId seg) {
+    // go through next/prev pointers
+    TObjSet blackList;
+    buildIgnoreList(blackList, sh, seg);
+    BOOST_FOREACH(const ObjHandle &obj, blackList) {
+        if (VAL_NULL != obj.value())
+            continue;
+
+        // if there is a nullified block under next/prev pointer, kill it now
+        obj.setValue(VAL_TRUE);
+        obj.setValue(VAL_NULL);
+    }
+}
+
 // when abstracting an object, we need to abstract all non-matching values in
 void abstractNonMatchingValues(
         SymHeap                     &sh,
@@ -320,6 +335,10 @@ void abstractNonMatchingValues(
         const TValId                dstAt,
         const bool                  bidir = false)
 {
+    killUniBlocksUnderBindingPtrs(sh, dstAt);
+    if (bidir)
+        killUniBlocksUnderBindingPtrs(sh, srcAt);
+
     if (!joinData(sh, dstAt, srcAt, bidir))
         CL_BREAK_IF("joinData() failed, failure of segDiscover()?");
 

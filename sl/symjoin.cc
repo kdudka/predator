@@ -2938,17 +2938,22 @@ bool joinData(
     SJ_DEBUG("--> joinData" << SJ_VALP(dst, src));
     ++cntJoinOps;
 
+    // used only for debugging (in case the debugging is enabled)
+    bool isomorphismWasExpected = false;
+
     // dst is expected to be a segment
     CL_BREAK_IF(!isAbstract(sh.valTarget(dst)));
     const BindingOff off(sh.segBinding(dst));
     if (debuggingSymJoin) {
         EJoinStatus status = JS_USE_ANY;
         joinDataReadOnly(&status, sh, off, dst, src, 0);
-        if (JS_USE_ANY != status)
+        if (JS_USE_ANY == status)
+            isomorphismWasExpected = true;
+        else
             debugPlot(sh, "joinData", dst, src, "00");
     }
 
-    // go through the commont part of joinData()/joinDataReadOnly()
+    // go through the common part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
     if (!joinDataCore(ctx, off, dst, src)) {
         CL_BREAK_IF("joinData() has failed, did joinDataReadOnly() succeed?");
@@ -2973,8 +2978,10 @@ bool joinData(
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");
 
     SJ_DEBUG("<-- joinData() has finished " << ctx.status);
-    if (JS_USE_ANY != ctx.status)
+    if (JS_USE_ANY != ctx.status) {
         debugPlot(sh, "joinData", dst, src, "01");
+        CL_BREAK_IF(isomorphismWasExpected);
+    }
 
     return true;
 }
