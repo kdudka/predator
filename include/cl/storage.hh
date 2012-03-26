@@ -308,8 +308,15 @@ struct KillVar {
     }
 };
 
+/// FIXME: inserting <id,0> and <id,1> could break the consistency of std::set
+struct ltKillVar {
+    bool operator()(const KillVar &a, const KillVar &b) {
+        return a.uid < b.uid;
+    }
+};
+
 /// list of variables to kill (a @b kill @b list)
-typedef std::vector<KillVar>                        TKillVarList;
+typedef std::set<KillVar, ltKillVar>                TKillVarList;
 
 /// list of kill lists (one per each target of a terminal instruction)
 typedef std::vector<TKillVarList>                   TKillPerTarget;

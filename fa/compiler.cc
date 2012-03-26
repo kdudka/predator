@@ -1085,7 +1085,7 @@ protected:
 				auto acc = insn.operands[0].accessor;
 
 				if (!acc || (acc->code != CL_ACCESSOR_DEREF))
-					varsToKill.push_back(CodeStorage::KillVar(varId, false));
+					varsToKill.insert(CodeStorage::KillVar(varId, false));
 
 			}
 

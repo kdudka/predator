@@ -259,7 +259,7 @@ void commitInsn(
                     << " by " << insn);
 
             const KillVar kv(vKill, isPointed);
-            insn.varsToKill.push_back(kv);
+            insn.varsToKill.insert(kv);
 
             if (multipleTargets) {
                 // mark "live" in all targets to avoid a double-kill
@@ -283,7 +283,7 @@ void commitInsn(
                     << " by " << term);
 
             const KillVar kv(vKill, isPointed);
-            term.killPerTarget[i].push_back(kv);
+            term.killPerTarget[i].insert(kv);
         }
     }
 }
