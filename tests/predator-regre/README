@@ -371,6 +371,8 @@ Linux lists
 
     test-0223.c - test-0222 using a list_add() wrapper with an explicit check
 
+    test-0224.c - error-free variant of test-0223 (the error is unreachable)
+
 
 Uniform blocks
 ==============
