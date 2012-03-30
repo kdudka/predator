@@ -367,6 +367,8 @@ Linux lists
 
     test-0180.c - test-0179 with an injected programming mistake
 
+    test-0222.c - misuse of list_add(), suggested by Vadim Mutilin
+
 
 Uniform blocks
 ==============
