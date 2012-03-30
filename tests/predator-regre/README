@@ -369,6 +369,8 @@ Linux lists
 
     test-0222.c - misuse of list_add(), suggested by Vadim Mutilin
 
+    test-0223.c - test-0222 using a list_add() wrapper with an explicit check
+
 
 Uniform blocks
 ==============
