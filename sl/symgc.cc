@@ -21,7 +21,6 @@
 #include "symgc.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/storage.hh>
 
 #include "symheap.hh"
 #include "symplot.hh"
@@ -29,7 +28,6 @@
 #include "worklist.hh"
 
 #include <stack>
-#include <vector>
 
 #include <boost/foreach.hpp>
 
@@ -48,51 +46,23 @@ void gatherReferredRoots(TValList &dst, SymHeap &sh, TValId at) {
     }
 }
 
-template <class TWL>
-void digPointingObjects(TWL &wl, const SymHeap &sh, TValId val) {
-    // go through all objects having the value
-    ObjList cont;
-    sh.usedBy(cont, val);
-    BOOST_FOREACH(const ObjHandle &obj, cont) {
-        wl.schedule(obj);
-    }
+bool isJunk(SymHeap &sh, TValId root) {
+    WorkList<TValId> wl(root);
 
-    // seek object's root
-    const TValId root = sh.valRoot(val);
-    if (root < 0)
-        return;
-
-    // traverse all subobjects
-    ObjList refs;
-    sh.pointedBy(refs, root);
-    BOOST_FOREACH(const ObjHandle &obj, refs) {
-        wl.schedule(obj);
-    }
-}
-
-bool digJunk(SymHeap &heap, TValId *ptrVal) {
-    if (*ptrVal <= 0)
-        return false;
-
-    const EValueTarget code = heap.valTarget(*ptrVal);
-    if (!isOnHeap(code))
-        // non-heap objects cannot be JUNK
-        return false;
-
-    // only root objects can be destroyed
-    *ptrVal = heap.valRoot(*ptrVal);
-
-    WorkList<ObjHandle> wl;
-    digPointingObjects(wl, heap, *ptrVal);
-
-    ObjHandle obj;
-    while (wl.next(obj)) {
-        const TValId val = obj.placedAt();
-        if (!isOnHeap(heap.valTarget(val)))
-            // non-heap object simply can't be JUNK
+    while (wl.next(root)) {
+        const EValueTarget code = sh.valTarget(root);
+        if (!isOnHeap(code))
+            // non-heap objects cannot be JUNK
             return false;
 
-        digPointingObjects(wl, heap, val);
+        // go through all referrers
+        ObjList refs;
+        sh.pointedBy(refs, root);
+        BOOST_FOREACH(const ObjHandle &obj, refs) {
+            const TValId refAt = obj.placedAt();
+            const TValId refRoot = sh.valRoot(refAt);
+            wl.schedule(refRoot);
+        }
     }
 
     return true;
@@ -108,23 +78,25 @@ bool collectJunk(SymHeap &sh, TValId root, TValList *leakList) {
         root = todo.top();
         todo.pop();
 
-        if (digJunk(sh, &root)) {
-            detected = true;
+        if (!isJunk(sh, root))
+            // not a junk, keep going...
+            continue;
 
-            // gather all referred roots pointed by the junk object
-            std::vector<TValId> refs;
-            gatherReferredRoots(refs, sh, root);
+        detected = true;
 
-            if (leakList)
-                leakList->push_back(root);
+        // gather all roots pointed by the junk object
+        TValList refs;
+        gatherReferredRoots(refs, sh, root);
 
-            // destroy junk
-            sh.valDestroyTarget(root);
+        if (leakList)
+            leakList->push_back(root);
 
-            // schedule just created junk candidates for next wheel
-            BOOST_FOREACH(TValId refRoot, refs)
-                todo.push(refRoot);
-        }
+        // destroy junk
+        sh.valDestroyTarget(root);
+
+        // schedule just created junk candidates for next wheel
+        BOOST_FOREACH(TValId refRoot, refs)
+            todo.push(refRoot);
     }
 
     return detected;
