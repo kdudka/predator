@@ -29,21 +29,16 @@
 
 #include <boost/foreach.hpp>
 
-void destroyRootAndCollectPtrs(
-        SymHeap                 &sh,
-        const TValId             root,
-        TValList                *killedPtrs = 0);
-
 /**
  * check if a sub-heap reachable from the given value is also reachable from
  * somewhere else.  If not, such a sub-heap is considered as garbage and
  * removed.
  * @param sh instance of the symbolic heap to search in
- * @param val ID of the heap value to check for junk
+ * @param root ID of the root value to check for junk
  * @param leakList if not null, push all destroyed root objects to the list
  * @return true if any junk has been detected/collected
  */
-bool collectJunk(SymHeap &sh, TValId val, TValList *leakList = 0);
+bool collectJunk(SymHeap &sh, TValId root, TValList *leakList = 0);
 
 bool destroyRootAndCollectJunk(
         SymHeap                 &sh,
@@ -66,11 +61,16 @@ class LeakMonitor {
         bool collectJunkFrom(const TCont &killedPtrs) {
             bool leaking = false;
             BOOST_FOREACH(TValId val, killedPtrs) {
-                if (collectJunk(sh_, val, &leakList_))
+                const TValId root = sh_.valRoot(val);
+                if (collectJunk(sh_, root, &leakList_))
                     leaking = true;
             }
 
             return leaking;
+        }
+
+        bool /* leaking */ destroyRoot(const TValId root) {
+            return destroyRootAndCollectJunk(sh_, root, &leakList_);
         }
 
         const TValList& leakList() const {

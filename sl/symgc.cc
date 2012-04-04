@@ -33,6 +33,21 @@
 
 #include <boost/foreach.hpp>
 
+void gatherReferredRoots(TValList &dst, SymHeap &sh, TValId at) {
+    CL_BREAK_IF(sh.valOffset(at));
+
+    ObjList ptrs;
+    sh.gatherLivePointers(ptrs, at);
+    BOOST_FOREACH(const ObjHandle &obj, ptrs) {
+        const TValId val = obj.value();
+        if (val <= 0)
+            continue;
+
+        const TValId root = sh.valRoot(val);
+        dst.push_back(root);
+    }
+}
+
 template <class TWL>
 void digPointingObjects(TWL &wl, const SymHeap &sh, TValId val) {
     // go through all objects having the value
@@ -83,22 +98,22 @@ bool digJunk(SymHeap &heap, TValId *ptrVal) {
     return true;
 }
 
-bool collectJunk(SymHeap &sh, TValId val, TValList *leakList) {
+bool collectJunk(SymHeap &sh, TValId root, TValList *leakList) {
+    CL_BREAK_IF(sh.valOffset(root));
     bool detected = false;
 
     std::stack<TValId> todo;
-    todo.push(val);
+    todo.push(root);
     while (!todo.empty()) {
-        TValId val = todo.top();
+        root = todo.top();
         todo.pop();
 
-        if (digJunk(sh, &val)) {
+        if (digJunk(sh, &root)) {
             detected = true;
 
-            // gather all values inside the junk object
-            const TValId root = sh.valRoot(val);
-            std::vector<TValId> ptrs;
-            getPtrValues(ptrs, sh, root);
+            // gather all referred roots pointed by the junk object
+            std::vector<TValId> refs;
+            gatherReferredRoots(refs, sh, root);
 
             if (leakList)
                 leakList->push_back(root);
@@ -107,29 +122,12 @@ bool collectJunk(SymHeap &sh, TValId val, TValList *leakList) {
             sh.valDestroyTarget(root);
 
             // schedule just created junk candidates for next wheel
-            BOOST_FOREACH(TValId ptrVal, ptrs) {
-                todo.push(ptrVal);
-            }
+            BOOST_FOREACH(TValId refRoot, refs)
+                todo.push(refRoot);
         }
     }
 
     return detected;
-}
-
-void destroyRootAndCollectPtrs(
-        SymHeap                 &sh,
-        const TValId             root,
-        TValList                *killedPtrs)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-    CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(root)));
-
-    if (killedPtrs)
-        // gather potentialy destroyed pointer values
-        getPtrValues(*killedPtrs, sh, root);
-
-    // destroy the target
-    sh.valDestroyTarget(root);
 }
 
 bool destroyRootAndCollectJunk(
@@ -137,8 +135,15 @@ bool destroyRootAndCollectJunk(
         const TValId             root,
         TValList                *leakList)
 {
+    CL_BREAK_IF(sh.valOffset(root));
+    CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(root)));
+
+    // gather potentialy destroyed pointer values
     TValList killedPtrs;
-    destroyRootAndCollectPtrs(sh, root, &killedPtrs);
+    gatherReferredRoots(killedPtrs, sh, root);
+
+    // destroy the target
+    sh.valDestroyTarget(root);
 
     // now check for memory leakage
     bool leaking = false;

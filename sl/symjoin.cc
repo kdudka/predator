@@ -2923,7 +2923,8 @@ void transferContentsOfGhost(
         const TValId valNew = objGhost.value();
         objDst.setValue(valNew);
 
-        if (collectJunk(sh, valOld))
+        const TValId rootOld = sh.valRoot(valOld);
+        if (collectJunk(sh, rootOld))
             CL_DEBUG("    transferContentsOfGhost() drops a sub-heap (valOld)");
     }
 }

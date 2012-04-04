@@ -290,8 +290,9 @@ struct ValueSynchronizer {
         dst.setValue(valSrc);
 
         // if the last reference is gone, we have a problem
-        if (collectJunk(sh, valDst))
-            CL_DEBUG("    ValueSynchronizer drops a sub-heap (dlSegPeer)");
+        const TValId rootDst = sh.valRoot(valDst);
+        if (collectJunk(sh, rootDst))
+            CL_DEBUG("    ValueSynchronizer drops a sub-heap (dlSegPeerData)");
 
         return /* continue */ true;
     }
@@ -469,7 +470,7 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     // replace VAR by DLS
     const TValId headAt = sh.valByOffset(var, off.head);
     sh.valReplace(headAt, segHeadAt(sh, dls));
-    REQUIRE_GC_ACTIVITY(sh, headAt, dlSegGobble);
+    REQUIRE_GC_ACTIVITY(sh, var, dlSegGobble);
 
     // handle DLS Neq predicates
     sh.segSetMinLength(dls, len);
@@ -508,10 +509,10 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
 
     // destroy headAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
-    REQUIRE_GC_ACTIVITY(sh, headAt, dlSegMerge);
-    if (!collectJunk(sh, peerAt) && isPossibleToDeref(sh.valTarget(peerAt))) {
+    REQUIRE_GC_ACTIVITY(sh, seg1, dlSegMerge);
+    if (!collectJunk(sh, peer1) && isPossibleToDeref(sh.valTarget(peer1))) {
         CL_ERROR("dlSegMerge() failed to collect garbage"
-                 ", peerAt still referenced");
+                 ", peer1 still referenced");
         CL_BREAK_IF("collectJunk() has not been successful");
     }
 

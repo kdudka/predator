@@ -797,10 +797,7 @@ void SymProc::valDestroyTarget(TValId addr) {
     LeakMonitor lm(sh_);
     lm.enter();
 
-    TValList killedPtrs;
-    destroyRootAndCollectPtrs(sh_, addr, &killedPtrs);
-
-    if (lm.collectJunkFrom(killedPtrs))
+    if (/* leaking */ lm.destroyRoot(addr))
         reportMemLeak(*this, code, "destroy");
 
     lm.leave();

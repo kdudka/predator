@@ -335,16 +335,6 @@ void initGlVar(SymHeap &sh, const CVar &cv) {
     (void) proc.varAt(cv);
 }
 
-void getPtrValues(TValList &dst, SymHeap &sh, TValId at) {
-    ObjList ptrs;
-    sh.gatherLivePointers(ptrs, at);
-    BOOST_FOREACH(const ObjHandle &obj, ptrs) {
-        const TValId val = obj.value();
-        if (0 < val)
-            dst.push_back(val);
-    }
-}
-
 bool /* anyChange */ redirectRefs(
         SymHeap                 &sh,
         const TValId            pointingFrom,

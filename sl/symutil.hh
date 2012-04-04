@@ -133,8 +133,6 @@ inline bool isVarAlive(SymHeap &sh, const CVar &cv) {
 
 void initGlVar(SymHeap &sh, const CVar &cv);
 
-void getPtrValues(TValList &dst, SymHeap &heap, TValId at);
-
 inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
     CL_BREAK_IF(sh.valOffset(root));
     const TValId valNext = valOfPtrAt(sh, root, offNext);
