@@ -55,6 +55,7 @@ typedef int                                 TVar;
 typedef std::set<TVar>                      TSet;
 typedef const Block                        *TBlock;
 typedef std::set<TBlock>                    TBlockSet;
+typedef std::vector<TSet>                   TLivePerTarget;
 
 /// per-block data
 struct BlockData {
@@ -225,16 +226,35 @@ void computeFixPoint(Data &data) {
     VK_DEBUG(2, "fixed-point reached in " << cntSteps << " steps");
 }
 
+// this just finishes the killing-per-target work (with some debug output)
+void killVariablePerTarget(
+        TStorRef                 stor,
+        const TBlock            &bb,
+        int                      target,
+        int                      uid)
+{
+    const TTargetList &targets = bb->targets();
+    Insn &term = *const_cast<Insn *>(bb->back());
+    const bool isPointed = stor.vars[uid].mayBePointed;
+
+    VK_DEBUG_MSG(1, &term.loc, "killing variable "
+            << varToString(stor, uid)
+            << " per target " << targets[target]->name()
+            << " by " << term);
+
+    const KillVar kv(uid, isPointed);
+    term.killPerTarget[target].insert(kv);
+}
+
 void commitInsn(
         Data                    &data,
         Insn                    &insn,
         TSet                    &live,
-        std::vector<TSet>       &livePerTarget)
+        TLivePerTarget          &livePerTarget)
 {
     const TStorRef stor = data.stor;
     const TBlock bb = insn.bb;
 
-    Insn &term = *const_cast<Insn *>(bb->back());
     const TTargetList &targets = bb->targets();
     const unsigned cntTargets = targets.size();
     const bool multipleTargets = (1 < cntTargets);
@@ -277,6 +297,13 @@ void commitInsn(
             // this variable is killed by this instruction && is _not_ generated
             // here - it must be switched to dead status
             live.erase(vKill);
+            // NOTE: It is not possible to re-kill the 'vKill' for particular
+            // targets *only* because:
+            //   a) future turns: 'vKill' is is not generated => is dead for
+            //      previous instructions => if it will be ever killed in this
+            //      BasicBlock, it MUST be done for all targets together
+            //   b) actual turn: it may be killed per particular target only if
+            //      it was not killed for all targets (No double kill).
         }
 
         if (!multipleTargets)
@@ -290,13 +317,7 @@ void commitInsn(
             if (!insertOnce(livePerTarget[i], vKill))
                 continue;
 
-            VK_DEBUG_MSG(1, &term.loc, "killing variable "
-                    << varToString(stor, vKill)
-                    << " per target " << targets[i]->name()
-                    << " by " << term);
-
-            const KillVar kv(vKill, isPointed);
-            term.killPerTarget[i].insert(kv);
+            killVariablePerTarget(stor, bb, i, vKill);
         }
     }
 }
@@ -305,8 +326,9 @@ void commitBlock(Data &data, TBlock bb) {
     const TTargetList &targets = bb->targets();
     const unsigned cntTargets = targets.size();
     const bool multipleTargets = (1 < cntTargets);
+    TStorRef stor = data.stor;
 
-    std::vector<TSet> livePerTarget;
+    TLivePerTarget livePerTarget;
     if (multipleTargets)
         livePerTarget.resize(cntTargets);
 
@@ -327,6 +349,46 @@ void commitBlock(Data &data, TBlock bb) {
         const Insn *pInsn = bb->operator[](i);
         Insn &insn = *const_cast<Insn *>(pInsn);
         commitInsn(data, insn, live, livePerTarget);
+    }
+
+    if (!multipleTargets)
+        return;
+
+    // finish this block -- there may stay some variables that are untouched by
+    // this block and/but these are alive only for some of targets --> lets
+    // catch these these fugitives.
+
+    TSet::const_iterator liveIt, perTargetIt;
+    for (unsigned target = 0; target < cntTargets; ++target) {
+        TLivePerTarget::const_reference perTarget = livePerTarget[target];
+
+        liveIt = live.begin();
+        perTargetIt = perTarget.begin();
+
+        // complexity O(N) (N is number of variables in live).  Note that this
+        // needs the 'live' and 'livePerTarget' lists to be sorted
+        while (liveIt != live.end()) {
+            CL_BREAK_IF(perTarget.end() == perTargetIt);
+
+            int uidLive = *liveIt;
+            int uidPerTarget = *perTargetIt;
+
+            if (uidPerTarget < uidLive) {
+                // uidPerTarget is killed for particular target
+                ++perTargetIt;
+                continue;
+            }
+
+            else if (uidLive == uidPerTarget) {
+                ++perTargetIt;
+                ++liveIt;
+                continue;
+            }
+
+            // OK, now we have untouched variable 'uidLive'
+            killVariablePerTarget(stor, bb, target, uidLive);
+            ++liveIt;
+        }
     }
 }
 
