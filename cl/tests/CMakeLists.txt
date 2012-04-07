@@ -18,9 +18,17 @@
 # tweak include dirs, etc.
 add_definitions("-I../../include -fPIC")
 
+# compile libchk_var_killer.so
+add_library(chk_var_killer SHARED chk_var_killer.cc)
+target_link_libraries(chk_var_killer cl)
+
 # compile libcl_test.so
 add_library(cl_test SHARED cl_test.cc)
 target_link_libraries(cl_test cl)
+
+# get the full path of libchk_var_killer.so
+get_property(GCC_PLUG TARGET chk_var_killer PROPERTY LOCATION)
+message (STATUS "GCC_PLUG: ${GCC_PLUG}")
 
 # basic set of the options to compile gcc/clplug.c with libc_test.so loaded
 set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_HOST}")
@@ -58,6 +66,19 @@ if(TEST_WITH_VALGRIND)
     add_test("compile-self-valgrind" sh -c "${cmd}")
 endif()
 
+# generic template for var-killer tests
+macro(add_vk_test id)
+    set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_HOST}")
+    set(cmd "${cmd} -c ${cl_SOURCE_DIR}/tests/data/vk-${id}.c")
+    set(cmd "${cmd} -o /dev/null")
+    set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/tests/libchk_var_killer.so")
+    add_test("var-killer-${id}" sh -c "${cmd}")
+endmacro()
+
+# append test-cases for var-killer
+add_vk_test(0001)
+add_vk_test(0002)
+
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
     -o /dev/null
     -c ${cl_SOURCE_DIR}/config_cl.h)
@@ -73,3 +94,8 @@ add_test("headers_sanity-2" make -j
 add_test("headers_sanity-3" make -j
     -C ${cl_SOURCE_DIR}
     -f ${cl_SOURCE_DIR}/Makefile.chk)
+
+# a debugging helper
+configure_file(${cl_SOURCE_DIR}/tests/vkdebug.sh.in
+               ${cl_BINARY_DIR}/tests/vkdebug.sh
+               @ONLY)

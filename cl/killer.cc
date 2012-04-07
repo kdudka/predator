@@ -77,23 +77,6 @@ struct Data {
     }
 };
 
-inline bool isLcVar(const cl_operand &op) {
-    if (CL_OPERAND_VAR != op.code)
-        // not a variable
-        return false;
-
-    const enum cl_scope_e code = op.scope;
-    switch (code) {
-        case CL_SCOPE_GLOBAL:
-        case CL_SCOPE_STATIC:
-            // global variable
-            return false;
-
-        default:
-            return true;
-    }
-}
-
 void scanOperand(BlockData &bData, const cl_operand &op, bool dst) {
     VK_DEBUG(4, "scanOperand: " << op << ((dst) ? " [dst]" : " [src]"));
 
@@ -149,6 +132,15 @@ void scanOperand(BlockData &bData, const cl_operand &op, bool dst) {
         VK_DEBUG(3, "gen(" << name << ")");
 }
 
+bool ignoreCallInsn(const Insn &insn) {
+    const char *name;
+    if (!fncNameFromCst(&name, &insn.operands[/* fnc */ 1]))
+        return false;
+
+    // this needs to be invisible so that we can run regression tests
+    return STREQ("VK_ASSERT", name);
+}
+
 void scanInsn(BlockData &bData, const Insn &insn) {
     VK_DEBUG_MSG(3, &insn.loc, "scanInsn: " << insn);
     const TOperandList opList = insn.operands;
@@ -156,6 +148,11 @@ void scanInsn(BlockData &bData, const Insn &insn) {
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_CALL:
+            if (ignoreCallInsn(insn))
+                // just pretend there is no insn
+                return;
+            // fall through!
+
         case CL_INSN_UNOP:
         case CL_INSN_BINOP:
             // go backwards!
