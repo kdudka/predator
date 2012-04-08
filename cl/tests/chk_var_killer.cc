@@ -70,15 +70,13 @@ bool chkAssert(
     const bool live = intCstFromOperand(&opList[/* state */ 2]);
 
     for (unsigned i = /* op0 */ 3; i < opList.size(); ++i) {
-        const unsigned cnt = i - 2;
-
         TOp op = opList[i];
         if (!isLcVar(op)) {
-            CL_ERROR_MSG(loc, name << ": invalid operand #" << cnt);
+            CL_ERROR_MSG(loc, name << ": invalid operand #" << (i - 2));
             continue;
         }
 
-        const char *varName = NULL;
+        const char *varName;
         const int uid = varIdFromOperand(&op, &varName);
         if (hasKey(state, uid) == live)
             // matched
@@ -132,7 +130,7 @@ void killVars(TState &state, const TInsn insn, const TKillList &kList) {
     }
 }
 
-void handleNontermInsn(
+void handleTermInsn(
         PerFncData                 &data,
         const TInsn                 insn,
         const TState               &origin)
@@ -162,7 +160,7 @@ void updateBlock(PerFncData &data, const TBlock bb) {
 
     BOOST_FOREACH(const TInsn insn, *bb) {
         if (cl_is_term_insn(insn->code)) {
-            handleNontermInsn(data, insn, state);
+            handleTermInsn(data, insn, state);
             return;
         }
 
@@ -171,14 +169,9 @@ void updateBlock(PerFncData &data, const TBlock bb) {
             continue;
 
         // first mark all local variables used by this insn as live
-        BOOST_FOREACH(TOp op, insn->operands) {
-            if (!isLcVar(op))
-                // not a local variable
-                continue;
-
-            const int uid = varIdFromOperand(&op);
-            state.insert(uid);
-        }
+        BOOST_FOREACH(TOp op, insn->operands)
+            if (isLcVar(op))
+                state.insert(varIdFromOperand(&op));
 
         // then kill all variables suggested by varKiller
         killVars(state, insn, insn->varsToKill);
@@ -198,10 +191,13 @@ void chkFunction(const TFnc fnc) {
     TBlockSet &todo = data.todo;
     todo.insert(entry);
 
-    // fixed-point computation
-    CL_DEBUG("computing a fixed-point for " << nameOf(*fnc) << "()");
+    // read the location info to bue used in the verbose output
+    const TLoc loc = &fnc->def.data.cst.data.cst_fnc.loc;
+    CL_DEBUG_MSG(loc, "--> computing a fixed-point for "
+            << nameOf(*fnc) << "()");
 
-    unsigned cntSteps = 1;
+    // fixed-point computation
+    unsigned cntSteps = 0;
     while (!todo.empty()) {
         TBlockSet::iterator i = todo.begin();
         TBlock bb = *i;
@@ -212,11 +208,13 @@ void chkFunction(const TFnc fnc) {
         ++cntSteps;
     }
 
-    CL_DEBUG("fixed-point for " << nameOf(*fnc) << "() reached in "
-            << cntSteps << " steps");
+    CL_DEBUG_MSG(loc, "<-- fixed-point for "
+            << nameOf(*fnc) << "() reached in " << cntSteps << " steps");
 }
 
 void clEasyRun(const CodeStorage::Storage &stor, const char *) {
+    CL_DEBUG("chk_var_killer started...");
+
     // go through all _defined_ functions
     BOOST_FOREACH(const TFnc fnc, stor.fncs)
         if (isDefined(*fnc))

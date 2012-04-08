@@ -45,6 +45,6 @@ RUN="$GDB --quiet -x $topdir/sl/gdbpp-loader.gdb --args $CC1_HOST \"$1\" \
     -fplugin-arg-libsl-verbose=$SL_VERBOSE \
     $SL_OPTS"
 
-RUN="`printf "$RUN" | tr --squeeze-repeats ' '`"
+RUN="`printf "%s\n" "$RUN" | tr --squeeze-repeats ' '`"
 printf "\n\n%s\n\n" "$RUN"
 eval "$RUN"
