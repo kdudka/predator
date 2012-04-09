@@ -133,8 +133,11 @@ void killVars(TState &state, const TInsn insn, const TKillList &kList) {
 void handleTermInsn(
         PerFncData                 &data,
         const TInsn                 insn,
-        const TState               &origin)
+        TState                      origin)
 {
+    // first kill variables that are dead for all targets
+    killVars(origin, insn, insn->varsToKill);
+
     const CodeStorage::TTargetList &tList = insn->targets;
     for (unsigned target = 0; target < tList.size(); ++target) {
         // kill variables per-target
@@ -181,23 +184,24 @@ void updateBlock(PerFncData &data, const TBlock bb) {
 void chkFunction(const TFnc fnc) {
     PerFncData data(fnc);
 
-    // start with the entrance basic block
-    const TBlock entry = fnc->cfg.entry();
-    TState &state = data.stateMap[entry];
+    // mark the function arguments as live for the entry block
+    const CodeStorage::ControlFlow &cfg = fnc->cfg;
+    TState &state = data.stateMap[cfg.entry()];
     BOOST_FOREACH(const int uid, data.fnc->args)
         state.insert(uid);
 
-    // schedule the entry block for processing
+    // schedule all basic blocks for processing
     TBlockSet &todo = data.todo;
-    todo.insert(entry);
+    BOOST_FOREACH(const TBlock bb, cfg)
+        todo.insert(bb);
 
-    // read the location info to bue used in the verbose output
+    // read the location info to be used in the verbose output
     const TLoc loc = &fnc->def.data.cst.data.cst_fnc.loc;
     CL_DEBUG_MSG(loc, "--> computing a fixed-point for "
             << nameOf(*fnc) << "()");
 
     // fixed-point computation
-    unsigned cntSteps = 0;
+    int cntSteps = 1 - cfg.size();
     while (!todo.empty()) {
         TBlockSet::iterator i = todo.begin();
         TBlock bb = *i;

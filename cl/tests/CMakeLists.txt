@@ -84,6 +84,7 @@ endmacro()
 # append test-cases for var-killer
 add_vk_test(0001)
 add_vk_test(0002)
+add_vk_test(0003)
 
 # headers sanity #0
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
