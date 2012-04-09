@@ -130,14 +130,11 @@ void killVars(TState &state, const TInsn insn, const TKillList &kList) {
     }
 }
 
-void handleTermInsn(
+void updateTargets(
         PerFncData                 &data,
         const TInsn                 insn,
-        TState                      origin)
+        const TState               &origin)
 {
-    // first kill variables that are dead for all targets
-    killVars(origin, insn, insn->varsToKill);
-
     const CodeStorage::TTargetList &tList = insn->targets;
     for (unsigned target = 0; target < tList.size(); ++target) {
         // kill variables per-target
@@ -162,11 +159,6 @@ void updateBlock(PerFncData &data, const TBlock bb) {
     TState state(data.stateMap[bb]);
 
     BOOST_FOREACH(const TInsn insn, *bb) {
-        if (cl_is_term_insn(insn->code)) {
-            handleTermInsn(data, insn, state);
-            return;
-        }
-
         if (handleBuiltIn(insn, state))
             // handled as a built-in function
             continue;
@@ -178,6 +170,9 @@ void updateBlock(PerFncData &data, const TBlock bb) {
 
         // then kill all variables suggested by varKiller
         killVars(state, insn, insn->varsToKill);
+
+        // if this is a terminal instruction, update all targets
+        updateTargets(data, insn, state);
     }
 }
 

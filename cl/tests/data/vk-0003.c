@@ -1,6 +1,6 @@
 #include "vk.h"
 
-void foo(int i)
+int foo(int i)
 {
     VK_ASSERT(VK_LIVE, i);
 
@@ -15,5 +15,5 @@ void foo(int i)
 
     VK_ASSERT(VK_DEAD, dead, i);
 
-    return (dead = 3);
+    return ((dead = 3));
 }
