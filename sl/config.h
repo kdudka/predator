@@ -92,6 +92,11 @@
  */
 #define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
 
+/*
+ * if non-zero, allow incomplete discovery paths with lower costs to apply
+ */
+#define SE_ALLOW_SUBPATH_RANKING            0
+
 /**
  * - 0 ... avoid creation of a new integral range from two integral constants
  * - 1 ... allow to create integral ranges from integral constants if needed

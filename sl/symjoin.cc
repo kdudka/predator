@@ -2981,7 +2981,8 @@ bool joinData(
     SJ_DEBUG("<-- joinData() has finished " << ctx.status);
     if (JS_USE_ANY != ctx.status) {
         debugPlot(sh, "joinData", dst, src, "01");
-        CL_BREAK_IF(isomorphismWasExpected);
+        if (isomorphismWasExpected)
+            CL_BREAK_IF("joinData() status differs from joinDataReadOnly()");
     }
 
     return true;
