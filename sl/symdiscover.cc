@@ -307,48 +307,6 @@ bool matchData(
     return true;
 }
 
-bool dlSegHaveChain(
-        SymHeap                     &sh,
-        const TValId                beg,
-        const TValId                end,
-        const TOffset               offNext)
-{
-    TValSet seen;
-
-    for (TValId cursor = beg;
-            0 < cursor && insertOnce(seen, cursor);
-            cursor = nextRootObj(sh, cursor, offNext))
-    {
-        const TValId next = nextRootObj(sh, cursor, offNext);
-        if (next == end)
-            return true;
-
-        if (OK_DLS != sh.valTargetKind(next))
-            return false;
-    }
-
-    return false;
-}
-
-bool segAvoidSelfCycle(
-        SymHeap                     &sh,
-        const BindingOff            &off,
-        const TValId                beg,
-        const TValId                end)
-{
-    if (!isDlsBinding(off)) {
-        const TValId next = nextRootObj(sh, end, off.next);
-        return haveSeg(sh, next, beg, OK_SLS);
-    }
-
-    TValId seg = end;
-    if (OK_DLS == sh.valTargetKind(end))
-        seg = dlSegPeer(sh, end);
-
-    return dlSegHaveChain(sh, beg, seg, off.prev)
-        || dlSegHaveChain(sh, seg, beg, off.next);
-}
-
 typedef std::map<int /* cost */, int /* length */> TRankMap;
 
 void segDiscover(
@@ -434,13 +392,6 @@ void segDiscover(
         // jump to the next object on the path
         prev = at;
         at = next;
-    }
-
-    // avoid creating self-cycle of two segments
-    BOOST_FOREACH(TRankMap::reference rank, dst) {
-        int &len = rank.second;
-        if (segAvoidSelfCycle(sh, off, entry, path[len - 1]))
-            --len;
     }
 }
 

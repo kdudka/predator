@@ -2582,6 +2582,10 @@ bool segDetectSelfLoopHelper(
             // no compatible next segment --> no loop
             return false;
 
+        if (objMinLength(sh, seg))
+            // not a 0+
+            return false;
+
         // optimization
         haveSeen.insert(seg);
     }
