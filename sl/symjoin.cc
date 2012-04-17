@@ -2553,74 +2553,7 @@ bool handleDstPreds(SymJoinCtx &ctx) {
     return true;
 }
 
-bool segDetectSelfLoopHelper(
-        SymHeap                 &sh,
-        std::set<TValId>        &haveSeen,
-        TValId                  seg)
-{
-    // remember original kind of object
-    const EObjKind kind = sh.valTargetKind(seg);
-
-    // find a loop-less path
-    std::set<TValId> path;
-    while (insertOnce(path, seg)) {
-        TValId peer = seg;
-        if (OK_DLS == kind) {
-            // jump to peer in case of DLS
-            peer = dlSegPeer(sh, seg);
-            if (!insertOnce(path, peer))
-                break;
-        }
-
-        const TValId valNext = nextValFromSeg(sh, peer);
-        if (!isAbstract(sh.valTarget(valNext)))
-            // no next segment --> no loop
-            return false;
-
-        seg = sh.valRoot(valNext);
-        if (kind != sh.valTargetKind(seg))
-            // no compatible next segment --> no loop
-            return false;
-
-        if (objMinLength(sh, seg))
-            // not a 0+
-            return false;
-
-        // optimization
-        haveSeen.insert(seg);
-    }
-
-    // loop detected!
-    return true;
-}
-
-bool segDetectSelfLoop(SymHeap &sh) {
-    // gather all abstract objects
-    TValList segRoots;
-    sh.gatherRootObjects(segRoots, isAbstract);
-
-    // go through all entries
-    std::set<TValId> haveSeen;
-    BOOST_FOREACH(const TValId seg, segRoots) {
-        if (!insertOnce(haveSeen, seg))
-            continue;
-
-        if (segDetectSelfLoopHelper(sh, haveSeen, seg))
-            // cycle detected!
-            return true;
-    }
-
-    // found nothing harmful
-    return false;
-}
-
 bool validateStatus(const SymJoinCtx &ctx) {
-    if (segDetectSelfLoop(ctx.dst)) {
-        // purely segmental loops cause us problems
-        CL_DEBUG(">J< segment cycle detected, cancelling join");
-        return false;
-    }
-
     if (ctx.allowThreeWay || (JS_THREE_WAY != ctx.status))
         return true;
 
