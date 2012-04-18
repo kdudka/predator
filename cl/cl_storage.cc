@@ -319,12 +319,14 @@ struct ClStorageBuilder::Private {
     Fnc         *fnc;
     Block       *bb;
     Insn        *insn;
+    bool        preventRefOps;
 
     Private():
         file(0),
         fnc(0),
         bb(0),
-        insn(0)
+        insn(0),
+        preventRefOps(0)
     {
     }
 
@@ -500,7 +502,9 @@ void ClStorageBuilder::Private::digOperand(const TOp *op) {
     const bool skipVarInit = !this->digOperandVar(op, /* isArgDecl */ false);
 
     ac = op->accessor;
-    if (ac && ac->code != CL_ACCESSOR_DEREF && seekRefAccessor(ac)) {
+    if (!preventRefOps && ac && ac->code != CL_ACCESSOR_DEREF &&
+            seekRefAccessor(ac))
+    {
         // we are taking a reference to the variable by this operand!
         const int id = varIdFromOperand(op);
         stor.vars[id].mayBePointed = true;
@@ -622,6 +626,14 @@ void ClStorageBuilder::insn(const struct cl_insn *cli) {
     d->closeInsn();
 }
 
+bool callBlacklistedRefOps(const char *name) {
+    if (STREQ("VK_ASSERT", name))
+        return true;
+    if (STREQ("PT_ASSERT", name))
+        return true;
+    return false;
+}
+
 void ClStorageBuilder::insn_call_open(
     const struct cl_loc     *loc,
     const struct cl_operand *dst,
@@ -636,6 +648,12 @@ void ClStorageBuilder::insn_call_open(
     storeOperand(operands[0], dst);
     storeOperand(operands[1], fnc);
 
+    // prevent existing reference marks '&' on operands to be taken into account
+    // for operands of some internal handlers like VK_ASSERT() or PT_ASSERT().
+    const char *name;
+    d->preventRefOps = fncNameFromCst(&name, &operands[/* fnc */ 1])
+        && callBlacklistedRefOps(name);
+
     d->openInsn(insn);
 }
 
@@ -648,6 +666,9 @@ void ClStorageBuilder::insn_call_arg(int, const struct cl_operand *arg_src) {
 
 void ClStorageBuilder::insn_call_close() {
     d->closeInsn();
+
+    // switch back preventing for next instructions
+    d->preventRefOps = false;
 }
 
 void ClStorageBuilder::insn_switch_open(
