@@ -25,8 +25,9 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
-#include "util.hh"
+#include "builtins.hh"
 #include "stopwatch.hh"
+#include "util.hh"
 
 #include <map>
 #include <set>
@@ -132,15 +133,6 @@ void scanOperand(BlockData &bData, const cl_operand &op, bool dst) {
         VK_DEBUG(3, "gen(" << name << ")");
 }
 
-bool ignoreCallInsn(const Insn &insn) {
-    const char *name;
-    if (!fncNameFromCst(&name, &insn.operands[/* fnc */ 1]))
-        return false;
-
-    // this needs to be invisible so that we can run regression tests
-    return STREQ("VK_ASSERT", name);
-}
-
 void scanInsn(BlockData &bData, const Insn &insn) {
     VK_DEBUG_MSG(3, &insn.loc, "scanInsn: " << insn);
     const TOperandList opList = insn.operands;
@@ -148,7 +140,7 @@ void scanInsn(BlockData &bData, const Insn &insn) {
     const enum cl_insn_e code = insn.code;
     switch (code) {
         case CL_INSN_CALL:
-            if (ignoreCallInsn(insn))
+            if (isBuiltInCall(insn))
                 // just pretend there is no insn
                 return;
             // fall through!

@@ -23,6 +23,7 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "builtins.hh"
 #include "util.hh"
 
 #include <cstring>
@@ -626,14 +627,6 @@ void ClStorageBuilder::insn(const struct cl_insn *cli) {
     d->closeInsn();
 }
 
-bool callBlacklistedRefOps(const char *name) {
-    if (STREQ("VK_ASSERT", name))
-        return true;
-    if (STREQ("PT_ASSERT", name))
-        return true;
-    return false;
-}
-
 void ClStorageBuilder::insn_call_open(
     const struct cl_loc     *loc,
     const struct cl_operand *dst,
@@ -650,9 +643,7 @@ void ClStorageBuilder::insn_call_open(
 
     // prevent existing reference marks '&' on operands to be taken into account
     // for operands of some internal handlers like VK_ASSERT() or PT_ASSERT().
-    const char *name;
-    d->preventRefOps = fncNameFromCst(&name, &operands[/* fnc */ 1])
-        && callBlacklistedRefOps(name);
+    d->preventRefOps = isBuiltInFnc(operands[/* fnc */ 1]);
 
     d->openInsn(insn);
 }

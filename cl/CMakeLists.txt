@@ -73,6 +73,7 @@ add_definitions("-I../include -fPIC")
 
 # libcl.so
 add_library(cl STATIC
+    builtins.cc
     cl_chain.cc
     cl_dotgen.cc
     cl_easy.cc
