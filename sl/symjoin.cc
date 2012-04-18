@@ -1586,11 +1586,8 @@ bool joinSegmentWithAny(
 
     const EValueTarget code1 = ctx.sh1.valTarget(root1);
     const EValueTarget code2 = ctx.sh2.valTarget(root2);
-    if (!isPossibleToDeref(code1) || !isPossibleToDeref(code2)) {
-        CL_BREAK_IF(firstTryReadOnly);
-        *pResult = false;
-        return true;
-    }
+    if (!isPossibleToDeref(code1) || !isPossibleToDeref(code2))
+        return false;
 
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
     const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
@@ -1927,41 +1924,39 @@ bool joinAbstractValues(
     bool isAbs2 = (VT_ABSTRACT == code2);
     resolveMayExist(ctx, &isAbs1, &isAbs2, v1, v2);
 
-    const EJoinStatus subStatus = (isAbs1)
-        ? JS_USE_SH1
-        : JS_USE_SH2;
+    if (isAbs1 && isAbs2
+            && joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY))
+        goto done;
 
-    const bool isValid1 = isPossibleToDeref(code1);
-    const bool isValid2 = isPossibleToDeref(code2);
-    if (isValid1 && isValid2) {
-        if (isAbs1 && isAbs2) {
-            if (!joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY))
-                *pResult = false;
+    if (!isAbs2 && joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_SH1))
+        goto done;
 
+    if (!isAbs1 && joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_SH2))
+        goto done;
+
+    if (isAbs1 && insertSegmentClone(pResult, ctx, v1, v2, JS_USE_SH1))
+        goto done;
+
+    if (isAbs2 && insertSegmentClone(pResult, ctx, v1, v2, JS_USE_SH2))
+        goto done;
+
+#ifndef I_WANT_TO_DEBUG_TEST_0039
+    if (ctx.joiningData() && (isAbs1 != isAbs2)) {
+        if (isAbs1 && joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_SH1,
+                    /* firstTryReadOnly */ false))
             goto done;
-        }
 
-        else if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
+        if (isAbs2 && joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_SH2,
+                    /* firstTryReadOnly */ false))
             goto done;
     }
+#endif
 
-    if (!insertSegmentClone(pResult, ctx, v1, v2, subStatus)) {
-        if (ctx.joiningData()) {
-            if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus,
-                        /* firstTryReadOnly */ false))
-                goto done;
-
-            return false;
-        }
-
-        *pResult = false;
-    }
+    // we have failed
+    *pResult = false;
+    return true;
 
 done:
-    if (!*pResult)
-        // we have failed anyway
-        return true;
-
     // we intentionally do not use code1/code2 here (see realValTarget())
     if (VT_RANGE == ctx.sh1.valTarget(v1) || VT_RANGE == ctx.sh2.valTarget(v2))
         // we came here from a VT_RANGE value, remember to join the entry
