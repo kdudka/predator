@@ -329,7 +329,8 @@ void FI_store::execute(ExecutionManager& execMan,
 	execMan.enqueue(state.second, state.first, fae, this->next_);
 
 }
-/*
+
+#if 0
 // FI_store_ABP
 void FI_store_ABP::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
@@ -346,7 +347,8 @@ void FI_store_ABP::execute(ExecutionManager& execMan, const AbstractInstruction:
 	execMan.enqueue(state.second, state.first, fae, this->next_);
 
 }
-*/
+#endif
+
 // FI_loads
 void FI_loads::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 

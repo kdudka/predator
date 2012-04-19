@@ -371,7 +371,7 @@ public:
 		boost::unordered_map<std::string, builtin_e>::iterator i = this->_table.find(key);
 		return (i == this->_table.end())?(builtin_e::biNone):(i->second);
 	}
-};
+}; // class BuiltinTable
 
 
 /**
@@ -617,7 +617,8 @@ protected:
 	 * @param[in,out]  offset  The initial offset of the record (to be modified)
 	 * @param[in]      acc     The head of the list of accessors
 	 *
-	 * @returns  Next accessor that is not a record accessor (e.g. "*", "[]", ...)
+	 * @returns  Next accessor that is not a record accessor (i.e. not "." but
+	 *           rather "*", "[]", ...)
 	 */
 	static const cl_accessor* computeOffset(int& offset, const cl_accessor* acc)
 	{
@@ -776,143 +777,179 @@ protected:
 	}
 
 
+	/**
+	 * @brief  Compile a load of an operand into a register
+	 *
+	 * Compiles the load instruction of the operand @p op into the destination
+	 * register @p dst. In case the @p canOverride parameter is set to @p true,
+	 * the destination register may change (in case the operand is already in
+	 * a register).
+	 *
+	 * @param[in]  dst          The index of the destination register
+	 * @param[in]  op           The source operand
+	 * @param[in]  insn         The corresponding instruction in the code storage
+	 * @param[in]  canOverride  @p true if the destination register may change
+	 *
+	 * @returns  Index of the register into which will the value be loaded (may
+	 *           differ from @p dst)
+	 */
 	size_t cLoadOperand(size_t dst, const cl_operand& op,
-		const CodeStorage::Insn& insn, bool canOverride = true) {
-
-		switch (op.code) {
-
-			case cl_operand_e::CL_OPERAND_VAR: {
-
+		const CodeStorage::Insn& insn, bool canOverride = true)
+	{
+		switch (op.code)
+		{	// according to the type of the operand
+			case cl_operand_e::CL_OPERAND_VAR:
+			{	// in case the operand is a variable
 				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				if (varInfo.first) {
+				if (varInfo.first)
+				{ // in the case of a variable on the stack
+					const cl_accessor* acc = op.accessor;   // get the first accessor
+					int offset = 0;                         // initialize the offset
 
-					// stack variable
-					const cl_accessor* acc = op.accessor;
-
-					int offset = 0;
-
-					if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
-
+					if (acc && (acc->code == CL_ACCESSOR_DEREF))
+					{	// in case there is the dereference accessor ('*' in C)
 						assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
-						append(new FI_load_ABP(&insn, dst, (int)varInfo.second));
+						// append an instruction to load value at the address relative to
+						// the abstract base pointer in the symbolic stack
+						append(new FI_load_ABP(&insn, dst, static_cast<int>(varInfo.second)));
 
+						// jump to next accessor
 						acc = Core::computeOffset(offset, acc->next);
 
-						if (acc && (acc->code == CL_ACCESSOR_REF)) {
-
+						if (acc && (acc->code == CL_ACCESSOR_REF))
+						{	// in case the next accessor is a reference ('&' in C)
+							// assert the operand is a pointer
 							assert(op.type->code == cl_type_e::CL_TYPE_PTR);
-
+							// assert '&' is the last accessor
 							assert(acc->next == nullptr);
 
 							if (offset)
+							{	// in case offset is non-zero
+
+								// append instruction to move the value on the offset to the
+								// beginning of the register
 								append(new FI_move_reg_offs(&insn, dst, dst, offset));
+							}
 
 							break;
-
 						}
 
+						// assert there are no more accessors
 						assert(acc == nullptr);
 
 						if (op.type->code == cl_type_e::CL_TYPE_STRUCT)
-						{
+						{	// in case the operand is a structure
 							std::vector<size_t> offs;
 							NodeBuilder::buildNode(offs, op.type);
 
+							// append an instruction to separate the root
 							append(new FI_acc_set(&insn, dst, offset, offs));
+							// append an instruction to load the root
 							append(new FI_loads(&insn, dst, dst, offset, offs));
 						} else
 						{
+							// append an instruction to separate the element
 							append(new FI_acc_sel(&insn, dst, offset));
+							// append an instruction to load the element
 							append(new FI_load(&insn, dst, dst, offset));
 						}
+					} else
+					{	// in case there is not a dereference
+						offset = static_cast<int>(varInfo.second);
 
-					} else {
-
-						offset = (int)varInfo.second;
-
+						// compute the real offset from record accessors
 						acc = Core::computeOffset(offset, acc);
 
-						if (acc && (acc->code == CL_ACCESSOR_REF)) {
-
+						if (acc && (acc->code == CL_ACCESSOR_REF))
+						{	// in case the next accessor is a reference ('&' in C)
+							// assert there are no more accessors
 							assert(acc->next == nullptr);
+
+							// append the instruction to get the value at given offset
+							// TODO @todo  should this really be there? The value is loaded
+							// later...
 							append(new FI_get_ABP(&insn, dst, offset));
 							break;
-
 						}
 
+						// assert there are no more accessors
 						assert(acc == nullptr);
 
+						// append the instruction to load the value at given offset
 						append(new FI_load_ABP(&insn, dst, offset));
-//						cMoveReg(dst, src, offset);
-
 					}
-
-
-				} else {
-
-					// register
-					if (canOverride) {
-						dst = varInfo.second;
+				} else
+				{	// in case the variable is in a register
+					if (canOverride)
+					{	// in case the destination register can be overridden
+						dst = varInfo.second;          // change the value
 						cLoadReg(dst, dst, op, insn);
-					} else {
+					} else
+					{	// in case the destination register cannot be overridden
 						cLoadReg(dst, varInfo.second, op, insn);
 					}
-
 				}
 
 				break;
-
 			}
 
-			case cl_operand_e::CL_OPERAND_CST:
-				cLoadCst(dst, op, insn);
+			case cl_operand_e::CL_OPERAND_CST: // if the operand is a constant
+				cLoadCst(dst, op, insn);         // load the constant
 				break;
 
 			default:
-				assert(false);
-
+				assert(false);                   // fail gracefully
 		}
 
 		return dst;
-
 	}
 
-	size_t lookupStoreReg(const cl_operand& op, size_t src) {
 
+	/**
+	 * @brief  Gets the index of the register where there is given operand
+	 *
+	 * Gets the index of the register where the value of the operand @p op which
+	 * is in register @p src is stored. So, if there is a variable reference in @p
+	 * src and the operand is dereferenced, the target of the reference is
+	 * obtained.
+	 *
+	 * @param[in]  op   The source operand
+	 * @param[in]  src  Index of the register with the source
+	 *
+	 * @returns  Index of the register with the requester operand
+	 */
+	size_t lookupStoreReg(const cl_operand& op, size_t src)
+	{
+		// @todo TODO why is it here?
 		size_t tmp = src;
 
-		switch (op.code) {
+		switch (op.code)
+		{	// depending on the type of the operand
+			case cl_operand_e::CL_OPERAND_VAR:
+				{	// in case it is a variable
 
-			case cl_operand_e::CL_OPERAND_VAR: {
+					// get info about the variable
+					auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
+					if (varInfo.first)
+					{	// in case it is on the stack
+						return src;
+					} else
+					{	// in case it is in a register
+						tmp = varInfo.second;
 
-				if (varInfo.first) {
+						const cl_accessor* acc = op.accessor;
 
-					// stack variable
-					return src;
-
-				} else {
-
-					// register
-					tmp = varInfo.second;
-
+						// in case there is dereference at the operand
+						return (acc && (acc->code == CL_ACCESSOR_DEREF))? (src) : (tmp);
+					}
 				}
 
-				const cl_accessor* acc = op.accessor;
-
-				return (acc && (acc->code == CL_ACCESSOR_DEREF))?(src):(tmp);
-
-			}
-
 			default:
-				assert(false);
-				return 0;
-
+				assert(false);      // fail gracefull
 		}
-
 	}
 
 	bool cStoreOperand(const cl_operand& op, size_t src, size_t tmp,
