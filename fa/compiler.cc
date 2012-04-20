@@ -802,7 +802,7 @@ protected:
 			{	// in case the operand is a variable
 				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				if (varInfo.first)
+				if (varInfo.isOnStack())
 				{ // in the case of a variable on the stack
 					const cl_accessor* acc = op.accessor;   // get the first accessor
 					int offset = 0;                         // initialize the offset
@@ -813,7 +813,7 @@ protected:
 
 						// append an instruction to load value at the address relative to
 						// the abstract base pointer in the symbolic stack
-						append(new FI_load_ABP(&insn, dst, static_cast<int>(varInfo.second)));
+						append(new FI_load_ABP(&insn, dst, static_cast<int>(varInfo.getStackOffset())));
 
 						// jump to next accessor
 						acc = Core::computeOffset(offset, acc->next);
@@ -857,7 +857,7 @@ protected:
 						}
 					} else
 					{	// in case there is not a dereference
-						offset = static_cast<int>(varInfo.second);
+						offset = static_cast<int>(varInfo.getStackOffset());
 
 						// compute the real offset from record accessors
 						acc = Core::computeOffset(offset, acc);
@@ -884,11 +884,11 @@ protected:
 				{	// in case the variable is in a register
 					if (canOverride)
 					{	// in case the destination register can be overridden
-						dst = varInfo.second;          // change the value
+						dst = varInfo.getRegIndex();          // change the value
 						cLoadReg(dst, dst, op, insn);
 					} else
 					{	// in case the destination register cannot be overridden
-						cLoadReg(dst, varInfo.second, op, insn);
+						cLoadReg(dst, varInfo.getRegIndex(), op, insn);
 					}
 				}
 
@@ -933,12 +933,12 @@ protected:
 					// get info about the variable
 					auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-					if (varInfo.first)
+					if (varInfo.isOnStack())
 					{	// in case it is on the stack
 						return src;
 					} else
 					{	// in case it is in a register
-						tmp = varInfo.second;
+						tmp = varInfo.getRegIndex();
 
 						const cl_accessor* acc = op.accessor;
 
@@ -961,14 +961,14 @@ protected:
 
 				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				if (varInfo.first) {
+				if (varInfo.isOnStack()) {
 
 					// stack variable
 					append(new FI_get_ABP(&insn, tmp, 0));
 
 					const cl_accessor* acc = op.accessor;
 
-					int offset = static_cast<int>(varInfo.second);
+					int offset = static_cast<int>(varInfo.getStackOffset());
 
 					bool needsAcc = false;
 
@@ -979,7 +979,7 @@ protected:
 							assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
 							// override previous instruction
-							override(new FI_load_ABP(&insn, tmp, varInfo.second));
+							override(new FI_load_ABP(&insn, tmp, varInfo.getStackOffset()));
 
 							needsAcc = true;
 
@@ -1021,7 +1021,7 @@ protected:
 				} else {
 
 					// register
-					return cStoreReg(op, src, varInfo.second, insn);
+					return cStoreReg(op, src, varInfo.getRegIndex(), insn);
 
 				}
 
@@ -1047,12 +1047,12 @@ protected:
 			if (var.onlyIfNotPointed)
 				continue;
 
-			const std::pair<bool, size_t>& varInfo = curCtx_->getVarInfo(var.uid);
+			const SymCtx::VarInfo& varInfo = curCtx_->getVarInfo(var.uid);
 
-			if (!varInfo.first)
+			if (!varInfo.isOnStack())
 				continue;
 
-			offs.insert(varInfo.second);
+			offs.insert(varInfo.getRegIndex());
 
 		}
 
@@ -1302,7 +1302,7 @@ protected:
 
 			auto varId = varIdFromOperand(&insn.operands[0]);
 
-			if (curCtx_->getVarInfo(varId).first) {
+			if (curCtx_->getVarInfo(varId).isOnStack()) {
 
 				auto acc = insn.operands[0].accessor;
 
@@ -1583,7 +1583,7 @@ protected:
 		std::vector<size_t> offsets = { ABP_OFFSET, RET_OFFSET };
 
 		for (auto arg : fnc.args)
-			offsets.push_back(curCtx_->getVarInfo(arg).second);
+			offsets.push_back(curCtx_->getVarInfo(arg).getStackOffset());
 
 		// build structure in r0
 		append(new FI_build_struct(nullptr, 0, 0, offsets));

@@ -59,8 +59,64 @@ struct SymCtx {
 
 	std::vector<SelData> sfLayout;
 
+	class VarInfo
+	{
+	private:  // data members 
+
+		bool isStack_;
+		union
+		{
+			size_t stackOffset_;
+			size_t regIndex_;
+		};
+
+	private:  // methods
+
+		VarInfo(bool isStack, size_t offsetIndex)
+			: isStack_(isStack)
+		{
+			if (isOnStack())
+			{
+				stackOffset_ = offsetIndex;
+			}
+			else
+			{
+				regIndex_ = offsetIndex;
+			}
+		}
+
+	public:   // methods
+
+		bool isOnStack() const { return isStack_;}
+		size_t getStackOffset() const
+		{
+			// Assertions
+			assert(isOnStack());
+
+			return stackOffset_;
+		}
+
+		size_t getRegIndex() const
+		{
+			// Assertions
+			assert(!isOnStack());
+
+			return regIndex_;
+		}
+
+		static VarInfo createOnStack(size_t offset)
+		{
+			return VarInfo(true, offset);
+		}
+
+		static VarInfo createInReg(size_t index)
+		{
+			return VarInfo(false, index);
+		}
+	};
+
 	// uid -> stack x offset/index
-	typedef std::unordered_map<int, std::pair<bool, size_t> > var_map_type;
+	typedef std::unordered_map<int, VarInfo> var_map_type;
 
 	var_map_type varMap;
 
@@ -85,14 +141,14 @@ struct SymCtx {
 				case CodeStorage::EVar::VAR_LC:
 					if (!SymCtx::isStacked(var)) {
 						this->varMap.insert(
-							std::make_pair(var.uid, std::make_pair(false, this->regCount++))
+							std::make_pair(var.uid, VarInfo::createInReg(this->regCount++))
 						);
 						break;
 					}
 					// no break
 				case CodeStorage::EVar::VAR_FNC_ARG:
 					NodeBuilder::buildNode(this->sfLayout, var.type, offset);
-					this->varMap.insert(std::make_pair(var.uid, std::make_pair(true, offset)));
+					this->varMap.insert(std::make_pair(var.uid, VarInfo::createOnStack(offset)));
 					offset += var.type->size;
 					if (var.code == CodeStorage::EVar::VAR_FNC_ARG)
 						++this->argCount;
@@ -122,13 +178,13 @@ struct SymCtx {
 			return false;
 		var_map_type::const_iterator i = this->varMap.find(varIdFromOperand(op));
 		assert(i != this->varMap.end());
-		if (i->second.first)
+		if (i->second.isOnStack())
 			return false;
-		id = i->second.second;
+		id = i->second.isOnStack();
 		return true;
 	}
 
-	const std::pair<bool, size_t>& getVarInfo(size_t id) const {
+	const VarInfo& getVarInfo(size_t id) const {
 		var_map_type::const_iterator i = this->varMap.find(id);
 		assert(i != this->varMap.end());
 		return i->second;
