@@ -815,7 +815,7 @@ protected:
 						// the abstract base pointer in the symbolic stack
 						append(new FI_load_ABP(&insn, dst, static_cast<int>(varInfo.second)));
 
-						// jump to next accessor
+						// jump to the next accessor
 						acc = Core::computeOffset(offset, acc->next);
 
 						if (acc && (acc->code == CL_ACCESSOR_REF))
@@ -928,113 +928,138 @@ protected:
 		switch (op.code)
 		{	// depending on the type of the operand
 			case cl_operand_e::CL_OPERAND_VAR:
-				{	// in case it is a variable
+			{	// in case it is a variable
 
-					// get info about the variable
-					auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
-
-					if (varInfo.first)
-					{	// in case it is on the stack
-						return src;
-					} else
-					{	// in case it is in a register
-						tmp = varInfo.second;
-
-						const cl_accessor* acc = op.accessor;
-
-						// in case there is dereference at the operand
-						return (acc && (acc->code == CL_ACCESSOR_DEREF))? (src) : (tmp);
-					}
-				}
-
-			default:
-				assert(false);      // fail gracefull
-		}
-	}
-
-	bool cStoreOperand(const cl_operand& op, size_t src, size_t tmp,
-		const CodeStorage::Insn& insn) {
-
-		switch (op.code) {
-
-			case cl_operand_e::CL_OPERAND_VAR: {
-
+				// get info about the variable
 				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				if (varInfo.first) {
-
-					// stack variable
-					append(new FI_get_ABP(&insn, tmp, 0));
+				if (varInfo.isOnStack())
+				{	// in case it is on the stack
+					return src;
+				} else
+				{	// in case it is in a register
+					tmp = varInfo.getRegIndex();
 
 					const cl_accessor* acc = op.accessor;
 
-					int offset = static_cast<int>(varInfo.second);
+					// in case there is dereference at the operand
+					return (acc && (acc->code == CL_ACCESSOR_DEREF))? (src) : (tmp);
+				}
+			}
+
+			default:
+				assert(false);      // fail gracefully
+				return src;					// for the sake of compiler (should never get here)
+		}
+	}
+
+
+	/**
+	 * @brief  Compile a store of a value into an operand
+	 *
+	 * Compiles the store instruction that stores the value given in @p src into
+	 * the operand which is pointed to by the @p tmp parameter.
+	 *
+	 * @param[in]  op    The target operand
+	 * @param[in]  src   Index of the register with the value to be stored
+	 * @param[in]  tmp   Index of the register the points to the symbolic memory
+	 *                   location where the value is to be stored
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 *
+	 * @returns  @p true if the value is stored into a variable, @p false if it is
+	 *           stored into a register
+	 */
+	bool cStoreOperand(const cl_operand& op, size_t src, size_t tmp,
+		const CodeStorage::Insn& insn)
+	{
+		switch (op.code)
+		{	// according to the type of the operand
+			case cl_operand_e::CL_OPERAND_VAR:
+			{	// in case it is a variable
+
+				// get variable info
+				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
+
+				if (varInfo.isOnStack())
+				{	// in case it is on the stack
+
+					// append the instruction to get the value at given offset
+					append(new FI_get_ABP(&insn, tmp, 0));
+
+					int offset = static_cast<int>(varInfo.getStackOffset());
 
 					bool needsAcc = false;
 
-					if (acc) {
+					const cl_accessor* acc = op.accessor;
 
-						if (acc->code == CL_ACCESSOR_DEREF) {
-
+					if (acc)
+					{	// in case there are some accessors
+						if (acc->code == CL_ACCESSOR_DEREF)
+						{	// in case the accessor is a dereference ('*' in C)
 							assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
 							// override previous instruction
 							override(new FI_load_ABP(&insn, tmp, varInfo.second));
 
+							// separation is needed
 							needsAcc = true;
 
+							// skip to the next accessor
 							acc = acc->next;
 
+							// reinitialize the offset
 							offset = 0;
-
 						}
 
+						// compute the real offset (while ``flattening'' the structure)
 						acc = Core::computeOffset(offset, acc);
-
 					}
 
+					// assert there are no more accessors
 					assert(acc == nullptr);
 
-					if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
+					if (op.type->code == cl_type_e::CL_TYPE_STRUCT)
+					{	// in case the operand is a structure
 
+						// build a symbolic node
 						std::vector<size_t> offs;
 						NodeBuilder::buildNode(offs, op.type);
 
-						if (needsAcc) {
+						if (needsAcc)
+						{	// in case separation is needed
+							// append separation of a set of nodes
 							append(new FI_acc_set(&insn, tmp, offset, offs));
 						}
+
+						// append store of the value into register
 						append(new FI_stores(&insn, tmp, src, offset));
+					} else
+					{	// in case the operand is anything but a structure
 
-					} else {
-
-						if (needsAcc) {
+						if (needsAcc)
+						{	// in case separation is needed
+							// append separation of a node
 							append(new FI_acc_sel(&insn, tmp, offset));
 						}
-						append(new FI_store(&insn, tmp, src, offset));
 
+						// append store of the value into register
+						append(new FI_store(&insn, tmp, src, offset));
 					}
 
+					// add an instruction to check invariants of the virtual machine
 					append(new FI_check(&insn));
 
 					return true;
-
-				} else {
-
-					// register
-					return cStoreReg(op, src, varInfo.second, insn);
-
+				} else
+				{	// in case it is in a register
+					return cStoreReg(op, src, varInfo.getRegIndex(), insn);
 				}
-
-				break;
-
 			}
 
-			default:
+			default:          // the default case
 				assert(false);
 				return false;
-
 		}
-
 	}
 
 	AbstractInstruction* cKillDeadVariables(const CodeStorage::TKillVarList& vars,

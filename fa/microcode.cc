@@ -591,7 +591,7 @@ struct DumpCtx {
 
 		vm.nodeLookupMultiple(vm.varGet(ABP_INDEX).d_ref.root, 0, offs, data);
 
-		boost::unordered_map<size_t, Data> tmp;
+		std::unordered_map<size_t, Data> tmp;
 		for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin();
 			i != data.d_struct->end(); ++i)
 			tmp.insert(make_pair(i->first, i->second));
@@ -607,7 +607,7 @@ struct DumpCtx {
 			switch (var.code) {
 				case CodeStorage::EVar::VAR_LC:
 					if (SymCtx::isStacked(var)) {
-						boost::unordered_map<size_t, Data>::iterator k = tmp.find(j->second.second);
+						std::unordered_map<size_t, Data>::iterator k = tmp.find(j->second.getStackOffset());
 						assert(k != tmp.end());
 						os << '#' << var.uid << ':' << var.name << " = " << k->second << std::endl;
 					} else {
