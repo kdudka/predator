@@ -464,7 +464,7 @@ class Block {
             name_(name)
         {
         }
-        
+
         // NOTE: there is no destructor ... given objects are NOT destroyed
 
         /**

@@ -184,7 +184,7 @@ enum cl_type_e {
     CL_TYPE_REAL,
 
     /**
-     * used only be cl_cst
+     * used only by cl_cst
      */
     CL_TYPE_STRING
 };
@@ -547,7 +547,7 @@ enum cl_insn_e {
     CL_INSN_SWITCH,
 
     /**
-     * label 
+     * label
      */
     CL_INSN_LABEL
 };
