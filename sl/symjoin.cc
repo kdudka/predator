@@ -1823,7 +1823,7 @@ bool insertSegmentClone(
         nextGt = nextValFromSeg(shGt, peer);
 
     const TValId nextLt = (isGt2) ? v1 : v2;
-    if (!off && !checkValueMapping(ctx, 
+    if (!off && !checkValueMapping(ctx,
                 (isGt1) ? nextGt : nextLt,
                 (isGt2) ? nextGt : nextLt,
                 /* allowUnknownMapping */ true))
@@ -2744,7 +2744,7 @@ bool joinDataReadOnly(
     // go through the commont part of joinData()/joinDataReadOnly()
     SymHeap tmp(sh.stor(), new Trace::TransientNode("joinDataReadOnly()"));
     SymJoinCtx ctx(tmp, sh);
-    
+
     if (!joinDataCore(ctx, off, addr1, addr2))
         return false;
 

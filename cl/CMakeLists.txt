@@ -68,9 +68,6 @@ endif()
 set_source_files_properties(gcc/clplug.c PROPERTIES
     COMPILE_FLAGS "-I${GCC_INC_DIR}")
 
-# tweak include dirs, etc.
-add_definitions("-I../include -fPIC")
-
 # libcl.so
 add_library(cl STATIC
     builtins.cc
