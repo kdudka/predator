@@ -1062,52 +1062,89 @@ protected:
 		}
 	}
 
-	AbstractInstruction* cKillDeadVariables(const CodeStorage::TKillVarList& vars,
-		const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Method that kills given variables
+	 *
+	 * This method is to be called after an instruction that may introduce
+	 * temporary variables is compiled. It identifies which variables can be
+	 * killed and kills them.
+	 *
+	 * @param[in]  vars  A list of variables to be killed
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 *
+	 * @returns  Either @p nullptr if there are no feasible varibles to be killed
+	 *           or a pointer to the instruction that loads the undefined data
+	 *           block that is used to kill given variables
+	 */
+	AbstractInstruction* cKillDeadVariables(const CodeStorage::TKillVarList& vars,
+		const CodeStorage::Insn& insn)
+	{
 		std::set<size_t> offs;
 
-		for (auto var : vars) {
-
+		for (auto var : vars)
+		{	// for every variable to be killed
 			if (var.onlyIfNotPointed)
+			{	// if killing is safe only if nobody points at the variable
 				continue;
+			}
 
+			// obtain information about the variable
 			const SymCtx::VarInfo& varInfo = curCtx_->getVarInfo(var.uid);
 
 			if (!varInfo.isOnStack())
+			{	// on case the variable is not on the stack
 				continue;
+			}
 
-			offs.insert(varInfo.getRegIndex());
-
+			// retrieve the offset of the variable at the current stack frame
+			offs.insert(varInfo.getStackOffset());
 		}
 
 		if (offs.empty())
+		{	// in case there are no feasible variables to be killed
 			return nullptr;
+		}
 
 		std::vector<Data::item_info> tmp;
 
-		if (offs.size() > 1) {
-
+		if (offs.size() > 1)
+		{	// in case there is more than one offset, prepare for creating a temporary
+			// structure
 			for (auto offset : offs)
 				tmp.push_back(Data::item_info(offset, Data::createUndef()));
-
 		}
 
+		// append an instruction to load an undefined constant to r0
 		AbstractInstruction* result = append(
-			new FI_load_cst(&insn, 0,
+			new FI_load_cst(&insn, /* dst reg */ 0,
 				(offs.size() > 1)?(Data::createStruct(tmp)):(Data::createUndef()))
 		);
 
-		append(new FI_get_ABP(&insn, 1, 0));
+		// append an instruction to load the abstract base pointer into r1
+		append(new FI_get_ABP(&insn, /* dst reg */ 1, /* offset */ 0));
+
+		// append an instruction to store the undefined value in r0 to the address
+		// stored in r1
 		append(
 			(offs.size() > 1)
-				?(static_cast<AbstractInstruction*>(new FI_stores(&insn, 1, 0, 0)))
-				:(static_cast<AbstractInstruction*>(new FI_store(&insn, 1, 0, *offs.begin())))
+				?(static_cast<AbstractInstruction*>(new FI_stores(
+						&insn,
+						/* reg with addr of dst */ 1,
+						/* src reg */ 0,
+						/* offset of the dst */ 0
+					)))
+				:(static_cast<AbstractInstruction*>(new FI_store(
+						&insn,
+						/* reg with addr of dst */ 1,
+						/* src reg */ 0,
+						/* offset of the dst */ *offs.begin()
+					)))
 		);
 
 		return result;
-
 	}
+
 
 	void compileAssignment(const CodeStorage::Insn& insn) {
 
