@@ -401,32 +401,37 @@ void FI_alloc::execute(ExecutionManager& execMan,
 
 // FI_node_create
 void FI_node_create::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+	const AbstractInstruction::StateType& state)
+{
+	const Data& srcData = (*state.first)[this->src_];
+	Data& dstData       = (*state.first)[this->dst_];
 
-	if ((*state.first)[this->src_].isRef() || (*state.first)[this->src_].isNull()) {
-
-		(*state.first)[this->dst_] = (*state.first)[this->src_];
-
+	if (srcData.isRef() || srcData.isNull())
+	{	// in case src_ is a null pointer
+		dstData = srcData;
 		execMan.enqueue(state.second, state.first, state.second->fae, this->next_);
-
 		return;
-
 	}
 
-	assert((*state.first)[this->src_].isVoidPtr());
+	// assert that src_ is a void pointer
+	assert(srcData.isVoidPtr());
 
-	if ((*state.first)[this->src_].d_void_ptr_size != this->size_)
+	if (srcData.d_void_ptr_size != this->size_)
+	{	// in case the type size differs from the allocated size
 		throw ProgramError("allocated block size mismatch", getLoc(state));
+	}
 
+	// create a new forest automaton
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
 
-	(*state.first)[this->dst_] = Data::createRef(
+	// create a new node
+	dstData = Data::createRef(
 		VirtualMachine(*fae).nodeCreate(this->sels_, this->typeInfo_)
 	);
 
 	execMan.enqueue(state.second, state.first, fae, this->next_);
-
 }
+
 /*
 // FI_node_alloc
 void FI_node_alloc::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
