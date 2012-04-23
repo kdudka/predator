@@ -1146,8 +1146,16 @@ protected:
 	}
 
 
-	void compileAssignment(const CodeStorage::Insn& insn) {
-
+	/**
+	 * @brief  Compiles an assignment of a value to some memory location
+	 *
+	 * This method compiles an assignment of a value to a memory location, given
+	 * by the operands in @p insn.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileAssignment(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src = insn.operands[1];
 
@@ -1156,7 +1164,7 @@ protected:
 		assert(dst.type != nullptr);
 		assert(src.type->code == dst.type->code);
 
-
+		// get registers for the source and the target
 		size_t dstReg = lookupStoreReg(dst, 0);
 		size_t srcReg = cLoadOperand(dstReg, src, insn);
 
@@ -1164,36 +1172,49 @@ protected:
 			src.type->code == cl_type_e::CL_TYPE_PTR &&
 			src.type->items[0].type->code == cl_type_e::CL_TYPE_VOID &&
 			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
-		) {
+		)
+		{	// in case the source is a void pointer and the destination is not
+
+			// build a node according to the destination type
 			std::vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
 
+			// create a string with the name of the type
 			std::string typeName;
 			if (dst.type->items[0].type->name)
+			{	// in case the type is named
 				typeName = std::string(dst.type->items[0].type->name);
-			else {
+			} else
+			{	// in case the type is unnamed
 				std::ostringstream ss;
 				ss << dst.type->items[0].type->uid;
 				typeName = ss.str();
 			}
 
+			// append an instruction to create a new node
 			append(
 				new FI_node_create(
 					&insn,
-					srcReg,
-					srcReg,
-					dst.type->items[0].type->size,
-					boxMan_.getTypeInfo(typeName),
-					sels
+					/* dst reg where the node will be stored */ srcReg,
+					/* reg with the value from which the node is to be created */ srcReg,
+					/* size of the created node */ dst.type->items[0].type->size,
+					/* type information */ boxMan_.getTypeInfo(typeName),
+					/* selectors of the node */ sels
 				)
 			);
-
 		}
 
-		cStoreOperand(dst, srcReg, 1, insn);
-		cKillDeadVariables(insn.varsToKill, insn);
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ srcReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
 
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
+
 
 	void compileTruthNot(const CodeStorage::Insn& insn) {
 
