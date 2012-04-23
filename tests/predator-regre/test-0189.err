@@ -1,38 +1,38 @@
 test-0189.c:3:1: error: error label "ERROR" has been reached
-test-0189.c:3:1: note: <-- abstract state reachable from L25 [entry block]
+test-0189.c:3:1: note: <-- abstract state reachable from L26 [entry block]
 test-0189.c:21:18: note: from call of error()
-test-0189.c:20:9: note: <-- abstract state reachable from L23
-test-0189.c:20:9: note:     <-- abstract state reachable from L22
-test-0189.c:20:9: note:         <-- abstract state reachable from L22
-test-0189.c:16:9: note:             <-- abstract state reachable from L21
-test-0189.c:16:9: note:                 <-- abstract state reachable from L21
-test-0189.c:16:9: note:                     <-- abstract state reachable from L19
-test-0189.c:16:9: note:                         <-- abstract state reachable from L19 [entry block]
+test-0189.c:20:9: note: <-- abstract state reachable from L24
+test-0189.c:20:9: note:     <-- abstract state reachable from L23
+test-0189.c:20:9: note:         <-- abstract state reachable from L23
+test-0189.c:16:9: note:             <-- abstract state reachable from L22
+test-0189.c:16:9: note:                 <-- abstract state reachable from L22
+test-0189.c:16:9: note:                     <-- abstract state reachable from L20
+test-0189.c:16:9: note:                         <-- abstract state reachable from L20 [entry block]
 test-0189.c:30:13: note: from call of gl_write()
-test-0189.c:30:13: note: <-- abstract state reachable from L17
-test-0189.c:27:8: note:     <-- abstract state reachable from L15
-test-0189.c:27:18: note:         <-- abstract state reachable from L15 [entry block]
+test-0189.c:30:13: note: <-- abstract state reachable from L18
+test-0189.c:27:8: note:     <-- abstract state reachable from L16
+test-0189.c:27:18: note:         <-- abstract state reachable from L16 [entry block]
 test-0189.c:41:21: note: from call of gl_proc1()
-test-0189.c:40:20: note: <-- abstract state reachable from L10
-test-0189.c:39:21: note:     <-- abstract state reachable from L8
-test-0189.c:39:45: note:         <-- abstract state reachable from L8
-test-0189.c:39:12: note:             <-- abstract state reachable from L7
-test-0189.c:39:13: note:                 <-- abstract state reachable from L7
-test-0189.c:38:11: note:                     <-- abstract state reachable from L6
-test-0189.c:38:12: note:                         <-- abstract state reachable from L6
-<unknown location>: note:                             <-- abstract state reachable from L5
-test-0189.c:38:12: note:                                 <-- abstract state reachable from L5 [entry block]
-test-0189.c:44:21: note:                             <-- abstract state reachable from L11
-test-0189.c:44:45: note:                                 <-- abstract state reachable from L11
-test-0189.c:44:12: note:                                     <-- abstract state reachable from L9
-test-0189.c:44:13: note:                                         <-- abstract state reachable from L9
-test-0189.c:39:21: note:                                             <-- abstract state reachable from L8 [loop]
-test-0189.c:47:20: note:                             <-- abstract state reachable from L12
-test-0189.c:45:20: note:                                 <-- abstract state reachable from L12
-test-0189.c:44:21: note:                                     <-- abstract state reachable from L11 [loop]
-test-0189.c:38:20: note:                     <-- abstract state reachable from L13
-test-0189.c:38:23: note:                         <-- abstract state reachable from L13
-test-0189.c:38:11: note:                             <-- abstract state reachable from L6 [loop]
+test-0189.c:40:20: note: <-- abstract state reachable from L11
+test-0189.c:39:21: note:     <-- abstract state reachable from L9
+test-0189.c:39:45: note:         <-- abstract state reachable from L9
+test-0189.c:39:12: note:             <-- abstract state reachable from L8
+test-0189.c:39:13: note:                 <-- abstract state reachable from L8
+test-0189.c:38:11: note:                     <-- abstract state reachable from L7
+test-0189.c:38:12: note:                         <-- abstract state reachable from L7
+<unknown location>: note:                             <-- abstract state reachable from L6
+test-0189.c:38:12: note:                                 <-- abstract state reachable from L6 [entry block]
+test-0189.c:44:21: note:                             <-- abstract state reachable from L12
+test-0189.c:44:45: note:                                 <-- abstract state reachable from L12
+test-0189.c:44:12: note:                                     <-- abstract state reachable from L10
+test-0189.c:44:13: note:                                         <-- abstract state reachable from L10
+test-0189.c:39:21: note:                                             <-- abstract state reachable from L9 [loop]
+test-0189.c:47:20: note:                             <-- abstract state reachable from L13
+test-0189.c:45:20: note:                                 <-- abstract state reachable from L13
+test-0189.c:44:21: note:                                     <-- abstract state reachable from L12 [loop]
+test-0189.c:38:20: note:                     <-- abstract state reachable from L14
+test-0189.c:38:23: note:                         <-- abstract state reachable from L14
+test-0189.c:38:11: note:                             <-- abstract state reachable from L7 [loop]
 test-0189.c:63:12: note: from call of gl_eval()
 test-0189.c:60:17: note: <-- abstract state reachable from L1 [entry block]
 test-0189.c:58:5: note: from call of main()

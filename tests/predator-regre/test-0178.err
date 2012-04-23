@@ -1,5 +1,5 @@
 test-0178.c:6:1: error: error label "ERROR" has been reached
-test-0178.c:6:1: note: <-- abstract state reachable from L68 [entry block]
+test-0178.c:6:1: note: <-- abstract state reachable from L69 [entry block]
 test-0178.c:93:5: note: from call of fail()
 test-0178.c:93:5: note: <-- abstract state reachable from L50
 test-0178.c:93:5: note:     <-- abstract state reachable from L49

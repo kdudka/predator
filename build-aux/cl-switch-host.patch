@@ -8,11 +8,11 @@ index b81ee1d..238b3eb 100755
  
 -    Use this script to (re)build Predator and/or Forester against an arbitrary
 -    build of host GCC.  The host GCC needs to be built with the support for GCC
--    plug-ins.  The currently supported version of host GCC is 4.6.2, but feel
+-    plug-ins.  The currently supported version of host GCC is 4.7.0, but feel
 -    free to use any other version of GCC at your own responsibility.
 +    Use this script to (re)build Code Listener against an arbitrary build of
 +    host GCC.  The host GCC needs to be built with the support for GCC plug-ins.
-+    The currently supported version of host GCC is 4.6.2, but feel free to use
++    The currently supported version of host GCC is 4.7.0, but feel free to use
 +    any other version of GCC at your own responsibility.
  
      GCC_HOST is the absolute path to gcc(1) that is built with the support for
