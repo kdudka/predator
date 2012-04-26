@@ -1261,24 +1261,42 @@ protected:
 	}
 
 
-	void compileMalloc(const CodeStorage::Insn& insn) {
-
+	/**
+	 * @brief  Compiles memory allocation
+	 *
+	 * This method compiles allocation of a symbolic memory block of given size
+	 * and type.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileMalloc(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src = insn.operands[2];
 
+		// assert that 
 		assert(src.type->code == cl_type_e::CL_TYPE_INT);
 		assert(dst.type->code == cl_type_e::CL_TYPE_PTR);
 
+		// get registers for the source and the target
 		size_t dstReg = lookupStoreReg(dst, 0);
 		size_t srcReg = cLoadOperand(dstReg, src, insn);
 
-		append(new FI_alloc(&insn, srcReg, srcReg));
+		// append the instruction to set information for the pointer
+		append(new FI_alloc(
+			&insn,
+			/* reg where the result shall be stored*/ srcReg,
+			/* reg with the number of allocated bytes */ srcReg
+		));
 
-		if (dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID) {
+		if (dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID)
+		{	// in case the destination pointer is not a void pointer
 
+			// build a node with proper selectors
 			std::vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
 
+			// get the name of the target type
 			std::string typeName;
 			if (dst.type->items[0].type->name)
 				typeName = std::string(dst.type->items[0].type->name);
@@ -1288,23 +1306,27 @@ protected:
 				typeName = ss.str();
 			}
 
-			append(
-				new FI_node_create(
-					&insn,
-					srcReg,
-					srcReg,
-					dst.type->items[0].type->size,
-					boxMan_.getTypeInfo(typeName),
-					sels
-				)
-			);
-
+			// append an instruction to create the node in the symbolic memory
+			append(new FI_node_create(
+				&insn,
+				/* dst reg for the pointer to the node */ srcReg,
+				/* reg with the value from which the node is to be created */ srcReg,
+				/* size of the created node*/ dst.type->items[0].type->size,
+				/* type information */ boxMan_.getTypeInfo(typeName),
+				/* selectors of the node */ sels
+			));
 		}
 
-		cStoreOperand(dst, srcReg, 1, insn);
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ srcReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
 		cKillDeadVariables(insn.varsToKill, insn);
-
 	}
+
 
 	void compileFree(const CodeStorage::Insn& insn) {
 
