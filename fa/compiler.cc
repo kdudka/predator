@@ -1328,18 +1328,37 @@ protected:
 	}
 
 
-	void compileFree(const CodeStorage::Insn& insn) {
-
+	/**
+	 * @brief  Compile freeing of memory
+	 *
+	 * Compiles instructions that release a symbolic memory block.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileFree(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& src = insn.operands[2];
 
+		// get registers for the source
 		size_t srcReg = cLoadOperand(0, src, insn);
 
-		append(new FI_acc_all(&insn, srcReg));
-		append(new FI_node_free(&insn, srcReg));
-		append(new FI_check(&insn));
-		cKillDeadVariables(insn.varsToKill, insn);
+		// append an instruction to isolate all selectors
+		append(new FI_acc_all(
+			&insn,
+			/* reg with ref to the tree to have selectors isolated */ srcReg
+		));
 
+		// append an instruction to free a symbolic memory node
+		append(new FI_node_free(&insn,
+			/* reg with ref to the freed node */ srcReg
+		));
+		// add an instruction to check invariants of the virtual machine
+		append(new FI_check(&insn));
+
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
+
 
 	template <class F>
 	void compileCmp(const CodeStorage::Insn& insn) {
