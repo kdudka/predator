@@ -1216,18 +1216,28 @@ protected:
 	}
 
 
-	void compileTruthNot(const CodeStorage::Insn& insn) {
-
+	/**
+	 * @brief  Compiles a Boolean negation
+	 *
+	 * This method compiles a negation of a Boolean (or, in general, integer)
+	 * expression.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileTruthNot(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src = insn.operands[1];
 
+		// assert that the destination is a Boolean
 		assert(dst.type->code == cl_type_e::CL_TYPE_BOOL);
 
+		// get registers for the source and the target
 		size_t dstReg = lookupStoreReg(dst, 0);
 		size_t srcReg = cLoadOperand(dstReg, src, insn);
 
-		switch (src.type->code) {
-
+		switch (src.type->code)
+		{	// append a corresponding indstruction according to the type of the source
 			case cl_type_e::CL_TYPE_BOOL:
 				append(new FI_bnot(&insn, srcReg));
 				break;
@@ -1238,13 +1248,18 @@ protected:
 
 			default:
 				assert(false);
-
 		}
 
-		cStoreOperand(dst, srcReg, 1, insn);
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ srcReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
 		cKillDeadVariables(insn.varsToKill, insn);
-
 	}
+
 
 	void compileMalloc(const CodeStorage::Insn& insn) {
 
