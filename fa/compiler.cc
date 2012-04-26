@@ -1398,45 +1398,80 @@ protected:
 	}
 
 
-	void compilePlus(const CodeStorage::Insn& insn) {
-
+	/**
+	 * @brief  Compiles integer addition
+	 *
+	 * This method compiles addition of two integer operands.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compilePlus(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src1 = insn.operands[1];
 		const cl_operand& src2 = insn.operands[2];
 
+		// assert that all operands are integer
 		assert(dst.type->code == cl_type_e::CL_TYPE_INT);
 		assert(src1.type->code == cl_type_e::CL_TYPE_INT);
 		assert(src2.type->code == cl_type_e::CL_TYPE_INT);
 
+		// get registers for the sources and the target
 		size_t dstReg = lookupStoreReg(dst, 0);
 		size_t src1Reg = cLoadOperand(0, src1, insn);
 		size_t src2Reg = cLoadOperand(1, src2, insn);
 
+		// append the instruction for integer addition
 		append(new FI_iadd(&insn, dstReg, src1Reg, src2Reg));
-		cStoreOperand(dst, dstReg, 1, insn);
-		cKillDeadVariables(insn.varsToKill, insn);
 
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ dstReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
-	void compilePointerPlus(const CodeStorage::Insn& insn) {
-
+	/**
+	 * @brief  Compile pointer arithmetics
+	 *
+	 * This method compiles instructions for pointer arithmetics, i.e. addition of
+	 * an integer to a pointer.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compilePointerPlus(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src1 = insn.operands[1];
 		const cl_operand& src2 = insn.operands[2];
 
+		// TODO: why this order? Cannot it be the other one?
+		// assert that @todo
 		assert(dst.type->code == cl_type_e::CL_TYPE_PTR);
 		assert(src1.type->code == cl_type_e::CL_TYPE_PTR);
 		assert(src2.type->code == cl_type_e::CL_TYPE_INT);
 
+		// get registers for the sources and the target
 		size_t dstReg = lookupStoreReg(dst, 0);
 		size_t src1Reg = cLoadOperand(0, src1, insn);
 		size_t src2Reg = cLoadOperand(1, src2, insn);
 
+		// append an instruction to increment displacement of a pointer
 		append(new FI_move_reg_inc(&insn, dstReg, src1Reg, src2Reg));
-		cStoreOperand(dst, dstReg, 1, insn);
-		cKillDeadVariables(insn.varsToKill, insn);
 
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ dstReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
+
 
 	void compileJmp(const CodeStorage::Insn& insn) {
 
