@@ -1708,9 +1708,7 @@ void scheduleSegAddr(
     const TValPair vpSeg(
             (JS_USE_SH1 == action) ? seg : VAL_INVALID,
             (JS_USE_SH2 == action) ? seg : VAL_INVALID);
-    if (!wl.schedule(vpSeg))
-        // XXX
-        wl.undo(vpSeg);
+    wl.schedule(vpSeg);
 
     if (seg == peer)
         return;
@@ -1718,9 +1716,7 @@ void scheduleSegAddr(
     const TValPair vpPeer(
             (JS_USE_SH1 == action) ? peer : VAL_INVALID,
             (JS_USE_SH2 == action) ? peer : VAL_INVALID);
-    if (!wl.schedule(vpPeer))
-        // XXX
-        wl.undo(vpPeer);
+    wl.schedule(vpPeer);
 }
 
 bool handleUnknownValues(
