@@ -388,16 +388,20 @@ void FI_stores::execute(ExecutionManager& execMan,
 
 // FI_alloc
 void FI_alloc::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+	const AbstractInstruction::StateType& state)
+{
+	const Data& srcData = (*state.first)[this->src_];
+	Data& dstData       = (*state.first)[this->dst_];
 
-	assert((*state.first)[this->src_].isInt());
+	// assert that the source operand is an integer, i.e. the size
+	assert(srcData.isInt());
 
-	(*state.first)[this->dst_] =
-		Data::createVoidPtr((*state.first)[this->src_].d_int);
+	// create a void pointer of given size, i.e. it points to a block of the size
+	dstData = Data::createVoidPtr(srcData.d_int);
 
 	execMan.enqueue(state, this->next_);
-
 }
+
 
 // FI_node_create
 void FI_node_create::execute(ExecutionManager& execMan,
