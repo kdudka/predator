@@ -1360,24 +1360,43 @@ protected:
 	}
 
 
+	/**
+	 * @brief  Compiles a comparison of two operands
+	 *
+	 * This instruction compiles a comparison (of the type @p F) of two operands.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 *
+	 * @tparam  F  The type of instruction to be compiled
+	 */
 	template <class F>
-	void compileCmp(const CodeStorage::Insn& insn) {
-
+	void compileCmp(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src1 = insn.operands[1];
 		const cl_operand& src2 = insn.operands[2];
 
+		// assert the destination is a Boolean
 		assert(dst.type->code == cl_type_e::CL_TYPE_BOOL);
 
+		// get registers for the sources and the target
 		size_t dstReg = lookupStoreReg(dst, 0);
 		size_t src1Reg = cLoadOperand(0, src1, insn);
 		size_t src2Reg = cLoadOperand(1, src2, insn);
 
+		// append the desired instruction
 		append(new F(dstReg, src1Reg, src2Reg));
-		cStoreOperand(dst, dstReg, 1, insn);
-		cKillDeadVariables(insn.varsToKill, insn);
 
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ dstReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
+
 
 	void compilePlus(const CodeStorage::Insn& insn) {
 
