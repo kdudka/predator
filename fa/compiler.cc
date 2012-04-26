@@ -844,13 +844,13 @@ protected:
 							std::vector<size_t> offs;
 							NodeBuilder::buildNode(offs, op.type);
 
-							// append an instruction to separate the root
+							// append an instruction to isolate the root
 							append(new FI_acc_set(&insn, dst, offset, offs));
 							// append an instruction to load the root
 							append(new FI_loads(&insn, dst, dst, offset, offs));
 						} else
 						{
-							// append an instruction to separate the element
+							// append an instruction to isolate the element
 							append(new FI_acc_sel(&insn, dst, offset));
 							// append an instruction to load the element
 							append(new FI_load(&insn, dst, dst, offset));
@@ -1210,7 +1210,6 @@ protected:
 			/* reg pointing to memory location with the value to be stored */ 1,
 			insn
 		);
-
 		// kill dead variables
 		cKillDeadVariables(insn.varsToKill, insn);
 	}
