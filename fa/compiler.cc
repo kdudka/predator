@@ -1617,29 +1617,43 @@ protected:
 		append(new FI_ret(&insn, 0));
 	}
 
-	void compileCond(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compiles a conditional jump
+	 *
+	 * This method compiles instructions for a conditional jump.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileCond(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& src = insn.operands[0];
 
+		// get register for the source
 		size_t srcReg = cLoadOperand(0, src, insn);
 
 		cKillDeadVariables(insn.varsToKill, insn);
 
 		AbstractInstruction* tmp[2] = { nullptr, nullptr };
 
+		// assign mark and allocate space in the code assembly for the condition
+		// test instruction
 		size_t sentinel = assembly_->code_.size();
-
 		append(nullptr);
 
-		for (auto i : { 0, 1 }) {
+		for (auto i : { 0, 1 })
+		{	// for each branch
 
+			// try to kill dead variables
 			tmp[i] = cKillDeadVariables(insn.killPerTarget[i], insn);
 
+			// append an instruction to jump to the corresponding branch
 			append(new FI_jmp(&insn, insn.targets[i]));
 
 			if (!tmp[i])
+			{	// if no dead variables were killed
 				tmp[i] = assembly_->code_.back();
-
+			}
 		}
 
 		assembly_->code_[sentinel] = new FI_cond(&insn, srcReg, tmp);
