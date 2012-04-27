@@ -1578,14 +1578,24 @@ protected:
 		assembly_->code_[head + 2]->setTarget();
 	}
 
-	void compileRet(const CodeStorage::Insn& insn) {
 
-		if (insn.operands[0].code != CL_OPERAND_VOID) {
-			// move return value into r0
+	/**
+	 * @brief  Compiles a return from a function
+	 *
+	 * This method compiles a return from a function, either with or without
+	 * a return value.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileRet(const CodeStorage::Insn& insn)
+	{
+		if (insn.operands[0].code != CL_OPERAND_VOID)
+		{	// in case the function returns a value
+
+			// move the return value into r0
 			cLoadOperand(0, insn.operands[0], insn, false);
 			// push r0 to gr1
 			append(new FI_push_greg(&insn, 0));
-
 		}
 
 		// load previous ABP into r0
@@ -1605,7 +1615,6 @@ protected:
 
 		// return to r0
 		append(new FI_ret(&insn, 0));
-
 	}
 
 	void compileCond(const CodeStorage::Insn& insn) {
