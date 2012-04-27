@@ -1485,36 +1485,54 @@ protected:
 		append(new FI_jmp(&insn, insn.targets[0]));
 	}
 
-	void compileCallInternal(const CodeStorage::Insn& insn, const CodeStorage::Fnc& fnc) {
 
+	/**
+	 * @brief  Compiles a call of an internal function
+	 *
+	 * Compiles a call of an internal function, i.e. function the implementation
+	 * of which is known.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 * @param[in]  fnc   The function which is to be called
+	 */
+	void compileCallInternal(const CodeStorage::Insn& insn,
+		const CodeStorage::Fnc& fnc)
+	{
+		// assertion on the number of arguments
 		assert(fnc.args.size() + 2 == insn.operands.size());
 
-		// feed registers with arguments (r2 ... )
 		for (size_t i = fnc.args.size() + 1; i > 1; --i)
-			cLoadOperand(i, insn.operands[i], insn, false);
+		{ // feed registers with arguments (r2 ... )
+			cLoadOperand(
+				/* destination reg */ i,
+				/* operand */ insn.operands[i],
+				/* instruction */ insn,
+				/* can the destination reg be overriden? */ false
+			);
+		}
 
 		CodeStorage::TKillVarList varsToKill = insn.varsToKill;
 
 		// kill also the destination variable if possible
-
-		if (insn.operands[0].code == cl_operand_e::CL_OPERAND_VAR) {
-
+		if (insn.operands[0].code == cl_operand_e::CL_OPERAND_VAR)
+		{	// in case the result of the function should be stored into a variable
 			auto varId = varIdFromOperand(&insn.operands[0]);
 
-			if (curCtx_->getVarInfo(varId).isOnStack()) {
-
+			if (curCtx_->getVarInfo(varId).isOnStack())
+			{	// if the variable is on the stack
 				auto acc = insn.operands[0].accessor;
 
 				if (!acc || (acc->code != CL_ACCESSOR_DEREF))
+				{	// in case the variable is not accessed by dereference
 					varsToKill.push_back(CodeStorage::KillVar(varId, false));
-
+				}
 			}
-
 		}
 
 		// kill dead variables
 		cKillDeadVariables(varsToKill, insn);
 
+		// current offset in the code segment
 		size_t head = assembly_->code_.size();
 
 		// put placeholder for loading return address into r1
@@ -1524,19 +1542,27 @@ protected:
 		append(new FI_jmp(&insn, &getFncInfo(&fnc).second));
 
 		// load ABP into r1
-		append(new FI_get_ABP(&insn, 1, 0));
+		append(new FI_get_ABP(
+			&insn,
+			/* dst reg */ 1,
+			/* offset */ 0
+		));
 
 		// isolate adjacent nodes (current ABP)
 		append(new FI_acc_all(&insn, 1));
 
+		// the new offset in the code segment
 		size_t head2 = assembly_->code_.size();
 
 		// fixpoint
 		cFixpoint(insn);
 
+		// TODO: I don't know why this is here
 		assembly_->code_[head2]->insn(&insn);
 
-		if (insn.operands[0].code != CL_OPERAND_VOID) {
+		if (insn.operands[0].code != CL_OPERAND_VOID)
+		{	// in case the called function returns some value
+
 			// pop return value into r0
 			append(new FI_pop_greg(&insn, 0));
 			// collect result from r0
