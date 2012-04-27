@@ -1472,10 +1472,17 @@ protected:
 	}
 
 
-	void compileJmp(const CodeStorage::Insn& insn) {
-
+	/**
+	 * @brief  Compiles a jump
+	 *
+	 * This method compiles a jump instruction.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileJmp(const CodeStorage::Insn& insn)
+	{
+		// append an instruction to perform a jump
 		append(new FI_jmp(&insn, insn.targets[0]));
-
 	}
 
 	void compileCallInternal(const CodeStorage::Insn& insn, const CodeStorage::Fnc& fnc) {
