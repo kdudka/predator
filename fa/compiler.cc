@@ -1657,13 +1657,25 @@ protected:
 		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
+
+	/**
+	 * @brief  Compiles a function call
+	 *
+	 * This method compiles a generic function call. It handles all types of
+	 * functions, i.e. special functions (such as malloc or free in C),
+	 * Forester-specific functions (fixpoint computation, printing of heap, ...)
+	 * and also ``normal'' functions.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
 	void compileCall(const CodeStorage::Insn& insn)
 	{
-		// Assertions
+		// assert that the operand is a constant function
 		assert(insn.operands[1].code == cl_operand_e::CL_OPERAND_CST);
 		assert(insn.operands[1].data.cst.code == cl_type_e::CL_TYPE_FNC);
 
-		switch (builtinTable_[insn.operands[1].data.cst.data.cst_fnc.name]) {
+		switch (builtinTable_[insn.operands[1].data.cst.data.cst_fnc.name])
+		{	// switch according to the name of the function
 			case builtin_e::biMalloc:
 				compileMalloc(insn);
 				return;
@@ -1683,19 +1695,34 @@ protected:
 				break;
 		}
 
-		const CodeStorage::Fnc* fnc = insn.stor->fncs[insn.operands[1].data.cst.data.cst_fnc.uid];
+		// in case the function has no special meaning
 
-		if (!isDefined(*fnc)) {
-			CL_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" << insn.operands[1].data.cst.data.cst_fnc.name << '\'');
-			if (insn.operands[0].code != CL_OPERAND_VOID) {
+		const CodeStorage::Fnc* fnc =
+			insn.stor->fncs[insn.operands[1].data.cst.data.cst_fnc.uid];
+
+		if (!isDefined(*fnc))
+		{	// in case the implementation of the function is not provided
+			CL_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" <<
+				insn.operands[1].data.cst.data.cst_fnc.name << '\'');
+
+			if (insn.operands[0].code != CL_OPERAND_VOID)
+			{	// in case the function returns a value
+
+				// append an instruction to load an unknown value
 				append(new FI_load_cst(&insn, 0, Data::createUnknw()));
-				cStoreOperand(insn.operands[0], 0, 1, insn);
+				cStoreOperand(
+					/* target operand */ insn.operands[0],
+					/* reg with src value */ 0,
+					/* reg pointing to memory location with the value to be stored */ 1,
+					insn
+				);
 			}
-		} else {
+		} else
+		{	// in case the function has an implementation
 			compileCallInternal(insn, *fnc);
 		}
-
 	}
+
 
 	void compileInstruction(const CodeStorage::Insn& insn) {
 
