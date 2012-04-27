@@ -1073,7 +1073,7 @@ protected:
 	 * @param[in]  vars  A list of variables to be killed
 	 * @param[in]  insn  The corresponding instruction in the code storage
 	 *
-	 * @returns  Either @p nullptr if there are no feasible varibles to be killed
+	 * @returns  Either @p nullptr if there are no feasible variables to be killed
 	 *           or a pointer to the instruction that loads the undefined data
 	 *           block that is used to kill given variables
 	 */
@@ -1656,8 +1656,12 @@ protected:
 			}
 		}
 
-		assembly_->code_[sentinel] = new FI_cond(&insn, srcReg, tmp);
-
+		// append the condition test instruction
+		assembly_->code_[sentinel] = new FI_cond(
+			&insn,
+			/* register with the result of the condition */ srcReg,
+			/* array of a pair of successor states (true and false branch) */ tmp
+		);
 	}
 
 
