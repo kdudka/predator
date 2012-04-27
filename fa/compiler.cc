@@ -1660,14 +1660,31 @@ protected:
 
 	}
 
+
+	/**
+	 * @brief  Compiles a load of a nondeterministic value
+	 *
+	 * This method compiles a load of a nondeterministic value into a register.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
 	void compileNondet(const CodeStorage::Insn& insn)
 	{
 		const cl_operand& dst = insn.operands[0];
 
+		// get register for the destination
 		size_t dstReg = lookupStoreReg(dst, 0);
 
+		// append an instruction to load an unknown constant
 		append(new FI_load_cst(&insn, dstReg, Data::createUnknw()));
-		cStoreOperand(dst, dstReg, 1, insn);
+
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ dstReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
 		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
