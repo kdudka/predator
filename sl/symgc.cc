@@ -24,6 +24,7 @@
 
 #include "symheap.hh"
 #include "symplot.hh"
+#include "symseg.hh"
 #include "symutil.hh"
 #include "worklist.hh"
 
@@ -68,9 +69,16 @@ bool isJunk(SymHeap &sh, TValId root) {
     return true;
 }
 
-bool collectJunk(SymHeap &sh, TValId root, TValList *leakList) {
+bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly) {
     CL_BREAK_IF(sh.valOffset(root));
     bool detected = false;
+
+    std::set<TValId> whiteList;
+    if (sharedOnly) {
+        whiteList.insert(root);
+        if (OK_DLS == sh.valTargetKind(root))
+            whiteList.insert(dlSegPeer(sh, root));
+    }
 
     std::stack<TValId> todo;
     todo.push(root);
@@ -78,28 +86,41 @@ bool collectJunk(SymHeap &sh, TValId root, TValList *leakList) {
         root = todo.top();
         todo.pop();
 
+        if (sharedOnly && sh.valTargetProtoLevel(root))
+            continue;
+
         if (!isJunk(sh, root))
             // not a junk, keep going...
             continue;
-
-        detected = true;
 
         // gather all roots pointed by the junk object
         TValList refs;
         gatherReferredRoots(refs, sh, root);
 
+        if (sharedOnly && hasKey(whiteList, root))
+            goto skip_root;
+
+        // leak detected
+        detected = true;
+        sh.valDestroyTarget(root);
         if (leakList)
             leakList->push_back(root);
 
-        // destroy junk
-        sh.valDestroyTarget(root);
-
+skip_root:
         // schedule just created junk candidates for next wheel
         BOOST_FOREACH(TValId refRoot, refs)
             todo.push(refRoot);
     }
 
     return detected;
+}
+
+bool collectJunk(SymHeap &sh, TValId root, TValList *leakList) {
+    return gcCore(sh, root, leakList, /* sharedOnly */ false);
+}
+
+bool collectSharedJunk(SymHeap &sh, TValId root, TValList *leakList) {
+    return gcCore(sh, root, leakList, /* sharedOnly */ true);
 }
 
 bool destroyRootAndCollectJunk(
@@ -151,4 +172,11 @@ void LeakMonitor::leave() {
     if (::debuggingGarbageCollector)
         plotHeap(snap_, "memleak", /* TODO: loc */ 0, leakList_,
                 /* digForward */ false);
+}
+
+bool /* leaking */ LeakMonitor::importLeakList(TValList *leakList) {
+    CL_BREAK_IF(!leakList_.empty());
+    leakList_ = *leakList;
+
+    return /* leaking */ !leakList_.empty();
 }
