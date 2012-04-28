@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2012 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -80,15 +80,8 @@ bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly) {
             whiteList.insert(dlSegPeer(sh, root));
     }
 
-    std::stack<TValId> todo;
-    todo.push(root);
-    while (!todo.empty()) {
-        root = todo.top();
-        todo.pop();
-
-        if (sharedOnly && sh.valTargetProtoLevel(root))
-            continue;
-
+    WorkList<TValId> wl(root);
+    while (wl.next(root)) {
         if (!isJunk(sh, root))
             // not a junk, keep going...
             continue;
@@ -97,8 +90,13 @@ bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly) {
         TValList refs;
         gatherReferredRoots(refs, sh, root);
 
-        if (sharedOnly && hasKey(whiteList, root))
-            goto skip_root;
+        if (sharedOnly) {
+            if (hasKey(whiteList, root))
+                goto skip_root;
+
+            if (0 < sh.valTargetProtoLevel(root))
+                goto skip_root;
+        }
 
         // leak detected
         detected = true;
@@ -109,7 +107,7 @@ bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly) {
 skip_root:
         // schedule just created junk candidates for next wheel
         BOOST_FOREACH(TValId refRoot, refs)
-            todo.push(refRoot);
+            wl.schedule(refRoot);
     }
 
     return detected;
