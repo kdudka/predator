@@ -3475,7 +3475,7 @@ void SymHeap::valTargetSetConcrete(TValId root) {
     d->absRoots.releaseEnt(root);
 }
 
-void SymHeap::valMerge(TValId v1, TValId v2) {
+void SymHeap::valMerge(TValId v1, TValId v2, TValList *leakList) {
     // check that at least one value is unknown
     moveKnownValueToLeft(*this, v1, v2);
     const EValueTarget code1 = this->valTarget(v1);
@@ -3488,11 +3488,11 @@ void SymHeap::valMerge(TValId v1, TValId v2) {
         return;
     }
 
-    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(*this, v1, v2))
+    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(*this, v1, v2, leakList))
         // splice-out succeeded ... ls(v1, v2)
         return;
 
-    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(*this, v2, v1))
+    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(*this, v2, v1, leakList))
         // splice-out succeeded ... ls(v2, v1)
         return;
 

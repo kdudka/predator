@@ -716,10 +716,11 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
 }
 
 void spliceOutListSegment(
-        SymHeap                 &sh,
+        SymHeap                &sh,
         const TValId            seg,
         const TValId            peer,
-        const TValId            valNext)
+        const TValId            valNext,
+        TValList               *leakList)
 {
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
@@ -747,6 +748,8 @@ void spliceOutListSegment(
             /* redirectTo   */ valNext,
             /* offHead      */ offHead);
 
+    collectSharedJunk(sh, seg, leakList);
+
     // destroy peer in case of DLS
     if (peer != seg && collectJunk(sh, peer))
         CL_DEBUG("spliceOutListSegment() drops a sub-heap (peer)");
@@ -763,13 +766,14 @@ void spliceOutSegmentIfNeeded(
         SymHeap                &sh,
         const TValId            seg,
         const TValId            peer,
-        TSymHeapList           &todo)
+        TSymHeapList           &todo,
+        TValList               *leakList)
 {
     if (!*pLen) {
         // possibly empty LS
         SymHeap sh0(sh);
         const TValId valNext = nextValFromSeg(sh0, peer);
-        spliceOutListSegment(sh0, seg, peer, valNext);
+        spliceOutListSegment(sh0, seg, peer, valNext, leakList);
 
         const EObjKind kind = sh.valTargetKind(seg);
         Trace::Node *tr = new Trace::SpliceOutNode(sh.traceNode(), kind, true);
@@ -803,13 +807,18 @@ void abstractIfNeeded(SymHeap &sh) {
     }
 }
 
-void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
+void concretizeObj(
+        SymHeap                     &sh,
+        const TValId                 addr,
+        TSymHeapList                &todo,
+        TValList                    *leakList)
+{
     const TValId seg = sh.valRoot(addr);
     const TValId peer = segPeer(sh, seg);
 
     // handle the possibly empty variant (if exists)
     TMinLen len = sh.segMinLength(seg);
-    spliceOutSegmentIfNeeded(&len, sh, seg, peer, todo);
+    spliceOutSegmentIfNeeded(&len, sh, seg, peer, todo, leakList);
 
     const EObjKind kind = sh.valTargetKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
@@ -862,10 +871,11 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
 }
 
 bool spliceOutAbstractPathCore(
-        SymHeap                 &sh,
+        SymHeap                &sh,
         const TValId            beg,
         const TValId            endPoint,
-        const bool              readOnlyMode)
+        const bool              readOnlyMode,
+        TValList               *leakList)
 {
     // NOTE: If there is a cycle consisting of empty list segments only, we will
     // loop indefinitely.  However, the basic list segment axiom guarantees that
@@ -899,12 +909,17 @@ bool spliceOutAbstractPathCore(
     }
 
     if (!readOnlyMode)
-        spliceOutListSegment(sh, beg, peer, valNext);
+        spliceOutListSegment(sh, beg, peer, valNext, leakList);
 
     return true;
 }
 
-bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo) {
+bool spliceOutAbstractPath(
+        SymHeap                     &sh,
+        const TValId                 atAddr,
+        const TValId                 pointingTo,
+        TValList                    *leakList)
+{
     const TValId seg = sh.valRoot(atAddr);
     const TValId peer = segPeer(sh, seg);
 
@@ -924,9 +939,14 @@ bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo) {
         endPoint = sh.valByOffset(pointingTo, off);
     }
 
-    const bool ok = spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ true);
-    if (ok && !spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ false))
+    const bool ok = spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ true,
+            leakList);
+
+    if (ok && !spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ false,
+                leakList))
+    {
         CL_BREAK_IF("spliceOutAbstractPathCore() completely broken");
+    }
 
     sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), kind, ok));
     return ok;
