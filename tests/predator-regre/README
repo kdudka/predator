@@ -228,6 +228,14 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0221.c - regression test covering a fixed bug in cloning of prototypes
 
+    test-0225.c - tricky white-box test focused on leaking shared data
+
+    test-0226.c - tiny modification of test-0225 that worked even before the fix
+
+    test-0227.c - leak-less variant of test-0225
+
+    test-0228.c - leak-less variant of test-0226
+
 
 Linux lists
 ===========
