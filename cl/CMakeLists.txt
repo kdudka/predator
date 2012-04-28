@@ -71,6 +71,7 @@ set_source_files_properties(gcc/clplug.c PROPERTIES
 # libcl.so
 add_library(cl STATIC
     builtins.cc
+    callgraph.cc
     cl_chain.cc
     cl_dotgen.cc
     cl_easy.cc

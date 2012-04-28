@@ -26,6 +26,7 @@
 #include <cl/easy.hh>
 #include <cl/storage.hh>
 
+#include "callgraph.hh"
 #include "cl_storage.hh"
 #include "killer.hh"
 #include "loopscan.hh"
@@ -56,6 +57,9 @@ class ClEasy: public ClStorageBuilder {
                 CL_DEBUG("CodeStorage::Storage appears empty, giving up...");
                 return;
             }
+
+            CL_DEBUG("building call-graph...");
+            CodeStorage::CallGraph::buildCallGraph(stor);
 
             CL_DEBUG("scanning CFG for loop-closing edges...");
             findLoopClosingEdges(stor);

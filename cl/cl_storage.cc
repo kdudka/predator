@@ -302,6 +302,7 @@ namespace CodeStorage {
         BOOST_FOREACH(const Block *bb, fnc->cfg) {
             destroyBlock(const_cast<Block *>(bb));
         }
+        delete fnc->cgNode;
         delete fnc;
     }
 

@@ -18,12 +18,15 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all check clean cppcheck distclean distcheck version_cl.h
+.PHONY: all check clean cppcheck distclean distcheck fast version_cl.h
 
 all: version_cl.h
 	mkdir -p ../cl_build
 	cd ../cl_build && $(CMAKE) ../cl
 	$(MAKE) -C ../cl_build
+
+fast:
+	$(MAKE) -sC ../cl_build
 
 check: all
 	cd ../cl_build && $(CTEST) --output-on-failure
