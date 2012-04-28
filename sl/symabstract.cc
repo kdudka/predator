@@ -758,14 +758,14 @@ void spliceOutListSegment(
     LDP_PLOT(symabstract, sh);
 }
 
-TMinLen /* len */ spliceOutSegmentIfNeeded(
-        SymHeap                 &sh,
+void spliceOutSegmentIfNeeded(
+        TMinLen                *pLen,
+        SymHeap                &sh,
         const TValId            seg,
         const TValId            peer,
-        TSymHeapList            &todo)
+        TSymHeapList           &todo)
 {
-    const TMinLen len = sh.segMinLength(seg);
-    if (!len) {
+    if (!*pLen) {
         // possibly empty LS
         SymHeap sh0(sh);
         const TValId valNext = nextValFromSeg(sh0, peer);
@@ -777,15 +777,12 @@ TMinLen /* len */ spliceOutSegmentIfNeeded(
         todo.push_back(sh0);
         todo.back().traceUpdate(tr);
     }
+    else
+        // we are going to detach one node
+        --(*pLen);
 
     LDP_INIT(symabstract, "concretizeObj");
     LDP_PLOT(symabstract, sh);
-
-    if (!len)
-        return /* LS 0+ */ 0;
-
-    // we are going to detach one node
-    return len - 1;
 }
 
 void abstractIfNeeded(SymHeap &sh) {
@@ -811,7 +808,8 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
     const TValId peer = segPeer(sh, seg);
 
     // handle the possibly empty variant (if exists)
-    const TMinLen lenRemains = spliceOutSegmentIfNeeded(sh, seg, peer, todo);
+    TMinLen len = sh.segMinLength(seg);
+    spliceOutSegmentIfNeeded(&len, sh, seg, peer, todo);
 
     const EObjKind kind = sh.valTargetKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
@@ -858,7 +856,7 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
-    sh.segSetMinLength(dup, lenRemains);
+    sh.segSetMinLength(dup, len);
 
     LDP_PLOT(symabstract, sh);
 }
