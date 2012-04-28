@@ -1396,12 +1396,14 @@ bool trimRangesIfPossible(
 }
 
 bool reflectCmpResult(
-        SymHeap                     &sh,
+        SymProc                    &proc,
         const enum cl_binop_e       code,
         const bool                  branch,
         const TValId                v1,
         const TValId                v2)
 {
+    SymHeap &sh = proc.sh();
+
     // resolve binary operator
     CmpOpTraits cTraits;
     if (!describeCmpOp(&cTraits, code))
@@ -1422,7 +1424,20 @@ bool reflectCmpResult(
             return false;
 
         // we have deduced that v1 and v2 is actually the same value
-        sh.valMerge(v1, v2);
+
+        LeakMonitor lm(sh);
+        lm.enter();
+
+        TValList leakList;
+        sh.valMerge(v1, v2, &leakList);
+
+        if (lm.importLeakList(&leakList)) {
+            const struct cl_loc *loc = proc.lw();
+            CL_WARN_MSG(loc, "memory leak detected while removing a segment");
+            proc.printBackTrace(ML_WARN);
+        }
+
+        lm.leave();
     }
 
     return true;
@@ -2013,7 +2028,18 @@ bool SymExecCore::concretizeLoop(
                 hitLocal = true;
                 hit = true;
 #endif
-                concretizeObj(sh, val, todo);
+                LeakMonitor lm(sh);
+                lm.enter();
+
+                TValList leakList;
+                concretizeObj(sh, val, todo, &leakList);
+
+                if (lm.importLeakList(&leakList)) {
+                    CL_WARN_MSG(lw_, "memory leak detected while unfolding");
+                    this->printBackTrace(ML_WARN);
+                }
+
+                lm.leave();
             }
         }
 

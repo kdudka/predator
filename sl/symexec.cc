@@ -326,20 +326,20 @@ void SymExecEngine::updateStateInBranch(
         const TValId                v1,
         const TValId                v2)
 {
+    SymProc proc(sh, &bt_);
+    proc.setLocation(lw_);
+
     sh.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
                 &insnCmp, &insnCnd, /* det */ false, branch));
 
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
-    if (!reflectCmpResult(sh, code, branch, v1, v2))
+    if (!reflectCmpResult(proc, code, branch, v1, v2))
         CL_DEBUG_MSG(lw_, "XXX unable to reflect comparison result");
 
     LDP_PLOT(nondetCond, sh);
 
-    SymProc proc(sh, &bt_);
-    proc.setLocation(lw_);
-    proc.killInsn(insnCmp);
-
     const unsigned targetIdx = !branch;
+    proc.killInsn(insnCmp);
     proc.killPerTarget(insnCnd, targetIdx);
 
     const CodeStorage::Block *target = insnCnd.targets[targetIdx];

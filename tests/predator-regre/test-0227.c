@@ -26,7 +26,7 @@ int main()
     while (___sl_get_nondet_int())
         append(&list, data);
 
-    // GC kills 'data' at this point
+    // var-killer kills 'data' at this point
 
     while (list) {
         struct item *next = list->next;

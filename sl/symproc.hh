@@ -65,13 +65,13 @@ inline bool areComparableTypes(const TObjType clt1, const TObjType clt2) {
 }
 
 TValId compareValues(
-        SymHeap                     &sh,
+        SymHeap                    &sh,
         const enum cl_binop_e       code,
         const TValId                v1,
         const TValId                v2);
 
 bool reflectCmpResult(
-        SymHeap                     &sh,
+        SymProc                    &proc,
         const enum cl_binop_e       code,
         const bool                  branch,
         const TValId                v1,
