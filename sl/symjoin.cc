@@ -2478,7 +2478,7 @@ bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0) {
 }
 
 // FIXME: the implementation is not going to work well in certain cases
-bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExists = 0)
+bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExist = 0)
 {
     const TValId root1 = roMapLookup(ctx.valMap1[/* rtl */ 1], rootDst);
     const TValId root2 = roMapLookup(ctx.valMap2[/* rtl */ 1], rootDst);
@@ -2488,7 +2488,7 @@ bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExists = 0)
     if (isValid1 == isValid2)
         return false;
 
-    if (wasMayExists) {
+    if (wasMayExist) {
         const EObjKind kind = (isValid1)
             ? ctx.sh1.valTargetKind(root1)
             : ctx.sh2.valTargetKind(root2);
@@ -2496,11 +2496,11 @@ bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExists = 0)
         switch (kind) {
             case OK_SEE_THROUGH:
             case OK_OBJ_OR_NULL:
-                *wasMayExists = true;
+                *wasMayExist = true;
                 break;
 
             default:
-                *wasMayExists = false;
+                *wasMayExist = false;
         }
     }
 
@@ -2553,12 +2553,12 @@ bool updateMayExistLevels(SymJoinCtx &ctx) {
                 break;
 
             default:
-                // we are interested only in 'may exists' objects here
+                // we are interested only in 0..1 objects here
                 continue;
         }
 
-        bool wasMayExists;
-        if (!isFreshProto(ctx, rootDst, &wasMayExists) || wasMayExists)
+        bool wasMayExist;
+        if (!isFreshProto(ctx, rootDst, &wasMayExist) || wasMayExist)
             // not a newly introduced one
             continue;
 
@@ -2616,7 +2616,7 @@ bool handleDstPreds(SymJoinCtx &ctx) {
             return false;
     }
 
-    // TODO: match gneric Neq predicates also in prototypes;  for now we
+    // TODO: match generic Neq predicates also in prototypes;  for now we
     // consider only minimal segment lengths
     BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
         const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);

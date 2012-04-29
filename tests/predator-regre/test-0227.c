@@ -30,7 +30,7 @@ int main()
 
     while (list) {
         struct item *next = list->next;
-        // the following statement avoids a memleak
+        // the following statement plugs a memleak
 #if 1
         if (!next)
             free(list->data);
