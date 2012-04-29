@@ -1420,7 +1420,6 @@ bool reflectCmpResult(
 
         // introduce a Neq predicate over v1 and v2
         sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
-        CL_BREAK_IF(!protoCheckConsistency(sh));
     }
     else {
         if (!cTraits.preserveEq)

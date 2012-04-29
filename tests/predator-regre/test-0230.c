@@ -21,10 +21,12 @@ static void append(struct item **plist)
 
 int main()
 {
-    // create SLS 0+
     struct item *list = NULL;
-    while (___sl_get_nondet_int())
+
+    // create SLS 1+
+    do
         append(&list);
+    while (___sl_get_nondet_int());
 
     while (list) {
         struct item *next = list->next;

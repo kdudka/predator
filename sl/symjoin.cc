@@ -547,9 +547,10 @@ bool joinFreshObjTripple(
         if (root <= 0 || (VT_RANGE != code && hasKey(vm[/* ltr */ 0], root)))
             return true;
 
-        // XXX
+#if SE_ALLOW_THREE_WAY_JOIN < 3
         if (!ctx.joiningData())
             return false;
+#endif
     }
     else {
         // special values have to match (NULL not treated as special here)
@@ -913,14 +914,20 @@ bool joinSegBinding(
     return false;
 }
 
-/// this runs on the way from joinSymHeaps() only
+/// FIXME: the name is misleading and it does not work anyway
 bool considerImplicitPrototype(
+        TProtoLevel             *pDst,
         const SymJoinCtx        &ctx,
         const TValId            root1,
         const TValId            root2)
 {
     const TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
     const TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
+    if (level1 == level2) {
+        // FIXME
+        *pDst = level1;
+        return true;
+    }
 
     const bool lowLevel1 = (level1 < level2);
     const TProtoLevel diff = (lowLevel1)
@@ -947,8 +954,8 @@ bool considerImplicitPrototype(
             return false;
     }
 
-    SJ_DEBUG("P-P considerImplicitPrototype() matches a pair of objects: "
-             << SJ_VALP(root1, root2));
+    // FIXME
+    *pDst = std::max(level1, level2);
     return true;
 }
 
@@ -993,17 +1000,12 @@ bool joinProtoFlag(
         return true;
     }
 
-    *pDst = level1;
-    if (level2 == *pDst)
-        return true;
-
-    if (!ctx.joiningData() && considerImplicitPrototype(ctx, root1, root2)) {
-        *pDst = std::max(level1, level2);
-        return true;
+    if (ctx.joiningData()) {
+        *pDst = level1;
+        return (level1 == level2);
     }
 
-    SJ_DEBUG("<-- prototype vs shared: " << SJ_VALP(root1, root2));
-    return false;
+    return considerImplicitPrototype(pDst, ctx, root1, root2);
 }
 
 TMinLen joinMinLength(
