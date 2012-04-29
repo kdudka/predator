@@ -1,0 +1,19 @@
+test-0230.c:12:16: error: dereference of NULL value
+test-0230.c:27:15: note: from call of append()
+test-0230.c:22:5: note: from call of main()
+test-0230.c:12:16: error: dereference of NULL value
+test-0230.c:27:15: note: from call of append()
+test-0230.c:22:5: note: from call of main()
+test-0230.c:12:16: error: dereference of NULL value
+test-0230.c:27:15: note: from call of append()
+test-0230.c:22:5: note: from call of main()
+test-0230.c:12:16: error: dereference of NULL value
+test-0230.c:27:15: note: from call of append()
+test-0230.c:22:5: note: from call of main()
+test-0230.c:12:16: error: dereference of NULL value
+test-0230.c:27:15: note: from call of append()
+test-0230.c:22:5: note: from call of main()
+test-0230.c:36:19: note: writing heap graph to 'test-0230.c-36-0000.dot'...
+test-0230.c:36:19: note: writing heap graph to 'test-0230.c-36-0001.dot'...
+test-0230.c:36:19: note: writing heap graph to 'test-0230.c-36-0002.dot'...
+test-0230.c:36:19: note: writing heap graph to 'test-0230.c-36-0003.dot'...

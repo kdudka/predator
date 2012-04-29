@@ -236,6 +236,10 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0228.c - leak-less variant of test-0226
 
+    test-0229.c - non-artificial variant of test-0225.c
+
+    test-0230.c - non-artificial variant of test-0227.c
+
 
 Linux lists
 ===========
