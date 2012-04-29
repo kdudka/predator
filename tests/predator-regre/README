@@ -240,6 +240,12 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0230.c - non-artificial variant of test-0227.c
 
+    test-0231.c - test-0229 forced to create SLS 0+ prior to entering the loop
+
+    test-0232.c - merge of test-0229 and test-0231 resulting in double free
+
+    test-0233.c - leak-less variant of test-0231
+
 
 Linux lists
 ===========
