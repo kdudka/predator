@@ -170,6 +170,9 @@ inline bool objWithBinding(const SymHeap &sh, const TValId root) {
     return (OK_OBJ_OR_NULL != kind);
 }
 
+/// increment prototype level of a single object while taking care of DLS peers
+void objIncrementProtoLevel(SymHeap &sh, TValId root);
+
 /// decrement prototype level of a single object while taking care of DLS peers
 void objDecrementProtoLevel(SymHeap &sh, TValId root);
 
