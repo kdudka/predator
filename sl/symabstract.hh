@@ -77,6 +77,8 @@ bool spliceOutAbstractPath(
         const TValId                 pointingTo,
         TValList                    *leakList = 0);
 
+void decrementProtoLevel(SymHeap &sh, const TValId at);
+
 /// enable/disable debugging of symabstract
 void debugSymAbstract(const bool enable);
 

@@ -3463,7 +3463,7 @@ void SymHeap::valTargetSetAbstract(
 }
 
 void SymHeap::valTargetSetConcrete(TValId root) {
-    CL_DEBUG("SymHeap::objSetConcrete() is taking place...");
+    CL_DEBUG("SymHeap::valTargetSetConcrete() is taking place...");
     CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
     CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(!d->absRoots.isValidEnt(root));
@@ -3556,6 +3556,7 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
             || haveSegBidir(&seg, this, OK_OBJ_OR_NULL, v1, v2)) {
         // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
         this->valTargetSetConcrete(seg);
+        decrementProtoLevel(*this, seg);
         return;
     }
 

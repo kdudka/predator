@@ -168,10 +168,10 @@ struct ProtoFinder {
 };
 
 void clonePrototypes(
-        SymHeap                 &sh,
+        SymHeap                &sh,
         const TValId            rootDst,
         const TValId            rootSrc,
-        const TValList          protoList)
+        const TValList         &protoList)
 {
     // allocate some space for clone IDs
     const unsigned cnt = protoList.size();
@@ -836,6 +836,7 @@ void concretizeObj(
         case OK_SEE_THROUGH:
             // these kinds are much easier than regular list segments
             sh.valTargetSetConcrete(seg);
+            decrementProtoLevel(sh, seg);
             LDP_PLOT(symabstract, sh);
             CL_BREAK_IF(!protoCheckConsistency(sh));
             return;
