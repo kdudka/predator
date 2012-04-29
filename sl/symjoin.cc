@@ -2477,6 +2477,99 @@ bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0) {
     return true;
 }
 
+// FIXME: the implementation is not going to work well in certain cases
+bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExists = 0)
+{
+    const TValId root1 = roMapLookup(ctx.valMap1[/* rtl */ 1], rootDst);
+    const TValId root2 = roMapLookup(ctx.valMap2[/* rtl */ 1], rootDst);
+
+    const bool isValid1 = (VAL_INVALID != root1);
+    const bool isValid2 = (VAL_INVALID != root2);
+    if (isValid1 == isValid2)
+        return false;
+
+    if (wasMayExists) {
+        const EObjKind kind = (isValid1)
+            ? ctx.sh1.valTargetKind(root1)
+            : ctx.sh2.valTargetKind(root2);
+
+        switch (kind) {
+            case OK_SEE_THROUGH:
+            case OK_OBJ_OR_NULL:
+                *wasMayExists = true;
+                break;
+
+            default:
+                *wasMayExists = false;
+        }
+    }
+
+    return true;
+}
+
+struct MayExistLevelUpdater {
+    SymJoinCtx         &ctx;
+    const TValId        rootDst;
+    ObjHandle           ignoredField;
+
+    MayExistLevelUpdater(SymJoinCtx &ctx_, const TValId rootDst_):
+        ctx(ctx_),
+        rootDst(rootDst_)
+    {
+        if (OK_SEE_THROUGH == ctx.dst.valTargetKind(rootDst))
+            ignoredField = nextPtrFromSeg(ctx.dst, rootDst);
+    }
+
+    bool operator()(const ObjHandle &sub) const {
+        if (sub == this->ignoredField)
+            return /* continue */ true;
+
+        const TValId proto = ctx.dst.valRoot(sub.value());
+        if (proto <= VAL_NULL)
+            return /* continue */ true;
+
+        if (rootDst == proto)
+            // self loop
+            return /* continue */ true;
+
+        if (!isFreshProto(ctx, proto))
+            // not a newly introduced one
+            return /* continue */ true;
+
+        // this object became a prototype, increment its level
+        objIncrementProtoLevel(ctx.dst, proto);
+        return /* continue */ true;
+    }
+};
+
+bool updateMayExistLevels(SymJoinCtx &ctx) {
+    TValList dstRoots;
+    ctx.dst.gatherRootObjects(dstRoots, isOnHeap);
+    BOOST_FOREACH(const TValId rootDst, dstRoots) {
+        const EObjKind kind = ctx.dst.valTargetKind(rootDst);
+        switch (kind) {
+            case OK_SEE_THROUGH:
+            case OK_OBJ_OR_NULL:
+                break;
+
+            default:
+                // we are interested only in 'may exists' objects here
+                continue;
+        }
+
+        bool wasMayExists;
+        if (!isFreshProto(ctx, rootDst, &wasMayExists) || wasMayExists)
+            // not a newly introduced one
+            continue;
+
+        const MayExistLevelUpdater visitor(ctx, rootDst);
+        if (!traverseLivePtrs(ctx.dst, rootDst, visitor))
+            return false;
+    }
+
+    return true;
+}
+
 bool matchPreds(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
@@ -2588,6 +2681,9 @@ bool joinSymHeaps(
 
     // join uniform blocks
     if (!joinCVars(ctx, JoinVarVisitor::JVM_UNI_BLOCKS))
+        goto fail;
+
+    if (!updateMayExistLevels(ctx))
         goto fail;
 
     // go through shared Neq predicates and set minimal segment lengths
@@ -2892,6 +2988,9 @@ bool joinData(
         CL_BREAK_IF("joinData() has failed, did joinDataReadOnly() succeed?");
         return false;
     }
+
+    if (!updateMayExistLevels(ctx))
+        return false;
 
     // ghost is a transiently existing object representing the join of dst/src
     const TValId ghost = roMapLookup(ctx.valMap1[0], dst);
