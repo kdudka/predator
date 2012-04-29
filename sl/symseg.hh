@@ -228,4 +228,10 @@ inline void buildIgnoreList(
  */
 bool dlSegCheckConsistency(const SymHeap &sh);
 
+/**
+ * returns true if all non-abstract prototypes do not bump the nestin level
+ * @note this runs in debug build only
+ */
+bool protoCheckConsistency(const SymHeap &sh);
+
 #endif /* H_GUARD_SYMSEG_H */

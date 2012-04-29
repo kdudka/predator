@@ -2567,6 +2567,9 @@ bool joinSymHeaps(
     // initialize symbolic join ctx
     SymJoinCtx ctx(*pDst, sh1, sh2, allowThreeWay);
 
+    CL_BREAK_IF(!protoCheckConsistency(ctx.sh1));
+    CL_BREAK_IF(!protoCheckConsistency(ctx.sh2));
+
     // first try to join return addresses (if in use)
     if (!joinReturnAddrs(ctx))
         goto fail;
@@ -2613,6 +2616,7 @@ bool joinSymHeaps(
     *pStatus = ctx.status;
     SJ_DEBUG("<-- joinSymHeaps() says " << ctx.status);
     CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
+    CL_BREAK_IF(!protoCheckConsistency(ctx.dst));
     return true;
 
 fail:

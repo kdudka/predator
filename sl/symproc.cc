@@ -32,6 +32,7 @@
 #include "symgc.hh"
 #include "symheap.hh"
 #include "symplot.hh"
+#include "symseg.hh"
 #include "symstate.hh"
 #include "symutil.hh"
 #include "symtrace.hh"
@@ -1403,6 +1404,7 @@ bool reflectCmpResult(
         const TValId                v2)
 {
     SymHeap &sh = proc.sh();
+    CL_BREAK_IF(!protoCheckConsistency(sh));
 
     // resolve binary operator
     CmpOpTraits cTraits;
@@ -1418,6 +1420,7 @@ bool reflectCmpResult(
 
         // introduce a Neq predicate over v1 and v2
         sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
+        CL_BREAK_IF(!protoCheckConsistency(sh));
     }
     else {
         if (!cTraits.preserveEq)
@@ -1440,6 +1443,7 @@ bool reflectCmpResult(
         lm.leave();
     }
 
+    CL_BREAK_IF(!protoCheckConsistency(sh));
     return true;
 }
 

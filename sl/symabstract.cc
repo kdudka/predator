@@ -669,6 +669,8 @@ bool considerAbstraction(
     LDP_PLOT(symabstract, sh);
 
     for (unsigned i = 0; i < lenTotal; ++i) {
+        CL_BREAK_IF(!protoCheckConsistency(sh));
+
         if (!segAbstractionStep(sh, off, &cursor)) {
             CL_DEBUG("<-- validity of next " << (lenTotal - i - 1)
                     << " abstraction step(s) broken, forcing re-discovery...");
@@ -684,6 +686,8 @@ bool considerAbstraction(
         sh.traceUpdate(trAbs);
 
         LDP_PLOT(symabstract, sh);
+
+        CL_BREAK_IF(!protoCheckConsistency(sh));
     }
 
     CL_DEBUG("<-- successfully abstracted " << name);
@@ -694,6 +698,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    CL_BREAK_IF(!protoCheckConsistency(sh));
 
     // take the value of 'next' pointer from peer
     const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
@@ -713,6 +718,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     sh.valTargetSetConcrete(seg);
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    CL_BREAK_IF(!protoCheckConsistency(sh));
 }
 
 void spliceOutListSegment(
@@ -813,6 +819,8 @@ void concretizeObj(
         TSymHeapList                &todo,
         TValList                    *leakList)
 {
+    CL_BREAK_IF(!protoCheckConsistency(sh));
+
     const TValId seg = sh.valRoot(addr);
     const TValId peer = segPeer(sh, seg);
 
@@ -829,6 +837,7 @@ void concretizeObj(
             // these kinds are much easier than regular list segments
             sh.valTargetSetConcrete(seg);
             LDP_PLOT(symabstract, sh);
+            CL_BREAK_IF(!protoCheckConsistency(sh));
             return;
 
         default:
@@ -868,6 +877,8 @@ void concretizeObj(
     sh.segSetMinLength(dup, len);
 
     LDP_PLOT(symabstract, sh);
+
+    CL_BREAK_IF(!protoCheckConsistency(sh));
 }
 
 bool spliceOutAbstractPathCore(
