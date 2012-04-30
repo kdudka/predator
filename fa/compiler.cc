@@ -1759,14 +1759,23 @@ protected:
 	}
 
 
-	void compileInstruction(const CodeStorage::Insn& insn) {
-
+	/**
+	 * @brief  Compiles an instruction
+	 *
+	 * This method compiles an arbitrary instruction, by calling a proper method
+	 * corresponding to the instruction code and subcode.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileInstruction(const CodeStorage::Insn& insn)
+	{
 		CL_DEBUG_AT(3, insn.loc << ' ' << insn);
 
-		switch (insn.code) {
-
-			case cl_insn_e::CL_INSN_UNOP:
-				switch (insn.subCode) {
+		switch (insn.code)
+		{	// according to the main instruction code
+			case cl_insn_e::CL_INSN_UNOP: // unary operator
+				switch (insn.subCode)
+				{	// according to the instruction subcode
 					case cl_unop_e::CL_UNOP_ASSIGN:
 						compileAssignment(insn);
 						break;
@@ -1779,8 +1788,9 @@ protected:
 				}
 				break;
 
-			case cl_insn_e::CL_INSN_BINOP:
-				switch (insn.subCode) {
+			case cl_insn_e::CL_INSN_BINOP: // binary operator
+				switch (insn.subCode)
+				{	// according to the instruction subcode
 					case cl_binop_e::CL_BINOP_EQ:
 						compileCmp<FI_eq>(insn);
 						break;
@@ -1796,9 +1806,6 @@ protected:
 					case cl_binop_e::CL_BINOP_PLUS:
 						compilePlus(insn);
 						break;
-/*					case cl_binop_e::CL_BINOP_MINUS:
-						execMinus(state, parent, insn);
-						break;*/
 					case cl_binop_e::CL_BINOP_POINTER_PLUS:
 						compilePointerPlus(insn);
 						break;
@@ -1808,19 +1815,19 @@ protected:
 				}
 				break;
 
-			case cl_insn_e::CL_INSN_CALL:
+			case cl_insn_e::CL_INSN_CALL: // function call
 				compileCall(insn);
 				break;
 
-			case cl_insn_e::CL_INSN_RET:
+			case cl_insn_e::CL_INSN_RET: // return from a function
 				compileRet(insn);
 				break;
 
-			case cl_insn_e::CL_INSN_JMP:
+			case cl_insn_e::CL_INSN_JMP: // jump
 				compileJmp(insn);
 				break;
 
-			case cl_insn_e::CL_INSN_COND:
+			case cl_insn_e::CL_INSN_COND: // condition
 				compileCond(insn);
 				break;
 
@@ -1829,6 +1836,7 @@ protected:
 					&insn.loc);
 		}
 	}
+
 
 	void compileBlock(const CodeStorage::Block* block, bool abstract)
 	{
