@@ -26,10 +26,13 @@
 
 #include "symheap.hh"
 #include "symplot.hh"
+#include "symtrace.hh"
 
 #include <iostream>
 
 using std::cout;
+
+SymHeapCore *symdump_ref_heap;
 
 void dump_clt(const struct cl_type *clt) {
     cltToStream(cout, clt, /* depth */ 3U);
@@ -76,6 +79,9 @@ void dump_plot_core(const SymHeapCore *core, const char *name) {
         cout << "dump_plot: error: failed to downcast SymHeapCore to SymHeap\n";
         return;
     }
+
+    // paralyze SymHeap self-checks while plotting from a debugger
+    ProtectionIntrusion intrudor;
 
     // attempt to plot heap
     if (!plotHeap(*sh, name))

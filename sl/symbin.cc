@@ -29,6 +29,7 @@
 #undef PREDATOR
 
 #include "symabstract.hh"
+#include "symdump.hh"
 #include "symgc.hh"
 #include "symjoin.hh"
 #include "symplot.hh"
@@ -42,6 +43,7 @@
 #include <libgen.h>
 #include <map>
 
+typedef const struct cl_loc     *TLoc;
 typedef const struct cl_operand &TOp;
 
 bool readPlotName(
@@ -601,6 +603,65 @@ bool handleStrlen(
     return true;
 }
 
+bool handleStrncpy(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const TLoc loc = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() != 5) {
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    // read the values of strncpy parameters
+    const TValId valDst  = core.valFromOperand(opList[/* dst */ 2]);
+    const TValId valSrc  = core.valFromOperand(opList[/* src */ 3]);
+    const TValId valSize = core.valFromOperand(opList[/* n   */ 4]);
+
+    SymHeap &sh = core.sh();
+
+    IR::Range size;
+    if (!rngFromVal(&size, sh, valSize) || size.lo < IR::Int0) {
+        CL_ERROR_MSG(loc, "n arg of " << name << "() is not a known integer");
+        core.printBackTrace(ML_ERROR);
+        return true;
+    }
+
+    const TSizeRange strLen = sh.valSizeOfString(valSrc);
+    const bool isValidString = (IR::Int0 < strLen.lo);
+    const TSizeOf srcLimit = (isValidString)
+        ? strLen.hi
+        : size.hi;
+
+    if (core.checkForInvalidDeref(valSrc, srcLimit)) {
+        // error message already printed out
+        core.printBackTrace(ML_ERROR);
+        insertCoreHeap(dst, core, insn);
+        return true;
+    }
+
+    if (isValidString) {
+        CL_DEBUG("strncpy() writes zeros");
+        executeMemset(core, valDst, VAL_NULL, valSize);
+
+        CL_DEBUG("strncpy() transfers the data");
+        const CustomValue cVal(strLen);
+        const TValId valLen = sh.valWrapCustom(cVal);
+        executeMemmove(core, valDst, valSrc, valLen, /* allowOverlap */ false);
+    }
+    else {
+        CL_DEBUG("strncpy() only invalidates the given range");
+        const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        executeMemset(core, valDst, valUnknown, valSize);
+    }
+
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
 bool handleNondetInt(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -801,7 +862,10 @@ class BuiltInTable {
                 const char                          *name)
             const;
 
-        const TOpIdxList& lookForDerefs(TInsn) const;
+        const TOpIdxList& lookForDerefs(const char *name) const;
+
+        // TODO: rename and hide
+        const TOpIdxList                            emp_;
 
     private:
         BuiltInTable();
@@ -819,7 +883,6 @@ class BuiltInTable {
 
         typedef std::map<std::string, TOpIdxList>   TDerefMap;
         TDerefMap                                   der_;
-        const TOpIdxList                            emp_;
 };
 
 BuiltInTable *BuiltInTable::inst_;
@@ -837,6 +900,7 @@ BuiltInTable::BuiltInTable() {
     tbl_["printf"]                                  = handlePrintf;
     tbl_["puts"]                                    = handlePuts;
     tbl_["strlen"]                                  = handleStrlen;
+    tbl_["strncpy"]                                 = handleStrncpy;
 
     // Linux kernel
     tbl_["kzalloc"]                                 = handleKzalloc;
@@ -869,6 +933,11 @@ BuiltInTable::BuiltInTable() {
     der_["memmove"]     .push_back(/* dst  */ 2);
     der_["memmove"]     .push_back(/* src  */ 3);
     der_["memset"]      .push_back(/* addr */ 2);
+    // TODO: printf
+    der_["puts"]        .push_back(/* s    */ 2);
+    der_["strlen"]      .push_back(/* s    */ 2);
+    der_["strncpy"]     .push_back(/* dst  */ 2);
+    der_["strncpy"]     .push_back(/* src  */ 3);
 }
 
 bool BuiltInTable::handleBuiltIn(
@@ -884,17 +953,14 @@ bool BuiltInTable::handleBuiltIn(
         return false;
 
     SymHeap &sh = core.sh();
+    SymDumpRefHeap shRef(&sh);
     sh.traceUpdate(new Trace::InsnNode(sh.traceNode(), &insn, /* bin */ true));
 
     const THandler hdl = it->second;
     return hdl(dst, core, insn, name);
 }
 
-const TOpIdxList& BuiltInTable::lookForDerefs(TInsn insn) const {
-    const char *name;
-    if (!fncNameFromCst(&name, &insn.operands[/* fnc */ 1]))
-        return emp_;
-
+const TOpIdxList& BuiltInTable::lookForDerefs(const char *name) const {
     TDerefMap::const_iterator it = der_.find(name);
     if (der_.end() == it)
         // no fnc name matched as built-in
@@ -903,21 +969,47 @@ const TOpIdxList& BuiltInTable::lookForDerefs(TInsn insn) const {
     return it->second;
 }
 
+bool fncNameFromOp(
+        const char                                **pName,
+        SymExecCore                                 &core,
+        const struct cl_operand                     &op)
+{
+    int uid;
+    if (!core.fncFromOperand(&uid, op))
+        return false;
+
+    const TStorRef stor = core.sh().stor();
+    const CodeStorage::Fnc *fnc = stor.fncs[uid];
+    const char *name = nameOf(*fnc);
+    if (!name)
+        return false;
+
+    *pName = name;
+    return true;
+}
+
 bool handleBuiltIn(
         SymState                                    &dst,
         SymExecCore                                 &core,
         const CodeStorage::Insn                     &insn)
 {
     const char *name;
-    if (!fncNameFromCst(&name, &insn.operands[/* fnc */ 1]))
+    if (!fncNameFromOp(&name, core, insn.operands[/* fnc */ 1]))
         return false;
 
     const BuiltInTable *tbl = BuiltInTable::inst();
     return tbl->handleBuiltIn(dst, core, insn, name);
 }
 
-const TOpIdxList& opsWithDerefSemanticsInCallInsn(const CodeStorage::Insn &insn)
+const TOpIdxList& opsWithDerefSemanticsInCallInsn(
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn)
 {
     const BuiltInTable *tbl = BuiltInTable::inst();
-    return tbl->lookForDerefs(insn);
+
+    const char *name;
+    if (!fncNameFromOp(&name, core, insn.operands[/* fnc */ 1]))
+        return tbl->emp_;
+
+    return tbl->lookForDerefs(name);
 }

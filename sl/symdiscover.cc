@@ -41,15 +41,18 @@ bool matchSegBinding(
         const BindingOff            &offDiscover)
 {
     const EObjKind kind = sh.valTargetKind(seg);
+    switch (kind) {
+        case OK_CONCRETE:
+            // nothing to match actually
+            return true;
 
-    // TODO
-#if 0
-    CL_BREAK_IF(OK_OBJ_OR_NULL == kind);
-#endif
+        case OK_OBJ_OR_NULL:
+            // OK_OBJ_OR_NULL on the path --> withdraw it!
+            return false;
 
-    if (OK_CONCRETE == kind)
-        // nothing to match actually
-        return true;
+        default:
+            break;
+    }
 
     const BindingOff off = sh.segBinding(seg);
     if (off.head != offDiscover.head)
@@ -126,7 +129,7 @@ bool validatePointingObjects(
     }
 
     const TValId headAddr = sh.valByOffset(root, off.head);
-    const bool rootIsProto = sh.valTargetIsProto(root);
+    const TProtoLevel rootProtoLevel = sh.valTargetProtoLevel(root);
 
     std::set<TValId> whiteList;
     whiteList.insert(sh.valByOffset(prev, off.next));
@@ -147,7 +150,7 @@ bool validatePointingObjects(
         if (hasKey(allowedReferers, sh.valRoot(at)))
             continue;
 
-        if (!rootIsProto && sh.valTargetIsProto(at))
+        if (rootProtoLevel + 1 == sh.valTargetProtoLevel(at))
             // FIXME: subtle
             continue;
 
@@ -304,55 +307,16 @@ bool matchData(
     return true;
 }
 
-bool dlSegHaveChain(
-        SymHeap                     &sh,
-        const TValId                beg,
-        const TValId                end,
-        const TOffset               offNext)
-{
-    TValSet seen;
+typedef std::map<int /* cost */, int /* length */> TRankMap;
 
-    for (TValId cursor = beg;
-            0 < cursor && insertOnce(seen, cursor);
-            cursor = nextRootObj(sh, cursor, offNext))
-    {
-        const TValId next = nextRootObj(sh, cursor, offNext);
-        if (next == end)
-            return true;
-
-        if (OK_DLS != sh.valTargetKind(next))
-            return false;
-    }
-
-    return false;
-}
-
-bool segAvoidSelfCycle(
-        SymHeap                     &sh,
-        const BindingOff            &off,
-        const TValId                beg,
-        const TValId                end)
-{
-    if (!isDlsBinding(off)) {
-        const TValId next = nextRootObj(sh, end, off.next);
-        return haveSeg(sh, next, beg, OK_SLS);
-    }
-
-    TValId seg = end;
-    if (OK_DLS == sh.valTargetKind(end))
-        seg = dlSegPeer(sh, end);
-
-    return dlSegHaveChain(sh, beg, seg, off.prev)
-        || dlSegHaveChain(sh, seg, beg, off.next);
-}
-
-bool segDiscover(
-        int                         *pLen,
-        int                         *pCost,
+void segDiscover(
+        TRankMap                    &dst,
         SymHeap                     &sh,
         const BindingOff            &off,
         const TValId                entry)
 {
+    CL_BREAK_IF(!dst.empty());
+
     // we use std::set to detect loops
     std::set<TValId> haveSeen;
     haveSeen.insert(entry);
@@ -361,10 +325,10 @@ bool segDiscover(
     TValId at = jumpToNextObj(sh, off, haveSeen, entry);
     if (!insertOnce(haveSeen, at))
         // loop detected
-        return false;
+        return;
 
     // we need a way to prefer lossless prototypes
-    *pCost = 0;
+    int maxCostOnPath = 0;
 
     // main loop of segDiscover()
     std::vector<TValId> path;
@@ -394,48 +358,41 @@ bool segDiscover(
             // someone points to a prototype
             break;
 
+        bool leaving = false;
+
         // look ahead
         TValId next = jumpToNextObj(sh, off, haveSeen, at);
         if (!validatePointingObjects(sh, off, at, prev, next, protoRoots[1])) {
             // someone points at/inside who should not
 
-            const bool allowReferredEnd =
-                /* looking of a DLS */ isDlsBinding(off)
-                && OK_DLS != sh.valTargetKind(at)
+            leaving = /* looking for a DLS */ isDlsBinding(off)
+                && /* got a DLS */ OK_DLS != sh.valTargetKind(at)
                 && validateSegEntry(sh, off, at, prev, VAL_INVALID,
                                     protoRoots[1]);
 
-            if (allowReferredEnd) {
-                // we allow others to point at DLS end-point's _head_
-                path.push_back(at);
-                if (*pCost < cost)
-                    *pCost = cost;
-            }
-
-            break;
+            if (!leaving)
+                break;
         }
 
         // enlarge the path by one
         path.push_back(at);
-        if (*pCost < cost)
-            *pCost = cost;
+        if (maxCostOnPath < cost)
+            maxCostOnPath = cost;
+
+        // remember the longest path at this cost level
+#if !SE_ALLOW_SUBPATH_RANKING
+        dst.clear();
+#endif
+        dst[maxCostOnPath] = path.size();
+
+        if (leaving)
+            // we allow others to point at DLS end-point's _head_
+            break;
 
         // jump to the next object on the path
         prev = at;
         at = next;
     }
-
-    if (path.empty())
-        // found nothing
-        return false;
-
-    int len = path.size();
-    if (segAvoidSelfCycle(sh, off, entry, path.back()))
-        // avoid creating self-cycle of two segments
-        --len;
-
-    *pLen = len;
-    return (0 < len);
 }
 
 class PtrFinder {
@@ -584,36 +541,43 @@ unsigned /* len */ selectBestAbstraction(
         // go through binding candidates
         const SegCandidate &segc = candidates[idx];
         BOOST_FOREACH(const BindingOff &off, segc.offList) {
-            int len, cost;
-            if (!segDiscover(&len, &cost, sh, off, segc.entry))
-                continue;
+            TRankMap rMap;
+            segDiscover(rMap, sh, off, segc.entry);
 
+            // go through all cost/length pairs
+            BOOST_FOREACH(TRankMap::const_reference rank, rMap) {
+                const int len = rank.second;
+                if (len <= 0)
+                    continue;
+
+                int cost = rank.first;
 #if SE_DEFER_SLS_INTRO
-            if (!cost 
-                    && !isDlsBinding(off)
-                    && !slSegOnPath(sh, off, segc.entry, len))
-            {
-                cost = (SE_DEFER_SLS_INTRO);
-            }
+                if (!cost 
+                        && !isDlsBinding(off)
+                        && !slSegOnPath(sh, off, segc.entry, len))
+                {
+                    cost = (SE_DEFER_SLS_INTRO);
+                }
 #endif
 
-            if (bestCost < cost)
-                // we already got something cheaper
-                continue;
+                if (bestCost < cost)
+                    // we already got something cheaper
+                    continue;
 
-            bestCost = cost;
-            if (len <= bestLen)
-                // we already got something longer
-                continue;
+                bestCost = cost;
+                if (len <= bestLen)
+                    // we already got something longer
+                    continue;
 
-            if (len <= (cost >> 2))
-                // too expensive
-                continue;
+                if (len <= (cost >> 2))
+                    // too expensive
+                    continue;
 
-            // update best candidate
-            bestIdx = idx;
-            bestLen = len;
-            bestBinding = off;
+                // update best candidate
+                bestIdx = idx;
+                bestLen = len;
+                bestBinding = off;
+            }
         }
     }
 

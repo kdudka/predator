@@ -1,17 +1,17 @@
 test-0182.c:6:1: error: error label "ERROR" has been reached
-test-0182.c:6:1: note: <-- abstract state reachable from L83 [entry block]
+test-0182.c:6:1: note: <-- abstract state reachable from L89 [entry block]
 test-0182.c:149:9: note: from call of fail()
-test-0182.c:149:9: note: <-- abstract state reachable from L21
-test-0182.c:149:9: note:     <-- abstract state reachable from L20
-test-0182.c:149:9: note:         <-- abstract state reachable from L20
-test-0182.c:148:9: note:             <-- abstract state reachable from L18
-test-0182.c:148:9: note:                 <-- abstract state reachable from L18
-test-0182.c:147:9: note:                     <-- abstract state reachable from L16
-test-0182.c:146:28: note:                         <-- abstract state reachable from L16
-test-0182.c:145:5: note:                             <-- abstract state reachable from L15
-test-0182.c:145:5: note:                                 <-- abstract state reachable from L15
-test-0182.c:143:17: note:                                     <-- abstract state reachable from L14
-test-0182.c:143:17: note:                                         <-- abstract state reachable from L14 [entry block]
+test-0182.c:149:9: note: <-- abstract state reachable from L22
+test-0182.c:149:9: note:     <-- abstract state reachable from L21
+test-0182.c:149:9: note:         <-- abstract state reachable from L21
+test-0182.c:148:9: note:             <-- abstract state reachable from L19
+test-0182.c:148:9: note:                 <-- abstract state reachable from L19
+test-0182.c:147:9: note:                     <-- abstract state reachable from L17
+test-0182.c:146:28: note:                         <-- abstract state reachable from L17
+test-0182.c:145:5: note:                             <-- abstract state reachable from L16
+test-0182.c:145:5: note:                                 <-- abstract state reachable from L16
+test-0182.c:143:17: note:                                     <-- abstract state reachable from L15
+test-0182.c:143:17: note:                                         <-- abstract state reachable from L15 [entry block]
 test-0182.c:178:17: note: from call of inspect_full()
 test-0182.c:177:25: note: <-- abstract state reachable from L1 [entry block]
 test-0182.c:175:5: note: from call of main()

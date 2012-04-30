@@ -21,8 +21,8 @@
 #include "symplot.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/storage.hh>
 #include <cl/clutil.hh>
+#include <cl/storage.hh>
 
 #include "plotenum.hh"
 #include "symheap.hh"
@@ -62,6 +62,12 @@ struct PlotData {
     {
     }
 };
+
+void dlSegJumpToBegIfNeeded(const SymHeap &sh, TValId *pRoot) {
+    const TValId root = *pRoot;
+    if (isDlSegPeer(sh, root))
+        *pRoot = dlSegPeer(sh, root);
+}
 
 #define SL_QUOTE(what) "\"" << what << "\""
 
@@ -113,14 +119,25 @@ inline const char* offPrefix(const TOffset off) {
 
 #define SIGNED_OFF(off) offPrefix(off) << (off)
 
+inline void appendLabelIf(std::ostream &str, const char *label) {
+    if (!label)
+        return;
+
+    str << ", label=\"" << label << "\"";
+}
+
 void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
 {
     const char *color = (off < 0)
         ? "red"
         : "black";
 
-    plot.out << "\t" << SL_QUOTE(from)
-        << " -> " << SL_QUOTE(to)
+    plot.out << "\t"
+#if SYMPLOT_FLAT_MODE
+        << SL_QUOTE(to) << " -> " << SL_QUOTE("obj" << from)
+#else
+        << SL_QUOTE(from) << " -> " << SL_QUOTE(to)
+#endif
         << " [color=" << color
         << ", fontcolor=" << color
         << ", label=\"[" << SIGNED_OFF(off)
@@ -221,14 +238,23 @@ void describeFieldPlacement(PlotData &plot, const ObjHandle &obj, TObjType clt)
     BOOST_FOREACH(const int idx, ic) {
         CL_BREAK_IF(clt->item_cnt <= idx);
         const cl_type_item *item = clt->items + idx;
+        const cl_type_e code = clt->code;
 
-        // read field name
-        const char *name = item->name;
-        if (!name)
-            name = "<anon>";
+        if (CL_TYPE_ARRAY == code) {
+            // TODO: support non-zero indexes? (not supported by CltFinder yet)
+            CL_BREAK_IF(item->offset);
+            plot.out << "[0]";
+        }
+        else {
+            // read field name
+            const char *name = item->name;
+            if (!name)
+                name = "<anon>";
 
-        // write to stream and move to the next one
-        plot.out << "." << name;
+            plot.out << "." << name;
+        }
+
+        // jump to the next item
         clt = item->type;
     }
 }
@@ -244,7 +270,7 @@ void describeObject(PlotData &plot, const ObjHandle &obj, const bool lonely) {
     const char *tag = "";
     if (lonely && isProgramVar(code)) {
         describeVar(plot, root);
-        tag = "obj";
+        tag = "field";
     }
 
     const TObjType cltRoot = sh.valLastKnownTypeOfTarget(root);
@@ -273,24 +299,59 @@ void printRawRange(
 void plotRootValue(PlotData &plot, const TValId val, const char *color) {
     SymHeap &sh = plot.sh;
     const TSizeRange size = sh.valSizeOfTarget(val);
+    const unsigned refCnt = sh.usedByCount(val);
 
-    // visualize the count of references as pen width
-    const float pw = static_cast<float>(1U + sh.usedByCount(val));
-    plot.out << "\t" << SL_QUOTE(val)
-        << " [shape=ellipse, penwidth=" << pw
-        << ", color=" << color
-        << ", fontcolor=" << color
-        << ", label=\"";
+#if SYMPLOT_FLAT_MODE
+    if (refCnt)
+#endif
+    {
+        // visualize the count of references as pen width
+        const float pw = static_cast<float>(1U + refCnt);
+        plot.out << "\t" << SL_QUOTE(val)
+            << " [shape=ellipse, penwidth=" << pw
+            << ", color=" << color
+            << ", fontcolor=" << color
+            << ", label=\"";
 
-    const EValueTarget code = sh.valTarget(val);
-    if (isProgramVar(code))
-        describeVar(plot, val);
+        const EValueTarget code = sh.valTarget(val);
+        if (isProgramVar(code))
+            describeVar(plot, val);
+        else
+            plot.out << "#" << val;
+    }
+
+#if SYMPLOT_FLAT_MODE
+    if (refCnt)
+        plot.out << "\"];";
+
+    TValId obj = val;
+    if (isDlSegPeer(sh, val))
+        obj = dlSegPeer(sh, val);
     else
-        plot.out << "#" << val;
+        plot.out << "\n\t" << SL_QUOTE("obj" << val)
+            << " [shape=box"
+            << ", color=" << color
+            << ", fontcolor=" << color
+            << ", label=\"O #" << val;
 
-    plot.out << " [size = ";
-    printRawRange(plot.out, size, " B");
-    plot.out << "]\"];\n";
+    if (val == obj)
+#endif
+    {
+        plot.out << " [size = ";
+        printRawRange(plot.out, size, " B");
+        plot.out << "]\"];\n";
+    }
+
+#if SYMPLOT_FLAT_MODE
+    if (!refCnt)
+        return;
+
+    plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE("obj" << obj)
+        << " [color=" << color
+        << ", fontcolor=" << color
+        << ", label=\"[" << SIGNED_OFF(0)
+        << "]\"];\n";
+#endif
 }
 
 enum EObjectClass {
@@ -325,18 +386,12 @@ struct AtomicObject {
     }
 };
 
-void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
+bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
 {
     SymHeap &sh = plot.sh;
 
     const ObjHandle &obj = ao.obj;
     CL_BREAK_IF(!obj.isValid());
-
-    // store address mapping for the live object (FIXME: this may trigger
-    // unnecessary assignment of a fresh address, which is inappropriate
-    // as long as we take a _const_ reference to SymHeap)
-    const TValId at = obj.placedAt();
-    plot.liveObjs[at].push_back(obj);
 
     const char *color = "black";
     const char *props = ", penwidth=3.0, style=dashed";
@@ -345,7 +400,7 @@ void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
     switch (code) {
         case OC_VOID:
             CL_BREAK_IF("plotAtomicObj() got an object of class OC_VOID");
-            return;
+            return false;
 
         case OC_PTR:
             props = "";
@@ -356,6 +411,10 @@ void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
             break;
 
         case OC_PREV:
+#if !SYMPLOT_DEBUG_DLS
+            return false;
+#endif
+            // cppcheck-suppress unreachableCode
             color = "gold";
             break;
 
@@ -364,6 +423,15 @@ void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
             props = ", style=dotted";
     }
 
+    // store address mapping for the live object
+    const TValId at = obj.placedAt();
+    plot.liveObjs[at].push_back(obj);
+
+#if SYMPLOT_FLAT_MODE
+    return false;
+#endif
+
+    // cppcheck-suppress unreachableCode
     if (lonely) {
         const EValueTarget code = sh.valTarget(at);
         switch (code) {
@@ -388,6 +456,7 @@ void plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
         plot.out << " [size = " << obj.objType()->size << "B]";
 
     plot.out << "\"];\n";
+    return true;
 }
 
 void plotUniformBlocks(PlotData &plot, const TValId root) {
@@ -403,6 +472,7 @@ void plotUniformBlocks(PlotData &plot, const TValId root) {
 
         // plot block node
         const int id = ++plot.last;
+#if !SYMPLOT_FLAT_MODE
         plot.out << "\t" << SL_QUOTE("lonely" << id)
             << " [shape=box, color=blue, fontcolor=blue, label=\"UNIFORM_BLOCK "
             << bl.size << "B\"];\n";
@@ -414,6 +484,7 @@ void plotUniformBlocks(PlotData &plot, const TValId root) {
             << " -> " << SL_QUOTE("lonely" << id)
             << " [color=black, fontcolor=black, label=\"[+"
             << off << "]\"];\n";
+#endif
 
         // schedule hasValue edge
         const PlotData::TDangVal dv(id, bl.tplValue);
@@ -468,7 +539,8 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
         const TOffset off = item.first;
         BOOST_FOREACH(const AtomicObject &ao, /* TAtomList */ item.second) {
             // plot a single object
-            plotAtomicObj(plot, ao, /* lonely */ false);
+            if (!plotAtomicObj(plot, ao, /* lonely */ false))
+                continue;
 
             // connect the inner object with the root by an offset edge
             plotOffset(plot, off, at, ao.obj.objId());
@@ -476,37 +548,68 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
     }
 }
 
-std::string labelOfCompObj(const SymHeap &sh, const TValId root) {
-    std::string label;
-    if (sh.valTargetIsProto(root))
-        label = "[prototype] ";
+std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
+{
+    std::ostringstream label;
+    const TProtoLevel protoLevel= sh.valTargetProtoLevel(root);
+    if (protoLevel)
+        label << "[L" << protoLevel << " prototype] ";
 
     const EObjKind kind = sh.valTargetKind(root);
     switch (kind) {
         case OK_CONCRETE:
-            return label;
+            return label.str();
 
         case OK_OBJ_OR_NULL:
         case OK_SEE_THROUGH:
-            label += "0..1";
-            return label;
+            label << "0..1";
+            break;
 
         case OK_SLS:
-            label += "SLS";
+            label << "SLS";
             break;
 
         case OK_DLS:
-            label += "DLS";
+            label << "DLS";
             break;
     }
 
-    // append minimal segment length
-    const TMinLen len = sh.segMinLength(root);
-    std::ostringstream str;
-    str << " " << len << "+";
-    label += str.str();
+    switch (kind) {
+        case OK_SLS:
+        case OK_DLS:
+            // append minimal segment length
+            label << " " << sh.segMinLength(root) << "+";
 
-    return label;
+        default:
+            break;
+    }
+
+    if (showProps && OK_OBJ_OR_NULL != kind) {
+        const BindingOff &bf = sh.segBinding(root);
+        switch (kind) {
+            case OK_SLS:
+            case OK_DLS:
+                label << ", head [" << SIGNED_OFF(bf.head) << "]";
+
+            default:
+                break;
+        }
+
+        switch (kind) {
+            case OK_SEE_THROUGH:
+            case OK_SLS:
+            case OK_DLS:
+                label << ", next [" << SIGNED_OFF(bf.next) << "]";
+
+            default:
+                break;
+        }
+
+        if (OK_DLS == kind)
+            label << ", prev [" << SIGNED_OFF(bf.prev) << "]";
+    }
+
+    return label.str();
 }
 
 template <class TCont>
@@ -555,7 +658,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
             break;
     }
 
-    const std::string label = labelOfCompObj(sh, at);
+    const std::string label = labelOfCompObj(sh, at, /* showProps */ true);
 
     // open cluster
     plot.out
@@ -563,7 +666,12 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
         << "\" {\n\trank=same;\n\tlabel=" << SL_QUOTE(label)
         << ";\n\tcolor=" << color
         << ";\n\tfontcolor=" << color
-        << ";\n\tbgcolor=gray98;\n\tstyle=dashed;\n\tpenwidth=" << pw
+#if SYMPLOT_FLAT_MODE
+        << ";\n\tcolor=transparent;"
+#else
+        << ";\n\tbgcolor=gray98;\n\tstyle=dashed;"
+#endif
+        << "\n\tpenwidth=" << pw
         << ";\n";
 
     // plot the root value
@@ -575,45 +683,63 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
     // plot all atomic objects inside
     plotInnerObjects(plot, at, liveObjs);
 
+    // in case of DLS, plot the corresponding peer
+    TValId peer;
+    if (OK_DLS == sh.valTargetKind(at)
+            && OK_DLS == sh.valTargetKind((peer = dlSegPeer(sh, at))))
+    {
+        // plot peer's root value
+        plotRootValue(plot, peer, color);
+#if !SYMPLOT_DEBUG_DLS
+        // plot peer's uniform blocks
+        plotUniformBlocks(plot, at);
+#endif
+
+#if SYMPLOT_DEBUG_DLS
+        ObjList peerObjs;
+        sh.gatherLiveObjects(peerObjs, peer);
+#else
+        TObjSet peerObjs;
+        buildIgnoreList(peerObjs, sh, peer);
+#endif
+        // plot all atomic objects inside
+        plotInnerObjects(plot, peer, peerObjs);
+    }
+
     // close cluster
     plot.out << "}\n";
 }
 
-void plotDlSeg(PlotData &plot, const TValId seg, const ObjList &liveObjs) {
+bool plotSimpleRoot(PlotData &plot, const ObjHandle &obj) {
     SymHeap &sh = plot.sh;
 
-    const std::string label = labelOfCompObj(sh, seg);
+    const TValId at = obj.placedAt();
+    if (sh.valOffset(at))
+        // offset detected
+        return false;
 
-    // open a cluster for the DLS pair
-    plot.out
-        << "subgraph \"cluster" << (++plot.last)
-        << "\" {\n\tlabel=" << SL_QUOTE(label)
-        << "\n\tcolor=gold;\n\tfontcolor=gold;\n\tstyle=dashed;\n";
+    const TValId root = sh.valRoot(at);
+    if (sh.usedByCount(root))
+        // root pointed
+        return false;
 
-    // plot the given root
-    plotCompositeObj(plot, seg, liveObjs);
+    // TODO: support for objects with variable size?
+    const TSizeRange size = sh.valSizeOfTarget(root);
+    CL_BREAK_IF(!isSingular(size));
 
-    // plot the corresponding peer
-    const TValId peer = dlSegPeer(sh, seg);
-    if (OK_DLS == sh.valTargetKind(peer)) {
-#if SYMPLOT_OMIT_NEQ_EDGES
-        TObjSet bindPtrs;
-        buildIgnoreList(bindPtrs, sh, peer);
-        plotCompositeObj(plot, peer, bindPtrs);
-#else
-        ObjList liveObjsAtPeer;
-        sh.gatherLiveObjects(liveObjsAtPeer, peer);
-        plotCompositeObj(plot, peer, liveObjsAtPeer);
-#endif
-    }
+    const TObjType clt = obj.objType();
+    CL_BREAK_IF(!clt);
+    if (clt->size != size.lo)
+        // size mismatch detected
+        return false;
 
-    // close the cluster
-    plot.out << "}\n";
+    const AtomicObject ao(obj);
+    plotAtomicObj(plot, ao, /* lonely */ true);
+    return true;
 }
 
 void plotRootObjects(PlotData &plot) {
     SymHeap &sh = plot.sh;
-    std::set<TValId> peersDone;
 
     // go through roots
     BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
@@ -621,53 +747,21 @@ void plotRootObjects(PlotData &plot) {
             continue;
 
         const TValId root = item.first;
-        if (hasKey(peersDone, root))
-            // already plotted
+        if (isDlSegPeer(plot.sh, root))
+            // DLS peers are never plotted directly at this level
             continue;
 
         // gather live objects
         ObjList liveObjs;
         sh.gatherLiveObjects(liveObjs, root);
 
-        const EObjKind kind = sh.valTargetKind(root);
-        switch (kind) {
-            case OK_DLS:
-                peersDone.insert(segPeer(sh, root));
-                plotDlSeg(plot, root, liveObjs);
-                continue;
-
-            case OK_CONCRETE:
-                if (1 == liveObjs.size()) {
-                    const ObjHandle &obj = liveObjs.front();
-                    if (sh.valOffset(obj.placedAt()))
-                        // offset detected
-                        break;
-
-                    if (sh.usedByCount(root))
-                        // root pointed
-                        break;
-
-                    // TODO: support for objects with variable size?
-                    const TSizeRange size = sh.valSizeOfTarget(root);
-                    CL_BREAK_IF(!isSingular(size));
-
-                    const TObjType clt = obj.objType();
-                    CL_BREAK_IF(!clt);
-                    if (clt->size != size.lo)
-                        // size mismatch detected
-                        break;
-
-                    const AtomicObject ao(obj);
-                    plotAtomicObj(plot, ao, /* lonely */ true);
-                    continue;
-                }
-                // fall through!
-
-            case OK_SLS:
-            case OK_SEE_THROUGH:
-            case OK_OBJ_OR_NULL:
-                break;
-        }
+#if !SYMPLOT_FLAT_MODE
+        if (OK_CONCRETE == sh.valTargetKind(root)
+                && (1 == liveObjs.size())
+                && plotSimpleRoot(plot, liveObjs.front()))
+            // this one went out in a simplified form
+            continue;
+#endif
 
         plotCompositeObj(plot, root, liveObjs);
     }
@@ -782,15 +876,27 @@ void describeCustomValue(PlotData &plot, const TValId val) {
     }
 }
 
-void plotCustomValue(PlotData &plot, const TObjId obj, const TValId val) {
+void plotCustomValue(
+        PlotData                       &plot,
+        const int                       idFrom,
+        const TValId                    val,
+        const char                     *edgeLabel)
+{
     const int id = ++plot.last;
     plot.out << "\t" << SL_QUOTE("lonely" << id) << " [shape=plaintext";
 
     describeCustomValue(plot, val);
 
-    plot.out << "];\n\t" << SL_QUOTE(obj)
+    plot.out << "];\n\t"
+#if SYMPLOT_FLAT_MODE
+        << SL_QUOTE("obj" << idFrom)
+#else
+        << SL_QUOTE(idFrom)
+#endif
         << " -> " << SL_QUOTE("lonely" << id)
-        << " [color=blue];\n";
+        << " [color=blue, fontcolor=blue";
+    appendLabelIf(plot.out, edgeLabel);
+    plot.out << "];\n";
 }
 
 void plotValue(PlotData &plot, const TValId val)
@@ -872,7 +978,12 @@ void plotPointsTo(PlotData &plot, const TValId val, const TObjId target) {
 
 void plotRangePtr(PlotData &plot, TValId val, TValId root, const IR::Range &rng)
 {
-    plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE(root)
+    plot.out << "\t" << SL_QUOTE(val) << " -> "
+#if SYMPLOT_FLAT_MODE
+        << SL_QUOTE("obj" << root)
+#else
+        << SL_QUOTE(root)
+#endif
         << " [color=red, fontcolor=red, label=\"[";
 
     printRawRange(plot.out, rng);
@@ -903,6 +1014,10 @@ void plotNonRootValues(PlotData &plot) {
             // no valid target
             continue;
 
+        TValId offEdgeRoot = root;
+#if SYMPLOT_FLAT_MODE
+        dlSegJumpToBegIfNeeded(sh, &offEdgeRoot);
+#else
         // assume an off-value
         PlotData::TLiveObjs::const_iterator it = plot.liveObjs.find(val);
         if ((plot.liveObjs.end() != it) && (1 == it->second.size())) {
@@ -911,11 +1026,12 @@ void plotNonRootValues(PlotData &plot) {
             plotPointsTo(plot, val, target.objId());
             continue;
         }
+#endif
 
         // an off-value with either no target, or too many targets
         const TOffset off = sh.valOffset(val);
         CL_BREAK_IF(!off);
-        plotOffset(plot, off, root, val);
+        plotOffset(plot, off, offEdgeRoot, val);
     }
 
     // go through value prototypes used in uniform blocks
@@ -952,7 +1068,12 @@ const char* valNullLabel(const SymHeapCore &sh, const TObjId obj) {
     }
 }
 
-void plotAuxValue(PlotData &plot, const int node, const TValId val, bool isObj)
+void plotAuxValue(
+        PlotData                       &plot,
+        const int                       node,
+        const TValId                    val,
+        const bool                      isObj,
+        const char                     *edgeLabel = 0)
 {
     const char *color = "blue";
     const char *label = "NULL";
@@ -983,33 +1104,90 @@ void plotAuxValue(PlotData &plot, const int node, const TValId val, bool isObj)
         << " [shape=plaintext, fontcolor=" << color
         << ", label=" << SL_QUOTE(label) << "];\n";
 
-    const char *prefix = (isObj)
-        ? ""
-        : "lonely";
+    const char *prefix = "";
+    if (edgeLabel)
+        prefix = "obj";
+    else if (!isObj)
+        prefix = "lonely";
 
     plot.out << "\t" << SL_QUOTE(prefix << node)
         << " -> " << SL_QUOTE("lonely" << id)
-        << " [color=blue];\n";
+        << " [color=blue, fontcolor=blue";
+    appendLabelIf(plot.out, edgeLabel);
+    plot.out << "];\n";
 }
 
-void plotHasValue(PlotData &plot, const ObjHandle &obj) {
+void plotHasValue(
+        PlotData                       &plot,
+        const int                       idFrom,
+        const TValId                    val,
+        const bool                      isObj = true,
+        const char                     *edgeLabel = 0)
+{
     SymHeap &sh = plot.sh;
 
-    const TValId val = obj.value();
     if (val <= 0) {
-        plotAuxValue(plot, obj.objId(), val, /* isObj */ true);
+        plotAuxValue(plot, idFrom, val, isObj, edgeLabel);
         return;
     }
 
     const EValueTarget code = sh.valTarget(val);
     if (VT_CUSTOM == code) {
-        plotCustomValue(plot, obj.objId(), val);
+        plotCustomValue(plot, idFrom, val, edgeLabel);
         return;
     }
 
-    plot.out << "\t" << SL_QUOTE(obj.objId())
+    plot.out << "\t"
+#if SYMPLOT_FLAT_MODE
+        << SL_QUOTE("obj" << idFrom)
+#else
+        << SL_QUOTE(idFrom)
+#endif
         << " -> " << SL_QUOTE(val)
-        << " [color=blue, fontcolor=blue];\n";
+        << " [color=blue, fontcolor=blue";
+    appendLabelIf(plot.out, edgeLabel);
+    plot.out << "];\n";
+}
+
+/// (0 == clt) means a uniform block because uniform blocks are type-free
+void plotHasValueFlat(
+        PlotData                       &plot,
+        TValId                          root,
+        const TOffset                   beg,
+        const TOffset                   end,
+        const TObjType                  clt,
+        const TValId                    val)
+{
+    dlSegJumpToBegIfNeeded(plot.sh, &root);
+
+    std::ostringstream strLabel;
+    if (clt) {
+        const cl_type_e code = clt->code;
+        switch (code) {
+            case CL_TYPE_INT:
+                strLabel << "INT";
+                break;
+
+            case CL_TYPE_PTR:
+                if (isDataPtr(clt)) {
+                    strLabel << "PTR";
+                    break;
+                }
+                // fall through!
+
+            default:
+                // TODO
+                strLabel << "OBJ";
+                break;
+        }
+    }
+    else
+        strLabel << "uni_block";
+
+    strLabel << "@<" << beg << ", " << end << ")";
+
+    const std::string label(strLabel.str());
+    plotHasValue(plot, root, val, /* isObj */ false, label.c_str());
 }
 
 void plotNeqZero(PlotData &plot, const TValId val) {
@@ -1062,33 +1240,7 @@ class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
         }
 };
 
-void plotEverything(PlotData &plot) {
-    plotRootObjects(plot);
-    plotNonRootValues(plot);
-
-    // plot "hasValue" edges
-    BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
-        BOOST_FOREACH(const ObjHandle &obj, /* ObjList */ item.second)
-            plotHasValue(plot, obj);
-
-    // plot "hasValue" edges for uniform block prototypes
-    BOOST_FOREACH(PlotData::TDangValues::const_reference item, plot.dangVals) {
-        const int id = item.first;
-        const TValId val = item.second;
-
-        if (val <= 0) {
-            plotAuxValue(plot, id, val, /* isObj */ false);
-            continue;
-        }
-
-        plot.out << "\t" << SL_QUOTE("lonely" << id)
-            << " -> " << SL_QUOTE(val)
-            << " [color=blue, fontcolor=blue];\n";
-    }
-
-#if SYMPLOT_OMIT_NEQ_EDGES
-    return;
-#endif
+void plotNeqEdges(PlotData &plot) {
     // cppcheck-suppress unreachableCode
     SymHeap &sh = plot.sh;
 
@@ -1113,6 +1265,89 @@ void plotEverything(PlotData &plot) {
 
     // plot "neq" edges
     np.plotNeqEdges(plot);
+}
+
+void plotFlatEdges(PlotData &plot) {
+    SymHeap &sh = plot.sh;
+
+    // plot "hasValue" edges
+    BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs) {
+        const TValId at = item.first;
+        const TValId root = sh.valRoot(at);
+        const TOffset beg = sh.valOffset(at);
+
+        BOOST_FOREACH(const ObjHandle &obj, /* ObjList */ item.second) {
+            const TObjType clt = obj.objType();
+            const TOffset end = beg + clt->size;
+            const TValId val = obj.value();
+
+            plotHasValueFlat(plot, root, beg, end, clt, val);
+        }
+    }
+
+    // go through all roots
+    BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
+        if (! /* isRoot */ item.second)
+            continue;
+
+        const TValId root = item.first;
+#if !SYMPLOT_OMIT_DEBUG_DLS
+        if (isDlSegPeer(plot.sh, root))
+            // plot uniform blocks only once for a DLS pair
+            continue;
+#endif
+
+        // get all uniform blocks inside the given root
+        TUniBlockMap bMap;
+        sh.gatherUniformBlocks(bMap, root);
+
+        // plot flat edges for all uniform blocks at the current root
+        BOOST_FOREACH(TUniBlockMap::const_reference item, bMap) {
+            const UniformBlock &bl = item.second;
+            const TOffset beg = bl.off;
+            const TOffset end = beg + bl.size;
+            const TValId val = bl.tplValue;
+
+            plotHasValueFlat(plot, root, beg, end, /* clt */ 0, val);
+        }
+    }
+}
+
+void plotHasValueEdges(PlotData &plot) {
+    // plot "hasValue" edges
+    BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
+        BOOST_FOREACH(const ObjHandle &obj, /* ObjList */ item.second)
+            plotHasValue(plot, obj.objId(), obj.value());
+
+    // plot "hasValue" edges for uniform block prototypes
+    BOOST_FOREACH(PlotData::TDangValues::const_reference item, plot.dangVals) {
+        const int id = item.first;
+        const TValId val = item.second;
+
+        if (val <= 0) {
+            plotAuxValue(plot, id, val, /* isObj */ false);
+            continue;
+        }
+
+        plot.out << "\t" << SL_QUOTE("lonely" << id)
+            << " -> " << SL_QUOTE(val)
+            << " [color=blue, fontcolor=blue];\n";
+    }
+}
+
+void plotEverything(PlotData &plot) {
+    plotRootObjects(plot);
+    plotNonRootValues(plot);
+
+#if SYMPLOT_FLAT_MODE
+    plotFlatEdges(plot);
+#else
+    plotHasValueEdges(plot);
+#endif
+
+#if !SYMPLOT_OMIT_NEQ_EDGES
+    plotNeqEdges(plot);
+#endif
 }
 
 bool plotHeap(

@@ -16,14 +16,15 @@
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
 MIRROR          ?= http://ftp.fi.muni.cz/pub/linux/gentoo
+GCC_MIRROR      ?= http://ftp.fi.muni.cz/pub/gnu/gnu/gcc
 
 BOOST_STABLE    ?= boost_1_46_1#            # released Boost
 BOOST_STABLE_TGZ?= $(BOOST_STABLE).tar.bz2# # tarball of released Boost
 BOOST_STABLE_URL?= $(MIRROR)/distfiles/$(BOOST_STABLE_TGZ)
 
-GCC_STABLE      ?= gcc-4.6.2#               # released gcc
+GCC_STABLE      ?= gcc-4.7.0#               # released gcc
 GCC_STABLE_TGZ  ?= $(GCC_STABLE).tar.bz2#   # tarball of released gcc
-GCC_STABLE_URL  ?= $(MIRROR)/distfiles/$(GCC_STABLE_TGZ)
+GCC_STABLE_URL  ?= $(GCC_MIRROR)/$(GCC_STABLE)/$(GCC_STABLE_TGZ)
 
 GCC_SRC         ?= gcc-src#                 # SVN working copy for gcc src
 GCC_BUILD       ?= gcc-build#               # working directory gcc build

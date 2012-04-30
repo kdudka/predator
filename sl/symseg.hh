@@ -129,6 +129,18 @@ inline TValId segNextRootObj(SymHeap &sh, TValId root) {
     return segNextRootObj(sh, root, offNext);
 }
 
+/// true if the given root is a DLS with bf.prev < bf.next
+inline bool isDlSegPeer(const SymHeap &sh, const TValId root) {
+    CL_BREAK_IF(sh.valOffset(root));
+
+    if (OK_DLS != sh.valTargetKind(root))
+        // not a DLS
+        return false;
+
+    const BindingOff &bf = sh.segBinding(root);
+    return (bf.prev < bf.next);
+}
+
 inline TMinLen objMinLength(const SymHeap &sh, TValId root) {
     CL_BREAK_IF(sh.valOffset(root));
 
@@ -146,10 +158,26 @@ inline TMinLen objMinLength(const SymHeap &sh, TValId root) {
         return 0;
 }
 
-/// same as SymHeap::objSetProto(), but takes care of DLS peers
-void segSetProto(SymHeap &sh, TValId seg, bool isProto);
+inline bool objWithBinding(const SymHeap &sh, const TValId root) {
+    CL_BREAK_IF(sh.valOffset(root));
 
-TValId segClone(SymHeap &sh, const TValId seg);
+    const EValueTarget code = sh.valTarget(root);
+    if (!isAbstract(code))
+        // not even an abstract object
+        return false;
+
+    const EObjKind kind = sh.valTargetKind(root);
+    return (OK_OBJ_OR_NULL != kind);
+}
+
+/// increment prototype level of a single object while taking care of DLS peers
+void objIncrementProtoLevel(SymHeap &sh, TValId root);
+
+/// decrement prototype level of a single object while taking care of DLS peers
+void objDecrementProtoLevel(SymHeap &sh, TValId root);
+
+/// clone a root object; in case of DLS, clone both parts of it
+TValId segClone(SymHeap &sh, const TValId root);
 
 inline void buildIgnoreList(
         TObjSet                 &ignoreList,
@@ -202,5 +230,11 @@ inline void buildIgnoreList(
  * @note this runs in debug build only
  */
 bool dlSegCheckConsistency(const SymHeap &sh);
+
+/**
+ * returns true if no concrete object points to another object of a higher level
+ * @note this runs in debug build only
+ */
+bool protoCheckConsistency(const SymHeap &sh);
 
 #endif /* H_GUARD_SYMSEG_H */

@@ -1,4 +1,4 @@
-# Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2010-2012 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -33,9 +33,11 @@ endif()
 include(CheckFunctionExists)
 check_function_exists("isatty" HAVE_ISATTY)
 if (HAVE_ISATTY)
-    add_definitions("-DHAVE_ISATTY=1")
+    set_source_files_properties(ssd.cc PROPERTIES
+        COMPILE_FLAGS "-DHAVE_ISATTY=1")
 else()
-    add_definitions("-DHAVE_ISATTY=0")
+    set_source_files_properties(ssd.cc PROPERTIES
+        COMPILE_FLAGS "-DHAVE_ISATTY=0")
 endif()
 
 # query GCC_INC_DIR using GCC_HOST
@@ -66,11 +68,10 @@ endif()
 set_source_files_properties(gcc/clplug.c PROPERTIES
     COMPILE_FLAGS "-I${GCC_INC_DIR}")
 
-# tweak include dirs, etc.
-add_definitions("-I../include -fPIC")
-
 # libcl.so
 add_library(cl STATIC
+    builtins.cc
+    callgraph.cc
     cl_chain.cc
     cl_dotgen.cc
     cl_easy.cc
@@ -94,64 +95,5 @@ add_library(cl STATIC
     storage.cc
     version.c)
 
-add_library(cl_test SHARED cl_test.cc)
-target_link_libraries(cl_test cl)
-
-# make install
-install(TARGETS cl DESTINATION lib)
-install(DIRECTORY ../include/cl DESTINATION include)
-
-set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_HOST}")
-set(cmd "${cmd} ${CFLAGS}")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
-set(cmd "${cmd} -I${GCC_INC_DIR}")
-set(cmd "${cmd} -c ${cl_SOURCE_DIR}/gcc/clplug.c")
-set(cmd "${cmd} -o /dev/null")
-set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
-set(cmd "${cmd} -fplugin-arg-libcl_test-dry-run")
-add_test("compile-self" sh -c "${cmd}")
-
-set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_HOST}")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
-set(cmd "${cmd} -I${GCC_INC_DIR}")
-set(cmd "${cmd} -c ${cl_SOURCE_DIR}/gcc/clplug.c -o /dev/null")
-set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
-set(cmd "${cmd} | diff -up ${cl_SOURCE_DIR}/cl_test.out -")
-add_test("cl_test" sh -c "${cmd}")
-
-set(cmd "${GCC_HOST} ${CFLAGS}")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}")
-set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
-set(cmd "${cmd} -I${GCC_INC_DIR}")
-set(cmd "${cmd} -c ${cl_SOURCE_DIR}/gcc/clplug.c")
-set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/libcl_test.so")
-set(cmd "${cmd} -fplugin-arg-libcl_test-dump-pp=/dev/null")
-set(cmd "${cmd} -fplugin-arg-libcl_test-dump-types")
-set(cmd "${cmd} -fplugin-arg-libcl_test-gen-dot=/dev/null")
-set(cmd "${cmd} -fplugin-arg-libcl_test-type-dot=/dev/null")
-set(cmd "${cmd} -fplugin-arg-libcl_test-verbose=15")
-set(cmd "${cmd} -fplugin-arg-libcl_test-dry-run")
-
-add_test("compile-self-extra" sh -c "LC_ALL=C CCACHE_DISABLE=1 ${cmd}")
-if(TEST_WITH_VALGRIND)
-    set(cmd "valgrind --trace-children=yes --error-exitcode=7 ${cmd}")
-    add_test("compile-self-valgrind" sh -c "${cmd}")
-endif()
-
-add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
-    -o /dev/null
-    -c ${cl_SOURCE_DIR}/config_cl.h)
-
-add_test("headers_sanity-1" gcc -ansi -Wall -Wextra -Werror -pedantic
-    -o /dev/null
-    -c ${cl_SOURCE_DIR}/../include/cl/code_listener.h)
-
-add_test("headers_sanity-2" make -j
-    -C ${cl_SOURCE_DIR}/../include/cl
-    -f ${cl_SOURCE_DIR}/Makefile.chk)
-
-add_test("headers_sanity-3" make -j
-    -C ${cl_SOURCE_DIR}
-    -f ${cl_SOURCE_DIR}/Makefile.chk)
+# load regression tests
+add_subdirectory(tests)

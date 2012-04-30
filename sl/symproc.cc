@@ -31,6 +31,8 @@
 #include "symbt.hh"
 #include "symgc.hh"
 #include "symheap.hh"
+#include "symplot.hh"
+#include "symseg.hh"
 #include "symstate.hh"
 #include "symutil.hh"
 #include "symtrace.hh"
@@ -52,7 +54,8 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace) {
     CL_BREAK_IF(!chkTraceGraphConsistency(trMsg));
 
     // print the backtrace
-    bt_->printBackTrace(forcePtrace);
+    if (bt_->printBackTrace(forcePtrace))
+        printMemUsage("SymBackTrace::printBackTrace");
 
     // dump trace graph, or schedule and endpoint for batch trace graph dump
 #if 2 == SE_DUMP_TRACE_GRAPHS
@@ -62,10 +65,13 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace) {
     glProxy->insert(sh_.traceNode(), "symtrace");
 #endif
 
-    printMemUsage("SymBackTrace::printBackTrace");
     if (ML_ERROR != level)
         // do not panic for now
         return;
+
+#if SE_PLOT_ERROR_STATES
+    plotHeap(sh_, "error-state", lw_);
+#endif
 
 #if SE_ERROR_RECOVERY_MODE
     errorDetected_ = true;
@@ -792,10 +798,7 @@ void SymProc::valDestroyTarget(TValId addr) {
     LeakMonitor lm(sh_);
     lm.enter();
 
-    TValList killedPtrs;
-    destroyRootAndCollectPtrs(sh_, addr, &killedPtrs);
-
-    if (lm.collectJunkFrom(killedPtrs))
+    if (/* leaking */ lm.destroyRoot(addr))
         reportMemLeak(*this, code, "destroy");
 
     lm.leave();
@@ -1394,12 +1397,15 @@ bool trimRangesIfPossible(
 }
 
 bool reflectCmpResult(
-        SymHeap                     &sh,
+        SymProc                    &proc,
         const enum cl_binop_e       code,
         const bool                  branch,
         const TValId                v1,
         const TValId                v2)
 {
+    SymHeap &sh = proc.sh();
+    CL_BREAK_IF(!protoCheckConsistency(sh));
+
     // resolve binary operator
     CmpOpTraits cTraits;
     if (!describeCmpOp(&cTraits, code))
@@ -1420,9 +1426,23 @@ bool reflectCmpResult(
             return false;
 
         // we have deduced that v1 and v2 is actually the same value
-        sh.valMerge(v1, v2);
+
+        LeakMonitor lm(sh);
+        lm.enter();
+
+        TValList leakList;
+        sh.valMerge(v1, v2, &leakList);
+
+        if (lm.importLeakList(&leakList)) {
+            const struct cl_loc *loc = proc.lw();
+            CL_WARN_MSG(loc, "memory leak detected while removing a segment");
+            proc.printBackTrace(ML_WARN);
+        }
+
+        lm.leave();
     }
 
+    CL_BREAK_IF(!protoCheckConsistency(sh));
     return true;
 }
 
@@ -1621,7 +1641,8 @@ TValId handleIntegralOp(
 }
 
 bool isAnyIntValue(const SymHeapCore &sh, const TValId val) {
-    switch (val) {
+    const TValId root = sh.valRoot(val);
+    switch (root) {
         case VAL_NULL:
         case VAL_TRUE:
             return true;
@@ -1803,7 +1824,7 @@ struct OpHandler</* binary */ 2> {
             case CL_BINOP_GT:
             case CL_BINOP_LE:
             case CL_BINOP_GE:
-                CL_BREAK_IF(clt[/* src1 */ 0]->code != clt[/* src2 */ 1]->code);
+                CL_BREAK_IF(!areComparableTypes(clt[0], clt[1]));
                 return compareValues(sh, code, rhs[0], rhs[1]);
 
             case CL_BINOP_MULT:
@@ -1994,6 +2015,10 @@ bool SymExecCore::concretizeLoop(
 #endif
         BOOST_FOREACH(unsigned idx, derefs) {
             const struct cl_operand &op = insn.operands.at(idx);
+            if (CL_OPERAND_VAR != op.code)
+                // literals cannot be abstract
+                continue;
+
             const TValId at = slave.varAt(op);
             if (!canWriteDataPtrAt(sh, at))
                 continue;
@@ -2006,7 +2031,18 @@ bool SymExecCore::concretizeLoop(
                 hitLocal = true;
                 hit = true;
 #endif
-                concretizeObj(sh, val, todo);
+                LeakMonitor lm(sh);
+                lm.enter();
+
+                TValList leakList;
+                concretizeObj(sh, val, todo, &leakList);
+
+                if (lm.importLeakList(&leakList)) {
+                    CL_WARN_MSG(lw_, "memory leak detected while unfolding");
+                    this->printBackTrace(ML_WARN);
+                }
+
+                lm.leave();
             }
         }
 
@@ -2036,7 +2072,7 @@ bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
     const cl_insn_e code = insn.code;
     if (CL_INSN_CALL == code)
         // certain built-ins dereference certain operands (free, memset, ...)
-        derefs = opsWithDerefSemanticsInCallInsn(insn);
+        derefs = opsWithDerefSemanticsInCallInsn(*this, insn);
 
     // look for explicit dereferences in operands of the instruction
     const CodeStorage::TOperandList &opList = insn.operands;

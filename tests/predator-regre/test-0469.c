@@ -1,0 +1,1 @@
+../lvm2-32bit/test-0469-simple-loop-2it.c

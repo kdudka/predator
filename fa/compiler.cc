@@ -322,7 +322,7 @@ struct LoopAnalyser {
 /**
  * @brief  Enumeration of built-in functions
  */
-typedef enum { biNone, biMalloc, biFree, biNondet, biFix, biPrintHeap } builtin_e;
+typedef enum { biNone, biMalloc, biFree, biNondet, biFix, biAbort, biPrintHeap } builtin_e;
 
 
 /**
@@ -353,6 +353,7 @@ public:
 		this->_table["__nondet"]      = builtin_e::biNondet;
 		this->_table["__fix"]         = builtin_e::biFix;
 		this->_table["__print_heap"]  = builtin_e::biPrintHeap;
+		this->_table["abort"]         = builtin_e::biAbort;
 	}
 
 	/**
@@ -1524,7 +1525,7 @@ protected:
 
 				if (!acc || (acc->code != CL_ACCESSOR_DEREF))
 				{	// in case the variable is not accessed by dereference
-					varsToKill.push_back(CodeStorage::KillVar(varId, false));
+					varsToKill.insert(CodeStorage::KillVar(varId, false));
 				}
 			}
 		}
@@ -1726,6 +1727,9 @@ protected:
 			case builtin_e::biPrintHeap:
 				cPrintHeap(insn);
 				return;
+			case builtin_e::biAbort:
+				this->append(new FI_abort(&insn));
+				return;
 			default:
 				break;
 		}
@@ -1779,6 +1783,8 @@ protected:
 					case cl_unop_e::CL_UNOP_ASSIGN:
 						compileAssignment(insn);
 						break;
+					case cl_unop_e::CL_UNOP_BIT_NOT:
+						// TODO
 					case cl_unop_e::CL_UNOP_TRUTH_NOT:
 						compileTruthNot(insn);
 						break;
@@ -1829,6 +1835,10 @@ protected:
 
 			case cl_insn_e::CL_INSN_COND: // condition
 				compileCond(insn);
+				break;
+
+			case cl_insn_e::CL_INSN_LABEL:
+				// safe to ignore unless we support checking for error label reachability
 				break;
 
 			default:

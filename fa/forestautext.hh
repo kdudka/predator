@@ -216,11 +216,12 @@ public:
 		}
 	}
 
-	template <class F>
-	void fuse(const TA<label_type>& src, F f) {
+	template <class F, class G>
+	void fuse(const TA<label_type>& src, F f, G g) {
 		Index<size_t> index;
+		TA<label_type> tmp2(src, g);
 		TA<label_type> tmp(*this->backend);
-		TA<label_type>::rename(tmp, src, RenameNonleafF(index, this->nextState()), false);
+		TA<label_type>::rename(tmp, tmp2, RenameNonleafF(index, this->nextState()), false);
 		this->incrementStateOffset(index.size());
 		for (size_t i = 0; i < this->roots.size(); ++i) {
 			if (!f(i, NULL))

@@ -326,20 +326,20 @@ void SymExecEngine::updateStateInBranch(
         const TValId                v1,
         const TValId                v2)
 {
+    SymProc proc(sh, &bt_);
+    proc.setLocation(lw_);
+
     sh.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
                 &insnCmp, &insnCnd, /* det */ false, branch));
 
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
-    if (!reflectCmpResult(sh, code, branch, v1, v2))
+    if (!reflectCmpResult(proc, code, branch, v1, v2))
         CL_DEBUG_MSG(lw_, "XXX unable to reflect comparison result");
 
     LDP_PLOT(nondetCond, sh);
 
-    SymProc proc(sh, &bt_);
-    proc.setLocation(lw_);
-    proc.killInsn(insnCmp);
-
     const unsigned targetIdx = !branch;
+    proc.killInsn(insnCmp);
     proc.killPerTarget(insnCnd, targetIdx);
 
     const CodeStorage::Block *target = insnCnd.targets[targetIdx];
@@ -356,23 +356,6 @@ bool isTrackableValue(const SymHeap &sh, const TValId val) {
         return true;
 
     return false;
-}
-
-inline bool areComparableTypes(const TObjType clt1, const TObjType clt2) {
-    if (!clt1 || !clt2)
-        return false;
-
-    enum cl_type_e code1 = clt1->code;
-    enum cl_type_e code2 = clt2->code;
-    if (code1 == code2)
-        return true;
-
-    if (CL_TYPE_ENUM == code1)
-        code1 = CL_TYPE_INT;
-    if (CL_TYPE_ENUM == code2)
-        code2 = CL_TYPE_INT;
-
-    return (code1 == code2);
 }
 
 bool SymExecEngine::bypassNonPointers(
@@ -705,7 +688,8 @@ void SymExecEngine::joinCallResults() {
     for (unsigned i = 0; i < cnt; ++i) {
         if (1 < cnt) {
             CL_DEBUG("*** SymExecEngine::joinCallResults() is processing heap #"
-                     << i << " of " << cnt << " heaps total");
+                     << i << " of " << cnt << " heaps total (size of target is "
+                     << all.size() << ")");
         }
 
         // time to respond to a single pending signal
@@ -937,10 +921,7 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
 
     fnc = stor_.fncs[uid];
     if (!isDefined(*fnc)) {
-        const struct cl_cst &cst = opFnc.data.cst;
-        const char *name = cst.data.cst_fnc.name;
-        CL_BREAK_IF(CL_TYPE_FNC != cst.code || !name);
-
+        const char *name = nameOf(*fnc);
         CL_WARN_MSG(lw, "ignoring call of undefined function: "
                 << name << "()");
 

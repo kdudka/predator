@@ -38,7 +38,9 @@ namespace CodeStorage {
 typedef std::vector<unsigned /* idx */>         TOpIdxList;
 
 /// list of operands which have dereference semantics for a detected built-in
-const TOpIdxList& opsWithDerefSemanticsInCallInsn(const CodeStorage::Insn &);
+const TOpIdxList& opsWithDerefSemanticsInCallInsn(
+        SymExecCore                             &core,
+        const CodeStorage::Insn                 &insn);
 
 /**
  * analyze the given @b call instruction and handle any recognized built-in

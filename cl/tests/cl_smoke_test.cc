@@ -17,7 +17,6 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config_cl.h"
 #include <cl/easy.hh>
 #include <iostream>
 
@@ -25,5 +24,5 @@
 extern "C" { int plugin_is_GPL_compatible; }
 
 void clEasyRun(const CodeStorage::Storage &, const char *) {
-    std::cout << "cl_test is up and running..." << std::endl;
+    std::cout << "cl_smoke_test is up and running..." << std::endl;
 }

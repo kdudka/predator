@@ -156,10 +156,10 @@ bool matchRoots(
         // target size mismatch
         return false;
 
-    const bool isProto1 = sh1.valTargetIsProto(root1);
-    const bool isProto2 = sh2.valTargetIsProto(root2);
-    if (isProto1 != isProto2)
-        // prototype vs. shared object while called from areEqual()
+    const TProtoLevel level1 = sh1.valTargetProtoLevel(root1);
+    const TProtoLevel level2 = sh2.valTargetProtoLevel(root2);
+    if (level1 != level2)
+        // prototype level mismatch
         return false;
 
     if (!matchUniBlocks(sh1, sh2, root1, root2))
@@ -176,20 +176,20 @@ bool matchRoots(
         // kind of object mismatch
         return false;
 
-    // compare binding fields
-    const BindingOff &bf1 = sh1.segBinding(root1);
-    const BindingOff &bf2 = sh2.segBinding(root2);
-    if (bf1 != bf2)
-        return false;
-
     const TMinLen len1 = sh1.segMinLength(root1);
     const TMinLen len2 = sh2.segMinLength(root2);
     if (len1 != len2)
         // minimal length mismatch
         return false;
 
-    // abstract objects are equal
-    return true;
+    if (OK_OBJ_OR_NULL == kind1 /* == kind2 */)
+        // this kind has no binding
+        return true;
+
+    // compare binding fields
+    const BindingOff &bf1 = sh1.segBinding(root1);
+    const BindingOff &bf2 = sh2.segBinding(root2);
+    return (bf1 == bf2);
 }
 
 bool cmpValues(

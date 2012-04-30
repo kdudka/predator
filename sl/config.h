@@ -31,7 +31,11 @@
 /**
  * if 1, print amount of allocated memory on certain places when in verbose mode
  */
-#define DEBUG_MEM_USAGE                     1
+#ifndef NDEBUG
+#   define DEBUG_MEM_USAGE                  1
+#else
+#   define DEBUG_MEM_USAGE                  0
+#endif
 
 /**
  * if 1, print block scheduler statistics whenever end of a fnc is not reached
@@ -79,11 +83,6 @@
 #define DEBUG_SYMSTATE                      0
 
 /**
- * if 1, SymState::insert() prints the effect of each invocation
- */
-#define DEBUG_SYMSTATE_INSERT               0
-
-/**
  * if 1, perform abstraction after each just completed call on @b caller's side
  */
 #define SE_ABSTRACT_ON_CALL_DONE            1
@@ -92,6 +91,11 @@
  * if 1, do not perform abstraction on each end of BB, but only when looping
  */
 #define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
+
+/*
+ * if non-zero, allow incomplete discovery paths with lower costs to apply
+ */
+#define SE_ALLOW_SUBPATH_RANKING            0
 
 /**
  * - 0 ... avoid creation of a new integral range from two integral constants
@@ -122,6 +126,11 @@
  * if 1, assume that the contents of static data is initialized on first access
  */
 #define SE_ASSUME_FRESH_STATIC_DATA         1
+
+/**
+ * call cache miss count that will trigger function removal (0 means disabled)
+ */
+#define SE_CALL_CACHE_MISS_THR              0x10
 
 /**
  * if non-zero, penalize length of SLS abstraction path by the given number in
@@ -192,6 +201,11 @@
 #define SE_MAX_CALL_DEPTH                   0x40
 
 /**
+ * if non-zero, plot each state that caused an error to be reported
+ */
+#define SE_PLOT_ERROR_STATES                0
+
+/**
  * cost of merged prototype where one case was more generic than the other case
  */
 #define SE_PROTO_COST_ASYM                  1
@@ -245,6 +259,16 @@
  * if 1, allow to assign unused heap IDs to newly created heap entities
  */
 #define SH_REUSE_FREE_IDS                   0
+
+/**
+ * if 1, write the contents of both parts of a DLS pair
+ */
+#define SYMPLOT_DEBUG_DLS                   0
+
+/**
+ * if 1, do not plot allocated areas as clusters
+ */
+#define SYMPLOT_FLAT_MODE                   0
 
 /**
  * if 1, skip plotting of "neq" edges (makes the result more readable by humans

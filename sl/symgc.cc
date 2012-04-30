@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2012 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -21,115 +21,104 @@
 #include "symgc.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/storage.hh>
 
 #include "symheap.hh"
 #include "symplot.hh"
+#include "symseg.hh"
 #include "symutil.hh"
 #include "worklist.hh"
 
 #include <stack>
-#include <vector>
 
 #include <boost/foreach.hpp>
 
-template <class TWL>
-void digPointingObjects(TWL &wl, const SymHeap &sh, TValId val) {
-    // go through all objects having the value
-    ObjList cont;
-    sh.usedBy(cont, val);
-    BOOST_FOREACH(const ObjHandle &obj, cont) {
-        wl.schedule(obj);
-    }
+void gatherReferredRoots(TValList &dst, SymHeap &sh, TValId at) {
+    CL_BREAK_IF(sh.valOffset(at));
 
-    // seek object's root
-    const TValId root = sh.valRoot(val);
-    if (root < 0)
-        return;
+    ObjList ptrs;
+    sh.gatherLivePointers(ptrs, at);
+    BOOST_FOREACH(const ObjHandle &obj, ptrs) {
+        const TValId val = obj.value();
+        if (val <= 0)
+            continue;
 
-    // traverse all subobjects
-    ObjList refs;
-    sh.pointedBy(refs, root);
-    BOOST_FOREACH(const ObjHandle &obj, refs) {
-        wl.schedule(obj);
+        const TValId root = sh.valRoot(val);
+        dst.push_back(root);
     }
 }
 
-bool digJunk(SymHeap &heap, TValId *ptrVal) {
-    if (*ptrVal <= 0)
-        return false;
+bool isJunk(SymHeap &sh, TValId root) {
+    WorkList<TValId> wl(root);
 
-    const EValueTarget code = heap.valTarget(*ptrVal);
-    if (!isOnHeap(code))
-        // non-heap objects cannot be JUNK
-        return false;
-
-    // only root objects can be destroyed
-    *ptrVal = heap.valRoot(*ptrVal);
-
-    WorkList<ObjHandle> wl;
-    digPointingObjects(wl, heap, *ptrVal);
-
-    ObjHandle obj;
-    while (wl.next(obj)) {
-        const TValId val = obj.placedAt();
-        if (!isOnHeap(heap.valTarget(val)))
-            // non-heap object simply can't be JUNK
+    while (wl.next(root)) {
+        const EValueTarget code = sh.valTarget(root);
+        if (!isOnHeap(code))
+            // non-heap objects cannot be JUNK
             return false;
 
-        digPointingObjects(wl, heap, val);
+        // go through all referrers
+        ObjList refs;
+        sh.pointedBy(refs, root);
+        BOOST_FOREACH(const ObjHandle &obj, refs) {
+            const TValId refAt = obj.placedAt();
+            const TValId refRoot = sh.valRoot(refAt);
+            wl.schedule(refRoot);
+        }
     }
 
     return true;
 }
 
-bool collectJunk(SymHeap &sh, TValId val, TValList *leakList) {
+bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly) {
+    CL_BREAK_IF(sh.valOffset(root));
     bool detected = false;
 
-    std::stack<TValId> todo;
-    todo.push(val);
-    while (!todo.empty()) {
-        TValId val = todo.top();
-        todo.pop();
+    std::set<TValId> whiteList;
+    if (sharedOnly) {
+        whiteList.insert(root);
+        if (OK_DLS == sh.valTargetKind(root))
+            whiteList.insert(dlSegPeer(sh, root));
+    }
 
-        if (digJunk(sh, &val)) {
-            detected = true;
+    WorkList<TValId> wl(root);
+    while (wl.next(root)) {
+        if (!isJunk(sh, root))
+            // not a junk, keep going...
+            continue;
 
-            // gather all values inside the junk object
-            const TValId root = sh.valRoot(val);
-            std::vector<TValId> ptrs;
-            getPtrValues(ptrs, sh, root);
+        // gather all roots pointed by the junk object
+        TValList refs;
+        gatherReferredRoots(refs, sh, root);
 
-            if (leakList)
-                leakList->push_back(root);
+        if (sharedOnly) {
+            if (hasKey(whiteList, root))
+                goto skip_root;
 
-            // destroy junk
-            sh.valDestroyTarget(root);
-
-            // schedule just created junk candidates for next wheel
-            BOOST_FOREACH(TValId ptrVal, ptrs) {
-                todo.push(ptrVal);
-            }
+            if (0 < sh.valTargetProtoLevel(root))
+                goto skip_root;
         }
+
+        // leak detected
+        detected = true;
+        sh.valDestroyTarget(root);
+        if (leakList)
+            leakList->push_back(root);
+
+skip_root:
+        // schedule just created junk candidates for next wheel
+        BOOST_FOREACH(TValId refRoot, refs)
+            wl.schedule(refRoot);
     }
 
     return detected;
 }
 
-void destroyRootAndCollectPtrs(
-        SymHeap                 &sh,
-        const TValId             root,
-        TValList                *killedPtrs)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-    CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(root)));
+bool collectJunk(SymHeap &sh, TValId root, TValList *leakList) {
+    return gcCore(sh, root, leakList, /* sharedOnly */ false);
+}
 
-    if (killedPtrs)
-        // gather potentialy destroyed pointer values
-        getPtrValues(*killedPtrs, sh, root);
-
-    // destroy the target
-    sh.valDestroyTarget(root);
+bool collectSharedJunk(SymHeap &sh, TValId root, TValList *leakList) {
+    return gcCore(sh, root, leakList, /* sharedOnly */ true);
 }
 
 bool destroyRootAndCollectJunk(
@@ -137,8 +126,15 @@ bool destroyRootAndCollectJunk(
         const TValId             root,
         TValList                *leakList)
 {
+    CL_BREAK_IF(sh.valOffset(root));
+    CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(root)));
+
+    // gather potentialy destroyed pointer values
     TValList killedPtrs;
-    destroyRootAndCollectPtrs(sh, root, &killedPtrs);
+    gatherReferredRoots(killedPtrs, sh, root);
+
+    // destroy the target
+    sh.valDestroyTarget(root);
 
     // now check for memory leakage
     bool leaking = false;
@@ -174,4 +170,11 @@ void LeakMonitor::leave() {
     if (::debuggingGarbageCollector)
         plotHeap(snap_, "memleak", /* TODO: loc */ 0, leakList_,
                 /* digForward */ false);
+}
+
+bool /* leaking */ LeakMonitor::importLeakList(TValList *leakList) {
+    CL_BREAK_IF(!leakList_.empty());
+    leakList_ = *leakList;
+
+    return /* leaking */ !leakList_.empty();
 }

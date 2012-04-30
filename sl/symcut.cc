@@ -167,9 +167,11 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     if (clt)
         dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 
+    // preserve prototype level
+    const TProtoLevel protoLevel = src.valTargetProtoLevel(rootSrcAt);
+    dst.valTargetSetProtoLevel(rootDstAt, protoLevel);
+
     // preserve metadata of abstract objects
-    const bool isProto = src.valTargetIsProto(rootSrcAt);
-    dst.valTargetSetProto(rootDstAt, isProto);
     if (isAbstract(src.valTarget(rootSrcAt))) {
         const EObjKind kind = src.valTargetKind(rootSrcAt);
         const BindingOff &off = src.segBinding(rootSrcAt);

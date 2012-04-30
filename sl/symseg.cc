@@ -27,26 +27,28 @@
 
 #include <boost/foreach.hpp>
 
-void segSetProto(SymHeap &sh, TValId seg, bool isProto) {
-    CL_BREAK_IF(sh.valOffset(seg));
+void objChangeProtoLevel(SymHeap &sh, TValId root, const TProtoLevel diff) {
+    CL_BREAK_IF(sh.valOffset(root));
 
-    const EObjKind kind = sh.valTargetKind(seg);
-    switch (kind) {
-        case OK_DLS:
-            sh.valTargetSetProto(dlSegPeer(sh, seg), isProto);
-            // fall through
+    const TProtoLevel level = sh.valTargetProtoLevel(root);
+    sh.valTargetSetProtoLevel(root, level + diff);
 
-        case OK_SLS:
-        case OK_SEE_THROUGH:
-        case OK_OBJ_OR_NULL:
-            sh.valTargetSetProto(seg, isProto);
-            return;
+    const EObjKind kind = sh.valTargetKind(root);
+    if (OK_DLS != kind)
+        return;
 
-        case OK_CONCRETE:
-            break;
-    }
+    const TValId peer = dlSegPeer(sh, root);
+    CL_BREAK_IF(sh.valTargetProtoLevel(peer) != level);
 
-    CL_BREAK_IF("ivalid call of segSetProto()");
+    sh.valTargetSetProtoLevel(peer, level + diff);
+}
+
+void objIncrementProtoLevel(SymHeap &sh, TValId root) {
+    objChangeProtoLevel(sh, root, 1);
+}
+
+void objDecrementProtoLevel(SymHeap &sh, TValId root) {
+    objChangeProtoLevel(sh, root, -1);
 }
 
 bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
@@ -98,12 +100,12 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
     return (segHeadAt(sh, peer) == peerAddr);
 }
 
-TValId segClone(SymHeap &sh, const TValId seg) {
-    const TValId dup = sh.valClone(seg);
+TValId segClone(SymHeap &sh, const TValId root) {
+    const TValId dup = objClone(sh, root);
 
-    if (OK_DLS == sh.valTargetKind(seg)) {
+    if (OK_DLS == sh.valTargetKind(root)) {
         // we need to clone the peer as well
-        const TValId peer = dlSegPeer(sh, seg);
+        const TValId peer = dlSegPeer(sh, root);
         const TValId dupPeer = sh.valClone(peer);
 
         // dig the 'peer' selectors of the cloned objects
@@ -159,3 +161,28 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
     return true;
 }
 
+bool protoCheckConsistency(const SymHeap &sh) {
+    TValList addrs;
+    sh.gatherRootObjects(addrs);
+    BOOST_FOREACH(const TValId root, addrs) {
+        const EValueTarget code = sh.valTarget(root);
+        if (isAbstract(code))
+            continue;
+
+        const TProtoLevel rootLevel = sh.valTargetProtoLevel(root);
+
+        ObjList ptrs;
+        sh.gatherLivePointers(ptrs, root);
+        BOOST_FOREACH(const ObjHandle &obj, ptrs) {
+            const TProtoLevel level = sh.valTargetProtoLevel(obj.value());
+            if (level <= rootLevel)
+                continue;
+
+            CL_ERROR("nesting level bump on a non-abstract object detected");
+            return false;
+        }
+    }
+
+    // all OK
+    return true;
+}

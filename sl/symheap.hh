@@ -215,6 +215,9 @@ typedef enum cl_type_e                                  TObjCode;
 /// a reference to CodeStorage::Storage instance describing the analyzed code
 typedef const CodeStorage::Storage                     &TStorRef;
 
+/// a type used for prototype level (0 means not a prototype)
+typedef short                                           TProtoLevel;
+
 /**
  * bundles static identification of a variable with its instance number
  *
@@ -482,18 +485,11 @@ class SymHeapCore {
         const CustomValue& valUnwrapCustom(TValId) const;
 
     public:
-        /**
-         * true, if the target object should be cloned on concretization of the
-         * owning object
-         */
-        bool valTargetIsProto(TValId) const;
+        /// prototype level of the target root entity (0 means not a prototype)
+        TProtoLevel valTargetProtoLevel(TValId) const;
 
-        /**
-         * set it to true, if the target object should be cloned on
-         * concretization of the owning object.  By default, all nested objects
-         * are shared.
-         */
-        void valTargetSetProto(TValId root, bool isProto);
+        /// set prototype level of the given root (0 means not a prototype)
+        void valTargetSetProtoLevel(TValId root, TProtoLevel level);
 
     protected:
         /// return a @b data pointer placed at the given address
@@ -777,13 +773,8 @@ class SymHeap: public SymHeapCore {
         /// set the given abstract object to be a concrete object (drops props)
         void valTargetSetConcrete(TValId root);
 
-        /**
-         * assume that v1 and v2 are equal.  Useful when e.g. traversing a
-         * non-deterministic condition.  This implies that one of them may be
-         * dropped.  You can utilize SymHeapCore::usedByCount() to check which
-         * one (if any).  But usually, you do not need to check anything.
-         */
-        void valMerge(TValId v1, TValId v2);
+        /// assume that v1 and v2 are equal (may trigger segment removal)
+        void valMerge(TValId v1, TValId v2, TValList *leakList = 0);
 
         /// read the minimal segment length of the given abstract object
         TMinLen segMinLength(TValId seg) const;
@@ -806,6 +797,21 @@ class SymHeap: public SymHeapCore {
         Private *d;
 
         void segMinLengthOp(ENeqOp op, TValId at, TMinLen len);
+};
+
+/// enable/disable built-in self-checks (takes effect only in debug build)
+void enableProtectedMode(bool enable);
+
+/// temporarily disable protected mode of SymHeap in a debug build
+class ProtectionIntrusion {
+    public:
+        ProtectionIntrusion() {
+            enableProtectedMode(false);
+        }
+
+        ~ProtectionIntrusion() {
+            enableProtectedMode(true);
+        }
 };
 
 #endif /* H_GUARD_SYM_HEAP_H */

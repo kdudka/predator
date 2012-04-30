@@ -34,6 +34,7 @@
 #include "symutil.hh"
 #include "symtrace.hh"
 #include "util.hh"
+#include "worklist.hh"
 
 #include <iomanip>
 #include <set>
@@ -103,50 +104,48 @@ void detachClonedPrototype(
         const TValId            proto,
         const TValId            clone,
         const TValId            rootDst,
-        const TValId            rootSrc)
+        const TValId            rootSrc,
+        const bool              uplink)
 {
     const bool isRootDls = (OK_DLS == sh.valTargetKind(rootDst));
     CL_BREAK_IF(isRootDls && (OK_DLS != sh.valTargetKind(rootSrc)));
 
+    TValId rootDstPeer = VAL_INVALID;
     TValId rootSrcPeer = VAL_INVALID;
     if (isRootDls) {
+        rootDstPeer = dlSegPeer(sh, rootDst);
         rootSrcPeer = dlSegPeer(sh, rootSrc);
-        CL_BREAK_IF(dlSegPeer(sh, rootDst) != rootSrcPeer);
+        CL_BREAK_IF(uplink && (rootDstPeer != rootSrcPeer));
     }
 
     redirectRefs(sh, rootDst, proto, clone);
     redirectRefs(sh, proto, rootDst, rootSrc);
-    if (isRootDls)
-        redirectRefs(sh, clone, rootSrcPeer, rootDst);
+
+    if (isRootDls) {
+        if (uplink)
+            redirectRefs(sh, clone, rootSrcPeer, rootDst);
+        else
+            redirectRefs(sh, rootDstPeer, proto, clone);
+    }
 
     if (OK_DLS == sh.valTargetKind(proto)) {
         const TValId protoPeer = dlSegPeer(sh, proto);
         const TValId clonePeer = dlSegPeer(sh, clone);
         redirectRefs(sh, rootDst, protoPeer, clonePeer);
         redirectRefs(sh, protoPeer, rootDst, rootSrc);
-        if (isRootDls)
+        if (isRootDls && uplink)
             redirectRefs(sh, clonePeer, rootSrcPeer, rootDst);
     }
 }
 
 TValId protoClone(SymHeap &sh, const TValId proto) {
-    TValId clone;
+    const TValId clone = segClone(sh, proto);
+    objDecrementProtoLevel(sh, clone);
 
-    if (isAbstract(sh.valTarget(proto))) {
-        // clone segment prototype
-        clone = segClone(sh, proto);
-        segSetProto(sh, clone, false);
-    }
-    else {
-        // clone bare prototype
-        clone = sh.valClone(proto);
-        sh.valTargetSetProto(clone, false);
+    const EValueTarget code = sh.valTarget(proto);
+    if (!isAbstract(code))
+        // clone all unknown values in order to keep prover working
         duplicateUnknownValues(sh, clone);
-    }
-
-    // if there was "a pointer to self", it should remain "a pointer to self";
-    // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh, clone, proto, clone);
 
     return clone;
 }
@@ -160,77 +159,38 @@ struct ProtoFinder {
             return /* continue */ true;
 
         SymHeapCore *sh = sub.sh();
-        if (sh->valOffset(val))
-            // TODO: support for prototypes not pointed by roots?
-            return /* continue */ true;
-
-        if (sh->valTargetIsProto(val))
-            protos.insert(val);
+        const TValId root = sh->valRoot(val);
+        if (sh->valTargetProtoLevel(root))
+            protos.insert(root);
 
         return /* continue */ true;
     }
 };
 
-// FIXME: this completely ignores Neq predicates for instance...
-void cloneGenericPrototype(
-        SymHeap                 &sh,
-        const TValId            proto,
+void clonePrototypes(
+        SymHeap                &sh,
         const TValId            rootDst,
-        const TValId            rootSrc)
+        const TValId            rootSrc,
+        const TValList         &protoList)
 {
-    std::vector<TValId>         protoList;
-    std::vector<TValId>         cloneList;
-    std::vector<int>            lengthList;
-    std::set<TValId>            haveSeen;
-    std::stack<TValId>          todo;
-    todo.push(proto);
-    haveSeen.insert(proto);
-
-    CL_DEBUG("WARNING: cloneGenericPrototype() is just a hack for now!");
-
-    while (!todo.empty()) {
-        const TValId proto = todo.top();
-        todo.pop();
-        protoList.push_back(proto);
-
-        ProtoFinder visitor;
-        traverseLivePtrs(sh, proto, visitor);
-        BOOST_FOREACH(const TValId protoAt, visitor.protos) {
-            if (!insertOnce(haveSeen, protoAt))
-                continue;
-
-            if (OK_DLS == sh.valTargetKind(protoAt) &&
-                    !insertOnce(haveSeen, dlSegPeer(sh, protoAt)))
-                continue;
-
-            todo.push(protoAt);
-        }
-    }
-
-    // allocate some space for clone IDs and minimal lengths
+    // allocate some space for clone IDs
     const unsigned cnt = protoList.size();
-    CL_BREAK_IF(!cnt);
-    cloneList.resize(cnt);
-    lengthList.resize(cnt);
+    TValList cloneList(cnt);
 
-    // clone the prototypes while reseting the minimal size to zero
+    // clone the prototypes and reconnect them to the new root
     for (unsigned i = 0; i < cnt; ++i) {
         const TValId proto = protoList[i];
-        if (isAbstract(sh.valTarget(proto))) {
-            lengthList[i] = sh.segMinLength(proto);
-            sh.segSetMinLength(proto, /* LS 0+ */ 0);
-        }
-        else
-            lengthList[i] = -1;
+        const TValId clone = protoClone(sh, protoList[i]);
+        detachClonedPrototype(sh, proto, clone, rootDst, rootSrc,
+                /* uplink */ true);
 
-        cloneList[i] = protoClone(sh, proto);
+        cloneList[i] = clone;
     }
 
     // FIXME: works, but likely to kill the CPU
     for (unsigned i = 0; i < cnt; ++i) {
         const TValId proto = protoList[i];
         const TValId clone = cloneList[i];
-        detachClonedPrototype(sh, proto, clone, rootDst, rootSrc);
 
         for (unsigned j = 0; j < cnt; ++j) {
             if (i == j)
@@ -238,49 +198,79 @@ void cloneGenericPrototype(
 
             const TValId otherProto = protoList[j];
             const TValId otherClone = cloneList[j];
-            detachClonedPrototype(sh, proto, clone, otherClone, otherProto);
+            detachClonedPrototype(sh, proto, clone, otherClone, otherProto,
+                    /* uplink */ false);
         }
-    }
-
-    // finally restore the minimal size of all segments
-    for (unsigned i = 0; i < cnt; ++i) {
-        const TValId proto = protoList[i];
-        const TValId clone = cloneList[i];
-        const int len = lengthList[i];
-        if (len <= 0)
-            // -1 means "not a segment"
-            continue;
-
-        sh.segSetMinLength(proto, len);
-        sh.segSetMinLength(clone, len);
     }
 }
 
 // visitor
-struct ProtoCloner {
-    TObjSet ignoreList;
-    TValId rootDst;
-    TValId rootSrc;
+class ProtoCollector {
+    private:
+        TValList               &protoList_;
+        TObjSet                 ignoreList_;
+        WorkList<TValId>        wl_;
 
-    bool operator()(const ObjHandle &obj) const {
-        if (hasKey(ignoreList, obj))
-            return /* continue */ true;
+    public:
+        ProtoCollector(TValList &dst):
+            protoList_(dst)
+        {
+        }
 
-        const TValId val = obj.value();
-        if (val <= 0)
-            return /* continue */ true;
+        TObjSet& ignoreList() {
+            return ignoreList_;
+        }
 
-        SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
-        if (!isPossibleToDeref(sh.valTarget(val)))
-            return /* continue */ true;
-
-        // check if we point to prototype, or shared data
-        if (sh.valTargetIsProto(val))
-            cloneGenericPrototype(sh, sh.valRoot(val), rootDst, rootSrc);
-
-        return /* continue */ true;
-    }
+        bool operator()(const ObjHandle &obj);
 };
+
+bool ProtoCollector::operator()(const ObjHandle &obj) {
+    if (hasKey(ignoreList_, obj))
+        return /* continue */ true;
+
+    const TValId val = obj.value();
+    if (val <= 0)
+        return /* continue */ true;
+
+    SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
+    if (!isPossibleToDeref(sh.valTarget(val)))
+        return /* continue */ true;
+
+    // check if we point to prototype, or shared data
+    if (!sh.valTargetProtoLevel(val))
+        return /* continue */ true;
+
+    TValId proto = sh.valRoot(val);
+    wl_.schedule(proto);
+    while (wl_.next(proto)) {
+        ProtoFinder visitor;
+        traverseLivePtrs(sh, proto, visitor);
+        BOOST_FOREACH(const TValId protoAt, visitor.protos)
+            wl_.schedule(protoAt);
+
+            if (isDlSegPeer(sh, proto))
+                // it is sufficient to process just one part of a DLS
+                continue;
+
+        protoList_.push_back(proto);
+    }
+
+    return /* continue */ true;
+}
+
+bool collectPrototypesOf(TValList &dst, SymHeap &sh, const TValId root)
+{
+    ProtoCollector collector(dst);
+    buildIgnoreList(collector.ignoreList(), sh, root);
+    return traverseLivePtrs(sh, root, collector);
+}
+
+void decrementProtoLevel(SymHeap &sh, const TValId at) {
+    TValList protoList;
+    collectPrototypesOf(protoList, sh, at);
+    BOOST_FOREACH(const TValId proto, protoList)
+        objDecrementProtoLevel(sh, proto);
+}
 
 struct ValueSynchronizer {
     SymHeap            &sh;
@@ -300,8 +290,9 @@ struct ValueSynchronizer {
         dst.setValue(valSrc);
 
         // if the last reference is gone, we have a problem
-        if (collectJunk(sh, valDst))
-            CL_DEBUG("    ValueSynchronizer drops a sub-heap (dlSegPeer)");
+        const TValId rootDst = sh.valRoot(valDst);
+        if (collectJunk(sh, rootDst))
+            CL_DEBUG("    ValueSynchronizer drops a sub-heap (dlSegPeerData)");
 
         return /* continue */ true;
     }
@@ -323,6 +314,21 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
     traverseLiveObjs<2>(sh, roots, visitor);
 }
 
+// FIXME: this works only for nullified blocks anyway
+void killUniBlocksUnderBindingPtrs(SymHeap &sh, const TValId seg) {
+    // go through next/prev pointers
+    TObjSet blackList;
+    buildIgnoreList(blackList, sh, seg);
+    BOOST_FOREACH(const ObjHandle &obj, blackList) {
+        if (VAL_NULL != obj.value())
+            continue;
+
+        // if there is a nullified block under next/prev pointer, kill it now
+        obj.setValue(VAL_TRUE);
+        obj.setValue(VAL_NULL);
+    }
+}
+
 // when abstracting an object, we need to abstract all non-matching values in
 void abstractNonMatchingValues(
         SymHeap                     &sh,
@@ -330,6 +336,10 @@ void abstractNonMatchingValues(
         const TValId                dstAt,
         const bool                  bidir = false)
 {
+    killUniBlocksUnderBindingPtrs(sh, dstAt);
+    if (bidir)
+        killUniBlocksUnderBindingPtrs(sh, srcAt);
+
     if (!joinData(sh, dstAt, srcAt, bidir))
         CL_BREAK_IF("joinData() failed, failure of segDiscover()?");
 
@@ -341,21 +351,39 @@ void abstractNonMatchingValues(
         dlSegSyncPeerData(sh, dstAt);
 }
 
-void clonePrototypes(SymHeap &sh, TValId addr, TValId dup) {
-    CL_BREAK_IF(sh.valOffset(addr) || sh.valOffset(dup));
-    duplicateUnknownValues(sh, addr);
+// FIXME: the semantics of this function is quite contra-intuitive
+TValId segDeepCopy(SymHeap &sh, TValId seg) {
+    // collect the list of prototypes
+    TValList protoList;
+    collectPrototypesOf(protoList, sh, seg);
 
-    ProtoCloner visitor;
-    visitor.rootDst = addr;
-    visitor.rootSrc = dup;
-    buildIgnoreList(visitor.ignoreList, sh, addr);
+    // clone the root itself
+    const TValId dup = objClone(sh, seg);
 
-    // traverse all live sub-objects
-    traverseLivePtrs(sh, addr, visitor);
+    // clone all unknown values in order to keep prover working
+    duplicateUnknownValues(sh, dup);
 
-    // if there was "a pointer to self", it should remain "a pointer to self";
-    // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh, dup, addr, dup);
+    // clone all prototypes originally owned by seg
+    clonePrototypes(sh, seg, dup, protoList);
+
+    return dup;
+}
+
+void enlargeMayExist(SymHeap &sh, const TValId at) {
+    const EObjKind kind = sh.valTargetKind(at);
+    switch (kind) {
+        case OK_SEE_THROUGH:
+            decrementProtoLevel(sh, at);
+            sh.valTargetSetConcrete(at);
+            // fall through!
+
+        case OK_CONCRETE:
+        case OK_SLS:
+            return;
+
+        default:
+            CL_BREAK_IF("invalid call of enlargeMayExist()");
+    }
 }
 
 void slSegAbstractionStep(
@@ -364,20 +392,22 @@ void slSegAbstractionStep(
         const TValId                nextAt,
         const BindingOff            &off)
 {
-    // read minimal length of 'obj' and set it temporarily to zero
-    TMinLen len = objMinLength(sh, at);
-    if (isAbstract(sh.valTarget(at)))
-        sh.segSetMinLength(at, /* SLS 0+ */ 0);
+    // compute the resulting minimal length
+    const TMinLen len = objMinLength(sh, at) + objMinLength(sh, nextAt);
 
-    len += objMinLength(sh, nextAt);
+    enlargeMayExist(sh, at);
+    enlargeMayExist(sh, nextAt);
+
+    if (OK_SLS == sh.valTargetKind(at))
+        decrementProtoLevel(sh, at);
+
     if (OK_SLS == sh.valTargetKind(nextAt))
-        sh.segSetMinLength(nextAt, /* SLS 0+ */ 0);
+        decrementProtoLevel(sh, nextAt);
     else
         // abstract the _next_ object
         sh.valTargetSetAbstract(nextAt, OK_SLS, off);
 
     // merge data
-    CL_BREAK_IF(OK_SLS != sh.valTargetKind(nextAt));
     abstractNonMatchingValues(sh, at, nextAt);
 
     // replace all references to 'head'
@@ -386,26 +416,11 @@ void slSegAbstractionStep(
     sh.valReplace(headAt, segHeadAt(sh, nextAt));
 
     // destroy self, including all prototypes
-    REQUIRE_GC_ACTIVITY(sh, headAt, slSegAbstractionStep);
+    REQUIRE_GC_ACTIVITY(sh, at, slSegAbstractionStep);
 
     if (len)
         // declare resulting segment's minimal length
         sh.segSetMinLength(nextAt, len);
-}
-
-void enlargeMayExist(SymHeap &sh, const TValId at) {
-    const EObjKind kind = sh.valTargetKind(at);
-    switch (kind) {
-        case OK_SEE_THROUGH:
-            sh.valTargetSetConcrete(at);
-            // fall through!
-
-        case OK_CONCRETE:
-            return;
-
-        default:
-            CL_BREAK_IF("invalid call of enlargeMayExist()");
-    }
 }
 
 void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
@@ -422,7 +437,7 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     swapValues(off.next, off.prev);
     sh.valTargetSetAbstract(a2, OK_DLS, off);
 
-    // introduce some UV_UNKNOWN values if necessary
+    // merge data
     abstractNonMatchingValues(sh, a1, a2, /* bidir */ true);
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
@@ -432,16 +447,18 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
 void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
-    // handle DLS Neq predicates and OK_SEE_THROUGH
+    // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, var);
-    sh.segSetMinLength(dls, /* DLS 0+ */ 0);
+
+    // we allow to gobble OK_SEE_THROUGH objects (if compatible)
     enlargeMayExist(sh, var);
 
     if (!backward)
         // jump to peer
         dls = dlSegPeer(sh, dls);
 
-    // introduce some UV_UNKNOWN values if necessary
+    // merge data
+    decrementProtoLevel(sh, dls);
     abstractNonMatchingValues(sh, var, dls);
 
     // store the pointer DLS -> VAR
@@ -453,7 +470,7 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     // replace VAR by DLS
     const TValId headAt = sh.valByOffset(var, off.head);
     sh.valReplace(headAt, segHeadAt(sh, dls));
-    REQUIRE_GC_ACTIVITY(sh, headAt, dlSegGobble);
+    REQUIRE_GC_ACTIVITY(sh, var, dlSegGobble);
 
     // handle DLS Neq predicates
     sh.segSetMinLength(dls, len);
@@ -462,10 +479,8 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
 }
 
 void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
-    // handle DLS Neq predicates
+    // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
-    sh.segSetMinLength(seg1, /* DLS 0+ */ 0);
-    sh.segSetMinLength(seg2, /* DLS 0+ */ 0);
 
     // dig peers
     const TValId peer1 = dlSegPeer(sh, seg1);
@@ -475,7 +490,9 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     CL_BREAK_IF(sh.segBinding(seg1) != sh.segBinding(seg2));
     CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2));
 
-    // introduce some UV_UNKNOWN values if necessary
+    // merge data
+    decrementProtoLevel(sh, seg1);
+    decrementProtoLevel(sh, seg2);
     abstractNonMatchingValues(sh, seg1, seg2, /* bidir */ true);
 
     // preserve backLink
@@ -492,10 +509,10 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
 
     // destroy headAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
-    REQUIRE_GC_ACTIVITY(sh, headAt, dlSegMerge);
-    if (!collectJunk(sh, peerAt) && isPossibleToDeref(sh.valTarget(peerAt))) {
+    REQUIRE_GC_ACTIVITY(sh, seg1, dlSegMerge);
+    if (!collectJunk(sh, peer1) && isPossibleToDeref(sh.valTarget(peer1))) {
         CL_ERROR("dlSegMerge() failed to collect garbage"
-                 ", peerAt still referenced");
+                 ", peer1 still referenced");
         CL_BREAK_IF("collectJunk() has not been successful");
     }
 
@@ -652,6 +669,8 @@ bool considerAbstraction(
     LDP_PLOT(symabstract, sh);
 
     for (unsigned i = 0; i < lenTotal; ++i) {
+        CL_BREAK_IF(!protoCheckConsistency(sh));
+
         if (!segAbstractionStep(sh, off, &cursor)) {
             CL_DEBUG("<-- validity of next " << (lenTotal - i - 1)
                     << " abstraction step(s) broken, forcing re-discovery...");
@@ -667,6 +686,8 @@ bool considerAbstraction(
         sh.traceUpdate(trAbs);
 
         LDP_PLOT(symabstract, sh);
+
+        CL_BREAK_IF(!protoCheckConsistency(sh));
     }
 
     CL_DEBUG("<-- successfully abstracted " << name);
@@ -677,10 +698,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
-
-    // first kill any related Neq predicates, we're going to concretize anyway
-    sh.segSetMinLength(seg, /* DLS 0+ */ 0);
-    CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    CL_BREAK_IF(!protoCheckConsistency(sh));
 
     // take the value of 'next' pointer from peer
     const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
@@ -700,13 +718,15 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     sh.valTargetSetConcrete(seg);
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    CL_BREAK_IF(!protoCheckConsistency(sh));
 }
 
 void spliceOutListSegment(
-        SymHeap                 &sh,
+        SymHeap                &sh,
         const TValId            seg,
         const TValId            peer,
-        const TValId            valNext)
+        const TValId            valNext,
+        TValList               *leakList)
 {
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
@@ -734,6 +754,8 @@ void spliceOutListSegment(
             /* redirectTo   */ valNext,
             /* offHead      */ offHead);
 
+    collectSharedJunk(sh, seg, leakList);
+
     // destroy peer in case of DLS
     if (peer != seg && collectJunk(sh, peer))
         CL_DEBUG("spliceOutListSegment() drops a sub-heap (peer)");
@@ -745,18 +767,19 @@ void spliceOutListSegment(
     LDP_PLOT(symabstract, sh);
 }
 
-TMinLen /* len */ spliceOutSegmentIfNeeded(
-        SymHeap                 &sh,
+void spliceOutSegmentIfNeeded(
+        TMinLen                *pLen,
+        SymHeap                &sh,
         const TValId            seg,
         const TValId            peer,
-        TSymHeapList            &todo)
+        TSymHeapList           &todo,
+        TValList               *leakList)
 {
-    const TMinLen len = sh.segMinLength(seg);
-    if (!len) {
+    if (!*pLen) {
         // possibly empty LS
         SymHeap sh0(sh);
         const TValId valNext = nextValFromSeg(sh0, peer);
-        spliceOutListSegment(sh0, seg, peer, valNext);
+        spliceOutListSegment(sh0, seg, peer, valNext, leakList);
 
         const EObjKind kind = sh.valTargetKind(seg);
         Trace::Node *tr = new Trace::SpliceOutNode(sh.traceNode(), kind, true);
@@ -764,18 +787,12 @@ TMinLen /* len */ spliceOutSegmentIfNeeded(
         todo.push_back(sh0);
         todo.back().traceUpdate(tr);
     }
+    else
+        // we are going to detach one node
+        --(*pLen);
 
     LDP_INIT(symabstract, "concretizeObj");
     LDP_PLOT(symabstract, sh);
-
-    if (!len)
-        return /* LS 0+ */ 0;
-
-    // forget the current minimal length for a while
-    sh.segSetMinLength(seg, 0);
-
-    // we are going to detach one node
-    return len - 1;
 }
 
 void abstractIfNeeded(SymHeap &sh) {
@@ -796,37 +813,40 @@ void abstractIfNeeded(SymHeap &sh) {
     }
 }
 
-void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
+void concretizeObj(
+        SymHeap                     &sh,
+        const TValId                 addr,
+        TSymHeapList                &todo,
+        TValList                    *leakList)
+{
+    CL_BREAK_IF(!protoCheckConsistency(sh));
+
     const TValId seg = sh.valRoot(addr);
     const TValId peer = segPeer(sh, seg);
 
     // handle the possibly empty variant (if exists)
-    const TMinLen lenRemains = spliceOutSegmentIfNeeded(sh, seg, peer, todo);
+    TMinLen len = sh.segMinLength(seg);
+    spliceOutSegmentIfNeeded(&len, sh, seg, peer, todo, leakList);
 
     const EObjKind kind = sh.valTargetKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
 
-    // TODO
-    CL_BREAK_IF(OK_OBJ_OR_NULL == kind);
+    switch (kind) {
+        case OK_OBJ_OR_NULL:
+        case OK_SEE_THROUGH:
+            // these kinds are much easier than regular list segments
+            sh.valTargetSetConcrete(seg);
+            decrementProtoLevel(sh, seg);
+            LDP_PLOT(symabstract, sh);
+            CL_BREAK_IF(!protoCheckConsistency(sh));
+            return;
 
-    if (OK_SEE_THROUGH == kind) {
-        // this kind is much easier than regular list segments
-        sh.valTargetSetConcrete(seg);
-        LDP_PLOT(symabstract, sh);
-        return;
+        default:
+            break;
     }
 
-    // duplicate self as abstract object
-    const TValId dup = sh.valClone(seg);
-    const TValId dupHead = segHeadAt(sh, dup);
-    if (OK_DLS == kind) {
-        // DLS relink
-        const PtrHandle ptr = prevPtrFromSeg(sh, peer);
-        ptr.setValue(dupHead);
-    }
-
-    // duplicate all unknown values, to keep the prover working
-    clonePrototypes(sh, seg, dup);
+    // duplicate self as abstract object (including all prototypes)
+    const TValId dup = segDeepCopy(sh, seg);
 
     // resolve the relative placement of the 'next' pointer
     const BindingOff off = sh.segBinding(seg);
@@ -834,29 +854,40 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
         ? off.next
         : off.prev;
 
-    // concretize self and recover the list
+    // concretize self
     sh.valTargetSetConcrete(seg);
+
+    // update 'next' pointer
     const PtrHandle nextPtr(sh, sh.valByOffset(seg, offNext));
+    const TValId dupHead = segHeadAt(sh, dup);
     nextPtr.setValue(dupHead);
 
     if (OK_DLS == kind) {
-        // update DLS back-link
-        const PtrHandle backLink(sh, sh.valByOffset(dup, off.next));
+        // update 'prev' pointer going from peer to the cloned object
+        const PtrHandle prev1 = prevPtrFromSeg(sh, peer);
+        prev1.setValue(dupHead);
+
+        // update 'prev' pointer going from the cloned object to the conrete one
+        const PtrHandle prev2(sh, sh.valByOffset(dup, off.next));
         const TValId headAddr = sh.valByOffset(seg, off.head);
-        backLink.setValue(headAddr);
+        prev2.setValue(headAddr);
+
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
-    sh.segSetMinLength(dup, lenRemains);
+    sh.segSetMinLength(dup, len);
 
     LDP_PLOT(symabstract, sh);
+
+    CL_BREAK_IF(!protoCheckConsistency(sh));
 }
 
 bool spliceOutAbstractPathCore(
-        SymHeap                 &sh,
+        SymHeap                &sh,
         const TValId            beg,
         const TValId            endPoint,
-        const bool              readOnlyMode)
+        const bool              readOnlyMode,
+        TValList               *leakList)
 {
     // NOTE: If there is a cycle consisting of empty list segments only, we will
     // loop indefinitely.  However, the basic list segment axiom guarantees that
@@ -890,12 +921,17 @@ bool spliceOutAbstractPathCore(
     }
 
     if (!readOnlyMode)
-        spliceOutListSegment(sh, beg, peer, valNext);
+        spliceOutListSegment(sh, beg, peer, valNext, leakList);
 
     return true;
 }
 
-bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo) {
+bool spliceOutAbstractPath(
+        SymHeap                     &sh,
+        const TValId                 atAddr,
+        const TValId                 pointingTo,
+        TValList                    *leakList)
+{
     const TValId seg = sh.valRoot(atAddr);
     const TValId peer = segPeer(sh, seg);
 
@@ -915,9 +951,14 @@ bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo) {
         endPoint = sh.valByOffset(pointingTo, off);
     }
 
-    const bool ok = spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ true);
-    if (ok && !spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ false))
+    const bool ok = spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ true,
+            leakList);
+
+    if (ok && !spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ false,
+                leakList))
+    {
         CL_BREAK_IF("spliceOutAbstractPathCore() completely broken");
+    }
 
     sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), kind, ok));
     return ok;

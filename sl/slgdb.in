@@ -37,7 +37,7 @@ test -z "$SL_VERBOSE" && SL_VERBOSE=1
 test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
 
 # prepare the command line
-RUN="$GDB --quiet --args $CC1_HOST \"$1\" \
+RUN="$GDB --quiet -x $topdir/sl/gdbpp-loader.gdb --args $CC1_HOST \"$1\" \
     -I$topdir/include/predator-builtins -DPREDATOR \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \
@@ -45,6 +45,6 @@ RUN="$GDB --quiet --args $CC1_HOST \"$1\" \
     -fplugin-arg-libsl-verbose=$SL_VERBOSE \
     $SL_OPTS"
 
-RUN="`printf "$RUN" | tr --squeeze-repeats ' '`"
+RUN="`printf "%s\n" "$RUN" | tr --squeeze-repeats ' '`"
 printf "\n\n%s\n\n" "$RUN"
 eval "$RUN"

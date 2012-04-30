@@ -48,7 +48,7 @@ public:
 				if (k == j)
 					continue;
 
-				if (stateMap[j->first] == stateMap[k->first])
+				if (stateMap[j->first] % stateMap[k->first])
 					continue;
 
 //				std::cerr << j->first << " != " << k->first << " because " << stateMap[j->first] << " !=  " << stateMap[k->first] << std::endl;

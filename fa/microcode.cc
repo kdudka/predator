@@ -41,7 +41,9 @@ inline const cl_loc* getLoc(const AbstractInstruction::StateType& state)
 	// Assertions
 	assert(state.second != nullptr);
 	assert(state.second->instr != nullptr);
-	assert(state.second->instr->insn() != nullptr);
+
+	if (!state.second->instr->insn())
+		return nullptr;
 
 	return &(state.second->instr->insn()->loc);
 }
@@ -248,7 +250,7 @@ void FI_move_reg_inc::execute(ExecutionManager& execMan,
 
 }
 
-// FI_get_sreg
+// FI_get_greg
 void FI_get_greg::execute(ExecutionManager& execMan,
 	const AbstractInstruction::StateType& state) {
 
@@ -258,7 +260,7 @@ void FI_get_greg::execute(ExecutionManager& execMan,
 
 }
 
-// FI_set_sreg
+// FI_set_greg
 void FI_set_greg::execute(ExecutionManager& execMan,
 	const AbstractInstruction::StateType& state) {
 
@@ -268,7 +270,7 @@ void FI_set_greg::execute(ExecutionManager& execMan,
 
 }
 
-// FI_move_ABP
+// FI_get_ABP
 void FI_get_ABP::execute(ExecutionManager& execMan,
 	const AbstractInstruction::StateType& state) {
 

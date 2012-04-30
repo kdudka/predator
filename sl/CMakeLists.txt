@@ -18,7 +18,6 @@
 # project metadata
 cmake_minimum_required(VERSION 2.6)
 project(sl C CXX)
-add_definitions("-I../include")
 enable_testing()
 
 include("../build-aux/common.cmake")
@@ -112,10 +111,12 @@ set(tests
     0180 0181 0182 0183 0184 0185 0186 0187 0188 0189
     0190 0191 0192 0193 0194 0195 0196 0197 0198 0199
     0200 0201 0202 0203 0204 0205      0207 0208 0209
-    0210
+    0210      0212      0214 0215      0217 0218 0219
+    0220 0221 0222 0223 0224 0225 0226 0227 0228 0229
+    0230 0231 0232 0233
     0300      0302
     0400 0401 0402 0403 0404      0406      0408
-         0411                     0416
+         0411
               0432
                         0464      0466 0467
     0500 0501 0502 0503 0504 0505           0508 0509
@@ -124,9 +125,10 @@ set(tests
 
 if(TEST_ONLY_FAST)
 else()
-    # expensive tests
+    # expensive tests (ordered from the fastest to the most expensive)
     set(tests ${tests}
-        0167 0415 0414 0418 0124 0417 0157 0521 0412 0405 0409 0407 0410 0413)
+        0416 0167 0124 0415 0414 0418 0417 0471 0412 0157
+        0469 0405 0409 0407 0521 0410 0413 0474)
 endif()
 
 set(cost 1)

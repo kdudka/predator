@@ -93,7 +93,20 @@ public:
 
 	};
 
-	static void reorderBoxes(vector<const AbstractBox*>& label, std::vector<size_t>& lhs) {
+	static size_t getLabelArity(std::vector<const AbstractBox*>& label) {
+
+		size_t arity = 0;
+
+		for (auto& box : label)
+			arity += box->getArity();
+
+		return arity;
+
+	}
+
+	static void reorderBoxes(std::vector<const AbstractBox*>& label, std::vector<size_t>& lhs) {
+
+		assert(FA::getLabelArity(label) == lhs.size());
 
 		std::vector<std::pair<const AbstractBox*, std::vector<size_t> > > tmp;
 		std::vector<size_t>::iterator lhsBegin = lhs.end(), lhsEnd = lhs.begin();
@@ -115,6 +128,7 @@ public:
 		for (size_t i = 0; i < tmp.size(); ++i) {
 
 			label[i] = tmp[i].first;
+
 			lhs.insert(lhs.end(), tmp[i].second.begin(), tmp[i].second.end());
 
 		}

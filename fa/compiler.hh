@@ -51,7 +51,6 @@ namespace CodeStorage {
 	struct Insn;
 }
 
-
 std::ostream& operator<<(std::ostream& os, const cl_loc& loc);
 
 
@@ -67,7 +66,7 @@ public:
 
 	/**
 	 * @brief  The structure that contains the assembly code
-	 * 
+	 *
 	 * This structure contains the compiled assembly code (in microinstructions)
 	 * of the program.
 	 *
@@ -156,9 +155,11 @@ public:
 				prev = instr;
 
 				if (instr->insn() && (instr->insn() != lastInsn)) {
+
 					os << instr->insn()->loc << ' ' << *instr->insn() << std::endl;
 
 					lastInsn = instr->insn();
+
 				}
 
 				if (instr->isTarget())

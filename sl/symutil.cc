@@ -70,6 +70,12 @@ bool rngFromVal(IR::Range *pDst, const SymHeapCore &sh, const TValId val) {
         return true;
     }
 
+    if (VAL_NULL == sh.valRoot(val)) {
+        // extract offset range of a NULL value
+        *pDst = sh.valOffsetRange(val);
+        return true;
+    }
+
     if (VT_CUSTOM != sh.valTarget(val))
         // not a custom value
         return false;
@@ -329,23 +335,15 @@ void initGlVar(SymHeap &sh, const CVar &cv) {
     (void) proc.varAt(cv);
 }
 
-void getPtrValues(TValList &dst, SymHeap &sh, TValId at) {
-    ObjList ptrs;
-    sh.gatherLivePointers(ptrs, at);
-    BOOST_FOREACH(const ObjHandle &obj, ptrs) {
-        const TValId val = obj.value();
-        if (0 < val)
-            dst.push_back(val);
-    }
-}
-
-void redirectRefs(
+bool /* anyChange */ redirectRefs(
         SymHeap                 &sh,
         const TValId            pointingFrom,
         const TValId            pointingTo,
         const TValId            redirectTo,
         const TOffset           offHead)
 {
+    bool anyChange = false;
+
     // go through all objects pointing at/inside pointingTo
     ObjList refs;
     sh.pointedBy(refs, pointingTo);
@@ -377,5 +375,8 @@ void redirectRefs(
 
         // store the redirected value
         obj.setValue(result);
+        anyChange = true;
     }
+
+    return anyChange;
 }

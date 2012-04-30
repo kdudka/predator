@@ -308,8 +308,15 @@ struct KillVar {
     }
 };
 
+/// FIXME: inserting <id,0> and <id,1> could break the consistency of std::set
+struct ltKillVar {
+    bool operator()(const KillVar &a, const KillVar &b) {
+        return a.uid < b.uid;
+    }
+};
+
 /// list of variables to kill (a @b kill @b list)
-typedef std::vector<KillVar>                        TKillVarList;
+typedef std::set<KillVar, ltKillVar>                TKillVarList;
 
 /// list of kill lists (one per each target of a terminal instruction)
 typedef std::vector<TKillVarList>                   TKillPerTarget;
@@ -457,7 +464,7 @@ class Block {
             name_(name)
         {
         }
-        
+
         // NOTE: there is no destructor ... given objects are NOT destroyed
 
         /**
@@ -600,18 +607,24 @@ class ControlFlow {
 typedef std::vector<int>        TArgByPos;
 typedef std::set<int>           TVarSet;
 
+namespace CallGraph {
+    struct Node;
+}
+
 /**
  * function definition
  */
 struct Fnc {
     struct cl_operand           def;    ///< definition as low-level operand
-    Storage                     *stor;  ///< owning Storage object
+    Storage                    *stor;   ///< owning Storage object
     TVarSet                     vars;   ///< uids of variables used by the fnc
     TArgByPos                   args;   ///< args uid addressed by arg position
     ControlFlow                 cfg;    ///< fnc code as control flow graph
+    CallGraph::Node            *cgNode; ///< pointer to call-graph node or NULL
 
     Fnc():
-        stor(0)
+        stor(0),
+        cgNode(0)
     {
         def.code = CL_OPERAND_VOID;
     }
@@ -692,6 +705,48 @@ class FncDb {
         Private *d;
 };
 
+typedef std::vector<const Insn *>                   TInsnList;
+typedef std::map<Fnc *, TInsnList>                  TInsnListByFnc;
+
+namespace CallGraph {
+
+    /// call-graph node (there is a 1:1 relation with Fnc, if the CG is built)
+    struct Node {
+        Fnc                        *fnc;
+
+        /// list of calls sorted by called fnc, zero key means an indirect call
+        TInsnListByFnc              calls;
+
+        /// list of direct call instructions that call this function
+        TInsnListByFnc              callers;
+
+        /// list of instructions that take address of this function
+        TInsnListByFnc              callbacks;
+
+        Node(Fnc *fnc_):
+            fnc(fnc_)
+        {
+        }
+    };
+
+    typedef std::set<Node *>                        TNodeList;
+
+    struct Graph {
+        TNodeList                   roots;
+        TNodeList                   leafs;
+
+        bool                        hasIndirectCall;
+        bool                        hasCallback;
+
+        Graph():
+            hasIndirectCall(false),
+            hasCallback(false)
+        {
+        }
+    };
+
+} // namespace CallGraph
+
 /**
  * a value type representing the @b whole @b serialised @b model of code
  */
@@ -701,6 +756,7 @@ struct Storage {
     FncDb                       fncs;       ///< functions lookup container
     NameDb                      varNames;   ///< var names lookup container
     NameDb                      fncNames;   ///< fnc names lookup container
+    CallGraph::Graph            callGraph;  ///< call graph globals
 };
 
 } // namespace CodeStorage

@@ -77,6 +77,24 @@ inline bool isDataPtr(const struct cl_type *clt) {
     return (CL_TYPE_FNC != clt->code);
 }
 
+/// return true if the given operand is a local variable
+inline bool isLcVar(const cl_operand &op) {
+    if (CL_OPERAND_VAR != op.code)
+        // not a variable
+        return false;
+
+    const enum cl_scope_e code = op.scope;
+    switch (code) {
+        case CL_SCOPE_GLOBAL:
+        case CL_SCOPE_STATIC:
+            // global variable
+            return false;
+
+        default:
+            return true;
+    }
+}
+
 /**
  * return true if there is any CL_ACCESSOR_REF in the given chain of accessors
  * @note CL_ACCESSOR_REF accessors can't be chained with each other, as it makes
@@ -92,6 +110,9 @@ int varIdFromOperand(const struct cl_operand *op, const char **pName = 0);
 
 /// get name of an @b external function given as CL_OPERAND_CST, true on success
 bool fncNameFromCst(const char **pName, const struct cl_operand *op);
+
+/// get uid of a function from the given operand if available, true on success
+bool fncUidFromOperand(int *pUid, const struct cl_operand *op);
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
 

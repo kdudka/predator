@@ -96,6 +96,7 @@ forward_signal() {
 
 # colorize the output
 run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin=libsl\.so\]$||'        \
+        -e "s|^/.*/predator[^/]*/||"                                           \
         -e "s|(^.*) \[internal location\]\$|$S\1$N|"                           \
         -e "s|(: error:) (.*)\$|\1 $R\2$N|"                                    \
         -e "s|(: warning:) (.*)\$|\1 $Y\2$N|"                                  \

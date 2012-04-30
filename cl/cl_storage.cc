@@ -23,6 +23,7 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "builtins.hh"
 #include "util.hh"
 
 #include <cstring>
@@ -301,6 +302,7 @@ namespace CodeStorage {
         BOOST_FOREACH(const Block *bb, fnc->cfg) {
             destroyBlock(const_cast<Block *>(bb));
         }
+        delete fnc->cgNode;
         delete fnc;
     }
 
@@ -319,12 +321,14 @@ struct ClStorageBuilder::Private {
     Fnc         *fnc;
     Block       *bb;
     Insn        *insn;
+    bool        preventRefOps;
 
     Private():
         file(0),
         fnc(0),
         bb(0),
-        insn(0)
+        insn(0),
+        preventRefOps(0)
     {
     }
 
@@ -500,7 +504,9 @@ void ClStorageBuilder::Private::digOperand(const TOp *op) {
     const bool skipVarInit = !this->digOperandVar(op, /* isArgDecl */ false);
 
     ac = op->accessor;
-    if (ac && ac->code != CL_ACCESSOR_DEREF && seekRefAccessor(ac)) {
+    if (!preventRefOps && ac && ac->code != CL_ACCESSOR_DEREF &&
+            seekRefAccessor(ac))
+    {
         // we are taking a reference to the variable by this operand!
         const int id = varIdFromOperand(op);
         stor.vars[id].mayBePointed = true;
@@ -636,6 +642,10 @@ void ClStorageBuilder::insn_call_open(
     storeOperand(operands[0], dst);
     storeOperand(operands[1], fnc);
 
+    // prevent existing reference marks '&' on operands to be taken into account
+    // for operands of some internal handlers like VK_ASSERT() or PT_ASSERT().
+    d->preventRefOps = isBuiltInFnc(operands[/* fnc */ 1]);
+
     d->openInsn(insn);
 }
 
@@ -648,6 +658,9 @@ void ClStorageBuilder::insn_call_arg(int, const struct cl_operand *arg_src) {
 
 void ClStorageBuilder::insn_call_close() {
     d->closeInsn();
+
+    // switch back preventing for next instructions
+    d->preventRefOps = false;
 }
 
 void ClStorageBuilder::insn_switch_open(

@@ -208,6 +208,32 @@ void dm_hash_remove(struct dm_hash_table *t, const char *key)
     free(dm_list_item(pos, struct ht_node));
 }
 
+/* overridden simplified implementation of dm_hash_destroy() */
+void dm_hash_destroy(struct dm_hash_table *t)
+{
+    void *head = t;
+    struct dm_list *pos = head;
+    struct dm_list *next = pos->n;
+    while (pos != head) {
+        free(dm_list_item(pos, struct ht_node));
+        pos = next;
+    }
+
+    free(head);
+}
+
+/* overridden simplified implementation of dm_hash_iter() */
+void dm_hash_iter(struct dm_hash_table *t, dm_hash_iterate_fn f)
+{
+    struct dm_list *head = (struct dm_list *) t;
+    struct dm_list *pos;
+
+    for (pos = head->n; head != pos; pos = pos->n) {
+        struct ht_node *node = dm_list_item(pos, struct ht_node);
+        f(node->data);
+    }
+}
+
 struct btree *btree_create(struct dm_pool *mem)
 {
     (void) mem;

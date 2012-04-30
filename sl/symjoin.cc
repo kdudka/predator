@@ -103,8 +103,8 @@ struct SymJoinCtx {
     SymHeap                     &sh2;
 
     // they need to be black-listed for joinAbstractValues()
-    std::set<TValId>            sset1;
-    std::set<TValId>            sset2;
+    TValSet                     sset1;
+    TValSet                     sset2;
 
     ObjList                     liveList1;
     ObjList                     liveList2;
@@ -547,9 +547,10 @@ bool joinFreshObjTripple(
         if (root <= 0 || (VT_RANGE != code && hasKey(vm[/* ltr */ 0], root)))
             return true;
 
-        // XXX
+#if SE_ALLOW_THREE_WAY_JOIN < 3
         if (!ctx.joiningData())
             return false;
+#endif
     }
     else {
         // special values have to match (NULL not treated as special here)
@@ -875,8 +876,8 @@ bool joinSegBinding(
         const TValId            v1,
         const TValId            v2)
 {
-    const bool isSeg1 = isAbstract(ctx.sh1.valTarget(v1));
-    const bool isSeg2 = isAbstract(ctx.sh2.valTarget(v2));
+    const bool isSeg1 = objWithBinding(ctx.sh1, v1);
+    const bool isSeg2 = objWithBinding(ctx.sh2, v2);
     if (!isSeg1 && !isSeg2)
         // nothing to join here
         return true;
@@ -913,62 +914,98 @@ bool joinSegBinding(
     return false;
 }
 
+/// FIXME: the name is misleading and it does not work anyway
 bool considerImplicitPrototype(
+        TProtoLevel             *pDst,
         const SymJoinCtx        &ctx,
         const TValId            root1,
         const TValId            root2)
 {
-    const bool isProto1 = ctx.sh1.valTargetIsProto(root1);
-    const bool isProto2 = ctx.sh2.valTargetIsProto(root2);
-    CL_BREAK_IF(isProto1 == isProto2);
-    (void) isProto1;
+    const TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
+    const TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
+    if (level1 == level2) {
+        // FIXME
+        *pDst = level1;
+        return true;
+    }
 
-    SymHeap &sh = (isProto2) ? ctx.sh1 : ctx.sh2;
-    const TValId root = (isProto2) ? root1 : root2;
+    const bool lowLevel1 = (level1 < level2);
+    const TProtoLevel diff = (lowLevel1)
+        ? (level2 - level1)
+        : (level1 - level2);
 
+    if (1 < diff)
+        // the difference is more than one level of abstraction, giving up...
+        return false;
+
+    CL_BREAK_IF(1 != diff);
+
+    SymHeap &sh                = (lowLevel1) ? ctx.sh1 : ctx.sh2;
+    const TValId root          = (lowLevel1) ?   root1 :   root2;
+    const TProtoLevel topLevel = (lowLevel1) ?  level1 :  level2;
+
+    // FIXME: this seems to be overly strict
     ObjList refs;
     sh.pointedBy(refs, root);
     BOOST_FOREACH(const ObjHandle &obj, refs) {
         const TValId at = obj.placedAt();
-        if (OK_CONCRETE != sh.valTargetKind(at))
+        const TProtoLevel refLevel = sh.valTargetProtoLevel(at);
+        if (refLevel != topLevel)
             return false;
     }
 
-    SJ_DEBUG("P-P considerImplicitPrototype() matches a pair of objects: "
-             << SJ_VALP(root1, root2));
+    // FIXME
+    *pDst = std::max(level1, level2);
     return true;
 }
 
+bool rootNotYetAbstract(SymHeap &sh, const TValSet &sset)
+{
+    if (sset.empty()) {
+        CL_BREAK_IF("rootNotYetAbstract() got an empty set");
+        return false;
+    }
+
+    const TValId anyRoot = *sset.begin();
+    const EValueTarget code = sh.valTarget(anyRoot);
+    return !isAbstract(code);
+}
+
 bool joinProtoFlag(
-        bool                    *pDst,
+        TProtoLevel             *pDst,
         const SymJoinCtx        &ctx,
         const TValId            root1,
         const TValId            root2)
 {
-    const bool isProto1 = ctx.sh1.valTargetIsProto(root1);
-    const bool isProto2 = ctx.sh2.valTargetIsProto(root2);
+    TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
+    TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
+
+    if (ctx.joiningData() && root1 != root2) {
+        // we are processing a prototype object
+        SymHeap &sh = ctx.sh1;
+        if (ctx.joiningDataReadWrite() || rootNotYetAbstract(sh, ctx.sset1))
+            ++level1;
+
+        if (ctx.joiningDataReadWrite() || rootNotYetAbstract(sh, ctx.sset2))
+            ++level2;
+    }
 
     if (VAL_INVALID == root2) {
-        *pDst = isProto1;
+        *pDst = level1;
         return true;
     }
 
     if (VAL_INVALID == root1) {
-        *pDst = isProto2;
+        *pDst = level2;
         return true;
     }
 
-    *pDst = isProto1;
-    if (isProto2 == *pDst)
-        return true;
-
-    if (ctx.joiningData() || considerImplicitPrototype(ctx, root1, root2)) {
-        *pDst = true;
-        return true;
+    if (ctx.joiningData()) {
+        *pDst = level1;
+        return (level1 == level2);
     }
 
-    SJ_DEBUG("<-- prototype vs shared: " << SJ_VALP(root1, root2));
-    return false;
+    return considerImplicitPrototype(pDst, ctx, root1, root2);
 }
 
 TMinLen joinMinLength(
@@ -1170,8 +1207,8 @@ bool createObject(
     if (!joinSegBinding(&off, ctx, root1, root2))
         return false;
 
-    bool isProto;
-    if (!joinProtoFlag(&isProto, ctx, root1, root2))
+    TProtoLevel protoLevel;
+    if (!joinProtoFlag(&protoLevel, ctx, root1, root2))
         return false;
 
     if (offMayExist) {
@@ -1213,7 +1250,7 @@ bool createObject(
         ctx.dst.valSetLastKnownTypeOfTarget(rootDst, clt);
 
     // preserve 'prototype' flag
-    ctx.dst.valTargetSetProto(rootDst, isProto);
+    ctx.dst.valTargetSetProtoLevel(rootDst, protoLevel);
 
     if (OK_CONCRETE != kind) {
         // abstract object
@@ -1551,11 +1588,8 @@ bool joinSegmentWithAny(
 
     const EValueTarget code1 = ctx.sh1.valTarget(root1);
     const EValueTarget code2 = ctx.sh2.valTarget(root2);
-    if (!isPossibleToDeref(code1) || !isPossibleToDeref(code2)) {
-        CL_BREAK_IF(firstTryReadOnly);
-        *pResult = false;
-        return true;
-    }
+    if (!isPossibleToDeref(code1) || !isPossibleToDeref(code2))
+        return false;
 
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
     const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
@@ -1676,9 +1710,7 @@ void scheduleSegAddr(
     const TValPair vpSeg(
             (JS_USE_SH1 == action) ? seg : VAL_INVALID,
             (JS_USE_SH2 == action) ? seg : VAL_INVALID);
-    if (!wl.schedule(vpSeg))
-        // XXX
-        wl.undo(vpSeg);
+    wl.schedule(vpSeg);
 
     if (seg == peer)
         return;
@@ -1686,9 +1718,7 @@ void scheduleSegAddr(
     const TValPair vpPeer(
             (JS_USE_SH1 == action) ? peer : VAL_INVALID,
             (JS_USE_SH2 == action) ? peer : VAL_INVALID);
-    if (!wl.schedule(vpPeer))
-        // XXX
-        wl.undo(vpPeer);
+    wl.schedule(vpPeer);
 }
 
 bool handleUnknownValues(
@@ -1791,7 +1821,7 @@ bool insertSegmentClone(
         nextGt = nextValFromSeg(shGt, peer);
 
     const TValId nextLt = (isGt2) ? v1 : v2;
-    if (!off && !checkValueMapping(ctx, 
+    if (!off && !checkValueMapping(ctx,
                 (isGt1) ? nextGt : nextLt,
                 (isGt2) ? nextGt : nextLt,
                 /* allowUnknownMapping */ true))
@@ -1892,41 +1922,39 @@ bool joinAbstractValues(
     bool isAbs2 = (VT_ABSTRACT == code2);
     resolveMayExist(ctx, &isAbs1, &isAbs2, v1, v2);
 
-    const EJoinStatus subStatus = (isAbs1)
-        ? JS_USE_SH1
-        : JS_USE_SH2;
+    if (isAbs1 && isAbs2
+            && joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY))
+        goto done;
 
-    const bool isValid1 = isPossibleToDeref(code1);
-    const bool isValid2 = isPossibleToDeref(code2);
-    if (isValid1 && isValid2) {
-        if (isAbs1 && isAbs2) {
-            if (!joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_ANY))
-                *pResult = false;
+    if (!isAbs2 && joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_SH1))
+        goto done;
 
+    if (!isAbs1 && joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_SH2))
+        goto done;
+
+    if (isAbs1 && insertSegmentClone(pResult, ctx, v1, v2, JS_USE_SH1))
+        goto done;
+
+    if (isAbs2 && insertSegmentClone(pResult, ctx, v1, v2, JS_USE_SH2))
+        goto done;
+
+#ifndef I_WANT_TO_DEBUG_TEST_0039
+    if (ctx.joiningData() && (isAbs1 != isAbs2)) {
+        if (isAbs1 && joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_SH1,
+                    /* firstTryReadOnly */ false))
             goto done;
-        }
 
-        else if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus))
+        if (isAbs2 && joinSegmentWithAny(pResult, ctx, root1, root2, JS_USE_SH2,
+                    /* firstTryReadOnly */ false))
             goto done;
     }
+#endif
 
-    if (!insertSegmentClone(pResult, ctx, v1, v2, subStatus)) {
-        if (ctx.joiningData()) {
-            if (joinSegmentWithAny(pResult, ctx, root1, root2, subStatus,
-                        /* firstTryReadOnly */ false))
-                goto done;
-
-            return false;
-        }
-
-        *pResult = false;
-    }
+    // we have failed
+    *pResult = false;
+    return true;
 
 done:
-    if (!*pResult)
-        // we have failed anyway
-        return true;
-
     // we intentionally do not use code1/code2 here (see realValTarget())
     if (VT_RANGE == ctx.sh1.valTarget(v1) || VT_RANGE == ctx.sh2.valTarget(v2))
         // we came here from a VT_RANGE value, remember to join the entry
@@ -2295,7 +2323,8 @@ bool joinCVars(SymJoinCtx &ctx, const JoinVarVisitor::EMode mode) {
     return traverseProgramVarsGeneric<
         /* N_DST */ 1,
         /* N_SRC */ 2>
-            (heaps,visitor);
+            (heaps, visitor,
+             /* allowRecovery */ JoinVarVisitor::JVM_LIVE_OBJS == mode);
 }
 
 TValId joinDstValue(
@@ -2450,6 +2479,99 @@ bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0) {
     return true;
 }
 
+// FIXME: the implementation is not going to work well in certain cases
+bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExist = 0)
+{
+    const TValId root1 = roMapLookup(ctx.valMap1[/* rtl */ 1], rootDst);
+    const TValId root2 = roMapLookup(ctx.valMap2[/* rtl */ 1], rootDst);
+
+    const bool isValid1 = (VAL_INVALID != root1);
+    const bool isValid2 = (VAL_INVALID != root2);
+    if (isValid1 == isValid2)
+        return false;
+
+    if (wasMayExist) {
+        const EObjKind kind = (isValid1)
+            ? ctx.sh1.valTargetKind(root1)
+            : ctx.sh2.valTargetKind(root2);
+
+        switch (kind) {
+            case OK_SEE_THROUGH:
+            case OK_OBJ_OR_NULL:
+                *wasMayExist = true;
+                break;
+
+            default:
+                *wasMayExist = false;
+        }
+    }
+
+    return true;
+}
+
+struct MayExistLevelUpdater {
+    SymJoinCtx         &ctx;
+    const TValId        rootDst;
+    ObjHandle           ignoredField;
+
+    MayExistLevelUpdater(SymJoinCtx &ctx_, const TValId rootDst_):
+        ctx(ctx_),
+        rootDst(rootDst_)
+    {
+        if (OK_SEE_THROUGH == ctx.dst.valTargetKind(rootDst))
+            ignoredField = nextPtrFromSeg(ctx.dst, rootDst);
+    }
+
+    bool operator()(const ObjHandle &sub) const {
+        if (sub == this->ignoredField)
+            return /* continue */ true;
+
+        const TValId proto = ctx.dst.valRoot(sub.value());
+        if (proto <= VAL_NULL)
+            return /* continue */ true;
+
+        if (rootDst == proto)
+            // self loop
+            return /* continue */ true;
+
+        if (!isFreshProto(ctx, proto))
+            // not a newly introduced one
+            return /* continue */ true;
+
+        // this object became a prototype, increment its level
+        objIncrementProtoLevel(ctx.dst, proto);
+        return /* continue */ true;
+    }
+};
+
+bool updateMayExistLevels(SymJoinCtx &ctx) {
+    TValList dstRoots;
+    ctx.dst.gatherRootObjects(dstRoots, isOnHeap);
+    BOOST_FOREACH(const TValId rootDst, dstRoots) {
+        const EObjKind kind = ctx.dst.valTargetKind(rootDst);
+        switch (kind) {
+            case OK_SEE_THROUGH:
+            case OK_OBJ_OR_NULL:
+                break;
+
+            default:
+                // we are interested only in 0..1 objects here
+                continue;
+        }
+
+        bool wasMayExist;
+        if (!isFreshProto(ctx, rootDst, &wasMayExist) || wasMayExist)
+            // not a newly introduced one
+            continue;
+
+        const MayExistLevelUpdater visitor(ctx, rootDst);
+        if (!traverseLivePtrs(ctx.dst, rootDst, visitor))
+            return false;
+    }
+
+    return true;
+}
+
 bool matchPreds(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
@@ -2496,7 +2618,7 @@ bool handleDstPreds(SymJoinCtx &ctx) {
             return false;
     }
 
-    // TODO: match gneric Neq predicates also in prototypes;  for now we
+    // TODO: match generic Neq predicates also in prototypes;  for now we
     // consider only minimal segment lengths
     BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
         const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
@@ -2517,70 +2639,7 @@ bool handleDstPreds(SymJoinCtx &ctx) {
     return true;
 }
 
-bool segDetectSelfLoopHelper(
-        SymHeap                 &sh,
-        std::set<TValId>        &haveSeen,
-        TValId                  seg)
-{
-    // remember original kind of object
-    const EObjKind kind = sh.valTargetKind(seg);
-
-    // find a loop-less path
-    std::set<TValId> path;
-    while (insertOnce(path, seg)) {
-        TValId peer = seg;
-        if (OK_DLS == kind) {
-            // jump to peer in case of DLS
-            peer = dlSegPeer(sh, seg);
-            if (!insertOnce(path, peer))
-                break;
-        }
-
-        const TValId valNext = nextValFromSeg(sh, peer);
-        if (!isAbstract(sh.valTarget(valNext)))
-            // no next segment --> no loop
-            return false;
-
-        seg = sh.valRoot(valNext);
-        if (kind != sh.valTargetKind(seg))
-            // no compatible next segment --> no loop
-            return false;
-
-        // optimization
-        haveSeen.insert(seg);
-    }
-
-    // loop detected!
-    return true;
-}
-
-bool segDetectSelfLoop(SymHeap &sh) {
-    // gather all abstract objects
-    TValList segRoots;
-    sh.gatherRootObjects(segRoots, isAbstract);
-
-    // go through all entries
-    std::set<TValId> haveSeen;
-    BOOST_FOREACH(const TValId seg, segRoots) {
-        if (!insertOnce(haveSeen, seg))
-            continue;
-
-        if (segDetectSelfLoopHelper(sh, haveSeen, seg))
-            // cycle detected!
-            return true;
-    }
-
-    // found nothing harmful
-    return false;
-}
-
 bool validateStatus(const SymJoinCtx &ctx) {
-    if (segDetectSelfLoop(ctx.dst)) {
-        // purely segmental loops cause us problems
-        CL_DEBUG(">J< segment cycle detected, cancelling join");
-        return false;
-    }
-
     if (ctx.allowThreeWay || (JS_THREE_WAY != ctx.status))
         return true;
 
@@ -2603,6 +2662,9 @@ bool joinSymHeaps(
     // initialize symbolic join ctx
     SymJoinCtx ctx(*pDst, sh1, sh2, allowThreeWay);
 
+    CL_BREAK_IF(!protoCheckConsistency(ctx.sh1));
+    CL_BREAK_IF(!protoCheckConsistency(ctx.sh2));
+
     // first try to join return addresses (if in use)
     if (!joinReturnAddrs(ctx))
         goto fail;
@@ -2621,6 +2683,9 @@ bool joinSymHeaps(
 
     // join uniform blocks
     if (!joinCVars(ctx, JoinVarVisitor::JVM_UNI_BLOCKS))
+        goto fail;
+
+    if (!updateMayExistLevels(ctx))
         goto fail;
 
     // go through shared Neq predicates and set minimal segment lengths
@@ -2649,6 +2714,7 @@ bool joinSymHeaps(
     *pStatus = ctx.status;
     SJ_DEBUG("<-- joinSymHeaps() says " << ctx.status);
     CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
+    CL_BREAK_IF(!protoCheckConsistency(ctx.dst));
     return true;
 
 fail:
@@ -2776,7 +2842,7 @@ bool joinDataReadOnly(
     // go through the commont part of joinData()/joinDataReadOnly()
     SymHeap tmp(sh.stor(), new Trace::TransientNode("joinDataReadOnly()"));
     SymJoinCtx ctx(tmp, sh);
-    
+
     if (!joinDataCore(ctx, off, addr1, addr2))
         return false;
 
@@ -2833,38 +2899,18 @@ void recoverPointersToSelf(
 void recoverPrototypes(
         SymJoinCtx              &ctx,
         const TValId            dst,
-        const TValId            ghost,
-        const bool              bidir)
+        const TValId            ghost)
 {
-    SymHeap &sh = ctx.dst;
-
     const unsigned cntProto = ctx.protoRoots.size();
     if (cntProto)
         CL_DEBUG("    joinData() joins " << cntProto << " prototype objects");
 
     // go through prototypes
     BOOST_FOREACH(const TValId protoGhost, ctx.protoRoots) {
-        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoGhost);
-        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoGhost);
-
-        if (isAbstract(sh.valTarget(proto1)))
-            // remove Neq predicates, their targets are going to vanish soon
-            sh.segSetMinLength(proto1, 0);
-
-        if (bidir && isAbstract(sh.valTarget(proto2)))
-            // remove Neq predicates, their targets are going to vanish soon
-            sh.segSetMinLength(proto2, 0);
-
-        if (isAbstract(sh.valTarget(protoGhost)))
-            // temporarily remove Neq predicates
-            sh.segSetMinLength(protoGhost, 0);
-
-        redirectRefs(sh,
+        redirectRefs(ctx.dst,
                 /* pointingFrom */  protoGhost,
                 /* pointingTo   */  ghost,
                 /* redirectTo   */  dst);
-
-        sh.valTargetSetProto(protoGhost, true);
     }
 }
 
@@ -2907,7 +2953,8 @@ void transferContentsOfGhost(
         const TValId valNew = objGhost.value();
         objDst.setValue(valNew);
 
-        if (collectJunk(sh, valOld))
+        const TValId rootOld = sh.valRoot(valOld);
+        if (collectJunk(sh, rootOld))
             CL_DEBUG("    transferContentsOfGhost() drops a sub-heap (valOld)");
     }
 }
@@ -2922,22 +2969,30 @@ bool joinData(
     SJ_DEBUG("--> joinData" << SJ_VALP(dst, src));
     ++cntJoinOps;
 
+    // used only for debugging (in case the debugging is enabled)
+    bool isomorphismWasExpected = false;
+
     // dst is expected to be a segment
     CL_BREAK_IF(!isAbstract(sh.valTarget(dst)));
     const BindingOff off(sh.segBinding(dst));
     if (debuggingSymJoin) {
         EJoinStatus status = JS_USE_ANY;
         joinDataReadOnly(&status, sh, off, dst, src, 0);
-        if (JS_USE_ANY != status)
+        if (JS_USE_ANY == status)
+            isomorphismWasExpected = true;
+        else
             debugPlot(sh, "joinData", dst, src, "00");
     }
 
-    // go through the commont part of joinData()/joinDataReadOnly()
+    // go through the common part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
     if (!joinDataCore(ctx, off, dst, src)) {
         CL_BREAK_IF("joinData() has failed, did joinDataReadOnly() succeed?");
         return false;
     }
+
+    if (!updateMayExistLevels(ctx))
+        return false;
 
     // ghost is a transiently existing object representing the join of dst/src
     const TValId ghost = roMapLookup(ctx.valMap1[0], dst);
@@ -2949,7 +3004,7 @@ bool joinData(
         transferContentsOfGhost(ctx.dst, src, ghost);
 
     // redirect some edges if necessary
-    recoverPrototypes(ctx, dst, ghost, bidir);
+    recoverPrototypes(ctx, dst, ghost);
     recoverPointersToSelf(sh, dst, src, ghost, bidir);
     restorePrototypeLengths(ctx);
 
@@ -2957,8 +3012,11 @@ bool joinData(
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");
 
     SJ_DEBUG("<-- joinData() has finished " << ctx.status);
-    if (JS_USE_ANY != ctx.status)
+    if (JS_USE_ANY != ctx.status) {
         debugPlot(sh, "joinData", dst, src, "01");
+        if (isomorphismWasExpected)
+            CL_BREAK_IF("joinData() status differs from joinDataReadOnly()");
+    }
 
     return true;
 }

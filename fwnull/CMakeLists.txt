@@ -18,7 +18,6 @@
 # project metadata
 cmake_minimum_required(VERSION 2.6)
 project(fwnull C CXX)
-add_definitions("-I../include")
 enable_testing()
 
 include("../build-aux/common.cmake")
