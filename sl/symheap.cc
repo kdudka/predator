@@ -3234,13 +3234,13 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
 TProtoLevel SymHeapCore::valTargetProtoLevel(TValId val) const {
     if (val <= 0)
         // not a prototype for sure
-        return false;
+        return 0;
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     if (!isPossibleToDeref(valData->code))
         // not a prototype for sure
-        return false;
+        return 0;
 
     // seek root
     const TValId root = valData->valRoot;

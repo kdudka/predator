@@ -1030,39 +1030,33 @@ bool joinNestingLevel(
 
     TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
     TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
-    const TProtoLevel ldiff = level1 - level2;
+    *pDst = std::max(level1, level2);
 
-    if (ctx.joiningData() && root1 != root2) {
-        // we are processing a prototype object
-        SymHeap &sh = ctx.sh1;
-        if (ctx.joiningDataReadWrite() || rootNotYetAbstract(sh, ctx.sset1))
-            ++level1;
-
-        if (ctx.joiningDataReadWrite() || rootNotYetAbstract(sh, ctx.sset2))
-            ++level2;
-    }
-
-    if (VAL_INVALID == root2) {
-        *pDst = level1;
+    if (ctx.joiningData() && root1 == root2)
+        // shared data
         return true;
-    }
 
-    if (VAL_INVALID == root1) {
-        *pDst = level2;
+    if (ctx.joiningDataReadWrite())
+        // symabstract.cc already decreased the level of prototypes hanging
+        // under abstract objects (this may work better the other way around)
+        ++(*pDst);
+
+    if (VAL_INVALID == root2 || VAL_INVALID == root1)
+        // we got only one object, just take tis level as it is
         return true;
+
+    TProtoLevel ldiff = level1 - level2;
+    if (ctx.joiningDataReadWrite()) {
+        // symabstract.cc gives the first object to joinData() always abstract
+        CL_BREAK_IF(rootNotYetAbstract(ctx.sh1, ctx.sset1));
+
+        // the other one can be concrete or abstract, we have to compensate it
+        if (rootNotYetAbstract(ctx.sh2, ctx.sset2))
+            ++ldiff;
     }
 
-    if (ctx.joiningData()) {
-        *pDst = level1;
-        return (level1 == level2);
-    }
-
-    if (ldiff == item.ldiff) {
-        *pDst = std::max(level1, level2);
-        return true;
-    }
-
-    return false;
+    // check that the computed ldiff matches the actual one
+    return (item.ldiff == ldiff);
 }
 
 TMinLen joinMinLength(
