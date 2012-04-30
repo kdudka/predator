@@ -45,5 +45,9 @@
  */
 #define FA_RESTART_AFTER_BOX_DISCOVERY		(1 + FA_BOX_APPROXIMATION)
 
+/**
+ * enable fusion when computing abstraction (default is 1)
+ */
+#define FA_FUSION_ENABLED					1
 
 #endif /* CONFIG_H */
