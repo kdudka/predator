@@ -1008,51 +1008,6 @@ bool joinSegBinding(
     return false;
 }
 
-/// FIXME: the name is misleading and it does not work anyway
-bool considerImplicitPrototype(
-        TProtoLevel             *pDst,
-        const SymJoinCtx        &ctx,
-        const TValId            root1,
-        const TValId            root2)
-{
-    const TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
-    const TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
-    if (level1 == level2) {
-        // FIXME
-        *pDst = level1;
-        return true;
-    }
-
-    const bool lowLevel1 = (level1 < level2);
-    const TProtoLevel diff = (lowLevel1)
-        ? (level2 - level1)
-        : (level1 - level2);
-
-    if (1 < diff)
-        // the difference is more than one level of abstraction, giving up...
-        return false;
-
-    CL_BREAK_IF(1 != diff);
-
-    SymHeap &sh                = (lowLevel1) ? ctx.sh1 : ctx.sh2;
-    const TValId root          = (lowLevel1) ?   root1 :   root2;
-    const TProtoLevel topLevel = (lowLevel1) ?  level1 :  level2;
-
-    // FIXME: this seems to be overly strict
-    ObjList refs;
-    sh.pointedBy(refs, root);
-    BOOST_FOREACH(const ObjHandle &obj, refs) {
-        const TValId at = obj.placedAt();
-        const TProtoLevel refLevel = sh.valTargetProtoLevel(at);
-        if (refLevel != topLevel)
-            return false;
-    }
-
-    // FIXME
-    *pDst = std::max(level1, level2);
-    return true;
-}
-
 bool rootNotYetAbstract(SymHeap &sh, const TValSet &sset)
 {
     if (sset.empty()) {
@@ -1065,14 +1020,17 @@ bool rootNotYetAbstract(SymHeap &sh, const TValSet &sset)
     return !isAbstract(code);
 }
 
-bool joinProtoFlag(
+bool joinNestingLevel(
         TProtoLevel             *pDst,
         const SymJoinCtx        &ctx,
-        const TValId            root1,
-        const TValId            root2)
+        const SchedItem         item)
 {
+    const TValId root1 = item.v1;
+    const TValId root2 = item.v2;
+
     TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
     TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
+    const TProtoLevel ldiff = level1 - level2;
 
     if (ctx.joiningData() && root1 != root2) {
         // we are processing a prototype object
@@ -1099,7 +1057,12 @@ bool joinProtoFlag(
         return (level1 == level2);
     }
 
-    return considerImplicitPrototype(pDst, ctx, root1, root2);
+    if (ldiff == item.ldiff) {
+        *pDst = std::max(level1, level2);
+        return true;
+    }
+
+    return false;
 }
 
 TMinLen joinMinLength(
@@ -1304,7 +1267,7 @@ bool createObject(
         return false;
 
     TProtoLevel protoLevel;
-    if (!joinProtoFlag(&protoLevel, ctx, root1, root2))
+    if (!joinNestingLevel(&protoLevel, ctx, item))
         return false;
 
     if (offMayExist) {
