@@ -1,1 +1,2 @@
+test-p0045.c:17:5: note: #1286 = *#1264:pmax
 test-p0045.c:17:5: error: dereferenced value is not a valid reference [(int)0]
