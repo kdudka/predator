@@ -1838,30 +1838,36 @@ protected:
 	}
 
 
+	/**
+	 * @brief  Compile a basic block of a control-flow graph
+	 *
+	 * This method compiles a basic block of a control-flow graph.
+	 *
+	 * @param[in]  block     The block of the control-flow graph in CodeStorage
+	 * @param[in]  abstract  @p true if there should be abstraction at the
+	 *                       beginning of the block, @p false otherwise
+	 */
 	void compileBlock(const CodeStorage::Block* block, bool abstract)
 	{
 		size_t head = assembly_->code_.size();
 
 		if (abstract || loopAnalyser_.isEntryPoint(*block->begin()))
+		{	// in case there should be abstraction at the start of the block
 			cAbstraction();
-//		else
-//			cFixpoint();
+		}
 
 		for (auto insn : *block)
-		{
+		{	// for every instruction of the block
 			compileInstruction(*insn);
 
-			if (head == assembly_->code_.size())
-				continue;
-
-			assembly_->code_[head]->insn(insn);
-
-//			for (size_t i = head; i < assembly_->code_.size(); ++i)
-//				CL_CDEBUG(assembly_->code_[i] << ":\t" << *assembly_->code_[i]);
-
-			head = assembly_->code_.size();
+			if (head != assembly_->code_.size())
+			{	// in case some instruction(s) was compiled
+				assembly_->code_[head]->insn(insn);
+				head = assembly_->code_.size();
+			}
 		}
 	}
+
 
 	void compileFunction(const CodeStorage::Fnc& fnc) {
 
