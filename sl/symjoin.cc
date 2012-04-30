@@ -538,6 +538,44 @@ bool checkNullConsistency(
     }
 }
 
+bool bumpNestingLevel(const ObjHandle &obj) {
+    if (!obj.isValid())
+        return false;
+
+    // resolve root (the owning object of this field)
+    SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
+    const TValId root = sh.valRoot(obj.placedAt());
+
+    const EObjKind kind = sh.valTargetKind(root);
+    switch (kind) {
+        case OK_CONCRETE:
+            // not an abstract object
+            return false;
+
+        case OK_DLS:
+            if (obj == prevPtrFromSeg(sh, root))
+                // prev pointer
+                return false;
+
+            // fall through!
+
+        case OK_SLS:
+        case OK_SEE_THROUGH:
+            if (obj == nextPtrFromSeg(sh, root))
+                // next pointer
+                return false;
+
+            // fall through!
+
+        case OK_OBJ_OR_NULL:
+            // please do!
+            return true;
+    }
+
+    CL_BREAK_IF("bumpNestingLevel() got something special");
+    return false;
+}
+
 /// (OBJ_INVALID == objDst) means read-only!!!
 bool joinFreshObjTripple(
         SymJoinCtx              &ctx,
@@ -608,12 +646,16 @@ bool joinFreshObjTripple(
             return true;
     }
 
-    // TODO: update ldiff
+    if (bumpNestingLevel(obj1))
+        ++ldiff;
+    if (bumpNestingLevel(obj2))
+        --ldiff;
 
     const SchedItem item(v1, v2, ldiff);
     if (ctx.wl.schedule(item))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
-                << " <- " << SJ_OBJP(obj1.objId(), obj2.objId()));
+                << " <- " << SJ_OBJP(obj1.objId(), obj2.objId())
+                << ", ldiff = " << ldiff);
 
     return true;
 }
