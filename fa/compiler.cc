@@ -1869,19 +1869,29 @@ protected:
 	}
 
 
-	void compileFunction(const CodeStorage::Fnc& fnc) {
-
+	/**
+	 * @brief  Compiles a function
+	 *
+	 * This method compiles a function into the assembly.
+	 *
+	 * @param[in]  fnc  The function to be compiled
+	 */
+	void compileFunction(const CodeStorage::Fnc& fnc)
+	{
 		std::pair<SymCtx, CodeStorage::Block>& fncInfo = getFncInfo(&fnc);
 
 		// get context
 		curCtx_ = &fncInfo.first;
 
 		if (assembly_->regFileSize_ < curCtx_->regCount)
+		{	// allocate the necessary number of registers
 			assembly_->regFileSize_ = curCtx_->regCount;
+		}
 
-		// we need 2 more registers in order to facilitate call
 		if (assembly_->regFileSize_ < (curCtx_->argCount + 2))
+		{	// we need 2 more registers in order to facilitate call
 			assembly_->regFileSize_ = curCtx_->argCount + 2;
+		}
 
 		// move ABP into r0
 		append(new FI_get_ABP(nullptr, 0, 0))->setTarget();
@@ -1909,12 +1919,25 @@ protected:
 
 		// allocate stack frame to r1
 		append(
-			new FI_node_create(nullptr, 1, 1, 1, boxMan_.getTypeInfo(ss.str()),
-				curCtx_->sfLayout)
+			new FI_node_create(
+				/* instruction */ nullptr,
+				/* dst reg where the node will be stored */ 1,
+				/* reg with the value from which the node is to be created */ 1,
+				/* size of the created node */ 1,
+				/* type information */ boxMan_.getTypeInfo(ss.str()),
+				/* selectors of the node */ curCtx_->sfLayout
+			)
 		);
 
 		// store arguments to the new frame (r1)
-		append(new FI_stores(nullptr, 1, 0, 0));
+		append(
+			new FI_stores(
+				/* instruction */ nullptr,
+				/* reg with addr of dst */ 1,
+				/* src reg */ 0,
+				/* offset of the dst */ 0
+			)
+		);
 
 		// set new ABP (r1)
 		append(new FI_set_greg(nullptr, ABP_INDEX, 1));
@@ -1932,34 +1955,35 @@ protected:
 
 		bool first = true;
 
-		while (!queue.empty()) {
-
+		while (!queue.empty())
+		{	// until all used basic blocks are compiled
 			const CodeStorage::Block* block = queue.front();
 			queue.pop_front();
 
 			auto p = codeIndex_.insert(std::make_pair(block,
 				static_cast<AbstractInstruction*>(nullptr)));
+
 			if (!p.second)
 				continue;
 
 			size_t blockHead = assembly_->code_.size();
 
+			// compile the block, abstract when the block is the first
 			compileBlock(block, first);
 
 			assert(blockHead < assembly_->code_.size());
+
 			p.first->second = assembly_->code_[blockHead];
 
 			for (auto target : block->targets())
 				queue.push_back(target);
 
 			first = false;
-
 		}
 
 		auto iter = codeIndex_.find(fnc.cfg.entry());
 		assert(iter != codeIndex_.end());
 		assembly_->functionIndex_.insert(std::make_pair(&fnc, iter->second));
-
 	}
 
 public:
