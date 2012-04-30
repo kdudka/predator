@@ -96,6 +96,47 @@ class WorkListWithUndo: public WorkList<T> {
         }
 };
 
+struct SchedItem {
+    TValId              v1;
+    TValId              v2;
+    TProtoLevel         ldiff;
+
+    SchedItem():
+        v1(VAL_INVALID),
+        v2(VAL_INVALID),
+        ldiff(0)
+    {
+    }
+
+    SchedItem(TValId v1_, TValId v2_, TProtoLevel ldiff_):
+        v1(v1_),
+        v2(v2_),
+        ldiff(ldiff_)
+    {
+    }
+
+    operator TValPair() const {
+        return TValPair(v1, v2);
+    }
+};
+
+// needed by std::set
+inline bool operator<(const SchedItem &a, const SchedItem &b) {
+    if (a.v1 < b.v1)
+        return true;
+    if (b.v1 < a.v1)
+        return false;
+
+    if (a.v2 < b.v2)
+        return true;
+    if (b.v2 < a.v2)
+        return false;
+
+    return (a.ldiff < b.ldiff);
+}
+
+typedef WorkListWithUndo<SchedItem>                             TWorkList;
+
 /// current state, common for joinSymHeaps(), joinDataReadOnly() and joinData()
 struct SymJoinCtx {
     SymHeap                     &dst;
@@ -112,7 +153,7 @@ struct SymJoinCtx {
     TValMapBidir                valMap1;
     TValMapBidir                valMap2;
 
-    WorkListWithUndo<TValPair>  wl;
+    TWorkList                   wl;
     EJoinStatus                 status;
     bool                        allowThreeWay;
 
@@ -566,7 +607,8 @@ bool joinFreshObjTripple(
             return true;
     }
 
-    if (ctx.wl.schedule(TValPair(v1, v2)))
+    const SchedItem item(v1, v2, /* TODO: ldiff */ 0);
+    if (ctx.wl.schedule(item))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
                 << " <- " << SJ_OBJP(obj1.objId(), obj2.objId()));
 
@@ -1678,27 +1720,29 @@ bool segmentCloneCore(
     return false;
 }
 
-template <class TWorkList>
 void scheduleSegAddr(
         TWorkList               &wl,
         const TValId            seg,
         const TValId            peer,
-        const EJoinStatus       action)
+        const EJoinStatus       action,
+        const TProtoLevel       ldiff)
 {
     CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
 
-    const TValPair vpSeg(
+    const SchedItem segItem(
             (JS_USE_SH1 == action) ? seg : VAL_INVALID,
-            (JS_USE_SH2 == action) ? seg : VAL_INVALID);
-    wl.schedule(vpSeg);
+            (JS_USE_SH2 == action) ? seg : VAL_INVALID,
+            ldiff);
+    wl.schedule(segItem);
 
     if (seg == peer)
         return;
 
-    const TValPair vpPeer(
+    const SchedItem peerItem(
             (JS_USE_SH1 == action) ? peer : VAL_INVALID,
-            (JS_USE_SH2 == action) ? peer : VAL_INVALID);
-    wl.schedule(vpPeer);
+            (JS_USE_SH2 == action) ? peer : VAL_INVALID,
+            ldiff);
+    wl.schedule(peerItem);
 }
 
 bool handleUnknownValues(
@@ -1730,9 +1774,11 @@ bool cloneSpecialValue(
         SymHeap                 &shGt,
         const TValId            valGt,
         const TValMapBidir      &valMapGt,
-        const TValPair          &vp,
+        const SchedItem         &itemToClone,
         EValueTarget            code)
 {
+    const TValPair vp(itemToClone);
+
     const TValId rootGt = shGt.valRoot(valGt);
     EValueOrigin vo = shGt.valOrigin(valGt);
     TValId vDst;
@@ -1821,14 +1867,14 @@ bool insertSegmentClone(
         ? ctx.valMap1
         : ctx.valMap2;
 
-    TValPair vp;
-    scheduleSegAddr(ctx.wl, seg, peer, action);
-    while (ctx.wl.next(vp)) {
-        const TValId valGt = (isGt1) ? vp.first : vp.second;
-        const TValId valLt = (isGt2) ? vp.first : vp.second;
+    SchedItem item;
+    scheduleSegAddr(ctx.wl, seg, peer, action, /* TODO: ldiff */ 0);
+    while (ctx.wl.next(item)) {
+        const TValId valGt = (isGt1) ? item.v1 : item.v2;
+        const TValId valLt = (isGt2) ? item.v1 : item.v2;
         if (VAL_INVALID != valLt) {
             // process the rest of ctx.wl rather in joinPendingValues()
-            ctx.wl.undo(vp);
+            ctx.wl.undo(item);
             break;
         }
 
@@ -1846,7 +1892,7 @@ bool insertSegmentClone(
                 continue;
         }
         else {
-            if (cloneSpecialValue(ctx, shGt, valGt, valMapGt, vp, code))
+            if (cloneSpecialValue(ctx, shGt, valGt, valMapGt, item, code))
                 continue;
         }
 
@@ -1858,7 +1904,8 @@ bool insertSegmentClone(
     // schedule the next object in the row (TODO: check if really necessary)
     const TValId valNext1 = (isGt1) ? nextGt : nextLt;
     const TValId valNext2 = (isGt2) ? nextGt : nextLt;
-    if (ctx.wl.schedule(TValPair(valNext1, valNext2)))
+    const SchedItem nextItem(valNext1, valNext2, /* TODO: ldiff */ 0);
+    if (ctx.wl.schedule(nextItem))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " by insertSegmentClone()");
 
     *pResult = true;
@@ -2201,7 +2248,9 @@ bool joinValuesByCode(
         return true;
 }
 
-bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
+bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item) {
+    const TValId v1 = item.v1;
+    const TValId v2 = item.v2;
     if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
         // already joined
         return true;
@@ -2242,16 +2291,13 @@ bool joinValuePair(SymJoinCtx &ctx, const TValId v1, const TValId v2) {
 }
 
 bool joinPendingValues(SymJoinCtx &ctx) {
-    TValPair vp;
-    while (ctx.wl.next(vp)) {
-        const TValId v1 = vp.first;
-        const TValId v2 = vp.second;
-
-        SJ_DEBUG("--- " << SJ_VALP(v1, v2));
-        if (!joinValuePair(ctx, v1, v2))
+    SchedItem item;
+    while (ctx.wl.next(item)) {
+        SJ_DEBUG("--- " << SJ_VALP(item.v1, item.v2));
+        if (!joinValuePair(ctx, item))
             return false;
 
-        ctx.alreadyJoined.insert(vp);
+        ctx.alreadyJoined.insert(TValPair(item));
     }
 
     return true;
