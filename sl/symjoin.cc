@@ -1528,26 +1528,6 @@ bool followValuePair(
     return true;
 }
 
-void considerValSchedule(
-        SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2,
-        const TValId            byVal1,
-        const TValId            byVal2)
-{
-    if (VAL_NULL == v1 && VAL_NULL == v2)
-        return;
-
-    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
-        return;
-
-    const TValPair vp(v1, v2);
-    if (!ctx.wl.schedule(vp))
-        return;
-
-    SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " <- " << SJ_VALP(byVal1, byVal2));
-}
-
 bool segAlreadyJoined(
         SymJoinCtx              &ctx,
         const TValId            seg1,
@@ -1878,7 +1858,9 @@ bool insertSegmentClone(
     // schedule the next object in the row (TODO: check if really necessary)
     const TValId valNext1 = (isGt1) ? nextGt : nextLt;
     const TValId valNext2 = (isGt2) ? nextGt : nextLt;
-    considerValSchedule(ctx, valNext1, valNext2, VAL_INVALID, VAL_INVALID);
+    if (ctx.wl.schedule(TValPair(valNext1, valNext2)))
+        SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " by insertSegmentClone()");
+
     *pResult = true;
     return true;
 }

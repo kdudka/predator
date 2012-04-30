@@ -58,7 +58,7 @@ int main()
 /**
  * @file test-0232.c
  *
- * @brief merge of test-0229 and test-0231 resulting in double free
+ * @brief merge of test-0230 and test-0231 resulting in double free
  *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
