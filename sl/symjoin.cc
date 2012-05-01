@@ -1632,15 +1632,11 @@ bool joinSegmentWithAny(
     if (!isPossibleToDeref(code1) || !isPossibleToDeref(code2))
         return false;
 
-    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
+    if (firstTryReadOnly && !followRootValues(ctx, item, action, /* RO */ true))
+        return false;
+
     const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
     const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
-
-    if (firstTryReadOnly && !followRootValues(ctx, item, action, /* RO */ true))
-    {
-        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
-        return false;
-    }
 
     TValId peer1 = root1;
     if (isDls1)
@@ -1656,10 +1652,7 @@ bool joinSegmentWithAny(
     if (firstTryReadOnly
             && haveDls
             && !followRootValues(ctx, peerItem, action, /* RO */ true))
-    {
-        SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(peer1, peer2));
         return false;
-    }
 
     const EObjKind kind = (JS_USE_SH1 == action)
         ? ctx.sh1.valTargetKind(root1)
@@ -1675,24 +1668,19 @@ bool joinSegmentWithAny(
         const TValId valNext2 = valOfPtrAt(ctx.sh2, peer2, off.next);
         if (firstTryReadOnly && !checkValueMapping(ctx, valNext1, valNext2,
                                /* allowUnknownMapping */ true))
-        {
-            SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
             return false;
-        }
 
         if (firstTryReadOnly && haveDls) {
             const TValId valPrev1 = valOfPtrAt(ctx.sh1, root1, off.prev);
             const TValId valPrev2 = valOfPtrAt(ctx.sh2, root2, off.prev);
             if (!checkValueMapping(ctx, valPrev1, valPrev2,
                                    /* allowUnknownMapping */ true))
-            {
-                SJ_DEBUG("<<< joinSegmentWithAny" << SJ_VALP(root1, root2));
                 return false;
-            }
         }
     }
 
     // go ahead, try it read-write!
+    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
     *pResult = followRootValues(ctx, item, action);
     if (!haveDls || !*pResult)
         return true;
