@@ -433,7 +433,7 @@ struct cl_var {
 };
 
 /**
- * generic operand type enumeration
+ * generic operand kind enumeration
  */
 enum cl_operand_e {
     /**
