@@ -202,6 +202,42 @@ void ClPrettyPrint::bb_open(
         << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << std::endl;
 }
 
+#define STRINGIFY(arg)  #arg
+#define TOSTRING(arg)   STRINGIFY(arg)
+#define ESCAPEDLIST(x) \
+    x(a) \
+    x(b) \
+    x(f) \
+    x(n) \
+    x(v) \
+    x(r) \
+    x(t)
+
+namespace {
+    string prettyEscaped(const char *raw_str) {
+        std::string ret;
+        const char *i, *last;
+        i = last = raw_str;
+        for (;;) {
+#define X(what)  && *i != TOSTRING(\what)[0]
+            while (*i != '\0' ESCAPEDLIST(X)) ++i;
+#undef X
+            ret += std::string(last, i - last);
+            if (*i == '\0')
+                break;
+            switch (*i) {
+#define X(what) \
+    case TOSTRING(\what)[0]: ret += std::string("\\" TOSTRING(what)); break;
+                ESCAPEDLIST(X)
+#undef X
+                default:   ret += std::string("???"); break;
+            }
+            last = ++i;
+        }
+        return ret;
+    }
+}
+
 void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
     const struct cl_type *type = op->type;
     const int value = op->data.cst.data.cst_int.value;
@@ -252,13 +288,11 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
                 SSD_COLORIZE(out_, C_WHITE) << "false";
             break;
 
-        case CL_TYPE_CHAR:
-            // TODO: quote special chars?
-            SSD_COLORIZE(out_, C_WHITE)
-                << '\''
-                << static_cast<char>(value)
-                << '\'';
+        case CL_TYPE_CHAR: {
+            char tmp[4] = {'\'', static_cast<char>(value), '\'', '\0'};
+            SSD_COLORIZE(out_, C_WHITE) << prettyEscaped(tmp);
             break;
+        }
 
         default:
             CL_TRAP;
@@ -287,7 +321,7 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
                     CL_ERROR_MSG(&loc_, "CL_TYPE_STRING with no string");
                     break;
                 }
-                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << "\"" << text << "\"";
+                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << "\"" << prettyEscaped(text) << "\"";
             }
             break;
 
