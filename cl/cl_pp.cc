@@ -207,7 +207,7 @@ namespace {
         std::string ret;
         unsigned char c;
         while ((c = *raw_str++)) {
-            if (isprint(c) && '\'' != c && '\"' != c) {
+            if (isprint(c) && '\'' != c && '\"' != c && '\\' != c) {
                 // preserve printable chars
                 ret += static_cast<char>(c);
                 continue;
@@ -220,6 +220,7 @@ namespace {
                 // simple escaping
                 case '\'':  ret += '\'';    continue;
                 case '\"':  ret += '\"';    continue;
+                case '\\':  ret += '\\';    continue;
                 case '\n':  ret += 'n';     continue;
                 case '\r':  ret += 'r';     continue;
                 case '\t':  ret += 't';     continue;
