@@ -207,7 +207,7 @@ namespace {
         std::string ret;
         unsigned char c;
         while ((c = *raw_str++)) {
-            if (isprint(c)) {
+            if (isprint(c) && '\'' != c && '\"' != c) {
                 // preserve printable chars
                 ret += static_cast<char>(c);
                 continue;
