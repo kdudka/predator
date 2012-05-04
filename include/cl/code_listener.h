@@ -295,7 +295,12 @@ enum cl_accessor_e {
     /**
      * record accessor, in the C language: .
      */
-    CL_ACCESSOR_ITEM
+    CL_ACCESSOR_ITEM,
+
+    /**
+     * offset accessor, in the C language: ((char *)ptr + N)
+     */
+    CL_ACCESSOR_OFFSET
 };
 
 /**
@@ -338,6 +343,14 @@ struct cl_accessor {
              */
             int                         id;
         } item; /**< valid only for @b CL_ACCESSOR_ITEM */
+
+        /* CL_ACCESSOR_OFFSET */
+        struct {
+            /**
+             * offset to move the address by
+             */
+            int                         off;
+        } offset;
     } data;
 };
 

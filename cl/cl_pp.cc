@@ -97,7 +97,8 @@ class ClPrettyPrint: public ICodeListener {
         void printBareType      (const struct cl_type *, bool expandFnc);
         void printVarType       (const struct cl_operand *);
         void printNestedVar     (const struct cl_operand *);
-        void printRecordAcessor (const struct cl_accessor **);
+        void printOffsetAccessor(const int off);
+        void printRecordAccessor(const struct cl_accessor **);
         void printOperandVar    (const struct cl_operand *);
         void printOperand       (const struct cl_operand *);
         void printAssignmentLhs (const struct cl_operand *);
@@ -522,7 +523,16 @@ namespace {
     }
 }
 
-void ClPrettyPrint::printRecordAcessor(const struct cl_accessor **ac) {
+void ClPrettyPrint::printOffsetAccessor(const int off) {
+    out_ << ssd::Color(C_LIGHT_RED) << "<";
+
+    if (0 <= off)
+        out_ << "+";
+
+    out_ << off << ">" << ssd::Color(C_NO_COLOR);
+}
+
+void ClPrettyPrint::printRecordAccessor(const struct cl_accessor **ac) {
     std::string tag;
     int offset = 0;
     readItemAccessInfo(*ac, &tag, &offset);
@@ -580,8 +590,12 @@ void ClPrettyPrint::printOperandVar(const struct cl_operand *op) {
                 out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "]");
                 break;
 
+            case CL_ACCESSOR_OFFSET:
+                this->printOffsetAccessor(ac->data.offset.off);
+                break;
+
             case CL_ACCESSOR_ITEM:
-                this->printRecordAcessor(&ac);
+                this->printRecordAccessor(&ac);
                 break;
 
             case CL_ACCESSOR_REF:

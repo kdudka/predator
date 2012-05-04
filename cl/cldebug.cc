@@ -140,6 +140,10 @@ void acToStream(std::ostream &out, const struct cl_accessor *ac, bool oneline) {
                 out << "CL_ACCESSOR_DEREF:";
                 break;
 
+            case CL_ACCESSOR_OFFSET:
+                out << "CL_ACCESSOR_OFFSET: offset = " << ac->data.offset.off << "B,";
+                break;
+
             case CL_ACCESSOR_ITEM: {
                 const struct cl_type_item *item = clt->items + ac->data.item.id;
                 out << "CL_ACCESSOR_ITEM: [+"
@@ -295,6 +299,13 @@ void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
 
             case CL_ACCESSOR_ITEM:
                 str << "." << fieldName(ac);
+                break;
+
+            case CL_ACCESSOR_OFFSET:
+                str << "<";
+                if (0 <= ac->data.offset.off)
+                    str << "+";
+                str << ac->data.offset.off << ">";
                 break;
 
             case CL_ACCESSOR_REF:

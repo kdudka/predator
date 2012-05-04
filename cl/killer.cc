@@ -99,6 +99,7 @@ void scanOperand(BlockData &bData, const cl_operand &op, bool dst) {
                 break;
 
             case CL_ACCESSOR_ITEM:
+            case CL_ACCESSOR_OFFSET:
                 fieldOfComp = true;
                 // fall through!
 
