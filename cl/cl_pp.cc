@@ -202,39 +202,43 @@ void ClPrettyPrint::bb_open(
         << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << std::endl;
 }
 
-#define STRINGIFY(arg)  #arg
-#define TOSTRING(arg)   STRINGIFY(arg)
-#define ESCAPEDLIST(x) \
-    x(a) \
-    x(b) \
-    x(f) \
-    x(n) \
-    x(v) \
-    x(r) \
-    x(t)
-
 namespace {
     string prettyEscaped(const char *raw_str) {
         std::string ret;
-        const char *i, *last;
-        i = last = raw_str;
-        for (;;) {
-#define X(what)  && *i != TOSTRING(\what)[0]
-            while (*i != '\0' ESCAPEDLIST(X)) ++i;
-#undef X
-            ret += std::string(last, i - last);
-            if (*i == '\0')
-                break;
-            switch (*i) {
-#define X(what) \
-    case TOSTRING(\what)[0]: ret += std::string("\\" TOSTRING(what)); break;
-                ESCAPEDLIST(X)
-#undef X
-                default:   ret += std::string("???"); break;
+        unsigned char c;
+        while ((c = *raw_str++)) {
+            if (isprint(c) && '\'' != c && '\"' != c && '\\' != c) {
+                // preserve printable chars
+                ret += static_cast<char>(c);
+                continue;
             }
-            last = ++i;
+
+            // escape non-printable chars
+            ret += '\\';
+
+            switch (c) {
+                // simple escaping
+                case '\'':  ret += '\'';    continue;
+                case '\"':  ret += '\"';    continue;
+                case '\\':  ret += '\\';    continue;
+                case '\n':  ret += 'n';     continue;
+                case '\r':  ret += 'r';     continue;
+                case '\t':  ret += 't';     continue;
+
+                // octal escaping
+                default:
+                    ret += ('0' + ( c        >> 6 ));
+                    ret += ('0' + ((c & 070) >> 3 ));
+                    ret += ('0' +  (c & 007)       );
+            }
         }
+
         return ret;
+    }
+
+    inline string prettyEscaped(const char raw_char) {
+        const char raw_str[] = { raw_char, '\0' };
+        return prettyEscaped(raw_str);
     }
 }
 
@@ -288,14 +292,14 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
                 SSD_COLORIZE(out_, C_WHITE) << "false";
             break;
 
-        case CL_TYPE_CHAR: {
-            char tmp[4] = {'\'', static_cast<char>(value), '\'', '\0'};
-            SSD_COLORIZE(out_, C_WHITE) << prettyEscaped(tmp);
+        case CL_TYPE_CHAR:
+            SSD_COLORIZE(out_, C_WHITE)
+                << "\'" << prettyEscaped(static_cast<char>(value)) << "\'";
             break;
         }
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("printIntegralCst() got something special");
     }
 }
 
@@ -312,7 +316,8 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
                 CL_ERROR_MSG(&loc_, "anonymous function");
                 break;
             }
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, op->data.cst.data.cst_fnc.name);
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN,
+                    op->data.cst.data.cst_fnc.name);
             break;
 
         case CL_TYPE_STRING: {
@@ -321,7 +326,8 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
                     CL_ERROR_MSG(&loc_, "CL_TYPE_STRING with no string");
                     break;
                 }
-                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << "\"" << prettyEscaped(text) << "\"";
+                SSD_COLORIZE(out_, C_LIGHT_PURPLE)
+                    << "\"" << prettyEscaped(text) << "\"";
             }
             break;
 

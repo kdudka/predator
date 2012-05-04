@@ -37,6 +37,8 @@
 
 #include "fixpoint.hh"
 
+#include "config.h"
+
 using namespace ssd;
 
 struct ExactTMatchF {
@@ -236,8 +238,6 @@ inline bool testInclusion(FAE& fae, TA<label_type>& fwdConf, UFAE& fwdConfWrappe
 	if (TA<label_type>::subseteq(ta, fwdConf))
 		return true;
 
-	CL_CDEBUG(1, "extending fixpoint with:" << std::endl << fae);
-
 	fwdConfWrapper.join(ta, index);
 
 	ta.clear();
@@ -262,7 +262,7 @@ inline void abstract(FAE& fae, TA<label_type>& fwdConf, TA<label_type>::Backend&
 	fae.unreachableFree();
 
 //	CL_CDEBUG(1, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after normalization:" ) << std::endl << *fae);
-
+#if FA_FUSION_ENABLED
 	// merge fixpoint
 	std::vector<FAE*> tmp;
 
@@ -276,10 +276,10 @@ inline void abstract(FAE& fae, TA<label_type>& fwdConf, TA<label_type>::Backend&
 		CL_CDEBUG(3, "accelerator " << std::endl << *tmp[i]);
 
 	fae.fuse(tmp, FuseNonZeroF());
-
 //	fae.fuse(fwdConf, FuseNonZeroF(), CopyNonZeroRhsF());
 
 	CL_CDEBUG(3, "fused " << std::endl << fae);
+#endif
 
 	// abstract
 //	CL_CDEBUG("abstracting ... " << 1);
@@ -446,6 +446,8 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	} else {
 
+		CL_CDEBUG(1, "extending fixpoint at " << this->insn()->loc << std::endl << *fae);
+
 		execMan.enqueue(state.second, state.first, fae, this->next_);
 
 	}
@@ -507,6 +509,8 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 		execMan.traceFinished(state.second);
 
 	} else {
+
+		CL_CDEBUG(1, "extending fixpoint at " << this->insn()->loc << std::endl << *fae);
 
 		execMan.enqueue(state.second, state.first, fae, this->next_);
 

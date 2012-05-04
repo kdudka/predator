@@ -246,6 +246,14 @@ Higher level SLS/DLS abstraction, etc.
 
     test-0233.c - leak-less variant of test-0231
 
+    test-0234.c - hierarchically nested SLS up to L5, properly destroyed
+
+    test-0235.c - hierarchically nested SLS up to L5, bottom-up destructor
+
+    test-0236.c - test-0234 with some direct up-links on top of it
+
+    test-0237.c - test-0236 but also with some indirect up-links
+
 
 Linux lists
 ===========
