@@ -127,7 +127,7 @@ macro(test_forester_regre name_suff ext arg1)
         # in the error output, which is checked for exact match
         set(cmd "${cmd} -m32")
 
-        set(cmd "${cmd} -S ${testdir}/test-${num}.c")
+        set(cmd "${cmd} -S ${testdir}/test-${num}.c -o /dev/null")
         set(cmd "${cmd} -I../include/predator-builtins -DFORESTER")
         set(cmd "${cmd} -fplugin=${fa_BINARY_DIR}/libfa.so ${arg1}")
         set(cmd "${cmd} -fplugin-arg-libfa-preserve-ec")
