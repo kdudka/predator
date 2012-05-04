@@ -3,7 +3,8 @@
  tests/predator-regre/test-0002.err.uninit |    6 +++---
  tests/predator-regre/test-0178.err        |    2 +-
  tests/predator-regre/test-0180.err        |    2 +-
- 5 files changed, 9 insertions(+), 9 deletions(-)
+ tests/predator-regre/test-0209.err.oom    |    2 +-
+ 6 files changed, 10 insertions(+), 10 deletions(-)
 
 diff --git a/tests/predator-regre/test-0002.err b/tests/predator-regre/test-0002.err
 index a6f8c4d..4fe6ef3 100644
@@ -60,3 +61,13 @@ index 07b54c4..096a14b 100644
  test-0180.c:52:5: note:                             <-- abstract state reachable from L35
  test-0180.c:52:5: note:                                 <-- abstract state reachable from L35
  test-0180.c:51:5: note:                                     <-- abstract state reachable from L33
+diff --git a/tests/predator-regre/test-0209.err.oom b/tests/predator-regre/test-0209.err.oom
+index f653228..d5200ca 100644
+--- a/tests/predator-regre/test-0209.err.oom
++++ b/tests/predator-regre/test-0209.err.oom
+@@ -1,4 +1,4 @@
+-test-0209.c:10:5: error: dereference of NULL value
++test-0209.c:10:18: error: dereference of NULL value
+ test-0209.c:16:23: note: from call of strdup()
+ test-0209.c:13:5: note: from call of main()
+ test-0209.c:21:19: note: writing heap graph to 'loop_body-0000.dot'...

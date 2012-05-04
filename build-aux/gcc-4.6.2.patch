@@ -8,7 +8,10 @@
  tests/predator-regre/test-0186.err        |   36 ++++++++--------
  tests/predator-regre/test-0187.err        |   24 ++++++------
  tests/predator-regre/test-0189.err        |   62 ++++++++++++++--------------
- 10 files changed, 109 insertions(+), 109 deletions(-)
+ tests/predator-regre/test-0226.err        |    2 +-
+ tests/predator-regre/test-0226.err.oom    |    2 +-
+ tests/predator-regre/test-0226.err.uninit |    2 +-
+ 13 files changed, 112 insertions(+), 112 deletions(-)
 
 diff --git a/tests/predator-regre/test-0056.err b/tests/predator-regre/test-0056.err
 index 5939af6..8d14815 100644
@@ -329,3 +332,31 @@ index db57bb9..e947774 100644
  test-0189.c:63:12: note: from call of gl_eval()
  test-0189.c:60:17: note: <-- abstract state reachable from L1 [entry block]
  test-0189.c:58:5: note: from call of main()
+diff --git a/tests/predator-regre/test-0226.err b/tests/predator-regre/test-0226.err
+index 6d55202..ce50571 100644
+--- a/tests/predator-regre/test-0226.err
++++ b/tests/predator-regre/test-0226.err
+@@ -1,3 +1,3 @@
+ test-0226.c:38:19: note: writing heap graph to 'test-0226.c-38-0000.dot'...
+ test-0226.c:38:19: note: writing heap graph to 'test-0226.c-38-0001.dot'...
+-test-0226.c:44:12: warning: memory leak detected while destroying a variable on stack
++test-0226.c:44:5: warning: memory leak detected while destroying a variable on stack
+diff --git a/tests/predator-regre/test-0226.err.oom b/tests/predator-regre/test-0226.err.oom
+index 28e300b..b85b789 100644
+--- a/tests/predator-regre/test-0226.err.oom
++++ b/tests/predator-regre/test-0226.err.oom
+@@ -20,4 +20,4 @@ test-0226.c:38:19: note: writing heap graph to 'test-0226.c-38-0000.dot'...
+ test-0226.c:38:19: note: writing heap graph to 'test-0226.c-38-0001.dot'...
+ test-0226.c:38:19: note: writing heap graph to 'test-0226.c-38-0002.dot'...
+ test-0226.c:38:19: note: writing heap graph to 'test-0226.c-38-0003.dot'...
+-test-0226.c:44:12: warning: memory leak detected while destroying a variable on stack
++test-0226.c:44:5: warning: memory leak detected while destroying a variable on stack
+diff --git a/tests/predator-regre/test-0226.err.uninit b/tests/predator-regre/test-0226.err.uninit
+index 6d55202..ce50571 100644
+--- a/tests/predator-regre/test-0226.err.uninit
++++ b/tests/predator-regre/test-0226.err.uninit
+@@ -1,3 +1,3 @@
+ test-0226.c:38:19: note: writing heap graph to 'test-0226.c-38-0000.dot'...
+ test-0226.c:38:19: note: writing heap graph to 'test-0226.c-38-0001.dot'...
+-test-0226.c:44:12: warning: memory leak detected while destroying a variable on stack
++test-0226.c:44:5: warning: memory leak detected while destroying a variable on stack

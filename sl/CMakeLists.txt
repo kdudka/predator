@@ -113,7 +113,7 @@ set(tests
     0200 0201 0202 0203 0204 0205      0207 0208 0209
     0210      0212      0214 0215      0217 0218 0219
     0220 0221 0222 0223 0224 0225 0226 0227 0228 0229
-    0230 0231 0232 0233
+    0230 0231 0232 0233 0234      0236 0237
     0300      0302
     0400 0401 0402 0403 0404      0406      0408
          0411
@@ -128,7 +128,7 @@ else()
     # expensive tests (ordered from the fastest to the most expensive)
     set(tests ${tests}
         0416 0167 0124 0415 0414 0418 0417 0471 0412 0157
-        0469 0405 0409 0407 0521 0410 0413 0474)
+        0235 0469 0405 0409 0407 0521 0410 0413 0474)
 endif()
 
 set(cost 1)
@@ -138,7 +138,7 @@ macro(test_predator_smoke label tool arg1 arg2 arg3)
     foreach (num ${tests})
         set(test_name "${label}___example-${num}")
         add_test(${test_name} ${tool} ${arg1} ${arg2} ${arg3}
-            -S "${testdir}/test-${num}.c"
+            -S "${testdir}/test-${num}.c" -o /dev/null
             -I../include/predator-builtins -DPREDATOR
             -fplugin=${sl_BINARY_DIR}/libsl.so
             -fplugin-arg-libsl-args=noplot
@@ -159,7 +159,7 @@ macro(test_predator_regre name_suff ext arg1)
         # in the error output, which is checked for exact match
         set(cmd "${cmd} -m32")
 
-        set(cmd "${cmd} -S ${testdir}/test-${num}.c")
+        set(cmd "${cmd} -S ${testdir}/test-${num}.c -o /dev/null")
         set(cmd "${cmd} -I../include/predator-builtins -DPREDATOR")
         set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
         set(cmd "${cmd} -fplugin-arg-libsl-preserve-ec")

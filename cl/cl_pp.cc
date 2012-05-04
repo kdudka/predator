@@ -202,6 +202,46 @@ void ClPrettyPrint::bb_open(
         << SSD_INLINE_COLOR(C_LIGHT_RED, ":") << std::endl;
 }
 
+namespace {
+    string prettyEscaped(const char *raw_str) {
+        std::string ret;
+        unsigned char c;
+        while ((c = *raw_str++)) {
+            if (isprint(c) && '\'' != c && '\"' != c && '\\' != c) {
+                // preserve printable chars
+                ret += static_cast<char>(c);
+                continue;
+            }
+
+            // escape non-printable chars
+            ret += '\\';
+
+            switch (c) {
+                // simple escaping
+                case '\'':  ret += '\'';    continue;
+                case '\"':  ret += '\"';    continue;
+                case '\\':  ret += '\\';    continue;
+                case '\n':  ret += 'n';     continue;
+                case '\r':  ret += 'r';     continue;
+                case '\t':  ret += 't';     continue;
+
+                // octal escaping
+                default:
+                    ret += ('0' + ( c        >> 6 ));
+                    ret += ('0' + ((c & 070) >> 3 ));
+                    ret += ('0' +  (c & 007)       );
+            }
+        }
+
+        return ret;
+    }
+
+    inline string prettyEscaped(const char raw_char) {
+        const char raw_str[] = { raw_char, '\0' };
+        return prettyEscaped(raw_str);
+    }
+}
+
 void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
     const struct cl_type *type = op->type;
     const int value = op->data.cst.data.cst_int.value;
@@ -253,15 +293,12 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
             break;
 
         case CL_TYPE_CHAR:
-            // TODO: quote special chars?
             SSD_COLORIZE(out_, C_WHITE)
-                << '\''
-                << static_cast<char>(value)
-                << '\'';
+                << "\'" << prettyEscaped(static_cast<char>(value)) << "\'";
             break;
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("printIntegralCst() got something special");
     }
 }
 
@@ -278,7 +315,8 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
                 CL_ERROR_MSG(&loc_, "anonymous function");
                 break;
             }
-            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN, op->data.cst.data.cst_fnc.name);
+            out_ << SSD_INLINE_COLOR(C_LIGHT_GREEN,
+                    op->data.cst.data.cst_fnc.name);
             break;
 
         case CL_TYPE_STRING: {
@@ -287,7 +325,8 @@ void ClPrettyPrint::printCst(const struct cl_operand *op) {
                     CL_ERROR_MSG(&loc_, "CL_TYPE_STRING with no string");
                     break;
                 }
-                SSD_COLORIZE(out_, C_LIGHT_PURPLE) << "\"" << text << "\"";
+                SSD_COLORIZE(out_, C_LIGHT_PURPLE)
+                    << "\"" << prettyEscaped(text) << "\"";
             }
             break;
 
