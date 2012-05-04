@@ -475,7 +475,6 @@ namespace {
             case CL_SCOPE_GLOBAL:       return 'G';
             case CL_SCOPE_STATIC:       return 'S';
             case CL_SCOPE_FUNCTION:     return 'F';
-            case CL_SCOPE_BB:           return 'B';
             default:
                 CL_TRAP;
                 return 'U';

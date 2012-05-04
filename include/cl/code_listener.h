@@ -158,12 +158,7 @@ enum cl_scope_e {
     /**
      * scope is limited to currently processed function
      */
-    CL_SCOPE_FUNCTION,
-
-    /**
-     * scope is limited to currently processed basic block
-     */
-    CL_SCOPE_BB
+    CL_SCOPE_FUNCTION
 };
 
 /**

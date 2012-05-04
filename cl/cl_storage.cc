@@ -387,7 +387,6 @@ EVar varCodeByScope(const enum cl_scope_e scope, const bool isArgDecl) {
                 ? VAR_FNC_ARG
                 : VAR_LC;
 
-        case CL_SCOPE_BB:
         default:
             CL_BREAK_IF("varCodeByScope() got an invalid scope code");
             return VAR_VOID;
