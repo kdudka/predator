@@ -1035,6 +1035,15 @@ static struct cl_type* operand_type_lookup(tree t)
     return add_type_if_needed(op0);
 }
 
+static void handle_accessor_addr_expr(struct cl_accessor **ac, tree t)
+{
+    if (STRING_CST == TREE_CODE(TREE_OPERAND(t, 0)))
+        return;
+
+    chain_accessor(ac, CL_ACCESSOR_REF);
+    (*ac)->type = operand_type_lookup(t);
+}
+
 static void handle_accessor_array_ref(struct cl_accessor **ac, tree t)
 {
     if (STRING_CST == TREE_CODE(TREE_OPERAND(t, 0)))
@@ -1084,17 +1093,6 @@ static void handle_accessor_offset(struct cl_accessor **ac, tree t)
     (*ac)->data.offset.off = off;
 }
 
-static void handle_accessor_addr_expr(struct cl_accessor **ac, tree *pt)
-{
-    tree t = *pt;
-    tree op0 = TREE_OPERAND(t, 0);
-    if (STRING_CST == TREE_CODE(op0))
-        return;
-
-    chain_accessor(ac, CL_ACCESSOR_REF);
-    (*ac)->type = operand_type_lookup(t);
-}
-
 static void handle_accessor_component_ref(struct cl_accessor **ac, tree t)
 {
     tree op    = TREE_OPERAND(t, 0);
@@ -1120,7 +1118,7 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
     enum tree_code code = TREE_CODE(t);
     switch (code) {
         case ADDR_EXPR:
-            handle_accessor_addr_expr(ac, &t);
+            handle_accessor_addr_expr(ac, t);
             break;
 
         case ARRAY_REF:
