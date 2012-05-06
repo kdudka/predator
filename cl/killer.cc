@@ -357,8 +357,7 @@ void commitBlock(Data &data, TBlock bb) {
 
         // complexity O(N) (N is number of variables in live).  Note that this
         // needs the 'live' and 'livePerTarget' lists to be sorted
-        while (liveIt != live.end()) {
-            CL_BREAK_IF(perTarget.end() == perTargetIt);
+        while (liveIt != live.end() && perTarget.end() != perTargetIt) {
 
             int uidLive = *liveIt;
             int uidPerTarget = *perTargetIt;

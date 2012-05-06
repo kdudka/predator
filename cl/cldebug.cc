@@ -356,6 +356,10 @@ void operandToStreamVar(std::ostream &str, const struct cl_operand &op) {
 void operandToStream(std::ostream &str, const struct cl_operand &op) {
     const enum cl_operand_e code = op.code;
     switch (code) {
+        case CL_OPERAND_VOID:
+            str << "void";
+            break;
+
         case CL_OPERAND_CST:
             operandToStreamCst(str, op);
             break;
@@ -364,13 +368,8 @@ void operandToStream(std::ostream &str, const struct cl_operand &op) {
             operandToStreamVar(str, op);
             break;
 
-        case CL_OPERAND_VOID:
-            // this should have been handled elsewhere
         default:
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
-            break;
+            CL_BREAK_IF("operandToStream() got an invalid operand");
     }
 }
 
