@@ -1140,6 +1140,19 @@ void SymExecCore::execFree(TValId val) {
     this->valDestroyTarget(val);
 }
 
+bool lhsFromOperand(ObjHandle *pLhs, SymProc &proc, const struct cl_operand &op)
+{
+    if (seekRefAccessor(op.accessor))
+        CL_BREAK_IF("lhs not an l-value");
+
+    *pLhs = proc.objByOperand(op);
+    if (OBJ_DEREF_FAILED == pLhs->objId())
+        return false;
+
+    CL_BREAK_IF(!pLhs->isValid());
+    return true;
+}
+
 void SymExecCore::execHeapAlloc(
         SymState                        &dst,
         const CodeStorage::Insn         &insn,
@@ -1147,8 +1160,8 @@ void SymExecCore::execHeapAlloc(
         const bool                      nullified)
 {
     // resolve lhs
-    const ObjHandle lhs = this->objByOperand(insn.operands[/* dst */ 0]);
-    if (OBJ_DEREF_FAILED == lhs.objId())
+    ObjHandle lhs;
+    if (!lhsFromOperand(&lhs, *this, insn.operands[/* dst */ 0]))
         // error alredy emitted
         return;
 
@@ -1874,9 +1887,9 @@ handle_int:
 template <int ARITY>
 void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
+    ObjHandle lhs;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
-    const ObjHandle lhs = this->objByOperand(dst);
-    if (OBJ_DEREF_FAILED == lhs.objId())
+    if (!lhsFromOperand(&lhs, *this, dst))
         // error alredy emitted
         return;
 

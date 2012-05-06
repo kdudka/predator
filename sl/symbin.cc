@@ -62,9 +62,7 @@ bool readPlotName(
         return true;
     }
 
-    if (CL_TYPE_PTR != op.type->code
-            || CL_TYPE_INT != cst.code
-            || cst.data.cst_int.value)
+    if (CL_TYPE_INT != cst.code || cst.data.cst_int.value)
         // no match
         return false;
 
