@@ -527,3 +527,40 @@ void insnToStream(std::ostream &str, const CodeStorage::Insn &insn) {
             break;
     }
 }
+
+// /////////////////////////////////////////////////////////////////////////////
+// These are handy when inspecting something from gdb...
+
+using std::cout;
+
+void cl_dump(const struct cl_type *clt) {
+    cltToStream(cout, clt, /* depth */ 3U);
+}
+
+void cl_dump(const struct cl_type *clt, unsigned depth) {
+    cltToStream(cout, clt, depth);
+}
+
+void cl_dump(const struct cl_accessor *ac) {
+    acToStream(cout, ac, /* oneline */ false);
+}
+
+void cl_dump(const struct cl_accessor &ac) {
+    cl_dump(&ac);
+}
+
+void cl_dump(const struct cl_operand &op) {
+    cout << op << "\n";
+}
+
+void cl_dump(const struct cl_operand *op) {
+    cl_dump(*op);
+}
+
+void cl_dump(const struct CodeStorage::Insn &insn) {
+    cout << insn << "\n";
+}
+
+void cl_dump(const struct CodeStorage::Insn *insn) {
+    cl_dump(*insn);
+}

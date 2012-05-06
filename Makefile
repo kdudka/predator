@@ -52,9 +52,9 @@ DIRS_BUILD      ?= cl $(ANALYZERS)
 	$(DIRS_BUILD)
 
 all: cl
-	$(MAKE) $(foreach dir, $(ANALYZERS), $(dir))
+	$(MAKE) $(ANALYZERS)
 
-$(foreach dir, $(DIRS_BUILD), $(dir)):
+$(DIRS_BUILD):
 	$(MAKE) -C $@
 
 check: all
