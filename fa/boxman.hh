@@ -253,7 +253,7 @@ public:
 		bool operator()(const AbstractBox* aBox, size_t index, size_t offset) {
 			switch (aBox->getType()) {
 				case box_type_e::bSel: {
-					const SelBox* sBox = (const SelBox*)aBox;
+					const SelBox* sBox = static_cast<const SelBox*>(aBox);
 					this->label.addMapItem(sBox->getData().offset, aBox, index, offset);
 					this->tag.push_back(sBox->getData().offset);
 					break;
@@ -321,10 +321,12 @@ public:
 
 	const SelBox* getSelector(const SelData& sel) {
 		std::pair<const SelData, const SelBox*>& p = *this->selIndex.insert(
-			std::make_pair(sel, (const SelBox*)nullptr)
+			std::make_pair(sel, static_cast<const SelBox*>(nullptr))
 		).first;
 		if (!p.second)
+		{
 			p.second = new SelBox(&p.first);
+		}
 		return p.second;
 	}
 
