@@ -352,7 +352,7 @@ protected:
 					assert(iter != stateMap.end());
 
 					Folding::updateSelectorMap(
-						selectorMap, ((const SelBox*)absBox)->getData().offset, iter->second
+						selectorMap, (static_cast<const SelBox*>(absBox))->getData().offset, iter->second
 					);
 
 					break;
