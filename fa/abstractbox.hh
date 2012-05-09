@@ -20,10 +20,13 @@
 #ifndef ABSTRACT_BOX_H
 #define ABSTRACT_BOX_H
 
+// Standard library headers
 #include <ostream>
 #include <set>
 
+
 typedef enum { bBox, bHead, bTypeInfo, bSel } box_type_e;
+
 
 class AbstractBox {
 
@@ -75,7 +78,6 @@ public:
 	 */
 	virtual ~AbstractBox()
 	{ }
-
 };
 
 class StructuralBox : public AbstractBox {

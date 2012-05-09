@@ -20,20 +20,20 @@
 #ifndef BOX_H
 #define BOX_H
 
-#include <string>
-#include <stdexcept>
+// Standard library headers
 #include <cassert>
 #include <ostream>
 #include <memory>
 
 #include <unordered_map>
 
+// Forester headers
 #include "tatimint.hh"
 #include "types.hh"
-//#include "forestaut.hh"
 #include "treeaut.hh"
 #include "abstractbox.hh"
 #include "connection_graph.hh"
+
 
 class NodeHead : public AbstractBox {
 
@@ -81,6 +81,9 @@ public:
 			os << *i << ';';
 		os << '}';
 	}
+
+	virtual ~TypeBox()
+	{ }
 
 };
 
@@ -148,7 +151,12 @@ public:
 
 	}
 
+	virtual ~SelBox()
+	{
+		/// TODO @todo do something?
+	}
 };
+
 
 class Box : public StructuralBox {
 
@@ -681,6 +689,8 @@ public:
 
 	}
 
+	virtual ~Box()
+	{ }
 };
 
 #endif
