@@ -22,9 +22,10 @@
 
 // Standard library headers
 #include <cassert>
-#include <ostream>
 #include <memory>
-
+#include <ostream>
+#include <stdexcept>
+#include <string>
 #include <unordered_map>
 
 // Forester headers
@@ -87,68 +88,85 @@ public:
 
 };
 
-class SelBox : public StructuralBox {
 
-	const SelData* data;
+/**
+ * @brief  TODO
+ *
+ * @todo
+ */
+class SelBox : public StructuralBox
+{
+	const SelData* data_;
 
 	std::set<size_t> s[2];
 
 public:
 
-	SelBox(const SelData* data) : StructuralBox(box_type_e::bSel, 1), data(data) {
+	SelBox(const SelData* data) :
+		StructuralBox(box_type_e::bSel, 1),
+		data_(data)
+	{
+		// Assertions
+		assert(data_ != nullptr);
 
-		assert(data);
+		s[0].insert(data_->offset);
 
-		s[0].insert(data->offset);
-
-		this->order = data->offset;
-
+		this->order = data_->offset;
 	}
 
-	const SelData& getData() const {
-		return *this->data;
+	const SelData& getData() const
+	{
+		// Assertions
+		assert(data_ != nullptr);
+
+		return *data_;
 	}
 
-	virtual void toStream(std::ostream& os) const {
-		os << *this->data;
+	virtual void toStream(std::ostream& os) const
+	{
+		// Assertions
+		assert(data_ != nullptr);
+
+		os << *data_;
 	}
 
-	virtual bool outputCovers(size_t offset) const {
-		return this->data->offset == offset;
+	virtual bool outputCovers(size_t offset) const
+	{
+		// Assertions
+		assert(data_ != nullptr);
+
+		return data_->offset == offset;
 	}
 
-	virtual const std::set<size_t>& outputCoverage() const {
+	virtual const std::set<size_t>& outputCoverage() const
+	{
 		return s[0];
 	}
 
-	virtual const std::set<size_t>& inputCoverage(size_t index) const {
-
-		if (!(index == 0))
+	virtual const std::set<size_t>& inputCoverage(size_t index) const
+	{
+		if (index != 0)
 			assert(false);
 
 		return s[1];
-
 	}
 
-	virtual size_t selectorToInput(size_t index) const {
-
-		if (!(index == 0))
+	virtual size_t selectorToInput(size_t index) const
+	{
+		if (index != 0)
 			assert(false);
 
-		return this->data->offset;
-
+		return data_->offset;
 	}
 
-	virtual size_t outputReachable(size_t) const {
-
-		return (size_t)(-1);
-
+	virtual size_t outputReachable(size_t) const
+	{
+		return static_cast<size_t>(-1);
 	}
 
-	virtual size_t getRealRefCount(size_t) const {
-
+	virtual size_t getRealRefCount(size_t) const
+	{
 		return 1;
-
 	}
 
 	virtual ~SelBox()
@@ -234,12 +252,12 @@ protected:
 			switch (absBox->getType()) {
 
 				case box_type_e::bSel:
-					v.push_back(((const SelBox*)absBox)->getData().offset);
+					v.push_back((static_cast<const SelBox*>(absBox))->getData().offset);
 					break;
 
 				case box_type_e::bBox: {
 
-					const Box* box = (const Box*)absBox;
+					const Box* box = static_cast<const Box*>(absBox);
 					v.insert(v.end(), box->selCoverage[0].begin(), box->selCoverage[0].end());
 					break;
 
