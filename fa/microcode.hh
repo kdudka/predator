@@ -20,43 +20,51 @@
 #ifndef MICROCODE_H
 #define MICROCODE_H
 
+// Standard library headers
 #include <vector>
 #include <unordered_map>
 
+// Forester headers
 #include "abstractinstruction.hh"
 #include "sequentialinstruction.hh"
 #include "box.hh"
 
-class FI_cond : public AbstractInstruction {
 
+class FI_cond : public AbstractInstruction
+{
 	size_t src_;
 
 	AbstractInstruction* next_[2];
 
 public:
 
-	FI_cond(const CodeStorage::Insn* insn, size_t src, AbstractInstruction* next[2])
-		: AbstractInstruction(insn, fi_type_e::fiBranch),
-		src_(src), next_{ next[0], next[1] } {}
+	FI_cond(const CodeStorage::Insn* insn, size_t src,
+		AbstractInstruction* next[2]) :
+		AbstractInstruction(insn, fi_type_e::fiBranch),
+		src_{src},
+		next_{next[0], next[1]}
+	{ }
 
-	FI_cond(const CodeStorage::Insn* insn, size_t src, const std::vector<AbstractInstruction*>& next)
-		: AbstractInstruction(insn, fi_type_e::fiBranch),
-		src_(src), next_{ next[0], next[1] } {}
+	FI_cond(const CodeStorage::Insn* insn, size_t src,
+		const std::vector<AbstractInstruction*>& next) :
+		AbstractInstruction(insn, fi_type_e::fiBranch),
+		src_{src},
+		next_{next[0], next[1]}
+	{ }
 
 	virtual void execute(ExecutionManager& execMan,
 		const AbstractInstruction::StateType& state);
 
-	virtual void finalize(
-		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
-		std::vector<AbstractInstruction*>::const_iterator
-	);
+	virtual void finalize(const std::unordered_map<const CodeStorage::Block*,
+			AbstractInstruction*>& codeIndex,
+		std::vector<AbstractInstruction*>::const_iterator);
 
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "cjmp  \tr" << this->src_ << ", "
-			<< this->next_[0] << ", " << this->next_[1];
+	virtual std::ostream& toStream(std::ostream& os) const
+	{
+		return os << "cjmp  \tr" << src_ << ", " << next_[0] << ", " << next_[1];
 	}
-
 };
+
 
 class FI_acc_sel : public SequentialInstruction {
 
