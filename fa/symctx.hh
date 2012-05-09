@@ -43,7 +43,6 @@ struct SymCtx {
 
 public:   // data types
 
-
 	/// Stack frame layout
 	typedef std::vector<SelData> StackFrameLayout;
 
@@ -170,13 +169,15 @@ public:   // data types
 
 private:  // static data
 
+	/// @todo is @p static really the best option?
+
 	// must be initialised externally!
 
 	/// The size of a data pointer in the analysed program
-	static int size_of_data_ptr;
+	static size_t size_of_data_ptr;
 
 	/// The size of a code pointer in the analysed program
-	static int size_of_code_ptr;
+	static size_t size_of_code_ptr;
 
 
 public:   // static methods
@@ -193,13 +194,21 @@ public:   // static methods
 	 */
 	static void initCtx(const CodeStorage::Storage& stor)
 	{
-		if ((size_of_code_ptr = stor.types.codePtrSizeof()) == -1)
-		{	// set the size of a code pointer
+		if (stor.types.codePtrSizeof() >= 0)
+		{
+			size_of_code_ptr = static_cast<size_t>(stor.types.codePtrSizeof());
+		}
+		else
+		{
 			size_of_code_ptr = sizeof(void(*)());
 		}
 
-		if ((size_of_data_ptr = stor.types.dataPtrSizeof()) == -1)
-		{	// set the size of a data pointer
+		if (stor.types.dataPtrSizeof() >= 0)
+		{
+			size_of_data_ptr = static_cast<size_t>(stor.types.dataPtrSizeof());
+		}
+		else
+		{
 			size_of_data_ptr = sizeof(void*);
 		}
 
