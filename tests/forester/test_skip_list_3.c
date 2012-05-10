@@ -16,8 +16,6 @@
 
 #include <stdlib.h>
 
-//#define __nondet ___sl_get_nondet_int
-
 // a skip list node with three next pointers
 struct sl_item {
     struct sl_item *n1, *n2, *n3;
@@ -56,11 +54,7 @@ void sl_random_insert(struct sl *sl)
     // a1, a2, a3 remember the nodes before the inserted one at the particular levels
     struct sl_item *a1, *a2, *a3;
     struct sl_item *new;
-/*
-    a2 = sl->head;
-    while (a2->n2 != sl->tail && __nondet())
-        a2 = a2->n2;
-*/
+
     // moving randomly on the 3rd level
     a3 = sl->head;
     while (a3->n3 != sl->tail && __nondet())
