@@ -297,7 +297,6 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
             SSD_COLORIZE(out_, C_WHITE)
                 << "\'" << prettyEscaped(static_cast<char>(value)) << "\'";
             break;
-        }
 
         default:
             CL_BREAK_IF("printIntegralCst() got something special");
