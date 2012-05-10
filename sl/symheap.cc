@@ -3172,6 +3172,9 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
 
         default:
             CL_BREAK_IF("invalid call of SymHeapCore::valCreate()");
+
+            // just to avoid an unnecessary SIGSEGV in the production build
+            code = VT_UNKNOWN;
     }
 
     return d->valCreate(code, origin);

@@ -434,6 +434,10 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
             case CL_ACCESSOR_ITEM:
                 off += offItem(ac);
                 continue;
+
+            case CL_ACCESSOR_OFFSET:
+                off += ac->data.offset.off;
+                continue;
         }
     }
 
