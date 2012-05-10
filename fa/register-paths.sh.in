@@ -1,0 +1,44 @@
+#!/bin/sh
+if test "register-paths.sh" = "`basename -- $0`"; then
+    printf "%s\n" \
+        "It makes no sense to run this script.  It needs to be sourced:
+
+. $0"
+    exit 1
+fi
+
+GCC_HOST='@GCC_HOST@'
+printf "GCC_HOST = %s\n" "$GCC_HOST"
+
+GCC_PLUG='@GCC_PLUG@'
+printf "GCC_PLUG = %s\n\n" "$GCC_PLUG"
+
+if "$GCC_HOST" --version >/dev/null 2>&1; then
+    if test -r "$GCC_PLUG"; then
+        test -x "$GCC_HOST" && PATH="`dirname "$GCC_HOST"`:$PATH"
+        LD_LIBRARY_PATH="`dirname "$GCC_PLUG"`:$LD_LIBRARY_PATH"
+        export PATH LD_LIBRARY_PATH
+
+        printf "Paths registered!  Use this to run Forester:\n
+    %s -fplugin=%s ...
+
+This will show you the available options of the Forester plug-in itself:
+
+    echo please help | %s -fplugin=%s -fplugin-arg-%s-help -xc -
+
+Note that using GCC within this shell to build binaries is NOT recommended.
+Especially, do not try to build GCC, Code Listener, or Forester itself from
+this shell anymore unless you have restored the original \$PATH!\n" \
+            "`basename "$GCC_HOST"`" \
+            "`basename "$GCC_PLUG"`" \
+            "`basename "$GCC_HOST"`" \
+            "`basename "$GCC_PLUG"`" \
+            "`basename "$GCC_PLUG" .so`"
+    else
+        printf "Forester GCC plug-in not found: %s, paths NOT registered!\n" \
+            "$GCC_PLUG" >&2
+    fi
+else
+    printf "unable to run gcc: %s --version, paths NOT registered!\n" \
+        "$GCC_HOST" >&2
+fi
