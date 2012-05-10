@@ -7,6 +7,11 @@
  * nodes---in other words, we do not let the height grow/shrink. Also, we do not consider a dynamic
  * number of next pointers in the nodes.
  *
+ * In Forester, you need to set the following parameters in config.h:
+ *
+ * #define FA_REF_CNT_TRESHOLD       3
+ * #define FA_REAL_REF_CNT_TRESHOLD  3
+ * #define FA_BOX_APPROXIMATION      1
  */
 
 #include <stdlib.h>
