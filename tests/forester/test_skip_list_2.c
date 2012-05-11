@@ -46,8 +46,8 @@ struct sl* create_sl_with_head_and_tail(void)
 // the head and tail.
 void sl_random_insert(struct sl *sl)
 {
-    // a1, a2, a3 remember the nodes before the inserted one at the particular levels
-    struct sl_item *a1, *a2, *a3;
+    // a1, a2 remember the nodes before the inserted one at the particular levels
+    struct sl_item *a1, *a2;
     struct sl_item *new;
 
     a2 = sl->head;
