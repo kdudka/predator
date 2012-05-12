@@ -92,7 +92,7 @@ set(testdir "${sl_SOURCE_DIR}/../tests/predator-regre")
 set(tests
          0001 0002 0003 0004 0005 0006 0007 0008 0009
     0010 0011 0012 0013 0014 0015 0016 0017 0018 0019
-    0020 0021 0022 0023 0024 0025 0026 0027 0028 0029
+    0020      0022 0023 0024 0025 0026 0027 0028 0029
     0030 0031 0032 0033 0034 0035 0036 0037 0038 0039
     0040 0041 0042 0043 0044 0045 0046 0047 0048 0049
     0050 0051 0052 0053 0054 0055 0056 0057 0058 0059
@@ -112,10 +112,11 @@ set(tests
     0190 0191 0192 0193 0194 0195 0196 0197 0198 0199
     0200 0201 0202 0203 0204 0205      0207 0208 0209
     0210      0212      0214 0215      0217 0218 0219
-    0220 0221 0222 0223 0224
+    0220 0221 0222 0223 0224 0225 0226 0227 0228 0229
+    0230 0231 0232 0233 0234      0236 0237 0238
     0300      0302
     0400 0401 0402 0403 0404      0406      0408
-         0411                     0416
+         0411
               0432
                         0464      0466 0467
     0500 0501 0502 0503 0504 0505           0508 0509
@@ -124,10 +125,11 @@ set(tests
 
 if(TEST_ONLY_FAST)
 else()
-    # expensive tests (ordered from the fastest to the most expensive)
-    set(tests ${tests}
-        0167 0124 0415 0414 0418 0417 0471 0412 0157 0469 0405 0409 0407 0521
-        0410 0413 0474)
+# expensive tests
+set(tests ${tests}
+    0124 0157 0167 0521 0235
+    0405 0407 0409 0410 0412 0413 0414 0415 0416 0417 0418
+    0469 0471 0474)
 endif()
 
 set(cost 1)
@@ -137,7 +139,7 @@ macro(test_predator_smoke label tool arg1 arg2 arg3)
     foreach (num ${tests})
         set(test_name "${label}___example-${num}")
         add_test(${test_name} ${tool} ${arg1} ${arg2} ${arg3}
-            -S "${testdir}/test-${num}.c"
+            -S "${testdir}/test-${num}.c" -o /dev/null
             -I../include/predator-builtins -DPREDATOR
             -fplugin=${sl_BINARY_DIR}/libsl.so
             -fplugin-arg-libsl-args=noplot
@@ -158,7 +160,7 @@ macro(test_predator_regre name_suff ext arg1)
         # in the error output, which is checked for exact match
         set(cmd "${cmd} -m32")
 
-        set(cmd "${cmd} -S ${testdir}/test-${num}.c")
+        set(cmd "${cmd} -S ${testdir}/test-${num}.c -o /dev/null")
         set(cmd "${cmd} -I../include/predator-builtins -DPREDATOR")
         set(cmd "${cmd} -fplugin=${sl_BINARY_DIR}/libsl.so ${arg1}")
         set(cmd "${cmd} -fplugin-arg-libsl-preserve-ec")

@@ -40,6 +40,9 @@
  */
 bool collectJunk(SymHeap &sh, TValId root, TValList *leakList = 0);
 
+/// experimental
+bool collectSharedJunk(SymHeap &sh, TValId root, TValList *leakList = 0);
+
 bool destroyRootAndCollectJunk(
         SymHeap                 &sh,
         const TValId             root,
@@ -73,9 +76,7 @@ class LeakMonitor {
             return destroyRootAndCollectJunk(sh_, root, &leakList_);
         }
 
-        const TValList& leakList() const {
-            return leakList_;
-        }
+        bool /* leaking */ importLeakList(TValList *leakList);
 
 
     private:

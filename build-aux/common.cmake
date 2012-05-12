@@ -51,7 +51,7 @@ endmacro()
 # treat Code Listener headers as system headers when scanning dependencies
 include_directories(SYSTEM ../include)
 
-# we use c99 to compile *.c and c++0x to copmile *.cc
+# we use c99 to compile *.c and c++0x to compile *.cc
 ADD_C_ONLY_FLAG(  "STD_C99"         "-std=c99")
 ADD_CXX_ONLY_FLAG("STD_CXX_0X"      "-std=c++0x")
 

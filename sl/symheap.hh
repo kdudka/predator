@@ -773,13 +773,8 @@ class SymHeap: public SymHeapCore {
         /// set the given abstract object to be a concrete object (drops props)
         void valTargetSetConcrete(TValId root);
 
-        /**
-         * assume that v1 and v2 are equal.  Useful when e.g. traversing a
-         * non-deterministic condition.  This implies that one of them may be
-         * dropped.  You can utilize SymHeapCore::usedByCount() to check which
-         * one (if any).  But usually, you do not need to check anything.
-         */
-        void valMerge(TValId v1, TValId v2);
+        /// assume that v1 and v2 are equal (may trigger segment removal)
+        void valMerge(TValId v1, TValId v2, TValList *leakList = 0);
 
         /// read the minimal segment length of the given abstract object
         TMinLen segMinLength(TValId seg) const;

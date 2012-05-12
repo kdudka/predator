@@ -64,13 +64,14 @@ if (NOT EXISTS "${GCC_INC_DIR}/gcc-plugin.h")
     required for building GCC plug-ins.")
 endif()
 
-# set the path to GCC headers for buildign plug-ins
+# set the path to GCC headers for building plug-ins
 set_source_files_properties(gcc/clplug.c PROPERTIES
     COMPILE_FLAGS "-I${GCC_INC_DIR}")
 
 # libcl.so
 add_library(cl STATIC
     builtins.cc
+    callgraph.cc
     cl_chain.cc
     cl_dotgen.cc
     cl_easy.cc

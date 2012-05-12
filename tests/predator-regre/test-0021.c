@@ -1,3 +1,4 @@
+#include <verifier-builtins.h>
 #include <stdlib.h>
 
 // return VAL_UNKNOWN of type CL_TYPE_PTR while running symbolic execution

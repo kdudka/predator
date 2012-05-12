@@ -140,50 +140,15 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
     }
 }
 
-template <class TDst>
-void gatherCaleeSet(TDst &dst, const CodeStorage::FncDb &fncs) {
-    using namespace CodeStorage;
+void execVirtualRoots(const CodeStorage::Storage &stor, const SymExecParams &ep)
+{
+    namespace CG = CodeStorage::CallGraph;
 
-    // for each function
-    BOOST_FOREACH(const Fnc *pFnc, fncs) {
-        const Fnc &fnc = *pFnc;
-        if (!isDefined(fnc))
-            continue;
-
-        // for each BB
-        BOOST_FOREACH(const Block *bb, fnc.cfg) {
-
-            // for each instruction
-            BOOST_FOREACH(const Insn *insn, *bb) {
-
-                // for each operand
-                BOOST_FOREACH(const struct cl_operand &op, insn->operands) {
-                    if (CL_OPERAND_CST != op.code)
-                        // not a literal
-                        continue;
-
-                    const struct cl_cst &cst = op.data.cst;
-                    if (CL_TYPE_FNC != cst.code)
-                        // not a function
-                        continue;
-
-                    const int callee = cst.data.cst_fnc.uid;
-                    dst.insert(callee);
-                }
-            }
-        }
-    }
-}
-
-void execVirtualRoots(const CodeStorage::FncDb &fncs, const SymExecParams &ep) {
-    using namespace CodeStorage;
-    std::set<int /* uid */> callees;
-    gatherCaleeSet(callees, fncs);
-
-    BOOST_FOREACH(const Fnc *pFnc, fncs) {
-        const Fnc &fnc = *pFnc;
-        if (!isDefined(fnc) || hasKey(callees, uidOf(fnc)))
-            continue;
+    // go through all root nodes
+    const CG::Graph &cg = stor.callGraph;
+    BOOST_FOREACH(const CG::Node *node, cg.roots) {
+        const CodeStorage::Fnc &fnc = *node->fnc;
+        CL_BREAK_IF(!isDefined(fnc));
 
         const struct cl_loc *lw = locationOf(fnc);
         CL_DEBUG_MSG(lw, nameOf(fnc)
@@ -204,7 +169,7 @@ void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep) {
     const NameDb::TNameMap::const_iterator iter = glNames.find("main");
     if (glNames.end() == iter) {
         CL_WARN("main() not found at global scope");
-        execVirtualRoots(stor.fncs, ep);
+        execVirtualRoots(stor, ep);
         return;
     }
 
@@ -213,7 +178,7 @@ void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep) {
     const Fnc *main = fncs[iter->second];
     if (!main || !isDefined(*main)) {
         CL_WARN("main() not defined");
-        execVirtualRoots(stor.fncs, ep);
+        execVirtualRoots(stor, ep);
         return;
     }
 

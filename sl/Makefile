@@ -28,7 +28,7 @@ all: version.h ../cl_build
 	$(MAKE) -C ../sl_build
 
 ../cl_build:
-	test -d $@ || $(MAKE) -C ../cl
+	test -e $@ || $(MAKE) -C ../cl
 
 fast:
 	$(MAKE) -sC ../sl_build
@@ -41,7 +41,7 @@ cppcheck: all
 		--template gcc -j5 --inline-suppr .
 
 version.h:
-	@if test -d ../.git; then \
+	@if test -e ../.git; then \
 		printf "#define SL_GIT_SHA1 \"%s\"\n" \
 			`git log -1 | head -1 | cut -f2 -d" "` \
 			> $@.tmp \
@@ -50,7 +50,7 @@ version.h:
 		fi
 
 clean:
-	if test -d ../.git; then rm -f version.h; fi
+	if test -e ../.git; then rm -f version.h; fi
 	if test -e ../sl_build/Makefile; then $(MAKE) clean -C ../sl_build; fi
 
 distclean: clean

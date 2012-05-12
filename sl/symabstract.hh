@@ -40,15 +40,17 @@ typedef std::list<SymHeap> TSymHeapList;
 /**
  * concretize the given @b abstract object.  If the result is non-deterministic,
  * more than one symbolic heap can be produced.
- * @param srcDst an instance of symbolic heap, used in read/write mode
- * @param atAddr address of the @b abstract heap object that should be
- * concretized
- * @param dst an extra container used to store extra results that are caused by
- * non-deterministic decisions
- * @note the first result is always stored into srcDst, the use of dst is
- * optional and should be eventually handled separately by caller
+ * @param sh an instance of symbolic heap, used in read/write mode
+ * @param addr address of the @b abstract heap object that should be concretized
+ * @param dst a container for the results caused by non-deterministic decisions
+ * @param leakList if not NULL, push all leaked root objects to the list
+ * @note the first result is always stored into sh, the use of dst is optional
  */
-void concretizeObj(SymHeap &srcDst, TValId atAddr, TSymHeapList &dst);
+void concretizeObj(
+        SymHeap                     &sh,
+        const TValId                 addr,
+        TSymHeapList                &dst,
+        TValList                    *leakList = 0);
 
 /**
  * analyze the given symbolic heap and consider abstraction of some shapes that
@@ -66,10 +68,16 @@ void abstractIfNeeded(SymHeap &sh);
  * condition during symbolic execution.
  * @param sh an instance of symbolic heap, used in read/write mode
  * @param atAddr address of the list segment that should be eliminated
- * @param pointingTo target point of the segment, it will be equal with atAddr
- * as long as the operation succeeds
+ * @param pointingTo target point of the segment
+ * @param leakList if not NULL, push all leaked root objects to the list
  */
-bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo);
+bool spliceOutAbstractPath(
+        SymHeap                     &sh,
+        const TValId                 atAddr,
+        const TValId                 pointingTo,
+        TValList                    *leakList = 0);
+
+void decrementProtoLevel(SymHeap &sh, const TValId at);
 
 /// enable/disable debugging of symabstract
 void debugSymAbstract(const bool enable);

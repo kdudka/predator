@@ -158,12 +158,25 @@ bool fncNameFromCst(const char **pName, const struct cl_operand *op) {
     if (CL_TYPE_FNC != cst.code)
         return false;
 
+    // FIXME: the name of this helper is quite misleading!!!
     if (CL_SCOPE_GLOBAL != op->scope || !cst.data.cst_fnc.is_extern)
         return false;
 
     const char *fncName = cst.data.cst_fnc.name;
     *pName = fncName;
     return !!fncName;
+}
+
+bool fncUidFromOperand(int *pUid, const struct cl_operand *op) {
+    if (CL_OPERAND_CST != op->code)
+        return false;
+
+    const struct cl_cst &cst = op->data.cst;
+    if (CL_TYPE_FNC != cst.code)
+        return false;
+
+    *pUid = cst.data.cst_fnc.uid;
+    return true;
 }
 
 std::string varToString(

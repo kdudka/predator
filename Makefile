@@ -43,16 +43,21 @@ CURL            ?= curl --location -v#      # URL grabber command-line
 GIT             ?= git#                     # use this to override git(1)
 SVN             ?= svn#                     # use this to override svn(1)
 
-DIRS_BUILD      ?= cl fwnull sl fa
+ANALYZERS       ?= fwnull sl fa
+DIRS_BUILD      ?= cl $(ANALYZERS)
 
 .PHONY: all check clean distcheck distclean api cl/api sl/api ChangeLog \
 	build_boost \
-	build_gcc build_gcc_svn update_gcc update_gcc_src_only
+	build_gcc build_gcc_svn update_gcc update_gcc_src_only \
+	$(DIRS_BUILD)
 
-all:
-	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
+all: cl
+	$(MAKE) $(ANALYZERS)
 
-check:
+$(DIRS_BUILD):
+	$(MAKE) -C $@
+
+check: all
 	$(foreach dir, $(DIRS_BUILD), $(MAKE) -C $(dir) $@ &&) true
 
 clean:

@@ -170,6 +170,9 @@ inline bool objWithBinding(const SymHeap &sh, const TValId root) {
     return (OK_OBJ_OR_NULL != kind);
 }
 
+/// increment prototype level of a single object while taking care of DLS peers
+void objIncrementProtoLevel(SymHeap &sh, TValId root);
+
 /// decrement prototype level of a single object while taking care of DLS peers
 void objDecrementProtoLevel(SymHeap &sh, TValId root);
 
@@ -227,5 +230,11 @@ inline void buildIgnoreList(
  * @note this runs in debug build only
  */
 bool dlSegCheckConsistency(const SymHeap &sh);
+
+/**
+ * returns true if no concrete object points to another object of a higher level
+ * @note this runs in debug build only
+ */
+bool protoCheckConsistency(const SymHeap &sh);
 
 #endif /* H_GUARD_SYMSEG_H */

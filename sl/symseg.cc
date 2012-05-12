@@ -27,11 +27,11 @@
 
 #include <boost/foreach.hpp>
 
-void objDecrementProtoLevel(SymHeap &sh, TValId root) {
+void objChangeProtoLevel(SymHeap &sh, TValId root, const TProtoLevel diff) {
     CL_BREAK_IF(sh.valOffset(root));
 
     const TProtoLevel level = sh.valTargetProtoLevel(root);
-    sh.valTargetSetProtoLevel(root, level - 1);
+    sh.valTargetSetProtoLevel(root, level + diff);
 
     const EObjKind kind = sh.valTargetKind(root);
     if (OK_DLS != kind)
@@ -40,7 +40,15 @@ void objDecrementProtoLevel(SymHeap &sh, TValId root) {
     const TValId peer = dlSegPeer(sh, root);
     CL_BREAK_IF(sh.valTargetProtoLevel(peer) != level);
 
-    sh.valTargetSetProtoLevel(peer, level - 1);
+    sh.valTargetSetProtoLevel(peer, level + diff);
+}
+
+void objIncrementProtoLevel(SymHeap &sh, TValId root) {
+    objChangeProtoLevel(sh, root, 1);
+}
+
+void objDecrementProtoLevel(SymHeap &sh, TValId root) {
+    objChangeProtoLevel(sh, root, -1);
 }
 
 bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
@@ -153,3 +161,28 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
     return true;
 }
 
+bool protoCheckConsistency(const SymHeap &sh) {
+    TValList addrs;
+    sh.gatherRootObjects(addrs);
+    BOOST_FOREACH(const TValId root, addrs) {
+        const EValueTarget code = sh.valTarget(root);
+        if (isAbstract(code))
+            continue;
+
+        const TProtoLevel rootLevel = sh.valTargetProtoLevel(root);
+
+        ObjList ptrs;
+        sh.gatherLivePointers(ptrs, root);
+        BOOST_FOREACH(const ObjHandle &obj, ptrs) {
+            const TProtoLevel level = sh.valTargetProtoLevel(obj.value());
+            if (level <= rootLevel)
+                continue;
+
+            CL_ERROR("nesting level bump on a non-abstract object detected");
+            return false;
+        }
+    }
+
+    // all OK
+    return true;
+}

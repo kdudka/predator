@@ -30,7 +30,7 @@ check: all
 	cd ../fa_build && $(CTEST) --output-on-failure
 
 version.h:
-	@if test -d ../.git; then \
+	@if test -e ../.git; then \
 		printf "#define FA_GIT_SHA1 \"%s\"\n" \
 			`git log -1 | head -1 | cut -f2 -d" "` \
 			> $@.tmp \

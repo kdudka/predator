@@ -185,7 +185,7 @@ void ClfUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     struct cl_operand val;
     NULLIFY(val);
     val.code                        = CL_OPERAND_CST;
-    val.scope                       = CL_SCOPE_BB;
+    val.scope                       = CL_SCOPE_FUNCTION;
     val.type                        = type;
     val.data.cst.code               = CL_TYPE_INT;
     val.data.cst.data.cst_int.value = cst;

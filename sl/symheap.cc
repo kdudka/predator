@@ -3172,6 +3172,9 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
 
         default:
             CL_BREAK_IF("invalid call of SymHeapCore::valCreate()");
+
+            // just to avoid an unnecessary SIGSEGV in the production build
+            code = VT_UNKNOWN;
     }
 
     return d->valCreate(code, origin);
@@ -3234,13 +3237,13 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
 TProtoLevel SymHeapCore::valTargetProtoLevel(TValId val) const {
     if (val <= 0)
         // not a prototype for sure
-        return false;
+        return 0;
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     if (!isPossibleToDeref(valData->code))
         // not a prototype for sure
-        return false;
+        return 0;
 
     // seek root
     const TValId root = valData->valRoot;
@@ -3463,7 +3466,7 @@ void SymHeap::valTargetSetAbstract(
 }
 
 void SymHeap::valTargetSetConcrete(TValId root) {
-    CL_DEBUG("SymHeap::objSetConcrete() is taking place...");
+    CL_DEBUG("SymHeap::valTargetSetConcrete() is taking place...");
     CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
     CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(!d->absRoots.isValidEnt(root));
@@ -3475,7 +3478,7 @@ void SymHeap::valTargetSetConcrete(TValId root) {
     d->absRoots.releaseEnt(root);
 }
 
-void SymHeap::valMerge(TValId v1, TValId v2) {
+void SymHeap::valMerge(TValId v1, TValId v2, TValList *leakList) {
     // check that at least one value is unknown
     moveKnownValueToLeft(*this, v1, v2);
     const EValueTarget code1 = this->valTarget(v1);
@@ -3488,11 +3491,11 @@ void SymHeap::valMerge(TValId v1, TValId v2) {
         return;
     }
 
-    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(*this, v1, v2))
+    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(*this, v1, v2, leakList))
         // splice-out succeeded ... ls(v1, v2)
         return;
 
-    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(*this, v2, v1))
+    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(*this, v2, v1, leakList))
         // splice-out succeeded ... ls(v2, v1)
         return;
 
@@ -3556,6 +3559,7 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
             || haveSegBidir(&seg, this, OK_OBJ_OR_NULL, v1, v2)) {
         // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
         this->valTargetSetConcrete(seg);
+        decrementProtoLevel(*this, seg);
         return;
     }
 

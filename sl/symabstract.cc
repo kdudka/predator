@@ -168,10 +168,10 @@ struct ProtoFinder {
 };
 
 void clonePrototypes(
-        SymHeap                 &sh,
+        SymHeap                &sh,
         const TValId            rootDst,
         const TValId            rootSrc,
-        const TValList          protoList)
+        const TValList         &protoList)
 {
     // allocate some space for clone IDs
     const unsigned cnt = protoList.size();
@@ -669,6 +669,8 @@ bool considerAbstraction(
     LDP_PLOT(symabstract, sh);
 
     for (unsigned i = 0; i < lenTotal; ++i) {
+        CL_BREAK_IF(!protoCheckConsistency(sh));
+
         if (!segAbstractionStep(sh, off, &cursor)) {
             CL_DEBUG("<-- validity of next " << (lenTotal - i - 1)
                     << " abstraction step(s) broken, forcing re-discovery...");
@@ -684,6 +686,8 @@ bool considerAbstraction(
         sh.traceUpdate(trAbs);
 
         LDP_PLOT(symabstract, sh);
+
+        CL_BREAK_IF(!protoCheckConsistency(sh));
     }
 
     CL_DEBUG("<-- successfully abstracted " << name);
@@ -694,6 +698,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    CL_BREAK_IF(!protoCheckConsistency(sh));
 
     // take the value of 'next' pointer from peer
     const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
@@ -713,13 +718,15 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
     sh.valTargetSetConcrete(seg);
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    CL_BREAK_IF(!protoCheckConsistency(sh));
 }
 
 void spliceOutListSegment(
-        SymHeap                 &sh,
+        SymHeap                &sh,
         const TValId            seg,
         const TValId            peer,
-        const TValId            valNext)
+        const TValId            valNext,
+        TValList               *leakList)
 {
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
@@ -747,6 +754,8 @@ void spliceOutListSegment(
             /* redirectTo   */ valNext,
             /* offHead      */ offHead);
 
+    collectSharedJunk(sh, seg, leakList);
+
     // destroy peer in case of DLS
     if (peer != seg && collectJunk(sh, peer))
         CL_DEBUG("spliceOutListSegment() drops a sub-heap (peer)");
@@ -758,18 +767,19 @@ void spliceOutListSegment(
     LDP_PLOT(symabstract, sh);
 }
 
-TMinLen /* len */ spliceOutSegmentIfNeeded(
-        SymHeap                 &sh,
+void spliceOutSegmentIfNeeded(
+        TMinLen                *pLen,
+        SymHeap                &sh,
         const TValId            seg,
         const TValId            peer,
-        TSymHeapList            &todo)
+        TSymHeapList           &todo,
+        TValList               *leakList)
 {
-    const TMinLen len = sh.segMinLength(seg);
-    if (!len) {
+    if (!*pLen) {
         // possibly empty LS
         SymHeap sh0(sh);
         const TValId valNext = nextValFromSeg(sh0, peer);
-        spliceOutListSegment(sh0, seg, peer, valNext);
+        spliceOutListSegment(sh0, seg, peer, valNext, leakList);
 
         const EObjKind kind = sh.valTargetKind(seg);
         Trace::Node *tr = new Trace::SpliceOutNode(sh.traceNode(), kind, true);
@@ -777,15 +787,12 @@ TMinLen /* len */ spliceOutSegmentIfNeeded(
         todo.push_back(sh0);
         todo.back().traceUpdate(tr);
     }
+    else
+        // we are going to detach one node
+        --(*pLen);
 
     LDP_INIT(symabstract, "concretizeObj");
     LDP_PLOT(symabstract, sh);
-
-    if (!len)
-        return /* LS 0+ */ 0;
-
-    // we are going to detach one node
-    return len - 1;
 }
 
 void abstractIfNeeded(SymHeap &sh) {
@@ -806,12 +813,20 @@ void abstractIfNeeded(SymHeap &sh) {
     }
 }
 
-void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
+void concretizeObj(
+        SymHeap                     &sh,
+        const TValId                 addr,
+        TSymHeapList                &todo,
+        TValList                    *leakList)
+{
+    CL_BREAK_IF(!protoCheckConsistency(sh));
+
     const TValId seg = sh.valRoot(addr);
     const TValId peer = segPeer(sh, seg);
 
     // handle the possibly empty variant (if exists)
-    const TMinLen lenRemains = spliceOutSegmentIfNeeded(sh, seg, peer, todo);
+    TMinLen len = sh.segMinLength(seg);
+    spliceOutSegmentIfNeeded(&len, sh, seg, peer, todo, leakList);
 
     const EObjKind kind = sh.valTargetKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
@@ -821,7 +836,9 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
         case OK_SEE_THROUGH:
             // these kinds are much easier than regular list segments
             sh.valTargetSetConcrete(seg);
+            decrementProtoLevel(sh, seg);
             LDP_PLOT(symabstract, sh);
+            CL_BREAK_IF(!protoCheckConsistency(sh));
             return;
 
         default:
@@ -858,16 +875,19 @@ void concretizeObj(SymHeap &sh, TValId addr, TSymHeapList &todo) {
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
-    sh.segSetMinLength(dup, lenRemains);
+    sh.segSetMinLength(dup, len);
 
     LDP_PLOT(symabstract, sh);
+
+    CL_BREAK_IF(!protoCheckConsistency(sh));
 }
 
 bool spliceOutAbstractPathCore(
-        SymHeap                 &sh,
+        SymHeap                &sh,
         const TValId            beg,
         const TValId            endPoint,
-        const bool              readOnlyMode)
+        const bool              readOnlyMode,
+        TValList               *leakList)
 {
     // NOTE: If there is a cycle consisting of empty list segments only, we will
     // loop indefinitely.  However, the basic list segment axiom guarantees that
@@ -901,12 +921,17 @@ bool spliceOutAbstractPathCore(
     }
 
     if (!readOnlyMode)
-        spliceOutListSegment(sh, beg, peer, valNext);
+        spliceOutListSegment(sh, beg, peer, valNext, leakList);
 
     return true;
 }
 
-bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo) {
+bool spliceOutAbstractPath(
+        SymHeap                     &sh,
+        const TValId                 atAddr,
+        const TValId                 pointingTo,
+        TValList                    *leakList)
+{
     const TValId seg = sh.valRoot(atAddr);
     const TValId peer = segPeer(sh, seg);
 
@@ -926,9 +951,14 @@ bool spliceOutAbstractPath(SymHeap &sh, TValId atAddr, TValId pointingTo) {
         endPoint = sh.valByOffset(pointingTo, off);
     }
 
-    const bool ok = spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ true);
-    if (ok && !spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ false))
+    const bool ok = spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ true,
+            leakList);
+
+    if (ok && !spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ false,
+                leakList))
+    {
         CL_BREAK_IF("spliceOutAbstractPathCore() completely broken");
+    }
 
     sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), kind, ok));
     return ok;

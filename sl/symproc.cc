@@ -32,6 +32,7 @@
 #include "symgc.hh"
 #include "symheap.hh"
 #include "symplot.hh"
+#include "symseg.hh"
 #include "symstate.hh"
 #include "symutil.hh"
 #include "symtrace.hh"
@@ -432,6 +433,10 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
 
             case CL_ACCESSOR_ITEM:
                 off += offItem(ac);
+                continue;
+
+            case CL_ACCESSOR_OFFSET:
+                off += ac->data.offset.off;
                 continue;
         }
     }
@@ -1135,6 +1140,19 @@ void SymExecCore::execFree(TValId val) {
     this->valDestroyTarget(val);
 }
 
+bool lhsFromOperand(ObjHandle *pLhs, SymProc &proc, const struct cl_operand &op)
+{
+    if (seekRefAccessor(op.accessor))
+        CL_BREAK_IF("lhs not an l-value");
+
+    *pLhs = proc.objByOperand(op);
+    if (OBJ_DEREF_FAILED == pLhs->objId())
+        return false;
+
+    CL_BREAK_IF(!pLhs->isValid());
+    return true;
+}
+
 void SymExecCore::execHeapAlloc(
         SymState                        &dst,
         const CodeStorage::Insn         &insn,
@@ -1142,8 +1160,8 @@ void SymExecCore::execHeapAlloc(
         const bool                      nullified)
 {
     // resolve lhs
-    const ObjHandle lhs = this->objByOperand(insn.operands[/* dst */ 0]);
-    if (OBJ_DEREF_FAILED == lhs.objId())
+    ObjHandle lhs;
+    if (!lhsFromOperand(&lhs, *this, insn.operands[/* dst */ 0]))
         // error alredy emitted
         return;
 
@@ -1396,12 +1414,15 @@ bool trimRangesIfPossible(
 }
 
 bool reflectCmpResult(
-        SymHeap                     &sh,
+        SymProc                    &proc,
         const enum cl_binop_e       code,
         const bool                  branch,
         const TValId                v1,
         const TValId                v2)
 {
+    SymHeap &sh = proc.sh();
+    CL_BREAK_IF(!protoCheckConsistency(sh));
+
     // resolve binary operator
     CmpOpTraits cTraits;
     if (!describeCmpOp(&cTraits, code))
@@ -1422,9 +1443,23 @@ bool reflectCmpResult(
             return false;
 
         // we have deduced that v1 and v2 is actually the same value
-        sh.valMerge(v1, v2);
+
+        LeakMonitor lm(sh);
+        lm.enter();
+
+        TValList leakList;
+        sh.valMerge(v1, v2, &leakList);
+
+        if (lm.importLeakList(&leakList)) {
+            const struct cl_loc *loc = proc.lw();
+            CL_WARN_MSG(loc, "memory leak detected while removing a segment");
+            proc.printBackTrace(ML_WARN);
+        }
+
+        lm.leave();
     }
 
+    CL_BREAK_IF(!protoCheckConsistency(sh));
     return true;
 }
 
@@ -1852,9 +1887,9 @@ handle_int:
 template <int ARITY>
 void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
+    ObjHandle lhs;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
-    const ObjHandle lhs = this->objByOperand(dst);
-    if (OBJ_DEREF_FAILED == lhs.objId())
+    if (!lhsFromOperand(&lhs, *this, dst))
         // error alredy emitted
         return;
 
@@ -2013,7 +2048,18 @@ bool SymExecCore::concretizeLoop(
                 hitLocal = true;
                 hit = true;
 #endif
-                concretizeObj(sh, val, todo);
+                LeakMonitor lm(sh);
+                lm.enter();
+
+                TValList leakList;
+                concretizeObj(sh, val, todo, &leakList);
+
+                if (lm.importLeakList(&leakList)) {
+                    CL_WARN_MSG(lw_, "memory leak detected while unfolding");
+                    this->printBackTrace(ML_WARN);
+                }
+
+                lm.leave();
             }
         }
 
