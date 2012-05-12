@@ -3287,7 +3287,8 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     CL_BREAK_IF(d->ents.outOfRange(valB));
 
     const EValueTarget code = this->valTarget(valB);
-    if (VAL_NULL == valA && (isKnownObject(code) || isGone(code)))
+    if (VAL_NULL == valA
+            && (isKnownObject(code) || isGone(code) || VT_RANGE == code))
         // all addresses of objects have to be non-zero
         return true;
 
