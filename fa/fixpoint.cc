@@ -391,9 +391,9 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	fae->updateConnectionGraph();
 
-	reorder(*fae);
-
 	std::set<size_t> forbidden;
+#if FA_ALLOW_FOLDING
+	reorder(*fae);
 
 	if (boxMan.boxDatabase().size()) {
 
@@ -401,18 +401,18 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 		fold(*fae, this->boxMan, forbidden);
 
+		forbidden.clear();
+
 	}
 
 	learn2(*fae, this->boxMan);
 
-	forbidden.clear();
-
 	computeForbiddenSet(forbidden, *fae);
-
+#endif
 	normalize(*fae, forbidden, true);
 
 	abstract(*fae, this->fwdConf, this->taBackend, this->boxMan);
-
+#if FA_ALLOW_FOLDING
 	learn1(*fae, this->boxMan);
 
 	if (boxMan.boxDatabase().size()) {
@@ -436,7 +436,7 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 		} while (fold(*fae, this->boxMan, forbidden) && !FAE::subseteq(*fae, old));
 
 	}
-
+#endif
 	// test inclusion
 	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper)) {
 
@@ -461,9 +461,9 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 	fae->updateConnectionGraph();
 
-	reorder(*fae);
-
 	std::set<size_t> forbidden;
+#if FA_ALLOW_FOLDING
+	reorder(*fae);
 
 	if (boxMan.boxDatabase().size()) {
 
@@ -471,14 +471,14 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 
 		fold(*fae, this->boxMan, forbidden);
 
+		forbidden.clear();
+
 	}
-
-	forbidden.clear();
-
+#endif
 	computeForbiddenSet(forbidden, *fae);
 
 	normalize(*fae, forbidden, true);
-
+#if FA_ALLOW_FOLDING
 	if (boxMan.boxDatabase().size()) {
 
 		forbidden.clear();
@@ -500,7 +500,7 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 		}
 
 	}
-
+#endif
 	// test inclusion
 	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper)) {
 

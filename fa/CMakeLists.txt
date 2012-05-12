@@ -46,6 +46,9 @@ configure_file( ${PROJECT_SOURCE_DIR}/fagccv.in    ${PROJECT_BINARY_DIR}/fagccv 
 configure_file( ${PROJECT_SOURCE_DIR}/fagccvf.in   ${PROJECT_BINARY_DIR}/fagccvf   @ONLY)
 configure_file( ${PROJECT_SOURCE_DIR}/fagdb.in     ${PROJECT_BINARY_DIR}/fagdb     @ONLY)
 
+configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
+    ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
+
 # libfa.so
 add_library(fa SHARED
 	treeaut.cc
@@ -73,8 +76,7 @@ option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 set(GCC_EXEC_PREFIX "timeout 120"
     CACHE STRING "Set to empty string if not sure")
 
-#set(testdir "${fa_SOURCE_DIR}/../tests/forester-regre")
-set(testdir "${fa_SOURCE_DIR}/../tests/forester")
+set(testdir "${fa_SOURCE_DIR}/../tests/forester-regre")
 
 # basic tests
 set(tests
@@ -128,7 +130,7 @@ macro(test_forester_regre name_suff ext arg1)
         # in the error output, which is checked for exact match
         set(cmd "${cmd} -m32")
 
-        set(cmd "${cmd} -S ${testdir}/test-${num}.c")
+        set(cmd "${cmd} -S ${testdir}/test-${num}.c -o /dev/null")
         set(cmd "${cmd} -I../include/predator-builtins -DFORESTER")
         set(cmd "${cmd} -fplugin=${fa_BINARY_DIR}/libfa.so ${arg1}")
         set(cmd "${cmd} -fplugin-arg-libfa-preserve-ec")
@@ -155,62 +157,4 @@ macro(test_forester_regre name_suff ext arg1)
 endmacro(test_forester_regre)
 
 # default mode
-#test_forester_regre("" "" "")
-
-# format of tests:
-#
-#    <test file>:<boxes directory>
-#
-set (forester_tests
-  "cdll.c:genericdll.boxes"
-  "dll-insert.c:genericdll.boxes"
-  "dll-insertsort.c:genericdll.boxes"
-  "dll-insertsort_v2.c:genericdll.boxes"
-  "dll-listofclists.c:listofclists.dll.boxes"
-  "dll-rev.c:genericdll.boxes"
-  "dsw.c:"
-  "recursion.c:"
-  "sll-bubblesort.c:"
-  "sll-delete.c:"
-  "sll-headptr.c:"
-  "sll-insertsort.c:"
-  "sll-listofclists.c:listofclists.sll.boxes"
-  "sll-mergesort.c:"
-  "sll-rev.c:"
-  "test-0080.c:"
-  "test-0098.c:test-0098.boxes"
-  "test-0124.inline.c:"
-  "test-0128.c:"
-  "treecons.c:"
-  "tree_stack.c:"
-  "treetraversal.c:treewpp.boxes"
-
-  # currently not working test cases
-  #
-  #"listeven.c:"
-  #"listref.c:"
-  #"test-0061.c:genericdll.boxes"
-  #"test-0113.c:"
-  #"treecraziness.c:"
-  #"rb_insert_rebalance.c:"
-  #"dfs.c:treewpp.boxes"
-)
-
-foreach (testcase ${forester_tests})
-  string(REPLACE ":" ";" testcase_list ${testcase})
-  list(GET testcase_list 0 testfile)
-  list(GET testcase_list 1 boxdir)
-
-  if (NOT ${boxdir} STREQUAL "")
-    set(box_arg "-fplugin-arg-libfa-args=db-root:${testdir}/${boxdir}")
-  else()
-    set(box_arg "")
-  endif()
-
-  add_test(
-    ${testfile} timeout 90 ${GCC_HOST} -o /dev/null -m32 -DFORESTER
-    -fplugin=${CMAKE_CURRENT_BUILD_DIR}../fa_build/libfa.so
-    -c ${testdir}/${testfile} ${box_arg}
-  )
-endforeach(testcase)
-
+test_forester_regre("" "" "")
