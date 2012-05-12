@@ -5,7 +5,7 @@ static void error(void)
 ERROR:
     goto ERROR;
 }
-
+extern int __VERIFIER_nondet_int(void);
 int gl_mloop;
 int gl_st2;
 
