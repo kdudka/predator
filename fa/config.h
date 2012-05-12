@@ -36,9 +36,14 @@
 #define FA_REAL_REF_CNT_TRESHOLD			1
 
 /**
+ * allow folding of nested structures (default is 1)
+ */
+#define FA_ALLOW_FOLDING					1
+
+/**
  * overapproximate when folding (default is 0)
  */
-#define FA_BOX_APPROXIMATION				0
+#define FA_BOX_APPROXIMATION				1
 
 /**
  * should we restart evry time a new box is encountered (default is 1)
