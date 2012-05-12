@@ -191,7 +191,9 @@
 #define SE_INT_ARITHMETIC_LIMIT             8
 
 /**
- * if 1, do not allow three-way join on each state update, but only when looping
+ * - 0 ... join states on each basic block entry
+ * - 1 ... join only when traversing a loop-closing edge, entailment otherwise
+ * - 2 ... join only when traversing a loop-closing edge, isomorphism otherwise
  */
 #define SE_JOIN_ON_LOOP_EDGES_ONLY          0
 

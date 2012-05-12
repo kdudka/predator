@@ -170,11 +170,8 @@ class SymStateMarked: public SymStateWithJoin {
             done_.clear();
         }
 
-        virtual void swap(SymState &otherBase) {
-            SymStateMarked &other = dynamic_cast<SymStateMarked &>(otherBase);
-            SymStateWithJoin::swap(other);
-            done_.swap(other.done_);
-        }
+        /// @attention always reinitializes the markers
+        virtual void swap(SymState &);
 
     protected:
         virtual void insertNew(const SymHeap &sh) {

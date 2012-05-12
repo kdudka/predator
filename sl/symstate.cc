@@ -192,6 +192,12 @@ void SymStateWithJoin::packSuffix(unsigned idx) {
 }
 
 bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
+#if 1 < SE_JOIN_ON_LOOP_EDGES_ONLY
+    if (!allowThreeWay)
+        // we are asked not to check for entailment, only isomorphism
+        return SymHeapUnion::insert(shNew, allowThreeWay);
+#endif
+
     const int cnt = this->size();
     if (!cnt) {
         // no heaps inside, insert the first now
@@ -359,6 +365,21 @@ void BlockScheduler::printStats() const {
                     << " times" << suffix);
         }
     }
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
+// SymStateMarked implementation
+void SymStateMarked::swap(SymState &other) {
+    // if this fires up one day, it means we need to cover the swap of done_
+    CL_BREAK_IF(dynamic_cast<SymStateMarked *>(&other));
+
+    // swap base
+    SymStateWithJoin::swap(other);
+
+    // wipe done
+    done_.clear();
+    done_.resize(this->size(), false);
 }
 
 
