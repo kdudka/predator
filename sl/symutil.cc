@@ -234,22 +234,8 @@ void moveKnownValueToLeft(
         return;
 
     const EValueTarget code = sh.valTarget(valA);
-    switch (code) {
-        case VT_STATIC:
-        case VT_ON_STACK:
-        case VT_ON_HEAP:
-        case VT_CUSTOM:
-        case VT_COMPOSITE:
-        case VT_LOST:
-        case VT_DELETED:
-            return;
-
-        case VT_RANGE:
-        case VT_ABSTRACT:
-        case VT_INVALID:
-        case VT_UNKNOWN:
-            break;
-    }
+    if (isKnownObject(code))
+        return;
 
     const TValId tmp = valA;
     valA = valB;
