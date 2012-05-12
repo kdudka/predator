@@ -536,15 +536,23 @@ static void dig_fnc_type(struct cl_type *clt, tree t)
 
     // dig arg types
     for (t = TYPE_ARG_TYPES(t); t; t = TREE_CHAIN(t)) {
-        tree val = TREE_VALUE(t);
-        CL_BREAK_IF(NULL_TREE == val);
+        tree type = TREE_VALUE(t);
+        if ((1 < clt->item_cnt) && VOID_TYPE == TREE_CODE(type)) {
+#ifndef NDEBUG
+            // check there is no non-void type in the chain
+            while ((t = TREE_CHAIN(t)))
+                CL_BREAK_IF(VOID_TYPE != TREE_CODE(TREE_VALUE(t)));
+#endif
+            // for some reason, GCC gives us some trailing void types, drop them
+            break;
+        }
 
         // TODO: chunk allocation ?
         clt->items = CL_RESIZEVEC(struct cl_type_item, clt->items,
                                   clt->item_cnt + 1);
 
         struct cl_type_item *item = &clt->items[clt->item_cnt ++];
-        item->type = /* recursion */ add_bare_type_if_needed(val);
+        item->type = /* recursion */ add_bare_type_if_needed(type);
         item->name = NULL;
     }
 }

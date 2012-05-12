@@ -442,10 +442,7 @@ deref_done:
 
     if (expandFnc && CL_TYPE_FNC == code) {
         SSD_COLORIZE(out_, C_DARK_GRAY) << "(";
-        int max = clt->item_cnt;
-        if (2 < max)
-            --max;
-        for (int i = 1; i < max; ++i) {
+        for (int i = 1; i < clt->item_cnt; ++i) {
             if (1 < i)
                 SSD_COLORIZE(out_, C_DARK_GRAY) << ", ";
 
