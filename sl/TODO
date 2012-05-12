@@ -32,3 +32,7 @@
     more general)
 
   - includes solving problems with join and call optimization
+
+- option to introduce new Neq predicates on call of free() to improve reasoning
+
+- option to show whole states leaking memory, not only the shape of leaked data

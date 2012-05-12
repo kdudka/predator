@@ -43,7 +43,7 @@ Building from sources against a local build of GCC [recommended for end users]
      - on binary distros you may need also the 'mpfr-devel' sub-package
 
 (2) Install all dependences of Predator and Forester
----------------------------------------
+----------------------------------------------------
    * CMake 2.8+
      - available at http://www.cmake.org
      - the executable is called 'cmake'
@@ -80,7 +80,7 @@ giving the option '-jN' to 'make', where N is the number of CPU cores plus one
 that your machine has enough resources for building GCC in parallel.
 
 (4) Build Code Listener, Predator and Forester from sources
--------------------------------------------------
+-----------------------------------------------------------
 The following command builds Code Listener, Predator and Forester from sources:
 
     make
