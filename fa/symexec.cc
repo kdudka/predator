@@ -620,9 +620,9 @@ public:
 			}
 
 			// print out stats
-			CL_DEBUG_AT(1, "forester has evaluated " << this->execMan.statesEvaluated()
-				<< " state(s) in " << this->execMan.tracesEvaluated() << " trace(s) using "
-				<< this->boxMan.boxDatabase().size() << " box(es)");
+			CL_DEBUG_AT(1, "forester has generated " << this->execMan.statesEvaluated()
+				<< " symbolic configuration(s) in " << this->execMan.tracesEvaluated() 
+                                << " trace(s) using " << this->boxMan.boxDatabase().size() << " box(es)");
 
 		}
 		catch (std::exception& e)
