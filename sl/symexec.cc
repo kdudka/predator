@@ -198,6 +198,7 @@ class SymExecEngine: public IStatsProvider {
         bool execInsn();
         bool execBlock();
         void processPendingSignals();
+        void pruneOrigin();
 
         void dumpStateMap();
 
@@ -565,16 +566,15 @@ bool /* complete */ SymExecEngine::execInsn() {
         nextLocalState_.clear();
     }
 
+    bool nextInsnIsCond = false;
     if (!isTerm) {
         CL_BREAK_IF(block_->size() <= insnIdx_);
 
         // look ahead for CL_INSN_COND
         const CodeStorage::Insn *nextInsn = block_->operator[](insnIdx_ + 1);
         if (CL_INSN_COND == nextInsn->code) {
-            // this is going to be handled in execCondInsn() right away
             CL_BREAK_IF(CL_INSN_BINOP != insn->code);
-            localState_.swap(nextLocalState_);
-            return true;
+            nextInsnIsCond = true;
         }
     }
 
@@ -594,6 +594,10 @@ bool /* complete */ SymExecEngine::execInsn() {
             // mark as processed now since it can be re-scheduled right away
             origin.setDone(heapIdx_);
         }
+
+        if (nextInsnIsCond)
+            // this is going to be handled in execCondInsn() right away
+            continue;
 
         if (1 < hCnt) {
             CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_
@@ -617,6 +621,9 @@ bool /* complete */ SymExecEngine::execInsn() {
         ++heapIdx_;
         return false;
     }
+
+    if (nextInsnIsCond)
+        localState_.swap(nextLocalState_);
 
     // completed execution of the given insn
     heapIdx_ = 0;
@@ -659,6 +666,9 @@ bool /* complete */ SymExecEngine::execBlock() {
             callResults_.clear();
             return false;
         }
+
+        if (!insnIdx_)
+            this->pruneOrigin();
 
         if (!nextLocalState_.size())
             // we ended up with an empty state already, jump to the end of bb
@@ -869,6 +879,48 @@ void SymExecEngine::processPendingSignals() {
         default:
             // time to finish...
             throw std::runtime_error("signalled to die");
+    }
+}
+
+void SymExecEngine::pruneOrigin() {
+#if SE_STATE_PRUNING_MODE
+    if (block_->isLoopEntry())
+#endif
+        // never prune loop entry, it would break the fixed-point computation
+        return;
+
+#if SE_STATE_PRUNING_MODE < 2
+    if (1 < block_->inbound().size())
+        // more than one incoming edges, keep this one
+        return;
+#endif
+
+    SymStateMarked &origin = stateMap_[block_];
+    SymHeapList tmp;
+
+    bool hit = false;
+
+    for (unsigned i = 0; i < origin.size(); ++i) {
+        if (origin.isDone(i))
+            hit = true;
+        else
+            tmp.insert(origin[i]);
+    }
+
+    if (!hit) {
+        CL_DEBUG_MSG(lw_, "SymExecEngine::pruneOrigin() failed to pack "
+                << block_->name());
+
+        CL_BREAK_IF(tmp.size() != origin.size());
+    }
+    else {
+        CL_DEBUG_MSG(lw_, "SymExecEngine::pruneOrigin() packed "
+                << block_->name() << ": "
+                << origin.size() << " -> "
+                <<  tmp.size());
+
+        CL_BREAK_IF(origin.size() <= tmp.size());
+        origin.swap(tmp);
     }
 }
 
