@@ -3279,18 +3279,24 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     if (VAL_TRUE == valA)
         return (VAL_FALSE == valB);
 
+    // we presume (0 <= valA) and (0 < valB) at this point
+    CL_BREAK_IF(d->ents.outOfRange(valB));
+
+    const EValueTarget code = this->valTarget(valB);
+    if (VAL_NULL == valA && (isKnownObject(code) || isGone(code)))
+        // all addresses of objects have to be non-zero
+        return true;
+
+    if (valInsideSafeRange(*this, valA) && valInsideSafeRange(*this, valB))
+        // NOTE: we know (valA != valB) at this point, look above
+        return true;
+
     IR::Range rng1, rng2;
     if (rngFromVal(&rng1, *this, valA) && rngFromVal(&rng2, *this, valB)) {
         // both values are integral ranges (
         bool result;
         return (compareIntRanges(&result, CL_BINOP_NE, rng1, rng2) && result);
     }
-
-    // we presume (0 <= valA) and (0 < valB) at this point
-    CL_BREAK_IF(d->ents.outOfRange(valB));
-    if (valInsideSafeRange(*this, valA) && valInsideSafeRange(*this, valB))
-        // NOTE: we know (valA != valB) at this point, look above
-        return true;
 
     // check for a Neq predicate
     if (d->neqDb->chk(valA, valB))
@@ -3588,15 +3594,12 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
 
     // having the values always in the same order leads to simpler code
     moveKnownValueToLeft(*this, ref, val);
-    if (this->hasAbstractTarget(ref) && this->hasAbstractTarget(val)) {
-        const TValId seg = this->valRoot(val);
-        if (objMinLength(*this, seg))
-            // move the non-empty one to left
-            swapValues(ref, val);
-    }
 
-    const EValueTarget refCode = this->valTarget(ref);
-    if (isAbstract(refCode)) {
+    if (ref < VAL_NULL || !isAbstract(this->valTarget(val)))
+        // we are interested only in abstract objects here, nothing to do...
+        return false;
+
+    if (isAbstract(this->valTarget(ref))) {
         // both values are abstract
         const TValId root1 = this->valRoot(ref);
         const TValId root2 = this->valRoot(val);
@@ -3607,18 +3610,26 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
             return (off1 == off2)
                 && (1 < this->segMinLength(root1));
         }
-
-        if (!objMinLength(*this, root1))
+        
+        const TMinLen len1 = objMinLength(*this, root1);
+        const TMinLen len2 = objMinLength(*this, root2);
+        if (!len1 && !len2)
             // both targets are possibly empty, giving up
             return false;
+
+        if (len1 < len2)
+            // move the non-empty segment to left (FIXME: still imprecise)
+            swapValues(ref, val);
     }
 
-    std::set<TValId> haveSeen;
+    const EValueTarget refCode = this->valTarget(ref);
+    if (VT_RANGE == refCode)
+        // not supported yet
+        return false;
 
+    const TOffset off = this->valOffset(val);
     EValueTarget code = this->valTarget(val);
-    TOffset off /* just to silence gcc */ = -1;
-    if (VT_RANGE != code)
-        off = this->valOffset(val);
+    TValSet haveSeen;
 
     while (0 < val && insertOnce(haveSeen, val)) {
         switch (code) {
