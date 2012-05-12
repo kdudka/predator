@@ -17,6 +17,14 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+
+/**
+ * @file compiler.cc
+ *
+ * File with the implementation of the compiler of microinstructions.
+ */
+
+
 // Standard library headers
 #include <sstream>
 #include <cstdlib>
@@ -38,6 +46,7 @@
 #include "microcode.hh"
 #include "regdef.hh"
 #include "compiler.hh"
+
 
 namespace {
 
@@ -310,113 +319,225 @@ struct LoopAnalyser {
 }; // struct LoopAnalyser
 
 
+/**
+ * @brief  Enumeration of built-in functions
+ */
 typedef enum { biNone, biMalloc, biFree, biNondet, biFix, biAbort, biPrintHeap } builtin_e;
 
 
-struct BuiltinTable {
+/**
+ * @brief  The table with built-in functions
+ *
+ * This table serves as a translation table of function names to the @p
+ * builtin_e enumeration.
+ */
+class BuiltinTable
+{
+private:
 
+	/// the hash table that maps function name to the value of enumeration
 	boost::unordered_map<std::string, builtin_e> _table;
 
 public:
 
-	BuiltinTable() {
-		this->_table["malloc"] = builtin_e::biMalloc;
-		this->_table["free"] = builtin_e::biFree;
-		this->_table["__nondet"] = builtin_e::biNondet;
-		this->_table["__fix"] = builtin_e::biFix;
-		this->_table["__print_heap"] = builtin_e::biPrintHeap;
-		this->_table["abort"] = builtin_e::biAbort;
+	/**
+	 * @brief  The default constructor
+	 *
+	 * The default constructor. It properly initialises the translation table with
+	 * proper values.
+	 */
+	BuiltinTable()
+	{
+		this->_table["malloc"]        = builtin_e::biMalloc;
+		this->_table["free"]          = builtin_e::biFree;
+		this->_table["__nondet"]      = builtin_e::biNondet;
+		this->_table["__fix"]         = builtin_e::biFix;
+		this->_table["__print_heap"]  = builtin_e::biPrintHeap;
+		this->_table["abort"]         = builtin_e::biAbort;
 	}
 
-	builtin_e operator[](const std::string& key) {
+	/**
+	 * @brief  The index operator
+	 *
+	 * Translates the function name @p key to the enumeration @p builtin_e.
+	 * Returns @p builtin_e::biNone if @p key is not a name of a built-in
+	 * function.
+	 *
+	 * @param[in]  key  The name of the function to check
+	 * 
+	 * @returns  The value of the @p builtin_e enumeration corresponding to @p key
+	 */
+	builtin_e operator[](const std::string& key)
+	{
 		boost::unordered_map<std::string, builtin_e>::iterator i = this->_table.find(key);
 		return (i == this->_table.end())?(builtin_e::biNone):(i->second);
 	}
+}; // class BuiltinTable
 
-};
 
-/// @todo: document!!!
-class Compiler::Core {
+/**
+ * @brief  The compiler core
+ *
+ * The core of the compiler that performs the compilation itself. It is given
+ * a code storage and generates an (linear) assembly of microinstructions,
+ * together with pointers of functions to the assembly.
+ */
+class Compiler::Core
+{
+private:
 
-	Compiler::Assembly* assembly;
-	std::unordered_map<const CodeStorage::Block*, AbstractInstruction*> codeIndex;
-	std::unordered_map<const CodeStorage::Fnc*, std::pair<SymCtx, CodeStorage::Block>> fncIndex;
-	const SymCtx* curCtx;
+	/// The assembly code of the program
+	Compiler::Assembly* assembly_;
 
-	TA<label_type>::Backend& fixpointBackend;
-	TA<label_type>::Backend& taBackend;
-	BoxMan& boxMan;
+	/// @todo: 
+	std::unordered_map<const CodeStorage::Block*, AbstractInstruction*> codeIndex_;
+	/// The index of functions, maps function names to their code
+	std::unordered_map<const CodeStorage::Fnc*, std::pair<SymCtx,
+		CodeStorage::Block>> fncIndex_;
+	/// @todo:
+	const SymCtx* curCtx_;
 
-	BuiltinTable builtinTable;
-	LoopAnalyser loopAnalyser;
+	/// The backend for fixpoints
+	TA<label_type>::Backend& fixpointBackend_;
+	/// The backend for tree automata
+	TA<label_type>::Backend& taBackend_;
+	/// The box manager
+	BoxMan& boxMan_;
+
+	/// The table with built-in functions
+	BuiltinTable builtinTable_;
+	/// The loop analyser
+	LoopAnalyser loopAnalyser_;
 
 protected:
 
-	std::pair<SymCtx, CodeStorage::Block>& getFncInfo(const CodeStorage::Fnc* fnc) {
-
-		auto info = this->fncIndex.find(fnc);
-		assert(info != this->fncIndex.end());
+	std::pair<SymCtx, CodeStorage::Block>& getFncInfo(const CodeStorage::Fnc* fnc)
+	{
+		auto info = fncIndex_.find(fnc);
+		// Assertions
+		assert(info != fncIndex_.end());
 		return info->second;
-
 	}
 
-	void reset(Compiler::Assembly& assembly) {
 
-		this->assembly = &assembly;
-		this->assembly->clear();
-		this->codeIndex.clear();
-		this->fncIndex.clear();
-
+	/**
+	 * @brief  Resets the compiler
+	 *
+	 * Resets the compiler.
+	 *
+	 * @param[out]  assembly  The new output for the assembly
+	 */
+	void reset(Compiler::Assembly& assembly)
+	{
+		assembly_ = &assembly;
+		assembly_->clear();
+		codeIndex_.clear();
+		fncIndex_.clear();
 	}
 
-	AbstractInstruction* append(AbstractInstruction* instr) {
 
-		this->assembly->code_.push_back(instr);
+	/**
+	 * @brief  Append instruction to the assembly
+	 *
+	 * Appends the instruction @p instr to the assembly that is set as the output
+	 * of the compiler.
+	 *
+	 * @param[in]  instr  The instruction to be appended
+	 *
+	 * @returns  The inserted instruction (should be equal to @p instr)
+	 */
+	AbstractInstruction* append(AbstractInstruction* instr)
+	{
+		assembly_->code_.push_back(instr);
 
 		return instr;
-
 	}
 
-	AbstractInstruction* override(AbstractInstruction* instr) {
 
-		assert(this->assembly->code_.size());
+	/**
+	 * @brief  Overrides the previous instruction
+	 *
+	 * This method overrides the previous instruction in the assembly with the
+	 * provided one.
+	 *
+	 * @param[in]  instr  The new instruction
+	 *
+	 * @returns  The inserted instruction
+	 */
+	AbstractInstruction* override(AbstractInstruction* instr)
+	{
+		// Assertions
+		assert(assembly_->code_.size() > 0);
 
-		delete this->assembly->code_.back();
-
-		this->assembly->code_.back() = instr;
-
+		delete assembly_->code_.back();
+		assembly_->code_.back() = instr;
 		return instr;
-
 	}
 
-	void cAbstraction(const CodeStorage::Insn* insn = nullptr) {
-		this->append(
-			new FI_abs(insn, this->fixpointBackend, this->taBackend, this->boxMan)
-		);
+
+	/**
+	 * @brief  Compile abstraction
+	 *
+	 * Compiles @b Abstraction as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void cAbstraction(const CodeStorage::Insn* insn = nullptr)
+	{
+		append(new FI_abs(insn, fixpointBackend_, taBackend_, boxMan_));
 	}
 
-	void cFixpoint(const CodeStorage::Insn& insn) {
-		this->append(
-			new FI_fix(&insn, this->fixpointBackend, this->taBackend, this->boxMan)
-		);
+
+	/**
+	 * @brief  Compile fixpoint
+	 *
+	 * Compiles @b Fixpoint as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void cFixpoint(const CodeStorage::Insn& insn)
+	{
+		append(new FI_fix(&insn, fixpointBackend_, taBackend_, boxMan_));
 	}
 
-	void cPrintHeap(const CodeStorage::Insn& insn) {
-		this->append(new FI_print_heap(&insn, this->curCtx));
+
+	/**
+	 * @brief  Compile heap print
+	 *
+	 * Compiles @b PrintHeap  as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void cPrintHeap(const CodeStorage::Insn& insn)
+	{
+		append(new FI_print_heap(&insn, curCtx_));
 	}
 
+
+	/**
+	 * @brief  Compile loading of a constant
+	 *
+	 * Compiles @b LoadConstant as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  dst   Index of the destination register (where the constant is
+	 *                   to be loaded)
+	 * @param[in]  op    The operand to be loaded (contains the value of the
+	 *                   constant)
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
 	void cLoadCst(size_t dst, const cl_operand& op,
-		const CodeStorage::Insn& insn) {
-
+		const CodeStorage::Insn& insn)
+	{
 		// Assertions
 		assert(op.code == cl_operand_e::CL_OPERAND_CST);
 		assert(op.type != nullptr);
 
-		switch (op.type->code) {
+		switch (op.type->code)
+		{
 			// according to the type of the operand
 			case cl_type_e::CL_TYPE_INT:
 			case cl_type_e::CL_TYPE_ENUM:
-				this->append(
+				append(
 					new FI_load_cst(&insn, dst, Data::createInt(intCstFromOperand(&op)))
 				);
 				break;
@@ -425,13 +546,13 @@ protected:
 				switch (op.data.cst.code) {
 					// according to the type of the constant
 					case cl_type_e::CL_TYPE_INT:
-						this->append(
+						append(
 							new FI_load_cst(&insn, dst, Data::createInt(intCstFromOperand(&op)))
 						);
 						break;
 
 					case cl_type_e::CL_TYPE_STRING:
-						this->append(new FI_load_cst(&insn, dst, Data::createUnknw()));
+						append(new FI_load_cst(&insn, dst, Data::createUnknw()));
 						break;
 
 					default:
@@ -441,7 +562,7 @@ protected:
 				break;
 
 			case cl_type_e::CL_TYPE_BOOL:
-				this->append(
+				append(
 					new FI_load_cst(&insn, dst, Data::createBool(intCstFromOperand(&op)))
 				);
 				break;
@@ -451,419 +572,591 @@ protected:
 					": constant type", &insn.loc);
 		}
 	}
-/*
-	void cLoadVar(size_t dst, size_t offset) {
 
-		this->append(new FI_load_ABP(dst, (int)offset));
 
+#if 0
+	void cLoadVar(size_t dst, size_t offset)
+	{
+		append(new FI_load_ABP(dst, (int)offset));
 	}
-*/
+#endif
+
+
+	/**
+	 * @brief  Compile a move between registers
+	 *
+	 * Compiles @b MoveRegister as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  dst     Index of the destination register
+	 * @param[in]  src     Index of the source register
+	 * @param[in]  offset  Offset of the destination
+	 * @param[in]  insn    The corresponding instruction in the code storage
+	 */
 	void cMoveReg(size_t dst, size_t src, int offset,
-		const CodeStorage::Insn& insn) {
-
-		if (offset > 0) {
-
-			this->append(new FI_move_reg_offs(&insn, dst, src, offset));
-
-		} else {
-
+		const CodeStorage::Insn& insn)
+	{
+		if (offset > 0)
+		{
+			append(new FI_move_reg_offs(&insn, dst, src, offset));
+		} else
+		{
 			if (src != dst)
-				this->append(new FI_move_reg(&insn, dst, src));
-
+				append(new FI_move_reg(&insn, dst, src));
 		}
-
 	}
 
-	static const cl_accessor* computeOffset(int& offset, const cl_accessor* acc) {
 
-		while (acc && (acc->code == CL_ACCESSOR_ITEM)) {
-
+	/**
+	 * @brief  Computes the final offset of a chain of accessor in a record
+	 *
+	 * Given a starting offset @p offset, this function modifies the value
+	 * according to the chain of item accessors (in C: "rec.acc1.acc2.acc3...",
+	 * where "rec", "rec.acc1", "rec.acc2", ... are records), thus obtaining the
+	 * offset from the beginning of the record when we look at the flattened image
+	 * of the record.
+	 *
+	 * @param[in,out]  offset  The initial offset of the record (to be modified)
+	 * @param[in]      acc     The head of the list of accessors
+	 *
+	 * @returns  Next accessor that is not a record accessor (i.e. not "." but
+	 *           rather "*", "[]", ...)
+	 */
+	static const cl_accessor* computeOffset(int& offset, const cl_accessor* acc)
+	{
+		while (acc && (acc->code == CL_ACCESSOR_ITEM))
+		{	// while there are more record accessors (in C: "rec.acc")
 			offset += acc->type->items[acc->data.item.id].offset;
 			acc = acc->next;
-
 		}
 
 		return acc;
-
 	}
 
+
+	/**
+	 * @brief  Compile a load of an operand into a register
+	 *
+	 * Compiles a load of an operand in the source register @p src into the
+	 * destination register @p dst. The operand is modifed according to the
+	 * accessors desribed in @p op. For instance, it may load the value given by
+	 * the accessors "reg1->acc1.acc2".
+	 *
+	 * @param[in]  dst   Index of the destination register
+	 * @param[in]  src   Index of the source register
+	 * @param[in]  op    The operand to be loaded (contains the accessors)
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
 	void cLoadReg(size_t dst, size_t src, const cl_operand& op,
-		const CodeStorage::Insn& insn) {
+		const CodeStorage::Insn& insn)
+	{
+		const cl_accessor* acc = op.accessor;   // the initial accessor
+		int offset = 0;                         // the initial offset
 
-		const cl_accessor* acc = op.accessor;
+		if (acc && (acc->code == CL_ACCESSOR_DEREF))
+		{	// in case there is a dereference (in C: "*op") at the start
 
-		int offset = 0;
-
-		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
-
+			// Assertions
 			assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
+			// compute offset of the accessors after the dereference
 			acc = Core::computeOffset(offset, acc->next);
+			if (acc && (acc->code == CL_ACCESSOR_REF))
+			{	// in case the next accessor is a reference (in C: "&op")
 
-			if (acc && (acc->code == CL_ACCESSOR_REF)) {
+				// assert that there are no more accessors
+				assert(acc->next == nullptr);
 
-				assert(acc->next == NULL);
-				this->cMoveReg(dst, src, offset, insn);
+				// move the register from given offset
+				cMoveReg(dst, src, offset, insn);
 				return;
-
 			}
 
-			assert(acc == NULL);
+			// assert that there are no more accessors
+			assert(acc == nullptr);
 
-			if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
-
+			if (op.type->code == cl_type_e::CL_TYPE_STRUCT)
+			{	// in case the operand is a structure
 				std::vector<size_t> offs;
 				NodeBuilder::buildNode(offs, op.type);
 
-				this->append(new FI_acc_set(&insn, dst, offset, offs));
-				this->append(new FI_loads(&insn, dst, dst, offset, offs));
+				// add an instruction to access the set of all selectors of the structure
+				append(new FI_acc_set(&insn, dst, offset, offs));
+				// add an instruction to load all selectors of the structure
+				append(new FI_loads(&insn, dst, dst, offset, offs));
+			} else
+			{	// in case the operand is not a structure
 
-			} else {
-
-				this->append(new FI_acc_sel(&insn, dst, offset));
-				this->append(new FI_load(&insn, dst, dst, offset));
-
+				// add an instruction to access a single selector
+				append(new FI_acc_sel(&insn, dst, offset));
+				// add an instruction to load a single selector
+				append(new FI_load(&insn, dst, dst, offset));
 			}
 
-			this->append(new FI_check(&insn));
+			// add an instruction to check invariants of the virtual machine
+			append(new FI_check(&insn));
+		} else
+		{	// in case the next accessor is not a dereference
 
-		} else {
-
+			// compute offset of the accessors
 			acc = Core::computeOffset(offset, acc);
 
-			assert(acc == NULL);
+			// assert that there are no more accessors
+			assert(acc == nullptr);
 
-			this->cMoveReg(dst, src, offset, insn);
-
+			// move the register from given offset
+			cMoveReg(dst, src, offset, insn);
 		}
-
 	}
 
+
+	/**
+	 * @brief  Compile a store of a register value into an operand
+	 *
+	 * @param[in]  op    The target operand
+	 * @param[in]  src   The index of the source register
+	 * @param[in]  tmp   The index of the register used as destination
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 *
+	 * @returns  @p true if the target is accessed using dereference, @p false
+	 *           otherwise
+	 */
 	bool cStoreReg(const cl_operand& op, size_t src, size_t tmp,
-		const CodeStorage::Insn& insn) {
+		const CodeStorage::Insn& insn)
+	{
+		const cl_accessor* acc = op.accessor;    // the initial accessor
+		int offset = 0;                          // the initial offset
 
-		const cl_accessor* acc = op.accessor;
+		if (acc && (acc->code == CL_ACCESSOR_DEREF))
+		{	// in case there is a dereference (in C: "*op") at the start
 
-		int offset = 0;
-
-		if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
-
+			// Assertions
 			assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
+			// compute offset of the accessors after the dereference
 			acc = Core::computeOffset(offset, acc->next);
 
-			assert(acc == NULL);
+			// assert that there are no more accessors
+			assert(acc == nullptr);
 
-			if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
-
+			if (op.type->code == cl_type_e::CL_TYPE_STRUCT)
+			{	// in case the operand is a structure
 				std::vector<size_t> offs;
 				NodeBuilder::buildNode(offs, op.type);
 
-				this->append(new FI_acc_set(&insn, tmp, offset, offs));
-				this->append(new FI_stores(&insn, tmp, src, offset));
+				// add an instruction to access the set of all selectors of the structure
+				append(new FI_acc_set(&insn, tmp, offset, offs));
+				// add an instruction to store all selectors of the structure
+				append(new FI_stores(&insn, tmp, src, offset));
+			} else
+			{	// in case the operand is not a structure
 
-			} else {
-
-				this->append(new FI_acc_sel(&insn, tmp, offset));
-				this->append(new FI_store(&insn, tmp, src, offset));
-
+				// add an instruction to access a single selector
+				append(new FI_acc_sel(&insn, tmp, offset));
+				// add an instruction to store a single selector
+				append(new FI_store(&insn, tmp, src, offset));
 			}
 
-			this->append(new FI_check(&insn));
+			// add an instruction to check invariants of the virtual machine
+			append(new FI_check(&insn));
 
 			return true;
+		} else
+		{	// in case the next accessor is not a dereference
 
-		} else {
-
+			// compute offset of the accessors
 			acc = Core::computeOffset(offset, acc);
 
-			assert(acc == NULL);
+			// Assertions
+			assert(acc == nullptr);   // there are no more accessors
 			assert(offset == 0);
 
 			if (src != tmp)
-				this->append(new FI_move_reg(&insn, tmp, src));
+				append(new FI_move_reg(&insn, tmp, src));
 
 			return false;
-
 		}
-
 	}
 
+
+	/**
+	 * @brief  Compile a load of an operand into a register
+	 *
+	 * Compiles the load instruction of the operand @p op into the destination
+	 * register @p dst. In case the @p canOverride parameter is set to @p true,
+	 * the destination register may change (in case the operand is already in
+	 * a register).
+	 *
+	 * @param[in]  dst          The index of the destination register
+	 * @param[in]  op           The source operand
+	 * @param[in]  insn         The corresponding instruction in the code storage
+	 * @param[in]  canOverride  @p true if the destination register may change
+	 *
+	 * @returns  Index of the register into which will the value be loaded (may
+	 *           differ from @p dst)
+	 */
 	size_t cLoadOperand(size_t dst, const cl_operand& op,
-		const CodeStorage::Insn& insn, bool canOverride = true) {
+		const CodeStorage::Insn& insn, bool canOverride = true)
+	{
+		switch (op.code)
+		{	// according to the type of the operand
+			case cl_operand_e::CL_OPERAND_VAR:
+			{	// in case the operand is a variable
+				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-		switch (op.code) {
+				if (varInfo.isOnStack())
+				{ // in the case of a variable on the stack
+					const cl_accessor* acc = op.accessor;   // get the first accessor
+					int offset = 0;                         // initialize the offset
 
-			case cl_operand_e::CL_OPERAND_VAR: {
-
-				auto varInfo = this->curCtx->getVarInfo(varIdFromOperand(&op));
-
-				if (varInfo.first) {
-
-					// stack variable
-					const cl_accessor* acc = op.accessor;
-
-					int offset = 0;
-
-					if (acc && (acc->code == CL_ACCESSOR_DEREF)) {
-
+					if (acc && (acc->code == CL_ACCESSOR_DEREF))
+					{	// in case there is the dereference accessor ('*' in C)
 						assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
-						this->append(new FI_load_ABP(&insn, dst, (int)varInfo.second));
+						// append an instruction to load value at the address relative to
+						// the abstract base pointer in the symbolic stack
+						append(new FI_load_ABP(&insn, dst, static_cast<int>(varInfo.getStackOffset())));
 
+						// jump to the next accessor
 						acc = Core::computeOffset(offset, acc->next);
 
-						if (acc && (acc->code == CL_ACCESSOR_REF)) {
-
+						if (acc && (acc->code == CL_ACCESSOR_REF))
+						{	// in case the next accessor is a reference ('&' in C)
+							// assert the operand is a pointer
 							assert(op.type->code == cl_type_e::CL_TYPE_PTR);
-
-							assert(acc->next == NULL);
+							// assert '&' is the last accessor
+							assert(acc->next == nullptr);
 
 							if (offset)
-								this->append(new FI_move_reg_offs(&insn, dst, dst, offset));
+							{	// in case offset is non-zero
+
+								// append instruction to move the value on the offset to the
+								// beginning of the register
+								append(new FI_move_reg_offs(&insn, dst, dst, offset));
+							}
 
 							break;
-
 						}
 
-						assert(acc == NULL);
+						// assert there are no more accessors
+						assert(acc == nullptr);
 
-						if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
-
+						if (op.type->code == cl_type_e::CL_TYPE_STRUCT)
+						{	// in case the operand is a structure
 							std::vector<size_t> offs;
 							NodeBuilder::buildNode(offs, op.type);
 
-							this->append(new FI_acc_set(&insn, dst, offset, offs));
-							this->append(new FI_loads(&insn, dst, dst, offset, offs));
-
-						} else {
-
-							this->append(new FI_acc_sel(&insn, dst, offset));
-							this->append(new FI_load(&insn, dst, dst, offset));
-
+							// append an instruction to isolate the root
+							append(new FI_acc_set(&insn, dst, offset, offs));
+							// append an instruction to load the root
+							append(new FI_loads(&insn, dst, dst, offset, offs));
+						} else
+						{
+							// append an instruction to isolate the element
+							append(new FI_acc_sel(&insn, dst, offset));
+							// append an instruction to load the element
+							append(new FI_load(&insn, dst, dst, offset));
 						}
+					} else
+					{	// in case there is not a dereference
+						offset = static_cast<int>(varInfo.getStackOffset());
 
-					} else {
-
-						offset = (int)varInfo.second;
-
+						// compute the real offset from record accessors
 						acc = Core::computeOffset(offset, acc);
 
-						if (acc && (acc->code == CL_ACCESSOR_REF)) {
+						if (acc && (acc->code == CL_ACCESSOR_REF))
+						{	// in case the next accessor is a reference ('&' in C)
+							// assert there are no more accessors
+							assert(acc->next == nullptr);
 
-							assert(acc->next == NULL);
-							this->append(new FI_get_ABP(&insn, dst, offset));
+							// append the instruction to get the value at given offset
+							// TODO @todo  should this really be there? The value is loaded
+							// later...
+							append(new FI_get_ABP(&insn, dst, offset));
 							break;
-
 						}
 
-						assert(acc == NULL);
+						// assert there are no more accessors
+						assert(acc == nullptr);
 
-						this->append(new FI_load_ABP(&insn, dst, offset));
-//						this->cMoveReg(dst, src, offset);
-
+						// append the instruction to load the value at given offset
+						append(new FI_load_ABP(&insn, dst, offset));
 					}
-
-
-				} else {
-
-					// register
-					if (canOverride) {
-						dst = varInfo.second;
-						this->cLoadReg(dst, dst, op, insn);
-					} else {
-						this->cLoadReg(dst, varInfo.second, op, insn);
+				} else
+				{	// in case the variable is in a register
+					if (canOverride)
+					{	// in case the destination register can be overridden
+						dst = varInfo.getRegIndex();          // change the value
+						cLoadReg(dst, dst, op, insn);
+					} else
+					{	// in case the destination register cannot be overridden
+						cLoadReg(dst, varInfo.getRegIndex(), op, insn);
 					}
-
 				}
 
 				break;
-
 			}
 
-			case cl_operand_e::CL_OPERAND_CST:
-				this->cLoadCst(dst, op, insn);
+			case cl_operand_e::CL_OPERAND_CST: // if the operand is a constant
+				cLoadCst(dst, op, insn);         // load the constant
 				break;
 
 			default:
-				assert(false);
-
+				assert(false);                   // fail gracefully
 		}
 
 		return dst;
-
 	}
 
-	size_t lookupStoreReg(const cl_operand& op, size_t src) {
 
+	/**
+	 * @brief  Gets the index of the register where there is given operand
+	 *
+	 * Gets the index of the register where the value of the operand @p op which
+	 * is in register @p src is stored. So, if there is a variable reference in @p
+	 * src and the operand is dereferenced, the target of the reference is
+	 * obtained.
+	 *
+	 * @param[in]  op   The source operand
+	 * @param[in]  src  Index of the register with the source
+	 *
+	 * @returns  Index of the register with the requester operand
+	 */
+	size_t lookupStoreReg(const cl_operand& op, size_t src)
+	{
+		// @todo TODO why is it here?
 		size_t tmp = src;
 
-		switch (op.code) {
+		switch (op.code)
+		{	// depending on the type of the operand
+			case cl_operand_e::CL_OPERAND_VAR:
+			{	// in case it is a variable
 
-			case cl_operand_e::CL_OPERAND_VAR: {
+				// get info about the variable
+				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				auto varInfo = this->curCtx->getVarInfo(varIdFromOperand(&op));
-
-				if (varInfo.first) {
-
-					// stack variable
+				if (varInfo.isOnStack())
+				{	// in case it is on the stack
 					return src;
-
-				} else {
-
-					// register
-					tmp = varInfo.second;
-
-				}
-
-				const cl_accessor* acc = op.accessor;
-
-				return (acc && (acc->code == CL_ACCESSOR_DEREF))?(src):(tmp);
-
-			}
-
-			default:
-				assert(false);
-				return 0;
-
-		}
-
-	}
-
-	bool cStoreOperand(const cl_operand& op, size_t src, size_t tmp,
-		const CodeStorage::Insn& insn) {
-
-		switch (op.code) {
-
-			case cl_operand_e::CL_OPERAND_VAR: {
-
-				auto varInfo = this->curCtx->getVarInfo(varIdFromOperand(&op));
-
-				if (varInfo.first) {
-
-					// stack variable
-					this->append(new FI_get_ABP(&insn, tmp, 0));
+				} else
+				{	// in case it is in a register
+					tmp = varInfo.getRegIndex();
 
 					const cl_accessor* acc = op.accessor;
 
-					int offset = (int)varInfo.second;
-
-					bool needsAcc = false;
-
-					if (acc) {
-
-						if (acc->code == CL_ACCESSOR_DEREF) {
-
-							assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
-
-							// override previous instruction
-							this->override(new FI_load_ABP(&insn, tmp, varInfo.second));
-
-							needsAcc = true;
-
-							acc = acc->next;
-
-							offset = 0;
-
-						}
-
-						acc = Core::computeOffset(offset, acc);
-
-					}
-
-					assert(acc == NULL);
-
-					if (op.type->code == cl_type_e::CL_TYPE_STRUCT) {
-
-						std::vector<size_t> offs;
-						NodeBuilder::buildNode(offs, op.type);
-
-						if (needsAcc) {
-							this->append(new FI_acc_set(&insn, tmp, offset, offs));
-						}
-						this->append(new FI_stores(&insn, tmp, src, offset));
-
-					} else {
-
-						if (needsAcc) {
-							this->append(new FI_acc_sel(&insn, tmp, offset));
-						}
-						this->append(new FI_store(&insn, tmp, src, offset));
-
-					}
-
-					this->append(new FI_check(&insn));
-
-					return true;
-
-				} else {
-
-					// register
-					return this->cStoreReg(op, src, varInfo.second, insn);
-
+					// in case there is dereference at the operand
+					return (acc && (acc->code == CL_ACCESSOR_DEREF))? (src) : (tmp);
 				}
-
-				break;
-
 			}
 
 			default:
-				assert(false);
-				return false;
-
+				assert(false);      // fail gracefully
+				return src;					// for the sake of compiler (should never get here)
 		}
-
 	}
 
-	AbstractInstruction* cKillDeadVariables(const CodeStorage::TKillVarList& vars,
-		const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compile a store of a value into an operand
+	 *
+	 * Compiles the store instruction that stores the value given in @p src into
+	 * the operand which is pointed to by the @p tmp parameter.
+	 *
+	 * @param[in]  op    The target operand
+	 * @param[in]  src   Index of the register with the value to be stored
+	 * @param[in]  tmp   Index of the register the points to the symbolic memory
+	 *                   location where the value is to be stored
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 *
+	 * @returns  @p true if the value is stored into a variable, @p false if it is
+	 *           stored into a register
+	 */
+	bool cStoreOperand(const cl_operand& op, size_t src, size_t tmp,
+		const CodeStorage::Insn& insn)
+	{
+		switch (op.code)
+		{	// according to the type of the operand
+			case cl_operand_e::CL_OPERAND_VAR:
+			{	// in case it is a variable
+
+				// get variable info
+				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
+
+				if (varInfo.isOnStack())
+				{	// in case it is on the stack
+
+					// append the instruction to get the value at given offset
+					append(new FI_get_ABP(&insn, tmp, 0));
+
+					int offset = static_cast<int>(varInfo.getStackOffset());
+
+					bool needsAcc = false;
+
+					const cl_accessor* acc = op.accessor;
+
+					if (acc)
+					{	// in case there are some accessors
+						if (acc->code == CL_ACCESSOR_DEREF)
+						{	// in case the accessor is a dereference ('*' in C)
+							assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
+
+							// override previous instruction
+							override(new FI_load_ABP(&insn, tmp, varInfo.getStackOffset()));
+
+							// separation is needed
+							needsAcc = true;
+
+							// skip to the next accessor
+							acc = acc->next;
+
+							// reinitialize the offset
+							offset = 0;
+						}
+
+						// compute the real offset (while ``flattening'' the structure)
+						acc = Core::computeOffset(offset, acc);
+					}
+
+					// assert there are no more accessors
+					assert(acc == nullptr);
+
+					if (op.type->code == cl_type_e::CL_TYPE_STRUCT)
+					{	// in case the operand is a structure
+
+						// build a symbolic node
+						std::vector<size_t> offs;
+						NodeBuilder::buildNode(offs, op.type);
+
+						if (needsAcc)
+						{	// in case separation is needed
+							// append separation of a set of nodes
+							append(new FI_acc_set(&insn, tmp, offset, offs));
+						}
+
+						// append store of the value into register
+						append(new FI_stores(&insn, tmp, src, offset));
+					} else
+					{	// in case the operand is anything but a structure
+
+						if (needsAcc)
+						{	// in case separation is needed
+							// append separation of a node
+							append(new FI_acc_sel(&insn, tmp, offset));
+						}
+
+						// append store of the value into register
+						append(new FI_store(&insn, tmp, src, offset));
+					}
+
+					// add an instruction to check invariants of the virtual machine
+					append(new FI_check(&insn));
+
+					return true;
+				} else
+				{	// in case it is in a register
+					return cStoreReg(op, src, varInfo.getRegIndex(), insn);
+				}
+			}
+
+			default:          // the default case
+				assert(false);
+				return false;
+		}
+	}
+
+
+	/**
+	 * @brief  Method that kills given variables
+	 *
+	 * This method is to be called after an instruction that may introduce
+	 * temporary variables is compiled. It identifies which variables can be
+	 * killed and kills them.
+	 *
+	 * @param[in]  vars  A list of variables to be killed
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 *
+	 * @returns  Either @p nullptr if there are no feasible variables to be killed
+	 *           or a pointer to the instruction that loads the undefined data
+	 *           block that is used to kill given variables
+	 */
+	AbstractInstruction* cKillDeadVariables(const CodeStorage::TKillVarList& vars,
+		const CodeStorage::Insn& insn)
+	{
 		std::set<size_t> offs;
 
-		for (auto var : vars) {
-
+		for (auto var : vars)
+		{	// for every variable to be killed
 			if (var.onlyIfNotPointed)
+			{	// if killing is safe only if nobody points at the variable
 				continue;
+			}
 
-			const std::pair<bool, size_t>& varInfo = this->curCtx->getVarInfo(var.uid);
+			// obtain information about the variable
+			const SymCtx::VarInfo& varInfo = curCtx_->getVarInfo(var.uid);
 
-			if (!varInfo.first)
+			if (!varInfo.isOnStack())
+			{	// on case the variable is not on the stack
 				continue;
+			}
 
-			offs.insert(varInfo.second);
-
+			// retrieve the offset of the variable at the current stack frame
+			offs.insert(varInfo.getStackOffset());
 		}
 
 		if (offs.empty())
-			return NULL;
+		{	// in case there are no feasible variables to be killed
+			return nullptr;
+		}
 
 		std::vector<Data::item_info> tmp;
 
-		if (offs.size() > 1) {
-
+		if (offs.size() > 1)
+		{	// in case there is more than one offset, prepare for creating a temporary
+			// structure
 			for (auto offset : offs)
 				tmp.push_back(Data::item_info(offset, Data::createUndef()));
-
 		}
 
-		AbstractInstruction* result = this->append(
-			new FI_load_cst(&insn, 0,
+		// append an instruction to load an undefined constant to r0
+		AbstractInstruction* result = append(
+			new FI_load_cst(&insn, /* dst reg */ 0,
 				(offs.size() > 1)?(Data::createStruct(tmp)):(Data::createUndef()))
 		);
 
-		this->append(new FI_get_ABP(&insn, 1, 0));
-		this->append(
+		// append an instruction to load the abstract base pointer into r1
+		append(new FI_get_ABP(&insn, /* dst reg */ 1, /* offset */ 0));
+
+		// append an instruction to store the undefined value in r0 to the address
+		// stored in r1
+		append(
 			(offs.size() > 1)
-				?((AbstractInstruction*)new FI_stores(&insn, 1, 0, 0))
-				:((AbstractInstruction*)new FI_store(&insn, 1, 0, *offs.begin()))
+				?(static_cast<AbstractInstruction*>(new FI_stores(
+						&insn,
+						/* reg with addr of dst */ 1,
+						/* src reg */ 0,
+						/* offset of the dst */ 0
+					)))
+				:(static_cast<AbstractInstruction*>(new FI_store(
+						&insn,
+						/* reg with addr of dst */ 1,
+						/* src reg */ 0,
+						/* offset of the dst */ *offs.begin()
+					)))
 		);
 
 		return result;
-
 	}
 
-	void compileAssignment(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compiles an assignment of a value to some memory location
+	 *
+	 * This method compiles an assignment of a value to a memory location, given
+	 * by the operands in @p insn.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileAssignment(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src = insn.operands[1];
 
@@ -872,93 +1165,138 @@ protected:
 		assert(dst.type != nullptr);
 		assert(src.type->code == dst.type->code);
 
-
-		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t srcReg = this->cLoadOperand(dstReg, src, insn);
+		// get registers for the source and the target
+		size_t dstReg = lookupStoreReg(dst, 0);
+		size_t srcReg = cLoadOperand(dstReg, src, insn);
 
 		if (
 			src.type->code == cl_type_e::CL_TYPE_PTR &&
 			src.type->items[0].type->code == cl_type_e::CL_TYPE_VOID &&
 			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
-		) {
+		)
+		{	// in case the source is a void pointer and the destination is not
+
+			// build a node according to the destination type
 			std::vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
 
+			// create a string with the name of the type
 			std::string typeName;
 			if (dst.type->items[0].type->name)
+			{	// in case the type is named
 				typeName = std::string(dst.type->items[0].type->name);
-			else {
+			} else
+			{	// in case the type is unnamed
 				std::ostringstream ss;
 				ss << dst.type->items[0].type->uid;
 				typeName = ss.str();
 			}
 
-			this->append(
+			// append an instruction to create a new node
+			append(
 				new FI_node_create(
 					&insn,
-					srcReg,
-					srcReg,
-					dst.type->items[0].type->size,
-					this->boxMan.getTypeInfo(typeName),
-					sels
+					/* dst reg where the node will be stored */ srcReg,
+					/* reg with the value from which the node is to be created */ srcReg,
+					/* size of the created node */ dst.type->items[0].type->size,
+					/* type information */ boxMan_.getTypeInfo(typeName),
+					/* selectors of the node */ sels
 				)
 			);
-
 		}
 
-		this->cStoreOperand(dst, srcReg, 1, insn);
-		this->cKillDeadVariables(insn.varsToKill, insn);
-
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ srcReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
-	void compileTruthNot(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compiles a Boolean negation
+	 *
+	 * This method compiles a negation of a Boolean (or, in general, integer)
+	 * expression.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileTruthNot(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src = insn.operands[1];
 
+		// assert that the destination is a Boolean
 		assert(dst.type->code == cl_type_e::CL_TYPE_BOOL);
 
-		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t srcReg = this->cLoadOperand(dstReg, src, insn);
+		// get registers for the source and the target
+		size_t dstReg = lookupStoreReg(dst, 0);
+		size_t srcReg = cLoadOperand(dstReg, src, insn);
 
-		switch (src.type->code) {
-
+		switch (src.type->code)
+		{	// append a corresponding indstruction according to the type of the source
 			case cl_type_e::CL_TYPE_BOOL:
-				this->append(new FI_bnot(&insn, srcReg));
+				append(new FI_bnot(&insn, srcReg));
 				break;
 
 			case cl_type_e::CL_TYPE_INT:
-				this->append(new FI_inot(&insn, srcReg));
+				append(new FI_inot(&insn, srcReg));
 				break;
 
 			default:
 				assert(false);
-
 		}
 
-		this->cStoreOperand(dst, srcReg, 1, insn);
-		this->cKillDeadVariables(insn.varsToKill, insn);
-
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ srcReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
-	void compileMalloc(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compiles memory allocation
+	 *
+	 * This method compiles allocation of a symbolic memory block of given size
+	 * and type.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileMalloc(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src = insn.operands[2];
 
+		// assert that 
 		assert(src.type->code == cl_type_e::CL_TYPE_INT);
 		assert(dst.type->code == cl_type_e::CL_TYPE_PTR);
 
-		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t srcReg = this->cLoadOperand(dstReg, src, insn);
+		// get registers for the source and the target
+		size_t dstReg = lookupStoreReg(dst, 0);
+		size_t srcReg = cLoadOperand(dstReg, src, insn);
 
-		this->append(new FI_alloc(&insn, srcReg, srcReg));
+		// append the instruction to set information for the pointer
+		append(new FI_alloc(
+			&insn,
+			/* reg where the result shall be stored*/ srcReg,
+			/* reg with the number of allocated bytes */ srcReg
+		));
 
-		if (dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID) {
+		if (dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID)
+		{	// in case the destination pointer is not a void pointer
 
+			// build a node with proper selectors
 			std::vector<SelData> sels;
 			NodeBuilder::buildNode(sels, dst.type->items[0].type);
 
+			// get the name of the target type
 			std::string typeName;
 			if (dst.type->items[0].type->name)
 				typeName = std::string(dst.type->items[0].type->name);
@@ -968,261 +1306,426 @@ protected:
 				typeName = ss.str();
 			}
 
-			this->append(
-				new FI_node_create(
-					&insn,
-					srcReg,
-					srcReg,
-					dst.type->items[0].type->size,
-					this->boxMan.getTypeInfo(typeName),
-					sels
-				)
-			);
-
+			// append an instruction to create the node in the symbolic memory
+			append(new FI_node_create(
+				&insn,
+				/* dst reg for the pointer to the node */ srcReg,
+				/* reg with the value from which the node is to be created */ srcReg,
+				/* size of the created node*/ dst.type->items[0].type->size,
+				/* type information */ boxMan_.getTypeInfo(typeName),
+				/* selectors of the node */ sels
+			));
 		}
 
-		this->cStoreOperand(dst, srcReg, 1, insn);
-		this->cKillDeadVariables(insn.varsToKill, insn);
-
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ srcReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
-	void compileFree(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compile freeing of memory
+	 *
+	 * Compiles instructions that release a symbolic memory block.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileFree(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& src = insn.operands[2];
 
-		size_t srcReg = this->cLoadOperand(0, src, insn);
+		// get registers for the source
+		size_t srcReg = cLoadOperand(0, src, insn);
 
-		this->append(new FI_acc_all(&insn, srcReg));
-		this->append(new FI_node_free(&insn, srcReg));
-		this->append(new FI_check(&insn));
-		this->cKillDeadVariables(insn.varsToKill, insn);
+		// append an instruction to isolate all selectors
+		append(new FI_acc_all(
+			&insn,
+			/* reg with ref to the tree to have selectors isolated */ srcReg
+		));
 
+		// append an instruction to free a symbolic memory node
+		append(new FI_node_free(&insn,
+			/* reg with ref to the freed node */ srcReg
+		));
+		// add an instruction to check invariants of the virtual machine
+		append(new FI_check(&insn));
+
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
-	template <class F>
-	void compileCmp(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compiles a comparison of two operands
+	 *
+	 * This instruction compiles a comparison (of the type @p F) of two operands.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 *
+	 * @tparam  F  The type of instruction to be compiled
+	 */
+	template <class F>
+	void compileCmp(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src1 = insn.operands[1];
 		const cl_operand& src2 = insn.operands[2];
 
+		// assert the destination is a Boolean
 		assert(dst.type->code == cl_type_e::CL_TYPE_BOOL);
 
-		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t src1Reg = this->cLoadOperand(0, src1, insn);
-		size_t src2Reg = this->cLoadOperand(1, src2, insn);
+		// get registers for the sources and the target
+		size_t dstReg = lookupStoreReg(dst, 0);
+		size_t src1Reg = cLoadOperand(0, src1, insn);
+		size_t src2Reg = cLoadOperand(1, src2, insn);
 
-		this->append(new F(dstReg, src1Reg, src2Reg));
-		this->cStoreOperand(dst, dstReg, 1, insn);
-		this->cKillDeadVariables(insn.varsToKill, insn);
+		// append the desired instruction
+		append(new F(dstReg, src1Reg, src2Reg));
 
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ dstReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
-	void compilePlus(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compiles integer addition
+	 *
+	 * This method compiles addition of two integer operands.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compilePlus(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src1 = insn.operands[1];
 		const cl_operand& src2 = insn.operands[2];
 
+		// assert that all operands are integer
 		assert(dst.type->code == cl_type_e::CL_TYPE_INT);
 		assert(src1.type->code == cl_type_e::CL_TYPE_INT);
 		assert(src2.type->code == cl_type_e::CL_TYPE_INT);
 
-		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t src1Reg = this->cLoadOperand(0, src1, insn);
-		size_t src2Reg = this->cLoadOperand(1, src2, insn);
+		// get registers for the sources and the target
+		size_t dstReg = lookupStoreReg(dst, 0);
+		size_t src1Reg = cLoadOperand(0, src1, insn);
+		size_t src2Reg = cLoadOperand(1, src2, insn);
 
-		this->append(new FI_iadd(&insn, dstReg, src1Reg, src2Reg));
-		this->cStoreOperand(dst, dstReg, 1, insn);
-		this->cKillDeadVariables(insn.varsToKill, insn);
+		// append the instruction for integer addition
+		append(new FI_iadd(&insn, dstReg, src1Reg, src2Reg));
 
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ dstReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
-	void compilePointerPlus(const CodeStorage::Insn& insn) {
-
+	/**
+	 * @brief  Compile pointer arithmetics
+	 *
+	 * This method compiles instructions for pointer arithmetics, i.e. addition of
+	 * an integer to a pointer.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compilePointerPlus(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 		const cl_operand& src1 = insn.operands[1];
 		const cl_operand& src2 = insn.operands[2];
 
+		// TODO: why this order? Cannot it be the other one?
+		// assert that @todo
 		assert(dst.type->code == cl_type_e::CL_TYPE_PTR);
 		assert(src1.type->code == cl_type_e::CL_TYPE_PTR);
 		assert(src2.type->code == cl_type_e::CL_TYPE_INT);
 
-		size_t dstReg = this->lookupStoreReg(dst, 0);
-		size_t src1Reg = this->cLoadOperand(0, src1, insn);
-		size_t src2Reg = this->cLoadOperand(1, src2, insn);
+		// get registers for the sources and the target
+		size_t dstReg = lookupStoreReg(dst, 0);
+		size_t src1Reg = cLoadOperand(0, src1, insn);
+		size_t src2Reg = cLoadOperand(1, src2, insn);
 
-		this->append(new FI_move_reg_inc(&insn, dstReg, src1Reg, src2Reg));
-		this->cStoreOperand(dst, dstReg, 1, insn);
-		this->cKillDeadVariables(insn.varsToKill, insn);
+		// append an instruction to increment displacement of a pointer
+		append(new FI_move_reg_inc(&insn, dstReg, src1Reg, src2Reg));
 
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ dstReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
-	void compileJmp(const CodeStorage::Insn& insn) {
 
-		this->append(new FI_jmp(&insn, insn.targets[0]));
-
+	/**
+	 * @brief  Compiles a jump
+	 *
+	 * This method compiles a jump instruction.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileJmp(const CodeStorage::Insn& insn)
+	{
+		// append an instruction to perform a jump
+		append(new FI_jmp(&insn, insn.targets[0]));
 	}
 
-	void compileCallInternal(const CodeStorage::Insn& insn, const CodeStorage::Fnc& fnc) {
 
+	/**
+	 * @brief  Compiles a call of an internal function
+	 *
+	 * Compiles a call of an internal function, i.e. function the implementation
+	 * of which is known.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 * @param[in]  fnc   The function which is to be called
+	 */
+	void compileCallInternal(const CodeStorage::Insn& insn,
+		const CodeStorage::Fnc& fnc)
+	{
+		// assertion on the number of arguments
 		assert(fnc.args.size() + 2 == insn.operands.size());
 
-		// feed registers with arguments (r2 ... )
 		for (size_t i = fnc.args.size() + 1; i > 1; --i)
-			this->cLoadOperand(i, insn.operands[i], insn, false);
+		{ // feed registers with arguments (r2 ... )
+			cLoadOperand(
+				/* destination reg */ i,
+				/* operand */ insn.operands[i],
+				/* instruction */ insn,
+				/* can the destination reg be overriden? */ false
+			);
+		}
 
 		CodeStorage::TKillVarList varsToKill = insn.varsToKill;
 
 		// kill also the destination variable if possible
-
-		if (insn.operands[0].code == cl_operand_e::CL_OPERAND_VAR) {
-
+		if (insn.operands[0].code == cl_operand_e::CL_OPERAND_VAR)
+		{	// in case the result of the function should be stored into a variable
 			auto varId = varIdFromOperand(&insn.operands[0]);
 
-			if (this->curCtx->getVarInfo(varId).first) {
-
+			if (curCtx_->getVarInfo(varId).isOnStack())
+			{	// if the variable is on the stack
 				auto acc = insn.operands[0].accessor;
 
 				if (!acc || (acc->code != CL_ACCESSOR_DEREF))
+				{	// in case the variable is not accessed by dereference
 					varsToKill.insert(CodeStorage::KillVar(varId, false));
-
+				}
 			}
-
 		}
 
 		// kill dead variables
-		this->cKillDeadVariables(varsToKill, insn);
+		cKillDeadVariables(varsToKill, insn);
 
-		size_t head = this->assembly->code_.size();
+		// current offset in the code segment
+		size_t head = assembly_->code_.size();
 
 		// put placeholder for loading return address into r1
-		this->append(NULL);
+		append(nullptr);
 
 		// call
-		this->append(new FI_jmp(&insn, &this->getFncInfo(&fnc).second));
+		append(new FI_jmp(&insn, &getFncInfo(&fnc).second));
 
 		// load ABP into r1
-		this->append(new FI_get_ABP(&insn, 1, 0));
+		append(new FI_get_ABP(
+			&insn,
+			/* dst reg */ 1,
+			/* offset */ 0
+		));
 
 		// isolate adjacent nodes (current ABP)
-		this->append(new FI_acc_all(&insn, 1));
+		append(new FI_acc_all(&insn, 1));
 
-		size_t head2 = this->assembly->code_.size();
+		// the new offset in the code segment
+		size_t head2 = assembly_->code_.size();
 
 		// fixpoint
-		this->cFixpoint(insn);
+		cFixpoint(insn);
 
-		this->assembly->code_[head2]->insn(&insn);
+		// TODO: I don't know why this is here
+		assembly_->code_[head2]->insn(&insn);
 
-		if (insn.operands[0].code != CL_OPERAND_VOID) {
+		if (insn.operands[0].code != CL_OPERAND_VOID)
+		{	// in case the called function returns some value
+
 			// pop return value into r0
-			this->append(new FI_pop_greg(&insn, 0));
+			append(new FI_pop_greg(&insn, 0));
 			// collect result from r0
-			this->cStoreOperand(insn.operands[0], 0, 1, insn);
-
+			cStoreOperand(insn.operands[0], 0, 1, insn);
 		}
 
 		// construct instruction for loading return address
-		this->assembly->code_[head] =
+		assembly_->code_[head] =
 			new FI_load_cst(&insn, 1,
-				Data::createNativePtr(this->assembly->code_[head + 2]));
+				Data::createNativePtr(assembly_->code_[head + 2]));
 
 		// set target flag
-		this->assembly->code_[head + 2]->setTarget();
-
+		assembly_->code_[head + 2]->setTarget();
 	}
 
-	void compileRet(const CodeStorage::Insn& insn) {
 
-		if (insn.operands[0].code != CL_OPERAND_VOID) {
-			// move return value into r0
-			this->cLoadOperand(0, insn.operands[0], insn, false);
+	/**
+	 * @brief  Compiles a return from a function
+	 *
+	 * This method compiles a return from a function, either with or without
+	 * a return value.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileRet(const CodeStorage::Insn& insn)
+	{
+		if (insn.operands[0].code != CL_OPERAND_VOID)
+		{	// in case the function returns a value
+
+			// move the return value into r0
+			cLoadOperand(0, insn.operands[0], insn, false);
 			// push r0 to gr1
-			this->append(new FI_push_greg(&insn, 0));
-
+			append(new FI_push_greg(&insn, 0));
 		}
 
 		// load previous ABP into r0
-		this->append(new FI_load_ABP(&insn, 0, ABP_OFFSET));
+		append(new FI_load_ABP(&insn, 0, ABP_OFFSET));
 
 		// store current ABP into r1
-		this->append(new FI_get_ABP(&insn, 1, 0));
+		append(new FI_get_ABP(&insn, 1, 0));
 
 		// restore previous ABP (r0)
-		this->append(new FI_set_greg(&insn, ABP_INDEX, 0));
+		append(new FI_set_greg(&insn, ABP_INDEX, 0));
 
 		// move return address into r0
-		this->append(new FI_load(&insn, 0, 1, RET_OFFSET));
+		append(new FI_load(&insn, 0, 1, RET_OFFSET));
 
 		// delete stack frame (r1)
-		this->append(new FI_node_free(&insn, 1));
+		append(new FI_node_free(&insn, 1));
 
 		// return to r0
-		this->append(new FI_ret(&insn, 0));
-
+		append(new FI_ret(&insn, 0));
 	}
 
-	void compileCond(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compiles a conditional jump
+	 *
+	 * This method compiles instructions for a conditional jump.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileCond(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& src = insn.operands[0];
 
-		size_t srcReg = this->cLoadOperand(0, src, insn);
+		// get register for the source
+		size_t srcReg = cLoadOperand(0, src, insn);
 
-		this->cKillDeadVariables(insn.varsToKill, insn);
+		cKillDeadVariables(insn.varsToKill, insn);
 
-		AbstractInstruction* tmp[2] = { NULL, NULL };
+		AbstractInstruction* tmp[2] = { nullptr, nullptr };
 
-		size_t sentinel = this->assembly->code_.size();
+		// assign mark and allocate space in the code assembly for the condition
+		// test instruction
+		size_t sentinel = assembly_->code_.size();
+		append(nullptr);
 
-		this->append(NULL);
+		for (auto i : { 0, 1 })
+		{	// for each branch
 
-		for (auto i : { 0, 1 }) {
+			// try to kill dead variables
+			tmp[i] = cKillDeadVariables(insn.killPerTarget[i], insn);
 
-			tmp[i] = this->cKillDeadVariables(insn.killPerTarget[i], insn);
-
-			this->append(new FI_jmp(&insn, insn.targets[i]));
+			// append an instruction to jump to the corresponding branch
+			append(new FI_jmp(&insn, insn.targets[i]));
 
 			if (!tmp[i])
-				tmp[i] = this->assembly->code_.back();
-
+			{	// if no dead variables were killed
+				tmp[i] = assembly_->code_.back();
+			}
 		}
 
-		this->assembly->code_[sentinel] = new FI_cond(&insn, srcReg, tmp);
-
+		// append the condition test instruction
+		assembly_->code_[sentinel] = new FI_cond(
+			&insn,
+			/* register with the result of the condition */ srcReg,
+			/* array of a pair of successor states (true and false branch) */ tmp
+		);
 	}
 
-	void compileNondet(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compiles a load of a nondeterministic value
+	 *
+	 * This method compiles a load of a nondeterministic value into a register.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileNondet(const CodeStorage::Insn& insn)
+	{
 		const cl_operand& dst = insn.operands[0];
 
-		size_t dstReg = this->lookupStoreReg(dst, 0);
+		// get register for the destination
+		size_t dstReg = lookupStoreReg(dst, 0);
 
-		this->append(new FI_load_cst(&insn, dstReg, Data::createUnknw()));
-		this->cStoreOperand(dst, dstReg, 1, insn);
-		this->cKillDeadVariables(insn.varsToKill, insn);
+		// append an instruction to load an unknown constant
+		append(new FI_load_cst(&insn, dstReg, Data::createUnknw()));
 
+		cStoreOperand(
+			/* target operand */ dst,
+			/* reg with src value */ dstReg,
+			/* reg pointing to memory location with the value to be stored */ 1,
+			insn
+		);
+		// kill dead variables
+		cKillDeadVariables(insn.varsToKill, insn);
 	}
 
-	void compileCall(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compiles a function call
+	 *
+	 * This method compiles a generic function call. It handles all types of
+	 * functions, i.e. special functions (such as malloc or free in C),
+	 * Forester-specific functions (fixpoint computation, printing of heap, ...)
+	 * and also ``normal'' functions.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileCall(const CodeStorage::Insn& insn)
+	{
+		// assert that the operand is a constant function
 		assert(insn.operands[1].code == cl_operand_e::CL_OPERAND_CST);
 		assert(insn.operands[1].data.cst.code == cl_type_e::CL_TYPE_FNC);
-		switch (this->builtinTable[insn.operands[1].data.cst.data.cst_fnc.name]) {
+
+		switch (builtinTable_[insn.operands[1].data.cst.data.cst_fnc.name])
+		{	// switch according to the name of the function
 			case builtin_e::biMalloc:
-				this->compileMalloc(insn);
+				compileMalloc(insn);
 				return;
 			case builtin_e::biFree:
-				this->compileFree(insn);
+				compileFree(insn);
 				return;
 			case builtin_e::biNondet:
-				this->compileNondet(insn);
+				compileNondet(insn);
 				return;
 			case builtin_e::biFix:
-				this->cFixpoint(insn);
+				cFixpoint(insn);
 				return;
 			case builtin_e::biPrintHeap:
-				this->cPrintHeap(insn);
+				cPrintHeap(insn);
 				return;
 			case builtin_e::biAbort:
 				this->append(new FI_abort(&insn));
@@ -1231,35 +1734,59 @@ protected:
 				break;
 		}
 
-		const CodeStorage::Fnc* fnc = insn.stor->fncs[insn.operands[1].data.cst.data.cst_fnc.uid];
+		// in case the function has no special meaning
 
-		if (!isDefined(*fnc)) {
-			CL_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" << insn.operands[1].data.cst.data.cst_fnc.name << '\'');
-			if (insn.operands[0].code != CL_OPERAND_VOID) {
-				this->append(new FI_load_cst(&insn, 0, Data::createUnknw()));
-				this->cStoreOperand(insn.operands[0], 0, 1, insn);
+		const CodeStorage::Fnc* fnc =
+			insn.stor->fncs[insn.operands[1].data.cst.data.cst_fnc.uid];
+
+		if (!isDefined(*fnc))
+		{	// in case the implementation of the function is not provided
+			CL_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" <<
+				insn.operands[1].data.cst.data.cst_fnc.name << '\'');
+
+			if (insn.operands[0].code != CL_OPERAND_VOID)
+			{	// in case the function returns a value
+
+				// append an instruction to load an unknown value
+				append(new FI_load_cst(&insn, 0, Data::createUnknw()));
+				cStoreOperand(
+					/* target operand */ insn.operands[0],
+					/* reg with src value */ 0,
+					/* reg pointing to memory location with the value to be stored */ 1,
+					insn
+				);
 			}
-		} else {
-			this->compileCallInternal(insn, *fnc);
+		} else
+		{	// in case the function has an implementation
+			compileCallInternal(insn, *fnc);
 		}
-
 	}
 
-	void compileInstruction(const CodeStorage::Insn& insn) {
 
+	/**
+	 * @brief  Compiles an instruction
+	 *
+	 * This method compiles an arbitrary instruction, by calling a proper method
+	 * corresponding to the instruction code and subcode.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void compileInstruction(const CodeStorage::Insn& insn)
+	{
 		CL_DEBUG_AT(3, insn.loc << ' ' << insn);
 
-		switch (insn.code) {
-
-			case cl_insn_e::CL_INSN_UNOP:
-				switch (insn.subCode) {
+		switch (insn.code)
+		{	// according to the main instruction code
+			case cl_insn_e::CL_INSN_UNOP: // unary operator
+				switch (insn.subCode)
+				{	// according to the instruction subcode
 					case cl_unop_e::CL_UNOP_ASSIGN:
-						this->compileAssignment(insn);
+						compileAssignment(insn);
 						break;
 					case cl_unop_e::CL_UNOP_BIT_NOT:
 						// TODO
 					case cl_unop_e::CL_UNOP_TRUTH_NOT:
-						this->compileTruthNot(insn);
+						compileTruthNot(insn);
 						break;
 					default:
 						throw NotImplementedException(translUnOpCode(insn.subCode),
@@ -1267,28 +1794,26 @@ protected:
 				}
 				break;
 
-			case cl_insn_e::CL_INSN_BINOP:
-				switch (insn.subCode) {
+			case cl_insn_e::CL_INSN_BINOP: // binary operator
+				switch (insn.subCode)
+				{	// according to the instruction subcode
 					case cl_binop_e::CL_BINOP_EQ:
-						this->compileCmp<FI_eq>(insn);
+						compileCmp<FI_eq>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_NE:
-						this->compileCmp<FI_neq>(insn);
+						compileCmp<FI_neq>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_LT:
-						this->compileCmp<FI_lt>(insn);
+						compileCmp<FI_lt>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_GT:
-						this->compileCmp<FI_gt>(insn);
+						compileCmp<FI_gt>(insn);
 						break;
 					case cl_binop_e::CL_BINOP_PLUS:
-						this->compilePlus(insn);
+						compilePlus(insn);
 						break;
-/*					case cl_binop_e::CL_BINOP_MINUS:
-						this->execMinus(state, parent, insn);
-						break;*/
 					case cl_binop_e::CL_BINOP_POINTER_PLUS:
-						this->compilePointerPlus(insn);
+						compilePointerPlus(insn);
 						break;
 					default:
 						throw NotImplementedException(translBinOpCode(insn.subCode),
@@ -1296,20 +1821,20 @@ protected:
 				}
 				break;
 
-			case cl_insn_e::CL_INSN_CALL:
-				this->compileCall(insn);
+			case cl_insn_e::CL_INSN_CALL: // function call
+				compileCall(insn);
 				break;
 
-			case cl_insn_e::CL_INSN_RET:
-				this->compileRet(insn);
+			case cl_insn_e::CL_INSN_RET: // return from a function
+				compileRet(insn);
 				break;
 
-			case cl_insn_e::CL_INSN_JMP:
-				this->compileJmp(insn);
+			case cl_insn_e::CL_INSN_JMP: // jump
+				compileJmp(insn);
 				break;
 
-			case cl_insn_e::CL_INSN_COND:
-				this->compileCond(insn);
+			case cl_insn_e::CL_INSN_COND: // condition
+				compileCond(insn);
 				break;
 
 			case cl_insn_e::CL_INSN_LABEL:
@@ -1322,88 +1847,116 @@ protected:
 		}
 	}
 
-	void compileBlock(const CodeStorage::Block* block, bool abstract) {
 
-		size_t head = this->assembly->code_.size();
+	/**
+	 * @brief  Compile a basic block of a control-flow graph
+	 *
+	 * This method compiles a basic block of a control-flow graph.
+	 *
+	 * @param[in]  block     The block of the control-flow graph in CodeStorage
+	 * @param[in]  abstract  @p true if there should be abstraction at the
+	 *                       beginning of the block, @p false otherwise
+	 */
+	void compileBlock(const CodeStorage::Block* block, bool abstract)
+	{
+		size_t head = assembly_->code_.size();
 
-		if (abstract || this->loopAnalyser.isEntryPoint(*block->begin()))
-			this->cAbstraction();
-/*		else
-			this->cFixpoint();*/
-
-		for (auto insn : *block) {
-
-			this->compileInstruction(*insn);
-
-			if (head == this->assembly->code_.size())
-				continue;
-
-			this->assembly->code_[head]->insn(insn);
-/*
-			for (size_t i = head; i < this->assembly->code_.size(); ++i)
-				CL_CDEBUG(this->assembly->code_[i] << ":\t" << *this->assembly->code_[i]);
-*/
-			head = this->assembly->code_.size();
-
+		if (abstract || loopAnalyser_.isEntryPoint(*block->begin()))
+		{	// in case there should be abstraction at the start of the block
+			cAbstraction();
 		}
 
+		for (auto insn : *block)
+		{	// for every instruction of the block
+			compileInstruction(*insn);
+
+			if (head != assembly_->code_.size())
+			{	// in case some instruction(s) was compiled
+				assembly_->code_[head]->insn(insn);
+				head = assembly_->code_.size();
+			}
+		}
 	}
 
-	void compileFunction(const CodeStorage::Fnc& fnc) {
 
-		std::pair<SymCtx, CodeStorage::Block>& fncInfo = this->getFncInfo(&fnc);
+	/**
+	 * @brief  Compiles a function
+	 *
+	 * This method compiles a function into the assembly.
+	 *
+	 * @param[in]  fnc  The function to be compiled
+	 */
+	void compileFunction(const CodeStorage::Fnc& fnc)
+	{
+		std::pair<SymCtx, CodeStorage::Block>& fncInfo = getFncInfo(&fnc);
 
 		// get context
-		this->curCtx = &fncInfo.first;
+		curCtx_ = &fncInfo.first;
 
-		if (this->assembly->regFileSize_ < this->curCtx->regCount)
-			this->assembly->regFileSize_ = this->curCtx->regCount;
+		if (assembly_->regFileSize_ < curCtx_->regCount)
+		{	// allocate the necessary number of registers
+			assembly_->regFileSize_ = curCtx_->regCount;
+		}
 
-		// we need 2 more registers in order to facilitate call
-		if (this->assembly->regFileSize_ < (this->curCtx->argCount + 2))
-			this->assembly->regFileSize_ = this->curCtx->argCount + 2;
+		if (assembly_->regFileSize_ < (curCtx_->argCount + 2))
+		{	// we need 2 more registers in order to facilitate call
+			assembly_->regFileSize_ = curCtx_->argCount + 2;
+		}
 
 		// move ABP into r0
-		this->append(new FI_get_ABP(nullptr, 0, 0))->setTarget();
+		append(new FI_get_ABP(nullptr, 0, 0))->setTarget();
 
 		// store entry point
-		this->codeIndex.insert(std::make_pair(&fncInfo.second, this->assembly->code_.back()));
+		codeIndex_.insert(std::make_pair(&fncInfo.second, assembly_->code_.back()));
 
 		// gather arguments
 		std::vector<size_t> offsets = { ABP_OFFSET, RET_OFFSET };
 
 		for (auto arg : fnc.args)
-			offsets.push_back(this->curCtx->getVarInfo(arg).second);
+			offsets.push_back(curCtx_->getVarInfo(arg).getStackOffset());
 
 		// build structure in r0
-		this->append(new FI_build_struct(nullptr, 0, 0, offsets));
+		append(new FI_build_struct(nullptr, 0, 0, offsets));
 
 		// build stack frame
 
 		// move void ptr of size 1 into r1
-		this->append(new FI_load_cst(nullptr, 1, Data::createVoidPtr(1)));
+		append(new FI_load_cst(nullptr, 1, Data::createVoidPtr(1)));
 
 		// get function name
 		std::ostringstream ss;
 		ss << nameOf(fnc) << ':' << uidOf(fnc);
 
 		// allocate stack frame to r1
-		this->append(
-			new FI_node_create(nullptr, 1, 1, 1, this->boxMan.getTypeInfo(ss.str()),
-				this->curCtx->sfLayout)
+		append(
+			new FI_node_create(
+				/* instruction */ nullptr,
+				/* dst reg where the node will be stored */ 1,
+				/* reg with the value from which the node is to be created */ 1,
+				/* size of the created node */ 1,
+				/* type information */ boxMan_.getTypeInfo(ss.str()),
+				/* selectors of the node */ curCtx_->sfLayout
+			)
 		);
 
 		// store arguments to the new frame (r1)
-		this->append(new FI_stores(nullptr, 1, 0, 0));
+		append(
+			new FI_stores(
+				/* instruction */ nullptr,
+				/* reg with addr of dst */ 1,
+				/* src reg */ 0,
+				/* offset of the dst */ 0
+			)
+		);
 
 		// set new ABP (r1)
-		this->append(new FI_set_greg(nullptr, ABP_INDEX, 1));
+		append(new FI_set_greg(nullptr, ABP_INDEX, 1));
 
 		// jump to the beginning of the first block
-		this->append(new FI_jmp(nullptr, fnc.cfg.entry()));
+		append(new FI_jmp(nullptr, fnc.cfg.entry()));
 
 		// compute loop entry points
-		this->loopAnalyser.init(fnc.cfg.entry());
+		loopAnalyser_.init(fnc.cfg.entry());
 
 		// compile underlying CFG
 		std::list<const CodeStorage::Block*> queue;
@@ -1412,113 +1965,152 @@ protected:
 
 		bool first = true;
 
-		while (!queue.empty()) {
-
+		while (!queue.empty())
+		{	// until all used basic blocks are compiled
 			const CodeStorage::Block* block = queue.front();
 			queue.pop_front();
 
-			auto p = this->codeIndex.insert(std::make_pair(block,
-				(AbstractInstruction*)NULL));
+			auto p = codeIndex_.insert(std::make_pair(block,
+				static_cast<AbstractInstruction*>(nullptr)));
+
 			if (!p.second)
 				continue;
 
-			size_t blockHead = this->assembly->code_.size();
+			size_t blockHead = assembly_->code_.size();
 
-			this->compileBlock(block, first);
+			// compile the block, abstract when the block is the first
+			compileBlock(block, first);
 
-			assert(blockHead < this->assembly->code_.size());
-			p.first->second = this->assembly->code_[blockHead];
+			assert(blockHead < assembly_->code_.size());
+
+			p.first->second = assembly_->code_[blockHead];
 
 			for (auto target : block->targets())
 				queue.push_back(target);
 
 			first = false;
-
 		}
 
-		auto iter = this->codeIndex.find(fnc.cfg.entry());
-		assert(iter != this->codeIndex.end());
-		this->assembly->functionIndex_.insert(std::make_pair(&fnc, iter->second));
-
+		auto iter = codeIndex_.find(fnc.cfg.entry());
+		assert(iter != codeIndex_.end());
+		assembly_->functionIndex_.insert(std::make_pair(&fnc, iter->second));
 	}
 
 public:
 
-	Core(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-		BoxMan& boxMan)
-		: fixpointBackend(fixpointBackend), taBackend(taBackend), boxMan(boxMan) {}
+	/**
+	 * @brief  The constructor
+	 *
+	 * The constructor sets the fixpoint backend, the tree automata backend, and
+	 * the box manager.
+	 *
+	 * @param[in,out]  fixpointBackend  The fixpoint backend
+	 * @param[in,out]  taBackend        Tree automata backend
+	 * @param[in,out]  boxMan           The box manager
+	 */
+	Core(TA<label_type>::Backend& fixpointBackend,
+		TA<label_type>::Backend& taBackend, BoxMan& boxMan)
+		: fixpointBackend_(fixpointBackend), taBackend_(taBackend), boxMan_(boxMan)
+	{ }
 
+
+	/**
+	 * @brief  The method that compiles the code from the code storage
+	 *
+	 * Compiles the code from the entry point @p entry from the code storage @p
+	 * stor into the provided assembly @p assembly.
+	 *
+	 * @param[out]  assembly  Assembly that serves as the output
+	 * @param[in]   stor      Code storage with the code
+	 * @param[in]   entry     The entry point of the program
+	 */
 	void compile(Compiler::Assembly& assembly, const CodeStorage::Storage& stor,
-		const CodeStorage::Fnc& entry) {
+		const CodeStorage::Fnc& entry)
+	{
+		// clear the code in the assembly
+		reset(assembly);
 
-		this->reset(assembly);
-
-		for (auto fnc : stor.fncs) {
-
+		for (auto fnc : stor.fncs)
+		{
 			if (isDefined(*fnc))
-				this->fncIndex.insert(std::make_pair(fnc, std::make_pair(SymCtx(*fnc), CodeStorage::Block())));
-
+			{	// in case the function is defined and not only declared
+				fncIndex_.insert(std::make_pair(
+					fnc,
+					std::make_pair(
+						SymCtx(*fnc),
+						CodeStorage::Block()
+					)
+				));
+			}
 		}
 
-		// compile entry call
+		//              ******* compile entry call *******
 
 		// load NULL into r0
-		this->append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
+		append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
 
 		// push r0 as ABP
-		this->append(new FI_push_greg(nullptr, 0));
+		append(new FI_push_greg(nullptr, 0));
 
 		// feed registers with arguments (unknown values)
 		for (size_t i = entry.args.size() + 1; i > 1; --i)
-			this->append(new FI_load_cst(nullptr, i, Data::createUnknw()));
+			append(new FI_load_cst(nullptr, i, Data::createUnknw()));
 
 		AbstractInstruction* instr = new FI_check(nullptr);
 
-		// set target flag
+		// set target flag (the instruction is the target of some jump)
 		instr->setTarget();
 
 		// store return address into r1
-		this->append(new FI_load_cst(nullptr, 1, Data::createNativePtr(instr)));
+		append(new FI_load_cst(nullptr, 1, Data::createNativePtr(instr)));
 
-		// call
-		this->append(new FI_jmp(nullptr, &this->getFncInfo(&entry).second));
+		// call the entry point
+		append(new FI_jmp(nullptr, &getFncInfo(&entry).second));
 
-		this->append(instr);
+		// push the instruction into the assembly; the instruction is set as the
+		// target of the function call
+		append(instr);
 
 		// pop return value into r0
-		this->append(new FI_pop_greg(nullptr, 0));
+		append(new FI_pop_greg(nullptr, 0));
 
 		// pop ABP into r1
-		this->append(new FI_pop_greg(nullptr, 1));
+		append(new FI_pop_greg(nullptr, 1));
 
 		// check stack frame
-		this->append(new FI_assert(nullptr, 1, Data::createInt(0)));
+		append(new FI_assert(nullptr, 1, Data::createInt(0)));
 
 		// abort
-		this->append(new FI_abort(nullptr));
+		append(new FI_abort(nullptr));
 
-		for (auto fnc : stor.fncs) {
-
+		for (auto fnc : stor.fncs)
+		{	// compile all functions in the code storage
 			if (isDefined(*fnc))
-				this->compileFunction(*fnc);
-
+				compileFunction(*fnc);
 		}
 
-		for (auto i = this->assembly->code_.begin(); i != this->assembly->code_.end(); ++i)
-			(*i)->finalize(this->codeIndex, i);
-
+		for (auto i = assembly_->code_.begin(); i != assembly_->code_.end(); ++i)
+		{	// finalize all microinstructions
+			(*i)->finalize(codeIndex_, i);
+		}
 	}
-
 };
 
-Compiler::Compiler(TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
-BoxMan& boxMan)
-	: core_(new Core(fixpointBackend, taBackend, boxMan)) {}
 
-Compiler::~Compiler() {
-	delete this->core_;
+Compiler::Compiler(TA<label_type>::Backend& fixpointBackend,
+	TA<label_type>::Backend& taBackend, BoxMan& boxMan)
+	: core_(new Core(fixpointBackend, taBackend, boxMan))
+{ }
+
+
+Compiler::~Compiler()
+{
+	delete core_;
 }
 
-void Compiler::compile(Compiler::Assembly& assembly, const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry) {
-	this->core_->compile(assembly, stor, entry);
+
+void Compiler::compile(Compiler::Assembly& assembly,
+	const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry)
+{
+	core_->compile(assembly, stor, entry);
 }

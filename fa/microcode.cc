@@ -331,7 +331,8 @@ void FI_store::execute(ExecutionManager& execMan,
 	execMan.enqueue(state.second, state.first, fae, this->next_);
 
 }
-/*
+
+#if 0
 // FI_store_ABP
 void FI_store_ABP::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
@@ -348,7 +349,8 @@ void FI_store_ABP::execute(ExecutionManager& execMan, const AbstractInstruction:
 	execMan.enqueue(state.second, state.first, fae, this->next_);
 
 }
-*/
+#endif
+
 // FI_loads
 void FI_loads::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
@@ -388,45 +390,54 @@ void FI_stores::execute(ExecutionManager& execMan,
 
 // FI_alloc
 void FI_alloc::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+	const AbstractInstruction::StateType& state)
+{
+	const Data& srcData = (*state.first)[this->src_];
+	Data& dstData       = (*state.first)[this->dst_];
 
-	assert((*state.first)[this->src_].isInt());
+	// assert that the source operand is an integer, i.e. the size
+	assert(srcData.isInt());
 
-	(*state.first)[this->dst_] =
-		Data::createVoidPtr((*state.first)[this->src_].d_int);
+	// create a void pointer of given size, i.e. it points to a block of the size
+	dstData = Data::createVoidPtr(srcData.d_int);
 
 	execMan.enqueue(state, this->next_);
-
 }
+
 
 // FI_node_create
 void FI_node_create::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+	const AbstractInstruction::StateType& state)
+{
+	const Data& srcData = (*state.first)[this->src_];
+	Data& dstData       = (*state.first)[this->dst_];
 
-	if ((*state.first)[this->src_].isRef() || (*state.first)[this->src_].isNull()) {
-
-		(*state.first)[this->dst_] = (*state.first)[this->src_];
-
+	if (srcData.isRef() || srcData.isNull())
+	{	// in case src_ is a null pointer
+		dstData = srcData;
 		execMan.enqueue(state.second, state.first, state.second->fae, this->next_);
-
 		return;
-
 	}
 
-	assert((*state.first)[this->src_].isVoidPtr());
+	// assert that src_ is a void pointer
+	assert(srcData.isVoidPtr());
 
-	if ((*state.first)[this->src_].d_void_ptr_size != this->size_)
+	if (srcData.d_void_ptr_size != this->size_)
+	{	// in case the type size differs from the allocated size
 		throw ProgramError("allocated block size mismatch", getLoc(state));
+	}
 
+	// create a new forest automaton
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
 
-	(*state.first)[this->dst_] = Data::createRef(
+	// create a new node
+	dstData = Data::createRef(
 		VirtualMachine(*fae).nodeCreate(this->sels_, this->typeInfo_)
 	);
 
 	execMan.enqueue(state.second, state.first, fae, this->next_);
-
 }
+
 /*
 // FI_node_alloc
 void FI_node_alloc::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
@@ -591,7 +602,7 @@ struct DumpCtx {
 
 		vm.nodeLookupMultiple(vm.varGet(ABP_INDEX).d_ref.root, 0, offs, data);
 
-		boost::unordered_map<size_t, Data> tmp;
+		std::unordered_map<size_t, Data> tmp;
 		for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin();
 			i != data.d_struct->end(); ++i)
 			tmp.insert(make_pair(i->first, i->second));
@@ -607,7 +618,7 @@ struct DumpCtx {
 			switch (var.code) {
 				case CodeStorage::EVar::VAR_LC:
 					if (SymCtx::isStacked(var)) {
-						boost::unordered_map<size_t, Data>::iterator k = tmp.find(j->second.second);
+						std::unordered_map<size_t, Data>::iterator k = tmp.find(j->second.getStackOffset());
 						assert(k != tmp.end());
 						os << '#' << var.uid << ':' << var.name << " = " << k->second << std::endl;
 					} else {
