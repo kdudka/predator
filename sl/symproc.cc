@@ -1415,21 +1415,29 @@ bool trimRangesIfPossible(
 
 /// (0 == leakList) means 'read-only' mode
 bool spliceOutAbstractPathCore(
-        SymHeap                &sh,
+        int                    *pHops,
+        SymProc                &proc,
         const TValId            beg,
         const TValId            endPoint,
-        TValList               *leakList)
+        const bool              readOnlyMode,
+        const int               seek         = 0,
+        const int               maxHops      = INT_MAX)
 {
-    const bool readOnlyMode = !leakList;
+    const int limit = seek + maxHops;
+    SymHeap &sh = proc.sh();
+    *pHops = 0;
+
+    TValList leakList;
+    LeakMonitor lm(sh);
+    lm.enter();
 
     // NOTE: If there is a cycle consisting of empty list segments only, we will
     // loop indefinitely.  However, the basic list segment axiom guarantees that
     // there is no such cycle.
 
     TValId seg = beg;
-    TValId peer, valNext;
 
-    for (;;) {
+    for (int i = 0; i < limit; ++i) {
         const EValueTarget code = sh.valTarget(seg);
         if (VT_ABSTRACT != code || objMinLength(sh, seg)) {
             // we are on a wrong way already...
@@ -1437,26 +1445,44 @@ bool spliceOutAbstractPathCore(
             return false;
         }
 
-        peer = segPeer(sh, seg);
-        valNext = nextValFromSeg(sh, peer);
+        const TValId peer = segPeer(sh, seg);
+        const TValId valNext = nextValFromSeg(sh, peer);
+        const TValId segNext = sh.valRoot(valNext);
 
-        if (!readOnlyMode && beg != seg)
-            destroyRootAndCollectJunk(sh, seg);
+        if (seek <= i) {
+            ++(*pHops);
+
+            if (!readOnlyMode && seek <= i)
+                spliceOutListSegment(sh, seg, peer, valNext, &leakList);
+        }
 
         if (valNext == endPoint)
             // we have the chain we are looking for
             break;
 
-        if (!readOnlyMode && seg != peer)
-            destroyRootAndCollectJunk(sh, peer);
-
-        seg = sh.valRoot(valNext);
+        seg = segNext;
     }
 
-    if (!readOnlyMode)
-        spliceOutListSegment(sh, beg, peer, valNext, leakList);
+    if (!readOnlyMode && lm.importLeakList(&leakList)) {
+        // [L0] leakage during splice-out
+        const struct cl_loc *loc = proc.lw();
+        CL_WARN_MSG(loc, "memory leak detected while removing a segment");
+        proc.printBackTrace(ML_WARN);
+        lm.leave();
+    }
 
     return true;
+}
+
+bool spliceOutMulti(
+        SymState               &dst,
+        SymProc                &proc,
+        const TValId            beg,
+        const TValId            endPoint,
+        const int               len)
+{
+    CL_BREAK_IF("please implement");
+    return false;
 }
 
 bool spliceOutAbstractPath(
@@ -1486,27 +1512,21 @@ bool spliceOutAbstractPath(
         endPoint = sh.valByOffset(pointingTo, off);
     }
 
-    if (!spliceOutAbstractPathCore(sh, seg, endPoint, /* read-only */ 0))
+    int len;
+    if (!spliceOutAbstractPathCore(&len, proc, seg, endPoint, /* RO */ true))
         // read-only attempt failed
         return false;
 
     sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), kind));
 
-    LeakMonitor lm(sh);
-    lm.enter();
+    if (1 != len)
+        // oops, we are sked to splice-out multiple segments at a time
+        return spliceOutMulti(dst, proc, seg, endPoint, len);
 
-    TValList leakList;
-    if (!spliceOutAbstractPathCore(sh, seg, endPoint, &leakList)) {
-        CL_BREAK_IF("spliceOutAbstractPathCore() completely broken");
+    // splicing-out a single list segment is the most common case
+    if (!spliceOutAbstractPathCore(&len, proc, seg, endPoint, /* RO */ false)) {
+        CL_BREAK_IF("failed to splice-out a single list segment");
         return false;
-    }
-
-    if (lm.importLeakList(&leakList)) {
-        // [L0] leakage during splice-out
-        const struct cl_loc *loc = proc.lw();
-        CL_WARN_MSG(loc, "memory leak detected while removing a segment");
-        proc.printBackTrace(ML_WARN);
-        lm.leave();
     }
 
     dst.insert(sh);
