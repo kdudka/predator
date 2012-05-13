@@ -1474,14 +1474,53 @@ bool spliceOutAbstractPathCore(
     return true;
 }
 
+/// experimental implementation for exactly two list segments
 bool spliceOutMulti(
         SymState               &dst,
-        SymProc                &proc,
+        SymProc                &procSrc,
         const TValId            beg,
-        const TValId            endPoint,
+        const TValId            end,
         const int               len)
 {
-    CL_BREAK_IF("please implement");
+    if (2 != len) {
+        CL_BREAK_IF("please implement");
+        return false;
+    }
+
+    for (int i = 0; i < len; ++i) {
+        // we intentionally create a local copy!
+        SymHeap sh(procSrc.sh());
+        Trace::waiveCloneOperation(sh);
+
+        // create a slave SymProc instance
+        SymProc proc(sh, procSrc.bt());
+        proc.setLocation(procSrc.lw());
+
+        TValId next = beg;
+        if (!i)
+            next = segNextRootObj(sh, beg);
+
+        int hops;
+        if (!spliceOutAbstractPathCore(&hops, proc, beg, end,
+                    /* read-only */ false,
+                    /* skip      */ i,
+                    /* maxHops   */ 1))
+            goto fail;
+
+        if (!spliceOutAbstractPathCore(&hops, proc, next, end,
+                    /* read-only */ false,
+                    /* skip      */ 0,
+                    /* maxHops   */ 1))
+            goto fail;
+
+        dst.insert(sh);
+    }
+
+    CL_DEBUG("spliceOutMulti() succeeded");
+    return true;
+
+fail:
+    CL_BREAK_IF("spliceOutMulti() failed");
     return false;
 }
 
