@@ -471,7 +471,7 @@ public:
 		}
 
 		// build the tuple
-		vector<size_t> lhs(nodeInfo.size(),
+		std::vector<size_t> lhs(nodeInfo.size(),
 			this->fae.addData(*ta, Data::createUndef()));
 
 		// reorder

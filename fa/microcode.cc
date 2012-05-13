@@ -606,7 +606,7 @@ struct DumpCtx {
 		std::unordered_map<size_t, Data> tmp;
 		for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin();
 			i != data.d_struct->end(); ++i)
-			tmp.insert(make_pair(i->first, i->second));
+			tmp.insert(std::make_pair(i->first, i->second));
 
 		for (CodeStorage::TVarSet::const_iterator i = cd.ctx.GetFnc().vars.begin();
 			i != cd.ctx.GetFnc().vars.end(); ++i) {

@@ -35,13 +35,6 @@
 #include "utils.hh"
 #include "programerror.hh"
 
-using std::vector;
-using std::set;
-using std::map;
-using std::pair;
-using std::make_pair;
-using std::runtime_error;
-
 class FAE : public FA {
 
 	friend class Normalization;
@@ -119,7 +112,7 @@ public:
 
 		this->stateOffset = stateOffset;
 
-		for (vector<size_t>::const_iterator i = top->lhs().begin(); i != top->lhs().end(); ++i) {
+		for (std::vector<size_t>::const_iterator i = top->lhs().begin(); i != top->lhs().end(); ++i) {
 
 			TA<label_type>* ta = this->allocTA();
 
@@ -143,7 +136,7 @@ public:
 		TA<label_type>::td_cache_type cache;
 		src.buildTDCache(cache);
 		std::vector<const TT<label_type>*>& v =
-			cache.insert(std::make_pair(0, vector<const TT<label_type>*>())).first->second;
+			cache.insert(std::make_pair(0, std::vector<const TT<label_type>*>())).first->second;
 		// iterate over all "synthetic" transitions and constuct new FAE for each
 		for (std::vector<const TT<label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
 //			std::cerr << "trying " << **i << std::endl;
@@ -296,7 +289,7 @@ public:
 	size_t addData(TA<label_type>& dst, const Data& data) {
 		label_type label = this->boxMan->lookupLabel(data);
 		size_t state = _MSB_ADD(label->getDataId());
-		dst.addTransition(vector<size_t>(), label, state);
+		dst.addTransition(std::vector<size_t>(), label, state);
 		return state;
 	}
 
@@ -403,7 +396,7 @@ public:
 
 	}
 */
-	TA<label_type>& relabelReferences(TA<label_type>& dst, const TA<label_type>& src, const vector<size_t>& index) {
+	TA<label_type>& relabelReferences(TA<label_type>& dst, const TA<label_type>& src, const std::vector<size_t>& index) {
 		dst.addFinalStates(src.getFinalStates());
 		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
 			if (i->label()->isData())
@@ -429,15 +422,15 @@ public:
 		return dst;
 	}
 
-	TA<label_type>* relabelReferences(TA<label_type>* src, const vector<size_t>& index) {
+	TA<label_type>* relabelReferences(TA<label_type>* src, const std::vector<size_t>& index) {
 		return &this->relabelReferences(*this->allocTA(), *src, index);
 	}
 
 	TA<label_type>& invalidateReference(TA<label_type>& dst, const TA<label_type>& src, size_t root) {
 		dst.addFinalStates(src.getFinalStates());
 		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
-			vector<size_t> lhs;
-			for (vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
+			std::vector<size_t> lhs;
+			for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
 				const Data* data;
 				if (FAE::isData(*j, data) && data->isRef(root)) {
 					lhs.push_back(this->addData(dst, Data::createUndef()));

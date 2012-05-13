@@ -45,9 +45,6 @@
 #include "symexec.hh"
 
 using namespace ssd;
-using std::vector;
-using std::list;
-using std::set;
 
 #if 0
 void dumpOperandTypes(std::ostream& os, const cl_operand* op) {

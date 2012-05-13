@@ -31,12 +31,6 @@
 
 #include "error.hh"
 
-using std::string;
-using std::vector;
-using std::pair;
-using std::make_pair;
-using std::map;
-
 class TimbukScanner {
 
 	std::istream* input;
@@ -235,7 +229,7 @@ protected:
 	// sym -> ID ':' INT
 	void r_sym() {
 		this->scanner.assertToken(TimbukScanner::tt_id, "identifier");
-		string label = this->scanner.getVal();
+		std::string label = this->scanner.getVal();
 		this->scanner.assertToken(':', ":");
 		this->scanner.assertToken(TimbukScanner::tt_int, "number");
 		int arity = std::atoi(this->scanner.getVal().c_str());
@@ -308,8 +302,8 @@ protected:
 	// trans -> ID state_list_par ARR state
 	void r_trans() {
 		this->scanner.assertToken(TimbukScanner::tt_id, "identifier");
-		pair<size_t, size_t> label = this->getLabel(this->scanner.getVal());
-		vector<size_t> lhs;
+		std::pair<size_t, size_t> label = this->getLabel(this->scanner.getVal());
+		std::vector<size_t> lhs;
 		this->r_state_list_par(lhs);
 		this->scanner.assertToken(TimbukScanner::tt_arr, "->");
 		this->scanner.assertToken(TimbukScanner::tt_id, "identifier");
@@ -319,13 +313,13 @@ protected:
 	}
 
 	// state_list_par -> state_list | eps
-	void r_state_list_par(vector<size_t>& lhs) {
+	void r_state_list_par(std::vector<size_t>& lhs) {
 		if (this->scanner.peekToken() == '(')
 			this->r_state_list(lhs);
 	}
 
 	// state_list
-	void r_state_list(vector<size_t>& lhs) {
+	void r_state_list(std::vector<size_t>& lhs) {
 		this->scanner.assertToken('(', "(");
 		if (this->scanner.nextToken() == TimbukScanner::tt_id) {
 			lhs.push_back(this->getState(this->scanner.getVal()));
@@ -347,9 +341,9 @@ public:
 
 protected:
 
-	virtual void newLabel(const string& name, size_t arity, size_t id) = 0;
-	virtual void beginModel(const string& name) = 0;
-	virtual void newState(const string& name, size_t id) = 0;
+	virtual void newLabel(const std::string& name, size_t arity, size_t id) = 0;
+	virtual void beginModel(const std::string& name) = 0;
+	virtual void newState(const std::string& name, size_t id) = 0;
 	virtual void newFinalState(size_t id) = 0;
 	virtual void endDeclaration() = 0;
 	virtual void newTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs) = 0;
@@ -357,11 +351,11 @@ protected:
 
 public:
 
-	TimbukReader(std::istream& input = std::cin, const string& name = "") {
+	TimbukReader(std::istream& input = std::cin, const std::string& name = "") {
 		this->resetInput(input, name);
 	}
 
-	void resetInput(std::istream& input = std::cin, const string& name = "") {
+	void resetInput(std::istream& input = std::cin, const std::string& name = "") {
 		this->scanner = TimbukScanner(input, name);
 	}
 
@@ -370,15 +364,15 @@ public:
 	}
 
 	const std::pair<size_t, size_t>& getLabel(const std::string& name) const {
-		map<string, pair<size_t, size_t> >::const_iterator i = this->labels.find(name);
+		std::map<std::string, std::pair<size_t, size_t> >::const_iterator i = this->labels.find(name);
 		if (i == this->labels.end())
 			Error::general(this->scanner.getName(), this->scanner.getLine(), "unknown label");
 		return i->second;
 	}
 
 	int addLabel(const std::string& name, size_t arity) {
-		pair<map<string, pair<size_t, size_t> >::iterator, bool> p = this->labels.insert(
-			make_pair(name, make_pair(this->labels.size(), arity))
+		std::pair<std::map<std::string, std::pair<size_t, size_t> >::iterator, bool> p = this->labels.insert(
+			std::make_pair(name, std::make_pair(this->labels.size(), arity))
 		);
 		if (p.first->second.second != arity)
 			Error::general(this->scanner.getName(), this->scanner.getLine(), "(duplicated) label arity mismatch");
@@ -387,7 +381,7 @@ public:
 		return p.first->second.first;
 	}
 
-	string getLabelName(size_t id) {
+	std::string getLabelName(size_t id) {
 		return this->labelNames[id];
 	}
 
@@ -396,7 +390,7 @@ public:
 	}
 
 	size_t getState(const std::string& name) const {
-		std::map<string, size_t>::const_iterator i = this->states.find(name);
+		std::map<std::string, size_t>::const_iterator i = this->states.find(name);
 		if (i == this->states.end())
 			Error::general(this->scanner.getName(), this->scanner.getLine(), "unknown state");
 		return i->second;
@@ -409,7 +403,7 @@ public:
 		return p.first->second;
 	}
 
-	string getStateName(size_t id) {
+	std::string getStateName(size_t id) {
 		return this->stateNames[id];
 	}
 
@@ -518,7 +512,7 @@ public:
 		this->out << "->" << f(rhs);
 	}
 
-	void writeTransition(const std::vector<string>& lhs, const std::string& label, const std::string& rhs) {
+	void writeTransition(const std::vector<std::string>& lhs, const std::string& label, const std::string& rhs) {
 		this->out << label;
 		if (lhs.size() > 0) {
 			this->out << '(' << lhs[0];
