@@ -1460,6 +1460,7 @@ bool spliceOutAbstractPathCore(
 }
 
 bool spliceOutAbstractPath(
+        SymState                    &dst,
         SymProc                     &proc,
         const TValId                 atAddr,
         const TValId                 pointingTo)
@@ -1472,6 +1473,7 @@ bool spliceOutAbstractPath(
         // assume identity over the two parts of a DLS
         dlSegReplaceByConcrete(sh, seg, peer);
         sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), OK_DLS, true));
+        dst.insert(sh);
         return true;
     }
 
@@ -1488,6 +1490,8 @@ bool spliceOutAbstractPath(
         // read-only attempt failed
         return false;
 
+    sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), kind));
+
     LeakMonitor lm(sh);
     lm.enter();
 
@@ -1497,19 +1501,19 @@ bool spliceOutAbstractPath(
         return false;
     }
 
-    if (!lm.importLeakList(&leakList))
-        // no [L0] leakage during splice-out
-        return true;
+    if (lm.importLeakList(&leakList)) {
+        // [L0] leakage during splice-out
+        const struct cl_loc *loc = proc.lw();
+        CL_WARN_MSG(loc, "memory leak detected while removing a segment");
+        proc.printBackTrace(ML_WARN);
+        lm.leave();
+    }
 
-    const struct cl_loc *loc = proc.lw();
-    CL_WARN_MSG(loc, "memory leak detected while removing a segment");
-    proc.printBackTrace(ML_WARN);
-
-    lm.leave();
+    dst.insert(sh);
     return true;
 }
 
-void valMerge(SymProc &proc, TValId v1, TValId v2) {
+bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2) {
     SymHeap &sh = proc.sh();
 
     // check that at least one value is unknown
@@ -1521,7 +1525,8 @@ void valMerge(SymProc &proc, TValId v1, TValId v2) {
     if (VT_ABSTRACT != code1 && VT_ABSTRACT != code2) {
         // no abstract objects involved
         sh.valReplace(v2, v1);
-        return;
+        dst.insert(sh);
+        return true;
     }
 
     // where did we get here from?
@@ -1530,22 +1535,20 @@ void valMerge(SymProc &proc, TValId v1, TValId v2) {
     const EObjKind kind1 = sh.valTargetKind(v1);
     const EObjKind kind2 = sh.valTargetKind(v2);
 
-    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(proc, v1, v2)) {
+    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(dst, proc, v1, v2))
         // splice-out succeeded ... ls(v1, v2)
-        sh.traceUpdate(new Trace::SpliceOutNode(trNode, kind1));
-        return;
-    }
+        return true;
 
-    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(proc, v2, v1)) {
+    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(dst, proc, v2, v1))
         // splice-out succeeded ... ls(v2, v1)
-        sh.traceUpdate(new Trace::SpliceOutNode(trNode, kind2));
-        return;
-    }
+        return true;
 
     CL_DEBUG("failed to splice-out list segment, has to over-approximate");
     trNode = new Trace::SpliceOutNode(trNode, kind1, /* ok */ false);
     trNode = new Trace::SpliceOutNode(trNode, kind2, /* ok */ false);
     sh.traceUpdate(trNode);
+    dst.insert(sh);
+    return false;
 }
 
 bool reflectCmpResult(
@@ -1585,7 +1588,7 @@ bool reflectCmpResult(
             goto fail;
 
         // we have deduced that v1 and v2 is actually the same value
-        valMerge(proc, v1, v2);
+        return valMerge(dst, proc, v1, v2);
     }
 
 done:
