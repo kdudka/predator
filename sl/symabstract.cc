@@ -783,8 +783,8 @@ void spliceOutSegmentIfNeeded(
         const TValId valNext = nextValFromSeg(sh0, peer);
         spliceOutListSegment(sh0, seg, peer, valNext, leakList);
 
-        const EObjKind kind = sh.valTargetKind(seg);
-        Trace::Node *tr = new Trace::SpliceOutNode(sh.traceNode(), kind, true);
+        // append a trace node for this operation
+        Trace::Node *tr = new Trace::SpliceOutNode(sh.traceNode());
 
         todo.push_back(sh0);
         todo.back().traceUpdate(tr);

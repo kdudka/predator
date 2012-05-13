@@ -332,7 +332,7 @@ void SymExecEngine::updateStateInBranch(
         const TValId                v1,
         const TValId                v2)
 {
-    SymStateWithJoin dst;
+    SymHeapList dst;
     SymProc procOrig(shOrig, &bt_);
     procOrig.setLocation(lw_);
 
@@ -345,7 +345,8 @@ void SymExecEngine::updateStateInBranch(
     if (!reflectCmpResult(dst, procOrig, code, branch, v1, v2))
         CL_DEBUG_MSG(lw_, "XXX unable to reflect comparison result");
 
-    CL_BREAK_IF(!dst.size());
+    // as of yet, we always get exactly one heap, although the API is generic
+    CL_BREAK_IF(1 != dst.size());
 
     BOOST_FOREACH(SymHeap *sh, dst) {
         sh->traceUpdate(trCond);

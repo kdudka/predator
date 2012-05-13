@@ -186,7 +186,7 @@ void SpliceOutNode::plotNode(TracePlotter &tplot) const {
     // TODO: kind_, successful_
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=ellipse, color=red, fontcolor=blue, label="
-        << SL_QUOTE("spliceOut*()") << "];\n";
+        << SL_QUOTE("spliceOut*(len = " << len_ << ")") << "];\n";
 }
 
 void JoinNode::plotNode(TracePlotter &tplot) const {

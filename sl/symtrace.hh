@@ -291,19 +291,16 @@ class ConcretizationNode: public Node {
 /// a trace graph node that represents a @b single splice-out operation
 class SpliceOutNode: public Node {
     private:
-        const EObjKind          kind_;
-        const bool              successful_;
+        const bool              len_;
 
     public:
         /**
          * @param ref a trace leading to this splice-out operation
-         * @param kind kind of segment the splice-out operation is applied on
-         * @param successful true, if the splice-out operation succeeded
+         * @param len count of successfully spliced-out segments
          */
-        SpliceOutNode(Node *ref, const EObjKind kind, bool successful = true):
+        SpliceOutNode(Node *ref, const int len = 1):
             Node(ref),
-            kind_(kind),
-            successful_(successful)
+            len_(len)
         {
         }
 

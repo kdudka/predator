@@ -1413,19 +1413,13 @@ bool trimRangesIfPossible(
     return true;
 }
 
-/// (0 == leakList) means 'read-only' mode
 bool spliceOutAbstractPathCore(
-        int                    *pHops,
         SymProc                &proc,
         const TValId            beg,
         const TValId            endPoint,
-        const bool              readOnlyMode,
-        const int               seek         = 0,
-        const int               maxHops      = INT_MAX)
+        const bool              readOnlyMode)
 {
-    const int limit = seek + maxHops;
     SymHeap &sh = proc.sh();
-    *pHops = 0;
 
     TValList leakList;
     LeakMonitor lm(sh);
@@ -1436,8 +1430,9 @@ bool spliceOutAbstractPathCore(
     // there is no such cycle.
 
     TValId seg = beg;
+    int len = 1;
 
-    for (int i = 0; i < limit; ++i) {
+    for (;;) {
         const EValueTarget code = sh.valTarget(seg);
         if (VT_ABSTRACT != code || objMinLength(sh, seg)) {
             // we are on a wrong way already...
@@ -1449,79 +1444,36 @@ bool spliceOutAbstractPathCore(
         const TValId valNext = nextValFromSeg(sh, peer);
         const TValId segNext = sh.valRoot(valNext);
 
-        if (seek <= i) {
-            ++(*pHops);
-
-            if (!readOnlyMode && seek <= i)
-                spliceOutListSegment(sh, seg, peer, valNext, &leakList);
-        }
+        if (!readOnlyMode)
+            spliceOutListSegment(sh, seg, peer, valNext, &leakList);
 
         if (valNext == endPoint)
             // we have the chain we are looking for
             break;
 
         seg = segNext;
+        ++len;
     }
 
-    if (!readOnlyMode && lm.importLeakList(&leakList)) {
+    if (readOnlyMode)
+        return true;
+
+    // read-write pass done
+    const struct cl_loc *loc = proc.lw();
+    CL_DEBUG_MSG(loc, "spliceOutAbstractPathCore() removed "
+            << len << " possibly empty abstract objects");
+
+    // append a trace node for this operation
+    sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), len));
+
+    if (lm.importLeakList(&leakList)) {
         // [L0] leakage during splice-out
-        const struct cl_loc *loc = proc.lw();
         CL_WARN_MSG(loc, "memory leak detected while removing a segment");
         proc.printBackTrace(ML_WARN);
         lm.leave();
     }
 
     return true;
-}
-
-/// experimental implementation for exactly two list segments
-bool spliceOutMulti(
-        SymState               &dst,
-        SymProc                &procSrc,
-        const TValId            beg,
-        const TValId            end,
-        const int               len)
-{
-    if (2 != len) {
-        CL_BREAK_IF("please implement");
-        return false;
-    }
-
-    for (int i = 0; i < len; ++i) {
-        // we intentionally create a local copy!
-        SymHeap sh(procSrc.sh());
-        Trace::waiveCloneOperation(sh);
-
-        // create a slave SymProc instance
-        SymProc proc(sh, procSrc.bt());
-        proc.setLocation(procSrc.lw());
-
-        TValId next = beg;
-        if (!i)
-            next = segNextRootObj(sh, beg);
-
-        int hops;
-        if (!spliceOutAbstractPathCore(&hops, proc, beg, end,
-                    /* read-only */ false,
-                    /* skip      */ i,
-                    /* maxHops   */ 1))
-            goto fail;
-
-        if (!spliceOutAbstractPathCore(&hops, proc, next, end,
-                    /* read-only */ false,
-                    /* skip      */ 0,
-                    /* maxHops   */ 1))
-            goto fail;
-
-        dst.insert(sh);
-    }
-
-    CL_DEBUG("spliceOutMulti() succeeded");
-    return true;
-
-fail:
-    CL_BREAK_IF("spliceOutMulti() failed");
-    return false;
 }
 
 bool spliceOutAbstractPath(
@@ -1537,7 +1489,7 @@ bool spliceOutAbstractPath(
     if (pointingTo == peer && peer != seg) {
         // assume identity over the two parts of a DLS
         dlSegReplaceByConcrete(sh, seg, peer);
-        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), OK_DLS, true));
+        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), OK_DLS));
         dst.insert(sh);
         return true;
     }
@@ -1551,19 +1503,12 @@ bool spliceOutAbstractPath(
         endPoint = sh.valByOffset(pointingTo, off);
     }
 
-    int len;
-    if (!spliceOutAbstractPathCore(&len, proc, seg, endPoint, /* RO */ true))
+    if (!spliceOutAbstractPathCore(proc, seg, endPoint, /* RO */ true))
         // read-only attempt failed
         return false;
 
-    sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), kind));
-
-    if (1 != len)
-        // oops, we are sked to splice-out multiple segments at a time
-        return spliceOutMulti(dst, proc, seg, endPoint, len);
-
     // splicing-out a single list segment is the most common case
-    if (!spliceOutAbstractPathCore(&len, proc, seg, endPoint, /* RO */ false)) {
+    if (!spliceOutAbstractPathCore(proc, seg, endPoint, /* RO */ false)) {
         CL_BREAK_IF("failed to splice-out a single list segment");
         return false;
     }
@@ -1591,9 +1536,6 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2) {
     // where did we get here from?
     Trace::Node *trNode = sh.traceNode();
 
-    const EObjKind kind1 = sh.valTargetKind(v1);
-    const EObjKind kind2 = sh.valTargetKind(v2);
-
     if (VT_ABSTRACT == code1 && spliceOutAbstractPath(dst, proc, v1, v2))
         // splice-out succeeded ... ls(v1, v2)
         return true;
@@ -1603,8 +1545,8 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2) {
         return true;
 
     CL_DEBUG("failed to splice-out list segment, has to over-approximate");
-    trNode = new Trace::SpliceOutNode(trNode, kind1, /* ok */ false);
-    trNode = new Trace::SpliceOutNode(trNode, kind2, /* ok */ false);
+    trNode = new Trace::SpliceOutNode(trNode, /* failed */ 0);
+    trNode = new Trace::SpliceOutNode(trNode, /* failed */ 0);
     sh.traceUpdate(trNode);
     dst.insert(sh);
     return false;
@@ -1618,9 +1560,7 @@ bool reflectCmpResult(
         const TValId                v1,
         const TValId                v2)
 {
-    // we intentionally create a local copy!
-    SymHeap sh(procSrc.sh());
-    Trace::waiveCloneOperation(sh);
+    SymHeap &sh = procSrc.sh();
     CL_BREAK_IF(!protoCheckConsistency(sh));
 
     // create a slave SymProc instance

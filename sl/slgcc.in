@@ -120,6 +120,7 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin=libsl\.so\]$||'        \
         -e "s/(: debug: SymHeap::)(valTargetSetConcrete)/\1$Y\2$N/"            \
         -e "s/(: debug:) \\(x\\) (.*)\$/\1 $Y(x)$N \2/"                        \
         -e "s/(: debug:) (spliceOutListSegment)/\1 $B\2$N/"                    \
+        -e "s/(: debug:) (spliceOutAbstractPathCore)/\1 $B\2$N/"               \
         -e "s/(: debug:) (<<<|>>>)/\1 $B\2$N/"                                 \
         -e "s/(: debug:) (XXX)/\1 $Y\2$N/"                                     \
         -e "s/(: debug: ___) (entering|we are)/\1 $G___$N \2/"                 \
