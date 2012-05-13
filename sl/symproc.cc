@@ -1413,6 +1413,47 @@ bool trimRangesIfPossible(
     return true;
 }
 
+void valMerge(SymProc &proc, TValId v1, TValId v2) {
+    SymHeap &sh = proc.sh();
+
+    // check that at least one value is unknown
+    moveKnownValueToLeft(sh, v1, v2);
+    const EValueTarget code1 = sh.valTarget(v1);
+    const EValueTarget code2 = sh.valTarget(v2);
+    CL_BREAK_IF(isKnownObject(code2));
+
+    if (VT_ABSTRACT != code1 && VT_ABSTRACT != code2) {
+        // no abstract objects involved
+        sh.valReplace(v2, v1);
+        return;
+    }
+
+    TValList leakList;
+    LeakMonitor lm(sh);
+    lm.enter();
+
+    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(sh, v1, v2, &leakList))
+        // splice-out succeeded ... ls(v1, v2)
+        goto done;
+
+    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(sh, v2, v1, &leakList))
+        // splice-out succeeded ... ls(v2, v1)
+        goto done;
+
+    CL_DEBUG("failed to splice-out list segment, has to over-approximate");
+    return;
+
+done:
+    if (!lm.importLeakList(&leakList))
+        return;
+
+    const struct cl_loc *loc = proc.lw();
+    CL_WARN_MSG(loc, "memory leak detected while removing a segment");
+    proc.printBackTrace(ML_WARN);
+
+    lm.leave();
+}
+
 bool reflectCmpResult(
         SymProc                    &proc,
         const enum cl_binop_e       code,
@@ -1443,20 +1484,7 @@ bool reflectCmpResult(
             return false;
 
         // we have deduced that v1 and v2 is actually the same value
-
-        LeakMonitor lm(sh);
-        lm.enter();
-
-        TValList leakList;
-        sh.valMerge(v1, v2, &leakList);
-
-        if (lm.importLeakList(&leakList)) {
-            const struct cl_loc *loc = proc.lw();
-            CL_WARN_MSG(loc, "memory leak detected while removing a segment");
-            proc.printBackTrace(ML_WARN);
-        }
-
-        lm.leave();
+        valMerge(proc, v1, v2);
     }
 
     CL_BREAK_IF(!protoCheckConsistency(sh));
