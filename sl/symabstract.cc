@@ -731,6 +731,8 @@ void spliceOutListSegment(
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
 
+    CL_BREAK_IF(objMinLength(sh, seg));
+
     TOffset offHead = 0;
     if (OK_OBJ_OR_NULL != sh.valTargetKind(seg))
         offHead = sh.segBinding(seg).head;
@@ -880,86 +882,4 @@ void concretizeObj(
     LDP_PLOT(symabstract, sh);
 
     CL_BREAK_IF(!protoCheckConsistency(sh));
-}
-
-bool spliceOutAbstractPathCore(
-        SymHeap                &sh,
-        const TValId            beg,
-        const TValId            endPoint,
-        const bool              readOnlyMode,
-        TValList               *leakList)
-{
-    // NOTE: If there is a cycle consisting of empty list segments only, we will
-    // loop indefinitely.  However, the basic list segment axiom guarantees that
-    // there is no such cycle.
-
-    TValId seg = beg;
-    TValId peer, valNext;
-
-    for (;;) {
-        const EValueTarget code = sh.valTarget(seg);
-        if (VT_ABSTRACT != code || objMinLength(sh, seg)) {
-            // we are on a wrong way already...
-            CL_BREAK_IF(!readOnlyMode);
-            return false;
-        }
-
-        peer = segPeer(sh, seg);
-        valNext = nextValFromSeg(sh, peer);
-
-        if (!readOnlyMode && beg != seg)
-            destroyRootAndCollectJunk(sh, seg);
-
-        if (valNext == endPoint)
-            // we have the chain we are looking for
-            break;
-
-        if (!readOnlyMode && seg != peer)
-            destroyRootAndCollectJunk(sh, peer);
-
-        seg = sh.valRoot(valNext);
-    }
-
-    if (!readOnlyMode)
-        spliceOutListSegment(sh, beg, peer, valNext, leakList);
-
-    return true;
-}
-
-bool spliceOutAbstractPath(
-        SymHeap                     &sh,
-        const TValId                 atAddr,
-        const TValId                 pointingTo,
-        TValList                    *leakList)
-{
-    const TValId seg = sh.valRoot(atAddr);
-    const TValId peer = segPeer(sh, seg);
-
-    if (pointingTo == peer && peer != seg) {
-        // assume identity over the two parts of a DLS
-        dlSegReplaceByConcrete(sh, seg, peer);
-        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), OK_DLS, true));
-        return true;
-    }
-
-    TValId endPoint = pointingTo;
-
-    const EObjKind kind = sh.valTargetKind(seg);
-    if (OK_OBJ_OR_NULL != kind) {
-        // if atAddr is above/bellow head, we need to shift endPoint accordingly
-        const TOffset off = sh.valOffset(atAddr) - sh.segBinding(seg).head;
-        endPoint = sh.valByOffset(pointingTo, off);
-    }
-
-    const bool ok = spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ true,
-            leakList);
-
-    if (ok && !spliceOutAbstractPathCore(sh, seg, endPoint, /* RO */ false,
-                leakList))
-    {
-        CL_BREAK_IF("spliceOutAbstractPathCore() completely broken");
-    }
-
-    sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), kind, ok));
-    return ok;
 }

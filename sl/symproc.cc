@@ -1413,6 +1413,102 @@ bool trimRangesIfPossible(
     return true;
 }
 
+/// (0 == leakList) means 'read-only' mode
+bool spliceOutAbstractPathCore(
+        SymHeap                &sh,
+        const TValId            beg,
+        const TValId            endPoint,
+        TValList               *leakList)
+{
+    const bool readOnlyMode = !leakList;
+
+    // NOTE: If there is a cycle consisting of empty list segments only, we will
+    // loop indefinitely.  However, the basic list segment axiom guarantees that
+    // there is no such cycle.
+
+    TValId seg = beg;
+    TValId peer, valNext;
+
+    for (;;) {
+        const EValueTarget code = sh.valTarget(seg);
+        if (VT_ABSTRACT != code || objMinLength(sh, seg)) {
+            // we are on a wrong way already...
+            CL_BREAK_IF(!readOnlyMode);
+            return false;
+        }
+
+        peer = segPeer(sh, seg);
+        valNext = nextValFromSeg(sh, peer);
+
+        if (!readOnlyMode && beg != seg)
+            destroyRootAndCollectJunk(sh, seg);
+
+        if (valNext == endPoint)
+            // we have the chain we are looking for
+            break;
+
+        if (!readOnlyMode && seg != peer)
+            destroyRootAndCollectJunk(sh, peer);
+
+        seg = sh.valRoot(valNext);
+    }
+
+    if (!readOnlyMode)
+        spliceOutListSegment(sh, beg, peer, valNext, leakList);
+
+    return true;
+}
+
+bool spliceOutAbstractPath(
+        SymProc                     &proc,
+        const TValId                 atAddr,
+        const TValId                 pointingTo)
+{
+    SymHeap &sh = proc.sh();
+    const TValId seg = sh.valRoot(atAddr);
+    const TValId peer = segPeer(sh, seg);
+
+    if (pointingTo == peer && peer != seg) {
+        // assume identity over the two parts of a DLS
+        dlSegReplaceByConcrete(sh, seg, peer);
+        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), OK_DLS, true));
+        return true;
+    }
+
+    TValId endPoint = pointingTo;
+
+    const EObjKind kind = sh.valTargetKind(seg);
+    if (OK_OBJ_OR_NULL != kind) {
+        // if atAddr is above/bellow head, we need to shift endPoint accordingly
+        const TOffset off = sh.valOffset(atAddr) - sh.segBinding(seg).head;
+        endPoint = sh.valByOffset(pointingTo, off);
+    }
+
+    if (!spliceOutAbstractPathCore(sh, seg, endPoint, /* read-only */ 0))
+        // read-only attempt failed
+        return false;
+
+    LeakMonitor lm(sh);
+    lm.enter();
+
+    TValList leakList;
+    if (!spliceOutAbstractPathCore(sh, seg, endPoint, &leakList)) {
+        CL_BREAK_IF("spliceOutAbstractPathCore() completely broken");
+        return false;
+    }
+
+    if (!lm.importLeakList(&leakList))
+        // no [L0] leakage during splice-out
+        return true;
+
+    const struct cl_loc *loc = proc.lw();
+    CL_WARN_MSG(loc, "memory leak detected while removing a segment");
+    proc.printBackTrace(ML_WARN);
+
+    lm.leave();
+    return true;
+}
+
 void valMerge(SymProc &proc, TValId v1, TValId v2) {
     SymHeap &sh = proc.sh();
 
@@ -1428,30 +1524,28 @@ void valMerge(SymProc &proc, TValId v1, TValId v2) {
         return;
     }
 
-    TValList leakList;
-    LeakMonitor lm(sh);
-    lm.enter();
+    // where did we get here from?
+    Trace::Node *trNode = sh.traceNode();
 
-    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(sh, v1, v2, &leakList))
+    const EObjKind kind1 = sh.valTargetKind(v1);
+    const EObjKind kind2 = sh.valTargetKind(v2);
+
+    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(proc, v1, v2)) {
         // splice-out succeeded ... ls(v1, v2)
-        goto done;
+        sh.traceUpdate(new Trace::SpliceOutNode(trNode, kind1));
+        return;
+    }
 
-    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(sh, v2, v1, &leakList))
+    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(proc, v2, v1)) {
         // splice-out succeeded ... ls(v2, v1)
-        goto done;
+        sh.traceUpdate(new Trace::SpliceOutNode(trNode, kind2));
+        return;
+    }
 
     CL_DEBUG("failed to splice-out list segment, has to over-approximate");
-    return;
-
-done:
-    if (!lm.importLeakList(&leakList))
-        return;
-
-    const struct cl_loc *loc = proc.lw();
-    CL_WARN_MSG(loc, "memory leak detected while removing a segment");
-    proc.printBackTrace(ML_WARN);
-
-    lm.leave();
+    trNode = new Trace::SpliceOutNode(trNode, kind1, /* ok */ false);
+    trNode = new Trace::SpliceOutNode(trNode, kind2, /* ok */ false);
+    sh.traceUpdate(trNode);
 }
 
 bool reflectCmpResult(

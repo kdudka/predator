@@ -300,7 +300,7 @@ class SpliceOutNode: public Node {
          * @param kind kind of segment the splice-out operation is applied on
          * @param successful true, if the splice-out operation succeeded
          */
-        SpliceOutNode(Node *ref, const EObjKind kind, const bool successful):
+        SpliceOutNode(Node *ref, const EObjKind kind, bool successful = true):
             Node(ref),
             kind_(kind),
             successful_(successful)

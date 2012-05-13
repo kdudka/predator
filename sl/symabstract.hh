@@ -52,30 +52,23 @@ void concretizeObj(
         TSymHeapList                &dst,
         TValList                    *leakList = 0);
 
+/// splice out a possibly empty list segment
+void spliceOutListSegment(
+        SymHeap                &sh,
+        const TValId            seg,
+        const TValId            peer,
+        const TValId            valNext,
+        TValList               *leakList);
+
+/// replace a DLS by a single concrete object
+void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer);
+
 /**
  * analyze the given symbolic heap and consider abstraction of some shapes that
  * we know ho to rewrite to their more abstract way of existence
  * @param sh an instance of symbolic heap, used in read/write mode
  */
 void abstractIfNeeded(SymHeap &sh);
-
-/**
- * attempt to splice out a chain of (possibly empty) empty list segments when
- * the caller has some explicit info that there are in fact no list segments
- * @note The operation may fail under some circumstances, caller should be
- * probably ready for both variants.
- * @note This operation may be used on traversing of a non-deterministic
- * condition during symbolic execution.
- * @param sh an instance of symbolic heap, used in read/write mode
- * @param atAddr address of the list segment that should be eliminated
- * @param pointingTo target point of the segment
- * @param leakList if not NULL, push all leaked root objects to the list
- */
-bool spliceOutAbstractPath(
-        SymHeap                     &sh,
-        const TValId                 atAddr,
-        const TValId                 pointingTo,
-        TValList                    *leakList = 0);
 
 void decrementProtoLevel(SymHeap &sh, const TValId at);
 
