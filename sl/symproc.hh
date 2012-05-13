@@ -71,6 +71,7 @@ TValId compareValues(
         const TValId                v2);
 
 bool reflectCmpResult(
+        SymState                   &dst,
         SymProc                    &proc,
         const enum cl_binop_e       code,
         const bool                  branch,

@@ -325,35 +325,43 @@ bool isAnyAbstractOf(const SymHeapCore &sh, const TValId v1, const TValId v2) {
 }
 
 void SymExecEngine::updateStateInBranch(
-        SymHeap                     sh,
+        SymHeap                     shOrig,
         const bool                  branch,
         const CodeStorage::Insn    &insnCmp,
         const CodeStorage::Insn    &insnCnd,
         const TValId                v1,
         const TValId                v2)
 {
-    SymProc proc(sh, &bt_);
-    proc.setLocation(lw_);
+    SymStateWithJoin dst;
+    SymProc procOrig(shOrig, &bt_);
+    procOrig.setLocation(lw_);
 
-    sh.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
-                &insnCmp, &insnCnd, /* det */ false, branch));
-
-    const bool wasAbstract = isAnyAbstractOf(sh, v1, v2);
+    // prepare trace node for a non-deterministic condition
+    Trace::waiveCloneOperation(shOrig);
+    Trace::Node *trCond = new Trace::CondNode(shOrig.traceNode(),
+                &insnCmp, &insnCnd, /* det */ false, branch);
 
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
-    if (!reflectCmpResult(proc, code, branch, v1, v2))
+    if (!reflectCmpResult(dst, procOrig, code, branch, v1, v2))
         CL_DEBUG_MSG(lw_, "XXX unable to reflect comparison result");
 
-#if DEBUG_SE_END_NOT_REACHED < 2
-    if (wasAbstract)
-        LDP_PLOT(nondetCond, sh);
-#endif
-    const unsigned targetIdx = !branch;
-    proc.killInsn(insnCmp);
-    proc.killPerTarget(insnCnd, targetIdx);
+    CL_BREAK_IF(!dst.size());
 
-    const CodeStorage::Block *target = insnCnd.targets[targetIdx];
-    this->updateState(sh, target);
+    BOOST_FOREACH(SymHeap *sh, dst) {
+        sh->traceUpdate(trCond);
+#if DEBUG_SE_END_NOT_REACHED < 2
+        if (isAnyAbstractOf(shOrig, v1, v2))
+            LDP_PLOT(nondetCond, *sh);
+#endif
+        SymProc proc(*sh, &bt_);
+        proc.setLocation(lw_);
+        const unsigned targetIdx = !branch;
+        proc.killInsn(insnCmp);
+        proc.killPerTarget(insnCnd, targetIdx);
+
+        const CodeStorage::Block *target = insnCnd.targets[targetIdx];
+        this->updateState(*sh, target);
+    }
 }
 
 bool isTrackableValue(const SymHeap &sh, const TValId val) {

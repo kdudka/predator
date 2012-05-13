@@ -1549,40 +1549,53 @@ void valMerge(SymProc &proc, TValId v1, TValId v2) {
 }
 
 bool reflectCmpResult(
-        SymProc                    &proc,
+        SymState                   &dst,
+        SymProc                    &procSrc,
         const enum cl_binop_e       code,
         const bool                  branch,
         const TValId                v1,
         const TValId                v2)
 {
-    SymHeap &sh = proc.sh();
+    // we intentionally create a local copy!
+    SymHeap sh(procSrc.sh());
+    Trace::waiveCloneOperation(sh);
     CL_BREAK_IF(!protoCheckConsistency(sh));
+
+    // create a slave SymProc instance
+    SymProc proc(sh, procSrc.bt());
+    proc.setLocation(procSrc.lw());
 
     // resolve binary operator
     CmpOpTraits cTraits;
     if (!describeCmpOp(&cTraits, code))
-        return false;
+        goto fail;
 
     if (trimRangesIfPossible(sh, cTraits, branch, v1, v2))
-        return true;
+        goto done;
 
     if (branch == cTraits.negative) {
         if (!cTraits.preserveNeq)
-            return false;
+            goto fail;
 
         // introduce a Neq predicate over v1 and v2
         sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
     }
     else {
         if (!cTraits.preserveEq)
-            return false;
+            goto fail;
 
         // we have deduced that v1 and v2 is actually the same value
         valMerge(proc, v1, v2);
     }
 
+done:
     CL_BREAK_IF(!protoCheckConsistency(sh));
+    dst.insert(sh);
     return true;
+
+fail:
+    dst.insert(sh);
+    return false;
 }
 
 bool computeIntRngResult(
