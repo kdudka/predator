@@ -319,6 +319,11 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
     }
 }
 
+bool isAnyAbstractOf(const SymHeapCore &sh, const TValId v1, const TValId v2) {
+    return isAbstract(sh.valTarget(v1))
+        || isAbstract(sh.valTarget(v2));
+}
+
 void SymExecEngine::updateStateInBranch(
         SymHeap                     sh,
         const bool                  branch,
@@ -333,12 +338,16 @@ void SymExecEngine::updateStateInBranch(
     sh.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
                 &insnCmp, &insnCnd, /* det */ false, branch));
 
+    const bool wasAbstract = isAnyAbstractOf(sh, v1, v2);
+
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
     if (!reflectCmpResult(proc, code, branch, v1, v2))
         CL_DEBUG_MSG(lw_, "XXX unable to reflect comparison result");
 
-    LDP_PLOT(nondetCond, sh);
-
+#if DEBUG_SE_END_NOT_REACHED < 2
+    if (wasAbstract)
+        LDP_PLOT(nondetCond, sh);
+#endif
     const unsigned targetIdx = !branch;
     proc.killInsn(insnCmp);
     proc.killPerTarget(insnCnd, targetIdx);
@@ -480,10 +489,15 @@ void SymExecEngine::execCondInsn() {
         proc.printBackTrace(ML_WARN);
     }
 
-    std::ostringstream str;
-    str << "at-line-" << lw_->line;
-    LDP_INIT(nondetCond, str.str().c_str());
-    LDP_PLOT(nondetCond, sh);
+#if DEBUG_SE_END_NOT_REACHED < 2
+    if (isAnyAbstractOf(sh, v1, v2))
+#endif
+    {
+        std::ostringstream str;
+        str << "at-line-" << lw_->line;
+        LDP_INIT(nondetCond, str.str().c_str());
+        LDP_PLOT(nondetCond, sh);
+    }
 
     CL_DEBUG_MSG(lw_, "?T? CL_INSN_COND updates TRUE branch");
     this->updateStateInBranch(sh, true,  *insnCmp, *insnCnd, v1, v2);

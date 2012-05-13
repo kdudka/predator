@@ -117,7 +117,7 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin=libsl\.so\]$||'        \
         -e "s/(CL_BREAK_IF|INT3|SIGTRAP)/$R\1$N/"                              \
         -e "s/(importGlVar\\(\\))/$R\1$N/"                                     \
         -e "s/(: debug: *) ([<>]J[<>]|AAA)/\1 $R\2$N/"                         \
-        -e "s/(: debug: SymHeap::)(objSetConcrete)/\1$Y\2$N/"                  \
+        -e "s/(: debug: SymHeap::)(valTargetSetConcrete)/\1$Y\2$N/"            \
         -e "s/(: debug:) \\(x\\) (.*)\$/\1 $Y(x)$N \2/"                        \
         -e "s/(: debug:) (spliceOutListSegment)/\1 $B\2$N/"                    \
         -e "s/(: debug:) (<<<|>>>)/\1 $B\2$N/"                                 \

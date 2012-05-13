@@ -43,7 +43,9 @@
 #define DEBUG_SE_END_NOT_REACHED            0
 
 /**
- * if 1, plot heap graphs of branching by non-deterministic conditions
+ * - 0 ... do not debug branching by non-deterministic conditions
+ * - 1 ... plot heap graphs of branching by non-deterministic abstract values
+ * - 2 ... plot heap graphs of branching by any non-deterministic conditions
  */
 #define DEBUG_SE_NONDET_COND                0
 
@@ -186,13 +188,6 @@
 #define SE_ERROR_RECOVERY_MODE              1
 
 /**
- * - 0 ... keep state info for all basic blocks of a function (safe default)
- * - 1 ... keep state info for all basic blocks with more than one ingoing edge
- * - 2 ... keep state info for all basic blocks that a CFG loop starts with
- */
-#define SE_STATE_PRUNING_MODE               0
-
-/**
  * the highest integral number we can count to (only partial implementation atm)
  */
 #define SE_INT_ARITHMETIC_LIMIT             8
@@ -234,6 +229,13 @@
  * upper bound of SLS minimal length (zero means unlimited)
  */
 #define SE_RESTRICT_SLS_MINLEN              2
+
+/**
+ * - 0 ... keep state info for all basic blocks of a function (safe default)
+ * - 1 ... keep state info for all basic blocks with more than one ingoing edge
+ * - 2 ... keep state info for all basic blocks that a CFG loop starts with
+ */
+#define SE_STATE_PRUNING_MODE               0
 
 /**
  * if 1, the symcut module allows generic minimal lengths to survive a function
