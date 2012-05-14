@@ -15,3 +15,4 @@ low
 * make AbstractBox::getArity() non-virtual
 * implement upwards traversal
 * support for global variables
+* resolve the issue of equalities and inequalities of deleted and non-deleted objects - deleted objects must be different from any object with which it was one allocated at the same time but it can be equal to any other object
