@@ -809,26 +809,53 @@ void SymProc::valDestroyTarget(TValId addr) {
 }
 
 void SymProc::killVar(const CodeStorage::KillVar &kv) {
-    const int uid = kv.uid;
-#if DEBUG_SE_STACK_FRAME
-    const CodeStorage::Storage &stor = sh_.stor();
-    const std::string varString = varToString(stor, uid);
-    CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() destroys var " << varString);
-#endif
-
-    // get the address (SymHeapCore is responsible for lazy creation)
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
-    const CVar cVar(uid, nestLevel);
+    const CVar cVar(kv.uid, nestLevel);
     const TValId addr = sh_.addrOfVar(cVar, /* createIfNeeded */ false);
     if (VAL_INVALID == addr)
         // the var is dead already
         return;
 
-    if (kv.onlyIfNotPointed && sh_.pointedByCount(addr))
-        // somebody points at the var, please wait with its destruction
+    const std::string varString = varToString(sh_.stor(), kv.uid);
+
+    if (!sh_.pointedByCount(addr)) {
+        // just destroy the variable
+#if DEBUG_SE_STACK_FRAME
+        CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() destroys var " << varString);
+#endif
+        this->valDestroyTarget(addr);
+        return;
+    }
+
+    // somebody points at the var
+
+    if (kv.onlyIfNotPointed)
+        // killer suggests to wait with its destruction
         return;
 
-    this->valDestroyTarget(addr);
+    // if it cannot be safely removed, then at least invalidate its contents
+    CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() invalidates var " << varString);
+    const TValId valUnknown = sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
+    const TSizeRange size = sh_.valSizeOfTarget(addr);
+    CL_BREAK_IF(!isSingular(size));
+
+    // enter leak monitor
+    LeakMonitor lm(sh_);
+    lm.enter();
+
+    // invalidate the contents
+    TValSet killedPtrs;
+    sh_.writeUniformBlock(addr, valUnknown, size.lo, &killedPtrs);
+
+    // check for memory leaks
+    if (lm.collectJunkFrom(killedPtrs)) {
+        CL_WARN_MSG(lw_,
+                "memory leak detected while invalidating a dead variable");
+        this->printBackTrace(ML_WARN);
+    }
+
+    // leave leak monitor
+    lm.leave();
 }
 
 bool headingToAbort(const CodeStorage::Block *bb) {
