@@ -248,7 +248,7 @@ public:   // static methods
 	var_map_type varMap;
 
 	size_t regCount_;
-	size_t argCount;
+	size_t argCount_;
 
 	bool isReg(const cl_operand* op, size_t& id) const {
 		if (op->code != cl_operand_e::CL_OPERAND_VAR)
@@ -281,7 +281,7 @@ public:   // methods
 	 *                  created
 	 */
 	SymCtx(const CodeStorage::Fnc& fnc) :
-		fnc_(fnc), regCount_(2), argCount(0)
+		fnc_(fnc), regCount_(2), argCount_(0)
 	{
 		// pointer to previous stack frame
 		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
@@ -309,7 +309,7 @@ public:   // methods
 					this->varMap.insert(std::make_pair(var.uid, VarInfo::createOnStack(offset)));
 					offset += var.type->size;
 					if (var.code == CodeStorage::EVar::VAR_FNC_ARG)
-						++this->argCount;
+						++argCount_;
 					break;
 				case CodeStorage::EVar::VAR_GL:
 					throw NotImplementedException("global variables", &(var.loc));
@@ -323,6 +323,11 @@ public:   // methods
 	size_t GetRegCount() const
 	{
 		return regCount_;
+	}
+
+	size_t GetArgCount() const
+	{
+		return argCount_;
 	}
 
 	const CodeStorage::Fnc& GetFnc() const

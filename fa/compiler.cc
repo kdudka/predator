@@ -1898,9 +1898,9 @@ protected:
 			assembly_->regFileSize_ = curCtx_->GetRegCount();
 		}
 
-		if (assembly_->regFileSize_ < (curCtx_->argCount + 2))
+		if (assembly_->regFileSize_ < (curCtx_->GetArgCount() + 2))
 		{	// we need 2 more registers in order to facilitate call
-			assembly_->regFileSize_ = curCtx_->argCount + 2;
+			assembly_->regFileSize_ = curCtx_->GetArgCount() + 2;
 		}
 
 		// move ABP into r0
