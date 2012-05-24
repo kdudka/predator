@@ -95,7 +95,7 @@ public:
 
 		FAE tmp(this->fae);
 //		for (std::vector<TA<label_type>*>::iterator i = this->fae.roots.begin(); i != this->fae.roots.end(); ++i)
-//			this->fae.updateRoot(*i, NULL);
+//			this->fae.updateRoot(*i, nullptr);
 
 		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
 			if (!tmp.roots[i]) {

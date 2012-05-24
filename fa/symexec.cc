@@ -173,7 +173,7 @@ protected:
 
 				this->processState(info);
 
-				fae = NULL;
+				fae = nullptr;
 
 			}
 
@@ -260,7 +260,7 @@ protected:
 
 		FAE tmp(fae);
 
-		SymState* state = NULL;
+		SymState* state = nullptr;
 
 		while (item->parent) {
 
@@ -332,7 +332,7 @@ protected:
 
 		CL_NOTE_MSG(&this->currentInsn->loc, *this->currentInsn);
 
-		return NULL;
+		return nullptr;
 
 	}
 #endif

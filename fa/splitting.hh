@@ -226,7 +226,7 @@ public:
 				ta.addTransition(*i);
 				continue;
 			}
-			matched = NULL;
+			matched = nullptr;
 			i->label()->iterate(LeafScanF(this->fae, *i, selector, target, matched));
 			if (matched) {
 				v.push_back(std::make_pair(&*i, matched));

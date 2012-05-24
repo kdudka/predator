@@ -166,7 +166,7 @@ public:
 			delete this->obj;
 	}
 	void release() {
-		this->obj = NULL;
+		this->obj = nullptr;
 	}
 };
 
@@ -185,7 +185,7 @@ public:
 		}
 	}
 	void release() {
-		this->_cont = NULL;
+		this->_cont = nullptr;
 	}
 };
 

@@ -55,7 +55,7 @@ public:
 
 	value_type* find(const T& x) {
 		typename store_type::iterator i = this->store.find(x);
-		return (i == this->store.end())?(NULL):(&*i);
+		return (i == this->store.end())?(nullptr):(&*i);
 	}
 
 	value_type* lookup(const T& x) {

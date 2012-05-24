@@ -59,7 +59,7 @@ protected:
 public:
 
 	TAReader(std::istream& input = std::cin, const std::string& name = "")
-		: TimbukReader(input, name), dst(NULL) {}
+		: TimbukReader(input, name), dst(nullptr) {}
 	
 	TA<std::string>& read(TA<std::string>& dst) {
 		this->dst = &dst;

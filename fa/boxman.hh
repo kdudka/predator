@@ -212,7 +212,7 @@ class BoxMan {
 
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data) {
 		std::pair<boost::unordered_map<Data, NodeLabel*>::iterator, bool> p
-			= this->dataStore.insert(std::make_pair(data, (NodeLabel*)NULL));
+			= this->dataStore.insert(std::make_pair(data, (NodeLabel*)nullptr));
 		if (p.second) {
 			p.first->second = new NodeLabel(&p.first->first, this->dataIndex.size());
 			this->dataIndex.push_back(&p.first->first);
@@ -240,7 +240,7 @@ public:
 
 	label_type lookupLabel(size_t arity, const std::vector<Data>& x) {
 		std::pair<boost::unordered_map<std::pair<size_t, std::vector<Data> >, NodeLabel*>::iterator, bool> p
-			= this->vDataStore.insert(std::make_pair(std::make_pair(arity, x), (NodeLabel*)NULL));
+			= this->vDataStore.insert(std::make_pair(std::make_pair(arity, x), (NodeLabel*)nullptr));
 		if (p.second)
 			p.first->second = new NodeLabel(&p.first->first.second);
 		return p.first->second;
@@ -280,7 +280,7 @@ public:
 	label_type lookupLabel(const std::vector<const AbstractBox*>& x) {
 
 		std::pair<boost::unordered_map<std::vector<const AbstractBox*>, NodeLabel*>::iterator, bool> p
-			= this->nodeStore.insert(std::make_pair(x, (NodeLabel*)NULL));
+			= this->nodeStore.insert(std::make_pair(x, (NodeLabel*)nullptr));
 
 		if (p.second) {
 
@@ -294,7 +294,7 @@ public:
 
 			label->setTag(
 				(void*)&*this->tagStore.insert(
-					std::make_pair((const TypeBox*)label->boxLookup((size_t)(-1), NULL), tag)
+					std::make_pair((const TypeBox*)label->boxLookup((size_t)(-1), nullptr), tag)
 				).first
 			);
 
@@ -321,7 +321,7 @@ public:
 
 	const SelBox* getSelector(const SelData& sel) {
 		std::pair<const SelData, const SelBox*>& p = *this->selIndex.insert(
-			std::make_pair(sel, (const SelBox*)NULL)
+			std::make_pair(sel, (const SelBox*)nullptr)
 		).first;
 		if (!p.second)
 			p.second = new SelBox(&p.first);
@@ -337,7 +337,7 @@ public:
 
 	const TypeBox* createTypeInfo(const std::string& name, const std::vector<size_t>& selectors) {
 		std::pair<const std::string, const TypeBox*>& p = *this->typeIndex.insert(
-			std::make_pair(name, (const TypeBox*)NULL)
+			std::make_pair(name, (const TypeBox*)nullptr)
 		).first;
 		if (p.second)
 			throw std::runtime_error("BoxMan::createTypeInfo(): type already exists!");

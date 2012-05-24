@@ -30,7 +30,7 @@ class FI_jmp : public AbstractInstruction {
 public:
 
 	FI_jmp(const CodeStorage::Insn* insn, const CodeStorage::Block* target)
-		: AbstractInstruction(insn, fi_type_e::fiJump), target_(target), next_(NULL) {}
+		: AbstractInstruction(insn, fi_type_e::fiJump), target_(target), next_(nullptr) {}
 
 	static AbstractInstruction* getTarget(
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,

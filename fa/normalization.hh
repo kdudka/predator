@@ -285,7 +285,7 @@ public:
 		for (auto& i : order) {
 
 			this->normalizeRoot(normalized, i, marked);
-//			assert(marked[*i] || (this->fae.roots[*i] == NULL));
+//			assert(marked[*i] || (this->fae.roots[*i] == nullptr));
 
 			if (!marked[i]) {
 

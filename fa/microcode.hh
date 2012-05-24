@@ -301,7 +301,7 @@ class FI_is_type : public SequentialInstruction {
 public:
 
 	FI_is_type(size_t dst, data_type_e type)
-		: SequentialInstruction(NULL), dst_(dst), type_(type) {}
+		: SequentialInstruction(nullptr), dst_(dst), type_(type) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
@@ -330,7 +330,7 @@ class FI_is_ref : public SequentialInstruction {
 public:
 
 	FI_is_ref(size_t dst)
-		: SequentialInstruction(NULL), dst_(dst) {}
+		: SequentialInstruction(nullptr), dst_(dst) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
@@ -362,7 +362,7 @@ class FI_inc_off : public SequentialInstruction {
 public:
 
 	FI_inc_off(size_t dst, size_t src, int offset)
-		: SequentialInstruction(NULL), dst_(dst), src_(src), offset_(offset) {}
+		: SequentialInstruction(nullptr), dst_(dst), src_(src), offset_(offset) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
@@ -452,7 +452,7 @@ class FI_store_ABP : public SequentialInstruction {
 public:
 
 	FI_store_ABP(size_t src, int offset)
-		: SequentialInstruction(NULL), src_(src), offset_(offset) {}
+		: SequentialInstruction(nullptr), src_(src), offset_(offset) {}
 
 	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
 

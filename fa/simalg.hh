@@ -138,7 +138,7 @@ public:
 	void moveToList(StateListElem*& src, StateListElem*& dst) {
 		assert(src);
 		if (this == this->_next)
-			src = NULL;
+			src = nullptr;
 		else {
 			src = this->_next;
 			this->_next->_prev = this->_prev;
@@ -180,7 +180,7 @@ class OLRTBlock {
 public:
 
 	OLRTBlock(size_t index, const LTS& lts, const std::vector<std::vector<size_t> >& key, const std::vector<size_t>& range)
-		: _index(index), _states(NULL), _remove(lts.labels()), _counter(lts.labels(), key, range), _intersection(NULL), _inset(lts.labels()), _tmp(NULL) {
+		: _index(index), _states(nullptr), _remove(lts.labels()), _counter(lts.labels(), key, range), _intersection(nullptr), _inset(lts.labels()), _tmp(nullptr) {
 		for (size_t i = 0; i < lts.states(); ++i) {
 			new StateListElem(i, this, this->_states);
 			for (SmartSet::iterator j = lts.lPre()[i].begin(); j != lts.lPre()[i].end(); ++j)
@@ -189,8 +189,8 @@ public:
 	}
 	
 	OLRTBlock(size_t index, OLRTBlock* parent, const LTS& lts)
-		: _index(index), _states(parent->_tmp), _remove(lts.labels(), NULL), _counter(parent->_counter), _inset(lts.labels()), _tmp(NULL) {
-		parent->_tmp = NULL;
+		: _index(index), _states(parent->_tmp), _remove(lts.labels(), nullptr), _counter(parent->_counter), _inset(lts.labels()), _tmp(nullptr) {
+		parent->_tmp = nullptr;
 		parent->_intersection = this;
 		StateListElem* elem = this->_states;
 		do {
@@ -227,10 +227,10 @@ public:
 	}
 	
 	bool checkEmpty() {
-		if (this->_states != NULL)
+		if (this->_states != nullptr)
 			return false;
 		this->_states = this->_tmp;
-		this->_tmp = NULL;
+		this->_tmp = nullptr;
 		return true;
 	}
 	
@@ -329,7 +329,7 @@ protected:
 		}
 		for (std::vector<size_t>::const_iterator i = remove.begin(); i != remove.end(); ++i) {
 			StateListElem* elem = this->_index[*i];
-			if (elem->block()->tmp() != NULL) {
+			if (elem->block()->tmp() != nullptr) {
 				splitList.push_back(elem->block());
 				OLRTBlock* block = new OLRTBlock(this->_relation.newEntry(), elem->block(), *this->_lts);
 				this->_partition.push_back(block);
@@ -337,7 +337,7 @@ protected:
 		}
 		for (std::vector<OLRTBlock*>::reverse_iterator i = splitList.rbegin(); i != splitList.rend(); ++i) {
 			OLRTBlock* bint = (*i)->intersection();
-			(*i)->intersection(NULL);
+			(*i)->intersection(nullptr);
 //			for (std::vector<OLRTBlock*>::iterator j = this->_partition.begin(); j != this->_partition.end(); ++j) {
 			for (std::vector<OLRTBlock*>::reverse_iterator j = this->_partition.rbegin(); j != this->_partition.rend(); ++j) {
 				this->_relation.data()[(*j)->index()][bint->index()] = this->_relation.data()[(*j)->index()][(*i)->index()];
@@ -359,7 +359,7 @@ protected:
 //		for (std::vector<int>::const_iterator i = remove.begin(); i != remove.end(); ++i) {
 		for (std::vector<size_t>::const_reverse_iterator i = remove.rbegin(); i != remove.rend(); ++i) {
 			StateListElem* elem = this->_index[*i];
-			if (elem->block()->tmp() != NULL) {
+			if (elem->block()->tmp() != nullptr) {
 				splitList.push_back(elem->block());
 				OLRTBlock* block = new OLRTBlock(this->_relation.newEntry(), elem->block(), *this->_lts);
 				this->_partition.push_back(block);
@@ -369,7 +369,7 @@ protected:
 //		for (std::vector<OLRTBlock*>::iterator i = splitList.begin(); i != splitList.end(); ++i) {
 		for (std::vector<OLRTBlock*>::reverse_iterator i = splitList.rbegin(); i != splitList.rend(); ++i) {
 			OLRTBlock* bint = (*i)->intersection();
-			(*i)->intersection(NULL);
+			(*i)->intersection(nullptr);
 //			for (std::vector<OLRTBlock*>::iterator j = this->_partition.begin(); j != this->_partition.end(); ++j) {
 			for (std::vector<OLRTBlock*>::reverse_iterator j = this->_partition.rbegin(); j != this->_partition.rend(); ++j) {
 				this->_relation.data()[(*j)->index()][bint->index()] = this->_relation.data()[(*j)->index()][(*i)->index()];
@@ -389,7 +389,7 @@ protected:
 	void processRemove(OLRTBlock* block, size_t label) {
 		/*block->dump();*/
 		std::vector<size_t>* remove = block->remove()[label];
-		block->remove()[label] = NULL;
+		block->remove()[label] = nullptr;
 /*		std::cout << block->index() << ":" << label << ": ";
 		for (size_t i = 0; i < remove->size(); ++i)
 			std::cout << (*remove)[i] << " ";
@@ -545,7 +545,7 @@ public:
 		}
 		for (std::vector<size_t>::const_iterator i = remove.begin(); i != remove.end(); ++i) {
 			StateListElem* elem = this->_index[*i];
-			if (elem->block()->tmp() != NULL) {
+			if (elem->block()->tmp() != nullptr) {
 				OLRTBlock* block = new OLRTBlock(this->_relation.newEntry(), elem->block(), *this->_lts);
 				this->_partition.push_back(block);
 			}

@@ -159,13 +159,13 @@ public:
 
 		for (TA<label_type>::iterator i = ta.begin(state); i != ta.end(state); ++i) {
 
-			TypeBox* typeBox = (TypeBox*)i->label()->boxLookup((size_t)(-1), NULL);
+			TypeBox* typeBox = (TypeBox*)i->label()->boxLookup((size_t)(-1), nullptr);
 
 			assert(typeBox);
 /*
 			if (!typeBox) {
 
-				i->label()->iterate(CheckIntegrityF(*this, ta, *i, NULL, bitmap, states));
+				i->label()->iterate(CheckIntegrityF(*this, ta, *i, nullptr, bitmap, states));
 
 				continue;
 

@@ -75,7 +75,7 @@ public:
 */
 public:
 
-	ExecutionManager() : root_(NULL) {}
+	ExecutionManager() : root_(nullptr) {}
 
 	~ExecutionManager() { this->clear(); }
 
@@ -87,7 +87,7 @@ public:
 
 		if (this->root_) {
 			this->root_->recycle(this->stateRecycler_);
-			this->root_ = NULL;
+			this->root_ = nullptr;
 		}
 
 		this->queue_.clear();
@@ -172,7 +172,7 @@ public:
 		AbstractInstruction* instr) {
 
 		this->clear();
-		this->root_ = this->enqueue(NULL, this->allocRegisters(registers), fae, instr);
+		this->root_ = this->enqueue(nullptr, this->allocRegisters(registers), fae, instr);
 
 	}
 
@@ -218,7 +218,7 @@ public:
 		assert(state == this->root_);
 
 		this->root_->recycle(this->stateRecycler_);
-		this->root_ = NULL;
+		this->root_ = nullptr;
 
 	}
 

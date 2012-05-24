@@ -217,7 +217,7 @@ public:
 		TA<label_type>::rename(tmp, tmp2, RenameNonleafF(index, this->nextState()), false);
 		this->incrementStateOffset(index.size());
 		for (size_t i = 0; i < this->roots.size(); ++i) {
-			if (!f(i, NULL))
+			if (!f(i, nullptr))
 				continue;
 			tmp.copyTransitions(*this->roots[i]);
 		}

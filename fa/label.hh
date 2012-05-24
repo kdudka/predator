@@ -215,7 +215,7 @@ struct label_type {
 
 	const NodeLabel* _obj;
 
-	label_type() : _obj(NULL) {}
+	label_type() : _obj(nullptr) {}
 	label_type(const label_type& label) : _obj(label._obj) {}
 	label_type(const NodeLabel* obj) : _obj(obj) {}
 

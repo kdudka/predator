@@ -53,7 +53,7 @@ public:
 
 protected:
 
-	TTBase(lhs_cache_type::value_type* lhs = NULL, const T& label = T(), size_t rhs = 0)
+	TTBase(lhs_cache_type::value_type* lhs = nullptr, const T& label = T(), size_t rhs = 0)
 		: _lhs(lhs), _label(label), _rhs(rhs) {}
 
 public:
@@ -137,7 +137,7 @@ public:
 		: TTBase<T>(lhsCache.lookup(lhs), label, rhs), lhsCache(lhsCache) {}
 
 	TT(const std::vector<size_t>& lhs, const T& label, size_t rhs, const std::vector<size_t>& index, typename TTBase<T>::lhs_cache_type& lhsCache)
-		: TTBase<T>(NULL, label, index[rhs]), lhsCache(lhsCache) {
+		: TTBase<T>(nullptr, label, index[rhs]), lhsCache(lhsCache) {
 		std::vector<size_t> tmp(lhs.size());
 		for (size_t i = 0; i < lhs.size(); ++i)
 			tmp[i] = index[lhs[i]];
@@ -148,7 +148,7 @@ public:
 		: TTBase<T>(lhsCache.lookup(t._lhs->first), t._label, t._rhs), lhsCache(lhsCache) {}
 
 	TT(const TT& t, const std::vector<size_t>& index, typename TTBase<T>::lhs_cache_type& lhsCache)
-		: TTBase<T>(NULL, t._label, index[t._rhs]), lhsCache(lhsCache) {
+		: TTBase<T>(nullptr, t._label, index[t._rhs]), lhsCache(lhsCache) {
 		std::vector<size_t> tmp(t._lhs->first.size());
 		for (size_t i = 0; i < t._lhs->first.size(); ++i)
 			tmp[i] = index[t._lhs->first[i]];
@@ -364,7 +364,7 @@ public:
 	typename trans_set_type::const_iterator _lookup(size_t rhs) const {
 		char buffer[sizeof(std::pair<const TT<T>, size_t>)];
 		std::pair<const TT<T>, size_t>* tPtr = (std::pair<const TT<T>, size_t>*)buffer;
-		new (reinterpret_cast<TTBase<T>*>(const_cast<TT<T>*>(&tPtr->first))) TTBase<T>(NULL, T(), rhs);
+		new (reinterpret_cast<TTBase<T>*>(const_cast<TT<T>*>(&tPtr->first))) TTBase<T>(nullptr, T(), rhs);
 		typename trans_set_type::const_iterator i = this->transitions.lower_bound(tPtr);
 		((TTBase<T>*)&tPtr->first)->~TTBase();
 		return i;
@@ -1256,7 +1256,7 @@ public:
 		}
 
 		bool isAlive(TA<T>* x) {
-			return this->taCache.find(x) != NULL;
+			return this->taCache.find(x) != nullptr;
 		}
 
 		typename TA<T>::Backend& getBackend() {
