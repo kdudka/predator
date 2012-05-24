@@ -19,5 +19,5 @@
 
 #include "symctx.hh"
 
-int SymCtx::size_of_data;
-int SymCtx::size_of_code;
+int SymCtx::size_of_data_ptr = 0;
+int SymCtx::size_of_code_ptr = 0;

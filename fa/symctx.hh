@@ -35,9 +35,9 @@
 #include "notimpl_except.hh"
 
 #define ABP_OFFSET		0
-#define ABP_SIZE		SymCtx::size_of_data
+#define ABP_SIZE		SymCtx::getSizeOfDataPtr()
 #define RET_OFFSET		(ABP_OFFSET + ABP_SIZE)
-#define RET_SIZE		SymCtx::size_of_code
+#define RET_SIZE		SymCtx::getSizeOfCodePtr()
 
 struct SymCtx {
 
@@ -166,13 +166,17 @@ public:   // data types
 	 * structures.
 	 */
 	typedef std::unordered_map<int, VarInfo> var_map_type;
+
+
+private:  // static data
+
 	// must be initialised externally!
 
 	/// The size of a data pointer in the analysed program
-	static int size_of_data;
+	static int size_of_data_ptr;
 
 	/// The size of a code pointer in the analysed program
-	static int size_of_code;
+	static int size_of_code_ptr;
 
 
 public:   // static methods
@@ -189,21 +193,36 @@ public:   // static methods
 	 */
 	static void initCtx(const CodeStorage::Storage& stor)
 	{
-		if ((size_of_code = stor.types.codePtrSizeof()) == -1)
+		if ((size_of_code_ptr = stor.types.codePtrSizeof()) == -1)
 		{	// set the size of a code pointer
-			size_of_code = sizeof(void(*)());
+			size_of_code_ptr = sizeof(void(*)());
 		}
 
-		if ((size_of_data = stor.types.dataPtrSizeof()) == -1)
+		if ((size_of_data_ptr = stor.types.dataPtrSizeof()) == -1)
 		{	// set the size of a data pointer
-			size_of_data = sizeof(void*);
+			size_of_data_ptr = sizeof(void*);
 		}
 
 		// Post-condition
-		assert(size_of_data > 0);
-		assert(size_of_code > 0);
+		assert(size_of_data_ptr > 0);
+		assert(size_of_code_ptr > 0);
 	}
 
+	static size_t getSizeOfCodePtr()
+	{
+		// Assertions
+		assert(size_of_code_ptr > 0);
+
+		return size_of_code_ptr;
+	}
+
+	static size_t getSizeOfDataPtr()
+	{
+		// Assertions
+		assert(size_of_data_ptr > 0);
+
+		return size_of_data_ptr;
+	}
 
 	static bool isStacked(const CodeStorage::Var& var) {
 		switch (var.code) {
