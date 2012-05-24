@@ -37,11 +37,11 @@ public:
 
 	FI_cond(const CodeStorage::Insn* insn, size_t src, AbstractInstruction* next[2])
 		: AbstractInstruction(insn, fi_type_e::fiBranch),
-		src_(src), next_({ next[0], next[1] }) {}
+		src_(src), next_{ next[0], next[1] } {}
 
 	FI_cond(const CodeStorage::Insn* insn, size_t src, const std::vector<AbstractInstruction*>& next)
 		: AbstractInstruction(insn, fi_type_e::fiBranch),
-		src_(src), next_({ next[0], next[1] }) {}
+		src_(src), next_{ next[0], next[1] } {}
 
 	virtual void execute(ExecutionManager& execMan,
 		const AbstractInstruction::StateType& state);
