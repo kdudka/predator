@@ -1,5 +1,5 @@
-Predator
-========
+Predator and Forester
+=====================
 Predator is a practical tool for checking manipulation of dynamic data
 structures using *separation logic*.  It can be loaded directly into *GCC* as a
 *plug-in*.  This way you can easily analyse C code sources, using the existing
@@ -11,8 +11,16 @@ on the following project page:
 
     http://www.fit.vutbr.cz/research/groups/verifit/tools/predator
 
-Predator and Code Listener are licensed as GPLv3+, see COPYING for details.
+Forester is an experimental tool for checking manipulation of dynamic data
+structures using *forest automata*.  As in case of Predator, it can be loaded
+directly into *GCC* as a *plug-in* to analyse C code sources.  However, the analysis
+itself is not yet mature enough to be able to verify ordinary programs.  Although
+Forester is intended to be as portable as GCC is, we support only Linux for now.
+You can find the latest news on the following project page:
 
+    http://www.fit.vutbr.cz/research/groups/verifit/tools/forester
+
+Predator, Code Listener, and Forester are licensed as GPLv3+, see COPYING for details.
 
 Building from sources against a local build of GCC [recommended for end users]
 ==============================================================================
@@ -34,8 +42,8 @@ Building from sources against a local build of GCC [recommended for end users]
      - package is usually called 'mpfr'
      - on binary distros you may need also the 'mpfr-devel' sub-package
 
-(2) Install all dependences of Predator
----------------------------------------
+(2) Install all dependences of Predator and Forester
+----------------------------------------------------
    * CMake 2.8+
      - available at http://www.cmake.org
      - the executable is called 'cmake'
@@ -71,17 +79,17 @@ giving the option '-jN' to 'make', where N is the number of CPU cores plus one
 (a commonly used heuristic, there exist several others).  But first make sure
 that your machine has enough resources for building GCC in parallel.
 
-(4) Build Code Listener and Predator from sources
--------------------------------------------------
-The following command builds Code Listener and Predator from sources:
+(4) Build Code Listener, Predator and Forester from sources
+-----------------------------------------------------------
+The following command builds Code Listener, Predator and Forester from sources:
 
     make
 
 Again, the build can be accelerated using the '-j' option of 'make', as stated
-above.  After a successful build of Predator, it is suggested (but not required)
-to run the test-suite shipped with Predator to ensure the plug-in works as the
-authors intended to.  The test-suite consists of more than 200 regression tests
-that can be run using the following command:
+above.  After a successful build of Predator (or Forester), it is suggested (but
+not required) to run the test-suite shipped with Predator (or Forester) to ensure
+the plug-in works as the authors intended to.  The test-suite for Predator consists
+of more than 200 regression tests that can be run using the following command:
 
     make check
 
@@ -107,6 +115,22 @@ This will show you the available options of the Predator plug-in itself:
 
     echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
 
+
+(6) Prepare environment for running Forester transparently [optional]
+---------------------------------------------------------------------
+Analogically to Predator you can also set up the environment for Forester by
+running the following script:
+
+    . fa_build/register-paths.sh
+
+Then you can again use the '-fplugin' option of GCC as documented in the gcc(1)
+man page:
+
+    gcc -fplugin=libfa.so ...
+
+This will show you the available options of the Forester plug-in itself:
+
+    echo please help | gcc -fplugin=libfa.so -fplugin-arg-libfa-help -xc -
 
 Building from sources against the system GCC
 ============================================

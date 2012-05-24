@@ -46,6 +46,9 @@ configure_file( ${PROJECT_SOURCE_DIR}/fagccv.in    ${PROJECT_BINARY_DIR}/fagccv 
 configure_file( ${PROJECT_SOURCE_DIR}/fagccvf.in   ${PROJECT_BINARY_DIR}/fagccvf   @ONLY)
 configure_file( ${PROJECT_SOURCE_DIR}/fagdb.in     ${PROJECT_BINARY_DIR}/fagdb     @ONLY)
 
+configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
+    ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
+
 # libfa.so
 add_library(fa SHARED
 	treeaut.cc
@@ -142,6 +145,9 @@ macro(test_forester_regre name_suff ext arg1)
 
         # drop absolute paths
         set(cmd "${cmd} | sed 's|^[^:]*/||'")
+
+        # drop var UIDs that are not guaranteed to be fixed among runs
+        set(cmd "${cmd} | sed -r -e 's|#[0-9]+:||g' -e 's|#[0-9]+|_|g'")
 
         # ... and finally diff with the expected output
         set(cmd "${cmd} | diff -up ${testdir}/test-${num}.err${ext} -")

@@ -1,0 +1,2 @@
+test-0238.c:21:20: error: ___sl_error() reached, analysis of this code path will not continue
+test-0238.c:21:20: note: user message: if the second malloc returns the same value as the first, I should get here

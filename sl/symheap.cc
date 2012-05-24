@@ -3021,6 +3021,10 @@ void SymHeapCore::valDestroyTarget(TValId val) {
 TSizeRange SymHeapCore::valSizeOfTarget(TValId val) const {
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
+    if (!isPossibleToDeref(valData->code))
+        // no writable target around here
+        return IR::rngFromNum(IR::Int0);
+
     if (valData->offRoot < 0)
         // we are above the root, so we cannot safely write anything
         return IR::rngFromNum(IR::Int0);
@@ -3172,6 +3176,9 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
 
         default:
             CL_BREAK_IF("invalid call of SymHeapCore::valCreate()");
+
+            // just to avoid an unnecessary SIGSEGV in the production build
+            code = VT_UNKNOWN;
     }
 
     return d->valCreate(code, origin);
@@ -3276,18 +3283,25 @@ bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
     if (VAL_TRUE == valA)
         return (VAL_FALSE == valB);
 
+    // we presume (0 <= valA) and (0 < valB) at this point
+    CL_BREAK_IF(d->ents.outOfRange(valB));
+
+    const EValueTarget code = this->valTarget(valB);
+    if (VAL_NULL == valA
+            && (isKnownObject(code) || isGone(code) || VT_RANGE == code))
+        // all addresses of objects have to be non-zero
+        return true;
+
+    if (valInsideSafeRange(*this, valA) && valInsideSafeRange(*this, valB))
+        // NOTE: we know (valA != valB) at this point, look above
+        return true;
+
     IR::Range rng1, rng2;
     if (rngFromVal(&rng1, *this, valA) && rngFromVal(&rng2, *this, valB)) {
         // both values are integral ranges (
         bool result;
         return (compareIntRanges(&result, CL_BINOP_NE, rng1, rng2) && result);
     }
-
-    // we presume (0 <= valA) and (0 < valB) at this point
-    CL_BREAK_IF(d->ents.outOfRange(valB));
-    if (valInsideSafeRange(*this, valA) && valInsideSafeRange(*this, valB))
-        // NOTE: we know (valA != valB) at this point, look above
-        return true;
 
     // check for a Neq predicate
     if (d->neqDb->chk(valA, valB))
@@ -3475,30 +3489,6 @@ void SymHeap::valTargetSetConcrete(TValId root) {
     d->absRoots.releaseEnt(root);
 }
 
-void SymHeap::valMerge(TValId v1, TValId v2, TValList *leakList) {
-    // check that at least one value is unknown
-    moveKnownValueToLeft(*this, v1, v2);
-    const EValueTarget code1 = this->valTarget(v1);
-    const EValueTarget code2 = this->valTarget(v2);
-    CL_BREAK_IF(isKnownObject(code2));
-
-    if (VT_ABSTRACT != code1 && VT_ABSTRACT != code2) {
-        // no abstract objects involved
-        SymHeapCore::valReplace(v2, v1);
-        return;
-    }
-
-    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(*this, v1, v2, leakList))
-        // splice-out succeeded ... ls(v1, v2)
-        return;
-
-    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(*this, v2, v1, leakList))
-        // splice-out succeeded ... ls(v2, v1)
-        return;
-
-    CL_DEBUG("failed to splice-out list segment, has to over-approximate");
-}
-
 void SymHeap::segMinLengthOp(ENeqOp op, TValId at, TMinLen len) {
     CL_BREAK_IF(!len);
 
@@ -3579,108 +3569,113 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
     CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
 }
 
+TValId lookThrough(TValSet *pSeen, SymHeap &sh, TValId val) {
+    if (VT_RANGE == sh.valTarget(val))
+        // not supported yet
+        return VAL_INVALID;
+
+    const TOffset off = sh.valOffset(val);
+
+    while (0 < val) {
+        const TValId root = sh.valRoot(val);
+        if (!insertOnce(*pSeen, root))
+            // an already seen root value
+            return VAL_INVALID;
+
+        const EValueTarget code = sh.valTarget(val);
+        if (!isAbstract(code))
+            // a non-abstract object reached
+            break;
+
+        const TValId seg = segPeer(sh, root);
+        if (sh.segMinLength(seg))
+            // non-empty abstract object reached
+            break;
+
+        const EObjKind kind = sh.valTargetKind(seg);
+        if (OK_OBJ_OR_NULL == kind) {
+            // we always end up with VAL_NULL if OK_OBJ_OR_NULL is removed
+            val = VAL_NULL;
+            continue;
+        }
+
+        // jump to next value while taking the 'head' offset into consideration
+        const TValId valNext = nextValFromSeg(sh, seg);
+        const BindingOff &bOff = sh.segBinding(seg);
+        val = sh.valByOffset(valNext, off - bOff.head);
+    }
+
+    return val;
+}
+
 bool SymHeap::proveNeq(TValId ref, TValId val) const {
     if (SymHeapCore::proveNeq(ref, val))
+        // values are non-equal in non-abstract world
         return true;
 
     // having the values always in the same order leads to simpler code
     moveKnownValueToLeft(*this, ref, val);
-    if (this->hasAbstractTarget(ref) && this->hasAbstractTarget(val)) {
-        const TValId seg = this->valRoot(val);
-        if (objMinLength(*this, seg))
-            // move the non-empty one to left
-            swapValues(ref, val);
-    }
 
-    const EValueTarget refCode = this->valTarget(ref);
-    if (isAbstract(refCode)) {
-        // both values are abstract
-        const TValId root1 = this->valRoot(ref);
-        const TValId root2 = this->valRoot(val);
-        if (root2 == segPeer(*this, root1)) {
-            // one value points at segment and the other points at its peer
-            const TOffset off1 = this->valOffset(ref);
-            const TOffset off2 = this->valOffset(val);
-            return (off1 == off2)
-                && (1 < this->segMinLength(root1));
-        }
+    if (ref < VAL_NULL || !isAbstract(this->valTarget(val)))
+        // we are interested only in abstract objects here, nothing to do...
+        return false;
 
-        if (!objMinLength(*this, root1))
-            // both targets are possibly empty, giving up
-            return false;
-    }
+    TValSet seen;
 
-    std::set<TValId> haveSeen;
+    // try to look through possibly empty abstract objects
+    val = lookThrough(&seen, *const_cast<SymHeap *>(this), val);
+    if (VAL_INVALID == val)
+        return false;
 
-    EValueTarget code = this->valTarget(val);
-    TOffset off /* just to silence gcc */ = -1;
-    if (VT_RANGE != code)
-        off = this->valOffset(val);
+    // try to look through possibly empty abstract objects
+    ref = lookThrough(&seen, *const_cast<SymHeap *>(this), ref);
+    if (VAL_INVALID == ref)
+        return false;
 
-    while (0 < val && insertOnce(haveSeen, val)) {
-        switch (code) {
-            case VT_ABSTRACT:
-                break;
+    if (SymHeapCore::proveNeq(ref, val))
+        // values are non-equal in non-abstract world
+        return true;
 
-            case VT_ON_STACK:
-            case VT_ON_HEAP:
-            case VT_STATIC:
-                // concrete object reached --> prove done
-                return (val != ref);
+    // having the values always in the same order leads to simpler code
+    moveKnownValueToLeft(*this, ref, val);
 
-            case VT_INVALID:
-            case VT_CUSTOM:
-                return SymHeapCore::proveNeq(ref, val);
+    const TSizeRange size2 = this->valSizeOfTarget(val);
+    if (size2.lo <= IR::Int0)
+        // oops, we cannot prove the address is safely allocated, giving up
+        return false;
 
-            case VT_RANGE:
-                // TODO: improve the reasoning about VT_RANGE values
-                // fall through!
+    const TValId root2 = this->valRoot(val);
+    const TMinLen len2 = objMinLength(*this, root2);
+    if (!len2)
+        // one of the targets is possibly empty, giving up
+        return false;
 
-            case VT_DELETED:
-            case VT_LOST:
-                return (VAL_NULL == ref);
+    if (VAL_NULL == ref)
+        // one of them is VAL_NULL the other one is address of non-empty object
+        return true;
 
-            case VT_COMPOSITE:
-                CL_BREAK_IF("SymHeap::proveNeq() sees VT_COMPOSITE");
-                // fall through!
+    const TSizeRange size1 = this->valSizeOfTarget(ref);
+    if (size1.lo <= IR::Int0)
+        // oops, we cannot prove the address is safely allocated, giving up
+        return false;
 
-            case VT_UNKNOWN:
-                // we can't prove much for unknown values
-                return false;
-        }
+    const TValId root1 = this->valRoot(ref);
+    const TMinLen len1 = objMinLength(*this, root1);
+    if (!len1)
+        // both targets are possibly empty, giving up
+        return false;
 
-        SymHeap &writable = *const_cast<SymHeap *>(this);
+    if (!isAbstract(this->valTarget(ref)))
+        // non-empty abstract object vs. concrete object
+        return true;
 
-        TValId seg = this->valRoot(val);
-        const EObjKind kind = this->valTargetKind(val);
-        if (OK_DLS == kind)
-            seg = dlSegPeer(writable, seg);
+    if (root2 != segPeer(*this, root1))
+        // a pair of non-empty abstract objects
+        return true;
 
-        if (seg < 0)
-            // no valid object here
-            return false;
-
-        if (this->segMinLength(seg))
-            // non-empty abstract object reached
-            return (VAL_NULL == ref)
-                || isKnownObject(refCode);
-
-        // jump to next value while taking the 'head' offset into consideration
-        const TValId valNext = nextValFromSeg(writable, seg);
-
-        if (OK_OBJ_OR_NULL == kind) {
-            CL_BREAK_IF(VAL_NULL != valNext);
-            val = VAL_NULL;
-        }
-        else {
-            const BindingOff &bOff = this->segBinding(seg);
-            val = writable.valByOffset(valNext, off - bOff.head);
-        }
-
-        code = this->valTarget(val);
-    }
-
-    return false;
+    // one value points at segment and the other points at its peer
+    CL_BREAK_IF(len1 != len2);
+    return (1 < len1);
 }
 
 void SymHeap::valDestroyTarget(TValId root) {

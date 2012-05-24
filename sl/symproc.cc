@@ -434,6 +434,10 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
             case CL_ACCESSOR_ITEM:
                 off += offItem(ac);
                 continue;
+
+            case CL_ACCESSOR_OFFSET:
+                off += ac->data.offset.off;
+                continue;
         }
     }
 
@@ -805,26 +809,53 @@ void SymProc::valDestroyTarget(TValId addr) {
 }
 
 void SymProc::killVar(const CodeStorage::KillVar &kv) {
-    const int uid = kv.uid;
-#if DEBUG_SE_STACK_FRAME
-    const CodeStorage::Storage &stor = sh_.stor();
-    const std::string varString = varToString(stor, uid);
-    CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() destroys var " << varString);
-#endif
-
-    // get the address (SymHeapCore is responsible for lazy creation)
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
-    const CVar cVar(uid, nestLevel);
+    const CVar cVar(kv.uid, nestLevel);
     const TValId addr = sh_.addrOfVar(cVar, /* createIfNeeded */ false);
     if (VAL_INVALID == addr)
         // the var is dead already
         return;
 
-    if (kv.onlyIfNotPointed && sh_.pointedByCount(addr))
-        // somebody points at the var, please wait with its destruction
+    const std::string varString = varToString(sh_.stor(), kv.uid);
+
+    if (!sh_.pointedByCount(addr)) {
+        // just destroy the variable
+#if DEBUG_SE_STACK_FRAME
+        CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() destroys var " << varString);
+#endif
+        this->valDestroyTarget(addr);
+        return;
+    }
+
+    // somebody points at the var
+
+    if (kv.onlyIfNotPointed)
+        // killer suggests to wait with its destruction
         return;
 
-    this->valDestroyTarget(addr);
+    // if it cannot be safely removed, then at least invalidate its contents
+    CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() invalidates var " << varString);
+    const TValId valUnknown = sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
+    const TSizeRange size = sh_.valSizeOfTarget(addr);
+    CL_BREAK_IF(!isSingular(size));
+
+    // enter leak monitor
+    LeakMonitor lm(sh_);
+    lm.enter();
+
+    // invalidate the contents
+    TValSet killedPtrs;
+    sh_.writeUniformBlock(addr, valUnknown, size.lo, &killedPtrs);
+
+    // check for memory leaks
+    if (lm.collectJunkFrom(killedPtrs)) {
+        CL_WARN_MSG(lw_,
+                "memory leak detected while invalidating a dead variable");
+        this->printBackTrace(ML_WARN);
+    }
+
+    // leave leak monitor
+    lm.leave();
 }
 
 bool headingToAbort(const CodeStorage::Block *bb) {
@@ -1136,6 +1167,19 @@ void SymExecCore::execFree(TValId val) {
     this->valDestroyTarget(val);
 }
 
+bool lhsFromOperand(ObjHandle *pLhs, SymProc &proc, const struct cl_operand &op)
+{
+    if (seekRefAccessor(op.accessor))
+        CL_BREAK_IF("lhs not an l-value");
+
+    *pLhs = proc.objByOperand(op);
+    if (OBJ_DEREF_FAILED == pLhs->objId())
+        return false;
+
+    CL_BREAK_IF(!pLhs->isValid());
+    return true;
+}
+
 void SymExecCore::execHeapAlloc(
         SymState                        &dst,
         const CodeStorage::Insn         &insn,
@@ -1143,8 +1187,8 @@ void SymExecCore::execHeapAlloc(
         const bool                      nullified)
 {
     // resolve lhs
-    const ObjHandle lhs = this->objByOperand(insn.operands[/* dst */ 0]);
-    if (OBJ_DEREF_FAILED == lhs.objId())
+    ObjHandle lhs;
+    if (!lhsFromOperand(&lhs, *this, insn.operands[/* dst */ 0]))
         // error alredy emitted
         return;
 
@@ -1396,54 +1440,191 @@ bool trimRangesIfPossible(
     return true;
 }
 
+bool spliceOutAbstractPathCore(
+        SymProc                &proc,
+        const TValId            beg,
+        const TValId            endPoint,
+        const bool              readOnlyMode)
+{
+    SymHeap &sh = proc.sh();
+
+    TValList leakList;
+    LeakMonitor lm(sh);
+    lm.enter();
+
+    // NOTE: If there is a cycle consisting of empty list segments only, we will
+    // loop indefinitely.  However, the basic list segment axiom guarantees that
+    // there is no such cycle.
+
+    TValId seg = beg;
+    int len = 1;
+
+    for (;;) {
+        const EValueTarget code = sh.valTarget(seg);
+        if (VT_ABSTRACT != code || objMinLength(sh, seg)) {
+            // we are on a wrong way already...
+            CL_BREAK_IF(!readOnlyMode);
+            return false;
+        }
+
+        const TValId peer = segPeer(sh, seg);
+        const TValId valNext = nextValFromSeg(sh, peer);
+        const TValId segNext = sh.valRoot(valNext);
+
+        if (!readOnlyMode)
+            spliceOutListSegment(sh, seg, peer, valNext, &leakList);
+
+        if (valNext == endPoint)
+            // we have the chain we are looking for
+            break;
+
+        seg = segNext;
+        ++len;
+    }
+
+    if (readOnlyMode)
+        return true;
+
+    // read-write pass done
+    const struct cl_loc *loc = proc.lw();
+    CL_DEBUG_MSG(loc, "spliceOutAbstractPathCore() removed "
+            << len << " possibly empty abstract objects");
+
+    // append a trace node for this operation
+    sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), len));
+
+    if (lm.importLeakList(&leakList)) {
+        // [L0] leakage during splice-out
+        CL_WARN_MSG(loc, "memory leak detected while removing a segment");
+        proc.printBackTrace(ML_WARN);
+        lm.leave();
+    }
+
+    return true;
+}
+
+bool spliceOutAbstractPath(
+        SymState                    &dst,
+        SymProc                     &proc,
+        const TValId                 atAddr,
+        const TValId                 pointingTo)
+{
+    SymHeap &sh = proc.sh();
+    const TValId seg = sh.valRoot(atAddr);
+    const TValId peer = segPeer(sh, seg);
+
+    if (pointingTo == peer && peer != seg) {
+        // assume identity over the two parts of a DLS
+        dlSegReplaceByConcrete(sh, seg, peer);
+        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), OK_DLS));
+        dst.insert(sh);
+        return true;
+    }
+
+    TValId endPoint = pointingTo;
+
+    const EObjKind kind = sh.valTargetKind(seg);
+    if (OK_OBJ_OR_NULL != kind) {
+        // if atAddr is above/bellow head, we need to shift endPoint accordingly
+        const TOffset off = sh.valOffset(atAddr) - sh.segBinding(seg).head;
+        endPoint = sh.valByOffset(pointingTo, off);
+    }
+
+    if (!spliceOutAbstractPathCore(proc, seg, endPoint, /* RO */ true))
+        // read-only attempt failed
+        return false;
+
+    // splicing-out a single list segment is the most common case
+    if (!spliceOutAbstractPathCore(proc, seg, endPoint, /* RO */ false)) {
+        CL_BREAK_IF("failed to splice-out a single list segment");
+        return false;
+    }
+
+    dst.insert(sh);
+    return true;
+}
+
+bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2) {
+    SymHeap &sh = proc.sh();
+
+    // check that at least one value is unknown
+    moveKnownValueToLeft(sh, v1, v2);
+    const EValueTarget code1 = sh.valTarget(v1);
+    const EValueTarget code2 = sh.valTarget(v2);
+    CL_BREAK_IF(isKnownObject(code2));
+
+    if (VT_ABSTRACT != code1 && VT_ABSTRACT != code2) {
+        // no abstract objects involved
+        sh.valReplace(v2, v1);
+        dst.insert(sh);
+        return true;
+    }
+
+    // where did we get here from?
+    Trace::Node *trNode = sh.traceNode();
+
+    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(dst, proc, v1, v2))
+        // splice-out succeeded ... ls(v1, v2)
+        return true;
+
+    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(dst, proc, v2, v1))
+        // splice-out succeeded ... ls(v2, v1)
+        return true;
+
+    CL_DEBUG("failed to splice-out list segment, has to over-approximate");
+    trNode = new Trace::SpliceOutNode(trNode, /* failed */ 0);
+    trNode = new Trace::SpliceOutNode(trNode, /* failed */ 0);
+    sh.traceUpdate(trNode);
+    dst.insert(sh);
+    return false;
+}
+
 bool reflectCmpResult(
-        SymProc                    &proc,
+        SymState                   &dst,
+        SymProc                    &procSrc,
         const enum cl_binop_e       code,
         const bool                  branch,
         const TValId                v1,
         const TValId                v2)
 {
-    SymHeap &sh = proc.sh();
+    SymHeap &sh = procSrc.sh();
     CL_BREAK_IF(!protoCheckConsistency(sh));
+
+    // create a slave SymProc instance
+    SymProc proc(sh, procSrc.bt());
+    proc.setLocation(procSrc.lw());
 
     // resolve binary operator
     CmpOpTraits cTraits;
     if (!describeCmpOp(&cTraits, code))
-        return false;
+        goto fail;
 
     if (trimRangesIfPossible(sh, cTraits, branch, v1, v2))
-        return true;
+        goto done;
 
     if (branch == cTraits.negative) {
         if (!cTraits.preserveNeq)
-            return false;
+            goto fail;
 
         // introduce a Neq predicate over v1 and v2
         sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
     }
     else {
         if (!cTraits.preserveEq)
-            return false;
+            goto fail;
 
         // we have deduced that v1 and v2 is actually the same value
-
-        LeakMonitor lm(sh);
-        lm.enter();
-
-        TValList leakList;
-        sh.valMerge(v1, v2, &leakList);
-
-        if (lm.importLeakList(&leakList)) {
-            const struct cl_loc *loc = proc.lw();
-            CL_WARN_MSG(loc, "memory leak detected while removing a segment");
-            proc.printBackTrace(ML_WARN);
-        }
-
-        lm.leave();
+        return valMerge(dst, proc, v1, v2);
     }
 
+done:
     CL_BREAK_IF(!protoCheckConsistency(sh));
+    dst.insert(sh);
     return true;
+
+fail:
+    dst.insert(sh);
+    return false;
 }
 
 bool computeIntRngResult(
@@ -1870,9 +2051,9 @@ handle_int:
 template <int ARITY>
 void SymExecCore::execOp(const CodeStorage::Insn &insn) {
     // resolve lhs
+    ObjHandle lhs;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
-    const ObjHandle lhs = this->objByOperand(dst);
-    if (OBJ_DEREF_FAILED == lhs.objId())
+    if (!lhsFromOperand(&lhs, *this, dst))
         // error alredy emitted
         return;
 

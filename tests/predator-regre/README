@@ -757,6 +757,10 @@ Tests taken from Forester
 
     test-0215.c - test-0214 reduced to a minimal example showing a bug in killer
 
+    test-0238.c - regression test covering a fixed bug in the prover
+                - Predator response was unsound when comparing freed pointers
+                - contributed by Ondra Lengal
+
 
 Data reinterpretation
 =====================

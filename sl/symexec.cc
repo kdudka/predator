@@ -198,6 +198,7 @@ class SymExecEngine: public IStatsProvider {
         bool execInsn();
         bool execBlock();
         void processPendingSignals();
+        void pruneOrigin();
 
         void dumpStateMap();
 
@@ -318,32 +319,50 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
     }
 }
 
+bool isAnyAbstractOf(const SymHeapCore &sh, const TValId v1, const TValId v2) {
+    return isAbstract(sh.valTarget(v1))
+        || isAbstract(sh.valTarget(v2));
+}
+
 void SymExecEngine::updateStateInBranch(
-        SymHeap                     sh,
+        SymHeap                     shOrig,
         const bool                  branch,
         const CodeStorage::Insn    &insnCmp,
         const CodeStorage::Insn    &insnCnd,
         const TValId                v1,
         const TValId                v2)
 {
-    SymProc proc(sh, &bt_);
-    proc.setLocation(lw_);
+    SymHeapList dst;
+    SymProc procOrig(shOrig, &bt_);
+    procOrig.setLocation(lw_);
 
-    sh.traceUpdate(new Trace::CondNode(sh.traceNode()->parent(),
-                &insnCmp, &insnCnd, /* det */ false, branch));
+    // prepare trace node for a non-deterministic condition
+    Trace::waiveCloneOperation(shOrig);
+    Trace::Node *trCond = new Trace::CondNode(shOrig.traceNode(),
+                &insnCmp, &insnCnd, /* det */ false, branch);
 
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
-    if (!reflectCmpResult(proc, code, branch, v1, v2))
+    if (!reflectCmpResult(dst, procOrig, code, branch, v1, v2))
         CL_DEBUG_MSG(lw_, "XXX unable to reflect comparison result");
 
-    LDP_PLOT(nondetCond, sh);
+    // as of yet, we always get exactly one heap, although the API is generic
+    CL_BREAK_IF(1 != dst.size());
 
-    const unsigned targetIdx = !branch;
-    proc.killInsn(insnCmp);
-    proc.killPerTarget(insnCnd, targetIdx);
+    BOOST_FOREACH(SymHeap *sh, dst) {
+        sh->traceUpdate(trCond);
+#if DEBUG_SE_END_NOT_REACHED < 2
+        if (isAnyAbstractOf(shOrig, v1, v2))
+            LDP_PLOT(nondetCond, *sh);
+#endif
+        SymProc proc(*sh, &bt_);
+        proc.setLocation(lw_);
+        const unsigned targetIdx = !branch;
+        proc.killInsn(insnCmp);
+        proc.killPerTarget(insnCnd, targetIdx);
 
-    const CodeStorage::Block *target = insnCnd.targets[targetIdx];
-    this->updateState(sh, target);
+        const CodeStorage::Block *target = insnCnd.targets[targetIdx];
+        this->updateState(*sh, target);
+    }
 }
 
 bool isTrackableValue(const SymHeap &sh, const TValId val) {
@@ -479,10 +498,15 @@ void SymExecEngine::execCondInsn() {
         proc.printBackTrace(ML_WARN);
     }
 
-    std::ostringstream str;
-    str << "at-line-" << lw_->line;
-    LDP_INIT(nondetCond, str.str().c_str());
-    LDP_PLOT(nondetCond, sh);
+#if DEBUG_SE_END_NOT_REACHED < 2
+    if (isAnyAbstractOf(sh, v1, v2))
+#endif
+    {
+        std::ostringstream str;
+        str << "at-line-" << lw_->line;
+        LDP_INIT(nondetCond, str.str().c_str());
+        LDP_PLOT(nondetCond, sh);
+    }
 
     CL_DEBUG_MSG(lw_, "?T? CL_INSN_COND updates TRUE branch");
     this->updateStateInBranch(sh, true,  *insnCmp, *insnCnd, v1, v2);
@@ -565,16 +589,15 @@ bool /* complete */ SymExecEngine::execInsn() {
         nextLocalState_.clear();
     }
 
+    bool nextInsnIsCond = false;
     if (!isTerm) {
         CL_BREAK_IF(block_->size() <= insnIdx_);
 
         // look ahead for CL_INSN_COND
         const CodeStorage::Insn *nextInsn = block_->operator[](insnIdx_ + 1);
         if (CL_INSN_COND == nextInsn->code) {
-            // this is going to be handled in execCondInsn() right away
             CL_BREAK_IF(CL_INSN_BINOP != insn->code);
-            localState_.swap(nextLocalState_);
-            return true;
+            nextInsnIsCond = true;
         }
     }
 
@@ -594,6 +617,10 @@ bool /* complete */ SymExecEngine::execInsn() {
             // mark as processed now since it can be re-scheduled right away
             origin.setDone(heapIdx_);
         }
+
+        if (nextInsnIsCond)
+            // this is going to be handled in execCondInsn() right away
+            continue;
 
         if (1 < hCnt) {
             CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_
@@ -617,6 +644,9 @@ bool /* complete */ SymExecEngine::execInsn() {
         ++heapIdx_;
         return false;
     }
+
+    if (nextInsnIsCond)
+        localState_.swap(nextLocalState_);
 
     // completed execution of the given insn
     heapIdx_ = 0;
@@ -659,6 +689,9 @@ bool /* complete */ SymExecEngine::execBlock() {
             callResults_.clear();
             return false;
         }
+
+        if (!insnIdx_)
+            this->pruneOrigin();
 
         if (!nextLocalState_.size())
             // we ended up with an empty state already, jump to the end of bb
@@ -869,6 +902,48 @@ void SymExecEngine::processPendingSignals() {
         default:
             // time to finish...
             throw std::runtime_error("signalled to die");
+    }
+}
+
+void SymExecEngine::pruneOrigin() {
+#if SE_STATE_PRUNING_MODE
+    if (block_->isLoopEntry())
+#endif
+        // never prune loop entry, it would break the fixed-point computation
+        return;
+
+#if SE_STATE_PRUNING_MODE < 2
+    if (1 < block_->inbound().size())
+        // more than one incoming edges, keep this one
+        return;
+#endif
+
+    SymStateMarked &origin = stateMap_[block_];
+    SymHeapList tmp;
+
+    bool hit = false;
+
+    for (unsigned i = 0; i < origin.size(); ++i) {
+        if (origin.isDone(i))
+            hit = true;
+        else
+            tmp.insert(origin[i]);
+    }
+
+    if (!hit) {
+        CL_DEBUG_MSG(lw_, "SymExecEngine::pruneOrigin() failed to pack "
+                << block_->name());
+
+        CL_BREAK_IF(tmp.size() != origin.size());
+    }
+    else {
+        CL_DEBUG_MSG(lw_, "SymExecEngine::pruneOrigin() packed "
+                << block_->name() << ": "
+                << origin.size() << " -> "
+                <<  tmp.size());
+
+        CL_BREAK_IF(origin.size() <= tmp.size());
+        origin.swap(tmp);
     }
 }
 

@@ -140,6 +140,10 @@ void acToStream(std::ostream &out, const struct cl_accessor *ac, bool oneline) {
                 out << "CL_ACCESSOR_DEREF:";
                 break;
 
+            case CL_ACCESSOR_OFFSET:
+                out << "CL_ACCESSOR_OFFSET: offset = " << ac->data.offset.off << "B,";
+                break;
+
             case CL_ACCESSOR_ITEM: {
                 const struct cl_type_item *item = clt->items + ac->data.item.id;
                 out << "CL_ACCESSOR_ITEM: [+"
@@ -297,6 +301,13 @@ void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
                 str << "." << fieldName(ac);
                 break;
 
+            case CL_ACCESSOR_OFFSET:
+                str << "<";
+                if (0 <= ac->data.offset.off)
+                    str << "+";
+                str << ac->data.offset.off << ">";
+                break;
+
             case CL_ACCESSOR_REF:
                 if (!ac->next)
                     // already handled
@@ -345,6 +356,10 @@ void operandToStreamVar(std::ostream &str, const struct cl_operand &op) {
 void operandToStream(std::ostream &str, const struct cl_operand &op) {
     const enum cl_operand_e code = op.code;
     switch (code) {
+        case CL_OPERAND_VOID:
+            str << "void";
+            break;
+
         case CL_OPERAND_CST:
             operandToStreamCst(str, op);
             break;
@@ -353,13 +368,8 @@ void operandToStream(std::ostream &str, const struct cl_operand &op) {
             operandToStreamVar(str, op);
             break;
 
-        case CL_OPERAND_VOID:
-            // this should have been handled elsewhere
         default:
-#ifndef NDEBUG
-            CL_TRAP;
-#endif
-            break;
+            CL_BREAK_IF("operandToStream() got an invalid operand");
     }
 }
 
@@ -516,4 +526,41 @@ void insnToStream(std::ostream &str, const CodeStorage::Insn &insn) {
             }
             break;
     }
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// These are handy when inspecting something from gdb...
+
+using std::cout;
+
+void cl_dump(const struct cl_type *clt) {
+    cltToStream(cout, clt, /* depth */ 3U);
+}
+
+void cl_dump(const struct cl_type *clt, unsigned depth) {
+    cltToStream(cout, clt, depth);
+}
+
+void cl_dump(const struct cl_accessor *ac) {
+    acToStream(cout, ac, /* oneline */ false);
+}
+
+void cl_dump(const struct cl_accessor &ac) {
+    cl_dump(&ac);
+}
+
+void cl_dump(const struct cl_operand &op) {
+    cout << op << "\n";
+}
+
+void cl_dump(const struct cl_operand *op) {
+    cl_dump(*op);
+}
+
+void cl_dump(const struct CodeStorage::Insn &insn) {
+    cout << insn << "\n";
+}
+
+void cl_dump(const struct CodeStorage::Insn *insn) {
+    cl_dump(*insn);
 }

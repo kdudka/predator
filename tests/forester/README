@@ -1,0 +1,79 @@
+Singly-linked lists
+===================
+
+    sll-rev.c             - reversal of singly-linked lists
+
+    sll-delete.c          - non-deterministic removal of an element from a
+                            singly-linked list
+ 
+    sll-bublesort.c       - bubble sort on singly-linked lists
+
+    sll-insertsort.c      - insert sort on singly-linked lists
+    
+    sll-mergesort.c       - merge sort on singly-linked lists
+
+    sll-headptr.c         - singly linked list in which each element points to
+                            its head
+
+    test-0080.c           - demonstration of Linux kernel style singly-linked
+                            lists
+
+    test-124.inline.c     - another version of merge sort on singly linked lists
+
+Doubly-linked lists
+===================
+
+    cdll.c                - demonstration of a cyclic doubly-linked list
+
+    dll-insert.c          - nondeterministic insertion of an element into
+                            a doubly-linked list
+
+    dll-rev.c             - reversal of doubly-linked lists
+
+    dll-insertsort.c      - insert sort on doubly-linked lists
+    
+    dll-insertsort_v2.c   - insert sort on doubly-linked lists
+
+Mixed lists
+============
+
+    test-0061.c           - conversion of a singly-linked list into a doubly-linked
+                            list and back (not working by default)
+
+    test-0113.c           - degenerated tree having only leftmost and rightmost
+                            branches (not working by default)
+
+    test-0128.c           - nested singly-linked lists; sublists have either 0 or
+                            1 element
+
+    sll-listofclists.c    - cyclic singly-linked lists nested within an ordinary
+                            singly-linked list
+
+    dll-listoflists.c     - demonstration of nested doubly-linked lists
+
+Trees
+=====
+
+    dfs.c                 - depth-first traversal of a binary tree
+
+    dsw.c                 - Deutsch-Schorr-Waite tree traversal
+
+    treecons.c            - construction and destruction of a binary tree
+
+    tree_stack.c          - destruction of a tree using stack
+
+    tree_traversal.c      - demonstration of a tree with parent pointers
+
+    rb_insert_rebalance.c - insertion into RB tree (not yet working)
+
+Miscellaneous
+=============
+
+    recursion.c           - demonstration of simple recursion on a singly linked
+                            list
+
+    test_skip_list_2.c    - 2-level (1 skipping layer) skip list
+
+    test_skip_list_3.c    - 3-level (2 skipping layer) skip list (not working
+                            by default)
+

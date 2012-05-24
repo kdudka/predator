@@ -36,7 +36,7 @@ cppcheck: all
 		--template gcc -j5 .
 
 version_cl.h:
-	@if test -d ../.git; then \
+	@if test -e ../.git; then \
 		printf "#define CL_GIT_SHA1 \"%s\"\n" \
 			`git log -1 | head -1 | cut -f2 -d" "` \
 			> $@.tmp \
@@ -45,7 +45,7 @@ version_cl.h:
 		fi
 
 clean:
-	if test -d ../.git; then rm -f version_cl.h; fi
+	if test -e ../.git; then rm -f version_cl.h; fi
 	if test -e ../cl_build/Makefile; then $(MAKE) clean -C ../cl_build; fi
 
 distclean: clean

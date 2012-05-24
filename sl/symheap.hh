@@ -773,9 +773,6 @@ class SymHeap: public SymHeapCore {
         /// set the given abstract object to be a concrete object (drops props)
         void valTargetSetConcrete(TValId root);
 
-        /// assume that v1 and v2 are equal (may trigger segment removal)
-        void valMerge(TValId v1, TValId v2, TValList *leakList = 0);
-
         /// read the minimal segment length of the given abstract object
         TMinLen segMinLength(TValId seg) const;
 

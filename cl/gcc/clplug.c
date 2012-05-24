@@ -536,15 +536,23 @@ static void dig_fnc_type(struct cl_type *clt, tree t)
 
     // dig arg types
     for (t = TYPE_ARG_TYPES(t); t; t = TREE_CHAIN(t)) {
-        tree val = TREE_VALUE(t);
-        CL_BREAK_IF(NULL_TREE == val);
+        tree type = TREE_VALUE(t);
+        if ((1 < clt->item_cnt) && VOID_TYPE == TREE_CODE(type)) {
+#ifndef NDEBUG
+            // check there is no non-void type in the chain
+            while ((t = TREE_CHAIN(t)))
+                CL_BREAK_IF(VOID_TYPE != TREE_CODE(TREE_VALUE(t)));
+#endif
+            // for some reason, GCC gives us some trailing void types, drop them
+            break;
+        }
 
         // TODO: chunk allocation ?
         clt->items = CL_RESIZEVEC(struct cl_type_item, clt->items,
                                   clt->item_cnt + 1);
 
         struct cl_type_item *item = &clt->items[clt->item_cnt ++];
-        item->type = /* recursion */ add_bare_type_if_needed(val);
+        item->type = /* recursion */ add_bare_type_if_needed(type);
         item->name = NULL;
     }
 }
@@ -1069,28 +1077,28 @@ static void handle_accessor_indirect_ref(struct cl_accessor **ac, tree *pt)
     tree op0 = TREE_OPERAND(t, 0);
 
     if (ADDR_EXPR == TREE_CODE(op0)) {
-        // EXPERIMENTAL: needed for gcc 4.7.x to keep Predator going
-        const tree type = TREE_TYPE(TREE_OPERAND(op0, 0));
-        const enum tree_code code = TREE_CODE(type);
-        switch (code) {
-            case ARRAY_TYPE:
-                handle_accessor_array_ref(ac, t);
-                (*ac)->type = add_bare_type_if_needed(type);
-                *pt = op0;
-                return;
-
-            case RECORD_TYPE:
-                // TODO: write a gcc 4.7.x adapter for legacy analyzers
-
-            default:
-                CL_WARN_UNHANDLED_EXPR(t, "node sequence added in gcc 4.7.x");
-                CL_BREAK_IF("this will need some additional debugging");
-                return;
-        }
+        // optimize out the sequence of REF/DEREF that would confuse Predator
+        *pt = op0;
+        return;
     }
 
     chain_accessor(ac, CL_ACCESSOR_DEREF);
     (*ac)->type = add_type_if_needed(op0);
+}
+
+static void handle_accessor_offset(struct cl_accessor **ac, tree t)
+{
+    const int off = TREE_INT_CST_LOW(TREE_OPERAND(t, 1));
+    if (!off)
+        return;
+
+    tree op0 = TREE_OPERAND(t, 0);
+    if (ADDR_EXPR == TREE_CODE(op0))
+        t = op0;
+
+    chain_accessor(ac, CL_ACCESSOR_OFFSET);
+    (*ac)->type            = operand_type_lookup(t);
+    (*ac)->data.offset.off = off;
 }
 
 static void handle_accessor_component_ref(struct cl_accessor **ac, tree t)
@@ -1125,9 +1133,11 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
             handle_accessor_array_ref(ac, t);
             break;
 
+        // MEM_REF appeared after 4.5.0
 #ifdef MEM_REF_CHECK
         case MEM_REF:
-            // MEM_REF appeared after 4.5.0 (should be equal to INDIRECT_REF)
+            handle_accessor_offset(ac, t);
+            // fall through!
 #endif
         case INDIRECT_REF:
             handle_accessor_indirect_ref(ac, &t);
