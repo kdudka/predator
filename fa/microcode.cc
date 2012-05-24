@@ -608,10 +608,10 @@ struct DumpCtx {
 			i != data.d_struct->end(); ++i)
 			tmp.insert(make_pair(i->first, i->second));
 
-		for (CodeStorage::TVarSet::const_iterator i = cd.ctx.fnc.vars.begin();
-			i != cd.ctx.fnc.vars.end(); ++i) {
+		for (CodeStorage::TVarSet::const_iterator i = cd.ctx.GetFnc().vars.begin();
+			i != cd.ctx.GetFnc().vars.end(); ++i) {
 
-			const CodeStorage::Var& var = cd.ctx.fnc.stor->vars[*i];
+			const CodeStorage::Var& var = cd.ctx.GetFnc().stor->vars[*i];
 
 			SymCtx::var_map_type::const_iterator j = cd.ctx.varMap.find(var.uid);
 			assert(j != cd.ctx.varMap.end());

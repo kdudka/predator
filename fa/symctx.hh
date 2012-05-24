@@ -233,7 +233,8 @@ public:   // static methods
 		}
 	}
 
-	const CodeStorage::Fnc& fnc;
+	const CodeStorage::Fnc& fnc_;
+
 
 	/**
 	 * @brief  The layout of stack frames
@@ -280,7 +281,7 @@ public:   // methods
 	 *                  created
 	 */
 	SymCtx(const CodeStorage::Fnc& fnc) :
-		fnc(fnc), regCount(2), argCount(0)
+		fnc_(fnc), regCount(2), argCount(0)
 	{
 		// pointer to previous stack frame
 		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
@@ -290,9 +291,9 @@ public:   // methods
 
 		size_t offset = ABP_SIZE + RET_SIZE;
 
-		for (auto& funcVar : fnc.vars)
+		for (auto& funcVar : fnc_.vars)
 		{	// for each variable in the function
-			const CodeStorage::Var& var = fnc.stor->vars[funcVar];
+			const CodeStorage::Var& var = fnc_.stor->vars[funcVar];
 
 			switch (var.code) {
 				case CodeStorage::EVar::VAR_LC:
@@ -318,6 +319,12 @@ public:   // methods
 			}
 		}
 	}
+
+	const CodeStorage::Fnc& GetFnc() const
+	{
+		return fnc_;
+	}
+
 };
 
 #endif
