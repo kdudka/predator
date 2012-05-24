@@ -1893,9 +1893,9 @@ protected:
 		// get context
 		curCtx_ = &fncInfo.first;
 
-		if (assembly_->regFileSize_ < curCtx_->regCount)
+		if (assembly_->regFileSize_ < curCtx_->GetRegCount())
 		{	// allocate the necessary number of registers
-			assembly_->regFileSize_ = curCtx_->regCount;
+			assembly_->regFileSize_ = curCtx_->GetRegCount();
 		}
 
 		if (assembly_->regFileSize_ < (curCtx_->argCount + 2))

@@ -247,7 +247,7 @@ public:   // static methods
 	/// The map of identifiers of variables to @p VarInfo
 	var_map_type varMap;
 
-	size_t regCount;
+	size_t regCount_;
 	size_t argCount;
 
 	bool isReg(const cl_operand* op, size_t& id) const {
@@ -281,7 +281,7 @@ public:   // methods
 	 *                  created
 	 */
 	SymCtx(const CodeStorage::Fnc& fnc) :
-		fnc_(fnc), regCount(2), argCount(0)
+		fnc_(fnc), regCount_(2), argCount(0)
 	{
 		// pointer to previous stack frame
 		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
@@ -299,7 +299,7 @@ public:   // methods
 				case CodeStorage::EVar::VAR_LC:
 					if (!SymCtx::isStacked(var)) {
 						this->varMap.insert(
-							std::make_pair(var.uid, VarInfo::createInReg(this->regCount++))
+							std::make_pair(var.uid, VarInfo::createInReg(regCount_++))
 						);
 						break;
 					}
@@ -318,6 +318,11 @@ public:   // methods
 					assert(false);
 			}
 		}
+	}
+
+	size_t GetRegCount() const
+	{
+		return regCount_;
 	}
 
 	const CodeStorage::Fnc& GetFnc() const
