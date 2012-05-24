@@ -41,11 +41,24 @@
 
 struct SymCtx {
 
-	// must be initialized externally!
+	// must be initialised externally!
+
+	/// The size of a data pointer in the analysed program
 	static int size_of_data;
+
+	/// The size of a code pointer in the analysed program
 	static int size_of_code;
 
-	// initialize size_of_void
+	/**
+	 * @brief  Initialise the symbolic context
+	 *
+	 * This static method needs to be called before the @p SymCtx structure is
+	 * used for the first time. It properly initialises static members of the
+	 * structure from the passed @p CodeStorage.
+	 *
+	 * @param[in]  stor  The @p CodeStorage from which the context is to be
+	 *                   initialised
+	 */
 	static void initCtx(const CodeStorage::Storage& stor) {
 		size_of_code = stor.types.codePtrSizeof();
 		if (size_of_code == -1)
@@ -57,8 +70,22 @@ struct SymCtx {
 
 	const CodeStorage::Fnc& fnc;
 
+	/**
+	 * @brief  The layout of stack frames
+	 *
+	 * The layout of stack frames (one stack frame corresponds to one structure
+	 * with selectors.
+	 */
 	std::vector<SelData> sfLayout;
 
+	/**
+	 * @brief  Structure with run-time information about variable's location
+	 *
+	 * This structure contains information about the location of a variable, i.e.
+	 * whether it is on a stack or in some register, and also the offset from the
+	 * base pointer of the corresponding stack frame (in case it is on a stack),
+	 * or the index of the register (in case it is therein).
+	 */
 	class VarInfo
 	{
 	private:  // data members 
@@ -87,7 +114,25 @@ struct SymCtx {
 
 	public:   // methods
 
+		/**
+		 * @brief  Checks whether the variable is on the stack
+		 *
+		 * This method returns a Boolean value meaning whether the variable is on
+		 * the stack.
+		 *
+		 * @returns  @p true in case the variable is on the stack, @p false
+		 *           otherwise
+		 */
 		bool isOnStack() const { return isStack_;}
+
+		/**
+		 * @brief  Returns the stack offset of the variable
+		 *
+		 * This method returns the offset of the variable from the stack frame base
+		 * pointer (for variables which are on the stack).
+		 *
+		 * @returns  The offset of the variable from the stack frame base pointer
+		 */
 		size_t getStackOffset() const
 		{
 			// Assertions
@@ -96,6 +141,14 @@ struct SymCtx {
 			return stackOffset_;
 		}
 
+		/**
+		 * @brief  Returns the index of the register of the variable
+		 *
+		 * This method returns the index of the register in which there is the
+		 * variable (for variables which are in registers).
+		 *
+		 * @returns  The index of the register in which the variable is
+		 */
 		size_t getRegIndex() const
 		{
 			// Assertions
@@ -104,25 +157,60 @@ struct SymCtx {
 			return regIndex_;
 		}
 
+		/**
+		 * @brief  Static method creating a variable on a stack
+		 *
+		 * This static method creates a new variable on a stack at given @p offset
+		 * from the base pointer of the stack frame.
+		 *
+		 * @param[in]  offset  The offset of the variable in the given stack frame
+		 *
+		 * @returns  New @p VarInfo structure for the variable
+		 */
 		static VarInfo createOnStack(size_t offset)
 		{
 			return VarInfo(true, offset);
 		}
 
+		/**
+		 * @brief  Static method creating a variable in a register
+		 *
+		 * This static method creates a new variable in the register with given @p
+		 * index.
+		 *
+		 * @param[in]  index  Index of the register in which the variable is stored
+		 *
+		 * @returns  New @p VarInfo structure for the variable
+		 */
 		static VarInfo createInReg(size_t index)
 		{
 			return VarInfo(false, index);
 		}
 	};
 
-	// uid -> stack x offset/index
+	/**
+	 * @brief  The type that maps identifiers of variables to @p VarInfo
+	 *
+	 * This type serves as a map between identifiers of variables and @p VarInfo
+	 * structures.
+	 */
 	typedef std::unordered_map<int, VarInfo> var_map_type;
 
+	/// The map of identifiers of variables to @p VarInfo
 	var_map_type varMap;
 
 	size_t regCount;
 	size_t argCount;
 
+	/**
+	 * @brief  A constructor of a symbolic context for given function
+	 *
+	 * This is a constructor that creates a new symbolic context for given
+	 * function.
+	 *
+	 * @param[in]  fnc  The function for which the symbolic context is to be
+	 *                  created
+	 */
 	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(2), argCount(0) {
 
 		// pointer to previous stack frame
