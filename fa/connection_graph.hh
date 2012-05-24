@@ -723,9 +723,9 @@ public:
 
 			changed = false;
 
-			for (auto i = transitions.begin(); i != transitions.end(); ++i) {
+			for (auto it = transitions.begin(); it != transitions.end(); ++it) {
 
-				const TT<label_type>& t = **i;
+				const TT<label_type>& t = **it;
 
 				assert(t.label()->isNode());
 
