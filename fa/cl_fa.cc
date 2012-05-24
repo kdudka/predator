@@ -70,7 +70,8 @@ struct Config {
 	}
 
 };
-/*
+
+#if 0
 struct BoxDb {
 
 	std::unordered_map<std::string, std::string> store;
@@ -93,62 +94,70 @@ struct BoxDb {
 	}
 
 };
-*/
-void clEasyRun(const CodeStorage::Storage& stor, const char* configString) {
+#endif
 
+void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
+{
 	ssd::ColorConsole::enableForTerm(STDERR_FILENO);
+
 #ifdef I_DONT_NEED_REPRODUCIBLE_RUNS_OF_FORESTER
 	// initialize random numbers
 	srandom(time(NULL));
 #endif
-    using namespace CodeStorage;
+
+	using namespace CodeStorage;
 
 	CL_DEBUG("config: " << configString);
 
-    // look for main() by name
-    CL_DEBUG("looking for 'main()' at gl scope...");
-    const NameDb::TNameMap &glNames = stor.fncNames.glNames;
-    const NameDb::TNameMap::const_iterator iter = glNames.find("main");
-    if (glNames.end() == iter) {
-        CL_ERROR("main() not found at global scope");
-        return;
-    }
+	// look for main() by name
+	CL_DEBUG("looking for 'main()' at global scope...");
+	const NameDb::TNameMap &glNames = stor.fncNames.glNames;
+	const NameDb::TNameMap::const_iterator iter = glNames.find("main");
+	if (glNames.end() == iter) {
+		CL_ERROR("main() not found at global scope");
+		return;
+	}
 
 	// initialize context
 	SymCtx::initCtx(stor);
 
-    // look for definition of main()
-    const FncDb &fncs = stor.fncs;
-    const Fnc *main = fncs[iter->second];
-    if (!main || !isDefined(*main)) {
-        CL_ERROR("main() not defined");
-        return;
-    }
+	// look for definition of main()
+	const FncDb &fncs = stor.fncs;
+	const Fnc *main = fncs[iter->second];
+	if (!main || !isDefined(*main)) {
+		CL_ERROR("main() not defined");
+		return;
+	}
 
-    CL_DEBUG("starting verification stuff ...");
-    try {
+	CL_DEBUG("starting verification stuff ...");
+	try
+	{
 		signal(SIGUSR1, setDbgFlag);
 		se.loadTypes(stor);
-/*		Config c(configString);
+/*
+		Config c(configString);
 		if (!c.dbRoot.empty()){
 			BoxDb db(c.dbRoot, "index");
 			se.loadBoxes(db.store);
-		}*/
+		}
+*/
 		se.compile(stor, *main);
 		se.run();
 		CL_NOTE("the program is safe ...");
-	} catch (const ProgramError& e) {
+	} catch (const ProgramError& e)
+	{
 		if (e.location())
 			CL_ERROR_MSG(e.location(), e.what());
 		else
 			CL_ERROR(e.what());
-	} catch (const NotImplementedException& e) {
+	} catch (const NotImplementedException& e)
+	{
 		if (e.location())
 			CL_ERROR_MSG(e.location(), "not implemented: " + std::string(e.what()));
 		else
 			CL_ERROR("not implemented: " + std::string(e.what()));
-	} catch (const std::exception& e) {
+	} catch (const std::exception& e)
+	{
 		CL_ERROR(e.what());
 	}
-
 }
