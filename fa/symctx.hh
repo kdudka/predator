@@ -133,9 +133,9 @@ struct SymCtx {
 
 		size_t offset = ABP_SIZE + RET_SIZE;
 
-		for (CodeStorage::TVarSet::const_iterator i = fnc.vars.begin(); i != fnc.vars.end(); ++i) {
-
-			const CodeStorage::Var& var = fnc.stor->vars[*i];
+		for (auto& funcVar : fnc.vars)
+		{	// for each variable in the function
+			const CodeStorage::Var& var = fnc.stor->vars[funcVar];
 
 			switch (var.code) {
 				case CodeStorage::EVar::VAR_LC:

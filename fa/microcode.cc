@@ -594,9 +594,10 @@ struct DumpCtx {
 
 		std::vector<size_t> offs;
 
-		for (std::vector<SelData>::const_iterator i = cd.ctx.sfLayout.begin();
-			i != cd.ctx.sfLayout.end(); ++i)
-			offs.push_back((*i).offset);
+		for (auto& selData : cd.ctx.sfLayout)
+		{
+			offs.push_back(selData.offset);
+		}
 
 		Data data;
 

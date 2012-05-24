@@ -102,7 +102,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 
 #ifdef I_DONT_NEED_REPRODUCIBLE_RUNS_OF_FORESTER
 	// initialize random numbers
-	srandom(time(NULL));
+	srandom(time(nullptr));
 #endif
 
 	using namespace CodeStorage;
