@@ -41,42 +41,12 @@
 
 struct SymCtx {
 
-	// must be initialised externally!
+public:   // data types
 
-	/// The size of a data pointer in the analysed program
-	static int size_of_data;
 
-	/// The size of a code pointer in the analysed program
-	static int size_of_code;
+	/// Stack frame layout
+	typedef std::vector<SelData> StackFrameLayout;
 
-	/**
-	 * @brief  Initialise the symbolic context
-	 *
-	 * This static method needs to be called before the @p SymCtx structure is
-	 * used for the first time. It properly initialises static members of the
-	 * structure from the passed @p CodeStorage.
-	 *
-	 * @param[in]  stor  The @p CodeStorage from which the context is to be
-	 *                   initialised
-	 */
-	static void initCtx(const CodeStorage::Storage& stor) {
-		size_of_code = stor.types.codePtrSizeof();
-		if (size_of_code == -1)
-			size_of_code = sizeof(void(*)());
-		size_of_data = stor.types.dataPtrSizeof();
-		if (size_of_data == -1)
-			size_of_data = sizeof(void*);
-	}
-
-	const CodeStorage::Fnc& fnc;
-
-	/**
-	 * @brief  The layout of stack frames
-	 *
-	 * The layout of stack frames (one stack frame corresponds to one structure
-	 * with selectors.
-	 */
-	std::vector<SelData> sfLayout;
 
 	/**
 	 * @brief  Structure with run-time information about variable's location
@@ -188,6 +158,47 @@ struct SymCtx {
 		}
 	};
 
+
+	// must be initialised externally!
+
+	/// The size of a data pointer in the analysed program
+	static int size_of_data;
+
+	/// The size of a code pointer in the analysed program
+	static int size_of_code;
+
+
+public:   // static methods
+
+	/**
+	 * @brief  Initialise the symbolic context
+	 *
+	 * This static method needs to be called before the @p SymCtx structure is
+	 * used for the first time. It properly initialises static members of the
+	 * structure from the passed @p CodeStorage.
+	 *
+	 * @param[in]  stor  The @p CodeStorage from which the context is to be
+	 *                   initialised
+	 */
+	static void initCtx(const CodeStorage::Storage& stor) {
+		size_of_code = stor.types.codePtrSizeof();
+		if (size_of_code == -1)
+			size_of_code = sizeof(void(*)());
+		size_of_data = stor.types.dataPtrSizeof();
+		if (size_of_data == -1)
+			size_of_data = sizeof(void*);
+	}
+	const CodeStorage::Fnc& fnc;
+
+
+	/**
+	 * @brief  The layout of stack frames
+	 *
+	 * The layout of stack frames (one stack frame corresponds to one structure
+	 * with selectors.
+	 */
+	StackFrameLayout sfLayout;
+
 	/**
 	 * @brief  The type that maps identifiers of variables to @p VarInfo
 	 *
@@ -202,6 +213,36 @@ struct SymCtx {
 	size_t regCount;
 	size_t argCount;
 
+	static bool isStacked(const CodeStorage::Var& var) {
+		switch (var.code) {
+			case CodeStorage::EVar::VAR_FNC_ARG: return true;
+			case CodeStorage::EVar::VAR_LC: return !var.name.empty();
+			case CodeStorage::EVar::VAR_GL: return false;
+			default: return false;
+		}
+	}
+
+	bool isReg(const cl_operand* op, size_t& id) const {
+		if (op->code != cl_operand_e::CL_OPERAND_VAR)
+			return false;
+		var_map_type::const_iterator i = this->varMap.find(varIdFromOperand(op));
+		assert(i != this->varMap.end());
+		if (i->second.isOnStack())
+			return false;
+		id = i->second.isOnStack();
+		return true;
+	}
+
+	const VarInfo& getVarInfo(size_t id) const {
+		var_map_type::const_iterator i = this->varMap.find(id);
+		assert(i != this->varMap.end());
+		return i->second;
+	}
+
+
+public:   // methods
+
+
 	/**
 	 * @brief  A constructor of a symbolic context for given function
 	 *
@@ -211,8 +252,9 @@ struct SymCtx {
 	 * @param[in]  fnc  The function for which the symbolic context is to be
 	 *                  created
 	 */
-	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(2), argCount(0) {
-
+	SymCtx(const CodeStorage::Fnc& fnc) :
+		fnc(fnc), regCount(2), argCount(0)
+	{
 		// pointer to previous stack frame
 		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
 
@@ -252,31 +294,6 @@ struct SymCtx {
 
 	}
 
-	static bool isStacked(const CodeStorage::Var& var) {
-		switch (var.code) {
-			case CodeStorage::EVar::VAR_FNC_ARG: return true;
-			case CodeStorage::EVar::VAR_LC: return !var.name.empty();
-			case CodeStorage::EVar::VAR_GL: return false;
-			default: return false;
-		}
-	}
-
-	bool isReg(const cl_operand* op, size_t& id) const {
-		if (op->code != cl_operand_e::CL_OPERAND_VAR)
-			return false;
-		var_map_type::const_iterator i = this->varMap.find(varIdFromOperand(op));
-		assert(i != this->varMap.end());
-		if (i->second.isOnStack())
-			return false;
-		id = i->second.isOnStack();
-		return true;
-	}
-
-	const VarInfo& getVarInfo(size_t id) const {
-		var_map_type::const_iterator i = this->varMap.find(id);
-		assert(i != this->varMap.end());
-		return i->second;
-	}
 /*
 	struct Dump {
 
