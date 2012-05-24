@@ -114,7 +114,18 @@ bool handleBuiltIn(
     return false;
 }
 
-void killVars(TState &state, const TInsn insn, const TKillList &kList) {
+bool isLocalUid(PerFncData &data, int uid) {
+    if (!hasKey(data.fnc->vars, uid))
+        return false;
+    return (data.fnc->stor->vars[uid].code != CodeStorage::VAR_GL);
+}
+
+void killVars(
+        TState                         &state,
+        PerFncData                     &data,
+        const TInsn                     insn,
+        const TKillList                &kList)
+{
     BOOST_FOREACH(const CodeStorage::KillVar &kv, kList) {
         if (kv.onlyIfNotPointed)
             // TODO: try all possibilities?
@@ -123,6 +134,13 @@ void killVars(TState &state, const TInsn insn, const TKillList &kList) {
         const int uid = kv.uid;
         if (1 == state.erase(uid))
             // successfully killed a variable
+            continue;
+
+        if (!isLocalUid(data, uid))
+            // Just skip non-local uids (which are killed just due to points-to
+            // analysis).  We are !not! checking whether the uid is live
+            // variable.
+            // FIXME: some smarter solution should be involved
             continue;
 
         CL_DEBUG_MSG(&insn->loc, "attempt to kill a dead variable: "
@@ -139,7 +157,7 @@ void updateTargets(
     for (unsigned target = 0; target < tList.size(); ++target) {
         // kill variables per-target
         TState state(origin);
-        killVars(state, insn, insn->killPerTarget[target]);
+        killVars(state, data, insn, insn->killPerTarget[target]);
 
         // resolve the target block
         const TBlock bb = tList[target];
@@ -169,7 +187,7 @@ void updateBlock(PerFncData &data, const TBlock bb) {
                 state.insert(varIdFromOperand(&op));
 
         // then kill all variables suggested by varKiller
-        killVars(state, insn, insn->varsToKill);
+        killVars(state, data, insn, insn->varsToKill);
 
         // if this is a terminal instruction, update all targets
         updateTargets(data, insn, state);
