@@ -1,0 +1,30 @@
+#!/bin/bash
+
+function die()
+{
+    echo $@ >&2
+    exit 2
+}
+
+rm -rf dot/*
+mkdir -p dot
+
+./ptgccv $@ || die "bad compilation"
+
+echo plotting
+
+cat $@
+
+cp *.dot dot
+
+pushd dot
+
+for i in `ls -1 | grep .dot$`; do
+    name=`basename $i .dot`
+    echo translating $name
+    dot -Tpng $i > $name.png
+done
+
+popd
+
+rm *.dot
