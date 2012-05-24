@@ -24,6 +24,7 @@
 
 #include <map>
 #include <set>
+#include <list>
 #include <string>
 #include <vector>
 
@@ -618,6 +619,113 @@ namespace CallGraph {
     struct Node;
 }
 
+class Fnc;
+
+namespace PointsTo {
+
+class Node;
+
+typedef enum {
+    PT_ITEM_VAR = 0,
+    PT_ITEM_RET,
+    PT_ITEM_MALLOC
+} ItemCodeE;
+
+class Item {
+    public:
+        Item(ItemCodeE);
+        Item(const Var *v);
+
+        bool isGlobal() const;
+        int uid() const;
+        const char *name() const;
+        /**
+         * return CodeStorage::Var pointer if the item represents PT_ITEM_VAR
+         * variable, otherwise return NULL.
+         */
+        const Var *var() const;
+
+    public:
+        ItemCodeE code;
+
+        union {
+            // NULL for black-hole
+            const Var *var;
+            // valid only for ITEM_RET
+            const Fnc *fnc;
+            // valid only for PT_ITEM_MALLOC
+            int mallocId;
+        } data;
+
+    private:
+        Item();
+};
+
+typedef std::set<const Item *>  TItemList;
+typedef std::set<Node *>        TNodeList;
+
+class Node {
+    public:
+        Node();
+       ~Node();
+
+    public:
+        /// list of variables assigned to the node
+        TItemList                       variables;
+        /// out-edges edges are stored inside
+        TNodeList                       outNodes;
+        /// in-edges are just 'synced' pointers
+        TNodeList                       inNodes;
+        /// there should be only one black-hole / graph
+        bool                            isBlackHole;
+};
+
+// In some types of PT-graphs (e.g. graph constructed by FICS algorithm) we can
+// expect that one variable may be placed at most in one node of graph
+// structure -- actual implementation covers this situation.
+// FIXME: this should be generalized for graphs where the same variable may be
+//        placed in more than one node of points-to graph.
+typedef std::map<int, Node *> TMap;
+
+class Graph {
+    public:
+        Graph(Fnc *fnc_ = 0) :
+            fnc(fnc_),
+            blackHole(0)
+        {
+        }
+
+    public:
+        /// map variable uid to Item object
+        std::map<int, const Item *>     uidToItem;
+        /// map item uid to concrete node
+        TMap                            map;
+        /// backward reference to FncDb (NULL for global graph)
+        Fnc                            *fnc;
+        /// shortcuts to global variables occurring in this graph
+        TItemList                       globals;
+        /// has this graph only one all-variables eating node?
+        const Node                     *blackHole;
+};
+
+class GlobalData {
+    public:
+        /// graph corresponding to global variables
+        Graph                   gptg;
+        /// points-to build status
+        bool                    dead;
+
+    public:
+        GlobalData() :
+            dead(false)
+        {
+        }
+};
+
+bool isDead(const GlobalData &);
+
+} // namespace PoinstTo
+
 /**
  * function definition
  */
@@ -627,10 +735,12 @@ struct Fnc {
     TVarSet                     vars;   ///< uids of variables used by the fnc
     TArgByPos                   args;   ///< args uid addressed by arg position
     ControlFlow                 cfg;    ///< fnc code as control flow graph
+    PointsTo::Graph             ptg;    ///< points-to graph
     CallGraph::Node            *cgNode; ///< pointer to call-graph node or NULL
 
     Fnc():
         stor(0),
+        ptg(this),
         cgNode(0)
     {
         def.code = CL_OPERAND_VOID;
@@ -764,6 +874,7 @@ struct Storage {
     NameDb                      varNames;   ///< var names lookup container
     NameDb                      fncNames;   ///< fnc names lookup container
     CallGraph::Graph            callGraph;  ///< call graph globals
+    PointsTo::GlobalData        ptd;        ///< global PT-info
 };
 
 } // namespace CodeStorage

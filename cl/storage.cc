@@ -380,6 +380,100 @@ bool Block::isLoopEntry() const
     return false;
 }
 
+
+// /////////////////////////////////////////////////////////////////////////////
+// PointsTo implementation
+
+namespace PointsTo {
+
+bool isDead(const GlobalData &data) {
+    return data.dead;
+}
+
+Item::Item() :
+    code(PT_ITEM_VAR)
+{
+    data.var = 0;
+}
+
+Item::Item(ItemCodeE code_) :
+    code(code_)
+{
+}
+
+Item::Item(const Var *v) :
+    code(PT_ITEM_VAR)
+{
+    data.var = v;
+}
+
+bool Item::isGlobal() const
+{
+    switch (code) {
+        case PT_ITEM_MALLOC:
+            return true;
+        case PT_ITEM_VAR:
+            return data.var->code == VAR_GL;
+        default:
+            return false;
+    }
+}
+
+int Item::uid() const
+{
+    switch (code) {
+        case PT_ITEM_VAR:
+            return data.var->uid;
+        case PT_ITEM_RET:
+            // Just for now! -- this should be safe
+            return data.fnc->def.data.cst.data.cst_fnc.uid;
+        case PT_ITEM_MALLOC:
+            return data.mallocId;
+    }
+    return 0;
+}
+
+const char *Item::name() const
+{
+    std::stringstream name;
+    switch (code) {
+        case PT_ITEM_VAR:
+            name << data.var->uid << ":" << data.var->name;
+            break;
+        case PT_ITEM_RET:
+            name << "fnc:" << nameOf(*data.fnc);
+            break;
+        case PT_ITEM_MALLOC:
+            name << "heap_" << -data.mallocId;
+    }
+
+#define __nameRet_MAX_LEN 1024
+    static char nameRet[__nameRet_MAX_LEN];
+    nameRet[__nameRet_MAX_LEN - 1] = 0;
+    strncpy(nameRet, name.str().c_str(), __nameRet_MAX_LEN -1);
+
+    return nameRet;
+}
+
+const Var *Item::var() const
+{
+    if (code != PT_ITEM_VAR)
+        return 0;
+
+    return data.var;
+}
+
+Node::Node():
+    isBlackHole(false)
+{
+}
+
+Node::~Node()
+{
+}
+
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // ControlFlow implementation
 struct ControlFlow::Private {

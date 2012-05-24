@@ -63,6 +63,16 @@
 #define CL_DEBUG_LOOP_SCAN              0
 
 /**
+ * debug level of points-to analyze algorithm
+ * - 0 ... print only time elapsed
+ * - 1 ... info regarding actually analyzed function
+ * - 2 ... print more deeply progress info at the basic block level
+ * - 3 ... debug info at the instruction level
+ * - 4 ... all info -- including info about creating/deleting PT-nodes
+ */
+#define CL_DEBUG_POINTS_TO              0
+
+/**
  * debug level of the verbose output when killing variables
  * - 0 ... print only time elapsed
  * - 1 ... print variables being killed and variables black-listed for killing

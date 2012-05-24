@@ -138,11 +138,14 @@ add_library(cl STATIC
     clf_unilabel.cc
     clf_unswitch.cc
     clutil.cc
+    clplot.cc
     code_listener.cc
     gcc/clplug.c
     killer.cc
     loopscan.cc
     memdebug.cc
+    pointsto.cc
+    pointsto_fics.cc
     ssd.cc
     stopwatch.cc
     storage.cc

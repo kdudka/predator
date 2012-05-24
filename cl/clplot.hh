@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2012 Pavel Raiskup <pavel@raiskup.cz>
  *
  * This file is part of predator.
  *
@@ -17,34 +17,29 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config_cl.h"
-#include "builtins.hh"
+#ifndef H_GUARD_CLPLOT_H
+#define H_GUARD_CLPLOT_H
 
-#include <cl/clutil.hh>
 #include <cl/storage.hh>
-
-#include "util.hh"
 
 namespace CodeStorage {
 
-bool isBuiltInFnc(const struct cl_operand &op)
-{
-    const char *name;
-    if (!fncNameFromCst(&name, &op))
-        // likely indirect fuction call
-        return false;
+namespace CallGraph {
 
-    // list of builtins
-    return STREQ("PT_ASSERT", name)
-        || STREQ("VK_ASSERT", name);
+void plotGraph(
+        const Storage                  &stor,
+        const std::string              &filename = "callgraph");
+
 }
 
-bool isBuiltInCall(const Insn &insn)
-{
-    if (insn.code != CL_INSN_CALL)
-        return false;
+namespace PointsTo {
 
-    return isBuiltInFnc(insn.operands[/* fnc */ 1]);
+void plotGraph(
+        const Storage                  &stor,
+        const std::string              &filename = "pointsto");
+
 }
 
-} // namespace CodeStorage
+}
+
+#endif /* H_GUARD_CLPLOT_H */

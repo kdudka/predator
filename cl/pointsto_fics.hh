@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2012 Pavel Raiskup <pavel@raiskup.cz>
  *
  * This file is part of predator.
  *
@@ -17,34 +17,20 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config_cl.h"
-#include "builtins.hh"
+// TODO
+//   - there should be some reference to FICS paper
 
-#include <cl/clutil.hh>
-#include <cl/storage.hh>
+#ifndef H_GUARD_CL_PT_FICS_H
+#define H_GUARD_CL_PT_FICS_H
 
-#include "util.hh"
+#include "pointsto.hh"
 
 namespace CodeStorage {
+namespace PointsTo {
 
-bool isBuiltInFnc(const struct cl_operand &op)
-{
-    const char *name;
-    if (!fncNameFromCst(&name, &op))
-        // likely indirect fuction call
-        return false;
+bool runFICS(BuildCtx &ctx);
 
-    // list of builtins
-    return STREQ("PT_ASSERT", name)
-        || STREQ("VK_ASSERT", name);
-}
+} /* namespace PointsTo */
+} /* namespace CodeStorage */
 
-bool isBuiltInCall(const Insn &insn)
-{
-    if (insn.code != CL_INSN_CALL)
-        return false;
-
-    return isBuiltInFnc(insn.operands[/* fnc */ 1]);
-}
-
-} // namespace CodeStorage
+#endif /* H_GUARD_CL_PT_FICS_H */

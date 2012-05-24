@@ -29,6 +29,7 @@
 #include "cl_storage.hh"
 #include "killer.hh"
 #include "loopscan.hh"
+#include "pointsto.hh"
 #include "stopwatch.hh"
 
 #include <string>
@@ -67,6 +68,10 @@ class ClEasy: public ClStorageBuilder {
             CL_DEBUG("scanning CFG for loop-closing edges...");
             findLoopClosingEdges(stor);
             printMemUsage("findLoopClosingEdges");
+
+            CL_DEBUG("perform points-to analysis...");
+            pointsToAnalyse(stor, configString_);
+            printMemUsage("pointsToAnalyse");
 
             CL_DEBUG("killing local variables...");
             killLocalVariables(stor);

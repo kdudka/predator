@@ -128,6 +128,9 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin=libsl\.so\]$||'        \
         -e "s/(: debug:) (<<<|>>>)/\1 $B\2$N/"                                 \
         -e "s/(: debug:) (XXX)/\1 $Y\2$N/"                                     \
         -e "s/(: debug: ___) (entering|we are)/\1 $G___$N \2/"                 \
+        -e "s/(PT: )(ERROR:)/\1$R\2$S/"                                        \
+        -e "s/(PT:)/$W\1$S/"                                                   \
+        -e "s/(> phase [0-9] <)/$G\1$S/"                                       \
         &
 
 # redirect terminating signals to our plug-in
