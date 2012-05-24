@@ -187,13 +187,21 @@ public:   // static methods
 	 * @param[in]  stor  The @p CodeStorage from which the context is to be
 	 *                   initialised
 	 */
-	static void initCtx(const CodeStorage::Storage& stor) {
-		size_of_code = stor.types.codePtrSizeof();
-		if (size_of_code == -1)
+	static void initCtx(const CodeStorage::Storage& stor)
+	{
+		if ((size_of_code = stor.types.codePtrSizeof()) == -1)
+		{	// set the size of a code pointer
 			size_of_code = sizeof(void(*)());
-		size_of_data = stor.types.dataPtrSizeof();
-		if (size_of_data == -1)
+		}
+
+		if ((size_of_data = stor.types.dataPtrSizeof()) == -1)
+		{	// set the size of a data pointer
 			size_of_data = sizeof(void*);
+		}
+
+		// Post-condition
+		assert(size_of_data > 0);
+		assert(size_of_code > 0);
 	}
 
 
@@ -289,10 +297,9 @@ public:   // methods
 				default:
 					assert(false);
 			}
-
 		}
-
 	}
+
 
 /*
 	struct Dump {
