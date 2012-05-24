@@ -70,6 +70,12 @@ public:
 		return os;
 	}
 
+	/**
+	 * @brief  Virtual destructor
+	 */
+	virtual ~AbstractBox()
+	{ }
+
 };
 
 class StructuralBox : public AbstractBox {
@@ -94,6 +100,11 @@ public:
 	// returns (size_t)(-1) if not
 	virtual size_t outputReachable(size_t input) const = 0;
 
+	/**
+	 * @brief  Virtual destructor
+	 */
+	virtual ~StructuralBox()
+	{ }
 };
 
 #endif
