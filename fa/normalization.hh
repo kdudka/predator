@@ -277,7 +277,7 @@ public:
 		}
 
 		// reindex roots
-		std::vector<size_t> index(this->fae.roots.size(), (size_t)(-1));
+		std::vector<size_t> index(this->fae.roots.size(), static_cast<size_t>(-1));
 		std::vector<bool> normalized(this->fae.roots.size(), false);
 		std::vector<std::shared_ptr<TA<label_type>>> newRoots;
 		size_t offset = 0;
@@ -320,7 +320,7 @@ public:
 			if (!i->isRef())
 				continue;
 
-			assert(index[i->d_ref.root] != (size_t)(-1));
+			assert(index[i->d_ref.root] != static_cast<size_t>(-1));
 
 			i->d_ref.root = index[i->d_ref.root];
 
