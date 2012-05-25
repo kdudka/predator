@@ -200,7 +200,7 @@ protected:
 
 						ConnectionGraph::processStateSignature(
 							tmp,
-							(StructuralBox*)box,
+							static_cast<const StructuralBox*>(box),
 							j,
 							t.lhs()[lhsOffset + j],
 							Folding::getSignature(t.lhs()[lhsOffset + j], signatures)
@@ -360,7 +360,7 @@ protected:
 
 				case box_type_e::bBox: {
 
-					const Box* box = (const Box*)absBox;
+					const Box* box = static_cast<const Box*>(absBox);
 
 					for (size_t i = 0; i < box->getArity(); ++i) {
 
@@ -467,7 +467,7 @@ protected:
 
 			assert(cutpointSelectorPair.first < index.size());
 
-			if (index[cutpointSelectorPair.first] == (size_t)(-1))
+			if (index[cutpointSelectorPair.first] == static_cast<size_t>(-1))
 				continue;
 
 			assert(index[cutpointSelectorPair.first] >= 1);
@@ -533,7 +533,7 @@ protected:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 
-		std::vector<size_t> index(this->fae.roots.size(), (size_t)(-1)), inputMap;
+		std::vector<size_t> index(this->fae.roots.size(), static_cast<size_t>(-1)), inputMap;
 		std::unordered_map<size_t, size_t> selectorMap;
 		ConnectionGraph::CutpointSignature outputSignature;
 
@@ -576,7 +576,7 @@ protected:
 		if (!boxPtr)
 			return nullptr;
 
-		CL_CDEBUG(2, *(AbstractBox*)boxPtr << " found");
+		CL_CDEBUG(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
 
 		this->fae.roots[root] = this->joinBox(*p.first, state, root, boxPtr, outputSignature);
 		this->fae.connectionGraph.invalidate(root);
@@ -597,7 +597,7 @@ protected:
 
 		size_t finalState = this->fae.roots[root]->getFinalState();
 
-		std::vector<size_t> index(this->fae.roots.size(), (size_t)(-1)), index2, inputMap;
+		std::vector<size_t> index(this->fae.roots.size(), static_cast<size_t>(-1)), index2, inputMap;
 		std::vector<bool> rootMask(this->fae.roots.size(), false);
 		std::unordered_map<size_t, size_t> selectorMap;
 		ConnectionGraph::CutpointSignature outputSignature, inputSignature, tmpSignature;
@@ -648,15 +648,15 @@ protected:
 
 			assert(cutpoint.root < index.size());
 
-			if (index[cutpoint.root] == (size_t)(-1)) {
+			if (index[cutpoint.root] == static_cast<size_t>(-1)) {
 
-				assert(index2[cutpoint.root] == (size_t)(-1));
+				assert(index2[cutpoint.root] == static_cast<size_t>(-1));
 
 				index2[cutpoint.root] = start++;
 
 				tmpSignature.push_back(cutpoint);
 
-				inputMap.push_back((size_t)(-1));
+				inputMap.push_back(static_cast<size_t>(-1));
 
 			}
 
@@ -690,7 +690,7 @@ protected:
 		if (!boxPtr)
 			return nullptr;
 
-		CL_CDEBUG(2, *(AbstractBox*)boxPtr << " found");
+		CL_CDEBUG(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
 
 		for (auto& cutpoint : tmpSignature)
 			outputSignature.push_back(cutpoint);
@@ -835,7 +835,7 @@ dis3_start:
 				this->fae.connectionGraph.data[cutpoint.root].signature, root
 			);
 
-			if (selectorToRoot == (size_t)(-1))
+			if (selectorToRoot == static_cast<size_t>(-1))
 				continue;
 /*
 			if (selectorToRoot == cutpoint.forwardSelector)
