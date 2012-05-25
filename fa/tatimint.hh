@@ -33,6 +33,11 @@ class TAReader : public TimbukReader {
 	TA<std::string>* dst;
 	std::string name;
 
+private:  // methods
+
+	TAReader(const TAReader&);
+	TAReader& operator=(const TAReader&);
+
 protected:
 
 	virtual void newLabel(const std::string&, size_t, size_t) {}
