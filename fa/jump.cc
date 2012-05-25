@@ -33,7 +33,7 @@ void FI_jmp::finalize(
 	this->next_ = this;
 
 	while (this->next_->getType() == fi_type_e::fiJump)
-		this->next_ = ((FI_jmp*)this->next_)->getTarget(codeIndex);
+		this->next_ = (static_cast<FI_jmp*>(this->next_))->getTarget(codeIndex);
 
 	this->next_->setTarget();
 
