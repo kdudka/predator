@@ -30,6 +30,12 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
+# Add some more useful compiler flags
+ADD_C_FLAG(       "PEDANTIC_ERRORS"      "-pedantic-errors")
+ADD_CXX_ONLY_FLAG("W_CTOR_DTOR_PRIVACY"  "-Wctor-dtor-privacy")
+ADD_CXX_ONLY_FLAG("W_OLD_STYLE_CAST"     "-Wold-style-cast")
+ADD_CXX_ONLY_FLAG("W_EFFCXX"             "-Weffc++")
+
 ## Check for isatty(3)
 #include(CheckFunctionExists)
 #check_function_exists("isatty" HAVE_ISATTY)

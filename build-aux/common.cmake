@@ -63,8 +63,6 @@ ADD_C_FLAG(       "W_FLOAT_EQUAL"        "-Wfloat-equal")
 ADD_C_ONLY_FLAG(  "W_UNDEF"              "-Wundef")
 ADD_CXX_ONLY_FLAG("W_NO_DEPRECATED"      "-Wno-deprecated")
 ADD_CXX_ONLY_FLAG("W_OVERLOADED_VIRTUAL" "-Woverloaded-virtual")
-ADD_CXX_ONLY_FLAG("W_CTOR_DTOR_PRIVACY"  "-Wctor-dtor-privacy")
-ADD_CXX_ONLY_FLAG("W_OLD_STYLE_CAST"     "-Wold-style-cast")
 
 option(USE_WEXTRA "Set to ON to use -Wextra (recommended)" ON)
 if(USE_WEXTRA)
@@ -74,11 +72,6 @@ endif()
 option(USE_WERROR "Set to ON to use -Werror (recommended)" OFF)
 if(USE_WERROR)
     ADD_C_FLAG("W_ERROR" "-Werror")
-endif()
-
-option(USE_WEFFCXX "Set to ON to use -Weffc++ (recommended)" OFF)
-if(USE_WEFFCXX)
-    ADD_CXX_ONLY_FLAG("W_EFFCXX" "-Weffc++")
 endif()
 
 option(USE_INT3_AS_BRK
