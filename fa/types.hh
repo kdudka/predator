@@ -20,13 +20,15 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+// Standard library headers
 #include <string>
 #include <ostream>
 #include <cassert>
 #include <stdexcept>
-
 #include <vector>
-#include <boost/unordered_map.hpp>
+
+// Boost headers
+#include <boost/functional/hash.hpp>
 
 /**
  * @file types.hh

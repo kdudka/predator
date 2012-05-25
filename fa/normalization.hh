@@ -22,8 +22,6 @@
 
 #include <vector>
 #include <map>
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
 
 #include "treeaut.hh"
 #include "forestautext.hh"

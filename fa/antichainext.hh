@@ -24,9 +24,6 @@
 #include "treeaut.hh"
 #include "antichain.hh"
 
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-
 template <class T>
 class AntichainExt : public Antichain {
 
@@ -55,7 +52,7 @@ private:
 public:
 
 	void aAddTransition(typename TA<T>::trans_cache_type::value_type* t, size_t bSize) {
-		boost::unordered_set<size_t> s;
+		std::unordered_set<size_t> s;
 		for (size_t i = 0; i < t->first._lhs->first.size(); ++i) {
 			if (s.insert(t->first._lhs->first[i]).second) {
 				if (this->aTransIndex[t->first._lhs->first[i] - bSize].size() < i + 1)
