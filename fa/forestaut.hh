@@ -158,10 +158,26 @@ public:
 
 	};
 
-	FA(TA<label_type>::Backend& backend) : backend(&backend) {}
+	FA(TA<label_type>::Backend& backend) : backend(&backend), variables{}, roots{}, connectionGraph{} {}
 
 	FA(const FA& src) : backend(src.backend), variables(src.variables), roots(src.roots),
 		connectionGraph(src.connectionGraph) { }
+
+	/**
+	 * @brief  Assignment operator
+	 */
+	FA& operator=(const FA& src)
+	{
+		if (this != &src)
+		{
+			backend = src.backend;
+			variables = src.variables;
+			roots = src.roots;
+			connectionGraph = src.connectionGraph;
+		}
+
+		return *this;
+	}
 
 	void clear() {
 		this->roots.clear();
@@ -192,6 +208,11 @@ public:
 
 	}
 
+	/**
+	 * @brief  Virtual destructor
+	 */
+	virtual ~FA()
+	{ }
 };
 
 std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta);
