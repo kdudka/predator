@@ -69,10 +69,13 @@ private:
 		return (i != this->keywords.end())?(i->second):(tt_id);
 	}
 
+	TimbukScanner(const TimbukScanner&);
+	TimbukScanner& operator=(const TimbukScanner&);
+
 public:
 
 	TimbukScanner(std::istream& input = std::cin, const std::string& name = "")
-		: input(&input), name(name), lineno(1), frozen(false) {
+		: input(&input), name(name), token{}, val{}, lineno(1), frozen(false), keywords{} {
 		this->initKeywords();
 	}
 
@@ -351,13 +354,9 @@ protected:
 
 public:
 
-	TimbukReader(std::istream& input = std::cin, const std::string& name = "") {
-		this->resetInput(input, name);
-	}
-
-	void resetInput(std::istream& input = std::cin, const std::string& name = "") {
-		this->scanner = TimbukScanner(input, name);
-	}
+	TimbukReader(std::istream& input = std::cin, const std::string& name = "") :
+		scanner{input, name}, labels{}, labelNames{}, states{}, stateNames{}
+	{ }
 
 	void clearLabels() {
 		this->labels.clear();
@@ -426,6 +425,12 @@ public:
 	void readAll() {
 		this->r_main();
 	}
+
+	/**
+	 * @brief  Virtual destructor
+	 */
+	virtual ~TimbukReader()
+	{ }
 
 };
 
