@@ -82,7 +82,7 @@ public:
 		TA<label_type>::Backend& fixpointBackend, TA<label_type>::Backend& taBackend,
 		BoxMan& boxMan) :
 		FixpointInstruction(insn), fwdConf(fixpointBackend),
-		fwdConfWrapper(this->fwdConf, boxMan), taBackend(taBackend), boxMan(boxMan) {}
+		fwdConfWrapper(this->fwdConf, boxMan), fixpoint{}, taBackend(taBackend), boxMan(boxMan) {}
 
 	virtual ~FixpointBase() {}
 
