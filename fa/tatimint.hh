@@ -64,7 +64,7 @@ protected:
 public:
 
 	TAReader(std::istream& input = std::cin, const std::string& name = "")
-		: TimbukReader(input, name), dst(nullptr) {}
+		: TimbukReader(input, name), dst(nullptr), name{} {}
 	
 	TA<std::string>& read(TA<std::string>& dst) {
 		this->dst = &dst;
@@ -123,7 +123,7 @@ protected:
 public:
 
 	TAMultiReader(TA<std::string>::Backend& backend, std::istream& input = std::cin, const std::string& name = "")
-		: TimbukReader(input, name), backend(backend) {}
+		: TimbukReader(input, name), backend(backend), automata{}, names{} {}
 
 	void clear() {
 		this->automata.clear();
@@ -232,7 +232,6 @@ public:
 		this->endl();
 		this->writeTransitions(aut);
 	}
-
 };
 
 #endif

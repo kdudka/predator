@@ -532,6 +532,11 @@ public:
 		this->out << std::endl;
 	}
 
+	/**
+	 * @brief  Virtual destructor
+	 */
+	virtual ~TimbukWriter()
+	{ }
 };
 
 #endif
