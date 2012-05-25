@@ -72,7 +72,7 @@ void FI_cond::finalize(
 
 			do {
 
-				this->next_[i] = ((FI_jmp*)this->next_[i])->getTarget(codeIndex);
+				this->next_[i] = (static_cast<FI_jmp*>(this->next_[i]))->getTarget(codeIndex);
 
 			} while (this->next_[i]->getType() == fi_type_e::fiJump);
 
@@ -305,7 +305,7 @@ void FI_load_ABP::execute(ExecutionManager& execMan,
 
 	const Data& data = vm.varGet(ABP_INDEX);
 
-	vm.nodeLookup(data.d_ref.root, (size_t)this->offset_, (*state.first)[this->dst_]);
+	vm.nodeLookup(data.d_ref.root, static_cast<size_t>(this->offset_), (*state.first)[this->dst_]);
 
 	execMan.enqueue(state, this->next_);
 
@@ -512,7 +512,7 @@ void FI_check::execute(ExecutionManager& execMan,
 
 	state.second->fae->updateConnectionGraph();
 
-	Normalization((FAE&)*state.second->fae).check();
+	Normalization(const_cast<FAE&>(*state.second->fae)).check();
 
 	execMan.enqueue(state, this->next_);
 
