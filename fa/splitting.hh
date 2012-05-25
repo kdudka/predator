@@ -39,7 +39,7 @@ struct RootEnumF {
 	bool operator()(const AbstractBox* aBox, size_t, size_t) {
 		if (!aBox->isStructural())
 			return true;
-		const StructuralBox* sBox = (const StructuralBox*)aBox;
+		const StructuralBox* sBox = static_cast<const StructuralBox*>(aBox);
 		this->selectors.insert(sBox->outputCoverage().begin(), sBox->outputCoverage().end());
 		return true;
 	}
@@ -59,7 +59,7 @@ struct LeafEnumF {
 	bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
 		if (!aBox->isType(box_type_e::bBox))
 			return true;
-		const Box* box = (const Box*)aBox;
+		const Box* box = static_cast<const Box*>(aBox);
 		for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
 			size_t ref;
 			if (fae.getRef(this->t.lhs()[offset], ref) && ref == this->target)
@@ -84,7 +84,7 @@ struct LeafScanF {
 	bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
 		if (!aBox->isType(box_type_e::bBox))
 			return true;
-		const Box* box = (const Box*)aBox;
+		const Box* box = static_cast<const Box*>(aBox);
 		for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
 			size_t ref;
 			if (fae.getRef(this->t.lhs()[offset], ref) && ref == this->target && box->inputCovers(k, this->selector)) {
@@ -122,7 +122,7 @@ struct IsolateBoxF {
 	}
 
 	friend std::ostream& operator<<(std::ostream& os, const IsolateBoxF& f) {
-		return os << *(AbstractBox*)&f.box;
+		return os << *static_cast<const AbstractBox*>(f.box);
 	}
 
 };
@@ -346,7 +346,7 @@ public:
 		for (std::vector<const AbstractBox*>::const_iterator j = t.label()->getNode().begin(); j != t.label()->getNode().end(); ++j) {
 			if (!(*j)->isStructural())
 				continue;
-			StructuralBox* b = (StructuralBox*)(*j);
+			const StructuralBox* b = static_cast<const StructuralBox*>(*j);
 			if (!f(b)) {
 				// this box is not interesting
 				for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
@@ -372,7 +372,7 @@ public:
 				this->fae.connectionGraph.newRoot();
 			}
 			if (b->isType(box_type_e::bBox))
-				boxes.insert((const Box*)*j);
+				boxes.insert(static_cast<const Box*>(*j));
 		}
 
 		ta.addTransition(lhs, t.label(), newState);
@@ -589,7 +589,7 @@ public:
 public:
 
 	Splitting(FAE& fae) : fae(fae) {}
-	Splitting(const FAE& fae) : fae(*(FAE*)&fae) {}
+	Splitting(const FAE& fae) : fae(const_cast<FAE&>(fae)) {}
 
 };
 
