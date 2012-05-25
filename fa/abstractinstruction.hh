@@ -75,6 +75,11 @@ private:
 	/// is the instruction the target of some jump?
 	bool isTarget_;
 
+private:  // methods
+
+	AbstractInstruction(const AbstractInstruction&);
+	AbstractInstruction& operator=(const AbstractInstruction&);
+
 public:
 
 	/**
