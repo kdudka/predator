@@ -1185,10 +1185,10 @@ public:
 		return dst;
 	}
 
-	TA<T>& unfoldAtRoot(TA<T>& dst, const boost::unordered_map<size_t, size_t>& states, bool registerFinalState = true) const {
+	TA<T>& unfoldAtRoot(TA<T>& dst, const std::unordered_map<size_t, size_t>& states, bool registerFinalState = true) const {
 		this->copyTransitions(dst);
 		for (std::set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i) {
-			boost::unordered_map<size_t, size_t>::const_iterator j = states.find(*i);
+			std::unordered_map<size_t, size_t>::const_iterator j = states.find(*i);
 			assert(j != states.end());
 			for (typename trans_set_type::const_iterator k = this->_lookup(*i); k != this->transitions.end() && (*k)->first._rhs == *i; ++k)
 				dst.addTransition((*k)->first._lhs->first, (*k)->first._label, j->second);

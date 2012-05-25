@@ -41,7 +41,7 @@ protected:
 		TA<label_type>* ta = this->fae.allocTA();
 		ta->addFinalStates(dst.getFinalStates());
 		size_t refState = _MSB_ADD(this->fae.boxMan->getDataId(Data::createRef(ref)));
-		boost::unordered_map<size_t, size_t> joinStatesMap;
+		std::unordered_map<size_t, size_t> joinStatesMap;
 		for (std::set<size_t>::const_iterator i = src.getFinalStates().begin(); i != src.getFinalStates().end(); ++i) {
 			joinStates.push_back(this->fae.nextState());
 			joinStatesMap.insert(std::make_pair(*i, this->fae.freshState()));
