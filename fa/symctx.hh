@@ -290,7 +290,7 @@ public:   // methods
 	 *                  created
 	 */
 	SymCtx(const CodeStorage::Fnc& fnc) :
-		fnc_(fnc), regCount_(2), argCount_(0)
+		fnc_(fnc), sfLayout{}, varMap{}, regCount_(2), argCount_(0)
 	{
 		// pointer to previous stack frame
 		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
