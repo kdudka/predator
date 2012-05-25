@@ -58,8 +58,8 @@ protected:
 							label.push_back(*j);
 							continue;
 						}
-						StructuralBox* b = (StructuralBox*)(*j);
-						if (b != (const StructuralBox*)box) {
+						const StructuralBox* b = static_cast<const StructuralBox*>(*j);
+						if (b != static_cast<const StructuralBox*>(box)) {
 							// this box is not interesting
 							for (size_t k = 0; k < b->getArity(); ++k, ++lhsOffset)
 								lhs.push_back(i->lhs()[lhsOffset]);
@@ -110,7 +110,7 @@ public:
 
 		for (std::vector<const AbstractBox*>::const_iterator i = t.label()->getNode().begin(); i != t.label()->getNode().end(); ++i) {
 
-			if ((const AbstractBox*)box != *i) {
+			if (static_cast<const AbstractBox*>(box) != *i) {
 
 				lhsOffset += (*i)->getArity();
 
@@ -123,7 +123,7 @@ public:
 				const Data& data = this->fae.getData(t.lhs()[lhsOffset + j]);
 
 				if (data.isUndef())
-					index.push_back((size_t)(-1));
+					index.push_back(static_cast<size_t>(-1));
 				else
 					index.push_back(data.d_ref.root);
 
@@ -147,7 +147,7 @@ public:
 
 		size_t aux = index[box->getInputIndex() + 1];
 
-		assert(aux != (size_t)(-1));
+		assert(aux != static_cast<size_t>(-1));
 		assert(aux < this->fae.roots.size());
 
 		TA<label_type> tmp(*this->fae.backend);
