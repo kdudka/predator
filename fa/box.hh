@@ -385,7 +385,7 @@ protected:
 			if (!abox->isType(box_type_e::bBox))
 				return true;
 
-			const Box* box = (const Box*)abox;
+			const Box* box = static_cast<const Box*>(abox);
 
 			for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
 
@@ -542,7 +542,7 @@ public:
 
 	bool operator==(const Box& rhs) const {
 
-		if ((bool)this->input != (bool)rhs.input)
+		if (static_cast<bool>(this->input) != static_cast<bool>(rhs.input))
 			return false;
 
 		if (this->input) {
@@ -579,7 +579,7 @@ public:
 
 	bool operator<=(const Box& rhs) const {
 
-		if ((bool)this->input != (bool)rhs.input)
+		if (static_cast<bool>(this->input) != static_cast<bool>(rhs.input))
 			return false;
 
 		if (this->input) {
@@ -612,7 +612,7 @@ public:
 
 	bool simplifiedLessThan(const Box& rhs) const {
 
-		if ((bool)this->input != (bool)rhs.input)
+		if (static_cast<bool>(this->input) != static_cast<bool>(rhs.input))
 			return false;
 
 		if (this->input) {
