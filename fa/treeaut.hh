@@ -363,10 +363,10 @@ public:
 
 	typename trans_set_type::const_iterator _lookup(size_t rhs) const {
 		char buffer[sizeof(std::pair<const TT<T>, size_t>)];
-		std::pair<const TT<T>, size_t>* tPtr = (std::pair<const TT<T>, size_t>*)buffer;
+		std::pair<const TT<T>, size_t>* tPtr = reinterpret_cast<std::pair<const TT<T>, size_t>*>(buffer);
 		new (reinterpret_cast<TTBase<T>*>(const_cast<TT<T>*>(&tPtr->first))) TTBase<T>(nullptr, T(), rhs);
 		typename trans_set_type::const_iterator i = this->transitions.lower_bound(tPtr);
-		((TTBase<T>*)&tPtr->first)->~TTBase();
+		(reinterpret_cast<TTBase<T>*>(const_cast<TT<T>*>(&tPtr->first)))->~TTBase();
 		return i;
 	}
 
