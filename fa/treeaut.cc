@@ -35,7 +35,7 @@ struct LhsEnv {
 	size_t index;
 	std::vector<size_t> data;
 
-	LhsEnv(const std::vector<size_t>& lhs, size_t index) : index(index) {
+	LhsEnv(const std::vector<size_t>& lhs, size_t index) : index(index), data{} {
 		this->data.insert(this->data.end(), lhs.begin(), lhs.begin() + index);
 		this->data.insert(this->data.end(), lhs.begin() + index + 1, lhs.end());
 	}

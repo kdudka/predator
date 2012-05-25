@@ -51,6 +51,11 @@ public:
 	T _label;
 	size_t _rhs;
 
+private:  // methods
+
+	TTBase(const TTBase&);
+	TTBase& operator=(const TTBase&);
+
 protected:
 
 	TTBase(lhs_cache_type::value_type* lhs = nullptr, const T& label = T(), size_t rhs = 0)
@@ -115,6 +120,11 @@ public:
 		return os << ")->" << t._rhs;
 	}
 
+	/**
+	 * @brief  Virtual destructor
+	 */
+	virtual ~TTBase()
+	{ }
 };
 
 template <class T>
@@ -205,6 +215,10 @@ public:
 		typename TTBase<T>::lhs_cache_type lhsCache;
 		trans_cache_type transCache;
 
+		Backend() :
+			lhsCache{},
+			transCache{}
+		{ }
 	};
 
 	Backend* backend;
@@ -271,7 +285,7 @@ public:
 
 	public:
 		TDIterator(const td_cache_type& cache, const std::vector<size_t>& stack)
-			: _cache(cache), _visited() {
+			: _cache(cache), _visited(), _stack{} {
 			this->insertLhs(stack);
 		}
 
@@ -333,11 +347,11 @@ public:
 
 public:
 
-	TA(Backend& backend) : backend(&backend), next_state(0), maxRank(0) {}
+	TA(Backend& backend) : backend(&backend), next_state(0), maxRank(0), transitions{}, finalStates{} {}
 
 	TA(const TA<T>& ta, bool copyFinalStates = true)
 		: backend(ta.backend), next_state(ta.next_state), maxRank(ta.maxRank),
-		transitions(ta.transitions) {
+		transitions(ta.transitions), finalStates{} {
 		if (copyFinalStates)
 			this->finalStates = ta.finalStates;
 		for (typename std::set<typename trans_cache_type::value_type*>::iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
@@ -1206,7 +1220,11 @@ public:
 
 	public:
 
-		Manager(typename TA<T>::Backend& backend) : backend(backend) {
+		Manager(typename TA<T>::Backend& backend) :
+			backend(backend),
+			taCache{},
+			taPool{}
+		{
 			this->taCache.addListener(this);
 		}
 
