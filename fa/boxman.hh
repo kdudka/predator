@@ -20,19 +20,16 @@
 #ifndef BOX_MANAGER_H
 #define BOX_MANAGER_H
 
+// Standard library headers
 #include <vector>
 #include <unordered_map>
 #include <string>
 #include <sstream>
 #include <fstream>
-
 #include <unordered_map>
 
-#include <boost/unordered_map.hpp>
-#include <boost/algorithm/string.hpp>
-
+// Forester headers
 #include "config.h"
-
 #include "treeaut.hh"
 #include "tatimint.hh"
 #include "label.hh"
@@ -199,19 +196,19 @@ public:
 
 class BoxMan {
 
-	boost::unordered_map<Data, NodeLabel*> dataStore;
+	std::unordered_map<Data, NodeLabel*, boost::hash<Data>> dataStore;
 	std::vector<const Data*> dataIndex;
-	boost::unordered_map<std::vector<const AbstractBox*>, NodeLabel*> nodeStore;
-	boost::unordered_set<std::pair<const TypeBox*, std::vector<size_t> > > tagStore;
-	boost::unordered_map<std::pair<size_t, std::vector<Data> >, NodeLabel*> vDataStore;
+	std::unordered_map<std::vector<const AbstractBox*>, NodeLabel*, boost::hash<std::vector<const AbstractBox*>>> nodeStore;
+	std::unordered_set<std::pair<const TypeBox*, std::vector<size_t>>, boost::hash<std::pair<const TypeBox*, std::vector<size_t>>>> tagStore;
+	std::unordered_map<std::pair<size_t, std::vector<Data>>, NodeLabel*, boost::hash<std::pair<size_t, std::vector<Data>>>> vDataStore;
 
-	boost::unordered_map<SelData, const SelBox*> selIndex;
+	std::unordered_map<SelData, const SelBox*, boost::hash<SelData>> selIndex;
 	std::unordered_map<std::string, const TypeBox*> typeIndex;
 
 	BoxDatabase boxes;
 
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data) {
-		std::pair<boost::unordered_map<Data, NodeLabel*>::iterator, bool> p
+		std::pair<std::unordered_map<Data, NodeLabel*, boost::hash<Data>>::iterator, bool> p
 			= this->dataStore.insert(std::make_pair(data, static_cast<NodeLabel*>(nullptr)));
 		if (p.second) {
 			p.first->second = new NodeLabel(&p.first->first, this->dataIndex.size());
@@ -239,7 +236,7 @@ public:
 	}
 
 	label_type lookupLabel(size_t arity, const std::vector<Data>& x) {
-		std::pair<boost::unordered_map<std::pair<size_t, std::vector<Data> >, NodeLabel*>::iterator, bool> p
+		std::pair<std::unordered_map<std::pair<size_t, std::vector<Data>>, NodeLabel*, boost::hash<std::pair<size_t, std::vector<Data>>>>::iterator, bool> p
 			= this->vDataStore.insert(std::make_pair(std::make_pair(arity, x), static_cast<NodeLabel*>(nullptr)));
 		if (p.second)
 			p.first->second = new NodeLabel(&p.first->first.second);
@@ -279,7 +276,7 @@ public:
 
 	label_type lookupLabel(const std::vector<const AbstractBox*>& x) {
 
-		std::pair<boost::unordered_map<std::vector<const AbstractBox*>, NodeLabel*>::iterator, bool> p
+		std::pair<std::unordered_map<std::vector<const AbstractBox*>, NodeLabel*, boost::hash<std::vector<const AbstractBox*>>>::iterator, bool> p
 			= this->nodeStore.insert(std::make_pair(x, static_cast<NodeLabel*>(nullptr)));
 
 		if (p.second) {
