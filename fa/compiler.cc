@@ -249,6 +249,14 @@ struct LoopAnalyser {
 
 
 	/**
+	 * @brief  Default constructor
+	 */
+	LoopAnalyser() :
+		entryPoints{}
+	{ }
+
+
+	/**
 	 * @brief  Visits recursively all reachable blocks
 	 *
 	 * This method visits recursively all reachable blocks of @p block and checks
@@ -346,7 +354,8 @@ public:
 	 * The default constructor. It properly initialises the translation table with
 	 * proper values.
 	 */
-	BuiltinTable()
+	BuiltinTable() :
+		_table{}
 	{
 		this->_table["malloc"]        = builtin_e::biMalloc;
 		this->_table["free"]          = builtin_e::biFree;
@@ -408,6 +417,11 @@ private:
 	BuiltinTable builtinTable_;
 	/// The loop analyser
 	LoopAnalyser loopAnalyser_;
+
+private:  // methods
+
+	Core(const Core&);
+	Core& operator=(const Core&);
 
 protected:
 
@@ -2009,8 +2023,16 @@ public:
 	 * @param[in,out]  boxMan           The box manager
 	 */
 	Core(TA<label_type>::Backend& fixpointBackend,
-		TA<label_type>::Backend& taBackend, BoxMan& boxMan)
-		: fixpointBackend_(fixpointBackend), taBackend_(taBackend), boxMan_(boxMan)
+		TA<label_type>::Backend& taBackend, BoxMan& boxMan) :
+		assembly_{},
+		codeIndex_{},
+		fncIndex_{},
+		curCtx_{},
+		fixpointBackend_(fixpointBackend),
+		taBackend_(taBackend),
+		boxMan_(boxMan),
+		builtinTable_{},
+		loopAnalyser_{}
 	{ }
 
 
