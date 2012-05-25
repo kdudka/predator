@@ -406,7 +406,7 @@ public:
 				const Data* data;
 				if (this->isData(*j, data)) {
 					if (data->isRef()) {
-						if (index[data->d_ref.root] != (size_t)(-1))
+						if (index[data->d_ref.root] != static_cast<size_t>(-1))
 							lhs.push_back(this->addData(dst, Data::createRef(index[data->d_ref.root], data->d_ref.displ)));
 						else
 							lhs.push_back(this->addData(dst, Data::createUndef()));
@@ -485,9 +485,9 @@ public:
 		assert(target < this->roots.size());
 		assert(this->roots[target]);
 		assert(this->roots[target]->getFinalStates().size());
-		return (TypeBox*)this->roots[target]->begin(
+		return static_cast<const TypeBox*>(this->roots[target]->begin(
 			*this->roots[target]->getFinalStates().begin()
-		)->label()->boxLookup((size_t)(-1)).aBox;
+		)->label()->boxLookup(static_cast<size_t>(-1)).aBox);
 	}
 
 public:
