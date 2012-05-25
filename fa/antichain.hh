@@ -176,7 +176,7 @@ protected:
 
 public:
 
-	Antichain(const std::vector<std::vector<bool> >& rel) : rel(rel), stateCacheListener(*this) {
+	Antichain(const std::vector<std::vector<bool> >& rel) : stateCache{}, cachedLte{}, rel(rel), relIndex{}, invRelIndex{}, stateCacheListener(*this), processed{}, next{} {
 		utils::relIndex(this->relIndex, rel);
 		std::vector<std::vector<bool> > invRel;
 		utils::relInv(invRel, rel);
