@@ -492,7 +492,16 @@ public:
 
 public:
 
-	BoxMan() {}
+	BoxMan() :
+		dataStore{},
+		dataIndex{},
+		nodeStore{},
+		tagStore{},
+		vDataStore{},
+		selIndex{},
+		typeIndex{},
+		boxes{}
+	{ }
 
 	~BoxMan() { this->clear(); }
 
