@@ -206,7 +206,7 @@ class BoxMan {
 	boost::unordered_map<std::pair<size_t, std::vector<Data> >, NodeLabel*> vDataStore;
 
 	boost::unordered_map<SelData, const SelBox*> selIndex;
-	boost::unordered_map<std::string, const TypeBox*> typeIndex;
+	std::unordered_map<std::string, const TypeBox*> typeIndex;
 
 	BoxDatabase boxes;
 
@@ -335,7 +335,7 @@ public:
 	}
 
 	const TypeBox* getTypeInfo(const std::string& name) {
-		boost::unordered_map<std::string, const TypeBox*>::const_iterator i = this->typeIndex.find(name);
+		std::unordered_map<std::string, const TypeBox*>::const_iterator i = this->typeIndex.find(name);
 		if (i == this->typeIndex.end())
 			throw std::runtime_error("BoxMan::getTypeInfo(): type for " + name + " not found!");
 		return i->second;
