@@ -25,9 +25,6 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
-
 #include "treeaut.hh"
 #include "forestautext.hh"
 #include "abstractbox.hh"
