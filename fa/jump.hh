@@ -27,6 +27,11 @@ class FI_jmp : public AbstractInstruction {
 	const CodeStorage::Block* target_;
 	AbstractInstruction* next_;
 
+private:  // methods
+
+	FI_jmp(const FI_jmp&);
+	FI_jmp& operator=(const FI_jmp&);
+
 public:
 
 	FI_jmp(const CodeStorage::Insn* insn, const CodeStorage::Block* target)
