@@ -37,6 +37,7 @@ public:
 
 	struct Listener {
 		virtual void drop(value_type* x) = 0;
+		virtual ~Listener() {}
 	};
 
 private:
