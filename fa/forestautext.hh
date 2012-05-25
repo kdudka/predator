@@ -496,7 +496,7 @@ public:
 	FAE(TA<label_type>::Backend& backend, BoxMan& boxMan)
 	 : FA(backend), boxMan(&boxMan), stateOffset(1), savedStateOffset() {}
 
-	FAE(const FAE& x) : FA(x), boxMan(x.boxMan), stateOffset(x.stateOffset)
+	FAE(const FAE& x) : FA(x), boxMan(x.boxMan), stateOffset(x.stateOffset), savedStateOffset{}
 		{}
 
 	~FAE() { this->clear(); }
