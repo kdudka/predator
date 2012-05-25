@@ -73,9 +73,15 @@ public:
 
 	};
 */
+
+private:  // methods
+
+	ExecutionManager(const ExecutionManager&);
+	ExecutionManager& operator=(const ExecutionManager&);
+
 public:
 
-	ExecutionManager() : root_(nullptr) {}
+	ExecutionManager() : root_(nullptr), queue_{}, statesExecuted_{}, tracesEvaluated_{}, registerRecycler_{}, stateRecycler_{} {}
 
 	~ExecutionManager() { this->clear(); }
 
