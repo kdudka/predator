@@ -60,7 +60,7 @@ public:
 
 		CutpointInfo(size_t root = 0) : root(root), /*joint(false), joinInherited(false),*/
 			refCount(1), realRefCount(FA_REAL_REF_CNT_TRESHOLD), refInherited(false),
-			fwdSelectors(), bwdSelector(static_cast<size_t>(-1)) {
+			fwdSelectors(), bwdSelector(static_cast<size_t>(-1)), defines{} {
 
 			this->fwdSelectors.insert(static_cast<size_t>(-1));
 
