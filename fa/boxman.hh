@@ -212,7 +212,7 @@ class BoxMan {
 
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data) {
 		std::pair<boost::unordered_map<Data, NodeLabel*>::iterator, bool> p
-			= this->dataStore.insert(std::make_pair(data, (NodeLabel*)nullptr));
+			= this->dataStore.insert(std::make_pair(data, static_cast<NodeLabel*>(nullptr)));
 		if (p.second) {
 			p.first->second = new NodeLabel(&p.first->first, this->dataIndex.size());
 			this->dataIndex.push_back(&p.first->first);
@@ -240,7 +240,7 @@ public:
 
 	label_type lookupLabel(size_t arity, const std::vector<Data>& x) {
 		std::pair<boost::unordered_map<std::pair<size_t, std::vector<Data> >, NodeLabel*>::iterator, bool> p
-			= this->vDataStore.insert(std::make_pair(std::make_pair(arity, x), (NodeLabel*)nullptr));
+			= this->vDataStore.insert(std::make_pair(std::make_pair(arity, x), static_cast<NodeLabel*>(nullptr)));
 		if (p.second)
 			p.first->second = new NodeLabel(&p.first->first.second);
 		return p.first->second;
@@ -259,7 +259,7 @@ public:
 					break;
 				}
 				case box_type_e::bBox: {
-					const Box* bBox = (const Box*)aBox;
+					const Box* bBox = static_cast<const Box*>(aBox);
 					for (std::set<size_t>::const_iterator i= bBox->outputCoverage().begin(); i != bBox->outputCoverage().end(); ++i) {
 						this->label.addMapItem(*i, aBox, index, offset);
 						this->tag.push_back(*i);
@@ -267,7 +267,7 @@ public:
 					break;
 				}
 				case box_type_e::bTypeInfo:
-					this->label.addMapItem((size_t)(-1), aBox, index, (size_t)(-1));
+					this->label.addMapItem(static_cast<size_t>(-1), aBox, index, static_cast<size_t>(-1));
 					break;
 				default:
 					assert(false);
@@ -280,7 +280,7 @@ public:
 	label_type lookupLabel(const std::vector<const AbstractBox*>& x) {
 
 		std::pair<boost::unordered_map<std::vector<const AbstractBox*>, NodeLabel*>::iterator, bool> p
-			= this->nodeStore.insert(std::make_pair(x, (NodeLabel*)nullptr));
+			= this->nodeStore.insert(std::make_pair(x, static_cast<NodeLabel*>(nullptr)));
 
 		if (p.second) {
 
@@ -293,9 +293,13 @@ public:
 			std::sort(tag.begin(), tag.end());
 
 			label->setTag(
-				(void*)&*this->tagStore.insert(
-					std::make_pair((const TypeBox*)label->boxLookup((size_t)(-1), nullptr), tag)
-				).first
+				const_cast<void*>(
+					reinterpret_cast<const void*>(
+						&*this->tagStore.insert(
+							std::make_pair(static_cast<const TypeBox*>(label->boxLookup(static_cast<size_t>(-1), nullptr)), tag)
+						).first
+					)
+				)
 			);
 
 			p.first->second = label;
@@ -339,7 +343,7 @@ public:
 
 	const TypeBox* createTypeInfo(const std::string& name, const std::vector<size_t>& selectors) {
 		std::pair<const std::string, const TypeBox*>& p = *this->typeIndex.insert(
-			std::make_pair(name, (const TypeBox*)nullptr)
+			std::make_pair(name, static_cast<const TypeBox*>(nullptr))
 		).first;
 		if (p.second)
 			throw std::runtime_error("BoxMan::createTypeInfo(): type already exists!");
@@ -352,7 +356,7 @@ public:
 		const ConnectionGraph::CutpointSignature& signature, size_t aux,
 		const std::vector<size_t>& index) {
 
-		size_t auxSelector = (size_t)(-1);
+		size_t auxSelector = static_cast<size_t>(-1);
 
 		for (auto& cutpoint : signature) {
 
@@ -387,7 +391,7 @@ public:
 		std::vector<std::pair<size_t, size_t>> selectors;
 
 		BoxMan::translateSignature(
-			outputSignature, selectors, root, signature, (size_t)(-1), index
+			outputSignature, selectors, root, signature, static_cast<size_t>(-1), index
 		);
 
 		return new Box(
@@ -425,11 +429,11 @@ public:
 
 			assert(cutpoint.root < index.size());
 
-			if (index[cutpoint.root] == (size_t)(-1)) {
+			if (index[cutpoint.root] == static_cast<size_t>(-1)) {
 
 				index[cutpoint.root] = start++;
 
-				selectors.push_back(std::make_pair(auxSelector, (size_t)(-1)));
+				selectors.push_back(std::make_pair(auxSelector, static_cast<size_t>(-1)));
 
 			}
 
@@ -469,7 +473,7 @@ public:
 			pBox->name = this->getBoxName();
 			pBox->initialize();
 
-			CL_CDEBUG(1, "learning " << *(AbstractBox*)cpBox << ':' << std::endl << *cpBox);
+			CL_CDEBUG(1, "learning " << *static_cast<const AbstractBox*>(cpBox) << ':' << std::endl << *cpBox);
 
 #if FA_RESTART_AFTER_BOX_DISCOVERY
 			throw RestartRequest("a new box encountered");
