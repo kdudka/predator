@@ -397,7 +397,7 @@ protected:
 		{
 			std::stringstream ss;
 
-			ss << *(const AbstractBox*)box;
+			ss << *static_cast<const AbstractBox*>(box);
 
 			orderedBoxes.insert(std::make_pair(ss.str(), box));
 		}
@@ -609,16 +609,16 @@ public:
 
 				if (instr->insn()) {
 					CL_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl
-						<< ((FixpointInstruction*)instr)->getFixPoint());
+						<< (static_cast<FixpointInstruction*>(instr))->getFixPoint());
 				} else {
 					CL_DEBUG_AT(1, "fixpoint at unknown location" << std::endl
-						<< ((FixpointInstruction*)instr)->getFixPoint());
+						<< (static_cast<FixpointInstruction*>(instr))->getFixPoint());
 				}
 			}
 
 			// print out stats
 			CL_DEBUG_AT(1, "forester has generated " << this->execMan.statesEvaluated()
-				<< " symbolic configuration(s) in " << this->execMan.tracesEvaluated() 
+				<< " symbolic configuration(s) in " << this->execMan.tracesEvaluated()
                                 << " trace(s) using " << this->boxMan.boxDatabase().size() << " box(es)");
 
 		}
