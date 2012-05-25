@@ -37,6 +37,10 @@ class Counter {
 	const std::vector<std::vector<size_t> >* _key;
 	const std::vector<size_t>* _range;
 	
+private:  // methods
+
+	Counter& operator=(const Counter&);
+
 public:
 
 	Counter(size_t labels, const std::vector<std::vector<size_t> >& key, const std::vector<size_t>& range)
@@ -118,13 +122,18 @@ protected:
 		}	
 	}
 
+private:  // methods
+
+	StateListElem(const StateListElem&);
+	StateListElem& operator=(const StateListElem&);
+
 public:
 
 	StateListElem(size_t state, OLRTBlock* block)
 		: _state(state), _block(block), _next(this), _prev(this) {}
 
 	StateListElem(size_t state, OLRTBlock* block, StateListElem*& dst)
-		: _state(state), _block(block) {
+		: _state(state), _block(block), _next{}, _prev{} {
 		this->insert(dst);
 	}
 	
@@ -177,6 +186,11 @@ class OLRTBlock {
 	SmartSet _inset;
 	StateListElem* _tmp;
 	
+private:  // methods
+
+	OLRTBlock(const OLRTBlock&);
+	OLRTBlock& operator=(const OLRTBlock&);
+
 public:
 
 	OLRTBlock(size_t index, const LTS& lts, const std::vector<std::vector<size_t> >& key, const std::vector<size_t>& range)
@@ -189,7 +203,7 @@ public:
 	}
 	
 	OLRTBlock(size_t index, OLRTBlock* parent, const LTS& lts)
-		: _index(index), _states(parent->_tmp), _remove(lts.labels(), nullptr), _counter(parent->_counter), _inset(lts.labels()), _tmp(nullptr) {
+		: _index(index), _states(parent->_tmp), _remove(lts.labels(), nullptr), _counter(parent->_counter), _intersection{},_inset(lts.labels()), _tmp(nullptr) {
 		parent->_tmp = nullptr;
 		parent->_intersection = this;
 		StateListElem* elem = this->_states;
@@ -300,6 +314,11 @@ class OLRTAlgorithm {
 	
 	std::vector<std::vector<size_t>*> _removeCache;
 	
+private:  // methods
+
+	OLRTAlgorithm(const OLRTAlgorithm&);
+	OLRTAlgorithm& operator=(const OLRTAlgorithm&);
+
 	std::vector<size_t>* rcAlloc() {
 		if (this->_removeCache.empty())
 			return new std::vector<size_t>;
@@ -437,7 +456,7 @@ protected:
 public:
 
 	OLRTAlgorithm(const LTS& lts)
-		: _lts(&lts), _partition(), _relation(), _tmp(lts.states()), _removeCache() {
+		: _lts(&lts), _partition(), _relation(), _index{}, _queue{}, _tmp(lts.states()), _delta{}, _delta1{}, _key{}, _range{}, _removeCache() {
 		OLRTBlock* block = new OLRTBlock(this->_relation.newEntry(), lts, this->_key, this->_range);
 		block->storeStates(this->_index);
 		this->_partition.push_back(block);
