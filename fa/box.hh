@@ -100,6 +100,11 @@ class SelBox : public StructuralBox
 
 	std::set<size_t> s[2];
 
+private:  // methods
+
+	SelBox(const SelBox&);
+	SelBox& operator=(const SelBox&);
+
 public:
 
 	SelBox(const SelData* data) :
@@ -332,7 +337,7 @@ protected:
 		const std::vector<std::pair<size_t,size_t>>& selectors
 	) : StructuralBox(box_type_e::bBox, selectors.size()), name(name), hint(), output(output),
 		outputSignature(outputSignature), outputLabels(), inputMap(inputMap), input(input),
-		inputIndex(inputIndex), inputSignature(inputSignature), inputLabels(), selectors(selectors) {
+		inputIndex(inputIndex), inputSignature(inputSignature), inputLabels(), selectors(selectors), selCoverage{}, selfReference{} {
 
 		Box::getAcceptingLabels(this->outputLabels, *output);
 
