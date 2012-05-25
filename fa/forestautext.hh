@@ -26,9 +26,6 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
-
 #include "forestaut.hh"
 #include "boxman.hh"
 #include "tatimint.hh"

@@ -20,13 +20,15 @@
 #ifndef CACHE_H
 #define CACHE_H
 
+// Standard library headers
 #include <vector>
 #include <list>
 #include <set>
 #include <algorithm>
 #include <unordered_map>
 
-#include <boost/unordered_map.hpp>
+// Boost headers
+#include <boost/functional/hash.hpp>
 
 template <class T>
 class Cache {
@@ -99,8 +101,8 @@ class CachedBinaryOp {
 
 public:
 
-	typedef boost::unordered_map<std::pair<T, T>, V> store_type;
-	typedef boost::unordered_map<T, std::set<typename store_type::value_type*> > store_map_type;
+	typedef std::unordered_map<std::pair<T, T>, V, boost::hash<std::pair<T, T>>> store_type;
+	typedef std::unordered_map<T, std::set<typename store_type::value_type*>, boost::hash<T>> store_map_type;
 
 protected:
 
@@ -199,7 +201,7 @@ class CachedBinaryOpExt : public CachedBinaryOp<T, V> {
 public:
 
 	typedef typename CachedBinaryOp<T, V>::store_type store_type;
-	typedef boost::unordered_map<V, std::set<typename store_type::value_type*> > value_map_type;
+	typedef std::unordered_map<V, std::set<typename store_type::value_type*> > value_map_type;
 
 protected:
 
