@@ -594,7 +594,7 @@ struct DumpCtx {
 
 		std::vector<size_t> offs;
 
-		for (auto& selData : cd.ctx.sfLayout)
+		for (auto& selData : cd.ctx.GetStackFrameLayout())
 		{
 			offs.push_back(selData.offset);
 		}

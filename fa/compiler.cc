@@ -1949,7 +1949,7 @@ protected:
 				/* reg with the value from which the node is to be created */ 1,
 				/* size of the created node */ 1,
 				/* type information */ boxMan_.getTypeInfo(ss.str()),
-				/* selectors of the node */ curCtx_->sfLayout
+				/* selectors of the node */ curCtx_->GetStackFrameLayout()
 			)
 		);
 

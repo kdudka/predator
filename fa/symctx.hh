@@ -251,7 +251,7 @@ public:   // static methods
 	 * The layout of stack frames (one stack frame corresponds to one structure
 	 * with selectors.
 	 */
-	StackFrameLayout sfLayout;
+	StackFrameLayout sfLayout_;
 
 	/// The map of identifiers of variables to @p VarInfo
 	var_map_type varMap;
@@ -290,13 +290,13 @@ public:   // methods
 	 *                  created
 	 */
 	SymCtx(const CodeStorage::Fnc& fnc) :
-		fnc_(fnc), sfLayout{}, varMap{}, regCount_(2), argCount_(0)
+		fnc_(fnc), sfLayout_{}, varMap{}, regCount_(2), argCount_(0)
 	{
 		// pointer to previous stack frame
-		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
+		sfLayout_.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
 
 		// pointer to context info
-		this->sfLayout.push_back(SelData(RET_OFFSET, RET_SIZE, 0));
+		sfLayout_.push_back(SelData(RET_OFFSET, RET_SIZE, 0));
 
 		size_t offset = ABP_SIZE + RET_SIZE;
 
@@ -314,7 +314,7 @@ public:   // methods
 					}
 					// no break
 				case CodeStorage::EVar::VAR_FNC_ARG:
-					NodeBuilder::buildNode(this->sfLayout, var.type, offset);
+					NodeBuilder::buildNode(sfLayout_, var.type, offset);
 					this->varMap.insert(std::make_pair(var.uid, VarInfo::createOnStack(offset)));
 					offset += var.type->size;
 					if (var.code == CodeStorage::EVar::VAR_FNC_ARG)
@@ -327,6 +327,12 @@ public:   // methods
 					assert(false);
 			}
 		}
+	}
+
+
+	const StackFrameLayout& GetStackFrameLayout() const
+	{
+		return sfLayout_;
 	}
 
 	size_t GetRegCount() const
