@@ -174,6 +174,11 @@ public:
 		}
 	};
 
+private:  // methods
+
+	Compiler(const Compiler&);
+	Compiler& operator=(const Compiler&);
+
 public:
 
 	/**
