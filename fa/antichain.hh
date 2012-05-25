@@ -241,6 +241,12 @@ public:
 	void printStatus() const {
 		std::cout << "processed: " << this->processed.size() << ", next: " << this->next.size() << std::endl;
 	}
+
+	/**
+	 * @brief  Virtual destructor
+	 */
+	virtual ~Antichain()
+	{ }
 /*
 	class Response {
 		

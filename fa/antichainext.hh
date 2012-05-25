@@ -75,7 +75,7 @@ public:
 public:
 
 	AntichainExt(const std::vector<std::vector<bool> >& rel)
-		: Antichain(rel) {}
+		: Antichain(rel), aTransIndex{} {}
 	
 	void initIndex(size_t aSize, size_t /* bSize */) {
 		this->aTransIndex.resize(aSize);
@@ -97,8 +97,12 @@ public:
 						return true;
 					this->current = this->trans->begin();
 					return false;
-				}				
-					
+				}
+
+				State() :
+					trans{},
+					current{}
+				{ }
 			};
 		
 			AntichainExt& ac;
