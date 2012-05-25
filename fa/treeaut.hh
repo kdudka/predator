@@ -260,7 +260,7 @@ public:
 
 public:
 
-	typedef typename boost::unordered_map<size_t, std::vector<const TT<T>*> > td_cache_type;
+	typedef typename std::unordered_map<size_t, std::vector<const TT<T>*> > td_cache_type;
 
 	class TDIterator {
 
@@ -315,9 +315,9 @@ public:
 
 	};
 
-	typedef typename boost::unordered_map<size_t, std::vector<const TT<T>*> > bu_cache_type;
+	typedef typename std::unordered_map<size_t, std::vector<const TT<T>*> > bu_cache_type;
 
-	typedef boost::unordered_map<T, std::vector<const TT<T>*> > lt_cache_type;
+	typedef std::unordered_map<T, std::vector<const TT<T>*> > lt_cache_type;
 //	typedef boost::unordered_map<size_t, lt_cache_type> slt_cache_type;
 
 public:
@@ -514,7 +514,7 @@ public:
 	}
 
 	void buildBUCache(bu_cache_type& cache) const {
-		boost::unordered_set<size_t> s;
+		std::unordered_set<size_t> s;
 		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 			s.clear();
 			for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {

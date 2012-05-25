@@ -24,8 +24,6 @@
 #include <stdexcept>
 #include <ostream>
 
-#include <boost/unordered_map.hpp>
-
 #include "treeaut.hh"
 #include "simalg.hh"
 #include "antichainext.hh"
