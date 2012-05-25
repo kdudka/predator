@@ -20,6 +20,7 @@
 #ifndef TREE_AUT_H
 #define TREE_AUT_H
 
+// Standard library headers
 #include <vector>
 #include <set>
 #include <map>
@@ -27,9 +28,7 @@
 #include <cassert>
 #include <stdexcept>
 
-#include <boost/unordered_set.hpp>
-#include <boost/unordered_map.hpp>
-
+// Forester headers
 #include "cache.hh"
 #include "utils.hh"
 #include "lts.hh"
@@ -652,7 +651,7 @@ public:
 
 	template <class F>
 	static size_t buProduct(const lt_cache_type& cache1, const lt_cache_type& cache2, F f, size_t stateOffset = 0) {
-		boost::unordered_map<std::pair<size_t, size_t>, size_t> product;
+		std::unordered_map<std::pair<size_t, size_t>, size_t, boost::hash<std::pair<size_t, size_t>>> product;
 		for (typename lt_cache_type::const_iterator i = cache1.begin(); i != cache1.end(); ++i) {
 			if (!i->second.front()->_lhs->first.empty())
 				continue;
@@ -661,7 +660,7 @@ public:
 				continue;
 			for (typename std::vector<const TT<T>*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
 				for (typename std::vector<const TT<T>*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l) {
-					std::pair<boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator, bool> p =
+					std::pair<std::unordered_map<std::pair<size_t, size_t>, size_t, boost::hash<std::pair<size_t, size_t>>>::iterator, bool> p =
 						product.insert(std::make_pair(std::make_pair((*k)->_rhs, (*l)->_rhs), product.size() + stateOffset));
 					f(*k, *l, std::vector<size_t>(), p.first->second);
 				}
@@ -681,7 +680,7 @@ public:
 						assert((*k)->_lhs->first.size() == (*l)->_lhs->first.size());
 						std::vector<size_t> lhs;
 						for (size_t m = 0; m < (*k)->_lhs->first.size(); ++m) {
-							boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator n = product.find(
+							std::unordered_map<std::pair<size_t, size_t>, size_t, boost::hash<std::pair<size_t, size_t>>>::iterator n = product.find(
 								std::make_pair((*k)->_lhs->first[m], (*l)->_lhs->first[m])
 							);
 							if (n == product.end())
@@ -690,7 +689,7 @@ public:
 						}
 						if (lhs.size() < (*k)->_lhs->first.size())
 							continue;
-						std::pair<boost::unordered_map<std::pair<size_t, size_t>, size_t>::iterator, bool> p =
+						std::pair<std::unordered_map<std::pair<size_t, size_t>, size_t, boost::hash<std::pair<size_t, size_t>>>::iterator, bool> p =
 							product.insert(std::make_pair(std::make_pair((*k)->_rhs, (*l)->_rhs), product.size() + stateOffset));
 						f(*k, *l, lhs, p.first->second);
 						if (p.second)
