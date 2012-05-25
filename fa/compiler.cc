@@ -344,7 +344,7 @@ class BuiltinTable
 private:
 
 	/// the hash table that maps function name to the value of enumeration
-	boost::unordered_map<std::string, builtin_e> _table;
+	std::unordered_map<std::string, builtin_e> _table;
 
 public:
 
@@ -378,7 +378,7 @@ public:
 	 */
 	builtin_e operator[](const std::string& key)
 	{
-		boost::unordered_map<std::string, builtin_e>::iterator i = this->_table.find(key);
+		std::unordered_map<std::string, builtin_e>::iterator i = this->_table.find(key);
 		return (i == this->_table.end())?(builtin_e::biNone):(i->second);
 	}
 }; // class BuiltinTable
