@@ -58,7 +58,9 @@ struct Config {
 			this->dbRoot = value;
 	}
 
-	Config(const std::string& c) {
+	Config(const std::string& c) :
+		dbRoot{}
+	{
 		std::vector<std::string> args;
 		boost::split(args, c, boost::is_from_range(';', ';'));
 		for (std::vector<std::string>::iterator i = args.begin(); i != args.end(); ++i) {
