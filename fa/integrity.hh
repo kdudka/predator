@@ -43,7 +43,7 @@ public:
 		bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
 			if (!aBox->isType(box_type_e::bBox))
 				return true;
-			const Box* box = (const Box*)aBox;
+			const Box* box = static_cast<const Box*>(aBox);
 			for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
 				size_t ref;
 				if (fae.getRef(this->t.lhs()[offset], ref) && ref == this->target)
@@ -87,7 +87,7 @@ public:
 
 				case bBox: {
 
-					const Box* tmp = (const Box*)aBox;
+					const Box* tmp = static_cast<const Box*>(aBox);
 
 					for (size_t i = 0; i < tmp->getArity(); ++i) {
 
@@ -123,7 +123,7 @@ public:
 
 			if (this->required && aBox->isStructural()) {
 
-				for (auto s : ((const StructuralBox*)aBox)->outputCoverage()) {
+				for (auto s : (static_cast<const StructuralBox*>(aBox))->outputCoverage()) {
 
 					if (!this->required->erase(s))
 						return false;
@@ -159,7 +159,7 @@ public:
 
 		for (TA<label_type>::iterator i = ta.begin(state); i != ta.end(state); ++i) {
 
-			TypeBox* typeBox = (TypeBox*)i->label()->boxLookup((size_t)(-1), nullptr);
+			const TypeBox* typeBox = static_cast<const TypeBox*>(i->label()->boxLookup(static_cast<size_t>(-1), nullptr));
 
 			assert(typeBox);
 /*
