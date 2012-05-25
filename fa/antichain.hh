@@ -27,8 +27,6 @@
 #include <functional>
 #include <algorithm>
 
-#include <boost/unordered_map.hpp>
-
 #include "cache.hh"
 
 class Antichain {
@@ -47,7 +45,7 @@ protected:
 */
 //	typedef multimap<size_t, state_cache_type::value_type*> antichain_type;
 	typedef std::list<state_cache_type::value_type*> antichain_item_type;
-	typedef boost::unordered_map<size_t, antichain_item_type> antichain_type;
+	typedef std::unordered_map<size_t, antichain_item_type> antichain_type;
 
 	const std::vector<std::vector<bool> >& rel;
 	
