@@ -44,6 +44,11 @@ namespace CodeStorage {
  */
 class SymExec {
 
+private:  // methods
+
+	SymExec(const SymExec&);
+	SymExec& operator=(const SymExec&);
+
 public:
 
 	/**
