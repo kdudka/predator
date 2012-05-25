@@ -37,7 +37,7 @@
 
 #include "config.h"
 
-#define _MSBM			((~(size_t)0) >> 1)
+#define _MSBM			((~static_cast<size_t>(0)) >> 1)
 #define _MSB			(~_MSBM)
 #define _MSB_TEST(x)	(x & _MSB)
 #define _MSB_GET(x)		(x & _MSBM)
@@ -60,9 +60,9 @@ public:
 
 		CutpointInfo(size_t root = 0) : root(root), /*joint(false), joinInherited(false),*/
 			refCount(1), realRefCount(FA_REAL_REF_CNT_TRESHOLD), refInherited(false),
-			fwdSelectors(), bwdSelector((size_t)(-1)) {
+			fwdSelectors(), bwdSelector(static_cast<size_t>(-1)) {
 
-			this->fwdSelectors.insert((size_t)(-1));
+			this->fwdSelectors.insert(static_cast<size_t>(-1));
 
 		}
 
@@ -117,7 +117,7 @@ public:
 
 			for (auto& s : info.fwdSelectors) {
 
-				if (s == (size_t)(-1))
+				if (s == static_cast<size_t>(-1))
 					continue;
 
 				os << ' ' << s;
@@ -126,7 +126,7 @@ public:
 
 			os << " }, ";
 
-			if (info.bwdSelector == (size_t)(-1))
+			if (info.bwdSelector == static_cast<size_t>(-1))
 				os << '-';
 			else
 				os << info.bwdSelector;
@@ -276,7 +276,7 @@ public:
 
 		}
 
-		return (size_t)(-1);
+		return static_cast<size_t>(-1);
 
 	}
 
@@ -328,10 +328,10 @@ public:
 				assert(p.first->second);
 
 				p.first->second->refCount = std::min(
-					p.first->second->refCount + signature[i].refCount, (size_t)FA_REF_CNT_TRESHOLD
+					p.first->second->refCount + signature[i].refCount, static_cast<size_t>(FA_REF_CNT_TRESHOLD)
 				);
 				p.first->second->realRefCount = std::min(
-					p.first->second->realRefCount + signature[i].realRefCount, (size_t)FA_REAL_REF_CNT_TRESHOLD
+					p.first->second->realRefCount + signature[i].realRefCount, static_cast<size_t>(FA_REAL_REF_CNT_TRESHOLD)
 				);
 				p.first->second->refInherited = false;
 				p.first->second->fwdSelectors.insert(
@@ -496,13 +496,13 @@ public:
 
 			assert(signature.size() == 1);
 			assert(signature[0].fwdSelectors.size() == 1);
-			assert(*signature[0].fwdSelectors.begin() == (size_t)(-1));
+			assert(*signature[0].fwdSelectors.begin() == static_cast<size_t>(-1));
 
 			result.push_back(signature[0]);
 			result.back().realRefCount = std::min(signature[0].realRefCount, box->getRealRefCount(input));
 			result.back().fwdSelectors.insert(box->selectorToInput(input));
 
-			if (selector != (size_t)(-1))
+			if (selector != static_cast<size_t>(-1))
 				result.back().bwdSelector = selector;
 
 			result.back().defines.insert(
@@ -520,8 +520,8 @@ public:
 			result.back().fwdSelectors.clear();
 			result.back().fwdSelectors.insert(box->selectorToInput(input));
 
-			if (selector == (size_t)(-1))
-				result.back().bwdSelector = (size_t)(-1);
+			if (selector == static_cast<size_t>(-1))
+				result.back().bwdSelector = static_cast<size_t>(-1);
 
 		}
 
@@ -532,12 +532,12 @@ public:
 
 		size_t lhsOffset = 0;
 
-		for (auto box : label->getNode()) {
+		for (const AbstractBox* box : label->getNode()) {
 
 			if (!box->isStructural())
 				continue;
 
-			StructuralBox* sBox = (StructuralBox*)box;
+			const StructuralBox* sBox = static_cast<const StructuralBox*>(box);
 
 			for (size_t j = 0; j < sBox->getArity(); ++j) {
 
@@ -990,7 +990,7 @@ public:
 
 			assert(cutpoint.root < this->data.size());
 
-			if (cutpoint.bwdSelector != (size_t)(-1)) {
+			if (cutpoint.bwdSelector != static_cast<size_t>(-1)) {
 
 				assert(this->data[cutpoint.root].backwardLookup(cutpoint.bwdSelector) == root);
 
@@ -1013,7 +1013,7 @@ public:
 
 			assert(cutpoint.root < this->data.size());
 
-			if (cutpoint.bwdSelector != (size_t)(-1)) {
+			if (cutpoint.bwdSelector != static_cast<size_t>(-1)) {
 
 				assert(
 					this->data[cutpoint.root].bwdMap.find(
@@ -1083,7 +1083,7 @@ public:
 
 		for (size_t i = 0; i < this->data.size(); ++i) {
 
-			if (index[i] == (size_t)(-1))
+			if (index[i] == static_cast<size_t>(-1))
 				continue;
 
 			assert(index[i] < tmp.size());
@@ -1183,7 +1183,7 @@ public:
 
 			}
 
-			if (cutpoint.bwdSelector == (size_t)(-1)) {
+			if (cutpoint.bwdSelector == static_cast<size_t>(-1)) {
 
 				// erase backward selector
 				for (auto& tmp : srcSignature) {
@@ -1191,10 +1191,10 @@ public:
 					signature.push_back(tmp);
 					signature.back().fwdSelectors = cutpoint.fwdSelectors;
 
-					if (tmp.bwdSelector == (size_t)(-1))
+					if (tmp.bwdSelector == static_cast<size_t>(-1))
 						continue;
 
-					signature.back().bwdSelector = (size_t)(-1);
+					signature.back().bwdSelector = static_cast<size_t>(-1);
 
 					assert(tmp.root < this->data.size());
 
@@ -1215,7 +1215,7 @@ public:
 					signature.push_back(tmp);
 					signature.back().fwdSelectors = cutpoint.fwdSelectors;
 
-					if (tmp.bwdSelector == (size_t)(-1))
+					if (tmp.bwdSelector == static_cast<size_t>(-1))
 						continue;
 
 					assert(tmp.root < this->data.size());
