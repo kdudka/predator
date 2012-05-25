@@ -484,7 +484,7 @@ public:
 
 	}
 */
-	static void processStateSignature(CutpointSignature& result, StructuralBox* box, size_t input,
+	static void processStateSignature(CutpointSignature& result, const StructuralBox* box, size_t input,
 		size_t state, const CutpointSignature& signature) {
 
 		size_t selector = box->outputReachable(input);
