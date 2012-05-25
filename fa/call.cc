@@ -27,9 +27,9 @@
 void FI_ret::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
 
 	assert((*state.first)[this->dst_].isNativePtr());
-	assert((AbstractInstruction*)(*state.first)[this->dst_].d_native_ptr);
+	assert(static_cast<AbstractInstruction*>((*state.first)[this->dst_].d_native_ptr));
 
-	execMan.enqueue(state, (AbstractInstruction*)(*state.first)[this->dst_].d_native_ptr);
+	execMan.enqueue(state, static_cast<AbstractInstruction*>((*state.first)[this->dst_].d_native_ptr));
 
 }
 
