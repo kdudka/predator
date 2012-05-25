@@ -177,7 +177,7 @@ public:
 		typename AntichainExt<T>::ResponseExt response(antichain);
 		antichain.initIndex(cSize - countB, countB);
 		std::vector<typename TA<T>::trans_cache_type::value_type*> aLeaves;
-		boost::unordered_map<T, std::vector<typename TA<T>::trans_cache_type::value_type*> > bTrans, bLeaves;
+		std::unordered_map<T, std::vector<typename TA<T>::trans_cache_type::value_type*> > bTrans, bLeaves;
 		for (typename TA<T>::trans_set_type::const_iterator i = c.transitions.begin(); i != c.transitions.end(); ++i) {
 			size_t arity = (*i)->first._lhs->first.size();
 			if ((*i)->first._rhs >= countB) {
@@ -199,7 +199,7 @@ public:
 		// Post(\emptyset)
 		std::vector<std::pair<size_t, std::set<size_t> > > post;
 		for (typename std::vector<typename TA<T>::trans_cache_type::value_type*>::iterator i = aLeaves.begin(); i != aLeaves.end(); ++i) {
-			typename boost::unordered_map<T, std::vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bLeaves.find((*i)->first._label);
+			typename std::unordered_map<T, std::vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bLeaves.find((*i)->first._label);
 			// careful
 			if (range == bLeaves.end())
 				return false;
@@ -231,7 +231,7 @@ public:
 				for (typename trans_list_type::iterator j = aTransList.begin(); j != aTransList.end(); ++j) {
 					if (!response.get(el, *j, i))
 						continue;
-					typename boost::unordered_map<T, std::vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bTrans.find((*j)->first._label);
+					typename std::unordered_map<T, std::vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bTrans.find((*j)->first._label);
 					// careful
 					if (range == bTrans.end())
 						return false;
