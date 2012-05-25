@@ -749,7 +749,7 @@ public:
 /*
 	template <class F>
 	static bool tdMatch(const TA<T> ta1, size_t s1, const TA<T> ta2, size_t s2, F f) {
-		boost::unordered_map<size_t, size_t> matching;
+		std::unordered_map<size_t, size_t> matching;
 		std::vector<std::pair<size_t, size_t> > stack;
 		std::pair<size_t, size_t> s(s1, s2);
 		product.insert(s);

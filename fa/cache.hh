@@ -24,6 +24,7 @@
 #include <list>
 #include <set>
 #include <algorithm>
+#include <unordered_map>
 
 #include <boost/unordered_map.hpp>
 
@@ -32,8 +33,8 @@ class Cache {
 
 public:
 
-	typedef typename boost::unordered_map<T, size_t> store_type;
-	typedef typename boost::unordered_map<T, size_t>::value_type value_type;
+	typedef typename std::unordered_map<T, size_t, boost::hash<T>> store_type;
+	typedef typename std::unordered_map<T, size_t, boost::hash<T>>::value_type value_type;
 
 	struct Listener {
 		virtual void drop(value_type* x) = 0;
