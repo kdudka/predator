@@ -44,6 +44,13 @@
 
 struct SymState {
 
+private:
+
+	SymState(const SymState&);
+	SymState& operator=(const SymState&);
+
+public:
+
 
 	/**
 	 * @brief  The output stream operator
@@ -97,7 +104,14 @@ struct SymState {
 	 *
 	 * Default constructor
 	 */
-	SymState() {}
+	SymState() :
+		parent{},
+		instr{},
+		fae{},
+		children{},
+		queueTag{},
+		payload{}
+	{ }
 
 	/**
 	 * @brief  Destructor

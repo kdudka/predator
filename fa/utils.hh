@@ -51,6 +51,13 @@ struct Index {
 
 	typedef typename map_type::const_iterator iterator;
 
+	/**
+	 * @brief  Default constructor
+	 */
+	Index() :
+		map{}
+	{ }
+
 	typename Index<T>::iterator begin() const {
 		return this->map.begin();
 	}
@@ -173,6 +180,12 @@ public:
 template <class T>
 class ContainerGuard {
 	T* _cont;
+
+private:  // methods
+
+	ContainerGuard(const ContainerGuard&);
+	ContainerGuard& operator=(const ContainerGuard&);
+
 public:
 	ContainerGuard(T& cont) : _cont(&cont) {}
 	~ContainerGuard() {

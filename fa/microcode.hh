@@ -36,6 +36,11 @@ class FI_cond : public AbstractInstruction
 
 	AbstractInstruction* next_[2];
 
+private:  // methods
+
+	FI_cond(const FI_cond&);
+	FI_cond& operator=(const FI_cond&);
+
 public:
 
 	FI_cond(const CodeStorage::Insn* insn, size_t src,
@@ -499,7 +504,6 @@ class FI_stores : public SequentialInstruction {
 	size_t dst_;
 	size_t src_;
 	int base_;
-	std::vector<size_t> offsets_;
 
 public:
 
@@ -542,6 +546,11 @@ class FI_node_create : public SequentialInstruction {
 	size_t size_;
 	const TypeBox* typeInfo_;
 	std::vector<SelData> sels_;
+
+private:  // methods
+
+	FI_node_create(const FI_node_create&);
+	FI_node_create& operator=(const FI_node_create&);
 
 public:
 
@@ -745,6 +754,11 @@ public:
 class FI_print_heap : public SequentialInstruction {
 
 	const struct SymCtx* ctx_;
+
+private:  // methods
+
+	FI_print_heap(const FI_print_heap&);
+	FI_print_heap& operator=(const FI_print_heap&);
 
 public:
 

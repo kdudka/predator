@@ -491,7 +491,12 @@ public:
 	 * The default constructor.
 	 */
 	Engine() :
-		boxMan(), compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
+		taBackend{},
+		fixpointBackend{},
+		boxMan(),
+		compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
+		assembly_{},
+		execMan{},
 		dbgFlag(false)
 	{ }
 

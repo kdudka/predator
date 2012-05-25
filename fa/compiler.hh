@@ -86,6 +86,16 @@ public:
 
 
 		/**
+		 * @brief  Default constructor
+		 */
+		Assembly() :
+			code_{},
+			functionIndex_{},
+			regFileSize_{}
+		{ }
+
+
+		/**
 		 * @brief  The destructor
 		 */
 		~Assembly() { clear(); }

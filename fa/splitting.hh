@@ -130,7 +130,9 @@ struct IsolateBoxF {
 struct IsolateSetF {
 	std::set<size_t> s;
 
-	IsolateSetF(const std::vector<size_t>& v, size_t offset = 0) {
+	IsolateSetF(const std::vector<size_t>& v, size_t offset = 0) :
+		s{}
+	{
 		for (std::vector<size_t>::const_iterator i = v.begin(); i != v.end(); ++i)
 			this->s.insert(*i + offset);
 	}

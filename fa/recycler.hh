@@ -29,7 +29,9 @@ class Recycler {
 
 public:
 
-	Recycler() {}
+	Recycler() :
+		buffer_{}
+	{ }
 
 	~Recycler() { this->clear(); }
 
