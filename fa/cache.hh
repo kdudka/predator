@@ -48,7 +48,10 @@ private:
 
 public:
 
-	Cache() {}
+	Cache() :
+		store{},
+		listeners{}
+	{ }
 	
 	void addListener(Listener* x) {
 		this->listeners.push_back(x);
@@ -166,6 +169,11 @@ protected:
 	};
 
 public:
+
+	CachedBinaryOp() :
+		store{},
+		storeMap{}
+	{ }
 
 	template <class F>
 	void invalidate(const T& x, const T& y, F f) {
