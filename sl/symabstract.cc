@@ -59,12 +59,6 @@ void debugSymAbstract(const bool enable) {
     CL_BREAK_IF("REQUIRE_GC_ACTIVITY has not been successful");                \
 } while (0)
 
-/// abstraction trigger threshold for SLS
-static const unsigned slsThreshold = 1;
-
-/// abstraction trigger threshold for DLS
-static const unsigned dlsThreshold = 1;
-
 // visitor
 struct UnknownValuesDuplicator {
     TObjSet ignoreList;
@@ -519,85 +513,37 @@ bool segAbstractionStep(
     return true;
 }
 
-void adjustAbstractionThreshold(
-        unsigned                    *pThr,
+bool applyAbstraction(
         SymHeap                     &sh,
         const BindingOff            &off,
         const TValId                entry,
-        const unsigned              lenTotal)
-{
-    const unsigned thrOrig = *pThr;
-    CL_BREAK_IF(!thrOrig);
-    if (1 == thrOrig)
-        // we are already at the lowest possible threshold
-        return;
-
-    TValId cursor = entry;
-
-    for (unsigned pos = 0; pos <= lenTotal; ++pos) {
-        if (VT_ABSTRACT == sh.valTarget(cursor)) {
-            CL_DEBUG("    adjustAbstractionThreshold() changes innerSegLen: "
-                    << thrOrig << " -> 1");
-
-            *pThr = 1;
-            return;
-        }
-
-        if (OK_DLS == sh.valTargetKind(cursor))
-            cursor = dlSegPeer(sh, cursor);
-
-        cursor = nextRootObj(sh, cursor, off.next);
-    }
-}
-
-bool considerAbstraction(
-        SymHeap                     &sh,
-        const BindingOff            &off,
-        const TValId                entry,
-        const unsigned              lenTotal)
+        const unsigned              len)
 {
     EObjKind kind;
-    unsigned thr;
     const char *name;
 
     if (isDlsBinding(off)) {
         kind = OK_DLS;
-        thr  = dlsThreshold;
         name = "DLS";
     }
     else {
         kind = OK_SLS;
-        thr  = slsThreshold;
         name = "SLS";
     }
 
-    adjustAbstractionThreshold(&thr, sh, off, entry, lenTotal);
-
-    // check whether the threshold is satisfied or not
-    if (lenTotal < thr) {
-        CL_DEBUG("<-- length (" << lenTotal
-                << ") of the longest segment is under the threshold ("
-                << thr << ")");
-        return false;
-    }
-
-    CL_DEBUG("    --- length of the longest segment is " << lenTotal);
+    CL_DEBUG("    AAA initiating " << name << " abstraction of length " << len);
 
     // cursor
     TValId cursor = entry;
 
-    // handle sparePrefix/spareSuffix
-    CL_DEBUG("    AAA initiating " << name
-             << " abstraction of length " << lenTotal);
-
     LDP_INIT(symabstract, name);
     LDP_PLOT(symabstract, sh);
 
-    for (unsigned i = 0; i < lenTotal; ++i) {
+    for (unsigned i = 0; i < len; ++i) {
         CL_BREAK_IF(!protoCheckConsistency(sh));
 
         if (!segAbstractionStep(sh, off, &cursor)) {
-            CL_DEBUG("<-- validity of next " << (lenTotal - i - 1)
+            CL_DEBUG("<-- validity of next " << (len - i - 1)
                     << " abstraction step(s) broken, forcing re-discovery...");
 
             if (i)
@@ -731,7 +677,7 @@ void abstractIfNeeded(SymHeap &sh) {
     unsigned            len;
 
     while ((len = discoverBestAbstraction(sh, &off, &entry))) {
-        if (!considerAbstraction(sh, off, entry, len))
+        if (!applyAbstraction(sh, off, entry, len))
             // the best abstraction given is unfortunately not good enough
             break;
 
