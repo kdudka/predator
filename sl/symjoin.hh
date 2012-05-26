@@ -55,7 +55,7 @@ bool joinDataReadOnly(
         const BindingOff        &bf,
         const TValId            addr1,
         const TValId            addr2,
-        TValList                protoRoots[1][2]);
+        TValSet                 protoRoots[1][2]);
 
 /// replacement of abstractNonMatchingValues() from symabstract
 bool joinData(

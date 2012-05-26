@@ -93,13 +93,9 @@ bool validatePointingObjects(
         const TValId                root,
         TValId                      prev,
         const TValId                next,
-        const TValList             &protoRoots,
+        TValSet                     allowedReferers,
         const bool                  allowHeadPtr = false)
 {
-    TValSet allowedReferers;
-    BOOST_FOREACH(const TValId proto, protoRoots)
-        allowedReferers.insert(proto);
-
     // we allow pointers to self at this point, but we require them to be
     // absolutely uniform along the abstraction path -- joinDataReadOnly()
     // is responsible for that
@@ -159,13 +155,13 @@ bool validatePrototypes(
         SymHeap                     &sh,
         const BindingOff            &off,
         const TValId                rootAt,
-        TValList                    protoRoots)
+        TValSet                     protoRoots)
 {
     TValId peerAt = VAL_INVALID;
-    protoRoots.push_back(rootAt);
+    protoRoots.insert(rootAt);
     if (OK_DLS == sh.valTargetKind(rootAt)) {
         peerAt = dlSegPeer(sh, rootAt);
-        protoRoots.push_back(peerAt);
+        protoRoots.insert(peerAt);
     }
 
     BOOST_FOREACH(const TValId protoAt, protoRoots) {
@@ -190,7 +186,7 @@ bool validateSegEntry(
         const TValId                entry,
         const TValId                prev,
         const TValId                next,
-        const TValList              &protoRoots)
+        const TValSet               &protoRoots)
 {
     // first validate 'root' itself
     if (!validatePointingObjects(sh, off, entry, prev, next, protoRoots,
@@ -204,7 +200,7 @@ TValId jumpToNextObj(
         SymHeap                     &sh,
         const BindingOff            &off,
         std::set<TValId>            &haveSeen,
-        const TValList              &protoRoots,
+        const TValSet               &protoRoots,
         TValId                      at)
 {
     if (!matchSegBinding(sh, at, off))
@@ -270,7 +266,7 @@ TValId jumpToNextObj(
     return next;
 }
 
-typedef TValList TProtoRoots[2];
+typedef TValSet TProtoRoots[2];
 
 bool matchData(
         SymHeap                     &sh,
@@ -319,9 +315,13 @@ void segDiscover(
     TValId prev = entry;
 
     // the entry can already have some prototypes we should take into account
-    TValList initialProtos;
-    if (OK_DLS == sh.valTargetKind(entry))
-        collectPrototypesOf(initialProtos, sh, entry, /* skipDlsPeers */ false);
+    TValSet initialProtos;
+    if (OK_DLS == sh.valTargetKind(entry)) {
+        TValList protoList;
+        collectPrototypesOf(protoList, sh, entry, /* skipDlsPeers */ false);
+        BOOST_FOREACH(const TValId proto, protoList)
+            initialProtos.insert(proto);
+    }
 
     // jump to the immediate successor
     TValId at = jumpToNextObj(sh, off, haveSeen, initialProtos, entry);
