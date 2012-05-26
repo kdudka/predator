@@ -493,7 +493,7 @@ class ProbeEntryVisitor {
         }
 };
 
-bool slSegOnPath(
+bool segOnPath(
         SymHeap                     &sh,
         const BindingOff            &off,
         const TValId                entry,
@@ -505,7 +505,7 @@ bool slSegOnPath(
         if (VT_ABSTRACT == sh.valTarget(cursor))
             return true;
 
-        cursor = nextRootObj(sh, cursor, off.next);
+        cursor = segNextRootObj(sh, cursor, off.next);
     }
 
     return false;
@@ -553,13 +553,9 @@ unsigned /* len */ selectBestAbstraction(
                     continue;
 
                 int cost = rank.first;
-#if SE_DEFER_SLS_INTRO
-                if (!cost 
-                        && !isDlsBinding(off)
-                        && !slSegOnPath(sh, off, segc.entry, len))
-                {
-                    cost = (SE_DEFER_SLS_INTRO);
-                }
+#if SE_COST_OF_SEG_INTRODUCTION
+                if (!segOnPath(sh, off, segc.entry, len))
+                    cost += (SE_COST_OF_SEG_INTRODUCTION);
 #endif
 
                 if (bestCost < cost)

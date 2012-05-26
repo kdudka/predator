@@ -135,10 +135,9 @@
 #define SE_CALL_CACHE_MISS_THR              0x10
 
 /**
- * if non-zero, penalize length of SLS abstraction path by the given number in
- * case the path consists of concrete objects only
+ * increase the cost of abstraction path consisting of concrete objects only by
  */
-#define SE_DEFER_SLS_INTRO                  0
+#define SE_COST_OF_SEG_INTRODUCTION         0
 
 /**
  * if 1, do not use alignment tracking unless we get it for free
