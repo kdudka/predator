@@ -3545,8 +3545,8 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
     if (haveSegBidir(&seg, this, OK_SEE_THROUGH, v1, v2)
             || haveSegBidir(&seg, this, OK_OBJ_OR_NULL, v1, v2)) {
         // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
-        this->valTargetSetConcrete(seg);
         decrementProtoLevel(*this, seg);
+        this->valTargetSetConcrete(seg);
         return;
     }
 

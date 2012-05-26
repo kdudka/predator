@@ -25,6 +25,7 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "prototype.hh"
 #include "symcmp.hh"
 #include "symdebug.hh"
 #include "symjoin.hh"
@@ -34,7 +35,6 @@
 #include "symutil.hh"
 #include "symtrace.hh"
 #include "util.hh"
-#include "worklist.hh"
 
 #include <iomanip>
 #include <set>
@@ -150,23 +150,6 @@ TValId protoClone(SymHeap &sh, const TValId proto) {
     return clone;
 }
 
-struct ProtoFinder {
-    std::set<TValId> protos;
-
-    bool operator()(const ObjHandle &sub) {
-        const TValId val = sub.value();
-        if (val <= 0)
-            return /* continue */ true;
-
-        SymHeapCore *sh = sub.sh();
-        const TValId root = sh->valRoot(val);
-        if (sh->valTargetProtoLevel(root))
-            protos.insert(root);
-
-        return /* continue */ true;
-    }
-};
-
 void clonePrototypes(
         SymHeap                &sh,
         const TValId            rootDst,
@@ -204,70 +187,9 @@ void clonePrototypes(
     }
 }
 
-// visitor
-class ProtoCollector {
-    private:
-        TValList               &protoList_;
-        TObjSet                 ignoreList_;
-        WorkList<TValId>        wl_;
-
-    public:
-        ProtoCollector(TValList &dst):
-            protoList_(dst)
-        {
-        }
-
-        TObjSet& ignoreList() {
-            return ignoreList_;
-        }
-
-        bool operator()(const ObjHandle &obj);
-};
-
-bool ProtoCollector::operator()(const ObjHandle &obj) {
-    if (hasKey(ignoreList_, obj))
-        return /* continue */ true;
-
-    const TValId val = obj.value();
-    if (val <= 0)
-        return /* continue */ true;
-
-    SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
-    if (!isPossibleToDeref(sh.valTarget(val)))
-        return /* continue */ true;
-
-    // check if we point to prototype, or shared data
-    if (!sh.valTargetProtoLevel(val))
-        return /* continue */ true;
-
-    TValId proto = sh.valRoot(val);
-    wl_.schedule(proto);
-    while (wl_.next(proto)) {
-        ProtoFinder visitor;
-        traverseLivePtrs(sh, proto, visitor);
-        BOOST_FOREACH(const TValId protoAt, visitor.protos)
-            wl_.schedule(protoAt);
-
-            if (isDlSegPeer(sh, proto))
-                // it is sufficient to process just one part of a DLS
-                continue;
-
-        protoList_.push_back(proto);
-    }
-
-    return /* continue */ true;
-}
-
-bool collectPrototypesOf(TValList &dst, SymHeap &sh, const TValId root)
-{
-    ProtoCollector collector(dst);
-    buildIgnoreList(collector.ignoreList(), sh, root);
-    return traverseLivePtrs(sh, root, collector);
-}
-
 void decrementProtoLevel(SymHeap &sh, const TValId at) {
     TValList protoList;
-    collectPrototypesOf(protoList, sh, at);
+    collectPrototypesOf(protoList, sh, at, /* skipDlsPeers */ true);
     BOOST_FOREACH(const TValId proto, protoList)
         objDecrementProtoLevel(sh, proto);
 }
@@ -355,7 +277,7 @@ void abstractNonMatchingValues(
 TValId segDeepCopy(SymHeap &sh, TValId seg) {
     // collect the list of prototypes
     TValList protoList;
-    collectPrototypesOf(protoList, sh, seg);
+    collectPrototypesOf(protoList, sh, seg, /* skipDlsPeers */ true);
 
     // clone the root itself
     const TValId dup = objClone(sh, seg);
