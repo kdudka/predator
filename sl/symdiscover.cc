@@ -566,7 +566,6 @@ unsigned /* len */ selectBestAbstraction(
                     // we already got something cheaper
                     continue;
 
-                bestCost = cost;
                 if (len <= bestLen)
                     // we already got something longer
                     continue;
@@ -578,6 +577,7 @@ unsigned /* len */ selectBestAbstraction(
                 // update best candidate
                 bestIdx = idx;
                 bestLen = len;
+                bestCost = cost;
                 bestBinding = off;
             }
         }

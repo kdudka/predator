@@ -322,6 +322,9 @@ void slSegAbstractionStep(
 
     if (OK_SLS == sh.valTargetKind(at))
         decrementProtoLevel(sh, at);
+    else
+        // just to make killUniBlocksUnderBindingPtrs() working appropriately
+        sh.valTargetSetAbstract(at, OK_SLS, off);
 
     if (OK_SLS == sh.valTargetKind(nextAt))
         decrementProtoLevel(sh, nextAt);
