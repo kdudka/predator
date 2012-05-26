@@ -24,6 +24,7 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "prototype.hh"
 #include "symcmp.hh"
 #include "symjoin.hh"
 #include "symseg.hh"
@@ -85,20 +86,25 @@ bool matchSegBinding(
     }
 }
 
-// TODO: rewrite, simplify, and make it easier to follow
+/// (VAL_INVALID == prev && VAL_INVALID == next) denotes prototype validation
 bool validatePointingObjects(
-        SymHeap                     &sh,
-        const BindingOff            &off,
+        SymHeap                    &sh,
+        const BindingOff           &off,
         const TValId                root,
         TValId                      prev,
         const TValId                next,
-        const TValList              &protoRoots = TValList(),
-        const bool                  toInsideOnly = false)
+        const TValList             &protoRoots,
+        const bool                  allowHeadPtr = false)
 {
-    const bool isDls = isDlsBinding(off);
-    std::set<TValId> allowedReferers;
+    TValSet allowedReferers;
+    BOOST_FOREACH(const TValId proto, protoRoots)
+        allowedReferers.insert(proto);
+
+    // we allow pointers to self at this point, but we require them to be
+    // absolutely uniform along the abstraction path -- joinDataReadOnly()
+    // is responsible for that
+    allowedReferers.insert(root);
     if (OK_DLS == sh.valTargetKind(root))
-        // retrieve peer's pointer to this object (if any)
         allowedReferers.insert(dlSegPeer(sh, root));
 
     if (OK_DLS == sh.valTargetKind(prev))
@@ -111,47 +117,33 @@ bool validatePointingObjects(
     allowedReferers.insert(root);
 
     // collect all objects pointing at/inside the object
-    // NOTE: we really intend to pass toInsideOnly == false at this point!
     ObjList refs;
     sh.pointedBy(refs, root);
 
-    // consider also up-links from nested prototypes
-    std::copy(protoRoots.begin(), protoRoots.end(),
-              std::inserter(allowedReferers, allowedReferers.begin()));
-
-    // please do not validate the binding pointers as data pointers;  otherwise
-    // we might mistakenly abstract SLL with head-pointers of length 2 as DLS!!
-    std::set<TValId> blackList;
-    if (VAL_INVALID != prev || VAL_INVALID != next) {
-        blackList.insert(sh.valByOffset(root, off.next));
-        if (isDls)
-            blackList.insert(sh.valByOffset(root, off.prev));
-    }
+    // unless this is a prototype, disallow self loops from _binding_ pointers
+    TObjSet blackList;
+    if (VAL_INVALID != prev || VAL_INVALID != next)
+        buildIgnoreList(blackList, sh, root, off);
 
     const TValId headAddr = sh.valByOffset(root, off.head);
-    const TProtoLevel rootProtoLevel = sh.valTargetProtoLevel(root);
 
-    std::set<TValId> whiteList;
+    TValSet whiteList;
     whiteList.insert(sh.valByOffset(prev, off.next));
-    if (isDls)
+    if (isDlsBinding(off))
         whiteList.insert(sh.valByOffset(next, off.prev));
 
     BOOST_FOREACH(const ObjHandle &obj, refs) {
-        const TValId at = obj.placedAt();
-        if (hasKey(blackList, at))
+        if (hasKey(blackList, obj))
             return false;
 
+        const TValId at = obj.placedAt();
         if (hasKey(whiteList, at))
             continue;
 
-        if (toInsideOnly && (obj.value() == headAddr))
+        if (allowHeadPtr && (obj.value() == headAddr))
             continue;
 
         if (hasKey(allowedReferers, sh.valRoot(at)))
-            continue;
-
-        if (rootProtoLevel + 1 == sh.valTargetProtoLevel(at))
-            // FIXME: subtle
             continue;
 
         // someone points at/inside who should not
@@ -202,7 +194,7 @@ bool validateSegEntry(
 {
     // first validate 'root' itself
     if (!validatePointingObjects(sh, off, entry, prev, next, protoRoots,
-                                 /* toInsideOnly */ true))
+                                 /* allowHeadPtr */ true))
         return false;
 
     return validatePrototypes(sh, off, entry, protoRoots);
@@ -212,6 +204,7 @@ TValId jumpToNextObj(
         SymHeap                     &sh,
         const BindingOff            &off,
         std::set<TValId>            &haveSeen,
+        const TValList              &protoRoots,
         TValId                      at)
 {
     if (!matchSegBinding(sh, at, off))
@@ -261,8 +254,11 @@ TValId jumpToNextObj(
             return VAL_INVALID;
     }
 
-    if (dlSegOnPath
-            && !validatePointingObjects(sh, off, at, /* prev */ at, next))
+    if (dlSegOnPath && !validatePointingObjects(sh, off,
+                /* root */ at,
+                /* prev */ at,
+                /* next */ next,
+                protoRoots))
         // never step over a peer object that is pointed from outside!
         return VAL_INVALID;
 
@@ -322,7 +318,13 @@ void segDiscover(
     haveSeen.insert(entry);
     TValId prev = entry;
 
-    TValId at = jumpToNextObj(sh, off, haveSeen, entry);
+    // the entry can already have some prototypes we should take into account
+    TValList initialProtos;
+    if (OK_DLS == sh.valTargetKind(entry))
+        collectPrototypesOf(initialProtos, sh, entry, /* skipDlsPeers */ false);
+
+    // jump to the immediate successor
+    TValId at = jumpToNextObj(sh, off, haveSeen, initialProtos, entry);
     if (!insertOnce(haveSeen, at))
         // loop detected
         return;
@@ -341,7 +343,7 @@ void segDiscover(
         // _program_ variable points at/inside;  call of matchData() in such
         // cases is significant waste for us!
         if (!matchData(sh, off, prev, at, &protoRoots, &cost)) {
-            CL_DEBUG("    DataMatchVisitor refuses to create a segment!");
+            CL_DEBUG("    joinDataReadOnly() refuses to create a segment!");
             break;
         }
 
@@ -361,7 +363,7 @@ void segDiscover(
         bool leaving = false;
 
         // look ahead
-        TValId next = jumpToNextObj(sh, off, haveSeen, at);
+        TValId next = jumpToNextObj(sh, off, haveSeen, protoRoots[1], at);
         if (!validatePointingObjects(sh, off, at, prev, next, protoRoots[1])) {
             // someone points at/inside who should not
 
