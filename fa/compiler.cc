@@ -2052,6 +2052,15 @@ public:
 		// clear the code in the assembly
 		reset(assembly);
 
+		// handle global variables first
+		for (const CodeStorage::Var& var : stor.vars)
+		{
+			if (var.code == CodeStorage::EVar::VAR_GL)
+			{
+				throw NotImplementedException("global variables", &(var.loc));
+			}
+		}
+
 		for (auto fnc : stor.fncs)
 		{
 			if (isDefined(*fnc))

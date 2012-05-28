@@ -316,7 +316,7 @@ public:   // methods
 						++argCount_;
 					break;
 				case CodeStorage::EVar::VAR_GL:
-					throw NotImplementedException("global variables", &(var.loc));
+					// global variables do not occur at the stack
 					break;
 				default:
 					assert(false);
