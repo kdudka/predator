@@ -552,7 +552,7 @@ public:
 			// its stackframe
 			std::vector<size_t> v;
 
-			SymCtx ctx(*fnc);
+			const SymCtx ctx(*fnc);
 			for (auto sel : ctx.GetStackFrameLayout())
 			{	// create the stackframe
 				v.push_back(sel.offset);
@@ -625,8 +625,7 @@ public:
 			// print out stats
 			CL_DEBUG_AT(1, "forester has generated " << this->execMan.statesEvaluated()
 				<< " symbolic configuration(s) in " << this->execMan.tracesEvaluated()
-                                << " trace(s) using " << this->boxMan.boxDatabase().size() << " box(es)");
-
+				<< " trace(s) using " << this->boxMan.boxDatabase().size() << " box(es)");
 		}
 		catch (std::exception& e)
 		{

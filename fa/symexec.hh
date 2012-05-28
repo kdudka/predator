@@ -80,7 +80,8 @@ public:
 	 * @brief  Compiles the code from code storage
 	 *
 	 * Compiles the code from the code storage into assembly code, starting with
-	 * the given entry point.
+	 * the given entry point. Before being compiled, the data types of the program
+	 * need to be loaded first by the method @p loadTypes.
 	 *
 	 * @param[in]  stor   Code storage with the code
 	 * @param[in]  entry  The entry point of the symbolic execution
@@ -91,7 +92,8 @@ public:
 	 * @brief  Runs the symbolic execution
 	 *
 	 * This method runs the symbolic execution of the analysed program. Before
-	 * being run, the program needs to be compiled into microcode.
+	 * being run, the program needs to be compiled into microcode by the method @p
+	 * compile.
 	 */
 	void run();
 
