@@ -39,6 +39,14 @@
 #define RET_OFFSET		(ABP_OFFSET + ABP_SIZE)
 #define RET_SIZE		SymCtx::getSizeOfCodePtr()
 
+
+/**
+ * @brief  Symbolic context of a function
+ *
+ * This class represents a symbolic context of a function.
+ *
+ * @todo
+ */
 class SymCtx {
 
 public:   // data types
@@ -95,6 +103,17 @@ public:   // data types
 		bool isOnStack() const { return isStack_;}
 
 		/**
+		 * @brief  Checks whether the variable is in a register
+		 *
+		 * This method returns a Boolean value meaning whether the variable is in
+		 * a register.
+		 *
+		 * @returns  @p true in case the variable is in a register, @p false
+		 *           otherwise
+		 */
+		bool isInReg() const { return !isStack_;}
+
+		/**
 		 * @brief  Returns the stack offset of the variable
 		 *
 		 * This method returns the offset of the variable from the stack frame base
@@ -121,7 +140,7 @@ public:   // data types
 		size_t getRegIndex() const
 		{
 			// Assertions
-			assert(!isOnStack());
+			assert(isInReg());
 
 			return regIndex_;
 		}
@@ -244,6 +263,7 @@ public:   // static methods
 
 private:  // data members
 
+	/// Reference to the function in the @p CodeStorage
 	const CodeStorage::Fnc& fnc_;
 
 	/**
@@ -257,19 +277,11 @@ private:  // data members
 	/// The map of identifiers of variables to @p VarInfo
 	var_map_type varMap_;
 
+	/// The number of variables in registers
 	size_t regCount_;
-	size_t argCount_;
 
-	bool isReg(const cl_operand* op, size_t& id) const {
-		if (op->code != cl_operand_e::CL_OPERAND_VAR)
-			return false;
-		var_map_type::const_iterator i = varMap_.find(varIdFromOperand(op));
-		assert(i != varMap_.end());
-		if (i->second.isOnStack())
-			return false;
-		id = i->second.isOnStack();
-		return true;
-	}
+	/// The number of arguments of the function
+	size_t argCount_;
 
 
 public:   // methods

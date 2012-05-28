@@ -1107,13 +1107,11 @@ protected:
 			// obtain information about the variable
 			const SymCtx::VarInfo& varInfo = curCtx_->getVarInfo(var.uid);
 
-			if (!varInfo.isOnStack())
+			if (varInfo.isOnStack())
 			{	// on case the variable is not on the stack
-				continue;
+				// retrieve the offset of the variable at the current stack frame
+				offs.insert(varInfo.getStackOffset());
 			}
-
-			// retrieve the offset of the variable at the current stack frame
-			offs.insert(varInfo.getStackOffset());
 		}
 
 		if (offs.empty())
