@@ -613,8 +613,8 @@ struct DumpCtx {
 
 			const CodeStorage::Var& var = cd.ctx.GetFnc().stor->vars[*i];
 
-			SymCtx::var_map_type::const_iterator j = cd.ctx.varMap.find(var.uid);
-			assert(j != cd.ctx.varMap.end());
+			SymCtx::var_map_type::const_iterator j = cd.ctx.GetVarMap().find(var.uid);
+			assert(j != cd.ctx.GetVarMap().end());
 
 			switch (var.code) {
 				case CodeStorage::EVar::VAR_LC:

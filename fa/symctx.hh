@@ -39,7 +39,7 @@
 #define RET_OFFSET		(ABP_OFFSET + ABP_SIZE)
 #define RET_SIZE		SymCtx::getSizeOfCodePtr()
 
-struct SymCtx {
+class SymCtx {
 
 public:   // data types
 
@@ -48,9 +48,9 @@ public:   // data types
 
 
 	/**
-	 * @brief  Structure with run-time information about variable's location
+	 * @brief  Class with run-time information about variable's location
 	 *
-	 * This structure contains information about the location of a variable, i.e.
+	 * This class contains information about the location of a variable, i.e.
 	 * whether it is on a stack or in some register, and also the offset from the
 	 * base pointer of the corresponding stack frame (in case it is on a stack),
 	 * or the index of the register (in case it is therein).
@@ -185,9 +185,9 @@ public:   // static methods
 	/**
 	 * @brief  Initialise the symbolic context
 	 *
-	 * This static method needs to be called before the @p SymCtx structure is
+	 * This static method needs to be called before the @p SymCtx class is
 	 * used for the first time. It properly initialises static members of the
-	 * structure from the passed @p CodeStorage.
+	 * class from the passed @p CodeStorage.
 	 *
 	 * @param[in]  stor  The @p CodeStorage from which the context is to be
 	 *                   initialised
@@ -242,8 +242,9 @@ public:   // static methods
 		}
 	}
 
-	const CodeStorage::Fnc& fnc_;
+private:  // data members
 
+	const CodeStorage::Fnc& fnc_;
 
 	/**
 	 * @brief  The layout of stack frames
@@ -254,7 +255,7 @@ public:   // static methods
 	StackFrameLayout sfLayout_;
 
 	/// The map of identifiers of variables to @p VarInfo
-	var_map_type varMap;
+	var_map_type varMap_;
 
 	size_t regCount_;
 	size_t argCount_;
@@ -262,18 +263,12 @@ public:   // static methods
 	bool isReg(const cl_operand* op, size_t& id) const {
 		if (op->code != cl_operand_e::CL_OPERAND_VAR)
 			return false;
-		var_map_type::const_iterator i = this->varMap.find(varIdFromOperand(op));
-		assert(i != this->varMap.end());
+		var_map_type::const_iterator i = varMap_.find(varIdFromOperand(op));
+		assert(i != varMap_.end());
 		if (i->second.isOnStack())
 			return false;
 		id = i->second.isOnStack();
 		return true;
-	}
-
-	const VarInfo& getVarInfo(size_t id) const {
-		var_map_type::const_iterator i = this->varMap.find(id);
-		assert(i != this->varMap.end());
-		return i->second;
 	}
 
 
@@ -290,7 +285,7 @@ public:   // methods
 	 *                  created
 	 */
 	SymCtx(const CodeStorage::Fnc& fnc) :
-		fnc_(fnc), sfLayout_{}, varMap{}, regCount_(2), argCount_(0)
+		fnc_(fnc), sfLayout_{}, varMap_{}, regCount_(2), argCount_(0)
 	{
 		// pointer to previous stack frame
 		sfLayout_.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
@@ -307,7 +302,7 @@ public:   // methods
 			switch (var.code) {
 				case CodeStorage::EVar::VAR_LC:
 					if (!SymCtx::isStacked(var)) {
-						this->varMap.insert(
+						varMap_.insert(
 							std::make_pair(var.uid, VarInfo::createInReg(regCount_++))
 						);
 						break;
@@ -315,7 +310,7 @@ public:   // methods
 					// no break
 				case CodeStorage::EVar::VAR_FNC_ARG:
 					NodeBuilder::buildNode(sfLayout_, var.type, offset);
-					this->varMap.insert(std::make_pair(var.uid, VarInfo::createOnStack(offset)));
+					varMap_.insert(std::make_pair(var.uid, VarInfo::createOnStack(offset)));
 					offset += var.type->size;
 					if (var.code == CodeStorage::EVar::VAR_FNC_ARG)
 						++argCount_;
@@ -330,9 +325,21 @@ public:   // methods
 	}
 
 
+	const VarInfo& getVarInfo(size_t id) const {
+		var_map_type::const_iterator i = varMap_.find(id);
+		assert(i != varMap_.end());
+		return i->second;
+	}
+
+
 	const StackFrameLayout& GetStackFrameLayout() const
 	{
 		return sfLayout_;
+	}
+
+	const var_map_type& GetVarMap() const
+	{
+		return varMap_;
 	}
 
 	size_t GetRegCount() const
