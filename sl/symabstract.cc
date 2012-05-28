@@ -25,6 +25,7 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "prototype.hh"
 #include "symcmp.hh"
 #include "symdebug.hh"
 #include "symjoin.hh"
@@ -34,7 +35,6 @@
 #include "symutil.hh"
 #include "symtrace.hh"
 #include "util.hh"
-#include "worklist.hh"
 
 #include <iomanip>
 #include <set>
@@ -58,12 +58,6 @@ void debugSymAbstract(const bool enable) {
     CL_ERROR(#fnc "() failed to collect garbage, " #val " still referenced");  \
     CL_BREAK_IF("REQUIRE_GC_ACTIVITY has not been successful");                \
 } while (0)
-
-/// abstraction trigger threshold for SLS
-static const unsigned slsThreshold = 1;
-
-/// abstraction trigger threshold for DLS
-static const unsigned dlsThreshold = 1;
 
 // visitor
 struct UnknownValuesDuplicator {
@@ -150,23 +144,6 @@ TValId protoClone(SymHeap &sh, const TValId proto) {
     return clone;
 }
 
-struct ProtoFinder {
-    std::set<TValId> protos;
-
-    bool operator()(const ObjHandle &sub) {
-        const TValId val = sub.value();
-        if (val <= 0)
-            return /* continue */ true;
-
-        SymHeapCore *sh = sub.sh();
-        const TValId root = sh->valRoot(val);
-        if (sh->valTargetProtoLevel(root))
-            protos.insert(root);
-
-        return /* continue */ true;
-    }
-};
-
 void clonePrototypes(
         SymHeap                &sh,
         const TValId            rootDst,
@@ -204,70 +181,9 @@ void clonePrototypes(
     }
 }
 
-// visitor
-class ProtoCollector {
-    private:
-        TValList               &protoList_;
-        TObjSet                 ignoreList_;
-        WorkList<TValId>        wl_;
-
-    public:
-        ProtoCollector(TValList &dst):
-            protoList_(dst)
-        {
-        }
-
-        TObjSet& ignoreList() {
-            return ignoreList_;
-        }
-
-        bool operator()(const ObjHandle &obj);
-};
-
-bool ProtoCollector::operator()(const ObjHandle &obj) {
-    if (hasKey(ignoreList_, obj))
-        return /* continue */ true;
-
-    const TValId val = obj.value();
-    if (val <= 0)
-        return /* continue */ true;
-
-    SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
-    if (!isPossibleToDeref(sh.valTarget(val)))
-        return /* continue */ true;
-
-    // check if we point to prototype, or shared data
-    if (!sh.valTargetProtoLevel(val))
-        return /* continue */ true;
-
-    TValId proto = sh.valRoot(val);
-    wl_.schedule(proto);
-    while (wl_.next(proto)) {
-        ProtoFinder visitor;
-        traverseLivePtrs(sh, proto, visitor);
-        BOOST_FOREACH(const TValId protoAt, visitor.protos)
-            wl_.schedule(protoAt);
-
-            if (isDlSegPeer(sh, proto))
-                // it is sufficient to process just one part of a DLS
-                continue;
-
-        protoList_.push_back(proto);
-    }
-
-    return /* continue */ true;
-}
-
-bool collectPrototypesOf(TValList &dst, SymHeap &sh, const TValId root)
-{
-    ProtoCollector collector(dst);
-    buildIgnoreList(collector.ignoreList(), sh, root);
-    return traverseLivePtrs(sh, root, collector);
-}
-
 void decrementProtoLevel(SymHeap &sh, const TValId at) {
     TValList protoList;
-    collectPrototypesOf(protoList, sh, at);
+    collectPrototypesOf(protoList, sh, at, /* skipDlsPeers */ true);
     BOOST_FOREACH(const TValId proto, protoList)
         objDecrementProtoLevel(sh, proto);
 }
@@ -355,7 +271,7 @@ void abstractNonMatchingValues(
 TValId segDeepCopy(SymHeap &sh, TValId seg) {
     // collect the list of prototypes
     TValList protoList;
-    collectPrototypesOf(protoList, sh, seg);
+    collectPrototypesOf(protoList, sh, seg, /* skipDlsPeers */ true);
 
     // clone the root itself
     const TValId dup = objClone(sh, seg);
@@ -400,6 +316,9 @@ void slSegAbstractionStep(
 
     if (OK_SLS == sh.valTargetKind(at))
         decrementProtoLevel(sh, at);
+    else
+        // just to make killUniBlocksUnderBindingPtrs() working appropriately
+        sh.valTargetSetAbstract(at, OK_SLS, off);
 
     if (OK_SLS == sh.valTargetKind(nextAt))
         decrementProtoLevel(sh, nextAt);
@@ -594,85 +513,37 @@ bool segAbstractionStep(
     return true;
 }
 
-void adjustAbstractionThreshold(
-        unsigned                    *pThr,
+bool applyAbstraction(
         SymHeap                     &sh,
         const BindingOff            &off,
         const TValId                entry,
-        const unsigned              lenTotal)
-{
-    const unsigned thrOrig = *pThr;
-    CL_BREAK_IF(!thrOrig);
-    if (1 == thrOrig)
-        // we are already at the lowest possible threshold
-        return;
-
-    TValId cursor = entry;
-
-    for (unsigned pos = 0; pos <= lenTotal; ++pos) {
-        if (VT_ABSTRACT == sh.valTarget(cursor)) {
-            CL_DEBUG("    adjustAbstractionThreshold() changes innerSegLen: "
-                    << thrOrig << " -> 1");
-
-            *pThr = 1;
-            return;
-        }
-
-        if (OK_DLS == sh.valTargetKind(cursor))
-            cursor = dlSegPeer(sh, cursor);
-
-        cursor = nextRootObj(sh, cursor, off.next);
-    }
-}
-
-bool considerAbstraction(
-        SymHeap                     &sh,
-        const BindingOff            &off,
-        const TValId                entry,
-        const unsigned              lenTotal)
+        const unsigned              len)
 {
     EObjKind kind;
-    unsigned thr;
     const char *name;
 
     if (isDlsBinding(off)) {
         kind = OK_DLS;
-        thr  = dlsThreshold;
         name = "DLS";
     }
     else {
         kind = OK_SLS;
-        thr  = slsThreshold;
         name = "SLS";
     }
 
-    adjustAbstractionThreshold(&thr, sh, off, entry, lenTotal);
-
-    // check whether the threshold is satisfied or not
-    if (lenTotal < thr) {
-        CL_DEBUG("<-- length (" << lenTotal
-                << ") of the longest segment is under the threshold ("
-                << thr << ")");
-        return false;
-    }
-
-    CL_DEBUG("    --- length of the longest segment is " << lenTotal);
+    CL_DEBUG("    AAA initiating " << name << " abstraction of length " << len);
 
     // cursor
     TValId cursor = entry;
 
-    // handle sparePrefix/spareSuffix
-    CL_DEBUG("    AAA initiating " << name
-             << " abstraction of length " << lenTotal);
-
     LDP_INIT(symabstract, name);
     LDP_PLOT(symabstract, sh);
 
-    for (unsigned i = 0; i < lenTotal; ++i) {
+    for (unsigned i = 0; i < len; ++i) {
         CL_BREAK_IF(!protoCheckConsistency(sh));
 
         if (!segAbstractionStep(sh, off, &cursor)) {
-            CL_DEBUG("<-- validity of next " << (lenTotal - i - 1)
+            CL_DEBUG("<-- validity of next " << (len - i - 1)
                     << " abstraction step(s) broken, forcing re-discovery...");
 
             if (i)
@@ -806,7 +677,7 @@ void abstractIfNeeded(SymHeap &sh) {
     unsigned            len;
 
     while ((len = discoverBestAbstraction(sh, &off, &entry))) {
-        if (!considerAbstraction(sh, off, entry, len))
+        if (!applyAbstraction(sh, off, entry, len))
             // the best abstraction given is unfortunately not good enough
             break;
 

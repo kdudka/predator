@@ -36,6 +36,7 @@ add_library(sl SHARED
     intrange.cc
     memdebug.cc
     plotenum.cc
+    prototype.cc
     sigcatch.cc
     symabstract.cc
     symbin.cc

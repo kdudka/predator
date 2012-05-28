@@ -506,7 +506,7 @@ Tests taken from Forester
                 - originally taken from fa/data/listeven.c
 
     test-0507.c - NULL-terminated SLL of length equal to 2
-                - Predator reports junk unless SE_DEFER_SLS_INTRO == 4
+                - Predator reports junk unless SE_COST_OF_SEG_INTRODUCTION == 4
                 - originally taken from fa/data/listref.c
 
     test-0508.c - Bubble-Sort operating on NULL-terminated SLL

@@ -2886,7 +2886,7 @@ bool joinDataReadOnly(
         const BindingOff        &off,
         const TValId            addr1,
         const TValId            addr2,
-        TValList                protoRoots[1][2])
+        TValSet                 protoRoots[1][2])
 {
     SJ_DEBUG("--> joinDataReadOnly" << SJ_VALP(addr1, addr2));
 
@@ -2908,13 +2908,13 @@ bool joinDataReadOnly(
         if (VAL_INVALID != proto1) {
             ++cntProto1;
             if (protoRoots)
-                (*protoRoots)[0].push_back(proto1);
+                (*protoRoots)[0].insert(proto1);
         }
 
         if (VAL_INVALID != proto2) {
             ++cntProto2;
             if (protoRoots)
-                (*protoRoots)[1].push_back(proto2);
+                (*protoRoots)[1].insert(proto2);
         }
     }
 
