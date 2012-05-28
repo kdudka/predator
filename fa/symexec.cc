@@ -552,7 +552,8 @@ public:
 			// its stackframe
 			std::vector<size_t> v;
 
-			for (auto sel : SymCtx(*fnc).sfLayout_)
+			SymCtx ctx(*fnc);
+			for (auto sel : ctx.GetStackFrameLayout())
 			{	// create the stackframe
 				v.push_back(sel.offset);
 			}
