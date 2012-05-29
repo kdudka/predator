@@ -81,7 +81,7 @@
 
 // somewhere after 4.5.0, the declaration has been moved to
 // gimple-pretty-print.h, which is no longer available for public
-extern void print_gimple_stmt (FILE *, gimple, int, int);
+extern void print_gimple_stmt(FILE *, gimple, int, int);
 
 // this in fact uses gcc's fancy_abort()
 #define CL_ASSERT(expr) \
@@ -89,9 +89,9 @@ extern void print_gimple_stmt (FILE *, gimple, int, int);
 
 // low-level strictly local error/warning emitter
 #define CL_PRINT(what, ...) do {                                            \
-    fprintf (stderr, "%s: %s: ", plugin_name, (what));                      \
-    fprintf (stderr, __VA_ARGS__);                                          \
-    fprintf (stderr, "\n");                                                 \
+    fprintf(stderr, "%s: %s: ", plugin_name, (what));                       \
+    fprintf(stderr, __VA_ARGS__);                                           \
+    fprintf(stderr, "\n");                                                  \
 } while (0)
 
 #define CL_ERROR(...)   CL_PRINT("error",   __VA_ARGS__)
@@ -251,33 +251,33 @@ static struct cl_code_listener *cl = NULL;
 static type_db_t type_db = NULL;
 static var_db_t var_db = NULL;
 
-static hashval_t type_db_hash (const void *p)
+static hashval_t type_db_hash(const void *p)
 {
     const struct cl_type *type = (const struct cl_type *) p;
     return type->uid;
 }
 
-static hashval_t var_db_hash (const void *p)
+static hashval_t var_db_hash(const void *p)
 {
     const struct cl_var *var = (const struct cl_var *) p;
     return var->uid;
 }
 
-static int type_db_eq (const void *p1, const void *p2)
+static int type_db_eq(const void *p1, const void *p2)
 {
     const struct cl_type *type1 = (const struct cl_type *) p1;
     const struct cl_type *type2 = (const struct cl_type *) p2;
     return type1->uid == type2->uid;
 }
 
-static int var_db_eq (const void *p1, const void *p2)
+static int var_db_eq(const void *p1, const void *p2)
 {
     const struct cl_var *var1 = (const struct cl_var *) p1;
     const struct cl_var *var2 = (const struct cl_var *) p2;
     return var1->uid == var2->uid;
 }
 
-static void type_db_free (void *p)
+static void type_db_free(void *p)
 {
     const struct cl_type *type = (const struct cl_type *) p;
     if (type->item_cnt)
@@ -339,7 +339,7 @@ static void free_initials(struct cl_initializer *initial)
     }
 }
 
-static void var_db_free (void *p)
+static void var_db_free(void *p)
 {
     const struct cl_var *var = (const struct cl_var *) p;
     free_initials(var->initial);
@@ -419,7 +419,7 @@ static void read_gimple_location(struct cl_loc *loc, const_gimple g)
     read_gcc_location(loc, g->gsbase.location);
 }
 
-static char* index_to_label (unsigned idx) {
+static char* index_to_label(unsigned idx) {
     char *label;
     int rv = asprintf(&label, "%u:%u", DECL_UID(current_function_decl), idx);
     CL_ASSERT(0 < rv);
@@ -962,8 +962,8 @@ static void read_cst_fnc(struct cl_operand *op, tree t)
 static void read_cst_int(struct cl_operand *op, tree t)
 {
     // I don't understand the following code, see gcc/print-tree.c
-    CL_BREAK_IF(TREE_INT_CST_HIGH (t) != 0 && (TREE_INT_CST_LOW (t) == 0
-                || TREE_INT_CST_HIGH (t) != -1));
+    CL_BREAK_IF(TREE_INT_CST_HIGH(t) != 0 && (TREE_INT_CST_LOW(t) == 0
+                || TREE_INT_CST_HIGH(t) != -1));
 
     op->code                            = CL_OPERAND_CST;
     op->data.cst.code                   = CL_TYPE_INT;
@@ -1523,11 +1523,11 @@ static void handle_stmt_label(gimple stmt)
 }
 
 // callback of walk_gimple_seq declared in <gimple.h>
-static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
-                                 bool *subtree_done,
-                                 struct walk_stmt_info *info)
+static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
+                                bool *subtree_done,
+                                struct walk_stmt_info *info)
 {
-    gimple stmt = gsi_stmt (*iter);
+    gimple stmt = gsi_stmt(*iter);
     (void) subtree_done;
     (void) info;
 
@@ -1587,14 +1587,14 @@ static tree cb_walk_gimple_stmt (gimple_stmt_iterator *iter,
 }
 
 // walk through gimple BODY using <gimple.h> API
-static void handle_bb_gimple (gimple_seq body)
+static void handle_bb_gimple(gimple_seq body)
 {
     struct walk_stmt_info info;
-    memset (&info, 0, sizeof(info));
-    walk_gimple_seq (body, cb_walk_gimple_stmt, NULL, &info);
+    memset(&info, 0, sizeof(info));
+    walk_gimple_seq(body, cb_walk_gimple_stmt, NULL, &info);
 }
 
-static void handle_jmp_edge (edge e)
+static void handle_jmp_edge(edge e)
 {
     struct basic_block_def *next = e->dest;
 
@@ -1610,7 +1610,7 @@ static void handle_jmp_edge (edge e)
     free((char *) cli.data.insn_jmp.label);
 }
 
-static void handle_fnc_bb (struct basic_block_def *bb)
+static void handle_fnc_bb(struct basic_block_def *bb)
 {
     // declare bb
     char *label = index_to_label(bb->index);
@@ -1634,7 +1634,7 @@ static void handle_fnc_bb (struct basic_block_def *bb)
     }
 }
 
-static void handle_fnc_cfg (struct control_flow_graph *cfg)
+static void handle_fnc_cfg(struct control_flow_graph *cfg)
 {
     struct basic_block_def *bb = cfg->x_entry_block_ptr;
     edge e;
@@ -1654,7 +1654,7 @@ static void handle_fnc_cfg (struct control_flow_graph *cfg)
 }
 
 // go through argument list ARGS of fnc declaration
-static void handle_fnc_decl_arglist (tree args)
+static void handle_fnc_decl_arglist(tree args)
 {
     int argc = 0;
 
@@ -1665,14 +1665,14 @@ static void handle_fnc_decl_arglist (tree args)
 
         cl->fnc_arg_decl(cl, ++argc, &arg_src);
 
-        args = TREE_CHAIN (args);
+        args = TREE_CHAIN(args);
     }
 }
 
 // handle FUNCTION_DECL tree node given as DECL
-static void handle_fnc_decl (tree decl)
+static void handle_fnc_decl(tree decl)
 {
-    CL_BREAK_IF(NULL_TREE == DECL_NAME (decl));
+    CL_BREAK_IF(NULL_TREE == DECL_NAME(decl));
 
     // emit fnc declaration
     struct cl_operand fnc;
@@ -1680,13 +1680,13 @@ static void handle_fnc_decl (tree decl)
     cl->fnc_open(cl, &fnc);
 
     // emit arg declarations
-    tree args = DECL_ARGUMENTS (decl);
-    handle_fnc_decl_arglist (args);
+    tree args = DECL_ARGUMENTS(decl);
+    handle_fnc_decl_arglist(args);
 
     // obtain CFG for current function
-    struct function *def = DECL_STRUCT_FUNCTION (decl);
+    struct function *def = DECL_STRUCT_FUNCTION(decl);
     if (!def || !def->cfg) {
-        CL_WARN_UNHANDLED ("CFG not found");
+        CL_WARN_UNHANDLED("CFG not found");
         return;
     }
 
@@ -1698,23 +1698,23 @@ static void handle_fnc_decl (tree decl)
 }
 
 // callback of tree pass declared in <tree-pass.h>
-static unsigned int cl_pass_execute (void)
+static unsigned int cl_pass_execute(void)
 {
     if (error_detected())
         // we're already on the error path
         return 0;
 
     if (!current_function_decl) {
-        CL_WARN_UNHANDLED ("NULL == current_function_decl");
+        CL_WARN_UNHANDLED("NULL == current_function_decl");
         return 0;
     }
 
-    if (FUNCTION_DECL != TREE_CODE (current_function_decl)) {
-        CL_WARN_UNHANDLED ("TREE_CODE (current_function_decl)");
+    if (FUNCTION_DECL != TREE_CODE(current_function_decl)) {
+        CL_WARN_UNHANDLED("TREE_CODE(current_function_decl)");
         return 0;
     }
 
-    handle_fnc_decl (current_function_decl);
+    handle_fnc_decl(current_function_decl);
     return 0;
 }
 
@@ -1740,7 +1740,7 @@ static struct register_pass_info cl_plugin_pass = {
 };
 
 // callback called as last (if the plug-in does not crash before)
-static void cb_finish (void *gcc_data, void *user_data)
+static void cb_finish(void *gcc_data, void *user_data)
 {
     (void) gcc_data;
     (void) user_data;
@@ -1775,7 +1775,7 @@ static void cb_finish (void *gcc_data, void *user_data)
 }
 
 // callback called on start of input file processing
-static void cb_start_unit (void *gcc_data, void *user_data)
+static void cb_start_unit(void *gcc_data, void *user_data)
 {
     (void) gcc_data;
     (void) user_data;
@@ -1783,7 +1783,7 @@ static void cb_start_unit (void *gcc_data, void *user_data)
     cl->file_open(cl, input_filename);
 }
 
-static void cb_finish_unit (void *gcc_data, void *user_data)
+static void cb_finish_unit(void *gcc_data, void *user_data)
 {
     (void) gcc_data;
     (void) user_data;
@@ -1792,29 +1792,29 @@ static void cb_finish_unit (void *gcc_data, void *user_data)
 }
 
 // register callbacks for plug-in NAME
-static void cl_regcb (const char *name) {
+static void cl_regcb(const char *name) {
     // passing NULL as CALLBACK to register_callback stands for virtual callback
 
     // register new pass provided by the plug-in
-    register_callback (name, PLUGIN_PASS_MANAGER_SETUP,
-                       /* callback */   NULL,
-                       &cl_plugin_pass);
+    register_callback(name, PLUGIN_PASS_MANAGER_SETUP,
+                      /* callback */   NULL,
+                      &cl_plugin_pass);
 
-    register_callback (name, PLUGIN_FINISH_UNIT,
-                       cb_finish_unit,
-                       /* user_data */  NULL);
+    register_callback(name, PLUGIN_FINISH_UNIT,
+                      cb_finish_unit,
+                      /* user_data */  NULL);
 
-    register_callback (name, PLUGIN_FINISH,
-                       cb_finish,
-                       /* user_data */  NULL);
+    register_callback(name, PLUGIN_FINISH,
+                      cb_finish,
+                      /* user_data */  NULL);
 
-    register_callback (name, PLUGIN_INFO,
-                       /* callback */   NULL,
-                       &cl_info);
+    register_callback(name, PLUGIN_INFO,
+                      /* callback */   NULL,
+                      &cl_info);
 
-    register_callback (name, PLUGIN_START_UNIT,
-                       cb_start_unit,
-                       /* user_data */  NULL);
+    register_callback(name, PLUGIN_START_UNIT,
+                      cb_start_unit,
+                      /* user_data */  NULL);
 }
 
 struct cl_plug_options {
@@ -1834,7 +1834,7 @@ static int clplug_init(const struct plugin_name_args *info,
                        struct cl_plug_options *opt)
 {
     // initialize opt data
-    memset (opt, 0, sizeof(*opt));
+    memset(opt, 0, sizeof(*opt));
     opt->use_analyzer       = true;
     opt->analyzer_args      = "";
 
@@ -1861,7 +1861,7 @@ static int clplug_init(const struct plugin_name_args *info,
         }
         else if (STREQ(key, "help")) {
             // do not use info->help yet
-            printf ("\n%s\n", cl_info.help);
+            printf("\n%s\n", cl_info.help);
             return EXIT_FAILURE;
         }
         else if (STREQ(key, "args")) {
@@ -2025,7 +2025,7 @@ static bool write_pid_file(const char *pid_file)
 }
 
 // plug-in initialization according to gcc plug-in API
-int plugin_init (struct plugin_name_args *plugin_info,
+int plugin_init(struct plugin_name_args *plugin_info,
                  struct plugin_gcc_version *version)
 {
     struct cl_plug_options opt;
