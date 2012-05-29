@@ -72,12 +72,12 @@
 #endif
 
 // our alternative to GGC_CNEW, used prior to gcc 4.6.x
-#define CL_ZNEW(type) xcalloc(1, sizeof(type))
+#define CL_ZNEW(type) (type *) xcalloc(1, sizeof(type))
 
-#define CL_ZNEW_ARRAY(type, cnt) xcalloc(cnt, sizeof(type))
+#define CL_ZNEW_ARRAY(type, cnt) (type *) xcalloc(cnt, sizeof(type))
 
 // our alternative to GGC_RESIZEVEC, used prior to gcc 4.6.x
-#define CL_RESIZEVEC(type, ptr, cnt) xrealloc((ptr), sizeof(type) * (cnt))
+#define CL_RESIZEVEC(type, p, cnt) (type *) xrealloc((p), sizeof(type) * (cnt))
 
 // somewhere after 4.5.0, the declaration has been moved to
 // gimple-pretty-print.h, which is no longer available for public
@@ -145,8 +145,8 @@ static int verbose = 0;
 
 // plug-in meta-data according to gcc plug-in API
 static struct plugin_info cl_info = {
-    .version = "%s [code listener SHA1 " CL_GIT_SHA1 "]",
-    .help    = "%s [code listener SHA1 " CL_GIT_SHA1 "]\n"
+    /* .version = */ "%s [code listener SHA1 " CL_GIT_SHA1 "]",
+    /* .help    = */ "%s [code listener SHA1 " CL_GIT_SHA1 "]\n"
 "\n"
 "Usage: gcc -fplugin=%s [OPTIONS] ...\n"
 "\n"
@@ -375,7 +375,7 @@ static struct cl_type* type_db_lookup(type_db_t db, int uid)
     struct cl_type type;
     type.uid = uid;
 
-    return htab_find(db, &type);
+    return (struct cl_type *) htab_find(db, &type);
 }
 
 static struct cl_var* var_db_lookup(var_db_t db, int uid)
@@ -383,7 +383,7 @@ static struct cl_var* var_db_lookup(var_db_t db, int uid)
     struct cl_var var;
     var.uid = uid;
 
-    return htab_find(db, &var);
+    return (struct cl_var *) htab_find(db, &var);
 }
 
 static void type_db_insert(type_db_t db, struct cl_type *type)
@@ -1352,15 +1352,16 @@ static void handle_stmt_return(gimple stmt)
 }
 
 static /* const */ struct cl_type builtin_bool_type = {
-    .uid            = /* FIXME */ -1,
-    .code           = CL_TYPE_BOOL,
-    .loc = {
-        .file       = NULL,
-        .line       = -1
-    },
-    .scope          = CL_SCOPE_GLOBAL,
-    .name           = "<builtin_bool>",
-    .size           = /* FIXME */ sizeof(bool)
+    /* .uid            = */ /* FIXME */ -1,
+    /* .code           = */ CL_TYPE_BOOL,
+    /* .loc            = */ /* cl_loc_unknown */ { NULL, 0, 0, false },
+    /* .scope          = */ CL_SCOPE_GLOBAL,
+    /* .name           = */ "<builtin_bool>",
+    /* .size           = */ /* FIXME */ sizeof(bool),
+    /* .item_cnt       = */ 0,
+    /* .items          = */ NULL,
+    /* .array_size     = */ 0,
+    /* .is_unsigned    = */ false
 };
 
 static void handle_stmt_cond_br(gimple stmt, const char *then_label,
@@ -1720,23 +1721,27 @@ static unsigned int cl_pass_execute(void)
 
 // pass description according to <tree-pass.h> API
 static struct opt_pass cl_pass = {
-    .type                       = GIMPLE_PASS,
-    .name                       = "clplug",
-    .gate                       = NULL,
-    .execute                    = cl_pass_execute,
-    .properties_required        = PROP_cfg | PROP_gimple_any,
-    // ...
+    /* .type                       = */ GIMPLE_PASS,
+    /* .name                       = */ "clplug",
+    /* .gate                       = */ NULL,
+    /* .execute                    = */ cl_pass_execute,
+    /* .sub                        = */ NULL,
+    /* .next                       = */ NULL,
+    /* .static_pass_number         = */ 0,
+    /* .tv_id                      = */ TV_NONE,
+    /* .properties_required        = */ PROP_cfg | PROP_gimple_any,
+    /* .properties_provided        = */ 0,
+    /* .properties_destroyed       = */ 0,
+    /* .todo_flags_start           = */ 0,
+    /* .todo_flags_finish          = */ 0
 };
 
 // definition of a new pass provided by the plug-in
 static struct register_pass_info cl_plugin_pass = {
-    .pass                       = &cl_pass,
-
-    // cfg ... control_flow_graph
-    .reference_pass_name        = "cfg",
-
-    .ref_pass_instance_number   = 0,
-    .pos_op                     = PASS_POS_INSERT_AFTER,
+    /* .pass                       = */ &cl_pass,
+    /* .reference_pass_name        = */ "cfg",
+    /* .ref_pass_instance_number   = */ 0,
+    /* .pos_op                     = */ PASS_POS_INSERT_AFTER
 };
 
 // callback called as last (if the plug-in does not crash before)
@@ -2059,11 +2064,12 @@ int plugin_init(struct plugin_name_args *plugin_info,
 
     // initialize code listener
     static struct cl_init_data init = {
-        .debug          = dummy_printer,
-        .warn           = cl_warn,
-        .error          = cl_error,
-        .note           = trivial_printer,
-        .die            = trivial_printer
+        /* .debug          = */ dummy_printer,
+        /* .warn           = */ cl_warn,
+        /* .error          = */ cl_error,
+        /* .note           = */ trivial_printer,
+        /* .die            = */ trivial_printer,
+        /* .debug_level    = */ 0
     };
 
     if ((init.debug_level = verbose))
