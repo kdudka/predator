@@ -20,6 +20,7 @@
 #ifndef FOREST_AUT_H
 #define FOREST_AUT_H
 
+// Standard library headers
 #include <vector>
 #include <stdexcept>
 #include <cassert>
@@ -27,9 +28,9 @@
 #include <sstream>
 #include <algorithm>
 #include <memory>
-
 #include <unordered_map>
 
+// Forester headers
 #include "types.hh"
 #include "treeaut.hh"
 #include "tatimint.hh"

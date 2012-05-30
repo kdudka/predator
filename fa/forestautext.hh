@@ -20,12 +20,14 @@
 #ifndef FOREST_AUT_EXT_H
 #define FOREST_AUT_EXT_H
 
+// Standard library headers
 #include <vector>
 #include <set>
 #include <map>
 #include <stdexcept>
 #include <algorithm>
 
+// Forester headers
 #include "forestaut.hh"
 #include "boxman.hh"
 #include "tatimint.hh"

@@ -20,9 +20,11 @@
 #ifndef UFAE_H
 #define UFAE_H
 
+// Standard library headers
 #include <vector>
 #include <ostream>
 
+// Forester headers
 #include "utils.hh"
 #include "treeaut.hh"
 #include "label.hh"
@@ -58,7 +60,8 @@ public:
 	void setStateOffset(size_t offset) {
 		this->stateOffset = offset;
 	}
-/*
+
+#if 0
 	struct RenameNonleafF {
 
 		Index<size_t>& index;
@@ -75,7 +78,8 @@ public:
 		}
 
 	};
-*/
+#endif
+
 	template <class T>
 	struct Cursor {
 		T begin;
