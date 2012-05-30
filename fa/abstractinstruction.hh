@@ -43,7 +43,7 @@ namespace CodeStorage {
 
 class ExecutionManager;
 
-typedef enum { fiAbort, fiBranch, fiCheck, fiFix, fiJump, fiUnspec } fi_type_e;
+enum class fi_type_e { fiAbort, fiBranch, fiCheck, fiFix, fiJump, fiUnspec };
 
 /**
  * @brief  An abstract base class that represents an instruction

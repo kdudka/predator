@@ -85,7 +85,7 @@ public:
 
 			switch (aBox->getType()){
 
-				case bBox: {
+				case box_type_e::bBox: {
 
 					const Box* tmp = static_cast<const Box*>(aBox);
 
@@ -107,7 +107,7 @@ public:
 
 				}
 
-				case bSel:
+				case  box_type_e::bSel:
 
 					assert(offset < this->t.lhs().size());
 

@@ -64,7 +64,7 @@ struct IntersectionIndex {
 
 };
 */
-typedef enum { iFail, iSuccess, iUnfold1, iUnfold2 } intersect_result_e;
+enum class intersect_result_e { iFail, iSuccess, iUnfold1, iUnfold2 };
 
 struct IntersectInfo {
 	Index<std::pair<size_t, size_t> > index;

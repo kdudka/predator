@@ -31,7 +31,7 @@
 
 struct NodeLabel {
 
-	typedef enum { n_unknown, n_node, n_data, n_vData } node_type;
+	enum class node_type { n_unknown, n_node, n_data, n_vData };
 
 	node_type type;
 
@@ -170,12 +170,6 @@ struct NodeLabel {
 
 	bool operator!=(const NodeLabel& rhs) const { return this->data.data != rhs.data.data; }
 
-	friend size_t hash_value(const NodeLabel& label) {
-		size_t h = boost::hash_value(label.type);
-		boost::hash_combine(h, label.data.data);
-		return h;
-	}
-
 	friend std::ostream& operator<<(std::ostream& os, const NodeLabel& label) {
 		os << '<';
 		switch (label.type) {
@@ -254,9 +248,17 @@ struct label_type {
 namespace std {
 
 	template <>
+	struct hash<NodeLabel::node_type> {
+		size_t operator()(const NodeLabel::node_type& nodeType) const
+		{
+			return std::hash<size_t>()(static_cast<size_t>(nodeType));
+		}
+	};
+
+	template <>
 	struct hash<NodeLabel> {
 		size_t operator()(const NodeLabel& label) const {
-			size_t h = boost::hash_value(label.type);
+			size_t h = std::hash<NodeLabel::node_type>()(label.type);
 			boost::hash_combine(h, label.data.data);
 			return h;
 		}

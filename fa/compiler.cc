@@ -330,7 +330,7 @@ struct LoopAnalyser {
 /**
  * @brief  Enumeration of built-in functions
  */
-typedef enum { biNone, biMalloc, biFree, biNondet, biFix, biAbort, biPrintHeap } builtin_e;
+enum class builtin_e { biNone, biMalloc, biFree, biNondet, biFix, biAbort, biPrintHeap };
 
 
 /**
