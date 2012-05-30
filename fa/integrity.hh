@@ -60,7 +60,7 @@ public:
 		for (size_t root = 0; root < this->fae.roots.size(); ++root) {
 			if (!this->fae.roots[root])
 				continue;
-			for (TA<label_type>::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
+			for (TreeAut::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
 				if (i->label()->isNode())
 					i->label()->iterate(LeafEnumF(this->fae, *i, target, selectors));
 			}
@@ -71,14 +71,14 @@ public:
 	struct CheckIntegrityF {
 
 		const Integrity& integrity;
-		const TA<label_type>& ta;
+		const TreeAut& ta;
 		const TT<label_type>& t;
 		std::set<size_t>* required;
 		std::vector<bool>& bitmap;
-		std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states;
+		std::map<std::pair<const TreeAut*, size_t>, std::set<size_t>>& states;
 
-		CheckIntegrityF(const Integrity& integrity, const TA<label_type>& ta, const TT<label_type>& t,
-			std::set<size_t>* required, std::vector<bool>& bitmap, std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states)
+		CheckIntegrityF(const Integrity& integrity, const TreeAut& ta, const TT<label_type>& t,
+			std::set<size_t>* required, std::vector<bool>& bitmap, std::map<std::pair<const TreeAut*, size_t>, std::set<size_t>>& states)
 			: integrity(integrity), ta(ta), t(t), required(required), bitmap(bitmap), states(states) {}
 
 		bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
@@ -138,8 +138,8 @@ public:
 
 	};
 
-	bool checkState(const TA<label_type>& ta, size_t state, const std::set<size_t>& defined,
-		std::vector<bool>& bitmap, std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states) const {
+	bool checkState(const TreeAut& ta, size_t state, const std::set<size_t>& defined,
+		std::vector<bool>& bitmap, std::map<std::pair<const TreeAut*, size_t>, std::set<size_t>>& states) const {
 
 		const Data* data;
 
@@ -157,7 +157,7 @@ public:
 		if (!p.second)
 			return (defined == p.first->second);
 
-		for (TA<label_type>::iterator i = ta.begin(state); i != ta.end(state); ++i) {
+		for (TreeAut::iterator i = ta.begin(state); i != ta.end(state); ++i) {
 
 			const TypeBox* typeBox = static_cast<const TypeBox*>(i->label()->boxLookup(static_cast<size_t>(-1), nullptr));
 
@@ -194,7 +194,7 @@ public:
 
 	}
 
-	bool checkRoot(size_t root, std::vector<bool>& bitmap, std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>>& states) const {
+	bool checkRoot(size_t root, std::vector<bool>& bitmap, std::map<std::pair<const TreeAut*, size_t>, std::set<size_t>>& states) const {
 
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
@@ -224,7 +224,7 @@ public:
 	bool check() const {
 
 		std::vector<bool> bitmap(this->fae.roots.size(), false);
-		std::map<std::pair<const TA<label_type>*, size_t>, std::set<size_t>> states;
+		std::map<std::pair<const TreeAut*, size_t>, std::set<size_t>> states;
 
 		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
 

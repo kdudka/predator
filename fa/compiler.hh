@@ -41,8 +41,7 @@
 
 // Forester headers
 #include "abstractinstruction.hh"
-#include "treeaut.hh"
-#include "label.hh"
+#include "treeaut_label.hh"
 
 
 namespace CodeStorage {
@@ -201,8 +200,8 @@ public:
 	 * @param[in]  taBackend        The backend for tree automata
 	 * @param[in]  boxMan           The box manager
 	 */
-	Compiler(TA<label_type>::Backend& fixpointBackend,
-		TA<label_type>::Backend& taBackend, class BoxMan& boxMan);
+	Compiler(TreeAut::Backend& fixpointBackend,
+		TreeAut::Backend& taBackend, class BoxMan& boxMan);
 
 	/**
 	 * @brief  The destructor

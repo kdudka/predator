@@ -407,9 +407,9 @@ private:
 	const SymCtx* curCtx_;
 
 	/// The backend for fixpoints
-	TA<label_type>::Backend& fixpointBackend_;
+	TreeAut::Backend& fixpointBackend_;
 	/// The backend for tree automata
-	TA<label_type>::Backend& taBackend_;
+	TreeAut::Backend& taBackend_;
 	/// The box manager
 	BoxMan& boxMan_;
 
@@ -2029,8 +2029,8 @@ public:
 	 * @param[in,out]  taBackend        Tree automata backend
 	 * @param[in,out]  boxMan           The box manager
 	 */
-	Core(TA<label_type>::Backend& fixpointBackend,
-		TA<label_type>::Backend& taBackend, BoxMan& boxMan) :
+	Core(TreeAut::Backend& fixpointBackend,
+		TreeAut::Backend& taBackend, BoxMan& boxMan) :
 		assembly_{},
 		codeIndex_{},
 		fncIndex_{},
@@ -2135,8 +2135,8 @@ public:
 };
 
 
-Compiler::Compiler(TA<label_type>::Backend& fixpointBackend,
-	TA<label_type>::Backend& taBackend, BoxMan& boxMan)
+Compiler::Compiler(TreeAut::Backend& fixpointBackend,
+	TreeAut::Backend& taBackend, BoxMan& boxMan)
 	: core_(new Core(fixpointBackend, taBackend, boxMan))
 { }
 

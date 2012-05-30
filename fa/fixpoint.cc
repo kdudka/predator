@@ -23,7 +23,6 @@
 #include <cl/cl_msg.hh>
 #include "../cl/ssd.h"
 
-#include "treeaut.hh"
 #include "forestautext.hh"
 #include "ufae.hh"
 #include "executionmanager.hh"
@@ -105,7 +104,7 @@ struct SmarterTMatchF {
 };
 
 struct CompareVariablesF {
-	bool operator()(size_t i, const TA<label_type>& ta1, const TA<label_type>& ta2) {
+	bool operator()(size_t i, const TreeAut& ta1, const TreeAut& ta2) {
 		if (i)
 			return true;
 		const TT<label_type>& t1 = ta1.getAcceptingTransition();
@@ -222,9 +221,9 @@ inline void reorder(FAE& fae) {
 
 }
 
-inline bool testInclusion(FAE& fae, TA<label_type>& fwdConf, UFAE& fwdConfWrapper) {
+inline bool testInclusion(FAE& fae, TreeAut& fwdConf, UFAE& fwdConfWrapper) {
 
-	TA<label_type> ta(*fwdConf.backend);
+	TreeAut ta(*fwdConf.backend);
 
 	Index<size_t> index;
 
@@ -235,7 +234,7 @@ inline bool testInclusion(FAE& fae, TA<label_type>& fwdConf, UFAE& fwdConfWrappe
 //	CL_CDEBUG(3, "challenge:" << std::endl << ta);
 //	CL_CDEBUG(3, "response:" << std::endl << fwdConf);
 
-	if (TA<label_type>::subseteq(ta, fwdConf))
+	if (TreeAut::subseteq(ta, fwdConf))
 		return true;
 
 	fwdConfWrapper.join(ta, index);
@@ -257,7 +256,7 @@ struct CopyNonZeroRhsF {
 	}
 };
 
-inline void abstract(FAE& fae, TA<label_type>& fwdConf, TA<label_type>::Backend& backend, BoxMan& boxMan) {
+inline void abstract(FAE& fae, TreeAut& fwdConf, TreeAut::Backend& backend, BoxMan& boxMan) {
 
 	fae.unreachableFree();
 

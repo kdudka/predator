@@ -113,7 +113,7 @@ protected:
 
 	}
 
-	void componentCut(TA<label_type>& res, TA<label_type>& complement,
+	void componentCut(TreeAut& res, TreeAut& complement,
 		ConnectionGraph::CutpointSignature& complementSignature, size_t root, size_t state,
 		size_t target
 	) {
@@ -121,7 +121,7 @@ protected:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 
-		const TA<label_type>& src = *this->fae.roots[root];
+		const TreeAut& src = *this->fae.roots[root];
 
 		res.addFinalStates(src.getFinalStates());
 
@@ -249,16 +249,16 @@ protected:
 
 	}
 
-	std::pair<std::shared_ptr<TA<label_type>>, std::shared_ptr<TA<label_type>>> separateCutpoint(
+	std::pair<std::shared_ptr<TreeAut>, std::shared_ptr<TreeAut>> separateCutpoint(
 		ConnectionGraph::CutpointSignature& boxSignature, size_t root, size_t state,
 		size_t cutpoint) {
 
-		auto ta = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
-		auto tmp = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+		auto ta = std::shared_ptr<TreeAut>(this->fae.allocTA());
+		auto tmp = std::shared_ptr<TreeAut>(this->fae.allocTA());
 
 		this->componentCut(*ta, *tmp, boxSignature, root, state, cutpoint);
 
-		auto tmp2 = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+		auto tmp2 = std::shared_ptr<TreeAut>(this->fae.allocTA());
 
 		tmp->unreachableFree(*tmp2);
 
@@ -266,10 +266,10 @@ protected:
 
 	}
 
-	std::shared_ptr<TA<label_type>> relabelReferences(const TA<label_type>& ta,
+	std::shared_ptr<TreeAut> relabelReferences(const TreeAut& ta,
 		std::vector<size_t>& index) {
 
-		auto tmp = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+		auto tmp = std::shared_ptr<TreeAut>(this->fae.allocTA());
 
 		this->fae.relabelReferences(*tmp, ta, index);
 
@@ -277,10 +277,13 @@ protected:
 
 	}
 
-	std::shared_ptr<TA<label_type>> joinBox(const TA<label_type>& src, size_t state, size_t root,
+	/**
+	 * @brief  @todo
+	 */
+	std::shared_ptr<TreeAut> joinBox(const TreeAut& src, size_t state, size_t root,
 		const Box* box, const ConnectionGraph::CutpointSignature& signature) {
 
-		auto ta = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+		auto ta = std::shared_ptr<TreeAut>(this->fae.allocTA());
 
 		ta->addFinalStates(src.getFinalStates());
 
@@ -398,7 +401,7 @@ protected:
 
 		auto& ta = *this->fae.roots[root];
 
-		for (TA<label_type>::iterator i = ta.begin(state); i != ta.end(state, i); ++i) {
+		for (TreeAut::iterator i = ta.begin(state); i != ta.end(state, i); ++i) {
 
 			std::unordered_map<size_t, size_t> m;
 
@@ -423,7 +426,7 @@ protected:
 
 		assert(ta.begin(state) != ta.end(state));
 /*
-		for (TA<label_type>::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i)
+		for (TreeAut::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i)
 			Folding::computeSelectorMap(selectorMap, *i, stateMap);
 */
 		auto& signatures = this->getSignatures(root);
@@ -483,7 +486,7 @@ protected:
 
 	}
 /*
-	static bool checkSingular(const TA<label_type>& ta, bool result,
+	static bool checkSingular(const TreeAut& ta, bool result,
 		const ConnectionGraph::StateToCutpointSignatureMap& stateMap) {
 
 		for (auto& state : ta.getFinalStates()) {
@@ -501,7 +504,7 @@ protected:
 
 	}
 
-	static bool isSingular(const TA<label_type>& ta) {
+	static bool isSingular(const TreeAut& ta) {
 
 		ConnectionGraph::StateToCutpointSignatureMap stateMap;
 

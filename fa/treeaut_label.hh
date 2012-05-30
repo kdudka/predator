@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Jiri Simacek
+ * Copyright (C) 2012  Ondrej Lengal
  *
  * This file is part of forester.
  *
@@ -17,28 +17,16 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef FIXPOINT_INSTRUCTION_H
-#define FIXPOINT_INSTRUCTION_H
+#ifndef _TREE_AUT_LABEL_HH_
+#define _TREE_AUT_LABEL_HH_
 
-#include <memory>
+#include "treeaut.hh"
+#include "label.hh"
 
-#include "treeaut_label.hh"
 
-#include "sequentialinstruction.hh"
+/**
+ * @brief  The type used for tree automata
+ */
+using TreeAut = TA<label_type>;
 
-class FixpointInstruction : public SequentialInstruction {
-
-public:
-
-	FixpointInstruction(const CodeStorage::Insn* insn) :
-		SequentialInstruction(insn, fi_type_e::fiFix) {}
-
-	virtual void clear() = 0;
-
-	virtual void extendFixpoint(const std::shared_ptr<const class FAE>& fae) = 0;
-
-	virtual const TreeAut& getFixPoint() const = 0;
-
-};
-
-#endif
+#endif /* _TREE_AUT_LABEL_HH_ */

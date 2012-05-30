@@ -20,7 +20,7 @@
 #include "forestaut.hh"
 #include "tatimint.hh"
 
-std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta) {
+std::ostream& operator<<(std::ostream& os, const TreeAut& ta) {
 	TAWriter<label_type> writer(os);
 	os << '[';
 	for (std::set<size_t>::iterator j = ta.getFinalStates().begin(); j != ta.getFinalStates().end(); ++j)
@@ -33,7 +33,7 @@ std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta) {
 std::ostream& operator<<(std::ostream& os, const FA& fa)
 {
 	os << '[';
-	for (auto var : fa.variables_)
+	for (const Data& var : fa.variables_)
 	{
 		os << ' ' << var;
 	}

@@ -33,8 +33,7 @@
 
 // Forester headers
 #include "types.hh"
-#include "treeaut.hh"
-#include "label.hh"
+#include "treeaut_label.hh"
 #include "abstractbox.hh"
 #include "config.h"
 
@@ -258,10 +257,10 @@ public:
 
 	// computes signature for all states of ta
 	static void computeSignatures(StateToCutpointSignatureMap& stateMap,
-		const TA<label_type>& ta);
+		const TreeAut& ta);
 
 	// computes signature for all states of ta
-	static void fixSignatures(TA<label_type>& dst, const TA<label_type>& ta, size_t& offset);
+	static void fixSignatures(TreeAut& dst, const TreeAut& ta, size_t& offset);
 
 public:
 
@@ -278,7 +277,7 @@ public:
 		return true;
 	}
 
-	void updateIfNeeded(const std::vector<std::shared_ptr<TA<label_type>>>& roots);
+	void updateIfNeeded(const std::vector<std::shared_ptr<TreeAut>>& roots);
 
 	void clear()
 	{
@@ -289,7 +288,7 @@ public:
 
 	void updateBackwardData(size_t root);
 
-	void updateRoot(size_t root, const TA<label_type>& ta);
+	void updateRoot(size_t root, const TreeAut& ta);
 
 	void newRoot()
 	{

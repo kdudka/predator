@@ -223,7 +223,7 @@ protected:
 #endif
 
 	/// @todo: add documentation
-	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition,
+	void transitionModify(TreeAut& dst, const TT<label_type>& transition,
 		size_t offset, const Data& in, Data& out) {
 
 		// Create a new final state
@@ -255,7 +255,7 @@ protected:
 	}
 
 	/// @todo: add documentation
-	void transitionModify(TA<label_type>& dst, const TT<label_type>& transition,
+	void transitionModify(TreeAut& dst, const TT<label_type>& transition,
 		size_t base, const std::vector<std::pair<size_t, Data> >& in, Data& out) {
 
 		// Create a new final state
@@ -384,7 +384,7 @@ public:
 
 		// create a new tree automaton in the forest automaton
 		size_t root = this->fae.roots.size();
-		TA<label_type>* ta = this->fae.allocTA();
+		TreeAut* ta = this->fae.allocTA();
 		size_t f = this->fae.freshState();
 		ta->addFinalState(f);
 
@@ -431,7 +431,7 @@ public:
 
 		// create a new tree automaton
 		size_t root = this->fae.roots.size();
-		TA<label_type>* ta = this->fae.allocTA();
+		TreeAut* ta = this->fae.allocTA();
 		size_t f = this->fae.freshState();
 		ta->addFinalState(f);
 
@@ -492,7 +492,7 @@ public:
 				continue;
 			}
 
-			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(
+			this->fae.roots[i] = std::shared_ptr<TreeAut>(
 				this->fae.invalidateReference(this->fae.roots[i].get(), root));
 			this->fae.connectionGraph.invalidate(i);
 		}
@@ -503,7 +503,7 @@ public:
 				continue;
 			}
 
-			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(
+			this->fae.roots[i] = std::shared_ptr<TreeAut>(
 				this->fae.invalidateReference(this->fae.roots[i].get(), root));
 			this->fae.connectionGraph.invalidate(i);
 		}
@@ -584,13 +584,13 @@ public:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 
-		TA<label_type> ta(*this->fae.backend);
+		TreeAut ta(*this->fae.backend);
 		this->transitionModify(ta, this->fae.roots[root]->getAcceptingTransition(),
 			offset, in, out);
 		this->fae.roots[root]->copyTransitions(ta);
-		TA<label_type>* tmp = this->fae.allocTA();
+		TreeAut* tmp = this->fae.allocTA();
 		ta.unreachableFree(*tmp);
-		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
+		this->fae.roots[root] = std::shared_ptr<TreeAut>(tmp);
 		this->fae.connectionGraph.invalidate(root);
 	}
 
@@ -602,13 +602,13 @@ public:
 		assert(this->fae.roots[root]);
 		assert(in.isStruct());
 
-		TA<label_type> ta(*this->fae.backend);
+		TreeAut ta(*this->fae.backend);
 		this->transitionModify(ta, this->fae.roots[root]->getAcceptingTransition(),
 			offset, *in.d_struct, out);
 		this->fae.roots[root]->copyTransitions(ta);
-		TA<label_type>* tmp = this->fae.allocTA();
+		TreeAut* tmp = this->fae.allocTA();
 		ta.unreachableFree(*tmp);
-		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
+		this->fae.roots[root] = std::shared_ptr<TreeAut>(tmp);
 		this->fae.connectionGraph.invalidate(root);
 	}
 

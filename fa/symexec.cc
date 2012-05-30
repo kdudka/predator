@@ -61,8 +61,8 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 
 class SymExec::Engine {
 
-	TA<label_type>::Backend taBackend;
-	TA<label_type>::Backend fixpointBackend;
+	TreeAut::Backend taBackend;
+	TreeAut::Backend fixpointBackend;
 	BoxMan boxMan;
 
 #if 0

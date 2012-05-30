@@ -182,7 +182,7 @@ public:
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 
-		for (TA<label_type>::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
+		for (TreeAut::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
 			if (i->label()->isNode())
 				i->label()->iterate(LeafEnumF(this->fae, *i, target, selectors));
 		}
@@ -193,7 +193,7 @@ public:
 		for (size_t root = 0; root < this->fae.roots.size(); ++root) {
 			if (!this->fae.roots[root])
 				continue;
-			for (TA<label_type>::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
+			for (TreeAut::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
 				if (i->label()->isNode())
 					i->label()->iterate(LeafEnumF(this->fae, *i, target, selectors));
 			}
@@ -220,10 +220,10 @@ public:
 
 		std::vector<std::pair<const TT<label_type>*, const Box*> > v;
 
-		TA<label_type> ta(*this->fae.backend);
+		TreeAut ta(*this->fae.backend);
 
 		const Box* matched;
-		for (TA<label_type>::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
+		for (TreeAut::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
 			if (!i->label()->isNode()) {
 				ta.addTransition(*i);
 				continue;
@@ -242,13 +242,13 @@ public:
 		for (std::vector<std::pair<const TT<label_type>*, const Box*> >::iterator i = v.begin(); i != v.end(); ++i) {
 			FAE fae(this->fae);
 			Splitting splitting(fae);
-			TA<label_type> ta2(*fae.backend);
+			TreeAut ta2(*fae.backend);
 			if (this->fae.roots[root]->isFinalState(i->first->rhs())) {
 				ta.copyTransitions(ta2);
 				size_t state = fae.freshState();
 				ta2.addFinalState(state);
 				const TT<label_type>& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
-				fae.roots[root] = std::shared_ptr<TA<label_type>>(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
+				fae.roots[root] = std::shared_ptr<TreeAut>(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
 				fae.connectionGraph.invalidate(root);
 				std::set<const Box*> boxes;
 				splitting.isolateAtRoot(root, t, IsolateBoxF(i->second), boxes);
@@ -258,7 +258,7 @@ public:
 				continue;
 			}
 			ta2.addFinalStates(this->fae.roots[root]->getFinalStates());
-			for (TA<label_type>::iterator j = ta.begin(); j != ta.end(); ++j) {
+			for (TreeAut::iterator j = ta.begin(); j != ta.end(); ++j) {
 				ta2.addTransition(*j);
 				std::vector<size_t> lhs = j->lhs();
 				for (std::vector<size_t>::iterator k = lhs.begin(); k != lhs.end(); ++k) {
@@ -270,7 +270,7 @@ public:
 				}
 			}
 
-			TA<label_type> ta3(*fae.backend);
+			TreeAut ta3(*fae.backend);
 
 			// ha! we can get inconsistent signatures here
 			size_t offset = fae.nextState();
@@ -308,7 +308,7 @@ public:
 
 				ta2.addFinalState(f);
 
-				fae2.roots[root] = std::shared_ptr<TA<label_type>>(&ta2.uselessAndUnreachableFree(*fae2.allocTA()));
+				fae2.roots[root] = std::shared_ptr<TreeAut>(&ta2.uselessAndUnreachableFree(*fae2.allocTA()));
 
 				std::set<const Box*> boxes;
 
@@ -337,7 +337,7 @@ public:
 
 		size_t newState = this->fae.freshState();
 
-		TA<label_type> ta(*this->fae.roots[root], false);
+		TreeAut ta(*this->fae.roots[root], false);
 
 		ta.addFinalState(newState);
 
@@ -365,9 +365,9 @@ public:
 				// update new left-hand side
 				lhs.push_back(this->fae.addData(ta, Data::createRef(this->fae.roots.size())));
 				// prepare new root
-				TA<label_type> tmp(*this->fae.roots[root], false);
+				TreeAut tmp(*this->fae.roots[root], false);
 				tmp.addFinalState(t.lhs()[lhsOffset]);
-				TA<label_type>* tmp2 = this->fae.allocTA();
+				TreeAut* tmp2 = this->fae.allocTA();
 				tmp.unreachableFree(*tmp2);
 				// update 'o'
 				this->fae.appendRoot(tmp2);
@@ -379,12 +379,12 @@ public:
 
 		ta.addTransition(lhs, t.label(), newState);
 
-		TA<label_type>* tmp = this->fae.allocTA();
+		TreeAut* tmp = this->fae.allocTA();
 
 		ta.unreachableFree(*tmp);
 
 		// exchange the original automaton with the new one
-		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
+		this->fae.roots[root] = std::shared_ptr<TreeAut>(tmp);
 		this->fae.connectionGraph.invalidate(root);
 
 //		this->fae.updateConnectionGraph();
@@ -401,7 +401,7 @@ public:
 //		CL_CDEBUG(3, "isolating at root " << root << " : " << IsolateSetF(offsets) << std::endl << this->fae);
 
 		for (std::set<size_t>::const_iterator j = this->fae.roots[root]->getFinalStates().begin(); j != this->fae.roots[root]->getFinalStates().end(); ++j) {
-		for (TA<label_type>::iterator i = this->fae.roots[root]->begin(*j), end = this->fae.roots[root]->end(*j, i); i != end ; ++i) {
+		for (TreeAut::iterator i = this->fae.roots[root]->begin(*j), end = this->fae.roots[root]->end(*j, i); i != end ; ++i) {
 			FAE fae(this->fae);
 			Splitting splitting(fae);
 			std::set<const Box*> boxes;
@@ -547,17 +547,17 @@ public:
 	}
 /*
 	void restrictedSplit(Index<size_t>& index, size_t root, size_t state) {
-		TA<label_type> ta(*this->fae.backend);
+		TreeAut ta(*this->fae.backend);
 		this->fae.roots[root]->copyTransitions(ta);
 		ta.addFinalState(state);
-		TA<label_type> ta2(*this->fae.backend);
+		TreeAut ta2(*this->fae.backend);
 		this->fae.roots[root]->copyTransitions(ta2);
 		index.set(state, this->fae.addData(ta2, Data::createRef(this->fae.roots.size())));
 		size_t base = this->fae.nextState();
 		bool changed = true;
 		while (changed) {
 			changed = false;
-			for (TA<label_type>::iterator i = ta2.begin(); i != ta2.end(); ++i) {
+			for (TreeAut::iterator i = ta2.begin(); i != ta2.end(); ++i) {
 				std::vector<size_t> lhs = i->lhs();
 				for (size_t j = 0; j < lhs.size(); ++j) {
 					std::pair<size_t, bool> p = index.find(lhs[j]);
@@ -577,14 +577,14 @@ public:
 				ta2.addFinalState(p.first);
 		}
 		// update FAE
-		TA<label_type>* tmp = this->fae.allocTA();
+		TreeAut* tmp = this->fae.allocTA();
 		ta.unreachableFree(*tmp);
 		this->fae.appendRoot(tmp);
 		this->fae.rootMap.push_back(FA::RootSignature());
 		this->fae.updateRootMap(this->fae.roots.size() - 1);
 		tmp = this->fae.allocTA();
 		ta2.unreachableFree(*tmp);
-		this->fae.roots[root] = std::shared_ptr<TA<label_type>>(tmp);
+		this->fae.roots[root] = std::shared_ptr<TreeAut>(tmp);
 		this->fae.updateRootMap(root);
 	}
 */

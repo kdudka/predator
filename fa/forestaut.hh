@@ -32,30 +32,48 @@
 
 // Forester headers
 #include "types.hh"
-#include "treeaut.hh"
-#include "label.hh"
+#include "treeaut_label.hh"
 #include "abstractbox.hh"
 #include "connection_graph.hh"
+
+
+
 
 /**
  * @brief  @todo
  */
 class FA
 {
+public:   // data types
 
-	friend class UFAE;
 
 public:
 
-	TA<label_type>::Backend* backend;
+	TreeAut::Backend* backend;
 
 private:  // data members
 
 	DataArray variables_;
 
+private:  // static methods
+
+	/**
+	 * @brief  
+	 */
+	static size_t getLabelArity(std::vector<const AbstractBox*>& label)
+	{
+		size_t arity = 0;
+
+		for (auto& box : label)
+			arity += box->getArity();
+
+		return arity;
+	}
+
+
 public:
 
-	std::vector<std::shared_ptr<TA<label_type> > > roots;
+	std::vector<std::shared_ptr<TreeAut > > roots;
 
 	mutable ConnectionGraph connectionGraph;
 
@@ -72,17 +90,6 @@ public:
 		}
 
 	};
-
-	static size_t getLabelArity(std::vector<const AbstractBox*>& label) {
-
-		size_t arity = 0;
-
-		for (auto& box : label)
-			arity += box->getArity();
-
-		return arity;
-
-	}
 
 	static void reorderBoxes(std::vector<const AbstractBox*>& label, std::vector<size_t>& lhs) {
 
@@ -115,8 +122,8 @@ public:
 
 	}
 
-	TA<label_type>* allocTA() {
-		return new TA<label_type>(*this->backend);
+	TreeAut* allocTA() {
+		return new TreeAut(*this->backend);
 	}
 
 protected:// methods
@@ -145,7 +152,7 @@ public:
 
 	};
 
-	FA(TA<label_type>::Backend& backend) : backend(&backend), variables_{}, roots{}, connectionGraph{} {}
+	FA(TreeAut::Backend& backend) : backend(&backend), variables_{}, roots{}, connectionGraph{} {}
 
 	FA(const FA& src) : backend(src.backend), variables_(src.variables_), roots(src.roots),
 		connectionGraph(src.connectionGraph) { }
@@ -176,16 +183,16 @@ public:
 		return this->roots.size();
 	}
 
-	const TA<label_type>* getRoot(size_t i) const {
+	const TreeAut* getRoot(size_t i) const {
 		assert(i < this->roots.size());
 		return this->roots[i].get();
 	}
 
-	void appendRoot(TA<label_type>* ta) {
-		this->roots.push_back(std::shared_ptr<TA<label_type>>(ta));
+	void appendRoot(TreeAut* ta) {
+		this->roots.push_back(std::shared_ptr<TreeAut>(ta));
 	}
 
-	void appendRoot(std::shared_ptr<TA<label_type>> ta) {
+	void appendRoot(std::shared_ptr<TreeAut> ta) {
 		this->roots.push_back(ta);
 	}
 
@@ -280,6 +287,6 @@ public:   // static methods
 	{ }
 };
 
-std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta);
+std::ostream& operator<<(std::ostream& os, const TreeAut& ta);
 
 #endif

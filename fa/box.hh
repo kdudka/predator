@@ -31,7 +31,7 @@
 // Forester headers
 #include "tatimint.hh"
 #include "types.hh"
-#include "treeaut.hh"
+#include "treeaut_label.hh"
 #include "abstractbox.hh"
 #include "connection_graph.hh"
 
@@ -187,11 +187,11 @@ class Box : public StructuralBox {
 
 	std::string name;
 	size_t hint;
-	std::shared_ptr<TA<label_type>> output;
+	std::shared_ptr<TreeAut> output;
 	ConnectionGraph::CutpointSignature outputSignature;
 	std::vector<label_type> outputLabels;
 	std::vector<size_t> inputMap;
-	std::shared_ptr<TA<label_type>> input;
+	std::shared_ptr<TreeAut> input;
 	size_t inputIndex;
 	ConnectionGraph::CutpointSignature inputSignature;
 	std::vector<label_type> inputLabels;
@@ -276,9 +276,9 @@ protected:
 
 	}
 
-	static bool checkDownwardCoverage(const std::vector<size_t>& v, const TA<label_type>& ta) {
+	static bool checkDownwardCoverage(const std::vector<size_t>& v, const TreeAut& ta) {
 
-		for (TA<label_type>::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i) {
+		for (TreeAut::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i) {
 
 			std::vector<size_t> v2;
 
@@ -293,7 +293,7 @@ protected:
 
 	}
 
-	static void getDownwardCoverage(std::set<size_t>& s, const TA<label_type>& ta) {
+	static void getDownwardCoverage(std::set<size_t>& s, const TreeAut& ta) {
 
 		std::vector<size_t> v;
 
@@ -311,7 +311,7 @@ protected:
 
 	}
 
-	static void getAcceptingLabels(std::vector<label_type>& labels, const TA<label_type>& ta) {
+	static void getAcceptingLabels(std::vector<label_type>& labels, const TreeAut& ta) {
 
 		for (auto& state : ta.getFinalStates()) {
 
@@ -328,10 +328,10 @@ protected:
 
 	Box(
 		const std::string& name,
-		const std::shared_ptr<TA<label_type>>& output,
+		const std::shared_ptr<TreeAut>& output,
 		ConnectionGraph::CutpointSignature outputSignature,
 		const std::vector<size_t>& inputMap,
-		const std::shared_ptr<TA<label_type>>& input,
+		const std::shared_ptr<TreeAut>& input,
 		size_t inputIndex,
 		ConnectionGraph::CutpointSignature inputSignature,
 		const std::vector<std::pair<size_t,size_t>>& selectors
@@ -359,12 +359,12 @@ protected:
 	struct LeafEnumF {
 
 		std::vector<std::set<size_t>>& selectors;
-		const TA<label_type>& ta;
+		const TreeAut& ta;
 		const TT<label_type>& t;
 
 		bool getRef(size_t state, size_t& ref) const {
 
-			TA<label_type>::Iterator i = this->ta.begin(state);
+			TreeAut::Iterator i = this->ta.begin(state);
 
 			assert(i != this->ta.end(state));
 
@@ -382,7 +382,7 @@ protected:
 
 		}
 
-		LeafEnumF(std::vector<std::set<size_t>>& selectors, const TA<label_type>& ta,
+		LeafEnumF(std::vector<std::set<size_t>>& selectors, const TreeAut& ta,
 			const TT<label_type>& t) : selectors(selectors), ta(ta), t(t)  {}
 
 		bool operator()(const AbstractBox* abox, size_t, size_t offset) {
@@ -414,7 +414,7 @@ protected:
 
 	// enumerates upward selectors
 	void enumerateSelectorsAtLeaves(std::vector<std::set<size_t>>& selectors,
-		const TA<label_type>& ta) const {
+		const TreeAut& ta) const {
 
 		for (auto i = ta.begin(); i != ta.end(); ++i) {
 
@@ -483,7 +483,7 @@ public:
 
 	}
 
-	const TA<label_type>* getOutput() const {
+	const TreeAut* getOutput() const {
 
 		return this->output.get();
 
@@ -495,7 +495,7 @@ public:
 
 	}
 
-	const TA<label_type>* getInput() const {
+	const TreeAut* getInput() const {
 
 		return this->input.get();
 
@@ -507,15 +507,15 @@ public:
 
 	}
 
-	static bool equal(const TA<label_type>& a, const TA<label_type>& b) {
+	static bool equal(const TreeAut& a, const TreeAut& b) {
 
-		return TA<label_type>::subseteq(a, b) && TA<label_type>::subseteq(b, a);
+		return TreeAut::subseteq(a, b) && TreeAut::subseteq(b, a);
 
 	}
 
-	static bool lessOrEqual(const TA<label_type>& a, const TA<label_type>& b) {
+	static bool lessOrEqual(const TreeAut& a, const TreeAut& b) {
 
-		return TA<label_type>::subseteq(a, b);
+		return TreeAut::subseteq(a, b);
 
 	}
 

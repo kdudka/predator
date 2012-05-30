@@ -23,7 +23,6 @@
 #include <vector>
 #include <map>
 
-#include "treeaut.hh"
 #include "forestautext.hh"
 #include "abstractbox.hh"
 #include "utils.hh"
@@ -34,9 +33,9 @@ class Normalization {
 
 protected:
 
-	TA<label_type>* mergeRoot(TA<label_type>& dst, size_t ref, TA<label_type>& src, std::vector<size_t>& joinStates) {
+	TreeAut* mergeRoot(TreeAut& dst, size_t ref, TreeAut& src, std::vector<size_t>& joinStates) {
 		assert(ref < this->fae.roots.size());
-		TA<label_type>* ta = this->fae.allocTA();
+		TreeAut* ta = this->fae.allocTA();
 		ta->addFinalStates(dst.getFinalStates());
 		size_t refState = _MSB_ADD(this->fae.boxMan->getDataId(Data::createRef(ref)));
 		std::unordered_map<size_t, size_t> joinStatesMap;
@@ -45,7 +44,7 @@ protected:
 			joinStatesMap.insert(std::make_pair(*i, this->fae.freshState()));
 		}
 		bool hit = false;
-		for (TA<label_type>::iterator i = dst.begin(); i != dst.end(); ++i) {
+		for (TreeAut::iterator i = dst.begin(); i != dst.end(); ++i) {
 			std::vector<size_t> tmp = i->lhs();
 			std::vector<size_t>::iterator j = std::find(tmp.begin(), tmp.end(), refState);
 			if (j != tmp.end()) {
@@ -173,14 +172,14 @@ public:
 
 			std::vector<size_t> refStates;
 
-			TA<label_type>* ta = this->mergeRoot(
+			TreeAut* ta = this->mergeRoot(
 				*this->fae.roots[root],
 				cutpoint.root,
 				*this->fae.roots[cutpoint.root],
 				refStates
 			);
 
-			this->fae.roots[root] = std::shared_ptr<TA<label_type>>(ta);
+			this->fae.roots[root] = std::shared_ptr<TreeAut>(ta);
 			this->fae.roots[cutpoint.root] = nullptr;
 
 			this->fae.connectionGraph.mergeCutpoint(root, cutpoint.root);
@@ -277,7 +276,7 @@ public:
 		// reindex roots
 		std::vector<size_t> index(this->fae.roots.size(), static_cast<size_t>(-1));
 		std::vector<bool> normalized(this->fae.roots.size(), false);
-		std::vector<std::shared_ptr<TA<label_type>>> newRoots;
+		std::vector<std::shared_ptr<TreeAut>> newRoots;
 		size_t offset = 0;
 
 		for (auto& i : order) {
@@ -304,7 +303,7 @@ public:
 
 		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
 
-			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(
+			this->fae.roots[i] = std::shared_ptr<TreeAut>(
 				this->fae.relabelReferences(this->fae.roots[i].get(), index)
 			);
 

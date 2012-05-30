@@ -30,7 +30,7 @@
 
 // Forester headers
 #include "config.h"
-#include "treeaut.hh"
+#include "treeaut_label.hh"
 #include "tatimint.hh"
 #include "label.hh"
 #include "types.hh"
@@ -380,7 +380,7 @@ public:
 
 	}
 
-	Box* createType1Box(size_t root, const std::shared_ptr<TA<label_type>>& output,
+	Box* createType1Box(size_t root, const std::shared_ptr<TreeAut>& output,
 		const ConnectionGraph::CutpointSignature& signature, std::vector<size_t>& inputMap,
 		const std::vector<size_t>& index) {
 
@@ -396,7 +396,7 @@ public:
 			output,
 			outputSignature,
 			inputMap,
-			std::shared_ptr<TA<label_type>>(nullptr),
+			std::shared_ptr<TreeAut>(nullptr),
 			0,
 			ConnectionGraph::CutpointSignature(),
 			selectors
@@ -404,9 +404,9 @@ public:
 
 	}
 
-	Box* createType2Box(size_t root, const std::shared_ptr<TA<label_type>>& output,
+	Box* createType2Box(size_t root, const std::shared_ptr<TreeAut>& output,
 		const ConnectionGraph::CutpointSignature& signature, std::vector<size_t>& inputMap,
-		size_t aux, const std::shared_ptr<TA<label_type>>& input,
+		size_t aux, const std::shared_ptr<TreeAut>& input,
 		const ConnectionGraph::CutpointSignature& signature2, size_t inputSelector,
 		std::vector<size_t>& index) {
 

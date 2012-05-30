@@ -35,16 +35,16 @@ class Unfolding {
 
 protected:
 
-	void boxMerge(TA<label_type>& dst, const TA<label_type>& src, const TA<label_type>& boxRoot, const Box* box, const std::vector<size_t>& rootIndex) {
-		TA<label_type> tmp(*this->fae.backend), tmp2(*this->fae.backend);
+	void boxMerge(TreeAut& dst, const TreeAut& src, const TreeAut& boxRoot, const Box* box, const std::vector<size_t>& rootIndex) {
+		TreeAut tmp(*this->fae.backend), tmp2(*this->fae.backend);
 //		this->fae.boxMan->adjustLeaves(tmp2, boxRoot);
 		this->fae.relabelReferences(tmp, boxRoot, rootIndex);
 		this->fae.unique(tmp2, tmp);
-		src.copyTransitions(dst, TA<label_type>::NonAcceptingF(src));
-		tmp2.copyTransitions(dst, TA<label_type>::NonAcceptingF(tmp2));
+		src.copyTransitions(dst, TreeAut::NonAcceptingF(src));
+		tmp2.copyTransitions(dst, TreeAut::NonAcceptingF(tmp2));
 		dst.addFinalStates(tmp2.getFinalStates());
 		for (std::set<size_t>::const_iterator j = src.getFinalStates().begin(); j != src.getFinalStates().end(); ++j) {
-			for (TA<label_type>::iterator i = src.begin(*j); i != src.end(*j, i); ++i) {
+			for (TreeAut::iterator i = src.begin(*j); i != src.end(*j, i); ++i) {
 				std::vector<size_t> lhs;
 				std::vector<const AbstractBox*> label;
 				size_t lhsOffset = 0;
@@ -78,7 +78,7 @@ protected:
 					lhs = i->lhs();
 					label = i->label()->getNode();
 				}
-				for (TA<label_type>::iterator j = tmp2.accBegin(); j != tmp2.accEnd(j); ++j) {
+				for (TreeAut::iterator j = tmp2.accBegin(); j != tmp2.accEnd(j); ++j) {
 					std::vector<size_t> lhs2 = lhs;
 					std::vector<const AbstractBox*> label2 = label;
 					lhs2.insert(lhs2.end(), j->lhs().begin(), j->lhs().end());
@@ -130,7 +130,7 @@ public:
 
 		}
 
-		auto ta = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+		auto ta = std::shared_ptr<TreeAut>(this->fae.allocTA());
 
 		this->boxMerge(*ta, *this->fae.roots[root], *box->getOutput(), box, index);
 
@@ -147,10 +147,10 @@ public:
 		assert(aux != static_cast<size_t>(-1));
 		assert(aux < this->fae.roots.size());
 
-		TA<label_type> tmp(*this->fae.backend);
+		TreeAut tmp(*this->fae.backend);
 
 		this->fae.roots[aux]->unfoldAtRoot(tmp, this->fae.freshState());
-		this->fae.roots[aux] = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+		this->fae.roots[aux] = std::shared_ptr<TreeAut>(this->fae.allocTA());
 
 		this->boxMerge(*this->fae.roots[aux], tmp, *box->getInput(), nullptr, index);
 

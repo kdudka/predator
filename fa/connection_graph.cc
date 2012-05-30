@@ -49,7 +49,7 @@ void ConnectionGraph::updateStateSignature(
 
 
 void ConnectionGraph::computeSignatures(
-	StateToCutpointSignatureMap& stateMap, const TA<label_type>& ta)
+	StateToCutpointSignatureMap& stateMap, const TreeAut& ta)
 {
 	stateMap.clear();
 
@@ -57,7 +57,7 @@ void ConnectionGraph::computeSignatures(
 
 	CutpointSignature v(1);
 
-	for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i)
+	for (TreeAut::iterator i = ta.begin(); i != ta.end(); ++i)
 	{
 		const Data* data;
 
@@ -115,7 +115,7 @@ void ConnectionGraph::computeSignatures(
 }
 
 
-void ConnectionGraph::fixSignatures(TA<label_type>& dst, const TA<label_type>& ta, size_t& offset)
+void ConnectionGraph::fixSignatures(TreeAut& dst, const TreeAut& ta, size_t& offset)
 {
 	typedef std::pair<size_t, CutpointSignature> StateCutpointSignaturePair;
 	typedef std::unordered_map<StateCutpointSignaturePair, size_t, boost::hash<StateCutpointSignaturePair>> StateCutpointSignatureToStateMap;
@@ -157,7 +157,7 @@ void ConnectionGraph::fixSignatures(TA<label_type>& dst, const TA<label_type>& t
 
 	CutpointSignature v;
 
-	for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i)
+	for (TreeAut::iterator i = ta.begin(); i != ta.end(); ++i)
 	{
 		const Data* data;
 
@@ -678,7 +678,7 @@ void ConnectionGraph::finishNormalization(size_t size, const std::vector<size_t>
 }
 
 
-void ConnectionGraph::updateRoot(size_t root, const TA<label_type>& ta)
+void ConnectionGraph::updateRoot(size_t root, const TreeAut& ta)
 {
 	// Assertions
 	assert(root < this->data.size());
@@ -756,7 +756,7 @@ void ConnectionGraph::invalidate(size_t root)
 }
 
 
-void ConnectionGraph::updateIfNeeded(const std::vector<std::shared_ptr<TA<label_type>>>& roots)
+void ConnectionGraph::updateIfNeeded(const std::vector<std::shared_ptr<TreeAut>>& roots)
 {
 	// Assertions
 	assert(this->data.size() == roots.size());
