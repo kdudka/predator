@@ -135,7 +135,7 @@ struct SelData {
  *
  * This enumeration defines type of stored data.
  */
-typedef enum {
+enum class data_type_e {
 	t_undef,          ///< undefined value
 	t_unknw,          ///< unknown value
 	t_native_ptr,     ///< native memory pointer for pointers to CFG
@@ -145,7 +145,18 @@ typedef enum {
 	t_bool,           ///< Boolean
 	t_struct,         ///< structure
 	t_other           ///< other type
-} data_type_e;
+};
+
+namespace std {
+
+	template <>
+	struct hash<data_type_e> {
+		size_t operator()(const data_type_e& dataType) const
+		{
+			return std::hash<size_t>()(static_cast<size_t>(dataType));
+		}
+	};
+}
 
 /**
  * @brief  Structure for information about stored data
@@ -573,26 +584,40 @@ struct Data {
 	 *
 	 * @todo  Improve the distribution of the hash function
 	 */
-	friend size_t hash_value(const Data& v) {
-		switch (v.type) {
-			case data_type_e::t_undef: // falls through
-			case data_type_e::t_unknw:
-				return boost::hash_value(v.type);
+	friend size_t hash_value(const Data& v)
+	{
+		size_t seed = std::hash<data_type_e>()(v.type);
+		switch (v.type)
+		{
+			case data_type_e::t_undef: break;
+			case data_type_e::t_unknw: break;
 			case data_type_e::t_native_ptr:
-				return boost::hash_value(v.type + boost::hash_value(v.d_native_ptr));
+				boost::hash_combine(seed, v.d_native_ptr);
+				break;
 			case data_type_e::t_void_ptr:
-				return boost::hash_value(v.type + v.d_void_ptr_size);
+				boost::hash_combine(seed, v.d_void_ptr_size);
+				break;
 			case data_type_e::t_ref:
-				return boost::hash_value(v.type + v.d_ref.root + v.d_ref.displ);
+				boost::hash_combine(seed, v.d_ref.root);
+				boost::hash_combine(seed, v.d_ref.displ);
+				break;
 			case data_type_e::t_int:
-				return boost::hash_value(v.type + v.d_int);
+				boost::hash_combine(seed, v.d_int);
+				break;
 			case data_type_e::t_bool:
-				return boost::hash_value(v.type + v.d_bool);
+				boost::hash_combine(seed, v.d_bool);
+				break;
 			case data_type_e::t_struct:
-				return boost::hash_value(v.type + boost::hash_value(*v.d_struct));
+				boost::hash_combine(seed, *v.d_struct);
+				break;
+			case data_type_e::t_other:
+				boost::hash_combine(seed, v.d_void_ptr_size);
+				break;
 			default:
-				return boost::hash_value(v.type + v.d_void_ptr_size);
+				assert(false);              // fail gracefully
 		}
+
+		return seed;
 	}
 
 	/**
