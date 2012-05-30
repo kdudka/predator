@@ -33,7 +33,6 @@
 // Forester headers
 #include "types.hh"
 #include "treeaut.hh"
-#include "tatimint.hh"
 #include "label.hh"
 #include "abstractbox.hh"
 #include "connection_graph.hh"
@@ -41,35 +40,6 @@
 class FA {
 
 	friend class UFAE;
-
-public:
-
-	friend std::ostream& operator<<(std::ostream& os, const FA& fa) {
-
-		os << '[';
-		for (auto var : fa.variables)
-			os << ' ' << var;
-		os << " ]" << std::endl;
-
-		for (size_t i = 0; i < fa.roots.size(); ++i) {
-
-			if (!fa.roots[i])
-				continue;
-
-			os << "===" << std::endl << "root " << i << " [" << fa.connectionGraph.data[i] << ']';
-
-			TAWriter<label_type> writer(os);
-
-			for (auto state : fa.roots[i]->getFinalStates())
-				writer.writeState(state);
-
-			writer.endl();
-			writer.writeTransitions(*fa.roots[i], FA::WriteStateF());
-
-		}
-
-		return os;
-	}
 
 public:
 
@@ -208,6 +178,10 @@ public:
 		this->connectionGraph.updateIfNeeded(this->roots);
 
 	}
+
+public:
+
+	friend std::ostream& operator<<(std::ostream& os, const FA& fa);
 
 	/**
 	 * @brief  Virtual destructor

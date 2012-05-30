@@ -29,3 +29,33 @@ std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta) {
 	writer.writeTransitions(ta, FA::WriteStateF());
 	return os;
 }
+
+std::ostream& operator<<(std::ostream& os, const FA& fa)
+{
+	os << '[';
+	for (auto var : fa.variables)
+	{
+		os << ' ' << var;
+	}
+	os << " ]" << std::endl;
+
+	for (size_t i = 0; i < fa.roots.size(); ++i)
+	{
+		if (!fa.roots[i])
+			continue;
+
+		os << "===" << std::endl << "root " << i << " [" << fa.connectionGraph.data[i] << ']';
+
+		TAWriter<label_type> writer(os);
+
+		for (auto state : fa.roots[i]->getFinalStates())
+		{
+			writer.writeState(state);
+		}
+
+		writer.endl();
+		writer.writeTransitions(*fa.roots[i], FA::WriteStateF());
+	}
+
+	return os;
+}
