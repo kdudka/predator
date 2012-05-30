@@ -54,6 +54,12 @@
 #include <toplev.h>
 #include <tree-pass.h>
 
+#ifdef __cplusplus
+#   define C99_FIELD(field)
+#else
+#   define C99_FIELD(field) .field =
+#endif
+
 #ifndef _GNU_SOURCE
 #   define _GNU_SOURCE
 #endif
@@ -145,8 +151,8 @@ static int verbose = 0;
 
 // plug-in meta-data according to gcc plug-in API
 static struct plugin_info cl_info = {
-    /* .version = */ "%s [code listener SHA1 " CL_GIT_SHA1 "]",
-    /* .help    = */ "%s [code listener SHA1 " CL_GIT_SHA1 "]\n"
+    C99_FIELD(version) "%s [code listener SHA1 " CL_GIT_SHA1 "]",
+    C99_FIELD(help   ) "%s [code listener SHA1 " CL_GIT_SHA1 "]\n"
 "\n"
 "Usage: gcc -fplugin=%s [OPTIONS] ...\n"
 "\n"
@@ -1086,6 +1092,7 @@ static void handle_accessor_indirect_ref(struct cl_accessor **ac, tree *pt)
     (*ac)->type = add_type_if_needed(op0);
 }
 
+#ifdef MEM_REF_CHECK
 static void handle_accessor_offset(struct cl_accessor **ac, tree t)
 {
     const int off = TREE_INT_CST_LOW(TREE_OPERAND(t, 1));
@@ -1100,6 +1107,7 @@ static void handle_accessor_offset(struct cl_accessor **ac, tree t)
     (*ac)->type            = operand_type_lookup(t);
     (*ac)->data.offset.off = off;
 }
+#endif
 
 static void handle_accessor_component_ref(struct cl_accessor **ac, tree t)
 {
@@ -1352,16 +1360,16 @@ static void handle_stmt_return(gimple stmt)
 }
 
 static /* const */ struct cl_type builtin_bool_type = {
-    /* .uid            = */ /* FIXME */ -1,
-    /* .code           = */ CL_TYPE_BOOL,
-    /* .loc            = */ /* cl_loc_unknown */ { NULL, 0, 0, false },
-    /* .scope          = */ CL_SCOPE_GLOBAL,
-    /* .name           = */ "<builtin_bool>",
-    /* .size           = */ /* FIXME */ sizeof(bool),
-    /* .item_cnt       = */ 0,
-    /* .items          = */ NULL,
-    /* .array_size     = */ 0,
-    /* .is_unsigned    = */ false
+    C99_FIELD(uid        ) /* FIXME */ -1,
+    C99_FIELD(code       ) CL_TYPE_BOOL,
+    C99_FIELD(loc        ) /* cl_loc_unknown */ { NULL, 0, 0, false },
+    C99_FIELD(scope      ) CL_SCOPE_GLOBAL,
+    C99_FIELD(name       ) "<builtin_bool>",
+    C99_FIELD(size       ) /* FIXME */ sizeof(bool),
+    C99_FIELD(item_cnt   ) 0,
+    C99_FIELD(items      ) NULL,
+    C99_FIELD(array_size ) 0,
+    C99_FIELD(is_unsigned) false
 };
 
 static void handle_stmt_cond_br(gimple stmt, const char *then_label,
@@ -1721,27 +1729,27 @@ static unsigned int cl_pass_execute(void)
 
 // pass description according to <tree-pass.h> API
 static struct opt_pass cl_pass = {
-    /* .type                       = */ GIMPLE_PASS,
-    /* .name                       = */ "clplug",
-    /* .gate                       = */ NULL,
-    /* .execute                    = */ cl_pass_execute,
-    /* .sub                        = */ NULL,
-    /* .next                       = */ NULL,
-    /* .static_pass_number         = */ 0,
-    /* .tv_id                      = */ TV_NONE,
-    /* .properties_required        = */ PROP_cfg | PROP_gimple_any,
-    /* .properties_provided        = */ 0,
-    /* .properties_destroyed       = */ 0,
-    /* .todo_flags_start           = */ 0,
-    /* .todo_flags_finish          = */ 0
+    C99_FIELD(type                ) GIMPLE_PASS,
+    C99_FIELD(name                ) "clplug",
+    C99_FIELD(gate                ) NULL,
+    C99_FIELD(execute             ) cl_pass_execute,
+    C99_FIELD(sub                 ) NULL,
+    C99_FIELD(next                ) NULL,
+    C99_FIELD(static_pass_number  ) 0,
+    C99_FIELD(tv_id               ) TV_NONE,
+    C99_FIELD(properties_required ) PROP_cfg | PROP_gimple_any,
+    C99_FIELD(properties_provided ) 0,
+    C99_FIELD(properties_destroyed) 0,
+    C99_FIELD(todo_flags_start    ) 0,
+    C99_FIELD(todo_flags_finish   ) 0
 };
 
 // definition of a new pass provided by the plug-in
 static struct register_pass_info cl_plugin_pass = {
-    /* .pass                       = */ &cl_pass,
-    /* .reference_pass_name        = */ "cfg",
-    /* .ref_pass_instance_number   = */ 0,
-    /* .pos_op                     = */ PASS_POS_INSERT_AFTER
+    C99_FIELD(pass                    ) &cl_pass,
+    C99_FIELD(reference_pass_name     ) "cfg",
+    C99_FIELD(ref_pass_instance_number) 0,
+    C99_FIELD(pos_op                  ) PASS_POS_INSERT_AFTER
 };
 
 // callback called as last (if the plug-in does not crash before)
@@ -2064,12 +2072,12 @@ int plugin_init(struct plugin_name_args *plugin_info,
 
     // initialize code listener
     static struct cl_init_data init = {
-        /* .debug          = */ dummy_printer,
-        /* .warn           = */ cl_warn,
-        /* .error          = */ cl_error,
-        /* .note           = */ trivial_printer,
-        /* .die            = */ trivial_printer,
-        /* .debug_level    = */ 0
+        C99_FIELD(debug      ) dummy_printer,
+        C99_FIELD(warn       ) cl_warn,
+        C99_FIELD(error      ) cl_error,
+        C99_FIELD(note       ) trivial_printer,
+        C99_FIELD(die        ) trivial_printer,
+        C99_FIELD(debug_level) 0
     };
 
     if ((init.debug_level = verbose))
