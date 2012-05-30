@@ -64,6 +64,44 @@ if (NOT EXISTS "${GCC_INC_DIR}/gcc-plugin.h")
     required for building GCC plug-ins.")
 endif()
 
+# query CC1_HOST using GCC_HOST
+execute_process(COMMAND "${GCC_HOST}" "-print-prog-name=cc1"
+    RESULT_VARIABLE CC1_HOST_STATUS
+    OUTPUT_VARIABLE CC1_HOST OUTPUT_STRIP_TRAILING_WHITESPACE)
+if ("${CC1_HOST_STATUS}" EQUAL 0)
+    message(STATUS "CC1_HOST: ${CC1_HOST}")
+else()
+    message(FATAL_ERROR "failed to query CC1_HOST")
+endif()
+
+# check for readelf/nm
+find_program(READELF readelf)
+if (EXISTS ${READELF})
+    set(SYM_LISTER "${READELF} -s")
+else()
+    find_program(NM nm)
+    if (EXISTS ${NM})
+        set(SYM_LISTER "${NM}")
+    endif()
+endif()
+
+# if we have readelf or nm, check whether cc1 symbols are mangled
+if (DEFINED SYM_LISTER)
+    message(STATUS "checking whether fancy_abort() in ${CC1_HOST} is mangled")
+    execute_process(COMMAND "sh" "-c"
+        "${SYM_LISTER} ${CC1_HOST} | grep _Z11fancy_abort > /dev/null"
+        RESULT_VARIABLE CXX_LINKAGE_STATUS)
+    if ("${CXX_LINKAGE_STATUS}" EQUAL 0)
+        message(STATUS "GCC plug-ins will be built with C++ linkage")
+        remove_definitions("-pedantic")
+        set_source_files_properties(gcc/clplug.c PROPERTIES LANGUAGE CXX)
+    else()
+        message(STATUS "GCC plug-ins will be built with C linkage")
+    endif()
+else()
+    message(WARNING "readelf/nm not found, building C linkage by default...")
+endif()
+
 # set the path to GCC headers for building plug-ins
 set_source_files_properties(gcc/clplug.c PROPERTIES
     COMPILE_FLAGS "-I${GCC_INC_DIR}")
