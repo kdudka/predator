@@ -20,11 +20,12 @@
 #ifndef LABEL_H
 #define LABEL_H
 
+// Standard library headers
 #include <vector>
 #include <stdexcept>
-
 #include <unordered_map>
 
+// Forester headers
 #include "types.hh"
 #include "abstractbox.hh"
 #include "programerror.hh"
@@ -53,7 +54,7 @@ struct NodeLabel {
 			std::unordered_map<size_t, NodeItem>* m;
 			void* tag;
 		} node;
-		const std::vector<Data>* vData;
+		const DataArray* vData;
 	};
 
 	NodeLabel() : type(node_type::n_unknown) {}
@@ -66,7 +67,7 @@ struct NodeLabel {
 		this->node.v = v;
 		this->node.m = new std::unordered_map<size_t, NodeItem>();
 	}
-	NodeLabel(const std::vector<Data>* vData) : type(node_type::n_vData), vData(vData) {}
+	NodeLabel(const DataArray* vData) : type(node_type::n_vData), vData(vData) {}
 
 	~NodeLabel() {
 		if (this->type == node_type::n_node)
@@ -118,7 +119,7 @@ struct NodeLabel {
 		return i->second;
 	}
 
-	const std::vector<Data>& getVData() const {
+	const DataArray& getVData() const {
 		assert(this->type == node_type::n_vData);
 		return *this->vData;
 	}
@@ -183,7 +184,7 @@ struct NodeLabel {
 			case node_type::n_vData: {
 				assert(label.vData);
 				assert(label.vData->size());
-				std::vector<Data>::const_iterator i = label.vData->begin();
+				DataArray::const_iterator i = label.vData->begin();
 				os << *i;
 				for (++i; i != label.vData->end(); ++i)
 					os << ',' << *i;

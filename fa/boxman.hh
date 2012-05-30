@@ -200,7 +200,7 @@ class BoxMan {
 	std::vector<const Data*> dataIndex;
 	std::unordered_map<std::vector<const AbstractBox*>, NodeLabel*, boost::hash<std::vector<const AbstractBox*>>> nodeStore;
 	std::unordered_set<std::pair<const TypeBox*, std::vector<size_t>>, boost::hash<std::pair<const TypeBox*, std::vector<size_t>>>> tagStore;
-	std::unordered_map<std::pair<size_t, std::vector<Data>>, NodeLabel*, boost::hash<std::pair<size_t, std::vector<Data>>>> vDataStore;
+	std::unordered_map<std::pair<size_t, DataArray>, NodeLabel*, boost::hash<std::pair<size_t, DataArray>>> vDataStore;
 
 	std::unordered_map<SelData, const SelBox*, boost::hash<SelData>> selIndex;
 	std::unordered_map<std::string, const TypeBox*> typeIndex;
@@ -235,8 +235,8 @@ public:
 		return this->insertData(data).second;
 	}
 
-	label_type lookupLabel(size_t arity, const std::vector<Data>& x) {
-		std::pair<std::unordered_map<std::pair<size_t, std::vector<Data>>, NodeLabel*, boost::hash<std::pair<size_t, std::vector<Data>>>>::iterator, bool> p
+	label_type lookupLabel(size_t arity, const DataArray& x) {
+		std::pair<std::unordered_map<std::pair<size_t, DataArray>, NodeLabel*, boost::hash<std::pair<size_t, DataArray>>>::iterator, bool> p
 			= this->vDataStore.insert(std::make_pair(std::make_pair(arity, x), static_cast<NodeLabel*>(nullptr)));
 		if (p.second)
 			p.first->second = new NodeLabel(&p.first->first.second);

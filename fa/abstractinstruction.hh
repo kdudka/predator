@@ -61,8 +61,7 @@ public:
 	 * The data type for the state of execution. It contains a vector of values
 	 * of variables and state of the symbolic heap.
 	 */
-	typedef std::pair<std::shared_ptr<std::vector<Data>>,
-		struct SymState*> StateType;
+	typedef std::pair<std::shared_ptr<DataArray>, struct SymState*> StateType;
 
 private:
 

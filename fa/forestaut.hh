@@ -45,7 +45,7 @@ public:
 
 	TA<label_type>::Backend* backend;
 
-	std::vector<Data> variables;
+	DataArray variables;
 	std::vector<std::shared_ptr<TA<label_type> > > roots;
 
 	mutable ConnectionGraph connectionGraph;

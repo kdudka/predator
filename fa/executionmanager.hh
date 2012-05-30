@@ -37,17 +37,17 @@ class ExecutionManager {
 	size_t statesExecuted_;
 	size_t tracesEvaluated_;
 
-	Recycler<std::vector<Data>> registerRecycler_;
+	Recycler<DataArray> registerRecycler_;
 	Recycler<SymState> stateRecycler_;
 
 	struct RecycleRegisterF {
 
-		Recycler<std::vector<Data>>& recycler_;
+		Recycler<DataArray>& recycler_;
 
-		RecycleRegisterF(Recycler<std::vector<Data>>& recycler)
+		RecycleRegisterF(Recycler<DataArray>& recycler)
 			: recycler_(recycler) {}
 
-		void operator()(std::vector<Data>* x) {
+		void operator()(DataArray* x) {
 
 			this->recycler_.recycle(x);
 
@@ -103,7 +103,7 @@ public:
 
 	}
 
-	SymState* enqueue(SymState* parent, const std::shared_ptr<std::vector<Data>>& registers,
+	SymState* enqueue(SymState* parent, const std::shared_ptr<DataArray>& registers,
 		const std::shared_ptr<const FAE>& fae, AbstractInstruction* instr) {
 
 		SymState* state = this->stateRecycler_.alloc();
@@ -164,17 +164,17 @@ public:
 
 	}
 
-	std::shared_ptr<std::vector<Data>> allocRegisters(const std::vector<Data>& model) {
+	std::shared_ptr<DataArray> allocRegisters(const DataArray& model) {
 
-		std::vector<Data>* v = this->registerRecycler_.alloc();
+		DataArray* v = this->registerRecycler_.alloc();
 
 		*v = model;
 
-		return std::shared_ptr<std::vector<Data>>(v, RecycleRegisterF(this->registerRecycler_));
+		return std::shared_ptr<DataArray>(v, RecycleRegisterF(this->registerRecycler_));
 
 	}
 
-	void init(const std::vector<Data>& registers, const std::shared_ptr<const FAE>& fae,
+	void init(const DataArray& registers, const std::shared_ptr<const FAE>& fae,
 		AbstractInstruction* instr) {
 
 		this->clear();

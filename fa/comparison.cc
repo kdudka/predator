@@ -83,7 +83,7 @@ inline void executeGeneric(const FI_cmp_base& cmp, ExecutionManager& execMan, co
 
 	for (auto v : res) {
 
-		std::shared_ptr<std::vector<Data>> regs = execMan.allocRegisters(*state.first);
+		std::shared_ptr<DataArray> regs = execMan.allocRegisters(*state.first);
 
 		(*regs)[cmp.dst_] = Data::createBool(v);
 

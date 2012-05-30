@@ -426,7 +426,7 @@ protected:
 
 		// schedule the initial state for processing
 		this->execMan.init(
-			std::vector<Data>(this->assembly_.regFileSize_, Data::createUndef()),
+			DataArray(this->assembly_.regFileSize_, Data::createUndef()),
 			fae,
 			this->assembly_.code_.front()
 		);

@@ -709,4 +709,9 @@ struct Data {
 	}
 };
 
+/**
+ * @brief  The data type representing an array of @p Data values
+ */
+using DataArray = std::vector<Data>;
+
 #endif
