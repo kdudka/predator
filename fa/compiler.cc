@@ -1579,7 +1579,11 @@ protected:
 			// pop return value into r0
 			append(new FI_pop_greg(&insn, 0));
 			// collect result from r0
-			cStoreOperand(insn.operands[0], 0, 1, insn);
+			cStoreOperand(
+				/* target operand */ insn.operands[0],
+				/* reg with src value */ 0,
+				/* reg pointing to memory location with the value to be stored */ 1,
+				insn);
 		}
 
 		// construct instruction for loading return address
@@ -1606,7 +1610,12 @@ protected:
 		{	// in case the function returns a value
 
 			// move the return value into r0
-			cLoadOperand(0, insn.operands[0], insn, false);
+			cLoadOperand(
+				/* destination reg */	0,
+				/* operand */ insn.operands[0],
+				/* instruction */ insn,
+				/* can the destination reg be overriden? */ false);
+
 			// push r0 to gr1
 			append(new FI_push_greg(&insn, 0));
 		}

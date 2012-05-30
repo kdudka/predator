@@ -37,7 +37,11 @@
 #include "abstractbox.hh"
 #include "connection_graph.hh"
 
-class FA {
+/**
+ * @brief  @todo
+ */
+class FA
+{
 
 	friend class UFAE;
 
@@ -180,6 +184,7 @@ public:
 	}
 
 public:
+public:   // static methods
 
 	friend std::ostream& operator<<(std::ostream& os, const FA& fa);
 

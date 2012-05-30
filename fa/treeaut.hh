@@ -76,6 +76,7 @@ public:
 	}
 
 	bool operator<(const TTBase& rhs) const {
+		// this is completely illegible
 		return (this->_rhs < rhs._rhs) || (
 			(this->_rhs == rhs._rhs) && (
 				(this->_label < rhs._label) || (
