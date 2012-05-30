@@ -204,12 +204,6 @@ public:
 
 		return false;
 	}
-*/
-	static size_t getSelectorToTarget(const CutpointSignature& signature, size_t target) {
-
-		for (auto& cutpoint : signature) {
-
-			if (cutpoint.root == target) {
 
 	static size_t getSelectorToTarget(const CutpointSignature& signature, size_t target)
 	{
