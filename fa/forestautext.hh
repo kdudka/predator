@@ -107,7 +107,7 @@ public:
 
 		this->clear();
 
-		this->variables = top->label()->getVData();
+		this->loadVars(top->label()->getVData());
 
 		this->stateOffset = stateOffset;
 
@@ -141,7 +141,7 @@ public:
 //			std::cerr << "trying " << **i << std::endl;
 			if ((*i)->lhs().size() != fae->roots.size())
 				continue;
-			if ((*i)->label()->getVData() != fae->variables)
+			if ((*i)->label()->getVData() != fae->GetVariables())
 				continue;
 			std::vector<std::shared_ptr<TA<label_type>>> roots;
 			size_t j;
@@ -183,7 +183,7 @@ public:
 			}
 			FAE* tmp = new FAE(backend, boxMan);
 			dst.push_back(tmp);
-			tmp->variables = fae->variables;
+			tmp->loadVars(fae->GetVariables());
 			tmp->roots = roots;
 			tmp->connectionGraph = fae->connectionGraph;
 			tmp->stateOffset = stateOffset;

@@ -103,7 +103,7 @@ public:
 			tmp.push_back(Cursor<std::set<size_t>::const_iterator>(root->getFinalStates().begin(), root->getFinalStates().end()));
 		}
 		std::vector<size_t> lhs(tmp.size());
-		label_type label = this->boxMan.lookupLabel(tmp.size(), src.variables);
+		label_type label = this->boxMan.lookupLabel(tmp.size(), src.GetVariables());
 		bool valid = true;
 //		std::cerr << index << std::endl;
 		while (valid) {

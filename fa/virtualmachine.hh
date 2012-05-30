@@ -303,7 +303,7 @@ public:
 	 * @return  The number of variables in the environment
 	 */
 	size_t varCount() const {
-		return this->fae.variables.size();
+		return this->fae.GetVarCount();
 	}
 
 	/**
@@ -317,8 +317,8 @@ public:
 	 * @returns  The identifier of the new variable
 	 */
 	size_t varPush(const Data& data) {
-		size_t id = this->fae.variables.size();
-		this->fae.variables.push_back(data);
+		size_t id = this->fae.GetVarCount();
+		this->fae.PushVar(data);
 		return id;
 	}
 
@@ -329,11 +329,12 @@ public:
 	 * environment and retrieves its value. The variables are removed using the
 	 * stack behaviour.
 	 *
-	 * @param[out]  data  The type and value information about the variable
+	 * @returns  data  The type and value information about the variable
 	 */
-	void varPop(Data& data) {
-		data = this->fae.variables.back();
-		this->fae.variables.pop_back();
+	Data varPop() {
+		Data data = this->fae.GetTopVar();
+		this->fae.PopVar();
+		return data;
 	}
 
 	/**
@@ -345,27 +346,7 @@ public:
 	 * @param[in]  count  The number of variables to be added
 	 */
 	void varPopulate(size_t count) {
-		this->fae.variables.resize(this->fae.variables.size() + count,
-			Data::createUndef());
-	}
-
-	/**
-	 * @brief  Removes a number of variables
-	 *
-	 * Removes the specified number of variables from the top of the environment
-	 * stack.
-	 *
-	 * @param[in]  count  The number of variables to be removed
-	 */
-	void varRemove(size_t count) {
-		// Assertions
-		assert(count <= this->fae.variables.size());
-
-		// remove variables
-		/// @todo std::vector::resize() could be more efficient
-		while (count-- > 0) {
-			this->fae.variables.pop_back();
-		}
+		this->fae.AddNewVars(count);
 	}
 
 	/**
@@ -378,11 +359,9 @@ public:
 	 *
 	 * @returns  Type and value information about the variable
 	 */
-	const Data& varGet(size_t varId) const {
-		// Assertions
-		assert(varId < this->fae.variables.size());
-
-		return this->fae.variables[varId];
+	const Data& varGet(size_t varId) const
+	{
+		return this->fae.GetVar(varId);
 	}
 
 	/**
@@ -394,11 +373,9 @@ public:
 	 * @param[in]  varId  Identifier of the desired variable
 	 * @param[in]  data   Type and value information
 	 */
-	void varSet(size_t varId, const Data& data) {
-		// Assertions
-		assert(varId < this->fae.variables.size());
-
-		this->fae.variables[varId] = data;
+	void varSet(size_t varId, const Data& data)
+	{
+		this->fae.SetVar(varId, data);
 	}
 
 #if 0
@@ -502,11 +479,7 @@ public:
 		assert(this->fae.roots[root]);
 
 		// update content of variables referencing the tree automaton
-		for (auto& var : this->fae.variables) {
-			if (var.isRef(root)) {
-				var = Data::createUndef();
-			}
-		}
+		this->fae.SetVarsToUndefForRoot(root);
 
 		// erase node
 		this->fae.roots[root] = nullptr;

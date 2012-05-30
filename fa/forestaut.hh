@@ -49,7 +49,12 @@ public:
 
 	TA<label_type>::Backend* backend;
 
-	DataArray variables;
+private:  // data members
+
+	DataArray variables_;
+
+public:
+
 	std::vector<std::shared_ptr<TA<label_type> > > roots;
 
 	mutable ConnectionGraph connectionGraph;
@@ -114,6 +119,13 @@ public:
 		return new TA<label_type>(*this->backend);
 	}
 
+protected:// methods
+
+	void loadVars(const DataArray& data)
+	{
+		variables_ = data;
+	}
+
 public:
 
 	static bool isData(size_t state) {
@@ -133,9 +145,9 @@ public:
 
 	};
 
-	FA(TA<label_type>::Backend& backend) : backend(&backend), variables{}, roots{}, connectionGraph{} {}
+	FA(TA<label_type>::Backend& backend) : backend(&backend), variables_{}, roots{}, connectionGraph{} {}
 
-	FA(const FA& src) : backend(src.backend), variables(src.variables), roots(src.roots),
+	FA(const FA& src) : backend(src.backend), variables_(src.variables_), roots(src.roots),
 		connectionGraph(src.connectionGraph) { }
 
 	/**
@@ -146,7 +158,7 @@ public:
 		if (this != &src)
 		{
 			backend = src.backend;
-			variables = src.variables;
+			variables_ = src.variables_;
 			roots = src.roots;
 			connectionGraph = src.connectionGraph;
 		}
@@ -157,7 +169,7 @@ public:
 	void clear() {
 		this->roots.clear();
 		this->connectionGraph.clear();
-		this->variables.clear();
+		variables_.clear();
 	}
 
 	size_t getRootCount() const {
@@ -183,7 +195,80 @@ public:
 
 	}
 
-public:
+	void PushVar(const Data& var)
+	{
+		return variables_.push_back(var);
+	}
+
+	void PopVar()
+	{
+		variables_.pop_back();
+	}
+
+	void AddNewVars(size_t count)
+	{
+		variables_.resize(variables_.size() + count, Data::createUndef());
+	}
+
+	size_t GetVarCount() const
+	{
+		return variables_.size();
+	}
+
+	const Data& GetVar(size_t varId) const
+	{
+		// Assertions
+		assert(varId < variables_.size());
+
+		return variables_[varId];
+	}
+
+	const DataArray& GetVariables() const
+	{
+		return variables_;
+	}
+
+	void SetVar(size_t varId, const Data& data)
+	{
+		// Assertions
+		assert(varId < variables_.size());
+
+		variables_[varId] = data;
+	}
+
+	void SetVarsToUndefForRoot(size_t root)
+	{
+		for (auto& var : variables_)
+		{	// set every variable referencing 'root' to undef
+			if (var.isRef(root))
+				var = Data::createUndef();
+		}
+	}
+
+	void UpdateVarsRootRefs(const std::vector<size_t>& index)
+	{
+		for (Data& var : variables_)
+		{
+			if (!var.isRef())
+				continue;
+
+			// Assertions
+			assert(index.size() > var.d_ref.root);
+			assert(index[var.d_ref.root] != static_cast<size_t>(-1));
+
+			var.d_ref.root = index[var.d_ref.root];
+		}
+	}
+
+
+	const Data& GetTopVar() const
+	{
+		// Assertions
+		assert(!variables_.empty());
+
+		return variables_.back();
+	}
+
 public:   // static methods
 
 	friend std::ostream& operator<<(std::ostream& os, const FA& fa);

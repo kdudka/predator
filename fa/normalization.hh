@@ -70,13 +70,13 @@ protected:
 
 		order.clear();
 
-		for (std::vector<Data>::const_iterator i = this->fae.variables.begin(); i != this->fae.variables.end(); ++i) {
+		for (const Data& var : this->fae.GetVariables()) {
 
 			// skip everything what is not a root reference
-			if (!i->isRef())
+			if (!var.isRef())
 				continue;
 
-			size_t root = i->d_ref.root;
+			size_t root = var.d_ref.root;
 
 			// mark rootpoint pointed by a variable
 			marked[root] = true;
@@ -95,13 +95,13 @@ protected:
 
 		visited = std::vector<bool>(this->fae.roots.size(), false);
 
-		for (std::vector<Data>::const_iterator i = this->fae.variables.begin(); i != this->fae.variables.end(); ++i) {
+		for (const Data& var : this->fae.GetVariables()) {
 
 			// skip everything what is not a root reference
-			if (!i->isRef())
+			if (!var.isRef())
 				continue;
 
-			size_t root = i->d_ref.root;
+			size_t root = var.d_ref.root;
 
 			// check whether we traversed this one before
 			if (visited[root])
@@ -313,19 +313,9 @@ public:
 		this->fae.connectionGraph.finishNormalization(this->fae.roots.size(), index);
 
 		// update variables
-		for (std::vector<Data>::iterator i = this->fae.variables.begin(); i != this->fae.variables.end(); ++i) {
-
-			if (!i->isRef())
-				continue;
-
-			assert(index[i->d_ref.root] != static_cast<size_t>(-1));
-
-			i->d_ref.root = index[i->d_ref.root];
-
-		}
+		this->fae.UpdateVarsRootRefs(index);
 
 		return merged;
-
 	}
 
 public:

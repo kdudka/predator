@@ -33,7 +33,7 @@ std::ostream& operator<<(std::ostream& os, const TA<label_type>& ta) {
 std::ostream& operator<<(std::ostream& os, const FA& fa)
 {
 	os << '[';
-	for (auto var : fa.variables)
+	for (auto var : fa.variables_)
 	{
 		os << ' ' << var;
 	}
