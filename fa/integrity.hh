@@ -55,17 +55,19 @@ public:
 	};
 
 	// enumerates upwards selectors
-	void enumerateSelectorsAtLeaf(std::set<size_t>& selectors, size_t target) const {
-
-		for (size_t root = 0; root < this->fae.roots.size(); ++root) {
-			if (!this->fae.roots[root])
+	void enumerateSelectorsAtLeaf(std::set<size_t>& selectors, size_t target) const
+	{
+		for (auto p_ta : fae.roots)
+		{
+			if (!p_ta)
 				continue;
-			for (TreeAut::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
-				if (i->label()->isNode())
-					i->label()->iterate(LeafEnumF(this->fae, *i, target, selectors));
+
+			for (auto rule : *p_ta)
+			{
+				if (rule.label()->isNode())
+					rule.label()->iterate(LeafEnumF(this->fae, rule, target, selectors));
 			}
 		}
-
 	}
 
 	struct CheckIntegrityF {
