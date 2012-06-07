@@ -32,6 +32,7 @@
 
 // Forester headers
 #include "recycler.hh"
+#include "exec_state.hh"
 #include "types.hh"
 #include "forestautext.hh"
 #include "abstractinstruction.hh"
@@ -42,8 +43,9 @@
  * SymState - structure that represents symbolic state of the execution engine
  */
 
-struct SymState {
 
+struct SymState
+{
 private:
 
 	SymState(const SymState&);
@@ -52,34 +54,7 @@ private:
 public:
 
 
-	/**
-	 * @brief  The output stream operator
-	 *
-	 * The std::ostream << operator for conversion to a string.
-	 *
-	 * @param[in,out]  os     The output stream
-	 * @param[in]      state  The value to be appended to the stream
-	 *
-	 * @returns  The modified output stream
-	 */
-	friend std::ostream& operator<<(std::ostream& os,
-		const AbstractInstruction::StateType& state) {
-
-		os << "registers:";
-
-		for (size_t i = 0; i < state.first->size(); ++i) {
-
-			os << " r" << i << '=' << (*state.first)[i];
-
-		}
-
-		os << ", heap:" << std::endl << *state.second->fae;
-
-		return os << "instruction (" << state.second->instr << "): "
-			<< *state.second->instr;
-	}
-
-	typedef std::list<AbstractInstruction::StateType> QueueType;
+	typedef std::list<ExecState> QueueType;
 
 	/// Parent symbolic state
 	SymState* parent;

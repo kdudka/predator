@@ -58,6 +58,7 @@ configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
 # libfa.so
 add_library(fa SHARED
   connection_graph.cc
+	exec_state.cc
 	treeaut.cc
 	timbuk.cc
 	forestaut.cc

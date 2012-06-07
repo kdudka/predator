@@ -58,7 +58,9 @@ private:  // data members
 private:  // static methods
 
 	/**
-	 * @brief  
+	 * @brief  @todo
+	 *
+	 * @todo
 	 */
 	static size_t getLabelArity(std::vector<const AbstractBox*>& label)
 	{
@@ -73,7 +75,7 @@ private:  // static methods
 
 public:
 
-	std::vector<std::shared_ptr<TreeAut > > roots;
+	std::vector<std::shared_ptr<TreeAut>> roots;
 
 	mutable ConnectionGraph connectionGraph;
 

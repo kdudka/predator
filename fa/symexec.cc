@@ -351,9 +351,9 @@ protected:
 	 *
 	 * @param[in]  state  The state for which the backtrace is desired
 	 */
-	static void printTrace(const AbstractInstruction::StateType& state)
+	static void printTrace(const ExecState& state)
 	{
-		SymState* s = state.second;
+		SymState* s = state.GetMem();
 
 		std::vector<SymState*> trace;
 
@@ -431,16 +431,16 @@ protected:
 			this->assembly_.code_.front()
 		);
 
-		AbstractInstruction::StateType state;
+		ExecState state;
 
 		try
 		{	// expecting problems...
 			while (this->execMan.dequeueDFS(state))
 			{	// process all states in the DFS order
-				if (state.second->instr->insn())
+				if (state.GetMem()->instr->insn())
 				{	// in case current instruction IS an instruction
 					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED,
-						state.second->instr->insn()->loc << *(state.second->instr->insn())));
+						state.GetMem()->instr->insn()->loc << *(state.GetMem()->instr->insn())));
 					CL_CDEBUG(2, state);
 				}
 				else
@@ -457,10 +457,10 @@ protected:
 		catch (ProgramError& e)
 		{
 //			Engine::printTrace(state);
-			if (state.second->instr->insn()) {
-				CL_NOTE_MSG(&state.second->instr->insn()->loc,
-					SSD_INLINE_COLOR(C_LIGHT_RED, *state.second->instr->insn()));
-				CL_DEBUG_AT(2, std::endl << *state.second->fae);
+			if (state.GetMem()->instr->insn()) {
+				CL_NOTE_MSG(&state.GetMem()->instr->insn()->loc,
+					SSD_INLINE_COLOR(C_LIGHT_RED, *state.GetMem()->instr->insn()));
+				CL_DEBUG_AT(2, std::endl << *state.GetMem()->fae);
 			}
 			throw;
 		}

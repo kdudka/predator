@@ -384,9 +384,9 @@ inline void learn2(FAE& fae, BoxMan& boxMan) {
 }
 
 // FI_fix
-void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
+void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->fae));
 
 	fae->updateConnectionGraph();
 
@@ -437,26 +437,23 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 	}
 #endif
 	// test inclusion
-	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper)) {
-
+	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper))
+	{
 		CL_CDEBUG(3, "hit");
 
-		execMan.traceFinished(state.second);
-
-	} else {
-
+		execMan.traceFinished(state.GetMem());
+	} else
+	{
 		CL_CDEBUG(1, "extending fixpoint at " << this->insn()->loc << std::endl << *fae);
 
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
+		execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 	}
-
 }
 
 // FI_fix
-void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
+void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->fae));
 
 	fae->updateConnectionGraph();
 
@@ -464,28 +461,27 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 #if FA_ALLOW_FOLDING
 	reorder(*fae);
 
-	if (boxMan.boxDatabase().size()) {
-
+	if (boxMan.boxDatabase().size())
+	{
 		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
 
 		fold(*fae, this->boxMan, forbidden);
 
 		forbidden.clear();
-
 	}
 #endif
 	computeForbiddenSet(forbidden, *fae);
 
 	normalize(*fae, forbidden, true);
 #if FA_ALLOW_FOLDING
-	if (boxMan.boxDatabase().size()) {
-
+	if (boxMan.boxDatabase().size())
+	{
 		forbidden.clear();
 
 		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
 
-		while (fold(*fae, this->boxMan, forbidden)) {
-
+		while (fold(*fae, this->boxMan, forbidden))
+		{
 			forbidden.clear();
 
 			computeForbiddenSet(forbidden, *fae);
@@ -495,24 +491,19 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 			forbidden.clear();
 
 			forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
-
 		}
-
 	}
 #endif
 	// test inclusion
-	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper)) {
-
+	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper))
+	{
 		CL_CDEBUG(3, "hit");
 
-		execMan.traceFinished(state.second);
-
-	} else {
-
+		execMan.traceFinished(state.GetMem());
+	} else
+	{
 		CL_CDEBUG(1, "extending fixpoint at " << this->insn()->loc << std::endl << *fae);
 
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
+		execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 	}
-
 }

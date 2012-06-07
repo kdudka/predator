@@ -99,8 +99,7 @@ public:
 		TreeAut::Backend& fixpointBackend, TreeAut::Backend& taBackend,
 		BoxMan& boxMan) : FixpointBase(insn, fixpointBackend, taBackend, boxMan) {}
 
-	virtual void execute(ExecutionManager& execMan,
-		const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan, const ExecState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "abs   ";
@@ -117,8 +116,7 @@ public:
 		BoxMan& boxMan)
 		: FixpointBase(insn, fixpointBackend, taBackend, boxMan) {}
 
-	virtual void execute(ExecutionManager& execMan,
-		const AbstractInstruction::StateType& state);
+	virtual void execute(ExecutionManager& execMan, const ExecState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "fix   ";

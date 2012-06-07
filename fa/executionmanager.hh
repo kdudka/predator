@@ -112,122 +112,114 @@ public:
 			parent,
 			instr,
 			fae,
-			this->queue_.insert(this->queue_.end(), std::make_pair(registers, state))
+			this->queue_.insert(this->queue_.end(), ExecState(registers, state))
 		);
 
 		return state;
 
 	}
 
-	SymState* enqueue(const AbstractInstruction::StateType& parent, AbstractInstruction* instr) {
-
-		SymState* state = this->stateRecycler_.alloc();
+	SymState* enqueue(const ExecState& parent, AbstractInstruction* instr)
+	{
+		SymState* state = stateRecycler_.alloc();
 
 		state->init(
-			parent.second,
+			parent.GetMem(),
 			instr,
-			parent.second->fae,
-			this->queue_.insert(this->queue_.end(), std::make_pair(parent.first, state))
+			parent.GetMem()->fae,
+			this->queue_.insert(this->queue_.end(), ExecState(parent.GetRegsShPtr(), state))
 		);
 
 		return state;
-
 	}
 
-	bool dequeueBFS(AbstractInstruction::StateType& state) {
-
-		if (this->queue_.empty())
+	bool dequeueBFS(ExecState& state)
+	{
+		if (queue_.empty())
 			return false;
 
-		state = this->queue_.front();
+		state = queue_.front();
+		queue_.pop_front();
 
-		this->queue_.pop_front();
-
-		state.second->queueTag = this->queue_.end();
+		state.GetMem()->queueTag = queue_.end();
 
 		return true;
-
 	}
 
-	bool dequeueDFS(AbstractInstruction::StateType& state) {
-
-		if (this->queue_.empty())
+	bool dequeueDFS(ExecState& state)
+	{
+		if (queue_.empty())
 			return false;
 
-		state = this->queue_.back();
+		state = queue_.back();
+		queue_.pop_back();
 
-		this->queue_.pop_back();
-
-		state.second->queueTag = this->queue_.end();
+		state.GetMem()->queueTag = queue_.end();
 
 		return true;
-
 	}
 
-	std::shared_ptr<DataArray> allocRegisters(const DataArray& model) {
-
-		DataArray* v = this->registerRecycler_.alloc();
+	std::shared_ptr<DataArray> allocRegisters(const DataArray& model)
+	{
+		DataArray* v = registerRecycler_.alloc();
 
 		*v = model;
 
-		return std::shared_ptr<DataArray>(v, RecycleRegisterF(this->registerRecycler_));
-
+		return std::shared_ptr<DataArray>(v, RecycleRegisterF(registerRecycler_));
 	}
 
 	void init(const DataArray& registers, const std::shared_ptr<const FAE>& fae,
-		AbstractInstruction* instr) {
-
+		AbstractInstruction* instr)
+	{
 		this->clear();
-		this->root_ = this->enqueue(nullptr, this->allocRegisters(registers), fae, instr);
-
+		root_ = this->enqueue(nullptr, this->allocRegisters(registers), fae, instr);
 	}
 
-	void execute(AbstractInstruction::StateType& state) {
+	void execute(ExecState& state)
+	{
+		++statesExecuted_;
 
-		++this->statesExecuted_;
-
-		state.second->instr->execute(*this, state);
-
+		state.GetMem()->instr->execute(*this, state);
 	}
 
 //	template <class F>
-	void traceFinished(SymState* state) {
-
-		++this->tracesEvaluated_;
+	void traceFinished(SymState* state)
+	{
+		++tracesEvaluated_;
 
 		this->destroyBranch(state);
-
 	}
 
 //	template <class F>
-	void destroyBranch(SymState* state/*, F f*/) {
-
+	void destroyBranch(SymState* state/*, F f*/)
+	{
+		// Assertions
 		assert(state);
 
-		while (state->parent) {
-
+		while (state->parent)
+		{
+			// Assertions
 			assert(state->parent->children.size());
 
 			if (state->instr->getType() == fi_type_e::fiFix)
 				(static_cast<FixpointInstruction*>(state->instr))->extendFixpoint(state->fae);
 //			f(state);
 
-			if (state->parent->children.size() > 1) {
-				state->recycle(this->stateRecycler_);
+			if (state->parent->children.size() > 1)
+			{
+				state->recycle(stateRecycler_);
 				return;
 			}
 
 			state = state->parent;
-
 		}
 
-		assert(state == this->root_);
+		// Assertions
+		assert(state == root_);
 
-		this->root_->recycle(this->stateRecycler_);
-		this->root_ = nullptr;
-
+		root_->recycle(stateRecycler_);
+		root_ = nullptr;
 	}
-
 };
 
 #endif

@@ -19,10 +19,9 @@
 
 #include "jump.hh"
 
-void FI_jmp::execute(ExecutionManager&, const AbstractInstruction::StateType&) {
-
+void FI_jmp::execute(ExecutionManager&, const ExecState&)
+{
 	assert(false);
-
 }
 
 void FI_jmp::finalize(

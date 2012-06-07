@@ -52,7 +52,7 @@ public:
 		return getTarget(codeIndex, this->target_);
 	}
 
-	virtual void execute(ExecutionManager&, const AbstractInstruction::StateType&);
+	virtual void execute(ExecutionManager&, const ExecState&);
 
 	virtual void finalize(
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
