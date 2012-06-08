@@ -87,7 +87,7 @@ inline void executeGeneric(const FI_cmp_base& cmp, ExecutionManager& execMan, co
 
 		(*regs)[cmp.dst_] = Data::createBool(v);
 
-		execMan.enqueue(state.GetMem(), regs, state.GetMem()->fae, cmp.next_);
+		execMan.enqueue(state.GetMem(), regs, state.GetMem()->GetFAE(), cmp.next_);
 
 	}
 

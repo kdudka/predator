@@ -31,8 +31,8 @@ std::ostream& operator<<(std::ostream& os, const ExecState& state)
 
 	}
 
-	os << ", heap:" << std::endl << *state.GetMem()->fae;
+	os << ", heap:" << std::endl << *state.GetMem()->GetFAE();
 
-	return os << "instruction (" << state.GetMem()->instr << "): "
-		<< *state.GetMem()->instr;
+	return os << "instruction (" << state.GetMem()->GetInstr() << "): "
+		<< *state.GetMem()->GetInstr();
 }

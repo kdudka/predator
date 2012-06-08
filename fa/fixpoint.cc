@@ -386,7 +386,7 @@ inline void learn2(FAE& fae, BoxMan& boxMan) {
 // FI_fix
 void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->fae));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
 	fae->updateConnectionGraph();
 
@@ -453,7 +453,7 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 // FI_fix
 void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->fae));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
 	fae->updateConnectionGraph();
 

@@ -44,17 +44,16 @@
  */
 
 
-struct SymState
+/**
+ * @brief  Symbolic state of the execution
+ */
+class SymState
 {
-private:
-
-	SymState(const SymState&);
-	SymState& operator=(const SymState&);
-
-public:
-
+public:   // data types
 
 	typedef std::list<ExecState> QueueType;
+
+private:  // data members
 
 	/// Parent symbolic state
 	SymState* parent;
@@ -73,6 +72,13 @@ public:
 
 	/// @todo: write dox
 	void* payload;
+
+private:  // methods
+
+	SymState(const SymState&);
+	SymState& operator=(const SymState&);
+
+public:   // methods
 
 	/**
 	 * @brief  Constructor
@@ -97,6 +103,31 @@ public:
 		// Assertions
 		assert(this->fae == nullptr);
 		assert(this->children.empty());
+	}
+
+	std::shared_ptr<const FAE> GetFAE() const
+	{
+		return fae;
+	}
+
+	AbstractInstruction* GetInstr()
+	{
+		return instr;
+	}
+
+	SymState* GetParent()
+	{
+		return parent;
+	}
+
+	const std::set<SymState*>& GetChildren() const
+	{
+		return children;
+	}
+
+	void SetQueueTag(const QueueType::iterator tag)
+	{
+		queueTag = tag;
 	}
 
 	/**

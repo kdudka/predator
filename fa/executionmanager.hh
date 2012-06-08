@@ -110,8 +110,8 @@ public:
 		state->init(
 			parent.GetMem(),
 			instr,
-			parent.GetMem()->fae,
-			this->queue_.insert(this->queue_.end(), ExecState(parent.GetRegsShPtr(), state))
+			parent.GetMem()->GetFAE(),
+			queue_.insert(queue_.end(), ExecState(parent.GetRegsShPtr(), state))
 		);
 
 		return state;
@@ -125,7 +125,7 @@ public:
 		state = queue_.front();
 		queue_.pop_front();
 
-		state.GetMem()->queueTag = queue_.end();
+		state.GetMem()->SetQueueTag(queue_.end());
 
 		return true;
 	}
@@ -138,7 +138,7 @@ public:
 		state = queue_.back();
 		queue_.pop_back();
 
-		state.GetMem()->queueTag = queue_.end();
+		state.GetMem()->SetQueueTag(queue_.end());
 
 		return true;
 	}
@@ -163,7 +163,7 @@ public:
 	{
 		++statesExecuted_;
 
-		state.GetMem()->instr->execute(*this, state);
+		state.GetMem()->GetInstr()->execute(*this, state);
 	}
 
 //	template <class F>
@@ -180,22 +180,21 @@ public:
 		// Assertions
 		assert(state);
 
-		while (state->parent)
+		while (state->GetParent())
 		{
 			// Assertions
-			assert(state->parent->children.size());
+			assert(state->GetParent()->GetChildren().size());
 
-			if (state->instr->getType() == fi_type_e::fiFix)
-				(static_cast<FixpointInstruction*>(state->instr))->extendFixpoint(state->fae);
-//			f(state);
+			if (state->GetInstr()->getType() == fi_type_e::fiFix)
+				(static_cast<FixpointInstruction*>(state->GetInstr()))->extendFixpoint(state->GetFAE());
 
-			if (state->parent->children.size() > 1)
+			if (state->GetParent()->GetChildren().size() > 1)
 			{
 				state->recycle(stateRecycler_);
 				return;
 			}
 
-			state = state->parent;
+			state = state->GetParent();
 		}
 
 		// Assertions

@@ -40,12 +40,12 @@ inline const cl_loc* getLoc(const ExecState& state)
 {
 	// Assertions
 	assert(state.GetMem() != nullptr);
-	assert(state.GetMem()->instr != nullptr);
+	assert(state.GetMem()->GetInstr() != nullptr);
 
-	if (!state.GetMem()->instr->insn())
+	if (!state.GetMem()->GetInstr()->insn())
 		return nullptr;
 
-	return &(state.GetMem()->instr->insn()->loc);
+	return &(state.GetMem()->GetInstr()->insn()->loc);
 }
 
 } // namespace
@@ -93,7 +93,7 @@ void FI_acc_sel::execute(ExecutionManager& execMan, const ExecState& state)
 
 	std::vector<FAE*> dst;
 
-	Splitting(*state.GetMem()->fae).isolateOne(dst, data.d_ref.root,
+	Splitting(*state.GetMem()->GetFAE()).isolateOne(dst, data.d_ref.root,
 		data.d_ref.displ + offset_);
 
 	for (auto fae : dst) {
@@ -116,7 +116,7 @@ void FI_acc_set::execute(ExecutionManager& execMan, const ExecState& state)
 
 	std::vector<FAE*> dst;
 
-	Splitting(*state.GetMem()->fae).isolateSet(
+	Splitting(*state.GetMem()->GetFAE()).isolateSet(
 		dst, data.d_ref.root, data.d_ref.displ + base_, offsets_
 	);
 
@@ -141,9 +141,9 @@ void FI_acc_all::execute(ExecutionManager& execMan, const ExecState& state)
 
 	std::vector<FAE*> dst;
 
-	Splitting(*state.GetMem()->fae).isolateSet(
+	Splitting(*state.GetMem()->GetFAE()).isolateSet(
 		dst, data.d_ref.root, 0,
-		state.GetMem()->fae->getType(data.d_ref.root)->getSelectors()
+		state.GetMem()->GetFAE()->getType(data.d_ref.root)->getSelectors()
 	);
 
 	for (auto fae : dst)
@@ -240,7 +240,7 @@ void FI_move_reg_inc::execute(ExecutionManager& execMan, const ExecState& state)
 void FI_get_greg::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	ExecState tmpState = state;
-	tmpState.SetReg(dst_, VirtualMachine(*tmpState.GetMem()->fae).varGet(src_));
+	tmpState.SetReg(dst_, VirtualMachine(*tmpState.GetMem()->GetFAE()).varGet(src_));
 
 	execMan.enqueue(tmpState, next_);
 }
@@ -248,7 +248,7 @@ void FI_get_greg::execute(ExecutionManager& execMan, const ExecState& state)
 // FI_set_greg
 void FI_set_greg::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	VirtualMachine(*state.GetMem()->fae).varSet(dst_, state.GetReg(src_));
+	VirtualMachine(*state.GetMem()->GetFAE()).varSet(dst_, state.GetReg(src_));
 
 	execMan.enqueue(state, next_);
 }
@@ -257,7 +257,7 @@ void FI_set_greg::execute(ExecutionManager& execMan, const ExecState& state)
 void FI_get_ABP::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	ExecState tmpState = state;
-	Data data = VirtualMachine(*tmpState.GetMem()->fae).varGet(ABP_INDEX);
+	Data data = VirtualMachine(*tmpState.GetMem()->GetFAE()).varGet(ABP_INDEX);
 	data.d_ref.displ += offset_;
 
 	tmpState.SetReg(dst_, data);
@@ -276,7 +276,7 @@ void FI_load::execute(ExecutionManager& execMan, const ExecState& state)
 	Data data = tmpState.GetReg(src_);
 	Data out;
 
-	VirtualMachine(*tmpState.GetMem()->fae).nodeLookup(
+	VirtualMachine(*tmpState.GetMem()->GetFAE()).nodeLookup(
 		data.d_ref.root, data.d_ref.displ + offset_, out
 	);
 
@@ -289,7 +289,7 @@ void FI_load::execute(ExecutionManager& execMan, const ExecState& state)
 void FI_load_ABP::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	ExecState tmpState = state;
-	VirtualMachine vm(*tmpState.GetMem()->fae);
+	VirtualMachine vm(*tmpState.GetMem()->GetFAE());
 
 	Data data = vm.varGet(ABP_INDEX);
 	Data out;
@@ -304,7 +304,7 @@ void FI_store::execute(ExecutionManager& execMan, const ExecState& state)
 	// Assertions
 	assert(state.GetReg(dst_).isRef());
 
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->fae));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
 	const Data& dst = state.GetReg(dst_);
 	const Data& src = state.GetReg(src_);
@@ -347,7 +347,7 @@ void FI_loads::execute(ExecutionManager& execMan, const ExecState& state)
 	Data data = tmpState.GetReg(src_);
 	Data out;
 
-	VirtualMachine(*state.GetMem()->fae).nodeLookupMultiple(
+	VirtualMachine(*state.GetMem()->GetFAE()).nodeLookupMultiple(
 		data.d_ref.root, data.d_ref.displ + base_, offsets_,
 		out
 	);
@@ -362,7 +362,7 @@ void FI_stores::execute(ExecutionManager& execMan, const ExecState& state)
 	// Assertions
 	assert(state.GetReg(dst_).isRef());
 
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->fae));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
 	const Data& dst = state.GetReg(dst_);
 	const Data& src = state.GetReg(src_);
@@ -407,7 +407,7 @@ void FI_node_create::execute(ExecutionManager& execMan, const ExecState& state)
 	if (srcData.isRef() || srcData.isNull())
 	{	// in case src_ is a null pointer
 		dstData = srcData;
-		execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(), state.GetMem()->fae, next_);
+		execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(), state.GetMem()->GetFAE(), next_);
 		return;
 	}
 
@@ -420,7 +420,7 @@ void FI_node_create::execute(ExecutionManager& execMan, const ExecState& state)
 	}
 
 	// create a new forest automaton
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*tmpState.GetMem()->fae));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*tmpState.GetMem()->GetFAE()));
 
 	// create a new node
 	dstData = Data::createRef(
@@ -469,7 +469,7 @@ void FI_node_free::execute(ExecutionManager& execMan, const ExecState& state)
 	// Assertions
 	assert(state.GetReg(dst_).isRef());
 
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->fae));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
 	const Data& data = state.GetReg(dst_);
 
@@ -502,9 +502,9 @@ void FI_iadd::execute(ExecutionManager& execMan, const ExecState& state)
 // FI_check
 void FI_check::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	state.GetMem()->fae->updateConnectionGraph();
+	state.GetMem()->GetFAE()->updateConnectionGraph();
 
-	Normalization(const_cast<FAE&>(*state.GetMem()->fae)).check();
+	Normalization(const_cast<FAE&>(*state.GetMem()->GetFAE())).check();
 
 	execMan.enqueue(state, next_);
 }
@@ -515,7 +515,7 @@ void FI_assert::execute(ExecutionManager& execMan, const ExecState& state)
 	if (state.GetReg(dst_) != cst_)
 	{
 		CL_CDEBUG(1, "registers: " << utils::wrap(state.GetRegs()) << ", heap:"
-			<< std::endl << *state.GetMem()->fae);
+			<< std::endl << *state.GetMem()->GetFAE());
 		throw std::runtime_error("assertion failed");
 	}
 
@@ -548,7 +548,7 @@ void FI_build_struct::execute(ExecutionManager& execMan, const ExecState& state)
 // FI_push_greg
 void FI_push_greg::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->fae));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
 	VirtualMachine(*fae).varPush(state.GetReg(src_));
 
@@ -560,7 +560,7 @@ void FI_pop_greg::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	ExecState tmpState = state;
 
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*tmpState.GetMem()->fae));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*tmpState.GetMem()->GetFAE()));
 
 	tmpState.SetReg(dst_, VirtualMachine(*fae).varPop());
 
@@ -627,8 +627,8 @@ struct DumpCtx {
 // FI_print_heap
 void FI_print_heap::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	CL_NOTE("local variables: " << DumpCtx(*ctx_, *state.GetMem()->fae));
-	CL_NOTE("heap:" << *state.GetMem()->fae);
+	CL_NOTE("local variables: " << DumpCtx(*ctx_, *state.GetMem()->GetFAE()));
+	CL_NOTE("heap:" << *state.GetMem()->GetFAE());
 
 	execMan.enqueue(state, next_);
 }

@@ -357,7 +357,7 @@ protected:
 
 		std::vector<SymState*> trace;
 
-		for ( ; s; s = s->parent)
+		for ( ; s; s = s->GetParent())
 		{	// until we reach the initial state of the execution tree
 			trace.push_back(s);
 		}
@@ -369,13 +369,13 @@ protected:
 
 		for (auto s : trace)
 		{	// print out the trace
-			if (s->instr->insn()) {
-				CL_NOTE_MSG(&s->instr->insn()->loc,
-					SSD_INLINE_COLOR(C_LIGHT_RED, *s->instr->insn()));
-				CL_DEBUG_AT(2, std::endl << *s->fae);
+			if (s->GetInstr()->insn()) {
+				CL_NOTE_MSG(&s->GetInstr()->insn()->loc,
+					SSD_INLINE_COLOR(C_LIGHT_RED, *s->GetInstr()->insn()));
+				CL_DEBUG_AT(2, std::endl << *s->GetFAE());
 			}
 
-			CL_DEBUG_AT(2, *s->instr);
+			CL_DEBUG_AT(2, *s->GetInstr());
 		}
 	}
 
@@ -437,10 +437,10 @@ protected:
 		{	// expecting problems...
 			while (this->execMan.dequeueDFS(state))
 			{	// process all states in the DFS order
-				if (state.GetMem()->instr->insn())
+				if (state.GetMem()->GetInstr()->insn())
 				{	// in case current instruction IS an instruction
 					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED,
-						state.GetMem()->instr->insn()->loc << *(state.GetMem()->instr->insn())));
+						state.GetMem()->GetInstr()->insn()->loc << *(state.GetMem()->GetInstr()->insn())));
 					CL_CDEBUG(2, state);
 				}
 				else
@@ -457,10 +457,10 @@ protected:
 		catch (ProgramError& e)
 		{
 //			Engine::printTrace(state);
-			if (state.GetMem()->instr->insn()) {
-				CL_NOTE_MSG(&state.GetMem()->instr->insn()->loc,
-					SSD_INLINE_COLOR(C_LIGHT_RED, *state.GetMem()->instr->insn()));
-				CL_DEBUG_AT(2, std::endl << *state.GetMem()->fae);
+			if (state.GetMem()->GetInstr()->insn()) {
+				CL_NOTE_MSG(&state.GetMem()->GetInstr()->insn()->loc,
+					SSD_INLINE_COLOR(C_LIGHT_RED, *state.GetMem()->GetInstr()->insn()));
+				CL_DEBUG_AT(2, std::endl << *state.GetMem()->GetFAE());
 			}
 			throw;
 		}
