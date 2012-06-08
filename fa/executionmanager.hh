@@ -40,39 +40,23 @@ class ExecutionManager {
 	Recycler<DataArray> registerRecycler_;
 	Recycler<SymState> stateRecycler_;
 
-	struct RecycleRegisterF {
+	class RecycleRegisterF
+	{
+	private:  // data members
 
 		Recycler<DataArray>& recycler_;
 
-		RecycleRegisterF(Recycler<DataArray>& recycler)
-			: recycler_(recycler) {}
+	public:   // methods
 
-		void operator()(DataArray* x) {
+		RecycleRegisterF(Recycler<DataArray>& recycler) :
+			recycler_(recycler)
+		{ }
 
-			this->recycler_.recycle(x);
-
+		void operator()(DataArray* x)
+		{
+			recycler_.recycle(x);
 		}
-
 	};
-/*
-public:
-
-	struct DestroySimpleF {
-
-		DestroySimpleF() {}
-
-		void operator()(SymState* state) {
-
-			AbstractInstruction* instr = state->instr;
-			if (instr->computesFixpoint())
-				((FixpointInstruction*)instr)->extendFixpoint(state->fae);
-	//			else
-	//				CFG_FROM_FAE(*node->fae)->invalidate(node->fae);
-
-		}
-
-	};
-*/
 
 private:  // methods
 
