@@ -70,9 +70,6 @@ private:  // data members
 	/// @todo: write dox
 	QueueType::iterator queueTag_;
 
-	/// @todo: write dox
-	void* payload;
-
 private:  // methods
 
 	SymState(const SymState&);
@@ -90,8 +87,7 @@ public:   // methods
 		instr_{},
 		fae_{},
 		children_{},
-		queueTag_{},
-		payload{}
+		queueTag_{}
 	{ }
 
 	/**
