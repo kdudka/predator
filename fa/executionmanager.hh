@@ -20,24 +20,41 @@
 #ifndef EXECUTION_MANAGER_H
 #define EXECUTION_MANAGER_H
 
+// Standard library headers
 #include <list>
 
+// Forester headers
 #include "types.hh"
 #include "recycler.hh"
 #include "abstractinstruction.hh"
 #include "fixpointinstruction.hh"
 #include "symstate.hh"
 
-class ExecutionManager {
 
+/**
+ * @brief  Class that carries out symbolic execution of the code
+ *
+ * This class performs symbolic execution of the code.
+ */
+class ExecutionManager
+{
+private:  // data members
+
+	/// the root of the execution graph
 	SymState* root_;
 
+	/// the queue with the states to be processed
 	SymState::QueueType queue_;
 
+	/// counter of evaluated states
 	size_t statesExecuted_;
+
+	/// counter of evaluated traces
 	size_t tracesEvaluated_;
 
+	/// memory manager for registers
 	Recycler<DataArray> registerRecycler_;
+	/// memory manager for states
 	Recycler<SymState> stateRecycler_;
 
 	class RecycleRegisterF
@@ -65,42 +82,51 @@ private:  // methods
 
 public:
 
-	ExecutionManager() : root_(nullptr), queue_{}, statesExecuted_{}, tracesEvaluated_{}, registerRecycler_{}, stateRecycler_{} {}
+	ExecutionManager() :
+		root_(nullptr),
+		queue_{},
+		statesExecuted_{},
+		tracesEvaluated_{},
+		registerRecycler_{},
+		stateRecycler_{}
+	{ }
 
-	~ExecutionManager() { this->clear(); }
+	~ExecutionManager()
+	{
+		this->clear();
+	}
 
 	size_t statesEvaluated() const { return statesExecuted_; }
 
 	size_t tracesEvaluated() const { return tracesEvaluated_; }
 
-	void clear() {
-
-		if (this->root_) {
-			this->root_->recycle(this->stateRecycler_);
-			this->root_ = nullptr;
+	void clear()
+	{
+		if (root_)
+		{
+			root_->recycle(stateRecycler_);
+			root_ = nullptr;
 		}
 
-		this->queue_.clear();
+		queue_.clear();
 
-		this->statesExecuted_ = 0;
-		this->tracesEvaluated_ = 0;
-
+		statesExecuted_ = 0;
+		tracesEvaluated_ = 0;
 	}
 
 	SymState* enqueue(SymState* parent, const std::shared_ptr<DataArray>& registers,
-		const std::shared_ptr<const FAE>& fae, AbstractInstruction* instr) {
-
-		SymState* state = this->stateRecycler_.alloc();
+		const std::shared_ptr<const FAE>& fae, AbstractInstruction* instr)
+	{
+		SymState* state = stateRecycler_.alloc();
 
 		state->init(
 			parent,
 			instr,
 			fae,
-			this->queue_.insert(this->queue_.end(), ExecState(registers, state))
+			queue_.insert(queue_.end(), ExecState(registers, state))
 		);
 
 		return state;
-
 	}
 
 	SymState* enqueue(const ExecState& parent, AbstractInstruction* instr)
@@ -166,7 +192,6 @@ public:
 		state.GetMem()->GetInstr()->execute(*this, state);
 	}
 
-//	template <class F>
 	void traceFinished(SymState* state)
 	{
 		++tracesEvaluated_;
@@ -174,8 +199,7 @@ public:
 		this->destroyBranch(state);
 	}
 
-//	template <class F>
-	void destroyBranch(SymState* state/*, F f*/)
+	void destroyBranch(SymState* state)
 	{
 		// Assertions
 		assert(state);
