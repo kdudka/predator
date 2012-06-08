@@ -56,19 +56,19 @@ public:   // data types
 private:  // data members
 
 	/// Parent symbolic state
-	SymState* parent;
+	SymState* parent_;
 
 	/// Instruction that the symbolic state corresponds to
-	AbstractInstruction* instr;
+	AbstractInstruction* instr_;
 
 	/// Forest automaton for the symbolic state
-	std::shared_ptr<const FAE> fae;
+	std::shared_ptr<const FAE> fae_;
 
 	/// Children symbolic states
-	std::set<SymState*> children;
+	std::set<SymState*> children_;
 
 	/// @todo: write dox
-	QueueType::iterator queueTag;
+	QueueType::iterator queueTag_;
 
 	/// @todo: write dox
 	void* payload;
@@ -86,11 +86,11 @@ public:   // methods
 	 * Default constructor
 	 */
 	SymState() :
-		parent{},
-		instr{},
-		fae{},
-		children{},
-		queueTag{},
+		parent_{},
+		instr_{},
+		fae_{},
+		children_{},
+		queueTag_{},
 		payload{}
 	{ }
 
@@ -99,35 +99,36 @@ public:   // methods
 	 *
 	 * Destructor
 	 */
-	~SymState() {
+	~SymState()
+	{
 		// Assertions
-		assert(this->fae == nullptr);
-		assert(this->children.empty());
+		assert(nullptr == fae_);
+		assert(children_.empty());
 	}
 
 	std::shared_ptr<const FAE> GetFAE() const
 	{
-		return fae;
+		return fae_;
 	}
 
 	AbstractInstruction* GetInstr()
 	{
-		return instr;
+		return instr_;
 	}
 
 	SymState* GetParent()
 	{
-		return parent;
+		return parent_;
 	}
 
 	const std::set<SymState*>& GetChildren() const
 	{
-		return children;
+		return children_;
 	}
 
 	void SetQueueTag(const QueueType::iterator tag)
 	{
-		queueTag = tag;
+		queueTag_ = tag;
 	}
 
 	/**
@@ -137,8 +138,9 @@ public:   // methods
 	 *
 	 * @param[in]  child  The child symbolic state to be added
 	 */
-	void addChild(SymState* child) {
-		if (!this->children.insert(child).second)
+	void addChild(SymState* child)
+	{
+		if (!children_.insert(child).second)
 		{	// in case already present state was added
 			assert(false);        // fail gracefully
 		}
@@ -152,7 +154,7 @@ public:   // methods
 	 * @param[in]  child  The child symbolic state to be removed
 	 */
 	void removeChild(SymState* child) {
-		if (this->children.erase(child) != 1)
+		if (children_.erase(child) != 1)
 		{	// in case the state to be removed is not present
 			assert(false);        // fail gracefully
 		}
@@ -174,12 +176,12 @@ public:   // methods
 		// Assertions
 		assert(Integrity(*fae).check());
 
-		this->parent = parent;
-		this->instr = instr;
-		this->fae = fae;
-		this->queueTag = queueTag;
-		if (this->parent)
-			this->parent->addChild(this);
+		parent_ = parent;
+		instr_ = instr;
+		fae_ = fae;
+		queueTag_ = queueTag;
+		if (parent_)
+			parent_->addChild(this);
 	}
 
 	/**
@@ -192,8 +194,9 @@ public:   // methods
 	 */
 	void recycle(Recycler<SymState>& recycler) {
 
-		if (this->parent) {
-			this->parent->removeChild(this);
+		if (parent_)
+		{
+			parent_->removeChild(this);
 		}
 
 		std::vector<SymState*> stack = { this };
@@ -204,14 +207,15 @@ public:   // methods
 			SymState* state = stack.back();
 			stack.pop_back();
 
-			assert(state->fae);
-			state->fae = nullptr;
+			assert(state->GetFAE());
+			state->fae_ = nullptr;
 
-			for (auto s : state->children) {
+			for (auto s : state->GetChildren())
+			{
 				stack.push_back(s);
 			}
 
-			state->children.clear();
+			state->children_.clear();
 			recycler.recycle(state);
 		}
 	}
