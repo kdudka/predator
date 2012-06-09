@@ -20,7 +20,7 @@ test-0189.c:39:12: note:             <-- abstract state reachable from L8
 test-0189.c:39:13: note:                 <-- abstract state reachable from L8
 test-0189.c:38:11: note:                     <-- abstract state reachable from L7
 test-0189.c:38:12: note:                         <-- abstract state reachable from L7
-<unknown location>: note:                             <-- abstract state reachable from L6
+test-0189.c:38:12: note:                             <-- abstract state reachable from L6
 test-0189.c:38:12: note:                                 <-- abstract state reachable from L6 [entry block]
 test-0189.c:44:21: note:                             <-- abstract state reachable from L12
 test-0189.c:44:45: note:                                 <-- abstract state reachable from L12
