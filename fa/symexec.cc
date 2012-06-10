@@ -587,9 +587,12 @@ public:
 
 	void compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry)
 	{
-		CL_DEBUG_AT(2, "compiling ...");
 		this->compiler_.compile(this->assembly_, stor, entry);
-		CL_DEBUG_AT(2, "assembly:" << std::endl << this->assembly_);
+	}
+
+	const Compiler::Assembly& GetAssembly() const
+	{
+		return assembly_;
 	}
 
 	void run()
@@ -688,6 +691,14 @@ void SymExec::loadBoxes(const std::unordered_map<std::string, std::string>& db) 
 	this->engine->loadBoxes(db);
 }
 #endif
+
+const Compiler::Assembly& SymExec::GetAssembly() const
+{
+	// Assertions
+	assert(nullptr != engine);
+
+	return this->engine->GetAssembly();
+}
 
 void SymExec::compile(const CodeStorage::Storage& stor,
 	const CodeStorage::Fnc& main)

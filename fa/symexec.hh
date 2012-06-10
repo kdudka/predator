@@ -76,6 +76,16 @@ public:
 
 //	void loadBoxes(const std::unordered_map<std::string, std::string>& db);
 
+
+	/**
+	 * @brief  Returns the compiled code
+	 *
+	 * Returns the compiled code in the form of microinstructions.
+	 *
+	 * @returns  The compiled code
+	 */
+	const Compiler::Assembly& GetAssembly() const;
+
 	/**
 	 * @brief  Compiles the code from code storage
 	 *

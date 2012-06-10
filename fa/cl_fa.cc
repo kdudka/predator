@@ -189,9 +189,18 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 			se.loadBoxes(db.store);
 		}
 */
+		CL_DEBUG_AT(2, "compiling ...");
 		se.compile(stor, *main);
-		se.run();
-		CL_NOTE("the program is safe ...");
+		if (conf.printUcode)
+		{
+			CL_NOTE("assembly:" << std::endl << se.GetAssembly());
+		}
+
+		if (!conf.onlyCompile)
+		{
+			se.run();
+			CL_NOTE("the program is safe ...");
+		}
 	} catch (const ProgramError& e)
 	{
 		if (e.location())
