@@ -260,7 +260,6 @@ inline void abstract(FAE& fae, TreeAut& fwdConf, TreeAut::Backend& backend, BoxM
 
 	fae.unreachableFree();
 
-//	CL_CDEBUG(1, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after normalization:" ) << std::endl << *fae);
 #if FA_FUSION_ENABLED
 	// merge fixpoint
 	std::vector<FAE*> tmp;
