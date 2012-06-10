@@ -30,7 +30,9 @@
 #ifndef BUILDING_DOX
 #   define STD_VECTOR(type) std::vector<type>
 #else
-#   define STD_VECTOR(type) type*
+    // this would cause a lot of syntax errors with any parser that takes C++
+    // seriously but doxygen does not complain and produces way better output
+#   define STD_VECTOR(type) type[]
 #endif
 
 /**

@@ -1625,7 +1625,7 @@ static bool dig_edge_location(struct cl_loc *loc, const edge e)
     }
 
     if (!e->flags & EDGE_FALLTHRU)
-        CL_BREAK_IF("read_edge_location() failed to read any location");
+        CL_BREAK_IF("dig_edge_location() failed to read any location");
 
     return false;
 }
