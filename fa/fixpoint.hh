@@ -102,7 +102,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const ExecState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "abs   ";
+		return os << "abs   \t";
 	}
 
 };
@@ -119,7 +119,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const ExecState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "fix   ";
+		return os << "fix   \t";
 	}
 
 };
