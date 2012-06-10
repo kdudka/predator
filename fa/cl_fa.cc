@@ -49,28 +49,71 @@ void setDbgFlag(int) {
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
 
-struct Config {
+struct Config
+{
+	std::string dbRoot       = "";      ///< box database root directory
+	bool        printUcode   = false;   ///< printing microcode?
+	bool        onlyCompile  = false;   ///< only compiling?
 
-	std::string dbRoot;
+private:  // methods
 
-	void processArg(const std::string& key, const std::string& value) {
-		if (key == "db-root")
-			this->dbRoot = value;
+	void processArg(const std::string& arg)
+	{
+		using std::string;
+
+		if (arg.empty())
+			return;
+
+		std::vector<string> data;
+		boost::split(data, arg, boost::is_any_of(":"));
+
+		// assert there is at least one part
+		assert(!data.empty());
+
+		const std::string& key = data[0];
+
+		//      ***************  unary arguments ****************
+		if (std::string("print-ucode") == key)
+		{
+			this->printUcode = true;
+			CL_DEBUG("Config::processArg: \"print-ucode\" mode requested");
+			return;
+		}
+
+		if (std::string("only-compile") == key)
+		{
+			this->onlyCompile = true;
+			CL_DEBUG("Config::processArg: \"only-compile\" mode requested");
+			return;
+		}
+
+		//      ***************  binary arguments ****************
+		if (std::string("db-root") == key)
+		{
+			if (data.size() != 2)
+			{
+				throw std::invalid_argument("use \"db-root:<path>\"");
+			}
+
+			this->dbRoot = data[1];
+			CL_DEBUG("Config::processArg: \"db-root\" is \"" + this->dbRoot + "\"");
+			return;
+		}
+
+		CL_WARN("unhandled argument: \"" << arg << "\"");
 	}
 
-	Config(const std::string& c) :
-		dbRoot{}
+public:   // methods
+
+	Config(const std::string& confStr)
 	{
 		std::vector<std::string> args;
-		boost::split(args, c, boost::is_from_range(';', ';'));
-		for (std::vector<std::string>::iterator i = args.begin(); i != args.end(); ++i) {
-			std::vector<std::string> data;
-			boost::split(data, *i, boost::is_from_range(':', ':'));
-			if (data.size() == 2)
-				this->processArg(data[0], data[1]);
+		boost::split(args, confStr, boost::is_any_of(";"));
+		for (const std::string& arg : args)
+		{
+			processArg(arg);
 		}
 	}
-
 };
 
 #if 0
@@ -109,7 +152,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 
 	using namespace CodeStorage;
 
-	CL_DEBUG("config: " << configString);
+	CL_DEBUG("config: \"" << configString << "\"");
 
 	// look for main() by name
 	CL_DEBUG("looking for 'main()' at global scope...");
@@ -136,10 +179,13 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 	{
 		signal(SIGUSR1, setDbgFlag);
 		se.loadTypes(stor);
+
+		// parse the configuration string
+		Config conf(configString);
+
 /*
-		Config c(configString);
-		if (!c.dbRoot.empty()){
-			BoxDb db(c.dbRoot, "index");
+		if (!conf.dbRoot.empty()){
+			BoxDb db(conf.dbRoot, "index");
 			se.loadBoxes(db.store);
 		}
 */
