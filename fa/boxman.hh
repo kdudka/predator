@@ -22,7 +22,6 @@
 
 // Standard library headers
 #include <vector>
-#include <unordered_map>
 #include <string>
 #include <sstream>
 #include <fstream>
@@ -38,9 +37,12 @@
 #include "utils.hh"
 #include "restart_request.hh"
 
-class BoxAntichain {
+class BoxAntichain
+{
+	using TBoxStore = std::unordered_map<Box::Signature, std::list<Box>,
+		boost::hash<Box::Signature>>;
 
-	std::unordered_map<Box::Signature, std::list<Box>, boost::hash<Box::Signature>> boxes_;
+	TBoxStore boxes_;
 
 	std::list<Box> obsolete_;
 
@@ -141,7 +143,9 @@ public:
 
 class BoxSet {
 
-	std::unordered_set<Box, boost::hash<Box>> boxes_;
+	using TBoxSet = std::unordered_set<Box, boost::hash<Box>>;
+
+	TBoxSet boxes_;
 
 	bool modified_;
 
@@ -194,21 +198,34 @@ public:
 	typedef BoxSet BoxDatabase;
 #endif
 
-class BoxMan {
+class BoxMan
+{
+	using TDataStore = std::unordered_map<Data, NodeLabel*, boost::hash<Data>>;
+	using TNodeStore = std::unordered_map<std::vector<const AbstractBox*>,
+		NodeLabel*, boost::hash<std::vector<const AbstractBox*>>>;
+	using TVarDataStore = std::unordered_map<std::pair<size_t, DataArray>,
+		NodeLabel*, boost::hash<std::pair<size_t, DataArray>>>;
+	using TTagStore = std::unordered_set<
+		std::pair<const TypeBox*, std::vector<size_t>>,
+		boost::hash<std::pair<const TypeBox*, std::vector<size_t>>>>;
+	using TSelIndex = std::unordered_map<SelData, const SelBox*,
+		boost::hash<SelData>>;
+	using TTypeIndex = std::unordered_map<std::string, const TypeBox*>;
 
-	std::unordered_map<Data, NodeLabel*, boost::hash<Data>> dataStore;
+
+	TDataStore dataStore;
 	std::vector<const Data*> dataIndex;
-	std::unordered_map<std::vector<const AbstractBox*>, NodeLabel*, boost::hash<std::vector<const AbstractBox*>>> nodeStore;
-	std::unordered_set<std::pair<const TypeBox*, std::vector<size_t>>, boost::hash<std::pair<const TypeBox*, std::vector<size_t>>>> tagStore;
-	std::unordered_map<std::pair<size_t, DataArray>, NodeLabel*, boost::hash<std::pair<size_t, DataArray>>> vDataStore;
+	TNodeStore nodeStore;
+	TTagStore tagStore;
+	TVarDataStore vDataStore;
 
-	std::unordered_map<SelData, const SelBox*, boost::hash<SelData>> selIndex;
-	std::unordered_map<std::string, const TypeBox*> typeIndex;
+	TSelIndex selIndex;
+	TTypeIndex typeIndex;
 
 	BoxDatabase boxes;
 
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data) {
-		std::pair<std::unordered_map<Data, NodeLabel*, boost::hash<Data>>::iterator, bool> p
+		std::pair<TDataStore::iterator, bool> p
 			= this->dataStore.insert(std::make_pair(data, static_cast<NodeLabel*>(nullptr)));
 		if (p.second) {
 			p.first->second = new NodeLabel(&p.first->first, this->dataIndex.size());
@@ -236,7 +253,7 @@ public:
 	}
 
 	label_type lookupLabel(size_t arity, const DataArray& x) {
-		std::pair<std::unordered_map<std::pair<size_t, DataArray>, NodeLabel*, boost::hash<std::pair<size_t, DataArray>>>::iterator, bool> p
+		std::pair<TVarDataStore::iterator, bool> p
 			= this->vDataStore.insert(std::make_pair(std::make_pair(arity, x), static_cast<NodeLabel*>(nullptr)));
 		if (p.second)
 			p.first->second = new NodeLabel(&p.first->first.second);
@@ -276,7 +293,7 @@ public:
 
 	label_type lookupLabel(const std::vector<const AbstractBox*>& x) {
 
-		std::pair<std::unordered_map<std::vector<const AbstractBox*>, NodeLabel*, boost::hash<std::vector<const AbstractBox*>>>::iterator, bool> p
+		std::pair<TNodeStore::iterator, bool> p
 			= this->nodeStore.insert(std::make_pair(x, static_cast<NodeLabel*>(nullptr)));
 
 		if (p.second) {
@@ -331,8 +348,9 @@ public:
 		return p.second;
 	}
 
-	const TypeBox* getTypeInfo(const std::string& name) {
-		std::unordered_map<std::string, const TypeBox*>::const_iterator i = this->typeIndex.find(name);
+	const TypeBox* getTypeInfo(const std::string& name)
+	{
+		TTypeIndex::const_iterator i = this->typeIndex.find(name);
 		if (i == this->typeIndex.end())
 			throw std::runtime_error("BoxMan::getTypeInfo(): type for " + name + " not found!");
 		return i->second;
