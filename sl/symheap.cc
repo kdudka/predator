@@ -1244,6 +1244,7 @@ void SymHeapCore::Private::shiftBlockAt(
         const TSizeOf               size,
         const TValSet              *killedPtrs)
 {
+    CL_ERROR("shiftBlockAt() is not implemented yet");
     CL_BREAK_IF("please implement");
     (void) dstRoot;
     (void) off;

@@ -752,8 +752,7 @@ void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs) {
 
 void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
     const TValId lhsAt = lhs.placedAt();
-    const EValueTarget code = sh_.valTarget(lhsAt);
-    CL_BREAK_IF(!isPossibleToDeref(code));
+    CL_BREAK_IF(!isPossibleToDeref(sh_.valTarget(lhsAt)));
 
     const TObjType clt = lhs.objType();
     const bool isComp = isComposite(clt, /* includingArray */ false);
@@ -778,20 +777,18 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
         return;
     }
 
-    // FIXME: Should we check for overlapping?  What does the C standard say??
+    // resolve rhs
     const ObjHandle compObj(sh_, sh_.valGetComposite(rhs));
     const TValId rhsAt = compObj.placedAt();
 
-    LeakMonitor lm(sh_);
-    lm.enter();
+    // wrap the size of the object being assigned as a heap value
+    const CustomValue cv(IR::rngFromNum(size));
+    const TValId valSize = sh_.valWrapCustom(cv);
 
-    TValSet killedPtrs;
-    sh_.copyBlockOfRawMemory(lhsAt, rhsAt, size, &killedPtrs);
-
-    if (lm.collectJunkFrom(killedPtrs))
-        reportMemLeak(*this, code, "assign");
-
-    lm.leave();
+    // C99 says that lhs and rhs cannot _partially_ overlap
+    // TODO: avoid reporting errors for full overlaps
+    // TODO: check for overlaps when assigning atomic variables, too
+    executeMemmove(*this, lhsAt, rhsAt, valSize, /* allowOverlap */ false);
 }
 
 void SymProc::valDestroyTarget(TValId addr) {
@@ -1036,15 +1033,18 @@ void executeMemmove(
 {
     SymHeap &sh = proc.sh();
     const struct cl_loc *loc = proc.lw();
+    const char *fnc = (allowOverlap)
+        ? "memmove()"
+        : "memcpy()";
 
     IR::Range size;
     if (!rngFromVal(&size, sh, valSize) || size.lo < 0) {
-        CL_ERROR_MSG(loc, "size arg of memmove() is not a known integer");
+        CL_ERROR_MSG(loc, "size arg of " << fnc << " is not a known integer");
         proc.printBackTrace(ML_ERROR);
         return;
     }
     if (!size.hi) {
-        CL_WARN_MSG(loc, "ignoring call of memcpy()/memmove() with size == 0");
+        CL_WARN_MSG(loc, "ignoring call of " << fnc << " with size == 0");
         proc.printBackTrace(ML_WARN);
         return;
     }
@@ -1058,7 +1058,7 @@ void executeMemmove(
     }
 
     if (!allowOverlap && checkForOverlap(sh, valDst, valSrc, size.hi)) {
-        CL_ERROR_MSG(loc, "source and destination overlap in call of memcpy()");
+        CL_ERROR_MSG(loc, "source and destination overlap in call of " << fnc);
         proc.printBackTrace(ML_ERROR);
         return;
     }
@@ -1070,7 +1070,7 @@ void executeMemmove(
     sh.copyBlockOfRawMemory(valDst, valSrc, size.lo, &killedPtrs);
 
     if (!isSingular(size)) {
-        CL_DEBUG_MSG(loc, "memcpy()/memmove() invalidates ambiguous suffix");
+        CL_DEBUG_MSG(loc, fnc << " invalidates ambiguous suffix");
         const TValId suffixAddr = sh.valByOffset(valDst, size.lo);
         const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         const TSizeOf suffWidth = widthOf(size) - /* closed int */ 1;
@@ -1078,7 +1078,7 @@ void executeMemmove(
     }
 
     if (lm.collectJunkFrom(killedPtrs)) {
-        CL_WARN_MSG(loc, "memory leak detected while executing memmove()");
+        CL_WARN_MSG(loc, "memory leak detected while executing " << fnc);
         proc.printBackTrace(ML_WARN);
     }
 
