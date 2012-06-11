@@ -382,14 +382,12 @@ void FI_alloc::execute(ExecutionManager& execMan, const ExecState& state)
 	ExecState tmpState = state;
 
 	const Data& srcData = tmpState.GetReg(src_);
-	Data dstData        = tmpState.GetReg(dst_);
 
 	// assert that the source operand is an integer, i.e. the size
 	assert(srcData.isInt());
 
 	// create a void pointer of given size, i.e. it points to a block of the size
-	dstData = Data::createVoidPtr(srcData.d_int);
-
+	Data dstData = Data::createVoidPtr(srcData.d_int);
 	tmpState.SetReg(dst_, dstData);
 
 	execMan.enqueue(tmpState, next_);
@@ -402,12 +400,10 @@ void FI_node_create::execute(ExecutionManager& execMan, const ExecState& state)
 	ExecState tmpState = state;
 
 	const Data& srcData = tmpState.GetReg(src_);
-	Data dstData        = tmpState.GetReg(dst_);
 
 	if (srcData.isRef() || srcData.isNull())
 	{	// in case src_ is a null pointer
-		dstData = srcData;
-		execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(), state.GetMem()->GetFAE(), next_);
+		execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(), tmpState.GetMem()->GetFAE(), next_);
 		return;
 	}
 
@@ -416,14 +412,14 @@ void FI_node_create::execute(ExecutionManager& execMan, const ExecState& state)
 
 	if (srcData.d_void_ptr_size != size_)
 	{	// in case the type size differs from the allocated size
-		throw ProgramError("allocated block size mismatch", getLoc(state));
+		throw ProgramError("allocated block size mismatch", getLoc(tmpState));
 	}
 
 	// create a new forest automaton
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*tmpState.GetMem()->GetFAE()));
 
 	// create a new node
-	dstData = Data::createRef(
+	Data dstData = Data::createRef(
 		VirtualMachine(*fae).nodeCreate(sels_, typeInfo_)
 	);
 

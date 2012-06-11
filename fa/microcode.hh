@@ -535,10 +535,21 @@ private:  // methods
 
 public:
 
-	FI_node_create(const CodeStorage::Insn* insn, size_t dst, size_t src,
-		size_t size, const TypeBox* typeInfo, const std::vector<SelData>& sels)
-		: SequentialInstruction(insn), dst_(dst), src_(src), size_(size),
-		typeInfo_(typeInfo), sels_(sels) {}
+	FI_node_create(
+		const CodeStorage::Insn* insn,
+		size_t dst,
+		size_t src,
+		size_t size,
+		const TypeBox* typeInfo,
+		const std::vector<SelData>& sels
+	) :
+		SequentialInstruction(insn),
+		dst_(dst),
+		src_(src),
+		size_(size),
+		typeInfo_(typeInfo),
+		sels_(sels)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, const ExecState& state);
 
@@ -547,27 +558,7 @@ public:
 	}
 
 };
-/*
-class FI_node_alloc : public SequentialInstruction {
 
-	BoxMan& boxMan_;
-	size_t dst_;
-	size_t src_;
-	const cl_type* type_;
-
-public:
-
-	FI_node_alloc(BoxMan& boxMan, size_t dst, size_t src, const cl_type* type)
-		: SequentialInstruction(), boxMan_(boxMan), dst_(dst), src_(src), type_(type) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "alloc \tr" << this->dst_ << ", r" << this->src_;
-	}
-
-};
-*/
 class FI_node_free : public SequentialInstruction {
 
 	size_t dst_;
@@ -718,7 +709,7 @@ public:
 	virtual void execute(ExecutionManager& execMan, const ExecState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "gpop \tr" << this->dst_;
+		return os << "gpop  \tr" << this->dst_;
 	}
 
 };
