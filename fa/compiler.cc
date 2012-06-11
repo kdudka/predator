@@ -1911,6 +1911,8 @@ protected:
 	{
 		std::pair<SymCtx, CodeStorage::Block>& fncInfo = getFncInfo(&fnc);
 
+		//         ************  create function context  *************
+
 		// get context
 		curCtx_ = &fncInfo.first;
 
@@ -1936,10 +1938,8 @@ protected:
 		for (auto arg : fnc.args)
 			offsets.push_back(curCtx_->getVarInfo(arg).getStackOffset());
 
-		// build structure in r0
+		// build the stack frame in r0
 		append(new FI_build_struct(nullptr, 0, 0, offsets));
-
-		// build stack frame
 
 		// move void ptr of size 1 into r1
 		append(new FI_load_cst(nullptr, 1, Data::createVoidPtr(1)));
@@ -1973,7 +1973,10 @@ protected:
 		// set new ABP (r1)
 		append(new FI_set_greg(nullptr, ABP_INDEX, 1));
 
-		// jump to the beginning of the first block
+		//         ************  execute the function  *************
+
+		// jump to the beginning of the first block of the function control-flow
+		// graph
 		append(new FI_jmp(nullptr, fnc.cfg.entry()));
 
 		// compute loop entry points
@@ -2005,6 +2008,7 @@ protected:
 			assert(blockHead < assembly_->code_.size());
 
 			p.first->second = assembly_->code_[blockHead];
+
 
 			for (auto target : block->targets())
 				queue.push_back(target);
@@ -2094,9 +2098,9 @@ public:
 		for (size_t i = entry.args.size() + 1; i > 1; --i)
 			append(new FI_load_cst(nullptr, i, Data::createUnknw()));
 
+		// create the instruction that we will return to after performing analysis
+		// of the entry function
 		AbstractInstruction* instr = new FI_check(nullptr);
-
-		// set target flag (the instruction is the target of some jump)
 		instr->setTarget();
 
 		// store return address into r1
@@ -2105,8 +2109,10 @@ public:
 		// call the entry point
 		append(new FI_jmp(nullptr, &getFncInfo(&entry).second));
 
-		// push the instruction into the assembly; the instruction is set as the
-		// target of the function call
+		//     ******* compile return from the entry function *******
+
+		// push the previously created instruction into the assembly; it is set as
+		// the return address of the call to the entry function
 		append(instr);
 
 		// pop return value into r0
@@ -2115,7 +2121,7 @@ public:
 		// pop ABP into r1
 		append(new FI_pop_greg(nullptr, 1));
 
-		// check stack frame
+		// check the stack frame
 		append(new FI_assert(nullptr, 1, Data::createInt(0)));
 
 		// abort

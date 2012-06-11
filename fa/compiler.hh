@@ -197,7 +197,7 @@ public:
 				++cnt;
 			}
 
-			return os << "code size: " << cnt << " instructions" << std::endl;
+			return os << std::endl << "; code size: " << cnt << " instructions" << std::endl;
 		}
 	};
 

@@ -193,7 +193,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 		se.compile(stor, *main);
 		if (conf.printUcode)
 		{
-			CL_NOTE("assembly:" << std::endl << se.GetAssembly());
+			std::cout << se.GetAssembly();
 		}
 
 		if (!conf.onlyCompile)
