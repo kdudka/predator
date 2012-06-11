@@ -44,9 +44,10 @@
  */
 struct SelData {
 
-	size_t  offset;      ///< offset in a structure
-	int     size;        ///< size of the type
-	int     displ;       ///< @todo write dox
+	      size_t       offset;  ///< offset in a structure
+	      int          size;    ///< size of the type
+	      int          displ;   ///< @todo write dox
+	const std::string  name;    ///< name of the selector
 
 	/**
 	 * @brief  Constructor
@@ -56,10 +57,16 @@ struct SelData {
 	 * @param[in]  offset  Offset of the selector
 	 * @param[in]  size    Size of the selector
 	 * @param[in]  displ   TODO write dox
+	 * @param[in]  name    Name of the selector
 	 */
-	SelData(size_t offset, int size, int displ) :
-		offset(offset), size(size), displ(displ) { }
+	SelData(size_t offset, int size, int displ, const std::string& name) :
+		offset(offset),
+		size(size),
+		displ(displ),
+		name(name)
+	{ }
 
+#if 0
 	/**
 	 * @brief  Construct selector information from arguments
 	 *
@@ -79,6 +86,7 @@ struct SelData {
 	 	return SelData(atol(args[1].c_str()), atol(args[2].c_str()),
 			atol(args[3].c_str()));
 	}
+#endif
 
 	/**
 	 * @brief  Computes the hash value
@@ -121,12 +129,25 @@ struct SelData {
 	 *
 	 * @returns  The modified output stream
 	 */
-	friend std::ostream& operator<<(std::ostream& os, const SelData& x) {
+	friend std::ostream& operator<<(std::ostream& os, const SelData& x)
+	{
+		// assert that a selector has a name
+		assert(!x.name.empty());
+
+		os << x.name << '[' << x.offset << ':' << x.size << ':';
+		if (x.displ >= 0) {
+			os << '+';
+		}
+
+		return os << x.displ << ']';
+
+#if 0
 		os << "sel" << x.offset << ':' << x.size << '[';
 		if (x.displ >= 0) {
 			os << '+';
 		}
-		return os << x.displ << ']';
+		return os << x.displ << ']' << x.name;
+#endif
 	}
 };
 
@@ -388,6 +409,7 @@ struct Data {
 		return data;
 	}
 
+#if 0
 	/**
 	 * @brief  Construct type and value information from arguments
 	 *
@@ -433,6 +455,7 @@ struct Data {
 			throw std::runtime_error("non-parsable arguments");
 		}
 	}
+#endif
 
 	/**
 	 * @brief  Clears the structure

@@ -553,10 +553,24 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, const ExecState& state);
 
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "node  \tr" << this->dst_ << ", r" << this->src_;
-	}
+	virtual std::ostream& toStream(std::ostream& os) const
+	{
+		// Assertions
+		assert(nullptr != typeInfo_);
 
+		os << "node  \tr" << this->dst_ << ", r" << this->src_ << ", ("
+			<< typeInfo_->getName() << "), <";
+
+		for (auto it = sels_.cbegin(); it != sels_.cend(); ++it)
+		{
+			if (it != sels_.cbegin())
+				os << ", ";
+
+			os << *it;
+		}
+
+		return os << ">";
+	}
 };
 
 class FI_node_free : public SequentialInstruction {

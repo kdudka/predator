@@ -300,10 +300,10 @@ public:   // methods
 		fnc_(fnc), sfLayout_{}, varMap_{}, regCount_(2), argCount_(0)
 	{
 		// pointer to previous stack frame
-		sfLayout_.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
+		sfLayout_.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0, "_pABP"));
 
 		// pointer to context info
-		sfLayout_.push_back(SelData(RET_OFFSET, RET_SIZE, 0));
+		sfLayout_.push_back(SelData(RET_OFFSET, RET_SIZE, 0, "_retaddr"));
 
 		size_t offset = ABP_SIZE + RET_SIZE;
 
@@ -321,7 +321,7 @@ public:   // methods
 					}
 					// no break
 				case CodeStorage::EVar::VAR_FNC_ARG:
-					NodeBuilder::buildNode(sfLayout_, var.type, offset);
+					NodeBuilder::buildNode(sfLayout_, var.type, offset, var.name);
 					varMap_.insert(std::make_pair(var.uid, VarInfo::createOnStack(offset)));
 					offset += var.type->size;
 					if (var.code == CodeStorage::EVar::VAR_FNC_ARG)
