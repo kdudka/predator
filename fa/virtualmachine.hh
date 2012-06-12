@@ -40,8 +40,10 @@
  */
 class VirtualMachine
 {
+private:   // data members
+
 	/// Reference to the forest automaton representing the environment
-	FAE& fae;
+	FAE& fae_;
 
 protected:
 
@@ -165,7 +167,7 @@ protected:
 		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, offset));
 
 		const Data* tmp = nullptr;
-		if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
+		if (!fae_.isData(transition.lhs()[ni.offset], tmp))
 		{
 			throw ProgramError("transitionLookup(): destination is not a leaf!");
 		}
@@ -203,7 +205,7 @@ protected:
 			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, *i + base));
 
 			const Data* tmp = nullptr;
-			if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
+			if (!fae_.isData(transition.lhs()[ni.offset], tmp))
 			{
 				throw ProgramError("transitionLookup(): destination is not a leaf!");
 			}
@@ -222,7 +224,7 @@ protected:
 		Data& out)
 	{
 		// Create a new final state
-		size_t state = this->fae.freshState();
+		size_t state = fae_.freshState();
 		dst.addFinalState(state);
 
 		std::vector<size_t> lhs = transition.lhs();
@@ -234,7 +236,7 @@ protected:
 		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, offset));
 
 		const Data* tmp = nullptr;
-		if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
+		if (!fae_.isData(transition.lhs()[ni.offset], tmp))
 		{
 			throw ProgramError("transitionModify(): destination is not a leaf!");
 		}
@@ -244,10 +246,10 @@ protected:
 		VirtualMachine::displToData(s, out);
 		Data d = in;
 		VirtualMachine::displToSel(s, d);
-		lhs[ni.offset] = this->fae.addData(dst, d);
-		label[ni.index] = this->fae.boxMan->getSelector(s);
+		lhs[ni.offset] = fae_.addData(dst, d);
+		label[ni.index] = fae_.boxMan->getSelector(s);
 		FAE::reorderBoxes(label, lhs);
-		dst.addTransition(lhs, this->fae.boxMan->lookupLabel(label), state);
+		dst.addTransition(lhs, fae_.boxMan->lookupLabel(label), state);
 	}
 
 	/// @todo: add documentation
@@ -259,7 +261,7 @@ protected:
 		Data& out)
 	{
 		// Create a new final state
-		size_t state = this->fae.freshState();
+		size_t state = fae_.freshState();
 		dst.addFinalState(state);
 
 		std::vector<size_t> lhs = transition.lhs();
@@ -276,7 +278,7 @@ protected:
 			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, i->first + base));
 
 			const Data* tmp = nullptr;
-			if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
+			if (!fae_.isData(transition.lhs()[ni.offset], tmp))
 			{
 				throw ProgramError("transitionModify(): destination is not a leaf!");
 			}
@@ -286,12 +288,12 @@ protected:
 			VirtualMachine::displToData(s, out.d_struct->back().second);
 			Data d = i->second;
 			VirtualMachine::displToSel(s, d);
-			lhs[ni.offset] = this->fae.addData(dst, d);
-			label[ni.index] = this->fae.boxMan->getSelector(s);
+			lhs[ni.offset] = fae_.addData(dst, d);
+			label[ni.index] = fae_.boxMan->getSelector(s);
 		}
 
 		FAE::reorderBoxes(label, lhs);
-		dst.addTransition(lhs, this->fae.boxMan->lookupLabel(label), state);
+		dst.addTransition(lhs, fae_.boxMan->lookupLabel(label), state);
 	}
 
 public:
@@ -306,7 +308,7 @@ public:
 	 */
 	size_t varCount() const
 	{
-		return this->fae.GetVarCount();
+		return fae_.GetVarCount();
 	}
 
 	/**
@@ -321,8 +323,8 @@ public:
 	 */
 	size_t varPush(const Data& data)
 	{
-		size_t id = this->fae.GetVarCount();
-		this->fae.PushVar(data);
+		size_t id = fae_.GetVarCount();
+		fae_.PushVar(data);
 		return id;
 	}
 
@@ -337,8 +339,8 @@ public:
 	 */
 	Data varPop()
 	{
-		Data data = this->fae.GetTopVar();
-		this->fae.PopVar();
+		Data data = fae_.GetTopVar();
+		fae_.PopVar();
 		return data;
 	}
 
@@ -352,7 +354,7 @@ public:
 	 */
 	void varPopulate(size_t count)
 	{
-		this->fae.AddNewVars(count);
+		fae_.AddNewVars(count);
 	}
 
 	/**
@@ -367,7 +369,7 @@ public:
 	 */
 	const Data& varGet(size_t varId) const
 	{
-		return this->fae.GetVar(varId);
+		return fae_.GetVar(varId);
 	}
 
 	/**
@@ -381,7 +383,7 @@ public:
 	 */
 	void varSet(size_t varId, const Data& data)
 	{
-		this->fae.SetVar(varId, data);
+		fae_.SetVar(varId, data);
 	}
 
 	/**
@@ -401,9 +403,9 @@ public:
 		const TypeBox* typeInfo = nullptr)
 	{
 		// create a new tree automaton
-		size_t root = this->fae.roots.size();
-		TreeAut* ta = this->fae.allocTA();
-		size_t f = this->fae.freshState();
+		size_t root = fae_.roots.size();
+		TreeAut* ta = fae_.allocTA();
+		size_t f = fae_.freshState();
 		ta->addFinalState(f);
 
 		// build the label
@@ -415,22 +417,22 @@ public:
 
 		for (auto i = nodeInfo.begin(); i != nodeInfo.end(); ++i)
 		{	// push selector
-			label.push_back(this->fae.boxMan->getSelector(*i));
+			label.push_back(fae_.boxMan->getSelector(*i));
 		}
 
 		// build the tuple
 		std::vector<size_t> lhs(nodeInfo.size(),
-			this->fae.addData(*ta, Data::createUndef()));
+			fae_.addData(*ta, Data::createUndef()));
 
 		// reorder
 		FAE::reorderBoxes(label, lhs);
 
 		// fill the rest
-		ta->addTransition(lhs, this->fae.boxMan->lookupLabel(label), f);
+		ta->addTransition(lhs, fae_.boxMan->lookupLabel(label), f);
 
 		// add the tree automaton into the forest automaton
-		this->fae.appendRoot(ta);
-		this->fae.connectionGraph.newRoot();
+		fae_.appendRoot(ta);
+		fae_.connectionGraph.newRoot();
 		return root;
 	}
 
@@ -446,37 +448,37 @@ public:
 	void nodeDelete(size_t root)
 	{
 		// Assertions
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+		assert(root < fae_.roots.size());
+		assert(fae_.roots[root]);
 
 		// update content of variables referencing the tree automaton
-		this->fae.SetVarsToUndefForRoot(root);
+		fae_.SetVarsToUndefForRoot(root);
 
 		// erase node
-		this->fae.roots[root] = nullptr;
+		fae_.roots[root] = nullptr;
 
 		/// @todo: do in a better way (deobfuscate)
 		// make all references to this rootpoint dangling
 		size_t i = 0;
 		for (; i < root; ++i)
 		{
-			if (!this->fae.roots[i])
+			if (!fae_.roots[i])
 				continue;
 
-			this->fae.roots[i] = std::shared_ptr<TreeAut>(
-				this->fae.invalidateReference(this->fae.roots[i].get(), root));
-			this->fae.connectionGraph.invalidate(i);
+			fae_.roots[i] = std::shared_ptr<TreeAut>(
+				fae_.invalidateReference(fae_.roots[i].get(), root));
+			fae_.connectionGraph.invalidate(i);
 		}
 		// skip 'root'
-		this->fae.connectionGraph.invalidate(i++);
-		for (; i < this->fae.roots.size(); ++i)
+		fae_.connectionGraph.invalidate(i++);
+		for (; i < fae_.roots.size(); ++i)
 		{
-			if (!this->fae.roots[i])
+			if (!fae_.roots[i])
 				continue;
 
-			this->fae.roots[i] = std::shared_ptr<TreeAut>(
-				this->fae.invalidateReference(this->fae.roots[i].get(), root));
-			this->fae.connectionGraph.invalidate(i);
+			fae_.roots[i] = std::shared_ptr<TreeAut>(
+				fae_.invalidateReference(fae_.roots[i].get(), root));
+			fae_.connectionGraph.invalidate(i);
 		}
 	}
 
@@ -496,11 +498,11 @@ public:
 	void nodeLookup(size_t root, size_t offset, Data& data) const
 	{
 		// Assertions
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+		assert(root < fae_.roots.size());
+		assert(fae_.roots[root]);
 
 		this->transitionLookup(
-			this->fae.roots[root]->getAcceptingTransition(), offset, data);
+			fae_.roots[root]->getAcceptingTransition(), offset, data);
 	}
 
 	/**
@@ -524,10 +526,10 @@ public:
 		Data& data) const
 	{
 		// Assertions
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+		assert(root < fae_.roots.size());
+		assert(fae_.roots[root]);
 
-		this->transitionLookup(this->fae.roots[root]->getAcceptingTransition(),
+		this->transitionLookup(fae_.roots[root]->getAcceptingTransition(),
 			base, offsets, data);
 	}
 
@@ -539,17 +541,17 @@ public:
 		Data& out)
 	{
 		// Assertions
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+		assert(root < fae_.roots.size());
+		assert(fae_.roots[root]);
 
-		TreeAut ta(*this->fae.backend);
-		this->transitionModify(ta, this->fae.roots[root]->getAcceptingTransition(),
+		TreeAut ta(*fae_.backend);
+		this->transitionModify(ta, fae_.roots[root]->getAcceptingTransition(),
 			offset, in, out);
-		this->fae.roots[root]->copyTransitions(ta);
-		TreeAut* tmp = this->fae.allocTA();
+		fae_.roots[root]->copyTransitions(ta);
+		TreeAut* tmp = fae_.allocTA();
 		ta.unreachableFree(*tmp);
-		this->fae.roots[root] = std::shared_ptr<TreeAut>(tmp);
-		this->fae.connectionGraph.invalidate(root);
+		fae_.roots[root] = std::shared_ptr<TreeAut>(tmp);
+		fae_.connectionGraph.invalidate(root);
 	}
 
 	/// @todo add documentation
@@ -560,32 +562,32 @@ public:
 		Data& out)
 	{
 		// Assertions
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+		assert(root < fae_.roots.size());
+		assert(fae_.roots[root]);
 		assert(in.isStruct());
 
-		TreeAut ta(*this->fae.backend);
-		this->transitionModify(ta, this->fae.roots[root]->getAcceptingTransition(),
+		TreeAut ta(*fae_.backend);
+		this->transitionModify(ta, fae_.roots[root]->getAcceptingTransition(),
 			offset, *in.d_struct, out);
-		this->fae.roots[root]->copyTransitions(ta);
-		TreeAut* tmp = this->fae.allocTA();
+		fae_.roots[root]->copyTransitions(ta);
+		TreeAut* tmp = fae_.allocTA();
 		ta.unreachableFree(*tmp);
-		this->fae.roots[root] = std::shared_ptr<TreeAut>(tmp);
-		this->fae.connectionGraph.invalidate(root);
+		fae_.roots[root] = std::shared_ptr<TreeAut>(tmp);
+		fae_.connectionGraph.invalidate(root);
 	}
 
 	/// @todo add documentation
 	void getNearbyReferences(size_t root, std::set<size_t>& out) const
 	{
 		// Assertions
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+		assert(root < fae_.roots.size());
+		assert(fae_.roots[root]);
 
-		const TT<label_type>& t = this->fae.roots[root]->getAcceptingTransition();
+		const TT<label_type>& t = fae_.roots[root]->getAcceptingTransition();
 		for (auto i = t.lhs().begin(); i != t.lhs().end(); ++i)
 		{
 			const Data* data = nullptr;
-			if (this->fae.isData(*i, data) && data->isRef())
+			if (fae_.isData(*i, data) && data->isRef())
 				out.insert(data->d_ref.root);
 		}
 	}
@@ -600,7 +602,7 @@ public:
 	 * @param[in]  fae  The forest automaton to be converted
 	 */
 	VirtualMachine(FAE& fae) :
-		fae(fae)
+		fae_(fae)
 	{ }
 
 	/**
@@ -611,7 +613,7 @@ public:
 	 * @param[in]  fae  The forest automaton to be converted
 	 */
 	VirtualMachine(const FAE& fae) :
-		fae(*const_cast<FAE*>(&fae))
+		fae_(*const_cast<FAE*>(&fae))
 	{ }
 };
 
