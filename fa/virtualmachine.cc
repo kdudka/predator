@@ -153,6 +153,9 @@ size_t VirtualMachine::nodeCreate(
 	const std::vector<SelData>& nodeInfo,
 	const TypeBox* typeInfo)
 {
+	// Assertions
+	assert(nullptr != fae_.boxMan);
+
 	// create a new tree automaton
 	size_t root = fae_.roots.size();
 	TreeAut* ta = fae_.allocTA();
@@ -164,6 +167,8 @@ size_t VirtualMachine::nodeCreate(
 	if (typeInfo)
 	{	// if there is a some box
 		label.push_back(typeInfo);
+
+		fae_.boxMan->InsertTypeDesc(typeInfo, nodeInfo);
 	}
 
 	for (auto i = nodeInfo.begin(); i != nodeInfo.end(); ++i)

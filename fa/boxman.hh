@@ -156,6 +156,7 @@ private:  // data types
 	using TSelIndex = std::unordered_map<SelData, const SelBox*,
 		boost::hash<SelData>>;
 	using TTypeIndex = std::unordered_map<std::string, const TypeBox*>;
+	using TTypeDescDict = std::unordered_map<const TypeBox*, std::vector<SelData>>;
 
 private:  // data members
 
@@ -170,6 +171,10 @@ private:  // data members
 
 	BoxDatabase boxes_;
 
+	TTypeDescDict typeDescDict_;
+
+private:  // methods
+
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data);
 
 	std::string getBoxName() const;
@@ -182,6 +187,19 @@ public:
 	}
 
 	label_type lookupLabel(size_t arity, const DataArray& x);
+
+	void InsertTypeDesc(const TypeBox* tb, const std::vector<SelData>& sels)
+	{
+		auto itBoolPair = typeDescDict_.insert(std::make_pair(tb, sels));
+		if (!itBoolPair.second)
+		{	// in case a new element was not inserted
+			const std::vector<SelData>& oldSels = itBoolPair.first->second;
+			if (sels != oldSels)
+			{
+				assert(false);       // fail gracefully
+			}
+		}
+	}
 
 	struct EvaluateBoxF
 	{
@@ -259,8 +277,6 @@ public:
 		return boxes_.lookup(box);
 	}
 
-public:
-
 	BoxMan() :
 		dataStore_{},
 		dataIndex_{},
@@ -269,7 +285,8 @@ public:
 		vDataStore_{},
 		selIndex_{},
 		typeIndex_{},
-		boxes_{}
+		boxes_{},
+		typeDescDict_{}
 	{ }
 
 	~BoxMan()
