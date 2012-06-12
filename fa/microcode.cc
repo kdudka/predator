@@ -403,7 +403,8 @@ void FI_node_create::execute(ExecutionManager& execMan, const ExecState& state)
 
 	if (srcData.isRef() || srcData.isNull())
 	{	// in case src_ is a null pointer
-		execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(), tmpState.GetMem()->GetFAE(), next_);
+		execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(),
+			tmpState.GetMem()->GetFAE(), next_);
 		return;
 	}
 

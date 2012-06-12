@@ -28,7 +28,8 @@
 enum class box_type_e { bBox, bHead, bTypeInfo, bSel };
 
 
-class AbstractBox {
+class AbstractBox
+{
 
 	box_type_e type;
 
@@ -37,8 +38,11 @@ protected:
 	size_t arity;
 	size_t order;
 
-	AbstractBox(box_type_e type, size_t arity) : type(type), arity(arity), order(0) {
-	}
+	AbstractBox(box_type_e type, size_t arity) :
+		type(type),
+		arity(arity),
+		order(0)
+	{ }
 
 public:
 

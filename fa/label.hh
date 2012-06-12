@@ -171,7 +171,8 @@ struct NodeLabel {
 
 	bool operator!=(const NodeLabel& rhs) const { return this->data.data != rhs.data.data; }
 
-	friend std::ostream& operator<<(std::ostream& os, const NodeLabel& label) {
+	friend std::ostream& operator<<(std::ostream& os, const NodeLabel& label)
+	{
 		os << '<';
 		switch (label.type) {
 			case node_type::n_unknown:
