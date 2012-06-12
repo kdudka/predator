@@ -122,7 +122,7 @@ public:
 	}
 
 	size_t size() const {
-		return this->size_;
+		return this->size_ - this->obsolete_.size();
 	}
 
 	void clear() {
