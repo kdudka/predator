@@ -362,11 +362,11 @@ const Box* BoxMan::getBox(const Box& box)
 {
 	auto cpBox = boxes_.get(box);
 
-	if (boxes_.modified()) {
-
+	if (boxes_.modified())
+	{
 		Box* pBox = const_cast<Box*>(cpBox);
 
-		pBox->name = this->getBoxName();
+		pBox->name_ = this->getBoxName();
 		pBox->initialize();
 
 		CL_CDEBUG(1, "learning " << *static_cast<const AbstractBox*>(cpBox)

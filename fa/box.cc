@@ -23,12 +23,12 @@
 
 void TypeBox::toStream(std::ostream& os) const
 {
-	os << this->name;
-	if (this->selectors.empty())
+	os << name_;
+	if (selectors_.empty())
 		return;
 
 	os << '{';
-	for (auto it = this->selectors.cbegin(); it != this->selectors.cend(); ++it)
+	for (auto it = selectors_.cbegin(); it != selectors_.cend(); ++it)
 		os << *it << ';';
 
 	os << '}';
@@ -61,7 +61,7 @@ void Box::getDownwardCoverage(
 			case box_type_e::bBox:
 			{
 				const Box* box = static_cast<const Box*>(absBox);
-				v.insert(v.end(), box->selCoverage[0].begin(), box->selCoverage[0].end());
+				v.insert(v.end(), box->selCoverage_[0].begin(), box->selCoverage_[0].end());
 				break;
 			}
 
@@ -136,32 +136,32 @@ Box::Box(
 	const std::vector<std::pair<size_t,size_t>>& selectors
 ) :
 	StructuralBox(box_type_e::bBox, selectors.size()),
-	name(name),
-	hint(),
-	output(output),
-	outputSignature(outputSignature),
-	outputLabels(),
-	inputMap(inputMap),
-	input(input),
-	inputIndex(inputIndex),
-	inputSignature(inputSignature),
-	inputLabels(),
-	selectors(selectors),
-	selCoverage{},
-	selfReference{}
+	name_(name),
+	hint_(),
+	output_(output),
+	outputSignature_(outputSignature),
+	outputLabels_(),
+	inputMap_(inputMap),
+	input_(input),
+	inputIndex_(inputIndex),
+	inputSignature_(inputSignature),
+	inputLabels_(),
+	selectors_(selectors),
+	selCoverage_{},
+	selfReference_{}
 {
-	Box::getAcceptingLabels(this->outputLabels, *output);
+	Box::getAcceptingLabels(outputLabels_, *output_);
 
-	boost::hash_combine(this->hint, selectors);
-	boost::hash_combine(this->hint, this->outputLabels);
-	boost::hash_combine(this->hint, outputSignature);
+	boost::hash_combine(hint_, selectors_);
+	boost::hash_combine(hint_, outputLabels_);
+	boost::hash_combine(hint_, outputSignature_);
 
-	if (input)
+	if (input_)
 	{
-		Box::getAcceptingLabels(this->inputLabels, *input);
+		Box::getAcceptingLabels(inputLabels_, *input_);
 
-		boost::hash_combine(this->hint, this->inputLabels);
-		boost::hash_combine(this->hint, inputSignature);
+		boost::hash_combine(hint_, inputLabels_);
+		boost::hash_combine(hint_, inputSignature_);
 	}
 }
 
@@ -226,114 +226,113 @@ void Box::enumerateSelectorsAtLeaves(
 
 bool Box::operator==(const Box& rhs) const
 {
-	if (static_cast<bool>(this->input) != static_cast<bool>(rhs.input))
+	if (static_cast<bool>(input_) != static_cast<bool>(rhs.input_))
 		return false;
 
-	if (this->input)
+	if (input_)
 	{
-		if (this->inputIndex != rhs.inputIndex)
+		if (inputIndex_ != rhs.inputIndex_)
 			return false;
 
-		if (this->inputSignature != rhs.inputSignature)
+		if (inputSignature_ != rhs.inputSignature_)
 			return false;
 
-		if (this->inputLabels != rhs.inputLabels)
+		if (inputLabels_ != rhs.inputLabels_)
 			return false;
 	}
 
-	if (this->outputSignature != rhs.outputSignature)
+	if (outputSignature_ != rhs.outputSignature_)
 		return false;
 
-	if (this->outputLabels != rhs.outputLabels)
+	if (outputLabels_ != rhs.outputLabels_)
 		return false;
 
-	if (this->selectors != rhs.selectors)
+	if (selectors_ != rhs.selectors_)
 		return false;
 
-	if (!Box::equal(*this->output, *rhs.output))
+	if (!Box::equal(*output_, *rhs.output_))
 		return false;
 
-	if (!this->input)
+	if (!input_)
 		return true;
 
-	return Box::equal(*this->input, *rhs.input);
+	return Box::equal(*input_, *rhs.input_);
 }
 
 
 bool Box::operator<=(const Box& rhs) const
 {
-	if (static_cast<bool>(this->input) != static_cast<bool>(rhs.input))
+	if (static_cast<bool>(input_) != static_cast<bool>(rhs.input_))
 		return false;
 
-	if (this->input)
+	if (input_)
 	{
-		if (this->inputIndex != rhs.inputIndex)
+		if (inputIndex_ != rhs.inputIndex_)
 			return false;
 
-		if (this->inputSignature != rhs.inputSignature)
+		if (inputSignature_ != rhs.inputSignature_)
 			return false;
 	}
 
-	if (this->outputSignature != rhs.outputSignature)
+	if (outputSignature_ != rhs.outputSignature_)
 		return false;
 
-	if (this->selectors != rhs.selectors)
+	if (selectors_ != rhs.selectors_)
 		return false;
 
-	if (!Box::lessOrEqual(*this->output, *rhs.output))
+	if (!Box::lessOrEqual(*output_, *rhs.output_))
 		return false;
 
-	if (!this->input)
+	if (!input_)
 		return true;
 
-	return Box::lessOrEqual(*this->input, *rhs.input);
+	return Box::lessOrEqual(*input_, *rhs.input_);
 }
 
 
 bool Box::simplifiedLessThan(const Box& rhs) const
 {
-	if (static_cast<bool>(this->input) != static_cast<bool>(rhs.input))
+	if (static_cast<bool>(input_) != static_cast<bool>(rhs.input_))
 		return false;
 
-	if (this->input)
+	if (input_)
 	{
-		if (this->inputIndex != rhs.inputIndex)
+		if (inputIndex_ != rhs.inputIndex_)
 			return false;
 	}
 
-	if (!Box::lessOrEqual(*this->output, *rhs.output))
+	if (!Box::lessOrEqual(*output_, *rhs.output_))
 		return false;
 
-	if (!this->input)
+	if (!input_)
 		return true;
 
-	return Box::lessOrEqual(*this->input, *rhs.input);
+	return Box::lessOrEqual(*input_, *rhs.input_);
 }
 
 
 void Box::initialize()
 {
+	selCoverage_.resize(arity_ + 1);
 
-	this->selCoverage.resize(this->arity + 1);
+	Box::getDownwardCoverage(selCoverage_[0], *output_);
 
-	Box::getDownwardCoverage(this->selCoverage[0], *this->output);
+	assert(selCoverage_[0].size());
 
-	assert(this->selCoverage[0].size());
+	order_ = *selCoverage_[0].begin();
 
-	this->order = *this->selCoverage[0].begin();
+	this->enumerateSelectorsAtLeaves(selCoverage_, *output_);
 
-	this->enumerateSelectorsAtLeaves(this->selCoverage, *this->output);
-
-	if (!this->input)
+	if (!input_)
 		return;
 
-	assert(this->inputIndex < this->selCoverage.size());
+	assert(inputIndex_ < selCoverage_.size());
 
-	Box::getDownwardCoverage(this->selCoverage[this->inputIndex + 1], *this->input);
+	Box::getDownwardCoverage(selCoverage_[inputIndex_ + 1], *input_);
 
-	this->enumerateSelectorsAtLeaves(this->selCoverage, *this->input);
+	this->enumerateSelectorsAtLeaves(selCoverage_, *input_);
 
-	this->selfReference = ConnectionGraph::containsCutpoint(this->outputSignature, 0);
+	selfReference_ = ConnectionGraph::containsCutpoint(outputSignature_, 0);
 }
 
 
@@ -356,31 +355,31 @@ std::ostream& operator<<(std::ostream& os, const Box& box)
 	for(auto& s : box.outputCoverage())
 		os << " +" << s;
 
-	os << " ) [" << box.outputSignature << "] ";
+	os << " ) [" << box.outputSignature_ << "] ";
 
 	TAWriter<label_type> writer(os);
 
-	for (auto state : box.output->getFinalStates())
+	for (auto state : box.output_->getFinalStates())
 		writer.writeState(state);
 
 	writer.endl();
-	writer.writeTransitions(*box.output, writeStateF);
+	writer.writeTransitions(*box.output_, writeStateF);
 
-	if (!box.input)
+	if (!box.input_)
 		return os;
 
-	os << "===" << std::endl << "input " << box.inputIndex << " (";
+	os << "===" << std::endl << "input " << box.inputIndex_ << " (";
 
-	for(auto& s : box.inputCoverage(box.inputIndex))
+	for(auto& s : box.inputCoverage(box.inputIndex_))
 		os << " +" << s;
 
-	os << " ) [" << box.inputSignature << "] ";
+	os << " ) [" << box.inputSignature_ << "] ";
 
-	for (auto state : box.input->getFinalStates())
+	for (auto state : box.input_->getFinalStates())
 		writer.writeState(state);
 
 	writer.endl();
-	writer.writeTransitions(*box.input, writeStateF);
+	writer.writeTransitions(*box.input_, writeStateF);
 
 	return os;
 }

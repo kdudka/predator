@@ -36,20 +36,22 @@
 #include "connection_graph.hh"
 
 
-class NodeHead : public AbstractBox {
+class NodeHead : public AbstractBox
+{
+private:  // data members
 
-	size_t size;
+	size_t size_;
 
-public:
+public:   // methods
 
 	NodeHead(size_t size) :
 		AbstractBox(box_type_e::bHead, 0),
-		size(size)
+		size_(size)
 	{ }
 
 	size_t getSize() const
 	{
-		return this->size;
+		return size_;
 	}
 
 	virtual void toStream(std::ostream& os) const
@@ -60,25 +62,30 @@ public:
 
 class TypeBox : public AbstractBox
 {
-	std::string name;
-	std::vector<size_t> selectors;
+private:  // data members
 
-public:
+	std::string name_;
+	std::vector<size_t> selectors_;
 
-	TypeBox(const std::string& name, const std::vector<size_t>& selectors) :
+public:   // methods
+
+	TypeBox(
+		const std::string& name,
+		const std::vector<size_t>& selectors
+	) :
 		AbstractBox(box_type_e::bTypeInfo, 0),
-		name(name),
-		selectors(selectors)
+		name_(name),
+		selectors_(selectors)
 	{ }
 
 	const std::string& getName() const
 	{
-		return this->name;
+		return name_;
 	}
 
 	const std::vector<size_t>& getSelectors() const
 	{
-		return this->selectors;
+		return selectors_;
 	}
 
 	virtual void toStream(std::ostream& os) const;
@@ -95,16 +102,18 @@ public:
  */
 class SelBox : public StructuralBox
 {
+private:  // data members
+
 	const SelData* data_;
 
-	std::set<size_t> s[2];
+	std::set<size_t> s_[2];
 
 private:  // methods
 
 	SelBox(const SelBox&);
 	SelBox& operator=(const SelBox&);
 
-public:
+public:   // methods
 
 	SelBox(const SelData* data) :
 		StructuralBox(box_type_e::bSel, 1),
@@ -113,9 +122,9 @@ public:
 		// Assertions
 		assert(data_ != nullptr);
 
-		s[0].insert(data_->offset);
+		s_[0].insert(data_->offset);
 
-		this->order = data_->offset;
+		order_ = data_->offset;
 	}
 
 	const SelData& getData() const
@@ -144,7 +153,7 @@ public:
 
 	virtual const std::set<size_t>& outputCoverage() const
 	{
-		return s[0];
+		return s_[0];
 	}
 
 	virtual const std::set<size_t>& inputCoverage(size_t index) const
@@ -152,7 +161,7 @@ public:
 		if (index != 0)
 			assert(false);
 
-		return s[1];
+		return s_[1];
 	}
 
 	virtual size_t selectorToInput(size_t index) const
@@ -180,30 +189,34 @@ public:
 };
 
 
-class Box : public StructuralBox {
+class Box : public StructuralBox
+{
+private:  // data types
 
 	friend class BoxMan;
 
-	std::string name;
-	size_t hint;
-	std::shared_ptr<TreeAut> output;
-	ConnectionGraph::CutpointSignature outputSignature;
-	std::vector<label_type> outputLabels;
-	std::vector<size_t> inputMap;
-	std::shared_ptr<TreeAut> input;
-	size_t inputIndex;
-	ConnectionGraph::CutpointSignature inputSignature;
-	std::vector<label_type> inputLabels;
-	std::vector<std::pair<size_t,size_t>> selectors;
+private:  // data members
 
-	std::vector<std::set<size_t>> selCoverage;
+	std::string name_;
+	size_t hint_;
+	std::shared_ptr<TreeAut> output_;
+	ConnectionGraph::CutpointSignature outputSignature_;
+	std::vector<label_type> outputLabels_;
+	std::vector<size_t> inputMap_;
+	std::shared_ptr<TreeAut> input_;
+	size_t inputIndex_;
+	ConnectionGraph::CutpointSignature inputSignature_;
+	std::vector<label_type> inputLabels_;
+	std::vector<std::pair<size_t,size_t>> selectors_;
 
-	bool selfReference;
+	std::vector<std::set<size_t>> selCoverage_;
+
+	bool selfReference_;
 
 public:
 
-	struct Signature {
-
+	struct Signature
+	{
 		ConnectionGraph::CutpointSignature outputSignature;
 		size_t inputIndex;
 		ConnectionGraph::CutpointSignature inputSignature;
@@ -234,9 +247,7 @@ public:
 
 	Signature getSignature() const
 	{
-		return Signature(
-			this->outputSignature, this->inputIndex, this->inputSignature, this->selectors
-		);
+		return Signature( outputSignature_, inputIndex_, inputSignature_, selectors_);
 	}
 
 protected:
@@ -298,64 +309,64 @@ public:
 
 	virtual bool outputCovers(size_t offset) const
 	{
-		assert(this->selCoverage.size());
-		return this->selCoverage[0].count(offset) > 0;
+		assert(selCoverage_.size());
+		return selCoverage_[0].count(offset) > 0;
 	}
 
 	virtual const std::set<size_t>& outputCoverage() const
 	{
-		assert(this->selCoverage.size());
-		return this->selCoverage[0];
+		assert(selCoverage_.size());
+		return selCoverage_[0];
 	}
 
 	bool inputCovers(size_t index, size_t offset) const
 	{
-		assert((index + 1) < this->selCoverage.size());
-		return this->selCoverage[index + 1].count(offset) > 0;
+		assert((index + 1) < selCoverage_.size());
+		return selCoverage_[index + 1].count(offset) > 0;
 	}
 
 	virtual const std::set<size_t>& inputCoverage(size_t index) const
 	{
-		assert((index + 1) < this->selCoverage.size());
-		return this->selCoverage[index + 1];
+		assert((index + 1) < selCoverage_.size());
+		return selCoverage_[index + 1];
 	}
 
 	virtual size_t selectorToInput(size_t input) const
 	{
-		assert(input < this->selectors.size());
-		return this->selectors[input].first;
+		assert(input < selectors_.size());
+		return selectors_[input].first;
 	}
 
 	virtual size_t outputReachable(size_t input) const
 	{
-		assert(input < this->selectors.size());
-		return this->selectors[input].second;
+		assert(input < selectors_.size());
+		return selectors_[input].second;
 	}
 
 	virtual size_t getRealRefCount(size_t input) const
 	{
-		assert(input < this->outputSignature.size());
-		return this->outputSignature[input].realRefCount;
+		assert(input < outputSignature_.size());
+		return outputSignature_[input].realRefCount;
 	}
 
 	const TreeAut* getOutput() const
 	{
-		return this->output.get();
+		return output_.get();
 	}
 
 	const ConnectionGraph::CutpointSignature& getOutputSignature() const
 	{
-		return this->outputSignature;
+		return outputSignature_;
 	}
 
 	const TreeAut* getInput() const
 	{
-		return this->input.get();
+		return input_.get();
 	}
 
 	size_t getInputIndex() const
 	{
-		return this->inputIndex;
+		return inputIndex_;
 	}
 
 	static bool equal(const TreeAut& a, const TreeAut& b)
@@ -370,25 +381,25 @@ public:
 
 	size_t getSelector(size_t input) const
 	{
-		assert(input < this->inputMap.size());
-		return this->inputMap[input];
+		assert(input < inputMap_.size());
+		return inputMap_[input];
 	}
 
 	bool hasSelfReference() const
 	{
-		return this->selfReference;
+		return selfReference_;
 	}
 
 public:
 
 	virtual void toStream(std::ostream& os) const
 	{
-		os << this->name << '(' << this->arity << ')';
+		os << name_ << '(' << arity_ << ')';
 	}
 
 	friend size_t hash_value(const Box& box)
 	{
-		return box.hint;
+		return box.hint_;
 	}
 
 	bool operator==(const Box& rhs) const;
