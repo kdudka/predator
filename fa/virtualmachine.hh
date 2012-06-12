@@ -202,26 +202,6 @@ protected:
 		}
 	}
 
-#if 0
-	void transitionLookup(const TT<label_type>& transition,
-		std::vector<std::pair<SelData, Data> >& nodeInfo) const {
-
-		size_t lhsOffset = 0;
-		for (auto i = transition.label()->getNode().begin();
-			i != transition.label()->getNode().end(); ++i) {
-
-			assert(VirtualMachine::isSelector(*i));
-			const Data* tmp;
-			if (!this->fae.isData(transition.lhs()[lhsOffset], tmp)) {
-				throw ProgramError("transitionLookup(): destination is not a leaf!");
-			}
-			nodeInfo.push_back(std::make_pair(VirtualMachine::readSelector(*i), *tmp));
-			VirtualMachine::displToData(nodeInfo.back().first, nodeInfo.back().second);
-			lhsOffset += (*i)->getArity();
-		}
-	}
-#endif
-
 	/// @todo: add documentation
 	void transitionModify(TreeAut& dst, const TT<label_type>& transition,
 		size_t offset, const Data& in, Data& out) {
@@ -378,42 +358,6 @@ public:
 		this->fae.SetVar(varId, data);
 	}
 
-#if 0
-	size_t nodeCreate(const std::vector<std::pair<SelData, Data>>& nodeInfo,
-		const TypeBox* typeInfo = nullptr) {
-
-		// create a new tree automaton in the forest automaton
-		size_t root = this->fae.roots.size();
-		TreeAut* ta = this->fae.allocTA();
-		size_t f = this->fae.freshState();
-		ta->addFinalState(f);
-
-		std::vector<const AbstractBox*> label;     // symbol of a TA transition
-		std::vector<size_t> lhs;                   // tuple of a TA transition
-
-		if (typeInfo) {
-			label.push_back(typeInfo);
-		}
-
-		for (auto i = nodeInfo.begin(); i != nodeInfo.end(); ++i) {
-			SelData sel = i->first;
-			Data data = i->second;
-			VirtualMachine::displToSel(sel, data);
-			// label
-			label.push_back(this->fae.boxMan->getSelector(sel));
-			// lhs
-			lhs.push_back(this->fae.addData(*ta, data));
-		}
-
-		FAE::reorderBoxes(label, lhs);
-		ta->addTransition(lhs, this->fae.boxMan->lookupLabel(label), f);
-		this->fae.appendRoot(ta);
-		this->fae.connectionGraph.newRoot();
-
-		return root;
-	}
-#endif
-
 	/**
 	 * @brief  Creates a node in the virtual machine memory
 	 *
@@ -509,18 +453,6 @@ public:
 		}
 	}
 
-#if 0
-	void unsafeNodeDelete(size_t root) {
-
-		// Assertions
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
-
-		// erase node
-		this->fae.roots[root] = nullptr;
-	}
-#endif
-
 	/**
 	 * @brief  Looks up a node in the memory
 	 *
@@ -543,14 +475,6 @@ public:
 		this->transitionLookup(
 			this->fae.roots[root]->getAcceptingTransition(), offset, data);
 	}
-
-#if 0
-	void nodeLookup(size_t root, std::vector<std::pair<SelData, Data> >& data) const {
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
-		this->transitionLookup(this->fae.roots[root]->getAcceptingTransition(), data);
-	}
-#endif
 
 	/**
 	 * @brief  Looks up a node with multiple data in the memory
