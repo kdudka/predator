@@ -428,37 +428,6 @@ void FI_node_create::execute(ExecutionManager& execMan, const ExecState& state)
 	execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(), fae, next_);
 }
 
-/*
-// FI_node_alloc
-void FI_node_alloc::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-	assert((*state.first)[this->src_].isInt());
-
-	if ((*state.first)[this->src_].d_int != this->type_->size)
-		throw ProgramError("allocated block size mismatch", getLoc(state));
-
-	std::vector<SelData> sels;
-	NodeBuilder::buildNode(sels, this->type_);
-
-	std::string typeName;
-	if (this->type_->name)
-		typeName = std::string(this->type_->name);
-	else {
-		std::ostringstream ss;
-		ss << this->type_->uid;
-		typeName = ss.str();
-	}
-
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-	(*state.first)[this->dst_] = Data::createRef(
-		VirtualMachine(*fae).nodeCreate(sels, this->boxMan_.getTypeInfo(typeName))
-	);
-
-	execMan.enqueue(state.second, state.first, fae, this->next_);
-
-}
-*/
 // FI_node_free
 void FI_node_free::execute(ExecutionManager& execMan, const ExecState& state)
 {
