@@ -38,8 +38,8 @@
  * Represents the symbolic execution environment, i.e. the memory configuration
  * of the execution engine.
  */
-class VirtualMachine {
-
+class VirtualMachine
+{
 	/// Reference to the forest automaton representing the environment
 	FAE& fae;
 
@@ -54,10 +54,10 @@ protected:
 	 * @param[in]      sel   The selector information
 	 * @param[in,out]  data  The type and value information to be updated
 	 */
-	static void displToData(const SelData& sel, Data& data) {
-		if (data.isRef()) {
+	static void displToData(const SelData& sel, Data& data)
+	{
+		if (data.isRef())
 			data.d_ref.displ = sel.displ;
-		}
 	}
 
 	/**
@@ -70,8 +70,10 @@ protected:
 	 * @param[in, out]  sel   The selector information
 	 * @param[in, out]  data  Type and value information
 	 */
-	static void displToSel(SelData& sel, Data& data) {
-		if (data.isRef()) {
+	static void displToSel(SelData& sel, Data& data)
+	{
+		if (data.isRef())
+		{
 			sel.displ = data.d_ref.displ;
 			data.d_ref.displ = 0;
 		}
@@ -88,7 +90,8 @@ protected:
 	 *
 	 * @todo Sanitize the Box hierarchy + move functions where they belong
 	 */
-	static bool isSelector(const AbstractBox* box) {
+	static bool isSelector(const AbstractBox* box)
+	{
 		// Assertions
 		assert(box != nullptr);
 
@@ -106,7 +109,8 @@ protected:
 	 *
 	 * @todo Sanitize the Box hierarchy + move functions where they belong
 	 */
-	static const SelData& readSelector(const AbstractBox* box) {
+	static const SelData& readSelector(const AbstractBox* box)
+	{
 		// Assertions
 		assert(box != nullptr);
 		assert(isSelector(box));
@@ -129,7 +133,8 @@ protected:
 	 *
 	 * @todo Sanitize the Box hierarchy + move functions where they belong
 	 */
-	static bool isSelectorWithOffset(const AbstractBox* box, size_t offset) {
+	static bool isSelectorWithOffset(const AbstractBox* box, size_t offset)
+	{
 		// Assertions
 		assert(box != nullptr);
 
@@ -152,15 +157,16 @@ protected:
 	 * @todo: sanitize the interface
 	 */
 	void transitionLookup(const TT<label_type>& transition,
-		size_t offset, Data& data) const {
-
+		size_t offset, Data& data) const
+	{
 		// retrieve the item at given offset
 		const NodeLabel::NodeItem& ni = transition.label()->boxLookup(offset);
 		// Assertions
 		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, offset));
 
 		const Data* tmp = nullptr;
-		if (!this->fae.isData(transition.lhs()[ni.offset], tmp)) {
+		if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
+		{
 			throw ProgramError("transitionLookup(): destination is not a leaf!");
 		}
 
@@ -181,19 +187,24 @@ protected:
 	 *
 	 * @todo: sanitize the interface
 	 */
-	void transitionLookup(const TT<label_type>& transition,
-		size_t base, const std::vector<size_t>& offsets, Data& data) const {
-
+	void transitionLookup(
+		const TT<label_type>& transition,
+		size_t base,
+		const std::vector<size_t>& offsets,
+		Data& data) const
+	{
 		data = Data::createStruct();
 
 		// for every offset, add an item
-		for (auto i = offsets.begin(); i != offsets.end(); ++i) {
+		for (auto i = offsets.begin(); i != offsets.end(); ++i)
+		{
 			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(*i + base);
 			// Assertions
 			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, *i + base));
 
 			const Data* tmp = nullptr;
-			if (!this->fae.isData(transition.lhs()[ni.offset], tmp)) {
+			if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
+			{
 				throw ProgramError("transitionLookup(): destination is not a leaf!");
 			}
 			data.d_struct->push_back(Data::item_info(*i, *tmp));
@@ -203,9 +214,13 @@ protected:
 	}
 
 	/// @todo: add documentation
-	void transitionModify(TreeAut& dst, const TT<label_type>& transition,
-		size_t offset, const Data& in, Data& out) {
-
+	void transitionModify(
+		TreeAut& dst,
+		const TT<label_type>& transition,
+		size_t offset,
+		const Data& in,
+		Data& out)
+	{
 		// Create a new final state
 		size_t state = this->fae.freshState();
 		dst.addFinalState(state);
@@ -219,7 +234,8 @@ protected:
 		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, offset));
 
 		const Data* tmp = nullptr;
-		if (!this->fae.isData(transition.lhs()[ni.offset], tmp)) {
+		if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
+		{
 			throw ProgramError("transitionModify(): destination is not a leaf!");
 		}
 
@@ -235,9 +251,13 @@ protected:
 	}
 
 	/// @todo: add documentation
-	void transitionModify(TreeAut& dst, const TT<label_type>& transition,
-		size_t base, const std::vector<std::pair<size_t, Data> >& in, Data& out) {
-
+	void transitionModify(
+		TreeAut& dst,
+		const TT<label_type>& transition,
+		size_t base,
+		const std::vector<std::pair<size_t, Data> >& in,
+		Data& out)
+	{
 		// Create a new final state
 		size_t state = this->fae.freshState();
 		dst.addFinalState(state);
@@ -248,14 +268,16 @@ protected:
 		std::vector<const AbstractBox*> label = transition.label()->getNode();
 
 		out = Data::createStruct();
-		for (auto i = in.begin(); i != in.end(); ++i) {
+		for (auto i = in.begin(); i != in.end(); ++i)
+		{
 			// Retrieve the item with the given offset
 			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(i->first + base);
 			// Assertions
 			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, i->first + base));
 
 			const Data* tmp = nullptr;
-			if (!this->fae.isData(transition.lhs()[ni.offset], tmp)) {
+			if (!this->fae.isData(transition.lhs()[ni.offset], tmp))
+			{
 				throw ProgramError("transitionModify(): destination is not a leaf!");
 			}
 
@@ -282,7 +304,8 @@ public:
 	 *
 	 * @return  The number of variables in the environment
 	 */
-	size_t varCount() const {
+	size_t varCount() const
+	{
 		return this->fae.GetVarCount();
 	}
 
@@ -296,7 +319,8 @@ public:
 	 *
 	 * @returns  The identifier of the new variable
 	 */
-	size_t varPush(const Data& data) {
+	size_t varPush(const Data& data)
+	{
 		size_t id = this->fae.GetVarCount();
 		this->fae.PushVar(data);
 		return id;
@@ -311,7 +335,8 @@ public:
 	 *
 	 * @returns  data  The type and value information about the variable
 	 */
-	Data varPop() {
+	Data varPop()
+	{
 		Data data = this->fae.GetTopVar();
 		this->fae.PopVar();
 		return data;
@@ -325,7 +350,8 @@ public:
 	 *
 	 * @param[in]  count  The number of variables to be added
 	 */
-	void varPopulate(size_t count) {
+	void varPopulate(size_t count)
+	{
 		this->fae.AddNewVars(count);
 	}
 
@@ -370,9 +396,10 @@ public:
 	 *
 	 * @returns  Identifier of the inserted tree automaton
 	 */
-	size_t nodeCreate(const std::vector<SelData>& nodeInfo,
-		const TypeBox* typeInfo = nullptr) {
-
+	size_t nodeCreate(
+		const std::vector<SelData>& nodeInfo,
+		const TypeBox* typeInfo = nullptr)
+	{
 		// create a new tree automaton
 		size_t root = this->fae.roots.size();
 		TreeAut* ta = this->fae.allocTA();
@@ -416,8 +443,8 @@ public:
 	 *
 	 * @param[in]  root  Identifier of the tree automaton to be removed
 	 */
-	void nodeDelete(size_t root) {
-
+	void nodeDelete(size_t root)
+	{
 		// Assertions
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
@@ -431,10 +458,10 @@ public:
 		/// @todo: do in a better way (deobfuscate)
 		// make all references to this rootpoint dangling
 		size_t i = 0;
-		for (; i < root; ++i) {
-			if (!this->fae.roots[i]) {
+		for (; i < root; ++i)
+		{
+			if (!this->fae.roots[i])
 				continue;
-			}
 
 			this->fae.roots[i] = std::shared_ptr<TreeAut>(
 				this->fae.invalidateReference(this->fae.roots[i].get(), root));
@@ -442,10 +469,10 @@ public:
 		}
 		// skip 'root'
 		this->fae.connectionGraph.invalidate(i++);
-		for (; i < this->fae.roots.size(); ++i) {
-			if (!this->fae.roots[i]) {
+		for (; i < this->fae.roots.size(); ++i)
+		{
+			if (!this->fae.roots[i])
 				continue;
-			}
 
 			this->fae.roots[i] = std::shared_ptr<TreeAut>(
 				this->fae.invalidateReference(this->fae.roots[i].get(), root));
@@ -466,8 +493,8 @@ public:
 	 *
 	 * @todo: obfuscate (too clear)
 	 */
-	void nodeLookup(size_t root, size_t offset, Data& data) const {
-
+	void nodeLookup(size_t root, size_t offset, Data& data) const
+	{
 		// Assertions
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
@@ -490,9 +517,12 @@ public:
 	 *
 	 * @todo: obfuscate (too clear)
 	 */
-	void nodeLookupMultiple(size_t root, size_t base,
-		const std::vector<size_t>& offsets, Data& data) const {
-
+	void nodeLookupMultiple(
+		size_t root,
+		size_t base,
+		const std::vector<size_t>& offsets,
+		Data& data) const
+	{
 		// Assertions
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
@@ -502,8 +532,12 @@ public:
 	}
 
 	/// @todo add documentation
-	void nodeModify(size_t root, size_t offset, const Data& in, Data& out) {
-
+	void nodeModify(
+		size_t root,
+		size_t offset,
+		const Data& in,
+		Data& out)
+	{
 		// Assertions
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
@@ -519,8 +553,12 @@ public:
 	}
 
 	/// @todo add documentation
-	void nodeModifyMultiple(size_t root, size_t offset, const Data& in, Data& out) {
-
+	void nodeModifyMultiple(
+		size_t root,
+		size_t offset,
+		const Data& in,
+		Data& out)
+	{
 		// Assertions
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
@@ -537,14 +575,15 @@ public:
 	}
 
 	/// @todo add documentation
-	void getNearbyReferences(size_t root, std::set<size_t>& out) const {
-
+	void getNearbyReferences(size_t root, std::set<size_t>& out) const
+	{
 		// Assertions
 		assert(root < this->fae.roots.size());
 		assert(this->fae.roots[root]);
 
 		const TT<label_type>& t = this->fae.roots[root]->getAcceptingTransition();
-		for (auto i = t.lhs().begin(); i != t.lhs().end(); ++i) {
+		for (auto i = t.lhs().begin(); i != t.lhs().end(); ++i)
+		{
 			const Data* data = nullptr;
 			if (this->fae.isData(*i, data) && data->isRef())
 				out.insert(data->d_ref.root);
@@ -560,7 +599,9 @@ public:
 	 *
 	 * @param[in]  fae  The forest automaton to be converted
 	 */
-	VirtualMachine(FAE& fae) : fae(fae) {}
+	VirtualMachine(FAE& fae) :
+		fae(fae)
+	{ }
 
 	/**
 	 * @brief  Conversion operator from forest automaton (const)
@@ -569,9 +610,9 @@ public:
 	 *
 	 * @param[in]  fae  The forest automaton to be converted
 	 */
-	VirtualMachine(const FAE& fae) : fae(*const_cast<FAE*>(&fae)) {}
-
+	VirtualMachine(const FAE& fae) :
+		fae(*const_cast<FAE*>(&fae))
+	{ }
 };
 
 #endif
-
