@@ -42,50 +42,49 @@ class NodeHead : public AbstractBox {
 
 public:
 
-	NodeHead(size_t size)
-		: AbstractBox(box_type_e::bHead, 0), size(size) {}
+	NodeHead(size_t size) :
+		AbstractBox(box_type_e::bHead, 0),
+		size(size)
+	{ }
 
-	size_t getSize() const {
+	size_t getSize() const
+	{
 		return this->size;
 	}
 
-	virtual void toStream(std::ostream& os) const {
+	virtual void toStream(std::ostream& os) const
+	{
 		os << "Node[" << this->getSize() << ']';
 	}
-
 };
 
-class TypeBox : public AbstractBox {
-
+class TypeBox : public AbstractBox
+{
 	std::string name;
 	std::vector<size_t> selectors;
 
 public:
 
-	TypeBox(const std::string& name, const std::vector<size_t>& selectors)
-		: AbstractBox(box_type_e::bTypeInfo, 0), name(name), selectors(selectors) {}
+	TypeBox(const std::string& name, const std::vector<size_t>& selectors) :
+		AbstractBox(box_type_e::bTypeInfo, 0),
+		name(name),
+		selectors(selectors)
+	{ }
 
-	const std::string& getName() const {
+	const std::string& getName() const
+	{
 		return this->name;
 	}
 
-	const std::vector<size_t>& getSelectors() const {
+	const std::vector<size_t>& getSelectors() const
+	{
 		return this->selectors;
 	}
 
-	virtual void toStream(std::ostream& os) const {
-		os << this->name;
-		if (this->selectors.empty())
-			return;
-		os << '{';
-		for (std::vector<size_t>::const_iterator i = this->selectors.begin(); i != this->selectors.end(); ++i)
-			os << *i << ';';
-		os << '}';
-	}
+	virtual void toStream(std::ostream& os) const;
 
 	virtual ~TypeBox()
 	{ }
-
 };
 
 
@@ -215,116 +214,48 @@ public:
 			size_t inputIndex,
 			const ConnectionGraph::CutpointSignature& inputSignature,
 			const std::vector<std::pair<size_t,size_t>>& selectors
-		) : outputSignature(outputSignature), inputIndex(inputIndex),
-		inputSignature(inputSignature), selectors(selectors) {}
+		) :
+			outputSignature(outputSignature),
+			inputIndex(inputIndex),
+			inputSignature(inputSignature),
+			selectors(selectors)
+		{ }
 
-		bool operator==(const Signature& rhs) const {
-
+		bool operator==(const Signature& rhs) const
+		{
 			return this->outputSignature == rhs.outputSignature &&
 				this->inputIndex == rhs.inputIndex &&
 				this->inputSignature == rhs.inputSignature &&
 				this->selectors == rhs.selectors;
-
 		}
 
-		friend size_t hash_value(const Signature& signature) {
-
-			size_t h = 0;
-			boost::hash_combine(h, signature.outputSignature);
-			boost::hash_combine(h, signature.inputIndex);
-			boost::hash_combine(h, signature.inputSignature);
-			boost::hash_combine(h, signature.selectors);
-			return h;
-
-		}
-
+		friend size_t hash_value(const Signature& signature);
 	};
 
-	Signature getSignature() const {
-
+	Signature getSignature() const
+	{
 		return Signature(
 			this->outputSignature, this->inputIndex, this->inputSignature, this->selectors
 		);
-
 	}
 
 protected:
 
-	static void getDownwardCoverage(std::vector<size_t>& v, const std::vector<const AbstractBox*>& label) {
+	static void getDownwardCoverage(
+		std::vector<size_t>& v,
+		const std::vector<const AbstractBox*>& label);
 
-		for (auto& absBox : label) {
+	static bool checkDownwardCoverage(
+		const std::vector<size_t>& v,
+		const TreeAut& ta);
 
-			switch (absBox->getType()) {
+	static void getDownwardCoverage(
+		std::set<size_t>& s,
+		const TreeAut& ta);
 
-				case box_type_e::bSel:
-					v.push_back((static_cast<const SelBox*>(absBox))->getData().offset);
-					break;
-
-				case box_type_e::bBox: {
-
-					const Box* box = static_cast<const Box*>(absBox);
-					v.insert(v.end(), box->selCoverage[0].begin(), box->selCoverage[0].end());
-					break;
-
-				}
-
-				default: continue;
-
-			}
-
-		}
-
-	}
-
-	static bool checkDownwardCoverage(const std::vector<size_t>& v, const TreeAut& ta) {
-
-		for (TreeAut::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i) {
-
-			std::vector<size_t> v2;
-
-			Box::getDownwardCoverage(v2, i->label()->getNode());
-
-			if (v2 != v)
-				return false;
-
-		}
-
-		return true;
-
-	}
-
-	static void getDownwardCoverage(std::set<size_t>& s, const TreeAut& ta) {
-
-		std::vector<size_t> v;
-
-		assert(ta.accBegin() != ta.accEnd());
-
-		Box::getDownwardCoverage(v, ta.accBegin()->label()->getNode());
-
-		assert(Box::checkDownwardCoverage(v, ta));
-
-		std::sort(v.begin(), v.end());
-
-		assert(std::unique(v.begin(), v.end()) == v.end());
-
-		s.insert(v.begin(), v.end());
-
-	}
-
-	static void getAcceptingLabels(std::vector<label_type>& labels, const TreeAut& ta) {
-
-		for (auto& state : ta.getFinalStates()) {
-
-			for (auto i = ta.begin(state); i != ta.end(state, i); ++i)
-				labels.push_back(i->label());
-
-		}
-
-		std::sort(labels.begin(), labels.end());
-
-		labels.resize(std::unique(labels.begin(), labels.end()) - labels.begin());
-
-	}
+	static void getAcceptingLabels(
+		std::vector<label_type>& labels,
+		const TreeAut& ta);
 
 	Box(
 		const std::string& name,
@@ -335,26 +266,7 @@ protected:
 		size_t inputIndex,
 		ConnectionGraph::CutpointSignature inputSignature,
 		const std::vector<std::pair<size_t,size_t>>& selectors
-	) : StructuralBox(box_type_e::bBox, selectors.size()), name(name), hint(), output(output),
-		outputSignature(outputSignature), outputLabels(), inputMap(inputMap), input(input),
-		inputIndex(inputIndex), inputSignature(inputSignature), inputLabels(), selectors(selectors), selCoverage{}, selfReference{} {
-
-		Box::getAcceptingLabels(this->outputLabels, *output);
-
-		boost::hash_combine(this->hint, selectors);
-		boost::hash_combine(this->hint, this->outputLabels);
-		boost::hash_combine(this->hint, outputSignature);
-
-		if (input) {
-
-			Box::getAcceptingLabels(this->inputLabels, *input);
-
-			boost::hash_combine(this->hint, this->inputLabels);
-			boost::hash_combine(this->hint, inputSignature);
-
-		}
-
-	}
+	);
 
 	struct LeafEnumF {
 
@@ -362,355 +274,132 @@ protected:
 		const TreeAut& ta;
 		const TT<label_type>& t;
 
-		bool getRef(size_t state, size_t& ref) const {
+		bool getRef(size_t state, size_t& ref) const;
 
-			TreeAut::Iterator i = this->ta.begin(state);
+		LeafEnumF(
+			std::vector<std::set<size_t>>& selectors,
+			const TreeAut& ta,
+			const TT<label_type>& t
+		) :
+			selectors(selectors),
+			ta(ta),
+			t(t)
+		{ }
 
-			assert(i != this->ta.end(state));
-
-			if (!i->label()->isData())
-				return false;
-
-			const Data& data = i->label()->getData();
-
-			if (!data.isRef())
-				return false;
-
-			ref = data.d_ref.root;
-
-			return true;
-
-		}
-
-		LeafEnumF(std::vector<std::set<size_t>>& selectors, const TreeAut& ta,
-			const TT<label_type>& t) : selectors(selectors), ta(ta), t(t)  {}
-
-		bool operator()(const AbstractBox* abox, size_t, size_t offset) {
-
-			if (!abox->isType(box_type_e::bBox))
-				return true;
-
-			const Box* box = static_cast<const Box*>(abox);
-
-			for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
-
-				size_t ref;
-
-				if (this->getRef(t.lhs()[offset], ref)) {
-
-					this->selectors[ref].insert(
-						box->inputCoverage(k).begin(), box->inputCoverage(k).end()
-					);
-
-				}
-
-			}
-
-			return true;
-
-		}
-
+		bool operator()(const AbstractBox* abox, size_t, size_t offset);
 	};
 
 	// enumerates upward selectors
-	void enumerateSelectorsAtLeaves(std::vector<std::set<size_t>>& selectors,
-		const TreeAut& ta) const {
-
-		for (auto i = ta.begin(); i != ta.end(); ++i) {
-
-			if (i->label()->isNode())
-				i->label()->iterate(LeafEnumF(selectors, ta, *i));
-
-		}
-
-	}
+	void enumerateSelectorsAtLeaves(
+		std::vector<std::set<size_t>>& selectors,
+		const TreeAut& ta) const;
 
 public:
 
-	virtual bool outputCovers(size_t offset) const {
-
+	virtual bool outputCovers(size_t offset) const
+	{
 		assert(this->selCoverage.size());
-
 		return this->selCoverage[0].count(offset) > 0;
-
 	}
 
-	virtual const std::set<size_t>& outputCoverage() const {
-
+	virtual const std::set<size_t>& outputCoverage() const
+	{
 		assert(this->selCoverage.size());
-
 		return this->selCoverage[0];
-
 	}
 
-	bool inputCovers(size_t index, size_t offset) const {
-
+	bool inputCovers(size_t index, size_t offset) const
+	{
 		assert((index + 1) < this->selCoverage.size());
-
 		return this->selCoverage[index + 1].count(offset) > 0;
-
 	}
 
-	virtual const std::set<size_t>& inputCoverage(size_t index) const {
-
+	virtual const std::set<size_t>& inputCoverage(size_t index) const
+	{
 		assert((index + 1) < this->selCoverage.size());
-
 		return this->selCoverage[index + 1];
-
 	}
 
-	virtual size_t selectorToInput(size_t input) const {
-
+	virtual size_t selectorToInput(size_t input) const
+	{
 		assert(input < this->selectors.size());
-
 		return this->selectors[input].first;
-
 	}
 
-	virtual size_t outputReachable(size_t input) const {
-
+	virtual size_t outputReachable(size_t input) const
+	{
 		assert(input < this->selectors.size());
-
 		return this->selectors[input].second;
-
 	}
 
-	virtual size_t getRealRefCount(size_t input) const {
-
+	virtual size_t getRealRefCount(size_t input) const
+	{
 		assert(input < this->outputSignature.size());
-
 		return this->outputSignature[input].realRefCount;
-
 	}
 
-	const TreeAut* getOutput() const {
-
+	const TreeAut* getOutput() const
+	{
 		return this->output.get();
-
 	}
 
-	const ConnectionGraph::CutpointSignature& getOutputSignature() const {
-
+	const ConnectionGraph::CutpointSignature& getOutputSignature() const
+	{
 		return this->outputSignature;
-
 	}
 
-	const TreeAut* getInput() const {
-
+	const TreeAut* getInput() const
+	{
 		return this->input.get();
-
 	}
 
-	size_t getInputIndex() const {
-
+	size_t getInputIndex() const
+	{
 		return this->inputIndex;
-
 	}
 
-	static bool equal(const TreeAut& a, const TreeAut& b) {
-
+	static bool equal(const TreeAut& a, const TreeAut& b)
+	{
 		return TreeAut::subseteq(a, b) && TreeAut::subseteq(b, a);
-
 	}
 
-	static bool lessOrEqual(const TreeAut& a, const TreeAut& b) {
-
+	static bool lessOrEqual(const TreeAut& a, const TreeAut& b)
+	{
 		return TreeAut::subseteq(a, b);
-
 	}
 
-	size_t getSelector(size_t input) const {
-
+	size_t getSelector(size_t input) const
+	{
 		assert(input < this->inputMap.size());
-
 		return this->inputMap[input];
-
 	}
 
-	bool hasSelfReference() const {
-
+	bool hasSelfReference() const
+	{
 		return this->selfReference;
-
 	}
 
 public:
 
-	virtual void toStream(std::ostream& os) const {
+	virtual void toStream(std::ostream& os) const
+	{
 		os << this->name << '(' << this->arity << ')';
 	}
 
-	friend size_t hash_value(const Box& box) {
-
+	friend size_t hash_value(const Box& box)
+	{
 		return box.hint;
-
 	}
 
-	bool operator==(const Box& rhs) const {
+	bool operator==(const Box& rhs) const;
 
-		if (static_cast<bool>(this->input) != static_cast<bool>(rhs.input))
-			return false;
+	bool operator<=(const Box& rhs) const;
 
-		if (this->input) {
+	bool simplifiedLessThan(const Box& rhs) const;
 
-			if (this->inputIndex != rhs.inputIndex)
-				return false;
+	void initialize();
 
-			if (this->inputSignature != rhs.inputSignature)
-				return false;
-
-			if (this->inputLabels != rhs.inputLabels)
-				return false;
-
-		}
-
-		if (this->outputSignature != rhs.outputSignature)
-			return false;
-
-		if (this->outputLabels != rhs.outputLabels)
-			return false;
-
-		if (this->selectors != rhs.selectors)
-			return false;
-
-		if (!Box::equal(*this->output, *rhs.output))
-			return false;
-
-		if (!this->input)
-			return true;
-
-		return Box::equal(*this->input, *rhs.input);
-
-	}
-
-	bool operator<=(const Box& rhs) const {
-
-		if (static_cast<bool>(this->input) != static_cast<bool>(rhs.input))
-			return false;
-
-		if (this->input) {
-
-			if (this->inputIndex != rhs.inputIndex)
-				return false;
-
-			if (this->inputSignature != rhs.inputSignature)
-				return false;
-
-
-		}
-
-		if (this->outputSignature != rhs.outputSignature)
-			return false;
-
-
-		if (this->selectors != rhs.selectors)
-			return false;
-
-		if (!Box::lessOrEqual(*this->output, *rhs.output))
-			return false;
-
-		if (!this->input)
-			return true;
-
-		return Box::lessOrEqual(*this->input, *rhs.input);
-
-	}
-
-	bool simplifiedLessThan(const Box& rhs) const {
-
-		if (static_cast<bool>(this->input) != static_cast<bool>(rhs.input))
-			return false;
-
-		if (this->input) {
-
-			if (this->inputIndex != rhs.inputIndex)
-				return false;
-
-		}
-
-		if (!Box::lessOrEqual(*this->output, *rhs.output))
-			return false;
-
-		if (!this->input)
-			return true;
-
-		return Box::lessOrEqual(*this->input, *rhs.input);
-
-	}
-
-	void initialize() {
-
-		this->selCoverage.resize(this->arity + 1);
-
-		Box::getDownwardCoverage(this->selCoverage[0], *this->output);
-
-		assert(this->selCoverage[0].size());
-
-		this->order = *this->selCoverage[0].begin();
-
-		this->enumerateSelectorsAtLeaves(this->selCoverage, *this->output);
-
-		if (!this->input)
-			return;
-
-		assert(this->inputIndex < this->selCoverage.size());
-
-		Box::getDownwardCoverage(this->selCoverage[this->inputIndex + 1], *this->input);
-
-		this->enumerateSelectorsAtLeaves(this->selCoverage, *this->input);
-
-		this->selfReference = ConnectionGraph::containsCutpoint(this->outputSignature, 0);
-
-	}
-
-	friend std::ostream& operator<<(std::ostream& os, const Box& box) {
-
-		auto writeStateF = [](size_t state) -> std::string {
-
-			std::ostringstream ss;
-
-			if (_MSB_TEST(state))
-				ss << 'r' << _MSB_GET(state);
-			else
-				ss << 'q' << state;
-
-			return ss.str();
-
-		};
-
-		os << "===" << std::endl << "output (";
-
-		for(auto& s : box.outputCoverage())
-			os << " +" << s;
-
-		os << " ) [" << box.outputSignature << "] ";
-
-		TAWriter<label_type> writer(os);
-
-		for (auto state : box.output->getFinalStates())
-			writer.writeState(state);
-
-		writer.endl();
-		writer.writeTransitions(*box.output, writeStateF);
-
-		if (!box.input)
-			return os;
-
-		os << "===" << std::endl << "input " << box.inputIndex << " (";
-
-		for(auto& s : box.inputCoverage(box.inputIndex))
-			os << " +" << s;
-
-		os << " ) [" << box.inputSignature << "] ";
-
-		for (auto state : box.input->getFinalStates())
-			writer.writeState(state);
-
-		writer.endl();
-		writer.writeTransitions(*box.input, writeStateF);
-
-		return os;
-
-	}
+	friend std::ostream& operator<<(std::ostream& os, const Box& box);
 
 	virtual ~Box()
 	{ }
