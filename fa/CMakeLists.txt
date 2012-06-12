@@ -57,22 +57,23 @@ configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
 
 # libfa.so
 add_library(fa SHARED
-  connection_graph.cc
-	exec_state.cc
-	treeaut.cc
-	timbuk.cc
-	forestaut.cc
-	sequentialinstruction.cc
-	jump.cc
 	call.cc
+	cl_fa.cc
 	comparison.cc
-	fixpoint.cc
-	microcode.cc
 	compiler.cc
+	exec_state.cc
+	fixpoint.cc
+	forestaut.cc
+	jump.cc
+	label.cc
+	microcode.cc
+	sequentialinstruction.cc
 	symctx.cc
 	symexec.cc
-	cl_fa.cc
+	timbuk.cc
+	treeaut.cc
 	virtualmachine.cc
+  connection_graph.cc
 )
 set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 
