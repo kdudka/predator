@@ -72,6 +72,7 @@ add_library(fa SHARED
 	symctx.cc
 	symexec.cc
 	cl_fa.cc
+	virtualmachine.cc
 )
 set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 

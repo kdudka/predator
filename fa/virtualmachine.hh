@@ -20,17 +20,21 @@
 #ifndef VIRTUAL_MACHINE_H
 #define VIRTUAL_MACHINE_H
 
+// Standard library headers
 #include <vector>
 #include <cassert>
 
+// Forester headers
 #include "types.hh"
 #include "forestautext.hh"
 #include "programerror.hh"
+
 
 /**
  * @file virtualmachine.hh
  * VirtualMachine - the representation of the symbolic execution environment
  */
+
 
 /**
  * @brief  Represents the symbolic execution environment
@@ -158,23 +162,11 @@ protected:
 	 *
 	 * @todo: sanitize the interface
 	 */
-	void transitionLookup(const TT<label_type>& transition,
-		size_t offset, Data& data) const
-	{
-		// retrieve the item at given offset
-		const NodeLabel::NodeItem& ni = transition.label()->boxLookup(offset);
-		// Assertions
-		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, offset));
+	void transitionLookup(
+		const TT<label_type>& transition,
+		size_t offset,
+		Data& data) const;
 
-		const Data* tmp = nullptr;
-		if (!fae_.isData(transition.lhs()[ni.offset], tmp))
-		{
-			throw ProgramError("transitionLookup(): destination is not a leaf!");
-		}
-
-		data = *tmp;
-		VirtualMachine::displToData(VirtualMachine::readSelector(ni.aBox), data);
-	}
 
 	/**
 	 * @brief  Retrieve data from given transition
@@ -193,27 +185,8 @@ protected:
 		const TT<label_type>& transition,
 		size_t base,
 		const std::vector<size_t>& offsets,
-		Data& data) const
-	{
-		data = Data::createStruct();
+		Data& data) const;
 
-		// for every offset, add an item
-		for (auto i = offsets.begin(); i != offsets.end(); ++i)
-		{
-			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(*i + base);
-			// Assertions
-			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, *i + base));
-
-			const Data* tmp = nullptr;
-			if (!fae_.isData(transition.lhs()[ni.offset], tmp))
-			{
-				throw ProgramError("transitionLookup(): destination is not a leaf!");
-			}
-			data.d_struct->push_back(Data::item_info(*i, *tmp));
-			VirtualMachine::displToData(VirtualMachine::readSelector(ni.aBox),
-				data.d_struct->back().second);
-		}
-	}
 
 	/// @todo: add documentation
 	void transitionModify(
@@ -221,36 +194,8 @@ protected:
 		const TT<label_type>& transition,
 		size_t offset,
 		const Data& in,
-		Data& out)
-	{
-		// Create a new final state
-		size_t state = fae_.freshState();
-		dst.addFinalState(state);
+		Data& out);
 
-		std::vector<size_t> lhs = transition.lhs();
-
-		// Retrieve the item with given offset from the transition
-		std::vector<const AbstractBox*> label = transition.label()->getNode();
-		const NodeLabel::NodeItem& ni = transition.label()->boxLookup(offset);
-		// Assertions
-		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, offset));
-
-		const Data* tmp = nullptr;
-		if (!fae_.isData(transition.lhs()[ni.offset], tmp))
-		{
-			throw ProgramError("transitionModify(): destination is not a leaf!");
-		}
-
-		out = *tmp;
-		SelData s = VirtualMachine::readSelector(ni.aBox);
-		VirtualMachine::displToData(s, out);
-		Data d = in;
-		VirtualMachine::displToSel(s, d);
-		lhs[ni.offset] = fae_.addData(dst, d);
-		label[ni.index] = fae_.boxMan->getSelector(s);
-		FAE::reorderBoxes(label, lhs);
-		dst.addTransition(lhs, fae_.boxMan->lookupLabel(label), state);
-	}
 
 	/// @todo: add documentation
 	void transitionModify(
@@ -258,43 +203,8 @@ protected:
 		const TT<label_type>& transition,
 		size_t base,
 		const std::vector<std::pair<size_t, Data> >& in,
-		Data& out)
-	{
-		// Create a new final state
-		size_t state = fae_.freshState();
-		dst.addFinalState(state);
+		Data& out);
 
-		std::vector<size_t> lhs = transition.lhs();
-
-		// Get the label
-		std::vector<const AbstractBox*> label = transition.label()->getNode();
-
-		out = Data::createStruct();
-		for (auto i = in.begin(); i != in.end(); ++i)
-		{
-			// Retrieve the item with the given offset
-			const NodeLabel::NodeItem& ni = transition.label()->boxLookup(i->first + base);
-			// Assertions
-			assert(VirtualMachine::isSelectorWithOffset(ni.aBox, i->first + base));
-
-			const Data* tmp = nullptr;
-			if (!fae_.isData(transition.lhs()[ni.offset], tmp))
-			{
-				throw ProgramError("transitionModify(): destination is not a leaf!");
-			}
-
-			out.d_struct->push_back(Data::item_info(i->first, *tmp));
-			SelData s = VirtualMachine::readSelector(ni.aBox);
-			VirtualMachine::displToData(s, out.d_struct->back().second);
-			Data d = i->second;
-			VirtualMachine::displToSel(s, d);
-			lhs[ni.offset] = fae_.addData(dst, d);
-			label[ni.index] = fae_.boxMan->getSelector(s);
-		}
-
-		FAE::reorderBoxes(label, lhs);
-		dst.addTransition(lhs, fae_.boxMan->lookupLabel(label), state);
-	}
 
 public:
 
@@ -400,41 +310,7 @@ public:
 	 */
 	size_t nodeCreate(
 		const std::vector<SelData>& nodeInfo,
-		const TypeBox* typeInfo = nullptr)
-	{
-		// create a new tree automaton
-		size_t root = fae_.roots.size();
-		TreeAut* ta = fae_.allocTA();
-		size_t f = fae_.freshState();
-		ta->addFinalState(f);
-
-		// build the label
-		std::vector<const AbstractBox*> label;
-		if (typeInfo)
-		{	// if there is a some box
-			label.push_back(typeInfo);
-		}
-
-		for (auto i = nodeInfo.begin(); i != nodeInfo.end(); ++i)
-		{	// push selector
-			label.push_back(fae_.boxMan->getSelector(*i));
-		}
-
-		// build the tuple
-		std::vector<size_t> lhs(nodeInfo.size(),
-			fae_.addData(*ta, Data::createUndef()));
-
-		// reorder
-		FAE::reorderBoxes(label, lhs);
-
-		// fill the rest
-		ta->addTransition(lhs, fae_.boxMan->lookupLabel(label), f);
-
-		// add the tree automaton into the forest automaton
-		fae_.appendRoot(ta);
-		fae_.connectionGraph.newRoot();
-		return root;
-	}
+		const TypeBox* typeInfo = nullptr);
 
 	/**
 	 * @brief  Removes a node from memory
@@ -445,42 +321,7 @@ public:
 	 *
 	 * @param[in]  root  Identifier of the tree automaton to be removed
 	 */
-	void nodeDelete(size_t root)
-	{
-		// Assertions
-		assert(root < fae_.roots.size());
-		assert(fae_.roots[root]);
-
-		// update content of variables referencing the tree automaton
-		fae_.SetVarsToUndefForRoot(root);
-
-		// erase node
-		fae_.roots[root] = nullptr;
-
-		/// @todo: do in a better way (deobfuscate)
-		// make all references to this rootpoint dangling
-		size_t i = 0;
-		for (; i < root; ++i)
-		{
-			if (!fae_.roots[i])
-				continue;
-
-			fae_.roots[i] = std::shared_ptr<TreeAut>(
-				fae_.invalidateReference(fae_.roots[i].get(), root));
-			fae_.connectionGraph.invalidate(i);
-		}
-		// skip 'root'
-		fae_.connectionGraph.invalidate(i++);
-		for (; i < fae_.roots.size(); ++i)
-		{
-			if (!fae_.roots[i])
-				continue;
-
-			fae_.roots[i] = std::shared_ptr<TreeAut>(
-				fae_.invalidateReference(fae_.roots[i].get(), root));
-			fae_.connectionGraph.invalidate(i);
-		}
-	}
+	void nodeDelete(size_t root);
 
 	/**
 	 * @brief  Looks up a node in the memory
@@ -538,59 +379,20 @@ public:
 		size_t root,
 		size_t offset,
 		const Data& in,
-		Data& out)
-	{
-		// Assertions
-		assert(root < fae_.roots.size());
-		assert(fae_.roots[root]);
+		Data& out);
 
-		TreeAut ta(*fae_.backend);
-		this->transitionModify(ta, fae_.roots[root]->getAcceptingTransition(),
-			offset, in, out);
-		fae_.roots[root]->copyTransitions(ta);
-		TreeAut* tmp = fae_.allocTA();
-		ta.unreachableFree(*tmp);
-		fae_.roots[root] = std::shared_ptr<TreeAut>(tmp);
-		fae_.connectionGraph.invalidate(root);
-	}
 
 	/// @todo add documentation
 	void nodeModifyMultiple(
 		size_t root,
 		size_t offset,
 		const Data& in,
-		Data& out)
-	{
-		// Assertions
-		assert(root < fae_.roots.size());
-		assert(fae_.roots[root]);
-		assert(in.isStruct());
+		Data& out);
 
-		TreeAut ta(*fae_.backend);
-		this->transitionModify(ta, fae_.roots[root]->getAcceptingTransition(),
-			offset, *in.d_struct, out);
-		fae_.roots[root]->copyTransitions(ta);
-		TreeAut* tmp = fae_.allocTA();
-		ta.unreachableFree(*tmp);
-		fae_.roots[root] = std::shared_ptr<TreeAut>(tmp);
-		fae_.connectionGraph.invalidate(root);
-	}
 
 	/// @todo add documentation
-	void getNearbyReferences(size_t root, std::set<size_t>& out) const
-	{
-		// Assertions
-		assert(root < fae_.roots.size());
-		assert(fae_.roots[root]);
+	void getNearbyReferences(size_t root, std::set<size_t>& out) const;
 
-		const TT<label_type>& t = fae_.roots[root]->getAcceptingTransition();
-		for (auto i = t.lhs().begin(); i != t.lhs().end(); ++i)
-		{
-			const Data* data = nullptr;
-			if (fae_.isData(*i, data) && data->isRef())
-				out.insert(data->d_ref.root);
-		}
-	}
 
 public:
 
