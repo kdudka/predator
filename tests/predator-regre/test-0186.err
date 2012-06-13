@@ -18,7 +18,7 @@ test-0186.c:121:12: note:             <-- abstract state reachable from L20
 test-0186.c:121:13: note:                 <-- abstract state reachable from L20
 test-0186.c:120:11: note:                     <-- abstract state reachable from L19
 test-0186.c:120:23: note:                         <-- abstract state reachable from L19
-<unknown location>: note:                             <-- abstract state reachable from L18
+test-0186.c:120:23: note:                             <-- abstract state reachable from L18
 test-0186.c:120:23: note:                                 <-- abstract state reachable from L18 [entry block]
 test-0186.c:172:16: note: from call of gl_eval()
 test-0186.c:172:16: note: <-- abstract state reachable from L2

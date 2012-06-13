@@ -12,7 +12,7 @@ test-0178.c:90:5: note:                             <-- abstract state reachable
 test-0178.c:90:5: note:                                 <-- abstract state reachable from L43
 test-0178.c:82:5: note:                                     <-- abstract state reachable from L33
 test-0178.c:82:17: note:                                         <-- abstract state reachable from L33
-<unknown location>: note:                                             <-- abstract state reachable from L32
+test-0178.c:82:17: note:                                             <-- abstract state reachable from L32
 test-0178.c:82:17: note:                                                 <-- abstract state reachable from L32
 test-0178.c:80:5: note:                                                     <-- abstract state reachable from L30
 test-0178.c:80:5: note:                                                         <-- abstract state reachable from L30 [entry block]

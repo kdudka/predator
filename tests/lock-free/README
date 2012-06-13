@@ -1,0 +1,21 @@
+Treiber's Stack Implementation
+------------------------------
+- contributed by Cong Quy Trinh and the Forester team
+- http://www.cs.rochester.edu/u/sandhya/csc458/lectures/scott.txt
+- sequential model of two parallel processes
+- atomic blocks are defined manually
+- two program counters (int variables) allow to interleave the execution
+- one shared data structure (lock-free stack)
+- the first process pushes newly allocated items to the stack in a loop
+- the second process pops items from the stack in a loop
+- the popped items are chained to a list, which is never freed
+- non-deterministic scheduler
+
+predator-config.h
+-----------------
+- recommended Predator configuration for this class of programs
+- join needs to be disabled for test_jumb5_hardcore.c to prevent false positives
+
+test_jumb3_hardcode-readable.c
+------------------------------
+- test_jumb3_hardcode.c translated into a human-readable form

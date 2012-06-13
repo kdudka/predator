@@ -1042,7 +1042,7 @@ bool joinNestingLevel(
         ++(*pDst);
 
     if (VAL_INVALID == root2 || VAL_INVALID == root1)
-        // we got only one object, just take tis level as it is
+        // we got only one object, just take its level as it is
         return true;
 
     TProtoLevel ldiff = level1 - level2;

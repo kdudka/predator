@@ -420,9 +420,11 @@ static void read_gcc_location(struct cl_loc *loc, location_t gcc_loc)
     loc->sysp   = /* FIXME: is this field always valid? */ exp_loc.sysp;
 }
 
-static void read_gimple_location(struct cl_loc *loc, const_gimple g)
+static bool read_gimple_location(struct cl_loc *loc, const_gimple g)
 {
-    read_gcc_location(loc, g->gsbase.location);
+    location_t gcc_loc = g->gsbase.location;
+    read_gcc_location(loc, gcc_loc);
+    return !!gcc_loc;
 }
 
 static char* index_to_label(unsigned idx) {
@@ -1603,20 +1605,45 @@ static void handle_bb_gimple(gimple_seq body)
     walk_gimple_seq(body, cb_walk_gimple_stmt, NULL, &info);
 }
 
+static bool dig_edge_location(struct cl_loc *loc, const edge e)
+{
+    const struct gimple_bb_info *bb_gimple = e->src->il.gimple;
+    if (bb_gimple) {
+        // use the last statement of the source bb
+        const gimple last_stmt = gimple_seq_last_stmt(bb_gimple->seq);
+        if (last_stmt && read_gimple_location(loc, last_stmt))
+            return true;
+    }
+
+    bb_gimple = e->dest->il.gimple;
+    if (bb_gimple) {
+        // use the 1st statement of the destination bb with valid location info
+        gimple_stmt_iterator iter = gsi_start(bb_gimple->seq);
+        for (; !gsi_end_p(iter); gsi_next(&iter))
+            if (read_gimple_location(loc, gsi_stmt(iter)))
+                return true;
+    }
+
+    if (!e->flags & EDGE_FALLTHRU)
+        CL_BREAK_IF("dig_edge_location() failed to read any location");
+
+    return false;
+}
+
 static void handle_jmp_edge(edge e)
 {
-    struct basic_block_def *next = e->dest;
+    char *label = index_to_label(e->dest->index);
 
     struct cl_insn cli;
     cli.code                = CL_INSN_JMP;
-    cli.data.insn_jmp.label = index_to_label(next->index);
+    cli.data.insn_jmp.label = label;
+    cli.loc.file            = NULL;
+    cli.loc.line            = -1;
 
-    // no location for CL_INSN_JMP for now
-    cli.loc.file = NULL;
-    cli.loc.line = -1;
+    dig_edge_location(&cli.loc, e);
 
     cl->insn(cl, &cli);
-    free((char *) cli.data.insn_jmp.label);
+    free(label);
 }
 
 static void handle_fnc_bb(struct basic_block_def *bb)

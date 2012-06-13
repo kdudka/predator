@@ -417,7 +417,7 @@ class SymHeapCore {
         /// return size (in bytes) that we can safely write at the given addr
         TSizeRange valSizeOfTarget(TValId) const;
 
-        /// return count of bytes (including '\0') we can safely read as string
+        /// return count of bytes (including NULL) we can safely read as string
         TSizeRange valSizeOfString(TValId) const;
 
         /// return address of the given program variable
