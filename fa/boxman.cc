@@ -164,14 +164,16 @@ bool BoxMan::EvaluateBoxF::operator()(
 }
 
 
-label_type BoxMan::lookupLabel(const std::vector<const AbstractBox*>& x)
+label_type BoxMan::lookupLabel(
+	const std::vector<const AbstractBox*>& x,
+	const std::vector<SelData>* nodeInfo)
 {
 	std::pair<TNodeStore::iterator, bool> p = nodeStore_.insert(
 		std::make_pair(x, static_cast<NodeLabel*>(nullptr)));
 
 	if (p.second)
 	{
-		NodeLabel* label = new NodeLabel(&p.first->first);
+		NodeLabel* label = new NodeLabel(&p.first->first, nodeInfo);
 
 		std::vector<size_t> tag;
 

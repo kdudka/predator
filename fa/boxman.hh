@@ -188,7 +188,9 @@ public:
 
 	label_type lookupLabel(size_t arity, const DataArray& x);
 
-	void InsertTypeDesc(const TypeBox* tb, const std::vector<SelData>& sels)
+	const std::vector<SelData>* LookupTypeDesc(
+		const TypeBox* tb,
+		const std::vector<SelData>& sels)
 	{
 		auto itBoolPair = typeDescDict_.insert(std::make_pair(tb, sels));
 		if (!itBoolPair.second)
@@ -199,6 +201,8 @@ public:
 				assert(false);       // fail gracefully
 			}
 		}
+
+		return &itBoolPair.first->second;
 	}
 
 	struct EvaluateBoxF
@@ -217,7 +221,9 @@ public:
 		bool operator()(const AbstractBox* aBox, size_t index, size_t offset);
 	};
 
-	label_type lookupLabel(const std::vector<const AbstractBox*>& x);
+	label_type lookupLabel(
+		const std::vector<const AbstractBox*>& x,
+		const std::vector<SelData>* nodeInfo = nullptr);
 
 	const Data& getData(const Data& data)
 	{

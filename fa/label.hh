@@ -52,6 +52,7 @@ struct NodeLabel {
 		struct {
 			const std::vector<const AbstractBox*>* v;
 			std::unordered_map<size_t, NodeItem>* m;
+			const std::vector<SelData>* sels;
 			void* tag;
 		} node;
 		const DataArray* vData;
@@ -65,11 +66,15 @@ struct NodeLabel {
 		this->data.id = id;
 	}
 
-	NodeLabel(const std::vector<const AbstractBox*>* v) :
+	NodeLabel(
+		const std::vector<const AbstractBox*>* v,
+		const std::vector<SelData>* sels
+	) :
 		type(node_type::n_node)
 	{
 		this->node.v = v;
 		this->node.m = new std::unordered_map<size_t, NodeItem>();
+		this->node.sels = sels;
 	}
 
 	NodeLabel(const DataArray* vData) :

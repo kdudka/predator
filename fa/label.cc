@@ -18,6 +18,7 @@
  */
 
 // Forester headers
+#include "box.hh"
 #include "label.hh"
 
 
@@ -46,12 +47,32 @@ std::ostream& operator<<(std::ostream& os, const NodeLabel& label)
 			if (label.node.v->empty())
 				break;
 
-			for (auto it = label.node.v->cbegin(); it != label.node.v->cend(); ++it)
+			const std::vector<SelData>* sels = label.node.sels;
+
+			size_t selIndex = 0;
+
+			for (auto itLb = label.node.v->cbegin(); itLb != label.node.v->cend(); ++itLb)
 			{
-				if (it != label.node.v->cbegin())
+				if (label.node.v->cbegin() != itLb)
 					os << ',';
 
-				os << **it;
+				const AbstractBox* box = *itLb;
+				assert(nullptr != box);
+
+				if ((box_type_e::bSel == box->getType()) && (nullptr != sels))
+				{	// in case there is a selector box with selectors
+					// assert the range is correct
+					assert(selIndex < sels->size());
+
+					SelBox tmpBox(&(*sels)[selIndex]);
+					++selIndex;
+
+					os << tmpBox;
+
+					continue;
+				}
+
+				os << **itLb;
 			}
 
 			break;
