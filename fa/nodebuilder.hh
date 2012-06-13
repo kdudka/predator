@@ -48,15 +48,19 @@ struct NodeBuilder {
 	 * @param[in]   name      Name of the selector
 	 * @param[in]   offset    Offset of the node in the flat offset space
 	 */
-	static void buildNode(std::vector<SelData>& nodeInfo,
-		const cl_type* type, int offset = 0, const std::string& name = "")
+	static void buildNode(
+		std::vector<SelData>& nodeInfo,
+		const cl_type* type,
+		int offset = 0,
+		const std::string& name = "")
 	{
 		// Assertions
 		assert(type != nullptr);
 		assert(type->size > 0);
 
 		// according to the type
-		switch (type->code) {
+		switch (type->code)
+		{
 			case cl_type_e::CL_TYPE_STRUCT:  // a structure is flattened
 				for (int i = 0; i < type->item_cnt; ++i)
 				{
@@ -102,17 +106,21 @@ struct NodeBuilder {
 	 * @param[in]   type      Properties of the type assigned to the node
 	 * @param[in]   offset    Offset of the node in the flat offset space
 	 */
-	static void buildNode(std::vector<size_t>& nodeInfo,
-		const cl_type* type, int offset = 0) {
-
+	static void buildNode(
+		std::vector<size_t>& nodeInfo,
+		const cl_type* type,
+		int offset = 0)
+	{
 		// Assertions
 		assert(type != nullptr);
 		assert(type->size > 0);
 
 		// according to the type
-		switch (type->code) {
+		switch (type->code)
+		{
 			case cl_type_e::CL_TYPE_STRUCT:  // a structure is flattened
-				for (int i = 0; i < type->item_cnt; ++i) {
+				for (int i = 0; i < type->item_cnt; ++i)
+				{
 					NodeBuilder::buildNode(nodeInfo, type->items[i].type,
 						offset + type->items[i].offset);
 				}

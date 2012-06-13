@@ -162,13 +162,15 @@ size_t VirtualMachine::nodeCreate(
 	size_t f = fae_.freshState();
 	ta->addFinalState(f);
 
+	const std::vector<SelData>* ptrNodeInfo = nullptr;
+
 	// build the label
 	std::vector<const AbstractBox*> label;
 	if (typeInfo)
 	{	// if there is a some box
 		label.push_back(typeInfo);
 
-		fae_.boxMan->InsertTypeDesc(typeInfo, nodeInfo);
+		ptrNodeInfo = fae_.boxMan->LookupTypeDesc(typeInfo, nodeInfo);
 	}
 
 	for (auto i = nodeInfo.begin(); i != nodeInfo.end(); ++i)
@@ -184,7 +186,7 @@ size_t VirtualMachine::nodeCreate(
 	FAE::reorderBoxes(label, lhs);
 
 	// fill the rest
-	ta->addTransition(lhs, fae_.boxMan->lookupLabel(label), f);
+	ta->addTransition(lhs, fae_.boxMan->lookupLabel(label, ptrNodeInfo), f);
 
 	// add the tree automaton into the forest automaton
 	fae_.appendRoot(ta);

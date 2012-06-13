@@ -246,7 +246,7 @@ public:
 		// clear the box manager
 		this->boxMan.clear();
 
-		for (auto type : stor.types)
+		for (const cl_type* type : stor.types)
 		{	// for each data type in the storage
 			std::vector<size_t> v;
 			std::string name;
