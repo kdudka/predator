@@ -73,7 +73,7 @@ public:
 
 	size_t size() const
 	{
-		return size_;
+		return size_ - obsolete_.size();
 	}
 
 	void clear()
