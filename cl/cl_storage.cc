@@ -364,6 +364,7 @@ void ClStorageBuilder::Private::digInitials(const TOp *op)
     const struct cl_initializer *initial;
     for (initial = clv->initial; initial; initial = initial->next) {
         Insn *insn = createInsn(&initial->insn, /* cfg */ 0);
+        insn->stor = &stor;
 
         // initializer instructions are not associated with any basic block
         insn->bb = 0;

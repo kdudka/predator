@@ -722,7 +722,7 @@ namespace CallGraph {
         /// list of direct call instructions that call this function
         TInsnListByFnc              callers;
 
-        /// list of instructions that take address of this function
+        /// insns that take address of this function, zero key means initializer
         TInsnListByFnc              callbacks;
 
         Node(Fnc *fnc_):
