@@ -249,6 +249,14 @@ struct LoopAnalyser {
 
 
 	/**
+	 * @brief  Default constructor
+	 */
+	LoopAnalyser() :
+		entryPoints{}
+	{ }
+
+
+	/**
 	 * @brief  Visits recursively all reachable blocks
 	 *
 	 * This method visits recursively all reachable blocks of @p block and checks
@@ -322,7 +330,7 @@ struct LoopAnalyser {
 /**
  * @brief  Enumeration of built-in functions
  */
-typedef enum { biNone, biMalloc, biFree, biNondet, biFix, biAbort, biPrintHeap } builtin_e;
+enum class builtin_e { biNone, biMalloc, biFree, biNondet, biFix, biAbort, biPrintHeap };
 
 
 /**
@@ -336,7 +344,7 @@ class BuiltinTable
 private:
 
 	/// the hash table that maps function name to the value of enumeration
-	boost::unordered_map<std::string, builtin_e> _table;
+	std::unordered_map<std::string, builtin_e> _table;
 
 public:
 
@@ -346,7 +354,8 @@ public:
 	 * The default constructor. It properly initialises the translation table with
 	 * proper values.
 	 */
-	BuiltinTable()
+	BuiltinTable() :
+		_table{}
 	{
 		this->_table["malloc"]        = builtin_e::biMalloc;
 		this->_table["free"]          = builtin_e::biFree;
@@ -369,7 +378,7 @@ public:
 	 */
 	builtin_e operator[](const std::string& key)
 	{
-		boost::unordered_map<std::string, builtin_e>::iterator i = this->_table.find(key);
+		std::unordered_map<std::string, builtin_e>::iterator i = this->_table.find(key);
 		return (i == this->_table.end())?(builtin_e::biNone):(i->second);
 	}
 }; // class BuiltinTable
@@ -398,9 +407,9 @@ private:
 	const SymCtx* curCtx_;
 
 	/// The backend for fixpoints
-	TA<label_type>::Backend& fixpointBackend_;
+	TreeAut::Backend& fixpointBackend_;
 	/// The backend for tree automata
-	TA<label_type>::Backend& taBackend_;
+	TreeAut::Backend& taBackend_;
 	/// The box manager
 	BoxMan& boxMan_;
 
@@ -408,6 +417,11 @@ private:
 	BuiltinTable builtinTable_;
 	/// The loop analyser
 	LoopAnalyser loopAnalyser_;
+
+private:  // methods
+
+	Core(const Core&);
+	Core& operator=(const Core&);
 
 protected:
 
@@ -1093,13 +1107,11 @@ protected:
 			// obtain information about the variable
 			const SymCtx::VarInfo& varInfo = curCtx_->getVarInfo(var.uid);
 
-			if (!varInfo.isOnStack())
+			if (varInfo.isOnStack())
 			{	// on case the variable is not on the stack
-				continue;
+				// retrieve the offset of the variable at the current stack frame
+				offs.insert(varInfo.getStackOffset());
 			}
-
-			// retrieve the offset of the variable at the current stack frame
-			offs.insert(varInfo.getStackOffset());
 		}
 
 		if (offs.empty())
@@ -1567,7 +1579,11 @@ protected:
 			// pop return value into r0
 			append(new FI_pop_greg(&insn, 0));
 			// collect result from r0
-			cStoreOperand(insn.operands[0], 0, 1, insn);
+			cStoreOperand(
+				/* target operand */ insn.operands[0],
+				/* reg with src value */ 0,
+				/* reg pointing to memory location with the value to be stored */ 1,
+				insn);
 		}
 
 		// construct instruction for loading return address
@@ -1594,7 +1610,12 @@ protected:
 		{	// in case the function returns a value
 
 			// move the return value into r0
-			cLoadOperand(0, insn.operands[0], insn, false);
+			cLoadOperand(
+				/* destination reg */	0,
+				/* operand */ insn.operands[0],
+				/* instruction */ insn,
+				/* can the destination reg be overriden? */ false);
+
 			// push r0 to gr1
 			append(new FI_push_greg(&insn, 0));
 		}
@@ -1890,17 +1911,19 @@ protected:
 	{
 		std::pair<SymCtx, CodeStorage::Block>& fncInfo = getFncInfo(&fnc);
 
+		//         ************  create function context  *************
+
 		// get context
 		curCtx_ = &fncInfo.first;
 
-		if (assembly_->regFileSize_ < curCtx_->regCount)
+		if (assembly_->regFileSize_ < curCtx_->GetRegCount())
 		{	// allocate the necessary number of registers
-			assembly_->regFileSize_ = curCtx_->regCount;
+			assembly_->regFileSize_ = curCtx_->GetRegCount();
 		}
 
-		if (assembly_->regFileSize_ < (curCtx_->argCount + 2))
+		if (assembly_->regFileSize_ < (curCtx_->GetArgCount() + 2))
 		{	// we need 2 more registers in order to facilitate call
-			assembly_->regFileSize_ = curCtx_->argCount + 2;
+			assembly_->regFileSize_ = curCtx_->GetArgCount() + 2;
 		}
 
 		// move ABP into r0
@@ -1915,10 +1938,8 @@ protected:
 		for (auto arg : fnc.args)
 			offsets.push_back(curCtx_->getVarInfo(arg).getStackOffset());
 
-		// build structure in r0
+		// build the stack frame in r0
 		append(new FI_build_struct(nullptr, 0, 0, offsets));
-
-		// build stack frame
 
 		// move void ptr of size 1 into r1
 		append(new FI_load_cst(nullptr, 1, Data::createVoidPtr(1)));
@@ -1935,7 +1956,7 @@ protected:
 				/* reg with the value from which the node is to be created */ 1,
 				/* size of the created node */ 1,
 				/* type information */ boxMan_.getTypeInfo(ss.str()),
-				/* selectors of the node */ curCtx_->sfLayout
+				/* selectors of the node */ curCtx_->GetStackFrameLayout()
 			)
 		);
 
@@ -1952,7 +1973,10 @@ protected:
 		// set new ABP (r1)
 		append(new FI_set_greg(nullptr, ABP_INDEX, 1));
 
-		// jump to the beginning of the first block
+		//         ************  execute the function  *************
+
+		// jump to the beginning of the first block of the function control-flow
+		// graph
 		append(new FI_jmp(nullptr, fnc.cfg.entry()));
 
 		// compute loop entry points
@@ -1985,6 +2009,7 @@ protected:
 
 			p.first->second = assembly_->code_[blockHead];
 
+
 			for (auto target : block->targets())
 				queue.push_back(target);
 
@@ -2008,9 +2033,17 @@ public:
 	 * @param[in,out]  taBackend        Tree automata backend
 	 * @param[in,out]  boxMan           The box manager
 	 */
-	Core(TA<label_type>::Backend& fixpointBackend,
-		TA<label_type>::Backend& taBackend, BoxMan& boxMan)
-		: fixpointBackend_(fixpointBackend), taBackend_(taBackend), boxMan_(boxMan)
+	Core(TreeAut::Backend& fixpointBackend,
+		TreeAut::Backend& taBackend, BoxMan& boxMan) :
+		assembly_{},
+		codeIndex_{},
+		fncIndex_{},
+		curCtx_{},
+		fixpointBackend_(fixpointBackend),
+		taBackend_(taBackend),
+		boxMan_(boxMan),
+		builtinTable_{},
+		loopAnalyser_{}
 	{ }
 
 
@@ -2029,6 +2062,15 @@ public:
 	{
 		// clear the code in the assembly
 		reset(assembly);
+
+		// handle global variables first
+		for (const CodeStorage::Var& var : stor.vars)
+		{
+			if (var.code == CodeStorage::EVar::VAR_GL)
+			{
+				throw NotImplementedException("global variables", &(var.loc));
+			}
+		}
 
 		for (auto fnc : stor.fncs)
 		{
@@ -2056,9 +2098,9 @@ public:
 		for (size_t i = entry.args.size() + 1; i > 1; --i)
 			append(new FI_load_cst(nullptr, i, Data::createUnknw()));
 
+		// create the instruction that we will return to after performing analysis
+		// of the entry function
 		AbstractInstruction* instr = new FI_check(nullptr);
-
-		// set target flag (the instruction is the target of some jump)
 		instr->setTarget();
 
 		// store return address into r1
@@ -2067,8 +2109,10 @@ public:
 		// call the entry point
 		append(new FI_jmp(nullptr, &getFncInfo(&entry).second));
 
-		// push the instruction into the assembly; the instruction is set as the
-		// target of the function call
+		//     ******* compile return from the entry function *******
+
+		// push the previously created instruction into the assembly; it is set as
+		// the return address of the call to the entry function
 		append(instr);
 
 		// pop return value into r0
@@ -2077,7 +2121,7 @@ public:
 		// pop ABP into r1
 		append(new FI_pop_greg(nullptr, 1));
 
-		// check stack frame
+		// check the stack frame
 		append(new FI_assert(nullptr, 1, Data::createInt(0)));
 
 		// abort
@@ -2097,8 +2141,8 @@ public:
 };
 
 
-Compiler::Compiler(TA<label_type>::Backend& fixpointBackend,
-	TA<label_type>::Backend& taBackend, BoxMan& boxMan)
+Compiler::Compiler(TreeAut::Backend& fixpointBackend,
+	TreeAut::Backend& taBackend, BoxMan& boxMan)
 	: core_(new Core(fixpointBackend, taBackend, boxMan))
 { }
 

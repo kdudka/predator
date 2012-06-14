@@ -45,9 +45,6 @@
 #include "symexec.hh"
 
 using namespace ssd;
-using std::vector;
-using std::list;
-using std::set;
 
 #if 0
 void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
@@ -64,15 +61,9 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 
 class SymExec::Engine {
 
-	TA<label_type>::Backend taBackend;
-	TA<label_type>::Backend fixpointBackend;
+	TreeAut::Backend taBackend;
+	TreeAut::Backend fixpointBackend;
 	BoxMan boxMan;
-
-#if 0
-	std::vector<const Box*> boxes;
-	std::vector<const Box*> basicBoxes;
-	boost::unordered_map<const Box*, std::vector<const Box*> > hierarchy;
-#endif
 
 	Compiler compiler_;
 	Compiler::Assembly assembly_;
@@ -83,269 +74,6 @@ class SymExec::Engine {
 
 protected:
 
-#if 0
-	bool foldBox(SymState* target, FAE& fae, size_t root, const Box* box) {
-		CL_CDEBUG("trying " << *(const AbstractBox*)box << " at " << root);
-		if (!fae.foldBox(root, box))
-			return false;
-		CL_CDEBUG("match");
-		std::set<size_t> tmp;
-		fae.getNearbyReferences(fae.varGet(ABP_INDEX).d_ref.root, tmp);
-		FAE::NormInfo normInfo;
-		fae.normalize(normInfo, tmp);
-		boost::unordered_map<const Box*, std::vector<const Box*> >::iterator i =
-			this->hierarchy.find(box);
-		if (i == this->hierarchy.end())
-			return true;
-		this->recAbstractAndFold(target, fae, i->second);
-		return true;
-	}
-
-	void recAbstractAndFold(SymState* target, FAE& fae, const std::vector<const Box*>& boxes) {
-
-		CL_CDEBUG("abstracting and folding ... " << target->absHeight);
-//		fae.heightAbstraction(target->absHeight, ExactLabelMatchF());
-		CL_CDEBUG(std::endl << fae);
-
-		// do not fold at 0
-		for (size_t i = 1; i < fae.getRootCount(); ++i) {
-			fae.heightAbstraction(i, target->absHeight, ExactLabelMatchF());
-			for (std::vector<const Box*>::const_iterator j = boxes.begin(); j != boxes.end(); ++j) {
-				if (this->foldBox(target, fae, i, *j))
-					i = 1;
-			}
-		}
-
-	}
-	struct InvalidateF {
-
-		list<SymState*>& queue;
-		set<CfgStateExt*>& s;
-
-		InvalidateF(list<SymState*>& queue, set<CfgStateExt*>& s) : queue(queue), s(s) {}
-
-		void operator()(SymState* state) {
-			CfgState* cfgState = CFG_FROM_FAE(*state->fae);
-			if (state->queueTag != this->queue.end())
-				this->queue.erase(state->queueTag);
-//			state->invalidate(this->queue, node->fae);
-			if (cfgState->hasExt)
-				s.insert((CfgStateExt*)cfgState);
-		}
-
-	};
-
-	void processState(SymState* state) {
-
-		assert(state);
-
-		CfgState* cfgState = CFG_FROM_FAE(*state->fae);
-
-		if (cfgState->hasExt && ((CfgStateExt*)cfgState)->testInclusion(*state->fae)) {
-
-			++this->tracesEvaluated;
-
-			CL_CDEBUG("hit");
-
-			this->traceRecorder.destroyBranch(state, DestroySimpleF());
-
-			return;
-
-		}
-
-		state->queueTag = this->queue.end();
-
-		try {
-
-			const cl_loc& loc = (*cfgState->insn)->loc;
-
-			CL_CDEBUG(loc << ' ' << **cfgState->insn);
-			CL_CDEBUG("preprocessing " << state);
-			CL_CDEBUG(std::endl << SymCtx::Dump(*cfgState->ctx, *state->fae));
-			CL_CDEBUG(std::endl << *state->fae);
-
-			std::vector<FAE*> tmp;
-
-			ContainerGuard<std::vector<FAE*> > g(tmp);
-
-			cfgState->prepareOperands(tmp, *state->fae);
-
-			for (FAE*& fae : tmp) {
-
-				ExecInfo info(state, cfgState, fae);
-
-				this->processState(info);
-
-				fae = NULL;
-
-			}
-
-			g.release();
-
-		} catch (const ProgramError& e) {
-
-			CL_CDEBUG(e.what());
-
-			this->printTrace(state);
-
-			throw;
-
-			TraceRecorder::Item* item = this->revRun(*fae);
-
-			if (!item)
-
-				throw ProgramError(e.what(), &(*state->insn)->loc);
-
-			CL_DEBUG("spurious counter example ...");
-
-			this->printTrace(*fae);
-
-			throw;
-
-			state = STATE_FROM_FAE(*item->fae);
-
-			assert(state->entryPoint);
-
-			set<SymState*> s;
-
-			this->traceRecorder.invalidateChildren(item, InvalidateF(this->queue, s));
-
-			const FAE* tmp2 = item->fae;
-
-			TraceRecorder::Item* parent = item->parent;
-
-			InvalidateF(this->queue, s)(item);
-
-			this->traceRecorder.remove(tmp2);
-
-			assert(parent);
-
-			parent->removeChild(item);
-
-			for (set<SymState*>::iterator i = s.begin(); i != s.end(); ++i) {
-				(*i)->recompute();
-				CL_CDEBUG("new fixpoint:" << std::endl << (*i)->fwdConf);
-			}
-
-			const cl_loc& loc = (*state->insn)->loc;
-
-			CL_CDEBUG("adjusting abstraction ... " << ++state->absHeight);
-			CL_CDEBUG("resuming execution ... ");
-			CL_CDEBUG(loc << ' ' << **state->insn);
-
-			parent->queueTag = this->queue.insert(this->queue.end(), parent->fae);
-
-		}
-
-	}
-
-	void printInfo(SymState* state) {
-		if (this->dbgFlag) {
-			CfgState* cfgState = CFG_FROM_FAE(*state->fae);
-			assert(cfgState);
-			if (!cfgState->hasExt)
-				return;
-			CL_DEBUG(std::endl << SymCtx::Dump(*((CfgStateExt*)cfgState)->ctx, *state->fae));
-			CL_DEBUG(std::endl << *state->fae);
-			CL_DEBUG("evaluated states: " << this->statesEvaluated << ", evaluated traces: " << this->tracesEvaluated);
-			this->dbgFlag = false;
-		}
-	}
-#endif
-#if 0
-	TraceRecorder::Item* revRun(const FAE& fae) {
-
-		CL_CDEBUG("reconstructing abstract trace ...");
-
-		vector<pair<const FAE*, const CodeStorage::Insn*> > trace;
-
-		TraceRecorder::Item* item = this->traceRecorder.find(&fae);
-
-		FAE tmp(fae);
-
-		SymState* state = NULL;
-
-		while (item->parent) {
-
-			CL_CDEBUG(std::endl << SymCtx::Dump(*STATE_FROM_FAE(*item->fae)->ctx, *item->fae));
-			CL_CDEBUG(std::endl << tmp);
-
-			state = STATE_FROM_FAE(*item->parent->fae);
-
-			CL_CDEBUG("rewinding " << (*state->insn)->loc << ' ' << **state->insn);
-
-			switch (item->itemType) {
-
-				case tr_item_type::itDenormalize: {
-
-					CL_CDEBUG("denormalizing " << std::endl << tmp << "with" << std::endl << *item->fae);
-					CL_CDEBUG(item->normInfo);
-
-					if (!Normalization(tmp).denormalize(*item->fae, item->normInfo)) {
-						CL_CDEBUG("spurious counter example (denormalization)!" << std::endl << *item->fae);
-						return item;
-					}
-
-					break;
-
-				}
-
-				case tr_item_type::itReverse: {
-
-					CL_CDEBUG("reversing " << std::endl << tmp << "with" << std::endl << *item->parent->fae);
-
-					if (!ReverseRun(tmp).reverse(*item->parent->fae)) {
-						CL_CDEBUG("spurious counter example (reversal)!" << std::endl << *item->parent->fae);
-						return item;
-					}
-
-					NormInfo normInfo;
-
-					VirtualMachine vm(tmp);
-
-					std::set<size_t> s;
-					vm.getNearbyReferences(vm.varGet(ABP_INDEX).d_ref.root, s);
-					Normalization(tmp).normalize(normInfo, s);
-
-					break;
-
-				}
-
-			}
-
-			if (item->itemType == tr_item_type::itDenormalize)
-				trace.push_back(make_pair(item->fae, *state->insn));
-
-			item = item->parent;
-
-		}
-
-		assert(state);
-
-//		trace.push_back(make_pair(item->fae, *state->insn));
-
-		CL_CDEBUG("trace:");
-
-		for (vector<pair<const FAE*, const CodeStorage::Insn*> >::reverse_iterator i = trace.rbegin(); i != trace.rend(); ++i) {
-			if (i->second)
-				CL_NOTE_MSG(&i->second->loc, *(i->second));
-//			STATE_FROM_FAE(*i->first)->ctx->dumpContext(*i->first);
-//			CL_CDEBUG(std::endl << *(i->first));
-		}
-
-		CL_NOTE_MSG(&this->currentInsn->loc, *this->currentInsn);
-
-		return NULL;
-
-	}
-#endif
-#if 0
-	void printQueue() const {
-		for (SymState* state : this->queue)
-			std::cerr << *state->fae;
-	}
-#endif
-
 	/**
 	 * @brief  Prints a trace of preceding symbolic states
 	 *
@@ -354,13 +82,13 @@ protected:
 	 *
 	 * @param[in]  state  The state for which the backtrace is desired
 	 */
-	static void printTrace(const AbstractInstruction::StateType& state)
+	static void printTrace(const ExecState& state)
 	{
-		SymState* s = state.second;
+		SymState* s = state.GetMem();
 
 		std::vector<SymState*> trace;
 
-		for ( ; s; s = s->parent)
+		for ( ; s; s = s->GetParent())
 		{	// until we reach the initial state of the execution tree
 			trace.push_back(s);
 		}
@@ -372,13 +100,13 @@ protected:
 
 		for (auto s : trace)
 		{	// print out the trace
-			if (s->instr->insn()) {
-				CL_NOTE_MSG(&s->instr->insn()->loc,
-					SSD_INLINE_COLOR(C_LIGHT_RED, *s->instr->insn()));
-				CL_DEBUG_AT(2, std::endl << *s->fae);
+			if (s->GetInstr()->insn()) {
+				CL_NOTE_MSG(&s->GetInstr()->insn()->loc,
+					SSD_INLINE_COLOR(C_LIGHT_RED, *s->GetInstr()->insn()));
+				CL_DEBUG_AT(2, std::endl << *s->GetFAE());
 			}
 
-			CL_DEBUG_AT(2, *s->instr);
+			CL_DEBUG_AT(2, *s->GetInstr());
 		}
 	}
 
@@ -400,7 +128,7 @@ protected:
 		{
 			std::stringstream ss;
 
-			ss << *(const AbstractBox*)box;
+			ss << *static_cast<const AbstractBox*>(box);
 
 			orderedBoxes.insert(std::make_pair(ss.str(), box));
 		}
@@ -429,21 +157,21 @@ protected:
 
 		// schedule the initial state for processing
 		this->execMan.init(
-			std::vector<Data>(this->assembly_.regFileSize_, Data::createUndef()),
+			DataArray(this->assembly_.regFileSize_, Data::createUndef()),
 			fae,
 			this->assembly_.code_.front()
 		);
 
-		AbstractInstruction::StateType state;
+		ExecState state;
 
 		try
 		{	// expecting problems...
 			while (this->execMan.dequeueDFS(state))
 			{	// process all states in the DFS order
-				if (state.second->instr->insn())
+				if (state.GetMem()->GetInstr()->insn())
 				{	// in case current instruction IS an instruction
 					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED,
-						state.second->instr->insn()->loc << *(state.second->instr->insn())));
+						state.GetMem()->GetInstr()->insn()->loc << *(state.GetMem()->GetInstr()->insn())));
 					CL_CDEBUG(2, state);
 				}
 				else
@@ -460,10 +188,10 @@ protected:
 		catch (ProgramError& e)
 		{
 //			Engine::printTrace(state);
-			if (state.second->instr->insn()) {
-				CL_NOTE_MSG(&state.second->instr->insn()->loc,
-					SSD_INLINE_COLOR(C_LIGHT_RED, *state.second->instr->insn()));
-				CL_DEBUG_AT(2, std::endl << *state.second->fae);
+			if (state.GetMem()->GetInstr()->insn()) {
+				CL_NOTE_MSG(&state.GetMem()->GetInstr()->insn()->loc,
+					SSD_INLINE_COLOR(C_LIGHT_RED, *state.GetMem()->GetInstr()->insn()));
+				CL_DEBUG_AT(2, std::endl << *state.GetMem()->GetFAE());
 			}
 			throw;
 		}
@@ -494,7 +222,12 @@ public:
 	 * The default constructor.
 	 */
 	Engine() :
-		boxMan(), compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
+		taBackend{},
+		fixpointBackend{},
+		boxMan(),
+		compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
+		assembly_{},
+		execMan{},
 		dbgFlag(false)
 	{ }
 
@@ -513,7 +246,7 @@ public:
 		// clear the box manager
 		this->boxMan.clear();
 
-		for (auto type : stor.types)
+		for (const cl_type* type : stor.types)
 		{	// for each data type in the storage
 			std::vector<size_t> v;
 			std::string name;
@@ -550,7 +283,8 @@ public:
 			// its stackframe
 			std::vector<size_t> v;
 
-			for (auto sel : SymCtx(*fnc).sfLayout)
+			const SymCtx ctx(*fnc);
+			for (auto sel : ctx.GetStackFrameLayout())
 			{	// create the stackframe
 				v.push_back(sel.offset);
 			}
@@ -584,9 +318,12 @@ public:
 
 	void compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry)
 	{
-		CL_DEBUG_AT(2, "compiling ...");
 		this->compiler_.compile(this->assembly_, stor, entry);
-		CL_DEBUG_AT(2, "assembly:" << std::endl << this->assembly_);
+	}
+
+	const Compiler::Assembly& GetAssembly() const
+	{
+		return assembly_;
 	}
 
 	void run()
@@ -612,18 +349,17 @@ public:
 
 				if (instr->insn()) {
 					CL_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl
-						<< ((FixpointInstruction*)instr)->getFixPoint());
+						<< (static_cast<FixpointInstruction*>(instr))->getFixPoint());
 				} else {
 					CL_DEBUG_AT(1, "fixpoint at unknown location" << std::endl
-						<< ((FixpointInstruction*)instr)->getFixPoint());
+						<< (static_cast<FixpointInstruction*>(instr))->getFixPoint());
 				}
 			}
 
 			// print out stats
 			CL_DEBUG_AT(1, "forester has generated " << this->execMan.statesEvaluated()
-				<< " symbolic configuration(s) in " << this->execMan.tracesEvaluated() 
-                                << " trace(s) using " << this->boxMan.boxDatabase().size() << " box(es)");
-
+				<< " symbolic configuration(s) in " << this->execMan.tracesEvaluated()
+				<< " trace(s) using " << this->boxMan.boxDatabase().size() << " box(es)");
 		}
 		catch (std::exception& e)
 		{
@@ -686,6 +422,14 @@ void SymExec::loadBoxes(const std::unordered_map<std::string, std::string>& db) 
 	this->engine->loadBoxes(db);
 }
 #endif
+
+const Compiler::Assembly& SymExec::GetAssembly() const
+{
+	// Assertions
+	assert(nullptr != engine);
+
+	return this->engine->GetAssembly();
+}
 
 void SymExec::compile(const CodeStorage::Storage& stor,
 	const CodeStorage::Fnc& main)

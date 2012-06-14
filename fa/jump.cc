@@ -19,10 +19,9 @@
 
 #include "jump.hh"
 
-void FI_jmp::execute(ExecutionManager&, const AbstractInstruction::StateType&) {
-
+void FI_jmp::execute(ExecutionManager&, const ExecState&)
+{
 	assert(false);
-
 }
 
 void FI_jmp::finalize(
@@ -33,7 +32,7 @@ void FI_jmp::finalize(
 	this->next_ = this;
 
 	while (this->next_->getType() == fi_type_e::fiJump)
-		this->next_ = ((FI_jmp*)this->next_)->getTarget(codeIndex);
+		this->next_ = (static_cast<FI_jmp*>(this->next_))->getTarget(codeIndex);
 
 	this->next_->setTarget();
 

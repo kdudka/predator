@@ -27,10 +27,15 @@ class FI_jmp : public AbstractInstruction {
 	const CodeStorage::Block* target_;
 	AbstractInstruction* next_;
 
+private:  // methods
+
+	FI_jmp(const FI_jmp&);
+	FI_jmp& operator=(const FI_jmp&);
+
 public:
 
 	FI_jmp(const CodeStorage::Insn* insn, const CodeStorage::Block* target)
-		: AbstractInstruction(insn, fi_type_e::fiJump), target_(target), next_(NULL) {}
+		: AbstractInstruction(insn, fi_type_e::fiJump), target_(target), next_(nullptr) {}
 
 	static AbstractInstruction* getTarget(
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
@@ -47,7 +52,7 @@ public:
 		return getTarget(codeIndex, this->target_);
 	}
 
-	virtual void execute(ExecutionManager&, const AbstractInstruction::StateType&);
+	virtual void execute(ExecutionManager&, const ExecState&);
 
 	virtual void finalize(
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,

@@ -22,8 +22,7 @@
 
 #include <memory>
 
-#include "label.hh"
-#include "treeaut.hh"
+#include "treeaut_label.hh"
 
 #include "sequentialinstruction.hh"
 
@@ -38,7 +37,7 @@ public:
 
 	virtual void extendFixpoint(const std::shared_ptr<const class FAE>& fae) = 0;
 
-	virtual const TA<label_type>& getFixPoint() const = 0;
+	virtual const TreeAut& getFixPoint() const = 0;
 
 };
 

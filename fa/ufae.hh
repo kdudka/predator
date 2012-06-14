@@ -20,18 +20,19 @@
 #ifndef UFAE_H
 #define UFAE_H
 
+// Standard library headers
 #include <vector>
 #include <ostream>
 
+// Forester headers
 #include "utils.hh"
-#include "treeaut.hh"
 #include "label.hh"
 #include "boxman.hh"
 #include "forestautext.hh"
 
 class UFAE {
 
-	TA<label_type>& backend;
+	TreeAut& backend;
 
 	size_t stateOffset;
 
@@ -39,7 +40,7 @@ class UFAE {
 
 public:
 
-	UFAE(TA<label_type>& backend, BoxMan& boxMan) : backend(backend), stateOffset(1), boxMan(boxMan) {
+	UFAE(TreeAut& backend, BoxMan& boxMan) : backend(backend), stateOffset(1), boxMan(boxMan) {
 		// let 0 be the only accepting state
 		this->backend.addFinalState(0);
 	}
@@ -58,7 +59,8 @@ public:
 	void setStateOffset(size_t offset) {
 		this->stateOffset = offset;
 	}
-/*
+
+#if 0
 	struct RenameNonleafF {
 
 		Index<size_t>& index;
@@ -75,7 +77,8 @@ public:
 		}
 
 	};
-*/
+#endif
+
 	template <class T>
 	struct Cursor {
 		T begin;
@@ -90,16 +93,16 @@ public:
 		}
 	};
 
-	TA<label_type>& fae2ta(TA<label_type>& dst, Index<size_t>& index, const FAE& src) const {
+	TreeAut& fae2ta(TreeAut& dst, Index<size_t>& index, const FAE& src) const {
 		dst.addFinalState(0);
 		std::vector<Cursor<std::set<size_t>::const_iterator> > tmp;
 		for (auto root : src.roots) {
-			TA<label_type>::rename(dst, *root, FAE::RenameNonleafF(index, this->stateOffset), false);
+			TreeAut::rename(dst, *root, FAE::RenameNonleafF(index, this->stateOffset), false);
 			assert(root->getFinalStates().size());
 			tmp.push_back(Cursor<std::set<size_t>::const_iterator>(root->getFinalStates().begin(), root->getFinalStates().end()));
 		}
 		std::vector<size_t> lhs(tmp.size());
-		label_type label = this->boxMan.lookupLabel(tmp.size(), src.variables);
+		label_type label = this->boxMan.lookupLabel(tmp.size(), src.GetVariables());
 		bool valid = true;
 //		std::cerr << index << std::endl;
 		while (valid) {
@@ -115,8 +118,8 @@ public:
 		return dst;
 	}
 
-	void join(const TA<label_type>& src, const Index<size_t>& index) {
-		TA<label_type>::disjointUnion(this->backend, src, false);
+	void join(const TreeAut& src, const Index<size_t>& index) {
+		TreeAut::disjointUnion(this->backend, src, false);
 		this->stateOffset += index.size();
 	}
 
@@ -124,12 +127,12 @@ public:
 		this->stateOffset += index.size();
 	}
 
-	void ta2fae(vector<FAE*>& dst, TA<label_type>::Backend& backend, BoxMan& boxMan) const {
-		TA<label_type>::td_cache_type cache;
+	void ta2fae(std::vector<FAE*>& dst, TreeAut::Backend& backend, BoxMan& boxMan) const {
+		TreeAut::td_cache_type cache;
 		this->backend.buildTDCache(cache);
-		vector<const TT<label_type>*>& v = cache.insert(make_pair(0, vector<const TT<label_type>*>())).first->second;
+		std::vector<const TT<label_type>*>& v = cache.insert(std::make_pair(0, std::vector<const TT<label_type>*>())).first->second;
 		// iterate over all "synthetic" transitions and constuct new FAE for each
-		for (vector<const TT<label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
+		for (std::vector<const TT<label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
 			FAE* fae = new FAE(backend, boxMan);
 			dst.push_back(fae);
 			fae->loadTA(this->backend, cache, *i, this->stateOffset);

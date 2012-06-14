@@ -25,21 +25,17 @@
 #include <stdexcept>
 #include <algorithm>
 
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
-
-#include "treeaut.hh"
 #include "forestautext.hh"
 #include "abstractbox.hh"
 
 struct CustomIntersectF {
 
 	FAE& fae;
-	TA<label_type>& dst;
-	const TA<label_type>& src1;
-	const TA<label_type>& src2;
+	TreeAut& dst;
+	const TreeAut& src1;
+	const TreeAut& src2;
 
-	CustomIntersectF(FAE& fae, TA<label_type>& dst, const TA<label_type>& src1, const TA<label_type>& src2)
+	CustomIntersectF(FAE& fae, TreeAut& dst, const TreeAut& src1, const TreeAut& src2)
 	 : fae(fae), dst(dst), src1(src1), src2(src2) {}
 
 	void operator()(const TT<label_type>* t1, const TT<label_type>* t2, const std::vector<size_t>& lhs, size_t& rhs) {
@@ -67,7 +63,7 @@ struct IntersectionIndex {
 
 };
 */
-typedef enum { iFail, iSuccess, iUnfold1, iUnfold2 } intersect_result_e;
+enum class intersect_result_e { iFail, iSuccess, iUnfold1, iUnfold2 };
 
 struct IntersectInfo {
 	Index<std::pair<size_t, size_t> > index;
@@ -94,21 +90,21 @@ public:
 		assert(this->fae.roots.size() == fae.roots.size());
 
 		FAE tmp(this->fae);
-//		for (std::vector<TA<label_type>*>::iterator i = this->fae.roots.begin(); i != this->fae.roots.end(); ++i)
-//			this->fae.updateRoot(*i, NULL);
+//		for (std::vector<TreeAut*>::iterator i = this->fae.roots.begin(); i != this->fae.roots.end(); ++i)
+//			this->fae.updateRoot(*i, nullptr);
 
 		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
 			if (!tmp.roots[i]) {
 				this->fae.roots[i] = fae.roots[i];
 				continue;
 			}
-			TA<label_type>::lt_cache_type cache1, cache2;
+			TreeAut::lt_cache_type cache1, cache2;
 			tmp.buildLTCacheExt(*tmp.roots[i], cache1);
 			tmp.buildLTCacheExt(*fae.roots[i], cache2);
 
-			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(this->fae.allocTA());
+			this->fae.roots[i] = std::shared_ptr<TreeAut>(this->fae.allocTA());
 
-			size_t stateCount = TA<label_type>::buProduct(
+			size_t stateCount = TreeAut::buProduct(
 				cache1,
 				cache2,
 				CustomIntersectF(this->fae, *this->fae.roots[i], *tmp.roots[i], *fae.roots[i]),
@@ -120,7 +116,7 @@ public:
 			if (this->fae.roots[i]->getFinalStates().empty())
 				return false;
 
-			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(&this->fae.roots[i]->unreachableFree(*this->fae.allocTA()));
+			this->fae.roots[i] = std::shared_ptr<TreeAut>(&this->fae.roots[i]->unreachableFree(*this->fae.allocTA()));
 
 		}
 
@@ -129,7 +125,7 @@ public:
 	}
 /*
 	template <class F>
-	static void intersection(IntersectInfo& info, TA<label_type>& dst, TA<label_type>& src1, TA<label_type>& src2, F f) {
+	static void intersection(IntersectInfo& info, TreeAut& dst, TreeAut& src1, TreeAut& src2, F f) {
 		const std::set<size_t>& s1 = src1.getFinalStates();
 		const std::set<size_t>& s2 = src2.getFinalStates();
 		std::vector<std::pair<size_t, size_t> > stack;
@@ -144,8 +140,8 @@ public:
 		while (!stack.empty()) {
 			std::pair<size_t, size_t> s = stack.back();
 			stack.pop_back();
-			for (TA<label_type>::iterator i = src1.begin(s.first), i != src1.end(s.first); ++i) {
-				for (TA<label_type>::iterator j = src2.begin(s.second), j != src2.end(s.second); ++j) {
+			for (TreeAut::iterator i = src1.begin(s.first), i != src1.end(s.first); ++i) {
+				for (TreeAut::iterator j = src2.begin(s.second), j != src2.end(s.second); ++j) {
 					f(info, i->label(), j->label());
 					switch (info.result) {
 						case iFail: break;

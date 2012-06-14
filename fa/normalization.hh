@@ -22,10 +22,7 @@
 
 #include <vector>
 #include <map>
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
 
-#include "treeaut.hh"
 #include "forestautext.hh"
 #include "abstractbox.hh"
 #include "utils.hh"
@@ -36,18 +33,18 @@ class Normalization {
 
 protected:
 
-	TA<label_type>* mergeRoot(TA<label_type>& dst, size_t ref, TA<label_type>& src, std::vector<size_t>& joinStates) {
+	TreeAut* mergeRoot(TreeAut& dst, size_t ref, TreeAut& src, std::vector<size_t>& joinStates) {
 		assert(ref < this->fae.roots.size());
-		TA<label_type>* ta = this->fae.allocTA();
+		TreeAut* ta = this->fae.allocTA();
 		ta->addFinalStates(dst.getFinalStates());
 		size_t refState = _MSB_ADD(this->fae.boxMan->getDataId(Data::createRef(ref)));
-		boost::unordered_map<size_t, size_t> joinStatesMap;
+		std::unordered_map<size_t, size_t> joinStatesMap;
 		for (std::set<size_t>::const_iterator i = src.getFinalStates().begin(); i != src.getFinalStates().end(); ++i) {
 			joinStates.push_back(this->fae.nextState());
 			joinStatesMap.insert(std::make_pair(*i, this->fae.freshState()));
 		}
 		bool hit = false;
-		for (TA<label_type>::iterator i = dst.begin(); i != dst.end(); ++i) {
+		for (TreeAut::iterator i = dst.begin(); i != dst.end(); ++i) {
 			std::vector<size_t> tmp = i->lhs();
 			std::vector<size_t>::iterator j = std::find(tmp.begin(), tmp.end(), refState);
 			if (j != tmp.end()) {
@@ -72,13 +69,13 @@ protected:
 
 		order.clear();
 
-		for (std::vector<Data>::const_iterator i = this->fae.variables.begin(); i != this->fae.variables.end(); ++i) {
+		for (const Data& var : this->fae.GetVariables()) {
 
 			// skip everything what is not a root reference
-			if (!i->isRef())
+			if (!var.isRef())
 				continue;
 
-			size_t root = i->d_ref.root;
+			size_t root = var.d_ref.root;
 
 			// mark rootpoint pointed by a variable
 			marked[root] = true;
@@ -97,13 +94,13 @@ protected:
 
 		visited = std::vector<bool>(this->fae.roots.size(), false);
 
-		for (std::vector<Data>::const_iterator i = this->fae.variables.begin(); i != this->fae.variables.end(); ++i) {
+		for (const Data& var : this->fae.GetVariables()) {
 
 			// skip everything what is not a root reference
-			if (!i->isRef())
+			if (!var.isRef())
 				continue;
 
-			size_t root = i->d_ref.root;
+			size_t root = var.d_ref.root;
 
 			// check whether we traversed this one before
 			if (visited[root])
@@ -175,14 +172,14 @@ public:
 
 			std::vector<size_t> refStates;
 
-			TA<label_type>* ta = this->mergeRoot(
+			TreeAut* ta = this->mergeRoot(
 				*this->fae.roots[root],
 				cutpoint.root,
 				*this->fae.roots[cutpoint.root],
 				refStates
 			);
 
-			this->fae.roots[root] = std::shared_ptr<TA<label_type>>(ta);
+			this->fae.roots[root] = std::shared_ptr<TreeAut>(ta);
 			this->fae.roots[cutpoint.root] = nullptr;
 
 			this->fae.connectionGraph.mergeCutpoint(root, cutpoint.root);
@@ -277,15 +274,15 @@ public:
 		}
 
 		// reindex roots
-		std::vector<size_t> index(this->fae.roots.size(), (size_t)(-1));
+		std::vector<size_t> index(this->fae.roots.size(), static_cast<size_t>(-1));
 		std::vector<bool> normalized(this->fae.roots.size(), false);
-		std::vector<std::shared_ptr<TA<label_type>>> newRoots;
+		std::vector<std::shared_ptr<TreeAut>> newRoots;
 		size_t offset = 0;
 
 		for (auto& i : order) {
 
 			this->normalizeRoot(normalized, i, marked);
-//			assert(marked[*i] || (this->fae.roots[*i] == NULL));
+//			assert(marked[*i] || (this->fae.roots[*i] == nullptr));
 
 			if (!marked[i]) {
 
@@ -306,7 +303,7 @@ public:
 
 		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
 
-			this->fae.roots[i] = std::shared_ptr<TA<label_type>>(
+			this->fae.roots[i] = std::shared_ptr<TreeAut>(
 				this->fae.relabelReferences(this->fae.roots[i].get(), index)
 			);
 
@@ -315,19 +312,9 @@ public:
 		this->fae.connectionGraph.finishNormalization(this->fae.roots.size(), index);
 
 		// update variables
-		for (std::vector<Data>::iterator i = this->fae.variables.begin(); i != this->fae.variables.end(); ++i) {
-
-			if (!i->isRef())
-				continue;
-
-			assert(index[i->d_ref.root] != (size_t)(-1));
-
-			i->d_ref.root = index[i->d_ref.root];
-
-		}
+		this->fae.UpdateVarsRootRefs(index);
 
 		return merged;
-
 	}
 
 public:

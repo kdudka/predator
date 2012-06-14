@@ -3,7 +3,7 @@
  * For a better implementation, see, e.g., http://eternallyconfuzzled.com/tuts/datastructures/jsw_tut_skip.aspx
  * or http://ck.kolivas.org/patches/bfs/test/bfs406-skiplists.patch
  *
- * We assume the height to be fixed to 3 and we always have the maximum height at the head and tail
+ * We assume the height to be fixed to 2 and we always have the maximum height at the head and tail
  * nodes---in other words, we do not let the height grow/shrink. Also, we do not consider a dynamic
  * number of next pointers in the nodes.
  *
@@ -11,11 +11,9 @@
 
 #include <stdlib.h>
 
-//#define __nondet ___sl_get_nondet_int
-
 // a skip list node with three next pointers
 struct sl_item {
-    struct sl_item *n1, *n2, *n3;
+    struct sl_item *n1, *n2;
 };
 
 // a skip list
@@ -37,8 +35,8 @@ struct sl* create_sl_with_head_and_tail(void)
     sl->head = malloc(sizeof(struct sl_item));
     sl->tail = malloc(sizeof(struct sl_item));
         
-/*    sl->head->n3 =*/ sl->head->n2 = sl->head->n1 = sl->tail;
-/*    sl->tail->n3 =*/ sl->tail->n2 = sl->tail->n1 = NULL;
+    sl->head->n2 = sl->head->n1 = sl->tail;
+    sl->tail->n2 = sl->tail->n1 = NULL;
 
     return sl;
 
@@ -48,24 +46,14 @@ struct sl* create_sl_with_head_and_tail(void)
 // the head and tail.
 void sl_random_insert(struct sl *sl)
 {
-    // a1, a2, a3 remember the nodes before the inserted one at the particular levels
-    struct sl_item *a1, *a2, *a3;
+    // a1, a2 remember the nodes before the inserted one at the particular levels
+    struct sl_item *a1, *a2;
     struct sl_item *new;
 
     a2 = sl->head;
     while (a2->n2 != sl->tail && __nondet())
         a2 = a2->n2;
-/*
-    // moving randomly on the 3rd level
-    a3 = sl->head;
-    while (a3->n3 != sl->tail && __nondet())
-        a3 = a3->n3;
 
-    // moving randomly on the 2nd level, not going behind a3->n3
-    a2 = a3; 
-    while (a2->n2 != a3->n3 && __nondet())
-        a2 = a2->n2;
-*/
     // moving randomly on the 1st level, not going behind a2->n2
     a1 = a2; 
     while (a1->n1 != a2->n2 && __nondet())
@@ -81,11 +69,6 @@ void sl_random_insert(struct sl *sl)
     if (__nondet()) {
         new->n2 = a2->n2;
         a2->n2 = new;
-        // choose whether to insert at level 3
-/*        if (__nondet()) {
-            new->n3 = a3->n3;
-            a3->n3 = new;
-        }*/
     }
 }
 

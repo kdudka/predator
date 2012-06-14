@@ -29,6 +29,7 @@
 #define COMPILER_H
 
 // Standard library headers
+#include <iomanip>
 #include <ostream>
 #include <vector>
 #include <unordered_map>
@@ -41,8 +42,7 @@
 
 // Forester headers
 #include "abstractinstruction.hh"
-#include "treeaut.hh"
-#include "label.hh"
+#include "treeaut_label.hh"
 
 
 namespace CodeStorage {
@@ -83,6 +83,16 @@ public:
 
 		/// size of the register file
 		size_t regFileSize_;
+
+
+		/**
+		 * @brief  Default constructor
+		 */
+		Assembly() :
+			code_{},
+			functionIndex_{},
+			regFileSize_{}
+		{ }
 
 
 		/**
@@ -136,13 +146,16 @@ public:
 		 */
 		friend std::ostream& operator<<(std::ostream& os, const Assembly& as)
 		{
-			AbstractInstruction* prev = nullptr;
+			const AbstractInstruction* prev = nullptr;
 			const CodeStorage::Insn* lastInsn = nullptr;
-			size_t c = 0;
+			size_t cnt = 0;
 
-			for (auto instr : as.code_) {
-				if ((instr->getType() == fi_type_e::fiJump) && prev) {
-					switch (prev->getType()) {
+			for (const AbstractInstruction* instr : as.code_)
+			{
+				if ((instr->getType() == fi_type_e::fiJump) && prev)
+				{
+					switch (prev->getType())
+					{
 						case fi_type_e::fiBranch:
 						case fi_type_e::fiJump:
 							prev = instr;
@@ -154,25 +167,44 @@ public:
 
 				prev = instr;
 
-				if (instr->insn() && (instr->insn() != lastInsn)) {
+				os << std::setw(16);
+				if (instr->isTarget())
+				{
+					std::ostringstream addrStream;
+					addrStream << instr << ':';
 
-					os << instr->insn()->loc << ' ' << *instr->insn() << std::endl;
-
-					lastInsn = instr->insn();
-
+					os << std::left << addrStream.str();
+				}
+				else
+				{
+					os << "";
 				}
 
-				if (instr->isTarget())
-					os << instr << ':' << std::endl;
+				std::ostringstream instrStream;
+				instrStream << *instr;
 
-				os << "\t\t" << *instr << std::endl;
+				os << std::setw(24) << std::left << instrStream.str();
 
-				++c;
+				if (instr->insn() && (instr->insn() != lastInsn))
+				{
+					os << "; " << instr->insn()->loc << ' ' << *instr->insn();
+
+					lastInsn = instr->insn();
+				}
+
+				os << std::endl;
+
+				++cnt;
 			}
 
-			return os << "code size: " << c << " instructions" << std::endl;
+			return os << std::endl << "; code size: " << cnt << " instructions" << std::endl;
 		}
 	};
+
+private:  // methods
+
+	Compiler(const Compiler&);
+	Compiler& operator=(const Compiler&);
 
 public:
 
@@ -186,8 +218,8 @@ public:
 	 * @param[in]  taBackend        The backend for tree automata
 	 * @param[in]  boxMan           The box manager
 	 */
-	Compiler(TA<label_type>::Backend& fixpointBackend,
-		TA<label_type>::Backend& taBackend, class BoxMan& boxMan);
+	Compiler(TreeAut::Backend& fixpointBackend,
+		TreeAut::Backend& taBackend, class BoxMan& boxMan);
 
 	/**
 	 * @brief  The destructor

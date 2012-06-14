@@ -7,9 +7,12 @@ medium
 * improve Data handling
 * recursion ?
 * function summaries ?
+* make Forester not crash with SEGFAULT on the set of Predator examples !
 
 low
 * garbage collector
 * cache o mapping and compute only on demand
 * make AbstractBox::getArity() non-virtual
 * implement upwards traversal
+* support for global variables
+* resolve the issue of equalities and inequalities of deleted and non-deleted objects - deleted objects must be different from any object with which it was one allocated at the same time but it can be equal to any other object

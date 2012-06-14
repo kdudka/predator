@@ -28,23 +28,26 @@
 #include "treeaut.hh"
 #include "utils.hh"
 
-using std::string;
-
 class TAReader : public TimbukReader {
 
-	TA<string>* dst;
-	string name;
+	TA<std::string>* dst;
+	std::string name;
+
+private:  // methods
+
+	TAReader(const TAReader&);
+	TAReader& operator=(const TAReader&);
 
 protected:
 
-	virtual void newLabel(const string&, size_t, size_t) {}
+	virtual void newLabel(const std::string&, size_t, size_t) {}
 	
-	virtual void beginModel(const string& name) {
+	virtual void beginModel(const std::string& name) {
 		this->dst->clear();
 		this->name = name;
 	}
 	
-	virtual void newState(const string&, size_t) {}
+	virtual void newState(const std::string&, size_t) {}
 	
 	virtual void newFinalState(size_t id) {
 		this->dst->addFinalState(id);
@@ -52,7 +55,7 @@ protected:
 	
 	virtual void endDeclaration() {}
 
-	virtual void newTransition(const vector<size_t>& lhs, size_t label, size_t rhs) {
+	virtual void newTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs) {
 		this->dst->addTransition(lhs, this->getLabelName(label), rhs);
 	}
 	
@@ -60,22 +63,22 @@ protected:
 	
 public:
 
-	TAReader(std::istream& input = std::cin, const string& name = "")
-		: TimbukReader(input, name), dst(NULL) {}
+	TAReader(std::istream& input = std::cin, const std::string& name = "")
+		: TimbukReader(input, name), dst(nullptr), name{} {}
 	
-	TA<string>& read(TA<string>& dst) {
+	TA<std::string>& read(TA<std::string>& dst) {
 		this->dst = &dst;
 		this->readOne();
 		return dst;
 	}
 
-	void readFirst(TA<string>& dst, string& name) {
+	void readFirst(TA<std::string>& dst, std::string& name) {
 		this->dst = &dst;
 		TimbukReader::readFirst();
 		name = this->name;
 	}
 
-	bool readNext(TA<string>& dst, string& name) {
+	bool readNext(TA<std::string>& dst, std::string& name) {
 		this->dst = &dst;
 		if (!TimbukReader::readNext())
 			return false;
@@ -87,7 +90,7 @@ public:
 
 class TAMultiReader : public TimbukReader {
 
-	TA<string>::Backend& backend;
+	TA<std::string>::Backend& backend;
 
 public:
 
@@ -96,14 +99,14 @@ public:
 
 protected:
 
-	virtual void newLabel(const string&, size_t, size_t) {}
+	virtual void newLabel(const std::string&, size_t, size_t) {}
 	
-	virtual void beginModel(const string& name) {
-		this->automata.push_back(TA<string>(this->backend));
+	virtual void beginModel(const std::string& name) {
+		this->automata.push_back(TA<std::string>(this->backend));
 		this->names.push_back(name);
 	}
 	
-	virtual void newState(const string&, size_t) {}
+	virtual void newState(const std::string&, size_t) {}
 	
 	virtual void newFinalState(size_t id) {
 		this->automata.back().addFinalState(id);
@@ -111,7 +114,7 @@ protected:
 	
 	virtual void endDeclaration() {}
 
-	virtual void newTransition(const vector<size_t>& lhs, size_t label, size_t rhs) {
+	virtual void newTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs) {
 		this->automata.back().addTransition(lhs, this->getLabelName(label), rhs);
 	}
 	
@@ -119,8 +122,8 @@ protected:
 	
 public:
 
-	TAMultiReader(TA<string>::Backend& backend, std::istream& input = std::cin, const string& name = "")
-		: TimbukReader(input, name), backend(backend) {}
+	TAMultiReader(TA<std::string>::Backend& backend, std::istream& input = std::cin, const std::string& name = "")
+		: TimbukReader(input, name), backend(backend), automata{}, names{} {}
 
 	void clear() {
 		this->automata.clear();
@@ -170,8 +173,8 @@ public:
 	}
 
 	template <class F>
-	void writeOne(const TA<T>& aut, F f, const string& name = "TreeAutomaton") {
-		std::map<string, size_t> labels;
+	void writeOne(const TA<T>& aut, F f, const std::string& name = "TreeAutomaton") {
+		std::map<std::string, size_t> labels;
 		std::set<size_t> states;
 		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
 			std::ostringstream ss;
@@ -188,11 +191,11 @@ public:
 		this->newModel(name);
 		this->endl();
 		this->startStates();
-		for (set<size_t>::iterator i = states.begin(); i != states.end(); ++i)
+		for (std::set<size_t>::iterator i = states.begin(); i != states.end(); ++i)
 			this->writeState(*i, f);
 		this->endl();
 		this->startFinalStates();
-		for (set<size_t>::iterator i = aut.getFinalStates().begin(); i != aut.getFinalStates().end(); ++i)
+		for (std::set<size_t>::iterator i = aut.getFinalStates().begin(); i != aut.getFinalStates().end(); ++i)
 			this->writeState(*i, f);
 		this->endl();
 		this->startTransitions();
@@ -200,8 +203,8 @@ public:
 		this->writeTransitions(aut, f);
 	}
 	
-	void writeOne(const TA<T>& aut, const string& name = "TreeAutomaton") {
-		std::map<string, size_t> labels;
+	void writeOne(const TA<T>& aut, const std::string& name = "TreeAutomaton") {
+		std::map<std::string, size_t> labels;
 		std::set<size_t> states;
 		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
 			std::ostringstream ss;
@@ -212,7 +215,7 @@ public:
 				states.insert(i->lhs()[j]);
 		}
 		this->startAlphabet();
-		for (std::map<string, size_t>::iterator i = labels.begin(); i != labels.end(); ++i)
+		for (std::map<std::string, size_t>::iterator i = labels.begin(); i != labels.end(); ++i)
 			this->writeLabel(i->first, i->second);
 		this->endl();
 		this->newModel(name);
@@ -229,7 +232,6 @@ public:
 		this->endl();
 		this->writeTransitions(aut);
 	}
-
 };
 
 #endif

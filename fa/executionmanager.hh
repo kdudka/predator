@@ -20,208 +20,213 @@
 #ifndef EXECUTION_MANAGER_H
 #define EXECUTION_MANAGER_H
 
+// Standard library headers
 #include <list>
 
+// Forester headers
 #include "types.hh"
 #include "recycler.hh"
 #include "abstractinstruction.hh"
 #include "fixpointinstruction.hh"
 #include "symstate.hh"
 
-class ExecutionManager {
 
+/**
+ * @brief  Class that carries out symbolic execution of the code
+ *
+ * This class performs symbolic execution of the code.
+ */
+class ExecutionManager
+{
+private:  // data members
+
+	/// the root of the execution graph
 	SymState* root_;
 
+	/// the queue with the states to be processed
 	SymState::QueueType queue_;
 
+	/// counter of evaluated states
 	size_t statesExecuted_;
+
+	/// counter of evaluated traces
 	size_t tracesEvaluated_;
 
-	Recycler<std::vector<Data>> registerRecycler_;
+	/// memory manager for registers
+	Recycler<DataArray> registerRecycler_;
+	/// memory manager for states
 	Recycler<SymState> stateRecycler_;
 
-	struct RecycleRegisterF {
+	class RecycleRegisterF
+	{
+	private:  // data members
 
-		Recycler<std::vector<Data>>& recycler_;
+		Recycler<DataArray>& recycler_;
 
-		RecycleRegisterF(Recycler<std::vector<Data>>& recycler)
-			: recycler_(recycler) {}
+	public:   // methods
 
-		void operator()(std::vector<Data>* x) {
+		RecycleRegisterF(Recycler<DataArray>& recycler) :
+			recycler_(recycler)
+		{ }
 
-			this->recycler_.recycle(x);
-
+		void operator()(DataArray* x)
+		{
+			recycler_.recycle(x);
 		}
-
 	};
-/*
+
+private:  // methods
+
+	ExecutionManager(const ExecutionManager&);
+	ExecutionManager& operator=(const ExecutionManager&);
+
 public:
 
-	struct DestroySimpleF {
+	ExecutionManager() :
+		root_(nullptr),
+		queue_{},
+		statesExecuted_{},
+		tracesEvaluated_{},
+		registerRecycler_{},
+		stateRecycler_{}
+	{ }
 
-		DestroySimpleF() {}
-
-		void operator()(SymState* state) {
-
-			AbstractInstruction* instr = state->instr;
-			if (instr->computesFixpoint())
-				((FixpointInstruction*)instr)->extendFixpoint(state->fae);
-	//			else
-	//				CFG_FROM_FAE(*node->fae)->invalidate(node->fae);
-
-		}
-
-	};
-*/
-public:
-
-	ExecutionManager() : root_(NULL) {}
-
-	~ExecutionManager() { this->clear(); }
+	~ExecutionManager()
+	{
+		this->clear();
+	}
 
 	size_t statesEvaluated() const { return statesExecuted_; }
 
 	size_t tracesEvaluated() const { return tracesEvaluated_; }
 
-	void clear() {
-
-		if (this->root_) {
-			this->root_->recycle(this->stateRecycler_);
-			this->root_ = NULL;
+	void clear()
+	{
+		if (root_)
+		{
+			root_->recycle(stateRecycler_);
+			root_ = nullptr;
 		}
 
-		this->queue_.clear();
+		queue_.clear();
 
-		this->statesExecuted_ = 0;
-		this->tracesEvaluated_ = 0;
-
+		statesExecuted_ = 0;
+		tracesEvaluated_ = 0;
 	}
 
-	SymState* enqueue(SymState* parent, const std::shared_ptr<std::vector<Data>>& registers,
-		const std::shared_ptr<const FAE>& fae, AbstractInstruction* instr) {
-
-		SymState* state = this->stateRecycler_.alloc();
+	SymState* enqueue(SymState* parent, const std::shared_ptr<DataArray>& registers,
+		const std::shared_ptr<const FAE>& fae, AbstractInstruction* instr)
+	{
+		SymState* state = stateRecycler_.alloc();
 
 		state->init(
 			parent,
 			instr,
 			fae,
-			this->queue_.insert(this->queue_.end(), std::make_pair(registers, state))
+			queue_.insert(queue_.end(), ExecState(registers, state))
 		);
 
 		return state;
-
 	}
 
-	SymState* enqueue(const AbstractInstruction::StateType& parent, AbstractInstruction* instr) {
-
-		SymState* state = this->stateRecycler_.alloc();
+	SymState* enqueue(const ExecState& parent, AbstractInstruction* instr)
+	{
+		SymState* state = stateRecycler_.alloc();
 
 		state->init(
-			parent.second,
+			parent.GetMem(),
 			instr,
-			parent.second->fae,
-			this->queue_.insert(this->queue_.end(), std::make_pair(parent.first, state))
+			parent.GetMem()->GetFAE(),
+			queue_.insert(queue_.end(), ExecState(parent.GetRegsShPtr(), state))
 		);
 
 		return state;
-
 	}
 
-	bool dequeueBFS(AbstractInstruction::StateType& state) {
-
-		if (this->queue_.empty())
+	bool dequeueBFS(ExecState& state)
+	{
+		if (queue_.empty())
 			return false;
 
-		state = this->queue_.front();
+		state = queue_.front();
+		queue_.pop_front();
 
-		this->queue_.pop_front();
-
-		state.second->queueTag = this->queue_.end();
+		state.GetMem()->SetQueueTag(queue_.end());
 
 		return true;
-
 	}
 
-	bool dequeueDFS(AbstractInstruction::StateType& state) {
-
-		if (this->queue_.empty())
+	bool dequeueDFS(ExecState& state)
+	{
+		if (queue_.empty())
 			return false;
 
-		state = this->queue_.back();
+		state = queue_.back();
+		queue_.pop_back();
 
-		this->queue_.pop_back();
-
-		state.second->queueTag = this->queue_.end();
+		state.GetMem()->SetQueueTag(queue_.end());
 
 		return true;
-
 	}
 
-	std::shared_ptr<std::vector<Data>> allocRegisters(const std::vector<Data>& model) {
-
-		std::vector<Data>* v = this->registerRecycler_.alloc();
+	std::shared_ptr<DataArray> allocRegisters(const DataArray& model)
+	{
+		DataArray* v = registerRecycler_.alloc();
 
 		*v = model;
 
-		return std::shared_ptr<std::vector<Data>>(v, RecycleRegisterF(this->registerRecycler_));
-
+		return std::shared_ptr<DataArray>(v, RecycleRegisterF(registerRecycler_));
 	}
 
-	void init(const std::vector<Data>& registers, const std::shared_ptr<const FAE>& fae,
-		AbstractInstruction* instr) {
-
+	void init(const DataArray& registers, const std::shared_ptr<const FAE>& fae,
+		AbstractInstruction* instr)
+	{
 		this->clear();
-		this->root_ = this->enqueue(NULL, this->allocRegisters(registers), fae, instr);
-
+		root_ = this->enqueue(nullptr, this->allocRegisters(registers), fae, instr);
 	}
 
-	void execute(AbstractInstruction::StateType& state) {
+	void execute(ExecState& state)
+	{
+		++statesExecuted_;
 
-		++this->statesExecuted_;
-
-		state.second->instr->execute(*this, state);
-
+		state.GetMem()->GetInstr()->execute(*this, state);
 	}
 
-//	template <class F>
-	void traceFinished(SymState* state) {
-
-		++this->tracesEvaluated_;
+	void traceFinished(SymState* state)
+	{
+		++tracesEvaluated_;
 
 		this->destroyBranch(state);
-
 	}
 
-//	template <class F>
-	void destroyBranch(SymState* state/*, F f*/) {
-
+	void destroyBranch(SymState* state)
+	{
+		// Assertions
 		assert(state);
 
-		while (state->parent) {
+		while (state->GetParent())
+		{
+			// Assertions
+			assert(state->GetParent()->GetChildren().size());
 
-			assert(state->parent->children.size());
+			if (state->GetInstr()->getType() == fi_type_e::fiFix)
+				(static_cast<FixpointInstruction*>(state->GetInstr()))->extendFixpoint(state->GetFAE());
 
-			if (state->instr->getType() == fi_type_e::fiFix)
-				((FixpointInstruction*)state->instr)->extendFixpoint(state->fae);
-//			f(state);
-
-			if (state->parent->children.size() > 1) {
-				state->recycle(this->stateRecycler_);
+			if (state->GetParent()->GetChildren().size() > 1)
+			{
+				state->recycle(stateRecycler_);
 				return;
 			}
 
-			state = state->parent;
-
+			state = state->GetParent();
 		}
 
-		assert(state == this->root_);
+		// Assertions
+		assert(state == root_);
 
-		this->root_->recycle(this->stateRecycler_);
-		this->root_ = NULL;
-
+		root_->recycle(stateRecycler_);
+		root_ = nullptr;
 	}
-
 };
 
 #endif

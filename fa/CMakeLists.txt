@@ -30,6 +30,12 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
+# Add some more useful compiler flags
+ADD_C_FLAG(       "PEDANTIC_ERRORS"      "-pedantic-errors")
+ADD_CXX_ONLY_FLAG("W_CTOR_DTOR_PRIVACY"  "-Wctor-dtor-privacy")
+ADD_CXX_ONLY_FLAG("W_OLD_STYLE_CAST"     "-Wold-style-cast")
+ADD_CXX_ONLY_FLAG("W_EFFCXX"             "-Weffc++")
+
 ## Check for isatty(3)
 #include(CheckFunctionExists)
 #check_function_exists("isatty" HAVE_ISATTY)
@@ -51,19 +57,25 @@ configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
 
 # libfa.so
 add_library(fa SHARED
-	treeaut.cc
-	timbuk.cc
-	forestaut.cc
-	sequentialinstruction.cc
-	jump.cc
+	box.cc
+	boxman.cc
 	call.cc
+	cl_fa.cc
 	comparison.cc
-	fixpoint.cc
-	microcode.cc
 	compiler.cc
+	exec_state.cc
+	fixpoint.cc
+	forestaut.cc
+	jump.cc
+	label.cc
+	microcode.cc
+	sequentialinstruction.cc
 	symctx.cc
 	symexec.cc
-	cl_fa.cc
+	timbuk.cc
+	treeaut.cc
+	virtualmachine.cc
+  connection_graph.cc
 )
 set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 

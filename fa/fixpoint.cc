@@ -23,7 +23,6 @@
 #include <cl/cl_msg.hh>
 #include "../cl/ssd.h"
 
-#include "treeaut.hh"
 #include "forestautext.hh"
 #include "ufae.hh"
 #include "executionmanager.hh"
@@ -105,7 +104,7 @@ struct SmarterTMatchF {
 };
 
 struct CompareVariablesF {
-	bool operator()(size_t i, const TA<label_type>& ta1, const TA<label_type>& ta2) {
+	bool operator()(size_t i, const TreeAut& ta1, const TreeAut& ta2) {
 		if (i)
 			return true;
 		const TT<label_type>& t1 = ta1.getAcceptingTransition();
@@ -222,9 +221,9 @@ inline void reorder(FAE& fae) {
 
 }
 
-inline bool testInclusion(FAE& fae, TA<label_type>& fwdConf, UFAE& fwdConfWrapper) {
+inline bool testInclusion(FAE& fae, TreeAut& fwdConf, UFAE& fwdConfWrapper) {
 
-	TA<label_type> ta(*fwdConf.backend);
+	TreeAut ta(*fwdConf.backend);
 
 	Index<size_t> index;
 
@@ -235,7 +234,7 @@ inline bool testInclusion(FAE& fae, TA<label_type>& fwdConf, UFAE& fwdConfWrappe
 //	CL_CDEBUG(3, "challenge:" << std::endl << ta);
 //	CL_CDEBUG(3, "response:" << std::endl << fwdConf);
 
-	if (TA<label_type>::subseteq(ta, fwdConf))
+	if (TreeAut::subseteq(ta, fwdConf))
 		return true;
 
 	fwdConfWrapper.join(ta, index);
@@ -257,11 +256,10 @@ struct CopyNonZeroRhsF {
 	}
 };
 
-inline void abstract(FAE& fae, TA<label_type>& fwdConf, TA<label_type>::Backend& backend, BoxMan& boxMan) {
+inline void abstract(FAE& fae, TreeAut& fwdConf, TreeAut::Backend& backend, BoxMan& boxMan) {
 
 	fae.unreachableFree();
 
-//	CL_CDEBUG(1, SSD_INLINE_COLOR(C_LIGHT_GREEN, "after normalization:" ) << std::endl << *fae);
 #if FA_FUSION_ENABLED
 	// merge fixpoint
 	std::vector<FAE*> tmp;
@@ -385,9 +383,9 @@ inline void learn2(FAE& fae, BoxMan& boxMan) {
 }
 
 // FI_fix
-void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
+void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
 	fae->updateConnectionGraph();
 
@@ -438,26 +436,23 @@ void FI_abs::execute(ExecutionManager& execMan, const AbstractInstruction::State
 	}
 #endif
 	// test inclusion
-	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper)) {
-
+	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper))
+	{
 		CL_CDEBUG(3, "hit");
 
-		execMan.traceFinished(state.second);
-
-	} else {
-
+		execMan.traceFinished(state.GetMem());
+	} else
+	{
 		CL_CDEBUG(1, "extending fixpoint at " << this->insn()->loc << std::endl << *fae);
 
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
+		execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 	}
-
 }
 
 // FI_fix
-void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
+void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
 	fae->updateConnectionGraph();
 
@@ -465,28 +460,27 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 #if FA_ALLOW_FOLDING
 	reorder(*fae);
 
-	if (boxMan.boxDatabase().size()) {
-
+	if (boxMan.boxDatabase().size())
+	{
 		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
 
 		fold(*fae, this->boxMan, forbidden);
 
 		forbidden.clear();
-
 	}
 #endif
 	computeForbiddenSet(forbidden, *fae);
 
 	normalize(*fae, forbidden, true);
 #if FA_ALLOW_FOLDING
-	if (boxMan.boxDatabase().size()) {
-
+	if (boxMan.boxDatabase().size())
+	{
 		forbidden.clear();
 
 		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
 
-		while (fold(*fae, this->boxMan, forbidden)) {
-
+		while (fold(*fae, this->boxMan, forbidden))
+		{
 			forbidden.clear();
 
 			computeForbiddenSet(forbidden, *fae);
@@ -496,24 +490,19 @@ void FI_fix::execute(ExecutionManager& execMan, const AbstractInstruction::State
 			forbidden.clear();
 
 			forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
-
 		}
-
 	}
 #endif
 	// test inclusion
-	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper)) {
-
+	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper))
+	{
 		CL_CDEBUG(3, "hit");
 
-		execMan.traceFinished(state.second);
-
-	} else {
-
+		execMan.traceFinished(state.GetMem());
+	} else
+	{
 		CL_CDEBUG(1, "extending fixpoint at " << this->insn()->loc << std::endl << *fae);
 
-		execMan.enqueue(state.second, state.first, fae, this->next_);
-
+		execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 	}
-
 }

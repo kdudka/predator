@@ -60,6 +60,27 @@ public:
 		msg(msg), loc(loc) {}
 
 	/**
+	 * @brief  Copy constructor
+	 */
+	ProgramError(const ProgramError& err) :
+		msg{err.msg}, loc{err.loc}
+	{ }
+
+	/**
+	 * @brief  Assignment operator
+	 */
+	ProgramError& operator=(const ProgramError& err)
+	{
+		if (&err != this)
+		{
+			msg = err.msg;
+			loc = err.loc;
+		}
+
+		return *this;
+	}
+
+	/**
 	 * @brief  Destructor
 	 *
 	 * Virtual destructor.

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Jiri Simacek
+ * Copyright (C) 2012  Ondrej Lengal
  *
  * This file is part of forester.
  *
@@ -17,23 +17,22 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cl/cldebug.hh>
+// Forester headers
+#include "exec_state.hh"
+#include "symstate.hh"
 
-#include "executionmanager.hh"
-
-#include "call.hh"
-
-// FI_ret
-void FI_ret::execute(ExecutionManager& execMan, const ExecState& state)
+std::ostream& operator<<(std::ostream& os, const ExecState& state)
 {
-	// Assertions
-	assert(state.GetReg(dst_).isNativePtr());
-	assert(static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
+	os << "registers:";
 
-	execMan.enqueue(state, static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
+	for (size_t i = 0; i < state.GetRegs().size(); ++i) {
+
+		os << " r" << i << '=' << state.GetReg(i);
+
+	}
+
+	os << ", heap:" << std::endl << *state.GetMem()->GetFAE();
+
+	return os << "instruction (" << state.GetMem()->GetInstr() << "): "
+		<< *state.GetMem()->GetInstr();
 }
-
-void FI_ret::finalize(
-	const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,
-	std::vector<AbstractInstruction*>::const_iterator
-) {}

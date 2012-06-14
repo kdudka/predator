@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Jiri Simacek
+ * Copyright (C) 2012  Ondrej Lengal
  *
  * This file is part of forester.
  *
@@ -17,23 +17,16 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cl/cldebug.hh>
+#ifndef _TREE_AUT_LABEL_HH_
+#define _TREE_AUT_LABEL_HH_
 
-#include "executionmanager.hh"
+#include "treeaut.hh"
+#include "label.hh"
 
-#include "call.hh"
 
-// FI_ret
-void FI_ret::execute(ExecutionManager& execMan, const ExecState& state)
-{
-	// Assertions
-	assert(state.GetReg(dst_).isNativePtr());
-	assert(static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
+/**
+ * @brief  The type used for tree automata
+ */
+typedef TA<label_type> TreeAut;
 
-	execMan.enqueue(state, static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
-}
-
-void FI_ret::finalize(
-	const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,
-	std::vector<AbstractInstruction*>::const_iterator
-) {}
+#endif /* _TREE_AUT_LABEL_HH_ */

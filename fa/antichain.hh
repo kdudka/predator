@@ -27,25 +27,13 @@
 #include <functional>
 #include <algorithm>
 
-#include <boost/unordered_map.hpp>
-
 #include "cache.hh"
-
-using std::vector;
-using std::list;
-using std::set;
-using std::map;
-using std::multimap;
-using std::pair;
-
-using boost::unordered_map;
-using boost::unordered_multimap;
 
 class Antichain {
 
 protected:
 
-	typedef Cache<set<size_t> > state_cache_type;
+	typedef Cache<std::set<size_t> > state_cache_type;
 
 	state_cache_type stateCache;
 
@@ -53,16 +41,16 @@ protected:
 	
 /*
 	typedef unordered_map<pair<state_cache_type::value_type*, state_cache_type::value_type*>, bool> lte_cache_type;
-	typedef unordered_map<state_cache_type::value_type*, set<lte_cache_type::value_type*> > lte_cache_map_type;
+	typedef unordered_map<state_cache_type::value_type*, std::set<lte_cache_type::value_type*> > lte_cache_map_type;
 */
 //	typedef multimap<size_t, state_cache_type::value_type*> antichain_type;
-	typedef list<state_cache_type::value_type*> antichain_item_type;
-	typedef unordered_map<size_t, antichain_item_type> antichain_type;
+	typedef std::list<state_cache_type::value_type*> antichain_item_type;
+	typedef std::unordered_map<size_t, antichain_item_type> antichain_type;
 
-	const vector<vector<bool> >& rel; 
+	const std::vector<std::vector<bool> >& rel;
 	
-	vector<vector<size_t> > relIndex;
-	vector<vector<size_t> > invRelIndex;
+	std::vector<std::vector<size_t> > relIndex;
+	std::vector<std::vector<size_t> > invRelIndex;
 
 	struct Lte {
 		
@@ -71,14 +59,14 @@ protected:
 		Lte(Antichain& ac) : ac(ac) {}
 		
 		bool operator()(state_cache_type::value_type* x, state_cache_type::value_type* y) {
-			for (set<size_t>::const_iterator i = x->first.begin(); i != x->first.end(); ++i) {
+			for (std::set<size_t>::const_iterator i = x->first.begin(); i != x->first.end(); ++i) {
 				if (!utils::checkIntersection(y->first, this->ac.relIndex[*i]))
 					return false;
 			}
 			return true;
 		}
 /*
-		bool operator()(Cache<set<size_t> >::value_type* x, Cache<set<size_t> >::value_type* y) {
+		bool operator()(Cache<std::set<size_t> >::value_type* x, Cache<std::set<size_t> >::value_type* y) {
 			return utils::checkInclusion(x->first, y->first));
 		}
 */
@@ -88,9 +76,9 @@ protected:
 		return (x == y)?(true):(this->cachedLte.lookup(x, y, Lte(*this)));
 	}
 
-	bool check(const multimap<size_t, state_cache_type::value_type*>& ac, const pair<size_t, state_cache_type::value_type*>& el) {
-		for (vector<size_t>::const_iterator i = this->relIndex[el.first].begin(); i != this->relIndex[el.first].end(); ++i) {
-			for (pair<multimap<size_t, state_cache_type::value_type*>::const_iterator, multimap<size_t, state_cache_type::value_type*>::const_iterator> p = ac.equal_range(*i); p.first != p.second; ++p.first) {
+	bool check(const std::multimap<size_t, state_cache_type::value_type*>& ac, const std::pair<size_t, state_cache_type::value_type*>& el) {
+		for (std::vector<size_t>::const_iterator i = this->relIndex[el.first].begin(); i != this->relIndex[el.first].end(); ++i) {
+			for (std::pair<std::multimap<size_t, state_cache_type::value_type*>::const_iterator, std::multimap<size_t, state_cache_type::value_type*>::const_iterator> p = ac.equal_range(*i); p.first != p.second; ++p.first) {
 				if (this->lte(p.first->second, el.second))
 					return true;
 			}
@@ -99,8 +87,8 @@ protected:
 		return false;
 	}
 
-	bool check(const antichain_type& ac, const pair<size_t, state_cache_type::value_type*>& el) {
-		for (vector<size_t>::const_iterator i = this->relIndex[el.first].begin(); i != this->relIndex[el.first].end(); ++i) {
+	bool check(const antichain_type& ac, const std::pair<size_t, state_cache_type::value_type*>& el) {
+		for (std::vector<size_t>::const_iterator i = this->relIndex[el.first].begin(); i != this->relIndex[el.first].end(); ++i) {
 			antichain_type::const_iterator j = ac.find(*i);
 			if (j == ac.end())
 				continue;
@@ -113,20 +101,20 @@ protected:
 		return false;
 	}
 
-	bool check(const list<pair<size_t, state_cache_type::value_type*> >& ac, const pair<size_t, state_cache_type::value_type*>& el) {
-		for (list<pair<size_t, state_cache_type::value_type*> >::const_iterator i = ac.begin(); i != ac.end(); ++i) {
+	bool check(const std::list<std::pair<size_t, state_cache_type::value_type*> >& ac, const std::pair<size_t, state_cache_type::value_type*>& el) {
+		for (std::list<std::pair<size_t, state_cache_type::value_type*> >::const_iterator i = ac.begin(); i != ac.end(); ++i) {
 			if (rel[el.first][i->first] && this->lte(i->second, el.second))
 				return true;
 		}
 		return false;
 	}
 
-	void refine(multimap<size_t, state_cache_type::value_type*>& ac, const pair<const size_t, state_cache_type::value_type*>& el) {
-		for (vector<size_t>::iterator i = this->invRelIndex[el.first].begin(); i != this->invRelIndex[el.first].end(); ++i) {
-			for (pair<multimap<size_t, state_cache_type::value_type*>::iterator, multimap<size_t, state_cache_type::value_type*>::iterator> p = ac.equal_range(*i); p.first != p.second; ) {
+	void refine(std::multimap<size_t, state_cache_type::value_type*>& ac, const std::pair<const size_t, state_cache_type::value_type*>& el) {
+		for (std::vector<size_t>::iterator i = this->invRelIndex[el.first].begin(); i != this->invRelIndex[el.first].end(); ++i) {
+			for (std::pair<std::multimap<size_t, state_cache_type::value_type*>::iterator, std::multimap<size_t, state_cache_type::value_type*>::iterator> p = ac.equal_range(*i); p.first != p.second; ) {
 				if (this->lte(el.second, p.first->second)) {
 					this->stateCache.release(p.first->second);
-					multimap<size_t, state_cache_type::value_type*>::iterator j = p.first++;
+					std::multimap<size_t, state_cache_type::value_type*>::iterator j = p.first++;
 					ac.erase(j);
 				} else {
 					++p.first;
@@ -135,8 +123,8 @@ protected:
 		}
 	}
 
-	void refine(antichain_type& ac, const pair<const size_t, state_cache_type::value_type*>& el) {
-		for (vector<size_t>::iterator i = this->invRelIndex[el.first].begin(); i != this->invRelIndex[el.first].end(); ++i) {
+	void refine(antichain_type& ac, const std::pair<const size_t, state_cache_type::value_type*>& el) {
+		for (std::vector<size_t>::iterator i = this->invRelIndex[el.first].begin(); i != this->invRelIndex[el.first].end(); ++i) {
 			antichain_type::iterator j = ac.find(*i);
 			if (j == ac.end())
 				continue;
@@ -151,8 +139,8 @@ protected:
 		}
 	}
 
-	void refine(list<pair<size_t, state_cache_type::value_type*> >& ac, const pair<size_t, state_cache_type::value_type*>& el) {
-		for (list<pair<size_t, state_cache_type::value_type*> >::iterator i = ac.begin(); i != ac.end(); ) {
+	void refine(std::list<std::pair<size_t, state_cache_type::value_type*> >& ac, const std::pair<size_t, state_cache_type::value_type*>& el) {
+		for (std::list<std::pair<size_t, state_cache_type::value_type*> >::iterator i = ac.begin(); i != ac.end(); ) {
 			if (rel[i->first][el.first] && this->lte(el.second, i->second)) {
 				this->stateCache.release(i->second);
 				i = ac.erase(i);
@@ -181,21 +169,21 @@ protected:
 	StateCacheListener stateCacheListener;
 	
 	antichain_type processed;
-//	list<pair<size_t, state_cache_type::value_type*> > next;
-	multimap<size_t, state_cache_type::value_type*> next;
+//	std::list<std::pair<size_t, state_cache_type::value_type*> > next;
+	std::multimap<size_t, state_cache_type::value_type*> next;
 
 public:
 
-	Antichain(const vector<vector<bool> >& rel) : rel(rel), stateCacheListener(*this) {
+	Antichain(const std::vector<std::vector<bool> >& rel) : stateCache{}, cachedLte{}, rel(rel), relIndex{}, invRelIndex{}, stateCacheListener(*this), processed{}, next{} {
 		utils::relIndex(this->relIndex, rel);
-		vector<vector<bool> > invRel;
+		std::vector<std::vector<bool> > invRel;
 		utils::relInv(invRel, rel);
 		utils::relIndex(this->invRelIndex, invRel);
 	}
 	
-	void initialize(const vector<pair<size_t, set<size_t> > >& post) {
-		for (vector<pair<size_t, set<size_t> > >::const_iterator i = post.begin(); i != post.end(); ++i) {
-			pair<size_t, state_cache_type::value_type*> p = make_pair(i->first, this->stateCache.lookup(i->second));
+	void initialize(const std::vector<std::pair<size_t, std::set<size_t> > >& post) {
+		for (std::vector<std::pair<size_t, std::set<size_t> > >::const_iterator i = post.begin(); i != post.end(); ++i) {
+			std::pair<size_t, state_cache_type::value_type*> p = make_pair(i->first, this->stateCache.lookup(i->second));
 			// antichain acceleration
 			if (this->check(this->next, p)) {
 				this->stateCache.release(p.second);
@@ -207,9 +195,9 @@ public:
 		}
 	}
 
-	void update(const vector<pair<size_t, set<size_t> > >& post) {
-		for (vector<pair<size_t, set<size_t> > >::const_iterator i = post.begin(); i != post.end(); ++i) {
-			pair<size_t, state_cache_type::value_type*> p = make_pair(i->first, this->stateCache.lookup(i->second));
+	void update(const std::vector<std::pair<size_t, std::set<size_t> > >& post) {
+		for (std::vector<std::pair<size_t, std::set<size_t> > >::const_iterator i = post.begin(); i != post.end(); ++i) {
+			std::pair<size_t, state_cache_type::value_type*> p = make_pair(i->first, this->stateCache.lookup(i->second));
 			// antichain acceleration
 			if (this->check(this->processed, p) || this->check(this->next, p)) {
 				this->stateCache.release(p.second);
@@ -239,7 +227,7 @@ public:
 		return true;
 	}
 */
-	bool nextElement(pair<size_t, state_cache_type::value_type*>& el) {
+	bool nextElement(std::pair<size_t, state_cache_type::value_type*>& el) {
 		if (this->next.empty())
 			return false;
 		el = *this->next.begin();
@@ -251,6 +239,12 @@ public:
 	void printStatus() const {
 		std::cout << "processed: " << this->processed.size() << ", next: " << this->next.size() << std::endl;
 	}
+
+	/**
+	 * @brief  Virtual destructor
+	 */
+	virtual ~Antichain()
+	{ }
 /*
 	class Response {
 		
@@ -273,7 +267,7 @@ public:
 				return false;
 			}
 			
-			pair<size_t, const set<size_t>*> current() const {
+			pair<size_t, const std::set<size_t>*> current() const {
 				return make_pair(this->i->first, &this->i->second->first);
 			}
 		

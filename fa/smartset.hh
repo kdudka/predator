@@ -65,7 +65,7 @@ private:
 
 public:
 
-	SmartSet(size_t size = 0) : _index(size, _elements.end()) {}
+	SmartSet(size_t size = 0) : _elements{}, _index(size, _elements.end()) {}
 	
 	SmartSet(const SmartSet& x)
 		: _elements(x._elements), _index(x._index.size(), _elements.end()) {

@@ -20,64 +20,87 @@
 #ifndef ABSTRACT_BOX_H
 #define ABSTRACT_BOX_H
 
+// Standard library headers
 #include <ostream>
 #include <set>
 
-typedef enum { bBox, bHead, bTypeInfo, bSel } box_type_e;
 
-class AbstractBox {
+enum class box_type_e { bBox, bHead, bTypeInfo, bSel };
 
-	box_type_e type;
 
-protected:
+class AbstractBox
+{
+private:  // data members
 
-	size_t arity;
-	size_t order;
+	box_type_e type_;
 
-	AbstractBox(box_type_e type, size_t arity) : type(type), arity(arity), order(0) {
-	}
+protected:// data members
+
+	size_t arity_;
+	size_t order_;
+
+protected:// methods
+
+	AbstractBox(box_type_e type, size_t arity) :
+		type_(type),
+		arity_(arity),
+		order_(0)
+	{ }
 
 public:
 
-	box_type_e getType() const {
-		return this->type;
+	box_type_e getType() const
+	{
+		return type_;
 	}
 
-	bool isType(box_type_e type) const {
-		return this->type == type;
+	bool isType(box_type_e type) const
+	{
+		return type_ == type;
 	}
 
-	bool isStructural() const {
-		return (this->type == box_type_e::bBox) || (this->type == box_type_e::bSel);
+	bool isStructural() const
+	{
+		return (type_ == box_type_e::bBox) || (type_ == box_type_e::bSel);
 	}
 
-	bool isBox() const {
-		return this->type == box_type_e::bBox;
+	bool isBox() const
+	{
+		return type_ == box_type_e::bBox;
 	}
 
-	size_t getArity() const {
-		return this->arity;
+	size_t getArity() const
+	{
+		return arity_;
 	}
 
-	size_t getOrder() const {
-		return this->order;
+	size_t getOrder() const
+	{
+		return order_;
 	}
 
 	virtual void toStream(std::ostream& os) const = 0;
 
-	friend std::ostream& operator<<(std::ostream& os, const AbstractBox& rhs) {
+	friend std::ostream& operator<<(std::ostream& os, const AbstractBox& rhs)
+	{
 		rhs.toStream(os);
 		return os;
 	}
 
+	/**
+	 * @brief  Virtual destructor
+	 */
+	virtual ~AbstractBox()
+	{ }
 };
 
-class StructuralBox : public AbstractBox {
+class StructuralBox : public AbstractBox
+{
+protected:// methods
 
-protected:
-
-	StructuralBox(box_type_e type, size_t arity) : AbstractBox(type, arity) {
-	}
+	StructuralBox(box_type_e type, size_t arity) :
+		AbstractBox(type, arity)
+	{ }
 
 public:
 
@@ -94,6 +117,11 @@ public:
 	// returns (size_t)(-1) if not
 	virtual size_t outputReachable(size_t input) const = 0;
 
+	/**
+	 * @brief  Virtual destructor
+	 */
+	virtual ~StructuralBox()
+	{ }
 };
 
 #endif

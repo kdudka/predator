@@ -20,27 +20,19 @@
 #ifndef FOREST_AUT_EXT_H
 #define FOREST_AUT_EXT_H
 
+// Standard library headers
 #include <vector>
 #include <set>
 #include <map>
 #include <stdexcept>
 #include <algorithm>
 
-#include <boost/unordered_map.hpp>
-#include <boost/unordered_set.hpp>
-
+// Forester headers
 #include "forestaut.hh"
 #include "boxman.hh"
 #include "tatimint.hh"
 #include "utils.hh"
 #include "programerror.hh"
-
-using std::vector;
-using std::set;
-using std::map;
-using std::pair;
-using std::make_pair;
-using std::runtime_error;
 
 class FAE : public FA {
 
@@ -77,15 +69,15 @@ public:
 
 public:
 
-	TA<label_type>& unique(TA<label_type>& dst, const TA<label_type>& src, bool addFinalStates = true) {
+	TreeAut& unique(TreeAut& dst, const TreeAut& src, bool addFinalStates = true) {
 		Index<size_t> stateIndex;
-		TA<label_type>::rename(dst, src, RenameNonleafF(stateIndex, this->nextState()), addFinalStates);
+		TreeAut::rename(dst, src, RenameNonleafF(stateIndex, this->nextState()), addFinalStates);
 		this->incrementStateOffset(stateIndex.size());
 		return dst;
 	}
 
-	TA<label_type>& unique(TA<label_type>& dst, const TA<label_type>& src, Index<size_t>& stateIndex, bool addFinalStates = true) {
-		TA<label_type>::rename(dst, src, RenameNonleafF(stateIndex, this->nextState()), addFinalStates);
+	TreeAut& unique(TreeAut& dst, const TreeAut& src, Index<size_t>& stateIndex, bool addFinalStates = true) {
+		TreeAut::rename(dst, src, RenameNonleafF(stateIndex, this->nextState()), addFinalStates);
 		this->incrementStateOffset(stateIndex.size());
 		return dst;
 	}
@@ -102,7 +94,7 @@ public:
 
 		for (size_t i = 0; i < lhs.roots.size(); ++i) {
 
-			if (!TA<label_type>::subseteq(*lhs.roots[i], *rhs.roots[i]))
+			if (!TreeAut::subseteq(*lhs.roots[i], *rhs.roots[i]))
 				return false;
 
 		}
@@ -111,20 +103,20 @@ public:
 
 	}
 
-	void loadTA(const TA<label_type>& src, const TA<label_type>::td_cache_type& cache, const TT<label_type>* top, size_t stateOffset) {
+	void loadTA(const TreeAut& src, const TreeAut::td_cache_type& cache, const TT<label_type>* top, size_t stateOffset) {
 
 		this->clear();
 
-		this->variables = top->label()->getVData();
+		this->loadVars(top->label()->getVData());
 
 		this->stateOffset = stateOffset;
 
-		for (vector<size_t>::const_iterator i = top->lhs().begin(); i != top->lhs().end(); ++i) {
+		for (std::vector<size_t>::const_iterator i = top->lhs().begin(); i != top->lhs().end(); ++i) {
 
-			TA<label_type>* ta = this->allocTA();
+			TreeAut* ta = this->allocTA();
 
 			// add reachable transitions
-			for (TA<label_type>::td_iterator j = src.tdStart(cache, itov(*i)); j.isValid(); j.next())
+			for (TreeAut::td_iterator j = src.tdStart(cache, itov(*i)); j.isValid(); j.next())
 				ta->addTransition(*j);
 
 			ta->addFinalState(*i);
@@ -138,29 +130,29 @@ public:
 	}
 
 	template <class F>
-	static void loadCompatibleFAs(std::vector<FAE*>& dst, const TA<label_type>& src, TA<label_type>::Backend& backend, BoxMan& boxMan, const FAE* fae, size_t stateOffset, F f) {
+	static void loadCompatibleFAs(std::vector<FAE*>& dst, const TreeAut& src, TreeAut::Backend& backend, BoxMan& boxMan, const FAE* fae, size_t stateOffset, F f) {
 //		std::cerr << "source" << std::endl << src;
-		TA<label_type>::td_cache_type cache;
+		TreeAut::td_cache_type cache;
 		src.buildTDCache(cache);
 		std::vector<const TT<label_type>*>& v =
-			cache.insert(std::make_pair(0, vector<const TT<label_type>*>())).first->second;
+			cache.insert(std::make_pair(0, std::vector<const TT<label_type>*>())).first->second;
 		// iterate over all "synthetic" transitions and constuct new FAE for each
 		for (std::vector<const TT<label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
 //			std::cerr << "trying " << **i << std::endl;
 			if ((*i)->lhs().size() != fae->roots.size())
 				continue;
-			if ((*i)->label()->getVData() != fae->variables)
+			if ((*i)->label()->getVData() != fae->GetVariables())
 				continue;
-			std::vector<std::shared_ptr<TA<label_type>>> roots;
+			std::vector<std::shared_ptr<TreeAut>> roots;
 			size_t j;
 //			std::vector<size_t>::const_iterator j;
 			for (j = 0; j != (*i)->lhs().size(); ++j) {
 //			for (j = (*i)->lhs().begin(); j != (*i)->lhs().end(); ++j) {
 //				std::cerr << "computing td reachability\n";
-				TA<label_type>* ta = new TA<label_type>(backend);//taMan.alloc();
-				roots.push_back(std::shared_ptr<TA<label_type>>(ta));
+				TreeAut* ta = new TreeAut(backend);//taMan.alloc();
+				roots.push_back(std::shared_ptr<TreeAut>(ta));
 				// add reachable transitions
-				for (TA<label_type>::td_iterator k = src.tdStart(cache, itov((*i)->lhs()[j])); k.isValid(); k.next()) {
+				for (TreeAut::td_iterator k = src.tdStart(cache, itov((*i)->lhs()[j])); k.isValid(); k.next()) {
 //					std::cerr << *k << std::endl;
 					ta->addTransition(*k);
 				}
@@ -185,13 +177,13 @@ public:
 			}
 			if (j < (*i)->lhs().size()) {
 //			if (j != (*i)->lhs().end()) {
-//				for (std::vector<TA<label_type>*>::iterator k = roots.begin(); k != roots.end(); ++k)
+//				for (std::vector<TreeAut*>::iterator k = roots.begin(); k != roots.end(); ++k)
 //					taMan.release(*k);
 				continue;
 			}
 			FAE* tmp = new FAE(backend, boxMan);
 			dst.push_back(tmp);
-			tmp->variables = fae->variables;
+			tmp->loadVars(fae->GetVariables());
 			tmp->roots = roots;
 			tmp->connectionGraph = fae->connectionGraph;
 			tmp->stateOffset = stateOffset;
@@ -210,21 +202,21 @@ public:
 				if (!f(j, *i))
 					continue;
 				index.clear();
-				TA<label_type>::rename(*this->roots[j], *(*i)->roots[j], RenameNonleafF(index, this->nextState()), false);
+				TreeAut::rename(*this->roots[j], *(*i)->roots[j], RenameNonleafF(index, this->nextState()), false);
 				this->incrementStateOffset(index.size());
 			}
 		}
 	}
 
 	template <class F, class G>
-	void fuse(const TA<label_type>& src, F f, G g) {
+	void fuse(const TreeAut& src, F f, G g) {
 		Index<size_t> index;
-		TA<label_type> tmp2(src, g);
-		TA<label_type> tmp(*this->backend);
-		TA<label_type>::rename(tmp, tmp2, RenameNonleafF(index, this->nextState()), false);
+		TreeAut tmp2(src, g);
+		TreeAut tmp(*this->backend);
+		TreeAut::rename(tmp, tmp2, RenameNonleafF(index, this->nextState()), false);
 		this->incrementStateOffset(index.size());
 		for (size_t i = 0; i < this->roots.size(); ++i) {
-			if (!f(i, NULL))
+			if (!f(i, nullptr))
 				continue;
 			tmp.copyTransitions(*this->roots[i]);
 		}
@@ -234,7 +226,7 @@ public:
 		for (size_t i = 0; i < this->roots.size(); ++i) {
 			if (!this->roots[i])
 				continue;
-			this->roots[i] = std::shared_ptr<TA<label_type>>(&this->roots[i]->minimized(*this->allocTA()));
+			this->roots[i] = std::shared_ptr<TreeAut>(&this->roots[i]->minimized(*this->allocTA()));
 		}
 	}
 
@@ -242,13 +234,13 @@ public:
 		for (size_t i = 0; i < this->roots.size(); ++i) {
 			if (!this->roots[i])
 				continue;
-			this->roots[i] = std::shared_ptr<TA<label_type>>(&this->roots[i]->minimizedCombo(*this->allocTA()));
+			this->roots[i] = std::shared_ptr<TreeAut>(&this->roots[i]->minimizedCombo(*this->allocTA()));
 		}
 	}
 
-	void unreachableFree(std::shared_ptr<TA<label_type>>& ta) {
+	void unreachableFree(std::shared_ptr<TreeAut>& ta) {
 		auto tmp = ta;
-		ta = std::shared_ptr<TA<label_type>>(this->allocTA());
+		ta = std::shared_ptr<TreeAut>(this->allocTA());
 		tmp->unreachableFree(*ta);
 	}
 
@@ -293,10 +285,10 @@ public:
 		this->stateOffset = this->savedStateOffset;
 	}
 
-	size_t addData(TA<label_type>& dst, const Data& data) {
+	size_t addData(TreeAut& dst, const Data& data) {
 		label_type label = this->boxMan->lookupLabel(data);
 		size_t state = _MSB_ADD(label->getDataId());
-		dst.addTransition(vector<size_t>(), label, state);
+		dst.addTransition(std::vector<size_t>(), label, state);
 		return state;
 	}
 
@@ -403,9 +395,9 @@ public:
 
 	}
 */
-	TA<label_type>& relabelReferences(TA<label_type>& dst, const TA<label_type>& src, const vector<size_t>& index) {
+	TreeAut& relabelReferences(TreeAut& dst, const TreeAut& src, const std::vector<size_t>& index) {
 		dst.addFinalStates(src.getFinalStates());
-		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
+		for (TreeAut::iterator i = src.begin(); i != src.end(); ++i) {
 			if (i->label()->isData())
 				continue;
 			std::vector<size_t> lhs;
@@ -413,7 +405,7 @@ public:
 				const Data* data;
 				if (this->isData(*j, data)) {
 					if (data->isRef()) {
-						if (index[data->d_ref.root] != (size_t)(-1))
+						if (index[data->d_ref.root] != static_cast<size_t>(-1))
 							lhs.push_back(this->addData(dst, Data::createRef(index[data->d_ref.root], data->d_ref.displ)));
 						else
 							lhs.push_back(this->addData(dst, Data::createUndef()));
@@ -429,15 +421,15 @@ public:
 		return dst;
 	}
 
-	TA<label_type>* relabelReferences(TA<label_type>* src, const vector<size_t>& index) {
+	TreeAut* relabelReferences(TreeAut* src, const std::vector<size_t>& index) {
 		return &this->relabelReferences(*this->allocTA(), *src, index);
 	}
 
-	TA<label_type>& invalidateReference(TA<label_type>& dst, const TA<label_type>& src, size_t root) {
+	TreeAut& invalidateReference(TreeAut& dst, const TreeAut& src, size_t root) {
 		dst.addFinalStates(src.getFinalStates());
-		for (TA<label_type>::iterator i = src.begin(); i != src.end(); ++i) {
-			vector<size_t> lhs;
-			for (vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
+		for (TreeAut::iterator i = src.begin(); i != src.end(); ++i) {
+			std::vector<size_t> lhs;
+			for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
 				const Data* data;
 				if (FAE::isData(*j, data) && data->isRef(root)) {
 					lhs.push_back(this->addData(dst, Data::createUndef()));
@@ -451,7 +443,7 @@ public:
 		return dst;
 	}
 
-	TA<label_type>* invalidateReference(TA<label_type>* src, size_t root) {
+	TreeAut* invalidateReference(TreeAut* src, size_t root) {
 		return &this->invalidateReference(*this->allocTA(), *src, root);
 	}
 /*
@@ -473,9 +465,9 @@ public:
 
 public:
 
-	void buildLTCacheExt(const TA<label_type>& ta, TA<label_type>::lt_cache_type& cache) {
+	void buildLTCacheExt(const TreeAut& ta, TreeAut::lt_cache_type& cache) {
 		label_type lUndef = this->boxMan->lookupLabel(Data::createUndef());
-		for (TA<label_type>::iterator i = ta.begin(); i != ta.end(); ++i) {
+		for (TreeAut::iterator i = ta.begin(); i != ta.end(); ++i) {
 			if (i->label()->isData()) {
 				cache.insert(
 					make_pair(lUndef, std::vector<const TT<label_type>*>())
@@ -492,18 +484,18 @@ public:
 		assert(target < this->roots.size());
 		assert(this->roots[target]);
 		assert(this->roots[target]->getFinalStates().size());
-		return (TypeBox*)this->roots[target]->begin(
+		return static_cast<const TypeBox*>(this->roots[target]->begin(
 			*this->roots[target]->getFinalStates().begin()
-		)->label()->boxLookup((size_t)(-1)).aBox;
+		)->label()->boxLookup(static_cast<size_t>(-1)).aBox);
 	}
 
 public:
 
 	// state 0 should never be allocated by FAE (?)
-	FAE(TA<label_type>::Backend& backend, BoxMan& boxMan)
+	FAE(TreeAut::Backend& backend, BoxMan& boxMan)
 	 : FA(backend), boxMan(&boxMan), stateOffset(1), savedStateOffset() {}
 
-	FAE(const FAE& x) : FA(x), boxMan(x.boxMan), stateOffset(x.stateOffset)
+	FAE(const FAE& x) : FA(x), boxMan(x.boxMan), stateOffset(x.stateOffset), savedStateOffset{}
 		{}
 
 	~FAE() { this->clear(); }

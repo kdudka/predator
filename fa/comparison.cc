@@ -58,7 +58,7 @@ inline void dataCmp(std::vector<bool>& res, const Data& x, const Data& y, F f) {
 
 	if ((x.isUnknw() || x.isUndef()) || (y.isUnknw() || y.isUndef())) {
 
-		if ((float)random()/RAND_MAX < 0.5) {
+		if (static_cast<float>(random())/RAND_MAX < 0.5) {
 			res.push_back(false);
 			res.push_back(true);
 		} else {
@@ -75,43 +75,43 @@ inline void dataCmp(std::vector<bool>& res, const Data& x, const Data& y, F f) {
 }
 
 template <class F>
-inline void executeGeneric(const FI_cmp_base& cmp, ExecutionManager& execMan, const AbstractInstruction::StateType& state, F f) {
+inline void executeGeneric(const FI_cmp_base& cmp, ExecutionManager& execMan, const ExecState& state, F f) {
 
 	std::vector<bool> res;
 
-	dataCmp(res, (*state.first)[cmp.src1_], (*state.first)[cmp.src2_], f);
+	dataCmp(res, state.GetReg(cmp.src1_), state.GetReg(cmp.src2_), f);
 
 	for (auto v : res) {
 
-		std::shared_ptr<std::vector<Data>> regs = execMan.allocRegisters(*state.first);
+		std::shared_ptr<DataArray> regs = execMan.allocRegisters(state.GetRegs());
 
 		(*regs)[cmp.dst_] = Data::createBool(v);
 
-		execMan.enqueue(state.second, regs, state.second->fae, cmp.next_);
+		execMan.enqueue(state.GetMem(), regs, state.GetMem()->GetFAE(), cmp.next_);
 
 	}
 
 }
 
-void FI_eq::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+void FI_eq::execute(ExecutionManager& execMan, const ExecState& state) {
 
 	executeGeneric(*this, execMan, state, Eq());
 
 }
 
-void FI_neq::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+void FI_neq::execute(ExecutionManager& execMan, const ExecState& state) {
 
 	executeGeneric(*this, execMan, state, Neq());
 
 }
 
-void FI_lt::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+void FI_lt::execute(ExecutionManager& execMan, const ExecState& state) {
 
 	executeGeneric(*this, execMan, state, Lt());
 
 }
 
-void FI_gt::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+void FI_gt::execute(ExecutionManager& execMan, const ExecState& state) {
 
 	executeGeneric(*this, execMan, state, Gt());
 

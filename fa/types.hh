@@ -20,13 +20,15 @@
 #ifndef TYPES_H
 #define TYPES_H
 
+// Standard library headers
 #include <string>
 #include <ostream>
 #include <cassert>
 #include <stdexcept>
-
 #include <vector>
-#include <boost/unordered_map.hpp>
+
+// Boost headers
+#include <boost/functional/hash.hpp>
 
 /**
  * @file types.hh
@@ -40,11 +42,12 @@
  *
  * @todo: write documentation... what the hell is 'displ'???
  */
-struct SelData {
-
-	size_t  offset;      ///< offset in a structure
-	int     size;        ///< size of the type
-	int     displ;       ///< @todo write dox
+struct SelData
+{
+	size_t       offset;  ///< offset in a structure
+	int          size;    ///< size of the type
+	int          displ;   ///< @todo write dox
+	std::string  name;    ///< name of the selector
 
 	/**
 	 * @brief  Constructor
@@ -54,10 +57,16 @@ struct SelData {
 	 * @param[in]  offset  Offset of the selector
 	 * @param[in]  size    Size of the selector
 	 * @param[in]  displ   TODO write dox
+	 * @param[in]  name    Name of the selector
 	 */
-	SelData(size_t offset, int size, int displ) :
-		offset(offset), size(size), displ(displ) { }
+	SelData(size_t offset, int size, int displ, const std::string& name) :
+		offset(offset),
+		size(size),
+		displ(displ),
+		name(name)
+	{ }
 
+#if 0
 	/**
 	 * @brief  Construct selector information from arguments
 	 *
@@ -77,6 +86,7 @@ struct SelData {
 	 	return SelData(atol(args[1].c_str()), atol(args[2].c_str()),
 			atol(args[3].c_str()));
 	}
+#endif
 
 	/**
 	 * @brief  Computes the hash value
@@ -119,12 +129,25 @@ struct SelData {
 	 *
 	 * @returns  The modified output stream
 	 */
-	friend std::ostream& operator<<(std::ostream& os, const SelData& x) {
+	friend std::ostream& operator<<(std::ostream& os, const SelData& x)
+	{
+		// assert that a selector has a name
+		assert(!x.name.empty());
+
+		os << x.name << '[' << x.offset << ':' << x.size << ':';
+		if (x.displ >= 0) {
+			os << '+';
+		}
+
+		return os << x.displ << ']';
+
+#if 0
 		os << "sel" << x.offset << ':' << x.size << '[';
 		if (x.displ >= 0) {
 			os << '+';
 		}
-		return os << x.displ << ']';
+		return os << x.displ << ']' << x.name;
+#endif
 	}
 };
 
@@ -133,7 +156,7 @@ struct SelData {
  *
  * This enumeration defines type of stored data.
  */
-typedef enum {
+enum class data_type_e {
 	t_undef,          ///< undefined value
 	t_unknw,          ///< unknown value
 	t_native_ptr,     ///< native memory pointer for pointers to CFG
@@ -143,7 +166,18 @@ typedef enum {
 	t_bool,           ///< Boolean
 	t_struct,         ///< structure
 	t_other           ///< other type
-} data_type_e;
+};
+
+namespace std {
+
+	template <>
+	struct hash<data_type_e> {
+		size_t operator()(const data_type_e& dataType) const
+		{
+			return std::hash<size_t>()(static_cast<size_t>(dataType));
+		}
+	};
+}
 
 /**
  * @brief  Structure for information about stored data
@@ -375,6 +409,7 @@ struct Data {
 		return data;
 	}
 
+#if 0
 	/**
 	 * @brief  Construct type and value information from arguments
 	 *
@@ -420,6 +455,7 @@ struct Data {
 			throw std::runtime_error("non-parsable arguments");
 		}
 	}
+#endif
 
 	/**
 	 * @brief  Clears the structure
@@ -571,26 +607,40 @@ struct Data {
 	 *
 	 * @todo  Improve the distribution of the hash function
 	 */
-	friend size_t hash_value(const Data& v) {
-		switch (v.type) {
-			case data_type_e::t_undef: // falls through
-			case data_type_e::t_unknw:
-				return boost::hash_value(v.type);
+	friend size_t hash_value(const Data& v)
+	{
+		size_t seed = std::hash<data_type_e>()(v.type);
+		switch (v.type)
+		{
+			case data_type_e::t_undef: break;
+			case data_type_e::t_unknw: break;
 			case data_type_e::t_native_ptr:
-				return boost::hash_value(v.type + boost::hash_value(v.d_native_ptr));
+				boost::hash_combine(seed, v.d_native_ptr);
+				break;
 			case data_type_e::t_void_ptr:
-				return boost::hash_value(v.type + v.d_void_ptr_size);
+				boost::hash_combine(seed, v.d_void_ptr_size);
+				break;
 			case data_type_e::t_ref:
-				return boost::hash_value(v.type + v.d_ref.root + v.d_ref.displ);
+				boost::hash_combine(seed, v.d_ref.root);
+				boost::hash_combine(seed, v.d_ref.displ);
+				break;
 			case data_type_e::t_int:
-				return boost::hash_value(v.type + v.d_int);
+				boost::hash_combine(seed, v.d_int);
+				break;
 			case data_type_e::t_bool:
-				return boost::hash_value(v.type + v.d_bool);
+				boost::hash_combine(seed, v.d_bool);
+				break;
 			case data_type_e::t_struct:
-				return boost::hash_value(v.type + boost::hash_value(*v.d_struct));
+				boost::hash_combine(seed, *v.d_struct);
+				break;
+			case data_type_e::t_other:
+				boost::hash_combine(seed, v.d_void_ptr_size);
+				break;
 			default:
-				return boost::hash_value(v.type + v.d_void_ptr_size);
+				assert(false);              // fail gracefully
 		}
+
+		return seed;
 	}
 
 	/**
@@ -681,5 +731,10 @@ struct Data {
 		return os;
 	}
 };
+
+/**
+ * @brief  The data type representing an array of @p Data values
+ */
+typedef std::vector<Data> DataArray;
 
 #endif

@@ -60,6 +60,27 @@ public:
 		msg(msg), loc(loc) {}
 
 	/**
+	 * @brief  Copy constructor
+	 */
+	NotImplementedException(const NotImplementedException& ex) :
+		msg{ex.msg}, loc{ex.loc}
+	{ }
+
+	/**
+	 * @brief  Assignment operator
+	 */
+	NotImplementedException& operator=(const NotImplementedException& ex)
+	{
+		if (this != &ex)
+		{
+			msg = ex.msg;
+			loc = ex.loc;
+		}
+
+		return *this;
+	}
+
+	/**
 	 * @brief  Destructor
 	 *
 	 * Virtual destructor.

@@ -32,6 +32,7 @@
 
 // Forester headers
 #include "recycler.hh"
+#include "exec_state.hh"
 #include "types.hh"
 #include "forestautext.hh"
 #include "abstractinstruction.hh"
@@ -42,72 +43,88 @@
  * SymState - structure that represents symbolic state of the execution engine
  */
 
-struct SymState {
 
+/**
+ * @brief  Symbolic state of the execution
+ */
+class SymState
+{
+public:   // data types
 
-	/**
-	 * @brief  The output stream operator
-	 *
-	 * The std::ostream << operator for conversion to a string.
-	 *
-	 * @param[in,out]  os     The output stream
-	 * @param[in]      state  The value to be appended to the stream
-	 *
-	 * @returns  The modified output stream
-	 */
-	friend std::ostream& operator<<(std::ostream& os,
-		const AbstractInstruction::StateType& state) {
+	typedef std::list<ExecState> QueueType;
 
-		os << "registers:";
-
-		for (size_t i = 0; i < state.first->size(); ++i) {
-
-			os << " r" << i << '=' << (*state.first)[i];
-
-		}
-
-		os << ", heap:" << std::endl << *state.second->fae;
-
-		return os << "instruction (" << state.second->instr << "): "
-			<< *state.second->instr;
-	}
-
-	typedef std::list<AbstractInstruction::StateType> QueueType;
+private:  // data members
 
 	/// Parent symbolic state
-	SymState* parent;
+	SymState* parent_;
 
 	/// Instruction that the symbolic state corresponds to
-	AbstractInstruction* instr;
+	AbstractInstruction* instr_;
 
 	/// Forest automaton for the symbolic state
-	std::shared_ptr<const FAE> fae;
+	std::shared_ptr<const FAE> fae_;
 
 	/// Children symbolic states
-	std::set<SymState*> children;
+	std::set<SymState*> children_;
 
 	/// @todo: write dox
-	QueueType::iterator queueTag;
+	QueueType::iterator queueTag_;
 
-	/// @todo: write dox
-	void* payload;
+private:  // methods
+
+	SymState(const SymState&);
+	SymState& operator=(const SymState&);
+
+public:   // methods
 
 	/**
 	 * @brief  Constructor
 	 *
 	 * Default constructor
 	 */
-	SymState() {}
+	SymState() :
+		parent_{},
+		instr_{},
+		fae_{},
+		children_{},
+		queueTag_{}
+	{ }
 
 	/**
 	 * @brief  Destructor
 	 *
 	 * Destructor
 	 */
-	~SymState() {
+	~SymState()
+	{
 		// Assertions
-		assert(this->fae == nullptr);
-		assert(this->children.empty());
+		assert(nullptr == fae_);
+		assert(children_.empty());
+	}
+
+	std::shared_ptr<const FAE> GetFAE() const
+	{
+		return fae_;
+	}
+
+	AbstractInstruction* GetInstr()
+	{
+		return instr_;
+	}
+
+	SymState* GetParent()
+	{
+		return parent_;
+	}
+
+	const std::set<SymState*>& GetChildren() const
+	{
+		return children_;
+	}
+
+	void SetQueueTag(const QueueType::iterator tag)
+	{
+		queueTag_ = tag;
 	}
 
 	/**
@@ -117,8 +134,9 @@ struct SymState {
 	 *
 	 * @param[in]  child  The child symbolic state to be added
 	 */
-	void addChild(SymState* child) {
-		if (!this->children.insert(child).second)
+	void addChild(SymState* child)
+	{
+		if (!children_.insert(child).second)
 		{	// in case already present state was added
 			assert(false);        // fail gracefully
 		}
@@ -132,7 +150,7 @@ struct SymState {
 	 * @param[in]  child  The child symbolic state to be removed
 	 */
 	void removeChild(SymState* child) {
-		if (this->children.erase(child) != 1)
+		if (children_.erase(child) != 1)
 		{	// in case the state to be removed is not present
 			assert(false);        // fail gracefully
 		}
@@ -154,12 +172,12 @@ struct SymState {
 		// Assertions
 		assert(Integrity(*fae).check());
 
-		this->parent = parent;
-		this->instr = instr;
-		this->fae = fae;
-		this->queueTag = queueTag;
-		if (this->parent)
-			this->parent->addChild(this);
+		parent_ = parent;
+		instr_ = instr;
+		fae_ = fae;
+		queueTag_ = queueTag;
+		if (parent_)
+			parent_->addChild(this);
 	}
 
 	/**
@@ -172,8 +190,9 @@ struct SymState {
 	 */
 	void recycle(Recycler<SymState>& recycler) {
 
-		if (this->parent) {
-			this->parent->removeChild(this);
+		if (parent_)
+		{
+			parent_->removeChild(this);
 		}
 
 		std::vector<SymState*> stack = { this };
@@ -184,14 +203,15 @@ struct SymState {
 			SymState* state = stack.back();
 			stack.pop_back();
 
-			assert(state->fae);
-			state->fae = nullptr;
+			assert(state->GetFAE());
+			state->fae_ = nullptr;
 
-			for (auto s : state->children) {
+			for (auto s : state->GetChildren())
+			{
 				stack.push_back(s);
 			}
 
-			state->children.clear();
+			state->children_.clear();
 			recycler.recycle(state);
 		}
 	}

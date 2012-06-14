@@ -35,30 +35,34 @@
 #include "notimpl_except.hh"
 
 #define ABP_OFFSET		0
-#define ABP_SIZE		SymCtx::size_of_data
+#define ABP_SIZE		SymCtx::getSizeOfDataPtr()
 #define RET_OFFSET		(ABP_OFFSET + ABP_SIZE)
-#define RET_SIZE		SymCtx::size_of_code
+#define RET_SIZE		SymCtx::getSizeOfCodePtr()
 
-struct SymCtx {
 
-	// must be initialized externally!
-	static int size_of_data;
-	static int size_of_code;
+/**
+ * @brief  Symbolic context of a function
+ *
+ * This class represents a symbolic context of a function.
+ *
+ * @todo
+ */
+class SymCtx {
 
-	// initialize size_of_void
-	static void initCtx(const CodeStorage::Storage& stor) {
-		size_of_code = stor.types.codePtrSizeof();
-		if (size_of_code == -1)
-			size_of_code = sizeof(void(*)());
-		size_of_data = stor.types.dataPtrSizeof();
-		if (size_of_data == -1)
-			size_of_data = sizeof(void*);
-	}
+public:   // data types
 
-	const CodeStorage::Fnc& fnc;
+	/// Stack frame layout
+	typedef std::vector<SelData> StackFrameLayout;
 
-	std::vector<SelData> sfLayout;
 
+	/**
+	 * @brief  Class with run-time information about variable's location
+	 *
+	 * This class contains information about the location of a variable, i.e.
+	 * whether it is on a stack or in some register, and also the offset from the
+	 * base pointer of the corresponding stack frame (in case it is on a stack),
+	 * or the index of the register (in case it is therein).
+	 */
 	class VarInfo
 	{
 	private:  // data members 
@@ -87,7 +91,36 @@ struct SymCtx {
 
 	public:   // methods
 
+		/**
+		 * @brief  Checks whether the variable is on the stack
+		 *
+		 * This method returns a Boolean value meaning whether the variable is on
+		 * the stack.
+		 *
+		 * @returns  @p true in case the variable is on the stack, @p false
+		 *           otherwise
+		 */
 		bool isOnStack() const { return isStack_;}
+
+		/**
+		 * @brief  Checks whether the variable is in a register
+		 *
+		 * This method returns a Boolean value meaning whether the variable is in
+		 * a register.
+		 *
+		 * @returns  @p true in case the variable is in a register, @p false
+		 *           otherwise
+		 */
+		bool isInReg() const { return !isStack_;}
+
+		/**
+		 * @brief  Returns the stack offset of the variable
+		 *
+		 * This method returns the offset of the variable from the stack frame base
+		 * pointer (for variables which are on the stack).
+		 *
+		 * @returns  The offset of the variable from the stack frame base pointer
+		 */
 		size_t getStackOffset() const
 		{
 			// Assertions
@@ -96,72 +129,127 @@ struct SymCtx {
 			return stackOffset_;
 		}
 
+		/**
+		 * @brief  Returns the index of the register of the variable
+		 *
+		 * This method returns the index of the register in which there is the
+		 * variable (for variables which are in registers).
+		 *
+		 * @returns  The index of the register in which the variable is
+		 */
 		size_t getRegIndex() const
 		{
 			// Assertions
-			assert(!isOnStack());
+			assert(isInReg());
 
 			return regIndex_;
 		}
 
+		/**
+		 * @brief  Static method creating a variable on a stack
+		 *
+		 * This static method creates a new variable on a stack at given @p offset
+		 * from the base pointer of the stack frame.
+		 *
+		 * @param[in]  offset  The offset of the variable in the given stack frame
+		 *
+		 * @returns  New @p VarInfo structure for the variable
+		 */
 		static VarInfo createOnStack(size_t offset)
 		{
 			return VarInfo(true, offset);
 		}
 
+		/**
+		 * @brief  Static method creating a variable in a register
+		 *
+		 * This static method creates a new variable in the register with given @p
+		 * index.
+		 *
+		 * @param[in]  index  Index of the register in which the variable is stored
+		 *
+		 * @returns  New @p VarInfo structure for the variable
+		 */
 		static VarInfo createInReg(size_t index)
 		{
 			return VarInfo(false, index);
 		}
 	};
 
-	// uid -> stack x offset/index
+
+	/**
+	 * @brief  The type that maps identifiers of variables to @p VarInfo
+	 *
+	 * This type serves as a map between identifiers of variables and @p VarInfo
+	 * structures.
+	 */
 	typedef std::unordered_map<int, VarInfo> var_map_type;
 
-	var_map_type varMap;
 
-	size_t regCount;
-	size_t argCount;
+private:  // static data
 
-	SymCtx(const CodeStorage::Fnc& fnc) : fnc(fnc), regCount(2), argCount(0) {
+	/// @todo is @p static really the best option?
 
-		// pointer to previous stack frame
-		this->sfLayout.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0));
+	// must be initialised externally!
 
-		// pointer to context info
-		this->sfLayout.push_back(SelData(RET_OFFSET, RET_SIZE, 0));
+	/// The size of a data pointer in the analysed program
+	static size_t size_of_data_ptr;
 
-		size_t offset = ABP_SIZE + RET_SIZE;
+	/// The size of a code pointer in the analysed program
+	static size_t size_of_code_ptr;
 
-		for (CodeStorage::TVarSet::const_iterator i = fnc.vars.begin(); i != fnc.vars.end(); ++i) {
 
-			const CodeStorage::Var& var = fnc.stor->vars[*i];
+public:   // static methods
 
-			switch (var.code) {
-				case CodeStorage::EVar::VAR_LC:
-					if (!SymCtx::isStacked(var)) {
-						this->varMap.insert(
-							std::make_pair(var.uid, VarInfo::createInReg(this->regCount++))
-						);
-						break;
-					}
-					// no break
-				case CodeStorage::EVar::VAR_FNC_ARG:
-					NodeBuilder::buildNode(this->sfLayout, var.type, offset);
-					this->varMap.insert(std::make_pair(var.uid, VarInfo::createOnStack(offset)));
-					offset += var.type->size;
-					if (var.code == CodeStorage::EVar::VAR_FNC_ARG)
-						++this->argCount;
-					break;
-				case CodeStorage::EVar::VAR_GL:
-					throw NotImplementedException("global variables", &(var.loc));
-					break;
-				default:
-					assert(false);
-			}
-
+	/**
+	 * @brief  Initialise the symbolic context
+	 *
+	 * This static method needs to be called before the @p SymCtx class is
+	 * used for the first time. It properly initialises static members of the
+	 * class from the passed @p CodeStorage.
+	 *
+	 * @param[in]  stor  The @p CodeStorage from which the context is to be
+	 *                   initialised
+	 */
+	static void initCtx(const CodeStorage::Storage& stor)
+	{
+		if (stor.types.codePtrSizeof() >= 0)
+		{
+			size_of_code_ptr = static_cast<size_t>(stor.types.codePtrSizeof());
+		}
+		else
+		{
+			size_of_code_ptr = sizeof(void(*)());
 		}
 
+		if (stor.types.dataPtrSizeof() >= 0)
+		{
+			size_of_data_ptr = static_cast<size_t>(stor.types.dataPtrSizeof());
+		}
+		else
+		{
+			size_of_data_ptr = sizeof(void*);
+		}
+
+		// Post-condition
+		assert(size_of_data_ptr > 0);
+		assert(size_of_code_ptr > 0);
+	}
+
+	static size_t getSizeOfCodePtr()
+	{
+		// Assertions
+		assert(size_of_code_ptr > 0);
+
+		return size_of_code_ptr;
+	}
+
+	static size_t getSizeOfDataPtr()
+	{
+		// Assertions
+		assert(size_of_data_ptr > 0);
+
+		return size_of_data_ptr;
 	}
 
 	static bool isStacked(const CodeStorage::Var& var) {
@@ -173,76 +261,114 @@ struct SymCtx {
 		}
 	}
 
-	bool isReg(const cl_operand* op, size_t& id) const {
-		if (op->code != cl_operand_e::CL_OPERAND_VAR)
-			return false;
-		var_map_type::const_iterator i = this->varMap.find(varIdFromOperand(op));
-		assert(i != this->varMap.end());
-		if (i->second.isOnStack())
-			return false;
-		id = i->second.isOnStack();
-		return true;
+private:  // data members
+
+	/// Reference to the function in the @p CodeStorage
+	const CodeStorage::Fnc& fnc_;
+
+	/**
+	 * @brief  The layout of stack frames
+	 *
+	 * The layout of stack frames (one stack frame corresponds to one structure
+	 * with selectors.
+	 */
+	StackFrameLayout sfLayout_;
+
+	/// The map of identifiers of variables to @p VarInfo
+	var_map_type varMap_;
+
+	/// The number of variables in registers
+	size_t regCount_;
+
+	/// The number of arguments of the function
+	size_t argCount_;
+
+
+public:   // methods
+
+
+	/**
+	 * @brief  A constructor of a symbolic context for given function
+	 *
+	 * This is a constructor that creates a new symbolic context for given
+	 * function.
+	 *
+	 * @param[in]  fnc  The function for which the symbolic context is to be
+	 *                  created
+	 */
+	SymCtx(const CodeStorage::Fnc& fnc) :
+		fnc_(fnc), sfLayout_{}, varMap_{}, regCount_(2), argCount_(0)
+	{
+		// pointer to previous stack frame
+		sfLayout_.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0, "_pABP"));
+
+		// pointer to context info
+		sfLayout_.push_back(SelData(RET_OFFSET, RET_SIZE, 0, "_retaddr"));
+
+		size_t offset = ABP_SIZE + RET_SIZE;
+
+		for (auto& funcVar : fnc_.vars)
+		{	// for each variable in the function
+			const CodeStorage::Var& var = fnc_.stor->vars[funcVar];
+
+			switch (var.code) {
+				case CodeStorage::EVar::VAR_LC:
+					if (!SymCtx::isStacked(var)) {
+						varMap_.insert(
+							std::make_pair(var.uid, VarInfo::createInReg(regCount_++))
+						);
+						break;
+					}
+					// no break
+				case CodeStorage::EVar::VAR_FNC_ARG:
+					NodeBuilder::buildNode(sfLayout_, var.type, offset, var.name);
+					varMap_.insert(std::make_pair(var.uid, VarInfo::createOnStack(offset)));
+					offset += var.type->size;
+					if (var.code == CodeStorage::EVar::VAR_FNC_ARG)
+						++argCount_;
+					break;
+				case CodeStorage::EVar::VAR_GL:
+					// global variables do not occur at the stack
+					break;
+				default:
+					assert(false);
+			}
+		}
 	}
+
 
 	const VarInfo& getVarInfo(size_t id) const {
-		var_map_type::const_iterator i = this->varMap.find(id);
-		assert(i != this->varMap.end());
+		var_map_type::const_iterator i = varMap_.find(id);
+		assert(i != varMap_.end());
 		return i->second;
 	}
-/*
-	struct Dump {
 
-		const SymCtx& ctx;
-		const FAE& fae;
 
-		Dump(const SymCtx& ctx, const FAE& fae) : ctx(ctx), fae(fae) {}
+	const StackFrameLayout& GetStackFrameLayout() const
+	{
+		return sfLayout_;
+	}
 
-		friend std::ostream& operator<<(std::ostream& os, const Dump& cd) {
+	const var_map_type& GetVarMap() const
+	{
+		return varMap_;
+	}
 
-			VirtualMachine vm(cd.fae);
+	size_t GetRegCount() const
+	{
+		return regCount_;
+	}
 
-			std::vector<size_t> offs;
+	size_t GetArgCount() const
+	{
+		return argCount_;
+	}
 
-			for (std::vector<SelData>::const_iterator i = cd.ctx.sfLayout.begin(); i != cd.ctx.sfLayout.end(); ++i)
-				offs.push_back((*i).offset);
+	const CodeStorage::Fnc& GetFnc() const
+	{
+		return fnc_;
+	}
 
-			Data data;
-
-			vm.nodeLookupMultiple(vm.varGet(ABP_INDEX).d_ref.root, 0, offs, data);
-
-			boost::unordered_map<size_t, Data> tmp;
-			for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin(); i != data.d_struct->end(); ++i)
-				tmp.insert(make_pair(i->first, i->second));
-
-			for (CodeStorage::TVarSet::const_iterator i = cd.ctx.fnc.vars.begin(); i != cd.ctx.fnc.vars.end(); ++i) {
-
-				const CodeStorage::Var& var = cd.ctx.fnc.stor->vars[*i];
-
-				var_map_type::const_iterator j = cd.ctx.varMap.find(var.uid);
-				assert(j != cd.ctx.varMap.end());
-
-				switch (var.code) {
-					case CodeStorage::EVar::VAR_LC:
-						if (SymCtx::isStacked(var)) {
-							boost::unordered_map<size_t, Data>::iterator k = tmp.find(j->second.second);
-							assert(k != tmp.end());
-							os << '#' << var.uid << ':' << var.name << " = " << k->second << std::endl;
-						} else {
-//							os << '#' << var.uid << " = " << fae.varGet(j->second.second) << std::endl;
-						}
-						break;
-					default:
-						break;
-				}
-
-			}
-
-			return os;
-
-		}
-
-	};
-*/
 };
 
 #endif

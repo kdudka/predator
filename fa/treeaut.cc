@@ -24,43 +24,32 @@
 #include <stdexcept>
 #include <ostream>
 
-#include <boost/unordered_map.hpp>
-
 #include "treeaut.hh"
 #include "simalg.hh"
 #include "antichainext.hh"
 
-using std::vector;
-using std::set;
-using std::map;
-using std::multimap;
-using std::pair;
-
-using boost::unordered_set;
-using boost::unordered_map;
-
 struct LhsEnv {
 
 	size_t index;
-	vector<size_t> data;
+	std::vector<size_t> data;
 
-	LhsEnv(const vector<size_t>& lhs, size_t index) : index(index) {
+	LhsEnv(const std::vector<size_t>& lhs, size_t index) : index(index), data{} {
 		this->data.insert(this->data.end(), lhs.begin(), lhs.begin() + index);
 		this->data.insert(this->data.end(), lhs.begin() + index + 1, lhs.end());
 	}
 	
-	static set<LhsEnv>::iterator get(const vector<size_t>& lhs, size_t index, set<LhsEnv>& s) {
+	static std::set<LhsEnv>::iterator get(const std::vector<size_t>& lhs, size_t index, std::set<LhsEnv>& s) {
 		return s.insert(LhsEnv(lhs, index)).first;
 	}
 
-	static set<LhsEnv>::iterator find(const vector<size_t>& lhs, size_t index, set<LhsEnv>& s) {
-		set<LhsEnv>::iterator x = s.find(LhsEnv(lhs, index));
+	static std::set<LhsEnv>::iterator find(const std::vector<size_t>& lhs, size_t index, std::set<LhsEnv>& s) {
+		std::set<LhsEnv>::iterator x = s.find(LhsEnv(lhs, index));
 		if (x == s.end())
 			throw std::runtime_error("LhsEnv::find - lookup failed");
 		return x;
 	}
 
-	static bool sim(const LhsEnv& e1, const LhsEnv& e2, const vector<vector<bool> >& sim) {
+	static bool sim(const LhsEnv& e1, const LhsEnv& e2, const std::vector<std::vector<bool> >& sim) {
 		if ((e1.index != e2.index) || (e1.data.size() != e2.data.size()))
 			return false;
 		for (size_t i = 0; i < e1.data.size(); ++i) {
@@ -70,7 +59,7 @@ struct LhsEnv {
 		return true;
 	}
 
-	static bool eq(const LhsEnv& e1, const LhsEnv& e2, const vector<vector<bool> >& sim) {
+	static bool eq(const LhsEnv& e1, const LhsEnv& e2, const std::vector<std::vector<bool> >& sim) {
 		if ((e1.index != e2.index) || (e1.data.size() != e2.data.size()))
 			return false;
 		for (size_t i = 0; i < e1.data.size(); ++i) {
@@ -100,7 +89,7 @@ struct LhsEnv {
 	friend std::ostream& operator<<(std::ostream& os, const LhsEnv& env) {
 		os << "[" << env.data.size() << "]";
 		os << env.index << "|";
-		for (vector<size_t>::const_iterator i = env.data.begin(); i != env.data.end(); ++i)
+		for (std::vector<size_t>::const_iterator i = env.data.begin(); i != env.data.end(); ++i)
 			os << "|" << *i;
 		return os;
 	}
@@ -109,34 +98,34 @@ struct LhsEnv {
 
 struct Env {
 
-	set<LhsEnv>::iterator lhs;
+	std::set<LhsEnv>::iterator lhs;
 	size_t label;
 	size_t rhs;
 
-	Env(set<LhsEnv>::iterator lhs, size_t label, size_t rhs) : lhs(lhs), label(label), rhs(rhs) {}
+	Env(std::set<LhsEnv>::iterator lhs, size_t label, size_t rhs) : lhs(lhs), label(label), rhs(rhs) {}
 	
-	static map<Env, size_t>::iterator get(set<LhsEnv>::const_iterator lhs, size_t label, size_t rhs, map<Env, size_t>& m) {
-		return m.insert(pair<Env, size_t>(Env(lhs, label, rhs), m.size())).first;
+	static std::map<Env, size_t>::iterator get(std::set<LhsEnv>::const_iterator lhs, size_t label, size_t rhs, std::map<Env, size_t>& m) {
+		return m.insert(std::pair<Env, size_t>(Env(lhs, label, rhs), m.size())).first;
 	}
 	
-	static map<Env, size_t>::iterator get(set<LhsEnv>::const_iterator lhs, size_t label, size_t rhs, map<Env, size_t>& m, bool& inserted) {
-		pair<map<Env, size_t>::iterator, bool> x = m.insert(pair<Env, size_t>(Env(lhs, label, rhs), m.size()));
+	static std::map<Env, size_t>::iterator get(std::set<LhsEnv>::const_iterator lhs, size_t label, size_t rhs, std::map<Env, size_t>& m, bool& inserted) {
+		std::pair<std::map<Env, size_t>::iterator, bool> x = m.insert(std::pair<Env, size_t>(Env(lhs, label, rhs), m.size()));
 		inserted = x.second;
 		return x.first;
 	}
 
-	static map<Env, size_t>::iterator find(set<LhsEnv>::const_iterator lhs, size_t label, size_t rhs, map<Env, size_t>& m) {
-		map<Env, size_t>::iterator x = m.find(Env(lhs, label, rhs));
+	static std::map<Env, size_t>::iterator find(std::set<LhsEnv>::const_iterator lhs, size_t label, size_t rhs, std::map<Env, size_t>& m) {
+		std::map<Env, size_t>::iterator x = m.find(Env(lhs, label, rhs));
 		if (x == m.end())
 			throw std::runtime_error("Env::find - lookup failed");
 		return x;
 	}
 
-	static bool sim(const Env& e1, const Env& e2, const vector<vector<bool> >& sim) {
+	static bool sim(const Env& e1, const Env& e2, const std::vector<std::vector<bool> >& sim) {
 		return (e1.label == e2.label) && LhsEnv::sim(*e1.lhs, *e2.lhs, sim);
 	}
 	
-	static bool eq(const Env& e1, const Env& e2, const vector<vector<bool> >& sim) {
+	static bool eq(const Env& e1, const Env& e2, const std::vector<std::vector<bool> >& sim) {
 		return (e1.label == e2.label) && LhsEnv::eq(*e1.lhs, *e2.lhs, sim);
 	}
 
@@ -157,10 +146,10 @@ struct Env {
 template <class T>
 void TA<T>::downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const Index<T>& labelIndex) const {
 	// build an index of non-translated left-hand sides
-	Index<const vector<size_t>*> lhs;
+	Index<const std::vector<size_t>*> lhs;
 	this->buildLhsIndex(lhs);
 	lts = LTS(labelIndex.size() + this->maxRank, stateIndex.size() + lhs.size());
-	for (Index<const vector<size_t>*>::iterator i = lhs.begin(); i != lhs.end(); ++i) {
+	for (Index<const std::vector<size_t>*>::iterator i = lhs.begin(); i != lhs.end(); ++i) {
 		for (size_t j = 0; j < i->first->size(); ++j)
 			lts.addTransition(stateIndex.size() + i->second, labelIndex.size() + j, stateIndex[(*i->first)[j]]);
 	}
@@ -169,7 +158,7 @@ void TA<T>::downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const
 }
 
 template <class T>
-void TA<T>::downwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& stateIndex) const {
+void TA<T>::downwardSimulation(std::vector<std::vector<bool> >& rel, const Index<size_t>& stateIndex) const {
 	LTS lts;
 	Index<T> labelIndex;
 	this->buildLabelIndex(labelIndex);
@@ -181,20 +170,20 @@ void TA<T>::downwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& 
 }
 
 template <class T>
-void TA<T>::upwardTranslation(LTS& lts, vector<vector<size_t> >& part, vector<vector<bool> >& rel, const Index<size_t>& stateIndex, const Index<T>& labelIndex, const vector<vector<bool> >& sim) const {
-	set<LhsEnv> lhsEnvSet;
-	map<Env, size_t> envMap;
-	vector<const Env*> head;
+void TA<T>::upwardTranslation(LTS& lts, std::vector<std::vector<size_t> >& part, std::vector<std::vector<bool> >& rel, const Index<size_t>& stateIndex, const Index<T>& labelIndex, const std::vector<std::vector<bool> >& sim) const {
+	std::set<LhsEnv> lhsEnvSet;
+	std::map<Env, size_t> envMap;
+	std::vector<const Env*> head;
 	part.clear();
 	for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
-		vector<size_t> lhs;
+		std::vector<size_t> lhs;
 		stateIndex.translate(lhs, (*i)->first._lhs->first);
 		size_t label = labelIndex[(*i)->first._label];
 		size_t rhs = stateIndex[(*i)->first._rhs];
 		for (size_t j = 0; j < lhs.size(); ++j) {
 			// insert required items into lhsEnv and lhsMap and build equivalence classes
 			bool inserted;
-			map<Env, size_t>::const_iterator env = Env::get(LhsEnv::get(lhs, j, lhsEnvSet), label, rhs, envMap, inserted);
+			std::map<Env, size_t>::const_iterator env = Env::get(LhsEnv::get(lhs, j, lhsEnvSet), label, rhs, envMap, inserted);
 			if (inserted) {
 				inserted = false;
 				for (size_t k = 0; k < head.size(); ++k) {
@@ -212,19 +201,19 @@ void TA<T>::upwardTranslation(LTS& lts, vector<vector<size_t> >& part, vector<ve
 		}
 	}
 	lts = LTS(labelIndex.size() + 1, stateIndex.size() + envMap.size());
-	for (typename set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
-		vector<size_t> lhs;
+	for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+		std::vector<size_t> lhs;
 		stateIndex.translate(lhs, (*i)->first._lhs->first);
 		size_t label = labelIndex[(*i)->first._label];
 		size_t rhs = stateIndex[(*i)->first._rhs];
 		for (size_t j = 0; j < lhs.size(); ++j) {
 			// find particular env
-			map<Env, size_t>::iterator env = Env::find(LhsEnv::find(lhs, j, lhsEnvSet), label, rhs, envMap);
+			std::map<Env, size_t>::iterator env = Env::find(LhsEnv::find(lhs, j, lhsEnvSet), label, rhs, envMap);
 			lts.addTransition(lhs[j], labelIndex.size(), env->second);
 			lts.addTransition(env->second, label, rhs);
 		}
 	}
-	rel = vector<vector<bool> >(part.size() + 2, vector<bool>(part.size() + 2, false));
+	rel = std::vector<std::vector<bool> >(part.size() + 2, std::vector<bool>(part.size() + 2, false));
 	// 0 non-accepting, 1 accepting, 2 .. environments
 	rel[0][0] = true;
 	rel[0][1] = true;
@@ -238,7 +227,7 @@ void TA<T>::upwardTranslation(LTS& lts, vector<vector<size_t> >& part, vector<ve
 }
 
 template <class T>
-void TA<T>::upwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& stateIndex, const vector<vector<bool> >& param) const {
+void TA<T>::upwardSimulation(std::vector<std::vector<bool> >& rel, const Index<size_t>& stateIndex, const std::vector<std::vector<bool> >& param) const {
 	LTS lts;
 	Index<T> labelIndex;
 	this->buildLabelIndex(labelIndex);
@@ -248,7 +237,7 @@ void TA<T>::upwardSimulation(vector<vector<bool> >& rel, const Index<size_t>& st
 	OLRTAlgorithm alg(lts);
 	// accepting states to block 1
 	std::vector<size_t> finalStates;
-	stateIndex.translate(finalStates, vector<size_t>(this->finalStates.begin(), this->finalStates.end())); 
+	stateIndex.translate(finalStates, std::vector<size_t>(this->finalStates.begin(), this->finalStates.end())); 
 	alg.fakeSplit(finalStates);
 	// environments to blocks 2, 3, ...
 	for (size_t i = 0; i < part.size(); ++i)
@@ -268,4 +257,3 @@ bool TA<T>::subseteq(const TA<T>& a, const TA<T>& b) {
 // this is really sad :-(
 #include "forestaut.hh"
 template class TA<label_type>;
-//template class TA<std::string>;

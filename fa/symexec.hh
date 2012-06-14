@@ -44,6 +44,11 @@ namespace CodeStorage {
  */
 class SymExec {
 
+private:  // methods
+
+	SymExec(const SymExec&);
+	SymExec& operator=(const SymExec&);
+
 public:
 
 	/**
@@ -71,11 +76,22 @@ public:
 
 //	void loadBoxes(const std::unordered_map<std::string, std::string>& db);
 
+
+	/**
+	 * @brief  Returns the compiled code
+	 *
+	 * Returns the compiled code in the form of microinstructions.
+	 *
+	 * @returns  The compiled code
+	 */
+	const Compiler::Assembly& GetAssembly() const;
+
 	/**
 	 * @brief  Compiles the code from code storage
 	 *
 	 * Compiles the code from the code storage into assembly code, starting with
-	 * the given entry point.
+	 * the given entry point. Before being compiled, the data types of the program
+	 * need to be loaded first by the method @p loadTypes.
 	 *
 	 * @param[in]  stor   Code storage with the code
 	 * @param[in]  entry  The entry point of the symbolic execution
@@ -86,7 +102,8 @@ public:
 	 * @brief  Runs the symbolic execution
 	 *
 	 * This method runs the symbolic execution of the analysed program. Before
-	 * being run, the program needs to be compiled into microcode.
+	 * being run, the program needs to be compiled into microcode by the method @p
+	 * compile.
 	 */
 	void run();
 

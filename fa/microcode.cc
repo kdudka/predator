@@ -36,300 +36,286 @@
 namespace
 {
 
-inline const cl_loc* getLoc(const AbstractInstruction::StateType& state)
+inline const cl_loc* getLoc(const ExecState& state)
 {
 	// Assertions
-	assert(state.second != nullptr);
-	assert(state.second->instr != nullptr);
+	assert(state.GetMem() != nullptr);
+	assert(state.GetMem()->GetInstr() != nullptr);
 
-	if (!state.second->instr->insn())
+	if (!state.GetMem()->GetInstr()->insn())
 		return nullptr;
 
-	return &(state.second->instr->insn()->loc);
+	return &(state.GetMem()->GetInstr()->insn()->loc);
 }
 
 } // namespace
 
 // FI_cond
-void FI_cond::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_cond::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	// Assertions
+	assert(state.GetReg(src_).isBool());
 
-	assert((*state.first)[this->src_].isBool());
-
-	execMan.enqueue(state, this->next_[((*state.first)[this->src_].d_bool)?(0):(1)]);
-
+	execMan.enqueue(state, next_[(state.GetReg(src_).d_bool)?(0):(1)]);
 }
 
 void FI_cond::finalize(
 	const std::unordered_map<const CodeStorage::Block*,
 	AbstractInstruction*>& codeIndex,
 	std::vector<AbstractInstruction*>::const_iterator
-) {
-
-	for (auto i : { 0, 1 }) {
-
-		if (this->next_[i]->getType() == fi_type_e::fiJump) {
-
-			do {
-
-				this->next_[i] = ((FI_jmp*)this->next_[i])->getTarget(codeIndex);
-
-			} while (this->next_[i]->getType() == fi_type_e::fiJump);
-
+)
+{
+	for (auto i : { 0, 1 })
+	{
+		if (next_[i]->getType() == fi_type_e::fiJump)
+		{
+			do
+			{
+				next_[i] = (static_cast<FI_jmp*>(next_[i]))->getTarget(codeIndex);
+			} while (next_[i]->getType() == fi_type_e::fiJump);
 		}
 
-		this->next_[i]->setTarget();
-
+		next_[i]->setTarget();
 	}
-
 }
 
 // FI_acc_sel
-void FI_acc_sel::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_acc_sel::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	auto data = state.GetReg(dst_);
 
-	auto data = (*state.first)[this->dst_];
-
-	if (!data.isRef()) {
-
+	if (!data.isRef())
+	{
 		std::stringstream ss;
 		ss << "dereferenced value is not a valid reference [" << data << ']';
 		throw ProgramError(ss.str(), getLoc(state));
-
 	}
 
 	std::vector<FAE*> dst;
 
-	Splitting(*state.second->fae).isolateOne(dst, data.d_ref.root,
-		data.d_ref.displ + this->offset_);
+	Splitting(*state.GetMem()->GetFAE()).isolateOne(dst, data.d_ref.root,
+		data.d_ref.displ + offset_);
 
 	for (auto fae : dst) {
-		execMan.enqueue(state.second, execMan.allocRegisters(*state.first),
-			std::shared_ptr<const FAE>(fae), this->next_);
+		execMan.enqueue(state.GetMem(), execMan.allocRegisters(state.GetRegs()),
+			std::shared_ptr<const FAE>(fae), next_);
 	}
 }
 
 // FI_acc_set
-void FI_acc_set::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_acc_set::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	auto data = state.GetReg(dst_);
 
-	auto data = (*state.first)[this->dst_];
-
-	if (!data.isRef()) {
-
+	if (!data.isRef())
+	{
 		std::stringstream ss;
 		ss << "dereferenced value is not a valid reference [" << data << ']';
 		throw ProgramError(ss.str(), getLoc(state));
-
 	}
 
 	std::vector<FAE*> dst;
 
-	Splitting(*state.second->fae).isolateSet(
-		dst, data.d_ref.root, data.d_ref.displ + this->base_, this->offsets_
+	Splitting(*state.GetMem()->GetFAE()).isolateSet(
+		dst, data.d_ref.root, data.d_ref.displ + base_, offsets_
 	);
 
-	for (auto fae : dst) {
-		execMan.enqueue(state.second, execMan.allocRegisters(*state.first),
-			std::shared_ptr<const FAE>(fae), this->next_);
+	for (auto fae : dst)
+	{
+		execMan.enqueue(state.GetMem(), execMan.allocRegisters(state.GetRegs()),
+			std::shared_ptr<const FAE>(fae), next_);
 	}
-
 }
 
 // FI_acc_all
-void FI_acc_all::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_acc_all::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	auto data = state.GetReg(dst_);
 
-	auto data = (*state.first)[this->dst_];
-
-	if (!data.isRef()) {
-
+	if (!data.isRef())
+	{
 		std::stringstream ss;
 		ss << "dereferenced value is not a valid reference [" << data << ']';
 		throw ProgramError(ss.str(), getLoc(state));
-
 	}
 
 	std::vector<FAE*> dst;
 
-	Splitting(*state.second->fae).isolateSet(
+	Splitting(*state.GetMem()->GetFAE()).isolateSet(
 		dst, data.d_ref.root, 0,
-		state.second->fae->getType(data.d_ref.root)->getSelectors()
+		state.GetMem()->GetFAE()->getType(data.d_ref.root)->getSelectors()
 	);
 
-	for (auto fae : dst) {
-		execMan.enqueue(state.second, execMan.allocRegisters(*state.first),
-			std::shared_ptr<const FAE>(fae), this->next_);
+	for (auto fae : dst)
+	{
+		execMan.enqueue(state.GetMem(), execMan.allocRegisters(state.GetRegs()),
+			std::shared_ptr<const FAE>(fae), next_);
 	}
-
 }
 
 // FI_load_cst
-void FI_load_cst::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_load_cst::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	tmpState.SetReg(dst_, data_);
 
-	(*state.first)[this->dst_] = this->data_;
-
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_move_reg
-void FI_move_reg::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_move_reg::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	tmpState.SetReg(dst_, tmpState.GetReg(src_));
 
-	(*state.first)[this->dst_] = (*state.first)[this->src_];
-
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_bnot
-void FI_bnot::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_bnot::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	// Assertions
+	assert(state.GetReg(dst_).isBool());
 
-	assert((*state.first)[this->dst_].isBool());
+	ExecState tmpState = state;
 
-	(*state.first)[this->dst_] = Data::createBool(!(*state.first)[this->dst_].d_bool);
+	tmpState.SetReg(dst_, Data::createBool(!tmpState.GetReg(dst_).d_bool));
 
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_inot
-void FI_inot::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_inot::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	// Assertions
+	assert(state.GetReg(dst_).isInt());
 
-	assert((*state.first)[this->dst_].isInt());
+	ExecState tmpState = state;
 
-	(*state.first)[this->dst_] = Data::createBool(!(*state.first)[this->dst_].d_int);
+	tmpState.SetReg(dst_, Data::createBool(!tmpState.GetReg(dst_).d_int));
 
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_move_reg_offs
-void FI_move_reg_offs::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_move_reg_offs::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	Data data = tmpState.GetReg(src_);
 
-	auto data = (*state.first)[this->src_];
-
-	if (!data.isRef()) {
-
+	if (!data.isRef())
+	{
 		std::stringstream ss;
 		ss << "dereferenced value is not a valid reference [" << data << ']';
-		throw ProgramError(ss.str(), getLoc(state));
-
+		throw ProgramError(ss.str(), getLoc(tmpState));
 	}
 
-	(*state.first)[this->dst_] = data;
-	(*state.first)[this->dst_].d_ref.displ += this->offset_;
+	data.d_ref.displ += offset_;
 
-	execMan.enqueue(state, this->next_);
+	tmpState.SetReg(dst_, data);
 
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_move_reg_inc
-void FI_move_reg_inc::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_move_reg_inc::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	Data data = tmpState.GetReg(src1_);
 
-	auto data = (*state.first)[this->src1_];
-
-	if (!data.isRef()) {
-
+	if (!data.isRef())
+	{
 		std::stringstream ss;
 		ss << "dereferenced value is not a valid reference [" << data << ']';
-		throw ProgramError(ss.str(), getLoc(state));
-
+		throw ProgramError(ss.str(), getLoc(tmpState));
 	}
 
-	(*state.first)[this->dst_] = data;
-	(*state.first)[this->dst_].d_ref.displ += (*state.first)[this->src2_].d_int;
+	data.d_ref.displ += tmpState.GetReg(src2_).d_int;
+	tmpState.SetReg(dst_, data);
 
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_get_greg
-void FI_get_greg::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_get_greg::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	tmpState.SetReg(dst_, VirtualMachine(*tmpState.GetMem()->GetFAE()).varGet(src_));
 
-	(*state.first)[this->dst_] = VirtualMachine(*state.second->fae).varGet(this->src_);
-
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_set_greg
-void FI_set_greg::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_set_greg::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	VirtualMachine(*state.GetMem()->GetFAE()).varSet(dst_, state.GetReg(src_));
 
-	VirtualMachine(*state.second->fae).varSet(this->dst_, (*state.first)[this->src_]);
-
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(state, next_);
 }
 
 // FI_get_ABP
-void FI_get_ABP::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_get_ABP::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	Data data = VirtualMachine(*tmpState.GetMem()->GetFAE()).varGet(ABP_INDEX);
+	data.d_ref.displ += offset_;
 
-	(*state.first)[this->dst_] = VirtualMachine(*state.second->fae).varGet(ABP_INDEX);
-	(*state.first)[this->dst_].d_ref.displ += this->offset_;
+	tmpState.SetReg(dst_, data);
 
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_load
-void FI_load::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_load::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	// Assertions
+	assert(state.GetReg(src_).isRef());
 
-	assert((*state.first)[this->src_].isRef());
+	ExecState tmpState = state;
 
-	const Data& data = (*state.first)[this->src_];
+	Data data = tmpState.GetReg(src_);
+	Data out;
 
-	VirtualMachine(*state.second->fae).nodeLookup(
-		data.d_ref.root, data.d_ref.displ + this->offset_, (*state.first)[this->dst_]
+	VirtualMachine(*tmpState.GetMem()->GetFAE()).nodeLookup(
+		data.d_ref.root, data.d_ref.displ + offset_, out
 	);
 
-	execMan.enqueue(state, this->next_);
+	tmpState.SetReg(dst_, out);
 
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_load_ABP
-void FI_load_ABP::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_load_ABP::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	VirtualMachine vm(*tmpState.GetMem()->GetFAE());
 
-	VirtualMachine vm(*state.second->fae);
-
-	const Data& data = vm.varGet(ABP_INDEX);
-
-	vm.nodeLookup(data.d_ref.root, (size_t)this->offset_, (*state.first)[this->dst_]);
-
-	execMan.enqueue(state, this->next_);
-
+	Data data = vm.varGet(ABP_INDEX);
+	Data out;
+	vm.nodeLookup(data.d_ref.root, static_cast<size_t>(offset_), out);
+	tmpState.SetReg(dst_, out);
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_store
-void FI_store::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_store::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	// Assertions
+	assert(state.GetReg(dst_).isRef());
 
-	assert((*state.first)[this->dst_].isRef());
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-	const Data& dst = (*state.first)[this->dst_];
-	const Data& src = (*state.first)[this->src_];
+	const Data& dst = state.GetReg(dst_);
+	const Data& src = state.GetReg(src_);
 
 	Data out;
 
 	VirtualMachine(*fae).nodeModify(
-		dst.d_ref.root, dst.d_ref.displ + this->offset_, src, out
+		dst.d_ref.root, dst.d_ref.displ + offset_, src, out
 	);
 
-	execMan.enqueue(state.second, state.first, fae, this->next_);
-
+	execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 }
 
 #if 0
@@ -352,132 +338,106 @@ void FI_store_ABP::execute(ExecutionManager& execMan, const AbstractInstruction:
 #endif
 
 // FI_loads
-void FI_loads::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
+void FI_loads::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	// Assertions
+	assert(state.GetReg(src_).isRef());
 
-	assert((*state.first)[this->src_].isRef());
+	ExecState tmpState = state;
+	Data data = tmpState.GetReg(src_);
+	Data out;
 
-	const Data& data = (*state.first)[this->src_];
-
-	VirtualMachine(*state.second->fae).nodeLookupMultiple(
-		data.d_ref.root, data.d_ref.displ + this->base_, this->offsets_,
-		(*state.first)[this->dst_]
+	VirtualMachine(*state.GetMem()->GetFAE()).nodeLookupMultiple(
+		data.d_ref.root, data.d_ref.displ + base_, offsets_,
+		out
 	);
 
-	execMan.enqueue(state, this->next_);
-
+	tmpState.SetReg(dst_, out);
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_stores
-void FI_stores::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_stores::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	// Assertions
+	assert(state.GetReg(dst_).isRef());
 
-	assert((*state.first)[this->dst_].isRef());
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-	const Data& dst = (*state.first)[this->dst_];
-	const Data& src = (*state.first)[this->src_];
+	const Data& dst = state.GetReg(dst_);
+	const Data& src = state.GetReg(src_);
 
 	Data out;
 
 	VirtualMachine(*fae).nodeModifyMultiple(
-		dst.d_ref.root, dst.d_ref.displ + this->base_, src, out
+		dst.d_ref.root, dst.d_ref.displ + base_, src, out
 	);
 
-	execMan.enqueue(state.second, state.first, fae, this->next_);
-
+	execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 }
 
 // FI_alloc
-void FI_alloc::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state)
+void FI_alloc::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	const Data& srcData = (*state.first)[this->src_];
-	Data& dstData       = (*state.first)[this->dst_];
+	ExecState tmpState = state;
+
+	const Data& srcData = tmpState.GetReg(src_);
 
 	// assert that the source operand is an integer, i.e. the size
 	assert(srcData.isInt());
 
 	// create a void pointer of given size, i.e. it points to a block of the size
-	dstData = Data::createVoidPtr(srcData.d_int);
+	Data dstData = Data::createVoidPtr(srcData.d_int);
+	tmpState.SetReg(dst_, dstData);
 
-	execMan.enqueue(state, this->next_);
+	execMan.enqueue(tmpState, next_);
 }
 
 
 // FI_node_create
-void FI_node_create::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state)
+void FI_node_create::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	const Data& srcData = (*state.first)[this->src_];
-	Data& dstData       = (*state.first)[this->dst_];
+	ExecState tmpState = state;
+
+	const Data& srcData = tmpState.GetReg(src_);
 
 	if (srcData.isRef() || srcData.isNull())
 	{	// in case src_ is a null pointer
-		dstData = srcData;
-		execMan.enqueue(state.second, state.first, state.second->fae, this->next_);
+		execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(),
+			tmpState.GetMem()->GetFAE(), next_);
 		return;
 	}
 
 	// assert that src_ is a void pointer
 	assert(srcData.isVoidPtr());
 
-	if (srcData.d_void_ptr_size != this->size_)
+	if (srcData.d_void_ptr_size != size_)
 	{	// in case the type size differs from the allocated size
-		throw ProgramError("allocated block size mismatch", getLoc(state));
+		throw ProgramError("allocated block size mismatch", getLoc(tmpState));
 	}
 
 	// create a new forest automaton
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*tmpState.GetMem()->GetFAE()));
 
 	// create a new node
-	dstData = Data::createRef(
-		VirtualMachine(*fae).nodeCreate(this->sels_, this->typeInfo_)
+	Data dstData = Data::createRef(
+		VirtualMachine(*fae).nodeCreate(sels_, typeInfo_)
 	);
 
-	execMan.enqueue(state.second, state.first, fae, this->next_);
+	tmpState.SetReg(dst_, dstData);
+
+	execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(), fae, next_);
 }
 
-/*
-// FI_node_alloc
-void FI_node_alloc::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-	assert((*state.first)[this->src_].isInt());
-
-	if ((*state.first)[this->src_].d_int != this->type_->size)
-		throw ProgramError("allocated block size mismatch", getLoc(state));
-
-	std::vector<SelData> sels;
-	NodeBuilder::buildNode(sels, this->type_);
-
-	std::string typeName;
-	if (this->type_->name)
-		typeName = std::string(this->type_->name);
-	else {
-		std::ostringstream ss;
-		ss << this->type_->uid;
-		typeName = ss.str();
-	}
-
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-	(*state.first)[this->dst_] = Data::createRef(
-		VirtualMachine(*fae).nodeCreate(sels, this->boxMan_.getTypeInfo(typeName))
-	);
-
-	execMan.enqueue(state.second, state.first, fae, this->next_);
-
-}
-*/
 // FI_node_free
-void FI_node_free::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_node_free::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	// Assertions
+	assert(state.GetReg(dst_).isRef());
 
-	assert((*state.first)[this->dst_].isRef());
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-	const Data& data = (*state.first)[this->dst_];
+	const Data& data = state.GetReg(dst_);
 
 	if (data.d_ref.displ != 0)
 		throw ProgramError(
@@ -486,99 +446,91 @@ void FI_node_free::execute(ExecutionManager& execMan,
 
 	VirtualMachine(*fae).nodeDelete(data.d_ref.root);
 
-	execMan.enqueue(state.second, state.first, fae, this->next_);
-
+	execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 }
 
 // FI_iadd
-void FI_iadd::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_iadd::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	// Assertions
+	assert(state.GetReg(src1_).isInt() && state.GetReg(src2_).isInt());
 
-	assert((*state.first)[this->src1_].isInt() &&
-		(*state.first)[this->src2_].isInt());
-
-	(*state.first)[this->dst_] = Data::createInt(
-		((*state.first)[this->src1_].d_int +
-		 (*state.first)[this->src2_].d_int > 0)?(1):(0)
+	ExecState tmpState = state;
+	tmpState.SetReg(dst_,
+		Data::createInt(
+			(tmpState.GetReg(src1_).d_int + tmpState.GetReg(src2_).d_int > 0)?(1):(0)
+		)
 	);
 
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_check
-void FI_check::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_check::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	state.GetMem()->GetFAE()->updateConnectionGraph();
 
-	state.second->fae->updateConnectionGraph();
+	Normalization(const_cast<FAE&>(*state.GetMem()->GetFAE())).check();
 
-	Normalization((FAE&)*state.second->fae).check();
-
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(state, next_);
 }
 
 // FI_assert
-void FI_assert::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
-
-	if ((*state.first)[this->dst_] != this->cst_) {
-		CL_CDEBUG(1, "registers: " << utils::wrap(*state.first) << ", heap:"
-			<< std::endl << *state.second->fae);
+void FI_assert::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	if (state.GetReg(dst_) != cst_)
+	{
+		CL_CDEBUG(1, "registers: " << utils::wrap(state.GetRegs()) << ", heap:"
+			<< std::endl << *state.GetMem()->GetFAE());
 		throw std::runtime_error("assertion failed");
 	}
 
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(state, next_);
 }
 
 // FI_abort
-void FI_abort::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
-
-	execMan.traceFinished(state.second);
-
+void FI_abort::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	execMan.traceFinished(state.GetMem());
 }
 
 // FI_build_struct
-void FI_build_struct::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_build_struct::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
 
 	std::vector<Data::item_info> items;
 
-	for (size_t i = 0; i < this->offsets_.size(); ++i)
-		items.push_back(std::make_pair(this->offsets_[i],
-			(*state.first)[this->start_ + i])
-		);
+	for (size_t i = 0; i < offsets_.size(); ++i)
+	{
+		items.push_back(std::make_pair(offsets_[i], tmpState.GetReg(start_ + i)));
+	}
 
-	(*state.first)[this->dst_] = Data::createStruct(items);
+	tmpState.SetReg(dst_, Data::createStruct(items));
 
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(tmpState, next_);
 }
 
 // FI_push_greg
-void FI_push_greg::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_push_greg::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
 
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
+	VirtualMachine(*fae).varPush(state.GetReg(src_));
 
-	VirtualMachine(*fae).varPush((*state.first)[this->src_]);
-
-	execMan.enqueue(state.second, state.first, fae, this->next_);
-
+	execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 }
 
 // FI_pop_greg
-void FI_pop_greg::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_pop_greg::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
 
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*tmpState.GetMem()->GetFAE()));
 
-	VirtualMachine(*fae).varPop((*state.first)[this->dst_]);
+	tmpState.SetReg(dst_, VirtualMachine(*fae).varPop());
 
-	execMan.enqueue(state.second, state.first, fae, this->next_);
-
+	execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(), fae, next_);
 }
 
 struct DumpCtx {
@@ -594,9 +546,10 @@ struct DumpCtx {
 
 		std::vector<size_t> offs;
 
-		for (std::vector<SelData>::const_iterator i = cd.ctx.sfLayout.begin();
-			i != cd.ctx.sfLayout.end(); ++i)
-			offs.push_back((*i).offset);
+		for (auto& selData : cd.ctx.GetStackFrameLayout())
+		{
+			offs.push_back(selData.offset);
+		}
 
 		Data data;
 
@@ -605,15 +558,15 @@ struct DumpCtx {
 		std::unordered_map<size_t, Data> tmp;
 		for (std::vector<Data::item_info>::const_iterator i = data.d_struct->begin();
 			i != data.d_struct->end(); ++i)
-			tmp.insert(make_pair(i->first, i->second));
+			tmp.insert(std::make_pair(i->first, i->second));
 
-		for (CodeStorage::TVarSet::const_iterator i = cd.ctx.fnc.vars.begin();
-			i != cd.ctx.fnc.vars.end(); ++i) {
+		for (CodeStorage::TVarSet::const_iterator i = cd.ctx.GetFnc().vars.begin();
+			i != cd.ctx.GetFnc().vars.end(); ++i) {
 
-			const CodeStorage::Var& var = cd.ctx.fnc.stor->vars[*i];
+			const CodeStorage::Var& var = cd.ctx.GetFnc().stor->vars[*i];
 
-			SymCtx::var_map_type::const_iterator j = cd.ctx.varMap.find(var.uid);
-			assert(j != cd.ctx.varMap.end());
+			SymCtx::var_map_type::const_iterator j = cd.ctx.GetVarMap().find(var.uid);
+			assert(j != cd.ctx.GetVarMap().end());
 
 			switch (var.code) {
 				case CodeStorage::EVar::VAR_LC:
@@ -638,12 +591,10 @@ struct DumpCtx {
 };
 
 // FI_print_heap
-void FI_print_heap::execute(ExecutionManager& execMan,
-	const AbstractInstruction::StateType& state) {
+void FI_print_heap::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	CL_NOTE("local variables: " << DumpCtx(*ctx_, *state.GetMem()->GetFAE()));
+	CL_NOTE("heap:" << *state.GetMem()->GetFAE());
 
-	CL_NOTE("local variables: " << DumpCtx(*this->ctx_, *state.second->fae));
-	CL_NOTE("heap:" << *state.second->fae);
-
-	execMan.enqueue(state, this->next_);
-
+	execMan.enqueue(state, next_);
 }

@@ -42,6 +42,12 @@ protected:
 	/// the following instruction
 	AbstractInstruction* next_;
 
+
+private: // methods
+
+	SequentialInstruction(const SequentialInstruction&);
+	SequentialInstruction& operator=(const SequentialInstruction&);
+
 public:
 
 	/**
@@ -55,7 +61,9 @@ public:
 	 */
 	SequentialInstruction(const CodeStorage::Insn* insn = nullptr,
 		fi_type_e fiType = fi_type_e::fiUnspec)
-		: AbstractInstruction(insn, fiType) {}
+		: AbstractInstruction(insn, fiType),
+		next_{nullptr}
+	{ }
 
 	/**
 	 * @copydoc AbstractInstruction::finalize

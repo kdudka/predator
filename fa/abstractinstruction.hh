@@ -27,6 +27,7 @@
 #include <memory>
 
 // Forester headers
+#include "exec_state.hh"
 #include "types.hh"
 
 /**
@@ -43,7 +44,7 @@ namespace CodeStorage {
 
 class ExecutionManager;
 
-typedef enum { fiAbort, fiBranch, fiCheck, fiFix, fiJump, fiUnspec } fi_type_e;
+enum class fi_type_e { fiAbort, fiBranch, fiCheck, fiFix, fiJump, fiUnspec };
 
 /**
  * @brief  An abstract base class that represents an instruction
@@ -51,19 +52,8 @@ typedef enum { fiAbort, fiBranch, fiCheck, fiFix, fiJump, fiUnspec } fi_type_e;
  * Abstract class representing an instruction. This class serves as the base
  * class for all instructions.
  */
-class AbstractInstruction {
-
-public:
-
-	/**
-	 * @brief  Type of state of execution
-	 *
-	 * The data type for the state of execution. It contains a vector of values
-	 * of variables and state of the symbolic heap.
-	 */
-	typedef std::pair<std::shared_ptr<std::vector<Data>>,
-		struct SymState*> StateType;
-
+class AbstractInstruction
+{
 private:
 
 	/// pointer to the instruction in CL's code storage
@@ -74,6 +64,11 @@ private:
 
 	/// is the instruction the target of some jump?
 	bool isTarget_;
+
+private:  // methods
+
+	AbstractInstruction(const AbstractInstruction&);
+	AbstractInstruction& operator=(const AbstractInstruction&);
 
 public:
 
@@ -128,7 +123,7 @@ public:
 	 * @param[in]      state    The state of the virtual machine in which the
 	 *                          instruction is executed
 	 */
-	virtual void execute(ExecutionManager& execMan, const StateType& state) = 0;
+	virtual void execute(ExecutionManager& execMan, const ExecState& state) = 0;
 
 
 	/**

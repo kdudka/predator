@@ -163,22 +163,46 @@ inline std::ostream& operator<<(std::ostream &str, const struct cl_loc &loc) {
     return str;
 }
 
-/// emit raw debug message
+/**
+ * emit raw debug message
+ *
+ * @param[in]  msg  The message to be emitted
+ */
 void cl_debug(const char *msg);
 
-/// emit raw warning message
+/**
+ * emit raw warning message
+ *
+ * @param[in]  msg  The message to be emitted
+ */
 void cl_warn(const char *msg);
 
-/// emit raw error message
+/**
+ * emit raw error message
+ *
+ * @param[in]  msg  The message to be emitted
+ */
 void cl_error(const char *msg);
 
-/// emit raw note message
+/**
+ * emit raw note message
+ *
+ * @param[in]  msg  The message to be emitted
+ */
 void cl_note(const char *msg);
 
-/// emit raw fatal error and ask cl peer to shoot down the process
+/**
+ * emit raw fatal error and ask cl peer to shoot down the process
+ *
+ * @param[in]  msg  The message to be emitted
+ */
 void cl_die(const char *msg);
 
-/// current debugging level
+/**
+ * current debugging level
+ *
+ * @returns  Current debugging level
+ */
 int cl_debug_level(void);
 
 #endif /* H_GUARD_CL_MSG_H */
