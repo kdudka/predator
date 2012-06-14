@@ -228,7 +228,7 @@ const std::string& CustomValue::str() const {
 }
 
 /// eliminates the warning 'comparing floating point with == or != is unsafe'
-inline bool areEqual(const float a, const float b) {
+inline bool areEqual(const double a, const double b) {
     return (a <= b)
         && (b <= a);
 }

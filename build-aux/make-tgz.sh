@@ -78,7 +78,7 @@ test -z "`git diff HEAD`" \
 test -z "`git diff origin/master`" \
     || die "not synced with origin/master"
 
-make -j5 distcheck \
+make -j9 distcheck CTEST='ctest -j9' \
     || die "'make distcheck' has failed"
 
 STAMP="`git log --pretty="%cd-%h" --date=short -1`" \
@@ -111,6 +111,7 @@ fi
 if test xyes = "x$readme_sl"; then
     patch docs/README-fedora < "build-aux/README-fedora-release.patch"
     patch docs/README-ubuntu < "build-aux/README-ubuntu-release.patch"
+    patch "switch-host-gcc.sh" < "build-aux/sl-switch-host.patch"
 fi
 
 # adapt Makefile
