@@ -227,6 +227,12 @@ const std::string& CustomValue::str() const {
     return *data_.str;
 }
 
+/// eliminates the warning 'comparing floating point with == or != is unsafe'
+inline bool areEqual(const float a, const float b) {
+    return (a <= b)
+        && (b <= a);
+}
+
 bool operator==(const CustomValue &a, const CustomValue &b) {
     const ECustomValue code = a.code_;
     if (b.code_ != code)
@@ -240,7 +246,8 @@ bool operator==(const CustomValue &a, const CustomValue &b) {
             return (a.data_.uid == b.data_.uid);
 
         case CV_REAL:
-            return (a.data_.fpn == b.data_.fpn);
+            // just for convenience, no need to compare CV_REAL for equality
+            return areEqual(a.data_.fpn, b.data_.fpn);
 
         case CV_STRING:
             CL_BREAK_IF(!a.data_.str || !b.data_.str);
