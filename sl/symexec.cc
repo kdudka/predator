@@ -1021,7 +1021,8 @@ fail:
 
         const TValId val = entry.valCreate(VT_UNKNOWN, origin);
         const ObjHandle obj = proc.objByOperand(dst);
-        proc.objSetValue(obj, val);
+        if (obj.isValid())
+            proc.objSetValue(obj, val);
     }
 
     // something wrong happened, print the backtrace

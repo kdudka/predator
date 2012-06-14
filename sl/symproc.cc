@@ -755,14 +755,13 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
     CL_BREAK_IF(!isPossibleToDeref(sh_.valTarget(lhsAt)));
 
     const TObjType clt = lhs.objType();
-    const bool isComp = isComposite(clt, /* includingArray */ false);
     const TSizeOf size = clt->size;
     CL_BREAK_IF(!size);
 
     if (VO_DEREF_FAILED == sh_.valOrigin(rhs)) {
         // we're already on an error path
         const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
-        if (isComp)
+        if (isComposite(clt, /* includingArray */ false))
             sh_.writeUniformBlock(lhsAt, tplValue, size);
         else
             lhs.setValue(tplValue);
@@ -770,8 +769,7 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
         return;
     }
 
-    CL_BREAK_IF(isComp != (VT_COMPOSITE == sh_.valTarget(rhs)));
-    if (!isComp) {
+    if ((VT_COMPOSITE != sh_.valTarget(rhs))) {
         // not a composite object
         objSetAtomicVal(*this, lhs, rhs);
         return;
