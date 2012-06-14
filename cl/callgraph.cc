@@ -42,7 +42,7 @@ Node* allocNodeIfNeeded(Graph &cg, Fnc *const fnc) {
 
     node = new Node(fnc);
     cg.roots.insert(node);
-    cg.leafs.insert(node);
+    cg.leaves.insert(node);
     return node;
 }
 
@@ -72,7 +72,7 @@ void handleCallback(Graph &cg, Node *node, const TInsn insn, TOp op) {
 
 void handleCall(Graph &cg, Node *node, const TInsn insn) {
     // if there is a call, it is no longer a leaf node
-    cg.leafs.erase(node);
+    cg.leaves.erase(node);
 
     int uid;
     if (!fncUidFromOperand(&uid, &insn->operands[/* fnc */ 1])) {

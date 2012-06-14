@@ -735,7 +735,7 @@ namespace CallGraph {
 
     struct Graph {
         TNodeList                   roots;
-        TNodeList                   leafs;
+        TNodeList                   leaves;
 
         bool                        hasIndirectCall;
         bool                        hasCallback;
