@@ -51,9 +51,10 @@ extern "C" { int plugin_is_GPL_compatible; }
 
 struct Config
 {
-	std::string dbRoot       = "";      ///< box database root directory
-	bool        printUcode   = false;   ///< printing microcode?
-	bool        onlyCompile  = false;   ///< only compiling?
+public:   // data members
+	std::string dbRoot;        ///< box database root directory
+	bool        printUcode;    ///< printing microcode?
+	bool        onlyCompile;   ///< only compiling?
 
 private:  // methods
 
@@ -105,7 +106,10 @@ private:  // methods
 
 public:   // methods
 
-	Config(const std::string& confStr)
+	Config(const std::string& confStr) :
+		dbRoot(""),
+		printUcode(false),
+		onlyCompile(false)
 	{
 		std::vector<std::string> args;
 		boost::split(args, confStr, boost::is_any_of(";"));

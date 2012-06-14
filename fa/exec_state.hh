@@ -92,7 +92,8 @@ public:   // methods
 	 * @param[in]  state  The execution state to be copied
 	 */
 	ExecState(const ExecState& state) :
-		ExecState(state.regs_, state.mem_)
+		regs_(state.regs_),
+		mem_(state.mem_)
 	{
 		// Assertions
 		assert(nullptr != regs_);

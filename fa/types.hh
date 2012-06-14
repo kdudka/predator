@@ -42,12 +42,12 @@
  *
  * @todo: write documentation... what the hell is 'displ'???
  */
-struct SelData {
-
-	      size_t       offset;  ///< offset in a structure
-	      int          size;    ///< size of the type
-	      int          displ;   ///< @todo write dox
-	const std::string  name;    ///< name of the selector
+struct SelData
+{
+	size_t       offset;  ///< offset in a structure
+	int          size;    ///< size of the type
+	int          displ;   ///< @todo write dox
+	std::string  name;    ///< name of the selector
 
 	/**
 	 * @brief  Constructor
@@ -735,6 +735,6 @@ struct Data {
 /**
  * @brief  The data type representing an array of @p Data values
  */
-using DataArray = std::vector<Data>;
+typedef std::vector<Data> DataArray;
 
 #endif

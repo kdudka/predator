@@ -42,8 +42,8 @@
 
 class BoxAntichain
 {
-	using TBoxStore = std::unordered_map<Box::Signature, std::list<Box>,
-		boost::hash<Box::Signature>>;
+	typedef std::unordered_map<Box::Signature, std::list<Box>,
+		boost::hash<Box::Signature>> TBoxStore;
 
 	TBoxStore boxes_;
 
@@ -87,7 +87,7 @@ public:
 
 class BoxSet
 {
-	using TBoxSet = std::unordered_set<Box, boost::hash<Box>>;
+	typedef std::unordered_set<Box, boost::hash<Box>> TBoxSet;
 
 	TBoxSet boxes_;
 
@@ -145,18 +145,18 @@ class BoxMan
 {
 private:  // data types
 
-	using TDataStore = std::unordered_map<Data, NodeLabel*, boost::hash<Data>>;
-	using TNodeStore = std::unordered_map<std::vector<const AbstractBox*>,
-		NodeLabel*, boost::hash<std::vector<const AbstractBox*>>>;
-	using TVarDataStore = std::unordered_map<std::pair<size_t, DataArray>,
-		NodeLabel*, boost::hash<std::pair<size_t, DataArray>>>;
-	using TTagStore = std::unordered_set<
-		std::pair<const TypeBox*, std::vector<size_t>>,
-		boost::hash<std::pair<const TypeBox*, std::vector<size_t>>>>;
-	using TSelIndex = std::unordered_map<SelData, const SelBox*,
-		boost::hash<SelData>>;
-	using TTypeIndex = std::unordered_map<std::string, const TypeBox*>;
-	using TTypeDescDict = std::unordered_map<const TypeBox*, std::vector<SelData>>;
+	typedef std::unordered_map<Data, NodeLabel*, boost::hash<Data>> TDataStore;
+	typedef std::unordered_map<std::vector<const AbstractBox*>, NodeLabel*,
+		boost::hash<std::vector<const AbstractBox*>>> TNodeStore;
+	typedef std::unordered_map<std::pair<size_t, DataArray>, NodeLabel*,
+		boost::hash<std::pair<size_t, DataArray>>> TVarDataStore;
+	typedef std::unordered_set< std::pair<const TypeBox*, std::vector<size_t>>,
+		boost::hash<std::pair<const TypeBox*, std::vector<size_t>>>> TTagStore;
+	typedef std::unordered_map<SelData, const SelBox*, boost::hash<SelData>>
+		TSelIndex;
+	typedef std::unordered_map<std::string, const TypeBox*> TTypeIndex;
+	typedef std::unordered_map<const TypeBox*, std::vector<SelData>>
+		TTypeDescDict;
 
 private:  // data members
 
