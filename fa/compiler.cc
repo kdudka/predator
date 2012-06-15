@@ -895,7 +895,7 @@ protected:
 						// append the instruction to load the value at given offset
 						append(new FI_load_ABP(&insn, dst, offset));
 					}
-				} else
+				} else if (varInfo.isInReg())
 				{	// in case the variable is in a register
 					if (canOverride)
 					{	// in case the destination register can be overridden
@@ -905,6 +905,12 @@ protected:
 					{	// in case the destination register cannot be overridden
 						cLoadReg(dst, varInfo.getRegIndex(), op, insn);
 					}
+				} else if (varInfo.isGlobal())
+				{	// in case it is a global variable
+					throw NotImplementedException("global variables");
+				} else
+				{	// otherwise
+					assert(false);      // fail gracefully
 				}
 
 				break;
@@ -951,7 +957,7 @@ protected:
 				if (varInfo.isOnStack())
 				{	// in case it is on the stack
 					return src;
-				} else
+				} else if (varInfo.isInReg())
 				{	// in case it is in a register
 					tmp = varInfo.getRegIndex();
 
@@ -959,6 +965,12 @@ protected:
 
 					// in case there is dereference at the operand
 					return (acc && (acc->code == CL_ACCESSOR_DEREF))? (src) : (tmp);
+				} else if (varInfo.isGlobal())
+				{	// in case it is a global variable
+					throw NotImplementedException("global variables");
+				} else
+				{	// othewise
+					assert(false);      // fail gracefully
 				}
 			}
 
@@ -1065,9 +1077,15 @@ protected:
 					append(new FI_check(&insn));
 
 					return true;
-				} else
+				} else if (varInfo.isInReg())
 				{	// in case it is in a register
 					return cStoreReg(op, src, varInfo.getRegIndex(), insn);
+				} else if (varInfo.isGlobal())
+				{
+					throw NotImplementedException("global variables");
+				} else
+				{ // otherwise
+					assert(false);        // fail gracefully
 				}
 			}
 
