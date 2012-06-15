@@ -815,7 +815,7 @@ protected:
 		{	// according to the type of the operand
 			case cl_operand_e::CL_OPERAND_VAR:
 			{	// in case the operand is a variable
-				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
+				const VarInfo& varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
 				if (varInfo.isOnStack())
 				{ // in the case of a variable on the stack
@@ -946,7 +946,7 @@ protected:
 			{	// in case it is a variable
 
 				// get info about the variable
-				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
+				const VarInfo& varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
 				if (varInfo.isOnStack())
 				{	// in case it is on the stack
@@ -993,7 +993,7 @@ protected:
 			{	// in case it is a variable
 
 				// get variable info
-				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
+				const VarInfo& varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
 				if (varInfo.isOnStack())
 				{	// in case it is on the stack
@@ -1105,7 +1105,7 @@ protected:
 			}
 
 			// obtain information about the variable
-			const SymCtx::VarInfo& varInfo = curCtx_->getVarInfo(var.uid);
+			const VarInfo& varInfo = curCtx_->getVarInfo(var.uid);
 
 			if (varInfo.isOnStack())
 			{	// on case the variable is not on the stack
@@ -2008,7 +2008,6 @@ protected:
 			assert(blockHead < assembly_->code_.size());
 
 			p.first->second = assembly_->code_[blockHead];
-
 
 			for (auto target : block->targets())
 				queue.push_back(target);
