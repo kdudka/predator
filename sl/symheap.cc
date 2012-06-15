@@ -3622,13 +3622,6 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
         // values are non-equal in non-abstract world
         return true;
 
-    // having the values always in the same order leads to simpler code
-    moveKnownValueToLeft(*this, ref, val);
-
-    if (ref < VAL_NULL || !isAbstract(this->valTarget(val)))
-        // we are interested only in abstract objects here, nothing to do...
-        return false;
-
     TValSet seen;
 
     // try to look through possibly empty abstract objects

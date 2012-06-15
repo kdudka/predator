@@ -769,7 +769,7 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
         return;
     }
 
-    if ((VT_COMPOSITE != sh_.valTarget(rhs))) {
+    if (VT_COMPOSITE != sh_.valTarget(rhs)) {
         // not a composite object
         objSetAtomicVal(*this, lhs, rhs);
         return;
