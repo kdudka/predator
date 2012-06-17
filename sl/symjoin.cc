@@ -1218,7 +1218,7 @@ bool joinUniBlocks(
     else
         joinUniBlocksCore(&bMapDst, &hasExtra1, &hasExtra2, ctx, root1, root2);
 
-    // FIXME: updating the status now may trigger an unnecessary JS_THREE_WAY
+    // update join status accordingly
     if (hasExtra1 && !updateJoinStatus(ctx, JS_USE_SH2))
         return false;
     if (hasExtra2 && !updateJoinStatus(ctx, JS_USE_SH1))

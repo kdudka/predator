@@ -40,6 +40,8 @@ class IntervalArena {
         typedef std::pair<TInt, TInt>               key_type;
         typedef std::pair<key_type, TObj>           value_type;
 
+        typedef std::vector<key_type>               TKeySet;
+
     private:
         typedef std::set<TObj>                      TLeaf;
         typedef std::map</* beg */ TInt, TLeaf>     TLine;
@@ -51,6 +53,9 @@ class IntervalArena {
         void sub(const key_type &, const TObj);
         void intersects(TSet &dst, const key_type &key) const;
         void exactMatch(TSet &dst, const key_type &key) const;
+
+        /// return the set of all keys that map to this object
+        void reverseLookup(TKeySet &dst, const TObj) const;
 
         void clear() {
             cont_.clear();
@@ -216,6 +221,29 @@ void IntervalArena<TInt, TObj>::intersects(TSet &dst, const key_type &key) const
             beg = lineIt->first;
         }
         while (beg < winEnd);
+    }
+}
+
+// FIXME: brute-force method
+// FIXME: no assumptions can be made about the output format
+template <typename TInt, typename TObj>
+void IntervalArena<TInt, TObj>::reverseLookup(TKeySet &dst, const TObj obj)
+    const
+{
+    key_type key;
+
+    BOOST_FOREACH(typename TCont::const_reference item, cont_) {
+        key/* end */.second = item/* end */.first;
+        const TLine &line = item.second;
+
+        BOOST_FOREACH(typename TLine::const_reference lineItem, line) {
+            const TLeaf &leaf = lineItem.second;
+            if (!hasKey(leaf, obj))
+                continue;
+
+            key/* beg */.first = lineItem/* beg */.first;
+            dst.push_back(key);
+        }
     }
 }
 

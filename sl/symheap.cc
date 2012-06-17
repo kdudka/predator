@@ -1743,7 +1743,28 @@ bool SymHeapCore::findCoveringUniBlocks(
         return true;
     }
 
-    // TODO: return partial coverage
+    TArena::TKeySet gaps;
+    coverage.reverseLookup(gaps, OBJ_UNKNOWN);
+    if (gaps.empty())
+        // there is really nothing we could pick for coverage
+        return false;
+
+    // TODO: rewrite the algorithm so that we do not compute complement twice
+    coverage.clear();
+    coverage += TMemItem(chunk, /* XXX: misleading */ OBJ_UNKNOWN);
+    BOOST_FOREACH(TArena::TKeySet::const_reference item, gaps)
+        coverage -= TMemItem(item, OBJ_UNKNOWN);
+
+    // return partial coverage (if any)
+    TArena::TKeySet covChunks;
+    coverage.reverseLookup(covChunks, OBJ_UNKNOWN);
+    BOOST_FOREACH(TArena::TKeySet::const_reference item, covChunks) {
+        const TOffset off = item.first;
+        block.off = off;
+        block.size = /* end */ item.second - off;
+        (*pCovered)[off] = block;
+    }
+
     return false;
 }
 
