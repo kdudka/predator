@@ -396,7 +396,7 @@ struct BaseValue: public AbstractHeapEntity {
     TOffset /* FIXME: misleading */ offRoot;
     TObjIdSet                       usedBy;
 
-    // cppcheck-suppress uninitVar
+    // cppcheck-suppress uninitMemberVar
     BaseValue(EValueTarget code_, EValueOrigin origin_):
         code(code_),
         origin(origin_),
@@ -449,7 +449,7 @@ struct RangeValue: public AnchorValue {
 struct CompValue: public BaseValue {
     TObjId                          compObj;
 
-    // cppcheck-suppress uninitVar
+    // cppcheck-suppress uninitMemberVar
     CompValue(EValueTarget code_, EValueOrigin origin_):
         BaseValue(code_, origin_)
     {

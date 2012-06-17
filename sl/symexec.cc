@@ -504,7 +504,7 @@ void SymExecEngine::execCondInsn() {
     {
         std::ostringstream str;
         str << "at-line-" << lw_->line;
-        LDP_INIT(nondetCond, str.str().c_str());
+        LDP_INIT(nondetCond, str.str());
         LDP_PLOT(nondetCond, sh);
     }
 

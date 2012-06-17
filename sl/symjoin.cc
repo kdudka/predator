@@ -1023,7 +1023,7 @@ bool rootNotYetAbstract(SymHeap &sh, const TValSet &sset)
 bool joinNestingLevel(
         TProtoLevel             *pDst,
         const SymJoinCtx        &ctx,
-        const SchedItem         item)
+        const SchedItem         &item)
 {
     const TValId root1 = item.v1;
     const TValId root2 = item.v2;
@@ -1485,7 +1485,7 @@ bool joinCustomValues(
 
 bool followRootValues(
         SymJoinCtx              &ctx,
-        const SchedItem         item,
+        const SchedItem         &item,
         const EJoinStatus       action,
         const bool              readOnly = false)
 {
