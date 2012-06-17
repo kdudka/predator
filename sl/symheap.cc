@@ -1692,18 +1692,20 @@ void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const {
 }
 
 bool SymHeapCore::findCoveringUniBlocks(
+        TUniBlockMap               *pCovered,
         const TValId                root,
-        const TOffset               beg,
-        const TSizeOf               size,
-        const TValId                tplValue)
+        UniformBlock                block)
     const
 {
+    CL_BREAK_IF(!pCovered->empty());
+
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     CL_BREAK_IF(!d->chkArenaConsistency(rootData));
 
     const TArena &arena = rootData->arena;
-    const TOffset end = beg + size;
+    const TOffset beg = block.off;
+    const TOffset end = beg + block.size;
     const TMemChunk chunk(beg, end);
 
     TObjIdSet overlaps;
@@ -1724,7 +1726,7 @@ bool SymHeapCore::findCoveringUniBlocks(
         if (BK_UNIFORM != code && VAL_NULL != blData->value)
             continue;
 
-        if (!areValProtosEqual(*this, *this, blData->value, tplValue))
+        if (!areValProtosEqual(*this, *this, blData->value, block.tplValue))
             // incompatible value prototype
             continue;
 
@@ -1734,9 +1736,15 @@ bool SymHeapCore::findCoveringUniBlocks(
         coverage -= createArenaItem(blBeg, blSize, OBJ_UNKNOWN);
     }
 
-    // check that full coverage has been found
     TObjIdSet uncovered;
-    return !arenaLookup(&uncovered, coverage, chunk, OBJ_INVALID);
+    if (!arenaLookup(&uncovered, coverage, chunk, OBJ_INVALID)) {
+        // full coverage has been found
+        (*pCovered)[beg] = block;
+        return true;
+    }
+
+    // TODO: return partial coverage
+    return false;
 }
 
 SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):

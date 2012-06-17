@@ -1146,55 +1146,47 @@ void joinUniBlocksCore(
     sh2.gatherUniformBlocks(bMap2, root2);
     CL_BREAK_IF(bMap1.empty() && bMap2.empty());
 
-    if (bMap2.empty()) {
-        *pExtra1 = true;
-        return;
-    }
-    if (bMap1.empty()) {
-        *pExtra2 = true;
-        return;
-    }
-
     BOOST_FOREACH(TUniBlockMap::const_reference item, bMap1) {
-        const TOffset off = item.first;
-        const UniformBlock &bl1 = item.second;
-        const TValId tplVal2 = translateValProto(sh2, sh1, bl1.tplValue);
+        UniformBlock bl2(item.second);
+        bl2.tplValue = translateValProto(sh2, sh1, bl2.tplValue);
 
-        if (!sh2.findCoveringUniBlocks(root2, off, bl1.size, tplVal2)) {
+        TUniBlockMap cov2;
+        if (!sh2.findCoveringUniBlocks(&cov2, root2, bl2))
             *pExtra1 = true;
-            continue;
-        }
 
-        UniformBlock blDst(bl1);
-        blDst.tplValue = translateValProto(ctx.dst, sh1, bl1.tplValue);
-        (*pMap)[off] = blDst;
+        BOOST_FOREACH(TUniBlockMap::const_reference cItem, cov2) {
+            UniformBlock blDst(cItem.second);
+            blDst.tplValue = translateValProto(ctx.dst, sh2, blDst.tplValue);
+            (*pMap)[blDst.off] = blDst;
+        }
     }
 
     BOOST_FOREACH(TUniBlockMap::const_reference item, bMap2) {
-        const TOffset off = item.first;
-        const UniformBlock &bl2 = item.second;
-        const TValId tplVal1 = translateValProto(sh1, sh2, bl2.tplValue);
+        UniformBlock bl1(item.second);
+        bl1.tplValue = translateValProto(sh1, sh2, bl1.tplValue);
 
-        if (!sh1.findCoveringUniBlocks(root1, off, bl2.size, tplVal1)) {
+        TUniBlockMap cov1;
+        if (!sh1.findCoveringUniBlocks(&cov1, root1, bl1))
             *pExtra2 = true;
-            continue;
+
+        BOOST_FOREACH(TUniBlockMap::const_reference cItem, cov1) {
+            UniformBlock blDst(cItem.second);
+            const TOffset off = blDst.off;
+            if (hasKey(*pMap, off)) {
+                // we already have a uniform block at this offset
+                const UniformBlock &old = (*pMap)[off];
+                CL_BREAK_IF(!areValProtosEqual(ctx.dst, sh1,
+                            old.tplValue,
+                            bl1.tplValue));
+
+                if (bl1.size < old.size)
+                    // the current block is smaller than the original one, skip it!
+                    continue;
+            }
+
+            blDst.tplValue = translateValProto(ctx.dst, sh1, blDst.tplValue);
+            (*pMap)[off] = blDst;
         }
-
-        if (hasKey(*pMap, off)) {
-            // we already have a uniform block at this offset
-            const UniformBlock &old = (*pMap)[off];
-            CL_BREAK_IF(!areValProtosEqual(ctx.dst, sh2,
-                        old.tplValue,
-                        bl2.tplValue));
-
-            if (bl2.size < old.size)
-                // the current block is smaller than the original one, skip it!
-                continue;
-        }
-
-        UniformBlock blDst(bl2);
-        blDst.tplValue = translateValProto(ctx.dst, sh2, bl2.tplValue);
-        (*pMap)[off] = blDst;
     }
 }
 
@@ -1222,7 +1214,6 @@ bool joinUniBlocks(
         // block maps are 100% equal, pick any
         ctx.sh1.gatherUniformBlocks(bMapDst, root1);
         importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh1);
-        goto write_them;
     }
     else
         joinUniBlocksCore(&bMapDst, &hasExtra1, &hasExtra2, ctx, root1, root2);
@@ -1233,7 +1224,6 @@ bool joinUniBlocks(
     if (hasExtra2 && !updateJoinStatus(ctx, JS_USE_SH1))
         return false;
 
-write_them:
     BOOST_FOREACH(TUniBlockMap::const_reference item, bMapDst) {
         const UniformBlock &bl = item.second;
         const TValId addrDst = ctx.dst.valByOffset(rootDst, bl.off);
