@@ -1690,11 +1690,11 @@ void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const {
     }
 }
 
-bool SymHeapCore::findCoveringUniBlock(
-        UniformBlock                *pDst,
+bool SymHeapCore::findCoveringUniBlocks(
         const TValId                root,
         const TOffset               beg,
-        const TSizeOf               size)
+        const TSizeOf               size,
+        const TValId                tplValue)
     const
 {
     const RootValue *rootData;
@@ -1731,11 +1731,8 @@ bool SymHeapCore::findCoveringUniBlock(
             // the template ends beyond this block
             continue;
 
-        // covering uniform block matched!
-        pDst->off       = blBeg;
-        pDst->size      = blSize;
-        pDst->tplValue  = blData->value;
-        return true;
+        // covering uniform block matched, check the template value matches
+        return areValProtosEqual(*this, *this, blData->value, tplValue);
     }
 
     // not found

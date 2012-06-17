@@ -1138,8 +1138,8 @@ void joinUniBlocksCore(
         const TValId            root1,
         const TValId            root2)
 {
-    const SymHeap &sh1 = ctx.sh1;
-    const SymHeap &sh2 = ctx.sh2;
+    SymHeap &sh1 = ctx.sh1;
+    SymHeap &sh2 = ctx.sh2;
 
     TUniBlockMap bMap1, bMap2;
     sh1.gatherUniformBlocks(bMap1, root1);
@@ -1158,10 +1158,9 @@ void joinUniBlocksCore(
     BOOST_FOREACH(TUniBlockMap::const_reference item, bMap1) {
         const TOffset off = item.first;
         const UniformBlock &bl1 = item.second;
-        UniformBlock bl2;
-        if (!sh2.findCoveringUniBlock(&bl2, root2, off, bl1.size)
-                || !areValProtosEqual(sh1, sh2, bl1.tplValue, bl2.tplValue))
-        {
+        const TValId tplVal2 = translateValProto(sh2, sh1, bl1.tplValue);
+
+        if (!sh2.findCoveringUniBlocks(root2, off, bl1.size, tplVal2)) {
             *pExtra1 = true;
             continue;
         }
@@ -1174,18 +1173,23 @@ void joinUniBlocksCore(
     BOOST_FOREACH(TUniBlockMap::const_reference item, bMap2) {
         const TOffset off = item.first;
         const UniformBlock &bl2 = item.second;
-        UniformBlock bl1;
-        if (!sh1.findCoveringUniBlock(&bl1, root1, off, bl2.size)
-                || !areValProtosEqual(sh1, sh2, bl1.tplValue, bl2.tplValue))
-        {
+        const TValId tplVal1 = translateValProto(sh1, sh2, bl2.tplValue);
+
+        if (!sh1.findCoveringUniBlocks(root1, off, bl2.size, tplVal1)) {
             *pExtra2 = true;
             continue;
         }
 
         if (hasKey(*pMap, off)) {
-            // symmetric match (should have been already handled)
-            CL_BREAK_IF(!areUniBlocksEqual(ctx.dst, sh2, (*pMap)[off], bl2));
-            continue;
+            // we already have a uniform block at this offset
+            const UniformBlock &old = (*pMap)[off];
+            CL_BREAK_IF(!areValProtosEqual(ctx.dst, sh2,
+                        old.tplValue,
+                        bl2.tplValue));
+
+            if (bl2.size < old.size)
+                // the current block is smaller than the original one, skip it!
+                continue;
         }
 
         UniformBlock blDst(bl2);
