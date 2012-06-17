@@ -294,22 +294,22 @@ bool translateValId(
     return true;
 }
 
-void translateValProto(
-        TValId                  *pValProto,
+TValId translateValProto(
         SymHeap                 &dst,
-        const SymHeap           &src)
+        const SymHeap           &src,
+        const TValId             valProto)
 {
-    if (*pValProto <= 0)
+    if (valProto <= 0)
         // do not translate special values
-        return;
+        return valProto;
 
     // read properties from src
-    const EValueTarget code = src.valTarget(*pValProto);
-    const EValueOrigin origin = src.valOrigin(*pValProto);
+    const EValueTarget code = src.valTarget(valProto);
+    const EValueOrigin origin = src.valOrigin(valProto);
 
     // create an equivalent unknown value in dst
     CL_BREAK_IF(VT_UNKNOWN != code);
-    *pValProto = dst.valCreate(code, origin);
+    return dst.valCreate(code, origin);
 }
 
 void initGlVar(SymHeap &sh, const CVar &cv) {

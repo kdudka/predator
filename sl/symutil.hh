@@ -93,10 +93,10 @@ bool translateValId(
         const SymHeapCore       &src,
         const TValMap           &valMap);
 
-void translateValProto(
-        TValId                  *pValProto,
+TValId translateValProto(
         SymHeap                 &dst,
-        const SymHeap           &src);
+        const SymHeap           &src,
+        const TValId             valProto);
 
 inline ObjHandle translateObjId(
         SymHeap                 &dst,

@@ -1126,7 +1126,7 @@ void importBlockMap(
 {
     BOOST_FOREACH(TUniBlockMap::reference item, *pMap) {
         UniformBlock &bl = item.second;
-        translateValProto(&bl.tplValue, dst, src);
+        bl.tplValue = translateValProto(dst, src, bl.tplValue);
     }
 }
 
@@ -1167,7 +1167,7 @@ void joinUniBlocksCore(
         }
 
         UniformBlock blDst(bl1);
-        translateValProto(&blDst.tplValue, ctx.dst, /* src */ sh1);
+        blDst.tplValue = translateValProto(ctx.dst, sh1, bl1.tplValue);
         (*pMap)[off] = blDst;
     }
 
@@ -1189,7 +1189,7 @@ void joinUniBlocksCore(
         }
 
         UniformBlock blDst(bl2);
-        translateValProto(&blDst.tplValue, ctx.dst, /* src */ sh2);
+        blDst.tplValue = translateValProto(ctx.dst, sh2, bl2.tplValue);
         (*pMap)[off] = blDst;
     }
 }

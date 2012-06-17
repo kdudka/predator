@@ -53,8 +53,7 @@ class UniBlockWriter {
         bool operator()(const SymHeap &src, const UniformBlock &bl) {
             const TValId addrDst = dst_.valByOffset(rootDst_, bl.off);
 
-            TValId tplValue = bl.tplValue;
-            translateValProto(&tplValue, dst_, src);
+            const TValId tplValue = translateValProto(dst_, src, bl.tplValue);
             dst_.writeUniformBlock(addrDst, tplValue, bl.size);
 
             return /* continue */ true;
