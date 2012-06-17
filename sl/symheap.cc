@@ -285,6 +285,7 @@ inline bool arenaLookup(
         const TMemChunk             &chunk,
         const TObjId                obj)
 {
+    CL_BREAK_IF(!dst->empty());
     arena.intersects(*dst, chunk);
 
     if (OBJ_INVALID != obj)
@@ -1710,33 +1711,32 @@ bool SymHeapCore::findCoveringUniBlocks(
         // not found
         return false;
 
-    BOOST_FOREACH(const TObjId id, overlaps) {
-        const BlockEntity *data;
-        d->ents.getEntRO(&data, id);
+    // use a temporary arena to test the coverage
+    TArena coverage;
+    coverage += TMemItem(chunk, /* XXX: misleading */ OBJ_UNKNOWN);
 
-        const EBlockKind code = data->code;
-        if (BK_UNIFORM != code)
+    // go through overlaps and subtract the chunks that are covered
+    BOOST_FOREACH(const TObjId obj, overlaps) {
+        const BlockEntity *blData;
+        d->ents.getEntRO(&blData, obj);
+
+        const EBlockKind code = blData->code;
+        if (BK_UNIFORM != code && VAL_NULL != blData->value)
             continue;
 
-        const BlockEntity *blData = DCAST<const BlockEntity *>(data);
+        if (!areValProtosEqual(*this, *this, blData->value, tplValue))
+            // incompatible value prototype
+            continue;
 
+        // this block entity can be used to build up the coverage, subtract it
         const TOffset blBeg = blData->off;
-        if (beg < blBeg)
-            // the template starts above this block
-            continue;
-
         const TSizeOf blSize = blData->size;
-        const TOffset blEnd = blBeg + blSize;
-        if (blEnd < end)
-            // the template ends beyond this block
-            continue;
-
-        // covering uniform block matched, check the template value matches
-        return areValProtosEqual(*this, *this, blData->value, tplValue);
+        coverage -= createArenaItem(blBeg, blSize, OBJ_UNKNOWN);
     }
 
-    // not found
-    return false;
+    // check that full coverage has been found
+    TObjIdSet uncovered;
+    return !arenaLookup(&uncovered, coverage, chunk, OBJ_INVALID);
 }
 
 SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
