@@ -69,38 +69,56 @@ public:
 
 public:
 
-	TreeAut& unique(TreeAut& dst, const TreeAut& src, bool addFinalStates = true) {
+	TreeAut& unique(
+		TreeAut& dst,
+		const TreeAut& src,
+		bool addFinalStates = true)
+	{
 		Index<size_t> stateIndex;
-		TreeAut::rename(dst, src, RenameNonleafF(stateIndex, this->nextState()), addFinalStates);
+
+		TreeAut::rename(
+			dst,
+			src,
+			RenameNonleafF(stateIndex, this->nextState()), addFinalStates
+		);
+
 		this->incrementStateOffset(stateIndex.size());
 		return dst;
 	}
 
-	TreeAut& unique(TreeAut& dst, const TreeAut& src, Index<size_t>& stateIndex, bool addFinalStates = true) {
-		TreeAut::rename(dst, src, RenameNonleafF(stateIndex, this->nextState()), addFinalStates);
+	TreeAut& unique(
+		TreeAut& dst,
+		const TreeAut& src,
+		Index<size_t>& stateIndex,
+		bool addFinalStates = true)
+	{
+		TreeAut::rename(
+			dst,
+			src,
+			RenameNonleafF(stateIndex, this->nextState()), addFinalStates
+		);
+
 		this->incrementStateOffset(stateIndex.size());
 		return dst;
 	}
 
 public:
 
-	static bool subseteq(const FAE& lhs, const FAE& rhs) {
-
+	static bool subseteq(const FAE& lhs, const FAE& rhs)
+	{
 		if (lhs.roots.size() != rhs.roots.size())
 			return false;
 
 		if (lhs.connectionGraph.data != rhs.connectionGraph.data)
 			return false;
 
-		for (size_t i = 0; i < lhs.roots.size(); ++i) {
-
+		for (size_t i = 0; i < lhs.roots.size(); ++i)
+		{
 			if (!TreeAut::subseteq(*lhs.roots[i], *rhs.roots[i]))
 				return false;
-
 		}
 
 		return true;
-
 	}
 
 	template <class F>
