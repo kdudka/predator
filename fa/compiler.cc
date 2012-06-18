@@ -637,7 +637,7 @@ protected:
 	 */
 	static const cl_accessor* computeOffset(int& offset, const cl_accessor* acc)
 	{
-		while (acc && (acc->code == CL_ACCESSOR_ITEM))
+		while (acc && (CL_ACCESSOR_ITEM == acc->code))
 		{	// while there are more record accessors (in C: "rec.acc")
 			offset += acc->type->items[acc->data.item.id].offset;
 			acc = acc->next;
@@ -817,8 +817,8 @@ protected:
 			{	// in case the operand is a variable
 				const VarInfo& varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				if (varInfo.isOnStack())
-				{ // in the case of a variable on the stack
+				if (varInfo.isOnStack() || varInfo.isGlobal())
+				{ // in the case of a variable on the stack or global
 					const cl_accessor* acc = op.accessor;   // get the first accessor
 					int offset = 0;                         // initialize the offset
 
@@ -826,9 +826,20 @@ protected:
 					{	// in case there is the dereference accessor ('*' in C)
 						assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
-						// append an instruction to load value at the address relative to
-						// the abstract base pointer in the symbolic stack
-						append(new FI_load_ABP(&insn, dst, static_cast<int>(varInfo.getStackOffset())));
+						if (varInfo.isOnStack())
+						{
+							// append an instruction to load value at the address relative to
+							// the abstract base pointer in the symbolic stack
+							append(new FI_load_ABP(&insn, dst, static_cast<int>(varInfo.getStackOffset())));
+						}
+						else if (varInfo.isGlobal())
+						{
+							throw NotImplementedException("global variables");
+						}
+						else
+						{
+							assert(false);           // fail gracefully
+						}
 
 						// jump to the next accessor
 						acc = Core::computeOffset(offset, acc->next);
@@ -872,7 +883,14 @@ protected:
 						}
 					} else
 					{	// in case there is not a dereference
-						offset = static_cast<int>(varInfo.getStackOffset());
+						if (varInfo.isOnStack())
+						{
+							offset = static_cast<int>(varInfo.getStackOffset());
+						}
+						else if (varInfo.isGlobal())
+						{
+							offset = static_cast<int>(varInfo.getGlobalBlockOffset());
+						}
 
 						// compute the real offset from record accessors
 						acc = Core::computeOffset(offset, acc);
@@ -882,18 +900,41 @@ protected:
 							// assert there are no more accessors
 							assert(acc->next == nullptr);
 
-							// append the instruction to get the value at given offset
-							// TODO @todo  should this really be there? The value is loaded
-							// later...
-							append(new FI_get_ABP(&insn, dst, offset));
+							if (varInfo.isOnStack())
+							{
+								// append the instruction to get the value at given offset
+								// TODO @todo  should this really be there? The value is loaded
+								// later...
+								append(new FI_get_ABP(&insn, dst, offset));
+							}
+							else if (varInfo.isGlobal())
+							{
+								assert(false);          // fail gracefully
+							}
+							else
+							{
+								assert(false);          // fail gracefully
+							}
 							break;
 						}
 
 						// assert there are no more accessors
 						assert(acc == nullptr);
 
-						// append the instruction to load the value at given offset
-						append(new FI_load_ABP(&insn, dst, offset));
+						if (varInfo.isOnStack())
+						{
+							// append the instruction to load the value at given offset
+							append(new FI_load_ABP(&insn, dst, offset));
+						}
+						else if (varInfo.isGlobal())
+						{
+							// append the instruction to load the global value at given offset
+							append(new FI_load_global(&insn, dst, offset));
+						}
+						else
+						{
+							assert(false);          // fail gracefully
+						}
 					}
 				} else if (varInfo.isInReg())
 				{	// in case the variable is in a register
@@ -905,9 +946,6 @@ protected:
 					{	// in case the destination register cannot be overridden
 						cLoadReg(dst, varInfo.getRegIndex(), op, insn);
 					}
-				} else if (varInfo.isGlobal())
-				{	// in case it is a global variable
-					throw NotImplementedException("global variables");
 				} else
 				{	// otherwise
 					assert(false);      // fail gracefully
@@ -2111,12 +2149,14 @@ public:
 			}
 		}
 
+		//              ******* compile entry call *******
+
 		//     ******* compile initialization of global variables *******
+		// move void ptr of size 1 into r0
+		append(new FI_load_cst(nullptr, 0, Data::createVoidPtr(1)));
+
 		if (!globalVarsLayout.empty())
 		{
-			// move void ptr of size 1 into r0
-			append(new FI_load_cst(nullptr, 0, Data::createVoidPtr(1)));
-
 			// allocate the block with global variables to r0
 			append(
 				new FI_node_create(
@@ -2130,8 +2170,8 @@ public:
 			);
 		}
 
-
-		//              ******* compile entry call *******
+		// push r0 as GLOB
+		append(new FI_push_greg(nullptr, 0));
 
 		// load NULL into r0
 		append(new FI_load_cst(nullptr, 0, Data::createInt(0)));

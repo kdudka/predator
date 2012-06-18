@@ -298,6 +298,20 @@ void FI_load_ABP::execute(ExecutionManager& execMan, const ExecState& state)
 	execMan.enqueue(tmpState, next_);
 }
 
+// FI_load_global
+void FI_load_global::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	VirtualMachine vm(*tmpState.GetMem()->GetFAE());
+
+	Data data = vm.varGet(GLOB_INDEX);
+	Data out;
+	vm.nodeLookup(data.d_ref.root, static_cast<size_t>(offset_), out);
+	tmpState.SetReg(dst_, out);
+
+	execMan.enqueue(tmpState, next_);
+}
+
 // FI_store
 void FI_store::execute(ExecutionManager& execMan, const ExecState& state)
 {
