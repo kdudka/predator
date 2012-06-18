@@ -588,14 +588,6 @@ protected:
 	}
 
 
-#if 0
-	void cLoadVar(size_t dst, size_t offset)
-	{
-		append(new FI_load_ABP(dst, (int)offset));
-	}
-#endif
-
-
 	/**
 	 * @brief  Compile a move between registers
 	 *

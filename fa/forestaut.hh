@@ -154,10 +154,19 @@ public:
 
 	};
 
-	FA(TreeAut::Backend& backend) : backend(&backend), variables_{}, roots{}, connectionGraph{} {}
+	FA(TreeAut::Backend& backend) :
+		backend(&backend),
+		variables_{},
+		roots{},
+		connectionGraph{}
+	{ }
 
-	FA(const FA& src) : backend(src.backend), variables_(src.variables_), roots(src.roots),
-		connectionGraph(src.connectionGraph) { }
+	FA(const FA& src) :
+		backend(src.backend),
+		variables_(src.variables_),
+		roots(src.roots),
+		connectionGraph(src.connectionGraph)
+	{ }
 
 	/**
 	 * @brief  Assignment operator
@@ -175,7 +184,8 @@ public:
 		return *this;
 	}
 
-	void clear() {
+	void clear()
+	{
 		this->roots.clear();
 		this->connectionGraph.clear();
 		variables_.clear();
@@ -212,11 +222,6 @@ public:
 	void PopVar()
 	{
 		variables_.pop_back();
-	}
-
-	void AddNewVars(size_t count)
-	{
-		variables_.resize(variables_.size() + count, Data::createUndef());
 	}
 
 	size_t GetVarCount() const

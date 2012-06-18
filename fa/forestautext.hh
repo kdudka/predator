@@ -50,8 +50,8 @@ class FAE : public FA {
 
 public:
 
-	struct RenameNonleafF {
-
+	struct RenameNonleafF
+	{
 		Index<size_t>& index;
 
 		size_t offset;
@@ -59,12 +59,13 @@ public:
 		RenameNonleafF(Index<size_t>& index, size_t offset = 0)
 			: index(index), offset(offset) {}
 
-		size_t operator()(size_t s) {
+		size_t operator()(size_t s)
+		{
 			if (_MSB_TEST(s))
 				return s;
+
 			return this->index.translateOTF(s) + this->offset;
 		}
-
 	};
 
 public:
@@ -355,50 +356,6 @@ public:
 		return true;
 	}
 
-/*
-	static void renameVector(std::vector<size_t>& dst, const std::vector<size_t>& index) {
-		for (std::vector<size_t>::iterator i = dst.begin(); i != dst.end(); ++i) {
-			assert(index[*i] != (size_t)(-1));
-			*i = index[*i];
-		}
-	}
-
-	static void renameVector(FA::RootSignature& dst, const std::vector<size_t>& index) {
-
-		for (auto& rootInfo : dst) {
-
-			assert(rootInfo.root < index.size());
-			assert(index[rootInfo.root] != (size_t)(-1));
-
-			rootInfo.root = index[rootInfo.root];
-
-		}
-
-	}
-
-	static void updateMap(FA::RootSignature& dst, size_t ref, const FA::RootSignature& src) {
-
-		RootSignature res;
-		RootSignature::iterator i;
-
-		for (i = dst.begin(); i != dst.end(); ++i) {
-
-			if (i->root == ref)
-				break;
-
-		}
-
-		assert(i != dst.end());
-		res.insert(res.end(), dst.begin(), i);
-		res.insert(res.end(), src.begin(), src.end());
-		res.insert(res.end(), i + 1, dst.end());
-
-		FAE::removeMultOcc(res);
-
-		std::swap(dst, res);
-
-	}
-*/
 	TreeAut& relabelReferences(TreeAut& dst, const TreeAut& src, const std::vector<size_t>& index) {
 		dst.addFinalStates(src.getFinalStates());
 		for (TreeAut::iterator i = src.begin(); i != src.end(); ++i) {
@@ -447,29 +404,17 @@ public:
 		return dst;
 	}
 
-	TreeAut* invalidateReference(TreeAut* src, size_t root) {
+	TreeAut* invalidateReference(TreeAut* src, size_t root)
+	{
 		return &this->invalidateReference(*this->allocTA(), *src, root);
 	}
-/*
-	static void invalidateReference(RootSignature& dst, size_t root) {
-
-		for (auto i = dst.begin(); i != dst.end(); ++i) {
-
-			if (i->root != root)
-				continue;
-
-			dst.erase(i);
-
-			return;
-
-		}
-
-	}
-*/
 
 public:
 
-	void buildLTCacheExt(const TreeAut& ta, TreeAut::lt_cache_type& cache) {
+	void buildLTCacheExt(
+		const TreeAut& ta,
+		TreeAut::lt_cache_type& cache)
+	{
 		label_type lUndef = this->boxMan->lookupLabel(Data::createUndef());
 		for (TreeAut::iterator i = ta.begin(); i != ta.end(); ++i) {
 			if (i->label()->isData()) {
@@ -484,10 +429,13 @@ public:
 		}
 	}
 
-	const TypeBox* getType(size_t target) const {
+	const TypeBox* getType(size_t target) const
+	{
+		// Assertions
 		assert(target < this->roots.size());
 		assert(this->roots[target]);
 		assert(this->roots[target]->getFinalStates().size());
+
 		return static_cast<const TypeBox*>(this->roots[target]->begin(
 			*this->roots[target]->getFinalStates().begin()
 		)->label()->boxLookup(static_cast<size_t>(-1)).aBox);
@@ -496,28 +444,42 @@ public:
 public:
 
 	// state 0 should never be allocated by FAE (?)
-	FAE(TreeAut::Backend& backend, BoxMan& boxMan)
-	 : FA(backend), boxMan(&boxMan), stateOffset(1), savedStateOffset() {}
+	FAE(TreeAut::Backend& backend, BoxMan& boxMan) :
+		FA(backend),
+		boxMan(&boxMan),
+		stateOffset(1),
+		savedStateOffset()
+	{ }
 
-	FAE(const FAE& x) : FA(x), boxMan(x.boxMan), stateOffset(x.stateOffset), savedStateOffset{}
-		{}
+	FAE(const FAE& x) :
+		FA(x),
+		boxMan(x.boxMan),
+		stateOffset(x.stateOffset),
+		savedStateOffset{}
+	{ }
 
-	~FAE() { this->clear(); }
+	~FAE()
+	{
+		this->clear();
+	}
 
-	FAE& operator=(const FAE& x) {
-		FA::operator=(x);
-		this->boxMan = x.boxMan;
-		this->stateOffset = x.stateOffset;
+	FAE& operator=(const FAE& x)
+	{
+		if (this != &x)
+		{
+			FA::operator=(x);
+			this->boxMan = x.boxMan;
+			this->stateOffset = x.stateOffset;
+		}
+
 		return *this;
 	}
 
-	void clear() {
-
+	void clear()
+	{
 		FA::clear();
 		this->stateOffset = 1;
-
 	}
-
 };
 
 #endif
