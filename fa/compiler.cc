@@ -939,13 +939,10 @@ protected:
 	 * @param[in]  op   The source operand
 	 * @param[in]  src  Index of the register with the source
 	 *
-	 * @returns  Index of the register with the requester operand
+	 * @returns  Index of the register with the requested operand
 	 */
 	size_t lookupStoreReg(const cl_operand& op, size_t src)
 	{
-		// @todo TODO why is it here?
-		size_t tmp = src;
-
 		switch (op.code)
 		{	// depending on the type of the operand
 			case cl_operand_e::CL_OPERAND_VAR:
@@ -959,15 +956,17 @@ protected:
 					return src;
 				} else if (varInfo.isInReg())
 				{	// in case it is in a register
-					tmp = varInfo.getRegIndex();
+					size_t tmp = varInfo.getRegIndex();
 
 					const cl_accessor* acc = op.accessor;
 
-					// in case there is dereference at the operand
+					// in case there is dereference at the operand, store to the new
+					// register, otherwise use the register in which the variable already
+					// is
 					return (acc && (acc->code == CL_ACCESSOR_DEREF))? (src) : (tmp);
 				} else if (varInfo.isGlobal())
 				{	// in case it is a global variable
-					throw NotImplementedException("global variables");
+					return src;
 				} else
 				{	// othewise
 					assert(false);      // fail gracefully
@@ -2080,15 +2079,24 @@ public:
 		// clear the code in the assembly
 		reset(assembly);
 
-		// handle global variables first
+		//     ********  prepare the structure with global variables ********
+		std::vector<SelData> globalVarsLayout;
+		SymCtx::var_map_type globalVarMap;
+		size_t globalVarsOffset = 0;
+
 		for (const CodeStorage::Var& var : stor.vars)
 		{
-			if (var.code == CodeStorage::EVar::VAR_GL)
+			if (CodeStorage::EVar::VAR_GL == var.code)
 			{
-				throw NotImplementedException("global variables", &(var.loc));
+				NodeBuilder::buildNode(globalVarsLayout, var.type, globalVarsOffset,
+					var.name);
+				globalVarMap.insert(
+					std::make_pair(var.uid, VarInfo::createGlobal(globalVarsOffset)));
+				globalVarsOffset += var.type->size;
 			}
 		}
 
+		//     ********  prepare functions' symbolic contexts ********
 		for (auto fnc : stor.fncs)
 		{
 			if (isDefined(*fnc))
@@ -2096,12 +2104,32 @@ public:
 				fncIndex_.insert(std::make_pair(
 					fnc,
 					std::make_pair(
-						SymCtx(*fnc),
+						SymCtx(*fnc, &globalVarMap),
 						CodeStorage::Block()
 					)
 				));
 			}
 		}
+
+		//     ******* compile initialization of global variables *******
+		if (!globalVarsLayout.empty())
+		{
+			// move void ptr of size 1 into r0
+			append(new FI_load_cst(nullptr, 0, Data::createVoidPtr(1)));
+
+			// allocate the block with global variables to r0
+			append(
+				new FI_node_create(
+					/* instruction */ nullptr,
+					/* dst reg where the node will be stored */ 0,
+					/* reg with the value from which the node is to be created */ 0,
+					/* size of the created node */ 1,
+					/* type information */ boxMan_.getTypeInfo(GLOBAL_VARS_BLOCK_STR),
+					/* selectors of the node */ globalVarsLayout
+				)
+			);
+		}
+
 
 		//              ******* compile entry call *******
 

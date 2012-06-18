@@ -40,6 +40,7 @@
 #define RET_OFFSET		(ABP_OFFSET + ABP_SIZE)
 #define RET_SIZE		SymCtx::getSizeOfCodePtr()
 
+#define GLOBAL_VARS_BLOCK_STR   "__global_vars_block"
 
 /**
  * @brief  Symbolic context of a function
@@ -172,11 +173,20 @@ public:   // methods
 	 * This is a constructor that creates a new symbolic context for given
 	 * function.
 	 *
-	 * @param[in]  fnc  The function for which the symbolic context is to be
-	 *                  created
+	 * @param[in]  fnc           The function for which the symbolic context is to
+	 *                           be created
+	 * @param[in]  globalVarMap  Map of global variables (in case the function is
+	 *                           to be compiled, otherwise @p nullptr)
 	 */
-	SymCtx(const CodeStorage::Fnc& fnc) :
-		fnc_(fnc), sfLayout_{}, varMap_{}, regCount_(2), argCount_(0)
+	SymCtx(
+		const CodeStorage::Fnc& fnc,
+		const var_map_type* globalVarMap = nullptr
+	) :
+		fnc_(fnc),
+		sfLayout_{},
+		varMap_{},
+		regCount_(2),
+		argCount_(0)
 	{
 		// pointer to previous stack frame
 		sfLayout_.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0, "_pABP"));
@@ -207,8 +217,24 @@ public:   // methods
 						++argCount_;
 					break;
 				case CodeStorage::EVar::VAR_GL:
-					// global variables do not occur at the stack
+				{ // global variables do not occur at the stack, but we need to track
+					// them as they can be used
+					if (nullptr != globalVarMap)
+					{	// in case we are compiling the function
+						CL_NOTE("Compiling global variable " << var.name << " in function "
+							<< nameOf(fnc_));
+
+						auto itGlobalVar = globalVarMap->find(var.uid);
+						if (globalVarMap->end() == itGlobalVar)
+						{ // the variable must be in the global map
+							assert(false);
+						}
+
+						varMap_.insert(std::make_pair(var.uid, itGlobalVar->second));
+					}
+
 					break;
+				}
 				default:
 					assert(false);
 			}

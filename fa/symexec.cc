@@ -246,6 +246,7 @@ public:
 		// clear the box manager
 		this->boxMan.clear();
 
+		// ************ infer data types' layouts ************
 		for (const cl_type* type : stor.types)
 		{	// for each data type in the storage
 			std::vector<size_t> v;
@@ -278,6 +279,7 @@ public:
 			}
 		}
 
+		// ************ infer functions' stackframes ************
 		for (auto fnc : stor.fncs)
 		{	// for each function in the storage, create a data structure representing
 			// its stackframe
@@ -295,6 +297,23 @@ public:
 			CL_DEBUG_AT(3, ss.str());
 
 			this->boxMan.createTypeInfo(ss.str(), v);
+		}
+
+		// ************ compile layout of the block of global vars ************
+		std::vector<size_t> v;
+		size_t globalVarsOffset = 0;
+		for (const CodeStorage::Var& var : stor.vars)
+		{
+			if (CodeStorage::EVar::VAR_GL == var.code)
+			{
+				v.push_back(globalVarsOffset);
+				globalVarsOffset += var.type->size;
+			}
+		}
+
+		if (!v.empty())
+		{
+			this->boxMan.createTypeInfo(GLOBAL_VARS_BLOCK_STR, v);
 		}
 	}
 
