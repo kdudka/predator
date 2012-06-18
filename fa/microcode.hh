@@ -440,25 +440,7 @@ public:
 	}
 
 };
-/*
-class FI_store_ABP : public SequentialInstruction {
 
-	size_t src_;
-	int offset_;
-
-public:
-
-	FI_store_ABP(size_t src, int offset)
-		: SequentialInstruction(nullptr), src_(src), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\t[ABP + " << this->offset_ << "], r" << this->src_;
-	}
-
-};
-*/
 class FI_loads : public SequentialInstruction {
 
 	size_t dst_;

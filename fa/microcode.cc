@@ -318,25 +318,6 @@ void FI_store::execute(ExecutionManager& execMan, const ExecState& state)
 	execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 }
 
-#if 0
-// FI_store_ABP
-void FI_store_ABP::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-	VirtualMachine vm(*fae);
-
-	const Data& data = vm.varGet(ABP_INDEX);
-
-	Data out;
-
-	vm.nodeModify(data.d_ref.root, this->offset_, (*state.first)[this->src_], out);
-
-	execMan.enqueue(state.second, state.first, fae, this->next_);
-
-}
-#endif
-
 // FI_loads
 void FI_loads::execute(ExecutionManager& execMan, const ExecState& state)
 {

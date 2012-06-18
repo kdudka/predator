@@ -103,32 +103,6 @@ public:
 
 	}
 
-	void loadTA(const TreeAut& src, const TreeAut::td_cache_type& cache, const TT<label_type>* top, size_t stateOffset) {
-
-		this->clear();
-
-		this->loadVars(top->label()->getVData());
-
-		this->stateOffset = stateOffset;
-
-		for (std::vector<size_t>::const_iterator i = top->lhs().begin(); i != top->lhs().end(); ++i) {
-
-			TreeAut* ta = this->allocTA();
-
-			// add reachable transitions
-			for (TreeAut::td_iterator j = src.tdStart(cache, itov(*i)); j.isValid(); j.next())
-				ta->addTransition(*j);
-
-			ta->addFinalState(*i);
-
-			this->appendRoot(ta);
-
-			this->connectionGraph.newRoot();
-
-		}
-
-	}
-
 	template <class F>
 	static void loadCompatibleFAs(std::vector<FAE*>& dst, const TreeAut& src, TreeAut::Backend& backend, BoxMan& boxMan, const FAE* fae, size_t stateOffset, F f) {
 //		std::cerr << "source" << std::endl << src;
