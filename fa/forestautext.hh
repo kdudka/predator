@@ -143,19 +143,22 @@ public:
 				continue;
 			if (trans->label()->getVData() != fae->GetVariables())
 				continue;
+
 			std::vector<std::shared_ptr<TreeAut>> roots;
 			size_t j;
-//			std::vector<size_t>::const_iterator j;
-			for (j = 0; j != trans->lhs().size(); ++j) {
-//			for (j = trans->lhs().begin(); j != trans->lhs().end(); ++j) {
-//				std::cerr << "computing td reachability\n";
-				TreeAut* ta = new TreeAut(backend);//taMan.alloc();
+			for (j = 0; j != trans->lhs().size(); ++j)
+			{
+				TreeAut* ta = new TreeAut(backend);
 				roots.push_back(std::shared_ptr<TreeAut>(ta));
+
 				// add reachable transitions
-				for (TreeAut::td_iterator k = src.tdStart(cache, itov(trans->lhs()[j])); k.isValid(); k.next()) {
-//					std::cerr << *k << std::endl;
+				for (TreeAut::td_iterator k = src.tdStart(cache, itov(trans->lhs()[j]));
+					k.isValid();
+					k.next())
+				{
 					ta->addTransition(*k);
 				}
+
 				ta->addFinalState(trans->lhs()[j]);
 
 				// compute signatures
@@ -165,29 +168,30 @@ public:
 
 				auto k = stateMap.find(trans->lhs()[j]);
 
-				if (k == stateMap.end()) {
+				if (k == stateMap.end())
+				{
 					if (!fae->connectionGraph.data[roots.size() - 1].signature.empty())
 						break;
-				} else {
+				}
+				else
+				{
 					if (k->second != fae->connectionGraph.data[roots.size() - 1].signature)
 						break;
 				}
+
 				if (!f(j, *fae->roots[j], *ta))
 					break;
 			}
-			if (j < trans->lhs().size()) {
-//			if (j != trans->lhs().end()) {
-//				for (std::vector<TreeAut*>::iterator k = roots.begin(); k != roots.end(); ++k)
-//					taMan.release(*k);
+
+			if (j < trans->lhs().size())
 				continue;
-			}
+
 			FAE* tmp = new FAE(backend, boxMan);
 			dst.push_back(tmp);
 			tmp->loadVars(fae->GetVariables());
 			tmp->roots = roots;
 			tmp->connectionGraph = fae->connectionGraph;
 			tmp->stateOffset = stateOffset;
-//			std::cerr << "accelerator " << std::endl << *tmp;
 		}
 	}
 
