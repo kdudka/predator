@@ -122,40 +122,48 @@ public:
 	}
 
 	template <class F>
-	static void loadCompatibleFAs(std::vector<FAE*>& dst, const TreeAut& src, TreeAut::Backend& backend, BoxMan& boxMan, const FAE* fae, size_t stateOffset, F f) {
-//		std::cerr << "source" << std::endl << src;
+	static void loadCompatibleFAs(
+		std::vector<FAE*>& dst,
+		const TreeAut& src,
+		TreeAut::Backend& backend,
+		BoxMan& boxMan,
+		const FAE* fae,
+		size_t stateOffset,
+		F f)
+	{
 		TreeAut::td_cache_type cache;
 		src.buildTDCache(cache);
-		std::vector<const TT<label_type>*>& v =
-			cache.insert(std::make_pair(0, std::vector<const TT<label_type>*>())).first->second;
+		std::vector<const TT<label_type>*>& v = cache.insert(
+			std::make_pair(0, std::vector<const TT<label_type>*>())).first->second;
+
 		// iterate over all "synthetic" transitions and constuct new FAE for each
-		for (std::vector<const TT<label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
-//			std::cerr << "trying " << **i << std::endl;
-			if ((*i)->lhs().size() != fae->roots.size())
+		for (const TT<label_type>* trans : v)
+		{
+			if (trans->lhs().size() != fae->roots.size())
 				continue;
-			if ((*i)->label()->getVData() != fae->GetVariables())
+			if (trans->label()->getVData() != fae->GetVariables())
 				continue;
 			std::vector<std::shared_ptr<TreeAut>> roots;
 			size_t j;
 //			std::vector<size_t>::const_iterator j;
-			for (j = 0; j != (*i)->lhs().size(); ++j) {
-//			for (j = (*i)->lhs().begin(); j != (*i)->lhs().end(); ++j) {
+			for (j = 0; j != trans->lhs().size(); ++j) {
+//			for (j = trans->lhs().begin(); j != trans->lhs().end(); ++j) {
 //				std::cerr << "computing td reachability\n";
 				TreeAut* ta = new TreeAut(backend);//taMan.alloc();
 				roots.push_back(std::shared_ptr<TreeAut>(ta));
 				// add reachable transitions
-				for (TreeAut::td_iterator k = src.tdStart(cache, itov((*i)->lhs()[j])); k.isValid(); k.next()) {
+				for (TreeAut::td_iterator k = src.tdStart(cache, itov(trans->lhs()[j])); k.isValid(); k.next()) {
 //					std::cerr << *k << std::endl;
 					ta->addTransition(*k);
 				}
-				ta->addFinalState((*i)->lhs()[j]);
+				ta->addFinalState(trans->lhs()[j]);
 
 				// compute signatures
 				ConnectionGraph::StateToCutpointSignatureMap stateMap;
 
 				ConnectionGraph::computeSignatures(stateMap, *ta);
 
-				auto k = stateMap.find((*i)->lhs()[j]);
+				auto k = stateMap.find(trans->lhs()[j]);
 
 				if (k == stateMap.end()) {
 					if (!fae->connectionGraph.data[roots.size() - 1].signature.empty())
@@ -167,8 +175,8 @@ public:
 				if (!f(j, *fae->roots[j], *ta))
 					break;
 			}
-			if (j < (*i)->lhs().size()) {
-//			if (j != (*i)->lhs().end()) {
+			if (j < trans->lhs().size()) {
+//			if (j != trans->lhs().end()) {
 //				for (std::vector<TreeAut*>::iterator k = roots.begin(); k != roots.end(); ++k)
 //					taMan.release(*k);
 				continue;
