@@ -421,14 +421,14 @@ public:
 
 };
 
-class FI_load_global : public SequentialInstruction {
+class FI_load_GLOB : public SequentialInstruction {
 
 	size_t dst_;
 	int offset_;
 
 public:
 
-	FI_load_global(const CodeStorage::Insn* insn, size_t dst, int offset)
+	FI_load_GLOB(const CodeStorage::Insn* insn, size_t dst, int offset)
 		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
 
 	virtual void execute(ExecutionManager& execMan, const ExecState& state);

@@ -298,8 +298,8 @@ void FI_load_ABP::execute(ExecutionManager& execMan, const ExecState& state)
 	execMan.enqueue(tmpState, next_);
 }
 
-// FI_load_global
-void FI_load_global::execute(ExecutionManager& execMan, const ExecState& state)
+// FI_load_GLOB
+void FI_load_GLOB::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	ExecState tmpState = state;
 	VirtualMachine vm(*tmpState.GetMem()->GetFAE());

@@ -921,7 +921,7 @@ protected:
 						else if (varInfo.isGlobal())
 						{
 							// append the instruction to load the global value at given offset
-							append(new FI_load_global(&insn, dst, offset));
+							append(new FI_load_GLOB(&insn, dst, offset));
 						}
 						else
 						{
