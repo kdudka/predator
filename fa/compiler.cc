@@ -2067,6 +2067,106 @@ protected:
 		assembly_->functionIndex_.insert(std::make_pair(&fnc, iter->second));
 	}
 
+	/**
+	 * @brief  Compiles initialisation
+	 *
+	 * Compiles the initialisation of global registers, global variables, etc.
+	 *
+	 * @param[in]   stor      Code storage with the code
+	 */
+	void compileInitialisation(const CodeStorage::Storage& stor)
+	{
+		//     ********  prepare the structure with global variables ********
+		std::vector<SelData> globalVarsLayout;
+		SymCtx::var_map_type globalVarMap;
+		size_t globalVarsOffset = 0;
+
+		for (const CodeStorage::Var& var : stor.vars)
+		{
+			if (CodeStorage::EVar::VAR_GL == var.code)
+			{
+				NodeBuilder::buildNode(globalVarsLayout, var.type, globalVarsOffset,
+					var.name);
+				globalVarMap.insert(
+					std::make_pair(var.uid, VarInfo::createGlobal(globalVarsOffset)));
+				globalVarsOffset += var.type->size;
+			}
+		}
+
+		//     ********  prepare functions' symbolic contexts ********
+		for (auto fnc : stor.fncs)
+		{
+			if (isDefined(*fnc))
+			{	// in case the function is defined and not only declared
+				fncIndex_.insert(std::make_pair(
+					fnc,
+					std::make_pair(
+						SymCtx(*fnc, &globalVarMap),
+						CodeStorage::Block()
+					)
+				));
+			}
+		}
+
+		//     ******* compile creation of global variables *******
+		// move void ptr of size 1 into r0
+		append(new FI_load_cst(nullptr, 0, Data::createVoidPtr(1)));
+
+		if (!globalVarsLayout.empty())
+		{
+			// allocate the block with global variables to r0
+			append(
+				new FI_node_create(
+					/* instruction */ nullptr,
+					/* dst reg where the node will be stored */ 0,
+					/* reg with the value from which the node is to be created */ 0,
+					/* size of the created node */ 1,
+					/* type information */ boxMan_.getTypeInfo(GLOBAL_VARS_BLOCK_STR),
+					/* selectors of the node */ globalVarsLayout
+				)
+			);
+		}
+
+		//     ******* load global registers *******
+		// push r0 as GLOB
+		append(new FI_push_greg(nullptr, 0));
+
+		// load NULL into r0
+		append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
+
+		// push r0 as ABP
+		append(new FI_push_greg(nullptr, 0));
+
+		//     ******* compile initialization of global variables *******
+		curCtx_ = new SymCtx(&globalVarMap);
+
+		for (const CodeStorage::Var& var : stor.vars)
+		{
+			if (CodeStorage::EVar::VAR_GL == var.code)
+			{	// for each global variable
+				if (!var.initials.empty())
+				{	// in case the variable is initialised
+					for (const CodeStorage::Insn* insn : var.initials)
+					{
+						// Assertions
+						assert(nullptr != insn);
+						assert((cl_insn_e::CL_INSN_UNOP == insn->code)
+							|| (cl_insn_e::CL_INSN_BINOP == insn->code));
+
+						compileInstruction(*insn);
+					}
+				}
+				else
+				{
+					throw NotImplementedException("Implicitly initialised global variable");
+				}
+			}
+		}
+
+		delete curCtx_;
+		curCtx_ = nullptr;
+	}
+
 public:
 
 	/**
@@ -2109,67 +2209,9 @@ public:
 		// clear the code in the assembly
 		reset(assembly);
 
-		//     ********  prepare the structure with global variables ********
-		std::vector<SelData> globalVarsLayout;
-		SymCtx::var_map_type globalVarMap;
-		size_t globalVarsOffset = 0;
-
-		for (const CodeStorage::Var& var : stor.vars)
-		{
-			if (CodeStorage::EVar::VAR_GL == var.code)
-			{
-				NodeBuilder::buildNode(globalVarsLayout, var.type, globalVarsOffset,
-					var.name);
-				globalVarMap.insert(
-					std::make_pair(var.uid, VarInfo::createGlobal(globalVarsOffset)));
-				globalVarsOffset += var.type->size;
-			}
-		}
-
-		//     ********  prepare functions' symbolic contexts ********
-		for (auto fnc : stor.fncs)
-		{
-			if (isDefined(*fnc))
-			{	// in case the function is defined and not only declared
-				fncIndex_.insert(std::make_pair(
-					fnc,
-					std::make_pair(
-						SymCtx(*fnc, &globalVarMap),
-						CodeStorage::Block()
-					)
-				));
-			}
-		}
+		compileInitialisation(stor);
 
 		//              ******* compile entry call *******
-
-		//     ******* compile initialization of global variables *******
-		// move void ptr of size 1 into r0
-		append(new FI_load_cst(nullptr, 0, Data::createVoidPtr(1)));
-
-		if (!globalVarsLayout.empty())
-		{
-			// allocate the block with global variables to r0
-			append(
-				new FI_node_create(
-					/* instruction */ nullptr,
-					/* dst reg where the node will be stored */ 0,
-					/* reg with the value from which the node is to be created */ 0,
-					/* size of the created node */ 1,
-					/* type information */ boxMan_.getTypeInfo(GLOBAL_VARS_BLOCK_STR),
-					/* selectors of the node */ globalVarsLayout
-				)
-			);
-		}
-
-		// push r0 as GLOB
-		append(new FI_push_greg(nullptr, 0));
-
-		// load NULL into r0
-		append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
-
-		// push r0 as ABP
-		append(new FI_push_greg(nullptr, 0));
 
 		// feed registers with arguments (unknown values)
 		for (size_t i = entry.args.size() + 1; i > 1; --i)
