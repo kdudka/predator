@@ -826,7 +826,7 @@ protected:
 						}
 						else if (varInfo.isGlobal())
 						{
-							throw NotImplementedException("global variables");
+							throw NotImplementedException("cLoadOperand(): global variables 1");
 						}
 						else
 						{
@@ -901,7 +901,7 @@ protected:
 							}
 							else if (varInfo.isGlobal())
 							{
-								assert(false);          // fail gracefully
+								throw NotImplementedException("cLoadOperand(): global variables 2");
 							}
 							else
 							{
@@ -981,8 +981,8 @@ protected:
 				// get info about the variable
 				const VarInfo& varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				if (varInfo.isOnStack())
-				{	// in case it is on the stack
+				if (varInfo.isOnStack() || varInfo.isGlobal())
+				{	// in case it is on the stack or global
 					return src;
 				} else if (varInfo.isInReg())
 				{	// in case it is in a register
@@ -994,9 +994,6 @@ protected:
 					// register, otherwise use the register in which the variable already
 					// is
 					return (acc && (acc->code == CL_ACCESSOR_DEREF))? (src) : (tmp);
-				} else if (varInfo.isGlobal())
-				{	// in case it is a global variable
-					return src;
 				} else
 				{	// othewise
 					assert(false);      // fail gracefully
@@ -1036,13 +1033,35 @@ protected:
 				// get variable info
 				const VarInfo& varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				if (varInfo.isOnStack())
-				{	// in case it is on the stack
+				if (varInfo.isOnStack() || varInfo.isGlobal())
+				{	// in case it is on the stack or is global
+					if (varInfo.isOnStack())
+					{ // append the instruction to get the value at given offset
+						append(new FI_get_ABP(&insn, tmp, 0));
+					}
+					else if (varInfo.isGlobal())
+					{ // append the instruction to get the value at given offset
+						append(new FI_get_GLOB(&insn, tmp, 0));
+					}
+					else
+					{
+						assert(false);          // fail gracefully
+					}
 
-					// append the instruction to get the value at given offset
-					append(new FI_get_ABP(&insn, tmp, 0));
+					int offset;
 
-					int offset = static_cast<int>(varInfo.getStackOffset());
+					if (varInfo.isOnStack())
+					{
+						offset = static_cast<int>(varInfo.getStackOffset());
+					}
+					else if (varInfo.isGlobal())
+					{
+						offset = static_cast<int>(varInfo.getGlobalBlockOffset());
+					}
+					else
+					{
+						assert(false);         // fail gracefully
+					}
 
 					bool needsAcc = false;
 
@@ -1054,8 +1073,19 @@ protected:
 						{	// in case the accessor is a dereference ('*' in C)
 							assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
-							// override previous instruction
-							override(new FI_load_ABP(&insn, tmp, varInfo.getStackOffset()));
+							if (varInfo.isOnStack())
+							{
+								// override previous instruction
+								override(new FI_load_ABP(&insn, tmp, varInfo.getStackOffset()));
+							}
+							else if (varInfo.isGlobal())
+							{
+								throw NotImplementedException("cStoreOperand(): global variables 3");
+							}
+							else
+							{
+								assert(false);         // fail gracefully
+							}
 
 							// separation is needed
 							needsAcc = true;
@@ -1109,9 +1139,6 @@ protected:
 				} else if (varInfo.isInReg())
 				{	// in case it is in a register
 					return cStoreReg(op, src, varInfo.getRegIndex(), insn);
-				} else if (varInfo.isGlobal())
-				{
-					throw NotImplementedException("global variables");
 				} else
 				{ // otherwise
 					assert(false);        // fail gracefully
