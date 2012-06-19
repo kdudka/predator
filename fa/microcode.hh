@@ -292,6 +292,24 @@ public:
 	}
 
 };
+
+class FI_get_GLOB : public SequentialInstruction {
+
+	size_t dst_;
+	int offset_;
+
+public:
+
+	FI_get_GLOB(const CodeStorage::Insn* insn, size_t dst, int offset)
+		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
+
+	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "mov   \tr" << this->dst_ << ", GLOB + " << this->offset_;
+	}
+
+};
 /*
 class FI_is_type : public SequentialInstruction {
 

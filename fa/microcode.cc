@@ -265,6 +265,18 @@ void FI_get_ABP::execute(ExecutionManager& execMan, const ExecState& state)
 	execMan.enqueue(tmpState, next_);
 }
 
+// FI_get_GLOB
+void FI_get_GLOB::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	Data data = VirtualMachine(*tmpState.GetMem()->GetFAE()).varGet(GLOB_INDEX);
+	data.d_ref.displ += offset_;
+
+	tmpState.SetReg(dst_, data);
+
+	execMan.enqueue(tmpState, next_);
+}
+
 // FI_load
 void FI_load::execute(ExecutionManager& execMan, const ExecState& state)
 {
