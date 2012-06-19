@@ -230,6 +230,8 @@ public:   // methods
 							assert(false);
 						}
 
+						/// @todo: instead of inserting, why not just initialise varMap_ to
+						///        globalVarMap
 						varMap_.insert(std::make_pair(var.uid, itGlobalVar->second));
 					}
 
@@ -241,6 +243,24 @@ public:   // methods
 		}
 	}
 
+	/**
+	 * @brief  Constructor for @e global context
+	 *
+	 * The constructor that creates the context for global variables. The function
+	 * reference is set to @p NULL reference (which is not very nice).
+	 *
+	 * @todo: revise the whole * concept
+	 */
+	SymCtx(const var_map_type* globalVarMap) :
+		fnc_(*static_cast<CodeStorage::Fnc*>(nullptr)),
+		sfLayout_{},
+		varMap_{*globalVarMap},
+		regCount_(0),
+		argCount_(0)
+	{
+		// Assertions
+		assert(nullptr != globalVarMap);
+	}
 
 	const VarInfo& getVarInfo(size_t id) const {
 		var_map_type::const_iterator i = varMap_.find(id);
