@@ -93,10 +93,10 @@ bool translateValId(
         const SymHeapCore       &src,
         const TValMap           &valMap);
 
-void translateValProto(
-        TValId                  *pValProto,
+TValId translateValProto(
         SymHeap                 &dst,
-        const SymHeap           &src);
+        const SymHeap           &src,
+        const TValId             valProto);
 
 inline ObjHandle translateObjId(
         SymHeap                 &dst,
@@ -140,8 +140,8 @@ inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
 }
 
 inline bool areValProtosEqual(
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
+        const SymHeapCore       &sh1,
+        const SymHeapCore       &sh2,
         const TValId            v1,
         const TValId            v2)
 {

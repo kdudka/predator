@@ -227,6 +227,12 @@ const std::string& CustomValue::str() const {
     return *data_.str;
 }
 
+/// eliminates the warning 'comparing floating point with == or != is unsafe'
+inline bool areEqual(const double a, const double b) {
+    return (a <= b)
+        && (b <= a);
+}
+
 bool operator==(const CustomValue &a, const CustomValue &b) {
     const ECustomValue code = a.code_;
     if (b.code_ != code)
@@ -240,7 +246,8 @@ bool operator==(const CustomValue &a, const CustomValue &b) {
             return (a.data_.uid == b.data_.uid);
 
         case CV_REAL:
-            return (a.data_.fpn == b.data_.fpn);
+            // just for convenience, no need to compare CV_REAL for equality
+            return areEqual(a.data_.fpn, b.data_.fpn);
 
         case CV_STRING:
             CL_BREAK_IF(!a.data_.str || !b.data_.str);
@@ -278,6 +285,7 @@ inline bool arenaLookup(
         const TMemChunk             &chunk,
         const TObjId                obj)
 {
+    CL_BREAK_IF(!dst->empty());
     arena.intersects(*dst, chunk);
 
     if (OBJ_INVALID != obj)
@@ -388,7 +396,7 @@ struct BaseValue: public AbstractHeapEntity {
     TOffset /* FIXME: misleading */ offRoot;
     TObjIdSet                       usedBy;
 
-    // cppcheck-suppress uninitVar
+    // cppcheck-suppress uninitMemberVar
     BaseValue(EValueTarget code_, EValueOrigin origin_):
         code(code_),
         origin(origin_),
@@ -441,7 +449,7 @@ struct RangeValue: public AnchorValue {
 struct CompValue: public BaseValue {
     TObjId                          compObj;
 
-    // cppcheck-suppress uninitVar
+    // cppcheck-suppress uninitMemberVar
     CompValue(EValueTarget code_, EValueOrigin origin_):
         BaseValue(code_, origin_)
     {
@@ -1683,19 +1691,21 @@ void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const {
     }
 }
 
-bool SymHeapCore::findCoveringUniBlock(
-        UniformBlock                *pDst,
+bool SymHeapCore::findCoveringUniBlocks(
+        TUniBlockMap               *pCovered,
         const TValId                root,
-        const TOffset               beg,
-        const TSizeOf               size)
+        UniformBlock                block)
     const
 {
+    CL_BREAK_IF(!pCovered->empty());
+
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     CL_BREAK_IF(!d->chkArenaConsistency(rootData));
 
     const TArena &arena = rootData->arena;
-    const TOffset end = beg + size;
+    const TOffset beg = block.off;
+    const TOffset end = beg + block.size;
     const TMemChunk chunk(beg, end);
 
     TObjIdSet overlaps;
@@ -1703,35 +1713,58 @@ bool SymHeapCore::findCoveringUniBlock(
         // not found
         return false;
 
-    BOOST_FOREACH(const TObjId id, overlaps) {
-        const BlockEntity *data;
-        d->ents.getEntRO(&data, id);
+    // use a temporary arena to test the coverage
+    TArena coverage;
+    coverage += TMemItem(chunk, /* XXX: misleading */ OBJ_UNKNOWN);
 
-        const EBlockKind code = data->code;
-        if (BK_UNIFORM != code)
+    // go through overlaps and subtract the chunks that are covered
+    BOOST_FOREACH(const TObjId obj, overlaps) {
+        const BlockEntity *blData;
+        d->ents.getEntRO(&blData, obj);
+
+        const EBlockKind code = blData->code;
+        if (BK_UNIFORM != code && VAL_NULL != blData->value)
             continue;
 
-        const BlockEntity *blData = DCAST<const BlockEntity *>(data);
+        if (!areValProtosEqual(*this, *this, blData->value, block.tplValue))
+            // incompatible value prototype
+            continue;
 
+        // this block entity can be used to build up the coverage, subtract it
         const TOffset blBeg = blData->off;
-        if (beg < blBeg)
-            // the template starts above this block
-            continue;
-
         const TSizeOf blSize = blData->size;
-        const TOffset blEnd = blBeg + blSize;
-        if (blEnd < end)
-            // the template ends beyond this block
-            continue;
+        coverage -= createArenaItem(blBeg, blSize, OBJ_UNKNOWN);
+    }
 
-        // covering uniform block matched!
-        pDst->off       = blBeg;
-        pDst->size      = blSize;
-        pDst->tplValue  = blData->value;
+    TObjIdSet uncovered;
+    if (!arenaLookup(&uncovered, coverage, chunk, OBJ_INVALID)) {
+        // full coverage has been found
+        (*pCovered)[beg] = block;
         return true;
     }
 
-    // not found
+    TArena::TKeySet gaps;
+    coverage.reverseLookup(gaps, OBJ_UNKNOWN);
+    if (gaps.empty())
+        // there is really nothing we could pick for coverage
+        return false;
+
+    // TODO: rewrite the algorithm so that we do not compute complement twice
+    coverage.clear();
+    coverage += TMemItem(chunk, /* XXX: misleading */ OBJ_UNKNOWN);
+    BOOST_FOREACH(TArena::TKeySet::const_reference item, gaps)
+        coverage -= TMemItem(item, OBJ_UNKNOWN);
+
+    // return partial coverage (if any)
+    TArena::TKeySet covChunks;
+    coverage.reverseLookup(covChunks, OBJ_UNKNOWN);
+    BOOST_FOREACH(TArena::TKeySet::const_reference item, covChunks) {
+        const TOffset off = item.first;
+        block.off = off;
+        block.size = /* end */ item.second - off;
+        (*pCovered)[off] = block;
+    }
+
     return false;
 }
 
@@ -1786,8 +1819,9 @@ void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
     const HeapObject *objData;
     d->ents.getEntRO(&objData, obj);
 
+    // make sure that the value is not a pointer to a structure object
     const TObjType clt = objData->clt;
-    CL_BREAK_IF(isComposite(clt, /* includingArray */ false));
+    CL_BREAK_IF(VT_COMPOSITE == this->valTarget(val));
 
     // check whether the root entity that owns this object ID is still valid
     CL_BREAK_IF(!isPossibleToDeref(this->valTarget(objData->root)));
@@ -3613,13 +3647,6 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
     if (SymHeapCore::proveNeq(ref, val))
         // values are non-equal in non-abstract world
         return true;
-
-    // having the values always in the same order leads to simpler code
-    moveKnownValueToLeft(*this, ref, val);
-
-    if (ref < VAL_NULL || !isAbstract(this->valTarget(val)))
-        // we are interested only in abstract objects here, nothing to do...
-        return false;
 
     TValSet seen;
 

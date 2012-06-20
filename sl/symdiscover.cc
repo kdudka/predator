@@ -266,6 +266,20 @@ TValId jumpToNextObj(
     return next;
 }
 
+bool isPointedByVar(SymHeap &sh, const TValId root) {
+    ObjList refs;
+    sh.pointedBy(refs, root);
+    BOOST_FOREACH(const ObjHandle obj, refs) {
+        const TValId at = obj.placedAt();
+        const EValueTarget code = sh.valTarget(at);
+        if (isProgramVar(code))
+            return true;
+    }
+
+    // no reference by a program variable
+    return false;
+}
+
 typedef TValSet TProtoRoots[2];
 
 bool matchData(
@@ -276,9 +290,15 @@ bool matchData(
         TProtoRoots                 *protoRoots,
         int                         *pCost)
 {
-    EJoinStatus status;
-    if (!joinDataReadOnly(&status, sh, off, at1, at2, protoRoots))
+    if (!isDlsBinding(off) && isPointedByVar(sh, at2))
+        // only first node of an SLS can be pointed by a program var, giving up
         return false;
+
+    EJoinStatus status;
+    if (!joinDataReadOnly(&status, sh, off, at1, at2, protoRoots)) {
+        CL_DEBUG("    joinDataReadOnly() refuses to create a segment!");
+        return false;
+    }
 
     int cost = 0;
     switch (status) {
@@ -339,13 +359,9 @@ void segDiscover(
         TProtoRoots protoRoots;
         int cost = 0;
 
-        // TODO: optimize such that matchData() is not called at all when any
-        // _program_ variable points at/inside;  call of matchData() in such
-        // cases is significant waste for us!
-        if (!matchData(sh, off, prev, at, &protoRoots, &cost)) {
-            CL_DEBUG("    joinDataReadOnly() refuses to create a segment!");
+        // join data of the current pair of objects
+        if (!matchData(sh, off, prev, at, &protoRoots, &cost))
             break;
-        }
 
         if (prev == entry && !validateSegEntry(sh, off, entry, VAL_INVALID, at,
                                                protoRoots[0]))
@@ -403,7 +419,7 @@ class PtrFinder {
         TOffset                     offFound_;
 
     public:
-        // cppcheck-suppress uninitVar
+        // cppcheck-suppress uninitMemberVar
         PtrFinder(TValId lookFor):
             lookFor_(lookFor)
         {

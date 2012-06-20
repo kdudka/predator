@@ -1,10 +1,9 @@
 diff --git a/switch-host-gcc.sh b/switch-host-gcc.sh
-index b81ee1d..238b3eb 100755
+index 3e89297..a8de196 100755
 --- a/switch-host-gcc.sh
 +++ b/switch-host-gcc.sh
-@@ -70,5 +70,3 @@ build_analyzer() {
- }
+@@ -71,4 +71,3 @@ build_analyzer() {
  
  build_analyzer fwnull fwnull
--build_analyzer sl Predator
+ build_analyzer sl Predator
 -build_analyzer fa Forester

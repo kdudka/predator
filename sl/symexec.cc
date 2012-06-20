@@ -504,7 +504,7 @@ void SymExecEngine::execCondInsn() {
     {
         std::ostringstream str;
         str << "at-line-" << lw_->line;
-        LDP_INIT(nondetCond, str.str().c_str());
+        LDP_INIT(nondetCond, str.str());
         LDP_PLOT(nondetCond, sh);
     }
 
@@ -1021,7 +1021,8 @@ fail:
 
         const TValId val = entry.valCreate(VT_UNKNOWN, origin);
         const ObjHandle obj = proc.objByOperand(dst);
-        proc.objSetValue(obj, val);
+        if (obj.isValid())
+            proc.objSetValue(obj, val);
     }
 
     // something wrong happened, print the backtrace

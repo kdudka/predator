@@ -443,11 +443,10 @@ class SymHeapCore {
         void gatherUniformBlocks(TUniBlockMap &dst, TValId root) const;
 
         /// experimental optimization of joinUniBlocksCore()
-        bool findCoveringUniBlock(
-                UniformBlock               *pDst,
+        bool findCoveringUniBlocks(
+                TUniBlockMap               *pCovered,
                 const TValId                root,
-                const TOffset               off,
-                const TSizeOf               size)
+                UniformBlock                block)
             const;
 
         /**

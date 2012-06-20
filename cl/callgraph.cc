@@ -42,7 +42,7 @@ Node* allocNodeIfNeeded(Graph &cg, Fnc *const fnc) {
 
     node = new Node(fnc);
     cg.roots.insert(node);
-    cg.leafs.insert(node);
+    cg.leaves.insert(node);
     return node;
 }
 
@@ -56,9 +56,14 @@ void handleCallback(Graph &cg, Node *node, const TInsn insn, TOp op) {
     Fnc *const targetFnc = insn->stor->fncs[uid];
     Node *const targetNode = allocNodeIfNeeded(cg, targetFnc);
 
+    // (node == 0) means var initializer
+    Fnc *const callerFnc = (node)
+        ? node->fnc
+        : 0;
+
     // append a callback to the _target_ node
     // FIXME: this can append a single instruction multiple times
-    targetNode->callbacks[node->fnc].push_back(insn);
+    targetNode->callbacks[callerFnc].push_back(insn);
 
     // update globals
     cg.roots.erase(targetNode);
@@ -67,7 +72,7 @@ void handleCallback(Graph &cg, Node *node, const TInsn insn, TOp op) {
 
 void handleCall(Graph &cg, Node *node, const TInsn insn) {
     // if there is a call, it is no longer a leaf node
-    cg.leafs.erase(node);
+    cg.leaves.erase(node);
 
     int uid;
     if (!fncUidFromOperand(&uid, &insn->operands[/* fnc */ 1])) {
@@ -114,6 +119,13 @@ void buildCallGraph(const Storage &stor) {
 
     BOOST_FOREACH(Fnc *fnc, stor.fncs)
         handleFnc(fnc);
+
+    Graph &cg = const_cast<Graph &>(stor.callGraph);
+
+    BOOST_FOREACH(const Var &var, stor.vars)
+        BOOST_FOREACH(const TInsn insn, var.initials)
+            BOOST_FOREACH(const TOp op, insn->operands)
+                handleCallback(cg, /* node */ 0, insn, op);
 
     CL_DEBUG("buildCallGraph() took " << watch);
 }

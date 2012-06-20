@@ -96,6 +96,11 @@ struct Var {
     bool                        initialized;
 
     /**
+     * true if the variable is external (defined in another module)
+     */
+    bool                        isExtern;
+
+    /**
      * true if there is at least one instruction in the program that takes an
      * address of the variable (or some part of it)
      */
@@ -722,7 +727,7 @@ namespace CallGraph {
         /// list of direct call instructions that call this function
         TInsnListByFnc              callers;
 
-        /// list of instructions that take address of this function
+        /// insns that take address of this function, zero key means initializer
         TInsnListByFnc              callbacks;
 
         Node(Fnc *fnc_):
@@ -735,7 +740,7 @@ namespace CallGraph {
 
     struct Graph {
         TNodeList                   roots;
-        TNodeList                   leafs;
+        TNodeList                   leaves;
 
         bool                        hasIndirectCall;
         bool                        hasCallback;

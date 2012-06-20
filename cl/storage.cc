@@ -103,6 +103,7 @@ Var::Var(EVar code_, const struct cl_operand *op):
     loc(op->data.var->loc),
     uid(op->data.var->uid),
     initialized(op->data.var->initialized),
+    isExtern(op->data.var->is_extern),
     mayBePointed(false)
 {
     CL_BREAK_IF(CL_OPERAND_VAR != op->code);
