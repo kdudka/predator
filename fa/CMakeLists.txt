@@ -36,15 +36,6 @@ ADD_CXX_ONLY_FLAG("W_CTOR_DTOR_PRIVACY"  "-Wctor-dtor-privacy")
 ADD_CXX_ONLY_FLAG("W_OLD_STYLE_CAST"     "-Wold-style-cast")
 ADD_CXX_ONLY_FLAG("W_EFFCXX"             "-Weffc++")
 
-## Check for isatty(3)
-#include(CheckFunctionExists)
-#check_function_exists("isatty" HAVE_ISATTY)
-#if (HAVE_ISATTY)
-#    add_definitions("-DHAVE_ISATTY=1")
-#else()
-#    add_definitions("-DHAVE_ISATTY=0")
-#endif()
-
 # helping scripts
 configure_file( ${PROJECT_SOURCE_DIR}/fagcc.in     ${PROJECT_BINARY_DIR}/fagcc     @ONLY)
 configure_file( ${PROJECT_SOURCE_DIR}/fagccp.in    ${PROJECT_BINARY_DIR}/fagccp    @ONLY)
