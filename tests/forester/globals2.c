@@ -13,9 +13,9 @@ struct T* x = NULL;
 
 int main()
 {
-	if (x)
+	if (!x)
 	{
-		// the analyzer should not report a bug here
+		// the analyzer should report a bug here
 		*(int*)NULL = 0;
 	}
 
