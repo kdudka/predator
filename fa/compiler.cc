@@ -2171,21 +2171,35 @@ protected:
 		{
 			if (CodeStorage::EVar::VAR_GL == var.code)
 			{	// for each global variable
-				if (!var.initials.empty())
-				{	// in case the variable is initialised
-					for (const CodeStorage::Insn* insn : var.initials)
-					{
-						// Assertions
-						assert(nullptr != insn);
-						assert((cl_insn_e::CL_INSN_UNOP == insn->code)
-							|| (cl_insn_e::CL_INSN_BINOP == insn->code));
+				if (!var.isExtern)
+				{	// if the variable has internal linkage
+					// assert it is initialised (explicitly or implicitely)
+					assert(var.initialized);
 
-						compileInstruction(*insn);
+					if (!var.initials.empty())
+					{	// in case the variable is initialised
+						for (const CodeStorage::Insn* insn : var.initials)
+						{
+							// Assertions
+							assert(nullptr != insn);
+							assert((cl_insn_e::CL_INSN_UNOP == insn->code)
+								|| (cl_insn_e::CL_INSN_BINOP == insn->code));
+
+							compileInstruction(*insn);
+						}
+					}
+					else
+					{
+						throw NotImplementedException("Implicitly initialised global variable");
 					}
 				}
 				else
-				{
-					throw NotImplementedException("Implicitly initialised global variable");
+				{	// if the variable has external linkage
+					assert(!var.initialized);
+					assert(var.initials.empty());
+
+					/// @todo: create with undef value
+					throw NotImplementedException("Global variable with external linkage");
 				}
 			}
 		}
