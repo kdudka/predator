@@ -944,6 +944,19 @@ static struct cl_var* add_var_if_needed(tree t)
     // read meta-data
     read_gcc_location(&var->loc, DECL_SOURCE_LOCATION(t));
     var->artificial = DECL_ARTIFICIAL(t);
+    var->is_extern = DECL_EXTERNAL(t);
+    if (!var->is_extern) {
+        const enum cl_scope_e code = get_decl_scope(t);
+        switch (code) {
+            case CL_SCOPE_GLOBAL:
+            case CL_SCOPE_STATIC:
+                // emit non-extern global variables as initialized
+                var->initialized = true;
+
+            default:
+                break;
+        }
+    }
 
     // read name and initializer
     var->name = get_decl_name(t);

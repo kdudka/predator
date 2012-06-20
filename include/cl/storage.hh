@@ -96,6 +96,11 @@ struct Var {
     bool                        initialized;
 
     /**
+     * true if the variable is external (defined in another module)
+     */
+    bool                        isExtern;
+
+    /**
      * true if there is at least one instruction in the program that takes an
      * address of the variable (or some part of it)
      */

@@ -438,6 +438,11 @@ struct cl_var {
      * true if the variable is initialized (does not imply NULL != initial)
      */
     bool                                initialized;
+
+    /**
+     * true if the variable is external (defined in another module)
+     */
+    bool                                is_extern;
 };
 
 /**
