@@ -17,6 +17,7 @@
 
 CMAKE           ?= cmake
 CTEST           ?= ctest
+CHK             ?= .
 
 .PHONY: all check clean cppcheck distclean distcheck fast version_cl.h
 
@@ -33,7 +34,7 @@ check: all
 
 cppcheck: all
 	cppcheck --enable=style,performance,portability,information,missingInclude \
-		--template gcc -j5 .
+		--template gcc -j5 --inline-suppr $(CHK)
 
 version_cl.h:
 	@if test -e ../.git; then \

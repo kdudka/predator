@@ -515,15 +515,8 @@ TValId SymProc::valFromOperand(const struct cl_operand &op) {
 }
 
 bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op) {
-    if (CL_OPERAND_CST == op.code) {
-        // direct call
-        const struct cl_cst &cst = op.data.cst;
-        if (CL_TYPE_FNC != cst.code)
-            return false;
-
-        *pUid = cst.data.cst_fnc.uid;
+    if (fncUidFromOperand(pUid, &op))
         return true;
-    }
 
     // assume indirect call
     const TValId val = this->valFromOperand(op);

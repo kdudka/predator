@@ -410,16 +410,15 @@ const Block* ControlFlow::operator[](const char *name) const {
 
 // /////////////////////////////////////////////////////////////////////////////
 // Fnc implementation
-namespace {
-    const struct cl_cst& cstFromFnc(const Fnc &fnc) {
-        const struct cl_operand &op = fnc.def;
-        CL_BREAK_IF(CL_OPERAND_CST != op.code);
+inline const struct cl_cst& cstFromFnc(const Fnc &fnc) {
+    const struct cl_operand &op = fnc.def;
+    CL_BREAK_IF(CL_OPERAND_CST != op.code);
 
-        const struct cl_cst &cst = op.data.cst;
-        CL_BREAK_IF(CL_TYPE_FNC != cst.code);
+    const struct cl_cst &cst = op.data.cst;
+    CL_BREAK_IF(CL_TYPE_FNC != cst.code);
 
-        return cst;
-    }
+    // cppcheck-suppress returnReference
+    return cst;
 }
 
 const char* nameOf(const Fnc &fnc) {
