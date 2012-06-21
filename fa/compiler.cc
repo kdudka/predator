@@ -2177,7 +2177,7 @@ protected:
 					assert(var.initialized);
 
 					if (!var.initials.empty())
-					{	// in case the variable is initialised
+					{	// in case the variable is initialised explicitly
 						for (const CodeStorage::Insn* insn : var.initials)
 						{
 							// Assertions
@@ -2185,12 +2185,54 @@ protected:
 							assert((cl_insn_e::CL_INSN_UNOP == insn->code)
 								|| (cl_insn_e::CL_INSN_BINOP == insn->code));
 
+							/// @todo: perform implicit zeroing (e.g. for structures)?
 							compileInstruction(*insn);
 						}
 					}
 					else
-					{
-						throw NotImplementedException("Implicitly initialised global variable");
+					{	// in case the variable is initialised implicitly
+
+						// NOTE: this is a very basic implementation with only very basic
+						// support. Advanced features are not supported
+
+						// load 0 into r0
+						append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
+
+						auto itVarMap = globalVarMap.find(var.uid);
+						assert(globalVarMap.end() != itVarMap);
+
+						int offset = itVarMap->second.getGlobalBlockOffset();
+
+						// load the variable into r1
+						append(new FI_get_GLOB(nullptr, 1, offset));
+
+						if (cl_type_e::CL_TYPE_STRUCT == var.type->code)
+						{	// in case the operand is a structure
+#if 0
+							// build a symbolic node
+							std::vector<size_t> offs;
+							NodeBuilder::buildNode(offs, op.type);
+
+							if (needsAcc)
+							{	// in case separation is needed
+								// append separation of a set of nodes
+								append(new FI_acc_set(&insn, tmp, offset, offs));
+							}
+
+							// append store of the value into register
+							append(new FI_stores(&insn, tmp, src, offset));
+#endif
+							throw NotImplementedException("Implicit initialization of a structure");
+						} else
+						{	// in case the operand is anything but a structure
+
+							// store the value in r0 to the memory location pointed by r1
+							append(new FI_store(nullptr, 1, 0, offset));
+						}
+
+						// add an instruction to check invariants of the virtual machine
+						append(new FI_check(nullptr));
+						//throw NotImplementedException("Implicitly initialised global variable");
 					}
 				}
 				else
