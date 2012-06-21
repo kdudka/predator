@@ -185,14 +185,12 @@ struct SymExecCoreParams {
     bool trackUninit;       ///< enable/disable @b track_uninit @b mode
     bool oomSimulation;     ///< enable/disable @b oom @b simulation mode
     bool skipPlot;          ///< simply ignore all ___sl_plot* calls
-    bool skipVarInit;       ///< used internally
     std::string errLabel;   ///< if not empty, treat reaching the label as error
 
     SymExecCoreParams():
         trackUninit(false),
         oomSimulation(false),
-        skipPlot(false),
-        skipVarInit(false)
+        skipPlot(false)
     {
     }
 };
@@ -205,7 +203,7 @@ class SymExecCore: public SymProc {
          * @param ep execution parameters - see SymExecCoreParams for details
          */
         SymExecCore(SymHeap &heap, const SymBackTrace *bt,
-                    const SymExecCoreParams &ep):
+                    const SymExecCoreParams &ep = SymExecCoreParams()):
             SymProc(heap, bt),
             ep_(ep)
         {

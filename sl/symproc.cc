@@ -297,9 +297,7 @@ void SymProc::varInit(TValId at) {
         // nothing to do at this level (already handled by SymExecCore)
         return;
 
-    SymExecCoreParams ep;
-    ep.skipVarInit = /* avoid an infinite recursion */ true;
-    SymExecCore core(sh_, bt_, ep);
+    SymExecCore core(sh_, bt_);
     BOOST_FOREACH(const CodeStorage::Insn *insn, var.initials) {
         const struct cl_loc *loc = &insn->loc;
         core.setLocation(loc);
@@ -1080,10 +1078,6 @@ void executeMemmove(
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
 void SymExecCore::varInit(TValId at) {
-    if (ep_.skipVarInit)
-        // we are explicitly asked to not initialize any vars
-        return;
-
     if (ep_.trackUninit && VT_ON_STACK == sh_.valTarget(at)) {
         // uninitialized stack variable
         const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
