@@ -7,17 +7,52 @@ export LC_ALL=C
 export CCACHE_DISABLE=1
 
 usage() {
-    echo "Usage: $0 foo.c <box directory>"
-    exit 1
+  echo "Usage: $SELF [OPTION]... FILE"
+  echo "Try '$SELF --help' for more information."
+  exit 1
+}
+
+usage_long() {
+  echo "Usage: $SELF [OPTION]... FILE"
+  echo ""
+  echo "Miscellaneous:"
+  echo "  -p, --print-ucode      print microcode"
+  echo "  -c, --compile-only     only compile, do not run the analysis"
+  echo "  -v, --verbose          increase verbosity level"
+  echo "  -h, --help             display this help and exit"
+
+  exit 1
 }
 
 seek_input_file() {
-    test -e "$1" && return 0
+  test -f "$1" && return 0
 
-    return 1
+  return 1
 }
 
-seek_input_file "$1" || usage
+FILENAME=
+FA_ARGS=
+FA_VERBOSE=0
+
+while [ "$1" != "" ]; do
+  case $1 in
+    -p | --print-ucode )    FA_ARGS="${FA_ARGS};print-ucode"
+                            ;;
+    -c | --compile-only )   FA_ARGS="${FA_ARGS};only-compile"
+                            ;;
+    -v | --verbose )        FA_VERBOSE=$(expr ${FA_VERBOSE} + 1)
+                            ;;
+    -h | --help )           usage_long
+                            ;;
+    * )                     FILENAME=$1
+  esac
+  shift
+done
+
+seek_input_file "$FILENAME" || {
+  echo "File \""$FILENAME"\" is not a regular file!"
+  usage ;
+}
 
 # include common code base
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
@@ -40,11 +75,6 @@ if [ "$FA_VERBOSE" -ge "1" ]; then
   # use pp code listener by default
   test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp -fplugin-arg-libfa-dump-types"
 fi;
-
-BOXDB=""
-if [ "$2" != "" ]; then
-    BOXDB="-fplugin-arg-libfa-args=db-root:$2"
-fi
 
 # check whether stdout is connected to a terminal
 if tty 0>&1 >"$SINK"; then
@@ -77,7 +107,9 @@ run_gcc() {
 
     "$GCC_HOST" $GCC_OPTS $@                                        \
         -fplugin="$FA_PLUG"                                         \
+        $FA_OPTS                                                    \
         -fplugin-arg-libfa-verbose="$FA_VERBOSE"                    \
+        -fplugin-arg-libfa-args="$FA_ARGS"                          \
         3>&1 1>&2 2>&3 #| stdbuf --output=L grep -E                  \
         #' \[-fplugin=libfa\.so\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'
     if [ $? -ne 0 ]; then
@@ -85,7 +117,7 @@ run_gcc() {
     fi
 }
 
-run_gcc $1 ${BOXDB} | stdbuf --output=L sed -re 's| \[-fplugin=libfa\.so\]$||' \
+run_gcc $FILENAME |stdbuf --output=L sed -re 's| \[-fplugin=libfa\.so\]$||'    \
         -e "s|(^.*) \[internal location\]\$|$S\1$N|"                           \
         -e "s|(: error:) (.*)\$|\1 $R\2$N|"                                    \
         -e "s|(: warning:) (.*)\$|\1 $Y\2$N|"                                  \
