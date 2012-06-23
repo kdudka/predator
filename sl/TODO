@@ -36,3 +36,6 @@
 - option to introduce new Neq predicates on call of free() to improve reasoning
 
 - option to show whole states leaking memory, not only the shape of leaked data
+
+- allow creation of lists from blocks of different sizes, leading to lists of
+  blocks of interval size
