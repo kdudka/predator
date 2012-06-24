@@ -1,6 +1,7 @@
 #!/bin/bash
 export SELF="$0"
 export LC_ALL=C
+export MAKE="make -j5"
 
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
@@ -13,14 +14,14 @@ usage() {
 
     Use this script to (re)build Predator and/or Forester against an arbitrary
     build of host GCC.  The host GCC needs to be built with the support for GCC
-    plug-ins.  The currently supported version of host GCC is 4.7.0, but feel
+    plug-ins.  The currently supported version of host GCC is 4.7.1, but feel
     free to use any other version of GCC at your own responsibility.
 
     GCC_HOST is the absolute path to gcc(1) that is built with the support for
     GCC plug-ins.  The most common location of the system GCC is /usr/bin/gcc.
     If you have multiple versions of gcc installed on the system, it can be
-    something like /usr/bin/gcc-4.7.0.  You can also provide a local build of
-    GCC, e.g.  /home/bob/gcc-4.7.0/bin/gcc.  Please avoid setting GCC_HOST to
+    something like /usr/bin/gcc-4.7.1.  You can also provide a local build of
+    GCC, e.g.  /home/bob/gcc-4.7.1/bin/gcc.  Please avoid setting GCC_HOST to
     a ccache, distcc, or another GCC wrapper.  Such setups are not supported
     yet.
 
@@ -49,24 +50,24 @@ test -x "$GCC_HOST" \
 "$GCC_HOST" --version || die "unable to run gcc: $GCC_HOST --version"
 
 status_update "Nuking working directory"
-make distclean \
-    || die "'make distclean' has failed"
+$MAKE distclean \
+    || die "'$MAKE distclean' has failed"
 
 status_update "Trying to build Code Listener"
-make -C cl CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
+$MAKE -C cl CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
     || die "failed to build Code Listener"
 
 status_update "Checking whether Code Listener works"
-make -C cl check \
+$MAKE -C cl check \
     || die "Code Listener does not work"
 
 build_analyzer() {
     status_update "Trying to build $2"
-    make -C $1 CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
+    $MAKE -C $1 CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
         || return $?
 
     status_update "Checking whether $2 works"
-    make -C $1 check
+    $MAKE -C $1 check
 }
 
 build_analyzer fwnull fwnull

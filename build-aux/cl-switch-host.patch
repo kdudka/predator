@@ -2,7 +2,7 @@ diff --git a/switch-host-gcc.sh b/switch-host-gcc.sh
 index b81ee1d..238b3eb 100755
 --- a/switch-host-gcc.sh
 +++ b/switch-host-gcc.sh
-@@ -70,5 +70,3 @@ build_analyzer() {
+@@ -71,5 +71,3 @@ build_analyzer() {
  }
  
  build_analyzer fwnull fwnull

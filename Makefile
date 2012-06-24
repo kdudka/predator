@@ -22,7 +22,7 @@ BOOST_STABLE    ?= boost_1_46_1#            # released Boost
 BOOST_STABLE_TGZ?= $(BOOST_STABLE).tar.bz2# # tarball of released Boost
 BOOST_STABLE_URL?= $(MIRROR)/distfiles/$(BOOST_STABLE_TGZ)
 
-GCC_STABLE      ?= gcc-4.7.0#               # released gcc
+GCC_STABLE      ?= gcc-4.7.1#               # released gcc
 GCC_STABLE_TGZ  ?= $(GCC_STABLE).tar.bz2#   # tarball of released gcc
 GCC_STABLE_URL  ?= $(GCC_MIRROR)/$(GCC_STABLE)/$(GCC_STABLE_TGZ)
 
