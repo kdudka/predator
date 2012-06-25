@@ -16,13 +16,13 @@ struct T y = {.next = &x};
 
 int main()
 {
-	if (x.next)
+	if (!x.next)
 	{
 		// the analyzer should not report a bug here
 		*(int*)NULL = 0;
 	}
 
-	if (y.next)
+	if (!y.next)
 	{
 		// the analyzer should not report a bug here
 		*(int*)NULL = 0;
