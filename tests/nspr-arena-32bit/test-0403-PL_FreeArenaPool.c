@@ -269,3 +269,20 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0403-PL_FreeArenaPool.c
+ *
+ * @brief single call of PL_FreeArenaPool()
+ *
+ *
+ * - arena size is 0x1000, alignment is commented out
+ *
+ * - size of the allocated block is 0x100
+ *
+ * - does NOT leak memory
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

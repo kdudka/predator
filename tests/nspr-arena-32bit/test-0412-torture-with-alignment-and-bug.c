@@ -287,3 +287,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0412-torture-with-alignment-and-bug.c
+ *
+ * @brief buggy variant of test-0409
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

@@ -290,3 +290,20 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0415-var-size.c
+ *
+ * @brief allocate in range 0x100..0x1000 aligned by 0x10
+ *
+ *
+ * - based on test-0414-tiny-size-range.c
+ *
+ * - arena size is 0x1000, alignment is commented out
+ *
+ * - allocating blocks of size 0x100..0x1000 & ~0xF
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

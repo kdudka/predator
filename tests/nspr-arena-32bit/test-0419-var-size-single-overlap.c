@@ -290,3 +290,17 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0419-var-size-single-overlap.c
+ *
+ * @brief size range exceeding arena size
+ *
+ *
+ * - arena size is 0x1000, alignment is commented out
+ *
+ * - blocks in range (0..0x1000 & ~sizeof(double)) + sizeof(double)
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

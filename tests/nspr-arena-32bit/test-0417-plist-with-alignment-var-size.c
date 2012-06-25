@@ -325,3 +325,18 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0417-plist-with-alignment-var-size.c
+ *
+ * @brief combination of 0410 and 0415
+ *
+ *
+ * - arena size is 0x10000, alignment is sizeof(double)
+ *
+ * - allocating blocks of size 0x100..0x1000 * sizeof(double)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

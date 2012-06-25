@@ -295,3 +295,20 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0414-tiny-size-range.c
+ *
+ * @brief allocate aligned range consisting of size 2
+ *
+ *
+ * - based on test-0405-torture.c
+ *
+ * - arena size is 0x1000, alignment is commented out
+ *
+ * - allocating blocks of size 0x80..0x81 * 0x10
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

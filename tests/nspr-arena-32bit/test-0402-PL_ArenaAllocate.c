@@ -263,3 +263,20 @@ int main()
     PL_ArenaFinish();
     return 0;
 }
+
+/**
+ * @file test-0402-PL_ArenaAllocate.c
+ *
+ * @brief single call of PL_ArenaAllocate()
+ *
+ *
+ * - arena size is 0x1000, alignment is 0x10
+ *
+ * - size of the allocated block is 0x100
+ *
+ * - leaks memory
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

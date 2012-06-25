@@ -287,3 +287,22 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0405-torture.c
+ *
+ * @brief for loops nested in each other, one arena, unaligned
+ *
+ *
+ * - arena size is 0x1000, alignment is commented out
+ *
+ * - size of the allocated blocks is 0x100
+ *
+ * - computationally expensive test-case
+ *
+ * - does NOT leak memory
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

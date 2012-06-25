@@ -287,3 +287,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0409-torture-with-alignment.c
+ *
+ * @brief aligned variant of test-0405-torture.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

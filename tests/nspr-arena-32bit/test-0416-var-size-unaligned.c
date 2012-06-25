@@ -290,3 +290,18 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0416-var-size-unaligned.c
+ *
+ * @brief unaligned variant of test-0415-var-size.c
+ *
+ *
+ * - unaligned allocation on aligned arena pool
+ *
+ * - assertion failure successfully caught by Predator
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

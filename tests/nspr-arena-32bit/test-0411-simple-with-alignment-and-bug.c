@@ -291,3 +291,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0411-simple-with-alignment-and-bug.c
+ *
+ * @brief buggy variant of test-0408
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

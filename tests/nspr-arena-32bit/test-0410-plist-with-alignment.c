@@ -322,3 +322,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0410-plist-with-alignment.c
+ *
+ * @brief aligned variant of test-0407-plist.c
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

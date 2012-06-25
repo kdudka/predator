@@ -291,3 +291,22 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0404-simple.c
+ *
+ * @brief simple use of the NSPR arena API without any loops
+ *
+ *
+ * - arena size is 0x1000, alignment is commented out
+ *
+ * - size of the allocated blocks is 0x100
+ *
+ * - there is probably a misuse of the API, but no assert for that
+ *
+ * - does NOT leak memory
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

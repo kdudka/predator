@@ -290,3 +290,18 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0418-var-size-below.c
+ *
+ * @brief allocating full range alignment..asize in loop
+ *
+ *
+ * - arena size is 0x1000, alignment is sizeof(double)
+ *
+ * - allocating blocks sizeof(double)..0x1000 & ~sizeof(double)
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

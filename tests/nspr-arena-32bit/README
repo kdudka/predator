@@ -1,0 +1,122 @@
+NSPR Arena 32bit
+================
+
+    test-0400-PL_ArenaFinish.c - single call of PL_ArenaFinish()
+
+    test-0401-PL_InitArenaPool.c - single call of PL_InitArenaPool()
+
+                - arena size is 0x1000, alignment is 0x10
+
+                - PL_FreeArenaPool() called twice
+
+                - PL_FinishArenaPool(), PL_ArenaFinish() called once
+
+    test-0402-PL_ArenaAllocate.c - single call of PL_ArenaAllocate()
+
+                - arena size is 0x1000, alignment is 0x10
+
+                - size of the allocated block is 0x100
+
+                - leaks memory
+
+    test-0403-PL_FreeArenaPool.c - single call of PL_FreeArenaPool()
+
+                - arena size is 0x1000, alignment is commented out
+
+                - size of the allocated block is 0x100
+
+                - does NOT leak memory
+
+    test-0404-simple.c - simple use of the NSPR arena API without any loops
+
+                - arena size is 0x1000, alignment is commented out
+
+                - size of the allocated blocks is 0x100
+
+                - there is probably a misuse of the API, but no assert for that
+
+                - does NOT leak memory
+
+    test-0405-torture.c - for loops nested in each other, one arena, unaligned
+
+                - arena size is 0x1000, alignment is commented out
+
+                - size of the allocated blocks is 0x100
+
+                - computationally expensive test-case
+
+                - does NOT leak memory
+
+    test-0406-plist-simplified.c - Linux list of uniform arena pools, unaligned
+
+                - top-level Linux list
+
+                - arena size is 0x100, alignment is commented out
+
+                - size of the allocated blocks is 0x100
+
+                - does NOT leak memory
+
+    test-0407-plist.c - Linux list of NSPR arena pools, unaligned
+
+                - top-level Linux list
+
+                - arena size is 0x1000, alignment is commented out
+
+                - size of the allocated blocks is 0x90
+
+                - computationally expensive test-case
+
+                - does NOT leak memory
+
+    test-0408-simple-with-alignment.c - aligned variant of test-0404-simple.c
+
+    test-0409-torture-with-alignment.c - aligned variant of test-0405-torture.c
+
+    test-0410-plist-with-alignment.c - aligned variant of test-0407-plist.c
+
+    test-0411-simple-with-alignment-and-bug.c - buggy variant of test-0408
+
+    test-0412-torture-with-alignment-and-bug.c - buggy variant of test-0409
+
+    test-0413-plist-with-alignment-and-bug.c - buggy variant of test-0410
+
+    test-0414-tiny-size-range.c - allocate aligned range consisting of size 2
+
+                - based on test-0405-torture.c
+
+                - arena size is 0x1000, alignment is commented out
+
+                - allocating blocks of size 0x80..0x81 * 0x10
+
+    test-0415-var-size.c - allocate in range 0x100..0x1000 aligned by 0x10
+
+                - based on test-0414-tiny-size-range.c
+
+                - arena size is 0x1000, alignment is commented out
+
+                - allocating blocks of size 0x100..0x1000 & ~0xF
+
+    test-0416-var-size-unaligned.c - unaligned variant of test-0415-var-size.c
+
+                - unaligned allocation on aligned arena pool
+
+                - assertion failure successfully caught by Predator
+
+    test-0417-plist-with-alignment-var-size.c - combination of 0410 and 0415
+
+                - arena size is 0x10000, alignment is sizeof(double)
+
+                - allocating blocks of size 0x100..0x1000 * sizeof(double)
+
+    test-0418-var-size-below.c - allocating full range alignment..asize in loop
+
+                - arena size is 0x1000, alignment is sizeof(double)
+
+                - allocating blocks sizeof(double)..0x1000 & ~sizeof(double)
+
+    test-0419-var-size-single-overlap.c - size range exceeding arena size
+
+                - arena size is 0x1000, alignment is commented out
+
+                - blocks in range (0..0x1000 & ~sizeof(double)) + sizeof(double)

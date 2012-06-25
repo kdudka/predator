@@ -266,3 +266,20 @@ int main()
     PL_ArenaFinish();
     return 0;
 }
+
+/**
+ * @file test-0401-PL_InitArenaPool.c
+ *
+ * @brief single call of PL_InitArenaPool()
+ *
+ *
+ * - arena size is 0x1000, alignment is 0x10
+ *
+ * - PL_FreeArenaPool() called twice
+ *
+ * - PL_FinishArenaPool(), PL_ArenaFinish() called once
+ *
+ * @attention
+ * This description is automatically imported from tests/predator-regre/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */
