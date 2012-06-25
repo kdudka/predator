@@ -34,6 +34,10 @@ FILENAME=
 FA_ARGS=
 FA_VERBOSE=0
 
+if [ $# == 0 ] ; then
+  usage ;
+fi;
+
 while [ "$1" != "" ]; do
   case $1 in
     -p | --print-ucode )    FA_ARGS="${FA_ARGS};print-ucode"
