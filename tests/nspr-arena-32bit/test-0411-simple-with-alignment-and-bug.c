@@ -298,6 +298,6 @@ int main()
  * @brief buggy variant of test-0408
  *
  * @attention
- * This description is automatically imported from tests/predator-regre/README.
+ * This description is automatically imported from tests/nspr-arena-32bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

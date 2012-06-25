@@ -337,6 +337,6 @@ int main()
  * - allocating blocks of size 0x100..0x1000 * sizeof(double)
  *
  * @attention
- * This description is automatically imported from tests/predator-regre/README.
+ * This description is automatically imported from tests/nspr-arena-32bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

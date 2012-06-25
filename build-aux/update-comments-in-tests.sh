@@ -36,7 +36,7 @@ write_desc() {
     fi
 
     printf "%s\n" " * @attention
- * This description is automatically imported from tests/predator-regre/README.
+ * This description is automatically imported from tests/$TEST_DIR/README.
  * Any changes made to this comment will be thrown away on the next import.
  */" >> "$output"
 }
@@ -128,6 +128,7 @@ process_README() {
 process_test_dir() (
     cd tests/$1 || die "failed to enter tests/$1"
     test -r README || die "unable to find tests/$1/README"
+    export TEST_DIR=$1
     process_README < README
 )
 
