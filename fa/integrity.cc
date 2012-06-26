@@ -24,14 +24,14 @@
 struct LeafEnumF
 {
 	const FAE& fae;
-	const TT<label_type>& t;
+	const TreeAut::Transition& t;
 	size_t target;
 	std::set<size_t>& selectors;
 
 
 	LeafEnumF(
 		const FAE& fae,
-		const TT<label_type>& t,
+		const TreeAut::Transition& t,
 		size_t target,
 		std::set<size_t>& selectors
 	) :
@@ -57,13 +57,27 @@ struct LeafEnumF
 };
 
 
+/**
+ * @brief  Functor for checking integrity of a label
+ */
 struct Integrity::CheckIntegrityF
 {
+	/// the integrity object
 	const Integrity& integrity;
+
+	/// the tree automaton
 	const TreeAut& ta;
+
+	/// the transition that is checked
 	const TT<label_type>& t;
+
+	/// the set of states which can only appear as cover in a structural box
 	std::set<size_t>* required;
+
+	/// the set of already processed tree automata
 	std::vector<bool>& bitmap;
+
+	/// the map of processed states
 	std::map<std::pair<const TreeAut*, size_t>, std::set<size_t>>& states;
 
 

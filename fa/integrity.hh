@@ -20,9 +20,12 @@
 #ifndef INTEGRITY_H
 #define INTEGRITY_H
 
+// Standard library headers
 #include <vector>
 
+// Forester headers
 #include "forestautext.hh"
+
 
 class Integrity
 {
