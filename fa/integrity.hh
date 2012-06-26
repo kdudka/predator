@@ -223,34 +223,26 @@ public:
 
 	}
 
-	bool check() const {
 
-		std::vector<bool> bitmap(this->fae.roots.size(), false);
-		std::map<std::pair<const TreeAut*, size_t>, std::set<size_t>> states;
+public:   // methods
 
-		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
+	/**
+	 * @brief  The constructor
+	 *
+	 * Constructs the @p Integrity object for a forest automaton
+	 *
+	 * @param[in]  fae  The forest automaton
+	 */
+	Integrity(const FAE& fae) :
+		fae(fae)
+	{ }
 
-			if (!this->fae.roots[i])
-				continue;
-
-			if (!this->checkRoot(i, bitmap, states)) {
-
-				CL_CDEBUG(1, "inconsistent heap: " << std::endl << this->fae);
-
-				return false;
-
-			}
-
-		}
-
-		return true;
-
-	}
-
-public:
-
-	Integrity(const FAE& fae) : fae(fae) {}
-
+	/**
+	 * @brief  Checks integrity of a Forest Automaton
+	 *
+	 * @returns @p true if the integrity holds, @p false otherwise
+	 */
+	bool check() const;
 };
 
 #endif

@@ -54,9 +54,11 @@ add_library(fa SHARED
 	cl_fa.cc
 	comparison.cc
 	compiler.cc
+  connection_graph.cc
 	exec_state.cc
 	fixpoint.cc
 	forestaut.cc
+	integrity.cc
 	jump.cc
 	label.cc
 	microcode.cc
@@ -66,7 +68,6 @@ add_library(fa SHARED
 	timbuk.cc
 	treeaut.cc
 	virtualmachine.cc
-  connection_graph.cc
 )
 set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 
