@@ -300,20 +300,23 @@ public:
 		}
 
 		// ************ compile layout of the block of global vars ************
-		std::vector<size_t> v;
-		size_t globalVarsOffset = 0;
+		std::vector<const cl_type*> components;
 		for (const CodeStorage::Var& var : stor.vars)
 		{
 			if (CodeStorage::EVar::VAR_GL == var.code)
 			{
-				v.push_back(globalVarsOffset);
-				globalVarsOffset += var.type->size;
+				components.push_back(var.type);
 			}
 		}
 
-		if (!v.empty())
+		if (!components.empty())
 		{
+			std::vector<size_t> v;
+			NodeBuilder::buildNode(v, components, 0);
+
 			this->boxMan.createTypeInfo(GLOBAL_VARS_BLOCK_STR, v);
+			CL_DEBUG_AT(1, "created box for global variables: "
+				<< *this->boxMan.getTypeInfo(GLOBAL_VARS_BLOCK_STR));
 		}
 	}
 
