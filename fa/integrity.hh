@@ -32,7 +32,8 @@ private:  // data types
 
 private:  // data members
 
-	const FAE& fae;
+	/// The Forest Automaton checked for integrity
+	const FAE& fae_;
 
 private:  // methods
 
@@ -92,7 +93,7 @@ public:   // methods
 	 * @param[in]  fae  The forest automaton
 	 */
 	Integrity(const FAE& fae) :
-		fae(fae)
+		fae_(fae)
 	{ }
 
 	/**

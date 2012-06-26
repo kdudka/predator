@@ -28,6 +28,7 @@ struct LeafEnumF
 	size_t target;
 	std::set<size_t>& selectors;
 
+
 	LeafEnumF(
 		const FAE& fae,
 		const TT<label_type>& t,
@@ -39,6 +40,7 @@ struct LeafEnumF
 		target(target),
 		selectors(selectors)
 	{ }
+
 
 	bool operator()(const AbstractBox* aBox, size_t, size_t offset)
 	{
@@ -64,6 +66,7 @@ struct Integrity::CheckIntegrityF
 	std::vector<bool>& bitmap;
 	std::map<std::pair<const TreeAut*, size_t>, std::set<size_t>>& states;
 
+
 	CheckIntegrityF(
 		const Integrity& integrity,
 		const TreeAut& ta,
@@ -80,6 +83,7 @@ struct Integrity::CheckIntegrityF
 		states(states)
 	{ }
 
+
 	bool operator()(const AbstractBox* aBox, size_t, size_t offset)
 	{
 		switch (aBox->getType())
@@ -94,7 +98,7 @@ struct Integrity::CheckIntegrityF
 
 					const Data* data;
 
-					if (this->integrity.fae.isData(this->t.lhs()[offset + i], data) && !data->isRef() && !data->isUndef())
+					if (this->integrity.fae_.isData(this->t.lhs()[offset + i], data) && !data->isRef() && !data->isUndef())
 						return false;
 
 					if (!this->integrity.checkState(this->ta, this->t.lhs()[offset + i], tmp->inputCoverage(i), this->bitmap, states))
@@ -136,7 +140,7 @@ void Integrity::enumerateSelectorsAtLeaf(
 	std::set<size_t>& selectors,
 	size_t target) const
 {
-	for (auto p_ta : fae.roots)
+	for (auto p_ta : fae_.roots)
 	{
 		if (!p_ta)
 			continue;
@@ -144,7 +148,7 @@ void Integrity::enumerateSelectorsAtLeaf(
 		for (auto rule : *p_ta)
 		{
 			if (rule.label()->isNode())
-				rule.label()->iterate(LeafEnumF(this->fae, rule, target, selectors));
+				rule.label()->iterate(LeafEnumF(fae_, rule, target, selectors));
 		}
 	}
 }
@@ -159,7 +163,7 @@ bool Integrity::checkState(
 {
 	const Data* data;
 
-	if (this->fae.isData(state, data))
+	if (fae_.isData(state, data))
 	{
 		if (!data->isRef())
 			return true;
@@ -205,8 +209,8 @@ bool Integrity::checkRoot(
 	std::map<std::pair<const TreeAut*, size_t>, std::set<size_t>>& states) const
 {
 	// Assertions
-	assert(root < this->fae.roots.size());
-	assert(this->fae.roots[root]);
+	assert(root < fae_.roots.size());
+	assert(fae_.roots[root]);
 	assert(root < bitmap.size());
 
 	if (bitmap[root])
@@ -218,28 +222,29 @@ bool Integrity::checkRoot(
 
 	this->enumerateSelectorsAtLeaf(tmp, root);
 
-	for (auto s : this->fae.roots[root]->getFinalStates())
+	for (auto s : fae_.roots[root]->getFinalStates())
 	{
-		if (!this->checkState(*this->fae.roots[root], s, tmp, bitmap, states))
+		if (!this->checkState(*fae_.roots[root], s, tmp, bitmap, states))
 			return false;
 	}
 
 	return true;
 }
 
+
 bool Integrity::check() const
 {
-	std::vector<bool> bitmap(this->fae.roots.size(), false);
+	std::vector<bool> bitmap(fae_.roots.size(), false);
 	std::map<std::pair<const TreeAut*, size_t>, std::set<size_t>> states;
 
-	for (size_t i = 0; i < this->fae.roots.size(); ++i)
+	for (size_t i = 0; i < fae_.roots.size(); ++i)
 	{
-		if (!this->fae.roots[i])
+		if (!fae_.roots[i])
 			continue;
 
 		if (!this->checkRoot(i, bitmap, states))
 		{
-			CL_CDEBUG(1, "inconsistent heap: " << std::endl << this->fae);
+			CL_CDEBUG(1, "inconsistent heap: " << std::endl << fae_);
 
 			return false;
 		}
