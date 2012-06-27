@@ -2099,9 +2099,11 @@ protected:
 	 *
 	 * Compiles the initialisation of global registers, global variables, etc.
 	 *
-	 * @param[in]   stor      Code storage with the code
+	 * @param[in]   stor        Code storage with the code
+	 * @param[out]  hasGlobals  @p true if there are global variables, @p false
+	 *                          otherwise
 	 */
-	void compileInitialisation(const CodeStorage::Storage& stor)
+	void compileInitialisation(const CodeStorage::Storage& stor, bool& hasGlobals)
 	{
 		//     ********  prepare the structure with global variables ********
 		std::vector<SelData> globalVarsLayout;
@@ -2139,8 +2141,11 @@ protected:
 		// move void ptr of size 1 into r0
 		append(new FI_load_cst(nullptr, 0, Data::createVoidPtr(1)));
 
+		hasGlobals = false;
 		if (!globalVarsLayout.empty())
 		{
+			hasGlobals = true;
+
 			// allocate the block with global variables to r0
 			append(
 				new FI_node_create(
@@ -2292,7 +2297,10 @@ public:
 		// clear the code in the assembly
 		reset(assembly);
 
-		compileInitialisation(stor);
+		bool hasGlobals;
+
+		// compile the initial code
+		compileInitialisation(stor, hasGlobals);
 
 		//              ******* compile entry call *******
 
@@ -2325,6 +2333,18 @@ public:
 
 		// check the stack frame
 		append(new FI_assert(nullptr, 1, Data::createInt(0)));
+
+		if (hasGlobals)
+		{
+			// store the GLOB into r1
+			append(new FI_get_GLOB(nullptr, 1, 0));
+
+			// delete the block with global variables (r1)
+			append(new FI_node_free(nullptr, 1));
+
+			// check for garbage
+			append(new FI_check(nullptr));
+		}
 
 		// abort
 		append(new FI_abort(nullptr));
