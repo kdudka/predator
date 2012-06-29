@@ -309,15 +309,19 @@ public:
 			}
 		}
 
+		std::vector<size_t> v;
 		if (!components.empty())
-		{
-			std::vector<size_t> v;
+		{ // in case the are some global variables
 			NodeBuilder::buildNode(v, components, 0);
-
-			this->boxMan.createTypeInfo(GLOBAL_VARS_BLOCK_STR, v);
-			CL_DEBUG_AT(1, "created box for global variables: "
-				<< *this->boxMan.getTypeInfo(GLOBAL_VARS_BLOCK_STR));
 		}
+		else
+		{	// in case there are no global variables, make one fake
+			v.push_back(0);
+		}
+
+		this->boxMan.createTypeInfo(GLOBAL_VARS_BLOCK_STR, v);
+		CL_DEBUG_AT(1, "created box for global variables: "
+			<< *this->boxMan.getTypeInfo(GLOBAL_VARS_BLOCK_STR));
 	}
 
 #if 0

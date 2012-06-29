@@ -2100,10 +2100,8 @@ protected:
 	 * Compiles the initialisation of global registers, global variables, etc.
 	 *
 	 * @param[in]   stor        Code storage with the code
-	 * @param[out]  hasGlobals  @p true if there are global variables, @p false
-	 *                          otherwise
 	 */
-	void compileInitialisation(const CodeStorage::Storage& stor, bool& hasGlobals)
+	void compileInitialisation(const CodeStorage::Storage& stor)
 	{
 		//     ********  prepare the structure with global variables ********
 		std::vector<SelData> globalVarsLayout;
@@ -2141,23 +2139,22 @@ protected:
 		// move void ptr of size 1 into r0
 		append(new FI_load_cst(nullptr, 0, Data::createVoidPtr(1)));
 
-		hasGlobals = false;
-		if (!globalVarsLayout.empty())
-		{
-			hasGlobals = true;
-
-			// allocate the block with global variables to r0
-			append(
-				new FI_node_create(
-					/* instruction */ nullptr,
-					/* dst reg where the node will be stored */ 0,
-					/* reg with the value from which the node is to be created */ 0,
-					/* size of the created node */ 1,
-					/* type information */ boxMan_.getTypeInfo(GLOBAL_VARS_BLOCK_STR),
-					/* selectors of the node */ globalVarsLayout
-				)
-			);
+		if (globalVarsLayout.empty())
+		{	// if there are no global variables, fake one
+			globalVarsLayout.push_back(SelData(0, 1, 0, "__fake_global__"));
 		}
+
+		// allocate the block with global variables to r0
+		append(
+			new FI_node_create(
+				/* instruction */ nullptr,
+				/* dst reg where the node will be stored */ 0,
+				/* reg with the value from which the node is to be created */ 0,
+				/* size of the created node */ 1,
+				/* type information */ boxMan_.getTypeInfo(GLOBAL_VARS_BLOCK_STR),
+				/* selectors of the node */ globalVarsLayout
+			)
+		);
 
 		//     ******* load global registers *******
 		// push r0 as GLOB
@@ -2235,6 +2232,9 @@ protected:
 							append(new FI_store(nullptr, 1, 0, offset));
 						}
 
+
+						// TODO: is the check instruction really necessary here?
+
 						// add an instruction to check invariants of the virtual machine
 						append(new FI_check(nullptr));
 						//throw NotImplementedException("Implicitly initialised global variable");
@@ -2297,10 +2297,8 @@ public:
 		// clear the code in the assembly
 		reset(assembly);
 
-		bool hasGlobals;
-
 		// compile the initial code
-		compileInitialisation(stor, hasGlobals);
+		compileInitialisation(stor);
 
 		//              ******* compile entry call *******
 
@@ -2334,17 +2332,14 @@ public:
 		// check the stack frame
 		append(new FI_assert(nullptr, 1, Data::createInt(0)));
 
-		if (hasGlobals)
-		{
-			// store the GLOB into r1
-			append(new FI_get_GLOB(nullptr, 1, 0));
+		// store the GLOB into r1
+		append(new FI_get_GLOB(nullptr, 1, 0));
 
-			// delete the block with global variables (r1)
-			append(new FI_node_free(nullptr, 1));
+		// delete the block with global variables (r1)
+		append(new FI_node_free(nullptr, 1));
 
-			// check for garbage
-			append(new FI_check(nullptr));
-		}
+		// check for garbage
+		append(new FI_check(nullptr));
 
 		// abort
 		append(new FI_abort(nullptr));

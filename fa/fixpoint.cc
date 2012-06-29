@@ -284,9 +284,19 @@ inline void abstract(FAE& fae, TreeAut& fwdConf, TreeAut::Backend& backend, BoxM
 
 	Abstraction abstraction(fae);
 
-	for (size_t i = 1; i < fae.getRootCount(); ++i)
-//		abstraction.heightAbstraction(i, 1, SmarterTMatchF(fae));
-		abstraction.heightAbstraction(i, 1, SmartTMatchF());
+	// the roots that will be excluded from abstraction
+	std::vector<bool> excludedRoots(fae.getRootCount(), false);
+	excludedRoots[VirtualMachine(fae).varGet(ABP_INDEX).d_ref.root] = true;
+	excludedRoots[VirtualMachine(fae).varGet(GLOB_INDEX).d_ref.root] = true;
+
+	for (size_t i = 0; i < fae.getRootCount(); ++i)
+	{
+		if (!excludedRoots[i])
+		{
+			abstraction.heightAbstraction(i, 1, SmartTMatchF());
+	//		abstraction.heightAbstraction(i, 1, SmarterTMatchF(fae));
+		}
+	}
 
 	CL_CDEBUG(3, "after abstraction: " << std::endl << fae);
 
