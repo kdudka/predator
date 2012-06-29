@@ -126,11 +126,14 @@ inline void computeForbiddenSet(std::set<size_t>& forbidden, FAE& fae) {
 	VirtualMachine vm(fae);
 
 	assert(fae.roots[vm.varGet(ABP_INDEX).d_ref.root]);
+	assert(fae.roots[vm.varGet(GLOB_INDEX).d_ref.root]);
 
 	// do not touch ABP
 	forbidden.insert(vm.varGet(ABP_INDEX).d_ref.root);
+	forbidden.insert(vm.varGet(GLOB_INDEX).d_ref.root);
 
 	vm.getNearbyReferences(vm.varGet(ABP_INDEX).d_ref.root, forbidden);
+	vm.getNearbyReferences(vm.varGet(GLOB_INDEX).d_ref.root, forbidden);
 
 /*
 	for (size_t i = 0; i < fae.roots.size(); ++i) {
