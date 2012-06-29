@@ -24,7 +24,7 @@
 
 - support for asymmetric predicates over integral ranges such that one can
   analyze NSPR arenas allocating blocks larger than arena size
-  
+
   - one needs to track that values in one integral range are below another
     integral range point-wise
 
@@ -39,3 +39,28 @@
 
 - allow creation of lists from blocks of different sizes, leading to lists of
   blocks of interval size
+
+------------------------------------------------------------------------------
+
+  >> Suggestions made by Hongseok Yang at CP-meets-CAV (June 2012) <<
+
+- Some (Linux (?)) drivers use lists of nodes that contain some small
+  array. The array is pointed from within the node via some field. If the space
+  in the array is insufficient, an external array is allocated and the pointer in
+  the structure is redirected to that array. Could we handle such a thing? It
+  complicates the join, it seems more difficult to base it on graph isomorphism.
+
+- Some Windows drivers use lists whose nodes are defined with a char[1] array at
+  the end. In reality, however, one allocates a large chunk of memory and
+  reinterpretes it such that it contains the list node structure at the beginning.
+  The programmers can, however, use a longer array tha the declared one of
+  length 1. To allow that, the list node structure contains a field giving the
+  length of the array. The algorithms rely upon this length. Hence, one has
+  to synchronize information about a data field and the size of the node.
+  Interesting to look at (and perhaps take into account when improving the
+  interval-based tracking of sizes and blocks). The example should be available
+  on the web by googling for something like: windows driver char[1].
+
+- As for the block operations, what about realloc?
+
+------------------------------------------------------------------------------
