@@ -409,6 +409,7 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 	if (boxMan.boxDatabase().size()) {
 
 		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
+		forbidden.insert(VirtualMachine(*fae).varGet(GLOB_INDEX).d_ref.root);
 
 		fold(*fae, this->boxMan, forbidden);
 
@@ -441,6 +442,7 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 
 			forbidden.clear();
 			forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
+			forbidden.insert(VirtualMachine(*fae).varGet(GLOB_INDEX).d_ref.root);
 
 			old = *fae;
 
@@ -476,6 +478,7 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 	if (boxMan.boxDatabase().size())
 	{
 		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
+		forbidden.insert(VirtualMachine(*fae).varGet(GLOB_INDEX).d_ref.root);
 
 		fold(*fae, this->boxMan, forbidden);
 
@@ -491,6 +494,7 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 		forbidden.clear();
 
 		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
+		forbidden.insert(VirtualMachine(*fae).varGet(GLOB_INDEX).d_ref.root);
 
 		while (fold(*fae, this->boxMan, forbidden))
 		{
@@ -503,6 +507,7 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 			forbidden.clear();
 
 			forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
+			forbidden.insert(VirtualMachine(*fae).varGet(GLOB_INDEX).d_ref.root);
 		}
 	}
 #endif
