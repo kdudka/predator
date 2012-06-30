@@ -74,10 +74,18 @@ if(USE_WERROR)
     ADD_C_FLAG("W_ERROR" "-Werror")
 endif()
 
-option(USE_INT3_AS_BRK
-       "Set to ON to use INT3 for breakpoints (SIGTRAP is used by default)" OFF)
-if(USE_INT3_AS_BRK)
+# if __asm__("int3") raises SIGTRAP, use it for breakpoints (SIGTRAP otherwise)
+message(STATUS "checking whether INT3 raises SIGTRAP")
+set(INT3_SRC "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/int3.c")
+file(WRITE "${INT3_SRC}" "int main(void) { __asm__(\"int3\"); }\n")
+try_run(INT3_RUN_RESULT INT3_COMPILE_RESULT
+        "${CMAKE_BINARY_DIR}" "${INT3_SRC}"
+        RUN_OUTPUT_VARIABLE INT3)
+if("${INT3}" MATCHES "SIGTRAP")
+    message(STATUS "INT3 will be used for trigerring breakpoints")
     add_definitions("-DUSE_INT3_AS_BRK")
+else()
+    message(STATUS "raise(SIGTRAP) will be used for trigerring breakpoints")
 endif()
 
 # FIXME: the use of $GCC_HOST from the environment should be better documented
