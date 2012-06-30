@@ -1976,18 +1976,6 @@ bool joinAbstractValues(
     if (isAbs2 && insertSegmentClone(pResult, ctx, item, JS_USE_SH2))
         goto done;
 
-#ifndef I_WANT_TO_DEBUG_TEST_0039
-    if (ctx.joiningData() && (isAbs1 != isAbs2)) {
-        if (isAbs1 && joinSegmentWithAny(pResult, ctx, rootItem, JS_USE_SH1,
-                    /* firstTryReadOnly */ false))
-            goto done;
-
-        if (isAbs2 && joinSegmentWithAny(pResult, ctx, rootItem, JS_USE_SH2,
-                    /* firstTryReadOnly */ false))
-            goto done;
-    }
-#endif
-
     // we have failed
     *pResult = false;
     return true;
@@ -2150,29 +2138,31 @@ bool mayExistFallback(
         // only concrete objects/prototypes are candidates for OK_SEE_THROUGH
         return false;
 
-    const TValId ref = (use2) ? v1 : v2;
-
-    MayExistVisitor visitor(ctx, item.ldiff, action, ref, /* root */ valRoot);
-
-    traverseLivePtrs(sh, valRoot, visitor);
-    if (!visitor.found()) {
-        // reference value not matched directly, try to look through
-        visitor.enableLookThroughMode();
-        traverseLivePtrs(sh, valRoot, visitor);
-    }
-
     BindingOff off;
-    if (visitor.found()) {
+
+    const TValId ref = (use2) ? v1 : v2;
+    if (VAL_NULL == ref) {
+        // introduce OK_OBJ_OR_NULL
+        off = ObjOrNull;
+    }
+    else {
+        // look for next pointer(s) of OK_SEE_THROUGH/OK_SEE_THROUGH_2N
+        MayExistVisitor visitor(ctx, item.ldiff, action, ref, /* root */ valRoot);
+        traverseLivePtrs(sh, valRoot, visitor);
+        if (!visitor.found()) {
+            // reference value not matched directly, try to look through
+            visitor.enableLookThroughMode();
+            traverseLivePtrs(sh, valRoot, visitor);
+        }
+
+        if (!visitor.found())
+            // no match
+            return false;
+
         // introduce OK_SEE_THROUGH
         off.head = sh.valOffset(val);
         off.next = off.prev = visitor.foundOffsets().front();
     }
-    else if (VAL_NULL == ref)
-        // introduce OK_OBJ_OR_NULL
-        off = ObjOrNull;
-    else
-        // no match
-        return false;
 
     // mayExistFallback() always implies JS_THREE_WAY
     if (!updateJoinStatus(ctx, JS_THREE_WAY))
