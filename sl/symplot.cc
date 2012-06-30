@@ -506,6 +506,7 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
             break;
 
         case OK_DLS:
+        case OK_SEE_THROUGH_2N:
             prev = prevPtrFromSeg(sh, at);
             // fall through!
 
@@ -562,6 +563,7 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
 
         case OK_OBJ_OR_NULL:
         case OK_SEE_THROUGH:
+        case OK_SEE_THROUGH_2N:
             label << "0..1";
             break;
 
@@ -643,6 +645,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
 
         case OK_OBJ_OR_NULL:
         case OK_SEE_THROUGH:
+        case OK_SEE_THROUGH_2N:
             color = "green";
             pw = "3.0";
             break;

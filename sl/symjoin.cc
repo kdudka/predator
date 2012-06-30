@@ -553,6 +553,7 @@ bool bumpNestingLevel(const ObjHandle &obj) {
             return false;
 
         case OK_DLS:
+        case OK_SEE_THROUGH_2N:
             if (obj == prevPtrFromSeg(sh, root))
                 // prev pointer
                 return false;

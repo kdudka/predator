@@ -195,6 +195,7 @@ inline void buildIgnoreList(
             return;
 
         case OK_DLS:
+        case OK_SEE_THROUGH_2N:
             // preserve 'peer' field
             off = sh.segBinding(at).prev;
             tmp = PtrHandle(writable, writable.valByOffset(at, off));

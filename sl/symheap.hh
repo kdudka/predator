@@ -695,9 +695,22 @@ enum EObjKind {
     OK_CONCRETE = 0,        ///< concrete object (not a segment)
     OK_SLS,                 ///< singly-linked list segment
     OK_DLS,                 ///< doubly-linked list segment
+    OK_OBJ_OR_NULL,         ///< 0..1 object, assume NULL if not allocated
     OK_SEE_THROUGH,         ///< 0..1 object, see through if not allocated
-    OK_OBJ_OR_NULL          ///< 0..1 object, assume NULL if not allocated
+    OK_SEE_THROUGH_2N       ///< OK_SEE_THROUGH with two next pointers
 };
+
+inline bool isMayExistObj(const enum EObjKind kind) {
+    switch (kind) {
+        case OK_OBJ_OR_NULL:
+        case OK_SEE_THROUGH:
+        case OK_SEE_THROUGH_2N:
+            return true;
+
+        default:
+            return false;
+    }
+}
 
 /// tuple of binding offsets assigned to abstract objects
 struct BindingOff {
