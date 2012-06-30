@@ -2047,6 +2047,9 @@ bool offRangeFallback(
 }
 
 class MayExistVisitor {
+    public:
+        typedef std::vector<TOffset>                TResult;
+
     private:
         SymJoinCtx              ctx_;
         const TProtoLevel       ldiff_;
@@ -2054,7 +2057,7 @@ class MayExistVisitor {
         const TValId            valRef_;
         const TValId            root_;
         bool                    lookThrough_;
-        TOffset                 offNext_;
+        TResult                 foundOffsets_;
 
     public:
         MayExistVisitor(
@@ -2068,14 +2071,17 @@ class MayExistVisitor {
             action_(action),
             valRef_(valRef),
             root_(root),
-            lookThrough_(false),
-            offNext_(0)
+            lookThrough_(false)
         {
             CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
         }
 
-        TOffset offNext() const {
-            return offNext_;
+        const TResult& foundOffsets() const {
+            return foundOffsets_;
+        }
+
+        bool found() const {
+            return !foundOffsets_.empty();
         }
 
         void enableLookThroughMode(bool enable = true) {
@@ -2107,8 +2113,8 @@ class MayExistVisitor {
                 val = nextValFromSeg(sh, seg);
             }
 
-            offNext_ = sh.valOffset(sub.placedAt());
-            return /* continue */ false;
+            foundOffsets_.push_back(sh.valOffset(sub.placedAt()));
+            return /* continue */ true;
         }
 };
 
@@ -2148,18 +2154,18 @@ bool mayExistFallback(
 
     MayExistVisitor visitor(ctx, item.ldiff, action, ref, /* root */ valRoot);
 
-    bool found = !traverseLivePtrs(sh, valRoot, visitor);
-    if (!found) {
+    traverseLivePtrs(sh, valRoot, visitor);
+    if (!visitor.found()) {
         // reference value not matched directly, try to look through
         visitor.enableLookThroughMode();
-        found = !traverseLivePtrs(sh, valRoot, visitor);
+        traverseLivePtrs(sh, valRoot, visitor);
     }
 
     BindingOff off;
-    if (found) {
+    if (visitor.found()) {
         // introduce OK_SEE_THROUGH
         off.head = sh.valOffset(val);
-        off.next = off.prev = visitor.offNext();
+        off.next = off.prev = visitor.foundOffsets().front();
     }
     else if (VAL_NULL == ref)
         // introduce OK_OBJ_OR_NULL
