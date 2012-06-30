@@ -173,7 +173,10 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     // preserve metadata of abstract objects
     if (isAbstract(src.valTarget(rootSrcAt))) {
         const EObjKind kind = src.valTargetKind(rootSrcAt);
-        const BindingOff &off = src.segBinding(rootSrcAt);
+        const BindingOff off = (OK_OBJ_OR_NULL == kind)
+            ? BindingOff(OK_OBJ_OR_NULL)
+            : src.segBinding(rootSrcAt);
+
         dst.valTargetSetAbstract(rootDstAt, kind, off);
 
 #if SE_SYMCUT_PRESERVES_MIN_LENGTHS

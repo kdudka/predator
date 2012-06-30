@@ -287,19 +287,11 @@ TValId segDeepCopy(SymHeap &sh, TValId seg) {
 
 void enlargeMayExist(SymHeap &sh, const TValId at) {
     const EObjKind kind = sh.valTargetKind(at);
-    switch (kind) {
-        case OK_SEE_THROUGH:
-            decrementProtoLevel(sh, at);
-            sh.valTargetSetConcrete(at);
-            // fall through!
+    if (!isMayExistObj(kind))
+        return;
 
-        case OK_CONCRETE:
-        case OK_SLS:
-            return;
-
-        default:
-            CL_BREAK_IF("invalid call of enlargeMayExist()");
-    }
+    decrementProtoLevel(sh, at);
+    sh.valTargetSetConcrete(at);
 }
 
 void slSegAbstractionStep(

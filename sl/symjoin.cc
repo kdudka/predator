@@ -1935,10 +1935,10 @@ void resolveMayExist(
         // kind of abstract object matches in both cases
         return;
 
-    if (OK_SEE_THROUGH == kind1)
+    if (isMayExistObj(kind1))
         *isAbs1 = false;
 
-    if (OK_SEE_THROUGH == kind2)
+    if (isMayExistObj(kind2))
         *isAbs2 = false;
 }
 

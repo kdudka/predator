@@ -48,8 +48,8 @@ bool matchSegBinding(
             return true;
 
         case OK_OBJ_OR_NULL:
-            // OK_OBJ_OR_NULL on the path --> withdraw it!
-            return false;
+            // OK_OBJ_OR_NULL can be the last node of a NULL-terminated list
+            return true;
 
         default:
             break;
