@@ -1842,7 +1842,7 @@ bool insertSegmentClone(
     }
 
 #if SE_ALLOW_THREE_WAY_JOIN < 3
-    if (!ctx.joiningData())
+    if (!ctx.joiningData() && objMinLength(shGt, seg))
         // on the way from joinSymHeaps(), some three way joins are destructive
         ctx.allowThreeWay = false;
 #endif
