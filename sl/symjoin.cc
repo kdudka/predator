@@ -901,6 +901,22 @@ bool joinObjKind(
     }
 }
 
+bool matchBindingFieldsByValue(
+        SymHeap                 &sh,
+        const TValId             root,
+        const BindingOff        &off1,
+        const BindingOff        &off2)
+{
+        const TValId valNextBy1 = valOfPtrAt(sh, root, off1.next);
+        const TValId valNextBy2 = valOfPtrAt(sh, root, off2.next);
+        if (valNextBy1 != valNextBy2)
+            return false;
+
+        const TValId valPrevBy1 = valOfPtrAt(sh, root, off1.prev);
+        const TValId valPrevBy2 = valOfPtrAt(sh, root, off2.prev);
+        return (valPrevBy1 == valPrevBy2);
+}
+
 bool joinSegBindingOfMayExist(
         bool                    *pResult,
         BindingOff              *pOff,
@@ -911,10 +927,8 @@ bool joinSegBindingOfMayExist(
     const EObjKind kind1 = ctx.sh1.valTargetKind(seg1);
     const EObjKind kind2 = ctx.sh2.valTargetKind(seg2);
 
-    const bool isMayExist1 = (OK_SEE_THROUGH == kind1
-            /* XXX */ || OK_SEE_THROUGH_2N == kind1);
-    const bool isMayExist2 = (OK_SEE_THROUGH == kind2
-            /* XXX */ || OK_SEE_THROUGH_2N == kind2);
+    const bool isMayExist1 = isMayExistObj(kind1);
+    const bool isMayExist2 = isMayExistObj(kind2);
     if (!isMayExist1 && !isMayExist2)
         // no OK_SEE_THROUGH involved
         return false;
@@ -923,39 +937,29 @@ bool joinSegBindingOfMayExist(
     const BindingOff off2 = ctx.sh2.segBinding(seg2);
     *pOff = (isMayExist2) ? off1 : off2;
 
-    const TOffset offNext1 = off1.next;
-    const TOffset offNext2 = off2.next;
-    if (offNext1 == offNext2 && off1.head == off2.head) {
+    if (off1 == off2) {
         // the 'next' offset matches trivially
         *pResult = true;
         return true;
     }
 
     if (OK_OBJ_OR_NULL == kind2) {
-        *pResult = (VAL_NULL == valOfPtrAt(ctx.sh1, seg1, offNext1));
+        *pResult = (VAL_NULL == valOfPtrAt(ctx.sh1, seg1, off1.next));
         return true;
     }
 
     if (OK_OBJ_OR_NULL == kind1) {
-        *pResult = (VAL_NULL == valOfPtrAt(ctx.sh2, seg2, offNext2));
+        *pResult = (VAL_NULL == valOfPtrAt(ctx.sh2, seg2, off2.next));
         return true;
     }
 
-    // NOTE: test-0129 utilizes this code path
+    // NOTE: test-0504 utilizes this code path
 
-    if (isMayExist1) {
-        const TValId valNextBy1 = valOfPtrAt(ctx.sh1, seg1, offNext1);
-        const TValId valNextBy2 = valOfPtrAt(ctx.sh1, seg1, offNext2);
-        if (valNextBy1 == valNextBy2)
+    if (isMayExist1 && matchBindingFieldsByValue(ctx.sh1, seg1, off1, off2))
             goto match;
-    }
 
-    if (isMayExist2) {
-        const TValId valNextBy1 = valOfPtrAt(ctx.sh2, seg2, offNext1);
-        const TValId valNextBy2 = valOfPtrAt(ctx.sh2, seg2, offNext2);
-        if (valNextBy1 == valNextBy2)
+    if (isMayExist2 && matchBindingFieldsByValue(ctx.sh2, seg2, off1, off2))
             goto match;
-    }
 
     // giving up
     *pResult = false;
