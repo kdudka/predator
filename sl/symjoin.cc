@@ -2034,10 +2034,9 @@ bool offRangeFallback(
     return true;
 }
 
-class MayExistVisitor {
-    public:
-        typedef std::vector<TOffset>                TResult;
+typedef std::vector<TOffset>                        TOffList;
 
+class MayExistVisitor {
     private:
         SymJoinCtx              ctx_;
         const TProtoLevel       ldiff_;
@@ -2045,7 +2044,7 @@ class MayExistVisitor {
         const TValId            valRef_;
         const TValId            root_;
         bool                    lookThrough_;
-        TResult                 foundOffsets_;
+        TOffList                foundOffsets_;
 
     public:
         MayExistVisitor(
@@ -2064,7 +2063,7 @@ class MayExistVisitor {
             CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
         }
 
-        const TResult& foundOffsets() const {
+        const TOffList& foundOffsets() const {
             return foundOffsets_;
         }
 
@@ -2077,10 +2076,19 @@ class MayExistVisitor {
         }
 
         bool operator()(const ObjHandle &sub) {
+            if (!isDataPtr(sub.objType()))
+                // not a pointer
+                return /* continue */ true;
+
             SymHeap &sh = *static_cast<SymHeap *>(sub.sh());
             TValId val = sub.value();
 
             for (;;) {
+                const TValId valRoot = sh.valRoot(val);
+                if (valRoot == root_)
+                    // refuse referencing the MayExist candidate itself
+                    return /* continue */ true;
+
                 const TValId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
                 const TValId v2 = (JS_USE_SH2 == action_) ? val : valRef_;
                 const SchedItem item(v1, v2, ldiff_);
@@ -2091,7 +2099,7 @@ class MayExistVisitor {
                 if (!lookThrough_ || !isAbstract(sh.valTarget(val)))
                     return /* continue */ true;
 
-                TValId seg = sh.valRoot(val);
+                TValId seg = valRoot;
                 if (sh.segMinLength(seg) || segHeadAt(sh, seg) != val)
                     return /* continue */ true;
 
@@ -2105,6 +2113,55 @@ class MayExistVisitor {
             return /* continue */ true;
         }
 };
+
+bool mayExistDigOffsets(
+        BindingOff              *pOff,
+        SymHeap                 &sh,
+        const TValId             valBy,
+        TOffList                 offList)
+{
+    if (offList.empty())
+        // no match
+        return false;
+
+    const TValId root = sh.valRoot(valBy);
+
+    typedef std::map<TValId, TOffList>              TOffsByVal;
+    TOffsByVal offsByVal;
+    BOOST_FOREACH(const TOffset off, offList) {
+        const TValId val = valOfPtrAt(sh, root, off);
+        offsByVal[val].push_back(off);
+    }
+
+    int maxCnt = 0;
+    TValId maxVal = VAL_INVALID;
+
+    BOOST_FOREACH(TOffsByVal::const_reference item, offsByVal) {
+        const int cnt = item.second.size();
+        if (cnt < maxCnt)
+            continue;
+
+        maxCnt = cnt;
+        maxVal = /* val */ item.first;
+    }
+
+    // pick the list of offsets with the best sharing
+    CL_BREAK_IF(VAL_INVALID == maxVal);
+    offList = offsByVal[maxVal];
+
+    switch (maxCnt) {
+        default:
+            // TODO
+
+        case 1:
+            // introduce OK_SEE_THROUGH
+            pOff->next = pOff->prev = offList.front();
+            break;
+    }
+
+    pOff->head = sh.valOffset(valBy);
+    return true;
+}
 
 bool mayExistFallback(
         SymJoinCtx              &ctx,
@@ -2155,13 +2212,9 @@ bool mayExistFallback(
             traverseLivePtrs(sh, valRoot, visitor);
         }
 
-        if (!visitor.found())
+        if (!mayExistDigOffsets(&off, sh, val, visitor.foundOffsets()))
             // no match
             return false;
-
-        // introduce OK_SEE_THROUGH
-        off.head = sh.valOffset(val);
-        off.next = off.prev = visitor.foundOffsets().front();
     }
 
     // mayExistFallback() always implies JS_THREE_WAY
