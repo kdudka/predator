@@ -82,7 +82,18 @@ test-0302.c:270:5: note: from call of main()
 test-0302.c:154:12: warning: memory leak detected while destroying a variable on stack
 test-0302.c:286:5: note: from call of register_cdrom()
 test-0302.c:270:5: note: from call of main()
-test-0302.c:86:19: warning: memory leak detected while destroying a static variable
+test-0302.c:151:8: warning: memory leak detected while destroying a variable on stack
+test-0302.c:286:5: note: from call of register_cdrom()
+test-0302.c:270:5: note: from call of main()
+test-0302.c:151:8: warning: memory leak detected while destroying a variable on stack
+test-0302.c:286:5: note: from call of register_cdrom()
+test-0302.c:270:5: note: from call of main()
+test-0302.c:154:12: warning: memory leak detected while destroying a variable on stack
+test-0302.c:286:5: note: from call of register_cdrom()
+test-0302.c:270:5: note: from call of main()
+test-0302.c:154:12: warning: memory leak detected while destroying a variable on stack
+test-0302.c:286:5: note: from call of register_cdrom()
+test-0302.c:270:5: note: from call of main()
 test-0302.c:87:33: warning: memory leak detected while destroying a static variable
 test-0302.c:90:34: warning: memory leak detected while destroying a static variable
 test-0302.c:87:33: warning: memory leak detected while destroying a static variable
@@ -102,3 +113,4 @@ test-0302.c:87:33: warning: memory leak detected while destroying a static varia
 test-0302.c:90:34: warning: memory leak detected while destroying a static variable
 test-0302.c:87:33: warning: memory leak detected while destroying a static variable
 test-0302.c:90:34: warning: memory leak detected while destroying a static variable
+test-0302.c:86:19: warning: memory leak detected while destroying a static variable

@@ -254,7 +254,7 @@
 /**
  * if 1, use a DFS scheduler at the level of basic blocks; if 0, use BFS
  */
-#define SE_USE_DFS_SCHEDULER                0
+#define SE_USE_DFS_SCHEDULER                1
 
 /**
  * if 1, do not make deep copy on copy of SymHeap [experimental]

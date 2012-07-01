@@ -1,5 +1,5 @@
 test-0077.c:43:15: note: writing heap graph to '01-0000.dot'...
-test-0077.c:47:22: error: dereferencing object of size 4B out of bounds
-test-0077.c:47:22: note: the pointer being dereferenced points 8B above a variable on stack of size 12B
 test-0077.c:51:22: error: dereferencing object of size 4B out of bounds
 test-0077.c:51:22: note: the pointer being dereferenced points 4B beyond a variable on stack of size 12B
+test-0077.c:47:22: error: dereferencing object of size 4B out of bounds
+test-0077.c:47:22: note: the pointer being dereferenced points 8B above a variable on stack of size 12B

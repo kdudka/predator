@@ -1,7 +1,3 @@
-lvmcache-prep.c:9172:30: warning: memory leak detected while destroying a static variable
-lvmcache-prep.c:9171:30: warning: memory leak detected while destroying a static variable
-lvmcache-prep.c:9173:30: warning: memory leak detected while destroying a static variable
-lvmcache-prep.c:9170:30: warning: memory leak detected while destroying a static variable
 lvmcache-prep.c:9171:30: warning: memory leak detected while destroying a static variable
 lvmcache-prep.c:9172:30: warning: memory leak detected while destroying a static variable
 lvmcache-prep.c:9173:30: warning: memory leak detected while destroying a static variable
@@ -12,5 +8,9 @@ lvmcache-prep.c:9173:30: warning: memory leak detected while destroying a static
 lvmcache-prep.c:9170:30: warning: memory leak detected while destroying a static variable
 lvmcache-prep.c:9171:30: warning: memory leak detected while destroying a static variable
 lvmcache-prep.c:9172:30: warning: memory leak detected while destroying a static variable
+lvmcache-prep.c:9173:30: warning: memory leak detected while destroying a static variable
+lvmcache-prep.c:9170:30: warning: memory leak detected while destroying a static variable
+lvmcache-prep.c:9172:30: warning: memory leak detected while destroying a static variable
+lvmcache-prep.c:9171:30: warning: memory leak detected while destroying a static variable
 lvmcache-prep.c:9173:30: warning: memory leak detected while destroying a static variable
 lvmcache-prep.c:9170:30: warning: memory leak detected while destroying a static variable

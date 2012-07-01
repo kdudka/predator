@@ -6,11 +6,11 @@ test-0224.c:33:5: note: from call of main()
 list.h:46:12: error: dereference of NULL value
 list.h:61:12: note: from call of __list_add()
 list_add.h:8:13: note: from call of list_add()
-test-0224.c:38:17: note: from call of __checked_list_add()
+test-0224.c:46:17: note: from call of __checked_list_add()
 test-0224.c:33:5: note: from call of main()
+test-0224.c:11:15: note: writing heap graph to 'test-0224.c-11-0000.dot'...
 list.h:46:12: error: dereference of NULL value
 list.h:61:12: note: from call of __list_add()
 list_add.h:8:13: note: from call of list_add()
-test-0224.c:38:17: note: from call of __checked_list_add()
+test-0224.c:46:17: note: from call of __checked_list_add()
 test-0224.c:33:5: note: from call of main()
-test-0224.c:11:15: note: writing heap graph to 'test-0224.c-11-0000.dot'...

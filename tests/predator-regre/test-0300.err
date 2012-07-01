@@ -82,7 +82,18 @@ test-0300.c:266:5: note: from call of main()
 test-0300.c:150:12: warning: memory leak detected while destroying a variable on stack
 test-0300.c:282:5: note: from call of register_cdrom()
 test-0300.c:266:5: note: from call of main()
-test-0300.c:82:19: warning: memory leak detected while destroying a static variable
+test-0300.c:147:8: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:147:8: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:150:12: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
+test-0300.c:150:12: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282:5: note: from call of register_cdrom()
+test-0300.c:266:5: note: from call of main()
 test-0300.c:83:33: warning: memory leak detected while destroying a static variable
 test-0300.c:86:34: warning: memory leak detected while destroying a static variable
 test-0300.c:83:33: warning: memory leak detected while destroying a static variable
@@ -102,3 +113,4 @@ test-0300.c:83:33: warning: memory leak detected while destroying a static varia
 test-0300.c:86:34: warning: memory leak detected while destroying a static variable
 test-0300.c:83:33: warning: memory leak detected while destroying a static variable
 test-0300.c:86:34: warning: memory leak detected while destroying a static variable
+test-0300.c:82:19: warning: memory leak detected while destroying a static variable

@@ -1,4 +1,4 @@
+test-0003.c:28:9: error: double free()
+test-0003.c:19:17: error: attempt to free a non-heap object
 test-0003.c:11:17: error: invalid free()
 test-0003.c:11:17: note: the value being freed is an untouched contents of stack
-test-0003.c:19:17: error: attempt to free a non-heap object
-test-0003.c:28:9: error: double free()
