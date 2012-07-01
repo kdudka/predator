@@ -1187,12 +1187,12 @@ bool joinUniBlocks(
     bool hasExtra2 = false;
 
     if (VAL_INVALID == root2) {
-        hasExtra1 = true;
+        hasExtra2 = true;
         ctx.sh1.gatherUniformBlocks(bMapDst, root1);
         importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh1);
     }
     else if (VAL_INVALID == root1) {
-        hasExtra2 = true;
+        hasExtra1 = true;
         ctx.sh2.gatherUniformBlocks(bMapDst, root2);
         importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh2);
     }
