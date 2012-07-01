@@ -249,7 +249,7 @@
  * - 2 ... expensive tracking of pointer values
  * - 3 ... track also code pointers
  */
-#define SE_TRACK_NON_POINTER_VALUES         3
+#define SE_TRACK_NON_POINTER_VALUES         2
 
 /**
  * if 1, use a DFS scheduler at the level of basic blocks; if 0, use BFS
