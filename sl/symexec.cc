@@ -384,19 +384,24 @@ bool SymExecEngine::bypassNonPointers(
         const TValId                                v1,
         const TValId                                v2)
 {
-#if !SE_TRACK_NON_POINTER_VALUES
+    SymHeap &sh = proc.sh();
     const TObjType clt1 = insnCmp.operands[/* src1 */ 1].type;
     const TObjType clt2 = insnCmp.operands[/* src2 */ 2].type;
+#if SE_TRACK_NON_POINTER_VALUES < 3
+    if (isCodePtr(clt1) || isCodePtr(clt2))
+        goto skip_tracking;
+#endif
+
+#if !SE_TRACK_NON_POINTER_VALUES
     if (isDataPtr(clt1) || isDataPtr(clt2))
 #endif
         return false;
 
     // white-list some values that are worth tracking
-    // cppcheck-suppress unreachableCode
-    SymHeap &sh = proc.sh();
     if (isTrackableValue(sh, v1) || isTrackableValue(sh, v2))
         return false;
 
+skip_tracking:
     proc.killInsn(insnCmp);
 
     SymHeap sh1(sh);

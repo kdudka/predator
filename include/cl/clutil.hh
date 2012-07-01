@@ -73,8 +73,15 @@ inline bool isDataPtr(const struct cl_type *clt) {
         return false;
 
     clt = targetTypeOfPtr(clt);
-    assert(clt);
     return (CL_TYPE_FNC != clt->code);
+}
+
+inline bool isCodePtr(const struct cl_type *clt) {
+    if (!clt || clt->code != CL_TYPE_PTR)
+        return false;
+
+    clt = targetTypeOfPtr(clt);
+    return (CL_TYPE_FNC == clt->code);
 }
 
 /// return true if the given operand is a local variable
