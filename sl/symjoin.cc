@@ -2831,6 +2831,25 @@ bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx) {
     return true;
 }
 
+// FIXME: this works only for nullified blocks anyway
+void killUniBlocksUnderBindingPtrs(
+        SymHeap                 &sh,
+        const BindingOff        &bf,
+        const TValId            root)
+{
+    // go through next/prev pointers
+    TObjSet blackList;
+    buildIgnoreList(blackList, sh, root, bf);
+    BOOST_FOREACH(const ObjHandle &obj, blackList) {
+        if (VAL_NULL != obj.value())
+            continue;
+
+        // if there is a nullified block under next/prev pointer, kill it now
+        obj.setValue(VAL_TRUE);
+        obj.setValue(VAL_NULL);
+    }
+}
+
 bool joinDataCore(
         SymJoinCtx              &ctx,
         const BindingOff        &off,
@@ -2886,6 +2905,8 @@ bool joinDataCore(
     if (!setDstValues(ctx, &blackList))
         return false;
 
+    killUniBlocksUnderBindingPtrs(sh, off, addr1);
+    killUniBlocksUnderBindingPtrs(sh, off, addr2);
     if (!joinUniBlocks(ctx, rootDstAt, addr1, addr2))
         // failed to complement uniform blocks
         return false;
