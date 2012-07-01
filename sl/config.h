@@ -196,7 +196,7 @@
  * - 1 ... join only when traversing a loop-closing edge, entailment otherwise
  * - 2 ... join only when traversing a loop-closing edge, isomorphism otherwise
  */
-#define SE_JOIN_ON_LOOP_EDGES_ONLY          0
+#define SE_JOIN_ON_LOOP_EDGES_ONLY          2
 
 /**
  * maximal call depth
