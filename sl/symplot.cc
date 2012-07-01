@@ -412,7 +412,8 @@ bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
 
         case OC_PREV:
 #if !SYMPLOT_DEBUG_DLS
-            return false;
+            if (OK_DLS == sh.valTargetKind(obj.placedAt()))
+                return false;
 #endif
             // cppcheck-suppress unreachableCode
             color = "gold";

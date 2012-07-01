@@ -911,8 +911,10 @@ bool joinSegBindingOfMayExist(
     const EObjKind kind1 = ctx.sh1.valTargetKind(seg1);
     const EObjKind kind2 = ctx.sh2.valTargetKind(seg2);
 
-    const bool isMayExist1 = (OK_SEE_THROUGH == kind1);
-    const bool isMayExist2 = (OK_SEE_THROUGH == kind2);
+    const bool isMayExist1 = (OK_SEE_THROUGH == kind1
+            /* XXX */ || OK_SEE_THROUGH_2N == kind1);
+    const bool isMayExist2 = (OK_SEE_THROUGH == kind2
+            /* XXX */ || OK_SEE_THROUGH_2N == kind2);
     if (!isMayExist1 && !isMayExist2)
         // no OK_SEE_THROUGH involved
         return false;
@@ -1236,7 +1238,7 @@ bool joinUniBlocks(
 
 static const BindingOff ObjOrNull(OK_OBJ_OR_NULL);
 
-/// (NULL != offMayExist) means 'create OK_SEE_THROUGH/OK_OBJ_OR_NULL'
+/// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
@@ -1261,21 +1263,16 @@ bool createObject(
 
     if (offMayExist) {
         // we are asked to introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL
-        switch (kind) {
-            case OK_CONCRETE:
-            case OK_SEE_THROUGH:
-            case OK_OBJ_OR_NULL:
-                break;
-
-            default:
-                CL_BREAK_IF("invalid call of createObject()");
-        }
+        if (OK_CONCRETE != kind && !isMayExistObj(kind))
+            CL_BREAK_IF("invalid call of createObject()");
 
         if (ObjOrNull == *offMayExist)
             kind = OK_OBJ_OR_NULL;
         else {
-            kind = OK_SEE_THROUGH;
             off = *offMayExist;
+            kind = (off.next == off.prev)
+                ? OK_SEE_THROUGH
+                : OK_SEE_THROUGH_2N;
         }
     }
 
@@ -1686,7 +1683,7 @@ bool joinSegmentWithAny(
     return true;
 }
 
-/// (NULL != off) means 'introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL'
+/// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool segmentCloneCore(
         SymJoinCtx                  &ctx,
         SymHeap                     &shGt,
@@ -1815,7 +1812,7 @@ bool cloneSpecialValue(
     return true;
 }
 
-/// (NULL != off) means 'introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL'
+/// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool insertSegmentClone(
         bool                    *pResult,
         SymJoinCtx              &ctx,
@@ -2150,13 +2147,21 @@ bool mayExistDigOffsets(
     offList = offsByVal[maxVal];
 
     switch (maxCnt) {
-        default:
-            // TODO
-
         case 1:
             // introduce OK_SEE_THROUGH
             pOff->next = pOff->prev = offList.front();
             break;
+
+        case 2:
+            // introduce OK_SEE_THROUGH_2N
+            pOff->next = offList[0];
+            pOff->prev = offList[1];
+            break;
+
+        default:
+            if (debuggingSymJoin)
+                CL_BREAK_IF("please implement");
+            return false;
     }
 
     pOff->head = sh.valOffset(valBy);
@@ -2589,15 +2594,7 @@ bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExist = 0)
             ? ctx.sh1.valTargetKind(root1)
             : ctx.sh2.valTargetKind(root2);
 
-        switch (kind) {
-            case OK_SEE_THROUGH:
-            case OK_OBJ_OR_NULL:
-                *wasMayExist = true;
-                break;
-
-            default:
-                *wasMayExist = false;
-        }
+        *wasMayExist = isMayExistObj(kind);
     }
 
     return true;
@@ -2606,18 +2603,17 @@ bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExist = 0)
 struct MayExistLevelUpdater {
     SymJoinCtx         &ctx;
     const TValId        rootDst;
-    ObjHandle           ignoredField;
+    TObjSet             ignoreList;
 
     MayExistLevelUpdater(SymJoinCtx &ctx_, const TValId rootDst_):
         ctx(ctx_),
         rootDst(rootDst_)
     {
-        if (OK_SEE_THROUGH == ctx.dst.valTargetKind(rootDst))
-            ignoredField = nextPtrFromSeg(ctx.dst, rootDst);
+        buildIgnoreList(ignoreList, ctx.dst, rootDst);
     }
 
     bool operator()(const ObjHandle &sub) const {
-        if (sub == this->ignoredField)
+        if (hasKey(this->ignoreList, sub))
             return /* continue */ true;
 
         const TValId proto = ctx.dst.valRoot(sub.value());
@@ -2643,15 +2639,9 @@ bool updateMayExistLevels(SymJoinCtx &ctx) {
     ctx.dst.gatherRootObjects(dstRoots, isOnHeap);
     BOOST_FOREACH(const TValId rootDst, dstRoots) {
         const EObjKind kind = ctx.dst.valTargetKind(rootDst);
-        switch (kind) {
-            case OK_SEE_THROUGH:
-            case OK_OBJ_OR_NULL:
-                break;
-
-            default:
-                // we are interested only in 0..1 objects here
-                continue;
-        }
+        if (!isMayExistObj(kind))
+            // we are interested only in 0..1 objects here
+            continue;
 
         bool wasMayExist;
         if (!isFreshProto(ctx, rootDst, &wasMayExist) || wasMayExist)

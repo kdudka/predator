@@ -696,18 +696,13 @@ void concretizeObj(
     const EObjKind kind = sh.valTargetKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
 
-    switch (kind) {
-        case OK_OBJ_OR_NULL:
-        case OK_SEE_THROUGH:
-            // these kinds are much easier than regular list segments
-            sh.valTargetSetConcrete(seg);
-            decrementProtoLevel(sh, seg);
-            LDP_PLOT(symabstract, sh);
-            CL_BREAK_IF(!protoCheckConsistency(sh));
-            return;
-
-        default:
-            break;
+    if (isMayExistObj(kind)) {
+        // these kinds are much easier than regular list segments
+        sh.valTargetSetConcrete(seg);
+        decrementProtoLevel(sh, seg);
+        LDP_PLOT(symabstract, sh);
+        CL_BREAK_IF(!protoCheckConsistency(sh));
+        return;
     }
 
     // duplicate self as abstract object (including all prototypes)

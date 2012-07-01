@@ -3577,8 +3577,10 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
         v2 = segNextRootObj(*this, v1);
 
     TValId seg;
-    if (haveSegBidir(&seg, this, OK_SEE_THROUGH, v1, v2)
-            || haveSegBidir(&seg, this, OK_OBJ_OR_NULL, v1, v2)) {
+    if (haveSegBidir(&seg, this, OK_OBJ_OR_NULL, v1, v2)
+            || haveSegBidir(&seg, this, OK_SEE_THROUGH, v1, v2)
+            || haveSegBidir(&seg, this, OK_SEE_THROUGH_2N, v1, v2))
+    {
         // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
         decrementProtoLevel(*this, seg);
         this->valTargetSetConcrete(seg);
@@ -3727,11 +3729,10 @@ TMinLen SymHeap::segMinLength(TValId seg) const {
     const AbstractRoot *aData = d->absRoots.getEntRO(seg);
 
     const EObjKind kind = aData->kind;
-    switch (kind) {
-        case OK_SEE_THROUGH:
-        case OK_OBJ_OR_NULL:
-            return 0;
+    if (isMayExistObj(kind))
+        return 0;
 
+    switch (kind) {
         case OK_SLS:
         case OK_DLS:
             return aData->minLength;
@@ -3751,17 +3752,14 @@ void SymHeap::segSetMinLength(TValId seg, TMinLen len) {
     AbstractRoot *aData = d->absRoots.getEntRW(seg);
 
     const EObjKind kind = aData->kind;
+    if (isMayExistObj(kind)) {
+        if (len)
+            CL_BREAK_IF("invalid call of SymHeap::segSetMinLength()");
+
+        return;
+    }
+
     switch (kind) {
-        case OK_SEE_THROUGH:
-            if (len)
-                CL_BREAK_IF("OK_SEE_THROUGH is supposed to have zero minLength");
-            return;
-
-        case OK_OBJ_OR_NULL:
-            if (len)
-                CL_BREAK_IF("OK_OBJ_OR_NULL is supposed to have zero minLength");
-            return;
-
         case OK_SLS:
 #if SE_RESTRICT_SLS_MINLEN
             if ((SE_RESTRICT_SLS_MINLEN) < len)
