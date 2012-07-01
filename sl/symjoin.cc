@@ -24,6 +24,7 @@
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
+#include "prototype.hh"
 #include "symcmp.hh"
 #include "symgc.hh"
 #include "symplot.hh"
