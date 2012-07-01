@@ -546,35 +546,13 @@ bool bumpNestingLevel(const ObjHandle &obj) {
     SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
     const TValId root = sh.valRoot(obj.placedAt());
 
-    const EObjKind kind = sh.valTargetKind(root);
-    switch (kind) {
-        case OK_CONCRETE:
-            // not an abstract object
-            return false;
+    if (!isAbstract(sh.valTarget(root)))
+        // do not bump nesting level on concrete objects
+        return false;
 
-        case OK_DLS:
-        case OK_SEE_THROUGH_2N:
-            if (obj == prevPtrFromSeg(sh, root))
-                // prev pointer
-                return false;
-
-            // fall through!
-
-        case OK_SLS:
-        case OK_SEE_THROUGH:
-            if (obj == nextPtrFromSeg(sh, root))
-                // next pointer
-                return false;
-
-            // fall through!
-
-        case OK_OBJ_OR_NULL:
-            // please do!
-            return true;
-    }
-
-    CL_BREAK_IF("bumpNestingLevel() got something special");
-    return false;
+    TObjSet ignoreList;
+    buildIgnoreList(ignoreList, sh, root);
+    return !hasKey(ignoreList, obj);
 }
 
 /// (OBJ_INVALID == objDst) means read-only!!!
