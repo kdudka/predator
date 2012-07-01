@@ -180,11 +180,11 @@ struct SymJoinCtx {
     }
 
     /// constructor used by joinSymHeaps()
-    SymJoinCtx(SymHeap &dst_, const SymHeap &sh1_, const SymHeap &sh2_,
+    SymJoinCtx(SymHeap &dst_, SymHeap &sh1_, SymHeap &sh2_,
             const bool allowThreeWay_):
         dst(dst_),
-        sh1(/* XXX */ const_cast<SymHeap &>(sh1_)),
-        sh2(/* XXX */ const_cast<SymHeap &>(sh2_)),
+        sh1(sh1_),
+        sh2(sh2_),
         status(JS_USE_ANY),
         allowThreeWay((1 < (SE_ALLOW_THREE_WAY_JOIN)) && allowThreeWay_)
     {
@@ -192,10 +192,10 @@ struct SymJoinCtx {
     }
 
     /// constructor used by joinDataReadOnly()
-    SymJoinCtx(SymHeap &tmp_, const SymHeap &sh_):
+    SymJoinCtx(SymHeap &tmp_, SymHeap &sh_):
         dst(tmp_),
-        sh1(/* XXX */ const_cast<SymHeap &>(sh_)),
-        sh2(/* XXX */ const_cast<SymHeap &>(sh_)),
+        sh1(sh_),
+        sh2(sh_),
         status(JS_USE_ANY),
         allowThreeWay(0 < (SE_ALLOW_THREE_WAY_JOIN))
     {
@@ -2717,13 +2717,17 @@ bool validateStatus(const SymJoinCtx &ctx) {
 bool joinSymHeaps(
         EJoinStatus             *pStatus,
         SymHeap                 *pDst,
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        const bool              allowThreeWay)
+        SymHeap                  sh1,
+        SymHeap                  sh2,
+        const bool               allowThreeWay)
 {
     SJ_DEBUG("--> joinSymHeaps()");
     TStorRef stor = sh1.stor();
     CL_BREAK_IF(&stor != &sh2.stor());
+
+    // update trace
+    Trace::waiveCloneOperation(sh1);
+    Trace::waiveCloneOperation(sh2);
     *pDst = SymHeap(stor, new Trace::TransientNode("joinSymHeaps()"));
 
     // initialize symbolic join ctx
@@ -2899,13 +2903,14 @@ bool joinDataCore(
 
 bool joinDataReadOnly(
         EJoinStatus             *pStatus,
-        const SymHeap           &sh,
+        SymHeap                  sh,
         const BindingOff        &off,
         const TValId            addr1,
         const TValId            addr2,
         TValSet                 protoRoots[1][2])
 {
     SJ_DEBUG("--> joinDataReadOnly" << SJ_VALP(addr1, addr2));
+    Trace::waiveCloneOperation(sh);
 
     // go through the commont part of joinData()/joinDataReadOnly()
     SymHeap tmp(sh.stor(), new Trace::TransientNode("joinDataReadOnly()"));
