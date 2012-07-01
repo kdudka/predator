@@ -181,13 +181,6 @@ void clonePrototypes(
     }
 }
 
-void decrementProtoLevel(SymHeap &sh, const TValId at) {
-    TValList protoList;
-    collectPrototypesOf(protoList, sh, at, /* skipDlsPeers */ true);
-    BOOST_FOREACH(const TValId proto, protoList)
-        objDecrementProtoLevel(sh, proto);
-}
-
 struct ValueSynchronizer {
     SymHeap            &sh;
     TObjSet             ignoreList;

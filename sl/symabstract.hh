@@ -70,8 +70,6 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer);
  */
 void abstractIfNeeded(SymHeap &sh);
 
-void decrementProtoLevel(SymHeap &sh, const TValId at);
-
 /// enable/disable debugging of symabstract
 void debugSymAbstract(const bool enable);
 

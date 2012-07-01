@@ -36,4 +36,7 @@ void objIncrementProtoLevel(SymHeap &sh, TValId root);
 /// decrement prototype level of a single object while taking care of DLS peers
 void objDecrementProtoLevel(SymHeap &sh, TValId root);
 
+/// decrement prototype level of owned prototype objects
+void decrementProtoLevel(SymHeap &sh, const TValId at);
+
 #endif /* H_GUARD_PROTOTYPE_H */

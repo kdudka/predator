@@ -136,3 +136,10 @@ void objIncrementProtoLevel(SymHeap &sh, TValId root) {
 void objDecrementProtoLevel(SymHeap &sh, TValId root) {
     objChangeProtoLevel(sh, root, -1);
 }
+
+void decrementProtoLevel(SymHeap &sh, const TValId at) {
+    TValList protoList;
+    collectPrototypesOf(protoList, sh, at, /* skipDlsPeers */ true);
+    BOOST_FOREACH(const TValId proto, protoList)
+        objDecrementProtoLevel(sh, proto);
+}
