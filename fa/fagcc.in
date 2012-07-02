@@ -71,7 +71,7 @@ source "$topdir/build-aux/xgcclib.sh"
 export SINK="/dev/null"
 export FA_PLUG="$topdir/fa_build/libfa.so"
 export GCC_HOST='@GCC_HOST@'
-export GCC_OPTS="-std=c99 -S -o $SINK -O0 -m32 -I$topdir/include/predator-builtins -DFORESTER"
+export GCC_OPTS="-S -o $SINK -O0 -m32 -I$topdir/include/predator-builtins -DFORESTER"
 
 # initial checks
 find_gcc_host
