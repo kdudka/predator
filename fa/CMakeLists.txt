@@ -61,7 +61,9 @@ add_library(fa SHARED
 	integrity.cc
 	jump.cc
 	label.cc
+	memplot.cc
 	microcode.cc
+	plotenum.cc
 	sequentialinstruction.cc
 	symctx.cc
 	symexec.cc
