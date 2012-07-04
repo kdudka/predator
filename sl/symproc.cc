@@ -1758,11 +1758,6 @@ TValId handleIntegralOp(
                     return result;
                 break;
 
-            case CL_BINOP_MINUS:
-                if (!isSingular(rng1) && isSingular(rng2))
-                    return sh.valByOffset(v1, -rng2.lo);
-                break;
-
             default:
                 break;
         }
