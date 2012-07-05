@@ -105,7 +105,7 @@
  * - 0x2 ... allow widening of the upper bound of integral ranges
  * - 0x4 ... allow widening of the lower bound of integral ranges
  */
-#define SE_ALLOW_INT_RANGES                 0
+#define SE_ALLOW_INT_RANGES                 0x6
 
 /**
  * bit mask of allowed operations on values with offset specified by int ranges
