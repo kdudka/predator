@@ -1016,33 +1016,30 @@ bool joinNestingLevel(
 
     TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
     TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
+
+    if (ctx.joiningData()) {
+        // if one of the starting points is not yet abstract, compensate it!
+
+        if (rootNotYetAbstract(ctx.sh1, ctx.sset1))
+            ++level1;
+
+        if (rootNotYetAbstract(ctx.sh2, ctx.sset2))
+            ++level2;
+    }
+
     *pDst = std::max(level1, level2);
 
     if (ctx.joiningData() && root1 == root2)
         // shared data
         return true;
 
-    if (ctx.joiningDataReadWrite())
-        // symabstract.cc already decreased the level of prototypes hanging
-        // under abstract objects (this may work better the other way around)
-        ++(*pDst);
-
     if (VAL_INVALID == root2 || VAL_INVALID == root1)
         // we got only one object, just take its level as it is
         return true;
 
-    TProtoLevel ldiff = level1 - level2;
-    if (ctx.joiningDataReadWrite()) {
-        // symabstract.cc gives the first object to joinData() always abstract
-        CL_BREAK_IF(rootNotYetAbstract(ctx.sh1, ctx.sset1));
-
-        // the other one can be concrete or abstract, we have to compensate it
-        if (rootNotYetAbstract(ctx.sh2, ctx.sset2))
-            ++ldiff;
-    }
-
     // check that the computed ldiff matches the actual one
-    return (item.ldiff == ldiff);
+    const TProtoLevel ldiff = level1 - level2;
+    return (ldiff == item.ldiff);
 }
 
 TMinLen joinMinLength(
@@ -2874,7 +2871,17 @@ bool joinDataCore(
         // preserve estimated type-info of the root
         ctx.dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 
-    const SchedItem rootItem(addr1, addr2, /* ldiff */ 0);
+    TProtoLevel ldiff = 0;
+
+    const EObjKind kind1 = sh.valTargetKind(addr1);
+    if (OK_CONCRETE != kind1)
+        --ldiff;
+
+    const EObjKind kind2 = sh.valTargetKind(addr2);
+    if (OK_CONCRETE != kind2)
+        ++ldiff;
+
+    const SchedItem rootItem(addr1, addr2, ldiff);
     if (!traverseRoots(ctx, rootDstAt, rootItem, &off))
         return false;
 
@@ -2882,13 +2889,13 @@ bool joinDataCore(
     ctx.sset2.insert(addr2);
 
     // never step over DLS peer
-    if (OK_DLS == sh.valTargetKind(addr1)) {
+    if (OK_DLS == kind1) {
         const TValId peer = dlSegPeer(sh, addr1);
         ctx.sset1.insert(peer);
         if (peer != addr2)
             mapGhostAddressSpace(ctx, addr1, peer, JS_USE_SH1);
     }
-    if (OK_DLS == sh.valTargetKind(addr2)) {
+    if (OK_DLS == kind2) {
         const TValId peer = dlSegPeer(sh, addr2);
         ctx.sset2.insert(peer);
         if (peer != addr1)

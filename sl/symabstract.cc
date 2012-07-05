@@ -262,17 +262,12 @@ void slSegAbstractionStep(
     enlargeMayExist(sh, at);
     enlargeMayExist(sh, nextAt);
 
-    if (OK_SLS == sh.valTargetKind(at))
-        decrementProtoLevel(sh, at);
-
-    if (OK_SLS == sh.valTargetKind(nextAt))
-        decrementProtoLevel(sh, nextAt);
-    else
-        // abstract the _next_ object
-        sh.valTargetSetAbstract(nextAt, OK_SLS, off);
-
     // merge data
     joinData(sh, off, nextAt, at, /* bidir */ false);
+
+    if (OK_SLS != sh.valTargetKind(nextAt))
+        // abstract the _next_ object
+        sh.valTargetSetAbstract(nextAt, OK_SLS, off);
 
     // replace all references to 'head'
     const TOffset offHead = sh.segBinding(nextAt).head;
@@ -295,14 +290,14 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     enlargeMayExist(sh, a1);
     enlargeMayExist(sh, a2);
 
+    // merge data
+    joinData(sh, off, a2, a1, /* bidir */ true);
+
     swapValues(off.next, off.prev);
     sh.valTargetSetAbstract(a1, OK_DLS, off);
 
     swapValues(off.next, off.prev);
     sh.valTargetSetAbstract(a2, OK_DLS, off);
-
-    // merge data
-    joinData(sh, off, a2, a1, /* bidir */ true);
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
     sh.segSetMinLength(a1, len);
@@ -320,8 +315,6 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     if (!backward)
         // jump to peer
         dls = dlSegPeer(sh, dls);
-
-    decrementProtoLevel(sh, dls);
 
     // merge data
     const BindingOff &off = sh.segBinding(dls);
@@ -357,8 +350,6 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2));
 
     // merge data
-    decrementProtoLevel(sh, seg1);
-    decrementProtoLevel(sh, seg2);
     const BindingOff &bf2 = sh.segBinding(seg2);
     joinData(sh, bf2, seg2, seg1, /* bidir */ true);
 
