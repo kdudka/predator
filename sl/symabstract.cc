@@ -223,24 +223,6 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
     traverseLiveObjs<2>(sh, roots, visitor);
 }
 
-// when abstracting an object, we need to abstract all non-matching values in
-void abstractNonMatchingValues(
-        SymHeap                     &sh,
-        const TValId                srcAt,
-        const TValId                dstAt,
-        const bool                  bidir = false)
-{
-    if (!joinData(sh, dstAt, srcAt, bidir))
-        CL_BREAK_IF("joinData() failed, failure of segDiscover()?");
-
-    if (bidir)
-        // already done as side-effect of joinData()
-        return;
-
-    if (OK_DLS == sh.valTargetKind(dstAt))
-        dlSegSyncPeerData(sh, dstAt);
-}
-
 // FIXME: the semantics of this function is quite contra-intuitive
 TValId segDeepCopy(SymHeap &sh, TValId seg) {
     // collect the list of prototypes
@@ -282,9 +264,6 @@ void slSegAbstractionStep(
 
     if (OK_SLS == sh.valTargetKind(at))
         decrementProtoLevel(sh, at);
-    else
-        // just to make killUniBlocksUnderBindingPtrs() working appropriately
-        sh.valTargetSetAbstract(at, OK_SLS, off);
 
     if (OK_SLS == sh.valTargetKind(nextAt))
         decrementProtoLevel(sh, nextAt);
@@ -293,7 +272,7 @@ void slSegAbstractionStep(
         sh.valTargetSetAbstract(nextAt, OK_SLS, off);
 
     // merge data
-    abstractNonMatchingValues(sh, at, nextAt);
+    joinData(sh, nextAt, at, /* bidir */ false);
 
     // replace all references to 'head'
     const TOffset offHead = sh.segBinding(nextAt).head;
@@ -323,7 +302,7 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     sh.valTargetSetAbstract(a2, OK_DLS, off);
 
     // merge data
-    abstractNonMatchingValues(sh, a1, a2, /* bidir */ true);
+    joinData(sh, a2, a1, /* bidir */ true);
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
     sh.segSetMinLength(a1, len);
@@ -344,7 +323,8 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
 
     // merge data
     decrementProtoLevel(sh, dls);
-    abstractNonMatchingValues(sh, var, dls);
+    joinData(sh, dls, var, /* bidir */ false);
+    dlSegSyncPeerData(sh, dls);
 
     // store the pointer DLS -> VAR
     const BindingOff &off = sh.segBinding(dls);
@@ -378,7 +358,7 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     // merge data
     decrementProtoLevel(sh, seg1);
     decrementProtoLevel(sh, seg2);
-    abstractNonMatchingValues(sh, seg1, seg2, /* bidir */ true);
+    joinData(sh, seg2, seg1, /* bidir */ true);
 
     // preserve backLink
     const TValId valNext1 = nextValFromSeg(sh, seg1);
