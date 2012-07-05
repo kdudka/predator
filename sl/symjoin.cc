@@ -160,7 +160,6 @@ struct SymJoinCtx {
 
     typedef std::map<TValId /* seg */, TMinLen /* len */>       TSegLengths;
     TSegLengths                 segLengths;
-    std::set<TValPair>          sharedNeqs;
 
     std::set<TValPair>          tieBreaking;
     std::set<TValPair>          alreadyJoined;
@@ -260,8 +259,6 @@ void dump_ctx(const SymJoinCtx &ctx) {
     // sumarize aux containers
     cout << "    ctx.segLengths     .size() = " << ctx.segLengths.size()
         << "\n";
-    cout << "    ctx.sharedNeqs     .size() = " << ctx.sharedNeqs.size()
-        << "\n";
     cout << "    ctx.alreadyJoined  .size() = " << ctx.alreadyJoined.size()
         << "\n";
     cout << "    ctx.protoRoots     .size() = " << ctx.protoRoots.size()
@@ -298,54 +295,6 @@ bool updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action) {
         || ctx.allowThreeWay;
 }
 
-/**
- * if Neq(v1, vDst) exists in ctx.sh1 and Neq(v2, vDst) exists in ctx.sh2,
- * declare the Neq relation as @b shared, such that it later appears in ctx.dst
- * @note it respects value ID mapping among all symbolic heaps
- */
-void gatherSharedPreds(
-        SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2,
-        const TValId            vDst)
-{
-    // look for shared Neq predicates
-    TValList rVals1;
-    ctx.sh1.gatherRelatedValues(rVals1, v1);
-    BOOST_FOREACH(const TValId rel1, rVals1) {
-        if (!ctx.sh1.SymHeapCore::proveNeq(v1, rel1))
-            // not a Neq in sh1
-            continue;
-
-        TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
-        TValMap::const_iterator it1 = vMap1.find(rel1);
-        if (vMap1.end() == it1)
-            // related value has not (yet?) any mapping to dst
-            continue;
-
-        const TValId relDst = it1->second;
-        TValMap &vMap2r = ctx.valMap2[/* rtl */ 1];
-        TValMap::const_iterator it2r = vMap2r.find(relDst);
-        if (vMap2r.end() == it2r)
-            // related value has not (yet?) any mapping back to sh2
-            continue;
-
-        const TValId rel2 = it2r->second;
-        if (!ctx.sh2.SymHeapCore::proveNeq(v2, rel2))
-            // not a Neq in sh2
-            continue;
-
-        // sort Neq values
-        TValId valLt = vDst;
-        TValId valGt = relDst;
-        sortValues(valLt, valGt);
-
-        // insert a shared Neq predicate
-        const TValPair neq(valLt, valGt);
-        ctx.sharedNeqs.insert(neq);
-    }
-}
-
 /// define value mapping for the given value triple (v1, v2, vDst)
 bool defineValueMapping(
         SymJoinCtx              &ctx,
@@ -363,15 +312,11 @@ bool defineValueMapping(
     const bool ok2 = !hasValue2
         || matchPlainValues(ctx.valMap2, ctx.sh2, ctx.dst, v2, vDst);
 
-    if (!ok1 || !ok2) {
-        SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
-        return false;
-    }
+    if (ok1 && ok2)
+        return true;
 
-    if (hasValue1 && hasValue2)
-        gatherSharedPreds(ctx, v1, v2, vDst);
-
-    return true;
+    SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
+    return false;
 }
 
 bool matchRanges(
@@ -2652,22 +2597,6 @@ bool handleDstPreds(SymJoinCtx &ctx) {
         const TValId    seg = ref.first;
         const TMinLen   len = ref.second;
         ctx.dst.segSetMinLength(seg, len);
-    }
-
-    // go through shared Neq predicates
-    BOOST_FOREACH(const TValPair &neq, ctx.sharedNeqs) {
-        TValId valLt, valGt;
-        boost::tie(valLt, valGt) = neq;
-
-        const TValId targetLt = ctx.dst.valRoot(valLt);
-        const TValId targetGt = ctx.dst.valRoot(valGt);
-        if (hasKey(ctx.segLengths, targetLt)
-                || hasKey(ctx.segLengths, targetGt))
-            // preserve segment length
-            continue;
-
-        // handle generic Neq predicate
-        ctx.dst.neqOp(SymHeap::NEQ_ADD, valLt, valGt);
     }
 
     if (!ctx.joiningData()) {
