@@ -391,6 +391,12 @@ struct SymStateMap::Private {
     struct BlockState {
         SymStateMarked                  state;
         BlockScheduler                  inbound;
+        bool                            anyHit;
+
+        BlockState():
+            anyHit(false)
+        {
+        }
     };
 
     std::map<TBlock, BlockState>        cont;
@@ -420,12 +426,18 @@ bool SymStateMap::insert(
 
     // insert the given symbolic heap
     const bool changed = ref.state.insert(sh, allowThreeWay);
+    if (!changed)
+        ref.anyHit = true;
 
     if (src)
         // store inbound edge
         ref.inbound.schedule(src);
 
     return changed;
+}
+
+bool SymStateMap::anyReuseHappened(const CodeStorage::Block *bb) const {
+    return d->cont[bb].anyHit;
 }
 
 void SymStateMap::gatherInboundEdges(TContBlock                  &dst,

@@ -238,6 +238,16 @@
 #define SE_STATE_PRUNING_MODE               1
 
 /**
+ * prune non-loop blocks on reaching the count of join misses (0 means disabled)
+ */
+#define SE_STATE_PRUNING_MISS_THR           0
+
+/**
+ * prune non-loop blocks on reaching the count of states (0 means disabled)
+ */
+#define SE_STATE_PRUNING_TOTAL_THR          0
+
+/**
  * if 1, the symcut module allows generic minimal lengths to survive a function
  * call/return.  @b Not recommended unless SymCallCache has been rewritten to
  * use symjoin to maintain cache entries.

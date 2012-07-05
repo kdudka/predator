@@ -250,6 +250,8 @@ class SymStateMap {
                                 const CodeStorage::Block    *ofBlock)
             const;
 
+        bool anyReuseHappened(const CodeStorage::Block *) const;
+
     private:
         /// object copying is @b not allowed
         SymStateMap(const SymStateMap &);

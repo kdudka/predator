@@ -917,6 +917,19 @@ void SymExecEngine::pruneOrigin() {
         // never prune loop entry, it would break the fixed-point computation
         return;
 
+    SymStateMarked &origin = stateMap_[block_];
+
+#if SE_STATE_PRUNING_MISS_THR
+    if (!stateMap_.anyReuseHappened(block_)
+            && (SE_STATE_PRUNING_MISS_THR) <= origin.size())
+        goto thr_reached;
+#endif
+
+#if SE_STATE_PRUNING_TOTAL_THR
+    if ((SE_STATE_PRUNING_TOTAL_THR) <= origin.size())
+        goto thr_reached;
+#endif
+
 #if SE_STATE_PRUNING_MODE < 2
     if (CL_INSN_COND != block_->back()->code || 2 < block_->size())
         return;
@@ -928,7 +941,9 @@ void SymExecEngine::pruneOrigin() {
         return;
 #endif
 
-    SymStateMarked &origin = stateMap_[block_];
+#if SE_STATE_PRUNING_MISS_THR || SE_STATE_PRUNING_TOTAL_THR
+thr_reached:
+#endif
     SymHeapList tmp;
 
     bool hit = false;
