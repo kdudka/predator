@@ -132,9 +132,14 @@ bool isAligned(const Range &range) {
     return (Int1 < range.alignment);
 }
 
-TInt widthOf(const Range &range) {
+TUInt widthOf(const Range &range) {
     chkRange(range);
-    return /* closed interval */ 1 + range.hi - range.lo;
+
+    if (range == FullRange)
+        // FIXME: this would overflow
+        CL_BREAK_IF("widthOf() does not work for IR::FullRange");
+
+    return /* closed interval */ 1UL + range.hi - range.lo;
 }
 
 TInt invertInt(const TInt num) {

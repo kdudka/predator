@@ -141,8 +141,8 @@ bool isSingular(const Range &);
 /// return true if the range is non-trivially aligned
 bool isAligned(const Range &);
 
-/// return the count of integral numbers that beTInt the given range
-TInt widthOf(const Range &);
+/// return the count of integral numbers that the given range represents
+TUInt widthOf(const Range &);
 
 } // namespace IR
 
