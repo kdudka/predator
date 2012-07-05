@@ -230,9 +230,10 @@
 #define SE_RESTRICT_SLS_MINLEN              2
 
 /**
- * - 0 ... keep state info for all basic blocks of a function (safe default)
- * - 1 ... keep state info for all basic blocks with more than one ingoing edge
- * - 2 ... keep state info for all basic blocks that a CFG loop starts with
+ * - 0 ... keep state info for all basic blocks of a function
+ * - 1 ... keep state info for all basic blocks except trivial decision blocks
+ * - 2 ... keep state info for all basic blocks with more than one ingoing edge
+ * - 3 ... keep state info for all basic blocks that a CFG loop starts with
  */
 #define SE_STATE_PRUNING_MODE               0
 

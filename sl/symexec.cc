@@ -918,6 +918,11 @@ void SymExecEngine::pruneOrigin() {
         return;
 
 #if SE_STATE_PRUNING_MODE < 2
+    if (CL_INSN_COND != block_->back()->code || 2 < block_->size())
+        return;
+#endif
+
+#if SE_STATE_PRUNING_MODE < 3
     if (1 < block_->inbound().size())
         // more than one incoming edges, keep this one
         return;
