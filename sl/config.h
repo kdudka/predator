@@ -235,7 +235,7 @@
  * - 2 ... keep state info for all basic blocks with more than one ingoing edge
  * - 3 ... keep state info for all basic blocks that a CFG loop starts with
  */
-#define SE_STATE_PRUNING_MODE               0
+#define SE_STATE_PRUNING_MODE               1
 
 /**
  * if 1, the symcut module allows generic minimal lengths to survive a function
