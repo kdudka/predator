@@ -424,16 +424,16 @@ bool joinRangeValues(
     IR::Range rng = join(rng1, rng2);
 
     // [experimental] widening on offset ranges
-#if 1 < SE_ALLOW_OFF_RANGES
     if (!isSingular(rng1) && !isSingular(rng2)) {
+#if (SE_ALLOW_OFF_RANGES & 0x2)
         if (rng.lo == rng1.lo || rng.lo == rng2.lo)
             rng.hi = IR::IntMax;
-#   if 2 < SE_ALLOW_OFF_RANGES
+#endif
+#if (SE_ALLOW_OFF_RANGES & 0x4)
         if (rng.hi == rng1.hi || rng.hi == rng2.hi)
             rng.lo = IR::IntMin;
-#   endif
-    }
 #endif
+    }
 
     if (!isCovered(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
         return false;
@@ -1974,7 +1974,7 @@ bool offRangeFallback(
         const TValId            v1,
         const TValId            v2)
 {
-#if !SE_ALLOW_OFF_RANGES
+#if !(SE_ALLOW_OFF_RANGES & 0x1)
     return false;
 #endif
 

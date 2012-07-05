@@ -108,12 +108,12 @@
 #define SE_ALLOW_INT_RANGES                 0
 
 /**
- * - 0 ... do not use values with offset specified by int ranges (VT_RANGE)
- * - 1 ... allow to use values with offset specified by int ranges (VT_RANGE)
- * - 2 ... same as above, additionally use widening in upward direction [broken]
- * - 3 ... same as above, additionally use widening in both directions [broken]
+ * bit mask of allowed operations on values with offset specified by int ranges
+ * - 0x1 ... allow to introduce values with offset specified by integral ranges
+ * - 0x2 ... allow widening of the upper bound of values with offset ranges
+ * - 0x4 ... allow widening of the upper lower of values with offset ranges
  */
-#define SE_ALLOW_OFF_RANGES                 1
+#define SE_ALLOW_OFF_RANGES                 0x1
 
 /**
  * how much do we allow to use three-way join
