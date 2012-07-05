@@ -2690,6 +2690,15 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
 void SymHeapCore::neqOp(ENeqOp op, TValId v1, TValId v2) {
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
 
+    const EValueTarget code1 = this->valTarget(v1);
+    const EValueTarget code2 = this->valTarget(v2);
+
+    if (VT_UNKNOWN != code1 && VT_UNKNOWN != code2) {
+        CL_BREAK_IF(NEQ_ADD != op);
+        CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
+        return;
+    }
+
     switch (op) {
         case NEQ_NOP:
             CL_BREAK_IF("invalid call of SymHeapCore::neqOp()");
