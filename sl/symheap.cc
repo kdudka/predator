@@ -587,6 +587,9 @@ struct SymHeapCore::Private {
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
     // runs only in debug build
+    bool chkValueDeps(const TValId);
+
+    // runs only in debug build
     bool chkArenaConsistency(
             const RootValue        *rootData,
             const bool              allowOverlap = false);
@@ -701,6 +704,65 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
     RootValue *rootData;
     this->ents.getEntRW(&rootData, root);
     rootData->usedByGl.insert(obj);
+}
+
+// runs only in debug build
+bool SymHeapCore::Private::chkValueDeps(const TValId val) {
+    const BaseValue *valData;
+    this->ents.getEntRO(&valData, val);
+    if (VT_CUSTOM != valData->code)
+        // we are interested only in CV_INT_RANGE here
+        return true;
+
+    const InternalCustomValue *customData =
+        dynamic_cast<const InternalCustomValue *>(valData);
+
+    if (CV_INT_RANGE != customData->customData.code())
+        // we are interested only in CV_INT_RANGE here
+        return true;
+
+    // jump to anchor
+    const TValId anchor = customData->anchor;
+    const InternalCustomValue *anchorData;
+    this->ents.getEntRO(&anchorData, anchor);
+
+    // compute range width of the anchor
+    const IR::Range &rngAnchor = anchorData->customData.rng();
+    const bool loUnbounded = (IR::IntMin == rngAnchor.lo);
+    const bool hiUnbounded = (IR::IntMax == rngAnchor.hi);
+
+    const IR::TUInt width = (loUnbounded || hiUnbounded)
+        ? 0U
+        : widthOf(rngAnchor);
+
+    const TValList &deps = anchorData->dependentValues;
+    BOOST_FOREACH(const TValId depVal, deps) {
+        // get the range of the dependent value
+        const InternalCustomValue *depData;
+        this->ents.getEntRO(&depData, depVal);
+        const IR::Range &rng = depData->customData.rng();
+
+        if (loUnbounded != (IR::IntMin == rng.lo))
+            goto fail;
+        if (hiUnbounded != (IR::IntMax == rng.hi))
+            goto fail;
+
+        if (loUnbounded || hiUnbounded)
+            continue;
+
+        if (rng.lo - rngAnchor.lo != depData->offRoot)
+            goto fail;
+        if (rng.hi - rngAnchor.hi != depData->offRoot)
+            goto fail;
+
+        if (width == widthOf(rng))
+            continue;
+fail:
+        CL_BREAK_IF("broken CV_INT_RANGE dependency");
+        return false;
+    }
+
+    return true;
 }
 
 // runs only in debug build
@@ -2055,6 +2117,8 @@ TObjType SymHeapCore::objType(TObjId obj) const {
 }
 
 TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
+    CL_BREAK_IF(!this->chkValueDeps(ref));
+
     const InternalCustomValue *customDataRef;
     this->ents.getEntRO(&customDataRef, ref);
 
@@ -2075,6 +2139,7 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     this->ents.getEntRW(&refData, customData->anchor);
     refData->dependentValues.push_back(val);
 
+    CL_BREAK_IF(!this->chkValueDeps(val));
     return val;
 }
 
@@ -2118,6 +2183,8 @@ void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData) {
 }
 
 void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
+    CL_BREAK_IF(!this->chkValueDeps(val));
+
     const InternalCustomValue *customData;
     this->ents.getEntRO(&customData, val);
 
@@ -2157,6 +2224,8 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
             // CV_INT_RANGE reduced to CV_INT
             this->replaceRngByInt(depData);
     }
+
+    CL_BREAK_IF(!this->chkValueDeps(val));
 }
 
 TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
