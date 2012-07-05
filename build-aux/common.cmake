@@ -75,13 +75,18 @@ if(USE_WERROR)
 endif()
 
 # if __asm__("int3") raises SIGTRAP, use it for breakpoints (SIGTRAP otherwise)
-message(STATUS "checking whether INT3 raises SIGTRAP")
-set(INT3_SRC "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/int3.c")
-file(WRITE "${INT3_SRC}" "int main(void) { __asm__(\"int3\"); }\n")
-try_run(INT3_RUN_RESULT INT3_COMPILE_RESULT
-        "${CMAKE_BINARY_DIR}" "${INT3_SRC}"
-        RUN_OUTPUT_VARIABLE INT3)
-if("${INT3}" MATCHES "SIGTRAP")
+if("${INT3_RESPONSE}" STREQUAL "")
+    message(STATUS "checking whether INT3 raises SIGTRAP")
+    set(INT3_SRC "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/int3.c")
+    file(WRITE "${INT3_SRC}" "int main(void) { __asm__(\"int3\"); }\n")
+    try_run(INT3_RUN_RESULT INT3_COMPILE_RESULT
+            "${CMAKE_BINARY_DIR}" "${INT3_SRC}"
+            RUN_OUTPUT_VARIABLE INT3)
+
+    # cache the result for next run
+    set(INT3_RESPONSE "${INT3}" CACHE STRING "response to INT3")
+endif()
+if("${INT3_RESPONSE}" MATCHES "SIGTRAP")
     message(STATUS "INT3 will be used for trigerring breakpoints")
     add_definitions("-DUSE_INT3_AS_BRK")
 else()
