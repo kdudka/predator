@@ -240,12 +240,12 @@
 /**
  * prune non-loop blocks on reaching the count of join misses (0 means disabled)
  */
-#define SE_STATE_PRUNING_MISS_THR           0
+#define SE_STATE_PRUNING_MISS_THR           0x20
 
 /**
  * prune non-loop blocks on reaching the count of states (0 means disabled)
  */
-#define SE_STATE_PRUNING_TOTAL_THR          0
+#define SE_STATE_PRUNING_TOTAL_THR          0x80
 
 /**
  * if 1, the symcut module allows generic minimal lengths to survive a function
