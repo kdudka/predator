@@ -3029,11 +3029,12 @@ void restorePrototypeLengths(SymJoinCtx &ctx) {
 
 void transferContentsOfGhost(
         SymHeap                 &sh,
+        const BindingOff        &bf,
         const TValId            dst,
         const TValId            ghost)
 {
     TObjSet ignoreList;
-    buildIgnoreList(ignoreList, sh, dst);
+    buildIgnoreList(ignoreList, sh, dst, bf);
 
     ObjList live;
     sh.gatherLiveObjects(live, ghost);
@@ -3053,9 +3054,9 @@ void transferContentsOfGhost(
     }
 }
 
-/// replacement of matchData() from symdiscover
-bool joinData(
+void joinData(
         SymHeap                 &sh,
+        const BindingOff        &bf,
         const TValId            dst,
         const TValId            src,
         const bool              bidir)
@@ -3065,13 +3066,13 @@ bool joinData(
 
     // used only for debugging (in case the debugging is enabled)
     bool isomorphismWasExpected = false;
-
-    // dst is expected to be a segment
-    CL_BREAK_IF(!isAbstract(sh.valTarget(dst)));
-    const BindingOff off(sh.segBinding(dst));
+#ifndef NDEBUG
+    SymHeap inputHeapSnap(sh);
+#endif
     if (debuggingSymJoin) {
         EJoinStatus status = JS_USE_ANY;
-        joinDataReadOnly(&status, sh, off, dst, src, 0);
+        if (!joinDataReadOnly(&status, sh, bf, dst, src, 0))
+            CL_BREAK_IF("joinDataReadOnly() fails, why joinData() is called?");
         if (JS_USE_ANY == status)
             isomorphismWasExpected = true;
         else
@@ -3080,22 +3081,24 @@ bool joinData(
 
     // go through the common part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
-    if (!joinDataCore(ctx, off, dst, src)) {
+    if (!joinDataCore(ctx, bf, dst, src)) {
         CL_BREAK_IF("joinData() has failed, did joinDataReadOnly() succeed?");
-        return false;
+        return;
     }
 
-    if (!updateMayExistLevels(ctx))
-        return false;
+    if (!updateMayExistLevels(ctx)) {
+        CL_BREAK_IF("updateMayExistLevels() has failed in joinData()");
+        return;
+    }
 
     // ghost is a transiently existing object representing the join of dst/src
     const TValId ghost = roMapLookup(ctx.valMap1[0], dst);
     CL_BREAK_IF(ghost != roMapLookup(ctx.valMap2[0], src));
 
     // assign values within dst (and also in src if bidir == true)
-    transferContentsOfGhost(ctx.dst, dst, ghost);
+    transferContentsOfGhost(ctx.dst, bf, dst, ghost);
     if (bidir)
-        transferContentsOfGhost(ctx.dst, src, ghost);
+        transferContentsOfGhost(ctx.dst, bf, src, ghost);
 
     // redirect some edges if necessary
     recoverPrototypes(ctx, dst, ghost);
@@ -3111,6 +3114,4 @@ bool joinData(
         if (isomorphismWasExpected)
             CL_BREAK_IF("joinData() status differs from joinDataReadOnly()");
     }
-
-    return true;
 }

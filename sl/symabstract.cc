@@ -272,7 +272,7 @@ void slSegAbstractionStep(
         sh.valTargetSetAbstract(nextAt, OK_SLS, off);
 
     // merge data
-    joinData(sh, nextAt, at, /* bidir */ false);
+    joinData(sh, off, nextAt, at, /* bidir */ false);
 
     // replace all references to 'head'
     const TOffset offHead = sh.segBinding(nextAt).head;
@@ -302,7 +302,7 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     sh.valTargetSetAbstract(a2, OK_DLS, off);
 
     // merge data
-    joinData(sh, a2, a1, /* bidir */ true);
+    joinData(sh, off, a2, a1, /* bidir */ true);
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
     sh.segSetMinLength(a1, len);
@@ -321,13 +321,14 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
         // jump to peer
         dls = dlSegPeer(sh, dls);
 
-    // merge data
     decrementProtoLevel(sh, dls);
-    joinData(sh, dls, var, /* bidir */ false);
+
+    // merge data
+    const BindingOff &off = sh.segBinding(dls);
+    joinData(sh, off, dls, var, /* bidir */ false);
     dlSegSyncPeerData(sh, dls);
 
     // store the pointer DLS -> VAR
-    const BindingOff &off = sh.segBinding(dls);
     const PtrHandle nextPtr(sh, sh.valByOffset(dls, off.next));
     const TValId valNext = valOfPtrAt(sh, var, off.next);
     nextPtr.setValue(valNext);
@@ -358,7 +359,8 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     // merge data
     decrementProtoLevel(sh, seg1);
     decrementProtoLevel(sh, seg2);
-    joinData(sh, seg2, seg1, /* bidir */ true);
+    const BindingOff &bf2 = sh.segBinding(seg2);
+    joinData(sh, bf2, seg2, seg1, /* bidir */ true);
 
     // preserve backLink
     const TValId valNext1 = nextValFromSeg(sh, seg1);
