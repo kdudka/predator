@@ -168,7 +168,7 @@ macro(test_predator_regre name_suff ext arg1)
         set(cmd "${cmd} 2>&1")
 
         # filter out messages that are unrelated to our plug-in
-        set(cmd "${cmd} | (grep -E '\\\\[-fplugin=libsl.so\\\\]\$|compiler error|undefined symbol'; true)")
+        set(cmd "${cmd} | (grep -E '\\\\[-fplugin=libsl.so\\\\]\$|compiler error|undefined symbol|CL_BREAK_IF'; true)")
         set(cmd "${cmd} | sed 's/ \\\\[-fplugin=libsl.so\\\\]\$//'")
 
         # filter out NOTE messages with internal location

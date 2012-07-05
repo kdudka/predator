@@ -701,13 +701,21 @@ void concretizeObj(
         const PtrHandle prev1 = prevPtrFromSeg(sh, peer);
         prev1.setValue(dupHead);
 
-        // update 'prev' pointer going from the cloned object to the conrete one
+        // update 'prev' pointer going from the cloned object to the concrete
         const PtrHandle prev2(sh, sh.valByOffset(dup, off.next));
         const TValId headAddr = sh.valByOffset(seg, off.head);
         prev2.setValue(headAddr);
 
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
+
+    // if there was a self loop from 'next' to the segment itself, recover it
+    const PtrHandle nextNextPtr = nextPtrFromSeg(sh, dup);
+    const TValId nextNextVal = nextNextPtr.value();
+    const TValId nextNextRoot = sh.valRoot(nextNextVal);
+    if (nextNextRoot == dup)
+        // FIXME: we should do this also the other way around for OK_DLS
+        nextNextPtr.setValue(sh.valByOffset(seg, sh.valOffset(nextNextVal)));
 
     sh.segSetMinLength(dup, len);
 
