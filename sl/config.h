@@ -100,10 +100,10 @@
 #define SE_ALLOW_SUBPATH_RANKING            0
 
 /**
- * - 0 ... avoid creation of a new integral range from two integral constants
- * - 1 ... allow to create integral ranges from integral constants if needed
- * - 2 ... same as above, additionally use widening in upward direction [broken]
- * - 3 ... same as above, additionally use widening in both directions [broken]
+ * bit mask of allowed operations on integral ranges
+ * - 0x1 ... allow to create integral ranges from integral constants if needed
+ * - 0x2 ... allow widening of the upper bound of integral ranges
+ * - 0x4 ... allow widening of the lower bound of integral ranges
  */
 #define SE_ALLOW_INT_RANGES                 0
 

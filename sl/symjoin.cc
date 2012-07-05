@@ -1432,7 +1432,7 @@ bool joinCustomValues(
     }
 #endif
 
-#if !SE_ALLOW_INT_RANGES
+#if !(SE_ALLOW_INT_RANGES & 0x1)
     // avoid creation of a CV_INT_RANGE value from two CV_INT values
     if (isSingular(rng1) && isSingular(rng2)) {
         const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
@@ -1442,16 +1442,16 @@ bool joinCustomValues(
 #endif
 
     // [experimental] widening on intervals
-#if 1 < SE_ALLOW_INT_RANGES
     if (!isSingular(rng1) && !isSingular(rng2)) {
+#if (SE_ALLOW_INT_RANGES & 0x2)
         if (rng.lo == rng1.lo || rng.lo == rng2.lo)
             rng.hi = IR::IntMax;
-#   if 2 < SE_ALLOW_INT_RANGES
+#endif
+#if (SE_ALLOW_INT_RANGES & 0x4)
         if (rng.hi == rng1.hi || rng.hi == rng2.hi)
             rng.lo = IR::IntMin;
-#   endif
-    }
 #endif
+    }
 
     if (!isCovered(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
         return false;
