@@ -1072,7 +1072,6 @@ void joinUniBlocksCore(
     TUniBlockMap bMap1, bMap2;
     sh1.gatherUniformBlocks(bMap1, root1);
     sh2.gatherUniformBlocks(bMap2, root2);
-    CL_BREAK_IF(bMap1.empty() && bMap2.empty());
 
     BOOST_FOREACH(TUniBlockMap::const_reference item, bMap1) {
         UniformBlock bl2(item.second);
@@ -1137,11 +1136,6 @@ bool joinUniBlocks(
         hasExtra1 = true;
         ctx.sh2.gatherUniformBlocks(bMapDst, root2);
         importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh2);
-    }
-    else if (matchUniBlocks(ctx.sh1, ctx.sh2, root1, root2)) {
-        // block maps are 100% equal, pick any
-        ctx.sh1.gatherUniformBlocks(bMapDst, root1);
-        importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh1);
     }
     else
         joinUniBlocksCore(&bMapDst, &hasExtra1, &hasExtra2, ctx, root1, root2);
