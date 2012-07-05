@@ -2185,11 +2185,11 @@ void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData) {
 void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
     CL_BREAK_IF(!this->chkValueDeps(val));
 
-    const InternalCustomValue *customData;
-    this->ents.getEntRO(&customData, val);
+    const InternalCustomValue *valData;
+    this->ents.getEntRO(&valData, val);
 
     // extract the original integral ragne
-    const IR::Range &refRange = rngFromCustom(customData->customData);
+    const IR::Range &refRange = valData->customData.rng();
     CL_BREAK_IF(isSingular(refRange));
 
     // compute the difference between the original and desired ranges
@@ -2198,27 +2198,29 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
         return;
     }
 
-    const IR::TUInt loShift = win.lo - refRange.lo;
-    const IR::TUInt hiShift = refRange.hi - win.hi;
-
     // jump to anchor
-    const TValId anchor = customData->anchor;
-    const ReferableValue *refData;
-    this->ents.getEntRO(&refData, anchor);
+    const TValId anchor = valData->anchor;
+    InternalCustomValue *anchorData;
+    this->ents.getEntRW(&anchorData, anchor);
+
+    // update range of the anchor
+    const TOffset off = valData->offRoot;
+    IR::Range &rngAnchor = anchorData->customData.rng();
+    rngAnchor = win - IR::rngFromNum(off);
+
+    if (isSingular(rngAnchor))
+        // CV_INT_RANGE reduced to CV_INT
+        this->replaceRngByInt(anchorData);
 
     // go through all dependent values including the anchor itself
-    TValList deps = refData->dependentValues;
-    deps.push_back(anchor);
+    const TValList deps(anchorData->dependentValues);
     BOOST_FOREACH(const TValId depVal, deps) {
-        // FIXME: are custom values the only allowed dependent values here?
         InternalCustomValue *depData;
         this->ents.getEntRW(&depData, depVal);
 
-        // shift the bounds accordingly
-        CustomValue &cvDep = depData->customData;
-        IR::Range &rngDep = cvDep.rng();
-        rngDep.lo += loShift;
-        rngDep.hi -= hiShift;
+        // update the dependent value
+        IR::Range &rngDep = depData->customData.rng();
+        rngDep = rngAnchor +  IR::rngFromNum(off);
 
         if (isSingular(rngDep))
             // CV_INT_RANGE reduced to CV_INT
