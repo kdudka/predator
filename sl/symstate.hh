@@ -250,6 +250,7 @@ class SymStateMap {
                                 const CodeStorage::Block    *ofBlock)
             const;
 
+        /// true if the specified block has ever joined/entailed any given state
         bool anyReuseHappened(const CodeStorage::Block *) const;
 
     private:

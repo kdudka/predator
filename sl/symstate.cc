@@ -430,10 +430,13 @@ bool SymStateMap::insert(
 {
     // look for the _target_ block
     Private::BlockState &ref = d->cont[dst];
+    const unsigned size = ref.state.size();
 
     // insert the given symbolic heap
     const bool changed = ref.state.insert(sh, allowThreeWay);
-    if (!changed)
+
+    if (ref.state.size() <= size)
+        // if the size did not grow, there must have been at least join
         ref.anyHit = true;
 
     if (src)
