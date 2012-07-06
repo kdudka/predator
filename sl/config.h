@@ -233,7 +233,7 @@
 /**
  * if non-zero, reorder list of state on the fly upon hit ratio [experimental]
  */
-#define SE_STATE_ON_THE_FLY_ORDERING        0
+#define SE_STATE_ON_THE_FLY_ORDERING        1
 
 /**
  * - 0 ... keep state info for all basic blocks of a function

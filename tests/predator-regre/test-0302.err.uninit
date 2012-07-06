@@ -180,9 +180,8 @@ test-0302.c:222:8: warning: conditional jump depends on uninitialized value
 test-0302.c:222:8: note: the value being used is an untouched contents of heap
 test-0302.c:286:5: note: from call of register_cdrom()
 test-0302.c:270:5: note: from call of main()
-test-0302.c:87:33: warning: memory leak detected while destroying a static variable
 test-0302.c:90:34: warning: memory leak detected while destroying a static variable
-test-0302.c:87:33: warning: memory leak detected while destroying a static variable
+test-0302.c:86:19: warning: memory leak detected while destroying a static variable
 test-0302.c:90:34: warning: memory leak detected while destroying a static variable
 test-0302.c:86:19: warning: memory leak detected while destroying a static variable
 test-0302.c:87:33: warning: memory leak detected while destroying a static variable
@@ -194,9 +193,12 @@ test-0302.c:87:33: warning: memory leak detected while destroying a static varia
 test-0302.c:90:34: warning: memory leak detected while destroying a static variable
 test-0302.c:87:33: warning: memory leak detected while destroying a static variable
 test-0302.c:90:34: warning: memory leak detected while destroying a static variable
-test-0302.c:86:19: warning: memory leak detected while destroying a static variable
 test-0302.c:87:33: warning: memory leak detected while destroying a static variable
 test-0302.c:90:34: warning: memory leak detected while destroying a static variable
 test-0302.c:87:33: warning: memory leak detected while destroying a static variable
 test-0302.c:90:34: warning: memory leak detected while destroying a static variable
 test-0302.c:86:19: warning: memory leak detected while destroying a static variable
+test-0302.c:87:33: warning: memory leak detected while destroying a static variable
+test-0302.c:90:34: warning: memory leak detected while destroying a static variable
+test-0302.c:87:33: warning: memory leak detected while destroying a static variable
+test-0302.c:90:34: warning: memory leak detected while destroying a static variable

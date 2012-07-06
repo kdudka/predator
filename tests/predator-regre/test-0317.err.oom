@@ -20,4 +20,3 @@ test-0317.c:90:9: error: dereference of NULL value
 test-0317.c:88:9: error: dereference of NULL value
 test-0317.c:90:9: error: dereference of NULL value
 test-0317.c:88:9: error: dereference of NULL value
-test-0317.c:90:9: error: dereference of NULL value

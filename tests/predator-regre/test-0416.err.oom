@@ -113,18 +113,18 @@ test-0416.c:266:25: note: from call of PL_ArenaAllocate()
 test-0416.c:282:26: note: from call of torture_arena()
 test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0019.dot'...
+test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
+test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
+test-0416.c:266:25: note: from call of PL_ArenaAllocate()
+test-0416.c:282:26: note: from call of torture_arena()
+test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0020.dot'...
+test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
+test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
+test-0416.c:266:25: note: from call of PL_ArenaAllocate()
+test-0416.c:282:26: note: from call of torture_arena()
+test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0021.dot'...
-test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
-test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
-test-0416.c:266:25: note: from call of PL_ArenaAllocate()
-test-0416.c:282:26: note: from call of torture_arena()
-test-0416.c:273:5: note: from call of main()
-test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
-test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
-test-0416.c:266:25: note: from call of PL_ArenaAllocate()
-test-0416.c:282:26: note: from call of torture_arena()
-test-0416.c:273:5: note: from call of main()
 test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
 test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
 test-0416.c:266:25: note: from call of PL_ArenaAllocate()
@@ -143,12 +143,12 @@ test-0416.c:266:25: note: from call of PL_ArenaAllocate()
 test-0416.c:282:26: note: from call of torture_arena()
 test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0024.dot'...
+test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0025.dot'...
 test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
 test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
 test-0416.c:266:25: note: from call of PL_ArenaAllocate()
 test-0416.c:282:26: note: from call of torture_arena()
 test-0416.c:273:5: note: from call of main()
-test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0025.dot'...
 test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
 test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
 test-0416.c:266:25: note: from call of PL_ArenaAllocate()
@@ -197,24 +197,24 @@ test-0416.c:266:25: note: from call of PL_ArenaAllocate()
 test-0416.c:282:26: note: from call of torture_arena()
 test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0033.dot'...
+test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
+test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
+test-0416.c:266:25: note: from call of PL_ArenaAllocate()
+test-0416.c:282:26: note: from call of torture_arena()
+test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0034.dot'...
-test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
-test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
-test-0416.c:266:25: note: from call of PL_ArenaAllocate()
-test-0416.c:282:26: note: from call of torture_arena()
-test-0416.c:273:5: note: from call of main()
-test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
-test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
-test-0416.c:266:25: note: from call of PL_ArenaAllocate()
-test-0416.c:282:26: note: from call of torture_arena()
-test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0035.dot'...
+test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0036.dot'...
 test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
 test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
 test-0416.c:266:25: note: from call of PL_ArenaAllocate()
 test-0416.c:282:26: note: from call of torture_arena()
 test-0416.c:273:5: note: from call of main()
-test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0036.dot'...
+test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
+test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
+test-0416.c:266:25: note: from call of PL_ArenaAllocate()
+test-0416.c:282:26: note: from call of torture_arena()
+test-0416.c:273:5: note: from call of main()
 test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
 test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
 test-0416.c:266:25: note: from call of PL_ArenaAllocate()
@@ -257,18 +257,18 @@ test-0416.c:266:25: note: from call of PL_ArenaAllocate()
 test-0416.c:282:26: note: from call of torture_arena()
 test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0043.dot'...
+test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
+test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
+test-0416.c:266:25: note: from call of PL_ArenaAllocate()
+test-0416.c:282:26: note: from call of torture_arena()
+test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0044.dot'...
+test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
+test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
+test-0416.c:266:25: note: from call of PL_ArenaAllocate()
+test-0416.c:282:26: note: from call of torture_arena()
+test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0045.dot'...
-test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
-test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
-test-0416.c:266:25: note: from call of PL_ArenaAllocate()
-test-0416.c:282:26: note: from call of torture_arena()
-test-0416.c:273:5: note: from call of main()
-test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
-test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
-test-0416.c:266:25: note: from call of PL_ArenaAllocate()
-test-0416.c:282:26: note: from call of torture_arena()
-test-0416.c:273:5: note: from call of main()
 test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
 test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
 test-0416.c:266:25: note: from call of PL_ArenaAllocate()
@@ -287,18 +287,18 @@ test-0416.c:266:25: note: from call of PL_ArenaAllocate()
 test-0416.c:282:26: note: from call of torture_arena()
 test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0048.dot'...
-test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
-test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
-test-0416.c:266:25: note: from call of PL_ArenaAllocate()
-test-0416.c:282:26: note: from call of torture_arena()
-test-0416.c:273:5: note: from call of main()
 test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0049.dot'...
+test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0050.dot'...
 test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
 test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
 test-0416.c:266:25: note: from call of PL_ArenaAllocate()
 test-0416.c:282:26: note: from call of torture_arena()
 test-0416.c:273:5: note: from call of main()
-test-0416.c:264:19: note: writing heap graph to '01-torture_arena-0050.dot'...
+test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
+test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
+test-0416.c:266:25: note: from call of PL_ArenaAllocate()
+test-0416.c:282:26: note: from call of torture_arena()
+test-0416.c:273:5: note: from call of main()
 test-0416.c:77:41: error: ___sl_error() reached, analysis of this code path will not continue
 test-0416.c:77:41: note: user message: (nb & pool->mask) == 0
 test-0416.c:266:25: note: from call of PL_ArenaAllocate()

@@ -85,6 +85,7 @@ if("${INT3_RESPONSE}" STREQUAL "")
 
     # cache the result for next run
     set(INT3_RESPONSE "${INT3}" CACHE STRING "response to INT3")
+    mark_as_advanced(INT3_RESPONSE)
 endif()
 if("${INT3_RESPONSE}" MATCHES "SIGTRAP")
     message(STATUS "INT3 will be used for trigerring breakpoints")
