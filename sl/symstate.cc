@@ -398,6 +398,28 @@ bool BlockScheduler::getNext(TBlock *dst) {
 #elif SE_BLOCK_SCHEDULER_KIND < 3
     bb = d->sched.back();
     d->sched.pop_back();
+
+#else // assume load-driven scheduler
+
+    typedef std::map<int /* cntPending */, TBlock> TLoad;
+    TLoad load;
+
+    // this really needs to be sorted in getNext()
+    BOOST_FOREACH(const TBlock bbNow, d->todo) {
+        const int cntPending = d->pcp->cntPending(bbNow);
+        load[cntPending] = bbNow;
+    }
+
+    const TLoad::const_iterator itTop = load.begin();
+    const TLoad::const_reverse_iterator itBottom = load.rbegin();
+
+    bb = itTop->second;
+
+    CL_DEBUG("<Q> load-driven scheduler picks "
+            << bb->name() << " with "
+            << itTop->first << " pending states, the last one is "
+            << itBottom->second->name() << " with "
+            << itBottom->first << " pending states");   
 #endif
     if (1 != d->todo.erase(bb))
         CL_BREAK_IF("BlockScheduler malfunction");

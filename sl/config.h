@@ -133,6 +133,7 @@
  * - 0 ... use BFS scheduler
  * - 1 ... use DFS scheduler, keep already scheduled blocks at their position
  * - 2 ... use DFS scheduler, move already scheduled blocks to front of queue
+ * - 3 ... use load-driven scheduler (picks the one with fewer pending heaps)
  */
 #define SE_BLOCK_SCHEDULER_KIND             2
 
