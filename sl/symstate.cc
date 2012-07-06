@@ -309,11 +309,14 @@ struct BlockScheduler::Private {
     TSched              sched;
 #endif
     TDone               done;
+
+    const IPendingCountProvider *pcp;
 };
 
-BlockScheduler::BlockScheduler():
+BlockScheduler::BlockScheduler(const IPendingCountProvider &pcp):
     d(new Private)
 {
+    d->pcp = &pcp;
 }
 
 BlockScheduler::BlockScheduler(const BlockScheduler &tpl):
@@ -462,10 +465,15 @@ struct SymStateMap::Private {
 
     struct BlockState {
         SymStateMarked                  state;
+
+        // TODO: drop this!
+        static SymStateMap              XXX;
         BlockScheduler                  inbound;
+
         bool                            anyHit;
 
         BlockState():
+            inbound(XXX),
             anyHit(false)
         {
         }
@@ -473,6 +481,9 @@ struct SymStateMap::Private {
 
     std::map<TBlock, BlockState>        cont;
 };
+
+// TODO: drop this!
+SymStateMap SymStateMap::Private::BlockState::XXX;
 
 SymStateMap::SymStateMap():
     d(new Private)

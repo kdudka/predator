@@ -117,6 +117,7 @@ class SymExecEngine: public IStatsProvider {
             dst_(results),
             stats_(stats),
             ptracer_(stateMap_),
+            sched_(stateMap_),
             block_(0),
             insnIdx_(0),
             heapIdx_(0),

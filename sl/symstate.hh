@@ -318,7 +318,7 @@ class BlockScheduler: public IStatsProvider {
         typedef std::vector<TBlock>             TBlockList;
 
     public:
-        BlockScheduler();
+        BlockScheduler(const IPendingCountProvider &);
         BlockScheduler(const BlockScheduler &);
         ~BlockScheduler();
 
