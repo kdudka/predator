@@ -197,7 +197,7 @@
  * - 2 ... join only when traversing a loop-closing edge, isomorphism otherwise
  * - 3 ... same as 2 but skips the isomorphism check when considered redundant
  */
-#define SE_JOIN_ON_LOOP_EDGES_ONLY          2
+#define SE_JOIN_ON_LOOP_EDGES_ONLY          3
 
 /**
  * maximal call depth
