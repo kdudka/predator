@@ -433,7 +433,17 @@ bool SymStateMap::insert(
     const unsigned size = ref.state.size();
 
     // insert the given symbolic heap
-    const bool changed = ref.state.insert(sh, allowThreeWay);
+    bool changed = true;
+#if 2 < SE_JOIN_ON_LOOP_EDGES_ONLY
+    if (1 == dst->inbound().size() && (cl_is_term_insn(dst->front()->code)
+                || (CL_INSN_COND == dst->back()->code && 2 == dst->size())))
+    {
+        CL_DEBUG("SymStateMap::insert() bypasses even the isomorphism check");
+        ref.state.insertNew(sh);
+    }
+    else
+#endif
+        changed = ref.state.insert(sh, allowThreeWay);
 
     if (ref.state.size() <= size)
         // if the size did not grow, there must have been at least join

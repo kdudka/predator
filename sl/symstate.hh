@@ -194,6 +194,8 @@ class SymStateMarked: public SymStateWithJoin {
             done_.at(nth) = false;
         }
 
+        friend class SymStateMap;
+
     public:
         /// check if the nth symbolic heap has been already processed
         bool isDone(int nth) const {

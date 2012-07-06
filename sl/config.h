@@ -195,6 +195,7 @@
  * - 0 ... join states on each basic block entry
  * - 1 ... join only when traversing a loop-closing edge, entailment otherwise
  * - 2 ... join only when traversing a loop-closing edge, isomorphism otherwise
+ * - 3 ... same as 2 but skips the isomorphism check when considered redundant
  */
 #define SE_JOIN_ON_LOOP_EDGES_ONLY          2
 
