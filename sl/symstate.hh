@@ -98,6 +98,8 @@ class SymState {
             existing.swap(sh);
         }
 
+        virtual void rotateExisting(const int idxA, const int idxB);
+
         /// lookup/insert optimization in SymCallCache implementation
         friend class PerFncCache;
 
@@ -194,6 +196,8 @@ class SymStateMarked: public SymStateWithJoin {
             done_.at(nth) = false;
         }
 
+        virtual void rotateExisting(const int idxA, const int idxB);
+
         friend class SymStateMap;
 
     public:
@@ -208,7 +212,8 @@ class SymStateMarked: public SymStateWithJoin {
         }
 
     private:
-        std::vector<bool> done_;
+        typedef std::vector<bool> TDone;
+        TDone done_;
 };
 
 /**

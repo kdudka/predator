@@ -118,6 +118,12 @@ bool SymState::insert(const SymHeap &sh, bool /* allowThreeWay */ ) {
     return true;
 }
 
+void SymState::rotateExisting(const int idxA, const int idxB) {
+    TList::iterator itA = heaps_.begin() + idxA;
+    TList::iterator itB = heaps_.begin() + idxB;
+    rotate(itA, itB, heaps_.end());
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapUnion implementation
@@ -151,6 +157,17 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
 
 
 // /////////////////////////////////////////////////////////////////////////////
+// SymStateMarked implementation
+void SymStateMarked::rotateExisting(const int idxA, const int idxB) {
+    SymState::rotateExisting(idxA, idxB);
+
+    TDone::iterator itA = done_.begin() + idxA;
+    TDone::iterator itB = done_.begin() + idxB;
+    rotate(itA, itB, done_.end());
+}
+
+
+// /////////////////////////////////////////////////////////////////////////////
 // SymStateWithJoin implementation
 void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay) {
     for (unsigned idxOld = 0U; idxOld < this->size();) {
@@ -173,9 +190,10 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay) {
             continue;
         }
 
-        CL_DEBUG("<J> packState():  idxOld = " << idxOld
-                << ", idxNew = " << idxNew
-                << ", action = " << status);
+        CL_DEBUG("<J> packState(): idxOld = #" << idxOld
+                << ", idxNew = #" << idxNew
+                << ", action = " << status
+                << ", size = " << this->size());
 
         switch (status) {
             case JS_USE_ANY:
@@ -196,6 +214,11 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay) {
 
         this->eraseExisting(idxOld);
     }
+
+#if SE_STATE_ON_THE_FLY_ORDERING
+    // put the matched heap at the beginning of the list [optimization]
+    this->rotateExisting(0U, idxNew);
+#endif
 }
 
 bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
@@ -235,18 +258,21 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
 
     switch (status) {
         case JS_USE_ANY:
-            // JS_USE_ANY means exact match
+            CL_DEBUG("<I> sh #" << idx << " is equal to the given one, "
+                    << this->size() << " heaps in total");
             break;
 
         case JS_USE_SH1:
-            CL_DEBUG("<J> sh #" << idx << " is stronger than the given one");
+            CL_DEBUG("<J> sh #" << idx << " covers the given one, "
+                    << this->size() << " heaps in total");
             debugPlot("join", 0, shNew);
             debugPlot("join", 1, this->operator[](idx));
             break;
 
         case JS_USE_SH2:
             // replace the heap inside by the given one
-            CL_DEBUG("<J> replacing sh #" << idx);
+            CL_DEBUG("<J> replacing sh #" << idx
+                    << ", " << this->size() << " heaps in total");
             debugPlot("join", 0, this->operator[](idx));
             debugPlot("join", 1, shNew);
 
@@ -259,7 +285,9 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
 
         case JS_THREE_WAY:
             // three-way join
-            CL_DEBUG("<J> three-way join with sh #" << idx);
+            CL_DEBUG("<J> three-way join with sh #" << idx
+                    << ", " << this->size() << " heaps in total");
+
             debugPlot("join", 0, this->operator[](idx));
             debugPlot("join", 1, shNew);
             debugPlot("join", 2, result);
@@ -268,6 +296,11 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
             this->packState(idx, allowThreeWay);
             return true;
     }
+
+#if SE_STATE_ON_THE_FLY_ORDERING
+    // put the matched heap at the beginning of the list [optimization]
+    this->rotateExisting(0U, idx);
+#endif
 
     // nothing changed actually
     return false;
