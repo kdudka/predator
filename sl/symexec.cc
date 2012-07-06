@@ -805,11 +805,8 @@ void SymExecEngine::printStatsHelper(const BlockScheduler::TBlock bb) const {
     const SymStateMarked &state = self->stateMap_[bb];
     const unsigned total = state.size();
 
-    // compute heaps pending for execution
-    unsigned waiting = 0;
-    for (unsigned i = 0; i < total; ++i)
-        if (!state.isDone(i))
-            ++waiting;
+    // read count of the heaps pending for execution
+    const unsigned waiting = state.cntPending();
 
     const char *status = (bb == block_)
         ? " in progress"

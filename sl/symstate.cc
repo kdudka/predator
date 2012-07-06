@@ -155,17 +155,6 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
 
 
 // /////////////////////////////////////////////////////////////////////////////
-// SymStateMarked implementation
-void SymStateMarked::rotateExisting(const int idxA, const int idxB) {
-    SymState::rotateExisting(idxA, idxB);
-
-    TDone::iterator itA = done_.begin() + idxA;
-    TDone::iterator itB = done_.begin() + idxB;
-    rotate(itA, itB, done_.end());
-}
-
-
-// /////////////////////////////////////////////////////////////////////////////
 // SymStateWithJoin implementation
 void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay) {
     for (unsigned idxOld = 0U; idxOld < this->size();) {
@@ -451,7 +440,15 @@ void SymStateMarked::swap(SymState &other) {
 
     // wipe done
     done_.clear();
-    done_.resize(this->size(), false);
+    done_.resize((cntPending_ = this->size()), false);
+}
+
+void SymStateMarked::rotateExisting(const int idxA, const int idxB) {
+    SymState::rotateExisting(idxA, idxB);
+
+    TDone::iterator itA = done_.begin() + idxA;
+    TDone::iterator itB = done_.begin() + idxB;
+    rotate(itA, itB, done_.end());
 }
 
 
@@ -523,6 +520,10 @@ bool SymStateMap::insert(
 
 bool SymStateMap::anyReuseHappened(const CodeStorage::Block *bb) const {
     return d->cont[bb].anyHit;
+}
+
+int SymStateMap::cntPending(const CodeStorage::Block *bb) const {
+    return d->cont[bb].state.cntPending();
 }
 
 void SymStateMap::gatherInboundEdges(TContBlock                  &dst,
