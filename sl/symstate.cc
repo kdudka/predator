@@ -152,42 +152,49 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymStateWithJoin implementation
-void SymStateWithJoin::packSuffix(unsigned idx) {
-    const unsigned suffix = idx++;
+void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay) {
+    for (unsigned idxOld = 0U; idxOld < this->size();) {
+        if (idxNew == idxOld) {
+            // do not remove the newly inserted heap based on identity with self
+            ++idxOld;
+            continue;
+        }
 
-    while (idx < this->size()) {
-        SymHeap &shNew = const_cast<SymHeap &>(this->operator[](suffix));
-        SymHeap &shOld = const_cast<SymHeap &>(this->operator[](idx));
+        SymHeap &shOld = const_cast<SymHeap &>(this->operator[](idxOld));
+        SymHeap &shNew = const_cast<SymHeap &>(this->operator[](idxNew));
 
         TStorRef stor = shNew.stor();
         CL_BREAK_IF(&stor != &shOld.stor());
 
         EJoinStatus     status;
-        SymHeap         result(stor, new Trace::TransientNode("packSuffix()"));
-        if (!joinSymHeaps(&status, &result, shNew, shOld)) {
-            ++idx;
+        SymHeap         result(stor, new Trace::TransientNode("packState()"));
+        if (!joinSymHeaps(&status, &result, shOld, shNew, allowThreeWay)) {
+            ++idxOld;
             continue;
         }
 
-        CL_DEBUG("<J> packSuffix(): suffix = " << suffix
-                << ", idx = " << idx
+        CL_DEBUG("<J> packState():  idxOld = " << idxOld
+                << ", idxNew = " << idxNew
                 << ", action = " << status);
 
         switch (status) {
             case JS_USE_ANY:
-            case JS_USE_SH1:
+            case JS_USE_SH2:
                 break;
 
-            case JS_USE_SH2:
-                this->swapExisting(suffix, shOld);
+            case JS_USE_SH1:
+                this->swapExisting(idxNew, shOld);
                 break;
 
             case JS_THREE_WAY:
-                this->swapExisting(suffix, result);
+                this->swapExisting(idxNew, result);
                 break;
         }
 
-        this->eraseExisting(idx);
+        if (idxOld < idxNew)
+            --idxNew;
+
+        this->eraseExisting(idxOld);
     }
 }
 
@@ -247,7 +254,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
             Trace::waiveCloneOperation(result);
             this->swapExisting(idx, result);
 
-            this->packSuffix(idx);
+            this->packState(idx, allowThreeWay);
             return true;
 
         case JS_THREE_WAY:
@@ -258,7 +265,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
             debugPlot("join", 2, result);
 
             this->swapExisting(idx, result);
-            this->packSuffix(idx);
+            this->packState(idx, allowThreeWay);
             return true;
     }
 

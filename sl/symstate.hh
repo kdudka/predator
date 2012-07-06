@@ -146,7 +146,7 @@ class SymStateWithJoin: public SymHeapUnion {
         virtual bool insert(const SymHeap &sh, bool allowThreeWay = true);
 
     private:
-        void packSuffix(unsigned idx);
+        void packState(unsigned idx, bool allowThreeWay);
 };
 
 /**
