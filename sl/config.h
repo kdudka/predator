@@ -130,6 +130,13 @@
 #define SE_ASSUME_FRESH_STATIC_DATA         1
 
 /**
+ * - 0 ... use BFS scheduler
+ * - 1 ... use DFS scheduler, keep already scheduled blocks at their position
+ * - 2 ... use DFS scheduler, move already scheduled blocks to front of queue
+ */
+#define SE_BLOCK_SCHEDULER_KIND             2
+
+/**
  * call cache miss count that will trigger function removal (0 means disabled)
  */
 #define SE_CALL_CACHE_MISS_THR              0x10
@@ -267,13 +274,6 @@
  * - 3 ... track also code pointers
  */
 #define SE_TRACK_NON_POINTER_VALUES         2
-
-/**
- * - 0 ... use BFS scheduler
- * - 1 ... use DFS scheduler, keep already scheduled blocks at their position
- * - 2 ... use DFS scheduler, move already scheduled blocks to front of queue
- */
-#define SE_USE_DFS_SCHEDULER                2
 
 /**
  * if 1, do not make deep copy on copy of SymHeap [experimental]

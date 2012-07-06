@@ -37,7 +37,7 @@
 
 #include <boost/foreach.hpp>
 
-#if !SE_USE_DFS_SCHEDULER
+#if !SE_BLOCK_SCHEDULER_KIND
 #   include <queue>
 #endif
 
@@ -297,15 +297,17 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
 // /////////////////////////////////////////////////////////////////////////////
 // BlockScheduler implementation
 struct BlockScheduler::Private {
-#if SE_USE_DFS_SCHEDULER
-    typedef std::vector<TBlock>                             TSched;
-#else
+#if !SE_BLOCK_SCHEDULER_KIND
     typedef std::queue<TBlock>                              TSched;
+#elif SE_BLOCK_SCHEDULER_KIND < 3
+    typedef std::vector<TBlock>                             TSched;
 #endif
     typedef std::map<TBlock, unsigned /* cnt */>            TDone;
 
     TBlockSet           todo;
+#if SE_BLOCK_SCHEDULER_KIND < 3
     TSched              sched;
+#endif
     TDone               done;
 };
 
@@ -341,17 +343,17 @@ BlockScheduler::TBlockList BlockScheduler::done() const {
 
 bool BlockScheduler::schedule(const TBlock bb) {
     if (insertOnce(d->todo, bb)) {
-#if SE_USE_DFS_SCHEDULER
-        d->sched.push_back(bb);
-#else
+#if !SE_BLOCK_SCHEDULER_KIND
         d->sched.push(bb);
+#elif SE_BLOCK_SCHEDULER_KIND < 3
+        d->sched.push_back(bb);
 #endif
         return true;
     }
 
     // already in the queue
 
-#if 1 < SE_USE_DFS_SCHEDULER
+#if 2 == SE_BLOCK_SCHEDULER_KIND
     const int cnt = d->sched.size();
 
     // seek the given block in the queue
@@ -385,13 +387,14 @@ bool BlockScheduler::getNext(TBlock *dst) {
     if (d->todo.empty())
         return false;
 
-    // take the first block in the queue
-#if SE_USE_DFS_SCHEDULER
-    const TBlock bb = d->sched.back();
-    d->sched.pop_back();
-#else
-    const TBlock bb = d->sched.front();
+    // select the block for processing according to the policy
+    TBlock bb;
+#if !SE_BLOCK_SCHEDULER_KIND
+    bb = d->sched.front();
     d->sched.pop();
+#elif SE_BLOCK_SCHEDULER_KIND < 3
+    bb = d->sched.back();
+    d->sched.pop_back();
 #endif
     if (1 != d->todo.erase(bb))
         CL_BREAK_IF("BlockScheduler malfunction");
