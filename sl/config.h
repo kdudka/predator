@@ -273,7 +273,7 @@
  * - 1 ... use DFS scheduler, keep already scheduled blocks at their position
  * - 2 ... use DFS scheduler, move already scheduled blocks to front of queue
  */
-#define SE_USE_DFS_SCHEDULER                1
+#define SE_USE_DFS_SCHEDULER                2
 
 /**
  * if 1, do not make deep copy on copy of SymHeap [experimental]
