@@ -269,7 +269,9 @@
 #define SE_TRACK_NON_POINTER_VALUES         2
 
 /**
- * if 1, use a DFS scheduler at the level of basic blocks; if 0, use BFS
+ * - 0 ... use BFS scheduler
+ * - 1 ... use DFS scheduler, keep already scheduled blocks at their position
+ * - 2 ... use DFS scheduler, move already scheduled blocks to front of queue
  */
 #define SE_USE_DFS_SCHEDULER                1
 

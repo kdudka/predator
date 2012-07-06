@@ -351,16 +351,45 @@ BlockScheduler::TBlockList BlockScheduler::done() const {
 }
 
 bool BlockScheduler::schedule(const TBlock bb) {
-    if (!insertOnce(d->todo, bb))
-        // already in the queue
+    if (insertOnce(d->todo, bb)) {
+#if SE_USE_DFS_SCHEDULER
+        d->sched.push_back(bb);
+#else
+        d->sched.push(bb);
+#endif
+        return true;
+    }
+
+    // already in the queue
+
+#if 1 < SE_USE_DFS_SCHEDULER
+    const int cnt = d->sched.size();
+
+    // seek the given block in the queue
+    int idx;
+    for (idx = cnt - 1; 0 <= idx; --idx)
+        if (bb == d->sched[idx])
+            break;
+
+    if (idx < 0) {
+        // if not found in the queue, consistency of BlockScheduler is broken
+        CL_BREAK_IF("BlockScheduler::schedule() detected inconsistency!");
+        return false;
+    }
+
+    if (idx + 1 == cnt)
+        // already at the top
         return false;
 
-#if SE_USE_DFS_SCHEDULER
-    d->sched.push_back(bb);
-#else
-    d->sched.push(bb);
+    CL_DEBUG("<Q> prioritizing block " << bb->name()
+            << ", found in depth " << (cnt - idx));
+
+    Private::TSched::iterator itIdx = d->sched.begin() + idx;
+    Private::TSched::iterator itTop = d->sched.begin() + (cnt - 1);
+    rotate(itIdx, itTop, d->sched.end());
 #endif
-    return true;
+
+    return false;
 }
 
 bool BlockScheduler::getNext(TBlock *dst) {
