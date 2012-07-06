@@ -37,9 +37,7 @@
 
 #include <boost/foreach.hpp>
 
-#if SE_USE_DFS_SCHEDULER
-#   include <stack>
-#else
+#if !SE_USE_DFS_SCHEDULER
 #   include <queue>
 #endif
 
@@ -311,7 +309,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
 // BlockScheduler implementation
 struct BlockScheduler::Private {
 #if SE_USE_DFS_SCHEDULER
-    typedef std::stack<TBlock>                              TSched;
+    typedef std::vector<TBlock>                             TSched;
 #else
     typedef std::queue<TBlock>                              TSched;
 #endif
@@ -357,7 +355,11 @@ bool BlockScheduler::schedule(const TBlock bb) {
         // already in the queue
         return false;
 
+#if SE_USE_DFS_SCHEDULER
+    d->sched.push_back(bb);
+#else
     d->sched.push(bb);
+#endif
     return true;
 }
 
@@ -367,11 +369,12 @@ bool BlockScheduler::getNext(TBlock *dst) {
 
     // take the first block in the queue
 #if SE_USE_DFS_SCHEDULER
-    const TBlock bb = d->sched.top();
+    const TBlock bb = d->sched.back();
+    d->sched.pop_back();
 #else
     const TBlock bb = d->sched.front();
-#endif
     d->sched.pop();
+#endif
     if (1 != d->todo.erase(bb))
         CL_BREAK_IF("BlockScheduler malfunction");
 
