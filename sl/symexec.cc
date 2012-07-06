@@ -931,7 +931,8 @@ void SymExecEngine::pruneOrigin() {
 #endif
 
 #if SE_STATE_PRUNING_MODE < 2
-    if (CL_INSN_COND != block_->back()->code || 2 < block_->size())
+    if (!cl_is_term_insn(block_->front()->code)
+            && (CL_INSN_COND != block_->back()->code || 2 < block_->size()))
         return;
 #endif
 
