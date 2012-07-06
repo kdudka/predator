@@ -918,15 +918,16 @@ void SymExecEngine::pruneOrigin() {
         return;
 
     SymStateMarked &origin = stateMap_[block_];
+    const unsigned size = origin.size();
 
 #if SE_STATE_PRUNING_MISS_THR
     if (!stateMap_.anyReuseHappened(block_)
-            && (SE_STATE_PRUNING_MISS_THR) <= origin.size())
+            && (SE_STATE_PRUNING_MISS_THR) <= size)
         goto thr_reached;
 #endif
 
 #if SE_STATE_PRUNING_TOTAL_THR
-    if ((SE_STATE_PRUNING_TOTAL_THR) <= origin.size())
+    if ((SE_STATE_PRUNING_TOTAL_THR) <= size)
         goto thr_reached;
 #endif
 
@@ -945,32 +946,28 @@ void SymExecEngine::pruneOrigin() {
 #if SE_STATE_PRUNING_MISS_THR || SE_STATE_PRUNING_TOTAL_THR
 thr_reached:
 #endif
-    SymHeapList tmp;
+    if (0x100 < size)
+        printMemUsage("SymExecEngine::execInsn");
 
-    bool hit = false;
-
-    for (unsigned i = 0; i < origin.size(); ++i) {
+    for (unsigned i = 0; i < size; ++i) {
         if (origin.isDone(i))
-            hit = true;
-        else
-            tmp.insert(origin[i]);
-    }
+            continue;
 
-    if (!hit) {
         CL_DEBUG_MSG(lw_, "SymExecEngine::pruneOrigin() failed to pack "
-                << block_->name());
+                << block_->name()
+                << ", sh #" << i << " has not been processed yet");
 
-        CL_BREAK_IF(tmp.size() != origin.size());
+        CL_BREAK_IF("SymExecEngine::pruneOrigin() has failed");
+        return;
     }
-    else {
-        CL_DEBUG_MSG(lw_, "SymExecEngine::pruneOrigin() packed "
-                << block_->name() << ": "
-                << origin.size() << " -> "
-                <<  tmp.size());
 
-        CL_BREAK_IF(origin.size() <= tmp.size());
-        origin.swap(tmp);
-    }
+    origin.clear();
+
+    CL_DEBUG_MSG(lw_, "SymExecEngine::pruneOrigin() cleared " << block_->name()
+            << " (initial size of state was " << size << ")");
+
+    if (0x100 < size)
+        printMemUsage("SymExecEngine::pruneOrigin");
 }
 
 // /////////////////////////////////////////////////////////////////////////////
