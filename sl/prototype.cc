@@ -20,6 +20,8 @@
 #include "config.h"
 #include "prototype.hh"
 
+#include <cl/cl_msg.hh>
+
 #include "symseg.hh"
 #include "symutil.hh"
 #include "worklist.hh"
@@ -142,4 +144,30 @@ void decrementProtoLevel(SymHeap &sh, const TValId at) {
     collectPrototypesOf(protoList, sh, at, /* skipDlsPeers */ true);
     BOOST_FOREACH(const TValId proto, protoList)
         objDecrementProtoLevel(sh, proto);
+}
+
+bool protoCheckConsistency(const SymHeap &sh) {
+    TValList addrs;
+    sh.gatherRootObjects(addrs);
+    BOOST_FOREACH(const TValId root, addrs) {
+        const EValueTarget code = sh.valTarget(root);
+        if (isAbstract(code))
+            continue;
+
+        const TProtoLevel rootLevel = sh.valTargetProtoLevel(root);
+
+        ObjList ptrs;
+        sh.gatherLivePointers(ptrs, root);
+        BOOST_FOREACH(const ObjHandle &obj, ptrs) {
+            const TProtoLevel level = sh.valTargetProtoLevel(obj.value());
+            if (level <= rootLevel)
+                continue;
+
+            CL_ERROR("nesting level bump on a non-abstract object detected");
+            return false;
+        }
+    }
+
+    // all OK
+    return true;
 }

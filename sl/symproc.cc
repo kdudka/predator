@@ -26,6 +26,7 @@
 #include <cl/storage.hh>
 
 #include "memdebug.hh"
+#include "prototype.hh"
 #include "symabstract.hh"
 #include "symbin.hh"
 #include "symbt.hh"
@@ -1557,7 +1558,6 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2) {
         return true;
 
     CL_DEBUG("failed to splice-out list segment, has to over-approximate");
-    trNode = new Trace::SpliceOutNode(trNode, /* failed */ 0);
     trNode = new Trace::SpliceOutNode(trNode, /* failed */ 0);
     sh.traceUpdate(trNode);
     dst.insert(sh);

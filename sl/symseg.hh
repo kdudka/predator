@@ -226,10 +226,4 @@ inline void buildIgnoreList(
  */
 bool dlSegCheckConsistency(const SymHeap &sh);
 
-/**
- * returns true if no concrete object points to another object of a higher level
- * @note this runs in debug build only
- */
-bool protoCheckConsistency(const SymHeap &sh);
-
 #endif /* H_GUARD_SYMSEG_H */

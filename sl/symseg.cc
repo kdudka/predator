@@ -136,29 +136,3 @@ bool dlSegCheckConsistency(const SymHeap &sh) {
     // all OK
     return true;
 }
-
-bool protoCheckConsistency(const SymHeap &sh) {
-    TValList addrs;
-    sh.gatherRootObjects(addrs);
-    BOOST_FOREACH(const TValId root, addrs) {
-        const EValueTarget code = sh.valTarget(root);
-        if (isAbstract(code))
-            continue;
-
-        const TProtoLevel rootLevel = sh.valTargetProtoLevel(root);
-
-        ObjList ptrs;
-        sh.gatherLivePointers(ptrs, root);
-        BOOST_FOREACH(const ObjHandle &obj, ptrs) {
-            const TProtoLevel level = sh.valTargetProtoLevel(obj.value());
-            if (level <= rootLevel)
-                continue;
-
-            CL_ERROR("nesting level bump on a non-abstract object detected");
-            return false;
-        }
-    }
-
-    // all OK
-    return true;
-}
