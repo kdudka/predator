@@ -3687,45 +3687,6 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
     CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
 }
 
-TValId lookThrough(TValSet *pSeen, SymHeap &sh, TValId val) {
-    if (VT_RANGE == sh.valTarget(val))
-        // not supported yet
-        return VAL_INVALID;
-
-    const TOffset off = sh.valOffset(val);
-
-    while (0 < val) {
-        const TValId root = sh.valRoot(val);
-        if (!insertOnce(*pSeen, root))
-            // an already seen root value
-            return VAL_INVALID;
-
-        const EValueTarget code = sh.valTarget(val);
-        if (!isAbstract(code))
-            // a non-abstract object reached
-            break;
-
-        const TValId seg = segPeer(sh, root);
-        if (sh.segMinLength(seg))
-            // non-empty abstract object reached
-            break;
-
-        const EObjKind kind = sh.valTargetKind(seg);
-        if (OK_OBJ_OR_NULL == kind) {
-            // we always end up with VAL_NULL if OK_OBJ_OR_NULL is removed
-            val = VAL_NULL;
-            continue;
-        }
-
-        // jump to next value while taking the 'head' offset into consideration
-        const TValId valNext = nextValFromSeg(sh, seg);
-        const BindingOff &bOff = sh.segBinding(seg);
-        val = sh.valByOffset(valNext, off - bOff.head);
-    }
-
-    return val;
-}
-
 bool SymHeap::proveNeq(TValId ref, TValId val) const {
     if (SymHeapCore::proveNeq(ref, val))
         // values are non-equal in non-abstract world
@@ -3734,12 +3695,12 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
     TValSet seen;
 
     // try to look through possibly empty abstract objects
-    val = lookThrough(&seen, *const_cast<SymHeap *>(this), val);
+    val = lookThrough(*const_cast<SymHeap *>(this), val, &seen);
     if (VAL_INVALID == val)
         return false;
 
     // try to look through possibly empty abstract objects
-    ref = lookThrough(&seen, *const_cast<SymHeap *>(this), ref);
+    ref = lookThrough(*const_cast<SymHeap *>(this), ref, &seen);
     if (VAL_INVALID == ref)
         return false;
 

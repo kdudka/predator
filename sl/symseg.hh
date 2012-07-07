@@ -220,6 +220,9 @@ inline void buildIgnoreList(
         ignoreList.insert(prev);
 }
 
+/// look through possibly empty objects and return the value seen
+TValId lookThrough(SymHeap &sh, TValId val, TValSet *pSeen = 0);
+
 /**
  * returns true if all DLS in the given symbolic heap are consistent
  * @note this runs in debug build only
