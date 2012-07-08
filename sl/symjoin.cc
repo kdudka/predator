@@ -466,22 +466,11 @@ bool checkNullConsistency(
         ? ctx.sh1.valTarget(v1)
         : ctx.sh2.valTarget(v2);
 
-    // NOTE: this is only a heuristic
-    switch (code) {
-        case VT_UNKNOWN:
-            // [experimental] reduce state explosion on test-0300
-            return !ctx.joiningData();
+    if (VT_UNKNOWN == code && !ctx.joiningData())
+        // [experimental] reduce state explosion on test-0300
+        return !ctx.joiningData();
 
-        case VT_STATIC:
-        case VT_ON_STACK:
-        case VT_ON_HEAP:
-        case VT_ABSTRACT:
-            return true;
-
-        default:
-            // implies inconsistency
-            return false;
-    }
+    return isPossibleToDeref(code);
 }
 
 bool bumpNestingLevel(const ObjHandle &obj) {
@@ -2175,6 +2164,25 @@ bool joinValuesByCode(
     const EValueTarget code1 = ctx.sh1.valTarget(v1);
     const EValueTarget code2 = ctx.sh2.valTarget(v2);
 
+    // check target's validity
+    const bool isNull1 = (VAL_NULL == v1);
+    const bool isNull2 = (VAL_NULL == v2);
+    if (isNull1 || isNull2) {
+        if (!checkNullConsistency(ctx, v1, v2)) {
+            *pResult = false;
+            return true;
+        }
+    }
+    else {
+        const bool haveTarget1 = isAnyDataArea(code1);
+        const bool haveTarget2 = isAnyDataArea(code2);
+        if (haveTarget1 != haveTarget2) {
+            SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
+            *pResult = false;
+            return true;
+        }
+    }
+
     if (VT_RANGE == code1 || VT_RANGE == code2)
         // these have to be handled in followValuePair()
         return false;
@@ -2260,15 +2268,6 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item) {
     if ((VT_ABSTRACT == vt1 || VT_ABSTRACT == vt2)
             && joinAbstractValues(&result, ctx, item, vt1, vt2))
         return result;
-
-    if (VAL_NULL != v1 && VAL_NULL != v2) {
-        const bool haveTarget1 = isAnyDataArea(vt1);
-        const bool haveTarget2 = isAnyDataArea(vt2);
-        if (haveTarget1 != haveTarget2) {
-            SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
-            return false;
-        }
-    }
 
     if (followValuePair(ctx, item, /* read-only */ true))
         return followValuePair(ctx, item, /* read-only */ false);
