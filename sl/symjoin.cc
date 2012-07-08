@@ -473,6 +473,12 @@ bool checkNullConsistency(
     return isPossibleToDeref(code);
 }
 
+bool joinValuesByCode(
+        bool                   *pResult,
+        SymJoinCtx             &ctx,
+        const TValId            v1,
+        const TValId            v2);
+
 bool bumpNestingLevel(const ObjHandle &obj) {
     if (!obj.isValid())
         return false;
@@ -1455,23 +1461,16 @@ bool followValuePair(
         // shallow scan only!
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
+    bool result;
+    if (joinValuesByCode(&result, ctx, v1, v2))
+        return result;
+
     const bool isRange = (VT_RANGE == ctx.sh1.valTarget(v1))
                       || (VT_RANGE == ctx.sh2.valTarget(v2));
 
     if (!isRange && (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2))) {
         SJ_DEBUG("<-- value offset mismatch: " << SJ_VALP(v1, v2));
         return false;
-    }
-
-    const bool isCustom1 = (VT_CUSTOM == ctx.sh1.valTarget(v1));
-    const bool isCustom2 = (VT_CUSTOM == ctx.sh2.valTarget(v2));
-    if (isCustom1 || isCustom2) {
-        if (!isCustom1 || !isCustom2) {
-            SJ_DEBUG("<-- custom value vs. something else " << SJ_VALP(v1, v2));
-            return false;
-        }
-
-        return joinCustomValues(ctx, v1, v2);
     }
 
     // follow the roots
@@ -2211,9 +2210,14 @@ bool joinValuesByCode(
     // check for VT_UNKNOWN
     const bool isUnknown1 = (VT_UNKNOWN == code1);
     const bool isUnknown2 = (VT_UNKNOWN == code2);
-    if (!isUnknown1 && !isUnknown2)
-        // nothing to join here
-        return false;
+
+    if (!isUnknown1 && !isUnknown2) {
+        // handle VT_CUSTOM values
+        const bool isCustom1 = (VT_CUSTOM == code1);
+        const bool isCustom2 = (VT_CUSTOM == code2);
+        *pResult = isCustom1 && isCustom2 && joinCustomValues(ctx, v1, v2);
+        return     isCustom1 || isCustom2;
+    }
 
     // join the origin
     const EValueOrigin vo1 = ctx.sh1.valOrigin(v1);
