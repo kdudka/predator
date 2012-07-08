@@ -41,11 +41,6 @@
 #   include <queue>
 #endif
 
-#define SS_DEBUG(...) do {                                                  \
-    if (::debugSymState)                                                    \
-        CL_DEBUG("SymState: " << __VA_ARGS__);                              \
-} while (0)
-
 // set to 'true' if you wonder why SymState matches states as it does (noisy)
 static bool debugSymState = static_cast<bool>(DEBUG_SYMSTATE);
 
@@ -132,24 +127,23 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
         return -1;
 
     ++::cntLookups;
-    SS_DEBUG(">>> lookup() starts, cnt = " << cnt);
     debugPlot("lookup", 0, lookFor);
 
     for(int idx = 0; idx < cnt; ++idx) {
         const int nth = idx + 1;
-        SS_DEBUG("--> lookup() tries sh #" << idx << ", cnt = " << cnt);
 
         const SymHeap &sh = this->operator[](idx);
         debugPlot("lookup", nth, sh);
 
         if (areEqual(lookFor, sh)) {
-            SS_DEBUG("<<< lookup() returns sh #" << idx << ", cnt = " << cnt);
+            CL_DEBUG("<I> sh #" << idx << " is equal to the given one, "
+                    << cnt << " heaps in total");
+
             return idx;
         }
     }
 
     // not found
-    SS_DEBUG("<<< lookup() failed, cnt = " << cnt);
     return -1;
 }
 
@@ -246,7 +240,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
     switch (status) {
         case JS_USE_ANY:
             CL_DEBUG("<I> sh #" << idx << " is equal to the given one, "
-                    << this->size() << " heaps in total");
+                    << cnt << " heaps in total");
             break;
 
         case JS_USE_SH1:
@@ -259,7 +253,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
         case JS_USE_SH2:
             // replace the heap inside by the given one
             CL_DEBUG("<J> replacing sh #" << idx
-                    << ", " << this->size() << " heaps in total");
+                    << ", " << cnt << " heaps in total");
             debugPlot("join", 0, this->operator[](idx));
             debugPlot("join", 1, shNew);
 
@@ -273,7 +267,7 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
         case JS_THREE_WAY:
             // three-way join
             CL_DEBUG("<J> three-way join with sh #" << idx
-                    << ", " << this->size() << " heaps in total");
+                    << ", " << cnt << " heaps in total");
 
             debugPlot("join", 0, this->operator[](idx));
             debugPlot("join", 1, shNew);

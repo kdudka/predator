@@ -3642,6 +3642,7 @@ bool haveSegBidir(
     return false;
 }
 
+// TODO: move this handling out of SymHeap, leave neqOp() for explicit Neqs
 void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
     CL_BREAK_IF(NEQ_ADD != op && NEQ_DEL != op);
     CL_BREAK_IF(v1 <= 0 && v2 <= 0);
@@ -3687,6 +3688,7 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
     CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
 }
 
+// TODO: move this prover out of SymHeap, keep proveNeq() a low-level operation!
 bool SymHeap::proveNeq(TValId ref, TValId val) const {
     if (SymHeapCore::proveNeq(ref, val))
         // values are non-equal in non-abstract world

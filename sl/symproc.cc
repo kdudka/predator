@@ -1504,7 +1504,7 @@ bool spliceOutAbstractPath(
         CL_BREAK_IF(readOnlyMode);
 
         dlSegReplaceByConcrete(sh, seg, peer);
-        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), OK_DLS));
+        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), /* len */ 1));
         return true;
     }
 
