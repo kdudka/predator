@@ -27,9 +27,6 @@
 #include "util.hh"
 #include "worklist.hh"
 
-#include <algorithm>            // for std::copy
-#include <stack>
-
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
@@ -242,7 +239,8 @@ bool cmpValues(
     return matchRoots(sh1, sh2, root1, root2, code);
 }
 
-typedef WorkList<TValPair> TWorkList;
+typedef std::queue<TValPair>                        TSched;
+typedef WorkList<TValPair,TSched>                   TWorkList;
 
 class ValueComparator {
     private:
