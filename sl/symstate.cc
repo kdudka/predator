@@ -139,6 +139,10 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
             CL_DEBUG("<I> sh #" << idx << " is equal to the given one, "
                     << cnt << " heaps in total");
 
+#if 1 < SE_STATE_ON_THE_FLY_ORDERING
+            // put the matched heap at the beginning of the list [optimization]
+            const_cast<SymHeapUnion *>(this)->rotateExisting(0U, idx);
+#endif
             return idx;
         }
     }

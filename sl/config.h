@@ -239,7 +239,9 @@
 #define SE_RESTRICT_SLS_MINLEN              2
 
 /**
- * if non-zero, reorder list of state on the fly upon hit ratio [experimental]
+ * - 0 ... do not try to optimize the order of heaps in SymState containers
+ * - 1 ... reorder heaps in SymStateWithJoin based on hit ratio
+ * - 2 ... reorder heaps also in SymHeapUnion based on hit ratio [experimental]
  */
 #define SE_STATE_ON_THE_FLY_ORDERING        1
 
