@@ -64,12 +64,6 @@ class WorkList {
             return hasKey(seen_, item);
         }
 
-        // FIXME: really bad idea as log as schedule(const T &) is non-virutal
-        template <class T1, class T2>
-        bool schedule(const T1 &i1, const T2 &i2) {
-            return this->schedule(T(i1, i2));
-        }
-
         unsigned cntSeen() const { return seen_.size(); }
         unsigned cntTodo() const { return todo_.size(); }
 };

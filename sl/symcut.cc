@@ -100,8 +100,8 @@ class DCopyObjVisitor {
             const TValId dstAt = objDst.placedAt();
             dc_.valMap[srcAt] = dstAt;
 
-            // FIXME: schedule by values instead
-            dc_.wl.schedule(objSrc, objDst);
+            const DeepCopyData::TItem schedItem(objSrc, objDst);
+            dc_.wl.schedule(schedItem);
 
             return /* continue */ true;
         }
