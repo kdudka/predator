@@ -100,7 +100,7 @@ TValId segClone(SymHeap &sh, const TValId root) {
     return dup;
 }
 
-TValId lookThrough(SymHeap &sh, TValId val, TValSet *pSeen) {
+TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen) {
     if (VT_RANGE == sh.valTarget(val))
         // not supported yet
         return VAL_INVALID;
@@ -108,16 +108,16 @@ TValId lookThrough(SymHeap &sh, TValId val, TValSet *pSeen) {
     const TOffset off = sh.valOffset(val);
 
     while (0 < val) {
-        const TValId root = sh.valRoot(val);
-        if (pSeen && !insertOnce(*pSeen, root))
-            // an already seen root value
-            return VAL_INVALID;
+        if (pSeen && !insertOnce(*pSeen, val))
+            // an already seen value
+            break;
 
         const EValueTarget code = sh.valTarget(val);
         if (!isAbstract(code))
             // a non-abstract object reached
             break;
 
+        const TValId root = sh.valRoot(val);
         const TValId seg = segPeer(sh, root);
         if (sh.segMinLength(seg))
             // non-empty abstract object reached
@@ -133,7 +133,7 @@ TValId lookThrough(SymHeap &sh, TValId val, TValSet *pSeen) {
         // jump to next value while taking the 'head' offset into consideration
         const TValId valNext = nextValFromSeg(sh, seg);
         const BindingOff &bOff = sh.segBinding(seg);
-        val = sh.valByOffset(valNext, off - bOff.head);
+        val = const_cast<SymHeap &>(sh).valByOffset(valNext, off - bOff.head);
     }
 
     return val;

@@ -3692,16 +3692,15 @@ bool SymHeap::proveNeq(TValId ref, TValId val) const {
         // values are non-equal in non-abstract world
         return true;
 
-    TValSet seen;
+    // collect the sets of values we get by jumping over 0+ abstract objects
+    TValSet seen1, seen2;
+    lookThrough(*this, ref, &seen1);
+    lookThrough(*this, val, &seen2);
 
     // try to look through possibly empty abstract objects
-    val = lookThrough(*const_cast<SymHeap *>(this), val, &seen);
-    if (VAL_INVALID == val)
-        return false;
-
-    // try to look through possibly empty abstract objects
-    ref = lookThrough(*const_cast<SymHeap *>(this), ref, &seen);
-    if (VAL_INVALID == ref)
+    ref = lookThrough(*this, ref, &seen2);
+    val = lookThrough(*this, val, &seen1);
+    if (ref == val)
         return false;
 
     if (SymHeapCore::proveNeq(ref, val))
