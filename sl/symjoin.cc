@@ -564,6 +564,10 @@ bool joinFreshObjTripple(
 
         if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
             return true;
+
+        bool result;
+        if (joinValuesByCode(&result, ctx, v1, v2))
+            return result;
     }
 
     if (bumpNestingLevel(obj1))
