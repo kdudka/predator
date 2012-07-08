@@ -303,20 +303,18 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
 #endif
 
     // update _target_ state and check if anything has changed
-    if (!stateMap_.insert(ofBlock, block_, sh, closingLoop)) {
-        CL_DEBUG_MSG(lw_, "--- block " << name
-                     << " left intact (size of target is "
-                     << stateMap_[ofBlock].size() << ")");
+    if (stateMap_.insert(ofBlock, block_, sh, closingLoop)) {
+        const SymStateMarked &target = stateMap_[ofBlock];
+
+        // schedule for next wheel (if not already)
+        sched_.schedule(ofBlock);
+
+        CL_DEBUG_MSG(lw_, "+++ block " << name << " updated: "
+                << target.cntPending() << " heaps pending, "
+                << target.size() << " heaps total");
     }
     else {
-        // schedule for next wheel (if not already)
-        const bool already = !sched_.schedule(ofBlock);
-        CL_DEBUG_MSG(lw_, ((already) ? "-+-" : "+++")
-                << " block " << name
-                << ((already)
-                    ? " changed, but already scheduled"
-                    : " scheduled for next wheel")
-                << " (size of target is " << stateMap_[ofBlock].size() << ")");
+        CL_DEBUG_MSG(lw_, "--- block " << name << " left intact");
     }
 }
 
@@ -629,7 +627,8 @@ bool /* complete */ SymExecEngine::execInsn() {
             continue;
 
         if (1 < hCnt) {
-            CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_
+            CL_DEBUG_MSG(lw_, "*** processing block " << block_->name()
+                         << ", heap #" << heapIdx_
                          << " (initial size of state was " << hCnt << ")");
         }
 
