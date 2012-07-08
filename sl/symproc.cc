@@ -1560,14 +1560,15 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2) {
         return true;
     }
 
-    // still no luck, try to look through possibly empty objects!
-    const TValId v1Tail = lookThrough(sh, v1);
-    const TValId v2Tail = lookThrough(sh, v2);
-    if (v1Tail == v2Tail && v1 != v1Tail && v2 != v2Tail) {
-        const TValId tail = sh.valRoot(v1Tail);
-        if (VAL_NULL != tail && !objMinLength(sh, tail))
-            goto fail;
+    // collect the sets of values we get by jumping over 0+ abstract objects
+    TValSet seen1, seen2;
+    lookThrough(sh, v1, &seen1);
+    lookThrough(sh, v2, &seen2);
 
+    // try to look through possibly empty objects
+    const TValId v1Tail = lookThrough(sh, v1, &seen2);
+    const TValId v2Tail = lookThrough(sh, v2, &seen1);
+    if (v1Tail == v2Tail && v1 != v1Tail && v2 != v2Tail) {
         CL_DEBUG_MSG(loc, "valMerge() removes two abstract paths at a time");
 
         if (!spliceOutAbstractPath(proc, v1, v1Tail, /* read-only */ true))
