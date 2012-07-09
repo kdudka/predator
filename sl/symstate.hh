@@ -208,9 +208,12 @@ class SymStateMarked: public SymStateWithJoin {
         virtual void swapExisting(int nth, SymHeap &sh) {
             SymStateWithJoin::swapExisting(nth, sh);
 
-            // an already inserted heap has been generalized, we need to
-            // schedule it once again
-            done_.at(nth) = false;
+            if (!done_.at(nth))
+                return;
+
+            // an already processed heap has been generalized, we need to
+            // schedule it for precessing once again
+            done_[nth] = false;
             ++cntPending_;
         }
 
