@@ -121,6 +121,21 @@ public:
 	}
 
 	/**
+	 * @brief  Run a visitor on the instance
+	 *
+	 * This method is the @p accept method of the Visitor design pattern.
+	 *
+	 * @param[in]  visitor  The visitor of the type @p TVisitor
+	 *
+	 * @tparam  TVisitor  The type of the visitor
+	 */
+	template <class TVisitor>
+	void accept(TVisitor& visitor) const
+	{
+		visitor(*this);
+	}
+
+	/**
 	 * @brief  Virtual destructor
 	 */
 	virtual ~TTBase()
@@ -1199,6 +1214,21 @@ public:
 				dst.addFinalState(j->second);
 		}
 		return dst;
+	}
+
+	/**
+	 * @brief  Run a visitor on the instance
+	 *
+	 * This method is the @p accept method of the Visitor design pattern.
+	 *
+	 * @param[in]  visitor  The visitor of the type @p TVisitor
+	 *
+	 * @tparam  TVisitor  The type of the visitor
+	 */
+	template <class TVisitor>
+	void accept(TVisitor& visitor) const
+	{
+		visitor(*this);
 	}
 
 /*

@@ -283,6 +283,21 @@ public:
 		return variables_.back();
 	}
 
+	/**
+	 * @brief  Run a visitor on the instance
+	 *
+	 * This method is the @p accept method of the Visitor design pattern.
+	 *
+	 * @param[in]  visitor  The visitor of the type @p TVisitor
+	 *
+	 * @tparam  TVisitor  The type of the visitor
+	 */
+	template <class TVisitor>
+	void accept(TVisitor& visitor) const
+	{
+		visitor(*this);
+	}
+
 public:   // static methods
 
 	friend std::ostream& operator<<(std::ostream& os, const FA& fa);
