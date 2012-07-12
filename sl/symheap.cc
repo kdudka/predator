@@ -3605,22 +3605,6 @@ void SymHeap::valTargetSetConcrete(TValId root) {
     d->absRoots.releaseEnt(root);
 }
 
-void SymHeap::segMinLengthOp(ENeqOp op, TValId at, TMinLen len) {
-    CL_BREAK_IF(!len);
-
-    if (NEQ_DEL == op) {
-        this->segSetMinLength(at, len - 1);
-        return;
-    }
-
-    CL_BREAK_IF(NEQ_ADD != op);
-    const TMinLen current = this->segMinLength(at);
-    if (len <= current)
-        return;
-
-    this->segSetMinLength(at, len);
-}
-
 bool haveSegBidir(
         TValId                      *pDst,
         const SymHeap               *sh,
@@ -3670,17 +3654,20 @@ void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
     }
 
     if (haveSegBidir(&seg, this, OK_SLS, v1, v2)) {
-        this->segMinLengthOp(op, seg, /* SLS 1+ */ 1);
+        CL_BREAK_IF(NEQ_ADD != op);
+        segIncreaseMinLength(*this, seg, /* SLS 1+ */ 1);
         return;
     }
 
     if (haveSegBidir(&seg, this, OK_DLS, v1, v2)) {
-        this->segMinLengthOp(op, seg, /* DLS 1+ */ 1);
+        CL_BREAK_IF(NEQ_ADD != op);
+        segIncreaseMinLength(*this, seg, /* DLS 1+ */ 1);
         return;
     }
 
     if (haveDlSegAt(*this, v1, v2)) {
-        this->segMinLengthOp(op, v1, /* DLS 2+ */ 2);
+        CL_BREAK_IF(NEQ_ADD != op);
+        segIncreaseMinLength(*this, v1, /* DLS 2+ */ 2);
         return;
     }
 

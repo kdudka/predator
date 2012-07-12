@@ -158,6 +158,15 @@ inline TMinLen objMinLength(const SymHeap &sh, TValId root) {
         return 0;
 }
 
+/// if the current segment min length is lower than the given one, update it!
+inline void segIncreaseMinLength(SymHeap &sh, const TValId seg, TMinLen len)
+{
+    CL_BREAK_IF(!len);
+
+    if (sh.segMinLength(seg) < len)
+        sh.segSetMinLength(seg, len);
+}
+
 inline bool objWithBinding(const SymHeap &sh, const TValId root) {
     CL_BREAK_IF(sh.valOffset(root));
 

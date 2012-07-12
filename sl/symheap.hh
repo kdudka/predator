@@ -804,8 +804,6 @@ class SymHeap: public SymHeapCore {
     private:
         struct Private;
         Private *d;
-
-        void segMinLengthOp(ENeqOp op, TValId at, TMinLen len);
 };
 
 /// enable/disable built-in self-checks (takes effect only in debug build)
