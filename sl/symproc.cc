@@ -941,7 +941,7 @@ bool checkForOverlap(
 {
     const TValId rootDst = sh.valRoot(valDst);
     const TValId rootSrc = sh.valRoot(valSrc);
-    if (sh.proveNeq(rootDst, rootSrc))
+    if (segProveNeq(sh, rootDst, rootSrc))
         // the roots are proven to be two distinct roots
         return false;
 
@@ -1313,7 +1313,7 @@ TValId compareValues(
     const bool neg = cTraits.negative;
     if ((v1 == v2) && cTraits.preserveNeq)
         return boolToVal(!neg);
-    if (sh.proveNeq(v1, v2) && cTraits.preserveEq)
+    if (segProveNeq(sh, v1, v2) && cTraits.preserveEq)
         return boolToVal(neg);
 
     const EValueTarget code1 = sh.valTarget(v1);

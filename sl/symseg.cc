@@ -28,8 +28,73 @@
 
 #include <boost/foreach.hpp>
 
-bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
-             const EObjKind kind)
+bool segProveNeq(const SymHeap &sh, TValId ref, TValId val) {
+    if (sh.proveNeq(ref, val))
+        // values are non-equal in non-abstract world
+        return true;
+
+    // collect the sets of values we get by jumping over 0+ abstract objects
+    TValSet seen1, seen2;
+    lookThrough(sh, ref, &seen1);
+    lookThrough(sh, val, &seen2);
+
+    // try to look through possibly empty abstract objects
+    ref = lookThrough(sh, ref, &seen2);
+    val = lookThrough(sh, val, &seen1);
+    if (ref == val)
+        return false;
+
+    if (sh.proveNeq(ref, val))
+        // values are non-equal in non-abstract world
+        return true;
+
+    // having the values always in the same order leads to simpler code
+    moveKnownValueToLeft(sh, ref, val);
+
+    const TSizeRange size2 = sh.valSizeOfTarget(val);
+    if (size2.lo <= IR::Int0)
+        // oops, we cannot prove the address is safely allocated, giving up
+        return false;
+
+    const TValId root2 = sh.valRoot(val);
+    const TMinLen len2 = objMinLength(sh, root2);
+    if (!len2)
+        // one of the targets is possibly empty, giving up
+        return false;
+
+    if (VAL_NULL == ref)
+        // one of them is VAL_NULL the other one is address of non-empty object
+        return true;
+
+    const TSizeRange size1 = sh.valSizeOfTarget(ref);
+    if (size1.lo <= IR::Int0)
+        // oops, we cannot prove the address is safely allocated, giving up
+        return false;
+
+    const TValId root1 = sh.valRoot(ref);
+    const TMinLen len1 = objMinLength(sh, root1);
+    if (!len1)
+        // both targets are possibly empty, giving up
+        return false;
+
+    if (!isAbstract(sh.valTarget(ref)))
+        // non-empty abstract object vs. concrete object
+        return true;
+
+    if (root2 != segPeer(sh, root1))
+        // a pair of non-empty abstract objects
+        return true;
+
+    // one value points at segment and the other points at its peer
+    CL_BREAK_IF(len1 != len2);
+    return (1 < len1);
+}
+
+bool haveSeg(
+        const SymHeap               &sh,
+        const TValId                 atAddr,
+        const TValId                 pointingTo,
+        const EObjKind               kind)
 {
     if (VT_ABSTRACT != sh.valTarget(atAddr))
         // not an abstract object

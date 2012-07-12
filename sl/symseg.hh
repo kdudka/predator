@@ -36,8 +36,11 @@
  * @param pointingTo target address of the given potential list segment
  * @param kind kind of list segment to look for
  */
-bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
-             const EObjKind kind);
+bool haveSeg(
+        const SymHeap               &sh,
+        const TValId                 atAddr,
+        const TValId                 pointingTo,
+        const EObjKind               kind);
 
 /**
  * return true if there is a DLS (Doubly-linked List Segment) among the given
@@ -157,6 +160,9 @@ inline TMinLen objMinLength(const SymHeap &sh, TValId root) {
         // no target here
         return 0;
 }
+
+/// return true if the given pair of values is proven to be non-equal
+bool segProveNeq(const SymHeap &sh, TValId v1, TValId v2);
 
 /// if the current segment min length is lower than the given one, update it!
 inline void segIncreaseMinLength(SymHeap &sh, const TValId seg, TMinLen len)

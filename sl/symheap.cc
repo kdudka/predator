@@ -3604,69 +3604,6 @@ void SymHeap::valTargetSetConcrete(TValId root) {
     d->absRoots.releaseEnt(root);
 }
 
-// TODO: move this prover out of SymHeap, keep proveNeq() a low-level operation!
-bool SymHeap::proveNeq(TValId ref, TValId val) const {
-    if (SymHeapCore::proveNeq(ref, val))
-        // values are non-equal in non-abstract world
-        return true;
-
-    // collect the sets of values we get by jumping over 0+ abstract objects
-    TValSet seen1, seen2;
-    lookThrough(*this, ref, &seen1);
-    lookThrough(*this, val, &seen2);
-
-    // try to look through possibly empty abstract objects
-    ref = lookThrough(*this, ref, &seen2);
-    val = lookThrough(*this, val, &seen1);
-    if (ref == val)
-        return false;
-
-    if (SymHeapCore::proveNeq(ref, val))
-        // values are non-equal in non-abstract world
-        return true;
-
-    // having the values always in the same order leads to simpler code
-    moveKnownValueToLeft(*this, ref, val);
-
-    const TSizeRange size2 = this->valSizeOfTarget(val);
-    if (size2.lo <= IR::Int0)
-        // oops, we cannot prove the address is safely allocated, giving up
-        return false;
-
-    const TValId root2 = this->valRoot(val);
-    const TMinLen len2 = objMinLength(*this, root2);
-    if (!len2)
-        // one of the targets is possibly empty, giving up
-        return false;
-
-    if (VAL_NULL == ref)
-        // one of them is VAL_NULL the other one is address of non-empty object
-        return true;
-
-    const TSizeRange size1 = this->valSizeOfTarget(ref);
-    if (size1.lo <= IR::Int0)
-        // oops, we cannot prove the address is safely allocated, giving up
-        return false;
-
-    const TValId root1 = this->valRoot(ref);
-    const TMinLen len1 = objMinLength(*this, root1);
-    if (!len1)
-        // both targets are possibly empty, giving up
-        return false;
-
-    if (!isAbstract(this->valTarget(ref)))
-        // non-empty abstract object vs. concrete object
-        return true;
-
-    if (root2 != segPeer(*this, root1))
-        // a pair of non-empty abstract objects
-        return true;
-
-    // one value points at segment and the other points at its peer
-    CL_BREAK_IF(len1 != len2);
-    return (1 < len1);
-}
-
 void SymHeap::valDestroyTarget(TValId root) {
     SymHeapCore::valDestroyTarget(root);
     if (!d->absRoots.isValidEnt(root))

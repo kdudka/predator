@@ -793,7 +793,6 @@ class SymHeap: public SymHeapCore {
 
     public:
         // just overrides (inherits the dox)
-        virtual bool proveNeq(TValId valA, TValId valB) const;
         virtual void valDestroyTarget(TValId);
         virtual TValId valClone(TValId);
 
