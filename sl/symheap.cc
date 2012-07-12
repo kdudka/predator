@@ -26,7 +26,6 @@
 #include <cl/storage.hh>
 
 #include "intarena.hh"
-#include "prototype.hh"
 #include "symabstract.hh"
 #include "syments.hh"
 #include "sympred.hh"
@@ -3603,76 +3602,6 @@ void SymHeap::valTargetSetConcrete(TValId root) {
     // unregister an abstract object
     // FIXME: suboptimal code of EntStore::releaseEnt() with SH_REUSE_FREE_IDS
     d->absRoots.releaseEnt(root);
-}
-
-bool haveSegBidir(
-        TValId                      *pDst,
-        const SymHeap               *sh,
-        const EObjKind              kind,
-        const TValId                v1,
-        const TValId                v2)
-{
-    if (haveSeg(*sh, v1, v2, kind)) {
-        *pDst = sh->valRoot(v1);
-        return true;
-    }
-
-    if (haveSeg(*sh, v2, v1, kind)) {
-        *pDst = sh->valRoot(v2);
-        return true;
-    }
-
-    // found nothing
-    return false;
-}
-
-// TODO: move this handling out of SymHeap, leave neqOp() for explicit Neqs
-void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
-    CL_BREAK_IF(NEQ_ADD != op && NEQ_DEL != op);
-    CL_BREAK_IF(v1 <= 0 && v2 <= 0);
-
-    if (!this->hasAbstractTarget(v1) && !this->hasAbstractTarget(v2)) {
-        // fallback to the base implementation
-        SymHeapCore::neqOp(op, v1, v2);
-        return;
-    }
-
-    if (VAL_NULL == v1 && !this->valOffset(v2))
-        v1 = segNextRootObj(*this, v2);
-    if (VAL_NULL == v2 && !this->valOffset(v1))
-        v2 = segNextRootObj(*this, v1);
-
-    TValId seg;
-    if (haveSegBidir(&seg, this, OK_OBJ_OR_NULL, v1, v2)
-            || haveSegBidir(&seg, this, OK_SEE_THROUGH, v1, v2)
-            || haveSegBidir(&seg, this, OK_SEE_THROUGH_2N, v1, v2))
-    {
-        // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
-        decrementProtoLevel(*this, seg);
-        this->valTargetSetConcrete(seg);
-        return;
-    }
-
-    if (haveSegBidir(&seg, this, OK_SLS, v1, v2)) {
-        CL_BREAK_IF(NEQ_ADD != op);
-        segIncreaseMinLength(*this, seg, /* SLS 1+ */ 1);
-        return;
-    }
-
-    if (haveSegBidir(&seg, this, OK_DLS, v1, v2)) {
-        CL_BREAK_IF(NEQ_ADD != op);
-        segIncreaseMinLength(*this, seg, /* DLS 1+ */ 1);
-        return;
-    }
-
-    if (haveDlSegAt(*this, v1, v2)) {
-        CL_BREAK_IF(NEQ_ADD != op);
-        segIncreaseMinLength(*this, v1, /* DLS 2+ */ 2);
-        return;
-    }
-
-    CL_BREAK_IF(NEQ_ADD != op);
-    CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
 }
 
 // TODO: move this prover out of SymHeap, keep proveNeq() a low-level operation!

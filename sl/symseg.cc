@@ -22,6 +22,7 @@
 
 #include <cl/cl_msg.hh>
 
+#include "prototype.hh"
 #include "symheap.hh"
 #include "symutil.hh"
 
@@ -74,6 +75,69 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
 
     // compare the end-points
     return (segHeadAt(sh, peer) == peerAddr);
+}
+
+bool haveSegBidir(
+        TValId                     *pDst,
+        const SymHeap              &sh,
+        const EObjKind              kind,
+        const TValId                v1,
+        const TValId                v2)
+{
+    if (haveSeg(sh, v1, v2, kind)) {
+        *pDst = sh.valRoot(v1);
+        return true;
+    }
+
+    if (haveSeg(sh, v2, v1, kind)) {
+        *pDst = sh.valRoot(v2);
+        return true;
+    }
+
+    // found nothing
+    return false;
+}
+
+bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2) {
+    const EValueTarget code1 = sh.valTarget(v1);
+    const EValueTarget code2 = sh.valTarget(v2);
+    if (!isAbstract(code1) && !isAbstract(code2))
+        // no abstract objects involved
+        return false;
+
+    if (VAL_NULL == v1 && !sh.valOffset(v2))
+        v1 = segNextRootObj(sh, v2);
+    if (VAL_NULL == v2 && !sh.valOffset(v1))
+        v2 = segNextRootObj(sh, v1);
+
+    TValId seg;
+    if (haveSegBidir(&seg, sh, OK_OBJ_OR_NULL, v1, v2)
+            || haveSegBidir(&seg, sh, OK_SEE_THROUGH, v1, v2)
+            || haveSegBidir(&seg, sh, OK_SEE_THROUGH_2N, v1, v2))
+    {
+        // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
+        decrementProtoLevel(sh, seg);
+        sh.valTargetSetConcrete(seg);
+        return true;
+    }
+
+    if (haveSegBidir(&seg, sh, OK_SLS, v1, v2)) {
+        segIncreaseMinLength(sh, seg, /* SLS 1+ */ 1);
+        return true;
+    }
+
+    if (haveSegBidir(&seg, sh, OK_DLS, v1, v2)) {
+        segIncreaseMinLength(sh, seg, /* DLS 1+ */ 1);
+        return true;
+    }
+
+    if (haveDlSegAt(sh, v1, v2)) {
+        segIncreaseMinLength(sh, v1, /* DLS 2+ */ 2);
+        return true;
+    }
+
+    // fallback to explicit Neq predicate
+    return false;
 }
 
 TValId segClone(SymHeap &sh, const TValId root) {
