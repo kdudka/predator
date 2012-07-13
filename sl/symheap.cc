@@ -2673,7 +2673,7 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     d->neqDb->gatherRelatedValues(neqs, val);
     BOOST_FOREACH(const TValId valNeq, neqs) {
         CL_BREAK_IF(valNeq == replaceBy);
-        SymHeapCore::neqOp(NEQ_DEL, valNeq, val);
+        this->delNeq(valNeq, val);
     }
 
     // we intentionally do not use a reference here (tight loop otherwise)
@@ -2686,31 +2686,25 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     }
 }
 
-void SymHeapCore::neqOp(ENeqOp op, TValId v1, TValId v2) {
+void SymHeapCore::addNeq(TValId v1, TValId v2) {
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
 
     const EValueTarget code1 = this->valTarget(v1);
     const EValueTarget code2 = this->valTarget(v2);
 
     if (VT_UNKNOWN != code1 && VT_UNKNOWN != code2) {
-        CL_BREAK_IF(NEQ_ADD != op);
         CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
         return;
     }
 
-    switch (op) {
-        case NEQ_NOP:
-            CL_BREAK_IF("invalid call of SymHeapCore::neqOp()");
-            return;
+    d->neqDb->add(v1, v2);
+}
 
-        case NEQ_ADD:
-            d->neqDb->add(v1, v2);
-            return;
+void SymHeapCore::delNeq(TValId v1, TValId v2) {
+    CL_BREAK_IF(!this->chkNeq(v1, v2));
 
-        case NEQ_DEL:
-            d->neqDb->del(v1, v2);
-            return;
-    }
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
+    d->neqDb->del(v1, v2);
 }
 
 void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {
@@ -2735,7 +2729,7 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
             continue;
 
         // create the image now!
-        dst.neqOp(NEQ_ADD, valLt, valGt);
+        dst.addNeq(valLt, valGt);
     }
 
     // go through CoincidenceDb

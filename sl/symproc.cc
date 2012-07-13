@@ -1625,8 +1625,8 @@ bool reflectCmpResult(
             goto fail;
 
         if (!segApplyNeq(sh, v1, v2))
-            // introduce a Neq predicate over v1 and v2
-            sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
+            // introduce an explicit Neq predicate over v1 and v2
+            sh.addNeq(v1, v2);
     }
     else {
         if (!cTraits.preserveEq)

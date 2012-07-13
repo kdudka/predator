@@ -356,20 +356,11 @@ class SymHeapCore {
                 TValSet                     *killedPtrs = 0);
 
     public:
-        /// enumeration of Neq predicate operations
-        enum ENeqOp {
-            NEQ_NOP = 0,    ///< used only internally
-            NEQ_ADD,        ///< define a Neq predicate (if not already present)
-            NEQ_DEL         ///< remove a Neq predicate (if defined)
-        };
+        /// define an explicit Neq predicate
+        void addNeq(TValId v1, TValId v2);
 
-        /**
-         * add or remove a Neq predicate (fully symmetric)
-         * @param op requested operation - NEQ_ADD or NEQ_DEL
-         * @param valA one side of the inequality
-         * @param valB one side of the inequality
-         */
-        void neqOp(ENeqOp op, TValId valA, TValId valB);
+        /// remove an explicit Neq predicate if defined
+        void delNeq(TValId v1, TValId v2);
 
         /// true if there is an @b explicit Neq relation over the given values
         bool chkNeq(TValId v1, TValId v2) const;
