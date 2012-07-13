@@ -29,14 +29,16 @@
 #include <boost/foreach.hpp>
 
 bool segProveNeq(const SymHeap &sh, TValId ref, TValId val) {
-    if (sh.proveNeq(ref, val))
+    if (proveNeq(sh, ref, val))
         // values are non-equal in non-abstract world
         return true;
 
     // collect the sets of values we get by jumping over 0+ abstract objects
     TValSet seen1, seen2;
-    lookThrough(sh, ref, &seen1);
-    lookThrough(sh, val, &seen2);
+    if (VAL_INVALID == lookThrough(sh, ref, &seen1))
+        return false;
+    if (VAL_INVALID == lookThrough(sh, val, &seen2))
+        return false;
 
     // try to look through possibly empty abstract objects
     ref = lookThrough(sh, ref, &seen2);
@@ -44,7 +46,7 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val) {
     if (ref == val)
         return false;
 
-    if (sh.proveNeq(ref, val))
+    if (proveNeq(sh, ref, val))
         // values are non-equal in non-abstract world
         return true;
 

@@ -3381,70 +3381,8 @@ void SymHeapCore::valTargetSetProtoLevel(TValId root, TProtoLevel level) {
     rootData->protoLevel = level;
 }
 
-bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
-    // check for invalid values
-    if (VAL_INVALID == valA || VAL_INVALID == valB)
-        return false;
-
-    // check for identical values
-    if (valA == valB)
-        return false;
-
-    // having the values always in the same order leads to simpler code
-    moveKnownValueToLeft(*this, valA, valB);
-
-    // check for known bool values
-    // NOTE: this is only an optimization to avoid calling rngFromVal() twice
-    if (VAL_TRUE == valA)
-        return (VAL_FALSE == valB);
-
-    // we presume (0 <= valA) and (0 < valB) at this point
-    CL_BREAK_IF(d->ents.outOfRange(valB));
-
-    const EValueTarget code = this->valTarget(valB);
-    if (VAL_NULL == valA
-            && (isKnownObject(code) || isGone(code) || VT_RANGE == code))
-        // all addresses of objects have to be non-zero
-        return true;
-
-    if (valInsideSafeRange(*this, valA) && valInsideSafeRange(*this, valB))
-        // NOTE: we know (valA != valB) at this point, look above
-        return true;
-
-    IR::Range rng1, rng2;
-    if (rngFromVal(&rng1, *this, valA) && rngFromVal(&rng2, *this, valB)) {
-        // both values are integral ranges (
-        bool result;
-        return (compareIntRanges(&result, CL_BINOP_NE, rng1, rng2) && result);
-    }
-
-    // check for a Neq predicate
-    if (d->neqDb->chk(valA, valB))
-        return true;
-
-    if (valA <= 0 || valB <= 0)
-        // no handling of special values here
-        return false;
-
-    const TValId root1 = this->valRoot(valA);
-    const TValId root2 = this->valRoot(valB);
-    if (root1 == root2) {
-        // same root, different offsets
-        CL_BREAK_IF(matchOffsets(*this, *this, valA, valB));
-        return true;
-    }
-
-    const TOffset offA = this->valOffset(valA);
-    const TOffset offB = this->valOffset(valB);
-
-    const TOffset diff = offB - offA;
-    if (!diff)
-        // check for Neq between the roots
-        return d->neqDb->chk(root1, root2);
-
-    SymHeapCore &writable = /* XXX */ *const_cast<SymHeapCore *>(this);
-    return d->neqDb->chk(root1, writable.valByOffset(root2,  diff))
-        && d->neqDb->chk(root2, writable.valByOffset(root1, -diff));
+bool SymHeapCore::chkNeq(TValId v1, TValId v2) const {
+    return d->neqDb->chk(v1, v2);
 }
 
 

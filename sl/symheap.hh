@@ -369,10 +369,10 @@ class SymHeapCore {
          * @param valA one side of the inequality
          * @param valB one side of the inequality
          */
-        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
+        void neqOp(ENeqOp op, TValId valA, TValId valB);
 
-        /// return true if the given pair of values is proven to be non-equal
-        virtual bool proveNeq(TValId valA, TValId valB) const;
+        /// true if there is an @b explicit Neq relation over the given values
+        bool chkNeq(TValId v1, TValId v2) const;
 
         /// collect values connect with the given value via an extra predicate
         void gatherRelatedValues(TValList &dst, TValId val) const;
