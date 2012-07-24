@@ -285,8 +285,8 @@ inline void abstract(FAE& fae, TreeAut& fwdConf, TreeAut::Backend& backend, BoxM
 	Abstraction abstraction(fae);
 
 	for (size_t i = 1; i < fae.getRootCount(); ++i)
-//		abstraction.heightAbstraction(i, 1, SmarterTMatchF(fae));
-		abstraction.heightAbstraction(i, 1, SmartTMatchF());
+//		abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmarterTMatchF(fae));
+		abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmartTMatchF());
 
 	CL_CDEBUG(3, "after abstraction: " << std::endl << fae);
 

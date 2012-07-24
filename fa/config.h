@@ -26,6 +26,11 @@
 #define CONFIG_H
 
 /**
+ * set abstraction height (default is 1)
+ */
+#define FA_ABS_HEIGHT				1
+
+/**
  * set reference count tracking treshold (default is 2)
  */
 #define FA_REF_CNT_TRESHOLD					2
@@ -43,7 +48,7 @@
 /**
  * overapproximate when folding (default is 0)
  */
-#define FA_BOX_APPROXIMATION				1
+#define FA_BOX_APPROXIMATION				0
 
 /**
  * should we restart evry time a new box is encountered (default is 1)
