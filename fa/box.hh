@@ -177,7 +177,7 @@ public:   // methods
 		return static_cast<size_t>(-1);
 	}
 
-	virtual size_t getRealRefCount(size_t) const
+	virtual size_t getSelCount(size_t) const
 	{
 		return 1;
 	}
@@ -343,10 +343,10 @@ public:
 		return selectors_[input].second;
 	}
 
-	virtual size_t getRealRefCount(size_t input) const
+	virtual size_t getSelCount(size_t input) const
 	{
 		assert(input < outputSignature_.size());
-		return outputSignature_[input].realRefCount;
+		return outputSignature_[input].selCount;
 	}
 
 	const TreeAut* getOutput() const
