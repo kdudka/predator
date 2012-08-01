@@ -404,9 +404,9 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 	}
 
 	learn2(*fae, this->boxMan);
-
-	computeForbiddenSet(forbidden, *fae);
 #endif
+	computeForbiddenSet(forbidden, *fae);
+
 	normalize(*fae, forbidden, true);
 
 	abstract(*fae, this->fwdConf, this->taBackend, this->boxMan);
