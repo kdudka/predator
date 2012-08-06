@@ -148,6 +148,23 @@
 #define SE_COST_OF_SEG_INTRODUCTION         0
 
 /**
+ * abstraction length threshold for cost of path equal to 0
+ */
+#define SE_COST0_LEN_THR                    2
+
+/**
+ * abstraction length threshold for cost of path equal to 1
+ * @note only values >= SE_COST0_LEN_THR make sense
+ */
+#define SE_COST1_LEN_THR                    2
+
+/**
+ * abstraction length threshold for cost of path equal to 2
+ * @note only values >= SE_COST1_LEN_THR make sense
+ */
+#define SE_COST2_LEN_THR                    3
+
+/**
  * if 1, do not use alignment tracking unless we get it for free
  */
 #define SE_DISABLE_ALIGNMENT_TRACKING       0
@@ -216,17 +233,6 @@
  * if non-zero, plot each state that caused an error to be reported
  */
 #define SE_PLOT_ERROR_STATES                0
-
-/**
- * cost of merged prototype where one case was more generic than the other case
- */
-#define SE_PROTO_COST_ASYM                  1
-
-/**
- * cost of merged prototype that is generalisation of both input prototypes
- * @note only values >= SE_PROTO_COST_ASYM make sense
- */
-#define SE_PROTO_COST_THREEWAY              4
 
 /**
  * upper bound of DLS minimal length (zero means unlimited)

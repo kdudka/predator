@@ -49,12 +49,12 @@ SLS abstraction
                 - no flaws reported with -fplugin-arg-libsl-symexec-args=fast
 
     test-0106.c - pseudo tree consisting of two SLLs
-                - known to work with SE_PROTO_COST_ASYM == 8
+                - known to work with SE_COST1_LEN_THR == 4
 
     test-0112.c - hello-world, once used as the most trivial example for symjoin
 
     test-0113.c - error-free variant of test-0106
-                - known to work with SE_PROTO_COST_ASYM == 8
+                - known to work with SE_COST1_LEN_THR == 4
 
     test-0118.c - abstraction of SLL, each node contains a pointer to head
                 - improved variant of test-0049
@@ -193,7 +193,6 @@ Higher level SLS/DLS abstraction, etc.
     test-0128.c - SLL, each item contains zero or one nested item
 
     test-0129.c - alternation of test-0127 with DLLs instead of SLLs
-                - terminates instantly with SE_PROTO_COST_THREEWAY == 0
 
     test-0130.c - alternation of test-0128 with DLLs instead of SLLs
 
@@ -341,15 +340,13 @@ Linux lists
     test-0109.c - Linux DLS with nested Linux DLLs consisting of _two_ items
 
     test-0115.c - non-deterministic variant of test-0123
-                - terminates instantly with SE_PROTO_COST_THREEWAY == 0
 
     test-0120.c - Linux "list" of length one, based on hlist_head/hlist_node
 
     test-0121.c - alternation of test-0097
                 - once used as demo in slides about symdiscover
                 - we needed something that is easy to plot
-                - abstraction is triggerred only
-                  with SE_PROTO_COST_THREEWAY == 0
+                - abstraction is triggerred only with SE_COST2_LEN_THR == 2
 
     test-0122.c - the most trivial case of Linux DLS abstraction
                 - once used as demo in slides about symdiscover
@@ -357,7 +354,6 @@ Linux lists
     test-0123.c - Linux DLS with zero or one nested items in each node
 
     test-0125.c - a more generic variant of test-0115
-                - terminates instantly with SE_PROTO_COST_THREEWAY == 0
 
     test-0132.c - example of creating, adding, deleting, and traversing the list
                 - contributed by Kulesh Shanmugasundaram
@@ -495,7 +491,6 @@ Tests taken from Forester
     test-0504.c - NULL-terminated DLL at the top level
                 - each node contains a nested (possibly empty) cyclic DLL
                 - originally taken from fa/data/dll-listofclists.c
-                - terminates instantly with SE_PROTO_COST_THREEWAY == 0
 
     test-0505.c - reversion of a NULL-terminated DLL
                 - originally taken from fa/data/dll-rev.c
@@ -506,7 +501,7 @@ Tests taken from Forester
                 - originally taken from fa/data/listeven.c
 
     test-0507.c - NULL-terminated SLL of length equal to 2
-                - Predator reports junk unless SE_COST_OF_SEG_INTRODUCTION == 4
+                - Predator reports junk unless SE_COST_OF_SEG_INTRODUCTION == 2
                 - originally taken from fa/data/listref.c
 
     test-0508.c - Bubble-Sort operating on NULL-terminated SLL
@@ -546,7 +541,7 @@ Tests taken from Forester
 
     test-0519.c - test-0113 once simplified for Forester
                 - originally taken from fa/data/test-0113.c
-                - known to work with SE_PROTO_COST_ASYM == 4
+                - known to work with SE_COST1_LEN_THR == 5
 
     test-0520.c - test-0128 once simplified for Forester
                 - originally taken from fa/data/test-0128.c

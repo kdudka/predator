@@ -44,7 +44,7 @@ int main() {
  *
  * @brief NULL-terminated SLL of length equal to 2
  *
- * - Predator reports junk unless SE_COST_OF_SEG_INTRODUCTION == 4
+ * - Predator reports junk unless SE_COST_OF_SEG_INTRODUCTION == 2
  * - originally taken from fa/data/listref.c
  *
  * @attention

@@ -90,8 +90,6 @@ int main()
  *
  * @brief alternation of test-0127 with DLLs instead of SLLs
  *
- * - terminates instantly with SE_PROTO_COST_THREEWAY == 0
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

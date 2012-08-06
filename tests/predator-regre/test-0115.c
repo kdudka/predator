@@ -137,8 +137,6 @@ int main()
  *
  * @brief non-deterministic variant of test-0123
  *
- * - terminates instantly with SE_PROTO_COST_THREEWAY == 0
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.

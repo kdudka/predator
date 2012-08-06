@@ -69,7 +69,7 @@ int main()
  * @brief test-0113 once simplified for Forester
  *
  * - originally taken from fa/data/test-0113.c
- * - known to work with SE_PROTO_COST_ASYM == 4
+ * - known to work with SE_COST1_LEN_THR == 5
  *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
