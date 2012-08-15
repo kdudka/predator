@@ -63,6 +63,9 @@ bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
 
+/// true if the given values are proven to be non-equal in non-abstract world
+bool proveNeq(const SymHeapCore &sh, TValId v1, TValId v2);
+
 /// extract an integral range from an unwrapped CV_INT/CV_INT_RANGE custom value
 const IR::Range& rngFromCustom(const CustomValue &);
 

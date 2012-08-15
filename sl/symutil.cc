@@ -366,3 +366,41 @@ bool /* anyChange */ redirectRefs(
 
     return anyChange;
 }
+
+bool proveNeq(const SymHeapCore &sh, TValId ref, TValId val) {
+    // check for invalid values
+    if (VAL_INVALID == ref || VAL_INVALID == val)
+        return false;
+
+    // check for identical values
+    if (ref == val)
+        return false;
+
+    // having the values always in the same order leads to simpler code
+    moveKnownValueToLeft(sh, ref, val);
+
+    // check for known bool values
+    // NOTE: only an optimization to eliminate unnecessary calls of rngFromVal()
+    if (VAL_TRUE == ref)
+        return (VAL_FALSE == val);
+
+    // we presume (0 <= ref) and (0 < val) at this point
+    const EValueTarget code = sh.valTarget(val);
+    if (VAL_NULL == ref && (isKnownObject(code) || isGone(code)))
+        // all addresses of objects have to be non-zero
+        return true;
+
+    if (valInsideSafeRange(sh, ref) && valInsideSafeRange(sh, val))
+        // NOTE: we know (ref != val) at this point, look above
+        return true;
+
+    IR::Range rng1, rng2;
+    if (rngFromVal(&rng1, sh, ref) && rngFromVal(&rng2, sh, val)) {
+        // both values are integral ranges (
+        bool result;
+        return (compareIntRanges(&result, CL_BINOP_NE, rng1, rng2) && result);
+    }
+
+    // check for an explicit Neq predicate
+    return sh.chkNeq(ref, val);
+}

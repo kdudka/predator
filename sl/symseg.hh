@@ -36,8 +36,11 @@
  * @param pointingTo target address of the given potential list segment
  * @param kind kind of list segment to look for
  */
-bool haveSeg(const SymHeap &sh, TValId atAddr, TValId pointingTo,
-             const EObjKind kind);
+bool haveSeg(
+        const SymHeap               &sh,
+        const TValId                 atAddr,
+        const TValId                 pointingTo,
+        const EObjKind               kind);
 
 /**
  * return true if there is a DLS (Doubly-linked List Segment) among the given
@@ -69,7 +72,7 @@ inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg) {
 }
 
 /// return the value of 'next' in the given segment (given by root)
-inline TValId nextValFromSeg(SymHeap &sh, TValId seg) {
+inline TValId nextValFromSeg(const SymHeap &sh, TValId seg) {
     if (OK_OBJ_OR_NULL == sh.valTargetKind(seg))
         return VAL_NULL;
 
@@ -158,6 +161,21 @@ inline TMinLen objMinLength(const SymHeap &sh, TValId root) {
         return 0;
 }
 
+/// return true if the given pair of values is proven to be non-equal
+bool segProveNeq(const SymHeap &sh, TValId v1, TValId v2);
+
+/// if the current segment min length is lower than the given one, update it!
+inline void segIncreaseMinLength(SymHeap &sh, const TValId seg, TMinLen len)
+{
+    CL_BREAK_IF(!len);
+
+    if (sh.segMinLength(seg) < len)
+        sh.segSetMinLength(seg, len);
+}
+
+/// we know (v1 != v2), update related segments in the given heap accordingly!
+bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2);
+
 inline bool objWithBinding(const SymHeap &sh, const TValId root) {
     CL_BREAK_IF(sh.valOffset(root));
 
@@ -220,16 +238,13 @@ inline void buildIgnoreList(
         ignoreList.insert(prev);
 }
 
+/// look through possibly empty objects and return the value seen
+TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen = 0);
+
 /**
  * returns true if all DLS in the given symbolic heap are consistent
  * @note this runs in debug build only
  */
 bool dlSegCheckConsistency(const SymHeap &sh);
-
-/**
- * returns true if no concrete object points to another object of a higher level
- * @note this runs in debug build only
- */
-bool protoCheckConsistency(const SymHeap &sh);
 
 #endif /* H_GUARD_SYMSEG_H */

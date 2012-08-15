@@ -27,9 +27,6 @@
 #include "util.hh"
 #include "worklist.hh"
 
-#include <algorithm>            // for std::copy
-#include <stack>
-
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
@@ -242,7 +239,8 @@ bool cmpValues(
     return matchRoots(sh1, sh2, root1, root2, code);
 }
 
-typedef WorkList<TValPair> TWorkList;
+typedef std::queue<TValPair>                        TSched;
+typedef WorkList<TValPair,TSched>                   TWorkList;
 
 class ValueComparator {
     private:
@@ -277,7 +275,7 @@ class ValueComparator {
                 // schedule roots for next wheel
                 const TValId root1 = sh1_.valRoot(v1);
                 const TValId root2 = sh2_.valRoot(v2);
-                wl_.schedule(root1, root2);
+                wl_.schedule(TValPair(root1, root2));
             }
 
             return /* continue */ true;
@@ -330,7 +328,8 @@ class VarScheduleVisitor {
         }
 
         bool operator()(const TValId roots[2]) {
-            wl_.schedule(roots[0], roots[1]);
+            const TValPair vp(roots[0], roots[1]);
+            wl_.schedule(vp);
             return /* continue */ true;
         }
 };
@@ -352,7 +351,8 @@ bool areEqual(
             || sh2.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET))
     {
         // schedule return values
-        wl.schedule(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
+        const TValPair vp(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
+        wl.schedule(vp);
     }
 
     // start with program variables

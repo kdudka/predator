@@ -135,8 +135,7 @@ int main()
  *
  * - once used as demo in slides about symdiscover
  * - we needed something that is easy to plot
- * - abstraction is triggerred only
- *   with SE_PROTO_COST_THREEWAY == 0
+ * - abstraction is triggerred only with SE_COST2_LEN_THR == 2
  *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.

@@ -356,23 +356,14 @@ class SymHeapCore {
                 TValSet                     *killedPtrs = 0);
 
     public:
-        /// enumeration of Neq predicate operations
-        enum ENeqOp {
-            NEQ_NOP = 0,    ///< used only internally
-            NEQ_ADD,        ///< define a Neq predicate (if not already present)
-            NEQ_DEL         ///< remove a Neq predicate (if defined)
-        };
+        /// define an explicit Neq predicate
+        void addNeq(TValId v1, TValId v2);
 
-        /**
-         * add or remove a Neq predicate (fully symmetric)
-         * @param op requested operation - NEQ_ADD or NEQ_DEL
-         * @param valA one side of the inequality
-         * @param valB one side of the inequality
-         */
-        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
+        /// remove an explicit Neq predicate if defined
+        void delNeq(TValId v1, TValId v2);
 
-        /// return true if the given pair of values is proven to be non-equal
-        virtual bool proveNeq(TValId valA, TValId valB) const;
+        /// true if there is an @b explicit Neq relation over the given values
+        bool chkNeq(TValId v1, TValId v2) const;
 
         /// collect values connect with the given value via an extra predicate
         void gatherRelatedValues(TValList &dst, TValId val) const;
@@ -793,8 +784,6 @@ class SymHeap: public SymHeapCore {
 
     public:
         // just overrides (inherits the dox)
-        virtual void neqOp(ENeqOp op, TValId valA, TValId valB);
-        virtual bool proveNeq(TValId valA, TValId valB) const;
         virtual void valDestroyTarget(TValId);
         virtual TValId valClone(TValId);
 
@@ -804,8 +793,6 @@ class SymHeap: public SymHeapCore {
     private:
         struct Private;
         Private *d;
-
-        void segMinLengthOp(ENeqOp op, TValId at, TMinLen len);
 };
 
 /// enable/disable built-in self-checks (takes effect only in debug build)

@@ -466,23 +466,18 @@ bool checkNullConsistency(
         ? ctx.sh1.valTarget(v1)
         : ctx.sh2.valTarget(v2);
 
-    // NOTE: this is only a heuristic
-    switch (code) {
-        case VT_UNKNOWN:
-            // [experimental] reduce state explosion on test-0300
-            return !ctx.joiningData();
+    if (VT_UNKNOWN == code && !ctx.joiningData())
+        // [experimental] reduce state explosion on test-0300
+        return !ctx.joiningData();
 
-        case VT_STATIC:
-        case VT_ON_STACK:
-        case VT_ON_HEAP:
-        case VT_ABSTRACT:
-            return true;
-
-        default:
-            // implies inconsistency
-            return false;
-    }
+    return isPossibleToDeref(code);
 }
+
+bool joinValuesByCode(
+        bool                   *pResult,
+        SymJoinCtx             &ctx,
+        const TValId            v1,
+        const TValId            v2);
 
 bool bumpNestingLevel(const ObjHandle &obj) {
     if (!obj.isValid())
@@ -569,6 +564,10 @@ bool joinFreshObjTripple(
 
         if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
             return true;
+
+        bool result;
+        if (joinValuesByCode(&result, ctx, v1, v2))
+            return result;
     }
 
     if (bumpNestingLevel(obj1))
@@ -1466,23 +1465,16 @@ bool followValuePair(
         // shallow scan only!
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
+    bool result;
+    if (joinValuesByCode(&result, ctx, v1, v2))
+        return result;
+
     const bool isRange = (VT_RANGE == ctx.sh1.valTarget(v1))
                       || (VT_RANGE == ctx.sh2.valTarget(v2));
 
     if (!isRange && (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2))) {
         SJ_DEBUG("<-- value offset mismatch: " << SJ_VALP(v1, v2));
         return false;
-    }
-
-    const bool isCustom1 = (VT_CUSTOM == ctx.sh1.valTarget(v1));
-    const bool isCustom2 = (VT_CUSTOM == ctx.sh2.valTarget(v2));
-    if (isCustom1 || isCustom2) {
-        if (!isCustom1 || !isCustom2) {
-            SJ_DEBUG("<-- custom value vs. something else " << SJ_VALP(v1, v2));
-            return false;
-        }
-
-        return joinCustomValues(ctx, v1, v2);
     }
 
     // follow the roots
@@ -2175,6 +2167,25 @@ bool joinValuesByCode(
     const EValueTarget code1 = ctx.sh1.valTarget(v1);
     const EValueTarget code2 = ctx.sh2.valTarget(v2);
 
+    // check target's validity
+    const bool isNull1 = (VAL_NULL == v1);
+    const bool isNull2 = (VAL_NULL == v2);
+    if (isNull1 || isNull2) {
+        if (!checkNullConsistency(ctx, v1, v2)) {
+            *pResult = false;
+            return true;
+        }
+    }
+    else {
+        const bool haveTarget1 = isAnyDataArea(code1);
+        const bool haveTarget2 = isAnyDataArea(code2);
+        if (haveTarget1 != haveTarget2) {
+            SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
+            *pResult = false;
+            return true;
+        }
+    }
+
     if (VT_RANGE == code1 || VT_RANGE == code2)
         // these have to be handled in followValuePair()
         return false;
@@ -2203,9 +2214,14 @@ bool joinValuesByCode(
     // check for VT_UNKNOWN
     const bool isUnknown1 = (VT_UNKNOWN == code1);
     const bool isUnknown2 = (VT_UNKNOWN == code2);
-    if (!isUnknown1 && !isUnknown2)
-        // nothing to join here
-        return false;
+
+    if (!isUnknown1 && !isUnknown2) {
+        // handle VT_CUSTOM values
+        const bool isCustom1 = (VT_CUSTOM == code1);
+        const bool isCustom2 = (VT_CUSTOM == code2);
+        *pResult = isCustom1 && isCustom2 && joinCustomValues(ctx, v1, v2);
+        return     isCustom1 || isCustom2;
+    }
 
     // join the origin
     const EValueOrigin vo1 = ctx.sh1.valOrigin(v1);
@@ -2260,15 +2276,6 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item) {
     if ((VT_ABSTRACT == vt1 || VT_ABSTRACT == vt2)
             && joinAbstractValues(&result, ctx, item, vt1, vt2))
         return result;
-
-    if (VAL_NULL != v1 && VAL_NULL != v2) {
-        const bool haveTarget1 = isAnyDataArea(vt1);
-        const bool haveTarget2 = isAnyDataArea(vt2);
-        if (haveTarget1 != haveTarget2) {
-            SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
-            return false;
-        }
-    }
 
     if (followValuePair(ctx, item, /* read-only */ true))
         return followValuePair(ctx, item, /* read-only */ false);

@@ -130,6 +130,14 @@
 #define SE_ASSUME_FRESH_STATIC_DATA         1
 
 /**
+ * - 0 ... use BFS scheduler
+ * - 1 ... use DFS scheduler, keep already scheduled blocks at their position
+ * - 2 ... use DFS scheduler, move already scheduled blocks to front of queue
+ * - 3 ... use load-driven scheduler (picks the one with fewer pending heaps)
+ */
+#define SE_BLOCK_SCHEDULER_KIND             2
+
+/**
  * call cache miss count that will trigger function removal (0 means disabled)
  */
 #define SE_CALL_CACHE_MISS_THR              0x10
@@ -138,6 +146,23 @@
  * increase the cost of abstraction path consisting of concrete objects only by
  */
 #define SE_COST_OF_SEG_INTRODUCTION         0
+
+/**
+ * abstraction length threshold for cost of path equal to 0
+ */
+#define SE_COST0_LEN_THR                    2
+
+/**
+ * abstraction length threshold for cost of path equal to 1
+ * @note only values >= SE_COST0_LEN_THR make sense
+ */
+#define SE_COST1_LEN_THR                    2
+
+/**
+ * abstraction length threshold for cost of path equal to 2
+ * @note only values >= SE_COST1_LEN_THR make sense
+ */
+#define SE_COST2_LEN_THR                    3
 
 /**
  * if 1, do not use alignment tracking unless we get it for free
@@ -195,8 +220,9 @@
  * - 0 ... join states on each basic block entry
  * - 1 ... join only when traversing a loop-closing edge, entailment otherwise
  * - 2 ... join only when traversing a loop-closing edge, isomorphism otherwise
+ * - 3 ... same as 2 but skips the isomorphism check when considered redundant
  */
-#define SE_JOIN_ON_LOOP_EDGES_ONLY          2
+#define SE_JOIN_ON_LOOP_EDGES_ONLY          3
 
 /**
  * maximal call depth
@@ -209,17 +235,6 @@
 #define SE_PLOT_ERROR_STATES                0
 
 /**
- * cost of merged prototype where one case was more generic than the other case
- */
-#define SE_PROTO_COST_ASYM                  1
-
-/**
- * cost of merged prototype that is generalisation of both input prototypes
- * @note only values >= SE_PROTO_COST_ASYM make sense
- */
-#define SE_PROTO_COST_THREEWAY              4
-
-/**
  * upper bound of DLS minimal length (zero means unlimited)
  */
 #define SE_RESTRICT_DLS_MINLEN              2
@@ -230,11 +245,29 @@
 #define SE_RESTRICT_SLS_MINLEN              2
 
 /**
- * - 0 ... keep state info for all basic blocks of a function (safe default)
- * - 1 ... keep state info for all basic blocks with more than one ingoing edge
- * - 2 ... keep state info for all basic blocks that a CFG loop starts with
+ * - 0 ... do not try to optimize the order of heaps in SymState containers
+ * - 1 ... reorder heaps in SymStateWithJoin based on hit ratio
+ * - 2 ... reorder heaps also in SymHeapUnion based on hit ratio [experimental]
  */
-#define SE_STATE_PRUNING_MODE               0
+#define SE_STATE_ON_THE_FLY_ORDERING        1
+
+/**
+ * - 0 ... keep state info for all basic blocks of a function
+ * - 1 ... keep state info for all basic blocks except trivial basic blocks
+ * - 2 ... keep state info for all basic blocks with more than one ingoing edge
+ * - 3 ... keep state info for all basic blocks that a CFG loop starts with
+ */
+#define SE_STATE_PRUNING_MODE               1
+
+/**
+ * prune non-loop blocks on reaching the count of join misses (0 means disabled)
+ */
+#define SE_STATE_PRUNING_MISS_THR           0x20
+
+/**
+ * prune non-loop blocks on reaching the count of states (0 means disabled)
+ */
+#define SE_STATE_PRUNING_TOTAL_THR          0x80
 
 /**
  * if 1, the symcut module allows generic minimal lengths to survive a function
@@ -250,11 +283,6 @@
  * - 3 ... track also code pointers
  */
 #define SE_TRACK_NON_POINTER_VALUES         2
-
-/**
- * if 1, use a DFS scheduler at the level of basic blocks; if 0, use BFS
- */
-#define SE_USE_DFS_SCHEDULER                1
 
 /**
  * if 1, do not make deep copy on copy of SymHeap [experimental]

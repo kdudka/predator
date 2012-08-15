@@ -11,11 +11,6 @@ Treiber's Stack Implementation
 - the popped items are chained to a list, which is never freed
 - non-deterministic scheduler
 
-predator-config.h
------------------
-- recommended Predator configuration for this class of programs
-- join needs to be disabled for test_jumb5_hardcore.c to prevent false positives
-
 test_jumb3_hardcode-readable.c
 ------------------------------
 - test_jumb3_hardcode.c translated into a human-readable form

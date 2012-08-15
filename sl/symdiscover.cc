@@ -36,6 +36,29 @@
 
 #include <boost/foreach.hpp>
 
+// costs are now hard-wired in the paper, so they were removed from config.h
+#define SE_PROTO_COST_SYM           0
+#define SE_PROTO_COST_ASYM          1
+#define SE_PROTO_COST_THREEWAY      2
+
+int minLengthByCost(int cost) {
+    // abstraction length thresholds are now configurable in config.h
+    static const int thrTable[] = {
+        (SE_COST0_LEN_THR),
+        (SE_COST1_LEN_THR),
+        (SE_COST2_LEN_THR)
+    };
+
+    static const int maxCost = sizeof(thrTable)/sizeof(thrTable[0]) - 1;
+    if (maxCost < cost)
+        cost = maxCost;
+
+    // Predator counts elementar merges whereas the paper counts objects on path
+    const int minLength = thrTable[cost] - 1;
+    CL_BREAK_IF(minLength < 1);
+    return minLength;
+}
+
 bool matchSegBinding(
         const SymHeap               &sh,
         const TValId                seg,
@@ -307,6 +330,7 @@ bool matchData(
     int cost = 0;
     switch (status) {
         case JS_USE_ANY:
+            cost = (SE_PROTO_COST_SYM);
             break;
 
         case JS_USE_SH1:
@@ -578,16 +602,16 @@ unsigned /* len */ selectBestAbstraction(
                     cost += (SE_COST_OF_SEG_INTRODUCTION);
 #endif
 
+                if (len < minLengthByCost(cost))
+                    // too short path at this cost level
+                    continue;
+
                 if (bestCost < cost)
                     // we already got something cheaper
                     continue;
 
                 if (len <= bestLen)
                     // we already got something longer
-                    continue;
-
-                if (len <= (cost >> 2))
-                    // too expensive
                     continue;
 
                 // update best candidate

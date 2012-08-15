@@ -179,70 +179,70 @@ test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->lim
 test-0413.c:225:18: note: from call of FreeArenaList()
 test-0413.c:306:25: note: from call of PL_FreeArenaPool()
 test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
+test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
+test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
+test-0413.c:225:18: note: from call of FreeArenaList()
+test-0413.c:306:25: note: from call of PL_FreeArenaPool()
+test-0413.c:293:5: note: from call of main()
 test-0413.c:308:15: note: writing heap graph to '03-freed-0001.dot'...
 test-0413.c:319:15: note: writing heap graph to '04-finished-0001.dot'...
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
-test-0413.c:181:65: error: ___sl_error() reached, analysis of this code path will not continue
-test-0413.c:181:65: note: user message: a->base <= a->avail && a->avail < a->limit
-test-0413.c:225:18: note: from call of FreeArenaList()
-test-0413.c:306:25: note: from call of PL_FreeArenaPool()
-test-0413.c:293:5: note: from call of main()
