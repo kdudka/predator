@@ -35,6 +35,172 @@
 // anonymous namespace
 namespace
 {
+
+typedef TTBase<label_type> BaseTransition;
+typedef TreeAut::Transition Transition;
+
+std::string stateToString(const size_t state)
+{
+	std::ostringstream os;
+
+	if (_MSB_TEST(state))
+		os << 'r' << _MSB_GET(state);
+	else
+		os << 'q' << state;
+
+	return os.str();
+}
+
+/// class for a memory node
+class MemNode
+{
+public:   // data types
+
+	enum class mem_type : unsigned char
+	{
+		t_block,
+		t_treeref,
+		t_datafield
+	};
+
+	struct SelectorData
+	{
+		std::string   name;
+		size_t        targetState;
+
+		SelectorData(const std::string& name, size_t targetState) :
+			name(name), targetState(targetState)
+		{ }
+	};
+
+	typedef std::map<int /* offset */, SelectorData> SelectorMap;
+
+
+public:   // data members
+
+	/// the ID of the node
+	size_t id_;
+
+	/// the type of the memory node
+	mem_type type_;
+
+
+// the following fields are mutually exclusive (impossible to make as a union in C++)
+//union
+//{
+
+	/// data fields for a block
+	struct
+	{
+		/// the name of the memory node
+		std::string name;
+
+		/// map of selectors inside a memory node
+		SelectorMap selMap;
+	} block_;
+
+	/// data fields for a tree reference
+	size_t treeref_;
+
+	/// the string of the data field
+	std::string dataField_;
+
+//} // union
+
+
+private:  // methods
+
+	MemNode(size_t id, mem_type type) :
+		id_{id},
+		type_{type},
+		block_{std::string(), SelectorMap()},
+		treeref_{},
+		dataField_{}
+	{ }
+
+public:   // methods
+
+	MemNode(const MemNode& node) :
+		id_{node.id_},
+		type_{node.type_},
+		block_(node.block_),
+		treeref_{node.treeref_},
+		dataField_{node.dataField_}
+	{ }
+
+	static MemNode createBlock(size_t nodeId, const std::string& name)
+	{
+		MemNode node(nodeId, mem_type::t_block);
+		node.block_.name = name;
+
+		return node;
+	}
+
+	static MemNode createDataField(size_t nodeId, const std::string& dataStr)
+	{
+		MemNode node(nodeId, mem_type::t_datafield);
+		node.dataField_ = dataStr;
+
+		return node;
+	}
+
+	static MemNode createTreeRef(size_t nodeId, size_t treeref)
+	{
+		MemNode node(nodeId, mem_type::t_treeref);
+		node.treeref_ = treeref;
+
+		return node;
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const MemNode& node)
+	{
+		(void)os;
+		(void)node;
+
+		assert(false);
+//		os << "<(" << node.id << ")" << " " << node.name << ": ";
+//
+//		for (auto it = node.selMap.cbegin(); it != node.selMap.cend(); ++it)
+//		{
+//			if (it != node.selMap.cbegin())
+//			{
+//				os << "; ";
+//			}
+//
+//			os << "[" << it->first << ":(" << it->second.name << ", "
+//				<< stateToString(it->second.targetState) << ")]";
+//		}
+//
+//		return os;
+	}
+};
+
+struct TreeAutHeap
+{
+	/// maps states to all memory nodes into which they can point
+	typedef std::multimap<size_t /* state */, MemNode> StateToMemNodeMap;
+
+	/**
+	 * @brief  The ID of the root memory node of the tree automaton
+	 *
+	 * Zero indicates an invalid objact.
+	 */
+	size_t rootNodeID;
+
+	/// for states in the given tree automaton
+	StateToMemNodeMap stateMap;
+
+	explicit TreeAutHeap(size_t rootNode = 0) :
+		rootNodeID{rootNode},
+		stateMap{}
+	{ }
+};
+
+inline size_t getTransID(const BaseTransition& trans)
+{
+	return reinterpret_cast<size_t>(&trans);
+}
+
 /// visitor that outputs the visited object into an output stream in the Dot
 /// format
 class DotPlotVisitor
@@ -44,70 +210,66 @@ private:  // data members
 	/// the output stream
 	std::ostream& os_;
 
-	/// counter for transition numbers
-	size_t transCnt_;
+	/// maps root numbers to tree automata representation of heap
+	std::vector<TreeAutHeap> vecTreeAut_;
 
 private:  // methods
 
 	DotPlotVisitor(const DotPlotVisitor&);
 	DotPlotVisitor& operator=(const DotPlotVisitor&);
 
-	static std::string dataToDot(const Data& data)
+	void addStateToMemNodeLink(size_t state, const MemNode& node)
 	{
-		std::ostringstream os;
+		assert(!vecTreeAut_.empty());
+
+		vecTreeAut_.rbegin()->stateMap.insert(std::make_pair(state, node));
+	}
+
+	static MemNode dataToMemNode(size_t transID, const Data& data)
+	{
 		switch (data.type)
 		{
 			case data_type_e::t_undef:
+			case data_type_e::t_native_ptr:
+			case data_type_e::t_int:
 			{
-			  os << FA_QUOTE(data);
-			  break;
+				std::ostringstream os;
+				os << data;
+				return MemNode::createDataField(transID, os.str());
 			}
 
 			case data_type_e::t_unknw:
 			{
-			  os << FA_QUOTE(data);
-			  break;
-			}
-
-			case data_type_e::t_native_ptr:
-			{
-			  os << FA_QUOTE(data);
+				assert(false);     // not supported
 			  break;
 			}
 
 			case data_type_e::t_void_ptr:
 			{
-			  os << FA_QUOTE(data);
+				assert(false);     // not supported
 			  break;
 			}
 
 			case data_type_e::t_ref:
 			{
-			  os << FA_QUOTE("treeaut" << data.d_ref.root);
-			  break;
-			}
-
-			case data_type_e::t_int:
-			{
-			  os << FA_QUOTE(data);
-			  break;
+				return MemNode::createTreeRef(transID, data.d_ref.root);
 			}
 
 			case data_type_e::t_bool:
 			{
-			  os << FA_QUOTE((data.d_bool? "TRUE" : "FALSE"));
+				assert(false);     // not supported
 			  break;
 			}
 
 			case data_type_e::t_struct:
 			{
-			  os << FA_QUOTE(data);
+				assert(false);     // not supported
 			  break;
 			}
 
 			case data_type_e::t_other:
 			{
-			  os << FA_QUOTE(data);
+				assert(false);     // not supported
 			  break;
 			}
 
@@ -116,101 +278,110 @@ private:  // methods
 				assert(false);        // fail gracefully
 			}
 		}
-
-		return os.str();
-	}
-
-	static std::string stateToString(const size_t state)
-	{
-		std::ostringstream os;
-
-		if (_MSB_TEST(state))
-			os << 'r' << _MSB_GET(state);
-		else
-			os << 'q' << state;
-
-		return os.str();
 	}
 
 public:   // methods
 
 	DotPlotVisitor(std::ostream& os) :
 		os_(os),
-		transCnt_{0}
+		vecTreeAut_{}
 	{ }
 
 	void operator()(const ExecState& state)
 	{
-		const DataArray& regs = state.GetRegs();
-		for (size_t i = 0; i < regs.size(); ++i)
-		{
-			os_ << "  " << FA_QUOTE("reg" << i) << " -> " << dataToDot(regs[i]) << ";\n";
-		}
-
-		os_ << "\n";
+//		const DataArray& regs = state.GetRegs();
+//		for (size_t i = 0; i < regs.size(); ++i)
+//		{
+//			os_ << "  " << FA_QUOTE("reg" << i) << " -> " << dataToDot(regs[i]) << ";\n";
+//		}
+//
+//		os_ << "\n";
 
 		state.GetMem()->GetFAE()->accept(*this);
 	}
 
 	void operator()(const FA& fa)
 	{
-		const DataArray& vars = fa.GetVariables();
-		for (size_t i = 0; i < vars.size(); ++i)
-		{
-			os_ << "  " << FA_QUOTE("greg" << i) << " -> " << dataToDot(vars[i]) << ";\n";
-		}
-
-		os_ << "\n";
+//		const DataArray& vars = fa.GetVariables();
+//		for (size_t i = 0; i < vars.size(); ++i)
+//		{
+//			os_ << "  " << FA_QUOTE("greg" << i) << " -> " << dataToDot(vars[i]) << ";\n";
+//		}
+//
+//		os_ << "\n";
+//
+//		// in the first traversal, create tree automata heap representation and set
+//		// the root memory node
+//		for (size_t i = 0; i < fa.getRootCount(); ++i)
+//		{
+//			assert(vecTreeAut_.size() == i);
+//
+//			TreeAutHeap taHeap;
+//
+//			if (nullptr != fa.getRoot(i))
+//			{
+//				const TreeAut& ta = *fa.getRoot(i);
+//				assert(ta.accBegin() != ta.accEnd());
+//
+//				if (++(ta.accBegin()) != ta.accEnd())
+//				{
+//					CL_NOTE("More accepting transitions! Considering only the first...");
+//				}
+//
+//				const Transition& trans = *ta.accBegin();
+//				taHeap.rootNodeID = getTransID(trans);
+//			}
+//
+//			vecTreeAut_.push_back(taHeap);
+//		}
 
 		for (size_t i = 0; i < fa.getRootCount(); ++i)
 		{
-			os_ << "  subgraph " << FA_QUOTE("cluster_treeaut" << i) <<  " {\n"
-				<< "    rank=same;\n"
-				<< "    label=\"\";\n"
-				<< "    color=black;\n"
-				<< "    fontcolor=black;\n"
-				<< "    bgcolor=gray98;\n"
-				<< "    style=dashed;\n"
-				<< "    penwidth=1.0;\n"
-				<< "\n"
-				<< "    " << FA_QUOTE("treeaut" << i) << ";\n";
+			// Assertions
+			assert(vecTreeAut_.size() == i);
 
-				fa.getRoot(i)->accept(*this);
+			if (nullptr != fa.getRoot(i))
+			{
+				const TreeAut& ta = *fa.getRoot(i);
+				assert(ta.accBegin() != ta.accEnd());
 
-			os_ << "\n  }\n";
+				if (++(ta.accBegin()) != ta.accEnd())
+				{
+					CL_NOTE("More accepting transitions! Considering only the first...");
+				}
+
+				const Transition& trans = *ta.accBegin();
+
+				TreeAutHeap taHeap(getTransID(trans));
+				vecTreeAut_.push_back(taHeap);
+
+				// process the tree automaton
+				ta.accept(*this);
+			}
+			else
+			{
+				vecTreeAut_.push_back(TreeAutHeap());
+			}
 		}
 	}
 
 	void operator()(const TreeAut& ta)
 	{
-		for (const TreeAut::Transition& trans : ta)
+		for (const Transition& trans : ta)
 		{
 			trans.accept(*this);
 		}
 	}
 
-	void operator()(const TTBase<label_type>& trans)
+	void operator()(const BaseTransition& trans)
 	{
-		os_ << "    subgraph " << FA_QUOTE("cluster_trans" << transCnt_++) << " {\n"
-			<< "      rank=same;\n"
-			<< "      label=\"\";\n"
-			<< "      color=black;\n"
-			<< "      fontcolor=black;\n"
-			<< "      bgcolor=orange;\n"
-			<< "      style=dashed;\n"
-			<< "      penwidth=1.0;\n\n";
-
 		const NodeLabel& label = *trans.label();
-
-//		os_ << "      " << FA_QUOTE(stateToString(state)) << " -> "
-//			<< FA_QUOTE(&label) << ";\n";
 
 		switch (label.type)
 		{
 			case NodeLabel::node_type::n_unknown:
 			{
-				os_ << "      " << FA_QUOTE(&label) << " [shape=box, label="
-					<< FA_QUOTE("<unknown>") << "];\n";
+				assert(false);      // not supported
 				break;
 			}
 
@@ -222,54 +393,49 @@ public:   // methods
 				assert(nullptr != label.node.sels);
 
 				const std::vector<const AbstractBox*>& boxes = *label.node.v;
-				assert(!boxes.empty());
+				const std::vector<SelData>& sels             = *label.node.sels;
 
-				os_ << "      " << FA_QUOTE(&label) << " [shape=ellipse, label="
-					<< FA_QUOTE(*boxes[0]) << "];\n";
+				// Assertions
+				assert(!boxes.empty());
+				assert(nullptr != boxes[0]);
+				assert(boxes[0]->isType(box_type_e::bTypeInfo));
+
+				const TypeBox& type = *static_cast<const TypeBox*>(boxes[0]);
+				MemNode node = MemNode::createBlock(getTransID(trans), type.getName());
 
 				for (size_t i = 1; i < boxes.size(); ++i)
-				{
-					assert(trans.lhs.size() <= i);
+				{	// go over all selectors (and boxes)
+					// Assertions
+					assert(i   <= trans.lhs().size());
+					assert(i-1 <  sels.size());
+					assert(nullptr != boxes[i]);
+					assert(boxes[i]->isType(box_type_e::bSel));
 
-					os_ << "      " << FA_QUOTE(boxes[i]) << " [shape=box, label="
-						<< FA_QUOTE(*(boxes[i])) << "];\n";
-
-					os_ << "      " << FA_QUOTE(boxes[i]) << " -> "
-						<< FA_QUOTE(stateToString(trans.lhs()[i-1])) << ";\n";
+					// FIXME: this is not correct
+					MemNode::SelectorData sel(sels[i-1].name, trans.lhs()[i-1]);
+					node.block_.selMap.insert(std::make_pair(i, sel));
 				}
 
+				this->addStateToMemNodeLink(trans.rhs(), node);
 				break;
 			}
 
 			case NodeLabel::node_type::n_data:
-			{
+	 		{
 				// Assertions
 				assert(nullptr != label.data.data);
-				assert(0 == trans.lhs.size());
+				assert(trans.lhs().empty());
 
-				os_ << "      " << FA_QUOTE(stateToString(trans.rhs()))
-					<< " [shape=box, label=" << dataToDot(*label.data.data) << "]\n";
+				const Data& data = *label.data.data;
 
+				this->addStateToMemNodeLink(trans.rhs(),
+					dataToMemNode(getTransID(trans), data));
 				break;
 			}
 
-			case NodeLabel::node_type::n_vData: break;
+			case NodeLabel::node_type::n_vData:
 			{
-				// Assertions
-				assert(nullptr != label.vData);
-				assert(0 == trans.lhs.size());
-
-				os_ << "      " << FA_QUOTE(&label) << " [shape=box, label="
-					<< FA_QUOTE(label) << "];\n";
-
-				for (const Data& data : *label.vData)
-				{
-					os_ << "      " << FA_QUOTE(&data) << " [shape=box, label="
-						<< dataToDot(data) << "]\n";
-					os_ << "      " << FA_QUOTE(stateToString(trans.rhs())) << " -> "
-						<< FA_QUOTE(&data) << ";\n";
-				}
-
+				assert(false);     // not supported
 				break;
 			}
 
@@ -278,8 +444,117 @@ public:   // methods
 				assert(false);    // fail gracefully
 			}
 		}
+	}
 
-		os_ << "\n    }\n";
+	void plotMemNode(
+		const MemNode& node,
+		const TreeAutHeap::StateToMemNodeMap& stateMap) const
+	{
+		switch (node.type_)
+		{
+			case MemNode::mem_type::t_block:
+			{
+				os_ << "      " << FA_QUOTE(node.id_)
+					<< " [shape=ellipse, style=filled, fillcolor=lightblue, label="
+					<< FA_QUOTE(node.block_.name) << "];\n";
+
+				break;
+			}
+
+			case MemNode::mem_type::t_treeref:
+			{
+				os_ << "      " << FA_QUOTE(node.id_)
+					<< " [shape=box, style=filled, fillcolor=yellow, label="
+					<< FA_QUOTE("(ref)" << node.treeref_) << "];\n";
+
+				break;
+			}
+
+			case MemNode::mem_type::t_datafield:
+			{
+				os_ << "      " << FA_QUOTE(node.id_)
+					<< " [shape=box, style=filled, fillcolor=red, label="
+					<< FA_QUOTE(node.dataField_) << "];\n";
+
+				break;
+			}
+
+			default:
+			{
+				assert(false);          // fail gracefully
+				break;
+			}
+		}
+
+		for (const auto& offsetSelectorPair : node.block_.selMap)
+		{
+			const int& offset = offsetSelectorPair.first;
+			const MemNode::SelectorData& sel = offsetSelectorPair.second;
+
+			// get the ID of a selector
+			std::ostringstream oss;
+			oss << node.id_ << "." << offset;
+			std::string selId = oss.str();
+
+			os_ << "      " << FA_QUOTE(selId)
+				<< " [shape=box, style=filled, fillcolor=pink, label="
+				<< FA_QUOTE(sel.name) << "];\n";
+
+			os_ << "      " << FA_QUOTE(node.id_) << " -> " << FA_QUOTE(selId) << "[label="
+				<< FA_QUOTE("[" << ((offset >= 0)? "+":"") << offset << "]") << "];\n";
+
+			for (auto beginEndItPair = stateMap.equal_range(sel.targetState);
+				beginEndItPair.first != beginEndItPair.second;
+				++(beginEndItPair.first))
+			{
+				const MemNode& tmpNode = (*beginEndItPair.first).second;
+
+				os_ << "      " << FA_QUOTE(selId) << " -> " << FA_QUOTE(tmpNode.id_)
+					<< ";\n";
+			}
+		}
+	}
+
+	void plotTreeAutHeap(const TreeAutHeap& treeaut) const
+	{
+		for (const auto& stateMemNodePair : treeaut.stateMap)
+		{
+			const MemNode& node = stateMemNodePair.second;
+
+			os_ << "    subgraph "
+				<< FA_QUOTE("cluster_" << stateToString(stateMemNodePair.first)) << " {\n"
+				<< "      rank=same;\n"
+				<< "      label=\"lejbl\";\n"
+				<< "      color=black;\n"
+				<< "      fontcolor=black;\n"
+				<< "      bgcolor=orange;\n"
+				<< "      style=dashed;\n"
+				<< "      penwidth=1.0;\n\n";
+
+			this->plotMemNode(node, treeaut.stateMap);
+
+			os_ << "    }\n\n";
+		}
+	}
+
+	void plot() const
+	{
+		for (size_t i = 0; i < vecTreeAut_.size(); ++i)
+		{
+			os_ << "  subgraph "
+				<< FA_QUOTE("cluster_treeaut" << i) << " {\n"
+				<< "    rank=same;\n"
+				<< "    label=" << FA_QUOTE("treeaut" << i) << ";\n"
+				<< "    color=black;\n"
+				<< "    fontcolor=black;\n"
+				<< "    bgcolor=green;\n"
+				<< "    style=dashed;\n"
+				<< "    penwidth=1.0;\n\n";
+
+			this->plotTreeAutHeap(vecTreeAut_[i]);
+
+			os_ << "  }\n\n";
+		}
 	}
 };
 } /* namespace */
@@ -323,6 +598,8 @@ bool MemPlotter::plotHeap(
 	DotPlotVisitor visitor(out);
 
 	state.accept(visitor);
+
+	visitor.plot();
 
 	// close graph
 	out << "}\n";
