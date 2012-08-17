@@ -213,10 +213,18 @@ private:  // data members
 	/// maps root numbers to tree automata representation of heap
 	std::vector<TreeAutHeap> vecTreeAut_;
 
+	/// vector of pointers
+	std::vector<std::pair<std::string /* src */, std::string /* dst */>> pointers_;
+
 private:  // methods
 
 	DotPlotVisitor(const DotPlotVisitor&);
 	DotPlotVisitor& operator=(const DotPlotVisitor&);
+
+	void addPointer(const std::string& src, const std::string& dst)
+	{
+		pointers_.push_back(std::make_pair(src, dst));
+	}
 
 	void addStateToMemNodeLink(size_t state, const MemNode& node)
 	{
@@ -284,7 +292,8 @@ public:   // methods
 
 	DotPlotVisitor(std::ostream& os) :
 		os_(os),
-		vecTreeAut_{}
+		vecTreeAut_{},
+		pointers_{}
 	{ }
 
 	void operator()(const ExecState& state)
@@ -448,7 +457,7 @@ public:   // methods
 
 	void plotMemNode(
 		const MemNode& node,
-		const TreeAutHeap::StateToMemNodeMap& stateMap) const
+		const TreeAutHeap::StateToMemNodeMap& stateMap)
 	{
 		switch (node.type_)
 		{
@@ -509,13 +518,17 @@ public:   // methods
 			{
 				const MemNode& tmpNode = (*beginEndItPair.first).second;
 
-				os_ << "      " << FA_QUOTE(selId) << " -> " << FA_QUOTE(tmpNode.id_)
-					<< ";\n";
+				std::ostringstream tmpOs;
+				tmpOs << tmpNode.id_;
+
+				this->addPointer(selId, tmpOs.str());
+//				os_ << "      " << FA_QUOTE(selId) << " -> " << FA_QUOTE(tmpNode.id_)
+//					<< ";\n";
 			}
 		}
 	}
 
-	void plotTreeAutHeap(const TreeAutHeap& treeaut) const
+	void plotTreeAutHeap(const TreeAutHeap& treeaut)
 	{
 		for (const auto& stateMemNodePair : treeaut.stateMap)
 		{
@@ -537,7 +550,17 @@ public:   // methods
 		}
 	}
 
-	void plot() const
+	void plotPointers() const
+	{
+		for (const auto& srcDstPair : pointers_)
+		{
+			os_ << "  " << FA_QUOTE(srcDstPair.first)
+				<< " -> " << FA_QUOTE(srcDstPair.second)
+				<< ";\n";
+		}
+	}
+
+	void plot()
 	{
 		for (size_t i = 0; i < vecTreeAut_.size(); ++i)
 		{
@@ -555,6 +578,8 @@ public:   // methods
 
 			os_ << "  }\n\n";
 		}
+
+		this->plotPointers();
 	}
 };
 } /* namespace */
