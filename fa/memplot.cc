@@ -513,7 +513,7 @@ public:   // methods
 			os_ << "      " << FA_QUOTE(node.id_) << " -> " << FA_QUOTE(selId)
 				<< "[label=" << FA_QUOTE("["
 				<< selData.offset << ":"
-				<< ((selData.size >= 0)? "+":"") << selData.size << ":"
+				<< selData.size << ":"
 				<< ((selData.displ >= 0)? "+":"") << selData.displ
 				<< "]") << "];\n";
 
@@ -540,16 +540,22 @@ public:   // methods
 		}
 	}
 
-	void plotTreeAutHeap(const TreeAutHeap& treeaut)
+	void plotTreeAutHeapNum(size_t num)
 	{
-		for (const auto& stateMemNodePair : treeaut.stateMap)
+		// Assertions
+		assert(num < vecTreeAut_.size());
+
+		const TreeAutHeap& taHeap = vecTreeAut_[num];
+
+		for (const auto& stateMemNodePair : taHeap.stateMap)
 		{
 			const MemNode& node = stateMemNodePair.second;
 
 			os_ << "    subgraph "
-				<< FA_QUOTE("cluster_" << stateToString(stateMemNodePair.first)) << " {\n"
+				<< FA_QUOTE("cluster_treeaut" << num << "_"
+				<< stateToString(stateMemNodePair.first)) << " {\n"
 				<< "      rank=same;\n"
-				<< "      label=\"\";\n"
+				<< "      label=" << stateToString(stateMemNodePair.first) << ";\n"
 				<< "      labeljust=left;\n"
 				<< "      color=black;\n"
 				<< "      fontcolor=black;\n"
@@ -557,7 +563,7 @@ public:   // methods
 				<< "      style=dashed;\n"
 				<< "      penwidth=1.0;\n\n";
 
-			this->plotMemNode(node, treeaut.stateMap);
+			this->plotMemNode(node, taHeap.stateMap);
 
 			os_ << "    }\n\n";
 		}
@@ -588,7 +594,7 @@ public:   // methods
 				<< "    style=dashed;\n"
 				<< "    penwidth=1.0;\n\n";
 
-			this->plotTreeAutHeap(vecTreeAut_[i]);
+			this->plotTreeAutHeapNum(i);
 
 			os_ << "  }\n\n";
 		}
