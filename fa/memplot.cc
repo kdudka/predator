@@ -73,7 +73,7 @@ public:   // data types
 		{ }
 	};
 
-	typedef std::map<int /* offset */, SelectorData> SelectorMap;
+	typedef std::vector<std::pair<SelData, SelectorData>> SelectorVec;
 
 
 public:   // data members
@@ -95,8 +95,8 @@ public:   // data members
 		/// the name of the memory node
 		std::string name;
 
-		/// map of selectors inside a memory node
-		SelectorMap selMap;
+		/// vector of selectors inside a memory node
+		SelectorVec selVec;
 	} block_;
 
 	/// data fields for a tree reference
@@ -113,7 +113,7 @@ private:  // methods
 	MemNode(size_t id, mem_type type) :
 		id_{id},
 		type_{type},
-		block_{std::string(), SelectorMap()},
+		block_{std::string(), SelectorVec()},
 		treeref_{},
 		dataField_{}
 	{ }
@@ -195,6 +195,11 @@ struct TreeAutHeap
 		stateMap{}
 	{ }
 };
+
+inline size_t getRandomID()
+{
+	return static_cast<size_t>(rand() - std::numeric_limits<int>::min());
+}
 
 inline size_t getTransID(const BaseTransition& trans)
 {
@@ -422,7 +427,7 @@ public:   // methods
 
 					// FIXME: this is not correct
 					MemNode::SelectorData sel(sels[i-1].name, trans.lhs()[i-1]);
-					node.block_.selMap.insert(std::make_pair(i, sel));
+					node.block_.selVec.push_back(std::make_pair(sels[i-1], sel));
 				}
 
 				this->addStateToMemNodeLink(trans.rhs(), node);
@@ -430,7 +435,7 @@ public:   // methods
 			}
 
 			case NodeLabel::node_type::n_data:
-	 		{
+			{
 				// Assertions
 				assert(nullptr != label.data.data);
 				assert(trans.lhs().empty());
@@ -438,7 +443,7 @@ public:   // methods
 				const Data& data = *label.data.data;
 
 				this->addStateToMemNodeLink(trans.rhs(),
-					dataToMemNode(getTransID(trans), data));
+					dataToMemNode(getRandomID(), data));
 				break;
 			}
 
@@ -491,22 +496,26 @@ public:   // methods
 			}
 		}
 
-		for (const auto& offsetSelectorPair : node.block_.selMap)
+		for (const auto& selSelectorPair : node.block_.selVec)
 		{
-			const int& offset = offsetSelectorPair.first;
-			const MemNode::SelectorData& sel = offsetSelectorPair.second;
+			const SelData& selData = selSelectorPair.first;
+			const MemNode::SelectorData& sel = selSelectorPair.second;
 
 			// get the ID of a selector
 			std::ostringstream oss;
-			oss << node.id_ << "." << offset;
+			oss << node.id_ << "." << selData.offset;
 			std::string selId = oss.str();
 
 			os_ << "      " << FA_QUOTE(selId)
 				<< " [shape=box, style=filled, fillcolor=pink, label="
 				<< FA_QUOTE(sel.name) << "];\n";
 
-			os_ << "      " << FA_QUOTE(node.id_) << " -> " << FA_QUOTE(selId) << "[label="
-				<< FA_QUOTE("[" << ((offset >= 0)? "+":"") << offset << "]") << "];\n";
+			os_ << "      " << FA_QUOTE(node.id_) << " -> " << FA_QUOTE(selId)
+				<< "[label=" << FA_QUOTE("["
+				<< selData.offset << ":"
+				<< ((selData.size >= 0)? "+":"") << selData.size << ":"
+				<< ((selData.displ >= 0)? "+":"") << selData.displ
+				<< "]") << "];\n";
 
 			for (auto beginEndItPair = stateMap.equal_range(sel.targetState);
 				beginEndItPair.first != beginEndItPair.second;
