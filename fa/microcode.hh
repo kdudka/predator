@@ -768,4 +768,24 @@ public:
 
 };
 
+class FI_plot : public SequentialInstruction {
+
+private:  // methods
+
+	FI_plot(const FI_plot&);
+	FI_plot& operator=(const FI_plot&);
+
+public:
+
+	FI_plot(const CodeStorage::Insn* insn)
+		: SequentialInstruction(insn) {}
+
+	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "plot ";
+	}
+
+};
+
 #endif

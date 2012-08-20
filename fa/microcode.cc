@@ -17,21 +17,24 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Standard library headers
 #include <list>
 #include <sstream>
 
+// Code Listener headers
 #include <cl/cldebug.hh>
 
+// Forester headers
 #include "executionmanager.hh"
-#include "splitting.hh"
-#include "virtualmachine.hh"
-#include "programerror.hh"
-#include "normalization.hh"
-#include "regdef.hh"
-#include "symctx.hh"
 #include "jump.hh"
-
+#include "memplot.hh"
 #include "microcode.hh"
+#include "normalization.hh"
+#include "programerror.hh"
+#include "regdef.hh"
+#include "splitting.hh"
+#include "symctx.hh"
+#include "virtualmachine.hh"
 
 namespace
 {
@@ -602,6 +605,13 @@ void FI_print_heap::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	CL_NOTE("local variables: " << DumpCtx(*ctx_, *state.GetMem()->GetFAE()));
 	CL_NOTE("heap:" << *state.GetMem()->GetFAE());
+
+	execMan.enqueue(state, next_);
+}
+
+void FI_plot::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	MemPlotter::plotHeap(state, "pokus", &this->insn()->loc);
 
 	execMan.enqueue(state, next_);
 }

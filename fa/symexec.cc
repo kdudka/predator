@@ -153,7 +153,7 @@ protected:
 		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(
 			new FAE(this->taBackend, this->boxMan));
 
-		CL_CDEBUG(2, "sheduling initial state ...");
+		CL_CDEBUG(2, "scheduling initial state ...");
 
 		// schedule the initial state for processing
 		this->execMan.init(
@@ -168,10 +168,10 @@ protected:
 		{	// expecting problems...
 			while (this->execMan.dequeueDFS(state))
 			{	// process all states in the DFS order
-				if (state.GetMem()->GetInstr()->insn())
+				const CodeStorage::Insn* insn = state.GetMem()->GetInstr()->insn();
+				if (nullptr != insn)
 				{	// in case current instruction IS an instruction
-					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED,
-						state.GetMem()->GetInstr()->insn()->loc << *(state.GetMem()->GetInstr()->insn())));
+					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED, insn->loc << *insn));
 					CL_CDEBUG(2, state);
 				}
 				else

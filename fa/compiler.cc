@@ -330,7 +330,17 @@ struct LoopAnalyser {
 /**
  * @brief  Enumeration of built-in functions
  */
-enum class builtin_e { biNone, biMalloc, biFree, biNondet, biFix, biAbort, biPrintHeap };
+enum class builtin_e
+{
+	biNone,
+	biMalloc,
+	biFree,
+	biNondet,
+	biFix,
+	biAbort,
+	biPrintHeap,
+	biPlot
+};
 
 
 /**
@@ -362,6 +372,7 @@ public:
 		this->_table["__nondet"]      = builtin_e::biNondet;
 		this->_table["__fix"]         = builtin_e::biFix;
 		this->_table["__print_heap"]  = builtin_e::biPrintHeap;
+		this->_table["__plot"]        = builtin_e::biPlot;
 		this->_table["abort"]         = builtin_e::biAbort;
 	}
 
@@ -525,6 +536,19 @@ protected:
 	void cPrintHeap(const CodeStorage::Insn& insn)
 	{
 		append(new FI_print_heap(&insn, curCtx_));
+	}
+
+
+	/**
+	 * @brief  Compile heap plot
+	 *
+	 * Compiles @b Plot  as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void cPlot(const CodeStorage::Insn& insn)
+	{
+		append(new FI_plot(&insn));
 	}
 
 
@@ -1821,6 +1845,9 @@ protected:
 				return;
 			case builtin_e::biPrintHeap:
 				cPrintHeap(insn);
+				return;
+			case builtin_e::biPlot:
+				cPlot(insn);
 				return;
 			case builtin_e::biAbort:
 				this->append(new FI_abort(&insn));
