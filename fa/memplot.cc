@@ -471,11 +471,7 @@ public:   // methods
 			}
 
 			case MemNode::mem_type::t_treeref:
-			{
-				os_ << "      " << FA_QUOTE(node.id_)
-					<< " [shape=box, style=filled, fillcolor=yellow, label="
-					<< FA_QUOTE("(ref)" << node.treeref_) << "];\n";
-
+			{	// do not print anything for tree references
 				break;
 			}
 
@@ -519,11 +515,18 @@ public:   // methods
 				const MemNode& tmpNode = (*beginEndItPair.first).second;
 
 				std::ostringstream tmpOs;
-				tmpOs << tmpNode.id_;
+				if (MemNode::mem_type::t_treeref == tmpNode.type_)
+				{	// if the node is a tree automaton reference
+					const TreeAutHeap& taHeap = vecTreeAut_[tmpNode.treeref_];
+
+					tmpOs << taHeap.rootNodeID;
+				}
+				else
+				{	// in case the node is anything but the tree automaton reference
+					tmpOs << tmpNode.id_;
+				}
 
 				this->addPointer(selId, tmpOs.str());
-//				os_ << "      " << FA_QUOTE(selId) << " -> " << FA_QUOTE(tmpNode.id_)
-//					<< ";\n";
 			}
 		}
 	}
@@ -537,7 +540,8 @@ public:   // methods
 			os_ << "    subgraph "
 				<< FA_QUOTE("cluster_" << stateToString(stateMemNodePair.first)) << " {\n"
 				<< "      rank=same;\n"
-				<< "      label=\"lejbl\";\n"
+				<< "      label=\"\";\n"
+				<< "      labeljust=left;\n"
 				<< "      color=black;\n"
 				<< "      fontcolor=black;\n"
 				<< "      bgcolor=orange;\n"
@@ -567,7 +571,8 @@ public:   // methods
 			os_ << "  subgraph "
 				<< FA_QUOTE("cluster_treeaut" << i) << " {\n"
 				<< "    rank=same;\n"
-				<< "    label=" << FA_QUOTE("treeaut" << i) << ";\n"
+				<< "    label=" << FA_QUOTE("TA " << i) << ";\n"
+				<< "    labeljust=right;\n"
 				<< "    color=black;\n"
 				<< "    fontcolor=black;\n"
 				<< "    bgcolor=green;\n"
