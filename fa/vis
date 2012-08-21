@@ -1,0 +1,13 @@
+#!/bin/bash
+self="`readlink -f "$0"`"
+topdir="`dirname "$self"`/.."
+
+# use chromium as default SVG_VIEWER
+test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
+
+# visualize graphs
+printf "graph visualization in progress ... "
+make $MAKEOPTS -s -f "$topdir/tests/forester-regre/Makefile.in" \
+    TIMEOUT="timeout 2" || exit $?
+printf "done\n"
+"$SVG_VIEWER" *.svg &
