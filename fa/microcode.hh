@@ -768,16 +768,16 @@ public:
 
 };
 
-class FI_plot : public SequentialInstruction {
+class FI_plot_heap : public SequentialInstruction {
 
 private:  // methods
 
-	FI_plot(const FI_plot&);
-	FI_plot& operator=(const FI_plot&);
+	FI_plot_heap(const FI_plot_heap&);
+	FI_plot_heap& operator=(const FI_plot_heap&);
 
 public:
 
-	FI_plot(const CodeStorage::Insn* insn)
+	FI_plot_heap(const CodeStorage::Insn* insn)
 		: SequentialInstruction(insn) {}
 
 	virtual void execute(ExecutionManager& execMan, const ExecState& state);

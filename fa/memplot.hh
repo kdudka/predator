@@ -20,14 +20,33 @@
 #ifndef _MEMPLOT_HH_
 #define _MEMPLOT_HH_
 
+// Code Listener headers
+#include <cl/storage.hh>
+
 class MemPlotter
 {
-public:   // methods
+private:
 
 	static bool plotHeap(
 		const ExecState&       state,
 		const std::string&     name,
-		const struct cl_loc    *loc = nullptr);
+		const struct cl_loc*   loc = nullptr);
+
+	/**
+	 * @brief  Generates the name of a plot
+	 *
+	 * Shamelessly copied from Predator.
+	 */
+	static bool readPlotName(
+		std::string*                      dst,
+		const CodeStorage::TOperandList&  opList,
+		const struct cl_loc*              loc);
+
+public:   // methods
+
+	static bool handlePlot(
+		const ExecState&          state,
+		const CodeStorage::Insn&  insn);
 };
 
 #endif /* _MEMPLOT_HH_ */

@@ -339,7 +339,7 @@ enum class builtin_e
 	biFix,
 	biAbort,
 	biPrintHeap,
-	biPlot
+	biPlotHeap
 };
 
 
@@ -372,7 +372,7 @@ public:
 		this->_table["__nondet"]      = builtin_e::biNondet;
 		this->_table["__fix"]         = builtin_e::biFix;
 		this->_table["__print_heap"]  = builtin_e::biPrintHeap;
-		this->_table["__plot"]        = builtin_e::biPlot;
+		this->_table["___fa_plot"]    = builtin_e::biPlotHeap;
 		this->_table["abort"]         = builtin_e::biAbort;
 	}
 
@@ -542,13 +542,13 @@ protected:
 	/**
 	 * @brief  Compile heap plot
 	 *
-	 * Compiles @b Plot  as the next microinstruction in the assembly.
+	 * Compiles @b PlotHeap  as the next microinstruction in the assembly.
 	 *
 	 * @param[in]  insn  The corresponding instruction in the code storage
 	 */
-	void cPlot(const CodeStorage::Insn& insn)
+	void cPlotHeap(const CodeStorage::Insn& insn)
 	{
-		append(new FI_plot(&insn));
+		append(new FI_plot_heap(&insn));
 	}
 
 
@@ -1846,8 +1846,8 @@ protected:
 			case builtin_e::biPrintHeap:
 				cPrintHeap(insn);
 				return;
-			case builtin_e::biPlot:
-				cPlot(insn);
+			case builtin_e::biPlotHeap:
+				cPlotHeap(insn);
 				return;
 			case builtin_e::biAbort:
 				this->append(new FI_abort(&insn));

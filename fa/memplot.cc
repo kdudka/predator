@@ -18,7 +18,9 @@
  */
 
 // Standard library headers
+#include <cstring>
 #include <fstream>
+#include <libgen.h>
 
 // Code Listener headers
 #include <cl/cl_msg.hh>
@@ -215,6 +217,9 @@ private:  // data members
 	/// the output stream
 	std::ostream& os_;
 
+	/// the location to be plotted
+	const cl_loc* loc_;
+
 	/// maps root numbers to tree automata representation of heap
 	std::vector<TreeAutHeap> vecTreeAut_;
 
@@ -295,8 +300,9 @@ private:  // methods
 
 public:   // methods
 
-	DotPlotVisitor(std::ostream& os) :
+	DotPlotVisitor(std::ostream& os, const cl_loc* loc) :
 		os_(os),
+		loc_(loc),
 		vecTreeAut_{},
 		pointers_{}
 	{ }
@@ -361,7 +367,8 @@ public:   // methods
 
 				if (++(ta.accBegin()) != ta.accEnd())
 				{
-					CL_NOTE("More accepting transitions! Considering only the first...");
+					CL_WARN_MSG(loc_,
+						"More accepting transitions! Considering only the first...");
 				}
 
 				const Transition& trans = *ta.accBegin();
@@ -602,7 +609,89 @@ public:   // methods
 		this->plotPointers();
 	}
 };
+
+void emitPrototypeError(const struct cl_loc *lw, const char *name)
+{
+	CL_WARN_MSG(lw, "incorrectly called " << name
+			<< "() not recognized as built-in");
+}
 } /* namespace */
+
+
+// Shamelessly copied from Predator
+bool MemPlotter::readPlotName(
+	std::string*                      dst,
+	const CodeStorage::TOperandList&  opList,
+	const struct cl_loc*              loc)
+{
+	const cl_operand &op = opList[/* dst + fnc */ 2];
+	if (CL_OPERAND_CST != op.code)
+		return false;
+
+	const cl_cst &cst = op.data.cst;
+	if (CL_TYPE_STRING == cst.code) {
+		// plot name given as a string literal
+		*dst = cst.data.cst_string.value;
+		return true;
+	}
+
+	if (CL_TYPE_INT != cst.code || cst.data.cst_int.value)
+		// no match
+		return false;
+
+	// NULL given as plot name, we're asked to generate the name automagically
+	if (!loc || !loc->file) {
+		// sorry, no location info here
+		*dst = "anonplot";
+		return true;
+	}
+
+	char *dup = strdup(loc->file);
+	const char *fname = basename(dup);
+
+	std::ostringstream str;
+	str << fname << "-" << loc->line;
+	*dst = str.str();
+
+	free(dup);
+	return true;
+}
+
+
+bool MemPlotter::handlePlot(
+	const ExecState&         state,
+	const CodeStorage::Insn  &insn)
+{
+	const CodeStorage::TOperandList &opList = insn.operands;
+	const cl_loc& loc = insn.loc;
+
+	const char* name = "___fa_plot";
+
+	const int cntArgs = opList.size() - /* dst + fnc */ 2;
+	if (cntArgs != 1) {
+		emitPrototypeError(&loc, name);
+		// wrong count of arguments
+		return false;
+	}
+
+	if (CL_OPERAND_VOID != opList[/* dst */ 0].code) {
+		// not a function returning void
+		emitPrototypeError(&loc, name);
+		return false;
+	}
+
+	std::string plotName;
+	if (!readPlotName(&plotName, opList, &loc)) {
+		emitPrototypeError(&loc, name);
+		return false;
+	}
+
+	bool ok = plotHeap(state, plotName, &loc);
+	if (!ok)
+		CL_WARN_MSG(&loc, "error while plotting '" << plotName << "'");
+
+	return true;
+}
 
 
 bool MemPlotter::plotHeap(
@@ -640,7 +729,7 @@ bool MemPlotter::plotHeap(
 	else
 		CL_DEBUG("writing memory graph to '" << fileName << "'...");
 
-	DotPlotVisitor visitor(out);
+	DotPlotVisitor visitor(out, loc);
 
 	state.accept(visitor);
 

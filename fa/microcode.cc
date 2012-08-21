@@ -609,9 +609,13 @@ void FI_print_heap::execute(ExecutionManager& execMan, const ExecState& state)
 	execMan.enqueue(state, next_);
 }
 
-void FI_plot::execute(ExecutionManager& execMan, const ExecState& state)
+
+void FI_plot_heap::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	MemPlotter::plotHeap(state, "pokus", &this->insn()->loc);
+	// Assertions
+	assert(nullptr != this->insn());
+
+	MemPlotter::handlePlot(state, *this->insn());
 
 	execMan.enqueue(state, next_);
 }
