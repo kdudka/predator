@@ -30,7 +30,8 @@
 static bool overflowDetected;
 static ssize_t peak;
 
-bool rawMemUsage(ssize_t *pDst) {
+bool rawMemUsage(ssize_t *pDst)
+{
     if (::overflowDetected)
         return false;
 
@@ -53,7 +54,8 @@ bool rawMemUsage(ssize_t *pDst) {
 
 static ssize_t memDrift;
 
-bool initMemDrift() {
+bool initMemDrift()
+{
     if (rawMemUsage(&::memDrift))
         return true;
 
@@ -62,7 +64,8 @@ bool initMemDrift() {
     return false;
 }
 
-bool currentMemUsage(ssize_t *pDst) {
+bool currentMemUsage(ssize_t *pDst)
+{
     if (!rawMemUsage(pDst))
         // failed to get current memory usage
         return false;
@@ -86,7 +89,8 @@ struct AmountFormatter {
     }
 };
 
-std::ostream& operator<<(std::ostream &str, const AmountFormatter &fmt) {
+std::ostream& operator<<(std::ostream &str, const AmountFormatter &fmt)
+{
     const std::ios_base::fmtflags oldFlags = str.flags();
     const int oldPrecision = str.precision();
 
@@ -99,7 +103,8 @@ std::ostream& operator<<(std::ostream &str, const AmountFormatter &fmt) {
 }
 
 #include <iostream>
-bool printMemUsage(const char *fnc) {
+bool printMemUsage(const char *fnc)
+{
     ssize_t cb;
     if (!currentMemUsage(&cb))
         // instead of printing misleading numbers, we rather print nothing
@@ -114,7 +119,8 @@ bool printMemUsage(const char *fnc) {
     return true;
 }
 
-bool printPeakMemUsage() {
+bool printPeakMemUsage()
+{
     if (::overflowDetected)
         return false;
 
@@ -130,23 +136,28 @@ bool printPeakMemUsage() {
 
 #else // DEBUG_MEM_USAGE
 
-bool rawMemUsage(ssize_t *) {
+bool rawMemUsage(ssize_t *)
+{
     return false;
 }
 
-bool initMemDrift() {
+bool initMemDrift()
+{
     return false;
 }
 
-bool currentMemUsage(ssize_t *) {
+bool currentMemUsage(ssize_t *)
+{
     return false;
 }
 
-bool printMemUsage(const char *) {
+bool printMemUsage(const char *)
+{
     return false;
 }
 
-bool printPeakMemUsage() {
+bool printPeakMemUsage()
+{
     return false;
 }
 

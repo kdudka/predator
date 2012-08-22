@@ -31,7 +31,8 @@
 
 #include <boost/foreach.hpp>
 
-bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val) {
+bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val)
+{
     switch (val) {
         case VAL_NULL:
             *pDst = 0L;
@@ -62,7 +63,8 @@ bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val) {
     return true;
 }
 
-bool rngFromVal(IR::Range *pDst, const SymHeapCore &sh, const TValId val) {
+bool rngFromVal(IR::Range *pDst, const SymHeapCore &sh, const TValId val)
+{
     IR::TInt num;
     if (numFromVal(&num, sh, val)) {
         // a single number
@@ -115,7 +117,8 @@ bool anyRangeFromVal(
     return false;
 }
 
-bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val) {
+bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val)
+{
     if (VT_CUSTOM != sh.valTarget(val))
         // not a custom value
         return false;
@@ -130,7 +133,8 @@ bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val) {
     return true;
 }
 
-const IR::Range& rngFromCustom(const CustomValue &cv) {
+const IR::Range& rngFromCustom(const CustomValue &cv)
+{
     const ECustomValue code = cv.code();
     switch (code) {
         case CV_INT_RANGE:
@@ -242,7 +246,8 @@ void moveKnownValueToLeft(
     valB = tmp;
 }
 
-bool valInsideSafeRange(const SymHeapCore &sh, TValId val) {
+bool valInsideSafeRange(const SymHeapCore &sh, TValId val)
+{
     const EValueTarget code = sh.valTarget(val);
     if (!isKnownObject(code))
         return false;
@@ -251,7 +256,8 @@ bool valInsideSafeRange(const SymHeapCore &sh, TValId val) {
     return (IR::Int0 < size.lo);
 }
 
-bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val) {
+bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val)
+{
     if (!isPossibleToDeref(sh.valTarget(val)))
         return false;
 
@@ -312,7 +318,8 @@ TValId translateValProto(
     return dst.valCreate(code, origin);
 }
 
-void initGlVar(SymHeap &sh, const CVar &cv) {
+void initGlVar(SymHeap &sh, const CVar &cv)
+{
     CL_BREAK_IF(cv.inst);
     CL_BREAK_IF(isVarAlive(sh, cv));
 
@@ -367,7 +374,8 @@ bool /* anyChange */ redirectRefs(
     return anyChange;
 }
 
-bool proveNeq(const SymHeapCore &sh, TValId ref, TValId val) {
+bool proveNeq(const SymHeapCore &sh, TValId ref, TValId val)
+{
     // check for invalid values
     if (VAL_INVALID == ref || VAL_INVALID == val)
         return false;

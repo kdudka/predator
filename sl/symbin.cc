@@ -84,7 +84,8 @@ bool readPlotName(
     return true;
 }
 
-void emitPrototypeError(const struct cl_loc *lw, const char *name) {
+void emitPrototypeError(const struct cl_loc *lw, const char *name)
+{
     CL_WARN_MSG(lw, "incorrectly called " << name
             << "() not recognized as built-in");
 }
@@ -144,7 +145,8 @@ void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
     CL_NOTE_MSG(loc, "user message: " << msg);
 }
 
-bool validateStringOp(SymProc &proc, TOp op, TSizeRange *pSize = 0) {
+bool validateStringOp(SymProc &proc, TOp op, TSizeRange *pSize = 0)
+{
     SymHeap &sh = proc.sh();
     const struct cl_loc *loc = proc.lw();
 
@@ -886,7 +888,8 @@ class BuiltInTable {
 BuiltInTable *BuiltInTable::inst_;
 
 /// register built-ins
-BuiltInTable::BuiltInTable() {
+BuiltInTable::BuiltInTable()
+{
     // C run-time
     tbl_["abort"]                                   = handleAbort;
     tbl_["calloc"]                                  = handleCalloc;
@@ -958,7 +961,8 @@ bool BuiltInTable::handleBuiltIn(
     return hdl(dst, core, insn, name);
 }
 
-const TOpIdxList& BuiltInTable::lookForDerefs(const char *name) const {
+const TOpIdxList& BuiltInTable::lookForDerefs(const char *name) const
+{
     TDerefMap::const_iterator it = der_.find(name);
     if (der_.end() == it)
         // no fnc name matched as built-in

@@ -44,7 +44,8 @@
 
 LOCAL_DEBUG_PLOTTER(symabstract, DEBUG_SYMABSTRACT)
 
-void debugSymAbstract(const bool enable) {
+void debugSymAbstract(const bool enable)
+{
     if (enable == __ldp_enabled_symabstract)
         return;
 
@@ -85,7 +86,8 @@ struct UnknownValuesDuplicator {
 };
 
 // when concretizing an object, we need to duplicate all _unknown_ values
-void duplicateUnknownValues(SymHeap &sh, TValId at) {
+void duplicateUnknownValues(SymHeap &sh, TValId at)
+{
     UnknownValuesDuplicator visitor;
     buildIgnoreList(visitor.ignoreList, sh, at);
 
@@ -132,7 +134,8 @@ void detachClonedPrototype(
     }
 }
 
-TValId protoClone(SymHeap &sh, const TValId proto) {
+TValId protoClone(SymHeap &sh, const TValId proto)
+{
     const TValId clone = segClone(sh, proto);
     objDecrementProtoLevel(sh, clone);
 
@@ -207,7 +210,8 @@ struct ValueSynchronizer {
     }
 };
 
-void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
+void dlSegSyncPeerData(SymHeap &sh, const TValId dls)
+{
     const TValId peer = dlSegPeer(sh, dls);
     ValueSynchronizer visitor(sh);
     buildIgnoreList(visitor.ignoreList, sh, dls);
@@ -224,7 +228,8 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
 }
 
 // FIXME: the semantics of this function is quite contra-intuitive
-TValId segDeepCopy(SymHeap &sh, TValId seg) {
+TValId segDeepCopy(SymHeap &sh, TValId seg)
+{
     // collect the list of prototypes
     TValList protoList;
     collectPrototypesOf(protoList, sh, seg, /* skipDlsPeers */ true);
@@ -241,7 +246,8 @@ TValId segDeepCopy(SymHeap &sh, TValId seg) {
     return dup;
 }
 
-void enlargeMayExist(SymHeap &sh, const TValId at) {
+void enlargeMayExist(SymHeap &sh, const TValId at)
+{
     const EObjKind kind = sh.valTargetKind(at);
     if (!isMayExistObj(kind))
         return;
@@ -282,7 +288,8 @@ void slSegAbstractionStep(
         sh.segSetMinLength(nextAt, len);
 }
 
-void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
+void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off)
+{
     // compute resulting segment's length
     const TMinLen len = objMinLength(sh, a1) + objMinLength(sh, a2);
 
@@ -303,7 +310,8 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     sh.segSetMinLength(a1, len);
 }
 
-void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
+void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward)
+{
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
 
     // compute the resulting minimal length
@@ -337,7 +345,8 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
     dlSegSyncPeerData(sh, dls);
 }
 
-void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
+void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2)
+{
     // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
 
@@ -504,7 +513,8 @@ bool applyAbstraction(
     return true;
 }
 
-void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer) {
+void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer)
+{
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
@@ -607,7 +617,8 @@ void spliceOutSegmentIfNeeded(
     LDP_PLOT(symabstract, sh);
 }
 
-void abstractIfNeeded(SymHeap &sh) {
+void abstractIfNeeded(SymHeap &sh)
+{
 #if SE_DISABLE_SLS && SE_DISABLE_DLS
     return;
 #endif

@@ -48,7 +48,8 @@
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
-void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace) {
+void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace)
+{
     // update trace graph
     Trace::MsgNode *trMsg = new Trace::MsgNode(sh_.traceNode(), level, lw_);
     sh_.traceUpdate(trMsg);
@@ -81,7 +82,8 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace) {
 #endif
 }
 
-bool SymProc::hasFatalError() const {
+bool SymProc::hasFatalError() const
+{
 #if 1 < SE_ERROR_RECOVERY_MODE
     // full error recovery mode
     return false;
@@ -90,7 +92,8 @@ bool SymProc::hasFatalError() const {
 #endif
 }
 
-TValId SymProc::valFromCst(const struct cl_operand &op) {
+TValId SymProc::valFromCst(const struct cl_operand &op)
+{
     const struct cl_cst &cst = op.data.cst;
 
     CustomValue cv;
@@ -166,7 +169,8 @@ void describeUnknownVal(
         CL_BREAK_IF("valOrigin out of range?");
 }
 
-const char* describeRootObj(const EValueTarget code) {
+const char* describeRootObj(const EValueTarget code)
+{
     switch (code) {
         case VT_STATIC:
             return "a static variable";
@@ -232,7 +236,8 @@ void reportDerefOutOfBounds(
     }
 }
 
-bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget) {
+bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
+{
     if (VAL_NULL == val) {
         CL_ERROR_MSG(lw_, "dereference of NULL value");
         return true;
@@ -290,7 +295,8 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget) {
     return false;
 }
 
-void SymProc::varInit(TValId at) {
+void SymProc::varInit(TValId at)
+{
     const CVar cv = sh_.cVarByRoot(at);
     const CodeStorage::Storage &stor = sh_.stor();
     const CodeStorage::Var &var = stor.vars[cv.uid];
@@ -315,7 +321,8 @@ void SymProc::varInit(TValId at) {
     }
 }
 
-TValId SymProc::varAt(const CVar &cv) {
+TValId SymProc::varAt(const CVar &cv)
+{
     TValId at = sh_.addrOfVar(cv, /* createIfNeeded */ false);
     if (0 < at)
         // var already alive
@@ -356,7 +363,8 @@ TValId SymProc::varAt(const CVar &cv) {
     return at;
 }
 
-TValId SymProc::varAt(const struct cl_operand &op) {
+TValId SymProc::varAt(const struct cl_operand &op)
+{
     // resolve CVar
     const int uid = varIdFromOperand(&op);
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
@@ -381,7 +389,8 @@ bool addOffDerefArray(SymProc &proc, TOffset &off, const struct cl_accessor *ac)
     return true;
 }
 
-TOffset offItem(const struct cl_accessor *ac) {
+TOffset offItem(const struct cl_accessor *ac)
+{
     const int id = ac->data.item.id;
     const TObjType clt = ac->type;
     CL_BREAK_IF(!clt || clt->item_cnt <= id);
@@ -389,7 +398,8 @@ TOffset offItem(const struct cl_accessor *ac) {
     return clt->items[id].offset;
 }
 
-TValId SymProc::targetAt(const struct cl_operand &op) {
+TValId SymProc::targetAt(const struct cl_operand &op)
+{
     // resolve program variable
     TValId addr = this->varAt(op);
     const struct cl_accessor *ac = op.accessor;
@@ -450,7 +460,8 @@ TValId SymProc::targetAt(const struct cl_operand &op) {
     return sh_.valByOffset(addr, off);
 }
 
-ObjHandle SymProc::objByOperand(const struct cl_operand &op) {
+ObjHandle SymProc::objByOperand(const struct cl_operand &op)
+{
     CL_BREAK_IF(seekRefAccessor(op.accessor));
 
     // resolve address of the target object
@@ -476,7 +487,8 @@ ObjHandle SymProc::objByOperand(const struct cl_operand &op) {
     return obj;
 }
 
-TValId SymProc::valFromObj(const struct cl_operand &op) {
+TValId SymProc::valFromObj(const struct cl_operand &op)
+{
     if (seekRefAccessor(op.accessor))
         return this->targetAt(op);
 
@@ -498,7 +510,8 @@ TValId SymProc::valFromObj(const struct cl_operand &op) {
     }
 }
 
-TValId SymProc::valFromOperand(const struct cl_operand &op) {
+TValId SymProc::valFromOperand(const struct cl_operand &op)
+{
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VAR:
@@ -513,7 +526,8 @@ TValId SymProc::valFromOperand(const struct cl_operand &op) {
     }
 }
 
-bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op) {
+bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op)
+{
     if (fncUidFromOperand(pUid, &op))
         return true;
 
@@ -532,7 +546,8 @@ bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op) {
     return true;
 }
 
-void digRootTypeInfo(SymHeap &sh, const ObjHandle &lhs, TValId rhs) {
+void digRootTypeInfo(SymHeap &sh, const ObjHandle &lhs, TValId rhs)
+{
     const EValueTarget code = sh.valTarget(rhs);
     if (!isPossibleToDeref(code))
         // no valid target anyway
@@ -565,7 +580,8 @@ void digRootTypeInfo(SymHeap &sh, const ObjHandle &lhs, TValId rhs) {
     sh.valSetLastKnownTypeOfTarget(rhs, cltTarget);
 }
 
-void reportMemLeak(SymProc &proc, const EValueTarget code, const char *reason) {
+void reportMemLeak(SymProc &proc, const EValueTarget code, const char *reason)
+{
     const struct cl_loc *loc = proc.lw();
     const char *const what = describeRootObj(code);
     CL_WARN_MSG(loc, "memory leak detected while " << reason << "ing " << what);
@@ -613,7 +629,8 @@ TValId ptrObjectEncoderCore(
     return sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
 }
 
-TValId ptrObjectEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
+TValId ptrObjectEncoder(SymProc &proc, const ObjHandle &dst, TValId val)
+{
     return ptrObjectEncoderCore(proc, dst, val, PK_DATA);
 }
 
@@ -673,7 +690,8 @@ TValId integralEncoder(
     return proc.sh().valWrapCustom(cv);
 }
 
-TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
+TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val)
+{
     SymHeap &sh = proc.sh();
     const CustomValue cv = sh.valUnwrapCustom(val);
     const ECustomValue code = cv.code();
@@ -700,7 +718,8 @@ TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val) {
     return VAL_INVALID;
 }
 
-void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs) {
+void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs)
+{
     if (!lhs.isValid()) {
         CL_ERROR_MSG(proc.lw(), "invalid L-value");
         proc.printBackTrace(ML_ERROR);
@@ -742,7 +761,8 @@ void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs) {
     lm.leave();
 }
 
-void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
+void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs)
+{
     const TValId lhsAt = lhs.placedAt();
     CL_BREAK_IF(!isPossibleToDeref(sh_.valTarget(lhsAt)));
 
@@ -781,7 +801,8 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs) {
     executeMemmove(*this, lhsAt, rhsAt, valSize, /* allowOverlap */ false);
 }
 
-void SymProc::valDestroyTarget(TValId addr) {
+void SymProc::valDestroyTarget(TValId addr)
+{
     const EValueTarget code = sh_.valTarget(addr);
     if (VAL_ADDR_OF_RET == addr && isGone(code))
         return;
@@ -795,7 +816,8 @@ void SymProc::valDestroyTarget(TValId addr) {
     lm.leave();
 }
 
-void SymProc::killVar(const CodeStorage::KillVar &kv) {
+void SymProc::killVar(const CodeStorage::KillVar &kv)
+{
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
     const CVar cVar(kv.uid, nestLevel);
     const TValId addr = sh_.addrOfVar(cVar, /* createIfNeeded */ false);
@@ -845,13 +867,15 @@ void SymProc::killVar(const CodeStorage::KillVar &kv) {
     lm.leave();
 }
 
-bool headingToAbort(const CodeStorage::Block *bb) {
+bool headingToAbort(const CodeStorage::Block *bb)
+{
     const CodeStorage::Insn *term = bb->back();
     const cl_insn_e code = term->code;
     return (CL_INSN_ABORT == code);
 }
 
-void SymProc::killInsn(const CodeStorage::Insn &insn) {
+void SymProc::killInsn(const CodeStorage::Insn &insn)
+{
     using namespace CodeStorage;
 #if !SE_EARLY_VARS_DESTRUCTION
     return;
@@ -861,7 +885,8 @@ void SymProc::killInsn(const CodeStorage::Insn &insn) {
         this->killVar(kv);
 }
 
-void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target) {
+void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target)
+{
     using namespace CodeStorage;
 #if SE_EARLY_VARS_DESTRUCTION
     if (headingToAbort(insn.targets[target]))
@@ -928,7 +953,8 @@ void execMemsetCore(
     }
 }
 
-inline void wipeAlignment(IR::Range &rng) {
+inline void wipeAlignment(IR::Range &rng)
+{
     CL_BREAK_IF(isAligned(rng));
     rng.alignment = IR::Int1;
 }
@@ -1078,7 +1104,8 @@ void executeMemmove(
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
-void SymExecCore::varInit(TValId at) {
+void SymExecCore::varInit(TValId at)
+{
     if (ep_.trackUninit && VT_ON_STACK == sh_.valTarget(at)) {
         // uninitialized stack variable
         const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
@@ -1090,7 +1117,8 @@ void SymExecCore::varInit(TValId at) {
     SymProc::varInit(at);
 }
 
-void SymExecCore::execFree(TValId val) {
+void SymExecCore::execFree(TValId val)
+{
     if (VAL_NULL == val) {
         CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
         return;
@@ -1222,7 +1250,8 @@ malloc/calloc is implementation-defined");
     dst.insert(sh_);
 }
 
-bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code) {
+bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code)
+{
     memset(pTraits, 0, sizeof *pTraits);
 
     switch (code) {
@@ -1528,7 +1557,8 @@ bool spliceOutAbstractPath(
     return false;
 }
 
-bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2) {
+bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2)
+{
     SymHeap &sh = proc.sh();
     const struct cl_loc *loc = proc.lw();
 
@@ -1803,7 +1833,8 @@ TValId handleIntegralOp(
     return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
-TValId handleBitNot(SymHeapCore &sh, const TValId val) {
+TValId handleBitNot(SymHeapCore &sh, const TValId val)
+{
     // check whether the value is an integral constant
     IR::TInt num;
     if (!numFromVal(&num, sh, val))
@@ -1835,7 +1866,8 @@ TValId handleIntegralOp(
     }
 }
 
-bool isAnyIntValue(const SymHeapCore &sh, const TValId val) {
+bool isAnyIntValue(const SymHeapCore &sh, const TValId val)
+{
     const TValId root = sh.valRoot(val);
     switch (root) {
         case VAL_NULL:
@@ -2063,7 +2095,8 @@ handle_int:
 };
 
 template <int ARITY>
-void SymExecCore::execOp(const CodeStorage::Insn &insn) {
+void SymExecCore::execOp(const CodeStorage::Insn &insn)
+{
     // resolve lhs
     ObjHandle lhs;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
@@ -2116,7 +2149,8 @@ already_alive:
     this->objSetValue(lhs, valResult);
 }
 
-void SymExecCore::handleLabel(const CodeStorage::Insn &insn) {
+void SymExecCore::handleLabel(const CodeStorage::Insn &insn)
+{
     const struct cl_operand &op = insn.operands[/* name */ 0];
     if (CL_OPERAND_VOID == op.code)
         // anonymous label
@@ -2261,7 +2295,8 @@ bool SymExecCore::concretizeLoop(
     return true;
 }
 
-bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn) {
+bool SymExecCore::exec(SymState &dst, const CodeStorage::Insn &insn)
+{
     TOpIdxList derefs;
 
     const cl_insn_e code = insn.code;

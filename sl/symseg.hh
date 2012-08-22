@@ -52,7 +52,8 @@ bool haveSeg(
 bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr);
 
 /// return 'next' pointer in the given segment (given by root)
-inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TValId seg) {
+inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TValId seg)
+{
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
@@ -62,7 +63,8 @@ inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TValId seg) {
 }
 
 /// return 'prev' pointer in the given segment (given by root)
-inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg) {
+inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg)
+{
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
@@ -72,7 +74,8 @@ inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg) {
 }
 
 /// return the value of 'next' in the given segment (given by root)
-inline TValId nextValFromSeg(const SymHeap &sh, TValId seg) {
+inline TValId nextValFromSeg(const SymHeap &sh, TValId seg)
+{
     if (OK_OBJ_OR_NULL == sh.valTargetKind(seg))
         return VAL_NULL;
 
@@ -81,7 +84,8 @@ inline TValId nextValFromSeg(const SymHeap &sh, TValId seg) {
 }
 
 /// return DLS peer object of the given DLS
-inline TValId dlSegPeer(const SymHeap &sh, TValId dls) {
+inline TValId dlSegPeer(const SymHeap &sh, TValId dls)
+{
     CL_BREAK_IF(sh.valOffset(dls));
     CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
     const BindingOff &off = sh.segBinding(dls);
@@ -90,7 +94,8 @@ inline TValId dlSegPeer(const SymHeap &sh, TValId dls) {
 }
 
 /// return DLS peer object in case of DLS, the given value otherwise
-inline TValId segPeer(const SymHeap &sh, TValId seg) {
+inline TValId segPeer(const SymHeap &sh, TValId seg)
+{
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(!isAbstract(sh.valTarget(seg)));
     return (OK_DLS == sh.valTargetKind(seg))
@@ -99,7 +104,8 @@ inline TValId segPeer(const SymHeap &sh, TValId seg) {
 }
 
 /// return address of segment's head (useful mainly for Linux lists)
-inline TValId segHeadAt(const SymHeap &sh, TValId seg) {
+inline TValId segHeadAt(const SymHeap &sh, TValId seg)
+{
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
 
@@ -108,7 +114,8 @@ inline TValId segHeadAt(const SymHeap &sh, TValId seg) {
 }
 
 /// we do NOT require root to be a segment
-inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext) {
+inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext)
+{
     CL_BREAK_IF(sh.valOffset(at));
     if (OK_DLS == sh.valTargetKind(at))
         // jump to peer in case of DLS
@@ -118,7 +125,8 @@ inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext) {
 }
 
 /// we DO require the root to be an abstract object
-inline TValId segNextRootObj(SymHeap &sh, TValId root) {
+inline TValId segNextRootObj(SymHeap &sh, TValId root)
+{
     CL_BREAK_IF(sh.valOffset(root));
 
     if (OK_OBJ_OR_NULL == sh.valTargetKind(root))
@@ -133,7 +141,8 @@ inline TValId segNextRootObj(SymHeap &sh, TValId root) {
 }
 
 /// true if the given root is a DLS with bf.prev < bf.next
-inline bool isDlSegPeer(const SymHeap &sh, const TValId root) {
+inline bool isDlSegPeer(const SymHeap &sh, const TValId root)
+{
     CL_BREAK_IF(sh.valOffset(root));
 
     if (OK_DLS != sh.valTargetKind(root))
@@ -144,7 +153,8 @@ inline bool isDlSegPeer(const SymHeap &sh, const TValId root) {
     return (bf.prev < bf.next);
 }
 
-inline TMinLen objMinLength(const SymHeap &sh, TValId root) {
+inline TMinLen objMinLength(const SymHeap &sh, TValId root)
+{
     CL_BREAK_IF(sh.valOffset(root));
 
     const EValueTarget code = sh.valTarget(root);
@@ -176,7 +186,8 @@ inline void segIncreaseMinLength(SymHeap &sh, const TValId seg, TMinLen len)
 /// we know (v1 != v2), update related segments in the given heap accordingly!
 bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2);
 
-inline bool objWithBinding(const SymHeap &sh, const TValId root) {
+inline bool objWithBinding(const SymHeap &sh, const TValId root)
+{
     CL_BREAK_IF(sh.valOffset(root));
 
     const EValueTarget code = sh.valTarget(root);

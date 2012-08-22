@@ -115,7 +115,8 @@ class PerFncCache {
         }
 };
 
-int PerFncCache::lookupCore(const SymHeap &sh) {
+int PerFncCache::lookupCore(const SymHeap &sh)
+{
 #if 1 < SE_ENABLE_CALL_CACHE
 #if SE_STATE_ON_THE_FLY_ORDERING
 #error "SE_STATE_ON_THE_FLY_ORDERING is incompatible with join-based call cache"
@@ -248,15 +249,18 @@ SymCallCtx::SymCallCtx(SymCallCache::Private *cd):
 {
 }
 
-SymCallCtx::~SymCallCtx() {
+SymCallCtx::~SymCallCtx()
+{
     delete d;
 }
 
-bool SymCallCtx::needExec() const {
+bool SymCallCtx::needExec() const
+{
     return !d->computed;
 }
 
-bool SymCallCtx::inUse() const {
+bool SymCallCtx::inUse() const
+{
     if (!d->flushed)
         return true;
 
@@ -264,15 +268,18 @@ bool SymCallCtx::inUse() const {
     return false;
 }
 
-const SymHeap& SymCallCtx::entry() const {
+const SymHeap& SymCallCtx::entry() const
+{
     return d->entry;
 }
 
-SymState& SymCallCtx::rawResults() {
+SymState& SymCallCtx::rawResults()
+{
     return d->rawResults;
 }
 
-void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
+void SymCallCtx::Private::assignReturnValue(SymHeap &sh)
+{
     const cl_operand &op = *this->dst;
     if (CL_OPERAND_VOID == op.code)
         // we're done for a function returning void
@@ -300,7 +307,8 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh) {
     proc.objSetValue(objDst, val);
 }
 
-void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
+void SymCallCtx::Private::destroyStackFrame(SymHeap &sh)
+{
     SymProc proc(sh, &this->cd->bt);
 
     // We need to look for junk since there can be a function returning an
@@ -334,7 +342,8 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh) {
     }
 }
 
-bool isGlVar(EValueTarget code) {
+bool isGlVar(EValueTarget code)
+{
     return (VT_STATIC == code);
 }
 
@@ -392,7 +401,8 @@ void joinHeapsWithCare(
     LDP_PLOT(symcall, sh);
 }
 
-void SymCallCtx::flushCallResults(SymState &dst) {
+void SymCallCtx::flushCallResults(SymState &dst)
+{
     using namespace Trace;
 
     // are we really ready for this?
@@ -451,7 +461,8 @@ void SymCallCtx::flushCallResults(SymState &dst) {
     d->cd->bt.popCall();
 }
 
-void SymCallCtx::invalidate() {
+void SymCallCtx::invalidate()
+{
 #if SE_ENABLE_CALL_CACHE
 #   if SE_CALL_CACHE_MISS_THR
     typedef SymCallCache::Private::TCache TCache;
@@ -489,15 +500,18 @@ SymCallCache::SymCallCache(TStorRef stor, bool ptrace):
 {
 }
 
-SymCallCache::~SymCallCache() {
+SymCallCache::~SymCallCache()
+{
     delete d;
 }
 
-SymBackTrace& SymCallCache::bt() {
+SymBackTrace& SymCallCache::bt()
+{
     return d->bt;
 }
 
-void pullGlVar(SymHeap &result, SymHeap origin, const CVar &cv) {
+void pullGlVar(SymHeap &result, SymHeap origin, const CVar &cv)
+{
     // do not try to combine things, it causes problems
     CL_BREAK_IF(!areEqual(result, SymHeap(origin.stor(), origin.traceNode())));
 
@@ -513,7 +527,8 @@ void pullGlVar(SymHeap &result, SymHeap origin, const CVar &cv) {
     result.swap(origin);
 }
 
-void pushGlVar(SymHeap &dst, const SymHeap &glSubHeap, const CVar &cv) {
+void pushGlVar(SymHeap &dst, const SymHeap &glSubHeap, const CVar &cv)
+{
     // make sure the gl var is alive in 'glSubHeap'
     CL_BREAK_IF(!isVarAlive(const_cast<SymHeap &>(glSubHeap), cv));
 
@@ -531,7 +546,8 @@ void pushGlVar(SymHeap &dst, const SymHeap &glSubHeap, const CVar &cv) {
     joinHeapsByCVars(&dst, &glSubHeap);
 }
 
-void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv) {
+void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv)
+{
     const int cnt = this->ctxStack.size();
     if (!cnt) {
         // empty ctx stack --> no heap to import the var from
@@ -690,7 +706,8 @@ void setCallArgs(
     srcProc.killInsn(insn);
 }
 
-SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc) {
+SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
+{
     // cache lookup
     const int uid = uidOf(fnc);
     PerFncCache &pfc = this->cache[uid];

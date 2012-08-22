@@ -61,7 +61,8 @@ assignInvalidIfNotFound(
 
 static bool bypassSelfChecks;
 
-void enableProtectedMode(bool enable) {
+void enableProtectedMode(bool enable)
+{
     ::bypassSelfChecks = !enable;
 }
 
@@ -172,7 +173,8 @@ class CVarMap {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of CustomValue
-CustomValue::~CustomValue() {
+CustomValue::~CustomValue()
+{
     if (CV_STRING != code_)
         return;
 
@@ -188,7 +190,8 @@ CustomValue::CustomValue(const CustomValue &ref):
         data_.str = new std::string(*ref.data_.str);
 }
 
-CustomValue& CustomValue::operator=(const CustomValue &ref) {
+CustomValue& CustomValue::operator=(const CustomValue &ref)
+{
     if (&ref == this)
         return *this;
 
@@ -206,34 +209,40 @@ CustomValue& CustomValue::operator=(const CustomValue &ref) {
     return *this;
 }
 
-int CustomValue::uid() const {
+int CustomValue::uid() const
+{
     CL_BREAK_IF(CV_FNC != code_);
     return data_.uid;
 }
 
-IR::Range& CustomValue::rng() {
+IR::Range& CustomValue::rng()
+{
     CL_BREAK_IF(CV_INT_RANGE != code_);
     return data_.rng;
 }
 
-double CustomValue::fpn() const {
+double CustomValue::fpn() const
+{
     CL_BREAK_IF(CV_REAL != code_);
     return data_.fpn;
 }
 
-const std::string& CustomValue::str() const {
+const std::string& CustomValue::str() const
+{
     CL_BREAK_IF(CV_STRING != code_);
     CL_BREAK_IF(!data_.str);
     return *data_.str;
 }
 
 /// eliminates the warning 'comparing floating point with == or != is unsafe'
-inline bool areEqual(const double a, const double b) {
+inline bool areEqual(const double a, const double b)
+{
     return (a <= b)
         && (b <= a);
 }
 
-bool operator==(const CustomValue &a, const CustomValue &b) {
+bool operator==(const CustomValue &a, const CustomValue &b)
+{
     const ECustomValue code = a.code_;
     if (b.code_ != code)
         return false;
@@ -305,7 +314,8 @@ inline void arenaLookForExactMatch(
 }
 
 // create a right-open interval
-inline TMemChunk createChunk(const TOffset off, const TObjType clt) {
+inline TMemChunk createChunk(const TOffset off, const TObjType clt)
+{
     CL_BREAK_IF(!clt || clt->code == CL_TYPE_VOID);
     return TMemChunk(off, off + clt->size);
 }
@@ -320,7 +330,8 @@ enum EBlockKind {
 
 typedef std::map<TObjId, EBlockKind>                    TLiveObjs;
 
-inline EBlockKind bkFromClt(const TObjType clt) {
+inline EBlockKind bkFromClt(const TObjType clt)
+{
     if (isComposite(clt, /* includingArray */ false))
         return BK_COMPOSITE;
 
@@ -638,18 +649,21 @@ struct SymHeapCore::Private {
         Private& operator=(const Private &);
 };
 
-inline TValId SymHeapCore::Private::assignId(BaseValue *valData) {
+inline TValId SymHeapCore::Private::assignId(BaseValue *valData)
+{
     const TValId val = this->ents.assignId<TValId>(valData);
     valData->valRoot = val;
     valData->anchor  = val;
     return val;
 }
 
-inline TObjId SymHeapCore::Private::assignId(BlockEntity *hbData) {
+inline TObjId SymHeapCore::Private::assignId(BlockEntity *hbData)
+{
     return this->ents.assignId<TObjId>(hbData);
 }
 
-bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
+bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val)
+{
     if (val <= 0)
         // we do not track uses of special values
         return /* wasPtr */ false;
@@ -685,7 +699,8 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TObjId obj, TValId val) {
     return /* wasPtr */ true;
 }
 
-void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
+void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val)
+{
     if (val <= 0)
         return;
 
@@ -706,7 +721,8 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
 }
 
 // runs only in debug build
-bool SymHeapCore::Private::chkValueDeps(const TValId val) {
+bool SymHeapCore::Private::chkValueDeps(const TValId val)
+{
     const BaseValue *valData;
     this->ents.getEntRO(&valData, val);
     if (VT_CUSTOM != valData->code)
@@ -930,12 +946,14 @@ bool isCoveredByBlock(
     return (end1 <= end2);
 }
 
-inline bool isChar(const TObjType clt) {
+inline bool isChar(const TObjType clt)
+{
     return (CL_TYPE_INT == clt->code)
         && (1 == clt->size);
 }
 
-inline bool isString(const TObjType clt) {
+inline bool isString(const TObjType clt)
+{
     return (CL_TYPE_ARRAY == clt->code)
         && isChar(targetTypeOfArray(clt));
 }
@@ -1189,7 +1207,8 @@ TObjId SymHeapCore::Private::objCreate(
     return obj;
 }
 
-void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach) {
+void SymHeapCore::Private::objDestroy(TObjId obj, bool removeVal, bool detach)
+{
     BlockEntity *blData;
     this->ents.getEntRW(&blData, obj);
 
@@ -1261,7 +1280,8 @@ TValId SymHeapCore::Private::valCreate(
     return val;
 }
 
-TValId SymHeapCore::Private::valDup(TValId val) {
+TValId SymHeapCore::Private::valDup(TValId val)
+{
     if (val <= 0)
         // do not clone special values
         return val;
@@ -1280,7 +1300,8 @@ TValId SymHeapCore::Private::valDup(TValId val) {
 }
 
 // FIXME: copy/pasted in symutil.hh
-bool SymHeapCore::Private::valsEqual(TValId v1, TValId v2) {
+bool SymHeapCore::Private::valsEqual(TValId v1, TValId v2)
+{
     if (v1 == v2)
         // matches trivially
         return true;
@@ -1411,7 +1432,8 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     RefCntLib<RCO_NON_VIRT>::enter(this->neqDb);
 }
 
-SymHeapCore::Private::~Private() {
+SymHeapCore::Private::~Private()
+{
     RefCntLib<RCO_NON_VIRT>::leave(this->liveRoots);
     RefCntLib<RCO_NON_VIRT>::leave(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cValueMap);
@@ -1419,7 +1441,8 @@ SymHeapCore::Private::~Private() {
     RefCntLib<RCO_NON_VIRT>::leave(this->neqDb);
 }
 
-TValId SymHeapCore::Private::objInit(TObjId obj) {
+TValId SymHeapCore::Private::objInit(TObjId obj)
+{
     HeapObject *objData;
     this->ents.getEntRW(&objData, obj);
     CL_BREAK_IF(!objData->extRefCnt);
@@ -1473,7 +1496,8 @@ TValId SymHeapCore::Private::objInit(TObjId obj) {
     return val;
 }
 
-TValId SymHeapCore::valueOf(TObjId obj) {
+TValId SymHeapCore::valueOf(TObjId obj)
+{
     // handle special cases first
     switch (obj) {
         case OBJ_UNKNOWN:
@@ -1518,7 +1542,8 @@ TValId SymHeapCore::valueOf(TObjId obj) {
     return d->objInit(obj);
 }
 
-void SymHeapCore::usedBy(ObjList &dst, TValId val, bool liveOnly) const {
+void SymHeapCore::usedBy(ObjList &dst, TValId val, bool liveOnly) const
+{
     if (VAL_NULL == val)
         // we do not track uses of special values
         return;
@@ -1550,7 +1575,8 @@ void SymHeapCore::usedBy(ObjList &dst, TValId val, bool liveOnly) const {
     }
 }
 
-unsigned SymHeapCore::usedByCount(TValId val) const {
+unsigned SymHeapCore::usedByCount(TValId val) const
+{
     if (VAL_NULL == val)
         return 0;
 
@@ -1559,7 +1585,8 @@ unsigned SymHeapCore::usedByCount(TValId val) const {
     return valData->usedBy.size();
 }
 
-void SymHeapCore::pointedBy(ObjList &dst, TValId root) const {
+void SymHeapCore::pointedBy(ObjList &dst, TValId root) const
+{
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     CL_BREAK_IF(rootData->offRoot);
@@ -1570,17 +1597,20 @@ void SymHeapCore::pointedBy(ObjList &dst, TValId root) const {
         dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
 }
 
-unsigned SymHeapCore::pointedByCount(TValId root) const {
+unsigned SymHeapCore::pointedByCount(TValId root) const
+{
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     return rootData->usedByGl.size();
 }
 
-unsigned SymHeapCore::lastId() const {
+unsigned SymHeapCore::lastId() const
+{
     return d->ents.lastId<unsigned>();
 }
 
-TValId SymHeapCore::valClone(TValId val) {
+TValId SymHeapCore::valClone(TValId val)
+{
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
 
@@ -1663,7 +1693,8 @@ TObjId SymHeapCore::Private::copySingleLiveBlock(
     return dst;
 }
 
-TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
+TValId SymHeapCore::Private::dupRoot(TValId rootAt)
+{
     CL_DEBUG("SymHeapCore::Private::dupRoot() is taking place...");
     const RootValue *rootDataSrc;
     this->ents.getEntRO(&rootDataSrc, rootAt);
@@ -1693,7 +1724,8 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt) {
     return imageAt;
 }
 
-void SymHeapCore::gatherLivePointers(ObjList &dst, TValId root) const {
+void SymHeapCore::gatherLivePointers(ObjList &dst, TValId root) const
+{
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
 
@@ -1707,7 +1739,8 @@ void SymHeapCore::gatherLivePointers(ObjList &dst, TValId root) const {
     }
 }
 
-void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
+void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const
+{
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
@@ -1728,7 +1761,8 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const {
     }
 }
 
-void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const {
+void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const
+{
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
 
@@ -1849,12 +1883,14 @@ SymHeapCore::SymHeapCore(const SymHeapCore &ref):
     CL_BREAK_IF(!&stor_);
 }
 
-SymHeapCore::~SymHeapCore() {
+SymHeapCore::~SymHeapCore()
+{
     delete d;
 }
 
 // cppcheck-suppress operatorEqToSelf
-SymHeapCore& SymHeapCore::operator=(const SymHeapCore &ref) {
+SymHeapCore& SymHeapCore::operator=(const SymHeapCore &ref)
+{
     CL_BREAK_IF(&ref == this);
     CL_BREAK_IF(&stor_ != &ref.stor_);
 
@@ -1863,20 +1899,24 @@ SymHeapCore& SymHeapCore::operator=(const SymHeapCore &ref) {
     return *this;
 }
 
-void SymHeapCore::swap(SymHeapCore &ref) {
+void SymHeapCore::swap(SymHeapCore &ref)
+{
     CL_BREAK_IF(&stor_ != &ref.stor_);
     swapValues(this->d, ref.d);
 }
 
-Trace::Node* SymHeapCore::traceNode() const {
+Trace::Node* SymHeapCore::traceNode() const
+{
     return d->traceHandle.node();
 }
 
-void SymHeapCore::traceUpdate(Trace::Node *node) {
+void SymHeapCore::traceUpdate(Trace::Node *node)
+{
     d->traceHandle.reset(node);
 }
 
-void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs) {
+void SymHeapCore::objSetValue(TObjId obj, TValId val, TValSet *killedPtrs)
+{
     // we allow to set values of atomic types only
     const HeapObject *objData;
     d->ents.getEntRO(&objData, obj);
@@ -2106,7 +2146,8 @@ bool SymHeapCore::Private::findZeroAtOff(
     return true;
 }
 
-TObjType SymHeapCore::objType(TObjId obj) const {
+TObjType SymHeapCore::objType(TObjId obj) const
+{
     if (obj < 0)
         return 0;
 
@@ -2115,7 +2156,8 @@ TObjType SymHeapCore::objType(TObjId obj) const {
     return objData->clt;
 }
 
-TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
+TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift)
+{
     CL_BREAK_IF(!this->chkValueDeps(ref));
 
     const InternalCustomValue *customDataRef;
@@ -2142,7 +2184,8 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     return val;
 }
 
-TValId SymHeapCore::Private::wrapIntVal(const IR::TInt num) {
+TValId SymHeapCore::Private::wrapIntVal(const IR::TInt num)
+{
     if (IR::Int0 == num)
         return VAL_NULL;
 
@@ -2165,7 +2208,8 @@ TValId SymHeapCore::Private::wrapIntVal(const IR::TInt num) {
     return valInt;
 }
 
-void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData) {
+void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData)
+{
     CL_DEBUG("replaceRngByInt() is taking place...");
 
     // we already expect a scalar at this point
@@ -2181,7 +2225,8 @@ void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData) {
         this->setValueOf(obj, replaceBy);
 }
 
-void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
+void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win)
+{
     CL_BREAK_IF(!this->chkValueDeps(val));
 
     const InternalCustomValue *valData;
@@ -2229,7 +2274,8 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
     CL_BREAK_IF(!this->chkValueDeps(val));
 }
 
-TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
+TValId SymHeapCore::valByOffset(TValId at, TOffset off)
+{
     if (!off || at < 0)
         return at;
 
@@ -2280,7 +2326,8 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
     return val;
 }
 
-TValId SymHeapCore::valByRange(TValId at, IR::Range range) {
+TValId SymHeapCore::valByRange(TValId at, IR::Range range)
+{
     if (isSingular(range)) {
         CL_DEBUG("valByRange() got a singular range, passing to valByOffset()");
         return this->valByOffset(at, range.lo);
@@ -2319,7 +2366,8 @@ TValId SymHeapCore::valByRange(TValId at, IR::Range range) {
     return val;
 }
 
-TValId SymHeapCore::valShift(TValId valToShift, TValId shiftBy) {
+TValId SymHeapCore::valShift(TValId valToShift, TValId shiftBy)
+{
     if (valToShift < 0)
         // do not shift special values
         return valToShift;
@@ -2384,7 +2432,8 @@ TValId SymHeapCore::valShift(TValId valToShift, TValId shiftBy) {
     return valResult;
 }
 
-void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {
+void SymHeapCore::valRestrictRange(TValId val, IR::Range win)
+{
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
 
@@ -2448,7 +2497,8 @@ void SymHeapCore::valRestrictRange(TValId val, IR::Range win) {
     }
 }
 
-void SymHeapCore::Private::bindValues(TValId v1, TValId v2, TValId valSum) {
+void SymHeapCore::Private::bindValues(TValId v1, TValId v2, TValId valSum)
+{
     const BaseValue *valData1, *valData2;
     this->ents.getEntRO(&valData1, v1);
     this->ents.getEntRO(&valData2, v2);
@@ -2467,7 +2517,8 @@ void SymHeapCore::Private::bindValues(TValId v1, TValId v2, TValId valSum) {
     this->coinDb->add(anchor1, anchor2, valSum);
 }
 
-TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
+TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2)
+{
     const TValId root1 = this->valRoot(v1);
     const TValId root2 = this->valRoot(v2);
     if (root1 != root2)
@@ -2490,7 +2541,8 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2) {
     return valDiff;
 }
 
-EValueOrigin SymHeapCore::valOrigin(TValId val) const {
+EValueOrigin SymHeapCore::valOrigin(TValId val) const
+{
     switch (val) {
         case VAL_INVALID:
             return VO_INVALID;
@@ -2508,7 +2560,8 @@ EValueOrigin SymHeapCore::valOrigin(TValId val) const {
     return valData->origin;
 }
 
-EValueTarget SymHeapCore::valTarget(TValId val) const {
+EValueTarget SymHeapCore::valTarget(TValId val) const
+{
     if (val <= 0)
         return VT_INVALID;
 
@@ -2528,7 +2581,8 @@ EValueTarget SymHeapCore::valTarget(TValId val) const {
     return code;
 }
 
-bool isUninitialized(EValueOrigin code) {
+bool isUninitialized(EValueOrigin code)
+{
     switch (code) {
         case VO_HEAP:
         case VO_STACK:
@@ -2539,11 +2593,13 @@ bool isUninitialized(EValueOrigin code) {
     }
 }
 
-bool isAbstract(EValueTarget code) {
+bool isAbstract(EValueTarget code)
+{
     return (VT_ABSTRACT == code);
 }
 
-bool isKnownObject(EValueTarget code) {
+bool isKnownObject(EValueTarget code)
+{
     switch (code) {
         case VT_STATIC:
         case VT_ON_HEAP:
@@ -2555,7 +2611,8 @@ bool isKnownObject(EValueTarget code) {
     }
 }
 
-bool isGone(EValueTarget code) {
+bool isGone(EValueTarget code)
+{
     switch (code) {
         case VT_DELETED:
         case VT_LOST:
@@ -2566,7 +2623,8 @@ bool isGone(EValueTarget code) {
     }
 }
 
-bool isOnHeap(EValueTarget code) {
+bool isOnHeap(EValueTarget code)
+{
     switch (code) {
         case VT_ON_HEAP:
         case VT_ABSTRACT:
@@ -2577,7 +2635,8 @@ bool isOnHeap(EValueTarget code) {
     }
 }
 
-bool isProgramVar(EValueTarget code) {
+bool isProgramVar(EValueTarget code)
+{
     switch (code) {
         case VT_STATIC:
         case VT_ON_STACK:
@@ -2588,17 +2647,20 @@ bool isProgramVar(EValueTarget code) {
     }
 }
 
-bool isPossibleToDeref(EValueTarget code) {
+bool isPossibleToDeref(EValueTarget code)
+{
     return isOnHeap(code)
         || isProgramVar(code);
 }
 
-bool isAnyDataArea(EValueTarget code) {
+bool isAnyDataArea(EValueTarget code)
+{
     return isPossibleToDeref(code)
         || (VT_RANGE == code);
 }
 
-TValId SymHeapCore::valRoot(TValId val) const {
+TValId SymHeapCore::valRoot(TValId val) const
+{
     if (val <= 0)
         return val;
 
@@ -2607,7 +2669,8 @@ TValId SymHeapCore::valRoot(TValId val) const {
     return valData->valRoot;
 }
 
-TOffset SymHeapCore::valOffset(TValId val) const {
+TOffset SymHeapCore::valOffset(TValId val) const
+{
     if (val <= 0)
         return 0;
 
@@ -2629,7 +2692,8 @@ TOffset SymHeapCore::valOffset(TValId val) const {
     }
 }
 
-IR::Range SymHeapCore::valOffsetRange(TValId val) const {
+IR::Range SymHeapCore::valOffsetRange(TValId val) const
+{
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
 
@@ -2664,7 +2728,8 @@ IR::Range SymHeapCore::valOffsetRange(TValId val) const {
     return range;
 }
 
-void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
+void SymHeapCore::valReplace(TValId val, TValId replaceBy)
+{
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
 
@@ -2686,7 +2751,8 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     }
 }
 
-void SymHeapCore::addNeq(TValId v1, TValId v2) {
+void SymHeapCore::addNeq(TValId v1, TValId v2)
+{
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
 
     const EValueTarget code1 = this->valTarget(v1);
@@ -2700,14 +2766,16 @@ void SymHeapCore::addNeq(TValId v1, TValId v2) {
     d->neqDb->add(v1, v2);
 }
 
-void SymHeapCore::delNeq(TValId v1, TValId v2) {
+void SymHeapCore::delNeq(TValId v1, TValId v2)
+{
     CL_BREAK_IF(!this->chkNeq(v1, v2));
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
     d->neqDb->del(v1, v2);
 }
 
-void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {
+void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const
+{
     d->neqDb->gatherRelatedValues(dst, val);
     d->coinDb->gatherRelatedValues(dst, val);
 }
@@ -2808,7 +2876,8 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
     return true;
 }
 
-TValId SymHeapCore::placedAt(TObjId obj) {
+TValId SymHeapCore::placedAt(TObjId obj)
+{
     if (obj < 0)
         return VAL_INVALID;
 
@@ -2821,7 +2890,8 @@ TValId SymHeapCore::placedAt(TObjId obj) {
     return this->valByOffset(root, objData->off);
 }
 
-TObjId SymHeapCore::ptrAt(TValId at) {
+TObjId SymHeapCore::ptrAt(TValId at)
+{
     if (at <= 0)
         return OBJ_INVALID;
 
@@ -2884,7 +2954,8 @@ TObjId SymHeapCore::ptrAt(TValId at) {
 }
 
 // TODO: simplify the code
-TObjId SymHeapCore::objAt(TValId at, TObjType clt) {
+TObjId SymHeapCore::objAt(TValId at, TObjType clt)
+{
     if (at <= 0)
         return OBJ_INVALID;
 
@@ -2980,14 +3051,16 @@ update_best:
     return d->objCreate(root, off, clt);
 }
 
-void SymHeapCore::objEnter(TObjId obj) {
+void SymHeapCore::objEnter(TObjId obj)
+{
     HeapObject *objData;
     d->ents.getEntRW(&objData, obj);
     CL_BREAK_IF(objData->extRefCnt < 0);
     ++(objData->extRefCnt);
 }
 
-void SymHeapCore::objLeave(TObjId obj) {
+void SymHeapCore::objLeave(TObjId obj)
+{
     HeapObject *objData;
     d->ents.getEntRW(&objData, obj);
     CL_BREAK_IF(objData->extRefCnt < 1);
@@ -3017,13 +3090,15 @@ void SymHeapCore::objLeave(TObjId obj) {
     // TODO: pack the representation if possible
 }
 
-CVar SymHeapCore::cVarByRoot(TValId valRoot) const {
+CVar SymHeapCore::cVarByRoot(TValId valRoot) const
+{
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, valRoot);
     return rootData->cVar;
 }
 
-TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
+TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded)
+{
     TValId addr = d->cVarMap->find(cv);
     if (0 < addr)
         return addr;
@@ -3068,7 +3143,8 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded) {
     return addr;
 }
 
-static bool dummyFilter(EValueTarget) {
+static bool dummyFilter(EValueTarget)
+{
     return true;
 }
 
@@ -3084,7 +3160,8 @@ void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
             dst.push_back(at);
 }
 
-TObjId SymHeapCore::valGetComposite(TValId val) const {
+TObjId SymHeapCore::valGetComposite(TValId val) const
+{
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     CL_BREAK_IF(VT_COMPOSITE != valData->code);
@@ -3093,7 +3170,8 @@ TObjId SymHeapCore::valGetComposite(TValId val) const {
     return compData->compObj;
 }
 
-TValId SymHeapCore::heapAlloc(const TSizeRange &size) {
+TValId SymHeapCore::heapAlloc(const TSizeRange &size)
+{
     CL_BREAK_IF(size.lo <= IR::Int0);
 
     // assign an address
@@ -3111,7 +3189,8 @@ TValId SymHeapCore::heapAlloc(const TSizeRange &size) {
     return addr;
 }
 
-void SymHeapCore::valDestroyTarget(TValId val) {
+void SymHeapCore::valDestroyTarget(TValId val)
+{
     if (VAL_NULL == val) {
         CL_BREAK_IF("SymHeapCore::valDestroyTarget() got VAL_NULL");
         return;
@@ -3127,7 +3206,8 @@ void SymHeapCore::valDestroyTarget(TValId val) {
     d->destroyRoot(val);
 }
 
-TSizeRange SymHeapCore::valSizeOfTarget(TValId val) const {
+TSizeRange SymHeapCore::valSizeOfTarget(TValId val) const
+{
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     if (!isPossibleToDeref(valData->code))
@@ -3152,7 +3232,8 @@ TSizeRange SymHeapCore::valSizeOfTarget(TValId val) const {
     return size;
 }
 
-TSizeRange SymHeapCore::valSizeOfString(TValId addr) const {
+TSizeRange SymHeapCore::valSizeOfString(TValId addr) const
+{
     const BaseValue *valData;
     d->ents.getEntRO(&valData, addr);
 
@@ -3190,7 +3271,8 @@ TSizeRange SymHeapCore::valSizeOfString(TValId addr) const {
     return rng;
 }
 
-void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
+void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt)
+{
     RootValue *rootData;
     d->ents.getEntRW(&rootData, root);
 
@@ -3207,14 +3289,16 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt) {
     rootData->lastKnownClt = clt;
 }
 
-TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const {
+TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const
+{
     CL_BREAK_IF(this->valOffset(root));
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
     return rootData->lastKnownClt;
 }
 
-void SymHeapCore::Private::destroyRoot(TValId root) {
+void SymHeapCore::Private::destroyRoot(TValId root)
+{
     RootValue *rootData;
     this->ents.getEntRW(&rootData, root);
 
@@ -3273,7 +3357,8 @@ void SymHeapCore::Private::destroyRoot(TValId root) {
     rootData->arena.clear();
 }
 
-TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
+TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin)
+{
     switch (code) {
         case VT_UNKNOWN:
             // this is the most common case
@@ -3293,7 +3378,8 @@ TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin) {
     return d->valCreate(code, origin);
 }
 
-TValId SymHeapCore::valWrapCustom(CustomValue cVal) {
+TValId SymHeapCore::valWrapCustom(CustomValue cVal)
+{
     const ECustomValue code = cVal.code();
 
     if (CV_INT_RANGE == code) {
@@ -3347,7 +3433,8 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
     return cv;
 }
 
-TProtoLevel SymHeapCore::valTargetProtoLevel(TValId val) const {
+TProtoLevel SymHeapCore::valTargetProtoLevel(TValId val) const
+{
     if (val <= 0)
         // not a prototype for sure
         return 0;
@@ -3365,7 +3452,8 @@ TProtoLevel SymHeapCore::valTargetProtoLevel(TValId val) const {
     return rootData->protoLevel;
 }
 
-void SymHeapCore::valTargetSetProtoLevel(TValId root, TProtoLevel level) {
+void SymHeapCore::valTargetSetProtoLevel(TValId root, TProtoLevel level)
+{
     CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
     CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(level < 0);
@@ -3375,7 +3463,8 @@ void SymHeapCore::valTargetSetProtoLevel(TValId root, TProtoLevel level) {
     rootData->protoLevel = level;
 }
 
-bool SymHeapCore::chkNeq(TValId v1, TValId v2) const {
+bool SymHeapCore::chkNeq(TValId v1, TValId v2) const
+{
     return d->neqDb->chk(v1, v2);
 }
 
@@ -3419,11 +3508,13 @@ SymHeap::SymHeap(const SymHeap &ref):
     RefCntLib<RCO_NON_VIRT>::enter(d);
 }
 
-SymHeap::~SymHeap() {
+SymHeap::~SymHeap()
+{
     RefCntLib<RCO_NON_VIRT>::leave(d);
 }
 
-SymHeap& SymHeap::operator=(const SymHeap &ref) {
+SymHeap& SymHeap::operator=(const SymHeap &ref)
+{
     SymHeapCore::operator=(ref);
 
     RefCntLib<RCO_NON_VIRT>::leave(d);
@@ -3434,7 +3525,8 @@ SymHeap& SymHeap::operator=(const SymHeap &ref) {
     return *this;
 }
 
-void SymHeap::swap(SymHeapCore &baseRef) {
+void SymHeap::swap(SymHeapCore &baseRef)
+{
     // swap base
     SymHeapCore::swap(baseRef);
 
@@ -3443,7 +3535,8 @@ void SymHeap::swap(SymHeapCore &baseRef) {
     swapValues(this->d, ref.d);
 }
 
-TValId SymHeap::valClone(TValId val) {
+TValId SymHeap::valClone(TValId val)
+{
     const TValId dup = SymHeapCore::valClone(val);
     if (dup <= 0 || VT_RANGE == this->valTarget(val))
         return dup;
@@ -3463,7 +3556,8 @@ TValId SymHeap::valClone(TValId val) {
     return dup;
 }
 
-EObjKind SymHeap::valTargetKind(TValId val) const {
+EObjKind SymHeap::valTargetKind(TValId val) const
+{
     if (val <= 0)
         return OK_CONCRETE;
 
@@ -3475,11 +3569,13 @@ EObjKind SymHeap::valTargetKind(TValId val) const {
     return aData->kind;
 }
 
-bool SymHeap::hasAbstractTarget(TValId val) const {
+bool SymHeap::hasAbstractTarget(TValId val) const
+{
     return (OK_CONCRETE != this->valTargetKind(val));
 }
 
-const BindingOff& SymHeap::segBinding(TValId root) const {
+const BindingOff& SymHeap::segBinding(TValId root) const
+{
     CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(!this->hasAbstractTarget(root));
     CL_BREAK_IF(!d->absRoots.isValidEnt(root));
@@ -3523,7 +3619,8 @@ void SymHeap::valTargetSetAbstract(
     d->absRoots.assignId(root, aData);
 }
 
-void SymHeap::valTargetSetConcrete(TValId root) {
+void SymHeap::valTargetSetConcrete(TValId root)
+{
     CL_DEBUG("SymHeap::valTargetSetConcrete() is taking place...");
     CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
     CL_BREAK_IF(this->valOffset(root));
@@ -3536,7 +3633,8 @@ void SymHeap::valTargetSetConcrete(TValId root) {
     d->absRoots.releaseEnt(root);
 }
 
-void SymHeap::valDestroyTarget(TValId root) {
+void SymHeap::valDestroyTarget(TValId root)
+{
     SymHeapCore::valDestroyTarget(root);
     if (!d->absRoots.isValidEnt(root))
         return;
@@ -3550,7 +3648,8 @@ void SymHeap::valDestroyTarget(TValId root) {
     d->absRoots.releaseEnt(root);
 }
 
-TMinLen SymHeap::segMinLength(TValId seg) const {
+TMinLen SymHeap::segMinLength(TValId seg) const
+{
     CL_BREAK_IF(this->valOffset(seg));
     CL_BREAK_IF(!d->absRoots.isValidEnt(seg));
 
@@ -3571,7 +3670,8 @@ TMinLen SymHeap::segMinLength(TValId seg) const {
     }
 }
 
-void SymHeap::segSetMinLength(TValId seg, TMinLen len) {
+void SymHeap::segSetMinLength(TValId seg, TMinLen len)
+{
     CL_BREAK_IF(this->valOffset(seg));
     CL_BREAK_IF(!d->absRoots.isValidEnt(seg));
 

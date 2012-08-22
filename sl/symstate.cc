@@ -65,18 +65,21 @@ namespace {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymState implementation
-void SymState::clear() {
+void SymState::clear()
+{
     BOOST_FOREACH(SymHeap *sh, heaps_)
         delete sh;
 
     heaps_.clear();
 }
 
-SymState::~SymState() {
+SymState::~SymState()
+{
     this->clear();
 }
 
-SymState& SymState::operator=(const SymState &ref) {
+SymState& SymState::operator=(const SymState &ref)
+{
     // wipe the existing contents (if any)
     this->clear();
 
@@ -87,11 +90,13 @@ SymState& SymState::operator=(const SymState &ref) {
     return *this;
 }
 
-SymState::SymState(const SymState &ref) {
+SymState::SymState(const SymState &ref)
+{
     SymState::operator=(ref);
 }
 
-void SymState::insertNew(const SymHeap &sh) {
+void SymState::insertNew(const SymHeap &sh)
+{
     // clone the given heap
     SymHeap *dup = new SymHeap(sh);
 
@@ -102,7 +107,8 @@ void SymState::insertNew(const SymHeap &sh) {
     heaps_.push_back(dup);
 }
 
-bool SymState::insert(const SymHeap &sh, bool /* allowThreeWay */ ) {
+bool SymState::insert(const SymHeap &sh, bool /* allowThreeWay */ )
+{
     if (-1 != this->lookup(sh))
         return false;
 
@@ -111,7 +117,8 @@ bool SymState::insert(const SymHeap &sh, bool /* allowThreeWay */ ) {
     return true;
 }
 
-void SymState::rotateExisting(const int idxA, const int idxB) {
+void SymState::rotateExisting(const int idxA, const int idxB)
+{
     TList::iterator itA = heaps_.begin() + idxA;
     TList::iterator itB = heaps_.begin() + idxB;
     rotate(itA, itB, heaps_.end());
@@ -120,7 +127,8 @@ void SymState::rotateExisting(const int idxA, const int idxB) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapUnion implementation
-int SymHeapUnion::lookup(const SymHeap &lookFor) const {
+int SymHeapUnion::lookup(const SymHeap &lookFor) const
+{
     const int cnt = this->size();
     if (!cnt)
         // empty state --> not found
@@ -154,7 +162,8 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymStateWithJoin implementation
-void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay) {
+void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay)
+{
     for (unsigned idxOld = 0U; idxOld < this->size();) {
         if (idxNew == idxOld) {
             // do not remove the newly inserted heap based on identity with self
@@ -206,7 +215,8 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay) {
 #endif
 }
 
-bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
+bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
+{
 #if 1 < SE_JOIN_ON_LOOP_EDGES_ONLY
     if (!allowThreeWay)
         // we are asked not to check for entailment, only isomorphism
@@ -322,19 +332,23 @@ BlockScheduler::BlockScheduler(const BlockScheduler &tpl):
 {
 }
 
-BlockScheduler::~BlockScheduler() {
+BlockScheduler::~BlockScheduler()
+{
     delete d;
 }
 
-unsigned BlockScheduler::cntWaiting() const {
+unsigned BlockScheduler::cntWaiting() const
+{
     return d->todo.size();
 }
 
-const BlockScheduler::TBlockSet& BlockScheduler::todo() const {
+const BlockScheduler::TBlockSet& BlockScheduler::todo() const
+{
     return d->todo;
 }
 
-BlockScheduler::TBlockList BlockScheduler::done() const {
+BlockScheduler::TBlockList BlockScheduler::done() const
+{
     TBlockList dst;
     BOOST_FOREACH(Private::TDone::const_reference item, d->done)
         dst.push_back(/* bb */ item.first);
@@ -342,7 +356,8 @@ BlockScheduler::TBlockList BlockScheduler::done() const {
     return dst;
 }
 
-bool BlockScheduler::schedule(const TBlock bb) {
+bool BlockScheduler::schedule(const TBlock bb)
+{
     if (insertOnce(d->todo, bb)) {
 #if !SE_BLOCK_SCHEDULER_KIND
         d->sched.push(bb);
@@ -384,7 +399,8 @@ bool BlockScheduler::schedule(const TBlock bb) {
     return false;
 }
 
-bool BlockScheduler::getNext(TBlock *dst) {
+bool BlockScheduler::getNext(TBlock *dst)
+{
     if (d->todo.empty())
         return false;
 
@@ -427,7 +443,8 @@ bool BlockScheduler::getNext(TBlock *dst) {
     return true;
 }
 
-void BlockScheduler::printStats() const {
+void BlockScheduler::printStats() const
+{
     typedef std::map<unsigned /* cnt */, TBlockList> TRMap;
 
     // sort d->todo by cnt
@@ -457,7 +474,8 @@ void BlockScheduler::printStats() const {
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymStateMarked implementation
-void SymStateMarked::swap(SymState &other) {
+void SymStateMarked::swap(SymState &other)
+{
     // if this fires up one day, it means we need to cover the swap of done_
     CL_BREAK_IF(dynamic_cast<SymStateMarked *>(&other));
 
@@ -469,7 +487,8 @@ void SymStateMarked::swap(SymState &other) {
     done_.resize((cntPending_ = this->size()), false);
 }
 
-void SymStateMarked::rotateExisting(const int idxA, const int idxB) {
+void SymStateMarked::rotateExisting(const int idxA, const int idxB)
+{
     SymState::rotateExisting(idxA, idxB);
 
     TDone::iterator itA = done_.begin() + idxA;
@@ -510,11 +529,13 @@ SymStateMap::SymStateMap():
 {
 }
 
-SymStateMap::~SymStateMap() {
+SymStateMap::~SymStateMap()
+{
     delete d;
 }
 
-SymStateMarked& SymStateMap::operator[](const CodeStorage::Block *bb) {
+SymStateMarked& SymStateMap::operator[](const CodeStorage::Block *bb)
+{
     return d->cont[bb].state;
 }
 
@@ -552,11 +573,13 @@ bool SymStateMap::insert(
     return changed;
 }
 
-bool SymStateMap::anyReuseHappened(const CodeStorage::Block *bb) const {
+bool SymStateMap::anyReuseHappened(const CodeStorage::Block *bb) const
+{
     return d->cont[bb].anyHit;
 }
 
-int SymStateMap::cntPending(const CodeStorage::Block *bb) const {
+int SymStateMap::cntPending(const CodeStorage::Block *bb) const
+{
     return d->cont[bb].state.cntPending();
 }
 

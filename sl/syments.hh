@@ -211,7 +211,8 @@ class EntStore {
 // implementation of EntStore
 template <class TBaseEnt>
 template <typename TId>
-TId EntStore<TBaseEnt>::assignId(TBaseEnt *ptr) {
+TId EntStore<TBaseEnt>::assignId(TBaseEnt *ptr)
+{
     CL_BREAK_IF(ptr->refCnt.isShared());
 
 #if SH_REUSE_FREE_IDS
@@ -230,7 +231,8 @@ TId EntStore<TBaseEnt>::assignId(TBaseEnt *ptr) {
 
 template <class TBaseEnt>
 template <typename TId>
-void EntStore<TBaseEnt>::assignId(const TId id, TBaseEnt *ptr) {
+void EntStore<TBaseEnt>::assignId(const TId id, TBaseEnt *ptr)
+{
     CL_BREAK_IF(ptr->refCnt.isShared());
 
     // make sure we have enough space allocated
@@ -247,7 +249,8 @@ void EntStore<TBaseEnt>::assignId(const TId id, TBaseEnt *ptr) {
 
 template <class TBaseEnt>
 template <typename TId>
-void EntStore<TBaseEnt>::releaseEnt(const TId id) {
+void EntStore<TBaseEnt>::releaseEnt(const TId id)
+{
 #if SH_REUSE_FREE_IDS
     freeIds_.push(id);
 #endif
@@ -256,7 +259,8 @@ void EntStore<TBaseEnt>::releaseEnt(const TId id) {
 
 template <class TBaseEnt>
 template <typename TId>
-bool EntStore<TBaseEnt>::isValidEnt(const TId id) const {
+bool EntStore<TBaseEnt>::isValidEnt(const TId id) const
+{
     if (this->outOfRange(id))
         return false;
 
@@ -273,7 +277,8 @@ EntStore<TBaseEnt>::EntStore(const EntStore &ref):
 }
 
 template <class TBaseEnt>
-EntStore<TBaseEnt>::~EntStore() {
+EntStore<TBaseEnt>::~EntStore()
+{
     BOOST_FOREACH(TBaseEnt *ent, ents_)
         if (ent)
             RefCntLib<RCO_VIRTUAL>::leave(ent);
@@ -306,7 +311,8 @@ inline TBaseEnt* EntStore<TBaseEnt>::getEntRW(const TId id)
 
 template <class TBaseEnt>
 template <class TEnt, typename TId>
-inline void EntStore<TBaseEnt>::getEntRO(const TEnt **pEnt, const TId id) {
+inline void EntStore<TBaseEnt>::getEntRO(const TEnt **pEnt, const TId id)
+{
     const TBaseEnt *ptr = this->getEntRO(id);
     const TEnt *ent = DCAST<const TEnt *>(ptr);
 
@@ -319,7 +325,8 @@ inline void EntStore<TBaseEnt>::getEntRO(const TEnt **pEnt, const TId id) {
 
 template <class TBaseEnt>
 template <class TEnt, typename TId>
-inline void EntStore<TBaseEnt>::getEntRW(TEnt **pEnt, const TId id) {
+inline void EntStore<TBaseEnt>::getEntRW(TEnt **pEnt, const TId id)
+{
     TBaseEnt *ptr = this->getEntRW(id);
     TEnt *ent = DCAST<TEnt *>(ptr);
 

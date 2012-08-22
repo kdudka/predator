@@ -29,7 +29,8 @@
 #include "symheap.hh"
 
 /// return true if the given binding is a DLS binding
-inline bool isDlsBinding(const BindingOff &off) {
+inline bool isDlsBinding(const BindingOff &off)
+{
     return (off.next != off.prev);
 }
 
