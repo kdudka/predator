@@ -480,7 +480,8 @@ void FI_check::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	state.GetMem()->GetFAE()->updateConnectionGraph();
 
-	Normalization(const_cast<FAE&>(*state.GetMem()->GetFAE())).check();
+	Normalization(const_cast<FAE&>(*state.GetMem()->GetFAE()),
+		state.GetMem()).check();
 
 	execMan.enqueue(state, next_);
 }

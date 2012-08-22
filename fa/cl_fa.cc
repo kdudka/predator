@@ -56,6 +56,7 @@ public:   // data members
 	std::string dbRoot;        ///< box database root directory
 	bool        printUcode;    ///< printing microcode?
 	bool        onlyCompile;   ///< only compiling?
+	bool        printTrace;    ///< printing trace for errors?
 
 private:  // methods
 
@@ -89,6 +90,13 @@ private:  // methods
 			return;
 		}
 
+		if (std::string("print-trace") == key)
+		{
+			this->printTrace = true;
+			CL_DEBUG("Config::processArg: \"print-trace\" mode requested");
+			return;
+		}
+
 		//      ***************  binary arguments ****************
 		if (std::string("db-root") == key)
 		{
@@ -107,10 +115,11 @@ private:  // methods
 
 public:   // methods
 
-	Config(const std::string& confStr) :
+	Config(const std::string& confStr = "") :
 		dbRoot(""),
 		printUcode(false),
-		onlyCompile(false)
+		onlyCompile(false),
+		printTrace(false)
 	{
 		std::vector<std::string> args;
 		boost::split(args, confStr, boost::is_any_of(";"));
@@ -179,14 +188,14 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 		return;
 	}
 
+	// parse the configuration string
+	Config conf(configString);
+
 	CL_DEBUG("starting verification stuff ...");
 	try
 	{
 		signal(SIGUSR1, setDbgFlag);
 		se.loadTypes(stor);
-
-		// parse the configuration string
-		Config conf(configString);
 
 /*
 		if (!conf.dbRoot.empty()){
@@ -208,7 +217,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 		}
 	} catch (const ProgramError& e)
 	{
-		if (nullptr != e.state())
+		if ((conf.printTrace) && (nullptr != e.state()))
 		{
 			std::ostringstream oss;
 			SymState::printTrace(oss, e.state()->getTrace());
