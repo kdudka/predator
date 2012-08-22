@@ -191,6 +191,22 @@ public:   // methods
 
 
 	/**
+	 * @brief  Run a visitor on the instance
+	 *
+	 * This method is the @p accept method of the Visitor design pattern.
+	 *
+	 * @param[in]  visitor  The visitor of the type @p TVisitor
+	 *
+	 * @tparam  TVisitor  The type of the visitor
+	 */
+	template <class TVisitor>
+	void accept(TVisitor& visitor) const
+	{
+		visitor(*this);
+	}
+
+
+	/**
 	 * @brief  Retrieves the trace to this state
 	 *
 	 * This method retrieves the trace trace to this state in the reverse order

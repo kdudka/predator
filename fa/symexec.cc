@@ -74,41 +74,42 @@ class SymExec::Engine {
 
 protected:
 
-	/**
-	 * @brief  Prints a trace of preceding symbolic states
-	 *
-	 * This static method prints the backtrace from the given symbolic state to
-	 * the initial state.
-	 *
-	 * @param[in]  state  The state for which the backtrace is desired
-	 */
-	static void printTrace(const ExecState& state)
-	{
-		SymState* s = state.GetMem();
-
-		std::vector<SymState*> trace;
-
-		for ( ; s; s = s->GetParent())
-		{	// until we reach the initial state of the execution tree
-			trace.push_back(s);
-		}
-
-		// invert the trace so that it is in the natural order
-		std::reverse(trace.begin(), trace.end());
-
-		CL_NOTE("trace:");
-
-		for (auto s : trace)
-		{	// print out the trace
-			if (s->GetInstr()->insn()) {
-				CL_NOTE_MSG(&s->GetInstr()->insn()->loc,
-					SSD_INLINE_COLOR(C_LIGHT_RED, *s->GetInstr()->insn()));
-				CL_DEBUG_AT(2, std::endl << *s->GetFAE());
-			}
-
-			CL_DEBUG_AT(2, *s->GetInstr());
-		}
-	}
+// TODO: remove (obsolete? we have SymState::printTrace)
+//	/**
+//	 * @brief  Prints a trace of preceding symbolic states
+//	 *
+//	 * This static method prints the backtrace from the given symbolic state to
+//	 * the initial state.
+//	 *
+//	 * @param[in]  state  The state for which the backtrace is desired
+//	 */
+//	static void printTrace(const ExecState& state)
+//	{
+//		SymState* s = state.GetMem();
+//
+//		std::vector<SymState*> trace;
+//
+//		for ( ; s; s = s->GetParent())
+//		{	// until we reach the initial state of the execution tree
+//			trace.push_back(s);
+//		}
+//
+//		// invert the trace so that it is in the natural order
+//		std::reverse(trace.begin(), trace.end());
+//
+//		CL_NOTE("trace:");
+//
+//		for (auto s : trace)
+//		{	// print out the trace
+//			if (s->GetInstr()->insn()) {
+//				CL_NOTE_MSG(&s->GetInstr()->insn()->loc,
+//					SSD_INLINE_COLOR(C_LIGHT_RED, *s->GetInstr()->insn()));
+//				CL_DEBUG_AT(2, std::endl << *s->GetFAE());
+//			}
+//
+//			CL_DEBUG_AT(2, *s->GetInstr());
+//		}
+//	}
 
 	/**
 	 * @brief  Prints boxes
@@ -187,10 +188,10 @@ protected:
 		}
 		catch (ProgramError& e)
 		{
-//			Engine::printTrace(state);
-			if (state.GetMem()->GetInstr()->insn()) {
-				CL_NOTE_MSG(&state.GetMem()->GetInstr()->insn()->loc,
-					SSD_INLINE_COLOR(C_LIGHT_RED, *state.GetMem()->GetInstr()->insn()));
+			//Engine::printTrace(state);
+			const CodeStorage::Insn* insn = state.GetMem()->GetInstr()->insn();
+			if (nullptr != insn) {
+				CL_NOTE_MSG(&insn->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *insn));
 				CL_DEBUG_AT(2, std::endl << *state.GetMem()->GetFAE());
 			}
 			throw;

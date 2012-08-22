@@ -21,6 +21,7 @@
 // Forester headers
 #include "compiler.hh"
 #include "integrity.hh"
+#include "memplot.hh"
 #include "symstate.hh"
 
 
@@ -93,14 +94,17 @@ std::ostream& SymState::printTrace(
 
 	for (auto it = trace.crbegin(); it != trace.crend(); ++it)
 	{	// traverse in the reverse order
-		const AbstractInstruction* instr = (*it)->instr_;
-		assert(nullptr != instr);
+		const SymState& state = **it;
+		const AbstractInstruction& instr = *state.instr_;
 
-		const CodeStorage::Insn* origInsn = instr->insn();
+		const CodeStorage::Insn* origInsn = instr.insn();
 		if ((nullptr != origInsn) && (lastInsn != origInsn))
 		{
 			lastInsn = origInsn;
-			os << *origInsn << "\n";
+			os << std::setw(4) << std::right << origInsn->loc.line << ": "
+				<< *origInsn << "\n";
+
+			MemPlotter::plotHeap(state);
 		}
 	}
 

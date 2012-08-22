@@ -615,8 +615,9 @@ void FI_plot_heap::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	// Assertions
 	assert(nullptr != this->insn());
+	assert(nullptr != state.GetMem());
 
-	MemPlotter::handlePlot(state, *this->insn());
+	MemPlotter::handlePlot(*state.GetMem(), *this->insn());
 
 	execMan.enqueue(state, next_);
 }

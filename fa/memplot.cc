@@ -309,6 +309,9 @@ public:   // methods
 
 	void operator()(const ExecState& state)
 	{
+		assert(nullptr != state.GetMem());
+		state.GetMem()->accept(*this);
+
 //		const DataArray& regs = state.GetRegs();
 //		for (size_t i = 0; i < regs.size(); ++i)
 //		{
@@ -316,8 +319,11 @@ public:   // methods
 //		}
 //
 //		os_ << "\n";
+	}
 
-		state.GetMem()->GetFAE()->accept(*this);
+	void operator()(const SymState& state)
+	{
+		state.GetFAE()->accept(*this);
 	}
 
 	void operator()(const FA& fa)
@@ -615,8 +621,37 @@ void emitPrototypeError(const struct cl_loc *lw, const char *name)
 	CL_WARN_MSG(lw, "incorrectly called " << name
 			<< "() not recognized as built-in");
 }
+
 } /* namespace */
 
+
+/**
+ * @brief  Generates plot filename from location info
+ *
+ * Generates plot filename from location info.
+ *
+ * @param[in]  loc  Location info
+ *
+ * @returns  Filename of the plot
+ */
+std::string MemPlotter::generatePlotName(
+	const struct cl_loc*              loc)
+{
+	if (!loc || !loc->file) {
+		// sorry, no location info here
+		return "anonplot";
+	}
+
+	char *dup = strdup(loc->file);
+	const char *fname = basename(dup);
+
+	std::ostringstream os;
+	os << fname << "-" << loc->line;
+
+	free(dup);
+
+	return os.str();
+}
 
 // Shamelessly copied from Predator
 bool MemPlotter::readPlotName(
@@ -640,26 +675,13 @@ bool MemPlotter::readPlotName(
 		return false;
 
 	// NULL given as plot name, we're asked to generate the name automagically
-	if (!loc || !loc->file) {
-		// sorry, no location info here
-		*dst = "anonplot";
-		return true;
-	}
-
-	char *dup = strdup(loc->file);
-	const char *fname = basename(dup);
-
-	std::ostringstream str;
-	str << fname << "-" << loc->line;
-	*dst = str.str();
-
-	free(dup);
+	*dst = generatePlotName(loc);
 	return true;
 }
 
 
 bool MemPlotter::handlePlot(
-	const ExecState&         state,
+	const SymState&          state,
 	const CodeStorage::Insn  &insn)
 {
 	const CodeStorage::TOperandList &opList = insn.operands;
@@ -695,7 +717,7 @@ bool MemPlotter::handlePlot(
 
 
 bool MemPlotter::plotHeap(
-	const ExecState&     state,
+	const SymState&      state,
 	const std::string&   name,
 	const struct cl_loc  *loc)
 {
@@ -740,4 +762,16 @@ bool MemPlotter::plotHeap(
 	const bool ok = !!out;
 	out.close();
 	return ok;
+}
+
+bool MemPlotter::plotHeap(
+	const SymState&        state)
+{
+	const struct cl_loc* loc = nullptr;
+	if (state.GetInstr() && state.GetInstr()->insn())
+	{
+		loc = &state.GetInstr()->insn()->loc;
+	}
+
+	return plotHeap(state, generatePlotName(loc), loc);
 }

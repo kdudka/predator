@@ -27,15 +27,24 @@ class MemPlotter
 {
 private:
 
-	static bool plotHeap(
-		const ExecState&       state,
-		const std::string&     name,
-		const struct cl_loc*   loc = nullptr);
+	/**
+	 * @brief  Generates plot filename from location info
+	 *
+	 * Generates plot filename from location info.
+	 *
+	 * @param[in]  loc  Location info
+	 *
+	 * @returns  Filename of the plot
+	 */
+	static std::string generatePlotName(
+		const struct cl_loc*              loc);
 
 	/**
 	 * @brief  Generates the name of a plot
 	 *
 	 * Shamelessly copied from Predator.
+	 *
+	 * @todo
 	 */
 	static bool readPlotName(
 		std::string*                      dst,
@@ -45,8 +54,16 @@ private:
 public:   // methods
 
 	static bool handlePlot(
-		const ExecState&          state,
+		const SymState&           state,
 		const CodeStorage::Insn&  insn);
+
+	static bool plotHeap(
+		const SymState&        state,
+		const std::string&     name,
+		const struct cl_loc*   loc = nullptr);
+
+	static bool plotHeap(
+		const SymState&        state);
 };
 
 #endif /* _MEMPLOT_HH_ */
