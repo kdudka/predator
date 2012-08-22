@@ -115,6 +115,8 @@ struct CompareVariablesF {
 
 struct FuseNonZeroF {
 	bool operator()(size_t root, const FAE*) {
+		// TODO: this appears as a test for the component at which ABP points,
+		// shouldn't there also be test for the component at which GLOB points?
 		return root != 0;
 	}
 };
@@ -153,9 +155,13 @@ inline void computeForbiddenSet(std::set<size_t>& forbidden, FAE& fae) {
 */
 }
 
-inline bool normalize(FAE& fae, const std::set<size_t>& forbidden, bool extended) {
-
-	Normalization norm(fae);
+inline bool normalize(
+	FAE&                      fae,
+	const SymState*           state,
+	const std::set<size_t>&   forbidden,
+	bool                      extended)
+{
+	Normalization norm(fae, state);
 
 	std::vector<size_t> order;
 	std::vector<bool> marked;
@@ -205,11 +211,13 @@ inline bool fold(FAE& fae, BoxMan& boxMan, const std::set<size_t>& forbidden) {
 
 }
 
-inline void reorder(FAE& fae) {
-
+inline void reorder(
+	const SymState*   state,
+	FAE&              fae)
+{
 	fae.unreachableFree();
 
-	Normalization norm(fae);
+	Normalization norm(fae, state);
 
 	std::vector<size_t> order;
 	std::vector<bool> marked;
@@ -404,7 +412,7 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 
 	std::set<size_t> forbidden;
 #if FA_ALLOW_FOLDING
-	reorder(*fae);
+	reorder(state.GetMem(), *fae);
 
 	if (boxMan.boxDatabase().size()) {
 
@@ -421,7 +429,7 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 
 	computeForbiddenSet(forbidden, *fae);
 #endif
-	normalize(*fae, forbidden, true);
+	normalize(*fae, state.GetMem(), forbidden, true);
 
 	abstract(*fae, this->fwdConf, this->taBackend, this->boxMan);
 #if FA_ALLOW_FOLDING
@@ -436,7 +444,7 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 			forbidden.clear();
 			computeForbiddenSet(forbidden, *fae);
 
-			normalize(*fae, forbidden, true);
+			normalize(*fae, state.GetMem(), forbidden, true);
 
 			abstract(*fae, this->fwdConf, this->taBackend, this->boxMan);
 
@@ -473,7 +481,7 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 
 	std::set<size_t> forbidden;
 #if FA_ALLOW_FOLDING
-	reorder(*fae);
+	reorder(state.GetMem(), *fae);
 
 	if (boxMan.boxDatabase().size())
 	{
@@ -487,7 +495,7 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 #endif
 	computeForbiddenSet(forbidden, *fae);
 
-	normalize(*fae, forbidden, true);
+	normalize(*fae, state.GetMem(), forbidden, true);
 #if FA_ALLOW_FOLDING
 	if (boxMan.boxDatabase().size())
 	{
@@ -502,7 +510,7 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 
 			computeForbiddenSet(forbidden, *fae);
 
-			normalize(*fae, forbidden, true);
+			normalize(*fae, state.GetMem(), forbidden, true);
 
 			forbidden.clear();
 

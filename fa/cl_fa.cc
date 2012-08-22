@@ -37,6 +37,7 @@
 // Forester headers
 #include "symctx.hh"
 #include "symexec.hh"
+#include "symstate.hh"
 #include "programerror.hh"
 #include "notimpl_except.hh"
 
@@ -207,13 +208,20 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 		}
 	} catch (const ProgramError& e)
 	{
-		if (e.location())
+		if (nullptr != e.state())
+		{
+			std::ostringstream oss;
+			SymState::printTrace(oss, e.state()->getTrace());
+			CL_ERROR_MSG(e.location(), oss.str());
+		}
+
+		if (nullptr != e.location())
 			CL_ERROR_MSG(e.location(), e.what());
 		else
 			CL_ERROR(e.what());
 	} catch (const NotImplementedException& e)
 	{
-		if (e.location())
+		if (nullptr != e.location())
 			CL_ERROR_MSG(e.location(), "not implemented: " + std::string(e.what()));
 		else
 			CL_ERROR("not implemented: " + std::string(e.what()));

@@ -33,10 +33,8 @@
 // Forester headers
 #include "recycler.hh"
 #include "exec_state.hh"
-#include "types.hh"
 #include "forestautext.hh"
 #include "abstractinstruction.hh"
-#include "integrity.hh"
 
 /**
  * @file symstate.hh
@@ -52,6 +50,9 @@ class SymState
 public:   // data types
 
 	typedef std::list<ExecState> QueueType;
+
+	/// Trace of symbolic states
+	typedef std::vector<const SymState*> Trace;
 
 private:  // data members
 
@@ -107,6 +108,11 @@ public:   // methods
 		return fae_;
 	}
 
+	const AbstractInstruction* GetInstr() const
+	{
+		return instr_;
+	}
+
 	AbstractInstruction* GetInstr()
 	{
 		return instr_;
@@ -156,6 +162,7 @@ public:   // methods
 		}
 	}
 
+
 	/**
 	 * @brief  Initializes the symbolic state
 	 *
@@ -166,19 +173,11 @@ public:   // methods
 	 * @param[in]  fae       The forest automaton for the symbolic state
 	 * @param[in]  queueTag  @todo write dox
 	 */
-	void init(SymState* parent, AbstractInstruction* instr,
-		const std::shared_ptr<const FAE>& fae, QueueType::iterator queueTag) {
+	void init(
+		SymState*                                                   parent,
+		AbstractInstruction*                                        instr,
+		const std::shared_ptr<const FAE>& fae, QueueType::iterator  queueTag);
 
-		// Assertions
-		assert(Integrity(*fae).check());
-
-		parent_ = parent;
-		instr_ = instr;
-		fae_ = fae;
-		queueTag_ = queueTag;
-		if (parent_)
-			parent_->addChild(this);
-	}
 
 	/**
 	 * @brief  Recycles the symbolic state for further use
@@ -188,34 +187,31 @@ public:   // methods
 	 *
 	 * @param[in,out]  recycler  The Recycler object
 	 */
-	void recycle(Recycler<SymState>& recycler) {
+	void recycle(Recycler<SymState>& recycler);
 
-		if (parent_)
-		{
-			parent_->removeChild(this);
-		}
 
-		std::vector<SymState*> stack = { this };
+	/**
+	 * @brief  Retrieves the trace to this state
+	 *
+	 * This method retrieves the trace trace to this state in the reverse order
+	 * (starting with this state).
+	 *
+	 * @returns  The trace
+	 */
+	Trace getTrace() const;
 
-		while (!stack.empty()) {
-			// recycle recursively all children
 
-			SymState* state = stack.back();
-			stack.pop_back();
-
-			assert(state->GetFAE());
-			state->fae_ = nullptr;
-
-			for (auto s : state->GetChildren())
-			{
-				stack.push_back(s);
-			}
-
-			state->children_.clear();
-			recycler.recycle(state);
-		}
-	}
-
+	/**
+	 * @brief  Prints the trace to output stream
+	 *
+	 * @param[in,out]  os     The output stream
+	 * @param[in]      trace  The trace to be printed
+	 *
+	 * @returns  Modified stream
+	 */
+	static std::ostream& printTrace(
+		std::ostream&   os,
+		const Trace&    trace);
 };
 
 #endif

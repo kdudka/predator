@@ -67,6 +67,7 @@ add_library(fa SHARED
 	sequentialinstruction.cc
 	symctx.cc
 	symexec.cc
+	symstate.cc
 	timbuk.cc
 	treeaut.cc
 	virtualmachine.cc

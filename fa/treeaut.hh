@@ -625,11 +625,13 @@ public:
 		return this->getRhsIterator(this->getFinalState());
 	}
 */
-	const Transition& getAcceptingTransition() const {
-		TA<T>::Iterator i = this->accBegin();
-		const Transition* t = &*i;
-		assert(++i == this->accEnd());
-		return *t;
+	const Transition& getAcceptingTransition() const
+	{
+		// Assertions
+		assert(this->accBegin() != this->accEnd());
+		assert(++(this->accBegin()) == this->accEnd());
+
+		return *(this->accBegin());
 	}
 
 	void downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const Index<T>& labelIndex) const;
