@@ -47,6 +47,10 @@ void setDbgFlag(int) {
 	se.setDbgFlag();
 }
 
+void userRequestHandler(int) {
+	se.setUserRequestFlag();
+}
+
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
 
@@ -195,6 +199,8 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 	try
 	{
 		signal(SIGUSR1, setDbgFlag);
+		signal(SIGUSR2, userRequestHandler);
+
 		se.loadTypes(stor);
 
 /*

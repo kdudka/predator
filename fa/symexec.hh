@@ -42,14 +42,14 @@ namespace CodeStorage {
  *
  * This class provides the top level algorithm of the @b symbolic @b execution.
  */
-class SymExec {
-
+class SymExec
+{
 private:  // methods
 
 	SymExec(const SymExec&);
 	SymExec& operator=(const SymExec&);
 
-public:
+public:   // methods
 
 	/**
 	 * @brief  Default constructor
@@ -121,6 +121,13 @@ public:
 	 * The method that sets the debugging flag.
 	 */
 	void setDbgFlag();
+
+	/**
+	 * @brief  Sets the flag for user request
+	 *
+	 * The method that sets the flag denoting user request.
+	 */
+	void setUserRequestFlag();
 
 private:
 

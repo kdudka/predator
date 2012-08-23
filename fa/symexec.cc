@@ -59,18 +59,21 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 }
 #endif
 
-class SymExec::Engine {
+class SymExec::Engine
+{
+private:  // data members
 
-	TreeAut::Backend taBackend;
-	TreeAut::Backend fixpointBackend;
-	BoxMan boxMan;
+	TreeAut::Backend taBackend_;
+	TreeAut::Backend fixpointBackend_;
+	BoxMan boxMan_;
 
 	Compiler compiler_;
 	Compiler::Assembly assembly_;
 
-	ExecutionManager execMan;
+	ExecutionManager execMan_;
 
-	bool dbgFlag;
+	volatile bool dbgFlag_;
+	volatile bool userRequestFlag_;
 
 protected:
 
@@ -120,7 +123,7 @@ protected:
 	{
 		std::vector<const Box*> boxes;
 
-		this->boxMan.boxDatabase().asVector(boxes);
+		boxMan_.boxDatabase().asVector(boxes);
 
 		std::map<std::string, const Box*> orderedBoxes;
 
@@ -152,22 +155,24 @@ protected:
 
 		// create an empty heap
 		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(
-			new FAE(this->taBackend, this->boxMan));
+			new FAE(taBackend_, boxMan_));
 
 		CL_CDEBUG(2, "scheduling initial state ...");
 
 		// schedule the initial state for processing
-		this->execMan.init(
-			DataArray(this->assembly_.regFileSize_, Data::createUndef()),
+		execMan_.init(
+			DataArray(assembly_.regFileSize_, Data::createUndef()),
 			fae,
-			this->assembly_.code_.front()
+			assembly_.code_.front()
 		);
 
 		ExecState state;
 
 		try
 		{	// expecting problems...
-			while (this->execMan.dequeueDFS(state))
+			size_t cntStates = 0;
+
+			while (execMan_.dequeueDFS(state))
 			{	// process all states in the DFS order
 				const CodeStorage::Insn* insn = state.GetMem()->GetInstr()->insn();
 				if (nullptr != insn)
@@ -180,8 +185,14 @@ protected:
 					CL_CDEBUG(3, state);
 				}
 
+				if (testAndClearUserRequestFlag())
+				{
+					CL_NOTE("Executed " << std::setw(7) << cntStates << " states so far.");
+				}
+
 				// run the state
-				this->execMan.execute(state);
+				execMan_.execute(state);
+				++cntStates;
 			}
 
 			return true;
@@ -198,7 +209,7 @@ protected:
 		}
 		catch (RestartRequest& e)
 		{	// in case a restart is requested, clear all fixpoint computation points
-			for (auto instr : this->assembly_.code_)
+			for (auto instr : assembly_.code_)
 			{
 				if (instr->getType() != fi_type_e::fiFix)
 				{
@@ -223,13 +234,14 @@ public:
 	 * The default constructor.
 	 */
 	Engine() :
-		taBackend{},
-		fixpointBackend{},
-		boxMan(),
-		compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
+		taBackend_{},
+		fixpointBackend_{},
+		boxMan_{},
+		compiler_(fixpointBackend_, taBackend_, boxMan_),
 		assembly_{},
-		execMan{},
-		dbgFlag(false)
+		execMan_{},
+		dbgFlag_{false},
+		userRequestFlag_{false}
 	{ }
 
 	/**
@@ -245,7 +257,7 @@ public:
 		CL_DEBUG_AT(3, "loading types ...");
 
 		// clear the box manager
-		this->boxMan.clear();
+		boxMan_.clear();
 
 		// ************ infer data types' layouts ************
 		for (const cl_type* type : stor.types)
@@ -272,7 +284,7 @@ public:
 
 					CL_DEBUG_AT(3, name);
 
-					this->boxMan.createTypeInfo(name, v);
+					boxMan_.createTypeInfo(name, v);
 					break;
 
 				default: // for other types
@@ -297,7 +309,7 @@ public:
 
 			CL_DEBUG_AT(3, ss.str());
 
-			this->boxMan.createTypeInfo(ss.str(), v);
+			boxMan_.createTypeInfo(ss.str(), v);
 		}
 
 		// ************ compile layout of the block of global vars ************
@@ -320,9 +332,9 @@ public:
 			v.push_back(0);
 		}
 
-		this->boxMan.createTypeInfo(GLOBAL_VARS_BLOCK_STR, v);
+		boxMan_.createTypeInfo(GLOBAL_VARS_BLOCK_STR, v);
 		CL_DEBUG_AT(1, "created box for global variables: "
-			<< *this->boxMan.getTypeInfo(GLOBAL_VARS_BLOCK_STR));
+			<< *boxMan_.getTypeInfo(GLOBAL_VARS_BLOCK_STR));
 	}
 
 #if 0
@@ -332,20 +344,20 @@ public:
 
 		for (auto p : db) {
 
-			this->boxes.push_back((const Box*)this->boxMan.loadBox(p.first, db));
+			this->boxes.push_back((const Box*)boxMan_.loadBox(p.first, db));
 
 			CL_DEBUG(p.first << ':' << std::endl << *(const FA*)this->boxes.back());
 
 		}
 
-		this->boxMan.buildBoxHierarchy(this->hierarchy, this->basicBoxes);
+		boxMan_.buildBoxHierarchy(this->hierarchy, this->basicBoxes);
 
 	}
 #endif
 
 	void compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry)
 	{
-		this->compiler_.compile(this->assembly_, stor, entry);
+		compiler_.compile(assembly_, stor, entry);
 	}
 
 	const Compiler::Assembly& GetAssembly() const
@@ -356,7 +368,7 @@ public:
 	void run()
 	{
 		// Assertions
-		assert(this->assembly_.code_.size());
+		assert(assembly_.code_.size());
 
 		try
 		{	// expect problems...
@@ -367,7 +379,7 @@ public:
 			// print out boxes
 			this->printBoxes();
 
-			for (auto instr : this->assembly_.code_)
+			for (auto instr : assembly_.code_)
 			{	// print out all fixpoints
 				if (instr->getType() != fi_type_e::fiFix)
 				{
@@ -384,9 +396,9 @@ public:
 			}
 
 			// print out stats
-			CL_DEBUG_AT(1, "forester has generated " << this->execMan.statesEvaluated()
-				<< " symbolic configuration(s) in " << this->execMan.tracesEvaluated()
-				<< " trace(s) using " << this->boxMan.boxDatabase().size() << " box(es)");
+			CL_DEBUG_AT(1, "forester has generated " << execMan_.statesEvaluated()
+				<< " symbolic configuration(s) in " << execMan_.tracesEvaluated()
+				<< " trace(s) using " << boxMan_.boxDatabase().size() << " box(es)");
 		}
 		catch (std::exception& e)
 		{
@@ -400,28 +412,37 @@ public:
 
 	void run(const Compiler::Assembly& assembly)
 	{
-		this->assembly_ = assembly;
+		assembly_ = assembly;
 
-		try {
-
+		try
+		{
 			this->run();
-			this->assembly_.code_.clear();
-
-		} catch (...) {
-
-			this->assembly_.code_.clear();
+			assembly_.code_.clear();
+		}
+		catch (...)
+		{
+			assembly_.code_.clear();
 
 			throw;
-
 		}
-
 	}
 
 	void setDbgFlag()
 	{
-		this->dbgFlag = 1;
+		dbgFlag_ = true;
 	}
 
+	void setUserRequestFlag()
+	{
+		userRequestFlag_ = true;
+	}
+
+	bool testAndClearUserRequestFlag()
+	{
+		bool oldValue = userRequestFlag_;
+		userRequestFlag_ = false;
+		return oldValue;
+	}
 };
 
 SymExec::SymExec() :
@@ -489,4 +510,12 @@ void SymExec::setDbgFlag()
 	assert(engine != nullptr);
 
 	this->engine->setDbgFlag();
+}
+
+void SymExec::setUserRequestFlag()
+{
+	// Assertions
+	assert(engine != nullptr);
+
+	this->engine->setUserRequestFlag();
 }
