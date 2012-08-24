@@ -13,15 +13,19 @@ usage() {
 }
 
 usage_long() {
+  # 80 output chars:
+  #    "################################################################################"
   echo "Usage: $SELF [OPTION]... FILE"
   echo ""
   echo "Miscellaneous:"
-  echo "  -p, --print-ucode      print microcode"
-  echo "  -c, --compile-only     only compile, do not run the analysis"
-  echo "  -t, --print-trace      print the trace for found errors"
-  echo "  -o, --output FILE      write the output to FILE (for -p)"
-  echo "  -v, --verbose          increase verbosity level"
-  echo "  -h, --help             display this help and exit"
+  echo "  -p,  --print-ucode            print microcode"
+  echo "  -c,  --compile-only           only compile, do not run the analysis"
+  echo "  -t,  --print-trace            print the trace for detected errors"
+  echo "  -ut, --print-ucode-trace      print the microcode trace for detected errors"
+  echo "  -o,  --output FILE            write the output to FILE (for -p)"
+  echo "  -v,  --verbose                increase verbosity level"
+  echo "  -h,  --help                   display this help and exit"
+  #    "################################################################################"
 
   exit 1
 }
@@ -43,20 +47,22 @@ fi;
 
 while [ "$1" != "" ]; do
   case $1 in
-    -p | --print-ucode )    FA_ARGS="${FA_ARGS};print-ucode"
-                            ;;
-    -c | --compile-only )   FA_ARGS="${FA_ARGS};only-compile"
-                            ;;
-    -t | --print-trace )    FA_ARGS="${FA_ARGS};print-trace"
-                            ;;
-    -o | --output )         shift
-                            OUTPUT_FILE=$1
-                            ;;
-    -v | --verbose )        FA_VERBOSE=$(expr ${FA_VERBOSE} + 1)
-                            ;;
-    -h | --help )           usage_long
-                            ;;
-    * )                     FILENAME=$1
+    -p  | --print-ucode )          FA_ARGS="${FA_ARGS};print-ucode"
+                                   ;;
+    -c  | --compile-only )         FA_ARGS="${FA_ARGS};only-compile"
+                                   ;;
+    -t  | --print-trace )          FA_ARGS="${FA_ARGS};print-trace"
+                                   ;;
+    -ut | --print-ucode-trace )    FA_ARGS="${FA_ARGS};print-ucode-trace"
+                                   ;;
+    -o  | --output )               shift
+                                   OUTPUT_FILE=$1
+                                   ;;
+    -v  | --verbose )              FA_VERBOSE=$(expr ${FA_VERBOSE} + 1)
+                                   ;;
+    -h  | --help )                 usage_long
+                                   ;;
+    * )                            FILENAME=$1
   esac
   shift
 done
