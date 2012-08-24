@@ -83,10 +83,10 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 
 	using namespace CodeStorage;
 
-	FA_DEBUG("config: \"" << configString << "\"");
+	FA_LOG("configuration string: \"" << configString << "\"");
 
 	// look for main() by name
-	FA_DEBUG("looking for 'main()' at global scope...");
+	FA_LOG("looking for 'main()' at global scope...");
 	const NameDb::TNameMap &glNames = stor.fncNames.glNames;
 	const NameDb::TNameMap::const_iterator iter = glNames.find("main");
 	if (glNames.end() == iter) {
@@ -112,10 +112,15 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 	signal(SIGUSR1, setDbgFlag);
 	signal(SIGUSR2, userRequestHandler);
 
-	FA_DEBUG("starting verification stuff ...");
+	// set the debugging level
+	Streams::setDebugLevelAsForCL();
+
+	FA_LOG("starting verification ...");
 	try
 	{
 		se = new SymExec(conf);
+
+		FA_LOG("loading types ...");
 		se->loadTypes(stor);
 
 /*
@@ -125,7 +130,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 		}
 */
 
-		FA_DEBUG_AT(2, "compiling ...");
+		FA_LOG("compiling to microcode ...");
 		se->compile(stor, *main);
 		if (conf.printUcode)
 		{
@@ -134,6 +139,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 
 		if (!conf.onlyCompile)
 		{
+			FA_LOG("starting symbolic execution ...");
 			se->run();
 		}
 	}
@@ -149,4 +155,6 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 	}
 
 	delete se;
+
+	FA_LOG("Forester finished.");
 }

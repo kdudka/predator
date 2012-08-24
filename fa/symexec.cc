@@ -423,7 +423,7 @@ public:   // methods
 			{	// while the analysis hasn't terminated
 			}
 
-			FA_NOTE("the program is safe ...");
+			FA_NOTE("The program is SAFE.");
 
 			// print out boxes
 			this->printBoxes();

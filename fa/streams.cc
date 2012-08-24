@@ -27,6 +27,9 @@
 // Forester headers
 #include "streams.hh"
 
+// definition of the symbol
+int Streams::debugLvl_ = 0;
+
 // anonymous namespace
 namespace
 {
@@ -47,7 +50,7 @@ namespace
 		assert(nullptr != label);
 		assert(nullptr != msg);
 
-		os << locStr << ": " << label << ": " << msg << (eol? "\n" : "");
+		os << locStr << label << ": " << msg << (eol? "\n" : "");
 	}
 }
 
@@ -103,4 +106,19 @@ void Streams::callPrintFnc(
 	}
 
 	fnc(locStr, msg);
+}
+
+void Streams::setDebugLevel(int lvl)
+{
+	debugLvl_ = lvl;
+}
+
+void Streams::setDebugLevelAsForCL()
+{
+	debugLvl_ = cl_debug_level();
+}
+
+int Streams::getDebugLevel()
+{
+	return debugLvl_;
 }

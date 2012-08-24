@@ -90,8 +90,8 @@
  *
  * see FA_MSG_STREAM for details
  */
-#define FA_MSG_STREAM_INTERNAL(fnc, to_stream)                 \
-  FA_MSG_STREAM(fnc, nullptr, __FILE__ << ":" << __LINE__,     \
+#define FA_MSG_STREAM_INTERNAL(fnc, to_stream)                         \
+  FA_MSG_STREAM(fnc, nullptr, __FILE__ << ":" << __LINE__ << ": ",     \
     to_stream << " [internal location]")
 
 /**
@@ -126,11 +126,11 @@
 
 
 /// same as FA_DEBUG, but compares the current debug level with the given one
-#define FA_DEBUG_AT(level, what) do {               \
-    /* if (cl_debug_level() < (level)) */           \
-    /*     break;                      */           \
-                                                    \
-    FA_DEBUG(what);                                 \
+#define FA_DEBUG_AT(level, what) do {                        \
+    if (Streams::getDebugLevel() < (level))                  \
+      break;                                                 \
+                                                             \
+    FA_DEBUG(what);                                          \
 } while (0)
 
 
@@ -183,8 +183,8 @@
 
 /// same as FA_DEBUG_MSG, but compares the current debug level with the given one
 #define FA_DEBUG_AT_MSG(level, loc, what) do {               \
-    /* if (cl_debug_level() < (level)) */                    \
-    /*     break;                      */                    \
+    if (Streams::getDebugLevel() < (level))                  \
+      break;                                                 \
                                                              \
     FA_DEBUG_MSG((loc), what);                               \
 } while (0)
@@ -192,6 +192,11 @@
 
 class Streams
 {
+private:  // data members
+
+	/// debugging level
+	static int debugLvl_;
+
 public:   // data types
 
 	/// Signature of print functions
@@ -213,6 +218,27 @@ public:   // methods
 		const cl_loc*      loc,
 		const char*        locStr,
 		const char*        msg);
+
+	/**
+	 * @brief  Sets the debugging level to @p lvl
+	 *
+	 * @param[in]  lvl  The new value of the debugging level
+	 */
+	static void setDebugLevel(int lvl);
+
+	/**
+	 * @brief  Sets the debugging level the same as for Code Listener
+	 *
+	 * @param[in]  lvl  The new value of the debugging level
+	 */
+	static void setDebugLevelAsForCL();
+
+	/**
+	 * @brief  Gets the current debugging level
+	 *
+	 * @returns  Current debugging level
+	 */
+	static int getDebugLevel();
 };
 
 #endif
