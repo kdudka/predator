@@ -40,6 +40,8 @@
 #include "symctx.hh"
 #include "executionmanager.hh"
 #include "fixpointinstruction.hh"
+#include "memplot.hh"
+#include "programconfig.hh"
 #include "restart_request.hh"
 #include "symexec.hh"
 
@@ -58,6 +60,46 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 }
 #endif
 
+// anonymous namespace
+namespace
+{
+	/**
+	 * @brief  Prints the trace to output stream
+	 *
+	 * @param[in,out]  os     The output stream
+	 * @param[in]      trace  The trace to be printed
+	 *
+	 * @returns  Modified stream
+	 */
+	std::ostream& printTrace(
+		std::ostream&             os,
+		const SymState::Trace&    trace)
+	{
+		const CodeStorage::Insn* lastInsn = nullptr;
+
+		for (auto it = trace.crbegin(); it != trace.crend(); ++it)
+		{	// traverse in the reverse order
+			const SymState& state = **it;
+
+			assert(state.GetInstr());
+			const AbstractInstruction& instr = *state.GetInstr();
+
+			const CodeStorage::Insn* origInsn = instr.insn();
+			if ((nullptr != origInsn) && (lastInsn != origInsn))
+			{
+				lastInsn = origInsn;
+				os << std::setw(4) << std::right << origInsn->loc.line << ": "
+					<< *origInsn << "\n";
+
+				MemPlotter::plotHeap(state);
+			}
+		}
+
+		return os;
+	}
+} // namespace
+
+
 class SymExec::Engine
 {
 private:  // data members
@@ -71,12 +113,14 @@ private:  // data members
 
 	ExecutionManager execMan_;
 
+	const ProgramConfig& conf_;
+
 	volatile bool dbgFlag_;
 	volatile bool userRequestFlag_;
 
 protected:
 
-// TODO: remove (obsolete? we have SymState::printTrace)
+// TODO: remove (obsolete? we have ::printTrace)
 //	/**
 //	 * @brief  Prints a trace of preceding symbolic states
 //	 *
@@ -225,20 +269,24 @@ protected:
 		}
 	}
 
-public:
+private:  // methods
+
+
+public:   // methods
 
 	/**
 	 * @brief  The default constructor
 	 *
 	 * The default constructor.
 	 */
-	Engine() :
+	explicit Engine(const ProgramConfig& conf) :
 		taBackend_{},
 		fixpointBackend_{},
 		boxMan_{},
 		compiler_(fixpointBackend_, taBackend_, boxMan_),
 		assembly_{},
 		execMan_{},
+		conf_(conf),
 		dbgFlag_{false},
 		userRequestFlag_{false}
 	{ }
@@ -375,6 +423,8 @@ public:
 			{	// while the analysis hasn't terminated
 			}
 
+			FA_NOTE("the program is safe ...");
+
 			// print out boxes
 			this->printBoxes();
 
@@ -398,6 +448,20 @@ public:
 			FA_DEBUG_AT(1, "forester has generated " << execMan_.statesEvaluated()
 				<< " symbolic configuration(s) in " << execMan_.tracesEvaluated()
 				<< " trace(s) using " << boxMan_.boxDatabase().size() << " box(es)");
+		}
+		catch (const ProgramError& e)
+		{
+			if ((conf_.printTrace) && (nullptr != e.state()))
+			{
+				std::ostringstream oss;
+				printTrace(oss, e.state()->getTrace());
+				FA_ERROR_MSG(e.location(), oss.str());
+			}
+
+			if (nullptr != e.location())
+				FA_ERROR_MSG(e.location(), e.what());
+			else
+				FA_ERROR(e.what());
 		}
 		catch (std::exception& e)
 		{
@@ -444,8 +508,8 @@ public:
 	}
 };
 
-SymExec::SymExec() :
-	engine(new Engine())
+SymExec::SymExec(const ProgramConfig& conf) :
+	engine{new Engine(conf)}
 { }
 
 SymExec::~SymExec()

@@ -17,28 +17,26 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Standard library headers
 #include <ostream>
 
+// Code Listener headers
 #include <cl/storage.hh>
-#include "../cl/ssd.h"
 
-#include "forestautext.hh"
-#include "ufae.hh"
-#include "executionmanager.hh"
-#include "virtualmachine.hh"
-#include "folding.hh"
+// Forester headers
 #include "abstraction.hh"
-#include "normalization.hh"
-#include "splitting.hh"
-#include "utils.hh"
-#include "regdef.hh"
-#include "streams.hh"
-
-#include "fixpoint.hh"
-
 #include "config.h"
-
-using namespace ssd;
+#include "executionmanager.hh"
+#include "fixpoint.hh"
+#include "folding.hh"
+#include "forestautext.hh"
+#include "normalization.hh"
+#include "regdef.hh"
+#include "splitting.hh"
+#include "streams.hh"
+#include "ufae.hh"
+#include "utils.hh"
+#include "virtualmachine.hh"
 
 struct ExactTMatchF {
 	bool operator()(const TT<label_type>& t1, const TT<label_type>& t2) {

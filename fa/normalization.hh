@@ -20,9 +20,11 @@
 #ifndef NORMALIZATION_H
 #define NORMALIZATION_H
 
+// Standard library headers
 #include <vector>
 #include <map>
 
+// Forester headers
 #include "forestautext.hh"
 #include "abstractbox.hh"
 #include "streams.hh"

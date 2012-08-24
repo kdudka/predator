@@ -29,10 +29,10 @@
 #include <cl/clutil.hh>
 
 // Forester headers
-#include "types.hh"
 #include "nodebuilder.hh"
 #include "notimpl_except.hh"
 #include "streams.hh"
+#include "types.hh"
 #include "varinfo.hh"
 
 #define ABP_OFFSET		0

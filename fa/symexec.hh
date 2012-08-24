@@ -25,6 +25,7 @@
 
 // Forester headers
 #include "compiler.hh"
+#include "programconfig.hh"
 
 /**
  * @file symexec.hh
@@ -52,11 +53,13 @@ private:  // methods
 public:   // methods
 
 	/**
-	 * @brief  Default constructor
+	 * @brief  Constructor
 	 *
-	 * Default constructor.
+	 * Constructor.
+	 *
+	 * @param[in]  conf  Program configuration
 	 */
-	SymExec();
+	explicit SymExec(const ProgramConfig& conf);
 
 	/**
 	 * @brief  Destructor

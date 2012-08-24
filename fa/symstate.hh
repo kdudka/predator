@@ -212,19 +212,6 @@ public:   // methods
 	 * @returns  The trace
 	 */
 	Trace getTrace() const;
-
-
-	/**
-	 * @brief  Prints the trace to output stream
-	 *
-	 * @param[in,out]  os     The output stream
-	 * @param[in]      trace  The trace to be printed
-	 *
-	 * @returns  Modified stream
-	 */
-	static std::ostream& printTrace(
-		std::ostream&   os,
-		const Trace&    trace);
 };
 
 #endif

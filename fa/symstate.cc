@@ -84,29 +84,3 @@ SymState::Trace SymState::getTrace() const
 
 	return trace;
 }
-
-
-std::ostream& SymState::printTrace(
-	std::ostream&   os,
-	const Trace&    trace)
-{
-	const CodeStorage::Insn* lastInsn = nullptr;
-
-	for (auto it = trace.crbegin(); it != trace.crend(); ++it)
-	{	// traverse in the reverse order
-		const SymState& state = **it;
-		const AbstractInstruction& instr = *state.instr_;
-
-		const CodeStorage::Insn* origInsn = instr.insn();
-		if ((nullptr != origInsn) && (lastInsn != origInsn))
-		{
-			lastInsn = origInsn;
-			os << std::setw(4) << std::right << origInsn->loc.line << ": "
-				<< *origInsn << "\n";
-
-			MemPlotter::plotHeap(state);
-		}
-	}
-
-	return os;
-}

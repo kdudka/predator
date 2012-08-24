@@ -18,122 +18,34 @@
  */
 
 // Standard library headers
-#include <vector>
-#include <unordered_map>
-#include <fstream>
-#include <iostream>
-#include <stdexcept>
 #include <ctime>
-#include <cstdlib>
 #include <signal.h>
-
-// Boost headers
-#include <boost/algorithm/string.hpp>
 
 // Code Listener headers
 #include <cl/easy.hh>
 #include "../cl/ssd.h"
 
 // Forester headers
+#include "notimpl_except.hh"
+#include "programconfig.hh"
+#include "streams.hh"
 #include "symctx.hh"
 #include "symexec.hh"
-#include "symstate.hh"
-#include "programerror.hh"
-#include "notimpl_except.hh"
-#include "streams.hh"
 
-SymExec se;
+SymExec* se = nullptr;
 
 void setDbgFlag(int) {
-	se.setDbgFlag();
+	if (se)
+		se->setDbgFlag();
 }
 
 void userRequestHandler(int) {
-	se.setUserRequestFlag();
+	if (se)
+		se->setUserRequestFlag();
 }
 
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
-
-struct Config
-{
-public:   // data members
-	std::string dbRoot;        ///< box database root directory
-	bool        printUcode;    ///< printing microcode?
-	bool        onlyCompile;   ///< only compiling?
-	bool        printTrace;    ///< printing trace for errors?
-
-private:  // methods
-
-	void processArg(const std::string& arg)
-	{
-		using std::string;
-
-		if (arg.empty())
-			return;
-
-		std::vector<string> data;
-		boost::split(data, arg, boost::is_any_of(":"));
-
-		// assert there is at least one part
-		assert(!data.empty());
-
-		const std::string& key = data[0];
-
-		//      ***************  unary arguments ****************
-		if (std::string("print-ucode") == key)
-		{
-			this->printUcode = true;
-			CL_DEBUG("Config::processArg: \"print-ucode\" mode requested");
-			return;
-		}
-
-		if (std::string("only-compile") == key)
-		{
-			this->onlyCompile = true;
-			CL_DEBUG("Config::processArg: \"only-compile\" mode requested");
-			return;
-		}
-
-		if (std::string("print-trace") == key)
-		{
-			this->printTrace = true;
-			CL_DEBUG("Config::processArg: \"print-trace\" mode requested");
-			return;
-		}
-
-		//      ***************  binary arguments ****************
-		if (std::string("db-root") == key)
-		{
-			if (data.size() != 2)
-			{
-				throw std::invalid_argument("use \"db-root:<path>\"");
-			}
-
-			this->dbRoot = data[1];
-			CL_DEBUG("Config::processArg: \"db-root\" is \"" + this->dbRoot + "\"");
-			return;
-		}
-
-		CL_WARN("unhandled argument: \"" << arg << "\"");
-	}
-
-public:   // methods
-
-	Config(const std::string& confStr = "") :
-		dbRoot(""),
-		printUcode(false),
-		onlyCompile(false),
-		printTrace(false)
-	{
-		std::vector<std::string> args;
-		boost::split(args, confStr, boost::is_any_of(";"));
-		for (const std::string& arg : args)
-		{
-			processArg(arg);
-		}
-	}
-};
 
 #if 0
 struct BoxDb {
@@ -194,15 +106,17 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 	}
 
 	// parse the configuration string
-	Config conf(configString);
+	ProgramConfig conf(configString);
 
-	CL_DEBUG("starting verification stuff ...");
+	// set signal handlers
+	signal(SIGUSR1, setDbgFlag);
+	signal(SIGUSR2, userRequestHandler);
+
+	FA_DEBUG("starting verification stuff ...");
 	try
 	{
-		signal(SIGUSR1, setDbgFlag);
-		signal(SIGUSR2, userRequestHandler);
-
-		se.loadTypes(stor);
+		se = new SymExec(conf);
+		se->loadTypes(stor);
 
 /*
 		if (!conf.dbRoot.empty()){
@@ -215,28 +129,15 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 		se->compile(stor, *main);
 		if (conf.printUcode)
 		{
-			std::cout << se.GetAssembly();
+			std::cout << se->GetAssembly();
 		}
 
 		if (!conf.onlyCompile)
 		{
-			se.run();
-			CL_NOTE("the program is safe ...");
+			se->run();
 		}
-	} catch (const ProgramError& e)
-	{
-		if ((conf.printTrace) && (nullptr != e.state()))
-		{
-			std::ostringstream oss;
-			SymState::printTrace(oss, e.state()->getTrace());
-			CL_ERROR_MSG(e.location(), oss.str());
-		}
-
-		if (nullptr != e.location())
-			CL_ERROR_MSG(e.location(), e.what());
-		else
-			CL_ERROR(e.what());
-	} catch (const NotImplementedException& e)
+	}
+	catch (const NotImplementedException& e)
 	{
 		if (nullptr != e.location())
 			FA_ERROR_MSG(e.location(), "not implemented: " << e.what());
@@ -246,4 +147,6 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 	{
 		FA_ERROR(e.what());
 	}
+
+	delete se;
 }
