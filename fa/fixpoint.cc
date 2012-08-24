@@ -461,7 +461,7 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 	{
 		FA_DEBUG_AT(3, "hit");
 
-		execMan.traceFinished(state.GetMem());
+		execMan.pathFinished(state.GetMem());
 	} else
 	{
 		FA_DEBUG_AT_MSG(1, &this->insn()->loc, "extending fixpoint\n" << *fae);
@@ -522,7 +522,7 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 	{
 		FA_DEBUG_AT(3, "hit");
 
-		execMan.traceFinished(state.GetMem());
+		execMan.pathFinished(state.GetMem());
 	} else
 	{
 		FA_DEBUG_AT_MSG(1, &this->insn()->loc, "extending fixpoint\n" << *fae);

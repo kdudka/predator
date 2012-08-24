@@ -446,8 +446,8 @@ public:   // methods
 
 			// print out stats
 			FA_DEBUG_AT(1, "forester has generated " << execMan_.statesEvaluated()
-				<< " symbolic configuration(s) in " << execMan_.tracesEvaluated()
-				<< " trace(s) using " << boxMan_.boxDatabase().size() << " box(es)");
+				<< " symbolic configuration(s) in " << execMan_.pathsEvaluated()
+				<< " path(s) using " << boxMan_.boxDatabase().size() << " box(es)");
 		}
 		catch (const ProgramError& e)
 		{

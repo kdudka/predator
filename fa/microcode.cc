@@ -502,7 +502,7 @@ void FI_assert::execute(ExecutionManager& execMan, const ExecState& state)
 // FI_abort
 void FI_abort::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	execMan.traceFinished(state.GetMem());
+	execMan.pathFinished(state.GetMem());
 }
 
 // FI_build_struct
