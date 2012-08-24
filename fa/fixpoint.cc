@@ -20,7 +20,6 @@
 #include <ostream>
 
 #include <cl/storage.hh>
-#include <cl/cl_msg.hh>
 #include "../cl/ssd.h"
 
 #include "forestautext.hh"
@@ -33,6 +32,7 @@
 #include "splitting.hh"
 #include "utils.hh"
 #include "regdef.hh"
+#include "streams.hh"
 
 #include "fixpoint.hh"
 
@@ -170,7 +170,7 @@ inline bool normalize(
 
 	bool result = norm.normalize(marked, order);
 
-	CL_CDEBUG(3, "after normalization: " << std::endl << fae);
+	FA_DEBUG_AT(3, "after normalization: " << std::endl << fae);
 
 	return result;
 
@@ -204,7 +204,7 @@ inline bool fold(FAE& fae, BoxMan& boxMan, const std::set<size_t>& forbidden) {
 	}
 
 	if (matched) {
-		CL_CDEBUG(3, "after folding: " << std::endl << fae);
+		FA_DEBUG_AT(3, "after folding: " << std::endl << fae);
 	}
 
 	return matched;
@@ -228,7 +228,7 @@ inline void reorder(
 
 	norm.normalize(marked, order);
 
-	CL_CDEBUG(3, "after reordering: " << std::endl << fae);
+	FA_DEBUG_AT(3, "after reordering: " << std::endl << fae);
 
 }
 
@@ -282,12 +282,12 @@ inline void abstract(FAE& fae, TreeAut& fwdConf, TreeAut::Backend& backend, BoxM
 	);
 
 	for (size_t i = 0; i < tmp.size(); ++i)
-		CL_CDEBUG(3, "accelerator " << std::endl << *tmp[i]);
+		FA_DEBUG_AT(3, "accelerator " << std::endl << *tmp[i]);
 
 	fae.fuse(tmp, FuseNonZeroF());
 //	fae.fuse(fwdConf, FuseNonZeroF(), CopyNonZeroRhsF());
 
-	CL_CDEBUG(3, "fused " << std::endl << fae);
+	FA_DEBUG_AT(3, "fused " << std::endl << fae);
 #endif
 
 	// abstract
@@ -309,7 +309,7 @@ inline void abstract(FAE& fae, TreeAut& fwdConf, TreeAut::Backend& backend, BoxM
 		}
 	}
 
-	CL_CDEBUG(3, "after abstraction: " << std::endl << fae);
+	FA_DEBUG_AT(3, "after abstraction: " << std::endl << fae);
 
 }
 
@@ -461,12 +461,12 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 	// test inclusion
 	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper))
 	{
-		CL_CDEBUG(3, "hit");
+		FA_DEBUG_AT(3, "hit");
 
 		execMan.traceFinished(state.GetMem());
 	} else
 	{
-		CL_CDEBUG(1, "extending fixpoint at " << this->insn()->loc << std::endl << *fae);
+		FA_DEBUG_AT_MSG(1, &this->insn()->loc, "extending fixpoint\n" << *fae);
 
 		execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 	}
@@ -522,12 +522,12 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 	// test inclusion
 	if (testInclusion(*fae, this->fwdConf, this->fwdConfWrapper))
 	{
-		CL_CDEBUG(3, "hit");
+		FA_DEBUG_AT(3, "hit");
 
 		execMan.traceFinished(state.GetMem());
 	} else
 	{
-		CL_CDEBUG(1, "extending fixpoint at " << this->insn()->loc << std::endl << *fae);
+		FA_DEBUG_AT_MSG(1, &this->insn()->loc, "extending fixpoint\n" << *fae);
 
 		execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 	}

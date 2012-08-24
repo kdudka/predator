@@ -40,6 +40,7 @@
 #include "symstate.hh"
 #include "programerror.hh"
 #include "notimpl_except.hh"
+#include "streams.hh"
 
 SymExec se;
 
@@ -170,14 +171,14 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 
 	using namespace CodeStorage;
 
-	CL_DEBUG("config: \"" << configString << "\"");
+	FA_DEBUG("config: \"" << configString << "\"");
 
 	// look for main() by name
-	CL_DEBUG("looking for 'main()' at global scope...");
+	FA_DEBUG("looking for 'main()' at global scope...");
 	const NameDb::TNameMap &glNames = stor.fncNames.glNames;
 	const NameDb::TNameMap::const_iterator iter = glNames.find("main");
 	if (glNames.end() == iter) {
-		CL_ERROR("main() not found at global scope");
+		FA_ERROR("main() not found at global scope");
 		return;
 	}
 
@@ -188,7 +189,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 	const FncDb &fncs = stor.fncs;
 	const Fnc *main = fncs[iter->second];
 	if (!main || !isDefined(*main)) {
-		CL_ERROR("main() not defined");
+		FA_ERROR("main() not defined");
 		return;
 	}
 
@@ -209,8 +210,9 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 			se.loadBoxes(db.store);
 		}
 */
-		CL_DEBUG_AT(2, "compiling ...");
-		se.compile(stor, *main);
+
+		FA_DEBUG_AT(2, "compiling ...");
+		se->compile(stor, *main);
 		if (conf.printUcode)
 		{
 			std::cout << se.GetAssembly();
@@ -237,11 +239,11 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 	} catch (const NotImplementedException& e)
 	{
 		if (nullptr != e.location())
-			CL_ERROR_MSG(e.location(), "not implemented: " + std::string(e.what()));
+			FA_ERROR_MSG(e.location(), "not implemented: " << e.what());
 		else
-			CL_ERROR("not implemented: " + std::string(e.what()));
+			FA_ERROR("not implemented: " + std::string(e.what()));
 	} catch (const std::exception& e)
 	{
-		CL_ERROR(e.what());
+		FA_ERROR(e.what());
 	}
 }

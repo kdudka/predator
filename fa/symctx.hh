@@ -27,12 +27,12 @@
 // Code Listener headers
 #include <cl/storage.hh>
 #include <cl/clutil.hh>
-#include <cl/cl_msg.hh>
 
 // Forester headers
 #include "types.hh"
 #include "nodebuilder.hh"
 #include "notimpl_except.hh"
+#include "streams.hh"
 #include "varinfo.hh"
 
 #define ABP_OFFSET		0
@@ -221,7 +221,7 @@ public:   // methods
 					// them as they can be used
 					if (nullptr != globalVarMap)
 					{	// in case we are compiling the function
-						CL_NOTE("Compiling global variable " << var.name << " in function "
+						FA_NOTE("Compiling global variable " << var.name << " in function "
 							<< nameOf(fnc_));
 
 						auto itGlobalVar = globalVarMap->find(var.uid);

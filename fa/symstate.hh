@@ -27,9 +27,6 @@
 #include <memory>
 #include <cassert>
 
-// Code Listener headers
-#include <cl/cl_msg.hh>
-
 // Forester headers
 #include "recycler.hh"
 #include "exec_state.hh"

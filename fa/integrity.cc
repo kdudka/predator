@@ -19,6 +19,7 @@
 
 // Forester headers
 #include "integrity.hh"
+#include "streams.hh"
 
 
 struct LeafEnumF
@@ -258,7 +259,7 @@ bool Integrity::check() const
 
 		if (!this->checkRoot(i, bitmap, states))
 		{
-			CL_CDEBUG(1, "inconsistent heap: " << std::endl << fae_);
+			FA_DEBUG_AT(1, "inconsistent heap: " << std::endl << fae_);
 
 			return false;
 		}

@@ -25,6 +25,7 @@
 
 #include "forestautext.hh"
 #include "abstractbox.hh"
+#include "streams.hh"
 #include "utils.hh"
 
 class Normalization
@@ -128,7 +129,7 @@ protected:
 
 			if (!visited[i]) {
 
-				CL_CDEBUG(1, "the root " << i << " is not referenced anymore ... " << this->fae.connectionGraph.data[i]);
+				FA_DEBUG_AT(1, "the root " << i << " is not referenced anymore ... " << this->fae.connectionGraph.data[i]);
 
 				garbage = true;
 

@@ -19,9 +19,7 @@
 
 // Standard library headers
 #include <iomanip>
-
-// Code Listener headers
-#include <cl/cl_msg.hh>
+#include <sstream>
 
 // Forester headers
 #include "plotenum.hh"

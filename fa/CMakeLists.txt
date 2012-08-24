@@ -65,6 +65,7 @@ add_library(fa SHARED
 	microcode.cc
 	plotenum.cc
 	sequentialinstruction.cc
+	streams.cc
 	symctx.cc
 	symexec.cc
 	symstate.cc

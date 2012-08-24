@@ -491,7 +491,7 @@ void FI_assert::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	if (state.GetReg(dst_) != cst_)
 	{
-		CL_CDEBUG(1, "registers: " << utils::wrap(state.GetRegs()) << ", heap:"
+		FA_DEBUG_AT(1, "registers: " << utils::wrap(state.GetRegs()) << ", heap:"
 			<< std::endl << *state.GetMem()->GetFAE());
 		throw std::runtime_error("assertion failed");
 	}
@@ -604,8 +604,8 @@ struct DumpCtx {
 // FI_print_heap
 void FI_print_heap::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	CL_NOTE("local variables: " << DumpCtx(*ctx_, *state.GetMem()->GetFAE()));
-	CL_NOTE("heap:" << *state.GetMem()->GetFAE());
+	FA_NOTE("local variables: " << DumpCtx(*ctx_, *state.GetMem()->GetFAE()));
+	FA_NOTE("heap:" << *state.GetMem()->GetFAE());
 
 	execMan.enqueue(state, next_);
 }

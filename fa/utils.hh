@@ -27,13 +27,6 @@
 #include <unordered_set>
 #include <unordered_map>
 
-#ifndef NDEBUG
-#define CL_CDEBUG(l, x) CL_DEBUG_AT(l, x)
-#define CL_CDEBUG_MSG(l, x) CL_DEBUG_MSG_AT(l, x)
-#else
-#define CL_CDEBUG(l, x)
-#define CL_CDEBUG_MSG(l, x)
-#endif
 
 template <class T>
 std::vector<T> itov(const T &item) {

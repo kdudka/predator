@@ -36,7 +36,6 @@
 
 // Code Listener headers
 #include <cl/storage.hh>
-#include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 

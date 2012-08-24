@@ -22,14 +22,12 @@
 #include <fstream>
 #include <libgen.h>
 
-// Code Listener headers
-#include <cl/cl_msg.hh>
-
 // Forester headers
 #include "exec_state.hh"
 #include "forestautext.hh"
 #include "memplot.hh"
 #include "plotenum.hh"
+#include "streams.hh"
 #include "symstate.hh"
 
 #define FA_QUOTE(what) "\"" << what << "\""
@@ -351,7 +349,7 @@ public:   // methods
 //
 //				if (++(ta.accBegin()) != ta.accEnd())
 //				{
-//					CL_NOTE("More accepting transitions! Considering only the first...");
+//					FA_NOTE("More accepting transitions! Considering only the first...");
 //				}
 //
 //				const Transition& trans = *ta.accBegin();
@@ -373,7 +371,7 @@ public:   // methods
 
 				if (++(ta.accBegin()) != ta.accEnd())
 				{
-					CL_WARN_MSG(loc_,
+					FA_WARN_MSG(loc_,
 						"More accepting transitions! Considering only the first...");
 				}
 
@@ -618,7 +616,7 @@ public:   // methods
 
 void emitPrototypeError(const struct cl_loc *lw, const char *name)
 {
-	CL_WARN_MSG(lw, "incorrectly called " << name
+	FA_WARN_MSG(lw, "incorrectly called " << name
 			<< "() not recognized as built-in");
 }
 
@@ -710,7 +708,7 @@ bool MemPlotter::handlePlot(
 
 	bool ok = plotHeap(state, plotName, &loc);
 	if (!ok)
-		CL_WARN_MSG(&loc, "error while plotting '" << plotName << "'");
+		FA_WARN_MSG(&loc, "error while plotting '" << plotName << "'");
 
 	return true;
 }
@@ -728,7 +726,7 @@ bool MemPlotter::plotHeap(
 	std::fstream out(fileName.c_str(), std::ios::out);
 	if (!out)
 	{
-		CL_ERROR("unable to create file '" << fileName << "'");
+		FA_WARN("unable to create file '" << fileName << "'");
 		return false;
 	}
 
@@ -741,15 +739,15 @@ bool MemPlotter::plotHeap(
 	// check whether we can write to stream
 	if (!out.flush())
 	{
-		CL_ERROR("unable to write file '" << fileName << "'");
+		FA_WARN("unable to write file '" << fileName << "'");
 		out.close();
 		return false;
 	}
 
 	if (loc)
-		CL_NOTE_MSG(loc, "writing memory graph to '" << fileName << "'...");
+		FA_NOTE_MSG(loc, "writing memory graph to '" << fileName << "'...");
 	else
-		CL_DEBUG("writing memory graph to '" << fileName << "'...");
+		FA_DEBUG("writing memory graph to '" << fileName << "'...");
 
 	DotPlotVisitor visitor(out, loc);
 

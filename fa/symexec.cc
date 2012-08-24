@@ -30,7 +30,6 @@
 
 // Code Listener headers
 #include <cl/code_listener.h>
-#include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
@@ -100,17 +99,17 @@ protected:
 //		// invert the trace so that it is in the natural order
 //		std::reverse(trace.begin(), trace.end());
 //
-//		CL_NOTE("trace:");
+//		FA_NOTE("trace:");
 //
 //		for (auto s : trace)
 //		{	// print out the trace
 //			if (s->GetInstr()->insn()) {
-//				CL_NOTE_MSG(&s->GetInstr()->insn()->loc,
+//				FA_NOTE_MSG(&s->GetInstr()->insn()->loc,
 //					SSD_INLINE_COLOR(C_LIGHT_RED, *s->GetInstr()->insn()));
-//				CL_DEBUG_AT(2, std::endl << *s->GetFAE());
+//				FA_DEBUG_AT(2, std::endl << *s->GetFAE());
 //			}
 //
-//			CL_DEBUG_AT(2, *s->GetInstr());
+//			FA_DEBUG_AT(2, *s->GetInstr());
 //		}
 //	}
 
@@ -139,7 +138,7 @@ protected:
 
 		for (auto& nameBoxPair : orderedBoxes)
 		{
-			CL_DEBUG_AT(1, nameBoxPair.first << ':' << std::endl << *nameBoxPair.second);
+			FA_DEBUG_AT(1, nameBoxPair.first << ':' << std::endl << *nameBoxPair.second);
 		}
 	}
 
@@ -151,13 +150,13 @@ protected:
 	 */
 	bool main()
 	{
-		CL_CDEBUG(2, "creating empty heap ...");
+		FA_DEBUG_AT(2, "creating empty heap ...");
 
 		// create an empty heap
 		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(
 			new FAE(taBackend_, boxMan_));
 
-		CL_CDEBUG(2, "scheduling initial state ...");
+		FA_DEBUG_AT(2, "scheduling initial state ...");
 
 		// schedule the initial state for processing
 		execMan_.init(
@@ -177,17 +176,17 @@ protected:
 				const CodeStorage::Insn* insn = state.GetMem()->GetInstr()->insn();
 				if (nullptr != insn)
 				{	// in case current instruction IS an instruction
-					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED, insn->loc << *insn));
-					CL_CDEBUG(2, state);
+					FA_DEBUG_AT(2, SSD_INLINE_COLOR(C_LIGHT_RED, insn->loc << *insn));
+					FA_DEBUG_AT(2, state);
 				}
 				else
 				{
-					CL_CDEBUG(3, state);
+					FA_DEBUG_AT(3, state);
 				}
 
 				if (testAndClearUserRequestFlag())
 				{
-					CL_NOTE("Executed " << std::setw(7) << cntStates << " states so far.");
+					FA_NOTE("Executed " << std::setw(7) << cntStates << " states so far.");
 				}
 
 				// run the state
@@ -202,8 +201,8 @@ protected:
 			//Engine::printTrace(state);
 			const CodeStorage::Insn* insn = state.GetMem()->GetInstr()->insn();
 			if (nullptr != insn) {
-				CL_NOTE_MSG(&insn->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *insn));
-				CL_DEBUG_AT(2, std::endl << *state.GetMem()->GetFAE());
+				FA_NOTE_MSG(&insn->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *insn));
+				FA_DEBUG_AT(2, std::endl << *state.GetMem()->GetFAE());
 			}
 			throw;
 		}
@@ -220,7 +219,7 @@ protected:
 				static_cast<FixpointInstruction*>(instr)->clear();
 			}
 
-			CL_CDEBUG(2, e.what());
+			FA_DEBUG_AT(2, e.what());
 
 			return false;
 		}
@@ -254,7 +253,7 @@ public:
 	 */
 	void loadTypes(const CodeStorage::Storage& stor)
 	{
-		CL_DEBUG_AT(3, "loading types ...");
+		FA_DEBUG_AT(3, "loading types ...");
 
 		// clear the box manager
 		boxMan_.clear();
@@ -282,7 +281,7 @@ public:
 						name = ss.str();
 					}
 
-					CL_DEBUG_AT(3, name);
+					FA_DEBUG_AT(3, name);
 
 					boxMan_.createTypeInfo(name, v);
 					break;
@@ -307,7 +306,7 @@ public:
 			std::ostringstream ss;
 			ss << nameOf(*fnc) << ':' << uidOf(*fnc);
 
-			CL_DEBUG_AT(3, ss.str());
+			FA_DEBUG_AT(3, ss.str());
 
 			boxMan_.createTypeInfo(ss.str(), v);
 		}
@@ -333,20 +332,20 @@ public:
 		}
 
 		boxMan_.createTypeInfo(GLOBAL_VARS_BLOCK_STR, v);
-		CL_DEBUG_AT(1, "created box for global variables: "
+		FA_DEBUG_AT(1, "created box for global variables: "
 			<< *boxMan_.getTypeInfo(GLOBAL_VARS_BLOCK_STR));
 	}
 
 #if 0
 	void loadBoxes(const std::unordered_map<std::string, std::string>& db) {
 
-		CL_DEBUG_AT(2, "loading boxes ...");
+		FA_DEBUG_AT(2, "loading boxes ...");
 
 		for (auto p : db) {
 
 			this->boxes.push_back((const Box*)boxMan_.loadBox(p.first, db));
 
-			CL_DEBUG(p.first << ':' << std::endl << *(const FA*)this->boxes.back());
+			FA_DEBUG(p.first << ':' << std::endl << *(const FA*)this->boxes.back());
 
 		}
 
@@ -387,22 +386,22 @@ public:
 				}
 
 				if (instr->insn()) {
-					CL_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl
+					FA_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl
 						<< (static_cast<FixpointInstruction*>(instr))->getFixPoint());
 				} else {
-					CL_DEBUG_AT(1, "fixpoint at unknown location" << std::endl
+					FA_DEBUG_AT(1, "fixpoint at unknown location" << std::endl
 						<< (static_cast<FixpointInstruction*>(instr))->getFixPoint());
 				}
 			}
 
 			// print out stats
-			CL_DEBUG_AT(1, "forester has generated " << execMan_.statesEvaluated()
+			FA_DEBUG_AT(1, "forester has generated " << execMan_.statesEvaluated()
 				<< " symbolic configuration(s) in " << execMan_.tracesEvaluated()
 				<< " trace(s) using " << boxMan_.boxDatabase().size() << " box(es)");
 		}
 		catch (std::exception& e)
 		{
-			CL_DEBUG(e.what());
+			FA_DEBUG(e.what());
 
 			this->printBoxes();
 

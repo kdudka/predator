@@ -1863,7 +1863,7 @@ protected:
 
 		if (!isDefined(*fnc))
 		{	// in case the implementation of the function is not provided
-			CL_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" <<
+			FA_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" <<
 				insn.operands[1].data.cst.data.cst_fnc.name << '\'');
 
 			if (insn.operands[0].code != CL_OPERAND_VOID)
@@ -1895,7 +1895,7 @@ protected:
 	 */
 	void compileInstruction(const CodeStorage::Insn& insn)
 	{
-		CL_DEBUG_AT(3, insn.loc << ' ' << insn);
+		FA_DEBUG_AT(3, insn.loc << ' ' << insn);
 
 		switch (insn.code)
 		{	// according to the main instruction code
