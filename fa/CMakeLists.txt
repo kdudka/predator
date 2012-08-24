@@ -64,6 +64,7 @@ add_library(fa SHARED
 	memplot.cc
 	microcode.cc
 	plotenum.cc
+	programconfig.cc
 	sequentialinstruction.cc
 	streams.cc
 	symctx.cc
