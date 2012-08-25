@@ -23,6 +23,7 @@ usage_long() {
   echo "  -t,  --print-trace            print the trace for detected errors"
   echo "  -ut, --print-ucode-trace      print the microcode trace for detected errors"
   echo "  -o,  --output FILE            write the output to FILE (for -p)"
+  echo "  -d,  --dry-run                do not run, only print the final command"
   echo "  -v,  --verbose                increase verbosity level"
   echo "  -h,  --help                   display this help and exit"
   #    "################################################################################"
@@ -40,6 +41,7 @@ FILENAME=
 FA_ARGS=
 FA_VERBOSE=0
 OUTPUT_FILE=
+DRY_RUN=0
 
 if [ $# == 0 ] ; then
   usage ;
@@ -57,6 +59,8 @@ while [ "$1" != "" ]; do
                                    ;;
     -o  | --output )               shift
                                    OUTPUT_FILE=$1
+                                   ;;
+    -d  | --dry-run )              DRY_RUN=1
                                    ;;
     -v  | --verbose )              FA_VERBOSE=$(expr ${FA_VERBOSE} + 1)
                                    ;;
@@ -108,11 +112,19 @@ fi
 
 # the GCC command
 exec_gcc() {
+  if [ ${DRY_RUN} == 0 ] ; then
     "$GCC_HOST" $GCC_OPTS $@                                        \
         -fplugin="$FA_PLUG"                                         \
         $FA_OPTS                                                    \
         -fplugin-arg-libfa-verbose="$FA_VERBOSE"                    \
         -fplugin-arg-libfa-args="$FA_ARGS"
+  else
+    echo "$GCC_HOST" $GCC_OPTS $@                                   \
+        -fplugin="$FA_PLUG"                                         \
+        $FA_OPTS                                                    \
+        -fplugin-arg-libfa-verbose="$FA_VERBOSE"                    \
+        -fplugin-arg-libfa-args="$FA_ARGS"
+  fi
 }
 
 # run the gcc
