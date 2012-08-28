@@ -53,10 +53,6 @@ FA_VERBOSE=0
 OUTPUT_FILE=
 DRY_RUN=0
 
-if [ $# == 0 ] ; then
-  usage ;
-fi;
-
 while [ "$1" != "" ]; do
   case $1 in
     -p  | --print-ucode )          FA_ARGS="${FA_ARGS};print-ucode"
@@ -84,6 +80,11 @@ while [ "$1" != "" ]; do
   shift
 done
 
+test "$FILENAME" = "" && {
+  echo "Missing source file name!"
+  usage ;
+}
+
 seek_input_file "$FILENAME" || {
   echo "File \""$FILENAME"\" is not a regular file!"
   usage ;
@@ -101,7 +102,7 @@ export GCC_OPTS="-S -o $SINK -O0 -m32 -I$topdir/include/predator-builtins -DFORE
 
 # initial checks
 find_gcc_host
-test -r "$FA_PLUG"  || die "Forester GCC plug-in not found: ${FA_PLUG}"
+find_gcc_plug fa Forester
 
 # use verbose level 0 by default
 test -z "$FA_VERBOSE" && FA_VERBOSE=0
@@ -122,6 +123,14 @@ if tty 0>&1 >"$SINK"; then
     export W='\o033[1;37m'
     export N='\o033[0m'
 fi
+
+# cleaning on exit 
+on_exit() {
+	rm -f "$tmp"
+	rm -f "$tmp_trace"
+}
+
+trap on_exit EXIT
 
 # the GCC command
 exec_gcc() {
@@ -149,7 +158,6 @@ run_gcc() {
     printf "Trying to compile \033[1;37m%s\033[0m ... " "$*" >&2
     tmp="$(mktemp)"
     test -w "$tmp" || die "mktemp failed"
-    trap "rm -f '$tmp'" RETURN
 
     if "$GCC_HOST" $GCC_OPTS "$@" > "$tmp" 2>&1; then
         printf "\033[1;32mOK\033[0m\n" >&2
@@ -163,14 +171,20 @@ run_gcc() {
 
     RETURN="-1"
 
+		tmp_trace="$(mktemp)"
+    test -w "$tmp_trace" || die "mktemp failed"
+
 		# swap stdout and stderr
 		exec_gcc "$@" "{FD_TMP}>&1                \
 			             1>&2                       \
 									 2>&\${FD_TMP}              \
-									 ${FD_TRACE}>${OUT_TRACE}   \
+									 ${FD_TRACE}>${tmp_trace}   \
 									 ${FD_UCODE}>${OUT_UCODE}   \
 									"
 		RETURN="$?"
+
+		cat ${tmp_trace} | \
+		eval "sed -re 's|#[0-9]+:||g' >${OUT_TRACE}"
 
     if [ ${RETURN} -ne 0 ]; then
         printf "\033[1;31mFAILED\033[0m\n" >&2
