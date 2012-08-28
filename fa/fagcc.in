@@ -4,7 +4,16 @@ export SELF="$0"
 # this makes 7x speedup in case 'grep' was compiled with multi-byte support
 export LC_ALL=C
 
+# Disable ccache so that GCC really processes the files
 export CCACHE_DISABLE=1
+
+# Allocation of file descriptors. Pay attention not to interfere with them!!
+FD_UCODE=3
+FD_TRACE=4
+
+# Outputs - defaults to standard streams
+OUT_TRACE='&1'
+OUT_UCODE='&1'
 
 usage() {
   echo "Usage: $SELF [OPTION]... FILE"
@@ -58,7 +67,7 @@ while [ "$1" != "" ]; do
     -ut | --print-ucode-trace )    FA_ARGS="${FA_ARGS};print-ucode-trace"
                                    ;;
     -o  | --output )               shift
-                                   OUTPUT_FILE=$1
+                                   OUT_UCODE=$1
                                    ;;
     -d  | --dry-run )              DRY_RUN=1
                                    ;;
@@ -112,18 +121,22 @@ fi
 
 # the GCC command
 exec_gcc() {
+	GCC_ARGS=$1
+	REDIR=$2
+
+	EXEC_STR="$GCC_HOST $GCC_OPTS                                     \
+	      ${GCC_ARGS}                                                 \
+        -fplugin="$FA_PLUG"                                         \
+        $FA_OPTS                                                    \
+        -fplugin-arg-libfa-verbose="$FA_VERBOSE"                    \
+        -fplugin-arg-libfa-args=\"$FA_ARGS\"                        \
+				${REDIR}                                                    \
+				"
+
   if [ ${DRY_RUN} == 0 ] ; then
-    "$GCC_HOST" $GCC_OPTS $@                                        \
-        -fplugin="$FA_PLUG"                                         \
-        $FA_OPTS                                                    \
-        -fplugin-arg-libfa-verbose="$FA_VERBOSE"                    \
-        -fplugin-arg-libfa-args="$FA_ARGS"
+		eval ${EXEC_STR}
   else
-    echo "$GCC_HOST" $GCC_OPTS $@                                   \
-        -fplugin="$FA_PLUG"                                         \
-        $FA_OPTS                                                    \
-        -fplugin-arg-libfa-verbose="$FA_VERBOSE"                    \
-        -fplugin-arg-libfa-args="$FA_ARGS"
+    echo ${EXEC_STR}
   fi
 }
 
@@ -145,13 +158,15 @@ run_gcc() {
     fi
 
     RETURN="-1"
-    if [ "${OUTPUT_FILE}" != "" ] ; then
-      exec_gcc $@  2>&1 1>${OUTPUT_FILE}
-      RETURN="$?"
-    else
-      exec_gcc $@ 3>&1 1>&2 2>&3
-      RETURN="$?"
-    fi
+
+		# swap stdout and stderr
+		exec_gcc "$@" "{FD_TMP}>&1                \
+			             1>&2                       \
+									 2>&\${FD_TMP}              \
+									 ${FD_TRACE}>${OUT_TRACE}   \
+									 ${FD_UCODE}>${OUT_UCODE}   \
+									"
+		RETURN="$?"
 
     if [ ${RETURN} -ne 0 ]; then
         printf "\033[1;31mFAILED\033[0m\n" >&2

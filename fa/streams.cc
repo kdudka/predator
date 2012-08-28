@@ -21,18 +21,25 @@
 #include <cassert>
 #include <iostream>
 
+// Boost headers
+#include <boost/iostreams/device/file_descriptor.hpp>
+
 // Code Listener headers
 #include <cl/cl_msg.hh>
 
 // Forester headers
 #include "streams.hh"
 
-// definition of the symbol
-int Streams::debugLvl_ = 0;
 
 // anonymous namespace
 namespace
 {
+	/// the file descriptor for trace output
+	const int FD_TRACE = 4;
+
+	/// debugging level
+	int debugLvl = 0;
+
 	/**
 	 * @brief  
 	 *
@@ -110,15 +117,28 @@ void Streams::callPrintFnc(
 
 void Streams::setDebugLevel(int lvl)
 {
-	debugLvl_ = lvl;
+	::debugLvl = lvl;
 }
 
 void Streams::setDebugLevelAsForCL()
 {
-	debugLvl_ = cl_debug_level();
+	::debugLvl = cl_debug_level();
 }
 
 int Streams::getDebugLevel()
 {
-	return debugLvl_;
+	return ::debugLvl;
+}
+
+void Streams::trace(
+	const char*        traceStr)
+{
+	// Assertions
+	assert(nullptr != traceStr);
+
+//	boost::iostreams::file_descriptor_sink tgt;
+
+	FILE* traceFile = fdopen(FD_TRACE, "w");
+	fwrite(traceStr, 1, strlen(traceStr), traceFile);
+	fflush(traceFile);
 }

@@ -248,6 +248,21 @@ protected:
 				FA_NOTE_MSG(&insn->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *insn));
 				FA_DEBUG_AT(2, std::endl << *state.GetMem()->GetFAE());
 			}
+
+			if (nullptr != e.location())
+				FA_ERROR_MSG(e.location(), e.what());
+			else
+				FA_ERROR(e.what());
+
+			if ((conf_.printTrace) && (nullptr != e.state()))
+			{
+				FA_LOG_MSG(e.location(), "Printing trace");
+
+				std::ostringstream oss;
+				printTrace(oss, e.state()->getTrace());
+				Streams::trace(oss.str().c_str());
+			}
+
 			throw;
 		}
 		catch (RestartRequest& e)
@@ -451,17 +466,17 @@ public:   // methods
 		}
 		catch (const ProgramError& e)
 		{
-			if ((conf_.printTrace) && (nullptr != e.state()))
-			{
-				std::ostringstream oss;
-				printTrace(oss, e.state()->getTrace());
-				FA_ERROR_MSG(e.location(), oss.str());
-			}
-
-			if (nullptr != e.location())
-				FA_ERROR_MSG(e.location(), e.what());
-			else
-				FA_ERROR(e.what());
+//			if ((conf_.printTrace) && (nullptr != e.state()))
+//			{
+//				std::ostringstream oss;
+//				printTrace(oss, e.state()->getTrace());
+//				FA_ERROR_MSG(e.location(), oss.str());
+//			}
+//
+//			if (nullptr != e.location())
+//				FA_ERROR_MSG(e.location(), e.what());
+//			else
+//				FA_ERROR(e.what());
 		}
 		catch (std::exception& e)
 		{

@@ -192,11 +192,6 @@
 
 class Streams
 {
-private:  // data members
-
-	/// debugging level
-	static int debugLvl_;
-
 public:   // data types
 
 	/// Signature of print functions
@@ -239,6 +234,13 @@ public:   // methods
 	 * @returns  Current debugging level
 	 */
 	static int getDebugLevel();
+
+	/**
+	 * @brief  Prints to the trace output
+	 *
+	 * @param[in]  traceStr  A string with a trace
+	 */
+	static void trace(const char* traceStr);
 };
 
 #endif
