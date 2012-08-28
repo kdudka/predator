@@ -34,8 +34,12 @@
 // anonymous namespace
 namespace
 {
-	/// the file descriptor for trace output
-	const int FD_TRACE = 4;
+	/// file descriptors (need to be open by the shell when executing)
+	enum fd_e : int
+	{
+		FD_UCODE = 3,             ///< FD for microcode output
+		FD_TRACE = 4              ///< FD for trace output
+	};
 
 	/// debugging level
 	int debugLvl = 0;
@@ -58,6 +62,54 @@ namespace
 		assert(nullptr != msg);
 
 		os << locStr << label << ": " << msg << (eol? "\n" : "");
+	}
+
+	/**
+	 * @brief  Writes a C-string to a stream given by a file descriptor
+	 * 
+	 * @param[in]  fd   The file descriptor of the output stream
+	 * @param[in]  str  The string to be written to the stream
+	 *
+	 * @returns  @p EXIT_SUCCESS if OK, otherwise something else :-)
+	 */
+	int writeToFD(
+		int                      fd,
+		const char*              str)
+	{
+		// Assertions
+		assert(nullptr != str);
+
+		// first duplicate the target file descriptor so that we can later close it
+		// with fclose()
+		int tmpFD = dup(fd);
+		if (-1 == tmpFD)
+		{
+			FA_WARN("Cannot duplicate the file descriptor " << fd << "!");
+			return EXIT_FAILURE;
+		}
+
+		FILE* file = fdopen(tmpFD, "w");
+		if (!file)
+		{
+			FA_WARN("Cannot open the file descriptor " << fd << "for writing!");
+			return EXIT_FAILURE;
+		}
+
+		size_t len = strlen(str);
+
+		if (fwrite(str, 1, len, file) != len)
+		{
+			FA_WARN("Error writing to the file descriptor " << fd << "!");
+			return EXIT_FAILURE;
+		}
+
+		if (fclose(file))
+		{
+			FA_WARN("Error closing the file descriptor " << fd << "!");
+			return EXIT_FAILURE;
+		}
+
+		return EXIT_SUCCESS;
 	}
 }
 
@@ -133,12 +185,11 @@ int Streams::getDebugLevel()
 void Streams::trace(
 	const char*        traceStr)
 {
-	// Assertions
-	assert(nullptr != traceStr);
+	writeToFD(FD_TRACE, traceStr);
+}
 
-//	boost::iostreams::file_descriptor_sink tgt;
-
-	FILE* traceFile = fdopen(FD_TRACE, "w");
-	fwrite(traceStr, 1, strlen(traceStr), traceFile);
-	fflush(traceFile);
+void Streams::ucode(
+	const char*        ucodeStr)
+{
+	writeToFD(FD_UCODE, ucodeStr);
 }

@@ -134,7 +134,10 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 		se->compile(stor, *main);
 		if (conf.printUcode)
 		{
-			std::cout << se->GetAssembly();
+			FA_LOG("Printing microcode");
+			std::ostringstream os;
+			os << se->GetAssembly();
+			Streams::ucode(os.str().c_str());
 		}
 
 		if (!conf.onlyCompile)

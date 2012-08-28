@@ -284,9 +284,6 @@ protected:
 		}
 	}
 
-private:  // methods
-
-
 public:   // methods
 
 	/**
@@ -465,19 +462,7 @@ public:   // methods
 				<< " path(s) using " << boxMan_.boxDatabase().size() << " box(es)");
 		}
 		catch (const ProgramError& e)
-		{
-//			if ((conf_.printTrace) && (nullptr != e.state()))
-//			{
-//				std::ostringstream oss;
-//				printTrace(oss, e.state()->getTrace());
-//				FA_ERROR_MSG(e.location(), oss.str());
-//			}
-//
-//			if (nullptr != e.location())
-//				FA_ERROR_MSG(e.location(), e.what());
-//			else
-//				FA_ERROR(e.what());
-		}
+		{ }
 		catch (std::exception& e)
 		{
 			FA_DEBUG(e.what());

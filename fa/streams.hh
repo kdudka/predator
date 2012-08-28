@@ -241,6 +241,13 @@ public:   // methods
 	 * @param[in]  traceStr  A string with a trace
 	 */
 	static void trace(const char* traceStr);
+
+	/**
+	 * @brief  Prints to the microcode output
+	 *
+	 * @param[in]  ucodeStr  A string with a microcode
+	 */
+	static void ucode(const char* ucodeStr);
 };
 
 #endif
