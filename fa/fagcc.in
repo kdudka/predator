@@ -30,8 +30,9 @@ usage_long() {
   echo "  -p,  --print-ucode            print microcode"
   echo "  -c,  --compile-only           only compile, do not run the analysis"
   echo "  -t,  --print-trace            print the trace for detected errors"
-  echo "  -ut, --print-ucode-trace      print the microcode trace for detected errors"
-  echo "  -o,  --output FILE            write the output to FILE (for -p)"
+  echo "  -tu, --print-trace-ucode      print the microcode trace for detected errors"
+  echo "  -ou, --output-ucode FILE      write the output microcode (for -p) to FILE"
+  echo "  -ot, --output-trace FILE      write the output trace (for -t, -tu) to FILE"
   echo "  -d,  --dry-run                do not run, only print the final command"
   echo "  -v,  --verbose                increase verbosity level"
   echo "  -h,  --help                   display this help and exit"
@@ -64,10 +65,13 @@ while [ "$1" != "" ]; do
                                    ;;
     -t  | --print-trace )          FA_ARGS="${FA_ARGS};print-trace"
                                    ;;
-    -ut | --print-ucode-trace )    FA_ARGS="${FA_ARGS};print-ucode-trace"
+    -tu | --print-trace-ucode )    FA_ARGS="${FA_ARGS};print-ucode-trace"
                                    ;;
-    -o  | --output )               shift
+    -ou | --output-ucode )         shift
                                    OUT_UCODE=$1
+                                   ;;
+    -ot | --output-trace )         shift
+                                   OUT_TRACE=$1
                                    ;;
     -d  | --dry-run )              DRY_RUN=1
                                    ;;
