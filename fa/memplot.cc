@@ -678,7 +678,7 @@ bool MemPlotter::readPlotName(
 }
 
 
-bool MemPlotter::handlePlot(
+std::string MemPlotter::handlePlot(
 	const SymState&          state,
 	const CodeStorage::Insn  &insn)
 {
@@ -691,30 +691,26 @@ bool MemPlotter::handlePlot(
 	if (cntArgs != 1) {
 		emitPrototypeError(&loc, name);
 		// wrong count of arguments
-		return false;
+		return std::string();
 	}
 
 	if (CL_OPERAND_VOID != opList[/* dst */ 0].code) {
 		// not a function returning void
 		emitPrototypeError(&loc, name);
-		return false;
+		return std::string();
 	}
 
 	std::string plotName;
 	if (!readPlotName(&plotName, opList, &loc)) {
 		emitPrototypeError(&loc, name);
-		return false;
+		return std::string();
 	}
 
-	bool ok = plotHeap(state, plotName, &loc);
-	if (!ok)
-		FA_WARN_MSG(&loc, "error while plotting '" << plotName << "'");
-
-	return true;
+	return plotHeap(state, plotName, &loc);
 }
 
 
-bool MemPlotter::plotHeap(
+std::string MemPlotter::plotHeap(
 	const SymState&      state,
 	const std::string&   name,
 	const struct cl_loc  *loc)
@@ -727,7 +723,7 @@ bool MemPlotter::plotHeap(
 	if (!out)
 	{
 		FA_WARN("unable to create file '" << fileName << "'");
-		return false;
+		return fileName;
 	}
 
 	// open graph
@@ -741,7 +737,7 @@ bool MemPlotter::plotHeap(
 	{
 		FA_WARN("unable to write file '" << fileName << "'");
 		out.close();
-		return false;
+		return fileName;
 	}
 
 	if (loc)
@@ -757,9 +753,13 @@ bool MemPlotter::plotHeap(
 
 	// close graph
 	out << "}\n";
-	const bool ok = !!out;
+	if (!out)
+	{
+		FA_WARN("Error writing to file " << fileName);
+	}
 	out.close();
-	return ok;
+
+	return fileName;
 }
 
 std::string MemPlotter::plotHeap(
@@ -771,10 +771,5 @@ std::string MemPlotter::plotHeap(
 		loc = &state.GetInstr()->insn()->loc;
 	}
 
-	std::string filename = generatePlotName(loc);
-
-	// do not care about the result
-	plotHeap(state, filename, loc);
-
-	return filename;
+	return plotHeap(state, generatePlotName(loc), loc);
 }

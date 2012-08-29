@@ -195,6 +195,7 @@ run_gcc() {
 			}                                                                            \
 		                                                                               \
 			print str;                                                                   \
+			next;                                                                        \
 		}                                                                              \
 		                                                                               \
 		{print}' >${OUT_TRACE}"

@@ -53,11 +53,32 @@ private:
 
 public:   // methods
 
-	static bool handlePlot(
+	/**
+	 * @brief  Plots the heap graph to a file
+	 *
+	 * @todo
+	 *
+	 * @param[in]  state  The state to be plotted
+	 * @param[in]  insn   The corresponding instruction
+	 *
+	 * @returns  The filename of the file where the output is saved
+	 */
+	static std::string handlePlot(
 		const SymState&           state,
 		const CodeStorage::Insn&  insn);
 
-	static bool plotHeap(
+	/**
+	 * @brief  Plots the heap graph to a file
+	 *
+	 * @todo
+	 *
+	 * @param[in]  state  The state to be plotted
+	 * @param[in]  name   The prefix of the filename
+	 * @param[in]  loc    The location in the original source file
+	 *
+	 * @returns  The filename of the file where the output is saved
+	 */
+	static std::string plotHeap(
 		const SymState&        state,
 		const std::string&     name,
 		const struct cl_loc*   loc = nullptr);
