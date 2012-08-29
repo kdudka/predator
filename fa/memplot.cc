@@ -762,7 +762,7 @@ bool MemPlotter::plotHeap(
 	return ok;
 }
 
-bool MemPlotter::plotHeap(
+std::string MemPlotter::plotHeap(
 	const SymState&        state)
 {
 	const struct cl_loc* loc = nullptr;
@@ -771,5 +771,10 @@ bool MemPlotter::plotHeap(
 		loc = &state.GetInstr()->insn()->loc;
 	}
 
-	return plotHeap(state, generatePlotName(loc), loc);
+	std::string filename = generatePlotName(loc);
+
+	// do not care about the result
+	plotHeap(state, filename, loc);
+
+	return filename;
 }

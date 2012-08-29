@@ -62,7 +62,17 @@ public:   // methods
 		const std::string&     name,
 		const struct cl_loc*   loc = nullptr);
 
-	static bool plotHeap(
+	/**
+	 * @brief  Plots the heap graph of a state
+	 *
+	 * Plots the heap graph of a state into an automatically generated filename
+	 * and returns the filename.
+	 *
+	 * @param[in]  state  The state to be plotted
+	 *
+	 * @returns  The name of the file with the plot
+	 */
+	static std::string plotHeap(
 		const SymState&        state);
 };
 

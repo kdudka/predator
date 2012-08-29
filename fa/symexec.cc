@@ -87,12 +87,55 @@ namespace
 			const CodeStorage::Insn* origInsn = instr.insn();
 			if ((nullptr != origInsn) && (lastInsn != origInsn))
 			{
+				std::ostringstream oss;
+				oss << *origInsn;
+
+				std::string filename = MemPlotter::plotHeap(state);
 				lastInsn = origInsn;
 				os << std::setw(4) << std::right << origInsn->loc.line << ": "
-					<< *origInsn << "\n";
-
-				MemPlotter::plotHeap(state);
+					<< std::setw(50) << std::left << oss.str() << " // " << filename << "\n";
 			}
+		}
+
+		return os;
+	}
+
+
+	/**
+	 * @brief  Prints the microcode trace to output stream
+	 *
+	 * @param[in,out]  os     The output stream
+	 * @param[in]      trace  The trace to be printed
+	 *
+	 * @returns  Modified stream
+	 */
+	std::ostream& printUcodeTrace(
+		std::ostream&             os,
+		const SymState::Trace&    trace)
+	{
+		const CodeStorage::Insn* lastInsn = nullptr;
+
+		for (auto it = trace.crbegin(); it != trace.crend(); ++it)
+		{	// traverse in the reverse order
+			const SymState& state = **it;
+
+			assert(state.GetInstr());
+			const AbstractInstruction& instr = *state.GetInstr();
+
+			std::ostringstream oss;
+			oss << instr;
+
+			os << "            " << std::setw(50) << std::left << oss.str();
+
+			const CodeStorage::Insn* origInsn = instr.insn();
+			if ((nullptr != origInsn) && (lastInsn != origInsn))
+			{
+				lastInsn = origInsn;
+				os << "; " << origInsn->loc.line << ": " << *origInsn;
+			}
+
+			os << "\n";
+			MemPlotter::plotHeap(state);
 		}
 
 		return os;
@@ -260,6 +303,15 @@ protected:
 
 				std::ostringstream oss;
 				printTrace(oss, e.state()->getTrace());
+				Streams::trace(oss.str().c_str());
+			}
+
+			if ((conf_.printUcodeTrace) && (nullptr != e.state()))
+			{
+				FA_LOG_MSG(e.location(), "Printing microcode trace");
+
+				std::ostringstream oss;
+				printUcodeTrace(oss, e.state()->getTrace());
 				Streams::trace(oss.str().c_str());
 			}
 

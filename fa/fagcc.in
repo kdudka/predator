@@ -183,8 +183,21 @@ run_gcc() {
 									"
 		RETURN="$?"
 
+#		eval "sed -re 's|#[0-9]+:||g' >${OUT_TRACE}"
 		cat ${tmp_trace} | \
-		eval "sed -re 's|#[0-9]+:||g' >${OUT_TRACE}"
+		eval "awk '                                                                    \
+		/#[0-9]+:/ {                                                                   \
+			str = \$0;                                                                   \
+			while (match(str, /#[0-9]+:/))                                               \
+			{                                                                            \
+				str = substr(str, 1, RSTART-1)  substr(str, RSTART+RLENGTH, length(\$0));  \
+				sub(/\/\//, \"      //\", str);                                            \
+			}                                                                            \
+		                                                                               \
+			print str;                                                                   \
+		}                                                                              \
+		                                                                               \
+		{print}' >${OUT_TRACE}"
 
     if [ ${RETURN} -ne 0 ]; then
         printf "\033[1;31mFAILED\033[0m\n" >&2
