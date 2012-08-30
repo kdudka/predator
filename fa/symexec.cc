@@ -92,7 +92,8 @@ namespace
 
 				std::string filename = MemPlotter::plotHeap(state);
 				lastInsn = origInsn;
-				os << std::setw(4) << std::right << origInsn->loc.line << ": "
+				os << origInsn->loc.file << ":" << std::setw(4) << std::left
+					<< origInsn->loc.line << ":  "
 					<< std::setw(50) << std::left << oss.str() << " // " << filename << "\n";
 			}
 		}
@@ -135,7 +136,7 @@ namespace
 			}
 
 			os << "\n";
-			MemPlotter::plotHeap(state);
+			//MemPlotter::plotHeap(state);
 		}
 
 		return os;
