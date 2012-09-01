@@ -151,28 +151,6 @@ public:   // methods
 
 		return node;
 	}
-
-	friend std::ostream& operator<<(std::ostream& os, const MemNode& node)
-	{
-		(void)os;
-		(void)node;
-
-		assert(false);
-//		os << "<(" << node.id << ")" << " " << node.name << ": ";
-//
-//		for (auto it = node.selMap.cbegin(); it != node.selMap.cend(); ++it)
-//		{
-//			if (it != node.selMap.cbegin())
-//			{
-//				os << "; ";
-//			}
-//
-//			os << "[" << it->first << ":(" << it->second.name << ", "
-//				<< stateToString(it->second.targetState) << ")]";
-//		}
-//
-//		return os;
-	}
 };
 
 struct TreeAutHeap
@@ -294,6 +272,9 @@ private:  // methods
 				assert(false);        // fail gracefully
 			}
 		}
+
+		// in case we fall through in the non-DEBUG build
+		throw std::runtime_error("Unsupported for now");
 	}
 
 public:   // methods
