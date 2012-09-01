@@ -17,16 +17,30 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// DO NOT MOVE LINES IN THIS PART  --- BEGIN
+
+// Forester headers
+#include "streams.hh"
+
+/**
+ * @brief  Reports an error
+ *
+ * @param[in]  errMsg  The error message
+ */
+void reportErrorNoLocation(const char* errMsg)
+{
+	FA_ERROR(errMsg);
+}
+
+// DO NOT MOVE LINES IN THIS PART  --- END
+
+
 // Standard library headers
 #include <sstream>
 #include <vector>
 #include <list>
 #include <set>
 #include <algorithm>
-
-// Boost headers
-//#include <boost/unordered_set.hpp>
-//#include <boost/unordered_map.hpp>
 
 // Code Listener headers
 #include <cl/code_listener.h>
@@ -164,43 +178,6 @@ private:  // data members
 
 protected:
 
-// TODO: remove (obsolete? we have ::printTrace)
-//	/**
-//	 * @brief  Prints a trace of preceding symbolic states
-//	 *
-//	 * This static method prints the backtrace from the given symbolic state to
-//	 * the initial state.
-//	 *
-//	 * @param[in]  state  The state for which the backtrace is desired
-//	 */
-//	static void printTrace(const ExecState& state)
-//	{
-//		SymState* s = state.GetMem();
-//
-//		std::vector<SymState*> trace;
-//
-//		for ( ; s; s = s->GetParent())
-//		{	// until we reach the initial state of the execution tree
-//			trace.push_back(s);
-//		}
-//
-//		// invert the trace so that it is in the natural order
-//		std::reverse(trace.begin(), trace.end());
-//
-//		FA_NOTE("trace:");
-//
-//		for (auto s : trace)
-//		{	// print out the trace
-//			if (s->GetInstr()->insn()) {
-//				FA_NOTE_MSG(&s->GetInstr()->insn()->loc,
-//					SSD_INLINE_COLOR(C_LIGHT_RED, *s->GetInstr()->insn()));
-//				FA_DEBUG_AT(2, std::endl << *s->GetFAE());
-//			}
-//
-//			FA_DEBUG_AT(2, *s->GetInstr());
-//		}
-//	}
-
 	/**
 	 * @brief  Prints boxes
 	 *
@@ -296,7 +273,7 @@ protected:
 			if (nullptr != e.location())
 				FA_ERROR_MSG(e.location(), e.what());
 			else
-				FA_ERROR(e.what());
+				reportErrorNoLocation(e.what());
 
 			if ((conf_.printTrace) && (nullptr != e.state()))
 			{
@@ -313,7 +290,7 @@ protected:
 
 				std::ostringstream oss;
 				printUcodeTrace(oss, e.state()->getTrace());
-				Streams::trace(oss.str().c_str());
+				Streams::traceUcode(oss.str().c_str());
 			}
 
 			throw;

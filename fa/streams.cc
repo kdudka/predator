@@ -37,8 +37,9 @@ namespace
 	/// file descriptors (need to be open by the shell when executing)
 	enum fd_e : int
 	{
-		FD_UCODE = 3,             ///< FD for microcode output
-		FD_TRACE = 4              ///< FD for trace output
+		FD_UCODE       = 3,             ///< FD for microcode output
+		FD_TRACE       = 4,             ///< FD for trace output
+		FD_TRACE_UCODE = 5,             ///< FD for microcode trace output
 	};
 
 	/// debugging level
@@ -147,7 +148,9 @@ void Streams::note(
 	const char* locStr,
 	const char* msg)
 {
-	printToStream(std::cerr, locStr, "note", msg);
+	std::ostringstream os;
+	printToStream(os, locStr, "note", msg, false);
+	cl_note(os.str().c_str());
 }
 
 void Streams::callPrintFnc(
@@ -186,6 +189,12 @@ void Streams::trace(
 	const char*        traceStr)
 {
 	writeToFD(FD_TRACE, traceStr);
+}
+
+void Streams::traceUcode(
+	const char*        traceUcodeStr)
+{
+	writeToFD(FD_TRACE_UCODE, traceUcodeStr);
 }
 
 void Streams::ucode(

@@ -10,10 +10,12 @@ export CCACHE_DISABLE=1
 # Allocation of file descriptors. Pay attention not to interfere with them!!
 FD_UCODE=3
 FD_TRACE=4
+FD_TRACE_UCODE=5
 
 # Outputs - defaults to standard streams
-OUT_TRACE='&1'
 OUT_UCODE='&1'
+OUT_TRACE='&1'
+OUT_TRACE_UCODE='&1'
 
 usage() {
   echo "Usage: $SELF [OPTION]... FILE"
@@ -27,15 +29,16 @@ usage_long() {
   echo "Usage: $SELF [OPTION]... FILE"
   echo ""
   echo "Miscellaneous:"
-  echo "  -p,  --print-ucode            print microcode"
-  echo "  -c,  --compile-only           only compile, do not run the analysis"
-  echo "  -t,  --print-trace            print the trace for detected errors"
-  echo "  -tu, --print-trace-ucode      print the microcode trace for detected errors"
-  echo "  -ou, --output-ucode FILE      write the output microcode (for -p) to FILE"
-  echo "  -ot, --output-trace FILE      write the output trace (for -t, -tu) to FILE"
-  echo "  -d,  --dry-run                do not run, only print the final command"
-  echo "  -v,  --verbose                increase verbosity level"
-  echo "  -h,  --help                   display this help and exit"
+  echo "  -p,   --print-ucode              print microcode"
+  echo "  -c,   --compile-only             only compile, do not run the analysis"
+  echo "  -t,   --print-trace              print the trace for detected errors"
+  echo "  -tu,  --print-trace-ucode        print the microcode trace for detected errors"
+  echo "  -ou,  --output-ucode FILE        write the output microcode (for -p) to FILE"
+  echo "  -ot,  --output-trace FILE        write the trace (for -t) to FILE"
+  echo "  -otu, --output-trace-ucode FILE  write the microcode trace (for -tu) to FILE"
+  echo "  -d,   --dry-run                  do not run, only print the final command"
+  echo "  -v,   --verbose                  increase verbosity level"
+  echo "  -h,   --help                     display this help and exit"
   #    "################################################################################"
 
   exit 1
@@ -55,27 +58,30 @@ DRY_RUN=0
 
 while [ "$1" != "" ]; do
   case $1 in
-    -p  | --print-ucode )          FA_ARGS="${FA_ARGS};print-ucode"
-                                   ;;
-    -c  | --compile-only )         FA_ARGS="${FA_ARGS};only-compile"
-                                   ;;
-    -t  | --print-trace )          FA_ARGS="${FA_ARGS};print-trace"
-                                   ;;
-    -tu | --print-trace-ucode )    FA_ARGS="${FA_ARGS};print-ucode-trace"
-                                   ;;
-    -ou | --output-ucode )         shift
-                                   OUT_UCODE=$1
-                                   ;;
-    -ot | --output-trace )         shift
-                                   OUT_TRACE=$1
-                                   ;;
-    -d  | --dry-run )              DRY_RUN=1
-                                   ;;
-    -v  | --verbose )              FA_VERBOSE=$(expr ${FA_VERBOSE} + 1)
-                                   ;;
-    -h  | --help )                 usage_long
-                                   ;;
-    * )                            FILENAME=$1
+    -p   | --print-ucode )          FA_ARGS="${FA_ARGS};print-ucode"
+                                    ;;
+    -c   | --compile-only )         FA_ARGS="${FA_ARGS};only-compile"
+                                    ;;
+    -t   | --print-trace )          FA_ARGS="${FA_ARGS};print-trace"
+                                    ;;
+    -tu  | --print-trace-ucode )    FA_ARGS="${FA_ARGS};print-ucode-trace"
+                                    ;;
+    -ou  | --output-ucode )         shift
+                                    OUT_UCODE=$1
+                                    ;;
+    -ot  | --output-trace )         shift
+                                    OUT_TRACE=$1
+                                    ;;
+    -otu | --output-trace-ucode )   shift
+                                    OUT_TRACE_UCODE=$1
+                                    ;;
+    -d   | --dry-run )              DRY_RUN=1
+                                    ;;
+    -v   | --verbose )              FA_VERBOSE=$(expr ${FA_VERBOSE} + 1)
+                                    ;;
+    -h   | --help )                 usage_long
+                                    ;;
+    * )                             FILENAME=$1
   esac
   shift
 done
@@ -175,15 +181,15 @@ run_gcc() {
     test -w "$tmp_trace" || die "mktemp failed"
 
 		# swap stdout and stderr
-		exec_gcc "$@" "{FD_TMP}>&1                \
-			             1>&2                       \
-									 2>&\${FD_TMP}              \
-									 ${FD_TRACE}>${tmp_trace}   \
-									 ${FD_UCODE}>${OUT_UCODE}   \
+		exec_gcc "$@" "{FD_TMP}>&1                          \
+			             1>&2                                 \
+									 2>&\${FD_TMP}                        \
+									 ${FD_TRACE}>${tmp_trace}             \
+									 ${FD_TRACE_UCODE}>${OUT_TRACE_UCODE} \
+									 ${FD_UCODE}>${OUT_UCODE}             \
 									"
 		RETURN="$?"
 
-#		eval "sed -re 's|#[0-9]+:||g' >${OUT_TRACE}"
 		cat ${tmp_trace} | \
 		eval "awk '                                                                    \
 		/#[0-9]+:/ {                                                                   \

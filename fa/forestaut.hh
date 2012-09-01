@@ -55,76 +55,18 @@ private:  // data members
 
 	DataArray variables_;
 
-private:  // static methods
-
-	/**
-	 * @brief  @todo
-	 *
-	 * @todo
-	 */
-	static size_t getLabelArity(std::vector<const AbstractBox*>& label)
-	{
-		size_t arity = 0;
-
-		for (auto& box : label)
-			arity += box->getArity();
-
-		return arity;
-	}
-
-
 public:
 
 	std::vector<std::shared_ptr<TreeAut>> roots;
 
 	mutable ConnectionGraph connectionGraph;
 
-	struct BoxCmpF {
+	static void reorderBoxes(
+		std::vector<const AbstractBox*>& label,
+		std::vector<size_t>& lhs);
 
-		bool operator()(const std::pair<const AbstractBox*, std::vector<size_t>>& v1,
-			const std::pair<const AbstractBox*, std::vector<size_t>>& v2) {
-
-			if (v1.first->isType(box_type_e::bTypeInfo))
-				return !v2.first->isType(box_type_e::bTypeInfo);
-
-			return v1.first->getOrder() < v2.first->getOrder();
-
-		}
-
-	};
-
-	static void reorderBoxes(std::vector<const AbstractBox*>& label, std::vector<size_t>& lhs) {
-
-		assert(FA::getLabelArity(label) == lhs.size());
-
-		std::vector<std::pair<const AbstractBox*, std::vector<size_t> > > tmp;
-		std::vector<size_t>::iterator lhsBegin = lhs.end(), lhsEnd = lhs.begin();
-
-		for (size_t i = 0; i < label.size(); ++i) {
-
-			lhsBegin = lhsEnd;
-
-			lhsEnd += label[i]->getArity();
-
-			tmp.push_back(std::make_pair(label[i], std::vector<size_t>(lhsBegin, lhsEnd)));
-
-		}
-
-		std::sort(tmp.begin(), tmp.end(), BoxCmpF());
-
-		lhs.clear();
-
-		for (size_t i = 0; i < tmp.size(); ++i) {
-
-			label[i] = tmp[i].first;
-
-			lhs.insert(lhs.end(), tmp[i].second.begin(), tmp[i].second.end());
-
-		}
-
-	}
-
-	TreeAut* allocTA() {
+	TreeAut* allocTA()
+	{
 		return new TreeAut(*this->backend);
 	}
 
@@ -140,19 +82,6 @@ public:
 	static bool isData(size_t state) {
 		return _MSB_TEST(state);
 	}
-
-	struct WriteStateF {
-
-		std::string operator()(size_t state) const {
-			std::ostringstream ss;
-			if (_MSB_TEST(state))
-				ss << 'r' << _MSB_GET(state);
-			else
-				ss << 'q' << state;
-			return ss.str();
-		}
-
-	};
 
 	FA(TreeAut::Backend& backend) :
 		backend(&backend),

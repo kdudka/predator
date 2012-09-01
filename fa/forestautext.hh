@@ -180,7 +180,7 @@ public:
 						break;
 				}
 
-				if (!f(j, *fae->roots[j], *ta))
+				if (!f(*fae, j, *fae->roots[j], *ta))
 					break;
 			}
 

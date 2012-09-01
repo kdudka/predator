@@ -80,8 +80,7 @@
  * see FA_MSG_STREAM for details
  */
 #define FA_MSG_STREAM_LOC(fnc, loc, to_stream)             \
-  FA_MSG_STREAM(fnc, (loc), "",                            \
-    to_stream << " [internal location]")
+  FA_MSG_STREAM(fnc, (loc), "", to_stream)
 
 
 /**
@@ -241,6 +240,13 @@ public:   // methods
 	 * @param[in]  traceStr  A string with a trace
 	 */
 	static void trace(const char* traceStr);
+
+	/**
+	 * @brief  Prints to the microcode trace output
+	 *
+	 * @param[in]  traceStr  A string with a microcode trace
+	 */
+	static void traceUcode(const char* traceUcodeStr);
 
 	/**
 	 * @brief  Prints to the microcode output

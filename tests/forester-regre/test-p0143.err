@@ -1,2 +1,2 @@
 test-p0143.c:22:21: note: insert_list_item (_, item)
-cl_fa.cc:213: error: garbage detected [internal location]
+test-p0143.c:22:21: error: garbage detected

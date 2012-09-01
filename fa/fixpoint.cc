@@ -101,10 +101,31 @@ struct SmarterTMatchF {
 	}
 };
 
-struct CompareVariablesF {
-	bool operator()(size_t i, const TreeAut& ta1, const TreeAut& ta2) {
-		if (i)
+struct CompareVariablesF
+{
+	bool operator()(
+		const FAE&            fae,
+		size_t                i,
+		const TreeAut&        ta1,
+		const TreeAut&        ta2)
+	{
+		VirtualMachine vm(fae);
+
+		bool isFixedComp = true;
+		for (size_t j = 0; j < FIXED_REG_COUNT; ++j)
+		{
+			if (i == vm.varGet(j).d_ref.root)
+			{
+				isFixedComp = false;
+				break;
+			}
+		}
+
+		if (isFixedComp)
+		{
 			return true;
+		}
+
 		const TT<label_type>& t1 = ta1.getAcceptingTransition();
 		const TT<label_type>& t2 = ta2.getAcceptingTransition();
 		return (t1.label() == t2.label()) && (t1.lhs() == t2.lhs());
@@ -112,28 +133,41 @@ struct CompareVariablesF {
 };
 
 struct FuseNonZeroF {
-	bool operator()(size_t root, const FAE*) {
-		// TODO: this appears as a test for the component at which ABP points,
-		// shouldn't there also be test for the component at which GLOB points?
-		return root != 0;
+	bool operator()(size_t root, FAE* fae)
+	{
+		VirtualMachine vm(*fae);
+
+		for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+		{
+			if (root == vm.varGet(i).d_ref.root)
+			{
+				return false;
+			}
+		}
+
+		return true;
 	}
 };
 
-inline void computeForbiddenSet(std::set<size_t>& forbidden, FAE& fae) {
+inline void computeForbiddenSet(
+	std::set<size_t>&               forbidden,
+	FAE&                            fae)
+{
 
 	assert(fae.roots.size() == fae.connectionGraph.data.size());
 
 	VirtualMachine vm(fae);
 
-	assert(fae.roots[vm.varGet(ABP_INDEX).d_ref.root]);
-	assert(fae.roots[vm.varGet(GLOB_INDEX).d_ref.root]);
+	for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+	{
+		assert(fae.roots[vm.varGet(i).d_ref.root]);
+		forbidden.insert(vm.varGet(i).d_ref.root);
+	}
 
-	// do not touch ABP
-	forbidden.insert(vm.varGet(ABP_INDEX).d_ref.root);
-	forbidden.insert(vm.varGet(GLOB_INDEX).d_ref.root);
-
-	vm.getNearbyReferences(vm.varGet(ABP_INDEX).d_ref.root, forbidden);
-	vm.getNearbyReferences(vm.varGet(GLOB_INDEX).d_ref.root, forbidden);
+	for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+	{
+		vm.getNearbyReferences(vm.varGet(i).d_ref.root, forbidden);
+	}
 
 /*
 	for (size_t i = 0; i < fae.roots.size(); ++i) {
@@ -265,9 +299,15 @@ struct CopyNonZeroRhsF {
 	}
 };
 
-inline void abstract(FAE& fae, TreeAut& fwdConf, TreeAut::Backend& backend, BoxMan& boxMan) {
-
+inline void abstract(
+	FAE&                    fae,
+	TreeAut&                fwdConf,
+	TreeAut::Backend&       backend,
+	BoxMan&                 boxMan)
+{
 	fae.unreachableFree();
+
+	FA_DEBUG_AT(3, "before abstraction: " << std::endl << fae);
 
 #if FA_FUSION_ENABLED
 	// merge fixpoint
@@ -295,8 +335,11 @@ inline void abstract(FAE& fae, TreeAut& fwdConf, TreeAut::Backend& backend, BoxM
 
 	// the roots that will be excluded from abstraction
 	std::vector<bool> excludedRoots(fae.getRootCount(), false);
-	excludedRoots[VirtualMachine(fae).varGet(ABP_INDEX).d_ref.root] = true;
-	excludedRoots[VirtualMachine(fae).varGet(GLOB_INDEX).d_ref.root] = true;
+
+	for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+	{
+		excludedRoots[VirtualMachine(fae).varGet(i).d_ref.root] = true;
+	}
 
 	for (size_t i = 0; i < fae.getRootCount(); ++i)
 	{
@@ -308,8 +351,8 @@ inline void abstract(FAE& fae, TreeAut& fwdConf, TreeAut::Backend& backend, BoxM
 	}
 
 	FA_DEBUG_AT(3, "after abstraction: " << std::endl << fae);
-
 }
+
 
 inline void getCandidates(std::set<size_t>& candidates, const FAE& fae) {
 
@@ -401,7 +444,7 @@ inline void learn2(FAE& fae, BoxMan& boxMan) {
 
 }
 
-// FI_fix
+// FI_abs
 void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
@@ -412,10 +455,12 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 #if FA_ALLOW_FOLDING
 	reorder(state.GetMem(), *fae);
 
-	if (boxMan.boxDatabase().size()) {
-
-		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
-		forbidden.insert(VirtualMachine(*fae).varGet(GLOB_INDEX).d_ref.root);
+	if (boxMan.boxDatabase().size())
+	{
+		for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+		{
+			forbidden.insert(VirtualMachine(*fae).varGet(i).d_ref.root);
+		}
 
 		fold(*fae, this->boxMan, forbidden);
 
@@ -447,8 +492,10 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 			abstract(*fae, this->fwdConf, this->taBackend, this->boxMan);
 
 			forbidden.clear();
-			forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
-			forbidden.insert(VirtualMachine(*fae).varGet(GLOB_INDEX).d_ref.root);
+			for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+			{
+				forbidden.insert(VirtualMachine(*fae).varGet(i).d_ref.root);
+			}
 
 			old = *fae;
 
@@ -483,8 +530,10 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 
 	if (boxMan.boxDatabase().size())
 	{
-		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
-		forbidden.insert(VirtualMachine(*fae).varGet(GLOB_INDEX).d_ref.root);
+		for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+		{
+			forbidden.insert(VirtualMachine(*fae).varGet(i).d_ref.root);
+		}
 
 		fold(*fae, this->boxMan, forbidden);
 
@@ -499,8 +548,10 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 	{
 		forbidden.clear();
 
-		forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
-		forbidden.insert(VirtualMachine(*fae).varGet(GLOB_INDEX).d_ref.root);
+		for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+		{
+			forbidden.insert(VirtualMachine(*fae).varGet(i).d_ref.root);
+		}
 
 		while (fold(*fae, this->boxMan, forbidden))
 		{
@@ -512,8 +563,10 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 
 			forbidden.clear();
 
-			forbidden.insert(VirtualMachine(*fae).varGet(ABP_INDEX).d_ref.root);
-			forbidden.insert(VirtualMachine(*fae).varGet(GLOB_INDEX).d_ref.root);
+			for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+			{
+				forbidden.insert(VirtualMachine(*fae).varGet(i).d_ref.root);
+			}
 		}
 	}
 #endif
