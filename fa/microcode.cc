@@ -36,6 +36,7 @@
 #include "symctx.hh"
 #include "virtualmachine.hh"
 
+// anonymous namespace
 namespace
 {
 
@@ -64,7 +65,7 @@ void FI_cond::execute(ExecutionManager& execMan, const ExecState& state)
 
 void FI_cond::finalize(
 	const std::unordered_map<const CodeStorage::Block*,
-	AbstractInstruction*>& codeIndex,
+		AbstractInstruction*>& codeIndex,
 	std::vector<AbstractInstruction*>::const_iterator
 )
 {

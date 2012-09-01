@@ -48,6 +48,7 @@
 #include "compiler.hh"
 
 
+// anonymous namespace
 namespace {
 
 /**

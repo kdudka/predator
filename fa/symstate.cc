@@ -26,9 +26,10 @@
 
 
 void SymState::init(
-	SymState*                                                   parent,
-	AbstractInstruction*                                        instr,
-	const std::shared_ptr<const FAE>& fae, QueueType::iterator  queueTag)
+	SymState*                             parent,
+	AbstractInstruction*                  instr,
+	const std::shared_ptr<const FAE>&     fae,
+	QueueType::iterator                   queueTag)
 {
 	// Assertions
 	assert(Integrity(*fae).check());

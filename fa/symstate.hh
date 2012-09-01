@@ -171,9 +171,10 @@ public:   // methods
 	 * @param[in]  queueTag  @todo write dox
 	 */
 	void init(
-		SymState*                                                   parent,
-		AbstractInstruction*                                        instr,
-		const std::shared_ptr<const FAE>& fae, QueueType::iterator  queueTag);
+		SymState*                                      parent,
+		AbstractInstruction*                           instr,
+		const std::shared_ptr<const FAE>&              fae,
+		QueueType::iterator                            queueTag);
 
 
 	/**
