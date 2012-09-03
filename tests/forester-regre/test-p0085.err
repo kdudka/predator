@@ -1,1 +1,2 @@
+test-p0085.c:48:9: note: free (pd)
 test-p0085.c:48:9: error: dereferenced value is not a valid reference [(undef)]

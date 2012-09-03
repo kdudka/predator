@@ -1,1 +1,2 @@
-test-p0027.c:14:13: error: dereferenced value is not a valid reference [(undef)]
+test-p0027.c:19:14: note: _ = &s->v2
+test-p0027.c:19:14: error: dereferenced value is not a valid reference [(undef)]
