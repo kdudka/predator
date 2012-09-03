@@ -1,14 +1,14 @@
 test-0201.c:9:15: note: writing heap graph to '01-continuous-range-0000.dot'...
 test-0201.c:13:15: note: writing heap graph to '02-with-aligment-0000.dot'...
-test-0201.c:23:13: error: ___sl_error() reached, analysis of this code path will not continue
-test-0201.c:23:13: note: user message: assertion failed: !(i & 0x1)
 test-0201.c:41:15: note: writing heap graph to '03-shifted-0000.dot'...
-test-0201.c:27:13: error: ___sl_error() reached, analysis of this code path will not continue
-test-0201.c:27:13: note: user message: assertion failed: !(j & 0x10)
-test-0201.c:31:13: error: ___sl_error() reached, analysis of this code path will not continue
-test-0201.c:31:13: note: user message: assertion failed: !(k & 0x100)
-test-0201.c:35:13: error: ___sl_error() reached, analysis of this code path will not continue
-test-0201.c:35:13: note: user message: assertion failed: !(k & ~0xFF)
 test-0201.c:52:15: note: writing heap graph to '04-badly-shifted-0000.dot'...
 test-0201.c:49:9: error: ___sl_error() reached, analysis of this code path will not continue
 test-0201.c:49:9: note: user message: assertion failed: !(k & 0xFF)
+test-0201.c:35:13: error: ___sl_error() reached, analysis of this code path will not continue
+test-0201.c:35:13: note: user message: assertion failed: !(k & ~0xFF)
+test-0201.c:31:13: error: ___sl_error() reached, analysis of this code path will not continue
+test-0201.c:31:13: note: user message: assertion failed: !(k & 0x100)
+test-0201.c:27:13: error: ___sl_error() reached, analysis of this code path will not continue
+test-0201.c:27:13: note: user message: assertion failed: !(j & 0x10)
+test-0201.c:23:13: error: ___sl_error() reached, analysis of this code path will not continue
+test-0201.c:23:13: note: user message: assertion failed: !(i & 0x1)

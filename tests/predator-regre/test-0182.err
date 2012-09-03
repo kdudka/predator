@@ -10,6 +10,22 @@ test-0182.c:147:9: note:                     <-- abstract state reachable from L
 test-0182.c:146:28: note:                         <-- abstract state reachable from L17
 test-0182.c:145:5: note:                             <-- abstract state reachable from L16
 test-0182.c:145:5: note:                                 <-- abstract state reachable from L16
+test-0182.c:145:21: note:                                     <-- abstract state reachable from L32
+test-0182.c:145:21: note:                                         <-- abstract state reachable from L32
+test-0182.c:151:9: note:                                             <-- abstract state reachable from L24
+test-0182.c:151:9: note:                                                 <-- abstract state reachable from L24
+test-0182.c:151:40: note:                                                     <-- abstract state reachable from L31
+test-0182.c:151:40: note:                                                         <-- abstract state reachable from L31
+test-0182.c:154:13: note:                                                             <-- abstract state reachable from L29
+test-0182.c:154:13: note:                                                                 <-- abstract state reachable from L29
+test-0182.c:153:13: note:                                                                     <-- abstract state reachable from L27
+test-0182.c:153:13: note:                                                                         <-- abstract state reachable from L27
+test-0182.c:152:13: note:                                                                             <-- abstract state reachable from L25
+test-0182.c:152:13: note:                                                                                 <-- abstract state reachable from L25
+test-0182.c:151:9: note:                                                                                     <-- abstract state reachable from L24 [loop]
+test-0182.c:151:18: note:                                                     <-- abstract state reachable from L23
+test-0182.c:151:18: note:                                                         <-- abstract state reachable from L23
+test-0182.c:149:9: note:                                                             <-- abstract state reachable from L21 [loop]
 test-0182.c:143:17: note:                                     <-- abstract state reachable from L15
 test-0182.c:143:17: note:                                         <-- abstract state reachable from L15 [entry block]
 test-0182.c:178:17: note: from call of inspect_full()

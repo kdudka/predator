@@ -87,7 +87,6 @@ int main() {
  *
  * - each node contains a nested (possibly empty) cyclic DLL
  * - originally taken from fa/data/dll-listofclists.c
- * - terminates instantly with SE_PROTO_COST_THREEWAY == 0
  *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.

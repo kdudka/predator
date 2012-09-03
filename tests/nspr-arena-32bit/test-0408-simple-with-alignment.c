@@ -291,3 +291,13 @@ int main()
 
     return 0;
 }
+
+/**
+ * @file test-0408-simple-with-alignment.c
+ *
+ * @brief aligned variant of test-0404-simple.c
+ *
+ * @attention
+ * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * Any changes made to this comment will be thrown away on the next import.
+ */

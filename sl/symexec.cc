@@ -117,6 +117,7 @@ class SymExecEngine: public IStatsProvider {
             dst_(results),
             stats_(stats),
             ptracer_(stateMap_),
+            sched_(stateMap_),
             block_(0),
             insnIdx_(0),
             heapIdx_(0),
@@ -302,20 +303,18 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
 #endif
 
     // update _target_ state and check if anything has changed
-    if (!stateMap_.insert(ofBlock, block_, sh, closingLoop)) {
-        CL_DEBUG_MSG(lw_, "--- block " << name
-                     << " left intact (size of target is "
-                     << stateMap_[ofBlock].size() << ")");
+    if (stateMap_.insert(ofBlock, block_, sh, closingLoop)) {
+        const SymStateMarked &target = stateMap_[ofBlock];
+
+        // schedule for next wheel (if not already)
+        sched_.schedule(ofBlock);
+
+        CL_DEBUG_MSG(lw_, "+++ block " << name << " updated: "
+                << target.cntPending() << " heaps pending, "
+                << target.size() << " heaps total");
     }
     else {
-        // schedule for next wheel (if not already)
-        const bool already = !sched_.schedule(ofBlock);
-        CL_DEBUG_MSG(lw_, ((already) ? "-+-" : "+++")
-                << " block " << name
-                << ((already)
-                    ? " changed, but already scheduled"
-                    : " scheduled for next wheel")
-                << " (size of target is " << stateMap_[ofBlock].size() << ")");
+        CL_DEBUG_MSG(lw_, "--- block " << name << " left intact");
     }
 }
 
@@ -384,19 +383,24 @@ bool SymExecEngine::bypassNonPointers(
         const TValId                                v1,
         const TValId                                v2)
 {
-#if !SE_TRACK_NON_POINTER_VALUES
+    SymHeap &sh = proc.sh();
     const TObjType clt1 = insnCmp.operands[/* src1 */ 1].type;
     const TObjType clt2 = insnCmp.operands[/* src2 */ 2].type;
+#if SE_TRACK_NON_POINTER_VALUES < 3
+    if (isCodePtr(clt1) || isCodePtr(clt2))
+        goto skip_tracking;
+#endif
+
+#if !SE_TRACK_NON_POINTER_VALUES
     if (isDataPtr(clt1) || isDataPtr(clt2))
 #endif
         return false;
 
     // white-list some values that are worth tracking
-    // cppcheck-suppress unreachableCode
-    SymHeap &sh = proc.sh();
     if (isTrackableValue(sh, v1) || isTrackableValue(sh, v2))
         return false;
 
+skip_tracking:
     proc.killInsn(insnCmp);
 
     SymHeap sh1(sh);
@@ -623,7 +627,8 @@ bool /* complete */ SymExecEngine::execInsn() {
             continue;
 
         if (1 < hCnt) {
-            CL_DEBUG_MSG(lw_, "*** processing heap #" << heapIdx_
+            CL_DEBUG_MSG(lw_, "*** processing block " << block_->name()
+                         << ", heap #" << heapIdx_
                          << " (initial size of state was " << hCnt << ")");
         }
 
@@ -800,11 +805,8 @@ void SymExecEngine::printStatsHelper(const BlockScheduler::TBlock bb) const {
     const SymStateMarked &state = self->stateMap_[bb];
     const unsigned total = state.size();
 
-    // compute heaps pending for execution
-    unsigned waiting = 0;
-    for (unsigned i = 0; i < total; ++i)
-        if (!state.isDone(i))
-            ++waiting;
+    // read count of the heaps pending for execution
+    const unsigned waiting = state.cntPending();
 
     const char *status = (bb == block_)
         ? " in progress"
@@ -912,39 +914,57 @@ void SymExecEngine::pruneOrigin() {
         // never prune loop entry, it would break the fixed-point computation
         return;
 
+    SymStateMarked &origin = stateMap_[block_];
+    const unsigned size = origin.size();
+
+#if SE_STATE_PRUNING_MISS_THR
+    if (!stateMap_.anyReuseHappened(block_)
+            && (SE_STATE_PRUNING_MISS_THR) <= size)
+        goto thr_reached;
+#endif
+
+#if SE_STATE_PRUNING_TOTAL_THR
+    if ((SE_STATE_PRUNING_TOTAL_THR) <= size)
+        goto thr_reached;
+#endif
+
 #if SE_STATE_PRUNING_MODE < 2
+    if (!cl_is_term_insn(block_->front()->code)
+            && (CL_INSN_COND != block_->back()->code || 2 < block_->size()))
+        return;
+#endif
+
+#if SE_STATE_PRUNING_MODE < 3
     if (1 < block_->inbound().size())
         // more than one incoming edges, keep this one
         return;
 #endif
 
-    SymStateMarked &origin = stateMap_[block_];
-    SymHeapList tmp;
+#if SE_STATE_PRUNING_MISS_THR || SE_STATE_PRUNING_TOTAL_THR
+thr_reached:
+#endif
+    if (0x100 < size)
+        printMemUsage("SymExecEngine::execInsn");
 
-    bool hit = false;
-
-    for (unsigned i = 0; i < origin.size(); ++i) {
+    for (unsigned i = 0; i < size; ++i) {
         if (origin.isDone(i))
-            hit = true;
-        else
-            tmp.insert(origin[i]);
-    }
+            continue;
 
-    if (!hit) {
         CL_DEBUG_MSG(lw_, "SymExecEngine::pruneOrigin() failed to pack "
-                << block_->name());
+                << block_->name()
+                << ", sh #" << i << " has not been processed yet");
 
-        CL_BREAK_IF(tmp.size() != origin.size());
+        CL_BREAK_IF("SymExecEngine::pruneOrigin() has failed");
+        return;
     }
-    else {
-        CL_DEBUG_MSG(lw_, "SymExecEngine::pruneOrigin() packed "
-                << block_->name() << ": "
-                << origin.size() << " -> "
-                <<  tmp.size());
 
-        CL_BREAK_IF(origin.size() <= tmp.size());
-        origin.swap(tmp);
-    }
+    origin.clear();
+
+    CL_DEBUG_MSG(lw_, "SymExecEngine::pruneOrigin() cleared " << block_->name()
+            << " (initial size of state was " << size << ")");
+
+    if (0x100 < size)
+        printMemUsage("SymExecEngine::pruneOrigin");
 }
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -18,19 +18,22 @@ test-0186.c:121:12: note:             <-- abstract state reachable from L20
 test-0186.c:121:13: note:                 <-- abstract state reachable from L20
 test-0186.c:120:11: note:                     <-- abstract state reachable from L19
 test-0186.c:120:23: note:                         <-- abstract state reachable from L19
+test-0186.c:126:12: note:                             <-- abstract state reachable from L22
+test-0186.c:126:13: note:                                 <-- abstract state reachable from L22
+test-0186.c:121:21: note:                                     <-- abstract state reachable from L21 [loop]
 test-0186.c:120:23: note:                             <-- abstract state reachable from L18
 test-0186.c:120:23: note:                                 <-- abstract state reachable from L18 [entry block]
 test-0186.c:172:16: note: from call of gl_eval()
 test-0186.c:172:16: note: <-- abstract state reachable from L2
-test-0186.c:169:16: note:     <-- abstract state reachable from L1
-test-0186.c:159:17: note:         <-- abstract state reachable from L1 [entry block]
 test-0186.c:183:5: note:     <-- abstract state reachable from L4
 test-0186.c:183:23: note:         <-- abstract state reachable from L4
 test-0186.c:179:21: note:             <-- abstract state reachable from L3
 test-0186.c:177:20: note:                 <-- abstract state reachable from L3
 test-0186.c:176:12: note:                     <-- abstract state reachable from L2
 test-0186.c:172:16: note:                         <-- abstract state reachable from L2
-test-0186.c:169:16: note:                             <-- abstract state reachable from L1 [loop]
+test-0186.c:183:5: note:                             <-- abstract state reachable from L4 [loop]
+test-0186.c:169:16: note:     <-- abstract state reachable from L1
+test-0186.c:159:17: note:         <-- abstract state reachable from L1 [entry block]
 test-0186.c:157:5: note: from call of main()
 test-0186.c:157:5: warning: symbolic execution terminates prematurely
 test-0186.c:157:5: note: an error label has been reached

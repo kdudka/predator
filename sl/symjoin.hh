@@ -48,18 +48,19 @@ inline std::ostream& operator<<(std::ostream &str, const EJoinStatus status) {
     }
 }
 
-/// replacement of matchData() from symdiscover
+/// @todo some dox
 bool joinDataReadOnly(
         EJoinStatus             *pStatus,
-        const SymHeap           &sh,
+        SymHeap                  sh,
         const BindingOff        &bf,
         const TValId            addr1,
         const TValId            addr2,
         TValSet                 protoRoots[1][2]);
 
-/// replacement of abstractNonMatchingValues() from symabstract
-bool joinData(
+/// @todo some dox
+void joinData(
         SymHeap                 &sh,
+        const BindingOff        &bf,
         const TValId            dst,
         const TValId            src,
         const bool              bidir);
@@ -68,9 +69,9 @@ bool joinData(
 bool joinSymHeaps(
         EJoinStatus             *pStatus,
         SymHeap                 *dst,
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        const bool              allowThreeWay = true);
+        SymHeap                  sh1,
+        SymHeap                  sh2,
+        const bool               allowThreeWay = true);
 
 /// enable/disable debugging of symjoin
 void debugSymJoin(const bool enable);

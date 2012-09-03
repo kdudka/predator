@@ -181,13 +181,6 @@ void clonePrototypes(
     }
 }
 
-void decrementProtoLevel(SymHeap &sh, const TValId at) {
-    TValList protoList;
-    collectPrototypesOf(protoList, sh, at, /* skipDlsPeers */ true);
-    BOOST_FOREACH(const TValId proto, protoList)
-        objDecrementProtoLevel(sh, proto);
-}
-
 struct ValueSynchronizer {
     SymHeap            &sh;
     TObjSet             ignoreList;
@@ -230,43 +223,6 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls) {
     traverseLiveObjs<2>(sh, roots, visitor);
 }
 
-// FIXME: this works only for nullified blocks anyway
-void killUniBlocksUnderBindingPtrs(SymHeap &sh, const TValId seg) {
-    // go through next/prev pointers
-    TObjSet blackList;
-    buildIgnoreList(blackList, sh, seg);
-    BOOST_FOREACH(const ObjHandle &obj, blackList) {
-        if (VAL_NULL != obj.value())
-            continue;
-
-        // if there is a nullified block under next/prev pointer, kill it now
-        obj.setValue(VAL_TRUE);
-        obj.setValue(VAL_NULL);
-    }
-}
-
-// when abstracting an object, we need to abstract all non-matching values in
-void abstractNonMatchingValues(
-        SymHeap                     &sh,
-        const TValId                srcAt,
-        const TValId                dstAt,
-        const bool                  bidir = false)
-{
-    killUniBlocksUnderBindingPtrs(sh, dstAt);
-    if (bidir)
-        killUniBlocksUnderBindingPtrs(sh, srcAt);
-
-    if (!joinData(sh, dstAt, srcAt, bidir))
-        CL_BREAK_IF("joinData() failed, failure of segDiscover()?");
-
-    if (bidir)
-        // already done as side-effect of joinData()
-        return;
-
-    if (OK_DLS == sh.valTargetKind(dstAt))
-        dlSegSyncPeerData(sh, dstAt);
-}
-
 // FIXME: the semantics of this function is quite contra-intuitive
 TValId segDeepCopy(SymHeap &sh, TValId seg) {
     // collect the list of prototypes
@@ -287,19 +243,11 @@ TValId segDeepCopy(SymHeap &sh, TValId seg) {
 
 void enlargeMayExist(SymHeap &sh, const TValId at) {
     const EObjKind kind = sh.valTargetKind(at);
-    switch (kind) {
-        case OK_SEE_THROUGH:
-            decrementProtoLevel(sh, at);
-            sh.valTargetSetConcrete(at);
-            // fall through!
+    if (!isMayExistObj(kind))
+        return;
 
-        case OK_CONCRETE:
-        case OK_SLS:
-            return;
-
-        default:
-            CL_BREAK_IF("invalid call of enlargeMayExist()");
-    }
+    decrementProtoLevel(sh, at);
+    sh.valTargetSetConcrete(at);
 }
 
 void slSegAbstractionStep(
@@ -314,20 +262,12 @@ void slSegAbstractionStep(
     enlargeMayExist(sh, at);
     enlargeMayExist(sh, nextAt);
 
-    if (OK_SLS == sh.valTargetKind(at))
-        decrementProtoLevel(sh, at);
-    else
-        // just to make killUniBlocksUnderBindingPtrs() working appropriately
-        sh.valTargetSetAbstract(at, OK_SLS, off);
+    // merge data
+    joinData(sh, off, nextAt, at, /* bidir */ false);
 
-    if (OK_SLS == sh.valTargetKind(nextAt))
-        decrementProtoLevel(sh, nextAt);
-    else
+    if (OK_SLS != sh.valTargetKind(nextAt))
         // abstract the _next_ object
         sh.valTargetSetAbstract(nextAt, OK_SLS, off);
-
-    // merge data
-    abstractNonMatchingValues(sh, at, nextAt);
 
     // replace all references to 'head'
     const TOffset offHead = sh.segBinding(nextAt).head;
@@ -350,14 +290,14 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off) {
     enlargeMayExist(sh, a1);
     enlargeMayExist(sh, a2);
 
+    // merge data
+    joinData(sh, off, a2, a1, /* bidir */ true);
+
     swapValues(off.next, off.prev);
     sh.valTargetSetAbstract(a1, OK_DLS, off);
 
     swapValues(off.next, off.prev);
     sh.valTargetSetAbstract(a2, OK_DLS, off);
-
-    // merge data
-    abstractNonMatchingValues(sh, a1, a2, /* bidir */ true);
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
     sh.segSetMinLength(a1, len);
@@ -377,11 +317,11 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward) {
         dls = dlSegPeer(sh, dls);
 
     // merge data
-    decrementProtoLevel(sh, dls);
-    abstractNonMatchingValues(sh, var, dls);
+    const BindingOff &off = sh.segBinding(dls);
+    joinData(sh, off, dls, var, /* bidir */ false);
+    dlSegSyncPeerData(sh, dls);
 
     // store the pointer DLS -> VAR
-    const BindingOff &off = sh.segBinding(dls);
     const PtrHandle nextPtr(sh, sh.valByOffset(dls, off.next));
     const TValId valNext = valOfPtrAt(sh, var, off.next);
     nextPtr.setValue(valNext);
@@ -410,9 +350,8 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2) {
     CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2));
 
     // merge data
-    decrementProtoLevel(sh, seg1);
-    decrementProtoLevel(sh, seg2);
-    abstractNonMatchingValues(sh, seg1, seg2, /* bidir */ true);
+    const BindingOff &bf2 = sh.segBinding(seg2);
+    joinData(sh, bf2, seg2, seg1, /* bidir */ true);
 
     // preserve backLink
     const TValId valNext1 = nextValFromSeg(sh, seg1);
@@ -704,18 +643,13 @@ void concretizeObj(
     const EObjKind kind = sh.valTargetKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
 
-    switch (kind) {
-        case OK_OBJ_OR_NULL:
-        case OK_SEE_THROUGH:
-            // these kinds are much easier than regular list segments
-            sh.valTargetSetConcrete(seg);
-            decrementProtoLevel(sh, seg);
-            LDP_PLOT(symabstract, sh);
-            CL_BREAK_IF(!protoCheckConsistency(sh));
-            return;
-
-        default:
-            break;
+    if (isMayExistObj(kind)) {
+        // these kinds are much easier than regular list segments
+        sh.valTargetSetConcrete(seg);
+        decrementProtoLevel(sh, seg);
+        LDP_PLOT(symabstract, sh);
+        CL_BREAK_IF(!protoCheckConsistency(sh));
+        return;
     }
 
     // duplicate self as abstract object (including all prototypes)
@@ -740,13 +674,21 @@ void concretizeObj(
         const PtrHandle prev1 = prevPtrFromSeg(sh, peer);
         prev1.setValue(dupHead);
 
-        // update 'prev' pointer going from the cloned object to the conrete one
+        // update 'prev' pointer going from the cloned object to the concrete
         const PtrHandle prev2(sh, sh.valByOffset(dup, off.next));
         const TValId headAddr = sh.valByOffset(seg, off.head);
         prev2.setValue(headAddr);
 
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
+
+    // if there was a self loop from 'next' to the segment itself, recover it
+    const PtrHandle nextNextPtr = nextPtrFromSeg(sh, dup);
+    const TValId nextNextVal = nextNextPtr.value();
+    const TValId nextNextRoot = sh.valRoot(nextNextVal);
+    if (nextNextRoot == dup)
+        // FIXME: we should do this also the other way around for OK_DLS
+        nextNextPtr.setValue(sh.valByOffset(seg, sh.valOffset(nextNextVal)));
 
     sh.segSetMinLength(dup, len);
 

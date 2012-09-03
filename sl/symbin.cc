@@ -791,7 +791,7 @@ bool handleDebuggingOf(
         module = 0L;
 
     const TValId valEnable = core.valFromOperand(opList[/* enable */ 3]);
-    const bool enable = sh.proveNeq(VAL_FALSE, valEnable);
+    const bool enable = proveNeq(sh, VAL_FALSE, valEnable);
 
     switch (module) {
         case ___SL_SYMABSTRACT:

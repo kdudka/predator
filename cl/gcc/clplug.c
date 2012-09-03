@@ -1637,9 +1637,11 @@ static bool dig_edge_location(struct cl_loc *loc, const edge e)
                 return true;
     }
 
-    if (!e->flags & EDGE_FALLTHRU)
-        CL_BREAK_IF("dig_edge_location() failed to read any location");
+    if (e->flags & EDGE_FALLTHRU)
+        // fallthru edges have no location info if the successor is empty
+        return false;
 
+    CL_BREAK_IF("dig_edge_location() failed to read any location");
     return false;
 }
 
@@ -2079,7 +2081,7 @@ static bool write_pid_file(const char *pid_file)
 
 // plug-in initialization according to gcc plug-in API
 int plugin_init(struct plugin_name_args *plugin_info,
-                 struct plugin_gcc_version *version)
+                struct plugin_gcc_version *version)
 {
     struct cl_plug_options opt;
 

@@ -11,7 +11,7 @@ die() {
 
 usage() {
     printf "Usage: %s path/to/chk-error-label-reachability.sh \
-[dir1 [dir2 [...]]]\n" "$SELF" >&2
+[file1 [file2 [...]]]\n" "$SELF" >&2
     exit 1
 }
 
@@ -26,13 +26,13 @@ shift
 
 GRAND_TOTAL=0
 
-rank_dir() {
+rank_files() {
     PLUS_ONE=0
     PLUS_TWO=0
     MINUS_TWO=0
     MINUS_FOUR=0
 
-    for i in "$1"/*.[ci]; do
+    for i in "$@"; do
         HAS_BUG=no
         if echo "$i" | match -E "BUG|unsafe"; then
             HAS_BUG=yes
@@ -96,11 +96,4 @@ rank_dir() {
     printf "<<< TOTAL: %d%s\n\n" "$TOTAL" "$SUFFIX"
 }
 
-while test -n "$1"; do
-    dir=$(echo "$1" | sed 's|//*$||')
-    printf ">>> %s\n" "$dir"
-    rank_dir "$dir"
-    shift
-done
-
-printf "*** GRAND TOTAL: %d ***\n" "$GRAND_TOTAL"
+rank_files "$@"

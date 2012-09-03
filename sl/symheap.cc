@@ -586,6 +586,9 @@ struct SymHeapCore::Private {
     void setValueOf(TObjId of, TValId val, TValSet *killedPtrs = 0);
 
     // runs only in debug build
+    bool chkValueDeps(const TValId);
+
+    // runs only in debug build
     bool chkArenaConsistency(
             const RootValue        *rootData,
             const bool              allowOverlap = false);
@@ -700,6 +703,65 @@ void SymHeapCore::Private::registerValueOf(TObjId obj, TValId val) {
     RootValue *rootData;
     this->ents.getEntRW(&rootData, root);
     rootData->usedByGl.insert(obj);
+}
+
+// runs only in debug build
+bool SymHeapCore::Private::chkValueDeps(const TValId val) {
+    const BaseValue *valData;
+    this->ents.getEntRO(&valData, val);
+    if (VT_CUSTOM != valData->code)
+        // we are interested only in CV_INT_RANGE here
+        return true;
+
+    const InternalCustomValue *customData =
+        dynamic_cast<const InternalCustomValue *>(valData);
+
+    if (CV_INT_RANGE != customData->customData.code())
+        // we are interested only in CV_INT_RANGE here
+        return true;
+
+    // jump to anchor
+    const TValId anchor = customData->anchor;
+    const InternalCustomValue *anchorData;
+    this->ents.getEntRO(&anchorData, anchor);
+
+    // compute range width of the anchor
+    const IR::Range &rngAnchor = anchorData->customData.rng();
+    const bool loUnbounded = (IR::IntMin == rngAnchor.lo);
+    const bool hiUnbounded = (IR::IntMax == rngAnchor.hi);
+
+    const IR::TUInt width = (loUnbounded || hiUnbounded)
+        ? 0U
+        : widthOf(rngAnchor);
+
+    const TValList &deps = anchorData->dependentValues;
+    BOOST_FOREACH(const TValId depVal, deps) {
+        // get the range of the dependent value
+        const InternalCustomValue *depData;
+        this->ents.getEntRO(&depData, depVal);
+        const IR::Range &rng = depData->customData.rng();
+
+        if (loUnbounded != (IR::IntMin == rng.lo))
+            goto fail;
+        if (hiUnbounded != (IR::IntMax == rng.hi))
+            goto fail;
+
+        if (loUnbounded || hiUnbounded)
+            continue;
+
+        if (rng.lo - rngAnchor.lo != depData->offRoot)
+            goto fail;
+        if (rng.hi - rngAnchor.hi != depData->offRoot)
+            goto fail;
+
+        if (width == widthOf(rng))
+            continue;
+fail:
+        CL_BREAK_IF("broken CV_INT_RANGE dependency");
+        return false;
+    }
+
+    return true;
 }
 
 // runs only in debug build
@@ -2054,6 +2116,8 @@ TObjType SymHeapCore::objType(TObjId obj) const {
 }
 
 TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
+    CL_BREAK_IF(!this->chkValueDeps(ref));
+
     const InternalCustomValue *customDataRef;
     this->ents.getEntRO(&customDataRef, ref);
 
@@ -2074,6 +2138,7 @@ TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift) {
     this->ents.getEntRW(&refData, customData->anchor);
     refData->dependentValues.push_back(val);
 
+    CL_BREAK_IF(!this->chkValueDeps(val));
     return val;
 }
 
@@ -2117,11 +2182,13 @@ void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData) {
 }
 
 void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
-    const InternalCustomValue *customData;
-    this->ents.getEntRO(&customData, val);
+    CL_BREAK_IF(!this->chkValueDeps(val));
+
+    const InternalCustomValue *valData;
+    this->ents.getEntRO(&valData, val);
 
     // extract the original integral ragne
-    const IR::Range &refRange = rngFromCustom(customData->customData);
+    const IR::Range &refRange = valData->customData.rng();
     CL_BREAK_IF(isSingular(refRange));
 
     // compute the difference between the original and desired ranges
@@ -2130,32 +2197,36 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win) {
         return;
     }
 
-    const IR::TUInt loShift = win.lo - refRange.lo;
-    const IR::TUInt hiShift = refRange.hi - win.hi;
-
     // jump to anchor
-    const TValId anchor = customData->anchor;
-    const ReferableValue *refData;
-    this->ents.getEntRO(&refData, anchor);
+    const TValId anchor = valData->anchor;
+    InternalCustomValue *anchorData;
+    this->ents.getEntRW(&anchorData, anchor);
+
+    // update range of the anchor
+    const TOffset off = valData->offRoot;
+    IR::Range &rngAnchor = anchorData->customData.rng();
+    rngAnchor = win - IR::rngFromNum(off);
+
+    if (isSingular(rngAnchor))
+        // CV_INT_RANGE reduced to CV_INT
+        this->replaceRngByInt(anchorData);
 
     // go through all dependent values including the anchor itself
-    TValList deps = refData->dependentValues;
-    deps.push_back(anchor);
+    const TValList deps(anchorData->dependentValues);
     BOOST_FOREACH(const TValId depVal, deps) {
-        // FIXME: are custom values the only allowed dependent values here?
         InternalCustomValue *depData;
         this->ents.getEntRW(&depData, depVal);
 
-        // shift the bounds accordingly
-        CustomValue &cvDep = depData->customData;
-        IR::Range &rngDep = cvDep.rng();
-        rngDep.lo += loShift;
-        rngDep.hi -= hiShift;
+        // update the dependent value
+        IR::Range &rngDep = depData->customData.rng();
+        rngDep = rngAnchor +  IR::rngFromNum(off);
 
         if (isSingular(rngDep))
             // CV_INT_RANGE reduced to CV_INT
             this->replaceRngByInt(depData);
     }
+
+    CL_BREAK_IF(!this->chkValueDeps(val));
 }
 
 TValId SymHeapCore::valByOffset(TValId at, TOffset off) {
@@ -2602,7 +2673,7 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     d->neqDb->gatherRelatedValues(neqs, val);
     BOOST_FOREACH(const TValId valNeq, neqs) {
         CL_BREAK_IF(valNeq == replaceBy);
-        SymHeapCore::neqOp(NEQ_DEL, valNeq, val);
+        this->delNeq(valNeq, val);
     }
 
     // we intentionally do not use a reference here (tight loop otherwise)
@@ -2615,22 +2686,25 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy) {
     }
 }
 
-void SymHeapCore::neqOp(ENeqOp op, TValId v1, TValId v2) {
+void SymHeapCore::addNeq(TValId v1, TValId v2) {
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
 
-    switch (op) {
-        case NEQ_NOP:
-            CL_BREAK_IF("invalid call of SymHeapCore::neqOp()");
-            return;
+    const EValueTarget code1 = this->valTarget(v1);
+    const EValueTarget code2 = this->valTarget(v2);
 
-        case NEQ_ADD:
-            d->neqDb->add(v1, v2);
-            return;
-
-        case NEQ_DEL:
-            d->neqDb->del(v1, v2);
-            return;
+    if (VT_UNKNOWN != code1 && VT_UNKNOWN != code2) {
+        CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
+        return;
     }
+
+    d->neqDb->add(v1, v2);
+}
+
+void SymHeapCore::delNeq(TValId v1, TValId v2) {
+    CL_BREAK_IF(!this->chkNeq(v1, v2));
+
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
+    d->neqDb->del(v1, v2);
 }
 
 void SymHeapCore::gatherRelatedValues(TValList &dst, TValId val) const {
@@ -2655,7 +2729,7 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
             continue;
 
         // create the image now!
-        dst.neqOp(NEQ_ADD, valLt, valGt);
+        dst.addNeq(valLt, valGt);
     }
 
     // go through CoincidenceDb
@@ -3301,70 +3375,8 @@ void SymHeapCore::valTargetSetProtoLevel(TValId root, TProtoLevel level) {
     rootData->protoLevel = level;
 }
 
-bool SymHeapCore::proveNeq(TValId valA, TValId valB) const {
-    // check for invalid values
-    if (VAL_INVALID == valA || VAL_INVALID == valB)
-        return false;
-
-    // check for identical values
-    if (valA == valB)
-        return false;
-
-    // having the values always in the same order leads to simpler code
-    moveKnownValueToLeft(*this, valA, valB);
-
-    // check for known bool values
-    // NOTE: this is only an optimization to avoid calling rngFromVal() twice
-    if (VAL_TRUE == valA)
-        return (VAL_FALSE == valB);
-
-    // we presume (0 <= valA) and (0 < valB) at this point
-    CL_BREAK_IF(d->ents.outOfRange(valB));
-
-    const EValueTarget code = this->valTarget(valB);
-    if (VAL_NULL == valA
-            && (isKnownObject(code) || isGone(code) || VT_RANGE == code))
-        // all addresses of objects have to be non-zero
-        return true;
-
-    if (valInsideSafeRange(*this, valA) && valInsideSafeRange(*this, valB))
-        // NOTE: we know (valA != valB) at this point, look above
-        return true;
-
-    IR::Range rng1, rng2;
-    if (rngFromVal(&rng1, *this, valA) && rngFromVal(&rng2, *this, valB)) {
-        // both values are integral ranges (
-        bool result;
-        return (compareIntRanges(&result, CL_BINOP_NE, rng1, rng2) && result);
-    }
-
-    // check for a Neq predicate
-    if (d->neqDb->chk(valA, valB))
-        return true;
-
-    if (valA <= 0 || valB <= 0)
-        // no handling of special values here
-        return false;
-
-    const TValId root1 = this->valRoot(valA);
-    const TValId root2 = this->valRoot(valB);
-    if (root1 == root2) {
-        // same root, different offsets
-        CL_BREAK_IF(matchOffsets(*this, *this, valA, valB));
-        return true;
-    }
-
-    const TOffset offA = this->valOffset(valA);
-    const TOffset offB = this->valOffset(valB);
-
-    const TOffset diff = offB - offA;
-    if (!diff)
-        // check for Neq between the roots
-        return d->neqDb->chk(root1, root2);
-
-    SymHeapCore &writable = /* XXX */ *const_cast<SymHeapCore *>(this);
-    return d->neqDb->chk(root1, writable.valByOffset(root2,  diff))
-        && d->neqDb->chk(root2, writable.valByOffset(root1, -diff));
+bool SymHeapCore::chkNeq(TValId v1, TValId v2) const {
+    return d->neqDb->chk(v1, v2);
 }
 
 
@@ -3524,188 +3536,6 @@ void SymHeap::valTargetSetConcrete(TValId root) {
     d->absRoots.releaseEnt(root);
 }
 
-void SymHeap::segMinLengthOp(ENeqOp op, TValId at, TMinLen len) {
-    CL_BREAK_IF(!len);
-
-    if (NEQ_DEL == op) {
-        this->segSetMinLength(at, len - 1);
-        return;
-    }
-
-    CL_BREAK_IF(NEQ_ADD != op);
-    const TMinLen current = this->segMinLength(at);
-    if (len <= current)
-        return;
-
-    this->segSetMinLength(at, len);
-}
-
-bool haveSegBidir(
-        TValId                      *pDst,
-        const SymHeap               *sh,
-        const EObjKind              kind,
-        const TValId                v1,
-        const TValId                v2)
-{
-    if (haveSeg(*sh, v1, v2, kind)) {
-        *pDst = sh->valRoot(v1);
-        return true;
-    }
-
-    if (haveSeg(*sh, v2, v1, kind)) {
-        *pDst = sh->valRoot(v2);
-        return true;
-    }
-
-    // found nothing
-    return false;
-}
-
-void SymHeap::neqOp(ENeqOp op, TValId v1, TValId v2) {
-    CL_BREAK_IF(NEQ_ADD != op && NEQ_DEL != op);
-    CL_BREAK_IF(v1 <= 0 && v2 <= 0);
-
-    if (!this->hasAbstractTarget(v1) && !this->hasAbstractTarget(v2)) {
-        // fallback to the base implementation
-        SymHeapCore::neqOp(op, v1, v2);
-        return;
-    }
-
-    if (VAL_NULL == v1 && !this->valOffset(v2))
-        v1 = segNextRootObj(*this, v2);
-    if (VAL_NULL == v2 && !this->valOffset(v1))
-        v2 = segNextRootObj(*this, v1);
-
-    TValId seg;
-    if (haveSegBidir(&seg, this, OK_SEE_THROUGH, v1, v2)
-            || haveSegBidir(&seg, this, OK_OBJ_OR_NULL, v1, v2)) {
-        // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
-        decrementProtoLevel(*this, seg);
-        this->valTargetSetConcrete(seg);
-        return;
-    }
-
-    if (haveSegBidir(&seg, this, OK_SLS, v1, v2)) {
-        this->segMinLengthOp(op, seg, /* SLS 1+ */ 1);
-        return;
-    }
-
-    if (haveSegBidir(&seg, this, OK_DLS, v1, v2)) {
-        this->segMinLengthOp(op, seg, /* DLS 1+ */ 1);
-        return;
-    }
-
-    if (haveDlSegAt(*this, v1, v2)) {
-        this->segMinLengthOp(op, v1, /* DLS 2+ */ 2);
-        return;
-    }
-
-    CL_BREAK_IF(NEQ_ADD != op);
-    CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
-}
-
-TValId lookThrough(TValSet *pSeen, SymHeap &sh, TValId val) {
-    if (VT_RANGE == sh.valTarget(val))
-        // not supported yet
-        return VAL_INVALID;
-
-    const TOffset off = sh.valOffset(val);
-
-    while (0 < val) {
-        const TValId root = sh.valRoot(val);
-        if (!insertOnce(*pSeen, root))
-            // an already seen root value
-            return VAL_INVALID;
-
-        const EValueTarget code = sh.valTarget(val);
-        if (!isAbstract(code))
-            // a non-abstract object reached
-            break;
-
-        const TValId seg = segPeer(sh, root);
-        if (sh.segMinLength(seg))
-            // non-empty abstract object reached
-            break;
-
-        const EObjKind kind = sh.valTargetKind(seg);
-        if (OK_OBJ_OR_NULL == kind) {
-            // we always end up with VAL_NULL if OK_OBJ_OR_NULL is removed
-            val = VAL_NULL;
-            continue;
-        }
-
-        // jump to next value while taking the 'head' offset into consideration
-        const TValId valNext = nextValFromSeg(sh, seg);
-        const BindingOff &bOff = sh.segBinding(seg);
-        val = sh.valByOffset(valNext, off - bOff.head);
-    }
-
-    return val;
-}
-
-bool SymHeap::proveNeq(TValId ref, TValId val) const {
-    if (SymHeapCore::proveNeq(ref, val))
-        // values are non-equal in non-abstract world
-        return true;
-
-    TValSet seen;
-
-    // try to look through possibly empty abstract objects
-    val = lookThrough(&seen, *const_cast<SymHeap *>(this), val);
-    if (VAL_INVALID == val)
-        return false;
-
-    // try to look through possibly empty abstract objects
-    ref = lookThrough(&seen, *const_cast<SymHeap *>(this), ref);
-    if (VAL_INVALID == ref)
-        return false;
-
-    if (SymHeapCore::proveNeq(ref, val))
-        // values are non-equal in non-abstract world
-        return true;
-
-    // having the values always in the same order leads to simpler code
-    moveKnownValueToLeft(*this, ref, val);
-
-    const TSizeRange size2 = this->valSizeOfTarget(val);
-    if (size2.lo <= IR::Int0)
-        // oops, we cannot prove the address is safely allocated, giving up
-        return false;
-
-    const TValId root2 = this->valRoot(val);
-    const TMinLen len2 = objMinLength(*this, root2);
-    if (!len2)
-        // one of the targets is possibly empty, giving up
-        return false;
-
-    if (VAL_NULL == ref)
-        // one of them is VAL_NULL the other one is address of non-empty object
-        return true;
-
-    const TSizeRange size1 = this->valSizeOfTarget(ref);
-    if (size1.lo <= IR::Int0)
-        // oops, we cannot prove the address is safely allocated, giving up
-        return false;
-
-    const TValId root1 = this->valRoot(ref);
-    const TMinLen len1 = objMinLength(*this, root1);
-    if (!len1)
-        // both targets are possibly empty, giving up
-        return false;
-
-    if (!isAbstract(this->valTarget(ref)))
-        // non-empty abstract object vs. concrete object
-        return true;
-
-    if (root2 != segPeer(*this, root1))
-        // a pair of non-empty abstract objects
-        return true;
-
-    // one value points at segment and the other points at its peer
-    CL_BREAK_IF(len1 != len2);
-    return (1 < len1);
-}
-
 void SymHeap::valDestroyTarget(TValId root) {
     SymHeapCore::valDestroyTarget(root);
     if (!d->absRoots.isValidEnt(root))
@@ -3727,11 +3557,10 @@ TMinLen SymHeap::segMinLength(TValId seg) const {
     const AbstractRoot *aData = d->absRoots.getEntRO(seg);
 
     const EObjKind kind = aData->kind;
-    switch (kind) {
-        case OK_SEE_THROUGH:
-        case OK_OBJ_OR_NULL:
-            return 0;
+    if (isMayExistObj(kind))
+        return 0;
 
+    switch (kind) {
         case OK_SLS:
         case OK_DLS:
             return aData->minLength;
@@ -3751,17 +3580,14 @@ void SymHeap::segSetMinLength(TValId seg, TMinLen len) {
     AbstractRoot *aData = d->absRoots.getEntRW(seg);
 
     const EObjKind kind = aData->kind;
+    if (isMayExistObj(kind)) {
+        if (len)
+            CL_BREAK_IF("invalid call of SymHeap::segSetMinLength()");
+
+        return;
+    }
+
     switch (kind) {
-        case OK_SEE_THROUGH:
-            if (len)
-                CL_BREAK_IF("OK_SEE_THROUGH is supposed to have zero minLength");
-            return;
-
-        case OK_OBJ_OR_NULL:
-            if (len)
-                CL_BREAK_IF("OK_OBJ_OR_NULL is supposed to have zero minLength");
-            return;
-
         case OK_SLS:
 #if SE_RESTRICT_SLS_MINLEN
             if ((SE_RESTRICT_SLS_MINLEN) < len)

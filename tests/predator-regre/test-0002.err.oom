@@ -1,2 +1,2 @@
-test-0002.c:9:20: error: invalid dereference
 test-0002.c:11:12: error: dereference of NULL value
+test-0002.c:9:20: error: invalid dereference

@@ -22,8 +22,6 @@ test-0178.c:129:8: note:     <-- abstract state reachable from L8
 test-0178.c:129:8: note:         <-- abstract state reachable from L8
 test-0178.c:112:11: note:             <-- abstract state reachable from L2
 test-0178.c:112:32: note:                 <-- abstract state reachable from L2
-test-0178.c:111:18: note:                     <-- abstract state reachable from L1
-test-0178.c:111:18: note:                         <-- abstract state reachable from L1 [entry block]
 test-0178.c:126:14: note:                     <-- abstract state reachable from L7
 test-0178.c:124:21: note:                         <-- abstract state reachable from L7
 test-0178.c:121:12: note:                             <-- abstract state reachable from L5
@@ -31,6 +29,8 @@ test-0178.c:117:20: note:                                 <-- abstract state rea
 test-0178.c:114:12: note:                                     <-- abstract state reachable from L3
 test-0178.c:113:22: note:                                         <-- abstract state reachable from L3
 test-0178.c:112:11: note:                                             <-- abstract state reachable from L2 [loop]
+test-0178.c:111:18: note:                     <-- abstract state reachable from L1
+test-0178.c:111:18: note:                         <-- abstract state reachable from L1 [entry block]
 test-0178.c:109:5: note: from call of main()
 test-0178.c:109:5: warning: symbolic execution terminates prematurely
 test-0178.c:109:5: note: an error label has been reached

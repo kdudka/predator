@@ -8,6 +8,9 @@ test-0184.c:97:9: note:     <-- abstract state reachable from L26
 test-0184.c:97:9: note:         <-- abstract state reachable from L26
 test-0184.c:96:5: note:             <-- abstract state reachable from L25
 test-0184.c:96:5: note:                 <-- abstract state reachable from L25
+test-0184.c:96:43: note:                     <-- abstract state reachable from L28
+test-0184.c:96:43: note:                         <-- abstract state reachable from L28
+test-0184.c:97:9: note:                             <-- abstract state reachable from L26 [loop]
 test-0184.c:96:14: note:                     <-- abstract state reachable from L24
 test-0184.c:96:14: note:                         <-- abstract state reachable from L24
 test-0184.c:94:5: note:                             <-- abstract state reachable from L22

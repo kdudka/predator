@@ -27,9 +27,6 @@
 #include "util.hh"
 #include "worklist.hh"
 
-#include <algorithm>            // for std::copy
-#include <stack>
-
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
@@ -121,22 +118,25 @@ bool matchUniBlocks(
     sh1.gatherUniformBlocks(bMap1, root1);
     sh2.gatherUniformBlocks(bMap2, root2);
 
-    if (bMap1.size() != bMap2.size())
-        // count of blocks does not match
-        return false;
+    SymHeap &sh1Writable = const_cast<SymHeap &>(sh1);
+    SymHeap &sh2Writable = const_cast<SymHeap &>(sh2);
 
-    TUniBlockMap::const_iterator i1 = bMap1.begin();
-    TUniBlockMap::const_iterator i2 = bMap2.begin();
-    const TUniBlockMap::const_iterator t1 = bMap1.end();
+    BOOST_FOREACH(TUniBlockMap::const_reference item, bMap1) {
+        UniformBlock bl2(item.second);
+        bl2.tplValue = translateValProto(sh2Writable, sh1, bl2.tplValue);
 
-    for (; i1 != t1; ++i1, ++i2) {
-        CL_BREAK_IF(i2 == bMap2.end());
-        const UniformBlock &bl1 = i1->second;
-        const UniformBlock &bl2 = i2->second;
-        if (!areUniBlocksEqual(sh1, sh2, bl1, bl2))
+        TUniBlockMap cov2;
+        if (!sh2.findCoveringUniBlocks(&cov2, root2, bl2))
             return false;
+    }
 
-        CL_BREAK_IF(i1->first != i2->first);
+    BOOST_FOREACH(TUniBlockMap::const_reference item, bMap2) {
+        UniformBlock bl1(item.second);
+        bl1.tplValue = translateValProto(sh1Writable, sh2, bl1.tplValue);
+
+        TUniBlockMap cov1;
+        if (!sh1.findCoveringUniBlocks(&cov1, root1, bl1))
+            return false;
     }
 
     // full match!
@@ -239,7 +239,8 @@ bool cmpValues(
     return matchRoots(sh1, sh2, root1, root2, code);
 }
 
-typedef WorkList<TValPair> TWorkList;
+typedef std::queue<TValPair>                        TSched;
+typedef WorkList<TValPair,TSched>                   TWorkList;
 
 class ValueComparator {
     private:
@@ -274,7 +275,7 @@ class ValueComparator {
                 // schedule roots for next wheel
                 const TValId root1 = sh1_.valRoot(v1);
                 const TValId root2 = sh2_.valRoot(v2);
-                wl_.schedule(root1, root2);
+                wl_.schedule(TValPair(root1, root2));
             }
 
             return /* continue */ true;
@@ -327,7 +328,8 @@ class VarScheduleVisitor {
         }
 
         bool operator()(const TValId roots[2]) {
-            wl_.schedule(roots[0], roots[1]);
+            const TValPair vp(roots[0], roots[1]);
+            wl_.schedule(vp);
             return /* continue */ true;
         }
 };
@@ -349,7 +351,8 @@ bool areEqual(
             || sh2.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET))
     {
         // schedule return values
-        wl.schedule(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
+        const TValPair vp(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
+        wl.schedule(vp);
     }
 
     // start with program variables

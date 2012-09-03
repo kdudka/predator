@@ -36,6 +36,7 @@
 #include "symtrace.hh"
 #include "util.hh"
 
+#include <algorithm>
 #include <vector>
 
 #include <boost/foreach.hpp>
@@ -93,13 +94,9 @@ class PerFncCache {
             CL_BREAK_IF("invalid call of PerFncCache::updateCacheEntry()");
             return;
 #endif
-            int idx = huni_.lookup(of);
-            if (-1 == idx) {
-                CL_BREAK_IF("PerFncCache::updateCacheEntry() has failed");
-                return;
-            }
-
+            const int idx = this->lookupCore(of);
             CL_BREAK_IF(!areEqual(of, huni_[idx]));
+
             Trace::waiveCloneOperation(by);
             huni_.swapExisting(idx, by);
         }
@@ -120,6 +117,9 @@ class PerFncCache {
 
 int PerFncCache::lookupCore(const SymHeap &sh) {
 #if 1 < SE_ENABLE_CALL_CACHE
+#if SE_STATE_ON_THE_FLY_ORDERING
+#error "SE_STATE_ON_THE_FLY_ORDERING is incompatible with join-based call cache"
+#endif
     EJoinStatus     status;
     SymHeap         result(sh.stor(), new Trace::TransientNode("PerFncCache"));
     const int       cnt = huni_.size();
@@ -172,7 +172,12 @@ int PerFncCache::lookupCore(const SymHeap &sh) {
     int idx = huni_.lookup(sh);
     if (-1 != idx) {
         this->cacheHit();
+#   if 1 < SE_STATE_ON_THE_FLY_ORDERING
+        rotate(ctxMap_.begin(), ctxMap_.begin() + idx, ctxMap_.end());
+        return 0;
+#   else
         return idx;
+#   endif
     }
 #endif
 

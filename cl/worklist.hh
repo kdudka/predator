@@ -22,17 +22,34 @@
 
 #include "util.hh"
 
+#include <queue>
 #include <set>
 #include <stack>
 
-/// really stupid, but easy to use, DFS implementation
+template <class T, class TShed> struct WorkListLib { };
+
 template <class T>
+struct WorkListLib<T, std::stack<T> > {
+    static typename std::stack<T>::reference top(std::stack<T> &cont) {
+        return cont.top();
+    }
+};
+
+template <class T>
+struct WorkListLib<T, std::queue<T> > {
+    static typename std::queue<T>::reference top(std::queue<T> &cont) {
+        return cont.front();
+    }
+};
+
+/// really stupid, but easy to use, DFS implementation
+template <class T, class TSched = std::stack<T> >
 class WorkList {
     public:
         typedef T value_type;
 
     protected:
-        std::stack<T> todo_;
+        TSched        todo_;
         std::set<T>   seen_;
 
     public:
@@ -46,7 +63,7 @@ class WorkList {
             if (todo_.empty())
                 return false;
 
-            dst = todo_.top();
+            dst = WorkListLib<T, TSched>::top(todo_);
             todo_.pop();
             return true;
         }
@@ -62,12 +79,6 @@ class WorkList {
 
         bool seen(const T &item) const {
             return hasKey(seen_, item);
-        }
-
-        // FIXME: really bad idea as log as schedule(const T &) is non-virutal
-        template <class T1, class T2>
-        bool schedule(const T1 &i1, const T2 &i2) {
-            return this->schedule(T(i1, i2));
         }
 
         unsigned cntSeen() const { return seen_.size(); }

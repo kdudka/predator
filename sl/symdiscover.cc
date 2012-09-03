@@ -36,10 +36,33 @@
 
 #include <boost/foreach.hpp>
 
+// costs are now hard-wired in the paper, so they were removed from config.h
+#define SE_PROTO_COST_SYM           0
+#define SE_PROTO_COST_ASYM          1
+#define SE_PROTO_COST_THREEWAY      2
+
+int minLengthByCost(int cost) {
+    // abstraction length thresholds are now configurable in config.h
+    static const int thrTable[] = {
+        (SE_COST0_LEN_THR),
+        (SE_COST1_LEN_THR),
+        (SE_COST2_LEN_THR)
+    };
+
+    static const int maxCost = sizeof(thrTable)/sizeof(thrTable[0]) - 1;
+    if (maxCost < cost)
+        cost = maxCost;
+
+    // Predator counts elementar merges whereas the paper counts objects on path
+    const int minLength = thrTable[cost] - 1;
+    CL_BREAK_IF(minLength < 1);
+    return minLength;
+}
+
 bool matchSegBinding(
         const SymHeap               &sh,
         const TValId                seg,
-        const BindingOff            &offDiscover)
+        const BindingOff            &offPath)
 {
     const EObjKind kind = sh.valTargetKind(seg);
     switch (kind) {
@@ -48,24 +71,24 @@ bool matchSegBinding(
             return true;
 
         case OK_OBJ_OR_NULL:
-            // OK_OBJ_OR_NULL on the path --> withdraw it!
-            return false;
+            // OK_OBJ_OR_NULL can be the last node of a NULL-terminated list
+            return true;
 
         default:
             break;
     }
 
-    const BindingOff off = sh.segBinding(seg);
-    if (off.head != offDiscover.head)
+    const BindingOff offObj = sh.segBinding(seg);
+    if (offObj.head != offPath.head)
         // head mismatch
         return false;
 
-    if (!isDlsBinding(offDiscover)) {
+    if (!isDlsBinding(offPath)) {
         // OK_SLS
         switch (kind) {
             case OK_SEE_THROUGH:
             case OK_SLS:
-                return (off.next == offDiscover.next);
+                return (offObj.next == offPath.next);
 
             default:
                 return false;
@@ -74,12 +97,16 @@ bool matchSegBinding(
 
     // OK_DLS
     switch (kind) {
-        case OK_SEE_THROUGH:
-            return (off.next == offDiscover.next);
+        case OK_SEE_THROUGH_2N:
+            if ((offObj.next == offPath.next) && (offObj.prev == offPath.prev))
+                // both fields are equal
+                return true;
+
+            // fall through!
 
         case OK_DLS:
-            return (off.next == offDiscover.prev)
-                && (off.prev == offDiscover.next);
+            return (offObj.next == offPath.prev)
+                && (offObj.prev == offPath.next);
 
         default:
             return false;
@@ -303,6 +330,7 @@ bool matchData(
     int cost = 0;
     switch (status) {
         case JS_USE_ANY:
+            cost = (SE_PROTO_COST_SYM);
             break;
 
         case JS_USE_SH1:
@@ -574,16 +602,16 @@ unsigned /* len */ selectBestAbstraction(
                     cost += (SE_COST_OF_SEG_INTRODUCTION);
 #endif
 
+                if (len < minLengthByCost(cost))
+                    // too short path at this cost level
+                    continue;
+
                 if (bestCost < cost)
                     // we already got something cheaper
                     continue;
 
                 if (len <= bestLen)
                     // we already got something longer
-                    continue;
-
-                if (len <= (cost >> 2))
-                    // too expensive
                     continue;
 
                 // update best candidate

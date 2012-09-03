@@ -84,7 +84,7 @@ int main()
  *
  * @brief pseudo tree consisting of two SLLs
  *
- * - known to work with SE_PROTO_COST_ASYM == 8
+ * - known to work with SE_COST1_LEN_THR == 4
  *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.

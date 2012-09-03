@@ -37,16 +37,9 @@
 
 #include <boost/foreach.hpp>
 
-#if SE_USE_DFS_SCHEDULER
-#   include <stack>
-#else
+#if !SE_BLOCK_SCHEDULER_KIND
 #   include <queue>
 #endif
-
-#define SS_DEBUG(...) do {                                                  \
-    if (::debugSymState)                                                    \
-        CL_DEBUG("SymState: " << __VA_ARGS__);                              \
-} while (0)
 
 // set to 'true' if you wonder why SymState matches states as it does (noisy)
 static bool debugSymState = static_cast<bool>(DEBUG_SYMSTATE);
@@ -118,6 +111,12 @@ bool SymState::insert(const SymHeap &sh, bool /* allowThreeWay */ ) {
     return true;
 }
 
+void SymState::rotateExisting(const int idxA, const int idxB) {
+    TList::iterator itA = heaps_.begin() + idxA;
+    TList::iterator itB = heaps_.begin() + idxB;
+    rotate(itA, itB, heaps_.end());
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapUnion implementation
@@ -128,67 +127,83 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const {
         return -1;
 
     ++::cntLookups;
-    SS_DEBUG(">>> lookup() starts, cnt = " << cnt);
     debugPlot("lookup", 0, lookFor);
 
     for(int idx = 0; idx < cnt; ++idx) {
         const int nth = idx + 1;
-        SS_DEBUG("--> lookup() tries sh #" << idx << ", cnt = " << cnt);
 
         const SymHeap &sh = this->operator[](idx);
         debugPlot("lookup", nth, sh);
 
         if (areEqual(lookFor, sh)) {
-            SS_DEBUG("<<< lookup() returns sh #" << idx << ", cnt = " << cnt);
+            CL_DEBUG("<I> sh #" << idx << " is equal to the given one, "
+                    << cnt << " heaps in total");
+
+#if 1 < SE_STATE_ON_THE_FLY_ORDERING
+            // put the matched heap at the beginning of the list [optimization]
+            const_cast<SymHeapUnion *>(this)->rotateExisting(0U, idx);
+#endif
             return idx;
         }
     }
 
     // not found
-    SS_DEBUG("<<< lookup() failed, cnt = " << cnt);
     return -1;
 }
 
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymStateWithJoin implementation
-void SymStateWithJoin::packSuffix(unsigned idx) {
-    const unsigned suffix = idx++;
+void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay) {
+    for (unsigned idxOld = 0U; idxOld < this->size();) {
+        if (idxNew == idxOld) {
+            // do not remove the newly inserted heap based on identity with self
+            ++idxOld;
+            continue;
+        }
 
-    while (idx < this->size()) {
-        SymHeap &shNew = const_cast<SymHeap &>(this->operator[](suffix));
-        SymHeap &shOld = const_cast<SymHeap &>(this->operator[](idx));
+        SymHeap &shOld = const_cast<SymHeap &>(this->operator[](idxOld));
+        SymHeap &shNew = const_cast<SymHeap &>(this->operator[](idxNew));
 
         TStorRef stor = shNew.stor();
         CL_BREAK_IF(&stor != &shOld.stor());
 
         EJoinStatus     status;
-        SymHeap         result(stor, new Trace::TransientNode("packSuffix()"));
-        if (!joinSymHeaps(&status, &result, shNew, shOld)) {
-            ++idx;
+        SymHeap         result(stor, new Trace::TransientNode("packState()"));
+        if (!joinSymHeaps(&status, &result, shOld, shNew, allowThreeWay)) {
+            ++idxOld;
             continue;
         }
 
-        CL_DEBUG("<J> packSuffix(): suffix = " << suffix
-                << ", idx = " << idx
-                << ", action = " << status);
+        CL_DEBUG("<J> packState(): idxOld = #" << idxOld
+                << ", idxNew = #" << idxNew
+                << ", action = " << status
+                << ", size = " << this->size());
 
         switch (status) {
             case JS_USE_ANY:
-            case JS_USE_SH1:
+            case JS_USE_SH2:
                 break;
 
-            case JS_USE_SH2:
-                this->swapExisting(suffix, shOld);
+            case JS_USE_SH1:
+                this->swapExisting(idxNew, shOld);
                 break;
 
             case JS_THREE_WAY:
-                this->swapExisting(suffix, result);
+                this->swapExisting(idxNew, result);
                 break;
         }
 
-        this->eraseExisting(idx);
+        if (idxOld < idxNew)
+            --idxNew;
+
+        this->eraseExisting(idxOld);
     }
+
+#if SE_STATE_ON_THE_FLY_ORDERING
+    // put the matched heap at the beginning of the list [optimization]
+    this->rotateExisting(0U, idxNew);
+#endif
 }
 
 bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
@@ -228,18 +243,21 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
 
     switch (status) {
         case JS_USE_ANY:
-            // JS_USE_ANY means exact match
+            CL_DEBUG("<I> sh #" << idx << " is equal to the given one, "
+                    << cnt << " heaps in total");
             break;
 
         case JS_USE_SH1:
-            CL_DEBUG("<J> sh #" << idx << " is stronger than the given one");
+            CL_DEBUG("<J> sh #" << idx << " covers the given one, "
+                    << this->size() << " heaps in total");
             debugPlot("join", 0, shNew);
             debugPlot("join", 1, this->operator[](idx));
             break;
 
         case JS_USE_SH2:
             // replace the heap inside by the given one
-            CL_DEBUG("<J> replacing sh #" << idx);
+            CL_DEBUG("<J> replacing sh #" << idx
+                    << ", " << cnt << " heaps in total");
             debugPlot("join", 0, this->operator[](idx));
             debugPlot("join", 1, shNew);
 
@@ -247,20 +265,27 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
             Trace::waiveCloneOperation(result);
             this->swapExisting(idx, result);
 
-            this->packSuffix(idx);
+            this->packState(idx, allowThreeWay);
             return true;
 
         case JS_THREE_WAY:
             // three-way join
-            CL_DEBUG("<J> three-way join with sh #" << idx);
+            CL_DEBUG("<J> three-way join with sh #" << idx
+                    << ", " << cnt << " heaps in total");
+
             debugPlot("join", 0, this->operator[](idx));
             debugPlot("join", 1, shNew);
             debugPlot("join", 2, result);
 
             this->swapExisting(idx, result);
-            this->packSuffix(idx);
+            this->packState(idx, allowThreeWay);
             return true;
     }
+
+#if SE_STATE_ON_THE_FLY_ORDERING
+    // put the matched heap at the beginning of the list [optimization]
+    this->rotateExisting(0U, idx);
+#endif
 
     // nothing changed actually
     return false;
@@ -270,21 +295,26 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay) {
 // /////////////////////////////////////////////////////////////////////////////
 // BlockScheduler implementation
 struct BlockScheduler::Private {
-#if SE_USE_DFS_SCHEDULER
-    typedef std::stack<TBlock>                              TSched;
-#else
+#if !SE_BLOCK_SCHEDULER_KIND
     typedef std::queue<TBlock>                              TSched;
+#elif SE_BLOCK_SCHEDULER_KIND < 3
+    typedef std::vector<TBlock>                             TSched;
 #endif
     typedef std::map<TBlock, unsigned /* cnt */>            TDone;
 
     TBlockSet           todo;
+#if SE_BLOCK_SCHEDULER_KIND < 3
     TSched              sched;
+#endif
     TDone               done;
+
+    const IPendingCountProvider *pcp;
 };
 
-BlockScheduler::BlockScheduler():
+BlockScheduler::BlockScheduler(const IPendingCountProvider &pcp):
     d(new Private)
 {
+    d->pcp = &pcp;
 }
 
 BlockScheduler::BlockScheduler(const BlockScheduler &tpl):
@@ -313,25 +343,82 @@ BlockScheduler::TBlockList BlockScheduler::done() const {
 }
 
 bool BlockScheduler::schedule(const TBlock bb) {
-    if (!insertOnce(d->todo, bb))
-        // already in the queue
+    if (insertOnce(d->todo, bb)) {
+#if !SE_BLOCK_SCHEDULER_KIND
+        d->sched.push(bb);
+#elif SE_BLOCK_SCHEDULER_KIND < 3
+        d->sched.push_back(bb);
+#endif
+        return true;
+    }
+
+    // already in the queue
+
+#if 2 == SE_BLOCK_SCHEDULER_KIND
+    const int cnt = d->sched.size();
+
+    // seek the given block in the queue
+    int idx;
+    for (idx = cnt - 1; 0 <= idx; --idx)
+        if (bb == d->sched[idx])
+            break;
+
+    if (idx < 0) {
+        // if not found in the queue, consistency of BlockScheduler is broken
+        CL_BREAK_IF("BlockScheduler::schedule() detected inconsistency!");
+        return false;
+    }
+
+    if (idx + 1 == cnt)
+        // already at the top
         return false;
 
-    d->sched.push(bb);
-    return true;
+    CL_DEBUG("<Q> prioritizing block " << bb->name()
+            << ", found in depth " << (cnt - idx));
+
+    Private::TSched::iterator itIdx = d->sched.begin() + idx;
+    Private::TSched::iterator itTop = d->sched.begin() + (cnt - 1);
+    rotate(itIdx, itTop, d->sched.end());
+#endif
+
+    return false;
 }
 
 bool BlockScheduler::getNext(TBlock *dst) {
     if (d->todo.empty())
         return false;
 
-    // take the first block in the queue
-#if SE_USE_DFS_SCHEDULER
-    const TBlock bb = d->sched.top();
-#else
-    const TBlock bb = d->sched.front();
-#endif
+    // select the block for processing according to the policy
+    TBlock bb;
+#if !SE_BLOCK_SCHEDULER_KIND
+    bb = d->sched.front();
     d->sched.pop();
+#elif SE_BLOCK_SCHEDULER_KIND < 3
+    bb = d->sched.back();
+    d->sched.pop_back();
+
+#else // assume load-driven scheduler
+
+    typedef std::map<int /* cntPending */, TBlock> TLoad;
+    TLoad load;
+
+    // this really needs to be sorted in getNext()
+    BOOST_FOREACH(const TBlock bbNow, d->todo) {
+        const int cntPending = d->pcp->cntPending(bbNow);
+        load[cntPending] = bbNow;
+    }
+
+    const TLoad::const_iterator itTop = load.begin();
+    const TLoad::const_reverse_iterator itBottom = load.rbegin();
+
+    bb = itTop->second;
+
+    CL_DEBUG("<Q> load-driven scheduler picks "
+            << bb->name() << " with "
+            << itTop->first << " pending states, the last one is "
+            << itBottom->second->name() << " with "
+            << itBottom->first << " pending states");   
+#endif
     if (1 != d->todo.erase(bb))
         CL_BREAK_IF("BlockScheduler malfunction");
 
@@ -379,7 +466,15 @@ void SymStateMarked::swap(SymState &other) {
 
     // wipe done
     done_.clear();
-    done_.resize(this->size(), false);
+    done_.resize((cntPending_ = this->size()), false);
+}
+
+void SymStateMarked::rotateExisting(const int idxA, const int idxB) {
+    SymState::rotateExisting(idxA, idxB);
+
+    TDone::iterator itA = done_.begin() + idxA;
+    TDone::iterator itB = done_.begin() + idxB;
+    rotate(itA, itB, done_.end());
 }
 
 
@@ -390,11 +485,25 @@ struct SymStateMap::Private {
 
     struct BlockState {
         SymStateMarked                  state;
+
+        // TODO: drop this!
+        static SymStateMap              XXX;
         BlockScheduler                  inbound;
+
+        bool                            anyHit;
+
+        BlockState():
+            inbound(XXX),
+            anyHit(false)
+        {
+        }
     };
 
     std::map<TBlock, BlockState>        cont;
 };
+
+// TODO: drop this!
+SymStateMap SymStateMap::Private::BlockState::XXX;
 
 SymStateMap::SymStateMap():
     d(new Private)
@@ -417,15 +526,38 @@ bool SymStateMap::insert(
 {
     // look for the _target_ block
     Private::BlockState &ref = d->cont[dst];
+    const unsigned size = ref.state.size();
 
     // insert the given symbolic heap
-    const bool changed = ref.state.insert(sh, allowThreeWay);
+    bool changed = true;
+#if 2 < SE_JOIN_ON_LOOP_EDGES_ONLY
+    if (1 == dst->inbound().size() && (cl_is_term_insn(dst->front()->code)
+                || (CL_INSN_COND == dst->back()->code && 2 == dst->size())))
+    {
+        CL_DEBUG("SymStateMap::insert() bypasses even the isomorphism check");
+        ref.state.insertNew(sh);
+    }
+    else
+#endif
+        changed = ref.state.insert(sh, allowThreeWay);
+
+    if (ref.state.size() <= size)
+        // if the size did not grow, there must have been at least join
+        ref.anyHit = true;
 
     if (src)
         // store inbound edge
         ref.inbound.schedule(src);
 
     return changed;
+}
+
+bool SymStateMap::anyReuseHappened(const CodeStorage::Block *bb) const {
+    return d->cont[bb].anyHit;
+}
+
+int SymStateMap::cntPending(const CodeStorage::Block *bb) const {
+    return d->cont[bb].state.cntPending();
 }
 
 void SymStateMap::gatherInboundEdges(TContBlock                  &dst,

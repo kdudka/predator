@@ -85,7 +85,7 @@ int main()
  *
  * @brief error-free variant of test-0106
  *
- * - known to work with SE_PROTO_COST_ASYM == 8
+ * - known to work with SE_COST1_LEN_THR == 4
  *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.

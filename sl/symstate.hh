@@ -98,6 +98,8 @@ class SymState {
             existing.swap(sh);
         }
 
+        virtual void rotateExisting(const int idxA, const int idxB);
+
         /// lookup/insert optimization in SymCallCache implementation
         friend class PerFncCache;
 
@@ -146,7 +148,7 @@ class SymStateWithJoin: public SymHeapUnion {
         virtual bool insert(const SymHeap &sh, bool allowThreeWay = true);
 
     private:
-        void packSuffix(unsigned idx);
+        void packState(unsigned idx, bool allowThreeWay);
 };
 
 /**
@@ -157,21 +159,33 @@ class SymStateWithJoin: public SymHeapUnion {
  */
 class SymStateMarked: public SymStateWithJoin {
     public:
+        SymStateMarked():
+            cntPending_(0)
+        {
+        }
+
         /// import of SymState rewrites the base and invalidates all flags
         SymStateMarked& operator=(const SymState &huni) {
             static_cast<SymState &>(*this) = huni;
             done_.clear();
             done_.resize(huni.size(), false);
+            cntPending_ = huni.size();
             return *this;
         }
 
         virtual void clear() {
             SymStateWithJoin::clear();
             done_.clear();
+            cntPending_ = 0;
         }
 
         /// @attention always reinitializes the markers
         virtual void swap(SymState &);
+
+        /// return count of heaps pending for execution
+        int cntPending() const {
+            return cntPending_;
+        }
 
     protected:
         virtual void insertNew(const SymHeap &sh) {
@@ -179,20 +193,33 @@ class SymStateMarked: public SymStateWithJoin {
 
             // schedule the just inserted SymHeap for processing
             done_.push_back(false);
+            ++cntPending_;
         }
 
         virtual void eraseExisting(int nth) {
             SymStateWithJoin::eraseExisting(nth);
+
+            if (!done_[nth])
+                --cntPending_;
+
             done_.erase(done_.begin() + nth);
         }
 
         virtual void swapExisting(int nth, SymHeap &sh) {
             SymStateWithJoin::swapExisting(nth, sh);
 
-            // an already inserted heap has been generalized, we need to
-            // schedule it once again
-            done_.at(nth) = false;
+            if (!done_.at(nth))
+                return;
+
+            // an already processed heap has been generalized, we need to
+            // schedule it for precessing once again
+            done_[nth] = false;
+            ++cntPending_;
         }
+
+        virtual void rotateExisting(const int idxA, const int idxB);
+
+        friend class SymStateMap;
 
     public:
         /// check if the nth symbolic heap has been already processed
@@ -202,23 +229,37 @@ class SymStateMarked: public SymStateWithJoin {
 
         /// mark the nth symbolic heap as processed
         void setDone(int nth) {
-            done_.at(nth) = true;
+            if (!done_.at(nth))
+                --cntPending_;
+
+            done_[nth] = true;
         }
 
     private:
-        std::vector<bool> done_;
+        typedef std::vector<bool> TDone;
+
+        TDone           done_;
+        int             cntPending_;
+};
+
+class IPendingCountProvider {
+    public:
+        virtual ~IPendingCountProvider() { }
+
+        /// return count of heaps pending for execution in the specified blcok
+        virtual int cntPending(const CodeStorage::Block *) const = 0;
 };
 
 /**
  * higher-level container that maintains a SymStateMarked object per each basic
  * block.  It's used by SymExecEngine and PathTracer classes.
  */
-class SymStateMap {
+class SymStateMap: public IPendingCountProvider {
     public:
         typedef std::vector<const CodeStorage::Block *>     TContBlock;
 
         SymStateMap();
-        ~SymStateMap();
+        virtual ~SymStateMap();
 
         /// state lookup, basically equal to std::map semantic
         SymStateMarked& operator[](const CodeStorage::Block *);
@@ -250,6 +291,11 @@ class SymStateMap {
                                 const CodeStorage::Block    *ofBlock)
             const;
 
+        /// true if the specified block has ever joined/entailed any given state
+        bool anyReuseHappened(const CodeStorage::Block *) const;
+
+        virtual int cntPending(const CodeStorage::Block *) const;
+
     private:
         /// object copying is @b not allowed
         SymStateMap(const SymStateMap &);
@@ -275,7 +321,7 @@ class BlockScheduler: public IStatsProvider {
         typedef std::vector<TBlock>             TBlockList;
 
     public:
-        BlockScheduler();
+        BlockScheduler(const IPendingCountProvider &);
         BlockScheduler(const BlockScheduler &);
         ~BlockScheduler();
 

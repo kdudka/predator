@@ -84,7 +84,7 @@ install(TARGETS sl DESTINATION lib)
 
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
-set(GCC_EXEC_PREFIX "timeout 3600"
+set(GCC_EXEC_PREFIX "timeout 6000"
     CACHE STRING "Set to empty string if not sure")
 
 set(testdir "${sl_SOURCE_DIR}/../tests/predator-regre")
@@ -116,6 +116,7 @@ set(tests
     0220 0221 0222 0223 0224 0225 0226 0227 0228 0229
     0230 0231 0232 0233 0234      0236 0237 0238
     0300      0302
+                                  0316
     0400 0401 0402 0403 0404      0406      0408
          0411
               0432
@@ -129,6 +130,7 @@ else()
 # expensive tests
 set(tests ${tests}
     0124 0157 0167 0521 0235
+    0308 0309 0310 0311 0312 0313 0314 0315 0317 0318
     0405 0407 0409 0410 0412 0413 0414 0415 0416 0417 0418
     0469 0471 0474)
 endif()
@@ -168,7 +170,7 @@ macro(test_predator_regre name_suff ext arg1)
         set(cmd "${cmd} 2>&1")
 
         # filter out messages that are unrelated to our plug-in
-        set(cmd "${cmd} | (grep -E '\\\\[-fplugin=libsl.so\\\\]\$|compiler error|undefined symbol'; true)")
+        set(cmd "${cmd} | (grep -E '\\\\[-fplugin=libsl.so\\\\]\$|compiler error|undefined symbol|CL_BREAK_IF'; true)")
         set(cmd "${cmd} | sed 's/ \\\\[-fplugin=libsl.so\\\\]\$//'")
 
         # filter out NOTE messages with internal location

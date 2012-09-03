@@ -36,7 +36,7 @@ write_desc() {
     fi
 
     printf "%s\n" " * @attention
- * This description is automatically imported from tests/predator-regre/README.
+ * This description is automatically imported from tests/$TEST_DIR/README.
  * Any changes made to this comment will be thrown away on the next import.
  */" >> "$output"
 }
@@ -125,9 +125,15 @@ process_README() {
     process_test
 }
 
+process_test_dir() (
+    cd tests/$1 || die "failed to enter tests/$1"
+    test -r README || die "unable to find tests/$1/README"
+    export TEST_DIR=$1
+    process_README < README
+)
+
 test -d build-aux || die "this script needs to be run from \$PREDATOR_ROOT"
 test -x build-aux/update-comments-in-tests.sh || die "unable to find self"
 
-cd tests/predator-regre || die "failed to enter tests/predator-regre"
-test -r README || die "unable to find tests/predator-regre/README"
-process_README < README
+process_test_dir predator-regre   || die "failed to process predator-regre"
+process_test_dir nspr-arena-32bit || die "failed to process nspr-arena-32bit"

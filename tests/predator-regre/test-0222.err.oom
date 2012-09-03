@@ -4,44 +4,36 @@ test-0222.c:37:17: note: from call of list_add()
 test-0222.c:32:5: note: from call of main()
 list.h:46:12: error: dereference of NULL value
 list.h:61:12: note: from call of __list_add()
-test-0222.c:37:17: note: from call of list_add()
-test-0222.c:32:5: note: from call of main()
-list.h:46:12: error: dereference of NULL value
-list.h:61:12: note: from call of __list_add()
-test-0222.c:37:17: note: from call of list_add()
-test-0222.c:32:5: note: from call of main()
-list.h:46:12: error: dereference of NULL value
-list.h:61:12: note: from call of __list_add()
-test-0222.c:45:17: note: from call of list_add()
-test-0222.c:32:5: note: from call of main()
-list.h:46:12: error: dereference of NULL value
-list.h:61:12: note: from call of __list_add()
-test-0222.c:45:17: note: from call of list_add()
-test-0222.c:32:5: note: from call of main()
-list.h:46:12: error: dereference of NULL value
-list.h:61:12: note: from call of __list_add()
-test-0222.c:45:17: note: from call of list_add()
-test-0222.c:32:5: note: from call of main()
-list.h:46:12: error: dereference of NULL value
-list.h:61:12: note: from call of __list_add()
-test-0222.c:45:17: note: from call of list_add()
-test-0222.c:32:5: note: from call of main()
-list.h:46:12: error: dereference of NULL value
-list.h:61:12: note: from call of __list_add()
-test-0222.c:45:17: note: from call of list_add()
-test-0222.c:32:5: note: from call of main()
-list.h:46:12: error: dereference of NULL value
-list.h:61:12: note: from call of __list_add()
 test-0222.c:45:17: note: from call of list_add()
 test-0222.c:32:5: note: from call of main()
 test-0222.c:10:15: note: writing heap graph to 'test-0222.c-10-0000.dot'...
+list.h:46:12: error: dereference of NULL value
+list.h:61:12: note: from call of __list_add()
+test-0222.c:45:17: note: from call of list_add()
+test-0222.c:32:5: note: from call of main()
+list.h:46:12: error: dereference of NULL value
+list.h:61:12: note: from call of __list_add()
+test-0222.c:45:17: note: from call of list_add()
+test-0222.c:32:5: note: from call of main()
 test-0222.c:10:15: note: writing heap graph to 'test-0222.c-10-0001.dot'...
 test-0222.c:16:31: error: dereference of already deleted heap object
 test-0222.c:58:12: note: from call of destroy()
 test-0222.c:32:5: note: from call of main()
+list.h:46:12: error: dereference of NULL value
+list.h:61:12: note: from call of __list_add()
+test-0222.c:45:17: note: from call of list_add()
+test-0222.c:32:5: note: from call of main()
 test-0222.c:10:15: note: writing heap graph to 'test-0222.c-10-0002.dot'...
 test-0222.c:16:31: error: dereference of already deleted heap object
 test-0222.c:58:12: note: from call of destroy()
+test-0222.c:32:5: note: from call of main()
+list.h:46:12: error: dereference of NULL value
+list.h:61:12: note: from call of __list_add()
+test-0222.c:45:17: note: from call of list_add()
+test-0222.c:32:5: note: from call of main()
+list.h:46:12: error: dereference of NULL value
+list.h:61:12: note: from call of __list_add()
+test-0222.c:45:17: note: from call of list_add()
 test-0222.c:32:5: note: from call of main()
 test-0222.c:10:15: note: writing heap graph to 'test-0222.c-10-0003.dot'...
 test-0222.c:16:31: error: dereference of already deleted heap object
@@ -51,6 +43,10 @@ test-0222.c:10:15: note: writing heap graph to 'test-0222.c-10-0004.dot'...
 test-0222.c:16:31: error: dereference of already deleted heap object
 test-0222.c:58:12: note: from call of destroy()
 test-0222.c:32:5: note: from call of main()
+list.h:46:12: error: dereference of NULL value
+list.h:61:12: note: from call of __list_add()
+test-0222.c:45:17: note: from call of list_add()
+test-0222.c:32:5: note: from call of main()
 test-0222.c:10:15: note: writing heap graph to 'test-0222.c-10-0005.dot'...
 test-0222.c:16:31: error: dereference of already deleted heap object
 test-0222.c:58:12: note: from call of destroy()
@@ -58,5 +54,9 @@ test-0222.c:32:5: note: from call of main()
 test-0222.c:10:15: note: writing heap graph to 'test-0222.c-10-0006.dot'...
 test-0222.c:16:31: error: dereference of already deleted heap object
 test-0222.c:58:12: note: from call of destroy()
+test-0222.c:32:5: note: from call of main()
+list.h:46:12: error: dereference of NULL value
+list.h:61:12: note: from call of __list_add()
+test-0222.c:45:17: note: from call of list_add()
 test-0222.c:32:5: note: from call of main()
 test-0222.c:5:1: warning: memory leak detected while destroying a static variable

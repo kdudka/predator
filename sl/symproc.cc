@@ -26,6 +26,7 @@
 #include <cl/storage.hh>
 
 #include "memdebug.hh"
+#include "prototype.hh"
 #include "symabstract.hh"
 #include "symbin.hh"
 #include "symbt.hh"
@@ -297,9 +298,7 @@ void SymProc::varInit(TValId at) {
         // nothing to do at this level (already handled by SymExecCore)
         return;
 
-    SymExecCoreParams ep;
-    ep.skipVarInit = /* avoid an infinite recursion */ true;
-    SymExecCore core(sh_, bt_, ep);
+    SymExecCore core(sh_, bt_);
     BOOST_FOREACH(const CodeStorage::Insn *insn, var.initials) {
         const struct cl_loc *loc = &insn->loc;
         core.setLocation(loc);
@@ -515,15 +514,8 @@ TValId SymProc::valFromOperand(const struct cl_operand &op) {
 }
 
 bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op) {
-    if (CL_OPERAND_CST == op.code) {
-        // direct call
-        const struct cl_cst &cst = op.data.cst;
-        if (CL_TYPE_FNC != cst.code)
-            return false;
-
-        *pUid = cst.data.cst_fnc.uid;
+    if (fncUidFromOperand(pUid, &op))
         return true;
-    }
 
     // assume indirect call
     const TValId val = this->valFromOperand(op);
@@ -949,7 +941,7 @@ bool checkForOverlap(
 {
     const TValId rootDst = sh.valRoot(valDst);
     const TValId rootSrc = sh.valRoot(valSrc);
-    if (sh.proveNeq(rootDst, rootSrc))
+    if (segProveNeq(sh, rootDst, rootSrc))
         // the roots are proven to be two distinct roots
         return false;
 
@@ -1087,10 +1079,6 @@ void executeMemmove(
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
 void SymExecCore::varInit(TValId at) {
-    if (ep_.skipVarInit)
-        // we are explicitly asked to not initialize any vars
-        return;
-
     if (ep_.trackUninit && VT_ON_STACK == sh_.valTarget(at)) {
         // uninitialized stack variable
         const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
@@ -1325,7 +1313,7 @@ TValId compareValues(
     const bool neg = cTraits.negative;
     if ((v1 == v2) && cTraits.preserveNeq)
         return boolToVal(!neg);
-    if (sh.proveNeq(v1, v2) && cTraits.preserveEq)
+    if (segProveNeq(sh, v1, v2) && cTraits.preserveEq)
         return boolToVal(neg);
 
     const EValueTarget code1 = sh.valTarget(v1);
@@ -1442,7 +1430,7 @@ bool spliceOutAbstractPathCore(
         SymProc                &proc,
         const TValId            beg,
         const TValId            endPoint,
-        const bool              readOnlyMode)
+        const bool              readOnlyMode = false)
 {
     SymHeap &sh = proc.sh();
 
@@ -1502,10 +1490,10 @@ bool spliceOutAbstractPathCore(
 }
 
 bool spliceOutAbstractPath(
-        SymState                    &dst,
         SymProc                     &proc,
         const TValId                 atAddr,
-        const TValId                 pointingTo)
+        const TValId                 pointingTo,
+        const bool                   readOnlyMode = false)
 {
     SymHeap &sh = proc.sh();
     const TValId seg = sh.valRoot(atAddr);
@@ -1513,9 +1501,10 @@ bool spliceOutAbstractPath(
 
     if (pointingTo == peer && peer != seg) {
         // assume identity over the two parts of a DLS
+        CL_BREAK_IF(readOnlyMode);
+
         dlSegReplaceByConcrete(sh, seg, peer);
-        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), OK_DLS));
-        dst.insert(sh);
+        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), /* len */ 1));
         return true;
     }
 
@@ -1524,7 +1513,7 @@ bool spliceOutAbstractPath(
     const EObjKind kind = sh.valTargetKind(seg);
     if (OK_OBJ_OR_NULL != kind) {
         // if atAddr is above/bellow head, we need to shift endPoint accordingly
-        const TOffset off = sh.valOffset(atAddr) - sh.segBinding(seg).head;
+        const TOffset off = sh.segBinding(seg).head - sh.valOffset(atAddr);
         endPoint = sh.valByOffset(pointingTo, off);
     }
 
@@ -1532,18 +1521,16 @@ bool spliceOutAbstractPath(
         // read-only attempt failed
         return false;
 
-    // splicing-out a single list segment is the most common case
-    if (!spliceOutAbstractPathCore(proc, seg, endPoint, /* RO */ false)) {
-        CL_BREAK_IF("failed to splice-out a single list segment");
-        return false;
-    }
+    if (readOnlyMode || spliceOutAbstractPathCore(proc, seg, endPoint))
+        return true;
 
-    dst.insert(sh);
-    return true;
+    CL_BREAK_IF("failed to splice-out a single list segment");
+    return false;
 }
 
 bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2) {
     SymHeap &sh = proc.sh();
+    const struct cl_loc *loc = proc.lw();
 
     // check that at least one value is unknown
     moveKnownValueToLeft(sh, v1, v2);
@@ -1561,16 +1548,49 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2) {
     // where did we get here from?
     Trace::Node *trNode = sh.traceNode();
 
-    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(dst, proc, v1, v2))
+    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(proc, v1, v2)) {
         // splice-out succeeded ... ls(v1, v2)
+        dst.insert(sh);
         return true;
+    }
 
-    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(dst, proc, v2, v1))
+    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(proc, v2, v1)) {
         // splice-out succeeded ... ls(v2, v1)
+        dst.insert(sh);
         return true;
+    }
 
-    CL_DEBUG("failed to splice-out list segment, has to over-approximate");
-    trNode = new Trace::SpliceOutNode(trNode, /* failed */ 0);
+    // collect the sets of values we get by jumping over 0+ abstract objects
+    TValSet seen1, seen2;
+    lookThrough(sh, v1, &seen1);
+    lookThrough(sh, v2, &seen2);
+
+    // try to look through possibly empty objects
+    const TValId v1Tail = lookThrough(sh, v1, &seen2);
+    const TValId v2Tail = lookThrough(sh, v2, &seen1);
+    if (v1Tail == v2Tail && v1 != v1Tail && v2 != v2Tail) {
+        CL_DEBUG_MSG(loc, "valMerge() removes two abstract paths at a time");
+
+        if (!spliceOutAbstractPath(proc, v1, v1Tail, /* read-only */ true))
+            goto fail;
+        if (!spliceOutAbstractPath(proc, v2, v2Tail, /* read-only */ true))
+            goto fail;
+
+        // go ahead, try it read-write!
+
+        if (spliceOutAbstractPath(proc, v1, v1Tail)
+                && spliceOutAbstractPath(proc, v2, v2Tail))
+        {
+            dst.insert(sh);
+            return true;
+        }
+
+        CL_ERROR_MSG(loc, "internal error in valMerge(), heap inconsistent!");
+        CL_BREAK_IF("this will need some debugging...");
+    }
+
+fail:
+    CL_DEBUG_MSG(loc, "failed to splice-out list segment!");
     trNode = new Trace::SpliceOutNode(trNode, /* failed */ 0);
     sh.traceUpdate(trNode);
     dst.insert(sh);
@@ -1604,8 +1624,9 @@ bool reflectCmpResult(
         if (!cTraits.preserveNeq)
             goto fail;
 
-        // introduce a Neq predicate over v1 and v2
-        sh.neqOp(SymHeap::NEQ_ADD, v1, v2);
+        if (!segApplyNeq(sh, v1, v2))
+            // introduce an explicit Neq predicate over v1 and v2
+            sh.addNeq(v1, v2);
     }
     else {
         if (!cTraits.preserveEq)
@@ -1769,11 +1790,6 @@ TValId handleIntegralOp(
             case CL_BINOP_PLUS:
                 if (handleRangeByScalarPlus(&result, sh, v1, v2, rng1, rng2))
                     return result;
-                break;
-
-            case CL_BINOP_MINUS:
-                if (!isSingular(rng1) && isSingular(rng2))
-                    return sh.valByOffset(v1, -rng2.lo);
                 break;
 
             default:
