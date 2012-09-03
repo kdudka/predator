@@ -1,0 +1,2 @@
+test-p0003.c:15:17: note: free (val.0)
+test-p0003.c:15:17: error: dereferenced value is not a valid reference [(int)0]

@@ -50,8 +50,8 @@ class FAE : public FA {
 
 public:
 
-	struct RenameNonleafF {
-
+	struct RenameNonleafF
+	{
 		Index<size_t>& index;
 
 		size_t offset;
@@ -59,135 +59,140 @@ public:
 		RenameNonleafF(Index<size_t>& index, size_t offset = 0)
 			: index(index), offset(offset) {}
 
-		size_t operator()(size_t s) {
+		size_t operator()(size_t s)
+		{
 			if (_MSB_TEST(s))
 				return s;
+
 			return this->index.translateOTF(s) + this->offset;
 		}
-
 	};
 
 public:
 
-	TreeAut& unique(TreeAut& dst, const TreeAut& src, bool addFinalStates = true) {
+	TreeAut& unique(
+		TreeAut& dst,
+		const TreeAut& src,
+		bool addFinalStates = true)
+	{
 		Index<size_t> stateIndex;
-		TreeAut::rename(dst, src, RenameNonleafF(stateIndex, this->nextState()), addFinalStates);
+
+		TreeAut::rename(
+			dst,
+			src,
+			RenameNonleafF(stateIndex, this->nextState()), addFinalStates
+		);
+
 		this->incrementStateOffset(stateIndex.size());
 		return dst;
 	}
 
-	TreeAut& unique(TreeAut& dst, const TreeAut& src, Index<size_t>& stateIndex, bool addFinalStates = true) {
-		TreeAut::rename(dst, src, RenameNonleafF(stateIndex, this->nextState()), addFinalStates);
+	TreeAut& unique(
+		TreeAut& dst,
+		const TreeAut& src,
+		Index<size_t>& stateIndex,
+		bool addFinalStates = true)
+	{
+		TreeAut::rename(
+			dst,
+			src,
+			RenameNonleafF(stateIndex, this->nextState()), addFinalStates
+		);
+
 		this->incrementStateOffset(stateIndex.size());
 		return dst;
 	}
 
 public:
 
-	static bool subseteq(const FAE& lhs, const FAE& rhs) {
-
+	static bool subseteq(const FAE& lhs, const FAE& rhs)
+	{
 		if (lhs.roots.size() != rhs.roots.size())
 			return false;
 
 		if (lhs.connectionGraph.data != rhs.connectionGraph.data)
 			return false;
 
-		for (size_t i = 0; i < lhs.roots.size(); ++i) {
-
+		for (size_t i = 0; i < lhs.roots.size(); ++i)
+		{
 			if (!TreeAut::subseteq(*lhs.roots[i], *rhs.roots[i]))
 				return false;
-
 		}
 
 		return true;
-
-	}
-
-	void loadTA(const TreeAut& src, const TreeAut::td_cache_type& cache, const TT<label_type>* top, size_t stateOffset) {
-
-		this->clear();
-
-		this->loadVars(top->label()->getVData());
-
-		this->stateOffset = stateOffset;
-
-		for (std::vector<size_t>::const_iterator i = top->lhs().begin(); i != top->lhs().end(); ++i) {
-
-			TreeAut* ta = this->allocTA();
-
-			// add reachable transitions
-			for (TreeAut::td_iterator j = src.tdStart(cache, itov(*i)); j.isValid(); j.next())
-				ta->addTransition(*j);
-
-			ta->addFinalState(*i);
-
-			this->appendRoot(ta);
-
-			this->connectionGraph.newRoot();
-
-		}
-
 	}
 
 	template <class F>
-	static void loadCompatibleFAs(std::vector<FAE*>& dst, const TreeAut& src, TreeAut::Backend& backend, BoxMan& boxMan, const FAE* fae, size_t stateOffset, F f) {
-//		std::cerr << "source" << std::endl << src;
+	static void loadCompatibleFAs(
+		std::vector<FAE*>& dst,
+		const TreeAut& src,
+		TreeAut::Backend& backend,
+		BoxMan& boxMan,
+		const FAE* fae,
+		size_t stateOffset,
+		F f)
+	{
 		TreeAut::td_cache_type cache;
 		src.buildTDCache(cache);
-		std::vector<const TT<label_type>*>& v =
-			cache.insert(std::make_pair(0, std::vector<const TT<label_type>*>())).first->second;
+		std::vector<const TT<label_type>*>& v = cache.insert(
+			std::make_pair(0, std::vector<const TT<label_type>*>())).first->second;
+
 		// iterate over all "synthetic" transitions and constuct new FAE for each
-		for (std::vector<const TT<label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
-//			std::cerr << "trying " << **i << std::endl;
-			if ((*i)->lhs().size() != fae->roots.size())
+		for (const TT<label_type>* trans : v)
+		{
+			if (trans->lhs().size() != fae->roots.size())
 				continue;
-			if ((*i)->label()->getVData() != fae->GetVariables())
+			if (trans->label()->getVData() != fae->GetVariables())
 				continue;
+
 			std::vector<std::shared_ptr<TreeAut>> roots;
 			size_t j;
-//			std::vector<size_t>::const_iterator j;
-			for (j = 0; j != (*i)->lhs().size(); ++j) {
-//			for (j = (*i)->lhs().begin(); j != (*i)->lhs().end(); ++j) {
-//				std::cerr << "computing td reachability\n";
-				TreeAut* ta = new TreeAut(backend);//taMan.alloc();
+			for (j = 0; j != trans->lhs().size(); ++j)
+			{
+				TreeAut* ta = new TreeAut(backend);
 				roots.push_back(std::shared_ptr<TreeAut>(ta));
+
 				// add reachable transitions
-				for (TreeAut::td_iterator k = src.tdStart(cache, itov((*i)->lhs()[j])); k.isValid(); k.next()) {
-//					std::cerr << *k << std::endl;
+				for (TreeAut::td_iterator k = src.tdStart(cache, itov(trans->lhs()[j]));
+					k.isValid();
+					k.next())
+				{
 					ta->addTransition(*k);
 				}
-				ta->addFinalState((*i)->lhs()[j]);
+
+				ta->addFinalState(trans->lhs()[j]);
 
 				// compute signatures
 				ConnectionGraph::StateToCutpointSignatureMap stateMap;
 
 				ConnectionGraph::computeSignatures(stateMap, *ta);
 
-				auto k = stateMap.find((*i)->lhs()[j]);
+				auto k = stateMap.find(trans->lhs()[j]);
 
-				if (k == stateMap.end()) {
+				if (k == stateMap.end())
+				{
 					if (!fae->connectionGraph.data[roots.size() - 1].signature.empty())
 						break;
-				} else {
+				}
+				else
+				{
 					if (k->second != fae->connectionGraph.data[roots.size() - 1].signature)
 						break;
 				}
-				if (!f(j, *fae->roots[j], *ta))
+
+				if (!f(*fae, j, *fae->roots[j], *ta))
 					break;
 			}
-			if (j < (*i)->lhs().size()) {
-//			if (j != (*i)->lhs().end()) {
-//				for (std::vector<TreeAut*>::iterator k = roots.begin(); k != roots.end(); ++k)
-//					taMan.release(*k);
+
+			if (j < trans->lhs().size())
 				continue;
-			}
+
 			FAE* tmp = new FAE(backend, boxMan);
 			dst.push_back(tmp);
 			tmp->loadVars(fae->GetVariables());
 			tmp->roots = roots;
 			tmp->connectionGraph = fae->connectionGraph;
 			tmp->stateOffset = stateOffset;
-//			std::cerr << "accelerator " << std::endl << *tmp;
 		}
 	}
 
@@ -351,50 +356,6 @@ public:
 		return true;
 	}
 
-/*
-	static void renameVector(std::vector<size_t>& dst, const std::vector<size_t>& index) {
-		for (std::vector<size_t>::iterator i = dst.begin(); i != dst.end(); ++i) {
-			assert(index[*i] != (size_t)(-1));
-			*i = index[*i];
-		}
-	}
-
-	static void renameVector(FA::RootSignature& dst, const std::vector<size_t>& index) {
-
-		for (auto& rootInfo : dst) {
-
-			assert(rootInfo.root < index.size());
-			assert(index[rootInfo.root] != (size_t)(-1));
-
-			rootInfo.root = index[rootInfo.root];
-
-		}
-
-	}
-
-	static void updateMap(FA::RootSignature& dst, size_t ref, const FA::RootSignature& src) {
-
-		RootSignature res;
-		RootSignature::iterator i;
-
-		for (i = dst.begin(); i != dst.end(); ++i) {
-
-			if (i->root == ref)
-				break;
-
-		}
-
-		assert(i != dst.end());
-		res.insert(res.end(), dst.begin(), i);
-		res.insert(res.end(), src.begin(), src.end());
-		res.insert(res.end(), i + 1, dst.end());
-
-		FAE::removeMultOcc(res);
-
-		std::swap(dst, res);
-
-	}
-*/
 	TreeAut& relabelReferences(TreeAut& dst, const TreeAut& src, const std::vector<size_t>& index) {
 		dst.addFinalStates(src.getFinalStates());
 		for (TreeAut::iterator i = src.begin(); i != src.end(); ++i) {
@@ -443,29 +404,17 @@ public:
 		return dst;
 	}
 
-	TreeAut* invalidateReference(TreeAut* src, size_t root) {
+	TreeAut* invalidateReference(TreeAut* src, size_t root)
+	{
 		return &this->invalidateReference(*this->allocTA(), *src, root);
 	}
-/*
-	static void invalidateReference(RootSignature& dst, size_t root) {
-
-		for (auto i = dst.begin(); i != dst.end(); ++i) {
-
-			if (i->root != root)
-				continue;
-
-			dst.erase(i);
-
-			return;
-
-		}
-
-	}
-*/
 
 public:
 
-	void buildLTCacheExt(const TreeAut& ta, TreeAut::lt_cache_type& cache) {
+	void buildLTCacheExt(
+		const TreeAut& ta,
+		TreeAut::lt_cache_type& cache)
+	{
 		label_type lUndef = this->boxMan->lookupLabel(Data::createUndef());
 		for (TreeAut::iterator i = ta.begin(); i != ta.end(); ++i) {
 			if (i->label()->isData()) {
@@ -480,10 +429,13 @@ public:
 		}
 	}
 
-	const TypeBox* getType(size_t target) const {
+	const TypeBox* getType(size_t target) const
+	{
+		// Assertions
 		assert(target < this->roots.size());
 		assert(this->roots[target]);
 		assert(this->roots[target]->getFinalStates().size());
+
 		return static_cast<const TypeBox*>(this->roots[target]->begin(
 			*this->roots[target]->getFinalStates().begin()
 		)->label()->boxLookup(static_cast<size_t>(-1)).aBox);
@@ -492,28 +444,42 @@ public:
 public:
 
 	// state 0 should never be allocated by FAE (?)
-	FAE(TreeAut::Backend& backend, BoxMan& boxMan)
-	 : FA(backend), boxMan(&boxMan), stateOffset(1), savedStateOffset() {}
+	FAE(TreeAut::Backend& backend, BoxMan& boxMan) :
+		FA(backend),
+		boxMan(&boxMan),
+		stateOffset(1),
+		savedStateOffset()
+	{ }
 
-	FAE(const FAE& x) : FA(x), boxMan(x.boxMan), stateOffset(x.stateOffset), savedStateOffset{}
-		{}
+	FAE(const FAE& x) :
+		FA(x),
+		boxMan(x.boxMan),
+		stateOffset(x.stateOffset),
+		savedStateOffset{}
+	{ }
 
-	~FAE() { this->clear(); }
+	~FAE()
+	{
+		this->clear();
+	}
 
-	FAE& operator=(const FAE& x) {
-		FA::operator=(x);
-		this->boxMan = x.boxMan;
-		this->stateOffset = x.stateOffset;
+	FAE& operator=(const FAE& x)
+	{
+		if (this != &x)
+		{
+			FA::operator=(x);
+			this->boxMan = x.boxMan;
+			this->stateOffset = x.stateOffset;
+		}
+
 		return *this;
 	}
 
-	void clear() {
-
+	void clear()
+	{
 		FA::clear();
 		this->stateOffset = 1;
-
 	}
-
 };
 
 #endif

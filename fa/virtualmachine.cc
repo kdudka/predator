@@ -173,9 +173,9 @@ size_t VirtualMachine::nodeCreate(
 		ptrNodeInfo = fae_.boxMan->LookupTypeDesc(typeInfo, nodeInfo);
 	}
 
-	for (auto i = nodeInfo.begin(); i != nodeInfo.end(); ++i)
+	for (const SelData& sel : nodeInfo)
 	{	// push selector
-		label.push_back(fae_.boxMan->getSelector(*i));
+		label.push_back(fae_.boxMan->getSelector(sel));
 	}
 
 	// build the tuple
@@ -186,7 +186,8 @@ size_t VirtualMachine::nodeCreate(
 	FAE::reorderBoxes(label, lhs);
 
 	// fill the rest
-	ta->addTransition(lhs, fae_.boxMan->lookupLabel(label, ptrNodeInfo), f);
+	const label_type boxLabel = fae_.boxMan->lookupLabel(label, ptrNodeInfo);
+	ta->addTransition(lhs, boxLabel, f);
 
 	// add the tree automaton into the forest automaton
 	fae_.appendRoot(ta);

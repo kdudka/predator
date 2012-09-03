@@ -17,3 +17,4 @@ tags
 .*.swp
 *-bare-gcc.err
 *-predator.err
+cscope.out

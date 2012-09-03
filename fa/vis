@@ -1,0 +1,31 @@
+#!/bin/bash
+self="`readlink -f "$0"`"
+topdir="`dirname "$self"`/.."
+
+# include common code base
+source "$topdir/build-aux/xgcclib.sh"
+
+# use chromium as default SVG_VIEWER
+test -z "$SVG_VIEWER" && SVG_VIEWER=chromium
+
+# visualize graphs
+printf "graph visualization in progress ... "
+make $MAKEOPTS -s -f "$topdir/tests/forester-regre/Makefile.in" \
+    TIMEOUT="timeout 2" || exit $?
+printf "done\n"
+
+if [ $# == 0 ] ; then
+	"$SVG_VIEWER" *.svg &
+elif [ $# == 1 ] ; then
+	TRACEFILE="$1"
+	test -f ${TRACEFILE} || die "The file ${TRACEFILE} does not exist" 
+	echo "loading trace from ${TRACEFILE}..."
+	FILES=$(cat ${TRACEFILE} |      \
+		sed 's/.*\/\///' |    \
+		sed 's/\.dot/.svg/' | \
+		tr '\n' ' ')
+	"$SVG_VIEWER" ${FILES} &
+else
+	echo "Bad use"
+	exit 1
+fi

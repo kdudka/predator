@@ -17,6 +17,24 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// DO NOT MOVE LINES IN THIS PART  --- BEGIN
+
+// Forester headers
+#include "streams.hh"
+
+/**
+ * @brief  Reports an error
+ *
+ * @param[in]  errMsg  The error message
+ */
+void reportErrorNoLocation(const char* errMsg)
+{
+	FA_ERROR(errMsg);
+}
+
+// DO NOT MOVE LINES IN THIS PART  --- END
+
+
 // Standard library headers
 #include <sstream>
 #include <vector>
@@ -24,13 +42,8 @@
 #include <set>
 #include <algorithm>
 
-// Boost headers
-//#include <boost/unordered_set.hpp>
-//#include <boost/unordered_map.hpp>
-
 // Code Listener headers
 #include <cl/code_listener.h>
-#include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
@@ -41,6 +54,8 @@
 #include "symctx.hh"
 #include "executionmanager.hh"
 #include "fixpointinstruction.hh"
+#include "memplot.hh"
+#include "programconfig.hh"
 #include "restart_request.hh"
 #include "symexec.hh"
 
@@ -59,56 +74,109 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 }
 #endif
 
-class SymExec::Engine {
+// anonymous namespace
+namespace
+{
+	/**
+	 * @brief  Prints the trace to output stream
+	 *
+	 * @param[in,out]  os     The output stream
+	 * @param[in]      trace  The trace to be printed
+	 *
+	 * @returns  Modified stream
+	 */
+	std::ostream& printTrace(
+		std::ostream&             os,
+		const SymState::Trace&    trace)
+	{
+		const CodeStorage::Insn* lastInsn = nullptr;
 
-	TreeAut::Backend taBackend;
-	TreeAut::Backend fixpointBackend;
-	BoxMan boxMan;
+		for (auto it = trace.crbegin(); it != trace.crend(); ++it)
+		{	// traverse in the reverse order
+			const SymState& state = **it;
+
+			assert(state.GetInstr());
+			const AbstractInstruction& instr = *state.GetInstr();
+
+			const CodeStorage::Insn* origInsn = instr.insn();
+			if ((nullptr != origInsn) && (lastInsn != origInsn))
+			{
+				std::ostringstream oss;
+				oss << *origInsn;
+
+				std::string filename = MemPlotter::plotHeap(state);
+				lastInsn = origInsn;
+				os << origInsn->loc.file << ":" << std::setw(4) << std::left
+					<< origInsn->loc.line << ":  "
+					<< std::setw(50) << std::left << oss.str() << " // " << filename << "\n";
+			}
+		}
+
+		return os;
+	}
+
+
+	/**
+	 * @brief  Prints the microcode trace to output stream
+	 *
+	 * @param[in,out]  os     The output stream
+	 * @param[in]      trace  The trace to be printed
+	 *
+	 * @returns  Modified stream
+	 */
+	std::ostream& printUcodeTrace(
+		std::ostream&             os,
+		const SymState::Trace&    trace)
+	{
+		const CodeStorage::Insn* lastInsn = nullptr;
+
+		for (auto it = trace.crbegin(); it != trace.crend(); ++it)
+		{	// traverse in the reverse order
+			const SymState& state = **it;
+
+			assert(state.GetInstr());
+			const AbstractInstruction& instr = *state.GetInstr();
+
+			std::ostringstream oss;
+			oss << instr;
+
+			os << "            " << std::setw(50) << std::left << oss.str();
+
+			const CodeStorage::Insn* origInsn = instr.insn();
+			if ((nullptr != origInsn) && (lastInsn != origInsn))
+			{
+				lastInsn = origInsn;
+				os << "; " << origInsn->loc.line << ": " << *origInsn;
+			}
+
+			os << "\n";
+			//MemPlotter::plotHeap(state);
+		}
+
+		return os;
+	}
+} // namespace
+
+
+class SymExec::Engine
+{
+private:  // data members
+
+	TreeAut::Backend taBackend_;
+	TreeAut::Backend fixpointBackend_;
+	BoxMan boxMan_;
 
 	Compiler compiler_;
 	Compiler::Assembly assembly_;
 
-	ExecutionManager execMan;
+	ExecutionManager execMan_;
 
-	bool dbgFlag;
+	const ProgramConfig& conf_;
+
+	volatile bool dbgFlag_;
+	volatile bool userRequestFlag_;
 
 protected:
-
-	/**
-	 * @brief  Prints a trace of preceding symbolic states
-	 *
-	 * This static method prints the backtrace from the given symbolic state to
-	 * the initial state.
-	 *
-	 * @param[in]  state  The state for which the backtrace is desired
-	 */
-	static void printTrace(const ExecState& state)
-	{
-		SymState* s = state.GetMem();
-
-		std::vector<SymState*> trace;
-
-		for ( ; s; s = s->GetParent())
-		{	// until we reach the initial state of the execution tree
-			trace.push_back(s);
-		}
-
-		// invert the trace so that it is in the natural order
-		std::reverse(trace.begin(), trace.end());
-
-		CL_NOTE("trace:");
-
-		for (auto s : trace)
-		{	// print out the trace
-			if (s->GetInstr()->insn()) {
-				CL_NOTE_MSG(&s->GetInstr()->insn()->loc,
-					SSD_INLINE_COLOR(C_LIGHT_RED, *s->GetInstr()->insn()));
-				CL_DEBUG_AT(2, std::endl << *s->GetFAE());
-			}
-
-			CL_DEBUG_AT(2, *s->GetInstr());
-		}
-	}
 
 	/**
 	 * @brief  Prints boxes
@@ -119,7 +187,7 @@ protected:
 	{
 		std::vector<const Box*> boxes;
 
-		this->boxMan.boxDatabase().asVector(boxes);
+		boxMan_.boxDatabase().asVector(boxes);
 
 		std::map<std::string, const Box*> orderedBoxes;
 
@@ -135,7 +203,7 @@ protected:
 
 		for (auto& nameBoxPair : orderedBoxes)
 		{
-			CL_DEBUG_AT(1, nameBoxPair.first << ':' << std::endl << *nameBoxPair.second);
+			FA_DEBUG_AT(1, nameBoxPair.first << ':' << std::endl << *nameBoxPair.second);
 		}
 	}
 
@@ -147,57 +215,89 @@ protected:
 	 */
 	bool main()
 	{
-		CL_CDEBUG(2, "creating empty heap ...");
+		FA_DEBUG_AT(2, "creating empty heap ...");
 
 		// create an empty heap
 		std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(
-			new FAE(this->taBackend, this->boxMan));
+			new FAE(taBackend_, boxMan_));
 
-		CL_CDEBUG(2, "sheduling initial state ...");
+		FA_DEBUG_AT(2, "scheduling initial state ...");
 
 		// schedule the initial state for processing
-		this->execMan.init(
-			DataArray(this->assembly_.regFileSize_, Data::createUndef()),
+		execMan_.init(
+			DataArray(assembly_.regFileSize_, Data::createUndef()),
 			fae,
-			this->assembly_.code_.front()
+			assembly_.code_.front()
 		);
 
 		ExecState state;
 
 		try
 		{	// expecting problems...
-			while (this->execMan.dequeueDFS(state))
+			size_t cntStates = 0;
+
+			while (execMan_.dequeueDFS(state))
 			{	// process all states in the DFS order
-				if (state.GetMem()->GetInstr()->insn())
+				const CodeStorage::Insn* insn = state.GetMem()->GetInstr()->insn();
+				if (nullptr != insn)
 				{	// in case current instruction IS an instruction
-					CL_CDEBUG(2, SSD_INLINE_COLOR(C_LIGHT_RED,
-						state.GetMem()->GetInstr()->insn()->loc << *(state.GetMem()->GetInstr()->insn())));
-					CL_CDEBUG(2, state);
+					FA_DEBUG_AT(2, SSD_INLINE_COLOR(C_LIGHT_RED, insn->loc << *insn));
+					FA_DEBUG_AT(2, state);
 				}
 				else
 				{
-					CL_CDEBUG(3, state);
+					FA_DEBUG_AT(3, state);
+				}
+
+				if (testAndClearUserRequestFlag())
+				{
+					FA_NOTE("Executed " << std::setw(7) << cntStates << " states so far.");
 				}
 
 				// run the state
-				this->execMan.execute(state);
+				execMan_.execute(state);
+				++cntStates;
 			}
 
 			return true;
 		}
 		catch (ProgramError& e)
 		{
-//			Engine::printTrace(state);
-			if (state.GetMem()->GetInstr()->insn()) {
-				CL_NOTE_MSG(&state.GetMem()->GetInstr()->insn()->loc,
-					SSD_INLINE_COLOR(C_LIGHT_RED, *state.GetMem()->GetInstr()->insn()));
-				CL_DEBUG_AT(2, std::endl << *state.GetMem()->GetFAE());
+			//Engine::printTrace(state);
+			const CodeStorage::Insn* insn = state.GetMem()->GetInstr()->insn();
+			if (nullptr != insn) {
+				FA_NOTE_MSG(&insn->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *insn));
+				FA_DEBUG_AT(2, std::endl << *state.GetMem()->GetFAE());
 			}
+
+			if (nullptr != e.location())
+				FA_ERROR_MSG(e.location(), e.what());
+			else
+				reportErrorNoLocation(e.what());
+
+			if ((conf_.printTrace) && (nullptr != e.state()))
+			{
+				FA_LOG_MSG(e.location(), "Printing trace");
+
+				std::ostringstream oss;
+				printTrace(oss, e.state()->getTrace());
+				Streams::trace(oss.str().c_str());
+			}
+
+			if ((conf_.printUcodeTrace) && (nullptr != e.state()))
+			{
+				FA_LOG_MSG(e.location(), "Printing microcode trace");
+
+				std::ostringstream oss;
+				printUcodeTrace(oss, e.state()->getTrace());
+				Streams::traceUcode(oss.str().c_str());
+			}
+
 			throw;
 		}
 		catch (RestartRequest& e)
 		{	// in case a restart is requested, clear all fixpoint computation points
-			for (auto instr : this->assembly_.code_)
+			for (auto instr : assembly_.code_)
 			{
 				if (instr->getType() != fi_type_e::fiFix)
 				{
@@ -208,27 +308,29 @@ protected:
 				static_cast<FixpointInstruction*>(instr)->clear();
 			}
 
-			CL_CDEBUG(2, e.what());
+			FA_DEBUG_AT(2, e.what());
 
 			return false;
 		}
 	}
 
-public:
+public:   // methods
 
 	/**
 	 * @brief  The default constructor
 	 *
 	 * The default constructor.
 	 */
-	Engine() :
-		taBackend{},
-		fixpointBackend{},
-		boxMan(),
-		compiler_(this->fixpointBackend, this->taBackend, this->boxMan),
+	explicit Engine(const ProgramConfig& conf) :
+		taBackend_{},
+		fixpointBackend_{},
+		boxMan_{},
+		compiler_(fixpointBackend_, taBackend_, boxMan_),
 		assembly_{},
-		execMan{},
-		dbgFlag(false)
+		execMan_{},
+		conf_(conf),
+		dbgFlag_{false},
+		userRequestFlag_{false}
 	{ }
 
 	/**
@@ -241,11 +343,12 @@ public:
 	 */
 	void loadTypes(const CodeStorage::Storage& stor)
 	{
-		CL_DEBUG_AT(3, "loading types ...");
+		FA_DEBUG_AT(3, "loading types ...");
 
 		// clear the box manager
-		this->boxMan.clear();
+		boxMan_.clear();
 
+		// ************ infer data types' layouts ************
 		for (const cl_type* type : stor.types)
 		{	// for each data type in the storage
 			std::vector<size_t> v;
@@ -268,9 +371,9 @@ public:
 						name = ss.str();
 					}
 
-					CL_DEBUG_AT(3, name);
+					FA_DEBUG_AT(3, name);
 
-					this->boxMan.createTypeInfo(name, v);
+					boxMan_.createTypeInfo(name, v);
 					break;
 
 				default: // for other types
@@ -278,6 +381,7 @@ public:
 			}
 		}
 
+		// ************ infer functions' stackframes ************
 		for (auto fnc : stor.fncs)
 		{	// for each function in the storage, create a data structure representing
 			// its stackframe
@@ -292,33 +396,57 @@ public:
 			std::ostringstream ss;
 			ss << nameOf(*fnc) << ':' << uidOf(*fnc);
 
-			CL_DEBUG_AT(3, ss.str());
+			FA_DEBUG_AT(3, ss.str());
 
-			this->boxMan.createTypeInfo(ss.str(), v);
+			boxMan_.createTypeInfo(ss.str(), v);
 		}
+
+		// ************ compile layout of the block of global vars ************
+		std::vector<const cl_type*> components;
+		for (const CodeStorage::Var& var : stor.vars)
+		{
+			if (CodeStorage::EVar::VAR_GL == var.code)
+			{
+				components.push_back(var.type);
+			}
+		}
+
+		std::vector<size_t> v;
+		if (!components.empty())
+		{ // in case the are some global variables
+			NodeBuilder::buildNode(v, components, 0);
+		}
+		else
+		{	// in case there are no global variables, make one fake
+			v.push_back(0);
+		}
+
+		boxMan_.createTypeInfo(GLOBAL_VARS_BLOCK_STR, v);
+		FA_DEBUG_AT(1, "created box for global variables: "
+			<< *boxMan_.getTypeInfo(GLOBAL_VARS_BLOCK_STR));
 	}
 
 #if 0
 	void loadBoxes(const std::unordered_map<std::string, std::string>& db) {
 
-		CL_DEBUG_AT(2, "loading boxes ...");
+		FA_DEBUG_AT(2, "loading boxes ...");
 
 		for (auto p : db) {
 
-			this->boxes.push_back((const Box*)this->boxMan.loadBox(p.first, db));
+			this->boxes.push_back((const Box*)boxMan_.loadBox(p.first, db));
 
-			CL_DEBUG(p.first << ':' << std::endl << *(const FA*)this->boxes.back());
+			FA_DEBUG(p.first << ':' << std::endl << *(const FA*)this->boxes.back());
 
 		}
 
-		this->boxMan.buildBoxHierarchy(this->hierarchy, this->basicBoxes);
+		boxMan_.buildBoxHierarchy(this->hierarchy, this->basicBoxes);
 
 	}
 #endif
 
 	void compile(const CodeStorage::Storage& stor, const CodeStorage::Fnc& entry)
 	{
-		this->compiler_.compile(this->assembly_, stor, entry);
+		compiler_.compile(assembly_, stor, entry);
 	}
 
 	const Compiler::Assembly& GetAssembly() const
@@ -329,7 +457,7 @@ public:
 	void run()
 	{
 		// Assertions
-		assert(this->assembly_.code_.size());
+		assert(assembly_.code_.size());
 
 		try
 		{	// expect problems...
@@ -337,10 +465,12 @@ public:
 			{	// while the analysis hasn't terminated
 			}
 
+			FA_NOTE("The program is SAFE.");
+
 			// print out boxes
 			this->printBoxes();
 
-			for (auto instr : this->assembly_.code_)
+			for (auto instr : assembly_.code_)
 			{	// print out all fixpoints
 				if (instr->getType() != fi_type_e::fiFix)
 				{
@@ -348,22 +478,24 @@ public:
 				}
 
 				if (instr->insn()) {
-					CL_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl
+					FA_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl
 						<< (static_cast<FixpointInstruction*>(instr))->getFixPoint());
 				} else {
-					CL_DEBUG_AT(1, "fixpoint at unknown location" << std::endl
+					FA_DEBUG_AT(1, "fixpoint at unknown location" << std::endl
 						<< (static_cast<FixpointInstruction*>(instr))->getFixPoint());
 				}
 			}
 
 			// print out stats
-			CL_DEBUG_AT(1, "forester has generated " << this->execMan.statesEvaluated()
-				<< " symbolic configuration(s) in " << this->execMan.tracesEvaluated()
-				<< " trace(s) using " << this->boxMan.boxDatabase().size() << " box(es)");
+			FA_DEBUG_AT(1, "forester has generated " << execMan_.statesEvaluated()
+				<< " symbolic configuration(s) in " << execMan_.pathsEvaluated()
+				<< " path(s) using " << boxMan_.boxDatabase().size() << " box(es)");
 		}
+		catch (const ProgramError& e)
+		{ }
 		catch (std::exception& e)
 		{
-			CL_DEBUG(e.what());
+			FA_DEBUG(e.what());
 
 			this->printBoxes();
 
@@ -373,32 +505,41 @@ public:
 
 	void run(const Compiler::Assembly& assembly)
 	{
-		this->assembly_ = assembly;
+		assembly_ = assembly;
 
-		try {
-
+		try
+		{
 			this->run();
-			this->assembly_.code_.clear();
-
-		} catch (...) {
-
-			this->assembly_.code_.clear();
+			assembly_.code_.clear();
+		}
+		catch (...)
+		{
+			assembly_.code_.clear();
 
 			throw;
-
 		}
-
 	}
 
 	void setDbgFlag()
 	{
-		this->dbgFlag = 1;
+		dbgFlag_ = true;
 	}
 
+	void setUserRequestFlag()
+	{
+		userRequestFlag_ = true;
+	}
+
+	bool testAndClearUserRequestFlag()
+	{
+		bool oldValue = userRequestFlag_;
+		userRequestFlag_ = false;
+		return oldValue;
+	}
 };
 
-SymExec::SymExec() :
-	engine(new Engine())
+SymExec::SymExec(const ProgramConfig& conf) :
+	engine{new Engine(conf)}
 { }
 
 SymExec::~SymExec()
@@ -462,4 +603,12 @@ void SymExec::setDbgFlag()
 	assert(engine != nullptr);
 
 	this->engine->setDbgFlag();
+}
+
+void SymExec::setUserRequestFlag()
+{
+	// Assertions
+	assert(engine != nullptr);
+
+	this->engine->setUserRequestFlag();
 }

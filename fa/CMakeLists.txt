@@ -36,15 +36,6 @@ ADD_CXX_ONLY_FLAG("W_CTOR_DTOR_PRIVACY"  "-Wctor-dtor-privacy")
 ADD_CXX_ONLY_FLAG("W_OLD_STYLE_CAST"     "-Wold-style-cast")
 ADD_CXX_ONLY_FLAG("W_EFFCXX"             "-Weffc++")
 
-## Check for isatty(3)
-#include(CheckFunctionExists)
-#check_function_exists("isatty" HAVE_ISATTY)
-#if (HAVE_ISATTY)
-#    add_definitions("-DHAVE_ISATTY=1")
-#else()
-#    add_definitions("-DHAVE_ISATTY=0")
-#endif()
-
 # helping scripts
 configure_file( ${PROJECT_SOURCE_DIR}/fagcc.in     ${PROJECT_BINARY_DIR}/fagcc     @ONLY)
 configure_file( ${PROJECT_SOURCE_DIR}/fagccp.in    ${PROJECT_BINARY_DIR}/fagccp    @ONLY)
@@ -63,19 +54,25 @@ add_library(fa SHARED
 	cl_fa.cc
 	comparison.cc
 	compiler.cc
+  connection_graph.cc
 	exec_state.cc
 	fixpoint.cc
 	forestaut.cc
+	integrity.cc
 	jump.cc
 	label.cc
+	memplot.cc
 	microcode.cc
+	plotenum.cc
+	programconfig.cc
 	sequentialinstruction.cc
+	streams.cc
 	symctx.cc
 	symexec.cc
+	symstate.cc
 	timbuk.cc
 	treeaut.cc
 	virtualmachine.cc
-  connection_graph.cc
 )
 set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 
@@ -94,14 +91,18 @@ set(testdir "${fa_SOURCE_DIR}/../tests/forester-regre")
 set(tests
           f0001 f0002 f0003 f0004 f0005 f0006 f0007       f0009
     f0010 f0011 f0012 f0013 f0014       f0016             f0019
-    f0020       f0022       f0024 f0025
+    f0020       f0022       f0024 f0025       f0027
+
+    f0100 f0101 f0102 f0103       f0105 f0106
+    f0110 f0111             f0114             f0117 f0118
 
 # Predator tests
-          p0001
-                      p0023                         p0028 p0029
+          p0001       p0003
+                      p0023                   p0027 p0028 p0029
                                               p0037
                 p0042             p0045 p0046
                                   p0075 p0076
+                                  p0085
           p0091
                                                           p0119
                                         p0126
@@ -122,14 +123,84 @@ endif(TEST_ONLY_FAST)
 
 # tests known to fail now (but shouldn't!)
 set(tests-known-to-fail
+          f0021
                                                           p0019
-                                  p0025 p0026 p0027
-          p0041
-                            p0074
-                      p0083       p0085
+                                  p0025 p0026      
+          p0041  
+                                  
                                                           p0159
+    p0160
+                                                    p0188
                                                     p0198
+)
+
+set(tests-failing-due-to-abstraction
+                                                    f0008
+                                              f0017
                                               p0507
+)
+
+set(tests-failing-due-to-timeout
+                      f0023
+)
+
+set(tests-failing-due-to-unsupported-feature
+                                        f0026
+                                              p0007 p0008
+    p0010       p0012 p0013 p0014 p0015 p0016 p0017 p0018
+                p0022       p0024
+                p0032 p0033 p0034 p0035             p0038 p0039
+    p0040             p0043                   p0047 p0048 p0049
+    p0050 p0051 p0052 p0053 p0054 p0055 p0056 p0057 p0058 p0059
+    p0060 p0061 p0062 p0063 p0064 p0065 p0066 p0067 p0068 p0069
+    p0070 p0071 p0072 p0073                               p0079
+    p0080 p0081 p0082       p0084       p0086 p0087 p0088 p0089
+    p0090                   p0094       p0096 p0097 p0098 p0099
+    p0100 p0101 p0102 p0103 p0104 p0105 p0106 p0107 p0108 p0109
+    p0110 p0111 p0112 p0113 p0114 p0115 p0116 p0117 p0118
+          p0121 p0122 p0123 p0124 p0125       p0127 p0128 p0129
+    p0130       p0132 p0133 p0134 p0135 p0136 p0137 p0138 p0139
+    p0140 p0141 p0142       p0144 p0145 p0146 p0147 p0148 p0149
+    p0150 p0151 p0152 p0153 p0154 p0155 p0156 p0157
+          p0161 p0162 p0163 p0164 p0165 p0166 p0167 p0168
+          p0171 p0172 p0173 p0174             p0177 p0178
+          p0181 p0182                   p0186             p0189
+          p0191 p0192 p0193 p0194       p0196
+          p0201 p0202 p0203 p0204 p0205 p0206 p0207 
+    p0500 p0501 p0502 p0503 p0504 p0505 p0506       p0508 p0509
+    p0510 p0511 p0512 p0513 p0514 p0515 p0516 p0517 p0518 p0519
+    p0520 p0521
+)
+
+set(tests-failing-due-to-internal-error
+                p0002       p0004 p0005 p0006             p0009
+          p0011
+    p0020 p0021           
+                            p0044
+                                              p0077 p0078 
+                p0092 p0093       p0095
+    p0120 p0121
+                                                    p0158
+                                                          p0169
+                                        p0176             p0179
+    p0180             p0183 p0184 p0185       p0187
+    p0190                         p0195       p0197       p0199
+    p0200                                           p0208
+    p0300 p0301 p0302 p0303
+    p0400 p0401 p0402 p0403 p0404 p0405 p0406 p0407 p0408 p0409
+    p0410 p0411 p0412 p0413 p0414 p0415 p0416 p0417 p0418 p0419
+                p0432
+                            p0464 p0465 p0466 p0467 p0468
+)
+
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+# PRIORITY: check these tests and if OK, add them into the suite!!!!
+# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+set(tests-with-unknown-results
+                                  f0015             f0018
+    p0030 p0031                         p0036
+                            p0074
+                      p0083
 )
 
 set(cost 1)

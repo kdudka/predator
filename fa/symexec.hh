@@ -25,6 +25,7 @@
 
 // Forester headers
 #include "compiler.hh"
+#include "programconfig.hh"
 
 /**
  * @file symexec.hh
@@ -42,21 +43,23 @@ namespace CodeStorage {
  *
  * This class provides the top level algorithm of the @b symbolic @b execution.
  */
-class SymExec {
-
+class SymExec
+{
 private:  // methods
 
 	SymExec(const SymExec&);
 	SymExec& operator=(const SymExec&);
 
-public:
+public:   // methods
 
 	/**
-	 * @brief  Default constructor
+	 * @brief  Constructor
 	 *
-	 * Default constructor.
+	 * Constructor.
+	 *
+	 * @param[in]  conf  Program configuration
 	 */
-	SymExec();
+	explicit SymExec(const ProgramConfig& conf);
 
 	/**
 	 * @brief  Destructor
@@ -121,6 +124,13 @@ public:
 	 * The method that sets the debugging flag.
 	 */
 	void setDbgFlag();
+
+	/**
+	 * @brief  Sets the flag for user request
+	 *
+	 * The method that sets the flag denoting user request.
+	 */
+	void setUserRequestFlag();
 
 private:
 

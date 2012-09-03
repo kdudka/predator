@@ -36,12 +36,6 @@ test -z "$FA_VERBOSE" && FA_VERBOSE=1
 test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp \
   -fplugin-arg-libfa-dump-types"
 
-# Box database
-BOXDB=""
-if [ "$2" != "" ]; then
-    BOXDB="-fplugin-arg-libfa-args=db-root:$2"
-fi
-
 # prepare the command line
 RUN="LD_PRELOAD=/lib/x86_64-linux-gnu/libpthread.so.0 \
     $GDB --quiet --args $CC1_HOST \"$1\" \

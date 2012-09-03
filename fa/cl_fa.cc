@@ -18,107 +18,34 @@
  */
 
 // Standard library headers
-#include <vector>
-#include <unordered_map>
-#include <fstream>
-#include <iostream>
-#include <stdexcept>
 #include <ctime>
-#include <cstdlib>
 #include <signal.h>
-
-// Boost headers
-#include <boost/algorithm/string.hpp>
 
 // Code Listener headers
 #include <cl/easy.hh>
 #include "../cl/ssd.h"
 
 // Forester headers
+#include "notimpl_except.hh"
+#include "programconfig.hh"
+#include "streams.hh"
 #include "symctx.hh"
 #include "symexec.hh"
-#include "programerror.hh"
-#include "notimpl_except.hh"
 
-SymExec se;
+SymExec* se = nullptr;
 
 void setDbgFlag(int) {
-	se.setDbgFlag();
+	if (se)
+		se->setDbgFlag();
+}
+
+void userRequestHandler(int) {
+	if (se)
+		se->setUserRequestFlag();
 }
 
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
-
-struct Config
-{
-public:   // data members
-	std::string dbRoot;        ///< box database root directory
-	bool        printUcode;    ///< printing microcode?
-	bool        onlyCompile;   ///< only compiling?
-
-private:  // methods
-
-	void processArg(const std::string& arg)
-	{
-		using std::string;
-
-		if (arg.empty())
-			return;
-
-		std::vector<string> data;
-		boost::split(data, arg, boost::is_any_of(":"));
-
-		// assert there is at least one part
-		assert(!data.empty());
-
-		const std::string& key = data[0];
-
-		//      ***************  unary arguments ****************
-		if (std::string("print-ucode") == key)
-		{
-			this->printUcode = true;
-			CL_DEBUG("Config::processArg: \"print-ucode\" mode requested");
-			return;
-		}
-
-		if (std::string("only-compile") == key)
-		{
-			this->onlyCompile = true;
-			CL_DEBUG("Config::processArg: \"only-compile\" mode requested");
-			return;
-		}
-
-		//      ***************  binary arguments ****************
-		if (std::string("db-root") == key)
-		{
-			if (data.size() != 2)
-			{
-				throw std::invalid_argument("use \"db-root:<path>\"");
-			}
-
-			this->dbRoot = data[1];
-			CL_DEBUG("Config::processArg: \"db-root\" is \"" + this->dbRoot + "\"");
-			return;
-		}
-
-		CL_WARN("unhandled argument: \"" << arg << "\"");
-	}
-
-public:   // methods
-
-	Config(const std::string& confStr) :
-		dbRoot(""),
-		printUcode(false),
-		onlyCompile(false)
-	{
-		std::vector<std::string> args;
-		boost::split(args, confStr, boost::is_any_of(";"));
-		for (const std::string& arg : args)
-		{
-			processArg(arg);
-		}
-	}
-};
 
 #if 0
 struct BoxDb {
@@ -156,14 +83,14 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 
 	using namespace CodeStorage;
 
-	CL_DEBUG("config: \"" << configString << "\"");
+	FA_LOG("configuration string: \"" << configString << "\"");
 
 	// look for main() by name
-	CL_DEBUG("looking for 'main()' at global scope...");
+	FA_LOG("looking for 'main()' at global scope...");
 	const NameDb::TNameMap &glNames = stor.fncNames.glNames;
 	const NameDb::TNameMap::const_iterator iter = glNames.find("main");
 	if (glNames.end() == iter) {
-		CL_ERROR("main() not found at global scope");
+		FA_ERROR("main() not found at global scope");
 		return;
 	}
 
@@ -174,18 +101,27 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 	const FncDb &fncs = stor.fncs;
 	const Fnc *main = fncs[iter->second];
 	if (!main || !isDefined(*main)) {
-		CL_ERROR("main() not defined");
+		FA_ERROR("main() not defined");
 		return;
 	}
 
-	CL_DEBUG("starting verification stuff ...");
+	// parse the configuration string
+	ProgramConfig conf(configString);
+
+	// set signal handlers
+	signal(SIGUSR1, setDbgFlag);
+	signal(SIGUSR2, userRequestHandler);
+
+	// set the debugging level
+	Streams::setDebugLevelAsForCL();
+
+	FA_LOG("starting verification ...");
 	try
 	{
-		signal(SIGUSR1, setDbgFlag);
-		se.loadTypes(stor);
+		se = new SymExec(conf);
 
-		// parse the configuration string
-		Config conf(configString);
+		FA_LOG("loading types ...");
+		se->loadTypes(stor);
 
 /*
 		if (!conf.dbRoot.empty()){
@@ -193,32 +129,35 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 			se.loadBoxes(db.store);
 		}
 */
-		CL_DEBUG_AT(2, "compiling ...");
-		se.compile(stor, *main);
+
+		FA_LOG("compiling to microcode ...");
+		se->compile(stor, *main);
 		if (conf.printUcode)
 		{
-			std::cout << se.GetAssembly();
+			FA_LOG("Printing microcode");
+			std::ostringstream os;
+			os << se->GetAssembly();
+			Streams::ucode(os.str().c_str());
 		}
 
 		if (!conf.onlyCompile)
 		{
-			se.run();
-			CL_NOTE("the program is safe ...");
+			FA_LOG("starting symbolic execution ...");
+			se->run();
 		}
-	} catch (const ProgramError& e)
+	}
+	catch (const NotImplementedException& e)
 	{
-		if (e.location())
-			CL_ERROR_MSG(e.location(), e.what());
+		if (nullptr != e.location())
+			FA_ERROR_MSG(e.location(), "not implemented: " << e.what());
 		else
-			CL_ERROR(e.what());
-	} catch (const NotImplementedException& e)
-	{
-		if (e.location())
-			CL_ERROR_MSG(e.location(), "not implemented: " + std::string(e.what()));
-		else
-			CL_ERROR("not implemented: " + std::string(e.what()));
+			FA_ERROR("not implemented: " + std::string(e.what()));
 	} catch (const std::exception& e)
 	{
-		CL_ERROR(e.what());
+		FA_ERROR(e.what());
 	}
+
+	delete se;
+
+	FA_LOG("Forester finished.");
 }

@@ -1,1 +1,3 @@
 version.h
+*.dot
+*.svg

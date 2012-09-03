@@ -20,15 +20,93 @@
 #include "forestaut.hh"
 #include "tatimint.hh"
 
-std::ostream& operator<<(std::ostream& os, const TreeAut& ta) {
+
+namespace
+{
+	struct BoxCmpF
+	{
+		bool operator()(
+			const std::pair<const AbstractBox*, std::vector<size_t>>& v1,
+			const std::pair<const AbstractBox*, std::vector<size_t>>& v2)
+		{
+			if (v1.first->isType(box_type_e::bTypeInfo))
+				return !v2.first->isType(box_type_e::bTypeInfo);
+
+			return v1.first->getOrder() < v2.first->getOrder();
+		}
+	};
+
+
+	struct WriteStateF
+	{
+		std::string operator()(size_t state) const
+		{
+			std::ostringstream ss;
+			if (_MSB_TEST(state))
+				ss << 'r' << _MSB_GET(state);
+			else
+				ss << 'q' << state;
+
+			return ss.str();
+		}
+	};
+
+	size_t getLabelArity(std::vector<const AbstractBox*>& label)
+	{
+		size_t arity = 0;
+
+		for (auto& box : label)
+			arity += box->getArity();
+
+		return arity;
+	}
+}
+
+void FA::reorderBoxes(
+	std::vector<const AbstractBox*>& label,
+	std::vector<size_t>& lhs)
+{
+	// Assertions
+	assert(getLabelArity(label) == lhs.size());
+
+	std::vector<std::pair<const AbstractBox*, std::vector<size_t>>> tmp;
+	std::vector<size_t>::iterator lhsBegin = lhs.end(), lhsEnd = lhs.begin();
+
+	for (size_t i = 0; i < label.size(); ++i)
+	{
+		lhsBegin = lhsEnd;
+
+		lhsEnd += label[i]->getArity();
+
+		tmp.push_back(std::make_pair(label[i], std::vector<size_t>(lhsBegin, lhsEnd)));
+	}
+
+	std::sort(tmp.begin(), tmp.end(), BoxCmpF());
+
+	lhs.clear();
+
+	for (size_t i = 0; i < tmp.size(); ++i)
+	{
+		label[i] = tmp[i].first;
+
+		lhs.insert(lhs.end(), tmp[i].second.begin(), tmp[i].second.end());
+	}
+}
+
+
+std::ostream& operator<<(std::ostream& os, const TreeAut& ta)
+{
 	TAWriter<label_type> writer(os);
 	os << '[';
-	for (std::set<size_t>::iterator j = ta.getFinalStates().begin(); j != ta.getFinalStates().end(); ++j)
-		writer.writeState(*j);
+
+	for (const size_t& state : ta.getFinalStates())
+		writer.writeState(state);
+
 	os << " ]" << std::endl;;
-	writer.writeTransitions(ta, FA::WriteStateF());
+	writer.writeTransitions(ta, WriteStateF());
 	return os;
 }
+
 
 std::ostream& operator<<(std::ostream& os, const FA& fa)
 {
@@ -54,7 +132,7 @@ std::ostream& operator<<(std::ostream& os, const FA& fa)
 		}
 
 		writer.endl();
-		writer.writeTransitions(*fa.roots[i], FA::WriteStateF());
+		writer.writeTransitions(*fa.roots[i], WriteStateF());
 	}
 
 	return os;

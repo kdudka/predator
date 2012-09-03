@@ -1,0 +1,1 @@
+../forester/main_returns_zero_by_default.c

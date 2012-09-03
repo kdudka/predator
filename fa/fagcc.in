@@ -4,20 +4,97 @@ export SELF="$0"
 # this makes 7x speedup in case 'grep' was compiled with multi-byte support
 export LC_ALL=C
 
+# Disable ccache so that GCC really processes the files
 export CCACHE_DISABLE=1
 
+# Allocation of file descriptors. Pay attention not to interfere with them!!
+FD_UCODE=3
+FD_TRACE=4
+FD_TRACE_UCODE=5
+
+# Outputs - defaults to standard streams
+OUT_UCODE='&1'
+OUT_TRACE='&1'
+OUT_TRACE_UCODE='&1'
+
 usage() {
-    echo "Usage: $0 foo.c <box directory>"
-    exit 1
+  echo "Usage: $SELF [OPTION]... FILE"
+  echo "Try '$SELF --help' for more information."
+  exit 1
+}
+
+usage_long() {
+  # 80 output chars:
+  #    "################################################################################"
+  echo "Usage: $SELF [OPTION]... FILE"
+  echo ""
+  echo "Miscellaneous:"
+  echo "  -p,   --print-ucode              print microcode"
+  echo "  -c,   --compile-only             only compile, do not run the analysis"
+  echo "  -t,   --print-trace              print the trace for detected errors"
+  echo "  -tu,  --print-trace-ucode        print the microcode trace for detected errors"
+  echo "  -ou,  --output-ucode FILE        write the output microcode (for -p) to FILE"
+  echo "  -ot,  --output-trace FILE        write the trace (for -t) to FILE"
+  echo "  -otu, --output-trace-ucode FILE  write the microcode trace (for -tu) to FILE"
+  echo "  -d,   --dry-run                  do not run, only print the final command"
+  echo "  -v,   --verbose                  increase verbosity level"
+  echo "  -h,   --help                     display this help and exit"
+  #    "################################################################################"
+
+  exit 1
 }
 
 seek_input_file() {
-    test -e "$1" && return 0
+  test -f "$1" && return 0
 
-    return 1
+  return 1
 }
 
-seek_input_file "$1" || usage
+FILENAME=
+FA_ARGS=
+FA_VERBOSE=0
+OUTPUT_FILE=
+DRY_RUN=0
+
+while [ "$1" != "" ]; do
+  case $1 in
+    -p   | --print-ucode )          FA_ARGS="${FA_ARGS};print-ucode"
+                                    ;;
+    -c   | --compile-only )         FA_ARGS="${FA_ARGS};only-compile"
+                                    ;;
+    -t   | --print-trace )          FA_ARGS="${FA_ARGS};print-trace"
+                                    ;;
+    -tu  | --print-trace-ucode )    FA_ARGS="${FA_ARGS};print-ucode-trace"
+                                    ;;
+    -ou  | --output-ucode )         shift
+                                    OUT_UCODE=$1
+                                    ;;
+    -ot  | --output-trace )         shift
+                                    OUT_TRACE=$1
+                                    ;;
+    -otu | --output-trace-ucode )   shift
+                                    OUT_TRACE_UCODE=$1
+                                    ;;
+    -d   | --dry-run )              DRY_RUN=1
+                                    ;;
+    -v   | --verbose )              FA_VERBOSE=$(expr ${FA_VERBOSE} + 1)
+                                    ;;
+    -h   | --help )                 usage_long
+                                    ;;
+    * )                             FILENAME=$1
+  esac
+  shift
+done
+
+test "$FILENAME" = "" && {
+  echo "Missing source file name!"
+  usage ;
+}
+
+seek_input_file "$FILENAME" || {
+  echo "File \""$FILENAME"\" is not a regular file!"
+  usage ;
+}
 
 # include common code base
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
@@ -31,7 +108,7 @@ export GCC_OPTS="-S -o $SINK -O0 -m32 -I$topdir/include/predator-builtins -DFORE
 
 # initial checks
 find_gcc_host
-test -r "$FA_PLUG"  || die "Forester GCC plug-in not found: ${FA_PLUG}"
+find_gcc_plug fa Forester
 
 # use verbose level 0 by default
 test -z "$FA_VERBOSE" && FA_VERBOSE=0
@@ -40,11 +117,6 @@ if [ "$FA_VERBOSE" -ge "1" ]; then
   # use pp code listener by default
   test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp -fplugin-arg-libfa-dump-types"
 fi;
-
-BOXDB=""
-if [ "$2" != "" ]; then
-    BOXDB="-fplugin-arg-libfa-args=db-root:$2"
-fi
 
 # check whether stdout is connected to a terminal
 if tty 0>&1 >"$SINK"; then
@@ -58,12 +130,40 @@ if tty 0>&1 >"$SINK"; then
     export N='\o033[0m'
 fi
 
+# cleaning on exit 
+on_exit() {
+	rm -f "$tmp"
+	rm -f "$tmp_trace"
+}
+
+trap on_exit EXIT
+
+# the GCC command
+exec_gcc() {
+	GCC_ARGS=$1
+	REDIR=$2
+
+	EXEC_STR="$GCC_HOST $GCC_OPTS                                     \
+	      ${GCC_ARGS}                                                 \
+        -fplugin="$FA_PLUG"                                         \
+        $FA_OPTS                                                    \
+        -fplugin-arg-libfa-verbose="$FA_VERBOSE"                    \
+        -fplugin-arg-libfa-args=\"$FA_ARGS\"                        \
+				${REDIR}                                                    \
+				"
+
+  if [ ${DRY_RUN} == 0 ] ; then
+		eval ${EXEC_STR}
+  else
+    echo ${EXEC_STR}
+  fi
+}
+
 # run the gcc
 run_gcc() {
     printf "Trying to compile \033[1;37m%s\033[0m ... " "$*" >&2
     tmp="$(mktemp)"
     test -w "$tmp" || die "mktemp failed"
-    trap "rm -f '$tmp'" RETURN
 
     if "$GCC_HOST" $GCC_OPTS "$@" > "$tmp" 2>&1; then
         printf "\033[1;32mOK\033[0m\n" >&2
@@ -75,17 +175,46 @@ run_gcc() {
         return 1
     fi
 
-    "$GCC_HOST" $GCC_OPTS $@                                        \
-        -fplugin="$FA_PLUG"                                         \
-        -fplugin-arg-libfa-verbose="$FA_VERBOSE"                    \
-        3>&1 1>&2 2>&3 #| stdbuf --output=L grep -E                  \
-        #' \[-fplugin=libfa\.so\]$|CL_BREAK_IF|INT3|SIGTRAP|internal compiler error|undefined symbol'
-    if [ $? -ne 0 ]; then
+    RETURN="-1"
+
+		tmp_trace="$(mktemp)"
+    test -w "$tmp_trace" || die "mktemp failed"
+
+		# swap stdout and stderr
+		exec_gcc "$@" "{FD_TMP}>&1                          \
+			             1>&2                                 \
+									 2>&\${FD_TMP}                        \
+									 ${FD_TRACE}>${tmp_trace}             \
+									 ${FD_TRACE_UCODE}>${OUT_TRACE_UCODE} \
+									 ${FD_UCODE}>${OUT_UCODE}             \
+									"
+		RETURN="$?"
+
+		cat ${tmp_trace} | \
+		eval "awk '                                                                    \
+		/#[0-9]+:/ {                                                                   \
+			str = \$0;                                                                   \
+			while (match(str, /#[0-9]+:/))                                               \
+			{                                                                            \
+				str = substr(str, 1, RSTART-1)  substr(str, RSTART+RLENGTH, length(\$0));  \
+				sub(/\/\//, \"      //\", str);                                            \
+			}                                                                            \
+		                                                                               \
+			print str;                                                                   \
+			next;                                                                        \
+		}                                                                              \
+		                                                                               \
+		{print}' >${OUT_TRACE}"
+
+    if [ ${RETURN} -ne 0 ]; then
         printf "\033[1;31mFAILED\033[0m\n" >&2
     fi
 }
 
-run_gcc $1 ${BOXDB} | stdbuf --output=L sed -re 's| \[-fplugin=libfa\.so\]$||' \
+RETURN=1
+
+run_gcc ${FILENAME} |                                                          \
+        stdbuf --output=L sed -re 's| \[-fplugin=libfa\.so\]$||'               \
         -e "s|(^.*) \[internal location\]\$|$S\1$N|"                           \
         -e "s|(: error:) (.*)\$|\1 $R\2$N|"                                    \
         -e "s|(: warning:) (.*)\$|\1 $Y\2$N|"                                  \
@@ -104,11 +233,10 @@ run_gcc $1 ${BOXDB} | stdbuf --output=L sed -re 's| \[-fplugin=libfa\.so\]$||' \
         -e "s|(internal compiler error:) (.*)\$|\1 $R\2$N|"                    \
         -e "s|(undefined symbol:) (.*)\$|\1 $R\2$N|"                           \
         -e "s/(CL_BREAK_IF|INT3|SIGTRAP)/$R\1$N/"                              \
-        -e "s/(importGlVar\\(\\))/$R\1$N/"                                     \
         -e "s/(: debug: *) ([<>]J[<>]|AAA)/\1 $R\2$N/"                         \
-        -e "s/(: debug: SymHeap::)(objSetConcrete)/\1$Y\2$N/"                  \
         -e "s/(: debug:) \\(x\\) (.*)\$/\1 $Y(x)$N \2/"                        \
-        -e "s/(: debug:) (spliceOutListSegment)/\1 $B\2$N/"                    \
         -e "s/(: debug:) (<<<|>>>)/\1 $B\2$N/"                                 \
         -e "s/(: debug:) (XXX)/\1 $Y\2$N/"                                     \
         -e "s/(: debug: ___) (entering|we are)/\1 $G___$N \2/"
+
+exit ${RETURN}

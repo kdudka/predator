@@ -20,16 +20,24 @@
 #ifndef NORMALIZATION_H
 #define NORMALIZATION_H
 
+// Standard library headers
 #include <vector>
 #include <map>
 
+// Forester headers
 #include "forestautext.hh"
 #include "abstractbox.hh"
+#include "streams.hh"
 #include "utils.hh"
 
-class Normalization {
+class Normalization
+{
+private:  // data members
 
 	FAE& fae;
+
+	// the corresponding symbolic state
+	const SymState* state_;
 
 protected:
 
@@ -123,7 +131,7 @@ protected:
 
 			if (!visited[i]) {
 
-				CL_CDEBUG(1, "the root " << i << " is not referenced anymore ... " << this->fae.connectionGraph.data[i]);
+				FA_DEBUG_AT(1, "the root " << i << " is not referenced anymore ... " << this->fae.connectionGraph.data[i]);
 
 				garbage = true;
 
@@ -132,8 +140,17 @@ protected:
 		}
 
 		if (garbage)
-			throw ProgramError("garbage detected");
+		{
+			const cl_loc* loc = nullptr;
+			if (nullptr != state_ &&
+				nullptr != state_->GetInstr() &&
+				nullptr != state_->GetInstr()->insn())
+			{
+				loc = &state_->GetInstr()->insn()->loc;
+			}
 
+			throw ProgramError("garbage detected", loc, state_);
+		}
 	}
 
 public:
@@ -252,8 +269,10 @@ public:
 	}
 
 	// normalize representation
-	bool normalize(const std::vector<bool>& marked, const std::vector<size_t>& order) {
-
+	bool normalize(
+		const std::vector<bool>&     marked,
+		const std::vector<size_t>&   order)
+	{
 		bool merged = false;
 
 		size_t i;
@@ -317,10 +336,11 @@ public:
 		return merged;
 	}
 
-public:
+public:   // methods
 
-	Normalization(FAE& fae) : fae(fae) {}
-
+	Normalization(FAE& fae, const SymState* state) :
+		fae(fae), state_{state}
+	{ }
 };
 
 #endif

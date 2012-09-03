@@ -292,6 +292,24 @@ public:
 	}
 
 };
+
+class FI_get_GLOB : public SequentialInstruction {
+
+	size_t dst_;
+	int offset_;
+
+public:
+
+	FI_get_GLOB(const CodeStorage::Insn* insn, size_t dst, int offset)
+		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
+
+	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "mov   \tr" << this->dst_ << ", GLOB + " << this->offset_;
+	}
+
+};
 /*
 class FI_is_type : public SequentialInstruction {
 
@@ -421,6 +439,24 @@ public:
 
 };
 
+class FI_load_GLOB : public SequentialInstruction {
+
+	size_t dst_;
+	int offset_;
+
+public:
+
+	FI_load_GLOB(const CodeStorage::Insn* insn, size_t dst, int offset)
+		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
+
+	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "mov   \tr" << this->dst_ << ", [GLOB + " << this->offset_ << ']';
+	}
+
+};
+
 class FI_store : public SequentialInstruction {
 
 	size_t dst_;
@@ -440,25 +476,7 @@ public:
 	}
 
 };
-/*
-class FI_store_ABP : public SequentialInstruction {
 
-	size_t src_;
-	int offset_;
-
-public:
-
-	FI_store_ABP(size_t src, int offset)
-		: SequentialInstruction(nullptr), src_(src), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state);
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov\t[ABP + " << this->offset_ << "], r" << this->src_;
-	}
-
-};
-*/
 class FI_loads : public SequentialInstruction {
 
 	size_t dst_;
@@ -746,6 +764,26 @@ public:
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "prh ";
+	}
+
+};
+
+class FI_plot_heap : public SequentialInstruction {
+
+private:  // methods
+
+	FI_plot_heap(const FI_plot_heap&);
+	FI_plot_heap& operator=(const FI_plot_heap&);
+
+public:
+
+	FI_plot_heap(const CodeStorage::Insn* insn)
+		: SequentialInstruction(insn) {}
+
+	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const {
+		return os << "plot ";
 	}
 
 };

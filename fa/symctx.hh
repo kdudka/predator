@@ -27,18 +27,20 @@
 // Code Listener headers
 #include <cl/storage.hh>
 #include <cl/clutil.hh>
-#include <cl/cl_msg.hh>
 
 // Forester headers
-#include "types.hh"
 #include "nodebuilder.hh"
 #include "notimpl_except.hh"
+#include "streams.hh"
+#include "types.hh"
+#include "varinfo.hh"
 
 #define ABP_OFFSET		0
 #define ABP_SIZE		SymCtx::getSizeOfDataPtr()
 #define RET_OFFSET		(ABP_OFFSET + ABP_SIZE)
 #define RET_SIZE		SymCtx::getSizeOfCodePtr()
 
+#define GLOBAL_VARS_BLOCK_STR   "__global_vars_block"
 
 /**
  * @brief  Symbolic context of a function
@@ -47,134 +49,12 @@
  *
  * @todo
  */
-class SymCtx {
-
+class SymCtx
+{
 public:   // data types
 
 	/// Stack frame layout
 	typedef std::vector<SelData> StackFrameLayout;
-
-
-	/**
-	 * @brief  Class with run-time information about variable's location
-	 *
-	 * This class contains information about the location of a variable, i.e.
-	 * whether it is on a stack or in some register, and also the offset from the
-	 * base pointer of the corresponding stack frame (in case it is on a stack),
-	 * or the index of the register (in case it is therein).
-	 */
-	class VarInfo
-	{
-	private:  // data members 
-
-		bool isStack_;
-		union
-		{
-			size_t stackOffset_;
-			size_t regIndex_;
-		};
-
-	private:  // methods
-
-		VarInfo(bool isStack, size_t offsetIndex)
-			: isStack_(isStack)
-		{
-			if (isOnStack())
-			{
-				stackOffset_ = offsetIndex;
-			}
-			else
-			{
-				regIndex_ = offsetIndex;
-			}
-		}
-
-	public:   // methods
-
-		/**
-		 * @brief  Checks whether the variable is on the stack
-		 *
-		 * This method returns a Boolean value meaning whether the variable is on
-		 * the stack.
-		 *
-		 * @returns  @p true in case the variable is on the stack, @p false
-		 *           otherwise
-		 */
-		bool isOnStack() const { return isStack_;}
-
-		/**
-		 * @brief  Checks whether the variable is in a register
-		 *
-		 * This method returns a Boolean value meaning whether the variable is in
-		 * a register.
-		 *
-		 * @returns  @p true in case the variable is in a register, @p false
-		 *           otherwise
-		 */
-		bool isInReg() const { return !isStack_;}
-
-		/**
-		 * @brief  Returns the stack offset of the variable
-		 *
-		 * This method returns the offset of the variable from the stack frame base
-		 * pointer (for variables which are on the stack).
-		 *
-		 * @returns  The offset of the variable from the stack frame base pointer
-		 */
-		size_t getStackOffset() const
-		{
-			// Assertions
-			assert(isOnStack());
-
-			return stackOffset_;
-		}
-
-		/**
-		 * @brief  Returns the index of the register of the variable
-		 *
-		 * This method returns the index of the register in which there is the
-		 * variable (for variables which are in registers).
-		 *
-		 * @returns  The index of the register in which the variable is
-		 */
-		size_t getRegIndex() const
-		{
-			// Assertions
-			assert(isInReg());
-
-			return regIndex_;
-		}
-
-		/**
-		 * @brief  Static method creating a variable on a stack
-		 *
-		 * This static method creates a new variable on a stack at given @p offset
-		 * from the base pointer of the stack frame.
-		 *
-		 * @param[in]  offset  The offset of the variable in the given stack frame
-		 *
-		 * @returns  New @p VarInfo structure for the variable
-		 */
-		static VarInfo createOnStack(size_t offset)
-		{
-			return VarInfo(true, offset);
-		}
-
-		/**
-		 * @brief  Static method creating a variable in a register
-		 *
-		 * This static method creates a new variable in the register with given @p
-		 * index.
-		 *
-		 * @param[in]  index  Index of the register in which the variable is stored
-		 *
-		 * @returns  New @p VarInfo structure for the variable
-		 */
-		static VarInfo createInReg(size_t index)
-		{
-			return VarInfo(false, index);
-		}
-	};
 
 
 	/**
@@ -293,11 +173,20 @@ public:   // methods
 	 * This is a constructor that creates a new symbolic context for given
 	 * function.
 	 *
-	 * @param[in]  fnc  The function for which the symbolic context is to be
-	 *                  created
+	 * @param[in]  fnc           The function for which the symbolic context is to
+	 *                           be created
+	 * @param[in]  globalVarMap  Map of global variables (in case the function is
+	 *                           to be compiled, otherwise @p nullptr)
 	 */
-	SymCtx(const CodeStorage::Fnc& fnc) :
-		fnc_(fnc), sfLayout_{}, varMap_{}, regCount_(2), argCount_(0)
+	SymCtx(
+		const CodeStorage::Fnc& fnc,
+		const var_map_type* globalVarMap = nullptr
+	) :
+		fnc_(fnc),
+		sfLayout_{},
+		varMap_{},
+		regCount_(2),
+		argCount_(0)
 	{
 		// pointer to previous stack frame
 		sfLayout_.push_back(SelData(ABP_OFFSET, ABP_SIZE, 0, "_pABP"));
@@ -328,14 +217,50 @@ public:   // methods
 						++argCount_;
 					break;
 				case CodeStorage::EVar::VAR_GL:
-					// global variables do not occur at the stack
+				{ // global variables do not occur at the stack, but we need to track
+					// them as they can be used
+					if (nullptr != globalVarMap)
+					{	// in case we are compiling the function
+						FA_NOTE("Compiling global variable " << var.name << " in function "
+							<< nameOf(fnc_));
+
+						auto itGlobalVar = globalVarMap->find(var.uid);
+						if (globalVarMap->end() == itGlobalVar)
+						{ // the variable must be in the global map
+							assert(false);
+						}
+
+						/// @todo: instead of inserting, why not just initialise varMap_ to
+						///        globalVarMap
+						varMap_.insert(std::make_pair(var.uid, itGlobalVar->second));
+					}
+
 					break;
+				}
 				default:
 					assert(false);
 			}
 		}
 	}
 
+	/**
+	 * @brief  Constructor for @e global context
+	 *
+	 * The constructor that creates the context for global variables. The function
+	 * reference is set to @p NULL reference (which is not very nice).
+	 *
+	 * @todo: revise the whole * concept
+	 */
+	SymCtx(const var_map_type* globalVarMap) :
+		fnc_(*static_cast<CodeStorage::Fnc*>(nullptr)),
+		sfLayout_{},
+		varMap_{*globalVarMap},
+		regCount_(0),
+		argCount_(0)
+	{
+		// Assertions
+		assert(nullptr != globalVarMap);
+	}
 
 	const VarInfo& getVarInfo(size_t id) const {
 		var_map_type::const_iterator i = varMap_.find(id);

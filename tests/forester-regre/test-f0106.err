@@ -1,0 +1,2 @@
+test-f0106.c:26:15: note: *_ = (int)0
+test-f0106.c:26:15: error: dereferenced value is not a valid reference [(int)0]
