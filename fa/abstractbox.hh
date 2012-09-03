@@ -112,7 +112,7 @@ public:
 
 	virtual size_t selectorToInput(size_t input) const = 0;
 
-	virtual size_t getRealRefCount(size_t input) const = 0;
+	virtual size_t getSelCount(size_t input) const = 0;
 
 	// returns (size_t)(-1) if not
 	virtual size_t outputReachable(size_t input) const = 0;

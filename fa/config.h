@@ -26,14 +26,19 @@
 #define CONFIG_H
 
 /**
+ * set abstraction height (default is 1)
+ */
+#define FA_ABS_HEIGHT						1
+
+/**
  * set reference count tracking treshold (default is 2)
  */
 #define FA_REF_CNT_TRESHOLD					2
 
 /**
- * set real reference count tracking treshold (default is 1)
+ * allow to track number of selectors leading towards a given cut-point (default is 1)
  */
-#define FA_REAL_REF_CNT_TRESHOLD			1
+#define FA_TRACK_SELECTORS					1
 
 /**
  * allow folding of nested structures (default is 1)
@@ -43,7 +48,7 @@
 /**
  * overapproximate when folding (default is 0)
  */
-#define FA_BOX_APPROXIMATION				1
+#define FA_BOX_APPROXIMATION				0
 
 /**
  * should we restart evry time a new box is encountered (default is 1)

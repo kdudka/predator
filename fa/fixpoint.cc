@@ -345,8 +345,8 @@ inline void abstract(
 	{
 		if (!excludedRoots[i])
 		{
-			abstraction.heightAbstraction(i, 1, SmartTMatchF());
-	//		abstraction.heightAbstraction(i, 1, SmarterTMatchF(fae));
+			abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmartTMatchF());
+	//		abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmarterTMatchF(fae));
 		}
 	}
 
@@ -469,9 +469,9 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 	}
 
 	learn2(*fae, this->boxMan);
-
-	computeForbiddenSet(forbidden, *fae);
 #endif
+	computeForbiddenSet(forbidden, *fae);
+
 	normalize(*fae, state.GetMem(), forbidden, true);
 
 	abstract(*fae, this->fwdConf, this->taBackend, this->boxMan);

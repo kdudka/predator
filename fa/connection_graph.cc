@@ -39,8 +39,8 @@ void ConnectionGraph::updateStateSignature(
 
 			p.first->second[i].refCount =
 				std::max(p.first->second[i].refCount, v[i].refCount);
-			p.first->second[i].realRefCount =
-				std::max(p.first->second[i].realRefCount, v[i].realRefCount);
+			p.first->second[i].selCount =
+				std::max(p.first->second[i].selCount, v[i].selCount);
 			p.first->second[i].fwdSelectors.insert(v[i].fwdSelectors.begin(),
 				v[i].fwdSelectors.end());
 		}
@@ -296,16 +296,15 @@ void ConnectionGraph::processStateSignature(CutpointSignature& result,
 		assert(*signature[0].fwdSelectors.begin() == static_cast<size_t>(-1));
 
 		result.push_back(signature[0]);
-		result.back().realRefCount =
-			std::min(signature[0].realRefCount, box->getRealRefCount(input));
+		result.back().selCount = signature[0].selCount?box->getSelCount(input):(0);
 		result.back().fwdSelectors.insert(box->selectorToInput(input));
 
 		if (selector != static_cast<size_t>(-1))
 			result.back().bwdSelector = selector;
 
 		result.back().defines.insert(
-				box->inputCoverage(input).begin(), box->inputCoverage(input).end()
-				);
+			box->inputCoverage(input).begin(), box->inputCoverage(input).end()
+		);
 
 		return;
 	}
@@ -313,8 +312,7 @@ void ConnectionGraph::processStateSignature(CutpointSignature& result,
 	for (auto& cutpoint : signature)
 	{
 		result.push_back(cutpoint);
-		result.back().realRefCount =
-			std::min(cutpoint.realRefCount, box->getRealRefCount(input));
+		result.back().selCount = cutpoint.selCount?box->getSelCount(input):(0);
 		result.back().fwdSelectors.clear();
 		result.back().fwdSelectors.insert(box->selectorToInput(input));
 
@@ -483,10 +481,7 @@ void ConnectionGraph::normalizeSignature(CutpointSignature& signature)
 				p.first->second->refCount + signature[i].refCount,
 				static_cast<size_t>(FA_REF_CNT_TRESHOLD)
 			);
-			p.first->second->realRefCount = std::min(
-				p.first->second->realRefCount + signature[i].realRefCount,
-				static_cast<size_t>(FA_REAL_REF_CNT_TRESHOLD)
-			);
+			p.first->second->selCount = p.first->second->selCount + signature[i].selCount;
 			p.first->second->refInherited = false;
 			p.first->second->fwdSelectors.insert(
 					signature[i].fwdSelectors.begin(), signature[i].fwdSelectors.end()
@@ -514,7 +509,7 @@ std::ostream& operator<<(std::ostream& os,
 	// Assertions
 	assert(info.refCount <= FA_REF_CNT_TRESHOLD);
 
-	os << info.root << "x" << info.refCount << ':' << info.realRefCount << "({";
+	os << info.root << "x" << info.refCount << ':' << info.selCount << "({";
 
 	for (auto& s : info.fwdSelectors)
 	{

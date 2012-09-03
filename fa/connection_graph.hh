@@ -59,7 +59,7 @@ public:
 		size_t refCount;
 
 		/// number of real references
-		size_t realRefCount;
+		size_t selCount;
 
 		/// inherited from different state
 		bool refInherited;
@@ -78,7 +78,7 @@ public:
 		CutpointInfo(size_t root = 0) :
 			root(root),
 			refCount(1),
-			realRefCount(FA_REAL_REF_CNT_TRESHOLD),
+			selCount(1),
 			refInherited(false),
 			fwdSelectors(),
 			bwdSelector(static_cast<size_t>(-1)),
@@ -96,7 +96,7 @@ public:
 
 			return this->root == rhs.root &&
 				this->refCount == rhs.refCount &&
-				this->realRefCount == rhs.realRefCount &&
+				this->selCount == rhs.selCount &&
 				*this->fwdSelectors.begin() == *rhs.fwdSelectors.begin() &&
 				this->bwdSelector == rhs.bwdSelector &&
 				this->defines == rhs.defines;
@@ -106,7 +106,9 @@ public:
 		{
 			return this->root == rhs.root &&
 				this->refCount == rhs.refCount &&
-				this->realRefCount == rhs.realRefCount &&
+#ifdef FA_TRACK_SELECTORS
+				this->selCount == rhs.selCount &&
+#endif
 //				this->fwdSelectors == rhs.fwdSelectors &&
 				this->bwdSelector == rhs.bwdSelector &&
 				this->defines == rhs.defines;
@@ -120,7 +122,7 @@ public:
 			size_t seed = 0;
 			boost::hash_combine(seed, info.root);
 			boost::hash_combine(seed, info.refCount);
-			boost::hash_combine(seed, info.realRefCount);
+			boost::hash_combine(seed, info.selCount);
 			boost::hash_combine(seed, *info.fwdSelectors.begin());
 			boost::hash_combine(seed, info.bwdSelector);
 			boost::hash_combine(seed, info.defines);
