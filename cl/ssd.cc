@@ -31,33 +31,39 @@ namespace ssd {
 // ColorConsole implementation
 bool ColorConsole::enabled_ = false;
 
-void ColorConsole::enable(bool value) {
+void ColorConsole::enable(bool value)
+{
     enabled_ = value;
 }
 
-bool ColorConsole::isEnabled() {
+bool ColorConsole::isEnabled()
+{
     return enabled_;
 }
 
-void ColorConsole::enableForTerm() {
+void ColorConsole::enableForTerm()
+{
 #if HAVE_ISATTY
     enabled_ = isatty(STDOUT_FILENO) && isatty(STDERR_FILENO);
 #endif
 }
 
-void ColorConsole::enableForTerm(int fd) {
+void ColorConsole::enableForTerm(int fd)
+{
 #if HAVE_ISATTY
     enabled_ = isatty(fd);
 #endif
 }
 
-void ColorConsole::enableIfCoutIsTerm() {
+void ColorConsole::enableIfCoutIsTerm()
+{
 #if HAVE_ISATTY
     enabled_ = isatty(STDOUT_FILENO);
 #endif
 }
 
-void ColorConsole::enableIfCerrIsTerm() {
+void ColorConsole::enableIfCerrIsTerm()
+{
 #if HAVE_ISATTY
     enabled_ = isatty(STDERR_FILENO);
 #endif
@@ -65,7 +71,8 @@ void ColorConsole::enableIfCerrIsTerm() {
 
 // /////////////////////////////////////////////////////////////////////////////
 // Color implementation
-std::ostream& operator<< (std::ostream &stream, const Color &color) {
+std::ostream& operator<< (std::ostream &stream, const Color &color)
+{
     static const char ESC = '\033';
     if (!ColorConsole::isEnabled())
         return stream;
@@ -101,11 +108,13 @@ Colorize::Colorize(std::ostream &stream, EColor color):
     stream_ << Color(color);
 }
 
-Colorize::~Colorize() {
+Colorize::~Colorize()
+{
     stream_ << Color(C_NO_COLOR);
 }
 
-std::ostream& Colorize::stream() {
+std::ostream& Colorize::stream()
+{
     return stream_;
 }
 

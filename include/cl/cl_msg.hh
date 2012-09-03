@@ -141,7 +141,8 @@
     CL_DEBUG_MSG(loc, what);                        \
 } while (0)
 
-inline std::ostream& operator<<(std::ostream &str, const struct cl_loc &loc) {
+inline std::ostream& operator<<(std::ostream &str, const struct cl_loc &loc)
+{
     if (!&loc || !loc.file) {
         str << "<unknown location>: ";
         return str;

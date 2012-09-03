@@ -394,7 +394,8 @@ ClfCbSeqChk::ClfCbSeqChk(ICodeListener *slave):
 {
 }
 
-const char* ClfCbSeqChk::toString(EState state) {
+const char* ClfCbSeqChk::toString(EState state)
+{
 #define CASE_TO_STRING(state) case state: return #state;
     switch (state) {
         CASE_TO_STRING(S_INIT)
@@ -412,16 +413,19 @@ const char* ClfCbSeqChk::toString(EState state) {
     }
 }
 
-void ClfCbSeqChk::emitUnexpected(const char *what) {
+void ClfCbSeqChk::emitUnexpected(const char *what)
+{
     CL_ERROR_MSG(&loc_, "unexpected callback in state "
             << toString(state_) << " (" << what << ")");
 }
 
-void ClfCbSeqChk::emitUnexpected(EState state) {
+void ClfCbSeqChk::emitUnexpected(EState state)
+{
     this->emitUnexpected(toString(state));
 }
 
-void ClfCbSeqChk::setState(EState newState) {
+void ClfCbSeqChk::setState(EState newState)
+{
     switch (state_) {
         case S_INIT:
             switch (newState) {
@@ -488,17 +492,20 @@ void ClfCbSeqChk::setState(EState newState) {
     state_ = newState;
 }
 
-void ClfCbSeqChk::chkArgDecl() {
+void ClfCbSeqChk::chkArgDecl()
+{
     if (S_FNC_DECL != state_)
         this->emitUnexpected("fnc_arg_decl");
 }
 
-void ClfCbSeqChk::chkInsnNop() {
+void ClfCbSeqChk::chkInsnNop()
+{
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_NOP");
 }
 
-void ClfCbSeqChk::chkInsnJmp() {
+void ClfCbSeqChk::chkInsnJmp()
+{
     switch (state_) {
         case S_FNC_DECL:
         case S_BLOCK_LEVEL:
@@ -511,60 +518,70 @@ void ClfCbSeqChk::chkInsnJmp() {
     state_ = S_FNC_BODY;
 }
 
-void ClfCbSeqChk::chkInsnCond() {
+void ClfCbSeqChk::chkInsnCond()
+{
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_COND");
 
     state_ = S_FNC_BODY;
 }
 
-void ClfCbSeqChk::chkInsnRet() {
+void ClfCbSeqChk::chkInsnRet()
+{
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_RET");
 
     state_ = S_FNC_BODY;
 }
 
-void ClfCbSeqChk::chkInsnAbort() {
+void ClfCbSeqChk::chkInsnAbort()
+{
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_ABORT");
 
     state_ = S_FNC_BODY;
 }
 
-void ClfCbSeqChk::chkInsnUnop() {
+void ClfCbSeqChk::chkInsnUnop()
+{
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_UNOP");
 }
 
-void ClfCbSeqChk::chkInsnBinop() {
+void ClfCbSeqChk::chkInsnBinop()
+{
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_BINOP");
 }
 
-void ClfCbSeqChk::chkInsnLabel() {
+void ClfCbSeqChk::chkInsnLabel()
+{
     if (S_BLOCK_LEVEL != state_)
         this->emitUnexpected("CL_INSN_LABEL");
 }
 
-void ClfCbSeqChk::chkInsnCallArg() {
+void ClfCbSeqChk::chkInsnCallArg()
+{
     if (S_INSN_CALL != state_)
         this->emitUnexpected("insn_call_arg");
 }
 
-void ClfCbSeqChk::setCallClose() {
+void ClfCbSeqChk::setCallClose()
+{
     if (S_INSN_CALL != state_)
         this->emitUnexpected("insn_call_close");
 
     state_ = S_BLOCK_LEVEL;
 }
 
-void ClfCbSeqChk::chkInsnSwitchCase() {
+void ClfCbSeqChk::chkInsnSwitchCase()
+{
     if (S_INSN_SWITCH != state_)
         this->emitUnexpected("insn_switch_case");
 }
 
-void ClfCbSeqChk::setSwitchClose() {
+void ClfCbSeqChk::setSwitchClose()
+{
     if (S_INSN_SWITCH != state_)
         this->emitUnexpected("insn_switch_close");
 
@@ -580,11 +597,13 @@ ClfLabelChk::ClfLabelChk(ICodeListener *slave):
 {
 }
 
-void ClfLabelChk::reset() {
+void ClfLabelChk::reset()
+{
     map_.clear();
 }
 
-void ClfLabelChk::defineLabel(const char *label) {
+void ClfLabelChk::defineLabel(const char *label)
+{
     LabelState &ls = map_[label];
     if (ls.defined) {
         CL_ERROR_MSG(&loc_, "redefinition of label '" << label << "'");
@@ -595,14 +614,16 @@ void ClfLabelChk::defineLabel(const char *label) {
         ls.loc = loc_;
 }
 
-void ClfLabelChk::reqLabel(const char *label) {
+void ClfLabelChk::reqLabel(const char *label)
+{
     LabelState &ls = map_[label];
     ls.reachable = true;
     if (!ls.loc.file)
         ls.loc = loc_;
 }
 
-void ClfLabelChk::emitWarnings() {
+void ClfLabelChk::emitWarnings()
+{
     TMap::iterator i;
     for (i = map_.begin(); i != map_.end(); ++i) {
         const std::string label = i->first;
@@ -632,7 +653,8 @@ namespace {
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see clf_intchk.hh for more details
-ICodeListener* createClfIntegrityChk(ICodeListener *slave) {
+ICodeListener* createClfIntegrityChk(ICodeListener *slave)
+{
     return usageChk(
         new ClfLabelChk(
         new ClfCbSeqChk(slave)));

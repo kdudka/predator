@@ -67,7 +67,8 @@ typedef std::stack<DfsItem>                 TDfsStack;
 typedef std::pair<TBlock, TBlock>           TCfgEdge;
 typedef std::set<TCfgEdge>                  TEdgeSet;
 
-void analyzeFnc(Fnc &fnc) {
+void analyzeFnc(Fnc &fnc)
+{
     const TLoc loc = &fnc.def.data.cst.data.cst_fnc.loc;
     LS_DEBUG_MSG(2, loc, ">>> entering " << nameOf(fnc) << "()");
 
@@ -142,7 +143,8 @@ void analyzeFnc(Fnc &fnc) {
 
 } // namespace LoopScan
 
-void findLoopClosingEdges(Storage &stor) {
+void findLoopClosingEdges(Storage &stor)
+{
     StopWatch watch;
 
     // go through all _defined_ functions

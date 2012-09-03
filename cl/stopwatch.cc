@@ -31,21 +31,25 @@ StopWatch::StopWatch():
     this->reset();
 }
 
-StopWatch::~StopWatch() {
+StopWatch::~StopWatch()
+{
     delete d;
 }
 
-void StopWatch::reset() {
+void StopWatch::reset()
+{
     d->start = clock();
 }
 
-float /* sec */ StopWatch::elapsed() const {
+float /* sec */ StopWatch::elapsed() const
+{
     static const float RATIO = CLOCKS_PER_SEC;
     const float diff = clock() - d->start;
     return diff/RATIO;
 }
 
-std::ostream& operator<<(std::ostream &str, const StopWatch &watch) {
+std::ostream& operator<<(std::ostream &str, const StopWatch &watch)
+{
     using namespace std;
 
     const std::ios_base::fmtflags oldFlags = str.flags();

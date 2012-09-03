@@ -26,7 +26,8 @@
 
 #include <boost/algorithm/string/replace.hpp>
 
-void cltToStreamCore(std::ostream &out, const struct cl_type *clt) {
+void cltToStreamCore(std::ostream &out, const struct cl_type *clt)
+{
     out << "*((const struct cl_type *)"
         << static_cast<const void *>(clt)
         << ")";
@@ -99,7 +100,8 @@ class DumpCltVisitor {
         }
 };
 
-void cltToStream(std::ostream &out, const struct cl_type *clt, unsigned depth) {
+void cltToStream(std::ostream &out, const struct cl_type *clt, unsigned depth)
+{
     if (!depth) {
         cltToStreamCore(out, clt);
         return;
@@ -119,7 +121,8 @@ void cltToStream(std::ostream &out, const struct cl_type *clt, unsigned depth) {
     traverseTypeIc(clt, visitor);
 }
 
-void acToStream(std::ostream &out, const struct cl_accessor *ac, bool oneline) {
+void acToStream(std::ostream &out, const struct cl_accessor *ac, bool oneline)
+{
     if (!ac) {
         out << "(empty)";
         if (!oneline)
@@ -172,7 +175,8 @@ void acToStream(std::ostream &out, const struct cl_accessor *ac, bool oneline) {
 
 namespace {
 
-void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
+void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op)
+{
     const struct cl_cst &cst = op.data.cst;
     const int val = cst.data.cst_int.value;
 
@@ -206,7 +210,8 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op) {
     }
 }
 
-void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
+void operandToStreamCst(std::ostream &str, const struct cl_operand &op)
+{
     const struct cl_cst &cst = op.data.cst;
     const enum cl_type_e code = cst.code;
     switch (code) {
@@ -246,7 +251,8 @@ void operandToStreamCst(std::ostream &str, const struct cl_operand &op) {
     }
 }
 
-const char* fieldName(const struct cl_accessor *ac) {
+const char* fieldName(const struct cl_accessor *ac)
+{
     CL_BREAK_IF(!ac || ac->code != CL_ACCESSOR_ITEM);
 
     const struct cl_type *clt = ac->type;
@@ -261,7 +267,8 @@ const char* fieldName(const struct cl_accessor *ac) {
         : "<anon_item>";
 }
 
-void arrayIdxToStream(std::ostream &str, const struct cl_operand *idx) {
+void arrayIdxToStream(std::ostream &str, const struct cl_operand *idx)
+{
     if (CL_OPERAND_CST != idx->code) {
         str << "[...]";
         return;
@@ -277,7 +284,8 @@ void arrayIdxToStream(std::ostream &str, const struct cl_operand *idx) {
     str << "[" << cst.data.cst_int.value << "]";
 }
 
-void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
+void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac)
+{
     if (!ac)
         return;
 
@@ -320,7 +328,8 @@ void operandToStreamAcs(std::ostream &str, const struct cl_accessor *ac) {
     }
 }
 
-void operandToStreamVar(std::ostream &str, const struct cl_operand &op) {
+void operandToStreamVar(std::ostream &str, const struct cl_operand &op)
+{
     const struct cl_accessor *ac = op.accessor;
 
     // FIXME: copy/pasted from cl_pp.cc
@@ -353,7 +362,8 @@ void operandToStreamVar(std::ostream &str, const struct cl_operand &op) {
 
 } // namespace
 
-void operandToStream(std::ostream &str, const struct cl_operand &op) {
+void operandToStream(std::ostream &str, const struct cl_operand &op)
+{
     const enum cl_operand_e code = op.code;
     switch (code) {
         case CL_OPERAND_VOID:
@@ -442,7 +452,8 @@ void binOpToStream(std::ostream &str, int subCode,
     str << ")";
 }
 
-void callToStream(std::ostream &str, const CodeStorage::TOperandList &opList) {
+void callToStream(std::ostream &str, const CodeStorage::TOperandList &opList)
+{
     const struct cl_operand &dst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != dst.code) {
         operandToStream(str, dst);
@@ -460,7 +471,8 @@ void callToStream(std::ostream &str, const CodeStorage::TOperandList &opList) {
     str << ")";
 }
 
-void retToStream(std::ostream &str, const struct cl_operand &src) {
+void retToStream(std::ostream &str, const struct cl_operand &src)
+{
     str << "return";
 
     if (CL_OPERAND_VOID == src.code)
@@ -472,7 +484,8 @@ void retToStream(std::ostream &str, const struct cl_operand &src) {
 
 } // namespace
 
-void insnToStream(std::ostream &str, const CodeStorage::Insn &insn) {
+void insnToStream(std::ostream &str, const CodeStorage::Insn &insn)
+{
     const CodeStorage::TOperandList &opList = insn.operands;
     const CodeStorage::TTargetList &tList = insn.targets;
 
@@ -533,34 +546,42 @@ void insnToStream(std::ostream &str, const CodeStorage::Insn &insn) {
 
 using std::cout;
 
-void cl_dump(const struct cl_type *clt) {
+void cl_dump(const struct cl_type *clt)
+{
     cltToStream(cout, clt, /* depth */ 3U);
 }
 
-void cl_dump(const struct cl_type *clt, unsigned depth) {
+void cl_dump(const struct cl_type *clt, unsigned depth)
+{
     cltToStream(cout, clt, depth);
 }
 
-void cl_dump(const struct cl_accessor *ac) {
+void cl_dump(const struct cl_accessor *ac)
+{
     acToStream(cout, ac, /* oneline */ false);
 }
 
-void cl_dump(const struct cl_accessor &ac) {
+void cl_dump(const struct cl_accessor &ac)
+{
     cl_dump(&ac);
 }
 
-void cl_dump(const struct cl_operand &op) {
+void cl_dump(const struct cl_operand &op)
+{
     cout << op << "\n";
 }
 
-void cl_dump(const struct cl_operand *op) {
+void cl_dump(const struct cl_operand *op)
+{
     cl_dump(*op);
 }
 
-void cl_dump(const struct CodeStorage::Insn &insn) {
+void cl_dump(const struct CodeStorage::Insn &insn)
+{
     cout << insn << "\n";
 }
 
-void cl_dump(const struct CodeStorage::Insn *insn) {
+void cl_dump(const struct CodeStorage::Insn *insn)
+{
     cl_dump(*insn);
 }

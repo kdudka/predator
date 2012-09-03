@@ -78,7 +78,8 @@ struct Data {
     }
 };
 
-void scanOperand(BlockData &bData, const cl_operand &op, bool dst) {
+void scanOperand(BlockData &bData, const cl_operand &op, bool dst)
+{
     VK_DEBUG(4, "scanOperand: " << op << ((dst) ? " [dst]" : " [src]"));
 
     bool fieldOfComp = false;
@@ -134,7 +135,8 @@ void scanOperand(BlockData &bData, const cl_operand &op, bool dst) {
         VK_DEBUG(3, "gen(" << name << ")");
 }
 
-void scanInsn(BlockData &bData, const Insn &insn) {
+void scanInsn(BlockData &bData, const Insn &insn)
+{
     VK_DEBUG_MSG(3, &insn.loc, "scanInsn: " << insn);
     const TOperandList opList = insn.operands;
 
@@ -170,7 +172,8 @@ void scanInsn(BlockData &bData, const Insn &insn) {
     }
 }
 
-void updateBlock(Data &data, TBlock bb) {
+void updateBlock(Data &data, TBlock bb)
+{
     VK_DEBUG_MSG(2, &bb->front()->loc, "updateBlock: " << bb->name());
     BlockData &bData = data.blocks[bb];
     bool anyChange = false;
@@ -199,7 +202,8 @@ void updateBlock(Data &data, TBlock bb) {
         data.todo.insert(bbDst);
 }
 
-void computeFixPoint(Data &data) {
+void computeFixPoint(Data &data)
+{
     // fixed-point computation
     unsigned cntSteps = 1;
     TBlockSet &todo = data.todo;
@@ -312,7 +316,8 @@ void commitInsn(
     }
 }
 
-void commitBlock(Data &data, TBlock bb) {
+void commitBlock(Data &data, TBlock bb)
+{
     const TTargetList &targets = bb->targets();
     const unsigned cntTargets = targets.size();
     const bool multipleTargets = (1 < cntTargets);
@@ -381,7 +386,8 @@ void commitBlock(Data &data, TBlock bb) {
     }
 }
 
-void analyzeFnc(Fnc &fnc) {
+void analyzeFnc(Fnc &fnc)
+{
     // shared state info
     Data data(*fnc.stor);
 
@@ -415,7 +421,8 @@ void analyzeFnc(Fnc &fnc) {
 
 } // namespace VarKiller
 
-void killLocalVariables(Storage &stor) {
+void killLocalVariables(Storage &stor)
+{
     StopWatch watch;
 
     // analyze all _defined_ functions

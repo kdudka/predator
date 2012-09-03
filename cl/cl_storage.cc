@@ -347,12 +347,14 @@ ClStorageBuilder::ClStorageBuilder():
 {
 }
 
-ClStorageBuilder::~ClStorageBuilder() {
+ClStorageBuilder::~ClStorageBuilder()
+{
     releaseStorage(d->stor);
     delete d;
 }
 
-void ClStorageBuilder::acknowledge() {
+void ClStorageBuilder::acknowledge()
+{
     this->run(d->stor);
 }
 
@@ -377,7 +379,8 @@ void ClStorageBuilder::Private::digInitials(const TOp *op)
     }
 }
 
-EVar varCodeByScope(const enum cl_scope_e scope, const bool isArgDecl) {
+EVar varCodeByScope(const enum cl_scope_e scope, const bool isArgDecl)
+{
     switch (scope) {
         case CL_SCOPE_GLOBAL:
         case CL_SCOPE_STATIC:
@@ -394,7 +397,8 @@ EVar varCodeByScope(const enum cl_scope_e scope, const bool isArgDecl) {
     }
 }
 
-bool ClStorageBuilder::Private::digOperandVar(const TOp *op, bool isArgDecl) {
+bool ClStorageBuilder::Private::digOperandVar(const TOp *op, bool isArgDecl)
+{
     const int id = varIdFromOperand(op);
 
     // mark as used in the current function
@@ -431,7 +435,8 @@ bool ClStorageBuilder::Private::digOperandVar(const TOp *op, bool isArgDecl) {
     return true;
 }
 
-void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
+void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op)
+{
     const struct cl_cst &cst = op->data.cst;
     if (CL_TYPE_FNC != cst.code)
         // we are interested only in fncs for now
@@ -468,7 +473,8 @@ void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op) {
     nameMap[name] = uid;
 }
 
-void ClStorageBuilder::Private::digOperand(const TOp *op) {
+void ClStorageBuilder::Private::digOperand(const TOp *op)
+{
     if (!op || CL_OPERAND_VOID == op->code)
         return;
 
@@ -518,7 +524,8 @@ void ClStorageBuilder::Private::digOperand(const TOp *op) {
     this->digInitials(op);
 }
 
-void ClStorageBuilder::Private::openInsn(Insn *newInsn) {
+void ClStorageBuilder::Private::openInsn(Insn *newInsn)
+{
     // set pointer to the owning instance of Storage
     newInsn->stor = &this->stor;
 
@@ -530,7 +537,8 @@ void ClStorageBuilder::Private::openInsn(Insn *newInsn) {
     insn = newInsn;
 }
 
-void ClStorageBuilder::Private::closeInsn() {
+void ClStorageBuilder::Private::closeInsn()
+{
     TOperandList &operands = insn->operands;
     BOOST_FOREACH(const struct cl_operand &op, operands) {
         this->digOperand(&op);
@@ -548,20 +556,23 @@ void ClStorageBuilder::Private::closeInsn() {
     insn = 0;
 }
 
-void ClStorageBuilder::file_open(const char *fileName) {
+void ClStorageBuilder::file_open(const char *fileName)
+{
     if (!fileName)
         CL_TRAP;
 
     d->file = fileName;
 }
 
-void ClStorageBuilder::file_close() {
+void ClStorageBuilder::file_close()
+{
     // let it honestly crash if callback sequence is incorrect since this should
     // have already been caught by ClfCbSeqChk cl filter
     d->file = 0;
 }
 
-void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
+void ClStorageBuilder::fnc_open(const struct cl_operand *op)
+{
     if (CL_OPERAND_CST != op->code)
         CL_TRAP;
 
@@ -590,7 +601,8 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op) {
     d->bb = 0;
 }
 
-void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
+void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op)
+{
     if (CL_OPERAND_VAR != op->code)
         CL_TRAP;
 
@@ -603,18 +615,21 @@ void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op) {
     (void) pos;
 }
 
-void ClStorageBuilder::fnc_close() {
+void ClStorageBuilder::fnc_close()
+{
     // let it honestly crash if callback sequence is incorrect since this should
     // have already been caught by ClfCbSeqChk cl filter
     d->fnc = 0;
 }
 
-void ClStorageBuilder::bb_open(const char *bb_name) {
+void ClStorageBuilder::bb_open(const char *bb_name)
+{
     ControlFlow &cfg = d->fnc->cfg;
     d->bb = cfg[bb_name];
 }
 
-void ClStorageBuilder::insn(const struct cl_insn *cli) {
+void ClStorageBuilder::insn(const struct cl_insn *cli)
+{
     if (!d->bb)
         // FIXME: this simply ignores 'jump to entry' insn
         return;
@@ -649,14 +664,16 @@ void ClStorageBuilder::insn_call_open(
     d->openInsn(insn);
 }
 
-void ClStorageBuilder::insn_call_arg(int, const struct cl_operand *arg_src) {
+void ClStorageBuilder::insn_call_arg(int, const struct cl_operand *arg_src)
+{
     TOperandList &operands = d->insn->operands;
     unsigned idx = operands.size();
     operands.resize(idx + 1);
     storeOperand(operands[idx], arg_src);
 }
 
-void ClStorageBuilder::insn_call_close() {
+void ClStorageBuilder::insn_call_close()
+{
     d->closeInsn();
 
     // switch back preventing for next instructions
@@ -737,6 +754,7 @@ void ClStorageBuilder::insn_switch_case(
     }
 }
 
-void ClStorageBuilder::insn_switch_close() {
+void ClStorageBuilder::insn_switch_close()
+{
     d->closeInsn();
 }

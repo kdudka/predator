@@ -33,7 +33,8 @@
 #define NULLIFY(what) \
     memset(&(what), 0, sizeof (what))
 
-int getCaseVal(const struct cl_operand *op) {
+int getCaseVal(const struct cl_operand *op)
+{
     CL_BREAK_IF(!op || !op->type);
 
     enum cl_type_e code = op->type->code;
@@ -116,7 +117,8 @@ class ClfUnfoldSwitch: public ClFilterBase {
 
 using std::string;
 
-ClfUnfoldSwitch::~ClfUnfoldSwitch() {
+ClfUnfoldSwitch::~ClfUnfoldSwitch()
+{
     BOOST_FOREACH(struct cl_var *clv, ptrs_) {
         delete clv;
     }
@@ -124,7 +126,8 @@ ClfUnfoldSwitch::~ClfUnfoldSwitch() {
 
 // FIXME: duplicated code from clf_uniregs.cc
 // TODO: implement shared module providing this
-void ClfUnfoldSwitch::cloneSwitchSrc(const struct cl_operand *op) {
+void ClfUnfoldSwitch::cloneSwitchSrc(const struct cl_operand *op)
+{
     CL_BREAK_IF(!op);
 
     src_ = *op;
@@ -142,7 +145,8 @@ void ClfUnfoldSwitch::cloneSwitchSrc(const struct cl_operand *op) {
 
 // FIXME: duplicated code from clf_uniregs.cc
 // TODO: implement shared module providing this
-void ClfUnfoldSwitch::freeClonedSwitchSrc() {
+void ClfUnfoldSwitch::freeClonedSwitchSrc()
+{
     struct cl_accessor *ac = src_.accessor;
     while (ac) {
         struct cl_accessor *next = ac->next;
@@ -154,7 +158,8 @@ void ClfUnfoldSwitch::freeClonedSwitchSrc() {
     }
 }
 
-struct cl_var* ClfUnfoldSwitch::acquireClVar() {
+struct cl_var* ClfUnfoldSwitch::acquireClVar()
+{
     struct cl_var *clv = new struct cl_var;
     memset(clv, 0, sizeof *clv);
     clv->uid = /* XXX */ 0x400000 + switchCnt_;
@@ -217,7 +222,8 @@ void ClfUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
     ClFilterBase::bb_open(aux_label);
 }
 
-void ClfUnfoldSwitch::emitDefault() {
+void ClfUnfoldSwitch::emitDefault()
+{
     if (defLabel_.empty())
         CL_TRAP;
 
@@ -232,7 +238,8 @@ void ClfUnfoldSwitch::emitDefault() {
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see clf_unswitch.hh for more details
-ICodeListener* createClfUnfoldSwitch(ICodeListener *slave) {
+ICodeListener* createClfUnfoldSwitch(ICodeListener *slave)
+{
     return createClfUniLabel(new ClfUnfoldSwitch(
             createClfUniLabel(slave, CL_SCOPE_GLOBAL)),
             CL_SCOPE_GLOBAL);

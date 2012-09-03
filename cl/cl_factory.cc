@@ -224,7 +224,8 @@ namespace {
     }
 }
 
-ClfChainFactory::ClfChainFactory() {
+ClfChainFactory::ClfChainFactory()
+{
     map_["unify_labels_gl"]         = createClfUniLabelGl;
     map_["unify_labels_static"]     = createClfUniLabelStatic;
     map_["unify_labels_fnc"]        = createClfUniLabelFnc;
@@ -302,11 +303,13 @@ ClFactory::ClFactory():
     d->map["typedot"]       = &createClTypeDotGenerator;
 }
 
-ClFactory::~ClFactory() {
+ClFactory::~ClFactory()
+{
     delete d;
 }
 
-ICodeListener* ClFactory::create(const char *config_string) {
+ICodeListener* ClFactory::create(const char *config_string)
+{
     CL_FACTORY_DEBUG("ClFactory: config_string: " << config_string);
 
     TStringMap args;

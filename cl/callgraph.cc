@@ -35,7 +35,8 @@ namespace CallGraph {
 typedef const struct cl_operand            &TOp;
 typedef const Insn                         *TInsn;
 
-Node* allocNodeIfNeeded(Graph &cg, Fnc *const fnc) {
+Node* allocNodeIfNeeded(Graph &cg, Fnc *const fnc)
+{
     Node *&node = fnc->cgNode;
     if (node)
         return node;
@@ -46,7 +47,8 @@ Node* allocNodeIfNeeded(Graph &cg, Fnc *const fnc) {
     return node;
 }
 
-void handleCallback(Graph &cg, Node *node, const TInsn insn, TOp op) {
+void handleCallback(Graph &cg, Node *node, const TInsn insn, TOp op)
+{
     int uid;
     if (!fncUidFromOperand(&uid, &op))
         // not a function
@@ -70,7 +72,8 @@ void handleCallback(Graph &cg, Node *node, const TInsn insn, TOp op) {
     cg.hasCallback = true;
 }
 
-void handleCall(Graph &cg, Node *node, const TInsn insn) {
+void handleCall(Graph &cg, Node *node, const TInsn insn)
+{
     // if there is a call, it is no longer a leaf node
     cg.leaves.erase(node);
 
@@ -92,7 +95,8 @@ void handleCall(Graph &cg, Node *node, const TInsn insn) {
     cg.roots.erase(targetNode);
 }
 
-void handleFnc(Fnc *const fnc) {
+void handleFnc(Fnc *const fnc)
+{
     Graph &cg = fnc->stor->callGraph;
     Node *const node = allocNodeIfNeeded(cg, fnc);
 
@@ -114,7 +118,8 @@ void handleFnc(Fnc *const fnc) {
     }
 }
 
-void buildCallGraph(const Storage &stor) {
+void buildCallGraph(const Storage &stor)
+{
     StopWatch watch;
 
     BOOST_FOREACH(Fnc *fnc, stor.fncs)

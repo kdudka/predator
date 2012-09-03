@@ -141,7 +141,8 @@ void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
 }
 
 /// returns true for VS_NOT_NULL and VS_NOT_NULL_DEDUCED
-inline bool anyNotNull(const EVarState code) {
+inline bool anyNotNull(const EVarState code)
+{
     switch (code) {
         case VS_NOT_NULL:
         case VS_NOT_NULL_DEDUCED:
@@ -157,7 +158,8 @@ inline bool anyNotNull(const EVarState code) {
  * @param dst destination state (used in read-write mode)
  * @param src source state (used in read-only mode)
  */
-bool mergeValues(VarState &dst, const VarState &src) {
+bool mergeValues(VarState &dst, const VarState &src)
+{
     if (VS_UNDEF == src.code || VS_MIGHT_BE_NULL == dst.code)
         // nothing to propagate actually
         return false;
@@ -199,7 +201,8 @@ bool mergeValues(VarState &dst, const VarState &src) {
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn) {
+void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
+{
     handleDerefs(state, insn);
 
     const struct cl_operand &dst = insn->operands[0];
@@ -325,7 +328,8 @@ we_know:
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn) {
+void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn)
+{
     const CodeStorage::TOperandList &opList = insn->operands;
 
 #ifndef NDEBUG
@@ -392,7 +396,8 @@ who_knows:
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn) {
+void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn)
+{
     const struct cl_operand &dst = insn->operands[0];
     if (dst.accessor)
         // we're interested only in direct manipulation of variables here
@@ -437,7 +442,8 @@ void treatRefAsSideEffect(Data::TState                          &state,
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn) {
+void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn)
+{
     treatRefAsSideEffect(state, insn->operands);
 
     const enum cl_insn_e code = insn->code;
@@ -496,7 +502,8 @@ void updateState(Data                           &data,
  * @param uid CodeStorage uid of the branch-by variable
  * @param val true in 'then' branch, false in 'else' branch
  */
-void replaceInBranch(Data::TState &state, int uid, bool val) {
+void replaceInBranch(Data::TState &state, int uid, bool val)
+{
     VarState &vs = state[uid];
     bool isNull;
 
@@ -620,7 +627,8 @@ void handleInsnTerm(Data                            &data,
     }
 }
 
-void handleBlock(Data &data, Data::TBlock bb) {
+void handleBlock(Data &data, Data::TBlock bb)
+{
     // go through the sequence of instructions of the current basic block
     Data::TState next = data.stateMap[bb];
     BOOST_FOREACH(const CodeStorage::Insn *insn, *bb) {
@@ -634,7 +642,8 @@ void handleBlock(Data &data, Data::TBlock bb) {
     }
 }
 
-void handleFnc(const CodeStorage::Fnc &fnc) {
+void handleFnc(const CodeStorage::Fnc &fnc)
+{
     using namespace CodeStorage;
 
     Data data;
@@ -661,7 +670,8 @@ void handleFnc(const CodeStorage::Fnc &fnc) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // see easy.hh for details
-void clEasyRun(const CodeStorage::Storage &stor, const char *) {
+void clEasyRun(const CodeStorage::Storage &stor, const char *)
+{
     using namespace CodeStorage;
 
     BOOST_FOREACH(const Fnc *pFnc, stor.fncs) {

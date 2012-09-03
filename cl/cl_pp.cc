@@ -138,7 +138,8 @@ ClPrettyPrint::ClPrettyPrint(const char *fileName, bool showTypes):
         CL_ERROR("unable to create file '" << fileName << "'");
 }
 
-ClPrettyPrint::~ClPrettyPrint() {
+ClPrettyPrint::~ClPrettyPrint()
+{
     if (fname_)
         fstr_.close();
 }
@@ -243,7 +244,8 @@ namespace {
     }
 }
 
-void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
+void ClPrettyPrint::printIntegralCst(const struct cl_operand *op)
+{
     const struct cl_type *type = op->type;
     const int value = op->data.cst.data.cst_int.value;
 
@@ -303,7 +305,8 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op) {
     }
 }
 
-void ClPrettyPrint::printCst(const struct cl_operand *op) {
+void ClPrettyPrint::printCst(const struct cl_operand *op)
+{
     enum cl_type_e code = op->data.cst.code;
     switch (code) {
         case CL_TYPE_INT:
@@ -357,7 +360,8 @@ namespace {
     }
 }
 
-void ClPrettyPrint::printBareType(const struct cl_type *clt, bool expandFnc) {
+void ClPrettyPrint::printBareType(const struct cl_type *clt, bool expandFnc)
+{
     string str;
     for (; clt; clt = clt->items[0].type) {
         enum cl_type_e code = clt->code;
@@ -452,7 +456,8 @@ deref_done:
     }
 }
 
-void ClPrettyPrint::printVarType(const struct cl_operand *op) {
+void ClPrettyPrint::printVarType(const struct cl_operand *op)
+{
     if (op->code == CL_OPERAND_VOID)
         CL_TRAP;
 
@@ -480,7 +485,8 @@ namespace {
     }
 }
 
-void ClPrettyPrint::printNestedVar(const struct cl_operand *op) {
+void ClPrettyPrint::printNestedVar(const struct cl_operand *op)
+{
     switch (op->code) {
         case CL_OPERAND_VAR:
             if (!op->data.var->name) {
@@ -520,7 +526,8 @@ namespace {
     }
 }
 
-void ClPrettyPrint::printOffsetAccessor(const int off) {
+void ClPrettyPrint::printOffsetAccessor(const int off)
+{
     out_ << ssd::Color(C_LIGHT_RED) << "<";
 
     if (0 <= off)
@@ -529,7 +536,8 @@ void ClPrettyPrint::printOffsetAccessor(const int off) {
     out_ << off << ">" << ssd::Color(C_NO_COLOR);
 }
 
-void ClPrettyPrint::printRecordAccessor(const struct cl_accessor **ac) {
+void ClPrettyPrint::printRecordAccessor(const struct cl_accessor **ac)
+{
     std::string tag;
     int offset = 0;
     readItemAccessInfo(*ac, &tag, &offset);
@@ -544,7 +552,8 @@ void ClPrettyPrint::printRecordAccessor(const struct cl_accessor **ac) {
     out_ << SSD_INLINE_COLOR(C_CYAN, "[+" << offset << "]") << tag;
 }
 
-void ClPrettyPrint::printOperandVar(const struct cl_operand *op) {
+void ClPrettyPrint::printOperandVar(const struct cl_operand *op)
+{
     const struct cl_accessor *ac = op->accessor;
     this->printVarType(op);
 
@@ -606,7 +615,8 @@ void ClPrettyPrint::printOperandVar(const struct cl_operand *op) {
     }
 }
 
-void ClPrettyPrint::printOperand(const struct cl_operand *op) {
+void ClPrettyPrint::printOperand(const struct cl_operand *op)
+{
     if (!op) {
         CL_DEBUG_MSG(&loc_, "no operand given to " << __FUNCTION__);
         return;
@@ -629,7 +639,8 @@ void ClPrettyPrint::printOperand(const struct cl_operand *op) {
     }
 }
 
-void ClPrettyPrint::printAssignmentLhs(const struct cl_operand *lhs) {
+void ClPrettyPrint::printAssignmentLhs(const struct cl_operand *lhs)
+{
     if (!lhs || lhs->code == CL_OPERAND_VOID) {
         CL_DEBUG_MSG(&loc_, "no lhs given to " << __FUNCTION__);
         return;
@@ -641,13 +652,15 @@ void ClPrettyPrint::printAssignmentLhs(const struct cl_operand *lhs) {
         << " ";
 }
 
-void ClPrettyPrint::printInsnNop(const struct cl_insn *) {
+void ClPrettyPrint::printInsnNop(const struct cl_insn *)
+{
     out_ << "\t\t"
         << SSD_INLINE_COLOR(C_LIGHT_RED, "nop")
         << std::endl;
 }
 
-void ClPrettyPrint::printInsnJmp(const struct cl_insn *cli) {
+void ClPrettyPrint::printInsnJmp(const struct cl_insn *cli)
+{
     if (printingArgDecls_) {
         printingArgDecls_ = false;
         out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")") << ":"
@@ -661,7 +674,8 @@ void ClPrettyPrint::printInsnJmp(const struct cl_insn *cli) {
         << std::endl;
 }
 
-void ClPrettyPrint::printInsnCond(const struct cl_insn *cli) {
+void ClPrettyPrint::printInsnCond(const struct cl_insn *cli)
+{
     const struct cl_operand *src = cli->data.insn_cond.src;
     const char *label_true  = cli->data.insn_cond.then_label;
     const char *label_false = cli->data.insn_cond.else_label;
@@ -689,7 +703,8 @@ void ClPrettyPrint::printInsnCond(const struct cl_insn *cli) {
         << std::endl;
 }
 
-void ClPrettyPrint::printInsnRet(const struct cl_insn *cli) {
+void ClPrettyPrint::printInsnRet(const struct cl_insn *cli)
+{
     const struct cl_operand *src = cli->data.insn_ret.src;
 
     out_ << "\t\t"
@@ -703,13 +718,15 @@ void ClPrettyPrint::printInsnRet(const struct cl_insn *cli) {
     out_ << std::endl;
 }
 
-void ClPrettyPrint::printInsnAbort(const struct cl_insn *) {
+void ClPrettyPrint::printInsnAbort(const struct cl_insn *)
+{
     out_ << "\t\t"
         << SSD_INLINE_COLOR(C_LIGHT_RED, "abort")
         << std::endl;
 }
 
-void ClPrettyPrint::printInsnUnop(const struct cl_insn *cli) {
+void ClPrettyPrint::printInsnUnop(const struct cl_insn *cli)
+{
     const enum cl_unop_e code       = cli->data.insn_unop.code;
     const struct cl_operand *dst    = cli->data.insn_unop.dst;
     const struct cl_operand *src    = cli->data.insn_unop.src;
@@ -748,7 +765,8 @@ void ClPrettyPrint::printInsnUnop(const struct cl_insn *cli) {
     out_ << std::endl;
 }
 
-void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
+void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli)
+{
     const enum cl_binop_e code      = cli->data.insn_binop.code;
     const struct cl_operand *dst    = cli->data.insn_binop.dst;
     const struct cl_operand *src1   = cli->data.insn_binop.src1;
@@ -865,7 +883,8 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli) {
     out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")") << std::endl;
 }
 
-void ClPrettyPrint::printInsnLabel(const struct cl_insn *cli) {
+void ClPrettyPrint::printInsnLabel(const struct cl_insn *cli)
+{
     const char *name = cli->data.insn_label.name;
     if (!name)
         return;
@@ -1009,7 +1028,8 @@ void ClPrettyPrint::insn_switch_close()
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_pp.hh for more details
-ICodeListener* createClPrettyPrint(const char *args, bool showTypes) {
+ICodeListener* createClPrettyPrint(const char *args, bool showTypes)
+{
     // check whether a file name is given
     return (args && *args)
         ? new ClPrettyPrint(/* file name */ args, showTypes)

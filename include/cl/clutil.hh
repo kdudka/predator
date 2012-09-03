@@ -41,7 +41,8 @@ namespace CodeStorage {
 bool operator==(const struct cl_type &cltA, const struct cl_type &cltB);
 
 /// compare given two pieces of static type-info semantically
-inline bool operator!=(const struct cl_type &cltA, const struct cl_type &cltB) {
+inline bool operator!=(const struct cl_type &cltA, const struct cl_type &cltB)
+{
     return !(cltA == cltB);
 }
 
@@ -51,7 +52,8 @@ const struct cl_type* targetTypeOfPtr(const struct cl_type *clt);
 /// return type of the @b target object that the array type can point to
 const struct cl_type* targetTypeOfArray(const struct cl_type *clt);
 
-inline bool isComposite(const struct cl_type *clt, bool includingArray = true) {
+inline bool isComposite(const struct cl_type *clt, bool includingArray = true)
+{
     if (!clt)
         return false;
 
@@ -68,7 +70,8 @@ inline bool isComposite(const struct cl_type *clt, bool includingArray = true) {
     }
 }
 
-inline bool isDataPtr(const struct cl_type *clt) {
+inline bool isDataPtr(const struct cl_type *clt)
+{
     if (!clt || clt->code != CL_TYPE_PTR)
         return false;
 
@@ -76,7 +79,8 @@ inline bool isDataPtr(const struct cl_type *clt) {
     return (CL_TYPE_FNC != clt->code);
 }
 
-inline bool isCodePtr(const struct cl_type *clt) {
+inline bool isCodePtr(const struct cl_type *clt)
+{
     if (!clt || clt->code != CL_TYPE_PTR)
         return false;
 
@@ -85,7 +89,8 @@ inline bool isCodePtr(const struct cl_type *clt) {
 }
 
 /// return true if the given operand is a local variable
-inline bool isLcVar(const cl_operand &op) {
+inline bool isLcVar(const cl_operand &op)
+{
     if (CL_OPERAND_VAR != op.code)
         // not a variable
         return false;

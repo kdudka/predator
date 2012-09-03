@@ -126,13 +126,15 @@ ClfUniLabel::ClfUniLabel(ICodeListener *slave, cl_scope_e scope):
     }
 }
 
-std::string ClfUniLabel::resolveLabel(const char *label) {
+std::string ClfUniLabel::resolveLabel(const char *label)
+{
     std::ostringstream str;
     str << "L" << this->labelLookup(label);
     return str.str();
 }
 
-int ClfUniLabel::labelLookup(const char *label) {
+int ClfUniLabel::labelLookup(const char *label)
+{
     std::string str(label);
 
     TMap::iterator i = map_.find(str);
@@ -143,13 +145,15 @@ int ClfUniLabel::labelLookup(const char *label) {
     return last_;
 }
 
-void ClfUniLabel::reset() {
+void ClfUniLabel::reset()
+{
     map_.clear();
     last_ = 0;
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see clf_unilabel.hh for more details
-ICodeListener* createClfUniLabel(ICodeListener *slave, cl_scope_e scope) {
+ICodeListener* createClfUniLabel(ICodeListener *slave, cl_scope_e scope)
+{
     return new ClfUniLabel(slave, scope);
 }
