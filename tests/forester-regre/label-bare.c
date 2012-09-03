@@ -1,0 +1,1 @@
+../predator-regre/label-bare.c
