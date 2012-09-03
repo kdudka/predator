@@ -17,22 +17,26 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// Standard library headers
 #include <list>
 #include <sstream>
 
+// Code Listener headers
 #include <cl/cldebug.hh>
 
+// Forester headers
 #include "executionmanager.hh"
-#include "splitting.hh"
-#include "virtualmachine.hh"
-#include "programerror.hh"
-#include "normalization.hh"
-#include "regdef.hh"
-#include "symctx.hh"
 #include "jump.hh"
-
+#include "memplot.hh"
 #include "microcode.hh"
+#include "normalization.hh"
+#include "programerror.hh"
+#include "regdef.hh"
+#include "splitting.hh"
+#include "symctx.hh"
+#include "virtualmachine.hh"
 
+// anonymous namespace
 namespace
 {
 
@@ -61,7 +65,7 @@ void FI_cond::execute(ExecutionManager& execMan, const ExecState& state)
 
 void FI_cond::finalize(
 	const std::unordered_map<const CodeStorage::Block*,
-	AbstractInstruction*>& codeIndex,
+		AbstractInstruction*>& codeIndex,
 	std::vector<AbstractInstruction*>::const_iterator
 )
 {
@@ -265,6 +269,18 @@ void FI_get_ABP::execute(ExecutionManager& execMan, const ExecState& state)
 	execMan.enqueue(tmpState, next_);
 }
 
+// FI_get_GLOB
+void FI_get_GLOB::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	Data data = VirtualMachine(*tmpState.GetMem()->GetFAE()).varGet(GLOB_INDEX);
+	data.d_ref.displ += offset_;
+
+	tmpState.SetReg(dst_, data);
+
+	execMan.enqueue(tmpState, next_);
+}
+
 // FI_load
 void FI_load::execute(ExecutionManager& execMan, const ExecState& state)
 {
@@ -298,6 +314,20 @@ void FI_load_ABP::execute(ExecutionManager& execMan, const ExecState& state)
 	execMan.enqueue(tmpState, next_);
 }
 
+// FI_load_GLOB
+void FI_load_GLOB::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	ExecState tmpState = state;
+	VirtualMachine vm(*tmpState.GetMem()->GetFAE());
+
+	Data data = vm.varGet(GLOB_INDEX);
+	Data out;
+	vm.nodeLookup(data.d_ref.root, static_cast<size_t>(offset_), out);
+	tmpState.SetReg(dst_, out);
+
+	execMan.enqueue(tmpState, next_);
+}
+
 // FI_store
 void FI_store::execute(ExecutionManager& execMan, const ExecState& state)
 {
@@ -317,25 +347,6 @@ void FI_store::execute(ExecutionManager& execMan, const ExecState& state)
 
 	execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
 }
-
-#if 0
-// FI_store_ABP
-void FI_store_ABP::execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.second->fae));
-
-	VirtualMachine vm(*fae);
-
-	const Data& data = vm.varGet(ABP_INDEX);
-
-	Data out;
-
-	vm.nodeModify(data.d_ref.root, this->offset_, (*state.first)[this->src_], out);
-
-	execMan.enqueue(state.second, state.first, fae, this->next_);
-
-}
-#endif
 
 // FI_loads
 void FI_loads::execute(ExecutionManager& execMan, const ExecState& state)
@@ -470,7 +481,8 @@ void FI_check::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	state.GetMem()->GetFAE()->updateConnectionGraph();
 
-	Normalization(const_cast<FAE&>(*state.GetMem()->GetFAE())).check();
+	Normalization(const_cast<FAE&>(*state.GetMem()->GetFAE()),
+		state.GetMem()).check();
 
 	execMan.enqueue(state, next_);
 }
@@ -480,7 +492,7 @@ void FI_assert::execute(ExecutionManager& execMan, const ExecState& state)
 {
 	if (state.GetReg(dst_) != cst_)
 	{
-		CL_CDEBUG(1, "registers: " << utils::wrap(state.GetRegs()) << ", heap:"
+		FA_DEBUG_AT(1, "registers: " << utils::wrap(state.GetRegs()) << ", heap:"
 			<< std::endl << *state.GetMem()->GetFAE());
 		throw std::runtime_error("assertion failed");
 	}
@@ -491,7 +503,7 @@ void FI_assert::execute(ExecutionManager& execMan, const ExecState& state)
 // FI_abort
 void FI_abort::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	execMan.traceFinished(state.GetMem());
+	execMan.pathFinished(state.GetMem());
 }
 
 // FI_build_struct
@@ -593,8 +605,20 @@ struct DumpCtx {
 // FI_print_heap
 void FI_print_heap::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	CL_NOTE("local variables: " << DumpCtx(*ctx_, *state.GetMem()->GetFAE()));
-	CL_NOTE("heap:" << *state.GetMem()->GetFAE());
+	FA_NOTE("local variables: " << DumpCtx(*ctx_, *state.GetMem()->GetFAE()));
+	FA_NOTE("heap:" << *state.GetMem()->GetFAE());
+
+	execMan.enqueue(state, next_);
+}
+
+
+void FI_plot_heap::execute(ExecutionManager& execMan, const ExecState& state)
+{
+	// Assertions
+	assert(nullptr != this->insn());
+	assert(nullptr != state.GetMem());
+
+	MemPlotter::handlePlot(*state.GetMem(), *this->insn());
 
 	execMan.enqueue(state, next_);
 }

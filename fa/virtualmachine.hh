@@ -255,19 +255,6 @@ public:
 	}
 
 	/**
-	 * @brief  Appends a number of new variables
-	 *
-	 * Appends the given number of variables to the environment and initializes
-	 * them to @e undefined.
-	 *
-	 * @param[in]  count  The number of variables to be added
-	 */
-	void varPopulate(size_t count)
-	{
-		fae_.AddNewVars(count);
-	}
-
-	/**
 	 * @brief  Gets information about a variable
 	 *
 	 * Returns the type and value information about the variable with the given

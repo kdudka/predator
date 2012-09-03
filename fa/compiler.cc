@@ -48,6 +48,7 @@
 #include "compiler.hh"
 
 
+// anonymous namespace
 namespace {
 
 /**
@@ -330,7 +331,17 @@ struct LoopAnalyser {
 /**
  * @brief  Enumeration of built-in functions
  */
-enum class builtin_e { biNone, biMalloc, biFree, biNondet, biFix, biAbort, biPrintHeap };
+enum class builtin_e
+{
+	biNone,
+	biMalloc,
+	biFree,
+	biNondet,
+	biFix,
+	biAbort,
+	biPrintHeap,
+	biPlotHeap
+};
 
 
 /**
@@ -362,6 +373,7 @@ public:
 		this->_table["__nondet"]      = builtin_e::biNondet;
 		this->_table["__fix"]         = builtin_e::biFix;
 		this->_table["__print_heap"]  = builtin_e::biPrintHeap;
+		this->_table["___fa_plot"]    = builtin_e::biPlotHeap;
 		this->_table["abort"]         = builtin_e::biAbort;
 	}
 
@@ -529,6 +541,19 @@ protected:
 
 
 	/**
+	 * @brief  Compile heap plot
+	 *
+	 * Compiles @b PlotHeap  as the next microinstruction in the assembly.
+	 *
+	 * @param[in]  insn  The corresponding instruction in the code storage
+	 */
+	void cPlotHeap(const CodeStorage::Insn& insn)
+	{
+		append(new FI_plot_heap(&insn));
+	}
+
+
+	/**
 	 * @brief  Compile loading of a constant
 	 *
 	 * Compiles @b LoadConstant as the next microinstruction in the assembly.
@@ -588,14 +613,6 @@ protected:
 	}
 
 
-#if 0
-	void cLoadVar(size_t dst, size_t offset)
-	{
-		append(new FI_load_ABP(dst, (int)offset));
-	}
-#endif
-
-
 	/**
 	 * @brief  Compile a move between registers
 	 *
@@ -637,7 +654,7 @@ protected:
 	 */
 	static const cl_accessor* computeOffset(int& offset, const cl_accessor* acc)
 	{
-		while (acc && (acc->code == CL_ACCESSOR_ITEM))
+		while (acc && (CL_ACCESSOR_ITEM == acc->code))
 		{	// while there are more record accessors (in C: "rec.acc")
 			offset += acc->type->items[acc->data.item.id].offset;
 			acc = acc->next;
@@ -815,10 +832,10 @@ protected:
 		{	// according to the type of the operand
 			case cl_operand_e::CL_OPERAND_VAR:
 			{	// in case the operand is a variable
-				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
+				const VarInfo& varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				if (varInfo.isOnStack())
-				{ // in the case of a variable on the stack
+				if (varInfo.isOnStack() || varInfo.isGlobal())
+				{ // in the case of a variable on the stack or global
 					const cl_accessor* acc = op.accessor;   // get the first accessor
 					int offset = 0;                         // initialize the offset
 
@@ -826,9 +843,20 @@ protected:
 					{	// in case there is the dereference accessor ('*' in C)
 						assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
-						// append an instruction to load value at the address relative to
-						// the abstract base pointer in the symbolic stack
-						append(new FI_load_ABP(&insn, dst, static_cast<int>(varInfo.getStackOffset())));
+						if (varInfo.isOnStack())
+						{
+							// append an instruction to load value at the address relative to
+							// the abstract base pointer in the symbolic stack
+							append(new FI_load_ABP(&insn, dst, static_cast<int>(varInfo.getStackOffset())));
+						}
+						else if (varInfo.isGlobal())
+						{
+							throw NotImplementedException("cLoadOperand(): global variables 1");
+						}
+						else
+						{
+							assert(false);           // fail gracefully
+						}
 
 						// jump to the next accessor
 						acc = Core::computeOffset(offset, acc->next);
@@ -872,7 +900,14 @@ protected:
 						}
 					} else
 					{	// in case there is not a dereference
-						offset = static_cast<int>(varInfo.getStackOffset());
+						if (varInfo.isOnStack())
+						{
+							offset = static_cast<int>(varInfo.getStackOffset());
+						}
+						else if (varInfo.isGlobal())
+						{
+							offset = static_cast<int>(varInfo.getGlobalBlockOffset());
+						}
 
 						// compute the real offset from record accessors
 						acc = Core::computeOffset(offset, acc);
@@ -882,20 +917,43 @@ protected:
 							// assert there are no more accessors
 							assert(acc->next == nullptr);
 
-							// append the instruction to get the value at given offset
-							// TODO @todo  should this really be there? The value is loaded
-							// later...
-							append(new FI_get_ABP(&insn, dst, offset));
+							if (varInfo.isOnStack())
+							{
+								// append the instruction to get the value at given offset
+								// TODO @todo  should this really be there? The value is loaded
+								// later...
+								append(new FI_get_ABP(&insn, dst, offset));
+							}
+							else if (varInfo.isGlobal())
+							{
+								throw NotImplementedException("cLoadOperand(): global variables 2");
+							}
+							else
+							{
+								assert(false);          // fail gracefully
+							}
 							break;
 						}
 
 						// assert there are no more accessors
 						assert(acc == nullptr);
 
-						// append the instruction to load the value at given offset
-						append(new FI_load_ABP(&insn, dst, offset));
+						if (varInfo.isOnStack())
+						{
+							// append the instruction to load the value at given offset
+							append(new FI_load_ABP(&insn, dst, offset));
+						}
+						else if (varInfo.isGlobal())
+						{
+							// append the instruction to load the global value at given offset
+							append(new FI_load_GLOB(&insn, dst, offset));
+						}
+						else
+						{
+							assert(false);          // fail gracefully
+						}
 					}
-				} else
+				} else if (varInfo.isInReg())
 				{	// in case the variable is in a register
 					if (canOverride)
 					{	// in case the destination register can be overridden
@@ -905,6 +963,9 @@ protected:
 					{	// in case the destination register cannot be overridden
 						cLoadReg(dst, varInfo.getRegIndex(), op, insn);
 					}
+				} else
+				{	// otherwise
+					assert(false);      // fail gracefully
 				}
 
 				break;
@@ -933,32 +994,34 @@ protected:
 	 * @param[in]  op   The source operand
 	 * @param[in]  src  Index of the register with the source
 	 *
-	 * @returns  Index of the register with the requester operand
+	 * @returns  Index of the register with the requested operand
 	 */
 	size_t lookupStoreReg(const cl_operand& op, size_t src)
 	{
-		// @todo TODO why is it here?
-		size_t tmp = src;
-
 		switch (op.code)
 		{	// depending on the type of the operand
 			case cl_operand_e::CL_OPERAND_VAR:
 			{	// in case it is a variable
 
 				// get info about the variable
-				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
+				const VarInfo& varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				if (varInfo.isOnStack())
-				{	// in case it is on the stack
+				if (varInfo.isOnStack() || varInfo.isGlobal())
+				{	// in case it is on the stack or global
 					return src;
-				} else
+				} else if (varInfo.isInReg())
 				{	// in case it is in a register
-					tmp = varInfo.getRegIndex();
+					size_t tmp = varInfo.getRegIndex();
 
 					const cl_accessor* acc = op.accessor;
 
-					// in case there is dereference at the operand
+					// in case there is dereference at the operand, store to the new
+					// register, otherwise use the register in which the variable already
+					// is
 					return (acc && (acc->code == CL_ACCESSOR_DEREF))? (src) : (tmp);
+				} else
+				{	// othewise
+					assert(false);      // fail gracefully
 				}
 			}
 
@@ -993,15 +1056,37 @@ protected:
 			{	// in case it is a variable
 
 				// get variable info
-				auto varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
+				const VarInfo& varInfo = curCtx_->getVarInfo(varIdFromOperand(&op));
 
-				if (varInfo.isOnStack())
-				{	// in case it is on the stack
+				if (varInfo.isOnStack() || varInfo.isGlobal())
+				{	// in case it is on the stack or is global
+					if (varInfo.isOnStack())
+					{ // append the instruction to get the value at given offset
+						append(new FI_get_ABP(&insn, tmp, 0));
+					}
+					else if (varInfo.isGlobal())
+					{ // append the instruction to get the value at given offset
+						append(new FI_get_GLOB(&insn, tmp, 0));
+					}
+					else
+					{
+						assert(false);          // fail gracefully
+					}
 
-					// append the instruction to get the value at given offset
-					append(new FI_get_ABP(&insn, tmp, 0));
+					int offset;
 
-					int offset = static_cast<int>(varInfo.getStackOffset());
+					if (varInfo.isOnStack())
+					{
+						offset = static_cast<int>(varInfo.getStackOffset());
+					}
+					else if (varInfo.isGlobal())
+					{
+						offset = static_cast<int>(varInfo.getGlobalBlockOffset());
+					}
+					else
+					{
+						assert(false);         // fail gracefully
+					}
 
 					bool needsAcc = false;
 
@@ -1013,8 +1098,19 @@ protected:
 						{	// in case the accessor is a dereference ('*' in C)
 							assert(acc->type->code == cl_type_e::CL_TYPE_PTR);
 
-							// override previous instruction
-							override(new FI_load_ABP(&insn, tmp, varInfo.getStackOffset()));
+							if (varInfo.isOnStack())
+							{
+								// override previous instruction
+								override(new FI_load_ABP(&insn, tmp, varInfo.getStackOffset()));
+							}
+							else if (varInfo.isGlobal())
+							{
+								throw NotImplementedException("cStoreOperand(): global variables 3");
+							}
+							else
+							{
+								assert(false);         // fail gracefully
+							}
 
 							// separation is needed
 							needsAcc = true;
@@ -1065,9 +1161,12 @@ protected:
 					append(new FI_check(&insn));
 
 					return true;
-				} else
+				} else if (varInfo.isInReg())
 				{	// in case it is in a register
 					return cStoreReg(op, src, varInfo.getRegIndex(), insn);
+				} else
+				{ // otherwise
+					assert(false);        // fail gracefully
 				}
 			}
 
@@ -1105,7 +1204,7 @@ protected:
 			}
 
 			// obtain information about the variable
-			const SymCtx::VarInfo& varInfo = curCtx_->getVarInfo(var.uid);
+			const VarInfo& varInfo = curCtx_->getVarInfo(var.uid);
 
 			if (varInfo.isOnStack())
 			{	// on case the variable is not on the stack
@@ -1748,6 +1847,9 @@ protected:
 			case builtin_e::biPrintHeap:
 				cPrintHeap(insn);
 				return;
+			case builtin_e::biPlotHeap:
+				cPlotHeap(insn);
+				return;
 			case builtin_e::biAbort:
 				this->append(new FI_abort(&insn));
 				return;
@@ -1762,7 +1864,7 @@ protected:
 
 		if (!isDefined(*fnc))
 		{	// in case the implementation of the function is not provided
-			CL_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" <<
+			FA_NOTE_MSG(&insn.loc, "ignoring call to undefined function '" <<
 				insn.operands[1].data.cst.data.cst_fnc.name << '\'');
 
 			if (insn.operands[0].code != CL_OPERAND_VOID)
@@ -1794,7 +1896,7 @@ protected:
 	 */
 	void compileInstruction(const CodeStorage::Insn& insn)
 	{
-		CL_DEBUG_AT(3, insn.loc << ' ' << insn);
+		FA_DEBUG_AT(3, insn.loc << ' ' << insn);
 
 		switch (insn.code)
 		{	// according to the main instruction code
@@ -2009,7 +2111,6 @@ protected:
 
 			p.first->second = assembly_->code_[blockHead];
 
-
 			for (auto target : block->targets())
 				queue.push_back(target);
 
@@ -2019,6 +2120,167 @@ protected:
 		auto iter = codeIndex_.find(fnc.cfg.entry());
 		assert(iter != codeIndex_.end());
 		assembly_->functionIndex_.insert(std::make_pair(&fnc, iter->second));
+	}
+
+	/**
+	 * @brief  Compiles initialisation
+	 *
+	 * Compiles the initialisation of global registers, global variables, etc.
+	 *
+	 * @param[in]   stor        Code storage with the code
+	 */
+	void compileInitialisation(const CodeStorage::Storage& stor)
+	{
+		//     ********  prepare the structure with global variables ********
+		std::vector<SelData> globalVarsLayout;
+		SymCtx::var_map_type globalVarMap;
+		size_t globalVarsOffset = 0;
+
+		for (const CodeStorage::Var& var : stor.vars)
+		{
+			if (CodeStorage::EVar::VAR_GL == var.code)
+			{
+				NodeBuilder::buildNode(globalVarsLayout, var.type, globalVarsOffset,
+					var.name);
+				globalVarMap.insert(
+					std::make_pair(var.uid, VarInfo::createGlobal(globalVarsOffset)));
+				globalVarsOffset += var.type->size;
+			}
+		}
+
+		//     ********  prepare functions' symbolic contexts ********
+		for (auto fnc : stor.fncs)
+		{
+			if (isDefined(*fnc))
+			{	// in case the function is defined and not only declared
+				fncIndex_.insert(std::make_pair(
+					fnc,
+					std::make_pair(
+						SymCtx(*fnc, &globalVarMap),
+						CodeStorage::Block()
+					)
+				));
+			}
+		}
+
+		//     ******* compile creation of global variables *******
+		// move void ptr of size 1 into r0
+		append(new FI_load_cst(nullptr, 0, Data::createVoidPtr(1)));
+
+		if (globalVarsLayout.empty())
+		{	// if there are no global variables, fake one
+			globalVarsLayout.push_back(SelData(0, 1, 0, "__fake_global__"));
+		}
+
+		// allocate the block with global variables to r0
+		append(
+			new FI_node_create(
+				/* instruction */ nullptr,
+				/* dst reg where the node will be stored */ 0,
+				/* reg with the value from which the node is to be created */ 0,
+				/* size of the created node */ 1,
+				/* type information */ boxMan_.getTypeInfo(GLOBAL_VARS_BLOCK_STR),
+				/* selectors of the node */ globalVarsLayout
+			)
+		);
+
+		//     ******* load global registers *******
+		// push r0 as GLOB
+		append(new FI_push_greg(nullptr, 0));
+
+		// load NULL into r0
+		append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
+
+		// push r0 as ABP
+		append(new FI_push_greg(nullptr, 0));
+
+		//     ******* compile initialization of global variables *******
+		curCtx_ = new SymCtx(&globalVarMap);
+
+		for (const CodeStorage::Var& var : stor.vars)
+		{
+			if (CodeStorage::EVar::VAR_GL == var.code)
+			{	// for each global variable
+				if (!var.isExtern)
+				{	// if the variable has internal linkage
+					// assert it is initialised (explicitly or implicitely)
+					assert(var.initialized);
+
+					if (!var.initials.empty())
+					{	// in case the variable is initialised explicitly
+						for (const CodeStorage::Insn* insn : var.initials)
+						{
+							// Assertions
+							assert(nullptr != insn);
+							assert((cl_insn_e::CL_INSN_UNOP == insn->code)
+								|| (cl_insn_e::CL_INSN_BINOP == insn->code));
+
+							/// @todo: perform implicit zeroing (e.g. for structures)?
+							compileInstruction(*insn);
+						}
+					}
+					else
+					{	// in case the variable is initialised implicitly
+
+						// NOTE: this is a very basic implementation with only very basic
+						// support. Advanced features are not supported
+
+						// load 0 into r0
+						append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
+
+						auto itVarMap = globalVarMap.find(var.uid);
+						assert(globalVarMap.end() != itVarMap);
+
+						int offset = itVarMap->second.getGlobalBlockOffset();
+
+						// load the variable into r1
+						append(new FI_get_GLOB(nullptr, 1, offset));
+
+						if (cl_type_e::CL_TYPE_STRUCT == var.type->code)
+						{	// in case the operand is a structure
+#if 0
+							// build a symbolic node
+							std::vector<size_t> offs;
+							NodeBuilder::buildNode(offs, op.type);
+
+							if (needsAcc)
+							{	// in case separation is needed
+								// append separation of a set of nodes
+								append(new FI_acc_set(&insn, tmp, offset, offs));
+							}
+
+							// append store of the value into register
+							append(new FI_stores(&insn, tmp, src, offset));
+#endif
+							throw NotImplementedException("Implicit initialization of a structure");
+						} else
+						{	// in case the operand is anything but a structure
+
+							// store the value in r0 to the memory location pointed by r1
+							append(new FI_store(nullptr, 1, 0, offset));
+						}
+
+
+						// TODO: is the check instruction really necessary here?
+
+						// add an instruction to check invariants of the virtual machine
+						append(new FI_check(nullptr));
+						//throw NotImplementedException("Implicitly initialised global variable");
+					}
+				}
+				else
+				{	// if the variable has external linkage
+					assert(!var.initialized);
+					assert(var.initials.empty());
+
+					/// @todo: create with undef value
+					throw NotImplementedException("Global variable with external linkage");
+				}
+			}
+		}
+
+		delete curCtx_;
+		curCtx_ = nullptr;
 	}
 
 public:
@@ -2063,36 +2325,10 @@ public:
 		// clear the code in the assembly
 		reset(assembly);
 
-		// handle global variables first
-		for (const CodeStorage::Var& var : stor.vars)
-		{
-			if (var.code == CodeStorage::EVar::VAR_GL)
-			{
-				throw NotImplementedException("global variables", &(var.loc));
-			}
-		}
-
-		for (auto fnc : stor.fncs)
-		{
-			if (isDefined(*fnc))
-			{	// in case the function is defined and not only declared
-				fncIndex_.insert(std::make_pair(
-					fnc,
-					std::make_pair(
-						SymCtx(*fnc),
-						CodeStorage::Block()
-					)
-				));
-			}
-		}
+		// compile the initial code
+		compileInitialisation(stor);
 
 		//              ******* compile entry call *******
-
-		// load NULL into r0
-		append(new FI_load_cst(nullptr, 0, Data::createInt(0)));
-
-		// push r0 as ABP
-		append(new FI_push_greg(nullptr, 0));
 
 		// feed registers with arguments (unknown values)
 		for (size_t i = entry.args.size() + 1; i > 1; --i)
@@ -2123,6 +2359,15 @@ public:
 
 		// check the stack frame
 		append(new FI_assert(nullptr, 1, Data::createInt(0)));
+
+		// store the GLOB into r1
+		append(new FI_get_GLOB(nullptr, 1, 0));
+
+		// delete the block with global variables (r1)
+		append(new FI_node_free(nullptr, 1));
+
+		// check for garbage
+		append(new FI_check(nullptr));
 
 		// abort
 		append(new FI_abort(nullptr));

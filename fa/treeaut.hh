@@ -121,6 +121,21 @@ public:
 	}
 
 	/**
+	 * @brief  Run a visitor on the instance
+	 *
+	 * This method is the @p accept method of the Visitor design pattern.
+	 *
+	 * @param[in]  visitor  The visitor of the type @p TVisitor
+	 *
+	 * @tparam  TVisitor  The type of the visitor
+	 */
+	template <class TVisitor>
+	void accept(TVisitor& visitor) const
+	{
+		visitor(*this);
+	}
+
+	/**
 	 * @brief  Virtual destructor
 	 */
 	virtual ~TTBase()
@@ -207,7 +222,10 @@ class TA {
 
 public:
 
-    typedef Cache<TT<T> > trans_cache_type;
+	///	the type of a tree automaton transition
+	typedef TT<T> Transition;
+
+    typedef Cache<Transition> trans_cache_type;
 
 	// this is the place where transitions are stored
 	struct Backend {
@@ -231,7 +249,7 @@ public:
 
 	typedef std::set<typename trans_cache_type::value_type*, CmpF> trans_set_type;
 
-	typename TT<T>::lhs_cache_type& lhsCache() const { return this->backend->lhsCache; }
+	typename Transition::lhs_cache_type& lhsCache() const { return this->backend->lhsCache; }
 
 	trans_cache_type& transCache() const { return this->backend->transCache; }
 
@@ -248,9 +266,9 @@ public:
 
 		Iterator operator--(int) { return Iterator(this->_i--); }
 
-		const TT<T>& operator*() const { return (*this->_i)->first; }
+		const Transition& operator*() const { return (*this->_i)->first; }
 
-		const TT<T>* operator->() const { return &(*this->_i)->first; }
+		const Transition* operator->() const { return &(*this->_i)->first; }
 
 		bool operator==(const Iterator& rhs) const { return this->_i == rhs._i; }
 
@@ -260,7 +278,7 @@ public:
 
 public:
 
-	typedef typename std::unordered_map<size_t, std::vector<const TT<T>*> > td_cache_type;
+	typedef typename std::unordered_map<size_t, std::vector<const Transition*> > td_cache_type;
 
 	class TDIterator {
 
@@ -268,8 +286,8 @@ public:
 		std::set<size_t> _visited;
 		std::vector<
 			std::pair<
-				typename std::vector<const TT<T>*>::const_iterator,
-				typename std::vector<const TT<T>*>::const_iterator
+				typename std::vector<const Transition*>::const_iterator,
+				typename std::vector<const Transition*>::const_iterator
 			>
 		> _stack;
 
@@ -309,15 +327,15 @@ public:
 			return false;
 		}
 
-		const TT<T>& operator*() const { return **this->_stack.back().first; }
+		const Transition& operator*() const { return **this->_stack.back().first; }
 
-		const TT<T>* operator->() const { return *this->_stack.back().first; }
+		const Transition* operator->() const { return *this->_stack.back().first; }
 
 	};
 
-	typedef typename std::unordered_map<size_t, std::vector<const TT<T>*> > bu_cache_type;
+	typedef typename std::unordered_map<size_t, std::vector<const Transition*> > bu_cache_type;
 
-	typedef std::unordered_map<T, std::vector<const TT<T>*> > lt_cache_type;
+	typedef std::unordered_map<T, std::vector<const Transition*> > lt_cache_type;
 //	typedef boost::unordered_map<size_t, lt_cache_type> slt_cache_type;
 
 public:
@@ -336,7 +354,7 @@ public:
 
 //	std::map<const std::vector<int>*, int> lhsMap;
 
-	typename trans_cache_type::value_type* internalAdd(const TT<T>& t) {
+	typename trans_cache_type::value_type* internalAdd(const Transition& t) {
 		typename trans_cache_type::value_type* x = this->transCache().lookup(t);
 		if (this->transitions.insert(x).second) {
 			if (t._lhs->first.size() > this->maxRank)
@@ -376,11 +394,11 @@ public:
 	typename TA<T>::Iterator end() const { return typename TA<T>::Iterator(this->transitions.end()); }
 
 	typename trans_set_type::const_iterator _lookup(size_t rhs) const {
-		char buffer[sizeof(std::pair<const TT<T>, size_t>)];
-		std::pair<const TT<T>, size_t>* tPtr = reinterpret_cast<std::pair<const TT<T>, size_t>*>(buffer);
-		new (reinterpret_cast<TTBase<T>*>(const_cast<TT<T>*>(&tPtr->first))) TTBase<T>(nullptr, T(), rhs);
+		char buffer[sizeof(std::pair<const Transition, size_t>)];
+		std::pair<const Transition, size_t>* tPtr = reinterpret_cast<std::pair<const Transition, size_t>*>(buffer);
+		new (reinterpret_cast<TTBase<T>*>(const_cast<Transition*>(&tPtr->first))) TTBase<T>(nullptr, T(), rhs);
 		typename trans_set_type::const_iterator i = this->transitions.lower_bound(tPtr);
-		(reinterpret_cast<TTBase<T>*>(const_cast<TT<T>*>(&tPtr->first)))->~TTBase();
+		(reinterpret_cast<TTBase<T>*>(const_cast<Transition*>(&tPtr->first)))->~TTBase();
 		return i;
 	}
 
@@ -510,7 +528,7 @@ public:
 
 	void buildTDCache(td_cache_type& cache) const {
 		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
-			cache.insert(make_pair((*i)->first._rhs, std::vector<const TT<T>*>())).first->second.push_back(&(*i)->first);
+			cache.insert(make_pair((*i)->first._rhs, std::vector<const Transition*>())).first->second.push_back(&(*i)->first);
 	}
 
 	void buildBUCache(bu_cache_type& cache) const {
@@ -519,57 +537,57 @@ public:
 			s.clear();
 			for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j) {
 				if (s.insert(*j).second)
-					cache.insert(make_pair(*j, std::vector<const TT<T>*>())).first->second.push_back(&(*i)->first);
+					cache.insert(make_pair(*j, std::vector<const Transition*>())).first->second.push_back(&(*i)->first);
 			}
 		}
 	}
 /*
 	void buildSLTBUCache(slt_cache_type& cache, leaf_cache_type& leafCache) const {
-		boost::unordered_map<std::pair<size_t, const T*>, std::set<const TT<T>*> > tmp;
+		boost::unordered_map<std::pair<size_t, const T*>, std::set<const Transition*> > tmp;
 		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
 			if ((*i)->first._lhs->first.empty()) {
-				leafCache.insert(make_pair(&(*i)->first._label, std::set<const TT<T>*>())).first->second.insert(&(*i)->first);
+				leafCache.insert(make_pair(&(*i)->first._label, std::set<const Transition*>())).first->second.insert(&(*i)->first);
 				continue;
 			}
 			for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
-				tmp.insert(make_pair(make_pair(*j, &(*i)->first._label), vector<const TT<T>*>())).first->second.insert(&(*i)->first);
+				tmp.insert(make_pair(make_pair(*j, &(*i)->first._label), vector<const Transition*>())).first->second.insert(&(*i)->first);
 		}
-		for (boost::unordered_map<std::pair<size_t, const T*>, std::set<const TT<T>*> >::const_iterator i = tmp.begin(); i != tmp.end(); ++i) {
+		for (boost::unordered_map<std::pair<size_t, const T*>, std::set<const Transition*> >::const_iterator i = tmp.begin(); i != tmp.end(); ++i) {
 			cache.insert(
-				make_pair(i->first.first, boost::unordered_map<const T*, std::vector<const TT<T>*> >())
+				make_pair(i->first.first, boost::unordered_map<const T*, std::vector<const Transition*> >())
 			).first->second.insert(
-				make_pair(i->first.second, std::vector<const TT<T>*>(i->second.begin(), i->second.end()))
+				make_pair(i->first.second, std::vector<const Transition*>(i->second.begin(), i->second.end()))
 			);
 		}
 	}
 */
 	void buildLTCache(lt_cache_type& cache) const {
 		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
-			cache.insert(make_pair((*i)->first._label, std::vector<const TT<T>*>())).first->second.push_back(&(*i)->first);
+			cache.insert(make_pair((*i)->first._label, std::vector<const Transition*>())).first->second.push_back(&(*i)->first);
 	}
 
 	typename trans_cache_type::value_type* addTransition(const std::vector<size_t>& lhs, const T& label, size_t rhs) {
-		return this->internalAdd(TT<T>(lhs, label, rhs, this->lhsCache()));
+		return this->internalAdd(Transition(lhs, label, rhs, this->lhsCache()));
 	}
 
 	typename trans_cache_type::value_type* addTransition(const std::vector<size_t>& lhs, const T& label, size_t rhs, const std::vector<size_t>& index) {
-		return this->internalAdd(TT<T>(lhs, label, rhs, index, this->lhsCache()));
+		return this->internalAdd(Transition(lhs, label, rhs, index, this->lhsCache()));
 	}
 
 	typename trans_cache_type::value_type* addTransition(const typename trans_cache_type::value_type* transition) {
-		return this->internalAdd(TT<T>(transition->first, this->lhsCache()));
+		return this->internalAdd(Transition(transition->first, this->lhsCache()));
 	}
 
 	typename trans_cache_type::value_type* addTransition(const typename trans_cache_type::value_type* transition, const std::vector<size_t>& index) {
-		return this->internalAdd(TT<T>(transition->first, index, this->lhsCache()));
+		return this->internalAdd(Transition(transition->first, index, this->lhsCache()));
 	}
 
-	typename trans_cache_type::value_type* addTransition(const TT<T>& transition) {
-		return this->internalAdd(TT<T>(transition, this->lhsCache()));
+	typename trans_cache_type::value_type* addTransition(const Transition& transition) {
+		return this->internalAdd(Transition(transition, this->lhsCache()));
 	}
 
-	typename trans_cache_type::value_type* addTransition(const TT<T>& transition, const std::vector<size_t>& index) {
-		return this->internalAdd(TT<T>(transition, index, this->lhsCache()));
+	typename trans_cache_type::value_type* addTransition(const Transition& transition, const std::vector<size_t>& index) {
+		return this->internalAdd(Transition(transition, index, this->lhsCache()));
 	}
 
 	void addFinalState(size_t state) {
@@ -607,11 +625,13 @@ public:
 		return this->getRhsIterator(this->getFinalState());
 	}
 */
-	const TT<T>& getAcceptingTransition() const {
-		TA<T>::Iterator i = this->accBegin();
-		const TT<T>* t = &*i;
-		assert(++i == this->accEnd());
-		return *t;
+	const Transition& getAcceptingTransition() const
+	{
+		// Assertions
+		assert(this->accBegin() != this->accEnd());
+		assert(++(this->accBegin()) == this->accEnd());
+
+		return *(this->accBegin());
 	}
 
 	void downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const Index<T>& labelIndex) const;
@@ -659,8 +679,8 @@ public:
 			typename lt_cache_type::const_iterator j = cache2.find(i->first);
 			if (j == cache2.end())
 				continue;
-			for (typename std::vector<const TT<T>*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
-				for (typename std::vector<const TT<T>*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l) {
+			for (typename std::vector<const Transition*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
+				for (typename std::vector<const Transition*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l) {
 					std::pair<std::unordered_map<std::pair<size_t, size_t>, size_t, boost::hash<std::pair<size_t, size_t>>>::iterator, bool> p =
 						product.insert(std::make_pair(std::make_pair((*k)->_rhs, (*l)->_rhs), product.size() + stateOffset));
 					f(*k, *l, std::vector<size_t>(), p.first->second);
@@ -676,8 +696,8 @@ public:
 				typename lt_cache_type::const_iterator j = cache2.find(i->first);
 				if (j == cache2.end())
 					continue;
-				for (typename std::vector<const TT<T>*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
-					for (typename std::vector<const TT<T>*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l) {
+				for (typename std::vector<const Transition*>::const_iterator k = i->second.begin(); k != i->second.end(); ++k) {
+					for (typename std::vector<const Transition*>::const_iterator l = j->second.begin(); l != j->second.end(); ++l) {
 						assert((*k)->_lhs->first.size() == (*l)->_lhs->first.size());
 						std::vector<size_t> lhs;
 						for (size_t m = 0; m < (*k)->_lhs->first.size(); ++m) {
@@ -710,7 +730,7 @@ public:
 
 		IntersectF(TA<T>& dst, const TA<T>& src1, const TA<T>& src2) : dst(dst), src1(src1), src2(src2) {}
 
-		void operator()(const TT<T>* t1, const TT<T>* t2, const std::vector<size_t>& lhs, size_t rhs) {
+		void operator()(const Transition* t1, const Transition* t2, const std::vector<size_t>& lhs, size_t rhs) {
 			if (this->src1.isFinalState(t1->_rhs) && this->src2.isFinalState(t2->_rhs))
 				this->dst.addFinalState(rhs);
 			this->dst.addTransition(lhs, t1->_label, rhs);
@@ -732,7 +752,7 @@ public:
 
 		PredicateF(std::vector<size_t>& dst, const TA<T>& predicate) : dst(dst), predicate(predicate) {}
 
-		void operator()(const TT<T>* /* t1 */, const TT<T>* t2,
+		void operator()(const Transition* /* t1 */, const Transition* t2,
 			const std::vector<size_t>& /* lhs */, size_t /* rhs */) {
 			if (predicate.isFinalState(t2->_rhs))
 				this->dst.push_back(t2->_rhs);
@@ -787,7 +807,7 @@ public:
 	}
 */
 	template <class F>
-	static bool transMatch(const TT<T>* t1, const TT<T>* t2, F f, const std::vector<std::vector<bool> >& mat, const Index<size_t>& stateIndex) {
+	static bool transMatch(const Transition* t1, const Transition* t2, F f, const std::vector<std::vector<bool> >& mat, const Index<size_t>& stateIndex) {
 
 		if (!f(*t1, *t2))
 			return false;
@@ -821,18 +841,18 @@ public:
 			for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i) {
 				size_t state1 = i->second;
 				typename td_cache_type::iterator j = cache.insert(
-					std::make_pair(i->first, std::vector<const TT<T>*>())
+					std::make_pair(i->first, std::vector<const Transition*>())
 				).first;
 				for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k) {
 					size_t state2 = k->second;
 					if ((state1 == state2) || !tmp[state1][state2])
 						continue;
 					typename td_cache_type::iterator l = cache.insert(
-						std::make_pair(k->first, std::vector<const TT<T>*>())
+						std::make_pair(k->first, std::vector<const Transition*>())
 					).first;
 					bool match = true;
-					for (typename std::vector<const TT<T>*>::const_iterator m = j->second.begin(); m != j->second.end(); ++m) {
-						for (typename std::vector<const TT<T>*>::const_iterator n = l->second.begin(); n != l->second.end(); ++n) {
+					for (typename std::vector<const Transition*>::const_iterator m = j->second.begin(); m != j->second.end(); ++m) {
+						for (typename std::vector<const Transition*>::const_iterator n = l->second.begin(); n != l->second.end(); ++n) {
 							if (!TA<T>::transMatch(*m, *n, f, tmp, stateIndex)) {
 								match = false;
 								break;
@@ -1017,23 +1037,23 @@ public:
 		for (std::set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
 			dst.addFinalState(*i);
 		for (typename td_cache_type::iterator i = cache.begin(); i != cache.end(); ++i) {
-			std::list<const TT<T>*> tmp;
-			for (typename std::vector<const TT<T>*>::iterator j = i->second.begin(); j != i->second.end(); ++j) {
+			std::list<const Transition*> tmp;
+			for (typename std::vector<const Transition*>::iterator j = i->second.begin(); j != i->second.end(); ++j) {
 				bool noskip = true;
-				for (typename std::list<const TT<T>*>::iterator k = tmp.begin(); k != tmp.end(); ) {
+				for (typename std::list<const Transition*>::iterator k = tmp.begin(); k != tmp.end(); ) {
 					if ((*j)->llhsLessThan(**k, cons, stateIndex)) {
 						noskip = false;
 						break;
 					}
 					if ((*k)->llhsLessThan(**j, cons, stateIndex)) {
-						typename std::list<const TT<T>*>::iterator l = k++;
+						typename std::list<const Transition*>::iterator l = k++;
 						tmp.erase(l);
 					} else ++k;
 				}
 				if (noskip)
 					tmp.push_back(*j);
 			}
-			for (typename std::list<const TT<T>*>::iterator j = tmp.begin(); j != tmp.end(); ++j)
+			for (typename std::list<const Transition*>::iterator j = tmp.begin(); j != tmp.end(); ++j)
 				dst.addTransition(**j);
 		}
 		return dst;
@@ -1107,13 +1127,13 @@ public:
 	struct AcceptingF {
 		const TA<T>& ta;
 		AcceptingF(const TA<T>& ta) : ta(ta) {}
-		bool operator()(const TT<T>* t) { return ta.isFinalState(t->_rhs); }
+		bool operator()(const Transition* t) { return ta.isFinalState(t->_rhs); }
 	};
 
 	struct NonAcceptingF {
 		const TA<T>& ta;
 		NonAcceptingF(const TA<T>& ta) : ta(ta) {}
-		bool operator()(const TT<T>* t) { return !ta.isFinalState(t->_rhs); }
+		bool operator()(const Transition* t) { return !ta.isFinalState(t->_rhs); }
 	};
 
 	TA& copyTransitions(TA<T>& dst) const {
@@ -1196,6 +1216,21 @@ public:
 				dst.addFinalState(j->second);
 		}
 		return dst;
+	}
+
+	/**
+	 * @brief  Run a visitor on the instance
+	 *
+	 * This method is the @p accept method of the Visitor design pattern.
+	 *
+	 * @param[in]  visitor  The visitor of the type @p TVisitor
+	 *
+	 * @tparam  TVisitor  The type of the visitor
+	 */
+	template <class TVisitor>
+	void accept(TVisitor& visitor) const
+	{
+		visitor(*this);
 	}
 
 /*

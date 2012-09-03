@@ -27,9 +27,6 @@
 #include <fstream>
 #include <unordered_map>
 
-// Code Listener headers
-#include <cl/cl_msg.hh>
-
 // Forester headers
 #include "config.h"
 #include "treeaut_label.hh"

@@ -19,6 +19,7 @@
 
 // Forester headers
 #include "boxman.hh"
+#include "streams.hh"
 
 
 const Box* BoxAntichain::get(const Box& box)
@@ -371,7 +372,7 @@ const Box* BoxMan::getBox(const Box& box)
 		pBox->name_ = this->getBoxName();
 		pBox->initialize();
 
-		CL_CDEBUG(1, "learning " << *static_cast<const AbstractBox*>(cpBox)
+		FA_DEBUG_AT(1, "learning " << *static_cast<const AbstractBox*>(cpBox)
 			<< ':' << std::endl << *cpBox);
 
 #if FA_RESTART_AFTER_BOX_DISCOVERY

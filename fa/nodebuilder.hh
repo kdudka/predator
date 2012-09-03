@@ -134,6 +134,32 @@ struct NodeBuilder {
 				break;
 		}
 	}
+
+	/**
+	 * @brief  Creates information about heap node
+	 *
+	 * Creates information about heap node from a vector of Code Listener types.
+	 * The output is an array of @e flat offsets of fields in the node. Safe for
+	 * a structure, the offset is equal to the @p offset parameter; a structure
+	 * recursively expands offsets of all of its substructures.
+	 *
+	 * @param[out]  nodeInfo    The output array of offsets
+	 * @param[in]   components  The array of components
+	 * @param[in]   offset      The initial offset
+	 */
+	static void buildNode(
+		std::vector<size_t>& nodeInfo,
+		const std::vector<const cl_type*>& components,
+		int offset = 0)
+	{
+		for (const cl_type* elem : components)
+		{
+			assert(nullptr != elem);
+
+			buildNode(nodeInfo, elem, offset);
+			offset += elem->size;
+		}
+	}
 };
 
 #endif

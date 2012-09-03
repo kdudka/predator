@@ -36,4 +36,5 @@ void FI_ret::execute(ExecutionManager& execMan, const ExecState& state)
 void FI_ret::finalize(
 	const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,
 	std::vector<AbstractInstruction*>::const_iterator
-) {}
+)
+{ }

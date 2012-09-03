@@ -20,19 +20,21 @@
 #ifndef FOLDING_H
 #define FOLDING_H
 
+// Standard library headers
 #include <vector>
 #include <set>
 #include <stdexcept>
 #include <algorithm>
 #include <unordered_map>
 
-#include "forestautext.hh"
+// Forester headers
 #include "abstractbox.hh"
 #include "boxman.hh"
-#include "connection_graph.hh"
-#include "restart_request.hh"
-
 #include "config.h"
+#include "connection_graph.hh"
+#include "forestautext.hh"
+#include "restart_request.hh"
+#include "streams.hh"
 
 class Folding {
 
@@ -579,7 +581,7 @@ protected:
 		if (!boxPtr)
 			return nullptr;
 
-		CL_CDEBUG(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
+		FA_DEBUG_AT(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
 
 		this->fae.roots[root] = this->joinBox(*p.first, state, root, boxPtr, outputSignature);
 		this->fae.connectionGraph.invalidate(root);
@@ -693,7 +695,7 @@ protected:
 		if (!boxPtr)
 			return nullptr;
 
-		CL_CDEBUG(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
+		FA_DEBUG_AT(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
 
 		for (auto& cutpoint : tmpSignature)
 			outputSignature.push_back(cutpoint);
@@ -735,7 +737,7 @@ dis1_start:
 			if (cutpoint.root != root)
 				continue;
 
-			CL_CDEBUG(3, "type 1 cutpoint detected at root " << root);
+			FA_DEBUG_AT(3, "type 1 cutpoint detected at root " << root);
 
 			auto boxPtr = this->makeType1Box(
 				root, this->fae.roots[root]->getFinalState(), root, forbidden, conditional
@@ -787,7 +789,7 @@ dis2_start:
 					if ((tmp.refCount < 2) || tmp.refInherited || (tmp.root != cutpoint.root))
 						continue;
 
-					CL_CDEBUG(3, "type 2 cutpoint detected inside component " << root << " at state q" << stateSignaturePair.first);
+					FA_DEBUG_AT(3, "type 2 cutpoint detected inside component " << root << " at state q" << stateSignaturePair.first);
 
 					auto boxPtr = this->makeType1Box(
 						root, stateSignaturePair.first, cutpoint.root, forbidden, conditional
@@ -850,7 +852,7 @@ dis3_start:
 				this->makeType2Box(cutpoint.root, root, forbidden, true, true))
 					continue;
 
-			CL_CDEBUG(3, "type 3 cutpoint detected at roots " << root << " and " << cutpoint.root);
+			FA_DEBUG_AT(3, "type 3 cutpoint detected at roots " << root << " and " << cutpoint.root);
 
 			auto boxPtr = this->makeType2Box(root, cutpoint.root, forbidden, conditional);
 
@@ -882,7 +884,7 @@ dis3_start:
 
 		const Box* boxPtr;
 
-		CL_CDEBUG(3, "analysing: " << this->fae);
+		FA_DEBUG_AT(3, "analysing: " << this->fae);
 
 		// save state offset
 		this->fae.pushStateOffset();
@@ -897,7 +899,7 @@ start:
 
 			if (cutpoint.root == root) {
 
-				CL_CDEBUG(3, "type 1 cutpoint detected at root " << root);
+				FA_DEBUG_AT(3, "type 1 cutpoint detected at root " << root);
 
 				boxPtr = this->makeType1Box(
 					root, this->fae.roots[root]->getFinalState(), root, forbidden, true
@@ -923,7 +925,7 @@ start:
 						if (!tmp.joint || tmp.joinInherited || (tmp.root != cutpoint.root))
 							continue;
 
-						CL_CDEBUG(3, "type 2 cutpoint detected inside component " << root << " at state q" << stateSignaturePair.first);
+						FA_DEBUG_AT(3, "type 2 cutpoint detected inside component " << root << " at state q" << stateSignaturePair.first);
 
 						boxPtr = this->makeType1Box(
 							root, stateSignaturePair.first, cutpoint.root, forbidden, true
@@ -957,7 +959,7 @@ start:
 *//*
 			assert(!cutpoint.fwdSelectors.empty());
 
-			CL_CDEBUG(3, "type 3 cutpoint detected at roots " << root << " and " << cutpoint.root);
+			FA_DEBUG_AT(3, "type 3 cutpoint detected at roots " << root << " and " << cutpoint.root);
 
 			boxPtr = this->makeType2Box(root, cutpoint.root, forbidden, true);
 
@@ -968,7 +970,7 @@ start:
 
 			continue;
 box_found:
-			CL_CDEBUG(3, (AbstractBox*)boxPtr << " found");
+			FA_DEBUG_AT(3, (AbstractBox*)boxPtr << " found");
 
 			found = true;
 

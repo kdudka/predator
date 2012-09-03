@@ -20,16 +20,23 @@
 #ifndef PROGRAM_ERROR_H
 #define PROGRAM_ERROR_H
 
+// Standard library headers
 #include <string>
 #include <stdexcept>
 
+// Code Listener headers
 #include <cl/code_listener.h>
+
+// Forester Headers
+//#include "symstate.hh"
+
 
 /**
  * @file programerror.hh
  * ProgramError class declaration (and definition)
  */
 
+class SymState;
 
 /**
  * @brief  An exception class for program analysis
@@ -38,13 +45,16 @@
  * interface. It contains an error message and a Code Listener provided
  * location.
  */
-class ProgramError : public std::exception {
-
+class ProgramError : public std::exception
+{
 	/// Error message
-	std::string msg;
+	std::string msg_;
 
 	/// Code Listener location to provide further information about the error
-	const cl_loc* loc;
+	const cl_loc* loc_;
+
+	/// The state in which the error appeared
+	const SymState* state_;
 
 public:
 
@@ -53,17 +63,24 @@ public:
 	 *
 	 * Constructs and assigns value to a new object.
 	 *
-	 * @param[in]  msg  The error message
-	 * @param[in]  loc  The location in the program that caused the error
+	 * @param[in]  msg    The error message
+	 * @param[in]  loc    The location in the program that caused the error
+	 * @param[in]  state  State in which the error appeared
 	 */
-	ProgramError(const std::string& msg = "", const cl_loc* loc = nullptr) :
-		msg(msg), loc(loc) {}
+	ProgramError(
+		const std::string&  msg = "",
+		const cl_loc*       loc = nullptr,
+		const SymState*     state = nullptr) :
+		msg_(msg),
+		loc_(loc),
+		state_(state)
+	{ }
 
 	/**
 	 * @brief  Copy constructor
 	 */
 	ProgramError(const ProgramError& err) :
-		msg{err.msg}, loc{err.loc}
+		msg_{err.msg_}, loc_{err.loc_}, state_{err.state_}
 	{ }
 
 	/**
@@ -73,8 +90,9 @@ public:
 	{
 		if (&err != this)
 		{
-			msg = err.msg;
-			loc = err.loc;
+			msg_   = err.msg_;
+			loc_   = err.loc_;
+			state_ = err.state_;
 		}
 
 		return *this;
@@ -95,7 +113,7 @@ public:
 	 *
 	 * @returns  The description of the error
 	 */
-	virtual const char* what() const throw() { return this->msg.c_str(); }
+	virtual const char* what() const throw() { return msg_.c_str(); }
 
 	/**
 	 * @brief  Location of the error
@@ -104,7 +122,16 @@ public:
 	 *
 	 * @returns  The location of the error
 	 */
-	const cl_loc* location() const throw() { return this->loc; }
+	const cl_loc* location() const throw() { return loc_; }
+
+	/**
+	 * @brief  State in which the error occured
+	 *
+	 * Retrieves the symbolic state in which the error was detected.
+	 *
+	 * @returns  The state in which the error occured
+	 */
+	const SymState* state() const throw() { return state_; }
 };
 
 #endif

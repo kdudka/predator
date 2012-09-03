@@ -20,11 +20,12 @@
 #ifndef REG_DEF_H
 #define REG_DEF_H
 
-// abstract base pointer
-#define ABP_INDEX		0
-// 'return address'
-//#define AAX_INDEX		1
+/// index of the global register with pointer to the block of global variables
+#define GLOB_INDEX    0
+/// index of the global register with abstract base pointer
+#define ABP_INDEX     1
 
-#define FIXED_REG_COUNT	1
+/// the total number of fixed registers
+#define FIXED_REG_COUNT	2
 
 #endif

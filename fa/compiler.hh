@@ -36,7 +36,6 @@
 
 // Code Listener headers
 #include <cl/storage.hh>
-#include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
@@ -74,8 +73,11 @@ public:
 	 */
 	struct Assembly
 	{
+		/// type for the code
+		typedef std::vector<AbstractInstruction*> CodeList;
+
 		/// linear code
-		std::vector<AbstractInstruction*> code_;
+		CodeList code_;
 
 		/// index with pointers to functions' entry points in the code
 		std::unordered_map<const struct CodeStorage::Fnc*, AbstractInstruction*>
@@ -135,22 +137,24 @@ public:
 
 
 		/**
-		 * @brief  The output stream operator
+		 * @brief  Prints the code of the assembly
 		 *
-		 * The std::ostream << operator for conversion to a string.
+		 * Prints the code of the assembly.
 		 *
-		 * @param[in,out]  os     The output stream
-		 * @param[in]      as     The value to be appended to the stream
+		 * @param[in,out]  os    The output stream
+		 * @param[in]      code  The code to be printed
 		 *
-		 * @returns  The modified output stream
+		 * @returns  Modified output stream
 		 */
-		friend std::ostream& operator<<(std::ostream& os, const Assembly& as)
+		static std::ostream& printCode(
+			std::ostream&         os,
+			const CodeList&       code)
 		{
 			const AbstractInstruction* prev = nullptr;
 			const CodeStorage::Insn* lastInsn = nullptr;
 			size_t cnt = 0;
 
-			for (const AbstractInstruction* instr : as.code_)
+			for (const AbstractInstruction* instr : code)
 			{
 				if ((instr->getType() == fi_type_e::fiJump) && prev)
 				{
@@ -198,6 +202,22 @@ public:
 			}
 
 			return os << std::endl << "; code size: " << cnt << " instructions" << std::endl;
+		}
+
+
+		/**
+		 * @brief  The output stream operator
+		 *
+		 * The std::ostream << operator for conversion to a string.
+		 *
+		 * @param[in,out]  os     The output stream
+		 * @param[in]      as     The value to be appended to the stream
+		 *
+		 * @returns  The modified output stream
+		 */
+		friend std::ostream& operator<<(std::ostream& os, const Assembly& as)
+		{
+			return printCode(os, as.code_);
 		}
 	};
 

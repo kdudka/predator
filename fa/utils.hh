@@ -20,20 +20,12 @@
 #ifndef UTILS_H
 #define UTILS_H
 
-#include <vector>
-#include <set>
+// Standard library headers
 #include <ostream>
-
-#include <unordered_set>
+#include <set>
 #include <unordered_map>
-
-#ifndef NDEBUG
-#define CL_CDEBUG(l, x) CL_DEBUG_AT(l, x)
-#define CL_CDEBUG_MSG(l, x) CL_DEBUG_MSG_AT(l, x)
-#else
-#define CL_CDEBUG(l, x)
-#define CL_CDEBUG_MSG(l, x)
-#endif
+#include <unordered_set>
+#include <vector>
 
 template <class T>
 std::vector<T> itov(const T &item) {
@@ -46,7 +38,7 @@ template <class T>
 struct Index {
 
 	typedef typename std::unordered_map<T, size_t> map_type;
-	
+
 	map_type map;
 
 	typedef typename map_type::const_iterator iterator;
@@ -61,7 +53,7 @@ struct Index {
 	typename Index<T>::iterator begin() const {
 		return this->map.begin();
 	}
-	
+
 	typename Index<T>::iterator end() const {
 		return this->map.end();
 	}
@@ -82,11 +74,11 @@ struct Index {
 	bool add(const T& x, size_t offset = 0) {
 		return this->map.insert(std::make_pair(x, this->map.size() + offset)).second;
 	}
-	
+
 	size_t size() const {
 		return this->map.size();
 	}
-	
+
 	std::pair<size_t, bool> find(const T& x) const {
 		typename map_type::const_iterator i = this->map.find(x);
 		if (i == this->map.end())

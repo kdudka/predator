@@ -49,8 +49,8 @@ private:  // data members
 	/// counter of evaluated states
 	size_t statesExecuted_;
 
-	/// counter of evaluated traces
-	size_t tracesEvaluated_;
+	/// counter of evaluated paths
+	size_t pathsEvaluated_;
 
 	/// memory manager for registers
 	Recycler<DataArray> registerRecycler_;
@@ -86,7 +86,7 @@ public:
 		root_(nullptr),
 		queue_{},
 		statesExecuted_{},
-		tracesEvaluated_{},
+		pathsEvaluated_{},
 		registerRecycler_{},
 		stateRecycler_{}
 	{ }
@@ -98,7 +98,7 @@ public:
 
 	size_t statesEvaluated() const { return statesExecuted_; }
 
-	size_t tracesEvaluated() const { return tracesEvaluated_; }
+	size_t pathsEvaluated() const { return pathsEvaluated_; }
 
 	void clear()
 	{
@@ -111,7 +111,7 @@ public:
 		queue_.clear();
 
 		statesExecuted_ = 0;
-		tracesEvaluated_ = 0;
+		pathsEvaluated_ = 0;
 	}
 
 	SymState* enqueue(SymState* parent, const std::shared_ptr<DataArray>& registers,
@@ -192,9 +192,9 @@ public:
 		state.GetMem()->GetInstr()->execute(*this, state);
 	}
 
-	void traceFinished(SymState* state)
+	void pathFinished(SymState* state)
 	{
-		++tracesEvaluated_;
+		++pathsEvaluated_;
 
 		this->destroyBranch(state);
 	}

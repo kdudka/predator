@@ -127,18 +127,6 @@ public:
 		this->stateOffset += index.size();
 	}
 
-	void ta2fae(std::vector<FAE*>& dst, TreeAut::Backend& backend, BoxMan& boxMan) const {
-		TreeAut::td_cache_type cache;
-		this->backend.buildTDCache(cache);
-		std::vector<const TT<label_type>*>& v = cache.insert(std::make_pair(0, std::vector<const TT<label_type>*>())).first->second;
-		// iterate over all "synthetic" transitions and constuct new FAE for each
-		for (std::vector<const TT<label_type>*>::iterator i = v.begin(); i != v.end(); ++i) {
-			FAE* fae = new FAE(backend, boxMan);
-			dst.push_back(fae);
-			fae->loadTA(this->backend, cache, *i, this->stateOffset);
-		}
-	}
-
 	friend std::ostream& operator<<(std::ostream& os, const UFAE& ufae) {
 		TAWriter<label_type>(os).writeOne(ufae.backend);
 		return os;
