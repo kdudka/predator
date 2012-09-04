@@ -1,0 +1,17 @@
+.PHONY: all clean *.dot
+
+BASENAME ?= basename
+DOT      ?= dot
+FORMAT   ?= svg
+SED      ?= sed
+TIMEOUT  ?= timeout 8
+
+all: *.dot
+*.dot:
+	$(TIMEOUT) \
+		$(DOT) $@ -T$(FORMAT) \
+		| $(SED) -e 's/"green"/"#00FF00"/g' -e 's/scale(1 1)/scale(.5 .5)/g' \
+		> `$(BASENAME) $@ .dot`.$(FORMAT) 
+
+clean:
+	rm -fv *.dot *.$(FORMAT)
