@@ -25,7 +25,7 @@
 #include <set>
 
 
-enum class box_type_e { bBox, bHead, bTypeInfo, bSel };
+enum class box_type_e { bBox, bTypeInfo, bSel };
 
 
 class AbstractBox
