@@ -187,7 +187,11 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op)
             break;
 
         case CL_TYPE_INT:
-            str << "(int)" << val;
+            str << "(int)";
+            if (op.type->is_unsigned)
+                str << "U";
+
+            str << val;
             break;
 
         case CL_TYPE_BOOL:

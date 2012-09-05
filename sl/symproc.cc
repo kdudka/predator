@@ -103,7 +103,9 @@ TValId SymProc::valFromCst(const struct cl_operand &op)
         case CL_TYPE_ENUM:
         case CL_TYPE_INT:
             // integral value
-            cv = CustomValue(IR::rngFromNum(cst.data.cst_int.value));
+            cv = CustomValue(IR::rngFromNum(
+                        /* FIXME: deal better with integer literals */
+                        static_cast<int>(cst.data.cst_int.value)));
             break;
 
         case CL_TYPE_REAL:
