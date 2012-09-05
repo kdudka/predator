@@ -69,6 +69,11 @@ public:
 		return type_ == box_type_e::bBox;
 	}
 
+	bool isSelector() const
+	{
+		return box_type_e::bSel == type_;
+	}
+
 	size_t getArity() const
 	{
 		return arity_;

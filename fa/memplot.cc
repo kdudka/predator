@@ -35,6 +35,8 @@
 // anonymous namespace
 namespace
 {
+/// counter for unique values
+size_t uniqCnt = 0;
 
 typedef TTBase<label_type> BaseTransition;
 typedef TreeAut::Transition Transition;
@@ -153,25 +155,64 @@ public:   // methods
 	}
 };
 
-struct TreeAutHeap
+class TreeAutHeap
 {
+public:   // data types
+
 	/// maps states to all memory nodes into which they can point
 	typedef std::multimap<size_t /* state */, MemNode> StateToMemNodeMap;
 
+	/// container for root node IDs
+	typedef std::vector<size_t> RootNodeIDList;
+
+private:  // data members
+
 	/**
-	 * @brief  The ID of the root memory node of the tree automaton
+	 * @brief  The IDs of the root memory node of the tree automaton
 	 *
-	 * Zero indicates an invalid objact.
+	 * Contains all possible root nodes' IDs (a single for normalised forest
+	 * automata). Empty list denotes an invalid tree automaton.
 	 */
-	size_t rootNodeID;
+	RootNodeIDList rootNodeIDs_;
 
 	/// for states in the given tree automaton
-	StateToMemNodeMap stateMap;
+	StateToMemNodeMap stateMap_;
 
-	explicit TreeAutHeap(size_t rootNode = 0) :
-		rootNodeID{rootNode},
-		stateMap{}
+public:   // methods
+
+	/// The constructor
+	TreeAutHeap() :
+		rootNodeIDs_{},
+		stateMap_{}
 	{ }
+
+	/// adds a mapping of state to a memory node
+	void addStateToNodeMapping(size_t state, const MemNode& node)
+	{
+		stateMap_.insert(std::make_pair(state, node));
+	}
+
+	/// adds another root node
+	void addRootNodeID(size_t rootNodeID)
+	{
+		rootNodeIDs_.push_back(rootNodeID);
+	}
+
+	/// @p true if the structure represents a valid heap component
+	bool valid() const
+	{
+		return !rootNodeIDs_.empty();
+	}
+
+	const RootNodeIDList& getRootNodeIDs() const
+	{
+		return rootNodeIDs_;
+	}
+
+	const StateToMemNodeMap& getStateMap() const
+	{
+		return stateMap_;
+	}
 };
 
 inline size_t getRandomID()
@@ -216,7 +257,7 @@ private:  // methods
 	{
 		assert(!vecTreeAut_.empty());
 
-		vecTreeAut_.rbegin()->stateMap.insert(std::make_pair(state, node));
+		vecTreeAut_.rbegin()->addStateToNodeMapping(state, node);
 	}
 
 	static MemNode dataToMemNode(size_t transID, const Data& data)
@@ -350,15 +391,13 @@ public:   // methods
 				const TreeAut& ta = *fa.getRoot(i);
 				assert(ta.accBegin() != ta.accEnd());
 
-				if (++(ta.accBegin()) != ta.accEnd())
+				TreeAutHeap taHeap;
+				for (auto it = ta.accBegin(); it != ta.accEnd(); ++it)
 				{
-					FA_WARN_MSG(loc_,
-						"More accepting transitions! Considering only the first...");
+					const Transition& trans = *it;
+					taHeap.addRootNodeID(getTransID(trans));
 				}
 
-				const Transition& trans = *ta.accBegin();
-
-				TreeAutHeap taHeap(getTransID(trans));
 				vecTreeAut_.push_back(taHeap);
 
 				// process the tree automaton
@@ -396,10 +435,14 @@ public:   // methods
 				// Assertions
 				assert(nullptr != label.node.v);
 				assert(nullptr != label.node.m);
-				assert(nullptr != label.node.sels);
+
+				if (nullptr == label.node.sels)
+				{
+					FA_DEBUG("plotting non-selector label: " << label);
+				}
 
 				const std::vector<const AbstractBox*>& boxes = *label.node.v;
-				const std::vector<SelData>& sels             = *label.node.sels;
+				const std::vector<SelData>* sels             = label.node.sels;
 
 				// Assertions
 				assert(!boxes.empty());
@@ -412,14 +455,39 @@ public:   // methods
 				for (size_t i = 1; i < boxes.size(); ++i)
 				{	// go over all selectors (and boxes)
 					// Assertions
-					assert(i   <= trans.lhs().size());
-					assert(i-1 <  sels.size());
+					assert(i <= trans.lhs().size());
+					assert((nullptr == sels) || (i-1 < sels->size()));
 					assert(nullptr != boxes[i]);
-					assert(boxes[i]->isType(box_type_e::bSel));
+					assert(boxes[i]->isStructural());
 
-					// FIXME: this is not correct
-					MemNode::SelectorData sel(sels[i-1].name, trans.lhs()[i-1]);
-					node.block_.selVec.push_back(std::make_pair(sels[i-1], sel));
+					if (boxes[i]->isSelector())
+					{	// for selectors
+						if (nullptr != sels)
+						{	// if the selectors are nicely named
+							// FIXME: this is not correct
+							MemNode::SelectorData sel((*sels)[i-1].name, trans.lhs()[i-1]);
+							node.block_.selVec.push_back(std::make_pair((*sels)[i-1], sel));
+						}
+						else
+						{	// otherwise we need to manage somehow else
+							std::ostringstream oss;
+							oss << "sel" << i-1;
+							MemNode::SelectorData sel(oss.str(), trans.lhs()[i-1]);
+							SelData madeUpSel(0, 0, 0, oss.str());
+							node.block_.selVec.push_back(std::make_pair(madeUpSel, sel));
+						}
+					}
+					else if (boxes[i]->isBox())
+					{	// for hierarchical boxes
+						FA_DEBUG("plotting a box transition " << *boxes[i]);
+						// FIXME: this is also not correct
+						MemNode::SelectorData sel("BOX", trans.lhs()[i-1]);
+						node.block_.selVec.push_back(std::make_pair(SelData(0, 0, 0, "BOX"), sel));
+					}
+					else
+					{	// undefined
+						assert(false);       // fail gracefully
+					}
 				}
 
 				this->addStateToMemNodeLink(trans.rhs(), node);
@@ -515,19 +583,29 @@ public:   // methods
 			{
 				const MemNode& tmpNode = (*beginEndItPair.first).second;
 
-				std::ostringstream tmpOs;
 				if (MemNode::mem_type::t_treeref == tmpNode.type_)
 				{	// if the node is a tree automaton reference
 					const TreeAutHeap& taHeap = vecTreeAut_[tmpNode.treeref_];
 
-					tmpOs << taHeap.rootNodeID;
+					if (!taHeap.valid())
+					{
+						FA_DEBUG("Plotting invalid TA!");
+					}
+
+					const TreeAutHeap::RootNodeIDList& rootNodeIDs = taHeap.getRootNodeIDs();
+					for (auto it = rootNodeIDs.cbegin(); it != rootNodeIDs.cend(); ++it)
+					{
+						std::ostringstream tmpOs;
+						tmpOs << *it;
+						this->addPointer(selId, tmpOs.str());
+					}
 				}
 				else
 				{	// in case the node is anything but the tree automaton reference
+					std::ostringstream tmpOs;
 					tmpOs << tmpNode.id_;
+					this->addPointer(selId, tmpOs.str());
 				}
-
-				this->addPointer(selId, tmpOs.str());
 			}
 		}
 	}
@@ -539,13 +617,13 @@ public:   // methods
 
 		const TreeAutHeap& taHeap = vecTreeAut_[num];
 
-		for (const auto& stateMemNodePair : taHeap.stateMap)
+		for (const auto& stateMemNodePair : taHeap.getStateMap())
 		{
 			const MemNode& node = stateMemNodePair.second;
 
 			os_ << "    subgraph "
 				<< FA_QUOTE("cluster_treeaut" << num << "_"
-				<< stateToString(stateMemNodePair.first)) << " {\n"
+				<< stateToString(stateMemNodePair.first) << "_" << uniqCnt++) << " {\n"
 				<< "      rank=same;\n"
 				<< "      label=" << stateToString(stateMemNodePair.first) << ";\n"
 				<< "      labeljust=left;\n"
@@ -555,7 +633,7 @@ public:   // methods
 				<< "      style=dashed;\n"
 				<< "      penwidth=1.0;\n\n";
 
-			this->plotMemNode(node, taHeap.stateMap);
+			this->plotMemNode(node, taHeap.getStateMap());
 
 			os_ << "    }\n\n";
 		}
