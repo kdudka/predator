@@ -335,6 +335,11 @@ public:
 		return outputSignature_;
 	}
 
+	const std::string& getName() const
+	{
+		return name_;
+	}
+
 	const TreeAut* getInput() const
 	{
 		return input_.get();

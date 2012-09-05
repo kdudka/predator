@@ -470,18 +470,20 @@ public:   // methods
 						}
 						else
 						{	// otherwise we need to manage somehow else
-							std::ostringstream oss;
-							oss << "sel" << i-1;
-							MemNode::SelectorData sel(oss.str(), trans.lhs()[i-1]);
-							SelData madeUpSel(0, 0, 0, oss.str());
-							node.block_.selVec.push_back(std::make_pair(madeUpSel, sel));
+							const SelBox* selBox = static_cast<const SelBox*>(boxes[i]);
+
+							MemNode::SelectorData sel(selBox->getData().name, trans.lhs()[i-1]);
+							node.block_.selVec.push_back(std::make_pair(selBox->getData(), sel));
 						}
 					}
 					else if (boxes[i]->isBox())
 					{	// for hierarchical boxes
 						FA_DEBUG("plotting a box transition " << *boxes[i]);
+
+						const Box* box = static_cast<const Box*>(boxes[i]);
+
 						// FIXME: this is also not correct
-						MemNode::SelectorData sel("BOX", trans.lhs()[i-1]);
+						MemNode::SelectorData sel(box->getName(), trans.lhs()[i-1]);
 						node.block_.selVec.push_back(std::make_pair(SelData(0, 0, 0, "BOX"), sel));
 					}
 					else
