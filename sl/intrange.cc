@@ -66,8 +66,7 @@ void chkRange(const Range &rng)
         CL_BREAK_IF(1 + rng.hi - rng.lo < rng.alignment);
 }
 
-// TODO: replace this implementation by something useful (it can loop badly)
-TInt greatestCommonDivisor(TInt a, TInt b)
+TInt approxGCD(TInt a, TInt b)
 {
     CL_BREAK_IF(a < RZ_MIN || RZ_MAX < a);
     CL_BREAK_IF(b < RZ_MIN || RZ_MAX < b);
@@ -81,15 +80,20 @@ TInt greatestCommonDivisor(TInt a, TInt b)
     if (b < Int0)
         b = -b;
 
-    while (a != b) {
-        if (a < b)
-            b -= a;
-        else
-            a -= b;
+    TInt gcd = Int1;
+
+    for (unsigned i = 1; gcd <= a && gcd <= b && gcd < RZ_MAX; ++i) {
+        const TInt mask = (Int1 << i) - Int1;
+
+        if (a & mask)
+            break;
+        if (b & mask)
+            break;
+
+        gcd = Int1 << i;
     }
 
-    CL_BREAK_IF(a < Int1);
-    return a;
+    return gcd;
 }
 
 Range join(const Range &rng1, const Range &rng2)
@@ -124,7 +128,7 @@ bool isCovered(const Range &small, const Range &big)
     return (big.lo <= small.lo)
         && (small.hi <= big.hi)
         && (Int1 == big.alignment || big.alignment ==
-                greatestCommonDivisor(small.alignment, big.alignment));
+                approxGCD(small.alignment, big.alignment));
 }
 
 bool isSingular(const Range &range)
@@ -240,7 +244,7 @@ Range& operator+=(Range &rng, const Range &other)
     // compute the resulting alignment
     rng.alignment = Int1;
     if (!isSingular(rng))
-        rng.alignment = greatestCommonDivisor(al1, al2);
+        rng.alignment = approxGCD(al1, al2);
 
     chkRange(rng);
     return rng;
