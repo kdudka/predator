@@ -1,0 +1,1 @@
+test-f0029.c:9:8: error: negative size arg of malloc(): -1

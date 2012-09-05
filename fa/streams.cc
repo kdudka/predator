@@ -127,7 +127,9 @@ void Streams::warn(
 	const char* locStr,
 	const char* msg)
 {
-	printToStream(std::cerr, locStr, "warning", msg);
+	std::ostringstream os;
+	printToStream(os, locStr, "warning", msg, false);
+	cl_warn(os.str().c_str());
 }
 
 void Streams::debug(

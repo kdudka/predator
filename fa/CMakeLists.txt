@@ -91,7 +91,8 @@ set(testdir "${fa_SOURCE_DIR}/../tests/forester-regre")
 set(tests
           f0001 f0002 f0003 f0004 f0005 f0006 f0007       f0009
     f0010 f0011 f0012 f0013 f0014       f0016             f0019
-    f0020       f0022       f0024 f0025       f0027 f0028
+    f0020       f0022       f0024 f0025       f0027 f0028 f0029
+    f0030      
 
     f0100 f0101 f0102 f0103       f0105 f0106
     f0110 f0111             f0114             f0117 f0118
@@ -124,6 +125,7 @@ endif(TEST_ONLY_FAST)
 # tests known to fail now (but shouldn't!)
 set(tests-known-to-fail
           f0021
+          f0031
                                                           p0019
                                   p0025 p0026      
           p0041  

@@ -397,6 +397,18 @@ void FI_alloc::execute(ExecutionManager& execMan, const ExecState& state)
 	// assert that the source operand is an integer, i.e. the size
 	assert(srcData.isInt());
 
+	if (0 > srcData.d_int)
+	{	// negative allocation size
+		FA_ERROR_MSG(&state.GetMem()->GetInstr()->insn()->loc,
+			"negative size arg of malloc(): " << srcData.d_int);
+	}
+	if (0 == srcData.d_int)
+	{	// zero allocation size
+		FA_WARN_MSG(&state.GetMem()->GetInstr()->insn()->loc,
+			"POSIX says that, given zero size, the behaviour of "
+			"malloc/calloc is implementation-defined");
+	}
+
 	// create a void pointer of given size, i.e. it points to a block of the size
 	Data dstData = Data::createVoidPtr(srcData.d_int);
 	tmpState.SetReg(dst_, dstData);
