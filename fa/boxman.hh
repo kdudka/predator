@@ -23,19 +23,10 @@
 // Standard library headers
 #include <vector>
 #include <string>
-#include <sstream>
-#include <fstream>
 #include <unordered_map>
 
 // Forester headers
-#include "config.h"
-#include "treeaut_label.hh"
-#include "tatimint.hh"
-#include "label.hh"
-#include "types.hh"
 #include "box.hh"
-#include "utils.hh"
-#include "restart_request.hh"
 
 class BoxAntichain
 {
