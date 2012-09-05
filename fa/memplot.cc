@@ -484,7 +484,9 @@ public:   // methods
 
 						// FIXME: this is also not correct
 						MemNode::SelectorData sel(box->getName(), trans.lhs()[i-1]);
-						node.block_.selVec.push_back(std::make_pair(SelData(0, 0, 0, "BOX"), sel));
+						node.block_.selVec.push_back(
+							std::make_pair(SelData(0, 0, 0, box->getName()), sel)
+							);
 					}
 					else
 					{	// undefined
