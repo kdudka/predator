@@ -20,7 +20,7 @@
 // Forester headers
 #include "boxman.hh"
 #include "streams.hh"
-
+#include "restart_request.hh"
 
 const Box* BoxAntichain::get(const Box& box)
 {
