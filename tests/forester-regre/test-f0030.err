@@ -1,0 +1,1 @@
+test-f0030.c:9:8: warning: POSIX says that, given zero size, the behaviour of malloc/calloc is implementation-defined
