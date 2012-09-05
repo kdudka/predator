@@ -140,14 +140,6 @@ struct SelData
 		}
 
 		return os << x.displ << ']';
-
-#if 0
-		os << "sel" << x.offset << ':' << x.size << '[';
-		if (x.displ >= 0) {
-			os << '+';
-		}
-		return os << x.displ << ']' << x.name;
-#endif
 	}
 };
 
