@@ -103,11 +103,13 @@ class ClChain: public ICodeListener {
     } \
 } while (0)
 
-ClChain::~ClChain() {
+ClChain::~ClChain()
+{
     CL_CHAIN_FOREACH(destroy);
 }
 
-void ClChain::append(cl_code_listener *item) {
+void ClChain::append(cl_code_listener *item)
+{
     list_.push_back(item);
 }
 

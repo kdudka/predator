@@ -28,7 +28,8 @@
 // implementation of PlotEnumerator
 PlotEnumerator *PlotEnumerator::inst_ = 0;
 
-std::string PlotEnumerator::decorate(std::string name) {
+std::string PlotEnumerator::decorate(std::string name)
+{
     // obtain a unique ID for the given name
     const int id = map_[name] ++;
 #if SYMPLOT_STOP_AFTER_N_STATES

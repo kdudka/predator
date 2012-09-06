@@ -32,7 +32,8 @@
 
 #include <boost/foreach.hpp>
 
-void gatherReferredRoots(TValList &dst, SymHeap &sh, TValId at) {
+void gatherReferredRoots(TValList &dst, SymHeap &sh, TValId at)
+{
     CL_BREAK_IF(sh.valOffset(at));
 
     ObjList ptrs;
@@ -47,7 +48,8 @@ void gatherReferredRoots(TValList &dst, SymHeap &sh, TValId at) {
     }
 }
 
-bool isJunk(SymHeap &sh, TValId root) {
+bool isJunk(SymHeap &sh, TValId root)
+{
     WorkList<TValId> wl(root);
 
     while (wl.next(root)) {
@@ -69,7 +71,8 @@ bool isJunk(SymHeap &sh, TValId root) {
     return true;
 }
 
-bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly) {
+bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly)
+{
     CL_BREAK_IF(sh.valOffset(root));
     bool detected = false;
 
@@ -113,11 +116,13 @@ skip_root:
     return detected;
 }
 
-bool collectJunk(SymHeap &sh, TValId root, TValList *leakList) {
+bool collectJunk(SymHeap &sh, TValId root, TValList *leakList)
+{
     return gcCore(sh, root, leakList, /* sharedOnly */ false);
 }
 
-bool collectSharedJunk(SymHeap &sh, TValId root, TValList *leakList) {
+bool collectSharedJunk(SymHeap &sh, TValId root, TValList *leakList)
+{
     return gcCore(sh, root, leakList, /* sharedOnly */ true);
 }
 
@@ -150,7 +155,8 @@ bool destroyRootAndCollectJunk(
 // implementation of LeakMonitor
 static bool debuggingGarbageCollector = static_cast<bool>(DEBUG_SYMGC);
 
-void debugGarbageCollector(const bool enable) {
+void debugGarbageCollector(const bool enable)
+{
     if (enable == ::debuggingGarbageCollector)
         return;
 
@@ -158,12 +164,14 @@ void debugGarbageCollector(const bool enable) {
     ::debuggingGarbageCollector = enable;
 }
 
-void LeakMonitor::enter() {
+void LeakMonitor::enter()
+{
     if (::debuggingGarbageCollector)
         snap_ = sh_;
 }
 
-void LeakMonitor::leave() {
+void LeakMonitor::leave()
+{
     if (leakList_.empty())
         return;
 
@@ -172,7 +180,8 @@ void LeakMonitor::leave() {
                 /* digForward */ false);
 }
 
-bool /* leaking */ LeakMonitor::importLeakList(TValList *leakList) {
+bool /* leaking */ LeakMonitor::importLeakList(TValList *leakList)
+{
     CL_BREAK_IF(!leakList_.empty());
     leakList_ = *leakList;
 

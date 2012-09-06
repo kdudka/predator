@@ -58,7 +58,8 @@ const struct cl_loc* digBlockLocationCore(TBlock bb, bool backward)
     return 0;
 }
 
-const struct cl_loc* digBlockLocation(TBlock bb, bool backward) {
+const struct cl_loc* digBlockLocation(TBlock bb, bool backward)
+{
     const struct cl_loc *loc = digBlockLocationCore(bb, backward);
     if (loc)
         return loc;
@@ -97,7 +98,8 @@ const struct cl_loc* digBlockLocation(TBlock bb, bool backward) {
 }
 
 /// print one item of the path trace
-void printOneBlock(TBlock bb, int level, bool backward, bool loop = false) {
+void printOneBlock(TBlock bb, int level, bool backward, bool loop = false)
+{
     using std::string;
 
     const struct cl_loc *lw = digBlockLocation(bb, backward);
@@ -129,7 +131,8 @@ struct PStackItem {
     }
 };
 
-void PathTracer::printPaths() const {
+void PathTracer::printPaths() const
+{
     if (!block_)
         // no idea where to start, giving up...
         return;

@@ -41,7 +41,8 @@
 #define SE_PROTO_COST_ASYM          1
 #define SE_PROTO_COST_THREEWAY      2
 
-int minLengthByCost(int cost) {
+int minLengthByCost(int cost)
+{
     // abstraction length thresholds are now configurable in config.h
     static const int thrTable[] = {
         (SE_COST0_LEN_THR),
@@ -293,7 +294,8 @@ TValId jumpToNextObj(
     return next;
 }
 
-bool isPointedByVar(SymHeap &sh, const TValId root) {
+bool isPointedByVar(SymHeap &sh, const TValId root)
+{
     ObjList refs;
     sh.pointedBy(refs, root);
     BOOST_FOREACH(const ObjHandle obj, refs) {

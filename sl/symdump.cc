@@ -34,7 +34,8 @@ using std::cout;
 
 SymHeapCore *symdump_ref_heap;
 
-void dump_plot_core(const SymHeapCore *core, const char *name) {
+void dump_plot_core(const SymHeapCore *core, const char *name)
+{
     if (!core) {
         cout << "dump_plot: error: got a NULL pointer\n";
         return;
@@ -54,18 +55,22 @@ void dump_plot_core(const SymHeapCore *core, const char *name) {
         cout << "dump_plot: warning: call of SymPlot::plot() has failed\n";
 }
 
-void dump_plot(const SymHeapCore *sh) {
+void dump_plot(const SymHeapCore *sh)
+{
     dump_plot_core(sh, "dump_plot");
 }
 
-void dump_plot(const SymHeapCore &sh, const char *name) {
+void dump_plot(const SymHeapCore &sh, const char *name)
+{
     dump_plot_core(&sh, name);
 }
 
-void dump_plot(const SymHeapCore &sh) {
+void dump_plot(const SymHeapCore &sh)
+{
     dump_plot(&sh);
 }
 
-void dump_trace(Trace::Node *endPoint) {
+void dump_trace(Trace::Node *endPoint)
+{
     Trace::plotTrace(endPoint, "dump_trace");
 }

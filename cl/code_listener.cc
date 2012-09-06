@@ -165,7 +165,8 @@ void cl_global_cleanup(void)
         free((char *)app_name);
 }
 
-bool cl_is_term_insn(enum cl_insn_e code) {
+bool cl_is_term_insn(enum cl_insn_e code)
+{
     switch (code) {
         case CL_INSN_JMP:
         case CL_INSN_COND:

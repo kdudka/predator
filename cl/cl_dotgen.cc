@@ -228,11 +228,13 @@ void ClDotGenerator::createDotFile(std::ofstream &str, std::string fileName,
         CL_ERROR("unable to create file '" << fileName << "'");
 }
 
-void ClDotGenerator::closeSub(std::ofstream &str) {
+void ClDotGenerator::closeSub(std::ofstream &str)
+{
     str << "}" << std::endl;
 }
 
-void ClDotGenerator::closeDot(std::ofstream &str) {
+void ClDotGenerator::closeDot(std::ofstream &str)
+{
     ClDotGenerator::closeSub(str);
 
     if (!str)
@@ -253,21 +255,25 @@ ClDotGenerator::ClDotGenerator(const char *glDotFile):
     }
 }
 
-ClDotGenerator::~ClDotGenerator() {
+ClDotGenerator::~ClDotGenerator()
+{
     if (hasGlDotFile_)
         this->closeDot(glOut_);
 }
 
-void ClDotGenerator::acknowledge() {
+void ClDotGenerator::acknowledge()
+{
     // we haven't been waiting for acknowledge anyway, sorry...
 }
 
-void ClDotGenerator::gobbleEdge(std::string dst, EdgeType type) {
+void ClDotGenerator::gobbleEdge(std::string dst, EdgeType type)
+{
     perBbEdgeMap_[dst] = type;
     perFncEdgeMap_[dst] = type;
 }
 
-void ClDotGenerator::emitEdge(std::string dst, EdgeType type) {
+void ClDotGenerator::emitEdge(std::string dst, EdgeType type)
+{
     switch (type) {
         case ET_LC_CALL:
         case ET_LC_CALL_INDIR:
@@ -291,7 +297,8 @@ void ClDotGenerator::emitEdge(std::string dst, EdgeType type) {
             << " [color=" << EtColors[type] << "];" << std::endl;
 }
 
-void ClDotGenerator::emitBb() {
+void ClDotGenerator::emitBb()
+{
     // colorize current BB node
     perFileOut_ << "\t" << SL_QUOTE_BB(bb_)
         << " [color=" << NtColors[nodeType_]
@@ -321,7 +328,8 @@ void ClDotGenerator::emitCallSet(std::ofstream &str, TCallSet &cs,
     }
 }
 
-void ClDotGenerator::emitPendingCalls() {
+void ClDotGenerator::emitPendingCalls()
+{
     TCallMultiMap::iterator i;
     for (i = perFncCalls_.begin(); i != perFncCalls_.end(); ++i) {
         const string &dst = i->first;
@@ -351,7 +359,8 @@ void ClDotGenerator::emitPendingCalls() {
     perFncEdgeMap_.clear();
 }
 
-void ClDotGenerator::emitFncEntry(const char *label) {
+void ClDotGenerator::emitFncEntry(const char *label)
+{
     FILE_FNC_STREAM(SL_SUBGRAPH(fnc_ << "." << label, fnc_
                 << "() at " << loc_.file << ":" << loc_.line)
             << "\tcolor=blue;" << std::endl
@@ -368,7 +377,8 @@ void ClDotGenerator::emitFncEntry(const char *label) {
     perFileOut_ << "\tURL=" << SL_QUOTE_URL(fnc_) << ";" << std::endl;
 }
 
-void ClDotGenerator::emitInsnJmp(const char *label) {
+void ClDotGenerator::emitInsnJmp(const char *label)
+{
     perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
         << " [shape=box, color=black, fontcolor=black,"
         << " style=bold, label=goto];" << std::endl;
@@ -396,7 +406,8 @@ void ClDotGenerator::emitInsnCond(const char *then_label,
             << " [color=green];" << std::endl;
 }
 
-void ClDotGenerator::emitOpIfNeeded() {
+void ClDotGenerator::emitOpIfNeeded()
+{
     switch (lastInsn_) {
         case CL_INSN_UNOP:
         case CL_INSN_BINOP:
@@ -417,7 +428,8 @@ void ClDotGenerator::emitOpIfNeeded() {
             << std::endl;
 }
 
-void ClDotGenerator::emitInsnCall() {
+void ClDotGenerator::emitInsnCall()
+{
     perFncOut_ << "\t" << SL_QUOTE_BB(bb_ << SL_BB_POS_SUFFIX)
             << " [shape=box, color=blue, fontcolor=blue, style=dashed,"
             << " label=call];" << std::endl;
@@ -429,7 +441,8 @@ void ClDotGenerator::emitInsnCall() {
             << std::endl;
 }
 
-void ClDotGenerator::checkForFncRef(const struct cl_operand *op) {
+void ClDotGenerator::checkForFncRef(const struct cl_operand *op)
+{
     if (CL_OPERAND_CST != op->code)
         return;
 
@@ -447,7 +460,8 @@ void ClDotGenerator::checkForFncRef(const struct cl_operand *op) {
     perBbCalls_[name].insert(str.str());
 }
 
-void ClDotGenerator::file_open(const char *file_name) {
+void ClDotGenerator::file_open(const char *file_name)
+{
     CL_LOC_SET_FILE(loc_, file_name);
     ClDotGenerator::createDotFile(perFileOut_, file_name, true);
     perFileOut_ << SL_GRAPH(file_name);
@@ -483,7 +497,8 @@ void ClDotGenerator::fnc_open(const struct cl_operand *fnc)
             << std::endl;
 }
 
-void ClDotGenerator::fnc_arg_decl(int, const struct cl_operand *) {
+void ClDotGenerator::fnc_arg_decl(int, const struct cl_operand *)
+{
 }
 
 void ClDotGenerator::fnc_close()
@@ -500,7 +515,8 @@ void ClDotGenerator::fnc_close()
     bb_.clear();
 }
 
-void ClDotGenerator::bb_open(const char *bb_name) {
+void ClDotGenerator::bb_open(const char *bb_name)
+{
     if (!bb_.empty())
         // emit last BB
         this->emitBb();
@@ -516,7 +532,8 @@ void ClDotGenerator::bb_open(const char *bb_name) {
         << "\tURL=\"\";" << std::endl;
 }
 
-void ClDotGenerator::insn(const struct cl_insn *cli) {
+void ClDotGenerator::insn(const struct cl_insn *cli)
+{
     switch (cli->code) {
         case CL_INSN_NOP:
         case CL_INSN_LABEL:
@@ -626,7 +643,8 @@ void ClDotGenerator::insn_call_open(const struct cl_loc     *loc,
         CL_INSN_JMP;
 }
 
-void ClDotGenerator::insn_call_arg(int, const struct cl_operand *arg_src) {
+void ClDotGenerator::insn_call_arg(int, const struct cl_operand *arg_src)
+{
     this->checkForFncRef(arg_src);
 }
 
@@ -655,7 +673,8 @@ void ClDotGenerator::insn_switch_case(const struct cl_loc *,
             << " [color=yellow];" << std::endl;
 }
 
-void ClDotGenerator::insn_switch_close() {
+void ClDotGenerator::insn_switch_close()
+{
     lastInsn_ =
         /* FIXME: we have no CL_INSN_SWITCH in enum cl_insn_e */
         CL_INSN_JMP;
@@ -663,6 +682,7 @@ void ClDotGenerator::insn_switch_close() {
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_dotgen.hh for more details
-ICodeListener* createClDotGenerator(const char *args) {
+ICodeListener* createClDotGenerator(const char *args)
+{
     return new ClDotGenerator(args);
 }

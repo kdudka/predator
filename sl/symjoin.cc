@@ -49,7 +49,8 @@ static bool debuggingSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
         CL_DEBUG("SymJoin: " << __VA_ARGS__);                               \
 } while (0)
 
-void debugSymJoin(const bool enable) {
+void debugSymJoin(const bool enable)
+{
     if (enable == ::debuggingSymJoin)
         return;
 
@@ -122,7 +123,8 @@ struct SchedItem {
 };
 
 // needed by std::set
-inline bool operator<(const SchedItem &a, const SchedItem &b) {
+inline bool operator<(const SchedItem &a, const SchedItem &b)
+{
     if (a.v1 < b.v1)
         return true;
     if (b.v1 < a.v1)
@@ -223,7 +225,8 @@ struct SymJoinCtx {
 };
 
 /// handy when debugging
-void dump_ctx(const SymJoinCtx &ctx) {
+void dump_ctx(const SymJoinCtx &ctx)
+{
     using std::cout;
 
     // plot heaps
@@ -273,7 +276,8 @@ void dump_ctx(const SymJoinCtx &ctx) {
 }
 
 /// update ctx.status according to action
-bool updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action) {
+bool updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action)
+{
     if (JS_USE_ANY == action)
         return true;
 
@@ -479,7 +483,8 @@ bool joinValuesByCode(
         const TValId            v1,
         const TValId            v2);
 
-bool bumpNestingLevel(const ObjHandle &obj) {
+bool bumpNestingLevel(const ObjHandle &obj)
+{
     if (!obj.isValid())
         return false;
 
@@ -612,7 +617,8 @@ struct ObjJoinVisitor {
 };
 
 template <class TDst>
-void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TValId root) {
+void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TValId root)
+{
     const EObjKind kind = sh.valTargetKind(root);
     if (OK_DLS != kind)
         return;
@@ -1311,7 +1317,8 @@ bool dlSegHandleShared(
     return true;
 }
 
-bool joinReturnAddrs(SymJoinCtx &ctx) {
+bool joinReturnAddrs(SymJoinCtx &ctx)
+{
     TObjType clt;
     const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET);
     const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET);
@@ -2144,7 +2151,8 @@ bool mayExistFallback(
     return result;
 }
 
-EValueOrigin joinOrigin(const EValueOrigin vo1, const EValueOrigin vo2) {
+EValueOrigin joinOrigin(const EValueOrigin vo1, const EValueOrigin vo2)
+{
     if (vo1 == vo2)
         // use any
         return vo2;
@@ -2252,7 +2260,8 @@ bool joinValuesByCode(
         return true;
 }
 
-bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item) {
+bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
+{
     const TValId v1 = item.v1;
     const TValId v2 = item.v2;
     if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
@@ -2285,7 +2294,8 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item) {
         || mayExistFallback(ctx, item, JS_USE_SH2);
 }
 
-bool joinPendingValues(SymJoinCtx &ctx) {
+bool joinPendingValues(SymJoinCtx &ctx)
+{
     SchedItem item;
     while (ctx.wl.next(item)) {
         SJ_DEBUG("--- " << SJ_VALP(item.v1, item.v2));
@@ -2336,7 +2346,8 @@ class JoinVarVisitor {
         }
 };
 
-bool joinCVars(SymJoinCtx &ctx, const JoinVarVisitor::EMode mode) {
+bool joinCVars(SymJoinCtx &ctx, const JoinVarVisitor::EMode mode)
+{
     SymHeap *const heaps[] = {
         &ctx.dst,
         &ctx.sh1,
@@ -2454,7 +2465,8 @@ bool setDstValuesCore(
     return true;
 }
 
-bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0) {
+bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0)
+{
     SymHeap &dst = ctx.dst;
     SymHeap &sh1 = ctx.sh1;
     SymHeap &sh2 = ctx.sh2;
@@ -2560,7 +2572,8 @@ struct MayExistLevelUpdater {
     }
 };
 
-bool updateMayExistLevels(SymJoinCtx &ctx) {
+bool updateMayExistLevels(SymJoinCtx &ctx)
+{
     TValList dstRoots;
     ctx.dst.gatherRootObjects(dstRoots, isOnHeap);
     BOOST_FOREACH(const TValId rootDst, dstRoots) {
@@ -2591,7 +2604,8 @@ bool matchPreds(
         && sh2.matchPreds(sh1, vMap[/* rtl */ 1]);
 }
 
-bool handleDstPreds(SymJoinCtx &ctx) {
+bool handleDstPreds(SymJoinCtx &ctx)
+{
     // go through all segments and initialize minLength
     BOOST_FOREACH(SymJoinCtx::TSegLengths::const_reference ref, ctx.segLengths)
     {
@@ -2633,7 +2647,8 @@ bool handleDstPreds(SymJoinCtx &ctx) {
     return true;
 }
 
-bool validateStatus(const SymJoinCtx &ctx) {
+bool validateStatus(const SymJoinCtx &ctx)
+{
     if (ctx.allowThreeWay || (JS_THREE_WAY != ctx.status))
         return true;
 
@@ -2742,7 +2757,8 @@ void mapGhostAddressSpace(
 }
 
 /// this runs only in debug build
-bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx) {
+bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx)
+{
     BOOST_FOREACH(const TValId proto, ctx.protoRoots) {
         if (OK_DLS != ctx.dst.valTargetKind(proto))
             // we are interested only DLSs here
@@ -2945,7 +2961,8 @@ void recoverPrototypes(
     }
 }
 
-void restorePrototypeLengths(SymJoinCtx &ctx) {
+void restorePrototypeLengths(SymJoinCtx &ctx)
+{
     CL_BREAK_IF(!ctx.joiningDataReadWrite());
     SymHeap &sh = ctx.dst;
 

@@ -65,7 +65,8 @@ class ProtoCollector {
         bool operator()(const ObjHandle &obj);
 };
 
-bool ProtoCollector::operator()(const ObjHandle &obj) {
+bool ProtoCollector::operator()(const ObjHandle &obj)
+{
     if (hasKey(ignoreList_, obj))
         return /* continue */ true;
 
@@ -115,7 +116,8 @@ bool collectPrototypesOf(
     return traverseLivePtrs(sh, root, collector);
 }
 
-void objChangeProtoLevel(SymHeap &sh, TValId root, const TProtoLevel diff) {
+void objChangeProtoLevel(SymHeap &sh, TValId root, const TProtoLevel diff)
+{
     CL_BREAK_IF(sh.valOffset(root));
 
     const TProtoLevel level = sh.valTargetProtoLevel(root);
@@ -131,22 +133,26 @@ void objChangeProtoLevel(SymHeap &sh, TValId root, const TProtoLevel diff) {
     sh.valTargetSetProtoLevel(peer, level + diff);
 }
 
-void objIncrementProtoLevel(SymHeap &sh, TValId root) {
+void objIncrementProtoLevel(SymHeap &sh, TValId root)
+{
     objChangeProtoLevel(sh, root, 1);
 }
 
-void objDecrementProtoLevel(SymHeap &sh, TValId root) {
+void objDecrementProtoLevel(SymHeap &sh, TValId root)
+{
     objChangeProtoLevel(sh, root, -1);
 }
 
-void decrementProtoLevel(SymHeap &sh, const TValId at) {
+void decrementProtoLevel(SymHeap &sh, const TValId at)
+{
     TValList protoList;
     collectPrototypesOf(protoList, sh, at, /* skipDlsPeers */ true);
     BOOST_FOREACH(const TValId proto, protoList)
         objDecrementProtoLevel(sh, proto);
 }
 
-bool protoCheckConsistency(const SymHeap &sh) {
+bool protoCheckConsistency(const SymHeap &sh)
+{
     TValList addrs;
     sh.gatherRootObjects(addrs);
     BOOST_FOREACH(const TValId root, addrs) {

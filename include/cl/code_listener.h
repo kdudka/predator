@@ -388,10 +388,15 @@ struct cl_cst {
 
         } cst_fnc; /**< valid only for @b CL_TYPE_FNC */
 
-        /* CL_TYPE_INT */
+        /* CL_TYPE_INT when is_unsigned is false */
         struct {
-            int                         value;
-        } cst_int; /**< valid only for @b CL_TYPE_INT */
+            long                        value;
+        } cst_int; /**< valid only for @b CL_TYPE_INT and !is_unsigned */
+
+        /* CL_TYPE_INT when is_unsigned is true */
+        struct {
+            unsigned long               value;
+        } cst_uint; /**< valid only for @b CL_TYPE_INT and is_unsigned */
 
         /* CL_TYPE_STRING */
         struct {

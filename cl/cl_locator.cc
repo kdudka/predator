@@ -98,13 +98,15 @@ ClLocator::ClLocator():
 {
 }
 
-void ClLocator::printLocation(const struct cl_loc *loc) {
+void ClLocator::printLocation(const struct cl_loc *loc)
+{
     CL_DEBUG_MSG(cl_loc_fallback(loc, &lastLoc_),
             "linearized code follows...");
 }
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_locator.hh for more details
-ICodeListener* createClLocator(const char *) {
+ICodeListener* createClLocator(const char *)
+{
     return new ClLocator;
 }

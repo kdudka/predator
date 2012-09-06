@@ -41,7 +41,8 @@ struct Range {
     // NOTE: there is no constructor because we put Range to unions
 };
 
-inline Range rngFromNum(TInt num) {
+inline Range rngFromNum(TInt num)
+{
     Range rng;
 
     rng.lo          = num;
@@ -56,13 +57,15 @@ extern const Range FullRange;
 /// this does nothing unless running a debug build
 void chkRange(const Range &rng);
 
-inline bool operator==(const Range &a, const Range &b) {
+inline bool operator==(const Range &a, const Range &b)
+{
     return (a.lo        == b.lo)
         && (a.hi        == b.hi)
         && (a.alignment == b.alignment);
 }
 
-inline bool operator!=(const Range &a, const Range &b) {
+inline bool operator!=(const Range &a, const Range &b)
+{
     return !operator==(a, b);
 }
 
@@ -70,7 +73,8 @@ inline bool operator!=(const Range &a, const Range &b) {
 TInt invertInt(const TInt);
 
 /// invert polarity of the range
-inline Range operator-(Range rng) {
+inline Range operator-(Range rng)
+{
     const TInt hi = invertInt(rng.lo);
     rng.lo = invertInt(rng.hi);
     rng.hi = hi;
@@ -91,37 +95,44 @@ Range& operator<<=(Range &rng, const TUInt);
 Range& operator>>=(Range &rng, const TUInt);
 
 /// subtract another range, but preserve boundary values if already reached
-inline Range& operator-=(Range &rng, const Range &other) {
+inline Range& operator-=(Range &rng, const Range &other)
+{
     rng += (-other);
     return rng;
 }
 
-inline Range operator+(Range rng, const Range &other) {
+inline Range operator+(Range rng, const Range &other)
+{
     rng += other;
     return rng;
 }
 
-inline Range operator*(Range rng, const Range &other) {
+inline Range operator*(Range rng, const Range &other)
+{
     rng *= other;
     return rng;
 }
 
-inline Range operator-(Range rng, const Range &other) {
+inline Range operator-(Range rng, const Range &other)
+{
     rng -= other;
     return rng;
 }
 
-inline Range operator&(Range rng, const TInt mask) {
+inline Range operator&(Range rng, const TInt mask)
+{
     rng &= mask;
     return rng;
 }
 
-inline Range operator<<(Range rng, const TUInt n) {
+inline Range operator<<(Range rng, const TUInt n)
+{
     rng <<= n;
     return rng;
 }
 
-inline Range operator>>(Range rng, const TUInt n) {
+inline Range operator>>(Range rng, const TUInt n)
+{
     rng >>= n;
     return rng;
 }

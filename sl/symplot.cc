@@ -63,7 +63,8 @@ struct PlotData {
     }
 };
 
-void dlSegJumpToBegIfNeeded(const SymHeap &sh, TValId *pRoot) {
+void dlSegJumpToBegIfNeeded(const SymHeap &sh, TValId *pRoot)
+{
     const TValId root = *pRoot;
     if (isDlSegPeer(sh, root))
         *pRoot = dlSegPeer(sh, root);
@@ -111,7 +112,8 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
     }
 }
 
-inline const char* offPrefix(const TOffset off) {
+inline const char* offPrefix(const TOffset off)
+{
     return (off < 0)
         ? ""
         : "+";
@@ -119,7 +121,8 @@ inline const char* offPrefix(const TOffset off) {
 
 #define SIGNED_OFF(off) offPrefix(off) << (off)
 
-inline void appendLabelIf(std::ostream &str, const char *label) {
+inline void appendLabelIf(std::ostream &str, const char *label)
+{
     if (!label)
         return;
 
@@ -197,7 +200,8 @@ bool digIcByOffset(
     return true;
 }
 
-void describeVar(PlotData &plot, const TValId rootAt) {
+void describeVar(PlotData &plot, const TValId rootAt)
+{
     if (VAL_ADDR_OF_RET == rootAt) {
         plot.out << "OBJ_RETURN";
         return;
@@ -259,7 +263,8 @@ void describeFieldPlacement(PlotData &plot, const ObjHandle &obj, TObjType clt)
     }
 }
 
-void describeObject(PlotData &plot, const ObjHandle &obj, const bool lonely) {
+void describeObject(PlotData &plot, const ObjHandle &obj, const bool lonely)
+{
     SymHeap &sh = plot.sh;
 
     // check root
@@ -296,7 +301,8 @@ void printRawRange(
         str << ", alignment = " << rng.alignment << suffix;
 }
 
-void plotRootValue(PlotData &plot, const TValId val, const char *color) {
+void plotRootValue(PlotData &plot, const TValId val, const char *color)
+{
     SymHeap &sh = plot.sh;
     const TSizeRange size = sh.valSizeOfTarget(val);
     const unsigned refCnt = sh.usedByCount(val);
@@ -460,7 +466,8 @@ bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
     return true;
 }
 
-void plotUniformBlocks(PlotData &plot, const TValId root) {
+void plotUniformBlocks(PlotData &plot, const TValId root)
+{
     SymHeap &sh = plot.sh;
 
     // get all uniform blocks inside the given root
@@ -714,7 +721,8 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
     plot.out << "}\n";
 }
 
-bool plotSimpleRoot(PlotData &plot, const ObjHandle &obj) {
+bool plotSimpleRoot(PlotData &plot, const ObjHandle &obj)
+{
     SymHeap &sh = plot.sh;
 
     const TValId at = obj.placedAt();
@@ -742,7 +750,8 @@ bool plotSimpleRoot(PlotData &plot, const ObjHandle &obj) {
     return true;
 }
 
-void plotRootObjects(PlotData &plot) {
+void plotRootObjects(PlotData &plot)
+{
     SymHeap &sh = plot.sh;
 
     // go through roots
@@ -773,7 +782,8 @@ void plotRootObjects(PlotData &plot) {
 
 #define GEN_labelByCode(cst) case cst: return #cst
 
-const char* labelByOrigin(const EValueOrigin code) {
+const char* labelByOrigin(const EValueOrigin code)
+{
     switch (code) {
         GEN_labelByCode(VO_INVALID);
         GEN_labelByCode(VO_ASSIGNED);
@@ -788,7 +798,8 @@ const char* labelByOrigin(const EValueOrigin code) {
     return "";
 }
 
-const char* labelByTarget(const EValueTarget code) {
+const char* labelByTarget(const EValueTarget code)
+{
     switch (code) {
         GEN_labelByCode(VT_INVALID);
         GEN_labelByCode(VT_UNKNOWN);
@@ -807,7 +818,8 @@ const char* labelByTarget(const EValueTarget code) {
     return "";
 }
 
-void describeInt(PlotData &plot, const IR::TInt num, const TValId val) {
+void describeInt(PlotData &plot, const IR::TInt num, const TValId val)
+{
     plot.out << ", fontcolor=red, label=\"[int] " << num;
     if (IR::Int0 < num && num < UCHAR_MAX && isprint(num))
         plot.out << " = '" << static_cast<char>(num) << "'";
@@ -815,7 +827,8 @@ void describeInt(PlotData &plot, const IR::TInt num, const TValId val) {
     plot.out << " (#" << val << ")\"";
 }
 
-void describeIntRange(PlotData &plot, const IR::Range &rng, const TValId val) {
+void describeIntRange(PlotData &plot, const IR::Range &rng, const TValId val)
+{
     plot.out << ", fontcolor=blue, label=\"[int range] ";
 
     printRawRange(plot.out, rng);
@@ -823,13 +836,15 @@ void describeIntRange(PlotData &plot, const IR::Range &rng, const TValId val) {
     plot.out << " (#" << val << ")\"";
 }
 
-void describeReal(PlotData &plot, const float fpn, const TValId val) {
+void describeReal(PlotData &plot, const float fpn, const TValId val)
+{
     plot.out << ", fontcolor=red, label=\"[real] "
         << fpn << " (#"
         << val << ")\"";
 }
 
-void describeFnc(PlotData &plot, const int uid, const TValId val) {
+void describeFnc(PlotData &plot, const int uid, const TValId val)
+{
     TStorRef stor = plot.sh.stor();
     const CodeStorage::Fnc *fnc = stor.fncs[uid];
     CL_BREAK_IF(!fnc);
@@ -840,14 +855,16 @@ void describeFnc(PlotData &plot, const int uid, const TValId val) {
         << val << ")\"";
 }
 
-void describeStr(PlotData &plot, const std::string &str, const TValId val) {
+void describeStr(PlotData &plot, const std::string &str, const TValId val)
+{
     // we need to escape twice, once for the C compiler and once for graphviz
     plot.out << ", fontcolor=blue, label=\"\\\""
         << str << "\\\" (#"
         << val << ")\"";
 }
 
-void describeCustomValue(PlotData &plot, const TValId val) {
+void describeCustomValue(PlotData &plot, const TValId val)
+{
     SymHeap &sh = plot.sh;
     const CustomValue cVal = sh.valUnwrapCustom(val);
 
@@ -974,7 +991,8 @@ preserve_suffix:
     plot.out << "\"];\n";
 }
 
-void plotPointsTo(PlotData &plot, const TValId val, const TObjId target) {
+void plotPointsTo(PlotData &plot, const TValId val, const TObjId target)
+{
     plot.out << "\t" << SL_QUOTE(val)
         << " -> " << SL_QUOTE(target)
         << " [color=green, fontcolor=green];\n";
@@ -995,7 +1013,8 @@ void plotRangePtr(PlotData &plot, TValId val, TValId root, const IR::Range &rng)
     plot.out << "]\"];\n";
 }
 
-void plotNonRootValues(PlotData &plot) {
+void plotNonRootValues(PlotData &plot)
+{
     SymHeap &sh = plot.sh;
 
     // go through non-roots
@@ -1050,7 +1069,8 @@ void plotNonRootValues(PlotData &plot) {
     }
 }
 
-const char* valNullLabel(const SymHeapCore &sh, const TObjId obj) {
+const char* valNullLabel(const SymHeapCore &sh, const TObjId obj)
+{
     const ObjHandle hdl(const_cast<SymHeapCore &>(sh), obj);
     const TObjType clt = hdl.objType();
     if (!clt)
@@ -1194,7 +1214,8 @@ void plotHasValueFlat(
     plotHasValue(plot, root, val, /* isObj */ false, label.c_str());
 }
 
-void plotNeqZero(PlotData &plot, const TValId val) {
+void plotNeqZero(PlotData &plot, const TValId val)
+{
     const int id = ++plot.last;
     plot.out << "\t" << SL_QUOTE("lonely" << id)
         << " [shape=plaintext, fontcolor=blue, label=NULL];\n";
@@ -1205,7 +1226,8 @@ void plotNeqZero(PlotData &plot, const TValId val) {
         ", penwidth=2.0];\n";
 }
 
-void plotNeqCustom(PlotData &plot, const TValId val, const TValId valCustom) {
+void plotNeqCustom(PlotData &plot, const TValId val, const TValId valCustom)
+{
     const int id = ++plot.last;
     plot.out << "\t" << SL_QUOTE("lonely" << id)
         << " [shape=plaintext";
@@ -1218,7 +1240,8 @@ void plotNeqCustom(PlotData &plot, const TValId val, const TValId valCustom) {
         ", penwidth=2.0];\n";
 }
 
-void plotNeq(std::ostream &out, const TValId v1, const TValId v2) {
+void plotNeq(std::ostream &out, const TValId v1, const TValId v2)
+{
     out << "\t" << SL_QUOTE(v1)
         << " -> " << SL_QUOTE(v2)
         << " [color=red, style=dashed, penwidth=2.0, arrowhead=none"
@@ -1244,7 +1267,8 @@ class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
         }
 };
 
-void plotNeqEdges(PlotData &plot) {
+void plotNeqEdges(PlotData &plot)
+{
     // cppcheck-suppress unreachableCode
     SymHeap &sh = plot.sh;
 
@@ -1271,7 +1295,8 @@ void plotNeqEdges(PlotData &plot) {
     np.plotNeqEdges(plot);
 }
 
-void plotFlatEdges(PlotData &plot) {
+void plotFlatEdges(PlotData &plot)
+{
     SymHeap &sh = plot.sh;
 
     // plot "hasValue" edges
@@ -1317,7 +1342,8 @@ void plotFlatEdges(PlotData &plot) {
     }
 }
 
-void plotHasValueEdges(PlotData &plot) {
+void plotHasValueEdges(PlotData &plot)
+{
     // plot "hasValue" edges
     BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
         BOOST_FOREACH(const ObjHandle &obj, /* ObjList */ item.second)
@@ -1339,7 +1365,8 @@ void plotHasValueEdges(PlotData &plot) {
     }
 }
 
-void plotEverything(PlotData &plot) {
+void plotEverything(PlotData &plot)
+{
     plotRootObjects(plot);
     plotNonRootValues(plot);
 

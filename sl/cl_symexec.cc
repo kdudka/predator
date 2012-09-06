@@ -41,7 +41,8 @@
 extern "C" { int plugin_is_GPL_compatible; }
 
 // FIXME: the implementation is amusing
-void parseConfigString(SymExecParams &sep, std::string cnf) {
+void parseConfigString(SymExecParams &sep, std::string cnf)
+{
     using std::string;
     if (cnf.empty())
         return;
@@ -86,7 +87,8 @@ void parseConfigString(SymExecParams &sep, std::string cnf) {
     CL_WARN("unhandled config string: \"" << cnf << "\"");
 }
 
-void digGlJunk(SymHeap &sh) {
+void digGlJunk(SymHeap &sh)
+{
     using namespace CodeStorage;
     TStorRef stor = sh.stor();
     SymBackTrace bt(stor);
@@ -160,7 +162,8 @@ void execVirtualRoots(const CodeStorage::Storage &stor, const SymExecParams &ep)
     }
 }
 
-void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep) {
+void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep)
+{
     using namespace CodeStorage;
 
     // look for main() by name
@@ -189,7 +192,8 @@ void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // see easy.hh for details
-void clEasyRun(const CodeStorage::Storage &stor, const char *configString) {
+void clEasyRun(const CodeStorage::Storage &stor, const char *configString)
+{
     // read parameters of symbolic execution
     SymExecParams ep;
     parseConfigString(ep, configString);

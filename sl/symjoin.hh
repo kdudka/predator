@@ -37,7 +37,8 @@ enum EJoinStatus {
     JS_THREE_WAY
 };
 
-inline std::ostream& operator<<(std::ostream &str, const EJoinStatus status) {
+inline std::ostream& operator<<(std::ostream &str, const EJoinStatus status)
+{
     switch (status) {
         case JS_USE_ANY:        return (str << "JS_USE_ANY"  );
         case JS_USE_SH1:        return (str << "JS_USE_SH1"  );

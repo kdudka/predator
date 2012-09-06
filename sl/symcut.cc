@@ -123,7 +123,8 @@ void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
     traverseLiveObjsGeneric<2>(heaps, roots, objVisitor);
 }
 
-TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
+TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
+{
     if (VAL_NULL == rootSrcAt)
         return VAL_NULL;
 
@@ -193,7 +194,8 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt) {
     return rootDstAt;
 }
 
-TValId handleValueCore(DeepCopyData &dc, TValId srcAt) {
+TValId handleValueCore(DeepCopyData &dc, TValId srcAt)
+{
     TValMap &valMap = dc.valMap;
     TValMap::iterator iterValSrc = valMap.find(srcAt);
     if (valMap.end() != iterValSrc)
@@ -220,7 +222,8 @@ TValId handleValueCore(DeepCopyData &dc, TValId srcAt) {
     return dstAt;
 }
 
-TValId handleCustomValue(DeepCopyData &dc, const TValId valSrc) {
+TValId handleCustomValue(DeepCopyData &dc, const TValId valSrc)
+{
     // custom value, e.g. fnc pointer
     const CustomValue custom = dc.src.valUnwrapCustom(valSrc);
     const TValId valDst = dc.dst.valWrapCustom(custom);
@@ -228,7 +231,8 @@ TValId handleCustomValue(DeepCopyData &dc, const TValId valSrc) {
     return valDst;
 }
 
-void trackUses(DeepCopyData &dc, TValId valSrc) {
+void trackUses(DeepCopyData &dc, TValId valSrc)
+{
     if (!dc.digBackward)
         // optimization
         return;
@@ -258,7 +262,8 @@ void trackUses(DeepCopyData &dc, TValId valSrc) {
     }
 }
 
-TValId handleValue(DeepCopyData &dc, TValId valSrc) {
+TValId handleValue(DeepCopyData &dc, TValId valSrc)
+{
     SymHeap &src = dc.src;
     SymHeap &dst = dc.dst;
 
@@ -290,7 +295,8 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc) {
     return valDst;
 }
 
-void deepCopy(DeepCopyData &dc) {
+void deepCopy(DeepCopyData &dc)
+{
     SymHeap &src = dc.src;
     SymHeap &dst = dc.dst;
 

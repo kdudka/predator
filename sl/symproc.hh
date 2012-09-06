@@ -47,7 +47,8 @@ struct CmpOpTraits {
 
 bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code);
 
-inline bool areComparableTypes(const TObjType clt1, const TObjType clt2) {
+inline bool areComparableTypes(const TObjType clt1, const TObjType clt2)
+{
     if (!clt1 || !clt2)
         return false;
 

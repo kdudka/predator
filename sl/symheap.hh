@@ -173,7 +173,8 @@ class CustomValue {
 
 bool operator==(const CustomValue &a, const CustomValue &b);
 
-inline bool operator!=(const CustomValue &a, const CustomValue &b) {
+inline bool operator!=(const CustomValue &a, const CustomValue &b)
+{
     return !operator==(a, b);
 }
 
@@ -245,7 +246,8 @@ struct CVar {
     }
 };
 
-inline bool operator==(const CVar &a, const CVar &b) {
+inline bool operator==(const CVar &a, const CVar &b)
+{
     if (a.uid != b.uid)
         return false;
 
@@ -256,7 +258,8 @@ inline bool operator==(const CVar &a, const CVar &b) {
     return a.inst == b.inst;
 }
 
-inline bool operator!=(const CVar &a, const CVar &b) {
+inline bool operator!=(const CVar &a, const CVar &b)
+{
     return !operator==(a, b);
 }
 
@@ -280,7 +283,8 @@ typedef std::map<TOffset, UniformBlock>                 TUniBlockMap;
  * lexicographical comparison of CVar objects
  * @note we need it in order to place the objects into ordered containers
  */
-inline bool operator<(const CVar &a, const CVar &b) {
+inline bool operator<(const CVar &a, const CVar &b)
+{
     if (a.uid < b.uid)
         return true;
     else if (b.uid < a.uid)
@@ -645,7 +649,8 @@ class ObjHandle {
 };
 
 /// this allows to insert ObjHandle instances into std::set
-inline bool operator<(const ObjHandle &a, const ObjHandle &b) {
+inline bool operator<(const ObjHandle &a, const ObjHandle &b)
+{
     if (a.sh() < b.sh())
         return true;
 
@@ -655,12 +660,14 @@ inline bool operator<(const ObjHandle &a, const ObjHandle &b) {
     return (a.objId() < b.objId());
 }
 
-inline bool operator==(const ObjHandle &a, const ObjHandle &b) {
+inline bool operator==(const ObjHandle &a, const ObjHandle &b)
+{
     return (a.sh()    == b.sh())
         && (a.objId() == b.objId());
 }
 
-inline bool operator!=(const ObjHandle &a, const ObjHandle &b) {
+inline bool operator!=(const ObjHandle &a, const ObjHandle &b)
+{
     return !operator==(a, b);
 }
 
@@ -691,7 +698,8 @@ enum EObjKind {
     OK_SEE_THROUGH_2N       ///< OK_SEE_THROUGH with two next pointers
 };
 
-inline bool isMayExistObj(const enum EObjKind kind) {
+inline bool isMayExistObj(const enum EObjKind kind)
+{
     switch (kind) {
         case OK_OBJ_OR_NULL:
         case OK_SEE_THROUGH:

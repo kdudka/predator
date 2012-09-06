@@ -986,6 +986,7 @@ static void read_cst_int(struct cl_operand *op, tree t)
     CL_BREAK_IF(TREE_INT_CST_HIGH(t) != 0 && (TREE_INT_CST_LOW(t) == 0
                 || TREE_INT_CST_HIGH(t) != -1));
 
+    // FIXME: should we read unsigned types separately?
     op->code                            = CL_OPERAND_CST;
     op->data.cst.code                   = CL_TYPE_INT;
     op->data.cst.data.cst_int.value     = TREE_INT_CST_LOW(t);

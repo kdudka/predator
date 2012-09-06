@@ -203,7 +203,8 @@ ClTypeDotGenerator::ClTypeDotGenerator(const char *glDotFile)
         << "\tlabelloc=t;" << std::endl;
 }
 
-ClTypeDotGenerator::~ClTypeDotGenerator() {
+ClTypeDotGenerator::~ClTypeDotGenerator()
+{
     glOut_ << "}" << std::endl;
     if (!glOut_) {
         CL_WARN("error detected while closing a file");
@@ -211,7 +212,8 @@ ClTypeDotGenerator::~ClTypeDotGenerator() {
     glOut_.close();
 }
 
-void ClTypeDotGenerator::acknowledge() {
+void ClTypeDotGenerator::acknowledge()
+{
     // we haven't been waiting for acknowledge anyway, sorry...
 }
 
@@ -228,7 +230,8 @@ namespace {
 }
 
 // FIXME: copy pasted from ClPrettyPrint::printVarType
-void ClTypeDotGenerator::printType(const struct cl_type *clt) {
+void ClTypeDotGenerator::printType(const struct cl_type *clt)
+{
     string str;
     for (; clt; clt = clt->items[0].type) {
         enum cl_type_e code = clt->code;
@@ -312,7 +315,8 @@ void ClTypeDotGenerator::gobbleEdge(cl_type_uid_t src, cl_type_uid_t dst,
     pendingEdges_.push_back(Edge(src, dst, code, strLabel));
 }
 
-void ClTypeDotGenerator::emitPendingEdges() {
+void ClTypeDotGenerator::emitPendingEdges()
+{
     TEdgeList::iterator i;
     for (i = pendingEdges_.begin(); i != pendingEdges_.end(); ++i) {
         const Edge &e = *i;
@@ -372,7 +376,8 @@ void ClTypeDotGenerator::digOneType(const struct cl_type *type, TStack &st)
     }
 }
 
-void ClTypeDotGenerator::handleType(const struct cl_type *clt) {
+void ClTypeDotGenerator::handleType(const struct cl_type *clt)
+{
     TStack st;
     st.push(clt);
 
@@ -391,7 +396,8 @@ void ClTypeDotGenerator::handleType(const struct cl_type *clt) {
     this->emitPendingEdges();
 }
 
-void ClTypeDotGenerator::handleOperand(const struct cl_operand *op) {
+void ClTypeDotGenerator::handleOperand(const struct cl_operand *op)
+{
     if (!op || op->code == CL_OPERAND_VOID)
         return;
 
@@ -404,6 +410,7 @@ void ClTypeDotGenerator::handleOperand(const struct cl_operand *op) {
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see cl_typedot.hh for more details
-ICodeListener* createClTypeDotGenerator(const char *args) {
+ICodeListener* createClTypeDotGenerator(const char *args)
+{
     return new ClTypeDotGenerator(args);
 }

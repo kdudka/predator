@@ -29,7 +29,8 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-bool operator==(const struct cl_type &a, const struct cl_type &b) {
+bool operator==(const struct cl_type &a, const struct cl_type &b)
+{
     // go through the given types recursively and match UIDs etc.
     typedef std::pair<const struct cl_type *, const struct cl_type *> TItem;
     std::stack<TItem> todo;
@@ -100,7 +101,8 @@ bool operator==(const struct cl_type &a, const struct cl_type &b) {
     return true;
 }
 
-const struct cl_type* targetTypeOfPtr(const struct cl_type *clt) {
+const struct cl_type* targetTypeOfPtr(const struct cl_type *clt)
+{
     if (!clt || clt->code != CL_TYPE_PTR)
         return /* not a pointer */ 0;
 
@@ -111,7 +113,8 @@ const struct cl_type* targetTypeOfPtr(const struct cl_type *clt) {
     return clt;
 }
 
-const struct cl_type* targetTypeOfArray(const struct cl_type *clt) {
+const struct cl_type* targetTypeOfArray(const struct cl_type *clt)
+{
     CL_BREAK_IF(!clt || clt->code != CL_TYPE_ARRAY || clt->item_cnt != 1);
 
     clt = clt->items[/* target */ 0].type;
@@ -119,7 +122,8 @@ const struct cl_type* targetTypeOfArray(const struct cl_type *clt) {
     return clt;
 }
 
-bool seekRefAccessor(const struct cl_accessor *ac) {
+bool seekRefAccessor(const struct cl_accessor *ac)
+{
     for(; ac; ac = ac->next) {
         if (CL_ACCESSOR_REF != ac->code)
             continue;
@@ -133,7 +137,8 @@ bool seekRefAccessor(const struct cl_accessor *ac) {
     return false;
 }
 
-int intCstFromOperand(const struct cl_operand *op) {
+int intCstFromOperand(const struct cl_operand *op)
+{
     CL_BREAK_IF(CL_OPERAND_CST != op->code);
 
     const struct cl_cst &cst = op->data.cst;
@@ -142,7 +147,8 @@ int intCstFromOperand(const struct cl_operand *op) {
     return cst.data.cst_int.value;
 }
 
-int varIdFromOperand(const struct cl_operand *op, const char **pName) {
+int varIdFromOperand(const struct cl_operand *op, const char **pName)
+{
     CL_BREAK_IF(CL_OPERAND_VAR != op->code);
     if (pName)
         *pName = op->data.var->name;
@@ -150,7 +156,8 @@ int varIdFromOperand(const struct cl_operand *op, const char **pName) {
     return op->data.var->uid;
 }
 
-bool fncNameFromCst(const char **pName, const struct cl_operand *op) {
+bool fncNameFromCst(const char **pName, const struct cl_operand *op)
+{
     if (CL_OPERAND_CST != op->code)
         return false;
 
@@ -167,7 +174,8 @@ bool fncNameFromCst(const char **pName, const struct cl_operand *op) {
     return !!fncName;
 }
 
-bool fncUidFromOperand(int *pUid, const struct cl_operand *op) {
+bool fncUidFromOperand(int *pUid, const struct cl_operand *op)
+{
     if (CL_OPERAND_CST != op->code)
         return false;
 
@@ -198,7 +206,8 @@ std::string varToString(
     return str.str();
 }
 
-int offsetByIdxChain(const struct cl_type *clt, const TFieldIdxChain &ic) {
+int offsetByIdxChain(const struct cl_type *clt, const TFieldIdxChain &ic)
+{
     int off = 0;
 
     BOOST_FOREACH(const int idx, ic) {

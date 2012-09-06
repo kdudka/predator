@@ -46,7 +46,8 @@
 
 LOCAL_DEBUG_PLOTTER(nondetCond, DEBUG_SE_NONDET_COND)
 
-bool installSignalHandlers(void) {
+bool installSignalHandlers(void)
+{
     // will be processed in SymExecEngine::processPendingSignals() eventually
     return SignalCatcher::install(SIGINT)
         && SignalCatcher::install(SIGUSR1)
@@ -230,7 +231,8 @@ void SymExecEngine::initEngine(const SymHeap &init)
     sched_.schedule(entry);
 }
 
-void SymExecEngine::execJump() {
+void SymExecEngine::execJump()
+{
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
     const CodeStorage::TTargetList &tlist = insn->targets;
 
@@ -242,7 +244,8 @@ void SymExecEngine::execJump() {
     this->updateState(sh, tlist[/* target */ 0]);
 }
 
-void SymExecEngine::execReturn() {
+void SymExecEngine::execReturn()
+{
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
     const CodeStorage::TOperandList &opList = insn->operands;
     CL_BREAK_IF(1 != opList.size());
@@ -318,7 +321,8 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
     }
 }
 
-bool isAnyAbstractOf(const SymHeapCore &sh, const TValId v1, const TValId v2) {
+bool isAnyAbstractOf(const SymHeapCore &sh, const TValId v1, const TValId v2)
+{
     return isAbstract(sh.valTarget(v1))
         || isAbstract(sh.valTarget(v2));
 }
@@ -364,7 +368,8 @@ void SymExecEngine::updateStateInBranch(
     }
 }
 
-bool isTrackableValue(const SymHeap &sh, const TValId val) {
+bool isTrackableValue(const SymHeap &sh, const TValId val)
+{
     const EValueTarget code = sh.valTarget(val);
     if (isPossibleToDeref(code))
         return true;
@@ -426,7 +431,8 @@ skip_tracking:
     return true;
 }
 
-void SymExecEngine::execCondInsn() {
+void SymExecEngine::execCondInsn()
+{
     // we should get a CL_INSN_BINOP instruction and a CL_INSN_COND instruction
     const CodeStorage::Insn *insnCmp = block_->operator[](insnIdx_ - 1);
     const CodeStorage::Insn *insnCnd = block_->operator[](insnIdx_);
@@ -519,7 +525,8 @@ void SymExecEngine::execCondInsn() {
     this->updateStateInBranch(sh, false, *insnCmp, *insnCnd, v1, v2);
 }
 
-void SymExecEngine::execTermInsn() {
+void SymExecEngine::execTermInsn()
+{
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
     const enum cl_insn_e code = insn->code;
@@ -546,7 +553,8 @@ void SymExecEngine::execTermInsn() {
     }
 }
 
-bool /* handled */ SymExecEngine::execNontermInsn() {
+bool /* handled */ SymExecEngine::execNontermInsn()
+{
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
     // set some properties of the execution
@@ -579,7 +587,8 @@ bool /* handled */ SymExecEngine::execNontermInsn() {
     return /* insn handled */ true;
 }
 
-bool /* complete */ SymExecEngine::execInsn() {
+bool /* complete */ SymExecEngine::execInsn()
+{
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
     // true for terminal instruction
@@ -658,7 +667,8 @@ bool /* complete */ SymExecEngine::execInsn() {
     return true;
 }
 
-bool /* complete */ SymExecEngine::execBlock() {
+bool /* complete */ SymExecEngine::execBlock()
+{
     const std::string &name = block_->name();
 
     if (insnIdx_ || heapIdx_) {
@@ -714,7 +724,8 @@ bool /* complete */ SymExecEngine::execBlock() {
     return true;
 }
 
-void SymExecEngine::joinCallResults() {
+void SymExecEngine::joinCallResults()
+{
 #if SE_ABSTRACT_ON_CALL_DONE
     SymStateWithJoin all;
 #else
@@ -739,7 +750,8 @@ void SymExecEngine::joinCallResults() {
     all.swap(nextLocalState_);
 }
 
-bool /* complete */ SymExecEngine::run() {
+bool /* complete */ SymExecEngine::run()
+{
     const CodeStorage::Fnc fnc = *bt_.topFnc();
 
     if (waiting_) {
@@ -797,7 +809,8 @@ bool /* complete */ SymExecEngine::run() {
     return true;
 }
 
-void SymExecEngine::printStatsHelper(const BlockScheduler::TBlock bb) const {
+void SymExecEngine::printStatsHelper(const BlockScheduler::TBlock bb) const
+{
     const std::string &name = bb->name();
 
     // query total count of heaps
@@ -819,7 +832,8 @@ void SymExecEngine::printStatsHelper(const BlockScheduler::TBlock bb) const {
             ", " << waiting << " heap(s) pending");
 }
 
-void SymExecEngine::printStats() const {
+void SymExecEngine::printStats() const
+{
     // per function statistics
     const BlockScheduler::TBlockSet &bset = sched_.todo();
     CL_NOTE_MSG(lw_,
@@ -851,7 +865,8 @@ void SymExecEngine::printStats() const {
 #endif
 }
 
-void SymExecEngine::dumpStateMap() {
+void SymExecEngine::dumpStateMap()
+{
     const BlockScheduler::TBlockList bbs(sched_.done());
     BOOST_FOREACH(const BlockScheduler::TBlock block, bbs) {
         const std::string name = block->name();
@@ -862,12 +877,14 @@ void SymExecEngine::dumpStateMap() {
     }
 }
 
-const SymHeap& SymExecEngine::callEntry() const {
+const SymHeap& SymExecEngine::callEntry() const
+{
     CL_BREAK_IF(heapIdx_ < 1);
     return localState_[heapIdx_ - /* already incremented for next wheel */ 1];
 }
 
-const CodeStorage::Insn& SymExecEngine::callInsn() const {
+const CodeStorage::Insn& SymExecEngine::callInsn() const
+{
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
     // check for possible protocol error
@@ -876,19 +893,23 @@ const CodeStorage::Insn& SymExecEngine::callInsn() const {
     return *insn;
 }
 
-SymState& SymExecEngine::callResults() {
+SymState& SymExecEngine::callResults()
+{
     return callResults_;
 }
 
-bool SymExecEngine::endReached() const {
+bool SymExecEngine::endReached() const
+{
     return endReached_;
 }
 
-void SymExecEngine::forceEndReached() {
+void SymExecEngine::forceEndReached()
+{
     endReached_ = true;
 }
 
-void SymExecEngine::processPendingSignals() {
+void SymExecEngine::processPendingSignals()
+{
     int signum;
     if (!SignalCatcher::caught(&signum))
         return;
@@ -907,7 +928,8 @@ void SymExecEngine::processPendingSignals() {
     }
 }
 
-void SymExecEngine::pruneOrigin() {
+void SymExecEngine::pruneOrigin()
+{
 #if SE_STATE_PRUNING_MODE
     if (block_->isLoopEntry())
 #endif
@@ -969,7 +991,8 @@ thr_reached:
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExec implementation
-SymExec::~SymExec() {
+SymExec::~SymExec()
+{
     // NOTE this is actually the right direction (from top of the backtrace)
     BOOST_FOREACH(const ExecStackItem &item, execStack_) {
 
@@ -1054,7 +1077,8 @@ fail:
     return 0;
 }
 
-void SymExec::enterCall(SymCallCtx *ctx, SymState &results) {
+void SymExec::enterCall(SymCallCtx *ctx, SymState &results)
+{
     // create engine
     SymExecEngine *eng = new SymExecEngine(
             ctx->rawResults(),
@@ -1154,7 +1178,8 @@ void SymExec::execFnc(
     }
 }
 
-void SymExec::printStats() const {
+void SymExec::printStats() const
+{
     // TODO: print SymCallCache stats here as soon as we have implemented some
 
     BOOST_FOREACH(const ExecStackItem &item, execStack_) {

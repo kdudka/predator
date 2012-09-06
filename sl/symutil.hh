@@ -39,7 +39,8 @@
 #include <boost/foreach.hpp>
 #include <boost/static_assert.hpp>
 
-inline TValId boolToVal(const bool b) {
+inline TValId boolToVal(const bool b)
+{
     return (b)
         ? VAL_TRUE
         : VAL_FALSE;
@@ -117,26 +118,30 @@ inline ObjHandle translateObjId(
     return ObjHandle(dst, dstAt, clt);
 }
 
-inline TValId valOfPtrAt(SymHeap &sh, TValId at) {
+inline TValId valOfPtrAt(SymHeap &sh, TValId at)
+{
     CL_BREAK_IF(!canWriteDataPtrAt(sh, at));
 
     const PtrHandle ptr(sh, at);
     return ptr.value();
 }
 
-inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off) {
+inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off)
+{
     const TValId ptrAt = sh.valByOffset(at, off);
     return valOfPtrAt(sh, ptrAt);
 }
 
-inline bool isVarAlive(SymHeap &sh, const CVar &cv) {
+inline bool isVarAlive(SymHeap &sh, const CVar &cv)
+{
     const TValId at = sh.addrOfVar(cv, /* createIfNeeded */ false);
     return 0 < at;
 }
 
 void initGlVar(SymHeap &sh, const CVar &cv);
 
-inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext) {
+inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext)
+{
     CL_BREAK_IF(sh.valOffset(root));
     const TValId valNext = valOfPtrAt(sh, root, offNext);
     return sh.valRoot(valNext);
@@ -190,7 +195,8 @@ inline bool areUniBlocksEqual(
 }
 
 /// needed because of VT_RANGE vs. VT_ABSTRACT (suboptimal design?)
-inline EValueTarget realValTarget(const SymHeap &sh, const TValId val) {
+inline EValueTarget realValTarget(const SymHeap &sh, const TValId val)
+{
     const EValueTarget code = sh.valTarget(val);
     return (VT_RANGE == code)
         ? sh.valTarget(sh.valRoot(val))

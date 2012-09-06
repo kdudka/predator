@@ -80,6 +80,7 @@ class ClEasy: public ClStorageBuilder {
 
 // /////////////////////////////////////////////////////////////////////////////
 // interface, see cl_easy.hh for details
-ICodeListener* createClEasy(const char *configString) {
+ICodeListener* createClEasy(const char *configString)
+{
     return new ClEasy(configString);
 }

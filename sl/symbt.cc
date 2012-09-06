@@ -75,7 +75,8 @@ struct SymBackTrace::Private {
     void popFnc();
 };
 
-const CodeStorage::Fnc* SymBackTrace::Private::fncOnTop() const {
+const CodeStorage::Fnc* SymBackTrace::Private::fncOnTop() const
+{
     if (this->btStack.empty())
         // empty stack, so there is no top
         return 0;
@@ -89,7 +90,8 @@ const CodeStorage::Fnc* SymBackTrace::Private::fncOnTop() const {
     return fnc;
 }
 
-const CodeStorage::Fnc* SymBackTrace::Private::fncById(int id) const {
+const CodeStorage::Fnc* SymBackTrace::Private::fncById(int id) const
+{
     const CodeStorage::Fnc *fnc = this->stor.fncs[id];
 
     // check fnc ID validity
@@ -114,7 +116,8 @@ void SymBackTrace::Private::pushFnc(
     ++ref;
 }
 
-void SymBackTrace::Private::popFnc() {
+void SymBackTrace::Private::popFnc()
+{
     const CodeStorage::Fnc *fnc = this->fncOnTop();
     this->btStack.pop_front();
 
@@ -142,15 +145,18 @@ SymBackTrace::SymBackTrace(const SymBackTrace &ref):
 {
 }
 
-SymBackTrace::~SymBackTrace() {
+SymBackTrace::~SymBackTrace()
+{
     delete d;
 }
 
-const CodeStorage::Storage& SymBackTrace::stor() const {
+const CodeStorage::Storage& SymBackTrace::stor() const
+{
     return d->stor;
 }
 
-bool SymBackTrace::printBackTrace(bool forcePtrace) const {
+bool SymBackTrace::printBackTrace(bool forcePtrace) const
+{
     using namespace CodeStorage;
 
     Private::TStackPP ppStack(d->ppStack);
@@ -186,7 +192,8 @@ void SymBackTrace::pushCall(
     d->pushFnc(fnc, loc);
 }
 
-const CodeStorage::Fnc* SymBackTrace::popCall() {
+const CodeStorage::Fnc* SymBackTrace::popCall()
+{
     const CodeStorage::Fnc *fnc = d->fncOnTop();
 
     // check bt integrity
@@ -196,16 +203,19 @@ const CodeStorage::Fnc* SymBackTrace::popCall() {
     return fnc;
 }
 
-unsigned SymBackTrace::size() const {
+unsigned SymBackTrace::size() const
+{
     return d->btStack.size();
 }
 
-int SymBackTrace::countOccurrencesOfFnc(int fncId) const {
+int SymBackTrace::countOccurrencesOfFnc(int fncId) const
+{
     const CodeStorage::Fnc *fnc = d->fncById(fncId);
     return d->nestMap[fnc];
 }
 
-int SymBackTrace::countOccurrencesOfTopFnc() const {
+int SymBackTrace::countOccurrencesOfTopFnc() const
+{
     const CodeStorage::Fnc *fnc = d->fncOnTop();
     if (!fnc)
         // empty stack --> no occurrence
@@ -214,21 +224,25 @@ int SymBackTrace::countOccurrencesOfTopFnc() const {
     return d->nestMap[fnc];
 }
 
-const CodeStorage::Fnc* SymBackTrace::topFnc() const {
+const CodeStorage::Fnc* SymBackTrace::topFnc() const
+{
     return d->fncOnTop();
 }
 
-const struct cl_loc* SymBackTrace::topCallLoc() const {
+const struct cl_loc* SymBackTrace::topCallLoc() const
+{
     CL_BREAK_IF(d->btStack.empty());
     const Private::BtStackItem &top = d->btStack.front();
     return top.loc;
 }
 
-void SymBackTrace::pushPathTracer(const IPathTracer *pp) {
+void SymBackTrace::pushPathTracer(const IPathTracer *pp)
+{
     d->ppStack.push(pp);
 }
 
-void SymBackTrace::popPathTracer(const IPathTracer *pp) {
+void SymBackTrace::popPathTracer(const IPathTracer *pp)
+{
     CL_BREAK_IF(d->ppStack.empty());
     CL_BREAK_IF(d->ppStack.top() != pp);
     (void) pp;

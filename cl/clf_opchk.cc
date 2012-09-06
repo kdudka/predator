@@ -26,7 +26,8 @@ ClfOpCheckerBase::ClfOpCheckerBase(ICodeListener *slave):
 {
 }
 
-void ClfOpCheckerBase::handleArrayIdx(const struct cl_operand *op) {
+void ClfOpCheckerBase::handleArrayIdx(const struct cl_operand *op)
+{
     if (CL_OPERAND_VOID == op->code)
         return;
 
@@ -41,7 +42,8 @@ void ClfOpCheckerBase::handleArrayIdx(const struct cl_operand *op) {
     }
 }
 
-void ClfOpCheckerBase::handleSrc(const struct cl_operand *op) {
+void ClfOpCheckerBase::handleSrc(const struct cl_operand *op)
+{
     if (CL_OPERAND_VOID == op->code)
         return;
 
@@ -60,7 +62,8 @@ void ClfOpCheckerBase::handleSrc(const struct cl_operand *op) {
     this->handleArrayIdx(op);
 }
 
-void ClfOpCheckerBase::handleDstSrc(const struct cl_operand *op) {
+void ClfOpCheckerBase::handleDstSrc(const struct cl_operand *op)
+{
     if (CL_OPERAND_VOID == op->code)
         return;
 

@@ -27,7 +27,8 @@
 
 namespace CodeStorage {
 
-bool isBuiltInFnc(const struct cl_operand &op) {
+bool isBuiltInFnc(const struct cl_operand &op)
+{
     const char *name;
     if (!fncNameFromCst(&name, &op))
         // likely indirect fuction call
@@ -38,7 +39,8 @@ bool isBuiltInFnc(const struct cl_operand &op) {
         || STREQ("VK_ASSERT", name);
 }
 
-bool isBuiltInCall(const Insn &insn) {
+bool isBuiltInCall(const Insn &insn)
+{
     return isBuiltInFnc(insn.operands[/* fnc */ 1]);
 }
 

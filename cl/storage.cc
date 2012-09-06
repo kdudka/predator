@@ -95,7 +95,8 @@ Var::Var():
 {
 }
 
-Var::~Var() {
+Var::~Var()
+{
 }
 
 Var::Var(EVar code_, const struct cl_operand *op):
@@ -137,7 +138,8 @@ Var::Var(EVar code_, const struct cl_operand *op):
     CL_BREAK_IF("attempt to create invalid CodeStorage::Var object");
 }
 
-bool isOnStack(const Var &var) {
+bool isOnStack(const Var &var)
+{
     const EVar code = var.code;
     switch (code) {
         case VAR_FNC_ARG:
@@ -166,7 +168,8 @@ VarDb::VarDb():
 {
 }
 
-VarDb::~VarDb() {
+VarDb::~VarDb()
+{
     BOOST_FOREACH(const Var &var, vars_)
         BOOST_FOREACH(const Insn *insn, var.initials)
             destroyInsn(const_cast<Insn *>(insn));
@@ -174,11 +177,13 @@ VarDb::~VarDb() {
     delete d;
 }
 
-Var& VarDb::operator[](int uid) {
+Var& VarDb::operator[](int uid)
+{
     return dbLookup(d->db, vars_, uid);
 }
 
-const Var& VarDb::operator[](int uid) const {
+const Var& VarDb::operator[](int uid) const
+{
     return dbConstLookup(d->db, vars_, uid);
 }
 
@@ -209,17 +214,20 @@ TypeDb::TypeDb():
 {
 }
 
-TypeDb::~TypeDb() {
+TypeDb::~TypeDb()
+{
     delete d;
 }
 
-void TypeDb::Private::updatePtrSizeof(int size, int *pField) {
+void TypeDb::Private::updatePtrSizeof(int size, int *pField)
+{
     CL_BREAK_IF(size <= 0);
     CL_BREAK_IF(-1 != *pField && *pField != size);
     *pField = size;
 }
 
-void TypeDb::Private::digPtrSizeof(const struct cl_type *clt) {
+void TypeDb::Private::digPtrSizeof(const struct cl_type *clt)
+{
     if (CL_TYPE_PTR != clt->code)
         return;
 
@@ -237,7 +245,8 @@ void TypeDb::Private::digPtrSizeof(const struct cl_type *clt) {
         this->genericDataPtr = clt;
 }
 
-bool TypeDb::insert(const struct cl_type *clt) {
+bool TypeDb::insert(const struct cl_type *clt)
+{
     if (!clt) {
         CL_DEBUG("TypeDb::insert() got a NULL pointer");
         return false;
@@ -258,19 +267,23 @@ bool TypeDb::insert(const struct cl_type *clt) {
     return true;
 }
 
-int TypeDb::codePtrSizeof() const {
+int TypeDb::codePtrSizeof() const
+{
     return d->codePtrSizeof;
 }
 
-int TypeDb::dataPtrSizeof() const {
+int TypeDb::dataPtrSizeof() const
+{
     return d->dataPtrSizeof;
 }
 
-const struct cl_type* TypeDb::genericDataPtr() const {
+const struct cl_type* TypeDb::genericDataPtr() const
+{
     return d->genericDataPtr;
 }
 
-void readTypeTree(TypeDb &db, const struct cl_type *clt) {
+void readTypeTree(TypeDb &db, const struct cl_type *clt)
+{
     if (!clt) {
 #if 0
         CL_DEBUG("readTypeTree() got a NULL pointer");
@@ -293,7 +306,8 @@ void readTypeTree(TypeDb &db, const struct cl_type *clt) {
     }
 }
 
-const struct cl_type* TypeDb::operator[](int uid) const {
+const struct cl_type* TypeDb::operator[](int uid) const
+{
     typedef Private::TMap TDb;
     TDb &db = d->db;
     TDb::iterator iter = db.find(uid);
@@ -312,7 +326,8 @@ const struct cl_type* TypeDb::operator[](int uid) const {
 
 // /////////////////////////////////////////////////////////////////////////////
 // Block implementation
-void Block::append(Insn *insn) {
+void Block::append(Insn *insn)
+{
 #ifndef NDEBUG
     if (!insns_.empty()) {
         // check insn sequence
@@ -324,28 +339,33 @@ void Block::append(Insn *insn) {
     insns_.push_back(insn);
 }
 
-void Block::appendPredecessor(Block *pred) {
+void Block::appendPredecessor(Block *pred)
+{
     inbound_.push_back(pred);
 }
 
-const Insn* Block::front() const {
+const Insn* Block::front() const
+{
     CL_BREAK_IF(insns_.empty());
     return insns_.front();
 }
 
-const Insn* Block::back() const {
+const Insn* Block::back() const
+{
     CL_BREAK_IF(insns_.empty());
     return insns_.back();
 }
 
-const TTargetList& Block::targets() const {
+const TTargetList& Block::targets() const
+{
     const Insn *last = this->back();
     CL_BREAK_IF(!cl_is_term_insn(last->code));
 
     return last->targets;
 }
 
-bool Block::isLoopEntry() const {
+bool Block::isLoopEntry() const
+{
     BOOST_FOREACH(const Block *ref, inbound_) {
         const Insn *term = ref->back();
         const TTargetList &tList = ref->targets();
@@ -378,23 +398,27 @@ ControlFlow::ControlFlow(const ControlFlow &ref):
 {
 }
 
-ControlFlow::~ControlFlow() {
+ControlFlow::~ControlFlow()
+{
     delete d;
 }
 
-ControlFlow& ControlFlow::operator=(const ControlFlow &ref) {
+ControlFlow& ControlFlow::operator=(const ControlFlow &ref)
+{
     bbs_ = ref.bbs_;
     delete d;
     d = new Private(*ref.d);
     return *this;
 }
 
-const Block* ControlFlow::entry() const {
+const Block* ControlFlow::entry() const
+{
     CL_BREAK_IF(bbs_.empty());
     return bbs_[0];
 }
 
-Block*& ControlFlow::operator[](const char *name) {
+Block*& ControlFlow::operator[](const char *name)
+{
     Block* &ref = dbLookup(d->db, bbs_, name, 0);
     if (!ref)
         // the object will be NOT destroyed by ControlFlow
@@ -403,14 +427,16 @@ Block*& ControlFlow::operator[](const char *name) {
     return ref;
 }
 
-const Block* ControlFlow::operator[](const char *name) const {
+const Block* ControlFlow::operator[](const char *name) const
+{
     return dbConstLookup(d->db, bbs_, name);
 }
 
 
 // /////////////////////////////////////////////////////////////////////////////
 // Fnc implementation
-inline const struct cl_cst& cstFromFnc(const Fnc &fnc) {
+inline const struct cl_cst& cstFromFnc(const Fnc &fnc)
+{
     const struct cl_operand &op = fnc.def;
     CL_BREAK_IF(CL_OPERAND_CST != op.code);
 
@@ -421,22 +447,26 @@ inline const struct cl_cst& cstFromFnc(const Fnc &fnc) {
     return cst;
 }
 
-const char* nameOf(const Fnc &fnc) {
+const char* nameOf(const Fnc &fnc)
+{
     const struct cl_cst &cst = cstFromFnc(fnc);
     return cst.data.cst_fnc.name;
 }
 
-const struct cl_loc* locationOf(const Fnc &fnc) {
+const struct cl_loc* locationOf(const Fnc &fnc)
+{
     const struct cl_cst &cst = cstFromFnc(fnc);
     return &cst.data.cst_fnc.loc;
 }
 
-int uidOf(const Fnc &fnc) {
+int uidOf(const Fnc &fnc)
+{
     const struct cl_cst &cst = cstFromFnc(fnc);
     return cst.data.cst_fnc.uid;
 }
 
-bool isDefined(const Fnc &fnc) {
+bool isDefined(const Fnc &fnc)
+{
     return CL_OPERAND_CST == fnc.def.code
         && !cstFromFnc(fnc).data.cst_fnc.is_extern;
 }
@@ -459,18 +489,21 @@ FncDb::FncDb(const FncDb &ref):
 {
 }
 
-FncDb::~FncDb() {
+FncDb::~FncDb()
+{
     delete d;
 }
 
-FncDb& FncDb::operator=(const FncDb &ref) {
+FncDb& FncDb::operator=(const FncDb &ref)
+{
     fncs_ = ref.fncs_;
     delete d;
     d = new Private(*ref.d);
     return *this;
 }
 
-Fnc*& FncDb::operator[](int uid) {
+Fnc*& FncDb::operator[](int uid)
+{
     Fnc* &ref = dbLookup(d->db, fncs_, uid, 0);
     if (!ref)
         // the object will be NOT destroyed by FncDb
@@ -479,7 +512,8 @@ Fnc*& FncDb::operator[](int uid) {
     return ref;
 }
 
-const Fnc* FncDb::operator[](int uid) const {
+const Fnc* FncDb::operator[](int uid) const
+{
     return dbConstLookup(d->db, fncs_, uid);
 }
 

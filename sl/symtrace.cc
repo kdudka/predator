@@ -40,12 +40,14 @@ namespace Trace {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::NodeBase
 
-NodeBase::~NodeBase() {
+NodeBase::~NodeBase()
+{
     BOOST_FOREACH(Node *parent, parents_)
         parent->notifyDeath(this);
 }
 
-Node* NodeBase::parent() const {
+Node* NodeBase::parent() const
+{
     CL_BREAK_IF(1 != parents_.size());
     return parents_.front();
 }
@@ -54,11 +56,13 @@ Node* NodeBase::parent() const {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::Node
 
-void Node::notifyBirth(NodeBase *child) {
+void Node::notifyBirth(NodeBase *child)
+{
     children_.push_back(child);
 }
 
-void Node::notifyDeath(NodeBase *child) {
+void Node::notifyDeath(NodeBase *child)
+{
     // remove the dead child from the list
     children_.erase(
             std::remove(children_.begin(), children_.end(), child),
@@ -73,7 +77,8 @@ void Node::notifyDeath(NodeBase *child) {
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::NodeHandle
 
-void NodeHandle::reset(Node *node) {
+void NodeHandle::reset(Node *node)
+{
     // release the old node
     Node *&ref = parents_.front();
     ref->notifyDeath(this);
@@ -104,7 +109,8 @@ struct TracePlotter {
     }
 };
 
-std::string insnToLabel(const TInsn insn) {
+std::string insnToLabel(const TInsn insn)
+{
     using boost::algorithm::replace_all;
 
     // dump the instruction to a string stream
@@ -119,7 +125,8 @@ std::string insnToLabel(const TInsn insn) {
     return label;
 }
 
-std::string insnToBlock(const TInsn insn) {
+std::string insnToBlock(const TInsn insn)
+{
     CodeStorage::Block *bb = insn->bb;
     return (bb)
         ? bb->name()
@@ -131,18 +138,21 @@ std::string insnToBlock(const TInsn insn) {
 
 #define INSN_LOC_AND_BB(insn) SL_QUOTE((insn)->loc << insnToBlock(insn))
 
-void TransientNode::plotNode(TracePlotter &tplot) const {
+void TransientNode::plotNode(TracePlotter &tplot) const
+{
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, color=red, fontcolor=red, label="
         << SL_QUOTE(origin_) << "];\n";
 }
 
-void RootNode::plotNode(TracePlotter &tplot) const {
+void RootNode::plotNode(TracePlotter &tplot) const
+{
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=circle, color=black, fontcolor=black, label=\"start\"];\n";
 }
 
-void InsnNode::plotNode(TracePlotter &tplot) const {
+void InsnNode::plotNode(TracePlotter &tplot) const
+{
     const char *color = (isBuiltin_)
         ? "blue"
         : "black";
@@ -154,7 +164,8 @@ void InsnNode::plotNode(TracePlotter &tplot) const {
         << "];\n";
 }
 
-void AbstractionNode::plotNode(TracePlotter &tplot) const {
+void AbstractionNode::plotNode(TracePlotter &tplot) const
+{
     const char *label;
     switch (kind_) {
         case OK_SLS:
@@ -175,59 +186,68 @@ void AbstractionNode::plotNode(TracePlotter &tplot) const {
         << SL_QUOTE(label) << "];\n";
 }
 
-void ConcretizationNode::plotNode(TracePlotter &tplot) const {
+void ConcretizationNode::plotNode(TracePlotter &tplot) const
+{
     // TODO: kind_
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=ellipse, color=red, fontcolor=blue, label="
         << SL_QUOTE("concretizeObj()") << "];\n";
 }
 
-void SpliceOutNode::plotNode(TracePlotter &tplot) const {
+void SpliceOutNode::plotNode(TracePlotter &tplot) const
+{
     // TODO: kind_, successful_
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=ellipse, color=red, fontcolor=blue, label="
         << SL_QUOTE("spliceOut*(len = " << len_ << ")") << "];\n";
 }
 
-void JoinNode::plotNode(TracePlotter &tplot) const {
+void JoinNode::plotNode(TracePlotter &tplot) const
+{
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=circle, color=red, fontcolor=red, label=\"join\"];\n";
 }
 
-void CloneNode::plotNode(TracePlotter &tplot) const {
+void CloneNode::plotNode(TracePlotter &tplot) const
+{
     tplot.out << "\t" << SL_QUOTE(this) << " [shape=doubleoctagon, color=black"
         ", fontcolor=black, label=\"clone\"];\n";
 }
 
-void CallEntryNode::plotNode(TracePlotter &tplot) const {
+void CallEntryNode::plotNode(TracePlotter &tplot) const
+{
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
         ", penwidth=3.0, label=\"--> call entry: " << (insnToLabel(insn_))
         << "\", tooltip=\"" << insn_->loc << insn_->bb->name() << "\"];\n";
 }
 
-void CallCacheHitNode::plotNode(TracePlotter &tplot) const {
+void CallCacheHitNode::plotNode(TracePlotter &tplot) const
+{
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=gold, fontcolor=blue"
         ", penwidth=3.0, label=\"(x) call cache hit: "
         << (nameOf(*fnc_)) << "()\"];\n";
 }
 
-void CallFrameNode::plotNode(TracePlotter &tplot) const {
+void CallFrameNode::plotNode(TracePlotter &tplot) const
+{
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
         ", label=\"--- call frame: " << (insnToLabel(insn_))
         << "\", tooltip=" << INSN_LOC_AND_BB(insn_) << "];\n";
 }
 
-void CallDoneNode::plotNode(TracePlotter &tplot) const {
+void CallDoneNode::plotNode(TracePlotter &tplot) const
+{
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
         ", penwidth=3.0, label=\"<-- call done: "
         << (nameOf(*fnc_)) << "()\"];\n";
 }
 
-void CondNode::plotNode(TracePlotter &tplot) const {
+void CondNode::plotNode(TracePlotter &tplot) const
+{
     tplot.out << "\t" << SL_QUOTE(this) << " [shape=box, fontname=monospace"
         ", tooltip=" << INSN_LOC_AND_BB(inCnd_);
 
@@ -251,7 +271,8 @@ void CondNode::plotNode(TracePlotter &tplot) const {
     tplot.out << "\"];\n";
 }
 
-void MsgNode::plotNode(TracePlotter &tplot) const {
+void MsgNode::plotNode(TracePlotter &tplot) const
+{
     const char *color = "red";
     const char *label;
     switch (level_) {
@@ -280,12 +301,14 @@ void MsgNode::plotNode(TracePlotter &tplot) const {
         << SL_QUOTE((*loc_) << label) << "];\n";
 }
 
-void UserNode::plotNode(TracePlotter &tplot) const {
+void UserNode::plotNode(TracePlotter &tplot) const
+{
     tplot.out << "\t" << SL_QUOTE(this) << " [shape=octagon, penwidth=3.0"
         ", color=green, fontcolor=black, label=\"" << label_ << "\"];\n";
 }
 
-void plotTraceCore(TracePlotter &tplot) {
+void plotTraceCore(TracePlotter &tplot)
+{
     CL_DEBUG("plotTraceCore() is traversing a trace graph...");
 
     TNodePair item;
@@ -310,7 +333,8 @@ void plotTraceCore(TracePlotter &tplot) {
 }
 
 // FIXME: copy-pasted from symplot.cc
-bool plotTrace(const std::string &name, TWorkList &wl) {
+bool plotTrace(const std::string &name, TWorkList &wl)
+{
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string plotName(pe->decorate(name));
     std::string fileName(plotName + ".dot");
@@ -345,7 +369,8 @@ bool plotTrace(const std::string &name, TWorkList &wl) {
     return !!out;
 }
 
-bool plotTrace(Node *endPoint, const std::string &name) {
+bool plotTrace(Node *endPoint, const std::string &name)
+{
     const TNodePair item(/* from */ endPoint, /* to */ nullNode);
     TWorkList wl(item);
     return plotTrace(name, wl);
@@ -355,7 +380,8 @@ bool plotTrace(Node *endPoint, const std::string &name) {
 // implementation of Trace::chkTraceGraphConsistency()
 
 template <class TNodeKind>
-bool isNodeKindReachble(Node *const from) {
+bool isNodeKindReachble(Node *const from)
+{
     Node *node = from;
     WorkList<Node *> wl(node);
     while (wl.next(node)) {
@@ -370,7 +396,8 @@ bool isNodeKindReachble(Node *const from) {
     return false;
 }
 
-bool chkTraceGraphConsistency(Node *const from) {
+bool chkTraceGraphConsistency(Node *const from)
+{
     if (isNodeKindReachble<CloneNode>(from)) {
         CL_WARN("CloneNode reachable from the given trace graph node");
         plotTrace(from, "symtrace-CloneNode-reachable");
@@ -415,7 +442,8 @@ EndPointConsolidator::EndPointConsolidator():
 {
 }
 
-EndPointConsolidator::~EndPointConsolidator() {
+EndPointConsolidator::~EndPointConsolidator()
+{
     if (d->dirty)
         CL_DEBUG("WARNING: EndPointConsolidator is destructed dirty");
 
@@ -425,7 +453,8 @@ EndPointConsolidator::~EndPointConsolidator() {
     delete d;
 }
 
-bool /* any change */ EndPointConsolidator::insert(Node *endPoint) {
+bool /* any change */ EndPointConsolidator::insert(Node *endPoint)
+{
     if (!insertOnce(d->nset, endPoint))
         return false;
 
@@ -435,7 +464,8 @@ bool /* any change */ EndPointConsolidator::insert(Node *endPoint) {
     return ((d->dirty = true));
 }
 
-bool EndPointConsolidator::plotAll(const std::string &name) {
+bool EndPointConsolidator::plotAll(const std::string &name)
+{
     d->dirty = false;
 
     // schedule all end-points
@@ -463,14 +493,16 @@ GraphProxy::GraphProxy():
 {
 }
 
-GraphProxy::~GraphProxy() {
+GraphProxy::~GraphProxy()
+{
     BOOST_FOREACH(Private::TMap::const_reference item, d->gmap)
         delete /* (EndPointConsolidator *) */ item.second;
 
     delete d;
 }
 
-bool /* any change */ GraphProxy::insert(Node *node, const std::string &name) {
+bool /* any change */ GraphProxy::insert(Node *node, const std::string &name)
+{
     Private::TMap::const_iterator it = d->gmap.find(name);
 
     EndPointConsolidator *const epc = (d->gmap.end() == it)
@@ -480,13 +512,15 @@ bool /* any change */ GraphProxy::insert(Node *node, const std::string &name) {
     return /* any change */ epc->insert(node);
 }
 
-bool GraphProxy::plotGraph(const std::string &name) {
+bool GraphProxy::plotGraph(const std::string &name)
+{
     CL_BREAK_IF(!hasKey(d->gmap, name));
 
     return d->gmap[name]->plotAll(name);
 }
 
-bool GraphProxy::plotAll() {
+bool GraphProxy::plotAll()
+{
     bool ok = true;
 
     BOOST_FOREACH(Private::TMap::const_reference item, d->gmap) {
@@ -510,7 +544,8 @@ Globals *Globals::inst_;
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::waiveCloneOperation()
 
-void waiveCloneOperation(SymHeap &sh) {
+void waiveCloneOperation(SymHeap &sh)
+{
     // just make sure the caller knows what is going on...
     Node *cnode = sh.traceNode();
     CL_BREAK_IF(!dynamic_cast<CloneNode *>(cnode));

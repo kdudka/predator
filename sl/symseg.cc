@@ -28,7 +28,8 @@
 
 #include <boost/foreach.hpp>
 
-bool segProveNeq(const SymHeap &sh, TValId ref, TValId val) {
+bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
+{
     if (proveNeq(sh, ref, val))
         // values are non-equal in non-abstract world
         return true;
@@ -120,7 +121,8 @@ bool haveSeg(
     return (valNext == pointingTo);
 }
 
-bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr) {
+bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
+{
     if (atAddr <= 0 || peerAddr <= 0)
         // no valid targets
         return false;
@@ -165,7 +167,8 @@ bool haveSegBidir(
     return false;
 }
 
-bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2) {
+bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
+{
     const EValueTarget code1 = sh.valTarget(v1);
     const EValueTarget code2 = sh.valTarget(v2);
     if (!isAbstract(code1) && !isAbstract(code2))
@@ -207,7 +210,8 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2) {
     return false;
 }
 
-TValId segClone(SymHeap &sh, const TValId root) {
+TValId segClone(SymHeap &sh, const TValId root)
+{
     const TValId dup = objClone(sh, root);
 
     if (OK_DLS == sh.valTargetKind(root)) {
@@ -231,7 +235,8 @@ TValId segClone(SymHeap &sh, const TValId root) {
     return dup;
 }
 
-TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen) {
+TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
+{
     if (VT_RANGE == sh.valTarget(val))
         // not supported yet
         return VAL_INVALID;
@@ -270,7 +275,8 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen) {
     return val;
 }
 
-bool dlSegCheckConsistency(const SymHeap &sh) {
+bool dlSegCheckConsistency(const SymHeap &sh)
+{
     TValList addrs;
     sh.gatherRootObjects(addrs, isAbstract);
     BOOST_FOREACH(const TValId at, addrs) {

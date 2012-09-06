@@ -37,7 +37,8 @@ bool areEqual(
         const SymHeap           &sh1,
         const SymHeap           &sh2);
 
-inline bool checkNonPosValues(int a, int b) {
+inline bool checkNonPosValues(int a, int b)
+{
     if (0 < a && 0 < b)
         // we'll need to properly compare positive values
         return true;

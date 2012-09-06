@@ -47,7 +47,8 @@ const Range FullRange = {
         (IntMin != (n) && (n) < RZ_MIN) || \
         (IntMax != (n) && RZ_MAX < (n)))
 
-void chkRange(const Range &rng) {
+void chkRange(const Range &rng)
+{
     // check red zone
     CL_BREAK_IF(RZ_CORRUPTION(rng.lo));
     CL_BREAK_IF(RZ_CORRUPTION(rng.hi));
@@ -65,8 +66,8 @@ void chkRange(const Range &rng) {
         CL_BREAK_IF(1 + rng.hi - rng.lo < rng.alignment);
 }
 
-// TODO: replace this implementation by something useful (it can loop badly)
-TInt greatestCommonDivisor(TInt a, TInt b) {
+TInt approxGCD(TInt a, TInt b)
+{
     CL_BREAK_IF(a < RZ_MIN || RZ_MAX < a);
     CL_BREAK_IF(b < RZ_MIN || RZ_MAX < b);
 
@@ -79,18 +80,24 @@ TInt greatestCommonDivisor(TInt a, TInt b) {
     if (b < Int0)
         b = -b;
 
-    while (a != b) {
-        if (a < b)
-            b -= a;
-        else
-            a -= b;
+    TInt gcd = Int1;
+
+    for (unsigned i = 1; gcd <= a && gcd <= b && gcd < RZ_MAX; ++i) {
+        const TInt mask = (Int1 << i) - Int1;
+
+        if (a & mask)
+            break;
+        if (b & mask)
+            break;
+
+        gcd = Int1 << i;
     }
 
-    CL_BREAK_IF(a < Int1);
-    return a;
+    return gcd;
 }
 
-Range join(const Range &rng1, const Range &rng2) {
+Range join(const Range &rng1, const Range &rng2)
+{
     Range result;
     result.lo = std::min(rng1.lo, rng2.lo);
     result.hi = std::max(rng1.hi, rng2.hi);
@@ -102,7 +109,8 @@ Range join(const Range &rng1, const Range &rng2) {
     return result;
 }
 
-bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range &rng2) {
+bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range &rng2)
+{
     const bool isRange1 = !isSingular(rng1);
     const bool isRange2 = !isSingular(rng2);
     if (isRange1 == isRange2)
@@ -112,27 +120,31 @@ bool isRangeByNum(bool *pIsRange1, const Range &rng1, const Range &rng2) {
     return true;
 }
 
-bool isCovered(const Range &small, const Range &big) {
+bool isCovered(const Range &small, const Range &big)
+{
     chkRange(small);
     chkRange(big);
 
     return (big.lo <= small.lo)
         && (small.hi <= big.hi)
         && (Int1 == big.alignment || big.alignment ==
-                greatestCommonDivisor(small.alignment, big.alignment));
+                approxGCD(small.alignment, big.alignment));
 }
 
-bool isSingular(const Range &range) {
+bool isSingular(const Range &range)
+{
     chkRange(range);
     return (range.lo == range.hi);
 }
 
-bool isAligned(const Range &range) {
+bool isAligned(const Range &range)
+{
     chkRange(range);
     return (Int1 < range.alignment);
 }
 
-TUInt widthOf(const Range &range) {
+TUInt widthOf(const Range &range)
+{
     chkRange(range);
 
     if (range == FullRange)
@@ -142,7 +154,8 @@ TUInt widthOf(const Range &range) {
     return /* closed interval */ 1UL + range.hi - range.lo;
 }
 
-TInt invertInt(const TInt num) {
+TInt invertInt(const TInt num)
+{
     CL_BREAK_IF(RZ_CORRUPTION(num));
 
     if (IntMin == num)
@@ -160,7 +173,8 @@ enum EIntBinOp {
     IBO_RSHIFT
 };
 
-inline void intBinOp(TInt *pDst, const TInt other, const EIntBinOp code) {
+inline void intBinOp(TInt *pDst, const TInt other, const EIntBinOp code)
+{
     switch (code) {
         case IBO_ADD:
             (*pDst) += other;
@@ -181,7 +195,8 @@ inline void intBinOp(TInt *pDst, const TInt other, const EIntBinOp code) {
 }
 
 // the real arithmetic actually works only for "small" numbers this way
-inline void rngBinOp(Range &rng, const Range &other, const EIntBinOp code) {
+inline void rngBinOp(Range &rng, const Range &other, const EIntBinOp code)
+{
     chkRange(rng);
     chkRange(other);
 
@@ -200,7 +215,8 @@ inline void rngBinOp(Range &rng, const Range &other, const EIntBinOp code) {
     }
 }
 
-TInt alignmentOf(const Range &rng) {
+TInt alignmentOf(const Range &rng)
+{
     chkRange(rng);
 
     if (!isSingular(rng))
@@ -216,7 +232,8 @@ TInt alignmentOf(const Range &rng) {
         return num;
 }
 
-Range& operator+=(Range &rng, const Range &other) {
+Range& operator+=(Range &rng, const Range &other)
+{
     // this needs to be done before rng is modified
     const TInt al1 = alignmentOf(rng);
     const TInt al2 = alignmentOf(other);
@@ -227,27 +244,30 @@ Range& operator+=(Range &rng, const Range &other) {
     // compute the resulting alignment
     rng.alignment = Int1;
     if (!isSingular(rng))
-        rng.alignment = greatestCommonDivisor(al1, al2);
+        rng.alignment = approxGCD(al1, al2);
 
     chkRange(rng);
     return rng;
 }
 
-Range& operator<<=(Range &rng, const TUInt n) {
+Range& operator<<=(Range &rng, const TUInt n)
+{
     rngBinOp(rng, rngFromNum(n), IBO_LSHIFT);
     rng.alignment = Int1;
     chkRange(rng);
     return rng;
 }
 
-Range& operator>>=(Range &rng, const TUInt n) {
+Range& operator>>=(Range &rng, const TUInt n)
+{
     rngBinOp(rng, rngFromNum(n), IBO_RSHIFT);
     rng.alignment = Int1;
     chkRange(rng);
     return rng;
 }
 
-Range& operator*=(Range &rng, const Range &other) {
+Range& operator*=(Range &rng, const Range &other)
+{
     // this needs to be done before rng is modified
     TInt coef = Int1;
     bool isRange1;
@@ -276,7 +296,8 @@ Range& operator*=(Range &rng, const Range &other) {
     return rng;
 }
 
-bool isZeroIntersection(TInt alignment, TInt mask) {
+bool isZeroIntersection(TInt alignment, TInt mask)
+{
     CL_BREAK_IF(alignment < Int1);
 
     if (mask)
@@ -294,7 +315,8 @@ bool isZeroIntersection(TInt alignment, TInt mask) {
     return false;
 }
 
-TInt maskToAlignment(TInt mask) {
+TInt maskToAlignment(TInt mask)
+{
     if (!mask) {
         CL_BREAK_IF("invalid call of maskToAlignment()");
         return Int1;
@@ -309,7 +331,8 @@ TInt maskToAlignment(TInt mask) {
     return alignment;
 }
 
-Range& operator&=(Range &rng, TInt mask) {
+Range& operator&=(Range &rng, TInt mask)
+{
     if (isZeroIntersection(rng.alignment, mask))
         // the whole range was masked, we are back to zero
         return (rng = rngFromNum(Int0));

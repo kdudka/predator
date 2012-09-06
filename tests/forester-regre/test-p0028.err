@@ -1,2 +1,2 @@
-test-p0028.c:24:13: note: item = malloc ((int)4)
+test-p0028.c:24:13: note: item = malloc ((int)U4)
 test-p0028.c:24:13: error: allocated block size mismatch

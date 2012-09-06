@@ -30,7 +30,8 @@
 #define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
 
 template <typename T>
-void swapValues(T &a, T &b) {
+void swapValues(T &a, T &b)
+{
     const T tmp = a;
     a = b;
     b = tmp;
@@ -38,23 +39,27 @@ void swapValues(T &a, T &b) {
 
 // ensure (a <= b)
 template <typename T>
-void sortValues(T &a, T &b) {
+void sortValues(T &a, T &b)
+{
     if (b < a)
         swapValues(a, b);
 }
 
 template <typename TCont>
-bool hasKey(const TCont &cont, const typename TCont::key_type &key) {
+bool hasKey(const TCont &cont, const typename TCont::key_type &key)
+{
     return cont.end() != cont.find(key);
 }
 
 template <typename TCont>
-bool hasKey(const TCont *cont, const typename TCont::key_type &key) {
+bool hasKey(const TCont *cont, const typename TCont::key_type &key)
+{
     return hasKey(*cont, key);
 }
 
 template <typename TCont>
-bool insertOnce(TCont &cont, const typename TCont::key_type &key) {
+bool insertOnce(TCont &cont, const typename TCont::key_type &key)
+{
     return cont.insert(key)./* inserted */second;
 }
 
