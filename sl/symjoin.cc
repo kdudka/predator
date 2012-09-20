@@ -2130,9 +2130,13 @@ bool mayExistFallback(
         MayExistVisitor visitor(ctx, item.ldiff, action, ref, /* root */ valRoot);
         traverseLivePtrs(sh, valRoot, visitor);
         if (!visitor.found()) {
-            // reference value not matched directly, try to look through
+            // reference value not matched directly, try to look through in
+            // order to allow insert chains of possibly empty abstract objects
             visitor.enableLookThroughMode();
             traverseLivePtrs(sh, valRoot, visitor);
+            if (visitor.found())
+                // e.g. test-0124 and test-167 use this code path
+                SJ_DEBUG("MayExistVisitor::enableLookThroughMode() in use!");
         }
 
         if (!mayExistDigOffsets(&off, sh, val, visitor.foundOffsets()))
