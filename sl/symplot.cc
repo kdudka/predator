@@ -285,6 +285,21 @@ void describeObject(PlotData &plot, const ObjHandle &obj, const bool lonely)
     plot.out << " " << tag << "#" << obj.objId();
 }
 
+void printRawInt(
+        std::ostream                &str,
+        const IR::TInt               i,
+        const char                  *suffix = "")
+{
+    if (IR::IntMin == i)
+        str << "-inf";
+    else if (IR::IntMax == i)
+        str << "inf";
+    else
+        str << i;
+
+    str << suffix;
+}
+
 void printRawRange(
         std::ostream                &str,
         const IR::Range             &rng,
@@ -295,7 +310,9 @@ void printRawRange(
         return;
     }
 
-    str << rng.lo << suffix << " .. " << rng.hi << suffix;
+    printRawInt(str, rng.lo, suffix);
+    str << " .. ";
+    printRawInt(str, rng.hi, suffix);
 
     if (isAligned(rng))
         str << ", alignment = " << rng.alignment << suffix;
