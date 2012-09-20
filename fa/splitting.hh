@@ -20,84 +20,120 @@
 #ifndef SPLITTING_H
 #define SPLITTING_H
 
+// Standard library headers
 #include <vector>
 #include <set>
 
+// Forester headers
 #include "forestautext.hh"
 #include "unfolding.hh"
 #include "programerror.hh"
 #include "utils.hh"
 
-struct RootEnumF {
-
+struct RootEnumF
+{
 	size_t target;
 	std::set<size_t>& selectors;
 
 	RootEnumF(size_t target, std::set<size_t>& selectors)
 		: target(target), selectors(selectors) {}
 
-	bool operator()(const AbstractBox* aBox, size_t, size_t) {
+	bool operator()(const AbstractBox* aBox, size_t, size_t)
+	{
 		if (!aBox->isStructural())
 			return true;
+
 		const StructuralBox* sBox = static_cast<const StructuralBox*>(aBox);
-		this->selectors.insert(sBox->outputCoverage().begin(), sBox->outputCoverage().end());
+		this->selectors.insert(
+			sBox->outputCoverage().begin(),
+			sBox->outputCoverage().end()
+		);
+
 		return true;
 	}
-
 };
 
-struct LeafEnumF {
-
+struct LeafEnumF
+{
 	const FAE& fae;
 	const TT<label_type>& t;
 	size_t target;
 	std::set<size_t>& selectors;
 
-	LeafEnumF(const FAE& fae, const TT<label_type>& t, size_t target, std::set<size_t>& selectors)
-		: fae(fae), t(t), target(target), selectors(selectors) {}
+	LeafEnumF(
+		const FAE&                 fae,
+		const TT<label_type>&      t,
+		size_t                     target,
+		std::set<size_t>&          selectors) :
+		fae(fae),
+		t(t),
+		target(target),
+		selectors(selectors)
+	{ }
 
-	bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
+	bool operator()(const AbstractBox* aBox, size_t, size_t offset)
+	{
 		if (!aBox->isType(box_type_e::bBox))
 			return true;
+
 		const Box* box = static_cast<const Box*>(aBox);
-		for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
+		for (size_t k = 0; k < box->getArity(); ++k, ++offset)
+		{
 			size_t ref;
 			if (fae.getRef(this->t.lhs()[offset], ref) && ref == this->target)
-				this->selectors.insert(box->inputCoverage(k).begin(), box->inputCoverage(k).end());
+			{
+				this->selectors.insert(
+					box->inputCoverage(k).begin(),
+					box->inputCoverage(k).end()
+				);
+			}
 		}
 		return true;
 	}
-
 };
 
-struct LeafScanF {
-
+struct LeafScanF
+{
 	const FAE& fae;
 	const TT<label_type>& t;
 	size_t selector;
 	size_t target;
 	const Box*& matched;
 
-	LeafScanF(const FAE& fae, const TT<label_type>& t, size_t selector, size_t target, const Box*& matched)
-		: fae(fae), t(t), selector(selector), target(target), matched(matched) {}
+	LeafScanF(
+		const FAE&                  fae,
+		const TT<label_type>&       t,
+		size_t                      selector,
+		size_t                      target,
+		const Box*&                 matched) :
+		fae(fae),
+		t(t),
+		selector(selector),
+		target(target),
+		matched(matched)
+	{ }
 
-	bool operator()(const AbstractBox* aBox, size_t, size_t offset) {
+	bool operator()(const AbstractBox* aBox, size_t, size_t offset)
+	{
 		if (!aBox->isType(box_type_e::bBox))
 			return true;
 		const Box* box = static_cast<const Box*>(aBox);
-		for (size_t k = 0; k < box->getArity(); ++k, ++offset) {
+		for (size_t k = 0; k < box->getArity(); ++k, ++offset)
+		{
 			size_t ref;
-			if (fae.getRef(this->t.lhs()[offset], ref) && ref == this->target && box->inputCovers(k, this->selector)) {
+			if (fae.getRef(this->t.lhs()[offset], ref) &&
+				ref == this->target && box->inputCovers(k, this->selector))
+			{
 				this->matched = box;
 				return false;
 			}
 		}
 		return true;
 	}
-
 };
 
-struct IsolateOneF {
+struct IsolateOneF
+{
 	size_t offset;
 
 	IsolateOneF(size_t offset) : offset(offset) {}
@@ -109,10 +145,10 @@ struct IsolateOneF {
 	friend std::ostream& operator<<(std::ostream& os, const IsolateOneF& f) {
 		return os << f.offset;
 	}
-
 };
 
-struct IsolateBoxF {
+struct IsolateBoxF
+{
 	const Box* box;
 
 	IsolateBoxF(const Box* box) : box(box) {}
@@ -124,10 +160,10 @@ struct IsolateBoxF {
 	friend std::ostream& operator<<(std::ostream& os, const IsolateBoxF& f) {
 		return os << *static_cast<const AbstractBox*>(f.box);
 	}
-
 };
 
-struct IsolateSetF {
+struct IsolateSetF
+{
 	std::set<size_t> s;
 
 	IsolateSetF(const std::vector<size_t>& v, size_t offset = 0) :
@@ -137,99 +173,118 @@ struct IsolateSetF {
 			this->s.insert(*i + offset);
 	}
 
-	bool operator()(const StructuralBox* box) const {
+	bool operator()(const StructuralBox* box) const
+	{
 		return utils::checkIntersection(box->outputCoverage(), this->s);
 	}
 
-	friend std::ostream& operator<<(std::ostream& os, const IsolateSetF& f) {
-
+	friend std::ostream& operator<<(std::ostream& os, const IsolateSetF& f)
+	{
 		for (auto& x : f.s)
 			os << x << ' ';
 
 		return os;
-
 	}
-
 };
 
-struct IsolateAllF {
-	bool operator()(const StructuralBox*) const {
+struct IsolateAllF
+{
+	bool operator()(const StructuralBox*) const
+	{
 		return true;
 	}
 
-	friend std::ostream& operator<<(std::ostream& os, const IsolateAllF&) {
+	friend std::ostream& operator<<(std::ostream& os, const IsolateAllF&)
+	{
 		return os << "<all>";
 	}
 };
 
-class Splitting {
-
-	FAE& fae;
+class Splitting
+{
+	FAE& fae_;
 
 public:
 
 	// enumerates downwards selectors
-	void enumerateSelectorsAtRoot(std::set<size_t>& selectors, size_t target) const {
-		assert(target < this->fae.roots.size());
-		assert(this->fae.roots[target]);
-		this->fae.roots[target]->begin(
-			*this->fae.roots[target]->getFinalStates().begin()
+	void enumerateSelectorsAtRoot(std::set<size_t>& selectors, size_t target) const
+	{
+		assert(target < fae_.roots.size());
+		assert(fae_.roots[target]);
+		fae_.roots[target]->begin(
+			*fae_.roots[target]->getFinalStates().begin()
 		)->label()->iterate(RootEnumF(target, selectors));
 	}
 
 	// enumerates upwards selectors
-	void enumerateSelectorsAtLeaf(std::set<size_t>& selectors, size_t root, size_t target) const {
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+	void enumerateSelectorsAtLeaf(
+		std::set<size_t>&               selectors,
+		size_t                          root,
+		size_t                          target) const
+	{
+		assert(root < fae_.roots.size());
+		assert(fae_.roots[root]);
 
-		for (TreeAut::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
+		for (TreeAut::iterator i = fae_.roots[root]->begin();
+			i != fae_.roots[root]->end(); ++i)
+		{
 			if (i->label()->isNode())
-				i->label()->iterate(LeafEnumF(this->fae, *i, target, selectors));
-		}
-	}
-
-	// enumerates upwards selectors
-	void enumerateSelectorsAtLeaf(std::set<size_t>& selectors, size_t target) const {
-		for (size_t root = 0; root < this->fae.roots.size(); ++root) {
-			if (!this->fae.roots[root])
-				continue;
-			for (TreeAut::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
-				if (i->label()->isNode())
-					i->label()->iterate(LeafEnumF(this->fae, *i, target, selectors));
+			{
+				i->label()->iterate(LeafEnumF(fae_, *i, target, selectors));
 			}
 		}
 	}
 
-	void enumerateSelectors(std::set<size_t>& selectors, size_t target) const {
-		assert(target < this->fae.roots.size());
-		assert(this->fae.roots[target]);
+	// enumerates upwards selectors
+	void enumerateSelectorsAtLeaf(
+		std::set<size_t>& selectors,
+		size_t target) const
+	{
+		for (size_t root = 0; root < fae_.roots.size(); ++root)
+		{
+			if (!fae_.roots[root])
+				continue;
+			for (TreeAut::iterator i = fae_.roots[root]->begin(); i != fae_.roots[root]->end(); ++i)
+			{
+				if (i->label()->isNode())
+				{
+					i->label()->iterate(LeafEnumF(fae_, *i, target, selectors));
+				}
+			}
+		}
+	}
+
+	void enumerateSelectors(std::set<size_t>& selectors, size_t target) const
+	{
+		assert(target < fae_.roots.size());
+		assert(fae_.roots[target]);
 		this->enumerateSelectorsAtRoot(selectors, target);
 		this->enumerateSelectorsAtLeaf(selectors, target);
 	}
 
 	// adds redundant root points to allow further manipulation
-	void isolateAtLeaf(std::vector<FAE*>& dst, size_t root, size_t target, size_t selector) const {
-
+	void isolateAtLeaf(std::vector<FAE*>& dst, size_t root, size_t target, size_t selector) const
+	{
 //		CL_CDEBUG(3, std::endl << this->fae);
 //		CL_CDEBUG(3, "isolateAtLeaf: (" << root << ", " << selector << ':' << target << ')');
 
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+		assert(root < fae_.roots.size());
+		assert(fae_.roots[root]);
 
-		this->fae.unreachableFree(this->fae.roots[root]);
+		fae_.unreachableFree(fae_.roots[root]);
 
 		std::vector<std::pair<const TT<label_type>*, const Box*> > v;
 
-		TreeAut ta(*this->fae.backend);
+		TreeAut ta(*fae_.backend);
 
 		const Box* matched;
-		for (TreeAut::iterator i = this->fae.roots[root]->begin(); i != this->fae.roots[root]->end(); ++i) {
+		for (TreeAut::iterator i = fae_.roots[root]->begin(); i != fae_.roots[root]->end(); ++i) {
 			if (!i->label()->isNode()) {
 				ta.addTransition(*i);
 				continue;
 			}
 			matched = nullptr;
-			i->label()->iterate(LeafScanF(this->fae, *i, selector, target, matched));
+			i->label()->iterate(LeafScanF(fae_, *i, selector, target, matched));
 			if (matched) {
 				v.push_back(std::make_pair(&*i, matched));
 			} else {
@@ -240,10 +295,10 @@ public:
 		assert(v.size());
 
 		for (std::vector<std::pair<const TT<label_type>*, const Box*> >::iterator i = v.begin(); i != v.end(); ++i) {
-			FAE fae(this->fae);
+			FAE fae(fae_);
 			Splitting splitting(fae);
 			TreeAut ta2(*fae.backend);
-			if (this->fae.roots[root]->isFinalState(i->first->rhs())) {
+			if (fae_.roots[root]->isFinalState(i->first->rhs())) {
 				ta.copyTransitions(ta2);
 				size_t state = fae.freshState();
 				ta2.addFinalState(state);
@@ -257,7 +312,7 @@ public:
 				splitting.isolateOne(dst, target, selector);
 				continue;
 			}
-			ta2.addFinalStates(this->fae.roots[root]->getFinalStates());
+			ta2.addFinalStates(fae_.roots[root]->getFinalStates());
 			for (TreeAut::iterator j = ta.begin(); j != ta.end(); ++j) {
 				ta2.addTransition(*j);
 				std::vector<size_t> lhs = j->lhs();
@@ -330,14 +385,14 @@ public:
 	template <class F>
 	void isolateAtRoot(size_t root, const TT<label_type>& t, F f, std::set<const Box*>& boxes) {
 
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+		assert(root < fae_.roots.size());
+		assert(fae_.roots[root]);
 
 //		std::cerr << "isolateAtRoot " << t << std::endl;
 
-		size_t newState = this->fae.freshState();
+		size_t newState = fae_.freshState();
 
-		TreeAut ta(*this->fae.roots[root], false);
+		TreeAut ta(*fae_.roots[root], false);
 
 		ta.addFinalState(newState);
 
@@ -363,15 +418,15 @@ public:
 					continue;
 				}
 				// update new left-hand side
-				lhs.push_back(this->fae.addData(ta, Data::createRef(this->fae.roots.size())));
+				lhs.push_back(fae_.addData(ta, Data::createRef(fae_.roots.size())));
 				// prepare new root
-				TreeAut tmp(*this->fae.roots[root], false);
+				TreeAut tmp(*fae_.roots[root], false);
 				tmp.addFinalState(t.lhs()[lhsOffset]);
-				TreeAut* tmp2 = this->fae.allocTA();
+				TreeAut* tmp2 = fae_.allocTA();
 				tmp.unreachableFree(*tmp2);
 				// update 'o'
-				this->fae.appendRoot(tmp2);
-				this->fae.connectionGraph.newRoot();
+				fae_.appendRoot(tmp2);
+				fae_.connectionGraph.newRoot();
 			}
 			if (b->isType(box_type_e::bBox))
 				boxes.insert(static_cast<const Box*>(*j));
@@ -379,13 +434,13 @@ public:
 
 		ta.addTransition(lhs, t.label(), newState);
 
-		TreeAut* tmp = this->fae.allocTA();
+		TreeAut* tmp = fae_.allocTA();
 
 		ta.unreachableFree(*tmp);
 
 		// exchange the original automaton with the new one
-		this->fae.roots[root] = std::shared_ptr<TreeAut>(tmp);
-		this->fae.connectionGraph.invalidate(root);
+		fae_.roots[root] = std::shared_ptr<TreeAut>(tmp);
+		fae_.connectionGraph.invalidate(root);
 
 //		this->fae.updateConnectionGraph();
 
@@ -395,14 +450,14 @@ public:
 //	template <class F>
 	void isolateAtRoot(std::vector<FAE*>& dst, size_t root, const std::vector<size_t>& offsets) const {
 
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+		assert(root < fae_.roots.size());
+		assert(fae_.roots[root]);
 
 //		CL_CDEBUG(3, "isolating at root " << root << " : " << IsolateSetF(offsets) << std::endl << this->fae);
 
-		for (std::set<size_t>::const_iterator j = this->fae.roots[root]->getFinalStates().begin(); j != this->fae.roots[root]->getFinalStates().end(); ++j) {
-		for (TreeAut::iterator i = this->fae.roots[root]->begin(*j), end = this->fae.roots[root]->end(*j, i); i != end ; ++i) {
-			FAE fae(this->fae);
+		for (std::set<size_t>::const_iterator j = fae_.roots[root]->getFinalStates().begin(); j != fae_.roots[root]->getFinalStates().end(); ++j) {
+		for (TreeAut::iterator i = fae_.roots[root]->begin(*j), end = fae_.roots[root]->end(*j, i); i != end ; ++i) {
+			FAE fae(fae_);
 			Splitting splitting(fae);
 			std::set<const Box*> boxes;
 			splitting.isolateAtRoot(root, *i, IsolateSetF(offsets), boxes);
@@ -419,63 +474,19 @@ public:
 
 	}
 
-	void isolateOne(std::vector<FAE*>& dst, size_t target, size_t offset) const {
-
-//		CL_CDEBUG(3, "isolateOne: " << target << ':' << offset << std::endl << this->fae);
-
+	void isolateOne(std::vector<FAE*>& dst, size_t target, size_t offset) const
+	{
 		this->isolateSet(dst, target, 0, { offset });
-
-/*
-		assert(target < this->fae.roots.size());
-		assert(this->fae.roots[target]);
-
-		std::set<size_t> tmp;
-
-		this->enumerateSelectorsAtRoot(tmp, target);
-
-		if (tmp.count(offset)) {
-
-			this->isolateAtRoot(dst, target, IsolateOneF(offset));
-
-			return;
-
-		}
-
-		this->fae.updateConnectionGraph();
-
-		for (size_t i = 0; i < this->fae.roots.size(); ++i) {
-
-			tmp.clear();
-
-			for (auto& cutpoint : this->fae.connectionGraph.data[i].signature) {
-
-				if (cutpoint.root != target)
-					continue;
-
-				this->enumerateSelectorsAtLeaf(tmp, i, target);
-
-				if (tmp.count(offset)) {
-
-					this->isolateAtLeaf(dst, i, target, offset);
-
-					return;
-
-				}
-
-				break;
-
-			}
-
-		}
-
-		throw ProgramError("isolateOne(): selector lookup failed!");
-*/
 	}
 
-	void isolateSet(std::vector<FAE*>& dst, size_t target, int base, const std::vector<size_t>& offsets) const {
-
-		assert(target < this->fae.roots.size());
-		assert(this->fae.roots[target]);
+	void isolateSet(
+		std::vector<FAE*>&                 dst,
+		size_t                             target,
+		int                                base,
+		const std::vector<size_t>&         offsets) const
+	{
+		assert(target < fae_.roots.size());
+		assert(fae_.roots[target]);
 
 //		CL_CDEBUG(3, "isolateSet: " << target << ", " << base << " + " << utils::wrap(offsets));
 
@@ -506,7 +517,7 @@ public:
 		if (offsD.size())
 			this->isolateAtRoot(tmp, target, offsD);
 		else
-			tmp.push_back(new FAE(this->fae));
+			tmp.push_back(new FAE(fae_));
 
 		for (std::set<size_t>::iterator i = offsU.begin(); i != offsU.end(); ++i) {
 			for (std::vector<FAE*>::iterator j = tmp.begin(); j != tmp.end(); ++j) {
@@ -590,8 +601,8 @@ public:
 */
 public:
 
-	Splitting(FAE& fae) : fae(fae) {}
-	Splitting(const FAE& fae) : fae(const_cast<FAE&>(fae)) {}
+	Splitting(FAE& fae) : fae_(fae) {}
+	Splitting(const FAE& fae) : fae_(const_cast<FAE&>(fae)) {}
 
 };
 
