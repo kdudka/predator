@@ -14,14 +14,14 @@ usage() {
 
     Use this script to (re)build Predator and/or Forester against an arbitrary
     build of host GCC.  The host GCC needs to be built with the support for GCC
-    plug-ins.  The currently supported version of host GCC is 4.7.1, but feel
+    plug-ins.  The currently supported version of host GCC is 4.7.2, but feel
     free to use any other version of GCC at your own responsibility.
 
     GCC_HOST is the absolute path to gcc(1) that is built with the support for
     GCC plug-ins.  The most common location of the system GCC is /usr/bin/gcc.
     If you have multiple versions of gcc installed on the system, it can be
-    something like /usr/bin/gcc-4.7.1.  You can also provide a local build of
-    GCC, e.g.  /home/bob/gcc-4.7.1/bin/gcc.  Please avoid setting GCC_HOST to
+    something like /usr/bin/gcc-4.7.2.  You can also provide a local build of
+    GCC, e.g.  /home/bob/gcc-4.7.2/bin/gcc.  Please avoid setting GCC_HOST to
     a ccache, distcc, or another GCC wrapper.  Such setups are not supported
     yet.
 
