@@ -29,18 +29,18 @@ void VirtualMachine::transitionLookup(
 	data = Data::createStruct();
 
 	// for every offset, add an item
-	for (auto i = offsets.begin(); i != offsets.end(); ++i)
+	for (size_t off : offsets)
 	{
-		const NodeLabel::NodeItem& ni = transition.label()->boxLookup(*i + base);
+		const NodeLabel::NodeItem& ni = transition.label()->boxLookup(off + base);
 		// Assertions
-		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, *i + base));
+		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, off + base));
 
 		const Data* tmp = nullptr;
 		if (!fae_.isData(transition.lhs()[ni.offset], tmp))
 		{
 			throw ProgramError("transitionLookup(): destination is not a leaf!");
 		}
-		data.d_struct->push_back(Data::item_info(*i, *tmp));
+		data.d_struct->push_back(Data::item_info(off, *tmp));
 		VirtualMachine::displToData(VirtualMachine::readSelector(ni.aBox),
 			data.d_struct->back().second);
 	}
