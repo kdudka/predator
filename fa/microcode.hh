@@ -30,10 +30,21 @@
 #include "box.hh"
 
 
+/**
+ * @brief  Conditional jump
+ *
+ * Performs a conditional jump according to the content of a register
+ *
+ * @note  The value is always concrete, if a case split occurs, it occurs before
+ * this instruction is executed.
+ *
+ */
 class FI_cond : public AbstractInstruction
 {
+	/// Index of the register with the Boolean value
 	size_t src_;
 
+	/// pointers to @p if and @p else blocks (in this order)
 	AbstractInstruction* next_[2];
 
 private:  // methods
@@ -70,9 +81,17 @@ public:
 };
 
 
-class FI_acc_sel : public SequentialInstruction {
-
+/**
+ * @brief  Isolates a single selector
+ *
+ * Isolates a single root selector of a tree automaton.
+ */
+class FI_acc_sel : public SequentialInstruction
+{
+	/// register holding the reference to the tree automaton
 	size_t dst_;
+
+	/// offset of the selector
 	size_t offset_;
 
 public:
@@ -89,10 +108,20 @@ public:
 
 };
 
-class FI_acc_set : public SequentialInstruction {
-
+/**
+ * @brief  Isolates a set of selectors
+ *
+ * Isolates a set of root selectors of a tree automaton.
+ */
+class FI_acc_set : public SequentialInstruction
+{
+	/// register holding the reference to the tree automaton
 	size_t dst_;
+
+	/// base value for the @p offsets_
 	int base_;
+
+	/// offsets of the selectors
 	std::vector<size_t> offsets_;
 
 public:
@@ -110,8 +139,14 @@ public:
 
 };
 
-class FI_acc_all : public SequentialInstruction {
-
+/**
+ * @brief  Isolates all selectors
+ *
+ * Isolates all root selectors of a tree automaton.
+ */
+class FI_acc_all : public SequentialInstruction
+{
+	/// register holding the reference to the tree automaton
 	size_t dst_;
 
 public:
@@ -127,9 +162,15 @@ public:
 
 };
 
-class FI_load_cst : public SequentialInstruction {
-
+/**
+ * @brief  Loads a constant into a register
+ */
+class FI_load_cst : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// The data value to be loaded into the register denoted by @p dst_
 	Data data_;
 
 public:
@@ -145,9 +186,15 @@ public:
 
 };
 
-class FI_move_reg : public SequentialInstruction {
-
+/**
+ * @brief  Moves a value between two registers
+ */
+class FI_move_reg : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Index of the source register
 	size_t src_;
 
 public:
@@ -163,8 +210,12 @@ public:
 
 };
 
-class FI_bnot : public SequentialInstruction {
-
+/**
+ * @brief  Negates a Boolean value in a register
+ */
+class FI_bnot : public SequentialInstruction
+{
+	/// Index of both the source and the target register
 	size_t dst_;
 
 public:
@@ -180,8 +231,14 @@ public:
 
 };
 
-class FI_inot : public SequentialInstruction {
-
+/**
+ * @brief  Negates an integer value in a register
+ *
+ * Negates an integer value in a register: the result is a Boolean.
+ */
+class FI_inot : public SequentialInstruction
+{
+	/// The both source and target register
 	size_t dst_;
 
 public:
@@ -197,10 +254,22 @@ public:
 
 };
 
-class FI_move_reg_offs : public SequentialInstruction {
-
+/**
+ * @brief  Moves a reference between register with an immediate offset
+ *
+ * Moves a reference to a tree automaton from one register into another
+ * register. Before storing the reference into the target register, the
+ * displacement is incremented by a specified offset.
+ */
+class FI_move_reg_offs : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Index of the source register
 	size_t src_;
+
+	/// The offset by which the displacement will be modified
 	int offset_;
 
 public:
@@ -218,10 +287,22 @@ public:
 
 };
 
-class FI_move_reg_inc : public SequentialInstruction {
-
+/**
+ * @brief  Moves a reference between register with an offset in a register
+ *
+ * Moves a reference to a tree automaton from one register into another
+ * register. Before storing the reference into the target register, the
+ * displacement is incremented by the value in the specified register.
+ */
+class FI_move_reg_inc : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Index of the source register
 	size_t src1_;
+
+	/// Index of the register with the offset value
 	size_t src2_;
 
 public:
@@ -239,9 +320,17 @@ public:
 
 };
 
-class FI_get_greg : public SequentialInstruction {
-
+/**
+ * @brief  Loads a global register into a local register
+ *
+ * Loads the value from a global register into a local register.
+ */
+class FI_get_greg : public SequentialInstruction
+{
+	/// Index of the target local register
 	size_t dst_;
+
+	/// Index of the source global register
 	size_t src_;
 
 public:
@@ -257,9 +346,17 @@ public:
 
 };
 
-class FI_set_greg : public SequentialInstruction {
-
+/**
+ * @brief  Loads a local register into a global register
+ *
+ * Loads the value from a local register into a global register
+ */
+class FI_set_greg : public SequentialInstruction
+{
+	/// Index of the target global register
 	size_t dst_;
+
+	/// Index of the source local register
 	size_t src_;
 
 public:
@@ -275,9 +372,17 @@ public:
 
 };
 
-class FI_get_ABP : public SequentialInstruction {
-
+/**
+ * @brief  Loads the ABP pointer into a register
+ *
+ * Loads the ABP pointer incremented by the specified offset into a register.
+ */
+class FI_get_ABP : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Offset to be added to the loaded pointer
 	int offset_;
 
 public:
@@ -293,9 +398,17 @@ public:
 
 };
 
-class FI_get_GLOB : public SequentialInstruction {
-
+/**
+ * @brief  Loads the GLOB pointer into a register
+ *
+ * Loads the GLOB pointer incremented by the specified offset into a register.
+ */
+class FI_get_GLOB : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Offset to be added to the loaded pointer
 	int offset_;
 
 public:
@@ -310,101 +423,22 @@ public:
 	}
 
 };
-/*
-class FI_is_type : public SequentialInstruction {
 
-	size_t dst_;
-	data_type_e type_;
-
-public:
-
-	FI_is_type(size_t dst, data_type_e type)
-		: SequentialInstruction(nullptr), dst_(dst), type_(type) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		if (!(*state.first)[this->dst_].type != this->type_) {
-
-			std::stringstream ss;
-			ss << "unexpected data type: " << (*state.first)[this->dst_];
-			throw ProgramError(ss.str());
-
-		}
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "istype\tr" << this->dst_ << ", " << this->type_;
-	}
-
-};
-
-class FI_is_ref : public SequentialInstruction {
-
+/**
+ * @brief  Loads a value pointed by a register into another register
+ *
+ * Loads a value at a given @p offset_ from the location pointed by the @p src_
+ * register into the @p dst_ register.
+ */
+class FI_load : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
 
-public:
-
-	FI_is_ref(size_t dst)
-		: SequentialInstruction(nullptr), dst_(dst) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		if (!(*state.first)[this->dst_].isRef()) {
-
-			std::stringstream ss;
-			ss << "dereferenced value is not a valid reference [" << (*state.first)[this->dst_] << ']';
-			throw ProgramError(ss.str());
-
-		}
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "isref\tr" << this->dst_;
-	}
-
-};
-*/
-/*
-class FI_inc_off : public SequentialInstruction {
-
-	size_t dst_;
+	/// Index of the source register
 	size_t src_;
-	int offset_;
 
-public:
-
-	FI_inc_off(size_t dst, size_t src, int offset)
-		: SequentialInstruction(nullptr), dst_(dst), src_(src), offset_(offset) {}
-
-	virtual void execute(ExecutionManager& execMan, const AbstractInstruction::StateType& state) {
-
-		assert((*state.first)[this->src_].isRef());
-
-		(*state.first)[this->dst_] = Data::createRef(
-			(*state.first)[this->src_].d_ref.root,
-			(*state.first)[this->src_].d_ref.offset + this->offset_
-		);
-
-		execMan.enqueue(state, this->next_);
-
-	}
-
-	virtual std::ostream& toStream(std::ostream& os) {
-		return os << "inc\tr" << this->dst_ << ", " << this->offset_;
-	}
-
-};
-*/
-class FI_load : public SequentialInstruction {
-
-	size_t dst_;
-	size_t src_;
+	/// Offset of the requested value
 	int offset_;
 
 public:
@@ -421,9 +455,18 @@ public:
 
 };
 
-class FI_load_ABP : public SequentialInstruction {
-
+/**
+ * @brief  Loads a value pointed by the ABP pointer
+ *
+ * Loads a value which is at the specified offset from the location pointed by
+ * the ABP pointer into a register.
+ */
+class FI_load_ABP : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Offset from the ABP 
 	int offset_;
 
 public:
@@ -439,9 +482,18 @@ public:
 
 };
 
-class FI_load_GLOB : public SequentialInstruction {
-
+/**
+ * @brief  Loads a value pointed by the GLOB pointer
+ *
+ * Loads a value which is at the specified offset from the location pointed by
+ * the GLOB pointer into a register.
+ */
+class FI_load_GLOB : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Offset from the GLOB
 	int offset_;
 
 public:
@@ -457,10 +509,22 @@ public:
 
 };
 
-class FI_store : public SequentialInstruction {
-
+/**
+ * @brief  Stores a value from a register into forest automaton
+ *
+ * Stores a value located in the @p src_ register into a memory location at
+ * a location displaced by @p offset_ from the location pointed by register @p
+ * dst_.
+ */
+class FI_store : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Index of the source register
 	size_t src_;
+
+	/// Offset from the location pointed by @p src_
 	int offset_;
 
 public:
@@ -477,11 +541,24 @@ public:
 
 };
 
-class FI_loads : public SequentialInstruction {
-
+/**
+ * @brief  Loads a structure pointed by a register into another register
+ *
+ * Loads a structure with multiple offsets pointed by the @p src_ register into
+ * the @p dst_ register.
+ */
+class FI_loads : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Index of the source register
 	size_t src_;
+
+	/// Base for the offsets
 	int base_;
+
+	/// Offsets for selectors in the structure
 	std::vector<size_t> offsets_;
 
 public:
@@ -500,10 +577,21 @@ public:
 
 };
 
-class FI_stores : public SequentialInstruction {
-
+/**
+ * @brief  Stores a structure in a register into the forest automaton
+ *
+ * Stores a structure with multiple offsets (from the @p base_) located in the
+ * @p src_ register into the memory location pointed to by the @p dst_ register.
+ */
+class FI_stores : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Index of the source register
 	size_t src_;
+
+	/// Base for the offsets
 	int base_;
 
 public:
@@ -520,9 +608,18 @@ public:
 
 };
 
-class FI_alloc : public SequentialInstruction {
-
+/**
+ * @brief  Allocates a memory block of given size
+ *
+ * Allocates a memory block of given size and stores a reference to it in
+ * a register.
+ */
+class FI_alloc : public SequentialInstruction
+{
+	/// Index of the register into which the allocated block will be stored
 	size_t dst_;
+
+	/// Index of the register with the size of the allocated block
 	size_t src_;
 
 public:
@@ -538,12 +635,27 @@ public:
 
 };
 
-class FI_node_create : public SequentialInstruction {
-
+/**
+ * @brief  Builds a new memory node
+ *
+ * Creates a new tree automaton in the forest automaton. This new single-level
+ * tree automaton is represents the created memory node.
+ */
+class FI_node_create : public SequentialInstruction
+{
+	/// Index of the register holding a reference to the created tree automaton
 	size_t dst_;
+
+	/// Index of the register pointing to a memory block
 	size_t src_;
+
+	/// Size of the desired data structure
 	size_t size_;
+
+	/// Type of the desired data structure
 	const TypeBox* typeInfo_;
+
+	/// Selectors of the desired data structure
 	std::vector<SelData> sels_;
 
 private:  // methods
@@ -591,8 +703,14 @@ public:
 	}
 };
 
-class FI_node_free : public SequentialInstruction {
-
+/**
+ * @brief  Frees a memory node
+ *
+ * Frees a memory node and invalidates all references pointing to the node.
+ */
+class FI_node_free : public SequentialInstruction
+{
+	/// Index of the register holding the reference to the freed node
 	size_t dst_;
 
 public:
@@ -608,10 +726,18 @@ public:
 
 };
 
-class FI_iadd : public SequentialInstruction {
-
+/**
+ * @brief  Computes integer addition
+ */
+class FI_iadd : public SequentialInstruction
+{
+	/// Index of the target register
 	size_t dst_;
+
+	/// Index of the register with the first operand
 	size_t src1_;
+
+	/// Index of the register with the other operand
 	size_t src2_;
 
 public:
@@ -628,9 +754,11 @@ public:
 
 };
 
-// checks whether there is no garbage
-class FI_check : public SequentialInstruction {
-
+/**
+ * @brief  Checks for the absence of garbage
+ */
+class FI_check : public SequentialInstruction
+{
 public:
 
 	FI_check(const CodeStorage::Insn* insn)
@@ -644,9 +772,17 @@ public:
 
 };
 
-class FI_assert : public SequentialInstruction {
-
+/**
+ * @brief  Assertion on the value of a register
+ *
+ * Checks whether the value of a register is equal to the desired value.
+ */
+class FI_assert : public SequentialInstruction
+{
+	/// Index of the source register
 	size_t dst_;
+
+	/// The data value that the @p dst_ register should hold
 	Data cst_;
 
 public:
@@ -662,9 +798,11 @@ public:
 
 };
 
-// aborts the program execution (exit)
-class FI_abort : public AbstractInstruction {
-
+/**
+ * @brief  Aborts the program execution (exit)
+ */
+class FI_abort : public AbstractInstruction
+{
 public:
 
 	FI_abort(const CodeStorage::Insn* insn)
@@ -686,10 +824,21 @@ public:
 
 };
 
-class FI_build_struct : public SequentialInstruction {
-
+/**
+ * @brief  Builds a structure from registers
+ *
+ * Builds a memory structure (e.g. a stack frame) from registers' content
+ * (starting from the @p start_ register.
+ */
+class FI_build_struct : public SequentialInstruction
+{
+	/// Index of the destination register
 	size_t dst_;
+
+	/// Index of the starting register
 	size_t start_;
+
+	/// List of offsets
 	std::vector<size_t> offsets_;
 
 public:
@@ -711,9 +860,15 @@ public:
 
 };
 
-// allocate new global variable and fill it with the content of the specified register
-class FI_push_greg : public SequentialInstruction {
-
+/**
+ * @brief  Allocate and load a new global register
+ *
+ * Allocates new global register and fills it with the content of the specified
+ * register.
+ */
+class FI_push_greg : public SequentialInstruction
+{
+	/// Index of the source register
 	size_t src_;
 
 public:
@@ -729,8 +884,15 @@ public:
 
 };
 
-class FI_pop_greg : public SequentialInstruction {
-
+/**
+ * @brief  Loads the value of the latest global register
+ *
+ * Loads the value of the latest global register into a local register and
+ * deletes the global register.
+ */
+class FI_pop_greg : public SequentialInstruction
+{
+	/// Index of the target local register
 	size_t dst_;
 
 public:
@@ -746,8 +908,14 @@ public:
 
 };
 
-class FI_print_heap : public SequentialInstruction {
-
+/**
+ * @brief  Prints the heap
+ *
+ * Prints the heap in a human readable format (ehm?)
+ */
+class FI_print_heap : public SequentialInstruction
+{
+	/// The context to be printed
 	const struct SymCtx* ctx_;
 
 private:  // methods
@@ -768,8 +936,13 @@ public:
 
 };
 
-class FI_plot_heap : public SequentialInstruction {
-
+/**
+ * @brief  Plots the heap
+ *
+ * Plots the heap.
+ */
+class FI_plot_heap : public SequentialInstruction
+{
 private:  // methods
 
 	FI_plot_heap(const FI_plot_heap&);
@@ -785,7 +958,6 @@ public:
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "plot ";
 	}
-
 };
 
 #endif
