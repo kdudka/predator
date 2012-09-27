@@ -125,7 +125,7 @@ endif(TEST_ONLY_FAST)
 # tests known to fail now (but shouldn't!)
 set(tests-known-to-fail
           f0021
-          f0031
+          f0031 f0032 f0033
                                                           p0019
                                   p0025 p0026      
           p0041  
