@@ -20,108 +20,141 @@
 #ifndef FIXPOINT_H
 #define FIXPOINT_H
 
+// Standard library headers
 #include <vector>
 #include <memory>
 
+// Forester headers
+#include "boxman.hh"
+#include "fixpointinstruction.hh"
 #include "forestautext.hh"
 #include "ufae.hh"
-#include "boxman.hh"
 
-#include "fixpointinstruction.hh"
-
-class FixpointBase : public FixpointInstruction {
-
+/**
+ * @brief  The base class for fixpoint instructions
+ */
+class FixpointBase : public FixpointInstruction
+{
 protected:
 
-	// configuration obtained in forward run
-	TreeAut fwdConf;
+	/// Fixpoint configuration obtained in the forward run
+	TreeAut fwdConf_;
 
-	UFAE fwdConfWrapper;
+	UFAE fwdConfWrapper_;
 
-	std::vector<std::shared_ptr<const FAE>> fixpoint;
+	std::vector<std::shared_ptr<const FAE>> fixpoint_;
 
-	TreeAut::Backend& taBackend;
+	TreeAut::Backend& taBackend_;
 
-	BoxMan& boxMan;
+	BoxMan& boxMan_;
 
 public:
 
-	virtual void extendFixpoint(const std::shared_ptr<const FAE>& fae) {
-		this->fixpoint.push_back(fae);
+	virtual void extendFixpoint(const std::shared_ptr<const FAE>& fae)
+	{
+		fixpoint_.push_back(fae);
 	}
 
-	virtual void clear() {
-
-		this->fixpoint.clear();
-		this->fwdConf.clear();
-		this->fwdConfWrapper.clear();
-
+	virtual void clear()
+	{
+		fixpoint_.clear();
+		fwdConf_.clear();
+		fwdConfWrapper_.clear();
 	}
 
-	void recompute() {
-		this->fwdConf.clear();
-		this->fwdConfWrapper.clear();
-		TreeAut ta(*this->fwdConf.backend);
+#if 0
+	void recompute()
+	{
+		fwdConf_.clear();
+		fwdConfWrapper_.clear();
+		TreeAut ta(*fwdConf_.backend);
 		Index<size_t> index;
 
-		for (auto fae : this->fixpoint)
-			this->fwdConfWrapper.fae2ta(ta, index, *fae);
-
-		if (!ta.getTransitions().empty()) {
-			this->fwdConfWrapper.adjust(index);
-			ta.minimized(this->fwdConf);
+		for (auto fae : fixpoint_)
+		{
+			fwdConfWrapper_.fae2ta(ta, index, *fae);
 		}
-//		this->fwdConfWrapper.setStateOffset(this->fixpointWrapper.getStateOffset());
-//		this->fwdConf = this->fixpoint;
+
+		if (!ta.getTransitions().empty())
+		{
+			fwdConfWrapper_.adjust(index);
+			ta.minimized(fwdConf_);
+		}
 	}
+#endif
 
 public:
 
-	FixpointBase(const CodeStorage::Insn* insn,
-		TreeAut::Backend& fixpointBackend, TreeAut::Backend& taBackend,
-		BoxMan& boxMan) :
-		FixpointInstruction(insn), fwdConf(fixpointBackend),
-		fwdConfWrapper(this->fwdConf, boxMan), fixpoint{}, taBackend(taBackend), boxMan(boxMan) {}
+	FixpointBase(
+		const CodeStorage::Insn*           insn,
+		TreeAut::Backend&                  fixpointBackend,
+		TreeAut::Backend&                  taBackend,
+		BoxMan&                            boxMan) :
+		FixpointInstruction(insn),
+		fwdConf_(fixpointBackend),
+		fwdConfWrapper_(fwdConf_, boxMan),
+		fixpoint_{},
+		taBackend_(taBackend),
+		boxMan_(boxMan)
+	{ }
 
-	virtual ~FixpointBase() {}
+	virtual ~FixpointBase()
+	{ }
 
-	virtual const TreeAut& getFixPoint() const {
-		return this->fwdConf;
+	virtual const TreeAut& getFixPoint() const
+	{
+		return fwdConf_;
 	}
 
 };
 
-class FI_abs : public FixpointBase {
-
+/**
+ * @brief  Computes a fixpoint with abstraction
+ *
+ * Computes a fixpoint, emplying abstraction. During computation, new
+ * convenient boxes are learnt.
+ */
+class FI_abs : public FixpointBase
+{
 public:
 
-	FI_abs(const CodeStorage::Insn* insn,
-		TreeAut::Backend& fixpointBackend, TreeAut::Backend& taBackend,
-		BoxMan& boxMan) : FixpointBase(insn, fixpointBackend, taBackend, boxMan) {}
+	FI_abs(
+		const CodeStorage::Insn*       insn,
+		TreeAut::Backend&              fixpointBackend,
+		TreeAut::Backend&              taBackend,
+		BoxMan&                        boxMan) :
+		FixpointBase(insn, fixpointBackend, taBackend, boxMan)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, const ExecState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "abs   \t";
 	}
-
 };
 
-class FI_fix : public FixpointBase {
-
+/**
+ * @brief  Computes a fixpoint without abstraction
+ *
+ * Computes a fixpoint without the use of abstraction.
+ */
+class FI_fix : public FixpointBase
+{
 public:
 
-	FI_fix(const CodeStorage::Insn* insn,
-		TreeAut::Backend& fixpointBackend, TreeAut::Backend& taBackend,
-		BoxMan& boxMan)
-		: FixpointBase(insn, fixpointBackend, taBackend, boxMan) {}
+	FI_fix(
+		const CodeStorage::Insn*           insn,
+		TreeAut::Backend&                  fixpointBackend,
+		TreeAut::Backend&                  taBackend,
+		BoxMan&                            boxMan)
+		: FixpointBase(insn, fixpointBackend, taBackend, boxMan)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, const ExecState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "fix   \t";
 	}
-
 };
 
 #endif
