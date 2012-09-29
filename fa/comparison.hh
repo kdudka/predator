@@ -20,29 +20,49 @@
 #ifndef COMPARISON_H
 #define COMPARISON_H
 
+// Forester headers
 #include "sequentialinstruction.hh"
 
-class FI_cmp_base : public SequentialInstruction {
-
+/**
+ * @brief  The base class for comparison instructions
+ *
+ * According to the result, it enqueues for processing the correct symbolic
+ * state. Note that two states may be enqueued in case the precise result is
+ * not known.
+ */
+class FI_cmp_base : public SequentialInstruction
+{
 	template <class F>
-	friend void executeGeneric(const FI_cmp_base& cmp, ExecutionManager& execMan,
-		const ExecState& state, F f);
+	friend void executeGeneric(
+		const FI_cmp_base&              cmp,
+		ExecutionManager&               execMan,
+		const ExecState&                state,
+		F                               f);
 
 protected:
 
+	/// Index of the target register
 	size_t dst_;
+
+	/// Index of the register with the left-hand side operand
 	size_t src1_;
+
+	/// Index of the register with the right-hand side operand
 	size_t src2_;
 
-public:
+	public:
 
 	FI_cmp_base(size_t dst, size_t src1, size_t src2)
 		: SequentialInstruction(), dst_(dst), src1_(src1), src2_(src2) {}
-
 };
 
-class FI_eq : public FI_cmp_base {
-
+/**
+ * @brief  Comparison for equality
+ *
+ * This instruction compares its operands for equality.
+ */
+class FI_eq : public FI_cmp_base
+{
 public:
 
 	FI_eq(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
@@ -53,11 +73,15 @@ public:
 		return os << "eq    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
 			<< this->src2_;
 	}
-
 };
 
-class FI_neq : public FI_cmp_base {
-
+/**
+ * @brief  Comparison for inequality
+ *
+ * This instruction compares its operands for inequality.
+ */
+class FI_neq : public FI_cmp_base
+{
 public:
 
 	FI_neq(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
@@ -71,8 +95,13 @@ public:
 
 };
 
-class FI_lt : public FI_cmp_base {
-
+/**
+ * @brief  Comparison for less-than
+ *
+ * This instruction compares its operands for the less-than relation.
+ */
+class FI_lt : public FI_cmp_base
+{
 public:
 
 	FI_lt(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
@@ -83,11 +112,15 @@ public:
 		return os << "lt    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
 			<< this->src2_;
 	}
-
 };
 
-class FI_gt : public FI_cmp_base {
-
+/**
+ * @brief  Comparison for greater-than
+ *
+ * This instruction compares its operands for the greater-than relation.
+ */
+class FI_gt : public FI_cmp_base
+{
 public:
 
 	FI_gt(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
@@ -98,6 +131,6 @@ public:
 		return os << "gt    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
 			<< this->src2_;
 	}
-
 };
+
 #endif
