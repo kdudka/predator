@@ -235,10 +235,10 @@ void VirtualMachine::nodeDelete(size_t root)
 
 
 void VirtualMachine::nodeModify(
-	size_t root,
-	size_t offset,
-	const Data& in,
-	Data& out)
+	size_t                      root,
+	size_t                      offset,
+	const Data&                 in,
+	Data&                       out)
 {
 	// Assertions
 	assert(root < fae_.roots.size());

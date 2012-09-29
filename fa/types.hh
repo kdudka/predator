@@ -454,10 +454,14 @@ struct Data {
 	 *
 	 * Clears the structure.
 	 */
-	void clear() {
-		if (this->type == data_type_e::t_struct) {
+	void clear()
+	{
+		if (this->type == data_type_e::t_struct)
+		{
 			delete this->d_struct;
+			this->d_struct = nullptr;
 		}
+
 		this->type = data_type_e::t_undef;
 	}
 
@@ -468,7 +472,8 @@ struct Data {
 	 *
 	 * @returns  @p false if the type is @p t_undef, @p true otherwise
 	 */
-	bool isDefined() const {
+	bool isDefined() const
+	{
 		return !isUndef();
 	}
 
@@ -479,7 +484,8 @@ struct Data {
 	 *
 	 * @returns  @p true if the type is @p t_undef, @p false otherwise
 	 */
-	bool isUndef() const {
+	bool isUndef() const
+	{
 		return this->type == data_type_e::t_undef;
 	}
 

@@ -170,6 +170,9 @@ void FI_load_cst::execute(ExecutionManager& execMan, const ExecState& state)
 // FI_move_reg
 void FI_move_reg::execute(ExecutionManager& execMan, const ExecState& state)
 {
+	// Check that we don't make a useless move
+	assert(src_ != dst_);
+
 	ExecState tmpState = state;
 	tmpState.SetReg(dst_, tmpState.GetReg(src_));
 
