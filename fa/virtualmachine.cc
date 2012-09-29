@@ -21,10 +21,10 @@
 #include "virtualmachine.hh"
 
 void VirtualMachine::transitionLookup(
-	const TT<label_type>& transition,
-	size_t base,
-	const std::vector<size_t>& offsets,
-	Data& data) const
+	const TT<label_type>&          transition,
+	size_t                         base,
+	const std::vector<size_t>&     offsets,
+	Data&                          data) const
 {
 	data = Data::createStruct();
 
@@ -48,9 +48,9 @@ void VirtualMachine::transitionLookup(
 
 
 void VirtualMachine::transitionLookup(
-	const TT<label_type>& transition,
-	size_t offset,
-	Data& data) const
+	const TT<label_type>&       transition,
+	size_t                      offset,
+	Data&                       data) const
 {
 	// retrieve the item at given offset
 	const NodeLabel::NodeItem& ni = transition.label()->boxLookup(offset);
@@ -69,11 +69,11 @@ void VirtualMachine::transitionLookup(
 
 
 void VirtualMachine::transitionModify(
-	TreeAut& dst,
-	const TT<label_type>& transition,
-	size_t offset,
-	const Data& in,
-	Data& out)
+	TreeAut&                            dst,
+	const TT<label_type>&               transition,
+	size_t                              offset,
+	const Data&                         in,
+	Data&                               out)
 {
 	// Create a new final state
 	size_t state = fae_.freshState();
@@ -106,11 +106,11 @@ void VirtualMachine::transitionModify(
 
 
 void VirtualMachine::transitionModify(
-	TreeAut& dst,
-	const TT<label_type>& transition,
-	size_t base,
-	const std::vector<std::pair<size_t, Data> >& in,
-	Data& out)
+	TreeAut&                                        dst,
+	const TT<label_type>&                           transition,
+	size_t                                          base,
+	const std::vector<std::pair<size_t, Data>>&     in,
+	Data&                                           out)
 {
 	// Create a new final state
 	size_t state = fae_.freshState();
@@ -150,8 +150,8 @@ void VirtualMachine::transitionModify(
 
 
 size_t VirtualMachine::nodeCreate(
-	const std::vector<SelData>& nodeInfo,
-	const TypeBox* typeInfo)
+	const std::vector<SelData>&          nodeInfo,
+	const TypeBox*                       typeInfo)
 {
 	// Assertions
 	assert(nullptr != fae_.boxMan);
@@ -256,10 +256,10 @@ void VirtualMachine::nodeModify(
 
 
 void VirtualMachine::nodeModifyMultiple(
-	size_t root,
-	size_t offset,
-	const Data& in,
-	Data& out)
+	size_t                      root,
+	size_t                      offset,
+	const Data&                 in,
+	Data&                       out)
 {
 	// Assertions
 	assert(root < fae_.roots.size());
@@ -278,8 +278,8 @@ void VirtualMachine::nodeModifyMultiple(
 
 
 void VirtualMachine::getNearbyReferences(
-	size_t root,
-	std::set<size_t>& out) const
+	size_t                       root,
+	std::set<size_t>&            out) const
 {
 	// Assertions
 	assert(root < fae_.roots.size());
