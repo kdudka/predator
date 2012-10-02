@@ -23,6 +23,7 @@
 // Standard library headers
 #include <ostream>
 #include <set>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -147,42 +148,106 @@ struct FullIndex : public Index<T> {
 	}
 };
 
+/**
+ * @brief  Guard of a pointer
+ *
+ * This class serves as a guard of a pointer. It is bound with a pointer to an
+ * object and deletes the object in its destructor. It can be used to release an
+ * allocated object at the end of the scope of the guard.
+ */
 template <class T>
-class Guard {
-	T* obj;
-public:
-	Guard(T* obj) : obj(obj) {}
-	~Guard() {
-		if (this->obj)
-			delete this->obj;
+class Guard
+{
+private:  // data members
+
+	/// The pointer to the object to be guarded
+	T* obj_;
+
+public:   // methods
+
+	/**
+	 * @brief  Constructor
+	 *
+	 * @param[in]  obj  Pointer to the guarded object
+	 */
+	Guard(T* obj) :
+		obj_(obj)
+	{ }
+
+	/**
+	 * @brief  Destructor
+	 */
+	~Guard()
+	{
+		// deleting a nullptr is OK
+		delete obj_;
 	}
-	void release() {
-		this->obj = nullptr;
+
+	/**
+	 * @brief  Releases the object from the guard
+	 */
+	void release()
+	{
+		obj_ = nullptr;
 	}
 };
 
+
+/**
+ * @brief  Guard of a container of pointers
+ *
+ * This class behaves similar to @ref Guard but is bound to containers of
+ * pointers to objects. It deletes all objects in the container in the
+ * destructor.
+ */
 template <class T>
-class ContainerGuard {
-	T* _cont;
+class ContainerGuard
+{
+	// We can only handle containers of pointers
+	static_assert(std::is_pointer<typename T::value_type>::value,
+	"ContainerGuard can only guard collections of pointers");
+
+private:  // data members
+
+	/// Pointer to the container associated with the guard
+	T* cont_;
 
 private:  // methods
 
 	ContainerGuard(const ContainerGuard&);
 	ContainerGuard& operator=(const ContainerGuard&);
 
-public:
-	ContainerGuard(T& cont) : _cont(&cont) {}
-	~ContainerGuard() {
-		if (this->_cont) {
-			for (typename T::iterator i = this->_cont->begin(); i != this->_cont->end(); ++i) {
-				if (*i)
-					delete *i;
+public:   // methods
+
+	/**
+   * @brief  Constructor from a container
+   */
+	ContainerGuard(T& cont) :
+		cont_(&cont)
+	{ }
+
+	/**
+	 * @brief  Destructor
+	 *
+	 * Deletes the bound object.
+	 */
+	~ContainerGuard()
+	{
+		if (cont_)
+		{
+			for (typename T::value_type i : *cont_)
+			{
+				// deleting a nullptr is OK
+				delete i;
 			}
-			this->_cont->clear();
+
+			cont_->clear();
 		}
 	}
-	void release() {
-		this->_cont = nullptr;
+
+	void release()
+	{
+		cont_ = nullptr;
 	}
 };
 
