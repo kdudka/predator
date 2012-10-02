@@ -207,8 +207,8 @@ public:   // methods
 	/**
 	 * @brief  Retrieves the trace to this state
 	 *
-	 * This method retrieves the trace trace to this state in the reverse order
-	 * (starting with this state).
+	 * This method retrieves the trace to this state in the reverse order
+	 * (starting with the current state).
 	 *
 	 * @returns  The trace
 	 */

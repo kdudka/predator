@@ -263,7 +263,6 @@ protected:
 		}
 		catch (ProgramError& e)
 		{
-			//Engine::printTrace(state);
 			const CodeStorage::Insn* insn = state.GetMem()->GetInstr()->insn();
 			if (nullptr != insn) {
 				FA_NOTE_MSG(&insn->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *insn));

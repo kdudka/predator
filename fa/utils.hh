@@ -85,7 +85,7 @@ struct Index
 			throw std::runtime_error("Index::translate() : lookup failed");
 		return i->second;
 	}
-	
+
 	// HACK: better keep this static (not virtual)
 	size_t translateOTF(const T& x) {
 		return this->map.insert(std::make_pair(x, this->map.size())).first->second;
@@ -99,13 +99,13 @@ struct Index
 		dst.clear();
 		for (typename std::vector<T>::const_iterator i = src.begin(); i != src.end(); ++i)
 			dst.push_back(this->translate(*i) + offset);
-	}	
+	}
 
 	void translateOTF(std::vector<size_t>& dst, const std::vector<T>& src, size_t offset = 0) {
 		dst.clear();
 		for (typename std::vector<T>::const_iterator i = src.begin(); i != src.end(); ++i)
 			dst.push_back(this->translateOTF(*i) + offset);
-	}	
+	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Index<T>& x) {
 		os << '[';
@@ -118,7 +118,7 @@ struct Index
 
 template <class T>
 struct FullIndex : public Index<T> {
-	
+
 	std::vector<T> index;
 
 	void clear() {
@@ -144,8 +144,7 @@ struct FullIndex : public Index<T> {
 		dst.clear();
 		for (typename std::vector<T>::const_iterator i = src.begin(); i != src.end(); ++i)
 			dst.push_back(this->translateOTF(*i) + offset);
-	}	
-
+	}
 };
 
 template <class T>
@@ -206,9 +205,9 @@ struct ContWrapper {
 };
 
 class utils {
-	
+
 public:
-	
+
 	// build equivalence classes
 	static void relBuildClasses(const std::vector<std::vector<bool> >& rel, std::vector<size_t>& headIndex) {
 		headIndex.resize(rel.size());
@@ -257,7 +256,7 @@ public:
 				dst[i][j] = src1[i][j] && src2[i][j];
 		}
 	}
-	
+
 	// transposition
 	static void relInv(std::vector<std::vector<bool> >& dst, const std::vector<std::vector<bool> >& src) {
 		dst.resize(src.size(), std::vector<bool>(src.size()));
@@ -273,14 +272,14 @@ public:
 		for (size_t i = 0; i < src.size(); ++i) {
 			for (size_t j = 0; j < src.size(); ++j) {
 				if (src[i][j])
-					dst[i].push_back(j);					
+					dst[i].push_back(j);
 			}
 		}
 	}
 
 	// intersection	
 	template <class T1, class T2>
-  	static bool checkIntersection(const T1& x, const T2& y) {
+	static bool checkIntersection(const T1& x, const T2& y) {
 		typename T1::const_iterator f1 = x.begin(), l1 = x.end();
 		typename T2::const_iterator f2 = y.begin(), l2 = y.end();
 		while ((f1 != l1) && (f2 != l2)) {
@@ -290,7 +289,7 @@ public:
 		}
 		return false;
 	}
-	
+
 	template <class T>
 	static void setIntersection(std::vector<T>& dst, const std::vector<std::vector<T> >& src) {
 		std::unordered_map<T, size_t> m;
@@ -341,7 +340,7 @@ public:
 
 	// inclusion	
 	template <class T1, class T2>
-  	static bool checkInclusion(const T1& x, const T2& y) {
+	static bool checkInclusion(const T1& x, const T2& y) {
 		typename T1::const_iterator f1 = x.begin(), l1 = x.end();
 		typename T2::const_iterator f2 = y.begin(), l2 = y.end();
 		for ( ; (f1 != l1) && (f2 != l2); ++f2) {
