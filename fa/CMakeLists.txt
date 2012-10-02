@@ -58,6 +58,7 @@ add_library(fa SHARED
 	exec_state.cc
 	fixpoint.cc
 	forestaut.cc
+  forestautext.cc
 	integrity.cc
 	jump.cc
 	label.cc
@@ -66,6 +67,7 @@ add_library(fa SHARED
 	plotenum.cc
 	programconfig.cc
 	sequentialinstruction.cc
+  splitting.cc
 	streams.cc
 	symctx.cc
 	symexec.cc
