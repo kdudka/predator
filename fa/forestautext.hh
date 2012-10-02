@@ -138,7 +138,7 @@ public:
 				roots.push_back(std::shared_ptr<TreeAut>(ta));
 
 				// add reachable transitions
-				for (TreeAut::td_iterator k = src.tdStart(cache, itov(trans->lhs()[j]));
+				for (TreeAut::td_iterator k = src.tdStart(cache, {trans->lhs()[j]});
 					k.isValid();
 					k.next())
 				{
