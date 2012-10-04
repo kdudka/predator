@@ -93,10 +93,10 @@ inline void dataCmp(
 
 template <class F>
 inline void executeGeneric(
-	const FI_cmp_base&              cmp,
-	ExecutionManager&               execMan,
-	const ExecState&                state,
-	F                               f)
+	const FI_cmp_base&        cmp,
+	ExecutionManager&         execMan,
+	SymState&                 state,
+	F                         f)
 {
 	std::vector<bool> res;
 
@@ -108,26 +108,26 @@ inline void executeGeneric(
 
 		(*regs)[cmp.dst_] = Data::createBool(v);
 
-		execMan.enqueue(state.GetMem(), regs, state.GetMem()->GetFAE(), cmp.next_);
+		execMan.enqueue(&state, regs, state.GetFAE(), cmp.next_);
 	}
 }
 
-void FI_eq::execute(ExecutionManager& execMan, const ExecState& state)
+void FI_eq::execute(ExecutionManager& execMan, SymState& state)
 {
 	executeGeneric(*this, execMan, state, Eq());
 }
 
-void FI_neq::execute(ExecutionManager& execMan, const ExecState& state)
+void FI_neq::execute(ExecutionManager& execMan, SymState& state)
 {
 	executeGeneric(*this, execMan, state, Neq());
 }
 
-void FI_lt::execute(ExecutionManager& execMan, const ExecState& state)
+void FI_lt::execute(ExecutionManager& execMan, SymState& state)
 {
 	executeGeneric(*this, execMan, state, Lt());
 }
 
-void FI_gt::execute(ExecutionManager& execMan, const ExecState& state)
+void FI_gt::execute(ExecutionManager& execMan, SymState& state)
 {
 	executeGeneric(*this, execMan, state, Gt());
 }

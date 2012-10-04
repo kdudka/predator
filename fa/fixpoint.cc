@@ -429,15 +429,15 @@ void learn2(FAE& fae, BoxMan& boxMan)
 }
 
 // FI_abs
-void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
+void FI_abs::execute(ExecutionManager& execMan, SymState& state)
 {
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(state.GetFAE())));
 
 	fae->updateConnectionGraph();
 
 	std::set<size_t> forbidden;
 #if FA_ALLOW_FOLDING
-	reorder(state.GetMem(), *fae);
+	reorder(&state, *fae);
 
 	if (boxMan_.boxDatabase().size())
 	{
@@ -455,7 +455,7 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 #endif
 	computeForbiddenSet(forbidden, *fae);
 
-	normalize(*fae, state.GetMem(), forbidden, true);
+	normalize(*fae, &state, forbidden, true);
 
 	abstract(*fae, fwdConf_, taBackend_, boxMan_);
 #if FA_ALLOW_FOLDING
@@ -470,7 +470,7 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 			forbidden.clear();
 			computeForbiddenSet(forbidden, *fae);
 
-			normalize(*fae, state.GetMem(), forbidden, true);
+			normalize(*fae, &state, forbidden, true);
 
 			abstract(*fae, fwdConf_, taBackend_, boxMan_);
 
@@ -491,25 +491,28 @@ void FI_abs::execute(ExecutionManager& execMan, const ExecState& state)
 	{
 		FA_DEBUG_AT(3, "hit");
 
-		execMan.pathFinished(state.GetMem());
+		execMan.pathFinished(&state);
 	} else
 	{
 		FA_DEBUG_AT_MSG(1, &this->insn()->loc, "extending fixpoint\n" << *fae);
 
-		execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
+		SymState* tmpState = execMan.createChildState(state, next_);
+		tmpState->SetFAE(fae);
+
+		execMan.enqueue(tmpState, next_);
 	}
 }
 
 // FI_fix
-void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
+void FI_fix::execute(ExecutionManager& execMan, SymState& state)
 {
-	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*state.GetMem()->GetFAE()));
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(state.GetFAE())));
 
 	fae->updateConnectionGraph();
 
 	std::set<size_t> forbidden;
 #if FA_ALLOW_FOLDING
-	reorder(state.GetMem(), *fae);
+	reorder(&state, *fae);
 
 	if (!boxMan_.boxDatabase().size())
 	{
@@ -525,7 +528,7 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 #endif
 	computeForbiddenSet(forbidden, *fae);
 
-	normalize(*fae, state.GetMem(), forbidden, true);
+	normalize(*fae, &state, forbidden, true);
 #if FA_ALLOW_FOLDING
 	if (boxMan_.boxDatabase().size())
 	{
@@ -542,7 +545,7 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 
 			computeForbiddenSet(forbidden, *fae);
 
-			normalize(*fae, state.GetMem(), forbidden, true);
+			normalize(*fae, &state, forbidden, true);
 
 			forbidden.clear();
 
@@ -558,11 +561,14 @@ void FI_fix::execute(ExecutionManager& execMan, const ExecState& state)
 	{
 		FA_DEBUG_AT(3, "hit");
 
-		execMan.pathFinished(state.GetMem());
+		execMan.pathFinished(&state);
 	} else
 	{
 		FA_DEBUG_AT_MSG(1, &this->insn()->loc, "extending fixpoint\n" << *fae);
 
-		execMan.enqueue(state.GetMem(), state.GetRegsShPtr(), fae, next_);
+		SymState* tmpState = execMan.createChildState(state, next_);
+		tmpState->SetFAE(fae);
+
+		execMan.enqueue(tmpState, next_);
 	}
 }

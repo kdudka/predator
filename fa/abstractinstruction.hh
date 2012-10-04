@@ -27,7 +27,7 @@
 #include <memory>
 
 // Forester headers
-#include "exec_state.hh"
+#include "symstate.hh"
 #include "types.hh"
 
 /**
@@ -123,7 +123,7 @@ public:
 	 * @param[in]      state    The state of the virtual machine in which the
 	 *                          instruction is executed
 	 */
-	virtual void execute(ExecutionManager& execMan, const ExecState& state) = 0;
+	virtual void execute(ExecutionManager& execMan, SymState& state) = 0;
 
 
 	/**

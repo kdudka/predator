@@ -230,15 +230,23 @@ protected:
 			assembly_.code_.front()
 		);
 
-		ExecState state;
+		typedef std::unordered_set<SymState*> StatePool;
+		StatePool pool;
+
+		SymState* state = nullptr;
+		// FIXME: deallocate the pool
 
 		try
 		{	// expecting problems...
 			size_t cntStates = 0;
 
-			while (execMan_.dequeueDFS(state))
+			while (nullptr != (state = execMan_.dequeueDFS()))
 			{	// process all states in the DFS order
-				const CodeStorage::Insn* insn = state.GetMem()->GetInstr()->insn();
+				assert(nullptr != state);
+
+				pool.insert(state);
+
+				const CodeStorage::Insn* insn = state->GetInstr()->insn();
 				if (nullptr != insn)
 				{	// in case current instruction IS an instruction
 					FA_DEBUG_AT(2, SSD_INLINE_COLOR(C_LIGHT_RED, insn->loc << *insn));
@@ -255,7 +263,7 @@ protected:
 				}
 
 				// run the state
-				execMan_.execute(state);
+				execMan_.execute(*state);
 				++cntStates;
 			}
 
@@ -263,16 +271,20 @@ protected:
 		}
 		catch (ProgramError& e)
 		{
-			const CodeStorage::Insn* insn = state.GetMem()->GetInstr()->insn();
+			assert(nullptr != state);
+
+			const CodeStorage::Insn* insn = state->GetInstr()->insn();
 			if (nullptr != insn) {
 				FA_NOTE_MSG(&insn->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *insn));
-				FA_DEBUG_AT(2, std::endl << *state.GetMem()->GetFAE());
+				FA_DEBUG_AT(2, std::endl << *(state->GetFAE()));
 			}
 
 			if (nullptr != e.location())
 				FA_ERROR_MSG(e.location(), e.what());
 			else
 				reportErrorNoLocation(e.what());
+
+			assert(nullptr != e.state());
 
 			if ((conf_.printTrace) && (nullptr != e.state()))
 			{

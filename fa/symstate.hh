@@ -28,16 +28,19 @@
 #include <cassert>
 
 // Forester headers
-#include "recycler.hh"
-#include "exec_state.hh"
-#include "forestautext.hh"
 #include "abstractinstruction.hh"
+//#include "exec_state.hh"
+#include "forestautext.hh"
+#include "recycler.hh"
+#include "types.hh"
 
 /**
  * @file symstate.hh
  * SymState - structure that represents symbolic state of the execution engine
  */
 
+// forward declaration
+class AbstractInstruction;
 
 /**
  * @brief  Symbolic state of the execution
@@ -45,8 +48,6 @@
 class SymState
 {
 public:   // data types
-
-	typedef std::list<ExecState> QueueType;
 
 	/// Trace of symbolic states
 	typedef std::vector<const SymState*> Trace;
@@ -62,11 +63,11 @@ private:  // data members
 	/// Forest automaton for the symbolic state
 	std::shared_ptr<const FAE> fae_;
 
+	/// the registers
+	std::shared_ptr<DataArray> regs_;
+
 	/// Children symbolic states
 	std::set<SymState*> children_;
-
-	/// @todo: write dox
-	QueueType::iterator queueTag_;
 
 private:  // methods
 
@@ -84,8 +85,8 @@ public:   // methods
 		parent_{},
 		instr_{},
 		fae_{},
-		children_{},
-		queueTag_{}
+		regs_(nullptr),
+		children_{}
 	{ }
 
 	/**
@@ -103,6 +104,36 @@ public:   // methods
 	std::shared_ptr<const FAE> GetFAE() const
 	{
 		return fae_;
+	}
+
+	const DataArray& GetRegs() const
+	{
+		// Assertions
+		assert(nullptr != regs_);
+
+		return *regs_;
+	}
+
+	const Data& GetReg(size_t index) const
+	{
+		// Assertions
+		assert(index < this->GetRegs().size());
+
+		return this->GetRegs()[index];
+	}
+
+	void SetReg(size_t index, const Data& data)
+	{
+		// Assertions
+		assert(nullptr != regs_);
+		assert(index < this->GetRegs().size());
+
+		(*regs_)[index] = data;
+	}
+
+	const std::shared_ptr<DataArray>& GetRegsShPtr() const
+	{
+		return regs_;
 	}
 
 	const AbstractInstruction* GetInstr() const
@@ -125,9 +156,9 @@ public:   // methods
 		return children_;
 	}
 
-	void SetQueueTag(const QueueType::iterator tag)
+	void SetFAE(const std::shared_ptr<FAE> fae)
 	{
-		queueTag_ = tag;
+		fae_ = fae;
 	}
 
 	/**
@@ -168,13 +199,27 @@ public:   // methods
 	 * @param[in]  parent    The parent symbolic state
 	 * @param[in]  instr     The instruction the state corresponds to
 	 * @param[in]  fae       The forest automaton for the symbolic state
-	 * @param[in]  queueTag  @todo write dox
+	 * @param[in]  regs      Values of registers
 	 */
 	void init(
 		SymState*                                      parent,
 		AbstractInstruction*                           instr,
 		const std::shared_ptr<const FAE>&              fae,
-		QueueType::iterator                            queueTag);
+		const std::shared_ptr<DataArray>&              regs);
+
+
+	/**
+	 * @brief  Initialises the symbolic state from its parent
+	 *
+	 * Method that initialises the symbolic state from its @p parent (which is indeed
+	 * set as the parent state) for the given instruction @p instr.
+	 *
+	 * @param[in,out]  parent  The parent state
+	 * @param[in]      instr   The instruction to be associated with the state
+	 */
+	void initChildFrom(
+		SymState*                                      parent,
+		AbstractInstruction*                           instr);
 
 
 	/**

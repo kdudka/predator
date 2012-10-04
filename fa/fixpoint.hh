@@ -126,7 +126,7 @@ public:
 		FixpointBase(insn, fixpointBackend, taBackend, boxMan)
 	{ }
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "abs   \t";
@@ -150,7 +150,7 @@ public:
 		: FixpointBase(insn, fixpointBackend, taBackend, boxMan)
 	{ }
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "fix   \t";

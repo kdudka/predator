@@ -149,7 +149,7 @@ protected:
 				loc = &state_->GetInstr()->insn()->loc;
 			}
 
-			throw ProgramError("garbage detected", loc, state_);
+			throw ProgramError("garbage detected", state_, loc);
 		}
 	}
 

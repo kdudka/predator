@@ -23,7 +23,6 @@
 #include <libgen.h>
 
 // Forester headers
-#include "exec_state.hh"
 #include "forestautext.hh"
 #include "memplot.hh"
 #include "plotenum.hh"
@@ -327,20 +326,6 @@ public:   // methods
 		pointers_{}
 	{ }
 
-	void operator()(const ExecState& state)
-	{
-		assert(nullptr != state.GetMem());
-		state.GetMem()->accept(*this);
-
-//		const DataArray& regs = state.GetRegs();
-//		for (size_t i = 0; i < regs.size(); ++i)
-//		{
-//			os_ << "  " << FA_QUOTE("reg" << i) << " -> " << dataToDot(regs[i]) << ";\n";
-//		}
-//
-//		os_ << "\n";
-	}
-
 	void operator()(const SymState& state)
 	{
 		state.GetFAE()->accept(*this);
@@ -348,39 +333,6 @@ public:   // methods
 
 	void operator()(const FA& fa)
 	{
-//		const DataArray& vars = fa.GetVariables();
-//		for (size_t i = 0; i < vars.size(); ++i)
-//		{
-//			os_ << "  " << FA_QUOTE("greg" << i) << " -> " << dataToDot(vars[i]) << ";\n";
-//		}
-//
-//		os_ << "\n";
-//
-//		// in the first traversal, create tree automata heap representation and set
-//		// the root memory node
-//		for (size_t i = 0; i < fa.getRootCount(); ++i)
-//		{
-//			assert(vecTreeAut_.size() == i);
-//
-//			TreeAutHeap taHeap;
-//
-//			if (nullptr != fa.getRoot(i))
-//			{
-//				const TreeAut& ta = *fa.getRoot(i);
-//				assert(ta.accBegin() != ta.accEnd());
-//
-//				if (++(ta.accBegin()) != ta.accEnd())
-//				{
-//					FA_NOTE("More accepting transitions! Considering only the first...");
-//				}
-//
-//				const Transition& trans = *ta.accBegin();
-//				taHeap.rootNodeID = getTransID(trans);
-//			}
-//
-//			vecTreeAut_.push_back(taHeap);
-//		}
-
 		for (size_t i = 0; i < fa.getRootCount(); ++i)
 		{
 			// Assertions

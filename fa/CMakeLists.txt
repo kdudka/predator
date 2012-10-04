@@ -55,7 +55,6 @@ add_library(fa SHARED
 	comparison.cc
 	compiler.cc
   connection_graph.cc
-	exec_state.cc
 	fixpoint.cc
 	forestaut.cc
   forestautext.cc

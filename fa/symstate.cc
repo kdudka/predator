@@ -29,17 +29,35 @@ void SymState::init(
 	SymState*                             parent,
 	AbstractInstruction*                  instr,
 	const std::shared_ptr<const FAE>&     fae,
-	QueueType::iterator                   queueTag)
+	const std::shared_ptr<DataArray>&     regs)
 {
 	// Assertions
 	assert(Integrity(*fae).check());
 
-	parent_ = parent;
-	instr_ = instr;
-	fae_ = fae;
-	queueTag_ = queueTag;
+	parent_    = parent;
+	instr_     = instr;
+	fae_       = fae;
+	regs_      = regs;
+
 	if (parent_)
 		parent_->addChild(this);
+}
+
+
+void SymState::initChildFrom(
+	SymState*                                      parent,
+	AbstractInstruction*                           instr)
+{
+	// Assertions
+	assert(nullptr != parent);
+	assert(nullptr != instr);
+
+	parent_ = parent;
+	instr_  = instr;
+	fae_    = parent->fae_;
+	regs_   = parent->regs_;
+
+	parent_->addChild(this);
 }
 
 

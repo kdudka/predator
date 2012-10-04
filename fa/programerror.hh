@@ -64,13 +64,13 @@ public:
 	 * Constructs and assigns value to a new object.
 	 *
 	 * @param[in]  msg    The error message
-	 * @param[in]  loc    The location in the program that caused the error
 	 * @param[in]  state  State in which the error appeared
+	 * @param[in]  loc    The location in the program that caused the error
 	 */
 	ProgramError(
 		const std::string&  msg = "",
-		const cl_loc*       loc = nullptr,
-		const SymState*     state = nullptr) :
+		const SymState*     state = nullptr,
+		const cl_loc*       loc = nullptr) :
 		msg_(msg),
 		loc_(loc),
 		state_(state)

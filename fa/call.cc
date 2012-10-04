@@ -24,13 +24,14 @@
 #include "call.hh"
 
 // FI_ret
-void FI_ret::execute(ExecutionManager& execMan, const ExecState& state)
+void FI_ret::execute(ExecutionManager& execMan, SymState& state)
 {
 	// Assertions
 	assert(state.GetReg(dst_).isNativePtr());
 	assert(static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
 
-	execMan.enqueue(state, static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
+	execMan.enqueue(&state,
+		static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
 }
 
 void FI_ret::finalize(

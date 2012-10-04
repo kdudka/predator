@@ -20,7 +20,7 @@
 // Forester headers
 #include "jump.hh"
 
-void FI_jmp::execute(ExecutionManager&, const ExecState&)
+void FI_jmp::execute(ExecutionManager&, SymState&)
 {
 	assert(false);
 }

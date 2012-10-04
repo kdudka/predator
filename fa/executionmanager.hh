@@ -38,13 +38,17 @@
  */
 class ExecutionManager
 {
+private:  // data types
+
+	typedef std::list<SymState*> QueueType;
+
 private:  // data members
 
 	/// the root of the execution graph
 	SymState* root_;
 
 	/// the queue with the states to be processed
-	SymState::QueueType queue_;
+	QueueType queue_;
 
 	/// counter of evaluated states
 	size_t statesExecuted_;
@@ -114,59 +118,75 @@ public:
 		pathsEvaluated_ = 0;
 	}
 
-	SymState* enqueue(SymState* parent, const std::shared_ptr<DataArray>& registers,
-		const std::shared_ptr<const FAE>& fae, AbstractInstruction* instr)
+	SymState* createState()
 	{
 		SymState* state = stateRecycler_.alloc();
+		assert(nullptr != state);
+		return state;
+	}
 
-		state->init(
-			parent,
-			instr,
-			fae,
-			queue_.insert(queue_.end(), ExecState(registers, state))
-		);
+
+	SymState* createChildState(
+		SymState&                          oldState,
+		AbstractInstruction*               instr)
+	{
+		SymState* state = createState();
+		state->initChildFrom(&oldState, instr);
 
 		return state;
 	}
 
-	SymState* enqueue(const ExecState& parent, AbstractInstruction* instr)
-	{
-		SymState* state = stateRecycler_.alloc();
 
-		state->init(
-			parent.GetMem(),
-			instr,
-			parent.GetMem()->GetFAE(),
-			queue_.insert(queue_.end(), ExecState(parent.GetRegsShPtr(), state))
-		);
+	SymState* enqueue(
+		SymState*                           parent,
+		const std::shared_ptr<DataArray>&   registers,
+		const std::shared_ptr<const FAE>&   fae,
+		AbstractInstruction*                instr)
+	{
+		SymState* state = createState();
+
+		state->init(parent, instr, fae, registers);
+		queue_.push_back(state);
 
 		return state;
 	}
 
-	bool dequeueBFS(ExecState& state)
+	SymState* enqueue(
+		SymState*                          parent,
+		AbstractInstruction*               instr)
+	{
+		SymState* state = createState();
+
+		state->init(parent, instr, parent->GetFAE(), parent->GetRegsShPtr());
+		queue_.push_back(state);
+
+		return state;
+	}
+
+	SymState* dequeueBFS()
 	{
 		if (queue_.empty())
-			return false;
+			return nullptr;
 
-		state = queue_.front();
+		SymState* state = queue_.front();
+		assert(nullptr != state);
+
 		queue_.pop_front();
 
-		state.GetMem()->SetQueueTag(queue_.end());
-
-		return true;
+		return state;
 	}
 
-	bool dequeueDFS(ExecState& state)
+	SymState* dequeueDFS()
 	{
 		if (queue_.empty())
-			return false;
+			return nullptr;
 
-		state = queue_.back();
+		SymState* state = queue_.back();
+		assert(nullptr != state);
+
 		queue_.pop_back();
 
-		state.GetMem()->SetQueueTag(queue_.end());
-
-		return true;
+		return state;
 	}
 
 	std::shared_ptr<DataArray> allocRegisters(const DataArray& model)
@@ -185,11 +205,14 @@ public:
 		root_ = this->enqueue(nullptr, this->allocRegisters(registers), fae, instr);
 	}
 
-	void execute(ExecState& state)
+	void execute(SymState& state)
 	{
+		// Assertions
+		assert(nullptr != state.GetInstr());
+
 		++statesExecuted_;
 
-		state.GetMem()->GetInstr()->execute(*this, state);
+		state.GetInstr()->execute(*this, state);
 	}
 
 	void pathFinished(SymState* state)
@@ -202,7 +225,7 @@ public:
 	void destroyBranch(SymState* state)
 	{
 		// Assertions
-		assert(state);
+		assert(nullptr != state);
 
 		while (state->GetParent())
 		{

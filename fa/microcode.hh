@@ -68,7 +68,7 @@ public:
 		next_{next[0], next[1]}
 	{ }
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual void finalize(const std::unordered_map<const CodeStorage::Block*,
 			AbstractInstruction*>& codeIndex,
@@ -100,7 +100,7 @@ public:
 		: SequentialInstruction(insn, fi_type_e::fiUnspec),
 		dst_(dst), offset_(offset) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "acc   \t[r" << this->dst_ << " + " << this->offset_ << "]";
@@ -130,7 +130,7 @@ public:
 		const std::vector<size_t>& offsets)
 		: SequentialInstruction(insn), dst_(dst), base_(base), offsets_(offsets) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "acc   \t[r" << this->dst_ << " + " << this->base_
@@ -154,7 +154,7 @@ public:
 	FI_acc_all(const CodeStorage::Insn* insn, size_t dst)
 		: SequentialInstruction(insn), dst_(dst) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "acca  \t[r" << this->dst_ << ']';
@@ -178,7 +178,7 @@ public:
 	FI_load_cst(const CodeStorage::Insn* insn, size_t dst, const Data& data)
 		: SequentialInstruction(insn), dst_(dst), data_(data) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", " << this->data_;
@@ -202,7 +202,7 @@ public:
 	FI_move_reg(const CodeStorage::Insn* insn, size_t dst, size_t src)
 		: SequentialInstruction(insn), dst_(dst), src_(src) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", r" << this->src_;
@@ -223,7 +223,7 @@ public:
 	FI_bnot(const CodeStorage::Insn* insn, size_t dst)
 		: SequentialInstruction(insn), dst_(dst) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "not   \tr" << this->dst_;
@@ -246,7 +246,7 @@ public:
 	FI_inot(const CodeStorage::Insn* insn, size_t dst) :
 		SequentialInstruction(insn), dst_(dst) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "not   \tr" << this->dst_;
@@ -278,7 +278,7 @@ public:
 		size_t dst, size_t src, int offset)
 		: SequentialInstruction(insn), dst_(dst), src_(src), offset_(offset) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", r" << this->src_
@@ -311,7 +311,7 @@ public:
 		size_t dst, size_t src1, size_t src2)
 		: SequentialInstruction(insn), dst_(dst), src1_(src1), src2_(src2) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", r" << this->src1_
@@ -338,7 +338,7 @@ public:
 	FI_get_greg(const CodeStorage::Insn* insn, size_t dst, size_t src)
 		: SequentialInstruction(insn), dst_(dst), src_(src) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", gr" << this->src_;
@@ -364,7 +364,7 @@ public:
 	FI_set_greg(const CodeStorage::Insn* insn, size_t dst, size_t src)
 		: SequentialInstruction(insn), dst_(dst), src_(src) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tgr" << this->dst_ << ", r" << this->src_;
@@ -390,7 +390,7 @@ public:
 	FI_get_ABP(const CodeStorage::Insn* insn, size_t dst, int offset)
 		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", ABP + " << this->offset_;
@@ -416,7 +416,7 @@ public:
 	FI_get_GLOB(const CodeStorage::Insn* insn, size_t dst, int offset)
 		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", GLOB + " << this->offset_;
@@ -446,7 +446,7 @@ public:
 	FI_load(const CodeStorage::Insn* insn, size_t dst, size_t src, int offset)
 		: SequentialInstruction(insn), dst_(dst), src_(src), offset_(offset) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", [r" << this->src_
@@ -474,7 +474,7 @@ public:
 	FI_load_ABP(const CodeStorage::Insn* insn, size_t dst, int offset)
 		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", [ABP + " << this->offset_ << ']';
@@ -501,7 +501,7 @@ public:
 	FI_load_GLOB(const CodeStorage::Insn* insn, size_t dst, int offset)
 		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", [GLOB + " << this->offset_ << ']';
@@ -532,7 +532,7 @@ public:
 	FI_store(const CodeStorage::Insn* insn, size_t dst, size_t src, int offset)
 		: SequentialInstruction(insn), dst_(dst), src_(src), offset_(offset) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \t[r" << this->dst_ << " + " << this->offset_
@@ -568,7 +568,7 @@ public:
 		: SequentialInstruction(insn), dst_(dst), src_(src), base_(base),
 		offsets_(offsets) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tr" << this->dst_ << ", [r" << this->src_ << " + "
@@ -599,7 +599,7 @@ public:
 	FI_stores(const CodeStorage::Insn* insn, size_t dst, size_t src, int base)
 		: SequentialInstruction(insn), dst_(dst), src_(src), base_(base) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \t[r" << this->dst_ << " + " << this->base_
@@ -627,7 +627,7 @@ public:
 	FI_alloc(const CodeStorage::Insn* insn, size_t dst, size_t src)
 		: SequentialInstruction(insn), dst_(dst), src_(src) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "alloc \tr" << this->dst_ << ", r" << this->src_;
@@ -681,7 +681,7 @@ public:
 		sels_(sels)
 	{ }
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const
 	{
@@ -718,7 +718,7 @@ public:
 	FI_node_free(const CodeStorage::Insn* insn, size_t dst)
 		: SequentialInstruction(insn), dst_(dst) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "free  \tr" << this->dst_;
@@ -745,7 +745,7 @@ public:
 	FI_iadd(const CodeStorage::Insn* insn, size_t dst, size_t src1, size_t src2)
 		: SequentialInstruction(insn), dst_(dst), src1_(src1), src2_(src2) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "iadd  \tr" << this->dst_ << ", r" << this->src1_
@@ -764,7 +764,7 @@ public:
 	FI_check(const CodeStorage::Insn* insn)
 		: SequentialInstruction(insn, fi_type_e::fiCheck) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "check ";
@@ -790,7 +790,7 @@ public:
 	FI_assert(const CodeStorage::Insn* insn, size_t dst, const Data& cst)
 		: SequentialInstruction(insn), dst_(dst), cst_(cst) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "assert\tr" << this->dst_ << ", " << this->cst_;
@@ -808,7 +808,7 @@ public:
 	FI_abort(const CodeStorage::Insn* insn)
 		: AbstractInstruction(insn, fi_type_e::fiAbort) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "abort ";
@@ -847,7 +847,7 @@ public:
 		const std::vector<size_t>& offsets)
 		: SequentialInstruction(insn), dst_(dst), start_(start), offsets_(offsets) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		os << "mov   \tr" << this->dst_ << ", {";
@@ -876,7 +876,7 @@ public:
 	FI_push_greg(const CodeStorage::Insn* insn, size_t src)
 		: SequentialInstruction(insn), src_(src) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "gpush \tr" << this->src_;
@@ -900,7 +900,7 @@ public:
 	FI_pop_greg(const CodeStorage::Insn* insn, size_t dst)
 		: SequentialInstruction(insn), dst_(dst) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "gpop  \tr" << this->dst_;
@@ -928,7 +928,7 @@ public:
 	FI_print_heap(const CodeStorage::Insn* insn, const struct SymCtx* ctx)
 		: SequentialInstruction(insn), ctx_(ctx) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "prh ";
@@ -953,7 +953,7 @@ public:
 	FI_plot_heap(const CodeStorage::Insn* insn)
 		: SequentialInstruction(insn) {}
 
-	virtual void execute(ExecutionManager& execMan, const ExecState& state);
+	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "plot ";
