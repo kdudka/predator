@@ -1108,16 +1108,27 @@ public:
 		return dst;
 	}
 
-	static TA<T>& reduce(TA<T>& dst, const TA<T>& src, Index<size_t>& index, size_t offset = 0, bool addFinalStates = true) {
+	static TA<T>& reduce(
+		TA<T>&                       dst,
+		const TA<T>&                 src,
+		Index<size_t>&               index,
+		size_t                       offset = 0,
+		bool                         addFinalStates = true)
+	{
 		std::vector<size_t> lhs;
-		if (addFinalStates) {
-			for (std::set<size_t>::const_iterator i = src.finalStates.begin(); i != src.finalStates.end(); ++i)
-				dst.addFinalState(index.translateOTF(*i) + offset);
+		if (addFinalStates)
+		{
+			for (size_t i : src.finalStates)
+			{
+				dst.addFinalState(index.translateOTF(i) + offset);
+			}
 		}
-		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = src.transitions.begin(); i != src.transitions.end(); ++i) {
+
+		for (typename trans_cache_type::value_type* trans : src.transitions)
+		{
 			lhs.clear();
-			index.translateOTF(lhs, (*i)->first._lhs->first, offset);
-			dst.addTransition(lhs, (*i)->first._label, index.translateOTF((*i)->first._rhs) + offset);
+			index.translateOTF(lhs, trans->first._lhs->first, offset);
+			dst.addTransition(lhs, trans->first._label, index.translateOTF(trans->first._rhs) + offset);
 		}
 		return dst;
 	}
