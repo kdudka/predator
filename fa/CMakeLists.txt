@@ -63,6 +63,7 @@ add_library(fa SHARED
 	label.cc
 	memplot.cc
 	microcode.cc
+  normalization.cc
 	plotenum.cc
 	programconfig.cc
 	sequentialinstruction.cc

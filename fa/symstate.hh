@@ -29,7 +29,6 @@
 
 // Forester headers
 #include "abstractinstruction.hh"
-//#include "exec_state.hh"
 #include "forestautext.hh"
 #include "recycler.hh"
 #include "types.hh"
