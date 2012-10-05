@@ -133,9 +133,9 @@ struct NodeLabel {
 	{
 		assert(this->type == node_type::n_node);
 		auto i = this->node.m->find(offset);
-//		assert(i != this->node.m->end());
-		if (i == this->node.m->end())
-			throw ProgramError("boxLookup(): required box not found!");
+		assert(i != this->node.m->end());
+//		if (i == this->node.m->end())
+//			throw ProgramError("boxLookup(): required box not found!");
 		return i->second;
 	}
 

@@ -32,7 +32,6 @@
 #include "boxman.hh"
 #include "tatimint.hh"
 #include "utils.hh"
-#include "programerror.hh"
 
 class FAE : public FA {
 

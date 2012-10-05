@@ -264,12 +264,13 @@ protected:
 		}
 		catch (ProgramError& e)
 		{
-			assert(nullptr != state);
+			assert(nullptr != e.state());
 
-			const CodeStorage::Insn* insn = state->GetInstr()->insn();
-			if (nullptr != insn) {
+			const CodeStorage::Insn* insn = e.state()->GetInstr()->insn();
+			if (nullptr != insn)
+			{
 				FA_NOTE_MSG(&insn->loc, SSD_INLINE_COLOR(C_LIGHT_RED, *insn));
-				FA_DEBUG_AT(2, std::endl << *(state->GetFAE()));
+				FA_DEBUG_AT(2, std::endl << *(e.state()->GetFAE()));
 			}
 
 			if (nullptr != e.location())
@@ -277,9 +278,7 @@ protected:
 			else
 				reportErrorNoLocation(e.what());
 
-			assert(nullptr != e.state());
-
-			if ((conf_.printTrace) && (nullptr != e.state()))
+			if (conf_.printTrace)
 			{
 				FA_LOG_MSG(e.location(), "Printing trace");
 
@@ -288,7 +287,7 @@ protected:
 				Streams::trace(oss.str().c_str());
 			}
 
-			if ((conf_.printUcodeTrace) && (nullptr != e.state()))
+			if (conf_.printUcodeTrace)
 			{
 				FA_LOG_MSG(e.location(), "Printing microcode trace");
 

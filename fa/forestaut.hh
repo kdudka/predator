@@ -44,10 +44,7 @@
  */
 class FA
 {
-public:   // data types
-
-
-public:
+public:   // data members
 
 	TreeAut::Backend* backend;
 

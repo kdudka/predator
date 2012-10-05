@@ -35,7 +35,6 @@
 #include <cl/cldebug.hh>
 
 // Forester headers
-#include "programerror.hh"
 #include "notimpl_except.hh"
 #include "symctx.hh"
 #include "nodebuilder.hh"
