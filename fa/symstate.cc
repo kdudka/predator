@@ -34,13 +34,11 @@ void SymState::init(
 	// Assertions
 	assert(Integrity(*fae).check());
 
-	parent_    = parent;
 	instr_     = instr;
 	fae_       = fae;
 	regs_      = regs;
 
-	if (parent_)
-		parent_->addChild(this);
+	this->setParent(parent);
 }
 
 
@@ -52,27 +50,25 @@ void SymState::initChildFrom(
 	assert(nullptr != parent);
 	assert(nullptr != instr);
 
-	parent_ = parent;
 	instr_  = instr;
 	fae_    = parent->fae_;
 	regs_   = parent->regs_;
 
-	parent_->addChild(this);
+	this->setParent(parent);
 }
 
 
 void SymState::recycle(Recycler<SymState>& recycler)
 {
-	if (parent_)
+	if (nullptr != this->GetParent())
 	{
-		parent_->removeChild(this);
+		this->GetParent()->removeChild(this);
 	}
 
 	std::vector<SymState*> stack = { this };
 
-	while (!stack.empty()) {
-		// recycle recursively all children
-
+	while (!stack.empty())
+	{ // recycle recursively all children
 		SymState* state = stack.back();
 		stack.pop_back();
 
@@ -81,10 +77,10 @@ void SymState::recycle(Recycler<SymState>& recycler)
 
 		for (auto s : state->GetChildren())
 		{
-			stack.push_back(s);
+			stack.push_back(static_cast<SymState*>(s));
 		}
 
-		state->children_.clear();
+		state->clearChildren();
 		recycler.recycle(state);
 	}
 }
@@ -98,7 +94,7 @@ SymState::Trace SymState::getTrace() const
 	while (nullptr != state)
 	{
 		trace.push_back(state);
-		state = state->parent_;
+		state = static_cast<const SymState*>(state->GetParent());
 	}
 
 	return trace;

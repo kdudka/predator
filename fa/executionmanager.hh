@@ -241,7 +241,7 @@ public:
 				return;
 			}
 
-			state = state->GetParent();
+			state = static_cast<SymState*>(state->GetParent());
 		}
 
 		// Assertions

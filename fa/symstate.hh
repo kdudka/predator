@@ -30,6 +30,7 @@
 // Forester headers
 #include "abstractinstruction.hh"
 #include "forestautext.hh"
+#include "link_tree.hh"
 #include "recycler.hh"
 #include "types.hh"
 
@@ -44,7 +45,7 @@ class AbstractInstruction;
 /**
  * @brief  Symbolic state of the execution
  */
-class SymState
+class SymState : public LinkTree
 {
 public:   // data types
 
@@ -52,9 +53,6 @@ public:   // data types
 	typedef std::vector<const SymState*> Trace;
 
 private:  // data members
-
-	/// Parent symbolic state
-	SymState* parent_;
 
 	/// Instruction that the symbolic state corresponds to
 	AbstractInstruction* instr_;
@@ -64,9 +62,6 @@ private:  // data members
 
 	/// the registers
 	std::shared_ptr<DataArray> regs_;
-
-	/// Children symbolic states
-	std::set<SymState*> children_;
 
 private:  // methods
 
@@ -81,11 +76,9 @@ public:   // methods
 	 * Default constructor
 	 */
 	SymState() :
-		parent_{},
 		instr_{},
 		fae_{},
-		regs_(nullptr),
-		children_{}
+		regs_(nullptr)
 	{ }
 
 	/**
@@ -97,7 +90,6 @@ public:   // methods
 	{
 		// Assertions
 		assert(nullptr == fae_);
-		assert(children_.empty());
 	}
 
 	std::shared_ptr<const FAE> GetFAE() const
@@ -145,48 +137,9 @@ public:   // methods
 		return instr_;
 	}
 
-	SymState* GetParent()
-	{
-		return parent_;
-	}
-
-	const std::set<SymState*>& GetChildren() const
-	{
-		return children_;
-	}
-
 	void SetFAE(const std::shared_ptr<FAE> fae)
 	{
 		fae_ = fae;
-	}
-
-	/**
-	 * @brief  Add a child symbolic state
-	 *
-	 * Adds a new child symbolic state
-	 *
-	 * @param[in]  child  The child symbolic state to be added
-	 */
-	void addChild(SymState* child)
-	{
-		if (!children_.insert(child).second)
-		{	// in case already present state was added
-			assert(false);        // fail gracefully
-		}
-	}
-
-	/**
-	 * @brief  Remove a child symbolic state
-	 *
-	 * Removes a child symbolic state
-	 *
-	 * @param[in]  child  The child symbolic state to be removed
-	 */
-	void removeChild(SymState* child) {
-		if (children_.erase(child) != 1)
-		{	// in case the state to be removed is not present
-			assert(false);        // fail gracefully
-		}
 	}
 
 
