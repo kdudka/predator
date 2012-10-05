@@ -230,21 +230,13 @@ protected:
 			assembly_.code_.front()
 		);
 
-		typedef std::unordered_set<SymState*> StatePool;
-		StatePool pool;
-
 		SymState* state = nullptr;
-		// FIXME: deallocate the pool
 
 		try
 		{	// expecting problems...
-			size_t cntStates = 0;
-
 			while (nullptr != (state = execMan_.dequeueDFS()))
 			{	// process all states in the DFS order
 				assert(nullptr != state);
-
-				pool.insert(state);
 
 				const CodeStorage::Insn* insn = state->GetInstr()->insn();
 				if (nullptr != insn)
@@ -259,12 +251,13 @@ protected:
 
 				if (testAndClearUserRequestFlag())
 				{
-					FA_NOTE("Executed " << std::setw(7) << cntStates << " states so far.");
+					FA_NOTE("Executed " << std::setw(7) << execMan_.statesEvaluated()
+						<< " states and " << std::setw(7) << execMan_.pathsEvaluated()
+						<< " paths so far.");
 				}
 
 				// run the state
 				execMan_.execute(*state);
-				++cntStates;
 			}
 
 			return true;

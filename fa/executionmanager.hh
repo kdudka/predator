@@ -106,7 +106,7 @@ public:
 
 	void clear()
 	{
-		if (root_)
+		if (nullptr != root_)
 		{
 			root_->recycle(stateRecycler_);
 			root_ = nullptr;
@@ -233,7 +233,11 @@ public:
 			assert(state->GetParent()->GetChildren().size());
 
 			if (state->GetInstr()->getType() == fi_type_e::fiFix)
-				(static_cast<FixpointInstruction*>(state->GetInstr()))->extendFixpoint(state->GetFAE());
+			{
+				FixpointInstruction* fixpoint =
+					static_cast<FixpointInstruction*>(state->GetInstr());
+				fixpoint->extendFixpoint(state->GetFAE());
+			}
 
 			if (state->GetParent()->GetChildren().size() > 1)
 			{
