@@ -35,6 +35,11 @@
  * AbstractInstruction - abstract base class for instructions
  */
 
+
+// forward declaration
+class SymState;
+
+
 namespace CodeStorage {
 	struct Fnc;
 	struct Storage;

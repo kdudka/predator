@@ -136,6 +136,15 @@ public:
 		return state;
 	}
 
+	SymState* copyState(
+		const SymState&                    oldState)
+	{
+		SymState* state = createState();
+		state->init(oldState);
+
+		return state;
+	}
+
 
 	SymState* enqueue(
 		SymState*                           parent,
@@ -221,6 +230,23 @@ public:
 
 		this->destroyBranch(state);
 	}
+
+	/**
+	 * @brief  Recycles a state
+	 *
+	 * Recycles a state using the associated recycler.
+	 *
+	 * @param[in]  state  The state to be recycled
+	 */
+	void recycleState(
+		SymState*                       state)
+	{
+		// Assertions
+		assert(nullptr != state);
+
+		state->recycle(stateRecycler_);
+	}
+
 
 	void destroyBranch(SymState* state)
 	{

@@ -50,13 +50,14 @@ void reportErrorNoLocation(const char* errMsg)
 #include "../cl/ssd.h"
 
 // Forester headers
-#include "forestautext.hh"
-#include "symctx.hh"
+#include "backward_run.hh"
 #include "executionmanager.hh"
 #include "fixpointinstruction.hh"
+#include "forestautext.hh"
 #include "memplot.hh"
 #include "programconfig.hh"
 #include "restart_request.hh"
+#include "symctx.hh"
 #include "symexec.hh"
 
 using namespace ssd;
@@ -295,6 +296,10 @@ protected:
 				printUcodeTrace(oss, e.state()->getTrace());
 				Streams::traceUcode(oss.str().c_str());
 			}
+
+			BackwardRun bwdRun(execMan_);
+			bool isSpurious = bwdRun.isSpuriousCE(e.state()->getTrace());
+			FA_NOTE( "The counterexample IS " << (isSpurious? "NOT " : "") << "spurious");
 
 			throw;
 		}

@@ -494,7 +494,10 @@ void Splitting::isolateSet(
 					}
 				}
 				if (!found)
-					throw ProgramError("isolateSet(): selector lookup failed!");
+				{
+					assert(false);
+					//throw ProgramError("isolateSet(): selector lookup failed!");
+				}
 			}
 		}
 

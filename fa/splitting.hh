@@ -27,7 +27,6 @@
 // Forester headers
 #include "forestautext.hh"
 #include "unfolding.hh"
-#include "programerror.hh"
 #include "utils.hh"
 
 /**

@@ -73,6 +73,11 @@ struct IntersectInfo {
 	const AbstractBox* box;
 };
 
+/**
+ * @brief  Obsolete?
+ *
+ * @todo remove?
+ */
 class ReverseRun {
 
 	FAE& fae;

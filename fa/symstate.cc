@@ -42,6 +42,17 @@ void SymState::init(
 }
 
 
+void SymState::init(
+	const SymState&                                oldState)
+{
+	instr_ = oldState.instr_;
+	fae_   = oldState.fae_;
+	regs_  = oldState.regs_;
+
+	this->clearTree();
+}
+
+
 void SymState::initChildFrom(
 	SymState*                                      parent,
 	AbstractInstruction*                           instr)
@@ -56,7 +67,6 @@ void SymState::initChildFrom(
 
 	this->setParent(parent);
 }
-
 
 void SymState::recycle(Recycler<SymState>& recycler)
 {

@@ -146,6 +146,15 @@ public:   // methods
 	}
 
 	/**
+	 * @brief  Clears the tree links
+	 */
+	void clearTree()
+	{
+		parent_ = nullptr;
+		children_.clear();
+	}
+
+	/**
 	 * @brief  Destructor
 	 */
 	virtual ~LinkTree()

@@ -161,6 +161,17 @@ public:   // methods
 
 
 	/**
+	 * @brief  Initializes the symbolic state
+	 *
+	 * Method that initializes the symbolic state from an old state
+	 *
+	 * @param[in]  oldState  The old symbolic state
+	 */
+	void init(
+		const SymState&                                oldState);
+
+
+	/**
 	 * @brief  Initialises the symbolic state from its parent
 	 *
 	 * Method that initialises the symbolic state from its @p parent (which is indeed
