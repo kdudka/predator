@@ -78,84 +78,84 @@ void dumpOperandTypes(std::ostream& os, const cl_operand* op) {
 // anonymous namespace
 namespace
 {
-	/**
-	 * @brief  Prints the trace to output stream
-	 *
-	 * @param[in,out]  os     The output stream
-	 * @param[in]      trace  The trace to be printed
-	 *
-	 * @returns  Modified stream
-	 */
-	std::ostream& printTrace(
-		std::ostream&             os,
-		const SymState::Trace&    trace)
-	{
-		const CodeStorage::Insn* lastInsn = nullptr;
+/**
+ * @brief  Prints the trace to output stream
+ *
+ * @param[in,out]  os     The output stream
+ * @param[in]      trace  The trace to be printed
+ *
+ * @returns  Modified stream
+ */
+std::ostream& printTrace(
+	std::ostream&             os,
+	const SymState::Trace&    trace)
+{
+	const CodeStorage::Insn* lastInsn = nullptr;
 
-		for (auto it = trace.crbegin(); it != trace.crend(); ++it)
-		{	// traverse in the reverse order
-			const SymState& state = **it;
+	for (auto it = trace.crbegin(); it != trace.crend(); ++it)
+	{	// traverse in the reverse order
+		const SymState& state = **it;
 
-			assert(state.GetInstr());
-			const AbstractInstruction& instr = *state.GetInstr();
+		assert(state.GetInstr());
+		const AbstractInstruction& instr = *state.GetInstr();
 
-			const CodeStorage::Insn* origInsn = instr.insn();
-			if ((nullptr != origInsn) && (lastInsn != origInsn))
-			{
-				std::ostringstream oss;
-				oss << *origInsn;
-
-				std::string filename = MemPlotter::plotHeap(state);
-				lastInsn = origInsn;
-				os << origInsn->loc.file << ":" << std::setw(4) << std::left
-					<< origInsn->loc.line << ":  "
-					<< std::setw(50) << std::left << oss.str() << " // " << filename << "\n";
-			}
-		}
-
-		return os;
-	}
-
-
-	/**
-	 * @brief  Prints the microcode trace to output stream
-	 *
-	 * @param[in,out]  os     The output stream
-	 * @param[in]      trace  The trace to be printed
-	 *
-	 * @returns  Modified stream
-	 */
-	std::ostream& printUcodeTrace(
-		std::ostream&             os,
-		const SymState::Trace&    trace)
-	{
-		const CodeStorage::Insn* lastInsn = nullptr;
-
-		for (auto it = trace.crbegin(); it != trace.crend(); ++it)
-		{	// traverse in the reverse order
-			const SymState& state = **it;
-
-			assert(state.GetInstr());
-			const AbstractInstruction& instr = *state.GetInstr();
-
+		const CodeStorage::Insn* origInsn = instr.insn();
+		if ((nullptr != origInsn) && (lastInsn != origInsn))
+		{
 			std::ostringstream oss;
-			oss << instr;
+			oss << *origInsn;
 
-			os << "            " << std::setw(50) << std::left << oss.str();
+			std::string filename = MemPlotter::plotHeap(state);
+			lastInsn = origInsn;
+			os << origInsn->loc.file << ":" << std::setw(4) << std::left
+				<< origInsn->loc.line << ":  "
+				<< std::setw(50) << std::left << oss.str() << " // " << filename << "\n";
+		}
+	}
 
-			const CodeStorage::Insn* origInsn = instr.insn();
-			if ((nullptr != origInsn) && (lastInsn != origInsn))
-			{
-				lastInsn = origInsn;
-				os << "; " << origInsn->loc.line << ": " << *origInsn;
-			}
+	return os;
+}
 
-			os << "\n";
-			//MemPlotter::plotHeap(state);
+
+/**
+ * @brief  Prints the microcode trace to output stream
+ *
+ * @param[in,out]  os     The output stream
+ * @param[in]      trace  The trace to be printed
+ *
+ * @returns  Modified stream
+ */
+std::ostream& printUcodeTrace(
+	std::ostream&             os,
+	const SymState::Trace&    trace)
+{
+	const CodeStorage::Insn* lastInsn = nullptr;
+
+	for (auto it = trace.crbegin(); it != trace.crend(); ++it)
+	{	// traverse in the reverse order
+		const SymState& state = **it;
+
+		assert(state.GetInstr());
+		const AbstractInstruction& instr = *state.GetInstr();
+
+		std::ostringstream oss;
+		oss << instr;
+
+		os << "            " << std::setw(50) << std::left << oss.str();
+
+		const CodeStorage::Insn* origInsn = instr.insn();
+		if ((nullptr != origInsn) && (lastInsn != origInsn))
+		{
+			lastInsn = origInsn;
+			os << "; " << origInsn->loc.line << ": " << *origInsn;
 		}
 
-		return os;
+		os << "\n";
+		//MemPlotter::plotHeap(state);
 	}
+
+	return os;
+}
 } // namespace
 
 
