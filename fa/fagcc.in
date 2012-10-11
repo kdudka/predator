@@ -81,7 +81,13 @@ while [ "$1" != "" ]; do
                                     ;;
     -h   | --help )                 usage_long
                                     ;;
-    * )                             FILENAME=$1
+    * )                             if [ "$FILENAME" = "" ]
+                                    then
+                                      FILENAME=$1
+                                    else
+                                      echo "Multiple input files provided: \"${FILENAME}\" and \"$1\"!"
+                                      usage
+                                    fi
   esac
   shift
 done
