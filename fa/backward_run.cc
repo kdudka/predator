@@ -19,6 +19,8 @@
 
 // Forester headers
 #include "backward_run.hh"
+#include "memplot.hh"
+#include "streams.hh"
 
 
 bool BackwardRun::isSpuriousCE(SymState::Trace& fwdTrace)
@@ -48,7 +50,11 @@ bool BackwardRun::isSpuriousCE(SymState::Trace& fwdTrace)
 		const AbstractInstruction* instr = fwdState->GetInstr();
 		assert(nullptr != instr);
 
-//		instr->reverseAndIsect(execMan_, *fwdState, *bwdState);
+		SymState* resultState = instr->reverseAndIsect(execMan_, *fwdState, *bwdState);
+		assert(nullptr != resultState);
+
+		std::string filename = MemPlotter::plotHeap(*resultState);
+		FA_NOTE("bwd: " << *instr);
 	}
 
 	for (SymState* st : bwdTrace)
