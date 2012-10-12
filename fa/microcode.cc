@@ -271,7 +271,7 @@ void FI_get_ABP::execute(ExecutionManager& execMan, SymState& state)
 	Data data = VirtualMachine(*(tmpState->GetFAE())).varGet(ABP_INDEX);
 	data.d_ref.displ += offset_;
 
-	tmpState->SetReg(dst_, data);
+	tmpState->SetReg(dstReg_, data);
 
 	execMan.enqueue(tmpState, next_);
 }
@@ -283,7 +283,7 @@ void FI_get_GLOB::execute(ExecutionManager& execMan, SymState& state)
 	Data data = VirtualMachine(*(tmpState->GetFAE())).varGet(GLOB_INDEX);
 	data.d_ref.displ += offset_;
 
-	tmpState->SetReg(dst_, data);
+	tmpState->SetReg(dstReg_, data);
 
 	execMan.enqueue(tmpState, next_);
 }
@@ -303,7 +303,7 @@ void FI_load::execute(ExecutionManager& execMan, SymState& state)
 		data.d_ref.root, data.d_ref.displ + offset_, out
 	);
 
-	tmpState->SetReg(dst_, out);
+	tmpState->SetReg(dstReg_, out);
 
 	execMan.enqueue(tmpState, next_);
 }
@@ -317,7 +317,7 @@ void FI_load_ABP::execute(ExecutionManager& execMan, SymState& state)
 	Data data = vm.varGet(ABP_INDEX);
 	Data out;
 	vm.nodeLookup(data.d_ref.root, static_cast<size_t>(offset_), out);
-	tmpState->SetReg(dst_, out);
+	tmpState->SetReg(dstReg_, out);
 	execMan.enqueue(tmpState, next_);
 }
 
@@ -330,7 +330,7 @@ void FI_load_GLOB::execute(ExecutionManager& execMan, SymState& state)
 	Data data = vm.varGet(GLOB_INDEX);
 	Data out;
 	vm.nodeLookup(data.d_ref.root, static_cast<size_t>(offset_), out);
-	tmpState->SetReg(dst_, out);
+	tmpState->SetReg(dstReg_, out);
 
 	execMan.enqueue(tmpState, next_);
 }
@@ -374,7 +374,7 @@ void FI_loads::execute(ExecutionManager& execMan, SymState& state)
 		out
 	);
 
-	tmpState->SetReg(dst_, out);
+	tmpState->SetReg(dstReg_, out);
 	execMan.enqueue(tmpState, next_);
 }
 
@@ -426,7 +426,7 @@ void FI_alloc::execute(ExecutionManager& execMan, SymState& state)
 
 	// create a void pointer of given size, i.e. it points to a block of the size
 	Data dstData = Data::createVoidPtr(srcData.d_int);
-	tmpState->SetReg(dst_, dstData);
+	tmpState->SetReg(dstReg_, dstData);
 
 	execMan.enqueue(tmpState, next_);
 }
@@ -504,7 +504,7 @@ void FI_iadd::execute(ExecutionManager& execMan, SymState& state)
 	SymState* tmpState = execMan.createChildState(state, next_);
 
 	int sum = tmpState->GetReg(src1_).d_int + tmpState->GetReg(src2_).d_int;
-	tmpState->SetReg(dst_, Data::createInt((sum > 0)? 1 : 0));
+	tmpState->SetReg(dstReg_, Data::createInt((sum > 0)? 1 : 0));
 
 	execMan.enqueue(tmpState, next_);
 }
@@ -553,7 +553,7 @@ void FI_build_struct::execute(ExecutionManager& execMan, SymState& state)
 		items.push_back(std::make_pair(offsets_[i], tmpState->GetReg(start_ + i)));
 	}
 
-	tmpState->SetReg(dst_, Data::createStruct(items));
+	tmpState->SetReg(dstReg_, Data::createStruct(items));
 
 	execMan.enqueue(tmpState, next_);
 }

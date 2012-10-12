@@ -376,23 +376,20 @@ public:
  *
  * Loads the ABP pointer incremented by the specified offset into a register.
  */
-class FI_get_ABP : public SequentialInstruction
+class FI_get_ABP : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// Offset to be added to the loaded pointer
 	int offset_;
 
 public:
 
 	FI_get_ABP(const CodeStorage::Insn* insn, size_t dst, int offset)
-		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
+		: RegisterAssignment(insn, dst), offset_(offset) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", ABP + " << this->offset_;
+		return os << "mov   \tr" << this->dstReg_ << ", ABP + " << this->offset_;
 	}
 
 };
@@ -402,23 +399,20 @@ public:
  *
  * Loads the GLOB pointer incremented by the specified offset into a register.
  */
-class FI_get_GLOB : public SequentialInstruction
+class FI_get_GLOB : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// Offset to be added to the loaded pointer
 	int offset_;
 
 public:
 
 	FI_get_GLOB(const CodeStorage::Insn* insn, size_t dst, int offset)
-		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
+		: RegisterAssignment(insn, dst),  offset_(offset) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", GLOB + " << this->offset_;
+		return os << "mov   \tr" << this->dstReg_ << ", GLOB + " << this->offset_;
 	}
 
 };
@@ -429,11 +423,8 @@ public:
  * Loads a value at a given @p offset_ from the location pointed by the @p src_
  * register into the @p dst_ register.
  */
-class FI_load : public SequentialInstruction
+class FI_load : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// Index of the source register
 	size_t src_;
 
@@ -443,12 +434,12 @@ class FI_load : public SequentialInstruction
 public:
 
 	FI_load(const CodeStorage::Insn* insn, size_t dst, size_t src, int offset)
-		: SequentialInstruction(insn), dst_(dst), src_(src), offset_(offset) {}
+		: RegisterAssignment(insn, dst), src_(src), offset_(offset) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", [r" << this->src_
+		return os << "mov   \tr" << this->dstReg_ << ", [r" << this->src_
 			<< " + " << this->offset_ << ']';
 	}
 
@@ -460,23 +451,20 @@ public:
  * Loads a value which is at the specified offset from the location pointed by
  * the ABP pointer into a register.
  */
-class FI_load_ABP : public SequentialInstruction
+class FI_load_ABP : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// Offset from the ABP 
 	int offset_;
 
 public:
 
 	FI_load_ABP(const CodeStorage::Insn* insn, size_t dst, int offset)
-		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
+		: RegisterAssignment(insn, dst), offset_(offset) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", [ABP + " << this->offset_ << ']';
+		return os << "mov   \tr" << this->dstReg_ << ", [ABP + " << this->offset_ << ']';
 	}
 
 };
@@ -487,23 +475,20 @@ public:
  * Loads a value which is at the specified offset from the location pointed by
  * the GLOB pointer into a register.
  */
-class FI_load_GLOB : public SequentialInstruction
+class FI_load_GLOB : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// Offset from the GLOB
 	int offset_;
 
 public:
 
 	FI_load_GLOB(const CodeStorage::Insn* insn, size_t dst, int offset)
-		: SequentialInstruction(insn), dst_(dst), offset_(offset) {}
+		: RegisterAssignment(insn, dst), offset_(offset) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", [GLOB + " << this->offset_ << ']';
+		return os << "mov   \tr" << this->dstReg_ << ", [GLOB + " << this->offset_ << ']';
 	}
 
 };
@@ -551,11 +536,8 @@ public:
  * Loads a structure with multiple offsets pointed by the @p src_ register into
  * the @p dst_ register.
  */
-class FI_loads : public SequentialInstruction
+class FI_loads : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// Index of the source register
 	size_t src_;
 
@@ -568,14 +550,14 @@ class FI_loads : public SequentialInstruction
 public:
 
 	FI_loads(const CodeStorage::Insn* insn, size_t dst, size_t src, int base,
-		const std::vector<size_t>& offsets)
-		: SequentialInstruction(insn), dst_(dst), src_(src), base_(base),
-		offsets_(offsets) {}
+		const std::vector<size_t>& offsets) :
+		RegisterAssignment(insn, dst), src_(src), base_(base),
+		offsets_(offsets) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", [r" << this->src_ << " + "
+		return os << "mov   \tr" << this->dstReg_ << ", [r" << this->src_ << " + "
 			<< this->base_ << " + " << utils::wrap(this->offsets_) << ']';
 	}
 
@@ -623,23 +605,20 @@ public:
  * Allocates a memory block of given size and stores a reference to it in
  * a register.
  */
-class FI_alloc : public SequentialInstruction
+class FI_alloc : public RegisterAssignment
 {
-	/// Index of the register into which the allocated block will be stored
-	size_t dst_;
-
 	/// Index of the register with the size of the allocated block
 	size_t src_;
 
 public:
 
 	FI_alloc(const CodeStorage::Insn* insn, size_t dst, size_t src)
-		: SequentialInstruction(insn), dst_(dst), src_(src) {}
+		: RegisterAssignment(insn, dst), src_(src) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "alloc \tr" << this->dst_ << ", r" << this->src_;
+		return os << "alloc \tr" << this->dstReg_ << ", r" << this->src_;
 	}
 
 };
@@ -748,11 +727,8 @@ public:
 /**
  * @brief  Computes integer addition
  */
-class FI_iadd : public SequentialInstruction
+class FI_iadd : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// Index of the register with the first operand
 	size_t src1_;
 
@@ -762,12 +738,12 @@ class FI_iadd : public SequentialInstruction
 public:
 
 	FI_iadd(const CodeStorage::Insn* insn, size_t dst, size_t src1, size_t src2)
-		: SequentialInstruction(insn), dst_(dst), src1_(src1), src2_(src2) {}
+		: RegisterAssignment(insn, dst), src1_(src1), src2_(src2) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "iadd  \tr" << this->dst_ << ", r" << this->src1_
+		return os << "iadd  \tr" << this->dstReg_ << ", r" << this->src1_
 			<< ", r" << this->src2_;
 	}
 
@@ -854,11 +830,8 @@ public:
  * Builds a memory structure (e.g. a stack frame) from registers' content
  * (starting from the @p start_ register.
  */
-class FI_build_struct : public SequentialInstruction
+class FI_build_struct : public RegisterAssignment
 {
-	/// Index of the destination register
-	size_t dst_;
-
 	/// Index of the starting register
 	size_t start_;
 
@@ -868,13 +841,13 @@ class FI_build_struct : public SequentialInstruction
 public:
 
 	FI_build_struct(const CodeStorage::Insn* insn, size_t dst, size_t start,
-		const std::vector<size_t>& offsets)
-		: SequentialInstruction(insn), dst_(dst), start_(start), offsets_(offsets) {}
+		const std::vector<size_t>& offsets) :
+		RegisterAssignment(insn, dst), start_(start), offsets_(offsets) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		os << "mov   \tr" << this->dst_ << ", {";
+		os << "mov   \tr" << this->dstReg_ << ", {";
 		for (size_t i = 0; i < this->offsets_.size(); ++i) {
 			os << " +" << this->offsets_[i] << ":r" << this->start_ + i;
 		}
