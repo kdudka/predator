@@ -104,8 +104,9 @@ void FI_acc_sel::execute(ExecutionManager& execMan, SymState& state)
 
 	for (auto fae : res)
 	{
-		execMan.enqueue(&state, execMan.allocRegisters(state.GetRegs()),
-			std::shared_ptr<const FAE>(fae), next_);
+		SymState* tmpState = execMan.createChildState(state, next_);
+		tmpState->SetFAE(std::shared_ptr<FAE>(fae));
+		execMan.enqueue(tmpState);
 	}
 }
 
@@ -129,8 +130,9 @@ void FI_acc_set::execute(ExecutionManager& execMan, SymState& state)
 
 	for (auto fae : res)
 	{
-		execMan.enqueue(&state, execMan.allocRegisters(state.GetRegs()),
-			std::shared_ptr<const FAE>(fae), next_);
+		SymState* tmpState = execMan.createChildState(state, next_);
+		tmpState->SetFAE(std::shared_ptr<FAE>(fae));
+		execMan.enqueue(tmpState);
 	}
 }
 
@@ -155,8 +157,9 @@ void FI_acc_all::execute(ExecutionManager& execMan, SymState& state)
 
 	for (auto fae : res)
 	{
-		execMan.enqueue(&state, execMan.allocRegisters(state.GetRegs()),
-			std::shared_ptr<const FAE>(fae), next_);
+		SymState* tmpState = execMan.createChildState(state, next_);
+		tmpState->SetFAE(std::shared_ptr<FAE>(fae));
+		execMan.enqueue(tmpState);
 	}
 }
 

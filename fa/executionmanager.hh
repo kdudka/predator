@@ -174,6 +174,9 @@ public:
 	SymState* enqueue(
 		SymState*                          state)
 	{
+		// Assertions
+		assert(nullptr != state);
+
 		queue_.push_back(state);
 		return state;
 	}
