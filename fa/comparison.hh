@@ -30,7 +30,7 @@
  * state. Note that two states may be enqueued in case the precise result is
  * not known.
  */
-class FI_cmp_base : public SequentialInstruction
+class FI_cmp_base : public RegisterAssignment
 {
 	template <class F>
 	friend void executeGeneric(
@@ -41,19 +41,23 @@ class FI_cmp_base : public SequentialInstruction
 
 protected:
 
-	/// Index of the target register
-	size_t dst_;
-
 	/// Index of the register with the left-hand side operand
 	size_t src1_;
 
 	/// Index of the register with the right-hand side operand
 	size_t src2_;
 
-	public:
+public:
 
-	FI_cmp_base(size_t dst, size_t src1, size_t src2)
-		: SequentialInstruction(), dst_(dst), src1_(src1), src2_(src2) {}
+	FI_cmp_base(
+		const CodeStorage::Insn*          insn,
+		size_t                            dst,
+		size_t                            src1,
+		size_t                            src2) :
+		RegisterAssignment(insn, dst),
+		src1_(src1),
+		src2_(src2)
+	{ }
 };
 
 /**
@@ -65,12 +69,18 @@ class FI_eq : public FI_cmp_base
 {
 public:
 
-	FI_eq(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
+	FI_eq(
+		const CodeStorage::Insn*          insn,
+		size_t                            dst,
+		size_t                            src1,
+		size_t                            src2) :
+		FI_cmp_base(insn, dst, src1, src2)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "eq    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+		return os << "eq    \tr" << this->dstReg_ << ", r" << this->src1_ << ", r"
 			<< this->src2_;
 	}
 };
@@ -84,12 +94,18 @@ class FI_neq : public FI_cmp_base
 {
 public:
 
-	FI_neq(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
+	FI_neq(
+		const CodeStorage::Insn*          insn,
+		size_t                            dst,
+		size_t                            src1,
+		size_t                            src2) :
+		FI_cmp_base(insn, dst, src1, src2)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "neq   \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+		return os << "neq   \tr" << this->dstReg_ << ", r" << this->src1_ << ", r"
 			<< this->src2_;
 	}
 
@@ -104,12 +120,18 @@ class FI_lt : public FI_cmp_base
 {
 public:
 
-	FI_lt(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
+	FI_lt(
+		const CodeStorage::Insn*          insn,
+		size_t                            dst,
+		size_t                            src1,
+		size_t                            src2) :
+		FI_cmp_base(insn, dst, src1, src2)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "lt    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+		return os << "lt    \tr" << this->dstReg_ << ", r" << this->src1_ << ", r"
 			<< this->src2_;
 	}
 };
@@ -123,12 +145,18 @@ class FI_gt : public FI_cmp_base
 {
 public:
 
-	FI_gt(size_t dst, size_t src1, size_t src2) : FI_cmp_base(dst, src1, src2) {}
+	FI_gt(
+		const CodeStorage::Insn*          insn,
+		size_t                            dst,
+		size_t                            src1,
+		size_t                            src2) :
+		FI_cmp_base(insn, dst, src1, src2)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "gt    \tr" << this->dst_ << ", r" << this->src1_ << ", r"
+		return os << "gt    \tr" << this->dstReg_ << ", r" << this->src1_ << ", r"
 			<< this->src2_;
 	}
 };

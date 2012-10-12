@@ -1495,7 +1495,7 @@ protected:
 		size_t src2Reg = cLoadOperand(1, src2, insn);
 
 		// append the desired instruction
-		append(new F(dstReg, src1Reg, src2Reg));
+		append(new F(&insn, dstReg, src1Reg, src2Reg));
 
 		cStoreOperand(
 			/* target operand */ dst,
