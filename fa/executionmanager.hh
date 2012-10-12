@@ -161,14 +161,9 @@ public:
 	}
 
 	SymState* enqueue(
-		SymState*                          parent,
-		AbstractInstruction*               instr)
+		SymState*                          state)
 	{
-		SymState* state = createState();
-
-		state->init(parent, instr, parent->GetFAE(), parent->GetRegsShPtr());
 		queue_.push_back(state);
-
 		return state;
 	}
 

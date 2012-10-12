@@ -511,7 +511,7 @@ void FI_abs::execute(ExecutionManager& execMan, SymState& state)
 		SymState* tmpState = execMan.createChildState(state, next_);
 		tmpState->SetFAE(fae);
 
-		execMan.enqueue(tmpState, next_);
+		execMan.enqueue(tmpState);
 	}
 }
 
@@ -581,6 +581,6 @@ void FI_fix::execute(ExecutionManager& execMan, SymState& state)
 		SymState* tmpState = execMan.createChildState(state, next_);
 		tmpState->SetFAE(fae);
 
-		execMan.enqueue(tmpState, next_);
+		execMan.enqueue(tmpState);
 	}
 }

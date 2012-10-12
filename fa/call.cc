@@ -30,8 +30,10 @@ void FI_ret::execute(ExecutionManager& execMan, SymState& state)
 	assert(state.GetReg(dst_).isNativePtr());
 	assert(static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
 
-	execMan.enqueue(&state,
+	SymState* tmpState = execMan.createChildState(state,
 		static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
+
+	execMan.enqueue(tmpState);
 }
 
 

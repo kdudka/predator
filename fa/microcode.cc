@@ -59,7 +59,10 @@ void FI_cond::execute(ExecutionManager& execMan, SymState& state)
 	// Assertions
 	assert(state.GetReg(src_).isBool());
 
-	execMan.enqueue(&state, next_[(state.GetReg(src_).d_bool)?(0):(1)]);
+	SymState* tmpState = execMan.createChildState(state,
+		next_[(state.GetReg(src_).d_bool)?(0):(1)]);
+
+	execMan.enqueue(tmpState);
 }
 
 void FI_cond::finalize(
@@ -163,7 +166,7 @@ void FI_load_cst::execute(ExecutionManager& execMan, SymState& state)
 	SymState* tmpState = execMan.createChildState(state, next_);
 	tmpState->SetReg(dstReg_, data_);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_move_reg
@@ -175,7 +178,7 @@ void FI_move_reg::execute(ExecutionManager& execMan, SymState& state)
 	SymState* tmpState = execMan.createChildState(state, next_);
 	tmpState->SetReg(dstReg_, tmpState->GetReg(src_));
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_bnot
@@ -188,7 +191,7 @@ void FI_bnot::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetReg(dstReg_, Data::createBool(!tmpState->GetReg(dstReg_).d_bool));
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_inot
@@ -201,7 +204,7 @@ void FI_inot::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetReg(dstReg_, Data::createBool(!tmpState->GetReg(dstReg_).d_int));
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_move_reg_offs
@@ -221,7 +224,7 @@ void FI_move_reg_offs::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetReg(dstReg_, data);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_move_reg_inc
@@ -243,7 +246,7 @@ void FI_move_reg_inc::execute(ExecutionManager& execMan, SymState& state)
 	data.d_ref.displ += tmpState->GetReg(src2_).d_int;
 	tmpState->SetReg(dstReg_, data);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_get_greg
@@ -252,7 +255,7 @@ void FI_get_greg::execute(ExecutionManager& execMan, SymState& state)
 	SymState* tmpState = execMan.createChildState(state, next_);
 	tmpState->SetReg(dstReg_, VirtualMachine(*(tmpState->GetFAE())).varGet(src_));
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_set_greg
@@ -261,7 +264,7 @@ void FI_set_greg::execute(ExecutionManager& execMan, SymState& state)
 	SymState* tmpState = execMan.createChildState(state, next_);
 	VirtualMachine(*(tmpState->GetFAE())).varSet(dst_, tmpState->GetReg(src_));
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_get_ABP
@@ -273,7 +276,7 @@ void FI_get_ABP::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetReg(dstReg_, data);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_get_GLOB
@@ -285,7 +288,7 @@ void FI_get_GLOB::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetReg(dstReg_, data);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_load
@@ -305,7 +308,7 @@ void FI_load::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetReg(dstReg_, out);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_load_ABP
@@ -318,7 +321,7 @@ void FI_load_ABP::execute(ExecutionManager& execMan, SymState& state)
 	Data out;
 	vm.nodeLookup(data.d_ref.root, static_cast<size_t>(offset_), out);
 	tmpState->SetReg(dstReg_, out);
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_load_GLOB
@@ -332,7 +335,7 @@ void FI_load_GLOB::execute(ExecutionManager& execMan, SymState& state)
 	vm.nodeLookup(data.d_ref.root, static_cast<size_t>(offset_), out);
 	tmpState->SetReg(dstReg_, out);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_store
@@ -356,7 +359,7 @@ void FI_store::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetFAE(fae);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_loads
@@ -375,7 +378,7 @@ void FI_loads::execute(ExecutionManager& execMan, SymState& state)
 	);
 
 	tmpState->SetReg(dstReg_, out);
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_stores
@@ -399,7 +402,7 @@ void FI_stores::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetFAE(fae);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_alloc
@@ -428,7 +431,7 @@ void FI_alloc::execute(ExecutionManager& execMan, SymState& state)
 	Data dstData = Data::createVoidPtr(srcData.d_int);
 	tmpState->SetReg(dstReg_, dstData);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 
@@ -442,7 +445,7 @@ void FI_node_create::execute(ExecutionManager& execMan, SymState& state)
 	// TODO: is this alright? Shouldn't dst_ be modified?
 	if (srcData.isRef() || srcData.isNull())
 	{	// in case src_ is a null pointer
-		execMan.enqueue(tmpState, next_);
+		execMan.enqueue(tmpState);
 		return;
 	}
 
@@ -465,7 +468,7 @@ void FI_node_create::execute(ExecutionManager& execMan, SymState& state)
 	tmpState->SetReg(dst_, dstData);
 	tmpState->SetFAE(fae);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_node_free
@@ -492,7 +495,7 @@ void FI_node_free::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetFAE(fae);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_iadd
@@ -506,7 +509,7 @@ void FI_iadd::execute(ExecutionManager& execMan, SymState& state)
 	int sum = tmpState->GetReg(src1_).d_int + tmpState->GetReg(src2_).d_int;
 	tmpState->SetReg(dstReg_, Data::createInt((sum > 0)? 1 : 0));
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_check
@@ -517,7 +520,7 @@ void FI_check::execute(ExecutionManager& execMan, SymState& state)
 	Normalization(const_cast<FAE&>(*(state.GetFAE())), &state).check();
 
 	SymState* tmpState = execMan.createChildState(state, next_);
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_assert
@@ -532,7 +535,7 @@ void FI_assert::execute(ExecutionManager& execMan, SymState& state)
 		throw std::runtime_error("assertion failed");
 	}
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_abort
@@ -555,7 +558,7 @@ void FI_build_struct::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetReg(dstReg_, Data::createStruct(items));
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_push_greg
@@ -569,7 +572,7 @@ void FI_push_greg::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetFAE(fae);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 // FI_pop_greg
@@ -583,7 +586,7 @@ void FI_pop_greg::execute(ExecutionManager& execMan, SymState& state)
 
 	tmpState->SetFAE(fae);
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 struct DumpCtx {
@@ -651,7 +654,7 @@ void FI_print_heap::execute(ExecutionManager& execMan, SymState& state)
 	FA_NOTE("local variables: " << DumpCtx(*ctx_, *(tmpState->GetFAE())));
 	FA_NOTE("heap:" << *(tmpState->GetFAE()));
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
 
 
@@ -664,5 +667,5 @@ void FI_plot_heap::execute(ExecutionManager& execMan, SymState& state)
 
 	MemPlotter::handlePlot(*tmpState, *this->insn());
 
-	execMan.enqueue(tmpState, next_);
+	execMan.enqueue(tmpState);
 }
