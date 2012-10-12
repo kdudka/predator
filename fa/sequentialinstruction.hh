@@ -125,4 +125,38 @@ public:   // methods
 };
 
 
+/**
+ * @brief  Instruction with void effect
+ *
+ * This class represents and instuction with void effect on the symbolic state.
+ * Derived are instructions such as printing of heap, etc.
+ */
+class VoidInstruction : public SequentialInstruction
+{
+protected:// methods
+
+	/**
+	 * @brief  Constructor
+	 *
+	 * Creates a void effect instruction fo given instruction in the Code Storage.
+	 *
+	 * @param[in]  insn  Corresponding instruction in the Code Storage
+	 */
+	explicit VoidInstruction(
+		const CodeStorage::Insn*               insn,
+		fi_type_e                              fiType = fi_type_e::fiUnspec) :
+		SequentialInstruction(insn, fiType)
+	{ }
+
+public:   // methods
+
+	/**
+	 * @copydoc  AbstractInstruction::reverseAndIsect
+	 */
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+};
+
 #endif

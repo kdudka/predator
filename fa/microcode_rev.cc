@@ -25,18 +25,6 @@
 // Forester headers
 #include "microcode.hh"
 
-SymState* FI_cond::reverseAndIsect(
-		ExecutionManager&                      execMan,
-		const SymState&                        fwdPred,
-		const SymState&                        bwdSucc) const
-{
-	(void)execMan;
-	(void)fwdPred;
-	(void)bwdSucc;
-
-	assert(false);
-}
-
 SymState* FI_acc_sel::reverseAndIsect(
 	ExecutionManager&                      execMan,
 	const SymState&                        fwdPred,
@@ -73,30 +61,6 @@ SymState* FI_acc_all::reverseAndIsect(
 	assert(false);
 }
 
-SymState* FI_print_heap::reverseAndIsect(
-		ExecutionManager&                      execMan,
-		const SymState&                        fwdPred,
-		const SymState&                        bwdSucc) const
-{
-	(void)execMan;
-	(void)fwdPred;
-	(void)bwdSucc;
-
-	assert(false);
-}
-
-SymState* FI_plot_heap::reverseAndIsect(
-	ExecutionManager&                      execMan,
-	const SymState&                        fwdPred,
-	const SymState&                        bwdSucc) const
-{
-	(void)execMan;
-	(void)fwdPred;
-	(void)bwdSucc;
-
-	assert(false);
-}
-
 SymState* FI_pop_greg::reverseAndIsect(
 	ExecutionManager&                      execMan,
 	const SymState&                        fwdPred,
@@ -122,30 +86,6 @@ SymState* FI_push_greg::reverseAndIsect(
 }
 
 SymState* FI_abort::reverseAndIsect(
-	ExecutionManager&                      execMan,
-	const SymState&                        fwdPred,
-	const SymState&                        bwdSucc) const
-{
-	(void)execMan;
-	(void)fwdPred;
-	(void)bwdSucc;
-
-	assert(false);
-}
-
-SymState* FI_assert::reverseAndIsect(
-	ExecutionManager&                      execMan,
-	const SymState&                        fwdPred,
-	const SymState&                        bwdSucc) const
-{
-	(void)execMan;
-	(void)fwdPred;
-	(void)bwdSucc;
-
-	assert(false);
-}
-
-SymState* FI_check::reverseAndIsect(
 	ExecutionManager&                      execMan,
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const

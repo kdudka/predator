@@ -39,7 +39,7 @@
  * this instruction is executed.
  *
  */
-class FI_cond : public AbstractInstruction
+class FI_cond : public VoidInstruction
 {
 	/// Index of the register with the Boolean value
 	size_t src_;
@@ -56,24 +56,19 @@ public:
 
 	FI_cond(const CodeStorage::Insn* insn, size_t src,
 		AbstractInstruction* next[2]) :
-		AbstractInstruction(insn, fi_type_e::fiBranch),
+		VoidInstruction(insn, fi_type_e::fiBranch),
 		src_{src},
 		next_{next[0], next[1]}
 	{ }
 
 	FI_cond(const CodeStorage::Insn* insn, size_t src,
 		const std::vector<AbstractInstruction*>& next) :
-		AbstractInstruction(insn, fi_type_e::fiBranch),
+		VoidInstruction(insn, fi_type_e::fiBranch),
 		src_{src},
 		next_{next[0], next[1]}
 	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
-
-	virtual SymState* reverseAndIsect(
-		ExecutionManager&                      execMan,
-		const SymState&                        fwdPred,
-		const SymState&                        bwdSucc) const;
 
 	virtual void finalize(const std::unordered_map<const CodeStorage::Block*,
 			AbstractInstruction*>& codeIndex,
@@ -802,19 +797,14 @@ public:
 /**
  * @brief  Checks for the absence of garbage
  */
-class FI_check : public SequentialInstruction
+class FI_check : public VoidInstruction
 {
 public:
 
 	FI_check(const CodeStorage::Insn* insn)
-		: SequentialInstruction(insn, fi_type_e::fiCheck) {}
+		: VoidInstruction(insn, fi_type_e::fiCheck) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
-
-	virtual SymState* reverseAndIsect(
-		ExecutionManager&                      execMan,
-		const SymState&                        fwdPred,
-		const SymState&                        bwdSucc) const;
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "check ";
@@ -827,7 +817,7 @@ public:
  *
  * Checks whether the value of a register is equal to the desired value.
  */
-class FI_assert : public SequentialInstruction
+class FI_assert : public VoidInstruction
 {
 	/// Index of the source register
 	size_t dst_;
@@ -838,14 +828,9 @@ class FI_assert : public SequentialInstruction
 public:
 
 	FI_assert(const CodeStorage::Insn* insn, size_t dst, const Data& cst)
-		: SequentialInstruction(insn), dst_(dst), cst_(cst) {}
+		: VoidInstruction(insn), dst_(dst), cst_(cst) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
-
-	virtual SymState* reverseAndIsect(
-		ExecutionManager&                      execMan,
-		const SymState&                        fwdPred,
-		const SymState&                        bwdSucc) const;
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "assert\tr" << this->dst_ << ", " << this->cst_;
@@ -856,12 +841,12 @@ public:
 /**
  * @brief  Aborts the program execution (exit)
  */
-class FI_abort : public AbstractInstruction
+class FI_abort : public SequentialInstruction
 {
 public:
 
 	FI_abort(const CodeStorage::Insn* insn)
-		: AbstractInstruction(insn, fi_type_e::fiAbort) {}
+		: SequentialInstruction(insn, fi_type_e::fiAbort) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
@@ -983,7 +968,7 @@ public:
  *
  * Prints the heap in a human readable format (ehm?)
  */
-class FI_print_heap : public SequentialInstruction
+class FI_print_heap : public VoidInstruction
 {
 	/// The context to be printed
 	const struct SymCtx* ctx_;
@@ -996,14 +981,9 @@ private:  // methods
 public:
 
 	FI_print_heap(const CodeStorage::Insn* insn, const struct SymCtx* ctx)
-		: SequentialInstruction(insn), ctx_(ctx) {}
+		: VoidInstruction(insn), ctx_(ctx) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
-
-	virtual SymState* reverseAndIsect(
-		ExecutionManager&                      execMan,
-		const SymState&                        fwdPred,
-		const SymState&                        bwdSucc) const;
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "prh ";
@@ -1016,7 +996,7 @@ public:
  *
  * Plots the heap.
  */
-class FI_plot_heap : public SequentialInstruction
+class FI_plot_heap : public VoidInstruction
 {
 private:  // methods
 
@@ -1026,14 +1006,9 @@ private:  // methods
 public:
 
 	FI_plot_heap(const CodeStorage::Insn* insn)
-		: SequentialInstruction(insn) {}
+		: VoidInstruction(insn) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
-
-	virtual SymState* reverseAndIsect(
-		ExecutionManager&                      execMan,
-		const SymState&                        fwdPred,
-		const SymState&                        bwdSucc) const;
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "plot ";

@@ -18,6 +18,7 @@
  */
 
 // Forester headers
+#include "executionmanager.hh"
 #include "sequentialinstruction.hh"
 #include "jump.hh"
 
@@ -46,4 +47,14 @@ SymState* RegisterAssignment::reverseAndIsect(
 	(void)bwdSucc;
 
 	assert(false);
+}
+
+SymState* VoidInstruction::reverseAndIsect(
+	ExecutionManager&                      execMan,
+	const SymState&                        fwdPred,
+	const SymState&                        bwdSucc) const
+{
+	(void)fwdPred;
+
+	return execMan.copyState(bwdSucc);
 }
