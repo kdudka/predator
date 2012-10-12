@@ -38,3 +38,16 @@ void FI_jmp::finalize(
 
 	this->next_->setTarget();
 }
+
+
+SymState* FI_jmp::reverseAndIsect(
+	ExecutionManager&                      execMan,
+	const SymState&                        fwdPred,
+	const SymState&                        bwdSucc) const
+{
+	(void)execMan;
+	(void)fwdPred;
+	(void)bwdSucc;
+
+	assert(false);
+}
