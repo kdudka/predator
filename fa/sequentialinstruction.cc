@@ -35,3 +35,15 @@ void SequentialInstruction::finalize(
 		this->next_ = static_cast<FI_jmp*>(this->next_)->getTarget(codeIndex);
 	}
 }
+
+SymState* RegisterAssignment::reverseAndIsect(
+	ExecutionManager&                      execMan,
+	const SymState&                        fwdPred,
+	const SymState&                        bwdSucc) const
+{
+	(void)execMan;
+	(void)fwdPred;
+	(void)bwdSucc;
+
+	assert(false);
+}

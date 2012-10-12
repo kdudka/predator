@@ -35,13 +35,12 @@
  * Abstract class representing a sequential instruction. This class serves as
  * the base class for all sequential instructions.
  */
-class SequentialInstruction : public AbstractInstruction {
-
+class SequentialInstruction : public AbstractInstruction
+{
 protected:
 
 	/// the following instruction
 	AbstractInstruction* next_;
-
 
 private: // methods
 
@@ -59,9 +58,10 @@ public:
 	 * @param[in]  insn    Source instruction in the CL's code storage
 	 * @param[in]  fiType  The type of the instruction (from #fi_type_e)
 	 */
-	SequentialInstruction(const CodeStorage::Insn* insn = nullptr,
-		fi_type_e fiType = fi_type_e::fiUnspec)
-		: AbstractInstruction(insn, fiType),
+	explicit SequentialInstruction(
+		const CodeStorage::Insn*           insn = nullptr,
+		fi_type_e                          fiType = fi_type_e::fiUnspec) :
+		AbstractInstruction(insn, fiType),
 		next_{nullptr}
 	{ }
 
@@ -83,5 +83,46 @@ public:
 	 */
 	AbstractInstruction* next() const { return this->next_; }
 };
+
+
+/**
+ * @brief  Instruction for assignment into a local register
+ *
+ * Assigns a value into a local register.
+ */
+class RegisterAssignment : public SequentialInstruction
+{
+protected:// data members
+
+	/// Index of the target local register
+	size_t dstReg_;
+
+protected:// methods
+
+	/**
+	 * @brief  Constructor
+	 *
+	 * Creates a register assignment instruction for given instruction in the Code
+	 * Storage.
+	 *
+	 * @param[in]  insn    Corresponding instruction in the Code Storage
+	 * @param[in]  dstReg  The destination register of the instruction
+	 */
+	explicit RegisterAssignment(const CodeStorage::Insn* insn, size_t dstReg) :
+		SequentialInstruction(insn, fi_type_e::fiUnspec),
+		dstReg_(dstReg)
+	{ }
+
+public:   // methods
+
+	/**
+	 * @copydoc  AbstractInstruction::reverseAndIsect
+	 */
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+};
+
 
 #endif
