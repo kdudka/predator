@@ -106,6 +106,10 @@ public:
 		return fwdConf_;
 	}
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
 };
 
 /**

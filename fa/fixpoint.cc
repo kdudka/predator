@@ -426,6 +426,18 @@ void learn2(FAE& fae, BoxMan& boxMan)
 		folding.discover3(i, forbidden, false);
 	}
 }
+} // namespace
+
+SymState* FixpointBase::reverseAndIsect(
+	ExecutionManager&                      execMan,
+	const SymState&                        fwdPred,
+	const SymState&                        bwdSucc) const
+{
+	(void)execMan;
+	(void)fwdPred;
+	(void)bwdSucc;
+
+	assert(false);
 }
 
 // FI_abs
