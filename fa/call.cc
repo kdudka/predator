@@ -34,8 +34,16 @@ void FI_ret::execute(ExecutionManager& execMan, SymState& state)
 		static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
 }
 
-void FI_ret::finalize(
-	const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,
-	std::vector<AbstractInstruction*>::const_iterator
-)
-{ }
+
+SymState* FI_ret::reverseAndIsect(
+	ExecutionManager&                      execMan,
+	const SymState&                        fwdPred,
+	const SymState&                        bwdSucc) const
+{
+	(void)execMan;
+	(void)fwdPred;
+	(void)bwdSucc;
+
+	assert(false);
+}
+

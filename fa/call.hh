@@ -33,10 +33,15 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual void finalize(
 		const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>&,
-		std::vector<AbstractInstruction*>::const_iterator
-	);
+		std::vector<AbstractInstruction*>::const_iterator)
+	{ }
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "ret   \tr" << this->dst_;
