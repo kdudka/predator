@@ -48,6 +48,7 @@ configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
 
 # libfa.so
 add_library(fa SHARED
+  backward_run.cc
 	box.cc
 	boxman.cc
 	call.cc
