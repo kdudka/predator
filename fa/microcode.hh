@@ -180,23 +180,20 @@ public:
 /**
  * @brief  Loads a constant into a register
  */
-class FI_load_cst : public SequentialInstruction
+class FI_load_cst : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// The data value to be loaded into the register denoted by @p dst_
 	Data data_;
 
 public:
 
 	FI_load_cst(const CodeStorage::Insn* insn, size_t dst, const Data& data)
-		: SequentialInstruction(insn), dst_(dst), data_(data) {}
+		: RegisterAssignment(insn, dst), data_(data) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", " << this->data_;
+		return os << "mov   \tr" << this->dstReg_ << ", " << this->data_;
 	}
 
 };
@@ -204,23 +201,20 @@ public:
 /**
  * @brief  Moves a value between two registers
  */
-class FI_move_reg : public SequentialInstruction
+class FI_move_reg : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// Index of the source register
 	size_t src_;
 
 public:
 
 	FI_move_reg(const CodeStorage::Insn* insn, size_t dst, size_t src)
-		: SequentialInstruction(insn), dst_(dst), src_(src) {}
+		: RegisterAssignment(insn, dst), src_(src) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", r" << this->src_;
+		return os << "mov   \tr" << this->dstReg_ << ", r" << this->src_;
 	}
 
 };
@@ -228,20 +222,17 @@ public:
 /**
  * @brief  Negates a Boolean value in a register
  */
-class FI_bnot : public SequentialInstruction
+class FI_bnot : public RegisterAssignment
 {
-	/// Index of both the source and the target register
-	size_t dst_;
-
 public:
 
 	FI_bnot(const CodeStorage::Insn* insn, size_t dst)
-		: SequentialInstruction(insn), dst_(dst) {}
+		: RegisterAssignment(insn, dst) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "not   \tr" << this->dst_;
+		return os << "not   \tr" << this->dstReg_;
 	}
 
 };
@@ -251,20 +242,17 @@ public:
  *
  * Negates an integer value in a register: the result is a Boolean.
  */
-class FI_inot : public SequentialInstruction
+class FI_inot : public RegisterAssignment
 {
-	/// The both source and target register
-	size_t dst_;
-
 public:
 
 	FI_inot(const CodeStorage::Insn* insn, size_t dst) :
-		SequentialInstruction(insn), dst_(dst) {}
+		RegisterAssignment(insn, dst) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "not   \tr" << this->dst_;
+		return os << "not   \tr" << this->dstReg_;
 	}
 
 };
@@ -276,11 +264,8 @@ public:
  * register. Before storing the reference into the target register, the
  * displacement is incremented by a specified offset.
  */
-class FI_move_reg_offs : public SequentialInstruction
+class FI_move_reg_offs : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// Index of the source register
 	size_t src_;
 
@@ -291,12 +276,12 @@ public:
 
 	FI_move_reg_offs(const CodeStorage::Insn* insn,
 		size_t dst, size_t src, int offset)
-		: SequentialInstruction(insn), dst_(dst), src_(src), offset_(offset) {}
+		: RegisterAssignment(insn, dst), src_(src), offset_(offset) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", r" << this->src_
+		return os << "mov   \tr" << this->dstReg_ << ", r" << this->src_
 			<< " + " << this->offset_;
 	}
 
@@ -309,11 +294,8 @@ public:
  * register. Before storing the reference into the target register, the
  * displacement is incremented by the value in the specified register.
  */
-class FI_move_reg_inc : public SequentialInstruction
+class FI_move_reg_inc : public RegisterAssignment
 {
-	/// Index of the target register
-	size_t dst_;
-
 	/// Index of the source register
 	size_t src1_;
 
@@ -324,12 +306,12 @@ public:
 
 	FI_move_reg_inc(const CodeStorage::Insn* insn,
 		size_t dst, size_t src1, size_t src2)
-		: SequentialInstruction(insn), dst_(dst), src1_(src1), src2_(src2) {}
+		: RegisterAssignment(insn, dst), src1_(src1), src2_(src2) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", r" << this->src1_
+		return os << "mov   \tr" << this->dstReg_ << ", r" << this->src1_
 			<< " + r" << this->src2_;
 	}
 
@@ -340,23 +322,20 @@ public:
  *
  * Loads the value from a global register into a local register.
  */
-class FI_get_greg : public SequentialInstruction
+class FI_get_greg : public RegisterAssignment
 {
-	/// Index of the target local register
-	size_t dst_;
-
 	/// Index of the source global register
 	size_t src_;
 
 public:
 
 	FI_get_greg(const CodeStorage::Insn* insn, size_t dst, size_t src)
-		: SequentialInstruction(insn), dst_(dst), src_(src) {}
+		: RegisterAssignment(insn, dst), src_(src) { }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
 	virtual std::ostream& toStream(std::ostream& os) const {
-		return os << "mov   \tr" << this->dst_ << ", gr" << this->src_;
+		return os << "mov   \tr" << this->dstReg_ << ", gr" << this->src_;
 	}
 
 };
