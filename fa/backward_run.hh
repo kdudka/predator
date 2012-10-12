@@ -48,7 +48,7 @@ public:   // methods
 	 *
 	 * @returns  @p true if the counterexample is spurious, @p false if otherwise
 	 */
-	bool isSpuriousCE(const SymState::Trace& fwdTrace)
+	bool isSpuriousCE(SymState::Trace& fwdTrace)
 	{
 		// Assertions
 		assert(!fwdTrace.empty());
@@ -67,11 +67,15 @@ public:   // methods
 
 		bwdTrace.push_back(bwdState);
 
-		// go the previous element in the forward trace
 		while (++itFwdTrace != fwdTrace.cend())
 		{	// until we hit the initial state of the execution trace
-			assert(nullptr != *itFwdTrace);
+			const SymState* fwdState = *itFwdTrace;
+			assert(nullptr != fwdState);
 
+			const AbstractInstruction* instr = fwdState->GetInstr();
+			assert(nullptr != instr);
+
+//			instr->reverseAndIsect(execMan_, *fwdState, *bwdState);
 		}
 
 		for (SymState* st : bwdTrace)

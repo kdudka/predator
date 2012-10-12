@@ -298,7 +298,8 @@ protected:
 			}
 
 			BackwardRun bwdRun(execMan_);
-			bool isSpurious = bwdRun.isSpuriousCE(e.state()->getTrace());
+			SymState::Trace trace = e.state()->getTrace();
+			bool isSpurious = bwdRun.isSpuriousCE(trace);
 			FA_NOTE( "The counterexample IS " << (isSpurious? "NOT " : "") << "spurious");
 
 			throw;
