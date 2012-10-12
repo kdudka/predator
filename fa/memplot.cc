@@ -280,8 +280,9 @@ private:  // methods
 
 			case data_type_e::t_void_ptr:
 			{
-				assert(false);     // not supported
-			  break;
+				std::ostringstream os;
+				os << "(void*) [size=" << data.d_void_ptr_size << " B]";
+				return MemNode::createDataField(transID, os.str());
 			}
 
 			case data_type_e::t_ref:
