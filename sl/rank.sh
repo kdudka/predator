@@ -27,69 +27,70 @@ shift
 GRAND_TOTAL=0
 
 rank_files() {
-    PLUS_ONE=0
-    PLUS_TWO=0
-    MINUS_TWO=0
-    MINUS_FOUR=0
+    CORRECT_FALSE=0
+    CORRECT_TRUE=0
+    INCORRECT_FALSE=0
+    INCORRECT_TRUE=0
 
     for i in "$@"; do
         HAS_BUG=no
-        if echo "$i" | match -E "BUG|unsafe"; then
+        if echo "$i" | match -E "BUG|unsafe|false"; then
             HAS_BUG=yes
         fi
 
-        printf "%-96s\t" "$i"
+        MEMBUG="$(echo $i | egrep -o "(valid-free)|(valid-deref)|(valid-memtrack)")"
+
+        printf "%-72s\t" "$i"
 
         RESULT="$($TIMEOUT $RUNNER $i -m32 2>/dev/null)"
-        case "$RESULT" in
-            SAFE)
-                if test xyes = "x$HAS_BUG"; then
-                    printf "SAFE\t[-4]\n"
-                    MINUS_FOUR=$(expr 1 + $MINUS_FOUR)
+        case "$( echo $RESULT | egrep -o "(TRUE)|(FALSE)" )" in
+            TRUE)
+                if test xyes = "x$HAS_BUG" ; then
+                    printf "\033[1;31m!TRUE!\t[-8]\n  HAS BUG: [$HAS_BUG] MEMBUG: [$MEMBUG] RESULT: [$RESULT]\033[0m\n"
+                    INCORRECT_TRUE=$(expr 1 + $INCORRECT_TRUE)
                 else
-                    printf "SAFE\t[+2]\n"
-                    PLUS_TWO=$(expr 1 + $PLUS_TWO)
+                    printf "\033[1;32mTRUE\t[+2]\033[0m\n"
+                    CORRECT_TRUE=$(expr 1 + $CORRECT_TRUE)
                 fi
                 ;;
 
-            UNSAFE)
-                if test xyes = "x$HAS_BUG"; then
-                    printf "UNSAFE\t[+1 with luck]\n"
-                    PLUS_ONE=$(expr 1 + $PLUS_ONE)
+            FALSE)
+              if test xyes = "x$HAS_BUG" && ( test -z "$MEMBUG" || test "FALSE(p_$MEMBUG)" == "$RESULT" ); then
+                    printf "\033[1;32mFALSE\t[+1 with luck]\033[0m\n"
+                    CORRECT_FALSE=$(expr 1 + $CORRECT_FALSE)
                 else
-                    printf "UNSAFE\t[-2]\n"
-                    MINUS_TWO=$(expr 1 + $MINUS_TWO)
+                    printf "\033[1;31m!FALSE!\t[-4]\n  HAS BUG: [$HAS_BUG] MEMBUG: [$MEMBUG] RESULT: [$RESULT]\033[0m\n"
+                    INCORRECT_FALSE=$(expr 1 + $INCORRECT_FALSE)
                 fi
                 ;;
 
-            *)
-                printf "UNKNOWN\t[+0]\n"
+            *)  printf "\033[1;34mUNKNOWN\t[+0]\033[0m\n"
                 ;;
         esac
     done
 
-    if test 0 -lt "$PLUS_ONE"; then
-        printf -- "--- UNSAFE CORRECT:\t%2d [need to check ptrace!]\n" \
-            "$PLUS_ONE"
+    if test 0 -lt "$CORRECT_FALSE"; then
+        printf -- "--- FALSE CORRECT:\t%2d [need to check ptrace!]\n" \
+            "$CORRECT_FALSE"
     fi
-    if test 0 -lt "$PLUS_TWO"; then
-        printf -- "--- SAFE CORRECT:\t%2d [+2 each]\n" "$PLUS_TWO"
+    if test 0 -lt "$CORRECT_TRUE"; then
+        printf -- "--- TRUE CORRECT:\t%2d [+2 each]\n" "$CORRECT_TRUE"
     fi
-    if test 0 -lt "$MINUS_TWO"; then
-        printf -- "--- UNSAFE INCORRECT:\t%2d [-2 each]\n" "$MINUS_TWO"
+    if test 0 -lt "$INCORRECT_FALSE"; then
+        printf -- "--- FALSE INCORRECT:\t%2d [-4 each]\n" "$INCORRECT_FALSE"
     fi
-    if test 0 -lt "$MINUS_FOUR"; then
-        printf -- "--- SAFE INCORRECT:\t%2d [-4 each]\n" "$MINUS_FOUR"
+    if test 0 -lt "$INCORRECT_TRUE"; then
+        printf -- "--- TRUE INCORRECT:\t%2d [-8 each]\n" "$INCORRECT_TRUE"
     fi
 
-    PLUS_TWO_SUM=$(expr 2 \* $PLUS_TWO)
-    MINUS_TWO_SUM=$(expr -2 \* $MINUS_TWO)
-    MINUS_FOUR_SUM=$(expr -4 \* $MINUS_FOUR)
-    TOTAL=$(expr $PLUS_ONE + $PLUS_TWO_SUM + $MINUS_TWO_SUM + $MINUS_FOUR_SUM)
+    CORRECT_TRUE_SUM=$(expr 2 \* $CORRECT_TRUE)
+    INCORRECT_FALSE_SUM=$(expr -2 \* $INCORRECT_FALSE)
+    INCORRECT_TRUE_SUM=$(expr -4 \* $INCORRECT_TRUE)
+    TOTAL=$(expr $CORRECT_FALSE + $CORRECT_TRUE_SUM + $INCORRECT_FALSE_SUM + $INCORRECT_TRUE_SUM)
     GRAND_TOTAL=$(expr $GRAND_TOTAL + $TOTAL)
 
     SUFFIX=
-    if test 0 -lt "$PLUS_ONE"; then
+    if test 0 -lt "$CORRECT_FALSE"; then
         SUFFIX=" [with luck]"
     fi
 

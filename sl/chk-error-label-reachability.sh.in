@@ -5,20 +5,75 @@ export CCACHE_DISABLE=1
 
 export MSG_INFLOOP=': warning: end of function .*() has not been reached'
 export MSG_LABEL_FOUND=': error: error label "ERROR" has been reached'
-export MSG_MEMLEAK=': warning: memory leak detected'
 export MSG_OUR_WARNINGS=': warning: .*\[-fplugin=libsl.so\]$'
-export MSG_TIME_ELAPSED=': note: clEasyRun() took '
+export MSG_TIME_ELAPSED=': note: clEasyRun\(\) took '
 export MSG_UNHANDLED_CALL=': warning: ignoring call of undefined function: '
+
+export MSG_MEMLEAK=': warning: memory leak detected'
+
+export MSG_DEREF_FREED=': error: dereference of already deleted heap object'
+export MSG_DEREF_OUT=': error: dereferencing object of size [0-9]*B out of bounds'
+export MSG_DEREF_NULL=': error: dereference of NULL value'
+export MSG_DEREF_INVALID=': error: invalid dereference'
+export MSG_DEREF_NENH=': error: dereference of non-existing non-heap object'
+
+export MSG_FREE_OFFSET=': error: free\(\) called with offset'
+export MSG_FREE_INVALID=': error: invalid free\(\)'
+export MSG_FREE_DOUBLE=': error: double free\(\)'
+export MSG_FREE_NENH=': error: attempt to free a non-existing non-heap object'
+export MSG_FREE_NONHEAP=': error: attempt to free a non-heap object'
+export MSG_FREE_NONPOINTER=': error: free() called on non-pointer value'
+
+# Predator error messages we need to handle:
+#"not enough space to store value of a pointer" - not sure
+#"invalid L-value" - probably not
+#"size arg of memset() is not a known integer" - no category
+#"size arg of " << fnc << " is not a known integer" - probably not
+#"source and destination overlap in call of " - not category
+#"internal error in valMerge(), heap inconsistent!" - probably not
+#"'nelem' arg of calloc() is not a known integer" - probably not
+#"'elsize' arg of calloc() is not a known integer" - probably not
+#"failed to imply a zero-terminated string" - probably not
+#"size arg of " << name << "() is not a known integer"- probably not
+#"size arg of malloc() is not a known integer" - probably not
+#"fmt arg of printf() is not a string literal" - probably not
+#"insufficient count of arguments given to printf()" - probably not
+#"unhandled conversion given to printf()" - probably not
+#"n arg of " << name << "() is not a known integer" - probably not
+#"call cache entry found, but result not " - probably not
+#"call cache entry found, but result not " - probably not
+#": " << "entry block not found" - probably not
+#"failed to resolve indirect function call" - probably not
+#"call depth exceeds SE_MAX_CALL_DEPTH" - probably not
+
+# Predator warnings we need to handle
+#"possible underflow of " << sig << " integer" - not
+#"possible overflow of " << sig << " integer" - not
+#"ignoring call of memset() with size == 0" - not
+#"ignoring call of " << fnc << " with size == 0" - not
+#"incorrectly called " - not
+#"() failed to read node_name" - not
+#"error while plotting '" << plotName << "'" - not
+#"() reached, stopping per user's request" - not
+#"too many arguments given to printf()" - not
+#"error while plotting '" << plotName << "'" - not
+#"conditional jump depends on uninitialized value" - not
+#"end of function " - not
+#"caught signal " - not
 
 usage() {
     printf "Usage: %s path/to/test-case.c [-m32|-m64] [CFLAGS]\n\n" "$SELF" >&2
     cat >&2 << EOF
-    The verification result (SAFE, UNSAFE, or UNKNOWN) will be printed to
+    The verification result (TRUE, FALSE, or UNKNOWN) will be printed to
     standard output.  All other information will be printed to standard error
     output.  There is no timeout or ulimit set by this script.  If these
     constraints are violated, it should be treated as UNKNOWN result.  Do not
     forget to use the -m32 option when compiling 32bit preprocessed code on a
     64bit OS.
+
+    For memory safety category, the FALSE result is further clarified as
+    FALSE(p) where p is the property for which the Predator judges the
+    program to be unsatisfactory.
 
 EOF
     exit 1
@@ -41,7 +96,7 @@ find_gcc_plug sl Predator
 match() {
     line="$1"
     shift
-    printf "%s" "$line" | grep "$@" >/dev/null
+    printf "%s" "$line" | egrep "$@" >/dev/null
     return $?
 }
 
@@ -52,9 +107,14 @@ fail() {
 }
 
 report_unsafe() {
+    PROPERTY="$1"
     # drop the remainder of the output
     cat > /dev/null
-    echo UNSAFE
+    if test -z "$PROPERTY"; then
+      echo FALSE
+    else
+      printf "FALSE(%s)\n" "$PROPERTY"
+    fi
     exit 0
 }
 
@@ -71,12 +131,32 @@ parse_gcc_output() {
             # an ERROR label has been reached
             report_unsafe
 
+        elif match "$line" "$MSG_DEREF_FREED" || \
+             match "$line" "$MSG_DEREF_OUT" || \
+             match "$line" "$MSG_DEREF_NULL" || \
+             match "$line" "$MSG_DEREF_INVALID" || \
+             match "$line" "$MSG_DEREF_NENH"; then
+            report_unsafe "p_valid-deref"
+
+        elif match "$line" "$MSG_MEMLEAK"; then
+            # memory leak: p_valid-memtrack
+            report_unsafe "p_valid-memtrack"
+
+        elif match "$line" "$MSG_FREE_OFFSET" || \
+             match "$line" "$MSG_FREE_INVALID" || \
+             match "$line" "$MSG_FREE_DOUBLE" || \
+             match "$line" "$MSG_FREE_NENH" || \
+             match "$line" "$MSG_FREE_NONHEAP" || \
+             match "$line" "$MSG_FREE_NONPOINTER"; then
+            # free called with offset: p_valid_free
+            report_unsafe "p_valid-free"
+
         elif match "$line" ": error: "; then
             # errors already reported, better to fail now
             fail
 
-        elif match "$line" -E "$MSG_INFLOOP|$MSG_MEMLEAK"; then
-            # memory leakage and infinite loop do not mean UNSAFE, ignore them
+        elif match "$line" -E "$MSG_INFLOOP"; then
+            # infinite loop does not mean FALSE, ignore them
             continue
 
         elif match "$line" "$MSG_OUR_WARNINGS"; then
@@ -92,7 +172,7 @@ parse_gcc_output() {
     if test xyes = "x$ERROR_DETECTED"; then
         fail
     elif test xyes = "x$ENDED_GRACEFULLY"; then
-        echo SAFE
+        echo TRUE
     else
         fail
     fi
