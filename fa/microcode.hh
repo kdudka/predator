@@ -70,6 +70,11 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual void finalize(const std::unordered_map<const CodeStorage::Block*,
 			AbstractInstruction*>& codeIndex,
 		std::vector<AbstractInstruction*>::const_iterator);
@@ -102,6 +107,11 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "acc   \t[r" << this->dst_ << " + " << this->offset_ << "]";
 	}
@@ -132,6 +142,11 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "acc   \t[r" << this->dst_ << " + " << this->base_
 			<< " + " << utils::wrap(this->offsets_) << ']';
@@ -155,6 +170,11 @@ public:
 		: SequentialInstruction(insn), dst_(dst) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
+
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "acca  \t[r" << this->dst_ << ']';
@@ -366,6 +386,11 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \tgr" << this->dst_ << ", r" << this->src_;
 	}
@@ -534,6 +559,11 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \t[r" << this->dst_ << " + " << this->offset_
 			<< "], r" << this->src_;
@@ -600,6 +630,11 @@ public:
 		: SequentialInstruction(insn), dst_(dst), src_(src), base_(base) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
+
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "mov   \t[r" << this->dst_ << " + " << this->base_
@@ -683,6 +718,11 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual std::ostream& toStream(std::ostream& os) const
 	{
 		// Assertions
@@ -719,6 +759,11 @@ public:
 		: SequentialInstruction(insn), dst_(dst) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
+
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "free  \tr" << this->dst_;
@@ -766,6 +811,11 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "check ";
 	}
@@ -792,6 +842,11 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "assert\tr" << this->dst_ << ", " << this->cst_;
 	}
@@ -809,6 +864,11 @@ public:
 		: AbstractInstruction(insn, fi_type_e::fiAbort) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
+
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "abort ";
@@ -878,6 +938,11 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "gpush \tr" << this->src_;
 	}
@@ -901,6 +966,11 @@ public:
 		: SequentialInstruction(insn), dst_(dst) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
+
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "gpop  \tr" << this->dst_;
@@ -930,6 +1000,11 @@ public:
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
+
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "prh ";
 	}
@@ -954,6 +1029,11 @@ public:
 		: SequentialInstruction(insn) {}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
+
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const;
 
 	virtual std::ostream& toStream(std::ostream& os) const {
 		return os << "plot ";
