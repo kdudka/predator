@@ -132,6 +132,29 @@ public:
 
 
 	/**
+	 * @brief  Reverses the effect of the instruction
+	 *
+	 * This method computes the @p SymState that corresponds to reversing the
+	 * effect of the instruction on @p bwdSucc and performs intersection of the
+	 * result with @p fwdPred. This corresponds to checking spuriousness of
+	 * a counterexample in Abstract Regular Tree Model Checking. The parameter @p
+	 * fwdPred is the predecessor in the <b>forward run</b> and @p bwdSucc is the
+	 * successor in the backward run (looking forward from the initial state).
+	 *
+	 * @param[in]  execMan  The execution manager
+	 * @param[in]  fwdPred  Predecessor in the forward run
+	 * @param[in]  bwdSucc  Successor in the backward run
+	 *
+	 * @returns  @p fwdPred after inverting the instruction and intersection with
+	 *           @p bwdSucc
+	 */
+	virtual SymState* reverseAndIsect(
+		ExecutionManager&                      execMan,
+		const SymState&                        fwdPred,
+		const SymState&                        bwdSucc) const = 0;
+
+
+	/**
 	 * @brief  Outputs instruction to std::ostream
 	 *
 	 * Virtual method for attaching of a representation of the instruction into
