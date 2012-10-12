@@ -68,6 +68,22 @@ void SymState::initChildFrom(
 	this->setParent(parent);
 }
 
+void SymState::initChildFrom(
+	SymState*                                      parent,
+	AbstractInstruction*                           instr,
+	const std::shared_ptr<DataArray>               regs)
+{
+	// Assertions
+	assert(nullptr != parent);
+	assert(nullptr != instr);
+
+	instr_  = instr;
+	fae_    = parent->fae_;
+	regs_   = regs;
+
+	this->setParent(parent);
+}
+
 void SymState::recycle(Recycler<SymState>& recycler)
 {
 	if (nullptr != this->GetParent())

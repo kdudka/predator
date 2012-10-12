@@ -20,6 +20,7 @@
 // Forester headers
 #include "comparison.hh"
 #include "executionmanager.hh"
+#include "streams.hh"
 
 // anonymous namespace
 namespace
@@ -92,11 +93,10 @@ inline void executeGeneric(
 
 	for (auto v : res)
 	{
-		std::shared_ptr<DataArray> regs = execMan.allocRegisters(state.GetRegs());
+		SymState* tmpState = execMan.createChildStateWithNewRegs(state, cmp.next_);
+		tmpState->SetReg(cmp.dstReg_, Data::createBool(v));
 
-		(*regs)[cmp.dstReg_] = Data::createBool(v);
-
-		execMan.enqueue(&state, regs, state.GetFAE(), cmp.next_);
+		execMan.enqueue(tmpState);
 	}
 }
 

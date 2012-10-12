@@ -186,6 +186,22 @@ public:   // methods
 
 
 	/**
+	 * @brief  Initialises the symbolic state from its parent with new registers
+	 *
+	 * Method that initialises the symbolic state from its @p parent (which is indeed
+	 * set as the parent state) for the given instruction @p instr, with new
+	 * register array
+	 *
+	 * @param[in,out]  parent  The parent state
+	 * @param[in]      instr   The instruction to be associated with the state
+	 * @param[in]      regs    The new register array
+	 */
+	void initChildFrom(
+		SymState*                                      parent,
+		AbstractInstruction*                           instr,
+		const std::shared_ptr<DataArray>               regs);
+
+	/**
 	 * @brief  Recycles the symbolic state for further use
 	 *
 	 * This method recycles the symbolic state for further use. It also recycles

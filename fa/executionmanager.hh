@@ -136,6 +136,17 @@ public:
 		return state;
 	}
 
+	SymState* createChildStateWithNewRegs(
+		SymState&                          oldState,
+		AbstractInstruction*               instr)
+	{
+		SymState* state = createState();
+		const std::shared_ptr<DataArray> regs = allocRegisters(oldState.GetRegs());
+		state->initChildFrom(&oldState, instr, regs);
+
+		return state;
+	}
+
 	SymState* copyState(
 		const SymState&                    oldState)
 	{
@@ -196,6 +207,7 @@ public:
 	std::shared_ptr<DataArray> allocRegisters(const DataArray& model)
 	{
 		DataArray* v = registerRecycler_.alloc();
+		assert(nullptr != v);
 
 		*v = model;
 

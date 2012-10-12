@@ -163,7 +163,7 @@ void FI_acc_all::execute(ExecutionManager& execMan, SymState& state)
 // FI_load_cst
 void FI_load_cst::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	tmpState->SetReg(dstReg_, data_);
 
 	execMan.enqueue(tmpState);
@@ -175,7 +175,7 @@ void FI_move_reg::execute(ExecutionManager& execMan, SymState& state)
 	// Check that we don't make a useless move
 	assert(src_ != dstReg_);
 
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	tmpState->SetReg(dstReg_, tmpState->GetReg(src_));
 
 	execMan.enqueue(tmpState);
@@ -187,8 +187,7 @@ void FI_bnot::execute(ExecutionManager& execMan, SymState& state)
 	// Assertions
 	assert(state.GetReg(dstReg_).isBool());
 
-	SymState* tmpState = execMan.createChildState(state, next_);
-
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	tmpState->SetReg(dstReg_, Data::createBool(!tmpState->GetReg(dstReg_).d_bool));
 
 	execMan.enqueue(tmpState);
@@ -200,8 +199,7 @@ void FI_inot::execute(ExecutionManager& execMan, SymState& state)
 	// Assertions
 	assert(state.GetReg(dstReg_).isInt());
 
-	SymState* tmpState = execMan.createChildState(state, next_);
-
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	tmpState->SetReg(dstReg_, Data::createBool(!tmpState->GetReg(dstReg_).d_int));
 
 	execMan.enqueue(tmpState);
@@ -210,7 +208,7 @@ void FI_inot::execute(ExecutionManager& execMan, SymState& state)
 // FI_move_reg_offs
 void FI_move_reg_offs::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	Data data = tmpState->GetReg(src_);
 
 	if (!data.isRef())
@@ -230,7 +228,7 @@ void FI_move_reg_offs::execute(ExecutionManager& execMan, SymState& state)
 // FI_move_reg_inc
 void FI_move_reg_inc::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	Data data = tmpState->GetReg(src1_);
 
 	if (!data.isRef())
@@ -252,7 +250,7 @@ void FI_move_reg_inc::execute(ExecutionManager& execMan, SymState& state)
 // FI_get_greg
 void FI_get_greg::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	tmpState->SetReg(dstReg_, VirtualMachine(*(tmpState->GetFAE())).varGet(src_));
 
 	execMan.enqueue(tmpState);
@@ -270,7 +268,7 @@ void FI_set_greg::execute(ExecutionManager& execMan, SymState& state)
 // FI_get_ABP
 void FI_get_ABP::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	Data data = VirtualMachine(*(tmpState->GetFAE())).varGet(ABP_INDEX);
 	data.d_ref.displ += offset_;
 
@@ -282,7 +280,7 @@ void FI_get_ABP::execute(ExecutionManager& execMan, SymState& state)
 // FI_get_GLOB
 void FI_get_GLOB::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	Data data = VirtualMachine(*(tmpState->GetFAE())).varGet(GLOB_INDEX);
 	data.d_ref.displ += offset_;
 
@@ -297,7 +295,7 @@ void FI_load::execute(ExecutionManager& execMan, SymState& state)
 	// Assertions
 	assert(state.GetReg(src_).isRef());
 
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 
 	Data data = tmpState->GetReg(src_);
 	Data out;
@@ -314,7 +312,7 @@ void FI_load::execute(ExecutionManager& execMan, SymState& state)
 // FI_load_ABP
 void FI_load_ABP::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	VirtualMachine vm(*(tmpState->GetFAE()));
 
 	Data data = vm.varGet(ABP_INDEX);
@@ -327,7 +325,7 @@ void FI_load_ABP::execute(ExecutionManager& execMan, SymState& state)
 // FI_load_GLOB
 void FI_load_GLOB::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	VirtualMachine vm(*(tmpState->GetFAE()));
 
 	Data data = vm.varGet(GLOB_INDEX);
@@ -368,7 +366,7 @@ void FI_loads::execute(ExecutionManager& execMan, SymState& state)
 	// Assertions
 	assert(state.GetReg(src_).isRef());
 
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	Data data = tmpState->GetReg(src_);
 	Data out;
 
@@ -408,7 +406,7 @@ void FI_stores::execute(ExecutionManager& execMan, SymState& state)
 // FI_alloc
 void FI_alloc::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 
 	const Data& srcData = tmpState->GetReg(src_);
 
@@ -438,19 +436,20 @@ void FI_alloc::execute(ExecutionManager& execMan, SymState& state)
 // FI_node_create
 void FI_node_create::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
-
-	const Data& srcData = tmpState->GetReg(src_);
+	const Data& srcData = state.GetReg(src_);
 
 	// TODO: is this alright? Shouldn't dst_ be modified?
 	if (srcData.isRef() || srcData.isNull())
 	{	// in case src_ is a null pointer
+		SymState* tmpState = execMan.createChildState(state, next_);
 		execMan.enqueue(tmpState);
 		return;
 	}
 
 	// assert that src_ is a void pointer
 	assert(srcData.isVoidPtr());
+
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 
 	if (srcData.d_void_ptr_size != size_)
 	{	// in case the type size differs from the allocated size
@@ -504,7 +503,7 @@ void FI_iadd::execute(ExecutionManager& execMan, SymState& state)
 	// Assertions
 	assert(state.GetReg(src1_).isInt() && state.GetReg(src2_).isInt());
 
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 
 	int sum = tmpState->GetReg(src1_).d_int + tmpState->GetReg(src2_).d_int;
 	tmpState->SetReg(dstReg_, Data::createInt((sum > 0)? 1 : 0));
@@ -547,7 +546,7 @@ void FI_abort::execute(ExecutionManager& execMan, SymState& state)
 // FI_build_struct
 void FI_build_struct::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 
 	std::vector<Data::item_info> items;
 
@@ -578,7 +577,7 @@ void FI_push_greg::execute(ExecutionManager& execMan, SymState& state)
 // FI_pop_greg
 void FI_pop_greg::execute(ExecutionManager& execMan, SymState& state)
 {
-	SymState* tmpState = execMan.createChildState(state, next_);
+	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
 
