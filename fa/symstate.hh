@@ -237,6 +237,18 @@ public:   // methods
 	 * @returns  The trace
 	 */
 	Trace getTrace() const;
+
+	/**
+	 * @brief  The output stream operator
+	 *
+	 * The std::ostream << operator for conversion to a string.
+	 *
+	 * @param[in,out]  os     The output stream
+	 * @param[in]      state  The value to be appended to the stream
+	 *
+	 * @returns  The modified output stream
+	 */
+	friend std::ostream& operator<<(std::ostream& os, const SymState& state);
 };
 
 #endif

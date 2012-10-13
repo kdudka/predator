@@ -22,7 +22,9 @@
 #include "compiler.hh"
 #include "integrity.hh"
 #include "memplot.hh"
+#include "regdef.hh"
 #include "symstate.hh"
+#include "virtualmachine.hh"
 
 
 void SymState::init(
@@ -68,6 +70,7 @@ void SymState::initChildFrom(
 	this->setParent(parent);
 }
 
+
 void SymState::initChildFrom(
 	SymState*                                      parent,
 	AbstractInstruction*                           instr,
@@ -83,6 +86,7 @@ void SymState::initChildFrom(
 
 	this->setParent(parent);
 }
+
 
 void SymState::recycle(Recycler<SymState>& recycler)
 {
@@ -124,4 +128,36 @@ SymState::Trace SymState::getTrace() const
 	}
 
 	return trace;
+}
+
+
+std::ostream& operator<<(std::ostream& os, const SymState& state)
+{
+	VirtualMachine vm(*state.GetFAE());
+
+	// check the number of global registers
+	assert(vm.varCount() >= FIXED_REG_COUNT);
+	// in case it changes, we should alter the printout
+	assert(2 == FIXED_REG_COUNT);
+
+	os << "global registers:";
+	os << " GLOB (gr" << GLOB_INDEX << ") = " << vm.varGet(GLOB_INDEX);
+	os << "  ABP (gr" <<  ABP_INDEX << ") = " << vm.varGet( ABP_INDEX);
+
+	for (size_t i = FIXED_REG_COUNT; i < vm.varCount(); ++i)
+	{
+		os << " gr" << i << '=' << vm.varGet(i);
+	}
+	os << "\n";
+
+	os << "local registers: ";
+	for (size_t i = 0; i < state.GetRegs().size(); ++i)
+	{
+		os << " r" << i << '=' << state.GetReg(i);
+	}
+
+	os << ", heap:" << std::endl << *state.GetFAE();
+
+	return os << "instruction (" << state.GetInstr() << "): "
+		<< *state.GetInstr();
 }
