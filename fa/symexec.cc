@@ -297,6 +297,8 @@ protected:
 				Streams::traceUcode(oss.str().c_str());
 			}
 
+			FA_LOG("Executing backward run...");
+
 			BackwardRun bwdRun(execMan_);
 			SymState::Trace trace = e.state()->getTrace();
 			bool isSpurious = bwdRun.isSpuriousCE(trace);
@@ -472,6 +474,7 @@ public:   // methods
 		{	// expect problems...
 			while (!this->main())
 			{	// while the analysis hasn't terminated
+				FA_NOTE("Restarting the analysis...");
 			}
 
 			FA_NOTE("The program is SAFE.");
