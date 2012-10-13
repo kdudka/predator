@@ -160,14 +160,20 @@ std::ostream& operator<<(std::ostream& os, const SymState& state)
 {
 	VirtualMachine vm(*state.GetFAE());
 
-	// check the number of global registers
-	assert(vm.varCount() >= FIXED_REG_COUNT);
 	// in case it changes, we should alter the printout
 	assert(2 == FIXED_REG_COUNT);
 
 	os << "global registers:";
-	os << " GLOB (gr" << GLOB_INDEX << ") = " << vm.varGet(GLOB_INDEX);
-	os << "  ABP (gr" <<  ABP_INDEX << ") = " << vm.varGet( ABP_INDEX);
+
+	// there may be cases (at the beginning of a program) when ABP and GLOB are
+	// not loaded
+	os << " GLOB (gr" << GLOB_INDEX << ") = ";
+	if (vm.varCount() <= GLOB_INDEX) { os << "undef"; }
+	else { os << vm.varGet(GLOB_INDEX); }
+
+	os << "  ABP (gr" <<  ABP_INDEX << ") = ";
+	if (vm.varCount() <=  ABP_INDEX) { os << "undef"; }
+	else { os << vm.varGet( ABP_INDEX); }
 
 	for (size_t i = FIXED_REG_COUNT; i < vm.varCount(); ++i)
 	{

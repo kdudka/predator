@@ -302,11 +302,8 @@ void FI_load::execute(ExecutionManager& execMan, SymState& state)
 	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 
 	Data data = tmpState->GetReg(src_);
-	// make sure that the value is really a tree reference
-	assert(data.isRef());
 
 	Data out;
-
 	VirtualMachine(*(tmpState->GetFAE())).nodeLookup(
 		data.d_ref.root, data.d_ref.displ + offset_, out
 	);
@@ -357,9 +354,6 @@ void FI_store::execute(ExecutionManager& execMan, SymState& state)
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
 
 	const Data& dst = tmpState->GetReg(dst_);
-	// make sure that the value is really a tree reference
-	assert(dst.isRef());
-
 	const Data& src = tmpState->GetReg(src_);
 
 	Data out;
@@ -381,8 +375,6 @@ void FI_loads::execute(ExecutionManager& execMan, SymState& state)
 
 	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	const Data& data = tmpState->GetReg(src_);
-	// make sure that the value is really a tree reference
-	assert(data.isRef());
 
 	Data out;
 	VirtualMachine(*(tmpState->GetFAE())).nodeLookupMultiple(
@@ -405,10 +397,9 @@ void FI_stores::execute(ExecutionManager& execMan, SymState& state)
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
 
 	const Data& dst = tmpState->GetReg(dst_);
-	// make sure that the value is really a tree reference
-	assert(dst.isRef());
-
 	const Data& src = tmpState->GetReg(src_);
+	// check the loaded value
+	assert(src.isStruct());
 
 	Data out;
 	VirtualMachine(*fae).nodeModifyMultiple(
@@ -423,12 +414,12 @@ void FI_stores::execute(ExecutionManager& execMan, SymState& state)
 // FI_alloc
 void FI_alloc::execute(ExecutionManager& execMan, SymState& state)
 {
+	// Assertions
+	assert(state.GetReg(src_).isInt());
+
 	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 
 	const Data& srcData = tmpState->GetReg(src_);
-
-	// assert that the source operand is an integer, i.e. the size
-	assert(srcData.isInt());
 
 	if (0 > srcData.d_int)
 	{	// negative allocation size
@@ -498,8 +489,6 @@ void FI_node_free::execute(ExecutionManager& execMan, SymState& state)
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
 
 	const Data& data = tmpState->GetReg(dst_);
-	// make sure that the value is really a tree reference
-	assert(data.isRef());
 
 	if (data.d_ref.displ != 0)
 	{
