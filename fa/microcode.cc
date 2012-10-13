@@ -251,6 +251,7 @@ void FI_move_reg_inc::execute(ExecutionManager& execMan, SymState& state)
 void FI_get_greg::execute(ExecutionManager& execMan, SymState& state)
 {
 	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
+
 	tmpState->SetReg(dstReg_, VirtualMachine(*(tmpState->GetFAE())).varGet(src_));
 
 	execMan.enqueue(tmpState);
@@ -260,7 +261,10 @@ void FI_get_greg::execute(ExecutionManager& execMan, SymState& state)
 void FI_set_greg::execute(ExecutionManager& execMan, SymState& state)
 {
 	SymState* tmpState = execMan.createChildState(state, next_);
-	VirtualMachine(*(tmpState->GetFAE())).varSet(dst_, tmpState->GetReg(src_));
+
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
+	VirtualMachine(*fae).varSet(dst_, tmpState->GetReg(src_));
+	tmpState->SetFAE(fae);
 
 	execMan.enqueue(tmpState);
 }
@@ -298,6 +302,9 @@ void FI_load::execute(ExecutionManager& execMan, SymState& state)
 	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 
 	Data data = tmpState->GetReg(src_);
+	// make sure that the value is really a tree reference
+	assert(data.isRef());
+
 	Data out;
 
 	VirtualMachine(*(tmpState->GetFAE())).nodeLookup(
@@ -329,6 +336,9 @@ void FI_load_GLOB::execute(ExecutionManager& execMan, SymState& state)
 	VirtualMachine vm(*(tmpState->GetFAE()));
 
 	Data data = vm.varGet(GLOB_INDEX);
+	// make sure that the value is really a tree reference
+	assert(data.isRef());
+
 	Data out;
 	vm.nodeLookup(data.d_ref.root, static_cast<size_t>(offset_), out);
 	tmpState->SetReg(dstReg_, out);
@@ -347,6 +357,9 @@ void FI_store::execute(ExecutionManager& execMan, SymState& state)
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
 
 	const Data& dst = tmpState->GetReg(dst_);
+	// make sure that the value is really a tree reference
+	assert(dst.isRef());
+
 	const Data& src = tmpState->GetReg(src_);
 
 	Data out;
@@ -367,9 +380,11 @@ void FI_loads::execute(ExecutionManager& execMan, SymState& state)
 	assert(state.GetReg(src_).isRef());
 
 	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
-	Data data = tmpState->GetReg(src_);
-	Data out;
+	const Data& data = tmpState->GetReg(src_);
+	// make sure that the value is really a tree reference
+	assert(data.isRef());
 
+	Data out;
 	VirtualMachine(*(tmpState->GetFAE())).nodeLookupMultiple(
 		data.d_ref.root, data.d_ref.displ + base_, offsets_,
 		out
@@ -390,10 +405,12 @@ void FI_stores::execute(ExecutionManager& execMan, SymState& state)
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
 
 	const Data& dst = tmpState->GetReg(dst_);
+	// make sure that the value is really a tree reference
+	assert(dst.isRef());
+
 	const Data& src = tmpState->GetReg(src_);
 
 	Data out;
-
 	VirtualMachine(*fae).nodeModifyMultiple(
 		dst.d_ref.root, dst.d_ref.displ + base_, src, out
 	);
@@ -481,6 +498,8 @@ void FI_node_free::execute(ExecutionManager& execMan, SymState& state)
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
 
 	const Data& data = tmpState->GetReg(dst_);
+	// make sure that the value is really a tree reference
+	assert(data.isRef());
 
 	if (data.d_ref.displ != 0)
 	{
@@ -491,7 +510,6 @@ void FI_node_free::execute(ExecutionManager& execMan, SymState& state)
 	}
 
 	VirtualMachine(*fae).nodeDelete(data.d_ref.root);
-
 	tmpState->SetFAE(fae);
 
 	execMan.enqueue(tmpState);
@@ -566,9 +584,7 @@ void FI_push_greg::execute(ExecutionManager& execMan, SymState& state)
 	SymState* tmpState = execMan.createChildState(state, next_);
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
-
 	VirtualMachine(*fae).varPush(tmpState->GetReg(src_));
-
 	tmpState->SetFAE(fae);
 
 	execMan.enqueue(tmpState);
@@ -580,9 +596,7 @@ void FI_pop_greg::execute(ExecutionManager& execMan, SymState& state)
 	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
-
 	tmpState->SetReg(dst_, VirtualMachine(*fae).varPop());
-
 	tmpState->SetFAE(fae);
 
 	execMan.enqueue(tmpState);
