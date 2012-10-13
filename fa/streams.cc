@@ -19,10 +19,10 @@
 
 // Standard library headers
 #include <cassert>
+#include <cstring>
+#include <fcntl.h>
 #include <iostream>
-
-// Boost headers
-#include <boost/iostreams/device/file_descriptor.hpp>
+#include <unistd.h>
 
 // Code Listener headers
 #include <cl/cl_msg.hh>
