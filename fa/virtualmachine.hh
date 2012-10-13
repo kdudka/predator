@@ -163,9 +163,9 @@ protected:
 	 * @todo: sanitize the interface
 	 */
 	void transitionLookup(
-		const TT<label_type>& transition,
-		size_t offset,
-		Data& data) const;
+		const TT<label_type>&             transition,
+		size_t                            offset,
+		Data&                             data) const;
 
 
 	/**
@@ -182,28 +182,28 @@ protected:
 	 * @todo: sanitize the interface
 	 */
 	void transitionLookup(
-		const TT<label_type>& transition,
-		size_t base,
-		const std::vector<size_t>& offsets,
-		Data& data) const;
+		const TT<label_type>&             transition,
+		size_t                            base,
+		const std::vector<size_t>&        offsets,
+		Data&                             data) const;
 
 
 	/// @todo: add documentation
 	void transitionModify(
-		TreeAut& dst,
-		const TT<label_type>& transition,
-		size_t offset,
-		const Data& in,
-		Data& out);
+		TreeAut&                          dst,
+		const TT<label_type>&             transition,
+		size_t                            offset,
+		const Data&                       in,
+		Data&                             out);
 
 
 	/// @todo: add documentation
 	void transitionModify(
-		TreeAut& dst,
-		const TT<label_type>& transition,
-		size_t base,
-		const std::vector<std::pair<size_t, Data> >& in,
-		Data& out);
+		TreeAut&                                      dst,
+		const TT<label_type>&                         transition,
+		size_t                                        base,
+		const std::vector<std::pair<size_t, Data>>&   in,
+		Data&                                         out);
 
 
 public:
@@ -323,7 +323,10 @@ public:
 	 *
 	 * @todo: obfuscate (too clear)
 	 */
-	void nodeLookup(size_t root, size_t offset, Data& data) const
+	void nodeLookup(
+		size_t                           root,
+		size_t                           offset,
+		Data&                            data) const
 	{
 		// Assertions
 		assert(root < fae_.roots.size());
@@ -348,10 +351,10 @@ public:
 	 * @todo: obfuscate (too clear)
 	 */
 	void nodeLookupMultiple(
-		size_t root,
-		size_t base,
-		const std::vector<size_t>& offsets,
-		Data& data) const
+		size_t                          root,
+		size_t                          base,
+		const std::vector<size_t>&      offsets,
+		Data&                           data) const
 	{
 		// Assertions
 		assert(root < fae_.roots.size());
@@ -363,22 +366,24 @@ public:
 
 	/// @todo add documentation
 	void nodeModify(
-		size_t root,
-		size_t offset,
-		const Data& in,
-		Data& out);
+		size_t                          root,
+		size_t                          offset,
+		const Data&                     in,
+		Data&                           out);
 
 
 	/// @todo add documentation
 	void nodeModifyMultiple(
-		size_t root,
-		size_t offset,
-		const Data& in,
-		Data& out);
+		size_t                          root,
+		size_t                          offset,
+		const Data&                     in,
+		Data&                           out);
 
 
 	/// @todo add documentation
-	void getNearbyReferences(size_t root, std::set<size_t>& out) const;
+	void getNearbyReferences(
+		size_t                          root,
+		std::set<size_t>&               out) const;
 
 
 public:
