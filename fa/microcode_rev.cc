@@ -23,18 +23,20 @@
  */
 
 // Forester headers
+#include "executionmanager.hh"
 #include "microcode.hh"
+#include "streams.hh"
+#include "virtualmachine.hh"
 
 SymState* FI_acc_sel::reverseAndIsect(
 	ExecutionManager&                      execMan,
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation FI_acc_sel");
+	return execMan.copyState(bwdSucc);
 }
 
 SymState* FI_acc_set::reverseAndIsect(
@@ -42,11 +44,10 @@ SymState* FI_acc_set::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation FI_acc_set");
+	return execMan.copyState(bwdSucc);
 }
 
 SymState* FI_acc_all::reverseAndIsect(
@@ -54,11 +55,10 @@ SymState* FI_acc_all::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation FI_acc_all");
+	return execMan.copyState(bwdSucc);
 }
 
 SymState* FI_pop_greg::reverseAndIsect(
@@ -66,11 +66,10 @@ SymState* FI_pop_greg::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation FI_pop_greg");
+	return execMan.copyState(bwdSucc);
 }
 
 SymState* FI_push_greg::reverseAndIsect(
@@ -78,11 +77,10 @@ SymState* FI_push_greg::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation FI_push_greg");
+	return execMan.copyState(bwdSucc);
 }
 
 SymState* FI_abort::reverseAndIsect(
@@ -90,11 +88,10 @@ SymState* FI_abort::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation for FI_abort");
+	return execMan.copyState(bwdSucc);
 }
 
 SymState* FI_node_free::reverseAndIsect(
@@ -102,11 +99,10 @@ SymState* FI_node_free::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation FI_node_free");
+	return execMan.copyState(bwdSucc);
 }
 
 SymState* FI_node_create::reverseAndIsect(
@@ -114,11 +110,10 @@ SymState* FI_node_create::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation FI_node_create");
+	return execMan.copyState(bwdSucc);
 }
 
 SymState* FI_store::reverseAndIsect(
@@ -126,11 +121,30 @@ SymState* FI_store::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
-	(void)fwdPred;
-	(void)bwdSucc;
+	// Assertions
+	assert(fwdPred.GetReg(dst_) == bwdSucc.GetReg(dst_));
+	assert(fwdPred.GetReg(src_) == bwdSucc.GetReg(src_));
 
-	assert(false);
+	const Data& treeRef = bwdSucc.GetReg(dst_);
+
+	// load the old value of the memory node
+	Data oldVal;
+	VirtualMachine(*(fwdPred.GetFAE())).nodeLookup(
+		treeRef.d_ref.root, treeRef.d_ref.displ + offset_, oldVal
+	);
+
+	// modify the FA 
+	SymState* tmpState = execMan.copyState(bwdSucc);
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
+
+	Data tmp;            // necessary to call the nodeModify() method
+	VirtualMachine(*fae).nodeModify(
+		treeRef.d_ref.root, treeRef.d_ref.displ + offset_, oldVal, tmp
+	);
+
+	tmpState->SetFAE(fae);
+
+	return tmpState;
 }
 
 SymState* FI_stores::reverseAndIsect(
@@ -138,11 +152,10 @@ SymState* FI_stores::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation for FI_stores");
+	return execMan.copyState(bwdSucc);
 }
 
 SymState* FI_set_greg::reverseAndIsect(
@@ -150,9 +163,17 @@ SymState* FI_set_greg::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
-	(void)fwdPred;
-	(void)bwdSucc;
+	// Assertions
+	assert(fwdPred.GetReg(src_) == bwdSucc.GetReg(src_));
 
-	assert(false);
+	// load the old value of the desired global register
+	Data oldVal = VirtualMachine(*(fwdPred.GetFAE())).varGet(dst_);
+
+	// modify the FA 
+	SymState* tmpState = execMan.copyState(bwdSucc);
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
+	VirtualMachine(*fae).varSet(dst_, oldVal);
+	tmpState->SetFAE(fae);
+
+	return execMan.copyState(bwdSucc);
 }

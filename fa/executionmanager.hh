@@ -156,6 +156,26 @@ public:
 		return state;
 	}
 
+	SymState* copyStateWithNewRegs(
+		const SymState&                    oldState)
+	{
+		SymState* state = createState();
+		const std::shared_ptr<DataArray> regs = allocRegisters(oldState.GetRegs());
+		state->init(oldState, regs);
+
+		return state;
+	}
+
+	SymState* copyStateWithNewRegs(
+		const SymState&                    oldState,
+		const AbstractInstruction*         insn)
+	{
+		SymState* state = createState();
+		const std::shared_ptr<DataArray> regs = allocRegisters(oldState.GetRegs());
+		state->init(oldState, regs, const_cast<AbstractInstruction*>(insn));
+
+		return state;
+	}
 
 	SymState* enqueue(
 		SymState*                           parent,

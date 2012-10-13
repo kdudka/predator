@@ -433,11 +433,10 @@ SymState* FixpointBase::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation for FixpointBase");
+	return execMan.copyState(bwdSucc);
 }
 
 // FI_abs

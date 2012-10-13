@@ -44,7 +44,7 @@ bool BackwardRun::isSpuriousCE(SymState::Trace& fwdTrace)
 
 	while (++itFwdTrace != fwdTrace.cend())
 	{	// until we hit the initial state of the execution trace
-		const SymState* fwdState = *itFwdTrace;
+		SymState* fwdState = const_cast<SymState*>(*itFwdTrace);
 		assert(nullptr != fwdState);
 
 		const AbstractInstruction* instr = fwdState->GetInstr();
@@ -53,8 +53,10 @@ bool BackwardRun::isSpuriousCE(SymState::Trace& fwdTrace)
 		SymState* resultState = instr->reverseAndIsect(execMan_, *fwdState, *bwdState);
 		assert(nullptr != resultState);
 
-		std::string filename = MemPlotter::plotHeap(*resultState);
-		FA_NOTE("bwd: " << *instr);
+		bwdTrace.push_back(resultState);
+		bwdState = resultState;
+
+//		std::string filename = MemPlotter::plotHeap(*resultState);
 	}
 
 	for (SymState* st : bwdTrace)
