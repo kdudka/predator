@@ -175,5 +175,5 @@ SymState* FI_set_greg::reverseAndIsect(
 	VirtualMachine(*fae).varSet(dst_, oldVal);
 	tmpState->SetFAE(fae);
 
-	return execMan.copyState(bwdSucc);
+	return tmpState;
 }
