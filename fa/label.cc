@@ -25,7 +25,7 @@
 std::ostream& operator<<(std::ostream& os, const NodeLabel& label)
 {
 	os << '<';
-	switch (label.type) {
+	switch (label.type_) {
 		case NodeLabel::node_type::n_unknown:
 			os << "unknown";
 			break;

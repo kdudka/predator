@@ -30,61 +30,94 @@
 #include "abstractbox.hh"
 #include "programerror.hh"
 
-struct NodeLabel {
+/**
+ * @brief  A memory node
+ */
+struct NodeLabel
+{
+public:   // data types
 
-	enum class node_type { n_unknown, n_node, n_data, n_vData };
+	enum class node_type
+	{
+		n_unknown,
+		n_node,
+		n_data,
+		n_vData
+	};
 
-	node_type type;
-
-	struct NodeItem {
+	/**
+	 * @brief  An item in a memory node
+	 */
+	struct NodeItem
+	{
 		const AbstractBox* aBox;
 		size_t index;
 		size_t offset;
+
 		NodeItem(const AbstractBox* aBox, size_t index, size_t offset)
-			: aBox(aBox), index(index), offset(offset) {}
+			: aBox(aBox), index(index), offset(offset)
+		{ }
 	};
 
-	union {
-		struct {
+private:  // data members
+
+	node_type type_;
+
+public:   // data members
+
+	union
+	{
+		struct
+		{
 			const Data* data;
 			size_t id;
 		} data;
-		struct {
+
+		struct
+		{
 			const std::vector<const AbstractBox*>* v;
 			std::unordered_map<size_t, NodeItem>* m;
 			const std::vector<SelData>* sels;
 			void* tag;
 		} node;
+
 		const DataArray* vData;
 	};
 
-	NodeLabel() : type(node_type::n_unknown) {}
-	NodeLabel(const Data* data, size_t id) :
-		type(node_type::n_data)
+public:   // methods
+
+	NodeLabel() :
+		type_(node_type::n_unknown)
+	{ }
+
+	NodeLabel(
+		const Data*                                 data,
+		size_t                                      id) :
+		type_(node_type::n_data)
 	{
 		this->data.data = data;
 		this->data.id = id;
 	}
 
 	NodeLabel(
-		const std::vector<const AbstractBox*>* v,
-		const std::vector<SelData>* sels
-	) :
-		type(node_type::n_node)
+		const std::vector<const AbstractBox*>*      v,
+		const std::vector<SelData>*                 sels) :
+		type_(node_type::n_node)
 	{
 		this->node.v = v;
 		this->node.m = new std::unordered_map<size_t, NodeItem>();
 		this->node.sels = sels;
 	}
 
-	NodeLabel(const DataArray* vData) :
-		type(node_type::n_vData),
+	NodeLabel(
+		const DataArray*                            vData) :
+		type_(node_type::n_vData),
 		vData(vData)
 	{ }
 
 	~NodeLabel()
 	{
-		if (this->type == node_type::n_node)
+		if (node_type::n_node == type_)
 			delete this->node.m;
 	}
 
@@ -97,12 +130,12 @@ struct NodeLabel {
 
 	bool isData() const
 	{
-		return this->type == node_type::n_data;
+		return node_type::n_data == type_;
 	}
 
 	bool isData(const Data*& data) const
 	{
-		if (this->type != node_type::n_data)
+		if (node_type::n_data != type_)
 			return false;
 		data = this->data.data;
 		return true;
@@ -110,19 +143,19 @@ struct NodeLabel {
 
 	const Data& getData() const
 	{
-		assert(this->type == node_type::n_data);
+		assert(node_type::n_data == type_);
 		return *this->data.data;
 	}
 
 	size_t getDataId() const
 	{
-		assert(this->type == node_type::n_data);
+		assert(node_type::n_data == type_);
 		return this->data.id;
 	}
 
 	const AbstractBox* boxLookup(size_t offset, const AbstractBox* def) const
 	{
-		assert(this->type == node_type::n_node);
+		assert(node_type::n_node == type_);
 		auto i = this->node.m->find(offset);
 		if (i == this->node.m->end())
 			return def;
@@ -131,7 +164,7 @@ struct NodeLabel {
 
 	const NodeItem& boxLookup(size_t offset) const
 	{
-		assert(this->type == node_type::n_node);
+		assert(node_type::n_node == type_);
 		auto i = this->node.m->find(offset);
 		assert(i != this->node.m->end());
 //		if (i == this->node.m->end())
@@ -139,39 +172,44 @@ struct NodeLabel {
 		return i->second;
 	}
 
+	node_type GetType() const
+	{
+		return type_;
+	}
+
 	const DataArray& getVData() const
 	{
-		assert(this->type == node_type::n_vData);
+		assert(node_type::n_vData == type_);
 		return *this->vData;
 	}
 
 	bool isNode() const
 	{
-		return this->type == node_type::n_node;
+		return node_type::n_node == type_;
 	}
 
 	const std::vector<const AbstractBox*>& getNode() const
 	{
-		assert(this->type == node_type::n_node);
+		assert(node_type::n_node == type_);
 		return *this->node.v;
 	}
 
 	void* getTag() const
 	{
-		assert(this->type == node_type::n_node);
+		assert(node_type::n_node == type_);
 		return this->node.tag;
 	}
 
 	void setTag(void* tag)
 	{
-		assert(this->type == node_type::n_node);
+		assert(node_type::n_node == type_);
 		this->node.tag = tag;
 	}
 
 	template <class F>
 	bool iterate(F f) const
 	{
-		assert(this->type == node_type::n_node);
+		assert(node_type::n_node == type_);
 
 		for (size_t i = 0, offset = 0; i < this->node.v->size(); ++i)
 		{
@@ -196,10 +234,16 @@ struct NodeLabel {
 	bool operator!=(const NodeLabel& rhs) const { return this->data.data != rhs.data.data; }
 
 	friend std::ostream& operator<<(std::ostream& os, const NodeLabel& label);
+
+	friend size_t hash_value(const NodeLabel& label)
+	{
+		return boost::hash_value(label.data.data);
+	}
 };
 
-struct label_type {
 
+struct label_type
+{
 	const NodeLabel* _obj;
 
 	label_type() : _obj(nullptr) {}
@@ -235,35 +279,17 @@ struct label_type {
 	friend std::ostream& operator<<(std::ostream& os, const label_type& label) {
 		return os << *label._obj;
 	}
-
 };
 
-namespace std {
 
-	template <>
-	struct hash<NodeLabel::node_type> {
-		size_t operator()(const NodeLabel::node_type& nodeType) const
-		{
-			return std::hash<size_t>()(static_cast<size_t>(nodeType));
-		}
-	};
-
-	template <>
-	struct hash<NodeLabel> {
-		size_t operator()(const NodeLabel& label) const {
-			size_t h = std::hash<NodeLabel::node_type>()(label.type);
-			boost::hash_combine(h, label.data.data);
-			return h;
-		}
-	};
-
-	template <>
-	struct hash<label_type> {
-		size_t operator()(const label_type& label) const {
-			return boost::hash_value(label._obj);
-		}
-	};
-
-}
+namespace std
+{
+template <>
+struct hash<label_type> {
+	size_t operator()(const label_type& label) const {
+		return boost::hash_value(label._obj);
+	}
+};
+} // namespace
 
 #endif
