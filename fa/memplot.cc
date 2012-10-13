@@ -375,7 +375,7 @@ public:   // methods
 	{
 		const NodeLabel& label = *trans.label();
 
-		switch (label.type)
+		switch (label.GetType())
 		{
 			case NodeLabel::node_type::n_unknown:
 			{

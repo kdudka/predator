@@ -594,6 +594,21 @@ struct Data {
 	}
 
 	/**
+	 * @brief  Retrieves the structure's selectors information
+	 *
+	 * Retrieves information about the structure's selectors.
+	 *
+	 * @returns  Selectors of the structure
+	 */
+	std::vector<item_info>& GetStruct() const
+	{
+		// Assertions
+		assert(data_type_e::t_struct == this->type);
+		assert(nullptr != this->d_struct);
+		return *this->d_struct;
+	}
+
+	/**
 	 * @brief  Computes the hash value
 	 *
 	 * Overloaded function for computation of hash value of an object of type

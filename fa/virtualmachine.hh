@@ -340,8 +340,8 @@ public:
 	 * @brief  Looks up a node with multiple data in the memory
 	 *
 	 * Retrieves a node with multiple data from the virtual machine's memory. The
-	 * node is specified by the identifier of the tree automaton and an offset.
-	 * The node is retrieved from the accepting transition.
+	 * node is specified by the identifier of the tree automaton, the base and
+	 * several offsets. The node is retrieved from the accepting transition.
 	 *
 	 * @param[in]   root     Identifier of the tree automaton
 	 * @param[in]   base     Offset of the base of the structure

@@ -126,6 +126,8 @@ SymState* FI_store::reverseAndIsect(
 	assert(fwdPred.GetReg(src_) == bwdSucc.GetReg(src_));
 
 	const Data& treeRef = bwdSucc.GetReg(dst_);
+	// assert that the loaded value is valid
+	assert(treeRef.isRef());
 
 	// load the old value of the memory node
 	Data oldVal;
@@ -137,7 +139,7 @@ SymState* FI_store::reverseAndIsect(
 	SymState* tmpState = execMan.copyState(bwdSucc);
 	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
 
-	Data tmp;            // necessary to call the nodeModify() method
+	Data tmp;            // necessary for the call of the nodeModify() method
 	VirtualMachine(*fae).nodeModify(
 		treeRef.d_ref.root, treeRef.d_ref.displ + offset_, oldVal, tmp
 	);
@@ -152,10 +154,42 @@ SymState* FI_stores::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)fwdPred;
+	// Assertions
+	assert(fwdPred.GetReg(dst_) == bwdSucc.GetReg(dst_));
+	assert(fwdPred.GetReg(src_) == bwdSucc.GetReg(src_));
 
-	FA_WARN("Skipping reverse operation for FI_stores");
-	return execMan.copyState(bwdSucc);
+	const Data& storedStruct = fwdPred.GetReg(src_);
+	// assert that the loaded value is valid
+	assert(storedStruct.isStruct());
+
+	std::vector<size_t> offsets;
+	for (auto offsetDataPair : storedStruct.GetStruct())
+	{
+		offsets.push_back(offsetDataPair.first);
+	}
+
+	const Data& treeRef = bwdSucc.GetReg(dst_);
+	// assert that the loaded value is valid
+	assert(treeRef.isRef());
+
+	// load the old value of the memory node
+	Data oldVal;
+	VirtualMachine(*(fwdPred.GetFAE())).nodeLookupMultiple(
+		treeRef.d_ref.root, treeRef.d_ref.displ + base_, offsets, oldVal
+	);
+
+	// modify the FA 
+	SymState* tmpState = execMan.copyState(bwdSucc);
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
+
+	Data tmp;            // necessary for the call of the nodeModify() method
+	VirtualMachine(*fae).nodeModifyMultiple(
+		treeRef.d_ref.root, treeRef.d_ref.displ + base_, oldVal, tmp
+	);
+
+	tmpState->SetFAE(fae);
+
+	return tmpState;
 }
 
 SymState* FI_set_greg::reverseAndIsect(

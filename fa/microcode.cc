@@ -401,9 +401,9 @@ void FI_stores::execute(ExecutionManager& execMan, SymState& state)
 	// check the loaded value
 	assert(src.isStruct());
 
-	Data out;
+	Data tmp;            // necessary for the call of the nodeModify() method
 	VirtualMachine(*fae).nodeModifyMultiple(
-		dst.d_ref.root, dst.d_ref.displ + base_, src, out
+		dst.d_ref.root, dst.d_ref.displ + base_, src, tmp
 	);
 
 	tmpState->SetFAE(fae);
