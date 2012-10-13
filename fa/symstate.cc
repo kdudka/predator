@@ -55,6 +55,31 @@ void SymState::init(
 }
 
 
+void SymState::init(
+	const SymState&                                oldState,
+	const std::shared_ptr<DataArray>               regs)
+{
+	instr_ = oldState.instr_;
+	fae_   = oldState.fae_;
+	regs_  = regs;
+
+	this->clearTree();
+}
+
+
+void SymState::init(
+	const SymState&                                oldState,
+	const std::shared_ptr<DataArray>               regs,
+	AbstractInstruction*                           insn)
+{
+	instr_ = insn;
+	fae_   = oldState.fae_;
+	regs_  = regs;
+
+	this->clearTree();
+}
+
+
 void SymState::initChildFrom(
 	SymState*                                      parent,
 	AbstractInstruction*                           instr)

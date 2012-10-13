@@ -172,6 +172,35 @@ public:   // methods
 
 
 	/**
+	 * @brief  Initializes the symbolic state with new registers
+	 *
+	 * Method that initializes the symbolic state from an old state using new
+	 * register array.
+	 *
+	 * @param[in]  oldState  The old symbolic state
+	 * @param[in]  regs      New register array
+	 */
+	void init(
+		const SymState&                                oldState,
+		const std::shared_ptr<DataArray>               regs);
+
+
+	/**
+	 * @brief  Initializes the symbolic state with new registers
+	 *
+	 * Method that initializes the symbolic state from an old state using new
+	 * register array.
+	 *
+	 * @param[in]  oldState  The old symbolic state
+	 * @param[in]  regs      New register array
+	 */
+	void init(
+		const SymState&                                oldState,
+		const std::shared_ptr<DataArray>               regs,
+		AbstractInstruction*                           insn);
+
+
+	/**
 	 * @brief  Initialises the symbolic state from its parent
 	 *
 	 * Method that initialises the symbolic state from its @p parent (which is indeed
