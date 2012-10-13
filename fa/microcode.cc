@@ -175,9 +175,6 @@ void FI_load_cst::execute(ExecutionManager& execMan, SymState& state)
 // FI_move_reg
 void FI_move_reg::execute(ExecutionManager& execMan, SymState& state)
 {
-	// Check that we don't make a useless move
-	assert(src_ != dstReg_);
-
 	SymState* tmpState = execMan.createChildStateWithNewRegs(state, next_);
 	tmpState->SetReg(dstReg_, tmpState->GetReg(src_));
 

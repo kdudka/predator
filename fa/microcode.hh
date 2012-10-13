@@ -209,7 +209,11 @@ class FI_move_reg : public RegisterAssignment
 public:
 
 	FI_move_reg(const CodeStorage::Insn* insn, size_t dst, size_t src)
-		: RegisterAssignment(insn, dst), src_(src) {}
+		: RegisterAssignment(insn, dst), src_(src)
+	{
+		// Check that we don't make a useless move
+		assert(src_ != dstReg_);
+	}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
@@ -276,7 +280,8 @@ public:
 
 	FI_move_reg_offs(const CodeStorage::Insn* insn,
 		size_t dst, size_t src, int offset)
-		: RegisterAssignment(insn, dst), src_(src), offset_(offset) { }
+		: RegisterAssignment(insn, dst), src_(src), offset_(offset)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
@@ -306,7 +311,8 @@ public:
 
 	FI_move_reg_inc(const CodeStorage::Insn* insn,
 		size_t dst, size_t src1, size_t src2)
-		: RegisterAssignment(insn, dst), src1_(src1), src2_(src2) {}
+		: RegisterAssignment(insn, dst), src1_(src1), src2_(src2)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
@@ -434,7 +440,8 @@ class FI_load : public RegisterAssignment
 public:
 
 	FI_load(const CodeStorage::Insn* insn, size_t dst, size_t src, int offset)
-		: RegisterAssignment(insn, dst), src_(src), offset_(offset) { }
+		: RegisterAssignment(insn, dst), src_(src), offset_(offset)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
@@ -514,7 +521,11 @@ class FI_store : public SequentialInstruction
 public:
 
 	FI_store(const CodeStorage::Insn* insn, size_t dst, size_t src, int offset)
-		: SequentialInstruction(insn), dst_(dst), src_(src), offset_(offset) {}
+		: SequentialInstruction(insn), dst_(dst), src_(src), offset_(offset)
+	{
+		// Assertions
+		assert(src_ != dst_);
+	}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
@@ -552,7 +563,8 @@ public:
 	FI_loads(const CodeStorage::Insn* insn, size_t dst, size_t src, int base,
 		const std::vector<size_t>& offsets) :
 		RegisterAssignment(insn, dst), src_(src), base_(base),
-		offsets_(offsets) { }
+		offsets_(offsets)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
@@ -583,7 +595,11 @@ class FI_stores : public SequentialInstruction
 public:
 
 	FI_stores(const CodeStorage::Insn* insn, size_t dst, size_t src, int base)
-		: SequentialInstruction(insn), dst_(dst), src_(src), base_(base) {}
+		: SequentialInstruction(insn), dst_(dst), src_(src), base_(base)
+	{
+		// Assertions
+		assert(src_ != dst_);
+	}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
@@ -613,7 +629,8 @@ class FI_alloc : public RegisterAssignment
 public:
 
 	FI_alloc(const CodeStorage::Insn* insn, size_t dst, size_t src)
-		: RegisterAssignment(insn, dst), src_(src) { }
+		: RegisterAssignment(insn, dst), src_(src)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
@@ -654,12 +671,12 @@ private:  // methods
 public:
 
 	FI_node_create(
-		const CodeStorage::Insn* insn,
-		size_t dst,
-		size_t src,
-		size_t size,
-		const TypeBox* typeInfo,
-		const std::vector<SelData>& sels
+		const CodeStorage::Insn*        insn,
+		size_t                          dst,
+		size_t                          src,
+		size_t                          size,
+		const TypeBox*                  typeInfo,
+		const std::vector<SelData>&     sels
 	) :
 		SequentialInstruction(insn),
 		dst_(dst),
@@ -738,7 +755,8 @@ class FI_iadd : public RegisterAssignment
 public:
 
 	FI_iadd(const CodeStorage::Insn* insn, size_t dst, size_t src1, size_t src2)
-		: RegisterAssignment(insn, dst), src1_(src1), src2_(src2) { }
+		: RegisterAssignment(insn, dst), src1_(src1), src2_(src2)
+	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 
