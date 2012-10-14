@@ -152,6 +152,7 @@ set(tests-failing-due-to-timeout
 
 set(tests-failing-due-to-unsupported-feature
                                         f0026
+                            f0034            
                                               p0007 p0008
     p0010       p0012 p0013 p0014 p0015 p0016 p0017 p0018
                 p0022       p0024
