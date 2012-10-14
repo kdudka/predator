@@ -77,10 +77,16 @@ SymState* FI_push_greg::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)fwdPred;
+	// Assertions
+	assert(fwdPred.GetFAE()->GetVarCount() + 1 == bwdSucc.GetFAE()->GetVarCount());
 
-	FA_WARN("Skipping reverse operation FI_push_greg");
-	return execMan.copyState(bwdSucc);
+	SymState* tmpState = execMan.copyState(bwdSucc);
+
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
+	VirtualMachine(*fae).varPop();
+	tmpState->SetFAE(fae);
+
+	return tmpState;
 }
 
 SymState* FI_abort::reverseAndIsect(
