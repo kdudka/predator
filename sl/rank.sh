@@ -10,7 +10,7 @@ die() {
 }
 
 usage() {
-    printf "Usage: %s path/to/chk-error-label-reachability.sh \
+    printf "Usage: %s path/to/check-property.sh property \
 [file1 [file2 [...]]]\n" "$SELF" >&2
     exit 1
 }
@@ -24,6 +24,10 @@ export RUNNER="$1"
 test -x "$1" || usage
 shift
 
+export PROPERTY="$1"
+test memory = "$1" || test label = "$1" || usage
+shift
+
 GRAND_TOTAL=0
 
 rank_files() {
@@ -31,6 +35,7 @@ rank_files() {
     CORRECT_TRUE=0
     INCORRECT_FALSE=0
     INCORRECT_TRUE=0
+    UNKNOWNS=0
 
     for i in "$@"; do
         HAS_BUG=no
@@ -42,7 +47,7 @@ rank_files() {
 
         printf "%-72s\t" "$i"
 
-        RESULT="$($TIMEOUT $RUNNER $i -m32 2>/dev/null)"
+        RESULT="$($TIMEOUT $RUNNER --task $PROPERTY -- $i -m32 2>/dev/null)"
         case "$( echo $RESULT | egrep -o "(TRUE)|(FALSE)" )" in
             TRUE)
                 if test xyes = "x$HAS_BUG" ; then
@@ -65,6 +70,7 @@ rank_files() {
                 ;;
 
             *)  printf "\033[1;34mUNKNOWN\t[+0]\033[0m\n"
+                UNKNOWNS=$(expr 1 + $UNKNOWNS)
                 ;;
         esac
     done
@@ -81,6 +87,9 @@ rank_files() {
     fi
     if test 0 -lt "$INCORRECT_TRUE"; then
         printf -- "--- TRUE INCORRECT:\t%2d [-8 each]\n" "$INCORRECT_TRUE"
+    fi
+    if test 0 -lt "$UNKNOWNS"; then
+        printf -- "--- UNKNOWNS:\t%2d [0]\n" "$UNKNOWNS"
     fi
 
     CORRECT_TRUE_SUM=$(expr 2 \* $CORRECT_TRUE)

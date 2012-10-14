@@ -76,8 +76,8 @@ configure_file(${PROJECT_SOURCE_DIR}/probe.sh.in  ${PROJECT_BINARY_DIR}/probe.sh
 configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
     ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
 
-configure_file(${PROJECT_SOURCE_DIR}/chk-error-label-reachability.sh.in
-    ${PROJECT_BINARY_DIR}/chk-error-label-reachability.sh                         @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/check-property.sh.in
+    ${PROJECT_BINARY_DIR}/check-property.sh                                       @ONLY)
 
 # make install
 install(TARGETS sl DESTINATION lib)
