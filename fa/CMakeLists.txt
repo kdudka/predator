@@ -143,6 +143,7 @@ set(tests-known-to-fail
 set(tests-failing-due-to-abstraction
                                                     f0008
                                               f0017
+                                  f0035
                                               p0507
 )
 
