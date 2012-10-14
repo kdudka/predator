@@ -117,8 +117,29 @@ public:
 		variables_.clear();
 	}
 
-	size_t getRootCount() const {
+	size_t getRootCount() const
+	{
 		return this->roots.size();
+	}
+
+	/**
+	 * @brief  Gets the count of valid roots
+	 *
+	 * Retrieve the number of valid roots (i.e. not-@p nullptr roots).
+	 *
+	 * @returns  The count of valid roots
+	 *
+	 * @todo: cache?
+	 */
+	size_t getValidRootCount() const
+	{
+		size_t sum = 0;
+		for (auto rootPtr : this->roots)
+		{
+			if (nullptr != rootPtr) ++sum;
+		}
+
+		return sum;
 	}
 
 	const TreeAut* getRoot(size_t i) const {

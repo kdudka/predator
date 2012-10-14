@@ -293,7 +293,7 @@ public:
 	 * @param[in]  typeInfo  Description of the type of data stored in the node
 	 *                       (if present)
 	 *
-	 * @returns  Identifier of the inserted tree automaton
+	 * @returns  Index (tree automaton reference) of the inserted tree automaton
 	 */
 	size_t nodeCreate(
 		const std::vector<SelData>& nodeInfo,

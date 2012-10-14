@@ -168,11 +168,11 @@ std::ostream& operator<<(std::ostream& os, const SymState& state)
 	// there may be cases (at the beginning of a program) when ABP and GLOB are
 	// not loaded
 	os << " GLOB (gr" << GLOB_INDEX << ") = ";
-	if (vm.varCount() <= GLOB_INDEX) { os << "undef"; }
+	if (vm.varCount() <= GLOB_INDEX) { os << "(invld)"; }
 	else { os << vm.varGet(GLOB_INDEX); }
 
 	os << "  ABP (gr" <<  ABP_INDEX << ") = ";
-	if (vm.varCount() <=  ABP_INDEX) { os << "undef"; }
+	if (vm.varCount() <=  ABP_INDEX) { os << "(invld)"; }
 	else { os << vm.varGet( ABP_INDEX); }
 
 	for (size_t i = FIXED_REG_COUNT; i < vm.varCount(); ++i)

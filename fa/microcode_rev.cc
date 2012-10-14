@@ -110,10 +110,38 @@ SymState* FI_node_create::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)fwdPred;
+	// TODO: this is bullsh*t (fails when real abstraction is performed)
 
-	FA_WARN("Skipping reverse operation FI_node_create");
-	return execMan.copyState(bwdSucc);
+	// Assertions
+	assert(fwdPred.GetFAE()->getValidRootCount() + 1
+		== bwdSucc.GetFAE()->getValidRootCount());
+
+	const Data& oldVal = fwdPred.GetReg(src_);
+
+	if (oldVal.isRef() || oldVal.isNull())
+	{	// in case the old value was a null pointer
+		return execMan.copyState(bwdSucc);
+	}
+
+	// assert that src_ is a void pointer
+	assert(oldVal.isVoidPtr());
+
+	// assert that the sizes are OK
+	assert(oldVal.d_void_ptr_size == size_);
+
+	// copy the old value of the register
+	SymState* tmpState = execMan.copyStateWithNewRegs(bwdSucc, fwdPred.GetInstr());
+	tmpState->SetReg(dst_, fwdPred.GetReg(dst_));
+
+	// create a new forest automaton
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
+	// TODO: the use of getValidRootCount() is not very nice, we need to develop
+	// a better way to handle root references 
+	VirtualMachine(*fae).nodeDelete(bwdSucc.GetFAE()->getValidRootCount() - 1);
+	tmpState->SetFAE(fae);
+
+	FA_WARN("Suspicious reverse operation FI_node_create");
+	return tmpState;
 }
 
 SymState* FI_store::reverseAndIsect(

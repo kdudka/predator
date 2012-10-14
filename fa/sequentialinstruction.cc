@@ -43,9 +43,8 @@ SymState* RegisterAssignment::reverseAndIsect(
 	const SymState&                        bwdSucc) const
 {
 	// copy the previous value of register dstReg_ 
-	const Data& data = fwdPred.GetReg(dstReg_);
 	SymState* tmpState = execMan.copyStateWithNewRegs(bwdSucc, fwdPred.GetInstr());
-	tmpState->SetReg(dstReg_, data);
+	tmpState->SetReg(dstReg_, fwdPred.GetReg(dstReg_));
 
 	return tmpState;
 }
