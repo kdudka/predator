@@ -17,11 +17,10 @@
  * along with forester.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <cl/cldebug.hh>
-
-#include "executionmanager.hh"
-
+// Forester headers
 #include "call.hh"
+#include "executionmanager.hh"
+#include "streams.hh"
 
 // FI_ret
 void FI_ret::execute(ExecutionManager& execMan, SymState& state)
@@ -42,10 +41,9 @@ SymState* FI_ret::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation FI_ret");
+	return execMan.copyState(bwdSucc);
 }
 

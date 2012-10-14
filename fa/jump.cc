@@ -18,7 +18,9 @@
  */
 
 // Forester headers
+#include "executionmanager.hh"
 #include "jump.hh"
+#include "streams.hh"
 
 void FI_jmp::execute(ExecutionManager&, SymState&)
 {
@@ -45,9 +47,8 @@ SymState* FI_jmp::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)execMan;
 	(void)fwdPred;
-	(void)bwdSucc;
 
-	assert(false);
+	FA_WARN("Skipping reverse operation FI_jmp");
+	return execMan.copyState(bwdSucc);
 }
