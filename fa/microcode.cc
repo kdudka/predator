@@ -448,7 +448,9 @@ void FI_node_create::execute(ExecutionManager& execMan, SymState& state)
 
 	// TODO: is this alright? Shouldn't dst_ be modified?
 	if (srcData.isRef() || srcData.isNull())
-	{	// in case src_ is a null pointer
+	{	// this is to handle the special case that appears e.g. in test-p0001.c
+		// Jiri claims it is a horrible solution of the issue and suggests to do it
+		// in a better way :-)
 		SymState* tmpState = execMan.createChildState(state, next_);
 		execMan.enqueue(tmpState);
 		return;
