@@ -89,7 +89,7 @@ rank_files() {
         printf -- "--- TRUE INCORRECT:\t%2d [-8 each]\n" "$INCORRECT_TRUE"
     fi
     if test 0 -lt "$UNKNOWNS"; then
-        printf -- "--- UNKNOWNS:\t%2d [0]\n" "$UNKNOWNS"
+        printf -- "--- UNKNOWNS:\t\t%2d [0]\n" "$UNKNOWNS"
     fi
 
     CORRECT_TRUE_SUM=$(expr 2 \* $CORRECT_TRUE)
