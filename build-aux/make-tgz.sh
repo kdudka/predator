@@ -153,7 +153,7 @@ test xyes = "x$drop_sl" && rm -rf sl    \
 # make a tarball
 cd ..
 test -d "$NAME" || die "internal error"
-tar cv "$NAME" | gzip -c > "${REPO}/${TGZ}" \
+tar c "$NAME" | gzip -c > "${REPO}/${TGZ}" \
     || die "failed to package the release"
 
 # cleanup

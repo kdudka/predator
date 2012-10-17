@@ -2,16 +2,16 @@ diff --git a/docs/README-ubuntu b/docs/README-ubuntu
 index e8dc24d..904618a 100644
 --- a/docs/README-ubuntu
 +++ b/docs/README-ubuntu
-@@ -15,12 +15,6 @@ This part is common for all versions of Ubuntu we have tried:
-         libgmp3-dev libmpc-dev libmpfr-dev  \
-         gcc-multilib
+@@ -6,12 +6,6 @@ The below steps were successfully tested on a fresh installation of Ubuntu
+ sudo apt-get install \
+     cmake curl g++ gcc-4.6-multilib gcc-4.6-plugin-dev libboost-dev make
  
--    curl http://www.fit.vutbr.cz/~idudka/download/predator-2011-10-11-8a7846b.tar.gz \
--        | gzip -cd \
--        | tar x
+-curl http://www.fit.vutbr.cz/~idudka/download/predator-2011-10-11-8a7846b.tar.gz \
+-    | gzip -cd \
+-    | tar x
 -
--    cd predator-2011-10-11-8a7846b
+-cd predator-2011-10-11-8a7846b
 -
-     make -j3 build_boost build_gcc
+ patch -p1 < build-aux/gcc-4.6.3.patch
  
-     make -j3
+ ./switch-host-gcc.sh /usr/bin/gcc-4.6

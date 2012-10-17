@@ -1,0 +1,23 @@
+Building Predator on Ubuntu
+===========================
+Please start with this, ONLY if you are on Ubuntu 10.04:
+
+    sudo apt-get install timeout
+
+
+This part is common for all versions of Ubuntu we have tried:
+
+    sudo apt-get install cmake curl g++     \
+        libgmp3-dev libmpc-dev libmpfr-dev  \
+        gcc-multilib
+
+    make -j3 build_boost build_gcc
+
+    make -j3
+
+    make -i check
+
+
+Note you need approximately 2 GB of free disk space to unpack and build GCC.
+The steps above were successfully tested on Ubuntu 11.04 Desktop (i386 and
+amd64) and Ubuntu 10.04.3 LTS (Lucid Lynx).
