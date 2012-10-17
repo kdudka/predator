@@ -121,7 +121,7 @@ find_gcc_plug sl Predator
 match() {
     line="$1"
     shift
-    printf "%s" "$line" | egrep "$@" >/dev/null
+    printf "%s" "$line" | grep -E "$@" >/dev/null
     return $?
 }
 
@@ -189,7 +189,7 @@ parse_gcc_output() {
             # errors already reported, better to fail now
             fail
 
-        elif match "$line" -E "$MSG_INFLOOP"; then
+        elif match "$line" "$MSG_INFLOOP"; then
             # infinite loop does not mean FALSE, ignore them
             continue
 

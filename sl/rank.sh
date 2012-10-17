@@ -16,7 +16,7 @@ usage() {
 }
 
 match() {
-    grep "$@" >/dev/null
+    grep -E "$@" >/dev/null
     return $?
 }
 
@@ -39,16 +39,16 @@ rank_files() {
 
     for i in "$@"; do
         HAS_BUG=no
-        if echo "$i" | match -E "BUG|unsafe|false"; then
+        if echo "$i" | match "BUG|unsafe|false"; then
             HAS_BUG=yes
         fi
 
-        MEMBUG="$(echo $i | egrep -o "(valid-free)|(valid-deref)|(valid-memtrack)")"
+        MEMBUG="$(echo $i | grep -E -o "(valid-free)|(valid-deref)|(valid-memtrack)")"
 
         printf "%-72s\t" "$i"
 
         RESULT="$($TIMEOUT $RUNNER --task $PROPERTY -- $i -m32 2>/dev/null)"
-        case "$( echo $RESULT | egrep -o "(TRUE)|(FALSE)" )" in
+        case "$( echo $RESULT | grep -E -o "(TRUE)|(FALSE)" )" in
             TRUE)
                 if test xyes = "x$HAS_BUG" ; then
                     printf "\033[1;31m!TRUE!\t[-8]\n  HAS BUG: [$HAS_BUG] MEMBUG: [$MEMBUG] RESULT: [$RESULT]\033[0m\n"
