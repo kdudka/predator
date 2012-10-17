@@ -662,6 +662,37 @@ bool handleStrncpy(
     return true;
 }
 
+bool handleAssume(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    SymHeap &sh = core.sh();
+    const TLoc loc = core.lw();
+    const CodeStorage::TOperandList &opList = insn.operands;
+
+    if (3 != opList.size() || opList[0].code != CL_OPERAND_VOID) {
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    const TValId valExpr = core.valFromOperand(opList[/* expr */ 2]);
+    const TValId valComp = compareValues(sh, CL_BINOP_EQ, VAL_FALSE, valExpr);
+
+    if (proveNeq(sh, VAL_FALSE, valComp)) {
+        CL_DEBUG_MSG(loc, name << "() got FALSE, skipping this code path!");
+        return true;
+    }
+
+    // TODO: it would be nice to call reflectCmpResult() in certain cases
+
+    // insert the resulting heap
+    CL_DEBUG_MSG(loc, name << "() failed to prove inconsistency");
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
 bool handleNondetInt(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -915,7 +946,8 @@ BuiltInTable::BuiltInTable()
     tbl_["___sl_plot_trace_once"]                   = handlePlotTraceOnce;
     tbl_["___sl_enable_debugging_of"]               = handleDebuggingOf;
 
-    // used in Competition on Software Verification held at TACAS 2012
+    // used in the Competition on Software Verification held at TACAS
+    tbl_["__VERIFIER_assume"]                       = handleAssume;
     tbl_["__VERIFIER_nondet_char"]                  = handleNondetInt;
     tbl_["__VERIFIER_nondet_float"]                 = handleNondetInt;
     tbl_["__VERIFIER_nondet_int"]                   = handleNondetInt;
