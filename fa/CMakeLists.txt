@@ -182,6 +182,7 @@ set(tests-failing-due-to-unsupported-feature
 )
 
 set(tests-failing-due-to-internal-error
+          f0041
                 p0002       p0004 p0005 p0006             p0009
           p0011
     p0020 p0021           
