@@ -99,8 +99,11 @@ void FI_acc_sel::execute(ExecutionManager& execMan, SymState& state)
 
 	std::vector<FAE*> res;
 
-	Splitting(*state.GetFAE()).isolateOne(res, data.d_ref.root,
-		data.d_ref.displ + offset_);
+	Splitting(*state.GetFAE()).isolateOne(
+		/* vector for results */ res,
+		/* index of the desired TA */ data.d_ref.root,
+		/* offset of the selector */ data.d_ref.displ + offset_
+	);
 
 	for (auto fae : res)
 	{
@@ -125,7 +128,10 @@ void FI_acc_set::execute(ExecutionManager& execMan, SymState& state)
 	std::vector<FAE*> res;
 
 	Splitting(*state.GetFAE()).isolateSet(
-		res, data.d_ref.root, data.d_ref.displ + base_, offsets_
+		/* vector for results */ res,
+		/* index of the desired TA */ data.d_ref.root,
+		/* base of offsets */ data.d_ref.displ + base_,
+		/* offsets of selectors */ offsets_
 	);
 
 	for (auto fae : res)
@@ -151,8 +157,10 @@ void FI_acc_all::execute(ExecutionManager& execMan, SymState& state)
 	std::vector<FAE*> res;
 
 	Splitting(*state.GetFAE()).isolateSet(
-		res, data.d_ref.root, 0,
-		state.GetFAE()->getType(data.d_ref.root)->getSelectors()
+		/* vector for results */ res,
+		/* index of the desired TA */ data.d_ref.root,
+		/* base of offsets */ 0,
+		/* offsets of selectors */ state.GetFAE()->getType(data.d_ref.root)->getSelectors()
 	);
 
 	for (auto fae : res)
