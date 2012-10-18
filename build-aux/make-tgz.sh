@@ -20,6 +20,7 @@ build-aux/README-ubuntu-release.patch \
 build-aux/cl-readme.patch \
 build-aux/cl-config.patch \
 build-aux/cl-switch-host.patch \
+build-aux/sl-switch-host.patch \
 build-aux/make-srpm.sh \
 build-aux/update-comments-in-tests.sh \
 build-aux/README-fedora-release.patch"

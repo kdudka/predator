@@ -1,7 +1,7 @@
 #!/bin/bash
 export SELF="$0"
 export LC_ALL=C
-export MAKE="make -j5"
+MAKE="make -j5"
 
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
