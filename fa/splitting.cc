@@ -20,8 +20,6 @@
 // Forester headers
 #include "splitting.hh"
 
-typedef TT<label_type> Transition;
-
 // anonymous namespace
 namespace
 {
@@ -59,15 +57,15 @@ struct RootEnumF
 struct LeafEnumF
 {
 	const FAE& fae;
-	const Transition& t;
+	const Splitting::Transition& t;
 	size_t target;
 	std::set<size_t>& selectors;
 
 	LeafEnumF(
-		const FAE&                 fae,
-		const Transition&          t,
-		size_t                     target,
-		std::set<size_t>&          selectors) :
+		const FAE&                      fae,
+		const Splitting::Transition&    t,
+		size_t                          target,
+		std::set<size_t>&               selectors) :
 		fae(fae),
 		t(t),
 		target(target),
@@ -99,17 +97,17 @@ struct LeafEnumF
 struct LeafScanF
 {
 	const FAE& fae;
-	const Transition& t;
+	const Splitting::Transition& t;
 	size_t selector;
 	size_t target;
 	const Box*& matched;
 
 	LeafScanF(
-		const FAE&                  fae,
-		const Transition&           t,
-		size_t                      selector,
-		size_t                      target,
-		const Box*&                 matched) :
+		const FAE&                     fae,
+		const Splitting::Transition&   t,
+		size_t                         selector,
+		size_t                         target,
+		const Box*&                    matched) :
 		fae(fae),
 		t(t),
 		selector(selector),
@@ -176,8 +174,8 @@ struct IsolateSetF
 	IsolateSetF(const std::vector<size_t>& v, size_t offset = 0) :
 		s{}
 	{
-		for (std::vector<size_t>::const_iterator i = v.begin(); i != v.end(); ++i)
-			this->s.insert(*i + offset);
+		for (size_t sel : v)
+			this->s.insert(sel + offset);
 	}
 
 	bool operator()(const StructuralBox* box) const

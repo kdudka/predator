@@ -38,8 +38,14 @@
  */
 class Splitting
 {
+public:   // data types
+
+	/// Transition
+	typedef TT<label_type> Transition;
+
 private:  // data members
 
+	/// The Forest Automaton that will be split
 	FAE& fae_;
 
 private:  // methods
@@ -72,15 +78,26 @@ private:  // methods
 		std::set<size_t>&           selectors,
 		size_t                      target) const;
 
+
 	// adds redundant root points to allow further manipulation
 	template <class F>
 	void isolateAtRoot(
 		size_t                             root,
-		const TT<label_type>&              t,
+		const Transition&                  t,
 		F                                  f,
 		std::set<const Box*>&              boxes);
 
-	// adds redundant root points to allow further manipulation
+
+	/**
+	 * @brief  Unfolds for given offsets at desired root
+	 *
+	 * Unfolds the tree automaton with the index @p root, isolating selectors at
+	 * given @p offsets.
+	 *
+	 * @param[out]  dst      The vector for storing results of the operation
+	 * @param[in]   root     The index of the desired tree automaton
+	 * @param[in]   offsets  Offsets to be isolated
+	 */
 	void isolateAtRoot(
 		std::vector<FAE*>&                            dst,
 		size_t                                        root,
