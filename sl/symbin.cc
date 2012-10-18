@@ -1018,6 +1018,10 @@ bool fncNameFromOp(
 
     const TStorRef stor = core.sh().stor();
     const CodeStorage::Fnc *fnc = stor.fncs[uid];
+    if (!fnc->def.data.cst.data.cst_fnc.is_extern)
+        // only external functions are candidates for built-in functions
+        return false;
+
     const char *name = nameOf(*fnc);
     if (!name)
         return false;
