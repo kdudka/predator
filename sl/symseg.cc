@@ -266,10 +266,20 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
             continue;
         }
 
-        // jump to next value while taking the 'head' offset into consideration
-        const TValId valNext = nextValFromSeg(sh, seg);
+        // when computing the actual shift, take the head offset into account
         const BindingOff &bOff = sh.segBinding(seg);
-        val = const_cast<SymHeap &>(sh).valByOffset(valNext, off - bOff.head);
+        const TOffset shiftBy = off - bOff.head;
+
+        if (root != seg) {
+            // put the shifted address of DLS peer to the list of seen values
+            const ObjHandle ptrPrev = prevPtrFromSeg(sh, root);
+            const TValId valPrev = ptrPrev.value();
+            val = const_cast<SymHeap &>(sh).valByOffset(valPrev, shiftBy);
+        }
+
+        // jump to next value
+        const TValId valNext = nextValFromSeg(sh, seg);
+        val = const_cast<SymHeap &>(sh).valByOffset(valNext, shiftBy);
     }
 
     return val;
