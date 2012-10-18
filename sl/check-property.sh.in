@@ -16,6 +16,8 @@ export MSG_DEREF_OUT=': error: dereferencing object of size [0-9]*B out of bound
 export MSG_DEREF_NULL=': error: dereference of NULL value'
 export MSG_DEREF_INVALID=': error: invalid dereference'
 export MSG_DEREF_NENH=': error: dereference of non-existing non-heap object'
+export MSG_DEREF_PTRSPACE=": error: not enough space to store value of a pointer"
+export MSG_DEREF_LVAL=": error: invalid L-value"
 
 export MSG_FREE_OFFSET=': error: free\(\) called with offset'
 export MSG_FREE_INVALID=': error: invalid free\(\)'
@@ -25,8 +27,6 @@ export MSG_FREE_NONHEAP=': error: attempt to free a non-heap object'
 export MSG_FREE_NONPOINTER=': error: free() called on non-pointer value'
 
 # Predator error messages we need to handle:
-#"not enough space to store value of a pointer" - not sure
-#"invalid L-value" - probably not
 #"size arg of memset() is not a known integer" - no category
 #"size arg of " << fnc << " is not a known integer" - probably not
 #"source and destination overlap in call of " - not category
@@ -162,11 +162,14 @@ parse_gcc_output() {
              match "$line" "$MSG_DEREF_OUT" || \
              match "$line" "$MSG_DEREF_NULL" || \
              match "$line" "$MSG_DEREF_INVALID" || \
-             match "$line" "$MSG_DEREF_NENH"; then
+             match "$line" "$MSG_DEREF_NENH" || \
+             match "$line" "$MSG_DEREF_PTRSPACE" || \
+             match "$line" "$MSG_DEREF_LVAL" ; then
             case "$TASK" in
               label) fail;;
               memory) report_unsafe "p_valid-deref";;
             esac
+
         elif match "$line" "$MSG_MEMLEAK"; then
             case "$TASK" in
               label) continue;;
