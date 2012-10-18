@@ -1,0 +1,28 @@
+Instructions for TACAS 2013 Competition on Software Verification
+================================================================
+
+(1) Build Predator from sources.  On Ubuntu 12.04, please follow the
+    instructions in docs/README-ubuntu.
+
+
+(2) Use the 'sl_build/check-property.sh' script to verify each single test-case.
+
+Usage: check-property.sh --task TASK -- path/to/test-case.c [-m32|-m64] [CFLAGS]
+
+    -t, --task TASK
+          A verification task. Currently supported tasks:
+
+          'label'   : checks if an error label is reachable
+          'memory'  : checks if three memory properties defined in SVCOMP'13
+                      MemSafety category rules hold.
+
+    The verification result (TRUE, FALSE, or UNKNOWN) will be printed to
+    standard output.  All other information will be printed to standard error
+    output.  There is no timeout or ulimit set by this script.  If these
+    constraints are violated, it should be treated as UNKNOWN result.  Do not
+    forget to use the -m32 option when compiling 32bit preprocessed code on a
+    64bit OS.
+
+    For memory safety category, the FALSE result is further clarified as
+    FALSE(p) where p is the property for which the Predator judges the
+    program to be unsatisfactory.
