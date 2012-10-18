@@ -71,6 +71,9 @@ usage() {
           'label'   : checks if an error label is reachable
           'memory'  : checks if three memory properties defined in SVCOMP'13
                       MemSafety category rules hold.
+    -v, --verbose
+          Prints more information about the result. Not to be used during the
+          competition.
 
     The verification result (TRUE, FALSE, or UNKNOWN) will be printed to
     standard output.  All other information will be printed to standard error
@@ -87,7 +90,7 @@ EOF
     exit 1
 }
 
-ARGS=$(getopt -o t: -l "task:" -n "check-property.sh" -- "$@")
+ARGS=$(getopt -o t:v -l "task:,verbose" -n "check-property.sh" -- "$@")
 if test $? -ne 0; then
   usage; exit 1;
 fi
@@ -98,6 +101,8 @@ while true; do
   case "$1" in
     -t|--task)
       export TASK="$2"; shift 2;;
+    -v|--verbose)
+      export VERBOSE="yes"; shift;;
     --)
       shift; break;;
   esac
@@ -125,9 +130,17 @@ match() {
     return $?
 }
 
+report_result() {
+  if test -n "$VERBOSE"; then
+    printf "$1$2: $3\n"
+  else
+    printf "$1$2"
+  fi
+}
+
 fail() {
     # exit now, it makes no sense to continue at this point
-    echo UNKNOWN
+    report_result "UNKNOWN" "" "$1"
     exit 1
 }
 
@@ -136,9 +149,9 @@ report_unsafe() {
     # drop the remainder of the output
     cat > /dev/null
     if test -z "$PROPERTY"; then
-      echo FALSE
+      report_result "FALSE" "" "$2"
     else
-      printf "FALSE(%s)\n" "$PROPERTY"
+      report_result "FALSE" "($PROPERTY)" "$2"
     fi
     exit 0
 }
@@ -150,12 +163,12 @@ parse_gcc_output() {
     while read line; do
         if match "$line" "$MSG_UNHANDLED_CALL"; then
             # call of an external function we have no model for, we have to fail
-            fail
+            fail "$line"
 
         elif match "$line" "$MSG_LABEL_FOUND"; then
             # an ERROR label has been reached
             case "$TASK" in
-              label) report_unsafe;;
+              label) report_unsafe "" "$line";;
               memory) continue;;
             esac
         elif match "$line" "$MSG_DEREF_FREED" || \
@@ -166,14 +179,14 @@ parse_gcc_output() {
              match "$line" "$MSG_DEREF_PTRSPACE" || \
              match "$line" "$MSG_DEREF_LVAL" ; then
             case "$TASK" in
-              label) fail;;
-              memory) report_unsafe "p_valid-deref";;
+              label) fail "$line";;
+              memory) report_unsafe "p_valid-deref" "$line";;
             esac
 
         elif match "$line" "$MSG_MEMLEAK"; then
             case "$TASK" in
               label) continue;;
-              memory) report_unsafe "p_valid-memtrack";;
+              memory) report_unsafe "p_valid-memtrack" "$line";;
             esac
 
         elif match "$line" "$MSG_FREE_OFFSET" || \
@@ -184,13 +197,13 @@ parse_gcc_output() {
              match "$line" "$MSG_FREE_NONPOINTER"; then
             # free called with offset: p_valid_free
             case "$TASK" in
-              label) fail;;
-              memory) report_unsafe "p_valid-free";;
+              label) fail "$line";;
+              memory) report_unsafe "p_valid-free" "$line";;
             esac
 
         elif match "$line" ": error: "; then
             # errors already reported, better to fail now
-            fail
+            fail "$line"
 
         elif match "$line" "$MSG_INFLOOP"; then
             # infinite loop does not mean FALSE, ignore them
@@ -207,11 +220,11 @@ parse_gcc_output() {
     done
 
     if test xyes = "x$ERROR_DETECTED"; then
-        fail
+        fail "warning: Encountered some warnings"
     elif test xyes = "x$ENDED_GRACEFULLY"; then
         echo TRUE
     else
-        fail
+        fail "error: Predator has not finished gracefully"
     fi
 }
 

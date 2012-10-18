@@ -47,11 +47,11 @@ rank_files() {
 
         printf "%-72s\t" "$i"
 
-        RESULT="$($TIMEOUT $RUNNER --task $PROPERTY -- $i -m32 2>/dev/null)"
+        RESULT="$($TIMEOUT $RUNNER --verbose --task $PROPERTY -- $i -m32 2>/dev/null)"
         case "$( echo $RESULT | grep -E -o "(TRUE)|(FALSE)" )" in
             TRUE)
                 if test xyes = "x$HAS_BUG" ; then
-                    printf "\033[1;31m!TRUE!\t[-8]\n  HAS BUG: [$HAS_BUG] MEMBUG: [$MEMBUG] RESULT: [$RESULT]\033[0m\n"
+                    printf "\033[1;31m!TRUE!\t[-8]\n  Reason: [$( echo $RESULT | grep -E -o '(error|warning):[^\[]*')]\033[0m\n"
                     INCORRECT_TRUE=$(expr 1 + $INCORRECT_TRUE)
                 else
                     printf "\033[1;32mTRUE\t[+2]\033[0m\n"
@@ -60,16 +60,16 @@ rank_files() {
                 ;;
 
             FALSE)
-              if test xyes = "x$HAS_BUG" && ( test -z "$MEMBUG" || test "FALSE(p_$MEMBUG)" == "$RESULT" ); then
+              if test xyes = "x$HAS_BUG" && ( test -z "$MEMBUG" || test "FALSE(p_$MEMBUG)" = "$( echo $RESULT | grep -E -o 'FALSE\(p_[a-z_-]*\)')" )  ; then
                     printf "\033[1;32mFALSE\t[+1 with luck]\033[0m\n"
                     CORRECT_FALSE=$(expr 1 + $CORRECT_FALSE)
                 else
-                    printf "\033[1;31m!FALSE!\t[-4]\n  HAS BUG: [$HAS_BUG] MEMBUG: [$MEMBUG] RESULT: [$RESULT]\033[0m\n"
+                    printf "\033[1;31m!FALSE!\t[-4]\n  Reason: [$( echo $RESULT | grep -E -o '(error|warning):[^\[]*')]\033[0m\n"
                     INCORRECT_FALSE=$(expr 1 + $INCORRECT_FALSE)
                 fi
                 ;;
 
-            *)  printf "\033[1;34mUNKNOWN\t[+0]\033[0m\n"
+            *)  printf "\033[1;34mUNKNOWN\t[+0]\n  Reason: [$( echo $RESULT | grep -E -o '(error|warning):[^\[]*')]\033[0m\n"
                 UNKNOWNS=$(expr 1 + $UNKNOWNS)
                 ;;
         esac
