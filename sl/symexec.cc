@@ -348,8 +348,7 @@ void SymExecEngine::updateStateInBranch(
     if (!reflectCmpResult(dst, procOrig, code, branch, v1, v2))
         CL_DEBUG_MSG(lw_, "XXX unable to reflect comparison result");
 
-    // as of yet, we always get exactly one heap, although the API is generic
-    CL_BREAK_IF(1 != dst.size());
+    CL_BREAK_IF(!dst.size());
 
     BOOST_FOREACH(SymHeap *sh, dst) {
         sh->traceUpdate(trCond);

@@ -1520,6 +1520,69 @@ bool spliceOutAbstractPathCore(
     return true;
 }
 
+bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2);
+
+bool dlSegMergeAddressesOfEmpty(
+        SymState                    &dst,
+        SymProc                     &procTpl,
+        const TValId                 root1,
+        const TValId                 root2)
+{
+    // we need to clone the SymHeap and SymProc objects
+    SymHeap sh(procTpl.sh());
+    Trace::waiveCloneOperation(sh);
+    SymProc proc(sh, procTpl.bt());
+    proc.setLocation(procTpl.lw());
+
+    const TValId valNext1 = nextValFromSeg(sh, root1);
+    const TValId valNext2 = nextValFromSeg(sh, root2);
+
+    if (!spliceOutAbstractPathCore(proc, root1, valNext2))
+        CL_BREAK_IF("dlSegMergeAddressesOfEmpty() failed to remove a DLS");
+
+    if (valNext1 == valNext2) {
+        dst.insert(sh);
+        return true;
+    }
+
+    CL_DEBUG_MSG(proc.lw(),
+            "dlSegMergeAddressesIfNeeded() calls valMerge() recursively");
+
+   return valMerge(dst, proc, valNext1, valNext2);
+}
+
+bool dlSegMergeAddressesIfNeeded(
+        SymState                    &dst,
+        SymProc                     &proc,
+        const TValId                 v1,
+        const TValId                 v2)
+{
+    SymHeap &sh = proc.sh();
+
+    const TOffset off1 = sh.valOffset(v1);
+    const TOffset off2 = sh.valOffset(v2);
+    if (off1 != off2)
+        // the given value differ in target offset
+        return false;
+
+    const TValId root1 = sh.valRoot(v1);
+    const TValId root2 = sh.valRoot(v2);
+    if (root1 == root2 && root1 != segPeer(sh, root2))
+        // apparently not the case we are looking for
+        return false;
+
+    CL_BREAK_IF(root2 != segPeer(sh, root1));
+
+    if (!sh.segMinLength(root1))
+        // 0+ DLS --> we have to look through!
+        dlSegMergeAddressesOfEmpty(dst, proc, root1, root2);
+
+    dlSegReplaceByConcrete(sh, root1, root2);
+    sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), /* len */ 1));
+    dst.insert(sh);
+    return true;
+}
+
 bool spliceOutAbstractPath(
         SymProc                     &proc,
         const TValId                 atAddr,
@@ -1528,16 +1591,6 @@ bool spliceOutAbstractPath(
 {
     SymHeap &sh = proc.sh();
     const TValId seg = sh.valRoot(atAddr);
-    const TValId peer = segPeer(sh, seg);
-
-    if (pointingTo == peer && peer != seg) {
-        // assume identity over the two parts of a DLS
-        CL_BREAK_IF(readOnlyMode);
-
-        dlSegReplaceByConcrete(sh, seg, peer);
-        sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), /* len */ 1));
-        return true;
-    }
 
     TValId endPoint = pointingTo;
 
@@ -1591,6 +1644,10 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2)
         dst.insert(sh);
         return true;
     }
+
+    if (dlSegMergeAddressesIfNeeded(dst, proc, v1, v2))
+        // splice-out succeeded ... v1 -> dls <- v2
+        return true;
 
     // collect the sets of values we get by jumping over 0+ abstract objects
     TValSet seen1, seen2;
