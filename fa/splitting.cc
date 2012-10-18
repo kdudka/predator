@@ -20,6 +20,8 @@
 // Forester headers
 #include "splitting.hh"
 
+typedef TT<label_type> Transition;
+
 // anonymous namespace
 namespace
 {
@@ -57,13 +59,13 @@ struct RootEnumF
 struct LeafEnumF
 {
 	const FAE& fae;
-	const TT<label_type>& t;
+	const Transition& t;
 	size_t target;
 	std::set<size_t>& selectors;
 
 	LeafEnumF(
 		const FAE&                 fae,
-		const TT<label_type>&      t,
+		const Transition&          t,
 		size_t                     target,
 		std::set<size_t>&          selectors) :
 		fae(fae),
@@ -97,14 +99,14 @@ struct LeafEnumF
 struct LeafScanF
 {
 	const FAE& fae;
-	const TT<label_type>& t;
+	const Transition& t;
 	size_t selector;
 	size_t target;
 	const Box*& matched;
 
 	LeafScanF(
 		const FAE&                  fae,
-		const TT<label_type>&       t,
+		const Transition&           t,
 		size_t                      selector,
 		size_t                      target,
 		const Box*&                 matched) :
@@ -235,12 +237,11 @@ void Splitting::enumerateSelectorsAtLeaf(
 	assert(root < fae_.roots.size());
 	assert(fae_.roots[root]);
 
-	for (TreeAut::iterator i = fae_.roots[root]->begin();
-		i != fae_.roots[root]->end(); ++i)
+	for (const Transition& trans : *fae_.roots[root])
 	{
-		if (i->label()->isNode())
+		if (trans.label()->isNode())
 		{
-			i->label()->iterate(LeafEnumF(fae_, *i, target, selectors));
+			trans.label()->iterate(LeafEnumF(fae_, trans, target, selectors));
 		}
 	}
 }
@@ -255,11 +256,11 @@ void Splitting::enumerateSelectorsAtLeaf(
 		if (!fae_.roots[root])
 			continue;
 
-		for (auto i = fae_.roots[root]->begin(); i != fae_.roots[root]->end(); ++i)
+		for (const Transition& trans : *fae_.roots[root])
 		{
-			if (i->label()->isNode())
+			if (trans.label()->isNode())
 			{
-				i->label()->iterate(LeafEnumF(fae_, *i, target, selectors));
+				trans.label()->iterate(LeafEnumF(fae_, trans, target, selectors));
 			}
 		}
 	}
@@ -291,7 +292,7 @@ void Splitting::isolateAtLeaf(
 
 	fae_.unreachableFree(fae_.roots[root]);
 
-	std::vector<std::pair<const TT<label_type>*, const Box*> > v;
+	std::vector<std::pair<const Transition*, const Box*> > v;
 
 	TreeAut ta(*fae_.backend);
 
@@ -312,7 +313,7 @@ void Splitting::isolateAtLeaf(
 
 	assert(v.size());
 
-	for (std::vector<std::pair<const TT<label_type>*, const Box*> >::iterator i = v.begin(); i != v.end(); ++i) {
+	for (std::vector<std::pair<const Transition*, const Box*> >::iterator i = v.begin(); i != v.end(); ++i) {
 		FAE fae(fae_);
 		Splitting splitting(fae);
 		TreeAut ta2(*fae.backend);
@@ -320,7 +321,7 @@ void Splitting::isolateAtLeaf(
 			ta.copyTransitions(ta2);
 			size_t state = fae.freshState();
 			ta2.addFinalState(state);
-			const TT<label_type>& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
+			const Transition& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
 			fae.roots[root] = std::shared_ptr<TreeAut>(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
 			fae.connectionGraph.invalidate(root);
 			std::set<const Box*> boxes;
@@ -360,7 +361,7 @@ void Splitting::isolateAtLeaf(
 
 		ta2.addFinalState(state);
 
-		const TT<label_type>& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
+		const Transition& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
 
 		ta.copyTransitions(ta2);
 
@@ -460,14 +461,22 @@ void Splitting::isolateSet(
 	}
 
 	// guarded vectors of forest automata (all FA they be deleted at the end of
-	// the function
+	// the function)
 	std::vector<FAE*> tmp, tmp2;
 	ContainerGuard<std::vector<FAE*>> g(tmp), f(tmp2);
 
 	if (!offsD.empty())
-		this->isolateAtRoot(tmp, target, offsD);
+	{	// in case there are some downward selectors, generate possible FA
+		this->isolateAtRoot(
+			/* the output vector */ tmp,
+			/* the root index */ target,
+			/* offsets */ offsD
+		);
+	}
 	else
+	{	// in case there are no downward selectors
 		tmp.push_back(new FAE(fae_));
+	}
 
 	for (size_t i : offsU)
 	{
