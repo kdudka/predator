@@ -398,6 +398,76 @@ void Splitting::isolateAtLeaf(
 }
 
 
+template <class F>
+void Splitting::isolateAtRoot(
+	size_t                             root,
+	const Transition&                  t,
+	F                                  f,
+	std::set<const Box*>&              boxes)
+{
+	// Assertions
+	assert(root < fae_.roots.size());
+	assert(fae_.roots[root]);
+
+	size_t newState = fae_.freshState();
+
+	TreeAut ta(*fae_.roots[root], false);
+
+	ta.addFinalState(newState);
+
+	std::vector<size_t> lhs;
+
+	size_t lhsOffset = 0;
+
+	for (auto j = t.label()->getNode().begin(); j != t.label()->getNode().end(); ++j)
+	{
+		if (!(*j)->isStructural())
+			continue;
+
+		const StructuralBox* b = static_cast<const StructuralBox*>(*j);
+		if (!f(b))
+		{
+			// this box is not interesting
+			for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
+				lhs.push_back(t.lhs()[lhsOffset]);
+			continue;
+		}
+
+		// we have to isolate here
+		for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
+		{
+			if (FA::isData(t.lhs()[lhsOffset])) {
+				// no need to create a leaf when it's already there
+				lhs.push_back(t.lhs()[lhsOffset]);
+				continue;
+			}
+			// update new left-hand side
+			lhs.push_back(fae_.addData(ta, Data::createRef(fae_.roots.size())));
+			// prepare new root
+			TreeAut tmp(*fae_.roots[root], false);
+			tmp.addFinalState(t.lhs()[lhsOffset]);
+			TreeAut* tmp2 = fae_.allocTA();
+			tmp.unreachableFree(*tmp2);
+			// update 'o'
+			fae_.appendRoot(tmp2);
+			fae_.connectionGraph.newRoot();
+		}
+		if (b->isType(box_type_e::bBox))
+			boxes.insert(static_cast<const Box*>(*j));
+	}
+
+	ta.addTransition(lhs, t.label(), newState);
+
+	TreeAut* tmp = fae_.allocTA();
+
+	ta.unreachableFree(*tmp);
+
+	// exchange the original automaton with the new one
+	fae_.roots[root] = std::shared_ptr<TreeAut>(tmp);
+	fae_.connectionGraph.invalidate(root);
+}
+
+
 void Splitting::isolateAtRoot(
 	std::vector<FAE*>&                            dst,
 	size_t                                        root,
@@ -407,11 +477,10 @@ void Splitting::isolateAtRoot(
 	assert(root < fae_.roots.size());
 	assert(fae_.roots[root]);
 
-	for (auto j = fae_.roots[root]->getFinalStates().cbegin();
-		j != fae_.roots[root]->getFinalStates().cend(); ++j)
+	for (size_t state : fae_.roots[root]->getFinalStates())
 	{
-		for (TreeAut::iterator i = fae_.roots[root]->begin(*j),
-			end = fae_.roots[root]->end(*j, i); i != end ; ++i)
+		for (TreeAut::iterator i = fae_.roots[root]->begin(state),
+			end = fae_.roots[root]->end(state, i); i != end ; ++i)
 		{
 			FAE fae(fae_);
 			Splitting splitting(fae);
@@ -468,7 +537,7 @@ void Splitting::isolateSet(
 	if (!offsD.empty())
 	{	// in case there are some downward selectors, generate possible FA
 		this->isolateAtRoot(
-			/* the output vector */ tmp,
+			/* the vector for the results */ tmp,
 			/* the root index */ target,
 			/* offsets */ offsD
 		);
@@ -478,12 +547,16 @@ void Splitting::isolateSet(
 		tmp.push_back(new FAE(fae_));
 	}
 
+	// now, the FAE to be further processed are stored in 'tmp'
+
 	for (size_t i : offsU)
-	{
+	{	// upward selectors are isolated separately 
 		for (FAE* j : tmp)
-		{
+		{	// each FAE is also processed separately
 			tmpS.clear();
 			Splitting splitting(*j);
+
+			// get root selectors (from the new FA)
 			splitting.enumerateSelectorsAtRoot(tmpS, target);
 			if (tmpS.count(i))
 				tmp2.push_back(new FAE(*j));
