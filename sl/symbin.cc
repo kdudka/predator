@@ -948,11 +948,7 @@ BuiltInTable::BuiltInTable()
 
     // used in the Competition on Software Verification held at TACAS
     tbl_["__VERIFIER_assume"]                       = handleAssume;
-    tbl_["__VERIFIER_nondet_char"]                  = handleNondetInt;
-    tbl_["__VERIFIER_nondet_float"]                 = handleNondetInt;
-    tbl_["__VERIFIER_nondet_int"]                   = handleNondetInt;
-    tbl_["__VERIFIER_nondet_pointer"]               = handleNondetInt;
-    tbl_["__VERIFIER_nondet_short"]                 = handleNondetInt;
+    //    __VERIFIER_nondet_*   functions are handled in the above layer
 
     // just to make life easier to our competitors (TODO: check for collisions)
     tbl_["__nondet"]                                = handleNondetInt;
@@ -980,16 +976,29 @@ bool BuiltInTable::handleBuiltIn(
         const char                                  *name)
     const
 {
+    THandler hdl;
+
     TMap::const_iterator it = tbl_.find(name);
-    if (tbl_.end() == it)
-        // no fnc name matched as built-in
-        return false;
+    if (tbl_.end() == it) {
+        static const char namePrefixNondet[] = "__VERIFIER_nondet_";
+        static const size_t namePrefixLength = sizeof(namePrefixNondet) - 1U;
+        std::string namePrefix(name);
+        if (namePrefixLength < namePrefix.size())
+            namePrefix.resize(namePrefixLength);
+
+        if (std::string(namePrefixNondet) == namePrefix)
+            hdl = handleNondetInt;
+        else
+            // no fnc name matched as built-in
+            return false;
+    }
+    else
+        hdl = it->second;
 
     SymHeap &sh = core.sh();
     SymDumpRefHeap shRef(&sh);
     sh.traceUpdate(new Trace::InsnNode(sh.traceNode(), &insn, /* bin */ true));
 
-    const THandler hdl = it->second;
     return hdl(dst, core, insn, name);
 }
 
