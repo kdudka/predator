@@ -47,6 +47,12 @@ void parseConfigString(SymExecParams &sep, std::string cnf)
     if (cnf.empty())
         return;
 
+    if (string("no_error_recovery") == cnf) {
+        CL_DEBUG("parseConfigString: \"no_error_recovery\" mode requested");
+        setErrorRecoveryMode(/* no_error_recovery */ 0);
+        return;
+    }
+
     if (string("oom") == cnf) {
         CL_DEBUG("parseConfigString: \"OOM simulation\" mode requested");
         sep.oomSimulation = true;

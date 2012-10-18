@@ -215,9 +215,14 @@ parse_gcc_output() {
     fi
 }
 
+case "$TASK" in
+    label)  ARGS="error_label:ERROR";;
+    memory) ARGS="no_error_recovery";;
+esac
+
 "$GCC_HOST"                                             \
     -fplugin="${GCC_PLUG}"                              \
-    -fplugin-arg-libsl-args="error_label:ERROR"         \
+    -fplugin-arg-libsl-args="$ARGS"                     \
     -o /dev/null -O0 -S "$@" 2>&1                       \
     | tee /dev/fd/2                                     \
     | parse_gcc_output

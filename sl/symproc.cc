@@ -46,6 +46,13 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+static int errorRecoveryMode = (SE_ERROR_RECOVERY_MODE);
+
+void setErrorRecoveryMode(int mode)
+{
+    ::errorRecoveryMode = mode;
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
 void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace)
@@ -75,21 +82,16 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace)
     plotHeap(sh_, "error-state", lw_);
 #endif
 
-#if SE_ERROR_RECOVERY_MODE
-    errorDetected_ = true;
-#else
-    throw std::runtime_error("support for error recovery not compiled in");
-#endif
+    if (::errorRecoveryMode)
+        errorDetected_ = true;
+    else
+        throw std::runtime_error("error recovery is disabled");
 }
 
 bool SymProc::hasFatalError() const
 {
-#if 1 < SE_ERROR_RECOVERY_MODE
-    // full error recovery mode
-    return false;
-#else
-    return errorDetected_;
-#endif
+    return (::errorRecoveryMode < 2)
+        && errorDetected_;
 }
 
 TValId SymProc::valFromCst(const struct cl_operand &op)
