@@ -94,10 +94,11 @@ SymState* FI_abort::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
+	(void)execMan;
 	(void)fwdPred;
+	(void)bwdSucc;
 
-	FA_WARN("Skipping reverse operation for FI_abort");
-	return execMan.copyState(bwdSucc);
+	throw std::runtime_error("FI_abort reversal: reached unreachable instruction!");
 }
 
 SymState* FI_node_free::reverseAndIsect(
@@ -143,7 +144,6 @@ SymState* FI_node_create::reverseAndIsect(
 	VirtualMachine(*fae).nodeDelete(nodeRef.d_ref.root);
 	tmpState->SetFAE(fae);
 
-	FA_WARN("Suspicious reverse operation FI_node_create");
 	return tmpState;
 }
 
