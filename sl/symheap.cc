@@ -278,6 +278,7 @@ typedef std::map<TOffset, TValId>                       TOffMap;
 typedef IntervalArena<TOffset, TObjId>                  TArena;
 typedef TArena::key_type                                TMemChunk;
 typedef TArena::value_type                              TMemItem;
+typedef std::map<CallInst, TValList>                    TAnonStackMap;
 
 inline TMemItem createArenaItem(
         const TOffset               off,
@@ -553,6 +554,11 @@ struct TValSetWrapper: public TValSet {
     RefCounter refCnt;
 };
 
+// FIXME: std::map is not a good candidate for base class
+struct TAnonStackMapWrapper: public TAnonStackMap {
+    RefCounter refCnt;
+};
+
 struct SymHeapCore::Private {
     Private(Trace::Node *);
     Private(const Private &);
@@ -561,6 +567,7 @@ struct SymHeapCore::Private {
     Trace::NodeHandle               traceHandle;
     EntStore<AbstractHeapEntity>    ents;
     TValSetWrapper                 *liveRoots;
+    TAnonStackMapWrapper           *anonStackMap;
     CVarMap                        *cVarMap;
     CustomValueMapper              *cValueMap;
     CoincidenceDb                  *coinDb;
@@ -1407,6 +1414,7 @@ void SymHeapCore::Private::transferBlock(
 SymHeapCore::Private::Private(Trace::Node *trace):
     traceHandle (trace),
     liveRoots   (new TValSetWrapper),
+    anonStackMap(new TAnonStackMapWrapper),
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
     coinDb      (new CoincidenceDb),
@@ -1420,12 +1428,14 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     traceHandle (new Trace::CloneNode(ref.traceHandle.node())),
     ents        (ref.ents),
     liveRoots   (ref.liveRoots),
+    anonStackMap(ref.anonStackMap),
     cVarMap     (ref.cVarMap),
     cValueMap   (ref.cValueMap),
     coinDb      (ref.coinDb),
     neqDb       (ref.neqDb)
 {
     RefCntLib<RCO_NON_VIRT>::enter(this->liveRoots);
+    RefCntLib<RCO_NON_VIRT>::enter(this->anonStackMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->cValueMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->coinDb);
@@ -1435,6 +1445,7 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
 SymHeapCore::Private::~Private()
 {
     RefCntLib<RCO_NON_VIRT>::leave(this->liveRoots);
+    RefCntLib<RCO_NON_VIRT>::leave(this->anonStackMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cValueMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->coinDb);
@@ -3179,10 +3190,21 @@ TObjId SymHeapCore::valGetComposite(TValId val) const
 
 TValId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
 {
-    (void) size;
-    (void) from;
-    CL_BREAK_IF("please imlement");
-    return this->valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    CL_BREAK_IF(size.lo <= IR::Int0);
+
+    // assign an address
+    const TValId addr = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
+
+    // initialize meta-data
+    RootValue *rootData;
+    d->ents.getEntRW(&rootData, addr);
+    rootData->size = size;
+
+    // append the object on the list of anonymous stack objects of the call
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->anonStackMap);
+    (*d->anonStackMap)[from].push_back(addr);
+
+    return addr;
 }
 
 TValId SymHeapCore::heapAlloc(const TSizeRange &size)
