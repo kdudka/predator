@@ -386,9 +386,8 @@ bool handleStackRestore(
         return false;
     }
 
-    CL_ERROR_MSG(loc, "ignoring call of " << name << "()");
-    CL_BREAK_IF("please implement");
-    core.printBackTrace(ML_ERROR);
+    CL_DEBUG_MSG(loc, "executing " << name << "()");
+    core.execStackRestore();
     insertCoreHeap(dst, core, insn);
     return true;
 }

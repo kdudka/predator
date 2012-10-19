@@ -1,0 +1,41 @@
+test-0239.c:9:22: warning: POSIX says that, given zero size, the behavior of malloc/calloc is implementation-defined
+test-0239.c:9:22: note: assuming NULL as the result
+test-0239.c:18:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()
+test-0239.c:9:22: warning: POSIX says that, given zero size, the behavior of malloc/calloc is implementation-defined
+test-0239.c:9:22: note: assuming NULL as the result
+test-0239.c:19:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()
+test-0239.c:9:22: warning: POSIX says that, given zero size, the behavior of malloc/calloc is implementation-defined
+test-0239.c:9:22: note: assuming NULL as the result
+test-0239.c:20:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()
+test-0239.c:9:22: warning: POSIX says that, given zero size, the behavior of malloc/calloc is implementation-defined
+test-0239.c:9:22: note: assuming NULL as the result
+test-0239.c:21:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()
+<unknown location>: warning: memory leak detected while destroying a variable on stack
+test-0239.c:21:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()
+test-0239.c:9:22: warning: POSIX says that, given zero size, the behavior of malloc/calloc is implementation-defined
+test-0239.c:9:22: note: assuming NULL as the result
+test-0239.c:22:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()
+<unknown location>: warning: memory leak detected while destroying a variable on stack
+test-0239.c:22:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()
+test-0239.c:9:22: warning: POSIX says that, given zero size, the behavior of malloc/calloc is implementation-defined
+test-0239.c:9:22: note: assuming NULL as the result
+test-0239.c:23:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()
+<unknown location>: warning: memory leak detected while destroying a variable on stack
+test-0239.c:23:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()
+test-0239.c:9:22: warning: POSIX says that, given zero size, the behavior of malloc/calloc is implementation-defined
+test-0239.c:9:22: note: assuming NULL as the result
+test-0239.c:24:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()
+test-0239.c:12:13: error: dereferencing object of size 4B out of bounds
+test-0239.c:12:13: note: the pointer being dereferenced points 0B beyond a variable on stack of size 12B
+test-0239.c:24:8: note: from call of foo()
+test-0239.c:15:5: note: from call of main()

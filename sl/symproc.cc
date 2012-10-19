@@ -1185,6 +1185,18 @@ void SymExecCore::execFree(TValId val)
     this->valDestroyTarget(val);
 }
 
+void SymExecCore::execStackRestore()
+{
+    TValList anonStackRoots;
+    const CallInst callInst(this->bt_);
+    sh_.clearAnonStackObjects(anonStackRoots, callInst);
+
+    BOOST_FOREACH(const TValId root, anonStackRoots) {
+        CL_DEBUG_MSG(lw_, "releasing an anonymous stack object");
+        this->valDestroyTarget(root);
+    }
+}
+
 bool lhsFromOperand(ObjHandle *pLhs, SymProc &proc, const struct cl_operand &op)
 {
     if (seekRefAccessor(op.accessor))

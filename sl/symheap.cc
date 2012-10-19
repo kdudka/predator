@@ -3173,9 +3173,19 @@ void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
 
 void SymHeapCore::clearAnonStackObjects(TValList &dst, const CallInst &of)
 {
-    (void) dst;
-    (void) of;
-    CL_BREAK_IF("please imlement");
+    CL_BREAK_IF(!dst.empty());
+
+    TAnonStackMap &sMap = *d->anonStackMap;
+    const TAnonStackMap::iterator it = sMap.find(of);
+    if (sMap.end() == it)
+        return;
+
+    // return the list of anonymous stack objects
+    dst = it->second;
+
+    // clear the list of anonymous stack objects
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->anonStackMap);
+    sMap.erase(it);
 }
 
 TObjId SymHeapCore::valGetComposite(TValId val) const
