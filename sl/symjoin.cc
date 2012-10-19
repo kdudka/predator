@@ -2599,15 +2599,6 @@ bool updateMayExistLevels(SymJoinCtx &ctx)
     return true;
 }
 
-bool matchPreds(
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        const TValMapBidir      &vMap)
-{
-    return sh1.matchPreds(sh2, vMap[/* ltr */ 0])
-        && sh2.matchPreds(sh1, vMap[/* rtl */ 1]);
-}
-
 bool handleDstPreds(SymJoinCtx &ctx)
 {
     // go through all segments and initialize minLength
@@ -2621,13 +2612,15 @@ bool handleDstPreds(SymJoinCtx &ctx)
     if (!ctx.joiningData()) {
         // cross-over check of Neq predicates
 
-        if (!matchPreds(ctx.sh1, ctx.dst, ctx.valMap1)
-                && !updateJoinStatus(ctx, JS_USE_SH2))
-            return false;
+        if (!ctx.sh1.matchPreds(ctx.dst, ctx.valMap1[/* ltr */ 0])) {
+            if (!updateJoinStatus(ctx, JS_USE_SH2))
+                return false;
+        }
 
-        if (!matchPreds(ctx.sh2, ctx.dst, ctx.valMap2)
-                && !updateJoinStatus(ctx, JS_USE_SH1))
-            return false;
+        if (!ctx.sh2.matchPreds(ctx.dst, ctx.valMap2[/* ltr */ 0])) {
+            if (!updateJoinStatus(ctx, JS_USE_SH1))
+                return false;
+        }
     }
 
     // TODO: match generic Neq predicates also in prototypes;  for now we
