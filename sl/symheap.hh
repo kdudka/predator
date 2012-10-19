@@ -407,7 +407,11 @@ class SymHeapCore {
         void copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap) const;
 
         /// true if all Neq predicates can be mapped to Neq predicates in ref
-        bool matchPreds(const SymHeapCore &ref, const TValMap &valMap) const;
+        bool matchPreds(
+                const SymHeapCore           &ref,
+                const TValMap               &valMap,
+                const bool                  nonZeroOnly = false)
+            const;
 
     public:
         /// translate the given address by the given offset

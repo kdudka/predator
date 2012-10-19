@@ -91,7 +91,8 @@ class NeqDb: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
 
         friend bool SymHeapCore::matchPreds(
                 const SymHeapCore       &src,
-                const TValMap           &vMap)
+                const TValMap           &vMap,
+                const bool              nonZeroOnly)
             const;
 };
 
@@ -2831,7 +2832,10 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
     }
 }
 
-bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
+bool SymHeapCore::matchPreds(
+        const SymHeapCore           &ref,
+        const TValMap               &valMap,
+        const bool                   nonZeroOnly)
     const
 {
     SymHeapCore &src = const_cast<SymHeapCore &>(*this);
@@ -2841,6 +2845,9 @@ bool SymHeapCore::matchPreds(const SymHeapCore &ref, const TValMap &valMap)
     BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb->cont_) {
         TValId valLt = item.first;
         TValId valGt = item.second;
+
+        if (nonZeroOnly && VAL_NULL == valLt)
+            continue;
 
         if (!translateValId(&valLt, dst, src, valMap))
             // failed to translate value ID, better to give up
