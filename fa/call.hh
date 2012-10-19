@@ -22,8 +22,12 @@
 
 #include "abstractinstruction.hh"
 
-class FI_ret : public AbstractInstruction {
-
+/**
+ * @brief  Performs a return from a function
+ */
+class FI_ret : public AbstractInstruction
+{
+	/// Index of the register with the return address
 	size_t dst_;
 
 public:

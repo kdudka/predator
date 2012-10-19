@@ -27,7 +27,7 @@ void FI_ret::execute(ExecutionManager& execMan, SymState& state)
 {
 	// Assertions
 	assert(state.GetReg(dst_).isNativePtr());
-	assert(static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
+	assert(nullptr != static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
 
 	SymState* tmpState = execMan.createChildState(state,
 		static_cast<AbstractInstruction*>(state.GetReg(dst_).d_native_ptr));
@@ -43,7 +43,13 @@ SymState* FI_ret::reverseAndIsect(
 {
 	(void)fwdPred;
 
-	FA_WARN("Skipping reverse operation FI_ret");
-	return execMan.copyState(bwdSucc);
+	// Assertions
+	assert(bwdSucc.GetReg(dst_).isNativePtr());
+	assert(nullptr != static_cast<AbstractInstruction*>(bwdSucc.GetReg(dst_).d_native_ptr));
+	assert(fwdPred.GetReg(dst_) == bwdSucc.GetReg(dst_));
+
+	SymState* tmpState = execMan.copyState(bwdSucc);
+
+	return tmpState;
 }
 
