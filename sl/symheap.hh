@@ -39,6 +39,8 @@
 #include <string>
 #include <vector>           // for many types
 
+class SymBackTrace;
+
 /// classification of kind of origins a value may come from
 enum EValueOrigin {
     VO_INVALID,             ///< reserved for signalling error states
@@ -263,6 +265,35 @@ inline bool operator!=(const CVar &a, const CVar &b)
     return !operator==(a, b);
 }
 
+/// bundles static identification of a function with its call instance number
+struct CallInst {
+    int uid;        ///< uid of the function
+    int inst;       ///< how many instances of the fnc we have on the stack
+
+    CallInst(const SymBackTrace *);
+
+    CallInst(int uid_, int inst_):
+        uid(uid_),
+        inst(inst_)
+    {
+    }
+};
+
+/**
+ * lexicographical comparison of CallInst objects
+ * @note we need it in order to place the objects into ordered containers
+ */
+inline bool operator<(const CallInst &a, const CallInst &b)
+{
+    if (a.uid < b.uid)
+        return true;
+    else if (b.uid < a.uid)
+        return false;
+    else
+        // we know (a.uid == b.uid) at this point, let's compare .inst
+        return a.inst < b.inst;
+}
+
 /// a list of _program_ variables
 typedef std::vector<CVar>                               TCVarList;
 
@@ -457,6 +488,12 @@ class SymHeapCore {
         TObjId valGetComposite(TValId val) const;
 
     public:
+        /// allocate a chunk of stack of known size from the select call stack
+        TValId stackAlloc(const TSizeRange &size, const CallInst &from);
+
+        /// clear the list of anonymous stack objects of the given call instance
+        void clearAnonStackObjects(TValList &dst, const CallInst &of);
+
         /// allocate a chunk of heap of known size
         TValId heapAlloc(const TSizeRange &size);
 

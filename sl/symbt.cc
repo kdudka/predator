@@ -248,3 +248,11 @@ void SymBackTrace::popPathTracer(const IPathTracer *pp)
     (void) pp;
     d->ppStack.pop();
 }
+
+// /////////////////////////////////////////////////////////////////////////////
+// part of the implementation of CallInst
+CallInst::CallInst(const SymBackTrace *bt):
+    uid(uidOf(*bt->topFnc())),
+    inst(bt->countOccurrencesOfTopFnc())
+{
+}

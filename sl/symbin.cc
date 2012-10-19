@@ -355,6 +355,73 @@ bool handleKzalloc(
     return true;
 }
 
+bool handleStackSave(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const TLoc loc = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (2 != opList.size()) {
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    CL_DEBUG_MSG(loc, "ignoring call of " << name << "()");
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
+bool handleStackRestore(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const TLoc loc = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (3 != opList.size()) {
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    CL_ERROR_MSG(loc, "ignoring call of " << name << "()");
+    CL_BREAK_IF("please implement");
+    core.printBackTrace(ML_ERROR);
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
+bool handleAllocaWithAlign(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const TLoc loc = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (4 != opList.size()) {
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    // amount of allocated memory must be known (TODO: relax this?)
+    const TValId valSize = core.valFromOperand(opList[/* size */ 2]);
+    IR::Range size;
+    if (rngFromVal(&size, core.sh(), valSize) && IR::Int0 <= size.lo) {
+        CL_DEBUG_MSG(loc, "executing " << name << "()");
+        core.execStackAlloc(insn.operands[/* dst */ 0], size);
+    }
+    else {
+        CL_ERROR_MSG(loc, "size arg of " << name<< "() is not a known integer");
+        core.printBackTrace(ML_ERROR);
+    }
+
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
 bool handleMalloc(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -916,6 +983,11 @@ BuiltInTable *BuiltInTable::inst_;
 /// register built-ins
 BuiltInTable::BuiltInTable()
 {
+    // GCC built-in stack allocation
+    tbl_["__builtin_alloca_with_align"]             = handleAllocaWithAlign;
+    tbl_["__builtin_stack_restore"]                 = handleStackRestore;
+    tbl_["__builtin_stack_save"]                    = handleStackSave;
+
     // C run-time
     tbl_["abort"]                                   = handleAbort;
     tbl_["calloc"]                                  = handleCalloc;

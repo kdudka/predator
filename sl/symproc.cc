@@ -1198,6 +1198,37 @@ bool lhsFromOperand(ObjHandle *pLhs, SymProc &proc, const struct cl_operand &op)
     return true;
 }
 
+void SymExecCore::execStackAlloc(
+        const struct cl_operand         &opLhs,
+        const TSizeRange                &size)
+{
+    // resolve lhs
+    ObjHandle lhs;
+    if (!lhsFromOperand(&lhs, *this, opLhs))
+        // error alredy emitted
+        return;
+
+    if (!size.hi) {
+        // object of zero size could hardly be properly allocated
+        const TValId valUnknown = sh_.valCreate(VT_UNKNOWN, VO_STACK);
+        this->objSetValue(lhs, valUnknown);
+        return;
+    }
+
+    // now create an annonymous stack object
+    const CallInst callInst(this->bt_);
+    const TValId val = sh_.stackAlloc(size, callInst);
+
+    if (ep_.trackUninit) {
+        // uninitialized heap block
+        const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_STACK);
+        sh_.writeUniformBlock(val, tplValue, size.lo);
+    }
+
+    // store the result of malloc
+    this->objSetValue(lhs, val);
+}
+
 void SymExecCore::execHeapAlloc(
         SymState                        &dst,
         const CodeStorage::Insn         &insn,

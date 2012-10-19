@@ -26,6 +26,7 @@
  */
 
 struct CVar;
+struct CallInst;
 class SymHeap;
 class SymProc;
 

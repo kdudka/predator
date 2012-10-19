@@ -3160,6 +3160,13 @@ void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
             dst.push_back(at);
 }
 
+void SymHeapCore::clearAnonStackObjects(TValList &dst, const CallInst &of)
+{
+    (void) dst;
+    (void) of;
+    CL_BREAK_IF("please imlement");
+}
+
 TObjId SymHeapCore::valGetComposite(TValId val) const
 {
     const BaseValue *valData;
@@ -3168,6 +3175,14 @@ TObjId SymHeapCore::valGetComposite(TValId val) const
 
     const CompValue *compData = DCAST<const CompValue *>(valData);
     return compData->compObj;
+}
+
+TValId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
+{
+    (void) size;
+    (void) from;
+    CL_BREAK_IF("please imlement");
+    return this->valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
 TValId SymHeapCore::heapAlloc(const TSizeRange &size)

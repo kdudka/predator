@@ -440,6 +440,10 @@ static int get_type_sizeof(tree t)
     if (NULL_TREE == size)
         return 0;
 
+    if (VAR_DECL == TREE_CODE(size))
+        // C99 stack-allocated arrays of variable size not known at compile-time
+        return 0;
+
     CL_BREAK_IF(TREE_INT_CST_HIGH(size));
 
     return TREE_INT_CST_LOW(size);
