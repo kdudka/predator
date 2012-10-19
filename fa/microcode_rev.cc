@@ -98,7 +98,7 @@ SymState* FI_abort::reverseAndIsect(
 	(void)fwdPred;
 	(void)bwdSucc;
 
-	throw std::runtime_error("FI_abort reversal: reached unreachable instruction!");
+	throw std::runtime_error("Reached unreachable operation: FI_abort reversal!");
 }
 
 SymState* FI_node_free::reverseAndIsect(

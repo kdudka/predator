@@ -22,9 +22,12 @@
 #include "jump.hh"
 #include "streams.hh"
 
-void FI_jmp::execute(ExecutionManager&, SymState&)
+void FI_jmp::execute(ExecutionManager& execMan, SymState& state)
 {
-	assert(false);
+	(void)execMan;
+	(void)state;
+
+	throw std::runtime_error("Reached unreachable operation: FI_jmp execution!");
 }
 
 void FI_jmp::finalize(
@@ -47,8 +50,9 @@ SymState* FI_jmp::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
+	(void)execMan;
 	(void)fwdPred;
+	(void)bwdSucc;
 
-	FA_WARN("Skipping reverse operation FI_jmp");
-	return execMan.copyState(bwdSucc);
+	throw std::runtime_error("Reached unreachable operation: FI_jmp reversal!");
 }
