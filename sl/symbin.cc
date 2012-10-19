@@ -392,7 +392,7 @@ bool handleStackRestore(
     return true;
 }
 
-bool handleAllocaWithAlign(
+bool handleAlloca(
         SymState                                    &dst,
         SymExecCore                                 &core,
         const CodeStorage::Insn                     &insn,
@@ -400,7 +400,9 @@ bool handleAllocaWithAlign(
 {
     const TLoc loc = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (4 != opList.size()) {
+
+    // this allows both __builtin_alloca(x) and __builtin_alloca_with_align(x,y)
+    if (opList.size() < 3 || 4 < opList.size()) {
         emitPrototypeError(loc, name);
         return false;
     }
@@ -983,7 +985,8 @@ BuiltInTable *BuiltInTable::inst_;
 BuiltInTable::BuiltInTable()
 {
     // GCC built-in stack allocation
-    tbl_["__builtin_alloca_with_align"]             = handleAllocaWithAlign;
+    tbl_["__builtin_alloca"] /* before GCC 4.7.0 */ = handleAlloca;
+    tbl_["__builtin_alloca_with_align"]             = handleAlloca;
     tbl_["__builtin_stack_restore"]                 = handleStackRestore;
     tbl_["__builtin_stack_save"]                    = handleStackSave;
 

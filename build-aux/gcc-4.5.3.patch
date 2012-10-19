@@ -11,7 +11,7 @@ index f31b844..8cb6bf3 100644
 --- a/tests/forester-regre/test-p0028.err
 +++ b/tests/forester-regre/test-p0028.err
 @@ -1,2 +1,2 @@
--test-p0028.c:24:13: note: item = malloc ((int)4)
+-test-p0028.c:24:13: note: item = malloc ((int)U4)
 +test-p0028.c:24:13: note: item = _
  test-p0028.c:24:13: error: allocated block size mismatch
 diff --git a/tests/predator-regre/test-0002.err b/tests/predator-regre/test-0002.err
