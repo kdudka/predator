@@ -24,7 +24,8 @@ build-aux/cl-switch-host.patch \
 build-aux/sl-switch-host.patch \
 build-aux/make-srpm.sh \
 build-aux/update-comments-in-tests.sh \
-build-aux/README-fedora-release.patch"
+build-aux/README-fedora-release.patch \
+sl/rank.sh"
 
 chlog_watch=
 drop_fwnull=no

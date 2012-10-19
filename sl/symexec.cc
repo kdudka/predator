@@ -354,8 +354,9 @@ void SymExecEngine::updateStateInBranch(
         sh->traceUpdate(trCond);
 #if DEBUG_SE_END_NOT_REACHED < 2
         if (isAnyAbstractOf(shOrig, v1, v2))
-            LDP_PLOT(nondetCond, *sh);
 #endif
+            LDP_PLOT(nondetCond, *sh);
+
         SymProc proc(*sh, &bt_);
         proc.setLocation(lw_);
         const unsigned targetIdx = !branch;
