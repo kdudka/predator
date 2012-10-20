@@ -214,7 +214,7 @@
 /**
  * the highest integral number we can count to (only partial implementation atm)
  */
-#define SE_INT_ARITHMETIC_LIMIT             8
+#define SE_INT_ARITHMETIC_LIMIT             10
 
 /**
  * - 0 ... join states on each basic block entry
