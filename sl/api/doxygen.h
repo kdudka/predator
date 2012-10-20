@@ -24,7 +24,7 @@
  *
  * - list segment abstraction: abstractIfNeeded()
  *
- * - list segment concretization: concretizeObj(), spliceOutAbstractPath()
+ * - list segment concretization: concretizeObj(), spliceOutListSegment(), dlSegReplaceByConcrete()
  *
  * - symbolic state: SymState, SymHeapUnion, SymStateWithJoin
  *
@@ -39,8 +39,6 @@
  * - utilities: symutil.hh, symseg.hh
  *
  * - built-in dispatcher: handleBuiltIn()
- *
- * - built-in header: sl.h
  *
  * - configuration: config.h
  */

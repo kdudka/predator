@@ -14,7 +14,6 @@ usage(){
 }
 
 PRUNE_ALWAYS=".git tests/linux-drivers \
-build-aux/xgcclib.sh \
 build-aux/make-tgz.sh \
 build-aux/README-ubuntu-release.patch \
 build-aux/cl-readme.patch \

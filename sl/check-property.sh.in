@@ -134,7 +134,7 @@ report_result() {
   if test -n "$VERBOSE"; then
     printf "$1$2: $3\n"
   else
-    printf "$1$2"
+    printf "$1$2\n"
   fi
 }
 
