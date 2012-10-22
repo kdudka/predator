@@ -20,22 +20,30 @@
 #ifndef UNFOLDING_H
 #define UNFOLDING_H
 
+// Standard library headers
 #include <vector>
 #include <set>
 #include <stdexcept>
 #include <algorithm>
 
+// Forester headers
 #include "forestautext.hh"
 #include "abstractbox.hh"
 #include "utils.hh"
 
-class Unfolding {
-
+class Unfolding
+{
 	FAE& fae;
 
 protected:
 
-	void boxMerge(TreeAut& dst, const TreeAut& src, const TreeAut& boxRoot, const Box* box, const std::vector<size_t>& rootIndex) {
+	void boxMerge(
+		TreeAut&                       dst,
+		const TreeAut&                 src,
+		const TreeAut&                 boxRoot,
+		const Box*                     box,
+		const std::vector<size_t>&     rootIndex)
+	{
 		TreeAut tmp(*this->fae.backend), tmp2(*this->fae.backend);
 //		this->fae.boxMan->adjustLeaves(tmp2, boxRoot);
 		this->fae.relabelReferences(tmp, boxRoot, rootIndex);
@@ -43,19 +51,22 @@ protected:
 		src.copyTransitions(dst, TreeAut::NonAcceptingF(src));
 		tmp2.copyTransitions(dst, TreeAut::NonAcceptingF(tmp2));
 		dst.addFinalStates(tmp2.getFinalStates());
-		for (std::set<size_t>::const_iterator j = src.getFinalStates().begin(); j != src.getFinalStates().end(); ++j) {
-			for (TreeAut::iterator i = src.begin(*j); i != src.end(*j, i); ++i) {
+
+		for (size_t state : src.getFinalStates())
+		{
+			for (TreeAut::iterator i = src.begin(state); i != src.end(state, i); ++i)
+			{
 				std::vector<size_t> lhs;
 				std::vector<const AbstractBox*> label;
 				size_t lhsOffset = 0;
 				if (box) {
 					bool found = false;
-					for (std::vector<const AbstractBox*>::const_iterator j = i->label()->getNode().begin(); j != i->label()->getNode().end(); ++j) {
-						if (!(*j)->isStructural()) {
-							label.push_back(*j);
+					for (const AbstractBox* aBox : i->label()->getNode()) {
+						if (!aBox->isStructural()) {
+							label.push_back(aBox);
 							continue;
 						}
-						const StructuralBox* b = static_cast<const StructuralBox*>(*j);
+						const StructuralBox* b = static_cast<const StructuralBox*>(aBox);
 						if (b != static_cast<const StructuralBox*>(box)) {
 							// this box is not interesting
 							for (size_t k = 0; k < b->getArity(); ++k, ++lhsOffset)

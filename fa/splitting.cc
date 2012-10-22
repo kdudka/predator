@@ -409,37 +409,55 @@ void Splitting::isolateAtRoot(
 
 	size_t newState = fae_.freshState();
 
-	TreeAut ta(*fae_.roots[root], false);
+	TreeAut ta(
+		/* original TA */ *fae_.roots[root],
+		/* copy final states? */ false
+	);
 
 	ta.addFinalState(newState);
 
+	// the new tuple of children states of the newly created transition
 	std::vector<size_t> lhs;
-
+	// pointer to the processed state in the original tuple of children states
 	size_t lhsOffset = 0;
 
-	for (auto j = t.label()->getNode().begin(); j != t.label()->getNode().end(); ++j)
-	{
-		if (!(*j)->isStructural())
-			continue;
+	for (const AbstractBox* aBox : t.label()->getNode())
+	{	// traverse all boxes in the label
+		assert(nullptr != aBox);
 
-		const StructuralBox* b = static_cast<const StructuralBox*>(*j);
-		if (!f(b))
-		{
-			// this box is not interesting
-			for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
-				lhs.push_back(t.lhs()[lhsOffset]);
+		if (!aBox->isStructural())
+		{	// we are not interested in non-structural boxes
 			continue;
 		}
 
-		// we have to isolate here
-		for (size_t k = 0; k < (*j)->getArity(); ++k, ++lhsOffset)
-		{
-			if (FA::isData(t.lhs()[lhsOffset])) {
-				// no need to create a leaf when it's already there
+		const StructuralBox* b = static_cast<const StructuralBox*>(aBox);
+		if (!f(b))
+		{	// in case this box is not interesting
+			for (size_t k = 0; k < aBox->getArity(); ++k, ++lhsOffset)
+			{	// push all states covered by the selectors
+				lhs.push_back(t.lhs()[lhsOffset]);
+			}
+			continue;
+		}
+
+		// in case we are interested in the box, we have to isolate here
+		for (size_t k = 0; k < aBox->getArity(); ++k, ++lhsOffset)
+		{	// iterate over the selectors of the box
+			if (FA::isData(t.lhs()[lhsOffset]))
+			{	// no need to create a leaf when it's already there
 				lhs.push_back(t.lhs()[lhsOffset]);
 				continue;
 			}
-			// update new left-hand side
+
+			// We split a tree automaton into two for a given transition at a given
+			// selector by creating a new tuple of children states where states at
+			// given selectors are substituted for new states that correspond to
+			// references to newly created tree automata. The new automaton is created
+			// by copying the original automaton without accepting states and making
+			// the original state in the tuple the only accepting state of the
+			// automaton.
+
+			// update new left-hand side - add reference to the new TA
 			lhs.push_back(fae_.addData(ta, Data::createRef(fae_.roots.size())));
 			// prepare new root
 			TreeAut tmp(*fae_.roots[root], false);
@@ -450,10 +468,14 @@ void Splitting::isolateAtRoot(
 			fae_.appendRoot(tmp2);
 			fae_.connectionGraph.newRoot();
 		}
+
 		if (b->isType(box_type_e::bBox))
-			boxes.insert(static_cast<const Box*>(*j));
+		{	// insert the hierarchical box into a list
+			boxes.insert(static_cast<const Box*>(aBox));
+		}
 	}
 
+	// insert the new transition
 	ta.addTransition(lhs, t.label(), newState);
 
 	TreeAut* tmp = fae_.allocTA();
@@ -476,21 +498,21 @@ void Splitting::isolateAtRoot(
 	assert(fae_.roots[root]);
 
 	for (size_t state : fae_.roots[root]->getFinalStates())
-	{
+	{	// for all final states
 		for (TreeAut::iterator i = fae_.roots[root]->begin(state),
 			end = fae_.roots[root]->end(state, i); i != end ; ++i)
-		{
+		{	// traverse accepting transitions
 			FAE fae(fae_);
 			Splitting splitting(fae);
 			std::set<const Box*> boxes;
 			splitting.isolateAtRoot(root, *i, IsolateSetF(offsets), boxes);
 
 			if (!boxes.empty())
-			{
+			{	// in case there were some hierarchical boxes, process further
 				Unfolding(fae).unfoldBoxes(root, boxes);
 				splitting.isolateSet(dst, root, 0, offsets);
 			} else
-			{
+			{	// in case there were no hierarchical boxes, simply take the result
 				dst.push_back(new FAE(fae));
 			}
 		}
@@ -549,21 +571,26 @@ void Splitting::isolateSet(
 
 	for (size_t i : offsU)
 	{	// upward selectors are isolated separately 
-		for (FAE* j : tmp)
+		for (FAE* aut : tmp)
 		{	// each FAE is also processed separately
-			tmpS.clear();
-			Splitting splitting(*j);
+			assert(nullptr != aut);
 
-			// get root selectors (from the new FA)
+			tmpS.clear();
+			Splitting splitting(*aut);
+
+			// get root selectors (from the new FA) into tmpS
 			splitting.enumerateSelectorsAtRoot(tmpS, target);
 			if (tmpS.count(i))
-				tmp2.push_back(new FAE(*j));
-			else {
+			{	// in case 
+				tmp2.push_back(new FAE(*aut));
+			}
+			else
+			{
 				bool found = false;
-				j->updateConnectionGraph();
-				for (size_t k = 0; k < j->roots.size(); ++k)
+				aut->updateConnectionGraph();
+				for (size_t k = 0; k < aut->roots.size(); ++k)
 				{
-					if (!j->roots[k] || !j->connectionGraph.hasReference(k, target))
+					if (!aut->roots[k] || !aut->connectionGraph.hasReference(k, target))
 						continue;
 					tmpS.clear();
 					splitting.enumerateSelectorsAtLeaf(tmpS, k, target);

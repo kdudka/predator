@@ -79,7 +79,20 @@ private:  // methods
 		size_t                      target) const;
 
 
-	// adds redundant root points to allow further manipulation
+	/**
+	 * @brief  Adds redundant root points to allow further manipulation  
+	 *
+	 * Adds redundant root points into a FA in order to allow further
+	 * manipulation only on roots. It does not unfold hierarchical boxes: that is
+	 * the task of another @p isolateAtRoot method.
+	 *
+	 * @param[in]  root   Index of the desired tree automaton
+	 * @param[in]  t      The transition to be handled
+	 * @param[in]  f      Functor that returns @p true if a box contains any of the
+	 *                    desired selectors
+	 * @param[out] boxes  Hierarchical boxes that were encountered and need to be
+	 *                    unfolded
+	 */
 	template <class F>
 	void isolateAtRoot(
 		size_t                             root,
