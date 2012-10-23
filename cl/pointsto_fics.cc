@@ -1012,6 +1012,12 @@ bool bindLocations(
         const Graph                    *srcPtg,
         Graph                          *tgtPtg)
 {
+    if (srcPtg == tgtPtg) {
+        PT_DEBUG(0, "recursion detected, giving up...");
+        ctx.stor.ptd.dead = true;
+        return false;
+    }
+
     const char *nameA = srcPtg->fnc ? nameOf(*srcPtg->fnc) : "globals";
     const char *nameB = tgtPtg->fnc ? nameOf(*tgtPtg->fnc) : "globals";
 
@@ -1228,7 +1234,7 @@ bool ficsPhase3(BuildCtx &ctx)
     }
 
     Fnc *callee;
-    while (fp.next(callee)) {
+    while (!stor.ptd.dead && fp.next(callee)) {
         bool change = false;
         // push the alias info from global PT-graph to graph of handled fnc
         if (bindLocationsGlob(ctx, &stor.ptd.gptg, &callee->ptg))

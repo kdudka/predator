@@ -159,6 +159,7 @@ add_pt_test(1101) # whitelisted fnc -> no-black hole!
 add_pt_test(1200) # PT-info downward propagation
 add_pt_test(1201) # ^^^ + check for non-propagation with returning operand
 add_pt_test(1202) # recursive loop in call-graph
+add_pt_test(1203) # simple tail recuresion (from forester-regre/test-f0019.c)
 
 add_pt_test(1300) # predator-regre test-0167.c
 
