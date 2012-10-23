@@ -178,8 +178,12 @@ void joinNodesS(
     }
     CL_BREAK_IF(nodeRight->outNodes.size() > 0);
 
-    // not it should be safe to remove right node
+    // FIXME: this causes a USE_AFTER_FREE in bindVarList() on the line where
+    //        we check hasKey(target->variables, i) in case we are called from
+    //        there via joinFixPointS(), see pt-1204.c for a reproducer
+#if 0
     delete nodeRight;
+#endif
 
     // the graph should be OK again
     CL_BREAK_IF(existsError(ctx.stor));

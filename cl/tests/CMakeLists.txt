@@ -41,7 +41,8 @@ message(STATUS "GCC_PT_PLUG: ${GCC_PT_PLUG}")
 set(PRED_INCL_DIR "${cl_SOURCE_DIR}/../include/predator-builtins/")
 
 macro(add_test_wrap test_name cmd)
-    add_test("${test_name}" sh -c "LC_ALL=C CCACHE_DISABLE=1 ${cmd}")
+    add_test("${test_name}" sh -c
+        "LC_ALL=C CCACHE_DISABLE=1 MALLOC_PERTURB_=170 ${cmd}")
 endmacro()
 
 # basic set of the options to compile gcc/clplug.c with libc_test.so loaded
@@ -160,6 +161,7 @@ add_pt_test(1200) # PT-info downward propagation
 add_pt_test(1201) # ^^^ + check for non-propagation with returning operand
 add_pt_test(1202) # recursive loop in call-graph
 add_pt_test(1203) # simple tail recuresion (from forester-regre/test-f0019.c)
+add_pt_test(1204) # caught a USE_AFTER_FREE (from predator-regre/test-0221.c)
 
 add_pt_test(1300) # predator-regre test-0167.c
 
