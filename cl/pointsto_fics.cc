@@ -19,7 +19,6 @@
 
 #include "util.hh"
 #include "cl/clutil.hh"
-#include "fixpoint.hh"
 #include "worklist.hh"
 #include "builtins.hh"
 
@@ -30,6 +29,27 @@
 #include "pointsto_fics.hh"
 
 #include <boost/foreach.hpp>
+
+template <class T>
+class FixPoint: public WorkList<T, std::queue<T> >
+{
+    private:
+        typedef WorkList<T, std::queue<T> > TBase;
+        int accessCounter_;
+
+    public:
+        bool next(T &dst) {
+            if (!TBase::next(dst))
+                return false;
+
+            accessCounter_++;
+            return true;
+        }
+
+        int steps() const {
+            return accessCounter_;
+        }
+};
 
 namespace CodeStorage {
 namespace PointsTo {
