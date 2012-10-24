@@ -24,7 +24,6 @@
 
 #include <map>
 #include <set>
-#include <list>
 #include <string>
 #include <vector>
 
@@ -661,8 +660,8 @@ class Item {
         Item();
 };
 
-typedef std::set<const Item *>  TItemList;
-typedef std::set<Node *>        TNodeList;
+typedef std::vector<const Item *>       TItemList;
+typedef std::set<Node *>                TNodeList;
 
 class Node {
     public:

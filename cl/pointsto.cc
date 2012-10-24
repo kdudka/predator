@@ -32,6 +32,8 @@
 
 #include <cl/clutil.hh>
 
+#include <algorithm>
+
 #include <boost/foreach.hpp>
 
 int pt_dbg_level = CL_DEBUG_POINTS_TO;
@@ -39,6 +41,11 @@ int pt_dbg_level = CL_DEBUG_POINTS_TO;
 namespace CodeStorage {
 
 namespace PointsTo {
+
+inline bool hasItem(const TItemList &il, const Item *key)
+{
+    return il.end() != std::find(il.begin(), il.end(), key);
+}
 
 // there may occur multiple out-edges
 void addEdge(Node *from, Node *to)
@@ -75,7 +82,7 @@ bool bindVarList(
             continue;
         }
 
-        if (hasKey(target->variables, i))
+        if (hasItem(target->variables, i))
             // this variable is in target node already
             continue;
 
@@ -113,11 +120,12 @@ void bindItem(Graph &ptg, Node *n, const Item *i)
 
     int uid = i->uid();
 
-    n->variables.insert(i);
+    if (!hasItem(n->variables, i))
+        n->variables.push_back(i);
     ptg.map[uid] = n;
 
-    if (i->isGlobal())
-        ptg.globals.insert(i);
+    if (i->isGlobal() && !hasItem(ptg.globals, i))
+        ptg.globals.push_back(i);
 
     if (hasKey(ptg.uidToItem, uid))
         CL_BREAK_IF(ptg.uidToItem[uid] != i);
@@ -181,9 +189,7 @@ void joinNodesS(
     // FIXME: this causes a USE_AFTER_FREE in bindVarList() on the line where
     //        we check hasKey(target->variables, i) in case we are called from
     //        there via joinFixPointS(), see pt-1204.c for a reproducer
-#if 0
     delete nodeRight;
-#endif
 
     // the graph should be OK again
     CL_BREAK_IF(existsError(ctx.stor));
