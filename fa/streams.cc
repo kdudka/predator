@@ -162,11 +162,13 @@ void Streams::callPrintFnc(
 	const char*        msg)
 {
 	std::ostringstream os;
+	std::string str;
 
 	if (loc)
 	{
 		os << *loc;
-		locStr = os.str().c_str();
+		str = os.str();
+		locStr = str.c_str();
 	}
 
 	fnc(locStr, msg);
