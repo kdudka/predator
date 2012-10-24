@@ -22,9 +22,9 @@
 #include <cl/easy.hh>
 #include <cl/cl_msg.hh>
 #include <cl/clutil.hh>
+#include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
-#include "memdebug.hh"
 #include "symbt.hh"
 #include "symdump.hh"
 #include "symexec.hh"

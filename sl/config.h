@@ -29,15 +29,6 @@
 #include "trap.h"
 
 /**
- * if 1, print amount of allocated memory on certain places when in verbose mode
- */
-#ifndef NDEBUG
-#   define DEBUG_MEM_USAGE                  1
-#else
-#   define DEBUG_MEM_USAGE                  0
-#endif
-
-/**
  * if 1, print block scheduler statistics whenever end of a fnc is not reached
  */
 #define DEBUG_SE_END_NOT_REACHED            0

@@ -26,6 +26,15 @@
 #include "trap.h"
 
 /**
+ * if 1, print amount of allocated memory on certain places when in verbose mode
+ */
+#ifndef NDEBUG
+#   define DEBUG_MEM_USAGE                  1
+#else
+#   define DEBUG_MEM_USAGE                  0
+#endif
+
+/**
  * if 1, check each code_listener filter by the integrity checker
  */
 #define CL_DEBUG_CLF                    0

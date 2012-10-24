@@ -21,11 +21,11 @@
 #include "symexec.hh"
 
 #include <cl/cl_msg.hh>
-#include <cl/storage.hh>
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
+#include <cl/memdebug.hh>
+#include <cl/storage.hh>
 
-#include "memdebug.hh"
 #include "sigcatch.hh"
 #include "symabstract.hh"
 #include "symcall.hh"

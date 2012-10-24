@@ -23,9 +23,9 @@
 #include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
+#include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
-#include "memdebug.hh"
 #include "prototype.hh"
 #include "symabstract.hh"
 #include "symbin.hh"

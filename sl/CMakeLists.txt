@@ -34,7 +34,6 @@ endif()
 add_library(sl SHARED
     cl_symexec.cc
     intrange.cc
-    memdebug.cc
     plotenum.cc
     prototype.cc
     sigcatch.cc

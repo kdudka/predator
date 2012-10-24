@@ -17,10 +17,10 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config.h"
-#include "memdebug.hh"
+#include "config_cl.h"
 
 #include <cl/cl_msg.hh>
+#include <cl/memdebug.hh>
 
 #include <iomanip>
 
