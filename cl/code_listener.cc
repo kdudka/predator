@@ -18,8 +18,9 @@
  */
 
 #include "config_cl.h"
-#include <cl/code_listener.h>
 #include <cl/cl_msg.hh>
+#include <cl/code_listener.h>
+#include <cl/memdebug.hh>
 
 #include "cl.hh"
 #include "cl_factory.hh"
@@ -127,11 +128,13 @@ int cl_debug_level(void)
 
 void cl_global_init(struct cl_init_data *data)
 {
+    initMemDrift();
     init_data = *data;
 }
 
 void cl_global_init_defaults(const char *name, int debug_level)
 {
+    initMemDrift();
     if (app_name_allocated)
         free((char *) app_name);
 

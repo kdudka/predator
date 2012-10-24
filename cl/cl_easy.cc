@@ -18,12 +18,11 @@
  */
 
 #include "config_cl.h"
-
 #define __CL_IN
-#include "cl_easy.hh"
 
 #include <cl/cl_msg.hh>
 #include <cl/easy.hh>
+#include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
 #include "callgraph.hh"
@@ -48,10 +47,13 @@ class ClEasy: public ClStorageBuilder {
             configString_(configString)
         {
             CL_DEBUG("ClEasy initialized: \"" << configString << "\"");
+            printMemUsage("ClEasy::ClEasy");
         }
 
     protected:
         virtual void run(CodeStorage::Storage &stor) {
+            printMemUsage("buildStorage");
+
             if (!stor.fncs.size() && !stor.vars.size()) {
                 // avoid confusing the ccache wrapper when called on empty input
                 CL_DEBUG("CodeStorage::Storage appears empty, giving up...");
@@ -60,12 +62,15 @@ class ClEasy: public ClStorageBuilder {
 
             CL_DEBUG("building call-graph...");
             CodeStorage::CallGraph::buildCallGraph(stor);
+            printMemUsage("buildCallGraph");
 
             CL_DEBUG("scanning CFG for loop-closing edges...");
             findLoopClosingEdges(stor);
+            printMemUsage("findLoopClosingEdges");
 
             CL_DEBUG("killing local variables...");
             killLocalVariables(stor);
+            printMemUsage("killLocalVariables");
 
             CL_DEBUG("ClEasy is calling the analyzer...");
             StopWatch watch;
