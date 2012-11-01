@@ -20,14 +20,14 @@ CTEST ?= ctest
 
 .PHONY: all check clean cppcheck distclean distcheck fast version.h
 
-all: version.h ../cl_build
+all: version.h ../cl_build/Makefile
 	# make sure the libcl.so is up2date
 	$(MAKE) -C ../cl_build
 	mkdir -p ../sl_build
 	cd ../sl_build && $(CMAKE) ../sl
 	$(MAKE) -C ../sl_build
 
-../cl_build:
+../cl_build/Makefile:
 	test -e $@ || $(MAKE) -C ../cl
 
 fast:
