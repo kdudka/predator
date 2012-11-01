@@ -183,15 +183,19 @@ void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op)
     const enum cl_type_e code = op.type->code;
     switch (code) {
         case CL_TYPE_ENUM:
-            str << "(enum XXX)" << val;
+            str << "(enum)" << val;
+            break;
+
+        case CL_TYPE_CHAR:
+            str << "(char)" << val;
+            if (op.type->is_unsigned)
+                str << "U";
             break;
 
         case CL_TYPE_INT:
-            str << "(int)";
+            str << "(int)" << val;
             if (op.type->is_unsigned)
                 str << "U";
-
-            str << val;
             break;
 
         case CL_TYPE_BOOL:
