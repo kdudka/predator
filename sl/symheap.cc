@@ -560,6 +560,16 @@ struct TAnonStackMapWrapper: public TAnonStackMap {
     RefCounter refCnt;
 };
 
+/// @note there is no virtual destructor for now (may be needed in the future)
+class IMatchPolicy {
+    public:
+        /// return true if we should keep searching
+        virtual bool matchBlock(TObjId, const HeapObject *data, bool alive) = 0;
+
+        /// return the field ID which matches the best, OBJ_INVALID for no match
+        virtual TObjId bestMatch() const = 0;
+};
+
 struct SymHeapCore::Private {
     Private(Trace::Node *);
     Private(const Private &);
@@ -651,6 +661,8 @@ struct SymHeapCore::Private {
     void replaceRngByInt(const InternalCustomValue *valData);
 
     void trimCustomValue(TValId val, const IR::Range &win);
+
+    TObjId fieldAt(const TValId at, const TObjType, IMatchPolicy *policy);
 
     private:
         // intentionally not implemented
@@ -2908,91 +2920,35 @@ TValId SymHeapCore::placedAt(TObjId obj)
     return this->valByOffset(root, objData->off);
 }
 
-TObjId SymHeapCore::ptrAt(TValId at)
+TObjId SymHeapCore::Private::fieldAt(
+        const TValId                at,
+        const TObjType              clt,
+        IMatchPolicy               *policy)
 {
     if (at <= 0)
         return OBJ_INVALID;
 
     const BaseValue *valData;
-    d->ents.getEntRO(&valData, at);
+    this->ents.getEntRO(&valData, at);
 
     const EValueTarget code = valData->code;
     CL_BREAK_IF(VT_RANGE == code);
     if (!isPossibleToDeref(code))
         return OBJ_INVALID;
-
-    // jump to root
-    const TValId valRoot = valData->valRoot;
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, valRoot);
-
-    // generic pointer, (void *) if available
-    const TObjType clt = stor_.types.genericDataPtr();
-    if (!clt || clt->code != CL_TYPE_PTR) {
-        CL_BREAK_IF("Code Listener failed to capture a type of data pointer");
-        return OBJ_INVALID;
-    }
 
     const TSizeOf size = clt->size;
     CL_BREAK_IF(size <= 0);
 
-    // arena lookup
-    TObjIdSet candidates;
-    const TArena &arena = rootData->arena;
-    const TOffset off = valData->offRoot;
-    const TMemChunk chunk(off, off + size);
-    arenaLookForExactMatch(&candidates, arena, chunk);
+    // jump to root
+    const TValId root = valData->valRoot;
+    const RootValue *rootData;
+    this->ents.getEntRO(&rootData, root);
 
-    // seek a _data_ pointer in the given interval
-    BOOST_FOREACH(const TObjId obj, candidates) {
-        const BlockEntity *blData;
-        d->ents.getEntRO(&blData, obj);
-        const EBlockKind code = blData->code;
-        if (BK_DATA_PTR != code && BK_DATA_OBJ != code)
-            continue;
-
-        const HeapObject *objData = DCAST<const HeapObject *>(blData);
-        const TObjType clt = objData->clt;
-        if (isDataPtr(clt))
-            return obj;
-    }
-
-    // check whether we have enough space allocated for the pointer
-    const TSizeRange avail = this->valSizeOfTarget(at);
-    if (avail.lo < clt->size) {
-        CL_BREAK_IF("ptrAt() called out of bounds");
+    if (rootData->size.lo < valData->offRoot + size) {
+        CL_BREAK_IF("fieldAt() called out of bounds");
         return OBJ_UNKNOWN;
     }
 
-    // resolve root
-    const TValId root = valData->valRoot;
-
-    // create the pointer
-    return d->objCreate(root, off, clt);
-}
-
-// TODO: simplify the code
-TObjId SymHeapCore::objAt(TValId at, TObjType clt)
-{
-    if (at <= 0)
-        return OBJ_INVALID;
-
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, at);
-
-    const EValueTarget code = valData->code;
-    CL_BREAK_IF(VT_RANGE == code);
-    if (!isPossibleToDeref(code))
-        return OBJ_INVALID;
-
-    CL_BREAK_IF(!clt || !clt->size);
-    const TSizeOf size = clt->size;
-
-    // jump to root
-    const TValId valRoot = valData->valRoot;
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, valRoot);
-
     // arena lookup
     TObjIdSet candidates;
     const TArena &arena = rootData->arena;
@@ -3000,15 +2956,11 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt)
     const TMemChunk chunk(off, off + size);
     arenaLookForExactMatch(&candidates, arena, chunk);
 
-    TObjId bestMatch = OBJ_INVALID;
-    bool liveObjFound = false;
-    bool cltExactMatch = false;
-    bool cltClassMatch = false;
-
-    // go through the objects in the given interval
+    // go through fields in the given interval
     BOOST_FOREACH(const TObjId obj, candidates) {
         const BlockEntity *blData;
-        d->ents.getEntRO(&blData, obj);
+        this->ents.getEntRO(&blData, obj);
+
         const EBlockKind code = blData->code;
         switch (code) {
             case BK_DATA_PTR:
@@ -3021,52 +2973,115 @@ TObjId SymHeapCore::objAt(TValId at, TObjType clt)
         }
 
         const bool isLive = hasKey(rootData->liveObjs, obj);
-        if (liveObjFound && !isLive)
-            continue;
-
         const HeapObject *objData = DCAST<const HeapObject *>(blData);
-        const TObjType cltNow = objData->clt;
-        if (cltNow == clt) {
-            // exact match
-            if (isLive)
-                return obj;
-
-            CL_BREAK_IF(cltExactMatch);
-            cltExactMatch = true;
-            goto update_best;
-        }
-
-        if (cltExactMatch)
-            continue;
-
-        if (*cltNow == *clt) {
-            cltClassMatch = true;
-            goto update_best;
-        }
-
-        if (cltClassMatch)
-            continue;
-
-        if (!isDataPtr(cltNow) || !isDataPtr(clt))
-            continue;
-        // at least both are _data_ pointers at this point, update best match
-
-update_best:
-        liveObjFound = isLive;
-        bestMatch = obj;
+        if (!/* continue */policy->matchBlock(obj, objData, isLive))
+            break;
     }
 
-    if (OBJ_INVALID != bestMatch)
-        return bestMatch;
+    const TObjId best = policy->bestMatch();
+    if (OBJ_INVALID != best)
+        return best;
 
-    const TSizeRange avail = this->valSizeOfTarget(at);
-    if (avail.lo < clt->size)
-        // out of bounds
-        return OBJ_UNKNOWN;
+    // no match, create a new field
+    return this->objCreate(root, off, clt);
+}
 
-    // create the object
-    const TValId root = valData->valRoot;
-    return d->objCreate(root, off, clt);
+class PtrMatchPolicy: public IMatchPolicy {
+    private:
+        TObjId bestMatch_;
+
+    public:
+        PtrMatchPolicy():
+            bestMatch_(OBJ_INVALID)
+        {
+        }
+
+        virtual bool matchBlock(TObjId obj, const HeapObject *data, bool) {
+            if (!isDataPtr(data->clt))
+                return /* continue */ true;
+
+            // pointer found!
+            bestMatch_ = obj;
+            return false;
+        }
+
+        virtual TObjId bestMatch() const {
+            return bestMatch_;
+        }
+};
+
+TObjId SymHeapCore::ptrAt(TValId at)
+{
+    // generic pointer, (void *) if available
+    const TObjType clt = stor_.types.genericDataPtr();
+    if (!clt || clt->code != CL_TYPE_PTR) {
+        CL_BREAK_IF("Code Listener failed to capture a type of data pointer");
+        return OBJ_INVALID;
+    }
+
+    PtrMatchPolicy policy;
+    return d->fieldAt(at, clt, &policy);
+}
+
+class FieldMatchPolicy: public IMatchPolicy {
+    private:
+        TObjId                      bestMatch_;
+        const TObjType              cltToMatch_;
+        bool                        cltExactMatch_;
+        bool                        cltClassMatch_;
+
+    public:
+        FieldMatchPolicy(const TObjType clt):
+            bestMatch_(OBJ_INVALID),
+            cltToMatch_(clt),
+            cltExactMatch_(false),
+            cltClassMatch_(false)
+        {
+            CL_BREAK_IF(!clt || !clt->size);
+        }
+
+        virtual bool matchBlock(TObjId obj, const HeapObject *data, bool alive);
+
+        virtual TObjId bestMatch() const {
+            return bestMatch_;
+        }
+};
+
+bool FieldMatchPolicy::matchBlock(
+        TObjId                      obj,
+        const HeapObject           *objData,
+        bool                        isLive)
+{
+    const TObjType cltNow = objData->clt;
+    if (cltNow == cltToMatch_) {
+        // exact match
+        cltExactMatch_ = true;
+        bestMatch_ = obj;
+        return /* continue */ !isLive;
+    }
+    else if (cltExactMatch_)
+        return /* continue */ true;
+
+    if (*cltNow == *cltToMatch_) {
+        cltClassMatch_ = true;
+        bestMatch_ = obj;
+        return /* continue */ true;
+    }
+    else if (cltClassMatch_)
+        return /* continue */ true;
+
+    if (!isDataPtr(cltNow) || !isDataPtr(cltToMatch_))
+        return /* continue */ true;
+
+    // at least both are _data_ pointers at this point, update best match
+    bestMatch_ = obj;
+    return /* continue */ true;
+}
+
+TObjId SymHeapCore::objAt(TValId at, TObjType clt)
+{
+    FieldMatchPolicy policy(clt);
+    return d->fieldAt(at, clt, &policy);
 }
 
 void SymHeapCore::objEnter(TObjId obj)
