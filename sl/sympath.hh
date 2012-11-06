@@ -25,7 +25,7 @@
  * PathTracer - SymStateMap based implementation of the IPathTracer interface
  */
 
-#include "symbt.hh"
+#include "symbt.hh"                 // for IPathTracer
 
 class SymStateMap;
 

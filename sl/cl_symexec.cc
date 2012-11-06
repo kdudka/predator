@@ -74,12 +74,6 @@ void parseConfigString(SymExecParams &sep, std::string cnf)
         return;
     }
 
-    if (string("ptrace") == cnf) {
-        CL_DEBUG("parseConfigString: \"ptrace\" mode requested");
-        sep.ptrace = true;
-        return;
-    }
-
     const char *cstr = cnf.c_str();
     const char *elPrefix = "error_label:";
     const size_t elPrefixLen = strlen(elPrefix);

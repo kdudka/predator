@@ -30,11 +30,10 @@
 
 #include <cl/storage.hh>
 
-#include "symbt.hh"
+#include "symbt.hh"                 // for EMsgLevel
 #include "symid.hh"
 #include "symheap.hh"
 
-class SymBackTrace;
 class SymState;
 
 struct CmpOpTraits {

@@ -25,9 +25,6 @@
  * SymBackTrace - backtrace management
  */
 
-struct CVar;
-struct CallInst;
-class SymHeap;
 class SymProc;
 
 enum EMsgLevel {
@@ -58,7 +55,7 @@ class SymBackTrace {
          * IDs
          * @param ptrace if true, print path trace with @b each backtrace
          */
-        SymBackTrace(const CodeStorage::Storage &stor, bool ptrace = false);
+        SymBackTrace(const CodeStorage::Storage &stor);
         ~SymBackTrace();
 
         SymBackTrace(const SymBackTrace &);

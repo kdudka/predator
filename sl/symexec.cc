@@ -73,7 +73,7 @@ class SymExec: public IStatsProvider {
         SymExec(const CodeStorage::Storage &stor, const SymExecParams &ep):
             stor_(stor),
             params_(ep),
-            callCache_(stor, ep.ptrace)
+            callCache_(stor)
         {
         }
 

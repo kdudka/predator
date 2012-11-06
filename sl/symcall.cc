@@ -209,8 +209,8 @@ struct SymCallCache::Private {
     void resolveHeapCut(TCVarList &cut, SymHeap &sh, TFncRef &fnc);
     SymCallCtx* getCallCtx(const SymHeap &entry, TFncRef fnc);
 
-    Private(TStorRef stor, bool ptrace):
-        bt(stor, ptrace)
+    Private(TStorRef stor):
+        bt(stor)
     {
     }
 };
@@ -495,8 +495,8 @@ void SymCallCtx::invalidate()
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymCallCache
-SymCallCache::SymCallCache(TStorRef stor, bool ptrace):
-    d(new Private(stor, ptrace))
+SymCallCache::SymCallCache(TStorRef stor):
+    d(new Private(stor))
 {
 }
 

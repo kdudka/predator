@@ -54,14 +54,12 @@ struct SymBackTrace::Private {
     typedef std::map<const CodeStorage::Fnc *, int /* cnt */>       TMap;
 
     const CodeStorage::Storage      &stor;
-    const bool                      ptrace;
     TStackPP                        ppStack;
     TStack                          btStack;
     TMap                            nestMap;
 
-    Private(const CodeStorage::Storage &stor_, const bool ptrace_):
-        stor(stor_),
-        ptrace(ptrace_)
+    Private(const CodeStorage::Storage &stor_):
+        stor(stor_)
     {
     }
 
@@ -135,8 +133,8 @@ void SymBackTrace::Private::popFnc()
     CL_BREAK_IF(ref < 0 || static_cast<int>(this->btStack.size()) < ref);
 }
 
-SymBackTrace::SymBackTrace(const CodeStorage::Storage &stor, bool ptrace):
-    d(new Private(stor, ptrace))
+SymBackTrace::SymBackTrace(const CodeStorage::Storage &stor):
+    d(new Private(stor))
 {
 }
 
@@ -160,7 +158,7 @@ bool SymBackTrace::printBackTrace(bool forcePtrace) const
     using namespace CodeStorage;
 
     Private::TStackPP ppStack(d->ppStack);
-    const bool ptrace = !ppStack.empty() && (d->ptrace || forcePtrace);
+    const bool ptrace = forcePtrace && !ppStack.empty();
 
     const Private::TStack &ref = d->btStack;
     if (!ptrace && ref.size() < 2)
