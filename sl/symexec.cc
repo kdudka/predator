@@ -30,7 +30,6 @@
 #include "symabstract.hh"
 #include "symcall.hh"
 #include "symdebug.hh"
-#include "sympath.hh"
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symutil.hh"
@@ -117,7 +116,6 @@ class SymExecEngine: public IStatsProvider {
             bt_(bt),
             dst_(results),
             stats_(stats),
-            ptracer_(stateMap_),
             sched_(stateMap_),
             block_(0),
             insnIdx_(0),
@@ -126,14 +124,6 @@ class SymExecEngine: public IStatsProvider {
             endReached_(false)
         {
             this->initEngine(entry);
-
-            // register path printer
-            bt_.pushPathTracer(&ptracer_);
-        }
-
-        ~SymExecEngine() {
-            // unregister path printer
-            bt_.popPathTracer(&ptracer_);
         }
 
     public:
@@ -157,7 +147,6 @@ class SymExecEngine: public IStatsProvider {
         std::string                     fncName_;
 
         SymStateMap                     stateMap_;
-        PathTracer                      ptracer_;
         BlockScheduler                  sched_;
         const CodeStorage::Block        *block_;
         unsigned                        insnIdx_;
@@ -225,7 +214,7 @@ void SymExecEngine::initEngine(const SymHeap &init)
     }
 
     // insert initial state to the corresponding union
-    stateMap_.insert(entry, /* no inbound edge here */ 0, init);
+    stateMap_.insert(entry, init);
 
     // schedule the entry block for processing
     sched_.schedule(entry);
@@ -306,7 +295,7 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
 #endif
 
     // update _target_ state and check if anything has changed
-    if (stateMap_.insert(ofBlock, block_, sh, closingLoop)) {
+    if (stateMap_.insert(ofBlock, sh, closingLoop)) {
         const SymStateMarked &target = stateMap_[ofBlock];
 
         // schedule for next wheel (if not already)
@@ -776,7 +765,6 @@ bool /* complete */ SymExecEngine::run()
         // update location info and ptracer
         const CodeStorage::Insn *first = block_->front();
         lw_ = &first->loc;
-        ptracer_.setBlock(block_);
 
         // enter the basic block
         const std::string &name = block_->name();

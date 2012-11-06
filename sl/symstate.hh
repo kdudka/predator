@@ -268,28 +268,13 @@ class SymStateMap: public IPendingCountProvider {
          * managed insertion of the state that keeps track of the relation among
          * source and destination basic blocks
          * @param dst @b destination basic block (where the insertion occurs)
-         * @param src @b source basic block (where the state has grown), may be
-         * zero when inserting an initial state to the entry block
          * @param sh an instance of symbolic heap that should be inserted
          * @param allowThreeWay if true, three-way join is allowed
          */
         bool insert(const CodeStorage::Block                *dst,
-                    const CodeStorage::Block                *src,
                     const SymHeap                           &sh,
                     const bool                              allowThreeWay = true
                     );
-
-        /**
-         * returns all blocks that inserted something to the given state
-         * @param dst a container where the result should be stored to
-         * @param ofBlock the basic block we doing the query for
-         * @note This is an @b over @b approximation as it operates on the level
-         * of abstract states (sets of symbolic heaps).  It does not consider
-         * paths along individual symbolic heaps themselves.
-         */
-        void gatherInboundEdges(TContBlock                  &dst,
-                                const CodeStorage::Block    *ofBlock)
-            const;
 
         /// true if the specified block has ever joined/entailed any given state
         bool anyReuseHappened(const CodeStorage::Block *) const;

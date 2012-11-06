@@ -504,15 +504,9 @@ struct SymStateMap::Private {
 
     struct BlockState {
         SymStateMarked                  state;
-
-        // TODO: drop this!
-        static SymStateMap              XXX;
-        BlockScheduler                  inbound;
-
         bool                            anyHit;
 
         BlockState():
-            inbound(XXX),
             anyHit(false)
         {
         }
@@ -520,9 +514,6 @@ struct SymStateMap::Private {
 
     std::map<TBlock, BlockState>        cont;
 };
-
-// TODO: drop this!
-SymStateMap SymStateMap::Private::BlockState::XXX;
 
 SymStateMap::SymStateMap():
     d(new Private)
@@ -541,7 +532,6 @@ SymStateMarked& SymStateMap::operator[](const CodeStorage::Block *bb)
 
 bool SymStateMap::insert(
         const CodeStorage::Block        *dst,
-        const CodeStorage::Block        *src,
         const SymHeap                   &sh,
         const bool                      allowThreeWay)
 {
@@ -566,10 +556,6 @@ bool SymStateMap::insert(
         // if the size did not grow, there must have been at least join
         ref.anyHit = true;
 
-    if (src)
-        // store inbound edge
-        ref.inbound.schedule(src);
-
     return changed;
 }
 
@@ -581,15 +567,4 @@ bool SymStateMap::anyReuseHappened(const CodeStorage::Block *bb) const
 int SymStateMap::cntPending(const CodeStorage::Block *bb) const
 {
     return d->cont[bb].state.cntPending();
-}
-
-void SymStateMap::gatherInboundEdges(TContBlock                  &dst,
-                                     const CodeStorage::Block    *ofBlock)
-    const
-{
-    BlockScheduler shed(d->cont[ofBlock].inbound);
-
-    BlockScheduler::TBlock bb;
-    while (shed.getNext(&bb))
-        dst.push_back(bb);
 }

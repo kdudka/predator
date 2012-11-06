@@ -38,15 +38,6 @@ namespace CodeStorage {
     struct Storage;
 }
 
-/// virtual interface for path tracers, optionally used by SymBackTrace
-class IPathTracer {
-    public:
-        virtual ~IPathTracer() { }
-
-        /// print a path trace valid for the current call level
-        virtual void printPaths() const = 0;
-};
-
 /// backtrace management
 class SymBackTrace {
     public:
@@ -109,19 +100,13 @@ class SymBackTrace {
         /// return location of call of the topmost function in the backtrace
         const struct cl_loc* topCallLoc() const;
 
-        /// register a path tracer associated with the topmost function call
-        void pushPathTracer(const IPathTracer *);
-
-        /// unregister the path tracer associated with the topmost function call
-        void popPathTracer(const IPathTracer *);
-
     protected:
         /**
          * stream out the backtrace, using CL_NOTE_MSG; or do nothing if the
          * backtrace is trivial
          * @return true if the backtrace is @b not trivial
          */
-        bool printBackTrace(bool forcePtrace = false) const;
+        bool printBackTrace() const;
         friend class SymProc;
         friend class SymExecEngine;
 

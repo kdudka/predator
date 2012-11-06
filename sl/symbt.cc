@@ -49,12 +49,10 @@ struct SymBackTrace::Private {
         }
     };
 
-    typedef std::stack<const IPathTracer *>                         TStackPP;
     typedef std::deque<BtStackItem>                                 TStack;
     typedef std::map<const CodeStorage::Fnc *, int /* cnt */>       TMap;
 
     const CodeStorage::Storage      &stor;
-    TStackPP                        ppStack;
     TStack                          btStack;
     TMap                            nestMap;
 
@@ -153,31 +151,14 @@ const CodeStorage::Storage& SymBackTrace::stor() const
     return d->stor;
 }
 
-bool SymBackTrace::printBackTrace(bool forcePtrace) const
+bool SymBackTrace::printBackTrace() const
 {
-    using namespace CodeStorage;
-
-    Private::TStackPP ppStack(d->ppStack);
-    const bool ptrace = forcePtrace && !ppStack.empty();
-
     const Private::TStack &ref = d->btStack;
-    if (!ptrace && ref.size() < 2)
+    if (ref.size() < 2)
         return false;
 
-    BOOST_FOREACH(const Private::BtStackItem &item, ref) {
-        if (ptrace) {
-            // perform path tracing at the current level
-            CL_BREAK_IF(ppStack.empty());
-
-            const IPathTracer *pp = ppStack.top();
-            ppStack.pop();
-            CL_BREAK_IF(!pp);
-
-            pp->printPaths();
-        }
-
+    BOOST_FOREACH(const Private::BtStackItem &item, ref)
         CL_NOTE_MSG(item.loc, "from call of " << nameOf(item.fnc) << "()");
-    }
 
     return true;
 }
@@ -232,19 +213,6 @@ const struct cl_loc* SymBackTrace::topCallLoc() const
     CL_BREAK_IF(d->btStack.empty());
     const Private::BtStackItem &top = d->btStack.front();
     return top.loc;
-}
-
-void SymBackTrace::pushPathTracer(const IPathTracer *pp)
-{
-    d->ppStack.push(pp);
-}
-
-void SymBackTrace::popPathTracer(const IPathTracer *pp)
-{
-    CL_BREAK_IF(d->ppStack.empty());
-    CL_BREAK_IF(d->ppStack.top() != pp);
-    (void) pp;
-    d->ppStack.pop();
 }
 
 // /////////////////////////////////////////////////////////////////////////////
