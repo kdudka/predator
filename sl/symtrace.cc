@@ -377,6 +377,94 @@ bool plotTrace(Node *endPoint, const std::string &name)
 }
 
 // /////////////////////////////////////////////////////////////////////////////
+// implementation of Trace::plotTrace()
+Node* /* selected predecessor */ TransientNode::printNode() const
+{
+    CL_BREAK_IF("please implement");
+    return this->parent();
+}
+
+Node* /* selected predecessor */ RootNode::printNode() const
+{
+    // reaching this node means we are done with tracing!
+    return 0;
+}
+
+Node* /* selected predecessor */ InsnNode::printNode() const
+{
+    // TODO: handle selected instructions here?
+    return this->parent();
+}
+
+Node* /* selected predecessor */ SpliceOutNode::printNode() const
+{
+    CL_BREAK_IF("please implement");
+    return this->parent();
+}
+
+Node* /* selected predecessor */ JoinNode::printNode() const
+{
+    // FIXME: deal better with join nodes
+    return this->parents().front();
+}
+
+Node* /* selected predecessor */ CloneNode::printNode() const
+{
+    CL_BREAK_IF("please implement");
+    return this->parent();
+}
+
+Node* /* selected predecessor */ CallEntryNode::printNode() const
+{
+    CL_NOTE_MSG(&insn_->loc, "from call of " << (*insn_));
+    return this->parent();
+}
+
+Node* /* selected predecessor */ CallCacheHitNode::printNode() const
+{
+    // follow the result, not the entry!
+    return this->parents().at(/* result */ 1);
+}
+
+Node* /* selected predecessor */ CallFrameNode::printNode() const
+{
+    CL_BREAK_IF("please implement");
+    return this->parent();
+}
+
+Node* /* selected predecessor */ CallDoneNode::printNode() const
+{
+    // follow the call, not the frame!
+    return this->parents().front();
+}
+
+Node* /* selected predecessor */ CondNode::printNode() const
+{
+    const char *action = (determ_)
+        ? "evaluated as "
+        : "assuming ";
+
+    const char *result = (branch_)
+        ? "TRUE"
+        : "FALSE";
+
+    CL_NOTE_MSG(&inCmp_->loc, (*inCmp_) << " ... " << action << result);
+    return this->parent();
+}
+
+Node* /* selected predecessor */ UserNode::printNode() const
+{
+    CL_BREAK_IF("please implement");
+    return this->parent();
+}
+
+void printTrace(Node *endPoint)
+{
+    while ((endPoint = endPoint->printNode()))
+        ;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::chkTraceGraphConsistency()
 
 template <class TNodeKind>

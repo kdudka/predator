@@ -123,6 +123,11 @@ class Node: public NodeBase {
         /// reference to list of child nodes (containing 0..n pointers)
         const TBaseList& children() const { return children_; }
 
+        /// print the node in a human-readable format if considered interesting
+        virtual Node* /* selected predecessor */ printNode() const {
+            return this->parent();
+        }
+
     private:
         // copying NOT allowed
         Node(const Node &);
@@ -173,6 +178,8 @@ class TransientNode: public Node {
         {
         }
 
+        virtual Node* printNode() const;
+
     protected:
         void virtual plotNode(TracePlotter &) const;
 
@@ -191,6 +198,8 @@ class RootNode: public Node {
             rootFnc_(rootFnc)
         {
         }
+
+        virtual Node* printNode() const;
 
     protected:
         void virtual plotNode(TracePlotter &) const;
@@ -214,6 +223,8 @@ class InsnNode: public Node {
             isBuiltin_(isBuiltin)
         {
         }
+
+        virtual Node* printNode() const;
 
     protected:
         void virtual plotNode(TracePlotter &) const;
@@ -243,6 +254,8 @@ class CondNode: public Node {
             branch_(branch)
         {
         }
+
+        virtual Node* printNode() const;
 
     protected:
         void virtual plotNode(TracePlotter &) const;
@@ -304,6 +317,8 @@ class SpliceOutNode: public Node {
         {
         }
 
+        virtual Node* printNode() const;
+
     protected:
         void virtual plotNode(TracePlotter &) const;
 };
@@ -317,6 +332,8 @@ class JoinNode: public Node {
         {
         }
 
+        virtual Node* printNode() const;
+
     protected:
         void virtual plotNode(TracePlotter &) const;
 };
@@ -328,6 +345,8 @@ class CloneNode: public Node {
             Node(ref)
         {
         }
+
+        virtual Node* printNode() const;
 
     protected:
         void virtual plotNode(TracePlotter &) const;
@@ -348,6 +367,8 @@ class CallEntryNode: public Node {
             insn_(insn)
         {
         }
+
+        virtual Node* printNode() const;
 
     protected:
         void virtual plotNode(TracePlotter &) const;
@@ -370,6 +391,8 @@ class CallCacheHitNode: public Node {
         {
         }
 
+        virtual Node* printNode() const;
+
     protected:
         void virtual plotNode(TracePlotter &) const;
 };
@@ -389,6 +412,8 @@ class CallFrameNode: public Node {
             insn_(insn)
         {
         }
+
+        virtual Node* printNode() const;
 
     protected:
         void virtual plotNode(TracePlotter &) const;
@@ -420,6 +445,8 @@ class CallDoneNode: public Node {
             fnc_(fnc)
         {
         }
+
+        virtual Node* printNode() const;
 
     protected:
         void virtual plotNode(TracePlotter &) const;
@@ -467,12 +494,17 @@ class UserNode: public Node {
         {
         }
 
+        virtual Node* printNode() const;
+
     protected:
         void virtual plotNode(TracePlotter &) const;
 };
 
 /// plot a trace graph named "name-NNNN.dot" leading to the given node
 bool plotTrace(Node *endPoint, const std::string &name);
+
+/// print a human-readable trace using the Code Listener messaging API
+void printTrace(Node *endPoint);
 
 /// this runs in the debug build only
 bool chkTraceGraphConsistency(Node *const from);
