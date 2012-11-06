@@ -22,7 +22,7 @@
 
 /**
  * @file symid.hh
- * types used for identification of SymHeap entities - symid.hh::TObjId and
+ * types used for identification of SymHeap entities - symid.hh::TFldId and
  * symid.hh::TValId
  */
 
@@ -32,37 +32,37 @@
 #include <utility>          // needed for std::pair
 
 /**
- * SymHeap @b object @b ID
+ * SymHeap @b field @b ID
  * @note Though the type is defined as enumeration for now, the code should not
  * rely on that fact, as it may be subject for change in the future.
  */
-enum TObjId {
+enum TFldId {
     /**
      * special enumeration value denoting a failure of a method which may return
-     * a valid object.  OBJ_INVALID can @b never denote a valid object.  @n @n
+     * a valid object.  FLD_INVALID can @b never denote a valid object.  @n @n
      */
-    OBJ_INVALID       = -1,
+    FLD_INVALID       = -1,
 
     /**
      * special enumeration value denoting a result of invalid dereference,
-     * either direct or implied.  OBJ_DEREF_FAILED can @b never denote a valid
+     * either direct or implied.  FLD_DEREF_FAILED can @b never denote a valid
      * object.  This enumeration value is used for sort of error recovery,
      * especially to avoid flood of error messages triggered by a single error
      * in the analyzed program. @n @n
      */
-    OBJ_DEREF_FAILED  = -2,
+    FLD_DEREF_FAILED  = -2,
 
     /**
      * special enumeration value denoting we in fact @b know @b nothing about
-     * the requested object.  OBJ_UNKNOWN may or may not stand for an existing
+     * the requested object.  FLD_UNKNOWN may or may not stand for an existing
      * object. @n @n
      */
-    OBJ_UNKNOWN       = -3,
+    FLD_UNKNOWN       = -3,
 
     /**
      * sort of non-portable hack, abusing enumeration type for integral purposes
      */
-    OBJ_MAX_ID        = /* XXX */ UINT_MAX
+    FLD_MAX_ID        = /* XXX */ UINT_MAX
 };
 
 /**
@@ -99,10 +99,10 @@ enum TValId {
      * special enumeration value denoting a Boolean true value.
      * @n @n
      */
-    VAL_TRUE          = (OBJ_UNKNOWN - 1),
+    VAL_TRUE          = (FLD_UNKNOWN - 1),
 
     /**
-     * @copydoc symid.hh::OBJ_MAX_ID
+     * @copydoc symid.hh::FLD_MAX_ID
      */
     VAL_MAX_ID        = /* XXX */ UINT_MAX
 };

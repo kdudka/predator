@@ -76,7 +76,7 @@ bool compareIntRanges(
         const IR::Range                     &range1,
         const IR::Range                     &range2);
 
-/// known to work only with TObjId/TValId
+/// known to work only with TFldId/TValId
 template <class TMap>
 typename TMap::mapped_type roMapLookup(
         const TMap                          &roMap,

@@ -489,7 +489,7 @@ class SymHeapCore {
          * composite object given by val (applicable only on VT_COMPOSITE vals)
          * @todo should we operate on ObjHandle instead?
          */
-        TObjId valGetComposite(TValId val) const;
+        TFldId valGetComposite(TValId val) const;
 
     public:
         /// allocate a chunk of stack of known size from the select call stack
@@ -528,16 +528,16 @@ class SymHeapCore {
 
     protected:
         /// return a @b data pointer placed at the given address
-        TObjId ptrAt(TValId at);
+        TFldId ptrAt(TValId at);
 
         /// return an object of the given type at the given address
-        TObjId objAt(TValId at, TObjType clt);
+        TFldId objAt(TValId at, TObjType clt);
 
         /// increment the external reference count of the given object
-        void objEnter(TObjId);
+        void objEnter(TFldId);
 
         /// decrement the external reference count (may trigger its destruction)
-        void objLeave(TObjId);
+        void objLeave(TFldId);
 
         /// ObjHandle takes care of external reference count
         friend class ObjHandle;
@@ -545,10 +545,10 @@ class SymHeapCore {
 
     protected:
         // these should be accessed indirectly via ObjHandle
-        TValId valueOf(TObjId obj);
-        TValId placedAt(TObjId obj);
-        TObjType objType(TObjId obj) const;
-        void objSetValue(TObjId obj, TValId val, TValSet *killedPtrs = 0);
+        TValId valueOf(TFldId obj);
+        TValId placedAt(TFldId obj);
+        TObjType objType(TFldId obj) const;
+        void objSetValue(TFldId obj, TValId val, TValSet *killedPtrs = 0);
 
     protected:
         TStorRef stor_;
@@ -568,11 +568,11 @@ class ObjHandle {
     public:
         ObjHandle():
             sh_(0),
-            id_(OBJ_INVALID)
+            id_(FLD_INVALID)
         {
         }
 
-        explicit ObjHandle(const TObjId special):
+        explicit ObjHandle(const TFldId special):
             sh_(0),
             id_(special)
         {
@@ -622,7 +622,7 @@ class ObjHandle {
 
     public:
         SymHeapCore*    sh()        const { return sh_; }
-        TObjId          objId()     const { return id_; }
+        TFldId          objId()     const { return id_; }
         bool            isValid()   const { return 0 < id_; }
 
         /**
@@ -668,7 +668,7 @@ class ObjHandle {
         }
 
     protected:
-        ObjHandle(SymHeapCore &sh, TObjId id):
+        ObjHandle(SymHeapCore &sh, TFldId id):
             sh_(&sh),
             id_(id)
         {
@@ -682,11 +682,11 @@ class ObjHandle {
         friend class SymProc;
 
         // TODO: remove this
-        friend const char* valNullLabel(const SymHeapCore &, const TObjId);
+        friend const char* valNullLabel(const SymHeapCore &, const TFldId);
 
     protected:
         SymHeapCore     *sh_;
-        TObjId           id_;
+        TFldId           id_;
 };
 
 /// this allows to insert ObjHandle instances into std::set

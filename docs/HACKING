@@ -55,6 +55,8 @@ ent                     entity that can be uniquely identified by sh/uid pair
 
 eq                      equal
 
+fld                     field
+
 fnc                     function
 
 fpn                     Floating-Point Number

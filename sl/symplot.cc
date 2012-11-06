@@ -1008,7 +1008,7 @@ preserve_suffix:
     plot.out << "\"];\n";
 }
 
-void plotPointsTo(PlotData &plot, const TValId val, const TObjId target)
+void plotPointsTo(PlotData &plot, const TValId val, const TFldId target)
 {
     plot.out << "\t" << SL_QUOTE(val)
         << " -> " << SL_QUOTE(target)
@@ -1086,7 +1086,7 @@ void plotNonRootValues(PlotData &plot)
     }
 }
 
-const char* valNullLabel(const SymHeapCore &sh, const TObjId obj)
+const char* valNullLabel(const SymHeapCore &sh, const TFldId obj)
 {
     const ObjHandle hdl(const_cast<SymHeapCore &>(sh), obj);
     const TObjType clt = hdl.objType();
@@ -1122,7 +1122,7 @@ void plotAuxValue(
     switch (val) {
         case VAL_NULL:
             if (isObj)
-                label = valNullLabel(plot.sh, static_cast<TObjId>(node));
+                label = valNullLabel(plot.sh, static_cast<TFldId>(node));
             break;
 
         case VAL_TRUE:

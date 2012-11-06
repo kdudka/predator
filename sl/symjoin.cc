@@ -501,7 +501,7 @@ bool bumpNestingLevel(const ObjHandle &obj)
     return !hasKey(ignoreList, obj);
 }
 
-/// (OBJ_INVALID == objDst) means read-only!!!
+/// (FLD_INVALID == objDst) means read-only!!!
 bool joinFreshObjTripple(
         SymJoinCtx              &ctx,
         const ObjHandle         &obj1,
@@ -648,7 +648,7 @@ struct SegMatchVisitor {
                 // black-listed
                 return true;
 
-            const ObjHandle readOnly(OBJ_INVALID);
+            const ObjHandle readOnly(FLD_INVALID);
             return joinFreshObjTripple(ctx, obj1, obj2, readOnly, ldiff);
         }
 };
@@ -1162,7 +1162,7 @@ bool joinUniBlocks(
 
 static const BindingOff ObjOrNull(OK_OBJ_OR_NULL);
 
-/// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
+/// (NULL != off) means 'introduce OK_{FLD_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool createObject(
         SymJoinCtx              &ctx,
         const struct cl_type    *clt,
@@ -2485,7 +2485,7 @@ bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0)
         const TValId rootDstAt = roMapLookup(vMap1, rootSrcAt);
         const ObjHandle objDst = translateObjId(dst, sh1, rootDstAt, objSrc);
         if (!hasKey(rMap, objDst))
-            rMap[objDst].second = ObjHandle(OBJ_INVALID);
+            rMap[objDst].second = ObjHandle(FLD_INVALID);
 
         // objDst -> obj1
         rMap[objDst].first = objSrc;
@@ -2498,7 +2498,7 @@ bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0)
         const TValId rootDstAt = roMapLookup(vMap2, rootSrcAt);
         const ObjHandle objDst = translateObjId(dst, sh2, rootDstAt, objSrc);
         if (!hasKey(rMap, objDst))
-            rMap[objDst].first = ObjHandle(OBJ_INVALID);
+            rMap[objDst].first = ObjHandle(FLD_INVALID);
 
         // objDst -> obj2
         rMap[objDst].second = objSrc;

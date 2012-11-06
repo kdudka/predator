@@ -473,13 +473,13 @@ ObjHandle SymProc::objByOperand(const struct cl_operand &op)
     const EValueOrigin origin = sh_.valOrigin(at);
     if (VO_DEREF_FAILED == origin)
         // we are already on the error path
-        return ObjHandle(OBJ_DEREF_FAILED);
+        return ObjHandle(FLD_DEREF_FAILED);
 
     // check for invalid dereference
     const TObjType cltTarget = op.type;
     if (this->checkForInvalidDeref(at, cltTarget->size)) {
         this->printBackTrace(ML_ERROR);
-        return ObjHandle(OBJ_DEREF_FAILED);
+        return ObjHandle(FLD_DEREF_FAILED);
     }
 
     // resolve the target object
@@ -501,12 +501,12 @@ TValId SymProc::valFromObj(const struct cl_operand &op)
         return handle.value();
 
     // failed to resolve object handle
-    const TObjId obj = handle.objId();
+    const TFldId obj = handle.objId();
     switch (obj) {
-        case OBJ_UNKNOWN:
+        case FLD_UNKNOWN:
             return sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
 
-        case OBJ_DEREF_FAILED:
+        case FLD_DEREF_FAILED:
             return sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
 
         default:
@@ -1203,7 +1203,7 @@ bool lhsFromOperand(ObjHandle *pLhs, SymProc &proc, const struct cl_operand &op)
         CL_BREAK_IF("lhs not an l-value");
 
     *pLhs = proc.objByOperand(op);
-    if (OBJ_DEREF_FAILED == pLhs->objId())
+    if (FLD_DEREF_FAILED == pLhs->objId())
         return false;
 
     CL_BREAK_IF(!pLhs->isValid());
