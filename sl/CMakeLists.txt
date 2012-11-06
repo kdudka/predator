@@ -178,6 +178,9 @@ macro(test_predator_regre name_suff ext arg1)
         # drop absolute paths
         set(cmd "${cmd} | sed 's|^[^:]*/||'")
 
+        # drop var UIDs that are not guaranteed to be fixed among runs
+        set(cmd "${cmd} | sed -r -e 's|#[0-9]+:||g' -e 's|#[0-9]+|_|g'")
+
         # ... and finally diff with the expected output
         set(cmd "${cmd} | diff -up ${testdir}/test-${num}.err${ext} -")
         set(test_name "test-${num}.c${name_suff}")

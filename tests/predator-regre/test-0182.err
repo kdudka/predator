@@ -1,35 +1,33 @@
 test-0182.c:6:1: error: error label "ERROR" has been reached
-test-0182.c:6:1: note: <-- abstract state reachable from L89 [entry block]
-test-0182.c:149:9: note: from call of fail()
-test-0182.c:149:9: note: <-- abstract state reachable from L22
-test-0182.c:149:9: note:     <-- abstract state reachable from L21
-test-0182.c:149:9: note:         <-- abstract state reachable from L21
-test-0182.c:148:9: note:             <-- abstract state reachable from L19
-test-0182.c:148:9: note:                 <-- abstract state reachable from L19
-test-0182.c:147:9: note:                     <-- abstract state reachable from L17
-test-0182.c:146:28: note:                         <-- abstract state reachable from L17
-test-0182.c:145:5: note:                             <-- abstract state reachable from L16
-test-0182.c:145:5: note:                                 <-- abstract state reachable from L16
-test-0182.c:145:21: note:                                     <-- abstract state reachable from L32
-test-0182.c:145:21: note:                                         <-- abstract state reachable from L32
-test-0182.c:151:9: note:                                             <-- abstract state reachable from L24
-test-0182.c:151:9: note:                                                 <-- abstract state reachable from L24
-test-0182.c:151:40: note:                                                     <-- abstract state reachable from L31
-test-0182.c:151:40: note:                                                         <-- abstract state reachable from L31
-test-0182.c:154:13: note:                                                             <-- abstract state reachable from L29
-test-0182.c:154:13: note:                                                                 <-- abstract state reachable from L29
-test-0182.c:153:13: note:                                                                     <-- abstract state reachable from L27
-test-0182.c:153:13: note:                                                                         <-- abstract state reachable from L27
-test-0182.c:152:13: note:                                                                             <-- abstract state reachable from L25
-test-0182.c:152:13: note:                                                                                 <-- abstract state reachable from L25
-test-0182.c:151:9: note:                                                                                     <-- abstract state reachable from L24 [loop]
-test-0182.c:151:18: note:                                                     <-- abstract state reachable from L23
-test-0182.c:151:18: note:                                                         <-- abstract state reachable from L23
-test-0182.c:149:9: note:                                                             <-- abstract state reachable from L21 [loop]
-test-0182.c:143:17: note:                                     <-- abstract state reachable from L15
-test-0182.c:143:17: note:                                         <-- abstract state reachable from L15 [entry block]
-test-0182.c:178:17: note: from call of inspect_full()
-test-0182.c:177:25: note: <-- abstract state reachable from L1 [entry block]
-test-0182.c:175:5: note: from call of main()
+test-0182.c:149:9: note: from call of fail ()
+test-0182.c:149:9: note: _ = (_ != NULL) ... assuming TRUE
+test-0182.c:148:9: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:147:9: note: _ = (pos == NULL) ... evaluated as FALSE
+test-0182.c:145:5: note: _ = (dll != NULL) ... evaluated as TRUE
+test-0182.c:134:5: note: _ = (dll != NULL) ... assuming FALSE
+test-0182.c:137:9: note: _ = (_ != dll) ... evaluated as FALSE
+test-0182.c:136:9: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:135:9: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:134:5: note: _ = (dll != NULL) ... evaluated as TRUE
+test-0182.c:132:5: note: _ = (_ != NULL) ... evaluated as FALSE
+test-0182.c:131:5: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:130:5: note: _ = (dll == NULL) ... evaluated as FALSE
+test-0182.c:143:17: note: from call of inspect_base (dll)
+test-0182.c:178:17: note: from call of inspect_full (dll)
+test-0182.c:66:11: note: _ = (_ != (int)0) ... assuming FALSE
+test-0182.c:66:11: note: _ = (_ != (int)0) ... assuming FALSE
+test-0182.c:54:8: note: _ = (next != NULL) ... evaluated as TRUE
+test-0182.c:23:8: note: _ = (ptr == NULL) ... evaluated as FALSE
+test-0182.c:51:24: note: from call of item = alloc_or_die_slave ()
+test-0182.c:63:15: note: from call of insert_fnc (&dll)
+test-0182.c:74:5: note: from call of _ = dll_create_generic (dll_insert_slave)
+test-0182.c:119:35: note: from call of _ = dll_create_slave ()
+test-0182.c:116:8: note: _ = (next != NULL) ... evaluated as FALSE
+test-0182.c:40:8: note: _ = (ptr == NULL) ... evaluated as FALSE
+test-0182.c:113:25: note: from call of item = alloc_or_die_master ()
+test-0182.c:63:15: note: from call of insert_fnc (&dll)
+test-0182.c:125:5: note: from call of _ = dll_create_generic (dll_insert_master)
+test-0182.c:177:25: note: from call of dll = dll_create_master ()
+test-0182.c:175:5: note: from call of main ()
 test-0182.c:175:5: warning: symbolic execution terminates prematurely
 test-0182.c:175:5: note: an error label has been reached

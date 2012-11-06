@@ -1,21 +1,26 @@
 test-0187.c:3:1: error: error label "ERROR" has been reached
-test-0187.c:3:1: note: <-- abstract state reachable from L16 [entry block]
-test-0187.c:19:18: note: from call of error()
-test-0187.c:18:9: note: <-- abstract state reachable from L14
-test-0187.c:18:9: note:     <-- abstract state reachable from L13
-test-0187.c:18:9: note:         <-- abstract state reachable from L13
-test-0187.c:14:9: note:             <-- abstract state reachable from L12
-test-0187.c:14:9: note:                 <-- abstract state reachable from L12
-test-0187.c:14:9: note:                     <-- abstract state reachable from L10
-test-0187.c:14:9: note:                         <-- abstract state reachable from L10 [entry block]
-test-0187.c:25:13: note: from call of gl_write()
-test-0187.c:25:13: note: <-- abstract state reachable from L9 [entry block]
-test-0187.c:32:17: note: from call of gl_proc1()
-test-0187.c:32:17: note: <-- abstract state reachable from L7
-test-0187.c:31:8: note:     <-- abstract state reachable from L6
-test-0187.c:31:9: note:         <-- abstract state reachable from L6 [entry block]
-test-0187.c:51:12: note: from call of gl_eval()
-test-0187.c:43:12: note: <-- abstract state reachable from L1 [entry block]
-test-0187.c:41:5: note: from call of main()
+test-0187.c:19:18: note: from call of error ()
+test-0187.c:14:9: note: _ = (i == (int)1) ... evaluated as FALSE
+test-0187.c:14:9: note: _ = (i == (int)0) ... evaluated as FALSE
+test-0187.c:25:13: note: from call of gl_write (gl_num.4)
+test-0187.c:32:17: note: from call of gl_proc1 ()
+test-0187.c:31:8: note: _ = (gl_st1.1 == (int)0) ... evaluated as TRUE
+test-0187.c:51:12: note: from call of gl_eval ()
+test-0187.c:37:8: note: _ = (gl_ev1.0 == (int)1) ... evaluated as TRUE
+test-0187.c:49:16: note: from call of gl_activate ()
+test-0187.c:14:9: note: _ = (i == (int)1) ... evaluated as TRUE
+test-0187.c:14:9: note: _ = (i == (int)0) ... evaluated as FALSE
+test-0187.c:25:13: note: from call of gl_write (gl_num.4)
+test-0187.c:32:17: note: from call of gl_proc1 ()
+test-0187.c:31:8: note: _ = (gl_st1.1 == (int)0) ... evaluated as TRUE
+test-0187.c:48:12: note: from call of gl_eval ()
+test-0187.c:37:8: note: _ = (gl_ev1.0 == (int)1) ... evaluated as TRUE
+test-0187.c:46:16: note: from call of gl_activate ()
+test-0187.c:14:9: note: _ = (i == (int)0) ... evaluated as TRUE
+test-0187.c:25:13: note: from call of gl_write (gl_num.4)
+test-0187.c:32:17: note: from call of gl_proc1 ()
+test-0187.c:31:8: note: _ = (gl_st1.1 == (int)0) ... evaluated as TRUE
+test-0187.c:45:12: note: from call of gl_eval ()
+test-0187.c:41:5: note: from call of main ()
 test-0187.c:41:5: warning: symbolic execution terminates prematurely
 test-0187.c:41:5: note: an error label has been reached

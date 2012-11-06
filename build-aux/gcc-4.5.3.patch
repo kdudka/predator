@@ -1,10 +1,10 @@
+ tests/forester-regre/test-p0028.err       |    2 +-
  tests/predator-regre/test-0002.err        |    4 ++--
  tests/predator-regre/test-0002.err.oom    |    4 ++--
  tests/predator-regre/test-0002.err.uninit |    6 +++---
- tests/predator-regre/test-0178.err        |    2 +-
- tests/predator-regre/test-0180.err        |    2 +-
+ tests/predator-regre/test-0182.err        |    4 ++--
  tests/predator-regre/test-0209.err.oom    |    2 +-
- 7 files changed, 11 insertions(+), 11 deletions(-)
+ 6 files changed, 11 insertions(+), 11 deletions(-)
 
 diff --git a/tests/forester-regre/test-p0028.err b/tests/forester-regre/test-p0028.err
 index f31b844..8cb6bf3 100644
@@ -43,32 +43,26 @@ index e773401..b8c0c09 100644
 +test-0002.c:11:18: error: dereference of NULL value
 +test-0002.c:9:22: error: invalid dereference
 +test-0002.c:9:22: note: the value being dereferenced is an untouched contents of stack
-diff --git a/tests/predator-regre/test-0178.err b/tests/predator-regre/test-0178.err
-index 3705577..8af88e3 100644
---- a/tests/predator-regre/test-0178.err
-+++ b/tests/predator-regre/test-0178.err
-@@ -27,7 +27,7 @@ test-0178.c:124:21: note:                         <-- abstract state reachable f
- test-0178.c:121:12: note:                             <-- abstract state reachable from L5
- test-0178.c:117:20: note:                                 <-- abstract state reachable from L5
- test-0178.c:114:12: note:                                     <-- abstract state reachable from L3
--test-0178.c:113:22: note:                                         <-- abstract state reachable from L3
-+test-0178.c:113:35: note:                                         <-- abstract state reachable from L3
- test-0178.c:112:11: note:                                             <-- abstract state reachable from L2 [loop]
- test-0178.c:111:18: note:                     <-- abstract state reachable from L1
- test-0178.c:111:18: note:                         <-- abstract state reachable from L1 [entry block]
-diff --git a/tests/predator-regre/test-0180.err b/tests/predator-regre/test-0180.err
-index 07b54c4..096a14b 100644
---- a/tests/predator-regre/test-0180.err
-+++ b/tests/predator-regre/test-0180.err
-@@ -7,7 +7,7 @@ test-0180.c:58:5: note:         <-- abstract state reachable from L41
- test-0180.c:57:5: note:             <-- abstract state reachable from L39
- test-0180.c:57:5: note:                 <-- abstract state reachable from L39
- test-0180.c:56:5: note:                     <-- abstract state reachable from L37
--test-0180.c:55:24: note:                         <-- abstract state reachable from L37
-+test-0180.c:55:31: note:                         <-- abstract state reachable from L37
- test-0180.c:52:5: note:                             <-- abstract state reachable from L35
- test-0180.c:52:5: note:                                 <-- abstract state reachable from L35
- test-0180.c:51:5: note:                                     <-- abstract state reachable from L33
+diff --git a/tests/predator-regre/test-0182.err b/tests/predator-regre/test-0182.err
+index c5aa4ff..ca4c0f2 100644
+--- a/tests/predator-regre/test-0182.err
++++ b/tests/predator-regre/test-0182.err
+@@ -20,13 +20,13 @@ test-0182.c:54:8: note: _ = (next != NULL) ... evaluated as TRUE
+ test-0182.c:23:8: note: _ = (ptr == NULL) ... evaluated as FALSE
+ test-0182.c:51:24: note: from call of item = alloc_or_die_slave ()
+ test-0182.c:63:15: note: from call of insert_fnc (&dll)
+-test-0182.c:74:5: note: from call of _ = dll_create_generic (dll_insert_slave)
++test-0182.c:74:30: note: from call of _ = dll_create_generic (dll_insert_slave)
+ test-0182.c:119:35: note: from call of _ = dll_create_slave ()
+ test-0182.c:116:8: note: _ = (next != NULL) ... evaluated as FALSE
+ test-0182.c:40:8: note: _ = (ptr == NULL) ... evaluated as FALSE
+ test-0182.c:113:25: note: from call of item = alloc_or_die_master ()
+ test-0182.c:63:15: note: from call of insert_fnc (&dll)
+-test-0182.c:125:5: note: from call of _ = dll_create_generic (dll_insert_master)
++test-0182.c:125:30: note: from call of _ = dll_create_generic (dll_insert_master)
+ test-0182.c:177:25: note: from call of dll = dll_create_master ()
+ test-0182.c:175:5: note: from call of main ()
+ test-0182.c:175:5: warning: symbolic execution terminates prematurely
 diff --git a/tests/predator-regre/test-0209.err.oom b/tests/predator-regre/test-0209.err.oom
 index f653228..d5200ca 100644
 --- a/tests/predator-regre/test-0209.err.oom

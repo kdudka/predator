@@ -63,7 +63,11 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace)
     CL_BREAK_IF(!chkTraceGraphConsistency(trMsg));
 
     // print the backtrace
-    if (bt_->printBackTrace(forcePtrace))
+    if (forcePtrace) {
+        Trace::printTrace(trMsg);
+        printMemUsage("Trace::printTrace");
+    }
+    else if (bt_->printBackTrace())
         printMemUsage("SymBackTrace::printBackTrace");
 
     // dump trace graph, or schedule and endpoint for batch trace graph dump
