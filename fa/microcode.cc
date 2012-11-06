@@ -86,7 +86,7 @@ void FI_cond::finalize(
 // FI_acc_sel
 void FI_acc_sel::execute(ExecutionManager& execMan, const ExecState& state)
 {
-	auto data = state.GetReg(dst_);
+	const Data& data = state.GetReg(dst_);
 
 	if (!data.isRef())
 	{
@@ -95,12 +95,13 @@ void FI_acc_sel::execute(ExecutionManager& execMan, const ExecState& state)
 		throw ProgramError(ss.str(), getLoc(state));
 	}
 
-	std::vector<FAE*> dst;
+	std::vector<FAE*> res;
 
-	Splitting(*state.GetMem()->GetFAE()).isolateOne(dst, data.d_ref.root,
+	Splitting(*state.GetMem()->GetFAE()).isolateOne(res, data.d_ref.root,
 		data.d_ref.displ + offset_);
 
-	for (auto fae : dst) {
+	for (auto fae : res)
+	{
 		execMan.enqueue(state.GetMem(), execMan.allocRegisters(state.GetRegs()),
 			std::shared_ptr<const FAE>(fae), next_);
 	}
@@ -118,13 +119,13 @@ void FI_acc_set::execute(ExecutionManager& execMan, const ExecState& state)
 		throw ProgramError(ss.str(), getLoc(state));
 	}
 
-	std::vector<FAE*> dst;
+	std::vector<FAE*> res;
 
 	Splitting(*state.GetMem()->GetFAE()).isolateSet(
-		dst, data.d_ref.root, data.d_ref.displ + base_, offsets_
+		res, data.d_ref.root, data.d_ref.displ + base_, offsets_
 	);
 
-	for (auto fae : dst)
+	for (auto fae : res)
 	{
 		execMan.enqueue(state.GetMem(), execMan.allocRegisters(state.GetRegs()),
 			std::shared_ptr<const FAE>(fae), next_);
@@ -143,14 +144,14 @@ void FI_acc_all::execute(ExecutionManager& execMan, const ExecState& state)
 		throw ProgramError(ss.str(), getLoc(state));
 	}
 
-	std::vector<FAE*> dst;
+	std::vector<FAE*> res;
 
 	Splitting(*state.GetMem()->GetFAE()).isolateSet(
-		dst, data.d_ref.root, 0,
+		res, data.d_ref.root, 0,
 		state.GetMem()->GetFAE()->getType(data.d_ref.root)->getSelectors()
 	);
 
-	for (auto fae : dst)
+	for (auto fae : res)
 	{
 		execMan.enqueue(state.GetMem(), execMan.allocRegisters(state.GetRegs()),
 			std::shared_ptr<const FAE>(fae), next_);
@@ -169,6 +170,9 @@ void FI_load_cst::execute(ExecutionManager& execMan, const ExecState& state)
 // FI_move_reg
 void FI_move_reg::execute(ExecutionManager& execMan, const ExecState& state)
 {
+	// Check that we don't make a useless move
+	assert(src_ != dst_);
+
 	ExecState tmpState = state;
 	tmpState.SetReg(dst_, tmpState.GetReg(src_));
 
@@ -233,6 +237,9 @@ void FI_move_reg_inc::execute(ExecutionManager& execMan, const ExecState& state)
 		ss << "dereferenced value is not a valid reference [" << data << ']';
 		throw ProgramError(ss.str(), getLoc(tmpState));
 	}
+
+	// make sure that the value is really integer
+	assert(tmpState.GetReg(src2_).isInt());
 
 	data.d_ref.displ += tmpState.GetReg(src2_).d_int;
 	tmpState.SetReg(dst_, data);
@@ -424,6 +431,7 @@ void FI_node_create::execute(ExecutionManager& execMan, const ExecState& state)
 
 	const Data& srcData = tmpState.GetReg(src_);
 
+	// TODO: is this alright? Shouldn't dst_ be modified?
 	if (srcData.isRef() || srcData.isNull())
 	{	// in case src_ is a null pointer
 		execMan.enqueue(tmpState.GetMem(), tmpState.GetRegsShPtr(),
@@ -463,9 +471,11 @@ void FI_node_free::execute(ExecutionManager& execMan, const ExecState& state)
 	const Data& data = state.GetReg(dst_);
 
 	if (data.d_ref.displ != 0)
+	{
 		throw ProgramError(
 			"releasing a pointer which points inside an allocated block",
 			getLoc(state));
+	}
 
 	VirtualMachine(*fae).nodeDelete(data.d_ref.root);
 

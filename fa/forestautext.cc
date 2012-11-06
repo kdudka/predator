@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Jiri Simacek
+ * Copyright (C) 2010 Jiri Simacek
  *
  * This file is part of forester.
  *
@@ -18,23 +18,21 @@
  */
 
 // Forester headers
-#include "jump.hh"
+#include "forestautext.hh"
 
-void FI_jmp::execute(ExecutionManager&, const ExecState&)
+bool FAE::subseteq(const FAE& lhs, const FAE& rhs)
 {
-	assert(false);
-}
+	if (lhs.roots.size() != rhs.roots.size())
+		return false;
 
-void FI_jmp::finalize(
-	const std::unordered_map<const CodeStorage::Block*, AbstractInstruction*>& codeIndex,
-	std::vector<AbstractInstruction*>::const_iterator /* it */)
-{
-	this->next_ = this;
+	if (lhs.connectionGraph.data != rhs.connectionGraph.data)
+		return false;
 
-	while (this->next_->getType() == fi_type_e::fiJump)
+	for (size_t i = 0; i < lhs.roots.size(); ++i)
 	{
-		this->next_ = (static_cast<FI_jmp*>(this->next_))->getTarget(codeIndex);
+		if (!TreeAut::subseteq(*lhs.roots[i], *rhs.roots[i]))
+			return false;
 	}
 
-	this->next_->setTarget();
+	return true;
 }

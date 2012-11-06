@@ -30,54 +30,68 @@
 #include "boxman.hh"
 #include "forestautext.hh"
 
-class UFAE {
+/**
+ * @brief  Tree automaton representing a forest automaton
+ *
+ * This class is used to represent a forest automaton as a tree automaton. This
+ * is done by merging transitions of all tree automata in the forest automaton
+ * and adding a new root state, such that it can only make a transition into
+ * all roots of the original tree automata over a special symbol.
+ */
+class UFAE
+{
+private:  // data members
 
-	TreeAut& backend;
+	/// The tree automaton
+	TreeAut& backend_;
 
-	size_t stateOffset;
+	/// Offset of states of the original forest automaton
+	size_t stateOffset_;
 
-	BoxMan& boxMan;
+	/// Manager of boxes
+	BoxMan& boxMan_;
 
-public:
+public:   // methods
 
-	UFAE(TreeAut& backend, BoxMan& boxMan) : backend(backend), stateOffset(1), boxMan(boxMan) {
+	UFAE(
+		TreeAut&                    backend,
+		BoxMan&                     boxMan) :
+    backend_(backend),
+		stateOffset_(1),
+		boxMan_(boxMan)
+	{
 		// let 0 be the only accepting state
-		this->backend.addFinalState(0);
+		backend_.addFinalState(0);
 	}
 
-	void clear() {
-
-		this->backend.addFinalState(0);
-		this->stateOffset = 1;
-
+	/**
+	 * @brief  Clears the structure to the initial state
+	 */
+	void clear()
+	{
+		backend_.addFinalState(0);
+		stateOffset_ = 1;
 	}
 
-	size_t getStateOffset() const {
-		return this->stateOffset;
+	/**
+	 * @brief  Retrievs the offset of states
+	 *
+	 * @returns  Offset of states from the original forest automaton
+	 */
+	size_t getStateOffset() const
+	{
+		return stateOffset_;
 	}
 
-	void setStateOffset(size_t offset) {
-		this->stateOffset = offset;
+	/**
+	 * @brief  Sets the offset of states
+	 *
+	 * @param[in]  offset  The new offset of states
+	 */
+	void setStateOffset(size_t offset)
+	{
+		stateOffset_ = offset;
 	}
-
-#if 0
-	struct RenameNonleafF {
-
-		Index<size_t>& index;
-
-		size_t offset;
-
-		RenameNonleafF(Index<size_t>& index, size_t offset = 0)
-			: index(index), offset(offset) {}
-
-		size_t operator()(size_t s) {
-			if (_MSB_TEST(s))
-				return s;
-			return this->index.translateOTF(s) + this->offset;
-		}
-
-	};
-#endif
 
 	template <class T>
 	struct Cursor {
@@ -93,45 +107,64 @@ public:
 		}
 	};
 
-	TreeAut& fae2ta(TreeAut& dst, Index<size_t>& index, const FAE& src) const {
+	TreeAut& fae2ta(
+		TreeAut&                   dst,
+		Index<size_t>&             index,
+		const FAE&                 src) const
+	{
 		dst.addFinalState(0);
-		std::vector<Cursor<std::set<size_t>::const_iterator> > tmp;
-		for (auto root : src.roots) {
-			TreeAut::rename(dst, *root, FAE::RenameNonleafF(index, this->stateOffset), false);
+		std::vector<Cursor<std::set<size_t>::const_iterator>> tmp;
+		for (auto root : src.roots)
+		{
+			TreeAut::rename(
+				dst,
+				*root,
+				FAE::RenameNonleafF(index, stateOffset_),
+				false);
+
 			assert(root->getFinalStates().size());
-			tmp.push_back(Cursor<std::set<size_t>::const_iterator>(root->getFinalStates().begin(), root->getFinalStates().end()));
+			tmp.push_back(Cursor<std::set<size_t>::const_iterator>(
+				root->getFinalStates().begin(),
+				root->getFinalStates().end()));
 		}
+
 		std::vector<size_t> lhs(tmp.size());
-		label_type label = this->boxMan.lookupLabel(tmp.size(), src.GetVariables());
+		label_type label = boxMan_.lookupLabel(tmp.size(), src.GetVariables());
+
 		bool valid = true;
-//		std::cerr << index << std::endl;
-		while (valid) {
-			for (size_t i = 0; i < lhs.size(); ++i) {
-//				std::cerr << *tmp[i].curr << ' ';
-				lhs[i] = index[*tmp[i].curr] + this->stateOffset;
+		while (valid)
+		{
+			for (size_t i = 0; i < lhs.size(); ++i)
+			{
+				lhs[i] = index[*tmp[i].curr] + stateOffset_;
 			}
 			dst.addTransition(lhs, label, 0);
 			valid = false;
-			for (std::vector<Cursor<std::set<size_t>::const_iterator> >::iterator i = tmp.begin(); !valid && i != tmp.end(); ++i)
-				valid = i->inc();
+
+			for (auto it = tmp.begin(); !valid && it != tmp.end(); ++it)
+			{
+				valid = it->inc();
+			}
 		}
 		return dst;
 	}
 
-	void join(const TreeAut& src, const Index<size_t>& index) {
-		TreeAut::disjointUnion(this->backend, src, false);
-		this->stateOffset += index.size();
+	void join(const TreeAut& src, const Index<size_t>& index)
+	{
+		TreeAut::disjointUnion(backend_, src, false);
+		stateOffset_ += index.size();
 	}
 
-	void adjust(const Index<size_t>& index) {
-		this->stateOffset += index.size();
+	void adjust(const Index<size_t>& index)
+	{
+		stateOffset_ += index.size();
 	}
 
-	friend std::ostream& operator<<(std::ostream& os, const UFAE& ufae) {
-		TAWriter<label_type>(os).writeOne(ufae.backend);
+	friend std::ostream& operator<<(std::ostream& os, const UFAE& ufae)
+	{
+		TAWriter<label_type>(os).writeOne(ufae.backend_);
 		return os;
 	}
-
 };
 
 #endif

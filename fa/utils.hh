@@ -23,20 +23,14 @@
 // Standard library headers
 #include <ostream>
 #include <set>
+#include <type_traits>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
 template <class T>
-std::vector<T> itov(const T &item) {
-	std::vector<T> vec;
-	vec.push_back(item);
-	return vec;
-}
-
-template <class T>
-struct Index {
-
+struct Index
+{
 	typedef typename std::unordered_map<T, size_t> map_type;
 
 	map_type map;
@@ -92,7 +86,7 @@ struct Index {
 			throw std::runtime_error("Index::translate() : lookup failed");
 		return i->second;
 	}
-	
+
 	// HACK: better keep this static (not virtual)
 	size_t translateOTF(const T& x) {
 		return this->map.insert(std::make_pair(x, this->map.size())).first->second;
@@ -106,13 +100,13 @@ struct Index {
 		dst.clear();
 		for (typename std::vector<T>::const_iterator i = src.begin(); i != src.end(); ++i)
 			dst.push_back(this->translate(*i) + offset);
-	}	
+	}
 
 	void translateOTF(std::vector<size_t>& dst, const std::vector<T>& src, size_t offset = 0) {
 		dst.clear();
 		for (typename std::vector<T>::const_iterator i = src.begin(); i != src.end(); ++i)
 			dst.push_back(this->translateOTF(*i) + offset);
-	}	
+	}
 
 	friend std::ostream& operator<<(std::ostream& os, const Index<T>& x) {
 		os << '[';
@@ -125,7 +119,7 @@ struct Index {
 
 template <class T>
 struct FullIndex : public Index<T> {
-	
+
 	std::vector<T> index;
 
 	void clear() {
@@ -151,46 +145,109 @@ struct FullIndex : public Index<T> {
 		dst.clear();
 		for (typename std::vector<T>::const_iterator i = src.begin(); i != src.end(); ++i)
 			dst.push_back(this->translateOTF(*i) + offset);
-	}	
-
-};
-
-template <class T>
-class Guard {
-	T* obj;
-public:
-	Guard(T* obj) : obj(obj) {}
-	~Guard() {
-		if (this->obj)
-			delete this->obj;
-	}
-	void release() {
-		this->obj = nullptr;
 	}
 };
 
+/**
+ * @brief  Guard of a pointer
+ *
+ * This class serves as a guard of a pointer. It is bound with a pointer to an
+ * object and deletes the object in its destructor. It can be used to release an
+ * allocated object at the end of the scope of the guard.
+ */
 template <class T>
-class ContainerGuard {
-	T* _cont;
+class Guard
+{
+private:  // data members
+
+	/// The pointer to the object to be guarded
+	T* obj_;
+
+public:   // methods
+
+	/**
+	 * @brief  Constructor
+	 *
+	 * @param[in]  obj  Pointer to the guarded object
+	 */
+	Guard(T* obj) :
+		obj_(obj)
+	{ }
+
+	/**
+	 * @brief  Destructor
+	 */
+	~Guard()
+	{
+		// deleting a nullptr is OK
+		delete obj_;
+	}
+
+	/**
+	 * @brief  Releases the object from the guard
+	 */
+	void release()
+	{
+		obj_ = nullptr;
+	}
+};
+
+
+/**
+ * @brief  Guard of a container of pointers
+ *
+ * This class behaves similar to @ref Guard but is bound to containers of
+ * pointers to objects. It deletes all objects in the container in the
+ * destructor.
+ */
+template <class T>
+class ContainerGuard
+{
+	// We can only handle containers of pointers
+	static_assert(std::is_pointer<typename T::value_type>::value,
+	"ContainerGuard can only guard collections of pointers");
+
+private:  // data members
+
+	/// Pointer to the container associated with the guard
+	T* cont_;
 
 private:  // methods
 
 	ContainerGuard(const ContainerGuard&);
 	ContainerGuard& operator=(const ContainerGuard&);
 
-public:
-	ContainerGuard(T& cont) : _cont(&cont) {}
-	~ContainerGuard() {
-		if (this->_cont) {
-			for (typename T::iterator i = this->_cont->begin(); i != this->_cont->end(); ++i) {
-				if (*i)
-					delete *i;
+public:   // methods
+
+	/**
+   * @brief  Constructor from a container
+   */
+	ContainerGuard(T& cont) :
+		cont_(&cont)
+	{ }
+
+	/**
+	 * @brief  Destructor
+	 *
+	 * Deletes the bound object.
+	 */
+	~ContainerGuard()
+	{
+		if (cont_)
+		{
+			for (typename T::value_type i : *cont_)
+			{
+				// deleting a nullptr is OK
+				delete i;
 			}
-			this->_cont->clear();
+
+			cont_->clear();
 		}
 	}
-	void release() {
-		this->_cont = nullptr;
+
+	void release()
+	{
+		cont_ = nullptr;
 	}
 };
 
@@ -213,9 +270,9 @@ struct ContWrapper {
 };
 
 class utils {
-	
+
 public:
-	
+
 	// build equivalence classes
 	static void relBuildClasses(const std::vector<std::vector<bool> >& rel, std::vector<size_t>& headIndex) {
 		headIndex.resize(rel.size());
@@ -264,7 +321,7 @@ public:
 				dst[i][j] = src1[i][j] && src2[i][j];
 		}
 	}
-	
+
 	// transposition
 	static void relInv(std::vector<std::vector<bool> >& dst, const std::vector<std::vector<bool> >& src) {
 		dst.resize(src.size(), std::vector<bool>(src.size()));
@@ -280,14 +337,14 @@ public:
 		for (size_t i = 0; i < src.size(); ++i) {
 			for (size_t j = 0; j < src.size(); ++j) {
 				if (src[i][j])
-					dst[i].push_back(j);					
+					dst[i].push_back(j);
 			}
 		}
 	}
 
 	// intersection	
 	template <class T1, class T2>
-  	static bool checkIntersection(const T1& x, const T2& y) {
+	static bool checkIntersection(const T1& x, const T2& y) {
 		typename T1::const_iterator f1 = x.begin(), l1 = x.end();
 		typename T2::const_iterator f2 = y.begin(), l2 = y.end();
 		while ((f1 != l1) && (f2 != l2)) {
@@ -297,7 +354,7 @@ public:
 		}
 		return false;
 	}
-	
+
 	template <class T>
 	static void setIntersection(std::vector<T>& dst, const std::vector<std::vector<T> >& src) {
 		std::unordered_map<T, size_t> m;
@@ -348,7 +405,7 @@ public:
 
 	// inclusion	
 	template <class T1, class T2>
-  	static bool checkInclusion(const T1& x, const T2& y) {
+	static bool checkInclusion(const T1& x, const T2& y) {
 		typename T1::const_iterator f1 = x.begin(), l1 = x.end();
 		typename T2::const_iterator f2 = y.begin(), l2 = y.end();
 		for ( ; (f1 != l1) && (f2 != l2); ++f2) {

@@ -20,11 +20,23 @@
 #ifndef JUMP_H
 #define JUMP_H
 
+// Forester headers
 #include "abstractinstruction.hh"
 
-class FI_jmp : public AbstractInstruction {
-
+/**
+ * @brief  The jump instruction
+ *
+ * This instruction represents a jump. It is using only during compilation as
+ * an intermediate instruction. After the first compilation phase, the jump
+ * instruction is removed from the microcode. Instead of it, the successors of
+ * all instructions are set correctly.
+ */
+class FI_jmp : public AbstractInstruction
+{
+	/// The target block of the jump
 	const CodeStorage::Block* target_;
+
+	/// The target instruction of the jump
 	AbstractInstruction* next_;
 
 private:  // methods

@@ -58,6 +58,7 @@ add_library(fa SHARED
 	exec_state.cc
 	fixpoint.cc
 	forestaut.cc
+  forestautext.cc
 	integrity.cc
 	jump.cc
 	label.cc
@@ -66,6 +67,7 @@ add_library(fa SHARED
 	plotenum.cc
 	programconfig.cc
 	sequentialinstruction.cc
+  splitting.cc
 	streams.cc
 	symctx.cc
 	symexec.cc
@@ -125,7 +127,7 @@ endif(TEST_ONLY_FAST)
 # tests known to fail now (but shouldn't!)
 set(tests-known-to-fail
           f0021
-          f0031
+          f0031 f0032 f0033
                                                           p0019
                                   p0025 p0026      
           p0041  

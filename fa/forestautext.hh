@@ -105,22 +105,7 @@ public:
 
 public:
 
-	static bool subseteq(const FAE& lhs, const FAE& rhs)
-	{
-		if (lhs.roots.size() != rhs.roots.size())
-			return false;
-
-		if (lhs.connectionGraph.data != rhs.connectionGraph.data)
-			return false;
-
-		for (size_t i = 0; i < lhs.roots.size(); ++i)
-		{
-			if (!TreeAut::subseteq(*lhs.roots[i], *rhs.roots[i]))
-				return false;
-		}
-
-		return true;
-	}
+	static bool subseteq(const FAE& lhs, const FAE& rhs);
 
 	template <class F>
 	static void loadCompatibleFAs(
@@ -153,7 +138,7 @@ public:
 				roots.push_back(std::shared_ptr<TreeAut>(ta));
 
 				// add reachable transitions
-				for (TreeAut::td_iterator k = src.tdStart(cache, itov(trans->lhs()[j]));
+				for (TreeAut::td_iterator k = src.tdStart(cache, {trans->lhs()[j]});
 					k.isValid();
 					k.next())
 				{
