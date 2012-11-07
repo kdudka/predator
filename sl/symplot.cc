@@ -44,7 +44,7 @@
 // implementation of plotHeap()
 struct PlotData {
     typedef std::map<TValId, bool /* isRoot */>             TValues;
-    typedef std::map<TValId, ObjList>                       TLiveObjs;
+    typedef std::map<TValId, FldList>                       TLiveObjs;
     typedef std::pair<int /* ID */, TValId>                 TDangVal;
     typedef std::vector<TDangVal>                           TDangValues;
 
@@ -101,9 +101,9 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
             continue;
 
         // traverse the root
-        ObjList liveObjs;
+        FldList liveObjs;
         sh.gatherLiveObjects(liveObjs, root);
-        BOOST_FOREACH(const ObjHandle &obj, liveObjs) {
+        BOOST_FOREACH(const FldHandle &obj, liveObjs) {
             const TValId valInside = obj.value();
             if (0 < valInside)
                 // schedule the value inside for processing
@@ -220,7 +220,7 @@ void describeVar(PlotData &plot, const TValId rootAt)
     plot.out << "]";
 }
 
-void describeFieldPlacement(PlotData &plot, const ObjHandle &obj, TObjType clt)
+void describeFieldPlacement(PlotData &plot, const FldHandle &obj, TObjType clt)
 {
     SymHeap &sh = plot.sh;
 
@@ -263,7 +263,7 @@ void describeFieldPlacement(PlotData &plot, const ObjHandle &obj, TObjType clt)
     }
 }
 
-void describeObject(PlotData &plot, const ObjHandle &obj, const bool lonely)
+void describeObject(PlotData &plot, const FldHandle &obj, const bool lonely)
 {
     SymHeap &sh = plot.sh;
 
@@ -386,7 +386,7 @@ enum EObjectClass {
 };
 
 struct AtomicObject {
-    ObjHandle       obj;
+    FldHandle       obj;
     EObjectClass    code;
 
     AtomicObject():
@@ -394,13 +394,13 @@ struct AtomicObject {
     {
     }
 
-    AtomicObject(const ObjHandle &obj_, EObjectClass code_):
+    AtomicObject(const FldHandle &obj_, EObjectClass code_):
         obj(obj_),
         code(code_)
     {
     }
 
-    AtomicObject(const ObjHandle &obj_):
+    AtomicObject(const FldHandle &obj_):
         obj(obj_),
         code(isDataPtr(obj.objType())
             ? OC_PTR
@@ -413,7 +413,7 @@ bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
 {
     SymHeap &sh = plot.sh;
 
-    const ObjHandle &obj = ao.obj;
+    const FldHandle &obj = ao.obj;
     CL_BREAK_IF(!obj.isValid());
 
     const char *color = "black";
@@ -522,8 +522,8 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
 {
     SymHeap &sh = plot.sh;
 
-    ObjHandle next;
-    ObjHandle prev;
+    FldHandle next;
+    FldHandle prev;
     const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
         case OK_CONCRETE:
@@ -544,7 +544,7 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
     typedef std::vector<AtomicObject>           TAtomList;
     typedef std::map<TOffset, TAtomList>        TAtomByOff;
     TAtomByOff objByOff;
-    BOOST_FOREACH(const ObjHandle &obj, liveObjs) {
+    BOOST_FOREACH(const FldHandle &obj, liveObjs) {
         EObjectClass code;
         if (obj == next)
             code = OC_NEXT;
@@ -724,10 +724,10 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
 #endif
 
 #if SYMPLOT_DEBUG_DLS
-        ObjList peerObjs;
+        FldList peerObjs;
         sh.gatherLiveObjects(peerObjs, peer);
 #else
-        TObjSet peerObjs;
+        TFldSet peerObjs;
         buildIgnoreList(peerObjs, sh, peer);
 #endif
         // plot all atomic objects inside
@@ -738,7 +738,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
     plot.out << "}\n";
 }
 
-bool plotSimpleRoot(PlotData &plot, const ObjHandle &obj)
+bool plotSimpleRoot(PlotData &plot, const FldHandle &obj)
 {
     SymHeap &sh = plot.sh;
 
@@ -782,7 +782,7 @@ void plotRootObjects(PlotData &plot)
             continue;
 
         // gather live objects
-        ObjList liveObjs;
+        FldList liveObjs;
         sh.gatherLiveObjects(liveObjs, root);
 
 #if !SYMPLOT_FLAT_MODE
@@ -1062,7 +1062,7 @@ void plotNonRootValues(PlotData &plot)
         PlotData::TLiveObjs::const_iterator it = plot.liveObjs.find(val);
         if ((plot.liveObjs.end() != it) && (1 == it->second.size())) {
             // exactly one target
-            const ObjHandle &target = it->second.front();
+            const FldHandle &target = it->second.front();
             plotPointsTo(plot, val, target.objId());
             continue;
         }
@@ -1088,7 +1088,7 @@ void plotNonRootValues(PlotData &plot)
 
 const char* valNullLabel(const SymHeapCore &sh, const TFldId obj)
 {
-    const ObjHandle hdl(const_cast<SymHeapCore &>(sh), obj);
+    const FldHandle hdl(const_cast<SymHeapCore &>(sh), obj);
     const TObjType clt = hdl.objType();
     if (!clt)
         return "[type-free] 0";
@@ -1322,7 +1322,7 @@ void plotFlatEdges(PlotData &plot)
         const TValId root = sh.valRoot(at);
         const TOffset beg = sh.valOffset(at);
 
-        BOOST_FOREACH(const ObjHandle &obj, /* ObjList */ item.second) {
+        BOOST_FOREACH(const FldHandle &obj, /* FldList */ item.second) {
             const TObjType clt = obj.objType();
             const TOffset end = beg + clt->size;
             const TValId val = obj.value();
@@ -1363,7 +1363,7 @@ void plotHasValueEdges(PlotData &plot)
 {
     // plot "hasValue" edges
     BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
-        BOOST_FOREACH(const ObjHandle &obj, /* ObjList */ item.second)
+        BOOST_FOREACH(const FldHandle &obj, /* FldList */ item.second)
             plotHasValue(plot, obj.objId(), obj.value());
 
     // plot "hasValue" edges for uniform block prototypes

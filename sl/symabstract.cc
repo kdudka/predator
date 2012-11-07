@@ -62,9 +62,9 @@ void debugSymAbstract(const bool enable)
 
 // visitor
 struct UnknownValuesDuplicator {
-    TObjSet ignoreList;
+    TFldSet ignoreList;
 
-    bool operator()(const ObjHandle &obj) const {
+    bool operator()(const FldHandle &obj) const {
         if (hasKey(ignoreList, obj))
             return /* continue */ true;
 
@@ -186,13 +186,13 @@ void clonePrototypes(
 
 struct ValueSynchronizer {
     SymHeap            &sh;
-    TObjSet             ignoreList;
+    TFldSet             ignoreList;
 
     ValueSynchronizer(SymHeap &sh_): sh(sh_) { }
 
-    bool operator()(ObjHandle item[2]) const {
-        const ObjHandle &src = item[0];
-        const ObjHandle &dst = item[1];
+    bool operator()(FldHandle item[2]) const {
+        const FldHandle &src = item[0];
+        const FldHandle &dst = item[1];
         if (hasKey(ignoreList, src))
             return /* continue */ true;
 
@@ -217,9 +217,9 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls)
     buildIgnoreList(visitor.ignoreList, sh, dls);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
-    ObjList refs;
+    FldList refs;
     sh.pointedBy(refs, dls);
-    BOOST_FOREACH(const ObjHandle &obj, refs) {
+    BOOST_FOREACH(const FldHandle &obj, refs) {
         visitor.ignoreList.insert(obj);
     }
 

@@ -29,7 +29,7 @@
 struct ProtoFinder {
     std::set<TValId> protos;
 
-    bool operator()(const ObjHandle &sub) {
+    bool operator()(const FldHandle &sub) {
         const TValId val = sub.value();
         if (val <= 0)
             return /* continue */ true;
@@ -48,7 +48,7 @@ class ProtoCollector {
     private:
         TValList               &protoList_;
         const bool              skipDlsPeers_;
-        TObjSet                 ignoreList_;
+        TFldSet                 ignoreList_;
         WorkList<TValId>        wl_;
 
     public:
@@ -58,14 +58,14 @@ class ProtoCollector {
         {
         }
 
-        TObjSet& ignoreList() {
+        TFldSet& ignoreList() {
             return ignoreList_;
         }
 
-        bool operator()(const ObjHandle &obj);
+        bool operator()(const FldHandle &obj);
 };
 
-bool ProtoCollector::operator()(const ObjHandle &obj)
+bool ProtoCollector::operator()(const FldHandle &obj)
 {
     if (hasKey(ignoreList_, obj))
         return /* continue */ true;
@@ -162,9 +162,9 @@ bool protoCheckConsistency(const SymHeap &sh)
 
         const TProtoLevel rootLevel = sh.valTargetProtoLevel(root);
 
-        ObjList ptrs;
+        FldList ptrs;
         sh.gatherLivePointers(ptrs, root);
-        BOOST_FOREACH(const ObjHandle &obj, ptrs) {
+        BOOST_FOREACH(const FldHandle &obj, ptrs) {
             const TProtoLevel level = sh.valTargetProtoLevel(obj.value());
             if (level <= rootLevel)
                 continue;

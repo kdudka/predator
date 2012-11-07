@@ -480,7 +480,7 @@ bool handleMemmoveCore(
     const struct cl_operand &opDst = opList[/* ret */ 0];
     if (CL_OPERAND_VOID != opDst.code) {
         // POSIX says that memmove() returns the value of the first argument
-        const ObjHandle objDst = core.objByOperand(opDst);
+        const FldHandle objDst = core.objByOperand(opDst);
         core.objSetValue(objDst, valDst);
     }
 
@@ -530,7 +530,7 @@ bool handleMemset(
     const struct cl_operand &opDst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != opDst.code) {
         // POSIX says that memset() returns the value of the first argument
-        const ObjHandle objDst = core.objByOperand(opDst);
+        const FldHandle objDst = core.objByOperand(opDst);
         core.objSetValue(objDst, addr);
     }
 
@@ -660,7 +660,7 @@ bool handleStrlen(
             // store the return value of strlen()
             const CustomValue cv(len - IR::rngFromNum(IR::Int1));
             const TValId valResult = core.sh().valWrapCustom(cv);
-            const ObjHandle objDst = core.objByOperand(opDst);
+            const FldHandle objDst = core.objByOperand(opDst);
             core.objSetValue(objDst, valResult);
         }
     }
@@ -778,7 +778,7 @@ bool handleNondetInt(
 
     // set the returned value to a new unknown value
     const struct cl_operand &opDst = opList[0];
-    const ObjHandle objDst = core.objByOperand(opDst);
+    const FldHandle objDst = core.objByOperand(opDst);
     const TValId val = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
     core.objSetValue(objDst, val);
 

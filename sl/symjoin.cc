@@ -150,8 +150,8 @@ struct SymJoinCtx {
     TValSet                     sset1;
     TValSet                     sset2;
 
-    ObjList                     liveList1;
-    ObjList                     liveList2;
+    FldList                     liveList1;
+    FldList                     liveList2;
 
     TValMapBidir                valMap1;
     TValMapBidir                valMap2;
@@ -483,7 +483,7 @@ bool joinValuesByCode(
         const TValId            v1,
         const TValId            v2);
 
-bool bumpNestingLevel(const ObjHandle &obj)
+bool bumpNestingLevel(const FldHandle &obj)
 {
     if (!obj.isValid())
         return false;
@@ -496,7 +496,7 @@ bool bumpNestingLevel(const ObjHandle &obj)
         // do not bump nesting level on concrete objects
         return false;
 
-    TObjSet ignoreList;
+    TFldSet ignoreList;
     buildIgnoreList(ignoreList, sh, root);
     return !hasKey(ignoreList, obj);
 }
@@ -504,9 +504,9 @@ bool bumpNestingLevel(const ObjHandle &obj)
 /// (FLD_INVALID == objDst) means read-only!!!
 bool joinFreshObjTripple(
         SymJoinCtx              &ctx,
-        const ObjHandle         &obj1,
-        const ObjHandle         &obj2,
-        const ObjHandle         &objDst,
+        const FldHandle         &obj1,
+        const FldHandle         &obj2,
+        const FldHandle         &objDst,
         TProtoLevel             ldiff)
 {
     const bool segClone = (!obj1.isValid() || !obj2.isValid());
@@ -592,8 +592,8 @@ bool joinFreshObjTripple(
 struct ObjJoinVisitor {
     SymJoinCtx              &ctx;
     const TProtoLevel       ldiff;
-    TObjSet                 blackList1;
-    TObjSet                 blackList2;
+    TFldSet                 blackList1;
+    TFldSet                 blackList2;
     bool                    noFollow;
 
     ObjJoinVisitor(SymJoinCtx &ctx_, const TProtoLevel ldiff_):
@@ -603,10 +603,10 @@ struct ObjJoinVisitor {
     {
     }
 
-    bool operator()(const ObjHandle item[3]) {
-        const ObjHandle &obj1   = item[0];
-        const ObjHandle &obj2   = item[1];
-        const ObjHandle &objDst = item[2];
+    bool operator()(const FldHandle item[3]) {
+        const FldHandle &obj1   = item[0];
+        const FldHandle &obj2   = item[1];
+        const FldHandle &objDst = item[2];
 
         // check black-list
         if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
@@ -630,8 +630,8 @@ void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TValId root)
 struct SegMatchVisitor {
     SymJoinCtx              &ctx;
     const TProtoLevel       ldiff;
-    TObjSet                 blackList1;
-    TObjSet                 blackList2;
+    TFldSet                 blackList1;
+    TFldSet                 blackList2;
 
     public:
         SegMatchVisitor(SymJoinCtx &ctx_, const TProtoLevel ldiff_):
@@ -640,15 +640,15 @@ struct SegMatchVisitor {
         {
         }
 
-        bool operator()(const ObjHandle item[2]) {
-            const ObjHandle &obj1 = item[0];
-            const ObjHandle &obj2 = item[1];
+        bool operator()(const FldHandle item[2]) {
+            const FldHandle &obj1 = item[0];
+            const FldHandle &obj2 = item[1];
 
             if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
                 // black-listed
                 return true;
 
-            const ObjHandle readOnly(FLD_INVALID);
+            const FldHandle readOnly(FLD_INVALID);
             return joinFreshObjTripple(ctx, obj1, obj2, readOnly, ldiff);
         }
 };
@@ -1990,7 +1990,7 @@ class MayExistVisitor {
             lookThrough_ = enable;
         }
 
-        bool operator()(const ObjHandle &sub) {
+        bool operator()(const FldHandle &sub) {
             if (!isDataPtr(sub.objType()))
                 // not a pointer
                 return /* continue */ true;
@@ -2417,7 +2417,7 @@ TValId joinDstValue(
         return VAL_INVALID;
 }
 
-typedef std::pair<ObjHandle, ObjHandle> THdlPair;
+typedef std::pair<FldHandle, FldHandle> THdlPair;
 
 template <class TItem, class TBlackList>
 bool setDstValuesCore(
@@ -2425,14 +2425,14 @@ bool setDstValuesCore(
         const TItem             &rItem,
         const TBlackList        &blackList)
 {
-    const ObjHandle &objDst = rItem.first;
+    const FldHandle &objDst = rItem.first;
     CL_BREAK_IF(!objDst.isValid());
     if (hasKey(blackList, objDst))
         return true;
 
     const THdlPair &orig = rItem.second;
-    const ObjHandle &obj1 = orig.first;
-    const ObjHandle &obj2 = orig.second;
+    const FldHandle &obj1 = orig.first;
+    const FldHandle &obj2 = orig.second;
     CL_BREAK_IF(!obj1.isValid() && !obj2.isValid());
 
     const TValId v1 = obj1.value();
@@ -2469,23 +2469,23 @@ bool setDstValuesCore(
     return true;
 }
 
-bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0)
+bool setDstValues(SymJoinCtx &ctx, const TFldSet *blackList = 0)
 {
     SymHeap &dst = ctx.dst;
     SymHeap &sh1 = ctx.sh1;
     SymHeap &sh2 = ctx.sh2;
 
-    typedef std::map<ObjHandle /* objDst */, THdlPair> TMap;
+    typedef std::map<FldHandle /* objDst */, THdlPair> TMap;
     TMap rMap;
 
     // reverse mapping for ctx.liveList1
     const TValMap &vMap1 = ctx.valMap1[0];
-    BOOST_FOREACH(const ObjHandle &objSrc, ctx.liveList1) {
+    BOOST_FOREACH(const FldHandle &objSrc, ctx.liveList1) {
         const TValId rootSrcAt = sh1.valRoot(objSrc.placedAt());
         const TValId rootDstAt = roMapLookup(vMap1, rootSrcAt);
-        const ObjHandle objDst = translateObjId(dst, sh1, rootDstAt, objSrc);
+        const FldHandle objDst = translateObjId(dst, sh1, rootDstAt, objSrc);
         if (!hasKey(rMap, objDst))
-            rMap[objDst].second = ObjHandle(FLD_INVALID);
+            rMap[objDst].second = FldHandle(FLD_INVALID);
 
         // objDst -> obj1
         rMap[objDst].first = objSrc;
@@ -2493,18 +2493,18 @@ bool setDstValues(SymJoinCtx &ctx, const TObjSet *blackList = 0)
 
     // reverse mapping for ctx.liveList2
     const TValMap &vMap2 = ctx.valMap2[0];
-    BOOST_FOREACH(const ObjHandle &objSrc, ctx.liveList2) {
+    BOOST_FOREACH(const FldHandle &objSrc, ctx.liveList2) {
         const TValId rootSrcAt = sh2.valRoot(objSrc.placedAt());
         const TValId rootDstAt = roMapLookup(vMap2, rootSrcAt);
-        const ObjHandle objDst = translateObjId(dst, sh2, rootDstAt, objSrc);
+        const FldHandle objDst = translateObjId(dst, sh2, rootDstAt, objSrc);
         if (!hasKey(rMap, objDst))
-            rMap[objDst].first = ObjHandle(FLD_INVALID);
+            rMap[objDst].first = FldHandle(FLD_INVALID);
 
         // objDst -> obj2
         rMap[objDst].second = objSrc;
     }
 
-    TObjSet emptyBlackList;
+    TFldSet emptyBlackList;
     if (!blackList)
         blackList = &emptyBlackList;
 
@@ -2545,7 +2545,7 @@ bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExist = 0)
 struct MayExistLevelUpdater {
     SymJoinCtx         &ctx;
     const TValId        rootDst;
-    TObjSet             ignoreList;
+    TFldSet             ignoreList;
 
     MayExistLevelUpdater(SymJoinCtx &ctx_, const TValId rootDst_):
         ctx(ctx_),
@@ -2554,7 +2554,7 @@ struct MayExistLevelUpdater {
         buildIgnoreList(ignoreList, ctx.dst, rootDst);
     }
 
-    bool operator()(const ObjHandle &sub) const {
+    bool operator()(const FldHandle &sub) const {
         if (hasKey(this->ignoreList, sub))
             return /* continue */ true;
 
@@ -2784,9 +2784,9 @@ void killUniBlocksUnderBindingPtrs(
         const TValId            root)
 {
     // go through next/prev pointers
-    TObjSet blackList;
+    TFldSet blackList;
     buildIgnoreList(blackList, sh, root, bf);
-    BOOST_FOREACH(const ObjHandle &obj, blackList) {
+    BOOST_FOREACH(const FldHandle &obj, blackList) {
         if (VAL_NULL != obj.value())
             continue;
 
@@ -2856,7 +2856,7 @@ bool joinDataCore(
         return false;
 
     // batch assignment of all values in ctx.dst
-    TObjSet blackList;
+    TFldSet blackList;
     buildIgnoreList(blackList, ctx.dst, rootDstAt, off);
     if (!setDstValues(ctx, &blackList))
         return false;
@@ -2990,13 +2990,13 @@ void transferContentsOfGhost(
         const TValId            dst,
         const TValId            ghost)
 {
-    TObjSet ignoreList;
+    TFldSet ignoreList;
     buildIgnoreList(ignoreList, sh, dst, bf);
 
-    ObjList live;
+    FldList live;
     sh.gatherLiveObjects(live, ghost);
-    BOOST_FOREACH(const ObjHandle &objGhost, live) {
-        const ObjHandle objDst = translateObjId(sh, sh, dst, objGhost);
+    BOOST_FOREACH(const FldHandle &objGhost, live) {
+        const FldHandle objDst = translateObjId(sh, sh, dst, objGhost);
         if (hasKey(ignoreList, objDst))
             // preserve binding pointers
             continue;

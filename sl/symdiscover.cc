@@ -141,11 +141,11 @@ bool validatePointingObjects(
     allowedReferers.insert(root);
 
     // collect all objects pointing at/inside the object
-    ObjList refs;
+    FldList refs;
     sh.pointedBy(refs, root);
 
     // unless this is a prototype, disallow self loops from _binding_ pointers
-    TObjSet blackList;
+    TFldSet blackList;
     if (VAL_INVALID != prev || VAL_INVALID != next)
         buildIgnoreList(blackList, sh, root, off);
 
@@ -156,7 +156,7 @@ bool validatePointingObjects(
     if (isDlsBinding(off))
         whiteList.insert(sh.valByOffset(next, off.prev));
 
-    BOOST_FOREACH(const ObjHandle &obj, refs) {
+    BOOST_FOREACH(const FldHandle &obj, refs) {
         if (hasKey(blackList, obj))
             return false;
 
@@ -296,9 +296,9 @@ TValId jumpToNextObj(
 
 bool isPointedByVar(SymHeap &sh, const TValId root)
 {
-    ObjList refs;
+    FldList refs;
     sh.pointedBy(refs, root);
-    BOOST_FOREACH(const ObjHandle obj, refs) {
+    BOOST_FOREACH(const FldHandle obj, refs) {
         const TValId at = obj.placedAt();
         const EValueTarget code = sh.valTarget(at);
         if (isProgramVar(code))
@@ -459,7 +459,7 @@ class PtrFinder {
             return offFound_;
         }
 
-    bool operator()(const ObjHandle &sub) {
+    bool operator()(const FldHandle &sub) {
         const TValId val = sub.value();
         if (val <= 0)
             return /* continue */ true;
@@ -510,7 +510,7 @@ class ProbeEntryVisitor {
         {
         }
 
-        bool operator()(const ObjHandle &sub) const
+        bool operator()(const FldHandle &sub) const
         {
             SymHeap &sh = *static_cast<SymHeap *>(sub.sh());
             const TValId next = sub.value();

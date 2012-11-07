@@ -325,7 +325,7 @@ inline bool operator<(const CVar &a, const CVar &b)
         return a.inst < b.inst;
 }
 
-class ObjList;
+class FldList;
 
 /// SymHeapCore - the elementary representation of the state of program memory
 class SymHeapCore {
@@ -365,13 +365,13 @@ class SymHeapCore {
          * @param liveOnly if true, exclude objects that are no longer alive
          * @note The operation may return from 0 to n objects.
          */
-        void usedBy(ObjList &dst, TValId val, bool liveOnly = false) const;
+        void usedBy(FldList &dst, TValId val, bool liveOnly = false) const;
 
         /// return how many objects have the value inside
         unsigned usedByCount(TValId val) const;
 
         /// return all objects that point at/inside the given root entity
-        void pointedBy(ObjList &dst, TValId root) const;
+        void pointedBy(FldList &dst, TValId root) const;
 
         /// return how many objects point at/inside the given root entity
         unsigned pointedByCount(TValId root) const;
@@ -464,10 +464,10 @@ class SymHeapCore {
         void gatherRootObjects(TValList &dst, bool (*)(EValueTarget) = 0) const;
 
         /// list of live objects (including ptrs) owned by the given root entity
-        void gatherLiveObjects(ObjList &dst, TValId root) const;
+        void gatherLiveObjects(FldList &dst, TValId root) const;
 
         /// list of live pointers owned by the given root entity
-        void gatherLivePointers(ObjList &dst, TValId root) const;
+        void gatherLivePointers(FldList &dst, TValId root) const;
 
         /// list of uninitialized and nullified uniform blocks
         void gatherUniformBlocks(TUniBlockMap &dst, TValId root) const;
@@ -487,7 +487,7 @@ class SymHeapCore {
 
         /**
          * composite object given by val (applicable only on VT_COMPOSITE vals)
-         * @todo should we operate on ObjHandle instead?
+         * @todo should we operate on FldHandle instead?
          */
         TFldId valGetComposite(TValId val) const;
 
@@ -539,12 +539,12 @@ class SymHeapCore {
         /// decrement the external reference count (may trigger its destruction)
         void objLeave(TFldId);
 
-        /// ObjHandle takes care of external reference count
-        friend class ObjHandle;
+        /// FldHandle takes care of external reference count
+        friend class FldHandle;
         friend class PtrHandle;
 
     protected:
-        // these should be accessed indirectly via ObjHandle
+        // these should be accessed indirectly via FldHandle
         TValId valueOf(TFldId obj);
         TValId placedAt(TFldId obj);
         TObjType objType(TFldId obj) const;
@@ -564,22 +564,22 @@ class SymHeapCore {
         Private *d;
 };
 
-class ObjHandle {
+class FldHandle {
     public:
-        ObjHandle():
+        FldHandle():
             sh_(0),
             id_(FLD_INVALID)
         {
         }
 
-        explicit ObjHandle(const TFldId special):
+        explicit FldHandle(const TFldId special):
             sh_(0),
             id_(special)
         {
             CL_BREAK_IF(0 < special);
         }
 
-        ObjHandle(SymHeapCore &sh, TValId addr, TObjType clt):
+        FldHandle(SymHeapCore &sh, TValId addr, TObjType clt):
             sh_(&sh),
             id_(sh.objAt(addr, clt))
         {
@@ -587,7 +587,7 @@ class ObjHandle {
                 sh_->objEnter(id_);
         }
 
-        ObjHandle(const ObjHandle &tpl):
+        FldHandle(const FldHandle &tpl):
             sh_(tpl.sh_),
             id_(tpl.id_)
         {
@@ -595,7 +595,7 @@ class ObjHandle {
                 sh_->objEnter(id_);
         }
 
-        ObjHandle(SymHeapCore &sh, const ObjHandle &tpl):
+        FldHandle(SymHeapCore &sh, const FldHandle &tpl):
             sh_(&sh),
             id_(tpl.id_)
         {
@@ -603,12 +603,12 @@ class ObjHandle {
                 sh_->objEnter(id_);
         }
 
-        ~ObjHandle() {
+        ~FldHandle() {
             if (0 < id_)
                 sh_->objLeave(id_);
         }
 
-        ObjHandle& operator=(const ObjHandle &tpl) {
+        FldHandle& operator=(const FldHandle &tpl) {
             if (0 < id_)
                 sh_->objLeave(id_);
 
@@ -668,7 +668,7 @@ class ObjHandle {
         }
 
     protected:
-        ObjHandle(SymHeapCore &sh, TFldId id):
+        FldHandle(SymHeapCore &sh, TFldId id):
             sh_(&sh),
             id_(id)
         {
@@ -689,8 +689,8 @@ class ObjHandle {
         TFldId           id_;
 };
 
-/// this allows to insert ObjHandle instances into std::set
-inline bool operator<(const ObjHandle &a, const ObjHandle &b)
+/// this allows to insert FldHandle instances into std::set
+inline bool operator<(const FldHandle &a, const FldHandle &b)
 {
     if (a.sh() < b.sh())
         return true;
@@ -701,30 +701,30 @@ inline bool operator<(const ObjHandle &a, const ObjHandle &b)
     return (a.objId() < b.objId());
 }
 
-inline bool operator==(const ObjHandle &a, const ObjHandle &b)
+inline bool operator==(const FldHandle &a, const FldHandle &b)
 {
     return (a.sh()    == b.sh())
         && (a.objId() == b.objId());
 }
 
-inline bool operator!=(const ObjHandle &a, const ObjHandle &b)
+inline bool operator!=(const FldHandle &a, const FldHandle &b)
 {
     return !operator==(a, b);
 }
 
-class PtrHandle: public ObjHandle {
+class PtrHandle: public FldHandle {
     public:
         PtrHandle(SymHeapCore &sh, TValId addr):
-            ObjHandle(sh, sh.ptrAt(addr))
+            FldHandle(sh, sh.ptrAt(addr))
         {
         }
 };
 
 /// ugly, but typedefs do not support partial declarations
-class ObjList: public std::vector<ObjHandle> { };
+class FldList: public std::vector<FldHandle> { };
 
 /// set of object handles
-typedef std::set<ObjHandle>                             TObjSet;
+typedef std::set<FldHandle>                             TFldSet;
 
 /// a type used for minimal segment length (0+, 1+, ...)
 typedef short                                           TMinLen;

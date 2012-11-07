@@ -468,7 +468,7 @@ TValId SymProc::targetAt(const struct cl_operand &op)
     return sh_.valByOffset(addr, off);
 }
 
-ObjHandle SymProc::objByOperand(const struct cl_operand &op)
+FldHandle SymProc::objByOperand(const struct cl_operand &op)
 {
     CL_BREAK_IF(seekRefAccessor(op.accessor));
 
@@ -477,17 +477,17 @@ ObjHandle SymProc::objByOperand(const struct cl_operand &op)
     const EValueOrigin origin = sh_.valOrigin(at);
     if (VO_DEREF_FAILED == origin)
         // we are already on the error path
-        return ObjHandle(FLD_DEREF_FAILED);
+        return FldHandle(FLD_DEREF_FAILED);
 
     // check for invalid dereference
     const TObjType cltTarget = op.type;
     if (this->checkForInvalidDeref(at, cltTarget->size)) {
         this->printBackTrace(ML_ERROR);
-        return ObjHandle(FLD_DEREF_FAILED);
+        return FldHandle(FLD_DEREF_FAILED);
     }
 
     // resolve the target object
-    const ObjHandle obj(sh_, at, op.type);
+    const FldHandle obj(sh_, at, op.type);
     if (!obj.isValid())
         CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
 
@@ -500,7 +500,7 @@ TValId SymProc::valFromObj(const struct cl_operand &op)
     if (seekRefAccessor(op.accessor))
         return this->targetAt(op);
 
-    const ObjHandle handle = this->objByOperand(op);
+    const FldHandle handle = this->objByOperand(op);
     if (handle.isValid())
         return handle.value();
 
@@ -554,7 +554,7 @@ bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op)
     return true;
 }
 
-void digRootTypeInfo(SymHeap &sh, const ObjHandle &lhs, TValId rhs)
+void digRootTypeInfo(SymHeap &sh, const FldHandle &lhs, TValId rhs)
 {
     const EValueTarget code = sh.valTarget(rhs);
     if (!isPossibleToDeref(code))
@@ -605,7 +605,7 @@ enum EPointerKind {
 // if we are going to write a pointer, check whether we have enough space for it
 TValId ptrObjectEncoderCore(
         SymProc                    &proc,
-        const ObjHandle            &dst,
+        const FldHandle            &dst,
         const TValId                val,
         const EPointerKind          code)
 {
@@ -637,7 +637,7 @@ TValId ptrObjectEncoderCore(
     return sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
 }
 
-TValId ptrObjectEncoder(SymProc &proc, const ObjHandle &dst, TValId val)
+TValId ptrObjectEncoder(SymProc &proc, const FldHandle &dst, TValId val)
 {
     return ptrObjectEncoderCore(proc, dst, val, PK_DATA);
 }
@@ -646,7 +646,7 @@ TValId ptrObjectEncoder(SymProc &proc, const ObjHandle &dst, TValId val)
 // TODO: allow overflow detection for target types >= sizeof(long) on host
 TValId integralEncoder(
         SymProc                    &proc,
-        const ObjHandle            &dst,
+        const FldHandle            &dst,
         const TValId                val,
         const IR::Range            &rngOrig)
 {
@@ -698,7 +698,7 @@ TValId integralEncoder(
     return proc.sh().valWrapCustom(cv);
 }
 
-TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val)
+TValId customValueEncoder(SymProc &proc, const FldHandle &dst, TValId val)
 {
     SymHeap &sh = proc.sh();
     const CustomValue cv = sh.valUnwrapCustom(val);
@@ -726,7 +726,7 @@ TValId customValueEncoder(SymProc &proc, const ObjHandle &dst, TValId val)
     return VAL_INVALID;
 }
 
-void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs)
+void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
 {
     if (!lhs.isValid()) {
         CL_ERROR_MSG(proc.lw(), "invalid L-value");
@@ -739,7 +739,7 @@ void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs)
     CL_BREAK_IF(!isPossibleToDeref(codeLhs));
 
     // generic prototype for a value encoder
-    TValId (*encode)(SymProc &, const ObjHandle &obj, const TValId val) = 0;
+    TValId (*encode)(SymProc &, const FldHandle &obj, const TValId val) = 0;
 
     const EValueTarget codeRhs = sh.valTarget(rhs);
     if (isPossibleToDeref(codeRhs))
@@ -769,7 +769,7 @@ void objSetAtomicVal(SymProc &proc, const ObjHandle &lhs, TValId rhs)
     lm.leave();
 }
 
-void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs)
+void SymProc::objSetValue(const FldHandle &lhs, TValId rhs)
 {
     const TValId lhsAt = lhs.placedAt();
     CL_BREAK_IF(!isPossibleToDeref(sh_.valTarget(lhsAt)));
@@ -796,7 +796,7 @@ void SymProc::objSetValue(const ObjHandle &lhs, TValId rhs)
     }
 
     // resolve rhs
-    const ObjHandle compObj(sh_, sh_.valGetComposite(rhs));
+    const FldHandle compObj(sh_, sh_.valGetComposite(rhs));
     const TValId rhsAt = compObj.placedAt();
 
     // wrap the size of the object being assigned as a heap value
@@ -1201,7 +1201,7 @@ void SymExecCore::execStackRestore()
     }
 }
 
-bool lhsFromOperand(ObjHandle *pLhs, SymProc &proc, const struct cl_operand &op)
+bool lhsFromOperand(FldHandle *pLhs, SymProc &proc, const struct cl_operand &op)
 {
     if (seekRefAccessor(op.accessor))
         CL_BREAK_IF("lhs not an l-value");
@@ -1219,7 +1219,7 @@ void SymExecCore::execStackAlloc(
         const TSizeRange                &size)
 {
     // resolve lhs
-    ObjHandle lhs;
+    FldHandle lhs;
     if (!lhsFromOperand(&lhs, *this, opLhs))
         // error alredy emitted
         return;
@@ -1252,7 +1252,7 @@ void SymExecCore::execHeapAlloc(
         const bool                      nullified)
 {
     // resolve lhs
-    ObjHandle lhs;
+    FldHandle lhs;
     if (!lhsFromOperand(&lhs, *this, insn.operands[/* dst */ 0]))
         // error alredy emitted
         return;
@@ -1276,7 +1276,7 @@ malloc/calloc is implementation-defined");
         Trace::waiveCloneOperation(oomHeap);
 
         // OOM state simulation
-        const ObjHandle oomLhs(oomHeap, lhs);
+        const FldHandle oomLhs(oomHeap, lhs);
         oomCore.objSetValue(oomLhs, VAL_NULL);
         oomCore.killInsn(insn);
         dst.insert(oomHeap);
@@ -2206,7 +2206,7 @@ template <int ARITY>
 void SymExecCore::execOp(const CodeStorage::Insn &insn)
 {
     // resolve lhs
-    ObjHandle lhs;
+    FldHandle lhs;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
     if (!lhsFromOperand(&lhs, *this, dst))
         // error alredy emitted
@@ -2243,9 +2243,9 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn)
     if (!isDataPtr(dst.type) && VO_UNKNOWN == sh_.valOrigin(valResult)) {
         const TValId root = sh_.valRoot(lhs.placedAt());
 
-        ObjList liveObjs;
+        FldList liveObjs;
         sh_.gatherLiveObjects(liveObjs, root);
-        BOOST_FOREACH(const ObjHandle &obj, liveObjs)
+        BOOST_FOREACH(const FldHandle &obj, liveObjs)
             if (obj == lhs)
                 goto already_alive;
 

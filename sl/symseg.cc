@@ -272,7 +272,7 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
 
         if (root != seg) {
             // put the shifted address of DLS peer to the list of seen values
-            const ObjHandle ptrPrev = prevPtrFromSeg(sh, root);
+            const FldHandle ptrPrev = prevPtrFromSeg(sh, root);
             const TValId valPrev = ptrPrev.value();
             val = const_cast<SymHeap &>(sh).valByOffset(valPrev, shiftBy);
         }

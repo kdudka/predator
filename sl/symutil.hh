@@ -102,11 +102,11 @@ TValId translateValProto(
         const SymHeap           &src,
         const TValId             valProto);
 
-inline ObjHandle translateObjId(
+inline FldHandle translateObjId(
         SymHeap                 &dst,
         SymHeap                 &src,
         const TValId            dstRootAt,
-        const ObjHandle         &srcObj)
+        const FldHandle         &srcObj)
 {
     // gather properties of the object in 'src'
     const TValId srcAt = srcObj.placedAt();
@@ -115,7 +115,7 @@ inline ObjHandle translateObjId(
 
     // use them to obtain the corresponding object in 'dst'
     const TValId dstAt = dst.valByOffset(dstRootAt, off);
-    return ObjHandle(dst, dstAt, clt);
+    return FldHandle(dst, dstAt, clt);
 }
 
 inline TValId valOfPtrAt(SymHeap &sh, TValId at)
@@ -255,9 +255,9 @@ bool /* complete */ traverseCore(
     const TValId rootAt = sh.valRoot(at);
     const TOffset offRoot = sh.valOffset(at);
 
-    ObjList objs;
+    FldList objs;
     (sh.*method)(objs, rootAt);
-    BOOST_FOREACH(const ObjHandle &obj, objs) {
+    BOOST_FOREACH(const FldHandle &obj, objs) {
         const TOffset off = sh.valOffset(obj.placedAt());
         if (off < offRoot)
             // do not go above the starting point
@@ -341,9 +341,9 @@ bool /* complete */ traverseLiveObjsGeneric(
         if (root < 0)
             continue;
 
-        ObjList objs;
+        FldList objs;
         sh.gatherLiveObjects(objs, root);
-        BOOST_FOREACH(const ObjHandle &obj, objs) {
+        BOOST_FOREACH(const FldHandle &obj, objs) {
             const TValId addr = obj.placedAt();
             const TOffset off = sh.valOffset(addr) - offs[i];
             if (off < 0)
@@ -361,12 +361,12 @@ bool /* complete */ traverseLiveObjsGeneric(
         const TOffset  off = item.first;
         const TObjType clt = item.second;
 
-        ObjHandle objs[N];
+        FldHandle objs[N];
         for (unsigned i = 0; i < N; ++i) {
             SymHeap &sh = *heaps[i];
 
             const TValId addr = sh.valByOffset(roots[i], offs[i] + off);
-            objs[i] = ObjHandle(sh, addr, clt);
+            objs[i] = FldHandle(sh, addr, clt);
         }
 
         if (!visitor(objs))

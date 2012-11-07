@@ -114,7 +114,7 @@ class SymProc {
 
     public:
         /// obtain a heap object corresponding to the given operand
-        ObjHandle objByOperand(const struct cl_operand &op);
+        FldHandle objByOperand(const struct cl_operand &op);
 
         /// obtain a heap value corresponding to the given operand
         TValId valFromOperand(const struct cl_operand &op);
@@ -123,7 +123,7 @@ class SymProc {
         bool fncFromOperand(int *pUid, const struct cl_operand &op);
 
         /// high-level interface to SymHeap::objSetValue()
-        void objSetValue(const ObjHandle &lhs, TValId rhs);
+        void objSetValue(const FldHandle &lhs, TValId rhs);
 
         /// high-level interface to SymHeap::valDestroyTarget()
         void valDestroyTarget(TValId at);

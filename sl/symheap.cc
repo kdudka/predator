@@ -1566,7 +1566,7 @@ TValId SymHeapCore::valueOf(TFldId obj)
     return d->objInit(obj);
 }
 
-void SymHeapCore::usedBy(ObjList &dst, TValId val, bool liveOnly) const
+void SymHeapCore::usedBy(FldList &dst, TValId val, bool liveOnly) const
 {
     if (VAL_NULL == val)
         // we do not track uses of special values
@@ -1578,7 +1578,7 @@ void SymHeapCore::usedBy(ObjList &dst, TValId val, bool liveOnly) const
     if (!liveOnly) {
         // dump everything
         BOOST_FOREACH(const TFldId obj, usedBy)
-            dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
+            dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), obj));
 
         return;
     }
@@ -1595,7 +1595,7 @@ void SymHeapCore::usedBy(ObjList &dst, TValId val, bool liveOnly) const
 
         // check if the object is alive
         if (hasKey(rootData->liveObjs, obj))
-            dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
+            dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), obj));
     }
 }
 
@@ -1609,7 +1609,7 @@ unsigned SymHeapCore::usedByCount(TValId val) const
     return valData->usedBy.size();
 }
 
-void SymHeapCore::pointedBy(ObjList &dst, TValId root) const
+void SymHeapCore::pointedBy(FldList &dst, TValId root) const
 {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
@@ -1618,7 +1618,7 @@ void SymHeapCore::pointedBy(ObjList &dst, TValId root) const
 
     const TFldIdSet &usedBy = rootData->usedByGl;
     BOOST_FOREACH(const TFldId obj, usedBy)
-        dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
+        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), obj));
 }
 
 unsigned SymHeapCore::pointedByCount(TValId root) const
@@ -1748,7 +1748,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
     return imageAt;
 }
 
-void SymHeapCore::gatherLivePointers(ObjList &dst, TValId root) const
+void SymHeapCore::gatherLivePointers(FldList &dst, TValId root) const
 {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
@@ -1759,7 +1759,7 @@ void SymHeapCore::gatherLivePointers(ObjList &dst, TValId root) const
             continue;
 
         const TFldId obj = item.first;
-        dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
+        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), obj));
     }
 }
 
@@ -1785,7 +1785,7 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const
     }
 }
 
-void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const
+void SymHeapCore::gatherLiveObjects(FldList &dst, TValId root) const
 {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
@@ -1807,7 +1807,7 @@ void SymHeapCore::gatherLiveObjects(ObjList &dst, TValId root) const
         }
 
         const TFldId obj = item.first;
-        dst.push_back(ObjHandle(*const_cast<SymHeapCore *>(this), obj));
+        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), obj));
     }
 }
 

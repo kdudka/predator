@@ -256,7 +256,7 @@ void SymExecEngine::execReturn()
         CL_BREAK_IF(VAL_INVALID == val);
 
         sh.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, src.type);
-        const ObjHandle ret(sh, VAL_ADDR_OF_RET, src.type);
+        const FldHandle ret(sh, VAL_ADDR_OF_RET, src.type);
         proc.objSetValue(ret, val);
     }
 
@@ -1051,7 +1051,7 @@ fail:
             : VO_UNKNOWN;
 
         const TValId val = entry.valCreate(VT_UNKNOWN, origin);
-        const ObjHandle obj = proc.objByOperand(dst);
+        const FldHandle obj = proc.objByOperand(dst);
         if (obj.isValid())
             proc.objSetValue(obj, val);
     }

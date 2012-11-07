@@ -262,7 +262,7 @@ class ValueComparator {
         {
         }
 
-        bool operator()(ObjHandle item[2]) {
+        bool operator()(FldHandle item[2]) {
             const TValId v1 = item[0].value();
             const TValId v2 = item[1].value();
 

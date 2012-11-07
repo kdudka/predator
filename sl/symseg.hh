@@ -79,7 +79,7 @@ inline TValId nextValFromSeg(const SymHeap &sh, TValId seg)
     if (OK_OBJ_OR_NULL == sh.valTargetKind(seg))
         return VAL_NULL;
 
-    const ObjHandle ptrNext = nextPtrFromSeg(sh, seg);
+    const FldHandle ptrNext = nextPtrFromSeg(sh, seg);
     return ptrNext.value();
 }
 
@@ -203,13 +203,13 @@ inline bool objWithBinding(const SymHeap &sh, const TValId root)
 TValId segClone(SymHeap &sh, const TValId root);
 
 inline void buildIgnoreList(
-        TObjSet                 &ignoreList,
+        TFldSet                 &ignoreList,
         const SymHeap           &sh,
         const TValId            at)
 {
     SymHeap &writable = const_cast<SymHeap &>(sh);
     TOffset off;
-    ObjHandle tmp;
+    FldHandle tmp;
 
     const EObjKind kind = sh.valTargetKind(at);
     switch (kind) {
@@ -235,7 +235,7 @@ inline void buildIgnoreList(
 }
 
 inline void buildIgnoreList(
-        TObjSet                 &ignoreList,
+        TFldSet                 &ignoreList,
         SymHeap                 &sh,
         const TValId            at,
         const BindingOff        &off)

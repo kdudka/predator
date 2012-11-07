@@ -62,7 +62,7 @@ class UniBlockWriter {
 
 struct DeepCopyData {
     typedef std::map<TValId     /* seg */, TMinLen   /* len */> TSegLengths;
-    typedef std::pair<ObjHandle /* src */, ObjHandle /* dst */> TItem;
+    typedef std::pair<FldHandle /* src */, FldHandle /* dst */> TItem;
     typedef std::set<CVar>                                      TCut;
 
     SymHeap             &src;
@@ -92,9 +92,9 @@ class DCopyObjVisitor {
     public:
         DCopyObjVisitor(DeepCopyData &dc): dc_(dc) { }
 
-        bool operator()(const ObjHandle item[2]) {
-            const ObjHandle &objSrc = item[/* src */ 0];
-            const ObjHandle &objDst = item[/* dst */ 1];
+        bool operator()(const FldHandle item[2]) {
+            const FldHandle &objSrc = item[/* src */ 0];
+            const FldHandle &objDst = item[/* dst */ 1];
 
             const TValId srcAt = objSrc.placedAt();
             const TValId dstAt = objDst.placedAt();
@@ -238,7 +238,7 @@ void trackUses(DeepCopyData &dc, TValId valSrc)
         return;
 
     SymHeap &sh = dc.src;
-    ObjList uses;
+    FldList uses;
 
     const TValId rootSrcAt = sh.valRoot(valSrc);
     if (VAL_NULL == rootSrcAt)
@@ -252,7 +252,7 @@ void trackUses(DeepCopyData &dc, TValId valSrc)
         sh.usedBy(uses, valSrc, /* liveOnly */ true);
 
     // go from the value backward
-    BOOST_FOREACH(const ObjHandle &objSrc, uses) {
+    BOOST_FOREACH(const FldHandle &objSrc, uses) {
         const TValId srcAt = objSrc.placedAt();
         const EValueTarget code = sh.valTarget(srcAt);
         if (!isPossibleToDeref(code))
@@ -302,8 +302,8 @@ void deepCopy(DeepCopyData &dc)
 
     DeepCopyData::TItem item;
     while (dc.wl.next(item)) {
-        const ObjHandle &objSrc = item.first;
-        const ObjHandle &objDst = item.second;
+        const FldHandle &objSrc = item.first;
+        const FldHandle &objDst = item.second;
         CL_BREAK_IF(!objSrc.isValid() || !objDst.isValid());
 
         // read the address

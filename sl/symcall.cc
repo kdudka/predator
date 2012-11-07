@@ -294,8 +294,8 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh)
     SymProc proc(sh, &callerSiteBt);
     proc.setLocation(&op.data.var->loc);
 
-    const ObjHandle objDst = proc.objByOperand(op);
-    const ObjHandle objSrc(sh, VAL_ADDR_OF_RET, op.type);
+    const FldHandle objDst = proc.objByOperand(op);
+    const FldHandle objSrc(sh, VAL_ADDR_OF_RET, op.type);
     TValId val;
     if (objSrc.isValid()) {
         val = objSrc.value();
@@ -699,7 +699,7 @@ void setCallArgs(
         CL_BREAK_IF(VAL_INVALID == val);
 
         // set the value of lhs accordingly
-        const ObjHandle argObj(sh, argAddr, clt);
+        const FldHandle argObj(sh, argAddr, clt);
         proc.objSetValue(argObj, val);
     }
 
