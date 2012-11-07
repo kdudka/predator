@@ -156,15 +156,15 @@ bool validatePointingObjects(
     if (isDlsBinding(off))
         whiteList.insert(sh.valByOffset(next, off.prev));
 
-    BOOST_FOREACH(const FldHandle &obj, refs) {
-        if (hasKey(blackList, obj))
+    BOOST_FOREACH(const FldHandle &fld, refs) {
+        if (hasKey(blackList, fld))
             return false;
 
-        const TValId at = obj.placedAt();
+        const TValId at = fld.placedAt();
         if (hasKey(whiteList, at))
             continue;
 
-        if (allowHeadPtr && (obj.value() == headAddr))
+        if (allowHeadPtr && (fld.value() == headAddr))
             continue;
 
         if (hasKey(allowedReferers, sh.valRoot(at)))
@@ -298,8 +298,8 @@ bool isPointedByVar(SymHeap &sh, const TValId root)
 {
     FldList refs;
     sh.pointedBy(refs, root);
-    BOOST_FOREACH(const FldHandle obj, refs) {
-        const TValId at = obj.placedAt();
+    BOOST_FOREACH(const FldHandle fld, refs) {
+        const TValId at = fld.placedAt();
         const EValueTarget code = sh.valTarget(at);
         if (isProgramVar(code))
             return true;

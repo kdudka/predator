@@ -383,7 +383,7 @@ class CallCacheHitNode: public Node {
         /**
          * @param entry trace representing the call cache entry
          * @param result trace representing a cached call result (without frame)
-         * @param fnc a CodeStorage::Fnc obj representing the called function
+         * @param fnc a CodeStorage::Fnc fld representing the called function
          */
         CallCacheHitNode(Node *entry, Node *result, const TFnc fnc):
             Node(entry, result),
@@ -427,7 +427,7 @@ class CallDoneNode: public Node {
     public:
         /**
          * @param result trace representing the result as seen by the @b callee
-         * @param fnc a CodeStorage::Fnc obj representing the called function
+         * @param fnc a CodeStorage::Fnc fld representing the called function
          */
         CallDoneNode(Node *result, const TFnc fnc):
             Node(result),
@@ -438,7 +438,7 @@ class CallDoneNode: public Node {
         /**
          * @param result trace representing the result as seen by the @b callee
          * @param callFrame trace representing the call frame of the call
-         * @param fnc a CodeStorage::Fnc obj representing the called function
+         * @param fnc a CodeStorage::Fnc fld representing the called function
          */
         CallDoneNode(Node *result, Node *callFrame, const TFnc fnc):
             Node(result, callFrame),

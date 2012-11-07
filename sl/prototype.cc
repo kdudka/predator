@@ -62,19 +62,19 @@ class ProtoCollector {
             return ignoreList_;
         }
 
-        bool operator()(const FldHandle &obj);
+        bool operator()(const FldHandle &);
 };
 
-bool ProtoCollector::operator()(const FldHandle &obj)
+bool ProtoCollector::operator()(const FldHandle &fld)
 {
-    if (hasKey(ignoreList_, obj))
+    if (hasKey(ignoreList_, fld))
         return /* continue */ true;
 
-    const TValId val = obj.value();
+    const TValId val = fld.value();
     if (val <= 0)
         return /* continue */ true;
 
-    SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
+    SymHeap &sh = *static_cast<SymHeap *>(fld.sh());
     if (!isPossibleToDeref(sh.valTarget(val)))
         return /* continue */ true;
 
@@ -164,8 +164,8 @@ bool protoCheckConsistency(const SymHeap &sh)
 
         FldList ptrs;
         sh.gatherLivePointers(ptrs, root);
-        BOOST_FOREACH(const FldHandle &obj, ptrs) {
-            const TProtoLevel level = sh.valTargetProtoLevel(obj.value());
+        BOOST_FOREACH(const FldHandle &fld, ptrs) {
+            const TProtoLevel level = sh.valTargetProtoLevel(fld.value());
             if (level <= rootLevel)
                 continue;
 

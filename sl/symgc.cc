@@ -38,8 +38,8 @@ void gatherReferredRoots(TValList &dst, SymHeap &sh, TValId at)
 
     FldList ptrs;
     sh.gatherLivePointers(ptrs, at);
-    BOOST_FOREACH(const FldHandle &obj, ptrs) {
-        const TValId val = obj.value();
+    BOOST_FOREACH(const FldHandle &fld, ptrs) {
+        const TValId val = fld.value();
         if (val <= 0)
             continue;
 
@@ -61,8 +61,8 @@ bool isJunk(SymHeap &sh, TValId root)
         // go through all referrers
         FldList refs;
         sh.pointedBy(refs, root);
-        BOOST_FOREACH(const FldHandle &obj, refs) {
-            const TValId refAt = obj.placedAt();
+        BOOST_FOREACH(const FldHandle &fld, refs) {
+            const TValId refAt = fld.placedAt();
             const TValId refRoot = sh.valRoot(refAt);
             wl.schedule(refRoot);
         }

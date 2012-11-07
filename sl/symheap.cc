@@ -284,24 +284,24 @@ typedef std::map<CallInst, TValList>                    TAnonStackMap;
 inline TMemItem createArenaItem(
         const TOffset               off,
         const TSizeOf               size,
-        const TFldId                obj)
+        const TFldId                fld)
 {
     const TMemChunk chunk(off, off + size);
-    return TMemItem(chunk, obj);
+    return TMemItem(chunk, fld);
 }
 
 inline bool arenaLookup(
         TFldIdSet                   *dst,
         const TArena                &arena,
         const TMemChunk             &chunk,
-        const TFldId                obj)
+        const TFldId                fld)
 {
     CL_BREAK_IF(!dst->empty());
     arena.intersects(*dst, chunk);
 
-    if (FLD_INVALID != obj)
+    if (FLD_INVALID != fld)
         // remove the reference object itself
-        dst->erase(obj);
+        dst->erase(fld);
 
     // finally check if there was anything else
     return !dst->empty();
@@ -592,7 +592,7 @@ struct SymHeapCore::Private {
     bool valsEqual(TValId, TValId);
 
     TFldId objCreate(TValId root, TOffset off, TObjType clt);
-    TValId objInit(TFldId obj);
+    TValId objInit(TFldId fld);
     void objDestroy(TFldId, bool removeVal, bool detach);
 
     TFldId copySingleLiveBlock(
@@ -604,14 +604,14 @@ struct SymHeapCore::Private {
             const TSizeOf           sizeLimit = 0);
 
     TValId dupRoot(TValId root);
-    void destroyRoot(TValId obj);
+    void destroyRoot(TValId fld);
 
-    bool /* wasPtr */ releaseValueOf(TFldId obj, TValId val);
-    void registerValueOf(TFldId obj, TValId val);
-    void splitBlockByObject(TFldId block, TFldId obj);
+    bool /* wasPtr */ releaseValueOf(TFldId fld, TValId val);
+    void registerValueOf(TFldId fld, TValId val);
+    void splitBlockByObject(TFldId block, TFldId fld);
     bool writeCharToString(TValId *pValDst, const TValId, const TOffset);
     bool reinterpretSingleObj(HeapObject *dstData, const BlockEntity *srcData);
-    void reinterpretObjData(TFldId old, TFldId obj, TValSet *killedPtrs = 0);
+    void reinterpretObjData(TFldId old, TFldId fld, TValSet *killedPtrs = 0);
     void setValueOf(TFldId of, TValId val, TValSet *killedPtrs = 0);
 
     // runs only in debug build
@@ -645,7 +645,7 @@ struct SymHeapCore::Private {
             TOffset                *offDst,
             bool                   *provenPrefix,
             const TOffset           offSrc,
-            const                   TFldId obj);
+            const                   TFldId fld);
 
     bool findZeroAtOff(
             IR::Range              *offDst,
@@ -682,7 +682,7 @@ inline TFldId SymHeapCore::Private::assignId(BlockEntity *hbData)
     return this->ents.assignId<TFldId>(hbData);
 }
 
-bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TFldId obj, TValId val)
+bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TFldId fld, TValId val)
 {
     if (val <= 0)
         // we do not track uses of special values
@@ -691,7 +691,7 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TFldId obj, TValId val)
     BaseValue *valData;
     this->ents.getEntRW(&valData, val);
     TFldIdSet &usedBy = valData->usedBy;
-    if (1 != usedBy.erase(obj))
+    if (1 != usedBy.erase(fld))
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
 
     if (usedBy.empty()) {
@@ -713,13 +713,13 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TFldId obj, TValId val)
     this->ents.getEntRW(&valData, root);
 
     RootValue *rootData = DCAST<RootValue *>(valData);
-    if (1 != rootData->usedByGl.erase(obj))
+    if (1 != rootData->usedByGl.erase(fld))
         CL_BREAK_IF("SymHeapCore::Private::releaseValueOf(): offset detected");
 
     return /* wasPtr */ true;
 }
 
-void SymHeapCore::Private::registerValueOf(TFldId obj, TValId val)
+void SymHeapCore::Private::registerValueOf(TFldId fld, TValId val)
 {
     if (val <= 0)
         return;
@@ -727,7 +727,7 @@ void SymHeapCore::Private::registerValueOf(TFldId obj, TValId val)
     // update usedBy
     BaseValue *valData;
     this->ents.getEntRW(&valData, val);
-    valData->usedBy.insert(obj);
+    valData->usedBy.insert(fld);
 
     const EValueTarget code = valData->code;
     if (!isAnyDataArea(code))
@@ -737,7 +737,7 @@ void SymHeapCore::Private::registerValueOf(TFldId obj, TValId val)
     const TValId root = valData->valRoot;
     RootValue *rootData;
     this->ents.getEntRW(&rootData, root);
-    rootData->usedByGl.insert(obj);
+    rootData->usedByGl.insert(fld);
 }
 
 // runs only in debug build
@@ -820,7 +820,7 @@ bool SymHeapCore::Private::chkArenaConsistency(
     std::set<TOffset> offs;
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
         const BlockEntity *blData;
-        this->ents.getEntRO(&blData, /* obj */ item.first);
+        this->ents.getEntRO(&blData, /* fld */ item.first);
         CL_BREAK_IF(!blData->size);
 
         if (allowOverlap)
@@ -841,8 +841,8 @@ bool SymHeapCore::Private::chkArenaConsistency(
 
     TFldIdSet overlaps;
     if (arenaLookup(&overlaps, arena, chunk, FLD_INVALID)) {
-        BOOST_FOREACH(const TFldId obj, overlaps)
-            all.erase(obj);
+        BOOST_FOREACH(const TFldId fld, overlaps)
+            all.erase(fld);
     }
 
     if (all.empty())
@@ -854,13 +854,13 @@ bool SymHeapCore::Private::chkArenaConsistency(
 
 void SymHeapCore::Private::splitBlockByObject(
         TFldId                      block,
-        TFldId                      obj)
+        TFldId                      fld)
 {
     BlockEntity *blData;
     this->ents.getEntRW(&blData, block);
 
     const BlockEntity *hbData;
-    this->ents.getEntRO(&hbData, obj);
+    this->ents.getEntRO(&hbData, fld);
 
     const EBlockKind code = hbData->code;
     switch (code) {
@@ -1090,7 +1090,7 @@ bool SymHeapCore::Private::reinterpretSingleObj(
 
 void SymHeapCore::Private::reinterpretObjData(
         TFldId                      old,
-        TFldId                      obj,
+        TFldId                      fld,
         TValSet                    *killedPtrs)
 {
     BlockEntity *blData;
@@ -1107,7 +1107,7 @@ void SymHeapCore::Private::reinterpretObjData(
             return;
 
         case BK_UNIFORM:
-            this->splitBlockByObject(/* block */ old, obj);
+            this->splitBlockByObject(/* block */ old, fld);
             return;
 
         case BK_INVALID:
@@ -1128,7 +1128,7 @@ void SymHeapCore::Private::reinterpretObjData(
     this->ents.getEntRW(&rootData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* allowOverlap */ true));
 
-    this->ents.getEntRW(&blData, obj);
+    this->ents.getEntRW(&blData, fld);
     code = blData->code;
 
     switch (code) {
@@ -1171,21 +1171,21 @@ data_restored:
 }
 
 void SymHeapCore::Private::setValueOf(
-        TFldId                      obj,
+        TFldId                      fld,
         TValId                      val,
         TValSet                    *killedPtrs)
 {
     // release old value
     HeapObject *objData;
-    this->ents.getEntRW(&objData, obj);
+    this->ents.getEntRW(&objData, fld);
 
     const TValId valOld = objData->value;
-    if (/* wasPtr */ this->releaseValueOf(obj, valOld) && killedPtrs)
+    if (/* wasPtr */ this->releaseValueOf(fld, valOld) && killedPtrs)
         killedPtrs->insert(valOld);
 
     // store new value
     objData->value = val;
-    this->registerValueOf(obj, val);
+    this->registerValueOf(fld, val);
 
     // resolve root
     const TValId root = objData->root;
@@ -1196,13 +1196,13 @@ void SymHeapCore::Private::setValueOf(
     TArena &arena = rootData->arena;
     const TOffset off = objData->off;
     const TObjType clt = objData->clt;
-    arena += createArenaItem(off, clt->size, obj);
+    arena += createArenaItem(off, clt->size, fld);
 
     // invalidate contents of the objects we are overwriting
     TFldIdSet overlaps;
-    if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
+    if (arenaLookup(&overlaps, arena, createChunk(off, clt), fld)) {
         BOOST_FOREACH(const TFldId old, overlaps)
-            this->reinterpretObjData(old, obj, killedPtrs);
+            this->reinterpretObjData(old, fld, killedPtrs);
     }
 
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
@@ -1215,28 +1215,28 @@ TFldId SymHeapCore::Private::objCreate(
 {
     // acquire object ID
     HeapObject *objData = new HeapObject(root, off, clt);
-    const TFldId obj = this->assignId(objData);
+    const TFldId fld = this->assignId(objData);
 
     // register the object by the owning root value
     RootValue *rootData;
     this->ents.getEntRW(&rootData, root);
 
     // map the region occupied by the object
-    rootData->arena += createArenaItem(off, clt->size, obj);
+    rootData->arena += createArenaItem(off, clt->size, fld);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
-    return obj;
+    return fld;
 }
 
-void SymHeapCore::Private::objDestroy(TFldId obj, bool removeVal, bool detach)
+void SymHeapCore::Private::objDestroy(TFldId fld, bool removeVal, bool detach)
 {
     BlockEntity *blData;
-    this->ents.getEntRW(&blData, obj);
+    this->ents.getEntRW(&blData, fld);
 
     const EBlockKind code = blData->code;
     if (removeVal && BK_UNIFORM != code) {
         // release value of the object
         TValId &val = blData->value;
-        this->releaseValueOf(obj, val);
+        this->releaseValueOf(fld, val);
         val = VAL_INVALID;
     }
 
@@ -1249,9 +1249,9 @@ void SymHeapCore::Private::objDestroy(TFldId obj, bool removeVal, bool detach)
         // remove the object from arena unless we are destroying everything
         const TOffset off = blData->off;
         const TSizeOf size = blData->size;
-        rootData->arena -= createArenaItem(off, size, obj);
+        rootData->arena -= createArenaItem(off, size, fld);
 
-        CL_BREAK_IF(hasKey(rootData->liveObjs, obj));
+        CL_BREAK_IF(hasKey(rootData->liveObjs, fld));
         CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* mayOverlap */true));
     }
 
@@ -1260,7 +1260,7 @@ void SymHeapCore::Private::objDestroy(TFldId obj, bool removeVal, bool detach)
         return;
 
     // release the corresponding HeapObject instance
-    this->ents.releaseEnt(obj);
+    this->ents.releaseEnt(fld);
 }
 
 TValId SymHeapCore::Private::valCreate(
@@ -1465,10 +1465,10 @@ SymHeapCore::Private::~Private()
     RefCntLib<RCO_NON_VIRT>::leave(this->neqDb);
 }
 
-TValId SymHeapCore::Private::objInit(TFldId obj)
+TValId SymHeapCore::Private::objInit(TFldId fld)
 {
     HeapObject *objData;
-    this->ents.getEntRW(&objData, obj);
+    this->ents.getEntRW(&objData, fld);
     CL_BREAK_IF(!objData->extRefCnt);
 
     // resolve root
@@ -1483,7 +1483,7 @@ TValId SymHeapCore::Private::objInit(TFldId obj)
 
     // first check for data reinterpretation
     TFldIdSet overlaps;
-    if (arenaLookup(&overlaps, arena, createChunk(off, clt), obj)) {
+    if (arenaLookup(&overlaps, arena, createChunk(off, clt), fld)) {
         BOOST_FOREACH(const TFldId other, overlaps) {
             const BlockEntity *blockData;
             this->ents.getEntRO(&blockData, other);
@@ -1493,7 +1493,7 @@ TValId SymHeapCore::Private::objInit(TFldId obj)
                 continue;
 
             // reinterpret _self_ by another live object or uniform block
-            this->reinterpretObjData(/* old */ obj, other);
+            this->reinterpretObjData(/* old */ fld, other);
             CL_BREAK_IF(!this->chkArenaConsistency(rootData));
             return objData->value;
         }
@@ -1505,10 +1505,10 @@ TValId SymHeapCore::Private::objInit(TFldId obj)
 
     // mark the object as live
     if (isDataPtr(clt))
-        rootData->liveObjs[obj] = BK_DATA_PTR;
+        rootData->liveObjs[fld] = BK_DATA_PTR;
 #if SE_TRACK_NON_POINTER_VALUES
     else
-        rootData->liveObjs[obj] = BK_DATA_OBJ;
+        rootData->liveObjs[fld] = BK_DATA_OBJ;
 #endif
 
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
@@ -1516,14 +1516,14 @@ TValId SymHeapCore::Private::objInit(TFldId obj)
     // store backward reference
     BaseValue *valData;
     this->ents.getEntRW(&valData, val);
-    valData->usedBy.insert(obj);
+    valData->usedBy.insert(fld);
     return val;
 }
 
-TValId SymHeapCore::valueOf(TFldId obj)
+TValId SymHeapCore::valueOf(TFldId fld)
 {
     // handle special cases first
-    switch (obj) {
+    switch (fld) {
         case FLD_UNKNOWN:
             // not implemented
         case FLD_INVALID:
@@ -1537,7 +1537,7 @@ TValId SymHeapCore::valueOf(TFldId obj)
     }
 
     const HeapObject *objData;
-    d->ents.getEntRO(&objData, obj);
+    d->ents.getEntRO(&objData, fld);
 
     TValId val = objData->value;
     if (VAL_INVALID != val)
@@ -1550,20 +1550,20 @@ TValId SymHeapCore::valueOf(TFldId obj)
         val = d->valCreate(VT_COMPOSITE, VO_INVALID);
         CompValue *compData;
         d->ents.getEntRW(&compData, val);
-        compData->compObj = obj;
+        compData->compObj = fld;
 
         // store the value
         HeapObject *objDataRW;
-        d->ents.getEntRW(&objDataRW, obj);
+        d->ents.getEntRW(&objDataRW, fld);
         objDataRW->value = val;
 
         // store backward reference
-        compData->usedBy.insert(obj);
+        compData->usedBy.insert(fld);
         return val;
     }
 
     // delayed object initialization
-    return d->objInit(obj);
+    return d->objInit(fld);
 }
 
 void SymHeapCore::usedBy(FldList &dst, TValId val, bool liveOnly) const
@@ -1577,16 +1577,16 @@ void SymHeapCore::usedBy(FldList &dst, TValId val, bool liveOnly) const
     const TFldIdSet &usedBy = valData->usedBy;
     if (!liveOnly) {
         // dump everything
-        BOOST_FOREACH(const TFldId obj, usedBy)
-            dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), obj));
+        BOOST_FOREACH(const TFldId fld, usedBy)
+            dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
 
         return;
     }
 
-    BOOST_FOREACH(const TFldId obj, usedBy) {
+    BOOST_FOREACH(const TFldId fld, usedBy) {
         // get object data
         const HeapObject *objData;
-        d->ents.getEntRO(&objData, obj);
+        d->ents.getEntRO(&objData, fld);
 
         // get root data
         const TValId root = objData->root;
@@ -1594,8 +1594,8 @@ void SymHeapCore::usedBy(FldList &dst, TValId val, bool liveOnly) const
         d->ents.getEntRO(&rootData, root);
 
         // check if the object is alive
-        if (hasKey(rootData->liveObjs, obj))
-            dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), obj));
+        if (hasKey(rootData->liveObjs, fld))
+            dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
     }
 }
 
@@ -1617,8 +1617,8 @@ void SymHeapCore::pointedBy(FldList &dst, TValId root) const
     CL_BREAK_IF(!isPossibleToDeref(rootData->code));
 
     const TFldIdSet &usedBy = rootData->usedByGl;
-    BOOST_FOREACH(const TFldId obj, usedBy)
-        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), obj));
+    BOOST_FOREACH(const TFldId fld, usedBy)
+        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
 }
 
 unsigned SymHeapCore::pointedByCount(TValId root) const
@@ -1758,8 +1758,8 @@ void SymHeapCore::gatherLivePointers(FldList &dst, TValId root) const
         if (BK_DATA_PTR != code)
             continue;
 
-        const TFldId obj = item.first;
-        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), obj));
+        const TFldId fld = item.first;
+        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
     }
 }
 
@@ -1773,7 +1773,7 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const
             continue;
 
         const BlockEntity *blData;
-        d->ents.getEntRO(&blData, /* obj */ item.first);
+        d->ents.getEntRO(&blData, /* fld */ item.first);
         const TOffset off = blData->off;
         CL_BREAK_IF(hasKey(dst, off) && !::bypassSelfChecks);
         UniformBlock &block = dst[off];
@@ -1806,8 +1806,8 @@ void SymHeapCore::gatherLiveObjects(FldList &dst, TValId root) const
                 CL_BREAK_IF("gatherLiveObjects sees something special");
         }
 
-        const TFldId obj = item.first;
-        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), obj));
+        const TFldId fld = item.first;
+        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
     }
 }
 
@@ -1838,9 +1838,9 @@ bool SymHeapCore::findCoveringUniBlocks(
     coverage += TMemItem(chunk, /* XXX: misleading */ FLD_UNKNOWN);
 
     // go through overlaps and subtract the chunks that are covered
-    BOOST_FOREACH(const TFldId obj, overlaps) {
+    BOOST_FOREACH(const TFldId fld, overlaps) {
         const BlockEntity *blData;
-        d->ents.getEntRO(&blData, obj);
+        d->ents.getEntRO(&blData, fld);
 
         const EBlockKind code = blData->code;
         if (BK_UNIFORM != code && VAL_NULL != blData->value)
@@ -1939,11 +1939,11 @@ void SymHeapCore::traceUpdate(Trace::Node *node)
     d->traceHandle.reset(node);
 }
 
-void SymHeapCore::objSetValue(TFldId obj, TValId val, TValSet *killedPtrs)
+void SymHeapCore::objSetValue(TFldId fld, TValId val, TValSet *killedPtrs)
 {
     // we allow to set values of atomic types only
     const HeapObject *objData;
-    d->ents.getEntRO(&objData, obj);
+    d->ents.getEntRO(&objData, fld);
 
     // make sure that the value is not a pointer to a structure object
     const TObjType clt = objData->clt;
@@ -1956,10 +1956,10 @@ void SymHeapCore::objSetValue(TFldId obj, TValId val, TValSet *killedPtrs)
     const TValId root = objData->root;
     RootValue *rootData;
     d->ents.getEntRW(&rootData, root);
-    rootData->liveObjs[obj] = bkFromClt(clt);
+    rootData->liveObjs[fld] = bkFromClt(clt);
 
     // now set the value
-    d->setValueOf(obj, val, killedPtrs);
+    d->setValueOf(fld, val, killedPtrs);
 }
 
 TFldId SymHeapCore::Private::writeUniformBlock(
@@ -1977,7 +1977,7 @@ TFldId SymHeapCore::Private::writeUniformBlock(
 
     // acquire object ID
     BlockEntity *blData = new BlockEntity(BK_UNIFORM, root, beg, size, tplVal);
-    const TFldId obj = this->assignId(blData);
+    const TFldId fld = this->assignId(blData);
 
     // check up to now arena consistency
     RootValue *rootData;
@@ -1985,21 +1985,21 @@ TFldId SymHeapCore::Private::writeUniformBlock(
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // mark the block as live
-    rootData->liveObjs[obj] = BK_UNIFORM;
+    rootData->liveObjs[fld] = BK_UNIFORM;
 
     TArena &arena = rootData->arena;
-    arena += createArenaItem(beg, size, obj);
+    arena += createArenaItem(beg, size, fld);
     const TMemChunk chunk(beg, end);
 
     // invalidate contents of the objects we are overwriting
     TFldIdSet overlaps;
-    if (arenaLookup(&overlaps, arena, chunk, obj)) {
+    if (arenaLookup(&overlaps, arena, chunk, fld)) {
         BOOST_FOREACH(const TFldId old, overlaps)
-            this->reinterpretObjData(old, obj, killedPtrs);
+            this->reinterpretObjData(old, fld, killedPtrs);
     }
 
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
-    return obj;
+    return fld;
 }
 
 /// just a trivial wrapper to hide the return value
@@ -2069,10 +2069,10 @@ bool SymHeapCore::Private::findZeroInBlock(
         TOffset                *offDst,
         bool                   *provenPrefix,
         const TOffset           offSrc,
-        const                   TFldId obj)
+        const                   TFldId fld)
 {
     const BlockEntity *blData;
-    this->ents.getEntRO(&blData, obj);
+    this->ents.getEntRO(&blData, fld);
 
     const EBlockKind code = blData->code;
     switch (code) {
@@ -2134,9 +2134,9 @@ bool SymHeapCore::Private::findZeroAtOff(
 
     // go through all intersections and find the zero that is closest to offSrc
     TOffset first = limit;
-    BOOST_FOREACH(const TFldId obj, overlaps) {
+    BOOST_FOREACH(const TFldId fld, overlaps) {
         TOffset beg;
-        if (!this->findZeroInBlock(&beg, &provenPrefix, offSrc, obj))
+        if (!this->findZeroInBlock(&beg, &provenPrefix, offSrc, fld))
             // failed to imply zero in this block entity
             continue;
 
@@ -2170,13 +2170,13 @@ bool SymHeapCore::Private::findZeroAtOff(
     return true;
 }
 
-TObjType SymHeapCore::objType(TFldId obj) const
+TObjType SymHeapCore::objType(TFldId fld) const
 {
-    if (obj < 0)
+    if (fld < 0)
         return 0;
 
     const HeapObject *objData;
-    d->ents.getEntRO(&objData, obj);
+    d->ents.getEntRO(&objData, fld);
     return objData->clt;
 }
 
@@ -2245,8 +2245,8 @@ void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData)
 
     // we intentionally do not use a reference here (tight loop otherwise)
     TFldIdSet usedBy = valData->usedBy;
-    BOOST_FOREACH(const TFldId obj, usedBy)
-        this->setValueOf(obj, replaceBy);
+    BOOST_FOREACH(const TFldId fld, usedBy)
+        this->setValueOf(fld, replaceBy);
 }
 
 void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win)
@@ -2767,11 +2767,11 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy)
 
     // we intentionally do not use a reference here (tight loop otherwise)
     TFldIdSet usedBy = valData->usedBy;
-    BOOST_FOREACH(const TFldId obj, usedBy) {
+    BOOST_FOREACH(const TFldId fld, usedBy) {
         // this used to happen with with test-0037 running in OOM mode [fixed]
-        CL_BREAK_IF(isGone(this->valTarget(this->placedAt(obj))));
+        CL_BREAK_IF(isGone(this->valTarget(this->placedAt(fld))));
 
-        this->objSetValue(obj, replaceBy);
+        this->objSetValue(fld, replaceBy);
     }
 }
 
@@ -2906,14 +2906,14 @@ bool SymHeapCore::matchPreds(
     return true;
 }
 
-TValId SymHeapCore::placedAt(TFldId obj)
+TValId SymHeapCore::placedAt(TFldId fld)
 {
-    if (obj < 0)
+    if (fld < 0)
         return VAL_INVALID;
 
     // jump to root
     const HeapObject *objData;
-    d->ents.getEntRO(&objData, obj);
+    d->ents.getEntRO(&objData, fld);
     const TValId root = objData->root;
 
     // then subtract the offset
@@ -2957,9 +2957,9 @@ TFldId SymHeapCore::Private::fieldAt(
     arenaLookForExactMatch(&candidates, arena, chunk);
 
     // go through fields in the given interval
-    BOOST_FOREACH(const TFldId obj, candidates) {
+    BOOST_FOREACH(const TFldId fld, candidates) {
         const BlockEntity *blData;
-        this->ents.getEntRO(&blData, obj);
+        this->ents.getEntRO(&blData, fld);
 
         const EBlockKind code = blData->code;
         switch (code) {
@@ -2972,9 +2972,9 @@ TFldId SymHeapCore::Private::fieldAt(
                 continue;
         }
 
-        const bool isLive = hasKey(rootData->liveObjs, obj);
+        const bool isLive = hasKey(rootData->liveObjs, fld);
         const HeapObject *objData = DCAST<const HeapObject *>(blData);
-        if (!/* continue */policy->matchBlock(obj, objData, isLive))
+        if (!/* continue */policy->matchBlock(fld, objData, isLive))
             break;
     }
 
@@ -2996,12 +2996,12 @@ class PtrMatchPolicy: public IMatchPolicy {
         {
         }
 
-        virtual bool matchBlock(TFldId obj, const HeapObject *data, bool) {
+        virtual bool matchBlock(TFldId fld, const HeapObject *data, bool) {
             if (!isDataPtr(data->clt))
                 return /* continue */ true;
 
             // pointer found!
-            bestMatch_ = obj;
+            bestMatch_ = fld;
             return false;
         }
 
@@ -3040,7 +3040,7 @@ class FieldMatchPolicy: public IMatchPolicy {
             CL_BREAK_IF(!clt || !clt->size);
         }
 
-        virtual bool matchBlock(TFldId obj, const HeapObject *data, bool alive);
+        virtual bool matchBlock(TFldId fld, const HeapObject *data, bool alive);
 
         virtual TFldId bestMatch() const {
             return bestMatch_;
@@ -3048,7 +3048,7 @@ class FieldMatchPolicy: public IMatchPolicy {
 };
 
 bool FieldMatchPolicy::matchBlock(
-        TFldId                      obj,
+        TFldId                      fld,
         const HeapObject           *objData,
         bool                        isLive)
 {
@@ -3056,7 +3056,7 @@ bool FieldMatchPolicy::matchBlock(
     if (cltNow == cltToMatch_) {
         // exact match
         cltExactMatch_ = true;
-        bestMatch_ = obj;
+        bestMatch_ = fld;
         return /* continue */ !isLive;
     }
     else if (cltExactMatch_)
@@ -3064,7 +3064,7 @@ bool FieldMatchPolicy::matchBlock(
 
     if (*cltNow == *cltToMatch_) {
         cltClassMatch_ = true;
-        bestMatch_ = obj;
+        bestMatch_ = fld;
         return /* continue */ true;
     }
     else if (cltClassMatch_)
@@ -3074,7 +3074,7 @@ bool FieldMatchPolicy::matchBlock(
         return /* continue */ true;
 
     // at least both are _data_ pointers at this point, update best match
-    bestMatch_ = obj;
+    bestMatch_ = fld;
     return /* continue */ true;
 }
 
@@ -3084,18 +3084,18 @@ TFldId SymHeapCore::objAt(TValId at, TObjType clt)
     return d->fieldAt(at, clt, &policy);
 }
 
-void SymHeapCore::objEnter(TFldId obj)
+void SymHeapCore::objEnter(TFldId fld)
 {
     HeapObject *objData;
-    d->ents.getEntRW(&objData, obj);
+    d->ents.getEntRW(&objData, fld);
     CL_BREAK_IF(objData->extRefCnt < 0);
     ++(objData->extRefCnt);
 }
 
-void SymHeapCore::objLeave(TFldId obj)
+void SymHeapCore::objLeave(TFldId fld)
 {
     HeapObject *objData;
-    d->ents.getEntRW(&objData, obj);
+    d->ents.getEntRW(&objData, fld);
     CL_BREAK_IF(objData->extRefCnt < 1);
     if (--(objData->extRefCnt))
         // still externally referenced
@@ -3115,9 +3115,9 @@ void SymHeapCore::objLeave(TFldId obj)
     const TValId root = objData->root;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
-    if (!hasKey(rootData->liveObjs, obj)) {
+    if (!hasKey(rootData->liveObjs, fld)) {
         CL_DEBUG("SymHeapCore::objLeave() destroys a dead object");
-        d->objDestroy(obj, /* removeVal */ true, /* detach */ true);
+        d->objDestroy(fld, /* removeVal */ true, /* detach */ true);
     }
 
     // TODO: pack the representation if possible
@@ -3414,8 +3414,8 @@ void SymHeapCore::Private::destroyRoot(TValId root)
         TFldIdSet allObjs;
         if (arenaLookup(&allObjs, rootData->arena, chunk, FLD_INVALID)) {
             // destroy all inner objects
-            BOOST_FOREACH(const TFldId obj, allObjs)
-                this->objDestroy(obj, /* removeVal */ true, /* detach */ false);
+            BOOST_FOREACH(const TFldId fld, allObjs)
+                this->objDestroy(fld, /* removeVal */ true, /* detach */ false);
         }
     }
 

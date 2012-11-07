@@ -257,13 +257,13 @@ bool /* complete */ traverseCore(
 
     FldList objs;
     (sh.*method)(objs, rootAt);
-    BOOST_FOREACH(const FldHandle &obj, objs) {
-        const TOffset off = sh.valOffset(obj.placedAt());
+    BOOST_FOREACH(const FldHandle &fld, objs) {
+        const TOffset off = sh.valOffset(fld.placedAt());
         if (off < offRoot)
             // do not go above the starting point
             continue;
 
-        if (!visitor(obj))
+        if (!visitor(fld))
             // traversal cancelled by visitor
             return false;
     }
@@ -343,14 +343,14 @@ bool /* complete */ traverseLiveObjsGeneric(
 
         FldList objs;
         sh.gatherLiveObjects(objs, root);
-        BOOST_FOREACH(const FldHandle &obj, objs) {
-            const TValId addr = obj.placedAt();
+        BOOST_FOREACH(const FldHandle &fld, objs) {
+            const TValId addr = fld.placedAt();
             const TOffset off = sh.valOffset(addr) - offs[i];
             if (off < 0)
                 // do not go above the starting point
                 continue;
 
-            const TObjType clt = obj.objType();
+            const TObjType clt = fld.objType();
             const TItem item(off, clt);
             all.insert(item);
         }

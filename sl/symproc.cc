@@ -487,12 +487,12 @@ FldHandle SymProc::objByOperand(const struct cl_operand &op)
     }
 
     // resolve the target object
-    const FldHandle obj(sh_, at, op.type);
-    if (!obj.isValid())
+    const FldHandle fld(sh_, at, op.type);
+    if (!fld.isValid())
         CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
 
     // all OK
-    return obj;
+    return fld;
 }
 
 TValId SymProc::valFromObj(const struct cl_operand &op)
@@ -505,8 +505,8 @@ TValId SymProc::valFromObj(const struct cl_operand &op)
         return handle.value();
 
     // failed to resolve object handle
-    const TFldId obj = handle.objId();
-    switch (obj) {
+    const TFldId fld = handle.objId();
+    switch (fld) {
         case FLD_UNKNOWN:
             return sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
 
@@ -739,7 +739,7 @@ void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
     CL_BREAK_IF(!isPossibleToDeref(codeLhs));
 
     // generic prototype for a value encoder
-    TValId (*encode)(SymProc &, const FldHandle &obj, const TValId val) = 0;
+    TValId (*encode)(SymProc &, const FldHandle &fld, const TValId val) = 0;
 
     const EValueTarget codeRhs = sh.valTarget(rhs);
     if (isPossibleToDeref(codeRhs))
@@ -2245,8 +2245,8 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn)
 
         FldList liveObjs;
         sh_.gatherLiveObjects(liveObjs, root);
-        BOOST_FOREACH(const FldHandle &obj, liveObjs)
-            if (obj == lhs)
+        BOOST_FOREACH(const FldHandle &fld, liveObjs)
+            if (fld == lhs)
                 goto already_alive;
 
         return;

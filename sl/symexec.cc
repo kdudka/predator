@@ -1051,9 +1051,9 @@ fail:
             : VO_UNKNOWN;
 
         const TValId val = entry.valCreate(VT_UNKNOWN, origin);
-        const FldHandle obj = proc.objByOperand(dst);
-        if (obj.isValid())
-            proc.objSetValue(obj, val);
+        const FldHandle fld = proc.objByOperand(dst);
+        if (fld.isValid())
+            proc.objSetValue(fld, val);
     }
 
     // something wrong happened, print the backtrace

@@ -64,22 +64,22 @@ void debugSymAbstract(const bool enable)
 struct UnknownValuesDuplicator {
     TFldSet ignoreList;
 
-    bool operator()(const FldHandle &obj) const {
-        if (hasKey(ignoreList, obj))
+    bool operator()(const FldHandle &fld) const {
+        if (hasKey(ignoreList, fld))
             return /* continue */ true;
 
-        const TValId valOld = obj.value();
+        const TValId valOld = fld.value();
         if (valOld <= 0)
             return /* continue */ true;
 
-        SymHeapCore *sh = obj.sh();
+        SymHeapCore *sh = fld.sh();
         const EValueTarget code = sh->valTarget(valOld);
         if (isPossibleToDeref(code) || (VT_CUSTOM == code))
             return /* continue */ true;
 
         // duplicate unknown value
         const TValId valNew = sh->valClone(valOld);
-        obj.setValue(valNew);
+        fld.setValue(valNew);
 
         return /* continue */ true;
     }
@@ -219,8 +219,8 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls)
     // if there was "a pointer to self", it should remain "a pointer to self";
     FldList refs;
     sh.pointedBy(refs, dls);
-    BOOST_FOREACH(const FldHandle &obj, refs) {
-        visitor.ignoreList.insert(obj);
+    BOOST_FOREACH(const FldHandle &fld, refs) {
+        visitor.ignoreList.insert(fld);
     }
 
     const TValId roots[] = { dls, peer };

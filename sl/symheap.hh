@@ -545,10 +545,10 @@ class SymHeapCore {
 
     protected:
         // these should be accessed indirectly via FldHandle
-        TValId valueOf(TFldId obj);
-        TValId placedAt(TFldId obj);
-        TObjType objType(TFldId obj) const;
-        void objSetValue(TFldId obj, TValId val, TValSet *killedPtrs = 0);
+        TValId valueOf(TFldId fld);
+        TValId placedAt(TFldId fld);
+        TObjType objType(TFldId fld) const;
+        void objSetValue(TFldId fld, TValId val, TValSet *killedPtrs = 0);
 
     protected:
         TStorRef stor_;

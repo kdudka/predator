@@ -31,31 +31,31 @@
 #define IA_AGGRESSIVE_OPTIMIZATION          0
 
 /// ad-hoc implementation;  wastes memory, performance, and human resources
-template <typename TInt, typename TObj>
+template <typename TInt, typename TFld>
 class IntervalArena {
     public:
-        typedef std::set<TObj>                      TSet;
+        typedef std::set<TFld>                      TSet;
 
         // for compatibility with STL
         typedef std::pair<TInt, TInt>               key_type;
-        typedef std::pair<key_type, TObj>           value_type;
+        typedef std::pair<key_type, TFld>           value_type;
 
         typedef std::vector<key_type>               TKeySet;
 
     private:
-        typedef std::set<TObj>                      TLeaf;
+        typedef std::set<TFld>                      TLeaf;
         typedef std::map</* beg */ TInt, TLeaf>     TLine;
         typedef std::map</* end */ TInt, TLine>     TCont;
         TCont                                       cont_;
 
     public:
-        void add(const key_type &, const TObj);
-        void sub(const key_type &, const TObj);
+        void add(const key_type &, const TFld);
+        void sub(const key_type &, const TFld);
         void intersects(TSet &dst, const key_type &key) const;
         void exactMatch(TSet &dst, const key_type &key) const;
 
         /// return the set of all keys that map to this object
-        void reverseLookup(TKeySet &dst, const TObj) const;
+        void reverseLookup(TKeySet &dst, const TFld) const;
 
         void clear() {
             cont_.clear();
@@ -72,18 +72,18 @@ class IntervalArena {
         }
 };
 
-template <typename TInt, typename TObj>
-void IntervalArena<TInt, TObj>::add(const key_type &key, const TObj obj)
+template <typename TInt, typename TFld>
+void IntervalArena<TInt, TFld>::add(const key_type &key, const TFld fld)
 {
     const TInt beg = key.first;
     const TInt end = key.second;
     CL_BREAK_IF(end <= beg);
 
-    cont_[end][beg].insert(obj);
+    cont_[end][beg].insert(fld);
 }
 
-template <typename TInt, typename TObj>
-void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
+template <typename TInt, typename TFld>
+void IntervalArena<TInt, TFld>::sub(const key_type &key, const TFld fld)
 {
     const TInt winBeg = key.first;
     const TInt winEnd = key.second;
@@ -123,13 +123,13 @@ void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
 
             // remove the object from the current leaf (if found)
             TLeaf &os = lineIt->second;
-            if (os.erase(obj)) {
+            if (os.erase(fld)) {
                 anyHit = true;
 
                 if (beg < winBeg) {
                     // schedule "the part above" for re-insertion
                     const key_type key(beg, winBeg);
-                    const value_type item(key, obj);
+                    const value_type item(key, fld);
                     recoverList.push_back(item);
                 }
             }
@@ -154,7 +154,7 @@ void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
             if (winEnd < end) {
                 // schedule "the part beyond" for re-insertion
                 const key_type key(winEnd, end);
-                const value_type item(key, obj);
+                const value_type item(key, fld);
                 recoverList.push_back(item);
             }
 
@@ -173,16 +173,16 @@ void IntervalArena<TInt, TObj>::sub(const key_type &key, const TObj obj)
     // go through the recoverList and re-insert the missing parts
     BOOST_FOREACH(const value_type &rItem, recoverList) {
         const key_type &key = rItem.first;
-        const TObj obj = rItem.second;
+        const TFld fld = rItem.second;
         const TInt beg = key.first;
         const TInt end = key.second;
 
-        cont_[end][beg].insert(obj);
+        cont_[end][beg].insert(fld);
     }
 }
 
-template <typename TInt, typename TObj>
-void IntervalArena<TInt, TObj>::intersects(TSet &dst, const key_type &key) const
+template <typename TInt, typename TFld>
+void IntervalArena<TInt, TFld>::intersects(TSet &dst, const key_type &key) const
 {
     const TInt winBeg = key.first;
     const TInt winEnd = key.second;
@@ -226,8 +226,8 @@ void IntervalArena<TInt, TObj>::intersects(TSet &dst, const key_type &key) const
 
 // FIXME: brute-force method
 // FIXME: no assumptions can be made about the output format
-template <typename TInt, typename TObj>
-void IntervalArena<TInt, TObj>::reverseLookup(TKeySet &dst, const TObj obj)
+template <typename TInt, typename TFld>
+void IntervalArena<TInt, TFld>::reverseLookup(TKeySet &dst, const TFld fld)
     const
 {
     key_type key;
@@ -238,7 +238,7 @@ void IntervalArena<TInt, TObj>::reverseLookup(TKeySet &dst, const TObj obj)
 
         BOOST_FOREACH(typename TLine::const_reference lineItem, line) {
             const TLeaf &leaf = lineItem.second;
-            if (!hasKey(leaf, obj))
+            if (!hasKey(leaf, fld))
                 continue;
 
             key/* beg */.first = lineItem/* beg */.first;
@@ -247,8 +247,8 @@ void IntervalArena<TInt, TObj>::reverseLookup(TKeySet &dst, const TObj obj)
     }
 }
 
-template <typename TInt, typename TObj>
-void IntervalArena<TInt, TObj>::exactMatch(TSet &dst, const key_type &key) const
+template <typename TInt, typename TFld>
+void IntervalArena<TInt, TFld>::exactMatch(TSet &dst, const key_type &key) const
 {
     typedef typename TCont::const_iterator TEndIt;
     const TEndIt itEnd = cont_.find(/* end */ key.second);

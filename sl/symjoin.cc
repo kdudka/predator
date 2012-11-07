@@ -483,14 +483,14 @@ bool joinValuesByCode(
         const TValId            v1,
         const TValId            v2);
 
-bool bumpNestingLevel(const FldHandle &obj)
+bool bumpNestingLevel(const FldHandle &fld)
 {
-    if (!obj.isValid())
+    if (!fld.isValid())
         return false;
 
     // resolve root (the owning object of this field)
-    SymHeap &sh = *static_cast<SymHeap *>(obj.sh());
-    const TValId root = sh.valRoot(obj.placedAt());
+    SymHeap &sh = *static_cast<SymHeap *>(fld.sh());
+    const TValId root = sh.valRoot(fld.placedAt());
 
     if (!isAbstract(sh.valTarget(root)))
         // do not bump nesting level on concrete objects
@@ -498,7 +498,7 @@ bool bumpNestingLevel(const FldHandle &obj)
 
     TFldSet ignoreList;
     buildIgnoreList(ignoreList, sh, root);
-    return !hasKey(ignoreList, obj);
+    return !hasKey(ignoreList, fld);
 }
 
 /// (FLD_INVALID == objDst) means read-only!!!
@@ -1803,7 +1803,7 @@ bool insertSegmentClone(
             continue;
 
         if (seg != valGt)
-            // OK_SEE_THROUGH/OK_OBJ_OR_NULL is applicable only on the first obj
+            // OK_SEE_THROUGH/OK_OBJ_OR_NULL is applicable only on the first fld
             off = 0;
 
         EValueTarget code = shGt.valTarget(valGt);
@@ -2786,13 +2786,13 @@ void killUniBlocksUnderBindingPtrs(
     // go through next/prev pointers
     TFldSet blackList;
     buildIgnoreList(blackList, sh, root, bf);
-    BOOST_FOREACH(const FldHandle &obj, blackList) {
-        if (VAL_NULL != obj.value())
+    BOOST_FOREACH(const FldHandle &fld, blackList) {
+        if (VAL_NULL != fld.value())
             continue;
 
         // if there is a nullified block under next/prev pointer, kill it now
-        obj.setValue(VAL_TRUE);
-        obj.setValue(VAL_NULL);
+        fld.setValue(VAL_TRUE);
+        fld.setValue(VAL_NULL);
     }
 }
 

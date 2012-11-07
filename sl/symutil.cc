@@ -340,16 +340,16 @@ bool /* anyChange */ redirectRefs(
     // go through all objects pointing at/inside pointingTo
     FldList refs;
     sh.pointedBy(refs, pointingTo);
-    BOOST_FOREACH(const FldHandle &obj, refs) {
+    BOOST_FOREACH(const FldHandle &fld, refs) {
         if (VAL_INVALID != pointingFrom) {
-            const TValId referrerAt = sh.valRoot(obj.placedAt());
+            const TValId referrerAt = sh.valRoot(fld.placedAt());
             if (pointingFrom != referrerAt)
                 // pointed from elsewhere, keep going
                 continue;
         }
 
         // check the current link
-        const TValId nowAt = obj.value();
+        const TValId nowAt = fld.value();
         TValId result;
 
         const EValueTarget code = sh.valTarget(nowAt);
@@ -367,7 +367,7 @@ bool /* anyChange */ redirectRefs(
         }
 
         // store the redirected value
-        obj.setValue(result);
+        fld.setValue(result);
         anyChange = true;
     }
 
