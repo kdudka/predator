@@ -918,7 +918,8 @@ void execMemsetCore(
         const IR::Range             &totalRange,
         TValSet                     *killedPtrs)
 {
-    const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+    const EValueOrigin code = sh.valOrigin(valToWrite);
+    const TValId valUnknown = sh.valCreate(VT_UNKNOWN, code);
     const TValId valBegTotal = sh.valByOffset(root, totalRange.lo);
 
     // how much memory can we guarantee the content of?

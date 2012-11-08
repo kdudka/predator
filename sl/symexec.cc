@@ -145,6 +145,7 @@ class SymExecEngine: public IStatsProvider {
         SymState                        &dst_;
         const IStatsProvider            &stats_;
         std::string                     fncName_;
+        TObjType                        fncReturnType_;
 
         SymStateMap                     stateMap_;
         BlockScheduler                  sched_;
@@ -206,6 +207,10 @@ void SymExecEngine::initEngine(const SymHeap &init)
     lw_ = locationOf(fnc);
     CL_DEBUG_MSG(lw_, ">>> entering " << fncName_ << "()");
 
+    const TObjType fncType = fnc.def.type;
+    CL_BREAK_IF(CL_TYPE_FNC != fncType->code || fncType->item_cnt < 1);
+    fncReturnType_ = fncType->items[/* ret */ 0].type;
+
     // look for the entry block
     const CodeStorage::Block *entry = fnc.cfg.entry();
     if (!entry) {
@@ -247,17 +252,27 @@ void SymExecEngine::execReturn()
     Trace::Node *trRet = new Trace::InsnNode(trOrig, insn, /* bin */ false);
     sh.traceUpdate(trRet);
 
-    const struct cl_operand &src = opList[0];
-    if (CL_OPERAND_VOID != src.code) {
+    if (CL_TYPE_VOID != fncReturnType_->code) {
         SymProc proc(sh, &bt_);
         proc.setLocation(lw_);
 
-        const TValId val = proc.valFromOperand(src);
-        CL_BREAK_IF(VAL_INVALID == val);
+        sh.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, fncReturnType_);
 
-        sh.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, src.type);
-        const FldHandle ret(sh, VAL_ADDR_OF_RET, src.type);
-        proc.objSetValue(ret, val);
+        const struct cl_operand &src = opList[0];
+        if (CL_OPERAND_VOID == src.code) {
+            // the function returns value, but we were given no value!
+            const TSizeOf size = fncReturnType_->size;
+            const CustomValue cv(IR::rngFromNum(size));
+            const TValId valSize = sh.valWrapCustom(cv);
+            const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_STACK);
+            executeMemset(proc, VAL_ADDR_OF_RET, valUnknown, valSize);
+        }
+        else {
+            const TValId val = proc.valFromOperand(src);
+            const FldHandle ret(sh, VAL_ADDR_OF_RET, src.type);
+            CL_BREAK_IF(VAL_INVALID == val);
+            proc.objSetValue(ret, val);
+        }
     }
 
     // commit one of the function results
