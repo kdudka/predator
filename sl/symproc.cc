@@ -1608,6 +1608,12 @@ bool dlSegMergeAddressesIfNeeded(
 {
     SymHeap &sh = proc.sh();
 
+    const EValueTarget code1 = sh.valTarget(v1);
+    const EValueTarget code2 = sh.valTarget(v2);
+    if (!isAbstract(code1) || !isAbstract(code2))
+        // not a pair of abstract values
+        return false;
+
     const TOffset off1 = sh.valOffset(v1);
     const TOffset off2 = sh.valOffset(v2);
     if (off1 != off2)
@@ -1616,7 +1622,7 @@ bool dlSegMergeAddressesIfNeeded(
 
     const TValId root1 = sh.valRoot(v1);
     const TValId root2 = sh.valRoot(v2);
-    if (root1 == root2 && root1 != segPeer(sh, root2))
+    if (root1 == root2 || root1 != segPeer(sh, root2))
         // apparently not the case we are looking for
         return false;
 
