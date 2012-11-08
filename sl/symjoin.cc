@@ -158,6 +158,7 @@ struct SymJoinCtx {
 
     TWorkList                   wl;
     EJoinStatus                 status;
+    bool                        forceThreeWay;
     bool                        allowThreeWay;
 
     typedef std::map<TValId /* seg */, TMinLen /* len */>       TSegLengths;
@@ -187,6 +188,7 @@ struct SymJoinCtx {
         sh1(sh1_),
         sh2(sh2_),
         status(JS_USE_ANY),
+        forceThreeWay(false),
         allowThreeWay((1 < (SE_ALLOW_THREE_WAY_JOIN)) && allowThreeWay_)
     {
         initValMaps();
@@ -198,6 +200,7 @@ struct SymJoinCtx {
         sh1(sh_),
         sh2(sh_),
         status(JS_USE_ANY),
+        forceThreeWay(false),
         allowThreeWay(0 < (SE_ALLOW_THREE_WAY_JOIN))
     {
         initValMaps();
@@ -209,6 +212,7 @@ struct SymJoinCtx {
         sh1(sh_),
         sh2(sh_),
         status(JS_USE_ANY),
+        forceThreeWay(false),
         allowThreeWay(0 < (SE_ALLOW_THREE_WAY_JOIN))
     {
         initValMaps();
@@ -296,6 +300,7 @@ bool updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action)
     }
 
     return (JS_THREE_WAY != status)
+        || ctx.forceThreeWay
         || ctx.allowThreeWay;
 }
 
@@ -1378,8 +1383,12 @@ bool joinCustomValues(
     // avoid creation of a CV_INT_RANGE value from two CV_INT values
     if (isSingular(rng1) && isSingular(rng2)) {
         const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-        return updateJoinStatus(ctx, JS_THREE_WAY)
-            && defineValueMapping(ctx, v1, v2, vDst);
+        if (!defineValueMapping(ctx, v1, v2, vDst))
+            return false;
+
+        // force three-way join in order not to loop forever!
+        ctx.forceThreeWay = true;
+        return updateJoinStatus(ctx, JS_THREE_WAY);
     }
 #endif
 
@@ -2652,6 +2661,11 @@ bool handleDstPreds(SymJoinCtx &ctx)
 
 bool validateStatus(const SymJoinCtx &ctx)
 {
+    if (!ctx.allowThreeWay && ctx.forceThreeWay) {
+        CL_DEBUG("!J! forcing three-way join");
+        return true;
+    }
+
     if (ctx.allowThreeWay || (JS_THREE_WAY != ctx.status))
         return true;
 
