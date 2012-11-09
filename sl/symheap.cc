@@ -1676,31 +1676,21 @@ unsigned SymHeapCore::usedByCount(TValId val) const
     return valData->usedBy.size();
 }
 
-void SymHeapCore::pointedBy(FldList &dst, TValId root) const
+void SymHeapCore::pointedBy(FldList &dst, TObjId obj) const
 {
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, root);
-    CL_BREAK_IF(rootData->offRoot);
-    CL_BREAK_IF(!isPossibleToDeref(rootData->code));
-
-    // jump to region
     const Region *regData;
-    d->ents.getEntRO(&regData, rootData->obj);
+    d->ents.getEntRO(&regData, obj);
+    CL_BREAK_IF(!isPossibleToDeref(this->valTarget(regData->rootAddr)));
 
     const TFldIdSet &usedBy = regData->usedByGl;
     BOOST_FOREACH(const TFldId fld, usedBy)
         dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
 }
 
-unsigned SymHeapCore::pointedByCount(TValId root) const
+unsigned SymHeapCore::pointedByCount(TObjId obj) const
 {
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, root);
-
-    // jump to region
     const Region *regData;
-    d->ents.getEntRO(&regData, rootData->obj);
-
+    d->ents.getEntRO(&regData, obj);
     return regData->usedByGl.size();
 }
 

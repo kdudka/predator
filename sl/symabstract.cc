@@ -218,7 +218,8 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls)
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     FldList refs;
-    sh.pointedBy(refs, dls);
+    const TObjId obj = sh.objByAddr(dls);
+    sh.pointedBy(refs, obj);
     BOOST_FOREACH(const FldHandle &fld, refs) {
         visitor.ignoreList.insert(fld);
     }

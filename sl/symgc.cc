@@ -60,7 +60,8 @@ bool isJunk(SymHeap &sh, TValId root)
 
         // go through all referrers
         FldList refs;
-        sh.pointedBy(refs, root);
+        const TObjId obj = sh.objByAddr(root);
+        sh.pointedBy(refs, obj);
         BOOST_FOREACH(const FldHandle &fld, refs) {
             const TValId refAt = fld.placedAt();
             const TValId refRoot = sh.valRoot(refAt);

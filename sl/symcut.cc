@@ -247,8 +247,10 @@ void trackUses(DeepCopyData &dc, TValId valSrc)
         return;
 
     const EValueTarget code = sh.valTarget(rootSrcAt);
-    if (isPossibleToDeref(code))
-        sh.pointedBy(uses, rootSrcAt);
+    if (isPossibleToDeref(code)) {
+        const TObjId objSrc = sh.objByAddr(rootSrcAt);
+        sh.pointedBy(uses, objSrc);
+    }
     else
         sh.usedBy(uses, valSrc, /* liveOnly */ true);
 

@@ -339,7 +339,8 @@ bool /* anyChange */ redirectRefs(
 
     // go through all objects pointing at/inside pointingTo
     FldList refs;
-    sh.pointedBy(refs, pointingTo);
+    const TObjId obj = sh.objByAddr(pointingTo);
+    sh.pointedBy(refs, obj);
     BOOST_FOREACH(const FldHandle &fld, refs) {
         if (VAL_INVALID != pointingFrom) {
             const TValId referrerAt = sh.valRoot(fld.placedAt());

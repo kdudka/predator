@@ -142,7 +142,8 @@ bool validatePointingObjects(
 
     // collect all objects pointing at/inside the object
     FldList refs;
-    sh.pointedBy(refs, root);
+    const TObjId obj = sh.objByAddr(root);
+    sh.pointedBy(refs, obj);
 
     // unless this is a prototype, disallow self loops from _binding_ pointers
     TFldSet blackList;
@@ -296,8 +297,10 @@ TValId jumpToNextObj(
 
 bool isPointedByVar(SymHeap &sh, const TValId root)
 {
+    const TObjId obj = sh.objByAddr(root);
+
     FldList refs;
-    sh.pointedBy(refs, root);
+    sh.pointedBy(refs, obj);
     BOOST_FOREACH(const FldHandle fld, refs) {
         const TValId at = fld.placedAt();
         const EValueTarget code = sh.valTarget(at);

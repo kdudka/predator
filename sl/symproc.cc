@@ -836,7 +836,8 @@ void SymProc::killVar(const CodeStorage::KillVar &kv)
 
     const std::string varString = varToString(sh_.stor(), kv.uid);
 
-    if (!sh_.pointedByCount(addr)) {
+    const TObjId obj = sh_.objByAddr(addr);
+    if (!sh_.pointedByCount(obj)) {
         // just destroy the variable
 #if DEBUG_SE_STACK_FRAME
         CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() destroys var " << varString);

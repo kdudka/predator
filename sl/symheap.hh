@@ -370,11 +370,11 @@ class SymHeapCore {
         /// return how many objects have the value inside
         unsigned usedByCount(TValId val) const;
 
-        /// return all objects that point at/inside the given root entity
-        void pointedBy(FldList &dst, TValId root) const;
+        /// return all objects that point at/inside the given object
+        void pointedBy(FldList &dst, TObjId) const;
 
-        /// return how many objects point at/inside the given root entity
-        unsigned pointedByCount(TValId root) const;
+        /// return how many objects point at/inside the given object
+        unsigned pointedByCount(TObjId) const;
 
         /// write an uninitialized or nullified block of memory
         void writeUniformBlock(
