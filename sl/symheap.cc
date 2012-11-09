@@ -1785,7 +1785,7 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const
     }
 }
 
-void SymHeapCore::gatherLiveObjects(FldList &dst, TValId root) const
+void SymHeapCore::gatherLiveFields(FldList &dst, TValId root) const
 {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
@@ -1803,7 +1803,7 @@ void SymHeapCore::gatherLiveObjects(FldList &dst, TValId root) const
 
             case BK_INVALID:
             default:
-                CL_BREAK_IF("gatherLiveObjects sees something special");
+                CL_BREAK_IF("gatherLiveFields sees something special");
         }
 
         const TFldId fld = item.first;

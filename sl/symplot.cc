@@ -102,7 +102,7 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
 
         // traverse the root
         FldList liveObjs;
-        sh.gatherLiveObjects(liveObjs, root);
+        sh.gatherLiveFields(liveObjs, root);
         BOOST_FOREACH(const FldHandle &fld, liveObjs) {
             const TValId valInside = fld.value();
             if (0 < valInside)
@@ -725,7 +725,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
 
 #if SYMPLOT_DEBUG_DLS
         FldList peerObjs;
-        sh.gatherLiveObjects(peerObjs, peer);
+        sh.gatherLiveFields(peerObjs, peer);
 #else
         TFldSet peerObjs;
         buildIgnoreList(peerObjs, sh, peer);
@@ -783,7 +783,7 @@ void plotRootObjects(PlotData &plot)
 
         // gather live objects
         FldList liveObjs;
-        sh.gatherLiveObjects(liveObjs, root);
+        sh.gatherLiveFields(liveObjs, root);
 
 #if !SYMPLOT_FLAT_MODE
         if (OK_CONCRETE == sh.valTargetKind(root)

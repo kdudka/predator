@@ -2251,7 +2251,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn)
         const TValId root = sh_.valRoot(lhs.placedAt());
 
         FldList liveObjs;
-        sh_.gatherLiveObjects(liveObjs, root);
+        sh_.gatherLiveFields(liveObjs, root);
         BOOST_FOREACH(const FldHandle &fld, liveObjs)
             if (fld == lhs)
                 goto already_alive;

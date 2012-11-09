@@ -289,7 +289,7 @@ bool /* complete */ traverseLiveObjs(
         const TValId                rootAt,
         TVisitor                    &visitor)
 {
-    return traverseCore(sh, rootAt, visitor, &SymHeap::gatherLiveObjects);
+    return traverseCore(sh, rootAt, visitor, &SymHeap::gatherLiveFields);
 }
 
 /// take the given visitor through all uniform blocks
@@ -342,7 +342,7 @@ bool /* complete */ traverseLiveObjsGeneric(
             continue;
 
         FldList objs;
-        sh.gatherLiveObjects(objs, root);
+        sh.gatherLiveFields(objs, root);
         BOOST_FOREACH(const FldHandle &fld, objs) {
             const TValId addr = fld.placedAt();
             const TOffset off = sh.valOffset(addr) - offs[i];

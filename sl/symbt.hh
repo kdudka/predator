@@ -42,9 +42,7 @@ namespace CodeStorage {
 class SymBackTrace {
     public:
         /**
-         * @param stor reference to storage object, later used for resolving fnc
-         * IDs
-         * @param ptrace if true, print path trace with @b each backtrace
+         * @param stor reference to storage object, used for resolving fnc IDs
          */
         SymBackTrace(const CodeStorage::Storage &stor);
         ~SymBackTrace();
