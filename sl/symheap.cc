@@ -489,7 +489,7 @@ struct InternalCustomValue: public ReferableValue {
 struct RootValue: public AnchorValue {
     CVar                            cVar;
     TSizeRange                      size;
-    TLiveObjs                       liveObjs;
+    TLiveObjs                       liveFields;
     TFldIdSet                       usedByGl;
     TArena                          arena;
     TObjType                        lastKnownClt;
@@ -808,17 +808,17 @@ bool SymHeapCore::Private::chkArenaConsistency(
     if (::bypassSelfChecks)
         return true;
 
-    TLiveObjs all(rootData->liveObjs);
+    TLiveObjs all(rootData->liveFields);
     if (isGone(rootData->code)) {
         CL_BREAK_IF(IR::rngFromNum(IR::Int0) != rootData->size);
-        CL_BREAK_IF(!rootData->liveObjs.empty());
+        CL_BREAK_IF(!rootData->liveFields.empty());
 
         // we can check nothing for VT_DELETED/VT_LOST, we do not know the size
         return true;
     }
 
     std::set<TOffset> offs;
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveFields) {
         const BlockEntity *blData;
         this->ents.getEntRO(&blData, /* fld */ item.first);
         CL_BREAK_IF(!blData->size);
@@ -895,7 +895,7 @@ void SymHeapCore::Private::splitBlockByObject(
 
     if (blBegToObjBeg <= 0 && objEndToBlEnd <= 0) {
         // block completely overlapped by the object, throw it away
-        if (!rootData->liveObjs.erase(block))
+        if (!rootData->liveFields.erase(block))
             CL_BREAK_IF("attempt to kill an already dead uniform block");
 
         rootData->arena -= createArenaItem(blOff, blSize, block);
@@ -925,7 +925,7 @@ void SymHeapCore::Private::splitBlockByObject(
                 objEndToBlEnd,
                 blOther);
 
-        rootData->liveObjs[blOther] = BK_UNIFORM;
+        rootData->liveFields[blOther] = BK_UNIFORM;
         return;
     }
 
@@ -1156,7 +1156,7 @@ void SymHeapCore::Private::reinterpretObjData(
     }
 
     // mark the object as dead
-    if (rootData->liveObjs.erase(old))
+    if (rootData->liveFields.erase(old))
         CL_DEBUG("reinterpretObjData() kills a live object");
 
     if (!oldData->extRefCnt) {
@@ -1251,7 +1251,7 @@ void SymHeapCore::Private::objDestroy(TFldId fld, bool removeVal, bool detach)
         const TSizeOf size = blData->size;
         rootData->arena -= createArenaItem(off, size, fld);
 
-        CL_BREAK_IF(hasKey(rootData->liveObjs, fld));
+        CL_BREAK_IF(hasKey(rootData->liveFields, fld));
         CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* mayOverlap */true));
     }
 
@@ -1413,7 +1413,7 @@ void SymHeapCore::Private::transferBlock(
             CL_BREAK_IF(hbDataSrc->size <= sizeLimit || sizeLimit <= 0);
         }
 
-        if (!hasKey(rootDataSrc->liveObjs, objSrc))
+        if (!hasKey(rootDataSrc->liveFields, objSrc))
             // dead object anyway
             continue;
 
@@ -1489,7 +1489,7 @@ TValId SymHeapCore::Private::objInit(TFldId fld)
             this->ents.getEntRO(&blockData, other);
 
             const EBlockKind code = blockData->code;
-            if (BK_UNIFORM != code && !hasKey(rootData->liveObjs, other))
+            if (BK_UNIFORM != code && !hasKey(rootData->liveFields, other))
                 continue;
 
             // reinterpret _self_ by another live object or uniform block
@@ -1505,10 +1505,10 @@ TValId SymHeapCore::Private::objInit(TFldId fld)
 
     // mark the object as live
     if (isDataPtr(clt))
-        rootData->liveObjs[fld] = BK_DATA_PTR;
+        rootData->liveFields[fld] = BK_DATA_PTR;
 #if SE_TRACK_NON_POINTER_VALUES
     else
-        rootData->liveObjs[fld] = BK_DATA_OBJ;
+        rootData->liveFields[fld] = BK_DATA_OBJ;
 #endif
 
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
@@ -1594,7 +1594,7 @@ void SymHeapCore::usedBy(FldList &dst, TValId val, bool liveOnly) const
         d->ents.getEntRO(&rootData, root);
 
         // check if the object is alive
-        if (hasKey(rootData->liveObjs, fld))
+        if (hasKey(rootData->liveFields, fld))
             dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
     }
 }
@@ -1713,7 +1713,7 @@ TFldId SymHeapCore::Private::copySingleLiveBlock(
     }
 
     // prevserve live object code
-    rootDataDst->liveObjs[dst] = code;
+    rootDataDst->liveFields[dst] = code;
     return dst;
 }
 
@@ -1739,7 +1739,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
     this->liveRoots->insert(imageAt);
 
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveObjs)
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveFields)
         this->copySingleLiveBlock(imageAt, rootDataDst,
                 /* src  */ item.first,
                 /* code */ item.second);
@@ -1753,7 +1753,7 @@ void SymHeapCore::gatherLivePointers(FldList &dst, TValId root) const
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
 
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveFields) {
         const EBlockKind code = item.second;
         if (BK_DATA_PTR != code)
             continue;
@@ -1767,7 +1767,7 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const
 {
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveFields) {
         const EBlockKind code = item.second;
         if (BK_UNIFORM != code)
             continue;
@@ -1790,7 +1790,7 @@ void SymHeapCore::gatherLiveFields(FldList &dst, TValId root) const
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
 
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveObjs) {
+    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveFields) {
         const EBlockKind code = item.second;
 
         switch (code) {
@@ -1956,7 +1956,7 @@ void SymHeapCore::objSetValue(TFldId fld, TValId val, TValSet *killedPtrs)
     const TValId root = objData->root;
     RootValue *rootData;
     d->ents.getEntRW(&rootData, root);
-    rootData->liveObjs[fld] = bkFromClt(clt);
+    rootData->liveFields[fld] = bkFromClt(clt);
 
     // now set the value
     d->setValueOf(fld, val, killedPtrs);
@@ -1985,7 +1985,7 @@ TFldId SymHeapCore::Private::writeUniformBlock(
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // mark the block as live
-    rootData->liveObjs[fld] = BK_UNIFORM;
+    rootData->liveFields[fld] = BK_UNIFORM;
 
     TArena &arena = rootData->arena;
     arena += createArenaItem(beg, size, fld);
@@ -2055,7 +2055,7 @@ void SymHeapCore::copyBlockOfRawMemory(
     CL_BREAK_IF(!d->chkArenaConsistency(rootDataDst));
 
     // remove the dummy block we used just to trigger the data reinterpretation
-    rootDataDst->liveObjs.erase(blKiller);
+    rootDataDst->liveFields.erase(blKiller);
     rootDataDst->arena -= createArenaItem(dstOff, size, blKiller);
     d->ents.releaseEnt(blKiller);
     CL_BREAK_IF(!d->chkArenaConsistency(rootDataDst));
@@ -2972,7 +2972,7 @@ TFldId SymHeapCore::Private::fieldAt(
                 continue;
         }
 
-        const bool isLive = hasKey(rootData->liveObjs, fld);
+        const bool isLive = hasKey(rootData->liveFields, fld);
         const FieldOfObj *objData = DCAST<const FieldOfObj *>(blData);
         if (!/* continue */policy->matchBlock(fld, objData, isLive))
             break;
@@ -3115,7 +3115,7 @@ void SymHeapCore::objLeave(TFldId fld)
     const TValId root = objData->root;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
-    if (!hasKey(rootData->liveObjs, fld)) {
+    if (!hasKey(rootData->liveFields, fld)) {
         CL_DEBUG("SymHeapCore::objLeave() destroys a dead object");
         d->objDestroy(fld, /* removeVal */ true, /* detach */ true);
     }
@@ -3422,7 +3422,7 @@ void SymHeapCore::Private::destroyRoot(TValId root)
     // wipe rootData
     rootData->size = IR::rngFromNum(IR::Int0);
     rootData->lastKnownClt = 0;
-    rootData->liveObjs.clear();
+    rootData->liveFields.clear();
     rootData->arena.clear();
 }
 
