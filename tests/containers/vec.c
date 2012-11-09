@@ -7,7 +7,8 @@ int main()
     int n = 0;
     int r = 0;
 
-    for (int i = 0; i < 10; ++i)
+    int i;
+    for (i = 0; i < 10; ++i)
     {
         if (n == r)
         {
@@ -20,7 +21,7 @@ int main()
         A[n++] = i;
     }
 
-    for (int i = 0; i < n; ++i)
+    for (i = 0; i < n; ++i)
         if (A[i] = 3)
             break;
 

@@ -15,7 +15,8 @@ struct SLL
 struct SLLinner* SLLinner_create(int const n, int* const A)
 {
     struct SLLinner* sll = 0;
-    for (int i = 0; i < n; ++i)
+    int i;
+    for (i = 0; i < n; ++i)
     {
         struct SLLinner* p = (struct SLLinner*)malloc(sizeof(struct SLLinner));
         p->data = A[i];
@@ -28,7 +29,8 @@ struct SLLinner* SLLinner_create(int const n, int* const A)
 struct SLL* SLL_create(int const n, int** const A, int const* m)
 {
     struct SLL* sll = 0;
-    for (int i = 0; i < n; ++i)
+    int i;
+    for (i = 0; i < n; ++i)
     {
         struct SLL* p = (struct SLL*)malloc(sizeof(struct SLL));
         p->data = SLLinner_create(m[i],A[i]);

@@ -9,11 +9,13 @@ struct SLL
 struct SLL* SLL_create(int const n, int** const A, int const* m)
 {
     struct SLL* sll = 0;
-    for (int i = 0; i < n; ++i)
+    int i;
+    for (i = 0; i < n; ++i)
     {
         struct SLL* p = (struct SLL*)malloc(sizeof(struct SLL));
         p->data = (int*)malloc(m[i] * sizeof(int));
-        for (int j = 0; j < m[i]; ++j)
+        int j;
+        for (j = 0; j < m[i]; ++j)
              p->data[j] = A[i][j];
         p->next = sll;
         sll = p;

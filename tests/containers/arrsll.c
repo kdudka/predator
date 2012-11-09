@@ -10,7 +10,8 @@ struct SLL
 struct SLL* SLL_create(int const n, int const* const A)
 {
     struct SLL* sll = 0;
-    for (int i = 0; i < n; ++i)
+    int i;
+    for (i = 0; i < n; ++i)
     {
         struct SLL* p = (struct SLL*)malloc(sizeof(struct SLL));
         p->data = A[i];
@@ -36,10 +37,11 @@ int main()
     int const n = sizeof(A)/sizeof(A[0]);
 
     struct SLL** arrsll = (struct SLL**)malloc(3 * sizeof(struct SLL*));
-    for (int i = 0; i < 3; ++i)
+    int i;
+    for (i = 0; i < 3; ++i)
         arrsll[i] = SLL_create(n,A);
 
-    for (int i = 0; i < 3; ++i)
+    for (i = 0; i < 3; ++i)
         SLL_destroy(arrsll[i]);
     free((void*)arrsll);
 

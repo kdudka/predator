@@ -12,9 +12,11 @@ int main()
     struct DLL* dll_head = 0;
     struct DLL* dll_tail = 0;
 
-    for (int k = 0; k < 3; ++k)
+    int k;
+    for (k = 0; k < 3; ++k)
     {
-        for (int i = 0; i < 10; ++i)
+        int i;
+        for (i = 0; i < 10; ++i)
         {
             if (dll_head == 0)
             {
@@ -33,7 +35,7 @@ int main()
             }
         }
 
-        for (int i = 0; i < 10; ++i)
+        for (i = 0; i < 10; ++i)
         {
             if (dll_head == 0)
             {

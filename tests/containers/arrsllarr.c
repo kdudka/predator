@@ -22,10 +22,11 @@ struct Outer
     struct SLL sll_2;
 };
 
-struct SLL* SLL_create(int const n, Inner const* const data)
+struct SLL* SLL_create(int const n, struct Inner const* const data)
 {
     struct SLL* sll = 0;
-    for (int i = 0; i < n; ++i)
+    int i;
+    for (i = 0; i < n; ++i)
     {
         struct SLL* p = (struct SLL*)malloc(sizeof(struct SLL));
         p->data.c = data->c;
@@ -67,7 +68,8 @@ void SLL_destroy(struct SLL const* sll)
 int main()
 {
     struct Outer* outer = (struct Outer*)malloc(5 * sizeof(struct Outer));
-    for (int i = 0; i < 5; ++i)
+    int i;
+    for (i = 0; i < 5; ++i)
     {
         struct Inner inner;
         outer[i].f = (float)i + 0.5f;
@@ -75,7 +77,8 @@ int main()
         inner.c = 'A';
         inner.n = 4;
         inner.arr = (int*)malloc(inner.n * sizeof(int));
-        for (int j = 0; j < inner.n; ++j)
+        int j;
+        for (j = 0; j < inner.n; ++j)
             inner.arr[j] = i+j;
         outer[i].sll_1 = SLL_create(i,&inner);
         outer[i].sll_2.data = inner;
@@ -83,7 +86,7 @@ int main()
         SLL_xcopy(outer[i].sll_1,outer[i].sll_1+i,&outer[i].sll_2);
     }
 
-    for (int i = 0; i < 5; ++i)
+    for (i = 0; i < 5; ++i)
     {
         SLL_destroy(outer[i].sll_1);
         SLL_destroy(outer[i].sll_2.next);

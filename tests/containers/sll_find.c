@@ -9,7 +9,8 @@ struct SLL
 struct SLL* SLL_create(int const n, int const* const A)
 {
     struct SLL* sll = 0;
-    for (int i = 0; i < n; ++i)
+    int i;
+    for (i = 0; i < n; ++i)
     {
         struct SLL* p = (struct SLL*)malloc(sizeof(struct SLL));
         p->data = A[i];
@@ -21,7 +22,8 @@ struct SLL* SLL_create(int const n, int const* const A)
 
 struct SLL const* SLL_find(struct SLL const* sll, int const x)
 {
-    for (struct SLL const* p = sll; p != 0; ++p)
+    struct SLL const* p;
+    for (p = sll; p != 0; ++p)
         if (p->data == x)
             return p;
     return 0;
