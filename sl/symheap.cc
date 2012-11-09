@@ -2817,6 +2817,18 @@ bool isAnyDataArea(EValueTarget code)
         || (VT_RANGE == code);
 }
 
+TObjId SymHeapCore::objByAddr(TValId val) const {
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
+
+    if (!isAnyDataArea(valData->code))
+        return OBJ_INVALID;
+
+    const RootValue *rootData;
+    d->ents.getEntRO(&rootData, valData->valRoot);
+    return rootData->obj;
+}
+
 TValId SymHeapCore::valRoot(TValId val) const
 {
     if (val <= 0)
@@ -3266,15 +3278,10 @@ void SymHeapCore::objLeave(TFldId fld)
     // TODO: pack the representation if possible
 }
 
-CVar SymHeapCore::cVarByRoot(TValId valRoot) const
+CVar SymHeapCore::cVarByObject(TObjId obj) const
 {
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, valRoot);
-
-    // jump to region
     const Region *regData;
-    d->ents.getEntRO(&regData, rootData->obj);
-
+    d->ents.getEntRO(&regData, obj);
     return regData->cVar;
 }
 

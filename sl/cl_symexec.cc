@@ -98,7 +98,8 @@ void digGlJunk(SymHeap &sh)
     sh.gatherRootObjects(glVars, isProgramVar);
     BOOST_FOREACH(const TValId root, glVars) {
         // ensure we are dealing with a gl variable
-        const CVar cv(sh.cVarByRoot(root));
+        const TObjId obj = sh.objByAddr(root);
+        const CVar cv(sh.cVarByObject(obj));
         CL_BREAK_IF(cv.inst);
 
         // dig var identity and location info

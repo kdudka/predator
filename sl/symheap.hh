@@ -429,6 +429,9 @@ class SymHeapCore {
         /// classify where the given value originates from
         EValueOrigin valOrigin(TValId) const;
 
+        /// return the object that the given address points to
+        TObjId objByAddr(TValId addr) const;
+
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;
 
@@ -479,11 +482,8 @@ class SymHeapCore {
                 UniformBlock                block)
             const;
 
-        /**
-         * return the corresponding program variable of the given @b root
-         * address pointing to VT_STATIC/VT_ON_STACK
-         */
-        CVar cVarByRoot(TValId root) const;
+        /// return program variable that the given object maps to
+        CVar cVarByObject(TObjId) const;
 
         /**
          * composite object given by val (applicable only on VT_COMPOSITE vals)

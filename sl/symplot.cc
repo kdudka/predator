@@ -211,7 +211,8 @@ void describeVar(PlotData &plot, const TValId rootAt)
     TStorRef stor = sh.stor();
 
     // var lookup
-    CVar cv = sh.cVarByRoot(rootAt);
+    const TObjId obj = sh.objByAddr(rootAt);
+    const CVar cv = sh.cVarByObject(obj);
 
     // write identity of the var
     plot.out << "CL" << varToString(stor, cv.uid) << " [root = #" << rootAt;

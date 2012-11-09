@@ -216,7 +216,9 @@ void gatherProgramVarsCore(
         if (VAL_ADDR_OF_RET == root)
             continue;
 
-        (dst.*ins)(sh.cVarByRoot(root));
+        const TObjId obj = sh.objByAddr(root);
+
+        (dst.*ins)(sh.cVarByObject(obj));
     }
 }
 
@@ -437,7 +439,8 @@ bool /* complete */ traverseProgramVarsGeneric(
             if (VAL_ADDR_OF_RET == root)
                 continue;
 
-            const CVar cv(sh.cVarByRoot(root));
+            const TObjId obj = sh.objByAddr(root);
+            const CVar cv(sh.cVarByObject(obj));
             if (!insertOnce(all, cv))
                 continue;
 

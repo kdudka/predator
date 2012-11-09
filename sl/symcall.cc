@@ -325,7 +325,8 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh)
             continue;
 
         // local variable
-        const CVar cv(sh.cVarByRoot(root));
+        const TObjId obj = sh.objByAddr(root);
+        const CVar cv(sh.cVarByObject(obj));
         if (!hasKey(this->fnc->vars, cv.uid) || cv.inst != this->nestLevel)
             // a local variable that is not here-local
             continue;
@@ -370,7 +371,8 @@ void joinHeapsWithCare(
     TValList liveGlVars;
     callFrame.gatherRootObjects(liveGlVars, isGlVar);
     BOOST_FOREACH(const TValId root, liveGlVars) {
-        const CVar cv = callFrame.cVarByRoot(root);
+        const TObjId obj = callFrame.objByAddr(root);
+        const CVar cv = callFrame.cVarByObject(obj);
         CL_BREAK_IF(cv.inst);
 
         // check whether the var from 'callFrame' is alive in 'sh'
@@ -626,7 +628,8 @@ void SymCallCache::Private::resolveHeapCut(
     TValList live;
     sh.gatherRootObjects(live, isProgramVar);
     BOOST_FOREACH(const TValId root, live) {
-        const CVar cv(sh.cVarByRoot(root));
+        const TObjId obj = sh.objByAddr(root);
+        const CVar cv(sh.cVarByObject(obj));
 
         const EValueTarget code = sh.valTarget(root);
         if (VT_STATIC == code) {

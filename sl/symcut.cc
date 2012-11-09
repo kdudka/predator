@@ -141,7 +141,8 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
     CVar cv;
     if (isProgramVar(src.valTarget(rootSrcAt))) {
         // program variable
-        cv = src.cVarByRoot(rootSrcAt);
+        const TObjId objSrc = src.objByAddr(rootSrcAt);
+        cv = src.cVarByObject(objSrc);
 #if DEBUG_SYMCUT
         const size_t orig = dc.cut.size();
 #endif

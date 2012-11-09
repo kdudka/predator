@@ -305,7 +305,8 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
 
 void SymProc::varInit(TValId at)
 {
-    const CVar cv = sh_.cVarByRoot(at);
+    const TObjId obj = sh_.objByAddr(at);
+    const CVar cv = sh_.cVarByObject(obj);
     const CodeStorage::Storage &stor = sh_.stor();
     const CodeStorage::Var &var = stor.vars[cv.uid];
     if (var.initials.empty())
