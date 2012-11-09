@@ -79,7 +79,7 @@ enum TValId {
      */
     VAL_NULL          =  0,
 
-    /// @todo some dox
+    /// TODO: drop this
     VAL_ADDR_OF_RET   =  1,
 
     /**
@@ -108,5 +108,21 @@ enum TValId {
 };
 
 typedef std::pair<TValId, TValId>           TValPair;
+
+/**
+ * SymHeap @b object @b ID
+ * @note Though the type is defined as enumeration for now, the code should not
+ * rely on that fact, as it may be subject for change in the future.
+ */
+enum TObjId {
+    /// for signalling error states only
+    OBJ_INVALID       = -1,
+
+    /// return value of the function currently being executed
+    OBJ_RETURN        = 2,
+
+    /// @copydoc symid.hh::FLD_MAX_ID
+    OBJ_MAX_ID        = /* XXX */ UINT_MAX
+};
 
 #endif /* H_GUARD_SYM_ID_H */
