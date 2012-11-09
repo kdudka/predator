@@ -1069,7 +1069,7 @@ void executeMemmove(
         return;
     }
     if (!size.hi) {
-        CL_WARN_MSG(loc, "ignoring call of " << fnc << " with size == 0");
+        CL_DEBUG_MSG(loc, "ignoring call of " << fnc << " with size == 0");
         proc.printBackTrace(ML_WARN);
         return;
     }
