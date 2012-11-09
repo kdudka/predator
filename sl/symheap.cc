@@ -593,7 +593,7 @@ struct SymHeapCore::Private {
 
     TFldId objCreate(TValId root, TOffset off, TObjType clt);
     TValId objInit(TFldId fld);
-    void objDestroy(TFldId, bool removeVal, bool detach);
+    void fldDestroy(TFldId, bool removeVal, bool detach);
 
     TFldId copySingleLiveBlock(
             const TValId            rootDst,
@@ -1161,7 +1161,7 @@ void SymHeapCore::Private::reinterpretObjData(
 
     if (!oldData->extRefCnt) {
         CL_DEBUG("reinterpretObjData() destroys a dead object");
-        this->objDestroy(old, /* removeVal */ false, /* detach */ true);
+        this->fldDestroy(old, /* removeVal */ false, /* detach */ true);
         return;
     }
 
@@ -1227,7 +1227,7 @@ TFldId SymHeapCore::Private::objCreate(
     return fld;
 }
 
-void SymHeapCore::Private::objDestroy(TFldId fld, bool removeVal, bool detach)
+void SymHeapCore::Private::fldDestroy(TFldId fld, bool removeVal, bool detach)
 {
     BlockEntity *blData;
     this->ents.getEntRW(&blData, fld);
@@ -3117,7 +3117,7 @@ void SymHeapCore::objLeave(TFldId fld)
     d->ents.getEntRO(&rootData, root);
     if (!hasKey(rootData->liveFields, fld)) {
         CL_DEBUG("SymHeapCore::objLeave() destroys a dead object");
-        d->objDestroy(fld, /* removeVal */ true, /* detach */ true);
+        d->fldDestroy(fld, /* removeVal */ true, /* detach */ true);
     }
 
     // TODO: pack the representation if possible
@@ -3415,7 +3415,7 @@ void SymHeapCore::Private::destroyRoot(TValId root)
         if (arenaLookup(&allObjs, rootData->arena, chunk, FLD_INVALID)) {
             // destroy all inner objects
             BOOST_FOREACH(const TFldId fld, allObjs)
-                this->objDestroy(fld, /* removeVal */ true, /* detach */ false);
+                this->fldDestroy(fld, /* removeVal */ true, /* detach */ false);
         }
     }
 
