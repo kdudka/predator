@@ -22,13 +22,13 @@ struct SLL* SLL_create(int const n, int const* const A)
 
 void SLL_copy(struct SLL const* begin, struct SLL const* const end, struct SLL* out)
 {
-    for ( ; begin != end; ++begin, ++out)
+    for ( ; begin != end; begin = begin->next, out = out->next)
         out->data = begin->data;
 }
 
 void SLL_xcopy(struct SLL const* begin, struct SLL const* const end, struct SLL* out)
 {
-    for ( ; begin != end; ++begin)
+    for ( ; begin != end; begin = begin->next)
     {
         struct SLL* p = (struct SLL*)malloc(sizeof(struct SLL));
         p->data = begin->data;
@@ -56,8 +56,8 @@ int main()
     struct SLL* sll_1 = SLL_create(n,A);
     struct SLL* sll_2 = SLL_create(2,A);
 
-    SLL_copy(sll_1+2,sll_1+4,sll_2);
-    SLL_xcopy(sll_1,sll_1+5,sll_2+1);
+    SLL_copy(sll_1->next->next,sll_1->next->next->next->next,sll_2);
+    SLL_xcopy(sll_1,sll_1->next->next->next->next->next,sll_2->next);
 
     SLL_destroy(sll_2);
     SLL_destroy(sll_1);

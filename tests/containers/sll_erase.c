@@ -31,7 +31,7 @@ struct SLL* SLL_erase(struct SLL* sll, struct SLL* const it)
     else
     {
         struct SLL* p = sll;
-        for ( ; p->next != it; ++p)
+        for ( ; p->next != it; p = p->next)
             ;
         p->next = it->next;
         free((void*)it);
@@ -56,7 +56,7 @@ int main()
 
     struct SLL* sll = SLL_create(n,A);
 
-    sll = SLL_erase(sll,sll+2);
+    sll = SLL_erase(sll,sll->next->next);
 
     SLL_destroy(sll);
 

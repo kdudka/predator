@@ -34,16 +34,16 @@ int S_empty(struct Stack* const s)
 void S_destroy(struct Stack* s)
 {
     while (!S_empty(s))
-        S_pop(s);
+        s = S_pop(s);
 }
 
 int main()
 {
     struct Stack* s = 0;
-    S_push(s,1);
-    S_push(s,2);
-    S_push(s,3);
-    S_pop(s);
+    s = S_push(s,1);
+    s = S_push(s,2);
+    s = S_push(s,3);
+    s = S_pop(s);
     S_destroy(s);
     return 0;
 }

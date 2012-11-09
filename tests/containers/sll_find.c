@@ -23,7 +23,7 @@ struct SLL* SLL_create(int const n, int const* const A)
 struct SLL const* SLL_find(struct SLL const* sll, int const x)
 {
     struct SLL const* p;
-    for (p = sll; p != 0; ++p)
+    for (p = sll; p != 0; p = p->next)
         if (p->data == x)
             return p;
     return 0;

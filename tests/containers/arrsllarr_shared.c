@@ -61,7 +61,10 @@ int main()
         outer[i].f = (float)i + 0.5f;
         outer[i].m = i;
         outer[i].sll_1 = SLL_create(i,&inner);
-        outer[i].sll_2 = *outer[i].sll_1;
+        if (i)
+            outer[i].sll_2 = *outer[i].sll_1;
+        else
+            memset(&outer[i].sll_2, 0, sizeof(struct SLL));
     }
 
     for (i = 0; i < 5; ++i)

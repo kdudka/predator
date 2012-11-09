@@ -41,7 +41,7 @@ struct SLL* SLL_create(int const n, struct Inner const* const data)
 
 void SLL_xcopy(struct SLL const* begin, struct SLL const* const end, struct SLL* out)
 {
-    for ( ; begin != end; ++begin)
+    for ( ; begin != end; begin = begin->next)
     {
         struct SLL* p = (struct SLL*)malloc(sizeof(struct SLL));
         p->data.c = begin->data.c;
@@ -83,7 +83,10 @@ int main()
         outer[i].sll_1 = SLL_create(i,&inner);
         outer[i].sll_2.data = inner;
         outer[i].sll_2.next = 0;
-        SLL_xcopy(outer[i].sll_1,outer[i].sll_1+i,&outer[i].sll_2);
+        struct SLL* it2 = outer[i].sll_1;
+        for (j = 0; j < i; ++j)
+            it2 = it2->next;
+        SLL_xcopy(outer[i].sll_1,it2,&outer[i].sll_2);
     }
 
     for (i = 0; i < 5; ++i)
