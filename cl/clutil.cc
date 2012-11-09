@@ -23,6 +23,7 @@
 #include <cl/storage.hh>
 
 #include "util.hh"
+#include "worklist.hh"
 
 #include <sstream>
 
@@ -33,12 +34,11 @@ bool operator==(const struct cl_type &a, const struct cl_type &b)
 {
     // go through the given types recursively and match UIDs etc.
     typedef std::pair<const struct cl_type *, const struct cl_type *> TItem;
-    std::stack<TItem> todo;
-    push(todo, &a, &b);
-    while (!todo.empty()) {
+    TItem item(&a, &b);
+    WorkList<TItem> wl(item);
+    while (wl.next(item)) {
         const struct cl_type *cltA, *cltB;
-        boost::tie(cltA, cltB) = todo.top();
-        todo.pop();
+        boost::tie(cltA, cltB) = item;
 
         if (cltA->uid == cltB->uid)
             // UID matched, go next
@@ -92,7 +92,8 @@ bool operator==(const struct cl_type &a, const struct cl_type &b)
                     if (ciA->name && ciB->name && !STREQ(ciA->name, ciB->name))
                         return false;
 
-                    push(todo, ciA->type, ciB->type);
+                    const TItem sub(ciA->type, ciB->type);
+                    wl.schedule(sub);
                 }
         }
     }
