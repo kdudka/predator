@@ -163,7 +163,8 @@ bool protoCheckConsistency(const SymHeap &sh)
         const TProtoLevel rootLevel = sh.valTargetProtoLevel(root);
 
         FldList ptrs;
-        sh.gatherLivePointers(ptrs, root);
+        const TObjId obj = sh.objByAddr(root);
+        sh.gatherLivePointers(ptrs, obj);
         BOOST_FOREACH(const FldHandle &fld, ptrs) {
             const TProtoLevel level = sh.valTargetProtoLevel(fld.value());
             if (level <= rootLevel)

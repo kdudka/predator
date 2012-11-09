@@ -1827,14 +1827,10 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
     return imageAt;
 }
 
-void SymHeapCore::gatherLivePointers(FldList &dst, TValId root) const
+void SymHeapCore::gatherLivePointers(FldList &dst, TObjId obj) const
 {
-    const RootValue *rootValData;
-    d->ents.getEntRO(&rootValData, root);
-
-    // jump to region
     const Region *rootData;
-    d->ents.getEntRO(&rootData, rootValData->obj);
+    d->ents.getEntRO(&rootData, obj);
 
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveFields) {
         const EBlockKind code = item.second;
@@ -1873,14 +1869,10 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const
     }
 }
 
-void SymHeapCore::gatherLiveFields(FldList &dst, TValId root) const
+void SymHeapCore::gatherLiveFields(FldList &dst, TObjId obj) const
 {
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, root);
-
-    // jump to region
     const Region *regData;
-    d->ents.getEntRO(&regData, rootData->obj);
+    d->ents.getEntRO(&regData, obj);
 
     BOOST_FOREACH(TLiveObjs::const_reference item, regData->liveFields) {
         const EBlockKind code = item.second;

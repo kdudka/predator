@@ -37,7 +37,8 @@ void gatherReferredRoots(TValList &dst, SymHeap &sh, TValId at)
     CL_BREAK_IF(sh.valOffset(at));
 
     FldList ptrs;
-    sh.gatherLivePointers(ptrs, at);
+    const TObjId obj = sh.objByAddr(at);
+    sh.gatherLivePointers(ptrs, obj);
     BOOST_FOREACH(const FldHandle &fld, ptrs) {
         const TValId val = fld.value();
         if (val <= 0)

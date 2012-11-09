@@ -682,9 +682,9 @@ bool traverseRoots(
     };
 
     if (VAL_INVALID != root1)
-        ctx.sh1.gatherLiveFields(ctx.liveList1, root1);
+        ctx.sh1.gatherLiveFields(ctx.liveList1, ctx.sh1.objByAddr(root1));
     if (VAL_INVALID != root2)
-        ctx.sh2.gatherLiveFields(ctx.liveList2, root2);
+        ctx.sh2.gatherLiveFields(ctx.liveList2, ctx.sh2.objByAddr(root2));
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx, rootItem.ldiff);
@@ -3008,7 +3008,8 @@ void transferContentsOfGhost(
     buildIgnoreList(ignoreList, sh, dst, bf);
 
     FldList live;
-    sh.gatherLiveFields(live, ghost);
+    const TObjId root = sh.objByAddr(ghost);
+    sh.gatherLiveFields(live, root);
     BOOST_FOREACH(const FldHandle &objGhost, live) {
         const FldHandle objDst = translateObjId(sh, sh, dst, objGhost);
         if (hasKey(ignoreList, objDst))

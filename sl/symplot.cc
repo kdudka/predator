@@ -102,7 +102,8 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
 
         // traverse the root
         FldList liveObjs;
-        sh.gatherLiveFields(liveObjs, root);
+        const TObjId obj = sh.objByAddr(root);
+        sh.gatherLiveFields(liveObjs, obj);
         BOOST_FOREACH(const FldHandle &fld, liveObjs) {
             const TValId valInside = fld.value();
             if (0 < valInside)
@@ -784,7 +785,8 @@ void plotRootObjects(PlotData &plot)
 
         // gather live objects
         FldList liveObjs;
-        sh.gatherLiveFields(liveObjs, root);
+        const TObjId obj = sh.objByAddr(root);
+        sh.gatherLiveFields(liveObjs, obj);
 
 #if !SYMPLOT_FLAT_MODE
         if (OK_CONCRETE == sh.valTargetKind(root)

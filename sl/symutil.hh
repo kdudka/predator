@@ -254,7 +254,7 @@ bool /* complete */ traverseCore(
 {
     // check that we got a valid root object
     CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(at)));
-    const TValId rootAt = sh.valRoot(at);
+    const TObjId rootAt = sh.objByAddr(at);
     const TOffset offRoot = sh.valOffset(at);
 
     FldList objs;
@@ -344,7 +344,8 @@ bool /* complete */ traverseLiveObjsGeneric(
             continue;
 
         FldList objs;
-        sh.gatherLiveFields(objs, root);
+        const TObjId obj = sh.objByAddr(root);
+        sh.gatherLiveFields(objs, obj);
         BOOST_FOREACH(const FldHandle &fld, objs) {
             const TValId addr = fld.placedAt();
             const TOffset off = sh.valOffset(addr) - offs[i];

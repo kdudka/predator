@@ -466,11 +466,11 @@ class SymHeapCore {
         /// list of root heap entities satisfying the given filtering predicate
         void gatherRootObjects(TValList &dst, bool (*)(EValueTarget) = 0) const;
 
-        /// list of live fields (including ptrs) owned by the given root entity
-        void gatherLiveFields(FldList &dst, TValId root) const;
+        /// list of live fields (including ptrs) inside the given object
+        void gatherLiveFields(FldList &dst, TObjId) const;
 
-        /// list of live pointers owned by the given root entity
-        void gatherLivePointers(FldList &dst, TValId root) const;
+        /// list of live pointers insed the give object
+        void gatherLivePointers(FldList &dst, TObjId) const;
 
         /// list of uninitialized and nullified uniform blocks
         void gatherUniformBlocks(TUniBlockMap &dst, TValId root) const;
