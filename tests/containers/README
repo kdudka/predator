@@ -1,0 +1,7 @@
+Containers Benchmark
+--------------------
+This directory contains various open-coded manipulations on STL-like containers.
+Each file ${file}.result.c corresponds to a file named ${file}.c and contains a
+manually converted code of ${file}.c that uses real STL containers.
+
+The 'containers' benchmark was contributed by Marek Trtík.
