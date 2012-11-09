@@ -298,14 +298,14 @@ bool /* complete */ traverseLiveObjs(
 template <class THeap, class TVisitor>
 bool /* complete */ traverseUniformBlocks(
         THeap                       &sh,
-        const TValId                root,
+        const TObjId                obj,
         TVisitor                    &visitor)
 {
     // check that we got a valid root object
-    CL_BREAK_IF(sh.valOffset(root) || !isPossibleToDeref(sh.valTarget(root)));
+    CL_BREAK_IF(OBJ_INVALID == obj);
 
     TUniBlockMap bMap;
-    sh.gatherUniformBlocks(bMap, root);
+    sh.gatherUniformBlocks(bMap, obj);
     BOOST_FOREACH(TUniBlockMap::const_reference bItem, bMap) {
         if (!visitor(sh, /* UniformBlock */ bItem.second))
             // traversal cancelled by visitor

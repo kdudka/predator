@@ -472,13 +472,13 @@ class SymHeapCore {
         /// list of live pointers insed the give object
         void gatherLivePointers(FldList &dst, TObjId) const;
 
-        /// list of uninitialized and nullified uniform blocks
-        void gatherUniformBlocks(TUniBlockMap &dst, TValId root) const;
+        /// list of uninitialized and nullified uniform blocks of the given obj
+        void gatherUniformBlocks(TUniBlockMap &dst, TObjId) const;
 
         /// experimental optimization of joinUniBlocksCore()
         bool findCoveringUniBlocks(
                 TUniBlockMap               *pCovered,
-                const TValId                root,
+                const TObjId                root,
                 UniformBlock                block)
             const;
 

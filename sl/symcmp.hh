@@ -63,7 +63,7 @@ bool matchOffsets(
 bool matchUniBlocks(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
-        const TValId            root1,
-        const TValId            root2);
+        const TObjId            root1,
+        const TObjId            root2);
 
 #endif /* H_GUARD_SYM_CMP_H */

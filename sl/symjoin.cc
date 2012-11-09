@@ -1073,8 +1073,8 @@ void joinUniBlocksCore(
         bool                    *pExtra1,
         bool                    *pExtra2,
         SymJoinCtx              &ctx,
-        const TValId            root1,
-        const TValId            root2)
+        const TObjId            root1,
+        const TObjId            root2)
 {
     SymHeap &sh1 = ctx.sh1;
     SymHeap &sh2 = ctx.sh2;
@@ -1130,19 +1130,19 @@ void joinUniBlocksCore(
 bool joinUniBlocks(
         SymJoinCtx              &ctx,
         const TValId            rootDst,
-        const TValId            root1,
-        const TValId            root2)
+        const TObjId            root1,
+        const TObjId            root2)
 {
     TUniBlockMap bMapDst;
     bool hasExtra1 = false;
     bool hasExtra2 = false;
 
-    if (VAL_INVALID == root2) {
+    if (OBJ_INVALID == root2) {
         hasExtra2 = true;
         ctx.sh1.gatherUniformBlocks(bMapDst, root1);
         importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh1);
     }
-    else if (VAL_INVALID == root1) {
+    else if (OBJ_INVALID == root1) {
         hasExtra1 = true;
         ctx.sh2.gatherUniformBlocks(bMapDst, root2);
         importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh2);
@@ -1215,7 +1215,9 @@ bool createObject(
     // create an image in ctx.dst
     const TValId rootDst = ctx.dst.heapAlloc(size);
 
-    if (!joinUniBlocks(ctx, rootDst, root1, root2))
+    const TObjId obj1 = ctx.sh1.objByAddr(root1);
+    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+    if (!joinUniBlocks(ctx, rootDst, obj1, obj2))
         // failed to complement uniform blocks
         return false;
 
@@ -2344,14 +2346,17 @@ class JoinVarVisitor {
             const TValId root1     = roots[/* sh1 */ 1];
             const TValId root2     = roots[/* sh2 */ 2];
 
-            const SchedItem rootItem(root1, root2, /* ldiff */ 0);
-
             switch (mode_) {
-                case JVM_LIVE_OBJS:
+                case JVM_LIVE_OBJS: {
+                    const SchedItem rootItem(root1, root2, /* ldiff */ 0);
                     return traverseRoots(ctx_, rootDst, rootItem);
+                }
 
-                case JVM_UNI_BLOCKS:
-                    return joinUniBlocks(ctx_, rootDst, root1, root2);
+                case JVM_UNI_BLOCKS: {
+                    const TObjId obj1 = ctx_.sh1.objByAddr(root1);
+                    const TObjId obj2 = ctx_.sh2.objByAddr(root2);
+                    return joinUniBlocks(ctx_, rootDst, obj1, obj2);
+                }
             }
 
             CL_BREAK_IF("stack smashing detected");
@@ -2877,7 +2882,10 @@ bool joinDataCore(
 
     killUniBlocksUnderBindingPtrs(sh, off, addr1);
     killUniBlocksUnderBindingPtrs(sh, off, addr2);
-    if (!joinUniBlocks(ctx, rootDstAt, addr1, addr2))
+
+    const TObjId obj1 = sh.objByAddr(addr1);
+    const TObjId obj2 = sh.objByAddr(addr2);
+    if (!joinUniBlocks(ctx, rootDstAt, obj1, obj2))
         // failed to complement uniform blocks
         return false;
 

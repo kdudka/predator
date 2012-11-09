@@ -111,8 +111,8 @@ bool matchPlainValues(
 bool matchUniBlocks(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
-        const TValId            root1,
-        const TValId            root2)
+        const TObjId            root1,
+        const TObjId            root2)
 {
     TUniBlockMap bMap1, bMap2;
     sh1.gatherUniformBlocks(bMap1, root1);
@@ -162,7 +162,9 @@ bool matchRoots(
         // prototype level mismatch
         return false;
 
-    if (!matchUniBlocks(sh1, sh2, root1, root2))
+    const TObjId obj1 = sh1.objByAddr(root1);
+    const TObjId obj2 = sh2.objByAddr(root2);
+    if (!matchUniBlocks(sh1, sh2, obj1, obj2))
         // root canvas mismatch
         return false;
 

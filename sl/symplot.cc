@@ -491,7 +491,8 @@ void plotUniformBlocks(PlotData &plot, const TValId root)
 
     // get all uniform blocks inside the given root
     TUniBlockMap bMap;
-    sh.gatherUniformBlocks(bMap, root);
+    const TObjId obj = sh.objByAddr(root);
+    sh.gatherUniformBlocks(bMap, obj);
 
     // plot all uniform blocks
     BOOST_FOREACH(TUniBlockMap::const_reference item, bMap) {
@@ -1348,7 +1349,8 @@ void plotFlatEdges(PlotData &plot)
 
         // get all uniform blocks inside the given root
         TUniBlockMap bMap;
-        sh.gatherUniformBlocks(bMap, root);
+        const TObjId obj = sh.objByAddr(root);
+        sh.gatherUniformBlocks(bMap, obj);
 
         // plot flat edges for all uniform blocks at the current root
         BOOST_FOREACH(TUniBlockMap::const_reference item, bMap) {

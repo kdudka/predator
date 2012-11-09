@@ -1842,14 +1842,10 @@ void SymHeapCore::gatherLivePointers(FldList &dst, TObjId obj) const
     }
 }
 
-void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TValId root) const
+void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TObjId obj) const
 {
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, root);
-
-    // jump to region
     const Region *regData;
-    d->ents.getEntRO(&regData, rootData->obj);
+    d->ents.getEntRO(&regData, obj);
 
     BOOST_FOREACH(TLiveObjs::const_reference item, regData->liveFields) {
         const EBlockKind code = item.second;
@@ -1897,19 +1893,14 @@ void SymHeapCore::gatherLiveFields(FldList &dst, TObjId obj) const
 
 bool SymHeapCore::findCoveringUniBlocks(
         TUniBlockMap               *pCovered,
-        const TValId                root,
+        const TObjId                obj,
         UniformBlock                block)
     const
 {
     CL_BREAK_IF(!pCovered->empty());
 
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, root);
-    CL_BREAK_IF(!d->chkArenaConsistency(rootData));
-
-    // jump to region
     const Region *regData;
-    d->ents.getEntRO(&regData, rootData->obj);
+    d->ents.getEntRO(&regData, obj);
 
     const TArena &arena = regData->arena;
     const TOffset beg = block.off;
@@ -2800,6 +2791,9 @@ bool isAnyDataArea(EValueTarget code)
 }
 
 TObjId SymHeapCore::objByAddr(TValId val) const {
+    if (val <= VAL_NULL)
+        return OBJ_INVALID;
+
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
 
