@@ -501,7 +501,7 @@ FldHandle SymProc::objByOperand(const struct cl_operand &op)
 
     // resolve the target object
     const FldHandle fld(sh_, at, op.type);
-    if (!fld.isValid())
+    if (!fld.isValidHandle())
         CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
 
     // all OK
@@ -514,11 +514,11 @@ TValId SymProc::valFromObj(const struct cl_operand &op)
         return this->targetAt(op);
 
     const FldHandle handle = this->objByOperand(op);
-    if (handle.isValid())
+    if (handle.isValidHandle())
         return handle.value();
 
     // failed to resolve object handle
-    const TFldId fld = handle.objId();
+    const TFldId fld = handle.fieldId();
     switch (fld) {
         case FLD_UNKNOWN:
             return sh_.valCreate(VT_UNKNOWN, VO_REINTERPRET);
@@ -741,7 +741,7 @@ TValId customValueEncoder(SymProc &proc, const FldHandle &dst, TValId val)
 
 void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
 {
-    if (!lhs.isValid()) {
+    if (!lhs.isValidHandle()) {
         CL_ERROR_MSG(proc.lw(), "invalid L-value");
         proc.printBackTrace(ML_ERROR);
         return;
@@ -1239,10 +1239,10 @@ bool lhsFromOperand(FldHandle *pLhs, SymProc &proc, const struct cl_operand &op)
         CL_BREAK_IF("lhs not an l-value");
 
     *pLhs = proc.objByOperand(op);
-    if (FLD_DEREF_FAILED == pLhs->objId())
+    if (FLD_DEREF_FAILED == pLhs->fieldId())
         return false;
 
-    CL_BREAK_IF(!pLhs->isValid());
+    CL_BREAK_IF(!pLhs->isValidHandle());
     return true;
 }
 

@@ -490,7 +490,7 @@ bool joinValuesByCode(
 
 bool bumpNestingLevel(const FldHandle &fld)
 {
-    if (!fld.isValid())
+    if (!fld.isValidHandle())
         return false;
 
     // resolve root (the owning object of this field)
@@ -514,10 +514,10 @@ bool joinFreshObjTripple(
         const FldHandle         &objDst,
         TProtoLevel             ldiff)
 {
-    const bool segClone = (!obj1.isValid() || !obj2.isValid());
-    const bool readOnly = (!objDst.isValid());
+    const bool segClone = (!obj1.isValidHandle() || !obj2.isValidHandle());
+    const bool readOnly = (!objDst.isValidHandle());
     CL_BREAK_IF(segClone && readOnly);
-    CL_BREAK_IF(!obj1.isValid() && !obj2.isValid());
+    CL_BREAK_IF(!obj1.isValidHandle() && !obj2.isValidHandle());
 
     const TValId v1 = obj1.value();
     const TValId v2 = obj2.value();
@@ -547,7 +547,7 @@ bool joinFreshObjTripple(
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
     if (segClone) {
-        const bool isGt1 = !obj2.isValid();
+        const bool isGt1 = !obj2.isValidHandle();
         const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
         const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
         const TValId valGt = (isGt1) ? v1 : v2;
@@ -588,7 +588,7 @@ bool joinFreshObjTripple(
     const SchedItem item(v1, v2, ldiff);
     if (ctx.wl.schedule(item))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
-                << " <- " << SJ_OBJP(obj1.objId(), obj2.objId())
+                << " <- " << SJ_OBJP(obj1.fieldId(), obj2.fieldId())
                 << ", ldiff = " << ldiff);
 
     return true;
@@ -2460,14 +2460,14 @@ bool setDstValuesCore(
         const TBlackList        &blackList)
 {
     const FldHandle &objDst = rItem.first;
-    CL_BREAK_IF(!objDst.isValid());
+    CL_BREAK_IF(!objDst.isValidHandle());
     if (hasKey(blackList, objDst))
         return true;
 
     const THdlPair &orig = rItem.second;
     const FldHandle &obj1 = orig.first;
     const FldHandle &obj2 = orig.second;
-    CL_BREAK_IF(!obj1.isValid() && !obj2.isValid());
+    CL_BREAK_IF(!obj1.isValidHandle() && !obj2.isValidHandle());
 
     const TValId v1 = obj1.value();
     const TValId v2 = obj2.value();
@@ -2476,8 +2476,8 @@ bool setDstValuesCore(
     const bool isComp2 = (isComposite(obj2.type()));
     if (isComp1 || isComp2) {
         // do not bother by composite values
-        CL_BREAK_IF(obj1.isValid() && !isComp1);
-        CL_BREAK_IF(obj2.isValid() && !isComp2);
+        CL_BREAK_IF(obj1.isValidHandle() && !isComp1);
+        CL_BREAK_IF(obj2.isValidHandle() && !isComp2);
         return true;
     }
 
@@ -2492,8 +2492,8 @@ bool setDstValuesCore(
     }
 
     // compute the resulting value
-    const bool validObj1 = (obj1.isValid());
-    const bool validObj2 = (obj2.isValid());
+    const bool validObj1 = (obj1.isValidHandle());
+    const bool validObj2 = (obj2.isValidHandle());
     const TValId vDst = joinDstValue(ctx, v1, v2, validObj1, validObj2);
     if (VAL_INVALID == vDst)
         return false;

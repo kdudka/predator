@@ -310,7 +310,7 @@ void deepCopy(DeepCopyData &dc)
     while (dc.wl.next(item)) {
         const FldHandle &objSrc = item.first;
         const FldHandle &objDst = item.second;
-        CL_BREAK_IF(!objSrc.isValid() || !objDst.isValid());
+        CL_BREAK_IF(!objSrc.isValidHandle() || !objDst.isValidHandle());
 
         // read the address
         const TValId atSrc = objSrc.placedAt();

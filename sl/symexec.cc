@@ -1067,7 +1067,7 @@ fail:
 
         const TValId val = entry.valCreate(VT_UNKNOWN, origin);
         const FldHandle fld = proc.objByOperand(dst);
-        if (fld.isValid())
+        if (fld.isValidHandle())
             proc.objSetValue(fld, val);
     }
 

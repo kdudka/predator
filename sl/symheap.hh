@@ -624,44 +624,29 @@ class FldHandle {
         }
 
     public:
-        SymHeapCore*    sh()        const { return sh_; }
-        TFldId          objId()     const { return id_; }
-        bool            isValid()   const { return 0 < id_; }
+        /// return the SymHeapCore instance associated with this handle
+        SymHeapCore*    sh()                const { return sh_; }
 
-        /**
-         * return a value @b stored @b in the given object
-         * @return A valid value ID in case of success, invalid otherwise.
-         * @note It may also return @b unknown, @b composite or @b custom value,
-         * depending on kind of the queried object.
-         * @note It may acquire a new value ID in case the value is not known.
-         */
-        TValId          value()     const { return sh_->valueOf(id_); }
+        /// return raw field ID inside this handle (used mainly internally)
+        TFldId          fieldId()           const { return id_; }
 
-        /**
-         * return a value corresponding to @b symbolic @b address of the given
-         * object
-         * @return A valid value ID when a valid object ID is given, VAL_INVALID
-         * otherwise.
-         */
-        TValId          placedAt()  const { return sh_->placedAt(id_); }
+        /// true if the given handle is valid (does not imply field validity)
+        bool            isValidHandle()     const { return (0 < id_); }
+
+        /// return the value inside the field (may trigger its initialization)
+        TValId          value()             const { return sh_->valueOf(id_); }
+
+        /// return the address of the field (may trigger address instantiation)
+        TValId          placedAt()          const { return sh_->placedAt(id_); }
 
         /// static type-info of the given object (return 0 if not available)
         TObjType type() const {
-            return (this->isValid())
+            return (this->isValidHandle())
                 ? sh_->fieldType(id_)
                 : 0;
         }
 
-        /**
-         * @b set @b value of the given object, which has to be @b valid and may
-         * @b not be a composite object
-         * @param val ID requested to be stored into the object
-         * @param killedPtrs if not NULL, insert killed pointer values there
-         * @note This is really @b low-level @b implementation.  It does not
-         * check for junk, delayed type-info definition, etc.  If you are
-         * interested in such abilities, you are looking for
-         * SymProc::objSetValue().
-         */
+        /// assign the given value, caller is responsible for garbage collecting
         void setValue(const TValId val, TValSet *killedPtrs = 0) const {
             sh_->objSetValue(id_, val, killedPtrs);
         }
@@ -697,13 +682,13 @@ inline bool operator<(const FldHandle &a, const FldHandle &b)
     if (b.sh() < a.sh())
         return false;
 
-    return (a.objId() < b.objId());
+    return (a.fieldId() < b.fieldId());
 }
 
 inline bool operator==(const FldHandle &a, const FldHandle &b)
 {
-    return (a.sh()    == b.sh())
-        && (a.objId() == b.objId());
+    return (a.sh() == b.sh())
+        && (a.fieldId() == b.fieldId());
 }
 
 inline bool operator!=(const FldHandle &a, const FldHandle &b)

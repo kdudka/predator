@@ -283,7 +283,7 @@ void describeObject(PlotData &plot, const FldHandle &fld, const bool lonely)
     if (cltRoot)
         describeFieldPlacement(plot, fld, cltRoot);
 
-    plot.out << " " << tag << "#" << fld.objId();
+    plot.out << " " << tag << "#" << fld.fieldId();
 }
 
 void printRawInt(
@@ -415,7 +415,7 @@ bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
     SymHeap &sh = plot.sh;
 
     const FldHandle &fld = ao.fld;
-    CL_BREAK_IF(!fld.isValid());
+    CL_BREAK_IF(!fld.isValidHandle());
 
     const char *color = "black";
     const char *props = ", penwidth=3.0, style=dashed";
@@ -470,7 +470,7 @@ bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
         }
     }
 
-    plot.out << "\t" << SL_QUOTE(fld.objId())
+    plot.out << "\t" << SL_QUOTE(fld.fieldId())
         << " [shape=box, color=" << color
         << ", fontcolor=" << color << props
         << ", label=\"";
@@ -573,7 +573,7 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
                 continue;
 
             // connect the inner object with the root by an offset edge
-            plotOffset(plot, off, at, ao.fld.objId());
+            plotOffset(plot, off, at, ao.fld.fieldId());
         }
     }
 }
@@ -1084,7 +1084,7 @@ void plotNonRootValues(PlotData &plot)
         if ((plot.liveObjs.end() != it) && (1 == it->second.size())) {
             // exactly one target
             const FldHandle &target = it->second.front();
-            plotPointsTo(plot, val, target.objId());
+            plotPointsTo(plot, val, target.fieldId());
             continue;
         }
 #endif
@@ -1385,7 +1385,7 @@ void plotHasValueEdges(PlotData &plot)
     // plot "hasValue" edges
     BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs)
         BOOST_FOREACH(const FldHandle &fld, /* FldList */ item.second)
-            plotHasValue(plot, fld.objId(), fld.value());
+            plotHasValue(plot, fld.fieldId(), fld.value());
 
     // plot "hasValue" edges for uniform block prototypes
     BOOST_FOREACH(PlotData::TDangValues::const_reference item, plot.dangVals) {

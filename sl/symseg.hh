@@ -255,11 +255,11 @@ inline void buildIgnoreList(
         const BindingOff        &off)
 {
     const PtrHandle next(sh, sh.valByOffset(at, off.next));
-    if (next.isValid())
+    if (next.isValidHandle())
         ignoreList.insert(next);
 
     const PtrHandle prev(sh, sh.valByOffset(at, off.prev));
-    if (prev.isValid())
+    if (prev.isValidHandle())
         ignoreList.insert(prev);
 }
 
