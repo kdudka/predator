@@ -537,10 +537,10 @@ class SymHeapCore {
         TFldId objAt(TValId at, TObjType clt);
 
         /// increment the external reference count of the given object
-        void objEnter(TFldId);
+        void fldEnter(TFldId);
 
         /// decrement the external reference count (may trigger its destruction)
-        void objLeave(TFldId);
+        void fldLeave(TFldId);
 
         /// FldHandle takes care of external reference count
         friend class FldHandle;
@@ -587,7 +587,7 @@ class FldHandle {
             id_(sh.objAt(addr, clt))
         {
             if (0 < id_)
-                sh_->objEnter(id_);
+                sh_->fldEnter(id_);
         }
 
         FldHandle(const FldHandle &tpl):
@@ -595,7 +595,7 @@ class FldHandle {
             id_(tpl.id_)
         {
             if (0 < id_)
-                sh_->objEnter(id_);
+                sh_->fldEnter(id_);
         }
 
         FldHandle(SymHeapCore &sh, const FldHandle &tpl):
@@ -603,22 +603,22 @@ class FldHandle {
             id_(tpl.id_)
         {
             if (0 < id_)
-                sh_->objEnter(id_);
+                sh_->fldEnter(id_);
         }
 
         ~FldHandle() {
             if (0 < id_)
-                sh_->objLeave(id_);
+                sh_->fldLeave(id_);
         }
 
         FldHandle& operator=(const FldHandle &tpl) {
             if (0 < id_)
-                sh_->objLeave(id_);
+                sh_->fldLeave(id_);
 
             sh_ = tpl.sh_;
             id_ = tpl.id_;
             if (0 < id_)
-                sh_->objEnter(id_);
+                sh_->fldEnter(id_);
 
             return *this;
         }
@@ -676,7 +676,7 @@ class FldHandle {
             id_(id)
         {
             if (0 < id_)
-                sh_->objEnter(id_);
+                sh_->fldEnter(id_);
         }
 
         friend class SymHeapCore;

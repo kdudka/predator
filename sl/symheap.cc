@@ -3210,7 +3210,7 @@ TFldId SymHeapCore::objAt(TValId at, TObjType clt)
     return d->fieldAt(at, clt, &policy);
 }
 
-void SymHeapCore::objEnter(TFldId fld)
+void SymHeapCore::fldEnter(TFldId fld)
 {
     FieldOfObj *objData;
     d->ents.getEntRW(&objData, fld);
@@ -3218,7 +3218,7 @@ void SymHeapCore::objEnter(TFldId fld)
     ++(objData->extRefCnt);
 }
 
-void SymHeapCore::objLeave(TFldId fld)
+void SymHeapCore::fldLeave(TFldId fld)
 {
     FieldOfObj *objData;
     d->ents.getEntRW(&objData, fld);
@@ -3227,14 +3227,14 @@ void SymHeapCore::objLeave(TFldId fld)
         // still externally referenced
         return;
 
-#if SH_DELAYED_OBJECTS_DESTRUCTION
+#if SH_DELAYED_FIELDS_DESTRUCTION
     return;
 #endif
 
     if (isComposite(objData->clt, /* includingArray */ false)
             && VAL_INVALID != objData->value)
     {
-        CL_DEBUG("SymHeapCore::objLeave() preserves a composite object");
+        CL_DEBUG("SymHeapCore::fldLeave() preserves a composite field");
         return;
     }
 
@@ -3247,7 +3247,7 @@ void SymHeapCore::objLeave(TFldId fld)
     d->ents.getEntRO(&regData, rootData->obj);
 
     if (!hasKey(regData->liveFields, fld)) {
-        CL_DEBUG("SymHeapCore::objLeave() destroys a dead object");
+        CL_DEBUG("SymHeapCore::fldLeave() destroys a dead field");
         d->fldDestroy(fld, /* removeVal */ true, /* detach */ true);
     }
 
