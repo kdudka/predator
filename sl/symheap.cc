@@ -3727,28 +3727,28 @@ bool SymHeapCore::chkNeq(TValId v1, TValId v2) const
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeap
-struct AbstractRoot {
+struct AbstractObject {
     RefCounter                      refCnt;
 
     EObjKind                        kind;
     BindingOff                      bOff;
     TMinLen                         minLength;
 
-    AbstractRoot(EObjKind kind_, BindingOff bOff_):
+    AbstractObject(EObjKind kind_, BindingOff bOff_):
         kind(kind_),
         bOff(bOff_),
         minLength(0)
     {
     }
 
-    AbstractRoot* clone() const {
-        return new AbstractRoot(*this);
+    AbstractObject* clone() const {
+        return new AbstractObject(*this);
     }
 };
 
 struct SymHeap::Private {
     RefCounter                      refCnt;
-    EntStore<AbstractRoot>          absRoots;
+    EntStore<AbstractObject>        absRoots;
 };
 
 SymHeap::SymHeap(TStorRef stor, Trace::Node *trace):
@@ -3797,17 +3797,17 @@ TValId SymHeap::valClone(TValId val)
     if (dup <= 0 || VT_RANGE == this->valTarget(val))
         return dup;
 
-    const TValId valRoot = this->valRoot(val);
-    if (!d->absRoots.isValidEnt(valRoot))
+    const TObjId obj = this->objByAddr(val);
+    if (!d->absRoots.isValidEnt(obj))
         return dup;
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // clone the data
-    const AbstractRoot *tplData = d->absRoots.getEntRO(valRoot);
-    const TValId dupRoot = this->valRoot(dup);
-    AbstractRoot *dupData = tplData->clone();
-    d->absRoots.assignId(dupRoot, dupData);
+    const AbstractObject *tplData = d->absRoots.getEntRO(obj);
+    const TObjId dupObj = this->objByAddr(dup);
+    AbstractObject *dupData = tplData->clone();
+    d->absRoots.assignId(dupObj, dupData);
 
     return dup;
 }
@@ -3817,11 +3817,11 @@ EObjKind SymHeap::valTargetKind(TValId val) const
     if (val <= 0)
         return OK_CONCRETE;
 
-    const TValId valRoot = this->valRoot(val);
-    if (!d->absRoots.isValidEnt(valRoot))
+    const TObjId obj = this->objByAddr(val);
+    if (!d->absRoots.isValidEnt(obj))
         return OK_CONCRETE;
 
-    const AbstractRoot *aData = d->absRoots.getEntRO(valRoot);
+    const AbstractObject *aData = d->absRoots.getEntRO(obj);
     return aData->kind;
 }
 
@@ -3834,9 +3834,9 @@ const BindingOff& SymHeap::segBinding(TValId root) const
 {
     CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(!this->hasAbstractTarget(root));
-    CL_BREAK_IF(!d->absRoots.isValidEnt(root));
 
-    const AbstractRoot *aData = d->absRoots.getEntRO(root);
+    const TObjId obj = this->objByAddr(root);
+    const AbstractObject *aData = d->absRoots.getEntRO(obj);
     CL_BREAK_IF(OK_OBJ_OR_NULL == aData->kind);
     return aData->bOff;
 }
@@ -3853,13 +3853,15 @@ void SymHeap::valTargetSetAbstract(
     // there is no 'prev' offset in OK_SEE_THROUGH
     CL_BREAK_IF(OK_SEE_THROUGH == kind && off.prev != off.next);
 
+    const TObjId obj = this->objByAddr(root);
+
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // clone the data
-    if (d->absRoots.isValidEnt(root)) {
+    if (d->absRoots.isValidEnt(obj)) {
         CL_BREAK_IF(OK_SLS != kind);
 
-        AbstractRoot *aData = d->absRoots.getEntRW(root);
+        AbstractObject *aData = d->absRoots.getEntRW(obj);
         CL_BREAK_IF(OK_SEE_THROUGH != aData->kind || off != aData->bOff);
 
         // OK_SEE_THROUGH -> OK_SLS
@@ -3867,26 +3869,27 @@ void SymHeap::valTargetSetAbstract(
         return;
     }
 
-    AbstractRoot *aData = new AbstractRoot(kind, (OK_OBJ_OR_NULL == kind)
+    AbstractObject *aData = new AbstractObject(kind, (OK_OBJ_OR_NULL == kind)
             ? BindingOff(OK_OBJ_OR_NULL)
             : off);
 
-    // register a new abstract root
-    d->absRoots.assignId(root, aData);
+    // register a new abstract object
+    d->absRoots.assignId(obj, aData);
 }
 
 void SymHeap::valTargetSetConcrete(TValId root)
 {
     CL_DEBUG("SymHeap::valTargetSetConcrete() is taking place...");
-    CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
     CL_BREAK_IF(this->valOffset(root));
-    CL_BREAK_IF(!d->absRoots.isValidEnt(root));
+    CL_BREAK_IF(!this->hasAbstractTarget(root));
+
+    const TObjId obj = this->objByAddr(root);
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // unregister an abstract object
     // FIXME: suboptimal code of EntStore::releaseEnt() with SH_REUSE_FREE_IDS
-    d->absRoots.releaseEnt(root);
+    d->absRoots.releaseEnt(obj);
 }
 
 void SymHeap::valDestroyTarget(TValId root)
@@ -3897,19 +3900,22 @@ void SymHeap::valDestroyTarget(TValId root)
 
     CL_DEBUG("SymHeap::valDestroyTarget() destroys an abstract object");
 
+    const TObjId obj = this->objByAddr(root);
+
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // unregister an abstract object
     // FIXME: suboptimal code of EntStore::releaseEnt() with SH_REUSE_FREE_IDS
-    d->absRoots.releaseEnt(root);
+    d->absRoots.releaseEnt(obj);
 }
 
 TMinLen SymHeap::segMinLength(TValId seg) const
 {
     CL_BREAK_IF(this->valOffset(seg));
-    CL_BREAK_IF(!d->absRoots.isValidEnt(seg));
+    CL_BREAK_IF(!this->hasAbstractTarget(seg));
 
-    const AbstractRoot *aData = d->absRoots.getEntRO(seg);
+    const TObjId obj = this->objByAddr(seg);
+    const AbstractObject *aData = d->absRoots.getEntRO(obj);
 
     const EObjKind kind = aData->kind;
     if (isMayExistObj(kind))
@@ -3926,14 +3932,16 @@ TMinLen SymHeap::segMinLength(TValId seg) const
     }
 }
 
-void SymHeap::segSetMinLength(TValId seg, TMinLen len)
+void SymHeap::segSetMinLength(TValId root, TMinLen len)
 {
-    CL_BREAK_IF(this->valOffset(seg));
-    CL_BREAK_IF(!d->absRoots.isValidEnt(seg));
+    CL_BREAK_IF(this->valOffset(root));
+    CL_BREAK_IF(!this->hasAbstractTarget(root));
+
+    const TObjId seg = this->objByAddr(root);
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
-    AbstractRoot *aData = d->absRoots.getEntRW(seg);
+    AbstractObject *aData = d->absRoots.getEntRW(seg);
 
     const EObjKind kind = aData->kind;
     if (isMayExistObj(kind)) {
@@ -3967,7 +3975,8 @@ void SymHeap::segSetMinLength(TValId seg, TMinLen len)
     if (OK_DLS != kind)
         return;
 
-    const TValId peer = dlSegPeer(*this, seg);
+    const TValId peerAt = dlSegPeer(*this, root);
+    const TObjId peer = this->objByAddr(peerAt);
     if (!d->absRoots.isValidEnt(peer)) {
         CL_BREAK_IF("SymHeap::segMinLength() got an inconsistent DLS");
         return;
@@ -3975,6 +3984,6 @@ void SymHeap::segSetMinLength(TValId seg, TMinLen len)
 
     CL_BREAK_IF(peer == seg);
 
-    AbstractRoot *peerData = d->absRoots.getEntRW(peer);
+    AbstractObject *peerData = d->absRoots.getEntRW(peer);
     peerData->minLength = len;
 }
