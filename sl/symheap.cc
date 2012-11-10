@@ -515,17 +515,17 @@ struct Region: public AbstractHeapEntity {
     }
 };
 
-struct RootValue: public AnchorValue {
+struct BaseAddress: public AnchorValue {
     TObjId                          obj;
 
-    RootValue(EValueTarget code_, EValueOrigin origin_):
+    BaseAddress(EValueTarget code_, EValueOrigin origin_):
         AnchorValue(code_, origin_),
         obj(OBJ_INVALID)
     {
     }
 
-    virtual RootValue* clone() const {
-        return new RootValue(*this);
+    virtual BaseAddress* clone() const {
+        return new BaseAddress(*this);
     }
 };
 
@@ -642,7 +642,7 @@ struct SymHeapCore::Private {
 
     // runs only in debug build
     bool chkArenaConsistency(
-            const RootValue        *rootData,
+            const BaseAddress      *rootData,
             const bool              allowOverlap = false);
 
     void shiftBlockAt(
@@ -738,7 +738,7 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TFldId fld, TValId val)
 
     // jump to root
     const TValId root = valData->valRoot;
-    const RootValue *rootData;
+    const BaseAddress *rootData;
     this->ents.getEntRO(&rootData, root);
 
     // jump to region
@@ -767,7 +767,7 @@ void SymHeapCore::Private::registerValueOf(TFldId fld, TValId val)
 
     // jump to root
     const TValId root = valData->valRoot;
-    const RootValue *rootData;
+    const BaseAddress *rootData;
     this->ents.getEntRO(&rootData, root);
 
     // update usedByGl
@@ -838,7 +838,7 @@ fail:
 
 // runs only in debug build
 bool SymHeapCore::Private::chkArenaConsistency(
-        const RootValue            *rootValData,
+        const BaseAddress          *rootValData,
         const bool                  allowOverlap)
 {
     if (::bypassSelfChecks)
@@ -919,7 +919,7 @@ void SymHeapCore::Private::splitBlockByObject(
     CL_BREAK_IF(root != hbData->root);
 
     // check up to now arena consistency
-    const RootValue *rootValData;
+    const BaseAddress *rootValData;
     this->ents.getEntRO(&rootValData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootValData, /* mayOverlap */ true));
 
@@ -1168,7 +1168,7 @@ void SymHeapCore::Private::reinterpretObjData(
 
     // dig root
     const TValId root = oldData->root;
-    const RootValue *rootValData;
+    const BaseAddress *rootValData;
     this->ents.getEntRO(&rootValData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootValData, /* mayOverlap */ true));
 
@@ -1237,7 +1237,7 @@ void SymHeapCore::Private::setValueOf(
 
     // resolve root
     const TValId root = objData->root;
-    const RootValue *rootValData;
+    const BaseAddress *rootValData;
     this->ents.getEntRO(&rootValData, root);
 
     // jump to region
@@ -1270,7 +1270,7 @@ TFldId SymHeapCore::Private::objCreate(
     const TFldId fld = this->assignId(objData);
 
     // jump to region
-    const RootValue *rootValData;
+    const BaseAddress *rootValData;
     this->ents.getEntRW(&rootValData, root);
     Region *rootData;
     this->ents.getEntRW(&rootData, rootValData->obj);
@@ -1296,7 +1296,7 @@ void SymHeapCore::Private::fldDestroy(TFldId fld, bool removeVal, bool detach)
 
     if (detach) {
         // properly remove the object from grid and arena
-        const RootValue *rootValData;
+        const BaseAddress *rootValData;
         this->ents.getEntRO(&rootValData, blData->root);
         Region *rootData;
         this->ents.getEntRW(&rootData, rootValData->obj);
@@ -1347,7 +1347,7 @@ TValId SymHeapCore::Private::valCreate(
             // fall through!
 
         case VT_OBJECT:
-            val = this->assignId(new RootValue(code, origin));
+            val = this->assignId(new BaseAddress(code, origin));
             break;
     }
 
@@ -1372,7 +1372,7 @@ TValId /* addr */ SymHeapCore::Private::createInvalidObject(
 {
     // assign an address
     const TValId addr = this->valCreate(VT_OBJECT, origin);
-    RootValue *rootAddrData;
+    BaseAddress *rootAddrData;
     this->ents.getEntRW(&rootAddrData, addr);
 
     // create an invalid object
@@ -1459,7 +1459,7 @@ void SymHeapCore::Private::transferBlock(
         const TSizeOf               winSize)
 {
     // check up to now arena consistency
-    const RootValue *rootValDataSrc;
+    const BaseAddress *rootValDataSrc;
     this->ents.getEntRO(&rootValDataSrc, srcRoot);
     CL_BREAK_IF(!this->chkArenaConsistency(rootValDataSrc));
 
@@ -1476,7 +1476,7 @@ void SymHeapCore::Private::transferBlock(
         // no data to copy in here
         return;
 
-    const RootValue *rootValDataDst;
+    const BaseAddress *rootValDataDst;
     this->ents.getEntRO(&rootValDataDst, dstRoot);
     const TOffset shift = dstOff - winBeg;
 
@@ -1530,7 +1530,7 @@ SymHeapCore::Private::Private(Trace::Node *trace):
     neqDb       (new NeqDb)
 {
     // allocate a root-value for VAL_NULL
-    this->assignId(new RootValue(VT_INVALID, VO_INVALID));
+    this->assignId(new BaseAddress(VT_INVALID, VO_INVALID));
 }
 
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
@@ -1569,7 +1569,7 @@ TValId SymHeapCore::Private::objInit(TFldId fld)
 
     // resolve root
     const TValId root = objData->root;
-    const RootValue *rootValData;
+    const BaseAddress *rootValData;
     this->ents.getEntRO(&rootValData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootValData));
 
@@ -1690,7 +1690,7 @@ void SymHeapCore::usedBy(FldList &dst, TValId val, bool liveOnly) const
 
         // get root data
         const TValId root = objData->root;
-        const RootValue *rootValData;
+        const BaseAddress *rootValData;
         d->ents.getEntRO(&rootValData, root);
 
         // get region data
@@ -1823,7 +1823,7 @@ TFldId SymHeapCore::Private::copySingleLiveBlock(
 TValId SymHeapCore::Private::dupRoot(TValId rootAt)
 {
     CL_DEBUG("SymHeapCore::Private::dupRoot() is taking place...");
-    const RootValue *rootValDataSrc;
+    const BaseAddress *rootValDataSrc;
     this->ents.getEntRO(&rootValDataSrc, rootAt);
     CL_BREAK_IF(!this->chkArenaConsistency(rootValDataSrc));
 
@@ -1834,7 +1834,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
     // assign an address to the clone
     const EValueTarget code = rootValDataSrc->code;
     const TValId imageAt = this->valCreate(code, VO_ASSIGNED);
-    RootValue *rootValDataDst;
+    BaseAddress *rootValDataDst;
     this->ents.getEntRW(&rootValDataDst, imageAt);
 
     // create the cloned object
@@ -2013,7 +2013,7 @@ SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
     // allocate VAL_ADDR_OF_RET
     const TValId addrRet = d->valCreate(VT_OBJECT, VO_ASSIGNED);
     CL_BREAK_IF(VAL_ADDR_OF_RET != addrRet);
-    RootValue *addrRetData;
+    BaseAddress *addrRetData;
     d->ents.getEntRW(&addrRetData, addrRet);
 
     // allocate OBJ_RETURN
@@ -2081,7 +2081,7 @@ void SymHeapCore::objSetValue(TFldId fld, TValId val, TValSet *killedPtrs)
 
     // mark the destination object as live
     const TValId root = objData->root;
-    const RootValue *rootData;
+    const BaseAddress *rootData;
     d->ents.getEntRO(&rootData, root);
 
     // jump to region
@@ -2112,7 +2112,7 @@ TFldId SymHeapCore::Private::writeUniformBlock(
     const TFldId fld = this->assignId(blData);
 
     // check up to now arena consistency
-    const RootValue *rootData;
+    const BaseAddress *rootData;
     this->ents.getEntRO(&rootData, root);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
@@ -2186,7 +2186,7 @@ void SymHeapCore::copyBlockOfRawMemory(
                                                  size, killedPtrs);
 
     // check up to now arena consistency
-    const RootValue *rootDataDst;
+    const BaseAddress *rootDataDst;
     d->ents.getEntRO(&rootDataDst, dstRoot);
     CL_BREAK_IF(!d->chkArenaConsistency(rootDataDst));
 
@@ -2258,7 +2258,7 @@ bool SymHeapCore::Private::findZeroAtOff(
         const TOffset           offSrc,
         const TValId            root)
 {
-    const RootValue *rootValData;
+    const BaseAddress *rootValData;
     this->ents.getEntRO(&rootValData, root);
 
     // jump to region
@@ -2528,7 +2528,7 @@ TValId SymHeapCore::valByRange(TValId at, IR::Range range)
     rangeData->anchor   = val;
 
     // register the VT_RANGE value by the owning root entity
-    RootValue *rootData;
+    BaseAddress *rootData;
     d->ents.getEntRW(&rootData, valRoot);
     rootData->dependentValues.push_back(val);
 
@@ -2830,7 +2830,7 @@ TObjId SymHeapCore::objByAddr(TValId val) const {
     if (!isAnyDataArea(valData->code))
         return OBJ_INVALID;
 
-    const RootValue *rootData;
+    const BaseAddress *rootData;
     d->ents.getEntRO(&rootData, valData->valRoot);
     return rootData->obj;
 }
@@ -3093,7 +3093,7 @@ TFldId SymHeapCore::Private::fieldAt(
 
     // jump to root
     const TValId root = valData->valRoot;
-    const RootValue *rootValData;
+    const BaseAddress *rootValData;
     this->ents.getEntRO(&rootValData, root);
 
     // jump to region
@@ -3269,7 +3269,7 @@ void SymHeapCore::fldLeave(TFldId fld)
     }
 
     const TValId root = objData->root;
-    const RootValue *rootData;
+    const BaseAddress *rootData;
     d->ents.getEntRO(&rootData, root);
 
     // jump to region
@@ -3317,7 +3317,7 @@ TObjId SymHeapCore::regionByVar(CVar cv, bool createIfNeeded)
     // assign an address
     addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
 
-    RootValue *rootAddrData;
+    BaseAddress *rootAddrData;
     d->ents.getEntRW(&rootAddrData, addr);
 
     // create an object
@@ -3398,7 +3398,7 @@ TValId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
 
     // assign an address
     const TValId addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
-    RootValue *rootAddrData;
+    BaseAddress *rootAddrData;
     d->ents.getEntRW(&rootAddrData, addr);
 
     // create an object
@@ -3426,7 +3426,7 @@ TValId SymHeapCore::heapAlloc(const TSizeRange &size)
 
     // assign an address
     const TValId addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
-    RootValue *rootAddrData;
+    BaseAddress *rootAddrData;
     d->ents.getEntRW(&rootAddrData, addr);
 
     // create an object
@@ -3482,7 +3482,7 @@ TSizeRange SymHeapCore::valSizeOfTarget(TValId val) const
         return IR::rngFromNum(IR::Int0);
 
     const TValId root = valData->valRoot;
-    const RootValue *rootData;
+    const BaseAddress *rootData;
     d->ents.getEntRO(&rootData, root);
 
     // jump to region
@@ -3535,7 +3535,7 @@ TSizeRange SymHeapCore::valSizeOfString(TValId addr) const
 
 void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt)
 {
-    RootValue *rootValData;
+    BaseAddress *rootValData;
     d->ents.getEntRW(&rootValData, root);
 
     // jump to region
@@ -3559,7 +3559,7 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt)
 TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const
 {
     CL_BREAK_IF(this->valOffset(root));
-    const RootValue *rootData;
+    const BaseAddress *rootData;
     d->ents.getEntRO(&rootData, root);
 
     // jump to region
@@ -3571,7 +3571,7 @@ TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const
 
 void SymHeapCore::Private::destroyRoot(TValId root)
 {
-    RootValue *rootValData;
+    BaseAddress *rootValData;
     this->ents.getEntRW(&rootValData, root);
 
     // mark the region as invalid
