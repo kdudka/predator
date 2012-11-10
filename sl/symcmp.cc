@@ -178,8 +178,8 @@ bool matchRoots(
         // not a pair of abstract objects
         return true;
 
-    const TMinLen len1 = sh1.segMinLength(root1);
-    const TMinLen len2 = sh2.segMinLength(root2);
+    const TMinLen len1 = sh1.segMinLength(obj1);
+    const TMinLen len2 = sh2.segMinLength(obj2);
     if (len1 != len2)
         // minimal length mismatch
         return false;

@@ -287,7 +287,7 @@ void slSegAbstractionStep(
 
     if (len)
         // declare resulting segment's minimal length
-        sh.segSetMinLength(nextAt, len);
+        sh.segSetMinLength(next, len);
 }
 
 void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off)
@@ -309,77 +309,83 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off)
     sh.valTargetSetAbstract(a2, OK_DLS, off);
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
-    sh.segSetMinLength(a1, len);
-    sh.segSetMinLength(a2, len);
+    sh.segSetMinLength(sh.objByAddr(a1), len);
+    sh.segSetMinLength(sh.objByAddr(a2), len);
 }
 
-void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward)
+void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId varAt, bool backward)
 {
-    CL_BREAK_IF(OK_DLS != sh.objKind(sh.objByAddr(dls)));
+    TObjId dls = sh.objByAddr(dlsAt);
+    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
 
     // compute the resulting minimal length
-    const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, var);
+    const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, varAt);
 
     // we allow to gobble OK_SEE_THROUGH objects (if compatible)
-    enlargeMayExist(sh, var);
+    enlargeMayExist(sh, varAt);
 
-    if (!backward)
+    if (!backward) {
         // jump to peer
-        dls = dlSegPeer(sh, dls);
+        dlsAt = dlSegPeer(sh, dlsAt);
+        dls = sh.objByAddr(dlsAt);
+    }
 
     // merge data
-    const BindingOff &off = sh.segBinding(sh.objByAddr(dls));
-    joinData(sh, off, dls, var, /* bidir */ false);
-    dlSegSyncPeerData(sh, dls);
+    const BindingOff &off = sh.segBinding(dls);
+    joinData(sh, off, dlsAt, varAt, /* bidir */ false);
+    dlSegSyncPeerData(sh, dlsAt);
 
     // store the pointer DLS -> VAR
-    const PtrHandle nextPtr(sh, sh.valByOffset(dls, off.next));
-    const TValId valNext = valOfPtrAt(sh, var, off.next);
+    const PtrHandle nextPtr(sh, sh.valByOffset(dlsAt, off.next));
+    const TValId valNext = valOfPtrAt(sh, varAt, off.next);
     nextPtr.setValue(valNext);
 
     // replace VAR by DLS
-    const TValId headAt = sh.valByOffset(var, off.head);
-    sh.valReplace(headAt, segHeadAt(sh, dls));
-    REQUIRE_GC_ACTIVITY(sh, var, dlSegGobble);
+    const TValId headAt = sh.valByOffset(varAt, off.head);
+    sh.valReplace(headAt, segHeadAt(sh, dlsAt));
+    REQUIRE_GC_ACTIVITY(sh, varAt, dlSegGobble);
 
     // handle DLS Neq predicates
     sh.segSetMinLength(dls, len);
-    sh.segSetMinLength(segPeer(sh, dls), len);
+    sh.segSetMinLength(sh.objByAddr(segPeer(sh, dlsAt)), len);
 
-    dlSegSyncPeerData(sh, dls);
+    dlSegSyncPeerData(sh, dlsAt);
 }
 
-void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2)
+void dlSegMerge(SymHeap &sh, TValId seg1At, TValId seg2At)
 {
+    const TObjId seg1 = sh.objByAddr(seg1At);
+    const TObjId seg2 = sh.objByAddr(seg2At);
+
     // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
 
     // dig peers
-    const TValId peer1 = dlSegPeer(sh, seg1);
-    const TValId peer2 = dlSegPeer(sh, seg2);
+    const TValId peer1 = dlSegPeer(sh, seg1At);
+    const TValId peer2 = dlSegPeer(sh, seg2At);
 
     // check for a failure of segDiscover()
-    CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2));
+    CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2At));
 
     // merge data
-    const BindingOff &bf2 = sh.segBinding(sh.objByAddr(seg2));
-    joinData(sh, bf2, seg2, seg1, /* bidir */ true);
+    const BindingOff &bf2 = sh.segBinding(seg2);
+    joinData(sh, bf2, seg2At, seg1At, /* bidir */ true);
 
     // preserve backLink
-    const TValId valNext1 = nextValFromSeg(sh, seg1);
-    const PtrHandle ptrNext2 = nextPtrFromSeg(sh, seg2);
+    const TValId valNext1 = nextValFromSeg(sh, seg1At);
+    const PtrHandle ptrNext2 = nextPtrFromSeg(sh, seg2At);
     ptrNext2.setValue(valNext1);
 
     // replace both parts point-wise
-    const TValId headAt = segHeadAt(sh,  seg1);
+    const TValId headAt = segHeadAt(sh,  seg1At);
     const TValId peerAt = segHeadAt(sh, peer1);
 
-    sh.valReplace(headAt, segHeadAt(sh,  seg2));
+    sh.valReplace(headAt, segHeadAt(sh,  seg2At));
     sh.valReplace(peerAt, segHeadAt(sh, peer2));
 
     // destroy headAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
-    REQUIRE_GC_ACTIVITY(sh, seg1, dlSegMerge);
+    REQUIRE_GC_ACTIVITY(sh, seg1At, dlSegMerge);
     if (!collectJunk(sh, peer1) && isPossibleToDeref(sh, peer1)) {
         CL_ERROR("dlSegMerge() failed to collect garbage"
                  ", peer1 still referenced");
@@ -389,10 +395,10 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2)
     if (len) {
         // assign the resulting minimal length
         sh.segSetMinLength(seg2, len);
-        sh.segSetMinLength(segPeer(sh, seg2), len);
+        sh.segSetMinLength(sh.objByAddr(segPeer(sh, seg2At)), len);
     }
 
-    dlSegSyncPeerData(sh, seg2);
+    dlSegSyncPeerData(sh, seg2At);
 }
 
 bool /* jump next */ dlSegAbstractionStep(
@@ -652,40 +658,40 @@ void concretizeObj(
 {
     CL_BREAK_IF(!protoCheckConsistency(sh));
 
-    const TValId seg = sh.valRoot(addr);
-    const TValId peer = segPeer(sh, seg);
+    const TObjId seg = sh.objByAddr(addr);
+    const TValId segAt = sh.valRoot(addr);
+    const TValId peer = segPeer(sh, segAt);
 
     // handle the possibly empty variant (if exists)
     TMinLen len = sh.segMinLength(seg);
-    spliceOutSegmentIfNeeded(&len, sh, seg, peer, todo, leakList);
+    spliceOutSegmentIfNeeded(&len, sh, segAt, peer, todo, leakList);
 
-    const TObjId obj = sh.objByAddr(seg);
-    const EObjKind kind = sh.objKind(obj);
+    const EObjKind kind = sh.objKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
 
     if (isMayExistObj(kind)) {
         // these kinds are much easier than regular list segments
-        sh.valTargetSetConcrete(seg);
-        decrementProtoLevel(sh, seg);
+        sh.valTargetSetConcrete(segAt);
+        decrementProtoLevel(sh, segAt);
         LDP_PLOT(symabstract, sh);
         CL_BREAK_IF(!protoCheckConsistency(sh));
         return;
     }
 
     // duplicate self as abstract object (including all prototypes)
-    const TValId dup = segDeepCopy(sh, seg);
+    const TValId dup = segDeepCopy(sh, segAt);
 
     // resolve the relative placement of the 'next' pointer
-    const BindingOff off = sh.segBinding(obj);
+    const BindingOff off = sh.segBinding(seg);
     const TOffset offNext = (OK_SLS == kind)
         ? off.next
         : off.prev;
 
     // concretize self
-    sh.valTargetSetConcrete(seg);
+    sh.valTargetSetConcrete(segAt);
 
     // update 'next' pointer
-    const PtrHandle nextPtr(sh, sh.valByOffset(seg, offNext));
+    const PtrHandle nextPtr(sh, sh.valByOffset(segAt, offNext));
     const TValId dupHead = segHeadAt(sh, dup);
     nextPtr.setValue(dupHead);
 
@@ -696,7 +702,7 @@ void concretizeObj(
 
         // update 'prev' pointer going from the cloned object to the concrete
         const PtrHandle prev2(sh, sh.valByOffset(dup, off.next));
-        const TValId headAddr = sh.valByOffset(seg, off.head);
+        const TValId headAddr = sh.valByOffset(segAt, off.head);
         prev2.setValue(headAddr);
 
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
@@ -708,10 +714,10 @@ void concretizeObj(
     const TValId nextNextRoot = sh.valRoot(nextNextVal);
     if (nextNextRoot == dup)
         // FIXME: we should do this also the other way around for OK_DLS
-        nextNextPtr.setValue(sh.valByOffset(seg, sh.valOffset(nextNextVal)));
+        nextNextPtr.setValue(sh.valByOffset(segAt, sh.valOffset(nextNextVal)));
 
-    sh.segSetMinLength(dup, len);
-    sh.segSetMinLength(segPeer(sh, dup), len);
+    sh.segSetMinLength(sh.objByAddr(dup), len);
+    sh.segSetMinLength(sh.objByAddr(segPeer(sh, dup)), len);
 
     LDP_PLOT(symabstract, sh);
 

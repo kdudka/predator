@@ -2043,14 +2043,15 @@ class MayExistVisitor {
                 if (!lookThrough_ || !isAbstractValue(sh, val))
                     return /* continue */ true;
 
-                TValId seg = valRoot;
-                if (sh.segMinLength(seg) || segHeadAt(sh, seg) != val)
+                TValId segAt = valRoot;
+                const TObjId seg = sh.objByAddr(segAt);
+                if (sh.segMinLength(seg) || segHeadAt(sh, segAt) != val)
                     return /* continue */ true;
 
-                if (OK_DLS == sh.objKind(sh.objByAddr(seg)))
-                    seg = dlSegPeer(sh, seg);
+                if (OK_DLS == sh.objKind(seg))
+                    segAt = dlSegPeer(sh, segAt);
 
-                val = nextValFromSeg(sh, seg);
+                val = nextValFromSeg(sh, segAt);
             }
 
             foundOffsets_.push_back(sh.valOffset(sub.placedAt()));
@@ -2638,10 +2639,11 @@ bool handleDstPreds(SymJoinCtx &ctx)
     // go through all segments and initialize minLength
     BOOST_FOREACH(SymJoinCtx::TSegLengths::const_reference ref, ctx.segLengths)
     {
-        const TValId    seg = ref.first;
-        const TMinLen   len = ref.second;
+        const TValId segA = ref.first;
+        const TMinLen len = ref.second;
+        const TObjId seg = ctx.dst.objByAddr(segA);
         ctx.dst.segSetMinLength(seg, len);
-        ctx.dst.segSetMinLength(segPeer(ctx.dst, seg), len);
+        ctx.dst.segSetMinLength(ctx.dst.objByAddr(segPeer(ctx.dst, segA)), len);
     }
 
     if (!ctx.joiningData()) {
@@ -3027,8 +3029,8 @@ void restorePrototypeLengths(SymJoinCtx &ctx)
         if (!len)
             continue;
 
-        sh.segSetMinLength(protoDst, len);
-        sh.segSetMinLength(segPeer(sh, protoDst), len);
+        sh.segSetMinLength(sh.objByAddr(protoDst), len);
+        sh.segSetMinLength(sh.objByAddr(segPeer(sh, protoDst)), len);
     }
 }
 

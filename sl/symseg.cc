@@ -251,11 +251,11 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
 
         const TValId root = sh.valRoot(val);
         const TValId segAt = segPeer(sh, root);
-        if (sh.segMinLength(segAt))
+        const TObjId seg = sh.objByAddr(segAt);
+
+        if (sh.segMinLength(seg))
             // non-empty abstract object reached
             break;
-
-        const TObjId seg = sh.objByAddr(segAt);
 
         const EObjKind kind = sh.objKind(seg);
         if (OK_OBJ_OR_NULL == kind) {
@@ -288,28 +288,30 @@ bool dlSegCheckConsistency(const SymHeap &sh)
     TValList addrs;
     sh.gatherRootObjects(addrs, isOnHeap);
     BOOST_FOREACH(const TValId at, addrs) {
-        if (OK_DLS != sh.objKind(sh.objByAddr(at)))
+        const TObjId seg = sh.objByAddr(at);
+        if (OK_DLS != sh.objKind(seg))
             // we are interested in OK_DLS here
             continue;
 
-        if (at <= 0) {
+        if (at <= VAL_NULL) {
             CL_ERROR("OK_DLS with invalid address detected");
             return false;
         }
 
-        const TValId peer = dlSegPeer(sh, at);
-        if (peer <= 0) {
+        const TValId peerAt = dlSegPeer(sh, at);
+        if (peerAt <= VAL_NULL) {
             CL_ERROR("OK_DLS with invalid peer detected");
             return false;
         }
 
-        if (OK_DLS != sh.objKind(sh.objByAddr(peer))) {
+        const TObjId peer = sh.objByAddr(peerAt);
+        if (OK_DLS != sh.objKind(peer)) {
             CL_ERROR("DLS peer not a DLS");
             return false;
         }
 
         // check the consistency of Neq predicates
-        const TMinLen len1 = sh.segMinLength(at);
+        const TMinLen len1 = sh.segMinLength(seg);
         const TMinLen len2 = sh.segMinLength(peer);
         if (len1 != len2) {
             CL_ERROR("peer of a DLS " << len1 << "+ is a DLS" << len2 << "+");

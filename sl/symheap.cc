@@ -3876,12 +3876,9 @@ void SymHeap::objInvalidate(TObjId obj)
     d->absRoots.releaseEnt(obj);
 }
 
-TMinLen SymHeap::segMinLength(TValId seg) const
+TMinLen SymHeap::segMinLength(TObjId seg) const
 {
-    CL_BREAK_IF(this->valOffset(seg));
-
-    const TObjId obj = this->objByAddr(seg);
-    const AbstractObject *aData = d->absRoots.getEntRO(obj);
+    const AbstractObject *aData = d->absRoots.getEntRO(seg);
 
     const EObjKind kind = aData->kind;
     if (isMayExistObj(kind))
@@ -3898,12 +3895,8 @@ TMinLen SymHeap::segMinLength(TValId seg) const
     }
 }
 
-void SymHeap::segSetMinLength(TValId root, TMinLen len)
+void SymHeap::segSetMinLength(TObjId seg, TMinLen len)
 {
-    CL_BREAK_IF(this->valOffset(root));
-
-    const TObjId seg = this->objByAddr(root);
-
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     AbstractObject *aData = d->absRoots.getEntRW(seg);

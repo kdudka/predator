@@ -1657,7 +1657,7 @@ bool dlSegMergeAddressesIfNeeded(
 
     CL_BREAK_IF(root2 != segPeer(sh, root1));
 
-    if (!sh.segMinLength(root1))
+    if (!sh.segMinLength(sh.objByAddr(root1)))
         // 0+ DLS --> we have to look through!
         dlSegMergeAddressesOfEmpty(dst, proc, root1, root2);
 

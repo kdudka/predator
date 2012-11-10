@@ -169,7 +169,7 @@ inline TMinLen objMinLength(const SymHeap &sh, TValId root)
 
     if (isAbstractValue(sh, root))
         // abstract target
-        return sh.segMinLength(root);
+        return sh.segMinLength(sh.objByAddr(root));
 
     if (isPossibleToDeref(sh, root))
         // concrete target
@@ -184,13 +184,15 @@ inline TMinLen objMinLength(const SymHeap &sh, TValId root)
 bool segProveNeq(const SymHeap &sh, TValId v1, TValId v2);
 
 /// if the current segment min length is lower than the given one, update it!
-inline void segIncreaseMinLength(SymHeap &sh, const TValId seg, TMinLen len)
+inline void segIncreaseMinLength(SymHeap &sh, const TValId segAt, TMinLen len)
 {
     CL_BREAK_IF(!len);
 
+    const TObjId seg = sh.objByAddr(segAt);
+
     if (sh.segMinLength(seg) < len) {
         sh.segSetMinLength(seg, len);
-        sh.segSetMinLength(segPeer(sh, seg), len);
+        sh.segSetMinLength(sh.objByAddr(segPeer(sh, segAt)), len);
     }
 }
 

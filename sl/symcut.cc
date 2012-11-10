@@ -336,10 +336,10 @@ void deepCopy(DeepCopyData &dc)
 
     typedef DeepCopyData::TSegLengths TSegLengths;
     BOOST_FOREACH(TSegLengths::const_reference item, dc.segLengths) {
-        const TValId seg = item.first;
+        const TObjId seg = dst.objByAddr(item.first);
         const TMinLen minLength = item.second;
         dst.segSetMinLength(seg, minLength);
-        dst.segSetMinLength(segPeer(dst, seg), minLength);
+        dst.segSetMinLength(dst.objByAddr(segPeer(dst, item.first)), minLength);
     }
 }
 

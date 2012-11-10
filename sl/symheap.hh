@@ -822,10 +822,10 @@ class SymHeap: public SymHeapCore {
         void valTargetSetConcrete(TValId root);
 
         /// read the minimal segment length of the given abstract object
-        TMinLen segMinLength(TValId seg) const;
+        TMinLen segMinLength(TObjId seg) const;
 
-        /// re-initialize the minimal segment length of the given list segment
-        void segSetMinLength(TValId seg, TMinLen len);
+        /// assign the minimal segment length of the given abstract object
+        void segSetMinLength(TObjId seg, TMinLen len);
 
     public:
         // just overrides (inherits the dox)

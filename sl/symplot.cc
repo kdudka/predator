@@ -612,7 +612,7 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
         case OK_SLS:
         case OK_DLS:
             // append minimal segment length
-            label << " " << sh.segMinLength(root) << "+";
+            label << " " << sh.segMinLength(obj) << "+";
 
         default:
             break;
