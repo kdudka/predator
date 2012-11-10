@@ -276,6 +276,7 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
             describeUnknownVal(*this, val, "dereference");
             return true;
 
+        case VT_OBJECT:
         case VT_STATIC:
         case VT_ON_STACK:
         case VT_ON_HEAP:
@@ -1164,6 +1165,7 @@ void SymExecCore::execFree(TValId val)
             this->printBackTrace(ML_ERROR);
             return;
 
+        case VT_OBJECT:
         case VT_RANGE:
             CL_BREAK_IF("please implement");
             // fall through!

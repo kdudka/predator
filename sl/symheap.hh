@@ -45,7 +45,7 @@ class SymBackTrace;
 enum EValueOrigin {
     VO_INVALID,             ///< reserved for signalling error states
     VO_ASSIGNED,            ///< known result of an operation
-    VO_UNKNOWN,             ///< unknown result of an operation (e.g. < >)
+    VO_UNKNOWN,             ///< value was abstracted out and guessed later on
     VO_REINTERPRET,         ///< a result of unsupported data reinterpretation
     VO_DEREF_FAILED,        ///< a result of invalid dereference
     VO_STACK,               ///< untouched contents of stack
@@ -59,12 +59,24 @@ bool isUninitialized(EValueOrigin);
 enum EValueTarget {
     VT_INVALID,             ///< completely invalid target
     VT_UNKNOWN,             ///< arbitrary target
-    VT_COMPOSITE,           ///< value of composite object (not a pointer to!)
-    VT_CUSTOM,              ///< not a pointer to data
+    VT_COMPOSITE,           ///< value of a composite field (not a pointer to!)
+    VT_CUSTOM,              ///< non-pointer data, classified by ECustomValue
+    VT_OBJECT,              ///< target is a (possibly invalid) object
+
+    // TODO: drop these
     VT_STATIC,              ///< target is static data
-    VT_ON_STACK,            ///< target is on stack
     VT_ON_HEAP,             ///< target is on heap
-    VT_RANGE,               ///< an offset value where offset is given by range
+    VT_ON_STACK,            ///< target is on stack
+    VT_RANGE                ///< an offset value where offset is given by range
+};
+
+/// classification of the storage class for objects
+enum EStorageClass {
+    SC_INVALID,             ///< reserved for signalling error states
+    SC_UNKNOWN,             ///< no assumptions, the object may be even shared
+    SC_STATIC,              ///< safely allocated in static data if not a 0+ obj
+    SC_ON_HEAP,             ///< safely allocated on heap  except for 0+ objects
+    SC_ON_STACK             ///< safely allocated on stack except for 0+ objects
 };
 
 /// true for VT_ON_HEAP
@@ -419,6 +431,9 @@ class SymHeapCore {
 
         /// return the object that the given address points to
         TObjId objByAddr(TValId addr) const;
+
+        /// classify the storage class of the given object
+        EStorageClass objStorClass(TObjId) const;
 
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;

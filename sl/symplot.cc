@@ -831,6 +831,7 @@ const char* labelByTarget(const EValueTarget code)
         GEN_labelByCode(VT_UNKNOWN);
         GEN_labelByCode(VT_COMPOSITE);
         GEN_labelByCode(VT_CUSTOM);
+        GEN_labelByCode(VT_OBJECT);
         GEN_labelByCode(VT_STATIC);
         GEN_labelByCode(VT_ON_STACK);
         GEN_labelByCode(VT_ON_HEAP);
@@ -955,8 +956,11 @@ void plotValue(PlotData &plot, const TValId val)
     const EValueTarget code = sh.valTarget(val);
     switch (code) {
         case VT_CUSTOM:
-            // skipt it, custom values are now handled in plotHasValue()
+            // skip it, custom values are now handled in plotHasValue()
             return;
+
+        case VT_OBJECT:
+            // TODO
 
         case VT_STATIC:
         case VT_ON_STACK:

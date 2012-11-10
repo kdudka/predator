@@ -490,6 +490,7 @@ struct Region: public AbstractHeapEntity {
     /// TODO: drop this
     TValId                          rootAddr;
 
+    EStorageClass                   code;
     CVar                            cVar;
     TSizeRange                      size;
     TLiveObjs                       liveFields;
@@ -499,8 +500,9 @@ struct Region: public AbstractHeapEntity {
     bool                            isValid;
     TProtoLevel                     protoLevel;
 
-    Region():
+    Region(EStorageClass code_):
         rootAddr(VAL_INVALID),
+        code(code_),
         size(IR::rngFromNum(0)),
         lastKnownClt(0),
         isValid(true),
@@ -1337,13 +1339,14 @@ TValId SymHeapCore::Private::valCreate(
             val = this->assignId(new InternalCustomValue(code, origin));
             break;
 
+        case VT_STATIC:
+        case VT_ON_STACK:
+        case VT_ON_HEAP:
         case VT_RANGE:
             CL_BREAK_IF("invalid call of SymHeapCore::Private::valCreate()");
             // fall through!
 
-        case VT_ON_HEAP:
-        case VT_ON_STACK:
-        case VT_STATIC:
+        case VT_OBJECT:
             val = this->assignId(new RootValue(code, origin));
             break;
     }
@@ -1351,17 +1354,29 @@ TValId SymHeapCore::Private::valCreate(
     return val;
 }
 
+EStorageClass storClassByCode(const EValueTarget code)
+{
+    switch (code) {
+        case VT_STATIC:     return SC_STATIC;
+        case VT_ON_STACK:   return SC_ON_STACK;
+        case VT_ON_HEAP:    return SC_ON_HEAP;
+        default:
+            CL_BREAK_IF("failed to determinate storage class");
+            return SC_INVALID;
+    }
+}
+
 TValId /* addr */ SymHeapCore::Private::createInvalidObject(
         EValueTarget                code,
         EValueOrigin                origin)
 {
     // assign an address
-    const TValId addr = this->valCreate(code, origin);
+    const TValId addr = this->valCreate(VT_OBJECT, origin);
     RootValue *rootAddrData;
     this->ents.getEntRW(&rootAddrData, addr);
 
     // create an invalid object
-    const TObjId reg = this->assignId(new Region);
+    const TObjId reg = this->assignId(new Region(storClassByCode(code)));
     Region *rootData;
     this->ents.getEntRW(&rootData, reg);
     rootData->isValid = false;
@@ -1823,7 +1838,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
     this->ents.getEntRW(&rootValDataDst, imageAt);
 
     // create the cloned object
-    const TObjId reg = this->assignId(new Region);
+    const TObjId reg = this->assignId(new Region(rootDataSrc->code));
     Region *rootDataDst;
     this->ents.getEntRW(&rootDataDst, reg);
 
@@ -1996,13 +2011,13 @@ SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
     CL_BREAK_IF(!&stor_);
 
     // allocate VAL_ADDR_OF_RET
-    const TValId addrRet = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
+    const TValId addrRet = d->valCreate(VT_OBJECT, VO_ASSIGNED);
     CL_BREAK_IF(VAL_ADDR_OF_RET != addrRet);
     RootValue *addrRetData;
     d->ents.getEntRW(&addrRetData, addrRet);
 
     // allocate OBJ_RETURN
-    const TObjId objRet = d->assignId(new Region);
+    const TObjId objRet = d->assignId(new Region(SC_ON_STACK));
     CL_BREAK_IF(OBJ_RETURN != objRet);
     Region *objRetData;
     d->ents.getEntRW(&objRetData, objRet);
@@ -2695,6 +2710,16 @@ TValId SymHeapCore::diffPointers(const TValId v1, const TValId v2)
     return valDiff;
 }
 
+EStorageClass SymHeapCore::objStorClass(TObjId obj) const
+{
+    if (OBJ_INVALID == obj)
+        return SC_INVALID;
+
+    const Region *regData;
+    d->ents.getEntRO(&regData, obj);
+    return regData->code;
+}
+
 EValueOrigin SymHeapCore::valOrigin(TValId val) const
 {
     switch (val) {
@@ -2721,7 +2746,22 @@ EValueTarget SymHeapCore::valTarget(TValId val) const
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
-    return valData->code;
+
+    const EValueTarget code = valData->code;
+    if (VT_OBJECT != code)
+        return code;
+
+    // TODO: drop this
+    const TObjId obj = this->objByAddr(val);
+    const EStorageClass sc = this->objStorClass(obj);
+    switch (sc) {
+        case SC_STATIC:     return VT_STATIC;
+        case SC_ON_HEAP:    return VT_ON_HEAP;
+        case SC_ON_STACK:   return VT_ON_STACK;
+        default:
+            CL_BREAK_IF("unhandled storage class in valTarget()");
+            return VT_INVALID;
+    }
 }
 
 bool isUninitialized(EValueOrigin code)
@@ -2756,10 +2796,14 @@ bool isProgramVar(EValueTarget code)
 bool isAnyDataArea(EValueTarget code)
 {
     switch (code) {
+        // TODO: drop these
         case VT_STATIC:
         case VT_ON_STACK:
         case VT_ON_HEAP:
         case VT_RANGE:
+        // fall through!
+
+        case VT_OBJECT:
             return true;
 
         default:
@@ -3262,14 +3306,14 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded)
 #endif
 
     // assign an address
-    const EValueTarget code = isOnStack(var) ? VT_ON_STACK : VT_STATIC;
-    addr = d->valCreate(code, VO_ASSIGNED);
+    addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
 
     RootValue *rootAddrData;
     d->ents.getEntRW(&rootAddrData, addr);
 
     // create an object
-    const TObjId reg = d->assignId(new Region);
+    const EValueTarget code = isOnStack(var) ? VT_ON_STACK : VT_STATIC;
+    const TObjId reg = d->assignId(new Region(storClassByCode(code)));
     Region *rootData;
     d->ents.getEntRW(&rootData, reg);
 
@@ -3344,12 +3388,12 @@ TValId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
     CL_BREAK_IF(size.lo <= IR::Int0);
 
     // assign an address
-    const TValId addr = d->valCreate(VT_ON_STACK, VO_ASSIGNED);
+    const TValId addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
     RootValue *rootAddrData;
     d->ents.getEntRW(&rootAddrData, addr);
 
     // create an object
-    const TObjId reg = d->assignId(new Region);
+    const TObjId reg = d->assignId(new Region(SC_ON_STACK));
     Region *rootData;
     d->ents.getEntRW(&rootData, reg);
 
@@ -3372,12 +3416,12 @@ TValId SymHeapCore::heapAlloc(const TSizeRange &size)
     CL_BREAK_IF(size.lo <= IR::Int0);
 
     // assign an address
-    const TValId addr = d->valCreate(VT_ON_HEAP, VO_ASSIGNED);
+    const TValId addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
     RootValue *rootAddrData;
     d->ents.getEntRW(&rootAddrData, addr);
 
     // create an object
-    const TObjId reg = d->assignId(new Region);
+    const TObjId reg = d->assignId(new Region(SC_ON_HEAP));
     Region *rootData;
     d->ents.getEntRW(&rootData, reg);
 
