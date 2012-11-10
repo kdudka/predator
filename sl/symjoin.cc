@@ -803,13 +803,13 @@ bool joinObjKind(
         return true;
     }
 
-    if (OK_CONCRETE == kind1) {
+    if (OK_REGION == kind1) {
         CL_BREAK_IF(action == JS_USE_SH1);
         *pDst = kind2;
         return true;
     }
 
-    if (OK_CONCRETE == kind2) {
+    if (OK_REGION == kind2) {
         CL_BREAK_IF(action == JS_USE_SH2);
         *pDst = kind1;
         return true;
@@ -1199,7 +1199,7 @@ bool createObject(
 
     if (offMayExist) {
         // we are asked to introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL
-        if (OK_CONCRETE != kind && !isMayExistObj(kind))
+        if (OK_REGION != kind && !isMayExistObj(kind))
             CL_BREAK_IF("invalid call of createObject()");
 
         if (ObjOrNull == *offMayExist)
@@ -1236,7 +1236,7 @@ bool createObject(
     // preserve 'prototype' flag
     ctx.dst.objSetProtoLevel(objDst, protoLevel);
 
-    if (OK_CONCRETE != kind) {
+    if (OK_REGION != kind) {
         // abstract object
         ctx.dst.valTargetSetAbstract(rootDst, kind, off);
 
@@ -2143,7 +2143,7 @@ bool mayExistFallback(
 
     const TValId valRoot = (use1) ? root1 : root2;
     const TObjId obj = sh.objByAddr(valRoot);
-    if (OK_CONCRETE != sh.objKind(obj))
+    if (OK_REGION != sh.objKind(obj))
         // only concrete objects/prototypes are candidates for OK_SEE_THROUGH
         return false;
 
@@ -2866,11 +2866,11 @@ bool joinDataCore(
     const TObjId obj2 = sh.objByAddr(addr2);
 
     const EObjKind kind1 = sh.objKind(obj1);
-    if (OK_CONCRETE != kind1)
+    if (OK_REGION != kind1)
         --ldiff;
 
     const EObjKind kind2 = sh.objKind(obj2);
-    if (OK_CONCRETE != kind2)
+    if (OK_REGION != kind2)
         ++ldiff;
 
     const SchedItem rootItem(addr1, addr2, ldiff);

@@ -67,7 +67,7 @@ bool matchSegBinding(
 {
     const EObjKind kind = sh.objKind(sh.objByAddr(seg));
     switch (kind) {
-        case OK_CONCRETE:
+        case OK_REGION:
             // nothing to match actually
             return true;
 

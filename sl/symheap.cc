@@ -3795,7 +3795,7 @@ TValId SymHeap::valClone(TValId val)
 EObjKind SymHeap::objKind(TObjId obj) const
 {
     if (!d->absRoots.isValidEnt(obj))
-        return OK_CONCRETE;
+        return OK_REGION;
 
     const AbstractObject *aData = d->absRoots.getEntRO(obj);
     return aData->kind;
@@ -3804,7 +3804,7 @@ EObjKind SymHeap::objKind(TObjId obj) const
 bool SymHeap::hasAbstractTarget(TValId val) const
 {
     const TObjId obj = this->objByAddr(val);
-    return (OK_CONCRETE != this->objKind(obj));
+    return (OK_REGION != this->objKind(obj));
 }
 
 const BindingOff& SymHeap::segBinding(TValId root) const
@@ -3825,7 +3825,7 @@ void SymHeap::valTargetSetAbstract(
 {
     CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
     CL_BREAK_IF(this->valOffset(root));
-    CL_BREAK_IF(OK_CONCRETE == kind);
+    CL_BREAK_IF(OK_REGION == kind);
 
     // there is no 'prev' offset in OK_SEE_THROUGH
     CL_BREAK_IF(OK_SEE_THROUGH == kind && off.prev != off.next);

@@ -216,7 +216,7 @@ inline void buildIgnoreList(
 
     const EObjKind kind = sh.objKind(sh.objByAddr(at));
     switch (kind) {
-        case OK_CONCRETE:
+        case OK_REGION:
         case OK_OBJ_OR_NULL:
             return;
 

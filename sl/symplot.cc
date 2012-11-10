@@ -531,7 +531,7 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
 
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
-        case OK_CONCRETE:
+        case OK_REGION:
         case OK_OBJ_OR_NULL:
             break;
 
@@ -591,7 +591,7 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
 
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
-        case OK_CONCRETE:
+        case OK_REGION:
             return label.str();
 
         case OK_OBJ_OR_NULL:
@@ -675,7 +675,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
 
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
-        case OK_CONCRETE:
+        case OK_REGION:
             break;
 
         case OK_OBJ_OR_NULL:
@@ -797,7 +797,7 @@ void plotRootObjects(PlotData &plot)
         sh.gatherLiveFields(liveObjs, obj);
 
 #if !SYMPLOT_FLAT_MODE
-        if (OK_CONCRETE == sh.objKind(obj)
+        if (OK_REGION == sh.objKind(obj)
                 && (1 == liveObjs.size())
                 && plotSimpleRoot(plot, liveObjs.front()))
             // this one went out in a simplified form

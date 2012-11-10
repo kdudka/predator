@@ -732,9 +732,9 @@ typedef std::set<FldHandle>                             TFldSet;
 /// a type used for minimal segment length (0+, 1+, ...)
 typedef short                                           TMinLen;
 
-/// enumeration of abstract object (although OK_CONCRETE is not abstract)
+/// enumeration of abstract object (although OK_REGION is not abstract)
 enum EObjKind {
-    OK_CONCRETE = 0,        ///< concrete object (not a segment)
+    OK_REGION = 0,          ///< concrete object (not a segment)
     OK_SLS,                 ///< singly-linked list segment
     OK_DLS,                 ///< doubly-linked list segment
     OK_OBJ_OR_NULL,         ///< 0..1 object, assume NULL if not allocated
