@@ -3420,7 +3420,7 @@ TValId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
     return addr;
 }
 
-TValId SymHeapCore::heapAlloc(const TSizeRange &size)
+TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
 {
     CL_BREAK_IF(size.lo <= IR::Int0);
 
@@ -3445,7 +3445,7 @@ TValId SymHeapCore::heapAlloc(const TSizeRange &size)
     // initialize meta-data
     rootData->size = size;
 
-    return addr;
+    return reg;
 }
 
 void SymHeapCore::valDestroyTarget(TValId val)

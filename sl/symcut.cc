@@ -162,7 +162,8 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
 
     // create the object in 'dst'
     const TSizeRange size = src.valSizeOfTarget(rootSrcAt);
-    TValId rootDstAt = dst.heapAlloc(size);
+    const TObjId regDst = dst.heapAlloc(size);
+    const TValId rootDstAt = dst.addrOfRegion(regDst);
 
     // preserve type-info if known
     const TObjType clt = src.valLastKnownTypeOfTarget(rootSrcAt);

@@ -1314,7 +1314,8 @@ malloc/calloc is implementation-defined");
     }
 
     // now create a heap object
-    const TValId val = sh_.heapAlloc(size);
+    const TObjId reg = sh_.heapAlloc(size);
+    const TValId val = sh_.addrOfRegion(reg);
 
     if (nullified) {
         // initialize to zero as we are doing calloc()

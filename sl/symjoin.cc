@@ -1219,8 +1219,8 @@ bool createObject(
         return false;
 
     // create an image in ctx.dst
-    const TValId rootDst = ctx.dst.heapAlloc(size);
-    const TObjId objDst = ctx.dst.objByAddr(rootDst);
+    const TObjId objDst = ctx.dst.heapAlloc(size);
+    const TValId rootDst = ctx.dst.addrOfRegion(objDst);
 
     const TObjId obj1 = ctx.sh1.objByAddr(root1);
     const TObjId obj2 = ctx.sh2.objByAddr(root2);
@@ -2845,7 +2845,8 @@ bool joinDataCore(
 
     // start with the given pair of objects and create a ghost object for them
     // create an image in ctx.dst
-    const TValId rootDstAt = ctx.dst.heapAlloc(size);
+    const TObjId regDst = ctx.dst.heapAlloc(size);
+    const TValId rootDstAt = ctx.dst.addrOfRegion(regDst);
 
     const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(addr1);
     const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(addr2);

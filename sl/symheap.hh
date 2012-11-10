@@ -505,7 +505,7 @@ class SymHeapCore {
         void clearAnonStackObjects(TValList &dst, const CallInst &of);
 
         /// allocate a chunk of heap of known size
-        TValId heapAlloc(const TSizeRange &size);
+        TObjId heapAlloc(const TSizeRange &size);
 
         /// destroy target of the given root value
         virtual void valDestroyTarget(TValId root);
