@@ -181,7 +181,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
         const EObjKind kind = src.objKind(src.objByAddr(rootSrcAt));
         const BindingOff off = (OK_OBJ_OR_NULL == kind)
             ? BindingOff(OK_OBJ_OR_NULL)
-            : src.segBinding(rootSrcAt);
+            : src.segBinding(objSrc);
 
         dst.valTargetSetAbstract(rootDstAt, kind, off);
 

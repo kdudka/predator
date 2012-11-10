@@ -217,8 +217,8 @@ TValId segClone(SymHeap &sh, const TValId root)
         const TValId dupPeer = sh.valClone(peer);
 
         // dig the 'peer' selectors of the cloned objects
-        const TOffset offpSeg  = sh.segBinding(dup).prev;
-        const TOffset offpPeer = sh.segBinding(dupPeer).prev;
+        const TOffset offpSeg  = sh.segBinding(sh.objByAddr(dup)).prev;
+        const TOffset offpPeer = sh.segBinding(sh.objByAddr(dupPeer)).prev;
 
         // resolve selectors -> sub-objects
         const PtrHandle ppSeg (sh, sh.valByOffset(dup, offpSeg));
@@ -250,12 +250,14 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
             break;
 
         const TValId root = sh.valRoot(val);
-        const TValId seg = segPeer(sh, root);
-        if (sh.segMinLength(seg))
+        const TValId segAt = segPeer(sh, root);
+        if (sh.segMinLength(segAt))
             // non-empty abstract object reached
             break;
 
-        const EObjKind kind = sh.objKind(sh.objByAddr(seg));
+        const TObjId seg = sh.objByAddr(segAt);
+
+        const EObjKind kind = sh.objKind(seg);
         if (OK_OBJ_OR_NULL == kind) {
             // we always end up with VAL_NULL if OK_OBJ_OR_NULL is removed
             val = VAL_NULL;
@@ -266,7 +268,7 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
         const BindingOff &bOff = sh.segBinding(seg);
         const TOffset shiftBy = off - bOff.head;
 
-        if (root != seg) {
+        if (root != segAt) {
             // put the shifted address of DLS peer to the list of seen values
             const FldHandle ptrPrev = prevPtrFromSeg(sh, root);
             const TValId valPrev = ptrPrev.value();
@@ -274,7 +276,7 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
         }
 
         // jump to next value
-        const TValId valNext = nextValFromSeg(sh, seg);
+        const TValId valNext = nextValFromSeg(sh, segAt);
         val = const_cast<SymHeap &>(sh).valByOffset(valNext, shiftBy);
     }
 

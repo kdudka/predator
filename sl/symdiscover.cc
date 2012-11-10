@@ -61,11 +61,13 @@ int minLengthByCost(int cost)
 }
 
 bool matchSegBinding(
-        const SymHeap               &sh,
-        const TValId                seg,
-        const BindingOff            &offPath)
+        const SymHeap              &sh,
+        const TValId                segAt,
+        const BindingOff           &offPath)
 {
-    const EObjKind kind = sh.objKind(sh.objByAddr(seg));
+    const TObjId seg = sh.objByAddr(segAt);
+
+    const EObjKind kind = sh.objKind(seg);
     switch (kind) {
         case OK_REGION:
             // nothing to match actually

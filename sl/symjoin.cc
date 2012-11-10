@@ -871,8 +871,8 @@ bool joinSegBindingOfMayExist(
         // no OK_SEE_THROUGH involved
         return false;
 
-    const BindingOff off1 = ctx.sh1.segBinding(seg1);
-    const BindingOff off2 = ctx.sh2.segBinding(seg2);
+    const BindingOff off1 = ctx.sh1.segBinding(obj1);
+    const BindingOff off2 = ctx.sh2.segBinding(obj2);
     *pOff = (isMayExist2) ? off1 : off2;
 
     if (off1 == off2) {
@@ -921,12 +921,15 @@ bool joinSegBinding(
         // nothing to join here
         return true;
 
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+
     if (isSeg1 && isSeg2) {
         bool result;
         if (!joinSegBindingOfMayExist(&result, pOff, ctx, v1, v2)) {
             // just compare the binding offsets
-            const BindingOff off1 = ctx.sh1.segBinding(v1);
-            const BindingOff off2 = ctx.sh2.segBinding(v2);
+            const BindingOff off1 = ctx.sh1.segBinding(obj1);
+            const BindingOff off2 = ctx.sh2.segBinding(obj2);
             if ((result = (off1 == off2)))
                 *pOff = off1;
         }
@@ -939,12 +942,12 @@ bool joinSegBinding(
     }
 
     if (isSeg1) {
-        *pOff = ctx.sh1.segBinding(v1);
+        *pOff = ctx.sh1.segBinding(obj1);
         return true;
     }
 
     if (isSeg2) {
-        *pOff = ctx.sh2.segBinding(v2);
+        *pOff = ctx.sh2.segBinding(obj2);
         return true;
     }
 
@@ -1598,8 +1601,8 @@ bool joinSegmentWithAny(
     if (OK_OBJ_OR_NULL != kind) {
         // BindingOff is assumed to be already matching at this point
         const BindingOff off = (JS_USE_SH1 == action)
-            ? ctx.sh1.segBinding(peer1)
-            : ctx.sh2.segBinding(peer2);
+            ? ctx.sh1.segBinding(ctx.sh1.objByAddr(peer1))
+            : ctx.sh2.segBinding(ctx.sh2.objByAddr(peer2));
 
         const TValId valNext1 = valOfPtrAt(ctx.sh1, peer1, off.next);
         const TValId valNext2 = valOfPtrAt(ctx.sh2, peer2, off.next);

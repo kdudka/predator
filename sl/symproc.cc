@@ -1674,22 +1674,25 @@ bool spliceOutAbstractPath(
         const bool                   readOnlyMode = false)
 {
     SymHeap &sh = proc.sh();
-    const TValId seg = sh.valRoot(atAddr);
 
     TValId endPoint = pointingTo;
 
-    const EObjKind kind = sh.objKind(sh.objByAddr(seg));
+    const TObjId seg = sh.objByAddr(atAddr);
+
+    const EObjKind kind = sh.objKind(seg);
     if (OK_OBJ_OR_NULL != kind) {
         // if atAddr is above/bellow head, we need to shift endPoint accordingly
         const TOffset off = sh.segBinding(seg).head - sh.valOffset(atAddr);
         endPoint = sh.valByOffset(pointingTo, off);
     }
 
-    if (!spliceOutAbstractPathCore(proc, seg, endPoint, /* RO */ true))
+    const TValId segAt = sh.valRoot(atAddr);
+
+    if (!spliceOutAbstractPathCore(proc, segAt, endPoint, /* RO */ true))
         // read-only attempt failed
         return false;
 
-    if (readOnlyMode || spliceOutAbstractPathCore(proc, seg, endPoint))
+    if (readOnlyMode || spliceOutAbstractPathCore(proc, segAt, endPoint))
         return true;
 
     CL_BREAK_IF("failed to splice-out a single list segment");

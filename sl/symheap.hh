@@ -810,7 +810,7 @@ class SymHeap: public SymHeapCore {
         EObjKind objKind(TObjId) const;
 
         /// tuple of binding offsets (next, prev, ...)
-        const BindingOff& segBinding(TValId seg) const;
+        const BindingOff& segBinding(TObjId seg) const;
 
         /// set properties of an abstract object, set abstract if not already
         void valTargetSetAbstract(

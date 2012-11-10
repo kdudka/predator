@@ -619,7 +619,7 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
     }
 
     if (showProps && OK_OBJ_OR_NULL != kind) {
-        const BindingOff &bf = sh.segBinding(root);
+        const BindingOff &bf = sh.segBinding(obj);
         switch (kind) {
             case OK_SLS:
             case OK_DLS:

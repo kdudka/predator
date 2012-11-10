@@ -168,8 +168,8 @@ bool matchRoots(
         // root canvas mismatch
         return false;
 
-    const EObjKind kind1 = sh1.objKind(sh1.objByAddr(root1));
-    const EObjKind kind2 = sh2.objKind(sh2.objByAddr(root2));
+    const EObjKind kind1 = sh1.objKind(obj1);
+    const EObjKind kind2 = sh2.objKind(obj2);
     if (kind1 != kind2)
         // kind of object mismatch
         return false;
@@ -189,8 +189,8 @@ bool matchRoots(
         return true;
 
     // compare binding fields
-    const BindingOff &bf1 = sh1.segBinding(root1);
-    const BindingOff &bf2 = sh2.segBinding(root2);
+    const BindingOff &bf1 = sh1.segBinding(obj1);
+    const BindingOff &bf2 = sh2.segBinding(obj2);
     return (bf1 == bf2);
 }
 

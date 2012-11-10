@@ -278,7 +278,7 @@ void slSegAbstractionStep(
         sh.valTargetSetAbstract(nextAt, OK_SLS, off);
 
     // replace all references to 'head'
-    const TOffset offHead = sh.segBinding(nextAt).head;
+    const TOffset offHead = sh.segBinding(next).head;
     const TValId headAt = sh.valByOffset(at, offHead);
     sh.valReplace(headAt, segHeadAt(sh, nextAt));
 
@@ -327,7 +327,7 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward)
         dls = dlSegPeer(sh, dls);
 
     // merge data
-    const BindingOff &off = sh.segBinding(dls);
+    const BindingOff &off = sh.segBinding(sh.objByAddr(dls));
     joinData(sh, off, dls, var, /* bidir */ false);
     dlSegSyncPeerData(sh, dls);
 
@@ -357,11 +357,10 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2)
     const TValId peer2 = dlSegPeer(sh, seg2);
 
     // check for a failure of segDiscover()
-    CL_BREAK_IF(sh.segBinding(seg1) != sh.segBinding(seg2));
     CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2));
 
     // merge data
-    const BindingOff &bf2 = sh.segBinding(seg2);
+    const BindingOff &bf2 = sh.segBinding(sh.objByAddr(seg2));
     joinData(sh, bf2, seg2, seg1, /* bidir */ true);
 
     // preserve backLink
@@ -560,12 +559,12 @@ void spliceOutListSegment(
 
     TOffset offHead = 0;
     if (OK_OBJ_OR_NULL != kind)
-        offHead = sh.segBinding(seg).head;
+        offHead = sh.segBinding(obj).head;
 
     if (OK_DLS == kind) {
         // OK_DLS --> unlink peer
         CL_BREAK_IF(seg == peer);
-        CL_BREAK_IF(offHead != sh.segBinding(peer).head);
+        CL_BREAK_IF(offHead != sh.segBinding(sh.objByAddr(peer)).head);
         const TValId valPrev = nextValFromSeg(sh, seg);
         redirectRefs(sh,
                 /* pointingFrom */ VAL_INVALID,
@@ -673,7 +672,7 @@ void concretizeObj(
     const TValId dup = segDeepCopy(sh, seg);
 
     // resolve the relative placement of the 'next' pointer
-    const BindingOff off = sh.segBinding(seg);
+    const BindingOff off = sh.segBinding(obj);
     const TOffset offNext = (OK_SLS == kind)
         ? off.next
         : off.prev;

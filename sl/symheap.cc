@@ -3797,12 +3797,9 @@ EObjKind SymHeap::objKind(TObjId obj) const
     return aData->kind;
 }
 
-const BindingOff& SymHeap::segBinding(TValId root) const
+const BindingOff& SymHeap::segBinding(TObjId seg) const
 {
-    CL_BREAK_IF(this->valOffset(root));
-
-    const TObjId obj = this->objByAddr(root);
-    const AbstractObject *aData = d->absRoots.getEntRO(obj);
+    const AbstractObject *aData = d->absRoots.getEntRO(seg);
     CL_BREAK_IF(OK_OBJ_OR_NULL == aData->kind);
     return aData->bOff;
 }

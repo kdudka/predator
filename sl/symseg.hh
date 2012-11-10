@@ -57,7 +57,7 @@ inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TValId seg)
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(!isAbstractValue(sh, seg));
 
-    const BindingOff &off = sh.segBinding(seg);
+    const BindingOff &off = sh.segBinding(sh.objByAddr(seg));
     const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.next);
     return PtrHandle(const_cast<SymHeap &>(sh), addr);
 }
@@ -68,7 +68,7 @@ inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg)
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(!isAbstractValue(sh, seg));
 
-    const BindingOff &off = sh.segBinding(seg);
+    const BindingOff &off = sh.segBinding(sh.objByAddr(seg));
     const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.prev);
     return PtrHandle(const_cast<SymHeap &>(sh), addr);
 }
@@ -84,12 +84,15 @@ inline TValId nextValFromSeg(const SymHeap &sh, TValId seg)
 }
 
 /// return DLS peer object of the given DLS
-inline TValId dlSegPeer(const SymHeap &sh, TValId dls)
+inline TValId dlSegPeer(const SymHeap &sh, TValId dlsAt)
 {
-    CL_BREAK_IF(sh.valOffset(dls));
-    CL_BREAK_IF(OK_DLS != sh.objKind(sh.objByAddr(dls)));
+    CL_BREAK_IF(sh.valOffset(dlsAt));
+
+    const TObjId dls = sh.objByAddr(dlsAt);
+    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
+
     const BindingOff &off = sh.segBinding(dls);
-    const TValId peer = valOfPtrAt(const_cast<SymHeap &>(sh), dls, off.prev);
+    const TValId peer = valOfPtrAt(const_cast<SymHeap &>(sh), dlsAt, off.prev);
     return sh.valRoot(peer);
 }
 
@@ -113,7 +116,7 @@ inline TValId segHeadAt(const SymHeap &sh, TValId seg)
     CL_BREAK_IF(sh.valOffset(seg));
     CL_BREAK_IF(!isAbstractValue(sh, seg));
 
-    const BindingOff &off = sh.segBinding(seg);
+    const BindingOff &off = sh.segBinding(sh.objByAddr(seg));
     return const_cast<SymHeap &>(sh).valByOffset(seg, off.head);
 }
 
@@ -138,7 +141,7 @@ inline TValId segNextRootObj(SymHeap &sh, TValId root)
     if (OK_OBJ_OR_NULL == kind)
         return VAL_NULL;
 
-    const BindingOff off = sh.segBinding(root);
+    const BindingOff off = sh.segBinding(obj);
     const TOffset offNext = (OK_DLS == kind)
         ? off.prev
         : off.next;
@@ -156,7 +159,7 @@ inline bool isDlSegPeer(const SymHeap &sh, const TValId root)
         // not a DLS
         return false;
 
-    const BindingOff &bf = sh.segBinding(root);
+    const BindingOff &bf = sh.segBinding(obj);
     return (bf.prev < bf.next);
 }
 
@@ -216,7 +219,9 @@ inline void buildIgnoreList(
     TOffset off;
     FldHandle tmp;
 
-    const EObjKind kind = sh.objKind(sh.objByAddr(at));
+    const TObjId obj = sh.objByAddr(at);
+
+    const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_REGION:
         case OK_OBJ_OR_NULL:
@@ -225,7 +230,7 @@ inline void buildIgnoreList(
         case OK_DLS:
         case OK_SEE_THROUGH_2N:
             // preserve 'peer' field
-            off = sh.segBinding(at).prev;
+            off = sh.segBinding(obj).prev;
             tmp = PtrHandle(writable, writable.valByOffset(at, off));
             ignoreList.insert(tmp);
             // fall through!
@@ -233,7 +238,7 @@ inline void buildIgnoreList(
         case OK_SLS:
         case OK_SEE_THROUGH:
             // preserve 'next' field
-            off = sh.segBinding(at).next;
+            off = sh.segBinding(obj).next;
             tmp = PtrHandle(writable, writable.valByOffset(at, off));
             ignoreList.insert(tmp);
     }
