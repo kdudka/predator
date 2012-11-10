@@ -342,13 +342,15 @@ void SymProc::varInit(TValId at)
 
 TValId SymProc::varAt(const CVar &cv)
 {
-    TValId at = sh_.addrOfVar(cv, /* createIfNeeded */ false);
+    TObjId reg = sh_.regionByVar(cv, /* createIfNeeded */ false);
+    TValId at = sh_.addrOfRegion(reg);
     if (0 < at)
         // var already alive
         return at;
 
     // lazy var creation
-    at = sh_.addrOfVar(cv, /* createIfNeeded */ true);
+    reg = sh_.regionByVar(cv, /* createIfNeeded */ true);
+    at = sh_.addrOfRegion(reg);
 
     // resolve Var
     const CodeStorage::Storage &stor = sh_.stor();
@@ -839,7 +841,8 @@ void SymProc::killVar(const CodeStorage::KillVar &kv)
 {
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
     const CVar cVar(kv.uid, nestLevel);
-    const TValId addr = sh_.addrOfVar(cVar, /* createIfNeeded */ false);
+    const TObjId reg = sh_.regionByVar(cVar, /* createIfNeeded */ false);
+    const TValId addr = sh_.addrOfRegion(reg);
     if (VAL_INVALID == addr)
         // the var is dead already
         return;

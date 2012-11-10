@@ -183,7 +183,8 @@ inline bool isAddressToFreedObj(SymHeapCore &sh, const TValId val)
 
 inline bool isVarAlive(SymHeap &sh, const CVar &cv)
 {
-    const TValId at = sh.addrOfVar(cv, /* createIfNeeded */ false);
+    const TObjId reg = sh.regionByVar(cv, /* createIfNeeded */ false);
+    const TValId at = sh.addrOfRegion(reg);
     return 0 < at;
 }
 
@@ -515,7 +516,8 @@ bool /* complete */ traverseProgramVarsGeneric(
                 return false;
 
             const bool createIfNeeded = isDst || allowRecovery;
-            const TValId at = sh.addrOfVar(cv, createIfNeeded);
+            const TObjId reg = sh.regionByVar(cv, createIfNeeded);
+            const TValId at = sh.addrOfRegion(reg);
 
             if (isAsym) {
                 // we have created a local variable in a _src_ heap

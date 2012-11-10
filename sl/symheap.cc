@@ -2720,6 +2720,15 @@ EStorageClass SymHeapCore::objStorClass(TObjId obj) const
     return regData->code;
 }
 
+TValId SymHeapCore::addrOfRegion(TObjId reg) {
+    if (OBJ_INVALID == reg)
+        return VAL_INVALID;
+
+    const Region *regData;
+    d->ents.getEntRO(&regData, reg);
+    return regData->rootAddr;
+}
+
 EValueOrigin SymHeapCore::valOrigin(TValId val) const
 {
     switch (val) {
@@ -3282,15 +3291,15 @@ CVar SymHeapCore::cVarByObject(TObjId obj) const
     return regData->cVar;
 }
 
-TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded)
+TObjId SymHeapCore::regionByVar(CVar cv, bool createIfNeeded)
 {
     TValId addr = d->cVarMap->find(cv);
     if (0 < addr)
-        return addr;
+        return this->objByAddr(addr);
 
     if (!createIfNeeded)
         // the variable does not exist and we are not asked to create the var
-        return VAL_INVALID;
+        return OBJ_INVALID;
 
     // lazy creation of a program variable
     const CodeStorage::Var &var = stor_.vars[cv.uid];
@@ -3336,7 +3345,7 @@ TValId SymHeapCore::addrOfVar(CVar cv, bool createIfNeeded)
     // store the address for next wheel
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cVarMap);
     d->cVarMap->insert(cv, addr);
-    return addr;
+    return this->objByAddr(addr);
 }
 
 static bool dummyFilter(EValueTarget)
@@ -3860,6 +3869,13 @@ void SymHeap::valTargetSetConcrete(TValId root)
     // unregister an abstract object
     // FIXME: suboptimal code of EntStore::releaseEnt() with SH_REUSE_FREE_IDS
     d->absRoots.releaseEnt(obj);
+}
+
+/// overridden just to catch possible misuse of the method
+TValId SymHeap::addrOfRegion(TObjId reg)
+{
+    CL_BREAK_IF(OK_REGION != this->objKind(reg));
+    return SymHeapCore::addrOfRegion(reg);
 }
 
 void SymHeap::valDestroyTarget(TValId root)

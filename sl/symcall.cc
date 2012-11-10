@@ -682,7 +682,8 @@ void setCallArgs(
         // cVar lookup
         const int nestLevel = bt.countOccurrencesOfFnc(uidOf(fnc));
         const CVar cVar(arg, nestLevel);
-        const TValId argAddr = sh.addrOfVar(cVar, /* createIfNeeded */ true);
+        const TObjId reg = sh.regionByVar(cVar, /* createIfNeeded */ true);
+        const TValId argAddr = sh.addrOfRegion(reg);
 
         // object instantiation
         TStorRef stor = *fnc.stor;

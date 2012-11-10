@@ -435,6 +435,9 @@ class SymHeapCore {
         /// classify the storage class of the given object
         EStorageClass objStorClass(TObjId) const;
 
+        /// return the base address of the given region (create a new if needed)
+        virtual TValId addrOfRegion(TObjId reg);
+
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;
 
@@ -456,8 +459,8 @@ class SymHeapCore {
         /// return count of bytes (including NULL) we can safely read as string
         TSizeRange valSizeOfString(TValId) const;
 
-        /// return address of the given program variable
-        TValId addrOfVar(CVar, bool createIfNeeded);
+        /// return the region corresponding to the given program variable
+        TObjId regionByVar(CVar, bool createIfNeeded);
 
         /// clone of the given value (deep copy)
         virtual TValId valClone(TValId);
@@ -472,7 +475,7 @@ class SymHeapCore {
         /// list of live fields (including ptrs) inside the given object
         void gatherLiveFields(FldList &dst, TObjId) const;
 
-        /// list of live pointers insed the give object
+        /// list of live pointers inside the give object
         void gatherLivePointers(FldList &dst, TObjId) const;
 
         /// list of uninitialized and nullified uniform blocks of the given obj
@@ -830,6 +833,7 @@ class SymHeap: public SymHeapCore {
 
     public:
         // just overrides (inherits the dox)
+        virtual TValId addrOfRegion(TObjId reg);
         virtual void valDestroyTarget(TValId);
         virtual TValId valClone(TValId);
 
