@@ -217,6 +217,12 @@ bool cmpValues(
         // value offset mismatch
         return false;
 
+    const bool isValid1 = sh1.isValid(sh1.objByAddr(v1));
+    const bool isValid2 = sh2.isValid(sh2.objByAddr(v2));
+    if (isValid1 != isValid2)
+        // target validity mismatch
+        return false;
+
     const EValueTarget code = sh1.valTarget(v1);
     if (code != sh2.valTarget(v2))
         // target kind mismatch
@@ -229,7 +235,9 @@ bool cmpValues(
         return (cVal1 == cVal2);
     }
 
-    if (isPossibleToDeref(code))
+    CL_BREAK_IF(isPossibleToDeref(sh1, v1) != isPossibleToDeref(sh2, v2));
+
+    if (isPossibleToDeref(sh1, v1))
         *pNeedFollow = true;
     else
         // no valid target

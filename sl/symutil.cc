@@ -256,7 +256,7 @@ bool valInsideSafeRange(const SymHeapCore &sh, TValId val)
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val)
 {
-    if (!isPossibleToDeref(sh.valTarget(val)))
+    if (!isPossibleToDeref(sh, val))
         return false;
 
     static TSizeOf ptrSize;
@@ -392,8 +392,7 @@ bool proveNeq(const SymHeapCore &sh, TValId ref, TValId val)
         return (VAL_FALSE == val);
 
     // we presume (0 <= ref) and (0 < val) at this point
-    const EValueTarget code = sh.valTarget(val);
-    if (VAL_NULL == ref && (isKnownObjectAt(sh, val) || isGone(code)))
+    if (VAL_NULL == ref && isKnownObjectAt(sh, val, /* allowInvalid */ true))
         // all addresses of objects have to be non-zero
         return true;
 

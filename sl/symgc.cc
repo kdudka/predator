@@ -54,6 +54,11 @@ bool isJunk(SymHeap &sh, TValId root)
     WorkList<TValId> wl(root);
 
     while (wl.next(root)) {
+        const TObjId obj = sh.objByAddr(root);
+        if (!sh.isValid(obj))
+            // this object is already freed
+            return false;
+
         const EValueTarget code = sh.valTarget(root);
         if (!isOnHeap(code))
             // non-heap objects cannot be JUNK
@@ -61,7 +66,6 @@ bool isJunk(SymHeap &sh, TValId root)
 
         // go through all referrers
         FldList refs;
-        const TObjId obj = sh.objByAddr(root);
         sh.pointedBy(refs, obj);
         BOOST_FOREACH(const FldHandle &fld, refs) {
             const TValId refAt = fld.placedAt();
@@ -134,7 +138,7 @@ bool destroyRootAndCollectJunk(
         TValList                *leakList)
 {
     CL_BREAK_IF(sh.valOffset(root));
-    CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(root)));
+    CL_BREAK_IF(!isPossibleToDeref(sh, root));
 
     // gather potentialy destroyed pointer values
     TValList killedPtrs;

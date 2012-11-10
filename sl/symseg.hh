@@ -168,8 +168,7 @@ inline TMinLen objMinLength(const SymHeap &sh, TValId root)
         // abstract target
         return sh.segMinLength(root);
 
-    const EValueTarget code = sh.valTarget(root);
-    if (isPossibleToDeref(code))
+    if (isPossibleToDeref(sh, root))
         // concrete target
         return 1;
 

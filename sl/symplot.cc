@@ -85,8 +85,7 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
     while (todo.next(val)) {
         // insert the value itself
         plot.values[val] = /* isRoot */ false;
-        const EValueTarget code = sh.valTarget(val);
-        if (!isPossibleToDeref(code))
+        if (!isPossibleToDeref(sh, val))
             // target is not an object
             continue;
 
@@ -835,8 +834,6 @@ const char* labelByTarget(const EValueTarget code)
         GEN_labelByCode(VT_STATIC);
         GEN_labelByCode(VT_ON_STACK);
         GEN_labelByCode(VT_ON_HEAP);
-        GEN_labelByCode(VT_LOST);
-        GEN_labelByCode(VT_DELETED);
         GEN_labelByCode(VT_RANGE);
     }
 
@@ -953,23 +950,26 @@ void plotValue(PlotData &plot, const TValId val)
     const char *color = "black";
     const char *suffix = 0;
 
+    const bool isValid = sh.isValid(sh.objByAddr(val));
+
     const EValueTarget code = sh.valTarget(val);
     switch (code) {
         case VT_CUSTOM:
             // skipt it, custom values are now handled in plotHasValue()
             return;
 
-        case VT_INVALID:
-        case VT_COMPOSITE:
-        case VT_LOST:
-        case VT_DELETED:
-        case VT_RANGE:
-            color = "red";
-            break;
-
         case VT_STATIC:
         case VT_ON_STACK:
-            color = "blue";
+            if (isValid) {
+                color = "blue";
+                break;
+            }
+            // fall through!
+
+        case VT_INVALID:
+        case VT_COMPOSITE:
+        case VT_RANGE:
+            color = "red";
             break;
 
         case VT_UNKNOWN:
@@ -977,6 +977,11 @@ void plotValue(PlotData &plot, const TValId val)
             // fall through!
 
         case VT_ON_HEAP:
+            if (!isValid) {
+                color = "red";
+                break;
+            }
+
             if (isAbstractValue(sh, val))
                 color = "green";
 
@@ -992,8 +997,12 @@ preserve_suffix:
         << ", fontcolor=" << color
         << ", label=\"#" << val;
 
-    if (suffix)
-        plot.out << " " << suffix;
+    if (suffix) {
+        plot.out << " ";
+        if (isAnyDataArea(code) && !isValid)
+            plot.out << "FREED_";
+        plot.out << suffix;
+    }
 
     const TValId root = sh.valRoot(val);
 
@@ -1058,7 +1067,7 @@ void plotNonRootValues(PlotData &plot)
             plotRangePtr(plot, val, root, rng);
             continue;
         }
-        else if (!isPossibleToDeref(code))
+        else if (!isPossibleToDeref(sh, val))
             // no valid target
             continue;
 
@@ -1089,7 +1098,7 @@ void plotNonRootValues(PlotData &plot)
             continue;
 
         // plot a value node
-        CL_BREAK_IF(isPossibleToDeref(sh.valTarget(val)));
+        CL_BREAK_IF(isPossibleToDeref(sh, val));
         plotValue(plot, val);
     }
 }

@@ -74,7 +74,7 @@ struct UnknownValuesDuplicator {
 
         SymHeapCore *sh = fld.sh();
         const EValueTarget code = sh->valTarget(valOld);
-        if (isPossibleToDeref(code) || (VT_CUSTOM == code))
+        if (isPossibleToDeref(*sh, valOld) || (VT_CUSTOM == code))
             return /* continue */ true;
 
         // duplicate unknown value
@@ -379,7 +379,7 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2)
     // destroy headAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
     REQUIRE_GC_ACTIVITY(sh, seg1, dlSegMerge);
-    if (!collectJunk(sh, peer1) && isPossibleToDeref(sh.valTarget(peer1))) {
+    if (!collectJunk(sh, peer1) && isPossibleToDeref(sh, peer1)) {
         CL_ERROR("dlSegMerge() failed to collect garbage"
                  ", peer1 still referenced");
         CL_BREAK_IF("collectJunk() has not been successful");

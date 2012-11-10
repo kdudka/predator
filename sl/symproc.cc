@@ -276,18 +276,28 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
             describeUnknownVal(*this, val, "dereference");
             return true;
 
-        case VT_LOST:
-            CL_ERROR_MSG(lw_, "dereference of non-existing non-heap object");
-            return true;
-
-        case VT_DELETED:
-            CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
-            return true;
-
         case VT_STATIC:
         case VT_ON_STACK:
         case VT_ON_HEAP:
             break;
+    }
+
+    if (!sh_.isValid(sh_.objByAddr(val))) {
+        switch (code) {
+            default:
+                CL_BREAK_IF("checkForInvalidDeref() got something special");
+                // fall through!
+
+            case VT_ON_STACK:
+                CL_ERROR_MSG(lw_,"dereference of non-existing non-heap object");
+                break;
+
+            case VT_ON_HEAP:
+                CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
+                break;
+        }
+
+        return true;
     }
 
     const TSizeRange dstSizeRange = sh_.valSizeOfTarget(val);
@@ -556,8 +566,7 @@ bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op)
 
 void digRootTypeInfo(SymHeap &sh, const FldHandle &lhs, TValId rhs)
 {
-    const EValueTarget code = sh.valTarget(rhs);
-    if (!isPossibleToDeref(code))
+    if (!isPossibleToDeref(sh, rhs))
         // no valid target anyway
         return;
 
@@ -578,7 +587,7 @@ void digRootTypeInfo(SymHeap &sh, const FldHandle &lhs, TValId rhs)
 
     const TSizeRange rootSizeRange = sh.valSizeOfTarget(rhs);
     const TSizeOf rootSize = rootSizeRange.lo;
-    CL_BREAK_IF(rootSize <= 0 && isOnHeap(code));
+    CL_BREAK_IF(rootSize <= 0 && isOnHeap(sh.valTarget(rhs)));
 
     if (cltLast && cltLast->size == rootSize && cltTarget->size != rootSize)
         // basically the same rule as above but now we check the size of target
@@ -735,14 +744,15 @@ void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
     }
 
     SymHeap &sh = proc.sh();
-    const EValueTarget codeLhs = sh.valTarget(lhs.placedAt());
-    CL_BREAK_IF(!isPossibleToDeref(codeLhs));
+    const TValId lhsAt = lhs.placedAt();
+    const EValueTarget codeLhs = sh.valTarget(lhsAt);
+    CL_BREAK_IF(!isPossibleToDeref(sh, lhsAt));
 
     // generic prototype for a value encoder
     TValId (*encode)(SymProc &, const FldHandle &fld, const TValId val) = 0;
 
     const EValueTarget codeRhs = sh.valTarget(rhs);
-    if (isPossibleToDeref(codeRhs))
+    if (isPossibleToDeref(sh, rhs))
         // pointer write validator
         encode = ptrObjectEncoder;
 
@@ -772,7 +782,7 @@ void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
 void SymProc::objSetValue(const FldHandle &lhs, TValId rhs)
 {
     const TValId lhsAt = lhs.placedAt();
-    CL_BREAK_IF(!isPossibleToDeref(sh_.valTarget(lhsAt)));
+    CL_BREAK_IF(!isPossibleToDeref(sh_, lhsAt));
 
     const TObjType clt = lhs.objType();
     const TSizeOf size = clt->size;
@@ -811,13 +821,13 @@ void SymProc::objSetValue(const FldHandle &lhs, TValId rhs)
 
 void SymProc::valDestroyTarget(TValId addr)
 {
-    const EValueTarget code = sh_.valTarget(addr);
-    if (VAL_ADDR_OF_RET == addr && isGone(code))
+    if (VAL_ADDR_OF_RET == addr && isAddressToFreedObj(sh_, addr))
         return;
 
     LeakMonitor lm(sh_);
     lm.enter();
 
+    const EValueTarget code = sh_.valTarget(addr);
     if (/* leaking */ lm.destroyRoot(addr))
         reportMemLeak(*this, code, "destroy");
 
@@ -1134,20 +1144,17 @@ void SymExecCore::execFree(TValId val)
         return;
     }
 
+    const bool hasValidTarget = sh_.isValid(sh_.objByAddr(val));
+
     const EValueTarget code = sh_.valTarget(val);
     switch (code) {
-        case VT_DELETED:
-            CL_ERROR_MSG(lw_, "double free()");
-            this->printBackTrace(ML_ERROR);
-            return;
-
-        case VT_LOST:
-            CL_ERROR_MSG(lw_, "attempt to free a non-existing non-heap object");
-            this->printBackTrace(ML_ERROR);
-            return;
+        case VT_ON_STACK:
+            if (!hasValidTarget)
+                // this is going to be handled right away
+                break;
+            // fall through!
 
         case VT_STATIC:
-        case VT_ON_STACK:
             CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
             this->printBackTrace(ML_ERROR);
             return;
@@ -1177,6 +1184,24 @@ void SymExecCore::execFree(TValId val)
 
         case VT_ON_HEAP:
             break;
+    }
+
+    if (!hasValidTarget) {
+        switch (code) {
+            default:
+                CL_BREAK_IF("execFree() got something special");
+                // fall through
+
+            case VT_ON_STACK:
+                CL_ERROR_MSG(lw_, "attempt to free a non-existing non-heap object");
+                this->printBackTrace(ML_ERROR);
+                return;
+
+            case VT_ON_HEAP:
+                CL_ERROR_MSG(lw_, "double free()");
+                this->printBackTrace(ML_ERROR);
+                return;
+        }
     }
 
     const TOffset off = sh_.valOffset(val);

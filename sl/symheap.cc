@@ -496,12 +496,14 @@ struct Region: public AbstractHeapEntity {
     TFldIdSet                       usedByGl;
     TArena                          arena;
     TObjType                        lastKnownClt;
+    bool                            isValid;
     TProtoLevel                     protoLevel;
 
     Region():
         rootAddr(VAL_INVALID),
         size(IR::rngFromNum(0)),
         lastKnownClt(0),
+        isValid(true),
         protoLevel(/* not a prototype */ 0)
     {
     }
@@ -606,6 +608,7 @@ struct SymHeapCore::Private {
     inline TObjId assignId(Region *);
 
     TValId valCreate(EValueTarget code, EValueOrigin origin);
+    TValId createInvalidObject(EValueTarget code, EValueOrigin origin);
     TValId valDup(TValId);
     bool valsEqual(TValId, TValId);
 
@@ -839,11 +842,11 @@ bool SymHeapCore::Private::chkArenaConsistency(
     if (::bypassSelfChecks)
         return true;
 
-    // jump to region
+    // TODO: drop this!
     const Region *rootData;
     this->ents.getEntRO(&rootData, rootValData->obj);
 
-    if (isGone(rootValData->code)) {
+    if (!rootData->isValid) {
         CL_BREAK_IF(IR::rngFromNum(IR::Int0) != rootData->size);
         CL_BREAK_IF(!rootData->liveFields.empty());
 
@@ -1341,13 +1344,33 @@ TValId SymHeapCore::Private::valCreate(
         case VT_ON_HEAP:
         case VT_ON_STACK:
         case VT_STATIC:
-        case VT_DELETED:
-        case VT_LOST:
             val = this->assignId(new RootValue(code, origin));
             break;
     }
 
     return val;
+}
+
+TValId /* addr */ SymHeapCore::Private::createInvalidObject(
+        EValueTarget                code,
+        EValueOrigin                origin)
+{
+    // assign an address
+    const TValId addr = this->valCreate(code, origin);
+    RootValue *rootAddrData;
+    this->ents.getEntRW(&rootAddrData, addr);
+
+    // create an invalid object
+    const TObjId reg = this->assignId(new Region);
+    Region *rootData;
+    this->ents.getEntRW(&rootData, reg);
+    rootData->isValid = false;
+
+    // inter-connect the object and its address
+    rootData->rootAddr = addr;
+    rootAddrData->obj = reg;
+
+    return addr;
 }
 
 TValId SymHeapCore::Private::valDup(TValId val)
@@ -1679,7 +1702,7 @@ void SymHeapCore::pointedBy(FldList &dst, TObjId obj) const
 {
     const Region *regData;
     d->ents.getEntRO(&regData, obj);
-    CL_BREAK_IF(!isPossibleToDeref(this->valTarget(regData->rootAddr)));
+    CL_BREAK_IF(!isPossibleToDeref(*this, regData->rootAddr));
 
     const TFldIdSet &usedBy = regData->usedByGl;
     BOOST_FOREACH(const TFldId fld, usedBy)
@@ -1726,7 +1749,7 @@ TValId SymHeapCore::valClone(TValId val)
         return this->valByRange(valData->valRoot, range);
     }
 
-    if (!isPossibleToDeref(code))
+    if (!isPossibleToDeref(*this, val))
         // duplicate an unknown value
         return d->valDup(val);
 
@@ -2039,7 +2062,7 @@ void SymHeapCore::objSetValue(TFldId fld, TValId val, TValSet *killedPtrs)
     CL_BREAK_IF(VT_COMPOSITE == this->valTarget(val));
 
     // check whether the root entity that owns this object ID is still valid
-    CL_BREAK_IF(!isPossibleToDeref(this->valTarget(objData->root)));
+    CL_BREAK_IF(!isPossibleToDeref(*this, objData->root));
 
     // mark the destination object as live
     const TValId root = objData->root;
@@ -2127,8 +2150,8 @@ void SymHeapCore::copyBlockOfRawMemory(
     d->ents.getEntRO(&dstData, dst);
     d->ents.getEntRO(&srcData, src);
 
-    CL_BREAK_IF(!isPossibleToDeref(dstData->code));
-    CL_BREAK_IF(!isPossibleToDeref(srcData->code));
+    CL_BREAK_IF(!isPossibleToDeref(*this, dst));
+    CL_BREAK_IF(!isPossibleToDeref(*this, src));
     CL_BREAK_IF(!size);
 
     const TOffset dstOff = dstData->offRoot;
@@ -2463,12 +2486,13 @@ TValId SymHeapCore::valByRange(TValId at, IR::Range range)
         return this->valByOffset(at, range.lo);
     }
 
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, at);
-    if (VAL_NULL == at || isGone(valData->code))
+    if (VAL_NULL == at || isAddressToFreedObj(*this, at))
         return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
-    CL_BREAK_IF(!isPossibleToDeref(valData->code));
+    CL_BREAK_IF(!isPossibleToDeref(*this, at));
+
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, at);
 
     // include the relative offset of the starting point
     const TValId valRoot = valData->valRoot;
@@ -2523,7 +2547,7 @@ TValId SymHeapCore::valShift(TValId valToShift, TValId shiftBy)
             return this->valByOffset(valToShift, off);
     }
 
-    if (isPossibleToDeref(code))
+    if (isPossibleToDeref(*this, valToShift))
         return this->valByRange(valToShift, rng);
 
     if (VT_RANGE != code) {
@@ -2712,18 +2736,6 @@ bool isUninitialized(EValueOrigin code)
     }
 }
 
-bool isGone(EValueTarget code)
-{
-    switch (code) {
-        case VT_DELETED:
-        case VT_LOST:
-            return true;
-
-        default:
-            return false;
-    }
-}
-
 bool isOnHeap(EValueTarget code)
 {
     return (VT_ON_HEAP == code);
@@ -2741,16 +2753,18 @@ bool isProgramVar(EValueTarget code)
     }
 }
 
-bool isPossibleToDeref(EValueTarget code)
-{
-    return isOnHeap(code)
-        || isProgramVar(code);
-}
-
 bool isAnyDataArea(EValueTarget code)
 {
-    return isPossibleToDeref(code)
-        || (VT_RANGE == code);
+    switch (code) {
+        case VT_STATIC:
+        case VT_ON_STACK:
+        case VT_ON_HEAP:
+        case VT_RANGE:
+            return true;
+
+        default:
+            return false;
+    }
 }
 
 TObjId SymHeapCore::objByAddr(TValId val) const {
@@ -2854,7 +2868,7 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy)
     TFldIdSet usedBy = valData->usedBy;
     BOOST_FOREACH(const TFldId fld, usedBy) {
         // this used to happen with with test-0037 running in OOM mode [fixed]
-        CL_BREAK_IF(isGone(this->valTarget(this->placedAt(fld))));
+        CL_BREAK_IF(isAddressToFreedObj(*this, this->placedAt(fld)));
 
         this->objSetValue(fld, replaceBy);
     }
@@ -3018,7 +3032,7 @@ TFldId SymHeapCore::Private::fieldAt(
 
     const EValueTarget code = valData->code;
     CL_BREAK_IF(VT_RANGE == code);
-    if (!isPossibleToDeref(code))
+    if (!isAnyDataArea(code))
         return FLD_INVALID;
 
     const TSizeOf size = clt->size;
@@ -3388,33 +3402,32 @@ void SymHeapCore::valDestroyTarget(TValId val)
         return;
     }
 
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, val);
-    if (valData->offRoot || !isPossibleToDeref(valData->code)) {
-        CL_BREAK_IF("invalid call of SymHeapCore::valDestroyTarget()");
-        return;
-    }
-
+    CL_BREAK_IF(this->valOffset(val));
+    CL_BREAK_IF(!isPossibleToDeref(*this, val));
     d->destroyRoot(val);
+}
+
+bool SymHeapCore::isValid(TObjId obj) const {
+    if (OBJ_INVALID == obj)
+        return false;
+
+    const Region *regData;
+    d->ents.getEntRO(&regData, obj);
+    return regData->isValid;
 }
 
 TSizeRange SymHeapCore::valSizeOfTarget(TValId val) const
 {
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, val);
-    if (!isPossibleToDeref(valData->code))
+    if (!isPossibleToDeref(*this, val))
         // no writable target around here
         return IR::rngFromNum(IR::Int0);
 
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, val);
     if (valData->offRoot < 0)
         // we are above the root, so we cannot safely write anything
         return IR::rngFromNum(IR::Int0);
 
-    const EValueTarget code = valData->code;
-    if (isGone(code))
-        return IR::rngFromNum(IR::Int0);
-
-    CL_BREAK_IF(!isPossibleToDeref(valData->code));
     const TValId root = valData->valRoot;
     const RootValue *rootData;
     d->ents.getEntRO(&rootData, root);
@@ -3447,7 +3460,7 @@ TSizeRange SymHeapCore::valSizeOfString(TValId addr) const
         return IR::rngFromNum(len);
     }
 
-    if (!isPossibleToDeref(code))
+    if (!isPossibleToDeref(*this, addr))
         return /* error */ IR::rngFromNum(IR::Int0);
 
     // resolve root and offset
@@ -3482,7 +3495,8 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt)
 
         // allocate a new root value at VAL_ADDR_OF_RET
         rootValData->code = VT_ON_STACK;
-        rootData->size = IR::rngFromNum(clt->size);
+        rootData->isValid = true;
+        rootData->size    = IR::rngFromNum(clt->size);
     }
 
     // convert a type-free object into a type-aware object
@@ -3507,40 +3521,17 @@ void SymHeapCore::Private::destroyRoot(TValId root)
     RootValue *rootValData;
     this->ents.getEntRW(&rootValData, root);
 
-    // jump to region
+    // mark the region as invalid
     Region *rootData;
     this->ents.getEntRW(&rootData, rootValData->obj);
+    CL_BREAK_IF(VAL_ADDR_OF_RET != root && !rootData->isValid);
+    rootData->isValid = false;
 
-    EValueTarget code = VT_DELETED;
     const CVar cv = rootData->cVar;
     if (cv.uid != /* heap object */ -1) {
         // remove the corresponding program variable
         RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->cVarMap);
         this->cVarMap->remove(cv);
-        code = VT_LOST;
-    }
-
-    // start with the root itself as anchor
-    std::vector<AnchorValue *> refs(1, rootValData);
-
-    // collect all VT_RANGE anchors
-    BOOST_FOREACH(const TValId rVal, rootValData->dependentValues) {
-        AnchorValue *anchorData;
-        this->ents.getEntRW(&anchorData, rVal);
-        refs.push_back(anchorData);
-    }
-
-    BOOST_FOREACH(AnchorValue *anchorData, refs) {
-        // mark the anchor value as deleted/lost
-        anchorData->code = code;
-
-        // mark all associated off-values as deleted/lost
-        BOOST_FOREACH(TOffMap::const_reference item, anchorData->offMap) {
-            const TValId val = item.second;
-            BaseValue *valData;
-            this->ents.getEntRW(&valData, val);
-            valData->code = code;
-        }
     }
 
     // release the root
@@ -3569,19 +3560,22 @@ void SymHeapCore::Private::destroyRoot(TValId root)
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin)
 {
     switch (code) {
-        case VT_UNKNOWN:
-            // this is the most common case
-
-        case VT_DELETED:
-        case VT_LOST:
-            // these are used by symcut
-            break;
+        case VT_ON_HEAP:
+        case VT_ON_STACK:
+            // valCreate() never creates a valid target object
+            return d->createInvalidObject(code, origin);
 
         default:
             CL_BREAK_IF("invalid call of SymHeapCore::valCreate()");
+            // fall through!
 
-            // just to avoid an unnecessary SIGSEGV in the production build
+        case VT_RANGE:
+            // VT_RANGE pointing to a freed object is replaced by VT_UNKNOWN
             code = VT_UNKNOWN;
+            // fall through!
+
+        case VT_UNKNOWN:
+            break;
     }
 
     return d->valCreate(code, origin);
@@ -3779,7 +3773,7 @@ void SymHeap::valTargetSetAbstract(
         EObjKind                    kind,
         const BindingOff            &off)
 {
-    CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
+    CL_BREAK_IF(!isPossibleToDeref(*this, root));
     CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(OK_REGION == kind);
 

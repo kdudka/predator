@@ -139,13 +139,46 @@ inline bool isAbstractValue(const SymHeap &sh, const TValId val)
     return (OK_REGION != kind);
 }
 
-inline bool isKnownObjectAt(const SymHeapCore &sh, const TValId val)
+inline bool isPossibleToDeref(const SymHeapCore &sh, const TValId val)
 {
     const EValueTarget code = sh.valTarget(val);
-    if (!isPossibleToDeref(code))
+    if (VT_RANGE == code)
+        // address with offset ranges are not allowed to be dreferenced for now
         return false;
 
+    const TObjId obj = sh.objByAddr(val);
+    return sh.isValid(obj);
+}
+
+inline bool isKnownObjectAt(
+        const SymHeapCore          &sh,
+        const TValId                val,
+        const bool                  allowInvalid = false)
+{
+    const EValueTarget code = sh.valTarget(val);
+    if (VT_RANGE == code)
+        // address with offset ranges are not allowed to be dreferenced for now
+        return false;
+
+    if (allowInvalid) {
+        if (OBJ_INVALID == sh.objByAddr(val))
+            return false;
+    }
+    else {
+        if (!isPossibleToDeref(sh, val))
+            return false;
+    }
+
     return !isAbstractValue(/* XXX */dynamic_cast<const SymHeap &>(sh), val);
+}
+
+inline bool isAddressToFreedObj(SymHeapCore &sh, const TValId val)
+{
+    const TObjId obj = sh.objByAddr(val);
+    if (OBJ_INVALID == obj)
+        return false;
+
+    return !sh.isValid(obj);
 }
 
 inline bool isVarAlive(SymHeap &sh, const CVar &cv)

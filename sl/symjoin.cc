@@ -479,7 +479,7 @@ bool checkNullConsistency(
         // [experimental] reduce state explosion on test-0300
         return !ctx.joiningData();
 
-    return isPossibleToDeref(code);
+    return isAnyDataArea(code);
 }
 
 bool joinValuesByCode(
@@ -1558,9 +1558,9 @@ bool joinSegmentWithAny(
         return true;
     }
 
-    const EValueTarget code1 = ctx.sh1.valTarget(root1);
-    const EValueTarget code2 = ctx.sh2.valTarget(root2);
-    if (!isPossibleToDeref(code1) || !isPossibleToDeref(code2))
+    const bool isValid1 = isPossibleToDeref(ctx.sh1, root1);
+    const bool isValid2 = isPossibleToDeref(ctx.sh2, root2);
+    if (!isValid1 || !isValid2)
         return false;
 
     if (firstTryReadOnly && !followRootValues(ctx, item, action, /* RO */ true))
@@ -1635,7 +1635,7 @@ bool segmentCloneCore(
         const EJoinStatus           action,
         const BindingOff            *off)
 {
-    if (!isPossibleToDeref(shGt.valTarget(valGt)))
+    if (!isPossibleToDeref(shGt, valGt))
         // not valid target
         return false;
 
@@ -1830,13 +1830,13 @@ bool insertSegmentClone(
             // OK_SEE_THROUGH/OK_OBJ_OR_NULL is applicable only on the first fld
             off = 0;
 
-        EValueTarget code = shGt.valTarget(valGt);
-        if (isPossibleToDeref(code)) {
+        if (isPossibleToDeref(shGt, valGt)) {
             if (segmentCloneCore(ctx, shGt, valGt, valMapGt, cloneItem.ldiff,
                         action, off))
                 continue;
         }
         else {
+            const EValueTarget code = shGt.valTarget(valGt);
             if (cloneSpecialValue(ctx, shGt, valGt, valMapGt, cloneItem, code))
                 continue;
         }
@@ -2132,7 +2132,7 @@ bool mayExistFallback(
 
     SymHeap &sh = (use1) ? ctx.sh1 : ctx.sh2;
     const TValId val = (use1) ? v1 : v2;
-    if (!isPossibleToDeref(sh.valTarget(val)))
+    if (!isPossibleToDeref(sh, val))
         // no valid target
         return false;
 
@@ -2200,9 +2200,8 @@ bool joinValuesByCode(
         const TValId            v1,
         const TValId            v2)
 {
-    // classify the targets
-    const EValueTarget code1 = ctx.sh1.valTarget(v1);
-    const EValueTarget code2 = ctx.sh2.valTarget(v2);
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
     // check target's validity
     const bool isNull1 = (VAL_NULL == v1);
@@ -2214,8 +2213,8 @@ bool joinValuesByCode(
         }
     }
     else {
-        const bool haveTarget1 = isAnyDataArea(code1);
-        const bool haveTarget2 = isAnyDataArea(code2);
+        const bool haveTarget1 = ctx.sh1.isValid(obj1);
+        const bool haveTarget2 = ctx.sh2.isValid(obj2);
         if (haveTarget1 != haveTarget2) {
             SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
             *pResult = false;
@@ -2223,6 +2222,8 @@ bool joinValuesByCode(
         }
     }
 
+    const EValueTarget code1 = ctx.sh1.valTarget(v1);
+    const EValueTarget code2 = ctx.sh2.valTarget(v2);
     if (VT_RANGE == code1 || VT_RANGE == code2)
         // these have to be handled in followValuePair()
         return false;
@@ -2231,9 +2232,9 @@ bool joinValuesByCode(
     const TOffset off2 = ctx.sh2.valOffset(v2);
 
     // check for VT_DELETED/VT_LOST
-    const bool gone1 = isGone(code1)
+    const bool gone1 = isAddressToFreedObj(ctx.sh1, v1)
         || /* FIXME: misleading */ (off1 && VAL_NULL == ctx.sh1.valRoot(v1));
-    const bool gone2 = isGone(code2)
+    const bool gone2 = isAddressToFreedObj(ctx.sh2, v2)
         || /* FIXME: misleading */ (off2 && VAL_NULL == ctx.sh2.valRoot(v2));
 
     if (gone1 || gone2) {
@@ -2267,8 +2268,8 @@ bool joinValuesByCode(
 
     // do not join VT_UNKNOWN with a valid pointer
     if (VO_DEREF_FAILED != origin) {
-        const bool haveTarget1 = isPossibleToDeref(code1);
-        const bool haveTarget2 = isPossibleToDeref(code2);
+        const bool haveTarget1 = isPossibleToDeref(ctx.sh1, v1);
+        const bool haveTarget2 = isPossibleToDeref(ctx.sh2, v2);
         if (haveTarget1 || haveTarget2) {
             *pResult = false;
             return true;

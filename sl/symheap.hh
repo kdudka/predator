@@ -64,22 +64,14 @@ enum EValueTarget {
     VT_STATIC,              ///< target is static data
     VT_ON_STACK,            ///< target is on stack
     VT_ON_HEAP,             ///< target is on heap
-    VT_LOST,                ///< target was on stack, but it is no longer valid
-    VT_DELETED,             ///< target was on heap, but it is no longer valid
     VT_RANGE,               ///< an offset value where offset is given by range
 };
-
-/// true for VT_DELETED and VT_LOST
-bool isGone(EValueTarget);
 
 /// true for VT_ON_HEAP
 bool isOnHeap(EValueTarget);
 
 /// true for VT_STATIC and VT_ON_STACK
 bool isProgramVar(EValueTarget);
-
-/// true for VT_STATIC, VT_ON_STACK, VT_ON_HEAP
-bool isPossibleToDeref(EValueTarget);
 
 /// true for VT_STATIC, VT_ON_STACK, VT_ON_HEAP, and VT_RANGE
 bool isAnyDataArea(EValueTarget);
@@ -499,6 +491,9 @@ class SymHeapCore {
 
         /// destroy target of the given root value
         virtual void valDestroyTarget(TValId root);
+
+        /// return true if the given object can be still accessed safely
+        bool isValid(TObjId) const;
 
         /// initialize (estimated) type-info of the given root entity
         void valSetLastKnownTypeOfTarget(TValId root, TObjType clt);

@@ -374,10 +374,10 @@ void SymExecEngine::updateStateInBranch(
 
 bool isTrackableValue(const SymHeap &sh, const TValId val)
 {
-    const EValueTarget code = sh.valTarget(val);
-    if (isPossibleToDeref(code))
+    if (isPossibleToDeref(sh, val))
         return true;
 
+    const EValueTarget code = sh.valTarget(val);
     if (VT_UNKNOWN == code && VO_ASSIGNED == sh.valOrigin(val))
         // this allows to track results of undefined functions returning int
         return true;

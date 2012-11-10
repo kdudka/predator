@@ -109,8 +109,7 @@ class DCopyObjVisitor {
 
 void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
 {
-    const EValueTarget code = dc.src.valTarget(addrSrc);
-    if (isPossibleToDeref(code)) {
+    if (isPossibleToDeref(dc.src, addrSrc)) {
         // copy uniform blocks
         const TObjId objSrc = dc.src.objByAddr(addrSrc);
         UniBlockWriter blVisitor(dc.dst, addrDst);
@@ -249,8 +248,7 @@ void trackUses(DeepCopyData &dc, TValId valSrc)
         // nothing to track actually
         return;
 
-    const EValueTarget code = sh.valTarget(rootSrcAt);
-    if (isPossibleToDeref(code)) {
+    if (isPossibleToDeref(sh, rootSrcAt)) {
         const TObjId objSrc = sh.objByAddr(rootSrcAt);
         sh.pointedBy(uses, objSrc);
     }
@@ -260,8 +258,7 @@ void trackUses(DeepCopyData &dc, TValId valSrc)
     // go from the value backward
     BOOST_FOREACH(const FldHandle &objSrc, uses) {
         const TValId srcAt = objSrc.placedAt();
-        const EValueTarget code = sh.valTarget(srcAt);
-        if (!isPossibleToDeref(code))
+        if (!isPossibleToDeref(sh, srcAt))
             continue;
 
         handleValueCore(dc, srcAt);
@@ -290,7 +287,8 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc)
         // custom value, e.g. fnc pointer
         return handleCustomValue(dc, valSrc);
 
-    if (isAnyDataArea(code) || VAL_NULL == src.valRoot(valSrc))
+    const TObjId objSrc = src.objByAddr(valSrc);
+    if (src.isValid(objSrc) || VAL_NULL == src.valRoot(valSrc))
         // create the target object, if it does not exist already
         return handleValueCore(dc, valSrc);
 
