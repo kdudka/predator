@@ -99,7 +99,7 @@ bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly)
             if (hasKey(whiteList, root))
                 goto skip_root;
 
-            if (0 < sh.valTargetProtoLevel(root))
+            if (0 < sh.objProtoLevel(sh.objByAddr(root)))
                 goto skip_root;
         }
 

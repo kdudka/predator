@@ -35,9 +35,8 @@ struct ProtoFinder {
             return /* continue */ true;
 
         SymHeapCore *sh = sub.sh();
-        const TValId root = sh->valRoot(val);
-        if (sh->valTargetProtoLevel(root))
-            protos.insert(root);
+        if (sh->objProtoLevel(sh->objByAddr(val)))
+            protos.insert(sh->valRoot(val));
 
         return /* continue */ true;
     }
@@ -79,7 +78,7 @@ bool ProtoCollector::operator()(const FldHandle &fld)
         return /* continue */ true;
 
     // check if we point to prototype, or shared data
-    if (!sh.valTargetProtoLevel(val))
+    if (!sh.objProtoLevel(sh.objByAddr(val)))
         return /* continue */ true;
 
     TValId proto = sh.valRoot(val);
@@ -121,17 +120,17 @@ void objChangeProtoLevel(SymHeap &sh, TValId root, const TProtoLevel diff)
     CL_BREAK_IF(sh.valOffset(root));
     const TObjId proto = sh.objByAddr(root);
 
-    const TProtoLevel level = sh.valTargetProtoLevel(root);
-    sh.valTargetSetProtoLevel(root, level + diff);
+    const TProtoLevel level = sh.objProtoLevel(proto);
+    sh.objSetProtoLevel(proto, level + diff);
 
     const EObjKind kind = sh.objKind(proto);
     if (OK_DLS != kind)
         return;
 
-    const TValId peer = dlSegPeer(sh, root);
-    CL_BREAK_IF(sh.valTargetProtoLevel(peer) != level);
+    const TObjId peer = sh.objByAddr(dlSegPeer(sh, root));
+    CL_BREAK_IF(sh.objProtoLevel(peer) != level);
 
-    sh.valTargetSetProtoLevel(peer, level + diff);
+    sh.objSetProtoLevel(peer, level + diff);
 }
 
 void objIncrementProtoLevel(SymHeap &sh, TValId root)
@@ -161,13 +160,14 @@ bool protoCheckConsistency(const SymHeap &sh)
         if (isAbstract(code))
             continue;
 
-        const TProtoLevel rootLevel = sh.valTargetProtoLevel(root);
+        const TObjId obj = sh.objByAddr(root);
+        const TProtoLevel rootLevel = sh.objProtoLevel(obj);
 
         FldList ptrs;
-        const TObjId obj = sh.objByAddr(root);
         sh.gatherLivePointers(ptrs, obj);
         BOOST_FOREACH(const FldHandle &fld, ptrs) {
-            const TProtoLevel level = sh.valTargetProtoLevel(fld.value());
+            const TObjId sub = sh.objByAddr(fld.value());
+            const TProtoLevel level = sh.objProtoLevel(sub);
             if (level <= rootLevel)
                 continue;
 

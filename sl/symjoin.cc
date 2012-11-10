@@ -973,8 +973,11 @@ bool joinNestingLevel(
     const TValId root1 = item.v1;
     const TValId root2 = item.v2;
 
-    TProtoLevel level1 = ctx.sh1.valTargetProtoLevel(root1);
-    TProtoLevel level2 = ctx.sh2.valTargetProtoLevel(root2);
+    const TObjId obj1 = ctx.sh1.objByAddr(root1);
+    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+
+    TProtoLevel level1 = ctx.sh1.objProtoLevel(obj1);
+    TProtoLevel level2 = ctx.sh2.objProtoLevel(obj2);
 
     if (ctx.joiningData()) {
         // if one of the starting points is not yet abstract, compensate it!
@@ -1218,6 +1221,7 @@ bool createObject(
 
     // create an image in ctx.dst
     const TValId rootDst = ctx.dst.heapAlloc(size);
+    const TObjId objDst = ctx.dst.objByAddr(rootDst);
 
     const TObjId obj1 = ctx.sh1.objByAddr(root1);
     const TObjId obj2 = ctx.sh2.objByAddr(root2);
@@ -1230,7 +1234,7 @@ bool createObject(
         ctx.dst.valSetLastKnownTypeOfTarget(rootDst, clt);
 
     // preserve 'prototype' flag
-    ctx.dst.valTargetSetProtoLevel(rootDst, protoLevel);
+    ctx.dst.objSetProtoLevel(objDst, protoLevel);
 
     if (OK_CONCRETE != kind) {
         // abstract object

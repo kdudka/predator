@@ -150,20 +150,21 @@ bool matchRoots(
         const TValId            root2,
         const EValueTarget      code)
 {
+    const TObjId obj1 = sh1.objByAddr(root1);
+    const TObjId obj2 = sh2.objByAddr(root2);
+
     const TSizeRange size1 = sh1.valSizeOfTarget(root1);
     const TSizeRange size2 = sh2.valSizeOfTarget(root2);
     if (size1 != size2)
         // target size mismatch
         return false;
 
-    const TProtoLevel level1 = sh1.valTargetProtoLevel(root1);
-    const TProtoLevel level2 = sh2.valTargetProtoLevel(root2);
+    const TProtoLevel level1 = sh1.objProtoLevel(obj1);
+    const TProtoLevel level2 = sh2.objProtoLevel(obj2);
     if (level1 != level2)
         // prototype level mismatch
         return false;
 
-    const TObjId obj1 = sh1.objByAddr(root1);
-    const TObjId obj2 = sh2.objByAddr(root2);
     if (!matchUniBlocks(sh1, sh2, obj1, obj2))
         // root canvas mismatch
         return false;

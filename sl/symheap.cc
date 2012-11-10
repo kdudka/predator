@@ -3679,43 +3679,23 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
     return cv;
 }
 
-TProtoLevel SymHeapCore::valTargetProtoLevel(TValId val) const
+TProtoLevel SymHeapCore::objProtoLevel(TObjId obj) const
 {
-    if (val <= 0)
+    if (obj <= 0)
         // not a prototype for sure
         return 0;
 
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, val);
-    if (!isPossibleToDeref(valData->code))
-        // not a prototype for sure
-        return 0;
-
-    // seek root
-    const TValId root = valData->valRoot;
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, root);
-
-    // jump to region
     const Region *regData;
-    d->ents.getEntRO(&regData, rootData->obj);
-
+    d->ents.getEntRO(&regData, obj);
     return regData->protoLevel;
 }
 
-void SymHeapCore::valTargetSetProtoLevel(TValId root, TProtoLevel level)
+void SymHeapCore::objSetProtoLevel(TObjId obj, TProtoLevel level)
 {
-    CL_BREAK_IF(!isPossibleToDeref(this->valTarget(root)));
-    CL_BREAK_IF(this->valOffset(root));
-    CL_BREAK_IF(level < 0);
+    CL_BREAK_IF(OBJ_INVALID == obj);
 
-    const RootValue *rootData;
-    d->ents.getEntRO(&rootData, root);
-
-    // jump to region
     Region *regData;
-    d->ents.getEntRW(&regData, rootData->obj);
-
+    d->ents.getEntRW(&regData, obj);
     regData->protoLevel = level;
 }
 

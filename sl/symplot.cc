@@ -584,7 +584,8 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
     const TObjId obj = sh.objByAddr(root);
 
     std::ostringstream label;
-    const TProtoLevel protoLevel= sh.valTargetProtoLevel(root);
+    const TObjId proto = sh.objByAddr(root);
+    const TProtoLevel protoLevel= sh.objProtoLevel(proto);
     if (protoLevel)
         label << "[L" << protoLevel << " prototype] ";
 

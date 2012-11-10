@@ -170,8 +170,10 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
         dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
 
     // preserve prototype level
-    const TProtoLevel protoLevel = src.valTargetProtoLevel(rootSrcAt);
-    dst.valTargetSetProtoLevel(rootDstAt, protoLevel);
+    const TObjId objSrc = src.objByAddr(rootSrcAt);
+    const TObjId objDst = dst.objByAddr(rootDstAt);
+    const TProtoLevel protoLevel = src.objProtoLevel(objSrc);
+    dst.objSetProtoLevel(objDst, protoLevel);
 
     // preserve metadata of abstract objects
     if (isAbstract(src.valTarget(rootSrcAt))) {

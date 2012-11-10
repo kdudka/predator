@@ -203,6 +203,9 @@ typedef std::vector<TOffset>                            TOffList;
 /// container used to store value IDs to
 typedef std::vector<TValId>                             TValList;
 
+/// container used to store Object IDs to
+typedef std::vector<TObjId>                             TObjList;
+
 /// container used to store value IDs to
 typedef std::set<TValId>                                TValSet;
 
@@ -520,11 +523,11 @@ class SymHeapCore {
         const CustomValue& valUnwrapCustom(TValId) const;
 
     public:
-        /// prototype level of the target root entity (0 means not a prototype)
-        TProtoLevel valTargetProtoLevel(TValId) const;
+        /// prototype level of the given object (0 means not a prototype)
+        TProtoLevel objProtoLevel(TObjId) const;
 
-        /// set prototype level of the given root (0 means not a prototype)
-        void valTargetSetProtoLevel(TValId root, TProtoLevel level);
+        /// set prototype level of the given boject (0 means not a prototype)
+        void objSetProtoLevel(TObjId obj, TProtoLevel level);
 
     protected:
         /// return a @b data pointer placed at the given address
