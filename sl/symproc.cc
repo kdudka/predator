@@ -577,7 +577,7 @@ void digRootTypeInfo(SymHeap &sh, const FldHandle &lhs, TValId rhs)
         // not a pointer to root
         return;
 
-    const TObjType cltTarget = targetTypeOfPtr(lhs.objType());
+    const TObjType cltTarget = targetTypeOfPtr(lhs.type());
     if (!cltTarget || CL_TYPE_VOID == cltTarget->code)
         // no type-info given for the target
         return;
@@ -637,7 +637,7 @@ TValId ptrObjectEncoderCore(
             break;
     }
 
-    const TSizeOf dstSize = dst.objType()->size;
+    const TSizeOf dstSize = dst.type()->size;
     CL_BREAK_IF((sh.valSizeOfTarget(dst.placedAt()).lo < dstSize));
     if (ptrSize <= dstSize)
         return val;
@@ -666,7 +666,7 @@ TValId integralEncoder(
     const struct cl_loc *loc = proc.lw();
 
     // read type-info of the target object
-    const TObjType clt = dst.objType();
+    const TObjType clt = dst.type();
     const TSizeOf size = clt->size;
     CL_BREAK_IF(isComposite(clt) || !size);
 
@@ -788,7 +788,7 @@ void SymProc::objSetValue(const FldHandle &lhs, TValId rhs)
     const TValId lhsAt = lhs.placedAt();
     CL_BREAK_IF(!isPossibleToDeref(sh_, lhsAt));
 
-    const TObjType clt = lhs.objType();
+    const TObjType clt = lhs.type();
     const TSizeOf size = clt->size;
     CL_BREAK_IF(!size);
 

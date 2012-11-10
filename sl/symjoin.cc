@@ -2017,7 +2017,7 @@ class MayExistVisitor {
         }
 
         bool operator()(const FldHandle &sub) {
-            if (!isDataPtr(sub.objType()))
+            if (!isDataPtr(sub.type()))
                 // not a pointer
                 return /* continue */ true;
 
@@ -2468,8 +2468,8 @@ bool setDstValuesCore(
     const TValId v1 = obj1.value();
     const TValId v2 = obj2.value();
 
-    const bool isComp1 = (isComposite(obj1.objType()));
-    const bool isComp2 = (isComposite(obj2.objType()));
+    const bool isComp1 = (isComposite(obj1.type()));
+    const bool isComp2 = (isComposite(obj2.type()));
     if (isComp1 || isComp2) {
         // do not bother by composite values
         CL_BREAK_IF(obj1.isValid() && !isComp1);
@@ -2539,7 +2539,7 @@ bool setDstValues(SymJoinCtx &ctx, const TFldSet *blackList = 0)
         blackList = &emptyBlackList;
 
     BOOST_FOREACH(TMap::const_reference rItem, rMap) {
-        if (!rItem.first.objType())
+        if (!rItem.first.type())
             // do not set value of anonymous objects
             continue;
 

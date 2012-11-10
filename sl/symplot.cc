@@ -225,7 +225,7 @@ void describeFieldPlacement(PlotData &plot, const FldHandle &fld, TObjType clt)
 {
     SymHeap &sh = plot.sh;
 
-    const TObjType cltField = fld.objType();
+    const TObjType cltField = fld.type();
     if (!cltField || *cltField == *clt)
         // nothing interesting here
         return;
@@ -403,7 +403,7 @@ struct AtomicObject {
 
     AtomicObject(const FldHandle &obj_):
         fld(obj_),
-        code(isDataPtr(fld.objType())
+        code(isDataPtr(fld.type())
             ? OC_PTR
             : OC_DATA)
     {
@@ -478,7 +478,7 @@ bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
     describeObject(plot, fld, lonely);
 
     if (OC_DATA == code)
-        plot.out << " [size = " << fld.objType()->size << "B]";
+        plot.out << " [size = " << fld.type()->size << "B]";
 
     plot.out << "\"];\n";
     return true;
@@ -554,7 +554,7 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
             code = OC_NEXT;
         else if (fld == prev)
             code = OC_PREV;
-        else if (isDataPtr(fld.objType()))
+        else if (isDataPtr(fld.type()))
             code = OC_PTR;
         else
             code = OC_DATA;
@@ -764,7 +764,7 @@ bool plotSimpleRoot(PlotData &plot, const FldHandle &fld)
     const TSizeRange size = sh.valSizeOfTarget(root);
     CL_BREAK_IF(!isSingular(size));
 
-    const TObjType clt = fld.objType();
+    const TObjType clt = fld.type();
     CL_BREAK_IF(!clt);
     if (clt->size != size.lo)
         // size mismatch detected
@@ -1110,7 +1110,7 @@ void plotNonRootValues(PlotData &plot)
 const char* valNullLabel(const SymHeapCore &sh, const TFldId fld)
 {
     const FldHandle hdl(const_cast<SymHeapCore &>(sh), fld);
-    const TObjType clt = hdl.objType();
+    const TObjType clt = hdl.type();
     if (!clt)
         return "[type-free] 0";
 
@@ -1343,7 +1343,7 @@ void plotFlatEdges(PlotData &plot)
         const TOffset beg = sh.valOffset(at);
 
         BOOST_FOREACH(const FldHandle &fld, /* FldList */ item.second) {
-            const TObjType clt = fld.objType();
+            const TObjType clt = fld.type();
             const TOffset end = beg + clt->size;
             const TValId val = fld.value();
 

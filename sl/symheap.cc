@@ -2314,7 +2314,7 @@ bool SymHeapCore::Private::findZeroAtOff(
     return true;
 }
 
-TObjType SymHeapCore::objType(TFldId fld) const
+TObjType SymHeapCore::fieldType(TFldId fld) const
 {
     if (fld < 0)
         return 0;

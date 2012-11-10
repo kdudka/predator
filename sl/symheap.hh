@@ -556,7 +556,7 @@ class SymHeapCore {
         // these should be accessed indirectly via FldHandle
         TValId valueOf(TFldId fld);
         TValId placedAt(TFldId fld);
-        TObjType objType(TFldId fld) const;
+        TObjType fieldType(TFldId fld) const;
         void objSetValue(TFldId fld, TValId val, TValSet *killedPtrs = 0);
 
     protected:
@@ -645,14 +645,10 @@ class FldHandle {
          */
         TValId          placedAt()  const { return sh_->placedAt(id_); }
 
-        /**
-         * look for static type-info of the given object
-         * @return pointer to the instance cl_type in case of success, 0
-         * otherwise
-         */
-        TObjType objType() const {
+        /// static type-info of the given object (return 0 if not available)
+        TObjType type() const {
             return (this->isValid())
-                ? sh_->objType(id_)
+                ? sh_->fieldType(id_)
                 : 0;
         }
 

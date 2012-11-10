@@ -320,7 +320,7 @@ void deepCopy(DeepCopyData &dc)
         // read the original value
         TValId valSrc = objSrc.value();
         CL_BREAK_IF(VAL_INVALID == valSrc);
-        if (isComposite(objDst.objType(), /* includingArray */ false))
+        if (isComposite(objDst.type(), /* includingArray */ false))
             continue;
 
         // do whatever we need to do with the value

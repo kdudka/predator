@@ -111,7 +111,7 @@ inline FldHandle translateObjId(
     // gather properties of the object in 'src'
     const TValId srcAt = srcObj.placedAt();
     const TOffset  off = src.valOffset(srcAt);
-    const TObjType clt = srcObj.objType();
+    const TObjType clt = srcObj.type();
 
     // use them to obtain the corresponding object in 'dst'
     const TValId dstAt = dst.valByOffset(dstRootAt, off);
@@ -388,7 +388,7 @@ bool /* complete */ traverseLiveObjsGeneric(
                 // do not go above the starting point
                 continue;
 
-            const TObjType clt = fld.objType();
+            const TObjType clt = fld.type();
             const TItem item(off, clt);
             all.insert(item);
         }
