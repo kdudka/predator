@@ -256,7 +256,7 @@ void SymExecEngine::execReturn()
         SymProc proc(sh, &bt_);
         proc.setLocation(lw_);
 
-        sh.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, fncReturnType_);
+        sh.objSetEstimatedType(OBJ_RETURN, fncReturnType_);
 
         const struct cl_operand &src = opList[0];
         if (CL_OPERAND_VOID == src.code) {

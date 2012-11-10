@@ -3530,21 +3530,16 @@ TSizeRange SymHeapCore::valSizeOfString(TValId addr) const
     return rng;
 }
 
-void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt)
+void SymHeapCore::objSetEstimatedType(TObjId obj, TObjType clt)
 {
-    BaseAddress *rootValData;
-    d->ents.getEntRW(&rootValData, root);
-
-    // jump to region
     Region *rootData;
-    d->ents.getEntRW(&rootData, rootValData->obj);
+    d->ents.getEntRW(&rootData, obj);
 
-    if (VAL_ADDR_OF_RET == root) {
+    if (OBJ_RETURN == obj) {
         // destroy any stale target of VAL_ADDR_OF_RET
-        d->destroyRoot(root);
+        d->destroyRoot(rootData->rootAddr);
 
-        // allocate a new root value at VAL_ADDR_OF_RET
-        rootValData->code = VT_ON_STACK;
+        // reinitalize the OBJ_RETURN region
         rootData->isValid = true;
         rootData->size    = IR::rngFromNum(clt->size);
     }
@@ -3553,16 +3548,10 @@ void SymHeapCore::valSetLastKnownTypeOfTarget(TValId root, TObjType clt)
     rootData->lastKnownClt = clt;
 }
 
-TObjType SymHeapCore::valLastKnownTypeOfTarget(TValId root) const
+TObjType SymHeapCore::objEstimatedType(TObjId obj) const
 {
-    CL_BREAK_IF(this->valOffset(root));
-    const BaseAddress *rootData;
-    d->ents.getEntRO(&rootData, root);
-
-    // jump to region
     const Region *regData;
-    d->ents.getEntRO(&regData, rootData->obj);
-
+    d->ents.getEntRO(&regData, obj);
     return regData->lastKnownClt;
 }
 

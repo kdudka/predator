@@ -261,9 +261,9 @@ TValId jumpToNextObj(
         // mismatch in size of targets
         return VAL_INVALID;
 
-    const TObjType clt = sh.valLastKnownTypeOfTarget(at);
+    const TObjType clt = sh.objEstimatedType(sh.objByAddr(at));
     if (clt) {
-        const TObjType cltNext = sh.valLastKnownTypeOfTarget(next);
+        const TObjType cltNext = sh.objEstimatedType(sh.objByAddr(next));
         if (cltNext && *cltNext != *clt)
             // both roots are (kind of) type-aware, but the types differ
             return VAL_INVALID;

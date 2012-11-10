@@ -582,7 +582,8 @@ void digRootTypeInfo(SymHeap &sh, const FldHandle &lhs, TValId rhs)
         // no type-info given for the target
         return;
 
-    const TObjType cltLast = sh.valLastKnownTypeOfTarget(rhs);
+    const TObjId rhsTarget = sh.objByAddr(rhs);
+    const TObjType cltLast = sh.objEstimatedType(rhsTarget);
     if (isComposite(cltLast) && !isComposite(cltTarget))
         // we are accessing a field that is placed at zero offset of a composite
         // type but it yet does not mean that we are changing the root type-info
@@ -597,7 +598,7 @@ void digRootTypeInfo(SymHeap &sh, const FldHandle &lhs, TValId rhs)
         return;
 
     // update the last known type-info of the root
-    sh.valSetLastKnownTypeOfTarget(rhs, cltTarget);
+    sh.objSetEstimatedType(rhsTarget, cltTarget);
 }
 
 void reportMemLeak(SymProc &proc, const EValueTarget code, const char *reason)

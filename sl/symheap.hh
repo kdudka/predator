@@ -513,11 +513,11 @@ class SymHeapCore {
         /// invalidate the given object
         virtual void objInvalidate(TObjId);
 
-        /// initialize (estimated) type-info of the given root entity
-        void valSetLastKnownTypeOfTarget(TValId root, TObjType clt);
+        /// update the estimated type-info of the given object
+        void objSetEstimatedType(TObjId obj, TObjType clt);
 
-        /// read the (estimated) type-info of the given root entity
-        TObjType valLastKnownTypeOfTarget(TValId root) const;
+        /// return the estimated type-info of the given object
+        TObjType objEstimatedType(TObjId obj) const;
 
         /// create a @b generic value (heapAlloc() or addrOfVar() otherwise)
         TValId valCreate(EValueTarget code, EValueOrigin origin);

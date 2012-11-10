@@ -357,8 +357,7 @@ bool areEqual(
     };
 
     TWorkList wl;
-    if (sh1.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET)
-            || sh2.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET))
+    if (sh1.objEstimatedType(OBJ_RETURN) || sh2.objEstimatedType(OBJ_RETURN))
     {
         // schedule return values
         const TValPair vp(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);

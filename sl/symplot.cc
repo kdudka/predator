@@ -279,7 +279,7 @@ void describeObject(PlotData &plot, const FldHandle &fld, const bool lonely)
         tag = "field";
     }
 
-    const TObjType cltRoot = sh.valLastKnownTypeOfTarget(root);
+    const TObjType cltRoot = sh.objEstimatedType(sh.objByAddr(root));
     if (cltRoot)
         describeFieldPlacement(plot, fld, cltRoot);
 

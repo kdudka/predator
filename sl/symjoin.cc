@@ -1230,7 +1230,7 @@ bool createObject(
 
     if (clt)
         // preserve estimated type-info of the root
-        ctx.dst.valSetLastKnownTypeOfTarget(rootDst, clt);
+        ctx.dst.objSetEstimatedType(objDst, clt);
 
     // preserve 'prototype' flag
     ctx.dst.objSetProtoLevel(objDst, protoLevel);
@@ -1268,8 +1268,11 @@ bool followRootValuesCore(
         // we are on the way from joinData() and hit shared data
         return traverseRoots(ctx, root1, item);
 
-    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(root1);
-    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(root2);
+    const TObjId obj1 = ctx.sh1.objByAddr(root1);
+    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+
+    const TObjType clt1 = ctx.sh1.objEstimatedType(obj1);
+    const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
     const TObjType clt = joinClt(ctx, clt1, clt2);
 
     return createObject(ctx, clt, item, action);
@@ -1334,8 +1337,8 @@ bool dlSegHandleShared(
 bool joinReturnAddrs(SymJoinCtx &ctx)
 {
     TObjType clt;
-    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET);
-    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET);
+    const TObjType clt1 = ctx.sh1.objEstimatedType(OBJ_RETURN);
+    const TObjType clt2 = ctx.sh2.objEstimatedType(OBJ_RETURN);
     if (!joinClt(&clt, clt1, clt2))
         // mismatch in type of return value
         return false;
@@ -1344,7 +1347,7 @@ bool joinReturnAddrs(SymJoinCtx &ctx)
         // nothing to join here
         return true;
 
-    ctx.dst.valSetLastKnownTypeOfTarget(VAL_ADDR_OF_RET, clt);
+    ctx.dst.objSetEstimatedType(OBJ_RETURN, clt);
 
     const SchedItem rootItem(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET, /* ldiff */ 0);
     return traverseRoots(ctx, VAL_ADDR_OF_RET, rootItem);
@@ -1475,8 +1478,8 @@ bool followRootValues(
     ctx.tieBreaking.insert(tb);
 
     const struct cl_type *clt = (isDls1)
-        ? ctx.sh1.valLastKnownTypeOfTarget(peer1)
-        : ctx.sh2.valLastKnownTypeOfTarget(peer2);
+        ? ctx.sh1.objEstimatedType(ctx.sh1.objByAddr(peer1))
+        : ctx.sh2.objEstimatedType(ctx.sh2.objByAddr(peer2));
 
     const SchedItem peerItem(peer1, peer2, item.ldiff);
     return createObject(ctx, clt, peerItem, action);
@@ -1644,7 +1647,7 @@ bool segmentCloneCore(
         // mapping already available for objGt
         return true;
 
-    const TObjType clt = shGt.valLastKnownTypeOfTarget(addrGt);
+    const TObjType clt = shGt.objEstimatedType(shGt.objByAddr(addrGt));
     SJ_DEBUG("+i+ insertSegmentClone: cloning object at #" << addrGt <<
              ", action = " << action);
 
@@ -2843,22 +2846,22 @@ bool joinDataCore(
     if (!joinObjSize(&size, ctx, addr1, addr2))
         return false;
 
+    const TObjId obj1 = sh.objByAddr(addr1);
+    const TObjId obj2 = sh.objByAddr(addr2);
+
     // start with the given pair of objects and create a ghost object for them
     // create an image in ctx.dst
     const TObjId regDst = ctx.dst.heapAlloc(size);
     const TValId rootDstAt = ctx.dst.addrOfRegion(regDst);
 
-    const TObjType clt1 = ctx.sh1.valLastKnownTypeOfTarget(addr1);
-    const TObjType clt2 = ctx.sh2.valLastKnownTypeOfTarget(addr2);
+    const TObjType clt1 = ctx.sh1.objEstimatedType(obj1);
+    const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
     const TObjType clt = joinClt(ctx, clt1, clt2);
     if (clt)
         // preserve estimated type-info of the root
-        ctx.dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
+        ctx.dst.objSetEstimatedType(regDst, clt);
 
     TProtoLevel ldiff = 0;
-
-    const TObjId obj1 = sh.objByAddr(addr1);
-    const TObjId obj2 = sh.objByAddr(addr2);
 
     const EObjKind kind1 = sh.objKind(obj1);
     if (OK_REGION != kind1)

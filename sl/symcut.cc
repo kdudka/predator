@@ -160,19 +160,19 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
         return rootDstAt;
     }
 
+    const TObjId objSrc = src.objByAddr(rootSrcAt);
+
     // create the object in 'dst'
     const TSizeRange size = src.valSizeOfTarget(rootSrcAt);
-    const TObjId regDst = dst.heapAlloc(size);
-    const TValId rootDstAt = dst.addrOfRegion(regDst);
+    const TObjId objDst = dst.heapAlloc(size);
+    const TValId rootDstAt = dst.addrOfRegion(objDst);
 
     // preserve type-info if known
-    const TObjType clt = src.valLastKnownTypeOfTarget(rootSrcAt);
+    const TObjType clt = src.objEstimatedType(objSrc);
     if (clt)
-        dst.valSetLastKnownTypeOfTarget(rootDstAt, clt);
+        dst.objSetEstimatedType(objDst, clt);
 
     // preserve prototype level
-    const TObjId objSrc = src.objByAddr(rootSrcAt);
-    const TObjId objDst = dst.objByAddr(rootDstAt);
     const TProtoLevel protoLevel = src.objProtoLevel(objSrc);
     dst.objSetProtoLevel(objDst, protoLevel);
 
@@ -359,7 +359,7 @@ void prune(const SymHeap &src, SymHeap &dst,
         digSubObjs(dc, srcAt, dstAt);
     }
 
-    if (src.valLastKnownTypeOfTarget(VAL_ADDR_OF_RET))
+    if (src.objEstimatedType(OBJ_RETURN))
         // clone VAL_ADDR_OF_RET
         digSubObjs(dc, VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
 
