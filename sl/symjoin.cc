@@ -2641,6 +2641,7 @@ bool handleDstPreds(SymJoinCtx &ctx)
         const TValId    seg = ref.first;
         const TMinLen   len = ref.second;
         ctx.dst.segSetMinLength(seg, len);
+        ctx.dst.segSetMinLength(segPeer(ctx.dst, seg), len);
     }
 
     if (!ctx.joiningData()) {
@@ -3023,8 +3024,11 @@ void restorePrototypeLengths(SymJoinCtx &ctx)
             continue;
 
         const TMinLen len = it->second;
-        if (len)
-            sh.segSetMinLength(protoDst, len);
+        if (!len)
+            continue;
+
+        sh.segSetMinLength(protoDst, len);
+        sh.segSetMinLength(segPeer(sh, protoDst), len);
     }
 }
 

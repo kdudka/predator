@@ -310,6 +310,7 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off)
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
     sh.segSetMinLength(a1, len);
+    sh.segSetMinLength(a2, len);
 }
 
 void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward)
@@ -343,6 +344,7 @@ void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward)
 
     // handle DLS Neq predicates
     sh.segSetMinLength(dls, len);
+    sh.segSetMinLength(segPeer(sh, dls), len);
 
     dlSegSyncPeerData(sh, dls);
 }
@@ -384,9 +386,11 @@ void dlSegMerge(SymHeap &sh, TValId seg1, TValId seg2)
         CL_BREAK_IF("collectJunk() has not been successful");
     }
 
-    if (len)
-        // handle DLS Neq predicates
+    if (len) {
+        // assign the resulting minimal length
         sh.segSetMinLength(seg2, len);
+        sh.segSetMinLength(segPeer(sh, seg2), len);
+    }
 
     dlSegSyncPeerData(sh, seg2);
 }
@@ -707,6 +711,7 @@ void concretizeObj(
         nextNextPtr.setValue(sh.valByOffset(seg, sh.valOffset(nextNextVal)));
 
     sh.segSetMinLength(dup, len);
+    sh.segSetMinLength(segPeer(sh, dup), len);
 
     LDP_PLOT(symabstract, sh);
 

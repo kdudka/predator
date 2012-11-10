@@ -83,7 +83,7 @@ inline TValId nextValFromSeg(const SymHeap &sh, TValId seg)
     return ptrNext.value();
 }
 
-/// return DLS peer object of the given DLS
+/// TODO: drop this!
 inline TValId dlSegPeer(const SymHeap &sh, TValId dlsAt)
 {
     CL_BREAK_IF(sh.valOffset(dlsAt));
@@ -96,7 +96,7 @@ inline TValId dlSegPeer(const SymHeap &sh, TValId dlsAt)
     return sh.valRoot(peer);
 }
 
-/// return DLS peer object in case of DLS, the given value otherwise
+/// TODO: drop this!
 inline TValId segPeer(const SymHeap &sh, TValId segAt)
 {
     CL_BREAK_IF(sh.valOffset(segAt));
@@ -188,8 +188,10 @@ inline void segIncreaseMinLength(SymHeap &sh, const TValId seg, TMinLen len)
 {
     CL_BREAK_IF(!len);
 
-    if (sh.segMinLength(seg) < len)
+    if (sh.segMinLength(seg) < len) {
         sh.segSetMinLength(seg, len);
+        sh.segSetMinLength(segPeer(sh, seg), len);
+    }
 }
 
 /// we know (v1 != v2), update related segments in the given heap accordingly!

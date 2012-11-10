@@ -339,6 +339,7 @@ void deepCopy(DeepCopyData &dc)
         const TValId seg = item.first;
         const TMinLen minLength = item.second;
         dst.segSetMinLength(seg, minLength);
+        dst.segSetMinLength(segPeer(dst, seg), minLength);
     }
 }
 

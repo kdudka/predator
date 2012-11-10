@@ -3937,18 +3937,4 @@ void SymHeap::segSetMinLength(TValId root, TMinLen len)
     }
 
     aData->minLength = len;
-    if (OK_DLS != kind)
-        return;
-
-    const TValId peerAt = dlSegPeer(*this, root);
-    const TObjId peer = this->objByAddr(peerAt);
-    if (!d->absRoots.isValidEnt(peer)) {
-        CL_BREAK_IF("SymHeap::segMinLength() got an inconsistent DLS");
-        return;
-    }
-
-    CL_BREAK_IF(peer == seg);
-
-    AbstractObject *peerData = d->absRoots.getEntRW(peer);
-    peerData->minLength = len;
 }
