@@ -2138,13 +2138,14 @@ bool mayExistFallback(
     }
     else {
         // look for next pointer(s) of OK_SEE_THROUGH/OK_SEE_THROUGH_2N
+        const TObjId obj = sh.objByAddr(valRoot);
         MayExistVisitor visitor(ctx, item.ldiff, action, ref, /* root */ valRoot);
-        traverseLivePtrs(sh, valRoot, visitor);
+        traverseLivePtrs(sh, obj, visitor);
         if (!visitor.found()) {
             // reference value not matched directly, try to look through in
             // order to allow insert chains of possibly empty abstract objects
             visitor.enableLookThroughMode();
-            traverseLivePtrs(sh, valRoot, visitor);
+            traverseLivePtrs(sh, obj, visitor);
             if (visitor.found())
                 // e.g. test-0124 and test-167 use this code path
                 SJ_DEBUG("MayExistVisitor::enableLookThroughMode() in use!");
@@ -2606,7 +2607,7 @@ bool updateMayExistLevels(SymJoinCtx &ctx)
             continue;
 
         const MayExistLevelUpdater visitor(ctx, rootDst);
-        if (!traverseLivePtrs(ctx.dst, rootDst, visitor))
+        if (!traverseLivePtrs(ctx.dst, ctx.dst.objByAddr(rootDst), visitor))
             return false;
     }
 

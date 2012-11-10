@@ -488,7 +488,7 @@ bool digBackLink(
     PtrFinder visitor(lookFor);
 
     // guide it through the next root entity
-    const TValId lookAt = sh.valRoot(next);
+    const TObjId lookAt = sh.objByAddr(next);
     if (/* found nothing */ traverseLivePtrs(sh, lookAt, visitor))
         return false;
 
@@ -653,7 +653,7 @@ unsigned /* len */ discoverBestAbstraction(
         // use ProbeEntryVisitor visitor to validate the potential segment entry
         SegCandidate segc;
         const ProbeEntryVisitor visitor(segc.offList, at);
-        traverseLivePtrs(sh, at, visitor);
+        traverseLivePtrs(sh, sh.objByAddr(at), visitor);
         if (segc.offList.empty())
             // found nothing
             continue;

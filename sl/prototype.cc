@@ -86,7 +86,7 @@ bool ProtoCollector::operator()(const FldHandle &fld)
     wl_.schedule(proto);
     while (wl_.next(proto)) {
         ProtoFinder visitor;
-        traverseLivePtrs(sh, proto, visitor);
+        traverseLivePtrs(sh, sh.objByAddr(proto), visitor);
         BOOST_FOREACH(const TValId protoAt, visitor.protos)
             wl_.schedule(protoAt);
 
@@ -113,7 +113,7 @@ bool collectPrototypesOf(
 
     ProtoCollector collector(dst, skipDlsPeers);
     buildIgnoreList(collector.ignoreList(), sh, root);
-    return traverseLivePtrs(sh, root, collector);
+    return traverseLivePtrs(sh, sh.objByAddr(root), collector);
 }
 
 void objChangeProtoLevel(SymHeap &sh, TValId root, const TProtoLevel diff)

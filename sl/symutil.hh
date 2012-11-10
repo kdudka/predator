@@ -247,51 +247,45 @@ inline void gatherProgramVars(
 /// take the given visitor through all live pointers
 template <class THeap, class TVisitor, typename TMethod>
 bool /* complete */ traverseCore(
-        THeap                       &sh,
-        const TValId                at,
-        TVisitor                    &visitor,
+        THeap                      &sh,
+        const TObjId                obj,
+        TVisitor                   &visitor,
         TMethod                     method)
 {
-    // check that we got a valid root object
-    CL_BREAK_IF(!isPossibleToDeref(sh.valTarget(at)));
-    const TObjId rootAt = sh.objByAddr(at);
-    const TOffset offRoot = sh.valOffset(at);
+    // check that we got a valid object
+    CL_BREAK_IF(OBJ_INVALID == obj);
 
-    FldList objs;
-    (sh.*method)(objs, rootAt);
-    BOOST_FOREACH(const FldHandle &fld, objs) {
-        const TOffset off = sh.valOffset(fld.placedAt());
-        if (off < offRoot)
-            // do not go above the starting point
-            continue;
+    // gather live fields using the requested method
+    FldList fields;
+    (sh.*method)(fields, obj);
 
-        if (!visitor(fld))
-            // traversal cancelled by visitor
+    // guide the visitor through the fields
+    BOOST_FOREACH(const FldHandle &fld, fields)
+        if (!/* continue */visitor(fld))
             return false;
-    }
 
-    // done
+    // all fields traversed successfully
     return true;
 }
 
 /// take the given visitor through all live pointers
 template <class THeap, class TVisitor>
 bool /* complete */ traverseLivePtrs(
-        THeap                       &sh,
-        const TValId                rootAt,
-        TVisitor                    &visitor)
+        THeap                      &sh,
+        const TObjId                obj,
+        TVisitor                   &visitor)
 {
-    return traverseCore(sh, rootAt, visitor, &SymHeap::gatherLivePointers);
+    return traverseCore(sh, obj, visitor, &SymHeap::gatherLivePointers);
 }
 
 /// take the given visitor through all live objects
 template <class THeap, class TVisitor>
 bool /* complete */ traverseLiveObjs(
-        THeap                       &sh,
-        const TValId                rootAt,
-        TVisitor                    &visitor)
+        THeap                      &sh,
+        const TObjId                obj,
+        TVisitor                   &visitor)
 {
-    return traverseCore(sh, rootAt, visitor, &SymHeap::gatherLiveFields);
+    return traverseCore(sh, obj, visitor, &SymHeap::gatherLiveFields);
 }
 
 /// take the given visitor through all uniform blocks
