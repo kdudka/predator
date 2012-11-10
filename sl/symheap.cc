@@ -3448,16 +3448,13 @@ TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
     return reg;
 }
 
-void SymHeapCore::valDestroyTarget(TValId val)
+void SymHeapCore::objInvalidate(TObjId obj)
 {
-    if (VAL_NULL == val) {
-        CL_BREAK_IF("SymHeapCore::valDestroyTarget() got VAL_NULL");
-        return;
-    }
+    CL_BREAK_IF(!this->isValid(obj));
 
-    CL_BREAK_IF(this->valOffset(val));
-    CL_BREAK_IF(!isPossibleToDeref(*this, val));
-    d->destroyRoot(val);
+    const Region *regData;
+    d->ents.getEntRO(&regData, obj);
+    d->destroyRoot(regData->rootAddr);
 }
 
 bool SymHeapCore::isValid(TObjId obj) const {
@@ -3878,15 +3875,13 @@ TValId SymHeap::addrOfRegion(TObjId reg)
     return SymHeapCore::addrOfRegion(reg);
 }
 
-void SymHeap::valDestroyTarget(TValId root)
+void SymHeap::objInvalidate(TObjId obj)
 {
-    SymHeapCore::valDestroyTarget(root);
-    if (!d->absRoots.isValidEnt(root))
+    SymHeapCore::objInvalidate(obj);
+    if (!d->absRoots.isValidEnt(obj))
         return;
 
     CL_DEBUG("SymHeap::valDestroyTarget() destroys an abstract object");
-
-    const TObjId obj = this->objByAddr(root);
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 

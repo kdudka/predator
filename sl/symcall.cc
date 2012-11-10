@@ -795,7 +795,7 @@ SymCallCtx* SymCallCache::getCallCtx(
 
     SymHeap callFrame(entry.stor(), trFrame);
     splitHeapByCVars(&entry, cut, &callFrame);
-    callFrame.valDestroyTarget(VAL_ADDR_OF_RET);
+    callFrame.objInvalidate(OBJ_RETURN);
     entry.traceUpdate(trEntry);
 
     LDP_PLOT(symcall, entry);

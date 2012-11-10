@@ -109,7 +109,7 @@ bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly)
 
         // leak detected
         detected = true;
-        sh.valDestroyTarget(root);
+        sh.objInvalidate(sh.objByAddr(root));
         if (leakList)
             leakList->push_back(root);
 
@@ -145,7 +145,7 @@ bool destroyRootAndCollectJunk(
     gatherReferredRoots(killedPtrs, sh, root);
 
     // destroy the target
-    sh.valDestroyTarget(root);
+    sh.objInvalidate(sh.objByAddr(root));
 
     // now check for memory leakage
     bool leaking = false;

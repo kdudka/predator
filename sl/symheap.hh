@@ -507,11 +507,11 @@ class SymHeapCore {
         /// allocate a chunk of heap of known size
         TObjId heapAlloc(const TSizeRange &size);
 
-        /// destroy target of the given root value
-        virtual void valDestroyTarget(TValId root);
-
         /// return true if the given object can be still accessed safely
         bool isValid(TObjId) const;
+
+        /// invalidate the given object
+        virtual void objInvalidate(TObjId);
 
         /// initialize (estimated) type-info of the given root entity
         void valSetLastKnownTypeOfTarget(TValId root, TObjType clt);
@@ -834,7 +834,7 @@ class SymHeap: public SymHeapCore {
     public:
         // just overrides (inherits the dox)
         virtual TValId addrOfRegion(TObjId reg);
-        virtual void valDestroyTarget(TValId);
+        virtual void objInvalidate(TObjId);
         virtual TValId valClone(TValId);
 
     private:
