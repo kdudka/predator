@@ -106,7 +106,7 @@ bool collectPrototypesOf(
         const bool                  skipDlsPeers)
 {
     CL_BREAK_IF(sh.valOffset(root));
-    if (!isAbstract(sh.valTarget(root)))
+    if (!isAbstractValue(sh, root))
         // only abstract objects are allowed to have prototypes
         return false;
 
@@ -156,8 +156,7 @@ bool protoCheckConsistency(const SymHeap &sh)
     TValList addrs;
     sh.gatherRootObjects(addrs);
     BOOST_FOREACH(const TValId root, addrs) {
-        const EValueTarget code = sh.valTarget(root);
-        if (isAbstract(code))
+        if (isAbstractValue(sh, root))
             continue;
 
         const TObjId obj = sh.objByAddr(root);

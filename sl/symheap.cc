@@ -1335,7 +1335,6 @@ TValId SymHeapCore::Private::valCreate(
             break;
 
         case VT_RANGE:
-        case VT_ABSTRACT:
             CL_BREAK_IF("invalid call of SymHeapCore::Private::valCreate()");
             // fall through!
 
@@ -2698,18 +2697,7 @@ EValueTarget SymHeapCore::valTarget(TValId val) const
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
-
-    const EValueTarget code = valData->code;
-    if (VT_RANGE == code)
-        // VT_RANGE takes precedence over VT_ABSTRACT
-        return VT_RANGE;
-
-    if (this->hasAbstractTarget(val))
-        // the overridden implementation claims the target is abstract
-        return VT_ABSTRACT;
-
-    // just return the native code we track in BaseValue
-    return code;
+    return valData->code;
 }
 
 bool isUninitialized(EValueOrigin code)
@@ -2717,24 +2705,6 @@ bool isUninitialized(EValueOrigin code)
     switch (code) {
         case VO_HEAP:
         case VO_STACK:
-            return true;
-
-        default:
-            return false;
-    }
-}
-
-bool isAbstract(EValueTarget code)
-{
-    return (VT_ABSTRACT == code);
-}
-
-bool isKnownObject(EValueTarget code)
-{
-    switch (code) {
-        case VT_STATIC:
-        case VT_ON_HEAP:
-        case VT_ON_STACK:
             return true;
 
         default:
@@ -2756,14 +2726,7 @@ bool isGone(EValueTarget code)
 
 bool isOnHeap(EValueTarget code)
 {
-    switch (code) {
-        case VT_ON_HEAP:
-        case VT_ABSTRACT:
-            return true;
-
-        default:
-            return false;
-    }
+    return (VT_ON_HEAP == code);
 }
 
 bool isProgramVar(EValueTarget code)
@@ -3801,16 +3764,9 @@ EObjKind SymHeap::objKind(TObjId obj) const
     return aData->kind;
 }
 
-bool SymHeap::hasAbstractTarget(TValId val) const
-{
-    const TObjId obj = this->objByAddr(val);
-    return (OK_REGION != this->objKind(obj));
-}
-
 const BindingOff& SymHeap::segBinding(TValId root) const
 {
     CL_BREAK_IF(this->valOffset(root));
-    CL_BREAK_IF(!this->hasAbstractTarget(root));
 
     const TObjId obj = this->objByAddr(root);
     const AbstractObject *aData = d->absRoots.getEntRO(obj);
@@ -3858,7 +3814,6 @@ void SymHeap::valTargetSetConcrete(TValId root)
 {
     CL_DEBUG("SymHeap::valTargetSetConcrete() is taking place...");
     CL_BREAK_IF(this->valOffset(root));
-    CL_BREAK_IF(!this->hasAbstractTarget(root));
 
     const TObjId obj = this->objByAddr(root);
 
@@ -3889,7 +3844,6 @@ void SymHeap::valDestroyTarget(TValId root)
 TMinLen SymHeap::segMinLength(TValId seg) const
 {
     CL_BREAK_IF(this->valOffset(seg));
-    CL_BREAK_IF(!this->hasAbstractTarget(seg));
 
     const TObjId obj = this->objByAddr(seg);
     const AbstractObject *aData = d->absRoots.getEntRO(obj);
@@ -3912,7 +3866,6 @@ TMinLen SymHeap::segMinLength(TValId seg) const
 void SymHeap::segSetMinLength(TValId root, TMinLen len)
 {
     CL_BREAK_IF(this->valOffset(root));
-    CL_BREAK_IF(!this->hasAbstractTarget(root));
 
     const TObjId seg = this->objByAddr(root);
 

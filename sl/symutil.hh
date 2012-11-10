@@ -132,6 +132,22 @@ inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off)
     return valOfPtrAt(sh, ptrAt);
 }
 
+inline bool isAbstractValue(const SymHeap &sh, const TValId val)
+{
+    const TObjId obj = sh.objByAddr(val);
+    const EObjKind kind = sh.objKind(obj);
+    return (OK_REGION != kind);
+}
+
+inline bool isKnownObjectAt(const SymHeapCore &sh, const TValId val)
+{
+    const EValueTarget code = sh.valTarget(val);
+    if (!isPossibleToDeref(code))
+        return false;
+
+    return !isAbstractValue(/* XXX */dynamic_cast<const SymHeap &>(sh), val);
+}
+
 inline bool isVarAlive(SymHeap &sh, const CVar &cv)
 {
     const TValId at = sh.addrOfVar(cv, /* createIfNeeded */ false);
@@ -192,15 +208,6 @@ inline bool areUniBlocksEqual(
 
     // compare value prototypes
     return areValProtosEqual(sh1, sh2, bl1.tplValue, bl2.tplValue);
-}
-
-/// needed because of VT_RANGE vs. VT_ABSTRACT (suboptimal design?)
-inline EValueTarget realValTarget(const SymHeap &sh, const TValId val)
-{
-    const EValueTarget code = sh.valTarget(val);
-    return (VT_RANGE == code)
-        ? sh.valTarget(sh.valRoot(val))
-        : code;
 }
 
 template <class TDst, typename TInserter>

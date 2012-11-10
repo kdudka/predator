@@ -80,7 +80,7 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
         // both targets are possibly empty, giving up
         return false;
 
-    if (!isAbstract(sh.valTarget(ref)))
+    if (!isAbstractValue(sh, ref))
         // non-empty abstract object vs. concrete object
         return true;
 
@@ -99,7 +99,7 @@ bool haveSeg(
         const TValId                 pointingTo,
         const EObjKind               kind)
 {
-    if (VT_ABSTRACT != sh.valTarget(atAddr))
+    if (!isAbstractValue(sh, atAddr))
         // not an abstract object
         return false;
 
@@ -127,8 +127,7 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
         // no valid targets
         return false;
 
-    if (VT_ABSTRACT != sh.valTarget(atAddr)
-            || VT_ABSTRACT != sh.valTarget(peerAddr))
+    if (!isAbstractValue(sh, atAddr) || !isAbstractValue(sh, peerAddr))
         // not abstract objects
         return false;
 
@@ -169,9 +168,7 @@ bool haveSegBidir(
 
 bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
 {
-    const EValueTarget code1 = sh.valTarget(v1);
-    const EValueTarget code2 = sh.valTarget(v2);
-    if (!isAbstract(code1) && !isAbstract(code2))
+    if (!isAbstractValue(sh, v1) && !isAbstractValue(sh, v2))
         // no abstract objects involved
         return false;
 
@@ -248,8 +245,7 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
             // an already seen value
             break;
 
-        const EValueTarget code = sh.valTarget(val);
-        if (!isAbstract(code))
+        if (!isAbstractValue(sh, val))
             // a non-abstract object reached
             break;
 
@@ -288,7 +284,7 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
 bool dlSegCheckConsistency(const SymHeap &sh)
 {
     TValList addrs;
-    sh.gatherRootObjects(addrs, isAbstract);
+    sh.gatherRootObjects(addrs, isOnHeap);
     BOOST_FOREACH(const TValId at, addrs) {
         if (OK_DLS != sh.objKind(sh.objByAddr(at)))
             // we are interested in OK_DLS here

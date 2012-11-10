@@ -663,7 +663,6 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
             break;
 
         case VT_ON_HEAP:
-        case VT_ABSTRACT:
             break;
 
         default:
@@ -839,7 +838,6 @@ const char* labelByTarget(const EValueTarget code)
         GEN_labelByCode(VT_LOST);
         GEN_labelByCode(VT_DELETED);
         GEN_labelByCode(VT_RANGE);
-        GEN_labelByCode(VT_ABSTRACT);
     }
 
     CL_BREAK_IF("invalid call of labelByTarget()");
@@ -978,11 +976,10 @@ void plotValue(PlotData &plot, const TValId val)
             suffix = labelByOrigin(sh.valOrigin(val));
             // fall through!
 
-        case VT_ABSTRACT:
-            color = "green";
-            // fall through!
-
         case VT_ON_HEAP:
+            if (isAbstractValue(sh, val))
+                color = "green";
+
             goto preserve_suffix;
     }
 
@@ -1304,8 +1301,7 @@ void plotNeqEdges(PlotData &plot)
     NeqPlotter np;
     BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
         const TValId val = item.first;
-        const EValueTarget code = sh.valTarget(val);
-        if (isKnownObject(code))
+        if (isKnownObjectAt(sh, val))
             // even if there was a non-equivalence, it would be the implicit one
             continue;
 

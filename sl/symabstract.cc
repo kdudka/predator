@@ -139,8 +139,7 @@ TValId protoClone(SymHeap &sh, const TValId proto)
     const TValId clone = segClone(sh, proto);
     objDecrementProtoLevel(sh, clone);
 
-    const EValueTarget code = sh.valTarget(proto);
-    if (!isAbstract(code))
+    if (!isAbstractValue(sh, proto))
         // clone all unknown values in order to keep prover working
         duplicateUnknownValues(sh, clone);
 

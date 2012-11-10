@@ -497,7 +497,7 @@ bool bumpNestingLevel(const FldHandle &fld)
     SymHeap &sh = *static_cast<SymHeap *>(fld.sh());
     const TValId root = sh.valRoot(fld.placedAt());
 
-    if (!isAbstract(sh.valTarget(root)))
+    if (!isAbstractValue(sh, root))
         // do not bump nesting level on concrete objects
         return false;
 
@@ -961,8 +961,7 @@ bool rootNotYetAbstract(SymHeap &sh, const TValSet &sset)
     }
 
     const TValId anyRoot = *sset.begin();
-    const EValueTarget code = sh.valTarget(anyRoot);
-    return !isAbstract(code);
+    return !isAbstractValue(sh, anyRoot);
 }
 
 bool joinNestingLevel(
@@ -1889,19 +1888,16 @@ bool joinAbstractValues(
         bool                    *pResult,
         SymJoinCtx              &ctx,
         const SchedItem         &item,
-        const EValueTarget      code1,
-        const EValueTarget      code2)
+        bool                     isAbs1,
+        bool                     isAbs2)
 {
     const TValId v1 = item.v1;
     const TValId v2 = item.v2;
+    resolveMayExist(ctx, &isAbs1, &isAbs2, v1, v2);
 
     const TValId root1 = ctx.sh1.valRoot(v1);
     const TValId root2 = ctx.sh2.valRoot(v2);
     const SchedItem rootItem(root1, root2, item.ldiff);
-
-    bool isAbs1 = (VT_ABSTRACT == code1);
-    bool isAbs2 = (VT_ABSTRACT == code2);
-    resolveMayExist(ctx, &isAbs1, &isAbs2, v1, v2);
 
     if (isAbs1 && isAbs2
             && joinSegmentWithAny(pResult, ctx, rootItem, JS_USE_ANY))
@@ -1924,7 +1920,6 @@ bool joinAbstractValues(
     return true;
 
 done:
-    // we intentionally do not use code1/code2 here (see realValTarget())
     if (VT_RANGE == ctx.sh1.valTarget(v1) || VT_RANGE == ctx.sh2.valTarget(v2))
         // we came here from a VT_RANGE value, remember to join the entry
         *pResult = joinRangeValues(ctx, v1, v2);
@@ -2039,7 +2034,7 @@ class MayExistVisitor {
                     // looks like we have a candidate
                     break;
 
-                if (!lookThrough_ || !isAbstract(sh.valTarget(val)))
+                if (!lookThrough_ || !isAbstractValue(sh, val))
                     return /* continue */ true;
 
                 TValId seg = valRoot;
@@ -2306,18 +2301,16 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     if (joinValuesByCode(&result, ctx, v1, v2))
         return result;
 
-    EValueTarget vt1 = realValTarget(ctx.sh1, v1);
-    if ((VT_ABSTRACT == vt1) && hasKey(ctx.sset1, ctx.sh1.valRoot(v1)))
-        // do not treat the starting point as encountered segment
-        vt1 = VT_ON_HEAP;
+    const bool isAbs1 = isAbstractValue(ctx.sh1, v1)
+        /* do not treat the starting point as encountered segment */
+        && !hasKey(ctx.sset1, ctx.sh1.valRoot(v1));
 
-    EValueTarget vt2 = realValTarget(ctx.sh2, v2);
-    if ((VT_ABSTRACT == vt2) && hasKey(ctx.sset2, ctx.sh2.valRoot(v2)))
-        // do not treat the starting point as encountered segment
-        vt2 = VT_ON_HEAP;
+    const bool isAbs2 = isAbstractValue(ctx.sh2, v2)
+        /* do not treat the starting point as encountered segment */
+        && !hasKey(ctx.sset2, ctx.sh2.valRoot(v2));
 
-    if ((VT_ABSTRACT == vt1 || VT_ABSTRACT == vt2)
-            && joinAbstractValues(&result, ctx, item, vt1, vt2))
+    if ((isAbs1 || isAbs2)
+            && joinAbstractValues(&result, ctx, item, isAbs1, isAbs2))
         return result;
 
     if (followValuePair(ctx, item, /* read-only */ true))

@@ -551,7 +551,7 @@ bool segOnPath(
     TValId cursor = entry;
 
     for (unsigned pos = 0; pos <= len; ++pos) {
-        if (VT_ABSTRACT == sh.valTarget(cursor))
+        if (isAbstractValue(sh, cursor))
             return true;
 
         cursor = segNextRootObj(sh, cursor, off.next);

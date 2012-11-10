@@ -176,7 +176,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
     dst.objSetProtoLevel(objDst, protoLevel);
 
     // preserve metadata of abstract objects
-    if (isAbstract(src.valTarget(rootSrcAt))) {
+    if (isAbstractValue(src, rootSrcAt)) {
         const EObjKind kind = src.objKind(src.objByAddr(rootSrcAt));
         const BindingOff off = (OK_OBJ_OR_NULL == kind)
             ? BindingOff(OK_OBJ_OR_NULL)
@@ -285,7 +285,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc)
 
     trackUses(dc, valSrc);
 
-    const EValueTarget code = realValTarget(src, valSrc);
+    const EValueTarget code = src.valTarget(valSrc);
     if (VT_CUSTOM == code)
         // custom value, e.g. fnc pointer
         return handleCustomValue(dc, valSrc);

@@ -325,10 +325,10 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
     }
 }
 
-bool isAnyAbstractOf(const SymHeapCore &sh, const TValId v1, const TValId v2)
+bool isAnyAbstractOf(const SymHeap &sh, const TValId v1, const TValId v2)
 {
-    return isAbstract(sh.valTarget(v1))
-        || isAbstract(sh.valTarget(v2));
+    return isAbstractValue(sh, v1)
+        || isAbstractValue(sh, v2);
 }
 
 void SymExecEngine::updateStateInBranch(

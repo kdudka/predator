@@ -67,28 +67,21 @@ enum EValueTarget {
     VT_LOST,                ///< target was on stack, but it is no longer valid
     VT_DELETED,             ///< target was on heap, but it is no longer valid
     VT_RANGE,               ///< an offset value where offset is given by range
-    VT_ABSTRACT             ///< abstract object (segment)
 };
-
-/// true for VT_ABSTRACT
-bool isAbstract(EValueTarget);
-
-/// true for VT_STATIC, VT_ON_HEAP, and VT_ON_STACK
-bool isKnownObject(EValueTarget);
 
 /// true for VT_DELETED and VT_LOST
 bool isGone(EValueTarget);
 
-/// true for VT_ON_HEAP and VT_ABSTRACT
+/// true for VT_ON_HEAP
 bool isOnHeap(EValueTarget);
 
 /// true for VT_STATIC and VT_ON_STACK
 bool isProgramVar(EValueTarget);
 
-/// true for VT_STATIC, VT_ON_STACK, VT_ON_STACK, and VT_ABSTRACT
+/// true for VT_STATIC, VT_ON_STACK, VT_ON_HEAP
 bool isPossibleToDeref(EValueTarget);
 
-/// true for VT_STATIC, VT_ON_STACK, VT_ON_STACK, VT_ABSTRACT, and VT_RANGE
+/// true for VT_STATIC, VT_ON_STACK, VT_ON_HEAP, and VT_RANGE
 bool isAnyDataArea(EValueTarget);
 
 /// enumeration of custom values, such as integer literals, or code pointers
@@ -556,12 +549,6 @@ class SymHeapCore {
     protected:
         TStorRef stor_;
 
-        /// return true if the given value points to/inside an abstract object
-        virtual bool hasAbstractTarget(TValId) const {
-            // no abstract objects at this level
-            return false;
-        }
-
     private:
         struct Private;
         Private *d;
@@ -835,9 +822,6 @@ class SymHeap: public SymHeapCore {
         // just overrides (inherits the dox)
         virtual void valDestroyTarget(TValId);
         virtual TValId valClone(TValId);
-
-    protected:
-        virtual bool hasAbstractTarget(TValId val) const;
 
     private:
         struct Private;

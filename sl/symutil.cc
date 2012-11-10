@@ -237,8 +237,7 @@ void moveKnownValueToLeft(
     if (valA <= 0)
         return;
 
-    const EValueTarget code = sh.valTarget(valA);
-    if (isKnownObject(code))
+    if (isKnownObjectAt(sh, valA))
         return;
 
     const TValId tmp = valA;
@@ -248,8 +247,7 @@ void moveKnownValueToLeft(
 
 bool valInsideSafeRange(const SymHeapCore &sh, TValId val)
 {
-    const EValueTarget code = sh.valTarget(val);
-    if (!isKnownObject(code))
+    if (!isKnownObjectAt(sh, val))
         return false;
 
     const TSizeRange size = sh.valSizeOfTarget(val);
@@ -395,7 +393,7 @@ bool proveNeq(const SymHeapCore &sh, TValId ref, TValId val)
 
     // we presume (0 <= ref) and (0 < val) at this point
     const EValueTarget code = sh.valTarget(val);
-    if (VAL_NULL == ref && (isKnownObject(code) || isGone(code)))
+    if (VAL_NULL == ref && (isKnownObjectAt(sh, val) || isGone(code)))
         // all addresses of objects have to be non-zero
         return true;
 

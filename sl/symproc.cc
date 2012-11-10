@@ -267,7 +267,6 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
 
         case VT_INVALID:
         case VT_COMPOSITE:
-        case VT_ABSTRACT:
             CL_BREAK_IF("attempt to dereference something special");
             // fall through!
 
@@ -1163,7 +1162,6 @@ void SymExecCore::execFree(TValId val)
             // fall through!
 
         case VT_INVALID:
-        case VT_ABSTRACT:
         case VT_COMPOSITE:
             CL_BREAK_IF("invalid call of SymExecCore::execFree()");
             // fall through!
@@ -1529,8 +1527,7 @@ bool spliceOutAbstractPathCore(
     int len = 1;
 
     for (;;) {
-        const EValueTarget code = sh.valTarget(seg);
-        if (VT_ABSTRACT != code || objMinLength(sh, seg)) {
+        if (!isAbstractValue(sh, seg) || objMinLength(sh, seg)) {
             // we are on a wrong way already...
             CL_BREAK_IF(!readOnlyMode);
             return false;
@@ -1610,10 +1607,7 @@ bool dlSegMergeAddressesIfNeeded(
         const TValId                 v2)
 {
     SymHeap &sh = proc.sh();
-
-    const EValueTarget code1 = sh.valTarget(v1);
-    const EValueTarget code2 = sh.valTarget(v2);
-    if (!isAbstract(code1) || !isAbstract(code2))
+    if (!isAbstractValue(sh, v1) || !isAbstractValue(sh, v2))
         // not a pair of abstract values
         return false;
 
@@ -1673,15 +1667,13 @@ bool spliceOutAbstractPath(
 bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2)
 {
     SymHeap &sh = proc.sh();
-    const struct cl_loc *loc = proc.lw();
+
+    moveKnownValueToLeft(sh, v1, v2);
 
     // check that at least one value is unknown
-    moveKnownValueToLeft(sh, v1, v2);
-    const EValueTarget code1 = sh.valTarget(v1);
-    const EValueTarget code2 = sh.valTarget(v2);
-    CL_BREAK_IF(isKnownObject(code2));
-
-    if (VT_ABSTRACT != code1 && VT_ABSTRACT != code2) {
+    const bool isAbstract1 = isAbstractValue(sh, v1);
+    const bool isAbstract2 = isAbstractValue(sh, v2);
+    if (!isAbstract1 && !isAbstract2) {
         // no abstract objects involved
         sh.valReplace(v2, v1);
         dst.insert(sh);
@@ -1691,13 +1683,13 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2)
     // where did we get here from?
     Trace::Node *trNode = sh.traceNode();
 
-    if (VT_ABSTRACT == code1 && spliceOutAbstractPath(proc, v1, v2)) {
+    if (isAbstract1 && spliceOutAbstractPath(proc, v1, v2)) {
         // splice-out succeeded ... ls(v1, v2)
         dst.insert(sh);
         return true;
     }
 
-    if (VT_ABSTRACT == code2 && spliceOutAbstractPath(proc, v2, v1)) {
+    if (isAbstract2 && spliceOutAbstractPath(proc, v2, v1)) {
         // splice-out succeeded ... ls(v2, v1)
         dst.insert(sh);
         return true;
@@ -1711,6 +1703,8 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2)
     TValSet seen1, seen2;
     lookThrough(sh, v1, &seen1);
     lookThrough(sh, v2, &seen2);
+
+    const struct cl_loc *loc = proc.lw();
 
     // try to look through possibly empty objects
     const TValId v1Tail = lookThrough(sh, v1, &seen2);
@@ -2371,7 +2365,7 @@ bool SymExecCore::concretizeLoop(
 
             // we expect a pointer at this point
             const TValId val = valOfPtrAt(sh, at);
-            if (VT_ABSTRACT == sh.valTarget(val)) {
+            if (isAbstractValue(sh, val)) {
 #ifndef NDEBUG
                 CL_BREAK_IF(hitLocal);
                 hitLocal = true;

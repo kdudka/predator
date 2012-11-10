@@ -147,8 +147,7 @@ bool matchRoots(
         const SymHeap           &sh1,
         const SymHeap           &sh2,
         const TValId            root1,
-        const TValId            root2,
-        const EValueTarget      code)
+        const TValId            root2)
 {
     const TObjId obj1 = sh1.objByAddr(root1);
     const TObjId obj2 = sh2.objByAddr(root2);
@@ -169,15 +168,15 @@ bool matchRoots(
         // root canvas mismatch
         return false;
 
-    if (!isAbstract(code))
-        // not an abstract object
-        return true;
-
     const EObjKind kind1 = sh1.objKind(sh1.objByAddr(root1));
     const EObjKind kind2 = sh2.objKind(sh2.objByAddr(root2));
     if (kind1 != kind2)
         // kind of object mismatch
         return false;
+
+    if (OK_REGION == kind1 /* == kind2 */)
+        // not a pair of abstract objects
+        return true;
 
     const TMinLen len1 = sh1.segMinLength(root1);
     const TMinLen len2 = sh2.segMinLength(root2);
@@ -239,7 +238,7 @@ bool cmpValues(
     // match roots
     const TValId root1 = sh1.valRoot(v1);
     const TValId root2 = sh2.valRoot(v2);
-    return matchRoots(sh1, sh2, root1, root2, code);
+    return matchRoots(sh1, sh2, root1, root2);
 }
 
 typedef std::queue<TValPair>                        TSched;

@@ -55,7 +55,7 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr);
 inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TValId seg)
 {
     CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
+    CL_BREAK_IF(!isAbstractValue(sh, seg));
 
     const BindingOff &off = sh.segBinding(seg);
     const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.next);
@@ -66,7 +66,7 @@ inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TValId seg)
 inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg)
 {
     CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
+    CL_BREAK_IF(!isAbstractValue(sh, seg));
 
     const BindingOff &off = sh.segBinding(seg);
     const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.prev);
@@ -94,20 +94,24 @@ inline TValId dlSegPeer(const SymHeap &sh, TValId dls)
 }
 
 /// return DLS peer object in case of DLS, the given value otherwise
-inline TValId segPeer(const SymHeap &sh, TValId seg)
+inline TValId segPeer(const SymHeap &sh, TValId segAt)
 {
-    CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(!isAbstract(sh.valTarget(seg)));
-    return (OK_DLS == sh.objKind(sh.objByAddr(seg)))
-        ? dlSegPeer(sh, seg)
-        : seg;
+    CL_BREAK_IF(sh.valOffset(segAt));
+
+    const TObjId seg = sh.objByAddr(segAt);
+    const EObjKind kind = sh.objKind(seg);
+    CL_BREAK_IF(OK_REGION == kind);
+
+    return (OK_DLS == kind)
+        ? dlSegPeer(sh, segAt)
+        : segAt;
 }
 
 /// return address of segment's head (useful mainly for Linux lists)
 inline TValId segHeadAt(const SymHeap &sh, TValId seg)
 {
     CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(VT_ABSTRACT != sh.valTarget(seg));
+    CL_BREAK_IF(!isAbstractValue(sh, seg));
 
     const BindingOff &off = sh.segBinding(seg);
     return const_cast<SymHeap &>(sh).valByOffset(seg, off.head);
@@ -160,12 +164,12 @@ inline TMinLen objMinLength(const SymHeap &sh, TValId root)
 {
     CL_BREAK_IF(sh.valOffset(root));
 
-    const EValueTarget code = sh.valTarget(root);
-    if (isAbstract(code))
+    if (isAbstractValue(sh, root))
         // abstract target
         return sh.segMinLength(root);
 
-    else if (isPossibleToDeref(code))
+    const EValueTarget code = sh.valTarget(root);
+    if (isPossibleToDeref(code))
         // concrete target
         return 1;
 
@@ -193,8 +197,7 @@ inline bool objWithBinding(const SymHeap &sh, const TValId root)
 {
     CL_BREAK_IF(sh.valOffset(root));
 
-    const EValueTarget code = sh.valTarget(root);
-    if (!isAbstract(code))
+    if (!isAbstractValue(sh, root))
         // not even an abstract object
         return false;
 
