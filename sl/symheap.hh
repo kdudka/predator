@@ -813,13 +813,13 @@ class SymHeap: public SymHeapCore {
         const BindingOff& segBinding(TObjId seg) const;
 
         /// set properties of an abstract object, set abstract if not already
-        void valTargetSetAbstract(
-                TValId                      root,
+        void objSetAbstract(
+                TObjId                      seg,
                 EObjKind                    kind,
                 const BindingOff            &off);
 
         /// set the given abstract object to be a concrete object (drops props)
-        void valTargetSetConcrete(TValId root);
+        void objSetConcrete(TObjId);
 
         /// read the minimal segment length of the given abstract object
         TMinLen segMinLength(TObjId seg) const;

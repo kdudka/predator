@@ -254,7 +254,7 @@ void enlargeMayExist(SymHeap &sh, const TValId at)
         return;
 
     decrementProtoLevel(sh, at);
-    sh.valTargetSetConcrete(at);
+    sh.objSetConcrete(obj);
 }
 
 void slSegAbstractionStep(
@@ -275,7 +275,7 @@ void slSegAbstractionStep(
     const TObjId next = sh.objByAddr(nextAt);
     if (OK_SLS != sh.objKind(next))
         // abstract the _next_ object
-        sh.valTargetSetAbstract(nextAt, OK_SLS, off);
+        sh.objSetAbstract(next, OK_SLS, off);
 
     // replace all references to 'head'
     const TOffset offHead = sh.segBinding(next).head;
@@ -302,15 +302,18 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off)
     // merge data
     joinData(sh, off, a2, a1, /* bidir */ true);
 
-    swapValues(off.next, off.prev);
-    sh.valTargetSetAbstract(a1, OK_DLS, off);
+    const TObjId seg1 = sh.objByAddr(a1);
+    const TObjId seg2 = sh.objByAddr(a2);
 
     swapValues(off.next, off.prev);
-    sh.valTargetSetAbstract(a2, OK_DLS, off);
+    sh.objSetAbstract(seg1, OK_DLS, off);
+
+    swapValues(off.next, off.prev);
+    sh.objSetAbstract(seg2, OK_DLS, off);
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
-    sh.segSetMinLength(sh.objByAddr(a1), len);
-    sh.segSetMinLength(sh.objByAddr(a2), len);
+    sh.segSetMinLength(seg1, len);
+    sh.segSetMinLength(seg2, len);
 }
 
 void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId varAt, bool backward)
@@ -546,7 +549,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer)
     REQUIRE_GC_ACTIVITY(sh, peer, dlSegReplaceByConcrete);
 
     // concretize self
-    sh.valTargetSetConcrete(seg);
+    sh.objSetConcrete(sh.objByAddr(seg));
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
     CL_BREAK_IF(!protoCheckConsistency(sh));
@@ -671,7 +674,7 @@ void concretizeObj(
 
     if (isMayExistObj(kind)) {
         // these kinds are much easier than regular list segments
-        sh.valTargetSetConcrete(segAt);
+        sh.objSetConcrete(seg);
         decrementProtoLevel(sh, segAt);
         LDP_PLOT(symabstract, sh);
         CL_BREAK_IF(!protoCheckConsistency(sh));
@@ -688,7 +691,7 @@ void concretizeObj(
         : off.prev;
 
     // concretize self
-    sh.valTargetSetConcrete(segAt);
+    sh.objSetConcrete(seg);
 
     // update 'next' pointer
     const PtrHandle nextPtr(sh, sh.valByOffset(segAt, offNext));

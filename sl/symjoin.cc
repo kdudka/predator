@@ -1240,7 +1240,7 @@ bool createObject(
 
     if (OK_REGION != kind) {
         // abstract object
-        ctx.dst.valTargetSetAbstract(rootDst, kind, off);
+        ctx.dst.objSetAbstract(objDst, kind, off);
 
         // compute minimal length of the resulting segment
         ctx.segLengths[rootDst] = joinMinLength(ctx, root1, root2);

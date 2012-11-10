@@ -183,7 +183,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
             ? BindingOff(OK_OBJ_OR_NULL)
             : src.segBinding(objSrc);
 
-        dst.valTargetSetAbstract(rootDstAt, kind, off);
+        dst.objSetAbstract(objDst, kind, off);
 
 #if SE_SYMCUT_PRESERVES_MIN_LENGTHS
         const TMinLen minLength = objMinLength(src, rootSrcAt);

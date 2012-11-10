@@ -3804,19 +3804,15 @@ const BindingOff& SymHeap::segBinding(TObjId seg) const
     return aData->bOff;
 }
 
-void SymHeap::valTargetSetAbstract(
-        TValId                      root,
+void SymHeap::objSetAbstract(
+        TObjId                      obj,
         EObjKind                    kind,
         const BindingOff            &off)
 {
-    CL_BREAK_IF(!isPossibleToDeref(*this, root));
-    CL_BREAK_IF(this->valOffset(root));
     CL_BREAK_IF(OK_REGION == kind);
 
     // there is no 'prev' offset in OK_SEE_THROUGH
     CL_BREAK_IF(OK_SEE_THROUGH == kind && off.prev != off.next);
-
-    const TObjId obj = this->objByAddr(root);
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
@@ -3840,13 +3836,9 @@ void SymHeap::valTargetSetAbstract(
     d->absRoots.assignId(obj, aData);
 }
 
-void SymHeap::valTargetSetConcrete(TValId root)
+void SymHeap::objSetConcrete(TObjId obj)
 {
-    CL_DEBUG("SymHeap::valTargetSetConcrete() is taking place...");
-    CL_BREAK_IF(this->valOffset(root));
-
-    const TObjId obj = this->objByAddr(root);
-
+    CL_DEBUG("SymHeap::objSetConcrete() is taking place...");
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // unregister an abstract object
@@ -3867,7 +3859,7 @@ void SymHeap::objInvalidate(TObjId obj)
     if (!d->absRoots.isValidEnt(obj))
         return;
 
-    CL_DEBUG("SymHeap::valDestroyTarget() destroys an abstract object");
+    CL_DEBUG("SymHeap::objInvalidate() destroys an abstract object");
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 

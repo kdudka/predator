@@ -184,7 +184,7 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
     {
         // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
         decrementProtoLevel(sh, seg);
-        sh.valTargetSetConcrete(seg);
+        sh.objSetConcrete(sh.objByAddr(seg));
         return true;
     }
 
