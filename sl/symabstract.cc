@@ -103,8 +103,8 @@ void detachClonedPrototype(
         const TValId            rootSrc,
         const bool              uplink)
 {
-    const bool isRootDls = (OK_DLS == sh.valTargetKind(rootDst));
-    CL_BREAK_IF(isRootDls && (OK_DLS != sh.valTargetKind(rootSrc)));
+    const bool isRootDls = (OK_DLS == sh.objKind(sh.objByAddr(rootDst)));
+    CL_BREAK_IF(isRootDls && (OK_DLS != sh.objKind(sh.objByAddr(rootSrc))));
 
     TValId rootDstPeer = VAL_INVALID;
     TValId rootSrcPeer = VAL_INVALID;
@@ -124,7 +124,7 @@ void detachClonedPrototype(
             redirectRefs(sh, rootDstPeer, proto, clone);
     }
 
-    if (OK_DLS == sh.valTargetKind(proto)) {
+    if (OK_DLS == sh.objKind(sh.objByAddr(proto))) {
         const TValId protoPeer = dlSegPeer(sh, proto);
         const TValId clonePeer = dlSegPeer(sh, clone);
         redirectRefs(sh, rootDst, protoPeer, clonePeer);
@@ -249,7 +249,8 @@ TValId segDeepCopy(SymHeap &sh, TValId seg)
 
 void enlargeMayExist(SymHeap &sh, const TValId at)
 {
-    const EObjKind kind = sh.valTargetKind(at);
+    const TObjId obj = sh.objByAddr(at);
+    const EObjKind kind = sh.objKind(obj);
     if (!isMayExistObj(kind))
         return;
 
@@ -272,7 +273,8 @@ void slSegAbstractionStep(
     // merge data
     joinData(sh, off, nextAt, at, /* bidir */ false);
 
-    if (OK_SLS != sh.valTargetKind(nextAt))
+    const TObjId next = sh.objByAddr(nextAt);
+    if (OK_SLS != sh.objKind(next))
         // abstract the _next_ object
         sh.valTargetSetAbstract(nextAt, OK_SLS, off);
 
@@ -313,7 +315,7 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off)
 
 void dlSegGobble(SymHeap &sh, TValId dls, TValId var, bool backward)
 {
-    CL_BREAK_IF(OK_DLS != sh.valTargetKind(dls));
+    CL_BREAK_IF(OK_DLS != sh.objKind(sh.objByAddr(dls)));
 
     // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, var);
@@ -397,8 +399,8 @@ bool /* jump next */ dlSegAbstractionStep(
         const TValId                next,
         const BindingOff            &off)
 {
-    const EObjKind kind = sh.valTargetKind(at);
-    const EObjKind kindNext = sh.valTargetKind(next);
+    const EObjKind kind = sh.objKind(sh.objByAddr(at));
+    const EObjKind kindNext = sh.objKind(sh.objByAddr(next));
     CL_BREAK_IF(OK_SLS == kind || OK_SLS == kindNext);
 
     if (OK_DLS == kindNext) {
@@ -432,7 +434,7 @@ bool segAbstractionStep(
 
     // jump to peer in case of DLS
     TValId peer = at;
-    if (OK_DLS == sh.valTargetKind(at))
+    if (OK_DLS == sh.objKind(sh.objByAddr(at)))
         peer = dlSegPeer(sh, at);
 
     // jump to the next object (as we know such an object exists)
@@ -554,11 +556,14 @@ void spliceOutListSegment(
 
     CL_BREAK_IF(objMinLength(sh, seg));
 
+    const TObjId obj = sh.objByAddr(seg);
+    const EObjKind kind = sh.objKind(obj);
+
     TOffset offHead = 0;
-    if (OK_OBJ_OR_NULL != sh.valTargetKind(seg))
+    if (OK_OBJ_OR_NULL != kind)
         offHead = sh.segBinding(seg).head;
 
-    if (OK_DLS == sh.valTargetKind(seg)) {
+    if (OK_DLS == kind) {
         // OK_DLS --> unlink peer
         CL_BREAK_IF(seg == peer);
         CL_BREAK_IF(offHead != sh.segBinding(peer).head);
@@ -652,7 +657,8 @@ void concretizeObj(
     TMinLen len = sh.segMinLength(seg);
     spliceOutSegmentIfNeeded(&len, sh, seg, peer, todo, leakList);
 
-    const EObjKind kind = sh.valTargetKind(seg);
+    const TObjId obj = sh.objByAddr(seg);
+    const EObjKind kind = sh.objKind(obj);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
 
     if (isMayExistObj(kind)) {

@@ -104,13 +104,13 @@ bool haveSeg(
         return false;
 
     TValId seg = sh.valRoot(atAddr);
-    if (kind != sh.valTargetKind(seg))
+    if (kind != sh.objKind(sh.objByAddr(seg)))
         // kind mismatch
         return false;
 
     if (OK_DLS == kind) {
         seg = dlSegPeer(sh, seg);
-        if (OK_DLS != sh.valTargetKind(seg))
+        if (OK_DLS != sh.objKind(sh.objByAddr(seg)))
             // invalid peer
             return false;
     }
@@ -133,12 +133,12 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
         return false;
 
     const TValId seg = sh.valRoot(atAddr);
-    if (OK_DLS != sh.valTargetKind(seg))
+    if (OK_DLS != sh.objKind(sh.objByAddr(seg)))
         // not a DLS
         return false;
 
     const TValId peer = dlSegPeer(sh, seg);
-    if (OK_DLS != sh.valTargetKind(peer))
+    if (OK_DLS != sh.objKind(sh.objByAddr(peer)))
         // invalid peer
         return false;
 
@@ -214,7 +214,7 @@ TValId segClone(SymHeap &sh, const TValId root)
 {
     const TValId dup = objClone(sh, root);
 
-    if (OK_DLS == sh.valTargetKind(root)) {
+    if (OK_DLS == sh.objKind(sh.objByAddr(root))) {
         // we need to clone the peer as well
         const TValId peer = dlSegPeer(sh, root);
         const TValId dupPeer = sh.valClone(peer);
@@ -259,7 +259,7 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
             // non-empty abstract object reached
             break;
 
-        const EObjKind kind = sh.valTargetKind(seg);
+        const EObjKind kind = sh.objKind(sh.objByAddr(seg));
         if (OK_OBJ_OR_NULL == kind) {
             // we always end up with VAL_NULL if OK_OBJ_OR_NULL is removed
             val = VAL_NULL;
@@ -290,7 +290,7 @@ bool dlSegCheckConsistency(const SymHeap &sh)
     TValList addrs;
     sh.gatherRootObjects(addrs, isAbstract);
     BOOST_FOREACH(const TValId at, addrs) {
-        if (OK_DLS != sh.valTargetKind(at))
+        if (OK_DLS != sh.objKind(sh.objByAddr(at)))
             // we are interested in OK_DLS here
             continue;
 
@@ -305,7 +305,7 @@ bool dlSegCheckConsistency(const SymHeap &sh)
             return false;
         }
 
-        if (OK_DLS != sh.valTargetKind(peer)) {
+        if (OK_DLS != sh.objKind(sh.objByAddr(peer))) {
             CL_ERROR("DLS peer not a DLS");
             return false;
         }

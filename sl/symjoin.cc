@@ -624,7 +624,8 @@ struct ObjJoinVisitor {
 template <class TDst>
 void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TValId root)
 {
-    const EObjKind kind = sh.valTargetKind(root);
+    const TObjId obj = sh.objByAddr(root);
+    const EObjKind kind = sh.objKind(obj);
     if (OK_DLS != kind)
         return;
 
@@ -790,13 +791,13 @@ bool joinObjKind(
 {
     CL_BREAK_IF(VAL_INVALID == v1 && VAL_INVALID == v2);
 
-    const EObjKind kind1 = ctx.sh1.valTargetKind(v1);
+    const EObjKind kind1 = ctx.sh1.objKind(ctx.sh1.objByAddr(v1));
     if (VAL_INVALID == v2) {
         *pDst = kind1;
         return true;
     }
 
-    const EObjKind kind2 = ctx.sh2.valTargetKind(v2);
+    const EObjKind kind2 = ctx.sh2.objKind(ctx.sh2.objByAddr(v2));
     if (VAL_INVALID == v1) {
         *pDst = kind2;
         return true;
@@ -858,8 +859,11 @@ bool joinSegBindingOfMayExist(
         const TValId            seg1,
         const TValId            seg2)
 {
-    const EObjKind kind1 = ctx.sh1.valTargetKind(seg1);
-    const EObjKind kind2 = ctx.sh2.valTargetKind(seg2);
+    const TObjId obj1 = ctx.sh1.objByAddr(seg1);
+    const TObjId obj2 = ctx.sh2.objByAddr(seg2);
+
+    const EObjKind kind1 = ctx.sh1.objKind(obj1);
+    const EObjKind kind2 = ctx.sh2.objKind(obj2);
 
     const bool isMayExist1 = isMayExistObj(kind1);
     const bool isMayExist2 = isMayExistObj(kind2);
@@ -1278,8 +1282,8 @@ bool dlSegHandleShared(
     const TValId root2 = item.v2;
     CL_BREAK_IF(ctx.sh1.valOffset(root1) || ctx.sh2.valOffset(root2));
 
-    const bool isDls = (OK_DLS == ctx.sh1.valTargetKind(root1));
-    CL_BREAK_IF(isDls != (OK_DLS == ctx.sh2.valTargetKind(root2)));
+    const bool isDls = (OK_DLS == ctx.sh1.objKind(ctx.sh1.objByAddr(root1)));
+    CL_BREAK_IF(isDls != (OK_DLS == ctx.sh2.objKind(ctx.sh2.objByAddr(root2))));
     if (!isDls)
         // not a DLS
         return true;
@@ -1440,10 +1444,13 @@ bool followRootValues(
         // postpone it till the read-write attempt
         return true;
 
-    const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1))
+    const TObjId obj1 = ctx.sh1.objByAddr(root1);
+    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+
+    const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1))
         && !hasKey(ctx.sset1, root1);
 
-    const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2))
+    const bool isDls2 = (OK_DLS == ctx.sh2.objKind(obj2))
         && !hasKey(ctx.sset2, root2);
 
     if (isDls1 == isDls2)
@@ -1556,8 +1563,11 @@ bool joinSegmentWithAny(
     if (firstTryReadOnly && !followRootValues(ctx, item, action, /* RO */ true))
         return false;
 
-    const bool isDls1 = (OK_DLS == ctx.sh1.valTargetKind(root1));
-    const bool isDls2 = (OK_DLS == ctx.sh2.valTargetKind(root2));
+    const TObjId obj1 = ctx.sh1.objByAddr(root1);
+    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+
+    const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1));
+    const bool isDls2 = (OK_DLS == ctx.sh2.objKind(obj2));
 
     TValId peer1 = root1;
     if (isDls1)
@@ -1576,8 +1586,8 @@ bool joinSegmentWithAny(
         return false;
 
     const EObjKind kind = (JS_USE_SH1 == action)
-        ? ctx.sh1.valTargetKind(root1)
-        : ctx.sh2.valTargetKind(root2);
+        ? ctx.sh1.objKind(obj1)
+        : ctx.sh2.objKind(obj2);
 
     if (OK_OBJ_OR_NULL != kind) {
         // BindingOff is assumed to be already matching at this point
@@ -1760,7 +1770,7 @@ bool insertSegmentClone(
     // resolve the existing segment in shGt
     SymHeap &shGt = ((isGt1) ? ctx.sh1 : ctx.sh2);
     const TValId seg = shGt.valRoot((isGt1) ? v1 : v2);
-    const bool isDls = (OK_DLS == shGt.valTargetKind(seg));
+    const bool isDls = (OK_DLS == shGt.objKind(shGt.objByAddr(seg)));
     CL_BREAK_IF(off && isDls);
 
     TValId peer = seg;
@@ -1855,8 +1865,11 @@ void resolveMayExist(
         // at most one abstract object
         return;
 
-    const EObjKind kind1 = ctx.sh1.valTargetKind(v1);
-    const EObjKind kind2 = ctx.sh2.valTargetKind(v2);
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+
+    const EObjKind kind1 = ctx.sh1.objKind(obj1);
+    const EObjKind kind2 = ctx.sh2.objKind(obj2);
     if (kind1 == kind2)
         // kind of abstract object matches in both cases
         return;
@@ -2029,7 +2042,7 @@ class MayExistVisitor {
                 if (sh.segMinLength(seg) || segHeadAt(sh, seg) != val)
                     return /* continue */ true;
 
-                if (OK_DLS == sh.valTargetKind(seg))
+                if (OK_DLS == sh.objKind(sh.objByAddr(seg)))
                     seg = dlSegPeer(sh, seg);
 
                 val = nextValFromSeg(sh, seg);
@@ -2125,7 +2138,8 @@ bool mayExistFallback(
         return false;
 
     const TValId valRoot = (use1) ? root1 : root2;
-    if (OK_CONCRETE != sh.valTargetKind(valRoot))
+    const TObjId obj = sh.objByAddr(valRoot);
+    if (OK_CONCRETE != sh.objKind(obj))
         // only concrete objects/prototypes are candidates for OK_SEE_THROUGH
         return false;
 
@@ -2548,8 +2562,8 @@ bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExist = 0)
 
     if (wasMayExist) {
         const EObjKind kind = (isValid1)
-            ? ctx.sh1.valTargetKind(root1)
-            : ctx.sh2.valTargetKind(root2);
+            ? ctx.sh1.objKind(ctx.sh1.objByAddr(root1))
+            : ctx.sh2.objKind(ctx.sh2.objByAddr(root2));
 
         *wasMayExist = isMayExistObj(kind);
     }
@@ -2596,7 +2610,8 @@ bool updateMayExistLevels(SymJoinCtx &ctx)
     TValList dstRoots;
     ctx.dst.gatherRootObjects(dstRoots, isOnHeap);
     BOOST_FOREACH(const TValId rootDst, dstRoots) {
-        const EObjKind kind = ctx.dst.valTargetKind(rootDst);
+        const TObjId objDst = ctx.dst.objByAddr(rootDst);
+        const EObjKind kind = ctx.dst.objKind(objDst);
         if (!isMayExistObj(kind))
             // we are interested only in 0..1 objects here
             continue;
@@ -2782,12 +2797,13 @@ void mapGhostAddressSpace(
 /// this runs only in debug build
 bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx)
 {
-    BOOST_FOREACH(const TValId proto, ctx.protoRoots) {
-        if (OK_DLS != ctx.dst.valTargetKind(proto))
+    BOOST_FOREACH(const TValId protoAt, ctx.protoRoots) {
+        const TObjId proto = ctx.dst.objByAddr(protoAt);
+        if (OK_DLS != ctx.dst.objKind(proto))
             // we are interested only DLSs here
             continue;
 
-        const TValId peer = dlSegPeer(ctx.dst, proto);
+        const TValId peer = dlSegPeer(ctx.dst, protoAt);
         if (!hasKey(ctx.protoRoots, peer)) {
             CL_ERROR("DLS prototype peer not a prototype");
             return false;
@@ -2842,11 +2858,14 @@ bool joinDataCore(
 
     TProtoLevel ldiff = 0;
 
-    const EObjKind kind1 = sh.valTargetKind(addr1);
+    const TObjId obj1 = sh.objByAddr(addr1);
+    const TObjId obj2 = sh.objByAddr(addr2);
+
+    const EObjKind kind1 = sh.objKind(obj1);
     if (OK_CONCRETE != kind1)
         --ldiff;
 
-    const EObjKind kind2 = sh.valTargetKind(addr2);
+    const EObjKind kind2 = sh.objKind(obj2);
     if (OK_CONCRETE != kind2)
         ++ldiff;
 
@@ -2883,9 +2902,6 @@ bool joinDataCore(
 
     killUniBlocksUnderBindingPtrs(sh, off, addr1);
     killUniBlocksUnderBindingPtrs(sh, off, addr2);
-
-    const TObjId obj1 = sh.objByAddr(addr1);
-    const TObjId obj2 = sh.objByAddr(addr2);
     if (!joinUniBlocks(ctx, rootDstAt, obj1, obj2))
         // failed to complement uniform blocks
         return false;

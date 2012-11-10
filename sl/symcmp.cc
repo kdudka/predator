@@ -172,8 +172,8 @@ bool matchRoots(
         // not an abstract object
         return true;
 
-    const EObjKind kind1 = sh1.valTargetKind(root1);
-    const EObjKind kind2 = sh2.valTargetKind(root2);
+    const EObjKind kind1 = sh1.objKind(sh1.objByAddr(root1));
+    const EObjKind kind2 = sh2.objKind(sh2.objByAddr(root2));
     if (kind1 != kind2)
         // kind of object mismatch
         return false;

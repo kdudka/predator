@@ -1652,7 +1652,7 @@ bool spliceOutAbstractPath(
 
     TValId endPoint = pointingTo;
 
-    const EObjKind kind = sh.valTargetKind(seg);
+    const EObjKind kind = sh.objKind(sh.objByAddr(seg));
     if (OK_OBJ_OR_NULL != kind) {
         // if atAddr is above/bellow head, we need to shift endPoint accordingly
         const TOffset off = sh.segBinding(seg).head - sh.valOffset(atAddr);

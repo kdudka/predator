@@ -65,7 +65,7 @@ bool matchSegBinding(
         const TValId                seg,
         const BindingOff            &offPath)
 {
-    const EObjKind kind = sh.valTargetKind(seg);
+    const EObjKind kind = sh.objKind(sh.objByAddr(seg));
     switch (kind) {
         case OK_CONCRETE:
             // nothing to match actually
@@ -128,10 +128,10 @@ bool validatePointingObjects(
     // absolutely uniform along the abstraction path -- joinDataReadOnly()
     // is responsible for that
     allowedReferers.insert(root);
-    if (OK_DLS == sh.valTargetKind(root))
+    if (OK_DLS == sh.objKind(sh.objByAddr(root)))
         allowedReferers.insert(dlSegPeer(sh, root));
 
-    if (OK_DLS == sh.valTargetKind(prev))
+    if (OK_DLS == sh.objKind(sh.objByAddr(prev)))
         // jump to peer in case of DLS
         prev = dlSegPeer(sh, prev);
 
@@ -188,7 +188,7 @@ bool validatePrototypes(
 {
     TValId peerAt = VAL_INVALID;
     protoRoots.insert(rootAt);
-    if (OK_DLS == sh.valTargetKind(rootAt)) {
+    if (OK_DLS == sh.objKind(sh.objByAddr(rootAt))) {
         peerAt = dlSegPeer(sh, rootAt);
         protoRoots.insert(peerAt);
     }
@@ -236,7 +236,7 @@ TValId jumpToNextObj(
         // binding mismatch
         return VAL_INVALID;
 
-    const bool dlSegOnPath = (OK_DLS == sh.valTargetKind(at));
+    const bool dlSegOnPath = (OK_DLS == sh.objKind(sh.objByAddr(at)));
     if (dlSegOnPath) {
         // jump to peer in case of DLS
         at = dlSegPeer(sh, at);
@@ -369,7 +369,7 @@ void segDiscover(
 
     // the entry can already have some prototypes we should take into account
     TValSet initialProtos;
-    if (OK_DLS == sh.valTargetKind(entry)) {
+    if (OK_DLS == sh.objKind(sh.objByAddr(entry))) {
         TValList protoList;
         collectPrototypesOf(protoList, sh, entry, /* skipDlsPeers */ false);
         BOOST_FOREACH(const TValId proto, protoList)
@@ -417,7 +417,7 @@ void segDiscover(
             // someone points at/inside who should not
 
             leaving = /* looking for a DLS */ isDlsBinding(off)
-                && /* got a DLS */ OK_DLS != sh.valTargetKind(at)
+                && /* got a DLS */ OK_DLS != sh.objKind(sh.objByAddr(at))
                 && validateSegEntry(sh, off, at, prev, VAL_INVALID,
                                     protoRoots[1]);
 

@@ -3812,12 +3812,8 @@ TValId SymHeap::valClone(TValId val)
     return dup;
 }
 
-EObjKind SymHeap::valTargetKind(TValId val) const
+EObjKind SymHeap::objKind(TObjId obj) const
 {
-    if (val <= 0)
-        return OK_CONCRETE;
-
-    const TObjId obj = this->objByAddr(val);
     if (!d->absRoots.isValidEnt(obj))
         return OK_CONCRETE;
 
@@ -3827,7 +3823,8 @@ EObjKind SymHeap::valTargetKind(TValId val) const
 
 bool SymHeap::hasAbstractTarget(TValId val) const
 {
-    return (OK_CONCRETE != this->valTargetKind(val));
+    const TObjId obj = this->objByAddr(val);
+    return (OK_CONCRETE != this->objKind(obj));
 }
 
 const BindingOff& SymHeap::segBinding(TValId root) const

@@ -119,11 +119,12 @@ bool collectPrototypesOf(
 void objChangeProtoLevel(SymHeap &sh, TValId root, const TProtoLevel diff)
 {
     CL_BREAK_IF(sh.valOffset(root));
+    const TObjId proto = sh.objByAddr(root);
 
     const TProtoLevel level = sh.valTargetProtoLevel(root);
     sh.valTargetSetProtoLevel(root, level + diff);
 
-    const EObjKind kind = sh.valTargetKind(root);
+    const EObjKind kind = sh.objKind(proto);
     if (OK_DLS != kind)
         return;
 

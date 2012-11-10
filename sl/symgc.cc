@@ -81,7 +81,7 @@ bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly)
     std::set<TValId> whiteList;
     if (sharedOnly) {
         whiteList.insert(root);
-        if (OK_DLS == sh.valTargetKind(root))
+        if (OK_DLS == sh.objKind(sh.objByAddr(root)))
             whiteList.insert(dlSegPeer(sh, root));
     }
 

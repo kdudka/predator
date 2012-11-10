@@ -807,11 +807,8 @@ class SymHeap: public SymHeapCore {
         virtual void swap(SymHeapCore &);
 
     public:
-        /**
-         * return @b kind of the target. Here @b kind means concrete object,
-         * SLS, DLS, and the like.
-         */
-        EObjKind valTargetKind(TValId) const;
+        /// kind of object (region, SLS, DLS, ...)
+        EObjKind objKind(TObjId) const;
 
         /// tuple of binding offsets (next, prev, ...)
         const BindingOff& segBinding(TValId seg) const;

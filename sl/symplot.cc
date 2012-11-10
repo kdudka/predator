@@ -437,7 +437,7 @@ bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
 
         case OC_PREV:
 #if !SYMPLOT_DEBUG_DLS
-            if (OK_DLS == sh.valTargetKind(fld.placedAt()))
+            if (OK_DLS == sh.objKind(sh.objByAddr(fld.placedAt())))
                 return false;
 #endif
             // cppcheck-suppress unreachableCode
@@ -524,10 +524,12 @@ template <class TCont>
 void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
 {
     SymHeap &sh = plot.sh;
+    const TObjId obj = sh.objByAddr(at);
 
     FldHandle next;
     FldHandle prev;
-    const EObjKind kind = sh.valTargetKind(at);
+
+    const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
         case OK_OBJ_OR_NULL:
@@ -579,12 +581,14 @@ void plotInnerObjects(PlotData &plot, const TValId at, const TCont &liveObjs)
 
 std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
 {
+    const TObjId obj = sh.objByAddr(root);
+
     std::ostringstream label;
     const TProtoLevel protoLevel= sh.valTargetProtoLevel(root);
     if (protoLevel)
         label << "[L" << protoLevel << " prototype] ";
 
-    const EObjKind kind = sh.valTargetKind(root);
+    const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
             return label.str();
@@ -666,7 +670,9 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
             return;
     }
 
-    const EObjKind kind = sh.valTargetKind(at);
+    const TObjId obj = sh.objByAddr(at);
+
+    const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_CONCRETE:
             break;
@@ -716,8 +722,8 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
 
     // in case of DLS, plot the corresponding peer
     TValId peer;
-    if (OK_DLS == sh.valTargetKind(at)
-            && OK_DLS == sh.valTargetKind((peer = dlSegPeer(sh, at))))
+    if (OK_DLS == sh.objKind(sh.objByAddr(at))
+            && OK_DLS == sh.objKind(sh.objByAddr((peer = dlSegPeer(sh, at)))))
     {
         // plot peer's root value
         plotRootValue(plot, peer, color);
@@ -790,7 +796,7 @@ void plotRootObjects(PlotData &plot)
         sh.gatherLiveFields(liveObjs, obj);
 
 #if !SYMPLOT_FLAT_MODE
-        if (OK_CONCRETE == sh.valTargetKind(root)
+        if (OK_CONCRETE == sh.objKind(obj)
                 && (1 == liveObjs.size())
                 && plotSimpleRoot(plot, liveObjs.front()))
             // this one went out in a simplified form

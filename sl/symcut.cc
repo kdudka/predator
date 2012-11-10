@@ -175,7 +175,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
 
     // preserve metadata of abstract objects
     if (isAbstract(src.valTarget(rootSrcAt))) {
-        const EObjKind kind = src.valTargetKind(rootSrcAt);
+        const EObjKind kind = src.objKind(src.objByAddr(rootSrcAt));
         const BindingOff off = (OK_OBJ_OR_NULL == kind)
             ? BindingOff(OK_OBJ_OR_NULL)
             : src.segBinding(rootSrcAt);
