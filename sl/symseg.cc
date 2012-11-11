@@ -54,7 +54,7 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
     // having the values always in the same order leads to simpler code
     moveKnownValueToLeft(sh, ref, val);
 
-    const TSizeRange size2 = sh.valSizeOfTarget(val);
+    const TSizeRange size2 = valSizeOfTarget(sh, val);
     if (size2.lo <= IR::Int0)
         // oops, we cannot prove the address is safely allocated, giving up
         return false;
@@ -69,7 +69,7 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
         // one of them is VAL_NULL the other one is address of non-empty object
         return true;
 
-    const TSizeRange size1 = sh.valSizeOfTarget(ref);
+    const TSizeRange size1 = valSizeOfTarget(sh, ref);
     if (size1.lo <= IR::Int0)
         // oops, we cannot prove the address is safely allocated, giving up
         return false;

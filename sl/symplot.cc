@@ -322,7 +322,9 @@ void printRawRange(
 void plotRootValue(PlotData &plot, const TValId val, const char *color)
 {
     SymHeap &sh = plot.sh;
-    const TSizeRange size = sh.valSizeOfTarget(val);
+    CL_BREAK_IF(sh.valOffset(val));
+    const TObjId obj = sh.objByAddr(val);
+    const TSizeRange size = sh.objSize(obj);
     const unsigned refCnt = sh.usedByCount(val);
 
 #if SYMPLOT_FLAT_MODE
@@ -761,7 +763,8 @@ bool plotSimpleRoot(PlotData &plot, const FldHandle &fld)
         return false;
 
     // TODO: support for objects with variable size?
-    const TSizeRange size = sh.valSizeOfTarget(root);
+    const TObjId obj = sh.objByAddr(at);
+    const TSizeRange size = sh.objSize(obj);
     CL_BREAK_IF(!isSingular(size));
 
     const TObjType clt = fld.type();

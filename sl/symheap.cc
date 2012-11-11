@@ -2148,7 +2148,7 @@ void SymHeapCore::writeUniformBlock(
         const TSizeOf               size,
         TValSet                     *killedPtrs)
 {
-    CL_BREAK_IF(this->valSizeOfTarget(addr).lo < size);
+    CL_BREAK_IF(valSizeOfTarget(*this, addr).lo < size);
     d->writeUniformBlock(addr, tplValue, size, killedPtrs);
 }
 
@@ -2159,8 +2159,8 @@ void SymHeapCore::copyBlockOfRawMemory(
         TValSet                     *killedPtrs)
 {
     // this should have been checked by the caller
-    CL_BREAK_IF(this->valSizeOfTarget(dst).lo < size);
-    CL_BREAK_IF(this->valSizeOfTarget(src).lo < size);
+    CL_BREAK_IF(valSizeOfTarget(*this, dst).lo < size);
+    CL_BREAK_IF(valSizeOfTarget(*this, src).lo < size);
 
     const BaseValue *dstData;
     const BaseValue *srcData;
@@ -3474,29 +3474,11 @@ bool SymHeapCore::isValid(TObjId obj) const {
     return regData->isValid;
 }
 
-TSizeRange SymHeapCore::valSizeOfTarget(TValId val) const
+TSizeRange SymHeapCore::objSize(TObjId obj) const
 {
-    if (!isPossibleToDeref(*this, val))
-        // no writable target around here
-        return IR::rngFromNum(IR::Int0);
-
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, val);
-    if (valData->offRoot < 0)
-        // we are above the root, so we cannot safely write anything
-        return IR::rngFromNum(IR::Int0);
-
-    const TValId root = valData->valRoot;
-    const BaseAddress *rootData;
-    d->ents.getEntRO(&rootData, root);
-
-    // jump to region
     const Region *regData;
-    d->ents.getEntRO(&regData, rootData->obj);
-
-    IR::Range size = regData->size;
-    size -= IR::rngFromNum(/* off */ valData->offRoot);
-    return size;
+    d->ents.getEntRO(&regData, obj);
+    return regData->size;
 }
 
 TSizeRange SymHeapCore::valSizeOfString(TValId addr) const

@@ -147,6 +147,26 @@ const IR::Range& rngFromCustom(const CustomValue &cv)
     }
 }
 
+TSizeRange valSizeOfTarget(const SymHeapCore &sh, const TValId at)
+{
+    if (!isPossibleToDeref(sh, at))
+        // no writable target around here
+        return IR::rngFromNum(IR::Int0);
+
+    const IR::Range off = sh.valOffsetRange(at);
+    if (off.lo < 0)
+        // if the offset can be negative, we can safely write nothing
+        return IR::rngFromNum(IR::Int0);
+
+    const TObjId obj = sh.objByAddr(at);
+    if (!sh.isValid(obj))
+        // we cannot safely write to an invalid object
+        return IR::rngFromNum(IR::Int0);
+
+    const IR::Range size = sh.objSize(obj);
+    return size - off;
+}
+
 bool compareIntRanges(
         bool                        *pDst,
         const enum cl_binop_e       code,
@@ -250,7 +270,7 @@ bool valInsideSafeRange(const SymHeapCore &sh, TValId val)
     if (!isKnownObjectAt(sh, val))
         return false;
 
-    const TSizeRange size = sh.valSizeOfTarget(val);
+    const TSizeRange size = valSizeOfTarget(sh, val);
     return (IR::Int0 < size.lo);
 }
 
@@ -263,7 +283,7 @@ bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val)
     if (!ptrSize)
         ptrSize = sh.stor().types.dataPtrSizeof();
 
-    const TSizeRange size = sh.valSizeOfTarget(val);
+    const TSizeRange size = valSizeOfTarget(sh, val);
     return (ptrSize <= size.lo);
 }
 

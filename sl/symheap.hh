@@ -435,12 +435,16 @@ class SymHeapCore {
         /// classify the storage class of the given object
         EStorageClass objStorClass(TObjId) const;
 
+        /// return size (in bytes) of the given object
+        TSizeRange objSize(TObjId) const;
+
         /// return the base address of the given region (create a new if needed)
         virtual TValId addrOfRegion(TObjId reg);
 
         /// TODO: drop this!
         TValId legacyAddrOfAny_XXX(TObjId) const;
 
+    public:
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;
 
@@ -455,9 +459,6 @@ class SymHeapCore {
 
         /// difference between two pointers (makes sense only for shared roots)
         TValId diffPointers(const TValId v1, const TValId v2);
-
-        /// return size (in bytes) that we can safely write at the given addr
-        TSizeRange valSizeOfTarget(TValId) const;
 
         /// return count of bytes (including NULL) we can safely read as string
         TSizeRange valSizeOfString(TValId) const;

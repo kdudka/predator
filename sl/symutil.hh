@@ -70,6 +70,9 @@ bool proveNeq(const SymHeapCore &sh, TValId v1, TValId v2);
 /// extract an integral range from an unwrapped CV_INT/CV_INT_RANGE custom value
 const IR::Range& rngFromCustom(const CustomValue &);
 
+/// return size (in bytes) that we can safely write at the given addr
+TSizeRange valSizeOfTarget(const SymHeapCore &, const TValId at);
+
 bool compareIntRanges(
         bool                                *pDst,
         const enum cl_binop_e               code,
@@ -521,7 +524,7 @@ bool /* complete */ traverseProgramVarsGeneric(
                 CL_BREAK_IF(!tryingRecover);
 
                 const TValId valInval = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-                const TSizeRange size = sh.valSizeOfTarget(at);
+                const TSizeRange size = sh.objSize(reg);
                 CL_BREAK_IF(!isSingular(size));
 
                 // mark its contents explicitly as unknown, not (un)initialized

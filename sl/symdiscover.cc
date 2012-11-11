@@ -238,10 +238,12 @@ TValId jumpToNextObj(
         // binding mismatch
         return VAL_INVALID;
 
-    const bool dlSegOnPath = (OK_DLS == sh.objKind(sh.objByAddr(at)));
+    TObjId obj = sh.objByAddr(at);
+    const bool dlSegOnPath = (OK_DLS == sh.objKind(obj));
     if (dlSegOnPath) {
         // jump to peer in case of DLS
         at = dlSegPeer(sh, at);
+        obj = sh.objByAddr(at);
         haveSeen.insert(at);
     }
 
@@ -260,11 +262,11 @@ TValId jumpToNextObj(
         // binding mismatch
         return VAL_INVALID;
 
-    if (sh.valSizeOfTarget(at) != sh.valSizeOfTarget(nextAt))
+    if (sh.objSize(obj) != sh.objSize(next))
         // mismatch in size of targets
         return VAL_INVALID;
 
-    const TObjType clt = sh.objEstimatedType(sh.objByAddr(at));
+    const TObjType clt = sh.objEstimatedType(obj);
     if (clt) {
         const TObjType cltNext = sh.objEstimatedType(next);
         if (cltNext && *cltNext != *clt)

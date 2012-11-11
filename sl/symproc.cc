@@ -211,8 +211,8 @@ void reportDerefOutOfBounds(
     const EValueTarget code = sh.valTarget(val);
     const char *const what = describeRootObj(code);
 
-    const TValId root = sh.valRoot(val);
-    const TSizeRange rootSizeRange = sh.valSizeOfTarget(root);
+    const TObjId obj = sh.objByAddr(val);
+    const TSizeRange rootSizeRange = sh.objSize(obj);
     const TSizeOf minRootSize = rootSizeRange.lo;
     CL_BREAK_IF(minRootSize <= 0);
 
@@ -234,7 +234,7 @@ void reportDerefOutOfBounds(
         return;
     }
 
-    const TSizeRange dstSizeRange = sh.valSizeOfTarget(val);
+    const TSizeRange dstSizeRange = valSizeOfTarget(sh, val);
     const TSizeOf minDstSize = dstSizeRange.lo;
     beyond = sizeOfTarget - minDstSize;
     if (0 < beyond) {
@@ -301,7 +301,7 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
         return true;
     }
 
-    const TSizeRange dstSizeRange = sh_.valSizeOfTarget(val);
+    const TSizeRange dstSizeRange = valSizeOfTarget(sh_, val);
     const TSizeOf minDstSize = dstSizeRange.lo;
     if (sh_.valOffset(val) < 0 || minDstSize < sizeOfTarget) {
         // out of bounds
@@ -370,7 +370,7 @@ TValId SymProc::varAt(const CVar &cv)
     bool needInit = !var.initials.empty();
     if (nullify) {
         // initialize to zero
-        const TSizeRange size = sh_.valSizeOfTarget(at);
+        const TSizeRange size = sh_.objSize(reg);
         CL_BREAK_IF(!isSingular(size));
         sh_.writeUniformBlock(at, VAL_NULL, size.lo);
     }
@@ -589,7 +589,7 @@ void digRootTypeInfo(SymHeap &sh, const FldHandle &lhs, TValId rhs)
         // type but it yet does not mean that we are changing the root type-info
         return;
 
-    const TSizeRange rootSizeRange = sh.valSizeOfTarget(rhs);
+    const TSizeRange rootSizeRange = sh.objSize(rhsTarget);
     const TSizeOf rootSize = rootSizeRange.lo;
     CL_BREAK_IF(rootSize <= 0 && isOnHeap(sh.objStorClass(rhsTarget)));
 
@@ -638,7 +638,7 @@ TValId ptrObjectEncoderCore(
     }
 
     const TSizeOf dstSize = dst.type()->size;
-    CL_BREAK_IF((sh.valSizeOfTarget(dst.placedAt()).lo < dstSize));
+    CL_BREAK_IF((valSizeOfTarget(sh, dst.placedAt()).lo < dstSize));
     if (ptrSize <= dstSize)
         return val;
 
@@ -869,7 +869,7 @@ void SymProc::killVar(const CodeStorage::KillVar &kv)
     // if it cannot be safely removed, then at least invalidate its contents
     CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() invalidates var " << varString);
     const TValId valUnknown = sh_.valCreate(VT_UNKNOWN, VO_ASSIGNED);
-    const TSizeRange size = sh_.valSizeOfTarget(addr);
+    const TSizeRange size = sh_.objSize(obj);
     CL_BREAK_IF(!isSingular(size));
 
     // enter leak monitor
@@ -1133,8 +1133,9 @@ void SymExecCore::varInit(TValId at)
 {
     if (ep_.trackUninit && VT_ON_STACK == sh_.valTarget(at)) {
         // uninitialized stack variable
+        const TObjId obj = sh_.objByAddr(at);
+        const TSizeRange size = sh_.objSize(obj);
         const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
-        const TSizeRange size = sh_.valSizeOfTarget(at);
         CL_BREAK_IF(!isSingular(size));
         sh_.writeUniformBlock(at, tpl, size.lo);
     }

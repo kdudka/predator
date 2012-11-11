@@ -163,7 +163,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
     }
 
     // create the object in 'dst'
-    const TSizeRange size = src.valSizeOfTarget(rootSrcAt);
+    const TSizeRange size = src.objSize(objSrc);
     const TObjId objDst = dst.heapAlloc(size);
     const TValId rootDstAt = dst.addrOfRegion(objDst);
 

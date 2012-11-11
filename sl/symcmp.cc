@@ -152,8 +152,8 @@ bool matchRoots(
     const TObjId obj1 = sh1.objByAddr(root1);
     const TObjId obj2 = sh2.objByAddr(root2);
 
-    const TSizeRange size1 = sh1.valSizeOfTarget(root1);
-    const TSizeRange size2 = sh2.valSizeOfTarget(root2);
+    const TSizeRange size1 = sh1.objSize(obj1);
+    const TSizeRange size2 = sh2.objSize(obj2);
     if (size1 != size2)
         // target size mismatch
         return false;

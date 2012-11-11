@@ -715,8 +715,11 @@ bool segMatchLookAhead(
     const TValId root1 = item.v1;
     const TValId root2 = item.v2;
 
-    const TSizeRange size1 = ctx.sh1.valSizeOfTarget(root1);
-    const TSizeRange size2 = ctx.sh2.valSizeOfTarget(root2);
+    const TObjId obj1 = ctx.sh1.objByAddr(root1);
+    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+
+    const TSizeRange size1 = ctx.sh1.objSize(obj1);
+    const TSizeRange size2 = ctx.sh2.objSize(obj2);
     if (size1 != size2)
         // size mismatch
         return false;
@@ -1045,20 +1048,26 @@ bool joinObjSize(
         const TValId            v1,
         const TValId            v2)
 {
+    CL_BREAK_IF(ctx.sh1.valOffset(v1));
+    CL_BREAK_IF(ctx.sh2.valOffset(v2));
+
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+
     if (VAL_INVALID == v1) {
-        *pDst = ctx.sh2.valSizeOfTarget(v2);
+        *pDst = ctx.sh2.objSize(obj2);
         return true;
     }
 
     if (VAL_INVALID == v2) {
-        *pDst = ctx.sh1.valSizeOfTarget(v1);
+        *pDst = ctx.sh1.objSize(obj1);
         return true;
     }
 
-    const TSizeRange size1 = ctx.sh1.valSizeOfTarget(v1);
-    const TSizeRange size2 = ctx.sh2.valSizeOfTarget(v2);
+    const TSizeRange size1 = ctx.sh1.objSize(obj1);
+    const TSizeRange size2 = ctx.sh2.objSize(obj2);
     if (size1 != size2) {
-        SJ_DEBUG("<-- object size mismatch " << SJ_VALP(v1, v2));
+        SJ_DEBUG("<-- object size mismatch " << SJ_OBJP(obj1, obj2));
         return false;
     }
 
