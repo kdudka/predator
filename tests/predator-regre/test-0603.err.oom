@@ -1,0 +1,16 @@
+test-0603.c:17:17: error: dereference of NULL value
+test-0603.c:39:17: note: from call of SLL_create()
+test-0603.c:34:5: note: from call of main()
+test-0603.c:17:17: error: dereference of NULL value
+test-0603.c:39:17: note: from call of SLL_create()
+test-0603.c:34:5: note: from call of main()
+test-0603.c:17:17: error: dereference of NULL value
+test-0603.c:39:17: note: from call of SLL_create()
+test-0603.c:34:5: note: from call of main()
+test-0603.c:17:17: error: dereference of NULL value
+test-0603.c:39:17: note: from call of SLL_create()
+test-0603.c:34:5: note: from call of main()
+test-0603.c:17:17: error: dereference of NULL value
+test-0603.c:39:17: note: from call of SLL_create()
+test-0603.c:34:5: note: from call of main()
+test-0603.c:44:19: error: dereference of NULL value

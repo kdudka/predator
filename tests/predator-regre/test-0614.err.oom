@@ -1,0 +1,9 @@
+test-0614.c:12:13: error: dereference of NULL value
+test-0614.c:43:7: note: from call of S_push()
+test-0614.c:40:5: note: from call of main()
+test-0614.c:12:13: error: dereference of NULL value
+test-0614.c:44:7: note: from call of S_push()
+test-0614.c:40:5: note: from call of main()
+test-0614.c:12:13: error: dereference of NULL value
+test-0614.c:45:7: note: from call of S_push()
+test-0614.c:40:5: note: from call of main()
