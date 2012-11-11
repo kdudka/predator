@@ -628,7 +628,6 @@ struct SymHeapCore::Private {
             const TSizeOf           sizeLimit = 0);
 
     TValId dupRoot(TValId root);
-    void destroyRoot(TValId fld);
 
     bool /* wasPtr */ releaseValueOf(TFldId fld, TValId val);
     void registerValueOf(TFldId fld, TValId val);
@@ -3466,15 +3465,6 @@ TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
     return reg;
 }
 
-void SymHeapCore::objInvalidate(TObjId obj)
-{
-    CL_BREAK_IF(!this->isValid(obj));
-
-    const Region *regData;
-    d->ents.getEntRO(&regData, obj);
-    d->destroyRoot(regData->rootAddr);
-}
-
 bool SymHeapCore::isValid(TObjId obj) const {
     if (OBJ_INVALID == obj)
         return false;
@@ -3555,7 +3545,7 @@ void SymHeapCore::objSetEstimatedType(TObjId obj, TObjType clt)
 
     if (OBJ_RETURN == obj) {
         // destroy any stale target of VAL_ADDR_OF_RET
-        d->destroyRoot(rootData->rootAddr);
+        this->objInvalidate(OBJ_RETURN);
 
         // reinitalize the OBJ_RETURN region
         rootData->isValid = true;
@@ -3573,29 +3563,25 @@ TObjType SymHeapCore::objEstimatedType(TObjId obj) const
     return regData->lastKnownClt;
 }
 
-void SymHeapCore::Private::destroyRoot(TValId root)
+void SymHeapCore::objInvalidate(TObjId obj)
 {
-    // jump to region
-    BaseAddress *rootValData;
-    this->ents.getEntRW(&rootValData, root);
-    const TObjId obj = rootValData->obj;
+    CL_BREAK_IF(OBJ_RETURN != obj && !this->isValid(obj));
 
     // mark the region as invalid
     Region *rootData;
-    this->ents.getEntRW(&rootData, obj);
-    CL_BREAK_IF(VAL_ADDR_OF_RET != root && !rootData->isValid);
+    d->ents.getEntRW(&rootData, obj);
     rootData->isValid = false;
 
     const CVar cv = rootData->cVar;
     if (cv.uid != /* heap object */ -1) {
         // remove the corresponding program variable
-        RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->cVarMap);
-        this->cVarMap->remove(cv);
+        RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cVarMap);
+        d->cVarMap->remove(cv);
     }
 
     // release the root
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveObjs);
-    this->liveObjs->erase(obj);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveObjs);
+    d->liveObjs->erase(obj);
 
     const TSizeRange size = rootData->size;
     if (IR::Int0 < size.hi) {
@@ -3605,7 +3591,7 @@ void SymHeapCore::Private::destroyRoot(TValId root)
         if (arenaLookup(&allObjs, rootData->arena, chunk, FLD_INVALID)) {
             // destroy all inner objects
             BOOST_FOREACH(const TFldId fld, allObjs)
-                this->fldDestroy(fld, /* removeVal */ true, /* detach */ false);
+                d->fldDestroy(fld, /* removeVal */ true, /* detach */ false);
         }
     }
 
