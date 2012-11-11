@@ -85,7 +85,7 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
     while (todo.next(val)) {
         // insert the value itself
         plot.values[val] = /* isRoot */ false;
-        if (!isPossibleToDeref(sh, val))
+        if (!isAnyDataArea(sh.valTarget(val)))
             // target is not an object
             continue;
 
@@ -327,6 +327,10 @@ void plotRootValue(PlotData &plot, const TValId val, const char *color)
     const TSizeRange size = sh.objSize(obj);
     const unsigned refCnt = sh.usedByCount(val);
 
+    const bool isValid = sh.isValid(sh.objByAddr(val));
+    if (!isValid)
+        color = "red";
+
 #if SYMPLOT_FLAT_MODE
     if (refCnt)
 #endif
@@ -339,12 +343,18 @@ void plotRootValue(PlotData &plot, const TValId val, const char *color)
             << ", fontcolor=" << color
             << ", label=\"";
 
-        const EStorageClass code = sh.objStorClass(sh.objByAddr(val));
+        const EStorageClass code = sh.objStorClass(obj);
         if (isProgramVar(code))
             describeVar(plot, val);
         else
             plot.out << "#" << val;
     }
+
+    if (!sh.isValid(obj))
+        plot.out << " [INVALID]";
+
+    if (OBJ_INVALID != obj)
+        plot.out << " [obj=#" << obj << "]";
 
 #if SYMPLOT_FLAT_MODE
     if (refCnt)
@@ -954,8 +964,6 @@ void plotValue(PlotData &plot, const TValId val)
     const char *color = "black";
     const char *suffix = 0;
 
-    const bool isValid = sh.isValid(sh.objByAddr(val));
-
     const EValueTarget code = sh.valTarget(val);
     switch (code) {
         case VT_CUSTOM:
@@ -963,15 +971,13 @@ void plotValue(PlotData &plot, const TValId val)
             return;
 
         case VT_OBJECT:
-            // TODO
+            CL_BREAK_IF("please implement");
+            // fall through!
 
         case VT_STATIC:
         case VT_ON_STACK:
-            if (isValid) {
-                color = "blue";
-                break;
-            }
-            // fall through!
+            color = "blue";
+            break;
 
         case VT_INVALID:
         case VT_COMPOSITE:
@@ -984,11 +990,6 @@ void plotValue(PlotData &plot, const TValId val)
             // fall through!
 
         case VT_ON_HEAP:
-            if (!isValid) {
-                color = "red";
-                break;
-            }
-
             if (isAbstractValue(sh, val))
                 color = "green";
 
@@ -1004,12 +1005,8 @@ preserve_suffix:
         << ", fontcolor=" << color
         << ", label=\"#" << val;
 
-    if (suffix) {
-        plot.out << " ";
-        if (isAnyDataArea(code) && !isValid)
-            plot.out << "FREED_";
-        plot.out << suffix;
-    }
+    if (suffix)
+        plot.out << " " << suffix;
 
     const TValId root = sh.valRoot(val);
 
@@ -1074,7 +1071,7 @@ void plotNonRootValues(PlotData &plot)
             plotRangePtr(plot, val, root, rng);
             continue;
         }
-        else if (!isPossibleToDeref(sh, val))
+        else if (!isAnyDataArea(sh.valTarget(val)))
             // no valid target
             continue;
 
@@ -1105,7 +1102,7 @@ void plotNonRootValues(PlotData &plot)
             continue;
 
         // plot a value node
-        CL_BREAK_IF(isPossibleToDeref(sh, val));
+        CL_BREAK_IF(isAnyDataArea(sh.valTarget(val)));
         plotValue(plot, val);
     }
 }
