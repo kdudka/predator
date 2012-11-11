@@ -63,10 +63,7 @@ enum EValueTarget {
     VT_CUSTOM,              ///< non-pointer data, classified by ECustomValue
     VT_OBJECT,              ///< target is a (possibly invalid) object
 
-    // TODO: drop these
-    VT_STATIC,              ///< target is static data
-    VT_ON_HEAP,             ///< target is on heap
-    VT_ON_STACK,            ///< target is on stack
+    // TODO: drop this?
     VT_RANGE                ///< an offset value where offset is given by range
 };
 

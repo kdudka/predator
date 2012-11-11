@@ -177,20 +177,20 @@ void describeUnknownVal(
         CL_BREAK_IF("valOrigin out of range?");
 }
 
-const char* describeRootObj(const EValueTarget code)
+const char* describeObj(const EStorageClass code)
 {
     switch (code) {
-        case VT_STATIC:
+        case SC_STATIC:
             return "a static variable";
 
-        case VT_ON_STACK:
+        case SC_ON_STACK:
             return "a variable on stack";
 
-        case VT_ON_HEAP:
+        case SC_ON_HEAP:
             return "a heap object";
 
         default:
-            CL_BREAK_IF("invalid call of describeRootObj()");
+            CL_BREAK_IF("unhandled storage class in describeObj()");
             return "a nonsense";
     }
 }
@@ -208,10 +208,10 @@ void reportDerefOutOfBounds(
             << "B out of bounds");
 
     // what is the root actually?
-    const EValueTarget code = sh.valTarget(val);
-    const char *const what = describeRootObj(code);
-
     const TObjId obj = sh.objByAddr(val);
+    const EStorageClass code = sh.objStorClass(obj);
+    const char *const what = describeObj(code);
+
     const TSizeRange rootSizeRange = sh.objSize(obj);
     const TSizeOf minRootSize = rootSizeRange.lo;
     CL_BREAK_IF(minRootSize <= 0);
@@ -277,23 +277,22 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
             return true;
 
         case VT_OBJECT:
-        case VT_STATIC:
-        case VT_ON_STACK:
-        case VT_ON_HEAP:
             break;
     }
 
-    if (!sh_.isValid(sh_.objByAddr(val))) {
-        switch (code) {
+    const TObjId obj = sh_.objByAddr(val);
+    if (!sh_.isValid(obj)) {
+        const EStorageClass sc = sh_.objStorClass(obj);
+        switch (sc) {
             default:
                 CL_BREAK_IF("checkForInvalidDeref() got something special");
                 // fall through!
 
-            case VT_ON_STACK:
+            case SC_ON_STACK:
                 CL_ERROR_MSG(lw_,"dereference of non-existing non-heap object");
                 break;
 
-            case VT_ON_HEAP:
+            case SC_ON_HEAP:
                 CL_ERROR_MSG(lw_, "dereference of already deleted heap object");
                 break;
         }
@@ -601,10 +600,10 @@ void digRootTypeInfo(SymHeap &sh, const FldHandle &lhs, TValId rhs)
     sh.objSetEstimatedType(rhsTarget, cltTarget);
 }
 
-void reportMemLeak(SymProc &proc, const EValueTarget code, const char *reason)
+void reportMemLeak(SymProc &proc, const EStorageClass code, const char *reason)
 {
     const struct cl_loc *loc = proc.lw();
-    const char *const what = describeRootObj(code);
+    const char *const what = describeObj(code);
     CL_WARN_MSG(loc, "memory leak detected while " << reason << "ing " << what);
     proc.printBackTrace(ML_WARN);
 }
@@ -749,7 +748,6 @@ void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
 
     SymHeap &sh = proc.sh();
     const TValId lhsAt = lhs.placedAt();
-    const EValueTarget codeLhs = sh.valTarget(lhsAt);
     CL_BREAK_IF(!isPossibleToDeref(sh, lhsAt));
 
     // generic prototype for a value encoder
@@ -777,8 +775,11 @@ void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
     TValSet killedPtrs;
     lhs.setValue(rhs, &killedPtrs);
 
-    if (lm.collectJunkFrom(killedPtrs))
+    if (lm.collectJunkFrom(killedPtrs)) {
+        const TObjId objLhs = sh.objByAddr(lhsAt);
+        const EStorageClass codeLhs = sh.objStorClass(objLhs);
         reportMemLeak(proc, codeLhs, "assign");
+    }
 
     lm.leave();
 }
@@ -831,9 +832,11 @@ void SymProc::valDestroyTarget(TValId addr)
     LeakMonitor lm(sh_);
     lm.enter();
 
-    const EValueTarget code = sh_.valTarget(addr);
-    if (/* leaking */ lm.destroyRoot(addr))
+    if (/* leaking */ lm.destroyRoot(addr)) {
+        const TObjId obj = sh_.objByAddr(addr);
+        const EStorageClass code = sh_.objStorClass(obj);
         reportMemLeak(*this, code, "destroy");
+    }
 
     lm.leave();
 }
@@ -1131,9 +1134,14 @@ void executeMemmove(
 // SymExecCore implementation
 void SymExecCore::varInit(TValId at)
 {
-    if (ep_.trackUninit && VT_ON_STACK == sh_.valTarget(at)) {
+    if (!ep_.trackUninit)
+        return;
+
+    const TObjId obj = sh_.objByAddr(at);
+
+    const EStorageClass code = sh_.objStorClass(obj);
+    if (SC_ON_STACK == code) {
         // uninitialized stack variable
-        const TObjId obj = sh_.objByAddr(at);
         const TSizeRange size = sh_.objSize(obj);
         const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
         CL_BREAK_IF(!isSingular(size));
@@ -1150,27 +1158,13 @@ void SymExecCore::execFree(TValId val)
         return;
     }
 
-    const bool hasValidTarget = sh_.isValid(sh_.objByAddr(val));
-
     const EValueTarget code = sh_.valTarget(val);
     switch (code) {
-        case VT_ON_STACK:
-            if (!hasValidTarget)
-                // this is going to be handled right away
-                break;
-            // fall through!
-
-        case VT_STATIC:
-            CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
-            this->printBackTrace(ML_ERROR);
-            return;
-
         case VT_CUSTOM:
             CL_ERROR_MSG(lw_, "free() called on non-pointer value");
             this->printBackTrace(ML_ERROR);
             return;
 
-        case VT_OBJECT:
         case VT_RANGE:
             CL_BREAK_IF("please implement");
             // fall through!
@@ -1189,26 +1183,40 @@ void SymExecCore::execFree(TValId val)
             this->printBackTrace(ML_ERROR);
             return;
 
-        case VT_ON_HEAP:
+        case VT_OBJECT:
             break;
     }
 
-    if (!hasValidTarget) {
-        switch (code) {
-            default:
-                CL_BREAK_IF("execFree() got something special");
-                // fall through
+    const TObjId obj = sh_.objByAddr(val);
+    const bool hasValidTarget = sh_.isValid(obj);
 
-            case VT_ON_STACK:
+    const EStorageClass sc = sh_.objStorClass(obj);
+    switch (sc) {
+        case SC_ON_HEAP:
+            break;
+
+        default:
+            CL_BREAK_IF("execFree() got something special");
+            // fall through
+
+        case SC_ON_STACK:
+            if (!hasValidTarget) {
                 CL_ERROR_MSG(lw_, "attempt to free a non-existing non-heap object");
                 this->printBackTrace(ML_ERROR);
                 return;
+            }
+            // fall through!
 
-            case VT_ON_HEAP:
-                CL_ERROR_MSG(lw_, "double free()");
-                this->printBackTrace(ML_ERROR);
-                return;
-        }
+        case SC_STATIC:
+            CL_ERROR_MSG(lw_, "attempt to free a non-heap object");
+            this->printBackTrace(ML_ERROR);
+            return;
+    }
+
+    if (!hasValidTarget) {
+        CL_ERROR_MSG(lw_, "double free()");
+        this->printBackTrace(ML_ERROR);
+        return;
     }
 
     const TOffset off = sh_.valOffset(val);

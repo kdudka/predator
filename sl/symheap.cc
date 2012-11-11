@@ -1334,9 +1334,6 @@ TValId SymHeapCore::Private::valCreate(
             val = this->assignId(new InternalCustomValue(code, origin));
             break;
 
-        case VT_STATIC:
-        case VT_ON_STACK:
-        case VT_ON_HEAP:
         case VT_RANGE:
             CL_BREAK_IF("invalid call of SymHeapCore::Private::valCreate()");
             // fall through!
@@ -2728,22 +2725,7 @@ EValueTarget SymHeapCore::valTarget(TValId val) const
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
-
-    const EValueTarget code = valData->code;
-    if (VT_OBJECT != code)
-        return code;
-
-    // TODO: drop this
-    const TObjId obj = this->objByAddr(val);
-    const EStorageClass sc = this->objStorClass(obj);
-    switch (sc) {
-        case SC_STATIC:     return VT_STATIC;
-        case SC_ON_HEAP:    return VT_ON_HEAP;
-        case SC_ON_STACK:   return VT_ON_STACK;
-        default:
-            CL_BREAK_IF("unhandled storage class in valTarget()");
-            return VT_INVALID;
-    }
+    return valData->code;
 }
 
 bool isUninitialized(EValueOrigin code)
@@ -2778,14 +2760,8 @@ bool isProgramVar(EStorageClass code)
 bool isAnyDataArea(EValueTarget code)
 {
     switch (code) {
-        // TODO: drop these
-        case VT_STATIC:
-        case VT_ON_STACK:
-        case VT_ON_HEAP:
-        case VT_RANGE:
-        // fall through!
-
         case VT_OBJECT:
+        case VT_RANGE:
             return true;
 
         default:

@@ -470,10 +470,11 @@ bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
 
     // cppcheck-suppress unreachableCode
     if (lonely) {
-        const EValueTarget code = sh.valTarget(at);
+        const TObjId obj = sh.objByAddr(at);
+        const EStorageClass code = sh.objStorClass(obj);
         switch (code) {
-            case VT_STATIC:
-            case VT_ON_STACK:
+            case SC_STATIC:
+            case SC_ON_STACK:
                 color = "blue";
                 break;
 
@@ -666,22 +667,22 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
     const char *color = "black";
     const char *pw = "1.0";
 
-    const EValueTarget code = sh.valTarget(at);
+    const TObjId obj = sh.objByAddr(at);
+
+    const EStorageClass code = sh.objStorClass(obj);
     switch (code) {
-        case VT_STATIC:
-        case VT_ON_STACK:
+        case SC_STATIC:
+        case SC_ON_STACK:
             color = "blue";
             break;
 
-        case VT_ON_HEAP:
+        case SC_ON_HEAP:
             break;
 
         default:
-            CL_BREAK_IF("plotCompositeObj() got invalid root object");
+            CL_BREAK_IF("unhandled storage class in plotCompositeObj()");
             return;
     }
-
-    const TObjId obj = sh.objByAddr(at);
 
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
@@ -845,9 +846,6 @@ const char* labelByTarget(const EValueTarget code)
         GEN_labelByCode(VT_COMPOSITE);
         GEN_labelByCode(VT_CUSTOM);
         GEN_labelByCode(VT_OBJECT);
-        GEN_labelByCode(VT_STATIC);
-        GEN_labelByCode(VT_ON_STACK);
-        GEN_labelByCode(VT_ON_HEAP);
         GEN_labelByCode(VT_RANGE);
     }
 
@@ -964,6 +962,9 @@ void plotValue(PlotData &plot, const TValId val)
     const char *color = "black";
     const char *suffix = 0;
 
+    const TObjId obj = sh.objByAddr(val);
+    const EStorageClass sc = sh.objStorClass(obj);
+
     const EValueTarget code = sh.valTarget(val);
     switch (code) {
         case VT_CUSTOM:
@@ -971,12 +972,6 @@ void plotValue(PlotData &plot, const TValId val)
             return;
 
         case VT_OBJECT:
-            CL_BREAK_IF("please implement");
-            // fall through!
-
-        case VT_STATIC:
-        case VT_ON_STACK:
-            color = "blue";
             break;
 
         case VT_INVALID:
@@ -988,8 +983,21 @@ void plotValue(PlotData &plot, const TValId val)
         case VT_UNKNOWN:
             suffix = labelByOrigin(sh.valOrigin(val));
             // fall through!
+            goto preserve_suffix;
+    }
 
-        case VT_ON_HEAP:
+    switch (sc) {
+        case SC_INVALID:
+        case SC_UNKNOWN:
+            color = "red";
+            break;
+
+        case SC_STATIC:
+        case SC_ON_STACK:
+            color = "blue";
+            break;
+
+        case SC_ON_HEAP:
             if (isAbstractValue(sh, val))
                 color = "green";
 
