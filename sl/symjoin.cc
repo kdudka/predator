@@ -2485,10 +2485,10 @@ TValId joinDstValue(
     const TValId valRootDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], root2);
 
     // translate the offsets into 'dst'
-    const TOffset off1 = ctx.sh1.valOffset(v1);
-    const TOffset off2 = ctx.sh2.valOffset(v2);
-    const TValId vDstBy1 = ctx.dst.valByOffset(valRootDstBy1, off1);
-    const TValId vDstBy2 = ctx.dst.valByOffset(valRootDstBy2, off2);
+    const IR::Range off1 = ctx.sh1.valOffsetRange(v1);
+    const IR::Range off2 = ctx.sh2.valOffsetRange(v2);
+    const TValId vDstBy1 = ctx.dst.valByRange(valRootDstBy1, off1);
+    const TValId vDstBy2 = ctx.dst.valByRange(valRootDstBy2, off2);
     if (vDstBy1 == vDstBy2)
         // the values are equal --> pick any
         return vDstBy1;

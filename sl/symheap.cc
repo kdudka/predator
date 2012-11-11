@@ -2496,10 +2496,8 @@ TValId SymHeapCore::valByOffset(TValId at, TOffset off)
 
 TValId SymHeapCore::valByRange(TValId at, IR::Range range)
 {
-    if (isSingular(range)) {
-        CL_DEBUG("valByRange() got a singular range, passing to valByOffset()");
+    if (isSingular(range))
         return this->valByOffset(at, range.lo);
-    }
 
     if (VAL_NULL == at || isAddressToFreedObj(*this, at))
         return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
@@ -2878,12 +2876,25 @@ TOffset SymHeapCore::valOffset(TValId val) const
 
 IR::Range SymHeapCore::valOffsetRange(TValId val) const
 {
+    if (val < VAL_NULL)
+        return IR::rngFromNum(IR::Int0);
+
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
 
-    if (VT_RANGE != valData->code)
-        // this is going to be a singular range
-        return IR::rngFromNum(valData->offRoot);
+    const EValueTarget code = valData->code;
+    switch (code) {
+        case VT_RANGE:
+            break;
+
+        case VT_CUSTOM:
+            // FIXME: valData->offRoot is used internally for unrelated purposes
+            return IR::rngFromNum(IR::Int0);
+
+        default:
+            // this is going to be a singular range
+            return IR::rngFromNum(valData->offRoot);
+    }
 
     const TValId anchor = valData->anchor;
     if (anchor == val) {
