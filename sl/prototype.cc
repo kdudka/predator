@@ -74,7 +74,7 @@ bool ProtoCollector::operator()(const FldHandle &fld)
         return /* continue */ true;
 
     SymHeap &sh = *static_cast<SymHeap *>(fld.sh());
-    if (!isPossibleToDeref(sh, val))
+    if (!isAnyDataArea(sh.valTarget(val)))
         return /* continue */ true;
 
     // check if we point to prototype, or shared data

@@ -611,7 +611,6 @@ struct SymHeapCore::Private {
     inline TObjId assignId(Region *);
 
     TValId valCreate(EValueTarget code, EValueOrigin origin);
-    TValId createInvalidObject(EValueTarget code, EValueOrigin origin);
     TValId valDup(TValId);
     bool valsEqual(TValId, TValId);
 
@@ -850,7 +849,7 @@ bool SymHeapCore::Private::chkArenaConsistency(
 
     if (!rootData->isValid)
         // invalid objects ... just check there are no outgoing has-value edges
-        return !rootData->liveFields.empty();
+        return rootData->liveFields.empty();
 
     std::set<TOffset> offs;
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveFields) {
@@ -1350,40 +1349,6 @@ TValId SymHeapCore::Private::valCreate(
     return val;
 }
 
-EStorageClass storClassByCode(const EValueTarget code)
-{
-    switch (code) {
-        case VT_STATIC:     return SC_STATIC;
-        case VT_ON_STACK:   return SC_ON_STACK;
-        case VT_ON_HEAP:    return SC_ON_HEAP;
-        default:
-            CL_BREAK_IF("failed to determinate storage class");
-            return SC_INVALID;
-    }
-}
-
-TValId /* addr */ SymHeapCore::Private::createInvalidObject(
-        EValueTarget                code,
-        EValueOrigin                origin)
-{
-    // assign an address
-    const TValId addr = this->valCreate(VT_OBJECT, origin);
-    BaseAddress *rootAddrData;
-    this->ents.getEntRW(&rootAddrData, addr);
-
-    // create an invalid object
-    const TObjId reg = this->assignId(new Region(storClassByCode(code)));
-    Region *rootData;
-    this->ents.getEntRW(&rootData, reg);
-    rootData->isValid = false;
-
-    // inter-connect the object and its address
-    rootData->rootAddr = addr;
-    rootAddrData->obj = reg;
-
-    return addr;
-}
-
 TValId SymHeapCore::Private::valDup(TValId val)
 {
     if (val <= 0)
@@ -1714,7 +1679,6 @@ void SymHeapCore::pointedBy(FldList &dst, TObjId obj) const
 {
     const Region *regData;
     d->ents.getEntRO(&regData, obj);
-    CL_BREAK_IF(!isPossibleToDeref(*this, regData->rootAddr));
 
     const TFldIdSet &usedBy = regData->usedByGl;
     BOOST_FOREACH(const TFldId fld, usedBy)
@@ -1763,7 +1727,7 @@ TValId SymHeapCore::valClone(TValId val)
         return this->valByRange(valData->valRoot, range);
     }
 
-    if (!isPossibleToDeref(*this, val))
+    if (!isAnyDataArea(code))
         // duplicate an unknown value
         return d->valDup(val);
 
@@ -1849,10 +1813,13 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
     rootDataDst->cVar               = rootDataSrc->cVar;
     rootDataDst->size               = rootDataSrc->size;
     rootDataDst->lastKnownClt       = rootDataSrc->lastKnownClt;
+    rootDataDst->isValid            = rootDataSrc->isValid;
     rootDataDst->protoLevel         = rootDataSrc->protoLevel;
 
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveObjs);
-    this->liveObjs->insert(reg);
+    if (rootDataDst->isValid) {
+        RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveObjs);
+        this->liveObjs->insert(reg);
+    }
 
     BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveFields)
         this->copySingleLiveBlock(imageAt, rootDataDst,
@@ -3341,8 +3308,8 @@ TObjId SymHeapCore::regionByVar(CVar cv, bool createIfNeeded)
     d->ents.getEntRW(&rootAddrData, addr);
 
     // create an object
-    const EValueTarget code = isOnStack(var) ? VT_ON_STACK : VT_STATIC;
-    const TObjId reg = d->assignId(new Region(storClassByCode(code)));
+    const EStorageClass code = isOnStack(var) ? SC_ON_STACK : SC_STATIC;
+    const TObjId reg = d->assignId(new Region(code));
     Region *rootData;
     d->ents.getEntRW(&rootData, reg);
 
@@ -3448,7 +3415,7 @@ TValId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
 
 TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
 {
-    CL_BREAK_IF(size.lo <= IR::Int0);
+    CL_BREAK_IF(size.lo < IR::Int0);
 
     // assign an address
     const TValId addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
@@ -3597,11 +3564,6 @@ void SymHeapCore::objInvalidate(TObjId obj)
 TValId SymHeapCore::valCreate(EValueTarget code, EValueOrigin origin)
 {
     switch (code) {
-        case VT_ON_HEAP:
-        case VT_ON_STACK:
-            // valCreate() never creates a valid target object
-            return d->createInvalidObject(code, origin);
-
         default:
             CL_BREAK_IF("invalid call of SymHeapCore::valCreate()");
             // fall through!

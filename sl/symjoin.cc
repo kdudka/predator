@@ -1097,24 +1097,45 @@ TMinLen joinMinLength(
     return len1;
 }
 
+bool joinObjValidity(
+        bool                    *pDst,
+        SymJoinCtx              &ctx,
+        const TObjId             obj1,
+        const TObjId             obj2)
+{
+    if (OBJ_INVALID == obj1) {
+        *pDst = ctx.sh2.isValid(obj2);
+        return true;
+    }
+
+    if (OBJ_INVALID == obj2) {
+        *pDst = ctx.sh1.isValid(obj1);
+        return true;
+    }
+
+    const bool valid1 = ctx.sh1.isValid(obj1);
+    const bool valid2 = ctx.sh2.isValid(obj2);
+    if (valid1 != valid2) {
+        SJ_DEBUG("<-- object validity mismatch " << SJ_OBJP(obj1, obj2));
+        return false;
+    }
+
+    *pDst = valid1;
+    return true;
+}
+
 bool joinObjSize(
         TSizeRange              *pDst,
         SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2)
+        const TObjId             obj1,
+        const TObjId             obj2)
 {
-    CL_BREAK_IF(ctx.sh1.valOffset(v1));
-    CL_BREAK_IF(ctx.sh2.valOffset(v2));
-
-    const TObjId obj1 = ctx.sh1.objByAddr(v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(v2);
-
-    if (VAL_INVALID == v1) {
+    if (OBJ_INVALID == obj1) {
         *pDst = ctx.sh2.objSize(obj2);
         return true;
     }
 
-    if (VAL_INVALID == v2) {
+    if (OBJ_INVALID == obj2) {
         *pDst = ctx.sh1.objSize(obj1);
         return true;
     }
@@ -1251,6 +1272,13 @@ bool createObject(
     const TValId root1 = item.v1;
     const TValId root2 = item.v2;
 
+    const TObjId obj1 = ctx.sh1.objByAddr(root1);
+    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+
+    bool valid;
+    if (!joinObjValidity(&valid, ctx, obj1, obj2))
+        return false;
+
     EObjKind kind;
     if (!joinObjKind(&kind, ctx, root1, root2, action))
         return false;
@@ -1279,7 +1307,7 @@ bool createObject(
     }
 
     TSizeRange size;
-    if (!joinObjSize(&size, ctx, root1, root2))
+    if (!joinObjSize(&size, ctx, obj1, obj2))
         return false;
 
     if (!updateJoinStatus(ctx, action))
@@ -1289,8 +1317,6 @@ bool createObject(
     const TObjId objDst = ctx.dst.heapAlloc(size);
     const TValId rootDst = ctx.dst.addrOfRegion(objDst);
 
-    const TObjId obj1 = ctx.sh1.objByAddr(root1);
-    const TObjId obj2 = ctx.sh2.objByAddr(root2);
     if (!joinUniBlocks(ctx, rootDst, obj1, obj2))
         // failed to complement uniform blocks
         return false;
@@ -1298,6 +1324,10 @@ bool createObject(
     if (clt)
         // preserve estimated type-info of the root
         ctx.dst.objSetEstimatedType(objDst, clt);
+
+    if (!valid)
+        // mark the object as invalid
+        ctx.dst.objInvalidate(objDst);
 
     // preserve 'prototype' flag
     ctx.dst.objSetProtoLevel(objDst, protoLevel);
@@ -1705,7 +1735,7 @@ bool segmentCloneCore(
         const EJoinStatus           action,
         const BindingOff            *off)
 {
-    if (!isPossibleToDeref(shGt, valGt))
+    if (!isAnyDataArea(shGt.valTarget(valGt)))
         // not valid target
         return false;
 
@@ -1900,13 +1930,13 @@ bool insertSegmentClone(
             // OK_SEE_THROUGH/OK_OBJ_OR_NULL is applicable only on the first fld
             off = 0;
 
-        if (isPossibleToDeref(shGt, valGt)) {
+        const EValueTarget code = shGt.valTarget(valGt);
+        if (isAnyDataArea(code)) {
             if (segmentCloneCore(ctx, shGt, valGt, valMapGt, cloneItem.ldiff,
                         action, off))
                 continue;
         }
         else {
-            const EValueTarget code = shGt.valTarget(valGt);
             if (cloneSpecialValue(ctx, shGt, valGt, valMapGt, cloneItem, code))
                 continue;
         }
@@ -2298,27 +2328,6 @@ bool joinValuesByCode(
     if (VT_RANGE == code1 || VT_RANGE == code2)
         // these have to be handled in followValuePair()
         return false;
-
-    const TOffset off1 = ctx.sh1.valOffset(v1);
-    const TOffset off2 = ctx.sh2.valOffset(v2);
-
-    // check for VT_DELETED/VT_LOST
-    const bool gone1 = isAddressToFreedObj(ctx.sh1, v1)
-        || /* FIXME: misleading */ (off1 && VAL_NULL == ctx.sh1.valRoot(v1));
-    const bool gone2 = isAddressToFreedObj(ctx.sh2, v2)
-        || /* FIXME: misleading */ (off2 && VAL_NULL == ctx.sh2.valRoot(v2));
-
-    if (gone1 || gone2) {
-        if (code1 == code2 && off1 == off2) {
-            const TValId vDstRoot = ctx.dst.valCreate(code1, VO_ASSIGNED);
-            const TValId vDst = ctx.dst.valByOffset(vDstRoot, off1);
-            *pResult = handleUnknownValues(ctx, v1, v2, vDst);
-        }
-        else
-            *pResult = false;
-
-        return true;
-    }
 
     // check for VT_UNKNOWN
     const bool isUnknown1 = (VT_UNKNOWN == code1);
@@ -2930,12 +2939,15 @@ bool joinDataCore(
     CL_BREAK_IF(!ctx.joiningData());
     SymHeap &sh = ctx.sh1;
 
-    TSizeRange size;
-    if (!joinObjSize(&size, ctx, addr1, addr2))
-        return false;
+    CL_BREAK_IF(sh.valOffset(addr1) || sh.valOffset(addr2));
 
     const TObjId obj1 = sh.objByAddr(addr1);
     const TObjId obj2 = sh.objByAddr(addr2);
+    CL_BREAK_IF(!sh.isValid(obj1) || !sh.isValid(obj2));
+
+    TSizeRange size;
+    if (!joinObjSize(&size, ctx, obj1, obj2))
+        return false;
 
     // start with the given pair of objects and create a ghost object for them
     // create an image in ctx.dst

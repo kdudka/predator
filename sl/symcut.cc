@@ -139,6 +139,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
     SymHeap &dst = dc.dst;
 
     const TObjId objSrc = src.objByAddr(rootSrcAt);
+    const bool valid = src.isValid(objSrc);
 
     CVar cv;
     if (isProgramVar(src.objStorClass(objSrc))) {
@@ -149,13 +150,19 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
         const size_t orig = dc.cut.size();
 #endif
         // enlarge the cut if needed
-        dc.cut.insert(cv);
+        if (valid) {
+            dc.cut.insert(cv);
 #if DEBUG_SYMCUT
-        if (dc.cut.size() != orig)
-            CL_DEBUG("addObjectIfNeeded() is enlarging the cut by cVar #"
-                    << cv.uid << ", nestlevel = " << cv.inst);
+            if (dc.cut.size() != orig)
+                CL_DEBUG("addObjectIfNeeded() is enlarging the cut by cVar #"
+                        << cv.uid << ", nestlevel = " << cv.inst);
 #endif
+        }
+
         const TObjId regDst = dst.regionByVar(cv, /* createIfNeeded */ true);
+        if (!valid)
+            dst.objInvalidate(regDst);
+
         const TValId rootDstAt = dst.addrOfRegion(regDst);
         dc.valMap[rootSrcAt] = rootDstAt;
         digSubObjs(dc, rootSrcAt, rootDstAt);
@@ -165,6 +172,9 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
     // create the object in 'dst'
     const TSizeRange size = src.objSize(objSrc);
     const TObjId objDst = dst.heapAlloc(size);
+    if (!valid)
+        dst.objInvalidate(objDst);
+
     const TValId rootDstAt = dst.addrOfRegion(objDst);
 
     // preserve type-info if known
@@ -289,8 +299,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc)
         // custom value, e.g. fnc pointer
         return handleCustomValue(dc, valSrc);
 
-    const TObjId objSrc = src.objByAddr(valSrc);
-    if (src.isValid(objSrc) || VAL_NULL == src.valRoot(valSrc))
+    if (isAnyDataArea(code) || VAL_NULL == src.valRoot(valSrc))
         // create the target object, if it does not exist already
         return handleValueCore(dc, valSrc);
 
@@ -444,8 +453,7 @@ void splitHeapByCVars(
         plotHeap(*srcDst,         "cut-input");
         plotHeap( dst,            "cut-output");
         plotHeap(*saveFrameTo,    "cut-frame");
-        CL_NOTE("symcut: plot done, please consider analyzing the results");
-        CL_TRAP;
+        CL_BREAK_IF("symcut: plot done, please consider analyzing the results");
     }
 #endif
 
