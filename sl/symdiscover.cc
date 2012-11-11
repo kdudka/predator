@@ -253,8 +253,8 @@ TValId jumpToNextObj(
         return VAL_INVALID;
 
     const TObjId next = sh.objByAddr(nextHead);
-    if (!isOnHeap(sh.objStorClass(next)))
-        // only objects on heap can be abstracted out
+    if (!sh.isValid(next) || !isOnHeap(sh.objStorClass(next)))
+        // only objects on heap can be abstracted for now
         return VAL_INVALID;
 
     const TValId nextAt = sh.valRoot(nextHead);

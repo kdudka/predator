@@ -848,13 +848,9 @@ bool SymHeapCore::Private::chkArenaConsistency(
     const Region *rootData;
     this->ents.getEntRO(&rootData, rootValData->obj);
 
-    if (!rootData->isValid) {
-        CL_BREAK_IF(IR::rngFromNum(IR::Int0) != rootData->size);
-        CL_BREAK_IF(!rootData->liveFields.empty());
-
-        // we can check nothing for VT_DELETED/VT_LOST, we do not know the size
-        return true;
-    }
+    if (!rootData->isValid)
+        // invalid objects ... just check there are no outgoing has-value edges
+        return !rootData->liveFields.empty();
 
     std::set<TOffset> offs;
     BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveFields) {
@@ -2267,6 +2263,7 @@ bool SymHeapCore::Private::findZeroAtOff(
     // jump to region
     const Region *rootData;
     this->ents.getEntRO(&rootData, rootValData->obj);
+    CL_BREAK_IF(!rootData->isValid);
 
     const TArena &arena = rootData->arena;
     const TSizeOf limit = rootData->size.hi;
@@ -3110,6 +3107,7 @@ TFldId SymHeapCore::Private::fieldAt(
     // jump to region
     const Region *rootData;
     this->ents.getEntRO(&rootData, rootValData->obj);
+    CL_BREAK_IF(!rootData->isValid);
 
     if (rootData->size.lo < valData->offRoot + size) {
         CL_BREAK_IF("fieldAt() called out of bounds");
@@ -3554,6 +3552,9 @@ void SymHeapCore::objInvalidate(TObjId obj)
     d->ents.getEntRW(&rootData, obj);
     rootData->isValid = false;
 
+    if (OBJ_RETURN == obj)
+        rootData->lastKnownClt = 0;
+
     const CVar cv = rootData->cVar;
     if (cv.uid != /* heap object */ -1) {
         // remove the corresponding program variable
@@ -3577,9 +3578,7 @@ void SymHeapCore::objInvalidate(TObjId obj)
         }
     }
 
-    // wipe rootData
-    rootData->size = IR::rngFromNum(IR::Int0);
-    rootData->lastKnownClt = 0;
+    // drop all outgoing has-value edges
     rootData->liveFields.clear();
     rootData->arena.clear();
 }
