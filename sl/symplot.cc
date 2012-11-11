@@ -271,7 +271,7 @@ void describeObject(PlotData &plot, const FldHandle &fld, const bool lonely)
     // check root
     const TValId at = fld.placedAt();
     const TValId root = sh.valRoot(at);
-    const EValueTarget code = sh.valTarget(at);
+    const EStorageClass code = sh.objStorClass(sh.objByAddr(at));
 
     const char *tag = "";
     if (lonely && isProgramVar(code)) {
@@ -337,7 +337,7 @@ void plotRootValue(PlotData &plot, const TValId val, const char *color)
             << ", fontcolor=" << color
             << ", label=\"";
 
-        const EValueTarget code = sh.valTarget(val);
+        const EStorageClass code = sh.objStorClass(sh.objByAddr(val));
         if (isProgramVar(code))
             describeVar(plot, val);
         else
@@ -1473,7 +1473,13 @@ bool plotHeap(
         const std::string               &name,
         const struct cl_loc             *loc)
 {
+    TObjList allObjs;
+    sh.gatherObjects(allObjs);
+
+    // TODO: drop this!
     TValList roots;
-    sh.gatherRootObjects(roots);
+    BOOST_FOREACH(const TObjId obj, allObjs)
+        roots.push_back(sh.legacyAddrOfAny_XXX(obj));
+
     return plotHeap(sh, name, loc, roots);
 }

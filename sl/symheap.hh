@@ -70,6 +70,9 @@ enum EValueTarget {
     VT_RANGE                ///< an offset value where offset is given by range
 };
 
+/// TODO: drop this!
+bool isAnyDataArea(EValueTarget);
+
 /// classification of the storage class for objects
 enum EStorageClass {
     SC_INVALID,             ///< reserved for signalling error states
@@ -79,14 +82,11 @@ enum EStorageClass {
     SC_ON_STACK             ///< safely allocated on stack except for 0+ objects
 };
 
-/// true for VT_ON_HEAP
-bool isOnHeap(EValueTarget);
+/// true for SC_ON_HEAP
+bool isOnHeap(EStorageClass);
 
-/// true for VT_STATIC and VT_ON_STACK
-bool isProgramVar(EValueTarget);
-
-/// true for VT_STATIC, VT_ON_STACK, VT_ON_HEAP, and VT_RANGE
-bool isAnyDataArea(EValueTarget);
+/// true for SC_STATIC and SC_ON_STACK
+bool isProgramVar(EStorageClass);
 
 /// enumeration of custom values, such as integer literals, or code pointers
 enum ECustomValue {
@@ -438,6 +438,9 @@ class SymHeapCore {
         /// return the base address of the given region (create a new if needed)
         virtual TValId addrOfRegion(TObjId reg);
 
+        /// TODO: drop this!
+        TValId legacyAddrOfAny_XXX(TObjId) const;
+
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;
 
@@ -469,8 +472,8 @@ class SymHeapCore {
         /// replace all occurrences of val by replaceBy
         virtual void valReplace(TValId val, TValId replaceBy);
 
-        /// list of root heap entities satisfying the given filtering predicate
-        void gatherRootObjects(TValList &dst, bool (*)(EValueTarget) = 0) const;
+        /// return the list of objects satisfying the given filtering predicate
+        void gatherObjects(TObjList &dst, bool (*)(EStorageClass) = 0) const;
 
         /// list of live fields (including ptrs) inside the given object
         void gatherLiveFields(FldList &dst, TObjId) const;

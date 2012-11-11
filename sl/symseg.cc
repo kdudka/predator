@@ -285,13 +285,15 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
 
 bool dlSegCheckConsistency(const SymHeap &sh)
 {
-    TValList addrs;
-    sh.gatherRootObjects(addrs, isOnHeap);
-    BOOST_FOREACH(const TValId at, addrs) {
-        const TObjId seg = sh.objByAddr(at);
+    TObjList objs;
+    sh.gatherObjects(objs, isOnHeap);
+    BOOST_FOREACH(const TObjId seg, objs) {
         if (OK_DLS != sh.objKind(seg))
             // we are interested in OK_DLS here
             continue;
+
+        // TODO: drop this!
+        const TValId at = sh.legacyAddrOfAny_XXX(seg);
 
         if (at <= VAL_NULL) {
             CL_ERROR("OK_DLS with invalid address detected");

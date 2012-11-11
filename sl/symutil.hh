@@ -250,14 +250,12 @@ void gatherProgramVarsCore(
         const SymHeap           &sh,
         TInserter               ins)
 {
-    TValList live;
-    sh.gatherRootObjects(live, isProgramVar);
+    TObjList vars;
+    sh.gatherObjects(vars, isProgramVar);
 
-    BOOST_FOREACH(const TValId root, live) {
-        if (VAL_ADDR_OF_RET == root)
+    BOOST_FOREACH(const TObjId obj, vars) {
+        if (OBJ_RETURN == obj)
             continue;
-
-        const TObjId obj = sh.objByAddr(root);
 
         (dst.*ins)(sh.cVarByObject(obj));
     }
@@ -469,13 +467,12 @@ bool /* complete */ traverseProgramVarsGeneric(
     for (unsigned i = /* src1 */ 1 + N_DST; i < N_TOTAL; ++i) {
         const SymHeap &sh = *heaps[i];
 
-        TValList live;
-        sh.gatherRootObjects(live, isProgramVar);
-        BOOST_FOREACH(const TValId root, live) {
-            if (VAL_ADDR_OF_RET == root)
+        TObjList live;
+        sh.gatherObjects(live, isProgramVar);
+        BOOST_FOREACH(const TObjId obj, live) {
+            if (OBJ_RETURN == obj)
                 continue;
 
-            const TObjId obj = sh.objByAddr(root);
             const CVar cv(sh.cVarByObject(obj));
             if (!insertOnce(all, cv))
                 continue;

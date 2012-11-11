@@ -250,22 +250,23 @@ TValId jumpToNextObj(
         // no valid head pointed by nextPtr
         return VAL_INVALID;
 
-    const TValId next = sh.valRoot(nextHead);
-    if (!isOnHeap(sh.valTarget(next)))
+    const TObjId next = sh.objByAddr(nextHead);
+    if (!isOnHeap(sh.objStorClass(next)))
         // only objects on heap can be abstracted out
         return VAL_INVALID;
 
-    if (!matchSegBinding(sh, next, off))
+    const TValId nextAt = sh.valRoot(nextHead);
+    if (!matchSegBinding(sh, nextAt, off))
         // binding mismatch
         return VAL_INVALID;
 
-    if (sh.valSizeOfTarget(at) != sh.valSizeOfTarget(next))
+    if (sh.valSizeOfTarget(at) != sh.valSizeOfTarget(nextAt))
         // mismatch in size of targets
         return VAL_INVALID;
 
     const TObjType clt = sh.objEstimatedType(sh.objByAddr(at));
     if (clt) {
-        const TObjType cltNext = sh.objEstimatedType(sh.objByAddr(next));
+        const TObjType cltNext = sh.objEstimatedType(next);
         if (cltNext && *cltNext != *clt)
             // both roots are (kind of) type-aware, but the types differ
             return VAL_INVALID;
@@ -275,7 +276,7 @@ TValId jumpToNextObj(
     if (isDls) {
         // check DLS back-link
         const TValId headAt = sh.valByOffset(at, off.head);
-        const TValId valPrev = valOfPtrAt(sh, next, off.prev);
+        const TValId valPrev = valOfPtrAt(sh, nextAt, off.prev);
         if (headAt != valPrev)
             // DLS back-link mismatch
             return VAL_INVALID;
@@ -284,17 +285,17 @@ TValId jumpToNextObj(
     if (dlSegOnPath && !validatePointingObjects(sh, off,
                 /* root */ at,
                 /* prev */ at,
-                /* next */ next,
+                /* next */ nextAt,
                 protoRoots))
         // never step over a peer object that is pointed from outside!
         return VAL_INVALID;
 
     // check if valNext inside the 'next' object is at least VAL_NULL
     // (otherwise we are not able to construct Neq edges to express its length)
-    if (valOfPtrAt(sh, next, off.next) < 0)
+    if (valOfPtrAt(sh, nextAt, off.next) < 0)
         return VAL_INVALID;
 
-    return next;
+    return nextAt;
 }
 
 bool isPointedByVar(SymHeap &sh, const TValId root)
@@ -304,8 +305,8 @@ bool isPointedByVar(SymHeap &sh, const TValId root)
     FldList refs;
     sh.pointedBy(refs, obj);
     BOOST_FOREACH(const FldHandle fld, refs) {
-        const TValId at = fld.placedAt();
-        const EValueTarget code = sh.valTarget(at);
+        const TObjId sub = sh.objByAddr(fld.placedAt());
+        const EStorageClass code = sh.objStorClass(sub);
         if (isProgramVar(code))
             return true;
     }
@@ -649,13 +650,16 @@ unsigned /* len */ discoverBestAbstraction(
     TSegCandidateList candidates;
 
     // go through all potential segment entries
-    TValList addrs;
-    sh.gatherRootObjects(addrs, isOnHeap);
-    BOOST_FOREACH(const TValId at, addrs) {
+    TObjList heapObjs;
+    sh.gatherObjects(heapObjs, isOnHeap);
+    BOOST_FOREACH(const TObjId obj, heapObjs) {
+        // TODO: drop this!
+        const TValId at = sh.legacyAddrOfAny_XXX(obj);
+
         // use ProbeEntryVisitor visitor to validate the potential segment entry
         SegCandidate segc;
         const ProbeEntryVisitor visitor(segc.offList, at);
-        traverseLivePtrs(sh, sh.objByAddr(at), visitor);
+        traverseLivePtrs(sh, obj, visitor);
         if (segc.offList.empty())
             // found nothing
             continue;

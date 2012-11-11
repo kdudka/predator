@@ -1747,7 +1747,9 @@ TValId SymHeapCore::valClone(TValId val)
         return val;
     }
 
-    if (isProgramVar(code)) {
+    if (VT_OBJECT == code && (isProgramVar(
+                    this->objStorClass(this->objByAddr(val)))))
+    {
         CL_BREAK_IF("program variables are not supposed to be cloned");
         return val;
     }
@@ -2720,10 +2722,18 @@ EStorageClass SymHeapCore::objStorClass(TObjId obj) const
     return regData->code;
 }
 
-TValId SymHeapCore::addrOfRegion(TObjId reg) {
+TValId SymHeapCore::addrOfRegion(TObjId reg)
+{
     if (OBJ_INVALID == reg)
         return VAL_INVALID;
 
+    const Region *regData;
+    d->ents.getEntRO(&regData, reg);
+    return regData->rootAddr;
+}
+
+TValId SymHeapCore::legacyAddrOfAny_XXX(TObjId reg) const
+{
     const Region *regData;
     d->ents.getEntRO(&regData, reg);
     return regData->rootAddr;
@@ -2785,16 +2795,16 @@ bool isUninitialized(EValueOrigin code)
     }
 }
 
-bool isOnHeap(EValueTarget code)
+bool isOnHeap(EStorageClass code)
 {
-    return (VT_ON_HEAP == code);
+    return (SC_ON_HEAP == code);
 }
 
-bool isProgramVar(EValueTarget code)
+bool isProgramVar(EStorageClass code)
 {
     switch (code) {
-        case VT_STATIC:
-        case VT_ON_STACK:
+        case SC_STATIC:
+        case SC_ON_STACK:
             return true;
 
         default:
@@ -3348,21 +3358,30 @@ TObjId SymHeapCore::regionByVar(CVar cv, bool createIfNeeded)
     return this->objByAddr(addr);
 }
 
-static bool dummyFilter(EValueTarget)
+static bool dummyFilter(EStorageClass)
 {
     return true;
 }
 
-void SymHeapCore::gatherRootObjects(TValList &dst, bool (*filter)(EValueTarget))
+void SymHeapCore::gatherObjects(TObjList &dst, bool (*filter)(EStorageClass))
     const
 {
     if (!filter)
         filter = dummyFilter;
 
     const TValSetWrapper &roots = *d->liveRoots;
-    BOOST_FOREACH(const TValId at, roots)
-        if (filter(this->valTarget(at)))
-            dst.push_back(at);
+    BOOST_FOREACH(const TValId at, roots) {
+        const BaseAddress *addrData;
+        d->ents.getEntRO(&addrData, at);
+        CL_BREAK_IF(VT_OBJECT != addrData->code);
+
+        const TObjId obj = addrData->obj;
+        const EStorageClass code = this->objStorClass(obj);
+        if (!filter(code))
+            continue;
+
+        dst.push_back(obj);
+    }
 }
 
 void SymHeapCore::clearAnonStackObjects(TValList &dst, const CallInst &of)

@@ -153,13 +153,12 @@ void decrementProtoLevel(SymHeap &sh, const TValId at)
 
 bool protoCheckConsistency(const SymHeap &sh)
 {
-    TValList addrs;
-    sh.gatherRootObjects(addrs);
-    BOOST_FOREACH(const TValId root, addrs) {
-        if (isAbstractValue(sh, root))
+    TObjList allObjs;
+    sh.gatherObjects(allObjs);
+    BOOST_FOREACH(const TObjId obj, allObjs) {
+        if (OK_REGION != sh.objKind(obj))
             continue;
 
-        const TObjId obj = sh.objByAddr(root);
         const TProtoLevel rootLevel = sh.objProtoLevel(obj);
 
         FldList ptrs;

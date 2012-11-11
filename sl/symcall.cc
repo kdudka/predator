@@ -316,16 +316,15 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh)
     // side can trigger a memory leak.  See test-0090.c for a use case.
     proc.valDestroyTarget(VAL_ADDR_OF_RET);
 
-    TValList live;
-    sh.gatherRootObjects(live, isProgramVar);
-    BOOST_FOREACH(const TValId root, live) {
-        const EValueTarget code = sh.valTarget(root);
-        if (VT_STATIC == code)
+    TObjList live;
+    sh.gatherObjects(live, isProgramVar);
+    BOOST_FOREACH(const TObjId obj, live) {
+        const EStorageClass code = sh.objStorClass(obj);
+        if (SC_STATIC == code)
             // gl variable
             continue;
 
         // local variable
-        const TObjId obj = sh.objByAddr(root);
         const CVar cv(sh.cVarByObject(obj));
         if (!hasKey(this->fnc->vars, cv.uid) || cv.inst != this->nestLevel)
             // a local variable that is not here-local
@@ -339,13 +338,13 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh)
         (void) varString;
 #endif
         proc.setLocation(loc);
-        proc.valDestroyTarget(root);
+        proc.valDestroyTarget(sh.addrOfRegion(obj));
     }
 }
 
-bool isGlVar(EValueTarget code)
+bool isGlVar(EStorageClass code)
 {
-    return (VT_STATIC == code);
+    return (SC_STATIC == code);
 }
 
 void joinHeapsWithCare(
@@ -368,10 +367,9 @@ void joinHeapsWithCare(
     // could have already been imported from there
     TCVarList preserveGlVars;
 
-    TValList liveGlVars;
-    callFrame.gatherRootObjects(liveGlVars, isGlVar);
-    BOOST_FOREACH(const TValId root, liveGlVars) {
-        const TObjId obj = callFrame.objByAddr(root);
+    TObjList liveGlVars;
+    callFrame.gatherObjects(liveGlVars, isGlVar);
+    BOOST_FOREACH(const TObjId obj, liveGlVars) {
         const CVar cv = callFrame.cVarByObject(obj);
         CL_BREAK_IF(cv.inst);
 
@@ -390,7 +388,7 @@ void joinHeapsWithCare(
     bool isFrameAlive = !liveGlVars.empty();
     if (!isFrameAlive) {
         TValList liveVars;
-        callFrame.gatherRootObjects(liveGlVars, isProgramVar);
+        callFrame.gatherObjects(liveGlVars, isProgramVar);
         isFrameAlive = !liveVars.empty();
     }
 
@@ -625,14 +623,13 @@ void SymCallCache::Private::resolveHeapCut(
     }
 #endif
 
-    TValList live;
-    sh.gatherRootObjects(live, isProgramVar);
-    BOOST_FOREACH(const TValId root, live) {
-        const TObjId obj = sh.objByAddr(root);
+    TObjList live;
+    sh.gatherObjects(live, isProgramVar);
+    BOOST_FOREACH(const TObjId obj, live) {
         const CVar cv(sh.cVarByObject(obj));
 
-        const EValueTarget code = sh.valTarget(root);
-        if (VT_STATIC == code) {
+        const EStorageClass code = sh.objStorClass(obj);
+        if (SC_STATIC == code) {
 #if !SE_ENABLE_CALL_CACHE
             cut.push_back(cv);
 #endif

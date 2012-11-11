@@ -2612,14 +2612,16 @@ struct MayExistLevelUpdater {
 
 bool updateMayExistLevels(SymJoinCtx &ctx)
 {
-    TValList dstRoots;
-    ctx.dst.gatherRootObjects(dstRoots, isOnHeap);
-    BOOST_FOREACH(const TValId rootDst, dstRoots) {
-        const TObjId objDst = ctx.dst.objByAddr(rootDst);
+    TObjList dstRoots;
+    ctx.dst.gatherObjects(dstRoots, isOnHeap);
+    BOOST_FOREACH(const TObjId objDst, dstRoots) {
         const EObjKind kind = ctx.dst.objKind(objDst);
         if (!isMayExistObj(kind))
             // we are interested only in 0..1 objects here
             continue;
+
+        // TODO: drop this!
+        const TValId rootDst = ctx.dst.legacyAddrOfAny_XXX(objDst);
 
         bool wasMayExist;
         if (!isFreshProto(ctx, rootDst, &wasMayExist) || wasMayExist)

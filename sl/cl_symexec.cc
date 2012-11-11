@@ -94,11 +94,10 @@ void digGlJunk(SymHeap &sh)
     SymBackTrace bt(stor);
     SymProc proc(sh, &bt);
 
-    TValList glVars;
-    sh.gatherRootObjects(glVars, isProgramVar);
-    BOOST_FOREACH(const TValId root, glVars) {
+    TObjList glVars;
+    sh.gatherObjects(glVars, isProgramVar);
+    BOOST_FOREACH(const TObjId obj, glVars) {
         // ensure we are dealing with a gl variable
-        const TObjId obj = sh.objByAddr(root);
         const CVar cv(sh.cVarByObject(obj));
         CL_BREAK_IF(cv.inst);
 
@@ -109,7 +108,7 @@ void digGlJunk(SymHeap &sh)
 
         // destroy the junk if needed
         proc.setLocation(loc);
-        proc.valDestroyTarget(root);
+        proc.valDestroyTarget(sh.addrOfRegion(obj));
     }
 }
 

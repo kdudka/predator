@@ -138,8 +138,10 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
     SymHeap &src = dc.src;
     SymHeap &dst = dc.dst;
 
+    const TObjId objSrc = src.objByAddr(rootSrcAt);
+
     CVar cv;
-    if (isProgramVar(src.valTarget(rootSrcAt))) {
+    if (isProgramVar(src.objStorClass(objSrc))) {
         // program variable
         const TObjId objSrc = src.objByAddr(rootSrcAt);
         cv = src.cVarByObject(objSrc);
@@ -159,8 +161,6 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
         digSubObjs(dc, rootSrcAt, rootDstAt);
         return rootDstAt;
     }
-
-    const TObjId objSrc = src.objByAddr(rootSrcAt);
 
     // create the object in 'dst'
     const TSizeRange size = src.valSizeOfTarget(rootSrcAt);

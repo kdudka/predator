@@ -59,7 +59,7 @@ bool isJunk(SymHeap &sh, TValId root)
             // this object is already freed
             return false;
 
-        const EValueTarget code = sh.valTarget(root);
+        const EStorageClass code = sh.objStorClass(obj);
         if (!isOnHeap(code))
             // non-heap objects cannot be JUNK
             return false;
