@@ -274,6 +274,7 @@ bool operator==(const CustomValue &a, const CustomValue &b)
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of SymHeapCore
+typedef std::set<TObjId>                                TObjSet;
 typedef std::set<TFldId>                                TFldIdSet;
 typedef std::map<TOffset, TValId>                       TOffMap;
 typedef IntervalArena<TOffset, TFldId>                  TArena;
@@ -572,7 +573,7 @@ class CustomValueMapper {
 };
 
 // FIXME: std::set is not a good candidate for base class
-struct TValSetWrapper: public TValSet {
+struct TObjSetWrapper: public TObjSet {
     RefCounter refCnt;
 };
 
@@ -598,7 +599,7 @@ struct SymHeapCore::Private {
 
     Trace::NodeHandle               traceHandle;
     EntStore<AbstractHeapEntity>    ents;
-    TValSetWrapper                 *liveRoots;
+    TObjSetWrapper                 *liveObjs;
     TAnonStackMapWrapper           *anonStackMap;
     CVarMap                        *cVarMap;
     CustomValueMapper              *cValueMap;
@@ -1520,9 +1521,10 @@ void SymHeapCore::Private::transferBlock(
 }
 
 
+
 SymHeapCore::Private::Private(Trace::Node *trace):
     traceHandle (trace),
-    liveRoots   (new TValSetWrapper),
+    liveObjs    (new TObjSetWrapper),
     anonStackMap(new TAnonStackMapWrapper),
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
@@ -1536,14 +1538,14 @@ SymHeapCore::Private::Private(Trace::Node *trace):
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     traceHandle (new Trace::CloneNode(ref.traceHandle.node())),
     ents        (ref.ents),
-    liveRoots   (ref.liveRoots),
+    liveObjs    (ref.liveObjs),
     anonStackMap(ref.anonStackMap),
     cVarMap     (ref.cVarMap),
     cValueMap   (ref.cValueMap),
     coinDb      (ref.coinDb),
     neqDb       (ref.neqDb)
 {
-    RefCntLib<RCO_NON_VIRT>::enter(this->liveRoots);
+    RefCntLib<RCO_NON_VIRT>::enter(this->liveObjs);
     RefCntLib<RCO_NON_VIRT>::enter(this->anonStackMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->cValueMap);
@@ -1553,7 +1555,7 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
 
 SymHeapCore::Private::~Private()
 {
-    RefCntLib<RCO_NON_VIRT>::leave(this->liveRoots);
+    RefCntLib<RCO_NON_VIRT>::leave(this->liveObjs);
     RefCntLib<RCO_NON_VIRT>::leave(this->anonStackMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cValueMap);
@@ -1854,8 +1856,8 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
     rootDataDst->lastKnownClt       = rootDataSrc->lastKnownClt;
     rootDataDst->protoLevel         = rootDataSrc->protoLevel;
 
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
-    this->liveRoots->insert(imageAt);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveObjs);
+    this->liveObjs->insert(reg);
 
     BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveFields)
         this->copySingleLiveBlock(imageAt, rootDataDst,
@@ -3349,8 +3351,8 @@ TObjId SymHeapCore::regionByVar(CVar cv, bool createIfNeeded)
     rootData->size = IR::rngFromNum(size);
 
     // mark the root as live
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
-    d->liveRoots->insert(addr);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveObjs);
+    d->liveObjs->insert(reg);
 
     // store the address for next wheel
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cVarMap);
@@ -3369,13 +3371,10 @@ void SymHeapCore::gatherObjects(TObjList &dst, bool (*filter)(EStorageClass))
     if (!filter)
         filter = dummyFilter;
 
-    const TValSetWrapper &roots = *d->liveRoots;
-    BOOST_FOREACH(const TValId at, roots) {
-        const BaseAddress *addrData;
-        d->ents.getEntRO(&addrData, at);
-        CL_BREAK_IF(VT_OBJECT != addrData->code);
+    const TObjSetWrapper &liveObjs = *d->liveObjs;
+    BOOST_FOREACH(const TObjId obj, liveObjs) {
+        CL_BREAK_IF(!this->isValid(obj));
 
-        const TObjId obj = addrData->obj;
         const EStorageClass code = this->objStorClass(obj);
         if (!filter(code))
             continue;
@@ -3458,8 +3457,8 @@ TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
     rootAddrData->obj = reg;
 
     // mark the root as live
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveRoots);
-    d->liveRoots->insert(addr);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveObjs);
+    d->liveObjs->insert(reg);
 
     // initialize meta-data
     rootData->size = size;
@@ -3576,12 +3575,14 @@ TObjType SymHeapCore::objEstimatedType(TObjId obj) const
 
 void SymHeapCore::Private::destroyRoot(TValId root)
 {
+    // jump to region
     BaseAddress *rootValData;
     this->ents.getEntRW(&rootValData, root);
+    const TObjId obj = rootValData->obj;
 
     // mark the region as invalid
     Region *rootData;
-    this->ents.getEntRW(&rootData, rootValData->obj);
+    this->ents.getEntRW(&rootData, obj);
     CL_BREAK_IF(VAL_ADDR_OF_RET != root && !rootData->isValid);
     rootData->isValid = false;
 
@@ -3593,8 +3594,8 @@ void SymHeapCore::Private::destroyRoot(TValId root)
     }
 
     // release the root
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveRoots);
-    this->liveRoots->erase(root);
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveObjs);
+    this->liveObjs->erase(obj);
 
     const TSizeRange size = rootData->size;
     if (IR::Int0 < size.hi) {

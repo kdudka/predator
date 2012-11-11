@@ -200,7 +200,7 @@ typedef std::vector<TOffset>                            TOffList;
 /// container used to store value IDs to
 typedef std::vector<TValId>                             TValList;
 
-/// container used to store Object IDs to
+/// container used to store object IDs to
 typedef std::vector<TObjId>                             TObjList;
 
 /// container used to store value IDs to
