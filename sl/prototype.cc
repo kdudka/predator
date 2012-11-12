@@ -124,8 +124,7 @@ void objChangeProtoLevel(SymHeap &sh, TObjId proto, const TProtoLevel diff)
     if (OK_DLS != kind)
         return;
 
-    const TValId root = /* XXX */ sh.legacyAddrOfAny_XXX(proto);
-    const TObjId peer = sh.objByAddr(dlSegPeer(sh, root));
+    const TObjId peer = dlSegPeer(sh, proto);
     CL_BREAK_IF(sh.objProtoLevel(peer) != level);
 
     sh.objSetProtoLevel(peer, level + diff);

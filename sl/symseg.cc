@@ -292,21 +292,12 @@ bool dlSegCheckConsistency(const SymHeap &sh)
             // we are interested in OK_DLS here
             continue;
 
-        // TODO: drop this!
-        const TValId at = sh.legacyAddrOfAny_XXX(seg);
-
-        if (at <= VAL_NULL) {
-            CL_ERROR("OK_DLS with invalid address detected");
-            return false;
-        }
-
-        const TValId peerAt = dlSegPeer(sh, at);
-        if (peerAt <= VAL_NULL) {
+        const TObjId peer = dlSegPeer(sh, seg);
+        if (OBJ_INVALID == peer) {
             CL_ERROR("OK_DLS with invalid peer detected");
             return false;
         }
 
-        const TObjId peer = sh.objByAddr(peerAt);
         if (OK_DLS != sh.objKind(peer)) {
             CL_ERROR("DLS peer not a DLS");
             return false;

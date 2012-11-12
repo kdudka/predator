@@ -121,6 +121,7 @@ inline FldHandle translateObjId(
     return FldHandle(dst, dstAt, clt);
 }
 
+/// TODO: drop this!
 inline TValId valOfPtrAt(SymHeap &sh, TValId at)
 {
     CL_BREAK_IF(!canWriteDataPtrAt(sh, at));
@@ -129,10 +130,17 @@ inline TValId valOfPtrAt(SymHeap &sh, TValId at)
     return ptr.value();
 }
 
+/// TODO: drop this!
 inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off)
 {
     const TValId ptrAt = sh.valByOffset(at, off);
     return valOfPtrAt(sh, ptrAt);
+}
+
+inline TValId valOfPtr(SymHeap &sh, TObjId obj, TOffset off)
+{
+    const PtrHandle ptr(sh, obj, off);
+    return ptr.value();
 }
 
 inline bool isAbstractValue(const SymHeap &sh, const TValId val)
