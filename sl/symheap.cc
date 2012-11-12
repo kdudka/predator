@@ -684,7 +684,11 @@ struct SymHeapCore::Private {
 
     void trimCustomValue(TValId val, const IR::Range &win);
 
-    TFldId fieldAt(const TValId at, const TObjType, IMatchPolicy *policy);
+    TFldId fldLookup(
+            const TObjId            obj,
+            const TOffset           off,
+            const TObjType          clt,
+            IMatchPolicy           *policy);
 
     private:
         // intentionally not implemented
@@ -3005,45 +3009,31 @@ TValId SymHeapCore::placedAt(TFldId fld)
     return this->valByOffset(objData->rootAddr, fldData->off);
 }
 
-TFldId SymHeapCore::Private::fieldAt(
-        const TValId                at,
+TFldId SymHeapCore::Private::fldLookup(
+        const TObjId                obj,
+        const TOffset               off,
         const TObjType              clt,
         IMatchPolicy               *policy)
 {
-    if (at <= 0)
-        return FLD_INVALID;
-
-    const BaseValue *valData;
-    this->ents.getEntRO(&valData, at);
-
-    const EValueTarget code = valData->code;
-    CL_BREAK_IF(VT_RANGE == code);
-    if (!isAnyDataArea(code))
+    if (OBJ_INVALID == obj || off < 0)
         return FLD_INVALID;
 
     const TSizeOf size = clt->size;
     CL_BREAK_IF(size <= 0);
-
-    // resolve object
-    const TValId root = valData->valRoot;
-    const BaseAddress *rootValData;
-    this->ents.getEntRO(&rootValData, root);
-    const TObjId obj = rootValData->obj;
 
     // jump to region
     const Region *rootData;
     this->ents.getEntRO(&rootData, obj);
     CL_BREAK_IF(!rootData->isValid);
 
-    if (rootData->size.lo < valData->offRoot + size) {
-        CL_BREAK_IF("fieldAt() called out of bounds");
+    if (rootData->size.lo < off + size) {
+        CL_BREAK_IF("fldLookup() called out of bounds");
         return FLD_UNKNOWN;
     }
 
     // arena lookup
     TFldIdSet candidates;
     const TArena &arena = rootData->arena;
-    const TOffset off = valData->offRoot;
     const TMemChunk chunk(off, off + size);
     arenaLookForExactMatch(&candidates, arena, chunk);
 
@@ -3101,7 +3091,7 @@ class PtrMatchPolicy: public IMatchPolicy {
         }
 };
 
-TFldId SymHeapCore::ptrAt(TValId at)
+TFldId SymHeapCore::ptrLookup(TObjId obj, TOffset off)
 {
     // generic pointer, (void *) if available
     const TObjType clt = stor_.types.genericDataPtr();
@@ -3111,7 +3101,7 @@ TFldId SymHeapCore::ptrAt(TValId at)
     }
 
     PtrMatchPolicy policy;
-    return d->fieldAt(at, clt, &policy);
+    return d->fldLookup(obj, off, clt, &policy);
 }
 
 class FieldMatchPolicy: public IMatchPolicy {
@@ -3169,10 +3159,10 @@ bool FieldMatchPolicy::matchBlock(
     return /* continue */ true;
 }
 
-TFldId SymHeapCore::objAt(TValId at, TObjType clt)
+TFldId SymHeapCore::fldLookup(TObjId obj, TOffset off, TObjType clt)
 {
     FieldMatchPolicy policy(clt);
-    return d->fieldAt(at, clt, &policy);
+    return d->fldLookup(obj, off, clt, &policy);
 }
 
 void SymHeapCore::fldEnter(TFldId fld)

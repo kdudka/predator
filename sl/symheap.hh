@@ -537,11 +537,11 @@ class SymHeapCore {
         void objSetProtoLevel(TObjId obj, TProtoLevel level);
 
     protected:
-        /// return a @b data pointer placed at the given address
-        TFldId ptrAt(TValId at);
+        /// return a @b data pointer inside the given object at the given offset
+        TFldId ptrLookup(TObjId obj, TOffset off);
 
-        /// return an object of the given type at the given address
-        TFldId objAt(TValId at, TObjType clt);
+        /// return a field of the specified type at the specified offset in obj
+        TFldId fldLookup(TObjId obj, TOffset off, TObjType clt);
 
         /// increment the external reference count of the given object
         void fldEnter(TFldId);
@@ -583,10 +583,13 @@ class FldHandle {
             CL_BREAK_IF(0 < special);
         }
 
+        /// TODO: drop this constructor!
         FldHandle(SymHeapCore &sh, TValId addr, TObjType clt):
-            sh_(&sh),
-            id_(sh.objAt(addr, clt))
+            sh_(&sh)
         {
+            const TObjId obj = sh.objByAddr(addr);
+            const TOffset off = sh.valOffset(addr);
+            id_ = sh.fldLookup(obj, off, clt);
             if (0 < id_)
                 sh_->fldEnter(id_);
         }
@@ -699,9 +702,15 @@ inline bool operator!=(const FldHandle &a, const FldHandle &b)
 
 class PtrHandle: public FldHandle {
     public:
+        /// TODO: drop this constructor!
         PtrHandle(SymHeapCore &sh, TValId addr):
-            FldHandle(sh, sh.ptrAt(addr))
+            FldHandle(sh, FLD_INVALID)
         {
+            const TObjId obj = sh.objByAddr(addr);
+            const TOffset off = sh.valOffset(addr);
+            id_ = sh.ptrLookup(obj, off);
+            if (0 < id_)
+                sh_->fldEnter(id_);
         }
 };
 
