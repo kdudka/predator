@@ -362,19 +362,19 @@ class AbstractHeapEntity {
 
 struct BlockEntity: public AbstractHeapEntity {
     EBlockKind                  code;
-    TValId                      root;
+    TObjId                      obj;
     TOffset                     off;
     TSizeOf                     size;
     TValId                      value;
 
     BlockEntity(
             const EBlockKind        code_,
-            const TValId            root_,
+            const TObjId            obj_,
             const TOffset           off_,
             const TSizeOf           size_,
             const TValId            value_):
         code(code_),
-        root(root_),
+        obj(obj_),
         off(off_),
         size(size_),
         value(value_)
@@ -390,8 +390,8 @@ struct FieldOfObj: public BlockEntity {
     TObjType                    clt;
     int                         extRefCnt;
 
-    FieldOfObj(TValId root_, TOffset off_, TObjType clt_):
-        BlockEntity(bkFromClt(clt_), root_, off_, clt_->size, VAL_INVALID),
+    FieldOfObj(TObjId obj_, TOffset off_, TObjType clt_):
+        BlockEntity(bkFromClt(clt_), obj_, off_, clt_->size, VAL_INVALID),
         clt(clt_),
         extRefCnt(0)
     {
@@ -614,14 +614,14 @@ struct SymHeapCore::Private {
     TValId valDup(TValId);
     bool valsEqual(TValId, TValId);
 
-    TFldId objCreate(TValId root, TOffset off, TObjType clt);
+    TFldId fldCreate(TObjId obj, TOffset off, TObjType clt);
     TValId objInit(TFldId fld);
     void fldDestroy(TFldId, bool removeVal, bool detach);
 
     TFldId copySingleLiveBlock(
-            const TValId            rootDst,
-            Region                 *rootDataDst,
-            const TFldId            objSrc,
+            const TObjId            objDst,
+            Region                 *objDataDst,
+            const TFldId            fldSrc,
             const EBlockKind        code,
             const TOffset           shift = 0,
             const TSizeOf           sizeLimit = 0);
@@ -905,16 +905,11 @@ void SymHeapCore::Private::splitBlockByObject(
             break;
     }
 
-    // dig root
-    const TValId root = blData->root;
-    CL_BREAK_IF(root != hbData->root);
-
-    const BaseAddress *rootValData;
-    this->ents.getEntRO(&rootValData, root);
-
-    // jump to region
+    // resolve object
+    const TObjId obj = blData->obj;
+    CL_BREAK_IF(obj != hbData->obj);
     Region *rootData;
-    this->ents.getEntRW(&rootData, rootValData->obj);
+    this->ents.getEntRW(&rootData, obj);
 
     // check up to now arena consistency
     CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* mayOverlap */ true));
@@ -1078,7 +1073,7 @@ bool SymHeapCore::Private::reinterpretSingleObj(
         FieldOfObj                 *dstData,
         const BlockEntity          *srcData)
 {
-    CL_BREAK_IF(srcData->root != dstData->root);
+    CL_BREAK_IF(srcData->obj != dstData->obj);
 
     const EBlockKind code = srcData->code;
     switch (code) {
@@ -1158,14 +1153,10 @@ void SymHeapCore::Private::reinterpretObjData(
     if (/* wasPtr */ this->releaseValueOf(old, valOld) && killedPtrs)
         killedPtrs->insert(valOld);
 
-    // dig root
-    const TValId root = oldData->root;
-    const BaseAddress *rootValData;
-    this->ents.getEntRO(&rootValData, root);
-
-    // jump to region
+    // resolve object data
+    const TObjId obj = oldData->obj;
     Region *rootData;
-    this->ents.getEntRW(&rootData, rootValData->obj);
+    this->ents.getEntRW(&rootData, obj);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* mayOverlap */ true));
 
     this->ents.getEntRW(&blData, fld);
@@ -1227,14 +1218,10 @@ void SymHeapCore::Private::setValueOf(
     objData->value = val;
     this->registerValueOf(fld, val);
 
-    // resolve root
-    const TValId root = objData->root;
-    const BaseAddress *rootValData;
-    this->ents.getEntRO(&rootValData, root);
-
-    // jump to region
+    // read object data
+    const TObjId obj = objData->obj;
     Region *rootData;
-    this->ents.getEntRW(&rootData, rootValData->obj);
+    this->ents.getEntRW(&rootData, obj);
 
     // (re)insert self into the arena if not there
     TArena &arena = rootData->arena;
@@ -1252,20 +1239,18 @@ void SymHeapCore::Private::setValueOf(
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 }
 
-TFldId SymHeapCore::Private::objCreate(
-        TValId                      root,
+TFldId SymHeapCore::Private::fldCreate(
+        TObjId                      obj,
         TOffset                     off,
         TObjType                    clt)
 {
     // acquire object ID
-    FieldOfObj *objData = new FieldOfObj(root, off, clt);
+    FieldOfObj *objData = new FieldOfObj(obj, off, clt);
     const TFldId fld = this->assignId(objData);
 
-    // jump to region
-    const BaseAddress *rootValData;
-    this->ents.getEntRW(&rootValData, root);
+    // read object data
     Region *rootData;
-    this->ents.getEntRW(&rootData, rootValData->obj);
+    this->ents.getEntRW(&rootData, obj);
 
     // map the region occupied by the object
     rootData->arena += createArenaItem(off, clt->size, fld);
@@ -1288,10 +1273,8 @@ void SymHeapCore::Private::fldDestroy(TFldId fld, bool removeVal, bool detach)
 
     if (detach) {
         // properly remove the object from grid and arena
-        const BaseAddress *rootValData;
-        this->ents.getEntRO(&rootValData, blData->root);
         Region *rootData;
-        this->ents.getEntRW(&rootData, rootValData->obj);
+        this->ents.getEntRW(&rootData, blData->obj);
         CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* overlap */true));
 
         // remove the object from arena unless we are destroying everything
@@ -1437,8 +1420,9 @@ void SymHeapCore::Private::transferBlock(
     const TOffset shift = dstOff - winBeg;
 
     // resolve dst region
-    Region *rootDataDst;
-    this->ents.getEntRW(&rootDataDst, rootValDataDst->obj);
+    Region *objDataDst;
+    const TObjId objDst = rootValDataDst->obj;
+    this->ents.getEntRW(&objDataDst, objDst);
 
     // go through overlaps and copy the live ones
     BOOST_FOREACH(const TFldId objSrc, overlaps) {
@@ -1470,7 +1454,7 @@ void SymHeapCore::Private::transferBlock(
             continue;
 
         // copy a single live block
-        this->copySingleLiveBlock(dstRoot, rootDataDst, objSrc, code,
+        this->copySingleLiveBlock(objDst, objDataDst, objSrc, code,
                 realShift, sizeLimit);
     }
 }
@@ -1520,23 +1504,19 @@ SymHeapCore::Private::~Private()
 
 TValId SymHeapCore::Private::objInit(TFldId fld)
 {
-    FieldOfObj *objData;
-    this->ents.getEntRW(&objData, fld);
-    CL_BREAK_IF(!objData->extRefCnt);
+    FieldOfObj *fldData;
+    this->ents.getEntRW(&fldData, fld);
+    CL_BREAK_IF(!fldData->extRefCnt);
 
-    // resolve root
-    const TValId root = objData->root;
-    const BaseAddress *rootValData;
-    this->ents.getEntRO(&rootValData, root);
-
-    // jump to region
+    // read object data
+    const TObjId obj = fldData->obj;
     Region *rootData;
-    this->ents.getEntRW(&rootData, rootValData->obj);
+    this->ents.getEntRW(&rootData, obj);
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     const TArena &arena = rootData->arena;
-    const TOffset off = objData->off;
-    const TObjType clt = objData->clt;
+    const TOffset off = fldData->off;
+    const TObjType clt = fldData->clt;
 
     // first check for data reinterpretation
     TFldIdSet overlaps;
@@ -1552,13 +1532,13 @@ TValId SymHeapCore::Private::objInit(TFldId fld)
             // reinterpret _self_ by another live object or uniform block
             this->reinterpretObjData(/* old */ fld, other);
             CL_BREAK_IF(!this->chkArenaConsistency(rootData));
-            return objData->value;
+            return fldData->value;
         }
     }
 
     // assign a fresh unknown value
     const TValId val = this->valCreate(VT_UNKNOWN, VO_UNKNOWN);
-    objData->value = val;
+    fldData->value = val;
 
     // mark the object as live
     if (isDataPtr(clt))
@@ -1641,18 +1621,13 @@ void SymHeapCore::usedBy(FldList &dst, TValId val, bool liveOnly) const
     }
 
     BOOST_FOREACH(const TFldId fld, usedBy) {
+        // get field data
+        const FieldOfObj *fldData;
+        d->ents.getEntRO(&fldData, fld);
+
         // get object data
-        const FieldOfObj *objData;
-        d->ents.getEntRO(&objData, fld);
-
-        // get root data
-        const TValId root = objData->root;
-        const BaseAddress *rootValData;
-        d->ents.getEntRO(&rootValData, root);
-
-        // get region data
         const Region *rootData;
-        d->ents.getEntRO(&rootData, rootValData->obj);
+        d->ents.getEntRO(&rootData, fldData->obj);
 
         // check if the object is alive
         if (hasKey(rootData->liveFields, fld))
@@ -1734,9 +1709,9 @@ TValId SymHeapCore::valClone(TValId val)
 }
 
 TFldId SymHeapCore::Private::copySingleLiveBlock(
-        const TValId                rootDst,
-        Region                     *rootDataDst,
-        const TFldId                objSrc,
+        const TObjId                objDst,
+        Region                     *objDataDst,
+        const TFldId                fldSrc,
         const EBlockKind            code,
         const TOffset               shift,
         const TSizeOf               sizeLimit)
@@ -1746,10 +1721,10 @@ TFldId SymHeapCore::Private::copySingleLiveBlock(
     if (BK_UNIFORM == code) {
         // duplicate a uniform block
         const BlockEntity *blSrc;
-        this->ents.getEntRO(&blSrc, objSrc);
+        this->ents.getEntRO(&blSrc, fldSrc);
         BlockEntity *blDst = blSrc->clone();
         dst = this->assignId(blDst);
-        blDst->root = rootDst;
+        blDst->obj = objDst;
 
         // shift the block and limit the size if asked to do so
         blDst->off += shift;
@@ -1757,24 +1732,24 @@ TFldId SymHeapCore::Private::copySingleLiveBlock(
             blDst->size = sizeLimit;
 
         // map the cloned block
-        rootDataDst->arena += createArenaItem(blDst->off, blDst->size, dst);
+        objDataDst->arena += createArenaItem(blDst->off, blDst->size, dst);
     }
     else {
         // duplicate a regular object
         CL_BREAK_IF(BK_DATA_PTR != code && BK_DATA_OBJ != code);
         CL_BREAK_IF(sizeLimit);
 
-        const FieldOfObj *objDataSrc;
-        this->ents.getEntRO(&objDataSrc, objSrc);
+        const FieldOfObj *fldDataSrc;
+        this->ents.getEntRO(&fldDataSrc, fldSrc);
 
-        const TOffset off = objDataSrc->off + shift;
-        const TObjType clt = objDataSrc->clt;
-        dst = this->objCreate(rootDst, off, clt);
-        this->setValueOf(dst, objDataSrc->value);
+        const TOffset off = fldDataSrc->off + shift;
+        const TObjType clt = fldDataSrc->clt;
+        dst = this->fldCreate(objDst, off, clt);
+        this->setValueOf(dst, fldDataSrc->value);
     }
 
     // prevserve live object code
-    rootDataDst->liveFields[dst] = code;
+    objDataDst->liveFields[dst] = code;
     return dst;
 }
 
@@ -1817,7 +1792,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
     }
 
     BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveFields)
-        this->copySingleLiveBlock(imageAt, rootDataDst,
+        this->copySingleLiveBlock(reg, rootDataDst,
                 /* src  */ item.first,
                 /* code */ item.second);
 
@@ -2030,25 +2005,16 @@ void SymHeapCore::traceUpdate(Trace::Node *node)
 void SymHeapCore::objSetValue(TFldId fld, TValId val, TValSet *killedPtrs)
 {
     // we allow to set values of atomic types only
-    const FieldOfObj *objData;
-    d->ents.getEntRO(&objData, fld);
+    const FieldOfObj *fldData;
+    d->ents.getEntRO(&fldData, fld);
 
     // make sure that the value is not a pointer to a structure object
-    const TObjType clt = objData->clt;
+    const TObjType clt = fldData->clt;
     CL_BREAK_IF(VT_COMPOSITE == this->valTarget(val));
 
-    // check whether the root entity that owns this object ID is still valid
-    CL_BREAK_IF(!isPossibleToDeref(*this, objData->root));
-
     // mark the destination object as live
-    const TValId root = objData->root;
-    const BaseAddress *rootData;
-    d->ents.getEntRO(&rootData, root);
-
-    // jump to region
     Region *regData;
-    d->ents.getEntRW(&regData, rootData->obj);
-
+    d->ents.getEntRW(&regData, fldData->obj);
     regData->liveFields[fld] = bkFromClt(clt);
 
     // now set the value
@@ -2068,16 +2034,17 @@ TFldId SymHeapCore::Private::writeUniformBlock(
     const TOffset beg = valData->offRoot;
     const TOffset end = beg + size;
 
-    // acquire object ID
-    BlockEntity *blData = new BlockEntity(BK_UNIFORM, root, beg, size, tplVal);
-    const TFldId fld = this->assignId(blData);
-
     const BaseAddress *rootData;
     this->ents.getEntRO(&rootData, root);
+    const TObjId obj = rootData->obj;
+
+    // acquire object ID
+    BlockEntity *blData = new BlockEntity(BK_UNIFORM, obj, beg, size, tplVal);
+    const TFldId fld = this->assignId(blData);
 
     // jump to region
     Region *regData;
-    this->ents.getEntRW(&regData, rootData->obj);
+    this->ents.getEntRW(&regData, obj);
 
     // check up to now arena consistency
     CL_BREAK_IF(!this->chkArenaConsistency(regData));
@@ -3025,13 +2992,17 @@ TValId SymHeapCore::placedAt(TFldId fld)
     if (fld < 0)
         return VAL_INVALID;
 
-    // jump to root
-    const FieldOfObj *objData;
-    d->ents.getEntRO(&objData, fld);
-    const TValId root = objData->root;
+    // resolve object
+    const FieldOfObj *fldData;
+    d->ents.getEntRO(&fldData, fld);
+    const TObjId obj = fldData->obj;
+
+    // read object data
+    const Region *objData;
+    d->ents.getEntRO(&objData, obj);
 
     // then subtract the offset
-    return this->valByOffset(root, objData->off);
+    return this->valByOffset(objData->rootAddr, fldData->off);
 }
 
 TFldId SymHeapCore::Private::fieldAt(
@@ -3053,14 +3024,15 @@ TFldId SymHeapCore::Private::fieldAt(
     const TSizeOf size = clt->size;
     CL_BREAK_IF(size <= 0);
 
-    // jump to root
+    // resolve object
     const TValId root = valData->valRoot;
     const BaseAddress *rootValData;
     this->ents.getEntRO(&rootValData, root);
+    const TObjId obj = rootValData->obj;
 
     // jump to region
     const Region *rootData;
-    this->ents.getEntRO(&rootData, rootValData->obj);
+    this->ents.getEntRO(&rootData, obj);
     CL_BREAK_IF(!rootData->isValid);
 
     if (rootData->size.lo < valData->offRoot + size) {
@@ -3102,7 +3074,7 @@ TFldId SymHeapCore::Private::fieldAt(
         return best;
 
     // no match, create a new field
-    return this->objCreate(root, off, clt);
+    return this->fldCreate(obj, off, clt);
 }
 
 class PtrMatchPolicy: public IMatchPolicy {
@@ -3205,18 +3177,18 @@ TFldId SymHeapCore::objAt(TValId at, TObjType clt)
 
 void SymHeapCore::fldEnter(TFldId fld)
 {
-    FieldOfObj *objData;
-    d->ents.getEntRW(&objData, fld);
-    CL_BREAK_IF(objData->extRefCnt < 0);
-    ++(objData->extRefCnt);
+    FieldOfObj *fldData;
+    d->ents.getEntRW(&fldData, fld);
+    CL_BREAK_IF(fldData->extRefCnt < 0);
+    ++(fldData->extRefCnt);
 }
 
 void SymHeapCore::fldLeave(TFldId fld)
 {
-    FieldOfObj *objData;
-    d->ents.getEntRW(&objData, fld);
-    CL_BREAK_IF(objData->extRefCnt < 1);
-    if (--(objData->extRefCnt))
+    FieldOfObj *fldData;
+    d->ents.getEntRW(&fldData, fld);
+    CL_BREAK_IF(fldData->extRefCnt < 1);
+    if (--(fldData->extRefCnt))
         // still externally referenced
         return;
 
@@ -3224,20 +3196,16 @@ void SymHeapCore::fldLeave(TFldId fld)
     return;
 #endif
 
-    if (isComposite(objData->clt, /* includingArray */ false)
-            && VAL_INVALID != objData->value)
+    if (isComposite(fldData->clt, /* includingArray */ false)
+            && VAL_INVALID != fldData->value)
     {
         CL_DEBUG("SymHeapCore::fldLeave() preserves a composite field");
         return;
     }
 
-    const TValId root = objData->root;
-    const BaseAddress *rootData;
-    d->ents.getEntRO(&rootData, root);
-
     // jump to region
     const Region *regData;
-    d->ents.getEntRO(&regData, rootData->obj);
+    d->ents.getEntRO(&regData, fldData->obj);
 
     if (!hasKey(regData->liveFields, fld)) {
         CL_DEBUG("SymHeapCore::fldLeave() destroys a dead field");
