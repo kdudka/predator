@@ -30,31 +30,6 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
-bool matchPlainValuesCore(
-        TValMapBidir            valMapping,
-        const TValId            v1,
-        const TValId            v2)
-{
-    // left-to-right check
-    TValMap &ltr = valMapping[/* ltr */ 0];
-    TValMap::iterator iter1 = ltr.find(v1);
-    if (iter1 != ltr.end())
-        // substitution already defined, check if it applies seamlessly
-        return iter1->second == v2;
-
-    // right-to-left check
-    TValMap &rtl = valMapping[/* rtl */ 1];
-    TValMap::iterator iter2 = rtl.find(v2);
-    if (iter2 != rtl.end())
-        // substitution already defined, check if it applies seamlessly
-        return iter2->second == v1;
-
-    // not found --> define a new substitution
-    ltr[v1] = v2;
-    rtl[v2] = v1;
-    return true;
-}
-
 bool matchOffsets(
         const SymHeapCore       &sh1,
         const SymHeapCore       &sh2,
@@ -105,7 +80,7 @@ bool matchPlainValues(
     // check the mapping of roots
     const TValId root1 = sh1.valRoot(v1);
     const TValId root2 = sh2.valRoot(v2);
-    return matchPlainValuesCore(valMapping, root1, root2);
+    return mapBidir(valMapping, root1, root2);
 }
 
 bool matchUniBlocks(

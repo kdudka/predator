@@ -47,6 +47,32 @@ inline bool checkNonPosValues(int a, int b)
     return (a == b);
 }
 
+template <typename TMap>
+bool mapBidir(
+        TMap                            bMap[2],
+        const typename TMap::key_type   v1,
+        const typename TMap::key_type   v2)
+{
+    // left-to-right check
+    TMap &ltr = bMap[/* ltr */ 0];
+    const typename TMap::iterator iter1 = ltr.find(v1);
+    if (iter1 != ltr.end())
+        // substitution already defined, check if it applies seamlessly
+        return iter1->second == v2;
+
+    // right-to-left check
+    TMap &rtl = bMap[/* rtl */ 1];
+    const typename TMap::iterator iter2 = rtl.find(v2);
+    if (iter2 != rtl.end())
+        // substitution already defined, check if it applies seamlessly
+        return iter2->second == v1;
+
+    // not found --> define a new substitution
+    ltr[v1] = v2;
+    rtl[v2] = v1;
+    return true;
+}
+
 bool matchPlainValues(
         TValMapBidir            valMapping,
         const SymHeap           &sh1,
