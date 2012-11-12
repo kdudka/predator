@@ -2660,20 +2660,20 @@ bool setDstValues(SymJoinCtx &ctx, const TFldSet *blackList = 0)
 }
 
 // FIXME: the implementation is not going to work well in certain cases
-bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExist = 0)
+bool isFreshProto(SymJoinCtx &ctx, const TObjId objDst, bool *wasMayExist = 0)
 {
-    const TValId root1 = roMapLookup(ctx.valMap1[/* rtl */ 1], rootDst);
-    const TValId root2 = roMapLookup(ctx.valMap2[/* rtl */ 1], rootDst);
+    const TObjId obj1 = roMapLookup(ctx.objMap1[/* rtl */ 1], objDst);
+    const TObjId obj2 = roMapLookup(ctx.objMap2[/* rtl */ 1], objDst);
 
-    const bool isValid1 = (VAL_INVALID != root1);
-    const bool isValid2 = (VAL_INVALID != root2);
+    const bool isValid1 = (OBJ_INVALID != obj1);
+    const bool isValid2 = (OBJ_INVALID != obj2);
     if (isValid1 == isValid2)
         return false;
 
     if (wasMayExist) {
         const EObjKind kind = (isValid1)
-            ? ctx.sh1.objKind(ctx.sh1.objByAddr(root1))
-            : ctx.sh2.objKind(ctx.sh2.objByAddr(root2));
+            ? ctx.sh1.objKind(obj1)
+            : ctx.sh2.objKind(obj2);
 
         *wasMayExist = isMayExistObj(kind);
     }
@@ -2683,25 +2683,25 @@ bool isFreshProto(SymJoinCtx &ctx, const TValId rootDst, bool *wasMayExist = 0)
 
 struct MayExistLevelUpdater {
     SymJoinCtx         &ctx;
-    const TValId        rootDst;
+    const TObjId        objDst;
     TFldSet             ignoreList;
 
-    MayExistLevelUpdater(SymJoinCtx &ctx_, const TValId rootDst_):
+    MayExistLevelUpdater(SymJoinCtx &ctx_, const TObjId objDst_):
         ctx(ctx_),
-        rootDst(rootDst_)
+        objDst(objDst_)
     {
-        buildIgnoreList(ignoreList, ctx.dst, rootDst);
+        buildIgnoreList(ignoreList, ctx.dst, objDst);
     }
 
     bool operator()(const FldHandle &sub) const {
         if (hasKey(this->ignoreList, sub))
             return /* continue */ true;
 
-        const TValId proto = ctx.dst.valRoot(sub.value());
-        if (proto <= VAL_NULL)
+        const TObjId proto = ctx.dst.objByAddr(sub.value());
+        if (OBJ_INVALID == proto)
             return /* continue */ true;
 
-        if (rootDst == proto)
+        if (objDst == proto)
             // self loop
             return /* continue */ true;
 
@@ -2710,7 +2710,7 @@ struct MayExistLevelUpdater {
             return /* continue */ true;
 
         // this object became a prototype, increment its level
-        objIncrementProtoLevel(ctx.dst, ctx.dst.objByAddr(proto));
+        objIncrementProtoLevel(ctx.dst, proto);
         return /* continue */ true;
     }
 };
@@ -2725,16 +2725,13 @@ bool updateMayExistLevels(SymJoinCtx &ctx)
             // we are interested only in 0..1 objects here
             continue;
 
-        // TODO: drop this!
-        const TValId rootDst = ctx.dst.legacyAddrOfAny_XXX(objDst);
-
         bool wasMayExist;
-        if (!isFreshProto(ctx, rootDst, &wasMayExist) || wasMayExist)
+        if (!isFreshProto(ctx, objDst, &wasMayExist) || wasMayExist)
             // not a newly introduced one
             continue;
 
-        const MayExistLevelUpdater visitor(ctx, rootDst);
-        if (!traverseLivePtrs(ctx.dst, ctx.dst.objByAddr(rootDst), visitor))
+        const MayExistLevelUpdater visitor(ctx, objDst);
+        if (!traverseLivePtrs(ctx.dst, objDst, visitor))
             return false;
     }
 
