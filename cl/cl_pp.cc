@@ -282,10 +282,10 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op)
             if (value < 0)
                 out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
 
-            if (op->type->is_unsigned)
-                out_ << "U";
+            SSD_COLORIZE(out_, C_WHITE) << value << ((op->type->is_unsigned)
+                    ? "U"
+                    : "");
 
-            SSD_COLORIZE(out_, C_WHITE) << value;
             if (value < 0)
                 out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")");
 
