@@ -140,6 +140,9 @@ inline bool operator<(const SchedItem &a, const SchedItem &b)
 
 typedef WorkListWithUndo<SchedItem>                             TWorkList;
 
+typedef std::map<TObjId, TObjId>                                TObjMap;
+typedef TObjMap                                                 TObjMapBidir[2];
+
 /// current state, common for joinSymHeaps(), joinDataReadOnly() and joinData()
 struct SymJoinCtx {
     SymHeap                     &dst;
@@ -155,6 +158,9 @@ struct SymJoinCtx {
 
     TValMapBidir                valMap1;
     TValMapBidir                valMap2;
+
+    TObjMapBidir                objMap1;
+    TObjMapBidir                objMap2;
 
     TWorkList                   wl;
     EJoinStatus                 status;
@@ -305,6 +311,26 @@ bool updateJoinStatus(SymJoinCtx &ctx, const EJoinStatus action)
     return (JS_THREE_WAY != status)
         || ctx.forceThreeWay
         || ctx.allowThreeWay;
+}
+
+bool defineObjectMapping(
+        SymJoinCtx              &ctx,
+        const TObjId            objDst,
+        const TObjId            obj1,
+        const TObjId            obj2)
+{
+    const bool hasObj1 = (OBJ_INVALID != obj1);
+    const bool hasObj2 = (OBJ_INVALID != obj2);
+    CL_BREAK_IF(!hasObj1 && !hasObj2);
+
+    const bool ok1 = !hasObj1 || mapBidir(ctx.objMap1, obj1, objDst);
+    const bool ok2 = !hasObj2 || mapBidir(ctx.objMap2, obj2, objDst);
+
+    if (ok1 && ok2)
+        return true;
+
+    SJ_DEBUG("<-- object mapping mismatch " << SJ_OBJP(obj1, obj2));
+    return false;
 }
 
 /**
@@ -723,6 +749,12 @@ bool traverseRoots(
     const TValId root1 = rootItem.v1;
     const TValId root2 = rootItem.v2;
     if (!defineValueMapping(ctx, root1, root2, rootDst))
+        return false;
+
+    const TObjId objDst = ctx.dst.objByAddr(rootDst);
+    const TObjId obj1   = ctx.sh1.objByAddr(root1);
+    const TObjId obj2   = ctx.sh2.objByAddr(root2);
+    if (!defineObjectMapping(ctx, objDst, obj1, obj2))
         return false;
 
     TValId roots[] = {
