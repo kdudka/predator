@@ -641,7 +641,7 @@ struct SymHeapCore::Private {
 
     // runs only in debug build
     bool chkArenaConsistency(
-            const BaseAddress      *rootData,
+            const Region           *rootData,
             const bool              allowOverlap = false);
 
     void shiftBlockAt(
@@ -837,15 +837,11 @@ fail:
 
 // runs only in debug build
 bool SymHeapCore::Private::chkArenaConsistency(
-        const BaseAddress          *rootValData,
+        const Region               *rootData,
         const bool                  allowOverlap)
 {
     if (::bypassSelfChecks)
         return true;
-
-    // TODO: drop this!
-    const Region *rootData;
-    this->ents.getEntRO(&rootData, rootValData->obj);
 
     if (!rootData->isValid)
         // invalid objects ... just check there are no outgoing has-value edges
@@ -913,14 +909,15 @@ void SymHeapCore::Private::splitBlockByObject(
     const TValId root = blData->root;
     CL_BREAK_IF(root != hbData->root);
 
-    // check up to now arena consistency
     const BaseAddress *rootValData;
     this->ents.getEntRO(&rootValData, root);
-    CL_BREAK_IF(!this->chkArenaConsistency(rootValData, /* mayOverlap */ true));
 
     // jump to region
     Region *rootData;
     this->ents.getEntRW(&rootData, rootValData->obj);
+
+    // check up to now arena consistency
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* mayOverlap */ true));
 
     // dig offsets and sizes
     const TOffset blOff = blData->off;
@@ -1165,11 +1162,11 @@ void SymHeapCore::Private::reinterpretObjData(
     const TValId root = oldData->root;
     const BaseAddress *rootValData;
     this->ents.getEntRO(&rootValData, root);
-    CL_BREAK_IF(!this->chkArenaConsistency(rootValData, /* mayOverlap */ true));
 
     // jump to region
     Region *rootData;
     this->ents.getEntRW(&rootData, rootValData->obj);
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* mayOverlap */ true));
 
     this->ents.getEntRW(&blData, fld);
     code = blData->code;
@@ -1252,7 +1249,7 @@ void SymHeapCore::Private::setValueOf(
             this->reinterpretObjData(old, fld, killedPtrs);
     }
 
-    CL_BREAK_IF(!this->chkArenaConsistency(rootValData));
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 }
 
 TFldId SymHeapCore::Private::objCreate(
@@ -1272,7 +1269,7 @@ TFldId SymHeapCore::Private::objCreate(
 
     // map the region occupied by the object
     rootData->arena += createArenaItem(off, clt->size, fld);
-    CL_BREAK_IF(!this->chkArenaConsistency(rootValData));
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
     return fld;
 }
 
@@ -1295,7 +1292,7 @@ void SymHeapCore::Private::fldDestroy(TFldId fld, bool removeVal, bool detach)
         this->ents.getEntRO(&rootValData, blData->root);
         Region *rootData;
         this->ents.getEntRW(&rootData, rootValData->obj);
-        CL_BREAK_IF(!this->chkArenaConsistency(rootValData, /* overlap */true));
+        CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* overlap */true));
 
         // remove the object from arena unless we are destroying everything
         const TOffset off = blData->off;
@@ -1303,7 +1300,7 @@ void SymHeapCore::Private::fldDestroy(TFldId fld, bool removeVal, bool detach)
         rootData->arena -= createArenaItem(off, size, fld);
 
         CL_BREAK_IF(hasKey(rootData->liveFields, fld));
-        CL_BREAK_IF(!this->chkArenaConsistency(rootValData, /* overlap */true));
+        CL_BREAK_IF(!this->chkArenaConsistency(rootData, /* overlap */true));
     }
 
     if (BK_UNIFORM != code && 0 < DCAST<FieldOfObj *>(blData)->extRefCnt)
@@ -1416,14 +1413,15 @@ void SymHeapCore::Private::transferBlock(
         const TOffset               winBeg,
         const TSizeOf               winSize)
 {
-    // check up to now arena consistency
     const BaseAddress *rootValDataSrc;
     this->ents.getEntRO(&rootValDataSrc, srcRoot);
-    CL_BREAK_IF(!this->chkArenaConsistency(rootValDataSrc));
 
     // resolve src region
     const Region *rootDataSrc;
     this->ents.getEntRO(&rootDataSrc, rootValDataSrc->obj);
+
+    // check up to now arena consistency
+    CL_BREAK_IF(!this->chkArenaConsistency(rootDataSrc));
 
     const TArena &arena = rootDataSrc->arena;
     const TOffset winEnd = winBeg + winSize;
@@ -1530,11 +1528,11 @@ TValId SymHeapCore::Private::objInit(TFldId fld)
     const TValId root = objData->root;
     const BaseAddress *rootValData;
     this->ents.getEntRO(&rootValData, root);
-    CL_BREAK_IF(!this->chkArenaConsistency(rootValData));
 
     // jump to region
     Region *rootData;
     this->ents.getEntRW(&rootData, rootValData->obj);
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     const TArena &arena = rootData->arena;
     const TOffset off = objData->off;
@@ -1553,7 +1551,7 @@ TValId SymHeapCore::Private::objInit(TFldId fld)
 
             // reinterpret _self_ by another live object or uniform block
             this->reinterpretObjData(/* old */ fld, other);
-            CL_BREAK_IF(!this->chkArenaConsistency(rootValData));
+            CL_BREAK_IF(!this->chkArenaConsistency(rootData));
             return objData->value;
         }
     }
@@ -1570,7 +1568,7 @@ TValId SymHeapCore::Private::objInit(TFldId fld)
         rootData->liveFields[fld] = BK_DATA_OBJ;
 #endif
 
-    CL_BREAK_IF(!this->chkArenaConsistency(rootValData));
+    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // store backward reference
     BaseValue *valData;
@@ -1785,11 +1783,11 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
     CL_DEBUG("SymHeapCore::Private::dupRoot() is taking place...");
     const BaseAddress *rootValDataSrc;
     this->ents.getEntRO(&rootValDataSrc, rootAt);
-    CL_BREAK_IF(!this->chkArenaConsistency(rootValDataSrc));
 
     // resolve the src region
     const Region *rootDataSrc;
     this->ents.getEntRO(&rootDataSrc, rootValDataSrc->obj);
+    CL_BREAK_IF(!this->chkArenaConsistency(rootDataSrc));
 
     // assign an address to the clone
     const EValueTarget code = rootValDataSrc->code;
@@ -1823,7 +1821,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
                 /* src  */ item.first,
                 /* code */ item.second);
 
-    CL_BREAK_IF(!this->chkArenaConsistency(rootValDataDst));
+    CL_BREAK_IF(!this->chkArenaConsistency(rootDataDst));
     return imageAt;
 }
 
@@ -2074,14 +2072,15 @@ TFldId SymHeapCore::Private::writeUniformBlock(
     BlockEntity *blData = new BlockEntity(BK_UNIFORM, root, beg, size, tplVal);
     const TFldId fld = this->assignId(blData);
 
-    // check up to now arena consistency
     const BaseAddress *rootData;
     this->ents.getEntRO(&rootData, root);
-    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
     // jump to region
     Region *regData;
     this->ents.getEntRW(&regData, rootData->obj);
+
+    // check up to now arena consistency
+    CL_BREAK_IF(!this->chkArenaConsistency(regData));
 
     // mark the block as live
     regData->liveFields[fld] = BK_UNIFORM;
@@ -2097,7 +2096,7 @@ TFldId SymHeapCore::Private::writeUniformBlock(
             this->reinterpretObjData(old, fld, killedPtrs);
     }
 
-    CL_BREAK_IF(!this->chkArenaConsistency(rootData));
+    CL_BREAK_IF(!this->chkArenaConsistency(regData));
     return fld;
 }
 
@@ -2148,24 +2147,25 @@ void SymHeapCore::copyBlockOfRawMemory(
     const TFldId blKiller = d->writeUniformBlock(dst, /* misleading */ VAL_NULL,
                                                  size, killedPtrs);
 
-    // check up to now arena consistency
     const BaseAddress *rootDataDst;
     d->ents.getEntRO(&rootDataDst, dstRoot);
-    CL_BREAK_IF(!d->chkArenaConsistency(rootDataDst));
 
     // jump to region
     Region *regDataDst;
     d->ents.getEntRW(&regDataDst, rootDataDst->obj);
 
+    // check up to now arena consistency
+    CL_BREAK_IF(!d->chkArenaConsistency(regDataDst));
+
     // remove the dummy block we used just to trigger the data reinterpretation
     regDataDst->liveFields.erase(blKiller);
     regDataDst->arena -= createArenaItem(dstOff, size, blKiller);
     d->ents.releaseEnt(blKiller);
-    CL_BREAK_IF(!d->chkArenaConsistency(rootDataDst));
+    CL_BREAK_IF(!d->chkArenaConsistency(regDataDst));
 
     // now we need to transfer data between two distinct root entities
     d->transferBlock(dstRoot, srcRoot, dstOff, srcOff, size);
-    CL_BREAK_IF(!d->chkArenaConsistency(rootDataDst));
+    CL_BREAK_IF(!d->chkArenaConsistency(regDataDst));
 }
 
 bool SymHeapCore::Private::findZeroInBlock(
