@@ -137,7 +137,7 @@ void detachClonedPrototype(
 TValId protoClone(SymHeap &sh, const TValId proto)
 {
     const TValId clone = segClone(sh, proto);
-    objDecrementProtoLevel(sh, clone);
+    objDecrementProtoLevel(sh, sh.objByAddr(clone));
 
     if (!isAbstractValue(sh, proto))
         // clone all unknown values in order to keep prover working

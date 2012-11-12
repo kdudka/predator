@@ -2710,7 +2710,7 @@ struct MayExistLevelUpdater {
             return /* continue */ true;
 
         // this object became a prototype, increment its level
-        objIncrementProtoLevel(ctx.dst, proto);
+        objIncrementProtoLevel(ctx.dst, ctx.dst.objByAddr(proto));
         return /* continue */ true;
     }
 };

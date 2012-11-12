@@ -31,10 +31,10 @@ bool collectPrototypesOf(
         const bool                  skipDlsPeers);
 
 /// increment prototype level of a single object while taking care of DLS peers
-void objIncrementProtoLevel(SymHeap &sh, TValId root);
+void objIncrementProtoLevel(SymHeap &sh, TObjId);
 
 /// decrement prototype level of a single object while taking care of DLS peers
-void objDecrementProtoLevel(SymHeap &sh, TValId root);
+void objDecrementProtoLevel(SymHeap &sh, TObjId);
 
 /// decrement prototype level of owned prototype objects
 void decrementProtoLevel(SymHeap &sh, const TValId at);

@@ -115,11 +115,8 @@ bool collectPrototypesOf(
     return traverseLivePtrs(sh, sh.objByAddr(root), collector);
 }
 
-void objChangeProtoLevel(SymHeap &sh, TValId root, const TProtoLevel diff)
+void objChangeProtoLevel(SymHeap &sh, TObjId proto, const TProtoLevel diff)
 {
-    CL_BREAK_IF(sh.valOffset(root));
-    const TObjId proto = sh.objByAddr(root);
-
     const TProtoLevel level = sh.objProtoLevel(proto);
     sh.objSetProtoLevel(proto, level + diff);
 
@@ -127,20 +124,21 @@ void objChangeProtoLevel(SymHeap &sh, TValId root, const TProtoLevel diff)
     if (OK_DLS != kind)
         return;
 
+    const TValId root = /* XXX */ sh.legacyAddrOfAny_XXX(proto);
     const TObjId peer = sh.objByAddr(dlSegPeer(sh, root));
     CL_BREAK_IF(sh.objProtoLevel(peer) != level);
 
     sh.objSetProtoLevel(peer, level + diff);
 }
 
-void objIncrementProtoLevel(SymHeap &sh, TValId root)
+void objIncrementProtoLevel(SymHeap &sh, TObjId obj)
 {
-    objChangeProtoLevel(sh, root, 1);
+    objChangeProtoLevel(sh, obj, 1);
 }
 
-void objDecrementProtoLevel(SymHeap &sh, TValId root)
+void objDecrementProtoLevel(SymHeap &sh, TObjId obj)
 {
-    objChangeProtoLevel(sh, root, -1);
+    objChangeProtoLevel(sh, obj, -1);
 }
 
 void decrementProtoLevel(SymHeap &sh, const TValId at)
@@ -148,7 +146,7 @@ void decrementProtoLevel(SymHeap &sh, const TValId at)
     TValList protoList;
     collectPrototypesOf(protoList, sh, at, /* skipDlsPeers */ true);
     BOOST_FOREACH(const TValId proto, protoList)
-        objDecrementProtoLevel(sh, proto);
+        objDecrementProtoLevel(sh, sh.objByAddr(proto));
 }
 
 bool protoCheckConsistency(const SymHeap &sh)
