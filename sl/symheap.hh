@@ -702,6 +702,13 @@ inline bool operator!=(const FldHandle &a, const FldHandle &b)
 
 class PtrHandle: public FldHandle {
     public:
+        PtrHandle(SymHeapCore &sh, const TObjId obj, const TOffset off):
+            FldHandle(sh, sh.ptrLookup(obj, off))
+        {
+            if (0 < id_)
+                sh_->fldEnter(id_);
+        }
+
         /// TODO: drop this constructor!
         PtrHandle(SymHeapCore &sh, TValId addr):
             FldHandle(sh, FLD_INVALID)

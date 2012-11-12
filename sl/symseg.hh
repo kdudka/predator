@@ -217,13 +217,11 @@ TValId segClone(SymHeap &sh, const TValId root);
 inline void buildIgnoreList(
         TFldSet                 &ignoreList,
         const SymHeap           &sh,
-        const TValId            at)
+        const TObjId            obj)
 {
     SymHeap &writable = const_cast<SymHeap &>(sh);
     TOffset off;
     FldHandle tmp;
-
-    const TObjId obj = sh.objByAddr(at);
 
     const EObjKind kind = sh.objKind(obj);
     switch (kind) {
@@ -235,7 +233,7 @@ inline void buildIgnoreList(
         case OK_SEE_THROUGH_2N:
             // preserve 'peer' field
             off = sh.segBinding(obj).prev;
-            tmp = PtrHandle(writable, writable.valByOffset(at, off));
+            tmp = PtrHandle(writable, obj, off);
             ignoreList.insert(tmp);
             // fall through!
 
@@ -243,24 +241,45 @@ inline void buildIgnoreList(
         case OK_SEE_THROUGH:
             // preserve 'next' field
             off = sh.segBinding(obj).next;
-            tmp = PtrHandle(writable, writable.valByOffset(at, off));
+            tmp = PtrHandle(writable, obj, off);
             ignoreList.insert(tmp);
     }
+}
+
+/// TODO: drop this!
+inline void buildIgnoreList(
+        TFldSet                 &ignoreList,
+        const SymHeap           &sh,
+        const TValId            at)
+{
+    const TObjId obj = sh.objByAddr(at);
+    return buildIgnoreList(ignoreList, sh, obj);
 }
 
 inline void buildIgnoreList(
         TFldSet                 &ignoreList,
         SymHeap                 &sh,
-        const TValId            at,
-        const BindingOff        &off)
+        const TObjId            obj,
+        const BindingOff        &bf)
 {
-    const PtrHandle next(sh, sh.valByOffset(at, off.next));
+    const PtrHandle next(sh, obj, bf.next);
     if (next.isValidHandle())
         ignoreList.insert(next);
 
-    const PtrHandle prev(sh, sh.valByOffset(at, off.prev));
+    const PtrHandle prev(sh, obj, bf.prev);
     if (prev.isValidHandle())
         ignoreList.insert(prev);
+}
+
+/// TODO: drop this!
+inline void buildIgnoreList(
+        TFldSet                 &ignoreList,
+        SymHeap                 &sh,
+        const TValId            at,
+        const BindingOff        &bf)
+{
+    const TObjId obj = sh.objByAddr(at);
+    buildIgnoreList(ignoreList, sh, obj, bf);
 }
 
 /// look through possibly empty objects and return the value seen
