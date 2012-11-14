@@ -136,11 +136,7 @@ void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
         : "black";
 
     plot.out << "\t"
-#if SYMPLOT_FLAT_MODE
-        << SL_QUOTE(to) << " -> " << SL_QUOTE("fld" << from)
-#else
         << SL_QUOTE(from) << " -> " << SL_QUOTE(to)
-#endif
         << " [color=" << color
         << ", fontcolor=" << color
         << ", label=\"[" << SIGNED_OFF(off)
@@ -331,24 +327,19 @@ void plotRootValue(PlotData &plot, const TValId val, const char *color)
     if (!isValid)
         color = "red";
 
-#if SYMPLOT_FLAT_MODE
-    if (refCnt)
-#endif
-    {
-        // visualize the count of references as pen width
-        const float pw = static_cast<float>(1U + refCnt);
-        plot.out << "\t" << SL_QUOTE(val)
-            << " [shape=ellipse, penwidth=" << pw
-            << ", color=" << color
-            << ", fontcolor=" << color
-            << ", label=\"";
+    // visualize the count of references as pen width
+    const float pw = static_cast<float>(1U + refCnt);
+    plot.out << "\t" << SL_QUOTE(val)
+        << " [shape=ellipse, penwidth=" << pw
+        << ", color=" << color
+        << ", fontcolor=" << color
+        << ", label=\"";
 
-        const EStorageClass code = sh.objStorClass(obj);
-        if (isProgramVar(code))
-            describeVar(plot, val);
-        else
-            plot.out << "#" << val;
-    }
+    const EStorageClass code = sh.objStorClass(obj);
+    if (isProgramVar(code))
+        describeVar(plot, val);
+    else
+        plot.out << "#" << val;
 
     if (!sh.isValid(obj))
         plot.out << " [INVALID]";
@@ -356,38 +347,9 @@ void plotRootValue(PlotData &plot, const TValId val, const char *color)
     if (OBJ_INVALID != obj)
         plot.out << " [obj=#" << obj << "]";
 
-#if SYMPLOT_FLAT_MODE
-    if (refCnt)
-        plot.out << "\"];";
-
-    TValId fld = val;
-    if (isDlSegPeer(sh, val))
-        fld = dlSegPeer(sh, val);
-    else
-        plot.out << "\n\t" << SL_QUOTE("fld" << val)
-            << " [shape=box"
-            << ", color=" << color
-            << ", fontcolor=" << color
-            << ", label=\"O #" << val;
-
-    if (val == fld)
-#endif
-    {
-        plot.out << " [size = ";
-        printRawRange(plot.out, size, " B");
-        plot.out << "]\"];\n";
-    }
-
-#if SYMPLOT_FLAT_MODE
-    if (!refCnt)
-        return;
-
-    plot.out << "\t" << SL_QUOTE(val) << " -> " << SL_QUOTE("fld" << fld)
-        << " [color=" << color
-        << ", fontcolor=" << color
-        << ", label=\"[" << SIGNED_OFF(0)
-        << "]\"];\n";
-#endif
+    plot.out << " [size = ";
+    printRawRange(plot.out, size, " B");
+    plot.out << "]\"];\n";
 }
 
 enum EObjectClass {
@@ -464,10 +426,6 @@ bool plotAtomicObj(PlotData &plot, const AtomicObject &ao, const bool lonely)
     const TValId at = fld.placedAt();
     plot.liveObjs[at].push_back(fld);
 
-#if SYMPLOT_FLAT_MODE
-    return false;
-#endif
-
     // cppcheck-suppress unreachableCode
     if (lonely) {
         const TObjId obj = sh.objByAddr(at);
@@ -512,7 +470,6 @@ void plotUniformBlocks(PlotData &plot, const TValId root)
 
         // plot block node
         const int id = ++plot.last;
-#if !SYMPLOT_FLAT_MODE
         plot.out << "\t" << SL_QUOTE("lonely" << id)
             << " [shape=box, color=blue, fontcolor=blue, label=\"UNIFORM_BLOCK "
             << bl.size << "B\"];\n";
@@ -524,7 +481,6 @@ void plotUniformBlocks(PlotData &plot, const TValId root)
             << " -> " << SL_QUOTE("lonely" << id)
             << " [color=black, fontcolor=black, label=\"[+"
             << off << "]\"];\n";
-#endif
 
         // schedule hasValue edge
         const PlotData::TDangVal dv(id, bl.tplValue);
@@ -715,11 +671,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveObjs)
         << "\" {\n\trank=same;\n\tlabel=" << SL_QUOTE(label)
         << ";\n\tcolor=" << color
         << ";\n\tfontcolor=" << color
-#if SYMPLOT_FLAT_MODE
-        << ";\n\tcolor=transparent;"
-#else
         << ";\n\tbgcolor=gray98;\n\tstyle=dashed;"
-#endif
         << "\n\tpenwidth=" << pw
         << ";\n";
 
@@ -808,13 +760,11 @@ void plotRootObjects(PlotData &plot)
         const TObjId obj = sh.objByAddr(root);
         sh.gatherLiveFields(liveObjs, obj);
 
-#if !SYMPLOT_FLAT_MODE
         if (OK_REGION == sh.objKind(obj)
                 && (1 == liveObjs.size())
                 && plotSimpleRoot(plot, liveObjs.front()))
             // this one went out in a simplified form
             continue;
-#endif
 
         plotCompositeObj(plot, root, liveObjs);
     }
@@ -944,11 +894,7 @@ void plotCustomValue(
     describeCustomValue(plot, val);
 
     plot.out << "];\n\t"
-#if SYMPLOT_FLAT_MODE
-        << SL_QUOTE("fld" << idFrom)
-#else
         << SL_QUOTE(idFrom)
-#endif
         << " -> " << SL_QUOTE("lonely" << id)
         << " [color=blue, fontcolor=blue";
     appendLabelIf(plot.out, edgeLabel);
@@ -1047,11 +993,7 @@ void plotPointsTo(PlotData &plot, const TValId val, const TFldId target)
 void plotRangePtr(PlotData &plot, TValId val, TValId root, const IR::Range &rng)
 {
     plot.out << "\t" << SL_QUOTE(val) << " -> "
-#if SYMPLOT_FLAT_MODE
-        << SL_QUOTE("fld" << root)
-#else
         << SL_QUOTE(root)
-#endif
         << " [color=red, fontcolor=red, label=\"[";
 
     printRawRange(plot.out, rng);
@@ -1084,9 +1026,7 @@ void plotNonRootValues(PlotData &plot)
             continue;
 
         TValId offEdgeRoot = root;
-#if SYMPLOT_FLAT_MODE
-        dlSegJumpToBegIfNeeded(sh, &offEdgeRoot);
-#else
+
         // assume an off-value
         PlotData::TLiveObjs::const_iterator it = plot.liveObjs.find(val);
         if ((plot.liveObjs.end() != it) && (1 == it->second.size())) {
@@ -1095,7 +1035,6 @@ void plotNonRootValues(PlotData &plot)
             plotPointsTo(plot, val, target.fieldId());
             continue;
         }
-#endif
 
         // an off-value with either no target, or too many targets
         const TOffset off = sh.valOffset(val);
@@ -1208,56 +1147,11 @@ void plotHasValue(
     }
 
     plot.out << "\t"
-#if SYMPLOT_FLAT_MODE
-        << SL_QUOTE("fld" << idFrom)
-#else
         << SL_QUOTE(idFrom)
-#endif
         << " -> " << SL_QUOTE(val)
         << " [color=blue, fontcolor=blue";
     appendLabelIf(plot.out, edgeLabel);
     plot.out << "];\n";
-}
-
-/// (0 == clt) means a uniform block because uniform blocks are type-free
-void plotHasValueFlat(
-        PlotData                       &plot,
-        TValId                          root,
-        const TOffset                   beg,
-        const TOffset                   end,
-        const TObjType                  clt,
-        const TValId                    val)
-{
-    dlSegJumpToBegIfNeeded(plot.sh, &root);
-
-    std::ostringstream strLabel;
-    if (clt) {
-        const cl_type_e code = clt->code;
-        switch (code) {
-            case CL_TYPE_INT:
-                strLabel << "INT";
-                break;
-
-            case CL_TYPE_PTR:
-                if (isDataPtr(clt)) {
-                    strLabel << "PTR";
-                    break;
-                }
-                // fall through!
-
-            default:
-                // TODO
-                strLabel << "OBJ";
-                break;
-        }
-    }
-    else
-        strLabel << "uni_block";
-
-    strLabel << "@<" << beg << ", " << end << ")";
-
-    const std::string label(strLabel.str());
-    plotHasValue(plot, root, val, /* isObj */ false, label.c_str());
 }
 
 void plotNeqZero(PlotData &plot, const TValId val)
@@ -1340,54 +1234,6 @@ void plotNeqEdges(PlotData &plot)
     np.plotNeqEdges(plot);
 }
 
-void plotFlatEdges(PlotData &plot)
-{
-    SymHeap &sh = plot.sh;
-
-    // plot "hasValue" edges
-    BOOST_FOREACH(PlotData::TLiveObjs::const_reference item, plot.liveObjs) {
-        const TValId at = item.first;
-        const TValId root = sh.valRoot(at);
-        const TOffset beg = sh.valOffset(at);
-
-        BOOST_FOREACH(const FldHandle &fld, /* FldList */ item.second) {
-            const TObjType clt = fld.type();
-            const TOffset end = beg + clt->size;
-            const TValId val = fld.value();
-
-            plotHasValueFlat(plot, root, beg, end, clt, val);
-        }
-    }
-
-    // go through all roots
-    BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
-        if (! /* isRoot */ item.second)
-            continue;
-
-        const TValId root = item.first;
-#if !SYMPLOT_OMIT_DEBUG_DLS
-        if (isDlSegPeer(plot.sh, root))
-            // plot uniform blocks only once for a DLS pair
-            continue;
-#endif
-
-        // get all uniform blocks inside the given root
-        TUniBlockMap bMap;
-        const TObjId obj = sh.objByAddr(root);
-        sh.gatherUniformBlocks(bMap, obj);
-
-        // plot flat edges for all uniform blocks at the current root
-        BOOST_FOREACH(TUniBlockMap::const_reference item, bMap) {
-            const UniformBlock &bl = item.second;
-            const TOffset beg = bl.off;
-            const TOffset end = beg + bl.size;
-            const TValId val = bl.tplValue;
-
-            plotHasValueFlat(plot, root, beg, end, /* clt */ 0, val);
-        }
-    }
-}
-
 void plotHasValueEdges(PlotData &plot)
 {
     // plot "hasValue" edges
@@ -1415,16 +1261,8 @@ void plotEverything(PlotData &plot)
 {
     plotRootObjects(plot);
     plotNonRootValues(plot);
-
-#if SYMPLOT_FLAT_MODE
-    plotFlatEdges(plot);
-#else
     plotHasValueEdges(plot);
-#endif
-
-#if !SYMPLOT_OMIT_NEQ_EDGES
     plotNeqEdges(plot);
-#endif
 }
 
 bool plotHeap(

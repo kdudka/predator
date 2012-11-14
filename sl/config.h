@@ -296,17 +296,6 @@
 #define SYMPLOT_DEBUG_DLS                   0
 
 /**
- * if 1, do not plot allocated areas as clusters
- */
-#define SYMPLOT_FLAT_MODE                   0
-
-/**
- * if 1, skip plotting of "neq" edges (makes the result more readable by humans
- * in certain cases)
- */
-#define SYMPLOT_OMIT_NEQ_EDGES              1
-
-/**
  * if more than zero, jump to debugger as soon as N graph of the same name has
  * been plotted
  */
