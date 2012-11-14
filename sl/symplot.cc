@@ -43,7 +43,6 @@
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of plotHeap()
 struct PlotData {
-    typedef std::map<TValId, bool /* isRoot */>             TValues;
     typedef std::map<TValId, FldList>                       TLiveFields;
     typedef std::pair<int /* ID */, TValId>                 TDangVal;
     typedef std::vector<TDangVal>                           TDangValues;
@@ -51,7 +50,8 @@ struct PlotData {
     SymHeap                             &sh;
     std::ostream                        &out;
     int                                 last;
-    TValues                             values;
+    std::set<TObjId>                    objs;
+    TValSet                             values;
     TLiveFields                         liveFields;
     TDangValues                         dangVals;
 
@@ -84,24 +84,22 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
     TValId val;
     while (todo.next(val)) {
         // insert the value itself
-        plot.values[val] = /* isRoot */ false;
+        plot.values.insert(val);
         if (!isAnyDataArea(sh.valTarget(val)))
             // target is not an object
             continue;
 
-        // check the root
-        const TValId root = sh.valRoot(val);
-        plot.values[root] = /* isRoot */ true;
-        if (root != val && todo.seen(root))
-            // this root was already traversed
+        // insert the target object
+        const TObjId obj = sh.objByAddr(val);
+        if (!insertOnce(plot.objs, obj))
+            // the outgoing has-value edges have already been traversed
             continue;
 
         if (!digForward)
             continue;
 
-        // traverse the root
+        // traverse the outgoing has-value edges
         FldList liveFields;
-        const TObjId obj = sh.objByAddr(root);
         sh.gatherLiveFields(liveFields, obj);
         BOOST_FOREACH(const FldHandle &fld, liveFields) {
             const TValId valInside = fld.value();
@@ -547,13 +545,10 @@ void plotFields(PlotData &plot, const TValId at, const TCont &liveFields)
     }
 }
 
-std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
+std::string labelOfCompObj(const SymHeap &sh, const TObjId obj, bool showProps)
 {
-    const TObjId obj = sh.objByAddr(root);
-
     std::ostringstream label;
-    const TObjId proto = sh.objByAddr(root);
-    const TProtoLevel protoLevel= sh.objProtoLevel(proto);
+    const TProtoLevel protoLevel= sh.objProtoLevel(obj);
     if (protoLevel)
         label << "[L" << protoLevel << " prototype] ";
 
@@ -616,14 +611,12 @@ std::string labelOfCompObj(const SymHeap &sh, const TValId root, bool showProps)
 }
 
 template <class TCont>
-void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveFields)
+void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
 {
     SymHeap &sh = plot.sh;
 
     const char *color = "black";
     const char *pw = "1.0";
-
-    const TObjId obj = sh.objByAddr(at);
 
     const EStorageClass code = sh.objStorClass(obj);
     switch (code) {
@@ -663,7 +656,7 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveFields)
             break;
     }
 
-    const std::string label = labelOfCompObj(sh, at, /* showProps */ true);
+    const std::string label = labelOfCompObj(sh, obj, /* showProps */ true);
 
     // open cluster
     plot.out
@@ -674,6 +667,8 @@ void plotCompositeObj(PlotData &plot, const TValId at, const TCont &liveFields)
         << ";\n\tbgcolor=gray98;\n\tstyle=dashed;"
         << "\n\tpenwidth=" << pw
         << ";\n";
+
+    const TValId at = sh.legacyAddrOfAny_XXX(obj);
 
     // plot the root value
     plotRootValue(plot, at, color);
@@ -746,18 +741,13 @@ void plotObjects(PlotData &plot)
     SymHeap &sh = plot.sh;
 
     // go through roots
-    BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
-        if (! /* isRoot */ item.second)
-            continue;
-
-        const TValId root = item.first;
-        if (isDlSegPeer(plot.sh, root))
+    BOOST_FOREACH(const TObjId obj, plot.objs) {
+        if (isDlSegPeer(plot.sh, obj))
             // DLS peers are never plotted directly at this level
             continue;
 
         // gather live objects
         FldList liveFields;
-        const TObjId obj = sh.objByAddr(root);
         sh.gatherLiveFields(liveFields, obj);
 
         if (OK_REGION == sh.objKind(obj)
@@ -766,7 +756,7 @@ void plotObjects(PlotData &plot)
             // this one went out in a simplified form
             continue;
 
-        plotCompositeObj(plot, root, liveFields);
+        plotCompositeObj(plot, obj, liveFields);
     }
 }
 
@@ -1006,12 +996,11 @@ void plotNonRootValues(PlotData &plot)
     SymHeap &sh = plot.sh;
 
     // go through non-roots
-    BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
-        if (/* isRoot */ item.second)
+    BOOST_FOREACH(const TValId val, plot.values) {
+        if (hasKey(plot.objs, sh.objByAddr(val)) && sh.valRoot(val) == val)
             continue;
 
         // plot a value node
-        const TValId val = item.first;
         plotValue(plot, val);
 
         const TValId root = sh.valRoot(val);
@@ -1214,12 +1203,7 @@ void plotNeqEdges(PlotData &plot)
 
     // gather relevant "neq" edges
     NeqPlotter np;
-    BOOST_FOREACH(PlotData::TValues::const_reference item, plot.values) {
-        const TValId val = item.first;
-        if (isKnownObjectAt(sh, val))
-            // even if there was a non-equivalence, it would be the implicit one
-            continue;
-
+    BOOST_FOREACH(const TValId val, plot.values) {
         // go through related values
         TValList relatedVals;
         sh.gatherRelatedValues(relatedVals, val);

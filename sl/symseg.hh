@@ -159,18 +159,23 @@ inline TValId segNextRootObj(SymHeap &sh, TValId root)
     return segNextRootObj(sh, root, offNext);
 }
 
-/// true if the given root is a DLS with bf.prev < bf.next
-inline bool isDlSegPeer(const SymHeap &sh, const TValId root)
+/// true if the given object is a DLS with bf.prev < bf.next
+inline bool isDlSegPeer(const SymHeap &sh, const TObjId obj)
 {
-    CL_BREAK_IF(sh.valOffset(root));
-
-    const TObjId obj = sh.objByAddr(root);
     if (OK_DLS != sh.objKind(obj))
         // not a DLS
         return false;
 
     const BindingOff &bf = sh.segBinding(obj);
     return (bf.prev < bf.next);
+}
+
+/// TODO: drop this!
+inline bool isDlSegPeer(const SymHeap &sh, const TValId root)
+{
+    CL_BREAK_IF(sh.valOffset(root));
+    const TObjId obj = sh.objByAddr(root);
+    return isDlSegPeer(sh, obj);
 }
 
 inline TMinLen objMinLength(const SymHeap &sh, TValId root)
