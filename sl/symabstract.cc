@@ -480,7 +480,7 @@ bool segAbstractionStep(
 bool applyAbstraction(
         SymHeap                     &sh,
         const BindingOff            &off,
-        const TValId                entry,
+        const TObjId                entry,
         const unsigned              len)
 {
     EObjKind kind;
@@ -498,7 +498,7 @@ bool applyAbstraction(
     CL_DEBUG("    AAA initiating " << name << " abstraction of length " << len);
 
     // cursor
-    TValId cursor = entry;
+    TValId cursor = sh.legacyAddrOfAny_XXX(entry);
 
     LDP_INIT(symabstract, name);
     LDP_PLOT(symabstract, sh);
@@ -642,7 +642,7 @@ void abstractIfNeeded(SymHeap &sh)
     return;
 #endif
     BindingOff          off;
-    TValId              entry;
+    TObjId              entry;
     unsigned            len;
 
     while ((len = discoverBestAbstraction(sh, &off, &entry))) {

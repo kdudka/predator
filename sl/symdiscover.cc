@@ -363,9 +363,11 @@ void segDiscover(
         TRankMap                    &dst,
         SymHeap                     &sh,
         const BindingOff            &off,
-        const TValId                entry)
+        const TObjId                entryObj)
 {
     CL_BREAK_IF(!dst.empty());
+
+    const TValId entry = sh.legacyAddrOfAny_XXX(entryObj);
 
     // we use std::set to detect loops
     std::set<TValId> haveSeen;
@@ -454,13 +456,15 @@ void segDiscover(
 
 class PtrFinder {
     private:
-        const TValId                lookFor_;
+        const TObjId                obj_;
+        const TOffset               off_;
         TOffset                     offFound_;
 
     public:
         // cppcheck-suppress uninitMemberVar
-        PtrFinder(TValId lookFor):
-            lookFor_(lookFor)
+        PtrFinder(const TObjId obj, const TOffset off):
+            obj_(obj),
+            off_(off)
         {
         }
 
@@ -473,11 +477,17 @@ class PtrFinder {
         if (val <= 0)
             return /* continue */ true;
 
-        if (val != lookFor_)
+        SymHeapCore *sh = sub.sh();
+        if (sh->objByAddr(val) != obj_)
+            return /* continue */ true;
+
+        if (sh->valTarget(val) != VT_OBJECT)
+            return /* continue */ true;
+
+        if (sh->valOffset(val) != off_)
             return /* continue */ true;
 
         // target found!
-        SymHeapCore *sh = sub.sh();
         offFound_ = sh->valOffset(sub.placedAt());
         return /* break */ false;
     }
@@ -485,17 +495,15 @@ class PtrFinder {
 
 bool digBackLink(
         BindingOff                 *pOff,
-        SymHeap                     &sh,
-        const TValId                root,
-        const TValId                next)
+        SymHeap                    &sh,
+        const TObjId                obj,
+        const TObjId                next)
 {
     // set up a visitor
-    const TValId lookFor = sh.valByOffset(root, pOff->head);
-    PtrFinder visitor(lookFor);
+    PtrFinder visitor(obj, pOff->head);
 
-    // guide it through the next root entity
-    const TObjId lookAt = sh.objByAddr(next);
-    if (/* found nothing */ traverseLivePtrs(sh, lookAt, visitor))
+    // guide it through the next object
+    if (/* found nothing */ traverseLivePtrs(sh, next, visitor))
         return false;
 
     // got a back-link!
@@ -508,33 +516,34 @@ typedef std::vector<BindingOff> TBindingCandidateList;
 class ProbeEntryVisitor {
     private:
         TBindingCandidateList   &dst_;
-        const TValId            root_;
+        const TObjId            obj_;
 
     public:
         ProbeEntryVisitor(
-                TBindingCandidateList         &dst,
-                const TValId                  root):
+                TBindingCandidateList      &dst,
+                const TObjId                obj):
             dst_(dst),
-            root_(root)
+            obj_(obj)
         {
         }
 
         bool operator()(const FldHandle &sub) const
         {
             SymHeap &sh = *static_cast<SymHeap *>(sub.sh());
-            const TValId next = sub.value();
-            if (!canWriteDataPtrAt(sh, next))
+            const TValId nextVal = sub.value();
+            const TObjId nextObj = sh.objByAddr(nextVal);
+            if (!canWriteDataPtrAt(sh, nextVal))
                 return /* continue */ true;
 
             // read head offset
             BindingOff off;
-            off.head = sh.valOffset(next);
+            off.head = sh.valOffset(nextVal);
 
             // entry candidate found, check the back-link in case of DLL
             off.next = sh.valOffset(sub.placedAt());
             off.prev = off.next;
 #if !SE_DISABLE_DLS
-            digBackLink(&off, sh, root_, next);
+            digBackLink(&off, sh, obj_, nextObj);
 #endif
 
 #if SE_DISABLE_SLS
@@ -567,7 +576,7 @@ bool segOnPath(
 }
 
 struct SegCandidate {
-    TValId                      entry;
+    TObjId                      entry;
     TBindingCandidateList       offList;
 };
 
@@ -577,7 +586,7 @@ unsigned /* len */ selectBestAbstraction(
         SymHeap                     &sh,
         const TSegCandidateList     &candidates,
         BindingOff                  *pOff,
-        TValId                      *entry)
+        TObjId                      *entry)
 {
     const unsigned cnt = candidates.size();
     if (!cnt)
@@ -648,7 +657,7 @@ unsigned /* len */ selectBestAbstraction(
 unsigned /* len */ discoverBestAbstraction(
         SymHeap             &sh,
         BindingOff          *off,
-        TValId              *entry)
+        TObjId              *entry)
 {
     TSegCandidateList candidates;
 
@@ -656,19 +665,16 @@ unsigned /* len */ discoverBestAbstraction(
     TObjList heapObjs;
     sh.gatherObjects(heapObjs, isOnHeap);
     BOOST_FOREACH(const TObjId obj, heapObjs) {
-        // TODO: drop this!
-        const TValId at = sh.legacyAddrOfAny_XXX(obj);
-
         // use ProbeEntryVisitor visitor to validate the potential segment entry
         SegCandidate segc;
-        const ProbeEntryVisitor visitor(segc.offList, at);
+        const ProbeEntryVisitor visitor(segc.offList, obj);
         traverseLivePtrs(sh, obj, visitor);
         if (segc.offList.empty())
             // found nothing
             continue;
 
         // append a segment candidate
-        segc.entry = at;
+        segc.entry = obj;
         candidates.push_back(segc);
     }
 

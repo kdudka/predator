@@ -51,6 +51,6 @@ inline bool isDlsBinding(const BindingOff &off)
 unsigned /* len */ discoverBestAbstraction(
         SymHeap                 &sh,
         BindingOff              *bf,
-        TValId                  *entry);
+        TObjId                  *entry);
 
 #endif /* H_GUARD_SYMDISCOVER_H */
