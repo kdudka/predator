@@ -203,6 +203,9 @@ typedef std::vector<TObjId>                             TObjList;
 /// container used to store value IDs to
 typedef std::set<TValId>                                TValSet;
 
+/// container used to store object IDs to
+typedef std::set<TObjId>                                TObjSet;
+
 /// a type used for (injective) value IDs mapping
 typedef std::map<TValId, TValId>                        TValMap;
 

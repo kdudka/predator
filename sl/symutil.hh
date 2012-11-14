@@ -201,6 +201,16 @@ inline bool isVarAlive(SymHeap &sh, const CVar &cv)
 
 void initGlVar(SymHeap &sh, const CVar &cv);
 
+inline TObjId nextObj(SymHeap &sh, TObjId obj, TOffset offNext)
+{
+    if (OBJ_INVALID == obj)
+        return OBJ_INVALID;
+
+    const TValId valNext = valOfPtr(sh, obj, offNext);
+    return sh.objByAddr(valNext);
+}
+
+/// TODO: drop this!
 inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext)
 {
     CL_BREAK_IF(sh.valOffset(root));

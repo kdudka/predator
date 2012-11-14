@@ -130,7 +130,32 @@ inline TValId segHeadAt(const SymHeap &sh, TValId seg)
     return const_cast<SymHeap &>(sh).valByOffset(seg, off.head);
 }
 
-/// we do NOT require root to be a segment
+/// we do NOT require obj to be an abstract object
+inline TObjId segNextObj(SymHeap &sh, TObjId obj, TOffset offNext)
+{
+    if (OK_DLS == sh.objKind(obj))
+        // jump to peer in case of DLS
+        obj = dlSegPeer(sh, obj);
+
+    return nextObj(sh, obj, offNext);
+}
+
+/// we require obj to be an abstract object
+inline TObjId segNextObj(SymHeap &sh, TObjId obj)
+{
+    const EObjKind kind = sh.objKind(obj);
+    if (OK_OBJ_OR_NULL == kind)
+        return OBJ_INVALID;
+
+    const BindingOff off = sh.segBinding(obj);
+    const TOffset offNext = (OK_DLS == kind)
+        ? off.prev
+        : off.next;
+
+    return segNextObj(sh, obj, offNext);
+}
+
+/// TODO: drop this!
 inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext)
 {
     CL_BREAK_IF(sh.valOffset(at));
@@ -141,7 +166,7 @@ inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext)
     return nextRootObj(sh, at, offNext);
 }
 
-/// we DO require the root to be an abstract object
+/// TODO: drop this!
 inline TValId segNextRootObj(SymHeap &sh, TValId root)
 {
     CL_BREAK_IF(sh.valOffset(root));
