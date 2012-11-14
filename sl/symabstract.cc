@@ -150,7 +150,7 @@ void clonePrototypes(
         SymHeap                &sh,
         const TValId            rootDst,
         const TValId            rootSrc,
-        const TValList         &protoList)
+        const TObjList         &protoList)
 {
     // allocate some space for clone IDs
     const unsigned cnt = protoList.size();
@@ -158,8 +158,10 @@ void clonePrototypes(
 
     // clone the prototypes and reconnect them to the new root
     for (unsigned i = 0; i < cnt; ++i) {
-        const TValId proto = protoList[i];
-        const TValId clone = protoClone(sh, protoList[i]);
+        const TValId proto = sh.legacyAddrOfAny_XXX(protoList[i]);
+        const TValId clone = protoClone(sh,
+                sh.legacyAddrOfAny_XXX(protoList[i]));
+
         detachClonedPrototype(sh, proto, clone, rootDst, rootSrc,
                 /* uplink */ true);
 
@@ -168,14 +170,14 @@ void clonePrototypes(
 
     // FIXME: works, but likely to kill the CPU
     for (unsigned i = 0; i < cnt; ++i) {
-        const TValId proto = protoList[i];
+        const TValId proto = sh.legacyAddrOfAny_XXX(protoList[i]);
         const TValId clone = cloneList[i];
 
         for (unsigned j = 0; j < cnt; ++j) {
             if (i == j)
                 continue;
 
-            const TValId otherProto = protoList[j];
+            const TValId otherProto = sh.legacyAddrOfAny_XXX(protoList[j]);
             const TValId otherClone = cloneList[j];
             detachClonedPrototype(sh, proto, clone, otherClone, otherProto,
                     /* uplink */ false);
@@ -231,8 +233,8 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls)
 TValId segDeepCopy(SymHeap &sh, TValId seg)
 {
     // collect the list of prototypes
-    TValList protoList;
-    collectPrototypesOf(protoList, sh, seg, /* skipDlsPeers */ true);
+    TObjList protoList;
+    collectPrototypesOf(protoList, sh, sh.objByAddr(seg), /* skipPeers */ true);
 
     // clone the root itself
     const TValId dup = objClone(sh, seg);
@@ -253,7 +255,7 @@ void enlargeMayExist(SymHeap &sh, const TValId at)
     if (!isMayExistObj(kind))
         return;
 
-    decrementProtoLevel(sh, at);
+    decrementProtoLevel(sh, obj);
     sh.objSetConcrete(obj);
 }
 
@@ -675,7 +677,7 @@ void concretizeObj(
     if (isMayExistObj(kind)) {
         // these kinds are much easier than regular list segments
         sh.objSetConcrete(seg);
-        decrementProtoLevel(sh, segAt);
+        decrementProtoLevel(sh, seg);
         LDP_PLOT(symabstract, sh);
         CL_BREAK_IF(!protoCheckConsistency(sh));
         return;

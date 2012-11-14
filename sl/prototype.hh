@@ -23,11 +23,11 @@
 #include "config.h"
 #include "symheap.hh"
 
-/// collect prototypes of the given root object, return true on success
+/// collect prototypes of the given object, return true on success
 bool collectPrototypesOf(
-        TValList                   &dst,
+        TObjList                   &dst,
         SymHeap                    &sh,
-        const TValId                root,
+        const TObjId                obj,
         const bool                  skipDlsPeers);
 
 /// increment prototype level of a single object while taking care of DLS peers
@@ -37,7 +37,7 @@ void objIncrementProtoLevel(SymHeap &sh, TObjId);
 void objDecrementProtoLevel(SymHeap &sh, TObjId);
 
 /// decrement prototype level of owned prototype objects
-void decrementProtoLevel(SymHeap &sh, const TValId at);
+void decrementProtoLevel(SymHeap &sh, const TObjId obj);
 
 /**
  * returns true if no concrete object points to another object of a higher level

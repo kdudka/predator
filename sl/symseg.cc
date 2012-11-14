@@ -183,8 +183,9 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
             || haveSegBidir(&seg, sh, OK_SEE_THROUGH_2N, v1, v2))
     {
         // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
-        decrementProtoLevel(sh, seg);
-        sh.objSetConcrete(sh.objByAddr(seg));
+        const TObjId obj = sh.objByAddr(seg);
+        decrementProtoLevel(sh, obj);
+        sh.objSetConcrete(obj);
         return true;
     }
 

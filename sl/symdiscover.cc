@@ -375,10 +375,11 @@ void segDiscover(
     // the entry can already have some prototypes we should take into account
     TValSet initialProtos;
     if (OK_DLS == sh.objKind(sh.objByAddr(entry))) {
-        TValList protoList;
-        collectPrototypesOf(protoList, sh, entry, /* skipDlsPeers */ false);
-        BOOST_FOREACH(const TValId proto, protoList)
-            initialProtos.insert(proto);
+        TObjList protoList;
+        collectPrototypesOf(protoList, sh, sh.objByAddr(entry),
+                /* skipDlsPeers */ false);
+        BOOST_FOREACH(const TObjId proto, protoList)
+            initialProtos.insert(sh.legacyAddrOfAny_XXX(proto));
     }
 
     // jump to the immediate successor
