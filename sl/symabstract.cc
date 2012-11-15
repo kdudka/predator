@@ -211,22 +211,22 @@ struct ValueSynchronizer {
     }
 };
 
-void dlSegSyncPeerData(SymHeap &sh, const TValId dls)
+void dlSegSyncPeerData(SymHeap &sh, const TValId dlsAt)
 {
-    const TValId peer = dlSegPeer(sh, dls);
+    const TObjId dls = sh.objByAddr(dlsAt);
+
     ValueSynchronizer visitor(sh);
     buildIgnoreList(visitor.ignoreList, sh, dls);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     FldList refs;
-    const TObjId obj = sh.objByAddr(dls);
-    sh.pointedBy(refs, obj);
-    BOOST_FOREACH(const FldHandle &fld, refs) {
+    sh.pointedBy(refs, dls);
+    BOOST_FOREACH(const FldHandle &fld, refs)
         visitor.ignoreList.insert(fld);
-    }
 
-    const TValId roots[] = { dls, peer };
-    traverseLiveFields<2>(sh, roots, visitor);
+    const TObjId peer = dlSegPeer(sh, dls);
+    const TObjId objs[] = { dls, peer };
+    traverseLiveFields<2>(sh, objs, visitor);
 }
 
 // FIXME: the semantics of this function is quite contra-intuitive

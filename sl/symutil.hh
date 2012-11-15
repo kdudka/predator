@@ -376,38 +376,22 @@ bool /* complete */ traverseUniformBlocks(
 template <unsigned N, class THeap, class TVisitor>
 bool /* complete */ traverseLiveFieldsGeneric(
         THeap                *const heaps[N],
-        const TValId                at[N],
+        const TObjId                objs[N],
         TVisitor                    &visitor)
 {
-    // collect the starting points
-    TValId roots[N];
-    TOffset offs[N];
-    for (unsigned i = 0; i < N; ++i) {
-        SymHeap &sh = *heaps[i];
-
-        const TValId addr = at[i];
-        roots[i] = sh.valRoot(addr);
-        offs[i] = sh.valOffset(addr);
-    }
-
     // collect all live objects from everywhere
     typedef std::pair<TOffset, TObjType> TItem;
     std::set<TItem> all;
     for (unsigned i = 0; i < N; ++i) {
         SymHeap &sh = *heaps[i];
-        const TValId root = roots[i];
-        if (root < 0)
+        const TObjId obj = objs[i];
+        if (OBJ_INVALID == obj)
             continue;
 
-        FldList objs;
-        const TObjId obj = sh.objByAddr(root);
-        sh.gatherLiveFields(objs, obj);
-        BOOST_FOREACH(const FldHandle &fld, objs) {
-            const TOffset off = fld.offset() - offs[i];
-            if (off < 0)
-                // do not go above the starting point
-                continue;
-
+        FldList fields;
+        sh.gatherLiveFields(fields, obj);
+        BOOST_FOREACH(const FldHandle &fld, fields) {
+            const TOffset off = fld.offset();
             const TObjType clt = fld.type();
             const TItem item(off, clt);
             all.insert(item);
@@ -419,15 +403,14 @@ bool /* complete */ traverseLiveFieldsGeneric(
         const TOffset  off = item.first;
         const TObjType clt = item.second;
 
-        FldHandle objs[N];
+        FldHandle fields[N];
         for (unsigned i = 0; i < N; ++i) {
             SymHeap &sh = *heaps[i];
-
-            const TValId addr = sh.valByOffset(roots[i], offs[i] + off);
-            objs[i] = FldHandle(sh, addr, clt);
+            const TObjId obj = objs[i];
+            fields[i] = FldHandle(sh, obj, off, clt);
         }
 
-        if (!visitor(objs))
+        if (!visitor(fields))
             // traversal cancelled by visitor
             return false;
     }
@@ -440,14 +423,14 @@ bool /* complete */ traverseLiveFieldsGeneric(
 template <unsigned N, class THeap, class TVisitor>
 bool /* complete */ traverseLiveFields(
         THeap                       &sh,
-        const TValId                at[N],
+        const TObjId                objs[N],
         TVisitor                    &visitor)
 {
     THeap *heaps[N];
     for (unsigned i = 0; i < N; ++i)
         heaps[i] = &sh;
 
-    return traverseLiveFieldsGeneric<N>(heaps, at, visitor);
+    return traverseLiveFieldsGeneric<N>(heaps, objs, visitor);
 }
 
 /// (VAL_INVALID != pointingFrom) means 'pointing from anywhere'

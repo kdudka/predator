@@ -757,18 +757,6 @@ bool traverseRoots(
     if (!defineObjectMapping(ctx, objDst, obj1, obj2))
         return false;
 
-    TValId roots[] = {
-        root1,
-        root2,
-        rootDst
-    };
-
-    SymHeap *const heaps[] = {
-        &ctx.sh1,
-        &ctx.sh2,
-        &ctx.dst
-    };
-
     if (VAL_INVALID != root1)
         ctx.sh1.gatherLiveFields(ctx.liveList1, ctx.sh1.objByAddr(root1));
     if (VAL_INVALID != root2)
@@ -791,8 +779,20 @@ bool traverseRoots(
             ctx.protoRoots.insert(rootDst);
     }
 
+    const TObjId objs[] = {
+        obj1,
+        obj2,
+        objDst
+    };
+
+    SymHeap *const heaps[] = {
+        &ctx.sh1,
+        &ctx.sh2,
+        &ctx.dst
+    };
+
     // guide the visitors through them
-    return traverseLiveFieldsGeneric<3>(heaps, roots, objVisitor);
+    return traverseLiveFieldsGeneric<3>(heaps, objs, objVisitor);
 }
 
 bool segMatchLookAhead(
@@ -813,13 +813,13 @@ bool segMatchLookAhead(
 
     // set up a visitor
     SymHeap *const heaps[] = { &ctx.sh1, &ctx.sh2 };
-    TValId roots[] = { root1, root2 };
+    TObjId objs[] = { obj1, obj2 };
     SegMatchVisitor visitor(ctx, item.ldiff);
 
     dlSegBlackListPrevPtr(visitor.blackList1, ctx.sh1, root1);
     dlSegBlackListPrevPtr(visitor.blackList2, ctx.sh2, root2);
 
-    return traverseLiveFieldsGeneric<2>(heaps, roots, visitor);
+    return traverseLiveFieldsGeneric<2>(heaps, objs, visitor);
 }
 
 bool joinClt(

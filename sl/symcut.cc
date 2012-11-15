@@ -117,10 +117,13 @@ void digFields(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
     }
 
     SymHeap *const heaps[] = { &dc.src, &dc.dst };
-    const TValId roots[] = { addrSrc, addrDst };
+    const TObjId objs[] = {
+        dc.src.objByAddr(addrSrc),
+        dc.dst.objByAddr(addrDst)
+    };
 
     DCopyObjVisitor objVisitor(dc);
-    traverseLiveFieldsGeneric<2>(heaps, roots, objVisitor);
+    traverseLiveFieldsGeneric<2>(heaps, objs, objVisitor);
 }
 
 TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)

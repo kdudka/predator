@@ -290,11 +290,11 @@ bool dfsCmp(
 
         // set up a visitor
         SymHeap *const heaps[] = { &sh1, &sh2 };
-        TValId roots[] = { v1, v2 };
+        const TObjId objs[] = { sh1.objByAddr(v1), sh2.objByAddr(v2) };
         ValueComparator visitor(wl, vMap, sh1, sh2);
 
         // guide it through a pair of root objects
-        if (!traverseLiveFieldsGeneric<2>(heaps, roots, visitor))
+        if (!traverseLiveFieldsGeneric<2>(heaps, objs, visitor))
             return false;
     }
 

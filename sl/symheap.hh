@@ -581,6 +581,14 @@ class FldHandle {
         {
         }
 
+        FldHandle(SymHeapCore &sh, TObjId obj, TOffset off, TObjType clt):
+            sh_(&sh),
+            id_(sh.fldLookup(obj, off, clt))
+        {
+            if (0 < id_)
+                sh_->fldEnter(id_);
+        }
+
         explicit FldHandle(const TFldId special):
             sh_(0),
             id_(special)
