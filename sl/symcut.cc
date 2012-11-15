@@ -93,21 +93,21 @@ class DCopyObjVisitor {
         DCopyObjVisitor(DeepCopyData &dc): dc_(dc) { }
 
         bool operator()(const FldHandle item[2]) {
-            const FldHandle &objSrc = item[/* src */ 0];
-            const FldHandle &objDst = item[/* dst */ 1];
+            const FldHandle &fldSrc = item[/* src */ 0];
+            const FldHandle &fldDst = item[/* dst */ 1];
 
-            const TValId srcAt = objSrc.placedAt();
-            const TValId dstAt = objDst.placedAt();
+            const TValId srcAt = fldSrc.placedAt();
+            const TValId dstAt = fldDst.placedAt();
             dc_.valMap[srcAt] = dstAt;
 
-            const DeepCopyData::TItem schedItem(objSrc, objDst);
+            const DeepCopyData::TItem schedItem(fldSrc, fldDst);
             dc_.wl.schedule(schedItem);
 
             return /* continue */ true;
         }
 };
 
-void digSubObjs(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
+void digFields(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
 {
     if (isPossibleToDeref(dc.src, addrSrc)) {
         // copy uniform blocks
@@ -165,7 +165,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
 
         const TValId rootDstAt = dst.addrOfRegion(regDst);
         dc.valMap[rootSrcAt] = rootDstAt;
-        digSubObjs(dc, rootSrcAt, rootDstAt);
+        digFields(dc, rootSrcAt, rootDstAt);
         return rootDstAt;
     }
 
@@ -205,7 +205,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
     dc.valMap[rootSrcAt] = rootDstAt;
 
     // look inside
-    digSubObjs(dc, rootSrcAt, rootDstAt);
+    digFields(dc, rootSrcAt, rootDstAt);
     return rootDstAt;
 }
 
@@ -268,8 +268,8 @@ void trackUses(DeepCopyData &dc, TValId valSrc)
         sh.usedBy(uses, valSrc, /* liveOnly */ true);
 
     // go from the value backward
-    BOOST_FOREACH(const FldHandle &objSrc, uses) {
-        const TValId srcAt = objSrc.placedAt();
+    BOOST_FOREACH(const FldHandle &fldSrc, uses) {
+        const TValId srcAt = fldSrc.placedAt();
         if (!isPossibleToDeref(sh, srcAt))
             continue;
 
@@ -317,27 +317,27 @@ void deepCopy(DeepCopyData &dc)
 
     DeepCopyData::TItem item;
     while (dc.wl.next(item)) {
-        const FldHandle &objSrc = item.first;
-        const FldHandle &objDst = item.second;
-        CL_BREAK_IF(!objSrc.isValidHandle() || !objDst.isValidHandle());
+        const FldHandle &fldSrc = item.first;
+        const FldHandle &fldDst = item.second;
+        CL_BREAK_IF(!fldSrc.isValidHandle() || !fldDst.isValidHandle());
 
         // read the address
-        const TValId atSrc = objSrc.placedAt();
+        const TValId atSrc = fldSrc.placedAt();
         CL_BREAK_IF(atSrc <= 0);
         trackUses(dc, atSrc);
 
         // read the original value
-        TValId valSrc = objSrc.value();
+        TValId valSrc = fldSrc.value();
         CL_BREAK_IF(VAL_INVALID == valSrc);
-        if (isComposite(objDst.type(), /* includingArray */ false))
+        if (isComposite(fldDst.type(), /* includingArray */ false))
             continue;
 
         // do whatever we need to do with the value
         const TValId valDst = handleValue(dc, valSrc);
         CL_BREAK_IF(VAL_INVALID == valDst);
 
-        // now set object's value
-        objDst.setValue(valDst);
+        // now set field's value
+        fldDst.setValue(valDst);
     }
 
     // finally copy all relevant predicates
@@ -366,12 +366,12 @@ void prune(const SymHeap &src, SymHeap &dst,
         const TValId srcAt = dc.src.addrOfRegion(srcReg);
         const TValId dstAt = dc.dst.addrOfRegion(dstReg);
         dc.valMap[srcAt] = dstAt;
-        digSubObjs(dc, srcAt, dstAt);
+        digFields(dc, srcAt, dstAt);
     }
 
     if (src.objEstimatedType(OBJ_RETURN))
         // clone VAL_ADDR_OF_RET
-        digSubObjs(dc, VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
+        digFields(dc, VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
 
     // go through the worklist
     deepCopy(dc);
