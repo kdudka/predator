@@ -44,9 +44,9 @@ class UniBlockWriter {
         const TObjId    objDst_;
 
     public:
-        UniBlockWriter(SymHeap &dst, const TValId rootDst):
+        UniBlockWriter(SymHeap &dst, const TObjId objDst):
             dst_(dst),
-            objDst_(dst.objByAddr(rootDst))
+            objDst_(objDst)
         {
         }
 
@@ -105,20 +105,16 @@ class DCopyObjVisitor {
         }
 };
 
-void digFields(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
+void digFields(DeepCopyData &dc, const TObjId objSrc, const TObjId objDst)
 {
-    if (isPossibleToDeref(dc.src, addrSrc)) {
+    if (dc.src.isValid(objSrc)) {
         // copy uniform blocks
-        const TObjId objSrc = dc.src.objByAddr(addrSrc);
-        UniBlockWriter blVisitor(dc.dst, addrDst);
+        UniBlockWriter blVisitor(dc.dst, objDst);
         traverseUniformBlocks(dc.src, objSrc, blVisitor);
     }
 
     SymHeap *const heaps[] = { &dc.src, &dc.dst };
-    const TObjId objs[] = {
-        dc.src.objByAddr(addrSrc),
-        dc.dst.objByAddr(addrDst)
-    };
+    const TObjId objs[] = { objSrc, objDst };
 
     DCopyObjVisitor objVisitor(dc);
     traverseLiveFieldsGeneric<2>(heaps, objs, objVisitor);
@@ -160,13 +156,13 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
 #endif
         }
 
-        const TObjId regDst = dst.regionByVar(cv, /* createIfNeeded */ true);
+        const TObjId objDst = dst.regionByVar(cv, /* createIfNeeded */ true);
         if (!valid)
-            dst.objInvalidate(regDst);
+            dst.objInvalidate(objDst);
 
-        const TValId rootDstAt = dst.addrOfRegion(regDst);
+        const TValId rootDstAt = dst.addrOfRegion(objDst);
         dc.valMap[rootSrcAt] = rootDstAt;
-        digFields(dc, rootSrcAt, rootDstAt);
+        digFields(dc, objSrc, objDst);
         return rootDstAt;
     }
 
@@ -206,7 +202,7 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
     dc.valMap[rootSrcAt] = rootDstAt;
 
     // look inside
-    digFields(dc, rootSrcAt, rootDstAt);
+    digFields(dc, objSrc, objDst);
     return rootDstAt;
 }
 
@@ -367,12 +363,12 @@ void prune(const SymHeap &src, SymHeap &dst,
         const TValId srcAt = dc.src.addrOfRegion(srcReg);
         const TValId dstAt = dc.dst.addrOfRegion(dstReg);
         dc.valMap[srcAt] = dstAt;
-        digFields(dc, srcAt, dstAt);
+        digFields(dc, srcReg, dstReg);
     }
 
     if (src.objEstimatedType(OBJ_RETURN))
         // clone VAL_ADDR_OF_RET
-        digFields(dc, VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
+        digFields(dc, OBJ_RETURN, OBJ_RETURN);
 
     // go through the worklist
     deepCopy(dc);
