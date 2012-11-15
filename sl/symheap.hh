@@ -561,6 +561,7 @@ class SymHeapCore {
         TValId valueOf(TFldId fld);
         TValId placedAt(TFldId fld);
         TObjId objByField(TFldId fld) const;
+        TOffset fieldOffset(TFldId fld) const;
         TObjType fieldType(TFldId fld) const;
         void objSetValue(TFldId fld, TValId val, TValSet *killedPtrs = 0);
 
@@ -643,6 +644,9 @@ class FldHandle {
 
         /// return the object that the field is part of
         TObjId          obj()           const { return sh_->objByField(id_); }
+
+        /// return the offset at which the field is placed within the object
+        TOffset         offset()        const { return sh_->fieldOffset(id_); }
 
         /// return the value inside the field (may trigger its initialization)
         TValId          value()         const { return sh_->valueOf(id_); }

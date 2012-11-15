@@ -637,7 +637,6 @@ TValId ptrObjectEncoderCore(
     }
 
     const TSizeOf dstSize = dst.type()->size;
-    CL_BREAK_IF((valSizeOfTarget(sh, dst.placedAt()).lo < dstSize));
     if (ptrSize <= dstSize)
         return val;
 

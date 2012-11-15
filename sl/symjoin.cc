@@ -2145,13 +2145,13 @@ class MayExistVisitor {
             lookThrough_ = enable;
         }
 
-        bool operator()(const FldHandle &sub) {
-            if (!isDataPtr(sub.type()))
+        bool operator()(const FldHandle &fld) {
+            if (!isDataPtr(fld.type()))
                 // not a pointer
                 return /* continue */ true;
 
-            SymHeap &sh = *static_cast<SymHeap *>(sub.sh());
-            TValId val = sub.value();
+            SymHeap &sh = *static_cast<SymHeap *>(fld.sh());
+            TValId val = fld.value();
 
             for (;;) {
                 const TValId valRoot = sh.valRoot(val);
@@ -2180,7 +2180,7 @@ class MayExistVisitor {
                 val = nextValFromSeg(sh, segAt);
             }
 
-            foundOffsets_.push_back(sh.valOffset(sub.placedAt()));
+            foundOffsets_.push_back(fld.offset());
             return /* continue */ true;
         }
 };

@@ -2852,12 +2852,8 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy)
 
     // we intentionally do not use a reference here (tight loop otherwise)
     TFldIdSet usedBy = valData->usedBy;
-    BOOST_FOREACH(const TFldId fld, usedBy) {
-        // this used to happen with with test-0037 running in OOM mode [fixed]
-        CL_BREAK_IF(isAddressToFreedObj(*this, this->placedAt(fld)));
-
+    BOOST_FOREACH(const TFldId fld, usedBy)
         this->objSetValue(fld, replaceBy);
-    }
 }
 
 void SymHeapCore::addNeq(TValId v1, TValId v2)
@@ -3000,6 +2996,17 @@ TObjId SymHeapCore::objByField(TFldId fld) const
     const FieldOfObj *fldData;
     d->ents.getEntRO(&fldData, fld);
     return fldData->obj;
+}
+
+TOffset SymHeapCore::fieldOffset(TFldId fld) const
+{
+    if (fld < 0)
+        return 0;
+
+    // resolve object
+    const FieldOfObj *fldData;
+    d->ents.getEntRO(&fldData, fld);
+    return fldData->off;
 }
 
 TValId SymHeapCore::placedAt(TFldId fld)

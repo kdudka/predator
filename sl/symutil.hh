@@ -109,12 +109,14 @@ inline FldHandle translateObjId(
         SymHeap                 &dst,
         SymHeap                 &src,
         const TValId            dstRootAt,
-        const FldHandle         &srcObj)
+        const FldHandle         &srcField)
 {
-    // gather properties of the object in 'src'
-    const TValId srcAt = srcObj.placedAt();
-    const TOffset  off = src.valOffset(srcAt);
-    const TObjType clt = srcObj.type();
+    CL_BREAK_IF(&src != srcField.sh());
+    (void) src;
+
+    // gather properties of the field in 'src'
+    const TOffset  off = srcField.offset();
+    const TObjType clt = srcField.type();
 
     // use them to obtain the corresponding object in 'dst'
     const TValId dstAt = dst.valByOffset(dstRootAt, off);
@@ -401,8 +403,7 @@ bool /* complete */ traverseLiveObjsGeneric(
         const TObjId obj = sh.objByAddr(root);
         sh.gatherLiveFields(objs, obj);
         BOOST_FOREACH(const FldHandle &fld, objs) {
-            const TValId addr = fld.placedAt();
-            const TOffset off = sh.valOffset(addr) - offs[i];
+            const TOffset off = fld.offset() - offs[i];
             if (off < 0)
                 // do not go above the starting point
                 continue;

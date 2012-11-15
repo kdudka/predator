@@ -217,16 +217,13 @@ void describeVar(PlotData &plot, const TValId rootAt)
 
 void describeFieldPlacement(PlotData &plot, const FldHandle &fld, TObjType clt)
 {
-    SymHeap &sh = plot.sh;
-
     const TObjType cltField = fld.type();
     if (!cltField || *cltField == *clt)
         // nothing interesting here
         return;
 
     // read field offset
-    const TValId at = fld.placedAt();
-    const TOffset off = sh.valOffset(at);
+    const TOffset off = fld.offset();
 
     TFieldIdxChain ic;
     if (!digIcByOffset(&ic, clt, cltField, off))
@@ -526,7 +523,7 @@ void plotFields(PlotData &plot, const TValId at, const TCont &liveFields)
         else
             code = FC_DATA;
 
-        const TOffset off = sh.valOffset(fld.placedAt());
+        const TOffset off = fld.offset();
         FieldWrapper fw(fld, code);
         objByOff[off].push_back(fw);
     }
@@ -710,11 +707,11 @@ bool plotSimpleRoot(PlotData &plot, const FldHandle &fld)
 {
     SymHeap &sh = plot.sh;
 
-    const TValId at = fld.placedAt();
-    if (sh.valOffset(at))
+    if (fld.offset())
         // offset detected
         return false;
 
+    const TValId at = fld.placedAt();
     const TValId root = sh.valRoot(at);
     if (sh.usedByCount(root))
         // root pointed
