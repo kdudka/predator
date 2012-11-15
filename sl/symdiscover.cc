@@ -169,7 +169,9 @@ bool validatePointingObjects(
 
         if (allowHeadPtr) {
             const TValId val = fld.value();
-            if (sh.objByAddr(val) == obj && sh.valOffset(val) == off.head)
+            if (VT_OBJECT == sh.valTarget(val)
+                    && sh.objByAddr(val) == obj
+                    && sh.valOffset(val) == off.head)
                 continue;
         }
 
