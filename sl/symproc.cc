@@ -371,7 +371,14 @@ TValId SymProc::varAt(const CVar &cv)
         // initialize to zero
         const TSizeRange size = sh_.objSize(reg);
         CL_BREAK_IF(!isSingular(size));
-        sh_.writeUniformBlock(at, VAL_NULL, size.lo);
+
+        const UniformBlock ub = {
+            /* off      */ 0,
+            /* size     */ size.lo,
+            /* tplValue */ VAL_NULL
+        };
+
+        sh_.writeUniformBlock(reg, ub);
     }
     else if (isLcVar)
         needInit = true;
@@ -793,8 +800,15 @@ void SymProc::objSetValue(const FldHandle &lhs, TValId rhs)
     if (VO_DEREF_FAILED == sh_.valOrigin(rhs)) {
         // we're already on an error path
         const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_DEREF_FAILED);
+
+        const UniformBlock ub = {
+            /* off      */  lhs.offset(),
+            /* size     */  size,
+            /* tplValue */  tplValue
+        };
+
         if (isComposite(clt, /* includingArray */ false))
-            sh_.writeUniformBlock(lhsAt, tplValue, size);
+            sh_.writeUniformBlock(lhs.obj(), ub);
         else
             lhs.setValue(tplValue);
 
@@ -878,7 +892,12 @@ void SymProc::killVar(const CodeStorage::KillVar &kv)
 
     // invalidate the contents
     TValSet killedPtrs;
-    sh_.writeUniformBlock(addr, valUnknown, size.lo, &killedPtrs);
+    const UniformBlock ub = {
+        /* off      */  0,
+        /* size     */ size.lo,
+        /* tplValue */ valUnknown
+    };
+    sh_.writeUniformBlock(obj, ub, &killedPtrs);
 
     // check for memory leaks
     if (lm.collectJunkFrom(killedPtrs)) {
@@ -934,9 +953,9 @@ void execMemsetCore(
         const IR::Range             &totalRange,
         TValSet                     *killedPtrs)
 {
+    const TObjId obj = sh.objByAddr(root);
     const EValueOrigin code = sh.valOrigin(valToWrite);
     const TValId valUnknown = sh.valCreate(VT_UNKNOWN, code);
-    const TValId valBegTotal = sh.valByOffset(root, totalRange.lo);
 
     // how much memory can we guarantee the content of?
     IR::Range safeRange;
@@ -948,7 +967,12 @@ void execMemsetCore(
     if (VAL_NULL != valToWrite || safeRange.hi <= safeRange.lo) {
         CL_DEBUG("memset() only invalidates the given range");
         const IR::TInt totalSize = widthOf(totalRange) - /* closed int */ 1;
-        sh.writeUniformBlock(valBegTotal, valUnknown, totalSize, killedPtrs);
+        const UniformBlock ubAll = {
+            /* off      */  totalRange.lo,
+            /* size     */  totalSize,
+            /* tplValue */  valUnknown
+        };
+        sh.writeUniformBlock(obj, ubAll, killedPtrs);
         return;
     }
 
@@ -957,15 +981,24 @@ void execMemsetCore(
     CL_BREAK_IF(safeSize <= 0);
 
     // valToWrite is VAL_NULL (we do not support writing arbitrary values yet)
-    const TValId valBegSafe = sh.valByOffset(root, safeRange.lo);
-    sh.writeUniformBlock(valBegSafe, valToWrite, safeSize, killedPtrs);
+    const UniformBlock ubSafe = {
+        /* off      */  safeRange.lo,
+        /* size     */  safeSize,
+        /* tplValue */  valToWrite,
+    };
+    sh.writeUniformBlock(obj, ubSafe, killedPtrs);
 
     // compute size of the prefix we _have_ to invalidate
     const IR::TInt prefixSize = safeRange.lo - totalRange.lo;
     CL_BREAK_IF(prefixSize < 0);
     if (0 < prefixSize) {
         CL_DEBUG("memset() invalidates ambiguous prefix");
-        sh.writeUniformBlock(valBegTotal, valUnknown, prefixSize, killedPtrs);
+        const UniformBlock ubPrefix = {
+            /* off      */  totalRange.lo,
+            /* size     */  prefixSize,
+            /* tplValue */  valUnknown
+        };
+        sh.writeUniformBlock(obj, ubPrefix, killedPtrs);
     }
 
     // compute size of the suffix we _have_ to invalidate
@@ -973,8 +1006,12 @@ void execMemsetCore(
     CL_BREAK_IF(suffixSize < 0);
     if (0 < suffixSize) {
         CL_DEBUG("memset() invalidates ambiguous suffix");
-        const TValId suffixAddr = sh.valByOffset(root, safeRange.hi);
-        sh.writeUniformBlock(suffixAddr, valUnknown, suffixSize, killedPtrs);
+        const UniformBlock ubSuffix = {
+            /* off      */  safeRange.hi,
+            /* size     */  suffixSize,
+            /* tplValue */  valUnknown
+        };
+        sh.writeUniformBlock(obj, ubSuffix, killedPtrs);
     }
 }
 
@@ -1078,6 +1115,8 @@ void executeMemmove(
         ? "memmove()"
         : "memcpy()";
 
+    const TObjId objDst = sh.objByAddr(valDst);
+
     IR::Range size;
     if (!rngFromVal(&size, sh, valSize) || size.lo < 0) {
         CL_ERROR_MSG(loc, "size arg of " << fnc << " is not a known integer");
@@ -1112,10 +1151,14 @@ void executeMemmove(
 
     if (!isSingular(size)) {
         CL_DEBUG_MSG(loc, fnc << " invalidates ambiguous suffix");
-        const TValId suffixAddr = sh.valByOffset(valDst, size.lo);
         const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         const TSizeOf suffWidth = widthOf(size) - /* closed int */ 1;
-        sh.writeUniformBlock(suffixAddr, valUnknown, suffWidth, &killedPtrs);
+        const UniformBlock ubSuffix = {
+            /* off      */  size.lo,
+            /* size     */  suffWidth,
+            /* tplValue */  valUnknown
+        };
+        sh.writeUniformBlock(objDst, ubSuffix, &killedPtrs);
     }
 
     if (lm.collectJunkFrom(killedPtrs)) {
@@ -1142,7 +1185,14 @@ void SymExecCore::varInit(TValId at)
         const TSizeRange size = sh_.objSize(obj);
         const TValId tpl = sh_.valCreate(VT_UNKNOWN, VO_STACK);
         CL_BREAK_IF(!isSingular(size));
-        sh_.writeUniformBlock(at, tpl, size.lo);
+
+        const UniformBlock ub = {
+            /* off      */  0,
+            /* size     */  size.lo,
+            /* tplValue */  tpl
+        };
+
+        sh_.writeUniformBlock(obj, ub);
     }
 
     SymProc::varInit(at);
@@ -1275,8 +1325,14 @@ void SymExecCore::execStackAlloc(
 
     if (ep_.trackUninit) {
         // uninitialized heap block
+        const TObjId obj = sh_.objByAddr(val);
         const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_STACK);
-        sh_.writeUniformBlock(val, tplValue, size.lo);
+        const UniformBlock ub = {
+            /* off      */  0,
+            /* size     */  size.lo,
+            /* tplValue */  tplValue
+        };
+        sh_.writeUniformBlock(obj, ub);
     }
 
     // store the result of malloc
@@ -1324,14 +1380,20 @@ malloc/calloc is implementation-defined");
     const TObjId reg = sh_.heapAlloc(size);
     const TValId val = sh_.addrOfRegion(reg);
 
+    UniformBlock ub = {
+        /* off      */  0,
+        /* size     */  size.lo,
+        /* tplValue */  VAL_NULL
+    };
+
     if (nullified) {
         // initialize to zero as we are doing calloc()
-        sh_.writeUniformBlock(val, VAL_NULL, size.lo);
+        sh_.writeUniformBlock(reg, ub);
     }
     else if (ep_.trackUninit) {
         // uninitialized heap block
-        const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
-        sh_.writeUniformBlock(val, tplValue, size.lo);
+        ub.tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
+        sh_.writeUniformBlock(reg, ub);
     }
 
     // store the result of malloc

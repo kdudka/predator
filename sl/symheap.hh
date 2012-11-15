@@ -378,17 +378,16 @@ class SymHeapCore {
 
         /// write an uninitialized or nullified block of memory
         void writeUniformBlock(
-                const TValId                addr,
-                const TValId                tplValue,
-                const TSizeOf               size,
-                TValSet                     *killedPtrs = 0);
+                const TObjId                obj,
+                const UniformBlock         &ub,
+                TValSet                    *killedPtrs = 0);
 
         /// copy 'size' bytes of raw memory from 'src' to 'dst'
         void copyBlockOfRawMemory(
                 const TValId                dst,
                 const TValId                src,
                 const TSizeOf               size,
-                TValSet                     *killedPtrs = 0);
+                TValSet                    *killedPtrs = 0);
 
     public:
         /// define an explicit Neq predicate

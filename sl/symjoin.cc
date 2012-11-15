@@ -1254,26 +1254,26 @@ void joinUniBlocksCore(
 
 bool joinUniBlocks(
         SymJoinCtx              &ctx,
-        const TValId            rootDst,
-        const TObjId            root1,
-        const TObjId            root2)
+        const TObjId            objDst,
+        const TObjId            obj1,
+        const TObjId            obj2)
 {
     TUniBlockMap bMapDst;
     bool hasExtra1 = false;
     bool hasExtra2 = false;
 
-    if (OBJ_INVALID == root2) {
+    if (OBJ_INVALID == obj2) {
         hasExtra2 = true;
-        ctx.sh1.gatherUniformBlocks(bMapDst, root1);
+        ctx.sh1.gatherUniformBlocks(bMapDst, obj1);
         importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh1);
     }
-    else if (OBJ_INVALID == root1) {
+    else if (OBJ_INVALID == obj1) {
         hasExtra1 = true;
-        ctx.sh2.gatherUniformBlocks(bMapDst, root2);
+        ctx.sh2.gatherUniformBlocks(bMapDst, obj2);
         importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh2);
     }
     else
-        joinUniBlocksCore(&bMapDst, &hasExtra1, &hasExtra2, ctx, root1, root2);
+        joinUniBlocksCore(&bMapDst, &hasExtra1, &hasExtra2, ctx, obj1, obj2);
 
     // update join status accordingly
     if (hasExtra1 && !updateJoinStatus(ctx, JS_USE_SH2))
@@ -1283,8 +1283,7 @@ bool joinUniBlocks(
 
     BOOST_FOREACH(TUniBlockMap::const_reference item, bMapDst) {
         const UniformBlock &bl = item.second;
-        const TValId addrDst = ctx.dst.valByOffset(rootDst, bl.off);
-        ctx.dst.writeUniformBlock(addrDst, bl.tplValue, bl.size);
+        ctx.dst.writeUniformBlock(objDst, bl);
     }
 
     return true;
@@ -1348,7 +1347,7 @@ bool createObject(
     const TObjId objDst = ctx.dst.heapAlloc(size);
     const TValId rootDst = ctx.dst.addrOfRegion(objDst);
 
-    if (!joinUniBlocks(ctx, rootDst, obj1, obj2))
+    if (!joinUniBlocks(ctx, objDst, obj1, obj2))
         // failed to complement uniform blocks
         return false;
 
@@ -2477,9 +2476,10 @@ class JoinVarVisitor {
                 }
 
                 case JVM_UNI_BLOCKS: {
-                    const TObjId obj1 = ctx_.sh1.objByAddr(root1);
-                    const TObjId obj2 = ctx_.sh2.objByAddr(root2);
-                    return joinUniBlocks(ctx_, rootDst, obj1, obj2);
+                    const TObjId objDst = ctx_.dst.objByAddr(rootDst);
+                    const TObjId obj1   = ctx_.sh1.objByAddr(root1);
+                    const TObjId obj2   = ctx_.sh2.objByAddr(root2);
+                    return joinUniBlocks(ctx_, objDst, obj1, obj2);
                 }
             }
 
@@ -2979,15 +2979,15 @@ bool joinDataCore(
 
     // start with the given pair of objects and create a ghost object for them
     // create an image in ctx.dst
-    const TObjId regDst = ctx.dst.heapAlloc(size);
-    const TValId rootDstAt = ctx.dst.addrOfRegion(regDst);
+    const TObjId objDst = ctx.dst.heapAlloc(size);
+    const TValId rootDstAt = ctx.dst.addrOfRegion(objDst);
 
     const TObjType clt1 = ctx.sh1.objEstimatedType(obj1);
     const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
     const TObjType clt = joinClt(ctx, clt1, clt2);
     if (clt)
         // preserve estimated type-info of the root
-        ctx.dst.objSetEstimatedType(regDst, clt);
+        ctx.dst.objSetEstimatedType(objDst, clt);
 
     TProtoLevel ldiff = 0;
 
@@ -3032,7 +3032,7 @@ bool joinDataCore(
 
     killUniBlocksUnderBindingPtrs(sh, off, addr1);
     killUniBlocksUnderBindingPtrs(sh, off, addr2);
-    if (!joinUniBlocks(ctx, rootDstAt, obj1, obj2))
+    if (!joinUniBlocks(ctx, objDst, obj1, obj2))
         // failed to complement uniform blocks
         return false;
 

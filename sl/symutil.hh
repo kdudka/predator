@@ -529,8 +529,14 @@ bool /* complete */ traverseProgramVarsGeneric(
                 const TSizeRange size = sh.objSize(reg);
                 CL_BREAK_IF(!isSingular(size));
 
+                const UniformBlock ub = {
+                    /* off  */      0,
+                    /* size */      size.lo,
+                    /* tplValue */  valInval,
+                };
+
                 // mark its contents explicitly as unknown, not (un)initialized
-                sh.writeUniformBlock(at, valInval, size.lo);
+                sh.writeUniformBlock(reg, ub);
             }
 
             roots[i] = at;

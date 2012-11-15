@@ -41,21 +41,19 @@
 class UniBlockWriter {
     private:
         SymHeap         &dst_;
-        const TValId    rootDst_;
+        const TObjId    objDst_;
 
     public:
         UniBlockWriter(SymHeap &dst, const TValId rootDst):
             dst_(dst),
-            rootDst_(rootDst)
+            objDst_(dst.objByAddr(rootDst))
         {
         }
 
-        bool operator()(const SymHeap &src, const UniformBlock &bl) {
-            const TValId addrDst = dst_.valByOffset(rootDst_, bl.off);
-
-            const TValId tplValue = translateValProto(dst_, src, bl.tplValue);
-            dst_.writeUniformBlock(addrDst, tplValue, bl.size);
-
+        bool operator()(const SymHeap &src,  UniformBlock ub)
+        {
+            ub.tplValue = translateValProto(dst_, src, ub.tplValue);
+            dst_.writeUniformBlock(objDst_, ub);
             return /* continue */ true;
         }
 };

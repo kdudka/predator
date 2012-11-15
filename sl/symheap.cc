@@ -658,9 +658,8 @@ struct SymHeapCore::Private {
             const TSizeOf           size);
 
     TFldId writeUniformBlock(
-            const TValId            addr,
-            const TValId            tplValue,
-            const TSizeOf           size,
+            const TObjId            obj,
+            const UniformBlock     &ub,
             TValSet                *killedPtrs);
 
     bool findZeroInBlock(
@@ -2026,24 +2025,13 @@ void SymHeapCore::objSetValue(TFldId fld, TValId val, TValSet *killedPtrs)
 }
 
 TFldId SymHeapCore::Private::writeUniformBlock(
-        const TValId                addr,
-        const TValId                tplVal,
-        const TSizeOf               size,
-        TValSet                     *killedPtrs)
+        const TObjId                obj,
+        const UniformBlock         &ub,
+        TValSet                    *killedPtrs)
 {
-    const BaseValue *valData;
-    this->ents.getEntRO(&valData, addr);
-
-    const TValId root = valData->valRoot;
-    const TOffset beg = valData->offRoot;
-    const TOffset end = beg + size;
-
-    const BaseAddress *rootData;
-    this->ents.getEntRO(&rootData, root);
-    const TObjId obj = rootData->obj;
-
-    // acquire object ID
-    BlockEntity *blData = new BlockEntity(BK_UNIFORM, obj, beg, size, tplVal);
+    // acquire field ID
+    BlockEntity *blData =
+        new BlockEntity(BK_UNIFORM, obj, ub.off, ub.size, ub.tplValue);
     const TFldId fld = this->assignId(blData);
 
     // jump to region
@@ -2057,8 +2045,8 @@ TFldId SymHeapCore::Private::writeUniformBlock(
     regData->liveFields[fld] = BK_UNIFORM;
 
     TArena &arena = regData->arena;
-    arena += createArenaItem(beg, size, fld);
-    const TMemChunk chunk(beg, end);
+    arena += createArenaItem(ub.off, ub.size, fld);
+    const TMemChunk chunk(ub.off, ub.off + ub.size);
 
     // invalidate contents of the objects we are overwriting
     TFldIdSet overlaps;
@@ -2073,13 +2061,11 @@ TFldId SymHeapCore::Private::writeUniformBlock(
 
 /// just a trivial wrapper to hide the return value
 void SymHeapCore::writeUniformBlock(
-        const TValId                addr,
-        const TValId                tplValue,
-        const TSizeOf               size,
-        TValSet                     *killedPtrs)
+        const TObjId                obj,
+        const UniformBlock         &ub,
+        TValSet                    *killedPtrs)
 {
-    CL_BREAK_IF(valSizeOfTarget(*this, addr).lo < size);
-    d->writeUniformBlock(addr, tplValue, size, killedPtrs);
+    d->writeUniformBlock(obj, ub, killedPtrs);
 }
 
 void SymHeapCore::copyBlockOfRawMemory(
@@ -2114,12 +2100,17 @@ void SymHeapCore::copyBlockOfRawMemory(
         return;
     }
 
-    // nuke the content we are going to overwrite
-    const TFldId blKiller = d->writeUniformBlock(dst, /* misleading */ VAL_NULL,
-                                                 size, killedPtrs);
-
     const BaseAddress *rootDataDst;
     d->ents.getEntRO(&rootDataDst, dstRoot);
+
+    // nuke the content we are going to overwrite
+    const UniformBlock ubKiller = {
+        /* off      */  dstOff,
+        /* size     */  size,
+        /* tplValue */  VAL_NULL
+    };
+    const TFldId blKiller =
+        d->writeUniformBlock(rootDataDst->obj, ubKiller, killedPtrs);
 
     // jump to region
     Region *regDataDst;
