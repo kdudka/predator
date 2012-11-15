@@ -2991,6 +2991,17 @@ bool SymHeapCore::matchPreds(
     return true;
 }
 
+TObjId SymHeapCore::objByField(TFldId fld) const
+{
+    if (fld < 0)
+        return OBJ_INVALID;
+
+    // resolve object
+    const FieldOfObj *fldData;
+    d->ents.getEntRO(&fldData, fld);
+    return fldData->obj;
+}
+
 TValId SymHeapCore::placedAt(TFldId fld)
 {
     if (fld < 0)

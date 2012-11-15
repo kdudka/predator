@@ -560,6 +560,7 @@ class SymHeapCore {
         // these should be accessed indirectly via FldHandle
         TValId valueOf(TFldId fld);
         TValId placedAt(TFldId fld);
+        TObjId objByField(TFldId fld) const;
         TObjType fieldType(TFldId fld) const;
         void objSetValue(TFldId fld, TValId val, TValSet *killedPtrs = 0);
 
@@ -632,19 +633,22 @@ class FldHandle {
 
     public:
         /// return the SymHeapCore instance associated with this handle
-        SymHeapCore*    sh()                const { return sh_; }
+        SymHeapCore*    sh()            const { return sh_; }
 
         /// return raw field ID inside this handle (used mainly internally)
-        TFldId          fieldId()           const { return id_; }
+        TFldId          fieldId()       const { return id_; }
 
         /// true if the given handle is valid (does not imply field validity)
-        bool            isValidHandle()     const { return (0 < id_); }
+        bool            isValidHandle() const { return (0 < id_); }
+
+        /// return the object that the field is part of
+        TObjId          obj()           const { return sh_->objByField(id_); }
 
         /// return the value inside the field (may trigger its initialization)
-        TValId          value()             const { return sh_->valueOf(id_); }
+        TValId          value()         const { return sh_->valueOf(id_); }
 
         /// return the address of the field (may trigger address instantiation)
-        TValId          placedAt()          const { return sh_->placedAt(id_); }
+        TValId          placedAt()      const { return sh_->placedAt(id_); }
 
         /// static type-info of the given object (return 0 if not available)
         TObjType type() const {

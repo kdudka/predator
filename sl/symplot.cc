@@ -408,7 +408,7 @@ bool plotField(PlotData &plot, const FieldWrapper &fw, const bool lonely)
 
         case FC_PREV:
 #if !SYMPLOT_DEBUG_DLS
-            if (OK_DLS == sh.objKind(sh.objByAddr(fld.placedAt())))
+            if (OK_DLS == sh.objKind(fld.obj()))
                 return false;
 #endif
             // cppcheck-suppress unreachableCode

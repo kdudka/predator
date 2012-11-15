@@ -308,7 +308,7 @@ bool isPointedByVar(SymHeap &sh, const TValId root)
     FldList refs;
     sh.pointedBy(refs, obj);
     BOOST_FOREACH(const FldHandle fld, refs) {
-        const TObjId sub = sh.objByAddr(fld.placedAt());
+        const TObjId sub = fld.obj();
         const EStorageClass code = sh.objStorClass(sub);
         if (isProgramVar(code))
             return true;

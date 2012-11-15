@@ -747,8 +747,6 @@ void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
     }
 
     SymHeap &sh = proc.sh();
-    const TValId lhsAt = lhs.placedAt();
-    CL_BREAK_IF(!isPossibleToDeref(sh, lhsAt));
 
     // generic prototype for a value encoder
     TValId (*encode)(SymProc &, const FldHandle &fld, const TValId val) = 0;
@@ -776,7 +774,7 @@ void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
     lhs.setValue(rhs, &killedPtrs);
 
     if (lm.collectJunkFrom(killedPtrs)) {
-        const TObjId objLhs = sh.objByAddr(lhsAt);
+        const TObjId objLhs = lhs.obj();
         const EStorageClass codeLhs = sh.objStorClass(objLhs);
         reportMemLeak(proc, codeLhs, "assign");
     }
@@ -2288,10 +2286,10 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn)
 #if SE_TRACK_NON_POINTER_VALUES < 2
     // avoid creation of live object in case we are not interested in its value
     if (!isDataPtr(dst.type) && VO_UNKNOWN == sh_.valOrigin(valResult)) {
-        const TValId root = sh_.valRoot(lhs.placedAt());
+        const TObjId obj = lhs.obj();
 
         FldList liveObjs;
-        sh_.gatherLiveFields(liveObjs, root);
+        sh_.gatherLiveFields(liveObjs, obj);
         BOOST_FOREACH(const FldHandle &fld, liveObjs)
             if (fld == lhs)
                 goto already_alive;
