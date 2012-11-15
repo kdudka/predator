@@ -120,7 +120,7 @@ void digFields(DeepCopyData &dc, TValId addrSrc, TValId addrDst)
     const TValId roots[] = { addrSrc, addrDst };
 
     DCopyObjVisitor objVisitor(dc);
-    traverseLiveObjsGeneric<2>(heaps, roots, objVisitor);
+    traverseLiveFieldsGeneric<2>(heaps, roots, objVisitor);
 }
 
 TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)

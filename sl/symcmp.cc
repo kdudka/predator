@@ -294,7 +294,7 @@ bool dfsCmp(
         ValueComparator visitor(wl, vMap, sh1, sh2);
 
         // guide it through a pair of root objects
-        if (!traverseLiveObjsGeneric<2>(heaps, roots, visitor))
+        if (!traverseLiveFieldsGeneric<2>(heaps, roots, visitor))
             return false;
     }
 

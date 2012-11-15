@@ -92,7 +92,7 @@ void duplicateUnknownValues(SymHeap &sh, TValId at)
     buildIgnoreList(visitor.ignoreList, sh, at);
 
     // traverse all sub-objects
-    traverseLiveObjs(sh, sh.objByAddr(at), visitor);
+    traverseLiveFields(sh, sh.objByAddr(at), visitor);
 }
 
 void detachClonedPrototype(
@@ -226,7 +226,7 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dls)
     }
 
     const TValId roots[] = { dls, peer };
-    traverseLiveObjs<2>(sh, roots, visitor);
+    traverseLiveFields<2>(sh, roots, visitor);
 }
 
 // FIXME: the semantics of this function is quite contra-intuitive

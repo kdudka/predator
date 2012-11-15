@@ -342,7 +342,7 @@ bool /* complete */ traverseLivePtrs(
 
 /// take the given visitor through all live objects
 template <class THeap, class TVisitor>
-bool /* complete */ traverseLiveObjs(
+bool /* complete */ traverseLiveFields(
         THeap                      &sh,
         const TObjId                obj,
         TVisitor                   &visitor)
@@ -374,7 +374,7 @@ bool /* complete */ traverseUniformBlocks(
 
 /// take the given visitor through all live objects object-wise
 template <unsigned N, class THeap, class TVisitor>
-bool /* complete */ traverseLiveObjsGeneric(
+bool /* complete */ traverseLiveFieldsGeneric(
         THeap                *const heaps[N],
         const TValId                at[N],
         TVisitor                    &visitor)
@@ -438,7 +438,7 @@ bool /* complete */ traverseLiveObjsGeneric(
 
 /// take the given visitor through all live objects object-wise
 template <unsigned N, class THeap, class TVisitor>
-bool /* complete */ traverseLiveObjs(
+bool /* complete */ traverseLiveFields(
         THeap                       &sh,
         const TValId                at[N],
         TVisitor                    &visitor)
@@ -447,7 +447,7 @@ bool /* complete */ traverseLiveObjs(
     for (unsigned i = 0; i < N; ++i)
         heaps[i] = &sh;
 
-    return traverseLiveObjsGeneric<N>(heaps, at, visitor);
+    return traverseLiveFieldsGeneric<N>(heaps, at, visitor);
 }
 
 /// (VAL_INVALID != pointingFrom) means 'pointing from anywhere'

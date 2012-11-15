@@ -792,7 +792,7 @@ bool traverseRoots(
     }
 
     // guide the visitors through them
-    return traverseLiveObjsGeneric<3>(heaps, roots, objVisitor);
+    return traverseLiveFieldsGeneric<3>(heaps, roots, objVisitor);
 }
 
 bool segMatchLookAhead(
@@ -819,8 +819,7 @@ bool segMatchLookAhead(
     dlSegBlackListPrevPtr(visitor.blackList1, ctx.sh1, root1);
     dlSegBlackListPrevPtr(visitor.blackList2, ctx.sh2, root2);
 
-    // FIXME: this will break as soon as we switch to delayed objects creation
-    return traverseLiveObjsGeneric<2>(heaps, roots, visitor);
+    return traverseLiveFieldsGeneric<2>(heaps, roots, visitor);
 }
 
 bool joinClt(
