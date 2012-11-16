@@ -70,6 +70,7 @@ struct DeepCopyData {
 
     TSegLengths         segLengths;
     TValMap             valMap;
+    TObjMap             objMap;
 
     WorkList<TItem>     wl;
 
@@ -120,28 +121,23 @@ void digFields(DeepCopyData &dc, const TObjId objSrc, const TObjId objDst)
     traverseLiveFieldsGeneric<2>(heaps, objs, objVisitor);
 }
 
-TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
+TObjId /* objDst */ addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc)
 {
-    if (VAL_NULL == rootSrcAt)
-        return VAL_NULL;
+    TObjMap &objMap = dc.objMap;
+    TObjMap::iterator itObjSrc = objMap.find(objSrc);
+    if (objMap.end() != itObjSrc)
+        // good luck, we have already added the object before
+        return itObjSrc->second;
 
-    TValMap &valMap = dc.valMap;
-    TValMap::iterator itRootSrc = valMap.find(rootSrcAt);
-    if (valMap.end() != itRootSrc)
-        // good luck, we have already handled the value before
-        return itRootSrc->second;
-
-    CL_BREAK_IF(VAL_ADDR_OF_RET == rootSrcAt);
+    CL_BREAK_IF(OBJ_RETURN == objSrc);
     SymHeap &src = dc.src;
     SymHeap &dst = dc.dst;
 
-    const TObjId objSrc = src.objByAddr(rootSrcAt);
     const bool valid = src.isValid(objSrc);
 
     CVar cv;
     if (isProgramVar(src.objStorClass(objSrc))) {
         // program variable
-        const TObjId objSrc = src.objByAddr(rootSrcAt);
         cv = src.cVarByObject(objSrc);
 #if DEBUG_SYMCUT
         const size_t orig = dc.cut.size();
@@ -160,10 +156,9 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
         if (!valid)
             dst.objInvalidate(objDst);
 
-        const TValId rootDstAt = dst.addrOfRegion(objDst);
-        dc.valMap[rootSrcAt] = rootDstAt;
+        dc.objMap[objSrc] = objDst;
         digFields(dc, objSrc, objDst);
-        return rootDstAt;
+        return objDst;
     }
 
     // create the object in 'dst'
@@ -184,8 +179,8 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
     dst.objSetProtoLevel(objDst, protoLevel);
 
     // preserve metadata of abstract objects
-    if (isAbstractValue(src, rootSrcAt)) {
-        const EObjKind kind = src.objKind(src.objByAddr(rootSrcAt));
+    const EObjKind kind = src.objKind(objSrc);
+    if (OK_REGION != kind) {
         const BindingOff off = (OK_OBJ_OR_NULL == kind)
             ? BindingOff(OK_OBJ_OR_NULL)
             : src.segBinding(objSrc);
@@ -193,17 +188,17 @@ TValId /* rootDstAt */ addObjectIfNeeded(DeepCopyData &dc, TValId rootSrcAt)
         dst.objSetAbstract(objDst, kind, off);
 
 #if SE_SYMCUT_PRESERVES_MIN_LENGTHS
-        const TMinLen minLength = objMinLength(src, rootSrcAt);
+        const TMinLen minLength = objMinLength(src, objSrc);
         dc.segLengths[rootDstAt] = minLength;
 #endif
     }
 
     // store mapping of values
-    dc.valMap[rootSrcAt] = rootDstAt;
+    dc.objMap[objSrc] = objDst;
 
     // look inside
     digFields(dc, objSrc, objDst);
-    return rootDstAt;
+    return objDst;
 }
 
 TValId handleValueCore(DeepCopyData &dc, TValId srcAt)
@@ -214,8 +209,12 @@ TValId handleValueCore(DeepCopyData &dc, TValId srcAt)
         // good luck, we have already handled the value before
         return iterValSrc->second;
 
-    const TValId rootSrcAt = dc.src.valRoot(srcAt);
-    const TValId rootDstAt = addObjectIfNeeded(dc, rootSrcAt);
+    TValId rootDstAt = VAL_NULL;
+    if (VAL_NULL != dc.src.valRoot(srcAt)) {
+        const TObjId objSrc = dc.src.objByAddr(srcAt);
+        const TObjId objDst = addObjectIfNeeded(dc, objSrc);
+        rootDstAt = dc.dst.legacyAddrOfAny_XXX(objDst);
+    }
 
     if (VT_RANGE == dc.src.valTarget(srcAt)) {
         // range offset value

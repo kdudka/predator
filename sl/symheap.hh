@@ -209,6 +209,9 @@ typedef std::set<TObjId>                                TObjSet;
 /// a type used for (injective) value IDs mapping
 typedef std::map<TValId, TValId>                        TValMap;
 
+/// a type used for (injective) object IDs mapping
+typedef std::map<TObjId, TObjId>                        TObjMap;
+
 /// a type used for type-info
 typedef const struct cl_type                           *TObjType;
 

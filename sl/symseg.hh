@@ -203,6 +203,19 @@ inline bool isDlSegPeer(const SymHeap &sh, const TValId root)
     return isDlSegPeer(sh, obj);
 }
 
+inline TMinLen objMinLength(const SymHeap &sh, TObjId obj)
+{
+    if (!sh.isValid(obj))
+        return 0;
+
+    const EObjKind kind = sh.objKind(obj);
+    if (OK_REGION == kind)
+        return 1;
+
+    return sh.segMinLength(obj);
+}
+
+/// TODO: drop this!
 inline TMinLen objMinLength(const SymHeap &sh, TValId root)
 {
     CL_BREAK_IF(sh.valOffset(root));

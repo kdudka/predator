@@ -140,7 +140,6 @@ inline bool operator<(const SchedItem &a, const SchedItem &b)
 
 typedef WorkListWithUndo<SchedItem>                             TWorkList;
 
-typedef std::map<TObjId, TObjId>                                TObjMap;
 typedef TObjMap                                                 TObjMapBidir[2];
 
 /// current state, common for joinSymHeaps(), joinDataReadOnly() and joinData()
