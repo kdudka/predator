@@ -149,22 +149,21 @@ bool validatePointingObjects(
     if (OBJ_INVALID != prev || OBJ_INVALID != next)
         buildIgnoreList(blackList, sh, obj, off);
 
-    TValSet whiteList;
+    TFldSet whiteList;
     if (OBJ_INVALID != prev) {
-        const TValId prevAt = sh.legacyAddrOfAny_XXX(prev);
-        whiteList.insert(sh.valByOffset(prevAt, off.next));
+        const PtrHandle prevNext(sh, prev, off.next);
+        whiteList.insert(prevNext);
     }
     if (OBJ_INVALID != next && isDlsBinding(off)) {
-        const TValId nextAt = sh.legacyAddrOfAny_XXX(next);
-        whiteList.insert(sh.valByOffset(nextAt, off.prev));
+        const PtrHandle nextPrev(sh, next, off.prev);
+        whiteList.insert(nextPrev);
     }
 
     BOOST_FOREACH(const FldHandle &fld, refs) {
         if (hasKey(blackList, fld))
             return false;
 
-        const TValId at = fld.placedAt();
-        if (hasKey(whiteList, at))
+        if (hasKey(whiteList, fld))
             continue;
 
         if (allowHeadPtr) {
@@ -175,7 +174,7 @@ bool validatePointingObjects(
                 continue;
         }
 
-        if (hasKey(allowedReferers, sh.objByAddr(at)))
+        if (hasKey(allowedReferers, fld.obj()))
             continue;
 
         // someone points at/inside who should not
