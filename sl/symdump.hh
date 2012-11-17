@@ -34,20 +34,6 @@ namespace Trace {
     class Node;
 }
 
-extern SymHeapCore *symdump_ref_heap;
-
-// TODO: maintain a stack?
-class SymDumpRefHeap {
-    public:
-        SymDumpRefHeap(SymHeapCore *sh) {
-            symdump_ref_heap = sh;
-        }
-
-        ~SymDumpRefHeap() {
-            symdump_ref_heap = 0;
-        }
-};
-
 /// plot the given heap to file "symdump-NNNN.dot"
 void dump_plot(const SymHeapCore *sh);
 

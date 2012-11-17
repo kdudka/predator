@@ -32,8 +32,6 @@
 
 using std::cout;
 
-SymHeapCore *symdump_ref_heap;
-
 void dump_plot_core(const SymHeapCore *core, const char *name)
 {
     if (!core) {

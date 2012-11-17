@@ -1065,7 +1065,6 @@ bool BuiltInTable::handleBuiltIn(
         hdl = it->second;
 
     SymHeap &sh = core.sh();
-    SymDumpRefHeap shRef(&sh);
     sh.traceUpdate(new Trace::InsnNode(sh.traceNode(), &insn, /* bin */ true));
 
     return hdl(dst, core, insn, name);
