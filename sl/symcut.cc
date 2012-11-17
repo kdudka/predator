@@ -95,10 +95,6 @@ class DCopyObjVisitor {
             const FldHandle &fldSrc = item[/* src */ 0];
             const FldHandle &fldDst = item[/* dst */ 1];
 
-            const TValId srcAt = fldSrc.placedAt();
-            const TValId dstAt = fldDst.placedAt();
-            dc_.valMap[srcAt] = dstAt;
-
             const DeepCopyData::TItem schedItem(fldSrc, fldDst);
             dc_.wl.schedule(schedItem);
 
@@ -225,9 +221,6 @@ TValId handleValueCore(DeepCopyData &dc, TValId srcAt)
     }
 
     const TOffset off = dc.src.valOffset(srcAt);
-    if (!off)
-        return rootDstAt;
-
     const TValId dstAt = dc.dst.valByOffset(rootDstAt, off);
     dc.valMap[srcAt] = dstAt;
     return dstAt;
@@ -242,35 +235,43 @@ TValId handleCustomValue(DeepCopyData &dc, const TValId valSrc)
     return valDst;
 }
 
-void trackUses(DeepCopyData &dc, TValId valSrc)
+void trackUsesCore(DeepCopyData &dc, const FldList &uses)
+{
+    BOOST_FOREACH(const FldHandle &fldSrc, uses) {
+        const TObjId objSrc = fldSrc.obj();
+        CL_BREAK_IF(!dc.src.isValid(objSrc));
+        addObjectIfNeeded(dc, objSrc);
+    }
+}
+
+void trackUsesOfObj(DeepCopyData &dc, const TObjId objSrc)
 {
     if (!dc.digBackward)
         // optimization
         return;
 
-    SymHeap &sh = dc.src;
     FldList uses;
+    dc.src.pointedBy(uses, objSrc);
+    trackUsesCore(dc, uses);
+}
 
-    const TValId rootSrcAt = sh.valRoot(valSrc);
-    if (VAL_NULL == rootSrcAt)
+void trackUsesOfVal(DeepCopyData &dc, const TValId valSrc)
+{
+    if (!dc.digBackward)
+        // optimization
+        return;
+
+    if (VAL_NULL == dc.src.valRoot(valSrc))
         // nothing to track actually
         return;
 
-    if (isPossibleToDeref(sh, rootSrcAt)) {
-        const TObjId objSrc = sh.objByAddr(rootSrcAt);
-        sh.pointedBy(uses, objSrc);
-    }
-    else
-        sh.usedBy(uses, valSrc, /* liveOnly */ true);
+    const TObjId objSrc = dc.src.objByAddr(valSrc);
+    if (dc.src.isValid(objSrc))
+        trackUsesOfObj(dc, objSrc);
 
-    // go from the value backward
-    BOOST_FOREACH(const FldHandle &fldSrc, uses) {
-        const TValId srcAt = fldSrc.placedAt();
-        if (!isPossibleToDeref(sh, srcAt))
-            continue;
-
-        handleValueCore(dc, srcAt);
-    }
+    FldList uses;
+    dc.src.usedBy(uses, valSrc, /* liveOnly */ true);
+    trackUsesCore(dc, uses);
 }
 
 TValId handleValue(DeepCopyData &dc, TValId valSrc)
@@ -288,7 +289,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc)
         // good luck, we have already handled the value before
         return iterValSrc->second;
 
-    trackUses(dc, valSrc);
+    trackUsesOfVal(dc, valSrc);
 
     const EValueTarget code = src.valTarget(valSrc);
     if (VT_CUSTOM == code)
@@ -318,9 +319,9 @@ void deepCopy(DeepCopyData &dc)
         CL_BREAK_IF(!fldSrc.isValidHandle() || !fldDst.isValidHandle());
 
         // read the address
-        const TValId atSrc = fldSrc.placedAt();
-        CL_BREAK_IF(atSrc <= 0);
-        trackUses(dc, atSrc);
+        const TObjId objSrc = fldSrc.obj();
+        CL_BREAK_IF(!dc.src.isValid(objSrc));
+        trackUsesOfObj(dc, objSrc);
 
         // read the original value
         TValId valSrc = fldSrc.value();
