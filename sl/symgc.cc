@@ -77,7 +77,7 @@ bool isJunk(SymHeap &sh, TValId root)
     return true;
 }
 
-bool gcCore(SymHeap &sh, TObjId obj, TValList *leakList, bool sharedOnly)
+bool gcCore(SymHeap &sh, TObjId obj, TObjSet *leakObjs, bool sharedOnly)
 {
     if (OBJ_INVALID == obj)
         return false;
@@ -99,6 +99,8 @@ bool gcCore(SymHeap &sh, TObjId obj, TValList *leakList, bool sharedOnly)
             // not a junk, keep going...
             continue;
 
+        const TObjId obj = sh.objByAddr(root);
+
         // gather all roots pointed by the junk object
         TValList refs;
         gatherReferredRoots(refs, sh, root);
@@ -107,15 +109,15 @@ bool gcCore(SymHeap &sh, TObjId obj, TValList *leakList, bool sharedOnly)
             if (hasKey(whiteList, root))
                 goto skip_root;
 
-            if (0 < sh.objProtoLevel(sh.objByAddr(root)))
+            if (0 < sh.objProtoLevel(obj))
                 goto skip_root;
         }
 
         // leak detected
         detected = true;
-        sh.objInvalidate(sh.objByAddr(root));
-        if (leakList)
-            leakList->push_back(root);
+        sh.objInvalidate(obj);
+        if (leakObjs)
+            leakObjs->insert(obj);
 
 skip_root:
         // schedule just created junk candidates for next wheel
@@ -126,20 +128,20 @@ skip_root:
     return detected;
 }
 
-bool collectJunk(SymHeap &sh, TObjId obj, TValList *leakList)
+bool collectJunk(SymHeap &sh, TObjId obj, TObjSet *leakObjs)
 {
-    return gcCore(sh, obj, leakList, /* sharedOnly */ false);
+    return gcCore(sh, obj, leakObjs, /* sharedOnly */ false);
 }
 
-bool collectSharedJunk(SymHeap &sh, TObjId obj, TValList *leakList)
+bool collectSharedJunk(SymHeap &sh, TObjId obj, TObjSet *leakObjs)
 {
-    return gcCore(sh, obj, leakList, /* sharedOnly */ true);
+    return gcCore(sh, obj, leakObjs, /* sharedOnly */ true);
 }
 
 bool destroyObjectAndCollectJunk(
         SymHeap                 &sh,
         const TObjId             obj,
-        TValList                *leakList)
+        TObjSet                 *leakObjs)
 {
     CL_BREAK_IF(!sh.isValid(obj));
 
@@ -156,7 +158,7 @@ bool destroyObjectAndCollectJunk(
     bool leaking = false;
     BOOST_FOREACH(TValId val, killedPtrs) {
         const TObjId obj = sh.objByAddr(val);
-        if (collectJunk(sh, obj, leakList))
+        if (collectJunk(sh, obj, leakObjs))
             leaking = true;
     }
 
@@ -184,18 +186,20 @@ void LeakMonitor::enter()
 
 void LeakMonitor::leave()
 {
-    if (leakList_.empty())
+    if (!::debuggingGarbageCollector || leakObjs_.empty())
         return;
 
-    if (::debuggingGarbageCollector)
-        plotHeap(snap_, "memleak", /* TODO: loc */ 0, leakList_,
-                /* digForward */ false);
+    TValList addrs;
+    BOOST_FOREACH(const TObjId obj, leakObjs_)
+        addrs.push_back(snap_.legacyAddrOfAny_XXX(obj));
+
+    plotHeap(snap_, "memleak", /* loc */ 0, addrs, /* digForward */ false);
 }
 
-bool /* leaking */ LeakMonitor::importLeakList(TValList *leakList)
+bool /* leaking */ LeakMonitor::importLeakObjs(TObjSet *leakObjs)
 {
-    CL_BREAK_IF(!leakList_.empty());
-    leakList_ = *leakList;
+    CL_BREAK_IF(!leakObjs_.empty());
+    leakObjs_ = *leakObjs;
 
-    return /* leaking */ !leakList_.empty();
+    return /* leaking */ !leakObjs_.empty();
 }

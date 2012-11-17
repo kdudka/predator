@@ -30,15 +30,15 @@
 #include <boost/foreach.hpp>
 
 /// collect and remove all junk reachable from the given object
-bool /* found */ collectJunk(SymHeap &sh, TObjId obj, TValList *leakList = 0);
+bool /* found */ collectJunk(SymHeap &sh, TObjId obj, TObjSet *leakObjs = 0);
 
 /// same as collectJunk(), but does not consider prototypes to be junk objects
-bool collectSharedJunk(SymHeap &sh, TObjId obj, TValList *leakList = 0);
+bool collectSharedJunk(SymHeap &sh, TObjId obj, TObjSet *leakObjs = 0);
 
 bool destroyObjectAndCollectJunk(
         SymHeap                 &sh,
         const TObjId             obj,
-        TValList                *leakList = 0);
+        TObjSet                *leakObjs = 0);
 
 /// @todo some dox
 class LeakMonitor {
@@ -57,7 +57,7 @@ class LeakMonitor {
             bool leaking = false;
             BOOST_FOREACH(TValId val, killedPtrs) {
                 const TObjId obj = sh_.objByAddr(val);
-                if (collectJunk(sh_, obj, &leakList_))
+                if (collectJunk(sh_, obj, &leakObjs_))
                     leaking = true;
             }
 
@@ -65,16 +65,16 @@ class LeakMonitor {
         }
 
         bool /* leaking */ destroyObject(const TObjId obj) {
-            return destroyObjectAndCollectJunk(sh_, obj, &leakList_);
+            return destroyObjectAndCollectJunk(sh_, obj, &leakObjs_);
         }
 
-        bool /* leaking */ importLeakList(TValList *leakList);
+        bool /* leaking */ importLeakObjs(TObjSet *leakObjs);
 
 
     private:
         SymHeap     &sh_;
         SymHeap     snap_;
-        TValList    leakList_;
+        TObjSet     leakObjs_;
 };
 
 /// enable/disable debugging of the garbage collector

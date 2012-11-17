@@ -569,7 +569,7 @@ void spliceOutListSegment(
         const TValId            segAt,
         const TValId            peerAt,
         const TValId            valNext,
-        TValList               *leakList)
+        TObjSet                *leakObjs)
 {
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
@@ -604,7 +604,7 @@ void spliceOutListSegment(
             /* redirectTo   */ valNext,
             /* offHead      */ offHead);
 
-    collectSharedJunk(sh, seg, leakList);
+    collectSharedJunk(sh, seg, leakObjs);
 
     // destroy peer in case of DLS
     if (peer != seg && collectJunk(sh, peer))
@@ -623,13 +623,13 @@ void spliceOutSegmentIfNeeded(
         const TValId            seg,
         const TValId            peer,
         TSymHeapList           &todo,
-        TValList               *leakList)
+        TObjSet                *leakObjs)
 {
     if (!*pLen) {
         // possibly empty LS
         SymHeap sh0(sh);
         const TValId valNext = nextValFromSeg(sh0, peer);
-        spliceOutListSegment(sh0, seg, peer, valNext, leakList);
+        spliceOutListSegment(sh0, seg, peer, valNext, leakObjs);
 
         // append a trace node for this operation
         Trace::Node *tr = new Trace::SpliceOutNode(sh.traceNode());
@@ -668,7 +668,7 @@ void concretizeObj(
         SymHeap                     &sh,
         const TValId                 addr,
         TSymHeapList                &todo,
-        TValList                    *leakList)
+        TObjSet                     *leakObjs)
 {
     CL_BREAK_IF(!protoCheckConsistency(sh));
 
@@ -678,7 +678,7 @@ void concretizeObj(
 
     // handle the possibly empty variant (if exists)
     TMinLen len = sh.segMinLength(seg);
-    spliceOutSegmentIfNeeded(&len, sh, segAt, peer, todo, leakList);
+    spliceOutSegmentIfNeeded(&len, sh, segAt, peer, todo, leakObjs);
 
     const EObjKind kind = sh.objKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));

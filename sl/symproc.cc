@@ -1614,7 +1614,7 @@ bool spliceOutAbstractPathCore(
 {
     SymHeap &sh = proc.sh();
 
-    TValList leakList;
+    TObjSet leakObjs;
     LeakMonitor lm(sh);
     lm.enter();
 
@@ -1637,7 +1637,7 @@ bool spliceOutAbstractPathCore(
         const TValId segNext = sh.valRoot(valNext);
 
         if (!readOnlyMode)
-            spliceOutListSegment(sh, seg, peer, valNext, &leakList);
+            spliceOutListSegment(sh, seg, peer, valNext, &leakObjs);
 
         if (valNext == endPoint)
             // we have the chain we are looking for
@@ -1658,7 +1658,7 @@ bool spliceOutAbstractPathCore(
     // append a trace node for this operation
     sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), len));
 
-    if (lm.importLeakList(&leakList)) {
+    if (lm.importLeakObjs(&leakObjs)) {
         // [L0] leakage during splice-out
         CL_WARN_MSG(loc, "memory leak detected while removing a segment");
         proc.printBackTrace(ML_WARN);
@@ -2476,10 +2476,10 @@ bool SymExecCore::concretizeLoop(
                 LeakMonitor lm(sh);
                 lm.enter();
 
-                TValList leakList;
-                concretizeObj(sh, val, todo, &leakList);
+                TObjSet leakObjs;
+                concretizeObj(sh, val, todo, &leakObjs);
 
-                if (lm.importLeakList(&leakList)) {
+                if (lm.importLeakObjs(&leakObjs)) {
                     CL_WARN_MSG(lw_, "memory leak detected while unfolding");
                     this->printBackTrace(ML_WARN);
                 }

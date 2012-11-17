@@ -43,14 +43,14 @@ typedef std::list<SymHeap> TSymHeapList;
  * @param sh an instance of symbolic heap, used in read/write mode
  * @param addr address of the @b abstract heap object that should be concretized
  * @param dst a container for the results caused by non-deterministic decisions
- * @param leakList if not NULL, push all leaked root objects to the list
+ * @param leakObjs if not NULL, push all leaked root objects to the list
  * @note the first result is always stored into sh, the use of dst is optional
  */
 void concretizeObj(
         SymHeap                     &sh,
         const TValId                 addr,
         TSymHeapList                &dst,
-        TValList                    *leakList = 0);
+        TObjSet                     *leakObjs = 0);
 
 /// splice out a possibly empty list segment
 void spliceOutListSegment(
@@ -58,7 +58,7 @@ void spliceOutListSegment(
         const TValId            seg,
         const TValId            peer,
         const TValId            valNext,
-        TValList               *leakList);
+        TObjSet                *leakObjs);
 
 /// replace a DLS by a single concrete object
 void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peer);
