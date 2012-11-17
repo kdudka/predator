@@ -843,11 +843,10 @@ void SymProc::valDestroyTarget(TValId addr)
     LeakMonitor lm(sh_);
     lm.enter();
 
-    if (/* leaking */ lm.destroyRoot(addr)) {
-        const TObjId obj = sh_.objByAddr(addr);
-        const EStorageClass code = sh_.objStorClass(obj);
+    const TObjId obj = sh_.objByAddr(addr);
+    const EStorageClass code = sh_.objStorClass(obj);
+    if (/* leaking */ lm.destroyObject(obj))
         reportMemLeak(*this, code, "destroy");
-    }
 
     lm.leave();
 }

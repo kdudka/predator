@@ -29,23 +29,15 @@
 
 #include <boost/foreach.hpp>
 
-/**
- * check if a sub-heap reachable from the given value is also reachable from
- * somewhere else.  If not, such a sub-heap is considered as garbage and
- * removed.
- * @param sh instance of the symbolic heap to search in
- * @param root ID of the root value to check for junk
- * @param leakList if not null, push all destroyed root objects to the list
- * @return true if any junk has been detected/collected
- */
-bool collectJunk(SymHeap &sh, TValId root, TValList *leakList = 0);
+/// collect and remove all junk reachable from the given object
+bool /* found */ collectJunk(SymHeap &sh, TObjId obj, TValList *leakList = 0);
 
-/// experimental
-bool collectSharedJunk(SymHeap &sh, TValId root, TValList *leakList = 0);
+/// same as collectJunk(), but does not consider prototypes to be junk objects
+bool collectSharedJunk(SymHeap &sh, TObjId obj, TValList *leakList = 0);
 
-bool destroyRootAndCollectJunk(
+bool destroyObjectAndCollectJunk(
         SymHeap                 &sh,
-        const TValId             root,
+        const TObjId             obj,
         TValList                *leakList = 0);
 
 /// @todo some dox
@@ -64,16 +56,16 @@ class LeakMonitor {
         bool collectJunkFrom(const TCont &killedPtrs) {
             bool leaking = false;
             BOOST_FOREACH(TValId val, killedPtrs) {
-                const TValId root = sh_.valRoot(val);
-                if (collectJunk(sh_, root, &leakList_))
+                const TObjId obj = sh_.objByAddr(val);
+                if (collectJunk(sh_, obj, &leakList_))
                     leaking = true;
             }
 
             return leaking;
         }
 
-        bool /* leaking */ destroyRoot(const TValId root) {
-            return destroyRootAndCollectJunk(sh_, root, &leakList_);
+        bool /* leaking */ destroyObject(const TObjId obj) {
+            return destroyObjectAndCollectJunk(sh_, obj, &leakList_);
         }
 
         bool /* leaking */ importLeakList(TValList *leakList);

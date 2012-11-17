@@ -77,9 +77,13 @@ bool isJunk(SymHeap &sh, TValId root)
     return true;
 }
 
-bool gcCore(SymHeap &sh, TValId root, TValList *leakList, bool sharedOnly)
+bool gcCore(SymHeap &sh, TObjId obj, TValList *leakList, bool sharedOnly)
 {
-    CL_BREAK_IF(sh.valOffset(root));
+    if (OBJ_INVALID == obj)
+        return false;
+
+    TValId root = sh.legacyAddrOfAny_XXX(obj);
+
     bool detected = false;
 
     std::set<TValId> whiteList;
@@ -122,35 +126,37 @@ skip_root:
     return detected;
 }
 
-bool collectJunk(SymHeap &sh, TValId root, TValList *leakList)
+bool collectJunk(SymHeap &sh, TObjId obj, TValList *leakList)
 {
-    return gcCore(sh, root, leakList, /* sharedOnly */ false);
+    return gcCore(sh, obj, leakList, /* sharedOnly */ false);
 }
 
-bool collectSharedJunk(SymHeap &sh, TValId root, TValList *leakList)
+bool collectSharedJunk(SymHeap &sh, TObjId obj, TValList *leakList)
 {
-    return gcCore(sh, root, leakList, /* sharedOnly */ true);
+    return gcCore(sh, obj, leakList, /* sharedOnly */ true);
 }
 
-bool destroyRootAndCollectJunk(
+bool destroyObjectAndCollectJunk(
         SymHeap                 &sh,
-        const TValId             root,
+        const TObjId             obj,
         TValList                *leakList)
 {
-    CL_BREAK_IF(sh.valOffset(root));
-    CL_BREAK_IF(!isPossibleToDeref(sh, root));
+    CL_BREAK_IF(!sh.isValid(obj));
+
+    const TValId root = sh.legacyAddrOfAny_XXX(obj);
 
     // gather potentialy destroyed pointer values
     TValList killedPtrs;
     gatherReferredRoots(killedPtrs, sh, root);
 
     // destroy the target
-    sh.objInvalidate(sh.objByAddr(root));
+    sh.objInvalidate(obj);
 
     // now check for memory leakage
     bool leaking = false;
     BOOST_FOREACH(TValId val, killedPtrs) {
-        if (collectJunk(sh, val, leakList))
+        const TObjId obj = sh.objByAddr(val);
+        if (collectJunk(sh, obj, leakList))
             leaking = true;
     }
 

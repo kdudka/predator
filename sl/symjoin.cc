@@ -3177,9 +3177,9 @@ void transferContentsOfGhost(
         const TValId valNew = objGhost.value();
         objDst.setValue(valNew);
 
-        const TValId rootOld = sh.valRoot(valOld);
-        if (collectJunk(sh, rootOld))
-            CL_DEBUG("    transferContentsOfGhost() drops a sub-heap (valOld)");
+        const TObjId objOld = sh.objByAddr(valOld);
+        if (collectJunk(sh, objOld))
+            CL_DEBUG("    transferContentsOfGhost() drops a sub-heap (objOld)");
     }
 }
 
@@ -3221,19 +3221,20 @@ void joinData(
     }
 
     // ghost is a transiently existing object representing the join of dst/src
-    const TValId ghost = roMapLookup(ctx.valMap1[0], dst);
-    CL_BREAK_IF(ghost != roMapLookup(ctx.valMap2[0], src));
+    const TValId ghostAt = roMapLookup(ctx.valMap1[0], dst);
+    CL_BREAK_IF(ghostAt != roMapLookup(ctx.valMap2[0], src));
 
     // assign values within dst (and also in src if bidir == true)
-    transferContentsOfGhost(ctx.dst, bf, dst, ghost);
+    transferContentsOfGhost(ctx.dst, bf, dst, ghostAt);
     if (bidir)
-        transferContentsOfGhost(ctx.dst, bf, src, ghost);
+        transferContentsOfGhost(ctx.dst, bf, src, ghostAt);
 
     // redirect some edges if necessary
-    recoverPrototypes(ctx, dst, ghost);
-    recoverPointersToSelf(sh, dst, src, ghost, bidir);
+    recoverPrototypes(ctx, dst, ghostAt);
+    recoverPointersToSelf(sh, dst, src, ghostAt, bidir);
     restorePrototypeLengths(ctx);
 
+    const TObjId ghost = ctx.dst.objByAddr(ghostAt);
     if (collectJunk(sh, ghost))
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");
 
