@@ -32,29 +32,28 @@
 
 #include <boost/foreach.hpp>
 
-void gatherReferredRoots(TValList &dst, SymHeap &sh, TValId at)
+void gatherReferredRoots(TObjSet &dst, SymHeap &sh, TObjId obj)
 {
-    CL_BREAK_IF(sh.valOffset(at));
-
     FldList ptrs;
-    const TObjId obj = sh.objByAddr(at);
     sh.gatherLivePointers(ptrs, obj);
     BOOST_FOREACH(const FldHandle &fld, ptrs) {
         const TValId val = fld.value();
         if (val <= 0)
             continue;
 
-        const TValId root = sh.valRoot(val);
-        dst.push_back(root);
+        const TObjId obj = sh.objByAddr(val);
+        if (!sh.isValid(obj))
+            continue;
+
+        dst.insert(obj);
     }
 }
 
-bool isJunk(SymHeap &sh, TValId root)
+bool isJunk(SymHeap &sh, TObjId obj)
 {
-    WorkList<TValId> wl(root);
+    WorkList<TObjId> wl(obj);
 
-    while (wl.next(root)) {
-        const TObjId obj = sh.objByAddr(root);
+    while (wl.next(obj)) {
         if (!sh.isValid(obj))
             // this object is already freed
             return false;
@@ -67,11 +66,8 @@ bool isJunk(SymHeap &sh, TValId root)
         // go through all referrers
         FldList refs;
         sh.pointedBy(refs, obj);
-        BOOST_FOREACH(const FldHandle &fld, refs) {
-            const TValId refAt = fld.placedAt();
-            const TValId refRoot = sh.valRoot(refAt);
-            wl.schedule(refRoot);
-        }
+        BOOST_FOREACH(const FldHandle &fld, refs)
+            wl.schedule(fld.obj());
     }
 
     return true;
@@ -82,31 +78,27 @@ bool gcCore(SymHeap &sh, TObjId obj, TObjSet *leakObjs, bool sharedOnly)
     if (OBJ_INVALID == obj)
         return false;
 
-    TValId root = sh.legacyAddrOfAny_XXX(obj);
-
     bool detected = false;
 
-    std::set<TValId> whiteList;
+    std::set<TObjId> whiteList;
     if (sharedOnly) {
-        whiteList.insert(root);
-        if (OK_DLS == sh.objKind(sh.objByAddr(root)))
-            whiteList.insert(dlSegPeer(sh, root));
+        whiteList.insert(obj);
+        if (OK_DLS == sh.objKind(obj))
+            whiteList.insert(dlSegPeer(sh, obj));
     }
 
-    WorkList<TValId> wl(root);
-    while (wl.next(root)) {
-        if (!isJunk(sh, root))
+    WorkList<TObjId> wl(obj);
+    while (wl.next(obj)) {
+        if (!isJunk(sh, obj))
             // not a junk, keep going...
             continue;
 
-        const TObjId obj = sh.objByAddr(root);
-
         // gather all roots pointed by the junk object
-        TValList refs;
-        gatherReferredRoots(refs, sh, root);
+        TObjSet refs;
+        gatherReferredRoots(refs, sh, obj);
 
         if (sharedOnly) {
-            if (hasKey(whiteList, root))
+            if (hasKey(whiteList, obj))
                 goto skip_root;
 
             if (0 < sh.objProtoLevel(obj))
@@ -121,8 +113,8 @@ bool gcCore(SymHeap &sh, TObjId obj, TObjSet *leakObjs, bool sharedOnly)
 
 skip_root:
         // schedule just created junk candidates for next wheel
-        BOOST_FOREACH(TValId refRoot, refs)
-            wl.schedule(refRoot);
+        BOOST_FOREACH(const TObjId refObj, refs)
+            wl.schedule(refObj);
     }
 
     return detected;
@@ -145,19 +137,16 @@ bool destroyObjectAndCollectJunk(
 {
     CL_BREAK_IF(!sh.isValid(obj));
 
-    const TValId root = sh.legacyAddrOfAny_XXX(obj);
-
     // gather potentialy destroyed pointer values
-    TValList killedPtrs;
-    gatherReferredRoots(killedPtrs, sh, root);
+    TObjSet refs;
+    gatherReferredRoots(refs, sh, obj);
 
     // destroy the target
     sh.objInvalidate(obj);
 
     // now check for memory leakage
     bool leaking = false;
-    BOOST_FOREACH(TValId val, killedPtrs) {
-        const TObjId obj = sh.objByAddr(val);
+    BOOST_FOREACH(const TObjId obj, refs) {
         if (collectJunk(sh, obj, leakObjs))
             leaking = true;
     }
