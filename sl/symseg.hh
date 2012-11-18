@@ -107,6 +107,17 @@ inline TObjId dlSegPeer(const SymHeap &sh, TObjId dls)
 }
 
 /// TODO: drop this!
+inline TObjId segPeer(const SymHeap &sh, TObjId seg)
+{
+    const EObjKind kind = sh.objKind(seg);
+    CL_BREAK_IF(OK_REGION == kind);
+
+    return (OK_DLS == kind)
+        ? dlSegPeer(sh, seg)
+        : seg;
+}
+
+/// TODO: drop this!
 inline TValId segPeer(const SymHeap &sh, TValId segAt)
 {
     CL_BREAK_IF(sh.valOffset(segAt));

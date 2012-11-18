@@ -59,7 +59,7 @@ class UniBlockWriter {
 };
 
 struct DeepCopyData {
-    typedef std::map<TValId     /* seg */, TMinLen   /* len */> TSegLengths;
+    typedef std::map<TObjId     /* seg */, TMinLen   /* len */> TSegLengths;
     typedef std::pair<FldHandle /* src */, FldHandle /* dst */> TItem;
     typedef std::set<CVar>                                      TCut;
 
@@ -183,8 +183,7 @@ TObjId /* objDst */ addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc)
 
 #if SE_SYMCUT_PRESERVES_MIN_LENGTHS
         const TMinLen minLength = objMinLength(src, objSrc);
-        const TValId rootDstAt = dst.addrOfTarget(objDst, /* XXX */ TS_REGION);
-        dc.segLengths[rootDstAt] = minLength;
+        dc.segLengths[objDst] = minLength;
 #endif
     }
 
@@ -341,10 +340,10 @@ void deepCopy(DeepCopyData &dc)
 
     typedef DeepCopyData::TSegLengths TSegLengths;
     BOOST_FOREACH(TSegLengths::const_reference item, dc.segLengths) {
-        const TObjId seg = dst.objByAddr(item.first);
+        const TObjId seg        = item.first;
         const TMinLen minLength = item.second;
         dst.segSetMinLength(seg, minLength);
-        dst.segSetMinLength(dst.objByAddr(segPeer(dst, item.first)), minLength);
+        dst.segSetMinLength(segPeer(dst, seg), minLength);
     }
 }
 
