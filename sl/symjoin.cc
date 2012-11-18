@@ -173,7 +173,7 @@ struct SymJoinCtx {
     std::set<TValPair>          tieBreaking;
     std::set<TValPair>          alreadyJoined;
 
-    std::set<TValId /* dst */>  protoRoots;
+    std::set<TObjId /* dst */>  protos;
 
     // XXX: experimental
     typedef std::map<TValPair /* (v1, v2) */, TValId /* dst */> TMatchLookup;
@@ -276,7 +276,7 @@ void dump_ctx(const SymJoinCtx &ctx)
         << "\n";
     cout << "    ctx.alreadyJoined  .size() = " << ctx.alreadyJoined.size()
         << "\n";
-    cout << "    ctx.protoRoots     .size() = " << ctx.protoRoots.size()
+    cout << "    ctx.protos         .size() = " << ctx.protos.size()
         << "\n\n";
 
     // print queue stats
@@ -775,7 +775,7 @@ bool traverseRoots(
             // do not follow shared data
             return true;
         else
-            ctx.protoRoots.insert(rootDst);
+            ctx.protos.insert(objDst);
     }
 
     const TObjId objs[] = {
@@ -2788,9 +2788,9 @@ bool handleDstPreds(SymJoinCtx &ctx)
 
     // TODO: match generic Neq predicates also in prototypes;  for now we
     // consider only minimal segment lengths
-    BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
-        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
-        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoDst);
+    BOOST_FOREACH(const TObjId protoDst, ctx.protos) {
+        const TObjId proto1 = roMapLookup(ctx.objMap1[/* rtl */ 1], protoDst);
+        const TObjId proto2 = roMapLookup(ctx.objMap2[/* rtl */ 1], protoDst);
 
         const TMinLen len1   = objMinLength(ctx.sh1, proto1);
         const TMinLen len2   = objMinLength(ctx.sh2, proto2);
@@ -2924,14 +2924,13 @@ void mapGhostAddressSpace(
 /// this runs only in debug build
 bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx)
 {
-    BOOST_FOREACH(const TValId protoAt, ctx.protoRoots) {
-        const TObjId proto = ctx.dst.objByAddr(protoAt);
+    BOOST_FOREACH(const TObjId proto, ctx.protos) {
         if (OK_DLS != ctx.dst.objKind(proto))
             // we are interested only DLSs here
             continue;
 
-        const TValId peer = dlSegPeer(ctx.dst, protoAt);
-        if (!hasKey(ctx.protoRoots, peer)) {
+        const TObjId peer = dlSegPeer(ctx.dst, proto);
+        if (!hasKey(ctx.protos, peer)) {
             CL_ERROR("DLS prototype peer not a prototype");
             return false;
         }
@@ -3072,20 +3071,20 @@ bool joinDataReadOnly(
     unsigned cntProto2 = 0;
 
     // go through prototypes
-    BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
-        const TValId proto1 = roMapLookup(ctx.valMap1[/* rtl */ 1], protoDst);
-        const TValId proto2 = roMapLookup(ctx.valMap2[/* rtl */ 1], protoDst);
+    BOOST_FOREACH(const TObjId protoDst, ctx.protos) {
+        const TObjId proto1 = roMapLookup(ctx.objMap1[/* rtl */ 1], protoDst);
+        const TObjId proto2 = roMapLookup(ctx.objMap2[/* rtl */ 1], protoDst);
 
-        if (VAL_INVALID != proto1) {
+        if (OBJ_INVALID != proto1) {
             ++cntProto1;
             if (protoRoots)
-                (*protoRoots)[0].insert(proto1);
+                (*protoRoots)[0].insert(sh.legacyAddrOfAny_XXX(proto1));
         }
 
-        if (VAL_INVALID != proto2) {
+        if (OBJ_INVALID != proto2) {
             ++cntProto2;
             if (protoRoots)
-                (*protoRoots)[1].insert(proto2);
+                (*protoRoots)[1].insert(sh.legacyAddrOfAny_XXX(proto2));
         }
     }
 
@@ -3123,14 +3122,14 @@ void recoverPrototypes(
         const TValId            dst,
         const TValId            ghost)
 {
-    const unsigned cntProto = ctx.protoRoots.size();
+    const unsigned cntProto = ctx.protos.size();
     if (cntProto)
         CL_DEBUG("    joinData() joins " << cntProto << " prototype objects");
 
     // go through prototypes
-    BOOST_FOREACH(const TValId protoGhost, ctx.protoRoots) {
+    BOOST_FOREACH(const TObjId protoGhost, ctx.protos) {
         redirectRefs(ctx.dst,
-                /* pointingFrom */  protoGhost,
+                /* pointingFrom */  ctx.dst.legacyAddrOfAny_XXX(protoGhost),
                 /* pointingTo   */  ghost,
                 /* redirectTo   */  dst);
     }
@@ -3142,10 +3141,8 @@ void restorePrototypeLengths(SymJoinCtx &ctx)
     SymHeap &sh = ctx.dst;
 
     // restore minimal length of segment prototypes
-    BOOST_FOREACH(const TValId protoDstAt, ctx.protoRoots) {
+    BOOST_FOREACH(const TObjId protoDst, ctx.protos) {
         typedef SymJoinCtx::TSegLengths TLens;
-
-        const TObjId protoDst = ctx.dst.objByAddr(protoDstAt);
 
         const TLens &lens = ctx.segLengths;
         TLens::const_iterator it = lens.find(protoDst);
