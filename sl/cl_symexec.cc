@@ -108,7 +108,7 @@ void digGlJunk(SymHeap &sh)
 
         // destroy the junk if needed
         proc.setLocation(loc);
-        proc.valDestroyTarget(sh.addrOfRegion(obj));
+        proc.objDestroy(obj);
     }
 }
 

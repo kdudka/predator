@@ -407,7 +407,7 @@ bool /* complete */ traverseLiveFieldsGeneric(
         for (unsigned i = 0; i < N; ++i) {
             SymHeap &sh = *heaps[i];
             const TObjId obj = objs[i];
-            fields[i] = FldHandle(sh, obj, off, clt);
+            fields[i] = FldHandle(sh, obj, clt, off);
         }
 
         if (!visitor(fields))

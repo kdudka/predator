@@ -3445,7 +3445,7 @@ void SymHeapCore::objSetEstimatedType(TObjId obj, TObjType clt)
     d->ents.getEntRW(&rootData, obj);
 
     if (OBJ_RETURN == obj) {
-        // destroy any stale target of VAL_ADDR_OF_RET
+        // destroy any stale OBJ_RETURN object
         this->objInvalidate(OBJ_RETURN);
 
         // reinitalize the OBJ_RETURN region

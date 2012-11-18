@@ -269,7 +269,7 @@ void SymExecEngine::execReturn()
         }
         else {
             const TValId val = proc.valFromOperand(src);
-            const FldHandle ret(sh, VAL_ADDR_OF_RET, src.type);
+            const FldHandle ret(sh, OBJ_RETURN, src.type);
             CL_BREAK_IF(VAL_INVALID == val);
             proc.objSetValue(ret, val);
         }

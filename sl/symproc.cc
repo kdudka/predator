@@ -835,15 +835,14 @@ void SymProc::objSetValue(const FldHandle &lhs, TValId rhs)
     executeMemmove(*this, lhsAt, rhsAt, valSize, /* allowOverlap */ false);
 }
 
-void SymProc::valDestroyTarget(TValId addr)
+void SymProc::objDestroy(TObjId obj)
 {
-    if (VAL_ADDR_OF_RET == addr && isAddressToFreedObj(sh_, addr))
+    if (OBJ_RETURN == obj && !sh_.isValid(obj))
         return;
 
     LeakMonitor lm(sh_);
     lm.enter();
 
-    const TObjId obj = sh_.objByAddr(addr);
     const EStorageClass code = sh_.objStorClass(obj);
     if (/* leaking */ lm.destroyObject(obj))
         reportMemLeak(*this, code, "destroy");
@@ -855,21 +854,19 @@ void SymProc::killVar(const CodeStorage::KillVar &kv)
 {
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
     const CVar cVar(kv.uid, nestLevel);
-    const TObjId reg = sh_.regionByVar(cVar, /* createIfNeeded */ false);
-    const TValId addr = sh_.addrOfRegion(reg);
-    if (VAL_INVALID == addr)
+    const TObjId obj = sh_.regionByVar(cVar, /* createIfNeeded */ false);
+    if (OBJ_INVALID == obj)
         // the var is dead already
         return;
 
     const std::string varString = varToString(sh_.stor(), kv.uid);
 
-    const TObjId obj = sh_.objByAddr(addr);
     if (!sh_.pointedByCount(obj)) {
         // just destroy the variable
 #if DEBUG_SE_STACK_FRAME
         CL_DEBUG_MSG(lw_, "FFF SymProc::killVar() destroys var " << varString);
 #endif
-        this->valDestroyTarget(addr);
+        this->objDestroy(obj);
         return;
     }
 
@@ -1273,7 +1270,7 @@ void SymExecCore::execFree(TValId val)
     }
 
     CL_DEBUG_MSG(lw_, "executing free()");
-    this->valDestroyTarget(val);
+    this->objDestroy(obj);
 }
 
 void SymExecCore::execStackRestore()
@@ -1284,7 +1281,7 @@ void SymExecCore::execStackRestore()
 
     BOOST_FOREACH(const TObjId obj, anonStackObjs) {
         CL_DEBUG_MSG(lw_, "releasing an anonymous stack object");
-        this->valDestroyTarget(sh_.legacyAddrOfAny_XXX(obj));
+        this->objDestroy(obj);
     }
 }
 

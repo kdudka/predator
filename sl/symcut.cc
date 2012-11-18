@@ -367,7 +367,7 @@ void prune(const SymHeap &src, SymHeap &dst,
     }
 
     if (src.objEstimatedType(OBJ_RETURN))
-        // clone VAL_ADDR_OF_RET
+        // clone OBJ_RETURN
         digFields(dc, OBJ_RETURN, OBJ_RETURN);
 
     // go through the worklist

@@ -295,7 +295,7 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh)
     proc.setLocation(&op.data.var->loc);
 
     const FldHandle objDst = proc.objByOperand(op);
-    const FldHandle objSrc(sh, VAL_ADDR_OF_RET, op.type);
+    const FldHandle objSrc(sh, OBJ_RETURN, op.type);
     TValId val;
     if (objSrc.isValidHandle()) {
         val = objSrc.value();
@@ -314,7 +314,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh)
     // We need to look for junk since there can be a function returning an
     // allocated object.  Then ignoring the return value on the caller's
     // side can trigger a memory leak.  See test-0090.c for a use case.
-    proc.valDestroyTarget(VAL_ADDR_OF_RET);
+    proc.objDestroy(OBJ_RETURN);
 
     TObjList live;
     sh.gatherObjects(live, isProgramVar);
@@ -338,7 +338,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh)
         (void) varString;
 #endif
         proc.setLocation(loc);
-        proc.valDestroyTarget(sh.addrOfRegion(obj));
+        proc.objDestroy(obj);
     }
 }
 

@@ -125,8 +125,8 @@ class SymProc {
         /// high-level interface to SymHeap::objSetValue()
         void objSetValue(const FldHandle &lhs, TValId rhs);
 
-        /// high-level interface to SymHeap::valDestroyTarget()
-        void valDestroyTarget(TValId at);
+        /// high-level interface to SymHeap::objInvalidate()
+        void objDestroy(TObjId obj);
 
         /// invalidate all variables that are killed by the given instruction
         void killInsn(const CodeStorage::Insn &);

@@ -583,7 +583,7 @@ class FldHandle {
         {
         }
 
-        FldHandle(SymHeapCore &sh, TObjId obj, TOffset off, TObjType clt):
+        FldHandle(SymHeapCore &sh, TObjId obj, TObjType clt, TOffset off = 0):
             sh_(&sh),
             id_(sh.fldLookup(obj, off, clt))
         {
