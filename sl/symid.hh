@@ -125,4 +125,6 @@ enum TObjId {
     OBJ_MAX_ID        = /* XXX */ UINT_MAX
 };
 
+typedef std::pair<TObjId, TObjId>           TObjPair;
+
 #endif /* H_GUARD_SYM_ID_H */

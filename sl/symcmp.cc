@@ -224,8 +224,8 @@ bool cmpValues(
     return matchRoots(sh1, sh2, root1, root2);
 }
 
-typedef std::queue<TValPair>                        TSched;
-typedef WorkList<TValPair,TSched>                   TWorkList;
+typedef std::queue<TObjPair>                        TSched;
+typedef WorkList<TObjPair,TSched>                   TWorkList;
 
 class ValueComparator {
     private:
@@ -258,9 +258,9 @@ class ValueComparator {
 
             if (follow) {
                 // schedule roots for next wheel
-                const TValId root1 = sh1_.valRoot(v1);
-                const TValId root2 = sh2_.valRoot(v2);
-                wl_.schedule(TValPair(root1, root2));
+                const TObjId obj1 = sh1_.objByAddr(v1);
+                const TObjId obj2 = sh2_.objByAddr(v2);
+                wl_.schedule(TObjPair(obj1, obj2));
             }
 
             return /* continue */ true;
@@ -276,21 +276,12 @@ bool dfsCmp(
     // DFS loop
     TWorkList::value_type item;
     while (wl.next(item)) {
-        TValId v1, v2;
-        boost::tie(v1, v2) = item;
-
-        bool follow;
-        if (!cmpValues(&follow, vMap, sh1, sh2, v1, v2))
-            // value mismatch
-            return false;
-
-        if (!follow)
-            // nothing to follow here
-            continue;
+        TObjId obj1, obj2;
+        boost::tie(obj1, obj2) = item;
 
         // set up a visitor
         SymHeap *const heaps[] = { &sh1, &sh2 };
-        const TObjId objs[] = { sh1.objByAddr(v1), sh2.objByAddr(v2) };
+        const TObjId objs[] = { obj1, obj2 };
         ValueComparator visitor(wl, vMap, sh1, sh2);
 
         // guide it through a pair of root objects
@@ -304,24 +295,17 @@ bool dfsCmp(
 
 class VarScheduleVisitor {
     private:
-        // drop this!
-        SymHeap &sh1_, &sh2_;
-
         TWorkList &wl_;
 
     public:
-        VarScheduleVisitor(TWorkList &wl, SymHeap &sh1, SymHeap &sh2):
-            sh1_(sh1),
-            sh2_(sh2),
+        VarScheduleVisitor(TWorkList &wl):
             wl_(wl)
         {
         }
 
         bool operator()(const TObjId objs[2]) {
-            const TValPair vp(
-                    sh1_.addrOfRegion(objs[0]),
-                    sh2_.addrOfRegion(objs[1]));
-            wl_.schedule(vp);
+            const TObjPair op(objs[0], objs[1]);
+            wl_.schedule(op);
             return /* continue */ true;
         }
 };
@@ -342,12 +326,12 @@ bool areEqual(
     if (sh1.objEstimatedType(OBJ_RETURN) || sh2.objEstimatedType(OBJ_RETURN))
     {
         // schedule return values
-        const TValPair vp(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET);
-        wl.schedule(vp);
+        const TObjPair op(OBJ_RETURN, OBJ_RETURN);
+        wl.schedule(op);
     }
 
     // start with program variables
-    VarScheduleVisitor visitor(wl, sh1Writable, sh2Writable);
+    VarScheduleVisitor visitor(wl);
     if (!traverseProgramVarsGeneric<0, /* N_SRC */ 2>(heaps, visitor))
         return false;
 
