@@ -3055,7 +3055,7 @@ bool joinDataReadOnly(
         const BindingOff        &off,
         const TValId            addr1,
         const TValId            addr2,
-        TValSet                 protoRoots[1][2])
+        TObjSet                 protoObjs[1][2])
 {
     SJ_DEBUG("--> joinDataReadOnly" << SJ_VALP(addr1, addr2));
     Trace::waiveCloneOperation(sh);
@@ -3077,14 +3077,14 @@ bool joinDataReadOnly(
 
         if (OBJ_INVALID != proto1) {
             ++cntProto1;
-            if (protoRoots)
-                (*protoRoots)[0].insert(sh.legacyAddrOfAny_XXX(proto1));
+            if (protoObjs)
+                (*protoObjs)[0].insert(proto1);
         }
 
         if (OBJ_INVALID != proto2) {
             ++cntProto2;
-            if (protoRoots)
-                (*protoRoots)[1].insert(sh.legacyAddrOfAny_XXX(proto2));
+            if (protoObjs)
+                (*protoObjs)[1].insert(proto2);
         }
     }
 

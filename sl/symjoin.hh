@@ -56,7 +56,7 @@ bool joinDataReadOnly(
         const BindingOff        &bf,
         const TValId            addr1,
         const TValId            addr2,
-        TValSet                 protoRoots[1][2]);
+        TObjSet                 protoObjs[1][2]);
 
 /// @todo some dox
 void joinData(

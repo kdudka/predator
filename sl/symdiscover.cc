@@ -334,16 +334,10 @@ bool matchData(
         return false;
 
     EJoinStatus status;
-    TValSet protoRoots[2];
-    if (!joinDataReadOnly(&status, sh, off, at1, at2, &protoRoots)) {
+    if (!joinDataReadOnly(&status, sh, off, at1, at2, protoPairs)) {
         CL_DEBUG("    joinDataReadOnly() refuses to create a segment!");
         return false;
     }
-
-    // TODO: drop this!
-    for (int i = 0; i < 2; ++i)
-        BOOST_FOREACH(const TValId root, protoRoots[i])
-            (*protoPairs)[i].insert(sh.objByAddr(root));
 
     int cost = 0;
     switch (status) {
