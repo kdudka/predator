@@ -294,17 +294,17 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh)
     SymProc proc(sh, &callerSiteBt);
     proc.setLocation(&op.data.var->loc);
 
-    const FldHandle objDst = proc.objByOperand(op);
-    const FldHandle objSrc(sh, OBJ_RETURN, op.type);
+    const FldHandle fldDst = proc.fldByOperand(op);
+    const FldHandle fldSrc(sh, OBJ_RETURN, op.type);
     TValId val;
-    if (objSrc.isValidHandle()) {
-        val = objSrc.value();
+    if (fldSrc.isValidHandle()) {
+        val = fldSrc.value();
     }
     else
         val = sh.valCreate(VT_UNKNOWN, VO_STACK);
 
     // assign the return value in the current symbolic heap
-    proc.objSetValue(objDst, val);
+    proc.setValueOf(fldDst, val);
 }
 
 void SymCallCtx::Private::destroyStackFrame(SymHeap &sh)
@@ -700,7 +700,7 @@ void setCallArgs(
 
         // set the value of lhs accordingly
         const FldHandle argObj(sh, obj, clt);
-        proc.objSetValue(argObj, val);
+        proc.setValueOf(argObj, val);
     }
 
     srcProc.killInsn(insn);

@@ -2005,7 +2005,7 @@ void SymHeapCore::traceUpdate(Trace::Node *node)
     d->traceHandle.reset(node);
 }
 
-void SymHeapCore::objSetValue(TFldId fld, TValId val, TValSet *killedPtrs)
+void SymHeapCore::setValOfField(TFldId fld, TValId val, TValSet *killedPtrs)
 {
     // we allow to set values of atomic types only
     const FieldOfObj *fldData;
@@ -2849,7 +2849,7 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy)
     // we intentionally do not use a reference here (tight loop otherwise)
     TFldIdSet usedBy = valData->usedBy;
     BOOST_FOREACH(const TFldId fld, usedBy)
-        this->objSetValue(fld, replaceBy);
+        this->setValOfField(fld, replaceBy);
 }
 
 void SymHeapCore::addNeq(TValId v1, TValId v2)

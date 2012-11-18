@@ -574,7 +574,7 @@ class SymHeapCore {
         TObjId objByField(TFldId fld) const;
         TOffset fieldOffset(TFldId fld) const;
         TObjType fieldType(TFldId fld) const;
-        void objSetValue(TFldId fld, TValId val, TValSet *killedPtrs = 0);
+        void setValOfField(TFldId fld, TValId val, TValSet *killedPtrs = 0);
 
     protected:
         TStorRef stor_;
@@ -682,7 +682,7 @@ class FldHandle {
 
         /// assign the given value, caller is responsible for garbage collecting
         void setValue(const TValId val, TValSet *killedPtrs = 0) const {
-            sh_->objSetValue(id_, val, killedPtrs);
+            sh_->setValOfField(id_, val, killedPtrs);
         }
 
     protected:

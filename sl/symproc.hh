@@ -114,7 +114,7 @@ class SymProc {
 
     public:
         /// obtain a heap object corresponding to the given operand
-        FldHandle objByOperand(const struct cl_operand &op);
+        FldHandle fldByOperand(const struct cl_operand &op);
 
         /// obtain a heap value corresponding to the given operand
         TValId valFromOperand(const struct cl_operand &op);
@@ -122,8 +122,8 @@ class SymProc {
         /// resolve Fnc uid from the given operand, return true on success
         bool fncFromOperand(int *pUid, const struct cl_operand &op);
 
-        /// high-level interface to SymHeap::objSetValue()
-        void objSetValue(const FldHandle &lhs, TValId rhs);
+        /// high-level interface to FldHandle::setValue()
+        void setValueOf(const FldHandle &lhs, TValId rhs);
 
         /// high-level interface to SymHeap::objInvalidate()
         void objDestroy(TObjId obj);

@@ -487,7 +487,7 @@ TValId SymProc::targetAt(const struct cl_operand &op)
     return sh_.valByOffset(addr, off);
 }
 
-FldHandle SymProc::objByOperand(const struct cl_operand &op)
+FldHandle SymProc::fldByOperand(const struct cl_operand &op)
 {
     CL_BREAK_IF(seekRefAccessor(op.accessor));
 
@@ -508,7 +508,7 @@ FldHandle SymProc::objByOperand(const struct cl_operand &op)
     // resolve the target object
     const FldHandle fld(sh_, at, op.type);
     if (!fld.isValidHandle())
-        CL_BREAK_IF("SymProc::objByOperand() failed to resolve an object");
+        CL_BREAK_IF("SymProc::fldByOperand() failed to resolve an object");
 
     // all OK
     return fld;
@@ -519,7 +519,7 @@ TValId SymProc::valFromObj(const struct cl_operand &op)
     if (seekRefAccessor(op.accessor))
         return this->targetAt(op);
 
-    const FldHandle handle = this->objByOperand(op);
+    const FldHandle handle = this->fldByOperand(op);
     if (handle.isValidHandle())
         return handle.value();
 
@@ -788,7 +788,7 @@ void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
     lm.leave();
 }
 
-void SymProc::objSetValue(const FldHandle &lhs, TValId rhs)
+void SymProc::setValueOf(const FldHandle &lhs, TValId rhs)
 {
     const TValId lhsAt = lhs.placedAt();
     CL_BREAK_IF(!isPossibleToDeref(sh_, lhsAt));
@@ -1290,7 +1290,7 @@ bool lhsFromOperand(FldHandle *pLhs, SymProc &proc, const struct cl_operand &op)
     if (seekRefAccessor(op.accessor))
         CL_BREAK_IF("lhs not an l-value");
 
-    *pLhs = proc.objByOperand(op);
+    *pLhs = proc.fldByOperand(op);
     if (FLD_DEREF_FAILED == pLhs->fieldId())
         return false;
 
@@ -1311,7 +1311,7 @@ void SymExecCore::execStackAlloc(
     if (!size.hi) {
         // object of zero size could hardly be properly allocated
         const TValId valUnknown = sh_.valCreate(VT_UNKNOWN, VO_STACK);
-        this->objSetValue(lhs, valUnknown);
+        this->setValueOf(lhs, valUnknown);
         return;
     }
 
@@ -1332,7 +1332,7 @@ void SymExecCore::execStackAlloc(
     }
 
     // store the result of malloc
-    this->objSetValue(lhs, val);
+    this->setValueOf(lhs, val);
 }
 
 void SymExecCore::execHeapAlloc(
@@ -1352,7 +1352,7 @@ void SymExecCore::execHeapAlloc(
 malloc/calloc is implementation-defined");
         CL_NOTE_MSG(lw_, "assuming NULL as the result");
         this->printBackTrace(ML_WARN);
-        this->objSetValue(lhs, VAL_NULL);
+        this->setValueOf(lhs, VAL_NULL);
         this->killInsn(insn);
         dst.insert(sh_);
         return;
@@ -1367,7 +1367,7 @@ malloc/calloc is implementation-defined");
 
         // OOM state simulation
         const FldHandle oomLhs(oomHeap, lhs);
-        oomCore.objSetValue(oomLhs, VAL_NULL);
+        oomCore.setValueOf(oomLhs, VAL_NULL);
         oomCore.killInsn(insn);
         dst.insert(oomHeap);
     }
@@ -1393,7 +1393,7 @@ malloc/calloc is implementation-defined");
 
     // store the result of malloc
     const TValId val = sh_.addrOfTarget(reg, TS_REGION);
-    this->objSetValue(lhs, val);
+    this->setValueOf(lhs, val);
     this->killInsn(insn);
     dst.insert(sh_);
 }
@@ -2356,7 +2356,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn)
 already_alive:
 #endif
     // store the result
-    this->objSetValue(lhs, valResult);
+    this->setValueOf(lhs, valResult);
 }
 
 void SymExecCore::handleLabel(const CodeStorage::Insn &insn)

@@ -480,8 +480,8 @@ bool handleMemmoveCore(
     const struct cl_operand &opDst = opList[/* ret */ 0];
     if (CL_OPERAND_VOID != opDst.code) {
         // POSIX says that memmove() returns the value of the first argument
-        const FldHandle objDst = core.objByOperand(opDst);
-        core.objSetValue(objDst, valDst);
+        const FldHandle fldDst = core.fldByOperand(opDst);
+        core.setValueOf(fldDst, valDst);
     }
 
     insertCoreHeap(dst, core, insn);
@@ -530,8 +530,8 @@ bool handleMemset(
     const struct cl_operand &opDst = opList[/* dst */ 0];
     if (CL_OPERAND_VOID != opDst.code) {
         // POSIX says that memset() returns the value of the first argument
-        const FldHandle objDst = core.objByOperand(opDst);
-        core.objSetValue(objDst, addr);
+        const FldHandle fldDst = core.fldByOperand(opDst);
+        core.setValueOf(fldDst, addr);
     }
 
     insertCoreHeap(dst, core, insn);
@@ -660,8 +660,8 @@ bool handleStrlen(
             // store the return value of strlen()
             const CustomValue cv(len - IR::rngFromNum(IR::Int1));
             const TValId valResult = core.sh().valWrapCustom(cv);
-            const FldHandle objDst = core.objByOperand(opDst);
-            core.objSetValue(objDst, valResult);
+            const FldHandle fldDst = core.fldByOperand(opDst);
+            core.setValueOf(fldDst, valResult);
         }
     }
     else
@@ -778,9 +778,9 @@ bool handleNondetInt(
 
     // set the returned value to a new unknown value
     const struct cl_operand &opDst = opList[0];
-    const FldHandle objDst = core.objByOperand(opDst);
+    const FldHandle fldDst = core.fldByOperand(opDst);
     const TValId val = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
-    core.objSetValue(objDst, val);
+    core.setValueOf(fldDst, val);
 
     // insert the resulting heap
     dst.insert(sh);

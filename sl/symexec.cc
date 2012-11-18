@@ -271,7 +271,7 @@ void SymExecEngine::execReturn()
             const TValId val = proc.valFromOperand(src);
             const FldHandle ret(sh, OBJ_RETURN, src.type);
             CL_BREAK_IF(VAL_INVALID == val);
-            proc.objSetValue(ret, val);
+            proc.setValueOf(ret, val);
         }
     }
 
@@ -1066,9 +1066,9 @@ fail:
             : VO_UNKNOWN;
 
         const TValId val = entry.valCreate(VT_UNKNOWN, origin);
-        const FldHandle fld = proc.objByOperand(dst);
+        const FldHandle fld = proc.fldByOperand(dst);
         if (fld.isValidHandle())
-            proc.objSetValue(fld, val);
+            proc.setValueOf(fld, val);
     }
 
     // something wrong happened, print the backtrace
