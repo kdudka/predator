@@ -507,7 +507,7 @@ bool /* complete */ traverseProgramVarsGeneric(
 
     // go through all program variables
     BOOST_FOREACH(const CVar &cv, all) {
-        TValId roots[N_TOTAL];
+        TObjId objs[N_TOTAL];
         for (signed i = 0; i < (signed)N_TOTAL; ++i) {
             SymHeap &sh = *heaps[i];
 
@@ -519,7 +519,6 @@ bool /* complete */ traverseProgramVarsGeneric(
 
             const bool createIfNeeded = isDst || allowRecovery;
             const TObjId reg = sh.regionByVar(cv, createIfNeeded);
-            const TValId at = sh.addrOfRegion(reg);
 
             if (isAsym) {
                 // we have created a local variable in a _src_ heap
@@ -539,10 +538,10 @@ bool /* complete */ traverseProgramVarsGeneric(
                 sh.writeUniformBlock(reg, ub);
             }
 
-            roots[i] = at;
+            objs[i] = reg;
         }
 
-        if (!visitor(roots))
+        if (!visitor(objs))
             // traversal cancelled by visitor
             return false;
     }

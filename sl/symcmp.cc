@@ -304,16 +304,23 @@ bool dfsCmp(
 
 class VarScheduleVisitor {
     private:
+        // drop this!
+        SymHeap &sh1_, &sh2_;
+
         TWorkList &wl_;
 
     public:
-        VarScheduleVisitor(TWorkList &wl):
+        VarScheduleVisitor(TWorkList &wl, SymHeap &sh1, SymHeap &sh2):
+            sh1_(sh1),
+            sh2_(sh2),
             wl_(wl)
         {
         }
 
-        bool operator()(const TValId roots[2]) {
-            const TValPair vp(roots[0], roots[1]);
+        bool operator()(const TObjId objs[2]) {
+            const TValPair vp(
+                    sh1_.addrOfRegion(objs[0]),
+                    sh2_.addrOfRegion(objs[1]));
             wl_.schedule(vp);
             return /* continue */ true;
         }
@@ -340,7 +347,7 @@ bool areEqual(
     }
 
     // start with program variables
-    VarScheduleVisitor visitor(wl);
+    VarScheduleVisitor visitor(wl, sh1Writable, sh2Writable);
     if (!traverseProgramVarsGeneric<0, /* N_SRC */ 2>(heaps, visitor))
         return false;
 

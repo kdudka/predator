@@ -2463,23 +2463,23 @@ class JoinVarVisitor {
         {
         }
 
-        bool operator()(const TValId roots[3]) {
-            const TValId rootDst   = roots[/* dst */ 0];
-            const TValId root1     = roots[/* sh1 */ 1];
-            const TValId root2     = roots[/* sh2 */ 2];
+        bool operator()(const TObjId objs[3]) {
+            const TObjId objDst = objs[/* dst */ 0];
+            const TObjId obj1   = objs[/* sh1 */ 1];
+            const TObjId obj2   = objs[/* sh2 */ 2];
 
             switch (mode_) {
                 case JVM_LIVE_OBJS: {
+                    const TValId rootDst   = ctx_.dst.addrOfRegion(objDst);
+                    const TValId root1     = ctx_.sh1.addrOfRegion(obj1);
+                    const TValId root2     = ctx_.sh2.addrOfRegion(obj2);
+
                     const SchedItem rootItem(root1, root2, /* ldiff */ 0);
                     return traverseRoots(ctx_, rootDst, rootItem);
                 }
 
-                case JVM_UNI_BLOCKS: {
-                    const TObjId objDst = ctx_.dst.objByAddr(rootDst);
-                    const TObjId obj1   = ctx_.sh1.objByAddr(root1);
-                    const TObjId obj2   = ctx_.sh2.objByAddr(root2);
+                case JVM_UNI_BLOCKS:
                     return joinUniBlocks(ctx_, objDst, obj1, obj2);
-                }
             }
 
             CL_BREAK_IF("stack smashing detected");
