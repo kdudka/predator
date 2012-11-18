@@ -2644,13 +2644,18 @@ EStorageClass SymHeapCore::objStorClass(TObjId obj) const
     return regData->code;
 }
 
-TValId SymHeapCore::addrOfRegion(TObjId reg)
+TValId SymHeapCore::addrOfTarget(TObjId obj, ETargetSpecifier ts, TOffset off)
 {
-    if (OBJ_INVALID == reg)
+    if (OBJ_INVALID == obj)
         return VAL_INVALID;
 
+    if (TS_REGION != ts || !!off) {
+        CL_BREAK_IF("please implement");
+        return VAL_INVALID;
+    }
+
     const Region *regData;
-    d->ents.getEntRO(&regData, reg);
+    d->ents.getEntRO(&regData, obj);
     return regData->rootAddr;
 }
 
@@ -3750,10 +3755,10 @@ void SymHeap::objSetConcrete(TObjId obj)
 }
 
 /// overridden just to catch possible misuse of the method
-TValId SymHeap::addrOfRegion(TObjId reg)
+TValId SymHeap::addrOfTarget(TObjId obj, ETargetSpecifier ts, TOffset off)
 {
-    CL_BREAK_IF(OK_REGION != this->objKind(reg));
-    return SymHeapCore::addrOfRegion(reg);
+    // TODO: check possible misuse once we actually start to use it correctly
+    return SymHeapCore::addrOfTarget(obj, ts, off);
 }
 
 void SymHeap::objInvalidate(TObjId obj)

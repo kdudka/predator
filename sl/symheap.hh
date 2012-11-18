@@ -85,6 +85,15 @@ bool isOnHeap(EStorageClass);
 /// true for SC_STATIC and SC_ON_STACK
 bool isProgramVar(EStorageClass);
 
+/// classification of the target of an address (a.k.a. target specifier)
+enum ETargetSpecifier {
+    TS_INVALID,             ///< reserved for signalling error states
+    TS_REGION,              ///< the only allowed TS for addresses of regions
+    TS_FIRST,               ///< target is the first node of an abstract object
+    TS_LAST,                ///< target is the last node of an abstract object
+    TS_ALL                  ///< target is any node of an abstract object
+};
+
 /// enumeration of custom values, such as integer literals, or code pointers
 enum ECustomValue {
     CV_INVALID,             ///< reserved for signalling error states
@@ -440,8 +449,8 @@ class SymHeapCore {
         /// return size (in bytes) of the given object
         TSizeRange objSize(TObjId) const;
 
-        /// return the base address of the given region (create a new if needed)
-        virtual TValId addrOfRegion(TObjId reg);
+        /// target address at the given object with target specifier and offset
+        virtual TValId addrOfTarget(TObjId, ETargetSpecifier, TOffset off = 0);
 
         /// TODO: drop this!
         TValId legacyAddrOfAny_XXX(TObjId) const;
@@ -525,7 +534,7 @@ class SymHeapCore {
         /// return the estimated type-info of the given object
         TObjType objEstimatedType(TObjId obj) const;
 
-        /// create a @b generic value (heapAlloc() or addrOfVar() otherwise)
+        /// create a @b generic value, otherwise use addrOfTarget()
         TValId valCreate(EValueTarget code, EValueOrigin origin);
 
         /// wrap a custom value, such as integer literal, or code pointer
@@ -852,7 +861,7 @@ class SymHeap: public SymHeapCore {
 
     public:
         // just overrides (inherits the dox)
-        virtual TValId addrOfRegion(TObjId reg);
+        virtual TValId addrOfTarget(TObjId, ETargetSpecifier, TOffset off = 0);
         virtual void objInvalidate(TObjId);
         virtual TValId valClone(TValId);
 

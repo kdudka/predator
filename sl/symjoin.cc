@@ -1344,7 +1344,6 @@ bool createObject(
 
     // create an image in ctx.dst
     const TObjId objDst = ctx.dst.heapAlloc(size);
-    const TValId rootDst = ctx.dst.addrOfRegion(objDst);
 
     if (!joinUniBlocks(ctx, objDst, obj1, obj2))
         // failed to complement uniform blocks
@@ -1360,6 +1359,9 @@ bool createObject(
 
     // preserve 'prototype' flag
     ctx.dst.objSetProtoLevel(objDst, protoLevel);
+
+    // TODO: drop this!
+    const TValId rootDst = ctx.dst.addrOfTarget(objDst, /* XXX */ TS_REGION);
 
     if (OK_REGION != kind) {
         // abstract object
@@ -2470,9 +2472,10 @@ class JoinVarVisitor {
 
             switch (mode_) {
                 case JVM_LIVE_OBJS: {
-                    const TValId rootDst   = ctx_.dst.addrOfRegion(objDst);
-                    const TValId root1     = ctx_.sh1.addrOfRegion(obj1);
-                    const TValId root2     = ctx_.sh2.addrOfRegion(obj2);
+                    const TValId root1 = ctx_.sh1.addrOfTarget(obj1, TS_REGION);
+                    const TValId root2 = ctx_.sh2.addrOfTarget(obj2, TS_REGION);
+                    const TValId rootDst = ctx_.dst.addrOfTarget(objDst,
+                            TS_REGION);
 
                     const SchedItem rootItem(root1, root2, /* ldiff */ 0);
                     return traverseRoots(ctx_, rootDst, rootItem);
@@ -2979,7 +2982,6 @@ bool joinDataCore(
     // start with the given pair of objects and create a ghost object for them
     // create an image in ctx.dst
     const TObjId objDst = ctx.dst.heapAlloc(size);
-    const TValId rootDstAt = ctx.dst.addrOfRegion(objDst);
 
     const TObjType clt1 = ctx.sh1.objEstimatedType(obj1);
     const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
@@ -2997,6 +2999,9 @@ bool joinDataCore(
     const EObjKind kind2 = sh.objKind(obj2);
     if (OK_REGION != kind2)
         ++ldiff;
+
+    // TODO: drop this!
+    const TValId rootDstAt = ctx.dst.addrOfTarget(objDst, /* XXX */ TS_REGION);
 
     const SchedItem rootItem(addr1, addr2, ldiff);
     if (!traverseRoots(ctx, rootDstAt, rootItem, &off))

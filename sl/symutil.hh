@@ -196,9 +196,8 @@ inline bool isAddressToFreedObj(SymHeapCore &sh, const TValId val)
 
 inline bool isVarAlive(SymHeap &sh, const CVar &cv)
 {
-    const TObjId reg = sh.regionByVar(cv, /* createIfNeeded */ false);
-    const TValId at = sh.addrOfRegion(reg);
-    return 0 < at;
+    const TObjId obj = sh.regionByVar(cv, /* createIfNeeded */ false);
+    return (OBJ_INVALID != obj);
 }
 
 void initGlVar(SymHeap &sh, const CVar &cv);

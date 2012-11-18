@@ -342,14 +342,14 @@ void SymProc::varInit(TValId at)
 TValId SymProc::varAt(const CVar &cv)
 {
     TObjId reg = sh_.regionByVar(cv, /* createIfNeeded */ false);
-    TValId at = sh_.addrOfRegion(reg);
+    TValId at = sh_.addrOfTarget(reg, TS_REGION);
     if (0 < at)
         // var already alive
         return at;
 
     // lazy var creation
     reg = sh_.regionByVar(cv, /* createIfNeeded */ true);
-    at = sh_.addrOfRegion(reg);
+    at = sh_.addrOfTarget(reg, TS_REGION);
 
     // resolve Var
     const CodeStorage::Storage &stor = sh_.stor();
@@ -1374,7 +1374,6 @@ malloc/calloc is implementation-defined");
 
     // now create a heap object
     const TObjId reg = sh_.heapAlloc(size);
-    const TValId val = sh_.addrOfRegion(reg);
 
     UniformBlock ub = {
         /* off      */  0,
@@ -1393,6 +1392,7 @@ malloc/calloc is implementation-defined");
     }
 
     // store the result of malloc
+    const TValId val = sh_.addrOfTarget(reg, TS_REGION);
     this->objSetValue(lhs, val);
     this->killInsn(insn);
     dst.insert(sh_);

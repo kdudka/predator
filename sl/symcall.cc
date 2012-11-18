@@ -679,8 +679,7 @@ void setCallArgs(
         // cVar lookup
         const int nestLevel = bt.countOccurrencesOfFnc(uidOf(fnc));
         const CVar cVar(arg, nestLevel);
-        const TObjId reg = sh.regionByVar(cVar, /* createIfNeeded */ true);
-        const TValId argAddr = sh.addrOfRegion(reg);
+        const TObjId obj = sh.regionByVar(cVar, /* createIfNeeded */ true);
 
         // object instantiation
         TStorRef stor = *fnc.stor;
@@ -700,7 +699,7 @@ void setCallArgs(
         CL_BREAK_IF(VAL_INVALID == val);
 
         // set the value of lhs accordingly
-        const FldHandle argObj(sh, argAddr, clt);
+        const FldHandle argObj(sh, obj, clt);
         proc.objSetValue(argObj, val);
     }
 

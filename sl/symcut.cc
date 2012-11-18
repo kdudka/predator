@@ -163,8 +163,6 @@ TObjId /* objDst */ addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc)
     if (!valid)
         dst.objInvalidate(objDst);
 
-    const TValId rootDstAt = dst.addrOfRegion(objDst);
-
     // preserve type-info if known
     const TObjType clt = src.objEstimatedType(objSrc);
     if (clt)
@@ -185,6 +183,7 @@ TObjId /* objDst */ addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc)
 
 #if SE_SYMCUT_PRESERVES_MIN_LENGTHS
         const TMinLen minLength = objMinLength(src, objSrc);
+        const TValId rootDstAt = dst.addrOfTarget(objDst, /* XXX */ TS_REGION);
         dc.segLengths[rootDstAt] = minLength;
 #endif
     }
@@ -359,10 +358,6 @@ void prune(const SymHeap &src, SymHeap &dst,
     BOOST_FOREACH(CVar cv, snap) {
         const TObjId srcReg = dc.src.regionByVar(cv, /* createIfNeeded */ true);
         const TObjId dstReg = dc.dst.regionByVar(cv, /* createIfNeeded */ true);
-
-        const TValId srcAt = dc.src.addrOfRegion(srcReg);
-        const TValId dstAt = dc.dst.addrOfRegion(dstReg);
-        dc.valMap[srcAt] = dstAt;
         digFields(dc, srcReg, dstReg);
     }
 
