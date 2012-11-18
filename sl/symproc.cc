@@ -1278,13 +1278,13 @@ void SymExecCore::execFree(TValId val)
 
 void SymExecCore::execStackRestore()
 {
-    TValList anonStackRoots;
+    TObjList anonStackObjs;
     const CallInst callInst(this->bt_);
-    sh_.clearAnonStackObjects(anonStackRoots, callInst);
+    sh_.clearAnonStackObjects(anonStackObjs, callInst);
 
-    BOOST_FOREACH(const TValId root, anonStackRoots) {
+    BOOST_FOREACH(const TObjId obj, anonStackObjs) {
         CL_DEBUG_MSG(lw_, "releasing an anonymous stack object");
-        this->valDestroyTarget(root);
+        this->valDestroyTarget(sh_.legacyAddrOfAny_XXX(obj));
     }
 }
 

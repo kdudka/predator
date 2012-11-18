@@ -280,7 +280,7 @@ typedef std::map<TOffset, TValId>                       TOffMap;
 typedef IntervalArena<TOffset, TFldId>                  TArena;
 typedef TArena::key_type                                TMemChunk;
 typedef TArena::value_type                              TMemItem;
-typedef std::map<CallInst, TValList>                    TAnonStackMap;
+typedef std::map<CallInst, TObjList>                    TAnonStackMap;
 
 inline TMemItem createArenaItem(
         const TOffset               off,
@@ -3301,7 +3301,7 @@ void SymHeapCore::gatherObjects(TObjList &dst, bool (*filter)(EStorageClass))
     }
 }
 
-void SymHeapCore::clearAnonStackObjects(TValList &dst, const CallInst &of)
+void SymHeapCore::clearAnonStackObjects(TObjList &dst, const CallInst &of)
 {
     CL_BREAK_IF(!dst.empty());
 
@@ -3351,7 +3351,7 @@ TValId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
 
     // append the object on the list of anonymous stack objects of the call
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->anonStackMap);
-    (*d->anonStackMap)[from].push_back(addr);
+    (*d->anonStackMap)[from].push_back(reg);
 
     return addr;
 }
