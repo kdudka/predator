@@ -166,7 +166,7 @@ struct SymJoinCtx {
     bool                        forceThreeWay;
     bool                        allowThreeWay;
 
-    typedef std::map<TValId /* seg */, TMinLen /* len */>       TSegLengths;
+    typedef std::map<TObjId /* seg */, TMinLen /* len */>       TSegLengths;
     TSegLengths                 segLengths;
     std::set<TValPair>          sharedNeqs;
 
@@ -1368,7 +1368,7 @@ bool createObject(
         ctx.dst.objSetAbstract(objDst, kind, off);
 
         // compute minimal length of the resulting segment
-        ctx.segLengths[rootDst] = joinMinLength(ctx, root1, root2);
+        ctx.segLengths[objDst] = joinMinLength(ctx, root1, root2);
     }
 
     return traverseRoots(ctx, rootDst, item);
@@ -2744,11 +2744,10 @@ bool handleDstPreds(SymJoinCtx &ctx)
     // go through all segments and initialize minLength
     BOOST_FOREACH(SymJoinCtx::TSegLengths::const_reference ref, ctx.segLengths)
     {
-        const TValId segA = ref.first;
+        const TObjId  seg = ref.first;
         const TMinLen len = ref.second;
-        const TObjId seg = ctx.dst.objByAddr(segA);
         ctx.dst.segSetMinLength(seg, len);
-        ctx.dst.segSetMinLength(ctx.dst.objByAddr(segPeer(ctx.dst, segA)), len);
+        ctx.dst.segSetMinLength(segPeer(ctx.dst, seg), len);
     }
 
     // go through shared Neq predicates
@@ -2756,8 +2755,8 @@ bool handleDstPreds(SymJoinCtx &ctx)
         TValId valLt, valGt;
         boost::tie(valLt, valGt) = neq;
 
-        const TValId targetLt = ctx.dst.valRoot(valLt);
-        const TValId targetGt = ctx.dst.valRoot(valGt);
+        const TObjId targetLt = ctx.dst.objByAddr(valLt);
+        const TObjId targetGt = ctx.dst.objByAddr(valGt);
         if (hasKey(ctx.segLengths, targetLt)
                 || hasKey(ctx.segLengths, targetGt))
             // preserve segment length
@@ -3143,8 +3142,10 @@ void restorePrototypeLengths(SymJoinCtx &ctx)
     SymHeap &sh = ctx.dst;
 
     // restore minimal length of segment prototypes
-    BOOST_FOREACH(const TValId protoDst, ctx.protoRoots) {
+    BOOST_FOREACH(const TValId protoDstAt, ctx.protoRoots) {
         typedef SymJoinCtx::TSegLengths TLens;
+
+        const TObjId protoDst = ctx.dst.objByAddr(protoDstAt);
 
         const TLens &lens = ctx.segLengths;
         TLens::const_iterator it = lens.find(protoDst);
@@ -3155,8 +3156,8 @@ void restorePrototypeLengths(SymJoinCtx &ctx)
         if (!len)
             continue;
 
-        sh.segSetMinLength(sh.objByAddr(protoDst), len);
-        sh.segSetMinLength(sh.objByAddr(segPeer(sh, protoDst)), len);
+        sh.segSetMinLength(protoDst, len);
+        sh.segSetMinLength(segPeer(sh, protoDst), len);
     }
 }
 
