@@ -433,12 +433,14 @@ public:   // methods
 					{	// for hierarchical boxes
 						FA_DEBUG("plotting a box transition " << *boxes[i]);
 
-						const Box* box = static_cast<const Box*>(boxes[i]);
+						const Box& box = *static_cast<const Box*>(boxes[i]);
 
+						std::ostringstream osBox;
+						box.toStream(osBox);
 						// FIXME: this is also not correct
-						MemNode::SelectorData sel(box->getName(), trans.lhs()[i-1]);
+						MemNode::SelectorData sel(osBox.str(), trans.lhs()[i-1]);
 						node.block_.selVec.push_back(
-							std::make_pair(SelData(0, 0, 0, box->getName()), sel)
+							std::make_pair(SelData(0, 0, 0, osBox.str()), sel)
 							);
 					}
 					else
