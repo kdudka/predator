@@ -30,8 +30,14 @@
 
 class BoxAntichain
 {
+private:  // data types
+
 	typedef std::unordered_map<Box::Signature, std::list<Box>,
 		boost::hash<Box::Signature>> TBoxStore;
+
+	typedef TBoxStore::const_iterator const_iterator;
+
+private:  // data members
 
 	TBoxStore boxes_;
 
@@ -69,13 +75,29 @@ public:
 		boxes_.clear();
 	}
 
+	const_iterator begin() const
+	{
+		return boxes_.begin();
+	}
+
+	const_iterator end() const
+	{
+		return boxes_.end();
+	}
+
 	void asVector(std::vector<const Box*>& boxes) const;
 };
 
 
 class BoxSet
 {
+private:  // data types
+
 	typedef std::unordered_set<Box, boost::hash<Box>> TBoxSet;
+
+	typedef TBoxSet::const_iterator const_iterator;
+
+private:  // data members
 
 	TBoxSet boxes_;
 
@@ -114,6 +136,16 @@ public:
 	size_t size() const
 	{
 		return boxes_.size();
+	}
+
+	const_iterator begin() const
+	{
+		return boxes_.begin();
+	}
+
+	const_iterator end() const
+	{
+		return boxes_.end();
 	}
 
 	void asVector(std::vector<const Box*>& boxes) const
