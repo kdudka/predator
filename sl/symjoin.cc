@@ -575,14 +575,14 @@ bool bumpNestingLevel(const FldHandle &fld)
 
     // resolve root (the owning object of this field)
     SymHeap &sh = *static_cast<SymHeap *>(fld.sh());
-    const TValId root = sh.valRoot(fld.placedAt());
+    const TObjId obj = fld.obj();
 
-    if (!isAbstractValue(sh, root))
+    if (OK_REGION == sh.objKind(obj))
         // do not bump nesting level on concrete objects
         return false;
 
     TFldSet ignoreList;
-    buildIgnoreList(ignoreList, sh, root);
+    buildIgnoreList(ignoreList, sh, obj);
     return !hasKey(ignoreList, fld);
 }
 

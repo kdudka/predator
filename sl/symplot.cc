@@ -194,9 +194,9 @@ bool digIcByOffset(
     return true;
 }
 
-void describeVar(PlotData &plot, const TValId rootAt)
+void describeVar(PlotData &plot, const TObjId obj)
 {
-    if (VAL_ADDR_OF_RET == rootAt) {
+    if (OBJ_RETURN == obj) {
         plot.out << "OBJ_RETURN";
         return;
     }
@@ -205,11 +205,10 @@ void describeVar(PlotData &plot, const TValId rootAt)
     TStorRef stor = sh.stor();
 
     // var lookup
-    const TObjId obj = sh.objByAddr(rootAt);
     const CVar cv = sh.cVarByObject(obj);
 
     // write identity of the var
-    plot.out << "CL" << varToString(stor, cv.uid) << " [root = #" << rootAt;
+    plot.out << "CL" << varToString(stor, cv.uid) << " [obj = #" << obj;
     if (1 < cv.inst)
         plot.out << ", inst = " << cv.inst;
     plot.out << "]";
@@ -258,19 +257,16 @@ void describeFieldPlacement(PlotData &plot, const FldHandle &fld, TObjType clt)
 void describeField(PlotData &plot, const FldHandle &fld, const bool lonely)
 {
     SymHeap &sh = plot.sh;
-
-    // check root
-    const TValId at = fld.placedAt();
-    const TValId root = sh.valRoot(at);
-    const EStorageClass code = sh.objStorClass(sh.objByAddr(at));
+    const TObjId obj = fld.obj();
+    const EStorageClass code = sh.objStorClass(obj);
 
     const char *tag = "";
     if (lonely && isProgramVar(code)) {
-        describeVar(plot, root);
+        describeVar(plot, obj);
         tag = "field";
     }
 
-    const TObjType cltRoot = sh.objEstimatedType(sh.objByAddr(root));
+    const TObjType cltRoot = sh.objEstimatedType(obj);
     if (cltRoot)
         describeFieldPlacement(plot, fld, cltRoot);
 
@@ -332,7 +328,7 @@ void plotRootValue(PlotData &plot, const TValId val, const char *color)
 
     const EStorageClass code = sh.objStorClass(obj);
     if (isProgramVar(code))
-        describeVar(plot, val);
+        describeVar(plot, obj);
     else
         plot.out << "#" << val;
 
@@ -711,14 +707,12 @@ bool plotSimpleRoot(PlotData &plot, const FldHandle &fld)
         // offset detected
         return false;
 
-    const TValId at = fld.placedAt();
-    const TValId root = sh.valRoot(at);
-    if (sh.usedByCount(root))
-        // root pointed
+    const TObjId obj = fld.obj();
+    if (sh.pointedByCount(obj))
+        // object pointed
         return false;
 
     // TODO: support for objects with variable size?
-    const TObjId obj = sh.objByAddr(at);
     const TSizeRange size = sh.objSize(obj);
     CL_BREAK_IF(!isSingular(size));
 
