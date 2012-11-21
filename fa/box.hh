@@ -304,6 +304,12 @@ public:
 		return selCoverage_[index + 1];
 	}
 
+	size_t outPortsNum() const
+	{
+		assert(!selCoverage_.empty());
+		return selCoverage_.size() - 1;
+	}
+
 	virtual size_t selectorToInput(size_t input) const
 	{
 		assert(input < selectors_.size());

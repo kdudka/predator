@@ -54,6 +54,14 @@ protected:
 		std::vector<bool>&                marked) const;
 
 
+	/**
+	 * @brief  Traverse the forest automaton and mark visited components
+	 *
+	 * This method traverses the forest automaton and marks visited components
+	 * in the passed bitmap.
+	 *
+	 * @param[out]  visited  Bitmap into which visited components are marked
+	 */
 	void traverse(
 		std::vector<bool>&                visited) const;
 

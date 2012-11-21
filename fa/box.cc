@@ -389,9 +389,9 @@ void Box::toStream(std::ostream& os) const
 	os << name_ << '(' << arity_ << ")[in=";
 
 	// coverage of the input port
-	for (auto it = selCoverage_[0].cbegin(); it != selCoverage_[0].cend(); ++it)
+	for (auto it = this->outputCoverage().cbegin(); it != this->outputCoverage().cend(); ++it)
 	{
-		if (selCoverage_[0].cbegin() != it)
+		if (this->outputCoverage().cbegin() != it)
 		{
 			os << ",";
 		}
@@ -400,13 +400,13 @@ void Box::toStream(std::ostream& os) const
 	}
 
 	// coverage of output ports
-	for (size_t i = 1; i < selCoverage_.size(); ++i)
+	for (size_t i = 0; i < this->outPortsNum(); ++i)
 	{
 		os << "; out" << i << "=";
 
-		for (auto it = selCoverage_[i].cbegin(); it != selCoverage_[i].cend(); ++it)
+		for (auto it = this->inputCoverage(i).cbegin(); it != this->inputCoverage(i).cend(); ++it)
 		{
-			if (selCoverage_[i].cbegin() != it)
+			if (this->inputCoverage(i).cbegin() != it)
 			{
 				os << ",";
 			}

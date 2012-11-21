@@ -72,6 +72,13 @@ public:   // data types
 		SelectorData(const std::string& name, size_t targetState) :
 			name(name), targetState(targetState)
 		{ }
+
+		friend std::ostream& operator<<(std::ostream& os, const SelectorData& sel)
+		{
+			os << sel.name;
+
+			return os;
+		}
 	};
 
 	typedef std::vector<std::pair<SelData, SelectorData>> SelectorVec;
@@ -151,6 +158,46 @@ public:   // methods
 		node.treeref_ = treeref;
 
 		return node;
+	}
+
+	friend std::ostream& operator<<(std::ostream& os, const MemNode& node)
+	{
+		os << "Node " << node.id_ << "\n";
+		os << " type: ";
+
+		switch (node.type_)
+		{
+			case mem_type::t_block:
+				os << "block " << node.block_.name << "(";
+				for (auto it = node.block_.selVec.cbegin(); it != node.block_.selVec.cend(); ++it)
+				{	// for all selectors
+					if (node.block_.selVec.cbegin() != it)
+					{
+						os << ", ";
+					}
+
+					os << it->second;
+				}
+
+				os << ")";
+				break;
+
+			case mem_type::t_datafield:
+				os << "data";
+				break;
+
+			case mem_type::t_treeref:
+				os << "treeref";
+				break;
+
+			default:
+				assert(false);         // fail gracefully
+		}
+
+		os << "\n";
+
+
+		return os;
 	}
 };
 
@@ -439,8 +486,13 @@ public:   // methods
 						box.toStream(osBox);
 						// FIXME: this is also not correct
 						MemNode::SelectorData sel(osBox.str(), trans.lhs()[i-1]);
+
+						// get the lowest output selector offset in the box
+						assert(!box.outputCoverage().empty());
+						size_t selOffset = *box.outputCoverage().cbegin();
+
 						node.block_.selVec.push_back(
-							std::make_pair(SelData(0, 0, 0, osBox.str()), sel)
+							std::make_pair(SelData(selOffset, 0, 0, osBox.str()), sel)
 							);
 					}
 					else
@@ -449,6 +501,7 @@ public:   // methods
 					}
 				}
 
+				FA_WARN("Creating node " << node);
 				this->addStateToMemNodeLink(trans.rhs(), node);
 				break;
 			}
