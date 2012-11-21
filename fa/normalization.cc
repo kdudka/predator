@@ -156,7 +156,6 @@ void Normalization::check() const
 {
 	// compute reachable roots
 	std::vector<bool> visited(this->fae.roots.size(), false);
-
 	this->traverse(visited);
 
 	// check garbage
@@ -299,11 +298,11 @@ bool Normalization::normalize(
 	size_t offset = 0;
 
 	for (auto& i : order)
-	{
+	{	// push tree automata into a new tuple in the right order
 		this->normalizeRoot(normalized, i, marked);
 
 		if (!marked[i])
-		{
+		{	// if a root was merged, do not put it in the new tuple!
 			merged = true;
 
 			continue;

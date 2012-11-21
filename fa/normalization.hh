@@ -62,17 +62,36 @@ protected:
 		const std::vector<bool>&          visited) const;
 
 
-public:
-
-
-	// check garbage
-	void check() const;
-
-
+	/**
+	 * @brief  Normalizes given root recursively
+	 *
+	 * This method performs recursively normalization of all components reachable
+	 * from given root. This only removes redundant root points (and preserves
+	 * only root points which are real cutpoints), reordering of roots is
+	 * performed on a higher level.
+	 *
+	 * @param[in,out]  normalized  Vector marking root points which are normalized
+	 * @param[in]      root        The root to be normalized
+	 * @param[in]      marked      Bitmap telling which root points are referenced
+	 *                             more than once
+	 */
 	void normalizeRoot(
 		std::vector<bool>&                normalized,
 		size_t                            root,
 		const std::vector<bool>&          marked);
+
+
+public:
+
+
+	/**
+	 * @brief  Checks for garbage
+	 *
+	 * Checks for garbage, i.e. components unreachable from program variables.
+	 *
+	 * @todo  This method fails for backward-only reachable components
+	 */
+	void check() const;
 
 
 	bool selfReachable(
@@ -88,7 +107,19 @@ public:
 		bool                              extended = false);
 
 
-	// normalize representation
+	/**
+	 * @brief  Transforms the forest automaton into a canonicity-respecting form
+	 *
+	 * This method transforms the corresponding forest automaton into
+	 * a canonicity-respecting form. This means that root points correspond to
+	 * real cutpoints (other are merged) and the order of the root points is
+	 * according to the depth-first traversal.
+	 *
+	 * @param[in]  marked  Vector marking roots which are referred more than once
+	 * @param[in]  order   Vector with root indices in the right order
+	 *
+	 * @returns  @p true in case some components were merged, @p false otherwise
+	 */
 	bool normalize(
 		const std::vector<bool>&          marked,
 		const std::vector<size_t>&        order);
