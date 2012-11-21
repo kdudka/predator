@@ -534,15 +534,18 @@ std::ostream& operator<<(std::ostream& os,
 	return os << " })";
 }
 
-void ConnectionGraph::visit(size_t c, std::vector<bool>& visited,
-	std::vector<size_t>& order, std::vector<bool>& marked) const
+void ConnectionGraph::visit(
+	size_t                        c,
+	std::vector<bool>&            visited,
+	std::vector<size_t>&          order,
+	std::vector<bool>&            marked) const
 {
 	// Assertions
 	assert(c < visited.size());
 
 	if (visited[c])
-	{
-		marked[c] = true;
+	{	// in case the root has already been visited
+		marked[c] = true;           // mark it and finish
 
 		return;
 	}
@@ -552,7 +555,7 @@ void ConnectionGraph::visit(size_t c, std::vector<bool>& visited,
 	order.push_back(c);
 
 	for (auto& cutpoint : this->data[c].signature)
-	{
+	{	// for every cutpoint reachable forward
 		this->visit(cutpoint.root, visited, order, marked);
 
 		if (cutpoint.refCount > 1)
@@ -560,7 +563,7 @@ void ConnectionGraph::visit(size_t c, std::vector<bool>& visited,
 	}
 
 	for (auto& selectorCutpointPair : this->data[c].bwdMap)
-	{
+	{	// for every cutpoint reachable backward
 		if (visited[selectorCutpointPair.second])
 			continue;
 
@@ -571,10 +574,13 @@ void ConnectionGraph::visit(size_t c, std::vector<bool>& visited,
 		size_t tmp = this->climb(selectorCutpointPair.second, visited, mask);
 
 		if (tmp == c)
+		{	// if we reached the original root
 			continue;
+		}
 
 		marked[tmp] = true;
 
+		// restart the forward traversal again from the new cutpoint
 		this->visit(tmp, visited, order, marked);
 	}
 }
@@ -610,8 +616,10 @@ void ConnectionGraph::visit(size_t c, std::vector<bool>& visited) const
 	}
 }
 
-size_t ConnectionGraph::climb(size_t c, const std::vector<bool>& visited,
-	std::vector<bool>& mask) const
+size_t ConnectionGraph::climb(
+	size_t                            c,
+	const std::vector<bool>&          visited,
+	std::vector<bool>&                mask) const
 {
 	// Assertions
 	assert(c < this->data.size());

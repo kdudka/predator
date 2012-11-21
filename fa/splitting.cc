@@ -600,6 +600,7 @@ void Splitting::isolateSet(
 						break;
 					}
 				}
+
 				if (!found)
 				{
 					assert(false);

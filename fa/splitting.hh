@@ -123,7 +123,10 @@ private:  // methods
 		size_t                              target,
 		size_t                              selector) const;
 
-public:
+public:   // methods
+
+	Splitting(FAE& fae) : fae_(fae) {}
+	Splitting(const FAE& fae) : fae_(const_cast<FAE&>(fae)) {}
 
 	/**
 	 * @brief  Isolates a single selector from a root
@@ -160,10 +163,6 @@ public:
 		int                                base,
 		const std::vector<size_t>&         offsets) const;
 
-public:
-
-	Splitting(FAE& fae) : fae_(fae) {}
-	Splitting(const FAE& fae) : fae_(const_cast<FAE&>(fae)) {}
 
 };
 

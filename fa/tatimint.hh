@@ -151,11 +151,15 @@ class TAWriter : public TimbukWriter {
 
 public:
 
-	TAWriter(std::ostream& output = std::cout) : TimbukWriter(output) {}
+	TAWriter(std::ostream& output = std::cout) :
+		TimbukWriter(output)
+	{ }
 
 	template <class F>
-	void writeTransitions(const TA<T>& aut, F f) {
-		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
+	void writeTransitions(const TA<T>& aut, F f)
+	{
+		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i)
+		{
 			std::ostringstream ss;
 			ss << i->label();
 			this->writeTransition(i->lhs(), ss.str(), i->rhs(), f);

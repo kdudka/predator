@@ -49,7 +49,7 @@ private:   // data members
 	/// Reference to the forest automaton representing the environment
 	FAE& fae_;
 
-protected:
+protected:// methods
 
 	/**
 	 * @brief  Sets displacement of type and value information

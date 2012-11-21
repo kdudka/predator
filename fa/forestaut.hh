@@ -256,6 +256,16 @@ public:   // static methods
 	{ }
 };
 
+/**
+ * @brief  The output stream operator
+ *
+ * The std::ostream << operator for conversion of a TA to a string.
+ *
+ * @param[in,out]  os  The output stream
+ * @param[in]      ta  The TA to be appended to the stream
+ *
+ * @returns  The modified output stream
+ */
 std::ostream& operator<<(std::ostream& os, const TreeAut& ta);
 
 #endif

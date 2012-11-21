@@ -46,9 +46,8 @@ private:  // data members
 public:   // methods
 
 	TypeBox(
-		const std::string& name,
-		const std::vector<size_t>& selectors
-	) :
+		const std::string&             name,
+		const std::vector<size_t>&     selectors) :
 		AbstractBox(box_type_e::bTypeInfo, 0),
 		name_(name),
 		selectors_(selectors)
@@ -199,11 +198,10 @@ public:
 		std::vector<std::pair<size_t,size_t>> selectors;
 
 		Signature(
-			const ConnectionGraph::CutpointSignature& outputSignature,
-			size_t inputIndex,
-			const ConnectionGraph::CutpointSignature& inputSignature,
-			const std::vector<std::pair<size_t,size_t>>& selectors
-		) :
+			const ConnectionGraph::CutpointSignature&       outputSignature,
+			size_t                                          inputIndex,
+			const ConnectionGraph::CutpointSignature&       inputSignature,
+			const std::vector<std::pair<size_t,size_t>>&    selectors) :
 			outputSignature(outputSignature),
 			inputIndex(inputIndex),
 			inputSignature(inputSignature),
@@ -229,34 +227,33 @@ public:
 protected:
 
 	static void getDownwardCoverage(
-		std::vector<size_t>& v,
-		const std::vector<const AbstractBox*>& label);
+		std::vector<size_t>&                       v,
+		const std::vector<const AbstractBox*>&     label);
 
 	static bool checkDownwardCoverage(
-		const std::vector<size_t>& v,
-		const TreeAut& ta);
+		const std::vector<size_t>&                 v,
+		const TreeAut&                             ta);
 
 	static void getDownwardCoverage(
-		std::set<size_t>& s,
-		const TreeAut& ta);
+		std::set<size_t>&                          s,
+		const TreeAut&                             ta);
 
 	static void getAcceptingLabels(
-		std::vector<label_type>& labels,
-		const TreeAut& ta);
+		std::vector<label_type>&                   labels,
+		const TreeAut&                             ta);
 
 	Box(
-		const std::string& name,
-		const std::shared_ptr<TreeAut>& output,
-		ConnectionGraph::CutpointSignature outputSignature,
-		const std::vector<size_t>& inputMap,
-		const std::shared_ptr<TreeAut>& input,
-		size_t inputIndex,
-		ConnectionGraph::CutpointSignature inputSignature,
-		const std::vector<std::pair<size_t,size_t>>& selectors
-	);
+		const std::string&                               name,
+		const std::shared_ptr<TreeAut>&                  output,
+		ConnectionGraph::CutpointSignature               outputSignature,
+		const std::vector<size_t>&                       inputMap,
+		const std::shared_ptr<TreeAut>&                  input,
+		size_t                                           inputIndex,
+		ConnectionGraph::CutpointSignature               inputSignature,
+		const std::vector<std::pair<size_t,size_t>>&     selectors);
 
-	struct LeafEnumF {
-
+	struct LeafEnumF
+	{
 		std::vector<std::set<size_t>>& selectors;
 		const TreeAut& ta;
 		const TT<label_type>& t;
@@ -278,8 +275,8 @@ protected:
 
 	// enumerates upward selectors
 	void enumerateSelectorsAtLeaves(
-		std::vector<std::set<size_t>>& selectors,
-		const TreeAut& ta) const;
+		std::vector<std::set<size_t>>&        selectors,
+		const TreeAut&                        ta) const;
 
 public:
 

@@ -47,8 +47,8 @@ size_t hash_value(const Box::Signature& signature)
 
 
 void Box::getDownwardCoverage(
-	std::vector<size_t>& v,
-	const std::vector<const AbstractBox*>& label)
+	std::vector<size_t>&                          v,
+	const std::vector<const AbstractBox*>&        label)
 {
 	for (auto& absBox : label)
 	{
@@ -72,8 +72,8 @@ void Box::getDownwardCoverage(
 
 
 bool Box::checkDownwardCoverage(
-	const std::vector<size_t>& v,
-	const TreeAut& ta)
+	const std::vector<size_t>&                    v,
+	const TreeAut&                                ta)
 {
 	for (TreeAut::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i)
 	{
@@ -90,8 +90,8 @@ bool Box::checkDownwardCoverage(
 
 
 void Box::getDownwardCoverage(
-	std::set<size_t>& s,
-	const TreeAut& ta)
+	std::set<size_t>&                             s,
+	const TreeAut&                                ta)
 {
 	std::vector<size_t> v;
 
@@ -110,8 +110,8 @@ void Box::getDownwardCoverage(
 
 
 void Box::getAcceptingLabels(
-	std::vector<label_type>& labels,
-	const TreeAut& ta)
+	std::vector<label_type>&                       labels,
+	const TreeAut&                                 ta)
 {
 	for (auto& state : ta.getFinalStates())
 	{
@@ -126,14 +126,14 @@ void Box::getAcceptingLabels(
 
 
 Box::Box(
-	const std::string& name,
-	const std::shared_ptr<TreeAut>& output,
-	ConnectionGraph::CutpointSignature outputSignature,
-	const std::vector<size_t>& inputMap,
-	const std::shared_ptr<TreeAut>& input,
-	size_t inputIndex,
-	ConnectionGraph::CutpointSignature inputSignature,
-	const std::vector<std::pair<size_t,size_t>>& selectors
+	const std::string&                                 name,
+	const std::shared_ptr<TreeAut>&                    output,
+	ConnectionGraph::CutpointSignature                 outputSignature,
+	const std::vector<size_t>&                         inputMap,
+	const std::shared_ptr<TreeAut>&                    input,
+	size_t                                             inputIndex,
+	ConnectionGraph::CutpointSignature                 inputSignature,
+	const std::vector<std::pair<size_t,size_t>>&       selectors
 ) :
 	StructuralBox(box_type_e::bBox, selectors.size()),
 	name_(name),

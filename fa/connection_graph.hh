@@ -310,17 +310,38 @@ public:
 
 	void mergeCutpoint(size_t dst, size_t src);
 
-public:
+public:   // methods
 
-	size_t climb(size_t c, const std::vector<bool>& visited,
-		std::vector<bool>& mask) const;
+	size_t climb(
+		size_t                           c,
+		const std::vector<bool>&         visited,
+		std::vector<bool>&               mask) const;
 
-	void visit(size_t c, std::vector<bool>& visited, std::vector<size_t>& order,
-		std::vector<bool>& marked) const;
+	/**
+	 * @brief  Computes the order of components in a FA
+	 *
+	 * Traverses the root interconnection graph from given root and computes the
+	 * order of components in a FA according to the depth-first traversal. Note
+	 * that only the root interconnection graph (based on signatures of
+	 * rootpoints) is traversed and not the actual tree automata.
+	 *
+	 * @param[in]      c        The index of the component to be traversed
+	 * @param[in,out]  visited  Vector where visited roots are set to true
+	 * @param[out]     order    To be filled with the order of root points
+	 * @param[out]     marked   Vector where roots referenced more than once are
+	 *                          set to true
+	 */
+	void visit(
+		size_t                       c,
+		std::vector<bool>&           visited,
+		std::vector<size_t>&         order,
+		std::vector<bool>&           marked) const;
 
-	void visit(size_t c, std::vector<bool>& visited) const;
 
-public:
+	void visit(
+		size_t                       c,
+		std::vector<bool>&           visited) const;
+
 
 	ConnectionGraph(size_t size = 0) : data(size) {}
 

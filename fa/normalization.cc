@@ -78,7 +78,7 @@ void Normalization::traverse(
 	order.clear();
 
 	for (const Data& var : this->fae.GetVariables())
-	{
+	{	// start from program variables and perform DFT
 		// skip everything what is not a root reference
 		if (!var.isRef())
 			continue;
@@ -284,11 +284,13 @@ bool Normalization::normalize(
 	}
 
 	if (i == order.size())
-	{
+	{	// in case the FA is in the canonical form
 		this->fae.roots.resize(order.size());
 		this->fae.connectionGraph.data.resize(order.size());
 		return false;
 	}
+
+	// in case the FA is not in the canonical form
 
 	// reindex roots
 	std::vector<size_t> index(this->fae.roots.size(), static_cast<size_t>(-1));

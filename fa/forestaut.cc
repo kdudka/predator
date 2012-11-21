@@ -20,7 +20,7 @@
 #include "forestaut.hh"
 #include "tatimint.hh"
 
-
+// anonymous namespace
 namespace
 {
 	struct BoxCmpF
