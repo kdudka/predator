@@ -51,14 +51,14 @@ void Box::getDownwardCoverage(
 	const std::vector<const AbstractBox*>&        label)
 {
 	for (auto& absBox : label)
-	{
+	{	// for all boxes in the label
 		switch (absBox->getType())
-		{
-			case box_type_e::bSel:
+		{	// according to the type of the box
+			case box_type_e::bSel: // selector
 				v.push_back((static_cast<const SelBox*>(absBox))->getData().offset);
 				break;
 
-			case box_type_e::bBox:
+			case box_type_e::bBox: // hierarchical box
 			{
 				const Box* box = static_cast<const Box*>(absBox);
 				v.insert(v.end(), box->selCoverage_[0].begin(), box->selCoverage_[0].end());
@@ -382,4 +382,38 @@ std::ostream& operator<<(std::ostream& os, const Box& box)
 	writer.writeTransitions(*box.input_, writeStateF);
 
 	return os;
+}
+
+void Box::toStream(std::ostream& os) const
+{
+	os << name_ << '(' << arity_ << ")[in=";
+
+	// coverage of the input port
+	for (auto it = selCoverage_[0].cbegin(); it != selCoverage_[0].cend(); ++it)
+	{
+		if (selCoverage_[0].cbegin() != it)
+		{
+			os << ",";
+		}
+
+		os << *it;
+	}
+
+	// coverage of output ports
+	for (size_t i = 1; i < selCoverage_.size(); ++i)
+	{
+		os << "; out" << i << "=";
+
+		for (auto it = selCoverage_[i].cbegin(); it != selCoverage_[i].cend(); ++it)
+		{
+			if (selCoverage_[i].cbegin() != it)
+			{
+				os << ",";
+			}
+
+			os << *it;
+		}
+	}
+
+	os << "]";
 }

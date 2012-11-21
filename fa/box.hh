@@ -370,10 +370,7 @@ public:
 
 public:
 
-	virtual void toStream(std::ostream& os) const
-	{
-		os << name_ << '(' << arity_ << ')';
-	}
+	virtual void toStream(std::ostream& os) const;
 
 	friend size_t hash_value(const Box& box)
 	{
