@@ -501,7 +501,6 @@ public:   // methods
 					}
 				}
 
-				FA_WARN("Creating node " << node);
 				this->addStateToMemNodeLink(trans.rhs(), node);
 				break;
 			}
