@@ -208,22 +208,14 @@ void VirtualMachine::nodeDelete(size_t root)
 	// erase node
 	fae_.roots[root] = nullptr;
 
-	/// @todo: do in a better way (deobfuscate)
 	// make all references to this rootpoint dangling
-	size_t i = 0;
-	for (; i < root; ++i)
+	for (size_t i = 0; i < fae_.roots.size(); ++i)
 	{
-		if (!fae_.roots[i])
-			continue;
+		if (root == i)
+		{	// for the 'root'
+			fae_.connectionGraph.invalidate(i);
+		}
 
-		fae_.roots[i] = std::shared_ptr<TreeAut>(
-			fae_.invalidateReference(fae_.roots[i].get(), root));
-		fae_.connectionGraph.invalidate(i);
-	}
-	// skip 'root'
-	fae_.connectionGraph.invalidate(i++);
-	for (; i < fae_.roots.size(); ++i)
-	{
 		if (!fae_.roots[i])
 			continue;
 
