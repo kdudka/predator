@@ -123,11 +123,11 @@ class CVarMap {
         RefCounter refCnt;
 
     private:
-        typedef std::map<CVar, TValId>              TCont;
+        typedef std::map<CVar, TObjId>              TCont;
         TCont                                       cont_;
 
     public:
-        void insert(CVar cVar, TValId val) {
+        void insert(CVar cVar, TObjId val) {
             // check for mapping redefinition
             CL_BREAK_IF(hasKey(cont_, cVar));
 
@@ -140,7 +140,7 @@ class CVarMap {
                 CL_BREAK_IF("offset detected in CVarMap::remove()");
         }
 
-        TValId find(const CVar &cVar) {
+        TObjId find(const CVar &cVar) {
             // regular lookup
             TCont::iterator iter = cont_.find(cVar);
             const bool found = (cont_.end() != iter);
@@ -148,7 +148,7 @@ class CVarMap {
                 // gl variable explicitly requested
                 return (found)
                     ? iter->second
-                    : VAL_INVALID;
+                    : OBJ_INVALID;
             }
 
             // automatic fallback to gl variable
@@ -159,7 +159,7 @@ class CVarMap {
 
             if (!found && !foundGl)
                 // not found anywhere
-                return VAL_INVALID;
+                return OBJ_INVALID;
 
             // check for clash on uid among lc/gl variable
             CL_BREAK_IF(found && foundGl);
@@ -3223,9 +3223,9 @@ CVar SymHeapCore::cVarByObject(TObjId obj) const
 
 TObjId SymHeapCore::regionByVar(CVar cv, bool createIfNeeded)
 {
-    TValId addr = d->cVarMap->find(cv);
-    if (0 < addr)
-        return this->objByAddr(addr);
+    TObjId obj = d->cVarMap->find(cv);
+    if (OBJ_INVALID != obj)
+        return obj;
 
     if (!createIfNeeded)
         // the variable does not exist and we are not asked to create the var
@@ -3245,20 +3245,20 @@ TObjId SymHeapCore::regionByVar(CVar cv, bool createIfNeeded)
 #endif
 
     // assign an address
-    addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
+    const TValId addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
 
     BaseAddress *rootAddrData;
     d->ents.getEntRW(&rootAddrData, addr);
 
     // create an object
     const EStorageClass code = isOnStack(var) ? SC_ON_STACK : SC_STATIC;
-    const TObjId reg = d->assignId(new Region(code));
+    obj = d->assignId(new Region(code));
     Region *rootData;
-    d->ents.getEntRW(&rootData, reg);
+    d->ents.getEntRW(&rootData, obj);
 
     // inter-connect the object and its address
     rootData->addrByTS[TS_REGION] = addr;
-    rootAddrData->obj = reg;
+    rootAddrData->obj = obj;
 
     // initialize metadata
     rootData->cVar = cv;
@@ -3270,12 +3270,12 @@ TObjId SymHeapCore::regionByVar(CVar cv, bool createIfNeeded)
 
     // mark the root as live
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveObjs);
-    d->liveObjs->insert(reg);
+    d->liveObjs->insert(obj);
 
     // store the address for next wheel
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->cVarMap);
-    d->cVarMap->insert(cv, addr);
-    return this->objByAddr(addr);
+    d->cVarMap->insert(cv, obj);
+    return obj;
 }
 
 static bool dummyFilter(EStorageClass)
