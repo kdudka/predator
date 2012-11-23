@@ -1949,9 +1949,8 @@ SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
 {
     CL_BREAK_IF(!&stor_);
 
-    // allocate VAL_ADDR_OF_RET
+    // allocate an address for OBJ_RETURN
     const TValId addrRet = d->valCreate(VT_OBJECT, VO_ASSIGNED);
-    CL_BREAK_IF(VAL_ADDR_OF_RET != addrRet);
     BaseAddress *addrRetData;
     d->ents.getEntRW(&addrRetData, addrRet);
 
@@ -1961,7 +1960,7 @@ SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
     Region *objRetData;
     d->ents.getEntRW(&objRetData, objRet);
 
-    // inter-connect VAL_ADDR_OF_RET and OBJ_RETURN
+    // inter-connect addrRet and OBJ_RETURN
     objRetData->rootAddr = addrRet;
     addrRetData-> obj = objRet;
 }

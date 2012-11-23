@@ -79,9 +79,6 @@ enum TValId {
      */
     VAL_NULL          =  0,
 
-    /// TODO: drop this
-    VAL_ADDR_OF_RET   =  1,
-
     /**
      * special enumeration value denoting a failure of a method which may return
      * a value ID.  VAL_INVALID can @b never denote a valid value.  @n @n

@@ -1477,8 +1477,12 @@ bool joinReturnAddrs(SymJoinCtx &ctx)
 
     ctx.dst.objSetEstimatedType(OBJ_RETURN, clt);
 
-    const SchedItem rootItem(VAL_ADDR_OF_RET, VAL_ADDR_OF_RET, /* ldiff */ 0);
-    return traverseRoots(ctx, VAL_ADDR_OF_RET, rootItem);
+    const TValId retAddrDst = ctx.dst.addrOfTarget(OBJ_RETURN, TS_REGION);
+    const TValId retAddr1   = ctx.sh1.addrOfTarget(OBJ_RETURN, TS_REGION);
+    const TValId retAddr2   = ctx.sh2.addrOfTarget(OBJ_RETURN, TS_REGION);
+
+    const SchedItem rootItem(retAddr1, retAddr2, /* ldiff */ 0);
+    return traverseRoots(ctx, retAddrDst, rootItem);
 }
 
 bool joinCustomValues(

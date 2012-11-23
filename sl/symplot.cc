@@ -1078,10 +1078,6 @@ void plotAuxValue(
             label = "TRUE";
             break;
 
-        case VAL_ADDR_OF_RET:
-            label = "ADDR_OF_RET";
-            break;
-
         case VAL_INVALID:
         default:
             color = "red";

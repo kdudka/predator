@@ -264,8 +264,9 @@ void SymExecEngine::execReturn()
             const TSizeOf size = fncReturnType_->size;
             const CustomValue cv(IR::rngFromNum(size));
             const TValId valSize = sh.valWrapCustom(cv);
+            const TValId retAddr = sh.addrOfTarget(OBJ_RETURN, TS_REGION);
             const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_STACK);
-            executeMemset(proc, VAL_ADDR_OF_RET, valUnknown, valSize);
+            executeMemset(proc, retAddr, valUnknown, valSize);
         }
         else {
             const TValId val = proc.valFromOperand(src);
