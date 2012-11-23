@@ -2616,36 +2616,32 @@ bool setDstValuesCore(
 bool setDstValues(SymJoinCtx &ctx, const TFldSet *blackList = 0)
 {
     SymHeap &dst = ctx.dst;
-    SymHeap &sh1 = ctx.sh1;
-    SymHeap &sh2 = ctx.sh2;
 
     typedef std::map<FldHandle /* objDst */, THdlPair> TMap;
     TMap rMap;
 
     // reverse mapping for ctx.liveList1
-    const TValMap &vMap1 = ctx.valMap1[0];
-    BOOST_FOREACH(const FldHandle &objSrc, ctx.liveList1) {
-        const TValId rootSrcAt = sh1.valRoot(objSrc.placedAt());
-        const TValId rootDstAt = roMapLookup(vMap1, rootSrcAt);
-        const FldHandle objDst = translateObjId(dst, sh1, rootDstAt, objSrc);
-        if (!hasKey(rMap, objDst))
-            rMap[objDst].second = FldHandle(FLD_INVALID);
+    BOOST_FOREACH(const FldHandle &fldSrc, ctx.liveList1) {
+        const TObjId objSrc = fldSrc.obj();
+        const TObjId objDst = roMapLookup(ctx.objMap1[0], objSrc);
+        const FldHandle fldDst = translateFldHandle(dst, objDst, fldSrc);
+        if (!hasKey(rMap, fldDst))
+            rMap[fldDst].second = FldHandle(FLD_INVALID);
 
-        // objDst -> obj1
-        rMap[objDst].first = objSrc;
+        // fldDst -> fld1
+        rMap[fldDst].first = fldSrc;
     }
 
     // reverse mapping for ctx.liveList2
-    const TValMap &vMap2 = ctx.valMap2[0];
-    BOOST_FOREACH(const FldHandle &objSrc, ctx.liveList2) {
-        const TValId rootSrcAt = sh2.valRoot(objSrc.placedAt());
-        const TValId rootDstAt = roMapLookup(vMap2, rootSrcAt);
-        const FldHandle objDst = translateObjId(dst, sh2, rootDstAt, objSrc);
-        if (!hasKey(rMap, objDst))
-            rMap[objDst].first = FldHandle(FLD_INVALID);
+    BOOST_FOREACH(const FldHandle &fldSrc, ctx.liveList2) {
+        const TObjId objSrc = fldSrc.obj();
+        const TObjId objDst = roMapLookup(ctx.objMap2[0], objSrc);
+        const FldHandle fldDst = translateFldHandle(dst, objDst, fldSrc);
+        if (!hasKey(rMap, fldDst))
+            rMap[fldDst].first = FldHandle(FLD_INVALID);
 
-        // objDst -> obj2
-        rMap[objDst].second = objSrc;
+        // fldDst -> fld2
+        rMap[fldDst].second = fldSrc;
     }
 
     TFldSet emptyBlackList;
@@ -3165,24 +3161,23 @@ void restorePrototypeLengths(SymJoinCtx &ctx)
 void transferContentsOfGhost(
         SymHeap                 &sh,
         const BindingOff        &bf,
-        const TValId            dst,
-        const TValId            ghost)
+        const TObjId            dst,
+        const TObjId            ghost)
 {
     TFldSet ignoreList;
     buildIgnoreList(ignoreList, sh, dst, bf);
 
     FldList live;
-    const TObjId root = sh.objByAddr(ghost);
-    sh.gatherLiveFields(live, root);
-    BOOST_FOREACH(const FldHandle &objGhost, live) {
-        const FldHandle objDst = translateObjId(sh, sh, dst, objGhost);
-        if (hasKey(ignoreList, objDst))
+    sh.gatherLiveFields(live, ghost);
+    BOOST_FOREACH(const FldHandle &fldGhost, live) {
+        const FldHandle fldDst = translateFldHandle(sh, dst, fldGhost);
+        if (hasKey(ignoreList, fldDst))
             // preserve binding pointers
             continue;
 
-        const TValId valOld = objDst.value();
-        const TValId valNew = objGhost.value();
-        objDst.setValue(valNew);
+        const TValId valOld = fldDst.value();
+        const TValId valNew = fldGhost.value();
+        fldDst.setValue(valNew);
 
         const TObjId objOld = sh.objByAddr(valOld);
         if (collectJunk(sh, objOld))
@@ -3193,11 +3188,15 @@ void transferContentsOfGhost(
 void joinData(
         SymHeap                 &sh,
         const BindingOff        &bf,
-        const TValId            dst,
-        const TValId            src,
+        const TValId            dstAt,
+        const TValId            srcAt,
         const bool              bidir)
 {
-    SJ_DEBUG("--> joinData" << SJ_VALP(dst, src));
+    // TODO: drop this!
+    const TObjId dst = sh.objByAddr(dstAt);
+    const TObjId src = sh.objByAddr(srcAt);
+
+    SJ_DEBUG("--> joinData" << SJ_OBJP(dst, src));
     ++cntJoinOps;
 
     // used only for debugging (in case the debugging is enabled)
@@ -3207,17 +3206,17 @@ void joinData(
 #endif
     if (debuggingSymJoin) {
         EJoinStatus status = JS_USE_ANY;
-        if (!joinDataReadOnly(&status, sh, bf, dst, src, 0))
+        if (!joinDataReadOnly(&status, sh, bf, dstAt, srcAt, 0))
             CL_BREAK_IF("joinDataReadOnly() fails, why joinData() is called?");
         if (JS_USE_ANY == status)
             isomorphismWasExpected = true;
         else
-            debugPlot(sh, "joinData", dst, src, "00");
+            debugPlot(sh, "joinData", dstAt, srcAt, "00");
     }
 
     // go through the common part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
-    if (!joinDataCore(ctx, bf, dst, src)) {
+    if (!joinDataCore(ctx, bf, dstAt, srcAt)) {
         CL_BREAK_IF("joinData() has failed, did joinDataReadOnly() succeed?");
         return;
     }
@@ -3228,26 +3227,29 @@ void joinData(
     }
 
     // ghost is a transiently existing object representing the join of dst/src
-    const TValId ghostAt = roMapLookup(ctx.valMap1[0], dst);
-    CL_BREAK_IF(ghostAt != roMapLookup(ctx.valMap2[0], src));
+    const TObjId ghost = roMapLookup(ctx.objMap1[0], dst);
+    CL_BREAK_IF(ghost != roMapLookup(ctx.objMap2[0], src));
 
     // assign values within dst (and also in src if bidir == true)
-    transferContentsOfGhost(ctx.dst, bf, dst, ghostAt);
+    transferContentsOfGhost(ctx.dst, bf, dst, ghost);
     if (bidir)
-        transferContentsOfGhost(ctx.dst, bf, src, ghostAt);
+        transferContentsOfGhost(ctx.dst, bf, src, ghost);
+
+    // TODO: drop this!
+    const TValId ghostAt = roMapLookup(ctx.valMap1[0], dstAt);
+    CL_BREAK_IF(ghostAt != roMapLookup(ctx.valMap2[0], srcAt));
 
     // redirect some edges if necessary
-    recoverPrototypes(ctx, dst, ghostAt);
-    recoverPointersToSelf(sh, dst, src, ghostAt, bidir);
+    recoverPrototypes(ctx, dstAt, ghostAt);
+    recoverPointersToSelf(sh, dstAt, srcAt, ghostAt, bidir);
     restorePrototypeLengths(ctx);
 
-    const TObjId ghost = ctx.dst.objByAddr(ghostAt);
     if (collectJunk(sh, ghost))
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");
 
     SJ_DEBUG("<-- joinData() has finished " << ctx.status);
     if (JS_USE_ANY != ctx.status) {
-        debugPlot(sh, "joinData", dst, src, "01");
+        debugPlot(sh, "joinData", dstAt, srcAt, "01");
         if (isomorphismWasExpected)
             CL_BREAK_IF("joinData() status differs from joinDataReadOnly()");
     }

@@ -105,22 +105,17 @@ TValId translateValProto(
         const SymHeap           &src,
         const TValId             valProto);
 
-inline FldHandle translateObjId(
+inline FldHandle translateFldHandle(
         SymHeap                 &dst,
-        SymHeap                 &src,
-        const TValId            dstRootAt,
+        const TObjId             dstObj,
         const FldHandle         &srcField)
 {
-    CL_BREAK_IF(&src != srcField.sh());
-    (void) src;
-
     // gather properties of the field in 'src'
     const TOffset  off = srcField.offset();
     const TObjType clt = srcField.type();
 
     // use them to obtain the corresponding object in 'dst'
-    const TValId dstAt = dst.valByOffset(dstRootAt, off);
-    return FldHandle(dst, dstAt, clt);
+    return FldHandle(dst, dstObj, clt, off);
 }
 
 /// TODO: drop this!
