@@ -2959,18 +2959,14 @@ void killUniBlocksUnderBindingPtrs(
 }
 
 bool joinDataCore(
-        SymJoinCtx              &ctx,
-        const BindingOff        &off,
-        const TValId            addr1,
-        const TValId            addr2)
+        SymJoinCtx             &ctx,
+        const BindingOff       &off,
+        const TObjId            obj1,
+        const TObjId            obj2)
 {
     CL_BREAK_IF(!ctx.joiningData());
     SymHeap &sh = ctx.sh1;
 
-    CL_BREAK_IF(sh.valOffset(addr1) || sh.valOffset(addr2));
-
-    const TObjId obj1 = sh.objByAddr(addr1);
-    const TObjId obj2 = sh.objByAddr(addr2);
     CL_BREAK_IF(!sh.isValid(obj1) || !sh.isValid(obj2));
 
     TSizeRange size;
@@ -3000,6 +2996,8 @@ bool joinDataCore(
 
     // TODO: drop this!
     const TValId rootDstAt = ctx.dst.addrOfTarget(objDst, /* XXX */ TS_REGION);
+    const TValId addr1     = ctx.sh1.addrOfTarget(obj1,   /* XXX */ TS_REGION);
+    const TValId addr2     = ctx.sh2.addrOfTarget(obj2,   /* XXX */ TS_REGION);
 
     const SchedItem rootItem(addr1, addr2, ldiff);
     if (!traverseRoots(ctx, rootDstAt, rootItem, &off))
@@ -3053,18 +3051,18 @@ bool joinDataReadOnly(
         EJoinStatus             *pStatus,
         SymHeap                  sh,
         const BindingOff        &off,
-        const TValId            addr1,
-        const TValId            addr2,
-        TObjSet                 protoObjs[1][2])
+        const TObjId             obj1,
+        const TObjId             obj2,
+        TObjSet                  protoObjs[1][2])
 {
-    SJ_DEBUG("--> joinDataReadOnly" << SJ_VALP(addr1, addr2));
+    SJ_DEBUG("--> joinDataReadOnly" << SJ_OBJP(obj1, obj2));
     Trace::waiveCloneOperation(sh);
 
     // go through the commont part of joinData()/joinDataReadOnly()
     SymHeap tmp(sh.stor(), new Trace::TransientNode("joinDataReadOnly()"));
     SymJoinCtx ctx(tmp, sh);
 
-    if (!joinDataCore(ctx, off, addr1, addr2))
+    if (!joinDataCore(ctx, off, obj1, obj2))
         return false;
 
     unsigned cntProto1 = 0;
@@ -3206,7 +3204,7 @@ void joinData(
 #endif
     if (debuggingSymJoin) {
         EJoinStatus status = JS_USE_ANY;
-        if (!joinDataReadOnly(&status, sh, bf, dstAt, srcAt, 0))
+        if (!joinDataReadOnly(&status, sh, bf, dst, src, 0))
             CL_BREAK_IF("joinDataReadOnly() fails, why joinData() is called?");
         if (JS_USE_ANY == status)
             isomorphismWasExpected = true;
@@ -3216,7 +3214,7 @@ void joinData(
 
     // go through the common part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
-    if (!joinDataCore(ctx, bf, dstAt, srcAt)) {
+    if (!joinDataCore(ctx, bf, dst, src)) {
         CL_BREAK_IF("joinData() has failed, did joinDataReadOnly() succeed?");
         return;
     }

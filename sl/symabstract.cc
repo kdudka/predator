@@ -460,7 +460,9 @@ bool segAbstractionStep(
 
     // check wheter he upcoming abstraction step is still doable
     EJoinStatus status;
-    if (!joinDataReadOnly(&status, sh, off, at, next, 0))
+    const TObjId obj1 = sh.objByAddr(at);
+    const TObjId obj2 = sh.objByAddr(next);
+    if (!joinDataReadOnly(&status, sh, off, obj1, obj2, 0))
         return false;
 
     if (isDlsBinding(off)) {

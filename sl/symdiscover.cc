@@ -300,15 +300,13 @@ TObjId jumpToNextObj(
     return next;
 }
 
-bool isPointedByVar(SymHeap &sh, const TValId root)
+bool isPointedByVar(SymHeap &sh, const TObjId obj)
 {
-    const TObjId obj = sh.objByAddr(root);
-
     FldList refs;
     sh.pointedBy(refs, obj);
     BOOST_FOREACH(const FldHandle fld, refs) {
-        const TObjId sub = fld.obj();
-        const EStorageClass code = sh.objStorClass(sub);
+        const TObjId refObj = fld.obj();
+        const EStorageClass code = sh.objStorClass(refObj);
         if (isProgramVar(code))
             return true;
     }
@@ -327,14 +325,12 @@ bool matchData(
         TProtoPairs                 *protoPairs,
         int                         *pCost)
 {
-    const TValId at1 = sh.legacyAddrOfAny_XXX(obj1);
-    const TValId at2 = sh.legacyAddrOfAny_XXX(obj2);
-    if (!isDlsBinding(off) && isPointedByVar(sh, at2))
+    if (!isDlsBinding(off) && isPointedByVar(sh, obj2))
         // only first node of an SLS can be pointed by a program var, giving up
         return false;
 
     EJoinStatus status;
-    if (!joinDataReadOnly(&status, sh, off, at1, at2, protoPairs)) {
+    if (!joinDataReadOnly(&status, sh, off, obj1, obj2, protoPairs)) {
         CL_DEBUG("    joinDataReadOnly() refuses to create a segment!");
         return false;
     }
