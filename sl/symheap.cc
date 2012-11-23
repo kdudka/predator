@@ -281,6 +281,7 @@ typedef IntervalArena<TOffset, TFldId>                  TArena;
 typedef TArena::key_type                                TMemChunk;
 typedef TArena::value_type                              TMemItem;
 typedef std::map<CallInst, TObjList>                    TAnonStackMap;
+typedef std::map<ETargetSpecifier, TValId>              TAddrByTS;
 
 inline TMemItem createArenaItem(
         const TOffset               off,
@@ -488,9 +489,6 @@ struct InternalCustomValue: public ReferableValue {
 };
 
 struct Region: public AbstractHeapEntity {
-    /// TODO: drop this
-    TValId                          rootAddr;
-
     EStorageClass                   code;
     CVar                            cVar;
     TSizeRange                      size;
@@ -500,9 +498,9 @@ struct Region: public AbstractHeapEntity {
     TObjType                        lastKnownClt;
     bool                            isValid;
     TProtoLevel                     protoLevel;
+    TAddrByTS                       addrByTS;
 
     Region(EStorageClass code_):
-        rootAddr(VAL_INVALID),
         code(code_),
         size(IR::rngFromNum(0)),
         lastKnownClt(0),
@@ -1779,7 +1777,7 @@ TValId SymHeapCore::Private::dupRoot(TValId rootAt)
     this->ents.getEntRW(&rootDataDst, reg);
 
     // inter-connect the object and its address
-    rootDataDst->rootAddr = imageAt;
+    rootDataDst->addrByTS[TS_REGION] = imageAt;
     rootValDataDst->obj = reg;
 
     // duplicate root metadata
@@ -1961,7 +1959,7 @@ SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
     d->ents.getEntRW(&objRetData, objRet);
 
     // inter-connect addrRet and OBJ_RETURN
-    objRetData->rootAddr = addrRet;
+    objRetData->addrByTS[TS_REGION] = addrRet;
     addrRetData-> obj = objRet;
 }
 
@@ -2648,21 +2646,24 @@ TValId SymHeapCore::addrOfTarget(TObjId obj, ETargetSpecifier ts, TOffset off)
     if (OBJ_INVALID == obj)
         return VAL_INVALID;
 
-    if (TS_REGION != ts || !!off) {
+    const Region *regData;
+    d->ents.getEntRO(&regData, obj);
+
+    const TAddrByTS &addrByTS = regData->addrByTS;
+    const TAddrByTS::const_iterator it = addrByTS.find(ts);
+    if (addrByTS.end() == it) {
+        // TODO: allocate a new TValId for the base address
         CL_BREAK_IF("please implement");
         return VAL_INVALID;
     }
 
-    const Region *regData;
-    d->ents.getEntRO(&regData, obj);
-    return regData->rootAddr;
+    const TValId base = it->second;
+    return this->valByOffset(base, off);
 }
 
 TValId SymHeapCore::legacyAddrOfAny_XXX(TObjId reg) const
 {
-    const Region *regData;
-    d->ents.getEntRO(&regData, reg);
-    return regData->rootAddr;
+    return const_cast<SymHeapCore *>(this)->addrOfTarget(reg, TS_REGION);
 }
 
 EValueOrigin SymHeapCore::valOrigin(TValId val) const
@@ -3014,12 +3015,7 @@ TValId SymHeapCore::placedAt(TFldId fld)
     d->ents.getEntRO(&fldData, fld);
     const TObjId obj = fldData->obj;
 
-    // read object data
-    const Region *objData;
-    d->ents.getEntRO(&objData, obj);
-
-    // then subtract the offset
-    return this->valByOffset(objData->rootAddr, fldData->off);
+    return this->addrOfTarget(obj, TS_REGION, fldData->off);
 }
 
 TFldId SymHeapCore::Private::fldLookup(
@@ -3261,7 +3257,7 @@ TObjId SymHeapCore::regionByVar(CVar cv, bool createIfNeeded)
     d->ents.getEntRW(&rootData, reg);
 
     // inter-connect the object and its address
-    rootData->rootAddr = addr;
+    rootData->addrByTS[TS_REGION] = addr;
     rootAddrData->obj = reg;
 
     // initialize metadata
@@ -3347,7 +3343,7 @@ TValId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
     d->ents.getEntRW(&rootData, reg);
 
     // inter-connect the object and its address
-    rootData->rootAddr = addr;
+    rootData->addrByTS[TS_REGION] = addr;
     rootAddrData->obj = reg;
 
     // initialize meta-data
@@ -3375,7 +3371,7 @@ TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
     d->ents.getEntRW(&rootData, reg);
 
     // inter-connect the object and its address
-    rootData->rootAddr = addr;
+    rootData->addrByTS[TS_REGION] = addr;
     rootAddrData->obj = reg;
 
     // mark the root as live
