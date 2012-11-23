@@ -62,9 +62,9 @@ bool joinDataReadOnly(
 void joinData(
         SymHeap                 &sh,
         const BindingOff        &bf,
-        const TValId            dst,
-        const TValId            src,
-        const bool              bidir);
+        const TObjId             dst,
+        const TObjId             src,
+        const bool               bidir);
 
 /// @todo some dox
 bool joinSymHeaps(

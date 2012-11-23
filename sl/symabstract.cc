@@ -273,10 +273,11 @@ void slSegAbstractionStep(
     enlargeMayExist(sh, at);
     enlargeMayExist(sh, nextAt);
 
-    // merge data
-    joinData(sh, off, nextAt, at, /* bidir */ false);
-
     const TObjId next = sh.objByAddr(nextAt);
+
+    // merge data
+    joinData(sh, off, next, obj, /* bidir */ false);
+
     if (OK_SLS != sh.objKind(next))
         // abstract the _next_ object
         sh.objSetAbstract(next, OK_SLS, off);
@@ -303,11 +304,11 @@ void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off)
     enlargeMayExist(sh, a1);
     enlargeMayExist(sh, a2);
 
-    // merge data
-    joinData(sh, off, a2, a1, /* bidir */ true);
-
     const TObjId seg1 = sh.objByAddr(a1);
     const TObjId seg2 = sh.objByAddr(a2);
+
+    // merge data
+    joinData(sh, off, seg2, seg1, /* bidir */ true);
 
     swapValues(off.next, off.prev);
     sh.objSetAbstract(seg1, OK_DLS, off);
@@ -341,7 +342,7 @@ void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId regAt, bool backward)
 
     // merge data
     const BindingOff &off = sh.segBinding(dls);
-    joinData(sh, off, dlsAt, regAt, /* bidir */ false);
+    joinData(sh, off, dls, reg, /* bidir */ false);
     dlSegSyncPeerData(sh, dlsAt);
 
     // store the pointer DLS -> VAR
@@ -379,7 +380,7 @@ void dlSegMerge(SymHeap &sh, TValId seg1At, TValId seg2At)
 
     // merge data
     const BindingOff &bf2 = sh.segBinding(seg2);
-    joinData(sh, bf2, seg2At, seg1At, /* bidir */ true);
+    joinData(sh, bf2, seg2, seg1, /* bidir */ true);
 
     // preserve backLink
     const TValId valNext1 = nextValFromSeg(sh, seg1At);

@@ -3186,13 +3186,13 @@ void transferContentsOfGhost(
 void joinData(
         SymHeap                 &sh,
         const BindingOff        &bf,
-        const TValId            dstAt,
-        const TValId            srcAt,
-        const bool              bidir)
+        const TObjId             dst,
+        const TObjId             src,
+        const bool               bidir)
 {
     // TODO: drop this!
-    const TObjId dst = sh.objByAddr(dstAt);
-    const TObjId src = sh.objByAddr(srcAt);
+    const TValId dstAt = sh.addrOfTarget(dst, /* XXX */ TS_REGION);
+    const TValId srcAt = sh.addrOfTarget(src, /* XXX */ TS_REGION);
 
     SJ_DEBUG("--> joinData" << SJ_OBJP(dst, src));
     ++cntJoinOps;
