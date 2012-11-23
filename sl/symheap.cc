@@ -516,10 +516,12 @@ struct Region: public AbstractHeapEntity {
 
 struct BaseAddress: public AnchorValue {
     TObjId                          obj;
+    ETargetSpecifier                ts;
 
-    BaseAddress(const TObjId obj_):
+    BaseAddress(const TObjId obj_, const ETargetSpecifier ts_):
         AnchorValue(VT_OBJECT, VO_ASSIGNED),
-        obj(obj_)
+        obj(obj_),
+        ts(ts_)
     {
     }
 
@@ -1932,7 +1934,7 @@ SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
     CL_BREAK_IF(!&stor_);
 
     // allocate the VAL_NULL base address
-    const TValId valNull = d->assignId(new BaseAddress(OBJ_NULL));
+    const TValId valNull = d->assignId(new BaseAddress(OBJ_NULL, TS_REGION));
     CL_BREAK_IF(VAL_NULL != valNull);
 
     // allocate the OBJ_NULL region and mark it as invalid
@@ -2641,7 +2643,7 @@ TValId SymHeapCore::addrOfTarget(TObjId obj, ETargetSpecifier ts, TOffset off)
     TValId base;
     if (addrByTS.end() == it) {
         // allocate a fresh base address
-        BaseAddress *baseAddrData = new BaseAddress(obj);
+        BaseAddress *baseAddrData = new BaseAddress(obj, ts);
         base = d->assignId(baseAddrData);
 
         // register the base address by the target object
@@ -2688,6 +2690,22 @@ EValueTarget SymHeapCore::valTarget(TValId val) const
     const BaseValue *valData;
     d->ents.getEntRO(&valData, val);
     return valData->code;
+}
+
+ETargetSpecifier SymHeapCore::targetSpec(TValId addr) const
+{
+    if (addr <= VAL_NULL)
+        return TS_INVALID;
+
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, addr);
+
+    if (!isAnyDataArea(valData->code))
+        return TS_INVALID;
+
+    const BaseAddress *rootData;
+    d->ents.getEntRO(&rootData, valData->valRoot);
+    return rootData->ts;
 }
 
 bool isUninitialized(EValueOrigin code)

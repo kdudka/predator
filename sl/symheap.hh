@@ -440,6 +440,9 @@ class SymHeapCore {
         /// classify where the given value originates from
         EValueOrigin valOrigin(TValId) const;
 
+        /// return the target specifier of the given address
+        ETargetSpecifier targetSpec(TValId addr) const;
+
         /// return the object that the given address points to
         TObjId objByAddr(TValId addr) const;
 

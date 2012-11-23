@@ -81,6 +81,8 @@ struct DeepCopyData {
         cut(cut_),
         digBackward(digBackward_)
     {
+        // OBJ_NULL is a globally valid object ID
+        objMap[OBJ_NULL] = OBJ_NULL;
     }
 };
 
@@ -203,23 +205,23 @@ TValId handleValueCore(DeepCopyData &dc, TValId srcAt)
         // good luck, we have already handled the value before
         return iterValSrc->second;
 
-    TValId rootDstAt = VAL_NULL;
-    if (VAL_NULL != dc.src.valRoot(srcAt)) {
-        const TObjId objSrc = dc.src.objByAddr(srcAt);
-        const TObjId objDst = addObjectIfNeeded(dc, objSrc);
-        rootDstAt = dc.dst.legacyAddrOfAny_XXX(objDst);
-    }
+    const TObjId objSrc = dc.src.objByAddr(srcAt);
+    const TObjId objDst = addObjectIfNeeded(dc, objSrc);
+
+    const ETargetSpecifier ts = dc.src.targetSpec(srcAt);
+    CL_BREAK_IF(TS_INVALID == ts);
 
     if (VT_RANGE == dc.src.valTarget(srcAt)) {
         // range offset value
         const IR::Range range = dc.src.valOffsetRange(srcAt);
+        const TValId rootDstAt = dc.dst.addrOfTarget(objDst, ts);
         const TValId dstAt = dc.dst.valByRange(rootDstAt, range);
         dc.valMap[srcAt] = dstAt;
         return dstAt;
     }
 
     const TOffset off = dc.src.valOffset(srcAt);
-    const TValId dstAt = dc.dst.valByOffset(rootDstAt, off);
+    const TValId dstAt = dc.dst.addrOfTarget(objDst, ts, off);
     dc.valMap[srcAt] = dstAt;
     return dstAt;
 }
@@ -259,10 +261,6 @@ void trackUsesOfVal(DeepCopyData &dc, const TValId valSrc)
         // optimization
         return;
 
-    if (VAL_NULL == dc.src.valRoot(valSrc))
-        // nothing to track actually
-        return;
-
     const TObjId objSrc = dc.src.objByAddr(valSrc);
     if (dc.src.isValid(objSrc))
         trackUsesOfObj(dc, objSrc);
@@ -294,7 +292,7 @@ TValId handleValue(DeepCopyData &dc, TValId valSrc)
         // custom value, e.g. fnc pointer
         return handleCustomValue(dc, valSrc);
 
-    if (isAnyDataArea(code) || VAL_NULL == src.valRoot(valSrc))
+    if (isAnyDataArea(code))
         // create the target object, if it does not exist already
         return handleValueCore(dc, valSrc);
 
