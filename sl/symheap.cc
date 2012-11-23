@@ -624,7 +624,7 @@ struct SymHeapCore::Private {
             const TOffset           shift = 0,
             const TSizeOf           sizeLimit = 0);
 
-    TValId dupRoot(TValId root);
+    TObjId dupObject(TObjId obj);
 
     bool /* wasPtr */ releaseValueOf(TFldId fld, TValId val);
     void registerValueOf(TFldId fld, TValId val);
@@ -1702,11 +1702,19 @@ TValId SymHeapCore::valClone(TValId val)
         // duplicate an unknown value
         return d->valDup(val);
 
-    // duplicate a root object
-    const TValId dupAt = d->dupRoot(root);
+    // duplicate an object
+    const TObjId obj = this->objByAddr(root);
+    const TObjId dup = d->dupObject(obj);
 
-    // take the offset into consideration
-    return this->valByOffset(dupAt, valData->offRoot);
+    // TODO: drop this!
+    const TValId dupAddr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
+    BaseAddress *dupAddrData;
+    d->ents.getEntRW(&dupAddrData, dupAddr);
+    dupAddrData->obj = dup;
+    Region *dupObjData;
+    d->ents.getEntRW(&dupObjData, dup);
+    dupObjData->addrByTS[TS_REGION] = dupAddr;
+    return this->valByOffset(dupAddr, valData->offRoot);
 }
 
 TFldId SymHeapCore::Private::copySingleLiveBlock(
@@ -1754,51 +1762,39 @@ TFldId SymHeapCore::Private::copySingleLiveBlock(
     return dst;
 }
 
-TValId SymHeapCore::Private::dupRoot(TValId rootAt)
+TObjId SymHeapCore::Private::dupObject(TObjId obj)
 {
-    CL_DEBUG("SymHeapCore::Private::dupRoot() is taking place...");
-    const BaseAddress *rootValDataSrc;
-    this->ents.getEntRO(&rootValDataSrc, rootAt);
+    CL_DEBUG("SymHeapCore::Private::dupObject() is taking place...");
 
     // resolve the src region
-    const Region *rootDataSrc;
-    this->ents.getEntRO(&rootDataSrc, rootValDataSrc->obj);
-    CL_BREAK_IF(!this->chkArenaConsistency(rootDataSrc));
-
-    // assign an address to the clone
-    const EValueTarget code = rootValDataSrc->code;
-    const TValId imageAt = this->valCreate(code, VO_ASSIGNED);
-    BaseAddress *rootValDataDst;
-    this->ents.getEntRW(&rootValDataDst, imageAt);
+    const Region *objDataSrc;
+    this->ents.getEntRO(&objDataSrc, obj);
+    CL_BREAK_IF(!this->chkArenaConsistency(objDataSrc));
 
     // create the cloned object
-    const TObjId reg = this->assignId(new Region(rootDataSrc->code));
-    Region *rootDataDst;
-    this->ents.getEntRW(&rootDataDst, reg);
-
-    // inter-connect the object and its address
-    rootDataDst->addrByTS[TS_REGION] = imageAt;
-    rootValDataDst->obj = reg;
+    const TObjId dup = this->assignId(new Region(objDataSrc->code));
+    Region *objDataDst;
+    this->ents.getEntRW(&objDataDst, dup);
 
     // duplicate root metadata
-    rootDataDst->cVar               = rootDataSrc->cVar;
-    rootDataDst->size               = rootDataSrc->size;
-    rootDataDst->lastKnownClt       = rootDataSrc->lastKnownClt;
-    rootDataDst->isValid            = rootDataSrc->isValid;
-    rootDataDst->protoLevel         = rootDataSrc->protoLevel;
+    objDataDst->cVar                = objDataSrc->cVar;
+    objDataDst->size                = objDataSrc->size;
+    objDataDst->lastKnownClt        = objDataSrc->lastKnownClt;
+    objDataDst->isValid             = objDataSrc->isValid;
+    objDataDst->protoLevel          = objDataSrc->protoLevel;
 
-    if (rootDataDst->isValid) {
+    if (objDataDst->isValid) {
         RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->liveObjs);
-        this->liveObjs->insert(reg);
+        this->liveObjs->insert(dup);
     }
 
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootDataSrc->liveFields)
-        this->copySingleLiveBlock(reg, rootDataDst,
+    BOOST_FOREACH(TLiveObjs::const_reference item, objDataSrc->liveFields)
+        this->copySingleLiveBlock(dup, objDataDst,
                 /* src  */ item.first,
                 /* code */ item.second);
 
-    CL_BREAK_IF(!this->chkArenaConsistency(rootDataDst));
-    return imageAt;
+    CL_BREAK_IF(!this->chkArenaConsistency(objDataDst));
+    return dup;
 }
 
 void SymHeapCore::gatherLivePointers(FldList &dst, TObjId obj) const
