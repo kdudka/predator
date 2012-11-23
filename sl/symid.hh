@@ -115,6 +115,9 @@ enum TObjId {
     /// for signalling error states only
     OBJ_INVALID       = -1,
 
+    /// target of VAL_NULL (a.k.a. NULL object)
+    OBJ_NULL          = 1,
+
     /// return value of the function currently being executed
     OBJ_RETURN        = 2,
 

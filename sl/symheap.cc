@@ -517,9 +517,9 @@ struct Region: public AbstractHeapEntity {
 struct BaseAddress: public AnchorValue {
     TObjId                          obj;
 
-    BaseAddress(EValueTarget code_, EValueOrigin origin_):
-        AnchorValue(code_, origin_),
-        obj(OBJ_INVALID)
+    BaseAddress(const TObjId obj_):
+        AnchorValue(VT_OBJECT, VO_ASSIGNED),
+        obj(obj_)
     {
     }
 
@@ -1303,6 +1303,11 @@ TValId SymHeapCore::Private::valCreate(
 
     switch (code) {
         case VT_INVALID:
+        case VT_OBJECT:
+        case VT_RANGE:
+            CL_BREAK_IF("invalid call of SymHeapCore::Private::valCreate()");
+            // fall through!
+
         case VT_UNKNOWN:
             val = this->assignId(new BaseValue(code, origin));
             break;
@@ -1313,14 +1318,6 @@ TValId SymHeapCore::Private::valCreate(
 
         case VT_CUSTOM:
             val = this->assignId(new InternalCustomValue(code, origin));
-            break;
-
-        case VT_RANGE:
-            CL_BREAK_IF("invalid call of SymHeapCore::Private::valCreate()");
-            // fall through!
-
-        case VT_OBJECT:
-            val = this->assignId(new BaseAddress(code, origin));
             break;
     }
 
@@ -1471,8 +1468,6 @@ SymHeapCore::Private::Private(Trace::Node *trace):
     coinDb      (new CoincidenceDb),
     neqDb       (new NeqDb)
 {
-    // allocate a root-value for VAL_NULL
-    this->assignId(new BaseAddress(VT_INVALID, VO_INVALID));
 }
 
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
@@ -1706,15 +1701,8 @@ TValId SymHeapCore::valClone(TValId val)
     const TObjId obj = this->objByAddr(root);
     const TObjId dup = d->dupObject(obj);
 
-    // TODO: drop this!
-    const TValId dupAddr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
-    BaseAddress *dupAddrData;
-    d->ents.getEntRW(&dupAddrData, dupAddr);
-    dupAddrData->obj = dup;
-    Region *dupObjData;
-    d->ents.getEntRW(&dupObjData, dup);
-    dupObjData->addrByTS[TS_REGION] = dupAddr;
-    return this->valByOffset(dupAddr, valData->offRoot);
+    // return the corresponding address
+    return this->addrOfTarget(dup, TS_REGION, valData->offRoot);
 }
 
 TFldId SymHeapCore::Private::copySingleLiveBlock(
@@ -1943,20 +1931,22 @@ SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
 {
     CL_BREAK_IF(!&stor_);
 
-    // allocate an address for OBJ_RETURN
-    const TValId addrRet = d->valCreate(VT_OBJECT, VO_ASSIGNED);
-    BaseAddress *addrRetData;
-    d->ents.getEntRW(&addrRetData, addrRet);
+    // allocate the VAL_NULL base address
+    const TValId valNull = d->assignId(new BaseAddress(OBJ_NULL));
+    CL_BREAK_IF(VAL_NULL != valNull);
+
+    // allocate the OBJ_NULL region and mark it as invalid
+    Region *objNullData = new Region(SC_INVALID);
+    objNullData->addrByTS[TS_REGION] = valNull;
+    objNullData->isValid = false;
+    const TObjId objNull = d->assignId(objNullData);
+    CL_BREAK_IF(OBJ_NULL != objNull);
+    (void) objNull;
 
     // allocate OBJ_RETURN
     const TObjId objRet = d->assignId(new Region(SC_ON_STACK));
     CL_BREAK_IF(OBJ_RETURN != objRet);
-    Region *objRetData;
-    d->ents.getEntRW(&objRetData, objRet);
-
-    // inter-connect addrRet and OBJ_RETURN
-    objRetData->addrByTS[TS_REGION] = addrRet;
-    addrRetData-> obj = objRet;
+    (void) objRet;
 }
 
 SymHeapCore::SymHeapCore(const SymHeapCore &ref):
@@ -2642,18 +2632,27 @@ TValId SymHeapCore::addrOfTarget(TObjId obj, ETargetSpecifier ts, TOffset off)
     if (OBJ_INVALID == obj)
         return VAL_INVALID;
 
-    const Region *regData;
-    d->ents.getEntRO(&regData, obj);
+    const Region *objDataRO;
+    d->ents.getEntRO(&objDataRO, obj);
 
-    const TAddrByTS &addrByTS = regData->addrByTS;
+    const TAddrByTS &addrByTS = objDataRO->addrByTS;
     const TAddrByTS::const_iterator it = addrByTS.find(ts);
-    if (addrByTS.end() == it) {
-        // TODO: allocate a new TValId for the base address
-        CL_BREAK_IF("please implement");
-        return VAL_INVALID;
-    }
 
-    const TValId base = it->second;
+    TValId base;
+    if (addrByTS.end() == it) {
+        // allocate a fresh base address
+        BaseAddress *baseAddrData = new BaseAddress(obj);
+        base = d->assignId(baseAddrData);
+
+        // register the base address by the target object
+        Region *objDataRW;
+        d->ents.getEntRW(&objDataRW, obj);
+        objDataRW->addrByTS[ts] = base;
+    }
+    else
+        // reuse the existing base address
+        base = it->second;
+
     return this->valByOffset(base, off);
 }
 
@@ -3240,21 +3239,11 @@ TObjId SymHeapCore::regionByVar(CVar cv, bool createIfNeeded)
     CL_DEBUG_MSG(loc, "FFF SymHeapCore::addrOfVar() creates var " << varString);
 #endif
 
-    // assign an address
-    const TValId addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
-
-    BaseAddress *rootAddrData;
-    d->ents.getEntRW(&rootAddrData, addr);
-
     // create an object
     const EStorageClass code = isOnStack(var) ? SC_ON_STACK : SC_STATIC;
     obj = d->assignId(new Region(code));
     Region *rootData;
     d->ents.getEntRW(&rootData, obj);
-
-    // inter-connect the object and its address
-    rootData->addrByTS[TS_REGION] = addr;
-    rootAddrData->obj = obj;
 
     // initialize metadata
     rootData->cVar = cv;
@@ -3324,23 +3313,14 @@ TFldId SymHeapCore::valGetComposite(TValId val) const
     return compData->compObj;
 }
 
-TValId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
+TObjId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
 {
     CL_BREAK_IF(size.lo <= IR::Int0);
-
-    // assign an address
-    const TValId addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
-    BaseAddress *rootAddrData;
-    d->ents.getEntRW(&rootAddrData, addr);
 
     // create an object
     const TObjId reg = d->assignId(new Region(SC_ON_STACK));
     Region *rootData;
     d->ents.getEntRW(&rootData, reg);
-
-    // inter-connect the object and its address
-    rootData->addrByTS[TS_REGION] = addr;
-    rootAddrData->obj = reg;
 
     // initialize meta-data
     rootData->size = size;
@@ -3349,26 +3329,17 @@ TValId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->anonStackMap);
     (*d->anonStackMap)[from].push_back(reg);
 
-    return addr;
+    return reg;
 }
 
 TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
 {
     CL_BREAK_IF(size.lo < IR::Int0);
 
-    // assign an address
-    const TValId addr = d->valCreate(VT_OBJECT, VO_ASSIGNED);
-    BaseAddress *rootAddrData;
-    d->ents.getEntRW(&rootAddrData, addr);
-
     // create an object
     const TObjId reg = d->assignId(new Region(SC_ON_HEAP));
     Region *rootData;
     d->ents.getEntRW(&rootData, reg);
-
-    // inter-connect the object and its address
-    rootData->addrByTS[TS_REGION] = addr;
-    rootAddrData->obj = reg;
 
     // mark the root as live
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveObjs);

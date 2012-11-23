@@ -1317,11 +1317,10 @@ void SymExecCore::execStackAlloc(
 
     // now create an annonymous stack object
     const CallInst callInst(this->bt_);
-    const TValId val = sh_.stackAlloc(size, callInst);
+    const TObjId obj = sh_.stackAlloc(size, callInst);
 
     if (ep_.trackUninit) {
         // uninitialized heap block
-        const TObjId obj = sh_.objByAddr(val);
         const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_STACK);
         const UniformBlock ub = {
             /* off      */  0,
@@ -1331,8 +1330,9 @@ void SymExecCore::execStackAlloc(
         sh_.writeUniformBlock(obj, ub);
     }
 
-    // store the result of malloc
-    this->setValueOf(lhs, val);
+    // store the address returned by alloca()
+    const TValId addr = sh_.addrOfTarget(obj, TS_REGION);
+    this->setValueOf(lhs, addr);
 }
 
 void SymExecCore::execHeapAlloc(

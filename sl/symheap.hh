@@ -514,7 +514,7 @@ class SymHeapCore {
 
     public:
         /// allocate a chunk of stack of known size from the select call stack
-        TValId stackAlloc(const TSizeRange &size, const CallInst &from);
+        TObjId stackAlloc(const TSizeRange &size, const CallInst &from);
 
         /// clear the list of anonymous stack objects of the given call instance
         void clearAnonStackObjects(TObjList &dst, const CallInst &of);
