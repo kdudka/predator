@@ -117,6 +117,15 @@ struct SchedItem {
     {
     }
 
+    /// TODO: drop this!
+    SchedItem(SymHeap &sh1, SymHeap &sh2, TObjId obj1, TObjId obj2,
+            TProtoLevel ldiff_):
+        v1(sh1.addrOfTarget(obj1, /* XXX */ TS_REGION)),
+        v2(sh2.addrOfTarget(obj2, /* XXX */ TS_REGION)),
+        ldiff(ldiff_)
+    {
+    }
+
     operator TValPair() const {
         return TValPair(v1, v2);
     }
@@ -1409,20 +1418,19 @@ bool dlSegHandleShared(
         const EJoinStatus       action,
         const bool              readOnly)
 {
-    const TValId root1 = item.v1;
-    const TValId root2 = item.v2;
-    CL_BREAK_IF(ctx.sh1.valOffset(root1) || ctx.sh2.valOffset(root2));
+    const TObjId obj1 = ctx.sh1.objByAddr(item.v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(item.v2);
 
-    const bool isDls = (OK_DLS == ctx.sh1.objKind(ctx.sh1.objByAddr(root1)));
-    CL_BREAK_IF(isDls != (OK_DLS == ctx.sh2.objKind(ctx.sh2.objByAddr(root2))));
+    const bool isDls = (OK_DLS == ctx.sh1.objKind(obj1));
+    CL_BREAK_IF(isDls != (OK_DLS == ctx.sh2.objKind(obj2)));
     if (!isDls)
         // not a DLS
         return true;
 
     // this should follow the 'next' pointer as long as we have a consistent DLS
-    const TValId peer1 = dlSegPeer(ctx.sh1, root1);
-    const TValId peer2 = dlSegPeer(ctx.sh2, root2);
-    const SchedItem peerItem(peer1, peer2, item.ldiff);
+    const TObjId peer1 = dlSegPeer(ctx.sh1, obj1);
+    const TObjId peer2 = dlSegPeer(ctx.sh2, obj2);
+    const SchedItem peerItem(ctx.sh1, ctx.sh2, peer1, peer2, item.ldiff);
     if (!followRootValuesCore(ctx, peerItem, action, readOnly))
         return false;
 
@@ -1431,27 +1439,24 @@ bool dlSegHandleShared(
         return true;
 
     // check the mapping
-    TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
+    TObjMap &objMap1 = ctx.objMap1[/* ltr */ 0];
 #ifndef NDEBUG
-    TValMap &vMap2 = ctx.valMap2[/* ltr */ 0];
-    CL_BREAK_IF(!hasKey(vMap1, root1));
-    CL_BREAK_IF(!hasKey(vMap2, root2));
-    CL_BREAK_IF(!hasKey(vMap1, peer1));
-    CL_BREAK_IF(!hasKey(vMap2, peer2));
+    TObjMap &objMap2 = ctx.objMap2[/* ltr */ 0];
+    CL_BREAK_IF(!hasKey(objMap1,  obj1));
+    CL_BREAK_IF(!hasKey(objMap2,  obj2));
+    CL_BREAK_IF(!hasKey(objMap1, peer1));
+    CL_BREAK_IF(!hasKey(objMap2, peer2));
 #endif
 
     // we might have just joined a DLS pair as shared data, which would lead to
     // unconnected DLS pair in ctx.dst and later cause some problems;  the best
     // thing to do at this point, is to recover the binding of DLS in ctx.dst
-    const TValId segAt  = vMap1[root1];
-    const TValId peerAt = vMap1[peer1];
-    CL_BREAK_IF(segAt  != vMap2[root2]);
-    CL_BREAK_IF(peerAt != vMap2[peer2]);
+    const TObjId seg  = objMap1[ obj1];
+    const TObjId peer = objMap1[peer1];
+    CL_BREAK_IF(seg  != objMap2[ obj2]);
+    CL_BREAK_IF(peer != objMap2[peer2]);
 
     SymHeap &sh = ctx.dst;
-    const TObjId seg  = sh.objByAddr(segAt);
-    const TObjId peer = sh.objByAddr(peerAt);
-
     const PtrHandle prev1 = prevPtrFromSeg(sh,  seg);
     const PtrHandle prev2 = prevPtrFromSeg(sh, peer);
 
@@ -1597,23 +1602,27 @@ bool followRootValues(
     CL_BREAK_IF(isDls1 && JS_USE_SH1 != action);
     CL_BREAK_IF(isDls2 && JS_USE_SH2 != action);
 
-    const TValId peer1 = (isDls1) ? dlSegPeer(ctx.sh1, root1) : VAL_INVALID;
-    const TValId peer2 = (isDls2) ? dlSegPeer(ctx.sh2, root2) : VAL_INVALID;
+    const TObjId peer1 = (isDls1) ? dlSegPeer(ctx.sh1, obj1) : OBJ_INVALID;
+    const TObjId peer2 = (isDls2) ? dlSegPeer(ctx.sh2, obj2) : OBJ_INVALID;
 
-    const TValMapBidir &vm = (isDls1) ? ctx.valMap1 : ctx.valMap2;
-    if (hasKey(vm[0], (isDls1) ? peer1 : peer2))
+    const TObjMapBidir &objMap = (isDls1) ? ctx.objMap1 : ctx.objMap2;
+    if (hasKey(objMap[0], (isDls1) ? peer1 : peer2))
         // alredy cloned
         return true;
 
+    /// TODO: drop this!
+    const TValId peer1At = ctx.sh1.addrOfTarget(peer1, /* XXX */ TS_REGION);
+    const TValId peer2At = ctx.sh2.addrOfTarget(peer2, /* XXX */ TS_REGION);
+
     // clone peer object
-    const TValPair tb(peer1, peer2);
+    const TValPair tb(peer1At, peer2At);
     ctx.tieBreaking.insert(tb);
 
     const struct cl_type *clt = (isDls1)
-        ? ctx.sh1.objEstimatedType(ctx.sh1.objByAddr(peer1))
-        : ctx.sh2.objEstimatedType(ctx.sh2.objByAddr(peer2));
+        ? ctx.sh1.objEstimatedType(peer1)
+        : ctx.sh2.objEstimatedType(peer2);
 
-    const SchedItem peerItem(peer1, peer2, item.ldiff);
+    const SchedItem peerItem(peer1At, peer2At, item.ldiff);
     return createObject(ctx, clt, peerItem, action);
 }
 
@@ -1707,15 +1716,15 @@ bool joinSegmentWithAny(
     const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1));
     const bool isDls2 = (OK_DLS == ctx.sh2.objKind(obj2));
 
-    TValId peer1 = root1;
+    TObjId peer1 = obj1;
     if (isDls1)
-        peer1 = dlSegPeer(ctx.sh1, root1);
+        peer1 = dlSegPeer(ctx.sh1, obj1);
 
-    TValId peer2 = root2;
+    TObjId peer2 = obj2;
     if (isDls2)
-        peer2 = dlSegPeer(ctx.sh2, root2);
+        peer2 = dlSegPeer(ctx.sh2, obj2);
 
-    const SchedItem peerItem(peer1, peer2, item.ldiff);
+    const SchedItem peerItem(ctx.sh1, ctx.sh2, peer1, peer2, item.ldiff);
 
     const bool haveDls = (isDls1 || isDls2);
     if (firstTryReadOnly
@@ -1730,18 +1739,18 @@ bool joinSegmentWithAny(
     if (OK_OBJ_OR_NULL != kind) {
         // BindingOff is assumed to be already matching at this point
         const BindingOff off = (JS_USE_SH1 == action)
-            ? ctx.sh1.segBinding(ctx.sh1.objByAddr(peer1))
-            : ctx.sh2.segBinding(ctx.sh2.objByAddr(peer2));
+            ? ctx.sh1.segBinding(peer1)
+            : ctx.sh2.segBinding(peer2);
 
-        const TValId valNext1 = valOfPtrAt(ctx.sh1, peer1, off.next);
-        const TValId valNext2 = valOfPtrAt(ctx.sh2, peer2, off.next);
+        const TValId valNext1 = valOfPtr(ctx.sh1, peer1, off.next);
+        const TValId valNext2 = valOfPtr(ctx.sh2, peer2, off.next);
         if (firstTryReadOnly && !checkValueMapping(ctx, valNext1, valNext2,
                                /* allowUnknownMapping */ true))
             return false;
 
         if (firstTryReadOnly && haveDls) {
-            const TValId valPrev1 = valOfPtrAt(ctx.sh1, root1, off.prev);
-            const TValId valPrev2 = valOfPtrAt(ctx.sh2, root2, off.prev);
+            const TValId valPrev1 = valOfPtr(ctx.sh1, obj1, off.prev);
+            const TValId valPrev2 = valOfPtr(ctx.sh2, obj2, off.prev);
             if (!checkValueMapping(ctx, valPrev1, valPrev2,
                                    /* allowUnknownMapping */ true))
                 return false;
@@ -1754,7 +1763,11 @@ bool joinSegmentWithAny(
     if (!haveDls || !*pResult)
         return true;
 
-    if (!segAlreadyJoined(ctx, peer1, peer2, action))
+    /// TODO: drop this!
+    const TValId peer1At = ctx.sh1.addrOfTarget(peer1, /* XXX */ TS_REGION);
+    const TValId peer2At = ctx.sh2.addrOfTarget(peer2, /* XXX */ TS_REGION);
+
+    if (!segAlreadyJoined(ctx, peer1At, peer2At, action))
         *pResult = followRootValues(ctx, peerItem, action);
 
     return true;
@@ -3009,13 +3022,15 @@ bool joinDataCore(
 
     // never step over DLS peer
     if (OK_DLS == kind1) {
-        const TValId peer = dlSegPeer(sh, addr1);
+        const TValId peer = sh.addrOfTarget(dlSegPeer(sh, obj1),
+                /* XXX */ TS_REGION);
         ctx.sset1.insert(peer);
         if (peer != addr2)
             mapGhostAddressSpace(ctx, addr1, peer, JS_USE_SH1);
     }
     if (OK_DLS == kind2) {
-        const TValId peer = dlSegPeer(sh, addr2);
+        const TValId peer = sh.addrOfTarget(dlSegPeer(sh, obj2),
+                /* XXX */ TS_REGION);
         ctx.sset2.insert(peer);
         if (peer != addr1)
             mapGhostAddressSpace(ctx, addr2, peer, JS_USE_SH2);

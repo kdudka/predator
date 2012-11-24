@@ -80,19 +80,6 @@ inline TValId nextValFromSeg(const SymHeap &sh, TObjId seg)
 }
 
 /// TODO: drop this!
-inline TValId dlSegPeer(const SymHeap &sh, TValId dlsAt)
-{
-    CL_BREAK_IF(sh.valOffset(dlsAt));
-
-    const TObjId dls = sh.objByAddr(dlsAt);
-    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
-
-    const BindingOff &off = sh.segBinding(dls);
-    const TValId peer = valOfPtrAt(const_cast<SymHeap &>(sh), dlsAt, off.prev);
-    return sh.valRoot(peer);
-}
-
-/// TODO: drop this!
 inline TObjId dlSegPeer(const SymHeap &sh, TObjId dls)
 {
     CL_BREAK_IF(OK_DLS != sh.objKind(dls));
