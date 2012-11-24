@@ -180,15 +180,6 @@ inline bool isKnownObjectAt(
     return !isAbstractValue(/* XXX */dynamic_cast<const SymHeap &>(sh), val);
 }
 
-inline bool isAddressToFreedObj(SymHeapCore &sh, const TValId val)
-{
-    const TObjId obj = sh.objByAddr(val);
-    if (OBJ_INVALID == obj)
-        return false;
-
-    return !sh.isValid(obj);
-}
-
 inline bool isVarAlive(SymHeap &sh, const CVar &cv)
 {
     const TObjId obj = sh.regionByVar(cv, /* createIfNeeded */ false);

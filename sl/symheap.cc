@@ -2366,10 +2366,9 @@ TValId SymHeapCore::valByRange(TValId at, IR::Range range)
     if (isSingular(range))
         return this->valByOffset(at, range.lo);
 
-    if (VAL_NULL == at || isAddressToFreedObj(*this, at))
+    const TObjId obj = this->objByAddr(at);
+    if (!this->isValid(obj))
         return d->valCreate(VT_UNKNOWN, VO_UNKNOWN);
-
-    CL_BREAK_IF(!isPossibleToDeref(*this, at));
 
     const BaseValue *valData;
     d->ents.getEntRO(&valData, at);
