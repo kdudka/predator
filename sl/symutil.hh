@@ -197,14 +197,6 @@ inline TObjId nextObj(SymHeap &sh, TObjId obj, TOffset offNext)
     return sh.objByAddr(valNext);
 }
 
-/// TODO: drop this!
-inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-    const TValId valNext = valOfPtrAt(sh, root, offNext);
-    return sh.valRoot(valNext);
-}
-
 inline bool areValProtosEqual(
         const SymHeapCore       &sh1,
         const SymHeapCore       &sh2,

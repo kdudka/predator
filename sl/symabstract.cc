@@ -279,13 +279,14 @@ void enlargeMayExist(SymHeap &sh, const TValId at)
 }
 
 void slSegAbstractionStep(
-        SymHeap                     &sh,
-        const TValId                at,
-        const TValId                nextAt,
-        const BindingOff            &off)
+        SymHeap                    &sh,
+        const TObjId                obj,
+        const TObjId                next,
+        const BindingOff           &off)
 {
-    const TObjId obj = sh.objByAddr(at);
-    const TObjId next = sh.objByAddr(nextAt);
+    // TODO: drop this!
+    const TValId at = sh.addrOfTarget(obj, /* XXX */ TS_REGION);
+    const TValId nextAt = sh.addrOfTarget(next, /* XXX */ TS_REGION);
 
     // compute the resulting minimal length
     const TMinLen len = objMinLength(sh, obj) + objMinLength(sh, next);
@@ -429,32 +430,36 @@ void dlSegMerge(SymHeap &sh, TValId seg1At, TValId seg2At)
 }
 
 bool /* jump next */ dlSegAbstractionStep(
-        SymHeap                     &sh,
-        const TValId                at,
-        const TValId                next,
+        SymHeap                    &sh,
+        const TObjId                obj,
+        const TObjId                next,
         const BindingOff            &off)
 {
-    const EObjKind kind = sh.objKind(sh.objByAddr(at));
-    const EObjKind kindNext = sh.objKind(sh.objByAddr(next));
+    // TODO: drop this!
+    const TValId objAt = sh.addrOfTarget(obj, /* XXX */ TS_REGION);
+    const TValId nextAt = sh.addrOfTarget(next, /* XXX */ TS_REGION);
+
+    const EObjKind kind = sh.objKind(obj);
+    const EObjKind kindNext = sh.objKind(next);
     CL_BREAK_IF(OK_SLS == kind || OK_SLS == kindNext);
 
     if (OK_DLS == kindNext) {
         if (OK_DLS == kind)
             // DLS + DLS
-            dlSegMerge(sh, at, next);
+            dlSegMerge(sh, objAt, nextAt);
         else
             // CONCRETE + DLS
-            dlSegGobble(sh, next, at, /* backward */ true);
+            dlSegGobble(sh, nextAt, objAt, /* backward */ true);
 
         return /* jump next */ true;
     }
     else {
         if (OK_DLS == kind)
             // DLS + CONCRETE
-            dlSegGobble(sh, at, next, /* backward */ false);
+            dlSegGobble(sh, objAt, nextAt, /* backward */ false);
         else
             // CONCRETE + CONCRETE
-            dlSegCreate(sh, at, next, off);
+            dlSegCreate(sh, objAt, nextAt, off);
 
         return /* nobody moves */ false;
     }
@@ -463,29 +468,27 @@ bool /* jump next */ dlSegAbstractionStep(
 bool segAbstractionStep(
         SymHeap                     &sh,
         const BindingOff            &off,
-        TValId                      *pCursor)
+        TObjId                      *pCursor)
 {
-    const TValId at = *pCursor;
+    const TObjId obj = *pCursor;
 
     // jump to peer in case of DLS
-    TValId peer = at;
-    if (OK_DLS == sh.objKind(sh.objByAddr(at)))
-        peer = dlSegPeer(sh, at);
+    TObjId peer = obj;
+    if (OK_DLS == sh.objKind(obj))
+        peer = dlSegPeer(sh, obj);
 
     // jump to the next object (as we know such an object exists)
-    const TValId next = nextRootObj(sh, peer, off.next);
+    const TObjId next = nextObj(sh, peer, off.next);
 
     // check wheter he upcoming abstraction step is still doable
     EJoinStatus status;
-    const TObjId obj1 = sh.objByAddr(at);
-    const TObjId obj2 = sh.objByAddr(next);
-    if (!joinDataReadOnly(&status, sh, off, obj1, obj2, 0))
+    if (!joinDataReadOnly(&status, sh, off, obj, next, 0))
         return false;
 
     if (isDlsBinding(off)) {
         // DLS
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
-        const bool jumpNext = dlSegAbstractionStep(sh, at, next, off);
+        const bool jumpNext = dlSegAbstractionStep(sh, obj, next, off);
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
         if (!jumpNext)
             // stay in place
@@ -493,7 +496,7 @@ bool segAbstractionStep(
     }
     else {
         // SLS
-        slSegAbstractionStep(sh, at, next, off);
+        slSegAbstractionStep(sh, obj, next, off);
     }
 
     // move the cursor one step forward
@@ -522,7 +525,7 @@ bool applyAbstraction(
     CL_DEBUG("    AAA initiating " << name << " abstraction of length " << len);
 
     // cursor
-    TValId cursor = sh.legacyAddrOfAny_XXX(entry);
+    TObjId cursor = entry;
 
     LDP_INIT(symabstract, name);
     LDP_PLOT(symabstract, sh);
