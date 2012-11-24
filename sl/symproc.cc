@@ -312,9 +312,8 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
     return false;
 }
 
-void SymProc::varInit(TValId at)
+void SymProc::varInit(TObjId obj)
 {
-    const TObjId obj = sh_.objByAddr(at);
     const CVar cv = sh_.cVarByObject(obj);
     const CodeStorage::Storage &stor = sh_.stor();
     const CodeStorage::Var &var = stor.vars[cv.uid];
@@ -339,17 +338,15 @@ void SymProc::varInit(TValId at)
     }
 }
 
-TValId SymProc::varAt(const CVar &cv)
+TObjId SymProc::objByVar(const CVar &cv)
 {
     TObjId reg = sh_.regionByVar(cv, /* createIfNeeded */ false);
-    TValId at = sh_.addrOfTarget(reg, TS_REGION);
-    if (0 < at)
+    if (OBJ_INVALID != reg)
         // var already alive
-        return at;
+        return reg;
 
     // lazy var creation
     reg = sh_.regionByVar(cv, /* createIfNeeded */ true);
-    at = sh_.addrOfTarget(reg, TS_REGION);
 
     // resolve Var
     const CodeStorage::Storage &stor = sh_.stor();
@@ -385,18 +382,18 @@ TValId SymProc::varAt(const CVar &cv)
 
     if (needInit)
         // go through explicit initializers
-        this->varInit(at);
+        this->varInit(reg);
 
-    return at;
+    return reg;
 }
 
-TValId SymProc::varAt(const struct cl_operand &op)
+TObjId SymProc::objByVar(const struct cl_operand &op)
 {
     // resolve CVar
     const int uid = varIdFromOperand(&op);
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
     const CVar cv(uid, nestLevel);
-    return this->varAt(cv);
+    return this->objByVar(cv);
 }
 
 bool addOffDerefArray(SymProc &proc, TOffset &off, const struct cl_accessor *ac)
@@ -428,7 +425,9 @@ TOffset offItem(const struct cl_accessor *ac)
 TValId SymProc::targetAt(const struct cl_operand &op)
 {
     // resolve program variable
-    TValId addr = this->varAt(op);
+    const TObjId obj = this->objByVar(op);
+    TValId addr = sh_.addrOfTarget(obj, TS_REGION);
+
     const struct cl_accessor *ac = op.accessor;
     if (!ac)
         // no accessors, we're done
@@ -1168,12 +1167,10 @@ void executeMemmove(
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
-void SymExecCore::varInit(TValId at)
+void SymExecCore::varInit(TObjId obj)
 {
     if (!ep_.trackUninit)
         return;
-
-    const TObjId obj = sh_.objByAddr(at);
 
     const EStorageClass code = sh_.objStorClass(obj);
     if (SC_ON_STACK == code) {
@@ -1191,7 +1188,7 @@ void SymExecCore::varInit(TValId at)
         sh_.writeUniformBlock(obj, ub);
     }
 
-    SymProc::varInit(at);
+    SymProc::varInit(obj);
 }
 
 void SymExecCore::execFree(TValId val)
@@ -2468,13 +2465,13 @@ bool SymExecCore::concretizeLoop(
                 // literals cannot be abstract
                 continue;
 
-            const TValId at = slave.varAt(op);
+            const TObjId obj = slave.objByVar(op);
+            const TValId at = sh.addrOfTarget(obj, TS_REGION);
             if (!canWriteDataPtrAt(sh, at))
                 continue;
 
             // we expect a pointer at this point
             CL_BREAK_IF(sh.valOffset(at));
-            const TObjId obj = sh.objByAddr(at);
             const TValId val = valOfPtr(sh, obj, /* off */ 0);
             if (isAbstractValue(sh, val)) {
 #ifndef NDEBUG

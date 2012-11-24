@@ -144,10 +144,10 @@ class SymProc {
         bool hasFatalError() const;
 
     protected:
-        TValId varAt(const CVar &cv);
-        TValId varAt(const struct cl_operand &op);
+        TObjId objByVar(const CVar &cv);
+        TObjId objByVar(const struct cl_operand &op);
         TValId targetAt(const struct cl_operand &op);
-        virtual void varInit(TValId at);
+        virtual void varInit(TObjId reg);
         friend void initGlVar(SymHeap &sh, const CVar &cv);
 
     private:
@@ -248,7 +248,7 @@ class SymExecCore: public SymProc {
         bool execCore(SymState &dst, const CodeStorage::Insn &insn);
 
     protected:
-        virtual void varInit(TValId at);
+        virtual void varInit(TObjId reg);
 
     private:
         const SymExecCoreParams ep_;

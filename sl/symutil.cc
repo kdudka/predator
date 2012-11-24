@@ -343,7 +343,7 @@ void initGlVar(SymHeap &sh, const CVar &cv)
 
     SymBackTrace dummyBt(sh.stor());
     SymProc proc(sh, &dummyBt);
-    (void) proc.varAt(cv);
+    (void) proc.objByVar(cv);
 }
 
 bool /* anyChange */ redirectRefs(
