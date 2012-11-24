@@ -208,9 +208,8 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
     return false;
 }
 
-TValId segClone(SymHeap &sh, const TValId root)
+TObjId segClone(SymHeap &sh, const TObjId obj)
 {
-    const TObjId obj = sh.objByAddr(root);
     const TObjId dup = objClone(sh, obj);
     const TValId dupAt = sh.addrOfTarget(dup, /* XXX */ TS_REGION);
 
@@ -234,7 +233,7 @@ TValId segClone(SymHeap &sh, const TValId root)
         ppPeer.setValue(segHeadAt(sh, dupAt));
     }
 
-    return dupAt;
+    return dup;
 }
 
 TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)

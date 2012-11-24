@@ -98,13 +98,13 @@ struct UnknownValuesDuplicator {
 };
 
 // when concretizing an object, we need to duplicate all _unknown_ values
-void duplicateUnknownValues(SymHeap &sh, TValId at)
+void duplicateUnknownValues(SymHeap &sh, TObjId obj)
 {
     UnknownValuesDuplicator visitor;
-    buildIgnoreList(visitor.ignoreList, sh, at);
+    buildIgnoreList(visitor.ignoreList, sh, obj);
 
     // traverse all sub-objects
-    traverseLiveFields(sh, sh.objByAddr(at), visitor);
+    traverseLiveFields(sh, obj, visitor);
 }
 
 void detachClonedPrototype(
@@ -146,12 +146,12 @@ void detachClonedPrototype(
     }
 }
 
-TValId protoClone(SymHeap &sh, const TValId proto)
+TObjId protoClone(SymHeap &sh, const TObjId proto)
 {
-    const TValId clone = segClone(sh, proto);
-    objDecrementProtoLevel(sh, sh.objByAddr(clone));
+    const TObjId clone = segClone(sh, proto);
+    objDecrementProtoLevel(sh, clone);
 
-    if (!isAbstractValue(sh, proto))
+    if (OK_REGION == sh.objKind(proto))
         // clone all unknown values in order to keep prover working
         duplicateUnknownValues(sh, clone);
 
@@ -171,8 +171,8 @@ void clonePrototypes(
     // clone the prototypes and reconnect them to the new root
     for (unsigned i = 0; i < cnt; ++i) {
         const TValId proto = sh.legacyAddrOfAny_XXX(protoList[i]);
-        const TValId clone = protoClone(sh,
-                sh.legacyAddrOfAny_XXX(protoList[i]));
+        const TValId clone = sh.legacyAddrOfAny_XXX(
+                protoClone(sh, protoList[i]));
 
         detachClonedPrototype(sh, proto, clone, rootDst, rootSrc,
                 /* uplink */ true);
@@ -255,7 +255,7 @@ TValId segDeepCopy(SymHeap &sh, TValId segAt)
     const TValId dupAt = sh.addrOfTarget(dup, /* XXX */ TS_REGION);
 
     // clone all unknown values in order to keep prover working
-    duplicateUnknownValues(sh, dupAt);
+    duplicateUnknownValues(sh, dup);
 
     // clone all prototypes originally owned by seg
     clonePrototypes(sh, segAt, dupAt, protoList);

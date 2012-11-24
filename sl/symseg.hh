@@ -275,8 +275,8 @@ inline bool objWithBinding(const SymHeap &sh, const TValId root)
     return (OK_OBJ_OR_NULL != kind);
 }
 
-/// clone a root object; in case of DLS, clone both parts of it
-TValId segClone(SymHeap &sh, const TValId root);
+/// clone an object; in case of DLS, clone both parts of it
+TObjId segClone(SymHeap &sh, const TObjId obj);
 
 inline void buildIgnoreList(
         TFldSet                 &ignoreList,
