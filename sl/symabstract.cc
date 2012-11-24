@@ -285,14 +285,13 @@ void slSegAbstractionStep(
         const BindingOff            &off)
 {
     const TObjId obj = sh.objByAddr(at);
+    const TObjId next = sh.objByAddr(nextAt);
 
     // compute the resulting minimal length
-    const TMinLen len = objMinLength(sh, at) + objMinLength(sh, nextAt);
+    const TMinLen len = objMinLength(sh, obj) + objMinLength(sh, next);
 
     enlargeMayExist(sh, at);
     enlargeMayExist(sh, nextAt);
-
-    const TObjId next = sh.objByAddr(nextAt);
 
     // merge data
     joinData(sh, off, next, obj, /* bidir */ false);
@@ -316,15 +315,15 @@ void slSegAbstractionStep(
 
 void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off)
 {
+    const TObjId seg1 = sh.objByAddr(a1);
+    const TObjId seg2 = sh.objByAddr(a2);
+
     // compute resulting segment's length
-    const TMinLen len = objMinLength(sh, a1) + objMinLength(sh, a2);
+    const TMinLen len = objMinLength(sh, seg1) + objMinLength(sh, seg2);
 
     // OK_SEE_THROUGH -> OK_CONCRETE if necessary
     enlargeMayExist(sh, a1);
     enlargeMayExist(sh, a2);
-
-    const TObjId seg1 = sh.objByAddr(a1);
-    const TObjId seg2 = sh.objByAddr(a2);
 
     // merge data
     joinData(sh, off, seg2, seg1, /* bidir */ true);
@@ -348,7 +347,7 @@ void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId regAt, bool backward)
     const TObjId reg = sh.objByAddr(regAt);
 
     // compute the resulting minimal length
-    const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, regAt);
+    const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, reg);
 
     // we allow to gobble OK_SEE_THROUGH objects (if compatible)
     enlargeMayExist(sh, regAt);

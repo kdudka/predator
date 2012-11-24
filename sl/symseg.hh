@@ -159,14 +159,6 @@ inline bool isDlSegPeer(const SymHeap &sh, const TObjId obj)
     return (bf.prev < bf.next);
 }
 
-/// TODO: drop this!
-inline bool isDlSegPeer(const SymHeap &sh, const TValId root)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-    const TObjId obj = sh.objByAddr(root);
-    return isDlSegPeer(sh, obj);
-}
-
 inline TMinLen objMinLength(const SymHeap &sh, TObjId obj)
 {
     if (!sh.isValid(obj))
@@ -177,24 +169,6 @@ inline TMinLen objMinLength(const SymHeap &sh, TObjId obj)
         return 1;
 
     return sh.segMinLength(obj);
-}
-
-/// TODO: drop this!
-inline TMinLen objMinLength(const SymHeap &sh, TValId root)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-
-    if (isAbstractValue(sh, root))
-        // abstract target
-        return sh.segMinLength(sh.objByAddr(root));
-
-    if (isPossibleToDeref(sh, root))
-        // concrete target
-        return 1;
-
-    else
-        // no target here
-        return 0;
 }
 
 /// return true if the given pair of values is proven to be non-equal

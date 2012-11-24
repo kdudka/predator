@@ -63,13 +63,6 @@ struct PlotData {
     }
 };
 
-void dlSegJumpToBegIfNeeded(const SymHeap &sh, TValId *pRoot)
-{
-    const TValId root = *pRoot;
-    if (isDlSegPeer(sh, root))
-        *pRoot = dlSegPeer(sh, root);
-}
-
 #define SL_QUOTE(what) "\"" << what << "\""
 
 void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)

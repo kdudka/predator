@@ -59,8 +59,8 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
         // oops, we cannot prove the address is safely allocated, giving up
         return false;
 
-    const TValId root2 = sh.valRoot(val);
-    const TMinLen len2 = objMinLength(sh, root2);
+    const TObjId obj2 = sh.objByAddr(val);
+    const TMinLen len2 = objMinLength(sh, obj2);
     if (!len2)
         // one of the targets is possibly empty, giving up
         return false;
@@ -74,8 +74,8 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
         // oops, we cannot prove the address is safely allocated, giving up
         return false;
 
-    const TValId root1 = sh.valRoot(ref);
-    const TMinLen len1 = objMinLength(sh, root1);
+    const TObjId obj1 = sh.objByAddr(ref);
+    const TMinLen len1 = objMinLength(sh, obj1);
     if (!len1)
         // both targets are possibly empty, giving up
         return false;
@@ -84,7 +84,7 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
         // non-empty abstract object vs. concrete object
         return true;
 
-    if (sh.objByAddr(root2) != segPeer(sh, sh.objByAddr(root1)))
+    if (obj2 != segPeer(sh, obj1))
         // a pair of non-empty abstract objects
         return true;
 

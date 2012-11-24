@@ -1092,23 +1092,23 @@ bool joinNestingLevel(
 }
 
 TMinLen joinMinLength(
-        SymJoinCtx              &ctx,
-        const TValId            root1,
-        const TValId            root2)
+        SymJoinCtx             &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2)
 {
-    if (VAL_INVALID == root1 || VAL_INVALID == root2) {
+    if (OBJ_INVALID == obj1 || OBJ_INVALID == obj2) {
         // the status should have been already updated
         CL_BREAK_IF(JS_USE_ANY == ctx.status);
 
-        if (objMinLength(ctx.sh1, root1) || objMinLength(ctx.sh2, root2))
+        if (objMinLength(ctx.sh1, obj1) || objMinLength(ctx.sh2, obj2))
             // insertion of non-empty object does not cover both variants
             updateJoinStatus(ctx, JS_THREE_WAY);
 
         return 0;
     }
 
-    const TMinLen len1 = objMinLength(ctx.sh1, root1);
-    const TMinLen len2 = objMinLength(ctx.sh2, root2);
+    const TMinLen len1 = objMinLength(ctx.sh1, obj1);
+    const TMinLen len2 = objMinLength(ctx.sh2, obj2);
     if (len1 < len2) {
         updateJoinStatus(ctx, JS_USE_SH1);
         return len1;
@@ -1365,7 +1365,7 @@ bool createObject(
         ctx.dst.objSetAbstract(objDst, kind, off);
 
         // compute minimal length of the resulting segment
-        ctx.segLengths[objDst] = joinMinLength(ctx, root1, root2);
+        ctx.segLengths[objDst] = joinMinLength(ctx, obj1, obj2);
     }
 
     return traverseRoots(ctx, rootDst, item);
@@ -1907,11 +1907,11 @@ bool insertSegmentClone(
 
     // resolve the existing segment in shGt
     SymHeap &shGt = ((isGt1) ? ctx.sh1 : ctx.sh2);
-    const TValId seg = shGt.valRoot((isGt1) ? v1 : v2);
-    const bool isDls = (OK_DLS == shGt.objKind(shGt.objByAddr(seg)));
+    const TObjId seg = shGt.objByAddr((isGt1) ? v1 : v2);
+    const bool isDls = (OK_DLS == shGt.objKind(seg));
     CL_BREAK_IF(off && isDls);
 
-    TValId peer = seg;
+    TObjId peer = seg;
     if (isDls)
         peer = dlSegPeer(shGt, seg);
 
@@ -1920,9 +1920,9 @@ bool insertSegmentClone(
     if (off)
         nextGt = (ObjOrNull == *off)
             ? VAL_NULL
-            : valOfPtrAt(shGt, seg, off->next);
+            : valOfPtr(shGt, seg, off->next);
     else
-        nextGt = nextValFromSeg(shGt, shGt.objByAddr(peer));
+        nextGt = nextValFromSeg(shGt, peer);
 
     const TValId nextLt = (isGt2) ? v1 : v2;
     if (!off && !checkValueMapping(ctx,
@@ -1945,7 +1945,11 @@ bool insertSegmentClone(
         ? ctx.valMap1
         : ctx.valMap2;
 
-    scheduleSegAddr(ctx.wl, seg, peer, action, item.ldiff);
+    // TODO: drop this!
+    const TValId segAt = shGt.addrOfTarget(seg, /* XXX */ TS_REGION);
+    const TValId peerAt = shGt.addrOfTarget(peer, /* XXX */ TS_REGION);
+
+    scheduleSegAddr(ctx.wl, segAt, peerAt, action, item.ldiff);
 
     SchedItem cloneItem;
     while (ctx.wl.next(cloneItem)) {
@@ -1961,7 +1965,7 @@ bool insertSegmentClone(
             // do not go byond the segment, just follow its data
             continue;
 
-        if (seg != valGt)
+        if (segAt != valGt)
             // OK_SEE_THROUGH/OK_OBJ_OR_NULL is applicable only on the first fld
             off = 0;
 
