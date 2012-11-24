@@ -2473,7 +2473,9 @@ bool SymExecCore::concretizeLoop(
                 continue;
 
             // we expect a pointer at this point
-            const TValId val = valOfPtrAt(sh, at);
+            CL_BREAK_IF(sh.valOffset(at));
+            const TObjId obj = sh.objByAddr(at);
+            const TValId val = valOfPtr(sh, obj, /* off */ 0);
             if (isAbstractValue(sh, val)) {
 #ifndef NDEBUG
                 CL_BREAK_IF(hitLocal);

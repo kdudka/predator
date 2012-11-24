@@ -932,17 +932,17 @@ bool joinObjKind(
 
 bool matchBindingFieldsByValue(
         SymHeap                 &sh,
-        const TValId             root,
+        const TObjId             obj,
         const BindingOff        &off1,
         const BindingOff        &off2)
 {
-        const TValId valNextBy1 = valOfPtrAt(sh, root, off1.next);
-        const TValId valNextBy2 = valOfPtrAt(sh, root, off2.next);
+        const TValId valNextBy1 = valOfPtr(sh, obj, off1.next);
+        const TValId valNextBy2 = valOfPtr(sh, obj, off2.next);
         if (valNextBy1 != valNextBy2)
             return false;
 
-        const TValId valPrevBy1 = valOfPtrAt(sh, root, off1.prev);
-        const TValId valPrevBy2 = valOfPtrAt(sh, root, off2.prev);
+        const TValId valPrevBy1 = valOfPtr(sh, obj, off1.prev);
+        const TValId valPrevBy2 = valOfPtr(sh, obj, off2.prev);
         return (valPrevBy1 == valPrevBy2);
 }
 
@@ -976,21 +976,21 @@ bool joinSegBindingOfMayExist(
     }
 
     if (OK_OBJ_OR_NULL == kind2) {
-        *pResult = (VAL_NULL == valOfPtrAt(ctx.sh1, seg1, off1.next));
+        *pResult = (VAL_NULL == valOfPtr(ctx.sh1, obj1, off1.next));
         return true;
     }
 
     if (OK_OBJ_OR_NULL == kind1) {
-        *pResult = (VAL_NULL == valOfPtrAt(ctx.sh2, seg2, off2.next));
+        *pResult = (VAL_NULL == valOfPtr(ctx.sh2, obj2, off2.next));
         return true;
     }
 
     // NOTE: test-0504 utilizes this code path
 
-    if (isMayExist1 && matchBindingFieldsByValue(ctx.sh1, seg1, off1, off2))
+    if (isMayExist1 && matchBindingFieldsByValue(ctx.sh1, obj1, off1, off2))
             goto match;
 
-    if (isMayExist2 && matchBindingFieldsByValue(ctx.sh2, seg2, off1, off2))
+    if (isMayExist2 && matchBindingFieldsByValue(ctx.sh2, obj2, off1, off2))
             goto match;
 
     // giving up
@@ -2214,12 +2214,12 @@ bool mayExistDigOffsets(
         // no match
         return false;
 
-    const TValId root = sh.valRoot(valBy);
+    const TObjId obj = sh.objByAddr(valBy);
 
     typedef std::map<TValId, TOffList>              TOffsByVal;
     TOffsByVal offsByVal;
     BOOST_FOREACH(const TOffset off, offList) {
-        const TValId val = valOfPtrAt(sh, root, off);
+        const TValId val = valOfPtr(sh, obj, off);
         offsByVal[val].push_back(off);
     }
 
