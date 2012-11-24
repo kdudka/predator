@@ -267,9 +267,8 @@ TObjId segDeepCopy(SymHeap &sh, TObjId seg)
     return dup;
 }
 
-void enlargeMayExist(SymHeap &sh, const TValId at)
+void enlargeMayExist(SymHeap &sh, const TObjId obj)
 {
-    const TObjId obj = sh.objByAddr(at);
     const EObjKind kind = sh.objKind(obj);
     if (!isMayExistObj(kind))
         return;
@@ -284,15 +283,11 @@ void slSegAbstractionStep(
         const TObjId                next,
         const BindingOff           &off)
 {
-    // TODO: drop this!
-    const TValId at = sh.addrOfTarget(obj, /* XXX */ TS_REGION);
-    const TValId nextAt = sh.addrOfTarget(next, /* XXX */ TS_REGION);
-
     // compute the resulting minimal length
     const TMinLen len = objMinLength(sh, obj) + objMinLength(sh, next);
 
-    enlargeMayExist(sh, at);
-    enlargeMayExist(sh, nextAt);
+    enlargeMayExist(sh, obj);
+    enlargeMayExist(sh, next);
 
     // merge data
     joinData(sh, off, next, obj, /* bidir */ false);
@@ -303,7 +298,7 @@ void slSegAbstractionStep(
 
     // replace all references to 'head'
     const TOffset offHead = sh.segBinding(next).head;
-    const TValId headAt = sh.valByOffset(at, offHead);
+    const TValId headAt = sh.addrOfTarget(obj, /* XXX */ TS_REGION, offHead);
     sh.valReplace(headAt, segHeadAt(sh, next));
 
     // destroy self, including all prototypes
@@ -314,30 +309,27 @@ void slSegAbstractionStep(
         sh.segSetMinLength(next, len);
 }
 
-void dlSegCreate(SymHeap &sh, TValId a1, TValId a2, BindingOff off)
+void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
 {
-    const TObjId seg1 = sh.objByAddr(a1);
-    const TObjId seg2 = sh.objByAddr(a2);
-
     // compute resulting segment's length
-    const TMinLen len = objMinLength(sh, seg1) + objMinLength(sh, seg2);
+    const TMinLen len = objMinLength(sh, obj1) + objMinLength(sh, obj2);
 
     // OK_SEE_THROUGH -> OK_CONCRETE if necessary
-    enlargeMayExist(sh, a1);
-    enlargeMayExist(sh, a2);
+    enlargeMayExist(sh, obj1);
+    enlargeMayExist(sh, obj2);
 
     // merge data
-    joinData(sh, off, seg2, seg1, /* bidir */ true);
+    joinData(sh, off, obj2, obj1, /* bidir */ true);
 
     swapValues(off.next, off.prev);
-    sh.objSetAbstract(seg1, OK_DLS, off);
+    sh.objSetAbstract(obj1, OK_DLS, off);
 
     swapValues(off.next, off.prev);
-    sh.objSetAbstract(seg2, OK_DLS, off);
+    sh.objSetAbstract(obj2, OK_DLS, off);
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
-    sh.segSetMinLength(seg1, len);
-    sh.segSetMinLength(seg2, len);
+    sh.segSetMinLength(obj1, len);
+    sh.segSetMinLength(obj2, len);
 }
 
 void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId regAt, bool backward)
@@ -351,7 +343,7 @@ void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId regAt, bool backward)
     const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, reg);
 
     // we allow to gobble OK_SEE_THROUGH objects (if compatible)
-    enlargeMayExist(sh, regAt);
+    enlargeMayExist(sh, reg);
 
     if (!backward) {
         // jump to peer
@@ -459,7 +451,7 @@ bool /* jump next */ dlSegAbstractionStep(
             dlSegGobble(sh, objAt, nextAt, /* backward */ false);
         else
             // CONCRETE + CONCRETE
-            dlSegCreate(sh, objAt, nextAt, off);
+            dlSegCreate(sh, obj, next, off);
 
         return /* nobody moves */ false;
     }
