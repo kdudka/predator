@@ -310,16 +310,6 @@ inline void buildIgnoreList(
     }
 }
 
-/// TODO: drop this!
-inline void buildIgnoreList(
-        TFldSet                 &ignoreList,
-        const SymHeap           &sh,
-        const TValId            at)
-{
-    const TObjId obj = sh.objByAddr(at);
-    return buildIgnoreList(ignoreList, sh, obj);
-}
-
 inline void buildIgnoreList(
         TFldSet                 &ignoreList,
         SymHeap                 &sh,
@@ -333,17 +323,6 @@ inline void buildIgnoreList(
     const PtrHandle prev(sh, obj, bf.prev);
     if (prev.isValidHandle())
         ignoreList.insert(prev);
-}
-
-/// TODO: drop this!
-inline void buildIgnoreList(
-        TFldSet                 &ignoreList,
-        SymHeap                 &sh,
-        const TValId            at,
-        const BindingOff        &bf)
-{
-    const TObjId obj = sh.objByAddr(at);
-    buildIgnoreList(ignoreList, sh, obj, bf);
 }
 
 /// look through possibly empty objects and return the value seen

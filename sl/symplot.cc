@@ -673,12 +673,14 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
     plotFields(plot, at, liveFields);
 
     // in case of DLS, plot the corresponding peer
-    TValId peer;
-    if (OK_DLS == sh.objKind(sh.objByAddr(at))
-            && OK_DLS == sh.objKind(sh.objByAddr((peer = dlSegPeer(sh, at)))))
+    TObjId peer;
+    if (OK_DLS == sh.objKind(obj)
+            && OK_DLS == sh.objKind((peer = dlSegPeer(sh, obj))))
     {
+        const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
+
         // plot peer's root value
-        plotRootValue(plot, peer, color);
+        plotRootValue(plot, peerAt, color);
 #if !SYMPLOT_DEBUG_DLS
         // plot peer's uniform blocks
         plotUniformBlocks(plot, at);
@@ -692,7 +694,7 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
         buildIgnoreList(peerFields, sh, peer);
 #endif
         // plot all atomic objects inside
-        plotFields(plot, peer, peerFields);
+        plotFields(plot, peerAt, peerFields);
     }
 
     // close cluster

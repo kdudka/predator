@@ -768,8 +768,8 @@ bool traverseRoots(
     dlSegBlackListPrevPtr(objVisitor.blackList2, ctx.sh2, root2);
 
     if (offBlackList) {
-        buildIgnoreList(objVisitor.blackList1, ctx.sh1, root1, *offBlackList);
-        buildIgnoreList(objVisitor.blackList2, ctx.sh2, root2, *offBlackList);
+        buildIgnoreList(objVisitor.blackList1, ctx.sh1, obj1, *offBlackList);
+        buildIgnoreList(objVisitor.blackList2, ctx.sh2, obj2, *offBlackList);
     }
     else if (ctx.joiningData()) {
         if (root1 == root2)
@@ -2940,13 +2940,13 @@ bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx)
 
 // FIXME: this works only for nullified blocks anyway
 void killUniBlocksUnderBindingPtrs(
-        SymHeap                 &sh,
-        const BindingOff        &bf,
-        const TValId            root)
+        SymHeap                &sh,
+        const BindingOff       &bf,
+        const TObjId            obj)
 {
     // go through next/prev pointers
     TFldSet blackList;
-    buildIgnoreList(blackList, sh, root, bf);
+    buildIgnoreList(blackList, sh, obj, bf);
     BOOST_FOREACH(const FldHandle &fld, blackList) {
         if (VAL_NULL != fld.value())
             continue;
@@ -3025,12 +3025,12 @@ bool joinDataCore(
 
     // batch assignment of all values in ctx.dst
     TFldSet blackList;
-    buildIgnoreList(blackList, ctx.dst, rootDstAt, off);
+    buildIgnoreList(blackList, ctx.dst, objDst, off);
     if (!setDstValues(ctx, &blackList))
         return false;
 
-    killUniBlocksUnderBindingPtrs(sh, off, addr1);
-    killUniBlocksUnderBindingPtrs(sh, off, addr2);
+    killUniBlocksUnderBindingPtrs(sh, off, obj1);
+    killUniBlocksUnderBindingPtrs(sh, off, obj2);
     if (!joinUniBlocks(ctx, objDst, obj1, obj2))
         // failed to complement uniform blocks
         return false;
