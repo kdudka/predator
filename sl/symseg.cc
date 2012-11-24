@@ -168,14 +168,17 @@ bool haveSegBidir(
 
 bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
 {
+    const TObjId obj1 = sh.objByAddr(v1);
+    const TObjId obj2 = sh.objByAddr(v2);
+
     if (!isAbstractValue(sh, v1) && !isAbstractValue(sh, v2))
         // no abstract objects involved
         return false;
 
     if (VAL_NULL == v1 && !sh.valOffset(v2))
-        v1 = segNextRootObj(sh, v2);
+        v1 = sh.addrOfTarget(segNextObj(sh, obj2), /* XXX */ TS_REGION);
     if (VAL_NULL == v2 && !sh.valOffset(v1))
-        v2 = segNextRootObj(sh, v1);
+        v2 = sh.addrOfTarget(segNextObj(sh, obj1), /* XXX */ TS_REGION);
 
     TValId seg;
     if (haveSegBidir(&seg, sh, OK_OBJ_OR_NULL, v1, v2)

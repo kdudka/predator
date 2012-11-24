@@ -138,7 +138,7 @@ inline TObjId segNextObj(SymHeap &sh, TObjId obj)
 {
     const EObjKind kind = sh.objKind(obj);
     if (OK_OBJ_OR_NULL == kind)
-        return OBJ_INVALID;
+        return OBJ_NULL;
 
     const BindingOff off = sh.segBinding(obj);
     const TOffset offNext = (OK_DLS == kind)
@@ -146,35 +146,6 @@ inline TObjId segNextObj(SymHeap &sh, TObjId obj)
         : off.next;
 
     return segNextObj(sh, obj, offNext);
-}
-
-/// TODO: drop this!
-inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext)
-{
-    CL_BREAK_IF(sh.valOffset(at));
-    if (OK_DLS == sh.objKind(sh.objByAddr(at)))
-        // jump to peer in case of DLS
-        at = dlSegPeer(sh, at);
-
-    return nextRootObj(sh, at, offNext);
-}
-
-/// TODO: drop this!
-inline TValId segNextRootObj(SymHeap &sh, TValId root)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-
-    const TObjId obj = sh.objByAddr(root);
-    const EObjKind kind = sh.objKind(obj);
-    if (OK_OBJ_OR_NULL == kind)
-        return VAL_NULL;
-
-    const BindingOff off = sh.segBinding(obj);
-    const TOffset offNext = (OK_DLS == kind)
-        ? off.prev
-        : off.next;
-
-    return segNextRootObj(sh, root, offNext);
 }
 
 /// true if the given object is a DLS with bf.prev < bf.next
