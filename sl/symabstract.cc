@@ -230,10 +230,8 @@ struct ValueSynchronizer {
     }
 };
 
-void dlSegSyncPeerData(SymHeap &sh, const TValId dlsAt)
+void dlSegSyncPeerData(SymHeap &sh, const TObjId dls)
 {
-    const TObjId dls = sh.objByAddr(dlsAt);
-
     ValueSynchronizer visitor(sh);
     buildIgnoreList(visitor.ignoreList, sh, dls);
 
@@ -332,12 +330,9 @@ void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
     sh.segSetMinLength(obj2, len);
 }
 
-void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId regAt, bool backward)
+void dlSegGobble(SymHeap &sh, TObjId dls, TObjId reg, bool backward)
 {
-    TObjId dls = sh.objByAddr(dlsAt);
     CL_BREAK_IF(OK_DLS != sh.objKind(dls));
-
-    const TObjId reg = sh.objByAddr(regAt);
 
     // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, reg);
@@ -345,24 +340,22 @@ void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId regAt, bool backward)
     // we allow to gobble OK_SEE_THROUGH objects (if compatible)
     enlargeMayExist(sh, reg);
 
-    if (!backward) {
+    if (!backward)
         // jump to peer
-        dlsAt = dlSegPeer(sh, dlsAt);
-        dls = sh.objByAddr(dlsAt);
-    }
+        dls = dlSegPeer(sh, dls);
 
     // merge data
     const BindingOff &off = sh.segBinding(dls);
     joinData(sh, off, dls, reg, /* bidir */ false);
-    dlSegSyncPeerData(sh, dlsAt);
+    dlSegSyncPeerData(sh, dls);
 
     // store the pointer DLS -> VAR
-    const PtrHandle nextPtr(sh, sh.valByOffset(dlsAt, off.next));
-    const TValId valNext = valOfPtrAt(sh, regAt, off.next);
+    const PtrHandle nextPtr(sh, dls, off.next);
+    const TValId valNext = valOfPtr(sh, reg, off.next);
     nextPtr.setValue(valNext);
 
     // replace VAR by DLS
-    const TValId headAt = sh.valByOffset(regAt, off.head);
+    const TValId headAt = sh.addrOfTarget(reg, /* XXX */ TS_REGION, off.head);
     sh.valReplace(headAt, segHeadAt(sh, dls));
     REQUIRE_GC_ACTIVITY(sh, reg, dlSegGobble);
 
@@ -370,14 +363,11 @@ void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId regAt, bool backward)
     sh.segSetMinLength(dls, len);
     sh.segSetMinLength(segPeer(sh, dls), len);
 
-    dlSegSyncPeerData(sh, dlsAt);
+    dlSegSyncPeerData(sh, dls);
 }
 
-void dlSegMerge(SymHeap &sh, TValId seg1At, TValId seg2At)
+void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
 {
-    const TObjId seg1 = sh.objByAddr(seg1At);
-    const TObjId seg2 = sh.objByAddr(seg2At);
-
     // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
 
@@ -418,7 +408,7 @@ void dlSegMerge(SymHeap &sh, TValId seg1At, TValId seg2At)
         sh.segSetMinLength(segPeer(sh, seg2), len);
     }
 
-    dlSegSyncPeerData(sh, seg2At);
+    dlSegSyncPeerData(sh, seg2);
 }
 
 bool /* jump next */ dlSegAbstractionStep(
@@ -427,10 +417,6 @@ bool /* jump next */ dlSegAbstractionStep(
         const TObjId                next,
         const BindingOff            &off)
 {
-    // TODO: drop this!
-    const TValId objAt = sh.addrOfTarget(obj, /* XXX */ TS_REGION);
-    const TValId nextAt = sh.addrOfTarget(next, /* XXX */ TS_REGION);
-
     const EObjKind kind = sh.objKind(obj);
     const EObjKind kindNext = sh.objKind(next);
     CL_BREAK_IF(OK_SLS == kind || OK_SLS == kindNext);
@@ -438,17 +424,17 @@ bool /* jump next */ dlSegAbstractionStep(
     if (OK_DLS == kindNext) {
         if (OK_DLS == kind)
             // DLS + DLS
-            dlSegMerge(sh, objAt, nextAt);
+            dlSegMerge(sh, obj, next);
         else
             // CONCRETE + DLS
-            dlSegGobble(sh, nextAt, objAt, /* backward */ true);
+            dlSegGobble(sh, next, obj, /* backward */ true);
 
         return /* jump next */ true;
     }
     else {
         if (OK_DLS == kind)
             // DLS + CONCRETE
-            dlSegGobble(sh, objAt, nextAt, /* backward */ false);
+            dlSegGobble(sh, obj, next, /* backward */ false);
         else
             // CONCRETE + CONCRETE
             dlSegCreate(sh, obj, next, off);
