@@ -1619,22 +1619,27 @@ bool spliceOutAbstractPathCore(
     // loop indefinitely.  However, the basic list segment axiom guarantees that
     // there is no such cycle.
 
-    TValId seg = beg;
+    TObjId seg = sh.objByAddr(beg);
     int len = 1;
 
     for (;;) {
-        if (!isAbstractValue(sh, seg) || objMinLength(sh, seg)) {
+        if (OK_REGION == sh.objKind(seg) || objMinLength(sh, seg)) {
             // we are on a wrong way already...
             CL_BREAK_IF(!readOnlyMode);
             return false;
         }
 
-        const TValId peer = segPeer(sh, seg);
-        const TValId valNext = nextValFromSeg(sh, sh.objByAddr(peer));
-        const TValId segNext = sh.valRoot(valNext);
+        const TObjId peer = segPeer(sh, seg);
+
+        // TODO: drop this!
+        const TValId segAt  = sh.addrOfTarget(seg , /* XXX */ TS_REGION);
+        const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
+
+        const TValId valNext = nextValFromSeg(sh, peer);
+        const TObjId segNext = sh.objByAddr(valNext);
 
         if (!readOnlyMode)
-            spliceOutListSegment(sh, seg, peer, valNext, &leakObjs);
+            spliceOutListSegment(sh, segAt, peerAt, valNext, &leakObjs);
 
         if (valNext == endPoint)
             // we have the chain we are looking for
@@ -1703,6 +1708,9 @@ bool dlSegMergeAddressesIfNeeded(
         const TValId                 v2)
 {
     SymHeap &sh = proc.sh();
+    const TObjId obj1 = sh.objByAddr(v1);
+    const TObjId obj2 = sh.objByAddr(v2);
+
     if (!isAbstractValue(sh, v1) || !isAbstractValue(sh, v2))
         // not a pair of abstract values
         return false;
@@ -1713,13 +1721,15 @@ bool dlSegMergeAddressesIfNeeded(
         // the given value differ in target offset
         return false;
 
-    const TValId root1 = sh.valRoot(v1);
-    const TValId root2 = sh.valRoot(v2);
-    if (root1 == root2 || root1 != segPeer(sh, root2))
+    if (obj1 == obj2 || obj1 != segPeer(sh, obj2))
         // apparently not the case we are looking for
         return false;
 
-    CL_BREAK_IF(root2 != segPeer(sh, root1));
+    CL_BREAK_IF(obj2 != segPeer(sh, obj1));
+
+    // TODO: drop this!
+    const TValId root1 = sh.valRoot(v1);
+    const TValId root2 = sh.valRoot(v2);
 
     if (!sh.segMinLength(sh.objByAddr(root1)))
         // 0+ DLS --> we have to look through!

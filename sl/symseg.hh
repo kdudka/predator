@@ -113,20 +113,6 @@ inline TObjId segPeer(const SymHeap &sh, TObjId seg)
         : seg;
 }
 
-/// TODO: drop this!
-inline TValId segPeer(const SymHeap &sh, TValId segAt)
-{
-    CL_BREAK_IF(sh.valOffset(segAt));
-
-    const TObjId seg = sh.objByAddr(segAt);
-    const EObjKind kind = sh.objKind(seg);
-    CL_BREAK_IF(OK_REGION == kind);
-
-    return (OK_DLS == kind)
-        ? dlSegPeer(sh, segAt)
-        : segAt;
-}
-
 /// return address of segment's head (useful mainly for Linux lists)
 inline TValId segHeadAt(const SymHeap &sh, TValId seg)
 {
@@ -252,7 +238,7 @@ inline void segIncreaseMinLength(SymHeap &sh, const TValId segAt, TMinLen len)
 
     if (sh.segMinLength(seg) < len) {
         sh.segSetMinLength(seg, len);
-        sh.segSetMinLength(sh.objByAddr(segPeer(sh, segAt)), len);
+        sh.segSetMinLength(segPeer(sh, seg), len);
     }
 }
 

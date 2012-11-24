@@ -84,7 +84,7 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
         // non-empty abstract object vs. concrete object
         return true;
 
-    if (root2 != segPeer(sh, root1))
+    if (sh.objByAddr(root2) != segPeer(sh, sh.objByAddr(root1)))
         // a pair of non-empty abstract objects
         return true;
 

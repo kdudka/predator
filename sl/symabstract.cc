@@ -376,7 +376,7 @@ void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId regAt, bool backward)
 
     // handle DLS Neq predicates
     sh.segSetMinLength(dls, len);
-    sh.segSetMinLength(sh.objByAddr(segPeer(sh, dlsAt)), len);
+    sh.segSetMinLength(segPeer(sh, dls), len);
 
     dlSegSyncPeerData(sh, dlsAt);
 }
@@ -425,7 +425,7 @@ void dlSegMerge(SymHeap &sh, TValId seg1At, TValId seg2At)
     if (len) {
         // assign the resulting minimal length
         sh.segSetMinLength(seg2, len);
-        sh.segSetMinLength(sh.objByAddr(segPeer(sh, seg2At)), len);
+        sh.segSetMinLength(segPeer(sh, seg2), len);
     }
 
     dlSegSyncPeerData(sh, seg2At);
