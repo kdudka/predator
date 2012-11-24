@@ -69,10 +69,9 @@ inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TObjId seg)
     return PtrHandle(const_cast<SymHeap &>(sh), seg, off.prev);
 }
 
-/// return the value of 'next' in the given segment (given by root)
-inline TValId nextValFromSeg(const SymHeap &sh, TValId segAt)
+/// return the value of 'next' in the given segment
+inline TValId nextValFromSeg(const SymHeap &sh, TObjId seg)
 {
-    const TObjId seg = sh.objByAddr(segAt);
     if (OK_OBJ_OR_NULL == sh.objKind(seg))
         return VAL_NULL;
 

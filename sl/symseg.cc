@@ -103,14 +103,14 @@ bool haveSeg(
         // not an abstract object
         return false;
 
-    TValId seg = sh.valRoot(atAddr);
-    if (kind != sh.objKind(sh.objByAddr(seg)))
+    TObjId seg = sh.objByAddr(atAddr);
+    if (kind != sh.objKind(seg))
         // kind mismatch
         return false;
 
     if (OK_DLS == kind) {
         seg = dlSegPeer(sh, seg);
-        if (OK_DLS != sh.objKind(sh.objByAddr(seg)))
+        if (OK_DLS != sh.objKind(seg))
             // invalid peer
             return false;
     }
@@ -270,9 +270,8 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
         const BindingOff &bOff = sh.segBinding(seg);
         const TOffset shiftBy = off - bOff.head;
 
-        const TValId root = sh.valRoot(val);
-        const TValId segAt = segPeer(sh, root);
-        if (root != segAt) {
+        const TObjId peer = segPeer(sh, seg);
+        if (peer != seg) {
             // put the shifted address of DLS peer to the list of seen values
             const FldHandle ptrPrev = prevPtrFromSeg(sh, seg);
             const TValId valPrev = ptrPrev.value();
@@ -280,7 +279,7 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
         }
 
         // jump to next value
-        const TValId valNext = nextValFromSeg(sh, segAt);
+        const TValId valNext = nextValFromSeg(sh, peer);
         val = const_cast<SymHeap &>(sh).valByOffset(valNext, shiftBy);
     }
 

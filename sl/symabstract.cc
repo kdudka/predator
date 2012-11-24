@@ -395,14 +395,14 @@ void dlSegMerge(SymHeap &sh, TValId seg1At, TValId seg2At)
     const TValId peer2At = dlSegPeer(sh, seg2At);
 
     // check for a failure of segDiscover()
-    CL_BREAK_IF(nextValFromSeg(sh, peer1At) != segHeadAt(sh, seg2At));
+    CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2At));
 
     // merge data
     const BindingOff &bf2 = sh.segBinding(seg2);
     joinData(sh, bf2, seg2, seg1, /* bidir */ true);
 
     // preserve backLink
-    const TValId valNext1 = nextValFromSeg(sh, seg1At);
+    const TValId valNext1 = nextValFromSeg(sh, seg1);
     const PtrHandle ptrNext2 = nextPtrFromSeg(sh, seg2);
     ptrNext2.setValue(valNext1);
 
@@ -568,7 +568,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId segAt, TValId peerAt)
 
     // take the value of 'next' pointer from peer
     const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
-    const TValId valNext = nextValFromSeg(sh, peerAt);
+    const TValId valNext = nextValFromSeg(sh, peer);
     peerPtr.setValue(valNext);
 
     // redirect all references originally pointing to peer to the current object
@@ -599,10 +599,10 @@ void spliceOutListSegment(
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
 
-    CL_BREAK_IF(objMinLength(sh, segAt));
-
     const TObjId seg = sh.objByAddr(segAt);
     const EObjKind kind = sh.objKind(seg);
+
+    CL_BREAK_IF(objMinLength(sh, seg));
 
     TOffset offHead = 0;
     if (OK_OBJ_OR_NULL != kind)
@@ -614,7 +614,7 @@ void spliceOutListSegment(
         // OK_DLS --> unlink peer
         CL_BREAK_IF(seg == peer);
         CL_BREAK_IF(offHead != sh.segBinding(peer).head);
-        const TValId valPrev = nextValFromSeg(sh, segAt);
+        const TValId valPrev = nextValFromSeg(sh, seg);
         redirectRefs(sh,
                 /* pointingFrom */ OBJ_INVALID,
                 /* pointingTo   */ peer,
@@ -657,7 +657,7 @@ void spliceOutSegmentIfNeeded(
     if (!*pLen) {
         // possibly empty LS
         SymHeap sh0(sh);
-        const TValId valNext = nextValFromSeg(sh0, peer);
+        const TValId valNext = nextValFromSeg(sh0, sh.objByAddr(peer));
         spliceOutListSegment(sh0, seg, peer, valNext, leakObjs);
 
         // append a trace node for this operation

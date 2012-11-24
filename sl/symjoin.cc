@@ -1922,7 +1922,7 @@ bool insertSegmentClone(
             ? VAL_NULL
             : valOfPtrAt(shGt, seg, off->next);
     else
-        nextGt = nextValFromSeg(shGt, peer);
+        nextGt = nextValFromSeg(shGt, shGt.objByAddr(peer));
 
     const TValId nextLt = (isGt2) ? v1 : v2;
     if (!off && !checkValueMapping(ctx,
@@ -2172,15 +2172,14 @@ class MayExistVisitor {
                 if (!lookThrough_ || !isAbstractValue(sh, val))
                     return /* continue */ true;
 
-                TValId segAt = valRoot;
-                const TObjId seg = sh.objByAddr(segAt);
-                if (sh.segMinLength(seg) || segHeadAt(sh, segAt) != val)
+                TObjId seg = sh.objByAddr(valRoot);
+                if (sh.segMinLength(seg) || segHeadAt(sh, valRoot) != val)
                     return /* continue */ true;
 
                 if (OK_DLS == sh.objKind(seg))
-                    segAt = dlSegPeer(sh, segAt);
+                    seg = dlSegPeer(sh, seg);
 
-                val = nextValFromSeg(sh, segAt);
+                val = nextValFromSeg(sh, seg);
             }
 
             foundOffsets_.push_back(fld.offset());

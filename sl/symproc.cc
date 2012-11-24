@@ -1630,7 +1630,7 @@ bool spliceOutAbstractPathCore(
         }
 
         const TValId peer = segPeer(sh, seg);
-        const TValId valNext = nextValFromSeg(sh, peer);
+        const TValId valNext = nextValFromSeg(sh, sh.objByAddr(peer));
         const TValId segNext = sh.valRoot(valNext);
 
         if (!readOnlyMode)
@@ -1679,8 +1679,8 @@ bool dlSegMergeAddressesOfEmpty(
     SymProc proc(sh, procTpl.bt());
     proc.setLocation(procTpl.lw());
 
-    const TValId valNext1 = nextValFromSeg(sh, root1);
-    const TValId valNext2 = nextValFromSeg(sh, root2);
+    const TValId valNext1 = nextValFromSeg(sh, sh.objByAddr(root1));
+    const TValId valNext2 = nextValFromSeg(sh, sh.objByAddr(root2));
 
     if (!spliceOutAbstractPathCore(proc, root1, valNext2))
         CL_BREAK_IF("dlSegMergeAddressesOfEmpty() failed to remove a DLS");
