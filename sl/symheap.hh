@@ -480,6 +480,9 @@ class SymHeapCore {
         /// return the region corresponding to the given program variable
         TObjId regionByVar(CVar, bool createIfNeeded);
 
+        /// clone the given object, including the outgoing has-value edges
+        virtual TObjId objClone(TObjId);
+
         /// clone of the given value (deep copy)
         virtual TValId valClone(TValId);
 
@@ -866,7 +869,7 @@ class SymHeap: public SymHeapCore {
         // just overrides (inherits the dox)
         virtual TValId addrOfTarget(TObjId, ETargetSpecifier, TOffset off = 0);
         virtual void objInvalidate(TObjId);
-        virtual TValId valClone(TValId);
+        virtual TObjId objClone(TObjId);
 
     private:
         struct Private;
