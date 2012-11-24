@@ -492,12 +492,12 @@ void plotFields(PlotData &plot, const TValId at, const TCont &liveFields)
 
         case OK_DLS:
         case OK_SEE_THROUGH_2N:
-            prev = prevPtrFromSeg(sh, at);
+            prev = prevPtrFromSeg(sh, obj);
             // fall through!
 
         case OK_SEE_THROUGH:
         case OK_SLS:
-            next = nextPtrFromSeg(sh, at);
+            next = nextPtrFromSeg(sh, obj);
     }
 
     // sort objects by offset

@@ -708,14 +708,13 @@ struct ObjJoinVisitor {
 };
 
 template <class TDst>
-void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TValId root)
+void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TObjId obj)
 {
-    const TObjId obj = sh.objByAddr(root);
     const EObjKind kind = sh.objKind(obj);
     if (OK_DLS != kind)
         return;
 
-    const PtrHandle prevPtr = prevPtrFromSeg(sh, root);
+    const PtrHandle prevPtr = prevPtrFromSeg(sh, obj);
     dst.insert(prevPtr);
 }
 
@@ -764,8 +763,8 @@ bool traverseRoots(
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx, rootItem.ldiff);
-    dlSegBlackListPrevPtr(objVisitor.blackList1, ctx.sh1, root1);
-    dlSegBlackListPrevPtr(objVisitor.blackList2, ctx.sh2, root2);
+    dlSegBlackListPrevPtr(objVisitor.blackList1, ctx.sh1, obj1);
+    dlSegBlackListPrevPtr(objVisitor.blackList2, ctx.sh2, obj2);
 
     if (offBlackList) {
         buildIgnoreList(objVisitor.blackList1, ctx.sh1, obj1, *offBlackList);
@@ -799,11 +798,8 @@ bool segMatchLookAhead(
         SymJoinCtx              &ctx,
         const SchedItem         &item)
 {
-    const TValId root1 = item.v1;
-    const TValId root2 = item.v2;
-
-    const TObjId obj1 = ctx.sh1.objByAddr(root1);
-    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+    const TObjId obj1 = ctx.sh1.objByAddr(item.v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(item.v2);
 
     const TSizeRange size1 = ctx.sh1.objSize(obj1);
     const TSizeRange size2 = ctx.sh2.objSize(obj2);
@@ -816,8 +812,8 @@ bool segMatchLookAhead(
     TObjId objs[] = { obj1, obj2 };
     SegMatchVisitor visitor(ctx, item.ldiff);
 
-    dlSegBlackListPrevPtr(visitor.blackList1, ctx.sh1, root1);
-    dlSegBlackListPrevPtr(visitor.blackList2, ctx.sh2, root2);
+    dlSegBlackListPrevPtr(visitor.blackList1, ctx.sh1, obj1);
+    dlSegBlackListPrevPtr(visitor.blackList2, ctx.sh2, obj2);
 
     return traverseLiveFieldsGeneric<2>(heaps, objs, visitor);
 }
@@ -1447,17 +1443,20 @@ bool dlSegHandleShared(
     // we might have just joined a DLS pair as shared data, which would lead to
     // unconnected DLS pair in ctx.dst and later cause some problems;  the best
     // thing to do at this point, is to recover the binding of DLS in ctx.dst
-    const TValId seg  = vMap1[root1];
-    const TValId peer = vMap1[peer1];
-    CL_BREAK_IF(seg  != vMap2[root2]);
-    CL_BREAK_IF(peer != vMap2[peer2]);
+    const TValId segAt  = vMap1[root1];
+    const TValId peerAt = vMap1[peer1];
+    CL_BREAK_IF(segAt  != vMap2[root2]);
+    CL_BREAK_IF(peerAt != vMap2[peer2]);
 
     SymHeap &sh = ctx.dst;
+    const TObjId seg  = sh.objByAddr(segAt);
+    const TObjId peer = sh.objByAddr(peerAt);
+
     const PtrHandle prev1 = prevPtrFromSeg(sh,  seg);
     const PtrHandle prev2 = prevPtrFromSeg(sh, peer);
 
-    prev1.setValue(segHeadAt(sh, peer));
-    prev2.setValue(segHeadAt(sh,  seg));
+    prev1.setValue(segHeadAt(sh, peerAt));
+    prev2.setValue(segHeadAt(sh,  segAt));
 
     CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
     return true;

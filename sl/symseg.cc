@@ -253,9 +253,7 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
             // a non-abstract object reached
             break;
 
-        const TValId root = sh.valRoot(val);
-        const TValId segAt = segPeer(sh, root);
-        const TObjId seg = sh.objByAddr(segAt);
+        const TObjId seg = sh.objByAddr(val);
 
         if (sh.segMinLength(seg))
             // non-empty abstract object reached
@@ -272,9 +270,11 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
         const BindingOff &bOff = sh.segBinding(seg);
         const TOffset shiftBy = off - bOff.head;
 
+        const TValId root = sh.valRoot(val);
+        const TValId segAt = segPeer(sh, root);
         if (root != segAt) {
             // put the shifted address of DLS peer to the list of seen values
-            const FldHandle ptrPrev = prevPtrFromSeg(sh, root);
+            const FldHandle ptrPrev = prevPtrFromSeg(sh, seg);
             const TValId valPrev = ptrPrev.value();
             val = const_cast<SymHeap &>(sh).valByOffset(valPrev, shiftBy);
         }

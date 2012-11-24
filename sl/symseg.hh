@@ -51,32 +51,29 @@ bool haveSeg(
  */
 bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr);
 
-/// return 'next' pointer in the given segment (given by root)
-inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TValId seg)
+/// return 'next' pointer in the given segment
+inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TObjId seg)
 {
-    CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(!isAbstractValue(sh, seg));
+    CL_BREAK_IF(OK_REGION == sh.objKind(seg));
 
-    const BindingOff &off = sh.segBinding(sh.objByAddr(seg));
-    const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.next);
-    return PtrHandle(const_cast<SymHeap &>(sh), addr);
+    const BindingOff &off = sh.segBinding(seg);
+    return PtrHandle(const_cast<SymHeap &>(sh), seg, off.next);
 }
 
-/// return 'prev' pointer in the given segment (given by root)
-inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg)
+/// return 'prev' pointer in the given segment
+inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TObjId seg)
 {
-    CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(!isAbstractValue(sh, seg));
+    CL_BREAK_IF(OK_REGION == sh.objKind(seg));
 
-    const BindingOff &off = sh.segBinding(sh.objByAddr(seg));
-    const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.prev);
-    return PtrHandle(const_cast<SymHeap &>(sh), addr);
+    const BindingOff &off = sh.segBinding(seg);
+    return PtrHandle(const_cast<SymHeap &>(sh), seg, off.prev);
 }
 
 /// return the value of 'next' in the given segment (given by root)
-inline TValId nextValFromSeg(const SymHeap &sh, TValId seg)
+inline TValId nextValFromSeg(const SymHeap &sh, TValId segAt)
 {
-    if (OK_OBJ_OR_NULL == sh.objKind(sh.objByAddr(seg)))
+    const TObjId seg = sh.objByAddr(segAt);
+    if (OK_OBJ_OR_NULL == sh.objKind(seg))
         return VAL_NULL;
 
     const FldHandle ptrNext = nextPtrFromSeg(sh, seg);

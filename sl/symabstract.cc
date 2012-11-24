@@ -249,17 +249,14 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dlsAt)
 }
 
 // FIXME: the semantics of this function is quite contra-intuitive
-TValId segDeepCopy(SymHeap &sh, TValId segAt)
+TObjId segDeepCopy(SymHeap &sh, TObjId seg)
 {
-    const TObjId seg = sh.objByAddr(segAt);
-
     // collect the list of prototypes
     TObjList protoList;
     collectPrototypesOf(protoList, sh, seg, /* skipPeers */ true);
 
     // clone the object itself
     const TObjId dup = objClone(sh, seg);
-    const TValId dupAt = sh.addrOfTarget(dup, /* XXX */ TS_REGION);
 
     // clone all unknown values in order to keep prover working
     duplicateUnknownValues(sh, dup);
@@ -267,7 +264,7 @@ TValId segDeepCopy(SymHeap &sh, TValId segAt)
     // clone all prototypes originally owned by seg
     clonePrototypes(sh, seg, dup, protoList);
 
-    return dupAt;
+    return dup;
 }
 
 void enlargeMayExist(SymHeap &sh, const TValId at)
@@ -406,7 +403,7 @@ void dlSegMerge(SymHeap &sh, TValId seg1At, TValId seg2At)
 
     // preserve backLink
     const TValId valNext1 = nextValFromSeg(sh, seg1At);
-    const PtrHandle ptrNext2 = nextPtrFromSeg(sh, seg2At);
+    const PtrHandle ptrNext2 = nextPtrFromSeg(sh, seg2);
     ptrNext2.setValue(valNext1);
 
     // replace both parts point-wise
@@ -570,7 +567,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TValId segAt, TValId peerAt)
     const TObjId peer = sh.objByAddr(peerAt);
 
     // take the value of 'next' pointer from peer
-    const PtrHandle peerPtr = prevPtrFromSeg(sh, segAt);
+    const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
     const TValId valNext = nextValFromSeg(sh, peerAt);
     peerPtr.setValue(valNext);
 
@@ -705,12 +702,15 @@ void concretizeObj(
     CL_BREAK_IF(!protoCheckConsistency(sh));
 
     const TObjId seg = sh.objByAddr(addr);
-    const TValId segAt = sh.valRoot(addr);
-    const TValId peer = segPeer(sh, segAt);
+    const TObjId peer = segPeer(sh, seg);
+
+    // TODO: drop this!
+    const TValId segAt = sh.addrOfTarget(seg, /* XXX */ TS_REGION);
+    const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
 
     // handle the possibly empty variant (if exists)
     TMinLen len = sh.segMinLength(seg);
-    spliceOutSegmentIfNeeded(&len, sh, segAt, peer, todo, leakObjs);
+    spliceOutSegmentIfNeeded(&len, sh, segAt, peerAt, todo, leakObjs);
 
     const EObjKind kind = sh.objKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
@@ -725,7 +725,8 @@ void concretizeObj(
     }
 
     // duplicate self as abstract object (including all prototypes)
-    const TValId dup = segDeepCopy(sh, segAt);
+    const TObjId dup = segDeepCopy(sh, seg);
+    const TValId dupAt = sh.addrOfTarget(dup, /* XXX */ TS_REGION);
 
     // resolve the relative placement of the 'next' pointer
     const BindingOff off = sh.segBinding(seg);
@@ -738,7 +739,7 @@ void concretizeObj(
 
     // update 'next' pointer
     const PtrHandle nextPtr(sh, sh.valByOffset(segAt, offNext));
-    const TValId dupHead = segHeadAt(sh, dup);
+    const TValId dupHead = segHeadAt(sh, dupAt);
     nextPtr.setValue(dupHead);
 
     if (OK_DLS == kind) {
@@ -747,7 +748,7 @@ void concretizeObj(
         prev1.setValue(dupHead);
 
         // update 'prev' pointer going from the cloned object to the concrete
-        const PtrHandle prev2(sh, sh.valByOffset(dup, off.next));
+        const PtrHandle prev2(sh, sh.valByOffset(dupAt, off.next));
         const TValId headAddr = sh.valByOffset(segAt, off.head);
         prev2.setValue(headAddr);
 
@@ -758,12 +759,12 @@ void concretizeObj(
     const PtrHandle nextNextPtr = nextPtrFromSeg(sh, dup);
     const TValId nextNextVal = nextNextPtr.value();
     const TValId nextNextRoot = sh.valRoot(nextNextVal);
-    if (nextNextRoot == dup)
+    if (nextNextRoot == dupAt)
         // FIXME: we should do this also the other way around for OK_DLS
         nextNextPtr.setValue(sh.valByOffset(segAt, sh.valOffset(nextNextVal)));
 
-    sh.segSetMinLength(sh.objByAddr(dup), len);
-    sh.segSetMinLength(sh.objByAddr(segPeer(sh, dup)), len);
+    sh.segSetMinLength(dup, len);
+    sh.segSetMinLength(segPeer(sh, dup), len);
 
     LDP_PLOT(symabstract, sh);
 
