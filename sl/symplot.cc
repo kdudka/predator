@@ -43,7 +43,8 @@
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of plotHeap()
 struct PlotData {
-    typedef std::map<TValId, FldList>                       TLiveFields;
+    typedef std::pair<TObjId, TOffset>                      TFieldKey;
+    typedef std::map<TFieldKey, FldList>                    TLiveFields;
     typedef std::pair<int /* ID */, TValId>                 TDangVal;
     typedef std::vector<TDangVal>                           TDangValues;
 
@@ -92,9 +93,9 @@ void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
             continue;
 
         // traverse the outgoing has-value edges
-        FldList liveFields;
-        sh.gatherLiveFields(liveFields, obj);
-        BOOST_FOREACH(const FldHandle &fld, liveFields) {
+        FldList fields;
+        sh.gatherLiveFields(fields, obj);
+        BOOST_FOREACH(const FldHandle &fld, fields) {
             const TValId valInside = fld.value();
             if (0 < valInside)
                 // schedule the value inside for processing
@@ -402,13 +403,13 @@ bool plotField(PlotData &plot, const FieldWrapper &fw, const bool lonely)
             props = ", style=dotted";
     }
 
-    // store address mapping for the live object
-    const TValId at = fld.placedAt();
-    plot.liveFields[at].push_back(fld);
+    // update filed lookup
+    const TObjId obj = fld.obj();
+    const PlotData::TFieldKey key(obj, fld.offset());
+    plot.liveFields[key].push_back(fld);
 
     // cppcheck-suppress unreachableCode
     if (lonely) {
-        const TObjId obj = sh.objByAddr(at);
         const EStorageClass code = sh.objStorClass(obj);
         switch (code) {
             case SC_STATIC:
@@ -971,7 +972,8 @@ void plotNonRootValues(PlotData &plot)
 
     // go through non-roots
     BOOST_FOREACH(const TValId val, plot.values) {
-        if (hasKey(plot.objs, sh.objByAddr(val)) && sh.valRoot(val) == val)
+        const TObjId obj = sh.objByAddr(val);
+        if (hasKey(plot.objs, obj) && sh.valRoot(val) == val)
             continue;
 
         // plot a value node
@@ -991,7 +993,8 @@ void plotNonRootValues(PlotData &plot)
         TValId offEdgeRoot = root;
 
         // assume an off-value
-        PlotData::TLiveFields::const_iterator it = plot.liveFields.find(val);
+        const PlotData::TFieldKey key(obj, sh.valOffset(val));
+        PlotData::TLiveFields::const_iterator it = plot.liveFields.find(key);
         if ((plot.liveFields.end() != it) && (1 == it->second.size())) {
             // exactly one target
             const FldHandle &target = it->second.front();
