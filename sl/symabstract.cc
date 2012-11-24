@@ -303,7 +303,7 @@ void slSegAbstractionStep(
     // replace all references to 'head'
     const TOffset offHead = sh.segBinding(next).head;
     const TValId headAt = sh.valByOffset(at, offHead);
-    sh.valReplace(headAt, segHeadAt(sh, nextAt));
+    sh.valReplace(headAt, segHeadAt(sh, next));
 
     // destroy self, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, obj, slSegAbstractionStep);
@@ -370,7 +370,7 @@ void dlSegGobble(SymHeap &sh, TValId dlsAt, TValId regAt, bool backward)
 
     // replace VAR by DLS
     const TValId headAt = sh.valByOffset(regAt, off.head);
-    sh.valReplace(headAt, segHeadAt(sh, dlsAt));
+    sh.valReplace(headAt, segHeadAt(sh, dls));
     REQUIRE_GC_ACTIVITY(sh, reg, dlSegGobble);
 
     // handle DLS Neq predicates
@@ -388,13 +388,11 @@ void dlSegMerge(SymHeap &sh, TValId seg1At, TValId seg2At)
     // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
 
-    // TODO: drop this!
-    const TObjId peer1   = dlSegPeer(sh, seg1);
-    const TValId peer1At = dlSegPeer(sh, seg1At);
-    const TValId peer2At = dlSegPeer(sh, seg2At);
+    const TObjId peer1 = dlSegPeer(sh, seg1);
+    const TObjId peer2 = dlSegPeer(sh, seg2);
 
     // check for a failure of segDiscover()
-    CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2At));
+    CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2));
 
     // merge data
     const BindingOff &bf2 = sh.segBinding(seg2);
@@ -406,11 +404,11 @@ void dlSegMerge(SymHeap &sh, TValId seg1At, TValId seg2At)
     ptrNext2.setValue(valNext1);
 
     // replace both parts point-wise
-    const TValId headAt = segHeadAt(sh,  seg1At);
-    const TValId peerAt = segHeadAt(sh, peer1At);
+    const TValId headAt = segHeadAt(sh,  seg1);
+    const TValId peerAt = segHeadAt(sh, peer1);
 
-    sh.valReplace(headAt, segHeadAt(sh,  seg2At));
-    sh.valReplace(peerAt, segHeadAt(sh, peer2At));
+    sh.valReplace(headAt, segHeadAt(sh,  seg2));
+    sh.valReplace(peerAt, segHeadAt(sh, peer2));
 
     // destroy headAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
@@ -725,7 +723,6 @@ void concretizeObj(
 
     // duplicate self as abstract object (including all prototypes)
     const TObjId dup = segDeepCopy(sh, seg);
-    const TValId dupAt = sh.addrOfTarget(dup, /* XXX */ TS_REGION);
 
     // resolve the relative placement of the 'next' pointer
     const BindingOff off = sh.segBinding(seg);
@@ -738,7 +735,7 @@ void concretizeObj(
 
     // update 'next' pointer
     const PtrHandle nextPtr(sh, sh.valByOffset(segAt, offNext));
-    const TValId dupHead = segHeadAt(sh, dupAt);
+    const TValId dupHead = segHeadAt(sh, dup);
     nextPtr.setValue(dupHead);
 
     if (OK_DLS == kind) {
@@ -747,7 +744,7 @@ void concretizeObj(
         prev1.setValue(dupHead);
 
         // update 'prev' pointer going from the cloned object to the concrete
-        const PtrHandle prev2(sh, sh.valByOffset(dupAt, off.next));
+        const PtrHandle prev2(sh, dup, off.next);
         const TValId headAddr = sh.valByOffset(segAt, off.head);
         prev2.setValue(headAddr);
 
@@ -757,8 +754,8 @@ void concretizeObj(
     // if there was a self loop from 'next' to the segment itself, recover it
     const PtrHandle nextNextPtr = nextPtrFromSeg(sh, dup);
     const TValId nextNextVal = nextNextPtr.value();
-    const TValId nextNextRoot = sh.valRoot(nextNextVal);
-    if (nextNextRoot == dupAt)
+    const TObjId nextNextObj = sh.objByAddr(nextNextVal);
+    if (nextNextObj == dup)
         // FIXME: we should do this also the other way around for OK_DLS
         nextNextPtr.setValue(sh.valByOffset(segAt, sh.valOffset(nextNextVal)));
 

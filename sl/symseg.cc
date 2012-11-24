@@ -131,13 +131,13 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
         // not abstract objects
         return false;
 
-    const TValId seg = sh.valRoot(atAddr);
-    if (OK_DLS != sh.objKind(sh.objByAddr(seg)))
+    const TObjId seg = sh.objByAddr(atAddr);
+    if (OK_DLS != sh.objKind(seg))
         // not a DLS
         return false;
 
-    const TValId peer = dlSegPeer(sh, seg);
-    if (OK_DLS != sh.objKind(sh.objByAddr(peer)))
+    const TObjId peer = dlSegPeer(sh, seg);
+    if (OK_DLS != sh.objKind(peer))
         // invalid peer
         return false;
 
@@ -214,7 +214,6 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
 TObjId segClone(SymHeap &sh, const TObjId obj)
 {
     const TObjId dup = objClone(sh, obj);
-    const TValId dupAt = sh.addrOfTarget(dup, /* XXX */ TS_REGION);
 
     if (OK_DLS == sh.objKind(obj)) {
         // we need to clone the peer as well
@@ -225,15 +224,13 @@ TObjId segClone(SymHeap &sh, const TObjId obj)
         const TOffset offpSeg  = sh.segBinding(dup).prev;
         const TOffset offpPeer = sh.segBinding(dupPeer).prev;
 
-        const TValId dupPeerAt = sh.addrOfTarget(dupPeer, /* XXX */ TS_REGION);
-
         // resolve selectors -> sub-objects
-        const PtrHandle ppSeg (sh, sh.valByOffset(dupAt, offpSeg));
-        const PtrHandle ppPeer(sh, sh.valByOffset(dupPeerAt, offpPeer));
+        const PtrHandle ppSeg (sh, dup, offpSeg);
+        const PtrHandle ppPeer(sh, dupPeer, offpPeer);
 
         // now cross the 'peer' pointers
-        ppSeg .setValue(segHeadAt(sh, dupPeerAt));
-        ppPeer.setValue(segHeadAt(sh, dupAt));
+        ppSeg .setValue(segHeadAt(sh, dupPeer));
+        ppPeer.setValue(segHeadAt(sh, dup));
     }
 
     return dup;

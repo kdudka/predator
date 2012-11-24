@@ -1455,8 +1455,8 @@ bool dlSegHandleShared(
     const PtrHandle prev1 = prevPtrFromSeg(sh,  seg);
     const PtrHandle prev2 = prevPtrFromSeg(sh, peer);
 
-    prev1.setValue(segHeadAt(sh, peerAt));
-    prev2.setValue(segHeadAt(sh,  segAt));
+    prev1.setValue(segHeadAt(sh, peer));
+    prev2.setValue(segHeadAt(sh,  seg));
 
     CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
     return true;
@@ -2177,7 +2177,7 @@ class MayExistVisitor {
                     return /* continue */ true;
 
                 TObjId seg = sh.objByAddr(valRoot);
-                if (sh.segMinLength(seg) || segHeadAt(sh, valRoot) != val)
+                if (sh.segMinLength(seg) || segHeadAt(sh, seg) != val)
                     return /* continue */ true;
 
                 if (OK_DLS == sh.objKind(seg))

@@ -114,13 +114,14 @@ inline TObjId segPeer(const SymHeap &sh, TObjId seg)
 }
 
 /// return address of segment's head (useful mainly for Linux lists)
-inline TValId segHeadAt(const SymHeap &sh, TValId seg)
+inline TValId segHeadAt(const SymHeap &sh, TObjId seg)
 {
-    CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(!isAbstractValue(sh, seg));
+    CL_BREAK_IF(OK_REGION == sh.objKind(seg));
 
-    const BindingOff &off = sh.segBinding(sh.objByAddr(seg));
-    return const_cast<SymHeap &>(sh).valByOffset(seg, off.head);
+    const BindingOff &off = sh.segBinding(seg);
+
+    SymHeap &shWritable = const_cast<SymHeap &>(sh);
+    return shWritable.addrOfTarget(seg, /* XXX */ TS_REGION, off.head);
 }
 
 /// we do NOT require obj to be an abstract object
