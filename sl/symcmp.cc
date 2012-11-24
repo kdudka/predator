@@ -188,10 +188,6 @@ bool cmpValues(
         // already checked by matchPlainValues()/checkNonPosValues()
         return true;
 
-    if (!matchOffsets(sh1, sh2, v1, v2))
-        // value offset mismatch
-        return false;
-
     const bool isValid1 = sh1.isValid(sh1.objByAddr(v1));
     const bool isValid2 = sh2.isValid(sh2.objByAddr(v2));
     if (isValid1 != isValid2)
@@ -217,6 +213,12 @@ bool cmpValues(
     else
         // no valid target
         return true;
+
+    const ETargetSpecifier ts1 = sh1.targetSpec(v1);
+    const ETargetSpecifier ts2 = sh2.targetSpec(v2);
+    if (ts1 != ts2)
+        // target specifier mismatch
+        return false;
 
     // match roots
     const TValId root1 = sh1.valRoot(v1);

@@ -689,15 +689,21 @@ struct ObjJoinVisitor {
     }
 
     bool operator()(const FldHandle item[3]) {
-        const FldHandle &obj1   = item[0];
-        const FldHandle &obj2   = item[1];
-        const FldHandle &objDst = item[2];
+        const FldHandle &fld1   = item[0];
+        const FldHandle &fld2   = item[1];
+        const FldHandle &fldDst = item[2];
+
+        if (fld1.isValidHandle())
+            ctx.liveList1.push_back(fld1);
+
+        if (fld2.isValidHandle())
+            ctx.liveList2.push_back(fld2);
 
         // check black-list
-        if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
+        if (hasKey(blackList1, fld1) || hasKey(blackList2, fld2))
             return /* continue */ true;
 
-        return joinFreshObjTripple(ctx, obj1, obj2, objDst, ldiff);
+        return joinFreshObjTripple(ctx, fld1, fld2, fldDst, ldiff);
     }
 };
 
@@ -755,11 +761,6 @@ bool traverseRoots(
     const TObjId obj2   = ctx.sh2.objByAddr(root2);
     if (!defineObjectMapping(ctx, objDst, obj1, obj2))
         return false;
-
-    if (VAL_INVALID != root1)
-        ctx.sh1.gatherLiveFields(ctx.liveList1, ctx.sh1.objByAddr(root1));
-    if (VAL_INVALID != root2)
-        ctx.sh2.gatherLiveFields(ctx.liveList2, ctx.sh2.objByAddr(root2));
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx, rootItem.ldiff);
@@ -2874,12 +2875,10 @@ bool joinSymHeaps(
     if (!validateStatus(ctx))
         goto fail;
 
-    if (debuggingSymJoin) {
-        // catch possible regression at this point
-        CL_BREAK_IF((JS_USE_ANY == ctx.status) != areEqual(sh1, sh2));
-        CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh1, ctx.dst));
-        CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
-    }
+    // catch possible regression at this point
+    CL_BREAK_IF((JS_USE_ANY == ctx.status) != areEqual(sh1, sh2));
+    CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh1, ctx.dst));
+    CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
 
     if (JS_THREE_WAY == ctx.status) {
         // create a new trace graph node for JS_THREE_WAY
