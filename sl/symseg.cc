@@ -146,19 +146,19 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
 }
 
 bool haveSegBidir(
-        TValId                     *pDst,
+        TObjId                     *pDst,
         const SymHeap              &sh,
         const EObjKind              kind,
         const TValId                v1,
         const TValId                v2)
 {
     if (haveSeg(sh, v1, v2, kind)) {
-        *pDst = sh.valRoot(v1);
+        *pDst = sh.objByAddr(v1);
         return true;
     }
 
     if (haveSeg(sh, v2, v1, kind)) {
-        *pDst = sh.valRoot(v2);
+        *pDst = sh.objByAddr(v2);
         return true;
     }
 
@@ -180,15 +180,14 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
     if (VAL_NULL == v2 && !sh.valOffset(v1))
         v2 = sh.addrOfTarget(segNextObj(sh, obj1), /* XXX */ TS_REGION);
 
-    TValId seg;
+    TObjId seg;
     if (haveSegBidir(&seg, sh, OK_OBJ_OR_NULL, v1, v2)
             || haveSegBidir(&seg, sh, OK_SEE_THROUGH, v1, v2)
             || haveSegBidir(&seg, sh, OK_SEE_THROUGH_2N, v1, v2))
     {
         // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
-        const TObjId obj = sh.objByAddr(seg);
-        decrementProtoLevel(sh, obj);
-        sh.objSetConcrete(obj);
+        decrementProtoLevel(sh, seg);
+        sh.objSetConcrete(seg);
         return true;
     }
 
@@ -203,7 +202,8 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
     }
 
     if (haveDlSegAt(sh, v1, v2)) {
-        segIncreaseMinLength(sh, v1, /* DLS 2+ */ 2);
+        seg = sh.objByAddr(v1);
+        segIncreaseMinLength(sh, seg, /* DLS 2+ */ 2);
         return true;
     }
 

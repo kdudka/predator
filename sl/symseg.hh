@@ -175,11 +175,9 @@ inline TMinLen objMinLength(const SymHeap &sh, TObjId obj)
 bool segProveNeq(const SymHeap &sh, TValId v1, TValId v2);
 
 /// if the current segment min length is lower than the given one, update it!
-inline void segIncreaseMinLength(SymHeap &sh, const TValId segAt, TMinLen len)
+inline void segIncreaseMinLength(SymHeap &sh, const TObjId seg, TMinLen len)
 {
     CL_BREAK_IF(!len);
-
-    const TObjId seg = sh.objByAddr(segAt);
 
     if (sh.segMinLength(seg) < len) {
         sh.segSetMinLength(seg, len);
