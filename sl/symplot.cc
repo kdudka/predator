@@ -400,10 +400,6 @@ bool plotField(PlotData &plot, const FieldWrapper &fw, const bool lonely)
             break;
 
         case FC_PREV:
-#if !SYMPLOT_DEBUG_DLS
-            if (OK_DLS == sh.objKind(fld.obj()))
-                return false;
-#endif
             // cppcheck-suppress unreachableCode
             color = "gold";
             break;
@@ -681,18 +677,10 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
 
         // plot peer's root value
         plotRootValue(plot, peerAt, color);
-#if !SYMPLOT_DEBUG_DLS
-        // plot peer's uniform blocks
-        plotUniformBlocks(plot, at);
-#endif
 
-#if SYMPLOT_DEBUG_DLS
         FldList peerFields;
         sh.gatherLiveFields(peerFields, peer);
-#else
-        TFldSet peerFields;
-        buildIgnoreList(peerFields, sh, peer);
-#endif
+
         // plot all atomic objects inside
         plotFields(plot, peerAt, peerFields);
     }

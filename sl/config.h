@@ -291,11 +291,6 @@
 #define SH_REUSE_FREE_IDS                   0
 
 /**
- * if 1, write the contents of both parts of a DLS pair
- */
-#define SYMPLOT_DEBUG_DLS                   0
-
-/**
  * if more than zero, jump to debugger as soon as N graph of the same name has
  * been plotted
  */
