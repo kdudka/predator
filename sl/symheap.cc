@@ -2706,7 +2706,7 @@ bool isAnyDataArea(EValueTarget code)
 }
 
 TObjId SymHeapCore::objByAddr(TValId val) const {
-    if (val <= VAL_NULL)
+    if (val < VAL_NULL)
         return OBJ_INVALID;
 
     const BaseValue *valData;

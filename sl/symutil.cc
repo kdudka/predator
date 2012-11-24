@@ -347,42 +347,55 @@ void initGlVar(SymHeap &sh, const CVar &cv)
 }
 
 bool /* anyChange */ redirectRefs(
-        SymHeap                 &sh,
-        const TValId            pointingFrom,
-        const TValId            pointingTo,
-        const TValId            redirectTo,
-        const TOffset           offHead)
+        SymHeap                &sh,
+        const TObjId            pointingFrom,
+        const TObjId            pointingTo,
+        const ETargetSpecifier  pointingWith,
+        const TObjId            redirectTo,
+        const ETargetSpecifier  redirectWith,
+        const TOffset           shiftBy)
 {
     bool anyChange = false;
 
     // go through all objects pointing at/inside pointingTo
     FldList refs;
-    const TObjId obj = sh.objByAddr(pointingTo);
-    sh.pointedBy(refs, obj);
+    sh.pointedBy(refs, pointingTo);
     BOOST_FOREACH(const FldHandle &fld, refs) {
-        if (VAL_INVALID != pointingFrom) {
-            const TValId referrerAt = sh.valRoot(fld.placedAt());
-            if (pointingFrom != referrerAt)
+        if (OBJ_INVALID != pointingFrom) {
+            const TObjId refObj = fld.obj();
+            if (pointingFrom != refObj)
                 // pointed from elsewhere, keep going
                 continue;
         }
 
         // check the current link
         const TValId nowAt = fld.value();
+
+        ETargetSpecifier ts = sh.targetSpec(nowAt);
+        if (TS_INVALID != pointingWith && pointingWith != ts)
+            // target specifier mismatch
+            continue;
+
+        if (TS_INVALID != redirectWith)
+            // use the given target specifier
+            ts = redirectWith;
+
+        // first redirect the target
+        const TValId baseAddr = sh.addrOfTarget(redirectTo, ts);
         TValId result;
 
         const EValueTarget code = sh.valTarget(nowAt);
         if (VT_RANGE == code) {
-            // redirect a value with range offset
+            // shift the base address by range offset
             IR::Range offRange = sh.valOffsetRange(nowAt);
-            offRange.lo -= offHead;
-            offRange.hi -= offHead;
-            result = sh.valByRange(redirectTo, offRange);
+            offRange.lo += shiftBy;
+            offRange.hi += shiftBy;
+            result = sh.valByRange(baseAddr, offRange);
         }
         else {
-            // redirect a value with scalar offset
+            // shift the base address by calar offset
             const TOffset offToRoot = sh.valOffset(nowAt);
-            result = sh.valByOffset(redirectTo, offToRoot - offHead);
+            result = sh.valByOffset(baseAddr, offToRoot + shiftBy);
         }
 
         // store the redirected value

@@ -3095,15 +3095,17 @@ bool joinDataReadOnly(
 
 void recoverPointersToSelf(
         SymHeap                 &sh,
-        const TValId            dst,
-        const TValId            src,
-        const TValId            ghost,
+        const TObjId            dst,
+        const TObjId            src,
+        const TObjId            ghost,
         const bool              bidir)
 {
     redirectRefs(sh,
             /* pointingFrom */  dst,
             /* pointingTo   */  ghost,
-            /* redirectTo   */  dst);
+            /* pointingWith */  TS_INVALID,
+            /* redirectTo   */  dst,
+            /* redirectWith */  TS_INVALID);
 
     if (!bidir)
         return;
@@ -3111,13 +3113,15 @@ void recoverPointersToSelf(
     redirectRefs(sh,
             /* pointingFrom */  src,
             /* pointingTo   */  ghost,
-            /* redirectTo   */  src);
+            /* pointingWith */  TS_INVALID,
+            /* redirectTo   */  src,
+            /* redirectWith */  TS_INVALID);
 }
 
 void recoverPrototypes(
-        SymJoinCtx              &ctx,
-        const TValId            dst,
-        const TValId            ghost)
+        SymJoinCtx             &ctx,
+        const TObjId            dst,
+        const TObjId            ghost)
 {
     const unsigned cntProto = ctx.protos.size();
     if (cntProto)
@@ -3126,9 +3130,11 @@ void recoverPrototypes(
     // go through prototypes
     BOOST_FOREACH(const TObjId protoGhost, ctx.protos) {
         redirectRefs(ctx.dst,
-                /* pointingFrom */  ctx.dst.legacyAddrOfAny_XXX(protoGhost),
+                /* pointingFrom */  protoGhost,
                 /* pointingTo   */  ghost,
-                /* redirectTo   */  dst);
+                /* pointingWith */  TS_INVALID,
+                /* redirectTo   */  dst,
+                /* redirectWith */  TS_INVALID);
     }
 }
 
@@ -3232,13 +3238,9 @@ void joinData(
     if (bidir)
         transferContentsOfGhost(ctx.dst, bf, src, ghost);
 
-    // TODO: drop this!
-    const TValId ghostAt = roMapLookup(ctx.valMap1[0], dstAt);
-    CL_BREAK_IF(ghostAt != roMapLookup(ctx.valMap2[0], srcAt));
-
     // redirect some edges if necessary
-    recoverPrototypes(ctx, dstAt, ghostAt);
-    recoverPointersToSelf(sh, dstAt, srcAt, ghostAt, bidir);
+    recoverPrototypes(ctx, dst, ghost);
+    recoverPointersToSelf(sh, dst, src, ghost, bidir);
     restorePrototypeLengths(ctx);
 
     if (collectJunk(sh, ghost))

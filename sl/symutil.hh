@@ -427,24 +427,29 @@ bool /* complete */ traverseLiveFields(
     return traverseLiveFieldsGeneric<N>(heaps, objs, visitor);
 }
 
-/// (VAL_INVALID != pointingFrom) means 'pointing from anywhere'
+/// (OBJ_INVALID != pointingFrom) means 'pointing from anywhere'
 bool redirectRefs(
-        SymHeap                 &sh,
-        const TValId            pointingFrom,
-        const TValId            pointingTo,
-        const TValId            redirectTo,
+        SymHeap                &sh,
+        const TObjId            pointingFrom,
+        const TObjId            pointingTo,
+        const ETargetSpecifier  pointingWith,
+        const TObjId            redirectTo,
+        const ETargetSpecifier  redirectWith,
         const TOffset           offHead = 0);
 
 inline TObjId objClone(SymHeap &sh, const TObjId obj)
 {
     const TObjId dup = sh.objClone(obj);
 
-    const TValId objAt = sh.addrOfTarget(obj, /* XXX */ TS_REGION);
-    const TValId dupAt = sh.addrOfTarget(dup, /* XXX */ TS_REGION);
-
     // if there was "a pointer to self", it should remain "a pointer to self";
     // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh, dupAt, objAt, dupAt);
+    redirectRefs(sh,
+            /* pointingFrom  */ dup,
+            /* pointingTo    */ obj,
+            /* pointingWith  */ TS_INVALID,
+            /* redirectTo    */ dup,
+            /* redirectWith  */ TS_INVALID);
+
     return dup;
 }
 

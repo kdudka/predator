@@ -108,41 +108,49 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj)
 }
 
 void detachClonedPrototype(
-        SymHeap                 &sh,
-        const TValId            proto,
-        const TValId            clone,
-        const TValId            rootDst,
-        const TValId            rootSrc,
+        SymHeap                &sh,
+        const TObjId            proto,
+        const TObjId            clone,
+        const TObjId            ownerDst,
+        const TObjId            ownerSrc,
         const bool              uplink)
 {
-    const bool isRootDls = (OK_DLS == sh.objKind(sh.objByAddr(rootDst)));
-    CL_BREAK_IF(isRootDls && (OK_DLS != sh.objKind(sh.objByAddr(rootSrc))));
+    const bool isOwnerDls = (OK_DLS == sh.objKind(ownerDst));
+    CL_BREAK_IF(isOwnerDls && (OK_DLS != sh.objKind(ownerSrc)));
 
-    TValId rootDstPeer = VAL_INVALID;
-    TValId rootSrcPeer = VAL_INVALID;
-    if (isRootDls) {
-        rootDstPeer = dlSegPeer(sh, rootDst);
-        rootSrcPeer = dlSegPeer(sh, rootSrc);
-        CL_BREAK_IF(uplink && (rootDstPeer != rootSrcPeer));
+    TObjId ownerDstPeer = OBJ_INVALID;
+    TObjId ownerSrcPeer = OBJ_INVALID;
+    if (isOwnerDls) {
+        ownerDstPeer = dlSegPeer(sh, ownerDst);
+        ownerSrcPeer = dlSegPeer(sh, ownerSrc);
+        CL_BREAK_IF(uplink && (ownerDstPeer != ownerSrcPeer));
     }
 
-    redirectRefs(sh, rootDst, proto, clone);
-    redirectRefs(sh, proto, rootDst, rootSrc);
+    redirectRefs(sh, ownerDst, proto, TS_INVALID, clone, TS_INVALID);
+    redirectRefs(sh, proto, ownerDst, TS_INVALID, ownerSrc, TS_INVALID);
 
-    if (isRootDls) {
+    if (isOwnerDls) {
         if (uplink)
-            redirectRefs(sh, clone, rootSrcPeer, rootDst);
+            redirectRefs(sh, clone, ownerSrcPeer, TS_INVALID,
+                    ownerDst, TS_INVALID);
         else
-            redirectRefs(sh, rootDstPeer, proto, clone);
+            redirectRefs(sh, ownerDstPeer, proto, TS_INVALID,
+                    clone, TS_INVALID);
     }
 
-    if (OK_DLS == sh.objKind(sh.objByAddr(proto))) {
-        const TValId protoPeer = dlSegPeer(sh, proto);
-        const TValId clonePeer = dlSegPeer(sh, clone);
-        redirectRefs(sh, rootDst, protoPeer, clonePeer);
-        redirectRefs(sh, protoPeer, rootDst, rootSrc);
-        if (isRootDls && uplink)
-            redirectRefs(sh, clonePeer, rootSrcPeer, rootDst);
+    if (OK_DLS == sh.objKind(proto)) {
+        const TObjId protoPeer = dlSegPeer(sh, proto);
+        const TObjId clonePeer = dlSegPeer(sh, clone);
+
+        redirectRefs(sh, ownerDst, protoPeer, TS_INVALID,
+                clonePeer, TS_INVALID);
+
+        redirectRefs(sh, protoPeer, ownerDst, TS_INVALID,
+                ownerSrc, TS_INVALID);
+
+        if (isOwnerDls && uplink)
+            redirectRefs(sh, clonePeer, ownerSrcPeer, TS_INVALID,
+                    ownerDst, TS_INVALID);
     }
 }
 
@@ -160,21 +168,20 @@ TObjId protoClone(SymHeap &sh, const TObjId proto)
 
 void clonePrototypes(
         SymHeap                &sh,
-        const TValId            rootDst,
-        const TValId            rootSrc,
+        const TObjId            objDst,
+        const TObjId            objSrc,
         const TObjList         &protoList)
 {
     // allocate some space for clone IDs
     const unsigned cnt = protoList.size();
-    TValList cloneList(cnt);
+    TObjList cloneList(cnt);
 
-    // clone the prototypes and reconnect them to the new root
+    // clone the prototypes and reconnect them to the new owner
     for (unsigned i = 0; i < cnt; ++i) {
-        const TValId proto = sh.legacyAddrOfAny_XXX(protoList[i]);
-        const TValId clone = sh.legacyAddrOfAny_XXX(
-                protoClone(sh, protoList[i]));
+        const TObjId proto = protoList[i];
+        const TObjId clone = protoClone(sh, protoList[i]);
 
-        detachClonedPrototype(sh, proto, clone, rootDst, rootSrc,
+        detachClonedPrototype(sh, proto, clone, objDst, objSrc,
                 /* uplink */ true);
 
         cloneList[i] = clone;
@@ -182,15 +189,15 @@ void clonePrototypes(
 
     // FIXME: works, but likely to kill the CPU
     for (unsigned i = 0; i < cnt; ++i) {
-        const TValId proto = sh.legacyAddrOfAny_XXX(protoList[i]);
-        const TValId clone = cloneList[i];
+        const TObjId proto = protoList[i];
+        const TObjId clone = cloneList[i];
 
         for (unsigned j = 0; j < cnt; ++j) {
             if (i == j)
                 continue;
 
-            const TValId otherProto = sh.legacyAddrOfAny_XXX(protoList[j]);
-            const TValId otherClone = cloneList[j];
+            const TObjId otherProto = protoList[j];
+            const TObjId otherClone = cloneList[j];
             detachClonedPrototype(sh, proto, clone, otherClone, otherProto,
                     /* uplink */ false);
         }
@@ -258,7 +265,7 @@ TValId segDeepCopy(SymHeap &sh, TValId segAt)
     duplicateUnknownValues(sh, dup);
 
     // clone all prototypes originally owned by seg
-    clonePrototypes(sh, segAt, dupAt, protoList);
+    clonePrototypes(sh, seg, dup, protoList);
 
     return dupAt;
 }
@@ -552,31 +559,34 @@ bool applyAbstraction(
     return true;
 }
 
-void dlSegReplaceByConcrete(SymHeap &sh, TValId seg, TValId peerAt)
+void dlSegReplaceByConcrete(SymHeap &sh, TValId segAt, TValId peerAt)
 {
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
     CL_BREAK_IF(!protoCheckConsistency(sh));
 
+    const TObjId seg  = sh.objByAddr(segAt);
     const TObjId peer = sh.objByAddr(peerAt);
 
     // take the value of 'next' pointer from peer
-    const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
+    const PtrHandle peerPtr = prevPtrFromSeg(sh, segAt);
     const TValId valNext = nextValFromSeg(sh, peerAt);
     peerPtr.setValue(valNext);
 
     // redirect all references originally pointing to peer to the current object
     redirectRefs(sh,
-            /* pointingFrom */ VAL_INVALID,
-            /* pointingTo   */ peerAt,
-            /* redirectTo   */ seg);
+            /* pointingFrom */ OBJ_INVALID,
+            /* pointingTo   */ peer,
+            /* pointingWith */ /* XXX */ TS_INVALID,
+            /* redirectTo   */ seg,
+            /* redirectWith */ /* XXX */ TS_REGION);
 
     // destroy peer, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, peer, dlSegReplaceByConcrete);
 
     // concretize self
-    sh.objSetConcrete(sh.objByAddr(seg));
+    sh.objSetConcrete(seg);
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
     CL_BREAK_IF(!protoCheckConsistency(sh));
@@ -609,18 +619,22 @@ void spliceOutListSegment(
         CL_BREAK_IF(offHead != sh.segBinding(peer).head);
         const TValId valPrev = nextValFromSeg(sh, segAt);
         redirectRefs(sh,
-                /* pointingFrom */ VAL_INVALID,
-                /* pointingTo   */ peerAt,
-                /* redirectTo   */ valPrev,
-                /* offHead      */ offHead);
+                /* pointingFrom */ OBJ_INVALID,
+                /* pointingTo   */ peer,
+                /* pointingWith */ TS_INVALID,
+                /* redirectTo   */ sh.objByAddr(valPrev),
+                /* redirectWith */ TS_INVALID,
+                /* offHead      */ sh.valOffset(valPrev) - offHead);
     }
 
     // unlink self
     redirectRefs(sh,
-            /* pointingFrom */ VAL_INVALID,
-            /* pointingTo   */ segAt,
-            /* redirectTo   */ valNext,
-            /* offHead      */ offHead);
+            /* pointingFrom */ OBJ_INVALID,
+            /* pointingTo   */ seg,
+            /* pointingWith */ TS_INVALID,
+            /* redirectTo   */ sh.objByAddr(valNext),
+            /* redirectWith */ TS_INVALID,
+            /* offHead      */ sh.valOffset(valNext) - offHead);
 
     collectSharedJunk(sh, seg, leakObjs);
 
