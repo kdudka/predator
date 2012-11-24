@@ -101,8 +101,8 @@ bool translateValId(
         const TValMap           &valMap);
 
 TValId translateValProto(
-        SymHeap                 &dst,
-        const SymHeap           &src,
+        SymHeapCore             &dst,
+        const SymHeapCore       &src,
         const TValId             valProto);
 
 inline FldHandle translateFldHandle(
@@ -435,14 +435,16 @@ bool redirectRefs(
         const TValId            redirectTo,
         const TOffset           offHead = 0);
 
-inline TValId objClone(SymHeap &sh, const TValId root)
+inline TObjId objClone(SymHeap &sh, const TObjId obj)
 {
-    CL_BREAK_IF(sh.valOffset(root));
-    const TValId dup = sh.valClone(root);
+    const TObjId dup = sh.objClone(obj);
+
+    const TValId objAt = sh.addrOfTarget(obj, /* XXX */ TS_REGION);
+    const TValId dupAt = sh.addrOfTarget(dup, /* XXX */ TS_REGION);
 
     // if there was "a pointer to self", it should remain "a pointer to self";
     // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh, dup, root, dup);
+    redirectRefs(sh, dupAt, objAt, dupAt);
     return dup;
 }
 

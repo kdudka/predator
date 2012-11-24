@@ -319,8 +319,8 @@ bool translateValId(
 }
 
 TValId translateValProto(
-        SymHeap                 &dst,
-        const SymHeap           &src,
+        SymHeapCore             &dst,
+        const SymHeapCore       &src,
         const TValId             valProto)
 {
     if (valProto <= 0)

@@ -1663,48 +1663,6 @@ unsigned SymHeapCore::lastId() const
     return d->ents.lastId<unsigned>();
 }
 
-TValId SymHeapCore::valClone(TValId val)
-{
-    const BaseValue *valData;
-    d->ents.getEntRO(&valData, val);
-
-    const EValueTarget code = valData->code;
-    if (VT_CUSTOM == code) {
-        CL_BREAK_IF("custom values are not supposed to be cloned");
-        return val;
-    }
-
-    if (VT_OBJECT == code && (isProgramVar(
-                    this->objStorClass(this->objByAddr(val)))))
-    {
-        CL_BREAK_IF("program variables are not supposed to be cloned");
-        return val;
-    }
-
-    const TValId root = valData->valRoot;
-    if (VAL_NULL == root) {
-        CL_BREAK_IF("VAL_NULL is not supposed to be cloned");
-        return val;
-    }
-
-    if (VT_RANGE == code) {
-        CL_DEBUG("support for VT_RANGE in valClone() is experimental");
-        const IR::Range range = this->valOffsetRange(val);
-        return this->valByRange(valData->valRoot, range);
-    }
-
-    if (!isAnyDataArea(code))
-        // duplicate an unknown value
-        return d->valDup(val);
-
-    // duplicate an object
-    const TObjId obj = this->objByAddr(root);
-    const TObjId dup = this->objClone(obj);
-
-    // return the corresponding address
-    return this->addrOfTarget(dup, TS_REGION, valData->offRoot);
-}
-
 TFldId SymHeapCore::Private::copySingleLiveBlock(
         const TObjId                objDst,
         Region                     *objDataDst,

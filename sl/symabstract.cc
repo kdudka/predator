@@ -74,11 +74,23 @@ struct UnknownValuesDuplicator {
 
         SymHeapCore *sh = fld.sh();
         const EValueTarget code = sh->valTarget(valOld);
-        if (isPossibleToDeref(*sh, valOld) || (VT_CUSTOM == code))
-            return /* continue */ true;
+        switch (code) {
+            case VT_INVALID:
+            case VT_COMPOSITE:
+                CL_BREAK_IF("UnknownValuesDuplicator sees an invalid target");
+                // fall through!
+
+            case VT_CUSTOM:
+            case VT_OBJECT:
+            case VT_RANGE:
+                return /* continue */ true;
+
+            case VT_UNKNOWN:
+                break;
+        }
 
         // duplicate unknown value
-        const TValId valNew = sh->valClone(valOld);
+        const TValId valNew = translateValProto(*sh, *sh, valOld);
         fld.setValue(valNew);
 
         return /* continue */ true;
@@ -230,22 +242,25 @@ void dlSegSyncPeerData(SymHeap &sh, const TValId dlsAt)
 }
 
 // FIXME: the semantics of this function is quite contra-intuitive
-TValId segDeepCopy(SymHeap &sh, TValId seg)
+TValId segDeepCopy(SymHeap &sh, TValId segAt)
 {
+    const TObjId seg = sh.objByAddr(segAt);
+
     // collect the list of prototypes
     TObjList protoList;
-    collectPrototypesOf(protoList, sh, sh.objByAddr(seg), /* skipPeers */ true);
+    collectPrototypesOf(protoList, sh, seg, /* skipPeers */ true);
 
-    // clone the root itself
-    const TValId dup = objClone(sh, seg);
+    // clone the object itself
+    const TObjId dup = objClone(sh, seg);
+    const TValId dupAt = sh.addrOfTarget(dup, /* XXX */ TS_REGION);
 
     // clone all unknown values in order to keep prover working
-    duplicateUnknownValues(sh, dup);
+    duplicateUnknownValues(sh, dupAt);
 
     // clone all prototypes originally owned by seg
-    clonePrototypes(sh, seg, dup, protoList);
+    clonePrototypes(sh, segAt, dupAt, protoList);
 
-    return dup;
+    return dupAt;
 }
 
 void enlargeMayExist(SymHeap &sh, const TValId at)

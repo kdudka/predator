@@ -483,9 +483,6 @@ class SymHeapCore {
         /// clone the given object, including the outgoing has-value edges
         virtual TObjId objClone(TObjId);
 
-        /// clone of the given value (deep copy)
-        virtual TValId valClone(TValId);
-
     public:
         /// replace all occurrences of val by replaceBy
         virtual void valReplace(TValId val, TValId replaceBy);

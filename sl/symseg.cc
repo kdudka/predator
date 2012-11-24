@@ -210,27 +210,31 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
 
 TValId segClone(SymHeap &sh, const TValId root)
 {
-    const TValId dup = objClone(sh, root);
+    const TObjId obj = sh.objByAddr(root);
+    const TObjId dup = objClone(sh, obj);
+    const TValId dupAt = sh.addrOfTarget(dup, /* XXX */ TS_REGION);
 
-    if (OK_DLS == sh.objKind(sh.objByAddr(root))) {
+    if (OK_DLS == sh.objKind(obj)) {
         // we need to clone the peer as well
-        const TValId peer = dlSegPeer(sh, root);
-        const TValId dupPeer = sh.valClone(peer);
+        const TObjId peer = dlSegPeer(sh, obj);
+        const TObjId dupPeer = sh.objClone(peer);
 
         // dig the 'peer' selectors of the cloned objects
-        const TOffset offpSeg  = sh.segBinding(sh.objByAddr(dup)).prev;
-        const TOffset offpPeer = sh.segBinding(sh.objByAddr(dupPeer)).prev;
+        const TOffset offpSeg  = sh.segBinding(dup).prev;
+        const TOffset offpPeer = sh.segBinding(dupPeer).prev;
+
+        const TValId dupPeerAt = sh.addrOfTarget(dupPeer, /* XXX */ TS_REGION);
 
         // resolve selectors -> sub-objects
-        const PtrHandle ppSeg (sh, sh.valByOffset(dup, offpSeg));
-        const PtrHandle ppPeer(sh, sh.valByOffset(dupPeer, offpPeer));
+        const PtrHandle ppSeg (sh, sh.valByOffset(dupAt, offpSeg));
+        const PtrHandle ppPeer(sh, sh.valByOffset(dupPeerAt, offpPeer));
 
         // now cross the 'peer' pointers
-        ppSeg .setValue(segHeadAt(sh, dupPeer));
-        ppPeer.setValue(segHeadAt(sh, dup));
+        ppSeg .setValue(segHeadAt(sh, dupPeerAt));
+        ppPeer.setValue(segHeadAt(sh, dupAt));
     }
 
-    return dup;
+    return dupAt;
 }
 
 TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
