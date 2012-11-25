@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2012 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -29,7 +29,6 @@
 #include "symgc.hh"
 #include "symplot.hh"
 #include "symseg.hh"
-#include "symstate.hh"
 #include "symutil.hh"
 #include "symtrace.hh"
 #include "worklist.hh"
@@ -113,15 +112,6 @@ struct SchedItem {
     SchedItem(TValId v1_, TValId v2_, TProtoLevel ldiff_):
         v1(v1_),
         v2(v2_),
-        ldiff(ldiff_)
-    {
-    }
-
-    /// TODO: drop this!
-    SchedItem(SymHeap &sh1, SymHeap &sh2, TObjId obj1, TObjId obj2,
-            TProtoLevel ldiff_):
-        v1(sh1.addrOfTarget(obj1, /* XXX */ TS_REGION)),
-        v2(sh2.addrOfTarget(obj2, /* XXX */ TS_REGION)),
         ldiff(ldiff_)
     {
     }
@@ -1430,13 +1420,6 @@ bool dlSegHandleShared(
     // this should follow the 'next' pointer as long as we have a consistent DLS
     const TObjId peer1 = dlSegPeer(ctx.sh1, obj1);
     const TObjId peer2 = dlSegPeer(ctx.sh2, obj2);
-    const SchedItem peerItem(ctx.sh1, ctx.sh2, peer1, peer2, item.ldiff);
-    if (!followRootValuesCore(ctx, peerItem, action, readOnly))
-        return false;
-
-    if (readOnly)
-        // we are done
-        return true;
 
     // check the mapping
     TObjMap &objMap1 = ctx.objMap1[/* ltr */ 0];
@@ -1459,6 +1442,14 @@ bool dlSegHandleShared(
     SymHeap &sh = ctx.dst;
     const PtrHandle prev1 = prevPtrFromSeg(sh,  seg);
     const PtrHandle prev2 = prevPtrFromSeg(sh, peer);
+
+    const SchedItem peerItem(prev1.value(), prev2.value(), item.ldiff);
+    if (!followRootValuesCore(ctx, peerItem, action, readOnly))
+        return false;
+
+    if (readOnly)
+        // we are done
+        return true;
 
     prev1.setValue(segHeadAt(sh, peer));
     prev2.setValue(segHeadAt(sh,  seg));
@@ -1607,7 +1598,7 @@ bool followRootValues(
 
     const TObjMapBidir &objMap = (isDls1) ? ctx.objMap1 : ctx.objMap2;
     if (hasKey(objMap[0], (isDls1) ? peer1 : peer2))
-        // alredy cloned
+        // already cloned
         return true;
 
     /// TODO: drop this!
@@ -1715,6 +1706,7 @@ bool joinSegmentWithAny(
 
     const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1));
     const bool isDls2 = (OK_DLS == ctx.sh2.objKind(obj2));
+    const bool haveDls = (isDls1 || isDls2);
 
     TObjId peer1 = obj1;
     if (isDls1)
@@ -1723,14 +1715,6 @@ bool joinSegmentWithAny(
     TObjId peer2 = obj2;
     if (isDls2)
         peer2 = dlSegPeer(ctx.sh2, obj2);
-
-    const SchedItem peerItem(ctx.sh1, ctx.sh2, peer1, peer2, item.ldiff);
-
-    const bool haveDls = (isDls1 || isDls2);
-    if (firstTryReadOnly
-            && haveDls
-            && !followRootValues(ctx, peerItem, action, /* RO */ true))
-        return false;
 
     const EObjKind kind = (JS_USE_SH1 == action)
         ? ctx.sh1.objKind(obj1)
@@ -1766,10 +1750,11 @@ bool joinSegmentWithAny(
     /// TODO: drop this!
     const TValId peer1At = ctx.sh1.addrOfTarget(peer1, /* XXX */ TS_REGION);
     const TValId peer2At = ctx.sh2.addrOfTarget(peer2, /* XXX */ TS_REGION);
+    if (segAlreadyJoined(ctx, peer1At, peer2At, action))
+        return true;
 
-    if (!segAlreadyJoined(ctx, peer1At, peer2At, action))
-        *pResult = followRootValues(ctx, peerItem, action);
-
+    const SchedItem peerItem(peer1At, peer2At, item.ldiff);
+    *pResult = followRootValues(ctx, peerItem, action);
     return true;
 }
 
@@ -1975,7 +1960,7 @@ bool insertSegmentClone(
         }
 
         if (nextGt == valGt)
-            // do not go byond the segment, just follow its data
+            // do not go beyond the segment, just follow its data
             continue;
 
         if (segAt != valGt)
@@ -3074,7 +3059,7 @@ bool joinDataReadOnly(
     SJ_DEBUG("--> joinDataReadOnly" << SJ_OBJP(obj1, obj2));
     Trace::waiveCloneOperation(sh);
 
-    // go through the commont part of joinData()/joinDataReadOnly()
+    // go through the common part of joinData()/joinDataReadOnly()
     SymHeap tmp(sh.stor(), new Trace::TransientNode("joinDataReadOnly()"));
     SymJoinCtx ctx(tmp, sh);
 
