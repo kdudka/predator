@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2012 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -65,7 +65,37 @@ struct PlotData {
     }
 };
 
+#define GEN_labelByCode(cst) case cst: return #cst
+
 #define SL_QUOTE(what) "\"" << what << "\""
+
+const char* labelByStorClass(const EStorageClass code)
+{
+    switch (code) {
+        GEN_labelByCode(SC_INVALID);
+        GEN_labelByCode(SC_UNKNOWN);
+        GEN_labelByCode(SC_STATIC);
+        GEN_labelByCode(SC_ON_HEAP);
+        GEN_labelByCode(SC_ON_STACK);
+    }
+
+    CL_BREAK_IF("invalid call of labelByStorClass()");
+    return "";
+}
+
+const char* labelByTargetSpec(const ETargetSpecifier code)
+{
+    switch (code) {
+        GEN_labelByCode(TS_INVALID);
+        GEN_labelByCode(TS_REGION);
+        GEN_labelByCode(TS_FIRST);
+        GEN_labelByCode(TS_LAST);
+        GEN_labelByCode(TS_ALL);
+    }
+
+    CL_BREAK_IF("invalid call of labelByTargetSpec()");
+    return "";
+}
 
 void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
 {
@@ -113,14 +143,6 @@ inline const char* offPrefix(const TOffset off)
 }
 
 #define SIGNED_OFF(off) offPrefix(off) << (off)
-
-inline void appendLabelIf(std::ostream &str, const char *label)
-{
-    if (!label)
-        return;
-
-    str << ", label=\"" << label << "\"";
-}
 
 void plotOffset(PlotData &plot, const TOffset off, const int from, const int to)
 {
@@ -325,7 +347,7 @@ void plotRawObject(PlotData &plot, const TObjId obj, const char *color)
     else
         plot.out << "#" << obj;
 
-    plot.out << " [size = ";
+    plot.out << " [" << labelByStorClass(code) << ", size = ";
     printRawRange(plot.out, size, " B");
     plot.out << "]\"];\n";
 }
@@ -725,8 +747,6 @@ void plotObjects(PlotData &plot)
     }
 }
 
-#define GEN_labelByCode(cst) case cst: return #cst
-
 const char* labelByOrigin(const EValueOrigin code)
 {
     switch (code) {
@@ -919,6 +939,11 @@ preserve_suffix:
         const IR::Range &offRange = sh.valOffsetRange(val);
         plot.out << " [off = ";
         printRawRange(plot.out, offRange);
+
+        const ETargetSpecifier ts = sh.targetSpec(val);
+        if (TS_REGION != ts)
+            plot.out << ", " << labelByTargetSpec(ts);
+
         plot.out << ", obj = #" << obj << "]";
     }
 
@@ -1016,8 +1041,7 @@ void plotAuxValue(
         PlotData                       &plot,
         const int                       node,
         const TValId                    val,
-        const bool                      isObj,
-        const char                     *edgeLabel = 0)
+        const bool                      isObj)
 {
     const char *color = "blue";
     const char *label = "NULL";
@@ -1045,16 +1069,12 @@ void plotAuxValue(
         << ", label=" << SL_QUOTE(label) << "];\n";
 
     const char *prefix = "";
-    if (edgeLabel)
-        prefix = "fld";
-    else if (!isObj)
+    if (!isObj)
         prefix = "lonely";
 
     plot.out << "\t" << SL_QUOTE(prefix << node)
         << " -> " << SL_QUOTE("lonely" << id)
-        << " [color=blue, fontcolor=blue";
-    appendLabelIf(plot.out, edgeLabel);
-    plot.out << "];\n";
+        << " [color=blue, fontcolor=blue];\n";
 }
 
 void plotHasValue(
