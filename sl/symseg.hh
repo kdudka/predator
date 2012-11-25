@@ -176,16 +176,22 @@ inline void segIncreaseMinLength(SymHeap &sh, const TObjId seg, TMinLen len)
 /// we know (v1 != v2), update related segments in the given heap accordingly!
 bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2);
 
-inline bool objWithBinding(const SymHeap &sh, const TValId root)
+inline bool objWithBinding(const SymHeap &sh, const TObjId obj)
 {
-    CL_BREAK_IF(sh.valOffset(root));
+    const EObjKind kind = sh.objKind(obj);
+    switch (kind) {
+        case OK_REGION:
+        case OK_OBJ_OR_NULL:
+            return false;
 
-    if (!isAbstractValue(sh, root))
-        // not even an abstract object
-        return false;
+        case OK_SLS:
+        case OK_DLS:
+        case OK_SEE_THROUGH:
+        case OK_SEE_THROUGH_2N:
+            break;
+    }
 
-    const EObjKind kind = sh.objKind(sh.objByAddr(root));
-    return (OK_OBJ_OR_NULL != kind);
+    return true;
 }
 
 /// clone an object; in case of DLS, clone both parts of it

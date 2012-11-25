@@ -869,22 +869,22 @@ TObjType joinClt(
 }
 
 bool joinObjKind(
-        EObjKind                *pDst,
-        const SymJoinCtx        &ctx,
-        const TValId            v1,
-        const TValId            v2,
+        EObjKind               *pDst,
+        const SymJoinCtx       &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2,
         const EJoinStatus       action)
 {
-    CL_BREAK_IF(VAL_INVALID == v1 && VAL_INVALID == v2);
+    CL_BREAK_IF(OBJ_INVALID == obj1 && OBJ_INVALID == obj2);
 
-    const EObjKind kind1 = ctx.sh1.objKind(ctx.sh1.objByAddr(v1));
-    if (VAL_INVALID == v2) {
+    const EObjKind kind1 = ctx.sh1.objKind(obj1);
+    if (OBJ_INVALID == obj2) {
         *pDst = kind1;
         return true;
     }
 
-    const EObjKind kind2 = ctx.sh2.objKind(ctx.sh2.objByAddr(v2));
-    if (VAL_INVALID == v1) {
+    const EObjKind kind2 = ctx.sh2.objKind(obj2);
+    if (OBJ_INVALID == obj1) {
         *pDst = kind2;
         return true;
     }
@@ -917,7 +917,7 @@ bool joinObjKind(
             return true;
 
         default:
-            SJ_DEBUG("<-- object kind mismatch " << SJ_VALP(v1, v2));
+            SJ_DEBUG("<-- object kind mismatch " << SJ_OBJP(obj1, obj2));
             return false;
     }
 }
@@ -939,15 +939,12 @@ bool matchBindingFieldsByValue(
 }
 
 bool joinSegBindingOfMayExist(
-        bool                    *pResult,
-        BindingOff              *pOff,
-        const SymJoinCtx        &ctx,
-        const TValId            seg1,
-        const TValId            seg2)
+        bool                   *pResult,
+        BindingOff             *pOff,
+        const SymJoinCtx       &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2)
 {
-    const TObjId obj1 = ctx.sh1.objByAddr(seg1);
-    const TObjId obj2 = ctx.sh2.objByAddr(seg2);
-
     const EObjKind kind1 = ctx.sh1.objKind(obj1);
     const EObjKind kind2 = ctx.sh2.objKind(obj2);
 
@@ -996,23 +993,20 @@ match:
 }
 
 bool joinSegBinding(
-        BindingOff              *pOff,
-        const SymJoinCtx        &ctx,
-        const TValId            v1,
-        const TValId            v2)
+        BindingOff             *pOff,
+        const SymJoinCtx       &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2)
 {
-    const bool isSeg1 = objWithBinding(ctx.sh1, v1);
-    const bool isSeg2 = objWithBinding(ctx.sh2, v2);
+    const bool isSeg1 = objWithBinding(ctx.sh1, obj1);
+    const bool isSeg2 = objWithBinding(ctx.sh2, obj2);
     if (!isSeg1 && !isSeg2)
         // nothing to join here
         return true;
 
-    const TObjId obj1 = ctx.sh1.objByAddr(v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(v2);
-
     if (isSeg1 && isSeg2) {
         bool result;
-        if (!joinSegBindingOfMayExist(&result, pOff, ctx, v1, v2)) {
+        if (!joinSegBindingOfMayExist(&result, pOff, ctx, obj1, obj2)) {
             // just compare the binding offsets
             const BindingOff off1 = ctx.sh1.segBinding(obj1);
             const BindingOff off2 = ctx.sh2.segBinding(obj2);
@@ -1023,7 +1017,7 @@ bool joinSegBinding(
         if (result)
             return true;
 
-        SJ_DEBUG("<-- segment binding mismatch " << SJ_VALP(v1, v2));
+        SJ_DEBUG("<-- segment binding mismatch " << SJ_OBJP(obj1, obj2));
         return false;
     }
 
@@ -1307,11 +1301,11 @@ bool createObject(
         return false;
 
     EObjKind kind;
-    if (!joinObjKind(&kind, ctx, root1, root2, action))
+    if (!joinObjKind(&kind, ctx, obj1, obj2, action))
         return false;
 
     BindingOff off;
-    if (!joinSegBinding(&off, ctx, root1, root2))
+    if (!joinSegBinding(&off, ctx, obj1, obj2))
         return false;
 
     TProtoLevel protoLevel;
