@@ -1601,29 +1601,29 @@ bool segAlreadyJoined(
 }
 
 bool joinSegmentWithAny(
-        bool                    *pResult,
-        SymJoinCtx              &ctx,
-        const SchedItem         &item,
+        bool                   *pResult,
+        SymJoinCtx             &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2,
+        const TProtoLevel       ldiff,
         const EJoinStatus       action,
         bool                    firstTryReadOnly = true)
 {
-    const TValId root1 = item.v1;
-    const TValId root2 = item.v2;
+    // TODO: drop this!
+    const TValId root1 = ctx.sh1.addrOfTarget(obj1, /* XXX */ TS_REGION);
+    const TValId root2 = ctx.sh2.addrOfTarget(obj2, /* XXX */ TS_REGION);
     if (segAlreadyJoined(ctx, root1, root2, action)) {
         // already joined
         *pResult = true;
         return true;
     }
 
-    const TObjId obj1 = ctx.sh1.objByAddr(root1);
-    const TObjId obj2 = ctx.sh2.objByAddr(root2);
-
     const bool isValid1 = isPossibleToDeref(ctx.sh1, root1);
     const bool isValid2 = isPossibleToDeref(ctx.sh2, root2);
     if (!isValid1 || !isValid2)
         return false;
 
-    if (firstTryReadOnly && !joinObjects(ctx, obj1, obj2, item.ldiff, action,
+    if (firstTryReadOnly && !joinObjects(ctx, obj1, obj2, ldiff, action,
                 /* RO */ true))
         return false;
 
@@ -1666,7 +1666,7 @@ bool joinSegmentWithAny(
 
     // go ahead, try it read-write!
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
-    *pResult = joinObjects(ctx, obj1, obj2, item.ldiff, action);
+    *pResult = joinObjects(ctx, obj1, obj2, ldiff, action);
     if (!haveDls || !*pResult)
         return true;
 
@@ -1676,7 +1676,7 @@ bool joinSegmentWithAny(
     if (segAlreadyJoined(ctx, peer1At, peer2At, action))
         return true;
 
-    *pResult = joinObjects(ctx, peer1, peer2, item.ldiff, action);
+    *pResult = joinObjects(ctx, peer1, peer2, ldiff, action);
     return true;
 }
 
@@ -1957,18 +1957,20 @@ bool joinAbstractValues(
     const TValId v2 = item.v2;
     resolveMayExist(ctx, &isAbs1, &isAbs2, v1, v2);
 
-    const TValId root1 = ctx.sh1.valRoot(v1);
-    const TValId root2 = ctx.sh2.valRoot(v2);
-    const SchedItem rootItem(root1, root2, item.ldiff);
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+    const TProtoLevel ldiff = item.ldiff;
 
-    if (isAbs1 && isAbs2
-            && joinSegmentWithAny(pResult, ctx, rootItem, JS_USE_ANY))
+    if (isAbs1 && isAbs2 && joinSegmentWithAny(
+                pResult, ctx, obj1, obj2, ldiff, JS_USE_ANY))
         goto done;
 
-    if (!isAbs2 && joinSegmentWithAny(pResult, ctx, rootItem, JS_USE_SH1))
+    if (!isAbs2 && joinSegmentWithAny(
+                pResult, ctx, obj1, obj2, ldiff, JS_USE_SH1))
         goto done;
 
-    if (!isAbs1 && joinSegmentWithAny(pResult, ctx, rootItem, JS_USE_SH2))
+    if (!isAbs1 && joinSegmentWithAny(
+                pResult, ctx, obj1, obj2, ldiff, JS_USE_SH2))
         goto done;
 
     if (isAbs1 && insertSegmentClone(pResult, ctx, item, JS_USE_SH1))
