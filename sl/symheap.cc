@@ -2613,11 +2613,6 @@ TValId SymHeapCore::addrOfTarget(TObjId obj, ETargetSpecifier ts, TOffset off)
     return this->valByOffset(base, off);
 }
 
-TValId SymHeapCore::legacyAddrOfAny_XXX(TObjId reg) const
-{
-    return const_cast<SymHeapCore *>(this)->addrOfTarget(reg, TS_REGION);
-}
-
 EValueOrigin SymHeapCore::valOrigin(TValId val) const
 {
     switch (val) {

@@ -455,9 +455,6 @@ class SymHeapCore {
         /// target address at the given object with target specifier and offset
         virtual TValId addrOfTarget(TObjId, ETargetSpecifier, TOffset off = 0);
 
-        /// TODO: drop this!
-        TValId legacyAddrOfAny_XXX(TObjId) const;
-
     public:
         /// return the address of the root which the given value is binded to
         TValId valRoot(TValId) const;

@@ -1315,10 +1315,9 @@ bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
         const struct cl_loc             *loc,
-        const TValList                  &startingPoints,
-        const bool                      digForward)
+        const TValList                  &startingPoints)
 {
-    HeapCrawler crawler(sh, digForward);
+    HeapCrawler crawler(sh);
 
     BOOST_FOREACH(const TValId val, startingPoints)
         crawler.digVal(val);
@@ -1336,6 +1335,20 @@ bool plotHeap(
     TObjList allObjs;
     sh.gatherObjects(allObjs);
     BOOST_FOREACH(const TObjId obj, allObjs)
+        crawler.digObj(obj);
+
+    return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals());
+}
+
+bool plotHeap(
+        const SymHeap                   &sh,
+        const std::string               &name,
+        const struct cl_loc             *loc,
+        const TObjSet                   &objs)
+{
+    HeapCrawler crawler(sh, /* digForward */ false);
+
+    BOOST_FOREACH(const TObjId obj, objs)
         crawler.digObj(obj);
 
     return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals());

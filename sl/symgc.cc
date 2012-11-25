@@ -178,11 +178,7 @@ void LeakMonitor::leave()
     if (!::debuggingGarbageCollector || leakObjs_.empty())
         return;
 
-    TValList addrs;
-    BOOST_FOREACH(const TObjId obj, leakObjs_)
-        addrs.push_back(snap_.legacyAddrOfAny_XXX(obj));
-
-    plotHeap(snap_, "memleak", /* loc */ 0, addrs, /* digForward */ false);
+    plotHeap(snap_, "memleak", /* loc */ 0, leakObjs_);
 }
 
 bool /* leaking */ LeakMonitor::importLeakObjs(TObjSet *leakObjs)
