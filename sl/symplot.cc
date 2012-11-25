@@ -300,17 +300,41 @@ void printRawRange(
         str << ", alignment = " << rng.alignment << suffix;
 }
 
+void plotRawObject(PlotData &plot, const TObjId obj, const char *color)
+{
+    SymHeap &sh = plot.sh;
+    const TSizeRange size = sh.objSize(obj);
+
+    const bool isValid = sh.isValid(obj);
+    if (!isValid)
+        color = "red";
+
+    plot.out << "\t" << SL_QUOTE(obj)
+        << " [shape=box"
+        << ", color=" << color
+        << ", fontcolor=" << color
+        << ", label=\"";
+
+    if (!sh.isValid(obj))
+        plot.out << "[INVALID] ";
+
+    const EStorageClass code = sh.objStorClass(obj);
+    if (isProgramVar(code))
+        describeVar(plot, obj);
+    else
+        plot.out << "#" << obj;
+
+    plot.out << " [size = ";
+    printRawRange(plot.out, size, " B");
+    plot.out << "]\"];\n";
+}
+
+/// TODO: drop this!
 void plotRootValue(PlotData &plot, const TValId val, const char *color)
 {
     SymHeap &sh = plot.sh;
     CL_BREAK_IF(sh.valOffset(val));
-    const TObjId obj = sh.objByAddr(val);
-    const TSizeRange size = sh.objSize(obj);
     const unsigned refCnt = sh.usedByCount(val);
-
-    const bool isValid = sh.isValid(sh.objByAddr(val));
-    if (!isValid)
-        color = "red";
 
     // visualize the count of references as pen width
     const float pw = static_cast<float>(1U + refCnt);
@@ -318,23 +342,9 @@ void plotRootValue(PlotData &plot, const TValId val, const char *color)
         << " [shape=ellipse, penwidth=" << pw
         << ", color=" << color
         << ", fontcolor=" << color
-        << ", label=\"";
-
-    const EStorageClass code = sh.objStorClass(obj);
-    if (isProgramVar(code))
-        describeVar(plot, obj);
-    else
-        plot.out << "#" << val;
-
-    if (!sh.isValid(obj))
-        plot.out << " [INVALID]";
-
-    if (OBJ_INVALID != obj)
-        plot.out << " [obj=#" << obj << "]";
-
-    plot.out << " [size = ";
-    printRawRange(plot.out, size, " B");
-    plot.out << "]\"];\n";
+        << ", label=\""
+        << "#" << val
+        << "\"];\n";
 }
 
 enum EFieldClass {
@@ -470,10 +480,9 @@ void plotUniformBlocks(PlotData &plot, const TValId root)
 }
 
 template <class TCont>
-void plotFields(PlotData &plot, const TValId at, const TCont &liveFields)
+void plotFields(PlotData &plot, const TObjId obj, const TCont &liveFields)
 {
     SymHeap &sh = plot.sh;
-    const TObjId obj = sh.objByAddr(at);
 
     FldHandle next;
     FldHandle prev;
@@ -522,8 +531,8 @@ void plotFields(PlotData &plot, const TValId at, const TCont &liveFields)
             if (!plotField(plot, fw, /* lonely */ false))
                 continue;
 
-            // connect the inner object with the root by an offset edge
-            plotOffset(plot, off, at, fw.fld.fieldId());
+            // connect the field with the object by an offset edge
+            plotOffset(plot, off, obj, fw.fld.fieldId());
         }
     }
 }
@@ -651,6 +660,8 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
         << "\n\tpenwidth=" << pw
         << ";\n";
 
+    plotRawObject(plot, obj, color);
+
     const TValId at = sh.legacyAddrOfAny_XXX(obj);
 
     // plot the root value
@@ -660,13 +671,15 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
     plotUniformBlocks(plot, at);
 
     // plot all atomic objects inside
-    plotFields(plot, at, liveFields);
+    plotFields(plot, obj, liveFields);
 
     // in case of DLS, plot the corresponding peer
     TObjId peer;
     if (OK_DLS == sh.objKind(obj)
             && OK_DLS == sh.objKind((peer = dlSegPeer(sh, obj))))
     {
+        plotRawObject(plot, peer, color);
+
         const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
 
         // plot peer's root value
@@ -676,7 +689,7 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
         sh.gatherLiveFields(peerFields, peer);
 
         // plot all atomic objects inside
-        plotFields(plot, peerAt, peerFields);
+        plotFields(plot, peer, peerFields);
     }
 
     // close cluster
