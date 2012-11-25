@@ -329,24 +329,6 @@ void plotRawObject(PlotData &plot, const TObjId obj, const char *color)
     plot.out << "]\"];\n";
 }
 
-/// TODO: drop this!
-void plotRootValue(PlotData &plot, const TValId val, const char *color)
-{
-    SymHeap &sh = plot.sh;
-    CL_BREAK_IF(sh.valOffset(val));
-    const unsigned refCnt = sh.usedByCount(val);
-
-    // visualize the count of references as pen width
-    const float pw = static_cast<float>(1U + refCnt);
-    plot.out << "\t" << SL_QUOTE(val)
-        << " [shape=ellipse, penwidth=" << pw
-        << ", color=" << color
-        << ", fontcolor=" << color
-        << ", label=\""
-        << "#" << val
-        << "\"];\n";
-}
-
 enum EFieldClass {
     FC_VOID = 0,
     FC_PTR,
@@ -446,13 +428,12 @@ bool plotField(PlotData &plot, const FieldWrapper &fw, const bool lonely)
     return true;
 }
 
-void plotUniformBlocks(PlotData &plot, const TValId root)
+void plotUniformBlocks(PlotData &plot, const TObjId obj)
 {
     SymHeap &sh = plot.sh;
 
-    // get all uniform blocks inside the given root
+    // get all uniform blocks inside the given object
     TUniBlockMap bMap;
-    const TObjId obj = sh.objByAddr(root);
     sh.gatherUniformBlocks(bMap, obj);
 
     // plot all uniform blocks
@@ -468,7 +449,7 @@ void plotUniformBlocks(PlotData &plot, const TValId root)
         // plot offset edge
         const TOffset off = bl.off;
         CL_BREAK_IF(off < 0);
-        plot.out << "\t" << SL_QUOTE(root)
+        plot.out << "\t" << SL_QUOTE(obj)
             << " -> " << SL_QUOTE("lonely" << id)
             << " [color=black, fontcolor=black, label=\"[+"
             << off << "]\"];\n";
@@ -662,13 +643,8 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
 
     plotRawObject(plot, obj, color);
 
-    const TValId at = sh.legacyAddrOfAny_XXX(obj);
-
-    // plot the root value
-    plotRootValue(plot, at, color);
-
     // plot all uniform blocks
-    plotUniformBlocks(plot, at);
+    plotUniformBlocks(plot, obj);
 
     // plot all atomic objects inside
     plotFields(plot, obj, liveFields);
@@ -679,11 +655,6 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
             && OK_DLS == sh.objKind((peer = dlSegPeer(sh, obj))))
     {
         plotRawObject(plot, peer, color);
-
-        const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
-
-        // plot peer's root value
-        plotRootValue(plot, peerAt, color);
 
         FldList peerFields;
         sh.gatherLiveFields(peerFields, peer);
@@ -879,7 +850,7 @@ void plotCustomValue(
     plot.out << "];\n";
 }
 
-void plotValue(PlotData &plot, const TValId val)
+void plotSingleValue(PlotData &plot, const TValId val)
 {
     SymHeap &sh = plot.sh;
 
@@ -968,10 +939,10 @@ void plotPointsTo(PlotData &plot, const TValId val, const TFldId target)
         << " [color=green, fontcolor=green];\n";
 }
 
-void plotRangePtr(PlotData &plot, TValId val, TValId root, const IR::Range &rng)
+void plotRangePtr(PlotData &plot, TValId val, TObjId obj, const IR::Range &rng)
 {
     plot.out << "\t" << SL_QUOTE(val) << " -> "
-        << SL_QUOTE(root)
+        << SL_QUOTE(obj)
         << " [color=red, fontcolor=red, label=\"[";
 
     printRawRange(plot.out, rng);
@@ -979,31 +950,24 @@ void plotRangePtr(PlotData &plot, TValId val, TValId root, const IR::Range &rng)
     plot.out << "]\"];\n";
 }
 
-void plotNonRootValues(PlotData &plot)
+void plotValues(PlotData &plot)
 {
     SymHeap &sh = plot.sh;
 
-    // go through non-roots
     BOOST_FOREACH(const TValId val, plot.values) {
-        const TObjId obj = sh.objByAddr(val);
-        if (hasKey(plot.objs, obj) && sh.valRoot(val) == val)
-            continue;
-
         // plot a value node
-        plotValue(plot, val);
+        plotSingleValue(plot, val);
 
-        const TValId root = sh.valRoot(val);
+        const TObjId obj = sh.objByAddr(val);
         const EValueTarget code = sh.valTarget(val);
         if (VT_RANGE == code) {
             const IR::Range &rng = sh.valOffsetRange(val);
-            plotRangePtr(plot, val, root, rng);
+            plotRangePtr(plot, val, obj, rng);
             continue;
         }
         else if (!isAnyDataArea(sh.valTarget(val)))
             // no valid target
             continue;
-
-        TValId offEdgeRoot = root;
 
         // assume an off-value
         const PlotData::TFieldKey key(obj, sh.valOffset(val));
@@ -1017,8 +981,7 @@ void plotNonRootValues(PlotData &plot)
 
         // an off-value with either no target, or too many targets
         const TOffset off = sh.valOffset(val);
-        CL_BREAK_IF(!off);
-        plotOffset(plot, off, offEdgeRoot, val);
+        plotOffset(plot, off, val, obj);
     }
 
     // go through value prototypes used in uniform blocks
@@ -1029,7 +992,7 @@ void plotNonRootValues(PlotData &plot)
 
         // plot a value node
         CL_BREAK_IF(isAnyDataArea(sh.valTarget(val)));
-        plotValue(plot, val);
+        plotSingleValue(plot, val);
     }
 }
 
@@ -1230,7 +1193,7 @@ void plotHasValueEdges(PlotData &plot)
 void plotEverything(PlotData &plot)
 {
     plotObjects(plot);
-    plotNonRootValues(plot);
+    plotValues(plot);
     plotHasValueEdges(plot);
     plotNeqEdges(plot);
 }
