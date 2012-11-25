@@ -19,18 +19,19 @@
 
 // Forester headers
 #include "forestautext.hh"
+#include "streams.hh"
 
 bool FAE::subseteq(const FAE& lhs, const FAE& rhs)
 {
-	if (lhs.roots.size() != rhs.roots.size())
+	if (lhs.getRootCount() != rhs.getRootCount())
 		return false;
 
 	if (lhs.connectionGraph.data != rhs.connectionGraph.data)
 		return false;
 
-	for (size_t i = 0; i < lhs.roots.size(); ++i)
+	for (size_t i = 0; i < lhs.getRootCount(); ++i)
 	{
-		if (!TreeAut::subseteq(*lhs.roots[i], *rhs.roots[i]))
+		if (!TreeAut::subseteq(*lhs.getRoot(i), *rhs.getRoot(i)))
 			return false;
 	}
 

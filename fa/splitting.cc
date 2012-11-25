@@ -214,14 +214,14 @@ void Splitting::enumerateSelectorsAtRoot(
 	size_t                       target) const
 {
 	// Assertions
-	assert(target < fae_.roots.size());
-	assert(fae_.roots[target]);
+	assert(target < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(target));
 
 	// the boxes of the accepting transition (note that there is exactly one
 	// accepting transition in a normalised FA) are traversed and selectors
 	// (even those inside boxes) are collected
-	fae_.roots[target]->begin(
-		*fae_.roots[target]->getFinalStates().begin()
+	fae_.getRoot(target)->begin(
+		*fae_.getRoot(target)->getFinalStates().begin()
 	)->label()->iterate(RootEnumF(target, selectors));
 }
 
@@ -232,10 +232,10 @@ void Splitting::enumerateSelectorsAtLeaf(
 	size_t                          target) const
 {
 	// Assertions
-	assert(root < fae_.roots.size());
-	assert(fae_.roots[root]);
+	assert(root < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(root));
 
-	for (const Transition& trans : *fae_.roots[root])
+	for (const Transition& trans : *fae_.getRoot(root))
 	{
 		if (trans.label()->isNode())
 		{
@@ -249,12 +249,12 @@ void Splitting::enumerateSelectorsAtLeaf(
 	std::set<size_t>&           selectors,
 	size_t                      target) const
 {
-	for (size_t root = 0; root < fae_.roots.size(); ++root)
+	for (std::shared_ptr<TreeAut> ta : fae_.getRoots())
 	{
-		if (!fae_.roots[root])
+		if (!ta)
 			continue;
 
-		for (const Transition& trans : *fae_.roots[root])
+		for (const Transition& trans : *ta)
 		{
 			if (trans.label()->isNode())
 			{
@@ -270,8 +270,8 @@ void Splitting::enumerateSelectors(
 	size_t                      target) const
 {
 	// Assertions
-	assert(target < fae_.roots.size());
-	assert(fae_.roots[target]);
+	assert(target < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(target));
 
 	this->enumerateSelectorsAtRoot(selectors, target);
 	this->enumerateSelectorsAtLeaf(selectors, target);
@@ -285,17 +285,17 @@ void Splitting::isolateAtLeaf(
 	size_t                              selector) const
 {
 	// Assertions
-	assert(root < fae_.roots.size());
-	assert(fae_.roots[root]);
+	assert(root < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(root));
 
-	fae_.unreachableFree(fae_.roots[root]);
+	fae_.unreachableFree(fae_.getRoot(root));
 
 	std::vector<std::pair<const Transition*, const Box*> > v;
 
 	TreeAut ta(*fae_.backend);
 
 	const Box* matched;
-	for (TreeAut::iterator i = fae_.roots[root]->begin(); i != fae_.roots[root]->end(); ++i) {
+	for (TreeAut::iterator i = fae_.getRoot(root)->begin(); i != fae_.getRoot(root)->end(); ++i) {
 		if (!i->label()->isNode()) {
 			ta.addTransition(*i);
 			continue;
@@ -315,12 +315,13 @@ void Splitting::isolateAtLeaf(
 		FAE fae(fae_);
 		Splitting splitting(fae);
 		TreeAut ta2(*fae.backend);
-		if (fae_.roots[root]->isFinalState(i->first->rhs())) {
+		if (fae_.getRoot(root)->isFinalState(i->first->rhs()))
+		{
 			ta.copyTransitions(ta2);
 			size_t state = fae.freshState();
 			ta2.addFinalState(state);
 			const Transition& t = ta2.addTransition(i->first->lhs(), i->first->label(), state)->first;
-			fae.roots[root] = std::shared_ptr<TreeAut>(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
+			fae.setRoot(root, std::shared_ptr<TreeAut>(&ta2.uselessAndUnreachableFree(*fae.allocTA())));
 			fae.connectionGraph.invalidate(root);
 			std::set<const Box*> boxes;
 			splitting.isolateAtRoot(root, t, IsolateBoxF(i->second), boxes);
@@ -329,13 +330,16 @@ void Splitting::isolateAtLeaf(
 			splitting.isolateOne(dst, target, selector);
 			continue;
 		}
-		ta2.addFinalStates(fae_.roots[root]->getFinalStates());
-		for (TreeAut::iterator j = ta.begin(); j != ta.end(); ++j) {
+		ta2.addFinalStates(fae_.getRoot(root)->getFinalStates());
+		for (TreeAut::iterator j = ta.begin(); j != ta.end(); ++j)
+		{
 			ta2.addTransition(*j);
 			std::vector<size_t> lhs = j->lhs();
-			for (std::vector<size_t>::iterator k = lhs.begin(); k != lhs.end(); ++k) {
-				if (*k == i->first->rhs()) {
-					*k = fae.addData(ta2, Data::createRef(fae.roots.size()));
+			for (std::vector<size_t>::iterator k = lhs.begin(); k != lhs.end(); ++k)
+			{
+				if (*k == i->first->rhs())
+				{
+					*k = fae.addData(ta2, Data::createRef(fae.getRootCount()));
 					ta2.addTransition(lhs, j->label(), j->rhs());
 					*k = i->first->rhs();
 				}
@@ -380,15 +384,15 @@ void Splitting::isolateAtLeaf(
 
 			ta2.addFinalState(f);
 
-			fae2.roots[root] = std::shared_ptr<TreeAut>(&ta2.uselessAndUnreachableFree(*fae2.allocTA()));
+			fae2.setRoot(root, std::shared_ptr<TreeAut>(&ta2.uselessAndUnreachableFree(*fae2.allocTA())));
 
 			std::set<const Box*> boxes;
 
-			splitting2.isolateAtRoot(fae2.roots.size() - 1, t, IsolateBoxF(i->second), boxes);
+			splitting2.isolateAtRoot(fae2.getRootCount() - 1, t, IsolateBoxF(i->second), boxes);
 
 			assert(boxes.count(i->second));
 
-			Unfolding(fae2).unfoldBox(fae2.roots.size() - 1, i->second);
+			Unfolding(fae2).unfoldBox(fae2.getRootCount() - 1, i->second);
 
 			splitting2.isolateOne(dst, target, selector);
 		}
@@ -404,13 +408,13 @@ void Splitting::isolateAtRoot(
 	std::set<const Box*>&              boxes)
 {
 	// Assertions
-	assert(root < fae_.roots.size());
-	assert(fae_.roots[root]);
+	assert(root < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(root));
 
 	size_t newState = fae_.freshState();
 
 	TreeAut ta(
-		/* original TA */ *fae_.roots[root],
+		/* original TA */ *fae_.getRoot(root),
 		/* copy final states? */ false
 	);
 
@@ -458,9 +462,9 @@ void Splitting::isolateAtRoot(
 			// automaton.
 
 			// update new left-hand side - add reference to the new TA
-			lhs.push_back(fae_.addData(ta, Data::createRef(fae_.roots.size())));
+			lhs.push_back(fae_.addData(ta, Data::createRef(fae_.getRootCount())));
 			// prepare new root
-			TreeAut tmp(*fae_.roots[root], false);
+			TreeAut tmp(*fae_.getRoot(root), false);
 			tmp.addFinalState(t.lhs()[lhsOffset]);
 			TreeAut* tmp2 = fae_.allocTA();
 			tmp.unreachableFree(*tmp2);
@@ -483,7 +487,7 @@ void Splitting::isolateAtRoot(
 	ta.unreachableFree(*tmp);
 
 	// exchange the original automaton with the new one
-	fae_.roots[root] = std::shared_ptr<TreeAut>(tmp);
+	fae_.setRoot(root, std::shared_ptr<TreeAut>(tmp));
 	fae_.connectionGraph.invalidate(root);
 }
 
@@ -494,13 +498,13 @@ void Splitting::isolateAtRoot(
 	const std::vector<size_t>&                    offsets) const
 {
 	// Assertions
-	assert(root < fae_.roots.size());
-	assert(fae_.roots[root]);
+	assert(root < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(root));
 
-	for (size_t state : fae_.roots[root]->getFinalStates())
+	for (size_t state : fae_.getRoot(root)->getFinalStates())
 	{	// for all final states
-		for (TreeAut::iterator i = fae_.roots[root]->begin(state),
-			end = fae_.roots[root]->end(state, i); i != end ; ++i)
+		for (TreeAut::iterator i = fae_.getRoot(root)->begin(state),
+			end = fae_.getRoot(root)->end(state, i); i != end ; ++i)
 		{	// traverse accepting transitions
 			FAE fae(fae_);
 			Splitting splitting(fae);
@@ -527,8 +531,8 @@ void Splitting::isolateSet(
 	const std::vector<size_t>&         offsets) const
 {
 	// Assertions
-	assert(target < fae_.roots.size());
-	assert(fae_.roots[target]);
+	assert(target < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(target));
 
 	std::vector<size_t> offsD;
 	std::set<size_t> tmpS, offsU;
@@ -588,13 +592,14 @@ void Splitting::isolateSet(
 			{
 				bool found = false;
 				aut->updateConnectionGraph();
-				for (size_t k = 0; k < aut->roots.size(); ++k)
+				for (size_t k = 0; k < aut->getRootCount(); ++k)
 				{
-					if (!aut->roots[k] || !aut->connectionGraph.hasReference(k, target))
+					if (!aut->getRoot(k) || !aut->connectionGraph.hasReference(k, target))
 						continue;
 					tmpS.clear();
 					splitting.enumerateSelectorsAtLeaf(tmpS, k, target);
-					if (tmpS.count(i)) {
+					if (tmpS.count(i))
+					{
 						splitting.isolateAtLeaf(tmp2, k, target, i);
 						found = true;
 						break;

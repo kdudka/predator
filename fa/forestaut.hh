@@ -48,13 +48,13 @@ public:   // data members
 
 	TreeAut::Backend* backend;
 
-private:  // data members
+protected:// data members
 
 	DataArray variables_;
 
-public:
+	std::vector<std::shared_ptr<TreeAut>> roots_;
 
-	std::vector<std::shared_ptr<TreeAut>> roots;
+public:
 
 	mutable ConnectionGraph connectionGraph;
 
@@ -74,23 +74,24 @@ protected:// methods
 		variables_ = data;
 	}
 
-public:
+public:   // methods
 
-	static bool isData(size_t state) {
+	static bool isData(size_t state)
+	{
 		return _MSB_TEST(state);
 	}
 
 	FA(TreeAut::Backend& backend) :
 		backend(&backend),
 		variables_{},
-		roots{},
+		roots_{},
 		connectionGraph{}
 	{ }
 
 	FA(const FA& src) :
 		backend(src.backend),
 		variables_(src.variables_),
-		roots(src.roots),
+		roots_(src.roots_),
 		connectionGraph(src.connectionGraph)
 	{ }
 
@@ -103,7 +104,7 @@ public:
 		{
 			backend = src.backend;
 			variables_ = src.variables_;
-			roots = src.roots;
+			roots_ = src.roots_;
 			connectionGraph = src.connectionGraph;
 		}
 
@@ -112,14 +113,14 @@ public:
 
 	void clear()
 	{
-		this->roots.clear();
+		roots_.clear();
 		this->connectionGraph.clear();
 		variables_.clear();
 	}
 
 	size_t getRootCount() const
 	{
-		return this->roots.size();
+		return roots_.size();
 	}
 
 	/**
@@ -134,7 +135,7 @@ public:
 	size_t getValidRootCount() const
 	{
 		size_t sum = 0;
-		for (auto rootPtr : this->roots)
+		for (std::shared_ptr<TreeAut> rootPtr : this->getRoots())
 		{
 			if (nullptr != rootPtr) ++sum;
 		}
@@ -142,23 +143,52 @@ public:
 		return sum;
 	}
 
-	const TreeAut* getRoot(size_t i) const {
-		assert(i < this->roots.size());
-		return this->roots[i].get();
+	const std::shared_ptr<TreeAut>& getRoot(size_t i) const
+	{
+		assert(i < this->getRootCount());
+		return roots_[i];
 	}
 
-	void appendRoot(TreeAut* ta) {
-		this->roots.push_back(std::shared_ptr<TreeAut>(ta));
+	std::shared_ptr<TreeAut>& getRoot(size_t i)
+	{
+		assert(i < this->getRootCount());
+		return roots_[i];
 	}
 
-	void appendRoot(std::shared_ptr<TreeAut> ta) {
-		this->roots.push_back(ta);
+	void setRoot(size_t i, std::shared_ptr<TreeAut> ta)
+	{
+		assert(i < this->getRootCount());
+		roots_[i] = ta;
 	}
 
-	void updateConnectionGraph() const {
+	void appendRoot(TreeAut* ta)
+	{
+		roots_.push_back(std::shared_ptr<TreeAut>(ta));
+	}
 
-		this->connectionGraph.updateIfNeeded(this->roots);
+	const std::vector<std::shared_ptr<TreeAut>>& getRoots() const
+	{
+		return roots_;
+	}
 
+	void appendRoot(std::shared_ptr<TreeAut> ta)
+	{
+		roots_.push_back(ta);
+	}
+
+	void resizeRoots(size_t newSize)
+	{
+		roots_.resize(newSize);
+	}
+
+	void swapRoots(std::vector<std::shared_ptr<TreeAut>> otherRoots)
+	{
+		roots_.swap(otherRoots);
+	}
+
+	void updateConnectionGraph() const
+	{
+		this->connectionGraph.updateIfNeeded(this->getRoots());
 	}
 
 	void PushVar(const Data& var)
@@ -189,6 +219,11 @@ public:
 		return variables_;
 	}
 
+	bool Empty() const
+	{
+		return variables_.empty();
+	}
+
 	void SetVar(size_t varId, const Data& data)
 	{
 		// Assertions
@@ -197,6 +232,11 @@ public:
 		variables_[varId] = data;
 	}
 
+	/**
+	 * @brief  Sets all variables referencing given root to undef
+	 *
+	 * @param[in]  root  The desired root reference
+	 */
 	void SetVarsToUndefForRoot(size_t root)
 	{
 		for (auto& var : variables_)
@@ -230,6 +270,7 @@ public:
 		return variables_.back();
 	}
 
+
 	/**
 	 * @brief  Run a visitor on the instance
 	 *
@@ -245,7 +286,6 @@ public:
 		visitor(*this);
 	}
 
-public:   // static methods
 
 	friend std::ostream& operator<<(std::ostream& os, const FA& fa);
 

@@ -59,7 +59,11 @@ struct SelData
 	 * @param[in]  displ   TODO write dox
 	 * @param[in]  name    Name of the selector
 	 */
-	SelData(size_t offset, int size, int displ, const std::string& name) :
+	SelData(
+		size_t                   offset,
+		int                      size,
+		int                      displ,
+		const std::string&       name) :
 		offset(offset),
 		size(size),
 		displ(displ),
@@ -100,7 +104,8 @@ struct SelData
 	 *
 	 * @todo  Improve the distribution of the hash function
 	 */
-	friend size_t hash_value(const SelData& v) {
+	friend size_t hash_value(const SelData& v)
+	{
 		return boost::hash_value(v.offset + v.size + v.displ);
 	}
 
@@ -113,7 +118,8 @@ struct SelData
 	 *
 	 * @returns  @p true if the object is equal to @p rhs, @p false otherwise
 	 */
-	bool operator==(const SelData& rhs) const {
+	bool operator==(const SelData& rhs) const
+	{
 		return this->offset == rhs.offset &&
 			this->size == rhs.size &&
 			this->displ == rhs.displ;
@@ -135,7 +141,8 @@ struct SelData
 		assert(!x.name.empty());
 
 		os << x.name << '[' << x.offset << ':' << x.size << ':';
-		if (x.displ >= 0) {
+		if (x.displ >= 0)
+		{
 			os << '+';
 		}
 
@@ -148,7 +155,8 @@ struct SelData
  *
  * This enumeration defines type of stored data.
  */
-enum class data_type_e {
+enum class data_type_e
+{
 	t_undef,          ///< undefined value
 	t_unknw,          ///< unknown value
 	t_native_ptr,     ///< native memory pointer for pointers to CFG
@@ -160,10 +168,11 @@ enum class data_type_e {
 	t_other           ///< other type
 };
 
-namespace std {
-
+namespace std
+{
 	template <>
-	struct hash<data_type_e> {
+	struct hash<data_type_e>
+	{
 		size_t operator()(const data_type_e& dataType) const
 		{
 			return std::hash<size_t>()(static_cast<size_t>(dataType));
@@ -177,8 +186,8 @@ namespace std {
  * This structure holds information about stored data, i.e., its size, type, and
  * additional information depending on the type.
  */
-struct Data {
-
+struct Data
+{
 	/**
 	 * @brief  Type for information about nested data
 	 *
@@ -194,7 +203,8 @@ struct Data {
 	int size;
 
 	/// Union with additional information about the data
-	union {
+	union
+	{
 		void*	  d_native_ptr;               ///< real memory pointer
 		size_t	d_void_ptr_size;            ///< void pointer size
 
@@ -216,18 +226,27 @@ struct Data {
 	 *
 	 * @param[in]  type  The type of data
 	 */
-	Data(data_type_e type = data_type_e::t_undef) : type(type), size(0) {}
+	Data(
+		data_type_e        type = data_type_e::t_undef) :
+		type(type),
+		size(0)
+	{ }
 
 	/**
 	 * @brief  Copy constructor
 	 *
-	 * Copying contructor.
+	 * Copying constructor.
 	 *
 	 * @param[in]  data  The object to be copied
 	 */
-	Data(const Data& data) : type(data.type), size(data.size) {
+	Data(
+		const Data&          data) :
+		type(data.type),
+		size(data.size)
+	{
 		// fill the additional type information according to the type of data
-		switch (data.type) {
+		switch (data.type)
+		{
 			case data_type_e::t_native_ptr:
 				this->d_native_ptr = data.d_native_ptr; break;
 			case data_type_e::t_void_ptr:
@@ -261,7 +280,8 @@ struct Data {
 	 *
 	 * @returns  Copy of the object
 	 */
-	Data& operator=(const Data& rhs) {
+	Data& operator=(const Data& rhs)
+	{
 		if (this == &rhs) { return *this; }
 
 		this->clear();
@@ -270,7 +290,8 @@ struct Data {
 
 		// fill the additional type information according to the type of data
 		/// @todo: remove duplicit code
-		switch (rhs.type) {
+		switch (rhs.type)
+		{
 			case data_type_e::t_native_ptr:
 				this->d_native_ptr = rhs.d_native_ptr; break;
 			case data_type_e::t_void_ptr:
@@ -317,7 +338,8 @@ struct Data {
 	 *
 	 * @returns  The type and value information for the pointer
 	 */
-	static Data createNativePtr(void* ptr) {
+	static Data createNativePtr(void* ptr)
+	{
 		Data data(data_type_e::t_native_ptr);
 		data.d_native_ptr = ptr;
 		return data;
@@ -333,7 +355,10 @@ struct Data {
 	 *
 	 * @returns  The type and value information for a reference
 	 */
-	static Data createRef(size_t root, int displ = 0) {
+	static Data createRef(
+		size_t                 root,
+		int                    displ = 0)
+	{
 		Data data(data_type_e::t_ref);
 		data.d_ref.root = root;
 		data.d_ref.displ = displ;
@@ -350,7 +375,8 @@ struct Data {
 	 * @returns  The type and value information for a structure
 	 */
 	static Data createStruct(
-		const std::vector<item_info>& items = std::vector<item_info>()) {
+		const std::vector<item_info>&      items = std::vector<item_info>())
+	{
 		Data data(data_type_e::t_struct);
 		data.d_struct = new std::vector<item_info>(items);
 		return data;
@@ -365,7 +391,8 @@ struct Data {
 	 *
 	 * @returns  The type and value information about a void pointer
 	 */
-	static Data createVoidPtr(size_t size = 0) {
+	static Data createVoidPtr(size_t size = 0)
+	{
 		Data data(data_type_e::t_void_ptr);
 		data.d_void_ptr_size = size;
 		return data;
@@ -380,7 +407,8 @@ struct Data {
 	 *
 	 * @returns  The type and value information about an integer
 	 */
-	static Data createInt(int x) {
+	static Data createInt(int x)
+	{
 		Data data(data_type_e::t_int);
 		data.d_int = x;
 		return data;
@@ -395,7 +423,8 @@ struct Data {
 	 *
 	 * @returns  The type and value information about a Boolean
 	 */
-	static Data createBool(bool x) {
+	static Data createBool(bool x)
+	{
 		Data data(data_type_e::t_bool);
 		data.d_bool = x;
 		return data;
@@ -496,7 +525,8 @@ struct Data {
 	 *
 	 * @returns  @p true if the type is @p t_unknw, @p false otherwise
 	 */
-	bool isUnknw() const {
+	bool isUnknw() const
+	{
 		return this->type == data_type_e::t_unknw;
 	}
 
@@ -507,7 +537,8 @@ struct Data {
 	 *
 	 * @returns  @p true if the type is @p t_native_ptr, @p false otherwise
 	 */
-	bool isNativePtr() const {
+	bool isNativePtr() const
+	{
 		return this->type == data_type_e::t_native_ptr;
 	}
 
@@ -518,7 +549,8 @@ struct Data {
 	 *
 	 * @returns  @p true if the type is @p t_void_ptr, @p false otherwise
 	 */
-	bool isVoidPtr() const {
+	bool isVoidPtr() const
+	{
 		return this->type == data_type_e::t_void_ptr;
 	}
 
@@ -530,7 +562,8 @@ struct Data {
 	 *
 	 * @returns  @p true if the type is @p NULL, @p false otherwise
 	 */
-	bool isNull() const {
+	bool isNull() const
+	{
 		return this->type == data_type_e::t_int && this->d_int == 0;
 	}
 
@@ -541,7 +574,8 @@ struct Data {
 	 *
 	 * @returns  @p true if the type is @p t_ref, @p false otherwise
 	 */
-	bool isRef() const {
+	bool isRef() const
+	{
 		return this->type == data_type_e::t_ref;
 	}
 
@@ -556,7 +590,8 @@ struct Data {
 	 * @returns  @p true if the type is @p t_ref and the value references the
 	 *           given tree automaton, @p false otherwise
 	 */
-	bool isRef(size_t root) const {
+	bool isRef(size_t root) const
+	{
 		return this->type == data_type_e::t_ref && this->d_ref.root == root;
 	}
 
@@ -567,7 +602,8 @@ struct Data {
 	 *
 	 * @returns  @p true if the type is @p t_struct, @p false otherwise
 	 */
-	bool isStruct() const {
+	bool isStruct() const
+	{
 		return this->type == data_type_e::t_struct;
 	}
 
@@ -578,7 +614,8 @@ struct Data {
 	 *
 	 * @returns  @p true if the type is @p t_bool, @p false otherwise
 	 */
-	bool isBool() const {
+	bool isBool() const
+	{
 		return this->type == data_type_e::t_bool;
 	}
 
@@ -589,7 +626,8 @@ struct Data {
 	 *
 	 * @returns  @p true if the type is @p t_int, @p false otherwise
 	 */
-	bool isInt() const {
+	bool isInt() const
+	{
 		return this->type == data_type_e::t_int;
 	}
 
@@ -665,7 +703,8 @@ struct Data {
 	 *
 	 * @returns  @p true if the object is equal to @p rhs, @p false otherwise
 	 */
-	bool operator==(const Data& rhs) const {
+	bool operator==(const Data& rhs) const
+	{
 		// check if the types match
 		if (this->type != rhs.type)
 			return false;
@@ -694,6 +733,7 @@ struct Data {
 		}
 	}
 
+
 	/**
 	 * @brief  Non-equality operator
 	 *
@@ -703,7 +743,11 @@ struct Data {
 	 *
 	 * @returns  @p true if the object is not equal to @p rhs, @p false otherwise
 	 */
-	bool operator!=(const Data& rhs) const { return !(*this == rhs); }
+	bool operator!=(const Data& rhs) const
+	{
+		return !(*this == rhs);
+	}
+
 
 	/**
 	 * @brief  The output stream operator
@@ -715,8 +759,10 @@ struct Data {
 	 *
 	 * @returns  The modified output stream
 	 */
-	friend std::ostream& operator<<(std::ostream& os, const Data& x) {
-		switch (x.type) {
+	friend std::ostream& operator<<(std::ostream& os, const Data& x)
+	{
+		switch (x.type)
+		{
 			case data_type_e::t_undef:
 				os << "(undef)"; break;
 			case data_type_e::t_unknw:

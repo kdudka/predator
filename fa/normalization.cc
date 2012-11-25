@@ -33,7 +33,7 @@ TreeAut* Normalization::mergeRoot(
 	std::vector<size_t>&              joinStates)
 {
 	// Assertions
-	assert(ref < this->fae.roots.size());
+	assert(ref < this->fae.getRootCount());
 
 	TreeAut* ta = this->fae.allocTA();
 	ta->addFinalStates(dst.getFinalStates());
@@ -72,8 +72,8 @@ void Normalization::traverse(
 	std::vector<size_t>&              order,
 	std::vector<bool>&                marked) const
 {
-	visited = std::vector<bool>(this->fae.roots.size(), false);
-	marked = std::vector<bool>(this->fae.roots.size(), false);
+	visited = std::vector<bool>(this->fae.getRootCount(), false);
+	marked = std::vector<bool>(this->fae.getRootCount(), false);
 
 	order.clear();
 
@@ -100,7 +100,7 @@ void Normalization::traverse(
 void Normalization::traverse(
 	std::vector<bool>&                visited) const
 {
-	visited = std::vector<bool>(this->fae.roots.size(), false);
+	visited = std::vector<bool>(this->fae.getRootCount(), false);
 
 	for (const Data& var : this->fae.GetVariables())
 	{
@@ -124,14 +124,15 @@ void Normalization::checkGarbage(
 {
 	bool garbage = false;
 
-	for (size_t i = 0; i < this->fae.roots.size(); ++i)
+	for (size_t i = 0; i < this->fae.getRootCount(); ++i)
 	{
-		if (!this->fae.roots[i])
+		if (!this->fae.getRoot(i))
 			continue;
 
 		if (!visited[i])
 		{
-			FA_DEBUG_AT(1, "the root " << i << " is not referenced anymore ... " << this->fae.connectionGraph.data[i]);
+			FA_DEBUG_AT(1, "the root " << i << " is not referenced anymore ... "
+				<< this->fae.connectionGraph.data[i]);
 
 			garbage = true;
 		}
@@ -155,7 +156,7 @@ void Normalization::checkGarbage(
 void Normalization::check() const
 {
 	// compute reachable roots
-	std::vector<bool> visited(this->fae.roots.size(), false);
+	std::vector<bool> visited(this->fae.getRootCount(), false);
 	this->traverse(visited);
 
 	// check garbage
@@ -188,14 +189,14 @@ void Normalization::normalizeRoot(
 		std::vector<size_t> refStates;
 
 		TreeAut* ta = this->mergeRoot(
-			*this->fae.roots[root],
+			*this->fae.getRoot(root),
 			cutpoint.root,
-			*this->fae.roots[cutpoint.root],
+			*this->fae.getRoot(cutpoint.root),
 			refStates
 		);
 
-		this->fae.roots[root] = std::shared_ptr<TreeAut>(ta);
-		this->fae.roots[cutpoint.root] = nullptr;
+		this->fae.setRoot(root, std::shared_ptr<TreeAut>(ta));
+		this->fae.setRoot(cutpoint.root, nullptr);
 
 		this->fae.connectionGraph.mergeCutpoint(root, cutpoint.root);
 	}
@@ -231,9 +232,9 @@ void Normalization::scan(
 {
 	assert(this->fae.connectionGraph.isValid());
 
-	std::vector<bool> visited(this->fae.roots.size(), false);
+	std::vector<bool> visited(this->fae.getRootCount(), false);
 
-	marked = std::vector<bool>(this->fae.roots.size(), false);
+	marked = std::vector<bool>(this->fae.getRootCount(), false);
 
 	order.clear();
 
@@ -284,7 +285,7 @@ bool Normalization::normalize(
 
 	if (i == order.size())
 	{	// in case the FA is in the canonical form
-		this->fae.roots.resize(order.size());
+		this->fae.resizeRoots(order.size());
 		this->fae.connectionGraph.data.resize(order.size());
 		return false;
 	}
@@ -292,8 +293,8 @@ bool Normalization::normalize(
 	// in case the FA is not in the canonical form
 
 	// reindex roots
-	std::vector<size_t> index(this->fae.roots.size(), static_cast<size_t>(-1));
-	std::vector<bool> normalized(this->fae.roots.size(), false);
+	std::vector<size_t> index(this->fae.getRootCount(), static_cast<size_t>(-1));
+	std::vector<bool> normalized(this->fae.getRootCount(), false);
 	std::vector<std::shared_ptr<TreeAut>> newRoots;
 	size_t offset = 0;
 
@@ -308,22 +309,22 @@ bool Normalization::normalize(
 			continue;
 		}
 
-		newRoots.push_back(this->fae.roots[i]);
+		newRoots.push_back(this->fae.getRoot(i));
 
 		index[i] = offset++;
 	}
 
 	// update representation
-	std::swap(this->fae.roots, newRoots);
+	this->fae.swapRoots(newRoots);
 
-	for (size_t i = 0; i < this->fae.roots.size(); ++i)
+	for (size_t i = 0; i < this->fae.getRootCount(); ++i)
 	{
-		this->fae.roots[i] = std::shared_ptr<TreeAut>(
-			this->fae.relabelReferences(this->fae.roots[i].get(), index)
-		);
+		this->fae.setRoot(i, std::shared_ptr<TreeAut>(
+			this->fae.relabelReferences(this->fae.getRoot(i).get(), index)
+		));
 	}
 
-	this->fae.connectionGraph.finishNormalization(this->fae.roots.size(), index);
+	this->fae.connectionGraph.finishNormalization(this->fae.getRootCount(), index);
 
 	// update variables
 	this->fae.UpdateVarsRootRefs(index);

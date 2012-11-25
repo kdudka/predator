@@ -117,22 +117,22 @@ std::ostream& operator<<(std::ostream& os, const FA& fa)
 	}
 	os << " ]" << std::endl;
 
-	for (size_t i = 0; i < fa.roots.size(); ++i)
+	for (size_t i = 0; i < fa.getRootCount(); ++i)
 	{
-		if (!fa.roots[i])
+		if (!fa.getRoot(i))
 			continue;
 
 		os << "===" << std::endl << "root " << i << " [" << fa.connectionGraph.data[i] << ']';
 
 		TAWriter<label_type> writer(os);
 
-		for (auto state : fa.roots[i]->getFinalStates())
+		for (size_t state : fa.getRoot(i)->getFinalStates())
 		{
 			writer.writeState(state);
 		}
 
 		writer.endl();
-		writer.writeTransitions(*fa.roots[i], WriteStateF());
+		writer.writeTransitions(*fa.getRoot(i), WriteStateF());
 	}
 
 	return os;

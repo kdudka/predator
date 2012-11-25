@@ -33,8 +33,8 @@
 #include "tatimint.hh"
 #include "utils.hh"
 
-class FAE : public FA {
-
+class FAE : public FA
+{
 	friend class Normalization;
 	friend class Folding;
 	friend class Unfolding;
@@ -56,7 +56,8 @@ public:
 		size_t offset;
 
 		RenameNonleafF(Index<size_t>& index, size_t offset = 0)
-			: index(index), offset(offset) {}
+			: index(index), offset(offset)
+		{ }
 
 		size_t operator()(size_t s)
 		{
@@ -108,13 +109,13 @@ public:
 
 	template <class F>
 	static void loadCompatibleFAs(
-		std::vector<FAE*>& dst,
-		const TreeAut& src,
-		TreeAut::Backend& backend,
-		BoxMan& boxMan,
-		const FAE* fae,
-		size_t stateOffset,
-		F f)
+		std::vector<FAE*>&              dst,
+		const TreeAut&                  src,
+		TreeAut::Backend&               backend,
+		BoxMan&                         boxMan,
+		const FAE*                      fae,
+		size_t                          stateOffset,
+		F                               f)
 	{
 		TreeAut::td_cache_type cache;
 		src.buildTDCache(cache);
@@ -124,7 +125,7 @@ public:
 		// iterate over all "synthetic" transitions and constuct new FAE for each
 		for (const TT<label_type>* trans : v)
 		{
-			if (trans->lhs().size() != fae->roots.size())
+			if (trans->lhs().size() != fae->getRootCount())
 				continue;
 			if (trans->label()->getVData() != fae->GetVariables())
 				continue;
@@ -164,7 +165,7 @@ public:
 						break;
 				}
 
-				if (!f(*fae, j, *fae->roots[j], *ta))
+				if (!f(*fae, j, *fae->getRoot(j), *ta))
 					break;
 			}
 
@@ -174,140 +175,168 @@ public:
 			FAE* tmp = new FAE(backend, boxMan);
 			dst.push_back(tmp);
 			tmp->loadVars(fae->GetVariables());
-			tmp->roots = roots;
+			tmp->roots_ = roots;
 			tmp->connectionGraph = fae->connectionGraph;
 			tmp->stateOffset = stateOffset;
 		}
 	}
 
 	template <class F>
-	void fuse(const std::vector<FAE*>& src, F f) {
+	void fuse(
+		const std::vector<FAE*>&       src,
+		F                              f)
+	{
 		if (src.empty())
 			return;
+
 		Index<size_t> index;
-		for (std::vector<FAE*>::const_iterator i = src.begin(); i != src.end(); ++i) {
-			assert(this->roots.size() == (*i)->roots.size());
-			for (size_t j = 0; j < this->roots.size(); ++j) {
-				if (!f(j, *i))
+		for (FAE* fae : src)
+		{
+			assert(this->getRootCount() == fae->getRootCount());
+			for (size_t j = 0; j < this->getRootCount(); ++j)
+			{
+				if (!f(j, fae))
 					continue;
 				index.clear();
-				TreeAut::rename(*this->roots[j], *(*i)->roots[j], RenameNonleafF(index, this->nextState()), false);
+				TreeAut::rename(*roots_[j], *fae->getRoot(j),
+					RenameNonleafF(index, this->nextState()), false);
 				this->incrementStateOffset(index.size());
 			}
 		}
 	}
 
 	template <class F, class G>
-	void fuse(const TreeAut& src, F f, G g) {
+	void fuse(
+		const TreeAut&       src,
+		F                    f,
+		G                    g)
+	{
 		Index<size_t> index;
 		TreeAut tmp2(src, g);
 		TreeAut tmp(*this->backend);
 		TreeAut::rename(tmp, tmp2, RenameNonleafF(index, this->nextState()), false);
 		this->incrementStateOffset(index.size());
-		for (size_t i = 0; i < this->roots.size(); ++i) {
+		for (size_t i = 0; i < this->getRootCount(); ++i)
+		{
 			if (!f(i, nullptr))
 				continue;
-			tmp.copyTransitions(*this->roots[i]);
+			tmp.copyTransitions(*roots_[i]);
 		}
 	}
 
-	void minimizeRoots() {
-		for (size_t i = 0; i < this->roots.size(); ++i) {
-			if (!this->roots[i])
+	void minimizeRoots()
+	{
+		for (std::shared_ptr<TreeAut> ta : roots_)
+		{
+			if (!ta)
 				continue;
-			this->roots[i] = std::shared_ptr<TreeAut>(&this->roots[i]->minimized(*this->allocTA()));
+
+			ta = std::shared_ptr<TreeAut>(&ta->minimized(*this->allocTA()));
 		}
 	}
 
-	void minimizeRootsCombo() {
-		for (size_t i = 0; i < this->roots.size(); ++i) {
-			if (!this->roots[i])
+	void minimizeRootsCombo()
+	{
+		for (std::shared_ptr<TreeAut> ta : roots_)
+		{
+			if (!ta)
 				continue;
-			this->roots[i] = std::shared_ptr<TreeAut>(&this->roots[i]->minimizedCombo(*this->allocTA()));
+
+			ta = std::shared_ptr<TreeAut>(&ta->minimizedCombo(*this->allocTA()));
 		}
 	}
 
-	void unreachableFree(std::shared_ptr<TreeAut>& ta) {
-		auto tmp = ta;
+	void unreachableFree(std::shared_ptr<TreeAut>& ta)
+	{
+		std::shared_ptr<TreeAut> tmp = ta;
 		ta = std::shared_ptr<TreeAut>(this->allocTA());
 		tmp->unreachableFree(*ta);
 	}
 
-	void unreachableFree() {
-
-		for (auto& ta : this->roots) {
-
+	void unreachableFree()
+	{
+		for (std::shared_ptr<TreeAut>& ta : roots_)
+		{
 			if (ta)
 				this->unreachableFree(ta);
-
 		}
-
 	}
 
 public:
 
-	void newState() {
+	void newState()
+	{
 		++this->stateOffset;
 	}
 
-	size_t nextState() {
+	size_t nextState()
+	{
 		return this->stateOffset;
 	}
 
-	size_t freshState() {
+	size_t freshState()
+	{
 		return this->stateOffset++;
 	}
 
-	void incrementStateOffset(size_t amount) {
+	void incrementStateOffset(size_t amount)
+	{
 		this->stateOffset += amount;
 	}
 
-	void setStateOffset(size_t offset) {
+	void setStateOffset(size_t offset)
+	{
 		this->stateOffset = offset;
 	}
 
-	void pushStateOffset() {
+	void pushStateOffset()
+	{
 		this->savedStateOffset = this->stateOffset;
 	}
 
-	void popStateOffset() {
+	void popStateOffset()
+	{
 		this->stateOffset = this->savedStateOffset;
 	}
 
-	size_t addData(TreeAut& dst, const Data& data) {
+	size_t addData(TreeAut& dst, const Data& data)
+	{
 		label_type label = this->boxMan->lookupLabel(data);
 		size_t state = _MSB_ADD(label->getDataId());
 		dst.addTransition(std::vector<size_t>(), label, state);
 		return state;
 	}
 
-	bool isData(size_t state, const Data*& data) const {
+	bool isData(size_t state, const Data*& data) const
+	{
 		if (!FA::isData(state))
 			return false;
 		data = &this->boxMan->getData(_MSB_GET(state));
 		return true;
 	}
 
-	const Data& getData(size_t state) const {
-
+	const Data& getData(size_t state) const
+	{
 		assert(FA::isData(state));
 
 		return this->boxMan->getData(_MSB_GET(state));
-
 	}
 
-	bool getRef(size_t state, size_t& ref) const {
+	bool getRef(size_t state, size_t& ref) const
+	{
 		if (!FA::isData(state))
 			return false;
+
 		const Data& data = this->boxMan->getData(_MSB_GET(state));
 		if (!data.isRef())
 			return false;
+
 		ref = data.d_ref.root;
 		return true;
 	}
 
-	size_t getRef(size_t state) const {
-
+	size_t getRef(size_t state) const
+	{
 		assert(FA::isData(state));
 
 		const Data& data = this->boxMan->getData(_MSB_GET(state));
@@ -315,41 +344,56 @@ public:
 		assert(data.isRef());
 
 		return data.d_ref.root;
-
 	}
 
-	static bool isRef(label_type label) {
+	static bool isRef(label_type label)
+	{
 		if (!label->isData())
 			return false;
+
 		return label->getData().isRef();
 	}
 
 
-	static bool isRef(label_type label, size_t ref) {
+	static bool isRef(label_type label, size_t ref)
+	{
 		if (!label->isData())
 			return false;
+
 		return label->getData().isRef(ref);
 	}
 
-	static bool getRef(label_type label, size_t& ref) {
+	static bool getRef(label_type label, size_t& ref)
+	{
 		if (!label->isData())
 			return false;
+
 		if (!label->getData().isRef())
 			return false;
+
 		ref = label->getData().d_ref.root;
 		return true;
 	}
 
-	TreeAut& relabelReferences(TreeAut& dst, const TreeAut& src, const std::vector<size_t>& index) {
+	TreeAut& relabelReferences(
+		TreeAut&                      dst,
+		const TreeAut&                src,
+		const std::vector<size_t>&    index)
+	{
 		dst.addFinalStates(src.getFinalStates());
-		for (TreeAut::iterator i = src.begin(); i != src.end(); ++i) {
+		for (TreeAut::iterator i = src.begin(); i != src.end(); ++i)
+		{
 			if (i->label()->isData())
 				continue;
+
 			std::vector<size_t> lhs;
-			for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
+			for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j)
+			{
 				const Data* data;
-				if (this->isData(*j, data)) {
-					if (data->isRef()) {
+				if (this->isData(*j, data))
+				{
+					if (data->isRef())
+					{
 						if (index[data->d_ref.root] != static_cast<size_t>(-1))
 							lhs.push_back(this->addData(dst, Data::createRef(index[data->d_ref.root], data->d_ref.displ)));
 						else
@@ -357,26 +401,37 @@ public:
 					} else {
 						lhs.push_back(this->addData(dst, *data));
 					}
-
 				} else
 					lhs.push_back(*j);
 			}
+
 			dst.addTransition(lhs, i->label(), i->rhs());
 		}
+
 		return dst;
 	}
 
-	TreeAut* relabelReferences(TreeAut* src, const std::vector<size_t>& index) {
+	TreeAut* relabelReferences(
+		TreeAut*                       src,
+		const std::vector<size_t>&     index)
+	{
 		return &this->relabelReferences(*this->allocTA(), *src, index);
 	}
 
-	TreeAut& invalidateReference(TreeAut& dst, const TreeAut& src, size_t root) {
+	TreeAut& invalidateReference(
+		TreeAut&                       dst,
+		const TreeAut&                 src,
+		size_t                         root)
+	{
 		dst.addFinalStates(src.getFinalStates());
-		for (TreeAut::iterator i = src.begin(); i != src.end(); ++i) {
+		for (TreeAut::iterator i = src.begin(); i != src.end(); ++i)
+		{
 			std::vector<size_t> lhs;
-			for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j) {
+			for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j)
+			{
 				const Data* data;
-				if (FAE::isData(*j, data) && data->isRef(root)) {
+				if (FAE::isData(*j, data) && data->isRef(root))
+				{
 					lhs.push_back(this->addData(dst, Data::createUndef()));
 				} else {
 					lhs.push_back(*j);
@@ -396,12 +451,14 @@ public:
 public:
 
 	void buildLTCacheExt(
-		const TreeAut& ta,
-		TreeAut::lt_cache_type& cache)
+		const TreeAut&               ta,
+		TreeAut::lt_cache_type&      cache)
 	{
 		label_type lUndef = this->boxMan->lookupLabel(Data::createUndef());
-		for (TreeAut::iterator i = ta.begin(); i != ta.end(); ++i) {
-			if (i->label()->isData()) {
+		for (TreeAut::iterator i = ta.begin(); i != ta.end(); ++i)
+		{
+			if (i->label()->isData())
+			{
 				cache.insert(
 					make_pair(lUndef, std::vector<const TT<label_type>*>())
 				).first->second.push_back(&*i);
@@ -416,12 +473,12 @@ public:
 	const TypeBox* getType(size_t target) const
 	{
 		// Assertions
-		assert(target < this->roots.size());
-		assert(this->roots[target]);
-		assert(this->roots[target]->getFinalStates().size());
+		assert(target < this->getRootCount());
+		assert(nullptr != this->getRoot(target));
+		assert(!this->getRoot(target)->getFinalStates().empty());
 
-		return static_cast<const TypeBox*>(this->roots[target]->begin(
-			*this->roots[target]->getFinalStates().begin()
+		return static_cast<const TypeBox*>(this->getRoot(target)->begin(
+			*this->getRoot(target)->getFinalStates().begin()
 		)->label()->boxLookup(static_cast<size_t>(-1)).aBox);
 	}
 

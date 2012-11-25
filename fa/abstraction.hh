@@ -24,26 +24,32 @@
 #include "forestautext.hh"
 #include "streams.hh"
 
-class Abstraction {
+class Abstraction
+{
+private:  // data members
 
 	FAE& fae;
 
-public:
+public:   // methods
 
 	template <class F>
-	void heightAbstraction(size_t root, size_t height, F f) {
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
+	void heightAbstraction(
+		size_t                root,
+		size_t                height,
+		F                     f)
+	{
+		assert(root < this->fae.getRootCount());
+		assert(nullptr != this->fae.getRoot(root));
 		Index<size_t> stateIndex;
-		this->fae.roots[root]->buildStateIndex(stateIndex);
+		this->fae.getRoot(root)->buildStateIndex(stateIndex);
 		std::vector<std::vector<bool> > rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), true));
-		this->fae.roots[root]->heightAbstraction(rel, height, f, stateIndex);
+		this->fae.getRoot(root)->heightAbstraction(rel, height, f, stateIndex);
 		ConnectionGraph::StateToCutpointSignatureMap stateMap;
-		ConnectionGraph::computeSignatures(stateMap, *this->fae.roots[root]);
-		for (Index<size_t>::iterator j = stateIndex.begin(); j != stateIndex.end(); ++j) {
-
-			for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k) {
-
+		ConnectionGraph::computeSignatures(stateMap, *this->fae.getRoot(root));
+		for (Index<size_t>::iterator j = stateIndex.begin(); j != stateIndex.end(); ++j)
+		{
+			for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k)
+			{
 				if (k == j)
 					continue;
 
@@ -51,14 +57,13 @@ public:
 					continue;
 
 				rel[j->second][k->second] = false;
-
 			}
-
 		}
+
 		TreeAut ta(*this->fae.backend);
-		this->fae.roots[root]->collapsed(ta, rel, stateIndex);
-		this->fae.roots[root] = std::shared_ptr<TreeAut>(this->fae.allocTA());
-		ta.uselessAndUnreachableFree(*this->fae.roots[root]);
+		this->fae.getRoot(root)->collapsed(ta, rel, stateIndex);
+		this->fae.setRoot(root, std::shared_ptr<TreeAut>(this->fae.allocTA()));
+		ta.uselessAndUnreachableFree(*this->fae.getRoot(root));
 	}
 
 public:

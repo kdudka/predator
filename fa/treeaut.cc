@@ -249,6 +249,48 @@ void TA<T>::upwardSimulation(std::vector<std::vector<bool> >& rel, const Index<s
 }
 
 template <class T>
+void TA<T>::combinedSimulation(
+	std::vector<std::vector<bool>>&           dst,
+	const std::vector<std::vector<bool>>&     dwn,
+	const std::vector<std::vector<bool>>&     up)
+{
+	size_t size = dwn.size();
+	std::vector<std::vector<bool> > dut(size, std::vector<bool>(size, false));
+	for (size_t i = 0; i < size; ++i)
+	{
+		for (size_t j = 0; j < size; ++j)
+		{
+			for (size_t k = 0; k < size; ++k)
+			{
+				if (dwn[i][k] && up[j][k])
+				{
+					dut[i][j] = true;
+					break;
+				}
+			}
+		}
+	}
+	dst = dut;
+	for (size_t i = 0; i < size; ++i)
+	{
+		for (size_t j = 0; j < size; ++j)
+		{
+			if (!dst[i][j])
+				continue;
+
+			for (size_t k = 0; k < size; ++k)
+			{
+				if (dwn[j][k] && !dut[i][k])
+				{
+					dst[i][j] = false;
+					break;
+				}
+			}
+		}
+	}
+}
+
+template <class T>
 bool TA<T>::subseteq(const TA<T>& a, const TA<T>& b) {
 //	std::cout << "TA::subseteq()\n";
 	return AntichainExt<T>::subseteq(a, b);

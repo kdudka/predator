@@ -21,7 +21,7 @@
 #include "virtualmachine.hh"
 
 void VirtualMachine::transitionLookup(
-	const TT<label_type>&          transition,
+	const Transition&              transition,
 	size_t                         base,
 	const std::vector<size_t>&     offsets,
 	Data&                          data) const
@@ -48,7 +48,7 @@ void VirtualMachine::transitionLookup(
 
 
 void VirtualMachine::transitionLookup(
-	const TT<label_type>&       transition,
+	const Transition&           transition,
 	size_t                      offset,
 	Data&                       data) const
 {
@@ -70,7 +70,7 @@ void VirtualMachine::transitionLookup(
 
 void VirtualMachine::transitionModify(
 	TreeAut&                            dst,
-	const TT<label_type>&               transition,
+	const Transition&                   transition,
 	size_t                              offset,
 	const Data&                         in,
 	Data&                               out)
@@ -107,7 +107,7 @@ void VirtualMachine::transitionModify(
 
 void VirtualMachine::transitionModify(
 	TreeAut&                                        dst,
-	const TT<label_type>&                           transition,
+	const Transition&                               transition,
 	size_t                                          base,
 	const std::vector<std::pair<size_t, Data>>&     in,
 	Data&                                           out)
@@ -122,12 +122,12 @@ void VirtualMachine::transitionModify(
 	std::vector<const AbstractBox*> label = transition.label()->getNode();
 
 	out = Data::createStruct();
-	for (auto i = in.begin(); i != in.end(); ++i)
+	for (const std::pair<size_t, Data>& sel : in)
 	{
 		// Retrieve the item with the given offset
-		const NodeLabel::NodeItem& ni = transition.label()->boxLookup(i->first + base);
+		const NodeLabel::NodeItem& ni = transition.label()->boxLookup(sel.first + base);
 		// Assertions
-		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, i->first + base));
+		assert(VirtualMachine::isSelectorWithOffset(ni.aBox, sel.first + base));
 
 		const Data* tmp = nullptr;
 		if (!fae_.isData(transition.lhs()[ni.offset], tmp))
@@ -135,10 +135,10 @@ void VirtualMachine::transitionModify(
 			throw ProgramError("transitionModify(): destination is not a leaf!");
 		}
 
-		out.d_struct->push_back(Data::item_info(i->first, *tmp));
+		out.d_struct->push_back(Data::item_info(sel.first, *tmp));
 		SelData s = VirtualMachine::readSelector(ni.aBox);
 		VirtualMachine::displToData(s, out.d_struct->back().second);
-		Data d = i->second;
+		Data d = sel.second;
 		VirtualMachine::displToSel(s, d);
 		lhs[ni.offset] = fae_.addData(dst, d);
 		label[ni.index] = fae_.boxMan->getSelector(s);
@@ -157,7 +157,7 @@ size_t VirtualMachine::nodeCreate(
 	assert(nullptr != fae_.boxMan);
 
 	// create a new tree automaton
-	size_t root = fae_.roots.size();
+	size_t root = fae_.getRootCount();
 	TreeAut* ta = fae_.allocTA();
 	size_t f = fae_.freshState();
 	ta->addFinalState(f);
@@ -199,28 +199,28 @@ size_t VirtualMachine::nodeCreate(
 void VirtualMachine::nodeDelete(size_t root)
 {
 	// Assertions
-	assert(root < fae_.roots.size());
-	assert(fae_.roots[root]);
+	assert(root < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(root));
 
 	// update content of variables referencing the tree automaton
 	fae_.SetVarsToUndefForRoot(root);
 
 	// erase node
-	fae_.roots[root] = nullptr;
+	fae_.setRoot(root, nullptr);
 
 	// make all references to this rootpoint dangling
-	for (size_t i = 0; i < fae_.roots.size(); ++i)
+	for (size_t i = 0; i < fae_.getRootCount(); ++i)
 	{
 		if (root == i)
 		{	// for the 'root'
 			fae_.connectionGraph.invalidate(i);
 		}
 
-		if (!fae_.roots[i])
+		if (!fae_.getRoot((i)))
 			continue;
 
-		fae_.roots[i] = std::shared_ptr<TreeAut>(
-			fae_.invalidateReference(fae_.roots[i].get(), root));
+		fae_.setRoot(i, std::shared_ptr<TreeAut>(
+			fae_.invalidateReference(fae_.getRoot(i).get(), root)));
 		fae_.connectionGraph.invalidate(i);
 	}
 }
@@ -233,16 +233,21 @@ void VirtualMachine::nodeModify(
 	Data&                       out)
 {
 	// Assertions
-	assert(root < fae_.roots.size());
-	assert(fae_.roots[root]);
+	assert(root < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(root));
 
 	TreeAut ta(*fae_.backend);
-	this->transitionModify(ta, fae_.roots[root]->getAcceptingTransition(),
-		offset, in, out);
-	fae_.roots[root]->copyTransitions(ta);
+	this->transitionModify(
+		ta,
+		fae_.getRoot(root)->getAcceptingTransition(),
+		offset,
+		in,
+		out);
+
+	fae_.getRoot(root)->copyTransitions(ta);
 	TreeAut* tmp = fae_.allocTA();
 	ta.unreachableFree(*tmp);
-	fae_.roots[root] = std::shared_ptr<TreeAut>(tmp);
+	fae_.setRoot(root, std::shared_ptr<TreeAut>(tmp));
 	fae_.connectionGraph.invalidate(root);
 }
 
@@ -254,17 +259,17 @@ void VirtualMachine::nodeModifyMultiple(
 	Data&                       out)
 {
 	// Assertions
-	assert(root < fae_.roots.size());
-	assert(fae_.roots[root]);
+	assert(root < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(root));
 	assert(in.isStruct());
 
 	TreeAut ta(*fae_.backend);
-	this->transitionModify(ta, fae_.roots[root]->getAcceptingTransition(),
+	this->transitionModify(ta, fae_.getRoot(root)->getAcceptingTransition(),
 		offset, *in.d_struct, out);
-	fae_.roots[root]->copyTransitions(ta);
+	fae_.getRoot(root)->copyTransitions(ta);
 	TreeAut* tmp = fae_.allocTA();
 	ta.unreachableFree(*tmp);
-	fae_.roots[root] = std::shared_ptr<TreeAut>(tmp);
+	fae_.setRoot(root, std::shared_ptr<TreeAut>(tmp));
 	fae_.connectionGraph.invalidate(root);
 }
 
@@ -274,14 +279,14 @@ void VirtualMachine::getNearbyReferences(
 	std::set<size_t>&            out) const
 {
 	// Assertions
-	assert(root < fae_.roots.size());
-	assert(fae_.roots[root]);
+	assert(root < fae_.getRootCount());
+	assert(nullptr != fae_.getRoot(root));
 
-	const TT<label_type>& t = fae_.roots[root]->getAcceptingTransition();
-	for (auto i = t.lhs().begin(); i != t.lhs().end(); ++i)
+	const Transition& t = fae_.getRoot(root)->getAcceptingTransition();
+	for (size_t state : t.lhs())
 	{
 		const Data* data = nullptr;
-		if (fae_.isData(*i, data) && data->isRef())
+		if (fae_.isData(state, data) && data->isRef())
 			out.insert(data->d_ref.root);
 	}
 }

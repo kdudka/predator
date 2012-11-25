@@ -31,9 +31,9 @@
 #include <boost/functional/hash.hpp>
 
 template <class T>
-class Cache {
-
-public:
+class Cache
+{
+public:   // data types
 
 	typedef typename std::unordered_map<T, size_t, boost::hash<T>> store_type;
 	typedef typename std::unordered_map<T, size_t, boost::hash<T>>::value_type value_type;
@@ -43,7 +43,7 @@ public:
 		virtual ~Listener() {}
 	};
 
-private:
+private:  // data members
 
 	store_type store;
 
@@ -55,45 +55,54 @@ public:
 		store{},
 		listeners{}
 	{ }
-	
-	void addListener(Listener* x) {
+
+	void addListener(Listener* x)
+	{
 		this->listeners.push_back(x);
 	}
 
-	value_type* find(const T& x) {
+	value_type* find(const T& x)
+	{
 		typename store_type::iterator i = this->store.find(x);
 		return (i == this->store.end())?(nullptr):(&*i);
 	}
 
-	value_type* lookup(const T& x) {
+	value_type* lookup(const T& x)
+	{
 		return this->addRef(&*this->store.insert(std::make_pair(x, 0)).first);
 	}
 
-	value_type* addRef(value_type* x) {
+	value_type* addRef(value_type* x)
+	{
 		return ++x->second, x;
 	}
 
-	size_t release(value_type* x) {
+	size_t release(value_type* x)
+	{
 		if (x->second > 1)
 			return --x->second;
-		for (typename std::vector<Listener*>::iterator i = this->listeners.begin(); i != this->listeners.end(); ++i)
-			(*i)->drop(x);
+
+		for (Listener* lsnr : this->listeners)
+			lsnr->drop(x);
+
 		this->store.erase(x->first);
 		return 0;
 	}
-	
-	void clear() {
-		for (typename std::vector<Listener*>::iterator i = this->listeners.begin(); i != this->listeners.end(); ++i) {
+
+	void clear()
+	{
+		for (Listener* lsnr : this->listeners)
+		{
 			for (typename store_type::iterator j = this->store.begin(); j != this->store.end(); ++j)
-				(*i)->drop(&*j);
+				lsnr->drop(&*j);
 		}
 		this->store.clear();
 	}
 
-	bool empty() const {
+	bool empty() const
+	{
 		return this->store.empty();
 	}
-
 };
 
 template <class T, class V>

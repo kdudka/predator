@@ -173,14 +173,14 @@ void computeForbiddenSet(
 	FAE&                            fae)
 {
 	// Assertions
-	assert(fae.roots.size() == fae.connectionGraph.data.size());
-	assert(fae.roots.size() >= FIXED_REG_COUNT);
+	assert(fae.getRootCount() == fae.connectionGraph.data.size());
+	assert(fae.getRootCount() >= FIXED_REG_COUNT);
 
 	VirtualMachine vm(fae);
 
 	for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
 	{
-		assert(fae.roots[vm.varGet(i).d_ref.root]);
+		assert(fae.getRoot(vm.varGet(i).d_ref.root));
 		forbidden.insert(vm.varGet(i).d_ref.root);
 	}
 
@@ -222,12 +222,12 @@ bool fold(
 
 	bool matched = false;
 
-	for (size_t i = 0; i < fae.roots.size(); ++i)
+	for (size_t i = 0; i < fae.getRootCount(); ++i)
 	{
 		if (forbidden.count(i))
 			continue;
 
-		assert(fae.roots[i]);
+		assert(fae.getRoot(i));
 
 		if (folding.discover1(i, forbidden, true))
 			matched = true;
@@ -366,7 +366,7 @@ void getCandidates(
 		boost::hash<std::vector<std::pair<int, size_t>>>
 	> partition;
 
-	for (size_t i = 0; i < fae.roots.size(); ++i)
+	for (size_t i = 0; i < fae.getRootCount(); ++i)
 	{
 		std::vector<std::pair<int, size_t>> tmp;
 
@@ -394,12 +394,12 @@ void learn1(FAE& fae, BoxMan& boxMan)
 
 	computeForbiddenSet(forbidden, fae);
 
-	for (size_t i = 0; i < fae.roots.size(); ++i)
+	for (size_t i = 0; i < fae.getRootCount(); ++i)
 	{
 		if (forbidden.count(i))
 			continue;
 
-		assert(fae.roots[i]);
+		assert(fae.getRoot(i));
 
 		folding.discover1(i, forbidden, false);
 		folding.discover2(i, forbidden, false);
@@ -416,12 +416,12 @@ void learn2(FAE& fae, BoxMan& boxMan)
 
 	computeForbiddenSet(forbidden, fae);
 
-	for (size_t i = 0; i < fae.roots.size(); ++i)
+	for (size_t i = 0; i < fae.getRootCount(); ++i)
 	{
 		if (forbidden.count(i))
 			continue;
 
-		assert(fae.roots[i]);
+		assert(fae.getRoot(i));
 
 		folding.discover3(i, forbidden, false);
 	}

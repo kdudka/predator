@@ -44,6 +44,11 @@
  */
 class VirtualMachine
 {
+public:   // data types
+
+	/// Transition
+	typedef TT<label_type> Transition;
+
 private:   // data members
 
 	/// Reference to the forest automaton representing the environment
@@ -163,7 +168,7 @@ protected:// methods
 	 * @todo: sanitize the interface
 	 */
 	void transitionLookup(
-		const TT<label_type>&             transition,
+		const Transition&                 transition,
 		size_t                            offset,
 		Data&                             data) const;
 
@@ -182,7 +187,7 @@ protected:// methods
 	 * @todo: sanitize the interface
 	 */
 	void transitionLookup(
-		const TT<label_type>&             transition,
+		const Transition&                 transition,
 		size_t                            base,
 		const std::vector<size_t>&        offsets,
 		Data&                             data) const;
@@ -191,7 +196,7 @@ protected:// methods
 	/// @todo: add documentation
 	void transitionModify(
 		TreeAut&                          dst,
-		const TT<label_type>&             transition,
+		const Transition&                 transition,
 		size_t                            offset,
 		const Data&                       in,
 		Data&                             out);
@@ -200,7 +205,7 @@ protected:// methods
 	/// @todo: add documentation
 	void transitionModify(
 		TreeAut&                                      dst,
-		const TT<label_type>&                         transition,
+		const Transition&                             transition,
 		size_t                                        base,
 		const std::vector<std::pair<size_t, Data>>&   in,
 		Data&                                         out);
@@ -329,11 +334,11 @@ public:
 		Data&                            data) const
 	{
 		// Assertions
-		assert(root < fae_.roots.size());
-		assert(fae_.roots[root]);
+		assert(root < fae_.getRootCount());
+		assert(nullptr != fae_.getRoot(root));
 
 		this->transitionLookup(
-			fae_.roots[root]->getAcceptingTransition(), offset, data);
+			fae_.getRoot(root)->getAcceptingTransition(), offset, data);
 	}
 
 	/**
@@ -357,10 +362,10 @@ public:
 		Data&                           data) const
 	{
 		// Assertions
-		assert(root < fae_.roots.size());
-		assert(fae_.roots[root]);
+		assert(root < fae_.getRootCount());
+		assert(nullptr != fae_.getRoot(root));
 
-		this->transitionLookup(fae_.roots[root]->getAcceptingTransition(),
+		this->transitionLookup(fae_.getRoot(root)->getAcceptingTransition(),
 			base, offsets, data);
 	}
 

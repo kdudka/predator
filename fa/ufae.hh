@@ -114,7 +114,7 @@ public:   // methods
 	{
 		dst.addFinalState(0);
 		std::vector<Cursor<std::set<size_t>::const_iterator>> tmp;
-		for (auto root : src.roots)
+		for (auto root : src.getRoots())
 		{
 			TreeAut::rename(
 				dst,

@@ -596,7 +596,9 @@ void ConnectionGraph::visit(size_t c, std::vector<bool>& visited) const
 	visited[c] = true;
 
 	for (auto& cutpoint : this->data[c].signature)
+	{
 		this->visit(cutpoint.root, visited);
+	}
 
 	for (auto& selectorCutpointPair : this->data[c].bwdMap)
 	{
