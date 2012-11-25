@@ -41,25 +41,112 @@
 #include <boost/foreach.hpp>
 
 // /////////////////////////////////////////////////////////////////////////////
-// implementation of plotHeap()
+// implementation of HeapCrawler
+class HeapCrawler {
+    public:
+        HeapCrawler(const SymHeap &sh, const bool digForward = true):
+            sh_(const_cast<SymHeap &>(sh)),
+            digForward_(digForward)
+        {
+        }
+
+        bool /* anyChange */ digObj(const TObjId);
+        bool /* anyChange */ digVal(const TValId);
+
+        const TObjSet objs() const { return objs_; }
+        const TValSet vals() const { return vals_; }
+
+    private:
+        void digFields(const TObjId of);
+        void operate();
+
+    private:
+        SymHeap                    &sh_;
+        WorkList<TValId>            wl_;
+        bool                        digForward_;
+        TObjSet                     objs_;
+        TValSet                     vals_;
+};
+
+void HeapCrawler::digFields(const TObjId obj)
+{
+    // traverse the outgoing has-value edges
+    FldList fields;
+    sh_.gatherLiveFields(fields, obj);
+    BOOST_FOREACH(const FldHandle &fld, fields)
+        wl_.schedule(fld.value());
+}
+
+void HeapCrawler::operate()
+{
+    TValId val;
+    while (wl_.next(val)) {
+        if (val <= VAL_NULL)
+            continue;
+
+        // insert the value itself
+        vals_.insert(val);
+        if (!isAnyDataArea(sh_.valTarget(val)))
+            // target is not an object
+            continue;
+
+        // insert the target object
+        const TObjId obj = sh_.objByAddr(val);
+        if (!insertOnce(objs_, obj))
+            // the outgoing has-value edges have already been traversed
+            continue;
+
+        if (digForward_)
+            this->digFields(obj);
+    }
+}
+
+bool /* anyChange */ HeapCrawler::digObj(const TObjId obj)
+{
+    if (!insertOnce(objs_, obj))
+        // the outgoing has-value edges have already been traversed
+        return false;
+
+    this->digFields(obj);
+    this->operate();
+    return true;
+}
+
+bool /* anyChange */ HeapCrawler::digVal(const TValId val)
+{
+    if (!wl_.schedule(val))
+        return false;
+
+    this->operate();
+    return true;
+}
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of plotHeapCore()
 struct PlotData {
     typedef std::pair<TObjId, TOffset>                      TFieldKey;
     typedef std::map<TFieldKey, FldList>                    TLiveFields;
     typedef std::pair<int /* ID */, TValId>                 TDangVal;
     typedef std::vector<TDangVal>                           TDangValues;
 
-    SymHeap                             &sh;
-    std::ostream                        &out;
+    SymHeap                            &sh;
+    std::ostream                       &out;
+    const TObjSet                      &objs;
+    const TValSet                      &values;
     int                                 last;
-    std::set<TObjId>                    objs;
-    TValSet                             values;
     TLiveFields                         liveFields;
     TFldSet                             lonelyFields;
     TDangValues                         dangVals;
 
-    PlotData(const SymHeap &sh_, std::ostream &out_):
+    PlotData(
+            const SymHeap              &sh_,
+            std::ostream               &out_,
+            const TObjSet              &objs_,
+            const TValSet              &values_):
         sh(const_cast<SymHeap &>(sh_)),
         out(out_),
+        objs(objs_),
+        values(values_),
         last(0)
     {
     }
@@ -95,44 +182,6 @@ const char* labelByTargetSpec(const ETargetSpecifier code)
 
     CL_BREAK_IF("invalid call of labelByTargetSpec()");
     return "";
-}
-
-void digValues(PlotData &plot, const TValList &startingPoints, bool digForward)
-{
-    SymHeap &sh = plot.sh;
-
-    WorkList<TValId> todo;
-    BOOST_FOREACH(const TValId val, startingPoints)
-        if (0 < val)
-            todo.schedule(val);
-
-    TValId val;
-    while (todo.next(val)) {
-        // insert the value itself
-        plot.values.insert(val);
-        if (!isAnyDataArea(sh.valTarget(val)))
-            // target is not an object
-            continue;
-
-        // insert the target object
-        const TObjId obj = sh.objByAddr(val);
-        if (!insertOnce(plot.objs, obj))
-            // the outgoing has-value edges have already been traversed
-            continue;
-
-        if (!digForward)
-            continue;
-
-        // traverse the outgoing has-value edges
-        FldList fields;
-        sh.gatherLiveFields(fields, obj);
-        BOOST_FOREACH(const FldHandle &fld, fields) {
-            const TValId valInside = fld.value();
-            if (0 < valInside)
-                // schedule the value inside for processing
-                todo.schedule(valInside);
-        }
-    }
 }
 
 inline const char* offPrefix(const TOffset off)
@@ -1211,12 +1260,12 @@ void plotEverything(PlotData &plot)
     plotNeqEdges(plot);
 }
 
-bool plotHeap(
+bool plotHeapCore(
         const SymHeap                   &sh,
         const std::string               &name,
         const struct cl_loc             *loc,
-        const TValList                  &startingPoints,
-        const bool                      digForward)
+        const TObjSet                   &objs,
+        const TValSet                   &vals)
 {
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string plotName(pe->decorate(name));
@@ -1247,10 +1296,9 @@ bool plotHeap(
         CL_DEBUG("writing heap graph to '" << fileName << "'...");
 
     // initialize an instance of PlotData
-    PlotData plot(sh, out);
+    PlotData plot(sh, out, objs, vals);
 
     // do our stuff
-    digValues(plot, startingPoints, digForward);
     plotEverything(plot);
 
     // close graph
@@ -1260,18 +1308,34 @@ bool plotHeap(
     return ok;
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of plotHeap()
+bool plotHeap(
+        const SymHeap                   &sh,
+        const std::string               &name,
+        const struct cl_loc             *loc,
+        const TValList                  &startingPoints,
+        const bool                      digForward)
+{
+    HeapCrawler crawler(sh, digForward);
+
+    BOOST_FOREACH(const TValId val, startingPoints)
+        crawler.digVal(val);
+
+    return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals());
+}
+
 bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
         const struct cl_loc             *loc)
 {
+    HeapCrawler crawler(sh);
+
     TObjList allObjs;
     sh.gatherObjects(allObjs);
-
-    // TODO: drop this!
-    TValList roots;
     BOOST_FOREACH(const TObjId obj, allObjs)
-        roots.push_back(sh.legacyAddrOfAny_XXX(obj));
+        crawler.digObj(obj);
 
-    return plotHeap(sh, name, loc, roots);
+    return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals());
 }
