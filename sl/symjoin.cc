@@ -101,40 +101,34 @@ class WorkListWithUndo: public WorkList<T> {
 };
 
 struct SchedItem {
-    TValId              v1;
-    TValId              v2;
+    FldHandle           fld1;
+    FldHandle           fld2;
     TProtoLevel         ldiff;
 
     SchedItem():
-        v1(VAL_INVALID),
-        v2(VAL_INVALID),
         ldiff(0)
     {
     }
 
-    SchedItem(TValId v1_, TValId v2_, TProtoLevel ldiff_):
-        v1(v1_),
-        v2(v2_),
+    SchedItem(FldHandle fld1_, FldHandle fld2_, TProtoLevel ldiff_):
+        fld1(fld1_),
+        fld2(fld2_),
         ldiff(ldiff_)
     {
-    }
-
-    operator TValPair() const {
-        return TValPair(v1, v2);
     }
 };
 
 // needed by std::set
 inline bool operator<(const SchedItem &a, const SchedItem &b)
 {
-    if (a.v1 < b.v1)
+    if (a.fld1 < b.fld1)
         return true;
-    if (b.v1 < a.v1)
+    if (b.fld1 < a.fld1)
         return false;
 
-    if (a.v2 < b.v2)
+    if (a.fld2 < b.fld2)
         return true;
-    if (b.v2 < a.v2)
+    if (b.fld2 < a.fld2)
         return false;
 
     return (a.ldiff < b.ldiff);
@@ -667,7 +661,7 @@ bool joinFreshObjTripple(
     if (bumpNestingLevel(fld2))
         --ldiff;
 
-    const SchedItem item(v1, v2, ldiff);
+    const SchedItem item(fld1, fld2, ldiff);
     if (ctx.wl.schedule(item))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
                 << " <- " << SJ_FLDP(fld1, fld2)
@@ -1547,8 +1541,8 @@ bool followValuePair(
         const SchedItem         &item,
         const bool              readOnly)
 {
-    const TValId v1 = item.v1;
-    const TValId v2 = item.v2;
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
     if (readOnly)
         // shallow scan only!
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
@@ -1708,8 +1702,8 @@ bool segmentCloneCore(
     // TODO: drop this!
     const TValId root1 = (JS_USE_SH1 == action) ? addrGt : VAL_INVALID;
     const TValId root2 = (JS_USE_SH2 == action) ? addrGt : VAL_INVALID;
-    const SchedItem item(root1, root2, ldiff);
-    ctx.tieBreaking.insert(TValPair(item));
+    const TValPair vp(root1, root2);
+    ctx.tieBreaking.insert(vp);
 
     // clone the object
     const TObjId obj1 = ctx.sh1.objByAddr(root1);
@@ -1724,27 +1718,31 @@ bool segmentCloneCore(
 
 void scheduleSegAddr(
         TWorkList              &wl,
-        const TValId            seg,
-        const TValId            peer,
+        const SymHeap          &shGt,
+        const TObjId            seg,
+        const TObjId            peer,
         const EJoinStatus       action,
-        const TProtoLevel       ldiff)
+        const SchedItem         item)
 {
     CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
 
+    const FldHandle fldInvalid;
+
     const SchedItem segItem(
-            (JS_USE_SH1 == action) ? seg : VAL_INVALID,
-            (JS_USE_SH2 == action) ? seg : VAL_INVALID,
-            ldiff);
+            (JS_USE_SH1 == action) ? item.fld1 : fldInvalid,
+            (JS_USE_SH2 == action) ? item.fld2 : fldInvalid,
+            item.ldiff);
     wl.schedule(segItem);
 
     if (seg == peer)
         return;
 
     // FIXME: we need this for test-0129
+    const FldHandle fldPeer = prevPtrFromSeg(shGt, seg);
     const SchedItem peerItem(
-            (JS_USE_SH1 == action) ? peer : VAL_INVALID,
-            (JS_USE_SH2 == action) ? peer : VAL_INVALID,
-            ldiff);
+            (JS_USE_SH1 == action) ? fldPeer : fldInvalid,
+            (JS_USE_SH2 == action) ? fldPeer : fldInvalid,
+            item.ldiff);
     wl.schedule(peerItem);
 }
 
@@ -1780,8 +1778,8 @@ bool cloneSpecialValue(
         const SchedItem         &itemToClone,
         EValueTarget            code)
 {
-    const TValId v1 = itemToClone.v1;
-    const TValId v2 = itemToClone.v2;
+    const TValId v1 = itemToClone.fld1.value();
+    const TValId v2 = itemToClone.fld2.value();
     const TValPair vp(v1, v2);
 
     const TValId rootGt = shGt.valRoot(valGt);
@@ -1825,8 +1823,8 @@ bool insertSegmentClone(
         const EJoinStatus       action,
         const BindingOff        *off = 0)
 {
-    const TValId v1 = item.v1;
-    const TValId v2 = item.v2;
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
     SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
 
     const bool isGt1 = (JS_USE_SH1 == action);
@@ -1883,14 +1881,16 @@ bool insertSegmentClone(
 
     // TODO: drop this!
     const TValId segAt = shGt.addrOfTarget(seg, /* XXX */ TS_REGION);
-    const TValId peerAt = shGt.addrOfTarget(peer, /* XXX */ TS_REGION);
 
-    scheduleSegAddr(ctx.wl, segAt, peerAt, action, item.ldiff);
+    scheduleSegAddr(ctx.wl, shGt, seg, peer, action, item);
 
     SchedItem cloneItem;
     while (ctx.wl.next(cloneItem)) {
-        const TValId valGt = (isGt1) ? cloneItem.v1 : cloneItem.v2;
-        const TValId valLt = (isGt2) ? cloneItem.v1 : cloneItem.v2;
+        const TValId v1 = cloneItem.fld1.value();
+        const TValId v2 = cloneItem.fld2.value();
+
+        const TValId valGt = (isGt1) ? v1 : v2;
+        const TValId valLt = (isGt2) ? v1 : v2;
         if (VAL_INVALID != valLt) {
             // process the rest of ctx.wl rather in joinPendingValues()
             ctx.wl.undo(cloneItem);
@@ -1926,12 +1926,15 @@ bool insertSegmentClone(
         // nothing to follow
         return true;
 
-    // schedule the next object in the row (TODO: check if really necessary)
-    const TValId valNext1 = (isGt1) ? nextGt : nextLt;
-    const TValId valNext2 = (isGt2) ? nextGt : nextLt;
-    const SchedItem nextItem(valNext1, valNext2, item.ldiff);
+    // FIXME: suspicious place  >>> HERE <<<
+
+    // schedule the successor fields
+    const FldHandle fldNext1 = (isGt1) ? nextPtr : item.fld1;
+    const FldHandle fldNext2 = (isGt2) ? nextPtr : item.fld2;
+    const SchedItem nextItem(fldNext1, fldNext2, item.ldiff);
     if (ctx.wl.schedule(nextItem))
-        SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " by insertSegmentClone()");
+        SJ_DEBUG("+++ " << SJ_FLDP(fldNext1, fldNext2)
+                << " by insertSegmentClone()");
 
     return true;
 }
@@ -1970,8 +1973,8 @@ bool joinAbstractValues(
         bool                     isAbs1,
         bool                     isAbs2)
 {
-    const TValId v1 = item.v1;
-    const TValId v2 = item.v2;
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
     resolveMayExist(ctx, &isAbs1, &isAbs2, v1, v2);
 
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
@@ -2060,7 +2063,7 @@ class MayExistVisitor {
         SymJoinCtx              ctx_;
         const TProtoLevel       ldiff_;
         const EJoinStatus       action_;
-        const TValId            valRef_;
+        const FldHandle         fldRef_;
         const TValId            root_;
         bool                    lookThrough_;
         TOffList                foundOffsets_;
@@ -2070,12 +2073,12 @@ class MayExistVisitor {
                 SymJoinCtx          &ctx,
                 const TProtoLevel   ldiff,
                 const EJoinStatus   action,
-                const TValId        valRef,
+                const FldHandle     fldRef,
                 const TValId        root):
             ctx_(ctx),
             ldiff_(ldiff),
             action_(action),
-            valRef_(valRef),
+            fldRef_(fldRef),
             root_(root),
             lookThrough_(false)
         {
@@ -2108,9 +2111,9 @@ class MayExistVisitor {
                     // refuse referencing the MayExist candidate itself
                     return /* continue */ true;
 
-                const TValId v1 = (JS_USE_SH1 == action_) ? val : valRef_;
-                const TValId v2 = (JS_USE_SH2 == action_) ? val : valRef_;
-                const SchedItem item(v1, v2, ldiff_);
+                const FldHandle fld1 = (JS_USE_SH1 == action_) ? fld : fldRef_;
+                const FldHandle fld2 = (JS_USE_SH2 == action_) ? fld : fldRef_;
+                const SchedItem item(fld1, fld2, ldiff_);
                 if (followValuePair(ctx_, item, /* read-only */ true))
                     // looks like we have a candidate
                     break;
@@ -2199,8 +2202,8 @@ bool mayExistFallback(
     const bool use2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(use1 == use2);
 
-    const TValId v1 = item.v1;
-    const TValId v2 = item.v2;
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
 
     const TValId root1 = ctx.sh1.valRoot(v1);
     const TValId root2 = ctx.sh2.valRoot(v2);
@@ -2225,8 +2228,8 @@ bool mayExistFallback(
 
     BindingOff off;
 
-    const TValId ref = (use2) ? v1 : v2;
-    if (VAL_NULL == ref) {
+    const FldHandle ref = (use2) ? item.fld1 : item.fld2;
+    if (VAL_NULL == ref.value()) {
         // introduce OK_OBJ_OR_NULL
         off = ObjOrNull;
     }
@@ -2352,8 +2355,8 @@ bool joinValuesByCode(
 
 bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
 {
-    const TValId v1 = item.v1;
-    const TValId v2 = item.v2;
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
     if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
         // already joined
         return true;
@@ -2386,13 +2389,13 @@ bool joinPendingValues(SymJoinCtx &ctx)
 {
     SchedItem item;
     while (ctx.wl.next(item)) {
-        const TValId v1 = item.v1;
-        const TValId v2 = item.v2;
+        const TValId v1 = item.fld1.value();
+        const TValId v2 = item.fld2.value();
         SJ_DEBUG("--- " << SJ_VALP(v1, v2));
         if (!joinValuePair(ctx, item))
             return false;
 
-        ctx.alreadyJoined.insert(TValPair(item));
+        ctx.alreadyJoined.insert(TValPair(v1, v2));
     }
 
     return true;
