@@ -54,6 +54,7 @@ struct PlotData {
     std::set<TObjId>                    objs;
     TValSet                             values;
     TLiveFields                         liveFields;
+    TFldSet                             lonelyFields;
     TDangValues                         dangVals;
 
     PlotData(const SymHeap &sh_, std::ostream &out_):
@@ -400,8 +401,11 @@ bool plotField(PlotData &plot, const FieldWrapper &fw, const bool lonely)
     const PlotData::TFieldKey key(obj, fld.offset());
     plot.liveFields[key].push_back(fld);
 
-    // cppcheck-suppress unreachableCode
+    int id = fld.fieldId();
+
     if (lonely) {
+        id = obj;
+
         const EStorageClass code = sh.objStorClass(obj);
         switch (code) {
             case SC_STATIC:
@@ -414,7 +418,7 @@ bool plotField(PlotData &plot, const FieldWrapper &fw, const bool lonely)
         }
     }
 
-    plot.out << "\t" << SL_QUOTE(fld.fieldId())
+    plot.out << "\t" << SL_QUOTE(id)
         << " [shape=box, color=" << color
         << ", fontcolor=" << color << props
         << ", label=\"";
@@ -667,7 +671,7 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
     plot.out << "}\n";
 }
 
-bool plotSimpleRoot(PlotData &plot, const FldHandle &fld)
+bool plotLonelyField(PlotData &plot, const FldHandle &fld)
 {
     SymHeap &sh = plot.sh;
 
@@ -690,6 +694,8 @@ bool plotSimpleRoot(PlotData &plot, const FldHandle &fld)
         // size mismatch detected
         return false;
 
+    plot.lonelyFields.insert(fld);
+
     const FieldWrapper fw(fld);
     plotField(plot, fw, /* lonely */ true);
     return true;
@@ -711,7 +717,7 @@ void plotObjects(PlotData &plot)
 
         if (OK_REGION == sh.objKind(obj)
                 && (1 == liveFields.size())
-                && plotSimpleRoot(plot, liveFields.front()))
+                && plotLonelyField(plot, liveFields.front()))
             // this one went out in a simplified form
             continue;
 
@@ -834,8 +840,7 @@ void describeCustomValue(PlotData &plot, const TValId val)
 void plotCustomValue(
         PlotData                       &plot,
         const int                       idFrom,
-        const TValId                    val,
-        const char                     *edgeLabel)
+        const TValId                    val)
 {
     const int id = ++plot.last;
     plot.out << "\t" << SL_QUOTE("lonely" << id) << " [shape=plaintext";
@@ -845,9 +850,8 @@ void plotCustomValue(
     plot.out << "];\n\t"
         << SL_QUOTE(idFrom)
         << " -> " << SL_QUOTE("lonely" << id)
-        << " [color=blue, fontcolor=blue";
-    appendLabelIf(plot.out, edgeLabel);
-    plot.out << "];\n";
+        << " [color=blue, fontcolor=blue"
+        << "];\n";
 }
 
 void plotSingleValue(PlotData &plot, const TValId val)
@@ -911,22 +915,11 @@ preserve_suffix:
     if (suffix)
         plot.out << " " << suffix;
 
-    const TValId root = sh.valRoot(val);
-
-    if (VT_RANGE == code) {
+    if (isAnyDataArea(code)) {
         const IR::Range &offRange = sh.valOffsetRange(val);
-        plot.out << " [root = #" << root
-            << ", off = " << offRange.lo << ".." << offRange.hi;
-
-        if (isAligned(offRange))
-            plot.out << ", alignment = " << offRange.alignment;
-    
-        plot.out << "]";
-    }
-    else {
-        const TOffset off = sh.valOffset(val);
-        if (off)
-            plot.out << " [root = #" << root << ", off = " << off << "]";
+        plot.out << " [off = ";
+        printRawRange(plot.out, offRange);
+        plot.out << ", obj = #" << obj << "]";
     }
 
     plot.out << "\"];\n";
@@ -939,18 +932,14 @@ void plotPointsTo(PlotData &plot, const TValId val, const TFldId target)
         << " [color=green, fontcolor=green];\n";
 }
 
-void plotRangePtr(PlotData &plot, TValId val, TObjId obj, const IR::Range &rng)
+void plotRangePtr(PlotData &plot, TValId val, TObjId obj)
 {
     plot.out << "\t" << SL_QUOTE(val) << " -> "
         << SL_QUOTE(obj)
-        << " [color=red, fontcolor=red, label=\"[";
-
-    printRawRange(plot.out, rng);
-    
-    plot.out << "]\"];\n";
+        << " [color=red, fontcolor=red];\n";
 }
 
-void plotValues(PlotData &plot)
+void plotAddrs(PlotData &plot)
 {
     SymHeap &sh = plot.sh;
 
@@ -959,28 +948,32 @@ void plotValues(PlotData &plot)
         plotSingleValue(plot, val);
 
         const TObjId obj = sh.objByAddr(val);
+
         const EValueTarget code = sh.valTarget(val);
-        if (VT_RANGE == code) {
-            const IR::Range &rng = sh.valOffsetRange(val);
-            plotRangePtr(plot, val, obj, rng);
-            continue;
-        }
-        else if (!isAnyDataArea(sh.valTarget(val)))
-            // no valid target
-            continue;
+        switch (code) {
+            case VT_OBJECT:
+                break;
 
-        // assume an off-value
-        const PlotData::TFieldKey key(obj, sh.valOffset(val));
-        PlotData::TLiveFields::const_iterator it = plot.liveFields.find(key);
-        if ((plot.liveFields.end() != it) && (1 == it->second.size())) {
-            // exactly one target
-            const FldHandle &target = it->second.front();
-            plotPointsTo(plot, val, target.fieldId());
-            continue;
+            case VT_RANGE:
+                plotRangePtr(plot, val, obj);
+                continue;
+
+            default:
+                continue;
         }
 
-        // an off-value with either no target, or too many targets
         const TOffset off = sh.valOffset(val);
+        if (off) {
+            const PlotData::TFieldKey key(obj, off);
+            PlotData::TLiveFields::const_iterator it = plot.liveFields.find(key);
+            if ((plot.liveFields.end() != it) && (1 == it->second.size())) {
+                // plot the target field as an abbreviation
+                const FldHandle &target = it->second.front();
+                plotPointsTo(plot, val, target.fieldId());
+                continue;
+            }
+        }
+
         plotOffset(plot, off, val, obj);
     }
 
@@ -1066,30 +1059,30 @@ void plotAuxValue(
 
 void plotHasValue(
         PlotData                       &plot,
-        const int                       idFrom,
-        const TValId                    val,
-        const bool                      isObj = true,
-        const char                     *edgeLabel = 0)
+        const FldHandle                &fld)
 {
     SymHeap &sh = plot.sh;
+    const TValId val = fld.value();
+    const bool isObj = hasKey(plot.lonelyFields, fld);
+    const int idFrom = (isObj)
+        ? static_cast<int>(fld.obj())
+        : static_cast<int>(fld.fieldId());
 
     if (val <= 0) {
-        plotAuxValue(plot, idFrom, val, isObj, edgeLabel);
+        plotAuxValue(plot, idFrom, val, !isObj);
         return;
     }
 
     const EValueTarget code = sh.valTarget(val);
     if (VT_CUSTOM == code) {
-        plotCustomValue(plot, idFrom, val, edgeLabel);
+        plotCustomValue(plot, idFrom, val);
         return;
     }
 
     plot.out << "\t"
         << SL_QUOTE(idFrom)
         << " -> " << SL_QUOTE(val)
-        << " [color=blue, fontcolor=blue";
-    appendLabelIf(plot.out, edgeLabel);
-    plot.out << "];\n";
+        << " [color=blue, fontcolor=blue];\n";
 }
 
 void plotNeqZero(PlotData &plot, const TValId val)
@@ -1172,7 +1165,7 @@ void plotHasValueEdges(PlotData &plot)
     // plot "hasValue" edges
     BOOST_FOREACH(PlotData::TLiveFields::const_reference item, plot.liveFields)
         BOOST_FOREACH(const FldHandle &fld, /* FldList */ item.second)
-            plotHasValue(plot, fld.fieldId(), fld.value());
+            plotHasValue(plot, fld);
 
     // plot "hasValue" edges for uniform block prototypes
     BOOST_FOREACH(PlotData::TDangValues::const_reference item, plot.dangVals) {
@@ -1193,7 +1186,7 @@ void plotHasValueEdges(PlotData &plot)
 void plotEverything(PlotData &plot)
 {
     plotObjects(plot);
-    plotValues(plot);
+    plotAddrs(plot);
     plotHasValueEdges(plot);
     plotNeqEdges(plot);
 }
