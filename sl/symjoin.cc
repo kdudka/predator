@@ -744,25 +744,26 @@ struct SegMatchVisitor {
         }
 };
 
-bool traverseRoots(
+bool joinFields(
         SymJoinCtx             &ctx,
-        const TValId            rootDst,
-        const SchedItem        &rootItem,
+        const TObjId            objDst,
+        const TObjId            obj1,
+        const TObjId            obj2,
+        const TProtoLevel       ldiff,
         const BindingOff       *offBlackList = 0)
 {
-    const TValId root1 = rootItem.v1;
-    const TValId root2 = rootItem.v2;
-    if (!defineValueMapping(ctx, root1, root2, rootDst))
+    // TODO: drop this!
+    const TValId addr1   = ctx.sh1.addrOfTarget(obj1  , /* XXX */ TS_REGION);
+    const TValId addr2   = ctx.sh2.addrOfTarget(obj2  , /* XXX */ TS_REGION);
+    const TValId addrDst = ctx.dst.addrOfTarget(objDst, /* XXX */ TS_REGION);
+    if (!defineValueMapping(ctx, addr1, addr2, addrDst))
         return false;
 
-    const TObjId objDst = ctx.dst.objByAddr(rootDst);
-    const TObjId obj1   = ctx.sh1.objByAddr(root1);
-    const TObjId obj2   = ctx.sh2.objByAddr(root2);
     if (!defineObjectMapping(ctx, objDst, obj1, obj2))
         return false;
 
     // initialize visitor
-    ObjJoinVisitor objVisitor(ctx, rootItem.ldiff);
+    ObjJoinVisitor objVisitor(ctx, ldiff);
     dlSegBlackListPrevPtr(objVisitor.blackList1, ctx.sh1, obj1);
     dlSegBlackListPrevPtr(objVisitor.blackList2, ctx.sh2, obj2);
 
@@ -771,7 +772,7 @@ bool traverseRoots(
         buildIgnoreList(objVisitor.blackList2, ctx.sh2, obj2, *offBlackList);
     }
     else if (ctx.joiningData()) {
-        if (root1 == root2)
+        if (obj1 == obj2)
             // do not follow shared data
             return true;
         else
@@ -1357,9 +1358,6 @@ bool createObject(
     // preserve 'prototype' flag
     ctx.dst.objSetProtoLevel(objDst, protoLevel);
 
-    // TODO: drop this!
-    const TValId rootDst = ctx.dst.addrOfTarget(objDst, /* XXX */ TS_REGION);
-
     if (OK_REGION != kind) {
         // abstract object
         ctx.dst.objSetAbstract(objDst, kind, off);
@@ -1368,7 +1366,7 @@ bool createObject(
         ctx.segLengths[objDst] = joinMinLength(ctx, obj1, obj2);
     }
 
-    return traverseRoots(ctx, rootDst, item);
+    return joinFields(ctx, objDst, obj1, obj2, item.ldiff);
 }
 
 bool followRootValuesCore(
@@ -1382,6 +1380,9 @@ bool followRootValuesCore(
     if (!checkValueMapping(ctx, root1, root2, /* allowUnknownMapping */ true))
         return false;
 
+    const TObjId obj1 = ctx.sh1.objByAddr(root1);
+    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+
     if (hasKey(ctx.valMap1[0], root1) && hasKey(ctx.valMap2[0], root2))
         return true;
 
@@ -1391,10 +1392,7 @@ bool followRootValuesCore(
 
     if (ctx.joiningDataReadWrite() && root1 == root2)
         // we are on the way from joinData() and hit shared data
-        return traverseRoots(ctx, root1, item);
-
-    const TObjId obj1 = ctx.sh1.objByAddr(root1);
-    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+        return joinFields(ctx, obj1, obj1, obj2, item.ldiff);
 
     const TObjType clt1 = ctx.sh1.objEstimatedType(obj1);
     const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
@@ -1473,13 +1471,7 @@ bool joinReturnAddrs(SymJoinCtx &ctx)
         return true;
 
     ctx.dst.objSetEstimatedType(OBJ_RETURN, clt);
-
-    const TValId retAddrDst = ctx.dst.addrOfTarget(OBJ_RETURN, TS_REGION);
-    const TValId retAddr1   = ctx.sh1.addrOfTarget(OBJ_RETURN, TS_REGION);
-    const TValId retAddr2   = ctx.sh2.addrOfTarget(OBJ_RETURN, TS_REGION);
-
-    const SchedItem rootItem(retAddr1, retAddr2, /* ldiff */ 0);
-    return traverseRoots(ctx, retAddrDst, rootItem);
+    return joinFields(ctx, OBJ_RETURN, OBJ_RETURN, OBJ_RETURN, /* ldiff */0);
 }
 
 bool joinCustomValues(
@@ -2477,15 +2469,9 @@ class JoinVarVisitor {
             const TObjId obj2   = objs[/* sh2 */ 2];
 
             switch (mode_) {
-                case JVM_LIVE_OBJS: {
-                    const TValId root1 = ctx_.sh1.addrOfTarget(obj1, TS_REGION);
-                    const TValId root2 = ctx_.sh2.addrOfTarget(obj2, TS_REGION);
-                    const TValId rootDst = ctx_.dst.addrOfTarget(objDst,
-                            TS_REGION);
-
-                    const SchedItem rootItem(root1, root2, /* ldiff */ 0);
-                    return traverseRoots(ctx_, rootDst, rootItem);
-                }
+                case JVM_LIVE_OBJS:
+                    return joinFields(ctx_, objDst, obj1, obj2,
+                        /* ldiff */ 0);
 
                 case JVM_UNI_BLOCKS:
                     return joinUniBlocks(ctx_, objDst, obj1, obj2);
@@ -2995,12 +2981,10 @@ bool joinDataCore(
         ++ldiff;
 
     // TODO: drop this!
-    const TValId rootDstAt = ctx.dst.addrOfTarget(objDst, /* XXX */ TS_REGION);
     const TValId addr1     = ctx.sh1.addrOfTarget(obj1,   /* XXX */ TS_REGION);
     const TValId addr2     = ctx.sh2.addrOfTarget(obj2,   /* XXX */ TS_REGION);
 
-    const SchedItem rootItem(addr1, addr2, ldiff);
-    if (!traverseRoots(ctx, rootDstAt, rootItem, &off))
+    if (!joinFields(ctx, objDst, obj1, obj2, ldiff, &off))
         return false;
 
     ctx.sset1.insert(addr1);
