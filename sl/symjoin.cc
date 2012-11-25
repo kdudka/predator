@@ -57,8 +57,9 @@ void debugSymJoin(const bool enable)
     ::debuggingSymJoin = enable;
 }
 
-#define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
+#define SJ_FLDP(f1, f2) "(f1 = #" << f1 << ", f2 = #" << f2 << ")"
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
+#define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
 
 static int cntJoinOps = -1;
 
@@ -588,18 +589,18 @@ bool bumpNestingLevel(const FldHandle &fld)
 /// (FLD_INVALID == objDst) means read-only!!!
 bool joinFreshObjTripple(
         SymJoinCtx              &ctx,
-        const FldHandle         &obj1,
-        const FldHandle         &obj2,
-        const FldHandle         &objDst,
+        const FldHandle         &fld1,
+        const FldHandle         &fld2,
+        const FldHandle         &fldDst,
         TProtoLevel             ldiff)
 {
-    const bool segClone = (!obj1.isValidHandle() || !obj2.isValidHandle());
-    const bool readOnly = (!objDst.isValidHandle());
+    const bool segClone = (!fld1.isValidHandle() || !fld2.isValidHandle());
+    const bool readOnly = (!fldDst.isValidHandle());
     CL_BREAK_IF(segClone && readOnly);
-    CL_BREAK_IF(!obj1.isValidHandle() && !obj2.isValidHandle());
+    CL_BREAK_IF(!fld1.isValidHandle() && !fld2.isValidHandle());
 
-    const TValId v1 = obj1.value();
-    const TValId v2 = obj2.value();
+    const TValId v1 = fld1.value();
+    const TValId v2 = fld2.value();
     if (VAL_NULL == v1 && VAL_NULL == v2)
         // both values are VAL_NULL, nothing more to join here
         return true;
@@ -626,7 +627,7 @@ bool joinFreshObjTripple(
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
     if (segClone) {
-        const bool isGt1 = !obj2.isValidHandle();
+        const bool isGt1 = !fld2.isValidHandle();
         const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
         const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
         const TValId valGt = (isGt1) ? v1 : v2;
@@ -659,15 +660,15 @@ bool joinFreshObjTripple(
             return result;
     }
 
-    if (bumpNestingLevel(obj1))
+    if (bumpNestingLevel(fld1))
         ++ldiff;
-    if (bumpNestingLevel(obj2))
+    if (bumpNestingLevel(fld2))
         --ldiff;
 
     const SchedItem item(v1, v2, ldiff);
     if (ctx.wl.schedule(item))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
-                << " <- " << SJ_OBJP(obj1.fieldId(), obj2.fieldId())
+                << " <- " << SJ_FLDP(fld1.fieldId(), fld2.fieldId())
                 << ", ldiff = " << ldiff);
 
     return true;
@@ -731,15 +732,15 @@ struct SegMatchVisitor {
         }
 
         bool operator()(const FldHandle item[2]) {
-            const FldHandle &obj1 = item[0];
-            const FldHandle &obj2 = item[1];
+            const FldHandle &fld1 = item[0];
+            const FldHandle &fld2 = item[1];
 
-            if (hasKey(blackList1, obj1) || hasKey(blackList2, obj2))
+            if (hasKey(blackList1, fld1) || hasKey(blackList2, fld2))
                 // black-listed
                 return true;
 
             const FldHandle readOnly(FLD_INVALID);
-            return joinFreshObjTripple(ctx, obj1, obj2, readOnly, ldiff);
+            return joinFreshObjTripple(ctx, fld1, fld2, readOnly, ldiff);
         }
 };
 
@@ -2570,47 +2571,47 @@ bool setDstValuesCore(
         const TItem             &rItem,
         const TBlackList        &blackList)
 {
-    const FldHandle &objDst = rItem.first;
-    CL_BREAK_IF(!objDst.isValidHandle());
-    if (hasKey(blackList, objDst))
+    const FldHandle &fldDst = rItem.first;
+    CL_BREAK_IF(!fldDst.isValidHandle());
+    if (hasKey(blackList, fldDst))
         return true;
 
     const THdlPair &orig = rItem.second;
-    const FldHandle &obj1 = orig.first;
-    const FldHandle &obj2 = orig.second;
-    CL_BREAK_IF(!obj1.isValidHandle() && !obj2.isValidHandle());
+    const FldHandle &fld1 = orig.first;
+    const FldHandle &fld2 = orig.second;
+    CL_BREAK_IF(!fld1.isValidHandle() && !fld2.isValidHandle());
 
-    const TValId v1 = obj1.value();
-    const TValId v2 = obj2.value();
+    const TValId v1 = fld1.value();
+    const TValId v2 = fld2.value();
 
-    const bool isComp1 = (isComposite(obj1.type()));
-    const bool isComp2 = (isComposite(obj2.type()));
+    const bool isComp1 = (isComposite(fld1.type()));
+    const bool isComp2 = (isComposite(fld2.type()));
     if (isComp1 || isComp2) {
         // do not bother by composite values
-        CL_BREAK_IF(obj1.isValidHandle() && !isComp1);
-        CL_BREAK_IF(obj2.isValidHandle() && !isComp2);
+        CL_BREAK_IF(fld1.isValidHandle() && !isComp1);
+        CL_BREAK_IF(fld2.isValidHandle() && !isComp2);
         return true;
     }
 
-    if (ctx.joiningData() && obj1 == obj2) {
+    if (ctx.joiningData() && fld1 == fld2) {
         // shared data
         CL_BREAK_IF(v1 != v2);
         if (ctx.joiningDataReadWrite())
             // read-write mode
-            objDst.setValue(v1);
+            fldDst.setValue(v1);
 
         return true;
     }
 
     // compute the resulting value
-    const bool validObj1 = (obj1.isValidHandle());
-    const bool validObj2 = (obj2.isValidHandle());
+    const bool validObj1 = (fld1.isValidHandle());
+    const bool validObj2 = (fld2.isValidHandle());
     const TValId vDst = joinDstValue(ctx, v1, v2, validObj1, validObj2);
     if (VAL_INVALID == vDst)
         return false;
 
     // set the value
-    objDst.setValue(vDst);
+    fldDst.setValue(vDst);
     return true;
 }
 
