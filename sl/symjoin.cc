@@ -1478,16 +1478,15 @@ bool joinCustomValues(
     return defineValueMapping(ctx, v1, v2, vDst);
 }
 
-bool followRootValues(
-        SymJoinCtx              &ctx,
-        const SchedItem         &item,
+bool joinObjects(
+        SymJoinCtx             &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2,
+        const TProtoLevel       ldiff,
         const EJoinStatus       action,
         const bool              readOnly = false)
 {
-    const TObjId obj1 = ctx.sh1.objByAddr(item.v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(item.v2);
-
-    if (!joinObjectsCore(ctx, obj1, obj2, item.ldiff, action, readOnly))
+    if (!joinObjectsCore(ctx, obj1, obj2, ldiff, action, readOnly))
         return false;
 
     if (!ctx.joiningData())
@@ -1503,8 +1502,8 @@ bool followRootValues(
         return true;
 
     // TODO: drop this!
-    const TValId root1 = item.v1;
-    const TValId root2 = item.v2;
+    const TValId root1 = ctx.sh1.addrOfTarget(obj1, /* XXX */ TS_REGION);
+    const TValId root2 = ctx.sh2.addrOfTarget(obj2, /* XXX */ TS_REGION);
 
     const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1))
         && !hasKey(ctx.sset1, root1);
@@ -1538,7 +1537,7 @@ bool followRootValues(
         ? ctx.sh1.objEstimatedType(peer1)
         : ctx.sh2.objEstimatedType(peer2);
 
-    return createObject(ctx, clt, peer1, peer2, item.ldiff, action);
+    return createObject(ctx, clt, peer1, peer2, ldiff, action);
 }
 
 bool followValuePair(
@@ -1564,11 +1563,10 @@ bool followValuePair(
         return false;
     }
 
-    // follow the roots
-    const TValId root1 = ctx.sh1.valRoot(v1);
-    const TValId root2 = ctx.sh2.valRoot(v2);
-    const SchedItem rootItem(root1, root2, item.ldiff);
-    if (!followRootValues(ctx, rootItem, JS_USE_ANY))
+    // join objects
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+    if (!joinObjects(ctx, obj1, obj2, item.ldiff, JS_USE_ANY))
         return false;
 
     // ranges cannot be joint unless the root exists in ctx.dst, join them now!
@@ -1617,16 +1615,17 @@ bool joinSegmentWithAny(
         return true;
     }
 
+    const TObjId obj1 = ctx.sh1.objByAddr(root1);
+    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+
     const bool isValid1 = isPossibleToDeref(ctx.sh1, root1);
     const bool isValid2 = isPossibleToDeref(ctx.sh2, root2);
     if (!isValid1 || !isValid2)
         return false;
 
-    if (firstTryReadOnly && !followRootValues(ctx, item, action, /* RO */ true))
+    if (firstTryReadOnly && !joinObjects(ctx, obj1, obj2, item.ldiff, action,
+                /* RO */ true))
         return false;
-
-    const TObjId obj1 = ctx.sh1.objByAddr(root1);
-    const TObjId obj2 = ctx.sh2.objByAddr(root2);
 
     const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1));
     const bool isDls2 = (OK_DLS == ctx.sh2.objKind(obj2));
@@ -1667,7 +1666,7 @@ bool joinSegmentWithAny(
 
     // go ahead, try it read-write!
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
-    *pResult = followRootValues(ctx, item, action);
+    *pResult = joinObjects(ctx, obj1, obj2, item.ldiff, action);
     if (!haveDls || !*pResult)
         return true;
 
@@ -1677,8 +1676,7 @@ bool joinSegmentWithAny(
     if (segAlreadyJoined(ctx, peer1At, peer2At, action))
         return true;
 
-    const SchedItem peerItem(peer1At, peer2At, item.ldiff);
-    *pResult = followRootValues(ctx, peerItem, action);
+    *pResult = joinObjects(ctx, peer1, peer2, item.ldiff, action);
     return true;
 }
 
