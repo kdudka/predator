@@ -1048,16 +1048,12 @@ bool rootNotYetAbstract(SymHeap &sh, const TValSet &sset)
 }
 
 bool joinNestingLevel(
-        TProtoLevel             *pDst,
-        const SymJoinCtx        &ctx,
-        const SchedItem         &item)
+        TProtoLevel            *pDst,
+        const SymJoinCtx       &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2,
+        const TProtoLevel       ldiff)
 {
-    const TValId root1 = item.v1;
-    const TValId root2 = item.v2;
-
-    const TObjId obj1 = ctx.sh1.objByAddr(root1);
-    const TObjId obj2 = ctx.sh2.objByAddr(root2);
-
     TProtoLevel level1 = ctx.sh1.objProtoLevel(obj1);
     TProtoLevel level2 = ctx.sh2.objProtoLevel(obj2);
 
@@ -1073,17 +1069,17 @@ bool joinNestingLevel(
 
     *pDst = std::max(level1, level2);
 
-    if (ctx.joiningData() && root1 == root2)
+    if (ctx.joiningData() && obj1 == obj2)
         // shared data
         return true;
 
-    if (VAL_INVALID == root2 || VAL_INVALID == root1)
+    if (OBJ_INVALID == obj2 || OBJ_INVALID == obj1)
         // we got only one object, just take its level as it is
         return true;
 
     // check that the computed ldiff matches the actual one
-    const TProtoLevel ldiff = level1 - level2;
-    return (ldiff == item.ldiff);
+    const TProtoLevel ldiffExpected = level1 - level2;
+    return (ldiffExpected == ldiff);
 }
 
 TMinLen joinMinLength(
@@ -1284,18 +1280,14 @@ static const BindingOff ObjOrNull(OK_OBJ_OR_NULL);
 
 /// (NULL != off) means 'introduce OK_{FLD_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool createObject(
-        SymJoinCtx              &ctx,
-        const struct cl_type    *clt,
-        const SchedItem         &item,
+        SymJoinCtx             &ctx,
+        const struct cl_type   *clt,
+        const TObjId            obj1,
+        const TObjId            obj2,
+        const TProtoLevel       ldiff,
         const EJoinStatus       action,
-        const BindingOff        *offMayExist = 0)
+        const BindingOff       *offMayExist = 0)
 {
-    const TValId root1 = item.v1;
-    const TValId root2 = item.v2;
-
-    const TObjId obj1 = ctx.sh1.objByAddr(root1);
-    const TObjId obj2 = ctx.sh2.objByAddr(root2);
-
     bool valid;
     if (!joinObjValidity(&valid, ctx, obj1, obj2))
         return false;
@@ -1309,7 +1301,7 @@ bool createObject(
         return false;
 
     TProtoLevel protoLevel;
-    if (!joinNestingLevel(&protoLevel, ctx, item))
+    if (!joinNestingLevel(&protoLevel, ctx, obj1, obj2, ldiff))
         return false;
 
     if (offMayExist) {
@@ -1360,7 +1352,7 @@ bool createObject(
         ctx.segLengths[objDst] = joinMinLength(ctx, obj1, obj2);
     }
 
-    return joinFields(ctx, objDst, obj1, obj2, item.ldiff);
+    return joinFields(ctx, objDst, obj1, obj2, ldiff);
 }
 
 bool followRootValuesCore(
@@ -1392,7 +1384,7 @@ bool followRootValuesCore(
     const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
     const TObjType clt = joinClt(ctx, clt1, clt2);
 
-    return createObject(ctx, clt, item, action);
+    return createObject(ctx, clt, obj1, obj2, item.ldiff, action);
 }
 
 bool joinReturnAddrs(SymJoinCtx &ctx)
@@ -1544,8 +1536,7 @@ bool followRootValues(
         ? ctx.sh1.objEstimatedType(peer1)
         : ctx.sh2.objEstimatedType(peer2);
 
-    const SchedItem peerItem(peer1At, peer2At, item.ldiff);
-    return createObject(ctx, clt, peerItem, action);
+    return createObject(ctx, clt, peer1, peer2, item.ldiff, action);
 }
 
 bool followValuePair(
@@ -1712,13 +1703,16 @@ bool segmentCloneCore(
     SJ_DEBUG("+i+ insertSegmentClone: cloning object at #" << addrGt <<
              ", action = " << action);
 
+    // TODO: drop this!
     const TValId root1 = (JS_USE_SH1 == action) ? addrGt : VAL_INVALID;
     const TValId root2 = (JS_USE_SH2 == action) ? addrGt : VAL_INVALID;
-
-    // clone the object
     const SchedItem item(root1, root2, ldiff);
     ctx.tieBreaking.insert(TValPair(item));
-    if (createObject(ctx, clt, item, action, off))
+
+    // clone the object
+    const TObjId obj1 = ctx.sh1.objByAddr(root1);
+    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+    if (createObject(ctx, clt, obj1, obj2, ldiff, action, off))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
