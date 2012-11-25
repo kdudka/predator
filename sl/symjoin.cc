@@ -796,12 +796,11 @@ bool joinFields(
 }
 
 bool segMatchLookAhead(
-        SymJoinCtx              &ctx,
-        const SchedItem         &item)
+        SymJoinCtx             &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2,
+        const TProtoLevel       ldiff)
 {
-    const TObjId obj1 = ctx.sh1.objByAddr(item.v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(item.v2);
-
     const TSizeRange size1 = ctx.sh1.objSize(obj1);
     const TSizeRange size2 = ctx.sh2.objSize(obj2);
     if (size1 != size2)
@@ -811,7 +810,7 @@ bool segMatchLookAhead(
     // set up a visitor
     SymHeap *const heaps[] = { &ctx.sh1, &ctx.sh2 };
     TObjId objs[] = { obj1, obj2 };
-    SegMatchVisitor visitor(ctx, item.ldiff);
+    SegMatchVisitor visitor(ctx, ldiff);
 
     dlSegBlackListPrevPtr(visitor.blackList1, ctx.sh1, obj1);
     dlSegBlackListPrevPtr(visitor.blackList2, ctx.sh2, obj2);
@@ -1355,36 +1354,37 @@ bool createObject(
     return joinFields(ctx, objDst, obj1, obj2, ldiff);
 }
 
-bool followRootValuesCore(
-        SymJoinCtx              &ctx,
-        const SchedItem         &item,
+bool joinObjectsCore(
+        SymJoinCtx             &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2,
+        const TProtoLevel       ldiff,
         const EJoinStatus       action,
         const bool              readOnly)
 {
-    const TValId root1 = item.v1;
-    const TValId root2 = item.v2;
+    // TODO: drop this!
+    const TValId root1 = ctx.sh1.addrOfTarget(obj1, /* XXX */ TS_REGION);
+    const TValId root2 = ctx.sh2.addrOfTarget(obj2, /* XXX */ TS_REGION);
+
     if (!checkValueMapping(ctx, root1, root2, /* allowUnknownMapping */ true))
         return false;
-
-    const TObjId obj1 = ctx.sh1.objByAddr(root1);
-    const TObjId obj2 = ctx.sh2.objByAddr(root2);
 
     if (hasKey(ctx.valMap1[0], root1) && hasKey(ctx.valMap2[0], root2))
         return true;
 
     if (readOnly)
         // do not create any object, just check if it was possible
-        return segMatchLookAhead(ctx, item);
+        return segMatchLookAhead(ctx, obj1, obj2, ldiff);
 
-    if (ctx.joiningDataReadWrite() && root1 == root2)
+    if (ctx.joiningDataReadWrite() && obj1 == obj2)
         // we are on the way from joinData() and hit shared data
-        return joinFields(ctx, obj1, obj1, obj2, item.ldiff);
+        return joinFields(ctx, obj1, obj1, obj2, ldiff);
 
     const TObjType clt1 = ctx.sh1.objEstimatedType(obj1);
     const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
     const TObjType clt = joinClt(ctx, clt1, clt2);
 
-    return createObject(ctx, clt, obj1, obj2, item.ldiff, action);
+    return createObject(ctx, clt, obj1, obj2, ldiff, action);
 }
 
 bool joinReturnAddrs(SymJoinCtx &ctx)
@@ -1484,16 +1484,17 @@ bool followRootValues(
         const EJoinStatus       action,
         const bool              readOnly = false)
 {
-    if (!followRootValuesCore(ctx, item, action, readOnly))
+    const TObjId obj1 = ctx.sh1.objByAddr(item.v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(item.v2);
+
+    if (!joinObjectsCore(ctx, obj1, obj2, item.ldiff, action, readOnly))
         return false;
 
     if (!ctx.joiningData())
         // we are on the way from joinSymHeaps()
         return true;
 
-    const TValId root1 = item.v1;
-    const TValId root2 = item.v2;
-    if (root1 == root2)
+    if (obj1 == obj2)
         // shared data
         return true;
 
@@ -1501,8 +1502,9 @@ bool followRootValues(
         // postpone it till the read-write attempt
         return true;
 
-    const TObjId obj1 = ctx.sh1.objByAddr(root1);
-    const TObjId obj2 = ctx.sh2.objByAddr(root2);
+    // TODO: drop this!
+    const TValId root1 = item.v1;
+    const TValId root2 = item.v2;
 
     const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1))
         && !hasKey(ctx.sset1, root1);
