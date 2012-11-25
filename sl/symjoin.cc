@@ -57,7 +57,9 @@ void debugSymJoin(const bool enable)
     ::debuggingSymJoin = enable;
 }
 
-#define SJ_FLDP(f1, f2) "(f1 = #" << f1 << ", f2 = #" << f2 << ")"
+#define SJ_FLDP(f1, f2) "(f1 = #" << f1.fieldId() \
+    << ", f2 = #" << f2.fieldId() << ")"
+
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
 
@@ -668,7 +670,7 @@ bool joinFreshObjTripple(
     const SchedItem item(v1, v2, ldiff);
     if (ctx.wl.schedule(item))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
-                << " <- " << SJ_FLDP(fld1.fieldId(), fld2.fieldId())
+                << " <- " << SJ_FLDP(fld1, fld2)
                 << ", ldiff = " << ldiff);
 
     return true;
@@ -1072,7 +1074,7 @@ bool joinNestingLevel(
         // shared data
         return true;
 
-    if (OBJ_INVALID == obj2 || OBJ_INVALID == obj1)
+    if (OBJ_INVALID == obj1 || OBJ_INVALID == obj2)
         // we got only one object, just take its level as it is
         return true;
 
@@ -1721,7 +1723,7 @@ bool segmentCloneCore(
 }
 
 void scheduleSegAddr(
-        TWorkList               &wl,
+        TWorkList              &wl,
         const TValId            seg,
         const TValId            peer,
         const EJoinStatus       action,
@@ -1738,6 +1740,7 @@ void scheduleSegAddr(
     if (seg == peer)
         return;
 
+    // FIXME: we need this for test-0129
     const SchedItem peerItem(
             (JS_USE_SH1 == action) ? peer : VAL_INVALID,
             (JS_USE_SH2 == action) ? peer : VAL_INVALID,
@@ -1777,7 +1780,9 @@ bool cloneSpecialValue(
         const SchedItem         &itemToClone,
         EValueTarget            code)
 {
-    const TValPair vp(itemToClone);
+    const TValId v1 = itemToClone.v1;
+    const TValId v2 = itemToClone.v2;
+    const TValPair vp(v1, v2);
 
     const TValId rootGt = shGt.valRoot(valGt);
     EValueOrigin vo = shGt.valOrigin(valGt);
@@ -1831,21 +1836,29 @@ bool insertSegmentClone(
     // resolve the existing segment in shGt
     SymHeap &shGt = ((isGt1) ? ctx.sh1 : ctx.sh2);
     const TObjId seg = shGt.objByAddr((isGt1) ? v1 : v2);
-    const bool isDls = (OK_DLS == shGt.objKind(seg));
+    const EObjKind kind = shGt.objKind(seg);
+    const bool isDls = (OK_DLS == kind);
     CL_BREAK_IF(off && isDls);
 
     TObjId peer = seg;
     if (isDls)
         peer = dlSegPeer(shGt, seg);
 
+    const bool isObjOrNull = (OK_OBJ_OR_NULL == kind)
+        || (off && (ObjOrNull == *off));
+
     // resolve the 'next' pointer and check its validity
+    FldHandle nextPtr;
     TValId nextGt;
-    if (off)
-        nextGt = (ObjOrNull == *off)
-            ? VAL_NULL
-            : valOfPtr(shGt, seg, off->next);
-    else
-        nextGt = nextValFromSeg(shGt, peer);
+    if (isObjOrNull)
+        nextGt = VAL_NULL;
+    else {
+        nextPtr = (off)
+            ? PtrHandle(shGt, seg, off->next)
+            : nextPtrFromSeg(shGt, peer);
+
+        nextGt = nextPtr.value();
+    }
 
     const TValId nextLt = (isGt2) ? v1 : v2;
     if (!off && !checkValueMapping(ctx,
@@ -1908,6 +1921,11 @@ bool insertSegmentClone(
         return true;
     }
 
+    *pResult = true;
+    if (isObjOrNull)
+        // nothing to follow
+        return true;
+
     // schedule the next object in the row (TODO: check if really necessary)
     const TValId valNext1 = (isGt1) ? nextGt : nextLt;
     const TValId valNext2 = (isGt2) ? nextGt : nextLt;
@@ -1915,7 +1933,6 @@ bool insertSegmentClone(
     if (ctx.wl.schedule(nextItem))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2) << " by insertSegmentClone()");
 
-    *pResult = true;
     return true;
 }
 
@@ -2369,7 +2386,9 @@ bool joinPendingValues(SymJoinCtx &ctx)
 {
     SchedItem item;
     while (ctx.wl.next(item)) {
-        SJ_DEBUG("--- " << SJ_VALP(item.v1, item.v2));
+        const TValId v1 = item.v1;
+        const TValId v2 = item.v2;
+        SJ_DEBUG("--- " << SJ_VALP(v1, v2));
         if (!joinValuePair(ctx, item))
             return false;
 
