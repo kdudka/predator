@@ -1401,62 +1401,6 @@ bool followRootValuesCore(
     return createObject(ctx, clt, item, action);
 }
 
-bool dlSegHandleShared(
-        SymJoinCtx              &ctx,
-        const SchedItem         &item,
-        const EJoinStatus       action,
-        const bool              readOnly)
-{
-    const TObjId obj1 = ctx.sh1.objByAddr(item.v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(item.v2);
-
-    const bool isDls = (OK_DLS == ctx.sh1.objKind(obj1));
-    CL_BREAK_IF(isDls != (OK_DLS == ctx.sh2.objKind(obj2)));
-    if (!isDls)
-        // not a DLS
-        return true;
-
-    // this should follow the 'next' pointer as long as we have a consistent DLS
-    const TObjId peer1 = dlSegPeer(ctx.sh1, obj1);
-    const TObjId peer2 = dlSegPeer(ctx.sh2, obj2);
-
-    // check the mapping
-    TObjMap &objMap1 = ctx.objMap1[/* ltr */ 0];
-#ifndef NDEBUG
-    TObjMap &objMap2 = ctx.objMap2[/* ltr */ 0];
-    CL_BREAK_IF(!hasKey(objMap1,  obj1));
-    CL_BREAK_IF(!hasKey(objMap2,  obj2));
-    CL_BREAK_IF(!hasKey(objMap1, peer1));
-    CL_BREAK_IF(!hasKey(objMap2, peer2));
-#endif
-
-    // we might have just joined a DLS pair as shared data, which would lead to
-    // unconnected DLS pair in ctx.dst and later cause some problems;  the best
-    // thing to do at this point, is to recover the binding of DLS in ctx.dst
-    const TObjId seg  = objMap1[ obj1];
-    const TObjId peer = objMap1[peer1];
-    CL_BREAK_IF(seg  != objMap2[ obj2]);
-    CL_BREAK_IF(peer != objMap2[peer2]);
-
-    SymHeap &sh = ctx.dst;
-    const PtrHandle prev1 = prevPtrFromSeg(sh,  seg);
-    const PtrHandle prev2 = prevPtrFromSeg(sh, peer);
-
-    const SchedItem peerItem(prev1.value(), prev2.value(), item.ldiff);
-    if (!followRootValuesCore(ctx, peerItem, action, readOnly))
-        return false;
-
-    if (readOnly)
-        // we are done
-        return true;
-
-    prev1.setValue(segHeadAt(sh, peer));
-    prev2.setValue(segHeadAt(sh,  seg));
-
-    CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
-    return true;
-}
-
 bool joinReturnAddrs(SymJoinCtx &ctx)
 {
     TObjType clt;
@@ -1565,7 +1509,7 @@ bool followRootValues(
     const TValId root2 = item.v2;
     if (root1 == root2)
         // shared data
-        return dlSegHandleShared(ctx, item, action, readOnly);
+        return true;
 
     if (readOnly)
         // postpone it till the read-write attempt
