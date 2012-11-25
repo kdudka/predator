@@ -1090,14 +1090,15 @@ void plotAuxValue(
         PlotData                       &plot,
         const int                       node,
         const TValId                    val,
-        const bool                      isObj)
+        const bool                      isField,
+        const bool                      isLonely = false)
 {
     const char *color = "blue";
     const char *label = "NULL";
 
     switch (val) {
         case VAL_NULL:
-            if (isObj)
+            if (isField)
                 label = valNullLabel(plot.sh, static_cast<TFldId>(node));
             break;
 
@@ -1118,7 +1119,7 @@ void plotAuxValue(
         << ", label=" << SL_QUOTE(label) << "];\n";
 
     const char *prefix = "";
-    if (!isObj)
+    if (isLonely)
         prefix = "lonely";
 
     plot.out << "\t" << SL_QUOTE(prefix << node)
@@ -1132,13 +1133,13 @@ void plotHasValue(
 {
     SymHeap &sh = plot.sh;
     const TValId val = fld.value();
-    const bool isObj = hasKey(plot.lonelyFields, fld);
-    const int idFrom = (isObj)
-        ? static_cast<int>(fld.obj())
-        : static_cast<int>(fld.fieldId());
+    const bool isField = !hasKey(plot.lonelyFields, fld);
+    const int idFrom = (isField)
+        ? static_cast<int>(fld.fieldId())
+        : static_cast<int>(fld.obj());
 
     if (val <= 0) {
-        plotAuxValue(plot, idFrom, val, !isObj);
+        plotAuxValue(plot, idFrom, val, isField);
         return;
     }
 
@@ -1242,7 +1243,7 @@ void plotHasValueEdges(PlotData &plot)
         const TValId val = item.second;
 
         if (val <= 0) {
-            plotAuxValue(plot, id, val, /* isObj */ false);
+            plotAuxValue(plot, id, val, /* isField */ false, /* lonely */ true);
             continue;
         }
 
