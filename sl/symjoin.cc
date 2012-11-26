@@ -1686,12 +1686,20 @@ bool segmentCloneCore(
         const EJoinStatus           action,
         const BindingOff            *off)
 {
+    const TValMapBidir &valMapLt = (JS_USE_SH2 == action)
+        ? ctx.valMap1
+        : ctx.valMap2;
+
+    const TValMap &valMapGtLtr = valMapGt[/* ltr */ 0];
+    const TValMap &valMapLtRtl = valMapLt[/* rtl */ 1];
+
     if (!isAnyDataArea(shGt.valTarget(valGt)))
         // not valid target
         return false;
 
     const TValId addrGt = shGt.valRoot(valGt);
-    if (hasKey(valMapGt[0], addrGt))
+    const TValMap::const_iterator it = valMapGtLtr.find(addrGt);
+    if (valMapGtLtr.end() != it && !hasKey(valMapLtRtl, it->second))
         // mapping already available for objGt
         return true;
 
