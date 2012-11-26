@@ -821,53 +821,54 @@ bool segMatchLookAhead(
     return traverseLiveFieldsGeneric<2>(heaps, objs, visitor);
 }
 
-bool joinClt(
-        const struct cl_type    **pDst,
-        const struct cl_type    *clt1,
-        const struct cl_type    *clt2)
+bool joinObjType(
+        TObjType               *pDst,
+        SymJoinCtx             &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2)
 {
-    const struct cl_type *sink;
-    if (!pDst)
-        pDst = &sink;
+    if (OBJ_INVALID == obj2) {
+        *pDst = ctx.sh1.objEstimatedType(obj1);
+        return true;
+    }
 
-    const bool anon1 = !clt1;
-    const bool anon2 = !clt2;
-    if (anon1 && anon2) {
+    if (OBJ_INVALID == obj1) {
+        *pDst = ctx.sh2.objEstimatedType(obj2);
+        return true;
+    }
+
+    const TObjType clt1 = ctx.sh1.objEstimatedType(obj1);
+    const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
+
+    const bool typeFree1 = !clt1;
+    const bool typeFree2 = !clt2;
+    if (typeFree1 && typeFree2) {
+        // full match
         *pDst = 0;
         return true;
     }
 
-    if (anon1 != anon2)
-        return false;
+    if (typeFree1 || typeFree2) {
+        *pDst = 0;
 
-    CL_BREAK_IF(anon1 || anon2);
-    if (*clt1 != *clt2)
-        return false;
+        if (typeFree1)
+            return updateJoinStatus(ctx, JS_USE_SH1);
 
-    *pDst = clt1;
-    return true;
-}
+        if (typeFree2)
+            return updateJoinStatus(ctx, JS_USE_SH2);
 
-TObjType joinClt(
-        SymJoinCtx              &ctx,
-        const TObjType          clt1,
-        const TObjType          clt2)
-{
-    TObjType clt;
-    if (joinClt(&clt, clt1, clt2))
-        // symmetric join of type-info
-        return clt;
-
-    if (clt2)
-        updateJoinStatus(ctx, JS_USE_SH1);
-    else if (clt1)
-        updateJoinStatus(ctx, JS_USE_SH2);
-    else
-        // not reachable
         CL_BREAK_IF("joinClt() malfunction");
+    }
 
-    // type-info is going to be abstracted out
-    return 0;
+    if (*clt1 == *clt2) {
+        // full match
+        *pDst = clt1;
+        return true;
+    }
+
+    // the type-info will be abstracted out
+    *pDst = 0;
+    return updateJoinStatus(ctx, JS_THREE_WAY);
 }
 
 bool joinObjKind(
@@ -1283,7 +1284,6 @@ static const BindingOff ObjOrNull(OK_OBJ_OR_NULL);
 /// (NULL != off) means 'introduce OK_{FLD_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool createObject(
         SymJoinCtx             &ctx,
-        const struct cl_type   *clt,
         const TObjId            obj1,
         const TObjId            obj2,
         const TProtoLevel       ldiff,
@@ -1306,6 +1306,14 @@ bool createObject(
     if (!joinNestingLevel(&protoLevel, ctx, obj1, obj2, ldiff))
         return false;
 
+    TSizeRange size;
+    if (!joinObjSize(&size, ctx, obj1, obj2))
+        return false;
+
+    TObjType clt;
+    if (!joinObjType(&clt, ctx, obj1, obj2))
+        return false;
+
     if (offMayExist) {
         // we are asked to introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL
         if (OK_REGION != kind && !isMayExistObj(kind))
@@ -1320,10 +1328,6 @@ bool createObject(
                 : OK_SEE_THROUGH_2N;
         }
     }
-
-    TSizeRange size;
-    if (!joinObjSize(&size, ctx, obj1, obj2))
-        return false;
 
     if (!updateJoinStatus(ctx, action))
         return false;
@@ -1383,28 +1387,7 @@ bool joinObjectsCore(
         // we are on the way from joinData() and hit shared data
         return joinFields(ctx, obj1, obj1, obj2, ldiff);
 
-    const TObjType clt1 = ctx.sh1.objEstimatedType(obj1);
-    const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
-    const TObjType clt = joinClt(ctx, clt1, clt2);
-
-    return createObject(ctx, clt, obj1, obj2, ldiff, action);
-}
-
-bool joinReturnAddrs(SymJoinCtx &ctx)
-{
-    TObjType clt;
-    const TObjType clt1 = ctx.sh1.objEstimatedType(OBJ_RETURN);
-    const TObjType clt2 = ctx.sh2.objEstimatedType(OBJ_RETURN);
-    if (!joinClt(&clt, clt1, clt2))
-        // mismatch in type of return value
-        return false;
-
-    if (!clt)
-        // nothing to join here
-        return true;
-
-    ctx.dst.objSetEstimatedType(OBJ_RETURN, clt);
-    return joinFields(ctx, OBJ_RETURN, OBJ_RETURN, OBJ_RETURN, /* ldiff */0);
+    return createObject(ctx, obj1, obj2, ldiff, action);
 }
 
 bool joinCustomValues(
@@ -1554,11 +1537,7 @@ bool joinObjects(
     const TValPair tb(peer1At, peer2At);
     ctx.tieBreaking.insert(tb);
 
-    const struct cl_type *clt = (isDls1)
-        ? ctx.sh1.objEstimatedType(peer1)
-        : ctx.sh2.objEstimatedType(peer2);
-
-    return createObject(ctx, clt, peer1, peer2, ldiff, action);
+    return createObject(ctx, peer1, peer2, ldiff, action);
 }
 
 bool followValuePair(
@@ -1728,7 +1707,6 @@ bool segmentCloneCore(
         // mapping already available for objGt
         return true;
 
-    const TObjType clt = shGt.objEstimatedType(shGt.objByAddr(addrGt));
     SJ_DEBUG("+i+ insertSegmentClone: cloning object at #" << addrGt <<
              ", action = " << action);
 
@@ -1741,7 +1719,7 @@ bool segmentCloneCore(
     // clone the object
     const TObjId obj1 = ctx.sh1.objByAddr(root1);
     const TObjId obj2 = ctx.sh2.objByAddr(root2);
-    if (createObject(ctx, clt, obj1, obj2, ldiff, action, off))
+    if (createObject(ctx, obj1, obj2, ldiff, action, off))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
@@ -2836,8 +2814,8 @@ bool joinSymHeaps(
     CL_BREAK_IF(!protoCheckConsistency(ctx.sh1));
     CL_BREAK_IF(!protoCheckConsistency(ctx.sh2));
 
-    // first try to join return addresses (if in use)
-    if (!joinReturnAddrs(ctx))
+    // try to join the objects that hold the return values
+    if (!joinFields(ctx, OBJ_RETURN, OBJ_RETURN, OBJ_RETURN, /* ldiff */ 0))
         goto fail;
 
     // start with program variables
@@ -2968,9 +2946,10 @@ bool joinDataCore(
     // create an image in ctx.dst
     const TObjId objDst = ctx.dst.heapAlloc(size);
 
-    const TObjType clt1 = ctx.sh1.objEstimatedType(obj1);
-    const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
-    const TObjType clt = joinClt(ctx, clt1, clt2);
+    TObjType clt;
+    if (!joinObjType(&clt, ctx, obj1, obj2))
+        return false;
+
     if (clt)
         // preserve estimated type-info of the root
         ctx.dst.objSetEstimatedType(objDst, clt);
