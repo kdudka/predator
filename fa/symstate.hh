@@ -294,6 +294,22 @@ public:   // methods
 
 
 	/**
+	 * @brief  Performs intersection of the symbolic state with other state
+	 *
+	 * This method performs intersection with another symbolic state, i.e. it
+	 * creates a forest automaton such that the language of the automaton is the
+	 * intersection of languages of automata of the states and alters local
+	 * registers accordingly. 
+	 *
+	 * @param[in]  fwd  The other symbolic state (from the forward run)
+	 *
+	 * @note  This may not compute the most precise intersection!
+	 */
+	void Intersect(
+		const SymState&      fwd);
+
+
+	/**
 	 * @brief  The output stream operator
 	 *
 	 * The std::ostream << operator for conversion to a string.

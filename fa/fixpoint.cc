@@ -435,8 +435,13 @@ SymState* FixpointBase::reverseAndIsect(
 {
 	(void)fwdPred;
 
-	FA_WARN("Skipping reverse operation for FixpointBase");
-	return execMan.copyState(bwdSucc);
+	SymState* tmpState = execMan.copyStateWithNewRegs(bwdSucc, fwdPred.GetInstr());
+
+	// perform intersection
+	tmpState->Intersect(fwdPred);
+
+	FA_WARN("Executing !!VERY!! suspicious reverse operation FixpointBase");
+	return tmpState;
 }
 
 // FI_abs

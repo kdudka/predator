@@ -418,6 +418,7 @@ public:
 		)->label()->boxLookup(static_cast<size_t>(-1)).aBox);
 	}
 
+
 public:
 
 	// state 0 should never be allocated by FAE (?)

@@ -65,7 +65,7 @@ bool BackwardRun::isSpuriousCE(SymState::Trace& fwdTrace)
 
 		if (resultState->GetFAE()->Empty())
 		{	// in case the intersection is empty - spurious counterexample
-			return false;
+			return true;
 		}
 
 		bwdTrace.push_back(resultState);
@@ -81,5 +81,5 @@ bool BackwardRun::isSpuriousCE(SymState::Trace& fwdTrace)
 		execMan_.recycleState(st);
 	}
 
-	return true;
+	return false;
 }

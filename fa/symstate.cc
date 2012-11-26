@@ -414,6 +414,171 @@ void SymState::SubstituteRefs(
 }
 
 
+void SymState::Intersect(
+	const SymState&          fwd)
+{
+	// data types
+
+	struct RootState
+	{
+		size_t root;
+		size_t state;
+
+		RootState(size_t pRoot, size_t pState) :
+			root(pRoot),
+			state(pState)
+		{ }
+
+		bool operator<(const RootState& rhs) const
+		{
+			if (root < rhs.root)
+			{
+				return true;
+			}
+			else if (root == rhs.root)
+			{
+				return state < rhs.state;
+			}
+			else
+			{
+				return false;
+			}
+		}
+	};
+
+	typedef std::pair<RootState, RootState> ProdState;
+
+	// start
+
+	const std::shared_ptr<const FAE> thisFAE = this->GetFAE();
+	const std::shared_ptr<const FAE> fwdFAE = fwd.GetFAE();
+	assert((nullptr != thisFAE) && (nullptr != fwdFAE));
+
+	FAE* fae = new FAE(*thisFAE);
+	fae->clear();
+	this->SetFAE(std::shared_ptr<FAE>(fae));
+
+	if (this->GetRegCount() != fwd.GetRegCount())
+	{	// if the number of local registers does not match
+		FA_LOG("Number of local registers does not match -> creating empty intersection");
+		return;      // empty FA
+	}
+
+	if (thisFAE->GetVarCount() != fwdFAE->GetVarCount())
+	{	// if the number of input ports of the FAE does not match
+		FA_LOG("Number of input ports does not match -> creating empty intersection");
+		return;      // empty FA
+	}
+
+	assert(thisFAE->GetVarCount() == fwdFAE->GetVarCount());
+	for (size_t i = 0; i < thisFAE->GetVarCount(); ++i)
+	{	// check global variables
+		const Data& thisVar = thisFAE->GetVar(i);
+		const Data& fwdVar = fwdFAE->GetVar(i);
+
+		if (!thisVar.isRef() && !fwdVar.isRef())
+		{	// in case of non-references
+			if (thisVar != fwdVar)
+			{
+				return;   // empty FA
+			}
+		}
+		else
+		{
+			assert(thisVar.isRef() && fwdVar.isRef());
+		}
+	}
+
+	assert(this->GetRegCount() == fwd.GetRegCount());
+	for (size_t i = 0; i < this->GetRegCount(); ++i)
+	{	// check local registers
+		const Data& thisVar = this->GetReg(i);
+		const Data& fwdVar = fwd.GetReg(i);
+
+		if (!thisVar.isRef() && !fwdVar.isRef())
+		{	// in case of non-references
+			if (thisVar != fwdVar)
+			{
+				return;   // empty FA
+			}
+		}
+		else
+		{
+			assert(thisVar.isRef() && fwdVar.isRef());
+		}
+	}
+
+
+
+
+
+
+
+	assert(false);
+
+#if 0
+
+	// number of input 
+	for (size_t i = 0; i < lhs.GetVarCount(); ++i)
+	{
+		const Data& lhsVar = lhs.GetVar(i);
+		const Data& rhsVar = rhs.GetVar(i);
+
+		if (lhsVar.isUndef())
+		{
+			fae->PushVar(fae->copyVariable(rhsVar, rhsIndex));
+			continue;
+		}
+		else if (rhsVar.isUndef())
+		{
+			fae->PushVar(fae->copyVariable(lhsVar, lhsIndex));
+			continue;
+		}
+
+		if (lhsVar.isRef() && rhsVar.isRef())
+		{	// in case both LHS and RHS are tree automata
+			assert(false);
+		}
+		else
+		{
+			if (!lhsVar.isRef() && !rhsVar.isRef())
+			{	// in case the roots are not references to tree automata
+				assert(false);
+			}
+			else
+			{	// in case one of the roots references a tree automaton and the other
+				// not, copy all components reachable from the root reference
+
+				// we need to maintain the mapping between 
+
+				Data newVar;
+				if (lhsVar.isRef())
+				{	// in case LHS is a tree automaton and RHS not
+					assert(!rhsVar.isRef());
+
+					size_t newRoot = fae.copyRootAndReachable(lhs, lhsVar.d_ref.root);
+					Data newVar = Data::createRef(newRoot, lhsVar.d_ref.displ);
+				}
+				else
+				{	// in case RHS is a tree automaton and LHS not
+					assert(!lhsVar.isRef() && rhsVar.isRef());
+
+					(void)rhsVar.d_ref.root;
+					size_t newRoot = fae.copyRootAndReachable(rhs, rhsVar.d_ref.root);
+					newVar = Data::createRef(newRoot, rhsVar.d_ref.displ);
+				}
+
+				fae.PushVar(newVar);
+			}
+		}
+	}
+#endif
+
+	FA_WARN("Underapproximating intersection");
+}
+
+
+
 std::ostream& operator<<(std::ostream& os, const SymState& state)
 {
 	VirtualMachine vm(*state.GetFAE());

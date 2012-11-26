@@ -302,7 +302,14 @@ protected:
 			BackwardRun bwdRun(execMan_);
 			SymState::Trace trace = e.state()->getTrace();
 			bool isSpurious = bwdRun.isSpuriousCE(trace);
-			FA_NOTE( "The counterexample IS " << (isSpurious? "NOT " : "") << "spurious");
+			if (isSpurious)
+			{
+				FA_NOTE("The counterexample IS (PROBABLY) spurious");
+			}
+			else
+			{
+				FA_NOTE("The counterexample IS real");
+			}
 
 			throw;
 		}
