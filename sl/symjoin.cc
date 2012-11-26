@@ -570,8 +570,7 @@ bool checkNullConsistency(
 bool joinValuesByCode(
         bool                   *pResult,
         SymJoinCtx             &ctx,
-        const TValId            v1,
-        const TValId            v2);
+        const SchedItem        &item);
 
 bool bumpNestingLevel(const FldHandle &fld)
 {
@@ -592,15 +591,15 @@ bool bumpNestingLevel(const FldHandle &fld)
 }
 
 /// (FLD_INVALID == fldDst) means read-only!!!
-bool joinFreshFldTripple(
-        SymJoinCtx              &ctx,
-        const FldHandle         &fld1,
-        const FldHandle         &fld2,
-        const FldHandle         &fldDst,
-        TProtoLevel             ldiff)
+bool joinFreshItem(
+        SymJoinCtx             &ctx,
+        const SchedItem        &item,
+        const bool              readOnly = false)
 {
+    const FldHandle &fld1 = item.fld1;
+    const FldHandle &fld2 = item.fld2;
+
     const bool segClone = (!fld1.isValidHandle() || !fld2.isValidHandle());
-    const bool readOnly = (!fldDst.isValidHandle());
     CL_BREAK_IF(segClone && readOnly);
     CL_BREAK_IF(!fld1.isValidHandle() && !fld2.isValidHandle());
 
@@ -661,34 +660,28 @@ bool joinFreshFldTripple(
             return true;
 
         bool result;
-        if (joinValuesByCode(&result, ctx, v1, v2))
+        if (joinValuesByCode(&result, ctx, item))
             return result;
     }
 
-    if (bumpNestingLevel(fld1))
-        ++ldiff;
-    if (bumpNestingLevel(fld2))
-        --ldiff;
-
-    const SchedItem item(fldDst, fld1, fld2, ldiff);
     if (ctx.wl.schedule(item))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
-                << " <- " << SJ_FLDT(fldDst, fld1, fld2)
-                << ", ldiff = " << ldiff);
+                << " <- " << SJ_FLDT(item.fldDst, fld1, fld2)
+                << ", ldiff = " << item.ldiff);
 
     return true;
 }
 
 struct ObjJoinVisitor {
     SymJoinCtx              &ctx;
-    const TProtoLevel       ldiff;
+    const TProtoLevel       ldiffOrig;
     TFldSet                 blackList1;
     TFldSet                 blackList2;
     bool                    noFollow;
 
     ObjJoinVisitor(SymJoinCtx &ctx_, const TProtoLevel ldiff_):
         ctx(ctx_),
-        ldiff(ldiff_),
+        ldiffOrig(ldiff_),
         noFollow(false)
     {
     }
@@ -708,7 +701,14 @@ struct ObjJoinVisitor {
         if (hasKey(blackList1, fld1) || hasKey(blackList2, fld2))
             return /* continue */ true;
 
-        return joinFreshFldTripple(ctx, fld1, fld2, fldDst, ldiff);
+        int ldiff = ldiffOrig;
+        if (bumpNestingLevel(fld1))
+            ++ldiff;
+        if (bumpNestingLevel(fld2))
+            --ldiff;
+
+        const SchedItem sItem(fldDst, fld1, fld2, ldiff);
+        return joinFreshItem(ctx, sItem);
     }
 };
 
@@ -725,14 +725,12 @@ void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TObjId obj)
 
 struct SegMatchVisitor {
     SymJoinCtx              &ctx;
-    const TProtoLevel       ldiff;
     TFldSet                 blackList1;
     TFldSet                 blackList2;
 
     public:
-        SegMatchVisitor(SymJoinCtx &ctx_, const TProtoLevel ldiff_):
-            ctx(ctx_),
-            ldiff(ldiff_)
+        SegMatchVisitor(SymJoinCtx &ctx_):
+            ctx(ctx_)
         {
         }
 
@@ -744,8 +742,9 @@ struct SegMatchVisitor {
                 // black-listed
                 return true;
 
-            const FldHandle readOnly(FLD_INVALID);
-            return joinFreshFldTripple(ctx, fld1, fld2, readOnly, ldiff);
+            const FldHandle fldInvalid;
+            const SchedItem sItem(fldInvalid, fld1, fld2, /* ldiff */ 0);
+            return joinFreshItem(ctx, sItem, /* readOnly */ true);
         }
 };
 
@@ -803,8 +802,7 @@ bool joinFields(
 bool segMatchLookAhead(
         SymJoinCtx             &ctx,
         const TObjId            obj1,
-        const TObjId            obj2,
-        const TProtoLevel       ldiff)
+        const TObjId            obj2)
 {
     const TSizeRange size1 = ctx.sh1.objSize(obj1);
     const TSizeRange size2 = ctx.sh2.objSize(obj2);
@@ -815,7 +813,7 @@ bool segMatchLookAhead(
     // set up a visitor
     SymHeap *const heaps[] = { &ctx.sh1, &ctx.sh2 };
     TObjId objs[] = { obj1, obj2 };
-    SegMatchVisitor visitor(ctx, ldiff);
+    SegMatchVisitor visitor(ctx);
 
     dlSegBlackListPrevPtr(visitor.blackList1, ctx.sh1, obj1);
     dlSegBlackListPrevPtr(visitor.blackList2, ctx.sh2, obj2);
@@ -1379,7 +1377,7 @@ bool joinObjectsCore(
 
     if (readOnly)
         // do not create any object, just check if it was possible
-        return segMatchLookAhead(ctx, obj1, obj2, ldiff);
+        return segMatchLookAhead(ctx, obj1, obj2);
 
     if (ctx.joiningDataReadWrite() && obj1 == obj2)
         // we are on the way from joinData() and hit shared data
@@ -1411,18 +1409,24 @@ bool joinReturnAddrs(SymJoinCtx &ctx)
 
 bool joinCustomValues(
         SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2)
+        const SchedItem         &item)
 {
     SymHeap &sh1 = ctx.sh1;
     SymHeap &sh2 = ctx.sh2;
+
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
 
     const CustomValue cVal1 = sh1.valUnwrapCustom(v1);
     const CustomValue cVal2 = sh2.valUnwrapCustom(v2);
     if (cVal1 == cVal2) {
         // full match
         const TValId vDst = ctx.dst.valWrapCustom(cVal1);
-        return defineValueMapping(ctx, v1, v2, vDst);
+        if (!defineValueMapping(ctx, v1, v2, vDst))
+            return false;
+
+        item.fldDst.setValue(vDst);
+        return true;
     }
 
     IR::Range rng1, rng2;
@@ -1430,8 +1434,14 @@ bool joinCustomValues(
         // throw custom values away and abstract them by a fresh unknown value
         SJ_DEBUG("throwing away unmatched custom values " << SJ_VALP(v1, v2));
         const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-        return updateJoinStatus(ctx, JS_THREE_WAY)
-            && defineValueMapping(ctx, v1, v2, vDst);
+        if (!updateJoinStatus(ctx, JS_THREE_WAY))
+            return false;
+
+        if (!defineValueMapping(ctx, v1, v2, vDst))
+            return false;
+
+        item.fldDst.setValue(vDst);
+        return true;
     }
 
     // compute the resulting range that covers both
@@ -1453,6 +1463,8 @@ bool joinCustomValues(
         const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         if (!defineValueMapping(ctx, v1, v2, vDst))
             return false;
+
+        item.fldDst.setValue(vDst);
 
         // force three-way join in order not to loop forever!
         ctx.forceThreeWay = true;
@@ -1480,7 +1492,11 @@ bool joinCustomValues(
 
     const CustomValue cv(rng);
     const TValId vDst = ctx.dst.valWrapCustom(cv);
-    return defineValueMapping(ctx, v1, v2, vDst);
+    if (!defineValueMapping(ctx, v1, v2, vDst))
+        return false;
+
+    item.fldDst.setValue(vDst);
+    return true;
 }
 
 bool joinObjects(
@@ -1557,7 +1573,7 @@ bool followValuePair(
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
 
     bool result;
-    if (joinValuesByCode(&result, ctx, v1, v2))
+    if (joinValuesByCode(&result, ctx, item))
         return result;
 
     const bool isRange = (VT_RANGE == ctx.sh1.valTarget(v1))
@@ -2303,9 +2319,11 @@ EValueOrigin joinOrigin(const EValueOrigin vo1, const EValueOrigin vo2)
 bool joinValuesByCode(
         bool                   *pResult,
         SymJoinCtx             &ctx,
-        const TValId            v1,
-        const TValId            v2)
+        const SchedItem        &item)
 {
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
@@ -2342,7 +2360,7 @@ bool joinValuesByCode(
         // handle VT_CUSTOM values
         const bool isCustom1 = (VT_CUSTOM == code1);
         const bool isCustom2 = (VT_CUSTOM == code2);
-        *pResult = isCustom1 && isCustom2 && joinCustomValues(ctx, v1, v2);
+        *pResult = isCustom1 && isCustom2 && joinCustomValues(ctx, item);
         return     isCustom1 || isCustom2;
     }
 
@@ -2364,6 +2382,11 @@ bool joinValuesByCode(
     // create a new unknown value in ctx.dst
     const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, origin);
     *pResult = handleUnknownValues(ctx, v1, v2, vDst);
+    if (!*pResult)
+        // we have failed
+        return true;
+
+    item.fldDst.setValue(vDst);
 
     // we have to use the heap where the unknown value occurs
     if (!isUnknown2)
@@ -2388,7 +2411,7 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     }
 
     bool result;
-    if (joinValuesByCode(&result, ctx, v1, v2))
+    if (joinValuesByCode(&result, ctx, item))
         return result;
 
     const bool isAbs1 = isAbstractValue(ctx.sh1, v1)
