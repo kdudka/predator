@@ -347,7 +347,7 @@ public:   // data types
 				{
 					typename td_cache_type::const_iterator j = this->_cache.find(*i);
 					if (j != this->_cache.end())
-						this->_stack.push_back(make_pair(j->second.begin(), j->second.end()));
+						this->_stack.push_back(std::make_pair(j->second.begin(), j->second.end()));
 				}
 			}
 		}
@@ -398,10 +398,6 @@ public:   // data types
 public:   // data members
 
 	Backend* backend;
-
-	typename Transition::lhs_cache_type& lhsCache() const { return this->backend->lhsCache; }
-
-	trans_cache_type& transCache() const { return this->backend->transCache; }
 
 	size_t next_state;
 	size_t maxRank;
@@ -464,6 +460,16 @@ public:
 		}
 	}
 
+	typename Transition::lhs_cache_type& lhsCache() const
+	{
+		return this->backend->lhsCache;
+	}
+
+	trans_cache_type& transCache() const
+	{
+		return this->backend->transCache;
+	}
+
 	typename trans_cache_type::value_type* internalAdd(const Transition& t)
 	{
 		typename trans_cache_type::value_type* x = this->transCache().lookup(t);
@@ -478,7 +484,10 @@ public:
 		return x;
 	}
 
-	~TA() { this->clear(); }
+	~TA()
+	{
+		this->clear();
+	}
 
 	typename TA<T>::Iterator begin() const { return typename TA<T>::Iterator(this->transitions.begin()); }
 	typename TA<T>::Iterator end() const { return typename TA<T>::Iterator(this->transitions.end()); }
@@ -666,7 +675,7 @@ public:
 	{
 		for (typename trans_cache_type::value_type* trans : this->transitions)
 		{
-			cache.insert(make_pair(trans->first._rhs, std::vector<const Transition*>())).first->second.push_back(&trans->first);
+			cache.insert(std::make_pair(trans->first._rhs, std::vector<const Transition*>())).first->second.push_back(&trans->first);
 		}
 	}
 
@@ -680,7 +689,7 @@ public:
 			{
 				if (s.insert(state).second)
 				{
-					cache.insert(make_pair(state, std::vector<const Transition*>())).first->second.push_back(&trans->first);
+					cache.insert(std::make_pair(state, std::vector<const Transition*>())).first->second.push_back(&trans->first);
 				}
 			}
 		}
@@ -711,7 +720,7 @@ public:
 	{
 		for (typename trans_cache_type::value_type* trans : this->transitions)
 		{
-			cache.insert(make_pair(trans->first._label, std::vector<const Transition*>())).first->second.push_back(&trans->first);
+			cache.insert(std::make_pair(trans->first._label, std::vector<const Transition*>())).first->second.push_back(&trans->first);
 		}
 	}
 
@@ -817,9 +826,14 @@ public:
 		return *(this->accBegin());
 	}
 
-	void downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const Index<T>& labelIndex) const;
+	void downwardTranslation(
+		LTS&                                      lts,
+		const Index<size_t>&                      stateIndex,
+		const Index<T>&                           labelIndex) const;
 
-	void downwardSimulation(std::vector<std::vector<bool> >& rel, const Index<size_t>& stateIndex) const;
+	void downwardSimulation(
+		std::vector<std::vector<bool>>&           rel,
+		const Index<size_t>&                      stateIndex) const;
 
 	void upwardTranslation(
 		LTS&                                      lts,

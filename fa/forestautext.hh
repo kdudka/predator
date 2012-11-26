@@ -378,38 +378,8 @@ public:
 	TreeAut& relabelReferences(
 		TreeAut&                      dst,
 		const TreeAut&                src,
-		const std::vector<size_t>&    index)
-	{
-		dst.addFinalStates(src.getFinalStates());
-		for (TreeAut::iterator i = src.begin(); i != src.end(); ++i)
-		{
-			if (i->label()->isData())
-				continue;
+		const std::vector<size_t>&    index);
 
-			std::vector<size_t> lhs;
-			for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j)
-			{
-				const Data* data;
-				if (this->isData(*j, data))
-				{
-					if (data->isRef())
-					{
-						if (index[data->d_ref.root] != static_cast<size_t>(-1))
-							lhs.push_back(this->addData(dst, Data::createRef(index[data->d_ref.root], data->d_ref.displ)));
-						else
-							lhs.push_back(this->addData(dst, Data::createUndef()));
-					} else {
-						lhs.push_back(this->addData(dst, *data));
-					}
-				} else
-					lhs.push_back(*j);
-			}
-
-			dst.addTransition(lhs, i->label(), i->rhs());
-		}
-
-		return dst;
-	}
 
 	TreeAut* relabelReferences(
 		TreeAut*                       src,
@@ -421,27 +391,8 @@ public:
 	TreeAut& invalidateReference(
 		TreeAut&                       dst,
 		const TreeAut&                 src,
-		size_t                         root)
-	{
-		dst.addFinalStates(src.getFinalStates());
-		for (TreeAut::iterator i = src.begin(); i != src.end(); ++i)
-		{
-			std::vector<size_t> lhs;
-			for (std::vector<size_t>::const_iterator j = i->lhs().begin(); j != i->lhs().end(); ++j)
-			{
-				const Data* data;
-				if (FAE::isData(*j, data) && data->isRef(root))
-				{
-					lhs.push_back(this->addData(dst, Data::createUndef()));
-				} else {
-					lhs.push_back(*j);
-				}
-			}
-			if (!FAE::isRef(i->label(), root))
-				dst.addTransition(lhs, i->label(), i->rhs());
-		}
-		return dst;
-	}
+		size_t                         root);
+
 
 	TreeAut* invalidateReference(TreeAut* src, size_t root)
 	{
@@ -452,23 +403,7 @@ public:
 
 	void buildLTCacheExt(
 		const TreeAut&               ta,
-		TreeAut::lt_cache_type&      cache)
-	{
-		label_type lUndef = this->boxMan->lookupLabel(Data::createUndef());
-		for (TreeAut::iterator i = ta.begin(); i != ta.end(); ++i)
-		{
-			if (i->label()->isData())
-			{
-				cache.insert(
-					make_pair(lUndef, std::vector<const TT<label_type>*>())
-				).first->second.push_back(&*i);
-			} else {
-				cache.insert(
-					make_pair(i->label(), std::vector<const TT<label_type>*>())
-				).first->second.push_back(&*i);
-			}
-		}
-	}
+		TreeAut::lt_cache_type&      cache);
 
 	const TypeBox* getType(size_t target) const
 	{

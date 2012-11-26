@@ -18,6 +18,7 @@
  */
 
 #include "forestaut.hh"
+#include "streams.hh"
 #include "tatimint.hh"
 
 // anonymous namespace

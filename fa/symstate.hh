@@ -113,6 +113,11 @@ public:   // methods
 		return this->GetRegs()[index];
 	}
 
+	size_t GetRegCount() const
+	{
+		return this->GetRegs().size();
+	}
+
 	void SetReg(size_t index, const Data& data)
 	{
 		// Assertions

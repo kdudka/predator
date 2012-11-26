@@ -229,9 +229,15 @@ public:   // methods
 		return this->data.data < rhs.data.data;
 	}
 
-	bool operator==(const NodeLabel& rhs) const { return this->data.data == rhs.data.data; }
+	bool operator==(const NodeLabel& rhs) const
+	{
+		return this->data.data == rhs.data.data;
+	}
 
-	bool operator!=(const NodeLabel& rhs) const { return this->data.data != rhs.data.data; }
+	bool operator!=(const NodeLabel& rhs) const
+	{
+		return this->data.data != rhs.data.data;
+	}
 
 	friend std::ostream& operator<<(std::ostream& os, const NodeLabel& label);
 

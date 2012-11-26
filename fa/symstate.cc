@@ -163,10 +163,10 @@ std::ostream& operator<<(std::ostream& os, const SymState& state)
 	// in case it changes, we should alter the printout
 	assert(2 == FIXED_REG_COUNT);
 
-	os << "global registers:";
+	os << "{" << &state << "} global registers:";
 
-	// there may be cases (at the beginning of a program) when ABP and GLOB are
-	// not loaded
+	// there may be cases (at the beginning or end of a program) when ABP and GLOB
+	// are not loaded
 	os << " GLOB (gr" << GLOB_INDEX << ") = ";
 	if (vm.varCount() <= GLOB_INDEX) { os << "(invld)"; }
 	else { os << vm.varGet(GLOB_INDEX); }

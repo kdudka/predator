@@ -44,6 +44,10 @@
  */
 class FA
 {
+public:   // data types
+
+	typedef TreeAut::Transition Transition;
+
 public:   // data members
 
 	TreeAut::Backend* backend;
