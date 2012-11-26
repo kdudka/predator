@@ -37,8 +37,6 @@
 #include "connection_graph.hh"
 
 
-
-
 /**
  * @brief  @todo
  */
@@ -225,7 +223,7 @@ public:   // methods
 
 	bool Empty() const
 	{
-		return variables_.empty();
+		return roots_.empty();
 	}
 
 	void SetVar(size_t varId, const Data& data)

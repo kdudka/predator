@@ -23,6 +23,7 @@
 #include "integrity.hh"
 #include "memplot.hh"
 #include "regdef.hh"
+#include "streams.hh"
 #include "symstate.hh"
 #include "virtualmachine.hh"
 
@@ -153,6 +154,263 @@ SymState::Trace SymState::getTrace() const
 	}
 
 	return trace;
+}
+
+
+void SymState::SubstituteRefs(
+	const SymState&      src,
+	const Data&          oldValue,
+	const Data&          newValue)
+{
+	// Preconditions
+	assert(oldValue.isRef() && newValue.isRef());
+
+	struct RootState
+	{
+		size_t root;
+		size_t state;
+
+		RootState(size_t pRoot, size_t pState) :
+			root(pRoot),
+			state(pState)
+		{ }
+
+		bool operator<(const RootState& rhs) const
+		{
+			if (root < rhs.root)
+			{
+				return true;
+			}
+			else if (root == rhs.root)
+			{
+				return state < rhs.state;
+			}
+			else
+			{
+				return false;
+			}
+		}
+	};
+
+	typedef std::pair<RootState, RootState> ProdState;
+
+	const std::shared_ptr<const FAE> thisFAE = this->GetFAE();
+	const std::shared_ptr<const FAE> srcFAE = src.GetFAE();
+	assert((nullptr != thisFAE) && (nullptr != srcFAE));
+
+	FAE* fae = new FAE(*thisFAE);
+	fae->clear();
+
+	for (size_t i = 0; i < thisFAE->getRootCount(); ++i)
+	{	// allocate existing TA
+		if (nullptr != thisFAE->getRoot(i))
+		{
+			TreeAut* ta =fae->allocTA();
+			ta->addFinalStates(thisFAE->getRoot(i)->getFinalStates());
+			fae->appendRoot(ta);
+		}
+		else
+		{
+			fae->appendRoot(nullptr);
+		}
+
+		fae->connectionGraph.newRoot();
+	}
+
+	std::set<ProdState> processed;
+	std::vector<ProdState> workset;
+
+	assert(thisFAE->GetVarCount() == srcFAE->GetVarCount());
+	for (size_t i = 0; i < thisFAE->GetVarCount(); ++i)
+	{	// copy global variables
+		Data thisVar = thisFAE->GetVar(i);
+		const Data& srcVar = srcFAE->GetVar(i);
+
+		if (srcVar.isRef() && thisVar.isUndef())
+		{	// in case we need to substitute at global variable
+			assert(oldValue == srcVar);
+			thisVar = newValue;
+		}
+
+		fae->PushVar(thisVar);
+
+		if (!srcVar.isRef() || !thisVar.isRef())
+		{	// in case some of them is not a reference
+			assert(srcVar == thisVar);
+			continue;
+		}
+
+		assert(thisVar.isRef() && srcVar.isRef());
+		assert(thisVar.d_ref.displ == srcVar.d_ref.displ);
+
+		const TreeAut* thisRoot = thisFAE->getRoot(thisVar.d_ref.root).get();
+		const TreeAut* srcRoot  = srcFAE->getRoot(srcVar.d_ref.root).get();
+		assert((nullptr != thisRoot) && (nullptr != srcRoot));
+
+		ProdState initialState(
+			RootState(thisVar.d_ref.root, thisRoot->getFinalState()),
+			RootState(srcVar.d_ref.root, srcRoot->getFinalState())
+		);
+
+		workset.push_back(initialState);
+		processed.insert(initialState);
+	}
+
+	assert(this->GetRegCount() == src.GetRegCount());
+	for (size_t i = 0; i < this->GetRegCount(); ++i)
+	{	// copy registers
+		Data thisVar = this->GetReg(i);
+		const Data& srcVar = src.GetReg(i);
+
+		if (srcVar.isRef() && thisVar.isUndef())
+		{	// in case we need to substitute at global variable
+			assert(oldValue == srcVar);
+			this->SetReg(i, thisVar);
+			thisVar = newValue;
+		}
+
+		if (!srcVar.isRef() || !thisVar.isRef())
+		{	// in case some of them is not a reference
+			assert(srcVar == thisVar);
+			continue;
+		}
+
+		assert(thisVar.isRef() && srcVar.isRef());
+		assert(thisVar.d_ref.displ == srcVar.d_ref.displ);
+
+		const TreeAut* thisRoot = thisFAE->getRoot(thisVar.d_ref.root).get();
+		const TreeAut* srcRoot  = srcFAE->getRoot(srcVar.d_ref.root).get();
+		assert((nullptr != thisRoot) && (nullptr != srcRoot));
+
+		ProdState initialState(
+			RootState(thisVar.d_ref.root, thisRoot->getFinalState()),
+			RootState(srcVar.d_ref.root, srcRoot->getFinalState())
+		);
+
+		workset.push_back(initialState);
+		processed.insert(initialState);
+	}
+
+
+	while (!workset.empty())
+	{
+		const ProdState curState = *workset.crbegin();
+		workset.pop_back();
+
+		const size_t& thisRoot = curState.first.root;
+		const size_t& srcRoot = curState.second.root;
+
+		const std::shared_ptr<TreeAut> thisTA = thisFAE->getRoot(thisRoot);
+		const std::shared_ptr<TreeAut> srcTA = srcFAE->getRoot(srcRoot);
+		assert((nullptr != thisTA) && (nullptr != srcTA));
+
+		const size_t& thisState = curState.first.state;
+		const size_t& srcState = curState.second.state;
+
+		TreeAut::iterator thisIt = thisTA->begin(thisState);
+		TreeAut::iterator thisEnd = thisTA->end(thisState, thisIt);
+		TreeAut::iterator srcIt = srcTA->begin(srcState);
+		TreeAut::iterator srcEnd = srcTA->end(srcState, srcIt);
+
+		for (; thisIt != thisEnd; ++thisIt)
+		{
+			for (; srcIt != srcEnd; ++srcIt)
+			{
+				const Transition& thisTrans = *thisIt;
+				const Transition& srcTrans = *srcIt;
+
+				if (thisTrans.label() == srcTrans.label())
+				{
+					assert(thisTrans.lhs().size() == srcTrans.lhs().size());
+
+					if (thisTrans.label()->isData())
+					{	// data are processed one level up
+						assert(srcTrans.label()->isData());
+						continue;
+					}
+
+					std::vector<size_t> lhs;
+
+					for (size_t i = 0; i < thisTrans.lhs().size(); ++i)
+					{	// for each pair of states that map to each other
+						const Data* srcData;
+						if (srcFAE->isData(srcTrans.lhs()[i], srcData))
+						{	// for data states
+							assert(nullptr != srcData);
+
+							const Data* thisData;
+							if (!thisFAE->isData(thisTrans.lhs()[i], thisData))
+							{
+								assert(false);       // fail gracefully
+							}
+
+							assert(nullptr != thisData);
+
+							if (oldValue == *srcData)
+							{	// in case we are at the right value
+								assert(thisData->isUndef());
+								// TODO: or may it reference itself?
+
+								assert(false);
+								// TODO: we should now change the undef to newValue
+
+								// add sth to 'lhs'
+							}
+							else if (srcData->isRef())
+							{	// for the case of other reference
+								assert(thisData->isRef());
+								assert(thisData->d_ref.displ == srcData->d_ref.displ);
+
+								const size_t& thisNewRoot = thisData->d_ref.root;
+								const size_t& srcNewRoot  = srcData->d_ref.root;
+
+								const TreeAut* thisNewTA = thisFAE->getRoot(thisData->d_ref.root).get();
+								const TreeAut* srcNewTA  = srcFAE->getRoot(srcData->d_ref.root).get();
+								assert((nullptr != thisNewTA) && (nullptr != srcNewTA));
+
+								ProdState jumpState(
+									RootState(thisNewRoot, thisNewTA->getFinalState()),
+									RootState(srcNewRoot, srcNewTA->getFinalState())
+								);
+
+								if (processed.insert(jumpState).second)
+								{	// in case the state has not been processed before
+									workset.push_back(jumpState);
+								}
+
+								lhs.push_back(fae->addData(*fae->getRoot(thisRoot).get(), *thisData));
+							}
+							else
+							{	// for other data
+								lhs.push_back(fae->addData(*fae->getRoot(thisRoot).get(), *thisData));
+							}
+						}
+						else
+						{
+							const ProdState newState(std::make_pair(
+								RootState(thisRoot, thisTrans.lhs()[i]),
+								RootState(srcRoot, srcTrans.lhs()[i])
+							));
+
+							if (processed.insert(newState).second)
+							{	// in case the state has not been processed before
+								workset.push_back(newState);
+							}
+						}
+					}
+
+					fae->getRoot(thisRoot)->addTransition(lhs, thisTrans.label(), thisTrans.rhs());
+				}
+				else
+				{
+					FA_LOG("not-matching: " << *thisIt << ", " << *srcIt);
+				}
+			}
+		}
+	}
+
+	fae->updateConnectionGraph();
+	this->SetFAE(std::shared_ptr<FAE>(fae));
 }
 
 

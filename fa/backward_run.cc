@@ -50,8 +50,23 @@ bool BackwardRun::isSpuriousCE(SymState::Trace& fwdTrace)
 		const AbstractInstruction* instr = fwdState->GetInstr();
 		assert(nullptr != instr);
 
+		for (size_t i = 0; i < 10; ++i)
+		{
+			FA_DEBUG_AT(1, "");
+		}
+
+		FA_DEBUG_AT(1, "instruction: " << *instr);
+		FA_DEBUG_AT(1, "fwd pred state: " << *fwdState);
+		FA_DEBUG_AT(1, "bwd succ state: " << *bwdState);
+
 		SymState* resultState = instr->reverseAndIsect(execMan_, *fwdState, *bwdState);
 		assert(nullptr != resultState);
+		FA_DEBUG_AT(1, "bwd pred state: " << *resultState);
+
+		if (resultState->GetFAE()->Empty())
+		{	// in case the intersection is empty - spurious counterexample
+			return false;
+		}
 
 		bwdTrace.push_back(resultState);
 		bwdState = resultState;

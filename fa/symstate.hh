@@ -47,6 +47,10 @@ class AbstractInstruction;
  */
 class SymState : public LinkTree
 {
+private:  // data types
+
+	typedef TreeAut::Transition Transition;
+
 public:   // data types
 
 	/// Trace of symbolic states
@@ -271,6 +275,23 @@ public:   // methods
 	 * @returns  The trace
 	 */
 	Trace getTrace() const;
+
+
+	/**
+	 * @brief  Substitutes references to one FA root with another root
+	 *
+	 * Traverses @p *this and @p src in parallel and in places where @p src
+	 * references @p oldValue adds (in @p *this) a reference to @p newValue.
+	 *
+	 * @param[in]  src       The reference symbolic state
+	 * @param[in]  oldValue  The value to be substituted
+	 * @param[in]  newValue  The new value
+	 */
+	void SubstituteRefs(
+		const SymState&      src,
+		const Data&          oldValue,
+		const Data&          newValue);
+
 
 	/**
 	 * @brief  The output stream operator

@@ -71,9 +71,9 @@ public:
 public:
 
 	TreeAut& unique(
-		TreeAut& dst,
-		const TreeAut& src,
-		bool addFinalStates = true)
+		TreeAut&          dst,
+		const TreeAut&    src,
+		bool              addFinalStates = true)
 	{
 		Index<size_t> stateIndex;
 
@@ -88,10 +88,10 @@ public:
 	}
 
 	TreeAut& unique(
-		TreeAut& dst,
-		const TreeAut& src,
-		Index<size_t>& stateIndex,
-		bool addFinalStates = true)
+		TreeAut&          dst,
+		const TreeAut&    src,
+		Index<size_t>&    stateIndex,
+		bool              addFinalStates = true)
 	{
 		TreeAut::rename(
 			dst,
@@ -387,21 +387,6 @@ public:
 	{
 		return &this->relabelReferences(*this->allocTA(), *src, index);
 	}
-
-	/**
-	 * @brief  Substitutes references to one root with another root
-	 *
-	 * Traverses @p *this and @p src in parallel and in places where @p src
-	 * references @p oldValue adds (in @p *this) a reference to @p newValue.
-	 *
-	 * @param[in]  src       The reference forest automaton
-	 * @param[in]  oldValue  The value to be substituted
-	 * @param[in]  newValue  The new value
-	 */
-	void SubstituteRefs(
-		const FAE&           src,
-		const Data&          oldValue,
-		const Data&          newValue);
 
 
 	TreeAut& invalidateReference(

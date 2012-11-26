@@ -290,3 +290,20 @@ void VirtualMachine::getNearbyReferences(
 			out.insert(data->d_ref.root);
 	}
 }
+
+void VirtualMachine::nodeCopy(
+	size_t                          dstRoot,
+	const VirtualMachine&           srcVM,
+	size_t                          srcRoot)
+{
+	// Assertions
+	assert(dstRoot < fae_.getRootCount());
+	assert(srcRoot < srcVM.fae_.getRootCount());
+	assert(nullptr == fae_.getRoot(dstRoot));
+	assert(nullptr != srcVM.fae_.getRoot(dstRoot));
+
+	// copy the TA
+	TreeAut* tmp = fae_.allocTA();
+	*tmp = *srcVM.fae_.getRoot(srcRoot);
+	fae_.setRoot(dstRoot, std::shared_ptr<TreeAut>(tmp));
+}

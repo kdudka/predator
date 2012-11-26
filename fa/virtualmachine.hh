@@ -316,6 +316,16 @@ public:
 	void nodeDelete(size_t root);
 
 	/**
+	 * @brief  Copies a node from another virtual machine
+	 *
+	 * @todo
+	 */
+	void nodeCopy(
+		size_t                          dstRoot,
+		const VirtualMachine&           srcVM,
+		size_t                          srcRoot);
+
+	/**
 	 * @brief  Looks up a node in the memory
 	 *
 	 * Retrieves a node from the virtual machine's memory. The node is specified

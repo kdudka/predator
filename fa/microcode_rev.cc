@@ -66,10 +66,19 @@ SymState* FI_pop_greg::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)fwdPred;
+	// Assertions
+	assert(fwdPred.GetFAE()->GetVarCount() == bwdSucc.GetFAE()->GetVarCount() + 1);
 
-	FA_WARN("Skipping reverse operation FI_pop_greg");
-	return execMan.copyState(bwdSucc);
+	SymState* tmpState = execMan.copyStateWithNewRegs(bwdSucc, fwdPred.GetInstr());
+
+	// invert the pop
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
+	VirtualMachine(*fae).varPush(tmpState->GetReg(dst_));
+	tmpState->SetFAE(fae);
+	// restore the original value in the dst_ register
+	tmpState->SetReg(dst_, fwdPred.GetReg(dst_));
+
+	return tmpState;
 }
 
 SymState* FI_push_greg::reverseAndIsect(
@@ -106,10 +115,81 @@ SymState* FI_node_free::reverseAndIsect(
 	const SymState&                        fwdPred,
 	const SymState&                        bwdSucc) const
 {
-	(void)fwdPred;
+	// If there is something pointing from the deallocated node, we can use the
+	// original values because during the backward run, we attempt to adjust the
+	// FA into the shape from the forward run.
+	// @todo: is this true? cannot the FA have e.g. more cutpoints?
+	SymState* tmpState = execMan.copyState(bwdSucc);
+	std::shared_ptr<FAE> fae = std::shared_ptr<FAE>(new FAE(*(tmpState->GetFAE())));
+	assert(nullptr != fae);
 
-	FA_WARN("Skipping reverse operation FI_node_free");
-	return execMan.copyState(bwdSucc);
+	// 'vm' is used to manipulate with 'fae'
+	VirtualMachine vm(*fae);
+
+	// load the number of the root we will be reconstructing
+	const Data& data = tmpState->GetReg(dst_);
+	assert(data.isRef());
+	assert(0 == data.d_ref.displ);
+	size_t root = data.d_ref.root;
+	assert(nullptr == fae->getRoot(root));
+
+	// load the number of the root that was deleted in the forward configuration
+	const Data& oldData = fwdPred.GetReg(dst_);
+	assert(oldData.isRef());
+	assert(0 == oldData.d_ref.displ);
+	size_t oldRoot = oldData.d_ref.root;
+	assert(nullptr != fwdPred.GetFAE()->getRoot(oldRoot));
+
+	// check that the registers correspond
+	assert(fwdPred.GetRegCount() == tmpState->GetRegCount());
+	for (size_t i = 0; i < tmpState->GetRegCount(); ++i)
+	{
+		const Data& fwdRegVal = fwdPred.GetReg(i);
+		if (fwdRegVal.isRef() && (fwdRegVal.d_ref.root == oldRoot))
+		{	// in case there was a reference to the deleted TA in the forward run
+			assert(tmpState->GetReg(i).isUndef() ||
+				(tmpState->GetReg(i).isRef() &&
+					(nullptr == fae->getRoot(tmpState->GetReg(i).d_ref.root))));
+		}
+	}
+
+	// we need to copy a tree automaton from the forward configuration into
+	// the backward configuration
+	VirtualMachine fwdVM(*(fwdPred.GetFAE()));
+
+	vm.nodeCopy(root, fwdVM, root);
+
+	for (size_t i = 0; i < tmpState->GetRegCount(); ++i)
+	{	// check local registers
+		const Data& fwdRegVal = fwdPred.GetReg(i);
+		if (fwdRegVal.isRef() && (fwdRegVal.d_ref.root == oldRoot))
+		{	// in case there was a reference to the deleted TA in the forward run
+			assert(tmpState->GetReg(i).isRef());
+			assert(tmpState->GetReg(i).d_ref.root == root);
+
+			// TODO: otherwise, we should load 'root' to reg 'i'
+		}
+	}
+
+	tmpState->SetFAE(fae);
+
+	// now, in the reversal, we need to fill in correct references to the inserted
+	// tree (from the forward predecessor) in places where there are <undef>s
+	// where they originally pointed to the inserted tree. More precisely, we need
+	// to traverse in parallel FAE from tmpState and fwdPred (such as when doing
+	// a product) and where there are references to 'oldRoot' in fwdPred and there
+	// are '<undef>'s in tmpState (there should always be an undef, otherwise
+	// there must be something fishy going on...), we need to change such
+	// '<undef>'s to references to 'root'
+	tmpState->SubstituteRefs(fwdPred, oldData, data);
+
+	// note that we do not need to update the references in the copied node...
+	// this is because when returning from the previous abstraction, the
+	// components should not change
+
+	FA_WARN("Executing !!VERY!! suspicious reverse operation FI_node_free");
+
+	return tmpState;
 }
 
 SymState* FI_node_create::reverseAndIsect(
