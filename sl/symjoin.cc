@@ -1887,9 +1887,6 @@ bool insertSegmentClone(
         ? ctx.valMap1
         : ctx.valMap2;
 
-    // TODO: drop this!
-    const TValId segAt = shGt.addrOfTarget(seg, /* XXX */ TS_REGION);
-
     scheduleSegAddr(ctx.wl, shGt, seg, peer, action, item);
 
     SchedItem cloneItem;
@@ -1909,8 +1906,9 @@ bool insertSegmentClone(
             // do not go beyond the segment, just follow its data
             continue;
 
-        if (segAt != valGt)
-            // OK_SEE_THROUGH/OK_OBJ_OR_NULL is applicable only on the first fld
+        const TObjId objGt = shGt.objByAddr(valGt);
+        if (seg != objGt)
+            // OK_SEE_THROUGH/OK_OBJ_OR_NULL is applicable only on the first obj
             off = 0;
 
         const EValueTarget code = shGt.valTarget(valGt);
