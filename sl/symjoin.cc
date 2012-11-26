@@ -154,8 +154,8 @@ struct SymJoinCtx {
     SymHeap                     &sh2;
 
     // they need to be black-listed for joinAbstractValues()
-    TValSet                     sset1;
-    TValSet                     sset2;
+    TObjSet                     sset1;
+    TObjSet                     sset2;
 
     FldList                     liveList1;
     FldList                     liveList2;
@@ -1039,15 +1039,18 @@ bool joinSegBinding(
     return false;
 }
 
-bool rootNotYetAbstract(SymHeap &sh, const TValSet &sset)
+bool rootNotYetAbstract(SymHeap &sh, const TObjSet &sset)
 {
     if (sset.empty()) {
         CL_BREAK_IF("rootNotYetAbstract() got an empty set");
         return false;
     }
 
-    const TValId anyRoot = *sset.begin();
-    return !isAbstractValue(sh, anyRoot);
+    const TObjId obj = *sset.begin();
+    CL_BREAK_IF(!sh.isValid(obj));
+
+    const EObjKind kind = sh.objKind(obj);
+    return (OK_REGION == kind);
 }
 
 bool joinNestingLevel(
@@ -1505,15 +1508,11 @@ bool joinObjects(
         // postpone it till the read-write attempt
         return true;
 
-    // TODO: drop this!
-    const TValId root1 = ctx.sh1.addrOfTarget(obj1, /* XXX */ TS_REGION);
-    const TValId root2 = ctx.sh2.addrOfTarget(obj2, /* XXX */ TS_REGION);
-
     const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1))
-        && !hasKey(ctx.sset1, root1);
+        && !hasKey(ctx.sset1, obj1);
 
     const bool isDls2 = (OK_DLS == ctx.sh2.objKind(obj2))
-        && !hasKey(ctx.sset2, root2);
+        && !hasKey(ctx.sset2, obj2);
 
     if (isDls1 == isDls2)
         return true;
@@ -1618,8 +1617,8 @@ bool joinSegmentWithAny(
         return true;
     }
 
-    const bool isValid1 = isPossibleToDeref(ctx.sh1, root1);
-    const bool isValid2 = isPossibleToDeref(ctx.sh2, root2);
+    const bool isValid1 = ctx.sh1.isValid(obj1);
+    const bool isValid2 = ctx.sh2.isValid(obj2);
     if (!isValid1 || !isValid2)
         return false;
 
@@ -1955,18 +1954,15 @@ bool insertSegmentClone(
 }
 
 void resolveMayExist(
-        SymJoinCtx              &ctx,
-        bool                    *isAbs1,
-        bool                    *isAbs2,
-        const TValId            v1,
-        const TValId            v2)
+        SymJoinCtx             &ctx,
+        bool                   *isAbs1,
+        bool                   *isAbs2,
+        const TObjId            obj1,
+        const TObjId            obj2)
 {
     if (!*isAbs1 || !*isAbs2)
         // at most one abstract object
         return;
-
-    const TObjId obj1 = ctx.sh1.objByAddr(v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
     const EObjKind kind1 = ctx.sh1.objKind(obj1);
     const EObjKind kind2 = ctx.sh2.objKind(obj2);
@@ -1990,10 +1986,11 @@ bool joinAbstractValues(
 {
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
-    resolveMayExist(ctx, &isAbs1, &isAbs2, v1, v2);
 
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
+    resolveMayExist(ctx, &isAbs1, &isAbs2, obj1, obj2);
+
     const TProtoLevel ldiff = item.ldiff;
 
     if (isAbs1 && isAbs2 && joinSegmentWithAny(
@@ -2394,11 +2391,11 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
 
     const bool isAbs1 = isAbstractValue(ctx.sh1, v1)
         /* do not treat the starting point as encountered segment */
-        && !hasKey(ctx.sset1, ctx.sh1.valRoot(v1));
+        && !hasKey(ctx.sset1, ctx.sh1.objByAddr(v1));
 
     const bool isAbs2 = isAbstractValue(ctx.sh2, v2)
         /* do not treat the starting point as encountered segment */
-        && !hasKey(ctx.sset2, ctx.sh2.valRoot(v2));
+        && !hasKey(ctx.sset2, ctx.sh2.objByAddr(v2));
 
     if ((isAbs1 || isAbs2)
             && joinAbstractValues(&result, ctx, item, isAbs1, isAbs2))
@@ -2971,23 +2968,23 @@ bool joinDataCore(
     if (!joinFields(ctx, objDst, obj1, obj2, ldiff, &off))
         return false;
 
-    ctx.sset1.insert(addr1);
-    ctx.sset2.insert(addr2);
+    ctx.sset1.insert(obj1);
+    ctx.sset2.insert(obj2);
 
     // never step over DLS peer
     if (OK_DLS == kind1) {
-        const TValId peer = sh.addrOfTarget(dlSegPeer(sh, obj1),
-                /* XXX */ TS_REGION);
+        const TObjId peer = dlSegPeer(sh, obj1);
+        const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
         ctx.sset1.insert(peer);
-        if (peer != addr2)
-            mapGhostAddressSpace(ctx, addr1, peer, JS_USE_SH1);
+        if (peer != obj2)
+            mapGhostAddressSpace(ctx, addr1, peerAt, JS_USE_SH1);
     }
     if (OK_DLS == kind2) {
-        const TValId peer = sh.addrOfTarget(dlSegPeer(sh, obj2),
-                /* XXX */ TS_REGION);
+        const TObjId peer = dlSegPeer(sh, obj2);
+        const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
         ctx.sset2.insert(peer);
-        if (peer != addr1)
-            mapGhostAddressSpace(ctx, addr2, peer, JS_USE_SH2);
+        if (peer != obj1)
+            mapGhostAddressSpace(ctx, addr2, peerAt, JS_USE_SH2);
     }
 
     // perform main loop
