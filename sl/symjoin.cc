@@ -57,8 +57,11 @@ void debugSymJoin(const bool enable)
     ::debuggingSymJoin = enable;
 }
 
-#define SJ_FLDP(f1, f2) "(f1 = #" << f1.fieldId() \
-    << ", f2 = #" << f2.fieldId() << ")"
+#define SJ_FLDT(fldDst, fld1, fld2)     \
+    "(fldDst = #" << fldDst.fieldId()   \
+    << ", fld1 = #" << fld1.fieldId()   \
+    << ", fld2 = #" << fld2.fieldId()   \
+    << ")"
 
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
@@ -101,6 +104,7 @@ class WorkListWithUndo: public WorkList<T> {
 };
 
 struct SchedItem {
+    FldHandle           fldDst;
     FldHandle           fld1;
     FldHandle           fld2;
     TProtoLevel         ldiff;
@@ -110,7 +114,12 @@ struct SchedItem {
     {
     }
 
-    SchedItem(FldHandle fld1_, FldHandle fld2_, TProtoLevel ldiff_):
+    SchedItem(
+            const FldHandle        &fldDst_,
+            const FldHandle        &fld1_,
+            const FldHandle        &fld2_,
+            const TProtoLevel       ldiff_):
+        fldDst(fldDst_),
         fld1(fld1_),
         fld2(fld2_),
         ldiff(ldiff_)
@@ -582,8 +591,8 @@ bool bumpNestingLevel(const FldHandle &fld)
     return !hasKey(ignoreList, fld);
 }
 
-/// (FLD_INVALID == objDst) means read-only!!!
-bool joinFreshObjTripple(
+/// (FLD_INVALID == fldDst) means read-only!!!
+bool joinFreshFldTripple(
         SymJoinCtx              &ctx,
         const FldHandle         &fld1,
         const FldHandle         &fld2,
@@ -661,10 +670,10 @@ bool joinFreshObjTripple(
     if (bumpNestingLevel(fld2))
         --ldiff;
 
-    const SchedItem item(fld1, fld2, ldiff);
+    const SchedItem item(fldDst, fld1, fld2, ldiff);
     if (ctx.wl.schedule(item))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
-                << " <- " << SJ_FLDP(fld1, fld2)
+                << " <- " << SJ_FLDT(fldDst, fld1, fld2)
                 << ", ldiff = " << ldiff);
 
     return true;
@@ -699,7 +708,7 @@ struct ObjJoinVisitor {
         if (hasKey(blackList1, fld1) || hasKey(blackList2, fld2))
             return /* continue */ true;
 
-        return joinFreshObjTripple(ctx, fld1, fld2, fldDst, ldiff);
+        return joinFreshFldTripple(ctx, fld1, fld2, fldDst, ldiff);
     }
 };
 
@@ -736,7 +745,7 @@ struct SegMatchVisitor {
                 return true;
 
             const FldHandle readOnly(FLD_INVALID);
-            return joinFreshObjTripple(ctx, fld1, fld2, readOnly, ldiff);
+            return joinFreshFldTripple(ctx, fld1, fld2, readOnly, ldiff);
         }
 };
 
@@ -1737,6 +1746,7 @@ void scheduleSegAddr(
     const FldHandle fldInvalid;
 
     const SchedItem segItem(
+            item.fldDst,
             (JS_USE_SH1 == action) ? item.fld1 : fldInvalid,
             (JS_USE_SH2 == action) ? item.fld2 : fldInvalid,
             item.ldiff);
@@ -1748,6 +1758,7 @@ void scheduleSegAddr(
     // FIXME: we need this for test-0129
     const FldHandle fldPeer = prevPtrFromSeg(shGt, seg);
     const SchedItem peerItem(
+            /* XXX */ fldInvalid,
             (JS_USE_SH1 == action) ? fldPeer : fldInvalid,
             (JS_USE_SH2 == action) ? fldPeer : fldInvalid,
             item.ldiff);
@@ -1932,14 +1943,18 @@ bool insertSegmentClone(
         // nothing to follow
         return true;
 
-    // FIXME: suspicious place  >>> HERE <<<
+    const TObjId segDst = (isGt1)
+        ? roMapLookup(ctx.objMap1[/* ltr */ 0], seg)
+        : roMapLookup(ctx.objMap2[/* ltr */ 0], seg);
+
+    const FldHandle fldNextDst = nextPtrFromSeg(ctx.dst, segDst);
 
     // schedule the successor fields
     const FldHandle fldNext1 = (isGt1) ? nextPtr : item.fld1;
     const FldHandle fldNext2 = (isGt2) ? nextPtr : item.fld2;
-    const SchedItem nextItem(fldNext1, fldNext2, item.ldiff);
+    const SchedItem nextItem(fldNextDst, fldNext1, fldNext2, item.ldiff);
     if (ctx.wl.schedule(nextItem))
-        SJ_DEBUG("+++ " << SJ_FLDP(fldNext1, fldNext2)
+        SJ_DEBUG("+++ " << SJ_FLDT(fldNextDst, fldNext1, fldNext2)
                 << " by insertSegmentClone()");
 
     return true;
@@ -2119,7 +2134,8 @@ class MayExistVisitor {
 
                 const FldHandle fld1 = (JS_USE_SH1 == action_) ? fld : fldRef_;
                 const FldHandle fld2 = (JS_USE_SH2 == action_) ? fld : fldRef_;
-                const SchedItem item(fld1, fld2, ldiff_);
+                const FldHandle fldInvalid;
+                const SchedItem item(fldInvalid, fld1, fld2, ldiff_);
                 if (followValuePair(ctx_, item, /* read-only */ true))
                     // looks like we have a candidate
                     break;
@@ -2363,9 +2379,13 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
 {
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
-    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
+    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false)) {
         // already joined
+        const TValId valDst = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
+        CL_BREAK_IF(valDst != roMapLookup(ctx.valMap2[/* ltr */ 0], v2));
+        item.fldDst.setValue(valDst);
         return true;
+    }
 
     bool result;
     if (joinValuesByCode(&result, ctx, v1, v2))
