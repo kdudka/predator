@@ -445,9 +445,11 @@ fail:
 
 bool joinRangeValues(
         SymJoinCtx             &ctx,
-        const TValId            v1,
-        const TValId            v2)
+        const SchedItem        &item)
 {
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
     // check whether the values are not matched already
     const TValPair vp(v1, v2);
     CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
@@ -481,6 +483,7 @@ bool joinRangeValues(
 
     // create a VT_RANGE value in ctx.dst
     const TValId vDst = ctx.dst.valByRange(rootDst, rng);
+    item.fldDst.setValue(vDst);
 
     // store the mapping (v1, v2) -> vDst
     ctx.matchLookup[vp] = vDst;
@@ -1569,7 +1572,7 @@ bool followValuePair(
         return false;
 
     // ranges cannot be joint unless the root exists in ctx.dst, join them now!
-    if (isRange && !joinRangeValues(ctx, v1, v2))
+    if (isRange && !joinRangeValues(ctx, item))
         return false;
 
     return true;
@@ -1992,23 +1995,24 @@ bool joinAbstractValues(
     resolveMayExist(ctx, &isAbs1, &isAbs2, obj1, obj2);
 
     const TProtoLevel ldiff = item.ldiff;
+    EJoinStatus action;
 
     if (isAbs1 && isAbs2 && joinSegmentWithAny(
-                pResult, ctx, obj1, obj2, ldiff, JS_USE_ANY))
+                pResult, ctx, obj1, obj2, ldiff, (action = JS_USE_ANY)))
         goto done;
 
     if (!isAbs2 && joinSegmentWithAny(
-                pResult, ctx, obj1, obj2, ldiff, JS_USE_SH1))
+                pResult, ctx, obj1, obj2, ldiff, (action = JS_USE_SH1)))
         goto done;
 
     if (!isAbs1 && joinSegmentWithAny(
-                pResult, ctx, obj1, obj2, ldiff, JS_USE_SH2))
+                pResult, ctx, obj1, obj2, ldiff, (action = JS_USE_SH2)))
         goto done;
 
-    if (isAbs1 && insertSegmentClone(pResult, ctx, item, JS_USE_SH1))
+    if (isAbs1 && insertSegmentClone(pResult, ctx, item, (action = JS_USE_SH1)))
         goto done;
 
-    if (isAbs2 && insertSegmentClone(pResult, ctx, item, JS_USE_SH2))
+    if (isAbs2 && insertSegmentClone(pResult, ctx, item, (action = JS_USE_SH2)))
         goto done;
 
     // we have failed
@@ -2017,8 +2021,52 @@ bool joinAbstractValues(
 
 done:
     if (VT_RANGE == ctx.sh1.valTarget(v1) || VT_RANGE == ctx.sh2.valTarget(v2))
+    {
         // we came here from a VT_RANGE value, remember to join the entry
-        *pResult = joinRangeValues(ctx, v1, v2);
+        *pResult = joinRangeValues(ctx, item);
+        return true;
+    }
+
+    const TObjId objDstBy1 = roMapLookup(ctx.objMap1[/* ltr */ 0], obj1);
+    const TObjId objDstBy2 = roMapLookup(ctx.objMap2[/* ltr */ 0], obj2);
+
+    const TOffset off1 = ctx.sh1.valOffset(v1);
+    const TOffset off2 = ctx.sh2.valOffset(v2);
+
+    const ETargetSpecifier ts1 = ctx.sh1.targetSpec(v1);
+    const ETargetSpecifier ts2 = ctx.sh2.targetSpec(v2);
+
+    TObjId objDst;
+    TOffset offDst;
+    ETargetSpecifier tsDst;
+
+    switch (action) {
+        case JS_USE_ANY:
+            CL_BREAK_IF(objDstBy1 != objDstBy2);
+            CL_BREAK_IF(off1 != off2);
+            CL_BREAK_IF(ts1 != ts2);
+            // fall through!
+
+        case JS_USE_SH1:
+            objDst = objDstBy1;
+            offDst = off1;
+            tsDst = ts1;
+            break;
+
+        case JS_USE_SH2:
+            objDst = objDstBy2;
+            offDst = off2;
+            tsDst = ts2;
+            break;
+
+        default:
+            CL_BREAK_IF("joinSegmentWithAny() is broken");
+            return false;
+    }
+
+    // write the resulting value to item.fldDst
+    const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
+    item.fldDst.setValue(vDst);
 
     return true;
 }
