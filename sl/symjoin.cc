@@ -1592,27 +1592,29 @@ bool followValuePair(
 }
 
 bool segAlreadyJoined(
-        SymJoinCtx              &ctx,
-        const TValId            seg1,
-        const TValId            seg2,
+        SymJoinCtx             &ctx,
+        const TObjId            seg1,
+        const TObjId            seg2,
         const EJoinStatus       action)
 {
-    TValPair vp;
+    const TObjMap &m1 = ctx.objMap1[/* ltr */ 0];
+    const TObjMap &m2 = ctx.objMap2[/* ltr */ 0];
+
+    const TObjMap::const_iterator it1 = m1.find(seg1);
+    const TObjMap::const_iterator it2 = m2.find(seg2);
 
     switch (action) {
         case JS_USE_SH1:
-            vp = TValPair(seg1, VAL_INVALID);
-            break;
+            return m1.end() != it1
+                && !hasKey(ctx.objMap2[/* rtl */ 1], it1->second);
 
         case JS_USE_SH2:
-            vp = TValPair(VAL_INVALID, seg2);
-            break;
+            return m2.end() != it2
+                && !hasKey(ctx.objMap1[/* rtl */ 1], it2->second);
 
         default:
             return false;
     }
-
-    return hasKey(ctx.tieBreaking, vp);
 }
 
 bool joinSegmentWithAny(
@@ -1624,10 +1626,7 @@ bool joinSegmentWithAny(
         const EJoinStatus       action,
         bool                    firstTryReadOnly = true)
 {
-    // TODO: drop this!
-    const TValId root1 = ctx.sh1.addrOfTarget(obj1, /* XXX */ TS_REGION);
-    const TValId root2 = ctx.sh2.addrOfTarget(obj2, /* XXX */ TS_REGION);
-    if (segAlreadyJoined(ctx, root1, root2, action)) {
+    if (segAlreadyJoined(ctx, obj1, obj2, action)) {
         // already joined
         *pResult = true;
         return true;
@@ -1680,15 +1679,12 @@ bool joinSegmentWithAny(
     }
 
     // go ahead, try it read-write!
-    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_VALP(root1, root2));
+    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(obj1, obj2));
     *pResult = joinObjects(ctx, obj1, obj2, ldiff, action);
     if (!haveDls || !*pResult)
         return true;
 
-    /// TODO: drop this!
-    const TValId peer1At = ctx.sh1.addrOfTarget(peer1, /* XXX */ TS_REGION);
-    const TValId peer2At = ctx.sh2.addrOfTarget(peer2, /* XXX */ TS_REGION);
-    if (segAlreadyJoined(ctx, peer1At, peer2At, action))
+    if (segAlreadyJoined(ctx, peer1, peer2, action))
         return true;
 
     *pResult = joinObjects(ctx, peer1, peer2, ldiff, action);
