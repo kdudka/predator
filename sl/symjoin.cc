@@ -1572,8 +1572,21 @@ bool followValuePair(
         return false;
 
     // ranges cannot be joint unless the root exists in ctx.dst, join them now!
-    if (isRange && !joinRangeValues(ctx, item))
-        return false;
+    if (isRange)
+        return joinRangeValues(ctx, item);
+
+    const TObjId objDst = roMapLookup(ctx.objMap1[/* ltr */ 0], obj1);
+    CL_BREAK_IF(objDst != roMapLookup(ctx.objMap2[/* ltr */ 0], obj2));
+
+    const TOffset offDst = ctx.sh1.valOffset(v1);
+    CL_BREAK_IF(offDst  != ctx.sh2.valOffset(v2));
+
+    const ETargetSpecifier tsDst = ctx.sh1.targetSpec(v1);
+    CL_BREAK_IF(tsDst           != ctx.sh2.targetSpec(v2));
+
+    // write the resulting value to item.fldDst
+    const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
+    item.fldDst.setValue(vDst);
 
     return true;
 }
