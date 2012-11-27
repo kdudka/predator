@@ -1762,11 +1762,13 @@ void scheduleSegAddr(
 }
 
 bool handleUnknownValues(
-        SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2,
+        SymJoinCtx             &ctx,
+        const SchedItem        &item,
         const TValId            vDst)
 {
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
     const bool isNull1 = (VAL_NULL == v1);
     const bool isNull2 = (VAL_NULL == v2);
     if (isNull1 != isNull2) {
@@ -1778,11 +1780,16 @@ bool handleUnknownValues(
         const TValId valGt = (isNull2) ? v1 : v2;
         TValMapBidir &vMap = (isNull2) ? ctx.valMap1 : ctx.valMap2;
 
-        return matchPlainValues(vMap, shGt, ctx.dst, valGt, vDst);
+        if (!matchPlainValues(vMap, shGt, ctx.dst, valGt, vDst))
+            return false;
+    }
+    else {
+        if (!defineValueMapping(ctx, v1, v2, vDst))
+            return false;
     }
 
-    CL_BREAK_IF(isNull1 && isNull2);
-    return defineValueMapping(ctx, v1, v2, vDst);
+    item.fldDst.setValue(vDst);
+    return true;
 }
 
 bool cloneSpecialValue(
@@ -1816,14 +1823,14 @@ bool cloneSpecialValue(
 
         default:
             vDst = ctx.dst.valCreate(code, vo);
-            return handleUnknownValues(ctx, vp.first, vp.second, vDst);
+            return handleUnknownValues(ctx, itemToClone, vDst);
     }
 
     // VT_RANGE
     const TValId rootDst = roMapLookup(valMapGt[/* ltr */ 0], rootGt);
     const IR::Range range = shGt.valOffsetRange(valGt);
     vDst = ctx.dst.valByRange(rootDst, range);
-    if (!handleUnknownValues(ctx, vp.first, vp.second, vDst))
+    if (!handleUnknownValues(ctx, itemToClone, vDst))
         return false;
 
     ctx.matchLookup[vp] = vDst;
@@ -2404,7 +2411,7 @@ bool joinValuesByCode(
 
     // create a new unknown value in ctx.dst
     const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, origin);
-    *pResult = handleUnknownValues(ctx, v1, v2, vDst);
+    *pResult = handleUnknownValues(ctx, item, vDst);
     if (!*pResult)
         // we have failed
         return true;
