@@ -147,6 +147,8 @@ typedef WorkListWithUndo<SchedItem>                             TWorkList;
 
 typedef TObjMap                                                 TObjMapBidir[2];
 
+typedef std::map<TValPair /* (v1, v2) */, TValId /* dst */>     TJoinCache;
+
 /// current state, common for joinSymHeaps(), joinDataReadOnly() and joinData()
 struct SymJoinCtx {
     SymHeap                     &dst;
@@ -176,13 +178,10 @@ struct SymJoinCtx {
     std::set<TValPair>          sharedNeqs;
 
     std::set<TValPair>          tieBreaking;
-    std::set<TValPair>          alreadyJoined;
 
     std::set<TObjId /* dst */>  protos;
 
-    // XXX: experimental
-    typedef std::map<TValPair /* (v1, v2) */, TValId /* dst */> TMatchLookup;
-    TMatchLookup                matchLookup;
+    TJoinCache                  joinCache;
 
     void initValMaps() {
         // VAL_NULL should be always mapped to VAL_NULL
@@ -279,7 +278,7 @@ void dump_ctx(const SymJoinCtx &ctx)
         << "\n";
     cout << "    ctx.sharedNeqs     .size() = " << ctx.sharedNeqs.size()
         << "\n";
-    cout << "    ctx.alreadyJoined  .size() = " << ctx.alreadyJoined.size()
+    cout << "    ctx.joinCache      .size() = " << ctx.joinCache.size()
         << "\n";
     cout << "    ctx.protos         .size() = " << ctx.protos.size()
         << "\n\n";
@@ -428,7 +427,7 @@ bool matchRanges(
 
         // the mapping should have already been defined
         const TValPair vp(v1, v2);
-        if (hasKey(ctx.matchLookup, vp))
+        if (hasKey(ctx.joinCache, vp))
             return false;
 
         goto fail;
@@ -452,7 +451,7 @@ bool joinRangeValues(
 
     // check whether the values are not matched already
     const TValPair vp(v1, v2);
-    CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
+    CL_BREAK_IF(hasKey(ctx.joinCache, vp));
 
     const IR::Range rng1 = ctx.sh1.valOffsetRange(v1);
     const IR::Range rng2 = ctx.sh2.valOffsetRange(v2);
@@ -486,7 +485,7 @@ bool joinRangeValues(
     item.fldDst.setValue(vDst);
 
     // store the mapping (v1, v2) -> vDst
-    ctx.matchLookup[vp] = vDst;
+    ctx.joinCache[vp] = vDst;
     return true;
 }
 
@@ -612,7 +611,7 @@ bool joinFreshItem(
         // both values are VAL_NULL, nothing more to join here
         return true;
 
-    if (hasKey(ctx.alreadyJoined, TValPair(v1, v2)))
+    if (hasKey(ctx.joinCache, TValPair(v1, v2)))
         // the join has been already successful
         return true;
 
@@ -1817,8 +1816,8 @@ bool handleUnknownValues(
     const bool isNull2 = (VAL_NULL == v2);
     if (isNull1 != isNull2) {
         const TValPair vp(v1, v2);
-        CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
-        ctx.matchLookup[vp] = vDst;
+        CL_BREAK_IF(hasKey(ctx.joinCache, vp));
+        ctx.joinCache[vp] = vDst;
 
         SymHeap &shGt      = (isNull2) ? ctx.sh1 : ctx.sh2;
         const TValId valGt = (isNull2) ? v1 : v2;
@@ -1877,7 +1876,7 @@ bool cloneSpecialValue(
     if (!handleUnknownValues(ctx, itemToClone, vDst))
         return false;
 
-    ctx.matchLookup[vp] = vDst;
+    ctx.joinCache[vp] = vDst;
     return true;
 }
 
@@ -2146,7 +2145,7 @@ bool offRangeFallback(
 
     // check whether the values are not matched already
     const TValPair vp(v1, v2);
-    CL_BREAK_IF(hasKey(ctx.matchLookup, vp));
+    CL_BREAK_IF(hasKey(ctx.joinCache, vp));
 
     if (!updateJoinStatus(ctx, /* intentionally! */ JS_THREE_WAY))
         return false;
@@ -2165,7 +2164,7 @@ bool offRangeFallback(
     const TValId vDst = ctx.dst.valByRange(rootDst, rng);
 
     // store the mapping (v1, v2) -> vDst
-    ctx.matchLookup[vp] = vDst;
+    ctx.joinCache[vp] = vDst;
     item.fldDst.setValue(vDst);
     return true;
 }
@@ -2481,8 +2480,8 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     const TValId v2 = item.fld2.value();
 
     const TValPair vp(v1, v2);
-    SymJoinCtx::TMatchLookup::const_iterator mit = ctx.matchLookup.find(vp);
-    if (ctx.matchLookup.end() != mit) {
+    const TJoinCache::const_iterator mit = ctx.joinCache.find(vp);
+    if (ctx.joinCache.end() != mit) {
         const TValId vDst = mit->second;
         item.fldDst.setValue(vDst);
         return true;
@@ -2529,8 +2528,6 @@ bool joinPendingValues(SymJoinCtx &ctx)
         SJ_DEBUG("--- " << SJ_VALP(v1, v2));
         if (!joinValuePair(ctx, item))
             return false;
-
-        ctx.alreadyJoined.insert(TValPair(v1, v2));
     }
 
     return true;
@@ -2655,7 +2652,7 @@ bool setDstValuesCore(
     const TValId v1 = fld1.value();
     const TValId v2 = fld2.value();
     const TValPair vp(v1, v2);
-    if (hasKey(ctx.matchLookup, vp))
+    if (hasKey(ctx.joinCache, vp))
         // XXX: experimental
         return true;
 
