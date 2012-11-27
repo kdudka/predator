@@ -2079,13 +2079,14 @@ done:
 }
 
 bool offRangeFallback(
-        SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2)
+        SymJoinCtx             &ctx,
+        const SchedItem        &item)
 {
 #if !(SE_ALLOW_OFF_RANGES & 0x1)
     return false;
 #endif
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
 
     const TValId root1 = ctx.sh1.valRoot(v1);
     const TValId root2 = ctx.sh2.valRoot(v2);
@@ -2120,6 +2121,7 @@ bool offRangeFallback(
 
     // store the mapping (v1, v2) -> vDst
     ctx.matchLookup[vp] = vDst;
+    item.fldDst.setValue(vDst);
     return true;
 }
 
@@ -2432,6 +2434,15 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
 {
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
+
+    const TValPair vp(v1, v2);
+    SymJoinCtx::TMatchLookup::const_iterator mit = ctx.matchLookup.find(vp);
+    if (ctx.matchLookup.end() != mit) {
+        const TValId vDst = mit->second;
+        item.fldDst.setValue(vDst);
+        return true;
+    }
+
     if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false)) {
         // already joined
         const TValId valDst = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
@@ -2459,7 +2470,7 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     if (followValuePair(ctx, item, /* read-only */ true))
         return followValuePair(ctx, item, /* read-only */ false);
 
-    return offRangeFallback(ctx, v1, v2)
+    return offRangeFallback(ctx, item)
         || mayExistFallback(ctx, item, JS_USE_SH1)
         || mayExistFallback(ctx, item, JS_USE_SH2);
 }
@@ -2541,12 +2552,6 @@ TValId joinDstValue(
         const bool              validObj1,
         const bool              validObj2)
 {
-    const TValPair vp(v1, v2);
-    SymJoinCtx::TMatchLookup::const_iterator mit = ctx.matchLookup.find(vp);
-    if (ctx.matchLookup.end() != mit)
-        // XXX: experimental
-        return mit->second;
-
     // translate the roots into 'dst'
     const TValId root1 = ctx.sh1.valRoot(v1);
     const TValId root2 = ctx.sh2.valRoot(v2);
@@ -2604,6 +2609,10 @@ bool setDstValuesCore(
 
     const TValId v1 = fld1.value();
     const TValId v2 = fld2.value();
+    const TValPair vp(v1, v2);
+    if (hasKey(ctx.matchLookup, vp))
+        // XXX: experimental
+        return true;
 
     const bool isComp1 = (isComposite(fld1.type()));
     const bool isComp2 = (isComposite(fld2.type()));
