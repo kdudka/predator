@@ -778,8 +778,9 @@ void plotObjects(PlotData &plot)
 
     // go through roots
     BOOST_FOREACH(const TObjId obj, plot.objs) {
-        if (isDlSegPeer(plot.sh, obj))
-            // DLS peers are never plotted directly at this level
+        if (isDlSegPeer(plot.sh, obj)
+            && OK_DLS == sh.objKind(dlSegPeer(sh, obj)))
+            // plot DLS peers in the same box for consistent DLSs
             continue;
 
         // gather live objects

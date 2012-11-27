@@ -659,8 +659,13 @@ bool joinFreshItem(
             return false;
         }
 
-        if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false))
+        if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false)) {
+            // already joined
+            const TValId valDst = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
+            CL_BREAK_IF(valDst != roMapLookup(ctx.valMap2[/* ltr */ 0], v2));
+            item.fldDst.setValue(valDst);
             return true;
+        }
 
         bool result;
         if (joinValuesByCode(&result, ctx, item))
@@ -1617,6 +1622,18 @@ bool segAlreadyJoined(
     }
 }
 
+void dlSegRecover(SymHeap &sh, const TObjId obj1, const TObjId obj2)
+{
+    const FldHandle ptr1 = prevPtrFromSeg(sh, obj1);
+    const FldHandle ptr2 = prevPtrFromSeg(sh, obj2);
+
+    const TValId addr1 = segHeadAt(sh, obj1);
+    const TValId addr2 = segHeadAt(sh, obj2);
+
+    ptr1.setValue(addr2);
+    ptr2.setValue(addr1);
+}
+
 bool joinSegmentWithAny(
         bool                   *pResult,
         SymJoinCtx             &ctx,
@@ -1684,10 +1701,28 @@ bool joinSegmentWithAny(
     if (!haveDls || !*pResult)
         return true;
 
-    if (segAlreadyJoined(ctx, peer1, peer2, action))
+    if (!segAlreadyJoined(ctx, peer1, peer2, action))
+        *pResult = joinObjects(ctx, peer1, peer2, ldiff, action);
+
+    if (!*pResult)
         return true;
 
-    *pResult = joinObjects(ctx, peer1, peer2, ldiff, action);
+    const bool use1 = (JS_USE_SH1 == action);
+
+    const TObjMap &objMap = (use1)
+        ? ctx.objMap1[/* ltr */ 0]
+        : ctx.objMap2[/* ltr */ 0];
+
+    const TObjId segDst = (use1)
+        ? roMapLookup(objMap, obj1)
+        : roMapLookup(objMap, obj2);
+
+    const TObjId peerDst = (use1)
+        ? roMapLookup(objMap, peer1)
+        : roMapLookup(objMap, peer2);
+
+    dlSegRecover(ctx.dst, segDst, peerDst);
+
     return true;
 }
 
@@ -2033,9 +2068,10 @@ bool joinAbstractValues(
 
     // we have failed
     *pResult = false;
-    return true;
-
 done:
+    if (!*pResult)
+        return true;
+
     if (VT_RANGE == ctx.sh1.valTarget(v1) || VT_RANGE == ctx.sh2.valTarget(v2))
     {
         // we came here from a VT_RANGE value, remember to join the entry
