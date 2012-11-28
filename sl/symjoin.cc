@@ -395,11 +395,8 @@ bool defineValueMapping(
     const bool hasValue2 = (VAL_INVALID != v2);
     CL_BREAK_IF(!hasValue1 && !hasValue2);
 
-    const bool ok1 = !hasValue1
-        || matchPlainValues(ctx.valMap1, ctx.sh1, ctx.dst, v1, vDst);
-
-    const bool ok2 = !hasValue2
-        || matchPlainValues(ctx.valMap2, ctx.sh2, ctx.dst, v2, vDst);
+    const bool ok1 = !hasValue1 || mapBidir(ctx.valMap1, v1, vDst);
+    const bool ok2 = !hasValue2 || mapBidir(ctx.valMap2, v2, vDst);
 
     if (!ok1 || !ok2) {
         SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
@@ -1819,11 +1816,10 @@ bool handleUnknownValues(
         CL_BREAK_IF(hasKey(ctx.joinCache, vp));
         ctx.joinCache[vp] = vDst;
 
-        SymHeap &shGt      = (isNull2) ? ctx.sh1 : ctx.sh2;
         const TValId valGt = (isNull2) ? v1 : v2;
         TValMapBidir &vMap = (isNull2) ? ctx.valMap1 : ctx.valMap2;
 
-        if (!matchPlainValues(vMap, shGt, ctx.dst, valGt, vDst))
+        if (!mapBidir(vMap, valGt, vDst))
             return false;
     }
     else {

@@ -73,13 +73,6 @@ bool mapBidir(
     return true;
 }
 
-bool matchPlainValues(
-        TValMapBidir            valMapping,
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        const TValId            v1,
-        const TValId            v2);
-
 bool matchOffsets(
         const SymHeapCore       &sh1,
         const SymHeapCore       &sh2,
