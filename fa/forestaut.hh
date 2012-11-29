@@ -56,13 +56,15 @@ protected:// data members
 
 	std::vector<std::shared_ptr<TreeAut>> roots_;
 
-public:
+public:   // data members
 
 	mutable ConnectionGraph connectionGraph;
 
+public:   // methods
+
 	static void reorderBoxes(
-		std::vector<const AbstractBox*>& label,
-		std::vector<size_t>& lhs);
+		std::vector<const AbstractBox*>&     label,
+		std::vector<size_t>&                 lhs);
 
 	TreeAut* allocTA()
 	{

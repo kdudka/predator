@@ -42,6 +42,8 @@ class FAE : public FA
 	friend class Splitting;
 	friend class VirtualMachine;
 
+private:  // data members
+
 	BoxMan* boxMan;
 
 	size_t stateOffset;

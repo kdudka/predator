@@ -1189,9 +1189,12 @@ protected:
 	 * @returns  Either @p nullptr if there are no feasible variables to be killed
 	 *           or a pointer to the instruction that loads the undefined data
 	 *           block that is used to kill given variables
+	 *
+	 * @note  Note that We are killing @e dead variables. This sounds very brutal.
 	 */
-	AbstractInstruction* cKillDeadVariables(const CodeStorage::TKillVarList& vars,
-		const CodeStorage::Insn& insn)
+	AbstractInstruction* cKillDeadVariables(
+		const CodeStorage::TKillVarList&        vars,
+		const CodeStorage::Insn&                insn)
 	{
 		std::set<size_t> offs;
 

@@ -243,11 +243,11 @@ protected:
 				if (nullptr != insn)
 				{	// in case current instruction IS an instruction
 					FA_DEBUG_AT(2, SSD_INLINE_COLOR(C_LIGHT_RED, insn->loc << *insn));
-					FA_DEBUG_AT(2, state);
+					FA_DEBUG_AT(2, *state);
 				}
 				else
 				{
-					FA_DEBUG_AT(3, state);
+					FA_DEBUG_AT(3, *state);
 				}
 
 				if (testAndClearUserRequestFlag())

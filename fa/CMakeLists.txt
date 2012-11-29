@@ -74,6 +74,7 @@ add_library(fa SHARED
 	symctx.cc
 	symexec.cc
 	symstate.cc
+  symstate_isect.cc
 	timbuk.cc
 	treeaut.cc
 	virtualmachine.cc
