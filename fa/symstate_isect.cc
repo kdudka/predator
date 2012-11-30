@@ -601,6 +601,7 @@ void SymState::Intersect(
 				if (thisTrans.label() == fwdTrans.label())
 				{
 					assert(thisTrans.lhs().size() == fwdTrans.lhs().size());
+					const size_t& transArity = thisTrans.lhs().size();
 
 					if (thisTrans.label()->isData())
 					{	// data are processed one level up
@@ -610,12 +611,13 @@ void SymState::Intersect(
 
 					// handle ordinary transitions
 					std::vector<size_t> lhs;
-					for (size_t i = 0; i < thisTrans.lhs().size(); ++i)
+					size_t i;
+					for (i = 0; i < transArity; ++i)
 					{	// for each pair of states that map to each other
 						const Data* fwdData = nullptr, *thisData = nullptr;
 						bool  fwdIsData =  fwdFAE->isData( fwdTrans.lhs()[i],  fwdData);
 						bool thisIsData = thisFAE->isData(thisTrans.lhs()[i], thisData);
-						
+
 						if (!fwdIsData && !thisIsData)
 						{	// ************* process internal states *************
 							// This is the easiest case, when both states in the product are
@@ -636,7 +638,7 @@ void SymState::Intersect(
 							// This is the second easiest case, when both case are data. In
 							// this case, we either perform intersection on non-references,
 							// or, for the case of references, create a jump from both
-							// automata at once
+							// automata at once.
 							assert((nullptr != fwdData) && (nullptr != thisData));
 
 							Data data;
@@ -674,21 +676,39 @@ void SymState::Intersect(
 						}
 						else if (fwdIsData && !thisIsData)
 						{
+							assert((nullptr != fwdData) && (nullptr == thisData));
+
+							FA_NOTE("fwdData: " << *fwdData);
+
+							if (fwdData->isNull())
+							{	// for a NULL pointer
+								break;   // cut this branch of the intersection
+							}
+
 							assert(false);
 						}
 						else
 						{	// !fwdIsData && thisIsData
-
 							// this is the only remaining case
 							assert(!fwdIsData && thisIsData);
+							assert((nullptr == fwdData) && (nullptr != thisData));
+
+							FA_NOTE("thisData: " << *thisData);
+
+							if (thisData->isNull())
+							{	// for a NULL pointer
+								break;   // cut this branch of the intersection
+							}
 
 							assert(false);
 						}
 					}
 
-					// add the transition
-					fae->getRoot(curNewState.root)->addTransition(
-						lhs, thisTrans.label(), curNewState.state);
+					if (transArity == i)
+					{	// in case we have not interrupted the search, add the transition
+						fae->getRoot(curNewState.root)->addTransition(
+							lhs, thisTrans.label(), curNewState.state);
+					}
 				}
 			}
 		}
@@ -713,8 +733,9 @@ void SymState::Intersect(
 		));
 	}
 
+	FA_NOTE("Result of intersection: " << *fae);
+
 	fae->updateConnectionGraph();
 
 	FA_WARN("Underapproximating intersection");
 }
-
