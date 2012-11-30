@@ -57,7 +57,7 @@ struct RootState
 
 	friend std::ostream& operator<<(std::ostream& os, const RootState& rs)
 	{
-		os << "[" << rs.root << ", " << rs.state << "]";
+		os << "[" << rs.root << ", " << FA::writeState(rs.state) << "]";
 		return os;
 	}
 };
@@ -235,12 +235,10 @@ void SymState::SubstituteRefs(
 							if (oldValue == *srcData)
 							{	// in case we are at the right value
 								assert(thisData->isUndef());
+
 								// TODO: or may it reference itself?
 
-								assert(false);
-								// TODO: we should now change the undef to newValue
-
-								// add sth to 'lhs'
+								lhs.push_back(fae->addData(*fae->getRoot(thisRoot).get(), newValue));
 							}
 							else if (srcData->isRef())
 							{	// for the case of other reference
@@ -389,7 +387,7 @@ public:   // methods
 
 		if (isNewState)
 		{	// in case the state has not been processed before
-			FA_NOTE("Creating new state: " << fae_.nextState()
+			FA_NOTE("Creating new state: " << FA::writeState(fae_.nextState())
 				<< " as the product of states (" <<  lhsRootState << ", "
 				<< rhsRootState << ")");
 			workstack_.push_back(std::make_pair(prodState, newState));
@@ -636,7 +634,7 @@ void SymState::Intersect(
 								const TreeAut* fwdNewTA  = fwdFAE->getRoot(fwdNewRoot).get();
 								assert((nullptr != thisNewTA) && (nullptr != fwdNewTA));
 
-								RootState rootState = engine.makeProductState( 
+								RootState rootState = engine.makeProductState(
 									thisNewRoot, thisNewTA->getFinalState(),
 									fwdNewRoot, fwdNewTA->getFinalState());
 
@@ -676,7 +674,7 @@ void SymState::Intersect(
 	// reorder the FAE to correspond to the original order
 	std::vector<size_t> index = engine.getRootOrderIndexForRHS();
 	std::vector<std::shared_ptr<TreeAut>> newRoots;
-	
+
 	for (size_t i : index)
 	{
 		newRoots.push_back(fae->getRoot(i));

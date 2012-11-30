@@ -291,6 +291,18 @@ public:   // methods
 	}
 
 
+	static std::string writeState(size_t state)
+	{
+		std::ostringstream ss;
+		if (_MSB_TEST(state))
+			ss << 'r' << _MSB_GET(state);
+		else
+			ss << 'q' << state;
+
+		return ss.str();
+	}
+
+
 	friend std::ostream& operator<<(std::ostream& os, const FA& fa);
 
 	/**

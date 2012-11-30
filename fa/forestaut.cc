@@ -37,21 +37,6 @@ namespace
 		}
 	};
 
-
-	struct WriteStateF
-	{
-		std::string operator()(size_t state) const
-		{
-			std::ostringstream ss;
-			if (_MSB_TEST(state))
-				ss << 'r' << _MSB_GET(state);
-			else
-				ss << 'q' << state;
-
-			return ss.str();
-		}
-	};
-
 	size_t getLabelArity(std::vector<const AbstractBox*>& label)
 	{
 		size_t arity = 0;
@@ -104,7 +89,7 @@ std::ostream& operator<<(std::ostream& os, const TreeAut& ta)
 		writer.writeState(state);
 
 	os << " ]" << std::endl;;
-	writer.writeTransitions(ta, WriteStateF());
+	writer.writeTransitions(ta, FA::writeState);
 	return os;
 }
 
@@ -133,7 +118,7 @@ std::ostream& operator<<(std::ostream& os, const FA& fa)
 		}
 
 		writer.endl();
-		writer.writeTransitions(*fa.getRoot(i), WriteStateF());
+		writer.writeTransitions(*fa.getRoot(i), FA::writeState);
 	}
 
 	return os;
