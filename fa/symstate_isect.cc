@@ -510,6 +510,11 @@ void SymState::Intersect(
 	assert(this->GetRegCount() == fwd.GetRegCount());
 	for (size_t i = 0; i < this->GetRegCount(); ++i)
 	{	// check local registers
+
+		// NOTE: this needs to be done in order to also collect temporary TA
+		// references for parts of heap which has not been so far connected so that
+		// they would be reachable from global variables
+
 		const Data& thisVar = this->GetReg(i);
 		const Data& fwdVar = fwd.GetReg(i);
 
