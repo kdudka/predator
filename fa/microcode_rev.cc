@@ -88,6 +88,7 @@ SymState* FI_push_greg::reverseAndIsect(
 {
 	// Assertions
 	assert(fwdPred.GetFAE()->GetVarCount() + 1 == bwdSucc.GetFAE()->GetVarCount());
+	(void)fwdPred;
 
 	SymState* tmpState = execMan.copyState(bwdSucc);
 

@@ -509,7 +509,6 @@ void SymState::Intersect(
 		}
 	}
 
-	// NOTE: references in registers may be invalid
 	assert(this->GetRegCount() == fwd.GetRegCount());
 	for (size_t i = 0; i < this->GetRegCount(); ++i)
 	{	// check local registers

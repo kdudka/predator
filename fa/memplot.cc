@@ -436,11 +436,6 @@ public:   // methods
 				assert(nullptr != label.node.v);
 				assert(nullptr != label.node.m);
 
-				if (nullptr == label.node.sels)
-				{
-					FA_DEBUG("plotting non-selector label: " << label);
-				}
-
 				const std::vector<const AbstractBox*>& boxes = *label.node.v;
 				const std::vector<SelData>* sels             = label.node.sels;
 
@@ -478,8 +473,6 @@ public:   // methods
 					}
 					else if (boxes[i]->isBox())
 					{	// for hierarchical boxes
-						FA_DEBUG("plotting a box transition " << *boxes[i]);
-
 						const Box& box = *static_cast<const Box*>(boxes[i]);
 
 						std::ostringstream osBox;
