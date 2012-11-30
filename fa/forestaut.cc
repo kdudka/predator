@@ -24,29 +24,29 @@
 // anonymous namespace
 namespace
 {
-	struct BoxCmpF
+struct BoxCmpF
+{
+	bool operator()(
+		const std::pair<const AbstractBox*, std::vector<size_t>>& v1,
+		const std::pair<const AbstractBox*, std::vector<size_t>>& v2)
 	{
-		bool operator()(
-			const std::pair<const AbstractBox*, std::vector<size_t>>& v1,
-			const std::pair<const AbstractBox*, std::vector<size_t>>& v2)
-		{
-			if (v1.first->isType(box_type_e::bTypeInfo))
-				return !v2.first->isType(box_type_e::bTypeInfo);
+		if (v1.first->isType(box_type_e::bTypeInfo))
+			return !v2.first->isType(box_type_e::bTypeInfo);
 
-			return v1.first->getOrder() < v2.first->getOrder();
-		}
-	};
-
-	size_t getLabelArity(std::vector<const AbstractBox*>& label)
-	{
-		size_t arity = 0;
-
-		for (auto& box : label)
-			arity += box->getArity();
-
-		return arity;
+		return v1.first->getOrder() < v2.first->getOrder();
 	}
+};
+
+size_t getLabelArity(std::vector<const AbstractBox*>& label)
+{
+	size_t arity = 0;
+
+	for (auto& box : label)
+		arity += box->getArity();
+
+	return arity;
 }
+} // namespace
 
 void FA::reorderBoxes(
 	std::vector<const AbstractBox*>& label,

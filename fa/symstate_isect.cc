@@ -594,6 +594,7 @@ void SymState::Intersect(
 				const Transition& fwdTrans = *fwdIt;
 
 				// we handle data one level up
+				assert(!thisTrans.label()->isData() && !fwdTrans.label()->isData());
 				assert(!thisTrans.lhs().empty() && !fwdTrans.lhs().empty());
 
 				// TODO: so far, we are not doing unfolding!
@@ -611,23 +612,37 @@ void SymState::Intersect(
 					std::vector<size_t> lhs;
 					for (size_t i = 0; i < thisTrans.lhs().size(); ++i)
 					{	// for each pair of states that map to each other
-						const Data* fwdData;
-						if (fwdFAE->isData(fwdTrans.lhs()[i], fwdData))
-						{	// for data states
-							assert(nullptr != fwdData);
+						const Data* fwdData = nullptr, *thisData = nullptr;
+						bool  fwdIsData =  fwdFAE->isData( fwdTrans.lhs()[i],  fwdData);
+						bool thisIsData = thisFAE->isData(thisTrans.lhs()[i], thisData);
+						
+						if (!fwdIsData && !thisIsData)
+						{	// ************* process internal states *************
+							// This is the easiest case, when both states in the product are
+							// internal. We do not create any new automaton.
+							assert((nullptr == fwdData) && (nullptr == thisData));
 
-							const Data* thisData;
-							if (!thisFAE->isData(thisTrans.lhs()[i], thisData))
-							{
-								assert(false);       // fail gracefully
-							}
+							RootState rootState = engine.makeProductState(
+								thisRoot, thisTrans.lhs()[i],
+								fwdRoot, fwdTrans.lhs()[i]);
 
-							assert(nullptr != thisData);
+							// check that we have not created a new automaton
+							assert(rootState.root == curNewState.root);
+
+							lhs.push_back(rootState.state);
+						}
+						else if (fwdIsData && thisIsData)
+						{ // ************* process data states (leaves) *************
+							// This is the second easiest case, when both case are data. In
+							// this case, we either perform intersection on non-references,
+							// or, for the case of references, create a jump from both
+							// automata at once
+							assert((nullptr != fwdData) && (nullptr != thisData));
 
 							Data data;
 
 							if (fwdData->isRef())
-							{
+							{	// for the case of references
 								assert(thisData->isRef());
 								assert(thisData->d_ref.displ == fwdData->d_ref.displ);
 								assert(0 == thisData->d_ref.displ);
@@ -646,7 +661,7 @@ void SymState::Intersect(
 								data = Data::createRef(rootState.root);
 							}
 							else
-							{
+							{	// for the case of non-references
 								assert(*thisData == *fwdData);
 
 								data = *thisData;
@@ -657,18 +672,21 @@ void SymState::Intersect(
 							lhs.push_back(fae->addData(
 								*fae->getRoot(curNewState.root).get(), data));
 						}
+						else if (fwdIsData && !thisIsData)
+						{
+							assert(false);
+						}
 						else
-						{	// for ordinary states
-							RootState rootState = engine.makeProductState(
-								thisRoot, thisTrans.lhs()[i],
-								fwdRoot, fwdTrans.lhs()[i]);
+						{	// !fwdIsData && thisIsData
 
-							assert(rootState.root == curNewState.root);
+							// this is the only remaining case
+							assert(!fwdIsData && thisIsData);
 
-							lhs.push_back(rootState.state);
+							assert(false);
 						}
 					}
 
+					// add the transition
 					fae->getRoot(curNewState.root)->addTransition(
 						lhs, thisTrans.label(), curNewState.state);
 				}
