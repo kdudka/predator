@@ -92,13 +92,18 @@ public:   // data members
 //{
 
 	/// data fields for a block
-	struct
+	struct BlockFields
 	{
 		/// the name of the memory node
 		std::string name;
 
 		/// vector of selectors inside a memory node
 		SelectorVec selVec;
+
+		BlockFields(const std::string& pName, const SelectorVec& pSelVec) :
+			name(pName),
+			selVec(pSelVec)
+		{ }
 	} block_;
 
 	/// data fields for a tree reference
@@ -113,11 +118,11 @@ public:   // data members
 private:  // methods
 
 	MemNode(size_t id, mem_type type) :
-		id_{id},
-		type_{type},
-		block_{std::string(), SelectorVec()},
-		treeref_{},
-		dataField_{}
+		id_(id),
+		type_(type),
+		block_(std::string(), SelectorVec()),
+		treeref_(),
+		dataField_()
 	{ }
 
 public:   // methods
