@@ -219,12 +219,12 @@ void SymState::SubstituteRefs(
 
 					for (size_t i = 0; i < thisTrans.lhs().size(); ++i)
 					{	// for each pair of states that map to each other
-						const Data* srcData;
+						const Data* srcData = nullptr;
 						if (srcFAE->isData(srcTrans.lhs()[i], srcData))
 						{	// for data states
 							assert(nullptr != srcData);
 
-							const Data* thisData;
+							const Data* thisData = nullptr;
 							if (!thisFAE->isData(thisTrans.lhs()[i], thisData))
 							{
 								assert(false);       // fail gracefully
@@ -453,6 +453,7 @@ public:   // methods
 
 		for (const size_t& i : index)
 		{
+			(void)i;
 			assert(i != static_cast<size_t>(-1));
 		}
 

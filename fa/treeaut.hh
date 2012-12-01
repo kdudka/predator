@@ -1162,15 +1162,15 @@ public:
 			invStateIndex[i->second] = i->first;
 		for (std::vector<size_t>::iterator i = headIndex.begin(); i != headIndex.end(); ++i)
 			*i = invStateIndex[*i];
-		for (std::set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
-			dst.addFinalState(headIndex[stateIndex[*i]]);
-		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
+		for (const size_t& state : this->finalStates)
+			dst.addFinalState(headIndex[stateIndex[state]]);
+		for (typename trans_cache_type::value_type* trans : this->transitions)
 		{
 			std::vector<size_t> lhs;
-			stateIndex.translate(lhs, (*i)->first._lhs->first);
+			stateIndex.translate(lhs, trans->first._lhs->first);
 			for (size_t j = 0; j < lhs.size(); ++j)
 				lhs[j] = headIndex[lhs[j]];
-			dst.addTransition(lhs, (*i)->first._label, headIndex[stateIndex[(*i)->first._rhs]]);
+			dst.addTransition(lhs, trans->first._label, headIndex[stateIndex[trans->first._rhs]]);
 		}
 		return dst;
 	}
@@ -1183,12 +1183,12 @@ public:
 		while (changed)
 		{
 			changed = false;
-			for (typename std::vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i)
+			for (typename trans_cache_type::value_type* trans : v1)
 			{
 				bool matches = true;
-				for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
+				for (const size_t state : trans->first._lhs->first)
 				{
-					if (!states.count(*j))
+					if (!states.count(state))
 					{
 						matches = false;
 						break;
@@ -1196,22 +1196,24 @@ public:
 				}
 				if (matches)
 				{
-					if (states.insert((*i)->first._rhs).second)
+					if (states.insert(trans->first._rhs).second)
 						changed = true;
-					dst.addTransition(*i);
+					dst.addTransition(trans);
 				} else
 				{
-					v2.push_back(*i);
+					v2.push_back(trans);
 				}
 			}
 			v1.clear();
 			std::swap(v1, v2);
 		}
-		for (std::set<size_t>::iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
+
+		for (const size_t& state : this->finalStates)
 		{
-			if (states.count(*i))
-				dst.finalStates.insert(*i);
+			if (states.count(state))
+				dst.finalStates.insert(state);
 		}
+
 		return dst;
 	}
 
