@@ -39,7 +39,7 @@ namespace
 	{
 		FD_UCODE       = 3,             ///< FD for microcode output
 		FD_TRACE       = 4,             ///< FD for trace output
-		FD_TRACE_UCODE = 5,             ///< FD for microcode trace output
+		FD_TRACE_UCODE = 5              ///< FD for microcode trace output
 	};
 
 	/// debugging level
