@@ -22,6 +22,7 @@
 #include <signal.h>
 
 // Code Listener headers
+#include <cl/cl_msg.hh>
 #include <cl/easy.hh>
 #include "../cl/ssd.h"
 
