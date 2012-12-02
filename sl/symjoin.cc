@@ -189,6 +189,12 @@ struct SymJoinCtx {
         valMap1[1][VAL_NULL] = VAL_NULL;
         valMap2[0][VAL_NULL] = VAL_NULL;
         valMap2[1][VAL_NULL] = VAL_NULL;
+
+        // OBJ_NULL should be always mapped to OBJ_NULL
+        objMap1[0][OBJ_NULL] = OBJ_NULL;
+        objMap1[1][OBJ_NULL] = OBJ_NULL;
+        objMap2[0][OBJ_NULL] = OBJ_NULL;
+        objMap2[1][OBJ_NULL] = OBJ_NULL;
     }
 
     /// constructor used by joinSymHeaps()
@@ -486,6 +492,42 @@ bool joinRangeValues(
     return true;
 }
 
+bool checkObjectMapping(
+        const SymJoinCtx       &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2,
+        const bool              allowUnknownMapping)
+{
+    if (!checkNonPosValues(obj1, obj2))
+        return false;
+
+    // read-only object lookup
+    const TObjMap &oMap1 = ctx.objMap1[/* ltr */ 0];
+    const TObjMap &oMap2 = ctx.objMap2[/* ltr */ 0];
+    TObjMap::const_iterator i1 = oMap1.find(obj1);
+    TObjMap::const_iterator i2 = oMap2.find(obj2);
+
+    const bool hasMapping1 = (oMap1.end() != i1);
+    const bool hasMapping2 = (oMap2.end() != i2);
+    if (!hasMapping1 || !hasMapping2)
+        // we have not enough info yet
+        return allowUnknownMapping;
+
+    const TObjId objDst1 = (hasMapping1) ? i1->second : OBJ_INVALID;
+    const TObjId objDst2 = (hasMapping2) ? i2->second : OBJ_INVALID;
+
+    if (hasMapping1 && hasMapping2 && (objDst1 == objDst2))
+        // mapping already known and known to be consistent
+        return true;
+
+    if (allowUnknownMapping) {
+        SJ_DEBUG("<-- object mapping mismatch: " << SJ_OBJP(obj1, obj2)
+                 "-> " << SJ_OBJP(objDst1, objDst2));
+    }
+
+    return false;
+}
+
 /// read-only (in)consistency check among value pair (v1, v2)
 bool checkValueMapping(
         const SymJoinCtx        &ctx,
@@ -499,6 +541,11 @@ bool checkValueMapping(
     bool result;
     if (matchRanges(&result, ctx, v1, v2, allowUnknownMapping))
         return result;
+
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
+        return false;
 
     // read-only value lookup
     const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
@@ -604,13 +651,21 @@ bool joinFreshItem(
 
     const TValId v1 = fld1.value();
     const TValId v2 = fld2.value();
-    if (VAL_NULL == v1 && VAL_NULL == v2)
+    if (VAL_NULL == v1 && VAL_NULL == v2) {
         // both values are VAL_NULL, nothing more to join here
+        if (!readOnly)
+            item.fldDst.setValue(VAL_NULL);
         return true;
+    }
 
-    if (hasKey(ctx.joinCache, TValPair(v1, v2)))
-        // the join has been already successful
+    const TValPair vp(v1, v2);
+    const TJoinCache::const_iterator mit = ctx.joinCache.find(vp);
+    if (ctx.joinCache.end() != mit) {
+        const TValId vDst = mit->second;
+        if (!readOnly)
+            item.fldDst.setValue(vDst);
         return true;
+    }
 
     if (VAL_NULL == v1 || VAL_NULL == v2) {
         if (segClone)
@@ -631,14 +686,22 @@ bool joinFreshItem(
 
     if (segClone) {
         const bool isGt1 = !fld2.isValidHandle();
-        const TValMapBidir &vm = (isGt1) ? ctx.valMap1 : ctx.valMap2;
+        const TObjMap &om = (isGt1) ? ctx.objMap1[0] : ctx.objMap2[0];
         const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
         const TValId valGt = (isGt1) ? v1 : v2;
-        const TValId root = shGt.valRoot(valGt);
         const EValueTarget code = shGt.valTarget(valGt);
-
-        if (root <= 0 || (VT_RANGE != code && hasKey(vm[/* ltr */ 0], root)))
-            return true;
+        if (VT_RANGE != code) {
+            const TObjId objGt = shGt.objByAddr(valGt);
+            const TObjMap::const_iterator it = om.find(objGt);
+            if (om.end() != it) {
+                const TObjId objDst = it->second;
+                const TOffset off = shGt.valOffset(valGt);
+                const ETargetSpecifier ts = shGt.targetSpec(valGt);
+                const TValId valDst = ctx.dst.addrOfTarget(objDst, ts, off);
+                item.fldDst.setValue(valDst);
+                return true;
+            }
+        }
 
 #if SE_ALLOW_THREE_WAY_JOIN < 3
         if (!ctx.joiningData())
@@ -648,8 +711,11 @@ bool joinFreshItem(
     else {
         // special values have to match (NULL not treated as special here)
         if (v1 < 0 || v2 < 0) {
-            if (v1 == v2)
+            if (v1 == v2) {
+                if (!readOnly)
+                    item.fldDst.setValue(v1);
                 return true;
+            }
 
             SJ_DEBUG("<-- special value mismatch " << SJ_VALP(v1, v2));
             return false;
@@ -760,15 +826,17 @@ bool joinFields(
         const TProtoLevel       ldiff,
         const BindingOff       *offBlackList = 0)
 {
+    if (!defineObjectMapping(ctx, objDst, obj1, obj2))
+        return false;
+
     // TODO: drop this!
     const TValId addr1   = ctx.sh1.addrOfTarget(obj1  , /* XXX */ TS_REGION);
     const TValId addr2   = ctx.sh2.addrOfTarget(obj2  , /* XXX */ TS_REGION);
     const TValId addrDst = ctx.dst.addrOfTarget(objDst, /* XXX */ TS_REGION);
-    if (!defineValueMapping(ctx, addr1, addr2, addrDst))
+    if (!defineValueMapping(ctx, addr1, addr2, addrDst)) {
+        CL_BREAK_IF(debuggingSymJoin);
         return false;
-
-    if (!defineObjectMapping(ctx, objDst, obj1, obj2))
-        return false;
+    }
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx, ldiff);
@@ -1569,7 +1637,8 @@ bool followValuePair(
     // join objects
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
-    if (!joinObjects(ctx, obj1, obj2, item.ldiff, JS_USE_ANY))
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ false)
+            && !joinObjects(ctx, obj1, obj2, item.ldiff, JS_USE_ANY))
         return false;
 
     // ranges cannot be joint unless the root exists in ctx.dst, join them now!
@@ -1612,6 +1681,11 @@ bool segAlreadyJoined(
         case JS_USE_SH2:
             return m2.end() != it2
                 && !hasKey(ctx.objMap1[/* rtl */ 1], it2->second);
+
+        case JS_USE_ANY:
+            return m1.end() != it1
+                && m2.end() != it2
+                && it1->second == it2->second;
 
         default:
             return false;
@@ -1985,9 +2059,11 @@ bool insertSegmentClone(
         // nothing to follow
         return true;
 
-    const TObjId segDst = (isGt1)
-        ? roMapLookup(ctx.objMap1[/* ltr */ 0], seg)
-        : roMapLookup(ctx.objMap2[/* ltr */ 0], seg);
+    const TObjMap &objMap = (isGt1)
+        ? ctx.objMap1[/* ltr */ 0]
+        : ctx.objMap2[/* ltr */ 0];
+
+    const TObjId segDst = roMapLookup(objMap, seg);
 
     const FldHandle fldNextDst = nextPtrFromSeg(ctx.dst, segDst);
 
@@ -1998,6 +2074,11 @@ bool insertSegmentClone(
     if (ctx.wl.schedule(nextItem))
         SJ_DEBUG("+++ " << SJ_FLDT(fldNextDst, fldNext1, fldNext2)
                 << " by insertSegmentClone()");
+
+    if (isDls) {
+        const TObjId peerDst = roMapLookup(objMap, peer);
+        dlSegRecover(ctx.dst, segDst, peerDst);
+    }
 
     return true;
 }
@@ -2173,7 +2254,7 @@ class MayExistVisitor {
         const TProtoLevel       ldiff_;
         const EJoinStatus       action_;
         const FldHandle         fldRef_;
-        const TValId            root_;
+        const TObjId            obj_;
         bool                    lookThrough_;
         TOffList                foundOffsets_;
 
@@ -2183,12 +2264,12 @@ class MayExistVisitor {
                 const TProtoLevel   ldiff,
                 const EJoinStatus   action,
                 const FldHandle     fldRef,
-                const TValId        root):
+                const TObjId        obj):
             ctx_(ctx),
             ldiff_(ldiff),
             action_(action),
             fldRef_(fldRef),
-            root_(root),
+            obj_(obj),
             lookThrough_(false)
         {
             CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
@@ -2215,8 +2296,8 @@ class MayExistVisitor {
             TValId val = fld.value();
 
             for (;;) {
-                const TValId valRoot = sh.valRoot(val);
-                if (valRoot == root_)
+                TObjId seg = sh.objByAddr(val);
+                if (seg == obj_)
                     // refuse referencing the MayExist candidate itself
                     return /* continue */ true;
 
@@ -2231,7 +2312,6 @@ class MayExistVisitor {
                 if (!lookThrough_ || !isAbstractValue(sh, val))
                     return /* continue */ true;
 
-                TObjId seg = sh.objByAddr(valRoot);
                 if (sh.segMinLength(seg) || segHeadAt(sh, seg) != val)
                     return /* continue */ true;
 
@@ -2315,11 +2395,11 @@ bool mayExistFallback(
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
 
-    const TValId root1 = ctx.sh1.valRoot(v1);
-    const TValId root2 = ctx.sh2.valRoot(v2);
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
-    const bool hasMapping1 = hasKey(ctx.valMap1[0], root1);
-    const bool hasMapping2 = hasKey(ctx.valMap2[0], root2);
+    const bool hasMapping1 = hasKey(ctx.objMap1[/* ltr */ 0], obj1);
+    const bool hasMapping2 = hasKey(ctx.objMap2[/* ltr */ 0], obj2);
     if ((hasMapping1 != hasMapping2) && (hasMapping1 == use1))
         // try it the other way around
         return false;
@@ -2330,8 +2410,7 @@ bool mayExistFallback(
         // no valid target
         return false;
 
-    const TValId valRoot = (use1) ? root1 : root2;
-    const TObjId obj = sh.objByAddr(valRoot);
+    const TObjId obj = (use1) ? obj1 : obj2;
     if (OK_REGION != sh.objKind(obj))
         // only concrete objects/prototypes are candidates for OK_SEE_THROUGH
         return false;
@@ -2345,8 +2424,7 @@ bool mayExistFallback(
     }
     else {
         // look for next pointer(s) of OK_SEE_THROUGH/OK_SEE_THROUGH_2N
-        const TObjId obj = sh.objByAddr(valRoot);
-        MayExistVisitor visitor(ctx, item.ldiff, action, ref, /* root */ valRoot);
+        MayExistVisitor visitor(ctx, item.ldiff, action, ref, obj);
         traverseLivePtrs(sh, obj, visitor);
         if (!visitor.found()) {
             // reference value not matched directly, try to look through in
@@ -2474,6 +2552,8 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
 {
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
+    SJ_DEBUG("--- " << SJ_FLDT(item.fldDst, item.fld1, item.fld2)
+            << " -> " << SJ_VALP(v1, v2));
 
     const TValPair vp(v1, v2);
     const TJoinCache::const_iterator mit = ctx.joinCache.find(vp);
@@ -2519,9 +2599,6 @@ bool joinPendingValues(SymJoinCtx &ctx)
 {
     SchedItem item;
     while (ctx.wl.next(item)) {
-        const TValId v1 = item.fld1.value();
-        const TValId v2 = item.fld2.value();
-        SJ_DEBUG("--- " << SJ_VALP(v1, v2));
         if (!joinValuePair(ctx, item))
             return false;
     }
@@ -2970,6 +3047,25 @@ fail:
 }
 
 void mapGhostAddressSpace(
+        SymJoinCtx             &ctx,
+        const TObjId            objReal,
+        const TObjId            objGhost,
+        const EJoinStatus       action)
+{
+    CL_BREAK_IF(!ctx.joiningData());
+
+    TObjMap &oMap = (JS_USE_SH1 == action)
+        ? ctx.objMap1[/* ltr */ 0]
+        : ctx.objMap2[/* ltr */ 0];
+
+    CL_BREAK_IF(!hasKey(oMap, objReal));
+    const TObjId image = oMap[objReal];
+
+    CL_BREAK_IF(hasKey(oMap, objGhost) && oMap[objGhost] != image);
+    oMap[objGhost] = image;
+}
+
+void mapGhostAddressSpace(
         SymJoinCtx              &ctx,
         const TValId            addrReal,
         const TValId            addrGhost,
@@ -3078,15 +3174,19 @@ bool joinDataCore(
         const TObjId peer = dlSegPeer(sh, obj1);
         const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
         ctx.sset1.insert(peer);
-        if (peer != obj2)
+        if (peer != obj2) {
+            mapGhostAddressSpace(ctx, obj1, peer, JS_USE_SH1);
             mapGhostAddressSpace(ctx, addr1, peerAt, JS_USE_SH1);
+        }
     }
     if (OK_DLS == kind2) {
         const TObjId peer = dlSegPeer(sh, obj2);
         const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
         ctx.sset2.insert(peer);
-        if (peer != obj1)
+        if (peer != obj1) {
+            mapGhostAddressSpace(ctx, obj2, peer, JS_USE_SH2);
             mapGhostAddressSpace(ctx, addr2, peerAt, JS_USE_SH2);
+        }
     }
 
     // perform main loop
