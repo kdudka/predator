@@ -587,19 +587,19 @@ bool checkNullConsistency(
         // VAL_NULL vs. something special
         return false;
 
-    const TValId root1 = ctx.sh1.valRoot(v1);
-    const TValId root2 = ctx.sh2.valRoot(v2);
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
     // special quirk for off-values related to VAL_NULL
-    if (isNull1 && VAL_NULL == root2)
+    if (isNull1 && OBJ_NULL == obj2)
         return false;
-    if (isNull2 && VAL_NULL == root1)
+    if (isNull2 && OBJ_NULL == obj1)
         return false;
 
     // check for inconsistency with the up to now mapping of values
-    if (isNull1 && hasKey(ctx.valMap2[/* lrt */ 0], root2))
+    if (isNull1 && hasKey(ctx.objMap2[/* lrt */ 0], obj2))
         return false;
-    if (isNull2 && hasKey(ctx.valMap1[/* lrt */ 0], root1))
+    if (isNull2 && hasKey(ctx.objMap1[/* lrt */ 0], obj1))
         return false;
 
     const EValueTarget code = (isNull2)
@@ -1444,14 +1444,10 @@ bool joinObjectsCore(
         const EJoinStatus       action,
         const bool              readOnly)
 {
-    // TODO: drop this!
-    const TValId root1 = ctx.sh1.addrOfTarget(obj1, /* XXX */ TS_REGION);
-    const TValId root2 = ctx.sh2.addrOfTarget(obj2, /* XXX */ TS_REGION);
-
-    if (!checkValueMapping(ctx, root1, root2, /* allowUnknownMapping */ true))
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
         return false;
 
-    if (hasKey(ctx.valMap1[0], root1) && hasKey(ctx.valMap2[0], root2))
+    if (hasKey(ctx.objMap1[0], obj1) && hasKey(ctx.objMap2[0], obj2))
         return true;
 
     if (readOnly)
@@ -1798,48 +1794,49 @@ bool joinSegmentWithAny(
 
 /// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool segmentCloneCore(
-        SymJoinCtx                  &ctx,
-        SymHeap                     &shGt,
+        SymJoinCtx                 &ctx,
+        SymHeap                    &shGt,
         const TValId                valGt,
-        const TValMapBidir          &valMapGt,
+        const TObjMapBidir         &objMapGt,
         const TProtoLevel           ldiff,
         const EJoinStatus           action,
-        const BindingOff            *off)
+        const BindingOff           *off)
 {
-    const TValMapBidir &valMapLt = (JS_USE_SH2 == action)
-        ? ctx.valMap1
-        : ctx.valMap2;
+    const TObjMapBidir &objMapLt = (JS_USE_SH2 == action)
+        ? ctx.objMap1
+        : ctx.objMap2;
 
-    const TValMap &valMapGtLtr = valMapGt[/* ltr */ 0];
-    const TValMap &valMapLtRtl = valMapLt[/* rtl */ 1];
+    const TObjMap &objMapGtLtr = objMapGt[/* ltr */ 0];
+    const TObjMap &objMapLtRtl = objMapLt[/* rtl */ 1];
 
     if (!isAnyDataArea(shGt.valTarget(valGt)))
         // not valid target
         return false;
 
-    const TValId addrGt = shGt.valRoot(valGt);
-    const TValMap::const_iterator it = valMapGtLtr.find(addrGt);
-    if (valMapGtLtr.end() != it && !hasKey(valMapLtRtl, it->second))
+    const TObjId objGt = shGt.objByAddr(valGt);
+    const TObjMap::const_iterator it = objMapGtLtr.find(objGt);
+    if (objMapGtLtr.end() != it && !hasKey(objMapLtRtl, it->second))
         // mapping already available for objGt
         return true;
 
-    SJ_DEBUG("+i+ insertSegmentClone: cloning object at #" << addrGt <<
+    SJ_DEBUG("+i+ insertSegmentClone: cloning object #" << objGt <<
              ", action = " << action);
 
+    const TObjId obj1 = (JS_USE_SH1 == action) ? objGt : OBJ_INVALID;
+    const TObjId obj2 = (JS_USE_SH2 == action) ? objGt : OBJ_INVALID;
+
     // TODO: drop this!
-    const TValId root1 = (JS_USE_SH1 == action) ? addrGt : VAL_INVALID;
-    const TValId root2 = (JS_USE_SH2 == action) ? addrGt : VAL_INVALID;
+    const TValId root1 = ctx.sh1.addrOfTarget(obj1, /* XXX */ TS_REGION);
+    const TValId root2 = ctx.sh2.addrOfTarget(obj2, /* XXX */ TS_REGION);
     const TValPair vp(root1, root2);
     ctx.tieBreaking.insert(vp);
 
     // clone the object
-    const TObjId obj1 = ctx.sh1.objByAddr(root1);
-    const TObjId obj2 = ctx.sh2.objByAddr(root2);
     if (createObject(ctx, obj1, obj2, ldiff, action, off))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
-             << SJ_VALP(root1, root2));
+             << SJ_OBJP(obj1, obj2));
     return false;
 }
 
@@ -2010,6 +2007,10 @@ bool insertSegmentClone(
         ctx.allowThreeWay = false;
 #endif
 
+    const TObjMapBidir &objMapGt = (isGt1)
+        ? ctx.objMap1
+        : ctx.objMap2;
+
     const TValMapBidir &valMapGt = (isGt1)
         ? ctx.valMap1
         : ctx.valMap2;
@@ -2040,7 +2041,7 @@ bool insertSegmentClone(
 
         const EValueTarget code = shGt.valTarget(valGt);
         if (isAnyDataArea(code)) {
-            if (segmentCloneCore(ctx, shGt, valGt, valMapGt, cloneItem.ldiff,
+            if (segmentCloneCore(ctx, shGt, valGt, objMapGt, cloneItem.ldiff,
                         action, off))
                 continue;
         }
