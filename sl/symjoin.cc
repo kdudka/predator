@@ -160,9 +160,6 @@ struct SymJoinCtx {
     TObjSet                     sset1;
     TObjSet                     sset2;
 
-    FldList                     liveList1;
-    FldList                     liveList2;
-
     TValMapBidir                valMap1;
     TValMapBidir                valMap2;
 
@@ -270,8 +267,9 @@ void dump_ctx(const SymJoinCtx &ctx)
         cout << "joinSymHeaps()\n";
 
     // summarize mapping
-    cout << "    ctx.liveList1      .size() = " << ctx.liveList1.size() << "\n";
-    cout << "    ctx.liveList2      .size() = " << ctx.liveList2.size()
+    cout << "    ctx.objMap1[0]     .size() = " << (ctx.objMap1[0].size() - 1)
+        << "\n";
+    cout << "    ctx.objMap2[0]     .size() = " << (ctx.objMap2[0].size() - 1)
         << "\n\n";
     cout << "    ctx.valMap1[0]     .size() = " << (ctx.valMap1[0].size() - 1)
         << "\n";
@@ -767,12 +765,6 @@ struct ObjJoinVisitor {
         const FldHandle &fld1   = item[0];
         const FldHandle &fld2   = item[1];
         const FldHandle &fldDst = item[2];
-
-        if (fld1.isValidHandle())
-            ctx.liveList1.push_back(fld1);
-
-        if (fld2.isValidHandle())
-            ctx.liveList2.push_back(fld2);
 
         // check black-list
         if (hasKey(blackList1, fld1) || hasKey(blackList2, fld2))
@@ -1608,19 +1600,14 @@ bool joinObjects(
 
 bool followValuePair(
         SymJoinCtx              &ctx,
-        const SchedItem         &item,
-        const bool              readOnly)
+        const SchedItem         &item)
 {
-    const TValId v1 = item.fld1.value();
-    const TValId v2 = item.fld2.value();
-    if (readOnly)
-        // shallow scan only!
-        return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
-
     bool result;
     if (joinValuesByCode(&result, ctx, item))
         return result;
 
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
     const bool isRange = (VT_RANGE == ctx.sh1.valTarget(v1))
                       || (VT_RANGE == ctx.sh2.valTarget(v2));
 
@@ -2329,7 +2316,10 @@ class MayExistVisitor {
                 const FldHandle fld2 = (JS_USE_SH2 == action_) ? fld : fldRef_;
                 const FldHandle fldInvalid;
                 const SchedItem item(fldInvalid, fld1, fld2, ldiff_);
-                if (followValuePair(ctx_, item, /* read-only */ true))
+                if (checkValueMapping(ctx_,
+                            fld1.value(),
+                            fld2.value(),
+                            /* allowUnknownMapping */ true))
                     // looks like we have a candidate
                     break;
 
@@ -2610,8 +2600,8 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
             && joinAbstractValues(&result, ctx, item, isAbs1, isAbs2))
         return result;
 
-    if (followValuePair(ctx, item, /* read-only */ true))
-        return followValuePair(ctx, item, /* read-only */ false);
+    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
+        return followValuePair(ctx, item);
 
     return offRangeFallback(ctx, item)
         || mayExistFallback(ctx, item, JS_USE_SH1)
