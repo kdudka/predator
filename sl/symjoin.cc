@@ -178,8 +178,6 @@ struct SymJoinCtx {
     TSegLengths                 segLengths;
     std::set<TValPair>          sharedNeqs;
 
-    std::set<TValPair>          tieBreaking;
-
     std::set<TObjId /* dst */>  protos;
 
     TJoinCache                  joinCache;
@@ -1605,14 +1603,6 @@ bool joinObjects(
         // already cloned
         return true;
 
-    /// TODO: drop this!
-    const TValId peer1At = ctx.sh1.addrOfTarget(peer1, /* XXX */ TS_REGION);
-    const TValId peer2At = ctx.sh2.addrOfTarget(peer2, /* XXX */ TS_REGION);
-
-    // clone peer object
-    const TValPair tb(peer1At, peer2At);
-    ctx.tieBreaking.insert(tb);
-
     return createObject(ctx, peer1, peer2, ldiff, action);
 }
 
@@ -1852,12 +1842,6 @@ bool segmentCloneCore(
     const TObjId obj1 = (JS_USE_SH1 == action) ? objGt : OBJ_INVALID;
     const TObjId obj2 = (JS_USE_SH2 == action) ? objGt : OBJ_INVALID;
 
-    // TODO: drop this!
-    const TValId root1 = ctx.sh1.addrOfTarget(obj1, /* XXX */ TS_REGION);
-    const TValId root2 = ctx.sh2.addrOfTarget(obj2, /* XXX */ TS_REGION);
-    const TValPair vp(root1, root2);
-    ctx.tieBreaking.insert(vp);
-
     // clone the object
     if (createObject(ctx, obj1, obj2, ldiff, action, off))
         return true;
@@ -2042,6 +2026,8 @@ bool insertSegmentClone(
         ? ctx.valMap1
         : ctx.valMap2;
 
+    const bool isMayExist = !!off;
+
     scheduleSegAddr(ctx.wl, shGt, seg, peer, action, item);
 
     SchedItem cloneItem;
@@ -2068,6 +2054,10 @@ bool insertSegmentClone(
 
         const EValueTarget code = shGt.valTarget(valGt);
         if (isAnyDataArea(code)) {
+            if (isMayExist && OK_DLS == shGt.objKind(objGt))
+                // FIXME: temporarily not supported
+                goto fail;
+
             if (segmentCloneCore(ctx, shGt, valGt, objMapGt, cloneItem.ldiff,
                         action, off))
             {
@@ -2086,6 +2076,7 @@ bool insertSegmentClone(
                 continue;
         }
 
+fail:
         // clone failed
         *pResult = false;
         return true;
@@ -2692,153 +2683,6 @@ bool joinCVars(SymJoinCtx &ctx, const JoinVarVisitor::EMode mode)
              /* allowRecovery */ JoinVarVisitor::JVM_LIVE_OBJS == mode);
 }
 
-TValId joinDstValue(
-        const SymJoinCtx        &ctx,
-        const TValId            v1,
-        const TValId            v2,
-        const bool              validObj1,
-        const bool              validObj2)
-{
-    // translate the roots into 'dst'
-    const TValId root1 = ctx.sh1.valRoot(v1);
-    const TValId root2 = ctx.sh2.valRoot(v2);
-    const TValId valRootDstBy1 = roMapLookup(ctx.valMap1[/* ltr */ 0], root1);
-    const TValId valRootDstBy2 = roMapLookup(ctx.valMap2[/* ltr */ 0], root2);
-
-    // translate the offsets into 'dst'
-    const IR::Range off1 = ctx.sh1.valOffsetRange(v1);
-    const IR::Range off2 = ctx.sh2.valOffsetRange(v2);
-    const TValId vDstBy1 = ctx.dst.valByRange(valRootDstBy1, off1);
-    const TValId vDstBy2 = ctx.dst.valByRange(valRootDstBy2, off2);
-    if (vDstBy1 == vDstBy2)
-        // the values are equal --> pick any
-        return vDstBy1;
-
-    if (!validObj2)
-        return vDstBy1;
-
-    if (!validObj1)
-        return vDstBy2;
-
-    // tie breaking
-    const TValPair tb1(root1, VAL_INVALID);
-    const TValPair tb2(VAL_INVALID, root2);
-
-    const bool use1 = hasKey(ctx.tieBreaking, tb1);
-    const bool use2 = hasKey(ctx.tieBreaking, tb2);
-    if (use1 && use2)
-        return VAL_INVALID;
-    else if (use1)
-        return vDstBy1;
-    else if (use2)
-        return vDstBy2;
-    else
-        return VAL_INVALID;
-}
-
-typedef std::pair<FldHandle, FldHandle> THdlPair;
-
-template <class TItem, class TBlackList>
-bool setDstValuesCore(
-        SymJoinCtx              &ctx,
-        const TItem             &rItem,
-        const TBlackList        &blackList)
-{
-    const FldHandle &fldDst = rItem.first;
-    CL_BREAK_IF(!fldDst.isValidHandle());
-    if (hasKey(blackList, fldDst))
-        return true;
-
-    const THdlPair &orig = rItem.second;
-    const FldHandle &fld1 = orig.first;
-    const FldHandle &fld2 = orig.second;
-    CL_BREAK_IF(!fld1.isValidHandle() && !fld2.isValidHandle());
-
-    const TValId v1 = fld1.value();
-    const TValId v2 = fld2.value();
-    const TValPair vp(v1, v2);
-    if (hasKey(ctx.joinCache, vp))
-        // XXX: experimental
-        return true;
-
-    const bool isComp1 = (isComposite(fld1.type()));
-    const bool isComp2 = (isComposite(fld2.type()));
-    if (isComp1 || isComp2) {
-        // do not bother by composite values
-        CL_BREAK_IF(fld1.isValidHandle() && !isComp1);
-        CL_BREAK_IF(fld2.isValidHandle() && !isComp2);
-        return true;
-    }
-
-    if (ctx.joiningData() && fld1 == fld2) {
-        // shared data
-        CL_BREAK_IF(v1 != v2);
-        if (ctx.joiningDataReadWrite())
-            // read-write mode
-            fldDst.setValue(v1);
-
-        return true;
-    }
-
-    // compute the resulting value
-    const bool validObj1 = (fld1.isValidHandle());
-    const bool validObj2 = (fld2.isValidHandle());
-    const TValId vDst = joinDstValue(ctx, v1, v2, validObj1, validObj2);
-    if (VAL_INVALID == vDst)
-        return false;
-
-    // set the value
-    fldDst.setValue(vDst);
-    return true;
-}
-
-bool setDstValues(SymJoinCtx &ctx, const TFldSet *blackList = 0)
-{
-    SymHeap &dst = ctx.dst;
-
-    typedef std::map<FldHandle /* objDst */, THdlPair> TMap;
-    TMap rMap;
-
-    // reverse mapping for ctx.liveList1
-    BOOST_FOREACH(const FldHandle &fldSrc, ctx.liveList1) {
-        const TObjId objSrc = fldSrc.obj();
-        const TObjId objDst = roMapLookup(ctx.objMap1[0], objSrc);
-        const FldHandle fldDst = translateFldHandle(dst, objDst, fldSrc);
-        if (!hasKey(rMap, fldDst))
-            rMap[fldDst].second = FldHandle(FLD_INVALID);
-
-        // fldDst -> fld1
-        rMap[fldDst].first = fldSrc;
-    }
-
-    // reverse mapping for ctx.liveList2
-    BOOST_FOREACH(const FldHandle &fldSrc, ctx.liveList2) {
-        const TObjId objSrc = fldSrc.obj();
-        const TObjId objDst = roMapLookup(ctx.objMap2[0], objSrc);
-        const FldHandle fldDst = translateFldHandle(dst, objDst, fldSrc);
-        if (!hasKey(rMap, fldDst))
-            rMap[fldDst].first = FldHandle(FLD_INVALID);
-
-        // fldDst -> fld2
-        rMap[fldDst].second = fldSrc;
-    }
-
-    TFldSet emptyBlackList;
-    if (!blackList)
-        blackList = &emptyBlackList;
-
-    BOOST_FOREACH(TMap::const_reference rItem, rMap) {
-        if (!rItem.first.type())
-            // do not set value of anonymous objects
-            continue;
-
-        if (!setDstValuesCore(ctx, rItem, *blackList))
-            return false;
-    }
-
-    return true;
-}
-
 // FIXME: the implementation is not going to work well in certain cases
 bool isFreshProto(SymJoinCtx &ctx, const TObjId objDst, bool *wasMayExist = 0)
 {
@@ -3219,12 +3063,6 @@ bool joinDataCore(
 
     // perform main loop
     if (!joinPendingValues(ctx))
-        return false;
-
-    // batch assignment of all values in ctx.dst
-    TFldSet blackList;
-    buildIgnoreList(blackList, ctx.dst, objDst, off);
-    if (!setDstValues(ctx, &blackList))
         return false;
 
     killUniBlocksUnderBindingPtrs(sh, off, obj1);
