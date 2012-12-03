@@ -1285,10 +1285,10 @@ public:
 			v1.clear();
 			std::swap(v1, v2);
 		}
-		for (std::set<size_t>::iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
+		for (size_t state : this->finalStates)
 		{
-			if (states.count(*i))
-				dst.finalStates.insert(*i);
+			if (states.count(state))
+				dst.finalStates.insert(state);
 		}
 		std::swap(v1, v3);
 		v2.clear();
@@ -1318,13 +1318,17 @@ public:
 		return dst;
 	}
 
-	TA<T>& downwardSieve(TA<T>& dst, const std::vector<std::vector<bool> >& cons, const Index<size_t>& stateIndex) const
+	TA<T>& downwardSieve(
+		TA<T>&                                    dst,
+		const std::vector<std::vector<bool>>&     cons,
+		const Index<size_t>&                      stateIndex) const
 	{
 		td_cache_type cache;
 		this->buildTDCache(cache);
 
-		for (std::set<size_t>::const_iterator i = this->finalStates.begin(); i != this->finalStates.end(); ++i)
-			dst.addFinalState(*i);
+		for (size_t state : this->finalStates)
+			dst.addFinalState(state);
+
 		for (typename td_cache_type::iterator i = cache.begin(); i != cache.end(); ++i)
 		{
 			std::list<const Transition*> tmp;
@@ -1422,9 +1426,9 @@ public:
 		std::vector<size_t> lhs;
 		if (addFinalStates)
 		{
-			for (size_t i : src.finalStates)
+			for (size_t state : src.finalStates)
 			{
-				dst.addFinalState(index.translateOTF(i) + offset);
+				dst.addFinalState(index.translateOTF(state) + offset);
 			}
 		}
 

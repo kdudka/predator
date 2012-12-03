@@ -35,6 +35,7 @@
 #include "treeaut_label.hh"
 #include "abstractbox.hh"
 #include "connection_graph.hh"
+#include "streams.hh"
 
 
 /**

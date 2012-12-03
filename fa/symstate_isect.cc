@@ -177,7 +177,6 @@ void SymState::SubstituteRefs(
 		}
 	}
 
-
 	while (!workset.empty())
 	{
 		const ProdState curState = *workset.crbegin();
@@ -572,6 +571,8 @@ void SymState::Intersect(
 		const ProdState& curState = curProdState.first;
 		const RootState& curNewState = curProdState.second;
 
+		FA_NOTE("Processing product state (" << curState.first << ", " << curState.second << ")");
+
 		const size_t& thisRoot = curState.first.root;
 		const size_t& fwdRoot = curState.second.root;
 
@@ -601,6 +602,8 @@ void SymState::Intersect(
 				// TODO: so far, we are not doing unfolding!
 				if (thisTrans.label() == fwdTrans.label())
 				{
+					FA_NOTE("Transition: " << thisTrans.label());
+
 					assert(thisTrans.lhs().size() == fwdTrans.lhs().size());
 					const size_t& transArity = thisTrans.lhs().size();
 
@@ -634,85 +637,96 @@ void SymState::Intersect(
 
 							lhs.push_back(rootState.state);
 						}
-						else if (fwdIsData && thisIsData)
-						{ // ************* process data states (leaves) *************
-							// This is the second easiest case, when both case are data. In
-							// this case, we either perform intersection on non-references,
-							// or, for the case of references, create a jump from both
-							// automata at once.
-							assert((nullptr != fwdData) && (nullptr != thisData));
-
-							Data data;
-
-							if (fwdData->isRef())
-							{	// for the case of references
-								assert(thisData->isRef());
-								assert(thisData->d_ref.displ == fwdData->d_ref.displ);
-								assert(0 == thisData->d_ref.displ);
-
-								const size_t& thisNewRoot = thisData->d_ref.root;
-								const size_t& fwdNewRoot  = fwdData->d_ref.root;
-
-								const TreeAut* thisNewTA = thisFAE->getRoot(thisNewRoot).get();
-								const TreeAut* fwdNewTA  = fwdFAE->getRoot(fwdNewRoot).get();
-								assert((nullptr != thisNewTA) && (nullptr != fwdNewTA));
-
-								RootState rootState = engine.makeProductState(
-									thisNewRoot, thisNewTA->getFinalState(),
-									fwdNewRoot, fwdNewTA->getFinalState());
-
-								data = Data::createRef(rootState.root);
-							}
-							else
-							{	// for the case of non-references
-								assert(*thisData == *fwdData);
-
-								data = *thisData;
-							}
-
-							FA_NOTE("Adding data: " << data);
+						else if (fwdIsData && thisIsData &&
+							!fwdData->isRef() && !thisData->isRef())
+						{ // ************* process real data states (leaves) *************
+							// This is the second easiest case, when both states are real data
+							// (i.e. no references). In this case, we are simply doing
+							// intersection of the data.
+							assert(*thisData == *fwdData);
 
 							lhs.push_back(fae->addData(
-								*fae->getRoot(curNewState.root).get(), data));
+								*fae->getRoot(curNewState.root).get(), *thisData));
 						}
-						else if (fwdIsData && !thisIsData)
-						{
-							assert((nullptr != fwdData) && (nullptr == thisData));
+						else if (fwdIsData && thisIsData &&
+							fwdData->isRef() && thisData->isRef())
+						{ // ************* process reference states (leaves) *************
+							// This is another quite easy case, when both states are
+							// references to another automata. In this case, we are jumping
+							// from both automata into another product automaton.
+							assert(thisData->d_ref.displ == fwdData->d_ref.displ);
+							assert(0 == thisData->d_ref.displ);
 
-							FA_NOTE("fwdData: " << *fwdData);
+							const size_t& thisNewRoot = thisData->d_ref.root;
+							const size_t& fwdNewRoot  = fwdData->d_ref.root;
 
-							if (fwdData->isNull())
-							{	// for a NULL pointer
-								break;   // cut this branch of the intersection
-							}
+							const TreeAut* thisNewTA = thisFAE->getRoot(thisNewRoot).get();
+							const TreeAut* fwdNewTA  = fwdFAE->getRoot(fwdNewRoot).get();
+							assert((nullptr != thisNewTA) && (nullptr != fwdNewTA));
 
-							assert(false);
+							RootState rootState = engine.makeProductState(
+								thisNewRoot, thisNewTA->getFinalState(),
+								fwdNewRoot, fwdNewTA->getFinalState());
+
+							lhs.push_back(fae->addData(*fae->getRoot(curNewState.root).get(),
+								Data::createRef(rootState.root)));
+						}
+						else if ((fwdIsData && !thisIsData && fwdData->isNull())
+							|| (!fwdIsData && thisIsData && thisData->isNull())
+							|| (fwdIsData && thisIsData && fwdData->isNull() && thisData->isRef())
+							|| (fwdIsData && thisIsData && fwdData->isRef() && thisData->isNull()))
+						{ // ************* process NULL pointers *************
+							// This is the case when there is a NULL pointer and either an
+							// internal state or a reference
+							break;   // cut this branch of the intersection
 						}
 						else
-						{	// !fwdIsData && thisIsData
-							// this is the only remaining case
-							assert(!fwdIsData && thisIsData);
-							assert((nullptr == fwdData) && (nullptr != thisData));
-
-							FA_NOTE("thisData: " << *thisData);
-
-							if (thisData->isNull())
-							{	// for a NULL pointer
-								break;   // cut this branch of the intersection
-							}
-
+						{	// we should not get here
 							assert(false);
 						}
 					}
 
 					if (transArity == i)
 					{	// in case we have not interrupted the search, add the transition
+						std::ostringstream osLhs;
+						for (auto it = lhs.cbegin(); it != lhs.cend(); ++it)
+						{
+							if (lhs.cbegin() != it)
+								osLhs << ",";
+
+							osLhs << FA::writeState(*it);
+						}
+
+						FA_NOTE("TA " << curNewState.root << ": adding transition "
+							<< FA::writeState(curNewState.state) << " -> "
+							<< thisTrans.label() << "(" << osLhs.str() << ")");
+
 						fae->getRoot(curNewState.root)->addTransition(
 							lhs, thisTrans.label(), curNewState.state);
 					}
 				}
 			}
 		}
+	}
+
+	FA_NOTE("Result of intersection: " << *fae);
+
+	// now, check whether there is some component with an empty language in the
+	// result
+	for (size_t i = 0; i < fae->getRootCount(); ++i)
+	{
+		TreeAut* ta = fae->allocTA();
+		fae->getRoot(i)->uselessAndUnreachableFree(*ta);
+		std::shared_ptr<TreeAut> pTa(ta);
+
+		// check emptiness
+		if (ta->getFinalStates().empty())
+		{	// in case the language of an automaton is empty
+			fae->clear();   // the language of the FA is empty
+			return;
+		}
+
+		fae->setRoot(i, pTa);
 	}
 
 	// reorder the FAE to correspond to the original order
@@ -733,8 +747,6 @@ void SymState::Intersect(
 			fae->relabelReferences(fae->getRoot(i).get(), index)
 		));
 	}
-
-	FA_NOTE("Result of intersection: " << *fae);
 
 	fae->updateConnectionGraph();
 
