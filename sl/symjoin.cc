@@ -63,6 +63,7 @@ void debugSymJoin(const bool enable)
     << ", fld2 = #" << fld2.fieldId()   \
     << ")"
 
+#define SJ_ITEM(item) SJ_FLDT(item.fldDst, item.fld1, item.fld2)
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
 
@@ -530,10 +531,11 @@ bool checkObjectMapping(
 
 /// read-only (in)consistency check among value pair (v1, v2)
 bool checkValueMapping(
-        const SymJoinCtx        &ctx,
+        const SymJoinCtx       &ctx,
         const TValId            v1,
         const TValId            v2,
-        const bool              allowUnknownMapping)
+        const bool              allowUnknownMapping,
+        TValId                 *pDst = 0)
 {
     if (!checkNonPosValues(v1, v2))
         return false;
@@ -562,9 +564,15 @@ bool checkValueMapping(
     const TValId vDst1 = (hasMapping1) ? i1->second : VAL_INVALID;
     const TValId vDst2 = (hasMapping2) ? i2->second : VAL_INVALID;
 
-    if (hasMapping1 && hasMapping2 && (vDst1 == vDst2))
+    if (hasMapping1 && hasMapping2 && (vDst1 == vDst2)) {
         // mapping already known and known to be consistent
+        if (pDst) {
+            const IR::Range off = ctx.sh1.valOffsetRange(v1);
+            CL_BREAK_IF(off != ctx.sh2.valOffsetRange(v2));
+            *pDst = ctx.dst.valByRange(vDst1 /* == vDst2 */, off);
+        }
         return true;
+    }
 
     if (allowUnknownMapping) {
         SJ_DEBUG("<-- value mapping mismatch: " << SJ_VALP(v1, v2)
@@ -668,9 +676,11 @@ bool joinFreshItem(
     }
 
     if (VAL_NULL == v1 || VAL_NULL == v2) {
-        if (segClone)
+        if (segClone) {
             // we got only one value and the value is VAL_NULL
+            item.fldDst.setValue(VAL_NULL);
             return true;
+        }
 
         if (!checkNullConsistency(ctx, v1, v2))
             // mapping already inconsistent
@@ -1654,7 +1664,7 @@ bool followValuePair(
     const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
     item.fldDst.setValue(vDst);
 
-    return true;
+    return defineValueMapping(ctx, v1, v2, vDst);
 }
 
 bool segAlreadyJoined(
@@ -1788,6 +1798,24 @@ bool joinSegmentWithAny(
         : roMapLookup(objMap, peer2);
 
     dlSegRecover(ctx.dst, segDst, peerDst);
+
+    const TOffset offPrev = ctx.dst.segBinding(segDst).next;
+    const SchedItem prevItem(
+            PtrHandle(ctx.dst, segDst , offPrev),
+            PtrHandle(ctx.sh1, obj1   , offPrev),
+            PtrHandle(ctx.sh2, obj2   , offPrev),
+            ldiff);
+    if (ctx.wl.schedule(prevItem))
+        SJ_DEBUG("+++ " << SJ_ITEM(prevItem) << " by joinSegmentWithAny()");
+
+    const TOffset offNext = ctx.dst.segBinding(peerDst).next;
+    const SchedItem nextItem(
+            PtrHandle(ctx.dst, peerDst, offNext),
+            PtrHandle(ctx.sh1, peer1  , offNext),
+            PtrHandle(ctx.sh2, peer2  , offNext),
+            ldiff);
+    if (ctx.wl.schedule(nextItem))
+        SJ_DEBUG("+++ " << SJ_ITEM(nextItem) << " by joinSegmentWithAny()");
 
     return true;
 }
@@ -2564,10 +2592,9 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
         return true;
     }
 
-    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false)) {
+    TValId valDst;
+    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMap */ false, &valDst)) {
         // already joined
-        const TValId valDst = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
-        CL_BREAK_IF(valDst != roMapLookup(ctx.valMap2[/* ltr */ 0], v2));
         item.fldDst.setValue(valDst);
         return true;
     }
