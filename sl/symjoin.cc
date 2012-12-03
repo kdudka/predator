@@ -731,10 +731,9 @@ bool joinFreshItem(
             return false;
         }
 
-        if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ false)) {
+        TValId valDst;
+        if (checkValueMapping(ctx, v1, v2, /* allowUnknown */ false, &valDst)) {
             // already joined
-            const TValId valDst = roMapLookup(ctx.valMap1[/* ltr */ 0], v1);
-            CL_BREAK_IF(valDst != roMapLookup(ctx.valMap2[/* ltr */ 0], v2));
             item.fldDst.setValue(valDst);
             return true;
         }
@@ -2071,7 +2070,16 @@ bool insertSegmentClone(
         if (isAnyDataArea(code)) {
             if (segmentCloneCore(ctx, shGt, valGt, objMapGt, cloneItem.ldiff,
                         action, off))
+            {
+                const TObjId objDst = roMapLookup(objMapGt[/* ltr */ 0], objGt);
+                const IR::Range off = shGt.valOffsetRange(valGt);
+                const ETargetSpecifier ts = shGt.targetSpec(valGt);
+                const TValId vDstBase = ctx.dst.addrOfTarget(objDst, ts);
+                const TValId vDst = ctx.dst.valByRange(vDstBase, off);
+                if (cloneItem.fldDst.isValidHandle())
+                    cloneItem.fldDst.setValue(vDst);
                 continue;
+            }
         }
         else {
             if (cloneSpecialValue(ctx, shGt, valGt, valMapGt, cloneItem, code))
@@ -2088,11 +2096,7 @@ bool insertSegmentClone(
         // nothing to follow
         return true;
 
-    const TObjMap &objMap = (isGt1)
-        ? ctx.objMap1[/* ltr */ 0]
-        : ctx.objMap2[/* ltr */ 0];
-
-    const TObjId segDst = roMapLookup(objMap, seg);
+    const TObjId segDst = roMapLookup(objMapGt[/* ltr */ 0], seg);
 
     const FldHandle fldNextDst = nextPtrFromSeg(ctx.dst, segDst);
 
@@ -2105,7 +2109,7 @@ bool insertSegmentClone(
                 << " by insertSegmentClone()");
 
     if (isDls) {
-        const TObjId peerDst = roMapLookup(objMap, peer);
+        const TObjId peerDst = roMapLookup(objMapGt[/* ltr */ 0], peer);
         dlSegRecover(ctx.dst, segDst, peerDst);
     }
 
@@ -3028,10 +3032,6 @@ bool joinSymHeaps(
 
     // go through all values in them
     if (!joinPendingValues(ctx))
-        goto fail;
-
-    // time to preserve all 'hasValue' edges
-    if (!setDstValues(ctx))
         goto fail;
 
     // join uniform blocks
