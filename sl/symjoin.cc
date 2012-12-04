@@ -808,15 +808,6 @@ bool joinFields(
     if (!defineObjectMapping(ctx, objDst, obj1, obj2))
         return false;
 
-    // TODO: drop this!
-    const TValId addr1   = ctx.sh1.addrOfTarget(obj1  , /* XXX */ TS_REGION);
-    const TValId addr2   = ctx.sh2.addrOfTarget(obj2  , /* XXX */ TS_REGION);
-    const TValId addrDst = ctx.dst.addrOfTarget(objDst, /* XXX */ TS_REGION);
-    if (!defineValueMapping(ctx, addr1, addr2, addrDst)) {
-        CL_BREAK_IF(debuggingSymJoin);
-        return false;
-    }
-
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx, ldiff);
     dlSegBlackListPrevPtr(objVisitor.blackList1, ctx.sh1, obj1);
@@ -2919,26 +2910,6 @@ void mapGhostAddressSpace(
     oMap[objGhost] = image;
 }
 
-void mapGhostAddressSpace(
-        SymJoinCtx              &ctx,
-        const TValId            addrReal,
-        const TValId            addrGhost,
-        const EJoinStatus       action)
-{
-    CL_BREAK_IF(!ctx.joiningData());
-    CL_BREAK_IF(addrReal < 0 || addrGhost < 0);
-
-    TValMap &vMap = (JS_USE_SH1 == action)
-        ? ctx.valMap1[/* ltr */ 0]
-        : ctx.valMap2[/* ltr */ 0];
-
-    CL_BREAK_IF(!hasKey(vMap, addrReal));
-    const TValId image = vMap[addrReal];
-
-    CL_BREAK_IF(hasKey(vMap, addrGhost) && vMap[addrGhost] != image);
-    vMap[addrGhost] = image;
-}
-
 /// this runs only in debug build
 bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx)
 {
@@ -3013,10 +2984,6 @@ bool joinDataCore(
     if (OK_REGION != kind2)
         ++ldiff;
 
-    // TODO: drop this!
-    const TValId addr1     = ctx.sh1.addrOfTarget(obj1,   /* XXX */ TS_REGION);
-    const TValId addr2     = ctx.sh2.addrOfTarget(obj2,   /* XXX */ TS_REGION);
-
     if (!joinFields(ctx, objDst, obj1, obj2, ldiff, &off))
         return false;
 
@@ -3026,21 +2993,15 @@ bool joinDataCore(
     // never step over DLS peer
     if (OK_DLS == kind1) {
         const TObjId peer = dlSegPeer(sh, obj1);
-        const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
         ctx.sset1.insert(peer);
-        if (peer != obj2) {
+        if (peer != obj2)
             mapGhostAddressSpace(ctx, obj1, peer, JS_USE_SH1);
-            mapGhostAddressSpace(ctx, addr1, peerAt, JS_USE_SH1);
-        }
     }
     if (OK_DLS == kind2) {
         const TObjId peer = dlSegPeer(sh, obj2);
-        const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
         ctx.sset2.insert(peer);
-        if (peer != obj1) {
+        if (peer != obj1)
             mapGhostAddressSpace(ctx, obj2, peer, JS_USE_SH2);
-            mapGhostAddressSpace(ctx, addr2, peerAt, JS_USE_SH2);
-        }
     }
 
     // perform main loop
@@ -3213,10 +3174,6 @@ void joinData(
         const TObjId             src,
         const bool               bidir)
 {
-    // TODO: drop this!
-    const TValId dstAt = sh.addrOfTarget(dst, /* XXX */ TS_REGION);
-    const TValId srcAt = sh.addrOfTarget(src, /* XXX */ TS_REGION);
-
     SJ_DEBUG("--> joinData" << SJ_OBJP(dst, src));
     ++cntJoinOps;
 
@@ -3232,7 +3189,7 @@ void joinData(
         if (JS_USE_ANY == status)
             isomorphismWasExpected = true;
         else
-            debugPlot(sh, "joinData", dstAt, srcAt, "00");
+            debugPlot(sh, "joinData", dst, src, "00");
     }
 
     // go through the common part of joinData()/joinDataReadOnly()
@@ -3266,7 +3223,7 @@ void joinData(
 
     SJ_DEBUG("<-- joinData() has finished " << ctx.status);
     if (JS_USE_ANY != ctx.status) {
-        debugPlot(sh, "joinData", dstAt, srcAt, "01");
+        debugPlot(sh, "joinData", dst, src, "01");
         if (isomorphismWasExpected)
             CL_BREAK_IF("joinData() status differs from joinDataReadOnly()");
     }
