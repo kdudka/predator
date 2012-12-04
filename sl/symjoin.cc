@@ -345,10 +345,10 @@ bool defineObjectMapping(
  * @note it respects value ID mapping among all symbolic heaps
  */
 void gatherSharedPreds(
-        SymJoinCtx              &ctx,
+        SymJoinCtx             &ctx,
+        const TValId            vDst,
         const TValId            v1,
-        const TValId            v2,
-        const TValId            vDst)
+        const TValId            v2)
 {
     // look for shared Neq predicates
     TValList rVals1;
@@ -389,10 +389,10 @@ void gatherSharedPreds(
 
 /// define value mapping for the given value triple (v1, v2, vDst)
 bool defineValueMapping(
-        SymJoinCtx              &ctx,
+        SymJoinCtx             &ctx,
+        const TValId            vDst,
         const TValId            v1,
-        const TValId            v2,
-        const TValId            vDst)
+        const TValId            v2)
 {
     const bool hasValue1 = (VAL_INVALID != v1);
     const bool hasValue2 = (VAL_INVALID != v2);
@@ -412,7 +412,7 @@ bool defineValueMapping(
     const TValPair vp(v1, v2);
     ctx.joinCache[vp] = vDst;
 
-    gatherSharedPreds(ctx, v1, v2, vDst);
+    gatherSharedPreds(ctx, vDst, v1, v2);
     return true;
 }
 
@@ -1446,7 +1446,7 @@ bool joinCustomValues(
     if (cVal1 == cVal2) {
         // full match
         const TValId vDst = ctx.dst.valWrapCustom(cVal1);
-        if (!defineValueMapping(ctx, v1, v2, vDst))
+        if (!defineValueMapping(ctx, vDst, v1, v2))
             return false;
 
         item.fldDst.setValue(vDst);
@@ -1461,7 +1461,7 @@ bool joinCustomValues(
         if (!updateJoinStatus(ctx, JS_THREE_WAY))
             return false;
 
-        if (!defineValueMapping(ctx, v1, v2, vDst))
+        if (!defineValueMapping(ctx, vDst, v1, v2))
             return false;
 
         item.fldDst.setValue(vDst);
@@ -1485,7 +1485,7 @@ bool joinCustomValues(
     // avoid creation of a CV_INT_RANGE value from two CV_INT values
     if (isSingular(rng1) && isSingular(rng2)) {
         const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-        if (!defineValueMapping(ctx, v1, v2, vDst))
+        if (!defineValueMapping(ctx, vDst, v1, v2))
             return false;
 
         item.fldDst.setValue(vDst);
@@ -1516,7 +1516,7 @@ bool joinCustomValues(
 
     const CustomValue cv(rng);
     const TValId vDst = ctx.dst.valWrapCustom(cv);
-    if (!defineValueMapping(ctx, v1, v2, vDst))
+    if (!defineValueMapping(ctx, vDst, v1, v2))
         return false;
 
     item.fldDst.setValue(vDst);
@@ -1611,7 +1611,7 @@ bool followValuePair(
     const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
     item.fldDst.setValue(vDst);
 
-    return defineValueMapping(ctx, v1, v2, vDst);
+    return defineValueMapping(ctx, vDst, v1, v2);
 }
 
 bool segAlreadyJoined(
@@ -1863,7 +1863,7 @@ bool handleUnknownValues(
             return false;
     }
     else {
-        if (!defineValueMapping(ctx, v1, v2, vDst))
+        if (!defineValueMapping(ctx, vDst, v1, v2))
             return false;
     }
 
