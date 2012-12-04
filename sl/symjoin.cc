@@ -760,7 +760,7 @@ EValueOrigin joinOrigin(const EValueOrigin vo1, const EValueOrigin vo2)
         // keep the error recovery as cheap as possible
         return VO_DEREF_FAILED;
 
-    // safe over-approximation
+    // FIXME: we should prioritize isUninitialized(...) to be sound in this
     return VO_UNKNOWN;
 }
 
@@ -952,11 +952,10 @@ bool joinFreshItem(
             return false;
         }
 
-        TValId valDst;
-        if (checkValueMapping(ctx, v1, v2, /* allowUnknown */ false, &valDst)) {
+        TValId vDst;
+        if (checkValueMapping(ctx, v1, v2, /* allowUnknown */ false, &vDst)) {
             // already joined
-            item.fldDst.setValue(valDst);
-            return true;
+            return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
         }
 
         bool result;
@@ -1345,7 +1344,7 @@ bool joinNestingLevel(
         const SymJoinCtx       &ctx,
         const TObjId            obj1,
         const TObjId            obj2,
-        const TProtoLevel       ldiff)
+        const TProtoLevel       ldiffExpected)
 {
     TProtoLevel level1 = ctx.sh1.objProtoLevel(obj1);
     TProtoLevel level2 = ctx.sh2.objProtoLevel(obj2);
@@ -1371,8 +1370,8 @@ bool joinNestingLevel(
         return true;
 
     // check that the computed ldiff matches the actual one
-    const TProtoLevel ldiffExpected = level1 - level2;
-    return (ldiffExpected == ldiff);
+    const TProtoLevel ldiffComputed = level1 - level2;
+    return (ldiffComputed == ldiffExpected);
 }
 
 TMinLen joinMinLength(
@@ -1760,11 +1759,12 @@ bool followValuePair(
     const ETargetSpecifier tsDst = ctx.sh1.targetSpec(v1);
     CL_BREAK_IF(tsDst           != ctx.sh2.targetSpec(v2));
 
-    // write the resulting value to item.fldDst
     const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
-    item.fldDst.setValue(vDst);
+    if (!defineValueMapping(ctx, vDst, v1, v2))
+        return false;
 
-    return defineValueMapping(ctx, vDst, v1, v2);
+    // write the resulting value to item.fldDst
+    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
 bool segAlreadyJoined(
