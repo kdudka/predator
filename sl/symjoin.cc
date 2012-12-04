@@ -449,16 +449,13 @@ bool joinRangeValues(
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
 
-    // check whether the values are not matched already
-    const TValPair vp(v1, v2);
-    CL_BREAK_IF(hasKey(ctx.joinCache, vp));
+    const ETargetSpecifier ts = ctx.sh1.targetSpec(v1);
+    if (ts != ctx.sh2.targetSpec(v2))
+        // target specifier mismatch
+        return false;
 
     const IR::Range rng1 = ctx.sh1.valOffsetRange(v1);
     const IR::Range rng2 = ctx.sh2.valOffsetRange(v2);
-
-    // resolve root in ctx.dst
-    const TValId rootDst = roMapLookup(ctx.valMap1[0], ctx.sh1.valRoot(v1));
-    CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[0], ctx.sh2.valRoot(v2)));
 
     // compute the join of ranges
     IR::Range rng = join(rng1, rng2);
@@ -480,11 +477,18 @@ bool joinRangeValues(
     if (!isCovered(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
         return false;
 
+    // resolve root in ctx.dst
+    const TObjId objDst = roMapLookup(ctx.objMap1[0], ctx.sh1.objByAddr(v1));
+    CL_BREAK_IF(objDst != roMapLookup(ctx.objMap2[0], ctx.sh2.objByAddr(v2)));
+    const TValId rootDst = ctx.dst.addrOfTarget(objDst, ts);
+
     // create a VT_RANGE value in ctx.dst
     const TValId vDst = ctx.dst.valByRange(rootDst, rng);
     item.fldDst.setValue(vDst);
 
     // store the mapping (v1, v2) -> vDst
+    const TValPair vp(v1, v2);
+    CL_BREAK_IF(hasKey(ctx.joinCache, vp));
     ctx.joinCache[vp] = vDst;
     return true;
 }
