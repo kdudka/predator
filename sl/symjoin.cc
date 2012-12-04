@@ -467,11 +467,17 @@ bool joinTargetSpec(
 {
     const ETargetSpecifier ts1 = ctx.sh1.targetSpec(v1);
     const ETargetSpecifier ts2 = ctx.sh2.targetSpec(v2);
-    if (ts1 != ts2)
-        return false;
 
-    *pDst = ts1 /* = ts2 */;
-    return true;
+    ETargetSpecifier tsDst = TS_INVALID;
+    if (ts1 == ts2)
+        tsDst = ts1 /* = ts2 */;
+    else if (TS_REGION == ts1)
+        tsDst = ts2;
+    else if (TS_REGION == ts2)
+        tsDst = ts1;
+
+    *pDst = tsDst;
+    return (TS_INVALID != tsDst);
 }
 
 bool joinRangeValues(
@@ -1767,8 +1773,9 @@ bool followValuePair(
     const TOffset offDst = ctx.sh1.valOffset(v1);
     CL_BREAK_IF(offDst  != ctx.sh2.valOffset(v2));
 
-    const ETargetSpecifier tsDst = ctx.sh1.targetSpec(v1);
-    CL_BREAK_IF(tsDst           != ctx.sh2.targetSpec(v2));
+    ETargetSpecifier tsDst;
+    if (!joinTargetSpec(&tsDst, ctx, v1, v2))
+        return false;
 
     const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
     if (!defineValueMapping(ctx, vDst, v1, v2))
