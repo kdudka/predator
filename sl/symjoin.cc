@@ -647,13 +647,8 @@ bool handleUnknownValues(
     const bool isNull1 = (VAL_NULL == v1);
     const bool isNull2 = (VAL_NULL == v2);
     if (isNull1 != isNull2) {
-        const TValPair vp(v1, v2);
-        CL_BREAK_IF(hasKey(ctx.joinCache, vp));
-        ctx.joinCache[vp] = vDst;
-
         const TValId valGt = (isNull2) ? v1 : v2;
         TValMapBidir &vMap = (isNull2) ? ctx.valMap1 : ctx.valMap2;
-
         if (!mapBidir(vMap, valGt, vDst))
             return false;
     }
@@ -662,8 +657,7 @@ bool handleUnknownValues(
             return false;
     }
 
-    item.fldDst.setValue(vDst);
-    return true;
+    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
 bool joinCustomValues(
@@ -684,23 +678,21 @@ bool joinCustomValues(
         if (!defineValueMapping(ctx, vDst, v1, v2))
             return false;
 
-        item.fldDst.setValue(vDst);
-        return true;
+        return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
     }
 
     IR::Range rng1, rng2;
     if (!rngFromVal(&rng1, sh1, v1) || !rngFromVal(&rng2, sh2, v2)) {
         // throw custom values away and abstract them by a fresh unknown value
         SJ_DEBUG("throwing away unmatched custom values " << SJ_VALP(v1, v2));
-        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         if (!updateJoinStatus(ctx, JS_THREE_WAY))
             return false;
 
+        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         if (!defineValueMapping(ctx, vDst, v1, v2))
             return false;
 
-        item.fldDst.setValue(vDst);
-        return true;
+        return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
     }
 
     // compute the resulting range that covers both
@@ -719,15 +711,16 @@ bool joinCustomValues(
 #if !(SE_ALLOW_INT_RANGES & 0x1)
     // avoid creation of a CV_INT_RANGE value from two CV_INT values
     if (isSingular(rng1) && isSingular(rng2)) {
+        // force three-way join in order not to loop forever!
+        ctx.forceThreeWay = true;
+        if (!updateJoinStatus(ctx, JS_THREE_WAY))
+            return false;
+
         const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         if (!defineValueMapping(ctx, vDst, v1, v2))
             return false;
 
-        item.fldDst.setValue(vDst);
-
-        // force three-way join in order not to loop forever!
-        ctx.forceThreeWay = true;
-        return updateJoinStatus(ctx, JS_THREE_WAY);
+        return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
     }
 #endif
 
@@ -754,8 +747,7 @@ bool joinCustomValues(
     if (!defineValueMapping(ctx, vDst, v1, v2))
         return false;
 
-    item.fldDst.setValue(vDst);
-    return true;
+    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
 EValueOrigin joinOrigin(const EValueOrigin vo1, const EValueOrigin vo2)
