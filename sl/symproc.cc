@@ -1602,7 +1602,7 @@ bool trimRangesIfPossible(
 
 bool spliceOutAbstractPathCore(
         SymProc                &proc,
-        const TValId            beg,
+        const TObjId            segFirst,
         const TValId            endPoint,
         const bool              readOnlyMode = false)
 {
@@ -1616,7 +1616,7 @@ bool spliceOutAbstractPathCore(
     // loop indefinitely.  However, the basic list segment axiom guarantees that
     // there is no such cycle.
 
-    TObjId seg = sh.objByAddr(beg);
+    TObjId seg = segFirst;
     int len = 1;
 
     for (;;) {
@@ -1672,8 +1672,8 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2);
 bool dlSegMergeAddressesOfEmpty(
         SymState                    &dst,
         SymProc                     &procTpl,
-        const TValId                 root1,
-        const TValId                 root2)
+        const TObjId                 obj1,
+        const TObjId                 obj2)
 {
     // we need to clone the SymHeap and SymProc objects
     SymHeap sh(procTpl.sh());
@@ -1681,10 +1681,10 @@ bool dlSegMergeAddressesOfEmpty(
     SymProc proc(sh, procTpl.bt());
     proc.setLocation(procTpl.lw());
 
-    const TValId valNext1 = nextValFromSeg(sh, sh.objByAddr(root1));
-    const TValId valNext2 = nextValFromSeg(sh, sh.objByAddr(root2));
+    const TValId valNext1 = nextValFromSeg(sh, obj1);
+    const TValId valNext2 = nextValFromSeg(sh, obj2);
 
-    if (!spliceOutAbstractPathCore(proc, root1, valNext2))
+    if (!spliceOutAbstractPathCore(proc, obj1, valNext2))
         CL_BREAK_IF("dlSegMergeAddressesOfEmpty() failed to remove a DLS");
 
     if (valNext1 == valNext2) {
@@ -1724,15 +1724,11 @@ bool dlSegMergeAddressesIfNeeded(
 
     CL_BREAK_IF(obj2 != segPeer(sh, obj1));
 
-    // TODO: drop this!
-    const TValId root1 = sh.valRoot(v1);
-    const TValId root2 = sh.valRoot(v2);
-
-    if (!sh.segMinLength(sh.objByAddr(root1)))
+    if (!sh.segMinLength(obj1))
         // 0+ DLS --> we have to look through!
-        dlSegMergeAddressesOfEmpty(dst, proc, root1, root2);
+        dlSegMergeAddressesOfEmpty(dst, proc, obj1, obj2);
 
-    dlSegReplaceByConcrete(sh, root1, root2);
+    dlSegReplaceByConcrete(sh, obj1, obj2);
     sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), /* len */ 1));
     dst.insert(sh);
     return true;
@@ -1757,13 +1753,11 @@ bool spliceOutAbstractPath(
         endPoint = sh.valByOffset(pointingTo, off);
     }
 
-    const TValId segAt = sh.valRoot(atAddr);
-
-    if (!spliceOutAbstractPathCore(proc, segAt, endPoint, /* RO */ true))
+    if (!spliceOutAbstractPathCore(proc, seg, endPoint, /* RO */ true))
         // read-only attempt failed
         return false;
 
-    if (readOnlyMode || spliceOutAbstractPathCore(proc, segAt, endPoint))
+    if (readOnlyMode || spliceOutAbstractPathCore(proc, seg, endPoint))
         return true;
 
     CL_BREAK_IF("failed to splice-out a single list segment");

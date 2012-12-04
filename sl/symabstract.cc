@@ -534,15 +534,12 @@ bool applyAbstraction(
     return true;
 }
 
-void dlSegReplaceByConcrete(SymHeap &sh, TValId segAt, TValId peerAt)
+void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
 {
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
     CL_BREAK_IF(!protoCheckConsistency(sh));
-
-    const TObjId seg  = sh.objByAddr(segAt);
-    const TObjId peer = sh.objByAddr(peerAt);
 
     // take the value of 'next' pointer from peer
     const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
