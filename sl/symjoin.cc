@@ -406,39 +406,13 @@ bool defineValueMapping(
         return false;
     }
 
-    if (hasValue1 && hasValue2)
-        gatherSharedPreds(ctx, v1, v2, vDst);
+    if (!hasValue1 || !hasValue2)
+        return true;
 
-    return true;
-}
+    const TValPair vp(v1, v2);
+    ctx.joinCache[vp] = vDst;
 
-bool matchRanges(
-        bool                    *pResult,
-        const SymJoinCtx        &ctx,
-        const TValId            v1,
-        const TValId            v2,
-        const bool              allowUnknownMapping)
-{
-    const bool isRange1 = (VT_RANGE == ctx.sh1.valTarget(v1));
-    const bool isRange2 = (VT_RANGE == ctx.sh2.valTarget(v2));
-    if (isRange1 || isRange2) {
-        if (allowUnknownMapping)
-            return false;
-
-        // the mapping should have already been defined
-        const TValPair vp(v1, v2);
-        if (hasKey(ctx.joinCache, vp))
-            return false;
-
-        goto fail;
-    }
-
-    // no VT_RANGE values involved here
-    if (matchOffsets(ctx.sh1, ctx.sh2, v1, v2))
-        return false;
-
-fail:
-    *pResult = false;
+    gatherSharedPreds(ctx, v1, v2, vDst);
     return true;
 }
 
@@ -510,7 +484,7 @@ bool checkObjectMapping(
 
     const bool hasMapping1 = (oMap1.end() != i1);
     const bool hasMapping2 = (oMap2.end() != i2);
-    if (!hasMapping1 || !hasMapping2)
+    if (!hasMapping1 && !hasMapping2)
         // we have not enough info yet
         return allowUnknownMapping;
 
@@ -523,7 +497,7 @@ bool checkObjectMapping(
 
     if (allowUnknownMapping) {
         SJ_DEBUG("<-- object mapping mismatch: " << SJ_OBJP(obj1, obj2)
-                 "-> " << SJ_OBJP(objDst1, objDst2));
+                 " -> " << SJ_OBJP(objDst1, objDst2));
     }
 
     return false;
@@ -540,24 +514,26 @@ bool checkValueMapping(
     if (!checkNonPosValues(v1, v2))
         return false;
 
-    bool result;
-    if (matchRanges(&result, ctx, v1, v2, allowUnknownMapping))
-        return result;
+    const EValueTarget code1 = ctx.sh1.valTarget(v1);
+    const EValueTarget code2 = ctx.sh2.valTarget(v2);
+    if (VT_OBJECT == code1 && VT_OBJECT == code2
+            && !matchOffsets(ctx.sh1, ctx.sh2, v1, v2))
+        return false;
 
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
-    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
+    if (!checkObjectMapping(ctx, obj1, obj2, allowUnknownMapping))
         return false;
 
     // read-only value lookup
     const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
     const TValMap &vMap2 = ctx.valMap2[/* ltr */ 0];
-    TValMap::const_iterator i1 = vMap1.find(ctx.sh1.valRoot(v1));
-    TValMap::const_iterator i2 = vMap2.find(ctx.sh2.valRoot(v2));
+    TValMap::const_iterator i1 = vMap1.find(v1);
+    TValMap::const_iterator i2 = vMap2.find(v2);
 
     const bool hasMapping1 = (vMap1.end() != i1);
     const bool hasMapping2 = (vMap2.end() != i2);
-    if (!hasMapping1 && !hasMapping2)
+    if (!hasMapping1 || !hasMapping2)
         // we have not enough info yet
         return allowUnknownMapping;
 
@@ -576,7 +552,7 @@ bool checkValueMapping(
 
     if (allowUnknownMapping) {
         SJ_DEBUG("<-- value mapping mismatch: " << SJ_VALP(v1, v2)
-                 "-> " << SJ_VALP(vDst1, vDst2));
+                 " -> " << SJ_VALP(vDst1, vDst2));
     }
 
     return false;
@@ -2242,8 +2218,8 @@ bool offRangeFallback(
         return false;
 
     // check we got different offsets
-    const TOffset off1 = ctx.sh1.valOffset(v1);
-    const TOffset off2 = ctx.sh2.valOffset(v2);
+    const IR::Range off1 = ctx.sh1.valOffsetRange(v1);
+    const IR::Range off2 = ctx.sh2.valOffsetRange(v2);
     CL_BREAK_IF(off1 == off2);
 
     // check whether the values are not matched already
@@ -2260,8 +2236,8 @@ bool offRangeFallback(
 
     // compute the resulting range
     IR::Range rng;
-    rng.lo = std::min(off1, off2);
-    rng.hi = std::max(off1, off2);
+    rng.lo = std::min(off1.lo, off2.lo);
+    rng.hi = std::max(off1.hi, off2.hi);
     rng.alignment = IR::Int1;
 
     // create a VT_RANGE value in ctx.dst
