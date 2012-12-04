@@ -636,10 +636,224 @@ bool checkNullConsistency(
     return isAnyDataArea(code);
 }
 
+bool handleUnknownValues(
+        SymJoinCtx             &ctx,
+        const SchedItem        &item,
+        const TValId            vDst)
+{
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
+    const bool isNull1 = (VAL_NULL == v1);
+    const bool isNull2 = (VAL_NULL == v2);
+    if (isNull1 != isNull2) {
+        const TValPair vp(v1, v2);
+        CL_BREAK_IF(hasKey(ctx.joinCache, vp));
+        ctx.joinCache[vp] = vDst;
+
+        const TValId valGt = (isNull2) ? v1 : v2;
+        TValMapBidir &vMap = (isNull2) ? ctx.valMap1 : ctx.valMap2;
+
+        if (!mapBidir(vMap, valGt, vDst))
+            return false;
+    }
+    else {
+        if (!defineValueMapping(ctx, vDst, v1, v2))
+            return false;
+    }
+
+    item.fldDst.setValue(vDst);
+    return true;
+}
+
+bool joinCustomValues(
+        SymJoinCtx              &ctx,
+        const SchedItem         &item)
+{
+    SymHeap &sh1 = ctx.sh1;
+    SymHeap &sh2 = ctx.sh2;
+
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
+    const CustomValue cVal1 = sh1.valUnwrapCustom(v1);
+    const CustomValue cVal2 = sh2.valUnwrapCustom(v2);
+    if (cVal1 == cVal2) {
+        // full match
+        const TValId vDst = ctx.dst.valWrapCustom(cVal1);
+        if (!defineValueMapping(ctx, vDst, v1, v2))
+            return false;
+
+        item.fldDst.setValue(vDst);
+        return true;
+    }
+
+    IR::Range rng1, rng2;
+    if (!rngFromVal(&rng1, sh1, v1) || !rngFromVal(&rng2, sh2, v2)) {
+        // throw custom values away and abstract them by a fresh unknown value
+        SJ_DEBUG("throwing away unmatched custom values " << SJ_VALP(v1, v2));
+        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        if (!updateJoinStatus(ctx, JS_THREE_WAY))
+            return false;
+
+        if (!defineValueMapping(ctx, vDst, v1, v2))
+            return false;
+
+        item.fldDst.setValue(vDst);
+        return true;
+    }
+
+    // compute the resulting range that covers both
+    IR::Range rng = join(rng1, rng2);
+
+#if SE_INT_ARITHMETIC_LIMIT
+    const IR::TInt max = std::max(std::abs(rng.lo), std::abs(rng.hi));
+    if (max <= (SE_INT_ARITHMETIC_LIMIT)) {
+        SJ_DEBUG("<-- integral values preserved by SE_INT_ARITHMETIC_LIMIT "
+                << SJ_VALP(v1, v2));
+
+        return false;
+    }
+#endif
+
+#if !(SE_ALLOW_INT_RANGES & 0x1)
+    // avoid creation of a CV_INT_RANGE value from two CV_INT values
+    if (isSingular(rng1) && isSingular(rng2)) {
+        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        if (!defineValueMapping(ctx, vDst, v1, v2))
+            return false;
+
+        item.fldDst.setValue(vDst);
+
+        // force three-way join in order not to loop forever!
+        ctx.forceThreeWay = true;
+        return updateJoinStatus(ctx, JS_THREE_WAY);
+    }
+#endif
+
+    // [experimental] widening on intervals
+    if (!isSingular(rng1) && !isSingular(rng2)) {
+#if (SE_ALLOW_INT_RANGES & 0x2)
+        if (rng.lo == rng1.lo || rng.lo == rng2.lo)
+            rng.hi = IR::IntMax;
+#endif
+#if (SE_ALLOW_INT_RANGES & 0x4)
+        if (rng.hi == rng1.hi || rng.hi == rng2.hi)
+            rng.lo = IR::IntMin;
+#endif
+    }
+
+    if (!isCovered(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
+        return false;
+
+    if (!isCovered(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
+        return false;
+
+    const CustomValue cv(rng);
+    const TValId vDst = ctx.dst.valWrapCustom(cv);
+    if (!defineValueMapping(ctx, vDst, v1, v2))
+        return false;
+
+    item.fldDst.setValue(vDst);
+    return true;
+}
+
+EValueOrigin joinOrigin(const EValueOrigin vo1, const EValueOrigin vo2)
+{
+    if (vo1 == vo2)
+        // use any
+        return vo2;
+
+    if (VO_DEREF_FAILED == vo1 || VO_DEREF_FAILED == vo2)
+        // keep the error recovery as cheap as possible
+        return VO_DEREF_FAILED;
+
+    // safe over-approximation
+    return VO_UNKNOWN;
+}
+
 bool joinValuesByCode(
         bool                   *pResult,
         SymJoinCtx             &ctx,
-        const SchedItem        &item);
+        const SchedItem        &item)
+{
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+
+    // check target's validity
+    const bool isNull1 = (VAL_NULL == v1);
+    const bool isNull2 = (VAL_NULL == v2);
+    if (isNull1 || isNull2) {
+        if (!checkNullConsistency(ctx, v1, v2)) {
+            *pResult = false;
+            return true;
+        }
+    }
+    else {
+        const bool haveTarget1 = ctx.sh1.isValid(obj1);
+        const bool haveTarget2 = ctx.sh2.isValid(obj2);
+        if (haveTarget1 != haveTarget2) {
+            SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
+            *pResult = false;
+            return true;
+        }
+    }
+
+    const EValueTarget code1 = ctx.sh1.valTarget(v1);
+    const EValueTarget code2 = ctx.sh2.valTarget(v2);
+    if (VT_RANGE == code1 || VT_RANGE == code2)
+        // these have to be handled in followValuePair()
+        return false;
+
+    // check for VT_UNKNOWN
+    const bool isUnknown1 = (VT_UNKNOWN == code1);
+    const bool isUnknown2 = (VT_UNKNOWN == code2);
+
+    if (!isUnknown1 && !isUnknown2) {
+        // handle VT_CUSTOM values
+        const bool isCustom1 = (VT_CUSTOM == code1);
+        const bool isCustom2 = (VT_CUSTOM == code2);
+        *pResult = isCustom1 && isCustom2 && joinCustomValues(ctx, item);
+        return     isCustom1 || isCustom2;
+    }
+
+    // join the origin
+    const EValueOrigin vo1 = ctx.sh1.valOrigin(v1);
+    const EValueOrigin vo2 = ctx.sh2.valOrigin(v2);
+    const EValueOrigin origin = joinOrigin(vo1, vo2);
+
+    // do not join VT_UNKNOWN with a valid pointer
+    if (VO_DEREF_FAILED != origin) {
+        const bool haveTarget1 = isPossibleToDeref(ctx.sh1, v1);
+        const bool haveTarget2 = isPossibleToDeref(ctx.sh2, v2);
+        if (haveTarget1 || haveTarget2) {
+            *pResult = false;
+            return true;
+        }
+    }
+
+    // create a new unknown value in ctx.dst
+    const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, origin);
+    *pResult = handleUnknownValues(ctx, item, vDst);
+    if (!*pResult)
+        // we have failed
+        return true;
+
+    item.fldDst.setValue(vDst);
+
+    // we have to use the heap where the unknown value occurs
+    if (!isUnknown2)
+        return updateJoinStatus(ctx, JS_USE_SH1);
+    else if (!isUnknown1)
+        return updateJoinStatus(ctx, JS_USE_SH2);
+    else
+        // use any
+        return true;
+}
+
 
 bool bumpNestingLevel(const FldHandle &fld)
 {
@@ -1470,98 +1684,6 @@ bool joinObjectsCore(
     return createObject(ctx, obj1, obj2, ldiff, action);
 }
 
-bool joinCustomValues(
-        SymJoinCtx              &ctx,
-        const SchedItem         &item)
-{
-    SymHeap &sh1 = ctx.sh1;
-    SymHeap &sh2 = ctx.sh2;
-
-    const TValId v1 = item.fld1.value();
-    const TValId v2 = item.fld2.value();
-
-    const CustomValue cVal1 = sh1.valUnwrapCustom(v1);
-    const CustomValue cVal2 = sh2.valUnwrapCustom(v2);
-    if (cVal1 == cVal2) {
-        // full match
-        const TValId vDst = ctx.dst.valWrapCustom(cVal1);
-        if (!defineValueMapping(ctx, vDst, v1, v2))
-            return false;
-
-        item.fldDst.setValue(vDst);
-        return true;
-    }
-
-    IR::Range rng1, rng2;
-    if (!rngFromVal(&rng1, sh1, v1) || !rngFromVal(&rng2, sh2, v2)) {
-        // throw custom values away and abstract them by a fresh unknown value
-        SJ_DEBUG("throwing away unmatched custom values " << SJ_VALP(v1, v2));
-        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-        if (!updateJoinStatus(ctx, JS_THREE_WAY))
-            return false;
-
-        if (!defineValueMapping(ctx, vDst, v1, v2))
-            return false;
-
-        item.fldDst.setValue(vDst);
-        return true;
-    }
-
-    // compute the resulting range that covers both
-    IR::Range rng = join(rng1, rng2);
-
-#if SE_INT_ARITHMETIC_LIMIT
-    const IR::TInt max = std::max(std::abs(rng.lo), std::abs(rng.hi));
-    if (max <= (SE_INT_ARITHMETIC_LIMIT)) {
-        SJ_DEBUG("<-- integral values preserved by SE_INT_ARITHMETIC_LIMIT "
-                << SJ_VALP(v1, v2));
-
-        return false;
-    }
-#endif
-
-#if !(SE_ALLOW_INT_RANGES & 0x1)
-    // avoid creation of a CV_INT_RANGE value from two CV_INT values
-    if (isSingular(rng1) && isSingular(rng2)) {
-        const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, VO_UNKNOWN);
-        if (!defineValueMapping(ctx, vDst, v1, v2))
-            return false;
-
-        item.fldDst.setValue(vDst);
-
-        // force three-way join in order not to loop forever!
-        ctx.forceThreeWay = true;
-        return updateJoinStatus(ctx, JS_THREE_WAY);
-    }
-#endif
-
-    // [experimental] widening on intervals
-    if (!isSingular(rng1) && !isSingular(rng2)) {
-#if (SE_ALLOW_INT_RANGES & 0x2)
-        if (rng.lo == rng1.lo || rng.lo == rng2.lo)
-            rng.hi = IR::IntMax;
-#endif
-#if (SE_ALLOW_INT_RANGES & 0x4)
-        if (rng.hi == rng1.hi || rng.hi == rng2.hi)
-            rng.lo = IR::IntMin;
-#endif
-    }
-
-    if (!isCovered(rng, rng1) && !updateJoinStatus(ctx, JS_USE_SH2))
-        return false;
-
-    if (!isCovered(rng, rng2) && !updateJoinStatus(ctx, JS_USE_SH1))
-        return false;
-
-    const CustomValue cv(rng);
-    const TValId vDst = ctx.dst.valWrapCustom(cv);
-    if (!defineValueMapping(ctx, vDst, v1, v2))
-        return false;
-
-    item.fldDst.setValue(vDst);
-    return true;
-}
-
 bool joinObjects(
         SymJoinCtx             &ctx,
         const TObjId            obj1,
@@ -1878,36 +2000,6 @@ void scheduleSegAddr(
             (JS_USE_SH2 == action) ? fldPeer : fldInvalid,
             item.ldiff);
     wl.schedule(peerItem);
-}
-
-bool handleUnknownValues(
-        SymJoinCtx             &ctx,
-        const SchedItem        &item,
-        const TValId            vDst)
-{
-    const TValId v1 = item.fld1.value();
-    const TValId v2 = item.fld2.value();
-
-    const bool isNull1 = (VAL_NULL == v1);
-    const bool isNull2 = (VAL_NULL == v2);
-    if (isNull1 != isNull2) {
-        const TValPair vp(v1, v2);
-        CL_BREAK_IF(hasKey(ctx.joinCache, vp));
-        ctx.joinCache[vp] = vDst;
-
-        const TValId valGt = (isNull2) ? v1 : v2;
-        TValMapBidir &vMap = (isNull2) ? ctx.valMap1 : ctx.valMap2;
-
-        if (!mapBidir(vMap, valGt, vDst))
-            return false;
-    }
-    else {
-        if (!defineValueMapping(ctx, vDst, v1, v2))
-            return false;
-    }
-
-    item.fldDst.setValue(vDst);
-    return true;
 }
 
 bool cloneSpecialValue(
@@ -2486,102 +2578,6 @@ bool mayExistFallback(
         result = false;
 
     return result;
-}
-
-EValueOrigin joinOrigin(const EValueOrigin vo1, const EValueOrigin vo2)
-{
-    if (vo1 == vo2)
-        // use any
-        return vo2;
-
-    if (VO_DEREF_FAILED == vo1 || VO_DEREF_FAILED == vo2)
-        // keep the error recovery as cheap as possible
-        return VO_DEREF_FAILED;
-
-    // safe over-approximation
-    return VO_UNKNOWN;
-}
-
-bool joinValuesByCode(
-        bool                   *pResult,
-        SymJoinCtx             &ctx,
-        const SchedItem        &item)
-{
-    const TValId v1 = item.fld1.value();
-    const TValId v2 = item.fld2.value();
-
-    const TObjId obj1 = ctx.sh1.objByAddr(v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(v2);
-
-    // check target's validity
-    const bool isNull1 = (VAL_NULL == v1);
-    const bool isNull2 = (VAL_NULL == v2);
-    if (isNull1 || isNull2) {
-        if (!checkNullConsistency(ctx, v1, v2)) {
-            *pResult = false;
-            return true;
-        }
-    }
-    else {
-        const bool haveTarget1 = ctx.sh1.isValid(obj1);
-        const bool haveTarget2 = ctx.sh2.isValid(obj2);
-        if (haveTarget1 != haveTarget2) {
-            SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
-            *pResult = false;
-            return true;
-        }
-    }
-
-    const EValueTarget code1 = ctx.sh1.valTarget(v1);
-    const EValueTarget code2 = ctx.sh2.valTarget(v2);
-    if (VT_RANGE == code1 || VT_RANGE == code2)
-        // these have to be handled in followValuePair()
-        return false;
-
-    // check for VT_UNKNOWN
-    const bool isUnknown1 = (VT_UNKNOWN == code1);
-    const bool isUnknown2 = (VT_UNKNOWN == code2);
-
-    if (!isUnknown1 && !isUnknown2) {
-        // handle VT_CUSTOM values
-        const bool isCustom1 = (VT_CUSTOM == code1);
-        const bool isCustom2 = (VT_CUSTOM == code2);
-        *pResult = isCustom1 && isCustom2 && joinCustomValues(ctx, item);
-        return     isCustom1 || isCustom2;
-    }
-
-    // join the origin
-    const EValueOrigin vo1 = ctx.sh1.valOrigin(v1);
-    const EValueOrigin vo2 = ctx.sh2.valOrigin(v2);
-    const EValueOrigin origin = joinOrigin(vo1, vo2);
-
-    // do not join VT_UNKNOWN with a valid pointer
-    if (VO_DEREF_FAILED != origin) {
-        const bool haveTarget1 = isPossibleToDeref(ctx.sh1, v1);
-        const bool haveTarget2 = isPossibleToDeref(ctx.sh2, v2);
-        if (haveTarget1 || haveTarget2) {
-            *pResult = false;
-            return true;
-        }
-    }
-
-    // create a new unknown value in ctx.dst
-    const TValId vDst = ctx.dst.valCreate(VT_UNKNOWN, origin);
-    *pResult = handleUnknownValues(ctx, item, vDst);
-    if (!*pResult)
-        // we have failed
-        return true;
-
-    item.fldDst.setValue(vDst);
-
-    // we have to use the heap where the unknown value occurs
-    if (!isUnknown2)
-        return updateJoinStatus(ctx, JS_USE_SH1);
-    else if (!isUnknown1)
-        return updateJoinStatus(ctx, JS_USE_SH2);
-    else
-        // use any
-        return true;
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
