@@ -416,6 +416,49 @@ bool defineValueMapping(
     return true;
 }
 
+bool writeJoinedValue(
+        SymJoinCtx             &ctx,
+        const FldHandle        &dst,
+        const TValId            vDst,
+        const TValId            v1,
+        const TValId            v2)
+{
+    CL_BREAK_IF(!dst.isValidHandle());
+    CL_BREAK_IF(VAL_INVALID == vDst);
+    CL_BREAK_IF(VAL_INVALID == v1 && VAL_INVALID == v2);
+
+    if (VAL_INVALID != v1 && VAL_INVALID != v2) {
+        // update join cache
+        const TValPair vp(v1, v2);
+        CL_BREAK_IF(hasKey(ctx.joinCache, vp) && vDst != ctx.joinCache[vp]);
+        ctx.joinCache[vp] = vDst;
+
+        // collect shared Neq relations
+        gatherSharedPreds(ctx, vDst, v1, v2);
+    }
+
+    // write the value
+    dst.setValue(vDst);
+
+    // the current implementation cannot fail (reserved for future extensions)
+    return true;
+}
+
+bool joinTargetSpec(
+        ETargetSpecifier       *pDst,
+        SymJoinCtx             &ctx,
+        const TValId            v1,
+        const TValId            v2)
+{
+    const ETargetSpecifier ts1 = ctx.sh1.targetSpec(v1);
+    const ETargetSpecifier ts2 = ctx.sh2.targetSpec(v2);
+    if (ts1 != ts2)
+        return false;
+
+    *pDst = ts1 /* = ts2 */;
+    return true;
+}
+
 bool joinRangeValues(
         SymJoinCtx             &ctx,
         const SchedItem        &item)
@@ -423,8 +466,8 @@ bool joinRangeValues(
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
 
-    const ETargetSpecifier ts = ctx.sh1.targetSpec(v1);
-    if (ts != ctx.sh2.targetSpec(v2))
+    ETargetSpecifier ts;
+    if (!joinTargetSpec(&ts, ctx, v1, v2))
         // target specifier mismatch
         return false;
 
@@ -458,13 +501,9 @@ bool joinRangeValues(
 
     // create a VT_RANGE value in ctx.dst
     const TValId vDst = ctx.dst.valByRange(rootDst, rng);
-    item.fldDst.setValue(vDst);
 
-    // store the mapping (v1, v2) -> vDst
-    const TValPair vp(v1, v2);
-    CL_BREAK_IF(hasKey(ctx.joinCache, vp));
-    ctx.joinCache[vp] = vDst;
-    return true;
+    // create the corresponding has-value edge
+    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
 bool checkObjectMapping(
