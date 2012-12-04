@@ -444,6 +444,21 @@ bool writeJoinedValue(
     return true;
 }
 
+bool joinCacheLookup(
+        TValId                 *pDst,
+        SymJoinCtx             &ctx,
+        const TValId            v1,
+        const TValId            v2)
+{
+    const TValPair vp(v1, v2);
+    const TJoinCache::const_iterator it = ctx.joinCache.find(vp);
+    if (ctx.joinCache.end() == it)
+        return false;
+
+    *pDst = it->second;
+    return true;
+}
+
 bool joinTargetSpec(
         ETargetSpecifier       *pDst,
         SymJoinCtx             &ctx,
@@ -887,10 +902,8 @@ bool joinFreshItem(
         return true;
     }
 
-    const TValPair vp(v1, v2);
-    const TJoinCache::const_iterator mit = ctx.joinCache.find(vp);
-    if (ctx.joinCache.end() != mit) {
-        const TValId vDst = mit->second;
+    TValId vDst;
+    if (joinCacheLookup(&vDst, ctx, v1, v2)) {
         if (!readOnly)
             item.fldDst.setValue(vDst);
         return true;
@@ -952,11 +965,9 @@ bool joinFreshItem(
             return false;
         }
 
-        TValId vDst;
-        if (checkValueMapping(ctx, v1, v2, /* allowUnknown */ false, &vDst)) {
+        if (checkValueMapping(ctx, v1, v2, /* allowUnknown */ false, &vDst))
             // already joined
             return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
-        }
 
         bool result;
         if (joinValuesByCode(&result, ctx, item))
@@ -2561,20 +2572,15 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     SJ_DEBUG("--- " << SJ_FLDT(item.fldDst, item.fld1, item.fld2)
             << " -> " << SJ_VALP(v1, v2));
 
-    const TValPair vp(v1, v2);
-    const TJoinCache::const_iterator mit = ctx.joinCache.find(vp);
-    if (ctx.joinCache.end() != mit) {
-        const TValId vDst = mit->second;
+    TValId vDst;
+    if (joinCacheLookup(&vDst, ctx, v1, v2)) {
         item.fldDst.setValue(vDst);
         return true;
     }
 
-    TValId valDst;
-    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMap */ false, &valDst)) {
+    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMap */ false, &vDst))
         // already joined
-        item.fldDst.setValue(valDst);
-        return true;
-    }
+        return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 
     bool result;
     if (joinValuesByCode(&result, ctx, item))
