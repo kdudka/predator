@@ -2002,10 +2002,6 @@ bool cloneSpecialValue(
         const SchedItem         &itemToClone,
         EValueTarget            code)
 {
-    const TValId v1 = itemToClone.fld1.value();
-    const TValId v2 = itemToClone.fld2.value();
-    const TValPair vp(v1, v2);
-
     const TValId rootGt = shGt.valRoot(valGt);
     EValueOrigin vo = shGt.valOrigin(valGt);
     TValId vDst;
@@ -2032,11 +2028,7 @@ bool cloneSpecialValue(
     const TValId rootDst = roMapLookup(valMapGt[/* ltr */ 0], rootGt);
     const IR::Range range = shGt.valOffsetRange(valGt);
     vDst = ctx.dst.valByRange(rootDst, range);
-    if (!handleUnknownValues(ctx, itemToClone, vDst))
-        return false;
-
-    ctx.joinCache[vp] = vDst;
-    return true;
+    return handleUnknownValues(ctx, itemToClone, vDst);
 }
 
 /// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
@@ -2299,9 +2291,7 @@ done:
 
     // write the resulting value to item.fldDst
     const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
-    item.fldDst.setValue(vDst);
-
-    return true;
+    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
 bool offRangeFallback(
@@ -2336,10 +2326,6 @@ bool offRangeFallback(
     const IR::Range off2 = ctx.sh2.valOffsetRange(v2);
     CL_BREAK_IF(off1 == off2);
 
-    // check whether the values are not matched already
-    const TValPair vp(v1, v2);
-    CL_BREAK_IF(hasKey(ctx.joinCache, vp));
-
     if (!updateJoinStatus(ctx, /* intentionally! */ JS_THREE_WAY))
         return false;
 
@@ -2356,11 +2342,7 @@ bool offRangeFallback(
 
     // create a VT_RANGE value in ctx.dst
     const TValId vDst = ctx.dst.valByRange(rootDst, rng);
-
-    // store the mapping (v1, v2) -> vDst
-    ctx.joinCache[vp] = vDst;
-    item.fldDst.setValue(vDst);
-    return true;
+    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
 typedef std::vector<TOffset>                        TOffList;
