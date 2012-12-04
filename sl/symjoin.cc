@@ -2224,9 +2224,20 @@ bool offRangeFallback(
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
 
-    const TValId root1 = ctx.sh1.valRoot(v1);
-    const TValId root2 = ctx.sh2.valRoot(v2);
-    if (!checkValueMapping(ctx, root1, root2, /* allowUnknownMapping */ false))
+    const ETargetSpecifier ts = ctx.sh1.targetSpec(v1);
+    if (ts != ctx.sh2.targetSpec(v2))
+        // target specifier mismatch
+        return false;
+
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+
+    const TObjMap &m1 = ctx.objMap1[/* ltr */ 0];
+    const TObjMap &m2 = ctx.objMap2[/* ltr */ 0];
+
+    const TObjMap::const_iterator it1 = m1.find(obj1);
+    const TObjMap::const_iterator it2 = m2.find(obj2);
+    if (it1 == m1.end() || it2 == m2.end() || it1->second != it2->second)
         // not really a suitable candidate for offRangeFallback()
         return false;
 
@@ -2243,8 +2254,9 @@ bool offRangeFallback(
         return false;
 
     // resolve root in ctx.dst
-    const TValId rootDst = roMapLookup(ctx.valMap1[/* ltr */ 0], root1);
-    CL_BREAK_IF(rootDst != roMapLookup(ctx.valMap2[/* ltr */ 0], root2));
+    const TObjId objDst = roMapLookup(ctx.objMap1[0], ctx.sh1.objByAddr(v1));
+    CL_BREAK_IF(objDst != roMapLookup(ctx.objMap2[0], ctx.sh2.objByAddr(v2)));
+    const TValId rootDst = ctx.dst.addrOfTarget(objDst, ts);
 
     // compute the resulting range
     IR::Range rng;
