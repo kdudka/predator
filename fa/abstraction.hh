@@ -28,7 +28,7 @@ class Abstraction
 {
 private:  // data members
 
-	FAE& fae;
+	FAE& fae_;
 
 public:   // methods
 
@@ -38,14 +38,16 @@ public:   // methods
 		size_t                height,
 		F                     f)
 	{
-		assert(root < this->fae.getRootCount());
-		assert(nullptr != this->fae.getRoot(root));
+		// Preconditions
+		assert(root < fae_.getRootCount());
+		assert(nullptr != fae_.getRoot(root));
+
 		Index<size_t> stateIndex;
-		this->fae.getRoot(root)->buildStateIndex(stateIndex);
+		fae_.getRoot(root)->buildStateIndex(stateIndex);
 		std::vector<std::vector<bool> > rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), true));
-		this->fae.getRoot(root)->heightAbstraction(rel, height, f, stateIndex);
+		fae_.getRoot(root)->heightAbstraction(rel, height, f, stateIndex);
 		ConnectionGraph::StateToCutpointSignatureMap stateMap;
-		ConnectionGraph::computeSignatures(stateMap, *this->fae.getRoot(root));
+		ConnectionGraph::computeSignatures(stateMap, *fae_.getRoot(root));
 		for (Index<size_t>::iterator j = stateIndex.begin(); j != stateIndex.end(); ++j)
 		{
 			for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k)
@@ -60,16 +62,17 @@ public:   // methods
 			}
 		}
 
-		TreeAut ta(*this->fae.backend);
-		this->fae.getRoot(root)->collapsed(ta, rel, stateIndex);
-		this->fae.setRoot(root, std::shared_ptr<TreeAut>(this->fae.allocTA()));
-		ta.uselessAndUnreachableFree(*this->fae.getRoot(root));
+		TreeAut ta(*fae_.backend);
+		fae_.getRoot(root)->collapsed(ta, rel, stateIndex);
+		fae_.setRoot(root, std::shared_ptr<TreeAut>(fae_.allocTA()));
+		ta.uselessAndUnreachableFree(*fae_.getRoot(root));
 	}
 
 public:
 
-	Abstraction(FAE& fae) : fae(fae) {}
-
+	Abstraction(FAE& fae) :
+		fae_(fae)
+	{ }
 };
 
 #endif

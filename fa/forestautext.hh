@@ -38,8 +38,6 @@ class FAE : public FA
 	friend class Normalization;
 	friend class Folding;
 	friend class Unfolding;
-	friend class Abstraction;
-	friend class Splitting;
 	friend class VirtualMachine;
 
 private:  // data members
