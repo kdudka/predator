@@ -64,3 +64,6 @@
 - As for the block operations, what about realloc?
 
 ------------------------------------------------------------------------------
+
+- allow to use #pragma to control certain Predator options at run-time (by PP)
+  <http://gcc.gnu.org/onlinedocs/cpp/Pragmas.html>

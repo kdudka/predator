@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2012 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -32,6 +32,14 @@
  * if 1, print block scheduler statistics whenever end of a fnc is not reached
  */
 #define DEBUG_SE_END_NOT_REACHED            0
+
+/**
+ * bit mask of fixed-point debugging flags, zero means no debugging
+ * - 0x1 ... print the counts of heaps per each unit
+ * - 0x2 ... dump the fixed point as a set of plots per each unit
+ * - 0x4 ... use a single instruction as the unit (basic block otherwise)
+ */
+#define DEBUG_SE_FIXED_POINT                0
 
 /**
  * - 0 ... do not debug branching by non-deterministic conditions

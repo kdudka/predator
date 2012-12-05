@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2012 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -34,6 +34,14 @@
 #define DEBUG_SE_END_NOT_REACHED            0
 
 /**
+ * bit mask of fixed-point debugging flags, zero means no debugging
+ * - 0x1 ... print the counts of heaps per each unit
+ * - 0x2 ... dump the fixed point as a set of plots per each unit
+ * - 0x4 ... use a single instruction as the unit (basic block otherwise)
+ */
+#define DEBUG_SE_FIXED_POINT                7
+
+/**
  * - 0 ... do not debug branching by non-deterministic conditions
  * - 1 ... plot heap graphs of branching by non-deterministic abstract values
  * - 2 ... plot heap graphs of branching by any non-deterministic conditions
@@ -48,7 +56,7 @@
 /**
  * if 1, plot each abstraction/concretization step to a separate heap graph
  */
-#define DEBUG_SYMABSTRACT                   1
+#define DEBUG_SYMABSTRACT                   0
 
 /**
  * if 1, plot some interesting operations as being performed by symcall
@@ -83,7 +91,7 @@
 /**
  * if 1, do not perform abstraction on each end of BB, but only when looping
  */
-#define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
+#define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      0
 
 /*
  * if non-zero, allow incomplete discovery paths with lower costs to apply
@@ -113,7 +121,7 @@
  * - 2 ... also when joining states if the three-way join is considered useful
  * - 3 ... do not restrict the usage of three-way join at the level of symjoin
  */
-#define SE_ALLOW_THREE_WAY_JOIN             2
+#define SE_ALLOW_THREE_WAY_JOIN             3
 
 /**
  * if 1, assume that the contents of static data is initialized on first access
@@ -213,7 +221,7 @@
  * - 2 ... join only when traversing a loop-closing edge, isomorphism otherwise
  * - 3 ... same as 2 but skips the isomorphism check when considered redundant
  */
-#define SE_JOIN_ON_LOOP_EDGES_ONLY          1
+#define SE_JOIN_ON_LOOP_EDGES_ONLY          0
 
 /**
  * maximal call depth
@@ -240,7 +248,7 @@
  * - 1 ... reorder heaps in SymStateWithJoin based on hit ratio
  * - 2 ... reorder heaps also in SymHeapUnion based on hit ratio [experimental]
  */
-#define SE_STATE_ON_THE_FLY_ORDERING        1
+#define SE_STATE_ON_THE_FLY_ORDERING        0
 
 /**
  * - 0 ... keep state info for all basic blocks of a function
@@ -248,7 +256,7 @@
  * - 2 ... keep state info for all basic blocks with more than one ingoing edge
  * - 3 ... keep state info for all basic blocks that a CFG loop starts with
  */
-#define SE_STATE_PRUNING_MODE               1
+#define SE_STATE_PRUNING_MODE               0
 
 /**
  * prune non-loop blocks on reaching the count of join misses (0 means disabled)

@@ -12,9 +12,9 @@ int main()
 {
     struct DLL* head = NULL;
     struct DLL* tail = NULL;
-    int i = 0;
+    int i = 2;
 
-    while (i < 10) {
+    while (i < 12) {
         if (NULL == head) {
             tail = NEW(struct DLL);
             head = tail;
