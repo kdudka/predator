@@ -607,17 +607,6 @@ class FldHandle {
             CL_BREAK_IF(0 < special);
         }
 
-        /// TODO: drop this constructor!
-        FldHandle(SymHeapCore &sh, TValId addr, TObjType clt):
-            sh_(&sh)
-        {
-            const TObjId obj = sh.objByAddr(addr);
-            const TOffset off = sh.valOffset(addr);
-            id_ = sh.fldLookup(obj, off, clt);
-            if (0 < id_)
-                sh_->fldEnter(id_);
-        }
-
         FldHandle(const FldHandle &tpl):
             sh_(tpl.sh_),
             id_(tpl.id_)
@@ -732,20 +721,9 @@ inline bool operator!=(const FldHandle &a, const FldHandle &b)
 
 class PtrHandle: public FldHandle {
     public:
-        PtrHandle(SymHeapCore &sh, const TObjId obj, const TOffset off):
+        PtrHandle(SymHeapCore &sh, const TObjId obj, const TOffset off = 0):
             FldHandle(sh, sh.ptrLookup(obj, off))
         {
-            if (0 < id_)
-                sh_->fldEnter(id_);
-        }
-
-        /// TODO: drop this constructor!
-        PtrHandle(SymHeapCore &sh, TValId addr):
-            FldHandle(sh, FLD_INVALID)
-        {
-            const TObjId obj = sh.objByAddr(addr);
-            const TOffset off = sh.valOffset(addr);
-            id_ = sh.ptrLookup(obj, off);
             if (0 < id_)
                 sh_->fldEnter(id_);
         }

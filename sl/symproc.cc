@@ -478,7 +478,7 @@ TValId SymProc::targetAt(const struct cl_operand &op)
 
     if (isDeref) {
         // read the value inside the pointer
-        const PtrHandle ptr(sh_, addr);
+        const PtrHandle ptr(sh_, obj);
         addr = ptr.value();
     }
 
@@ -505,7 +505,9 @@ FldHandle SymProc::fldByOperand(const struct cl_operand &op)
     }
 
     // resolve the target object
-    const FldHandle fld(sh_, at, op.type);
+    const TObjId obj = sh_.objByAddr(at);
+    const TOffset off = sh_.valOffset(at);
+    const FldHandle fld(sh_, obj, op.type, off);
     if (!fld.isValidHandle())
         CL_BREAK_IF("SymProc::fldByOperand() failed to resolve an object");
 
