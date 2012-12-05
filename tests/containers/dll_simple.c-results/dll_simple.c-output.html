@@ -7,13 +7,14 @@
 Trying to compile <span style='color: #FFFFFF; font-weight: bold;'>dll_simple.c -m32</span> ... <span style='color: #54FF54; font-weight: bold;'>OK</span>
 Running <span style='color: #5454FF; font-weight: bold;'>Predator</span> ...
 <span style='color: #808080; font-weight: bold;'>cl/cl_easy.cc:49: debug: ClEasy initialized: "error_label:ERROR"</span>
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.00 MB</span> (just completed ClEasy::ClEasy())</span>
 <span style='color: #5454FF; font-weight: bold;'>main</span><span style='color: #FF5454; font-weight: bold;'>(</span><span style='color: #FF5454; font-weight: bold;'>)</span>:
 		<span style='color: #FFFF54; font-weight: bold;'>goto</span> <span style='color: #54FFFF; font-weight: bold;'>L1</span>
 
 	<span style='color: #54FFFF; font-weight: bold;'>L1</span><span style='color: #FF5454; font-weight: bold;'>:</span>
 		<span style='color: #5454FF; font-weight: bold;'>%mF</span>2239:<span style='color: #5454FF; font-weight: bold;'>head</span> <span style='color: #FFFF54; font-weight: bold;'>:=</span> <span style='color: #FFFFFF; font-weight: bold;'>NULL</span>
 		<span style='color: #5454FF; font-weight: bold;'>%mF</span>2240:<span style='color: #5454FF; font-weight: bold;'>tail</span> <span style='color: #FFFF54; font-weight: bold;'>:=</span> <span style='color: #FFFFFF; font-weight: bold;'>NULL</span>
-		<span style='color: #5454FF; font-weight: bold;'>%mF</span>2241:<span style='color: #5454FF; font-weight: bold;'>i</span> <span style='color: #FFFF54; font-weight: bold;'>:=</span> <span style='color: #FFFFFF; font-weight: bold;'>0</span>
+		<span style='color: #5454FF; font-weight: bold;'>%mF</span>2241:<span style='color: #5454FF; font-weight: bold;'>i</span> <span style='color: #FFFF54; font-weight: bold;'>:=</span> <span style='color: #FFFFFF; font-weight: bold;'>2</span>
 		<span style='color: #FFFF54; font-weight: bold;'>goto</span> <span style='color: #54FFFF; font-weight: bold;'>L2</span>
 
 	<span style='color: #54FFFF; font-weight: bold;'>L3</span><span style='color: #FF5454; font-weight: bold;'>:</span>
@@ -47,7 +48,7 @@ Running <span style='color: #5454FF; font-weight: bold;'>Predator</span> ...
 		<span style='color: #FFFF54; font-weight: bold;'>goto</span> <span style='color: #54FFFF; font-weight: bold;'>L2</span>
 
 	<span style='color: #54FFFF; font-weight: bold;'>L2</span><span style='color: #FF5454; font-weight: bold;'>:</span>
-		<span style='color: #5454FF; font-weight: bold;'>%r1048578</span> <span style='color: #FFFF54; font-weight: bold;'>:=</span> <span style='color: #FF5454; font-weight: bold;'>(</span><span style='color: #5454FF; font-weight: bold;'>%mF</span>2241:<span style='color: #5454FF; font-weight: bold;'>i</span> <span style='color: #FFFF54; font-weight: bold;'>&lt;=</span> <span style='color: #FFFFFF; font-weight: bold;'>9</span><span style='color: #FF5454; font-weight: bold;'>)</span>
+		<span style='color: #5454FF; font-weight: bold;'>%r1048578</span> <span style='color: #FFFF54; font-weight: bold;'>:=</span> <span style='color: #FF5454; font-weight: bold;'>(</span><span style='color: #5454FF; font-weight: bold;'>%mF</span>2241:<span style='color: #5454FF; font-weight: bold;'>i</span> <span style='color: #FFFF54; font-weight: bold;'>&lt;=</span> <span style='color: #FFFFFF; font-weight: bold;'>11</span><span style='color: #FF5454; font-weight: bold;'>)</span>
 		<span style='color: #FFFF54; font-weight: bold;'>if (</span><span style='color: #5454FF; font-weight: bold;'>%r1048578</span><span style='color: #FFFF54; font-weight: bold;'>)</span>
 			<span style='color: #FFFF54; font-weight: bold;'>goto</span> <span style='color: #54FFFF; font-weight: bold;'>L3</span>
 		<span style='color: #FFFF54; font-weight: bold;'>else</span>
@@ -61,34 +62,38 @@ Running <span style='color: #5454FF; font-weight: bold;'>Predator</span> ...
 		<span style='color: #FF5454; font-weight: bold;'>ret</span> <span style='color: #5454FF; font-weight: bold;'>%r2252</span>
 
 
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.25 MB</span> (just completed buildStorage())</span>
 <span style='color: #808080; font-weight: bold;'>cl/cl_easy.cc:63: debug: building call-graph...</span>
 <span style='color: #808080; font-weight: bold;'>cl/callgraph.cc:135: debug: buildCallGraph() took <span style='color: #FF5454; font-weight: bold;'>0.000 s</span></span>
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.25 MB</span> (just completed buildCallGraph())</span>
 <span style='color: #808080; font-weight: bold;'>cl/cl_easy.cc:67: debug: scanning CFG for loop-closing edges...</span>
 <span style='color: #808080; font-weight: bold;'>cl/loopscan.cc:161: debug: findLoopClosingEdges() took <span style='color: #FF5454; font-weight: bold;'>0.000 s</span></span>
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.25 MB</span> (just completed findLoopClosingEdges())</span>
 <span style='color: #808080; font-weight: bold;'>cl/cl_easy.cc:71: debug: killing local variables...</span>
 <span style='color: #808080; font-weight: bold;'>cl/killer.cc:438: debug: killLocalVariables() took <span style='color: #FF5454; font-weight: bold;'>0.000 s</span></span>
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.25 MB</span> (just completed killLocalVariables())</span>
 <span style='color: #808080; font-weight: bold;'>cl/cl_easy.cc:75: debug: ClEasy is calling the analyzer...</span>
 <span style='color: #808080; font-weight: bold;'>sl/cl_symexec.cc:82: debug: parseConfigString: error label is "ERROR"</span>
 <span style='color: #808080; font-weight: bold;'>sl/cl_symexec.cc:170: debug: looking for 'main()' at gl scope...</span>
 dll_simple.c:11:5: debug: creating fresh initial state for main()...
 dll_simple.c:11:5: debug: SymCallCache is looking for main()...
 dll_simple.c:11:5: debug: <span style='color: #5454FF; font-weight: bold;'>&gt;&gt;&gt;</span> entering main()
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.01 MB</span> (just completed SymExec::enterCall())</span>
 dll_simple.c:13:17: debug: ___ </span> entering L1, main(), 0 basic block(s) in the queue
 dll_simple.c:13:17: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#2239:head = NULL</span>
 dll_simple.c:14:17: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail = NULL</span>
-dll_simple.c:15:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#2</span> ... <span style='color: #54FF54; font-weight: bold;'>#2241:i = (int)0</span>
+dll_simple.c:15:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#2</span> ... <span style='color: #54FF54; font-weight: bold;'>#2241:i = (int)2</span>
 dll_simple.c:15:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#3</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L2</span>
 dll_simple.c:15:9: debug: +++ block L2 updated: 1 heaps pending, 1 heaps total
 dll_simple.c:15:9: debug: ___ completed batch for L1, main(), 1 basic block(s) in the queue
 dll_simple.c:17:11: debug: ___ </span> entering L2, main(), 0 basic block(s) in the queue
-dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)9)</span>
+dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)11)</span>
 dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048578) goto L3 else L7</span>
 dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
 dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 1 heaps total
 dll_simple.c:17:11: debug: ___ completed batch for L2, main(), 1 basic block(s) in the queue
 dll_simple.c:18:12: debug: ___ </span> entering L3, main(), 0 basic block(s) in the queue
 dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048577 = (#2239:head == NULL)</span>
-dll_simple.c:18:12: debug: SymExecEngine::pruneOrigin() cleared L3 (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>1</span>)
 dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048577) goto L4 else L5</span>
 dll_simple.c:18:12: debug: .T. CL_INSN_COND got VAL_TRUE
 dll_simple.c:18:12: debug: +++ block L4 updated: 1 heaps pending, 1 heaps total
@@ -111,18 +116,18 @@ dll_simple.c:34:9: debug: -L- traversing a loop-closing edge
 dll_simple.c:34:9: debug: +++ block L2 updated: 1 heaps pending, 2 heaps total
 dll_simple.c:34:9: debug: ___ completed batch for L6, main(), 1 basic block(s) in the queue
 dll_simple.c:17:11: debug: ___ </span> entering L2, main(), 0 basic block(s) in the queue
-dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)9)</span>
+dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)11)</span>
 dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048578) goto L3 else L7</span>
 dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>2</span>)
 dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 1 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#0</span> is equal to the given one, 1 heaps in total</span>
+dll_simple.c:17:11: debug: --- block L3 left intact
 dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>2</span>)
 dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 2 heaps pending, 2 heaps total
+dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 2 heaps total
 dll_simple.c:17:11: debug: ___ completed batch for L2, main(), 1 basic block(s) in the queue
 dll_simple.c:18:12: debug: ___ </span> entering L3, main(), 0 basic block(s) in the queue
 dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048577 = (#2239:head == NULL)</span>
-dll_simple.c:18:12: debug: SymExecEngine::pruneOrigin() cleared L3 (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>2</span>)
 dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048577) goto L4 else L5</span>
 dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>2</span>)
 dll_simple.c:18:12: debug: .T. CL_INSN_COND got VAL_TRUE
@@ -142,6 +147,8 @@ dll_simple.c:29:21: debug: !!! executing insn <span style='color: #FFFFFF; font-
 dll_simple.c:30:24: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#5</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail-&gt;next = #2242:p</span>
 dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#6</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail = #2242:p</span>
 dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#7</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L6</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
 dll_simple.c:31:18: debug: +++ block L6 updated: 1 heaps pending, 2 heaps total
 dll_simple.c:31:18: debug: ___ completed batch for L5, main(), 1 basic block(s) in the queue
 dll_simple.c:34:9: debug: ___ </span> entering L6, main(), 0 basic block(s) in the queue
@@ -150,27 +157,28 @@ dll_simple.c:34:9: debug: *** processing block L6, heap <span style='color: #FFF
 dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L2</span>
 dll_simple.c:34:9: debug: -L- traversing a loop-closing edge
 <span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
 <span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
 dll_simple.c:34:9: debug: +++ block L2 updated: 1 heaps pending, 3 heaps total
 dll_simple.c:34:9: debug: ___ completed batch for L6, main(), 1 basic block(s) in the queue
 dll_simple.c:17:11: debug: ___ </span> entering L2, main(), 0 basic block(s) in the queue
-dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)9)</span>
+dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)11)</span>
 dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048578) goto L3 else L7</span>
 dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>3</span>)
 dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 1 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#0</span> is equal to the given one, 2 heaps in total</span>
+dll_simple.c:17:11: debug: --- block L3 left intact
 dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>3</span>)
 dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 2 heaps pending, 2 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#1</span> is equal to the given one, 2 heaps in total</span>
+dll_simple.c:17:11: debug: --- block L3 left intact
 dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>3</span>)
 dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 3 heaps pending, 3 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
+dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 3 heaps total
 dll_simple.c:17:11: debug: ___ completed batch for L2, main(), 1 basic block(s) in the queue
 dll_simple.c:18:12: debug: ___ </span> entering L3, main(), 0 basic block(s) in the queue
 dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048577 = (#2239:head == NULL)</span>
-dll_simple.c:18:12: debug: SymExecEngine::pruneOrigin() cleared L3 (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>3</span>)
 dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048577) goto L4 else L5</span>
 dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>3</span>)
 dll_simple.c:18:12: debug: .T. CL_INSN_COND got VAL_TRUE
@@ -182,6 +190,8 @@ dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
 dll_simple.c:18:12: debug: --- block L5 left intact
 dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>3</span>)
 dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
 dll_simple.c:18:12: debug: +++ block L5 updated: 1 heaps pending, 2 heaps total
 dll_simple.c:18:12: debug: ___ completed batch for L3, main(), 1 basic block(s) in the queue
 dll_simple.c:26:25: debug: ___ </span> entering L5, main(), 0 basic block(s) in the queue
@@ -195,6 +205,13 @@ dll_simple.c:29:21: debug: !!! executing insn <span style='color: #FFFFFF; font-
 dll_simple.c:30:24: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#5</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail-&gt;next = #2242:p</span>
 dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#6</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail = #2242:p</span>
 dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#7</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L6</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 3 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:503: debug:     <span style='color: #FF5454; font-weight: bold;'>AAA</span> initiating DLS abstraction of length 2</span>
+<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3251: debug:     joinData() drops a sub-heap (ghost)</span>
+<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3251: debug:     joinData() drops a sub-heap (ghost)</span>
+<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:533: debug: &lt;-- successfully abstracted DLS</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
 dll_simple.c:31:18: debug: +++ block L6 updated: 1 heaps pending, 3 heaps total
 dll_simple.c:31:18: debug: ___ completed batch for L5, main(), 1 basic block(s) in the queue
 dll_simple.c:34:9: debug: ___ </span> entering L6, main(), 0 basic block(s) in the queue
@@ -202,33 +219,35 @@ dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-w
 dll_simple.c:34:9: debug: *** processing block L6, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>3</span>)
 dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L2</span>
 dll_simple.c:34:9: debug: -L- traversing a loop-closing edge
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 3 entry candidate(s) given</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
 <span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
 dll_simple.c:34:9: debug: +++ block L2 updated: 1 heaps pending, 4 heaps total
 dll_simple.c:34:9: debug: ___ completed batch for L6, main(), 1 basic block(s) in the queue
 dll_simple.c:17:11: debug: ___ </span> entering L2, main(), 0 basic block(s) in the queue
-dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)9)</span>
+dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)11)</span>
 dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048578) goto L3 else L7</span>
 dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 1 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#0</span> is equal to the given one, 3 heaps in total</span>
+dll_simple.c:17:11: debug: --- block L3 left intact
 dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 2 heaps pending, 2 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#1</span> is equal to the given one, 3 heaps in total</span>
+dll_simple.c:17:11: debug: --- block L3 left intact
 dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 3 heaps pending, 3 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#2</span> is equal to the given one, 3 heaps in total</span>
+dll_simple.c:17:11: debug: --- block L3 left intact
 dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 4 heaps pending, 4 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
+dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 4 heaps total
 dll_simple.c:17:11: debug: ___ completed batch for L2, main(), 1 basic block(s) in the queue
 dll_simple.c:18:12: debug: ___ </span> entering L3, main(), 0 basic block(s) in the queue
 dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048577 = (#2239:head == NULL)</span>
-dll_simple.c:18:12: debug: SymExecEngine::pruneOrigin() cleared L3 (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048577) goto L4 else L5</span>
 dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:18:12: debug: .T. CL_INSN_COND got VAL_TRUE
@@ -240,10 +259,14 @@ dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
 dll_simple.c:18:12: debug: --- block L5 left intact
 dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
 <span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#1</span> is equal to the given one, 2 heaps in total</span>
 dll_simple.c:18:12: debug: --- block L5 left intact
 dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
 dll_simple.c:18:12: debug: +++ block L5 updated: 1 heaps pending, 3 heaps total
 dll_simple.c:18:12: debug: ___ completed batch for L3, main(), 1 basic block(s) in the queue
 dll_simple.c:26:25: debug: ___ </span> entering L5, main(), 0 basic block(s) in the queue
@@ -252,163 +275,6 @@ dll_simple.c:26:25: debug: *** processing block L5, heap <span style='color: #FF
 dll_simple.c:26:25: debug: executing malloc(12)
 dll_simple.c:27:21: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p-&gt;data = #2241:i</span>
 dll_simple.c:28:27: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#2</span> ... <span style='color: #54FF54; font-weight: bold;'>#2251 = #2240:tail-&gt;next</span>
-dll_simple.c:28:21: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#3</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p-&gt;next = #2251</span>
-dll_simple.c:29:21: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#4</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p-&gt;prev = #2240:tail</span>
-dll_simple.c:30:24: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#5</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail-&gt;next = #2242:p</span>
-dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#6</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail = #2242:p</span>
-dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#7</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L6</span>
-dll_simple.c:31:18: debug: +++ block L6 updated: 1 heaps pending, 4 heaps total
-dll_simple.c:31:18: debug: ___ completed batch for L5, main(), 1 basic block(s) in the queue
-dll_simple.c:34:9: debug: ___ </span> entering L6, main(), 0 basic block(s) in the queue
-dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#2241:i = (#2241:i + (int)1)</span>
-dll_simple.c:34:9: debug: *** processing block L6, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
-dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L2</span>
-dll_simple.c:34:9: debug: -L- traversing a loop-closing edge
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 4 entry candidate(s) given</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
-dll_simple.c:34:9: debug: +++ block L2 updated: 1 heaps pending, 5 heaps total
-dll_simple.c:34:9: debug: ___ completed batch for L6, main(), 1 basic block(s) in the queue
-dll_simple.c:17:11: debug: ___ </span> entering L2, main(), 0 basic block(s) in the queue
-dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)9)</span>
-dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048578) goto L3 else L7</span>
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 1 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 2 heaps pending, 2 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 3 heaps pending, 3 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 4 heaps pending, 4 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#4</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 5 heaps pending, 5 heaps total
-dll_simple.c:17:11: debug: ___ completed batch for L2, main(), 1 basic block(s) in the queue
-dll_simple.c:18:12: debug: ___ </span> entering L3, main(), 0 basic block(s) in the queue
-dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048577 = (#2239:head == NULL)</span>
-dll_simple.c:18:12: debug: SymExecEngine::pruneOrigin() cleared L3 (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048577) goto L4 else L5</span>
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:18:12: debug: .T. CL_INSN_COND got VAL_TRUE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#0</span> is equal to the given one, 1 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L4 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#1</span> is equal to the given one, 3 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#2</span> is equal to the given one, 3 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#2</span> is equal to the given one, 3 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#4</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-dll_simple.c:18:12: debug: +++ block L5 updated: 1 heaps pending, 4 heaps total
-dll_simple.c:18:12: debug: ___ completed batch for L3, main(), 1 basic block(s) in the queue
-dll_simple.c:26:25: debug: ___ </span> entering L5, main(), 0 basic block(s) in the queue
-dll_simple.c:26:25: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p = malloc ((int)12U)</span>
-dll_simple.c:26:25: debug: *** processing block L5, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
-dll_simple.c:26:25: debug: executing malloc(12)
-dll_simple.c:27:21: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p-&gt;data = #2241:i</span>
-dll_simple.c:28:27: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#2</span> ... <span style='color: #54FF54; font-weight: bold;'>#2251 = #2240:tail-&gt;next</span>
-dll_simple.c:28:21: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#3</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p-&gt;next = #2251</span>
-dll_simple.c:29:21: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#4</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p-&gt;prev = #2240:tail</span>
-dll_simple.c:30:24: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#5</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail-&gt;next = #2242:p</span>
-dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#6</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail = #2242:p</span>
-dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#7</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L6</span>
-dll_simple.c:31:18: debug: +++ block L6 updated: 1 heaps pending, 5 heaps total
-dll_simple.c:31:18: debug: ___ completed batch for L5, main(), 1 basic block(s) in the queue
-dll_simple.c:34:9: debug: ___ </span> entering L6, main(), 0 basic block(s) in the queue
-dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#2241:i = (#2241:i + (int)1)</span>
-dll_simple.c:34:9: debug: *** processing block L6, heap <span style='color: #FFFFFF; font-weight: bold;'>#4</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L2</span>
-dll_simple.c:34:9: debug: -L- traversing a loop-closing edge
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 5 entry candidate(s) given</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:503: debug:     <span style='color: #FF5454; font-weight: bold;'>AAA</span> initiating DLS abstraction of length 2</span>
-<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3190: debug:     joinData() drops a sub-heap (ghost)</span>
-<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3190: debug:     joinData() drops a sub-heap (ghost)</span>
-<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:533: debug: &lt;-- successfully abstracted DLS</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 4 entry candidate(s) given</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
-dll_simple.c:34:9: debug: +++ block L2 updated: 1 heaps pending, 6 heaps total
-dll_simple.c:34:9: debug: ___ completed batch for L6, main(), 1 basic block(s) in the queue
-dll_simple.c:17:11: debug: ___ </span> entering L2, main(), 0 basic block(s) in the queue
-dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)9)</span>
-dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048578) goto L3 else L7</span>
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 1 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 2 heaps pending, 2 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 3 heaps pending, 3 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 4 heaps pending, 4 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#4</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 5 heaps pending, 5 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#5</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 6 heaps pending, 6 heaps total
-dll_simple.c:17:11: debug: ___ completed batch for L2, main(), 1 basic block(s) in the queue
-dll_simple.c:18:12: debug: ___ </span> entering L3, main(), 0 basic block(s) in the queue
-dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048577 = (#2239:head == NULL)</span>
-dll_simple.c:18:12: debug: SymExecEngine::pruneOrigin() cleared L3 (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048577) goto L4 else L5</span>
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:18:12: debug: .T. CL_INSN_COND got VAL_TRUE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#0</span> is equal to the given one, 1 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L4 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#2</span> is equal to the given one, 4 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#3</span> is equal to the given one, 4 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#3</span> is equal to the given one, 4 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#4</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#3</span> is equal to the given one, 4 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#5</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-dll_simple.c:18:12: debug: +++ block L5 updated: 1 heaps pending, 5 heaps total
-dll_simple.c:18:12: debug: ___ completed batch for L3, main(), 1 basic block(s) in the queue
-dll_simple.c:26:25: debug: ___ </span> entering L5, main(), 0 basic block(s) in the queue
-dll_simple.c:26:25: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p = malloc ((int)12U)</span>
-dll_simple.c:26:25: debug: *** processing block L5, heap <span style='color: #FFFFFF; font-weight: bold;'>#4</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
-dll_simple.c:26:25: debug: executing malloc(12)
-dll_simple.c:27:21: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p-&gt;data = #2241:i</span>
-dll_simple.c:28:27: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#2</span> ... <span style='color: #54FF54; font-weight: bold;'>#2251 = #2240:tail-&gt;next</span>
 <span style='color: #808080; font-weight: bold;'>sl/symheap.cc:1713: debug: SymHeapCore::objClone() is taking place...</span>
 <span style='color: #808080; font-weight: bold;'>sl/symheap.cc:3674: debug: SymHeap::<span style='color: #FFFF54; font-weight: bold;'>objSetConcrete</span>() is taking place...</span>
 dll_simple.c:28:21: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#3</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p-&gt;next = #2251</span>
@@ -416,95 +282,93 @@ dll_simple.c:29:21: debug: !!! executing insn <span style='color: #FFFFFF; font-
 dll_simple.c:30:24: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#5</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail-&gt;next = #2242:p</span>
 dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#6</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail = #2242:p</span>
 dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#7</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L6</span>
-dll_simple.c:31:18: debug: +++ block L6 updated: 1 heaps pending, 6 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 4 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:503: debug:     <span style='color: #FF5454; font-weight: bold;'>AAA</span> initiating DLS abstraction of length 2</span>
+<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3251: debug:     joinData() drops a sub-heap (ghost)</span>
+<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3251: debug:     joinData() drops a sub-heap (ghost)</span>
+<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:533: debug: &lt;-- successfully abstracted DLS</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:284: debug: <span style='color: #FF5454; font-weight: bold;'>&lt;J&gt;</span> three-way join with sh <span style='color: #FFFFFF; font-weight: bold;'>#2</span>, 3 heaps in total</span>
+dll_simple.c:31:18: debug: +++ block L6 updated: 1 heaps pending, 3 heaps total
 dll_simple.c:31:18: debug: ___ completed batch for L5, main(), 1 basic block(s) in the queue
 dll_simple.c:34:9: debug: ___ </span> entering L6, main(), 0 basic block(s) in the queue
 dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#2241:i = (#2241:i + (int)1)</span>
-dll_simple.c:34:9: debug: *** processing block L6, heap <span style='color: #FFFFFF; font-weight: bold;'>#5</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
+dll_simple.c:34:9: debug: *** processing block L6, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>3</span>)
 dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L2</span>
 dll_simple.c:34:9: debug: -L- traversing a loop-closing edge
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 6 entry candidate(s) given</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:503: debug:     <span style='color: #FF5454; font-weight: bold;'>AAA</span> initiating DLS abstraction of length 2</span>
-<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3190: debug:     joinData() drops a sub-heap (ghost)</span>
-<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3190: debug:     joinData() drops a sub-heap (ghost)</span>
-<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:533: debug: &lt;-- successfully abstracted DLS</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 4 entry candidate(s) given</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
 <span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:284: debug: <span style='color: #FF5454; font-weight: bold;'>&lt;J&gt;</span> three-way join with sh <span style='color: #FFFFFF; font-weight: bold;'>#5</span>, 6 heaps in total</span>
-dll_simple.c:34:9: debug: +++ block L2 updated: 1 heaps pending, 6 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:270: debug: <span style='color: #FF5454; font-weight: bold;'>&lt;J&gt;</span> replacing sh <span style='color: #FFFFFF; font-weight: bold;'>#3</span>, 4 heaps in total</span>
+dll_simple.c:34:9: debug: +++ block L2 updated: 1 heaps pending, 4 heaps total
 dll_simple.c:34:9: debug: ___ completed batch for L6, main(), 1 basic block(s) in the queue
 dll_simple.c:17:11: debug: ___ </span> entering L2, main(), 0 basic block(s) in the queue
-dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)9)</span>
+dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048578 = (#2241:i &lt;= (int)11)</span>
 dll_simple.c:17:11: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048578) goto L3 else L7</span>
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
+dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
+dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#0</span> is equal to the given one, 4 heaps in total</span>
+dll_simple.c:17:11: debug: --- block L3 left intact
+dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
+dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#1</span> is equal to the given one, 4 heaps in total</span>
+dll_simple.c:17:11: debug: --- block L3 left intact
+dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
+dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#2</span> is equal to the given one, 4 heaps in total</span>
+dll_simple.c:17:11: debug: --- block L3 left intact
+dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:17:11: debug: ?T? CL_INSN_COND updates TRUE branch
-<span style='color: #808080; font-weight: bold;'>sl/symproc.cc:1586: debug: trimRangesIfPossible() is taking place...</span>
-dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 1 heaps total
+<span style='color: #808080; font-weight: bold;'>sl/symproc.cc:1588: debug: trimRangesIfPossible() is taking place...</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:270: debug: <span style='color: #FF5454; font-weight: bold;'>&lt;J&gt;</span> replacing sh <span style='color: #FFFFFF; font-weight: bold;'>#3</span>, 4 heaps in total</span>
+dll_simple.c:17:11: debug: +++ block L3 updated: 1 heaps pending, 4 heaps total
 dll_simple.c:17:11: debug: ?F? CL_INSN_COND updates FALSE branch
-<span style='color: #808080; font-weight: bold;'>sl/symproc.cc:1586: debug: trimRangesIfPossible() is taking place...</span>
+<span style='color: #808080; font-weight: bold;'>sl/symproc.cc:1588: debug: trimRangesIfPossible() is taking place...</span>
 <span style='color: #808080; font-weight: bold;'>sl/symheap.cc:3695: debug: SymHeap::objInvalidate() destroys an abstract object</span>
 <span style='color: #808080; font-weight: bold;'>sl/symheap.cc:3695: debug: SymHeap::objInvalidate() destroys an abstract object</span>
 dll_simple.c:17:11: warning: <span style='color: #FFFF54; font-weight: bold;'>memory leak detected while destroying a variable on stack</span>
 dll_simple.c:17:11: debug: +++ block L7 updated: 1 heaps pending, 1 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:392: debug: &lt;Q&gt; prioritizing block L3, found in depth 2</span>
-dll_simple.c:17:11: debug: +++ block L3 updated: 2 heaps pending, 2 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 3 heaps pending, 3 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 4 heaps pending, 4 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#4</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 5 heaps pending, 5 heaps total
-dll_simple.c:17:11: debug: *** processing block L2, heap <span style='color: #FFFFFF; font-weight: bold;'>#5</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:17:11: debug: .T. CL_INSN_COND got VAL_TRUE
-dll_simple.c:17:11: debug: +++ block L3 updated: 6 heaps pending, 6 heaps total
 dll_simple.c:17:11: debug: ___ completed batch for L2, main(), 2 basic block(s) in the queue
-dll_simple.c:18:12: debug: ___ </span> entering L3, main(), 1 basic block(s) in the queue
+dll_simple.c:37:5: debug: ___ </span> entering L7, main(), 1 basic block(s) in the queue
+dll_simple.c:37:5: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#2252 = (int)0</span>
+dll_simple.c:37:5: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L8</span>
+dll_simple.c:37:5: debug: +++ block L8 updated: 1 heaps pending, 1 heaps total
+dll_simple.c:37:5: debug: ___ completed batch for L7, main(), 2 basic block(s) in the queue
+dll_simple.c:38:1: debug: ___ </span> entering L8, main(), 1 basic block(s) in the queue
+dll_simple.c:38:1: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>&lt;anon_label&gt;:</span>
+dll_simple.c:37:5: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>return #2252</span>
+dll_simple.c:37:5: debug: ___ completed batch for L8, main(), 1 basic block(s) in the queue
+dll_simple.c:18:12: debug: ___ </span> entering L3, main(), 0 basic block(s) in the queue
 dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#1048577 = (#2239:head == NULL)</span>
-dll_simple.c:18:12: debug: SymExecEngine::pruneOrigin() cleared L3 (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
 dll_simple.c:18:12: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>if (#1048577) goto L4 else L5</span>
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:270: debug: <span style='color: #FF5454; font-weight: bold;'>&lt;J&gt;</span> replacing sh <span style='color: #FFFFFF; font-weight: bold;'>#4</span>, 5 heaps in total</span>
-dll_simple.c:18:12: debug: +++ block L5 updated: 1 heaps pending, 5 heaps total
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
+dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:18:12: debug: .T. CL_INSN_COND got VAL_TRUE
 <span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#0</span> is equal to the given one, 1 heaps in total</span>
 dll_simple.c:18:12: debug: --- block L4 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
+dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#1</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#4</span> is equal to the given one, 5 heaps in total</span>
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#0</span> is equal to the given one, 3 heaps in total</span>
 dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
+dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#4</span> is equal to the given one, 5 heaps in total</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#1</span> is equal to the given one, 3 heaps in total</span>
 dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#4</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
+dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#3</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>4</span>)
 dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#4</span> is equal to the given one, 5 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: *** processing block L3, heap <span style='color: #FFFFFF; font-weight: bold;'>#5</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:18:12: debug: .F. CL_INSN_COND got VAL_FALSE
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:257: debug: &lt;I&gt; sh <span style='color: #FFFFFF; font-weight: bold;'>#4</span> is equal to the given one, 5 heaps in total</span>
-dll_simple.c:18:12: debug: --- block L5 left intact
-dll_simple.c:18:12: debug: ___ completed batch for L3, main(), 2 basic block(s) in the queue
-dll_simple.c:26:25: debug: ___ </span> entering L5, main(), 1 basic block(s) in the queue
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:270: debug: <span style='color: #FF5454; font-weight: bold;'>&lt;J&gt;</span> replacing sh <span style='color: #FFFFFF; font-weight: bold;'>#2</span>, 3 heaps in total</span>
+dll_simple.c:18:12: debug: +++ block L5 updated: 1 heaps pending, 3 heaps total
+dll_simple.c:18:12: debug: ___ completed batch for L3, main(), 1 basic block(s) in the queue
+dll_simple.c:26:25: debug: ___ </span> entering L5, main(), 0 basic block(s) in the queue
 dll_simple.c:26:25: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p = malloc ((int)12U)</span>
-dll_simple.c:26:25: debug: *** processing block L5, heap <span style='color: #FFFFFF; font-weight: bold;'>#4</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>5</span>)
+dll_simple.c:26:25: debug: *** processing block L5, heap <span style='color: #FFFFFF; font-weight: bold;'>#2</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>3</span>)
 dll_simple.c:26:25: debug: executing malloc(12)
 dll_simple.c:27:21: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>#2242:p-&gt;data = #2241:i</span>
 dll_simple.c:28:27: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#2</span> ... <span style='color: #54FF54; font-weight: bold;'>#2251 = #2240:tail-&gt;next</span>
@@ -515,48 +379,123 @@ dll_simple.c:29:21: debug: !!! executing insn <span style='color: #FFFFFF; font-
 dll_simple.c:30:24: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#5</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail-&gt;next = #2242:p</span>
 dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#6</span> ... <span style='color: #54FF54; font-weight: bold;'>#2240:tail = #2242:p</span>
 dll_simple.c:31:18: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#7</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L6</span>
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:270: debug: <span style='color: #FF5454; font-weight: bold;'>&lt;J&gt;</span> replacing sh <span style='color: #FFFFFF; font-weight: bold;'>#5</span>, 6 heaps in total</span>
-dll_simple.c:31:18: debug: +++ block L6 updated: 1 heaps pending, 6 heaps total
-dll_simple.c:31:18: debug: ___ completed batch for L5, main(), 2 basic block(s) in the queue
-dll_simple.c:34:9: debug: ___ </span> entering L6, main(), 1 basic block(s) in the queue
-dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#2241:i = (#2241:i + (int)1)</span>
-dll_simple.c:34:9: debug: *** processing block L6, heap <span style='color: #FFFFFF; font-weight: bold;'>#0</span> (initial size of state was <span style='color: #FFFFFF; font-weight: bold;'>6</span>)
-dll_simple.c:34:9: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L2</span>
-dll_simple.c:34:9: debug: -L- traversing a loop-closing edge
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 6 entry candidate(s) given</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:503: debug:     <span style='color: #FF5454; font-weight: bold;'>AAA</span> initiating DLS abstraction of length 2</span>
-<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3190: debug:     joinData() drops a sub-heap (ghost)</span>
-<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3190: debug:     joinData() drops a sub-heap (ghost)</span>
-<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:533: debug: &lt;-- successfully abstracted DLS</span>
 <span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 4 entry candidate(s) given</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
-<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:334: debug:     joinDataReadOnly() refuses to create a segment!</span>
+<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:503: debug:     <span style='color: #FF5454; font-weight: bold;'>AAA</span> initiating DLS abstraction of length 2</span>
+<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3251: debug:     joinData() drops a sub-heap (ghost)</span>
+<span style='color: #808080; font-weight: bold;'>sl/symjoin.cc:3251: debug:     joinData() drops a sub-heap (ghost)</span>
+<span style='color: #808080; font-weight: bold;'>sl/symabstract.cc:533: debug: &lt;-- successfully abstracted DLS</span>
+<span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:592: debug: --&gt; initiating segment discovery, 2 entry candidate(s) given</span>
 <span style='color: #808080; font-weight: bold;'>sl/symdiscover.cc:642: debug: &lt;-- no new segment found</span>
-<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:262: debug: <span style='color: #FF5454; font-weight: bold;'>&lt;J&gt;</span> sh <span style='color: #FFFFFF; font-weight: bold;'>#0</span> covers the given one, 6 heaps in total</span>
-dll_simple.c:34:9: debug: --- block L2 left intact
-dll_simple.c:34:9: debug: ___ completed batch for L6, main(), 1 basic block(s) in the queue
-dll_simple.c:37:5: debug: ___ </span> entering L7, main(), 0 basic block(s) in the queue
-dll_simple.c:37:5: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>#2252 = (int)0</span>
-dll_simple.c:37:5: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>goto L8</span>
-dll_simple.c:37:5: debug: +++ block L8 updated: 1 heaps pending, 1 heaps total
-dll_simple.c:37:5: debug: ___ completed batch for L7, main(), 1 basic block(s) in the queue
-dll_simple.c:38:1: debug: ___ </span> entering L8, main(), 0 basic block(s) in the queue
-dll_simple.c:38:1: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span> ... <span style='color: #54FF54; font-weight: bold;'>&lt;anon_label&gt;:</span>
-dll_simple.c:37:5: debug: !!! executing insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span> ... <span style='color: #54FF54; font-weight: bold;'>return #2252</span>
-dll_simple.c:37:5: debug: ___ completed batch for L8, main(), 0 basic block(s) in the queue
+<span style='color: #808080; font-weight: bold;'>sl/symstate.cc:262: debug: <span style='color: #FF5454; font-weight: bold;'>&lt;J&gt;</span> sh <span style='color: #FFFFFF; font-weight: bold;'>#2</span> covers the given one, 3 heaps in total</span>
+dll_simple.c:31:18: debug: --- block L6 left intact
+dll_simple.c:31:18: debug: ___ completed batch for L5, main(), 0 basic block(s) in the queue
 dll_simple.c:11:5: debug: <span style='color: #5454FF; font-weight: bold;'>&lt;&lt;&lt;</span> leaving main()
+dll_simple.c:17:11: note: <span style='color: #54FF54; font-weight: bold;'>block L2, insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span>: count of heaps is 4</span>
+dll_simple.c:17:11: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L2-insn-0-heap-0000.dot'...</span>
+dll_simple.c:17:11: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L2-insn-0-heap-0001.dot'...</span>
+dll_simple.c:17:11: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L2-insn-0-heap-0002.dot'...</span>
+dll_simple.c:17:11: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L2-insn-0-heap-0003.dot'...</span>
+dll_simple.c:17:11: note: <span style='color: #54FF54; font-weight: bold;'>block L2, insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span>: count of heaps is 4</span>
+dll_simple.c:17:11: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L2-insn-1-heap-0000.dot'...</span>
+dll_simple.c:17:11: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L2-insn-1-heap-0001.dot'...</span>
+dll_simple.c:17:11: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L2-insn-1-heap-0002.dot'...</span>
+dll_simple.c:17:11: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L2-insn-1-heap-0003.dot'...</span>
+dll_simple.c:18:12: note: <span style='color: #54FF54; font-weight: bold;'>block L3, insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span>: count of heaps is 4</span>
+dll_simple.c:18:12: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L3-insn-0-heap-0000.dot'...</span>
+dll_simple.c:18:12: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L3-insn-0-heap-0001.dot'...</span>
+dll_simple.c:18:12: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L3-insn-0-heap-0002.dot'...</span>
+dll_simple.c:18:12: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L3-insn-0-heap-0003.dot'...</span>
+dll_simple.c:18:12: note: <span style='color: #54FF54; font-weight: bold;'>block L3, insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span>: count of heaps is 4</span>
+dll_simple.c:18:12: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L3-insn-1-heap-0000.dot'...</span>
+dll_simple.c:18:12: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L3-insn-1-heap-0001.dot'...</span>
+dll_simple.c:18:12: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L3-insn-1-heap-0002.dot'...</span>
+dll_simple.c:18:12: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L3-insn-1-heap-0003.dot'...</span>
+dll_simple.c:19:18: note: <span style='color: #54FF54; font-weight: bold;'>block L4, insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span>: count of heaps is 1</span>
+dll_simple.c:19:18: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L4-insn-0-heap-0000.dot'...</span>
+dll_simple.c:19:18: debug: executing malloc(12)
+dll_simple.c:20:18: note: <span style='color: #54FF54; font-weight: bold;'>block L4, insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span>: count of heaps is 1</span>
+dll_simple.c:20:18: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L4-insn-1-heap-0000.dot'...</span>
+dll_simple.c:21:24: note: <span style='color: #54FF54; font-weight: bold;'>block L4, insn <span style='color: #FFFFFF; font-weight: bold;'>#2</span>: count of heaps is 1</span>
+dll_simple.c:21:24: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L4-insn-2-heap-0000.dot'...</span>
+dll_simple.c:22:24: note: <span style='color: #54FF54; font-weight: bold;'>block L4, insn <span style='color: #FFFFFF; font-weight: bold;'>#3</span>: count of heaps is 1</span>
+dll_simple.c:22:24: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L4-insn-3-heap-0000.dot'...</span>
+dll_simple.c:23:30: note: <span style='color: #54FF54; font-weight: bold;'>block L4, insn <span style='color: #FFFFFF; font-weight: bold;'>#4</span>: count of heaps is 1</span>
+dll_simple.c:23:30: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L4-insn-4-heap-0000.dot'...</span>
+dll_simple.c:23:24: note: <span style='color: #54FF54; font-weight: bold;'>block L4, insn <span style='color: #FFFFFF; font-weight: bold;'>#5</span>: count of heaps is 1</span>
+dll_simple.c:23:24: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L4-insn-5-heap-0000.dot'...</span>
+dll_simple.c:23:24: note: <span style='color: #54FF54; font-weight: bold;'>block L4, insn <span style='color: #FFFFFF; font-weight: bold;'>#6</span>: count of heaps is 1</span>
+dll_simple.c:23:24: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L4-insn-6-heap-0000.dot'...</span>
+dll_simple.c:26:25: note: <span style='color: #54FF54; font-weight: bold;'>block L5, insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span>: count of heaps is 3</span>
+dll_simple.c:26:25: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-0-heap-0000.dot'...</span>
+dll_simple.c:26:25: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-0-heap-0001.dot'...</span>
+dll_simple.c:26:25: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-0-heap-0002.dot'...</span>
+dll_simple.c:26:25: debug: executing malloc(12)
+dll_simple.c:26:25: debug: executing malloc(12)
+dll_simple.c:26:25: debug: executing malloc(12)
+dll_simple.c:27:21: note: <span style='color: #54FF54; font-weight: bold;'>block L5, insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span>: count of heaps is 3</span>
+dll_simple.c:27:21: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-1-heap-0000.dot'...</span>
+dll_simple.c:27:21: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-1-heap-0001.dot'...</span>
+dll_simple.c:27:21: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-1-heap-0002.dot'...</span>
+dll_simple.c:28:27: note: <span style='color: #54FF54; font-weight: bold;'>block L5, insn <span style='color: #FFFFFF; font-weight: bold;'>#2</span>: count of heaps is 3</span>
+dll_simple.c:28:27: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-2-heap-0000.dot'...</span>
+dll_simple.c:28:27: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-2-heap-0001.dot'...</span>
+dll_simple.c:28:27: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-2-heap-0002.dot'...</span>
+<span style='color: #808080; font-weight: bold;'>sl/symheap.cc:1713: debug: SymHeapCore::objClone() is taking place...</span>
+<span style='color: #808080; font-weight: bold;'>sl/symheap.cc:3674: debug: SymHeap::<span style='color: #FFFF54; font-weight: bold;'>objSetConcrete</span>() is taking place...</span>
+dll_simple.c:28:21: note: <span style='color: #54FF54; font-weight: bold;'>block L5, insn <span style='color: #FFFFFF; font-weight: bold;'>#3</span>: count of heaps is 3</span>
+dll_simple.c:28:21: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-3-heap-0000.dot'...</span>
+dll_simple.c:28:21: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-3-heap-0001.dot'...</span>
+dll_simple.c:28:21: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-3-heap-0002.dot'...</span>
+dll_simple.c:29:21: note: <span style='color: #54FF54; font-weight: bold;'>block L5, insn <span style='color: #FFFFFF; font-weight: bold;'>#4</span>: count of heaps is 3</span>
+dll_simple.c:29:21: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-4-heap-0000.dot'...</span>
+dll_simple.c:29:21: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-4-heap-0001.dot'...</span>
+dll_simple.c:29:21: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-4-heap-0002.dot'...</span>
+dll_simple.c:30:24: note: <span style='color: #54FF54; font-weight: bold;'>block L5, insn <span style='color: #FFFFFF; font-weight: bold;'>#5</span>: count of heaps is 3</span>
+dll_simple.c:30:24: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-5-heap-0000.dot'...</span>
+dll_simple.c:30:24: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-5-heap-0001.dot'...</span>
+dll_simple.c:30:24: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-5-heap-0002.dot'...</span>
+dll_simple.c:31:18: note: <span style='color: #54FF54; font-weight: bold;'>block L5, insn <span style='color: #FFFFFF; font-weight: bold;'>#6</span>: count of heaps is 3</span>
+dll_simple.c:31:18: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-6-heap-0000.dot'...</span>
+dll_simple.c:31:18: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-6-heap-0001.dot'...</span>
+dll_simple.c:31:18: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-6-heap-0002.dot'...</span>
+dll_simple.c:31:18: note: <span style='color: #54FF54; font-weight: bold;'>block L5, insn <span style='color: #FFFFFF; font-weight: bold;'>#7</span>: count of heaps is 3</span>
+dll_simple.c:31:18: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-7-heap-0000.dot'...</span>
+dll_simple.c:31:18: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-7-heap-0001.dot'...</span>
+dll_simple.c:31:18: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L5-insn-7-heap-0002.dot'...</span>
+dll_simple.c:13:17: note: <span style='color: #54FF54; font-weight: bold;'>block L1, insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span>: count of heaps is 1</span>
+dll_simple.c:13:17: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L1-insn-0-heap-0000.dot'...</span>
+dll_simple.c:14:17: note: <span style='color: #54FF54; font-weight: bold;'>block L1, insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span>: count of heaps is 1</span>
+dll_simple.c:14:17: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L1-insn-1-heap-0000.dot'...</span>
+dll_simple.c:15:9: note: <span style='color: #54FF54; font-weight: bold;'>block L1, insn <span style='color: #FFFFFF; font-weight: bold;'>#2</span>: count of heaps is 1</span>
+dll_simple.c:15:9: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L1-insn-2-heap-0000.dot'...</span>
+dll_simple.c:15:9: note: <span style='color: #54FF54; font-weight: bold;'>block L1, insn <span style='color: #FFFFFF; font-weight: bold;'>#3</span>: count of heaps is 1</span>
+dll_simple.c:15:9: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L1-insn-3-heap-0000.dot'...</span>
+dll_simple.c:34:9: note: <span style='color: #54FF54; font-weight: bold;'>block L6, insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span>: count of heaps is 3</span>
+dll_simple.c:34:9: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L6-insn-0-heap-0000.dot'...</span>
+dll_simple.c:34:9: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L6-insn-0-heap-0001.dot'...</span>
+dll_simple.c:34:9: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L6-insn-0-heap-0002.dot'...</span>
+dll_simple.c:34:9: note: <span style='color: #54FF54; font-weight: bold;'>block L6, insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span>: count of heaps is 3</span>
+dll_simple.c:34:9: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L6-insn-1-heap-0000.dot'...</span>
+dll_simple.c:34:9: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L6-insn-1-heap-0001.dot'...</span>
+dll_simple.c:34:9: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L6-insn-1-heap-0002.dot'...</span>
+dll_simple.c:37:5: note: <span style='color: #54FF54; font-weight: bold;'>block L7, insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span>: count of heaps is 1</span>
+dll_simple.c:37:5: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L7-insn-0-heap-0000.dot'...</span>
+dll_simple.c:37:5: note: <span style='color: #54FF54; font-weight: bold;'>block L7, insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span>: count of heaps is 1</span>
+dll_simple.c:37:5: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L7-insn-1-heap-0000.dot'...</span>
+dll_simple.c:38:1: note: <span style='color: #54FF54; font-weight: bold;'>block L8, insn <span style='color: #FFFFFF; font-weight: bold;'>#0</span>: count of heaps is 1</span>
+dll_simple.c:38:1: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L8-insn-0-heap-0000.dot'...</span>
+dll_simple.c:37:5: note: <span style='color: #54FF54; font-weight: bold;'>block L8, insn <span style='color: #FFFFFF; font-weight: bold;'>#1</span>: count of heaps is 1</span>
+dll_simple.c:37:5: note: <span style='color: #54FF54; font-weight: bold;'>writing heap graph to 'block-L8-insn-1-heap-0000.dot'...</span>
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.09 MB</span> (just completed SymExecEngine::run())</span>
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.03 MB</span> (just completed SymExecEngine::~SymExecEngine())</span>
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.02 MB</span> (just completed SymExec::~SymExec())</span>
 dll_simple.c:11:5: debug: (g) looking for gl junk...
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.01 MB</span> (just completed execFnc())</span>
 <span style='color: #808080; font-weight: bold;'>sl/symtrace.cc:312: debug: plotTraceCore() is traversing a trace graph...</span>
 <span style='color: #808080; font-weight: bold;'>sl/symtrace.cc:368: note: <span style='color: #54FF54; font-weight: bold;'>trace graph dumped to 'symtrace-0000.dot'</span></span>
-<span style='color: #808080; font-weight: bold;'>cl/cl_easy.cc:78: note: <span style='color: #54FF54; font-weight: bold;'>clEasyRun() took <span style='color: #FF5454; font-weight: bold;'>0.010 s</span></span></span>
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:117: debug: current memory usage:    <span style='color: #5454FF; font-weight: bold;'>0.01 MB</span> (just completed Trace::Globals::cleanup())</span>
+<span style='color: #808080; font-weight: bold;'>cl/memdebug.cc:132: note: <span style='color: #54FF54; font-weight: bold;'>peak memory usage: <span style='color: #FF5454; font-weight: bold;'>0.09 MB</span></span></span>
+<span style='color: #808080; font-weight: bold;'>cl/cl_easy.cc:78: note: <span style='color: #54FF54; font-weight: bold;'>clEasyRun() took <span style='color: #FF5454; font-weight: bold;'>0.120 s</span></span></span>
 </pre>
 </body>
 </html>

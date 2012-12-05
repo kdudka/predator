@@ -1,0 +1,58 @@
+digraph "block-L5-insn-0-heap-0001" {
+	label=<<FONT POINT-SIZE="18">block-L5-insn-0-heap-0001</FONT>>;
+	clusterrank=local;
+	labelloc=t;
+	"9" [shape=box, color=blue, fontcolor=blue, style=dotted, label="CL#2266:i [obj = #9] field#11 [size = 4B]"];
+subgraph "cluster1" {
+	rank=same;
+	label="";
+	color=black;
+	fontcolor=black;
+	bgcolor=gray98;
+	style=dashed;
+	penwidth=1.0;
+	"18" [shape=box, color=black, fontcolor=black, label="#18 [SC_ON_HEAP, size = 24 B]"];
+	"23" [shape=box, color=gray, fontcolor=gray, style=dotted, label=".data #23 [size = 4B]"];
+	"18" -> "23" [color=black, fontcolor=black, label="[+0]"];
+	"30" [shape=box, color=black, fontcolor=black, label=".next #30"];
+	"18" -> "30" [color=black, fontcolor=black, label="[+8]"];
+	"25" [shape=box, color=black, fontcolor=black, label=".prev #25"];
+	"18" -> "25" [color=black, fontcolor=black, label="[+16]"];
+}
+	"20" [shape=box, color=blue, fontcolor=blue, label="CL#2264:head [obj = #20] field#22"];
+subgraph "cluster2" {
+	rank=same;
+	label="";
+	color=black;
+	fontcolor=black;
+	bgcolor=gray98;
+	style=dashed;
+	penwidth=1.0;
+	"35" [shape=box, color=black, fontcolor=black, label="#35 [SC_ON_HEAP, size = 24 B]"];
+	"37" [shape=box, color=gray, fontcolor=gray, style=dotted, label=".data #37 [size = 4B]"];
+	"35" -> "37" [color=black, fontcolor=black, label="[+0]"];
+	"42" [shape=box, color=black, fontcolor=black, label=".next #42"];
+	"35" -> "42" [color=black, fontcolor=black, label="[+8]"];
+	"44" [shape=box, color=black, fontcolor=black, label=".prev #44"];
+	"35" -> "44" [color=black, fontcolor=black, label="[+16]"];
+}
+	"45" [shape=box, color=blue, fontcolor=blue, label="CL#2265:tail [obj = #45] field#47"];
+	"19" [shape=ellipse, penwidth=3, fontcolor=black, label="#19 [off = 0, obj = #18]"];
+	"19" -> "18" [color=black, fontcolor=black, label="[+0]"];
+	"36" [shape=ellipse, penwidth=3, fontcolor=black, label="#36 [off = 0, obj = #35]"];
+	"36" -> "35" [color=black, fontcolor=black, label="[+0]"];
+	"lonely3" [shape=plaintext, fontcolor=red, label="[int] 4 (#48)"];
+	"9" -> "lonely3" [color=blue, fontcolor=blue];
+	"lonely4" [shape=plaintext, fontcolor=red, label="[int] 2 (#12)"];
+	"23" -> "lonely4" [color=blue, fontcolor=blue];
+	"30" -> "36" [color=blue, fontcolor=blue];
+	"lonely5" [shape=plaintext, fontcolor=blue, label="NULL"];
+	"25" -> "lonely5" [color=blue, fontcolor=blue];
+	"20" -> "19" [color=blue, fontcolor=blue];
+	"lonely6" [shape=plaintext, fontcolor=red, label="[int] 3 (#31)"];
+	"37" -> "lonely6" [color=blue, fontcolor=blue];
+	"lonely7" [shape=plaintext, fontcolor=blue, label="NULL"];
+	"42" -> "lonely7" [color=blue, fontcolor=blue];
+	"44" -> "19" [color=blue, fontcolor=blue];
+	"45" -> "36" [color=blue, fontcolor=blue];
+}

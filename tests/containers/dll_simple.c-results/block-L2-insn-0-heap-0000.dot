@@ -1,0 +1,14 @@
+digraph "block-L2-insn-0-heap-0000" {
+	label=<<FONT POINT-SIZE="18">block-L2-insn-0-heap-0000</FONT>>;
+	clusterrank=local;
+	labelloc=t;
+	"3" [shape=box, color=blue, fontcolor=blue, label="CL#2264:head [obj = #3] field#5"];
+	"6" [shape=box, color=blue, fontcolor=blue, label="CL#2265:tail [obj = #6] field#8"];
+	"9" [shape=box, color=blue, fontcolor=blue, style=dotted, label="CL#2266:i [obj = #9] field#11 [size = 4B]"];
+	"lonely1" [shape=plaintext, fontcolor=blue, label="NULL"];
+	"3" -> "lonely1" [color=blue, fontcolor=blue];
+	"lonely2" [shape=plaintext, fontcolor=blue, label="NULL"];
+	"6" -> "lonely2" [color=blue, fontcolor=blue];
+	"lonely3" [shape=plaintext, fontcolor=red, label="[int] 2 (#12)"];
+	"9" -> "lonely3" [color=blue, fontcolor=blue];
+}
