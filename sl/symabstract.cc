@@ -667,13 +667,12 @@ void abstractIfNeeded(SymHeap &sh)
 
 void concretizeObj(
         SymHeap                     &sh,
-        const TValId                 addr,
+        const TObjId                 seg,
         TSymHeapList                &todo,
         TObjSet                     *leakObjs)
 {
     CL_BREAK_IF(!protoCheckConsistency(sh));
 
-    const TObjId seg = sh.objByAddr(addr);
     const TObjId peer = segPeer(sh, seg);
 
     // handle the possibly empty variant (if exists)

@@ -41,14 +41,14 @@ typedef std::list<SymHeap> TSymHeapList;
  * concretize the given @b abstract object.  If the result is non-deterministic,
  * more than one symbolic heap can be produced.
  * @param sh an instance of symbolic heap, used in read/write mode
- * @param addr address of the @b abstract heap object that should be concretized
+ * @param obj @b abstract heap object that should be concretized
  * @param dst a container for the results caused by non-deterministic decisions
  * @param leakObjs if not NULL, push all leaked root objects to the list
  * @note the first result is always stored into sh, the use of dst is optional
  */
 void concretizeObj(
         SymHeap                     &sh,
-        const TValId                 addr,
+        const TObjId                 obj,
         TSymHeapList                &dst,
         TObjSet                     *leakObjs = 0);
 

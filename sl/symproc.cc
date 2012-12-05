@@ -2456,33 +2456,40 @@ bool SymExecCore::concretizeLoop(
                 // literals cannot be abstract
                 continue;
 
-            const TObjId obj = slave.objByVar(op);
-            const TValId at = sh.addrOfTarget(obj, TS_REGION);
-            if (!canWriteDataPtrAt(sh, at))
+            // we expect a pointer at this point
+            const TObjId ptr = slave.objByVar(op);
+            CL_BREAK_IF(!sh.isValid(ptr));
+
+            // read the value inside the pointer
+            const TValId addr = valOfPtr(sh, ptr, /* off */ 0);
+            if (!canWriteDataPtrAt(sh, addr))
                 continue;
 
-            // we expect a pointer at this point
-            CL_BREAK_IF(sh.valOffset(at));
-            const TValId val = valOfPtr(sh, obj, /* off */ 0);
-            if (isAbstractValue(sh, val)) {
+            // resolve the target object of the address
+            const TObjId obj = sh.objByAddr(addr);
+            CL_BREAK_IF(!sh.isValid(obj));
+
+            // check whether the target is an abstract object
+            const EObjKind kind = sh.objKind(obj);
+            if (OK_REGION == kind)
+                continue;
 #ifndef NDEBUG
-                CL_BREAK_IF(hitLocal);
-                hitLocal = true;
-                hit = true;
+            CL_BREAK_IF(hitLocal);
+            hitLocal = true;
+            hit = true;
 #endif
-                LeakMonitor lm(sh);
-                lm.enter();
+            LeakMonitor lm(sh);
+            lm.enter();
 
-                TObjSet leakObjs;
-                concretizeObj(sh, val, todo, &leakObjs);
+            TObjSet leakObjs;
+            concretizeObj(sh, obj, todo, &leakObjs);
 
-                if (lm.importLeakObjs(&leakObjs)) {
-                    CL_WARN_MSG(lw_, "memory leak detected while unfolding");
-                    this->printBackTrace(ML_WARN);
-                }
-
-                lm.leave();
+            if (lm.importLeakObjs(&leakObjs)) {
+                CL_WARN_MSG(lw_, "memory leak detected while unfolding");
+                this->printBackTrace(ML_WARN);
             }
+
+            lm.leave();
         }
 
         // process the current heap and move to the next one (if any)
