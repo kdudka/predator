@@ -44,11 +44,25 @@ public:   // methods
 	/**
 	 * @brief  Test for spuriousness of a counterexample trace
 	 *
-	 * @param[in]  fwdTrace  The forward trace
+	 * Performs the backward run, trying to validate the spuriousness of the
+	 * forward trace @p fwdTrace, i.e. whether the trace really appears in the
+	 * real program (unabstracted).
+	 *
+	 * @param[in]  fwdTrace   The forward trace
+	 * @param[out] failPoint  The point in the forward trace where the backward
+	 *                        run failed (the intersection with the corresponding
+	 *                        state in @p fwdTrace was empty), for the case when
+	 *                        the forward trace is spurious.
+	 * @param[out] predicate  A forest automaton which was extracted as a good
+	 *                        predicate to be used in predicate abstraction, for
+	 *                        the case when the forward trace is spurious
 	 *
 	 * @returns  @p true if the counterexample is spurious, @p false if otherwise
 	 */
-	bool isSpuriousCE(SymState::Trace& fwdTrace);
+	bool isSpuriousCE(
+		const SymState::Trace&              fwdTrace,
+		const SymState*&                    failPoint,
+		std::shared_ptr<const FAE>&         predicate);
 };
 
 

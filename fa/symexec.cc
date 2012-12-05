@@ -299,11 +299,19 @@ protected:
 
 			FA_LOG("Executing backward run...");
 
+			// check whether the counterexample is spurious and in case it is collect
+			// some perhaps helpful information (failpoint and predicate)
 			BackwardRun bwdRun(execMan_);
 			SymState::Trace trace = e.state()->getTrace();
-			bool isSpurious = bwdRun.isSpuriousCE(trace);
+			const SymState* failPoint = nullptr;
+			std::shared_ptr<const FAE> predicate = nullptr;
+
+			bool isSpurious = bwdRun.isSpuriousCE(trace, failPoint, predicate);
 			if (isSpurious)
 			{
+				assert(nullptr != failPoint);
+				assert(nullptr != predicate);
+
 				FA_NOTE("The counterexample IS (PROBABLY) spurious");
 			}
 			else

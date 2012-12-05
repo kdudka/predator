@@ -23,10 +23,15 @@
 #include "streams.hh"
 
 
-bool BackwardRun::isSpuriousCE(SymState::Trace& fwdTrace)
+bool BackwardRun::isSpuriousCE(
+	const SymState::Trace&              fwdTrace,
+	const SymState*&                    failPoint,
+	std::shared_ptr<const FAE>&         predicate)
 {
 	// Assertions
 	assert(!fwdTrace.empty());
+	assert(nullptr == failPoint);
+	assert(nullptr == predicate);
 
 	// iterator from the leaf of the forward run
 	auto itFwdTrace = fwdTrace.cbegin();
@@ -65,6 +70,9 @@ bool BackwardRun::isSpuriousCE(SymState::Trace& fwdTrace)
 
 		if (resultState->GetFAE()->Empty())
 		{	// in case the intersection is empty - spurious counterexample
+			failPoint = fwdState;
+			predicate = bwdState->GetFAE();
+
 			return true;
 		}
 
