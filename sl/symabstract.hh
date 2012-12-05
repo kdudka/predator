@@ -55,8 +55,8 @@ void concretizeObj(
 /// splice out a possibly empty list segment
 void spliceOutListSegment(
         SymHeap                &sh,
-        const TValId            seg,
-        const TValId            peer,
+        const TObjId            seg,
+        const TObjId            peer,
         const TValId            valNext,
         TObjSet                *leakObjs);
 

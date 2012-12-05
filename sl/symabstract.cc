@@ -566,15 +566,14 @@ void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
 
 void spliceOutListSegment(
         SymHeap                &sh,
-        const TValId            segAt,
-        const TValId            peerAt,
+        const TObjId            seg,
+        const TObjId            peer,
         const TValId            valNext,
         TObjSet                *leakObjs)
 {
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
 
-    const TObjId seg = sh.objByAddr(segAt);
     const EObjKind kind = sh.objKind(seg);
 
     CL_BREAK_IF(objMinLength(sh, seg));
@@ -582,8 +581,6 @@ void spliceOutListSegment(
     TOffset offHead = 0;
     if (OK_OBJ_OR_NULL != kind)
         offHead = sh.segBinding(seg).head;
-
-    const TObjId peer = sh.objByAddr(peerAt);
 
     if (OK_DLS == kind) {
         // OK_DLS --> unlink peer
@@ -624,15 +621,15 @@ void spliceOutListSegment(
 void spliceOutSegmentIfNeeded(
         TMinLen                *pLen,
         SymHeap                &sh,
-        const TValId            seg,
-        const TValId            peer,
+        const TObjId            seg,
+        const TObjId            peer,
         TSymHeapList           &todo,
         TObjSet                *leakObjs)
 {
     if (!*pLen) {
         // possibly empty LS
         SymHeap sh0(sh);
-        const TValId valNext = nextValFromSeg(sh0, sh.objByAddr(peer));
+        const TValId valNext = nextValFromSeg(sh0, peer);
         spliceOutListSegment(sh0, seg, peer, valNext, leakObjs);
 
         // append a trace node for this operation
@@ -679,13 +676,9 @@ void concretizeObj(
     const TObjId seg = sh.objByAddr(addr);
     const TObjId peer = segPeer(sh, seg);
 
-    // TODO: drop this!
-    const TValId segAt = sh.addrOfTarget(seg, /* XXX */ TS_REGION);
-    const TValId peerAt = sh.addrOfTarget(peer, /* XXX */ TS_REGION);
-
     // handle the possibly empty variant (if exists)
     TMinLen len = sh.segMinLength(seg);
-    spliceOutSegmentIfNeeded(&len, sh, segAt, peerAt, todo, leakObjs);
+    spliceOutSegmentIfNeeded(&len, sh, seg, peer, todo, leakObjs);
 
     const EObjKind kind = sh.objKind(seg);
     sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
@@ -712,7 +705,7 @@ void concretizeObj(
     sh.objSetConcrete(seg);
 
     // update 'next' pointer
-    const PtrHandle nextPtr(sh, sh.valByOffset(segAt, offNext));
+    const PtrHandle nextPtr(sh, seg, offNext);
     const TValId dupHead = segHeadAt(sh, dup);
     nextPtr.setValue(dupHead);
 
@@ -723,7 +716,8 @@ void concretizeObj(
 
         // update 'prev' pointer going from the cloned object to the concrete
         const PtrHandle prev2(sh, dup, off.next);
-        const TValId headAddr = sh.valByOffset(segAt, off.head);
+        const TValId headAddr = sh.addrOfTarget(seg,
+                /* XXX */ TS_REGION, off.head);
         prev2.setValue(headAddr);
 
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
@@ -735,7 +729,9 @@ void concretizeObj(
     const TObjId nextNextObj = sh.objByAddr(nextNextVal);
     if (nextNextObj == dup)
         // FIXME: we should do this also the other way around for OK_DLS
-        nextNextPtr.setValue(sh.valByOffset(segAt, sh.valOffset(nextNextVal)));
+        nextNextPtr.setValue(sh.addrOfTarget(seg,
+                    /* XXX */ TS_REGION,
+                    sh.valOffset(nextNextVal)));
 
     sh.segSetMinLength(dup, len);
     sh.segSetMinLength(segPeer(sh, dup), len);
