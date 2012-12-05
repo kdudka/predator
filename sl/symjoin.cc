@@ -1961,9 +1961,16 @@ bool segmentCloneCore(
 
     const TObjId objGt = shGt.objByAddr(valGt);
     const TObjMap::const_iterator it = objMapGtLtr.find(objGt);
-    if (objMapGtLtr.end() != it && !hasKey(objMapLtRtl, it->second))
-        // mapping already available for objGt
-        return true;
+    if (objMapGtLtr.end() != it) {
+        const TObjId objDst = it->second;
+        if (OK_OBJ_OR_NULL == ctx.dst.objKind(objDst) && (ObjOrNull != *off))
+            // FIXME: we need to fix this in a more generic way
+            return false;
+
+        if (!hasKey(objMapLtRtl, objDst))
+            // mapping already available for objGt
+            return true;
+    }
 
     SJ_DEBUG("+i+ insertSegmentClone: cloning object #" << objGt <<
              ", action = " << action);
