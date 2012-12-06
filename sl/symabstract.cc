@@ -36,6 +36,7 @@
 #include "symtrace.hh"
 #include "util.hh"
 
+#include <algorithm>
 #include <iomanip>
 #include <set>
 #include <sstream>
@@ -127,7 +128,7 @@ void detachClonedPrototype(
     }
 
     redirectRefs(sh, ownerDst, proto, TS_INVALID, clone, TS_INVALID);
-    redirectRefs(sh, proto, ownerDst, TS_INVALID, ownerSrc, TS_INVALID);
+    redirectRefs(sh, clone, ownerSrc, TS_INVALID, ownerDst, TS_INVALID);
 
     if (isOwnerDls) {
         if (uplink)
@@ -145,8 +146,8 @@ void detachClonedPrototype(
         redirectRefs(sh, ownerDst, protoPeer, TS_INVALID,
                 clonePeer, TS_INVALID);
 
-        redirectRefs(sh, protoPeer, ownerDst, TS_INVALID,
-                ownerSrc, TS_INVALID);
+        redirectRefs(sh, clonePeer, ownerSrc, TS_INVALID,
+                ownerDst, TS_INVALID);
 
         if (isOwnerDls && uplink)
             redirectRefs(sh, clonePeer, ownerSrcPeer, TS_INVALID,
@@ -246,7 +247,7 @@ void dlSegSyncPeerData(SymHeap &sh, const TObjId dls)
     traverseLiveFields<2>(sh, objs, visitor);
 }
 
-// FIXME: the semantics of this function is quite contra-intuitive
+// clone a segment including its prototypes and decrement their nesting level
 TObjId segDeepCopy(SymHeap &sh, TObjId seg)
 {
     // collect the list of prototypes
@@ -260,7 +261,7 @@ TObjId segDeepCopy(SymHeap &sh, TObjId seg)
     duplicateUnknownValues(sh, dup);
 
     // clone all prototypes originally owned by seg
-    clonePrototypes(sh, seg, dup, protoList);
+    clonePrototypes(sh, dup, seg, protoList);
 
     return dup;
 }
@@ -665,6 +666,42 @@ void abstractIfNeeded(SymHeap &sh)
     }
 }
 
+void redirectRefsNotFrom(
+        SymHeap                &sh,
+        const TObjList         &pointingNotFrom,
+        const TObjId            pointingTo,
+        const TObjId            redirectTo)
+{
+    // go through all objects pointing at/inside pointingTo
+    FldList refs;
+    sh.pointedBy(refs, pointingTo);
+    BOOST_FOREACH(const FldHandle &fld, refs) {
+        const TObjId refObj = fld.obj();
+        if (pointingNotFrom.end() != std::find(
+                    pointingNotFrom.begin(),
+                    pointingNotFrom.end(),
+                    refObj))
+            continue;
+
+        // check the current link
+        const TValId nowAt = fld.value();
+
+        const ETargetSpecifier ts = sh.targetSpec(nowAt);
+        const TValId baseAddr = sh.addrOfTarget(redirectTo, ts);
+        TValId result;
+
+        // TODO
+        CL_BREAK_IF(VT_RANGE == sh.valTarget(nowAt));
+
+        // shift the base address by calar offset
+        const TOffset offToRoot = sh.valOffset(nowAt);
+        result = sh.valByOffset(baseAddr, offToRoot);
+
+        // store the redirected value
+        fld.setValue(result);
+    }
+}
+
 void concretizeObj(
         SymHeap                     &sh,
         const TObjId                 seg,
@@ -691,8 +728,18 @@ void concretizeObj(
         return;
     }
 
-    // duplicate self as abstract object (including all prototypes)
+    // duplicate seg (including all prototypes) and convert to OK_REGION
     const TObjId dup = segDeepCopy(sh, seg);
+    /* XXX */ TObjList ignoreList;
+    /* XXX */ collectPrototypesOf(ignoreList, sh, seg, /* skipPeers */ false);
+    /* XXX */ collectPrototypesOf(ignoreList, sh, dup, /* skipPeers */ false);
+    sh.objSetConcrete(dup);
+
+    // unless we use TS_FIRST/TS_LAST properly, we cannot use redirectRefs()
+    /* XXX */ ignoreList.push_back(seg);
+    /* XXX */ ignoreList.push_back(dup);
+    /* XXX */ ignoreList.push_back(peer);
+    redirectRefsNotFrom(sh, ignoreList, seg, dup);
 
     // resolve the relative placement of the 'next' pointer
     const BindingOff off = sh.segBinding(seg);
@@ -700,40 +747,33 @@ void concretizeObj(
         ? off.next
         : off.prev;
 
-    // concretize self
-    sh.objSetConcrete(seg);
-
     // update 'next' pointer
-    const PtrHandle nextPtr(sh, seg, offNext);
-    const TValId dupHead = segHeadAt(sh, dup);
-    nextPtr.setValue(dupHead);
+    const PtrHandle nextPtr(sh, dup, offNext);
+    const TValId segHead = segHeadAt(sh, seg);
+    nextPtr.setValue(segHead);
 
     if (OK_DLS == kind) {
-        // update 'prev' pointer going from peer to the cloned object
-        const PtrHandle prev1 = prevPtrFromSeg(sh, peer);
-        prev1.setValue(dupHead);
-
-        // update 'prev' pointer going from the cloned object to the concrete
-        const PtrHandle prev2(sh, dup, off.next);
-        const TValId headAddr = sh.addrOfTarget(seg,
+        // redirect 'prev' pointer from seg to the cloned (concrete) object
+        const PtrHandle prev = nextPtrFromSeg(sh, seg);
+        const TValId headAddr = sh.addrOfTarget(dup,
                 /* XXX */ TS_REGION, off.head);
-        prev2.setValue(headAddr);
+        prev.setValue(headAddr);
 
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
     // if there was a self loop from 'next' to the segment itself, recover it
-    const PtrHandle nextNextPtr = nextPtrFromSeg(sh, dup);
+    const PtrHandle nextNextPtr = nextPtrFromSeg(sh, peer);
     const TValId nextNextVal = nextNextPtr.value();
     const TObjId nextNextObj = sh.objByAddr(nextNextVal);
-    if (nextNextObj == dup)
+    if (nextNextObj == seg)
         // FIXME: we should do this also the other way around for OK_DLS
-        nextNextPtr.setValue(sh.addrOfTarget(seg,
+        nextNextPtr.setValue(sh.addrOfTarget(dup,
                     /* XXX */ TS_REGION,
                     sh.valOffset(nextNextVal)));
 
-    sh.segSetMinLength(dup, len);
-    sh.segSetMinLength(segPeer(sh, dup), len);
+    sh.segSetMinLength(seg,  len);
+    sh.segSetMinLength(peer, len);
 
     LDP_PLOT(symabstract, sh);
 
