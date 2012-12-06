@@ -127,13 +127,13 @@ void detachClonedPrototype(
         CL_BREAK_IF(uplink && (ownerDstPeer != ownerSrcPeer));
     }
 
-    redirectRefs(sh, ownerDst, proto, TS_INVALID, clone, TS_INVALID);
-    redirectRefs(sh, clone, ownerSrc, TS_INVALID, ownerDst, TS_INVALID);
+    redirectRefs(sh, ownerDst, proto, TS_INVALID, clone,    TS_REGION);
+    redirectRefs(sh, clone, ownerSrc, TS_INVALID, ownerDst, TS_REGION);
 
     if (isOwnerDls) {
         if (uplink)
             redirectRefs(sh, clone, ownerSrcPeer, TS_INVALID,
-                    ownerDst, TS_INVALID);
+                    ownerDst, TS_REGION);
         else
             redirectRefs(sh, ownerDstPeer, proto, TS_INVALID,
                     clone, TS_INVALID);
@@ -144,14 +144,14 @@ void detachClonedPrototype(
         const TObjId clonePeer = dlSegPeer(sh, clone);
 
         redirectRefs(sh, ownerDst, protoPeer, TS_INVALID,
-                clonePeer, TS_INVALID);
+                clonePeer, TS_REGION);
 
         redirectRefs(sh, clonePeer, ownerSrc, TS_INVALID,
-                ownerDst, TS_INVALID);
+                ownerDst, TS_REGION);
 
         if (isOwnerDls && uplink)
             redirectRefs(sh, clonePeer, ownerSrcPeer, TS_INVALID,
-                    ownerDst, TS_INVALID);
+                    ownerDst, TS_REGION);
     }
 }
 

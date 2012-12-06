@@ -415,7 +415,7 @@ inline TObjId objClone(SymHeap &sh, const TObjId obj)
             /* pointingTo    */ obj,
             /* pointingWith  */ TS_INVALID,
             /* redirectTo    */ dup,
-            /* redirectWith  */ TS_INVALID);
+            /* redirectWith  */ /* XXX */ TS_REGION);
 
     return dup;
 }

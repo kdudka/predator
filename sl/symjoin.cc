@@ -471,6 +471,10 @@ bool joinTargetSpec(
     ETargetSpecifier tsDst = TS_INVALID;
     if (ts1 == ts2)
         tsDst = ts1 /* = ts2 */;
+    else if (TS_INVALID == ts1)
+        tsDst = ts2;
+    else if (TS_INVALID == ts2)
+        tsDst = ts1;
     else if (TS_REGION == ts1)
         tsDst = ts2;
     else if (TS_REGION == ts2)
@@ -2283,9 +2287,6 @@ done:
     const TOffset off1 = ctx.sh1.valOffset(v1);
     const TOffset off2 = ctx.sh2.valOffset(v2);
 
-    const ETargetSpecifier ts1 = ctx.sh1.targetSpec(v1);
-    const ETargetSpecifier ts2 = ctx.sh2.targetSpec(v2);
-
     TObjId objDst;
     TOffset offDst;
     ETargetSpecifier tsDst;
@@ -2294,19 +2295,21 @@ done:
         case JS_USE_ANY:
             CL_BREAK_IF(objDstBy1 != objDstBy2);
             CL_BREAK_IF(off1 != off2);
-            CL_BREAK_IF(ts1 != ts2);
-            // fall through!
+            objDst = objDstBy1 /* = objDstBy2 */;
+            offDst = off1      /* = off2 */;
+            if (!joinTargetSpec(&tsDst, ctx, v1, v2))
+                return false;
 
         case JS_USE_SH1:
             objDst = objDstBy1;
             offDst = off1;
-            tsDst = ts1;
+            tsDst = ctx.sh1.targetSpec(v1);
             break;
 
         case JS_USE_SH2:
             objDst = objDstBy2;
             offDst = off2;
-            tsDst = ts2;
+            tsDst = ctx.sh2.targetSpec(v2);
             break;
 
         default:
@@ -2329,8 +2332,8 @@ bool offRangeFallback(
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
 
-    const ETargetSpecifier ts = ctx.sh1.targetSpec(v1);
-    if (ts != ctx.sh2.targetSpec(v2))
+    ETargetSpecifier ts;
+    if (!joinTargetSpec(&ts, ctx, v1, v2))
         // target specifier mismatch
         return false;
 
@@ -3113,7 +3116,7 @@ void recoverPointersToSelf(
             /* pointingTo   */  ghost,
             /* pointingWith */  TS_INVALID,
             /* redirectTo   */  dst,
-            /* redirectWith */  TS_INVALID);
+            /* redirectWith */  /* XXX */ TS_ALL);
 
     if (!bidir)
         return;
@@ -3123,7 +3126,7 @@ void recoverPointersToSelf(
             /* pointingTo   */  ghost,
             /* pointingWith */  TS_INVALID,
             /* redirectTo   */  src,
-            /* redirectWith */  TS_INVALID);
+            /* redirectWith */  /* XXX */ TS_ALL);
 }
 
 void recoverPrototypes(
@@ -3142,7 +3145,7 @@ void recoverPrototypes(
                 /* pointingTo   */  ghost,
                 /* pointingWith */  TS_INVALID,
                 /* redirectTo   */  dst,
-                /* redirectWith */  TS_INVALID);
+                /* redirectWith */  TS_ALL);
     }
 }
 
