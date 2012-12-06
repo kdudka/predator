@@ -523,10 +523,12 @@ bool applyAbstraction(
             return false;
         }
 
-        Trace::Node *trAbs = new Trace::AbstractionNode(sh.traceNode(), kind);
-        sh.traceUpdate(trAbs);
+        std::string pName;
+        LDP_PLOTN(symabstract, sh, &pName);
 
-        LDP_PLOT(symabstract, sh);
+        Trace::Node *trAbs =
+            new Trace::AbstractionNode(sh.traceNode(), kind, pName);
+        sh.traceUpdate(trAbs);
 
         CL_BREAK_IF(!protoCheckConsistency(sh));
     }
@@ -642,9 +644,6 @@ void spliceOutSegmentIfNeeded(
     else
         // we are going to detach one node
         --(*pLen);
-
-    LDP_INIT(symabstract, "concretizeObj");
-    LDP_PLOT(symabstract, sh);
 }
 
 void abstractIfNeeded(SymHeap &sh)
@@ -716,8 +715,12 @@ void concretizeObj(
     TMinLen len = sh.segMinLength(seg);
     spliceOutSegmentIfNeeded(&len, sh, seg, peer, todo, leakObjs);
 
+    std::string pName;
+    LDP_INIT(symabstract, "concretizeObj");
+    LDP_PLOTN(symabstract, sh, &pName);
+
     const EObjKind kind = sh.objKind(seg);
-    sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind));
+    sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind, pName));
 
     if (isMayExistObj(kind)) {
         // these kinds are much easier than regular list segments

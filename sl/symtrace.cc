@@ -183,7 +183,8 @@ void AbstractionNode::plotNode(TracePlotter &tplot) const
 
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=ellipse, color=red, fontcolor=red, label="
-        << SL_QUOTE(label) << "];\n";
+        << SL_QUOTE(label) << ", tooltip="
+        << SL_QUOTE(name_) << "];\n";
 }
 
 void ConcretizationNode::plotNode(TracePlotter &tplot) const
@@ -191,7 +192,8 @@ void ConcretizationNode::plotNode(TracePlotter &tplot) const
     // TODO: kind_
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=ellipse, color=red, fontcolor=blue, label="
-        << SL_QUOTE("concretizeObj()") << "];\n";
+        << SL_QUOTE("concretizeObj()") << ", tooltip="
+        << SL_QUOTE(name_) << "];\n";
 }
 
 void SpliceOutNode::plotNode(TracePlotter &tplot) const

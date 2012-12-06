@@ -47,7 +47,7 @@
         ::__ldp_plot_name_##name = plot_name;                                  \
     }                                                                          \
                                                                                \
-    void __ldp_plot_##name(const SymHeap &sh) {                                \
+    void __ldp_plot_##name(const SymHeap &sh, std::string *pName = 0) {        \
         if (!::__ldp_enabled_##name)                                           \
             return;                                                            \
                                                                                \
@@ -59,11 +59,12 @@
             << "-" << std::setfill('0') << std::setw(4)                        \
             << (::__ldp_cnt_steps_##name++);                                   \
                                                                                \
-       plotHeap(sh, str.str().c_str());                                        \
+       plotHeap(sh, str.str().c_str(), /* loc */ 0, pName);                    \
     }                                                                          \
 
 #define LDP_INIT(plotter, plot_name) __ldp_init_##plotter(plot_name)
 #define LDP_PLOT(plotter, sh)        __ldp_plot_##plotter(sh)
+#define LDP_PLOTN(plotter, sh, pName)__ldp_plot_##plotter(sh, pName)
 #define LDP_ENABLE(plotter)          __ldp_enable_##plotter()
 #define LDP_DISABLE(plotter)         __ldp_disable_##plotter()
 

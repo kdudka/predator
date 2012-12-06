@@ -1267,11 +1267,16 @@ bool plotHeapCore(
         const std::string               &name,
         const struct cl_loc             *loc,
         const TObjSet                   &objs,
-        const TValSet                   &vals)
+        const TValSet                   &vals,
+        std::string                     *pName = 0)
 {
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string plotName(pe->decorate(name));
     std::string fileName(plotName + ".dot");
+
+    if (pName)
+        // propagate the resulting name back to the caller
+        *pName = plotName;
 
     // create a dot file
     std::fstream out(fileName.c_str(), std::ios::out);
@@ -1329,7 +1334,8 @@ bool plotHeap(
 bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
-        const struct cl_loc             *loc)
+        const struct cl_loc             *loc,
+        std::string                     *pName)
 {
     HeapCrawler crawler(sh);
 
@@ -1338,7 +1344,7 @@ bool plotHeap(
     BOOST_FOREACH(const TObjId obj, allObjs)
         crawler.digObj(obj);
 
-    return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals());
+    return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals(), pName);
 }
 
 bool plotHeap(
