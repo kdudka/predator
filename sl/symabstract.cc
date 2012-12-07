@@ -298,7 +298,7 @@ void slSegAbstractionStep(
     // replace all references to 'head'
     const TOffset offHead = sh.segBinding(next).head;
     const TValId headAt = sh.addrOfTarget(obj, /* XXX */ TS_REGION, offHead);
-    sh.valReplace(headAt, segHeadAt(sh, next));
+    sh.valReplace(headAt, segHeadAt(sh, next, /* XXX */ TS_REGION));
 
     // destroy self, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, obj, slSegAbstractionStep);
@@ -357,7 +357,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId reg, bool backward)
 
     // replace VAR by DLS
     const TValId headAt = sh.addrOfTarget(reg, /* XXX */ TS_REGION, off.head);
-    sh.valReplace(headAt, segHeadAt(sh, dls));
+    sh.valReplace(headAt, segHeadAt(sh, dls, /* XXX */ TS_REGION));
     REQUIRE_GC_ACTIVITY(sh, reg, dlSegGobble);
 
     // handle DLS Neq predicates
@@ -375,9 +375,6 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
     const TObjId peer1 = dlSegPeer(sh, seg1);
     const TObjId peer2 = dlSegPeer(sh, seg2);
 
-    // check for a failure of segDiscover()
-    CL_BREAK_IF(nextValFromSeg(sh, peer1) != segHeadAt(sh, seg2));
-
     // merge data
     const BindingOff &bf2 = sh.segBinding(seg2);
     joinData(sh, bf2, seg2, seg1, /* bidir */ true);
@@ -388,11 +385,11 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
     ptrNext2.setValue(valNext1);
 
     // replace both parts point-wise
-    const TValId headAt = segHeadAt(sh,  seg1);
-    const TValId peerAt = segHeadAt(sh, peer1);
+    const TValId headAt = segHeadAt(sh,  seg1, /* XXX */ TS_REGION);
+    const TValId peerAt = segHeadAt(sh, peer1, /* XXX */ TS_REGION);
 
-    sh.valReplace(headAt, segHeadAt(sh,  seg2));
-    sh.valReplace(peerAt, segHeadAt(sh, peer2));
+    sh.valReplace(headAt, segHeadAt(sh,  seg2, /* XXX */ TS_REGION));
+    sh.valReplace(peerAt, segHeadAt(sh, peer2, /* XXX */ TS_REGION));
 
     // destroy headAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
@@ -752,7 +749,7 @@ void concretizeObj(
 
     // update 'next' pointer
     const PtrHandle nextPtr(sh, dup, offNext);
-    const TValId segHead = segHeadAt(sh, seg);
+    const TValId segHead = segHeadAt(sh, seg, /* XXX */ TS_REGION);
     nextPtr.setValue(segHead);
 
     if (OK_DLS == kind) {

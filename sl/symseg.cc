@@ -142,7 +142,8 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
         return false;
 
     // compare the end-points
-    return (segHeadAt(sh, peer) == peerAddr);
+    SymHeap &shWritable = const_cast<SymHeap &>(sh);
+    return (segHeadAt(shWritable, peer, /* XXX */ TS_REGION) == peerAddr);
 }
 
 bool haveSegBidir(
@@ -230,8 +231,8 @@ TObjId segClone(SymHeap &sh, const TObjId obj)
         const PtrHandle ppPeer(sh, dupPeer, offpPeer);
 
         // now cross the 'peer' pointers
-        ppSeg .setValue(segHeadAt(sh, dupPeer));
-        ppPeer.setValue(segHeadAt(sh, dup));
+        ppSeg .setValue(segHeadAt(sh, dupPeer, /* XXX */ TS_REGION));
+        ppPeer.setValue(segHeadAt(sh, dup,     /* XXX */ TS_REGION));
     }
 
     return dup;

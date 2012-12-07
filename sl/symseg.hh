@@ -111,14 +111,14 @@ inline TOffset headOffset(const SymHeap &sh, const TObjId seg)
 }
 
 /// return address of segment's head (useful mainly for Linux lists)
-inline TValId segHeadAt(const SymHeap &sh, TObjId seg)
+inline TValId segHeadAt(SymHeap &sh, TObjId seg, ETargetSpecifier ts)
 {
     CL_BREAK_IF(OK_REGION == sh.objKind(seg));
 
     const BindingOff &off = sh.segBinding(seg);
 
     SymHeap &shWritable = const_cast<SymHeap &>(sh);
-    return shWritable.addrOfTarget(seg, /* XXX */ TS_REGION, off.head);
+    return shWritable.addrOfTarget(seg, ts, off.head);
 }
 
 /// we do NOT require obj to be an abstract object

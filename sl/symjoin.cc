@@ -1825,8 +1825,8 @@ void dlSegRecover(SymHeap &sh, const TObjId obj1, const TObjId obj2)
     const FldHandle ptr1 = prevPtrFromSeg(sh, obj1);
     const FldHandle ptr2 = prevPtrFromSeg(sh, obj2);
 
-    const TValId addr1 = segHeadAt(sh, obj1);
-    const TValId addr2 = segHeadAt(sh, obj2);
+    const TValId addr1 = segHeadAt(sh, obj1, /* XXX */ TS_REGION);
+    const TValId addr2 = segHeadAt(sh, obj2, /* XXX */ TS_REGION);
 
     ptr1.setValue(addr2);
     ptr2.setValue(addr1);
@@ -2299,6 +2299,7 @@ done:
             offDst = off1      /* = off2 */;
             if (!joinTargetSpec(&tsDst, ctx, v1, v2))
                 return false;
+            break;
 
         case JS_USE_SH1:
             objDst = objDstBy1;
@@ -2442,7 +2443,8 @@ class MayExistVisitor {
                 if (!lookThrough_ || !isAbstractValue(sh, val))
                     return /* continue */ true;
 
-                if (sh.segMinLength(seg) || segHeadAt(sh, seg) != val)
+                if (sh.segMinLength(seg)
+                        || segHeadAt(sh, seg, /* XXX */ TS_REGION) != val)
                     return /* continue */ true;
 
                 if (OK_DLS == sh.objKind(seg))
