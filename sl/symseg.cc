@@ -80,10 +80,12 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
         // both targets are possibly empty, giving up
         return false;
 
-    if (!isAbstractValue(sh, ref))
+    const EObjKind kind1 = sh.objKind(obj1);
+    if (OK_REGION == kind1)
         // non-empty abstract object vs. concrete object
         return true;
 
+    // FIXME: this needs to be rewritten once we unimplement DLS peers
     if (obj2 != segPeer(sh, obj1))
         // a pair of non-empty abstract objects
         return true;
@@ -99,25 +101,13 @@ bool haveSeg(
         const TValId                 pointingTo,
         const EObjKind               kind)
 {
-    if (!isAbstractValue(sh, atAddr))
-        // not an abstract object
-        return false;
-
-    TObjId seg = sh.objByAddr(atAddr);
+    const TObjId seg = sh.objByAddr(atAddr);
     if (kind != sh.objKind(seg))
         // kind mismatch
         return false;
 
-    if (OK_DLS == kind) {
-        seg = dlSegPeer(sh, seg);
-        if (OK_DLS != sh.objKind(seg))
-            // invalid peer
-            return false;
-    }
-
     // compare the end-points
-    SymHeap &writable = const_cast<SymHeap &>(sh);
-    const TValId valNext = nextValFromSeg(writable, seg);
+    const TValId valNext = nextValFromSegAddr(sh, atAddr);
     return (valNext == pointingTo);
 }
 
@@ -132,6 +122,7 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
         // not a DLS
         return false;
 
+    // FIXME: this needs to be rewritten once we unimplement DLS peers
     const TObjId peer = dlSegPeer(sh, seg);
     if (OK_DLS != sh.objKind(peer))
         // invalid peer

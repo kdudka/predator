@@ -2412,7 +2412,7 @@ class MayExistVisitor {
             TValId val = fld.value();
 
             for (;;) {
-                TObjId seg = sh.objByAddr(val);
+                const TObjId seg = sh.objByAddr(val);
                 if (seg == obj_)
                     // refuse referencing the MayExist candidate itself
                     return /* continue */ true;
@@ -2435,10 +2435,7 @@ class MayExistVisitor {
                 if (sh.segMinLength(seg) || off != headOffset(sh, seg))
                     return /* continue */ true;
 
-                if (OK_DLS == sh.objKind(seg))
-                    seg = dlSegPeer(sh, seg);
-
-                val = nextValFromSeg(sh, seg);
+                val = nextValFromSegAddr(sh, val);
             }
 
             foundOffsets_.push_back(fld.offset());
