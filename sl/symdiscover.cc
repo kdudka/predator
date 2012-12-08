@@ -489,6 +489,7 @@ class PtrFinder {
 };
 
 bool digBackLink(
+        bool                       *pSkip,
         BindingOff                 *pOff,
         SymHeap                    &sh,
         const TObjId                obj,
@@ -503,6 +504,9 @@ bool digBackLink(
 
     // got a back-link!
     pOff->prev = visitor.offFound();
+
+    // we require offNext < offPrev (symmetry breaking rule)
+    *pSkip = (pOff->next < pOff->prev);
     return true;
 }
 
@@ -538,7 +542,10 @@ class ProbeEntryVisitor {
             off.next = fld.offset();
             off.prev = off.next;
 #if !SE_DISABLE_DLS
-            digBackLink(&off, sh, obj_, nextObj);
+            bool skip;
+            if (digBackLink(&skip, &off, sh, obj_, nextObj) && skip)
+                // looks like an oppositely oriented OK_DLS, keep going
+                return /* continue */ true;
 #endif
 
 #if SE_DISABLE_SLS
