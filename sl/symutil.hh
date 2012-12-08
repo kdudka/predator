@@ -404,6 +404,13 @@ bool redirectRefs(
         const ETargetSpecifier  redirectWith,
         const TOffset           offHead = 0);
 
+void redirectRefsNotFrom(
+        SymHeap                &sh,
+        const TObjList         &pointingNotFrom,
+        const TObjId            pointingTo,
+        const TObjId            redirectTo,
+        const ETargetSpecifier  redirectWith);
+
 inline TObjId objClone(SymHeap &sh, const TObjId obj)
 {
     const TObjId dup = sh.objClone(obj);

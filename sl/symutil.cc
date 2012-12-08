@@ -29,6 +29,8 @@
 #include "symstate.hh"
 #include "util.hh"
 
+#include <algorithm>                /* for std::find() */
+
 #include <boost/foreach.hpp>
 
 bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val)
@@ -406,6 +408,39 @@ bool /* anyChange */ redirectRefs(
     return anyChange;
 }
 
+void redirectRefsNotFrom(
+        SymHeap                &sh,
+        const TObjList         &pointingNotFrom,
+        const TObjId            pointingTo,
+        const TObjId            redirectTo,
+        const ETargetSpecifier  redirectWith)
+{
+    // go through all objects pointing at/inside pointingTo
+    FldList refs;
+    sh.pointedBy(refs, pointingTo);
+    BOOST_FOREACH(const FldHandle &fld, refs) {
+        const TObjId refObj = fld.obj();
+        if (pointingNotFrom.end() != std::find(
+                    pointingNotFrom.begin(),
+                    pointingNotFrom.end(),
+                    refObj))
+            continue;
+
+        // resolve the base address
+        const TValId nowAt = fld.value();
+        const TValId baseAddr = sh.addrOfTarget(redirectTo, redirectWith);
+
+        // TODO
+        CL_BREAK_IF(VT_RANGE == sh.valTarget(nowAt));
+
+        // shift the base address by scalar offset
+        const TOffset offToRoot = sh.valOffset(nowAt);
+        const TValId result = sh.valByOffset(baseAddr, offToRoot);
+
+        // store the redirected value
+        fld.setValue(result);
+    }
+}
 bool proveNeq(const SymHeapCore &sh, TValId ref, TValId val)
 {
     // check for invalid values

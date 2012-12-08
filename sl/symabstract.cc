@@ -36,7 +36,6 @@
 #include "symtrace.hh"
 #include "util.hh"
 
-#include <algorithm>
 #include <iomanip>
 #include <set>
 #include <sstream>
@@ -666,39 +665,6 @@ void abstractIfNeeded(SymHeap &sh)
     }
 }
 
-void redirectRefsNotFrom(
-        SymHeap                &sh,
-        const TObjList         &pointingNotFrom,
-        const TObjId            pointingTo,
-        const TObjId            redirectTo)
-{
-    // go through all objects pointing at/inside pointingTo
-    FldList refs;
-    sh.pointedBy(refs, pointingTo);
-    BOOST_FOREACH(const FldHandle &fld, refs) {
-        const TObjId refObj = fld.obj();
-        if (pointingNotFrom.end() != std::find(
-                    pointingNotFrom.begin(),
-                    pointingNotFrom.end(),
-                    refObj))
-            continue;
-
-        // resolve the base address
-        const TValId nowAt = fld.value();
-        const TValId baseAddr = sh.addrOfTarget(redirectTo, TS_REGION);
-
-        // TODO
-        CL_BREAK_IF(VT_RANGE == sh.valTarget(nowAt));
-
-        // shift the base address by scalar offset
-        const TOffset offToRoot = sh.valOffset(nowAt);
-        const TValId result = sh.valByOffset(baseAddr, offToRoot);
-
-        // store the redirected value
-        fld.setValue(result);
-    }
-}
-
 void concretizeObj(
         SymHeap                     &sh,
         TSymHeapList                &todo,
@@ -741,7 +707,7 @@ void concretizeObj(
     /* XXX */ ignoreList.push_back(seg);
     /* XXX */ ignoreList.push_back(dup);
     /* XXX */ ignoreList.push_back(peer);
-    redirectRefsNotFrom(sh, ignoreList, seg, dup);
+    redirectRefsNotFrom(sh, ignoreList, seg, dup, TS_REGION);
 
     // resolve the relative placement of the 'next' pointer
     const BindingOff off = sh.segBinding(seg);
