@@ -100,6 +100,16 @@ inline TObjId segPeer(const SymHeap &sh, TObjId seg)
         : seg;
 }
 
+inline TOffset headOffset(const SymHeap &sh, const TObjId seg)
+{
+    const EObjKind kind = sh.objKind(seg);
+    CL_BREAK_IF(OK_REGION == kind);
+
+    return (OK_OBJ_OR_NULL == kind)
+        ? 0
+        : sh.segBinding(seg).head;
+}
+
 /// return address of segment's head (useful mainly for Linux lists)
 inline TValId segHeadAt(const SymHeap &sh, TObjId seg)
 {
