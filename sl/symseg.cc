@@ -185,10 +185,10 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
         return false;
 
     if (VAL_NULL == v1 && sh.valOffset(v2) == headOffset(sh, obj2))
-        v1 = nextValFromSeg(sh, segPeer(sh, obj2));
+        v1 = nextValFromSegAddr(sh, v2);
 
     if (VAL_NULL == v2 && sh.valOffset(v1) == headOffset(sh, obj1))
-        v2 = nextValFromSeg(sh, segPeer(sh, obj1));
+        v2 = nextValFromSegAddr(sh, v1);
 
     TObjId seg;
     if (haveSegBidir(&seg, sh, OK_OBJ_OR_NULL, v1, v2)
@@ -288,16 +288,16 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
         const BindingOff &bOff = sh.segBinding(seg);
         const TOffset shiftBy = off - bOff.head;
 
-        const TObjId peer = segPeer(sh, seg);
-        if (peer != seg) {
+        if (OK_DLS == kind) {
             // put the shifted address of DLS peer to the list of seen values
-            const FldHandle ptrPrev = prevPtrFromSeg(sh, seg);
-            const TValId valPrev = ptrPrev.value();
-            val = const_cast<SymHeap &>(sh).valByOffset(valPrev, shiftBy);
+            TValId valPrev = prevValFromSegAddr(sh, val);
+            valPrev = const_cast<SymHeap &>(sh).valByOffset(valPrev, shiftBy);
+            if (!insertOnce(*pSeen, valPrev))
+                return val;
         }
 
         // jump to next value
-        const TValId valNext = nextValFromSeg(sh, peer);
+        const TValId valNext = nextValFromSegAddr(sh, val);
         val = const_cast<SymHeap &>(sh).valByOffset(valNext, shiftBy);
     }
 

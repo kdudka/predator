@@ -468,13 +468,8 @@ bool segAbstractionStep(
 {
     const TObjId obj = *pCursor;
 
-    // jump to peer in case of DLS
-    TObjId peer = obj;
-    if (OK_DLS == sh.objKind(obj))
-        peer = dlSegPeer(sh, obj);
-
     // jump to the next object (as we know such an object exists)
-    const TObjId next = nextObj(sh, peer, off.next);
+    const TObjId next = segNextObj(sh, obj, off.next);
 
     // check wheter he upcoming abstraction step is still doable
     EJoinStatus status;
