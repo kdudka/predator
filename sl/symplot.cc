@@ -725,20 +725,6 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
     // plot all atomic objects inside
     plotFields(plot, obj, liveFields);
 
-    // in case of DLS, plot the corresponding peer
-    TObjId peer;
-    if (OK_DLS == sh.objKind(obj)
-            && OK_DLS == sh.objKind((peer = dlSegPeer(sh, obj))))
-    {
-        plotRawObject(plot, peer, color);
-
-        FldList peerFields;
-        sh.gatherLiveFields(peerFields, peer);
-
-        // plot all atomic objects inside
-        plotFields(plot, peer, peerFields);
-    }
-
     // close cluster
     plot.out << "}\n";
 }
@@ -779,12 +765,6 @@ void plotObjects(PlotData &plot)
 
     // go through roots
     BOOST_FOREACH(const TObjId obj, plot.objs) {
-        if (isDlSegPeer(plot.sh, obj)
-            && OK_DLS == sh.objKind(dlSegPeer(sh, obj))
-            && dlSegPeer(sh, dlSegPeer(sh, obj)) == obj)
-            // plot DLS peers in the same box for consistent DLSs
-            continue;
-
         // gather live objects
         FldList liveFields;
         sh.gatherLiveFields(liveFields, obj);
