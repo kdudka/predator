@@ -123,12 +123,8 @@ bool haveSeg(
 
 bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
 {
-    if (atAddr <= 0 || peerAddr <= 0)
-        // no valid targets
-        return false;
-
-    if (!isAbstractValue(sh, atAddr) || !isAbstractValue(sh, peerAddr))
-        // not abstract objects
+    if (VT_RANGE == sh.valTarget(atAddr) || VT_RANGE == sh.valTarget(peerAddr))
+        // VT_RANGE not supported for now
         return false;
 
     const TObjId seg = sh.objByAddr(atAddr);
@@ -141,9 +137,21 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
         // invalid peer
         return false;
 
-    // compare the end-points
-    SymHeap &shWritable = const_cast<SymHeap &>(sh);
-    return (segHeadAt(shWritable, peer, /* XXX */ TS_REGION) == peerAddr);
+    const TOffset off1 = sh.valOffset(atAddr);
+    const TOffset off2 = sh.valOffset(peerAddr);
+    if (off1 != off2)
+        // offset mismatch
+        return false;
+
+    CL_BREAK_IF(TS_ALL == sh.targetSpec(atAddr));
+    CL_BREAK_IF(TS_ALL == sh.targetSpec(peerAddr));
+
+    if (peer != dlSegPeer(sh, seg))
+        // not in a relation
+        return false;
+
+    CL_BREAK_IF(seg != dlSegPeer(sh, peer));
+    return true;
 }
 
 bool haveSegBidir(
