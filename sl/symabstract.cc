@@ -127,8 +127,10 @@ void detachClonedPrototype(
         CL_BREAK_IF(uplink && (ownerDstPeer != ownerSrcPeer));
     }
 
-    redirectRefs(sh, ownerDst, proto, TS_INVALID, clone,    TS_REGION);
-    redirectRefs(sh, clone, ownerSrc, TS_INVALID, ownerDst, TS_REGION);
+    redirectRefs(sh, ownerDst, proto, TS_INVALID, clone, TS_INVALID);
+    redirectRefs(sh, clone, ownerSrc, TS_INVALID, ownerDst, (uplink)
+            ? TS_REGION
+            : TS_INVALID);
 
     if (isOwnerDls) {
         if (uplink)
@@ -295,10 +297,12 @@ void slSegAbstractionStep(
         // abstract the _next_ object
         sh.objSetAbstract(next, OK_SLS, off);
 
-    // replace all references to 'head'
-    const TOffset offHead = sh.segBinding(next).head;
-    const TValId headAt = sh.addrOfTarget(obj, /* XXX */ TS_REGION, offHead);
-    sh.valReplace(headAt, segHeadAt(sh, next, /* XXX */ TS_REGION));
+    redirectRefs(sh,
+            /* pointingFrom */ OBJ_INVALID,
+            /* pointingTo   */ obj,
+            /* pointingWith */ TS_INVALID,
+            /* redirectTo   */ next,
+            /* redirectWith */ TS_FIRST);
 
     // destroy self, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, obj, slSegAbstractionStep);
@@ -592,7 +596,7 @@ void spliceOutListSegment(
                 /* pointingTo   */ peer,
                 /* pointingWith */ TS_INVALID,
                 /* redirectTo   */ sh.objByAddr(valPrev),
-                /* redirectWith */ TS_INVALID,
+                /* redirectWith */ sh.targetSpec(valPrev),
                 /* offHead      */ sh.valOffset(valPrev) - offHead);
     }
 
@@ -602,7 +606,7 @@ void spliceOutListSegment(
             /* pointingTo   */ seg,
             /* pointingWith */ TS_INVALID,
             /* redirectTo   */ sh.objByAddr(valNext),
-            /* redirectWith */ TS_INVALID,
+            /* redirectWith */ sh.targetSpec(valNext),
             /* offHead      */ sh.valOffset(valNext) - offHead);
 
     collectSharedJunk(sh, seg, leakObjs);
@@ -679,19 +683,16 @@ void redirectRefsNotFrom(
                     refObj))
             continue;
 
-        // check the current link
+        // resolve the base address
         const TValId nowAt = fld.value();
-
-        const ETargetSpecifier ts = sh.targetSpec(nowAt);
-        const TValId baseAddr = sh.addrOfTarget(redirectTo, ts);
-        TValId result;
+        const TValId baseAddr = sh.addrOfTarget(redirectTo, TS_REGION);
 
         // TODO
         CL_BREAK_IF(VT_RANGE == sh.valTarget(nowAt));
 
-        // shift the base address by calar offset
+        // shift the base address by scalar offset
         const TOffset offToRoot = sh.valOffset(nowAt);
-        result = sh.valByOffset(baseAddr, offToRoot);
+        const TValId result = sh.valByOffset(baseAddr, offToRoot);
 
         // store the redirected value
         fld.setValue(result);
@@ -747,9 +748,14 @@ void concretizeObj(
         ? off.next
         : off.prev;
 
+    const ETargetSpecifier ts = (OK_SLS == kind)
+        ? TS_FIRST
+        : /* XXX */ TS_REGION;
+
+    const TValId segHead = segHeadAt(sh, seg, ts);
+
     // update 'next' pointer
     const PtrHandle nextPtr(sh, dup, offNext);
-    const TValId segHead = segHeadAt(sh, seg, /* XXX */ TS_REGION);
     nextPtr.setValue(segHead);
 
     if (OK_DLS == kind) {

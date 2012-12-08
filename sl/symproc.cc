@@ -251,7 +251,8 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
         return true;
     }
 
-    if (VAL_NULL == sh_.valRoot(val)) {
+    const TObjId obj = sh_.objByAddr(val);
+    if (OBJ_NULL == obj) {
         const TOffset off = sh_.valOffset(val);
         CL_ERROR_MSG(lw_, "dereference of NULL value with offset "
                 << off << "B");
@@ -280,7 +281,6 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
             break;
     }
 
-    const TObjId obj = sh_.objByAddr(val);
     if (!sh_.isValid(obj)) {
         const EStorageClass sc = sh_.objStorClass(obj);
         switch (sc) {

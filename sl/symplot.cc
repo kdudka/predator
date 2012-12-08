@@ -668,6 +668,11 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
 
     const EStorageClass code = sh.objStorClass(obj);
     switch (code) {
+        case SC_INVALID:
+        case SC_UNKNOWN:
+            color = "red";
+            break;
+
         case SC_STATIC:
         case SC_ON_STACK:
             color = "blue";
@@ -675,10 +680,6 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
 
         case SC_ON_HEAP:
             break;
-
-        default:
-            CL_BREAK_IF("unhandled storage class in plotCompositeObj()");
-            return;
     }
 
     const EObjKind kind = sh.objKind(obj);

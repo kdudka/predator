@@ -2644,7 +2644,7 @@ EValueTarget SymHeapCore::valTarget(TValId val) const
 
 ETargetSpecifier SymHeapCore::targetSpec(TValId addr) const
 {
-    if (addr <= VAL_NULL)
+    if (addr < VAL_NULL)
         return TS_INVALID;
 
     const BaseValue *valData;
