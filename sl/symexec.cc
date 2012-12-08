@@ -350,6 +350,9 @@ void SymExecEngine::updateStateInBranch(
     Trace::Node *trCond = new Trace::CondNode(shOrig.traceNode(),
                 &insnCmp, &insnCnd, /* det */ false, branch);
 
+#if DEBUG_SE_NONDET_COND < 2
+    const bool hasAbstract = isAnyAbstractOf(shOrig, v1, v2);
+#endif
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
     if (!reflectCmpResult(dst, procOrig, code, branch, v1, v2))
         CL_DEBUG_MSG(lw_, "XXX unable to reflect comparison result");
@@ -358,8 +361,8 @@ void SymExecEngine::updateStateInBranch(
 
     BOOST_FOREACH(SymHeap *sh, dst) {
         sh->traceUpdate(trCond);
-#if DEBUG_SE_END_NOT_REACHED < 2
-        if (isAnyAbstractOf(shOrig, v1, v2))
+#if DEBUG_SE_NONDET_COND < 2
+        if (hasAbstract)
 #endif
             LDP_PLOT(nondetCond, *sh);
 
@@ -514,7 +517,7 @@ void SymExecEngine::execCondInsn()
         proc.printBackTrace(ML_WARN);
     }
 
-#if DEBUG_SE_END_NOT_REACHED < 2
+#if DEBUG_SE_NONDET_COND < 2
     if (isAnyAbstractOf(sh, v1, v2))
 #endif
     {
