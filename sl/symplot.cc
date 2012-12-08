@@ -969,14 +969,15 @@ void plotSingleValue(PlotData &plot, const TValId val)
             break;
 
         case SC_ON_HEAP:
-            if (isAbstractValue(sh, val))
-                color = "green";
-
             goto preserve_suffix;
     }
 
     suffix = labelByTarget(code);
 preserve_suffix:
+
+    const ETargetSpecifier ts = sh.targetSpec(val);
+    if (TS_REGION != ts)
+        color = "green";
 
     const float pw = static_cast<float>(1U + sh.usedByCount(val));
     plot.out << "\t" << SL_QUOTE(val)

@@ -2443,8 +2443,8 @@ class MayExistVisitor {
                 if (!lookThrough_ || !isAbstractValue(sh, val))
                     return /* continue */ true;
 
-                if (sh.segMinLength(seg)
-                        || segHeadAt(sh, seg, /* XXX */ TS_REGION) != val)
+                const TOffset off = sh.valOffset(val);
+                if (sh.segMinLength(seg) || off != headOffset(sh, seg))
                     return /* continue */ true;
 
                 if (OK_DLS == sh.objKind(seg))
