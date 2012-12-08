@@ -221,6 +221,25 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
     return false;
 }
 
+void dlSegRecover(SymHeap &sh, const TObjId obj1, const TObjId obj2)
+{
+    CL_BREAK_IF(isDlSegPeer(sh, obj1) == isDlSegPeer(sh, obj2));
+
+    const FldHandle ptr1 = prevPtrFromSeg(sh, obj1);
+    const FldHandle ptr2 = prevPtrFromSeg(sh, obj2);
+
+    ETargetSpecifier ts1 = TS_LAST;
+    ETargetSpecifier ts2 = TS_FIRST;
+    if (isDlSegPeer(sh, obj1))
+        swapValues(ts1, ts2);
+
+    const TValId addr1 = segHeadAt(sh, obj1, ts1);
+    const TValId addr2 = segHeadAt(sh, obj2, ts2);
+
+    ptr1.setValue(addr2);
+    ptr2.setValue(addr1);
+}
+
 TObjId segClone(SymHeap &sh, const TObjId obj)
 {
     const TObjId dup = objClone(sh, obj);
@@ -229,18 +248,7 @@ TObjId segClone(SymHeap &sh, const TObjId obj)
         // we need to clone the peer as well
         const TObjId peer = dlSegPeer(sh, obj);
         const TObjId dupPeer = sh.objClone(peer);
-
-        // dig the 'peer' selectors of the cloned objects
-        const TOffset offpSeg  = sh.segBinding(dup).prev;
-        const TOffset offpPeer = sh.segBinding(dupPeer).prev;
-
-        // resolve selectors -> sub-objects
-        const PtrHandle ppSeg (sh, dup, offpSeg);
-        const PtrHandle ppPeer(sh, dupPeer, offpPeer);
-
-        // now cross the 'peer' pointers
-        ppSeg .setValue(segHeadAt(sh, dupPeer, /* XXX */ TS_REGION));
-        ppPeer.setValue(segHeadAt(sh, dup,     /* XXX */ TS_REGION));
+        dlSegRecover(sh, dup, dupPeer);
     }
 
     return dup;
