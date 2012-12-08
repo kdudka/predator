@@ -2473,6 +2473,8 @@ bool SymExecCore::concretizeLoop(
             const EObjKind kind = sh.objKind(obj);
             if (OK_REGION == kind)
                 continue;
+
+            const ETargetSpecifier ts = sh.targetSpec(addr);
 #ifndef NDEBUG
             CL_BREAK_IF(hitLocal);
             hitLocal = true;
@@ -2482,7 +2484,7 @@ bool SymExecCore::concretizeLoop(
             lm.enter();
 
             TObjSet leakObjs;
-            concretizeObj(sh, obj, todo, &leakObjs);
+            concretizeObj(sh, todo, obj, ts, &leakObjs);
 
             if (lm.importLeakObjs(&leakObjs)) {
                 CL_WARN_MSG(lw_, "memory leak detected while unfolding");

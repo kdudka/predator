@@ -701,8 +701,9 @@ void redirectRefsNotFrom(
 
 void concretizeObj(
         SymHeap                     &sh,
-        const TObjId                 seg,
         TSymHeapList                &todo,
+        const TObjId                 seg,
+        const ETargetSpecifier       ts,
         TObjSet                     *leakObjs)
 {
     CL_BREAK_IF(!protoCheckConsistency(sh));
@@ -747,10 +748,6 @@ void concretizeObj(
     const TOffset offNext = (OK_SLS == kind)
         ? off.next
         : off.prev;
-
-    const ETargetSpecifier ts = (OK_SLS == kind)
-        ? TS_FIRST
-        : /* XXX */ TS_REGION;
 
     const TValId segHead = segHeadAt(sh, seg, ts);
 
