@@ -58,8 +58,6 @@ void concretizeObj(
 void spliceOutListSegment(
         SymHeap                &sh,
         const TObjId            seg,
-        const TObjId            peer,
-        const TValId            valNext,
         TObjSet                *leakObjs);
 
 /// replace a DLS by a single concrete object

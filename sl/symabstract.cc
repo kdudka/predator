@@ -594,26 +594,22 @@ void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
 void spliceOutListSegment(
         SymHeap                &sh,
         const TObjId            seg,
-        const TObjId            peer,
-        const TValId            valNext,
         TObjSet                *leakObjs)
 {
     LDP_INIT(symabstract, "spliceOutListSegment");
     LDP_PLOT(symabstract, sh);
-
-    const EObjKind kind = sh.objKind(seg);
-
     CL_BREAK_IF(objMinLength(sh, seg));
 
-    TOffset offHead = 0;
-    if (OK_OBJ_OR_NULL != kind)
-        offHead = sh.segBinding(seg).head;
+    const TObjId peer = segPeer(sh, seg);
 
+    const TValId segAt = sh.addrOfTarget(seg, TS_FIRST);
+    const TValId valNext = nextValFromSegAddr(sh, segAt);
+    const TOffset offHead = headOffset(sh, seg);
+
+    const EObjKind kind = sh.objKind(seg);
     if (OK_DLS == kind) {
         // OK_DLS --> unlink peer
-        CL_BREAK_IF(seg == peer);
-        CL_BREAK_IF(offHead != sh.segBinding(peer).head);
-        const TValId valPrev = nextValFromSeg(sh, seg);
+        const TValId valPrev = prevValFromSegAddr(sh, segAt);
         redirectRefs(sh,
                 /* pointingFrom */ OBJ_INVALID,
                 /* pointingTo   */ peer,
@@ -635,7 +631,7 @@ void spliceOutListSegment(
     collectSharedJunk(sh, seg, leakObjs);
 
     // destroy peer in case of DLS
-    if (peer != seg && collectJunk(sh, peer))
+    if (OK_DLS == kind && collectJunk(sh, peer))
         CL_DEBUG("spliceOutListSegment() drops a sub-heap (peer)");
 
     // destroy self, including all nested prototypes
@@ -649,15 +645,13 @@ void spliceOutSegmentIfNeeded(
         TMinLen                *pLen,
         SymHeap                &sh,
         const TObjId            seg,
-        const TObjId            peer,
         TSymHeapList           &todo,
         TObjSet                *leakObjs)
 {
     if (!*pLen) {
         // possibly empty LS
         SymHeap sh0(sh);
-        const TValId valNext = nextValFromSeg(sh0, peer);
-        spliceOutListSegment(sh0, seg, peer, valNext, leakObjs);
+        spliceOutListSegment(sh0, seg, leakObjs);
 
         // append a trace node for this operation
         Trace::Node *tr = new Trace::SpliceOutNode(sh.traceNode());
@@ -702,7 +696,7 @@ void concretizeObj(
 
     // handle the possibly empty variant (if exists)
     TMinLen len = sh.segMinLength(seg);
-    spliceOutSegmentIfNeeded(&len, sh, seg, peer, todo, leakObjs);
+    spliceOutSegmentIfNeeded(&len, sh, seg, todo, leakObjs);
 
     std::string pName;
     LDP_INIT(symabstract, "concretizeObj");

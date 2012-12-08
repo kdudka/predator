@@ -1629,11 +1629,10 @@ bool spliceOutAbstractPathCore(
             return false;
         }
 
-        const TObjId peer = segPeer(sh, seg);
         const TValId valNext = nextValFromSegAddr(sh, addr);
 
         if (!readOnlyMode)
-            spliceOutListSegment(sh, seg, peer, valNext, &leakObjs);
+            spliceOutListSegment(sh, seg, &leakObjs);
 
         if (valNext == endPoint)
             // we have the chain we are looking for
