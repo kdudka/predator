@@ -329,6 +329,15 @@ void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
     swapValues(off.next, off.prev);
     sh.objSetAbstract(obj2, OK_DLS, off);
 
+    TObjList protos;
+    collectPrototypesOf(protos, sh, obj1, /* skipPeers */ false);
+
+    // convert the TS_REGION addresses to TS_FIRST/TS_LAST
+    /* XXX */ protos.push_back(obj1);
+    redirectRefsNotFrom(sh, protos, obj1, obj1, TS_LAST);
+    /* XXX */ protos.back() = obj2;
+    redirectRefsNotFrom(sh, protos, obj2, obj2, TS_FIRST);
+
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
     sh.segSetMinLength(obj1, len);
     sh.segSetMinLength(obj2, len);
@@ -344,7 +353,10 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId reg, bool backward)
     // we allow to gobble OK_SEE_THROUGH objects (if compatible)
     enlargeMayExist(sh, reg);
 
-    if (!backward)
+    ETargetSpecifier ts = TS_FIRST;
+    if (backward)
+        ts = TS_LAST;
+    else
         // jump to peer
         dls = dlSegPeer(sh, dls);
 
@@ -359,8 +371,9 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId reg, bool backward)
     nextPtr.setValue(valNext);
 
     // replace VAR by DLS
-    const TValId headAt = sh.addrOfTarget(reg, /* XXX */ TS_REGION, off.head);
-    sh.valReplace(headAt, segHeadAt(sh, dls, /* XXX */ TS_REGION));
+    const TValId headOld = sh.addrOfTarget(reg, TS_REGION, off.head);
+    const TValId headNew = segHeadAt(sh, dls, ts);
+    sh.valReplace(headOld, headNew);
     REQUIRE_GC_ACTIVITY(sh, reg, dlSegGobble);
 
     // handle DLS Neq predicates
@@ -375,8 +388,12 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
     // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
 
+    CL_BREAK_IF(isDlSegPeer(sh, seg1) || isDlSegPeer(sh, seg2));
+
     const TObjId peer1 = dlSegPeer(sh, seg1);
     const TObjId peer2 = dlSegPeer(sh, seg2);
+
+    CL_BREAK_IF(!isDlSegPeer(sh, peer1) || !isDlSegPeer(sh, peer2));
 
     // merge data
     const BindingOff &bf2 = sh.segBinding(seg2);
@@ -388,11 +405,11 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
     ptrNext2.setValue(valNext1);
 
     // replace both parts point-wise
-    const TValId headAt = segHeadAt(sh,  seg1, /* XXX */ TS_REGION);
-    const TValId peerAt = segHeadAt(sh, peer1, /* XXX */ TS_REGION);
+    const TValId headAt = segHeadAt(sh,  seg1, TS_LAST);
+    const TValId peerAt = segHeadAt(sh, peer1, TS_FIRST);
 
-    sh.valReplace(headAt, segHeadAt(sh,  seg2, /* XXX */ TS_REGION));
-    sh.valReplace(peerAt, segHeadAt(sh, peer2, /* XXX */ TS_REGION));
+    sh.valReplace(headAt, segHeadAt(sh,  seg2, TS_LAST));
+    sh.valReplace(peerAt, segHeadAt(sh, peer2, TS_FIRST));
 
     // destroy headAt and peerAt, including all prototypes -- either at once, or
     // one by one (depending on the shape of subgraph)
@@ -736,8 +753,7 @@ void concretizeObj(
     if (OK_DLS == kind) {
         // redirect 'prev' pointer from seg to the cloned (concrete) object
         const PtrHandle prev = nextPtrFromSeg(sh, seg);
-        const TValId headAddr = sh.addrOfTarget(dup,
-                /* XXX */ TS_REGION, off.head);
+        const TValId headAddr = sh.addrOfTarget(dup, TS_REGION, off.head);
         prev.setValue(headAddr);
 
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
@@ -747,11 +763,12 @@ void concretizeObj(
     const PtrHandle nextNextPtr = nextPtrFromSeg(sh, peer);
     const TValId nextNextVal = nextNextPtr.value();
     const TObjId nextNextObj = sh.objByAddr(nextNextVal);
-    if (nextNextObj == seg)
+    if (nextNextObj == seg) {
         // FIXME: we should do this also the other way around for OK_DLS
-        nextNextPtr.setValue(sh.addrOfTarget(dup,
-                    /* XXX */ TS_REGION,
-                    sh.valOffset(nextNextVal)));
+        const TOffset off = sh.valOffset(nextNextVal);
+        const TValId addr = sh.addrOfTarget(dup, TS_REGION, off);
+        nextNextPtr.setValue(addr);
+    }
 
     sh.segSetMinLength(seg,  len);
     sh.segSetMinLength(peer, len);

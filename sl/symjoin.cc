@@ -1822,11 +1822,18 @@ bool segAlreadyJoined(
 
 void dlSegRecover(SymHeap &sh, const TObjId obj1, const TObjId obj2)
 {
+    CL_BREAK_IF(isDlSegPeer(sh, obj1) == isDlSegPeer(sh, obj2));
+
     const FldHandle ptr1 = prevPtrFromSeg(sh, obj1);
     const FldHandle ptr2 = prevPtrFromSeg(sh, obj2);
 
-    const TValId addr1 = segHeadAt(sh, obj1, /* XXX */ TS_REGION);
-    const TValId addr2 = segHeadAt(sh, obj2, /* XXX */ TS_REGION);
+    ETargetSpecifier ts1 = TS_LAST;
+    ETargetSpecifier ts2 = TS_FIRST;
+    if (isDlSegPeer(sh, obj1))
+        swapValues(ts1, ts2);
+
+    const TValId addr1 = segHeadAt(sh, obj1, ts1);
+    const TValId addr2 = segHeadAt(sh, obj2, ts2);
 
     ptr1.setValue(addr2);
     ptr2.setValue(addr1);
