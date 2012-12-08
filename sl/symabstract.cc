@@ -539,23 +539,35 @@ bool applyAbstraction(
 
 void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
 {
+    std::string pName;
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
-    LDP_PLOT(symabstract, sh);
+    LDP_PLOTN(symabstract, sh, &pName);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
     CL_BREAK_IF(!protoCheckConsistency(sh));
+
+    Trace::Node *trOrig = sh.traceNode();
+    sh.traceUpdate(new Trace::ConcretizationNode(trOrig, OK_DLS, pName));
 
     // take the value of 'next' pointer from peer
     const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
     const TValId valNext = nextValFromSeg(sh, peer);
     peerPtr.setValue(valNext);
 
-    // redirect all references originally pointing to peer to the current object
+    // redirect all references originally pointing to seg
+    redirectRefs(sh,
+            /* pointingFrom */ OBJ_INVALID,
+            /* pointingTo   */ seg,
+            /* pointingWith */ TS_INVALID,
+            /* redirectTo   */ seg,
+            /* redirectWith */ TS_REGION);
+
+    // redirect all references originally pointing to peer
     redirectRefs(sh,
             /* pointingFrom */ OBJ_INVALID,
             /* pointingTo   */ peer,
-            /* pointingWith */ /* XXX */ TS_INVALID,
+            /* pointingWith */ TS_INVALID,
             /* redirectTo   */ seg,
-            /* redirectWith */ /* XXX */ TS_REGION);
+            /* redirectWith */ TS_REGION);
 
     // destroy peer, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, peer, dlSegReplaceByConcrete);
