@@ -122,8 +122,7 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
         // not a DLS
         return false;
 
-    // FIXME: this needs to be rewritten once we unimplement DLS peers
-    const TObjId peer = dlSegPeer(sh, seg);
+    const TObjId peer = sh.objByAddr(peerAddr);
     if (OK_DLS != sh.objKind(peer))
         // invalid peer
         return false;
@@ -134,15 +133,16 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
         // offset mismatch
         return false;
 
-    CL_BREAK_IF(TS_ALL == sh.targetSpec(atAddr));
-    CL_BREAK_IF(TS_ALL == sh.targetSpec(peerAddr));
-
     if (peer != dlSegPeer(sh, seg))
         // not in a relation
         return false;
 
-    CL_BREAK_IF(seg != dlSegPeer(sh, peer));
-    return true;
+    const ETargetSpecifier ts1 = sh.targetSpec(atAddr);
+    const ETargetSpecifier ts2 = sh.targetSpec(peerAddr);
+    CL_BREAK_IF(TS_ALL == ts1 || TS_ALL == ts2);
+    CL_BREAK_IF(ts1 == ts2);
+    return (TS_FIRST == ts1 && TS_LAST == ts2)
+        || (TS_LAST == ts1 && TS_FIRST == ts2);
 }
 
 bool haveSegBidir(

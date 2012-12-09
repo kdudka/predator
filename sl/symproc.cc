@@ -1714,8 +1714,9 @@ bool dlSegMergeAddressesIfNeeded(
         // the given value differ in target offset
         return false;
 
-    // FIXME: this needs to be rewritten once we unimplement DLS peers
-    if (obj1 == obj2 || obj1 != segPeer(sh, obj2))
+    const ETargetSpecifier ts1 = sh.targetSpec(v1);
+    const ETargetSpecifier ts2 = sh.targetSpec(v2);
+    if (ts1 == ts2 || obj1 != segPeer(sh, obj2))
         // apparently not the case we are looking for
         return false;
 
