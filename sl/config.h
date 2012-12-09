@@ -234,6 +234,11 @@
 #define SE_PLOT_ERROR_STATES                0
 
 /**
+ * preserve heaps with different DLS minimum lengths up to the specified number
+ */
+#define SE_PRESERVE_DLS_MINLEN              0
+
+/**
  * upper bound of DLS minimal length (zero means unlimited)
  */
 #define SE_RESTRICT_DLS_MINLEN              2

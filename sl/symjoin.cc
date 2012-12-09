@@ -1395,37 +1395,45 @@ bool joinNestingLevel(
     return (ldiffComputed == ldiffExpected);
 }
 
-TMinLen joinMinLength(
+bool joinMinLength(
+        TMinLen                *pDst,
         SymJoinCtx             &ctx,
         const TObjId            obj1,
-        const TObjId            obj2)
+        const TObjId            obj2,
+        const EObjKind          kind)
 {
     if (OBJ_INVALID == obj1 || OBJ_INVALID == obj2) {
-        // the status should have been already updated
-        CL_BREAK_IF(JS_USE_ANY == ctx.status);
-
         if (objMinLength(ctx.sh1, obj1) || objMinLength(ctx.sh2, obj2))
             // insertion of non-empty object does not cover both variants
             updateJoinStatus(ctx, JS_THREE_WAY);
 
-        return 0;
+        *pDst = 0;
+        return true;
     }
 
     const TMinLen len1 = objMinLength(ctx.sh1, obj1);
     const TMinLen len2 = objMinLength(ctx.sh2, obj2);
-    if (len1 < len2) {
-        updateJoinStatus(ctx, JS_USE_SH1);
-        return len1;
-    }
+    *pDst = std::min(len1, len2);
 
-    if (len2 < len1) {
-        updateJoinStatus(ctx, JS_USE_SH2);
-        return len2;
+#if SE_PRESERVE_DLS_MINLEN
+    if (len1 != len2 && OK_DLS == kind && !ctx.joiningData()) {
+        const TMinLen maxLen = std::max(len1, len2);
+        if (maxLen < (SE_PRESERVE_DLS_MINLEN))
+            return false;
     }
+#else
+    (void) kind;
+#endif
+
+    if (len1 < len2)
+        return updateJoinStatus(ctx, JS_USE_SH1);
+
+    if (len2 < len1)
+        return updateJoinStatus(ctx, JS_USE_SH2);
 
     // the lengths are equal, pick any
     CL_BREAK_IF(len1 != len2);
-    return len1;
+    return true;
 }
 
 bool joinObjValidity(
@@ -1620,6 +1628,10 @@ bool createObject(
     if (!joinObjSize(&size, ctx, obj1, obj2))
         return false;
 
+    TMinLen len;
+    if (!joinMinLength(&len, ctx, obj1, obj2, kind))
+        return false;
+
     TObjType clt;
     if (!joinObjType(&clt, ctx, obj1, obj2))
         return false;
@@ -1665,7 +1677,7 @@ bool createObject(
         ctx.dst.objSetAbstract(objDst, kind, off);
 
         // compute minimal length of the resulting segment
-        ctx.segLengths[objDst] = joinMinLength(ctx, obj1, obj2);
+        ctx.segLengths[objDst] = len;
     }
 
     return joinFields(ctx, objDst, obj1, obj2, ldiff);
