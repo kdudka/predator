@@ -306,9 +306,8 @@ void slSegAbstractionStep(
     // destroy self, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, obj, slSegAbstractionStep);
 
-    if (len)
-        // declare resulting segment's minimal length
-        sh.segSetMinLength(next, len);
+    // declare resulting segment's minimal length
+    sh.segSetMinLength(next, len);
 }
 
 void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
@@ -399,7 +398,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
     const BindingOff &bf2 = sh.segBinding(seg2);
     joinData(sh, bf2, seg2, seg1, /* bidir */ true);
 
-    // preserve backLink
+    // preserve valNext
     const TValId valNext1 = nextValFromSeg(sh, seg1);
     const PtrHandle ptrNext2 = nextPtrFromSeg(sh, seg2);
     ptrNext2.setValue(valNext1);
@@ -420,11 +419,9 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
         CL_BREAK_IF("collectJunk() has not been successful");
     }
 
-    if (len) {
-        // assign the resulting minimal length
-        sh.segSetMinLength(seg2, len);
-        sh.segSetMinLength(segPeer(sh, seg2), len);
-    }
+    // assign the resulting minimal length
+    sh.segSetMinLength(seg2, len);
+    sh.segSetMinLength(segPeer(sh, seg2), len);
 
     dlSegSyncPeerData(sh, seg2);
 }
@@ -440,13 +437,14 @@ bool /* jump next */ dlSegAbstractionStep(
     CL_BREAK_IF(OK_SLS == kind || OK_SLS == kindNext);
 
     if (OK_DLS == kindNext) {
-        if (OK_DLS == kind)
+        if (OK_DLS == kind) {
             // DLS + DLS
             dlSegMerge(sh, obj, next);
-        else
-            // CONCRETE + DLS
-            dlSegGobble(sh, next, obj, /* backward */ true);
+            return /* jump next */ true;
+        }
 
+        // CONCRETE + DLS
+        dlSegGobble(sh, next, obj, /* backward */ true);
         return /* jump next */ true;
     }
     else {
@@ -560,7 +558,6 @@ void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
     Trace::Node *trOrig = sh.traceNode();
     sh.traceUpdate(new Trace::ConcretizationNode(trOrig, OK_DLS, pName));
 
-    // take the value of 'next' pointer from peer
     const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
     const TValId valNext = nextValFromSeg(sh, peer);
     peerPtr.setValue(valNext);
@@ -584,8 +581,9 @@ void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
     // destroy peer, including all prototypes
     REQUIRE_GC_ACTIVITY(sh, peer, dlSegReplaceByConcrete);
 
-    // concretize self
+    // convert OK_DLS to OK_REGION
     sh.objSetConcrete(seg);
+
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!dlSegCheckConsistency(sh));
     CL_BREAK_IF(!protoCheckConsistency(sh));

@@ -28,6 +28,22 @@
 
 #include <boost/foreach.hpp>
 
+/// FIXME: this needs to be rewritten once we unimplement DLS peers
+TValId nextValFromSegAddr(const SymHeap &sh, const TValId addr)
+{
+    const TObjId seg = sh.objByAddr(addr);
+    const TObjId peer = segPeer(sh, seg);
+    return nextValFromSeg(sh, peer);
+}
+
+/// FIXME: this needs to be rewritten once we unimplement DLS peers
+TValId prevValFromSegAddr(const SymHeap &sh, const TValId addr)
+{
+    const TObjId seg = sh.objByAddr(addr);
+    CL_BREAK_IF(OK_DLS != sh.objKind(seg));
+    return nextValFromSeg(sh, seg);
+}
+
 bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
 {
     if (proveNeq(sh, ref, val))

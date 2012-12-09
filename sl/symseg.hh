@@ -100,21 +100,9 @@ inline TObjId segPeer(const SymHeap &sh, TObjId seg)
         : seg;
 }
 
-/// FIXME: this needs to be rewritten once we unimplement DLS peers
-inline TValId nextValFromSegAddr(const SymHeap &sh, const TValId addr)
-{
-    const TObjId seg = sh.objByAddr(addr);
-    const TObjId peer = segPeer(sh, seg);
-    return nextValFromSeg(sh, peer);
-}
+TValId nextValFromSegAddr(const SymHeap &sh, const TValId addr);
 
-/// FIXME: this needs to be rewritten once we unimplement DLS peers
-inline TValId prevValFromSegAddr(const SymHeap &sh, const TValId addr)
-{
-    const TObjId seg = sh.objByAddr(addr);
-    CL_BREAK_IF(OK_DLS != sh.objKind(seg));
-    return nextValFromSeg(sh, seg);
-}
+TValId prevValFromSegAddr(const SymHeap &sh, const TValId addr);
 
 inline TOffset headOffset(const SymHeap &sh, const TObjId seg)
 {
@@ -162,7 +150,7 @@ inline TObjId segNextObj(SymHeap &sh, TObjId obj)
     return segNextObj(sh, obj, offNext);
 }
 
-/// true if the given object is a DLS with bf.prev < bf.next
+/// TODO: drop this!
 inline bool isDlSegPeer(const SymHeap &sh, const TObjId obj)
 {
     if (OK_DLS != sh.objKind(obj))
