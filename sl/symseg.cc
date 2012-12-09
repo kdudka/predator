@@ -301,8 +301,59 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
     return val;
 }
 
+bool segCheckConsistency(const SymHeap &sh)
+{
+    TObjList objs;
+    sh.gatherObjects(objs, isOnHeap);
+    BOOST_FOREACH(const TObjId seg, objs) {
+        bool hasNext = false;
+        bool hasPrev = false;
+
+        const EObjKind kind = sh.objKind(seg);
+        switch (kind) {
+            case OK_REGION:
+            case OK_OBJ_OR_NULL:
+                break;
+
+            case OK_DLS:
+            case OK_SEE_THROUGH_2N:
+                hasPrev = true;
+                // fall through!
+
+            case OK_SLS:
+            case OK_SEE_THROUGH:
+                hasNext = true;
+        }
+
+        if (hasNext) {
+            const TValId valNext = nextValFromSeg(sh, seg);
+            const EValueTarget code = sh.valTarget(valNext);
+            if (VT_OBJECT != code) {
+                CL_ERROR("valNext of #" << seg << " has no target object");
+                return false;
+            }
+        }
+
+        if (hasPrev) {
+            const PtrHandle prevPtr = prevPtrFromSeg(sh, seg);
+            const TValId valPrev = prevPtr.value();
+            const EValueTarget code = sh.valTarget(valPrev);
+            if (VT_OBJECT != code) {
+                CL_ERROR("valPrev of #" << seg << " has no target object");
+                return false;
+            }
+        }
+    }
+
+    // all OK
+    return true;
+}
+
 bool dlSegCheckConsistency(const SymHeap &sh)
 {
+    if (!segCheckConsistency(sh))
+        return false;
+
     TObjList objs;
     sh.gatherObjects(objs, isOnHeap);
     BOOST_FOREACH(const TObjId seg, objs) {

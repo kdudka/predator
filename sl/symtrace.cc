@@ -398,12 +398,6 @@ Node* /* selected predecessor */ InsnNode::printNode() const
     return this->parent();
 }
 
-Node* /* selected predecessor */ SpliceOutNode::printNode() const
-{
-    CL_BREAK_IF("please implement");
-    return this->parent();
-}
-
 Node* /* selected predecessor */ JoinNode::printNode() const
 {
     // FIXME: deal better with join nodes

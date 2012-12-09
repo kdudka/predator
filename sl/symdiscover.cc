@@ -426,6 +426,10 @@ void segDiscover(
 
             if (!leaving)
                 break;
+
+            if (OBJ_INVALID == segNextObj(sh, obj, off.next))
+                // valNext has no target
+                break;
         }
 
         // enlarge the path by one

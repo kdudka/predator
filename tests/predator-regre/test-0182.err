@@ -9,6 +9,14 @@ test-0182.c:137:9: note: _ = (_ != dll) ... evaluated as FALSE
 test-0182.c:136:9: note: _ = (_ == NULL) ... evaluated as FALSE
 test-0182.c:135:9: note: _ = (_ == NULL) ... evaluated as FALSE
 test-0182.c:134:5: note: _ = (dll != NULL) ... evaluated as TRUE
+test-0182.c:137:9: note: _ = (_ != dll) ... evaluated as FALSE
+test-0182.c:136:9: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:135:9: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:134:5: note: _ = (dll != NULL) ... evaluated as TRUE
+test-0182.c:137:9: note: _ = (_ != dll) ... evaluated as FALSE
+test-0182.c:136:9: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:135:9: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:134:5: note: _ = (dll != NULL) ... evaluated as TRUE
 test-0182.c:132:5: note: _ = (_ != NULL) ... evaluated as FALSE
 test-0182.c:131:5: note: _ = (_ == NULL) ... evaluated as FALSE
 test-0182.c:130:5: note: _ = (dll == NULL) ... evaluated as FALSE

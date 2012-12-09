@@ -2634,7 +2634,7 @@ EValueOrigin SymHeapCore::valOrigin(TValId val) const
 
 EValueTarget SymHeapCore::valTarget(TValId val) const
 {
-    if (val <= 0)
+    if (val < VAL_NULL)
         return VT_INVALID;
 
     const BaseValue *valData;

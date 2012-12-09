@@ -323,8 +323,6 @@ class SpliceOutNode: public Node {
         {
         }
 
-        virtual Node* printNode() const;
-
     protected:
         void virtual plotNode(TracePlotter &) const;
 };

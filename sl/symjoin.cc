@@ -3034,7 +3034,7 @@ bool joinDataCore(
         return false;
 
     // check consistency of DLS prototype peers
-    CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
+    CL_BREAK_IF(!ctx.joiningData() && !dlSegCheckConsistency(ctx.dst));
     CL_BREAK_IF(!dlSegCheckProtoConsistency(ctx));
 
     // go through Neq predicates
