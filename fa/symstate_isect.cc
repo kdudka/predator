@@ -66,6 +66,168 @@ struct RootState
 typedef std::pair<RootState, RootState> ProdState;
 
 
+// anonymous namespace
+namespace
+{
+class IsectEngine
+{
+private:  // data members
+
+	/// FAE to be the output
+	FAE& fae_;
+
+	/// Maps product states to states in the new automaton, e.g. (p,q) -> r
+	std::map<ProdState, RootState> processed_;
+
+	/// The work stack
+	std::vector<std::pair<ProdState, RootState>> workstack_;
+
+	/// Maps pairs of roots to a root in the new automaton
+	std::map<std::pair<size_t, size_t>, size_t> rootMap_;
+
+	/// Counter of roots in the new FAE
+	size_t rootCnt_;
+
+public:   // methods
+
+	explicit IsectEngine(FAE& fae) :
+		fae_(fae),
+		processed_(),
+		workstack_(),
+		rootMap_(),
+		rootCnt_(0)
+	{ }
+
+	/**
+	 * @brief  Adds a state to the automaton if it does not exist
+	 *
+	 * Inserts a product state in the automaton in case it does not exist. In
+	 * either case returns the number of the root and the number of the state in
+	 * the target FAE (in the form of a pair). In case it is the first state of
+	 * a new automaton (previously unknown combination of root numbers), it is set
+	 * as the final state.
+	 *
+	 * @param[in]  lhsRoot   Root number of the LHS automaton
+	 * @param[in]  lhsState  State in the LHS automaton
+	 * @param[in]  rhsRoot   Root number of the RHS automaton
+	 * @param[in]  rhsState  State in the RHS automaton
+	 *
+	 * @returns  Root in the new FAE and the number of the product state
+	 */
+	RootState makeProductState(
+		const size_t&          lhsRoot,
+		const size_t&          lhsState,
+		const size_t&          rhsRoot,
+		const size_t&          rhsState)
+	{
+		// the product state
+		RootState lhsRootState(lhsRoot, lhsState);
+		RootState rhsRootState(rhsRoot, rhsState);
+		ProdState prodState(lhsRootState, rhsRootState);
+
+		// find the root # in the aut (or create one)
+		auto itBoolPairRootMap = rootMap_.insert(std::make_pair(
+			std::make_pair(lhsRoot, rhsRoot), rootCnt_));
+		bool isNewRoot = itBoolPairRootMap.second;
+		if (isNewRoot)
+		{
+			FA_NOTE("Creating new root: " << rootCnt_ << " as the product of roots ("
+				<< lhsRoot << ", " << rhsRoot << ")");
+			++rootCnt_;
+
+			TreeAut* ta = fae_.allocTA();
+			fae_.appendRoot(ta);
+			fae_.connectionGraph.newRoot();
+		}
+
+		// the actual number of the root
+		const size_t& root = itBoolPairRootMap.first->second;
+
+		RootState newState(root, fae_.nextState());
+		auto itBoolPairProcessed = processed_.insert(std::make_pair(prodState, newState));
+		bool isNewState = itBoolPairProcessed.second;
+
+		// isNewRoot -> isNewState
+		assert(!isNewRoot || isNewState);
+
+		if (isNewState)
+		{	// in case the state has not been processed before
+			FA_NOTE("Creating new state: " << FA::writeState(fae_.nextState())
+				<< " as the product of states (" <<  lhsRootState << ", "
+				<< rhsRootState << ")");
+			workstack_.push_back(std::make_pair(prodState, newState));
+			fae_.newState();
+		}
+
+		// the actual number of the state
+		const size_t& state = itBoolPairProcessed.first->second.state;
+
+		if (isNewRoot)
+		{	// set final state
+			fae_.getRoot(root)->addFinalState(state);
+		}
+
+		return RootState(root, state);
+	}
+
+
+	/**
+	 * @brief  Determines whether the work stack is empty
+	 *
+	 * This method returns @p true in case the work stack is empty, @p false
+	 * otherwise.
+	 *
+	 * @returns  @p true in case the work stack is empty, @p false otherwise
+	 */
+	bool wsEmpty() const
+	{
+		return workstack_.empty();
+	}
+
+	/**
+	 * @brief  Retrieves the next state to be processed
+	 *
+	 * This method retrieves the next state that has not been processed so far.
+	 * Further, it removes it from the work stack.
+	 *
+	 * @returns  A pair of a product state and corresponding root and state in new
+	 *           FAE
+	 */
+	std::pair<ProdState, RootState> getNextState()
+	{
+		// Preconditions
+		assert(!wsEmpty());
+
+		std::pair<ProdState, RootState> res = *workstack_.crbegin();
+		workstack_.pop_back();
+		return res;
+	}
+
+	std::vector<size_t> getRootOrderIndexForRHS() const
+	{
+		std::vector<size_t> index(fae_.getRootCount(), static_cast<size_t>(-1));
+
+		for (const std::pair<const std::pair<size_t, size_t>, size_t>&
+			productRootPair : rootMap_)
+		{
+			const size_t& oldState = productRootPair.first.second;
+			const size_t& newState = productRootPair.second;
+			assert(index[newState] == static_cast<size_t>(-1));
+			index[newState] = oldState;
+		}
+
+		for (const size_t& i : index)
+		{
+			(void)i;
+			assert(i != static_cast<size_t>(-1));
+		}
+
+		return index;
+	}
+};
+} // namespace
+
+
 void SymState::SubstituteRefs(
 	const SymState&      src,
 	const Data&          oldValue,
@@ -298,168 +460,6 @@ void SymState::SubstituteRefs(
 	fae->updateConnectionGraph();
 	this->SetFAE(std::shared_ptr<FAE>(fae));
 }
-
-
-// anonymous namespace
-namespace
-{
-class IsectEngine
-{
-private:  // data members
-
-	/// FAE to be the output
-	FAE& fae_;
-
-	/// Maps product states to states in the new automaton, e.g. (p,q) -> r
-	std::map<ProdState, RootState> processed_;
-
-	/// The work stack
-	std::vector<std::pair<ProdState, RootState>> workstack_;
-
-	/// Maps pairs of roots to a root in the new automaton
-	std::map<std::pair<size_t, size_t>, size_t> rootMap_;
-
-	/// Counter of roots in the new FAE
-	size_t rootCnt_;
-
-public:   // methods
-
-	explicit IsectEngine(FAE& fae) :
-		fae_(fae),
-		processed_(),
-		workstack_(),
-		rootMap_(),
-		rootCnt_(0)
-	{ }
-
-	/**
-	 * @brief  Adds a state to the automaton if it does not exist
-	 *
-	 * Inserts a product state in the automaton in case it does not exist. In
-	 * either case returns the number of the root and the number of the state in
-	 * the target FAE (in the form of a pair). In case it is the first state of
-	 * a new automaton (previously unknown combination of root numbers), it is set
-	 * as the final state.
-	 *
-	 * @param[in]  lhsRoot   Root number of the LHS automaton
-	 * @param[in]  lhsState  State in the LHS automaton
-	 * @param[in]  rhsRoot   Root number of the RHS automaton
-	 * @param[in]  rhsState  State in the RHS automaton
-	 *
-	 * @returns  Root in the new FAE and the number of the product state
-	 */
-	RootState makeProductState(
-		const size_t&          lhsRoot,
-		const size_t&          lhsState,
-		const size_t&          rhsRoot,
-		const size_t&          rhsState)
-	{
-		// the product state
-		RootState lhsRootState(lhsRoot, lhsState);
-		RootState rhsRootState(rhsRoot, rhsState);
-		ProdState prodState(lhsRootState, rhsRootState);
-
-		// find the root # in the aut (or create one)
-		auto itBoolPairRootMap = rootMap_.insert(std::make_pair(
-			std::make_pair(lhsRoot, rhsRoot), rootCnt_));
-		bool isNewRoot = itBoolPairRootMap.second;
-		if (isNewRoot)
-		{
-			FA_NOTE("Creating new root: " << rootCnt_ << " as the product of roots ("
-				<< lhsRoot << ", " << rhsRoot << ")");
-			++rootCnt_;
-
-			TreeAut* ta = fae_.allocTA();
-			fae_.appendRoot(ta);
-			fae_.connectionGraph.newRoot();
-		}
-
-		// the actual number of the root
-		const size_t& root = itBoolPairRootMap.first->second;
-
-		RootState newState(root, fae_.nextState());
-		auto itBoolPairProcessed = processed_.insert(std::make_pair(prodState, newState));
-		bool isNewState = itBoolPairProcessed.second;
-
-		// isNewRoot -> isNewState
-		assert(!isNewRoot || isNewState);
-
-		if (isNewState)
-		{	// in case the state has not been processed before
-			FA_NOTE("Creating new state: " << FA::writeState(fae_.nextState())
-				<< " as the product of states (" <<  lhsRootState << ", "
-				<< rhsRootState << ")");
-			workstack_.push_back(std::make_pair(prodState, newState));
-			fae_.newState();
-		}
-
-		// the actual number of the state
-		const size_t& state = itBoolPairProcessed.first->second.state;
-
-		if (isNewRoot)
-		{	// set final state
-			fae_.getRoot(root)->addFinalState(state);
-		}
-
-		return RootState(root, state);
-	}
-
-
-	/**
-	 * @brief  Determines whether the work stack is empty
-	 *
-	 * This method returns @p true in case the work stack is empty, @p false
-	 * otherwise.
-	 *
-	 * @returns  @p true in case the work stack is empty, @p false otherwise
-	 */
-	bool wsEmpty() const
-	{
-		return workstack_.empty();
-	}
-
-	/**
-	 * @brief  Retrieves the next state to be processed
-	 *
-	 * This method retrieves the next state that has not been processed so far.
-	 * Further, it removes it from the work stack.
-	 *
-	 * @returns  A pair of a product state and corresponding root and state in new
-	 *           FAE
-	 */
-	std::pair<ProdState, RootState> getNextState()
-	{
-		// Preconditions
-		assert(!wsEmpty());
-
-		std::pair<ProdState, RootState> res = *workstack_.crbegin();
-		workstack_.pop_back();
-		return res;
-	}
-
-	std::vector<size_t> getRootOrderIndexForRHS() const
-	{
-		std::vector<size_t> index(fae_.getRootCount(), static_cast<size_t>(-1));
-
-		for (const std::pair<const std::pair<size_t, size_t>, size_t>&
-			productRootPair : rootMap_)
-		{
-			const size_t& oldState = productRootPair.first.second;
-			const size_t& newState = productRootPair.second;
-			assert(index[newState] == static_cast<size_t>(-1));
-			index[newState] = oldState;
-		}
-
-		for (const size_t& i : index)
-		{
-			(void)i;
-			assert(i != static_cast<size_t>(-1));
-		}
-
-		return index;
-	}
-};
-} // namespace
 
 
 void SymState::Intersect(
@@ -731,24 +731,168 @@ void SymState::Intersect(
 
 	// reorder the FAE to correspond to the original order
 	std::vector<size_t> index = engine.getRootOrderIndexForRHS();
-	std::vector<std::shared_ptr<TreeAut>> newRoots;
+	assert(index.size() == fae->getValidRootCount());
 
-	for (size_t i : index)
+	std::ostringstream os;
+	utils::printCont(os, index);
+	FA_NOTE("Index: " << os.str());
+
+	std::vector<std::shared_ptr<TreeAut>> newRoots;
+	for (size_t i = 0; i < fwdFAE->getRootCount(); ++i)
 	{
-		newRoots.push_back(fae->getRoot(i));
+		newRoots.push_back(std::shared_ptr<TreeAut>());
+	}
+
+	for (size_t i = 0; i < index.size(); ++i)
+	{
+		newRoots[index[i]] = fae->getRoot(i);
 	}
 
 	// update representation
 	fae->swapRoots(newRoots);
 
-	for (size_t i = 0; i < fae->getRootCount(); ++i)
+	for (size_t i = 0; i < index.size(); ++i)
 	{
-		fae->setRoot(i, std::shared_ptr<TreeAut>(
-			fae->relabelReferences(fae->getRoot(i).get(), index)
+		fae->setRoot(index[i], std::shared_ptr<TreeAut>(
+			fae->relabelReferences(fae->getRoot(index[i]).get(), index)
 		));
 	}
 
-	fae->updateConnectionGraph();
+	FA_NOTE("After shuffling: " << *fae);
+
+	// FIXME: do we really need this?
+//	fae->updateConnectionGraph();
 
 	FA_WARN("Underapproximating intersection");
+}
+
+
+void FAE::makeProduct(
+	const FAE&                             lhs,
+	const FAE&                             rhs,
+	std::set<std::pair<size_t, size_t>>&   result)
+{
+	std::set<ProdState> processed;
+	std::vector<ProdState> workset;
+
+	assert(lhs.GetVarCount() == rhs.GetVarCount());
+	for (size_t i = 0; i < lhs.GetVarCount(); ++i)
+	{	// copy global variables
+		const Data& lhsVar = lhs.GetVar(i);
+		const Data& rhsVar = rhs.GetVar(i);
+
+		if (lhsVar.isRef() && rhsVar.isRef())
+		{	// for references
+			assert(lhsVar.d_ref.displ == rhsVar.d_ref.displ);
+			assert(0 == lhsVar.d_ref.displ);
+
+			const TreeAut* lhsRoot = lhs.getRoot(lhsVar.d_ref.root).get();
+			const TreeAut* rhsRoot = rhs.getRoot(rhsVar.d_ref.root).get();
+			assert((nullptr != lhsRoot) && (nullptr != rhsRoot));
+
+			ProdState initialState(
+				RootState(lhsVar.d_ref.root, lhsRoot->getFinalState()),
+				RootState(rhsVar.d_ref.root, rhsRoot->getFinalState())
+			);
+
+			if (processed.insert(initialState).second)
+			{	// in case the state has not been processed before
+				workset.push_back(initialState);
+			}
+		}
+	}
+
+	while (!workset.empty())
+	{
+		const ProdState curState = *workset.crbegin();
+		workset.pop_back();
+
+		const size_t& lhsRoot = curState.first.root;
+		const size_t& rhsRoot = curState.second.root;
+
+		const std::shared_ptr<TreeAut> lhsTA = lhs.getRoot(lhsRoot);
+		const std::shared_ptr<TreeAut> rhsTA = rhs.getRoot(rhsRoot);
+		assert((nullptr != lhsTA) && (nullptr != rhsTA));
+
+		const size_t& lhsState = curState.first.state;
+		const size_t& rhsState = curState.second.state;
+
+		TreeAut::iterator lhsIt = lhsTA->begin(lhsState);
+		TreeAut::iterator lhsEnd = lhsTA->end(lhsState, lhsIt);
+		TreeAut::iterator rhsIt = rhsTA->begin(rhsState);
+		TreeAut::iterator rhsEnd = rhsTA->end(rhsState, rhsIt);
+
+		for (; lhsIt != lhsEnd; ++lhsIt)
+		{
+			for (; rhsIt != rhsEnd; ++rhsIt)
+			{
+				const Transition& lhsTrans = *lhsIt;
+				const Transition& rhsTrans = *rhsIt;
+
+				if (lhsTrans.label() == rhsTrans.label())
+				{
+					assert(lhsTrans.lhs().size() == rhsTrans.lhs().size());
+					for (size_t i = 0; i < lhsTrans.lhs().size(); ++i)
+					{	// for each pair of states that map to each other
+						const Data* lhsData = nullptr;
+						if (lhs.isData(lhsTrans.lhs()[i], lhsData))
+						{	// for data states
+							assert(nullptr != lhsData);
+
+							const Data* rhsData = nullptr;
+							if (!rhs.isData(rhsTrans.lhs()[i], rhsData))
+							{
+								assert(false);       // fail gracefully
+							}
+
+							assert(nullptr != rhsData);
+
+							if (lhsData->isRef())
+							{	// for the case of other reference
+								assert(rhsData->isRef());
+								assert(rhsData->d_ref.displ == lhsData->d_ref.displ);
+								assert(0 == rhsData->d_ref.displ);
+
+								const size_t& lhsNewRoot = lhsData->d_ref.root;
+								const size_t& rhsNewRoot = rhsData->d_ref.root;
+
+								const TreeAut* lhsNewTA = lhs.getRoot(lhsData->d_ref.root).get();
+								const TreeAut* rhsNewTA = rhs.getRoot(rhsData->d_ref.root).get();
+								assert((nullptr != lhsNewTA) && (nullptr != rhsNewTA));
+
+								ProdState jumpState(
+									RootState(lhsNewRoot, lhsNewTA->getFinalState()),
+									RootState(rhsNewRoot, rhsNewTA->getFinalState())
+								);
+
+								if (processed.insert(jumpState).second)
+								{	// in case the state has not been processed before
+									workset.push_back(jumpState);
+								}
+							}
+						}
+						else
+						{
+							const ProdState newState(std::make_pair(
+								RootState(lhsRoot, lhsTrans.lhs()[i]),
+								RootState(rhsRoot, rhsTrans.lhs()[i])
+							));
+
+							// TODO: add to lhs?
+							assert(false);
+							if (processed.insert(newState).second)
+							{	// in case the state has not been processed before
+								workset.push_back(newState);
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	for (const ProdState& prodState : processed)
+	{
+		result.insert(std::make_pair(prodState.first.state, prodState.second.state));
+	}
 }

@@ -419,6 +419,23 @@ public:
 	}
 
 
+	/**
+	 * @brief  Makes a product of states of two FA
+	 *
+	 * This method performs a parallel traversal through a pair of forest
+	 * automata @p lhs and @p rhs and generates all possible mappings of states
+	 * between these two automata.
+	 *
+	 * @param[in]   lhs     First forest automaton
+	 * @param[in]   rhs     The other forest automaton
+	 * @param[out]  result  A container with achieved mappings
+	 */
+	static void makeProduct(
+		const FAE&                             lhs,
+		const FAE&                             rhs,
+		std::set<std::pair<size_t, size_t>>&   result);
+
+
 public:
 
 	// state 0 should never be allocated by FAE (?)

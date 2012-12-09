@@ -273,45 +273,74 @@ class utils {
 
 public:
 
-	// build equivalence classes
-	static void relBuildClasses(const std::vector<std::vector<bool> >& rel, std::vector<size_t>& headIndex) {
+	/**
+	 * @brief  Builds equivalence classes for a relation
+	 *
+	 * This method builds equivalence classes for a given relation @p rel. In
+	 * particular, it fills up @p headIndex, which is a vector where for each
+	 * element @p x in @p rel, there is the index of the first element in @p rel
+	 * such that it is equivalent to @p x.
+	 *
+	 * @param[in]  rel        The relation for which the equivalence classes are
+	 *                        computed
+	 * @param[out] headIndex  The index where each element in @p rel is associated
+	 *                        with the index of the first equivalent element
+	 */
+	static void relBuildClasses(
+		const std::vector<std::vector<bool>>&        rel,
+		std::vector<size_t>&                         headIndex)
+	{
 		headIndex.resize(rel.size());
 		std::vector<size_t> head;
-		for (size_t i = 0; i < rel.size(); ++i) {
+		for (size_t i = 0; i < rel.size(); ++i)
+		{
 			bool found = false;
-			for (size_t j = 0; j < head.size(); ++j) {
-				if (rel[i][head[j]] && rel[head[j]][i]) {
+			for (size_t j = 0; j < head.size(); ++j)
+			{
+				if (rel[i][head[j]] && rel[head[j]][i])
+				{
 					headIndex[i] = head[j];
 					found = true;
 					break;
 				}
 			}
-			if (!found) {
+			if (!found)
+			{
 				headIndex[i] = i;
 				head.push_back(i);
 			}
 		}
 	}
 
+#if 0
 	// build equivalence classes
-	static void relBuildClasses(const std::vector<std::vector<bool> >& rel, std::vector<size_t>& index, std::vector<size_t>& head) {
+	static void relBuildClasses(
+		const std::vector<std::vector<bool>>&  rel,
+		std::vector<size_t>&                   index,
+		std::vector<size_t>&                   head)
+	{
 		index.resize(rel.size());
 		head.clear();
-		for (size_t i = 0; i < rel.size(); ++i) {
+		for (size_t i = 0; i < rel.size(); ++i)
+		{
 			bool found = false;
-			for (size_t j = 0; j < head.size(); ++j) {
-				if (rel[i][head[j]] && rel[head[j]][i]) {
+			for (size_t j = 0; j < head.size(); ++j)
+			{
+				if (rel[i][head[j]] && rel[head[j]][i])
+				{
 					index[i] = j;
 					found = true;
 					break;
 				}
 			}
-			if (!found) {
+			if (!found)
+			{
 				index[i] = head.size();
 				head.push_back(i);
 			}
 		}
 	}
+#endif
 
 	// and composition
 	static void relAnd(std::vector<std::vector<bool> >& dst, const std::vector<std::vector<bool> >& src1, const std::vector<std::vector<bool> >& src2) {
@@ -412,7 +441,7 @@ public:
 			if (*f1 < *f2)
 				return false;
 			if (*f1 == *f2)
-				++f1; 
+				++f1;
 		}
 		return true;
 	}
