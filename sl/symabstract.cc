@@ -115,45 +115,10 @@ void detachClonedPrototype(
         const TObjId            ownerSrc,
         const bool              uplink)
 {
-    const bool isOwnerDls = (OK_DLS == sh.objKind(ownerDst));
-    CL_BREAK_IF(isOwnerDls && (OK_DLS != sh.objKind(ownerSrc)));
-
-    TObjId ownerDstPeer = OBJ_INVALID;
-    TObjId ownerSrcPeer = OBJ_INVALID;
-    if (isOwnerDls) {
-        ownerDstPeer = dlSegPeer(sh, ownerDst);
-        ownerSrcPeer = dlSegPeer(sh, ownerSrc);
-        CL_BREAK_IF(uplink && (ownerDstPeer != ownerSrcPeer));
-    }
-
     redirectRefs(sh, ownerDst, proto, TS_INVALID, clone, TS_INVALID);
     redirectRefs(sh, clone, ownerSrc, TS_INVALID, ownerDst, (uplink)
             ? TS_REGION
             : TS_INVALID);
-
-    if (isOwnerDls) {
-        if (uplink)
-            redirectRefs(sh, clone, ownerSrcPeer, TS_INVALID,
-                    ownerDst, TS_REGION);
-        else
-            redirectRefs(sh, ownerDstPeer, proto, TS_INVALID,
-                    clone, TS_INVALID);
-    }
-
-    if (OK_DLS == sh.objKind(proto)) {
-        const TObjId protoPeer = dlSegPeer(sh, proto);
-        const TObjId clonePeer = dlSegPeer(sh, clone);
-
-        redirectRefs(sh, ownerDst, protoPeer, TS_INVALID,
-                clonePeer, TS_REGION);
-
-        redirectRefs(sh, clonePeer, ownerSrc, TS_INVALID,
-                ownerDst, TS_REGION);
-
-        if (isOwnerDls && uplink)
-            redirectRefs(sh, clonePeer, ownerSrcPeer, TS_INVALID,
-                    ownerDst, TS_REGION);
-    }
 }
 
 TObjId protoClone(SymHeap &sh, const TObjId proto)
@@ -204,48 +169,6 @@ void clonePrototypes(
                     /* uplink */ false);
         }
     }
-}
-
-struct ValueSynchronizer {
-    SymHeap            &sh;
-    TFldSet             ignoreList;
-
-    ValueSynchronizer(SymHeap &sh_): sh(sh_) { }
-
-    bool operator()(FldHandle item[2]) const {
-        const FldHandle &src = item[0];
-        const FldHandle &dst = item[1];
-        if (hasKey(ignoreList, src))
-            return /* continue */ true;
-
-        // store value of 'src' into 'dst'
-        const TValId valSrc = src.value();
-        const TValId valDst = dst.value();
-        dst.setValue(valSrc);
-
-        // if the last reference is gone, we have a problem
-        const TObjId objDst = sh.objByAddr(valDst);
-        if (collectJunk(sh, objDst))
-            CL_DEBUG("    ValueSynchronizer drops a sub-heap (dlSegPeerData)");
-
-        return /* continue */ true;
-    }
-};
-
-void dlSegSyncPeerData(SymHeap &sh, const TObjId dls)
-{
-    ValueSynchronizer visitor(sh);
-    buildIgnoreList(visitor.ignoreList, sh, dls);
-
-    // if there was "a pointer to self", it should remain "a pointer to self";
-    FldList refs;
-    sh.pointedBy(refs, dls);
-    BOOST_FOREACH(const FldHandle &fld, refs)
-        visitor.ignoreList.insert(fld);
-
-    const TObjId peer = dlSegPeer(sh, dls);
-    const TObjId objs[] = { dls, peer };
-    traverseLiveFields<2>(sh, objs, visitor);
 }
 
 // clone a segment including its prototypes and decrement their nesting level
@@ -320,26 +243,27 @@ void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
     enlargeMayExist(sh, obj2);
 
     // merge data
-    joinData(sh, off, obj2, obj1, /* bidir */ true);
+    joinData(sh, off, obj1, obj2, /* bidir */ false);
 
-    swapValues(off.next, off.prev);
     sh.objSetAbstract(obj1, OK_DLS, off);
-
-    swapValues(off.next, off.prev);
-    sh.objSetAbstract(obj2, OK_DLS, off);
 
     TObjList protos;
     collectPrototypesOf(protos, sh, obj1, /* skipPeers */ false);
 
     // convert the TS_REGION addresses to TS_FIRST/TS_LAST
     /* XXX */ protos.push_back(obj1);
-    redirectRefsNotFrom(sh, protos, obj1, obj1, TS_LAST);
+    redirectRefsNotFrom(sh, protos, obj1, obj1, TS_FIRST);
     /* XXX */ protos.back() = obj2;
-    redirectRefsNotFrom(sh, protos, obj2, obj2, TS_FIRST);
+    redirectRefsNotFrom(sh, protos, obj2, obj1, TS_LAST);
+
+    const TValId valNext = valOfPtr(sh, obj2, off.next);
+    const PtrHandle prevPtr(sh, obj1, off.next);
+    prevPtr.setValue(valNext);
+
+    REQUIRE_GC_ACTIVITY(sh, obj2, dlSegCreate);
 
     // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
     sh.segSetMinLength(obj1, len);
-    sh.segSetMinLength(obj2, len);
 }
 
 void dlSegGobble(SymHeap &sh, TObjId dls, TObjId reg, bool backward)
@@ -352,34 +276,27 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId reg, bool backward)
     // we allow to gobble OK_SEE_THROUGH objects (if compatible)
     enlargeMayExist(sh, reg);
 
-    ETargetSpecifier ts = TS_FIRST;
-    if (backward)
-        ts = TS_LAST;
-    else
-        // jump to peer
-        dls = dlSegPeer(sh, dls);
-
     // merge data
     const BindingOff &off = sh.segBinding(dls);
     joinData(sh, off, dls, reg, /* bidir */ false);
-    dlSegSyncPeerData(sh, dls);
 
-    // store the pointer DLS -> VAR
-    const PtrHandle nextPtr(sh, dls, off.next);
-    const TValId valNext = valOfPtr(sh, reg, off.next);
+    TOffset offNext = off.next;;
+    TOffset offPrev = off.prev;
+    if (backward)
+        swapValues(offNext, offPrev);
+
+    const TValId headOld = sh.addrOfTarget(reg, TS_REGION, off.head);
+    const TValId headNew = valOfPtr(sh, reg, offPrev);
+    sh.valReplace(headOld, headNew);
+
+    const PtrHandle nextPtr(sh, dls, offNext);
+    const TValId valNext = valOfPtr(sh, reg, offNext);
     nextPtr.setValue(valNext);
 
-    // replace VAR by DLS
-    const TValId headOld = sh.addrOfTarget(reg, TS_REGION, off.head);
-    const TValId headNew = segHeadAt(sh, dls, ts);
-    sh.valReplace(headOld, headNew);
     REQUIRE_GC_ACTIVITY(sh, reg, dlSegGobble);
 
     // handle DLS Neq predicates
     sh.segSetMinLength(dls, len);
-    sh.segSetMinLength(segPeer(sh, dls), len);
-
-    dlSegSyncPeerData(sh, dls);
 }
 
 void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
@@ -387,43 +304,27 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
     // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
 
-    CL_BREAK_IF(isDlSegPeer(sh, seg1) || isDlSegPeer(sh, seg2));
-
-    const TObjId peer1 = dlSegPeer(sh, seg1);
-    const TObjId peer2 = dlSegPeer(sh, seg2);
-
-    CL_BREAK_IF(!isDlSegPeer(sh, peer1) || !isDlSegPeer(sh, peer2));
-
     // merge data
     const BindingOff &bf2 = sh.segBinding(seg2);
-    joinData(sh, bf2, seg2, seg1, /* bidir */ true);
+    joinData(sh, bf2, seg1, seg2, /* bidir */ false);
 
     // preserve valNext
-    const TValId valNext1 = nextValFromSeg(sh, seg1);
-    const PtrHandle ptrNext2 = nextPtrFromSeg(sh, seg2);
-    ptrNext2.setValue(valNext1);
+    const TValId valNext = nextValFromSeg(sh, seg2);
+    const PtrHandle ptrNext = nextPtrFromSeg(sh, seg1);
+    ptrNext.setValue(valNext);
 
-    // replace both parts point-wise
-    const TValId headAt = segHeadAt(sh,  seg1, TS_LAST);
-    const TValId peerAt = segHeadAt(sh, peer1, TS_FIRST);
+    redirectRefs(sh,
+            /* pointingFrom */ OBJ_INVALID,
+            /* pointingTo   */ seg2,
+            /* pointingWith */ TS_LAST,
+            /* redirectTo   */ seg1,
+            /* redirectWith */ TS_LAST);
 
-    sh.valReplace(headAt, segHeadAt(sh,  seg2, TS_LAST));
-    sh.valReplace(peerAt, segHeadAt(sh, peer2, TS_FIRST));
-
-    // destroy headAt and peerAt, including all prototypes -- either at once, or
-    // one by one (depending on the shape of subgraph)
-    REQUIRE_GC_ACTIVITY(sh, seg1, dlSegMerge);
-    if (!collectJunk(sh, peer1) && sh.isValid(peer1)) {
-        CL_ERROR("dlSegMerge() failed to collect garbage"
-                 ", peer1 still referenced");
-        CL_BREAK_IF("collectJunk() has not been successful");
-    }
+    // destroy seg2 including all prototypes
+    REQUIRE_GC_ACTIVITY(sh, seg2, dlSegMerge);
 
     // assign the resulting minimal length
-    sh.segSetMinLength(seg2, len);
-    sh.segSetMinLength(segPeer(sh, seg2), len);
-
-    dlSegSyncPeerData(sh, seg2);
+    sh.segSetMinLength(seg1, len);
 }
 
 bool /* jump next */ dlSegAbstractionStep(
@@ -440,7 +341,7 @@ bool /* jump next */ dlSegAbstractionStep(
         if (OK_DLS == kind) {
             // DLS + DLS
             dlSegMerge(sh, obj, next);
-            return /* jump next */ true;
+            return /* jump next */ false;
         }
 
         // CONCRETE + DLS
@@ -558,9 +459,9 @@ void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
     Trace::Node *trOrig = sh.traceNode();
     sh.traceUpdate(new Trace::ConcretizationNode(trOrig, OK_DLS, pName));
 
-    const PtrHandle peerPtr = prevPtrFromSeg(sh, seg);
-    const TValId valNext = nextValFromSeg(sh, peer);
-    peerPtr.setValue(valNext);
+    CL_BREAK_IF(seg != peer);
+    CL_BREAK_IF(OK_DLS != sh.objKind(seg));
+    (void) peer;
 
     // redirect all references originally pointing to seg
     redirectRefs(sh,
@@ -569,17 +470,6 @@ void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
             /* pointingWith */ TS_INVALID,
             /* redirectTo   */ seg,
             /* redirectWith */ TS_REGION);
-
-    // redirect all references originally pointing to peer
-    redirectRefs(sh,
-            /* pointingFrom */ OBJ_INVALID,
-            /* pointingTo   */ peer,
-            /* pointingWith */ TS_INVALID,
-            /* redirectTo   */ seg,
-            /* redirectWith */ TS_REGION);
-
-    // destroy peer, including all prototypes
-    REQUIRE_GC_ACTIVITY(sh, peer, dlSegReplaceByConcrete);
 
     // convert OK_DLS to OK_REGION
     sh.objSetConcrete(seg);
@@ -600,28 +490,45 @@ void spliceOutListSegment(
 
     const TObjId peer = segPeer(sh, seg);
 
-    const TValId segAt = sh.addrOfTarget(seg, TS_FIRST);
-    const TValId valNext = nextValFromSegAddr(sh, segAt);
+    const TValId valNext = nextValFromSeg(sh, seg);
     const TOffset offHead = headOffset(sh, seg);
 
     const EObjKind kind = sh.objKind(seg);
     if (OK_DLS == kind) {
         // OK_DLS --> unlink peer
-        const TValId valPrev = prevValFromSegAddr(sh, segAt);
+        const PtrHandle prevPtr = prevPtrFromSeg(sh, seg);
+        const TValId valPrev = prevPtr.value();
         redirectRefs(sh,
                 /* pointingFrom */ OBJ_INVALID,
                 /* pointingTo   */ peer,
-                /* pointingWith */ TS_INVALID,
+                /* pointingWith */ TS_LAST,
                 /* redirectTo   */ sh.objByAddr(valPrev),
                 /* redirectWith */ sh.targetSpec(valPrev),
                 /* offHead      */ sh.valOffset(valPrev) - offHead);
+    }
+
+    ETargetSpecifier ts = TS_INVALID;
+    switch (kind) {
+        case OK_REGION:
+            CL_BREAK_IF("invalid call of spliceOutListSegment()");
+
+        case OK_OBJ_OR_NULL:
+        case OK_SEE_THROUGH:
+        case OK_SEE_THROUGH_2N:
+            ts = TS_REGION;
+            break;
+
+        case OK_SLS:
+        case OK_DLS:
+            ts = TS_FIRST;
+            break;
     }
 
     // unlink self
     redirectRefs(sh,
             /* pointingFrom */ OBJ_INVALID,
             /* pointingTo   */ seg,
-            /* pointingWith */ TS_INVALID,
+            /* pointingWith */ ts,
             /* redirectTo   */ sh.objByAddr(valNext),
             /* redirectWith */ sh.targetSpec(valNext),
             /* offHead      */ sh.valOffset(valNext) - offHead);
@@ -727,7 +634,7 @@ void concretizeObj(
 
     // resolve the relative placement of the 'next' pointer
     const BindingOff off = sh.segBinding(seg);
-    const TOffset offNext = (OK_SLS == kind)
+    const TOffset offNext = (TS_FIRST == ts)
         ? off.next
         : off.prev;
 
@@ -739,7 +646,10 @@ void concretizeObj(
 
     if (OK_DLS == kind) {
         // redirect 'prev' pointer from seg to the cloned (concrete) object
-        const PtrHandle prev = nextPtrFromSeg(sh, seg);
+        const PtrHandle prev = (TS_FIRST == ts)
+            ? prevPtrFromSeg(sh, seg)
+            : nextPtrFromSeg(sh, seg);
+
         const TValId headAddr = sh.addrOfTarget(dup, TS_REGION, off.head);
         prev.setValue(headAddr);
 

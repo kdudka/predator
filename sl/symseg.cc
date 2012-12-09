@@ -28,20 +28,35 @@
 
 #include <boost/foreach.hpp>
 
-/// FIXME: this needs to be rewritten once we unimplement DLS peers
-TValId nextValFromSegAddr(const SymHeap &sh, const TValId addr)
+TValId valFromSegAddr(
+        const SymHeap              &sh,
+        const TValId                addr,
+        const bool                  backward)
 {
     const TObjId seg = sh.objByAddr(addr);
-    const TObjId peer = segPeer(sh, seg);
-    return nextValFromSeg(sh, peer);
+    if (OK_OBJ_OR_NULL == sh.objKind(seg)) {
+        CL_BREAK_IF(backward);
+        return VAL_NULL;
+    }
+
+    const ETargetSpecifier ts = sh.targetSpec(addr);
+    const bool isLast = (TS_LAST == ts);
+
+    const PtrHandle ptr = (backward == isLast)
+        ? nextPtrFromSeg(sh, seg)
+        : prevPtrFromSeg(sh, seg);
+
+    return ptr.value();
 }
 
-/// FIXME: this needs to be rewritten once we unimplement DLS peers
+TValId nextValFromSegAddr(const SymHeap &sh, const TValId addr)
+{
+    return valFromSegAddr(sh, addr, /* backward */ false);
+}
+
 TValId prevValFromSegAddr(const SymHeap &sh, const TValId addr)
 {
-    const TObjId seg = sh.objByAddr(addr);
-    CL_BREAK_IF(OK_DLS != sh.objKind(seg));
-    return nextValFromSeg(sh, seg);
+    return valFromSegAddr(sh, addr, /* backward */ true);
 }
 
 bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
@@ -300,14 +315,6 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
         // when computing the actual shift, take the head offset into account
         const BindingOff &bOff = sh.segBinding(seg);
         const TOffset shiftBy = off - bOff.head;
-
-        if (OK_DLS == kind) {
-            // put the shifted address of DLS peer to the list of seen values
-            TValId valPrev = prevValFromSegAddr(sh, val);
-            valPrev = const_cast<SymHeap &>(sh).valByOffset(valPrev, shiftBy);
-            if (!insertOnce(*pSeen, valPrev))
-                return val;
-        }
 
         // jump to next value
         const TValId valNext = nextValFromSegAddr(sh, val);

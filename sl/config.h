@@ -236,7 +236,7 @@
 /**
  * preserve heaps with different DLS minimum lengths up to the specified number
  */
-#define SE_PRESERVE_DLS_MINLEN              0
+#define SE_PRESERVE_DLS_MINLEN              2
 
 /**
  * upper bound of DLS minimal length (zero means unlimited)

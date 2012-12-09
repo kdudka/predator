@@ -1026,17 +1026,6 @@ struct ObjJoinVisitor {
     }
 };
 
-template <class TDst>
-void dlSegBlackListPrevPtr(TDst &dst, SymHeap &sh, TObjId obj)
-{
-    const EObjKind kind = sh.objKind(obj);
-    if (OK_DLS != kind)
-        return;
-
-    const PtrHandle prevPtr = prevPtrFromSeg(sh, obj);
-    dst.insert(prevPtr);
-}
-
 struct SegMatchVisitor {
     SymJoinCtx              &ctx;
     TFldSet                 blackList1;
@@ -1075,8 +1064,6 @@ bool joinFields(
 
     // initialize visitor
     ObjJoinVisitor objVisitor(ctx, ldiff);
-    dlSegBlackListPrevPtr(objVisitor.blackList1, ctx.sh1, obj1);
-    dlSegBlackListPrevPtr(objVisitor.blackList2, ctx.sh2, obj2);
 
     if (offBlackList) {
         buildIgnoreList(objVisitor.blackList1, ctx.sh1, obj1, *offBlackList);
@@ -1121,9 +1108,6 @@ bool segMatchLookAhead(
     SymHeap *const heaps[] = { &ctx.sh1, &ctx.sh2 };
     TObjId objs[] = { obj1, obj2 };
     SegMatchVisitor visitor(ctx);
-
-    dlSegBlackListPrevPtr(visitor.blackList1, ctx.sh1, obj1);
-    dlSegBlackListPrevPtr(visitor.blackList2, ctx.sh2, obj2);
 
     return traverseLiveFieldsGeneric<2>(heaps, objs, visitor);
 }

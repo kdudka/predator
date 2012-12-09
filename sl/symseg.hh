@@ -80,13 +80,10 @@ inline TValId nextValFromSeg(const SymHeap &sh, TObjId seg)
 }
 
 /// TODO: drop this!
-inline TObjId dlSegPeer(const SymHeap &sh, TObjId dls)
+inline TObjId dlSegPeer(const SymHeap &, TObjId dls)
 {
-    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
-
-    const BindingOff &off = sh.segBinding(dls);
-    const TValId prev = valOfPtr(const_cast<SymHeap &>(sh), dls, off.prev);
-    return sh.objByAddr(prev);
+    // DLS peers no longer exist!
+    return dls;
 }
 
 /// TODO: drop this!
@@ -150,15 +147,9 @@ inline TObjId segNextObj(SymHeap &sh, TObjId obj)
     return segNextObj(sh, obj, offNext);
 }
 
-/// TODO: drop this!
-inline bool isDlSegPeer(const SymHeap &sh, const TObjId obj)
+inline bool isDlSegPeer(const SymHeap &, const TObjId)
 {
-    if (OK_DLS != sh.objKind(obj))
-        // not a DLS
-        return false;
-
-    const BindingOff &bf = sh.segBinding(obj);
-    return (bf.prev < bf.next);
+    return false;
 }
 
 inline TMinLen objMinLength(const SymHeap &sh, TObjId obj)
