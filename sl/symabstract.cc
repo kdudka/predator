@@ -691,6 +691,7 @@ void concretizeObj(
         TObjSet                     *leakObjs)
 {
     CL_BREAK_IF(!protoCheckConsistency(sh));
+    CL_BREAK_IF(TS_ALL == ts);
 
     const TObjId peer = segPeer(sh, seg);
 
@@ -716,16 +717,15 @@ void concretizeObj(
 
     // duplicate seg (including all prototypes) and convert to OK_REGION
     const TObjId dup = segDeepCopy(sh, seg);
-    /* XXX */ TObjList ignoreList;
-    /* XXX */ collectPrototypesOf(ignoreList, sh, seg, /* skipPeers */ false);
-    /* XXX */ collectPrototypesOf(ignoreList, sh, dup, /* skipPeers */ false);
     sh.objSetConcrete(dup);
 
-    // unless we use TS_FIRST/TS_LAST properly, we cannot use redirectRefs()
-    /* XXX */ ignoreList.push_back(seg);
-    /* XXX */ ignoreList.push_back(dup);
-    /* XXX */ ignoreList.push_back(peer);
-    redirectRefsNotFrom(sh, ignoreList, seg, dup, TS_REGION);
+    // redirect all TS_FIRST/TS_LAST addresses to the region
+    redirectRefs(sh,
+            /* pointingFrom */ OBJ_INVALID,
+            /* pointingTo   */ seg,
+            /* pointingWith */ ts,
+            /* redirectTo   */ dup,
+            /* redirectWith */ TS_REGION);
 
     // resolve the relative placement of the 'next' pointer
     const BindingOff off = sh.segBinding(seg);
@@ -745,6 +745,7 @@ void concretizeObj(
         const TValId headAddr = sh.addrOfTarget(dup, TS_REGION, off.head);
         prev.setValue(headAddr);
 
+        dlSegRecover(sh, seg, peer);
         CL_BREAK_IF(!dlSegCheckConsistency(sh));
     }
 
