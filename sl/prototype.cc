@@ -119,11 +119,16 @@ void objChangeProtoLevel(SymHeap &sh, TObjId proto, const TProtoLevel diff)
     const TProtoLevel level = sh.objProtoLevel(proto);
     sh.objSetProtoLevel(proto, level + diff);
 
+    // TODO: drop this!
     const EObjKind kind = sh.objKind(proto);
     if (OK_DLS != kind)
         return;
 
     const TObjId peer = dlSegPeer(sh, proto);
+    if (peer == proto)
+        // not a DLS peer really
+        return;
+
     CL_BREAK_IF(sh.objProtoLevel(peer) != level);
 
     sh.objSetProtoLevel(peer, level + diff);

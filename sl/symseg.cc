@@ -214,6 +214,9 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
 
 void dlSegRecover(SymHeap &sh, const TObjId obj1, const TObjId obj2)
 {
+    if (obj1 == obj2)
+        return;
+
     CL_BREAK_IF(isDlSegPeer(sh, obj1) == isDlSegPeer(sh, obj2));
 
     const FldHandle ptr1 = prevPtrFromSeg(sh, obj1);
@@ -238,6 +241,9 @@ TObjId segClone(SymHeap &sh, const TObjId obj)
     if (OK_DLS == sh.objKind(obj)) {
         // we need to clone the peer as well
         const TObjId peer = dlSegPeer(sh, obj);
+        if (peer == obj)
+            return dup;
+
         const TObjId dupPeer = sh.objClone(peer);
         dlSegRecover(sh, dup, dupPeer);
     }

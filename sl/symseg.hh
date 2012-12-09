@@ -220,7 +220,7 @@ inline bool objWithBinding(const SymHeap &sh, const TObjId obj)
     return true;
 }
 
-/// clone an object; in case of DLS, clone both parts of it
+/// TODO: drop this!
 TObjId segClone(SymHeap &sh, const TObjId obj);
 
 inline void buildIgnoreList(
