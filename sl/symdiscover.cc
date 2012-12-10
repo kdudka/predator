@@ -343,6 +343,10 @@ void segDiscover(
 {
     CL_BREAK_IF(!dst.empty());
 
+    if (isDlsBinding(off) && (OBJ_INVALID == nextObj(sh, entry, off.prev)))
+        // valPrev has no target
+        return;
+
     // we use std::set to detect loops
     TObjSet haveSeen;
     haveSeen.insert(entry);
