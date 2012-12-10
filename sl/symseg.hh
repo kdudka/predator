@@ -252,9 +252,6 @@ inline void buildIgnoreList(
 /// look through possibly empty objects and return the value seen
 TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen = 0);
 
-/// TODO: drop this!
-void dlSegRecover(SymHeap &sh, const TObjId obj1, const TObjId obj2);
-
 /// true if all segments have populated next/prev pointers
 bool segCheckConsistency(const SymHeap &sh);
 

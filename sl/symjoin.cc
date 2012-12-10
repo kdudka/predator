@@ -1915,9 +1915,6 @@ bool segmentCloneCore(
 
 void scheduleSegAddr(
         TWorkList              &wl,
-        const SymHeap          &shGt,
-        const TObjId            seg,
-        const TObjId            peer,
         const EJoinStatus       action,
         const SchedItem         item)
 {
@@ -1931,18 +1928,6 @@ void scheduleSegAddr(
             (JS_USE_SH2 == action) ? item.fld2 : fldInvalid,
             item.ldiff);
     wl.schedule(segItem);
-
-    if (seg == peer)
-        return;
-
-    // FIXME: we need this for test-0129
-    const FldHandle fldPeer = prevPtrFromSeg(shGt, seg);
-    const SchedItem peerItem(
-            /* XXX */ fldInvalid,
-            (JS_USE_SH1 == action) ? fldPeer : fldInvalid,
-            (JS_USE_SH2 == action) ? fldPeer : fldInvalid,
-            item.ldiff);
-    wl.schedule(peerItem);
 }
 
 bool cloneSpecialValue(
@@ -2002,12 +1987,6 @@ bool insertSegmentClone(
     SymHeap &shGt = ((isGt1) ? ctx.sh1 : ctx.sh2);
     const TObjId seg = shGt.objByAddr((isGt1) ? v1 : v2);
     const EObjKind kind = shGt.objKind(seg);
-    const bool isDls = (OK_DLS == kind);
-    CL_BREAK_IF(off && isDls);
-
-    TObjId peer = seg;
-    if (isDls)
-        peer = dlSegPeer(shGt, seg);
 
     const bool isObjOrNull = (OK_OBJ_OR_NULL == kind)
         || (off && (ObjOrNull == *off));
@@ -2020,7 +1999,7 @@ bool insertSegmentClone(
     else {
         nextPtr = (off)
             ? PtrHandle(shGt, seg, off->next)
-            : nextPtrFromSeg(shGt, peer);
+            : nextPtrFromSeg(shGt, seg);
 
         nextGt = nextPtr.value();
     }
@@ -2052,7 +2031,7 @@ bool insertSegmentClone(
 
     const bool isMayExist = !!off;
 
-    scheduleSegAddr(ctx.wl, shGt, seg, peer, action, item);
+    scheduleSegAddr(ctx.wl, action, item);
 
     SchedItem cloneItem;
     while (ctx.wl.next(cloneItem)) {
@@ -2122,11 +2101,6 @@ fail:
     if (ctx.wl.schedule(nextItem))
         SJ_DEBUG("+++ " << SJ_FLDT(fldNextDst, fldNext1, fldNext2)
                 << " by insertSegmentClone()");
-
-    if (isDls) {
-        const TObjId peerDst = roMapLookup(objMapGt[/* ltr */ 0], peer);
-        dlSegRecover(ctx.dst, segDst, peerDst);
-    }
 
     return true;
 }
