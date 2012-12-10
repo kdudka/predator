@@ -411,22 +411,6 @@ void redirectRefsNotFrom(
         const TObjId            redirectTo,
         const ETargetSpecifier  redirectWith);
 
-inline TObjId objClone(SymHeap &sh, const TObjId obj)
-{
-    const TObjId dup = sh.objClone(obj);
-
-    // if there was "a pointer to self", it should remain "a pointer to self";
-    // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh,
-            /* pointingFrom  */ dup,
-            /* pointingTo    */ obj,
-            /* pointingWith  */ TS_INVALID,
-            /* redirectTo    */ dup,
-            /* redirectWith  */ /* XXX */ TS_REGION);
-
-    return dup;
-}
-
 /// take the given visitor through all live program variables in all heaps
 template <unsigned N_DST, unsigned N_SRC, class THeap, class TVisitor>
 bool /* complete */ traverseProgramVarsGeneric(

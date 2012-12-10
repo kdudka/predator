@@ -123,8 +123,16 @@ void detachClonedPrototype(
 
 TObjId protoClone(SymHeap &sh, const TObjId proto)
 {
-    const TObjId clone = objClone(sh, proto);
+    const TObjId clone = sh.objClone(proto);
     objDecrementProtoLevel(sh, clone);
+
+    // recover pointers to self
+    redirectRefs(sh,
+            /* pointingFrom  */ clone,
+            /* pointingTo    */ proto,
+            /* pointingWith  */ TS_INVALID,
+            /* redirectTo    */ clone,
+            /* redirectWith  */ TS_INVALID);
 
     if (OK_REGION == sh.objKind(proto))
         // clone all unknown values in order to keep prover working
@@ -172,22 +180,31 @@ void clonePrototypes(
 }
 
 // clone a segment including its prototypes and decrement their nesting level
-TObjId segDeepCopy(SymHeap &sh, TObjId seg)
+TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
 {
     // collect the list of prototypes
     TObjList protoList;
     collectPrototypesOf(protoList, sh, seg);
 
     // clone the object itself
-    const TObjId dup = objClone(sh, seg);
+    const TObjId reg = sh.objClone(seg);
+    sh.objSetConcrete(reg);
+
+    // recover pointers to self
+    redirectRefs(sh,
+            /* pointingFrom  */ reg,
+            /* pointingTo    */ seg,
+            /* pointingWith  */ TS_INVALID,
+            /* redirectTo    */ reg,
+            /* redirectWith  */ TS_REGION);
 
     // clone all unknown values in order to keep prover working
-    duplicateUnknownValues(sh, dup);
+    duplicateUnknownValues(sh, reg);
 
     // clone all prototypes originally owned by seg
-    clonePrototypes(sh, dup, seg, protoList);
+    clonePrototypes(sh, reg, seg, protoList);
 
-    return dup;
+    return reg;
 }
 
 void enlargeMayExist(SymHeap &sh, const TObjId obj)
@@ -611,15 +628,14 @@ void concretizeObj(
     }
 
     // duplicate seg (including all prototypes) and convert to OK_REGION
-    const TObjId dup = segDeepCopy(sh, seg);
-    sh.objSetConcrete(dup);
+    const TObjId reg = regFromSegDeep(sh, seg);
 
     // redirect all TS_FIRST/TS_LAST addresses to the region
     redirectRefs(sh,
             /* pointingFrom */ OBJ_INVALID,
             /* pointingTo   */ seg,
             /* pointingWith */ ts,
-            /* redirectTo   */ dup,
+            /* redirectTo   */ reg,
             /* redirectWith */ TS_REGION);
 
     // resolve the relative placement of the 'next' pointer
@@ -631,7 +647,7 @@ void concretizeObj(
     const TValId segHead = segHeadAt(sh, seg, ts);
 
     // update 'next' pointer
-    const PtrHandle nextPtr(sh, dup, offNext);
+    const PtrHandle nextPtr(sh, reg, offNext);
     nextPtr.setValue(segHead);
 
     if (OK_DLS == kind) {
@@ -640,7 +656,7 @@ void concretizeObj(
             ? prevPtrFromSeg(sh, seg)
             : nextPtrFromSeg(sh, seg);
 
-        const TValId headAddr = sh.addrOfTarget(dup, TS_REGION, off.head);
+        const TValId headAddr = sh.addrOfTarget(reg, TS_REGION, off.head);
         prev.setValue(headAddr);
         CL_BREAK_IF(!segCheckConsistency(sh));
     }
@@ -652,7 +668,7 @@ void concretizeObj(
     if (nextNextObj == seg) {
         // FIXME: we should do this also the other way around for OK_DLS
         const TOffset off = sh.valOffset(nextNextVal);
-        const TValId addr = sh.addrOfTarget(dup, TS_REGION, off);
+        const TValId addr = sh.addrOfTarget(reg, TS_REGION, off);
         nextNextPtr.setValue(addr);
     }
 
