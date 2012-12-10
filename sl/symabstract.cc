@@ -377,9 +377,8 @@ bool segAbstractionStep(
 
     if (isDlsBinding(off)) {
         // DLS
-        CL_BREAK_IF(!dlSegCheckConsistency(sh));
         const bool jumpNext = dlSegAbstractionStep(sh, obj, next, off);
-        CL_BREAK_IF(!dlSegCheckConsistency(sh));
+        CL_BREAK_IF(!segCheckConsistency(sh));
         if (!jumpNext)
             // stay in place
             return true;
@@ -453,7 +452,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
     std::string pName;
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOTN(symabstract, sh, &pName);
-    CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    CL_BREAK_IF(!segCheckConsistency(sh));
     CL_BREAK_IF(!protoCheckConsistency(sh));
 
     Trace::Node *trOrig = sh.traceNode();
@@ -475,7 +474,7 @@ void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
     sh.objSetConcrete(seg);
 
     LDP_PLOT(symabstract, sh);
-    CL_BREAK_IF(!dlSegCheckConsistency(sh));
+    CL_BREAK_IF(!segCheckConsistency(sh));
     CL_BREAK_IF(!protoCheckConsistency(sh));
 }
 
@@ -488,19 +487,16 @@ void spliceOutListSegment(
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(objMinLength(sh, seg));
 
-    const TObjId peer = segPeer(sh, seg);
-
     const TValId valNext = nextValFromSeg(sh, seg);
     const TOffset offHead = headOffset(sh, seg);
 
     const EObjKind kind = sh.objKind(seg);
     if (OK_DLS == kind) {
-        // OK_DLS --> unlink peer
         const PtrHandle prevPtr = prevPtrFromSeg(sh, seg);
         const TValId valPrev = prevPtr.value();
         redirectRefs(sh,
                 /* pointingFrom */ OBJ_INVALID,
-                /* pointingTo   */ peer,
+                /* pointingTo   */ seg,
                 /* pointingWith */ TS_LAST,
                 /* redirectTo   */ sh.objByAddr(valPrev),
                 /* redirectWith */ sh.targetSpec(valPrev),
@@ -534,10 +530,6 @@ void spliceOutListSegment(
             /* offHead      */ sh.valOffset(valNext) - offHead);
 
     collectSharedJunk(sh, seg, leakObjs);
-
-    // destroy peer in case of DLS
-    if (OK_DLS == kind && collectJunk(sh, peer))
-        CL_DEBUG("spliceOutListSegment() drops a sub-heap (peer)");
 
     // destroy self, including all nested prototypes
     if (collectJunk(sh, seg))
@@ -598,8 +590,6 @@ void concretizeObj(
     CL_BREAK_IF(!protoCheckConsistency(sh));
     CL_BREAK_IF(TS_ALL == ts);
 
-    const TObjId peer = segPeer(sh, seg);
-
     // handle the possibly empty variant (if exists)
     TMinLen len = sh.segMinLength(seg);
     spliceOutSegmentIfNeeded(&len, sh, seg, todo, leakObjs);
@@ -652,13 +642,11 @@ void concretizeObj(
 
         const TValId headAddr = sh.addrOfTarget(dup, TS_REGION, off.head);
         prev.setValue(headAddr);
-
-        dlSegRecover(sh, seg, peer);
-        CL_BREAK_IF(!dlSegCheckConsistency(sh));
+        CL_BREAK_IF(!segCheckConsistency(sh));
     }
 
     // if there was a self loop from 'next' to the segment itself, recover it
-    const PtrHandle nextNextPtr = nextPtrFromSeg(sh, peer);
+    const PtrHandle nextNextPtr = nextPtrFromSeg(sh, seg);
     const TValId nextNextVal = nextNextPtr.value();
     const TObjId nextNextObj = sh.objByAddr(nextNextVal);
     if (nextNextObj == seg) {
@@ -669,7 +657,6 @@ void concretizeObj(
     }
 
     sh.segSetMinLength(seg,  len);
-    sh.segSetMinLength(peer, len);
 
     LDP_PLOT(symabstract, sh);
 

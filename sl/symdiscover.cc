@@ -119,7 +119,7 @@ bool validatePointingObjects(
         SymHeap                    &sh,
         const BindingOff           &off,
         const TObjId                obj,
-        TObjId                      prev,
+        const TObjId                prev,
         const TObjId                next,
         TObjSet                     allowedReferers,
         const ETargetSpecifier      tsEntry = TS_INVALID)
@@ -127,17 +127,6 @@ bool validatePointingObjects(
     // we allow pointers to self at this point, but we require them to be
     // absolutely uniform along the abstraction path -- joinDataReadOnly()
     // is responsible for that
-    allowedReferers.insert(obj);
-    if (OK_DLS == sh.objKind(obj))
-        allowedReferers.insert(dlSegPeer(sh, obj));
-
-    if (OK_DLS == sh.objKind(prev))
-        // jump to peer in case of DLS
-        prev = dlSegPeer(sh, prev);
-
-    // we allow pointers to self at this point, but we require them to be
-    // absolutely uniform along the abstraction path -- matchData() should
-    // later take care of that
     allowedReferers.insert(obj);
 
     // collect all objects pointing at/inside the object
@@ -193,18 +182,13 @@ bool validatePrototypes(
         const TObjId                obj,
         TObjSet                     protos)
 {
-    TObjId peer = OBJ_INVALID;
     protos.insert(obj);
-    if (OK_DLS == sh.objKind(obj)) {
-        peer = dlSegPeer(sh, obj);
-        protos.insert(peer);
-    }
 
     BOOST_FOREACH(const TObjId proto, protos) {
-        if (proto == obj || proto == peer)
-            // we have inserted root/peer into protos, in order to get them on
-            // the list of allowed referrers, but it does not mean that they are
-            // prototypes
+        if (proto == obj)
+            // we have inserted obj into protos, in order to get them on the
+            // list of allowed referrers, but it does not mean that it is a
+            // prototype
             continue;
 
         if (!validatePointingObjects(sh, off, proto, OBJ_INVALID, OBJ_INVALID,
@@ -235,8 +219,6 @@ bool validateSegEntry(
 TObjId jumpToNextObj(
         SymHeap                    &sh,
         const BindingOff           &off,
-        TObjSet                    &/* haveSeen */,
-        const TObjSet              &/* protos */,
         TObjId                      obj)
 {
     if (!matchSegBinding(sh, obj, off))
@@ -376,7 +358,7 @@ void segDiscover(
     }
 
     // jump to the immediate successor
-    TObjId obj = jumpToNextObj(sh, off, haveSeen, initialProtos, entry);
+    TObjId obj = jumpToNextObj(sh, off, entry);
     if (!insertOnce(haveSeen, obj))
         // loop detected
         return;
@@ -411,7 +393,7 @@ void segDiscover(
         bool leaving = false;
 
         // look ahead
-        TObjId next = jumpToNextObj(sh, off, haveSeen, protoPairs[1], obj);
+        TObjId next = jumpToNextObj(sh, off, obj);
         if (!validatePointingObjects(sh, off, obj, prev, next, protoPairs[1])) {
             // someone points at/inside who should not
 
