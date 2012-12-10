@@ -26,10 +26,8 @@
 #include <cl/storage.hh>
 
 #include "intarena.hh"
-#include "symabstract.hh"
 #include "syments.hh"
 #include "sympred.hh"
-#include "symseg.hh"
 #include "symutil.hh"
 #include "symtrace.hh"
 #include "util.hh"

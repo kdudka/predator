@@ -370,7 +370,7 @@ void segDiscover(
     TObjSet initialProtos;
     if (OK_DLS == sh.objKind(entry)) {
         TObjList protoList;
-        collectPrototypesOf(protoList, sh, entry, /* skipDlsPeers */ false);
+        collectPrototypesOf(protoList, sh, entry);
         BOOST_FOREACH(const TObjId proto, protoList)
             initialProtos.insert(proto);
     }

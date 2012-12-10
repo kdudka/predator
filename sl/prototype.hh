@@ -27,8 +27,7 @@
 bool collectPrototypesOf(
         TObjList                   &dst,
         SymHeap                    &sh,
-        const TObjId                obj,
-        const bool                  skipDlsPeers);
+        const TObjId                obj);
 
 /// increment prototype level of a single object while taking care of DLS peers
 void objIncrementProtoLevel(SymHeap &sh, TObjId);

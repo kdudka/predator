@@ -176,7 +176,7 @@ TObjId segDeepCopy(SymHeap &sh, TObjId seg)
 {
     // collect the list of prototypes
     TObjList protoList;
-    collectPrototypesOf(protoList, sh, seg, /* skipPeers */ true);
+    collectPrototypesOf(protoList, sh, seg);
 
     // clone the object itself
     const TObjId dup = objClone(sh, seg);
@@ -248,7 +248,7 @@ void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
     sh.objSetAbstract(obj1, OK_DLS, off);
 
     TObjList protos;
-    collectPrototypesOf(protos, sh, obj1, /* skipPeers */ false);
+    collectPrototypesOf(protos, sh, obj1);
 
     // convert the TS_REGION addresses to TS_FIRST/TS_LAST
     /* XXX */ protos.push_back(obj1);

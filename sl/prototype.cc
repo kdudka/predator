@@ -46,14 +46,12 @@ struct ProtoFinder {
 class ProtoCollector {
     private:
         TObjList               &protoList_;
-        const bool              skipDlsPeers_;
         TFldSet                 ignoreList_;
         WorkList<TObjId>        wl_;
 
     public:
-        ProtoCollector(TObjList &dst, bool skipDlsPeers):
-            protoList_(dst),
-            skipDlsPeers_(skipDlsPeers)
+        ProtoCollector(TObjList &dst):
+            protoList_(dst)
         {
         }
 
@@ -89,10 +87,6 @@ bool ProtoCollector::operator()(const FldHandle &fld)
         BOOST_FOREACH(const TObjId proto, visitor.protos)
             wl_.schedule(proto);
 
-            if (skipDlsPeers_ && isDlSegPeer(sh, proto))
-                // we are asked to return only one part of each DLS
-                continue;
-
         protoList_.push_back(proto);
     }
 
@@ -102,52 +96,33 @@ bool ProtoCollector::operator()(const FldHandle &fld)
 bool collectPrototypesOf(
         TObjList                   &dst,
         SymHeap                    &sh,
-        const TObjId                obj,
-        const bool                  skipDlsPeers)
+        const TObjId                obj)
 {
     if (OK_REGION == sh.objKind(obj))
         // only abstract objects are allowed to have prototypes
         return false;
 
-    ProtoCollector collector(dst, skipDlsPeers);
+    ProtoCollector collector(dst);
     buildIgnoreList(collector.ignoreList(), sh, obj);
     return traverseLivePtrs(sh, obj, collector);
 }
 
-void objChangeProtoLevel(SymHeap &sh, TObjId proto, const TProtoLevel diff)
-{
-    const TProtoLevel level = sh.objProtoLevel(proto);
-    sh.objSetProtoLevel(proto, level + diff);
-
-    // TODO: drop this!
-    const EObjKind kind = sh.objKind(proto);
-    if (OK_DLS != kind)
-        return;
-
-    const TObjId peer = dlSegPeer(sh, proto);
-    if (peer == proto)
-        // not a DLS peer really
-        return;
-
-    CL_BREAK_IF(sh.objProtoLevel(peer) != level);
-
-    sh.objSetProtoLevel(peer, level + diff);
-}
-
 void objIncrementProtoLevel(SymHeap &sh, TObjId obj)
 {
-    objChangeProtoLevel(sh, obj, 1);
+    const TProtoLevel level = sh.objProtoLevel(obj);
+    sh.objSetProtoLevel(obj, level + 1);
 }
 
 void objDecrementProtoLevel(SymHeap &sh, TObjId obj)
 {
-    objChangeProtoLevel(sh, obj, -1);
+    const TProtoLevel level = sh.objProtoLevel(obj);
+    sh.objSetProtoLevel(obj, level - 1);
 }
 
 void decrementProtoLevel(SymHeap &sh, const TObjId obj)
 {
     TObjList protoList;
-    collectPrototypesOf(protoList, sh, obj, /* skipDlsPeers */ true);
+    collectPrototypesOf(protoList, sh, obj);
     BOOST_FOREACH(const TObjId proto, protoList)
         objDecrementProtoLevel(sh, proto);
 }
