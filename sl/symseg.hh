@@ -86,17 +86,6 @@ inline TObjId dlSegPeer(const SymHeap &, TObjId dls)
     return dls;
 }
 
-/// TODO: drop this!
-inline TObjId segPeer(const SymHeap &sh, TObjId seg)
-{
-    const EObjKind kind = sh.objKind(seg);
-    CL_BREAK_IF(OK_REGION == kind);
-
-    return (OK_DLS == kind)
-        ? dlSegPeer(sh, seg)
-        : seg;
-}
-
 TValId nextValFromSegAddr(const SymHeap &sh, const TValId addr);
 
 TValId prevValFromSegAddr(const SymHeap &sh, const TValId addr);
@@ -147,11 +136,6 @@ inline TObjId segNextObj(SymHeap &sh, TObjId obj)
     return segNextObj(sh, obj, offNext);
 }
 
-inline bool isDlSegPeer(const SymHeap &, const TObjId)
-{
-    return false;
-}
-
 inline TMinLen objMinLength(const SymHeap &sh, TObjId obj)
 {
     if (!sh.isValid(obj))
@@ -172,10 +156,8 @@ inline void segIncreaseMinLength(SymHeap &sh, const TObjId seg, TMinLen len)
 {
     CL_BREAK_IF(!len);
 
-    if (sh.segMinLength(seg) < len) {
+    if (sh.segMinLength(seg) < len)
         sh.segSetMinLength(seg, len);
-        sh.segSetMinLength(segPeer(sh, seg), len);
-    }
 }
 
 /// we know (v1 != v2), update related segments in the given heap accordingly!
@@ -198,9 +180,6 @@ inline bool objWithBinding(const SymHeap &sh, const TObjId obj)
 
     return true;
 }
-
-/// TODO: drop this!
-TObjId segClone(SymHeap &sh, const TObjId obj);
 
 inline void buildIgnoreList(
         TFldSet                 &ignoreList,

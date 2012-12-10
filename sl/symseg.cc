@@ -116,8 +116,7 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
         // non-empty abstract object vs. concrete object
         return true;
 
-    // FIXME: this needs to be rewritten once we unimplement DLS peers
-    if (obj2 != segPeer(sh, obj1))
+    if (obj2 != obj1)
         // a pair of non-empty abstract objects
         return true;
 
@@ -241,45 +240,6 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
 
     // fallback to explicit Neq predicate
     return false;
-}
-
-void dlSegRecover(SymHeap &sh, const TObjId obj1, const TObjId obj2)
-{
-    if (obj1 == obj2)
-        return;
-
-    CL_BREAK_IF(isDlSegPeer(sh, obj1) == isDlSegPeer(sh, obj2));
-
-    const FldHandle ptr1 = prevPtrFromSeg(sh, obj1);
-    const FldHandle ptr2 = prevPtrFromSeg(sh, obj2);
-
-    ETargetSpecifier ts1 = TS_LAST;
-    ETargetSpecifier ts2 = TS_FIRST;
-    if (isDlSegPeer(sh, obj1))
-        swapValues(ts1, ts2);
-
-    const TValId addr1 = segHeadAt(sh, obj1, ts1);
-    const TValId addr2 = segHeadAt(sh, obj2, ts2);
-
-    ptr1.setValue(addr2);
-    ptr2.setValue(addr1);
-}
-
-TObjId segClone(SymHeap &sh, const TObjId obj)
-{
-    const TObjId dup = objClone(sh, obj);
-
-    if (OK_DLS == sh.objKind(obj)) {
-        // we need to clone the peer as well
-        const TObjId peer = dlSegPeer(sh, obj);
-        if (peer == obj)
-            return dup;
-
-        const TObjId dupPeer = sh.objClone(peer);
-        dlSegRecover(sh, dup, dupPeer);
-    }
-
-    return dup;
 }
 
 TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)

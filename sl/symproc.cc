@@ -1716,11 +1716,9 @@ bool dlSegMergeAddressesIfNeeded(
 
     const ETargetSpecifier ts1 = sh.targetSpec(v1);
     const ETargetSpecifier ts2 = sh.targetSpec(v2);
-    if (ts1 == ts2 || obj1 != segPeer(sh, obj2))
+    if (ts1 == ts2 || obj1 != obj2)
         // apparently not the case we are looking for
         return false;
-
-    CL_BREAK_IF(obj2 != segPeer(sh, obj1));
 
     if (!sh.segMinLength(obj1))
         // 0+ DLS --> we have to look through!

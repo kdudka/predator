@@ -123,7 +123,7 @@ void detachClonedPrototype(
 
 TObjId protoClone(SymHeap &sh, const TObjId proto)
 {
-    const TObjId clone = segClone(sh, proto);
+    const TObjId clone = objClone(sh, proto);
     objDecrementProtoLevel(sh, clone);
 
     if (OK_REGION == sh.objKind(proto))
