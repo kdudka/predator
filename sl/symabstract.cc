@@ -213,7 +213,7 @@ void slSegAbstractionStep(
     enlargeMayExist(sh, next);
 
     // merge data
-    joinData(sh, off, next, obj, /* bidir */ false);
+    joinData(sh, off, next, obj);
 
     if (OK_SLS != sh.objKind(next))
         // abstract the _next_ object
@@ -243,7 +243,7 @@ void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
     enlargeMayExist(sh, obj2);
 
     // merge data
-    joinData(sh, off, obj1, obj2, /* bidir */ false);
+    joinData(sh, off, obj1, obj2);
 
     sh.objSetAbstract(obj1, OK_DLS, off);
 
@@ -278,7 +278,7 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId reg, bool backward)
 
     // merge data
     const BindingOff &off = sh.segBinding(dls);
-    joinData(sh, off, dls, reg, /* bidir */ false);
+    joinData(sh, off, dls, reg);
 
     TOffset offNext = off.next;;
     TOffset offPrev = off.prev;
@@ -306,7 +306,7 @@ void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
 
     // merge data
     const BindingOff &bf2 = sh.segBinding(seg2);
-    joinData(sh, bf2, seg1, seg2, /* bidir */ false);
+    joinData(sh, bf2, seg1, seg2);
 
     // preserve valNext
     const TValId valNext = nextValFromSeg(sh, seg2);

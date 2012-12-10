@@ -2927,26 +2927,14 @@ bool joinDataReadOnly(
 void recoverPointersToSelf(
         SymHeap                 &sh,
         const TObjId            dst,
-        const TObjId            src,
-        const TObjId            ghost,
-        const bool              bidir)
+        const TObjId            ghost)
 {
     redirectRefs(sh,
             /* pointingFrom */  dst,
             /* pointingTo   */  ghost,
             /* pointingWith */  TS_INVALID,
             /* redirectTo   */  dst,
-            /* redirectWith */  /* XXX */ TS_ALL);
-
-    if (!bidir)
-        return;
-
-    redirectRefs(sh,
-            /* pointingFrom */  src,
-            /* pointingTo   */  ghost,
-            /* pointingWith */  TS_INVALID,
-            /* redirectTo   */  src,
-            /* redirectWith */  /* XXX */ TS_ALL);
+            /* redirectWith */  TS_ALL);
 }
 
 void recoverPrototypes(
@@ -3000,8 +2988,7 @@ void joinData(
         SymHeap                 &sh,
         const BindingOff        &bf,
         const TObjId             dst,
-        const TObjId             src,
-        const bool               bidir)
+        const TObjId             src)
 {
     SJ_DEBUG("--> joinData" << SJ_OBJP(dst, src));
     ++cntJoinOps;
@@ -3037,14 +3024,12 @@ void joinData(
     const TObjId ghost = roMapLookup(ctx.objMap1[0], dst);
     CL_BREAK_IF(ghost != roMapLookup(ctx.objMap2[0], src));
 
-    // assign values within dst (and also in src if bidir == true)
+    // create has-value edges going from dst
     transferContentsOfGhost(ctx.dst, bf, dst, ghost);
-    if (bidir)
-        transferContentsOfGhost(ctx.dst, bf, src, ghost);
 
     // redirect some edges if necessary
     recoverPrototypes(ctx, dst, ghost);
-    recoverPointersToSelf(sh, dst, src, ghost, bidir);
+    recoverPointersToSelf(sh, dst, ghost);
 
     if (collectJunk(sh, ghost))
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");

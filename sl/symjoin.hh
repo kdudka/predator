@@ -63,8 +63,7 @@ void joinData(
         SymHeap                 &sh,
         const BindingOff        &bf,
         const TObjId             dst,
-        const TObjId             src,
-        const bool               bidir);
+        const TObjId             src);
 
 /// @todo some dox
 bool joinSymHeaps(
