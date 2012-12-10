@@ -491,7 +491,7 @@ bool digBackLink(
     pOff->prev = visitor.offFound();
 
     // we require offNext < offPrev (symmetry breaking rule)
-    *pSkip = (pOff->next < pOff->prev);
+    *pSkip = (pOff->prev < pOff->next);
     return true;
 }
 
