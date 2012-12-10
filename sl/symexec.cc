@@ -329,8 +329,11 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
 
 bool isAnyAbstractOf(const SymHeap &sh, const TValId v1, const TValId v2)
 {
-    return isAbstractValue(sh, v1)
-        || isAbstractValue(sh, v2);
+    const TObjId obj1 = sh.objByAddr(v1);
+    const TObjId obj2 = sh.objByAddr(v2);
+
+    return isAbstractObject(sh, obj1)
+        || isAbstractObject(sh, obj2);
 }
 
 void SymExecEngine::updateStateInBranch(

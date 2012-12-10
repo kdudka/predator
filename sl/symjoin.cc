@@ -2304,7 +2304,7 @@ class MayExistVisitor {
                     // looks like we have a candidate
                     break;
 
-                if (!lookThrough_ || !isAbstractValue(sh, val))
+                if (!lookThrough_ || !isAbstractObject(sh, seg))
                     return /* continue */ true;
 
                 const TOffset off = sh.valOffset(val);
@@ -2466,13 +2466,16 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     if (joinValuesByCode(&result, ctx, item))
         return result;
 
-    const bool isAbs1 = isAbstractValue(ctx.sh1, v1)
-        /* do not treat the starting point as encountered segment */
-        && !hasKey(ctx.sset1, ctx.sh1.objByAddr(v1));
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
-    const bool isAbs2 = isAbstractValue(ctx.sh2, v2)
+    const bool isAbs1 = isAbstractObject(ctx.sh1, obj1)
         /* do not treat the starting point as encountered segment */
-        && !hasKey(ctx.sset2, ctx.sh2.objByAddr(v2));
+        && !hasKey(ctx.sset1, obj1);
+
+    const bool isAbs2 = isAbstractObject(ctx.sh2, obj2)
+        /* do not treat the starting point as encountered segment */
+        && !hasKey(ctx.sset2, obj2);
 
     if ((isAbs1 || isAbs2)
             && joinAbstractValues(&result, ctx, item, isAbs1, isAbs2))

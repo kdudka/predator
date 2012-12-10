@@ -1704,7 +1704,7 @@ bool dlSegMergeAddressesIfNeeded(
     const TObjId obj1 = sh.objByAddr(v1);
     const TObjId obj2 = sh.objByAddr(v2);
 
-    if (!isAbstractValue(sh, v1) || !isAbstractValue(sh, v2))
+    if (!isAbstractObject(sh, obj1) || !isAbstractObject(sh, obj2))
         // not a pair of abstract values
         return false;
 
@@ -1767,8 +1767,8 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2)
     moveKnownValueToLeft(sh, v1, v2);
 
     // check that at least one value is unknown
-    const bool isAbstract1 = isAbstractValue(sh, v1);
-    const bool isAbstract2 = isAbstractValue(sh, v2);
+    const bool isAbstract1 = isAbstractObject(sh, sh.objByAddr(v1));
+    const bool isAbstract2 = isAbstractObject(sh, sh.objByAddr(v2));
     if (!isAbstract1 && !isAbstract2) {
         // no abstract objects involved
         sh.valReplace(v2, v1);

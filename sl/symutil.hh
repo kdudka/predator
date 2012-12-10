@@ -124,9 +124,8 @@ inline TValId valOfPtr(SymHeap &sh, TObjId obj, TOffset off)
     return ptr.value();
 }
 
-inline bool isAbstractValue(const SymHeap &sh, const TValId val)
+inline bool isAbstractObject(const SymHeap &sh, const TObjId obj)
 {
-    const TObjId obj = sh.objByAddr(val);
     const EObjKind kind = sh.objKind(obj);
     return (OK_REGION != kind);
 }
@@ -152,8 +151,9 @@ inline bool isKnownObjectAt(
         // address with offset ranges are not allowed to be dreferenced for now
         return false;
 
+    const TObjId obj = sh.objByAddr(val);
     if (allowInvalid) {
-        if (OBJ_INVALID == sh.objByAddr(val))
+        if (OBJ_INVALID == obj)
             return false;
     }
     else {
@@ -161,7 +161,7 @@ inline bool isKnownObjectAt(
             return false;
     }
 
-    return !isAbstractValue(/* XXX */dynamic_cast<const SymHeap &>(sh), val);
+    return !isAbstractObject(/* XXX */ dynamic_cast<const SymHeap &>(sh), obj);
 }
 
 inline bool isVarAlive(SymHeap &sh, const CVar &cv)

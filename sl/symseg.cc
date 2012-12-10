@@ -201,7 +201,7 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
     const TObjId obj1 = sh.objByAddr(v1);
     const TObjId obj2 = sh.objByAddr(v2);
 
-    if (!isAbstractValue(sh, v1) && !isAbstractValue(sh, v2))
+    if (!isAbstractObject(sh, obj1) && !isAbstractObject(sh, obj2))
         // no abstract objects involved
         return false;
 
@@ -255,11 +255,10 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
             // an already seen value
             break;
 
-        if (!isAbstractValue(sh, val))
+        const TObjId seg = sh.objByAddr(val);
+        if (!isAbstractObject(sh, seg))
             // a non-abstract object reached
             break;
-
-        const TObjId seg = sh.objByAddr(val);
 
         if (sh.segMinLength(seg))
             // non-empty abstract object reached
