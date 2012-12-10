@@ -171,8 +171,6 @@ struct SymJoinCtx {
     bool                        forceThreeWay;
     bool                        allowThreeWay;
 
-    typedef std::map<TObjId /* seg */, TMinLen /* len */>       TSegLengths;
-    TSegLengths                 segLengths;
     std::set<TValPair>          sharedNeqs;
 
     std::set<TObjId /* dst */>  protos;
@@ -277,8 +275,6 @@ void dump_ctx(const SymJoinCtx &ctx)
         << "\n\n";
 
     // sumarize aux containers
-    cout << "    ctx.segLengths     .size() = " << ctx.segLengths.size()
-        << "\n";
     cout << "    ctx.sharedNeqs     .size() = " << ctx.sharedNeqs.size()
         << "\n";
     cout << "    ctx.joinCache      .size() = " << ctx.joinCache.size()
@@ -1660,8 +1656,8 @@ bool createObject(
         // abstract object
         ctx.dst.objSetAbstract(objDst, kind, off);
 
-        // compute minimal length of the resulting segment
-        ctx.segLengths[objDst] = len;
+        // intialize the minimum segment length
+        ctx.dst.segSetMinLength(objDst, len);
     }
 
     return joinFields(ctx, objDst, obj1, obj2, ldiff);
@@ -2664,26 +2660,10 @@ bool updateMayExistLevels(SymJoinCtx &ctx)
 
 bool handleDstPreds(SymJoinCtx &ctx)
 {
-    // go through all segments and initialize minLength
-    BOOST_FOREACH(SymJoinCtx::TSegLengths::const_reference ref, ctx.segLengths)
-    {
-        const TObjId  seg = ref.first;
-        const TMinLen len = ref.second;
-        ctx.dst.segSetMinLength(seg, len);
-        ctx.dst.segSetMinLength(segPeer(ctx.dst, seg), len);
-    }
-
     // go through shared Neq predicates
     BOOST_FOREACH(const TValPair &neq, ctx.sharedNeqs) {
         TValId valLt, valGt;
         boost::tie(valLt, valGt) = neq;
-
-        const TObjId targetLt = ctx.dst.objByAddr(valLt);
-        const TObjId targetGt = ctx.dst.objByAddr(valGt);
-        if (hasKey(ctx.segLengths, targetLt)
-                || hasKey(ctx.segLengths, targetGt))
-            // preserve segment length
-            continue;
 
         // handle generic Neq predicate
         ctx.dst.addNeq(valLt, valGt);
@@ -3044,29 +3024,6 @@ void recoverPrototypes(
     }
 }
 
-void restorePrototypeLengths(SymJoinCtx &ctx)
-{
-    CL_BREAK_IF(!ctx.joiningDataReadWrite());
-    SymHeap &sh = ctx.dst;
-
-    // restore minimal length of segment prototypes
-    BOOST_FOREACH(const TObjId protoDst, ctx.protos) {
-        typedef SymJoinCtx::TSegLengths TLens;
-
-        const TLens &lens = ctx.segLengths;
-        TLens::const_iterator it = lens.find(protoDst);
-        if (lens.end() == it)
-            continue;
-
-        const TMinLen len = it->second;
-        if (!len)
-            continue;
-
-        sh.segSetMinLength(protoDst, len);
-        sh.segSetMinLength(segPeer(sh, protoDst), len);
-    }
-}
-
 void transferContentsOfGhost(
         SymHeap                 &sh,
         const BindingOff        &bf,
@@ -3143,7 +3100,6 @@ void joinData(
     // redirect some edges if necessary
     recoverPrototypes(ctx, dst, ghost);
     recoverPointersToSelf(sh, dst, src, ghost, bidir);
-    restorePrototypeLengths(ctx);
 
     if (collectJunk(sh, ghost))
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");
