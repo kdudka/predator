@@ -58,14 +58,14 @@ bool anyRangeFromVal(IR::Range *pDst, const SymHeap &, const TValId);
 /// extract string literal from the given value if possible, fail otherwise
 bool stringFromVal(const char **pDst, const SymHeap &, const TValId);
 
-void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
+void moveKnownValueToLeft(const SymHeap &sh, TValId &valA, TValId &valB);
 
 bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
 
 /// true if the given values are proven to be non-equal in non-abstract world
-bool proveNeq(const SymHeapCore &sh, TValId v1, TValId v2);
+bool proveNeq(const SymHeap &sh, TValId v1, TValId v2);
 
 /// extract an integral range from an unwrapped CV_INT/CV_INT_RANGE custom value
 const IR::Range& rngFromCustom(const CustomValue &);
@@ -139,29 +139,6 @@ inline bool isPossibleToDeref(const SymHeapCore &sh, const TValId val)
 
     const TObjId obj = sh.objByAddr(val);
     return sh.isValid(obj);
-}
-
-inline bool isKnownObjectAt(
-        const SymHeapCore          &sh,
-        const TValId                val,
-        const bool                  allowInvalid = false)
-{
-    const EValueTarget code = sh.valTarget(val);
-    if (VT_RANGE == code)
-        // address with offset ranges are not allowed to be dreferenced for now
-        return false;
-
-    const TObjId obj = sh.objByAddr(val);
-    if (allowInvalid) {
-        if (OBJ_INVALID == obj)
-            return false;
-    }
-    else {
-        if (!isPossibleToDeref(sh, val))
-            return false;
-    }
-
-    return !isAbstractObject(/* XXX */ dynamic_cast<const SymHeap &>(sh), obj);
 }
 
 inline bool isVarAlive(SymHeap &sh, const CVar &cv)

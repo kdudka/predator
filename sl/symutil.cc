@@ -250,8 +250,31 @@ bool compareIntRanges(
     return false;
 }
 
+bool isKnownObjectAt(
+        const SymHeap              &sh,
+        const TValId                val,
+        const bool                  allowInvalid = false)
+{
+    const EValueTarget code = sh.valTarget(val);
+    if (VT_RANGE == code)
+        // address with offset ranges are not allowed to be dreferenced for now
+        return false;
+
+    const TObjId obj = sh.objByAddr(val);
+    if (allowInvalid) {
+        if (OBJ_INVALID == obj)
+            return false;
+    }
+    else {
+        if (!isPossibleToDeref(sh, val))
+            return false;
+    }
+
+    return !isAbstractObject(sh, obj);
+}
+
 void moveKnownValueToLeft(
-        const SymHeapCore           &sh,
+        const SymHeap               &sh,
         TValId                      &valA,
         TValId                      &valB)
 {
@@ -267,7 +290,7 @@ void moveKnownValueToLeft(
     valB = tmp;
 }
 
-bool valInsideSafeRange(const SymHeapCore &sh, TValId val)
+bool valInsideSafeRange(const SymHeap &sh, TValId val)
 {
     if (!isKnownObjectAt(sh, val))
         return false;
@@ -441,7 +464,8 @@ void redirectRefsNotFrom(
         fld.setValue(result);
     }
 }
-bool proveNeq(const SymHeapCore &sh, TValId ref, TValId val)
+
+bool proveNeq(const SymHeap &sh, TValId ref, TValId val)
 {
     // check for invalid values
     if (VAL_INVALID == ref || VAL_INVALID == val)
