@@ -81,11 +81,8 @@ bool gcCore(SymHeap &sh, TObjId obj, TObjSet *leakObjs, bool sharedOnly)
     bool detected = false;
 
     std::set<TObjId> whiteList;
-    if (sharedOnly) {
+    if (sharedOnly)
         whiteList.insert(obj);
-        if (OK_DLS == sh.objKind(obj))
-            whiteList.insert(dlSegPeer(sh, obj));
-    }
 
     WorkList<TObjId> wl(obj);
     while (wl.next(obj)) {

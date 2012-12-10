@@ -163,7 +163,7 @@ bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
         // offset mismatch
         return false;
 
-    if (peer != dlSegPeer(sh, seg))
+    if (peer != seg)
         // not in a relation
         return false;
 
@@ -325,42 +325,6 @@ bool segCheckConsistency(const SymHeap &sh)
                 CL_ERROR("valPrev of #" << seg << " has no target object");
                 return false;
             }
-        }
-    }
-
-    // all OK
-    return true;
-}
-
-bool dlSegCheckConsistency(const SymHeap &sh)
-{
-    if (!segCheckConsistency(sh))
-        return false;
-
-    TObjList objs;
-    sh.gatherObjects(objs, isOnHeap);
-    BOOST_FOREACH(const TObjId seg, objs) {
-        if (OK_DLS != sh.objKind(seg))
-            // we are interested in OK_DLS here
-            continue;
-
-        const TObjId peer = dlSegPeer(sh, seg);
-        if (OBJ_INVALID == peer) {
-            CL_ERROR("OK_DLS with invalid peer detected");
-            return false;
-        }
-
-        if (OK_DLS != sh.objKind(peer)) {
-            CL_ERROR("DLS peer not a DLS");
-            return false;
-        }
-
-        // check the consistency of Neq predicates
-        const TMinLen len1 = sh.segMinLength(seg);
-        const TMinLen len2 = sh.segMinLength(peer);
-        if (len1 != len2) {
-            CL_ERROR("peer of a DLS " << len1 << "+ is a DLS" << len2 << "+");
-            return false;
         }
     }
 

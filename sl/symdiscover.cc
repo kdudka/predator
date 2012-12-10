@@ -382,7 +382,7 @@ void segDiscover(
             // invalid entry
             break;
 
-        if (!insertOnce(haveSeen, segNextObj(sh, obj, off.next)))
+        if (!insertOnce(haveSeen, nextObj(sh, obj, off.next)))
             // loop detected
             break;
 
@@ -404,7 +404,7 @@ void segDiscover(
             if (!leaving)
                 break;
 
-            if (OBJ_INVALID == segNextObj(sh, obj, off.next))
+            if (OBJ_INVALID == nextObj(sh, obj, off.next))
                 // valNext has no target
                 break;
         }
@@ -552,7 +552,7 @@ bool segOnPath(
         if (OK_REGION != sh.objKind(cursor))
             return true;
 
-        cursor = segNextObj(sh, cursor, off.next);
+        cursor = nextObj(sh, cursor, off.next);
     }
 
     return false;

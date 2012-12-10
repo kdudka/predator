@@ -368,7 +368,7 @@ bool segAbstractionStep(
     const TObjId obj = *pCursor;
 
     // jump to the next object (as we know such an object exists)
-    const TObjId next = segNextObj(sh, obj, off.next);
+    const TObjId next = nextObj(sh, obj, off.next);
 
     // check wheter he upcoming abstraction step is still doable
     SymHeap sandBox(sh);

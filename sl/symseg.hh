@@ -79,13 +79,6 @@ inline TValId nextValFromSeg(const SymHeap &sh, TObjId seg)
     return ptrNext.value();
 }
 
-/// TODO: drop this!
-inline TObjId dlSegPeer(const SymHeap &, TObjId dls)
-{
-    // DLS peers no longer exist!
-    return dls;
-}
-
 TValId nextValFromSegAddr(const SymHeap &sh, const TValId addr);
 
 TValId prevValFromSegAddr(const SymHeap &sh, const TValId addr);
@@ -111,16 +104,6 @@ inline TValId segHeadAt(SymHeap &sh, TObjId seg, ETargetSpecifier ts)
     return shWritable.addrOfTarget(seg, ts, off.head);
 }
 
-/// we do NOT require obj to be an abstract object
-inline TObjId segNextObj(SymHeap &sh, TObjId obj, TOffset offNext)
-{
-    if (OK_DLS == sh.objKind(obj))
-        // jump to peer in case of DLS
-        obj = dlSegPeer(sh, obj);
-
-    return nextObj(sh, obj, offNext);
-}
-
 /// we require obj to be an abstract object
 inline TObjId segNextObj(SymHeap &sh, TObjId obj)
 {
@@ -133,7 +116,7 @@ inline TObjId segNextObj(SymHeap &sh, TObjId obj)
         ? off.prev
         : off.next;
 
-    return segNextObj(sh, obj, offNext);
+    return nextObj(sh, obj, offNext);
 }
 
 inline TMinLen objMinLength(const SymHeap &sh, TObjId obj)
@@ -233,8 +216,5 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen = 0);
 
 /// true if all segments have populated next/prev pointers
 bool segCheckConsistency(const SymHeap &sh);
-
-/// TODO: drop this!
-bool dlSegCheckConsistency(const SymHeap &sh);
 
 #endif /* H_GUARD_SYMSEG_H */
