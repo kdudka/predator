@@ -34,10 +34,6 @@
 #include "worklist.hh"
 #include "util.hh"
 
-#include <iomanip>
-#include <map>
-#include <set>
-
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
@@ -66,30 +62,6 @@ void debugSymJoin(const bool enable)
 #define SJ_ITEM(item) SJ_FLDT(item.fldDst, item.fld1, item.fld2)
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
-
-static int cntJoinOps = -1;
-
-namespace {
-    void debugPlot(
-            const SymHeap       &sh,
-            const char          *name,
-            const int           dst,
-            const int           src,
-            const char          *suffix)
-    {
-        if (!::debuggingSymJoin)
-            return;
-
-        std::ostringstream str;
-        str << "symjoin-" << FIXW(6) << ::cntJoinOps
-            << "-" << name << "-"
-            << FIXW(3) << dst << "-"
-            << FIXW(3) << src << "-"
-            << suffix;
-
-        plotHeap(sh, str.str().c_str());
-    }
-}
 
 template <class T>
 class WorkListWithUndo: public WorkList<T> {
@@ -2991,22 +2963,6 @@ void joinData(
         const TObjId             src)
 {
     SJ_DEBUG("--> joinData" << SJ_OBJP(dst, src));
-    ++cntJoinOps;
-
-    // used only for debugging (in case the debugging is enabled)
-    bool isomorphismWasExpected = false;
-#ifndef NDEBUG
-    SymHeap inputHeapSnap(sh);
-#endif
-    if (debuggingSymJoin) {
-        EJoinStatus status = JS_USE_ANY;
-        if (!joinDataReadOnly(&status, sh, bf, dst, src, 0))
-            CL_BREAK_IF("joinDataReadOnly() fails, why joinData() is called?");
-        if (JS_USE_ANY == status)
-            isomorphismWasExpected = true;
-        else
-            debugPlot(sh, "joinData", dst, src, "00");
-    }
 
     // go through the common part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
@@ -3035,9 +2991,4 @@ void joinData(
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");
 
     SJ_DEBUG("<-- joinData() has finished " << ctx.status);
-    if (JS_USE_ANY != ctx.status) {
-        debugPlot(sh, "joinData", dst, src, "01");
-        if (isomorphismWasExpected)
-            CL_BREAK_IF("joinData() status differs from joinDataReadOnly()");
-    }
 }
