@@ -1798,14 +1798,6 @@ bool joinSegmentWithAny(
     const bool isDls2 = (OK_DLS == ctx.sh2.objKind(obj2));
     const bool haveDls = (isDls1 || isDls2);
 
-    TObjId peer1 = obj1;
-    if (isDls1)
-        peer1 = dlSegPeer(ctx.sh1, obj1);
-
-    TObjId peer2 = obj2;
-    if (isDls2)
-        peer2 = dlSegPeer(ctx.sh2, obj2);
-
     const EObjKind kind = (JS_USE_SH1 == action)
         ? ctx.sh1.objKind(obj1)
         : ctx.sh2.objKind(obj2);
@@ -1813,11 +1805,11 @@ bool joinSegmentWithAny(
     if (OK_OBJ_OR_NULL != kind) {
         // BindingOff is assumed to be already matching at this point
         const BindingOff off = (JS_USE_SH1 == action)
-            ? ctx.sh1.segBinding(peer1)
-            : ctx.sh2.segBinding(peer2);
+            ? ctx.sh1.segBinding(obj1)
+            : ctx.sh2.segBinding(obj2);
 
-        const TValId valNext1 = valOfPtr(ctx.sh1, peer1, off.next);
-        const TValId valNext2 = valOfPtr(ctx.sh2, peer2, off.next);
+        const TValId valNext1 = valOfPtr(ctx.sh1, obj1, off.next);
+        const TValId valNext2 = valOfPtr(ctx.sh2, obj2, off.next);
         if (firstTryReadOnly && !checkValueMapping(ctx, valNext1, valNext2,
                                /* allowUnknownMapping */ true))
             return false;
@@ -1834,12 +1826,6 @@ bool joinSegmentWithAny(
     // go ahead, try it read-write!
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(obj1, obj2));
     *pResult = joinObjects(ctx, obj1, obj2, ldiff, action);
-    if (!haveDls || !*pResult)
-        return true;
-
-    if (!segAlreadyJoined(ctx, peer1, peer2, action))
-        *pResult = joinObjects(ctx, peer1, peer2, ldiff, action);
-
     if (!*pResult)
         return true;
 
@@ -1853,29 +1839,27 @@ bool joinSegmentWithAny(
         ? roMapLookup(objMap, obj1)
         : roMapLookup(objMap, obj2);
 
-    const TObjId peerDst = (use1)
-        ? roMapLookup(objMap, peer1)
-        : roMapLookup(objMap, peer2);
+    if (haveDls) {
+        const TOffset offPrev = ctx.dst.segBinding(segDst).prev;
+        const SchedItem prevItem(
+                PtrHandle(ctx.dst, segDst, offPrev),
+                PtrHandle(ctx.sh1, obj1  , offPrev),
+                PtrHandle(ctx.sh2, obj2  , offPrev),
+                ldiff);
+        if (ctx.wl.schedule(prevItem))
+            SJ_DEBUG("+++ " << SJ_ITEM(prevItem) << " by joinSegmentWithAny()");
+    }
 
-    dlSegRecover(ctx.dst, segDst, peerDst);
-
-    const TOffset offPrev = ctx.dst.segBinding(segDst).next;
-    const SchedItem prevItem(
-            PtrHandle(ctx.dst, segDst , offPrev),
-            PtrHandle(ctx.sh1, obj1   , offPrev),
-            PtrHandle(ctx.sh2, obj2   , offPrev),
-            ldiff);
-    if (ctx.wl.schedule(prevItem))
-        SJ_DEBUG("+++ " << SJ_ITEM(prevItem) << " by joinSegmentWithAny()");
-
-    const TOffset offNext = ctx.dst.segBinding(peerDst).next;
-    const SchedItem nextItem(
-            PtrHandle(ctx.dst, peerDst, offNext),
-            PtrHandle(ctx.sh1, peer1  , offNext),
-            PtrHandle(ctx.sh2, peer2  , offNext),
-            ldiff);
-    if (ctx.wl.schedule(nextItem))
-        SJ_DEBUG("+++ " << SJ_ITEM(nextItem) << " by joinSegmentWithAny()");
+    if (OK_OBJ_OR_NULL != kind) {
+        const TOffset offNext = ctx.dst.segBinding(segDst).next;
+        const SchedItem nextItem(
+                PtrHandle(ctx.dst, segDst, offNext),
+                PtrHandle(ctx.sh1, obj1  , offNext),
+                PtrHandle(ctx.sh2, obj2  , offNext),
+                ldiff);
+        if (ctx.wl.schedule(nextItem))
+            SJ_DEBUG("+++ " << SJ_ITEM(nextItem) << " by joinSegmentWithAny()");
+    }
 
     return true;
 }
