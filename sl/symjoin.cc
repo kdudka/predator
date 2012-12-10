@@ -1667,13 +1667,13 @@ bool createObject(
     return joinFields(ctx, objDst, obj1, obj2, ldiff);
 }
 
-bool joinObjectsCore(
+bool joinObjects(
         SymJoinCtx             &ctx,
         const TObjId            obj1,
         const TObjId            obj2,
         const TProtoLevel       ldiff,
         const EJoinStatus       action,
-        const bool              readOnly)
+        const bool              readOnly = false)
 {
     if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
         return false;
@@ -1690,52 +1690,6 @@ bool joinObjectsCore(
         return joinFields(ctx, obj1, obj1, obj2, ldiff);
 
     return createObject(ctx, obj1, obj2, ldiff, action);
-}
-
-bool joinObjects(
-        SymJoinCtx             &ctx,
-        const TObjId            obj1,
-        const TObjId            obj2,
-        const TProtoLevel       ldiff,
-        const EJoinStatus       action,
-        const bool              readOnly = false)
-{
-    if (!joinObjectsCore(ctx, obj1, obj2, ldiff, action, readOnly))
-        return false;
-
-    if (!ctx.joiningData())
-        // we are on the way from joinSymHeaps()
-        return true;
-
-    if (obj1 == obj2)
-        // shared data
-        return true;
-
-    if (readOnly)
-        // postpone it till the read-write attempt
-        return true;
-
-    const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1))
-        && !hasKey(ctx.sset1, obj1);
-
-    const bool isDls2 = (OK_DLS == ctx.sh2.objKind(obj2))
-        && !hasKey(ctx.sset2, obj2);
-
-    if (isDls1 == isDls2)
-        return true;
-
-    CL_BREAK_IF(isDls1 && JS_USE_SH1 != action);
-    CL_BREAK_IF(isDls2 && JS_USE_SH2 != action);
-
-    const TObjId peer1 = (isDls1) ? dlSegPeer(ctx.sh1, obj1) : OBJ_INVALID;
-    const TObjId peer2 = (isDls2) ? dlSegPeer(ctx.sh2, obj2) : OBJ_INVALID;
-
-    const TObjMapBidir &objMap = (isDls1) ? ctx.objMap1 : ctx.objMap2;
-    if (hasKey(objMap[0], (isDls1) ? peer1 : peer2))
-        // already cloned
-        return true;
-
-    return createObject(ctx, peer1, peer2, ldiff, action);
 }
 
 bool followValuePair(
