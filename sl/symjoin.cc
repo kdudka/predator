@@ -122,7 +122,7 @@ typedef TObjMap                                                 TObjMapBidir[2];
 
 typedef std::map<TValPair /* (v1, v2) */, TValId /* dst */>     TJoinCache;
 
-/// current state, common for joinSymHeaps(), joinDataReadOnly() and joinData()
+/// current state, common for joinSymHeaps() and joinData()
 struct SymJoinCtx {
     SymHeap                     &dst;
     SymHeap                     &sh1;
@@ -176,18 +176,6 @@ struct SymJoinCtx {
         initValMaps();
     }
 
-    /// constructor used by joinDataReadOnly()
-    SymJoinCtx(SymHeap &tmp_, SymHeap &sh_):
-        dst(tmp_),
-        sh1(sh_),
-        sh2(sh_),
-        status(JS_USE_ANY),
-        forceThreeWay(false),
-        allowThreeWay(0 < (SE_ALLOW_THREE_WAY_JOIN))
-    {
-        initValMaps();
-    }
-
     /// constructor used by joinData()
     SymJoinCtx(SymHeap &sh_):
         dst(sh_),
@@ -201,10 +189,6 @@ struct SymJoinCtx {
     }
 
     bool joiningData() const {
-        return (&sh1 == &sh2);
-    }
-
-    bool joiningDataReadWrite() const {
         return (&dst == &sh1)
             && (&dst == &sh2);
     }
@@ -216,11 +200,9 @@ void dump_ctx(const SymJoinCtx &ctx)
     using std::cout;
 
     // plot heaps
-    if (!ctx.joiningDataReadWrite()) {
+    if (!ctx.joiningData()) {
         cout << "    plotting ctx.sh1...\n";
         plotHeap(ctx.sh1, "dump_ctx");
-    }
-    if (!ctx.joiningData()) {
         cout << "    plotting ctx.sh2...\n";
         plotHeap(ctx.sh2, "dump_ctx");
     }
@@ -229,10 +211,8 @@ void dump_ctx(const SymJoinCtx &ctx)
 
     // print entry-point
     cout << "\ndump_ctx: ";
-    if (ctx.joiningDataReadWrite())
+    if (ctx.joiningData())
         cout << "joinData()\n";
-    else if (ctx.joiningData())
-        cout << "joinDataReadOnly()\n";
     else
         cout << "joinSymHeaps()\n";
 
@@ -1653,7 +1633,7 @@ bool joinObjects(
         // do not create any object, just check if it was possible
         return segMatchLookAhead(ctx, obj1, obj2);
 
-    if (ctx.joiningDataReadWrite() && obj1 == obj2)
+    if (ctx.joiningData() && obj1 == obj2)
         // we are on the way from joinData() and hit shared data
         return joinFields(ctx, obj1, obj1, obj2, ldiff);
 
@@ -2927,7 +2907,6 @@ bool joinData(
         return false;
     }
 
-    // go through the common part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
     if (!joinDataCore(ctx, bf, obj1, obj2))
         return false;
