@@ -59,7 +59,6 @@ class UniBlockWriter {
 };
 
 struct DeepCopyData {
-    typedef std::map<TObjId     /* seg */, TMinLen   /* len */> TSegLengths;
     typedef std::pair<FldHandle /* src */, FldHandle /* dst */> TItem;
     typedef std::set<CVar>                                      TCut;
 
@@ -68,7 +67,6 @@ struct DeepCopyData {
     TCut                &cut;
     const bool          digBackward;
 
-    TSegLengths         segLengths;
     TValMap             valMap;
     TObjMap             objMap;
 
@@ -185,7 +183,7 @@ TObjId /* objDst */ addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc)
 
 #if SE_SYMCUT_PRESERVES_MIN_LENGTHS
         const TMinLen minLength = objMinLength(src, objSrc);
-        dc.segLengths[objDst] = minLength;
+        dst.segSetMinLength(objDst, minLength);
 #endif
     }
 
@@ -335,13 +333,6 @@ void deepCopy(DeepCopyData &dc)
 
     // finally copy all relevant predicates
     src.copyRelevantPreds(dst, dc.valMap);
-
-    typedef DeepCopyData::TSegLengths TSegLengths;
-    BOOST_FOREACH(TSegLengths::const_reference item, dc.segLengths) {
-        const TObjId seg        = item.first;
-        const TMinLen minLength = item.second;
-        dst.segSetMinLength(seg, minLength);
-    }
 }
 
 void prune(const SymHeap &src, SymHeap &dst,
