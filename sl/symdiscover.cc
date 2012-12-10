@@ -296,7 +296,7 @@ bool isPointedByVar(SymHeap &sh, const TObjId obj)
 typedef TObjSet TProtoPairs[2];
 
 bool matchData(
-        SymHeap                     &sh,
+        SymHeap                      sh,
         const BindingOff            &off,
         const TObjId                obj1,
         const TObjId                obj2,
@@ -308,7 +308,7 @@ bool matchData(
         return false;
 
     EJoinStatus status;
-    if (!joinDataReadOnly(&status, sh, off, obj1, obj2, protoPairs)) {
+    if (!joinData(sh, off, obj1, obj2, &status, protoPairs)) {
         CL_DEBUG("    joinDataReadOnly() refuses to create a segment!");
         return false;
     }

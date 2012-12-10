@@ -371,8 +371,8 @@ bool segAbstractionStep(
     const TObjId next = segNextObj(sh, obj, off.next);
 
     // check wheter he upcoming abstraction step is still doable
-    EJoinStatus status;
-    if (!joinDataReadOnly(&status, sh, off, obj, next, 0))
+    SymHeap sandBox(sh);
+    if (!joinData(sandBox, off, obj, next))
         return false;
 
     if (isDlsBinding(off)) {

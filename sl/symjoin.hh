@@ -50,20 +50,13 @@ inline std::ostream& operator<<(std::ostream &str, const EJoinStatus status)
 }
 
 /// @todo some dox
-bool joinDataReadOnly(
-        EJoinStatus             *pStatus,
-        SymHeap                  sh,
-        const BindingOff        &bf,
-        const TObjId             obj1,
-        const TObjId             obj2,
-        TObjSet                  protoObjs[1][2]);
-
-/// @todo some dox
-void joinData(
+bool joinData(
         SymHeap                 &sh,
         const BindingOff        &bf,
         const TObjId             dst,
-        const TObjId             src);
+        const TObjId             src,
+        EJoinStatus             *pStatus = 0,
+        TObjSet                  protoObjs[1][2] = 0);
 
 /// @todo some dox
 bool joinSymHeaps(

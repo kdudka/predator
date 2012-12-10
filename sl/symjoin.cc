@@ -2849,53 +2849,6 @@ bool joinDataCore(
     return validateStatus(ctx);
 }
 
-bool joinDataReadOnly(
-        EJoinStatus             *pStatus,
-        SymHeap                  sh,
-        const BindingOff        &off,
-        const TObjId             obj1,
-        const TObjId             obj2,
-        TObjSet                  protoObjs[1][2])
-{
-    SJ_DEBUG("--> joinDataReadOnly" << SJ_OBJP(obj1, obj2));
-    Trace::waiveCloneOperation(sh);
-
-    // go through the common part of joinData()/joinDataReadOnly()
-    SymHeap tmp(sh.stor(), new Trace::TransientNode("joinDataReadOnly()"));
-    SymJoinCtx ctx(tmp, sh);
-
-    if (!joinDataCore(ctx, off, obj1, obj2))
-        return false;
-
-    unsigned cntProto1 = 0;
-    unsigned cntProto2 = 0;
-
-    // go through prototypes
-    BOOST_FOREACH(const TObjId protoDst, ctx.protos) {
-        const TObjId proto1 = roMapLookup(ctx.objMap1[/* rtl */ 1], protoDst);
-        const TObjId proto2 = roMapLookup(ctx.objMap2[/* rtl */ 1], protoDst);
-
-        if (OBJ_INVALID != proto1) {
-            ++cntProto1;
-            if (protoObjs)
-                (*protoObjs)[0].insert(proto1);
-        }
-
-        if (OBJ_INVALID != proto2) {
-            ++cntProto2;
-            if (protoObjs)
-                (*protoObjs)[1].insert(proto2);
-        }
-    }
-
-    SJ_DEBUG("<-- joinDataReadOnly() says " << ctx.status << " (found "
-             << cntProto1 << " | "
-             << cntProto2 << " prototype objects)");
-
-    *pStatus = ctx.status;
-    return true;
-}
-
 void recoverPointersToSelf(
         SymHeap                 &sh,
         const TObjId            dst,
@@ -2956,24 +2909,24 @@ void transferContentsOfGhost(
     }
 }
 
-void joinData(
+bool joinData(
         SymHeap                 &sh,
         const BindingOff        &bf,
         const TObjId             dst,
-        const TObjId             src)
+        const TObjId             src,
+        EJoinStatus             *pStatus,
+        TObjSet                  protoObjs[1][2])
 {
     SJ_DEBUG("--> joinData" << SJ_OBJP(dst, src));
 
     // go through the common part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
-    if (!joinDataCore(ctx, bf, dst, src)) {
-        CL_BREAK_IF("joinData() has failed, did joinDataReadOnly() succeed?");
-        return;
-    }
+    if (!joinDataCore(ctx, bf, dst, src))
+        return false;
 
     if (!updateMayExistLevels(ctx)) {
         CL_BREAK_IF("updateMayExistLevels() has failed in joinData()");
-        return;
+        return false;
     }
 
     // ghost is a transiently existing object representing the join of dst/src
@@ -2990,5 +2943,32 @@ void joinData(
     if (collectJunk(sh, ghost))
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");
 
-    SJ_DEBUG("<-- joinData() has finished " << ctx.status);
+    unsigned cntProto1 = 0;
+    unsigned cntProto2 = 0;
+
+    // go through prototypes
+    BOOST_FOREACH(const TObjId protoDst, ctx.protos) {
+        const TObjId proto1 = roMapLookup(ctx.objMap1[/* rtl */ 1], protoDst);
+        const TObjId proto2 = roMapLookup(ctx.objMap2[/* rtl */ 1], protoDst);
+
+        if (OBJ_INVALID != proto1) {
+            ++cntProto1;
+            if (protoObjs)
+                (*protoObjs)[0].insert(proto1);
+        }
+
+        if (OBJ_INVALID != proto2) {
+            ++cntProto2;
+            if (protoObjs)
+                (*protoObjs)[1].insert(proto2);
+        }
+    }
+
+    if (pStatus)
+        *pStatus = ctx.status;
+
+    SJ_DEBUG("<-- joinData() says " << ctx.status << " (found " << cntProto1
+            << " | " << cntProto2 << " prototype objects)");
+
+    return true;
 }
