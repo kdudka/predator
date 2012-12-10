@@ -2915,16 +2915,21 @@ void transferContentsOfGhost(
 bool joinData(
         SymHeap                 &sh,
         const BindingOff        &bf,
-        const TObjId             dst,
-        const TObjId             src,
+        const TObjId             obj1,
+        const TObjId             obj2,
+        TObjId                  *pDst,
         EJoinStatus             *pStatus,
         TObjSet                  protoObjs[1][2])
 {
-    SJ_DEBUG("--> joinData" << SJ_OBJP(dst, src));
+    SJ_DEBUG("--> joinData" << SJ_OBJP(obj1, obj2));
+    if (pDst) {
+        CL_BREAK_IF("please implement");
+        return false;
+    }
 
     // go through the common part of joinData()/joinDataReadOnly()
     SymJoinCtx ctx(sh);
-    if (!joinDataCore(ctx, bf, dst, src))
+    if (!joinDataCore(ctx, bf, obj1, obj2))
         return false;
 
     if (!updateMayExistLevels(ctx)) {
@@ -2932,16 +2937,16 @@ bool joinData(
         return false;
     }
 
-    // ghost is a transiently existing object representing the join of dst/src
-    const TObjId ghost = roMapLookup(ctx.objMap1[0], dst);
-    CL_BREAK_IF(ghost != roMapLookup(ctx.objMap2[0], src));
+    // ghost is a transiently existing object representing the join of obj1/obj2
+    const TObjId ghost = roMapLookup(ctx.objMap1[0], obj1);
+    CL_BREAK_IF(ghost != roMapLookup(ctx.objMap2[0], obj2));
 
-    // create has-value edges going from dst
-    transferContentsOfGhost(ctx.dst, bf, dst, ghost);
+    // create has-value edges going from obj1
+    transferContentsOfGhost(ctx.dst, bf, obj1, ghost);
 
     // redirect some edges if necessary
-    recoverPrototypes(ctx, dst, ghost);
-    recoverPointersToSelf(sh, dst, ghost);
+    recoverPrototypes(ctx, obj1, ghost);
+    recoverPointersToSelf(sh, obj1, ghost);
 
     if (collectJunk(sh, ghost))
         CL_DEBUG("    joinData() drops a sub-heap (ghost)");

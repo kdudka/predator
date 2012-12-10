@@ -53,9 +53,10 @@ inline std::ostream& operator<<(std::ostream &str, const EJoinStatus status)
 bool joinData(
         SymHeap                 &sh,
         const BindingOff        &bf,
-        const TObjId             dst,
-        const TObjId             src,
-        EJoinStatus             *pStatus = 0,
+        const TObjId             obj1,
+        const TObjId             obj2,
+        TObjId                  *pDst            = 0,
+        EJoinStatus             *pStatus         = 0,
         TObjSet                  protoObjs[1][2] = 0);
 
 /// @todo some dox
