@@ -2788,7 +2788,7 @@ bool joinSymHeaps(
     // all OK
     *pStatus = ctx.status;
     SJ_DEBUG("<-- joinSymHeaps() says " << ctx.status);
-    CL_BREAK_IF(!dlSegCheckConsistency(ctx.dst));
+    CL_BREAK_IF(!segCheckConsistency(ctx.dst));
     CL_BREAK_IF(!protoCheckConsistency(ctx.dst));
     return true;
 
@@ -2796,43 +2796,6 @@ fail:
     // if the join failed on heaps that were isomorphic, something went wrong
     CL_BREAK_IF(areEqual(sh1, sh2));
     return false;
-}
-
-void mapGhostAddressSpace(
-        SymJoinCtx             &ctx,
-        const TObjId            objReal,
-        const TObjId            objGhost,
-        const EJoinStatus       action)
-{
-    CL_BREAK_IF(!ctx.joiningData());
-
-    TObjMap &oMap = (JS_USE_SH1 == action)
-        ? ctx.objMap1[/* ltr */ 0]
-        : ctx.objMap2[/* ltr */ 0];
-
-    CL_BREAK_IF(!hasKey(oMap, objReal));
-    const TObjId image = oMap[objReal];
-
-    CL_BREAK_IF(hasKey(oMap, objGhost) && oMap[objGhost] != image);
-    oMap[objGhost] = image;
-}
-
-/// this runs only in debug build
-bool dlSegCheckProtoConsistency(const SymJoinCtx &ctx)
-{
-    BOOST_FOREACH(const TObjId proto, ctx.protos) {
-        if (OK_DLS != ctx.dst.objKind(proto))
-            // we are interested only DLSs here
-            continue;
-
-        const TObjId peer = dlSegPeer(ctx.dst, proto);
-        if (!hasKey(ctx.protos, peer)) {
-            CL_ERROR("DLS prototype peer not a prototype");
-            return false;
-        }
-    }
-
-    return true;
 }
 
 // FIXME: this works only for nullified blocks anyway
@@ -2897,20 +2860,6 @@ bool joinDataCore(
     ctx.sset1.insert(obj1);
     ctx.sset2.insert(obj2);
 
-    // never step over DLS peer
-    if (OK_DLS == kind1) {
-        const TObjId peer = dlSegPeer(sh, obj1);
-        ctx.sset1.insert(peer);
-        if (peer != obj2)
-            mapGhostAddressSpace(ctx, obj1, peer, JS_USE_SH1);
-    }
-    if (OK_DLS == kind2) {
-        const TObjId peer = dlSegPeer(sh, obj2);
-        ctx.sset2.insert(peer);
-        if (peer != obj1)
-            mapGhostAddressSpace(ctx, obj2, peer, JS_USE_SH2);
-    }
-
     // perform main loop
     if (!joinPendingValues(ctx))
         return false;
@@ -2920,10 +2869,6 @@ bool joinDataCore(
     if (!joinUniBlocks(ctx, objDst, obj1, obj2))
         // failed to complement uniform blocks
         return false;
-
-    // check consistency of DLS prototype peers
-    CL_BREAK_IF(!ctx.joiningData() && !dlSegCheckConsistency(ctx.dst));
-    CL_BREAK_IF(!dlSegCheckProtoConsistency(ctx));
 
     // go through Neq predicates
     handleDstPreds(ctx);
