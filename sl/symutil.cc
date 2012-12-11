@@ -436,7 +436,8 @@ void redirectRefsNotFrom(
         const TObjSet          &pointingNotFrom,
         const TObjId            pointingTo,
         const TObjId            redirectTo,
-        const ETargetSpecifier  redirectWith)
+        const ETargetSpecifier  redirectWith,
+        bool                  (*tsFilter)(ETargetSpecifier))
 {
     // go through all objects pointing at/inside pointingTo
     FldList refs;
@@ -446,16 +447,20 @@ void redirectRefsNotFrom(
         if (hasKey(pointingNotFrom, refObj))
             continue;
 
-        // resolve the base address
         const TValId nowAt = fld.value();
+
+        if (tsFilter) {
+            const ETargetSpecifier ts = sh.targetSpec(nowAt);
+            if (!tsFilter(ts))
+                continue;
+        }
+
+        // resolve the base address
         const TValId baseAddr = sh.addrOfTarget(redirectTo, redirectWith);
 
-        // TODO
-        CL_BREAK_IF(VT_RANGE == sh.valTarget(nowAt));
-
-        // shift the base address by scalar offset
-        const TOffset offToRoot = sh.valOffset(nowAt);
-        const TValId result = sh.valByOffset(baseAddr, offToRoot);
+        // shift the base address by the offset range (if any)
+        const IR::Range off = sh.valOffsetRange(nowAt);
+        const TValId result = sh.valByRange(baseAddr, off);
 
         // store the redirected value
         fld.setValue(result);

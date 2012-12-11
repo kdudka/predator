@@ -386,7 +386,8 @@ void redirectRefsNotFrom(
         const TObjSet          &pointingNotFrom,
         const TObjId            pointingTo,
         const TObjId            redirectTo,
-        const ETargetSpecifier  redirectWith);
+        const ETargetSpecifier  redirectWith,
+        bool                  (*tsFilter)(ETargetSpecifier) = 0);
 
 /// take the given visitor through all live program variables in all heaps
 template <unsigned N_DST, unsigned N_SRC, class THeap, class TVisitor>
