@@ -486,7 +486,8 @@ bool checkObjectMapping(
         const SymJoinCtx       &ctx,
         const TObjId            obj1,
         const TObjId            obj2,
-        const bool              allowUnknownMapping)
+        const bool              allowUnknownMapping,
+        TObjId                 *pDst = 0)
 {
     if (!checkNonPosValues(obj1, obj2))
         return false;
@@ -506,9 +507,13 @@ bool checkObjectMapping(
     const TObjId objDst1 = (hasMapping1) ? i1->second : OBJ_INVALID;
     const TObjId objDst2 = (hasMapping2) ? i2->second : OBJ_INVALID;
 
-    if (hasMapping1 && hasMapping2 && (objDst1 == objDst2))
+    if (hasMapping1 && hasMapping2 && (objDst1 == objDst2)) {
         // mapping already known and known to be consistent
+        if (pDst)
+            *pDst = objDst1 /* = objDst2 */;
+
         return true;
+    }
 
     if (allowUnknownMapping) {
         SJ_DEBUG("<-- object mapping mismatch: " << SJ_OBJP(obj1, obj2)
@@ -1499,6 +1504,7 @@ static const BindingOff ObjOrNull(OK_OBJ_OR_NULL);
 
 /// (NULL != off) means 'introduce OK_{FLD_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool createObject(
+        TObjId                 *pObjDst,
         SymJoinCtx             &ctx,
         const TObjId            obj1,
         const TObjId            obj2,
@@ -1574,35 +1580,43 @@ bool createObject(
         ctx.dst.segSetMinLength(objDst, len);
     }
 
-    return joinFields(ctx, objDst, obj1, obj2, ldiff);
+    if (!joinFields(ctx, objDst, obj1, obj2, ldiff))
+        return false;
+
+    *pObjDst = objDst;
+    return true;
 }
 
+/// (NULL == pObjDst) means read-only!
 bool joinObjects(
+        TObjId                 *pObjDst,
         SymJoinCtx             &ctx,
         const TObjId            obj1,
         const TObjId            obj2,
         const TProtoLevel       ldiff,
-        const EJoinStatus       action,
-        const bool              readOnly = false)
+        const EJoinStatus       action = JS_USE_ANY)
 {
+    if (checkObjectMapping(ctx, obj1, obj2, /* allowUnknown */ false, pObjDst))
+        return true;
+
     if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
         return false;
 
-    if (hasKey(ctx.objMap1[0], obj1) && hasKey(ctx.objMap2[0], obj2))
-        return true;
-
+    const bool readOnly = !pObjDst;
     if (readOnly)
         // do not create any object, just check if it was possible
         return segMatchLookAhead(ctx, obj1, obj2);
 
-    if (ctx.joiningData() && obj1 == obj2)
+    if (ctx.joiningData() && obj1 == obj2) {
         // we are on the way from joinData() and hit shared data
+        *pObjDst = obj1 /* = obj2 */;
         return joinFields(ctx, obj1, obj1, obj2, ldiff);
+    }
 
     if (!updateJoinStatus(ctx, action))
         return false;
 
-    return createObject(ctx, obj1, obj2, ldiff);
+    return createObject(pObjDst, ctx, obj1, obj2, ldiff);
 }
 
 bool followValuePair(
@@ -1624,18 +1638,16 @@ bool followValuePair(
     }
 
     // join objects
+    TObjId objDst;
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
-    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ false)
-            && !joinObjects(ctx, obj1, obj2, item.ldiff, JS_USE_ANY))
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknown */ false, &objDst)
+            && !joinObjects(&objDst, ctx, obj1, obj2, item.ldiff))
         return false;
 
     // ranges cannot be joint unless the root exists in ctx.dst, join them now!
     if (isRange)
         return joinRangeValues(ctx, item);
-
-    const TObjId objDst = roMapLookup(ctx.objMap1[/* ltr */ 0], obj1);
-    CL_BREAK_IF(objDst != roMapLookup(ctx.objMap2[/* ltr */ 0], obj2));
 
     const TOffset offDst = ctx.sh1.valOffset(v1);
     CL_BREAK_IF(offDst  != ctx.sh2.valOffset(v2));
@@ -1703,8 +1715,7 @@ bool joinSegmentWithAny(
     if (!isValid1 || !isValid2)
         return false;
 
-    if (firstTryReadOnly && !joinObjects(ctx, obj1, obj2, ldiff, action,
-                /* RO */ true))
+    if (firstTryReadOnly && !joinObjects(/* RO */ 0, ctx, obj1, obj2, ldiff))
         return false;
 
     const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1));
@@ -1738,47 +1749,37 @@ bool joinSegmentWithAny(
 
     // go ahead, try it read-write!
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(obj1, obj2));
-    *pResult = joinObjects(ctx, obj1, obj2, ldiff, action);
-    if (!*pResult)
+    TObjId objDst;
+    *pResult = joinObjects(&objDst, ctx, obj1, obj2, ldiff, action);
+    if (!*pResult || OK_OBJ_OR_NULL == kind)
         return true;
 
-    const bool use1 = (JS_USE_SH1 == action);
-
-    const TObjMap &objMap = (use1)
-        ? ctx.objMap1[/* ltr */ 0]
-        : ctx.objMap2[/* ltr */ 0];
-
-    const TObjId segDst = (use1)
-        ? roMapLookup(objMap, obj1)
-        : roMapLookup(objMap, obj2);
+    const BindingOff &off = ctx.dst.segBinding(objDst);
 
     if (haveDls) {
-        const TOffset offPrev = ctx.dst.segBinding(segDst).prev;
         const SchedItem prevItem(
-                PtrHandle(ctx.dst, segDst, offPrev),
-                PtrHandle(ctx.sh1, obj1  , offPrev),
-                PtrHandle(ctx.sh2, obj2  , offPrev),
+                PtrHandle(ctx.dst, objDst, off.prev),
+                PtrHandle(ctx.sh1, obj1  , off.prev),
+                PtrHandle(ctx.sh2, obj2  , off.prev),
                 ldiff);
         if (ctx.wl.schedule(prevItem))
             SJ_DEBUG("+++ " << SJ_ITEM(prevItem) << " by joinSegmentWithAny()");
     }
 
-    if (OK_OBJ_OR_NULL != kind) {
-        const TOffset offNext = ctx.dst.segBinding(segDst).next;
-        const SchedItem nextItem(
-                PtrHandle(ctx.dst, segDst, offNext),
-                PtrHandle(ctx.sh1, obj1  , offNext),
-                PtrHandle(ctx.sh2, obj2  , offNext),
-                ldiff);
-        if (ctx.wl.schedule(nextItem))
-            SJ_DEBUG("+++ " << SJ_ITEM(nextItem) << " by joinSegmentWithAny()");
-    }
+    const SchedItem nextItem(
+            PtrHandle(ctx.dst, objDst, off.next),
+            PtrHandle(ctx.sh1, obj1  , off.next),
+            PtrHandle(ctx.sh2, obj2  , off.next),
+            ldiff);
+    if (ctx.wl.schedule(nextItem))
+        SJ_DEBUG("+++ " << SJ_ITEM(nextItem) << " by joinSegmentWithAny()");
 
     return true;
 }
 
 /// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool segmentCloneCore(
+        TObjId                     *pObjDst,
         SymJoinCtx                 &ctx,
         SymHeap                    &shGt,
         const TValId                valGt,
@@ -1806,9 +1807,11 @@ bool segmentCloneCore(
             // FIXME: we need to fix this in a more generic way
             return false;
 
-        if (!hasKey(objMapLtRtl, objDst))
+        if (!hasKey(objMapLtRtl, objDst)) {
             // mapping already available for objGt
+            *pObjDst = objDst;
             return true;
+        }
     }
 
     SJ_DEBUG("+i+ insertSegmentClone: cloning object #" << objGt <<
@@ -1821,7 +1824,7 @@ bool segmentCloneCore(
         return false;
 
     // clone the object
-    if (createObject(ctx, obj1, obj2, ldiff, off))
+    if (createObject(pObjDst, ctx, obj1, obj2, ldiff, off))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
@@ -1977,10 +1980,10 @@ bool insertSegmentClone(
                 // FIXME: temporarily not supported
                 goto fail;
 
-            if (segmentCloneCore(ctx, shGt, valGt, objMapGt, cloneItem.ldiff,
-                        action, off))
+            TObjId objDst;
+            if (segmentCloneCore(&objDst, ctx, shGt, valGt, objMapGt,
+                        cloneItem.ldiff, action, off))
             {
-                const TObjId objDst = roMapLookup(objMapGt[/* ltr */ 0], objGt);
                 const IR::Range off = shGt.valOffsetRange(valGt);
                 const ETargetSpecifier ts = shGt.targetSpec(valGt);
                 const TValId vDstBase = ctx.dst.addrOfTarget(objDst, ts);
