@@ -2748,63 +2748,6 @@ void killUniBlocksUnderBindingPtrs(
     }
 }
 
-bool joinDataCore(
-        SymJoinCtx             &ctx,
-        const BindingOff       &off,
-        const TObjId            obj1,
-        const TObjId            obj2)
-{
-    CL_BREAK_IF(!ctx.joiningData());
-    SymHeap &sh = ctx.sh1;
-
-    CL_BREAK_IF(!sh.isValid(obj1) || !sh.isValid(obj2));
-
-    TSizeRange size;
-    if (!joinObjSize(&size, ctx, obj1, obj2))
-        return false;
-
-    // start with the given pair of objects and create a ghost object for them
-    // create an image in ctx.dst
-    const TObjId objDst = ctx.dst.heapAlloc(size);
-
-    TObjType clt;
-    if (!joinObjType(&clt, ctx, obj1, obj2))
-        return false;
-
-    if (clt)
-        // preserve estimated type-info of the root
-        ctx.dst.objSetEstimatedType(objDst, clt);
-
-    TProtoLevel ldiff = 0;
-
-    const EObjKind kind1 = sh.objKind(obj1);
-    if (OK_REGION != kind1)
-        --ldiff;
-
-    const EObjKind kind2 = sh.objKind(obj2);
-    if (OK_REGION != kind2)
-        ++ldiff;
-
-    if (!joinFields(ctx, objDst, obj1, obj2, ldiff, &off))
-        return false;
-
-    // perform main loop
-    if (!joinPendingValues(ctx))
-        return false;
-
-    killUniBlocksUnderBindingPtrs(sh, off, obj1);
-    killUniBlocksUnderBindingPtrs(sh, off, obj2);
-    if (!joinUniBlocks(ctx, objDst, obj1, obj2))
-        // failed to complement uniform blocks
-        return false;
-
-    // go through Neq predicates
-    handleDstPreds(ctx);
-
-    // if the result is three-way join, check if it is a good idea
-    return validateStatus(ctx);
-}
-
 void recoverPointersToSelf(
         SymHeap                 &sh,
         const TObjId            dst,
@@ -2884,7 +2827,47 @@ bool joinData(
             /* l1Drift */ !isAbstractObject(sh, obj1),
             /* l2Drift */ !isAbstractObject(sh, obj2));
 
-    if (!joinDataCore(ctx, bf, obj1, obj2))
+    TSizeRange size;
+    if (!joinObjSize(&size, ctx, obj1, obj2))
+        return false;
+
+    // start with the given pair of objects and create a ghost object for them
+    // create an image in ctx.dst
+    const TObjId objDst = ctx.dst.heapAlloc(size);
+
+    TObjType clt;
+    if (!joinObjType(&clt, ctx, obj1, obj2))
+        return false;
+
+    if (clt)
+        // preserve estimated type-info of the root
+        ctx.dst.objSetEstimatedType(objDst, clt);
+
+    TProtoLevel ldiff = 0;
+    if (isAbstractObject(sh, obj1))
+        --ldiff;
+    if (isAbstractObject(sh, obj2))
+        ++ldiff;
+
+    if (!joinFields(ctx, objDst, obj1, obj2, ldiff, &bf))
+        return false;
+
+    // perform main loop
+    if (!joinPendingValues(ctx))
+        return false;
+
+    killUniBlocksUnderBindingPtrs(sh, bf, obj1);
+    killUniBlocksUnderBindingPtrs(sh, bf, obj2);
+    if (!joinUniBlocks(ctx, objDst, obj1, obj2))
+        // failed to complement uniform blocks
+        return false;
+
+    // go through Neq predicates
+    if (!handleDstPreds(ctx))
+        return false;
+
+    // if the result is three-way join, check if it is a good idea
+    if (!validateStatus(ctx))
         return false;
 
     if (!updateMayExistLevels(ctx)) {
@@ -2892,19 +2875,16 @@ bool joinData(
         return false;
     }
 
-    // ghost is a transiently existing object representing the join of obj1/obj2
-    const TObjId ghost = roMapLookup(ctx.objMap1[0], obj1);
-    CL_BREAK_IF(ghost != roMapLookup(ctx.objMap2[0], obj2));
-
     // create has-value edges going from obj1
-    transferContentsOfGhost(ctx.dst, bf, obj1, ghost);
+    transferContentsOfGhost(ctx.dst, bf, /* XXX */ obj1, objDst);
 
     // redirect some edges if necessary
-    recoverPrototypes(ctx, obj1, ghost);
-    recoverPointersToSelf(sh, obj1, ghost);
+    recoverPrototypes(ctx, /* XXX */ obj1, objDst);
+    recoverPointersToSelf(sh, /* XXX */ obj1, objDst);
 
-    if (collectJunk(sh, ghost))
-        CL_DEBUG("    joinData() drops a sub-heap (ghost)");
+    // TODO: drop this!
+    if (collectJunk(sh, objDst))
+        CL_DEBUG("    joinData() drops a sub-heap (objDst)");
 
     unsigned cntProto1 = 0;
     unsigned cntProto2 = 0;
