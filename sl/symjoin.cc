@@ -124,9 +124,12 @@ typedef std::map<TValPair /* (v1, v2) */, TValId /* dst */>     TJoinCache;
 
 /// current state, common for joinSymHeaps() and joinData()
 struct SymJoinCtx {
-    SymHeap                     &dst;
-    SymHeap                     &sh1;
-    SymHeap                     &sh2;
+    SymHeap                    &dst;
+    SymHeap                    &sh1;
+    SymHeap                    &sh2;
+
+    const TProtoLevel           l1Drift;
+    const TProtoLevel           l2Drift;
 
     // they need to be black-listed for joinAbstractValues()
     TObjSet                     sset1;
@@ -169,6 +172,8 @@ struct SymJoinCtx {
         dst(dst_),
         sh1(sh1_),
         sh2(sh2_),
+        l1Drift(0),
+        l2Drift(0),
         status(JS_USE_ANY),
         forceThreeWay(false),
         allowThreeWay((1 < (SE_ALLOW_THREE_WAY_JOIN)) && allowThreeWay_)
@@ -177,10 +182,12 @@ struct SymJoinCtx {
     }
 
     /// constructor used by joinData()
-    SymJoinCtx(SymHeap &sh_):
+    SymJoinCtx(SymHeap &sh_, TProtoLevel l1Drift_, TProtoLevel l2Drift_):
         dst(sh_),
         sh1(sh_),
         sh2(sh_),
+        l1Drift(l1Drift_),
+        l2Drift(l2Drift_),
         status(JS_USE_ANY),
         forceThreeWay(false),
         allowThreeWay(0 < (SE_ALLOW_THREE_WAY_JOIN))
@@ -1278,20 +1285,6 @@ bool joinSegBinding(
     return false;
 }
 
-bool rootNotYetAbstract(SymHeap &sh, const TObjSet &sset)
-{
-    if (sset.empty()) {
-        CL_BREAK_IF("rootNotYetAbstract() got an empty set");
-        return false;
-    }
-
-    const TObjId obj = *sset.begin();
-    CL_BREAK_IF(!sh.isValid(obj));
-
-    const EObjKind kind = sh.objKind(obj);
-    return (OK_REGION == kind);
-}
-
 bool joinNestingLevel(
         TProtoLevel            *pDst,
         const SymJoinCtx       &ctx,
@@ -1299,18 +1292,8 @@ bool joinNestingLevel(
         const TObjId            obj2,
         const TProtoLevel       ldiffExpected)
 {
-    TProtoLevel level1 = ctx.sh1.objProtoLevel(obj1);
-    TProtoLevel level2 = ctx.sh2.objProtoLevel(obj2);
-
-    if (ctx.joiningData()) {
-        // if one of the starting points is not yet abstract, compensate it!
-
-        if (rootNotYetAbstract(ctx.sh1, ctx.sset1))
-            ++level1;
-
-        if (rootNotYetAbstract(ctx.sh2, ctx.sset2))
-            ++level2;
-    }
+    const TProtoLevel level1 = ctx.l1Drift + ctx.sh1.objProtoLevel(obj1);
+    const TProtoLevel level2 = ctx.l2Drift + ctx.sh2.objProtoLevel(obj2);
 
     *pDst = std::max(level1, level2);
 
@@ -2907,7 +2890,10 @@ bool joinData(
         return false;
     }
 
-    SymJoinCtx ctx(sh);
+    SymJoinCtx ctx(sh,
+            /* l1Drift */ !isAbstractObject(sh, obj1),
+            /* l2Drift */ !isAbstractObject(sh, obj2));
+
     if (!joinDataCore(ctx, bf, obj1, obj2))
         return false;
 
