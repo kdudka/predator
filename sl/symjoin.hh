@@ -56,8 +56,8 @@ bool joinData(
         const TObjId             obj1,
         const TObjId             obj2,
         TObjId                  *pDst            = 0,
-        EJoinStatus             *pStatus         = 0,
-        TObjSet                  protoObjs[1][2] = 0);
+        TObjSet                  protoObjs[1][2] = 0,
+        EJoinStatus             *pStatus         = 0);
 
 /// @todo some dox
 bool joinSymHeaps(

@@ -308,7 +308,7 @@ bool matchData(
         return false;
 
     EJoinStatus status;
-    if (!joinData(sh, off, obj1, obj2, /* pDst */ 0, &status, protoPairs)) {
+    if (!joinData(sh, off, obj1, obj2, /* pDst */ 0, protoPairs, &status)) {
         CL_DEBUG("    joinDataReadOnly() refuses to create a segment!");
         return false;
     }

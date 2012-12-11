@@ -26,6 +26,7 @@
 
 #include "prototype.hh"
 #include "symcmp.hh"
+#include "symdiscover.hh"
 #include "symgc.hh"
 #include "symplot.hh"
 #include "symseg.hh"
@@ -2797,14 +2798,10 @@ bool joinData(
         const TObjId             obj1,
         const TObjId             obj2,
         TObjId                  *pDst,
-        EJoinStatus             *pStatus,
-        TObjSet                  protoObjs[1][2])
+        TObjSet                  protoObjs[1][2],
+        EJoinStatus             *pStatus)
 {
     SJ_DEBUG("--> joinData" << SJ_OBJP(obj1, obj2));
-    if (pDst) {
-        CL_BREAK_IF("please implement");
-        return false;
-    }
 
     SymJoinCtx ctx(sh,
             /* l1Drift */ !isAbstractObject(sh, obj1),
@@ -2814,18 +2811,27 @@ bool joinData(
     if (!joinObjSize(&size, ctx, obj1, obj2))
         return false;
 
-    // start with the given pair of objects and create a ghost object for them
-    // create an image in ctx.dst
-    const TObjId objDst = ctx.dst.heapAlloc(size);
-
     TObjType clt;
     if (!joinObjType(&clt, ctx, obj1, obj2))
         return false;
+
+    const EObjKind kind = (isDlsBinding(bf))
+        ? OK_DLS
+        : OK_SLS;
+
+    // create an image in ctx.dst
+    const TObjId objDst = ctx.dst.heapAlloc(size);
+    ctx.dst.objSetAbstract(objDst, kind, bf);
+
+    // intialize the minimum segment length
+    const TMinLen lenDst = objMinLength(sh, obj1) + objMinLength(sh, obj2);
+    ctx.dst.segSetMinLength(objDst, lenDst);
 
     if (clt)
         // preserve estimated type-info of the root
         ctx.dst.objSetEstimatedType(objDst, clt);
 
+    // compute the initial ldiff (nesting level difference)
     TProtoLevel ldiff = 0;
     if (isAbstractObject(sh, obj1))
         --ldiff;
@@ -2858,15 +2864,17 @@ bool joinData(
         return false;
     }
 
-    // TODO: drop this!
-    transferContentsOfGhost(ctx.dst, bf, /* XXX */ obj1, objDst);
-
-    // redirect some edges if necessary
-    recoverPointersToDst(ctx, /* XXX */ obj1, objDst);
-
-    // TODO: drop this!
-    if (collectJunk(sh, objDst))
-        CL_DEBUG("    joinData() drops a sub-heap (objDst)");
+    if (pDst) {
+        recoverPointersToDst(ctx, objDst, objDst);
+        *pDst = objDst;
+    }
+    else {
+        // TODO: drop this!
+        transferContentsOfGhost(ctx.dst, bf, /* XXX */ obj1, objDst);
+        recoverPointersToDst(ctx, /* XXX */ obj1, objDst);
+        if (collectJunk(sh, objDst))
+            CL_DEBUG("    joinData() drops a sub-heap (objDst)");
+    }
 
     unsigned cntProto1 = 0;
     unsigned cntProto2 = 0;

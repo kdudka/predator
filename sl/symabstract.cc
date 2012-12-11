@@ -207,34 +207,40 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
     return reg;
 }
 
-void slSegAbstractionStep(
+TObjId /* objDst */ slSegAbstractionStep(
         SymHeap                    &sh,
-        const TObjId                obj,
-        const TObjId                next,
+        const TObjId                obj1,
+        const TObjId                obj2,
         const BindingOff           &off)
 {
-    // compute the resulting minimal length
-    const TMinLen len = objMinLength(sh, obj) + objMinLength(sh, next);
+    // join data
+    TObjId seg;
+    TObjSet protos[2];
+    if (!joinData(sh, off, obj1, obj2, &seg, &protos)) {
+        CL_BREAK_IF("call of joinData() failed in slSegAbstractionStep()");
+        return OBJ_INVALID;
+    }
 
-    // merge data
-    joinData(sh, off, next, obj);
+    // compute the list of objects that can point up to 'obj1'
+    TObjList privList;
+    TObjSet &objProtos = protos[0];
+    objProtos.insert(obj1);
+    BOOST_FOREACH(const TObjId proto, objProtos)
+        privList.push_back(proto);
 
-    if (OK_SLS != sh.objKind(next))
-        // abstract the _next_ object
-        sh.objSetAbstract(next, OK_SLS, off);
+    // redirect pointers going to 'obj1' from left to 'seg'
+    redirectRefsNotFrom(sh, privList, obj1, seg, TS_FIRST);
 
-    redirectRefs(sh,
-            /* pointingFrom */ OBJ_INVALID,
-            /* pointingTo   */ obj,
-            /* pointingWith */ TS_INVALID,
-            /* redirectTo   */ next,
-            /* redirectWith */ TS_FIRST);
+    // preserve valNext
+    const TValId valNext = valOfPtr(sh, obj2, off.next);
+    const PtrHandle nextPtr(sh, seg, off.next);
+    nextPtr.setValue(valNext);
 
-    // destroy self, including all prototypes
-    REQUIRE_GC_ACTIVITY(sh, obj, slSegAbstractionStep);
+    // destroy 'obj1' and 'obj2', including all prototypes
+    REQUIRE_GC_ACTIVITY(sh, obj2, slSegAbstractionStep);
+    REQUIRE_GC_ACTIVITY(sh, obj1, slSegAbstractionStep);
 
-    // declare resulting segment's minimal length
-    sh.segSetMinLength(next, len);
+    return seg;
 }
 
 void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
@@ -376,17 +382,14 @@ bool segAbstractionStep(
         // DLS
         const bool jumpNext = dlSegAbstractionStep(sh, obj, next, off);
         CL_BREAK_IF(!segCheckConsistency(sh));
-        if (!jumpNext)
-            // stay in place
-            return true;
+        if (jumpNext)
+            *pCursor = next;
     }
     else {
         // SLS
-        slSegAbstractionStep(sh, obj, next, off);
+        *pCursor = slSegAbstractionStep(sh, obj, next, off);
     }
 
-    // move the cursor one step forward
-    *pCursor = next;
     return true;
 }
 
