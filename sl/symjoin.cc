@@ -131,10 +131,6 @@ struct SymJoinCtx {
     const TProtoLevel           l1Drift;
     const TProtoLevel           l2Drift;
 
-    // they need to be black-listed for joinAbstractValues()
-    TObjSet                     sset1;
-    TObjSet                     sset2;
-
     TValMapBidir                valMap1;
     TValMapBidir                valMap2;
 
@@ -2432,17 +2428,14 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
-    const bool isAbs1 = isAbstractObject(ctx.sh1, obj1)
-        /* do not treat the starting point as encountered segment */
-        && !hasKey(ctx.sset1, obj1);
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ false)) {
+        const bool isAbs1 = isAbstractObject(ctx.sh1, obj1);
+        const bool isAbs2 = isAbstractObject(ctx.sh2, obj2);
 
-    const bool isAbs2 = isAbstractObject(ctx.sh2, obj2)
-        /* do not treat the starting point as encountered segment */
-        && !hasKey(ctx.sset2, obj2);
-
-    if ((isAbs1 || isAbs2)
-            && joinAbstractValues(&result, ctx, item, isAbs1, isAbs2))
-        return result;
+        if ((isAbs1 || isAbs2)
+                && joinAbstractValues(&result, ctx, item, isAbs1, isAbs2))
+            return result;
+    }
 
     if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
         return followValuePair(ctx, item);
@@ -2794,9 +2787,6 @@ bool joinDataCore(
 
     if (!joinFields(ctx, objDst, obj1, obj2, ldiff, &off))
         return false;
-
-    ctx.sset1.insert(obj1);
-    ctx.sset2.insert(obj2);
 
     // perform main loop
     if (!joinPendingValues(ctx))
