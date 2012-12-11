@@ -251,45 +251,22 @@ bool filterBack(ETargetSpecifier ts)
     return false;
 }
 
-TObjId /* objDst */ slSegAbstractionStep(
-        SymHeap                    &sh,
-        const TObjId                obj1,
-        const TObjId                obj2,
-        const BindingOff           &off)
+bool segAbstractionStep(
+        SymHeap                     &sh,
+        const BindingOff            &off,
+        TObjId                      *pCursor)
 {
-    // join data
-    TObjId seg;
-    TObjSet protos[2];
-    if (!joinData(sh, off, obj1, obj2, &seg, &protos)) {
-        CL_BREAK_IF("call of joinData() failed in slSegAbstractionStep()");
-        return OBJ_INVALID;
+    // resolve the pair of objects to be merged
+    const TObjId obj0 = *pCursor;
+    const TObjId obj1 = nextObj(sh, obj0, off.next);
+
+    // check whether the upcoming abstraction step is still doable
+    SymHeap sandBox(sh);
+    if (!joinData(sandBox, off, obj0, obj1)) {
+        CL_DEBUG("segAbstractionStep() forces segment re-discoverty");
+        return false;
     }
 
-    // compute the list of objects that can point up to 'obj1'
-    TObjSet &privSet = protos[0];
-    privSet.insert(obj1);
-
-    // redirect pointers going to 'obj1' from left to 'seg'
-    redirectRefsNotFrom(sh, privSet, obj1, seg, TS_FIRST);
-
-    // preserve valNext
-    const TValId valNext = valOfPtr(sh, obj2, off.next);
-    const PtrHandle nextPtr(sh, seg, off.next);
-    nextPtr.setValue(valNext);
-
-    // destroy 'obj1' and 'obj2', including all prototypes
-    REQUIRE_GC_ACTIVITY(sh, obj2, slSegAbstractionStep);
-    REQUIRE_GC_ACTIVITY(sh, obj1, slSegAbstractionStep);
-
-    return seg;
-}
-
-TObjId /* objDst */ dlSegAbstractionStep(
-        SymHeap                    &sh,
-        const TObjId                obj0,
-        const TObjId                obj1,
-        const BindingOff           &off)
-{
     // join data
     TObjId seg;
     TObjSet protos[2];
@@ -305,48 +282,28 @@ TObjId /* objDst */ dlSegAbstractionStep(
     // redirect pointers going to 'obj0' from left to 'seg'
     redirectRefsNotFrom(sh, protos[0], obj0, seg, TS_FIRST, filterFront);
 
-    // redirect pointers going to 'obj1' from left to 'seg'
-    redirectRefsNotFrom(sh, protos[1], obj1, seg, TS_LAST, filterBack);
-
     // preserve valNext
     const TValId valNext = valOfPtr(sh, obj1, off.next);
     const PtrHandle nextPtr(sh, seg, off.next);
     nextPtr.setValue(valNext);
 
-    // preserve valPrev
-    const TValId valPrev = valOfPtr(sh, obj0, off.prev);
-    const PtrHandle prevPtr(sh, seg, off.prev);
-    prevPtr.setValue(valPrev);
+    if (isDlsBinding(off)) {
+        // redirect pointers going to 'obj1' from left to 'seg'
+        redirectRefsNotFrom(sh, protos[1], obj1, seg, TS_LAST, filterBack);
+
+        // preserve valPrev
+        const TValId valPrev = valOfPtr(sh, obj0, off.prev);
+        const PtrHandle prevPtr(sh, seg, off.prev);
+        prevPtr.setValue(valPrev);
+    }
 
     // destroy 'obj0' and 'obj1', including all prototypes
     REQUIRE_GC_ACTIVITY(sh, obj1, dlSegAbstractionStep);
-    collectJunk(sh, obj0);
+    if (collectJunk(sh, obj0))
+        CL_DEBUG("dlSegAbstractionStep() drops a sub-heap (obj0)");
 
-    return seg;
-}
-
-bool segAbstractionStep(
-        SymHeap                     &sh,
-        const BindingOff            &off,
-        TObjId                      *pCursor)
-{
-    const TObjId obj = *pCursor;
-
-    // jump to the next object (as we know such an object exists)
-    const TObjId next = nextObj(sh, obj, off.next);
-
-    // check whether he upcoming abstraction step is still doable
-    SymHeap sandBox(sh);
-    if (!joinData(sandBox, off, obj, next))
-        return false;
-
-    if (isDlsBinding(off))
-        // DLS
-        *pCursor = dlSegAbstractionStep(sh, obj, next, off);
-    else
-        // SLS
-        *pCursor = slSegAbstractionStep(sh, obj, next, off);
-
+    // move to the resulting segment
+    *pCursor = seg;
     return true;
 }
 
