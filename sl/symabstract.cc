@@ -213,6 +213,44 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
     return reg;
 }
 
+bool filterFront(ETargetSpecifier ts)
+{
+    switch (ts) {
+        case TS_INVALID:
+            CL_BREAK_IF("invalid call of filterFront()");
+            break;
+
+        case TS_REGION:
+        case TS_FIRST:
+            return true;
+
+        case TS_LAST:
+        case TS_ALL:
+            break;
+    }
+
+    return false;
+}
+
+bool filterBack(ETargetSpecifier ts)
+{
+    switch (ts) {
+        case TS_INVALID:
+            CL_BREAK_IF("invalid call of filterFront()");
+            break;
+
+        case TS_REGION:
+        case TS_LAST:
+            return true;
+
+        case TS_FIRST:
+        case TS_ALL:
+            break;
+    }
+
+    return false;
+}
+
 TObjId /* objDst */ slSegAbstractionStep(
         SymHeap                    &sh,
         const TObjId                obj1,
@@ -246,124 +284,45 @@ TObjId /* objDst */ slSegAbstractionStep(
     return seg;
 }
 
-void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
+TObjId /* objDst */ dlSegAbstractionStep(
+        SymHeap                    &sh,
+        const TObjId                obj0,
+        const TObjId                obj1,
+        const BindingOff           &off)
 {
-    // compute resulting segment's length
-    const TMinLen len = objMinLength(sh, obj1) + objMinLength(sh, obj2);
+    // join data
+    TObjId seg;
+    TObjSet protos[2];
+    if (!joinData(sh, off, obj0, obj1, &seg, &protos)) {
+        CL_BREAK_IF("call of joinData() failed in dlSegAbstractionStep()");
+        return OBJ_INVALID;
+    }
 
-    // merge data
-    joinData(sh, off, obj1, obj2);
+    // add obj0/obj1 to the set of allowed bottom-up referrers
+    protos[0].insert(obj0);
+    protos[1].insert(obj1);
 
-    sh.objSetAbstract(obj1, OK_DLS, off);
+    // redirect pointers going to 'obj0' from left to 'seg'
+    redirectRefsNotFrom(sh, protos[0], obj0, seg, TS_FIRST, filterFront);
 
-    TObjSet privSet;
-    collectPrototypesOf(privSet, sh, obj1);
-
-    // convert the TS_REGION addresses to TS_FIRST/TS_LAST
-    privSet.insert(obj1);
-    redirectRefsNotFrom(sh, privSet, obj1, obj1, TS_FIRST);
-    privSet.insert(obj2);
-    redirectRefsNotFrom(sh, privSet, obj2, obj1, TS_LAST);
-
-    const TValId valNext = valOfPtr(sh, obj2, off.next);
-    const PtrHandle prevPtr(sh, obj1, off.next);
-    prevPtr.setValue(valNext);
-
-    REQUIRE_GC_ACTIVITY(sh, obj2, dlSegCreate);
-
-    // just created DLS is said to be 2+ as long as no OK_SEE_THROUGH are involved
-    sh.segSetMinLength(obj1, len);
-}
-
-void dlSegGobble(SymHeap &sh, TObjId dls, TObjId reg, bool backward)
-{
-    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
-
-    // compute the resulting minimal length
-    const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, reg);
-
-    // merge data
-    const BindingOff &off = sh.segBinding(dls);
-    joinData(sh, off, dls, reg);
-
-    TOffset offNext = off.next;;
-    TOffset offPrev = off.prev;
-    if (backward)
-        swapValues(offNext, offPrev);
-
-    const TValId headOld = sh.addrOfTarget(reg, TS_REGION, off.head);
-    const TValId headNew = valOfPtr(sh, reg, offPrev);
-    sh.valReplace(headOld, headNew);
-
-    const PtrHandle nextPtr(sh, dls, offNext);
-    const TValId valNext = valOfPtr(sh, reg, offNext);
-    nextPtr.setValue(valNext);
-
-    REQUIRE_GC_ACTIVITY(sh, reg, dlSegGobble);
-
-    // handle DLS Neq predicates
-    sh.segSetMinLength(dls, len);
-}
-
-void dlSegMerge(SymHeap &sh, TObjId seg1, TObjId seg2)
-{
-    // compute the resulting minimal length
-    const TMinLen len = sh.segMinLength(seg1) + sh.segMinLength(seg2);
-
-    // merge data
-    const BindingOff &bf2 = sh.segBinding(seg2);
-    joinData(sh, bf2, seg1, seg2);
+    // redirect pointers going to 'obj1' from left to 'seg'
+    redirectRefsNotFrom(sh, protos[1], obj1, seg, TS_LAST, filterBack);
 
     // preserve valNext
-    const TValId valNext = nextValFromSeg(sh, seg2);
-    const PtrHandle ptrNext = nextPtrFromSeg(sh, seg1);
-    ptrNext.setValue(valNext);
+    const TValId valNext = valOfPtr(sh, obj1, off.next);
+    const PtrHandle nextPtr(sh, seg, off.next);
+    nextPtr.setValue(valNext);
 
-    redirectRefs(sh,
-            /* pointingFrom */ OBJ_INVALID,
-            /* pointingTo   */ seg2,
-            /* pointingWith */ TS_LAST,
-            /* redirectTo   */ seg1,
-            /* redirectWith */ TS_LAST);
+    // preserve valPrev
+    const TValId valPrev = valOfPtr(sh, obj0, off.prev);
+    const PtrHandle prevPtr(sh, seg, off.prev);
+    prevPtr.setValue(valPrev);
 
-    // destroy seg2 including all prototypes
-    REQUIRE_GC_ACTIVITY(sh, seg2, dlSegMerge);
+    // destroy 'obj0' and 'obj1', including all prototypes
+    REQUIRE_GC_ACTIVITY(sh, obj1, dlSegAbstractionStep);
+    collectJunk(sh, obj0);
 
-    // assign the resulting minimal length
-    sh.segSetMinLength(seg1, len);
-}
-
-bool /* jump next */ dlSegAbstractionStep(
-        SymHeap                    &sh,
-        const TObjId                obj,
-        const TObjId                next,
-        const BindingOff            &off)
-{
-    const EObjKind kind = sh.objKind(obj);
-    const EObjKind kindNext = sh.objKind(next);
-    CL_BREAK_IF(OK_SLS == kind || OK_SLS == kindNext);
-
-    if (OK_DLS == kindNext) {
-        if (OK_DLS == kind) {
-            // DLS + DLS
-            dlSegMerge(sh, obj, next);
-            return /* jump next */ false;
-        }
-
-        // CONCRETE + DLS
-        dlSegGobble(sh, next, obj, /* backward */ true);
-        return /* jump next */ true;
-    }
-    else {
-        if (OK_DLS == kind)
-            // DLS + CONCRETE
-            dlSegGobble(sh, obj, next, /* backward */ false);
-        else
-            // CONCRETE + CONCRETE
-            dlSegCreate(sh, obj, next, off);
-
-        return /* nobody moves */ false;
-    }
+    return seg;
 }
 
 bool segAbstractionStep(
@@ -376,22 +335,17 @@ bool segAbstractionStep(
     // jump to the next object (as we know such an object exists)
     const TObjId next = nextObj(sh, obj, off.next);
 
-    // check wheter he upcoming abstraction step is still doable
+    // check whether he upcoming abstraction step is still doable
     SymHeap sandBox(sh);
     if (!joinData(sandBox, off, obj, next))
         return false;
 
-    if (isDlsBinding(off)) {
+    if (isDlsBinding(off))
         // DLS
-        const bool jumpNext = dlSegAbstractionStep(sh, obj, next, off);
-        CL_BREAK_IF(!segCheckConsistency(sh));
-        if (jumpNext)
-            *pCursor = next;
-    }
-    else {
+        *pCursor = dlSegAbstractionStep(sh, obj, next, off);
+    else
         // SLS
         *pCursor = slSegAbstractionStep(sh, obj, next, off);
-    }
 
     return true;
 }
