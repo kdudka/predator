@@ -2748,37 +2748,28 @@ void killUniBlocksUnderBindingPtrs(
     }
 }
 
-void recoverPointersToSelf(
-        SymHeap                 &sh,
-        const TObjId            dst,
-        const TObjId            ghost)
-{
-    redirectRefs(sh,
-            /* pointingFrom */  dst,
-            /* pointingTo   */  ghost,
-            /* pointingWith */  TS_INVALID,
-            /* redirectTo   */  dst,
-            /* redirectWith */  TS_ALL);
-}
-
-void recoverPrototypes(
+void recoverPointersToDst(
         SymJoinCtx             &ctx,
         const TObjId            dst,
-        const TObjId            ghost)
+        const TObjId            src)
 {
-    const unsigned cntProto = ctx.protos.size();
-    if (cntProto)
-        CL_DEBUG("    joinData() joins " << cntProto << " prototype objects");
-
-    // go through prototypes
+    // redirect pointers from prototypes to their parents
     BOOST_FOREACH(const TObjId protoGhost, ctx.protos) {
         redirectRefs(ctx.dst,
                 /* pointingFrom */  protoGhost,
-                /* pointingTo   */  ghost,
+                /* pointingTo   */  src,
                 /* pointingWith */  TS_INVALID,
                 /* redirectTo   */  dst,
                 /* redirectWith */  TS_ALL);
     }
+
+    // redirect pointers to self
+    redirectRefs(ctx.dst,
+            /* pointingFrom */  dst,
+            /* pointingTo   */  src,
+            /* pointingWith */  TS_INVALID,
+            /* redirectTo   */  dst,
+            /* redirectWith */  TS_ALL);
 }
 
 void transferContentsOfGhost(
@@ -2875,12 +2866,11 @@ bool joinData(
         return false;
     }
 
-    // create has-value edges going from obj1
+    // TODO: drop this!
     transferContentsOfGhost(ctx.dst, bf, /* XXX */ obj1, objDst);
 
     // redirect some edges if necessary
-    recoverPrototypes(ctx, /* XXX */ obj1, objDst);
-    recoverPointersToSelf(sh, /* XXX */ obj1, objDst);
+    recoverPointersToDst(ctx, /* XXX */ obj1, objDst);
 
     // TODO: drop this!
     if (collectJunk(sh, objDst))
