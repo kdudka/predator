@@ -3638,7 +3638,7 @@ const BindingOff& SymHeap::segBinding(TObjId seg) const
 void SymHeap::objSetAbstract(
         TObjId                      obj,
         EObjKind                    kind,
-        const BindingOff            &off)
+        const BindingOff           &off)
 {
     CL_BREAK_IF(OK_REGION == kind);
 
@@ -3647,15 +3647,11 @@ void SymHeap::objSetAbstract(
 
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
-    // clone the data
     if (d->absRoots.isValidEnt(obj)) {
-        CL_BREAK_IF(OK_SLS != kind);
-
+        // the object already exists, just update its properties
         AbstractObject *aData = d->absRoots.getEntRW(obj);
-        CL_BREAK_IF(OK_SEE_THROUGH != aData->kind || off != aData->bOff);
-
-        // OK_SEE_THROUGH -> OK_SLS
         aData->kind = kind;
+        aData->bOff = off;
         return;
     }
 

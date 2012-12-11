@@ -207,16 +207,6 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
     return reg;
 }
 
-void enlargeMayExist(SymHeap &sh, const TObjId obj)
-{
-    const EObjKind kind = sh.objKind(obj);
-    if (!isMayExistObj(kind))
-        return;
-
-    decrementProtoLevel(sh, obj);
-    sh.objSetConcrete(obj);
-}
-
 void slSegAbstractionStep(
         SymHeap                    &sh,
         const TObjId                obj,
@@ -225,9 +215,6 @@ void slSegAbstractionStep(
 {
     // compute the resulting minimal length
     const TMinLen len = objMinLength(sh, obj) + objMinLength(sh, next);
-
-    enlargeMayExist(sh, obj);
-    enlargeMayExist(sh, next);
 
     // merge data
     joinData(sh, off, next, obj);
@@ -254,10 +241,6 @@ void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
 {
     // compute resulting segment's length
     const TMinLen len = objMinLength(sh, obj1) + objMinLength(sh, obj2);
-
-    // OK_SEE_THROUGH -> OK_CONCRETE if necessary
-    enlargeMayExist(sh, obj1);
-    enlargeMayExist(sh, obj2);
 
     // merge data
     joinData(sh, off, obj1, obj2);
@@ -289,9 +272,6 @@ void dlSegGobble(SymHeap &sh, TObjId dls, TObjId reg, bool backward)
 
     // compute the resulting minimal length
     const TMinLen len = sh.segMinLength(dls) + objMinLength(sh, reg);
-
-    // we allow to gobble OK_SEE_THROUGH objects (if compatible)
-    enlargeMayExist(sh, reg);
 
     // merge data
     const BindingOff &off = sh.segBinding(dls);
