@@ -1117,54 +1117,41 @@ bool joinObjKind(
         EObjKind               *pDst,
         const SymJoinCtx       &ctx,
         const TObjId            obj1,
-        const TObjId            obj2,
-        const EJoinStatus       action)
+        const TObjId            obj2)
 {
     CL_BREAK_IF(OBJ_INVALID == obj1 && OBJ_INVALID == obj2);
 
     const EObjKind kind1 = ctx.sh1.objKind(obj1);
-    if (OBJ_INVALID == obj2) {
-        *pDst = kind1;
-        return true;
-    }
-
     const EObjKind kind2 = ctx.sh2.objKind(obj2);
-    if (OBJ_INVALID == obj1) {
-        *pDst = kind2;
-        return true;
-    }
-
-    if (OK_REGION == kind1) {
-        CL_BREAK_IF(action == JS_USE_SH1);
-        *pDst = kind2;
-        return true;
-    }
-
-    if (OK_REGION == kind2) {
-        CL_BREAK_IF(action == JS_USE_SH2);
-        *pDst = kind1;
-        return true;
-    }
-
     if (kind1 == kind2) {
-        CL_BREAK_IF(action != JS_USE_ANY);
-        *pDst = kind1;
+        // pick any
+        *pDst = kind1 /* = kind2 */;
         return true;
     }
 
-    switch (action) {
-        case JS_USE_SH1:
-            *pDst = kind1;
-            return true;
+    const EObjKind prioTable[] = {
+        OK_REGION,
+        OK_OBJ_OR_NULL,
+        OK_SEE_THROUGH,
+        OK_SEE_THROUGH_2N
+    };
 
-        case JS_USE_SH2:
+    for (unsigned i = 0; i < (sizeof prioTable) / (sizeof *prioTable); ++i) {
+        const EObjKind dominated = prioTable[i];
+
+        if (dominated == kind1) {
             *pDst = kind2;
             return true;
+        }
 
-        default:
-            SJ_DEBUG("<-- object kind mismatch " << SJ_OBJP(obj1, obj2));
-            return false;
+        if (dominated == kind2) {
+            *pDst = kind1;
+            return true;
+        }
     }
+            
+    SJ_DEBUG("<-- object kind mismatch " << SJ_OBJP(obj1, obj2));
+    return false;
 }
 
 bool matchBindingFieldsByValue(
@@ -1516,7 +1503,6 @@ bool createObject(
         const TObjId            obj1,
         const TObjId            obj2,
         const TProtoLevel       ldiff,
-        const EJoinStatus       action,
         const BindingOff       *offMayExist = 0)
 {
     bool valid;
@@ -1524,7 +1510,7 @@ bool createObject(
         return false;
 
     EObjKind kind;
-    if (!joinObjKind(&kind, ctx, obj1, obj2, action))
+    if (!joinObjKind(&kind, ctx, obj1, obj2))
         return false;
 
     BindingOff off;
@@ -1561,9 +1547,6 @@ bool createObject(
                 : OK_SEE_THROUGH_2N;
         }
     }
-
-    if (!updateJoinStatus(ctx, action))
-        return false;
 
     // create an image in ctx.dst
     const TObjId objDst = ctx.dst.heapAlloc(size);
@@ -1616,7 +1599,10 @@ bool joinObjects(
         // we are on the way from joinData() and hit shared data
         return joinFields(ctx, obj1, obj1, obj2, ldiff);
 
-    return createObject(ctx, obj1, obj2, ldiff, action);
+    if (!updateJoinStatus(ctx, action))
+        return false;
+
+    return createObject(ctx, obj1, obj2, ldiff);
 }
 
 bool followValuePair(
@@ -1831,8 +1817,11 @@ bool segmentCloneCore(
     const TObjId obj1 = (JS_USE_SH1 == action) ? objGt : OBJ_INVALID;
     const TObjId obj2 = (JS_USE_SH2 == action) ? objGt : OBJ_INVALID;
 
+    if (!updateJoinStatus(ctx, action))
+        return false;
+
     // clone the object
-    if (createObject(ctx, obj1, obj2, ldiff, action, off))
+    if (createObject(ctx, obj1, obj2, ldiff, off))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
