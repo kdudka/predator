@@ -2743,14 +2743,13 @@ void killUniBlocksUnderBindingPtrs(
 
 void recoverPointersToDst(
         SymJoinCtx             &ctx,
-        const TObjId            dst,
-        const TObjId            src)
+        const TObjId            dst)
 {
     // redirect pointers from prototypes to their parents
     BOOST_FOREACH(const TObjId protoGhost, ctx.protos) {
         redirectRefs(ctx.dst,
                 /* pointingFrom */  protoGhost,
-                /* pointingTo   */  src,
+                /* pointingTo   */  dst,
                 /* pointingWith */  TS_INVALID,
                 /* redirectTo   */  dst,
                 /* redirectWith */  TS_ALL);
@@ -2759,37 +2758,10 @@ void recoverPointersToDst(
     // redirect pointers to self
     redirectRefs(ctx.dst,
             /* pointingFrom */  dst,
-            /* pointingTo   */  src,
+            /* pointingTo   */  dst,
             /* pointingWith */  TS_INVALID,
             /* redirectTo   */  dst,
             /* redirectWith */  TS_ALL);
-}
-
-void transferContentsOfGhost(
-        SymHeap                 &sh,
-        const BindingOff        &bf,
-        const TObjId            dst,
-        const TObjId            ghost)
-{
-    TFldSet ignoreList;
-    buildIgnoreList(ignoreList, sh, dst, bf);
-
-    FldList live;
-    sh.gatherLiveFields(live, ghost);
-    BOOST_FOREACH(const FldHandle &fldGhost, live) {
-        const FldHandle fldDst = translateFldHandle(sh, dst, fldGhost);
-        if (hasKey(ignoreList, fldDst))
-            // preserve binding pointers
-            continue;
-
-        const TValId valOld = fldDst.value();
-        const TValId valNew = fldGhost.value();
-        fldDst.setValue(valNew);
-
-        const TObjId objOld = sh.objByAddr(valOld);
-        if (collectJunk(sh, objOld))
-            CL_DEBUG("    transferContentsOfGhost() drops a sub-heap (objOld)");
-    }
 }
 
 bool joinData(
@@ -2865,15 +2837,8 @@ bool joinData(
     }
 
     if (pDst) {
-        recoverPointersToDst(ctx, objDst, objDst);
+        recoverPointersToDst(ctx, objDst);
         *pDst = objDst;
-    }
-    else {
-        // TODO: drop this!
-        transferContentsOfGhost(ctx.dst, bf, /* XXX */ obj1, objDst);
-        recoverPointersToDst(ctx, /* XXX */ obj1, objDst);
-        if (collectJunk(sh, objDst))
-            CL_DEBUG("    joinData() drops a sub-heap (objDst)");
     }
 
     unsigned cntProto1 = 0;
