@@ -383,7 +383,7 @@ bool redirectRefs(
 
 void redirectRefsNotFrom(
         SymHeap                &sh,
-        const TObjList         &pointingNotFrom,
+        const TObjSet          &pointingNotFrom,
         const TObjId            pointingTo,
         const TObjId            redirectTo,
         const ETargetSpecifier  redirectWith);

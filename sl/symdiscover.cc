@@ -354,12 +354,8 @@ void segDiscover(
 
     // the entry can already have some prototypes we should take into account
     TObjSet initialProtos;
-    if (OK_DLS == sh.objKind(entry)) {
-        TObjList protoList;
-        collectPrototypesOf(protoList, sh, entry);
-        BOOST_FOREACH(const TObjId proto, protoList)
-            initialProtos.insert(proto);
-    }
+    if (OK_DLS == sh.objKind(entry))
+        collectPrototypesOf(initialProtos, sh, entry);
 
     // jump to the immediate successor
     TObjId obj = jumpToNextObj(sh, off, entry);

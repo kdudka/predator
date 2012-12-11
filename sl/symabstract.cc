@@ -145,11 +145,17 @@ void clonePrototypes(
         SymHeap                &sh,
         const TObjId            objDst,
         const TObjId            objSrc,
-        const TObjList         &protoList)
+        const TObjSet          &protos)
 {
-    // allocate some space for clone IDs
-    const unsigned cnt = protoList.size();
+    // allocate lists for object IDs
+    const unsigned cnt = protos.size();
+    TObjList protoList(cnt);
     TObjList cloneList(cnt);
+
+    // export the 'protos' set to a vector
+    unsigned i = 0;
+    BOOST_FOREACH(const TObjId obj, protos)
+        protoList[i++] = obj;
 
     // clone the prototypes and reconnect them to the new owner
     for (unsigned i = 0; i < cnt; ++i) {
@@ -183,7 +189,7 @@ void clonePrototypes(
 TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
 {
     // collect the list of prototypes
-    TObjList protoList;
+    TObjSet protoList;
     collectPrototypesOf(protoList, sh, seg);
 
     // clone the object itself
@@ -222,14 +228,11 @@ TObjId /* objDst */ slSegAbstractionStep(
     }
 
     // compute the list of objects that can point up to 'obj1'
-    TObjList privList;
-    TObjSet &objProtos = protos[0];
-    objProtos.insert(obj1);
-    BOOST_FOREACH(const TObjId proto, objProtos)
-        privList.push_back(proto);
+    TObjSet &privSet = protos[0];
+    privSet.insert(obj1);
 
     // redirect pointers going to 'obj1' from left to 'seg'
-    redirectRefsNotFrom(sh, privList, obj1, seg, TS_FIRST);
+    redirectRefsNotFrom(sh, privSet, obj1, seg, TS_FIRST);
 
     // preserve valNext
     const TValId valNext = valOfPtr(sh, obj2, off.next);
@@ -253,14 +256,14 @@ void dlSegCreate(SymHeap &sh, TObjId obj1, TObjId obj2, BindingOff off)
 
     sh.objSetAbstract(obj1, OK_DLS, off);
 
-    TObjList protos;
-    collectPrototypesOf(protos, sh, obj1);
+    TObjSet privSet;
+    collectPrototypesOf(privSet, sh, obj1);
 
     // convert the TS_REGION addresses to TS_FIRST/TS_LAST
-    /* XXX */ protos.push_back(obj1);
-    redirectRefsNotFrom(sh, protos, obj1, obj1, TS_FIRST);
-    /* XXX */ protos.back() = obj2;
-    redirectRefsNotFrom(sh, protos, obj2, obj1, TS_LAST);
+    privSet.insert(obj1);
+    redirectRefsNotFrom(sh, privSet, obj1, obj1, TS_FIRST);
+    privSet.insert(obj2);
+    redirectRefsNotFrom(sh, privSet, obj2, obj1, TS_LAST);
 
     const TValId valNext = valOfPtr(sh, obj2, off.next);
     const PtrHandle prevPtr(sh, obj1, off.next);

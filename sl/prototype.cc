@@ -45,12 +45,12 @@ struct ProtoFinder {
 // visitor
 class ProtoCollector {
     private:
-        TObjList               &protoList_;
+        TObjSet                &protoList_;
         TFldSet                 ignoreList_;
         WorkList<TObjId>        wl_;
 
     public:
-        ProtoCollector(TObjList &dst):
+        ProtoCollector(TObjSet &dst):
             protoList_(dst)
         {
         }
@@ -87,14 +87,14 @@ bool ProtoCollector::operator()(const FldHandle &fld)
         BOOST_FOREACH(const TObjId proto, visitor.protos)
             wl_.schedule(proto);
 
-        protoList_.push_back(proto);
+        protoList_.insert(proto);
     }
 
     return /* continue */ true;
 }
 
 bool collectPrototypesOf(
-        TObjList                   &dst,
+        TObjSet                    &dst,
         SymHeap                    &sh,
         const TObjId                obj)
 {
@@ -121,7 +121,7 @@ void objDecrementProtoLevel(SymHeap &sh, TObjId obj)
 
 void decrementProtoLevel(SymHeap &sh, const TObjId obj)
 {
-    TObjList protoList;
+    TObjSet protoList;
     collectPrototypesOf(protoList, sh, obj);
     BOOST_FOREACH(const TObjId proto, protoList)
         objDecrementProtoLevel(sh, proto);

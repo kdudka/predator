@@ -433,7 +433,7 @@ bool /* anyChange */ redirectRefs(
 
 void redirectRefsNotFrom(
         SymHeap                &sh,
-        const TObjList         &pointingNotFrom,
+        const TObjSet          &pointingNotFrom,
         const TObjId            pointingTo,
         const TObjId            redirectTo,
         const ETargetSpecifier  redirectWith)
@@ -443,10 +443,7 @@ void redirectRefsNotFrom(
     sh.pointedBy(refs, pointingTo);
     BOOST_FOREACH(const FldHandle &fld, refs) {
         const TObjId refObj = fld.obj();
-        if (pointingNotFrom.end() != std::find(
-                    pointingNotFrom.begin(),
-                    pointingNotFrom.end(),
-                    refObj))
+        if (hasKey(pointingNotFrom, refObj))
             continue;
 
         // resolve the base address
