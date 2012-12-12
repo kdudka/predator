@@ -1542,7 +1542,7 @@ bool joinObjects(
     if (ctx.joiningData() && obj1 == obj2) {
         // we are on the way from joinData() and hit shared data
         *pObjDst = obj1 /* = obj2 */;
-        return joinFields(ctx, obj1, obj1, obj2, ldiff);
+        return defineObjectMapping(ctx, obj1, obj2, obj1 /* = obj2 */);
     }
 
     if (!updateJoinStatus(ctx, action))
@@ -1610,7 +1610,6 @@ bool followValuePair(
         if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
             return false;
 
-        // join objects
         if (!joinObjects(&objDst, ctx, obj1, obj2, item.ldiff)) {
             *pResult = false;
             return true;
