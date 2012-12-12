@@ -986,6 +986,12 @@ bool segMatchLookAhead(
         const TObjId            obj1,
         const TObjId            obj2)
 {
+    if (checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ false))
+        return true;
+
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
+        return false;
+
     const TSizeRange size1 = ctx.sh1.objSize(obj1);
     const TSizeRange size2 = ctx.sh2.objSize(obj2);
     if (size1 != size2)
@@ -1534,11 +1540,6 @@ bool joinObjects(
     if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
         return false;
 
-    const bool readOnly = !pObjDst;
-    if (readOnly)
-        // do not create any object, just check if it was possible
-        return segMatchLookAhead(ctx, obj1, obj2);
-
     if (ctx.joiningData() && obj1 == obj2) {
         // we are on the way from joinData() and hit shared data
         *pObjDst = obj1 /* = obj2 */;
@@ -1672,7 +1673,7 @@ bool joinSegmentWithAny(
     if (!isValid1 || !isValid2)
         return false;
 
-    if (firstTryReadOnly && !joinObjects(/* RO */ 0, ctx, obj1, obj2, ldiff))
+    if (firstTryReadOnly && !segMatchLookAhead(ctx, obj1, obj2))
         return false;
 
     const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1));
