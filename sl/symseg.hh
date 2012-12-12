@@ -146,9 +146,8 @@ inline void segIncreaseMinLength(SymHeap &sh, const TObjId seg, TMinLen len)
 /// we know (v1 != v2), update related segments in the given heap accordingly!
 bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2);
 
-inline bool objWithBinding(const SymHeap &sh, const TObjId obj)
+inline bool isObjWithBinding(const EObjKind kind)
 {
-    const EObjKind kind = sh.objKind(obj);
     switch (kind) {
         case OK_REGION:
         case OK_OBJ_OR_NULL:

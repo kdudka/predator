@@ -1173,8 +1173,11 @@ bool joinSegBinding(
         const TObjId            obj1,
         const TObjId            obj2)
 {
-    const bool isSeg1 = objWithBinding(ctx.sh1, obj1);
-    const bool isSeg2 = objWithBinding(ctx.sh2, obj2);
+    const EObjKind kind1 = ctx.sh1.objKind(obj1);
+    const EObjKind kind2 = ctx.sh2.objKind(obj2);
+
+    const bool isSeg1 = isObjWithBinding(kind1);
+    const bool isSeg2 = isObjWithBinding(kind2);
     if (!isSeg1 && !isSeg2)
         // nothing to join here
         return true;
@@ -1531,8 +1534,7 @@ bool joinObjects(
         SymJoinCtx             &ctx,
         const TObjId            obj1,
         const TObjId            obj2,
-        const TProtoLevel       ldiff,
-        const EJoinStatus       action = JS_USE_ANY)
+        const TProtoLevel       ldiff)
 {
     if (checkObjectMapping(ctx, obj1, obj2, /* allowUnknown */ false, pObjDst))
         return true;
@@ -1545,9 +1547,6 @@ bool joinObjects(
         *pObjDst = obj1 /* = obj2 */;
         return defineObjectMapping(ctx, obj1, obj2, obj1 /* = obj2 */);
     }
-
-    if (!updateJoinStatus(ctx, action))
-        return false;
 
     return createObject(pObjDst, ctx, obj1, obj2, ldiff);
 }
@@ -1628,7 +1627,6 @@ bool joinSegmentWithAny(
         const TObjId            obj1,
         const TObjId            obj2,
         const TProtoLevel       ldiff,
-        const EJoinStatus       action,
         bool                    firstTryReadOnly = true)
 {
     const bool isValid1 = ctx.sh1.isValid(obj1);
@@ -1639,19 +1637,14 @@ bool joinSegmentWithAny(
     if (firstTryReadOnly && !segMatchLookAhead(ctx, obj1, obj2))
         return false;
 
-    const bool isDls1 = (OK_DLS == ctx.sh1.objKind(obj1));
-    const bool isDls2 = (OK_DLS == ctx.sh2.objKind(obj2));
-    const bool haveDls = (isDls1 || isDls2);
+    EObjKind kind;
+    if (!joinObjKind(&kind, ctx, obj1, obj2))
+        return false;
 
-    const EObjKind kind = (JS_USE_SH1 == action)
-        ? ctx.sh1.objKind(obj1)
-        : ctx.sh2.objKind(obj2);
-
-    if (OK_OBJ_OR_NULL != kind) {
-        // BindingOff is assumed to be already matching at this point
-        const BindingOff off = (JS_USE_SH1 == action)
-            ? ctx.sh1.segBinding(obj1)
-            : ctx.sh2.segBinding(obj2);
+    if (isObjWithBinding(kind)) {
+        BindingOff off;
+        if (!joinSegBinding(&off, ctx, obj1, obj2))
+            return false;
 
         const TValId valNext1 = valOfPtr(ctx.sh1, obj1, off.next);
         const TValId valNext2 = valOfPtr(ctx.sh2, obj2, off.next);
@@ -1659,7 +1652,7 @@ bool joinSegmentWithAny(
                                /* allowUnknownMapping */ true))
             return false;
 
-        if (firstTryReadOnly && haveDls) {
+        if (firstTryReadOnly && OK_DLS == kind) {
             const TValId valPrev1 = valOfPtr(ctx.sh1, obj1, off.prev);
             const TValId valPrev2 = valOfPtr(ctx.sh2, obj2, off.prev);
             if (!checkValueMapping(ctx, valPrev1, valPrev2,
@@ -1671,13 +1664,13 @@ bool joinSegmentWithAny(
     // go ahead, try it read-write!
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(obj1, obj2));
     TObjId objDst;
-    *pResult = joinObjects(&objDst, ctx, obj1, obj2, ldiff, action);
-    if (!*pResult || OK_OBJ_OR_NULL == kind)
+    *pResult = joinObjects(&objDst, ctx, obj1, obj2, ldiff);
+    if (!*pResult || !isObjWithBinding(kind))
         return true;
 
     const BindingOff &off = ctx.dst.segBinding(objDst);
 
-    if (haveDls) {
+    if (OK_DLS == kind) {
         const SchedItem prevItem(
                 PtrHandle(ctx.dst, objDst, off.prev),
                 PtrHandle(ctx.sh1, obj1  , off.prev),
@@ -1990,17 +1983,21 @@ bool joinAbstractValues(
     const TProtoLevel ldiff = item.ldiff;
     EJoinStatus action;
 
-    if (isAbs1 && isAbs2 && joinSegmentWithAny(
-                pResult, ctx, obj1, obj2, ldiff, (action = JS_USE_ANY)))
+    if (isAbs1 && isAbs2 && joinSegmentWithAny(pResult, ctx, obj1, obj2, ldiff))
+    {
+        action = JS_USE_ANY;
         goto done;
+    }
 
-    if (!isAbs2 && joinSegmentWithAny(
-                pResult, ctx, obj1, obj2, ldiff, (action = JS_USE_SH1)))
+    if (!isAbs2 && joinSegmentWithAny(pResult, ctx, obj1, obj2, ldiff)) {
+        action = JS_USE_SH1;
         goto done;
+    }
 
-    if (!isAbs1 && joinSegmentWithAny(
-                pResult, ctx, obj1, obj2, ldiff, (action = JS_USE_SH2)))
+    if (!isAbs1 && joinSegmentWithAny(pResult, ctx, obj1, obj2, ldiff)) {
+        action = JS_USE_SH2;
         goto done;
+    }
 
     if (isAbs1 && insertSegmentClone(pResult, ctx, item, (action = JS_USE_SH1)))
         goto done;
@@ -2013,6 +2010,9 @@ bool joinAbstractValues(
 done:
     if (!*pResult)
         return true;
+
+    if (!updateJoinStatus(ctx, action))
+        return false;
 
     if (VT_RANGE == ctx.sh1.valTarget(v1) || VT_RANGE == ctx.sh2.valTarget(v2))
     {
