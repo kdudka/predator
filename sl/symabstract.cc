@@ -107,20 +107,6 @@ void duplicateUnknownValues(SymHeap &sh, TObjId obj)
     traverseLiveFields(sh, obj, visitor);
 }
 
-void detachClonedPrototype(
-        SymHeap                &sh,
-        const TObjId            proto,
-        const TObjId            clone,
-        const TObjId            ownerDst,
-        const TObjId            ownerSrc,
-        const bool              uplink)
-{
-    redirectRefs(sh, ownerDst, proto, TS_INVALID, clone, TS_INVALID);
-    redirectRefs(sh, clone, ownerSrc, TS_INVALID, ownerDst, (uplink)
-            ? TS_REGION
-            : TS_INVALID);
-}
-
 TObjId protoClone(SymHeap &sh, const TObjId proto)
 {
     const TObjId clone = sh.objClone(proto);
@@ -141,6 +127,29 @@ TObjId protoClone(SymHeap &sh, const TObjId proto)
     return clone;
 }
 
+void reconnectProto(
+        SymHeap                &sh,
+        const TObjId            proto,
+        const TObjId            clone,
+        const TObjId            ownerSrc,
+        const TObjId            ownerDst,
+        const ETargetSpecifier  tsTarget)
+{
+    redirectRefs(sh,
+            /* pointingFrom  */ ownerDst,
+            /* pointingTo    */ proto,
+            /* pointingWith  */ TS_INVALID,
+            /* redirectTo    */ clone,
+            /* redirectWith  */ TS_INVALID);
+
+    redirectRefs(sh,
+            /* pointingFrom  */ clone,
+            /* pointingTo    */ ownerSrc,
+            /* pointingWith  */ TS_INVALID,
+            /* redirectTo    */ ownerDst,
+            /* redirectWith  */ tsTarget);
+}
+
 void clonePrototypes(
         SymHeap                &sh,
         const TObjId            objDst,
@@ -157,30 +166,18 @@ void clonePrototypes(
     BOOST_FOREACH(const TObjId obj, protos)
         protoList[i++] = obj;
 
-    // clone the prototypes and reconnect them to the new owner
+    // clone the prototypes and reconnect them to the new owner and prototypes
     for (unsigned i = 0; i < cnt; ++i) {
-        const TObjId proto = protoList[i];
-        const TObjId clone = protoClone(sh, protoList[i]);
+        const TObjId protoI = protoList[i];
+        const TObjId cloneI = protoClone(sh, protoList[i]);
+        cloneList[i] = cloneI;
 
-        detachClonedPrototype(sh, proto, clone, objDst, objSrc,
-                /* uplink */ true);
+        reconnectProto(sh, protoI, cloneI, objSrc, objDst, TS_REGION);
 
-        cloneList[i] = clone;
-    }
-
-    // FIXME: works, but likely to kill the CPU
-    for (unsigned i = 0; i < cnt; ++i) {
-        const TObjId proto = protoList[i];
-        const TObjId clone = cloneList[i];
-
-        for (unsigned j = 0; j < cnt; ++j) {
-            if (i == j)
-                continue;
-
-            const TObjId otherProto = protoList[j];
-            const TObjId otherClone = cloneList[j];
-            detachClonedPrototype(sh, proto, clone, otherClone, otherProto,
-                    /* uplink */ false);
+        for (unsigned j = 0; j < i; ++j) {
+            const TObjId protoJ = protoList[j];
+            const TObjId cloneJ = cloneList[j];
+            reconnectProto(sh, protoI, cloneI, protoJ, cloneJ, TS_INVALID);
         }
     }
 }
@@ -236,7 +233,7 @@ bool filterBack(ETargetSpecifier ts)
 {
     switch (ts) {
         case TS_INVALID:
-            CL_BREAK_IF("invalid call of filterFront()");
+            CL_BREAK_IF("invalid call of filterBack()");
             break;
 
         case TS_REGION:
@@ -271,7 +268,7 @@ bool segAbstractionStep(
     TObjId seg;
     TObjSet protos[2];
     if (!joinData(sh, off, obj0, obj1, &seg, &protos)) {
-        CL_BREAK_IF("call of joinData() failed in dlSegAbstractionStep()");
+        CL_BREAK_IF("call of joinData() failed in segAbstractionStep()");
         return OBJ_INVALID;
     }
 
@@ -288,7 +285,7 @@ bool segAbstractionStep(
     nextPtr.setValue(valNext);
 
     if (isDlsBinding(off)) {
-        // redirect pointers going to 'obj1' from left to 'seg'
+        // redirect pointers going to 'obj1' from right to 'seg'
         redirectRefsNotFrom(sh, protos[1], obj1, seg, TS_LAST, filterBack);
 
         // preserve valPrev
@@ -298,9 +295,9 @@ bool segAbstractionStep(
     }
 
     // destroy 'obj0' and 'obj1', including all prototypes
-    REQUIRE_GC_ACTIVITY(sh, obj1, dlSegAbstractionStep);
+    REQUIRE_GC_ACTIVITY(sh, obj1, segAbstractionStep);
     if (collectJunk(sh, obj0))
-        CL_DEBUG("dlSegAbstractionStep() drops a sub-heap (obj0)");
+        CL_DEBUG("segAbstractionStep() drops a sub-heap (obj0)");
 
     // move to the resulting segment
     *pCursor = seg;
