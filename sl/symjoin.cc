@@ -1551,45 +1551,77 @@ bool joinObjects(
     return createObject(pObjDst, ctx, obj1, obj2, ldiff);
 }
 
+bool joinAbstractValues(
+        bool                    *pResult,
+        SymJoinCtx              &ctx,
+        const SchedItem         &item,
+        bool                     isAbs1,
+        bool                     isAbs2);
+
 bool followValuePair(
+        bool                    *pResult,
         SymJoinCtx              &ctx,
         const SchedItem         &item)
 {
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
+
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+    TObjId objDst;
+
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknown */ false, &objDst))
+    {
+        const bool isAbs1 = isAbstractObject(ctx.sh1, obj1);
+        const bool isAbs2 = isAbstractObject(ctx.sh2, obj2);
+
+        if (isAbs1 || isAbs2) {
+            if (joinAbstractValues(pResult, ctx, item, isAbs1, isAbs2))
+                return true;
+        }
+    }
+
+    if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
+        return false;
+
     const bool isRange = (VT_RANGE == ctx.sh1.valTarget(v1))
                       || (VT_RANGE == ctx.sh2.valTarget(v2));
 
-    if (!isRange && (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2))) {
-        SJ_DEBUG("<-- value offset mismatch: " << SJ_VALP(v1, v2));
+    if (!isRange && (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2)))
         return false;
-    }
 
     // join objects
-    TObjId objDst;
-    const TObjId obj1 = ctx.sh1.objByAddr(v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(v2);
     if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknown */ false, &objDst)
             && !joinObjects(&objDst, ctx, obj1, obj2, item.ldiff))
-        return false;
+    {
+        *pResult = false;
+        return true;
+    }
 
     // ranges cannot be joint unless the root exists in ctx.dst, join them now!
-    if (isRange)
-        return joinRangeValues(ctx, item);
+    if (isRange) {
+        *pResult = joinRangeValues(ctx, item);
+        return true;
+    }
 
     const TOffset offDst = ctx.sh1.valOffset(v1);
     CL_BREAK_IF(offDst  != ctx.sh2.valOffset(v2));
 
     ETargetSpecifier tsDst;
-    if (!joinTargetSpec(&tsDst, ctx, v1, v2))
-        return false;
+    if (!joinTargetSpec(&tsDst, ctx, v1, v2)) {
+        *pResult = false;
+        return true;
+    }
 
     const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
-    if (!defineValueMapping(ctx, vDst, v1, v2))
-        return false;
+    if (!defineValueMapping(ctx, vDst, v1, v2)) {
+        *pResult = false;
+        return true;
+    }
 
     // write the resulting value to item.fldDst
-    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
+    *pResult = writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
+    return true;
 }
 
 bool segAlreadyJoined(
@@ -2341,20 +2373,8 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     if (joinValuesByCode(&result, ctx, item))
         return result;
 
-    const TObjId obj1 = ctx.sh1.objByAddr(v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(v2);
-
-    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ false)) {
-        const bool isAbs1 = isAbstractObject(ctx.sh1, obj1);
-        const bool isAbs2 = isAbstractObject(ctx.sh2, obj2);
-
-        if ((isAbs1 || isAbs2)
-                && joinAbstractValues(&result, ctx, item, isAbs1, isAbs2))
-            return result;
-    }
-
-    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
-        return followValuePair(ctx, item);
+    if (followValuePair(&result, ctx, item))
+        return result;
 
     return offRangeFallback(ctx, item)
         || mayExistFallback(ctx, item, JS_USE_SH1)
