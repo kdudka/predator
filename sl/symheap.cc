@@ -1210,6 +1210,10 @@ void SymHeapCore::Private::setValueOf(
     this->ents.getEntRW(&objData, fld);
 
     const TValId valOld = objData->value;
+    if (valOld == val)
+        // we are asked to write a value which is already there, skip it!
+        return;
+
     if (/* wasPtr */ this->releaseValueOf(fld, valOld) && killedPtrs)
         killedPtrs->insert(valOld);
 

@@ -143,8 +143,6 @@ struct SymJoinCtx {
     bool                        forceThreeWay;
     bool                        allowThreeWay;
 
-    std::set<TValPair>          sharedNeqs;
-
     std::set<TObjId /* dst */>  protos;
 
     TJoinCache                  joinCache;
@@ -233,8 +231,6 @@ void dump_ctx(const SymJoinCtx &ctx)
         << "\n\n";
 
     // sumarize aux containers
-    cout << "    ctx.sharedNeqs     .size() = " << ctx.sharedNeqs.size()
-        << "\n";
     cout << "    ctx.joinCache      .size() = " << ctx.joinCache.size()
         << "\n";
     cout << "    ctx.protos         .size() = " << ctx.protos.size()
@@ -293,12 +289,8 @@ bool defineObjectMapping(
     return false;
 }
 
-/**
- * if Neq(v1, vDst) exists in ctx.sh1 and Neq(v2, vDst) exists in ctx.sh2,
- * declare the Neq relation as @b shared, such that it later appears in ctx.dst
- * @note it respects value ID mapping among all symbolic heaps
- */
-void gatherSharedPreds(
+/// preserve shared Neq predicates
+void preserveSharedNeqs(
         SymJoinCtx             &ctx,
         const TValId            vDst,
         const TValId            v1,
@@ -312,15 +304,15 @@ void gatherSharedPreds(
             // not a Neq in sh1
             continue;
 
-        TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
-        TValMap::const_iterator it1 = vMap1.find(rel1);
+        const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
+        const TValMap::const_iterator it1 = vMap1.find(rel1);
         if (vMap1.end() == it1)
             // related value has not (yet?) any mapping to dst
             continue;
 
         const TValId relDst = it1->second;
-        TValMap &vMap2r = ctx.valMap2[/* rtl */ 1];
-        TValMap::const_iterator it2r = vMap2r.find(relDst);
+        const TValMap &vMap2r = ctx.valMap2[/* rtl */ 1];
+        const TValMap::const_iterator it2r = vMap2r.find(relDst);
         if (vMap2r.end() == it2r)
             // related value has not (yet?) any mapping back to sh2
             continue;
@@ -330,14 +322,8 @@ void gatherSharedPreds(
             // not a Neq in sh2
             continue;
 
-        // sort Neq values
-        TValId valLt = vDst;
-        TValId valGt = relDst;
-        sortValues(valLt, valGt);
-
-        // insert a shared Neq predicate
-        const TValPair neq(valLt, valGt);
-        ctx.sharedNeqs.insert(neq);
+        // establish the Neq in ctx.dst
+        ctx.dst.addNeq(vDst, relDst);
     }
 }
 
@@ -354,20 +340,11 @@ bool defineValueMapping(
 
     const bool ok1 = !hasValue1 || mapBidir(ctx.valMap1, v1, vDst);
     const bool ok2 = !hasValue2 || mapBidir(ctx.valMap2, v2, vDst);
-
-    if (!ok1 || !ok2) {
-        SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
-        return false;
-    }
-
-    if (!hasValue1 || !hasValue2)
+    if (ok1 && ok2)
         return true;
 
-    const TValPair vp(v1, v2);
-    ctx.joinCache[vp] = vDst;
-
-    gatherSharedPreds(ctx, vDst, v1, v2);
-    return true;
+    SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
+    return false;
 }
 
 bool writeJoinedValue(
@@ -388,7 +365,7 @@ bool writeJoinedValue(
         ctx.joinCache[vp] = vDst;
 
         // collect shared Neq relations
-        gatherSharedPreds(ctx, vDst, v1, v2);
+        preserveSharedNeqs(ctx, vDst, v1, v2);
     }
 
     // write the value
@@ -2529,15 +2506,6 @@ bool updateMayExistLevels(SymJoinCtx &ctx)
 
 bool handleDstPreds(SymJoinCtx &ctx)
 {
-    // go through shared Neq predicates
-    BOOST_FOREACH(const TValPair &neq, ctx.sharedNeqs) {
-        TValId valLt, valGt;
-        boost::tie(valLt, valGt) = neq;
-
-        // handle generic Neq predicate
-        ctx.dst.addNeq(valLt, valGt);
-    }
-
     if (!ctx.joiningData()) {
         // cross-over check of Neq predicates
 
