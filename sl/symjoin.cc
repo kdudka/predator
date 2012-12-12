@@ -155,6 +155,8 @@ struct SymJoinCtx {
         valMap1[1][VAL_NULL] = VAL_NULL;
         valMap2[0][VAL_NULL] = VAL_NULL;
         valMap2[1][VAL_NULL] = VAL_NULL;
+        const TValPair vp(VAL_NULL, VAL_NULL);
+        joinCache[vp] = VAL_NULL;
 
         // OBJ_NULL should be always mapped to OBJ_NULL
         objMap1[0][OBJ_NULL] = OBJ_NULL;
@@ -815,12 +817,6 @@ bool joinFreshItem(
 
     const TValId v1 = fld1.value();
     const TValId v2 = fld2.value();
-    if (VAL_NULL == v1 && VAL_NULL == v2) {
-        // both values are VAL_NULL, nothing more to join here
-        if (!readOnly)
-            item.fldDst.setValue(VAL_NULL);
-        return true;
-    }
 
     TValId vDst;
     if (joinCacheLookup(&vDst, ctx, v1, v2)) {
