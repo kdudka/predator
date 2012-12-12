@@ -124,9 +124,7 @@ bool validatePointingObjects(
         TObjSet                     allowedReferers,
         const ETargetSpecifier      tsEntry = TS_INVALID)
 {
-    // we allow pointers to self at this point, but we require them to be
-    // absolutely uniform along the abstraction path -- joinDataReadOnly()
-    // is responsible for that
+    // allow pointers to self
     allowedReferers.insert(obj);
 
     // collect all objects pointing at/inside the object
@@ -175,24 +173,18 @@ bool validatePointingObjects(
     return true;
 }
 
-// FIXME: suboptimal implementation
 bool validatePrototypes(
         SymHeap                    &sh,
         const BindingOff           &off,
         const TObjId                obj,
-        TObjSet                     protos)
+        const TObjSet              &protos)
 {
-    protos.insert(obj);
+    TObjSet allowedReferers(protos);
+    allowedReferers.insert(obj);
 
     BOOST_FOREACH(const TObjId proto, protos) {
-        if (proto == obj)
-            // we have inserted obj into protos, in order to get them on the
-            // list of allowed referrers, but it does not mean that it is a
-            // prototype
-            continue;
-
         if (!validatePointingObjects(sh, off, proto, OBJ_INVALID, OBJ_INVALID,
-                                     protos))
+                                     allowedReferers))
             return false;
     }
 
@@ -247,32 +239,24 @@ TObjId jumpToNextObj(
     if (clt) {
         const TObjType cltNext = sh.objEstimatedType(next);
         if (cltNext && *cltNext != *clt)
-            // both roots are (kind of) type-aware, but the types differ
+            // both objects have estimated types assigned, but the types differ
             return OBJ_INVALID;
     }
 
-    const bool isDls = isDlsBinding(off);
-    if (isDls) {
-        // check DLS back-link
+    if (isDlsBinding(off)) {
         const TValId valPrev = valOfPtr(sh, next, off.prev);
         if (sh.objByAddr(valPrev) != obj || sh.valOffset(valPrev) != off.head)
             // DLS back-link mismatch
             return OBJ_INVALID;
 
         const ETargetSpecifier ts = sh.targetSpec(valPrev);
-        switch (ts) {
-            case TS_REGION:
-            case TS_LAST:
-                break;
-
-            default:
-                return OBJ_INVALID;
-        }
+        if (TS_REGION != ts && TS_LAST != ts)
+            // DLS back-link mismatch
+            return OBJ_INVALID;
     }
 
-    // check if valNext inside the 'next' object is at least VAL_NULL
-    // (otherwise we are not able to construct Neq edges to express its length)
-    if (valOfPtr(sh, next, off.next) < 0)
+    if (OBJ_INVALID == nextObj(sh, next, off.next))
+        // valNext has no target
         return OBJ_INVALID;
 
     return next;
@@ -309,7 +293,7 @@ bool matchData(
 
     EJoinStatus status;
     if (!joinData(sh, off, obj1, obj2, /* pDst */ 0, protoPairs, &status)) {
-        CL_DEBUG("    joinDataReadOnly() refuses to create a segment!");
+        CL_DEBUG("    joinData() refuses to create a segment!");
         return false;
     }
 
