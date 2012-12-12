@@ -2304,7 +2304,10 @@ bool followValuePair(
         if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
             return false;
 
-        if (!joinObjects(&objDst, ctx, obj1, obj2, item.ldiff)) {
+        if (!joinSegmentWithAny(pResult, &objDst, ctx, obj1, obj2, item.ldiff,
+                    /* firstTryReadOnly */ false)
+                || !*pResult)
+        {
             *pResult = false;
             return true;
         }
