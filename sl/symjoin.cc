@@ -1622,37 +1622,6 @@ bool followValuePair(
     return true;
 }
 
-bool segAlreadyJoined(
-        SymJoinCtx             &ctx,
-        const TObjId            seg1,
-        const TObjId            seg2,
-        const EJoinStatus       action)
-{
-    const TObjMap &m1 = ctx.objMap1[DIR_LTR];
-    const TObjMap &m2 = ctx.objMap2[DIR_LTR];
-
-    const TObjMap::const_iterator it1 = m1.find(seg1);
-    const TObjMap::const_iterator it2 = m2.find(seg2);
-
-    switch (action) {
-        case JS_USE_SH1:
-            return m1.end() != it1
-                && !hasKey(ctx.objMap2[DIR_RTL], it1->second);
-
-        case JS_USE_SH2:
-            return m2.end() != it2
-                && !hasKey(ctx.objMap1[DIR_RTL], it2->second);
-
-        case JS_USE_ANY:
-            return m1.end() != it1
-                && m2.end() != it2
-                && it1->second == it2->second;
-
-        default:
-            return false;
-    }
-}
-
 bool joinSegmentWithAny(
         bool                   *pResult,
         SymJoinCtx             &ctx,
@@ -1662,12 +1631,6 @@ bool joinSegmentWithAny(
         const EJoinStatus       action,
         bool                    firstTryReadOnly = true)
 {
-    if (segAlreadyJoined(ctx, obj1, obj2, action)) {
-        // already joined
-        *pResult = true;
-        return true;
-    }
-
     const bool isValid1 = ctx.sh1.isValid(obj1);
     const bool isValid2 = ctx.sh2.isValid(obj2);
     if (!isValid1 || !isValid2)
