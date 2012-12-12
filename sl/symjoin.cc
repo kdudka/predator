@@ -1555,10 +1555,6 @@ bool followValuePair(
         SymJoinCtx              &ctx,
         const SchedItem         &item)
 {
-    bool result;
-    if (joinValuesByCode(&result, ctx, item))
-        return result;
-
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
     const bool isRange = (VT_RANGE == ctx.sh1.valTarget(v1))
@@ -2340,10 +2336,6 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
         item.fldDst.setValue(vDst);
         return true;
     }
-
-    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMap */ false, &vDst))
-        // already joined
-        return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 
     bool result;
     if (joinValuesByCode(&result, ctx, item))
