@@ -1551,12 +1551,45 @@ bool joinObjects(
     return createObject(pObjDst, ctx, obj1, obj2, ldiff);
 }
 
+bool offRangeFallback(
+        SymJoinCtx             &ctx,
+        const SchedItem        &item);
+
+bool mapTargetAddress(
+        SymJoinCtx              &ctx,
+        const SchedItem         &item,
+        const TObjId             objDst)
+{
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
+    const EValueTarget code1 = ctx.sh1.valTarget(v1);
+    const EValueTarget code2 = ctx.sh2.valTarget(v2);
+
+    if (VT_RANGE == code1 || VT_RANGE == code2)
+        return joinRangeValues(ctx, item);
+
+    const TOffset off1 = ctx.sh1.valOffset(v1);
+    const TOffset off2 = ctx.sh2.valOffset(v2);
+    if (off1 != off2)
+        return offRangeFallback(ctx, item);
+
+    ETargetSpecifier tsDst;
+    if (!joinTargetSpec(&tsDst, ctx, v1, v2))
+        return false;
+
+    const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, off1 /* = off2 */);
+    if (!defineValueMapping(ctx, vDst, v1, v2))
+        return false;
+
+    // write the resulting value to item.fldDst
+    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
+}
+
 bool joinAbstractValues(
         bool                    *pResult,
         SymJoinCtx              &ctx,
-        const SchedItem         &item,
-        bool                     isAbs1,
-        bool                     isAbs2);
+        const SchedItem         &item);
 
 bool followValuePair(
         bool                    *pResult,
@@ -1568,59 +1601,24 @@ bool followValuePair(
 
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
+
     TObjId objDst;
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnkn */ false, &objDst)) {
+        if (joinAbstractValues(pResult, ctx, item))
+            return true;
 
-    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknown */ false, &objDst))
-    {
-        const bool isAbs1 = isAbstractObject(ctx.sh1, obj1);
-        const bool isAbs2 = isAbstractObject(ctx.sh2, obj2);
+        if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
+            return false;
 
-        if (isAbs1 || isAbs2) {
-            if (joinAbstractValues(pResult, ctx, item, isAbs1, isAbs2))
-                return true;
+        // join objects
+        if (!joinObjects(&objDst, ctx, obj1, obj2, item.ldiff)) {
+            *pResult = false;
+            return true;
         }
     }
 
-    if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
-        return false;
-
-    const bool isRange = (VT_RANGE == ctx.sh1.valTarget(v1))
-                      || (VT_RANGE == ctx.sh2.valTarget(v2));
-
-    if (!isRange && (ctx.sh1.valOffset(v1) != ctx.sh2.valOffset(v2)))
-        return false;
-
-    // join objects
-    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknown */ false, &objDst)
-            && !joinObjects(&objDst, ctx, obj1, obj2, item.ldiff))
-    {
-        *pResult = false;
-        return true;
-    }
-
-    // ranges cannot be joint unless the root exists in ctx.dst, join them now!
-    if (isRange) {
-        *pResult = joinRangeValues(ctx, item);
-        return true;
-    }
-
-    const TOffset offDst = ctx.sh1.valOffset(v1);
-    CL_BREAK_IF(offDst  != ctx.sh2.valOffset(v2));
-
-    ETargetSpecifier tsDst;
-    if (!joinTargetSpec(&tsDst, ctx, v1, v2)) {
-        *pResult = false;
-        return true;
-    }
-
-    const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
-    if (!defineValueMapping(ctx, vDst, v1, v2)) {
-        *pResult = false;
-        return true;
-    }
-
     // write the resulting value to item.fldDst
-    *pResult = writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
+    *pResult = mapTargetAddress(ctx, item, objDst);
     return true;
 }
 
@@ -2011,15 +2009,19 @@ void resolveMayExist(
 bool joinAbstractValues(
         bool                    *pResult,
         SymJoinCtx              &ctx,
-        const SchedItem         &item,
-        bool                     isAbs1,
-        bool                     isAbs2)
+        const SchedItem         &item)
 {
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
 
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
+
+    bool isAbs1 = isAbstractObject(ctx.sh1, obj1);
+    bool isAbs2 = isAbstractObject(ctx.sh2, obj2);
+    if (!isAbs1 && !isAbs2)
+        return false;
+
     resolveMayExist(ctx, &isAbs1, &isAbs2, obj1, obj2);
 
     const TProtoLevel ldiff = item.ldiff;
@@ -2376,8 +2378,7 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     if (followValuePair(&result, ctx, item))
         return result;
 
-    return offRangeFallback(ctx, item)
-        || mayExistFallback(ctx, item, JS_USE_SH1)
+    return mayExistFallback(ctx, item, JS_USE_SH1)
         || mayExistFallback(ctx, item, JS_USE_SH2);
 }
 
