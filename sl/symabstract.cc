@@ -398,6 +398,9 @@ void spliceOutListSegment(
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(objMinLength(sh, seg));
 
+    // append a trace node for this operation
+    sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode()));
+
     const TValId valNext = nextValFromSeg(sh, seg);
     const TOffset offHead = headOffset(sh, seg);
 
@@ -449,27 +452,23 @@ void spliceOutListSegment(
     LDP_PLOT(symabstract, sh);
 }
 
-void spliceOutSegmentIfNeeded(
-        TMinLen                *pLen,
+TMinLen spliceOutSegmentIfNeeded(
         SymHeap                &sh,
         const TObjId            seg,
         TSymHeapList           &todo,
         TObjSet                *leakObjs)
 {
-    if (!*pLen) {
-        // possibly empty LS
-        SymHeap sh0(sh);
-        spliceOutListSegment(sh0, seg, leakObjs);
+    const TMinLen len = sh.segMinLength(seg);
+    if (0 < len)
+        return len - 1;
 
-        // append a trace node for this operation
-        Trace::Node *tr = new Trace::SpliceOutNode(sh.traceNode());
-
-        todo.push_back(sh0);
-        todo.back().traceUpdate(tr);
-    }
-    else
-        // we are going to detach one node
-        --(*pLen);
+    // possibly empty LS
+    SymHeap sh0(sh);
+    Trace::waiveCloneOperation(sh0);
+    spliceOutListSegment(sh0, seg, leakObjs);
+    todo.push_back(sh0);
+    Trace::waiveCloneOperation(todo.back());
+    return 0;
 }
 
 void abstractIfNeeded(SymHeap &sh)
@@ -502,8 +501,7 @@ void concretizeObj(
     CL_BREAK_IF(TS_ALL == ts);
 
     // handle the possibly empty variant (if exists)
-    TMinLen len = sh.segMinLength(seg);
-    spliceOutSegmentIfNeeded(&len, sh, seg, todo, leakObjs);
+    const TMinLen len = spliceOutSegmentIfNeeded(sh, seg, todo, leakObjs);
 
     std::string pName;
     LDP_INIT(symabstract, "concretizeObj");
