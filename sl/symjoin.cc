@@ -1058,7 +1058,7 @@ bool joinObjType(
 
 bool joinObjKind(
         EObjKind               *pDst,
-        const SymJoinCtx       &ctx,
+        SymJoinCtx             &ctx,
         const TObjId            obj1,
         const TObjId            obj2)
 {
@@ -1084,12 +1084,12 @@ bool joinObjKind(
 
         if (dominated == kind1) {
             *pDst = kind2;
-            return true;
+            return updateJoinStatus(ctx, JS_USE_SH2);
         }
 
         if (dominated == kind2) {
             *pDst = kind1;
-            return true;
+            return updateJoinStatus(ctx, JS_USE_SH1);
         }
     }
             
