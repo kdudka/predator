@@ -64,6 +64,15 @@ void debugSymJoin(const bool enable)
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
 
+// mapping direction
+enum {
+    /// left-to-right
+    DIR_LTR = 0,
+
+    /// right-to-left
+    DIR_RTL = 1
+};
+
 template <class T>
 class WorkListWithUndo: public WorkList<T> {
     private:
@@ -304,14 +313,14 @@ void preserveSharedNeqs(
             // not a Neq in sh1
             continue;
 
-        const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
+        const TValMap &vMap1 = ctx.valMap1[DIR_LTR];
         const TValMap::const_iterator it1 = vMap1.find(rel1);
         if (vMap1.end() == it1)
             // related value has not (yet?) any mapping to dst
             continue;
 
         const TValId relDst = it1->second;
-        const TValMap &vMap2r = ctx.valMap2[/* rtl */ 1];
+        const TValMap &vMap2r = ctx.valMap2[DIR_RTL];
         const TValMap::const_iterator it2r = vMap2r.find(relDst);
         if (vMap2r.end() == it2r)
             // related value has not (yet?) any mapping back to sh2
@@ -473,8 +482,8 @@ bool checkObjectMapping(
         return false;
 
     // read-only object lookup
-    const TObjMap &oMap1 = ctx.objMap1[/* ltr */ 0];
-    const TObjMap &oMap2 = ctx.objMap2[/* ltr */ 0];
+    const TObjMap &oMap1 = ctx.objMap1[DIR_LTR];
+    const TObjMap &oMap2 = ctx.objMap2[DIR_LTR];
     TObjMap::const_iterator i1 = oMap1.find(obj1);
     TObjMap::const_iterator i2 = oMap2.find(obj2);
 
@@ -526,8 +535,8 @@ bool checkValueMapping(
         return false;
 
     // read-only value lookup
-    const TValMap &vMap1 = ctx.valMap1[/* ltr */ 0];
-    const TValMap &vMap2 = ctx.valMap2[/* ltr */ 0];
+    const TValMap &vMap1 = ctx.valMap1[DIR_LTR];
+    const TValMap &vMap2 = ctx.valMap2[DIR_LTR];
     TValMap::const_iterator i1 = vMap1.find(v1);
     TValMap::const_iterator i2 = vMap2.find(v2);
 
@@ -1593,8 +1602,8 @@ bool segAlreadyJoined(
         const TObjId            seg2,
         const EJoinStatus       action)
 {
-    const TObjMap &m1 = ctx.objMap1[/* ltr */ 0];
-    const TObjMap &m2 = ctx.objMap2[/* ltr */ 0];
+    const TObjMap &m1 = ctx.objMap1[DIR_LTR];
+    const TObjMap &m2 = ctx.objMap2[DIR_LTR];
 
     const TObjMap::const_iterator it1 = m1.find(seg1);
     const TObjMap::const_iterator it2 = m2.find(seg2);
@@ -1602,11 +1611,11 @@ bool segAlreadyJoined(
     switch (action) {
         case JS_USE_SH1:
             return m1.end() != it1
-                && !hasKey(ctx.objMap2[/* rtl */ 1], it1->second);
+                && !hasKey(ctx.objMap2[DIR_RTL], it1->second);
 
         case JS_USE_SH2:
             return m2.end() != it2
-                && !hasKey(ctx.objMap1[/* rtl */ 1], it2->second);
+                && !hasKey(ctx.objMap1[DIR_RTL], it2->second);
 
         case JS_USE_ANY:
             return m1.end() != it1
@@ -1715,8 +1724,8 @@ bool segmentCloneCore(
         ? ctx.objMap1
         : ctx.objMap2;
 
-    const TObjMap &objMapGtLtr = objMapGt[/* ltr */ 0];
-    const TObjMap &objMapLtRtl = objMapLt[/* rtl */ 1];
+    const TObjMap &objMapGtLtr = objMapGt[DIR_LTR];
+    const TObjMap &objMapLtRtl = objMapLt[DIR_RTL];
 
     if (!isAnyDataArea(shGt.valTarget(valGt)))
         // not valid target
@@ -1786,7 +1795,7 @@ bool cloneSpecialValue(
 
     switch (code) {
         case VT_RANGE:
-            if (hasKey(valMapGt[/* ltr */ 0], rootGt))
+            if (hasKey(valMapGt[DIR_LTR], rootGt))
                 break;
 
             CL_BREAK_IF("unable to transfer a VT_RANGE value");
@@ -1803,7 +1812,7 @@ bool cloneSpecialValue(
     }
 
     // VT_RANGE
-    const TValId rootDst = roMapLookup(valMapGt[/* ltr */ 0], rootGt);
+    const TValId rootDst = roMapLookup(valMapGt[DIR_LTR], rootGt);
     const IR::Range range = shGt.valOffsetRange(valGt);
     vDst = ctx.dst.valByRange(rootDst, range);
     return handleUnknownValues(ctx, itemToClone, vDst);
@@ -1932,7 +1941,7 @@ fail:
         // nothing to follow
         return true;
 
-    const TObjId segDst = roMapLookup(objMapGt[/* ltr */ 0], seg);
+    const TObjId segDst = roMapLookup(objMapGt[DIR_LTR], seg);
 
     const FldHandle fldNextDst = nextPtrFromSeg(ctx.dst, segDst);
 
@@ -2019,8 +2028,8 @@ done:
         return true;
     }
 
-    const TObjId objDstBy1 = roMapLookup(ctx.objMap1[/* ltr */ 0], obj1);
-    const TObjId objDstBy2 = roMapLookup(ctx.objMap2[/* ltr */ 0], obj2);
+    const TObjId objDstBy1 = roMapLookup(ctx.objMap1[DIR_LTR], obj1);
+    const TObjId objDstBy2 = roMapLookup(ctx.objMap2[DIR_LTR], obj2);
 
     const TOffset off1 = ctx.sh1.valOffset(v1);
     const TOffset off2 = ctx.sh2.valOffset(v2);
@@ -2079,8 +2088,8 @@ bool offRangeFallback(
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
-    const TObjMap &m1 = ctx.objMap1[/* ltr */ 0];
-    const TObjMap &m2 = ctx.objMap2[/* ltr */ 0];
+    const TObjMap &m1 = ctx.objMap1[DIR_LTR];
+    const TObjMap &m2 = ctx.objMap2[DIR_LTR];
 
     const TObjMap::const_iterator it1 = m1.find(obj1);
     const TObjMap::const_iterator it2 = m2.find(obj2);
@@ -2265,8 +2274,8 @@ bool mayExistFallback(
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
-    const bool hasMapping1 = hasKey(ctx.objMap1[/* ltr */ 0], obj1);
-    const bool hasMapping2 = hasKey(ctx.objMap2[/* ltr */ 0], obj2);
+    const bool hasMapping1 = hasKey(ctx.objMap1[DIR_LTR], obj1);
+    const bool hasMapping2 = hasKey(ctx.objMap2[DIR_LTR], obj2);
     if ((hasMapping1 != hasMapping2) && (hasMapping1 == use1))
         // try it the other way around
         return false;
@@ -2428,8 +2437,8 @@ bool joinCVars(SymJoinCtx &ctx, const JoinVarVisitor::EMode mode)
 // FIXME: the implementation is not going to work well in certain cases
 bool isFreshProto(SymJoinCtx &ctx, const TObjId objDst, bool *wasMayExist = 0)
 {
-    const TObjId obj1 = roMapLookup(ctx.objMap1[/* rtl */ 1], objDst);
-    const TObjId obj2 = roMapLookup(ctx.objMap2[/* rtl */ 1], objDst);
+    const TObjId obj1 = roMapLookup(ctx.objMap1[DIR_RTL], objDst);
+    const TObjId obj2 = roMapLookup(ctx.objMap2[DIR_RTL], objDst);
 
     const bool isValid1 = (OBJ_INVALID != obj1);
     const bool isValid2 = (OBJ_INVALID != obj2);
@@ -2509,7 +2518,7 @@ bool handleDstPreds(SymJoinCtx &ctx)
     if (!ctx.joiningData()) {
         // cross-over check of Neq predicates
 
-        if (!ctx.sh1.matchPreds(ctx.dst, ctx.valMap1[/* ltr */ 0])) {
+        if (!ctx.sh1.matchPreds(ctx.dst, ctx.valMap1[DIR_LTR])) {
             if (ctx.sh1.matchPreds(ctx.dst, ctx.valMap1[0], /* nonzero */ true))
                 ctx.allowThreeWay = false;
 
@@ -2517,7 +2526,7 @@ bool handleDstPreds(SymJoinCtx &ctx)
                 return false;
         }
 
-        if (!ctx.sh2.matchPreds(ctx.dst, ctx.valMap2[/* ltr */ 0])) {
+        if (!ctx.sh2.matchPreds(ctx.dst, ctx.valMap2[DIR_LTR])) {
             if (ctx.sh2.matchPreds(ctx.dst, ctx.valMap2[0], /* nonzero */ true))
                 ctx.allowThreeWay = false;
 
@@ -2529,8 +2538,8 @@ bool handleDstPreds(SymJoinCtx &ctx)
     // TODO: match generic Neq predicates also in prototypes;  for now we
     // consider only minimal segment lengths
     BOOST_FOREACH(const TObjId protoDst, ctx.protos) {
-        const TObjId proto1 = roMapLookup(ctx.objMap1[/* rtl */ 1], protoDst);
-        const TObjId proto2 = roMapLookup(ctx.objMap2[/* rtl */ 1], protoDst);
+        const TObjId proto1 = roMapLookup(ctx.objMap1[DIR_RTL], protoDst);
+        const TObjId proto2 = roMapLookup(ctx.objMap2[DIR_RTL], protoDst);
 
         const TMinLen len1   = objMinLength(ctx.sh1, proto1);
         const TMinLen len2   = objMinLength(ctx.sh2, proto2);
@@ -2759,8 +2768,8 @@ bool joinData(
 
     // go through prototypes
     BOOST_FOREACH(const TObjId protoDst, ctx.protos) {
-        const TObjId proto1 = roMapLookup(ctx.objMap1[/* rtl */ 1], protoDst);
-        const TObjId proto2 = roMapLookup(ctx.objMap2[/* rtl */ 1], protoDst);
+        const TObjId proto1 = roMapLookup(ctx.objMap1[DIR_RTL], protoDst);
+        const TObjId proto2 = roMapLookup(ctx.objMap2[DIR_RTL], protoDst);
 
         if (OBJ_INVALID != proto1) {
             ++cntProto1;
