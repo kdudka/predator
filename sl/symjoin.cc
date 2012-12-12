@@ -1528,29 +1528,6 @@ bool createObject(
     return true;
 }
 
-/// (NULL == pObjDst) means read-only!
-bool joinObjects(
-        TObjId                 *pObjDst,
-        SymJoinCtx             &ctx,
-        const TObjId            obj1,
-        const TObjId            obj2,
-        const TProtoLevel       ldiff)
-{
-    if (checkObjectMapping(ctx, obj1, obj2, /* allowUnknown */ false, pObjDst))
-        return true;
-
-    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
-        return false;
-
-    if (ctx.joiningData() && obj1 == obj2) {
-        // we are on the way from joinData() and hit shared data
-        *pObjDst = obj1 /* = obj2 */;
-        return defineObjectMapping(ctx, obj1, obj2, obj1 /* = obj2 */);
-    }
-
-    return createObject(pObjDst, ctx, obj1, obj2, ldiff);
-}
-
 bool offRangeFallback(
         SymJoinCtx             &ctx,
         const SchedItem        &item);
@@ -1586,7 +1563,7 @@ bool mapTargetAddress(
     return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
-bool joinSegmentWithAny(
+bool joinObjects(
         bool                   *pResult,
         TObjId                 *pObjDst,
         SymJoinCtx             &ctx,
@@ -1623,8 +1600,20 @@ bool joinSegmentWithAny(
     }
 
     // go ahead, try it read-write!
-    SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(obj1, obj2));
-    *pResult = joinObjects(pObjDst, ctx, obj1, obj2, ldiff);
+    SJ_DEBUG(">>> joinObjects" << SJ_OBJP(obj1, obj2));
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true)) {
+        *pResult = false;
+        return true;
+    }
+
+    if (ctx.joiningData() && obj1 == obj2) {
+        // we are on the way from joinData() and hit shared data
+        *pObjDst = obj1 /* = obj2 */;
+        *pResult = defineObjectMapping(ctx, obj1, obj2, obj1 /* = obj2 */);
+    }
+    else
+        *pResult = createObject(pObjDst, ctx, obj1, obj2, ldiff);
+
     if (!*pResult || !isObjWithBinding(kind))
         return true;
 
@@ -1638,7 +1627,7 @@ bool joinSegmentWithAny(
                 PtrHandle(ctx.sh2, obj2  , off.prev),
                 ldiff);
         if (ctx.wl.schedule(prevItem))
-            SJ_DEBUG("+++ " << SJ_ITEM(prevItem) << " by joinSegmentWithAny()");
+            SJ_DEBUG("+++ " << SJ_ITEM(prevItem) << " by joinObjects()");
     }
 
     const SchedItem nextItem(
@@ -1647,7 +1636,7 @@ bool joinSegmentWithAny(
             PtrHandle(ctx.sh2, obj2  , off.next),
             ldiff);
     if (ctx.wl.schedule(nextItem))
-        SJ_DEBUG("+++ " << SJ_ITEM(nextItem) << " by joinSegmentWithAny()");
+        SJ_DEBUG("+++ " << SJ_ITEM(nextItem) << " by joinObjects()");
 
     return true;
 }
@@ -1946,20 +1935,18 @@ bool joinAbstractValues(
     TObjId objDst;
 
     if (isAbs1 && isAbs2
-            && joinSegmentWithAny(pResult, &objDst, ctx, obj1, obj2, ldiff))
+            && joinObjects(pResult, &objDst, ctx, obj1, obj2, ldiff))
     {
         action = JS_USE_ANY;
         goto done;
     }
 
-    if (!isAbs2 && joinSegmentWithAny(pResult, &objDst, ctx, obj1, obj2, ldiff))
-    {
+    if (!isAbs2 && joinObjects(pResult, &objDst, ctx, obj1, obj2, ldiff)) {
         action = JS_USE_SH1;
         goto done;
     }
 
-    if (!isAbs1 && joinSegmentWithAny(pResult, &objDst, ctx, obj1, obj2, ldiff))
-    {
+    if (!isAbs1 && joinObjects(pResult, &objDst, ctx, obj1, obj2, ldiff)) {
         action = JS_USE_SH2;
         goto done;
     }
@@ -2018,7 +2005,7 @@ done:
             break;
 
         default:
-            CL_BREAK_IF("joinSegmentWithAny() is broken");
+            CL_BREAK_IF("joinObjects() is broken");
             return false;
     }
 
@@ -2304,7 +2291,7 @@ bool followValuePair(
         if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
             return false;
 
-        if (!joinSegmentWithAny(pResult, &objDst, ctx, obj1, obj2, item.ldiff,
+        if (!joinObjects(pResult, &objDst, ctx, obj1, obj2, item.ldiff,
                     /* firstTryReadOnly */ false)
                 || !*pResult)
         {
