@@ -1586,54 +1586,15 @@ bool mapTargetAddress(
     return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
-bool joinAbstractValues(
-        bool                    *pResult,
-        SymJoinCtx              &ctx,
-        const SchedItem         &item);
-
-bool followValuePair(
-        bool                    *pResult,
-        SymJoinCtx              &ctx,
-        const SchedItem         &item)
-{
-    const TValId v1 = item.fld1.value();
-    const TValId v2 = item.fld2.value();
-
-    const TObjId obj1 = ctx.sh1.objByAddr(v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(v2);
-
-    TObjId objDst;
-    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnkn */ false, &objDst)) {
-        if (joinAbstractValues(pResult, ctx, item))
-            return true;
-
-        if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
-            return false;
-
-        if (!joinObjects(&objDst, ctx, obj1, obj2, item.ldiff)) {
-            *pResult = false;
-            return true;
-        }
-    }
-
-    // write the resulting value to item.fldDst
-    *pResult = mapTargetAddress(ctx, item, objDst);
-    return true;
-}
-
 bool joinSegmentWithAny(
         bool                   *pResult,
+        TObjId                 *pObjDst,
         SymJoinCtx             &ctx,
         const TObjId            obj1,
         const TObjId            obj2,
         const TProtoLevel       ldiff,
         bool                    firstTryReadOnly = true)
 {
-    const bool isValid1 = ctx.sh1.isValid(obj1);
-    const bool isValid2 = ctx.sh2.isValid(obj2);
-    if (!isValid1 || !isValid2)
-        return false;
-
     if (firstTryReadOnly && !segMatchLookAhead(ctx, obj1, obj2))
         return false;
 
@@ -1663,11 +1624,11 @@ bool joinSegmentWithAny(
 
     // go ahead, try it read-write!
     SJ_DEBUG(">>> joinSegmentWithAny" << SJ_OBJP(obj1, obj2));
-    TObjId objDst;
-    *pResult = joinObjects(&objDst, ctx, obj1, obj2, ldiff);
+    *pResult = joinObjects(pObjDst, ctx, obj1, obj2, ldiff);
     if (!*pResult || !isObjWithBinding(kind))
         return true;
 
+    const TObjId objDst = *pObjDst;
     const BindingOff &off = ctx.dst.segBinding(objDst);
 
     if (OK_DLS == kind) {
@@ -1982,19 +1943,23 @@ bool joinAbstractValues(
 
     const TProtoLevel ldiff = item.ldiff;
     EJoinStatus action;
+    TObjId objDst;
 
-    if (isAbs1 && isAbs2 && joinSegmentWithAny(pResult, ctx, obj1, obj2, ldiff))
+    if (isAbs1 && isAbs2
+            && joinSegmentWithAny(pResult, &objDst, ctx, obj1, obj2, ldiff))
     {
         action = JS_USE_ANY;
         goto done;
     }
 
-    if (!isAbs2 && joinSegmentWithAny(pResult, ctx, obj1, obj2, ldiff)) {
+    if (!isAbs2 && joinSegmentWithAny(pResult, &objDst, ctx, obj1, obj2, ldiff))
+    {
         action = JS_USE_SH1;
         goto done;
     }
 
-    if (!isAbs1 && joinSegmentWithAny(pResult, ctx, obj1, obj2, ldiff)) {
+    if (!isAbs1 && joinSegmentWithAny(pResult, &objDst, ctx, obj1, obj2, ldiff))
+    {
         action = JS_USE_SH2;
         goto done;
     }
@@ -2027,7 +1992,6 @@ done:
     const TOffset off1 = ctx.sh1.valOffset(v1);
     const TOffset off2 = ctx.sh2.valOffset(v2);
 
-    TObjId objDst;
     TOffset offDst;
     ETargetSpecifier tsDst;
 
@@ -2319,6 +2283,36 @@ bool mayExistFallback(
         result = false;
 
     return result;
+}
+
+bool followValuePair(
+        bool                    *pResult,
+        SymJoinCtx              &ctx,
+        const SchedItem         &item)
+{
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+
+    TObjId objDst;
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnkn */ false, &objDst)) {
+        if (joinAbstractValues(pResult, ctx, item))
+            return true;
+
+        if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
+            return false;
+
+        if (!joinObjects(&objDst, ctx, obj1, obj2, item.ldiff)) {
+            *pResult = false;
+            return true;
+        }
+    }
+
+    // write the resulting value to item.fldDst
+    *pResult = mapTargetAddress(ctx, item, objDst);
+    return true;
 }
 
 bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
