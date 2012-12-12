@@ -579,45 +579,6 @@ bool checkValueMapping(
     return false;
 }
 
-bool checkNullConsistency(
-        SymJoinCtx              &ctx,
-        const TValId            v1,
-        const TValId            v2)
-{
-    const bool isNull1 = (VAL_NULL == v1);
-    const bool isNull2 = (VAL_NULL == v2);
-    CL_BREAK_IF(isNull1 == isNull2);
-
-    if (v1 < 0 || v2 < 0)
-        // VAL_NULL vs. something special
-        return false;
-
-    const TObjId obj1 = ctx.sh1.objByAddr(v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(v2);
-
-    // special quirk for off-values related to VAL_NULL
-    if (isNull1 && OBJ_NULL == obj2)
-        return false;
-    if (isNull2 && OBJ_NULL == obj1)
-        return false;
-
-    // check for inconsistency with the up to now mapping of values
-    if (isNull1 && hasKey(ctx.objMap2[/* lrt */ 0], obj2))
-        return false;
-    if (isNull2 && hasKey(ctx.objMap1[/* lrt */ 0], obj1))
-        return false;
-
-    const EValueTarget code = (isNull2)
-        ? ctx.sh1.valTarget(v1)
-        : ctx.sh2.valTarget(v2);
-
-    if (VT_UNKNOWN == code && !ctx.joiningData())
-        // [experimental] reduce state explosion on test-0300
-        return !ctx.joiningData();
-
-    return isAnyDataArea(code);
-}
-
 bool handleUnknownValues(
         SymJoinCtx             &ctx,
         const SchedItem        &item,
@@ -758,15 +719,7 @@ bool joinValuesByCode(
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
     // check target's validity
-    const bool isNull1 = (VAL_NULL == v1);
-    const bool isNull2 = (VAL_NULL == v2);
-    if (isNull1 || isNull2) {
-        if (!checkNullConsistency(ctx, v1, v2)) {
-            *pResult = false;
-            return true;
-        }
-    }
-    else {
+    if (VAL_NULL != v1 && VAL_NULL != v2) {
         const bool haveTarget1 = ctx.sh1.isValid(obj1);
         const bool haveTarget2 = ctx.sh2.isValid(obj2);
         if (haveTarget1 != haveTarget2) {
@@ -882,10 +835,6 @@ bool joinFreshItem(
             item.fldDst.setValue(VAL_NULL);
             return true;
         }
-
-        if (!checkNullConsistency(ctx, v1, v2))
-            // mapping already inconsistent
-            return false;
 
         if (readOnly)
             // act optimistically for now
