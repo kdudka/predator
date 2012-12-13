@@ -1595,12 +1595,15 @@ bool segmentCloneCore(
         TObjId                     *pObjDst,
         SymJoinCtx                 &ctx,
         SymHeap                    &shGt,
-        const TValId                valGt,
-        const TObjMapBidir         &objMapGt,
+        const TObjId                objGt,
         const TProtoLevel           ldiff,
         const EJoinStatus           action,
         const BindingOff           *off)
 {
+    const TObjMapBidir &objMapGt = (JS_USE_SH1 == action)
+        ? ctx.objMap1
+        : ctx.objMap2;
+
     const TObjMapBidir &objMapLt = (JS_USE_SH2 == action)
         ? ctx.objMap1
         : ctx.objMap2;
@@ -1608,15 +1611,15 @@ bool segmentCloneCore(
     const TObjMap &objMapGtLtr = objMapGt[DIR_LTR];
     const TObjMap &objMapLtRtl = objMapLt[DIR_RTL];
 
-    if (!isAnyDataArea(shGt.valTarget(valGt)))
+    if (!shGt.isValid(objGt))
         // not valid target
         return false;
 
-    const TObjId objGt = shGt.objByAddr(valGt);
     const TObjMap::const_iterator it = objMapGtLtr.find(objGt);
     if (objMapGtLtr.end() != it) {
         const TObjId objDst = it->second;
-        if (OK_OBJ_OR_NULL == ctx.dst.objKind(objDst) && (ObjOrNull != *off))
+        if (OK_OBJ_OR_NULL == ctx.dst.objKind(objDst)
+                && (!off || ObjOrNull != *off))
             // FIXME: we need to fix this in a more generic way
             return false;
 
@@ -1643,23 +1646,6 @@ bool segmentCloneCore(
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
              << SJ_OBJP(obj1, obj2));
     return false;
-}
-
-void scheduleSegAddr(
-        TWorkList              &wl,
-        const EJoinStatus       action,
-        const SchedItem         item)
-{
-    CL_BREAK_IF(JS_USE_SH1 != action && JS_USE_SH2 != action);
-
-    const FldHandle fldInvalid;
-
-    const SchedItem segItem(
-            item.fldDst,
-            (JS_USE_SH1 == action) ? item.fld1 : fldInvalid,
-            (JS_USE_SH2 == action) ? item.fld2 : fldInvalid,
-            item.ldiff);
-    wl.schedule(segItem);
 }
 
 bool cloneSpecialValue(
@@ -1752,17 +1738,35 @@ bool insertSegmentClone(
         ctx.allowThreeWay = false;
 #endif
 
-    const TObjMapBidir &objMapGt = (isGt1)
-        ? ctx.objMap1
-        : ctx.objMap2;
+    TObjId objDst;
+    if (!segmentCloneCore(&objDst, ctx, shGt, seg, item.ldiff, action, off)) {
+        *pResult = false;
+        return true;
+    }
+    const TValId valGt = (isGt1) ? v1 : v2;
+    const TOffset refOff = shGt.valOffset(valGt);
+    const ETargetSpecifier ts = shGt.targetSpec(valGt);
+    const TValId vDst = ctx.dst.addrOfTarget(objDst, ts, refOff);
+    item.fldDst.setValue(vDst);
+
+    if (!isObjOrNull) {
+        // follow the next pointer
+        const FldHandle fldNextDst = nextPtrFromSeg(ctx.dst, objDst);
+
+        // schedule the successor fields
+        const FldHandle fldNext1 = (isGt1) ? nextPtr : item.fld1;
+        const FldHandle fldNext2 = (isGt2) ? nextPtr : item.fld2;
+        const SchedItem nextItem(fldNextDst, fldNext1, fldNext2, item.ldiff);
+        if (ctx.wl.schedule(nextItem))
+            SJ_DEBUG("+++ " << SJ_FLDT(fldNextDst, fldNext1, fldNext2)
+                    << " by insertSegmentClone()");
+    }
 
     const TValMapBidir &valMapGt = (isGt1)
         ? ctx.valMap1
         : ctx.valMap2;
 
     const bool isMayExist = !!off;
-
-    scheduleSegAddr(ctx.wlSegInsert, action, item);
 
     SchedItem cloneItem;
     while (ctx.wlSegInsert.next(cloneItem)) {
@@ -1778,20 +1782,16 @@ bool insertSegmentClone(
             // do not go beyond the segment, just follow its data
             continue;
 
-        const TObjId objGt = shGt.objByAddr(valGt);
-        if (seg != objGt)
-            // OK_SEE_THROUGH/OK_OBJ_OR_NULL is applicable only on the first obj
-            off = 0;
-
         const EValueTarget code = shGt.valTarget(valGt);
         if (isAnyDataArea(code)) {
+            const TObjId objGt = shGt.objByAddr(valGt);
+
             if (isMayExist && OK_DLS == shGt.objKind(objGt))
                 // FIXME: temporarily not supported
                 goto fail;
 
-            TObjId objDst;
-            if (segmentCloneCore(&objDst, ctx, shGt, valGt, objMapGt,
-                        cloneItem.ldiff, action, off))
+            if (segmentCloneCore(&objDst, ctx, shGt, objGt, cloneItem.ldiff,
+                        action, /* off */ 0))
             {
                 const IR::Range off = shGt.valOffsetRange(valGt);
                 const ETargetSpecifier ts = shGt.targetSpec(valGt);
@@ -1814,22 +1814,6 @@ fail:
     }
 
     *pResult = true;
-    if (isObjOrNull)
-        // nothing to follow
-        return true;
-
-    const TObjId segDst = roMapLookup(objMapGt[DIR_LTR], seg);
-
-    const FldHandle fldNextDst = nextPtrFromSeg(ctx.dst, segDst);
-
-    // schedule the successor fields
-    const FldHandle fldNext1 = (isGt1) ? nextPtr : item.fld1;
-    const FldHandle fldNext2 = (isGt2) ? nextPtr : item.fld2;
-    const SchedItem nextItem(fldNextDst, fldNext1, fldNext2, item.ldiff);
-    if (ctx.wl.schedule(nextItem))
-        SJ_DEBUG("+++ " << SJ_FLDT(fldNextDst, fldNext1, fldNext2)
-                << " by insertSegmentClone()");
-
     return true;
 }
 
