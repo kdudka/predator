@@ -1611,37 +1611,8 @@ bool joinObjects(
         return true;
     }
 
-    EObjKind kind;
-    if (!joinObjKind(&kind, ctx, obj1, obj2))
-        return false;
-
     // go ahead, try it read-write!
-    SJ_DEBUG(">>> joinObjects" << SJ_OBJP(obj1, obj2));
     *pResult = createObject(pObjDst, ctx, obj1, obj2, ldiff);
-    if (!*pResult || !isObjWithBinding(kind))
-        return true;
-
-    const TObjId objDst = *pObjDst;
-    const BindingOff &off = ctx.dst.segBinding(objDst);
-
-    if (OK_DLS == kind) {
-        const SchedItem prevItem(
-                PtrHandle(ctx.dst, objDst, off.prev),
-                PtrHandle(ctx.sh1, obj1  , off.prev),
-                PtrHandle(ctx.sh2, obj2  , off.prev),
-                ldiff);
-        if (ctx.wl.schedule(prevItem))
-            SJ_DEBUG("+++ " << SJ_ITEM(prevItem) << " by joinObjects()");
-    }
-
-    const SchedItem nextItem(
-            PtrHandle(ctx.dst, objDst, off.next),
-            PtrHandle(ctx.sh1, obj1  , off.next),
-            PtrHandle(ctx.sh2, obj2  , off.next),
-            ldiff);
-    if (ctx.wl.schedule(nextItem))
-        SJ_DEBUG("+++ " << SJ_ITEM(nextItem) << " by joinObjects()");
-
     return true;
 }
 
