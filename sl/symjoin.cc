@@ -914,13 +914,11 @@ struct ObjJoinVisitor {
     }
 };
 
-struct SegMatchVisitor {
+struct ObjMatchVisitor {
     SymJoinCtx              &ctx;
-    TFldSet                 blackList1;
-    TFldSet                 blackList2;
 
     public:
-        SegMatchVisitor(SymJoinCtx &ctx_):
+        ObjMatchVisitor(SymJoinCtx &ctx_):
             ctx(ctx_)
         {
         }
@@ -928,10 +926,6 @@ struct SegMatchVisitor {
         bool operator()(const FldHandle item[2]) {
             const FldHandle &fld1 = item[0];
             const FldHandle &fld2 = item[1];
-
-            if (hasKey(blackList1, fld1) || hasKey(blackList2, fld2))
-                // black-listed
-                return true;
 
             const FldHandle fldInvalid;
             const SchedItem sItem(fldInvalid, fld1, fld2, /* ldiff */ 0);
@@ -979,31 +973,6 @@ bool joinFields(
 
     // guide the visitors through them
     return traverseLiveFieldsGeneric<3>(heaps, objs, objVisitor);
-}
-
-bool segMatchLookAhead(
-        SymJoinCtx             &ctx,
-        const TObjId            obj1,
-        const TObjId            obj2)
-{
-    if (checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ false))
-        return true;
-
-    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
-        return false;
-
-    const TSizeRange size1 = ctx.sh1.objSize(obj1);
-    const TSizeRange size2 = ctx.sh2.objSize(obj2);
-    if (size1 != size2)
-        // size mismatch
-        return false;
-
-    // set up a visitor
-    SymHeap *const heaps[] = { &ctx.sh1, &ctx.sh2 };
-    TObjId objs[] = { obj1, obj2 };
-    SegMatchVisitor visitor(ctx);
-
-    return traverseLiveFieldsGeneric<2>(heaps, objs, visitor);
 }
 
 bool joinObjType(
@@ -1443,7 +1412,7 @@ bool joinUniBlocks(
 
 static const BindingOff ObjOrNull(OK_OBJ_OR_NULL);
 
-/// (NULL != off) means 'introduce OK_{FLD_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
+/// (NULL == pObjDst) means dry-run, (NULL != off) means 0..1 abstract object
 bool createObject(
         TObjId                 *pObjDst,
         SymJoinCtx             &ctx,
@@ -1479,6 +1448,10 @@ bool createObject(
     TObjType clt;
     if (!joinObjType(&clt, ctx, obj1, obj2))
         return false;
+
+    if (!pObjDst)
+        // do not create the object
+        return true;;
 
     if (offMayExist) {
         // we are asked to introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL
@@ -1526,6 +1499,30 @@ bool createObject(
 
     *pObjDst = objDst;
     return true;
+}
+
+bool objMatchLookAhead(
+        SymJoinCtx             &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2,
+        const TProtoLevel       ldiff)
+{
+    if (checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ false))
+        return true;
+
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
+        return false;
+
+    if (!createObject(/* dry-run */ 0, ctx, obj1, obj2, ldiff))
+        // dry-run creation failed
+        return false;
+
+    // set up a visitor
+    SymHeap *const heaps[] = { &ctx.sh1, &ctx.sh2 };
+    TObjId objs[] = { obj1, obj2 };
+    ObjMatchVisitor visitor(ctx);
+
+    return traverseLiveFieldsGeneric<2>(heaps, objs, visitor);
 }
 
 bool offRangeFallback(
@@ -1610,7 +1607,7 @@ bool joinObjects(
         const TProtoLevel       ldiff,
         bool                    firstTryReadOnly = true)
 {
-    if (firstTryReadOnly && !segMatchLookAhead(ctx, obj1, obj2))
+    if (firstTryReadOnly && !objMatchLookAhead(ctx, obj1, obj2, ldiff))
         return false;
 
     EObjKind kind;
