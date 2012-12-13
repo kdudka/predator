@@ -1604,19 +1604,8 @@ bool joinObjects(
         SymJoinCtx             &ctx,
         const TObjId            obj1,
         const TObjId            obj2,
-        const TProtoLevel       ldiff,
-        bool                    firstTryReadOnly = true)
+        const TProtoLevel       ldiff)
 {
-    if (firstTryReadOnly && !objMatchLookAhead(ctx, obj1, obj2, ldiff))
-        return false;
-
-    if (ctx.joiningData() && obj1 == obj2) {
-        // we are on the way from joinData() and hit shared data
-        *pObjDst = obj1 /* = obj2 */;
-        *pResult = defineObjectMapping(ctx, obj1, obj2, obj1 /* = obj2 */);
-        return true;
-    }
-
     if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true)) {
         *pResult = false;
         return true;
@@ -2244,6 +2233,11 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
+    if (ctx.joiningData() && obj1 == obj2)
+        // we are on the way from joinData() and hit shared data
+        return defineObjectMapping(ctx, obj1, obj2, obj1 /* = obj2 */)
+            && mapTargetAddress(ctx, item, obj1 /* = obj2 */);
+
     TObjId objDst;
     if (checkObjectMapping(ctx, obj1, obj2, /* allowUnkn */ false, &objDst))
         return mapTargetAddress(ctx, item, objDst);
@@ -2253,8 +2247,9 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     const bool haveAbs = isAbs1 || isAbs2;
 
     if (haveAbs) {
-        if (joinObjects(&result, &objDst, ctx, obj1, obj2, item.ldiff))
-            return result && mapTargetAddress(ctx, item, objDst, /* XXX */ true);
+        if (objMatchLookAhead(ctx, obj1, obj2, item.ldiff)
+                && joinObjects(&result, &objDst, ctx, obj1, obj2, item.ldiff))
+            return result && mapTargetAddress(ctx, item, objDst, /* XXX */true);
 
         if (segInsertionFallback(&result, ctx, item))
             return result;
@@ -2271,9 +2266,7 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
             return result;
     }
 
-    if (joinObjects(&result, &objDst, ctx, obj1, obj2, item.ldiff,
-                /* firstTryReadOnly */ false)
-            && result)
+    if (joinObjects(&result, &objDst, ctx, obj1, obj2, item.ldiff) && result)
         return mapTargetAddress(ctx, item, objDst);
 
     return false;
