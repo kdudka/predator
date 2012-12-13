@@ -69,6 +69,98 @@ typedef std::pair<RootState, RootState> ProdState;
 // anonymous namespace
 namespace
 {
+/**
+ * @brief  Engine for reference substitution
+ */
+class SubsRefEngine
+{
+private:  // data members
+
+	/// FAE to be the output
+	FAE& fae_;
+
+	/// Keeps product states, e.g. (p,q)
+	std::set<ProdState> processed_;
+
+	/// The work stack
+	std::vector<ProdState> workstack_;
+
+public:   // methods
+
+	explicit SubsRefEngine(FAE& fae) :
+		fae_(fae),
+		processed_(),
+		workstack_()
+	{ }
+
+	/**
+	 * @brief  Creates a product state and adds it to processing
+	 *
+	 * Creates a product state in case it does not exist.
+	 *
+	 * @param[in]  lhsRoot   Root number of the LHS automaton
+	 * @param[in]  lhsState  State in the LHS automaton
+	 * @param[in]  rhsRoot   Root number of the RHS automaton
+	 * @param[in]  rhsState  State in the RHS automaton
+	 */
+	void makeProductState(
+		const size_t&          lhsRoot,
+		const size_t&          lhsState,
+		const size_t&          rhsRoot,
+		const size_t&          rhsState)
+	{
+		// the product state
+		RootState lhsRootState(lhsRoot, lhsState);
+		RootState rhsRootState(rhsRoot, rhsState);
+		ProdState prodState(lhsRootState, rhsRootState);
+
+		auto itBoolPairProcessed = processed_.insert(prodState);
+		bool isNewState = itBoolPairProcessed.second;
+
+		if (isNewState)
+		{	// in case the state has not been processed before
+			FA_NOTE("Creating new product state (" <<  lhsRootState << ", "
+				<< rhsRootState << ")");
+			workstack_.push_back(prodState);
+		}
+	}
+
+
+	/**
+	 * @brief  Determines whether the work stack is empty
+	 *
+	 * This method returns @p true in case the work stack is empty, @p false
+	 * otherwise.
+	 *
+	 * @returns  @p true in case the work stack is empty, @p false otherwise
+	 */
+	bool wsEmpty() const
+	{
+		return workstack_.empty();
+	}
+
+	/**
+	 * @brief  Retrieves the next state to be processed
+	 *
+	 * This method retrieves the next state that has not been processed so far.
+	 * Further, it removes it from the work stack.
+	 *
+	 * @returns  The product state
+	 */
+	ProdState getNextState()
+	{
+		// Preconditions
+		assert(!wsEmpty());
+
+		ProdState res = *workstack_.crbegin();
+		workstack_.pop_back();
+		return res;
+	}
+};
+
+/**
+ * @brief  Engine for intersection
+ */
 class IsectEngine
 {
 private:  // data members
@@ -240,8 +332,14 @@ void SymState::SubstituteRefs(
 	const std::shared_ptr<const FAE> srcFAE = src.GetFAE();
 	assert((nullptr != thisFAE) && (nullptr != srcFAE));
 
+	FA_NOTE("before substitution: " << *thisFAE);
+
 	FAE* fae = new FAE(*thisFAE);
 	fae->clear();
+	this->SetFAE(std::shared_ptr<FAE>(fae));
+
+	// engine that handles creation of new states etc.
+	SubsRefEngine engine(*fae);
 
 	for (size_t i = 0; i < thisFAE->getRootCount(); ++i)
 	{	// allocate existing TA
@@ -258,9 +356,6 @@ void SymState::SubstituteRefs(
 
 		fae->connectionGraph.newRoot();
 	}
-
-	std::set<ProdState> processed;
-	std::vector<ProdState> workset;
 
 	assert(thisFAE->GetVarCount() == srcFAE->GetVarCount());
 	for (size_t i = 0; i < thisFAE->GetVarCount(); ++i)
@@ -290,15 +385,9 @@ void SymState::SubstituteRefs(
 		const TreeAut* srcRoot  = srcFAE->getRoot(srcVar.d_ref.root).get();
 		assert((nullptr != thisRoot) && (nullptr != srcRoot));
 
-		ProdState initialState(
-			RootState(thisVar.d_ref.root, thisRoot->getFinalState()),
-			RootState(srcVar.d_ref.root, srcRoot->getFinalState())
-		);
-
-		if (processed.insert(initialState).second)
-		{	// in case the state has not been processed before
-			workset.push_back(initialState);
-		}
+		engine.makeProductState(
+			thisVar.d_ref.root, thisRoot->getFinalState(),
+			srcVar.d_ref.root, srcRoot->getFinalState());
 	}
 
 	assert(this->GetRegCount() == src.GetRegCount());
@@ -328,21 +417,14 @@ void SymState::SubstituteRefs(
 		const TreeAut* srcRoot  = srcFAE->getRoot(srcVar.d_ref.root).get();
 		assert((nullptr != thisRoot) && (nullptr != srcRoot));
 
-		ProdState initialState(
-			RootState(thisVar.d_ref.root, thisRoot->getFinalState()),
-			RootState(srcVar.d_ref.root, srcRoot->getFinalState())
-		);
-
-		if (processed.insert(initialState).second)
-		{	// in case the state has not been processed before
-			workset.push_back(initialState);
-		}
+		engine.makeProductState(
+			thisVar.d_ref.root, thisRoot->getFinalState(),
+			srcVar.d_ref.root, srcRoot->getFinalState());
 	}
 
-	while (!workset.empty())
+	while (!engine.wsEmpty())
 	{
-		const ProdState curState = *workset.crbegin();
-		workset.pop_back();
+		const ProdState curState = engine.getNextState();
 
 		const size_t& thisRoot = curState.first.root;
 		const size_t& srcRoot = curState.second.root;
@@ -353,6 +435,9 @@ void SymState::SubstituteRefs(
 
 		const size_t& thisState = curState.first.state;
 		const size_t& srcState = curState.second.state;
+
+		FA_NOTE("Processing product state (" <<  curState.first << ", "
+			<< curState.second << ")");
 
 		TreeAut::iterator thisIt = thisTA->begin(thisState);
 		TreeAut::iterator thisEnd = thisTA->end(thisState, thisIt);
@@ -366,9 +451,17 @@ void SymState::SubstituteRefs(
 				const Transition& thisTrans = *thisIt;
 				const Transition& srcTrans = *srcIt;
 
+				// we handle data one level up
+				assert(!thisTrans.label()->isData() && !srcTrans.label()->isData());
+				assert(!thisTrans.lhs().empty() && !srcTrans.lhs().empty());
+
+				// TODO: so far, we are not doing unfolding!
 				if (thisTrans.label() == srcTrans.label())
 				{
+					FA_NOTE("Transition: " << thisTrans.label() << ", thisState = " << thisState << ", srcState = " << srcState);
+
 					assert(thisTrans.lhs().size() == srcTrans.lhs().size());
+					const size_t& transArity = thisTrans.lhs().size();
 
 					if (thisTrans.label()->isData())
 					{	// data are processed one level up
@@ -377,10 +470,128 @@ void SymState::SubstituteRefs(
 					}
 
 					std::vector<size_t> lhs;
-
-					for (size_t i = 0; i < thisTrans.lhs().size(); ++i)
+					size_t i;
+					for (i = 0; i < transArity; ++i)
 					{	// for each pair of states that map to each other
-						const Data* srcData = nullptr;
+						const Data* srcData = nullptr, *thisData = nullptr;
+						bool  srcIsData =  srcFAE->isData( srcTrans.lhs()[i],  srcData);
+						bool thisIsData = thisFAE->isData(thisTrans.lhs()[i], thisData);
+
+						//  srcIsData <-> nullptr != srcData
+						assert((!srcIsData || (nullptr != srcData))
+							&& (srcIsData || (nullptr == srcData)));
+						//  thisIsData <-> nullptr != thisData
+						assert((!thisIsData || (nullptr != thisData))
+							&& (thisIsData || (nullptr == thisData)));
+
+						if (!srcIsData && !thisIsData)
+						{	// ************* process internal states *************
+							// This is the easiest case, when both states in the product are
+							// internal.
+							engine.makeProductState(
+								thisRoot, thisTrans.lhs()[i],
+								srcRoot, srcTrans.lhs()[i]);
+
+							lhs.push_back(thisTrans.lhs()[i]);
+						}
+						else if (srcIsData && (*srcData == oldValue))
+						{ // ************* perform substitution of reference *************
+							assert(thisIsData && thisData->isUndef());
+
+							FA_NOTE("Substituting " << *srcData << " for " << newValue);
+
+							lhs.push_back(fae->addData(
+								*fae->getRoot(thisRoot).get(), newValue));
+						}
+						else if (srcIsData && thisIsData &&
+							!srcData->isRef() && !thisData->isRef())
+						{ // ************* process real data states (leaves) *************
+							// This is the second easiest case, when both states are real data
+							// (i.e. no references). In this case, we are simply doing
+							// intersection of the data.
+							assert(*thisData == *srcData);
+
+							lhs.push_back(fae->addData(
+								*fae->getRoot(thisRoot).get(), *thisData));
+						}
+						else if (srcIsData && thisIsData &&
+							srcData->isRef() && thisData->isRef())
+						{ // ************* process reference states (leaves) *************
+							// This is another quite easy case, when both states are
+							// references to another automata. In this case, we are jumping
+							// from both automata into another product automaton.
+							assert(thisData->d_ref.displ == srcData->d_ref.displ);
+							assert(0 == thisData->d_ref.displ);
+
+							FA_NOTE("Two references");
+
+							const size_t& thisNewRoot = thisData->d_ref.root;
+							const size_t& srcNewRoot  = srcData->d_ref.root;
+
+							const TreeAut* thisNewTA = thisFAE->getRoot(thisNewRoot).get();
+							const TreeAut* srcNewTA  = srcFAE->getRoot(srcNewRoot).get();
+							assert((nullptr != thisNewTA) && (nullptr != srcNewTA));
+
+							engine.makeProductState(
+								thisNewRoot, thisNewTA->getFinalState(),
+								srcNewRoot, srcNewTA->getFinalState());
+
+							lhs.push_back(fae->addData(*fae->getRoot(thisRoot).get(),
+								Data::createRef(thisNewRoot)));
+						}
+						else if ((srcIsData && !thisIsData && srcData->isNull())
+							|| (!srcIsData && thisIsData && thisData->isNull())
+							|| (srcIsData && thisIsData && srcData->isNull() && thisData->isRef())
+							|| (srcIsData && thisIsData && srcData->isRef() && thisData->isNull()))
+						{ // ************* process NULL pointers *************
+							// This is the case when there is a NULL pointer and either an
+							// internal state or a reference
+							FA_NOTE("NULL ptr!");
+
+							break;   // cut this branch of the product
+						}
+						else if ((srcIsData && !thisIsData && srcData->isRef())
+							|| (!srcIsData && thisIsData && thisData->isRef()))
+						{ // ************* process jumps *************
+							// This is the case when one FA jumps to another TA and the other does not
+							FA_NOTE("jump!");
+
+							if (srcIsData)
+							{
+								assert(srcIsData && !thisIsData && srcData->isRef());
+
+								const size_t& srcNewRoot = srcData->d_ref.root;
+								const TreeAut* srcNewTA  = srcFAE->getRoot(srcNewRoot).get();
+								assert(nullptr != srcNewTA);
+
+								engine.makeProductState(
+									thisRoot, thisTrans.lhs()[i],
+									srcNewRoot, srcNewTA->getFinalState());
+
+								lhs.push_back(thisTrans.lhs()[i]);
+							}
+							else
+							{
+								assert(!srcIsData && thisIsData && thisData->isRef());
+
+								const size_t& thisNewRoot = thisData->d_ref.root;
+								const TreeAut* thisNewTA = thisFAE->getRoot(thisNewRoot).get();
+								assert(nullptr != thisNewTA);
+
+								engine.makeProductState(
+									thisNewRoot, thisNewTA->getFinalState(),
+									srcRoot, srcTrans.lhs()[i]);
+
+								lhs.push_back(fae->addData(*fae->getRoot(thisRoot).get(),
+									Data::createRef(thisNewRoot)));
+							}
+						}
+						else
+						{
+							assert(false);       // fail gracefully
+						}
+
+#if 0
 						if (srcFAE->isData(srcTrans.lhs()[i], srcData))
 						{	// for data states
 							assert(nullptr != srcData);
@@ -414,15 +625,9 @@ void SymState::SubstituteRefs(
 								const TreeAut* srcNewTA  = srcFAE->getRoot(srcData->d_ref.root).get();
 								assert((nullptr != thisNewTA) && (nullptr != srcNewTA));
 
-								ProdState jumpState(
-									RootState(thisNewRoot, thisNewTA->getFinalState()),
-									RootState(srcNewRoot, srcNewTA->getFinalState())
-								);
-
-								if (processed.insert(jumpState).second)
-								{	// in case the state has not been processed before
-									workset.push_back(jumpState);
-								}
+								engine.makeProductState(
+									thisNewRoot, thisNewTA->getFinalState(),
+									srcNewRoot, srcNewTA->getFinalState());
 
 								lhs.push_back(fae->addData(*fae->getRoot(thisRoot).get(), *thisData));
 							}
@@ -432,22 +637,33 @@ void SymState::SubstituteRefs(
 							}
 						}
 						else
-						{
-							const ProdState newState(std::make_pair(
-								RootState(thisRoot, thisTrans.lhs()[i]),
-								RootState(srcRoot, srcTrans.lhs()[i])
-							));
+						{	// for internal states
+							engine.makeProductState(
+								thisRoot, thisTrans.lhs()[i],
+								srcRoot, srcTrans.lhs()[i]);
 
-							// TODO: add to lhs?
-							assert(false);
-							if (processed.insert(newState).second)
-							{	// in case the state has not been processed before
-								workset.push_back(newState);
-							}
+							lhs.push_back(thisTrans.lhs()[i]);
 						}
+#endif
 					}
 
-					fae->getRoot(thisRoot)->addTransition(lhs, thisTrans.label(), thisTrans.rhs());
+					if (transArity == i)
+					{	// in case we have not interrupted the search, add the transition
+						std::ostringstream osLhs;
+						for (auto it = lhs.cbegin(); it != lhs.cend(); ++it)
+						{
+							if (lhs.cbegin() != it)
+								osLhs << ",";
+
+							osLhs << FA::writeState(*it);
+						}
+
+						FA_NOTE("TA " << thisRoot << ": adding transition "
+							<< FA::writeState(thisState) << " -> "
+							<< thisTrans.label() << "(" << osLhs.str() << ")");
+
+						fae->getRoot(thisRoot)->addTransition(lhs, thisTrans.label(), thisTrans.rhs());
+					}
 				}
 				else
 				{
@@ -457,8 +673,11 @@ void SymState::SubstituteRefs(
 		}
 	}
 
-	fae->updateConnectionGraph();
-	this->SetFAE(std::shared_ptr<FAE>(fae));
+	// TODO: 'odprasit' this function
+	// TODO: I also need to perform some on-the fly splitting
+	FA_NOTE("after substitution: " << *fae);
+
+//	fae->updateConnectionGraph();
 }
 
 
