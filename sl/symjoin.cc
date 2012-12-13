@@ -1963,8 +1963,10 @@ done:
     if (!*pResult)
         return true;
 
-    if (!updateJoinStatus(ctx, action))
-        return false;
+    if (!updateJoinStatus(ctx, action)) {
+        *pResult = false;
+        return true;
+    }
 
     if (VT_RANGE == ctx.sh1.valTarget(v1) || VT_RANGE == ctx.sh2.valTarget(v2))
     {
@@ -1988,8 +1990,10 @@ done:
             CL_BREAK_IF(off1 != off2);
             objDst = objDstBy1 /* = objDstBy2 */;
             offDst = off1      /* = off2 */;
-            if (!joinTargetSpec(&tsDst, ctx, v1, v2))
-                return false;
+            if (!joinTargetSpec(&tsDst, ctx, v1, v2)) {
+                *pResult = false;
+                return true;
+            }
             break;
 
         case JS_USE_SH1:
@@ -2006,12 +2010,14 @@ done:
 
         default:
             CL_BREAK_IF("joinObjects() is broken");
-            return false;
+            *pResult = false;
+            return true;
     }
 
     // write the resulting value to item.fldDst
     const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
-    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
+    *pResult = writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
+    return true;
 }
 
 bool offRangeFallback(
