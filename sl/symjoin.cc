@@ -2204,6 +2204,7 @@ bool mayExistDigOffsets(
 }
 
 bool mayExistFallback(
+        bool                    *pResult,
         SymJoinCtx              &ctx,
         const SchedItem         &item,
         const EJoinStatus       action)
@@ -2261,15 +2262,14 @@ bool mayExistFallback(
             return false;
     }
 
-    // mayExistFallback() always implies JS_THREE_WAY
-    if (!updateJoinStatus(ctx, JS_THREE_WAY))
+    if (!insertSegmentClone(pResult, ctx, item, action, &off))
         return false;
 
-    bool result;
-    if (!insertSegmentClone(&result, ctx, item, action, &off))
-        result = false;
+    if (*pResult)
+        // mayExistFallback() always implies JS_THREE_WAY
+        *pResult = updateJoinStatus(ctx, JS_THREE_WAY);
 
-    return result;
+    return true;
 }
 
 bool followValuePair(
@@ -2325,8 +2325,13 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     if (followValuePair(&result, ctx, item))
         return result;
 
-    return mayExistFallback(ctx, item, JS_USE_SH1)
-        || mayExistFallback(ctx, item, JS_USE_SH2);
+    if (mayExistFallback(&result, ctx, item, JS_USE_SH1))
+        return result;
+
+    if (mayExistFallback(&result, ctx, item, JS_USE_SH2))
+        return result;
+
+    return false;
 }
 
 bool joinPendingValues(SymJoinCtx &ctx)
