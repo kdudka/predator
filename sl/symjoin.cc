@@ -1592,23 +1592,32 @@ bool mapAsymTarget(
 
 /// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool segmentCloneCore(
-        TObjId                     *pObjDst,
         SymJoinCtx                 &ctx,
-        SymHeap                    &shGt,
-        const TObjId                objGt,
-        const TProtoLevel           ldiff,
+        const SchedItem            &item,
         const EJoinStatus           action,
-        const BindingOff           *off)
+        const BindingOff           *off = 0,
+        TObjId                     *pObjDst = 0)
 {
+    const bool isGt1 = (JS_USE_SH1 == action);
+    const bool isGt2 = (JS_USE_SH2 == action);
+
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
+    const TObjId obj1 = (isGt1) ? ctx.sh1.objByAddr(v1) : OBJ_INVALID;
+    const TObjId obj2 = (isGt2) ? ctx.sh2.objByAddr(v2) : OBJ_INVALID;
+
+    SymHeap &shGt      = (isGt1) ? ctx.sh1 : ctx.sh2;
+    const TObjId objGt = (isGt1) ? obj1 : obj2;
     if (!shGt.isValid(objGt))
         // not valid target
         return false;
 
-    const TObjMapBidir &objMapGt = (JS_USE_SH1 == action)
+    const TObjMapBidir &objMapGt = (isGt1)
         ? ctx.objMap1
         : ctx.objMap2;
 
-    const TObjMapBidir &objMapLt = (JS_USE_SH2 == action)
+    const TObjMapBidir &objMapLt = (isGt2)
         ? ctx.objMap1
         : ctx.objMap2;
 
@@ -1625,22 +1634,26 @@ bool segmentCloneCore(
 
         if (!hasKey(objMapLtRtl, objDst)) {
             // mapping already available for objGt
-            *pObjDst = objDst;
-            return true;
+            if (pObjDst)
+                *pObjDst = objDst;
+
+            return mapAsymTarget(ctx, item, objDst, action);
         }
     }
 
     SJ_DEBUG("+i+ insertSegmentClone: cloning object #" << objGt <<
              ", action = " << action);
 
-    const TObjId obj1 = (JS_USE_SH1 == action) ? objGt : OBJ_INVALID;
-    const TObjId obj2 = (JS_USE_SH2 == action) ? objGt : OBJ_INVALID;
+    TObjId objDst;
+    if (!joinObjects(&objDst, ctx, obj1, obj2, item.ldiff, off))
+        return false;
 
-    // clone the object
-    if (joinObjects(pObjDst, ctx, obj1, obj2, ldiff, off))
-        return true;
+    if (!mapAsymTarget(ctx, item, objDst, action))
+        return false;
 
-    return false;
+    if (pObjDst)
+        *pObjDst = objDst;
+    return true;
 }
 
 bool cloneSpecialValue(
@@ -1713,12 +1726,7 @@ bool clonePendingValues(
 
         const EValueTarget code = shGt.valTarget(valGt);
         if (isAnyDataArea(code)) {
-            TObjId objDst;
-            if (!segmentCloneCore(&objDst, ctx, shGt, objGt, cloneItem.ldiff,
-                        action, /* off */ 0))
-                return false;
-
-            if (!mapAsymTarget(ctx, cloneItem, objDst, action))
+            if (!segmentCloneCore(ctx, cloneItem, action))
                 return false;
         }
         else {
@@ -1789,12 +1797,7 @@ bool insertSegmentClone(
     }
 
     TObjId objDst;
-    if (!segmentCloneCore(&objDst, ctx, shGt, seg, item.ldiff, action, off)) {
-        *pResult = false;
-        return true;
-    }
-
-    if (!mapAsymTarget(ctx, item, objDst, action)) {
+    if (!segmentCloneCore(ctx, item, action, off, &objDst)) {
         *pResult = false;
         return true;
     }
