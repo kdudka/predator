@@ -1685,6 +1685,64 @@ bool cloneSpecialValue(
     return handleUnknownValues(ctx, itemToClone, vDst);
 }
 
+bool clonePendingValues(
+        SymJoinCtx             &ctx,
+        const TValId            nextGt,
+        const EJoinStatus       action,
+        const bool              isMayExist)
+{
+    SymHeap &shGt = ((JS_USE_SH1 == action) ? ctx.sh1 : ctx.sh2);
+
+    const TValMapBidir &valMapGt = (JS_USE_SH1 == action)
+        ? ctx.valMap1
+        : ctx.valMap2;
+
+    SchedItem cloneItem;
+    while (ctx.wlSegInsert.next(cloneItem)) {
+        const TValId v1 = cloneItem.fld1.value();
+        const TValId v2 = cloneItem.fld2.value();
+
+        const TValId valGt = (JS_USE_SH1 == action) ? v1 : v2;
+        const TValId valLt = (JS_USE_SH2 == action) ? v1 : v2;
+        CL_BREAK_IF(VAL_INVALID != valLt);
+        (void) valLt;
+
+        if (nextGt == valGt)
+            // do not go beyond the segment, just follow its data
+            continue;
+
+        const EValueTarget code = shGt.valTarget(valGt);
+        if (isAnyDataArea(code)) {
+            const TObjId objGt = shGt.objByAddr(valGt);
+            if (isMayExist && OK_DLS == shGt.objKind(objGt))
+                // FIXME: temporarily not supported
+                return false;
+
+            TObjId objDst;
+            if (segmentCloneCore(&objDst, ctx, shGt, objGt, cloneItem.ldiff,
+                        action, /* off */ 0))
+            {
+                const IR::Range off = shGt.valOffsetRange(valGt);
+                const ETargetSpecifier ts = shGt.targetSpec(valGt);
+                const TValId vDstBase = ctx.dst.addrOfTarget(objDst, ts);
+                const TValId vDst = ctx.dst.valByRange(vDstBase, off);
+                if (cloneItem.fldDst.isValidHandle())
+                    cloneItem.fldDst.setValue(vDst);
+                continue;
+            }
+        }
+        else {
+            if (cloneSpecialValue(ctx, shGt, valGt, valMapGt, cloneItem, code))
+                continue;
+        }
+
+        // clone failed
+        return false;
+    }
+
+    return true;
+}
+
 /// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool insertSegmentClone(
         bool                    *pResult,
@@ -1762,58 +1820,7 @@ bool insertSegmentClone(
                     << " by insertSegmentClone()");
     }
 
-    const TValMapBidir &valMapGt = (isGt1)
-        ? ctx.valMap1
-        : ctx.valMap2;
-
-    const bool isMayExist = !!off;
-
-    SchedItem cloneItem;
-    while (ctx.wlSegInsert.next(cloneItem)) {
-        const TValId v1 = cloneItem.fld1.value();
-        const TValId v2 = cloneItem.fld2.value();
-
-        const TValId valGt = (isGt1) ? v1 : v2;
-        const TValId valLt = (isGt2) ? v1 : v2;
-        CL_BREAK_IF(VAL_INVALID != valLt);
-        (void) valLt;
-
-        if (nextGt == valGt)
-            // do not go beyond the segment, just follow its data
-            continue;
-
-        const EValueTarget code = shGt.valTarget(valGt);
-        if (isAnyDataArea(code)) {
-            const TObjId objGt = shGt.objByAddr(valGt);
-
-            if (isMayExist && OK_DLS == shGt.objKind(objGt))
-                // FIXME: temporarily not supported
-                goto fail;
-
-            if (segmentCloneCore(&objDst, ctx, shGt, objGt, cloneItem.ldiff,
-                        action, /* off */ 0))
-            {
-                const IR::Range off = shGt.valOffsetRange(valGt);
-                const ETargetSpecifier ts = shGt.targetSpec(valGt);
-                const TValId vDstBase = ctx.dst.addrOfTarget(objDst, ts);
-                const TValId vDst = ctx.dst.valByRange(vDstBase, off);
-                if (cloneItem.fldDst.isValidHandle())
-                    cloneItem.fldDst.setValue(vDst);
-                continue;
-            }
-        }
-        else {
-            if (cloneSpecialValue(ctx, shGt, valGt, valMapGt, cloneItem, code))
-                continue;
-        }
-
-fail:
-        // clone failed
-        *pResult = false;
-        return true;
-    }
-
-    *pResult = true;
+    *pResult = clonePendingValues(ctx, nextGt, action, /* isMayExist */ !!off);
     return true;
 }
 
