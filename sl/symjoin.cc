@@ -1535,7 +1535,8 @@ bool offRangeFallback(
 bool mapTargetAddress(
         SymJoinCtx              &ctx,
         const SchedItem         &item,
-        const TObjId             objDst)
+        const TObjId             objDst,
+        const bool               preserveValMap = false)
 {
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
@@ -1556,7 +1557,7 @@ bool mapTargetAddress(
         return false;
 
     const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, off1 /* = off2 */);
-    if (!defineValueMapping(ctx, vDst, v1, v2))
+    if (/* XXX */ !preserveValMap && !defineValueMapping(ctx, vDst, v1, v2))
         return false;
 
     // write the resulting value to item.fldDst
@@ -1912,7 +1913,7 @@ void resolveMayExist(
         *isAbs2 = false;
 }
 
-bool joinAbstractValues(
+bool segInsertionFallback(
         bool                    *pResult,
         SymJoinCtx              &ctx,
         const SchedItem         &item)
@@ -1920,36 +1921,20 @@ bool joinAbstractValues(
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
 
+    const EValueTarget code1 = ctx.sh1.valTarget(v1);
+    const EValueTarget code2 = ctx.sh2.valTarget(v2);
+    if (VT_RANGE == code1 || VT_RANGE == code2)
+        // segInsertionFallback() does not support VT_RANGE values for now
+        return false;
+
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
     bool isAbs1 = isAbstractObject(ctx.sh1, obj1);
     bool isAbs2 = isAbstractObject(ctx.sh2, obj2);
-    if (!isAbs1 && !isAbs2)
-        return false;
-
     resolveMayExist(ctx, &isAbs1, &isAbs2, obj1, obj2);
 
-    const TProtoLevel ldiff = item.ldiff;
     EJoinStatus action;
-    TObjId objDst;
-
-    if (isAbs1 && isAbs2
-            && joinObjects(pResult, &objDst, ctx, obj1, obj2, ldiff))
-    {
-        action = JS_USE_ANY;
-        goto done;
-    }
-
-    if (!isAbs2 && joinObjects(pResult, &objDst, ctx, obj1, obj2, ldiff)) {
-        action = JS_USE_SH1;
-        goto done;
-    }
-
-    if (!isAbs1 && joinObjects(pResult, &objDst, ctx, obj1, obj2, ldiff)) {
-        action = JS_USE_SH2;
-        goto done;
-    }
 
     if (isAbs1 && insertSegmentClone(pResult, ctx, item, (action = JS_USE_SH1)))
         goto done;
@@ -1957,54 +1942,30 @@ bool joinAbstractValues(
     if (isAbs2 && insertSegmentClone(pResult, ctx, item, (action = JS_USE_SH2)))
         goto done;
 
-    // we have failed
-    *pResult = false;
+    // segInsertionFallback() not applicable
+    return false;
+
 done:
+    if (*pResult)
+        *pResult = updateJoinStatus(ctx, action);
+
     if (!*pResult)
         return true;
 
-    if (!updateJoinStatus(ctx, action)) {
-        *pResult = false;
-        return true;
-    }
-
-    if (VT_RANGE == ctx.sh1.valTarget(v1) || VT_RANGE == ctx.sh2.valTarget(v2))
-    {
-        // we came here from a VT_RANGE value, remember to join the entry
-        *pResult = joinRangeValues(ctx, item);
-        return true;
-    }
-
-    const TObjId objDstBy1 = roMapLookup(ctx.objMap1[DIR_LTR], obj1);
-    const TObjId objDstBy2 = roMapLookup(ctx.objMap2[DIR_LTR], obj2);
-
-    const TOffset off1 = ctx.sh1.valOffset(v1);
-    const TOffset off2 = ctx.sh2.valOffset(v2);
-
+    TObjId objDst;
     TOffset offDst;
     ETargetSpecifier tsDst;
 
     switch (action) {
-        case JS_USE_ANY:
-            CL_BREAK_IF(objDstBy1 != objDstBy2);
-            CL_BREAK_IF(off1 != off2);
-            objDst = objDstBy1 /* = objDstBy2 */;
-            offDst = off1      /* = off2 */;
-            if (!joinTargetSpec(&tsDst, ctx, v1, v2)) {
-                *pResult = false;
-                return true;
-            }
-            break;
-
         case JS_USE_SH1:
-            objDst = objDstBy1;
-            offDst = off1;
+            objDst = roMapLookup(ctx.objMap1[DIR_LTR], obj1);
+            offDst = ctx.sh1.valOffset(v1);
             tsDst = ctx.sh1.targetSpec(v1);
             break;
 
         case JS_USE_SH2:
-            objDst = objDstBy2;
-            offDst = off2;
+            objDst = roMapLookup(ctx.objMap2[DIR_LTR], obj2);
+            offDst = ctx.sh2.valOffset(v2);
             tsDst = ctx.sh2.targetSpec(v2);
             break;
 
@@ -2302,8 +2263,20 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     if (checkObjectMapping(ctx, obj1, obj2, /* allowUnkn */ false, &objDst))
         return mapTargetAddress(ctx, item, objDst);
 
-    if (joinAbstractValues(&result, ctx, item))
-        return result;
+    const bool isAbs1 = isAbstractObject(ctx.sh1, obj1);
+    const bool isAbs2 = isAbstractObject(ctx.sh2, obj2);
+    const bool haveAbs = isAbs1 || isAbs2;
+
+    if (haveAbs) {
+        if (joinObjects(&result, &objDst, ctx, obj1, obj2, item.ldiff))
+            return result && mapTargetAddress(ctx, item, objDst, /* XXX */ true);
+
+        if (segInsertionFallback(&result, ctx, item))
+            return result;
+
+        // failed to join abstract targets
+        return false;
+    }
 
     if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true)) {
         if (mayExistFallback(&result, ctx, item, JS_USE_SH1))
