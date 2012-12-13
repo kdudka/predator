@@ -2299,20 +2299,18 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     if (joinAbstractValues(&result, ctx, item))
         return result;
 
-    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true)) {
-        if (joinObjects(&result, &objDst, ctx, obj1, obj2, item.ldiff,
-                    /* firstTryReadOnly */ false)
-                && result)
-            return mapTargetAddress(ctx, item, objDst);
+    if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true)) {
+        if (mayExistFallback(&result, ctx, item, JS_USE_SH1))
+            return result;
 
-        return false;
+        if (mayExistFallback(&result, ctx, item, JS_USE_SH2))
+            return result;
     }
 
-    if (mayExistFallback(&result, ctx, item, JS_USE_SH1))
-        return result;
-
-    if (mayExistFallback(&result, ctx, item, JS_USE_SH2))
-        return result;
+    if (joinObjects(&result, &objDst, ctx, obj1, obj2, item.ldiff,
+                /* firstTryReadOnly */ false)
+            && result)
+        return mapTargetAddress(ctx, item, objDst);
 
     return false;
 }
