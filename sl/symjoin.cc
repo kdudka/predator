@@ -1565,17 +1565,17 @@ bool mapAsymTarget(
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
 
-    TOffset offDst;
+    IR::Range offDst;
     ETargetSpecifier tsDst;
 
     switch (action) {
         case JS_USE_SH1:
-            offDst = ctx.sh1.valOffset(v1);
+            offDst = ctx.sh1.valOffsetRange(v1);
             tsDst = ctx.sh1.targetSpec(v1);
             break;
 
         case JS_USE_SH2:
-            offDst = ctx.sh2.valOffset(v2);
+            offDst = ctx.sh2.valOffsetRange(v2);
             tsDst = ctx.sh2.targetSpec(v2);
             break;
 
@@ -1585,7 +1585,8 @@ bool mapAsymTarget(
     }
 
     // write the resulting value to item.fldDst
-    const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
+    const TValId vDstBase = ctx.dst.addrOfTarget(objDst, tsDst);
+    const TValId vDst = ctx.dst.valByRange(vDstBase, offDst);
     return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
@@ -1643,17 +1644,21 @@ bool segmentCloneCore(
 }
 
 bool cloneSpecialValue(
-        SymJoinCtx              &ctx,
-        SymHeap                 &shGt,
+        SymJoinCtx             &ctx,
+        SymHeap                &shGt,
         const TValId            valGt,
-        const TValMapBidir      &valMapGt,
-        const SchedItem         &itemToClone,
-        EValueTarget            code)
+        const SchedItem        &itemToClone,
+        const EJoinStatus       action)
 {
+    const TValMapBidir &valMapGt = (JS_USE_SH1 == action)
+        ? ctx.valMap1
+        : ctx.valMap2;
+
     const TValId rootGt = shGt.valRoot(valGt);
     EValueOrigin vo = shGt.valOrigin(valGt);
     TValId vDst;
 
+    EValueTarget code = shGt.valTarget(valGt);
     switch (code) {
         case VT_RANGE:
             if (hasKey(valMapGt[DIR_LTR], rootGt))
@@ -1687,10 +1692,6 @@ bool clonePendingValues(
 {
     SymHeap &shGt = ((JS_USE_SH1 == action) ? ctx.sh1 : ctx.sh2);
 
-    const TValMapBidir &valMapGt = (JS_USE_SH1 == action)
-        ? ctx.valMap1
-        : ctx.valMap2;
-
     SchedItem cloneItem;
     while (ctx.wlSegInsert.next(cloneItem)) {
         const TValId v1 = cloneItem.fld1.value();
@@ -1705,33 +1706,25 @@ bool clonePendingValues(
             // do not go beyond the segment, just follow its data
             continue;
 
+        const TObjId objGt = shGt.objByAddr(valGt);
+        if (isMayExist && OK_DLS == shGt.objKind(objGt))
+            // FIXME: temporarily not supported
+            return false;
+
         const EValueTarget code = shGt.valTarget(valGt);
         if (isAnyDataArea(code)) {
-            const TObjId objGt = shGt.objByAddr(valGt);
-            if (isMayExist && OK_DLS == shGt.objKind(objGt))
-                // FIXME: temporarily not supported
+            TObjId objDst;
+            if (!segmentCloneCore(&objDst, ctx, shGt, objGt, cloneItem.ldiff,
+                        action, /* off */ 0))
                 return false;
 
-            TObjId objDst;
-            if (segmentCloneCore(&objDst, ctx, shGt, objGt, cloneItem.ldiff,
-                        action, /* off */ 0))
-            {
-                const IR::Range off = shGt.valOffsetRange(valGt);
-                const ETargetSpecifier ts = shGt.targetSpec(valGt);
-                const TValId vDstBase = ctx.dst.addrOfTarget(objDst, ts);
-                const TValId vDst = ctx.dst.valByRange(vDstBase, off);
-                if (cloneItem.fldDst.isValidHandle())
-                    cloneItem.fldDst.setValue(vDst);
-                continue;
-            }
+            if (!mapAsymTarget(ctx, cloneItem, objDst, action))
+                return false;
         }
         else {
-            if (cloneSpecialValue(ctx, shGt, valGt, valMapGt, cloneItem, code))
-                continue;
+            if (!cloneSpecialValue(ctx, shGt, valGt, cloneItem, action))
+                return false;
         }
-
-        // clone failed
-        return false;
     }
 
     return true;
