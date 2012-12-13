@@ -1555,27 +1555,26 @@ bool mapTargetAddress(
 
 bool mapAsymTarget(
         SymJoinCtx             &ctx,
-        const FldHandle        &fldDst,
-        const TValId            v1,
-        const TValId            v2,
+        const SchedItem        &item,
+        const TObjId            objDst,
         const EJoinStatus       action)
 {
     if (!updateJoinStatus(ctx, action))
         return false;
 
-    TObjId objDst;
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
     TOffset offDst;
     ETargetSpecifier tsDst;
 
     switch (action) {
         case JS_USE_SH1:
-            objDst = roMapLookup(ctx.objMap1[DIR_LTR], ctx.sh1.objByAddr(v1));
             offDst = ctx.sh1.valOffset(v1);
             tsDst = ctx.sh1.targetSpec(v1);
             break;
 
         case JS_USE_SH2:
-            objDst = roMapLookup(ctx.objMap2[DIR_LTR], ctx.sh2.objByAddr(v2));
             offDst = ctx.sh2.valOffset(v2);
             tsDst = ctx.sh2.targetSpec(v2);
             break;
@@ -1587,7 +1586,7 @@ bool mapAsymTarget(
 
     // write the resulting value to item.fldDst
     const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
-    return writeJoinedValue(ctx, fldDst, vDst, v1, v2);
+    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
 /// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
@@ -1600,6 +1599,10 @@ bool segmentCloneCore(
         const EJoinStatus           action,
         const BindingOff           *off)
 {
+    if (!shGt.isValid(objGt))
+        // not valid target
+        return false;
+
     const TObjMapBidir &objMapGt = (JS_USE_SH1 == action)
         ? ctx.objMap1
         : ctx.objMap2;
@@ -1610,10 +1613,6 @@ bool segmentCloneCore(
 
     const TObjMap &objMapGtLtr = objMapGt[DIR_LTR];
     const TObjMap &objMapLtRtl = objMapLt[DIR_RTL];
-
-    if (!shGt.isValid(objGt))
-        // not valid target
-        return false;
 
     const TObjMap::const_iterator it = objMapGtLtr.find(objGt);
     if (objMapGtLtr.end() != it) {
@@ -1636,15 +1635,10 @@ bool segmentCloneCore(
     const TObjId obj1 = (JS_USE_SH1 == action) ? objGt : OBJ_INVALID;
     const TObjId obj2 = (JS_USE_SH2 == action) ? objGt : OBJ_INVALID;
 
-    if (!updateJoinStatus(ctx, action))
-        return false;
-
     // clone the object
     if (joinObjects(pObjDst, ctx, obj1, obj2, ldiff, off))
         return true;
 
-    SJ_DEBUG("<-- insertSegmentClone: failed to create object "
-             << SJ_OBJP(obj1, obj2));
     return false;
 }
 
@@ -1796,16 +1790,21 @@ bool insertSegmentClone(
         ctx.allowThreeWay = false;
 #endif
 
+    if (!updateJoinStatus(ctx, action)) {
+        *pResult = false;
+        return true;
+    }
+
     TObjId objDst;
     if (!segmentCloneCore(&objDst, ctx, shGt, seg, item.ldiff, action, off)) {
         *pResult = false;
         return true;
     }
-    const TValId valGt = (isGt1) ? v1 : v2;
-    const TOffset refOff = shGt.valOffset(valGt);
-    const ETargetSpecifier ts = shGt.targetSpec(valGt);
-    const TValId vDst = ctx.dst.addrOfTarget(objDst, ts, refOff);
-    item.fldDst.setValue(vDst);
+
+    if (!mapAsymTarget(ctx, item, objDst, action)) {
+        *pResult = false;
+        return true;
+    }
 
     if (!isObjOrNull) {
         // follow the next pointer
@@ -1869,19 +1868,11 @@ bool segInsertionFallback(
     bool isAbs2 = isAbstractObject(ctx.sh2, obj2);
     resolveMayExist(ctx, &isAbs1, &isAbs2, obj1, obj2);
 
-    if (isAbs1 && insertSegmentClone(pResult, ctx, item, JS_USE_SH1)) {
-        if (*pResult)
-            *pResult = mapAsymTarget(ctx, item.fldDst, v1, v2, JS_USE_SH1);
-
+    if (isAbs1 && insertSegmentClone(pResult, ctx, item, JS_USE_SH1))
         return true;
-    }
 
-    if (isAbs2 && insertSegmentClone(pResult, ctx, item, JS_USE_SH2)) {
-        if (*pResult)
-            *pResult = mapAsymTarget(ctx, item.fldDst, v1, v2, JS_USE_SH2);
-
+    if (isAbs2 && insertSegmentClone(pResult, ctx, item, JS_USE_SH2))
         return true;
-    }
 
     // segInsertionFallback() not applicable
     return false;
