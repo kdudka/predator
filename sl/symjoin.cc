@@ -1413,7 +1413,7 @@ bool joinUniBlocks(
 static const BindingOff ObjOrNull(OK_OBJ_OR_NULL);
 
 /// (NULL == pObjDst) means dry-run, (NULL != off) means 0..1 abstract object
-bool createObject(
+bool joinObjects(
         TObjId                 *pObjDst,
         SymJoinCtx             &ctx,
         const TObjId            obj1,
@@ -1456,7 +1456,7 @@ bool createObject(
     if (offMayExist) {
         // we are asked to introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL
         if (OK_REGION != kind && !isMayExistObj(kind))
-            CL_BREAK_IF("invalid call of createObject()");
+            CL_BREAK_IF("invalid call of joinObjects()");
 
         if (ObjOrNull == *offMayExist)
             kind = OK_OBJ_OR_NULL;
@@ -1513,7 +1513,7 @@ bool objMatchLookAhead(
     if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
         return false;
 
-    if (!createObject(/* dry-run */ 0, ctx, obj1, obj2, ldiff))
+    if (!joinObjects(/* dry-run */ 0, ctx, obj1, obj2, ldiff))
         // dry-run creation failed
         return false;
 
@@ -1598,24 +1598,6 @@ bool mapAsymTarget(
     return writeJoinedValue(ctx, fldDst, vDst, v1, v2);
 }
 
-bool joinObjects(
-        bool                   *pResult,
-        TObjId                 *pObjDst,
-        SymJoinCtx             &ctx,
-        const TObjId            obj1,
-        const TObjId            obj2,
-        const TProtoLevel       ldiff)
-{
-    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true)) {
-        *pResult = false;
-        return true;
-    }
-
-    // go ahead, try it read-write!
-    *pResult = createObject(pObjDst, ctx, obj1, obj2, ldiff);
-    return true;
-}
-
 /// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool segmentCloneCore(
         TObjId                     *pObjDst,
@@ -1663,7 +1645,7 @@ bool segmentCloneCore(
         return false;
 
     // clone the object
-    if (createObject(pObjDst, ctx, obj1, obj2, ldiff, off))
+    if (joinObjects(pObjDst, ctx, obj1, obj2, ldiff, off))
         return true;
 
     SJ_DEBUG("<-- insertSegmentClone: failed to create object "
@@ -2218,9 +2200,9 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     const bool haveAbs = isAbs1 || isAbs2;
 
     if (haveAbs) {
-        if (objMatchLookAhead(ctx, obj1, obj2, item.ldiff)
-                && joinObjects(&result, &objDst, ctx, obj1, obj2, item.ldiff))
-            return result && mapTargetAddress(ctx, item, objDst, /* XXX */true);
+        if (objMatchLookAhead(ctx, obj1, obj2, item.ldiff))
+            return joinObjects(&objDst, ctx, obj1, obj2, item.ldiff)
+                && mapTargetAddress(ctx, item, objDst, /* XXX */true);
 
         if (segInsertionFallback(&result, ctx, item))
             return result;
@@ -2237,7 +2219,10 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
             return result;
     }
 
-    if (joinObjects(&result, &objDst, ctx, obj1, obj2, item.ldiff) && result)
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknown */ true))
+        return false;
+
+    if (joinObjects(&objDst, ctx, obj1, obj2, item.ldiff))
         return mapTargetAddress(ctx, item, objDst);
 
     return false;
