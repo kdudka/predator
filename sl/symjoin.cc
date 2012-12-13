@@ -1610,45 +1610,25 @@ bool joinObjects(
     if (firstTryReadOnly && !objMatchLookAhead(ctx, obj1, obj2, ldiff))
         return false;
 
-    EObjKind kind;
-    if (!joinObjKind(&kind, ctx, obj1, obj2))
-        return false;
-
-    if (isObjWithBinding(kind)) {
-        BindingOff off;
-        if (!joinSegBinding(&off, ctx, obj1, obj2))
-            return false;
-
-        const TValId valNext1 = valOfPtr(ctx.sh1, obj1, off.next);
-        const TValId valNext2 = valOfPtr(ctx.sh2, obj2, off.next);
-        if (firstTryReadOnly && !checkValueMapping(ctx, valNext1, valNext2,
-                               /* allowUnknownMapping */ true))
-            return false;
-
-        if (firstTryReadOnly && OK_DLS == kind) {
-            const TValId valPrev1 = valOfPtr(ctx.sh1, obj1, off.prev);
-            const TValId valPrev2 = valOfPtr(ctx.sh2, obj2, off.prev);
-            if (!checkValueMapping(ctx, valPrev1, valPrev2,
-                                   /* allowUnknownMapping */ true))
-                return false;
-        }
+    if (ctx.joiningData() && obj1 == obj2) {
+        // we are on the way from joinData() and hit shared data
+        *pObjDst = obj1 /* = obj2 */;
+        *pResult = defineObjectMapping(ctx, obj1, obj2, obj1 /* = obj2 */);
+        return true;
     }
 
-    // go ahead, try it read-write!
-    SJ_DEBUG(">>> joinObjects" << SJ_OBJP(obj1, obj2));
     if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true)) {
         *pResult = false;
         return true;
     }
 
-    if (ctx.joiningData() && obj1 == obj2) {
-        // we are on the way from joinData() and hit shared data
-        *pObjDst = obj1 /* = obj2 */;
-        *pResult = defineObjectMapping(ctx, obj1, obj2, obj1 /* = obj2 */);
-    }
-    else
-        *pResult = createObject(pObjDst, ctx, obj1, obj2, ldiff);
+    EObjKind kind;
+    if (!joinObjKind(&kind, ctx, obj1, obj2))
+        return false;
 
+    // go ahead, try it read-write!
+    SJ_DEBUG(">>> joinObjects" << SJ_OBJP(obj1, obj2));
+    *pResult = createObject(pObjDst, ctx, obj1, obj2, ldiff);
     if (!*pResult || !isObjWithBinding(kind))
         return true;
 
