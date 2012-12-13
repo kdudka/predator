@@ -54,6 +54,11 @@ void debugSymJoin(const bool enable)
     ::debuggingSymJoin = enable;
 }
 
+#define SJ_FLDP(fldDst, fldGt)          \
+    "(fldDst = #" << fldDst.fieldId()   \
+    << ", fldGt = #" << fldGt.fieldId() \
+    << ")"
+
 #define SJ_FLDT(fldDst, fld1, fld2)     \
     "(fldDst = #" << fldDst.fieldId()   \
     << ", fld1 = #" << fld1.fieldId()   \
@@ -877,12 +882,10 @@ struct ObjJoinVisitor {
     const TProtoLevel       ldiffOrig;
     TFldSet                 blackList1;
     TFldSet                 blackList2;
-    bool                    noFollow;
 
     ObjJoinVisitor(SymJoinCtx &ctx_, const TProtoLevel ldiff_):
         ctx(ctx_),
-        ldiffOrig(ldiff_),
-        noFollow(false)
+        ldiffOrig(ldiff_)
     {
     }
 
@@ -965,6 +968,88 @@ bool joinFields(
 
     // guide the visitors through them
     return traverseLiveFieldsGeneric<3>(heaps, objs, objVisitor);
+}
+
+class CloneVisitor {
+    private:
+        SymJoinCtx             &ctx_;
+        const bool              isGt1_;
+        const bool              isGt2_;
+
+    public:
+        CloneVisitor(SymJoinCtx &ctx, const EJoinStatus action):
+            ctx_(ctx),
+            isGt1_(JS_USE_SH1 == action),
+            isGt2_(JS_USE_SH2 == action)
+        {
+        }
+
+        bool operator()(const FldHandle item[2]);
+};
+
+bool CloneVisitor::operator()(const FldHandle item[2]) {
+    const FldHandle &fldDst = item[0];
+    const FldHandle &fldGt  = item[1];
+
+    const TValId valGt = fldGt.value();
+    if (VAL_NULL == valGt) {
+        // VAL_NULL always maps to VAL_NULL
+        fldDst.setValue(VAL_NULL);
+        return true;
+    }
+
+    const TObjMap &om = (isGt1_) ? ctx_.objMap1[0] : ctx_.objMap2[0];
+    const SymHeap &shGt = (isGt1_) ? ctx_.sh1 : ctx_.sh2;
+    const EValueTarget code = shGt.valTarget(valGt);
+    if (VT_RANGE != code) {
+        const TObjId objGt = shGt.objByAddr(valGt);
+        const TObjMap::const_iterator it = om.find(objGt);
+        if (om.end() != it) {
+            const TObjId objDst = it->second;
+            const TOffset off = shGt.valOffset(valGt);
+            const ETargetSpecifier ts = shGt.targetSpec(valGt);
+            const TValId valDst = ctx_.dst.addrOfTarget(objDst, ts, off);
+            fldDst.setValue(valDst);
+            return true;
+        }
+    }
+
+#if SE_ALLOW_THREE_WAY_JOIN < 3
+    if (!ctx_.joiningData())
+        return false;
+#endif
+
+    // TODO: drop this!
+    const FldHandle fld1 = (isGt1_) ? fldGt : FldHandle(FLD_INVALID);
+    const FldHandle fld2 = (isGt2_) ? fldGt : FldHandle(FLD_INVALID);
+
+    const SchedItem sItem(fldDst, fld1, fld2, /* ldiff */ 0);
+    if (ctx_.wlSegInsert.schedule(sItem))
+        SJ_DEBUG("+++ " << SJ_FLDP(fldDst, fldGt));
+
+    return true;
+}
+
+bool followClonedObject(
+        SymJoinCtx             &ctx,
+        const TObjId            objDst,
+        const TObjId            objGt,
+        const EJoinStatus       action)
+{
+    const TObjId objs[] = {
+        objDst,
+        objGt,
+    };
+
+    SymHeap *const heaps[] = {
+        &ctx.dst,
+        (JS_USE_SH1 == action)
+            ? &ctx.sh1
+            : &ctx.sh2
+    };
+
+    CloneVisitor objVisitor(ctx, action);
+    return traverseLiveFieldsGeneric<2>(heaps, objs, objVisitor);
 }
 
 bool joinObjType(
@@ -1493,6 +1578,10 @@ TObjId /* objDst */ cloneObject(
         // preserve estimated type-info
         ctx.dst.objSetEstimatedType(objDst, clt);
 
+    if (ctx.joiningData())
+        // cloned object is always a prototype when joining data
+        ctx.protos.insert(objDst);
+
     // initialize nesting level
     TProtoLevel protoLevel = shGt.objProtoLevel(objGt);
     protoLevel += ((JS_USE_SH1 == action) ? ctx.l1Drift : ctx.l2Drift);
@@ -1687,7 +1776,10 @@ bool segmentCloneCore(
              ", action = " << action);
 
     const TObjId objDst = cloneObject(ctx, objGt, action, off);
-    if (!joinFields(ctx, objDst, obj1, obj2, item.ldiff))
+    if (!defineObjectMapping(ctx, objDst, obj1, obj2))
+        return false;
+
+    if (!followClonedObject(ctx, objDst, objGt, action))
         return false;
 
     if (!mapAsymTarget(ctx, item, objDst, action))
