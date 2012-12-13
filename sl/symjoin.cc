@@ -1564,6 +1564,43 @@ bool mapTargetAddress(
     return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
+bool mapAsymTarget(
+        SymJoinCtx             &ctx,
+        const FldHandle        &fldDst,
+        const TValId            v1,
+        const TValId            v2,
+        const EJoinStatus       action)
+{
+    if (!updateJoinStatus(ctx, action))
+        return false;
+
+    TObjId objDst;
+    TOffset offDst;
+    ETargetSpecifier tsDst;
+
+    switch (action) {
+        case JS_USE_SH1:
+            objDst = roMapLookup(ctx.objMap1[DIR_LTR], ctx.sh1.objByAddr(v1));
+            offDst = ctx.sh1.valOffset(v1);
+            tsDst = ctx.sh1.targetSpec(v1);
+            break;
+
+        case JS_USE_SH2:
+            objDst = roMapLookup(ctx.objMap2[DIR_LTR], ctx.sh2.objByAddr(v2));
+            offDst = ctx.sh2.valOffset(v2);
+            tsDst = ctx.sh2.targetSpec(v2);
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of mapAsymTarget()");
+            return false;
+    }
+
+    // write the resulting value to item.fldDst
+    const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
+    return writeJoinedValue(ctx, fldDst, vDst, v1, v2);
+}
+
 bool joinObjects(
         bool                   *pResult,
         TObjId                 *pObjDst,
@@ -1934,51 +1971,22 @@ bool segInsertionFallback(
     bool isAbs2 = isAbstractObject(ctx.sh2, obj2);
     resolveMayExist(ctx, &isAbs1, &isAbs2, obj1, obj2);
 
-    EJoinStatus action;
+    if (isAbs1 && insertSegmentClone(pResult, ctx, item, JS_USE_SH1)) {
+        if (*pResult)
+            *pResult = mapAsymTarget(ctx, item.fldDst, v1, v2, JS_USE_SH1);
 
-    if (isAbs1 && insertSegmentClone(pResult, ctx, item, (action = JS_USE_SH1)))
-        goto done;
+        return true;
+    }
 
-    if (isAbs2 && insertSegmentClone(pResult, ctx, item, (action = JS_USE_SH2)))
-        goto done;
+    if (isAbs2 && insertSegmentClone(pResult, ctx, item, JS_USE_SH2)) {
+        if (*pResult)
+            *pResult = mapAsymTarget(ctx, item.fldDst, v1, v2, JS_USE_SH2);
+
+        return true;
+    }
 
     // segInsertionFallback() not applicable
     return false;
-
-done:
-    if (*pResult)
-        *pResult = updateJoinStatus(ctx, action);
-
-    if (!*pResult)
-        return true;
-
-    TObjId objDst;
-    TOffset offDst;
-    ETargetSpecifier tsDst;
-
-    switch (action) {
-        case JS_USE_SH1:
-            objDst = roMapLookup(ctx.objMap1[DIR_LTR], obj1);
-            offDst = ctx.sh1.valOffset(v1);
-            tsDst = ctx.sh1.targetSpec(v1);
-            break;
-
-        case JS_USE_SH2:
-            objDst = roMapLookup(ctx.objMap2[DIR_LTR], obj2);
-            offDst = ctx.sh2.valOffset(v2);
-            tsDst = ctx.sh2.targetSpec(v2);
-            break;
-
-        default:
-            CL_BREAK_IF("joinObjects() is broken");
-            *pResult = false;
-            return true;
-    }
-
-    // write the resulting value to item.fldDst
-    const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, offDst);
-    *pResult = writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
-    return true;
 }
 
 bool offRangeFallback(
