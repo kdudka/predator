@@ -73,19 +73,6 @@ enum {
     DIR_RTL = 1
 };
 
-template <class T>
-class WorkListWithUndo: public WorkList<T> {
-    private:
-        typedef WorkList<T> TBase;
-
-    public:
-        /// push an @b already @b processed item back to WorkList
-        void undo(const T &item) {
-            CL_BREAK_IF(!hasKey(TBase::seen_, item));
-            TBase::todo_.push(item);
-        }
-};
-
 struct SchedItem {
     FldHandle           fldDst;
     FldHandle           fld1;
@@ -126,7 +113,7 @@ inline bool operator<(const SchedItem &a, const SchedItem &b)
     return (a.ldiff < b.ldiff);
 }
 
-typedef WorkListWithUndo<SchedItem>                             TWorkList;
+typedef WorkList<SchedItem>                                     TWorkList;
 
 typedef TObjMap                                                 TObjMapBidir[2];
 
@@ -148,6 +135,7 @@ struct SymJoinCtx {
     TObjMapBidir                objMap2;
 
     TWorkList                   wl;
+    TWorkList                   wlSegInsert;
     EJoinStatus                 status;
     bool                        forceThreeWay;
     bool                        allowThreeWay;
@@ -872,7 +860,11 @@ bool joinFreshItem(
             return result;
     }
 
-    if (ctx.wl.schedule(item))
+    TWorkList &wl = (segClone)
+        ? ctx.wlSegInsert
+        : ctx.wl;
+
+    if (wl.schedule(item))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
                 << " <- " << SJ_FLDT(item.fldDst, fld1, fld2)
                 << ", ldiff = " << item.ldiff);
@@ -1717,7 +1709,6 @@ bool insertSegmentClone(
 {
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
-    SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
 
     const bool isGt1 = (JS_USE_SH1 == action);
     const bool isGt2 = (JS_USE_SH2 == action);
@@ -1750,10 +1741,10 @@ bool insertSegmentClone(
                 (isGt2) ? nextGt : nextLt,
                 /* allowUnknownMapping */ true))
     {
-        SJ_DEBUG("<-- insertSegmentClone: value mismatch "
-                 "(nextLt = #" << nextLt << ", nextGt = #" << nextGt << ")");
         return false;
     }
+
+    SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
 
 #if SE_ALLOW_THREE_WAY_JOIN < 3
     if (!ctx.joiningData() && objMinLength(shGt, seg))
@@ -1771,20 +1762,17 @@ bool insertSegmentClone(
 
     const bool isMayExist = !!off;
 
-    scheduleSegAddr(ctx.wl, action, item);
+    scheduleSegAddr(ctx.wlSegInsert, action, item);
 
     SchedItem cloneItem;
-    while (ctx.wl.next(cloneItem)) {
+    while (ctx.wlSegInsert.next(cloneItem)) {
         const TValId v1 = cloneItem.fld1.value();
         const TValId v2 = cloneItem.fld2.value();
 
         const TValId valGt = (isGt1) ? v1 : v2;
         const TValId valLt = (isGt2) ? v1 : v2;
-        if (VAL_INVALID != valLt) {
-            // process the rest of ctx.wl rather in joinPendingValues()
-            ctx.wl.undo(cloneItem);
-            break;
-        }
+        CL_BREAK_IF(VAL_INVALID != valLt);
+        (void) valLt;
 
         if (nextGt == valGt)
             // do not go beyond the segment, just follow its data
