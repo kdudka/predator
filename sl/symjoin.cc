@@ -2272,39 +2272,6 @@ bool mayExistFallback(
     return true;
 }
 
-bool followValuePair(
-        bool                    *pResult,
-        SymJoinCtx              &ctx,
-        const SchedItem         &item)
-{
-    const TValId v1 = item.fld1.value();
-    const TValId v2 = item.fld2.value();
-
-    const TObjId obj1 = ctx.sh1.objByAddr(v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(v2);
-
-    TObjId objDst;
-    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnkn */ false, &objDst)) {
-        if (joinAbstractValues(pResult, ctx, item))
-            return true;
-
-        if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true))
-            return false;
-
-        if (!joinObjects(pResult, &objDst, ctx, obj1, obj2, item.ldiff,
-                    /* firstTryReadOnly */ false)
-                || !*pResult)
-        {
-            *pResult = false;
-            return true;
-        }
-    }
-
-    // write the resulting value to item.fldDst
-    *pResult = mapTargetAddress(ctx, item, objDst);
-    return true;
-}
-
 bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
 {
     const TValId v1 = item.fld1.value();
@@ -2322,8 +2289,24 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     if (joinValuesByCode(&result, ctx, item))
         return result;
 
-    if (followValuePair(&result, ctx, item))
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+
+    TObjId objDst;
+    if (checkObjectMapping(ctx, obj1, obj2, /* allowUnkn */ false, &objDst))
+        return mapTargetAddress(ctx, item, objDst);
+
+    if (joinAbstractValues(&result, ctx, item))
         return result;
+
+    if (checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true)) {
+        if (joinObjects(&result, &objDst, ctx, obj1, obj2, item.ldiff,
+                    /* firstTryReadOnly */ false)
+                && result)
+            return mapTargetAddress(ctx, item, objDst);
+
+        return false;
+    }
 
     if (mayExistFallback(&result, ctx, item, JS_USE_SH1))
         return result;
