@@ -1404,14 +1404,13 @@ bool joinUniBlocks(
 
 static const BindingOff ObjOrNull(OK_OBJ_OR_NULL);
 
-/// (NULL == pObjDst) means dry-run, (NULL != off) means 0..1 abstract object
+/// (NULL == pObjDst) means dry-run
 bool joinObjects(
         TObjId                 *pObjDst,
         SymJoinCtx             &ctx,
         const TObjId            obj1,
         const TObjId            obj2,
-        const TProtoLevel       ldiff,
-        const BindingOff       *offMayExist = 0)
+        const TProtoLevel       ldiff)
 {
     bool valid;
     if (!joinObjValidity(&valid, ctx, obj1, obj2))
@@ -1445,21 +1444,6 @@ bool joinObjects(
         // do not create the object
         return true;;
 
-    if (offMayExist) {
-        // we are asked to introduce OK_SEE_THROUGH/OK_OBJ_OR_NULL
-        if (OK_REGION != kind && !isMayExistObj(kind))
-            CL_BREAK_IF("invalid call of joinObjects()");
-
-        if (ObjOrNull == *offMayExist)
-            kind = OK_OBJ_OR_NULL;
-        else {
-            off = *offMayExist;
-            kind = (off.next == off.prev)
-                ? OK_SEE_THROUGH
-                : OK_SEE_THROUGH_2N;
-        }
-    }
-
     // create an image in ctx.dst
     const TObjId objDst = ctx.dst.heapAlloc(size);
 
@@ -1491,6 +1475,64 @@ bool joinObjects(
 
     *pObjDst = objDst;
     return true;
+}
+
+TObjId /* objDst */ cloneObject(
+        SymJoinCtx             &ctx,
+        const TObjId            objGt,
+        const EJoinStatus       action,
+        const BindingOff       *offMayExist)
+{
+    SymHeap &shGt = (JS_USE_SH1 == action) ? ctx.sh1 : ctx.sh2;
+
+    // create an image in ctx.dst
+    const TSizeRange size = shGt.objSize(objGt);
+    const TObjId objDst = ctx.dst.heapAlloc(size);
+    const TObjType clt = shGt.objEstimatedType(objGt);
+    if (clt)
+        // preserve estimated type-info
+        ctx.dst.objSetEstimatedType(objDst, clt);
+
+    // initialize nesting level
+    TProtoLevel protoLevel = shGt.objProtoLevel(objGt);
+    protoLevel += ((JS_USE_SH1 == action) ? ctx.l1Drift : ctx.l2Drift);
+    ctx.dst.objSetProtoLevel(objDst, protoLevel);
+
+    const bool valid = shGt.isValid(objGt);
+    if (valid) {
+        // preserve uniform blocks
+        TUniBlockMap bMapDst;
+        shGt.gatherUniformBlocks(bMapDst, objGt);
+        importBlockMap(&bMapDst, ctx.dst, shGt);
+        BOOST_FOREACH(TUniBlockMap::const_reference item, bMapDst)
+            ctx.dst.writeUniformBlock(objDst, item.second);
+    }
+    else
+        // mark the object as invalid
+        ctx.dst.objInvalidate(objDst);
+
+    EObjKind kind = shGt.objKind(objGt);
+    if (OK_REGION == kind && !offMayExist)
+        // we are done with cloning OK_REGION
+        return objDst;
+
+    BindingOff off = ObjOrNull;
+    if (offMayExist) {
+        if (ObjOrNull == *offMayExist)
+            kind = OK_OBJ_OR_NULL;
+        else {
+            off = *offMayExist;
+            kind = (off.next == off.prev)
+                ? OK_SEE_THROUGH
+                : OK_SEE_THROUGH_2N;
+        }
+    }
+    else if (OK_OBJ_OR_NULL != kind)
+        off = shGt.segBinding(objGt);
+
+    // we are cloning an abstract object
+    ctx.dst.objSetAbstract(objDst, kind, off);
+    return objDst;
 }
 
 bool objMatchLookAhead(
@@ -1644,8 +1686,8 @@ bool segmentCloneCore(
     SJ_DEBUG("+i+ insertSegmentClone: cloning object #" << objGt <<
              ", action = " << action);
 
-    TObjId objDst;
-    if (!joinObjects(&objDst, ctx, obj1, obj2, item.ldiff, off))
+    const TObjId objDst = cloneObject(ctx, objGt, action, off);
+    if (!joinFields(ctx, objDst, obj1, obj2, item.ldiff))
         return false;
 
     if (!mapAsymTarget(ctx, item, objDst, action))
@@ -1791,7 +1833,12 @@ bool insertSegmentClone(
         ctx.allowThreeWay = false;
 #endif
 
-    if (!updateJoinStatus(ctx, action)) {
+    EJoinStatus status = action;
+    if (objMinLength(shGt, seg))
+        // cloning a non-empty object implies JS_THREE_WAY
+        status = JS_THREE_WAY;
+
+    if (!updateJoinStatus(ctx, status)) {
         *pResult = false;
         return true;
     }
