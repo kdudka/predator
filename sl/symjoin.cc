@@ -118,6 +118,9 @@ inline bool operator<(const SchedItem &a, const SchedItem &b)
     return (a.ldiff < b.ldiff);
 }
 
+typedef std::pair<FldHandle /* dst */, FldHandle /* gt */>      TCloneItem;
+typedef WorkList<TCloneItem>                                    TCloneWorkList;
+
 typedef WorkList<SchedItem>                                     TWorkList;
 
 typedef TObjMap                                                 TObjMapBidir[2];
@@ -140,7 +143,6 @@ struct SymJoinCtx {
     TObjMapBidir                objMap2;
 
     TWorkList                   wl;
-    TWorkList                   wlSegInsert;
     EJoinStatus                 status;
     bool                        forceThreeWay;
     bool                        allowThreeWay;
@@ -925,12 +927,14 @@ bool joinFields(
 class CloneVisitor {
     private:
         SymJoinCtx             &ctx_;
+        TCloneWorkList         &wl_;
         const bool              isGt1_;
         const bool              isGt2_;
 
     public:
-        CloneVisitor(SymJoinCtx &ctx, const EJoinStatus action):
+        CloneVisitor(SymJoinCtx &ctx, TCloneWorkList &wl, EJoinStatus action):
             ctx_(ctx),
+            wl_(wl),
             isGt1_(JS_USE_SH1 == action),
             isGt2_(JS_USE_SH2 == action)
         {
@@ -971,12 +975,8 @@ bool CloneVisitor::operator()(const FldHandle item[2]) {
         return false;
 #endif
 
-    // TODO: drop this!
-    const FldHandle fld1 = (isGt1_) ? fldGt : FldHandle(FLD_INVALID);
-    const FldHandle fld2 = (isGt2_) ? fldGt : FldHandle(FLD_INVALID);
-
-    const SchedItem sItem(fldDst, fld1, fld2, /* ldiff */ 0);
-    if (ctx_.wlSegInsert.schedule(sItem))
+    const TCloneItem sItem(fldDst, fldGt);
+    if (wl_.schedule(sItem))
         SJ_DEBUG("+++ " << SJ_FLDP(fldDst, fldGt));
 
     return true;
@@ -984,6 +984,7 @@ bool CloneVisitor::operator()(const FldHandle item[2]) {
 
 bool followClonedObject(
         SymJoinCtx             &ctx,
+        TCloneWorkList         &wl,
         const TObjId            objDst,
         const TObjId            objGt,
         const EJoinStatus       action)
@@ -1000,7 +1001,7 @@ bool followClonedObject(
             : &ctx.sh2
     };
 
-    CloneVisitor objVisitor(ctx, action);
+    CloneVisitor objVisitor(ctx, wl, action);
     return traverseLiveFieldsGeneric<2>(heaps, objs, objVisitor);
 }
 
@@ -1676,6 +1677,7 @@ bool mapAsymTarget(
 /// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool segmentCloneCore(
         SymJoinCtx                 &ctx,
+        TCloneWorkList             &wl,
         const SchedItem            &item,
         const EJoinStatus           action,
         const BindingOff           *off = 0,
@@ -1731,7 +1733,7 @@ bool segmentCloneCore(
     if (!defineObjectMapping(ctx, objDst, obj1, obj2))
         return false;
 
-    if (!followClonedObject(ctx, objDst, objGt, action))
+    if (!followClonedObject(ctx, wl, objDst, objGt, action))
         return false;
 
     if (!mapAsymTarget(ctx, item, objDst, action))
@@ -1785,22 +1787,19 @@ bool cloneSpecialValue(
 
 bool clonePendingValues(
         SymJoinCtx             &ctx,
+        TCloneWorkList         &wl,
         const TValId            nextGt,
         const EJoinStatus       action,
         const bool              isMayExist)
 {
     SymHeap &shGt = ((JS_USE_SH1 == action) ? ctx.sh1 : ctx.sh2);
 
-    SchedItem cloneItem;
-    while (ctx.wlSegInsert.next(cloneItem)) {
-        const TValId v1 = cloneItem.fld1.value();
-        const TValId v2 = cloneItem.fld2.value();
+    TCloneItem cloneItem;
+    while (wl.next(cloneItem)) {
+        const FldHandle &fldDst = cloneItem.first;
+        const FldHandle &fldGt = cloneItem.second;
 
-        const TValId valGt = (JS_USE_SH1 == action) ? v1 : v2;
-        const TValId valLt = (JS_USE_SH2 == action) ? v1 : v2;
-        CL_BREAK_IF(VAL_INVALID != valLt);
-        (void) valLt;
-
+        const TValId valGt = fldGt.value();
         if (nextGt == valGt)
             // do not go beyond the segment, just follow its data
             continue;
@@ -1810,13 +1809,19 @@ bool clonePendingValues(
             // FIXME: temporarily not supported
             return false;
 
+        // convert TCloneItem -> SchedItem
+        const FldHandle fldInval(FLD_INVALID);
+        const FldHandle fld1 = (JS_USE_SH1 == action) ? fldGt : fldInval;
+        const FldHandle fld2 = (JS_USE_SH2 == action) ? fldGt : fldInval;
+        const SchedItem sItem(fldDst, fld1, fld2, /* ldiff */ 0);
+
         const EValueTarget code = shGt.valTarget(valGt);
         if (isAnyDataArea(code)) {
-            if (!segmentCloneCore(ctx, cloneItem, action))
+            if (!segmentCloneCore(ctx, wl, sItem, action))
                 return false;
         }
         else {
-            if (!cloneSpecialValue(ctx, shGt, valGt, cloneItem, action))
+            if (!cloneSpecialValue(ctx, shGt, valGt, sItem, action))
                 return false;
         }
     }
@@ -1887,8 +1892,9 @@ bool insertSegmentClone(
         return true;
     }
 
+    TCloneWorkList wl;
     TObjId objDst;
-    if (!segmentCloneCore(ctx, item, action, off, &objDst)) {
+    if (!segmentCloneCore(ctx, wl, item, action, off, &objDst)) {
         *pResult = false;
         return true;
     }
@@ -1906,7 +1912,7 @@ bool insertSegmentClone(
                     << " by insertSegmentClone()");
     }
 
-    *pResult = clonePendingValues(ctx, nextGt, action, /* isMayExist */ !!off);
+    *pResult = clonePendingValues(ctx, wl, nextGt, action, /* 0..1 */ !!off);
     return true;
 }
 
