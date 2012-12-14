@@ -1,8 +1,0 @@
-digraph "block-L1-insn-1-heap-0000" {
-	label=<<FONT POINT-SIZE="18">block-L1-insn-1-heap-0000</FONT>>;
-	clusterrank=local;
-	labelloc=t;
-	"3" [shape=box, color=blue, fontcolor=blue, label="CL#2264:head [obj = #3] field#5"];
-	"lonely1" [shape=plaintext, fontcolor=blue, label="NULL"];
-	"3" -> "lonely1" [color=blue, fontcolor=blue];
-}
