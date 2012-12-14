@@ -34,6 +34,11 @@ struct RootState
 	size_t root;
 	size_t state;
 
+	RootState() :
+		root(0),
+		state(0)
+	{ }
+
 	RootState(size_t pRoot, size_t pState) :
 		root(pRoot),
 		state(pState)
@@ -587,64 +592,9 @@ void SymState::SubstituteRefs(
 							}
 						}
 						else
-						{
+						{	// we should not get here
 							assert(false);       // fail gracefully
 						}
-
-#if 0
-						if (srcFAE->isData(srcTrans.lhs()[i], srcData))
-						{	// for data states
-							assert(nullptr != srcData);
-
-							const Data* thisData = nullptr;
-							if (!thisFAE->isData(thisTrans.lhs()[i], thisData))
-							{
-								assert(false);       // fail gracefully
-							}
-
-							assert(nullptr != thisData);
-
-							if (oldValue == *srcData)
-							{	// in case we are at the right value
-								assert(thisData->isUndef());
-
-								// TODO: or may it reference itself?
-
-								lhs.push_back(fae->addData(*fae->getRoot(thisRoot).get(), newValue));
-							}
-							else if (srcData->isRef())
-							{	// for the case of other reference
-								assert(thisData->isRef());
-								assert(thisData->d_ref.displ == srcData->d_ref.displ);
-								assert(0 == thisData->d_ref.displ);
-
-								const size_t& thisNewRoot = thisData->d_ref.root;
-								const size_t& srcNewRoot  = srcData->d_ref.root;
-
-								const TreeAut* thisNewTA = thisFAE->getRoot(thisData->d_ref.root).get();
-								const TreeAut* srcNewTA  = srcFAE->getRoot(srcData->d_ref.root).get();
-								assert((nullptr != thisNewTA) && (nullptr != srcNewTA));
-
-								engine.makeProductState(
-									thisNewRoot, thisNewTA->getFinalState(),
-									srcNewRoot, srcNewTA->getFinalState());
-
-								lhs.push_back(fae->addData(*fae->getRoot(thisRoot).get(), *thisData));
-							}
-							else
-							{	// for other data
-								lhs.push_back(fae->addData(*fae->getRoot(thisRoot).get(), *thisData));
-							}
-						}
-						else
-						{	// for internal states
-							engine.makeProductState(
-								thisRoot, thisTrans.lhs()[i],
-								srcRoot, srcTrans.lhs()[i]);
-
-							lhs.push_back(thisTrans.lhs()[i]);
-						}
-#endif
 					}
 
 					if (transArity == i)
@@ -821,7 +771,7 @@ void SymState::Intersect(
 				// TODO: so far, we are not doing unfolding!
 				if (thisTrans.label() == fwdTrans.label())
 				{
-					FA_NOTE("Transition: " << thisTrans.label());
+					FA_NOTE("Transition: " << thisTrans.label() << ", thisState = " << thisState << ", srcState = " << fwdState);
 
 					assert(thisTrans.lhs().size() == fwdTrans.lhs().size());
 					const size_t& transArity = thisTrans.lhs().size();
@@ -898,6 +848,41 @@ void SymState::Intersect(
 							// This is the case when there is a NULL pointer and either an
 							// internal state or a reference
 							break;   // cut this branch of the intersection
+						}
+						else if ((fwdIsData && !thisIsData && fwdData->isRef())
+							|| (!fwdIsData && thisIsData && thisData->isRef()))
+						{ // ************* process jumps *************
+							// This is the case when one FA jumps to another TA and the other does not
+							FA_NOTE("jump!");
+
+							RootState rootState;
+							if (fwdIsData)
+							{
+								assert(fwdIsData && !thisIsData && fwdData->isRef());
+
+								const size_t& fwdNewRoot = fwdData->d_ref.root;
+								const TreeAut* fwdNewTA  = fwdFAE->getRoot(fwdNewRoot).get();
+								assert(nullptr != fwdNewTA);
+
+								rootState = engine.makeProductState(
+									thisRoot, thisTrans.lhs()[i],
+									fwdNewRoot, fwdNewTA->getFinalState());
+							}
+							else
+							{
+								assert(!fwdIsData && thisIsData && thisData->isRef());
+
+								const size_t& thisNewRoot = thisData->d_ref.root;
+								const TreeAut* thisNewTA = thisFAE->getRoot(thisNewRoot).get();
+								assert(nullptr != thisNewTA);
+
+								rootState = engine.makeProductState(
+									thisNewRoot, thisNewTA->getFinalState(),
+									fwdRoot, fwdTrans.lhs()[i]);
+							}
+
+							lhs.push_back(fae->addData(*fae->getRoot(curNewState.root).get(),
+								Data::createRef(rootState.root)));
 						}
 						else
 						{	// we should not get here
