@@ -781,7 +781,6 @@ bool bumpNestingLevel(const FldHandle &fld)
     return !hasKey(ignoreList, fld);
 }
 
-/// (FLD_INVALID == fldDst) means read-only!!!
 bool joinFreshItem(
         SymJoinCtx             &ctx,
         const SchedItem        &item,
@@ -789,10 +788,6 @@ bool joinFreshItem(
 {
     const FldHandle &fld1 = item.fld1;
     const FldHandle &fld2 = item.fld2;
-
-    const bool segClone = (!fld1.isValidHandle() || !fld2.isValidHandle());
-    CL_BREAK_IF(segClone && readOnly);
-    CL_BREAK_IF(!fld1.isValidHandle() && !fld2.isValidHandle());
 
     const TValId v1 = fld1.value();
     const TValId v2 = fld2.value();
@@ -804,72 +799,29 @@ bool joinFreshItem(
         return true;
     }
 
-    if (VAL_NULL == v1 || VAL_NULL == v2) {
-        if (segClone) {
-            // we got only one value and the value is VAL_NULL
-            item.fldDst.setValue(VAL_NULL);
-            return true;
-        }
-
-        if (readOnly)
+    if (readOnly) {
+        if (VAL_NULL == v1 || VAL_NULL == v2)
             // act optimistically for now
             return true;
-    }
 
-    if (readOnly)
         return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
-
-    if (segClone) {
-        const bool isGt1 = !fld2.isValidHandle();
-        const TObjMap &om = (isGt1) ? ctx.objMap1[0] : ctx.objMap2[0];
-        const SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
-        const TValId valGt = (isGt1) ? v1 : v2;
-        const EValueTarget code = shGt.valTarget(valGt);
-        if (VT_RANGE != code) {
-            const TObjId objGt = shGt.objByAddr(valGt);
-            const TObjMap::const_iterator it = om.find(objGt);
-            if (om.end() != it) {
-                const TObjId objDst = it->second;
-                const TOffset off = shGt.valOffset(valGt);
-                const ETargetSpecifier ts = shGt.targetSpec(valGt);
-                const TValId valDst = ctx.dst.addrOfTarget(objDst, ts, off);
-                item.fldDst.setValue(valDst);
-                return true;
-            }
-        }
-
-#if SE_ALLOW_THREE_WAY_JOIN < 3
-        if (!ctx.joiningData())
-            return false;
-#endif
-    }
-    else {
-        // special values have to match (NULL not treated as special here)
-        if (v1 < 0 || v2 < 0) {
-            if (v1 == v2) {
-                if (!readOnly)
-                    item.fldDst.setValue(v1);
-                return true;
-            }
-
-            SJ_DEBUG("<-- special value mismatch " << SJ_VALP(v1, v2));
-            return false;
-        }
-
-        if (checkValueMapping(ctx, v1, v2, /* allowUnknown */ false, &vDst))
-            // already joined
-            return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
-
-        bool result;
-        if (joinValuesByCode(&result, ctx, item))
-            return result;
     }
 
-    TWorkList &wl = (segClone)
-        ? ctx.wlSegInsert
-        : ctx.wl;
+    // special values have to match (NULL not treated as special here)
+    if (v1 < 0 || v2 < 0) {
+        if (v1 != v2)
+            return false;
 
-    if (wl.schedule(item))
+        item.fldDst.setValue(v1);
+        return true;
+    }
+
+    // TODO: drop this!
+    bool result;
+    if (joinValuesByCode(&result, ctx, item))
+        return result;
+
+    if (ctx.wl.schedule(item))
         SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
                 << " <- " << SJ_FLDT(item.fldDst, fld1, fld2)
                 << ", ldiff = " << item.ldiff);
