@@ -784,44 +784,6 @@ bool bumpNestingLevel(const FldHandle &fld)
     return !hasKey(ignoreList, fld);
 }
 
-bool joinFreshItem(
-        SymJoinCtx             &ctx,
-        const SchedItem        &item)
-{
-    const FldHandle &fld1 = item.fld1;
-    const FldHandle &fld2 = item.fld2;
-
-    const TValId v1 = fld1.value();
-    const TValId v2 = fld2.value();
-
-    TValId vDst;
-    if (joinCacheLookup(ctx, v1, v2, &vDst)) {
-        item.fldDst.setValue(vDst);
-        return true;
-    }
-
-    // special values have to match (NULL not treated as special here)
-    if (v1 < 0 || v2 < 0) {
-        if (v1 != v2)
-            return false;
-
-        item.fldDst.setValue(v1);
-        return true;
-    }
-
-    // TODO: drop this!
-    bool result;
-    if (joinValuesByCode(&result, ctx, item))
-        return result;
-
-    if (ctx.wl.schedule(item))
-        SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
-                << " <- " << SJ_FLDT(item.fldDst, fld1, fld2)
-                << ", ldiff = " << item.ldiff);
-
-    return true;
-}
-
 struct ObjJoinVisitor {
     SymJoinCtx              &ctx;
     const TProtoLevel       ldiffOrig;
@@ -834,25 +796,44 @@ struct ObjJoinVisitor {
     {
     }
 
-    bool operator()(const FldHandle item[3]) {
-        const FldHandle &fld1   = item[0];
-        const FldHandle &fld2   = item[1];
-        const FldHandle &fldDst = item[2];
-
-        // check black-list
-        if (hasKey(blackList1, fld1) || hasKey(blackList2, fld2))
-            return /* continue */ true;
-
-        int ldiff = ldiffOrig;
-        if (bumpNestingLevel(fld1))
-            ++ldiff;
-        if (bumpNestingLevel(fld2))
-            --ldiff;
-
-        const SchedItem sItem(fldDst, fld1, fld2, ldiff);
-        return joinFreshItem(ctx, sItem);
-    }
+    bool operator()(const FldHandle item[3]);
 };
+
+bool ObjJoinVisitor::operator()(const FldHandle item[3]) {
+    const FldHandle &fld1   = item[0];
+    const FldHandle &fld2   = item[1];
+    const FldHandle &fldDst = item[2];
+
+    // check black-list
+    if (hasKey(blackList1, fld1) || hasKey(blackList2, fld2))
+        return /* continue */ true;
+
+    const TValId v1 = fld1.value();
+    const TValId v2 = fld2.value();
+
+    // special values have to match (NULL not treated as special here)
+    if (v1 < 0 || v2 < 0) {
+        if (v1 != v2)
+            return false;
+
+        fldDst.setValue(v1);
+        return true;
+    }
+
+    int ldiff = ldiffOrig;
+    if (bumpNestingLevel(fld1))
+        ++ldiff;
+    if (bumpNestingLevel(fld2))
+        --ldiff;
+
+    const SchedItem sItem(fldDst, fld1, fld2, ldiff);
+    if (ctx.wl.schedule(sItem))
+        SJ_DEBUG("+++ " << SJ_VALP(v1, v2)
+                << " <- " << SJ_FLDT(fldDst, fld1, fld2)
+                << ", ldiff = " << ldiff);
+
+    return true;
+}
 
 class ObjMatchVisitor {
     private:
@@ -1753,6 +1734,12 @@ bool cloneSpecialValue(
         const SchedItem        &itemToClone,
         const EJoinStatus       action)
 {
+    if (valGt <= VAL_NULL) {
+        // write special values (with non-positive IDs) as they are
+        itemToClone.fldDst.setValue(valGt);
+        return true;
+    }
+
     const TValMapBidir &valMapGt = (JS_USE_SH1 == action)
         ? ctx.valMap1
         : ctx.valMap2;
