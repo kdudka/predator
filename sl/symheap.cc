@@ -1895,6 +1895,11 @@ SymHeapCore::SymHeapCore(TStorRef stor, Trace::Node *trace):
     const TValId valNull = d->assignId(new BaseAddress(OBJ_NULL, TS_REGION));
     CL_BREAK_IF(VAL_NULL != valNull);
 
+    // allocate the VAL_TRUE value
+    const TValId valTrue = d->wrapIntVal(IR::Int1);
+    CL_BREAK_IF(VAL_TRUE != valTrue);
+    (void) valTrue;
+
     // allocate the OBJ_NULL region and mark it as invalid
     Region *objNullData = new Region(SC_INVALID);
     objNullData->addrByTS[TS_REGION] = valNull;
@@ -2225,9 +2230,6 @@ TValId SymHeapCore::Private::wrapIntVal(const IR::TInt num)
 {
     if (IR::Int0 == num)
         return VAL_NULL;
-
-    if (IR::Int1 == num)
-        return VAL_TRUE;
 
     // CV_INT values are supposed to be reused if they exist already
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->cValueMap);
@@ -2622,7 +2624,6 @@ EValueOrigin SymHeapCore::valOrigin(TValId val) const
             return VO_INVALID;
 
         case VAL_NULL /* = VAL_FALSE */:
-        case VAL_TRUE:
             return VO_ASSIGNED;
 
         default:
@@ -3505,8 +3506,8 @@ const CustomValue& SymHeapCore::valUnwrapCustom(TValId val) const
         if (!isSingular(rng))
             return cv;
 
-        // VAL_FALSE/VAL_TRUE are not supposed to be wrapped as custom values
-        CL_BREAK_IF(IR::Int0 == rng.lo || IR::Int1 == rng.lo);
+        // VAL_FALSE is not supposed to be wrapped as custom values
+        CL_BREAK_IF(IR::Int0 == rng.lo);
     }
 
     // check the consistency of backward mapping

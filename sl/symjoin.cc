@@ -812,7 +812,10 @@ bool ObjJoinVisitor::operator()(const FldHandle item[3]) {
     const TValId v2 = fld2.value();
 
     // special values have to match (NULL not treated as special here)
-    if (v1 < 0 || v2 < 0) {
+    if (v1 < VAL_NULL || v2 < VAL_NULL
+            /* XXX */ || VAL_TRUE == v1
+            /* XXX */ || VAL_TRUE == v2)
+    {
         if (v1 != v2)
             return false;
 

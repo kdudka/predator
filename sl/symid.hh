@@ -93,10 +93,9 @@ enum TValId {
     VAL_FALSE         = VAL_NULL,
 
     /**
-     * special enumeration value denoting a Boolean true value.
-     * @n @n
+     * special enumeration value denoting a Boolean true value or (int) 1.
      */
-    VAL_TRUE          = (FLD_UNKNOWN - 1),
+    VAL_TRUE          = 1,
 
     /**
      * @copydoc symid.hh::FLD_MAX_ID
@@ -116,10 +115,10 @@ enum TObjId {
     OBJ_INVALID       = -1,
 
     /// target of VAL_NULL (a.k.a. NULL object)
-    OBJ_NULL          = 1,
+    OBJ_NULL          = (VAL_TRUE + 1),
 
     /// return value of the function currently being executed
-    OBJ_RETURN        = 2,
+    OBJ_RETURN        = (OBJ_NULL + 1),
 
     /// @copydoc symid.hh::FLD_MAX_ID
     OBJ_MAX_ID        = /* XXX */ UINT_MAX
