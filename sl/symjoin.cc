@@ -380,17 +380,18 @@ bool writeJoinedValue(
 }
 
 bool joinCacheLookup(
-        TValId                 *pDst,
         SymJoinCtx             &ctx,
         const TValId            v1,
-        const TValId            v2)
+        const TValId            v2,
+        TValId                 *pDst = 0)
 {
     const TValPair vp(v1, v2);
     const TJoinCache::const_iterator it = ctx.joinCache.find(vp);
     if (ctx.joinCache.end() == it)
         return false;
 
-    *pDst = it->second;
+    if (pDst)
+        *pDst = it->second;
     return true;
 }
 
@@ -785,8 +786,7 @@ bool bumpNestingLevel(const FldHandle &fld)
 
 bool joinFreshItem(
         SymJoinCtx             &ctx,
-        const SchedItem        &item,
-        const bool              readOnly = false)
+        const SchedItem        &item)
 {
     const FldHandle &fld1 = item.fld1;
     const FldHandle &fld2 = item.fld2;
@@ -795,18 +795,9 @@ bool joinFreshItem(
     const TValId v2 = fld2.value();
 
     TValId vDst;
-    if (joinCacheLookup(&vDst, ctx, v1, v2)) {
-        if (!readOnly)
-            item.fldDst.setValue(vDst);
+    if (joinCacheLookup(ctx, v1, v2, &vDst)) {
+        item.fldDst.setValue(vDst);
         return true;
-    }
-
-    if (readOnly) {
-        if (VAL_NULL == v1 || VAL_NULL == v2)
-            // act optimistically for now
-            return true;
-
-        return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
     }
 
     // special values have to match (NULL not treated as special here)
@@ -863,8 +854,9 @@ struct ObjJoinVisitor {
     }
 };
 
-struct ObjMatchVisitor {
-    SymJoinCtx              &ctx;
+class ObjMatchVisitor {
+    private:
+        SymJoinCtx             &ctx;
 
     public:
         ObjMatchVisitor(SymJoinCtx &ctx_):
@@ -872,15 +864,25 @@ struct ObjMatchVisitor {
         {
         }
 
-        bool operator()(const FldHandle item[2]) {
-            const FldHandle &fld1 = item[0];
-            const FldHandle &fld2 = item[1];
-
-            const FldHandle fldInvalid;
-            const SchedItem sItem(fldInvalid, fld1, fld2, /* ldiff */ 0);
-            return joinFreshItem(ctx, sItem, /* readOnly */ true);
-        }
+        bool operator()(const FldHandle item[2]);
 };
+
+bool ObjMatchVisitor::operator()(const FldHandle item[2]) {
+    const FldHandle &fld1 = item[0];
+    const FldHandle &fld2 = item[1];
+
+    const TValId v1 = fld1.value();
+    const TValId v2 = fld2.value();
+
+    if (VAL_NULL == v1 || VAL_NULL == v2)
+        // act optimistically for now
+        return true;
+
+    if (joinCacheLookup(ctx, v1, v2))
+        return true;
+
+    return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
+}
 
 bool joinFields(
         SymJoinCtx             &ctx,
@@ -2237,7 +2239,7 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
             << " -> " << SJ_VALP(v1, v2));
 
     TValId vDst;
-    if (joinCacheLookup(&vDst, ctx, v1, v2)) {
+    if (joinCacheLookup(ctx, v1, v2, &vDst)) {
         item.fldDst.setValue(vDst);
         return true;
     }
