@@ -32,6 +32,7 @@ public:   // data members
 
 	std::string dbRoot;             ///< box database root directory
 	bool        printUcode;         ///< printing microcode?
+	bool        printOrigCode;      ///< printing the original code?
 	bool        onlyCompile;        ///< only compiling?
 	bool        printTrace;         ///< printing trace for errors?
 	bool        printUcodeTrace;    ///< printing microcode trace for errors?
@@ -45,6 +46,7 @@ public:   // methods
 	ProgramConfig(const std::string& confStr = "") :
 		dbRoot(""),
 		printUcode(false),
+		printOrigCode(false),
 		onlyCompile(false),
 		printTrace(false),
 		printUcodeTrace(false)

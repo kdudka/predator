@@ -43,6 +43,13 @@ void ProgramConfig::processArg(const std::string& arg)
 		return;
 	}
 
+	if (std::string("print-orig-code") == key)
+	{
+		this->printOrigCode = true;
+		FA_LOG("Config::processArg: \"print-orig-code\" mode requested");
+		return;
+	}
+
 	if (std::string("only-compile") == key)
 	{
 		this->onlyCompile = true;

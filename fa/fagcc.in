@@ -30,6 +30,7 @@ usage_long() {
   echo ""
   echo "Miscellaneous:"
   echo "  -p,   --print-ucode              print microcode"
+  echo "  -po,  --print-orig-code          prints the input code after GCC processing"
   echo "  -c,   --compile-only             only compile, do not run the analysis"
   echo "  -t,   --print-trace              print the trace for detected errors"
   echo "  -tu,  --print-trace-ucode        print the microcode trace for detected errors"
@@ -59,6 +60,8 @@ DRY_RUN=0
 while [ "$1" != "" ]; do
   case $1 in
     -p   | --print-ucode )          FA_ARGS="${FA_ARGS};print-ucode"
+                                    ;;
+    -po  | --print-orig-code )      FA_ARGS="${FA_ARGS};print-orig-code"
                                     ;;
     -c   | --compile-only )         FA_ARGS="${FA_ARGS};only-compile"
                                     ;;
