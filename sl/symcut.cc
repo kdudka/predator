@@ -259,6 +259,11 @@ void trackUsesOfVal(DeepCopyData &dc, const TValId valSrc)
         // optimization
         return;
 
+    const EValueTarget code = dc.src.valTarget(valSrc);
+    if (VT_CUSTOM == code)
+        // do not track uses of custom values
+        return;
+
     const TObjId objSrc = dc.src.objByAddr(valSrc);
     if (dc.src.isValid(objSrc))
         trackUsesOfObj(dc, objSrc);
