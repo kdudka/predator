@@ -456,6 +456,26 @@ class CallDoneNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// a trace graph node that represents a @b single call of importGlVar()
+class ImportGlVarNode: public Node {
+    private:
+        const std::string           varString_;
+
+    public:
+        /**
+         * @param ref a trace leading to this concretization step
+         * @param string describing the global variable being imported
+         */
+        ImportGlVarNode(Node *ref, const std::string &varString):
+            Node(ref),
+            varString_(varString)
+        {
+        }
+
+    protected:
+        void virtual plotNode(TracePlotter &) const;
+};
+
 /// trace graph node representing an error/warning message
 class MsgNode: public Node {
     private:

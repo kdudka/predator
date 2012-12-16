@@ -248,6 +248,12 @@ void CallDoneNode::plotNode(TracePlotter &tplot) const
         << (nameOf(*fnc_)) << "()\"];\n";
 }
 
+void ImportGlVarNode::plotNode(TracePlotter &tplot) const
+{
+    tplot.out << "\t" << SL_QUOTE(this) << " [shape=ellipse, color=red"
+        ", fontcolor=red, label=\"importGlVar(" << varString_ << ")\"];\n";
+}
+
 void CondNode::plotNode(TracePlotter &tplot) const
 {
     tplot.out << "\t" << SL_QUOTE(this) << " [shape=box, fontname=monospace"

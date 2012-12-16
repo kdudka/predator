@@ -72,3 +72,9 @@ void dump_trace(Trace::Node *endPoint)
 {
     Trace::plotTrace(endPoint, "dump_trace");
 }
+
+void dump_trace(const SymHeapCore &sh)
+{
+    Trace::Node *tr = sh.traceNode();
+    dump_trace(tr);
+}
