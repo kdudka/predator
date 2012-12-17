@@ -145,7 +145,7 @@ void clEasyRun(const CodeStorage::Storage& stor, const char* configString)
 			FA_LOG("Printing input code");
 			std::ostringstream os;
 			Compiler::Assembly::printOrigCode(os, se->GetAssembly().code_);
-			Streams::ucode(os.str().c_str());
+			Streams::origCode(os.str().c_str());
 		}
 
 		if (!conf.onlyCompile)

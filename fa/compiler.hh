@@ -234,10 +234,10 @@ public:
 
 			for (const AbstractInstruction* instr : ucode)
 			{
-				if (instr->insn() && (instr->insn() != lastInsn))
-				{
-					const CodeStorage::Insn* clInsn = instr->insn();
+				const CodeStorage::Insn* clInsn = instr->insn();
 
+				if (clInsn && (clInsn != lastInsn))
+				{
 					os << std::setw(8);
 					if ((nullptr != clInsn) && (clInsn->bb->front() == clInsn))
 					{

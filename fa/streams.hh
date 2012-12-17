@@ -49,28 +49,28 @@
 #define FA_MSG_STREAM(fnc, loc, locStream, to_stream) do {    \
 /*  if ((cl_debug == (fnc)) && !cl_debug_level())   */        \
 /*     break; */                                              \
-                                                              \
-  std::ostringstream strMsg;                                  \
-  strMsg << to_stream;                                        \
-  if (!(loc))                                                 \
-  {                                                           \
-    std::ostringstream strLoc;                                \
-    strLoc << locStream;                                      \
-                                                              \
-    Streams::callPrintFnc(                                    \
-      fnc,                                                    \
-      nullptr,                                                \
-      strLoc.str().c_str(),                                   \
-      strMsg.str().c_str());                                  \
-  }                                                           \
-  else                                                        \
-  {                                                           \
+	                                                            \
+	std::ostringstream strMsg;                                  \
+	strMsg << to_stream;                                        \
+	if (!(loc))                                                 \
+	{                                                           \
+	  std::ostringstream strLoc;                                \
+	  strLoc << locStream;                                      \
+	                                                            \
+	  Streams::callPrintFnc(                                    \
+	    fnc,                                                    \
+	    nullptr,                                                \
+	    strLoc.str().c_str(),                                   \
+	    strMsg.str().c_str());                                  \
+	}                                                           \
+	else                                                        \
+	{                                                           \
 		Streams::callPrintFnc(                                    \
-      fnc,                                                    \
-      loc,                                                    \
-      nullptr,                                                \
-      strMsg.str().c_str());                                  \
-  }                                                           \
+	    fnc,                                                    \
+	    loc,                                                    \
+	    nullptr,                                                \
+	    strMsg.str().c_str());                                  \
+	}                                                           \
 } while (0)
 
 
@@ -80,7 +80,7 @@
  * see FA_MSG_STREAM for details
  */
 #define FA_MSG_STREAM_LOC(fnc, loc, to_stream)             \
-  FA_MSG_STREAM(fnc, (loc), "", to_stream)
+	FA_MSG_STREAM(fnc, (loc), "", to_stream)
 
 
 /**
@@ -90,46 +90,46 @@
  * see FA_MSG_STREAM for details
  */
 #define FA_MSG_STREAM_INTERNAL(fnc, to_stream)                         \
-  FA_MSG_STREAM(fnc, nullptr, __FILE__ << ":" << __LINE__ << ": ",     \
-    to_stream << " [internal location]")
+	FA_MSG_STREAM(fnc, nullptr, __FILE__ << ":" << __LINE__ << ": ",     \
+	  to_stream << " [internal location]")
 
 /**
  * Emit an @b error message with @b internal location info
  */
 #define FA_ERROR(to_stream) \
-  FA_MSG_STREAM_INTERNAL(Streams::error, to_stream)
+	FA_MSG_STREAM_INTERNAL(Streams::error, to_stream)
 
 /**
  * Emit a @b warn message with @b internal location info
  */
 #define FA_WARN(to_stream) \
-  FA_MSG_STREAM_INTERNAL(Streams::warn, to_stream)
+	FA_MSG_STREAM_INTERNAL(Streams::warn, to_stream)
 
 /**
  * Emit a @b debug message with @b internal location info
  */
 #define FA_DEBUG(to_stream) \
-  FA_MSG_STREAM_INTERNAL(Streams::debug, to_stream)
+	FA_MSG_STREAM_INTERNAL(Streams::debug, to_stream)
 
 /**
  * Emit a @b log message with @b internal location info
  */
 #define FA_LOG(to_stream) \
-  FA_MSG_STREAM_INTERNAL(Streams::log, to_stream)
+	FA_MSG_STREAM_INTERNAL(Streams::log, to_stream)
 
 /**
  * Emit a @b note message with @b internal location info
  */
 #define FA_NOTE(to_stream) \
-  FA_MSG_STREAM_INTERNAL(Streams::note, to_stream)
+	FA_MSG_STREAM_INTERNAL(Streams::note, to_stream)
 
 
 /// same as FA_DEBUG, but compares the current debug level with the given one
 #define FA_DEBUG_AT(level, what) do {                        \
-    if (Streams::getDebugLevel() < (level))                  \
-      break;                                                 \
-                                                             \
-    FA_DEBUG(what);                                          \
+	if (Streams::getDebugLevel() < (level))                    \
+		break;                                                   \
+	                                                           \
+	FA_DEBUG(what);                                            \
 } while (0)
 
 
@@ -140,7 +140,7 @@
  * @param[in]  what  whatever you need to stream out
  */
 #define FA_ERROR_MSG(loc, what) \
-  FA_MSG_STREAM_LOC(Streams::error, (loc), what)
+	FA_MSG_STREAM_LOC(Streams::error, (loc), what)
 
 /**
  * Emit a @b warn message using the given location info
@@ -149,7 +149,7 @@
  * @param[in]  what  whatever you need to stream out
  */
 #define FA_WARN_MSG(loc, what) \
-  FA_MSG_STREAM_LOC(Streams::warn, (loc), what)
+	FA_MSG_STREAM_LOC(Streams::warn, (loc), what)
 
 
 /**
@@ -159,7 +159,7 @@
  * @param[in]  what  whatever you need to stream out
  */
 #define FA_DEBUG_MSG(loc, what) \
-  FA_MSG_STREAM_LOC(Streams::debug, (loc), what)
+	FA_MSG_STREAM_LOC(Streams::debug, (loc), what)
 
 /**
  * Emit a @b log message using the given location info
@@ -168,7 +168,7 @@
  * @param[in]  what  whatever you need to stream out
  */
 #define FA_LOG_MSG(loc, what) \
-  FA_MSG_STREAM_LOC(Streams::log, (loc), what)
+	FA_MSG_STREAM_LOC(Streams::log, (loc), what)
 
 /**
  * Emit a @b note message using the given location info
@@ -177,15 +177,15 @@
  * @param[in]  what  whatever you need to stream out
  */
 #define FA_NOTE_MSG(loc, what) \
-  FA_MSG_STREAM_LOC(Streams::note, (loc), what)
+	FA_MSG_STREAM_LOC(Streams::note, (loc), what)
 
 
 /// same as FA_DEBUG_MSG, but compares the current debug level with the given one
-#define FA_DEBUG_AT_MSG(level, loc, what) do {               \
-    if (Streams::getDebugLevel() < (level))                  \
-      break;                                                 \
-                                                             \
-    FA_DEBUG_MSG((loc), what);                               \
+#define FA_DEBUG_AT_MSG(level, loc, what) do {             \
+	if (Streams::getDebugLevel() < (level))                  \
+		break;                                                 \
+	                                                         \
+	FA_DEBUG_MSG((loc), what);                               \
 } while (0)
 
 
@@ -254,6 +254,13 @@ public:   // methods
 	 * @param[in]  ucodeStr  A string with a microcode
 	 */
 	static void ucode(const char* ucodeStr);
+
+	/**
+	 * @brief  Prints to the original code output
+	 *
+	 * @param[in]  origCodeStr  A string with the original code
+	 */
+	static void origCode(const char* origCodeStr);
 };
 
 #endif

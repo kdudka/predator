@@ -11,11 +11,13 @@ export CCACHE_DISABLE=1
 FD_UCODE=3
 FD_TRACE=4
 FD_TRACE_UCODE=5
+FD_ORIG_CODE=6
 
 # Outputs - defaults to standard streams
 OUT_UCODE='&1'
 OUT_TRACE='&1'
 OUT_TRACE_UCODE='&1'
+OUT_ORIG_CODE='&1'
 
 usage() {
   echo "Usage: $SELF [OPTION]... FILE"
@@ -34,8 +36,9 @@ usage_long() {
   echo "  -c,   --compile-only             only compile, do not run the analysis"
   echo "  -t,   --print-trace              print the trace for detected errors"
   echo "  -tu,  --print-trace-ucode        print the microcode trace for detected errors"
-  echo "  -ou,  --output-ucode FILE        write the output microcode (for -p) to FILE"
-  echo "  -ot,  --output-trace FILE        write the trace (for -t) to FILE"
+  echo "  -op,  --output-ucode       FILE  write the output microcode (for -p) to FILE"
+  echo "  -opo, --output-orig-code   FILE  write the input code (for -po) to FILE"
+  echo "  -ot,  --output-trace       FILE  write the trace (for -t) to FILE"
   echo "  -otu, --output-trace-ucode FILE  write the microcode trace (for -tu) to FILE"
   echo "  -d,   --dry-run                  do not run, only print the final command"
   echo "  -v,   --verbose                  increase verbosity level"
@@ -51,10 +54,27 @@ seek_input_file() {
   return 1
 }
 
+remove_gcc_varnames() {
+	echo "$1" | \
+	eval "awk '                                                                    \
+	/#[0-9]+:/ {                                                                   \
+		str = \$0;                                                                   \
+		while (match(str, /#[0-9]+:/))                                               \
+		{                                                                            \
+			str = substr(str, 1, RSTART-1)  substr(str, RSTART+RLENGTH, length(\$0));  \
+			sub(/\/\//, \"      //\", str);                                            \
+		}                                                                            \
+	                                                                               \
+		print str;                                                                   \
+		next;                                                                        \
+	}                                                                              \
+	                                                                               \
+	{print}'"
+}
+
 FILENAME=
 FA_ARGS=
 FA_VERBOSE=0
-OUTPUT_FILE=
 DRY_RUN=0
 
 while [ "$1" != "" ]; do
@@ -69,8 +89,11 @@ while [ "$1" != "" ]; do
                                     ;;
     -tu  | --print-trace-ucode )    FA_ARGS="${FA_ARGS};print-ucode-trace"
                                     ;;
-    -ou  | --output-ucode )         shift
+    -op  | --output-ucode )         shift
                                     OUT_UCODE=$1
+                                    ;;
+    -opo | --output-orig-code )     shift
+                                    OUT_ORIG_CODE=$1
                                     ;;
     -ot  | --output-trace )         shift
                                     OUT_TRACE=$1
@@ -189,31 +212,25 @@ run_gcc() {
 		tmp_trace="$(mktemp)"
     test -w "$tmp_trace" || die "mktemp failed"
 
-		# swap stdout and stderr
+		tmp_orig_code="$(mktemp)"
+    test -w "$tmp_orig_code" || die "mktemp failed"
+
+    # swap stdout and stderr and set outputs for other FDs
 		exec_gcc "$@" "{FD_TMP}>&1                          \
 			             1>&2                                 \
 									 2>&\${FD_TMP}                        \
 									 ${FD_TRACE}>${tmp_trace}             \
 									 ${FD_TRACE_UCODE}>${OUT_TRACE_UCODE} \
 									 ${FD_UCODE}>${OUT_UCODE}             \
+                   ${FD_ORIG_CODE}>${tmp_orig_code}     \
 									"
 		RETURN="$?"
 
-		cat ${tmp_trace} | \
-		eval "awk '                                                                    \
-		/#[0-9]+:/ {                                                                   \
-			str = \$0;                                                                   \
-			while (match(str, /#[0-9]+:/))                                               \
-			{                                                                            \
-				str = substr(str, 1, RSTART-1)  substr(str, RSTART+RLENGTH, length(\$0));  \
-				sub(/\/\//, \"      //\", str);                                            \
-			}                                                                            \
-		                                                                               \
-			print str;                                                                   \
-			next;                                                                        \
-		}                                                                              \
-		                                                                               \
-		{print}' >${OUT_TRACE}"
+    eval remove_gcc_varnames "\"\$(cat ${tmp_trace})\" >${OUT_TRACE}"
+    rm ${tmp_trace}
+
+    eval remove_gcc_varnames "\"\$(cat ${tmp_orig_code})\" >${OUT_ORIG_CODE}"
+    rm ${tmp_orig_code}
 
     if [ ${RETURN} -ne 0 ]; then
         printf "\033[1;31mFAILED\033[0m\n" >&2
