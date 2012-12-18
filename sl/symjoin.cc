@@ -732,12 +732,11 @@ bool joinValuesByCode(
 
     // we have to use the heap where the unknown value occurs
     if (!isUnknown2)
-        return updateJoinStatus(ctx, JS_USE_SH1);
+        *pResult = updateJoinStatus(ctx, JS_USE_SH1);
     else if (!isUnknown1)
-        return updateJoinStatus(ctx, JS_USE_SH2);
-    else
-        // use any
-        return true;
+        *pResult = updateJoinStatus(ctx, JS_USE_SH2);
+
+    return true;
 }
 
 
