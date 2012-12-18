@@ -65,7 +65,6 @@ void debugSymJoin(const bool enable)
     << ", fld2 = #" << fld2.fieldId()   \
     << ")"
 
-#define SJ_ITEM(item) SJ_FLDT(item.fldDst, item.fld1, item.fld2)
 #define SJ_OBJP(o1, o2) "(o1 = #" << o1 << ", o2 = #" << o2 << ")"
 #define SJ_VALP(v1, v2) "(v1 = #" << v1 << ", v2 = #" << v2 << ")"
 
@@ -285,12 +284,7 @@ bool defineObjectMapping(
 
     const bool ok1 = !hasObj1 || mapBidir(ctx.objMap1, obj1, objDst);
     const bool ok2 = !hasObj2 || mapBidir(ctx.objMap2, obj2, objDst);
-
-    if (ok1 && ok2)
-        return true;
-
-    SJ_DEBUG("<-- object mapping mismatch " << SJ_OBJP(obj1, obj2));
-    return false;
+    return (ok1 && ok2);
 }
 
 /// preserve shared Neq predicates
@@ -344,11 +338,7 @@ bool defineValueMapping(
 
     const bool ok1 = !hasValue1 || mapBidir(ctx.valMap1, v1, vDst);
     const bool ok2 = !hasValue2 || mapBidir(ctx.valMap2, v2, vDst);
-    if (ok1 && ok2)
-        return true;
-
-    SJ_DEBUG("<-- value mapping mismatch " << SJ_VALP(v1, v2));
-    return false;
+    return (ok1 && ok2);
 }
 
 bool writeJoinedValue(
@@ -500,11 +490,6 @@ bool checkObjectMapping(
         return true;
     }
 
-    if (allowUnknownMapping) {
-        SJ_DEBUG("<-- object mapping mismatch: " << SJ_OBJP(obj1, obj2)
-                 " -> " << SJ_OBJP(objDst1, objDst2));
-    }
-
     return false;
 }
 
@@ -553,11 +538,6 @@ bool checkValueMapping(
             *pDst = ctx.dst.valByRange(vDst1 /* == vDst2 */, off);
         }
         return true;
-    }
-
-    if (allowUnknownMapping) {
-        SJ_DEBUG("<-- value mapping mismatch: " << SJ_VALP(v1, v2)
-                 " -> " << SJ_VALP(vDst1, vDst2));
     }
 
     return false;
@@ -611,7 +591,6 @@ bool joinCustomValues(
     IR::Range rng1, rng2;
     if (!rngFromVal(&rng1, sh1, v1) || !rngFromVal(&rng2, sh2, v2)) {
         // throw custom values away and abstract them by a fresh unknown value
-        SJ_DEBUG("throwing away unmatched custom values " << SJ_VALP(v1, v2));
         if (!updateJoinStatus(ctx, JS_THREE_WAY))
             return false;
 
@@ -627,12 +606,9 @@ bool joinCustomValues(
 
 #if SE_INT_ARITHMETIC_LIMIT
     const IR::TInt max = std::max(std::abs(rng.lo), std::abs(rng.hi));
-    if (max <= (SE_INT_ARITHMETIC_LIMIT)) {
-        SJ_DEBUG("<-- integral values preserved by SE_INT_ARITHMETIC_LIMIT "
-                << SJ_VALP(v1, v2));
-
+    if (max <= (SE_INT_ARITHMETIC_LIMIT))
+        // integral values preserved by SE_INT_ARITHMETIC_LIMIT
         return false;
-    }
 #endif
 
 #if !(SE_ALLOW_INT_RANGES & 0x1)
@@ -707,7 +683,6 @@ bool joinValuesByCode(
         const bool haveTarget1 = ctx.sh1.isValid(obj1);
         const bool haveTarget2 = ctx.sh2.isValid(obj2);
         if (haveTarget1 != haveTarget2) {
-            SJ_DEBUG("<-- target validity mismatch " << SJ_VALP(v1, v2));
             *pResult = false;
             return true;
         }
@@ -1070,7 +1045,7 @@ bool joinObjKind(
         }
     }
             
-    SJ_DEBUG("<-- object kind mismatch " << SJ_OBJP(obj1, obj2));
+    // object kind mismatch
     return false;
 }
 
@@ -1174,7 +1149,7 @@ bool joinSegBinding(
         if (result)
             return true;
 
-        SJ_DEBUG("<-- segment binding mismatch " << SJ_OBJP(obj1, obj2));
+        // segment binding mismatch
         return false;
     }
 
