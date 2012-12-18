@@ -37,4 +37,19 @@ test-0823.c:21:6: note: from call of main()
 test-0823.c:18:6: warning: memory leak detected while assigning a variable on stack
 test-0823.c:27:14: note: from call of reverse_seg()
 test-0823.c:21:6: note: from call of main()
+test-0823.c:12:8: warning: memory leak detected while destroying a variable on stack
+test-0823.c:27:14: note: from call of reverse_seg()
+test-0823.c:21:6: note: from call of main()
+test-0823.c:12:8: warning: memory leak detected while destroying a variable on stack
+test-0823.c:27:14: note: from call of reverse_seg()
+test-0823.c:21:6: note: from call of main()
+test-0823.c:12:8: warning: memory leak detected while destroying a variable on stack
+test-0823.c:27:14: note: from call of reverse_seg()
+test-0823.c:21:6: note: from call of main()
+test-0823.c:12:8: warning: memory leak detected while destroying a variable on stack
+test-0823.c:27:14: note: from call of reverse_seg()
+test-0823.c:21:6: note: from call of main()
+test-0823.c:12:8: warning: memory leak detected while destroying a variable on stack
+test-0823.c:27:14: note: from call of reverse_seg()
+test-0823.c:21:6: note: from call of main()
 test-0823.c:23:14: warning: memory leak detected while destroying a variable on stack

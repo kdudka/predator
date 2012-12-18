@@ -36,12 +36,6 @@ test-0702.c:133:5: note: from call of main()
 test-0702.c:69:12: warning: memory leak detected while destroying a variable on stack
 test-0702.c:164:37: note: from call of t1394_IsochAttachCompletionRoutine()
 test-0702.c:133:5: note: from call of main()
-test-0702.c:69:12: warning: memory leak detected while destroying a variable on stack
-test-0702.c:164:37: note: from call of t1394_IsochAttachCompletionRoutine()
-test-0702.c:133:5: note: from call of main()
-test-0702.c:80:22: warning: ignoring call of undefined function: WdfSpinLockRelease()
-test-0702.c:164:37: note: from call of t1394_IsochAttachCompletionRoutine()
-test-0702.c:133:5: note: from call of main()
 test-0702.c:80:22: warning: ignoring call of undefined function: WdfSpinLockRelease()
 test-0702.c:164:37: note: from call of t1394_IsochAttachCompletionRoutine()
 test-0702.c:133:5: note: from call of main()

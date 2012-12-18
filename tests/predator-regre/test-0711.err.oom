@@ -31,6 +31,39 @@ test-0711.c:38:5: note: from call of main()
 test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
 test-0711.c:56:26: note: from call of t1394_IsOnList()
 test-0711.c:38:5: note: from call of main()
+harness.h:342:18: error: dereference of NULL value
+test-0711.c:53:21: note: from call of InsertHeadList()
+test-0711.c:38:5: note: from call of main()
+test-0711.c:17:5: warning: memory leak detected while destroying a variable on stack
+test-0711.c:56:26: note: from call of t1394_IsOnList()
+test-0711.c:38:5: note: from call of main()
+test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
+test-0711.c:56:26: note: from call of t1394_IsOnList()
+test-0711.c:38:5: note: from call of main()
+test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
+test-0711.c:56:26: note: from call of t1394_IsOnList()
+test-0711.c:38:5: note: from call of main()
+test-0711.c:17:5: warning: memory leak detected while destroying a variable on stack
+test-0711.c:56:26: note: from call of t1394_IsOnList()
+test-0711.c:38:5: note: from call of main()
+test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
+test-0711.c:56:26: note: from call of t1394_IsOnList()
+test-0711.c:38:5: note: from call of main()
+test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
+test-0711.c:56:26: note: from call of t1394_IsOnList()
+test-0711.c:38:5: note: from call of main()
+test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
+test-0711.c:56:26: note: from call of t1394_IsOnList()
+test-0711.c:38:5: note: from call of main()
+test-0711.c:17:5: warning: memory leak detected while destroying a variable on stack
+test-0711.c:56:26: note: from call of t1394_IsOnList()
+test-0711.c:38:5: note: from call of main()
+test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
+test-0711.c:56:26: note: from call of t1394_IsOnList()
+test-0711.c:38:5: note: from call of main()
+test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
+test-0711.c:56:26: note: from call of t1394_IsOnList()
+test-0711.c:38:5: note: from call of main()
 test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
 test-0711.c:56:26: note: from call of t1394_IsOnList()
 test-0711.c:38:5: note: from call of main()
@@ -40,27 +73,6 @@ test-0711.c:38:5: note: from call of main()
 harness.h:342:18: error: dereference of NULL value
 test-0711.c:53:21: note: from call of InsertHeadList()
 test-0711.c:38:5: note: from call of main()
-test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
-test-0711.c:56:26: note: from call of t1394_IsOnList()
-test-0711.c:38:5: note: from call of main()
-test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
-test-0711.c:56:26: note: from call of t1394_IsOnList()
-test-0711.c:38:5: note: from call of main()
 harness.h:342:18: error: dereference of NULL value
 test-0711.c:53:21: note: from call of InsertHeadList()
-test-0711.c:38:5: note: from call of main()
-harness.h:342:18: error: dereference of NULL value
-test-0711.c:53:21: note: from call of InsertHeadList()
-test-0711.c:38:5: note: from call of main()
-harness.h:342:18: error: dereference of NULL value
-test-0711.c:53:21: note: from call of InsertHeadList()
-test-0711.c:38:5: note: from call of main()
-harness.h:342:18: error: dereference of NULL value
-test-0711.c:53:21: note: from call of InsertHeadList()
-test-0711.c:38:5: note: from call of main()
-harness.h:342:18: error: dereference of NULL value
-test-0711.c:53:21: note: from call of InsertHeadList()
-test-0711.c:38:5: note: from call of main()
-test-0711.c:23:12: warning: memory leak detected while destroying a variable on stack
-test-0711.c:56:26: note: from call of t1394_IsOnList()
 test-0711.c:38:5: note: from call of main()
