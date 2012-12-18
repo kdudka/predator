@@ -1641,6 +1641,62 @@ bool mapAsymTarget(
     return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
+bool cloneSpecialValue(
+        bool                   *pResult,
+        SymJoinCtx             &ctx,
+        SymHeap                &shGt,
+        const TValId            valGt,
+        const SchedItem        &itemToClone,
+        const EJoinStatus       action)
+{
+    if (valGt <= VAL_NULL) {
+        // write special values (with non-positive IDs) as they are
+        itemToClone.fldDst.setValue(valGt);
+        *pResult = true;
+        return true;
+    }
+
+    EValueTarget code = shGt.valTarget(valGt);
+    if (isAnyDataArea(code))
+        return false;
+
+    const TValId v1 = itemToClone.fld1.value();
+    const TValId v2 = itemToClone.fld2.value();
+
+    const TValMapBidir &valMapGt = (JS_USE_SH1 == action)
+        ? ctx.valMap1
+        : ctx.valMap2;
+
+    const TValId rootGt = shGt.valRoot(valGt);
+    EValueOrigin vo = shGt.valOrigin(valGt);
+    TValId vDst;
+
+    switch (code) {
+        case VT_RANGE:
+            if (hasKey(valMapGt[DIR_LTR], rootGt))
+                break;
+
+            CL_BREAK_IF("unable to transfer a VT_RANGE value");
+            // fall through!
+
+        case VT_CUSTOM:
+            code = VT_UNKNOWN;
+            vo = VO_UNKNOWN;
+            // fall through!
+
+        default:
+            vDst = ctx.dst.valCreate(code, vo);
+            return writeJoinedValue(ctx, itemToClone.fldDst, vDst, v1, v2);
+    }
+
+    // VT_RANGE
+    const TValId rootDst = roMapLookup(valMapGt[DIR_LTR], rootGt);
+    const IR::Range range = shGt.valOffsetRange(valGt);
+    vDst = ctx.dst.valByRange(rootDst, range);
+    *pResult = writeJoinedValue(ctx, itemToClone.fldDst, vDst, v1, v2);
+    return true;
+}
+
 /// (NULL != off) means 'introduce OK_{OBJ_OR_NULL,SEE_THROUGH,SEE_THROUGH_2N}'
 bool segmentCloneCore(
         SymJoinCtx                 &ctx,
@@ -1656,10 +1712,15 @@ bool segmentCloneCore(
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
 
+    SymHeap &shGt = (isGt1) ? ctx.sh1 : ctx.sh2;
+    const TValId valGt = (isGt1) ? v1 : v2;
+
+    bool result;
+    if (cloneSpecialValue(&result, ctx, shGt, valGt, item, action))
+        return result;
+
     const TObjId obj1 = (isGt1) ? ctx.sh1.objByAddr(v1) : OBJ_INVALID;
     const TObjId obj2 = (isGt2) ? ctx.sh2.objByAddr(v2) : OBJ_INVALID;
-
-    SymHeap &shGt      = (isGt1) ? ctx.sh1 : ctx.sh2;
     const TObjId objGt = (isGt1) ? obj1 : obj2;
     if (!shGt.isValid(objGt))
         // not valid target
@@ -1711,53 +1772,6 @@ bool segmentCloneCore(
     return true;
 }
 
-bool cloneSpecialValue(
-        SymJoinCtx             &ctx,
-        SymHeap                &shGt,
-        const TValId            valGt,
-        const SchedItem        &itemToClone,
-        const EJoinStatus       action)
-{
-    if (valGt <= VAL_NULL) {
-        // write special values (with non-positive IDs) as they are
-        itemToClone.fldDst.setValue(valGt);
-        return true;
-    }
-
-    const TValMapBidir &valMapGt = (JS_USE_SH1 == action)
-        ? ctx.valMap1
-        : ctx.valMap2;
-
-    const TValId rootGt = shGt.valRoot(valGt);
-    EValueOrigin vo = shGt.valOrigin(valGt);
-    TValId vDst;
-
-    EValueTarget code = shGt.valTarget(valGt);
-    switch (code) {
-        case VT_RANGE:
-            if (hasKey(valMapGt[DIR_LTR], rootGt))
-                break;
-
-            CL_BREAK_IF("unable to transfer a VT_RANGE value");
-            // fall through!
-
-        case VT_CUSTOM:
-            code = VT_UNKNOWN;
-            vo = VO_UNKNOWN;
-            // fall through!
-
-        default:
-            vDst = ctx.dst.valCreate(code, vo);
-            return handleUnknownValues(ctx, itemToClone, vDst);
-    }
-
-    // VT_RANGE
-    const TValId rootDst = roMapLookup(valMapGt[DIR_LTR], rootGt);
-    const IR::Range range = shGt.valOffsetRange(valGt);
-    vDst = ctx.dst.valByRange(rootDst, range);
-    return handleUnknownValues(ctx, itemToClone, vDst);
-}
-
 bool clonePendingValues(
         SymJoinCtx             &ctx,
         TCloneWorkList         &wl,
@@ -1786,17 +1800,10 @@ bool clonePendingValues(
         const FldHandle fldInval(FLD_INVALID);
         const FldHandle fld1 = (JS_USE_SH1 == action) ? fldGt : fldInval;
         const FldHandle fld2 = (JS_USE_SH2 == action) ? fldGt : fldInval;
-        const SchedItem sItem(fldDst, fld1, fld2, /* ldiff */ 0);
 
-        const EValueTarget code = shGt.valTarget(valGt);
-        if (isAnyDataArea(code)) {
-            if (!segmentCloneCore(ctx, wl, sItem, action))
-                return false;
-        }
-        else {
-            if (!cloneSpecialValue(ctx, shGt, valGt, sItem, action))
-                return false;
-        }
+        const SchedItem sItem(fldDst, fld1, fld2, /* ldiff */ 0);
+        if (!segmentCloneCore(ctx, wl, sItem, action))
+            return false;
     }
 
     return true;
