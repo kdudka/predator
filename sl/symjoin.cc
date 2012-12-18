@@ -997,15 +997,7 @@ bool joinObjType(
         const TObjId            obj1,
         const TObjId            obj2)
 {
-    if (OBJ_INVALID == obj2) {
-        *pDst = ctx.sh1.objEstimatedType(obj1);
-        return true;
-    }
-
-    if (OBJ_INVALID == obj1) {
-        *pDst = ctx.sh2.objEstimatedType(obj2);
-        return true;
-    }
+    CL_BREAK_IF(OBJ_INVALID == obj1 || OBJ_INVALID == obj2);
 
     const TObjType clt1 = ctx.sh1.objEstimatedType(obj1);
     const TObjType clt2 = ctx.sh2.objEstimatedType(obj2);
@@ -1047,7 +1039,7 @@ bool joinObjKind(
         const TObjId            obj1,
         const TObjId            obj2)
 {
-    CL_BREAK_IF(OBJ_INVALID == obj1 && OBJ_INVALID == obj2);
+    CL_BREAK_IF(OBJ_INVALID == obj1 || OBJ_INVALID == obj2);
 
     const EObjKind kind1 = ctx.sh1.objKind(obj1);
     const EObjKind kind2 = ctx.sh2.objKind(obj2);
@@ -1158,6 +1150,8 @@ bool joinSegBinding(
         const TObjId            obj1,
         const TObjId            obj2)
 {
+    CL_BREAK_IF(OBJ_INVALID == obj1 || OBJ_INVALID == obj2);
+
     const EObjKind kind1 = ctx.sh1.objKind(obj1);
     const EObjKind kind2 = ctx.sh2.objKind(obj2);
 
@@ -1206,6 +1200,8 @@ bool joinNestingLevel(
         const TObjId            obj2,
         const TProtoLevel       ldiffExpected)
 {
+    CL_BREAK_IF(OBJ_INVALID == obj1 || OBJ_INVALID == obj2);
+
     const TProtoLevel level1 = ctx.l1Drift + ctx.sh1.objProtoLevel(obj1);
     const TProtoLevel level2 = ctx.l2Drift + ctx.sh2.objProtoLevel(obj2);
 
@@ -1213,10 +1209,6 @@ bool joinNestingLevel(
 
     if (ctx.joiningData() && obj1 == obj2)
         // shared data
-        return true;
-
-    if (OBJ_INVALID == obj1 || OBJ_INVALID == obj2)
-        // we got only one object, just take its level as it is
         return true;
 
     // check that the computed ldiff matches the actual one
@@ -1231,14 +1223,7 @@ bool joinMinLength(
         const TObjId            obj2,
         const EObjKind          kind)
 {
-    if (OBJ_INVALID == obj1 || OBJ_INVALID == obj2) {
-        if (objMinLength(ctx.sh1, obj1) || objMinLength(ctx.sh2, obj2))
-            // insertion of non-empty object does not cover both variants
-            updateJoinStatus(ctx, JS_THREE_WAY);
-
-        *pDst = 0;
-        return true;
-    }
+    CL_BREAK_IF(OBJ_INVALID == obj1 || OBJ_INVALID == obj2);
 
     const TMinLen len1 = objMinLength(ctx.sh1, obj1);
     const TMinLen len2 = objMinLength(ctx.sh2, obj2);
@@ -1271,22 +1256,13 @@ bool joinObjValidity(
         const TObjId             obj1,
         const TObjId             obj2)
 {
-    if (OBJ_INVALID == obj1) {
-        *pDst = ctx.sh2.isValid(obj2);
-        return true;
-    }
-
-    if (OBJ_INVALID == obj2) {
-        *pDst = ctx.sh1.isValid(obj1);
-        return true;
-    }
+    CL_BREAK_IF(OBJ_INVALID == obj1 || OBJ_INVALID == obj2);
 
     const bool valid1 = ctx.sh1.isValid(obj1);
     const bool valid2 = ctx.sh2.isValid(obj2);
-    if (valid1 != valid2) {
-        SJ_DEBUG("<-- object validity mismatch " << SJ_OBJP(obj1, obj2));
+    if (valid1 != valid2)
+        // object validity mismatch
         return false;
-    }
 
     *pDst = valid1;
     return true;
@@ -1298,22 +1274,13 @@ bool joinObjSize(
         const TObjId             obj1,
         const TObjId             obj2)
 {
-    if (OBJ_INVALID == obj1) {
-        *pDst = ctx.sh2.objSize(obj2);
-        return true;
-    }
-
-    if (OBJ_INVALID == obj2) {
-        *pDst = ctx.sh1.objSize(obj1);
-        return true;
-    }
+    CL_BREAK_IF(OBJ_INVALID == obj1 || OBJ_INVALID == obj2);
 
     const TSizeRange size1 = ctx.sh1.objSize(obj1);
     const TSizeRange size2 = ctx.sh2.objSize(obj2);
-    if (size1 != size2) {
-        SJ_DEBUG("<-- object size mismatch " << SJ_OBJP(obj1, obj2));
+    if (size1 != size2)
+        // object size mismatch
         return false;
-    }
 
     *pDst = size1;
     return true;
@@ -1395,22 +1362,12 @@ bool joinUniBlocks(
         const TObjId            obj1,
         const TObjId            obj2)
 {
+    CL_BREAK_IF(OBJ_INVALID == obj1 || OBJ_INVALID == obj2);
+
     TUniBlockMap bMapDst;
     bool hasExtra1 = false;
     bool hasExtra2 = false;
-
-    if (OBJ_INVALID == obj2) {
-        hasExtra2 = true;
-        ctx.sh1.gatherUniformBlocks(bMapDst, obj1);
-        importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh1);
-    }
-    else if (OBJ_INVALID == obj1) {
-        hasExtra1 = true;
-        ctx.sh2.gatherUniformBlocks(bMapDst, obj2);
-        importBlockMap(&bMapDst, ctx.dst, /* src */ ctx.sh2);
-    }
-    else
-        joinUniBlocksCore(&bMapDst, &hasExtra1, &hasExtra2, ctx, obj1, obj2);
+    joinUniBlocksCore(&bMapDst, &hasExtra1, &hasExtra2, ctx, obj1, obj2);
 
     // update join status accordingly
     if (hasExtra1 && !updateJoinStatus(ctx, JS_USE_SH2))
