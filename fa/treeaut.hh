@@ -30,8 +30,9 @@
 
 // Forester headers
 #include "cache.hh"
-#include "utils.hh"
 #include "lts.hh"
+#include "streams.hh"
+#include "utils.hh"
 
 template <class T> class TA;
 
@@ -394,40 +395,42 @@ public:   // data types
 	typedef Iterator iterator;
 	typedef TDIterator td_iterator;
 
+private:  // data members
+
+	size_t nextState_;
+	std::set<size_t> finalStates_;
 
 public:   // data members
 
 	Backend* backend;
 
-	size_t next_state;
 	size_t maxRank;
 
 	trans_set_type transitions;
-	std::set<size_t> finalStates;
 
 public:
 
 	TA(
 		Backend&             backend) :
+		nextState_(0),
+		finalStates_{},
 		backend(&backend),
-		next_state(0),
 		maxRank(0),
-		transitions{},
-		finalStates{}
+		transitions{}
 	{ }
 
 	TA(
 		const TA<T>&         ta,
 		bool                 copyFinalStates = true) :
+		nextState_(ta.nextState_),
+		finalStates_{},
 		backend(ta.backend),
-		next_state(ta.next_state),
 		maxRank(ta.maxRank),
-		transitions(ta.transitions),
-		finalStates{}
+		transitions(ta.transitions)
 	{
 		if (copyFinalStates)
 		{	// copy final states (if desired)
-			this->finalStates = ta.finalStates;
+			finalStates_ = ta.finalStates_;
 		}
 
 		for (typename trans_cache_type::value_type* trans : this->transitions)
@@ -442,13 +445,14 @@ public:
 		F                    f,
 		bool                 copyFinalStates = true) :
 		backend(ta.backend),
-		next_state(ta.next_state),
+		nextState_(ta.nextState_),
+		finalStates_(),
 		maxRank(ta.maxRank),
 		transitions()
 	{
 		if (copyFinalStates)
 		{	// copy final states (if desired)
-			this->finalStates = ta.finalStates;
+			finalStates_ = ta.finalStates_;
 		}
 
 		for (typename trans_cache_type::value_type* trans : ta.transitions)
@@ -547,7 +551,7 @@ public:
 
 	typename TA<T>::TDIterator tdStart(const td_cache_type& cache) const
 	{
-		return typename TA<T>::TDIterator(cache, std::vector<size_t>(this->finalStates.begin(), this->finalStates.end()));
+		return typename TA<T>::TDIterator(cache, std::vector<size_t>(finalStates_.begin(), finalStates_.end()));
 	}
 
 	typename TA<T>::TDIterator tdStart(
@@ -563,11 +567,11 @@ public:
 			return *this;
 
 		this->clear();
-		this->next_state = rhs.next_state;
+		nextState_ = rhs.nextState_;
 		this->maxRank = rhs.maxRank;
 		this->backend = rhs.backend;
 		this->transitions = rhs.transitions;
-		this->finalStates = rhs.finalStates;
+		finalStates_ = rhs.finalStates_;
 
 		for (typename trans_cache_type::value_type* trans : this->transitions)
 		{	// copy transitions
@@ -580,14 +584,15 @@ public:
 	void clear()
 	{
 		this->maxRank = 0;
-		this->next_state = 0;
+		nextState_ = 0;
 		for (typename trans_cache_type::value_type* trans : this->transitions)
 		{
 			this->transCache().release(trans);
 		}
 		this->transitions.clear();
-		this->finalStates.clear();
+		finalStates_.clear();
 	}
+
 /*
 	void loadFromDFS(const TA<T>::dfs_cache_type& dfsCache, const TA<T>& ta, const vector<size_t>& stack, bool registerFinalStates = true) {
 		for (TA<T>::dfs_iterator i = ta.dfsStart(dfsCache, stack); i.isValid(); i.next())
@@ -598,18 +603,31 @@ public:
 */
 	size_t newState()
 	{
-		return this->next_state++;
+		return nextState_++;
 	}
 
 	void updateStateCounter()
 	{
-		this->next_state = 0;
+		nextState_ = 0;
 		for (typename trans_cache_type::value_type* trans : this->transitions)
 		{
-			this->next_state = std::max(this->next_state, 1 + std::max(trans->first._rhs, *std::max_element(trans->first._lhs->first.begin(), trans->first._lhs->first.end())));
+			nextState_ = std::max(
+				nextState_,
+				1 + std::max(
+					trans->first._rhs,
+					*std::max_element(
+						trans->first._lhs->first.begin(),
+						trans->first._lhs->first.end())));
 		}
 	}
 
+	/**
+	 * @brief  Build an index of states occuring in the automaton
+	 *
+	 * This method builds an index of states that really occur in the automaton.
+	 *
+	 * @param[out]  index  The index that will be built
+	 */
 	void buildStateIndex(Index<size_t>& index) const
 	{
 		for (typename trans_cache_type::value_type* trans : this->transitions)
@@ -620,12 +638,11 @@ public:
 			}
 			index.add(trans->first._rhs);
 		}
-		for (size_t state : this->finalStates)
+
+		for (size_t state : finalStates_)
 		{
 			index.add(state);
 		}
-		for (size_t state : this->finalStates)
-			index.add(state);
 	}
 
 	void buildSortedStateIndex(Index<size_t>& index) const
@@ -639,7 +656,7 @@ public:
 			}
 			s.insert(trans->first._rhs);
 		}
-		s.insert(this->finalStates.begin(), this->finalStates.end());
+		s.insert(finalStates_.begin(), finalStates_.end());
 		for (size_t state : s)
 			index.add(state);
 	}
@@ -768,43 +785,43 @@ public:
 
 	void addFinalState(size_t state)
 	{
-		this->finalStates.insert(state);
+		finalStates_.insert(state);
 	}
 
 	void addFinalStates(const std::vector<size_t>& states)
 	{
-		this->finalStates.insert(states.begin(), states.end());
+		finalStates_.insert(states.begin(), states.end());
 	}
 
 	void addFinalStates(const std::set<size_t>& states)
 	{
-		this->finalStates.insert(states.begin(), states.end());
+		finalStates_.insert(states.begin(), states.end());
 	}
 
 	void removeFinalState(size_t state)
 	{
-		this->finalStates.erase(state);
+		finalStates_.erase(state);
 	}
 
 	void clearFinalStates()
 	{
-		this->finalStates.clear();
+		finalStates_.clear();
 	}
 
 	bool isFinalState(size_t state) const
 	{
-		return (this->finalStates.find(state) != this->finalStates.end());
+		return (finalStates_.find(state) != finalStates_.end());
 	}
 
 	const std::set<size_t>& getFinalStates() const
 	{
-		return this->finalStates;
+		return finalStates_;
 	}
 
 	size_t getFinalState() const
 	{
-		assert(this->finalStates.size() == 1);
-		return *this->finalStates.begin();
+		assert(finalStates_.size() == 1);
+		return *finalStates_.begin();
 	}
 
 	const trans_set_type& getTransitions() const
@@ -1070,7 +1087,7 @@ public:
 		td_cache_type cache;
 		this->buildTDCache(cache);
 
-		std::vector<std::vector<bool> > tmp;
+		std::vector<std::vector<bool>> tmp;
 
 		while (height--)
 		{
@@ -1078,24 +1095,25 @@ public:
 
 			for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i)
 			{
-				size_t state1 = i->second;
+				const size_t& state1 = i->second;
 				typename td_cache_type::iterator j = cache.insert(
 					std::make_pair(i->first, std::vector<const Transition*>())
 				).first;
 				for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k)
 				{
-					size_t state2 = k->second;
+					const size_t& state2 = k->second;
 					if ((state1 == state2) || !tmp[state1][state2])
 						continue;
 					typename td_cache_type::iterator l = cache.insert(
 						std::make_pair(k->first, std::vector<const Transition*>())
 					).first;
 					bool match = true;
-					for (typename std::vector<const Transition*>::const_iterator m = j->second.begin(); m != j->second.end(); ++m)
+					for (const Transition* trans1 : j->second)
 					{
-						for (typename std::vector<const Transition*>::const_iterator n = l->second.begin(); n != l->second.end(); ++n)
+						for (const Transition* trans2 : l->second)
 						{
-							if (!TA<T>::transMatch(*m, *n, f, tmp, stateIndex)) {
+							if (!TA<T>::transMatch(trans1, trans2, f, tmp, stateIndex))
+							{
 								match = false;
 								break;
 							}
@@ -1156,14 +1174,27 @@ public:
 	{
 		std::vector<size_t> headIndex;
 		utils::relBuildClasses(rel, headIndex);
+
+		std::ostringstream os;
+		utils::printCont(os, headIndex);
+
 		// TODO: perhaps improve indexing
 		std::vector<size_t> invStateIndex(stateIndex.size());
 		for (Index<size_t>::iterator i = stateIndex.begin(); i != stateIndex.end(); ++i)
+		{
 			invStateIndex[i->second] = i->first;
+		}
+
 		for (std::vector<size_t>::iterator i = headIndex.begin(); i != headIndex.end(); ++i)
+		{
 			*i = invStateIndex[*i];
-		for (const size_t& state : this->finalStates)
+		}
+
+		for (const size_t& state : finalStates_)
+		{
 			dst.addFinalState(headIndex[stateIndex[state]]);
+		}
+
 		for (typename trans_cache_type::value_type* trans : this->transitions)
 		{
 			std::vector<size_t> lhs;
@@ -1171,6 +1202,8 @@ public:
 			for (size_t j = 0; j < lhs.size(); ++j)
 				lhs[j] = headIndex[lhs[j]];
 			dst.addTransition(lhs, trans->first._label, headIndex[stateIndex[trans->first._rhs]]);
+			std::ostringstream os;
+			utils::printCont(os, lhs);
 		}
 		return dst;
 	}
@@ -1208,10 +1241,10 @@ public:
 			std::swap(v1, v2);
 		}
 
-		for (const size_t& state : this->finalStates)
+		for (const size_t& state : finalStates_)
 		{
 			if (states.count(state))
-				dst.finalStates.insert(state);
+				dst.addFinalState(state);
 		}
 
 		return dst;
@@ -1221,8 +1254,8 @@ public:
 	{
 		std::vector<typename trans_cache_type::value_type*> v1(
 			transitions.begin(), this->transitions.end()), v2;
-		std::set<size_t> states(this->finalStates.begin(), this->finalStates.end());
-		for (size_t finState : this->finalStates)
+		std::set<size_t> states(finalStates_.begin(), finalStates_.end());
+		for (size_t finState : finalStates_)
 		{
 			dst.addFinalState(finState);
 		}
@@ -1285,14 +1318,14 @@ public:
 			v1.clear();
 			std::swap(v1, v2);
 		}
-		for (size_t state : this->finalStates)
+		for (size_t state : finalStates_)
 		{
 			if (states.count(state))
-				dst.finalStates.insert(state);
+				dst.addFinalState(state);
 		}
 		std::swap(v1, v3);
 		v2.clear();
-		states = std::set<size_t>(dst.finalStates.begin(), dst.finalStates.end());
+		states = std::set<size_t>(dst.finalStates_.begin(), dst.finalStates_.end());
 		changed = true;
 		while (changed)
 		{
@@ -1326,7 +1359,7 @@ public:
 		td_cache_type cache;
 		this->buildTDCache(cache);
 
-		for (size_t state : this->finalStates)
+		for (size_t state : finalStates_)
 			dst.addFinalState(state);
 
 		for (typename td_cache_type::iterator i = cache.begin(); i != cache.end(); ++i)
@@ -1402,7 +1435,7 @@ public:
 		std::vector<size_t> lhs;
 		if (addFinalStates)
 		{
-			for (size_t state : src.finalStates)
+			for (size_t state : src.finalStates_)
 				dst.addFinalState(f(state));
 		}
 
@@ -1426,7 +1459,7 @@ public:
 		std::vector<size_t> lhs;
 		if (addFinalStates)
 		{
-			for (size_t state : src.finalStates)
+			for (size_t state : src.finalStates_)
 			{
 				dst.addFinalState(index.translateOTF(state) + offset);
 			}
@@ -1498,10 +1531,10 @@ public:
 		const TA<T>&                a,
 		const TA<T>&                b)
 	{
-		for (size_t state : a.finalStates)
+		for (size_t state : a.finalStates_)
 			dst.addFinalState(state);
 
-		for (size_t state : b.finalStates)
+		for (size_t state : b.finalStates_)
 			dst.addFinalState(state);
 
 		for (typename trans_cache_type::value_type* trans : a.transitions)
@@ -1520,7 +1553,7 @@ public:
 	{
 		if (addFinalStates)
 		{
-			for (size_t state : src.finalStates)
+			for (size_t state : src.finalStates_)
 				dst.addFinalState(state);
 		}
 
@@ -1581,7 +1614,7 @@ public:
 		bool                                          registerFinalState = true) const
 	{
 		this->copyTransitions(dst);
-		for (size_t state : this->finalStates)
+		for (size_t state : finalStates_)
 		{
 			std::unordered_map<size_t, size_t>::const_iterator j = states.find(state);
 			assert(j != states.end());

@@ -227,17 +227,21 @@ void TA<T>::upwardTranslation(LTS& lts, std::vector<std::vector<size_t> >& part,
 }
 
 template <class T>
-void TA<T>::upwardSimulation(std::vector<std::vector<bool> >& rel, const Index<size_t>& stateIndex, const std::vector<std::vector<bool> >& param) const {
+void TA<T>::upwardSimulation(
+	std::vector<std::vector<bool>>&         rel,
+	const Index<size_t>&                    stateIndex,
+	const std::vector<std::vector<bool>>&   param) const
+{
 	LTS lts;
 	Index<T> labelIndex;
 	this->buildLabelIndex(labelIndex);
-	std::vector<std::vector<size_t> > part;
-	std::vector<std::vector<bool> > initRel;
+	std::vector<std::vector<size_t>> part;
+	std::vector<std::vector<bool>> initRel;
 	this->upwardTranslation(lts, part, initRel, stateIndex, labelIndex, param);
 	OLRTAlgorithm alg(lts);
 	// accepting states to block 1
 	std::vector<size_t> finalStates;
-	stateIndex.translate(finalStates, std::vector<size_t>(this->finalStates.begin(), this->finalStates.end())); 
+	stateIndex.translate(finalStates, std::vector<size_t>(finalStates_.begin(), finalStates_.end()));
 	alg.fakeSplit(finalStates);
 	// environments to blocks 2, 3, ...
 	for (size_t i = 0; i < part.size(); ++i)
