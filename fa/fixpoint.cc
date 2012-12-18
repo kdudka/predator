@@ -302,10 +302,11 @@ struct CopyNonZeroRhsF
 };
 
 void abstract(
-	FAE&                    fae,
-	TreeAut&                fwdConf,
-	TreeAut::Backend&       backend,
-	BoxMan&                 boxMan)
+	FAE&                                fae,
+	TreeAut&                            fwdConf,
+	TreeAut::Backend&                   backend,
+	BoxMan&                             boxMan,
+	const std::shared_ptr<const FAE>&   predicate)
 {
 	fae.unreachableFree();
 
@@ -315,7 +316,7 @@ void abstract(
 	// merge fixpoint
 	std::vector<FAE*> tmp;
 
-	ContainerGuard<std::vector<FAE*> > g(tmp);
+	ContainerGuard<std::vector<FAE*>> g(tmp);
 
 	FAE::loadCompatibleFAs(
 		tmp, fwdConf, backend, boxMan, &fae, 0, CompareVariablesF()
@@ -335,6 +336,7 @@ void abstract(
 	// abstract
 	Abstraction abstraction(fae);
 
+#if 0
 	// the roots that will be excluded from abstraction
 	std::vector<bool> excludedRoots(fae.getRootCount(), false);
 
@@ -351,6 +353,9 @@ void abstract(
 	//		abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmarterTMatchF(fae));
 		}
 	}
+#endif
+
+	abstraction.predicateAbstraction(predicate);
 
 	FA_DEBUG_AT(3, "after abstraction: " << std::endl << fae);
 }
@@ -473,7 +478,7 @@ void FI_abs::execute(ExecutionManager& execMan, SymState& state)
 
 	normalize(*fae, &state, forbidden, true);
 
-	abstract(*fae, fwdConf_, taBackend_, boxMan_);
+	abstract(*fae, fwdConf_, taBackend_, boxMan_, this->getPredicate());
 #if FA_ALLOW_FOLDING
 	learn1(*fae, boxMan_);
 
@@ -488,7 +493,7 @@ void FI_abs::execute(ExecutionManager& execMan, SymState& state)
 
 			normalize(*fae, &state, forbidden, true);
 
-			abstract(*fae, fwdConf_, taBackend_, boxMan_);
+			abstract(*fae, fwdConf_, taBackend_, boxMan_, this->getPredicate());
 
 			forbidden.clear();
 			for (size_t i = 0; i < FIXED_REG_COUNT; ++i)

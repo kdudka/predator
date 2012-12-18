@@ -25,7 +25,7 @@
 
 bool BackwardRun::isSpuriousCE(
 	const SymState::Trace&              fwdTrace,
-	const SymState*&                    failPoint,
+	SymState*&                          failPoint,
 	std::shared_ptr<const FAE>&         predicate)
 {
 	// Assertions

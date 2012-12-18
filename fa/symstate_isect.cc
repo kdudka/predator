@@ -81,9 +81,6 @@ class SubsRefEngine
 {
 private:  // data members
 
-	/// FAE to be the output
-	FAE& fae_;
-
 	/// Keeps product states, e.g. (p,q)
 	std::set<ProdState> processed_;
 
@@ -92,8 +89,7 @@ private:  // data members
 
 public:   // methods
 
-	explicit SubsRefEngine(FAE& fae) :
-		fae_(fae),
+	SubsRefEngine() :
 		processed_(),
 		workstack_()
 	{ }
@@ -161,6 +157,11 @@ public:   // methods
 		workstack_.pop_back();
 		return res;
 	}
+
+	const std::set<ProdState>& getProcessed() const
+	{
+		return processed_;
+	}
 };
 
 /**
@@ -182,6 +183,9 @@ private:  // data members
 	/// Maps pairs of roots to a root in the new automaton
 	std::map<std::pair<size_t, size_t>, size_t> rootMap_;
 
+	/// Maps roots of RHS automaton to roots of the new automaton
+	std::map<size_t, size_t> rhsRootMap_;
+
 	/// Counter of roots in the new FAE
 	size_t rootCnt_;
 
@@ -192,6 +196,7 @@ public:   // methods
 		processed_(),
 		workstack_(),
 		rootMap_(),
+		rhsRootMap_(),
 		rootCnt_(0)
 	{ }
 
@@ -264,6 +269,15 @@ public:   // methods
 			fae_.getRoot(root)->addFinalState(state);
 		}
 
+		auto itBoolRhsRootMap = rhsRootMap_.insert(std::make_pair(rhsRoot, root));
+		if (!itBoolRhsRootMap.second)
+		{
+			FA_NOTE("Not entering already processed RHS root " << rhsRoot << " -> "
+				<< root << " (already present mapping "
+				<< itBoolRhsRootMap.first->first << " -> "
+				<< itBoolRhsRootMap.first->second << ")");
+		}
+
 		return RootState(root, state);
 	}
 
@@ -304,19 +318,35 @@ public:   // methods
 	{
 		std::vector<size_t> index(fae_.getRootCount(), static_cast<size_t>(-1));
 
-		for (const std::pair<const std::pair<size_t, size_t>, size_t>&
-			productRootPair : rootMap_)
+		std::set<size_t> usedVals;
+
+		for (const std::pair<size_t, size_t>& rootPair : rhsRootMap_)
 		{
-			const size_t& oldState = productRootPair.first.second;
-			const size_t& newState = productRootPair.second;
-			assert(index[newState] == static_cast<size_t>(-1));
-			index[newState] = oldState;
+			const size_t& oldRoot = rootPair.first;
+			const size_t& newRoot = rootPair.second;
+			assert(static_cast<size_t>(-1) == index[newRoot]);
+			index[newRoot] = oldRoot;
+
+			if (!usedVals.insert(oldRoot).second)
+			{	// in case the value could not be inserted
+				assert(false);               // fail gracefully
+			}
 		}
 
-		for (const size_t& i : index)
-		{
-			(void)i;
-			assert(i != static_cast<size_t>(-1));
+		size_t cnt = 0;
+
+		for (size_t i = 0; i < index.size(); ++i)
+		{	// fill not bound root numbers
+			if (static_cast<size_t>(-1) == index[i])
+			{	// in case the root number has not been bound
+				while (usedVals.find(cnt) != usedVals.cend())
+				{	// try to find a non-used root number
+					++cnt;
+				}
+
+				FA_NOTE("Adding " << cnt << " at position " << i << " of index");
+				index[i] = cnt++;
+			}
 		}
 
 		return index;
@@ -344,7 +374,7 @@ void SymState::SubstituteRefs(
 	this->SetFAE(std::shared_ptr<FAE>(fae));
 
 	// engine that handles creation of new states etc.
-	SubsRefEngine engine(*fae);
+	SubsRefEngine engine;
 
 	for (size_t i = 0; i < thisFAE->getRootCount(); ++i)
 	{	// allocate existing TA
@@ -937,23 +967,31 @@ void SymState::Intersect(
 	std::vector<size_t> index = engine.getRootOrderIndexForRHS();
 	assert(index.size() == fae->getValidRootCount());
 
+	// set new root # for components that do not correspond to components in the
+	// forward run
+	
+
 	std::ostringstream os;
 	utils::printCont(os, index);
 	FA_NOTE("Index: " << os.str());
 
 	std::vector<std::shared_ptr<TreeAut>> newRoots;
-	for (size_t i = 0; i < fwdFAE->getRootCount(); ++i)
+	size_t newRootsSize = std::max(fae->getRootCount(), fwdFAE->getRootCount());
+	for (size_t i = 0; i < newRootsSize; ++i)
 	{
 		newRoots.push_back(std::shared_ptr<TreeAut>());
 	}
 
 	for (size_t i = 0; i < index.size(); ++i)
 	{
+		assert(index[i] < newRootsSize);
 		newRoots[index[i]] = fae->getRoot(i);
 	}
 
 	// update representation
 	fae->swapRoots(newRoots);
+
+	FA_NOTE("Before relabelling: " << *fae);
 
 	for (size_t i = 0; i < index.size(); ++i)
 	{
@@ -976,8 +1014,8 @@ void FAE::makeProduct(
 	const FAE&                             rhs,
 	std::set<std::pair<size_t, size_t>>&   result)
 {
-	std::set<ProdState> processed;
-	std::vector<ProdState> workset;
+	// engine that handles creation of new states etc.
+	SubsRefEngine engine;
 
 	assert(lhs.GetVarCount() == rhs.GetVarCount());
 	for (size_t i = 0; i < lhs.GetVarCount(); ++i)
@@ -994,22 +1032,15 @@ void FAE::makeProduct(
 			const TreeAut* rhsRoot = rhs.getRoot(rhsVar.d_ref.root).get();
 			assert((nullptr != lhsRoot) && (nullptr != rhsRoot));
 
-			ProdState initialState(
-				RootState(lhsVar.d_ref.root, lhsRoot->getFinalState()),
-				RootState(rhsVar.d_ref.root, rhsRoot->getFinalState())
-			);
-
-			if (processed.insert(initialState).second)
-			{	// in case the state has not been processed before
-				workset.push_back(initialState);
-			}
+			engine.makeProductState(
+				lhsVar.d_ref.root, lhsRoot->getFinalState(),
+				rhsVar.d_ref.root, rhsRoot->getFinalState());
 		}
 	}
 
-	while (!workset.empty())
+	while (!engine.wsEmpty())
 	{
-		const ProdState curState = *workset.crbegin();
-		workset.pop_back();
+		const ProdState curState = engine.getNextState();
 
 		const size_t& lhsRoot = curState.first.root;
 		const size_t& rhsRoot = curState.second.root;
@@ -1021,9 +1052,12 @@ void FAE::makeProduct(
 		const size_t& lhsState = curState.first.state;
 		const size_t& rhsState = curState.second.state;
 
-		TreeAut::iterator lhsIt = lhsTA->begin(lhsState);
+		FA_NOTE("Processing product state (" <<  curState.first << ", "
+			<< curState.second << ")");
+
+		TreeAut::iterator lhsIt  = lhsTA->begin(lhsState);
 		TreeAut::iterator lhsEnd = lhsTA->end(lhsState, lhsIt);
-		TreeAut::iterator rhsIt = rhsTA->begin(rhsState);
+		TreeAut::iterator rhsIt  = rhsTA->begin(rhsState);
 		TreeAut::iterator rhsEnd = rhsTA->end(rhsState, rhsIt);
 
 		for (; lhsIt != lhsEnd; ++lhsIt)
@@ -1033,69 +1067,131 @@ void FAE::makeProduct(
 				const Transition& lhsTrans = *lhsIt;
 				const Transition& rhsTrans = *rhsIt;
 
+				// we handle data one level up
+				assert(!lhsTrans.label()->isData() && !rhsTrans.label()->isData());
+				assert(!lhsTrans.lhs().empty() && !rhsTrans.lhs().empty());
+
+				// TODO: so far, we are not doing unfolding!
 				if (lhsTrans.label() == rhsTrans.label())
 				{
+					FA_NOTE("Transition: " << lhsTrans.label() << ", thisState = " << lhsState << ", srcState = " << rhsState);
+
 					assert(lhsTrans.lhs().size() == rhsTrans.lhs().size());
+
+					if (lhsTrans.label()->isData())
+					{	// data are processed one level up
+						assert(rhsTrans.label()->isData());
+						continue;
+					}
+
 					for (size_t i = 0; i < lhsTrans.lhs().size(); ++i)
 					{	// for each pair of states that map to each other
-						const Data* lhsData = nullptr;
-						if (lhs.isData(lhsTrans.lhs()[i], lhsData))
-						{	// for data states
-							assert(nullptr != lhsData);
+						const Data* lhsData = nullptr, *rhsData = nullptr;
+						bool lhsIsData = lhs.isData(lhsTrans.lhs()[i], lhsData);
+						bool rhsIsData = rhs.isData(rhsTrans.lhs()[i], rhsData);
 
-							const Data* rhsData = nullptr;
-							if (!rhs.isData(rhsTrans.lhs()[i], rhsData))
+						//  lhsIsData <-> nullptr != lrcData
+						assert((!lhsIsData || (nullptr != lhsData))
+							&& (lhsIsData || (nullptr == lhsData)));
+						//  rhsIsData <-> nullptr != rhsData
+						assert((!rhsIsData || (nullptr != rhsData))
+							&& (rhsIsData || (nullptr == rhsData)));
+
+						if (!lhsIsData && !rhsIsData)
+						{	// ************* process internal states *************
+							// This is the easiest case, when both states in the product are
+							// internal.
+							engine.makeProductState(
+								lhsRoot, lhsTrans.lhs()[i],
+								rhsRoot, rhsTrans.lhs()[i]);
+						}
+						else if (lhsIsData && rhsIsData &&
+							!lhsData->isRef() && !rhsData->isRef())
+						{ // ************* process real data states (leaves) *************
+							// This is the second easiest case, when both states are real data
+							// (i.e. no references). In this case, we are simply doing
+							// intersection of the data.
+							assert(*lhsData == *rhsData);
+						}
+						else if (lhsIsData && rhsIsData &&
+							lhsData->isRef() && rhsData->isRef())
+						{ // ************* process reference states (leaves) *************
+							// This is another quite easy case, when both states are
+							// references to another automata. In this case, we are jumping
+							// from both automata into another product automaton.
+							assert(lhsData->d_ref.displ == rhsData->d_ref.displ);
+							assert(0 == lhsData->d_ref.displ);
+
+							FA_NOTE("Two references");
+
+							const size_t& lhsNewRoot = lhsData->d_ref.root;
+							const size_t& rhsNewRoot = rhsData->d_ref.root;
+
+							const TreeAut* lhsNewTA = lhs.getRoot(lhsNewRoot).get();
+							const TreeAut* rhsNewTA = rhs.getRoot(rhsNewRoot).get();
+							assert((nullptr != lhsNewTA) && (nullptr != rhsNewTA));
+
+							engine.makeProductState(
+								lhsNewRoot, lhsNewTA->getFinalState(),
+								rhsNewRoot, rhsNewTA->getFinalState());
+						}
+						else if ((lhsIsData && !rhsIsData && lhsData->isNull())
+							|| (!lhsIsData && rhsIsData && rhsData->isNull())
+							|| (lhsIsData && rhsIsData && lhsData->isNull() && rhsData->isRef())
+							|| (lhsIsData && rhsIsData && lhsData->isRef()  && rhsData->isNull()))
+						{ // ************* process NULL pointers *************
+							// This is the case when there is a NULL pointer and either an
+							// internal state or a reference
+							FA_NOTE("NULL ptr!");
+
+							break;   // cut this branch of the product
+						}
+						else if ((lhsIsData && !rhsIsData && lhsData->isRef())
+							|| (!lhsIsData && rhsIsData && rhsData->isRef()))
+						{ // ************* process jumps *************
+							// This is the case when one FA jumps to another TA and the other does not
+							FA_NOTE("jump!");
+
+							if (lhsIsData)
 							{
-								assert(false);       // fail gracefully
-							}
-
-							assert(nullptr != rhsData);
-
-							if (lhsData->isRef())
-							{	// for the case of other reference
-								assert(rhsData->isRef());
-								assert(rhsData->d_ref.displ == lhsData->d_ref.displ);
-								assert(0 == rhsData->d_ref.displ);
+								assert(lhsIsData && !rhsIsData && lhsData->isRef());
 
 								const size_t& lhsNewRoot = lhsData->d_ref.root;
+								const TreeAut* lhsNewTA  = lhs.getRoot(lhsNewRoot).get();
+								assert(nullptr != lhsNewTA);
+
+								engine.makeProductState(
+									lhsNewRoot, lhsNewTA->getFinalState(),
+									rhsRoot, rhsTrans.lhs()[i]);
+							}
+							else
+							{
+								assert(!lhsIsData && rhsIsData && rhsData->isRef());
+
 								const size_t& rhsNewRoot = rhsData->d_ref.root;
+								const TreeAut* rhsNewTA  = rhs.getRoot(rhsNewRoot).get();
+								assert(nullptr != rhsNewTA);
 
-								const TreeAut* lhsNewTA = lhs.getRoot(lhsData->d_ref.root).get();
-								const TreeAut* rhsNewTA = rhs.getRoot(rhsData->d_ref.root).get();
-								assert((nullptr != lhsNewTA) && (nullptr != rhsNewTA));
-
-								ProdState jumpState(
-									RootState(lhsNewRoot, lhsNewTA->getFinalState()),
-									RootState(rhsNewRoot, rhsNewTA->getFinalState())
-								);
-
-								if (processed.insert(jumpState).second)
-								{	// in case the state has not been processed before
-									workset.push_back(jumpState);
-								}
+								engine.makeProductState(
+									lhsRoot, lhsTrans.lhs()[i],
+									rhsNewRoot, rhsNewTA->getFinalState());
 							}
 						}
 						else
-						{
-							const ProdState newState(std::make_pair(
-								RootState(lhsRoot, lhsTrans.lhs()[i]),
-								RootState(rhsRoot, rhsTrans.lhs()[i])
-							));
-
-							// TODO: add to lhs?
-							assert(false);
-							if (processed.insert(newState).second)
-							{	// in case the state has not been processed before
-								workset.push_back(newState);
-							}
+						{	// we should not get here
+							assert(false);       // fail gracefully
 						}
 					}
+				}
+				else
+				{
+					FA_LOG("not-matching: " << *lhsIt << ", " << *rhsIt);
 				}
 			}
 		}
 	}
 
-	for (const ProdState& prodState : processed)
+	for (const ProdState& prodState : engine.getProcessed())
 	{
 		result.insert(std::make_pair(prodState.first.state, prodState.second.state));
 	}

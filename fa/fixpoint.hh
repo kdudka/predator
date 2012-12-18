@@ -120,6 +120,11 @@ public:
  */
 class FI_abs : public FixpointBase
 {
+private:  // data members
+
+	/// The predicate FA used for the predicate abstraction
+	std::shared_ptr<const FAE> predicate_;
+
 public:
 
 	FI_abs(
@@ -127,8 +132,19 @@ public:
 		TreeAut::Backend&              fixpointBackend,
 		TreeAut::Backend&              taBackend,
 		BoxMan&                        boxMan) :
-		FixpointBase(insn, fixpointBackend, taBackend, boxMan)
+		FixpointBase(insn, fixpointBackend, taBackend, boxMan),
+		predicate_(nullptr)
 	{ }
+
+	void setPredicate(const std::shared_ptr<const FAE>& predicate)
+	{
+		predicate_ = predicate;
+	}
+
+	const std::shared_ptr<const FAE>& getPredicate() const
+	{
+		return this->predicate_;
+	}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
 

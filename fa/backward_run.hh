@@ -61,7 +61,7 @@ public:   // methods
 	 */
 	bool isSpuriousCE(
 		const SymState::Trace&              fwdTrace,
-		const SymState*&                    failPoint,
+		SymState*&                          failPoint,
 		std::shared_ptr<const FAE>&         predicate);
 };
 

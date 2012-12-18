@@ -385,6 +385,9 @@ public:
 		TreeAut*                       src,
 		const std::vector<size_t>&     index)
 	{
+		// Preconditions
+		assert(nullptr != src);
+
 		return &this->relabelReferences(*this->allocTA(), *src, index);
 	}
 
@@ -397,8 +400,24 @@ public:
 
 	TreeAut* invalidateReference(TreeAut* src, size_t root)
 	{
+		// Preconditions
+		assert(nullptr != src);
+
 		return &this->invalidateReference(*this->allocTA(), *src, root);
 	}
+
+
+	/**
+	 * @brief  Frees a position in the FA by moving given TA away
+	 *
+	 * This method frees a position at index @p root in the forest automaton. In
+	 * case there is some tree automaton at the position, it moves it to some
+	 * other position and relabels references accordingly.
+	 *
+	 * @param[in]  root  The index in the FA to be freed
+	 */
+	void freePosition(size_t root);
+
 
 public:
 

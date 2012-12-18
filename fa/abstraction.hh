@@ -24,6 +24,11 @@
 #include "forestautext.hh"
 #include "streams.hh"
 
+/**
+ * @brief  The class that performs abstraction
+ *
+ * This class peforms abstraction over tree automata.
+ */
 class Abstraction
 {
 private:  // data members
@@ -32,6 +37,16 @@ private:  // data members
 
 public:   // methods
 
+	/**
+	 * @brief  Performs finite height abstraction
+	 *
+	 * This method performs the finite height abtraction over a tree automaton at
+	 * index @p root of the forest automaton. The abstraction is for @p height.
+	 *
+	 * @param[in]  root    The root on which the abstraction is to be applied
+	 * @param[in]  height  The height of the abstraction
+	 * @param[in]  f       Functor for matching transitions
+	 */
 	template <class F>
 	void heightAbstraction(
 		size_t                root,
@@ -44,12 +59,15 @@ public:   // methods
 
 		Index<size_t> stateIndex;
 		fae_.getRoot(root)->buildStateIndex(stateIndex);
-		std::vector<std::vector<bool> > rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), true));
+		std::vector<std::vector<bool>> rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), true));
+
+		// compute the abstraction (i.e. which states are to be merged)
 		fae_.getRoot(root)->heightAbstraction(rel, height, f, stateIndex);
+
 		ConnectionGraph::StateToCutpointSignatureMap stateMap;
 		ConnectionGraph::computeSignatures(stateMap, *fae_.getRoot(root));
 		for (Index<size_t>::iterator j = stateIndex.begin(); j != stateIndex.end(); ++j)
-		{
+		{	// go through the matrix
 			for (Index<size_t>::iterator k = stateIndex.begin(); k != stateIndex.end(); ++k)
 			{
 				if (k == j)
@@ -67,6 +85,143 @@ public:   // methods
 		fae_.setRoot(root, std::shared_ptr<TreeAut>(fae_.allocTA()));
 		ta.uselessAndUnreachableFree(*fae_.getRoot(root));
 	}
+
+
+	/**
+	 * @brief  Performs predicate abstraction
+	 *
+	 * This method performs predicate abstraction of a forest automaton using
+	 * a set of predicates (currently only one predicate).
+	 *
+	 * @param[in]  predicate  The predicate used for the abstraction
+	 *
+	 * @todo change a single predicate for a set
+	 */
+	void predicateAbstraction(
+		const std::shared_ptr<const FAE>&    predicate)
+	{
+		FA_NOTE("Predicate abstraction input: " << fae_);
+
+		Index<size_t> faeStateIndex;
+		for (size_t i = 0; i < fae_.getRootCount(); ++i)
+		{
+			assert(nullptr != fae_.getRoot(i));
+			fae_.getRoot(i)->buildStateIndex(faeStateIndex);
+		}
+
+		size_t numStates = faeStateIndex.size();
+
+		FA_NOTE("Index: " << faeStateIndex);
+
+		// create the initial relation
+		// TODO: use boost::dynamic_bitset
+		std::vector<std::vector<bool>> rel;
+
+		if (nullptr != predicate)
+		{
+			FA_NOTE("Predicate: " << *predicate);
+
+			std::set<std::pair<size_t, size_t>> product;
+			FAE::makeProduct(fae_, *predicate, product);
+
+			// create a map of states of 'fae_' on sets of states of 'predicate'
+			std::vector<std::set<size_t>> matchWith(numStates, std::set<size_t>());
+			for (const std::pair<size_t, size_t>& statePair : product)
+			{
+				matchWith[faeStateIndex[statePair.first]].insert(statePair.second);
+			}
+
+			std::ostringstream oss;
+			for (size_t i = 0; i < matchWith.size(); ++i)
+			{
+				oss << ", " << i << " -> ";
+				utils::printCont(oss, matchWith[i]);
+			}
+
+			FA_NOTE("matchWith: " << oss.str());
+
+			// create the relation
+			rel.assign(numStates, std::vector<bool>(numStates, false));
+			for (size_t i = 0; i < numStates; ++i)
+			{
+				rel[i][i] = true;
+
+				for (size_t j = 0 ; j < i; ++j)
+				{
+					if (matchWith[i] == matchWith[j])
+					{
+						rel[i][j] = true;
+						rel[j][i] = true;
+					}
+				}
+			}
+		}
+		else
+		{
+			// create universal relation
+			rel.assign(numStates, std::vector<bool>(numStates, true));
+		}
+
+		for (size_t i = 0; i < fae_.getRootCount(); ++i)
+		{
+			// refine it according to cutpoints
+			ConnectionGraph::StateToCutpointSignatureMap stateMap;
+			ConnectionGraph::computeSignatures(stateMap, *fae_.getRoot(i));
+			for (auto j = faeStateIndex.begin(); j != faeStateIndex.end(); ++j)
+			{	// go through the matrix
+				for (auto k = faeStateIndex.begin(); k != faeStateIndex.end(); ++k)
+				{
+					if (k == j)
+						continue;
+
+					if (fae_.getRoot(i)->isFinalState(j->first)
+						|| fae_.getRoot(i)->isFinalState(k->first))
+					{
+						rel[j->second][k->second] = false;
+						continue;
+					}
+
+					if (FA::isData(j->first) || FA::isData(k->first))
+					{
+						rel[j->second][k->second] = false;
+						continue;
+					}
+
+					if (stateMap[j->first] % stateMap[k->first])
+						continue;
+
+					rel[j->second][k->second] = false;
+				}
+			}
+		}
+
+		std::ostringstream oss;
+		utils::relPrint(oss, rel);
+		FA_NOTE("Relation: \n" << oss.str());
+
+		std::ostringstream ossInd;
+		ossInd << '[';
+		for (auto it = faeStateIndex.begin(); it != faeStateIndex.end(); ++it)
+		{
+			ossInd << '(' << FA::writeState(it->first) << ',' << it->second << ')';
+		}
+
+		ossInd << ']';
+		FA_NOTE("Index: " << ossInd.str());
+
+		// TODO: label states of fae_ by states of predicate
+
+		for (size_t i = 0; i < fae_.getRootCount(); ++i)
+		{
+			TreeAut ta(*fae_.backend);
+			fae_.getRoot(i)->collapsed(ta, rel, faeStateIndex);
+			fae_.setRoot(i, std::shared_ptr<TreeAut>(fae_.allocTA()));
+			ta.uselessAndUnreachableFree(*fae_.getRoot(i));
+		}
+
+		FA_NOTE("Predicate abstraction output: " << fae_);
+	}
+
 
 public:
 

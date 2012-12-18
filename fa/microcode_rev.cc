@@ -25,6 +25,7 @@
 // Forester headers
 #include "executionmanager.hh"
 #include "microcode.hh"
+#include "splitting.hh"
 #include "streams.hh"
 #include "virtualmachine.hh"
 
@@ -35,7 +36,22 @@ SymState* FI_acc_sel::reverseAndIsect(
 {
 	(void)fwdPred;
 
-	FA_WARN("Skipping reverse operation FI_acc_sel");
+//	const Data& data = bwdSucc.GetReg(dst_);
+//	assert(data.isRef());
+//
+//	SymState* tmpState = execMan.copyState(bwdSucc);
+//
+//	FAE* fae = Splitting(*tmpState->GetFAE()).mergeOne(
+//		/* index of the desired TA */ data.d_ref.root,
+//		/* offset of the selector */ data.d_ref.displ + offset_
+//	);
+//
+//	tmpState->SetFAE(std::shared_ptr<FAE>(fae));
+//
+//	FA_WARN("Executing !!VERY!! suspicious reverse operation FI_acc_sel");
+//	return tmpState;
+
+	FA_WARN("Skipping reverse operation FI_acc_set");
 	return execMan.copyState(bwdSucc);
 }
 
@@ -132,7 +148,12 @@ SymState* FI_node_free::reverseAndIsect(
 	assert(data.isRef());
 	assert(0 == data.d_ref.displ);
 	size_t root = data.d_ref.root;
-	assert(nullptr == fae->getRoot(root));
+	if (nullptr != fae->getRoot(root))
+	{	// in case some unexpected TA is in the position
+
+		// move the TA away
+		fae->freePosition(data.d_ref.root);
+	}
 
 	// load the number of the root that was deleted in the forward configuration
 	const Data& oldData = fwdPred.GetReg(dst_);

@@ -127,3 +127,58 @@ void FAE::buildLTCacheExt(
 		}
 	}
 }
+
+
+void FAE::freePosition(size_t root)
+{
+	// Preconditions
+	assert(root < roots_.size());
+	assert(nullptr != roots_[root]);
+
+	size_t pos;
+	for (pos = 0; pos < roots_.size(); ++pos)
+	{	// try to find a gap in the forest
+		if (nullptr == roots_[pos])
+		{
+			break;
+		}
+	}
+
+	if (roots_.size() == pos)
+	{ // in case no gap was found
+		roots_.push_back(std::shared_ptr<TreeAut>());
+	}
+
+	// 'pos' is now the target index
+	assert(nullptr == roots_[pos]);
+
+	std::vector<size_t> index(roots_.size());
+	for (size_t i = 0; i < index.size(); ++i)
+	{	// create the index
+		index[i] = i;
+	}	
+
+	index[root] = pos;
+	index[pos] = static_cast<size_t>(-1);
+
+	std::ostringstream os;
+	utils::printCont(os, index);
+	FA_NOTE("Index: " << os.str());
+
+	// relabel references to the TA that was at 'pos'
+	for (size_t i = 0; i < roots_.size(); ++i)
+	{
+		if (nullptr != roots_[i])
+		{	// if there is some TA
+			roots_[i] = std::shared_ptr<TreeAut>(
+				this->relabelReferences(roots_[i].get(), index));
+		}
+	}
+
+	// swap the TA
+	roots_[pos].swap(roots_[root]);
+
+	FA_NOTE("TA " << root << " moved to " << pos << ".");
+	FA_NOTE("FAE now: " << *this);
+}
+

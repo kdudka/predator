@@ -52,6 +52,7 @@ void reportErrorNoLocation(const char* errMsg)
 // Forester headers
 #include "backward_run.hh"
 #include "executionmanager.hh"
+#include "fixpoint.hh"
 #include "fixpointinstruction.hh"
 #include "forestautext.hh"
 #include "memplot.hh"
@@ -216,6 +217,40 @@ protected:
 	 */
 	bool main()
 	{
+#ifndef NDEBUG
+		std::ostringstream oss;
+		Compiler::Assembly::printOrigCode(oss, this->GetAssembly().code_);
+		FA_DEBUG_AT(0, "\n" << oss.str());
+
+		FA_DEBUG_AT(0, "Running the analysis with the folowing predicates:");
+		for (const AbstractInstruction* instr : this->GetAssembly().code_)
+		{
+			if (fi_type_e::fiFix == instr->getType())
+			{
+				const FI_abs* absInstr = dynamic_cast<const FI_abs*>(instr);
+				if ((nullptr != absInstr) && (nullptr != absInstr->getPredicate()))
+				{
+					std::ostringstream os;
+					os << "\n---------------------------------------------------\n"
+						<< *absInstr << absInstr->insn();
+
+					const CodeStorage::Insn* clInsn = absInstr->insn();
+					assert(nullptr != clInsn);
+					assert(nullptr != clInsn->bb);
+					if (clInsn->bb->front() == clInsn)
+					{
+						os << " (" << clInsn->bb->name() << ")";
+					}
+
+					os << ": " << *absInstr->insn() << "\n" << *absInstr->getPredicate();
+
+					FA_DEBUG_AT(0, os.str());
+				}
+			}
+		}
+		FA_DEBUG_AT(0, "\n---------------------END---------------------------");
+#endif
+
 		FA_DEBUG_AT(2, "creating empty heap ...");
 
 		// create an empty heap
@@ -303,23 +338,53 @@ protected:
 			// some perhaps helpful information (failpoint and predicate)
 			BackwardRun bwdRun(execMan_);
 			SymState::Trace trace = e.state()->getTrace();
-			const SymState* failPoint = nullptr;
+			SymState* failPoint = nullptr;
 			std::shared_ptr<const FAE> predicate = nullptr;
 
 			bool isSpurious = bwdRun.isSpuriousCE(trace, failPoint, predicate);
 			if (isSpurious)
 			{
-				assert(nullptr != failPoint);
 				assert(nullptr != predicate);
+				assert(nullptr != failPoint);
+				assert(nullptr != failPoint->GetInstr());
 
 				FA_NOTE("The counterexample IS (PROBABLY) spurious");
+
+				FA_NOTE("Failing instuction: " << *failPoint->GetInstr());
+				FA_NOTE("Learnt predicate: " << *predicate);
+
+				// now, we add 'predicate' to the set of predicates that are used for
+				// abstraction at failPoint (which should BTW be abstraction)
+
+				FI_abs* absInstr = dynamic_cast<FI_abs*>(failPoint->GetInstr());
+				if (nullptr == absInstr)
+				{
+					assert(false);
+				}
+
+				// set the new predicate for abstraction
+				absInstr->setPredicate(predicate);
+
+				// clear all fixpoints
+				for (auto instr : assembly_.code_)
+				{
+					if (instr->getType() != fi_type_e::fiFix)
+					{
+						continue;
+					}
+
+					// clear the fixpoint
+					static_cast<FixpointInstruction*>(instr)->clear();
+				}
+
+				return false;
 			}
 			else
 			{
 				FA_NOTE("The counterexample IS real");
-			}
 
-			throw;
+				throw;
+			}
 		}
 		catch (RestartRequest& e)
 		{	// in case a restart is requested, clear all fixpoint computation points

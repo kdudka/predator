@@ -191,6 +191,7 @@ public:   // methods
 		roots_.swap(otherRoots);
 	}
 
+
 	void updateConnectionGraph() const
 	{
 		this->connectionGraph.updateIfNeeded(this->getRoots());
