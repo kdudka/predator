@@ -773,7 +773,8 @@ struct ObjJoinVisitor {
     bool operator()(const FldHandle item[3]);
 };
 
-bool ObjJoinVisitor::operator()(const FldHandle item[3]) {
+bool ObjJoinVisitor::operator()(const FldHandle item[3])
+{
     const FldHandle &fld1   = item[0];
     const FldHandle &fld2   = item[1];
     const FldHandle &fldDst = item[2];
@@ -825,7 +826,8 @@ class ObjMatchVisitor {
         bool operator()(const FldHandle item[2]);
 };
 
-bool ObjMatchVisitor::operator()(const FldHandle item[2]) {
+bool ObjMatchVisitor::operator()(const FldHandle item[2])
+{
     const FldHandle &fld1 = item[0];
     const FldHandle &fld2 = item[1];
 
@@ -903,7 +905,8 @@ class CloneVisitor {
         bool operator()(const FldHandle item[2]);
 };
 
-bool CloneVisitor::operator()(const FldHandle item[2]) {
+bool CloneVisitor::operator()(const FldHandle item[2])
+{
     const FldHandle &fldDst = item[0];
     const FldHandle &fldGt  = item[1];
 
@@ -1946,7 +1949,6 @@ typedef std::vector<TOffset>                        TOffList;
 class MayExistVisitor {
     private:
         SymJoinCtx              ctx_;
-        const TProtoLevel       ldiff_;
         const EJoinStatus       action_;
         const FldHandle         fldRef_;
         const TObjId            obj_;
@@ -1956,12 +1958,10 @@ class MayExistVisitor {
     public:
         MayExistVisitor(
                 SymJoinCtx          &ctx,
-                const TProtoLevel   ldiff,
                 const EJoinStatus   action,
                 const FldHandle     fldRef,
                 const TObjId        obj):
             ctx_(ctx),
-            ldiff_(ldiff),
             action_(action),
             fldRef_(fldRef),
             obj_(obj),
@@ -1982,45 +1982,44 @@ class MayExistVisitor {
             lookThrough_ = enable;
         }
 
-        bool operator()(const FldHandle &fld) {
-            if (!isDataPtr(fld.type()))
-                // not a pointer
-                return /* continue */ true;
-
-            SymHeap &sh = *static_cast<SymHeap *>(fld.sh());
-            TValId val = fld.value();
-
-            for (;;) {
-                const TObjId seg = sh.objByAddr(val);
-                if (seg == obj_)
-                    // refuse referencing the MayExist candidate itself
-                    return /* continue */ true;
-
-                const FldHandle fld1 = (JS_USE_SH1 == action_) ? fld : fldRef_;
-                const FldHandle fld2 = (JS_USE_SH2 == action_) ? fld : fldRef_;
-                const FldHandle fldInvalid;
-                const SchedItem item(fldInvalid, fld1, fld2, ldiff_);
-                if (checkValueMapping(ctx_,
-                            fld1.value(),
-                            fld2.value(),
-                            /* allowUnknownMapping */ true))
-                    // looks like we have a candidate
-                    break;
-
-                if (!lookThrough_ || !isAbstractObject(sh, seg))
-                    return /* continue */ true;
-
-                const TOffset off = sh.valOffset(val);
-                if (sh.segMinLength(seg) || off != headOffset(sh, seg))
-                    return /* continue */ true;
-
-                val = nextValFromSegAddr(sh, val);
-            }
-
-            foundOffsets_.push_back(fld.offset());
-            return /* continue */ true;
-        }
+        bool operator()(const FldHandle &fld);
 };
+
+bool MayExistVisitor::operator()(const FldHandle &fld)
+{
+    if (!isDataPtr(fld.type()))
+        // not a pointer
+        return /* continue */ true;
+
+    SymHeap &sh = *static_cast<SymHeap *>(fld.sh());
+    TValId val = fld.value();
+
+    for (;;) {
+        const TObjId seg = sh.objByAddr(val);
+        if (seg == obj_)
+            // refuse referencing the MayExist candidate itself
+            return /* continue */ true;
+
+        const FldHandle fld1 = (JS_USE_SH1 == action_) ? fld : fldRef_;
+        const FldHandle fld2 = (JS_USE_SH2 == action_) ? fld : fldRef_;
+        const FldHandle fldInvalid;
+        if (checkValueMapping(ctx_, fld1.value(), fld2.value(),
+                    /* allowUnknownMapping */ true))
+            break;
+
+        if (!lookThrough_ || !isAbstractObject(sh, seg))
+            return /* continue */ true;
+
+        const TOffset off = sh.valOffset(val);
+        if (sh.segMinLength(seg) || off != headOffset(sh, seg))
+            return /* continue */ true;
+
+        val = nextValFromSegAddr(sh, val);
+    }
+
+    foundOffsets_.push_back(fld.offset());
+    return /* continue */ true;
+}
 
 bool mayExistDigOffsets(
         BindingOff              *pOff,
@@ -2102,12 +2101,11 @@ bool mayExistFallback(
         return false;
 
     SymHeap &sh = (use1) ? ctx.sh1 : ctx.sh2;
-    const TValId val = (use1) ? v1 : v2;
-    if (!isPossibleToDeref(sh, val))
+    const TObjId obj = (use1) ? obj1 : obj2;
+    if (!sh.isValid(obj))
         // no valid target
         return false;
 
-    const TObjId obj = (use1) ? obj1 : obj2;
     if (OK_REGION != sh.objKind(obj))
         // only concrete objects/prototypes are candidates for OK_SEE_THROUGH
         return false;
@@ -2121,7 +2119,7 @@ bool mayExistFallback(
     }
     else {
         // look for next pointer(s) of OK_SEE_THROUGH/OK_SEE_THROUGH_2N
-        MayExistVisitor visitor(ctx, item.ldiff, action, ref, obj);
+        MayExistVisitor visitor(ctx, action, ref, obj);
         traverseLivePtrs(sh, obj, visitor);
         if (!visitor.found()) {
             // reference value not matched directly, try to look through in
@@ -2133,6 +2131,7 @@ bool mayExistFallback(
                 SJ_DEBUG("MayExistVisitor::enableLookThroughMode() in use!");
         }
 
+        const TValId val = (use1) ? v1 : v2;
         if (!mayExistDigOffsets(&off, sh, val, visitor.foundOffsets()))
             // no match
             return false;
