@@ -1546,7 +1546,54 @@ bool objMatchLookAhead(
 
 bool offRangeFallback(
         SymJoinCtx             &ctx,
-        const SchedItem        &item);
+        const SchedItem        &item)
+{
+#if !(SE_ALLOW_OFF_RANGES & 0x1)
+    return false;
+#endif
+    const TValId v1 = item.fld1.value();
+    const TValId v2 = item.fld2.value();
+
+    ETargetSpecifier ts;
+    if (!joinTargetSpec(&ts, ctx, v1, v2))
+        // target specifier mismatch
+        return false;
+
+    const TObjId obj1 = ctx.sh1.objByAddr(v1);
+    const TObjId obj2 = ctx.sh2.objByAddr(v2);
+
+    const TObjMap &m1 = ctx.objMap1[DIR_LTR];
+    const TObjMap &m2 = ctx.objMap2[DIR_LTR];
+
+    const TObjMap::const_iterator it1 = m1.find(obj1);
+    const TObjMap::const_iterator it2 = m2.find(obj2);
+    if (it1 == m1.end() || it2 == m2.end() || it1->second != it2->second)
+        // not really a suitable candidate for offRangeFallback()
+        return false;
+
+    // check we got different offsets
+    const IR::Range off1 = ctx.sh1.valOffsetRange(v1);
+    const IR::Range off2 = ctx.sh2.valOffsetRange(v2);
+    CL_BREAK_IF(off1 == off2);
+
+    if (!updateJoinStatus(ctx, /* intentionally! */ JS_THREE_WAY))
+        return false;
+
+    // resolve root in ctx.dst
+    const TObjId objDst = roMapLookup(ctx.objMap1[0], ctx.sh1.objByAddr(v1));
+    CL_BREAK_IF(objDst != roMapLookup(ctx.objMap2[0], ctx.sh2.objByAddr(v2)));
+    const TValId rootDst = ctx.dst.addrOfTarget(objDst, ts);
+
+    // compute the resulting range
+    IR::Range rng;
+    rng.lo = std::min(off1.lo, off2.lo);
+    rng.hi = std::max(off1.hi, off2.hi);
+    rng.alignment = IR::Int1;
+
+    // create a VT_RANGE value in ctx.dst
+    const TValId vDst = ctx.dst.valByRange(rootDst, rng);
+    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
+}
 
 bool mapTargetAddress(
         SymJoinCtx              &ctx,
@@ -1918,57 +1965,6 @@ bool segInsertionFallback(
 
     // segInsertionFallback() not applicable
     return false;
-}
-
-bool offRangeFallback(
-        SymJoinCtx             &ctx,
-        const SchedItem        &item)
-{
-#if !(SE_ALLOW_OFF_RANGES & 0x1)
-    return false;
-#endif
-    const TValId v1 = item.fld1.value();
-    const TValId v2 = item.fld2.value();
-
-    ETargetSpecifier ts;
-    if (!joinTargetSpec(&ts, ctx, v1, v2))
-        // target specifier mismatch
-        return false;
-
-    const TObjId obj1 = ctx.sh1.objByAddr(v1);
-    const TObjId obj2 = ctx.sh2.objByAddr(v2);
-
-    const TObjMap &m1 = ctx.objMap1[DIR_LTR];
-    const TObjMap &m2 = ctx.objMap2[DIR_LTR];
-
-    const TObjMap::const_iterator it1 = m1.find(obj1);
-    const TObjMap::const_iterator it2 = m2.find(obj2);
-    if (it1 == m1.end() || it2 == m2.end() || it1->second != it2->second)
-        // not really a suitable candidate for offRangeFallback()
-        return false;
-
-    // check we got different offsets
-    const IR::Range off1 = ctx.sh1.valOffsetRange(v1);
-    const IR::Range off2 = ctx.sh2.valOffsetRange(v2);
-    CL_BREAK_IF(off1 == off2);
-
-    if (!updateJoinStatus(ctx, /* intentionally! */ JS_THREE_WAY))
-        return false;
-
-    // resolve root in ctx.dst
-    const TObjId objDst = roMapLookup(ctx.objMap1[0], ctx.sh1.objByAddr(v1));
-    CL_BREAK_IF(objDst != roMapLookup(ctx.objMap2[0], ctx.sh2.objByAddr(v2)));
-    const TValId rootDst = ctx.dst.addrOfTarget(objDst, ts);
-
-    // compute the resulting range
-    IR::Range rng;
-    rng.lo = std::min(off1.lo, off2.lo);
-    rng.hi = std::max(off1.hi, off2.hi);
-    rng.alignment = IR::Int1;
-
-    // create a VT_RANGE value in ctx.dst
-    const TValId vDst = ctx.dst.valByRange(rootDst, rng);
-    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
 typedef std::vector<TOffset>                        TOffList;
