@@ -59,7 +59,8 @@ public:   // methods
 
 		Index<size_t> stateIndex;
 		fae_.getRoot(root)->buildStateIndex(stateIndex);
-		std::vector<std::vector<bool>> rel(stateIndex.size(), std::vector<bool>(stateIndex.size(), true));
+		std::vector<std::vector<bool>> rel(stateIndex.size(),
+			std::vector<bool>(stateIndex.size(), true));
 
 		// compute the abstraction (i.e. which states are to be merged)
 		fae_.getRoot(root)->heightAbstraction(rel, height, f, stateIndex);
@@ -164,7 +165,9 @@ public:   // methods
 
 		for (size_t i = 0; i < fae_.getRootCount(); ++i)
 		{
-			// refine it according to cutpoints
+			assert(nullptr != fae_.getRoot(i));
+
+			// refine the relation according to cutpoints etc.
 			ConnectionGraph::StateToCutpointSignatureMap stateMap;
 			ConnectionGraph::computeSignatures(stateMap, *fae_.getRoot(i));
 			for (auto j = faeStateIndex.begin(); j != faeStateIndex.end(); ++j)
@@ -181,7 +184,15 @@ public:   // methods
 						continue;
 					}
 
-					if (FA::isData(j->first) || FA::isData(k->first))
+					// load data if present
+					const Data* jData;
+					bool jIsData = fae_.isData(j->first, jData);
+					assert((!jIsData || (nullptr != jData)) && (!(nullptr == jData) || !jIsData));
+					const Data* kData;
+					bool kIsData = fae_.isData(k->first, kData);
+					assert((!kIsData || (nullptr != kData)) && (!(nullptr == kData) || !kIsData));
+
+					if (jIsData || kIsData)
 					{
 						rel[j->second][k->second] = false;
 						continue;

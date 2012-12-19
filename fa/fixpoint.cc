@@ -336,26 +336,29 @@ void abstract(
 	// abstract
 	Abstraction abstraction(fae);
 
-#if 0
-	// the roots that will be excluded from abstraction
-	std::vector<bool> excludedRoots(fae.getRootCount(), false);
-
-	for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
-	{
-		excludedRoots[VirtualMachine(fae).varGet(i).d_ref.root] = true;
+	if (FA_USE_PREDICATE_ABSTRACTION)
+	{	// for predicate abstraction
+		abstraction.predicateAbstraction(predicate);
 	}
+	else
+	{	// for finite height abstraction
 
-	for (size_t i = 0; i < fae.getRootCount(); ++i)
-	{
-		if (!excludedRoots[i])
+		// the roots that will be excluded from abstraction
+		std::vector<bool> excludedRoots(fae.getRootCount(), false);
+		for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
 		{
-			abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmartTMatchF());
-	//		abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmarterTMatchF(fae));
+			excludedRoots[VirtualMachine(fae).varGet(i).d_ref.root] = true;
+		}
+
+		for (size_t i = 0; i < fae.getRootCount(); ++i)
+		{
+			if (!excludedRoots[i])
+			{
+				abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmartTMatchF());
+//				abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmarterTMatchF(fae));
+			}
 		}
 	}
-#endif
-
-	abstraction.predicateAbstraction(predicate);
 
 	FA_DEBUG_AT(3, "after abstraction: " << std::endl << fae);
 }

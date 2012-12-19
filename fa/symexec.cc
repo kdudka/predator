@@ -210,46 +210,60 @@ protected:
 	}
 
 	/**
+	 * @brief  Clears all fixpoints
+	 */
+	void clearFixpoints()
+	{
+		// clear all fixpoints
+		for (auto instr : assembly_.code_)
+		{
+			if (instr->getType() == fi_type_e::fiFix)
+			{
+				// clear the fixpoint
+				static_cast<FixpointInstruction*>(instr)->clear();
+			}
+		}
+	}
+
+
+	/**
 	 * @brief  The main execution loop
 	 *
 	 * This method is the main execution loop for the symbolic execution. It
 	 * assumes that the microcode is already compiled, etc.
 	 */
-	bool main()
+	bool mainLoop()
 	{
-#ifndef NDEBUG
-		std::ostringstream oss;
-		Compiler::Assembly::printOrigCode(oss, this->GetAssembly().code_);
-		FA_DEBUG_AT(0, "\n" << oss.str());
-
-		FA_DEBUG_AT(0, "Running the analysis with the folowing predicates:");
-		for (const AbstractInstruction* instr : this->GetAssembly().code_)
+		if (FA_USE_PREDICATE_ABSTRACTION)
 		{
-			if (fi_type_e::fiFix == instr->getType())
+			FA_DEBUG_AT(0, "Running the analysis with the folowing predicates:");
+			for (const AbstractInstruction* instr : this->GetAssembly().code_)
 			{
-				const FI_abs* absInstr = dynamic_cast<const FI_abs*>(instr);
-				if ((nullptr != absInstr) && (nullptr != absInstr->getPredicate()))
+				if (fi_type_e::fiFix == instr->getType())
 				{
-					std::ostringstream os;
-					os << "\n---------------------------------------------------\n"
-						<< *absInstr << absInstr->insn();
-
-					const CodeStorage::Insn* clInsn = absInstr->insn();
-					assert(nullptr != clInsn);
-					assert(nullptr != clInsn->bb);
-					if (clInsn->bb->front() == clInsn)
+					const FI_abs* absInstr = dynamic_cast<const FI_abs*>(instr);
+					if ((nullptr != absInstr) && (nullptr != absInstr->getPredicate()))
 					{
-						os << " (" << clInsn->bb->name() << ")";
+						std::ostringstream os;
+						os << "\n---------------------------------------------------\n"
+							<< *absInstr << absInstr->insn();
+
+						const CodeStorage::Insn* clInsn = absInstr->insn();
+						assert(nullptr != clInsn);
+						assert(nullptr != clInsn->bb);
+						if (clInsn->bb->front() == clInsn)
+						{
+							os << " (" << clInsn->bb->name() << ")";
+						}
+
+						os << ": " << *absInstr->insn() << "\n" << *absInstr->getPredicate();
+
+						FA_DEBUG_AT(0, os.str());
 					}
-
-					os << ": " << *absInstr->insn() << "\n" << *absInstr->getPredicate();
-
-					FA_DEBUG_AT(0, os.str());
 				}
 			}
+			FA_DEBUG_AT(0, "\n---------------------END---------------------------");
 		}
-		FA_DEBUG_AT(0, "\n---------------------END---------------------------");
-#endif
 
 		FA_DEBUG_AT(2, "creating empty heap ...");
 
@@ -332,72 +346,60 @@ protected:
 				Streams::traceUcode(oss.str().c_str());
 			}
 
-			FA_LOG("Executing backward run...");
+			if (FA_USE_PREDICATE_ABSTRACTION)
+			{	// in case we are using predicate abstraction
+				FA_LOG("Executing backward run...");
 
-			// check whether the counterexample is spurious and in case it is collect
-			// some perhaps helpful information (failpoint and predicate)
-			BackwardRun bwdRun(execMan_);
-			SymState::Trace trace = e.state()->getTrace();
-			SymState* failPoint = nullptr;
-			std::shared_ptr<const FAE> predicate = nullptr;
+				// check whether the counterexample is spurious and in case it is collect
+				// some perhaps helpful information (failpoint and predicate)
+				BackwardRun bwdRun(execMan_);
+				SymState::Trace trace = e.state()->getTrace();
+				SymState* failPoint = nullptr;
+				std::shared_ptr<const FAE> predicate = nullptr;
 
-			bool isSpurious = bwdRun.isSpuriousCE(trace, failPoint, predicate);
-			if (isSpurious)
-			{
-				assert(nullptr != predicate);
-				assert(nullptr != failPoint);
-				assert(nullptr != failPoint->GetInstr());
-
-				FA_NOTE("The counterexample IS (PROBABLY) spurious");
-
-				FA_NOTE("Failing instuction: " << *failPoint->GetInstr());
-				FA_NOTE("Learnt predicate: " << *predicate);
-
-				// now, we add 'predicate' to the set of predicates that are used for
-				// abstraction at failPoint (which should BTW be abstraction)
-
-				FI_abs* absInstr = dynamic_cast<FI_abs*>(failPoint->GetInstr());
-				if (nullptr == absInstr)
+				bool isSpurious = bwdRun.isSpuriousCE(trace, failPoint, predicate);
+				if (isSpurious)
 				{
-					assert(false);
-				}
+					assert(nullptr != predicate);
+					assert(nullptr != failPoint);
+					assert(nullptr != failPoint->GetInstr());
 
-				// set the new predicate for abstraction
-				absInstr->setPredicate(predicate);
+					FA_NOTE("The counterexample IS (PROBABLY) spurious");
 
-				// clear all fixpoints
-				for (auto instr : assembly_.code_)
-				{
-					if (instr->getType() != fi_type_e::fiFix)
+					FA_NOTE("Failing instuction: " << *failPoint->GetInstr());
+					FA_NOTE("Learnt predicate: " << *predicate);
+
+					// now, we add 'predicate' to the set of predicates that are used for
+					// abstraction at failPoint (which should BTW be abstraction)
+
+					FI_abs* absInstr = dynamic_cast<FI_abs*>(failPoint->GetInstr());
+					if (nullptr == absInstr)
 					{
-						continue;
+						assert(false);
 					}
 
-					// clear the fixpoint
-					static_cast<FixpointInstruction*>(instr)->clear();
-				}
+					// set the new predicate for abstraction
+					absInstr->setPredicate(predicate);
 
-				return false;
+					clearFixpoints();
+
+					return false;
+				}
+				else
+				{	// if the counterexample is not spurious
+					FA_NOTE("The counterexample IS real");
+
+					throw;
+				}
 			}
 			else
-			{
-				FA_NOTE("The counterexample IS real");
-
+			{	// in case we are using finite height abstraction
 				throw;
 			}
 		}
 		catch (RestartRequest& e)
 		{	// in case a restart is requested, clear all fixpoint computation points
-			for (auto instr : assembly_.code_)
-			{
-				if (instr->getType() != fi_type_e::fiFix)
-				{
-					continue;
-				}
-
-				// clear the fixpoint
-				static_cast<FixpointInstruction*>(instr)->clear();
-			}
+			clearFixpoints();
 
 			FA_DEBUG_AT(2, e.what());
 
@@ -552,7 +554,7 @@ public:   // methods
 
 		try
 		{	// expect problems...
-			while (!this->main())
+			while (!this->mainLoop())
 			{	// while the analysis hasn't terminated
 				FA_NOTE("Restarting the analysis...");
 			}

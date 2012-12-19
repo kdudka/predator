@@ -28,36 +28,42 @@
 /**
  * set abstraction height (default is 1)
  */
-#define FA_ABS_HEIGHT						1
+#define FA_ABS_HEIGHT                   1
 
 /**
  * set reference count tracking treshold (default is 2)
  */
-#define FA_REF_CNT_TRESHOLD					2
+#define FA_REF_CNT_TRESHOLD             2
 
 /**
  * allow to track number of selectors leading towards a given cut-point (default is 1)
  */
-#define FA_TRACK_SELECTORS					1
+#define FA_TRACK_SELECTORS              1
 
 /**
  * allow folding of nested structures (default is 1)
  */
-#define FA_ALLOW_FOLDING					1
+#define FA_ALLOW_FOLDING                1
 
 /**
  * overapproximate when folding (default is 0)
  */
-#define FA_BOX_APPROXIMATION				0
+#define FA_BOX_APPROXIMATION            0
 
 /**
- * should we restart evry time a new box is encountered (default is 1)
+ * should we restart every time a new box is encountered (default is 1)
  */
-#define FA_RESTART_AFTER_BOX_DISCOVERY		(1 + FA_BOX_APPROXIMATION)
+#define FA_RESTART_AFTER_BOX_DISCOVERY  (1 + FA_BOX_APPROXIMATION)
 
 /**
  * enable fusion when computing abstraction (default is 1)
  */
-#define FA_FUSION_ENABLED					1
+#define FA_FUSION_ENABLED					       1
+
+/**
+ * use predicate abstraction (default abstraction is finite height abstraction)
+ */
+#define FA_USE_PREDICATE_ABSTRACTION     0
+
 
 #endif /* CONFIG_H */
