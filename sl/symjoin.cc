@@ -1809,45 +1809,43 @@ bool insertSegmentClone(
     const bool isGt2 = (JS_USE_SH2 == action);
     CL_BREAK_IF(isGt1 == isGt2);
 
-    // resolve the existing segment in shGt
+    // resolve the segment to be inserted and the corresponding heap
     SymHeap &shGt = ((isGt1) ? ctx.sh1 : ctx.sh2);
-    const TObjId seg = shGt.objByAddr((isGt1) ? v1 : v2);
-    const EObjKind kind = shGt.objKind(seg);
+    const TObjId objGt = shGt.objByAddr((isGt1) ? v1 : v2);
 
-    const bool isObjOrNull = (OK_OBJ_OR_NULL == kind)
-        || (off && (ObjOrNull == *off));
-
-    // resolve the 'next' pointer and check its validity
-    FldHandle nextPtr;
-    TValId nextGt;
-    if (isObjOrNull)
-        nextGt = VAL_NULL;
+    // resolve the 'next' pointer
+    FldHandle nextPtr(FLD_INVALID);
+    if (off) {
+        if (ObjOrNull != *off)
+            nextPtr = PtrHandle(shGt, objGt, off->next);
+    }
     else {
-        nextPtr = (off)
-            ? PtrHandle(shGt, seg, off->next)
-            : nextPtrFromSeg(shGt, seg);
-
-        nextGt = nextPtr.value();
+        const EObjKind kind = shGt.objKind(objGt);
+        if (isObjWithBinding(kind))
+            nextPtr = nextPtrFromSeg(shGt, objGt);
     }
 
-    const TValId nextLt = (isGt2) ? v1 : v2;
-    if (!off && !checkValueMapping(ctx,
-                (isGt1) ? nextGt : nextLt,
-                (isGt2) ? nextGt : nextLt))
-    {
+    // resolve the 'next' address
+    const TValId nextGt = (nextPtr.isValidHandle())
+        ? nextPtr.value()
+        : VAL_NULL;
+
+    // make sure there is no conflict on the successor pair of values already
+    const TValId valNext1 = (isGt1) ? nextGt : v1;
+    const TValId valNext2 = (isGt2) ? nextGt : v2;
+    if (!off && !checkValueMapping(ctx, valNext1, valNext2))
         return false;
-    }
 
     SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
 
 #if SE_ALLOW_THREE_WAY_JOIN < 3
-    if (!ctx.joiningData() && objMinLength(shGt, seg))
+    if (!ctx.joiningData() && objMinLength(shGt, objGt))
         // on the way from joinSymHeaps(), some three way joins are destructive
         ctx.allowThreeWay = false;
 #endif
 
     EJoinStatus status = action;
-    if (objMinLength(shGt, seg))
+    if (objMinLength(shGt, objGt))
         // cloning a non-empty object implies JS_THREE_WAY
         status = JS_THREE_WAY;
 
@@ -1863,7 +1861,7 @@ bool insertSegmentClone(
         return true;
     }
 
-    if (!isObjOrNull) {
+    if (nextPtr.isValidHandle()) {
         // follow the next pointer
         const FldHandle fldNextDst = nextPtrFromSeg(ctx.dst, objDst);
 
