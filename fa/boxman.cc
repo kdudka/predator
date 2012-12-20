@@ -116,7 +116,9 @@ std::string BoxMan::getBoxName() const
 }
 
 
-label_type BoxMan::lookupLabel(size_t arity, const DataArray& x)
+label_type BoxMan::lookupLabel(
+	size_t                        arity,
+	const DataArray&              x)
 {
 	std::pair<TVarDataStore::iterator, bool> p = vDataStore_.insert(
 		std::make_pair(std::make_pair(arity, x), static_cast<NodeLabel*>(nullptr)));
@@ -128,9 +130,9 @@ label_type BoxMan::lookupLabel(size_t arity, const DataArray& x)
 
 
 bool BoxMan::EvaluateBoxF::operator()(
-	const AbstractBox* aBox,
-	size_t index,
-	size_t offset)
+	const AbstractBox*       aBox,
+	size_t                   index,
+	size_t                   offset)
 {
 	switch (aBox->getType())
 	{
@@ -166,8 +168,8 @@ bool BoxMan::EvaluateBoxF::operator()(
 
 
 label_type BoxMan::lookupLabel(
-	const std::vector<const AbstractBox*>& x,
-	const std::vector<SelData>* nodeInfo)
+	const std::vector<const AbstractBox*>&     x,
+	const std::vector<SelData>*                nodeInfo)
 {
 	std::pair<TNodeStore::iterator, bool> p = nodeStore_.insert(
 		std::make_pair(x, static_cast<NodeLabel*>(nullptr)));
@@ -227,8 +229,8 @@ const TypeBox* BoxMan::getTypeInfo(const std::string& name)
 
 
 const TypeBox* BoxMan::createTypeInfo(
-	const std::string& name,
-	const std::vector<size_t>& selectors)
+	const std::string&            name,
+	const std::vector<size_t>&    selectors)
 {
 	std::pair<const std::string, const TypeBox*>& p = *typeIndex_.insert(
 		std::make_pair(name, static_cast<const TypeBox*>(nullptr))
@@ -241,12 +243,12 @@ const TypeBox* BoxMan::createTypeInfo(
 
 
 size_t BoxMan::translateSignature(
-	ConnectionGraph::CutpointSignature& result,
-	std::vector<std::pair<size_t, size_t>>& selectors,
-	size_t root,
-	const ConnectionGraph::CutpointSignature& signature,
-	size_t aux,
-	const std::vector<size_t>& index)
+	ConnectionGraph::CutpointSignature&         result,
+	std::vector<std::pair<size_t, size_t>>&     selectors,
+	size_t                                      root,
+	const ConnectionGraph::CutpointSignature&   signature,
+	size_t                                      aux,
+	const std::vector<size_t>&                  index)
 {
 	size_t auxSelector = static_cast<size_t>(-1);
 
@@ -275,11 +277,11 @@ size_t BoxMan::translateSignature(
 
 
 Box* BoxMan::createType1Box(
-	size_t root,
-	const std::shared_ptr<TreeAut>& output,
-	const ConnectionGraph::CutpointSignature& signature,
-	std::vector<size_t>& inputMap,
-	const std::vector<size_t>& index)
+	size_t                                      root,
+	const std::shared_ptr<TreeAut>&             output,
+	const ConnectionGraph::CutpointSignature&   signature,
+	std::vector<size_t>&                        inputMap,
+	const std::vector<size_t>&                  index)
 {
 	ConnectionGraph::CutpointSignature outputSignature;
 	std::vector<std::pair<size_t, size_t>> selectors;
@@ -302,15 +304,15 @@ Box* BoxMan::createType1Box(
 
 
 Box* BoxMan::createType2Box(
-	size_t root,
-	const std::shared_ptr<TreeAut>& output,
-	const ConnectionGraph::CutpointSignature& signature,
-	std::vector<size_t>& inputMap,
-	size_t aux,
-	const std::shared_ptr<TreeAut>& input,
-	const ConnectionGraph::CutpointSignature& signature2,
-	size_t inputSelector,
-	std::vector<size_t>& index)
+	size_t                                        root,
+	const std::shared_ptr<TreeAut>&               output,
+	const ConnectionGraph::CutpointSignature&     signature,
+	std::vector<size_t>&                          inputMap,
+	size_t                                        aux,
+	const std::shared_ptr<TreeAut>&               input,
+	const ConnectionGraph::CutpointSignature&     signature2,
+	size_t                                        inputSelector,
+	std::vector<size_t>&                          index)
 {
 	// Assertions
 	assert(aux < index.size());

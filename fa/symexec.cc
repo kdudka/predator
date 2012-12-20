@@ -451,8 +451,6 @@ public:   // methods
 			{
 				case cl_type_e::CL_TYPE_STRUCT: // for a structure
 
-					NodeBuilder::buildNode(v, type);
-
 					if (type->name)
 					{	// in case the structure has a name
 						name = std::string(type->name);
@@ -463,6 +461,8 @@ public:   // methods
 						ss << type->uid;
 						name = ss.str();
 					}
+
+					NodeBuilder::buildNode(v, type);
 
 					FA_DEBUG_AT(3, name);
 

@@ -242,8 +242,8 @@ public:
 	};
 
 	label_type lookupLabel(
-		const std::vector<const AbstractBox*>& x,
-		const std::vector<SelData>* nodeInfo = nullptr);
+		const std::vector<const AbstractBox*>&       x,
+		const std::vector<SelData>*                  nodeInfo = nullptr);
 
 	const Data& getData(const Data& data)
 	{
@@ -267,34 +267,35 @@ public:
 
 	const TypeBox* getTypeInfo(const std::string& name);
 
-	const TypeBox* createTypeInfo(const std::string& name,
-		const std::vector<size_t>& selectors);
+	const TypeBox* createTypeInfo(
+		const std::string&                           name,
+		const std::vector<size_t>&                   selectors);
 
 	static size_t translateSignature(
-		ConnectionGraph::CutpointSignature& result,
-		std::vector<std::pair<size_t, size_t>>& selectors,
-		size_t root,
-		const ConnectionGraph::CutpointSignature& signature,
-		size_t aux,
-		const std::vector<size_t>& index);
+		ConnectionGraph::CutpointSignature&          result,
+		std::vector<std::pair<size_t, size_t>>&      selectors,
+		size_t                                       root,
+		const ConnectionGraph::CutpointSignature&    signature,
+		size_t                                       aux,
+		const std::vector<size_t>&                   index);
 
 	Box* createType1Box(
-		size_t root,
-		const std::shared_ptr<TreeAut>& output,
-		const ConnectionGraph::CutpointSignature& signature,
-		std::vector<size_t>& inputMap,
-		const std::vector<size_t>& index);
+		size_t                                       root,
+		const std::shared_ptr<TreeAut>&              output,
+		const ConnectionGraph::CutpointSignature&    signature,
+		std::vector<size_t>&                         inputMap,
+		const std::vector<size_t>&                   index);
 
 	Box* createType2Box(
-		size_t root,
-		const std::shared_ptr<TreeAut>& output,
-		const ConnectionGraph::CutpointSignature& signature,
-		std::vector<size_t>& inputMap,
-		size_t aux,
-		const std::shared_ptr<TreeAut>& input,
-		const ConnectionGraph::CutpointSignature& signature2,
-		size_t inputSelector,
-		std::vector<size_t>& index);
+		size_t                                       root,
+		const std::shared_ptr<TreeAut>&              output,
+		const ConnectionGraph::CutpointSignature&    signature,
+		std::vector<size_t>&                         inputMap,
+		size_t                                       aux,
+		const std::shared_ptr<TreeAut>&              input,
+		const ConnectionGraph::CutpointSignature&    signature2,
+		size_t                                       inputSelector,
+		std::vector<size_t>&                         index);
 
 	const Box* getBox(const Box& box);
 
