@@ -233,10 +233,14 @@ const TypeBox* BoxMan::createTypeInfo(
 	const std::vector<size_t>&    selectors)
 {
 	std::pair<const std::string, const TypeBox*>& p = *typeIndex_.insert(
-		std::make_pair(name, static_cast<const TypeBox*>(nullptr))
-	).first;
-	if (p.second)
-		throw std::runtime_error("BoxMan::createTypeInfo(): type already exists!");
+		std::make_pair(name, static_cast<const TypeBox*>(nullptr))).first;
+	if (p.second && (selectors != p.second->getSelectors()))
+	{
+		// FIXME: this should be done in a better way, more C99-like
+		throw std::runtime_error("BoxMan::createTypeInfo(): type \'" + name
+			+ "\' already exists with incompatible declaration!");
+	}
+
 	p.second = new TypeBox(name, selectors);
 	return p.second;
 }
