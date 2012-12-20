@@ -849,7 +849,7 @@ bool joinFields(
         const TObjId            objDst,
         const TObjId            obj1,
         const TObjId            obj2,
-        const TProtoLevel       ldiff,
+        const TProtoLevel       ldiff = 0,
         const BindingOff       *offBlackList = 0)
 {
     if (!defineObjectMapping(ctx, objDst, obj1, obj2))
@@ -2252,8 +2252,7 @@ class JoinVarVisitor {
 
             switch (mode_) {
                 case JVM_LIVE_OBJS:
-                    return joinFields(ctx_, objDst, obj1, obj2,
-                        /* ldiff */ 0);
+                    return joinFields(ctx_, objDst, obj1, obj2);
 
                 case JVM_UNI_BLOCKS:
                     return joinUniBlocks(ctx_, objDst, obj1, obj2);
@@ -2440,7 +2439,7 @@ bool joinSymHeaps(
     CL_BREAK_IF(!protoCheckConsistency(ctx.sh2));
 
     // try to join the objects that hold the return values
-    if (!joinFields(ctx, OBJ_RETURN, OBJ_RETURN, OBJ_RETURN, /* ldiff */ 0))
+    if (!joinFields(ctx, OBJ_RETURN, OBJ_RETURN, OBJ_RETURN))
         goto fail;
 
     // start with program variables
@@ -2511,26 +2510,22 @@ void killUniBlocksUnderBindingPtrs(
 }
 
 void recoverPointersToDst(
-        SymJoinCtx             &ctx,
-        const TObjId            dst)
+        SymHeap                &sh,
+        const TObjId            dst,
+        TObjSet                 protos)
 {
+    // include the root as if it was a prototype (to recover pointers to self)
+    protos.insert(dst);
+
     // redirect pointers from prototypes to their parents
-    BOOST_FOREACH(const TObjId protoGhost, ctx.protos) {
-        redirectRefs(ctx.dst,
-                /* pointingFrom */  protoGhost,
+    BOOST_FOREACH(const TObjId obj, protos) {
+        redirectRefs(sh,
+                /* pointingFrom */  obj,
                 /* pointingTo   */  dst,
                 /* pointingWith */  TS_INVALID,
                 /* redirectTo   */  dst,
                 /* redirectWith */  TS_ALL);
     }
-
-    // redirect pointers to self
-    redirectRefs(ctx.dst,
-            /* pointingFrom */  dst,
-            /* pointingTo   */  dst,
-            /* pointingWith */  TS_INVALID,
-            /* redirectTo   */  dst,
-            /* redirectWith */  TS_ALL);
 }
 
 bool joinData(
@@ -2606,7 +2601,7 @@ bool joinData(
     }
 
     if (pDst) {
-        recoverPointersToDst(ctx, objDst);
+        recoverPointersToDst(ctx.dst, objDst, ctx.protos);
         *pDst = objDst;
     }
 
