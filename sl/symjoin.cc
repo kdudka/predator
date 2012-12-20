@@ -497,22 +497,24 @@ bool checkObjectMapping(
 bool checkValueMapping(
         const SymJoinCtx       &ctx,
         const TValId            v1,
-        const TValId            v2,
-        const bool              allowUnknownMapping,
-        TValId                 *pDst = 0)
+        const TValId            v2)
 {
     if (!checkNonPosValues(v1, v2))
         return false;
 
     const EValueTarget code1 = ctx.sh1.valTarget(v1);
     const EValueTarget code2 = ctx.sh2.valTarget(v2);
-    if (VT_OBJECT == code1 && VT_OBJECT == code2
-            && !matchOffsets(ctx.sh1, ctx.sh2, v1, v2))
-        return false;
+    if (VT_OBJECT == code1 && VT_OBJECT == code2) {
+        const TOffset off1 = ctx.sh1.valOffset(v1);
+        const TOffset off2 = ctx.sh2.valOffset(v2);
+        if (off1 != off2)
+            // offset mismatch
+            return false;
+    }
 
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
-    if (!checkObjectMapping(ctx, obj1, obj2, allowUnknownMapping))
+    if (!checkObjectMapping(ctx, obj1, obj2, /* allowUnknownMapping */ true))
         return false;
 
     // read-only value lookup
@@ -521,26 +523,10 @@ bool checkValueMapping(
     TValMap::const_iterator i1 = vMap1.find(v1);
     TValMap::const_iterator i2 = vMap2.find(v2);
 
-    const bool hasMapping1 = (vMap1.end() != i1);
-    const bool hasMapping2 = (vMap2.end() != i2);
-    if (!hasMapping1 || !hasMapping2)
-        // we have not enough info yet
-        return allowUnknownMapping;
-
-    const TValId vDst1 = (hasMapping1) ? i1->second : VAL_INVALID;
-    const TValId vDst2 = (hasMapping2) ? i2->second : VAL_INVALID;
-
-    if (hasMapping1 && hasMapping2 && (vDst1 == vDst2)) {
-        // mapping already known and known to be consistent
-        if (pDst) {
-            const IR::Range off = ctx.sh1.valOffsetRange(v1);
-            CL_BREAK_IF(off != ctx.sh2.valOffsetRange(v2));
-            *pDst = ctx.dst.valByRange(vDst1 /* == vDst2 */, off);
-        }
-        return true;
-    }
-
-    return false;
+    // fail only if both values are mapped, but to a different value
+    return (vMap1.end() == i1)
+        || (vMap2.end() == i2)
+        || (i1->second  == i2->second);
 }
 
 bool handleUnknownValues(
@@ -841,7 +827,7 @@ bool ObjMatchVisitor::operator()(const FldHandle item[2])
     if (joinCacheLookup(ctx, v1, v2))
         return true;
 
-    return checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true);
+    return checkValueMapping(ctx, v1, v2);
 }
 
 bool joinFields(
@@ -1847,8 +1833,7 @@ bool insertSegmentClone(
     const TValId nextLt = (isGt2) ? v1 : v2;
     if (!off && !checkValueMapping(ctx,
                 (isGt1) ? nextGt : nextLt,
-                (isGt2) ? nextGt : nextLt,
-                /* allowUnknownMapping */ true))
+                (isGt2) ? nextGt : nextLt))
     {
         return false;
     }
@@ -2009,8 +1994,7 @@ bool MayExistVisitor::operator()(const FldHandle &fld)
         const FldHandle fld1 = (JS_USE_SH1 == action_) ? fld : fldRef_;
         const FldHandle fld2 = (JS_USE_SH2 == action_) ? fld : fldRef_;
         const FldHandle fldInvalid;
-        if (checkValueMapping(ctx_, fld1.value(), fld2.value(),
-                    /* allowUnknownMapping */ true))
+        if (checkValueMapping(ctx_, fld1.value(), fld2.value()))
             break;
 
         if (!lookThrough_ || !isAbstractObject(sh, seg))
@@ -2201,7 +2185,7 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
         return false;
     }
 
-    if (!checkValueMapping(ctx, v1, v2, /* allowUnknownMapping */ true)) {
+    if (!checkValueMapping(ctx, v1, v2)) {
         if (mayExistFallback(&result, ctx, item, JS_USE_SH1))
             return result;
 
