@@ -863,11 +863,9 @@ bool joinFields(
         buildIgnoreList(objVisitor.blackList2, ctx.sh2, obj2, *offBlackList);
     }
     else if (ctx.joiningData()) {
-        if (obj1 == obj2)
-            // do not follow shared data
-            return true;
-        else
-            ctx.protos.insert(objDst);
+        // this is going to be a prototype object
+        CL_BREAK_IF(obj1 == obj2);
+        ctx.protos.insert(objDst);
     }
 
     const TObjId objs[] = {
@@ -1184,9 +1182,10 @@ bool joinNestingLevel(
 
     *pDst = std::max(level1, level2);
 
-    if (ctx.joiningData() && obj1 == obj2)
-        // shared data
+    if (ctx.joiningData() && obj1 == obj2) {
+        CL_BREAK_IF("joinNestingLevel() called on a shared object");
         return true;
+    }
 
     // check that the computed ldiff matches the actual one
     const TProtoLevel ldiffComputed = level1 - level2;
@@ -2161,6 +2160,10 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     SJ_DEBUG("--- " << SJ_FLDT(item.fldDst, item.fld1, item.fld2)
             << " -> " << SJ_VALP(v1, v2));
 
+    if (ctx.joiningData() && v1 == v2)
+        // shared data
+        return writeJoinedValue(ctx, item.fldDst, v1 /* = v2*/, v1, v2);
+
     TValId vDst;
     if (joinCacheLookup(ctx, v1, v2, &vDst)) {
         item.fldDst.setValue(vDst);
@@ -2175,9 +2178,8 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
     if (ctx.joiningData() && obj1 == obj2)
-        // we are on the way from joinData() and hit shared data
-        return defineObjectMapping(ctx, obj1, obj2, obj1 /* = obj2 */)
-            && mapTargetAddress(ctx, item, obj1 /* = obj2 */);
+        // joinData() hits a shared object via different addresses, giving up!
+        return false;
 
     TObjId objDst;
     if (checkObjectMapping(ctx, obj1, obj2, /* allowUnkn */ false, &objDst))
