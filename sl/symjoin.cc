@@ -1939,22 +1939,22 @@ typedef std::vector<TOffset>                        TOffList;
 
 class MayExistVisitor {
     private:
-        SymJoinCtx              ctx_;
+        SymJoinCtx             &ctx_;
         const EJoinStatus       action_;
-        const FldHandle         fldRef_;
+        const TValId            refVal_;
         const TObjId            obj_;
         bool                    lookThrough_;
         TOffList                foundOffsets_;
 
     public:
         MayExistVisitor(
-                SymJoinCtx          &ctx,
+                SymJoinCtx         &ctx,
                 const EJoinStatus   action,
-                const FldHandle     fldRef,
+                const TValId        refVal,
                 const TObjId        obj):
             ctx_(ctx),
             action_(action),
-            fldRef_(fldRef),
+            refVal_(refVal),
             obj_(obj),
             lookThrough_(false)
         {
@@ -1991,10 +1991,9 @@ bool MayExistVisitor::operator()(const FldHandle &fld)
             // refuse referencing the MayExist candidate itself
             return /* continue */ true;
 
-        const FldHandle fld1 = (JS_USE_SH1 == action_) ? fld : fldRef_;
-        const FldHandle fld2 = (JS_USE_SH2 == action_) ? fld : fldRef_;
-        const FldHandle fldInvalid;
-        if (checkValueMapping(ctx_, fld1.value(), fld2.value()))
+        const TValId v1 = (JS_USE_SH1 == action_) ? val : refVal_;
+        const TValId v2 = (JS_USE_SH2 == action_) ? val : refVal_;
+        if (checkValueMapping(ctx_, v1, v2))
             break;
 
         if (!lookThrough_ || !isAbstractObject(sh, seg))
@@ -2102,14 +2101,14 @@ bool mayExistFallback(
 
     BindingOff off;
 
-    const FldHandle ref = (use2) ? item.fld1 : item.fld2;
-    if (VAL_NULL == ref.value()) {
+    const TValId refVal = (use2) ? v1 : v2;
+    if (VAL_NULL == refVal) {
         // introduce OK_OBJ_OR_NULL
         off = ObjOrNull;
     }
     else {
         // look for next pointer(s) of OK_SEE_THROUGH/OK_SEE_THROUGH_2N
-        MayExistVisitor visitor(ctx, action, ref, obj);
+        MayExistVisitor visitor(ctx, action, refVal, obj);
         traverseLivePtrs(sh, obj, visitor);
         if (!visitor.found()) {
             // reference value not matched directly, try to look through in
@@ -2130,10 +2129,8 @@ bool mayExistFallback(
     if (!insertSegmentClone(pResult, ctx, item, action, &off))
         return false;
 
-    if (*pResult)
-        // mayExistFallback() always implies JS_THREE_WAY
-        *pResult = updateJoinStatus(ctx, JS_THREE_WAY);
-
+    // mayExistFallback() always implies JS_THREE_WAY
+    *pResult &= updateJoinStatus(ctx, JS_THREE_WAY);
     return true;
 }
 
