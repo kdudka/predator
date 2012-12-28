@@ -275,7 +275,16 @@ public:   // data types
 	///	the type of a tree automaton transition
 	typedef TT<T> Transition;
 
+	/// cache of transitions
 	typedef Cache<Transition> trans_cache_type;
+
+	/// the value type of the cache: a pair of a transition and its ID
+	typedef std::pair<const Transition, size_t> TransIDPair;
+
+	// check that the types _really_ match
+	static_assert(
+		std::is_same<typename trans_cache_type::value_type, TransIDPair>::value,
+		"Incompatible types!");
 
 	// this is the place where transitions are stored
 	struct Backend
@@ -292,14 +301,14 @@ public:   // data types
 	struct CmpF
 	{
 		bool operator()(
-			typename trans_cache_type::value_type*     lhs,
-			typename trans_cache_type::value_type*     rhs) const
+			const TransIDPair*     lhs,
+			const TransIDPair*     rhs) const
 		{
 			return lhs->first < rhs->first;
 		}
 	};
 
-	typedef std::set<typename trans_cache_type::value_type*, CmpF> trans_set_type;
+	typedef std::set<TransIDPair*, CmpF> trans_set_type;
 
 	/**
 	 * @brief  Iterator over transitions
@@ -433,7 +442,7 @@ public:
 			finalStates_ = ta.finalStates_;
 		}
 
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (TransIDPair* trans : this->transitions)
 		{	// copy transitions
 			this->transCache().addRef(trans);
 		}
@@ -455,7 +464,7 @@ public:
 			finalStates_ = ta.finalStates_;
 		}
 
-		for (typename trans_cache_type::value_type* trans : ta.transitions)
+		for (TransIDPair* trans : ta.transitions)
 		{	// copy transitions (only those requested)
 			if (f(&trans->first))
 			{
@@ -474,9 +483,9 @@ public:
 		return this->backend->transCache;
 	}
 
-	typename trans_cache_type::value_type* internalAdd(const Transition& t)
+	TransIDPair* internalAdd(const Transition& t)
 	{
-		typename trans_cache_type::value_type* x = this->transCache().lookup(t);
+		TransIDPair* x = this->transCache().lookup(t);
 		if (this->transitions.insert(x).second)
 		{
 			if (t._lhs->first.size() > this->maxRank)
@@ -573,7 +582,7 @@ public:
 		this->transitions = rhs.transitions;
 		finalStates_ = rhs.finalStates_;
 
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (TransIDPair* trans : this->transitions)
 		{	// copy transitions
 			this->transCache().addRef(trans);
 		}
@@ -585,7 +594,7 @@ public:
 	{
 		this->maxRank = 0;
 		nextState_ = 0;
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (TransIDPair* trans : this->transitions)
 		{
 			this->transCache().release(trans);
 		}
@@ -609,7 +618,7 @@ public:
 	void updateStateCounter()
 	{
 		nextState_ = 0;
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			nextState_ = std::max(
 				nextState_,
@@ -630,7 +639,7 @@ public:
 	 */
 	void buildStateIndex(Index<size_t>& index) const
 	{
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			for (size_t state : trans->first._lhs->first)
 			{
@@ -648,7 +657,7 @@ public:
 	void buildSortedStateIndex(Index<size_t>& index) const
 	{
 		std::set<size_t> s;
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			for (size_t state : trans->first._lhs->first)
 			{
@@ -663,7 +672,7 @@ public:
 
 	void buildLabelIndex(Index<T>& index) const
 	{
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			index.add(trans->first._label);
 		}
@@ -682,7 +691,7 @@ public:
 */
 	void buildLhsIndex(Index<const std::vector<size_t>*>& index) const
 	{
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			index.add(&trans->first._lhs->first);
 		}
@@ -690,7 +699,7 @@ public:
 
 	void buildTDCache(td_cache_type& cache) const
 	{
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			cache.insert(std::make_pair(trans->first._rhs, std::vector<const Transition*>())).first->second.push_back(&trans->first);
 		}
@@ -699,7 +708,7 @@ public:
 	void buildBUCache(bu_cache_type& cache) const
 	{
 		std::unordered_set<size_t> s;
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			s.clear();
 			for (size_t state : trans->first._lhs->first)
@@ -735,13 +744,13 @@ public:
 
 	void buildLTCache(lt_cache_type& cache) const
 	{
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			cache.insert(std::make_pair(trans->first._label, std::vector<const Transition*>())).first->second.push_back(&trans->first);
 		}
 	}
 
-	typename trans_cache_type::value_type* addTransition(
+	const TransIDPair* addTransition(
 		const std::vector<size_t>&          lhs,
 		const T&                            label,
 		size_t                              rhs)
@@ -749,7 +758,7 @@ public:
 		return this->internalAdd(Transition(lhs, label, rhs, this->lhsCache()));
 	}
 
-	typename trans_cache_type::value_type* addTransition(
+	const TransIDPair* addTransition(
 		const std::vector<size_t>&          lhs,
 		const T&                            label,
 		size_t                              rhs,
@@ -758,25 +767,25 @@ public:
 		return this->internalAdd(Transition(lhs, label, rhs, index, this->lhsCache()));
 	}
 
-	typename trans_cache_type::value_type* addTransition(
-		const typename trans_cache_type::value_type*       transition)
+	const TransIDPair* addTransition(
+		const TransIDPair*       transition)
 	{
 		return this->internalAdd(Transition(transition->first, this->lhsCache()));
 	}
 
-	typename trans_cache_type::value_type* addTransition(
-		const typename trans_cache_type::value_type*       transition,
-		const std::vector<size_t>&                         index)
+	const TransIDPair* addTransition(
+		const TransIDPair*               transition,
+		const std::vector<size_t>&       index)
 	{
 		return this->internalAdd(Transition(transition->first, index, this->lhsCache()));
 	}
 
-	typename trans_cache_type::value_type* addTransition(const Transition& transition)
+	const TransIDPair* addTransition(const Transition& transition)
 	{
 		return this->internalAdd(Transition(transition, this->lhsCache()));
 	}
 
-	typename trans_cache_type::value_type* addTransition(
+	const TransIDPair* addTransition(
 		const Transition&                 transition,
 		const std::vector<size_t>&        index)
 	{
@@ -1195,7 +1204,7 @@ public:
 			dst.addFinalState(headIndex[stateIndex[state]]);
 		}
 
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			std::vector<size_t> lhs;
 			stateIndex.translate(lhs, trans->first._lhs->first);
@@ -1210,13 +1219,13 @@ public:
 
 	TA<T>& uselessFree(TA<T>& dst) const
 	{
-		std::vector<typename trans_cache_type::value_type*> v1(this->transitions.begin(), this->transitions.end()), v2;
+		std::vector<const TransIDPair*> v1(this->transitions.begin(), this->transitions.end()), v2;
 		std::set<size_t> states;
 		bool changed = true;
 		while (changed)
 		{
 			changed = false;
-			for (typename trans_cache_type::value_type* trans : v1)
+			for (const TransIDPair* trans : v1)
 			{
 				bool matches = true;
 				for (const size_t state : trans->first._lhs->first)
@@ -1252,7 +1261,7 @@ public:
 
 	TA<T>& unreachableFree(TA<T>& dst) const
 	{
-		std::vector<typename trans_cache_type::value_type*> v1(
+		std::vector<const TransIDPair*> v1(
 			transitions.begin(), this->transitions.end()), v2;
 		std::set<size_t> states(finalStates_.begin(), finalStates_.end());
 		for (size_t finState : finalStates_)
@@ -1264,7 +1273,7 @@ public:
 		while (changed)
 		{
 			changed = false;
-			for (typename trans_cache_type::value_type* trans : v1)
+			for (const TransIDPair* trans : v1)
 			{
 				if (states.count(trans->first._rhs))
 				{
@@ -1288,13 +1297,13 @@ public:
 
 	TA<T>& uselessAndUnreachableFree(TA<T>& dst) const
 	{
-		std::vector<typename trans_cache_type::value_type*> v1(this->transitions.begin(), this->transitions.end()), v2, v3;
+		std::vector<const TransIDPair*> v1(this->transitions.begin(), this->transitions.end()), v2, v3;
 		std::set<size_t> states;
 		bool changed = true;
 		while (changed)
 		{
 			changed = false;
-			for (typename std::vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i)
+			for (typename std::vector<const TransIDPair*>::const_iterator i = v1.begin(); i != v1.end(); ++i)
 			{
 				bool matches = true;
 				for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
@@ -1330,7 +1339,7 @@ public:
 		while (changed)
 		{
 			changed = false;
-			for (typename std::vector<typename trans_cache_type::value_type*>::const_iterator i = v1.begin(); i != v1.end(); ++i)
+			for (typename std::vector<const TransIDPair*>::const_iterator i = v1.begin(); i != v1.end(); ++i)
 			{
 				if (states.count((*i)->first._rhs))
 				{
@@ -1439,7 +1448,7 @@ public:
 				dst.addFinalState(f(state));
 		}
 
-		for (typename trans_cache_type::value_type* trans : src.transitions)
+		for (const TransIDPair* transID : src.transitions)
 		{
 			lhs.resize(trans->first._lhs->first.size());
 			for (size_t j = 0; j < trans->first._lhs->first.size(); ++j)
@@ -1465,7 +1474,7 @@ public:
 			}
 		}
 
-		for (typename trans_cache_type::value_type* trans : src.transitions)
+		for (const TransIDPair* trans : src.transitions)
 		{
 			lhs.clear();
 			index.translateOTF(lhs, trans->first._lhs->first, offset);
@@ -1502,7 +1511,7 @@ public:
 	 */
 	TA& copyTransitions(TA<T>& dst) const
 	{
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 			dst.addTransition(trans);
 		return dst;
 	}
@@ -1510,7 +1519,7 @@ public:
 	template <class F>
 	TA& copyTransitions(TA<T>& dst, F f) const
 	{
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			if (f(&trans->first))
 				dst.addTransition(trans);
@@ -1537,10 +1546,10 @@ public:
 		for (size_t state : b.finalStates_)
 			dst.addFinalState(state);
 
-		for (typename trans_cache_type::value_type* trans : a.transitions)
+		for (const TransIDPair* trans : a.transitions)
 			dst.addTransition(trans);
 
-		for (typename trans_cache_type::value_type* trans : b.transitions)
+		for (const TransIDPair* trans : b.transitions)
 			dst.addTransition(trans);
 
 		return dst;
@@ -1557,7 +1566,7 @@ public:
 				dst.addFinalState(state);
 		}
 
-		for (typename trans_cache_type::value_type* trans : src.transitions)
+		for (const TransIDPair* trans : src.transitions)
 			dst.addTransition(trans);
 
 		return dst;
@@ -1598,7 +1607,7 @@ public:
 		if (registerFinalState)
 			dst.addFinalState(newState);
 
-		for (typename trans_cache_type::value_type* trans : this->transitions)
+		for (const TransIDPair* trans : this->transitions)
 		{
 			dst.addTransition(trans);
 			if (this->isFinalState(trans->first._rhs))

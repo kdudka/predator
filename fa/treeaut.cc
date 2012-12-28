@@ -153,8 +153,14 @@ void TA<T>::downwardTranslation(LTS& lts, const Index<size_t>& stateIndex, const
 		for (size_t j = 0; j < i->first->size(); ++j)
 			lts.addTransition(stateIndex.size() + i->second, labelIndex.size() + j, stateIndex[(*i->first)[j]]);
 	}
-	for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i)
-		lts.addTransition(stateIndex[(*i)->first._rhs], labelIndex[(*i)->first._label], stateIndex.size() + lhs[&((*i)->first._lhs->first)]);
+
+	for (const TransIDPair* ptrTransIDPair : this->transitions)
+	{
+		lts.addTransition(
+			stateIndex[ptrTransIDPair->first.rhs()],
+			labelIndex[ptrTransIDPair->first.label()],
+			stateIndex.size() + lhs[&(ptrTransIDPair->first.lhs())]);
+	}
 }
 
 template <class T>
@@ -175,11 +181,12 @@ void TA<T>::upwardTranslation(LTS& lts, std::vector<std::vector<size_t> >& part,
 	std::map<Env, size_t> envMap;
 	std::vector<const Env*> head;
 	part.clear();
-	for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+	for (const TransIDPair* ptrTransIDPair : this->transitions)
+	{
 		std::vector<size_t> lhs;
-		stateIndex.translate(lhs, (*i)->first._lhs->first);
-		size_t label = labelIndex[(*i)->first._label];
-		size_t rhs = stateIndex[(*i)->first._rhs];
+		stateIndex.translate(lhs, ptrTransIDPair->first.lhs());
+		size_t label = labelIndex[ptrTransIDPair->first.label()];
+		size_t rhs = stateIndex[ptrTransIDPair->first.rhs()];
 		for (size_t j = 0; j < lhs.size(); ++j) {
 			// insert required items into lhsEnv and lhsMap and build equivalence classes
 			bool inserted;
@@ -201,11 +208,12 @@ void TA<T>::upwardTranslation(LTS& lts, std::vector<std::vector<size_t> >& part,
 		}
 	}
 	lts = LTS(labelIndex.size() + 1, stateIndex.size() + envMap.size());
-	for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
+	for (const TransIDPair* ptrTransIDPair : this->transitions)
+	{
 		std::vector<size_t> lhs;
-		stateIndex.translate(lhs, (*i)->first._lhs->first);
-		size_t label = labelIndex[(*i)->first._label];
-		size_t rhs = stateIndex[(*i)->first._rhs];
+		stateIndex.translate(lhs, ptrTransIDPair->first.lhs());
+		size_t label = labelIndex[ptrTransIDPair->first.label()];
+		size_t rhs = stateIndex[ptrTransIDPair->first.rhs()];
 		for (size_t j = 0; j < lhs.size(); ++j) {
 			// find particular env
 			std::map<Env, size_t>::iterator env = Env::find(LhsEnv::find(lhs, j, lhsEnvSet), label, rhs, envMap);

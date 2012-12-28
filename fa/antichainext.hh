@@ -29,9 +29,7 @@ class AntichainExt : public Antichain {
 
 protected:
 
-//	state_cache_type stateCache;
-
-	typedef std::vector<typename TA<T>::trans_cache_type::value_type*> trans_list_type;
+	typedef std::vector<const typename TA<T>::TransIDPair*> trans_list_type;
 
 private:
 
@@ -51,7 +49,10 @@ private:
 
 public:
 
-	void aAddTransition(typename TA<T>::trans_cache_type::value_type* t, size_t bSize) {
+	void aAddTransition(
+		const typename TA<T>::TransIDPair*   t,
+		size_t                               bSize)
+	{
 		std::unordered_set<size_t> s;
 		for (size_t i = 0; i < t->first._lhs->first.size(); ++i) {
 			if (s.insert(t->first._lhs->first[i]).second) {
@@ -110,7 +111,11 @@ public:
 
 			ResponseExt(AntichainExt& ac) : ac(ac), state(), fixed(1) {}
 		
-			bool get(const std::pair<size_t, state_cache_type::value_type*>& el, const typename TA<T>::trans_cache_type::value_type* t, size_t index) {
+			bool get(
+				const std::pair<size_t, state_cache_type::value_type*>&   el,
+				const typename TA<T>::TransIDPair*                        t,
+				size_t                                                    index)
+			{
 				this->state.clear();
 				this->fixed.front() = el.second;
 				for (size_t i = 0; i < t->first._lhs->first.size(); ++i) {
@@ -136,8 +141,9 @@ public:
 				}
 				return false;
 			}
-			
-			bool match(const typename TA<T>::trans_cache_type::value_type* t) {
+
+			bool match(const typename TA<T>::TransIDPair* t)
+			{
 				for (size_t i = 0; i < t->first._lhs->first.size(); ++i) {
 					if ((*this->state[i].current)->first.count(t->first._lhs->first[i]) == 0)
 						return false;
