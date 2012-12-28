@@ -28,7 +28,6 @@
 // Forester headers
 #include "types.hh"
 #include "abstractbox.hh"
-#include "programerror.hh"
 
 /**
  * @brief  A memory node
@@ -167,8 +166,6 @@ public:   // methods
 		assert(node_type::n_node == type_);
 		auto i = this->node.m->find(offset);
 		assert(i != this->node.m->end());
-//		if (i == this->node.m->end())
-//			throw ProgramError("boxLookup(): required box not found!");
 		return i->second;
 	}
 
