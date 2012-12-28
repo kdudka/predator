@@ -681,3 +681,13 @@ void FI_plot_heap::execute(ExecutionManager& execMan, SymState& state)
 
 	execMan.enqueue(tmpState);
 }
+
+
+void FI_error::execute(ExecutionManager& execMan, SymState& state)
+{
+	(void)execMan;
+
+	FA_DEBUG_AT(1, "registers: " << utils::wrap(state.GetRegs()) << ", heap:"
+		<< std::endl << *(state.GetFAE()));
+	throw ProgramError(msg_, &state, getLoc(state));
+}

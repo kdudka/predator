@@ -339,7 +339,8 @@ enum class builtin_e
 	biFix,
 	biAbort,
 	biPrintHeap,
-	biPlotHeap
+	biPlotHeap,
+	biError
 };
 
 
@@ -374,6 +375,7 @@ public:
 		this->_table["__print_heap"]  = builtin_e::biPrintHeap;
 		this->_table["___fa_plot"]    = builtin_e::biPlotHeap;
 		this->_table["abort"]         = builtin_e::biAbort;
+		this->_table["___fa_error"]   = builtin_e::biError;
 	}
 
 	/**
@@ -1740,6 +1742,29 @@ protected:
 		append(new FI_ret(&insn, 0));
 	}
 
+	/**
+	 * @brief  Compiles the error instruction
+	 *
+	 * Compiles an instruction that represents an error location in the code.
+	 */
+	void compileError(const CodeStorage::Insn& insn)
+	{
+		const CodeStorage::TOperandList &opList = insn.operands;
+		assert(3 == opList.size());
+
+		const cl_operand& opMsg = opList[2];
+		// TODO: also allow CL_OPERAND_VAR
+		assert(CL_OPERAND_CST == opMsg.code);
+
+		const struct cl_cst &cstMsg = opMsg.data.cst;
+		assert(CL_TYPE_STRING == cstMsg.code);
+		assert(nullptr != cstMsg.data.cst_string.value);
+
+		std::string msg(cstMsg.data.cst_string.value);
+
+		append(new FI_error(&insn, msg));
+	}
+
 
 	/**
 	 * @brief  Compiles a conditional jump
@@ -1861,6 +1886,9 @@ protected:
 				// TODO: this does not look very nice either... where is checking for
 				// garbage?
 				this->append(new FI_abort(&insn));
+				return;
+			case builtin_e::biError:
+				compileError(insn);
 				return;
 			default:
 				break;

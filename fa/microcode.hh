@@ -985,4 +985,31 @@ public:
 	}
 };
 
+/**
+ * @brief  Error instruction
+ *
+ * Represents an error location.
+ */
+class FI_error : public VoidInstruction
+{
+private:  // data members
+
+	/// the error message
+	std::string msg_;
+
+public:
+
+	FI_error(const CodeStorage::Insn* insn, const std::string msg) :
+		VoidInstruction(insn),
+		msg_(msg)
+	{ }
+
+	virtual void execute(ExecutionManager& execMan, SymState& state);
+
+	virtual std::ostream& toStream(std::ostream& os) const
+	{
+		return os << "error";
+	}
+
+};
 #endif
