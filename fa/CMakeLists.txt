@@ -114,6 +114,7 @@ set(tests
                                                           p0119
                                         p0126
                       p0143
+                                                          p0169
     p0170                         p0175
 )
 
@@ -147,6 +148,8 @@ set(tests-failing-due-to-abstraction
                                               f0017
                                   f0035             f0038
                       f0043
+    f0050 f0051
+    f0060
                                               p0507
 )
 
@@ -166,18 +169,21 @@ set(tests-failing-due-to-unsupported-feature
     p0060 p0061 p0062 p0063 p0064 p0065 p0066 p0067 p0068 p0069
     p0070 p0071 p0072 p0073                               p0079
     p0080 p0081 p0082       p0084       p0086 p0087 p0088 p0089
-    p0090                   p0094       p0096 p0097 p0098 p0099
+    p0090       p0092 p0093 p0094       p0096 p0097 p0098 p0099
     p0100 p0101 p0102 p0103 p0104 p0105 p0106 p0107 p0108 p0109
     p0110 p0111 p0112 p0113 p0114 p0115 p0116 p0117 p0118
-          p0121 p0122 p0123 p0124 p0125       p0127 p0128 p0129
+    p0120 p0121 p0122 p0123 p0124 p0125       p0127 p0128 p0129
     p0130       p0132 p0133 p0134 p0135 p0136 p0137 p0138 p0139
     p0140 p0141 p0142       p0144 p0145 p0146 p0147 p0148 p0149
     p0150 p0151 p0152 p0153 p0154 p0155 p0156 p0157
           p0161 p0162 p0163 p0164 p0165 p0166 p0167 p0168
-          p0171 p0172 p0173 p0174             p0177 p0178
-          p0181 p0182                   p0186             p0189
-          p0191 p0192 p0193 p0194       p0196
+          p0171 p0172 p0173 p0174             p0177 p0178 p0179
+    p0180 p0181 p0182 p0183 p0184       p0186             p0189
+          p0191 p0192 p0193 p0194       p0196             p0199
           p0201 p0202 p0203 p0204 p0205 p0206 p0207 
+                p0402 p0403 p0404 p0405 p0406 p0407 p0408 p0409
+    p0410 p0411 p0412 p0413 p0414 p0415 p0416 p0417 p0418 p0419
+                p0432
     p0500 p0501 p0502 p0503 p0504 p0505 p0506       p0508 p0509
     p0510 p0511 p0512 p0513 p0514 p0515 p0516 p0517 p0518 p0519
     p0520 p0521
@@ -190,18 +196,15 @@ set(tests-failing-due-to-internal-error
     p0020 p0021           
                             p0044
                                               p0077 p0078 
-                p0092 p0093       p0095
-    p0120 p0121
+                                  p0095
+                 
                                                     p0158
-                                                          p0169
-                                        p0176             p0179
-    p0180             p0183 p0184 p0185       p0187
-    p0190                         p0195       p0197       p0199
+                                        p0176
+                                  p0185       p0187
+    p0190                         p0195       p0197
     p0200                                           p0208
     p0300 p0301 p0302 p0303
-    p0400 p0401 p0402 p0403 p0404 p0405 p0406 p0407 p0408 p0409
-    p0410 p0411 p0412 p0413 p0414 p0415 p0416 p0417 p0418 p0419
-                p0432
+    p0400 p0401       
                             p0464 p0465 p0466 p0467 p0468
 )
 
@@ -226,7 +229,7 @@ macro(test_forester_regre name_suff ext arg1)
         set(cmd "${cmd} -m32")
 
         set(cmd "${cmd} -S ${testdir}/test-${num}.c -o /dev/null")
-        set(cmd "${cmd} -I../include/predator-builtins -DFORESTER")
+        set(cmd "${cmd} -I../include/forester-builtins -DFORESTER")
         set(cmd "${cmd} -fplugin=${fa_BINARY_DIR}/libfa.so ${arg1}")
         set(cmd "${cmd} -fplugin-arg-libfa-preserve-ec")
         set(cmd "${cmd} 2>&1")
