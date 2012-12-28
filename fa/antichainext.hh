@@ -54,11 +54,13 @@ public:
 		size_t                               bSize)
 	{
 		std::unordered_set<size_t> s;
-		for (size_t i = 0; i < t->first._lhs->first.size(); ++i) {
-			if (s.insert(t->first._lhs->first[i]).second) {
-				if (this->aTransIndex[t->first._lhs->first[i] - bSize].size() < i + 1)
-					this->aTransIndex[t->first._lhs->first[i] - bSize].resize(i + 1);
-				this->aTransIndex[t->first._lhs->first[i] - bSize][i].push_back(t);
+		for (size_t i = 0; i < t->first.lhs().size(); ++i)
+		{
+			if (s.insert(t->first.lhs()[i]).second)
+			{
+				if (this->aTransIndex[t->first.lhs()[i] - bSize].size() < i + 1)
+					this->aTransIndex[t->first.lhs()[i] - bSize].resize(i + 1);
+				this->aTransIndex[t->first.lhs()[i] - bSize][i].push_back(t);
 			}
 		}
 	}
@@ -118,12 +120,15 @@ public:
 			{
 				this->state.clear();
 				this->fixed.front() = el.second;
-				for (size_t i = 0; i < t->first._lhs->first.size(); ++i) {
+				for (size_t i = 0; i < t->first.lhs().size(); ++i)
+				{
 					State state;
-					if (i == index) {
+					if (i == index)
+					{
 						state.trans = &this->fixed;
-					} else {
-						antichain_type::iterator j = ac.processed.find(t->first._lhs->first[i]);
+					} else
+					{
+						antichain_type::iterator j = ac.processed.find(t->first.lhs()[i]);
 						if (j == ac.processed.end())
 							return false;
 						state.trans = &j->second;
@@ -144,11 +149,14 @@ public:
 
 			bool match(const typename TA<T>::TransIDPair* t)
 			{
-				for (size_t i = 0; i < t->first._lhs->first.size(); ++i) {
-					if ((*this->state[i].current)->first.count(t->first._lhs->first[i]) == 0)
-						return false;
-				}
-				return true;
+		bool match(const typename TA<T>::TransIDPair* t)
+		{
+			for (size_t i = 0; i < t->first.lhs().size(); ++i)
+			{
+				if ((*this->state[i].current)->first.count(t->first.lhs()[i]) == 0)
+					return false;
+			}
+			return true;
 			}
 			
 	};
@@ -183,7 +191,8 @@ public:
 		std::unordered_map<T, std::vector<typename TA<T>::trans_cache_type::value_type*> > bTrans, bLeaves;
 		for (typename TA<T>::trans_set_type::const_iterator i = c.transitions.begin(); i != c.transitions.end(); ++i) {
 			size_t arity = (*i)->first._lhs->first.size();
-			if ((*i)->first._rhs >= countB) {
+			if ((*i)->first.rhs() >= countB)
+			{
 				if (arity == 0) {
 					aLeaves.push_back(*i);
 				} else {
@@ -191,9 +200,9 @@ public:
 				}
 			} else {	
 				if (arity == 0) {
-					bLeaves.insert(make_pair((*i)->first._label, std::vector<typename TA<T>::trans_cache_type::value_type*>())).first->second.push_back(*i);
+					bLeaves.insert(make_pair((*i)->first.label(), trans_list_type())).first->second.push_back(*i);
 				} else {
-					bTrans.insert(make_pair((*i)->first._label, std::vector<typename TA<T>::trans_cache_type::value_type*>())).first->second.push_back(*i);
+					bTrans.insert(make_pair((*i)->first.label(), trans_list_type())).first->second.push_back(*i);
 				}
 			}
 		}
@@ -206,10 +215,10 @@ public:
 			// careful
 			if (range == bLeaves.end())
 				return false;
-			std::pair<size_t, std::set<size_t> > newEl((*i)->first._rhs, std::set<size_t>());
+			std::pair<size_t, std::set<size_t>> newEl((*i)->first.rhs(), std::set<size_t>());
 			bool isAccepting = c.isFinalState(newEl.first);
 			for (typename std::vector<typename TA<T>::trans_cache_type::value_type*>::iterator j = range->second.begin(); j != range->second.end(); ++j)
-				antichain.simInsert(newEl, isAccepting, (*j)->first._rhs, c);
+				antichain.simInsert(newEl, isAccepting, (*j)->first.rhs(), c);
 			if (isAccepting)
 				return false;
 			// cross-automata check
@@ -234,16 +243,16 @@ public:
 				for (typename trans_list_type::iterator j = aTransList.begin(); j != aTransList.end(); ++j) {
 					if (!response.get(el, *j, i))
 						continue;
-					typename std::unordered_map<T, std::vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bTrans.find((*j)->first._label);
+					typename std::unordered_map<T, std::vector<typename TA<T>::trans_cache_type::value_type*> >::iterator range = bTrans.find((*j)->first.label());
 					// careful
 					if (range == bTrans.end())
 						return false;
 					do {
-						std::pair<size_t, std::set<size_t> > newEl((*j)->first._rhs, std::set<size_t>());
+						std::pair<size_t, std::set<size_t> > newEl((*j)->first.rhs(), std::set<size_t>());
 						bool isAccepting = c.isFinalState(newEl.first);
 						for (typename std::vector<typename TA<T>::trans_cache_type::value_type*>::iterator k = range->second.begin(); k != range->second.end(); ++k) {
 							if (response.match(*k))
-								antichain.simInsert(newEl, isAccepting, (*k)->first._rhs, c);
+								antichain.simInsert(newEl, isAccepting, (*k)->first.rhs(), c);
 						}
 						if (isAccepting) {
 //							std::cout << "accepting\n";
