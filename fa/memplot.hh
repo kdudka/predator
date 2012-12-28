@@ -23,6 +23,9 @@
 // Code Listener headers
 #include <cl/storage.hh>
 
+// Forester headers
+#include "symstate.hh"
+
 class MemPlotter
 {
 private:

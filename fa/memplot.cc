@@ -312,6 +312,7 @@ private:  // methods
 		{
 			case data_type_e::t_undef:
 			case data_type_e::t_native_ptr:
+			case data_type_e::t_bool:
 			case data_type_e::t_int:
 			{
 				std::ostringstream os;
@@ -335,12 +336,6 @@ private:  // methods
 			case data_type_e::t_ref:
 			{
 				return MemNode::createTreeRef(transID, data.d_ref.root);
-			}
-
-			case data_type_e::t_bool:
-			{
-				assert(false);     // not supported
-			  break;
 			}
 
 			case data_type_e::t_struct:
