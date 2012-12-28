@@ -301,60 +301,67 @@ public:   // data types
 
 	class TDIterator
 	{
-		const td_cache_type& _cache;
-		std::set<size_t> _visited;
+	private:  // data members
+
+		const td_cache_type& cache_;
+		std::set<size_t> visited_;
 		std::vector<
 			std::pair<
 				typename std::vector<const Transition*>::const_iterator,
 				typename std::vector<const Transition*>::const_iterator
 			>
-		> _stack;
+		> stack_;
 
 		void insertLhs(const std::vector<size_t>& lhs)
 		{
 			for (std::vector<size_t>::const_reverse_iterator i = lhs.rbegin(); i != lhs.rend(); ++i)
 			{
-				if (this->_visited.insert(*i).second)
+				if (visited_.insert(*i).second)
 				{
-					typename td_cache_type::const_iterator j = this->_cache.find(*i);
-					if (j != this->_cache.end())
-						this->_stack.push_back(std::make_pair(j->second.begin(), j->second.end()));
+					typename td_cache_type::const_iterator j = cache_.find(*i);
+					if (j != cache_.end())
+						stack_.push_back(std::make_pair(j->second.begin(), j->second.end()));
 				}
 			}
 		}
 
 	public:
 
-		TDIterator(const td_cache_type& cache, const std::vector<size_t>& stack)
-			: _cache(cache), _visited(), _stack{} {
+		TDIterator(
+			const td_cache_type&         cache,
+			const std::vector<size_t>&   stack) :
+			cache_(cache),
+			visited_(),
+			stack_{ }
+		{
 			this->insertLhs(stack);
 		}
 
-		bool isValid() const { return !this->_stack.empty(); }
+		bool isValid() const { return !stack_.empty(); }
 
 		bool next()
 		{
-			size_t oldSize = this->_stack.size();
-			this->insertLhs((*this->_stack.back().first)->lhs());
+			size_t oldSize = stack_.size();
+			this->insertLhs((*stack_.back().first)->lhs());
 			// if something changed then we have a new "working" item on the top of the stack
-			if (this->_stack.size() != oldSize)
+			if (stack_.size() != oldSize)
 				return true;
-			++this->_stack.back().first;
+			++stack_.back().first;
 			do
 			{
 				// is there something to process ?
-				if (this->_stack.back().first != this->_stack.back().second)
+				if (stack_.back().first != stack_.back().second)
 					return true;
 				// discard processed queue
-				this->_stack.pop_back();
-			} while (!this->_stack.empty());
+				stack_.pop_back();
+			} while (!stack_.empty());
 			// nothing else remains
 			return false;
 		}
 
-		const Transition& operator*() const { return **this->_stack.back().first; }
+		const Transition& operator*() const { return **stack_.back().first; }
 
-		const Transition* operator->() const { return *this->_stack.back().first; }
+		const Transition* operator->() const { return *stack_.back().first; }
 
 	};
 
