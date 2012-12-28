@@ -93,19 +93,6 @@ public:   // methods
 		return (rhs_ < rhs.rhs_) || (
 			(rhs_ == rhs.rhs_) && ((label_ < rhs.label_) || (
 				(label_ == rhs.label_) && ( lhs_ < rhs.lhs_))));
-/*		if (this->_rhs < rhs._rhs)
-			return true;
-		if (this->_rhs != rhs._rhs)
-			return false;
-		if (this->_label < rhs._label)
-			return true;
-		if (this->_label != rhs._label)
-			return false;
-		return this->_lhs < rhs._lhs;*/
-/*		assert(this->_lhs);
-		assert(rhs._lhs);
-		return this->_lhs->first < rhs._lhs->first;*/
-
 	}
 
 	friend size_t hash_value(const TTBase& t)
@@ -235,29 +222,6 @@ public:   // methods
 		}
 		return true;
 	}
-
-/*
-	bool operator<(const TT& rhs) const {
-		return (this->_label < rhs._label) || (
-			(this->_label == rhs._label) && (
-				(this->_lhs->first < rhs._lhs->first) || (
-					(this->_lhs == rhs._lhs) && (
-						this->_rhs < rhs._rhs
-					)
-				)
-			)
-		);
-		return (this->_lhs->first < rhs._lhs->first) || (
-			(this->_lhs->first == rhs._lhs->first) && (
-				(this->_label < rhs._label) || (
-					(this->_label == rhs._label) && (
-						this->_rhs < rhs._rhs
-					)
-				)
-			)
-		);
-	}
-*/
 };
 
 
@@ -546,15 +510,6 @@ public:
 		return this->end(this->getFinalState(), i);
 	}
 
-/*
-	typename TA<T>::RhsIterator getRhsIterator(size_t state) const {
-		return TA<T>::RhsIterator(*this, state);
-	}*/
-//	typename TA<T>::AcceptingIterator a_end() const {
-//		assert(this->acceptingValid);
-//		return TA<T>::AcceptingIterator(this->acceptingTransitions.end());
-//	}
-
 	typename TA<T>::TDIterator tdStart(const td_cache_type& cache) const
 	{
 		return typename TA<T>::TDIterator(cache, std::vector<size_t>(finalStates_.begin(), finalStates_.end()));
@@ -599,14 +554,6 @@ public:
 		finalStates_.clear();
 	}
 
-/*
-	void loadFromDFS(const TA<T>::dfs_cache_type& dfsCache, const TA<T>& ta, const vector<size_t>& stack, bool registerFinalStates = true) {
-		for (TA<T>::dfs_iterator i = ta.dfsStart(dfsCache, stack); i.isValid(); i.next())
-			this->addTransition(*i);
-		if (registerFinalStates)
-			this->addFinalStates(stack);
-	}
-*/
 	size_t newState()
 	{
 		return nextState_++;
@@ -674,18 +621,7 @@ public:
 			index.add(trans->first.label());
 		}
 	}
-/*
-	void buildIndex(Index<T>& stateIndex, Index<T>& labelIndex) const {
-		stateIndex.clear();
-		labelIndex.clear();
-		for (std::set<trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
-			for (vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
-				stateIndex.add(*j);
-			labelIndex.add((*i)->first._label);
-			stateIndex.add((*i)->first._rhs);
-		}
-	}
-*/
+
 	void buildLhsIndex(Index<const std::vector<size_t>*>& index) const
 	{
 		for (const TransIDPair* trans : this->transitions)
@@ -717,27 +653,6 @@ public:
 			}
 		}
 	}
-
-/*
-	void buildSLTBUCache(slt_cache_type& cache, leaf_cache_type& leafCache) const {
-		boost::unordered_map<std::pair<size_t, const T*>, std::set<const Transition*> > tmp;
-		for (typename std::set<typename trans_cache_type::value_type*>::const_iterator i = this->transitions.begin(); i != this->transitions.end(); ++i) {
-			if ((*i)->first._lhs->first.empty()) {
-				leafCache.insert(make_pair(&(*i)->first._label, std::set<const Transition*>())).first->second.insert(&(*i)->first);
-				continue;
-			}
-			for (std::vector<size_t>::const_iterator j = (*i)->first._lhs->first.begin(); j != (*i)->first._lhs->first.end(); ++j)
-				tmp.insert(make_pair(make_pair(*j, &(*i)->first._label), vector<const Transition*>())).first->second.insert(&(*i)->first);
-		}
-		for (boost::unordered_map<std::pair<size_t, const T*>, std::set<const Transition*> >::const_iterator i = tmp.begin(); i != tmp.end(); ++i) {
-			cache.insert(
-				make_pair(i->first.first, boost::unordered_map<const T*, std::vector<const Transition*> >())
-			).first->second.insert(
-				make_pair(i->first.second, std::vector<const Transition*>(i->second.begin(), i->second.end()))
-			);
-		}
-	}
-*/
 
 	void buildLTCache(lt_cache_type& cache) const
 	{
@@ -1015,46 +930,7 @@ public:
 		predicate.buildLTCache(cache2);
 		TA<T>::buProduct(cache1, cache2, TA<T>::PredicateF(dst, predicate));
 	}
-/*
-	template <class F>
-	static bool tdMatch(const TA<T> ta1, size_t s1, const TA<T> ta2, size_t s2, F f) {
-		std::unordered_map<size_t, size_t> matching;
-		std::vector<std::pair<size_t, size_t> > stack;
-		std::pair<size_t, size_t> s(s1, s2);
-		product.insert(s);
-		stack.push_back(s);
-		while (!stack.empty()) {
-			std::pair<size_t, size_t> el = stack.back();
-			stack.pop_back();
-			typename TA<T>::trans_set_type::const_iterator i = ta1._lookup(el.first);
-			if (i == ta1.transitions.end())
-				continue;
-			typename TA<T>::trans_set_type::const_iterator j = ta2._lookup(el.second);
-			if (j == ta2.transitions.end())
-				continue;
-			typename TA<T>::trans_set_type::const_iterator k = j;
-			for (; i != ta1.transitions.end() && (*i)->first._rhs == el.first; ++i) {
-				bool matched = false;
-				for (; j != ta2.transitions.end() && (*j)->first._rhs == el.second; ++j) {
-					std::vector<size_t> lhs1((*i)->first._lhs->first), lhs2((*j)->first._lhs->first);
-					if (!f((*i)->first, lhs1, (*j)->first, lhs2))
-						continue;
-					matched = true;
-					for (size_t m = 0; m < lhs1.size(); ++m) {
-						std::pair<size_t, size_t> el(lhs1[m], lhs2[m]);
 
-						if (product.insert(el).second)
-							stack.push_back(el);
-					}
-				}
-				if (!matched)
-					return false;
-				j = k;
-			}
-		}
-		return true;
-	}
-*/
 
 	template <class F>
 	static bool transMatch(
