@@ -365,9 +365,9 @@ public:   // data types
 
 	};
 
-	typedef typename std::unordered_map<size_t, std::vector<const Transition*> > bu_cache_type;
+	typedef std::unordered_map<size_t, std::vector<const Transition*>> bu_cache_type;
 
-	typedef std::unordered_map<T, std::vector<const Transition*> > lt_cache_type;
+	typedef std::unordered_map<T, std::vector<const Transition*>> lt_cache_type;
 
 	typedef Iterator iterator;
 	typedef TDIterator td_iterator;
@@ -421,9 +421,9 @@ public:
 		const TA<T>&         ta,
 		F                    f,
 		bool                 copyFinalStates = true) :
-		backend(ta.backend),
 		nextState_(ta.nextState_),
 		finalStates_(),
+		backend(ta.backend),
 		maxRank(ta.maxRank),
 		transitions()
 	{
@@ -470,8 +470,15 @@ public:
 		this->clear();
 	}
 
-	typename TA<T>::Iterator begin() const { return typename TA<T>::Iterator(this->transitions.begin()); }
-	typename TA<T>::Iterator end() const { return typename TA<T>::Iterator(this->transitions.end()); }
+	typename TA<T>::Iterator begin() const
+	{
+		return typename TA<T>::Iterator(this->transitions.begin());
+	}
+
+	typename TA<T>::Iterator end() const
+	{
+		return typename TA<T>::Iterator(this->transitions.end());
+	}
 
 	typename trans_set_type::const_iterator _lookup(size_t rhs) const
 	{
@@ -943,27 +950,30 @@ public:
 	static bool transMatch(
 		const Transition*                         t1,
 		const Transition*                         t2,
-		F                                         f,
+		F                                         funcMatch,
 		const std::vector<std::vector<bool>>&     mat,
 		const Index<size_t>&                      stateIndex)
 	{
-		if (!f(*t1, *t2))
+		// Preconditions
+		assert((nullptr != t1) && (nullptr != t2));
+
+		if (!funcMatch(*t1, *t2))
 			return false;
 
 		if (t1->lhs().size() != t2->lhs().size())
 			return false;
 
-		bool match = true;
 		for (size_t m = 0; m < t1->lhs().size(); ++m)
 		{
 			if (!mat[stateIndex[t1->lhs()[m]]][stateIndex[t2->lhs()[m]]])
 			{
-				match = false;
-				break;
+				return false;
 			}
 		}
-		return match;
+
+		return true;
 	}
+
 
 	// currently erases '1' from the relation
 	template <class F>
@@ -1279,10 +1289,13 @@ public:
 		return dst;
 	}
 
-	TA<T>& minimized(TA<T>& dst, const std::vector<std::vector<bool> >& cons, const Index<size_t>& stateIndex) const
+	TA<T>& minimized(
+		TA<T>&                                   dst,
+		const std::vector<std::vector<bool>>&    cons,
+		const Index<size_t>&                     stateIndex) const
 	{
 		typename TA<T>::Backend backend;
-		std::vector<std::vector<bool> > dwn;
+		std::vector<std::vector<bool>> dwn;
 		this->downwardSimulation(dwn, stateIndex);
 		utils::relAnd(dwn, cons, dwn);
 		TA<T> tmp1(backend), tmp2(backend), tmp3(backend);
