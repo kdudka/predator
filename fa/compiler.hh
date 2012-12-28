@@ -181,7 +181,8 @@ public:
 					std::ostringstream addrStream;
 					addrStream << instr;
 
-					if ((nullptr != clInsn) && (clInsn->bb->front() == clInsn))
+					if ((nullptr != clInsn) && (clInsn != lastInsn)
+						&& (clInsn->bb->front() == clInsn))
 					{
 						addrStream << " (" << clInsn->bb->name() << ")";
 					}
@@ -217,6 +218,38 @@ public:
 
 
 		/**
+		 * @brief  Transforms an instruction into a string
+		 *
+		 * This method takes a CodeListener instruction and transforms it into a @e
+		 * nice string.
+		 *
+		 * @param[in]  clInsn  The CodeListener instruction to be transformed
+		 *
+		 * @returns  String with the instruction
+		 */
+		static std::string insnToString(const CodeStorage::Insn& clInsn)
+		{
+			std::ostringstream os;
+			os << std::setw(8);
+			if (clInsn.bb->front() == &clInsn)
+			{
+				std::ostringstream addrStream;
+				addrStream << clInsn.bb->name() << ":";
+
+				os << std::left << addrStream.str();
+			}
+			else
+			{
+				os << "";
+			}
+
+			os << clInsn;
+
+			return os.str();
+		}
+
+
+		/**
 		 * @brief  Prints the original code of the program
 		 *
 		 * Prints the original code of the program as stored in the assembly.
@@ -238,20 +271,7 @@ public:
 
 				if (clInsn && (clInsn != lastInsn))
 				{
-					os << std::setw(8);
-					if ((nullptr != clInsn) && (clInsn->bb->front() == clInsn))
-					{
-						std::ostringstream addrStream;
-						addrStream << clInsn->bb->name() << ":";
-
-						os << std::left << addrStream.str();
-					}
-					else
-					{
-						os << "";
-					}
-
-					os << *clInsn << "\n";
+					os << insnToString(*clInsn) << "\n";
 					lastInsn = clInsn;
 				}
 			}
