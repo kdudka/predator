@@ -1345,22 +1345,22 @@ public:
 	static TA<T>& rename(
 		TA<T>&                   dst,
 		const TA<T>&             src,
-		F                        f,
+		F                        funcRename,
 		bool                     addFinalStates = true)
 	{
 		std::vector<size_t> lhs;
 		if (addFinalStates)
 		{
 			for (size_t state : src.finalStates_)
-				dst.addFinalState(f(state));
+				dst.addFinalState(funcRename(state));
 		}
 
 		for (const TransIDPair* transID : src.transitions)
 		{
 			lhs.resize(transID->first.lhs().size());
 			for (size_t j = 0; j < transID->first.lhs().size(); ++j)
-				lhs[j] = f(transID->first.lhs()[j]);
-			dst.addTransition(lhs, transID->first.label(), f(transID->first.rhs()));
+				lhs[j] = funcRename(transID->first.lhs()[j]);
+			dst.addTransition(lhs, transID->first.label(), funcRename(transID->first.rhs()));
 		}
 		return dst;
 	}
