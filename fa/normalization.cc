@@ -23,6 +23,7 @@
 // Forester headers
 #include "abstractinstruction.hh"
 #include "normalization.hh"
+#include "programerror.hh"
 #include "symstate.hh"
 
 
@@ -52,8 +53,11 @@ TreeAut* Normalization::mergeRoot(
 	{
 		std::vector<size_t> tmp = i->lhs();
 		std::vector<size_t>::iterator j = std::find(tmp.begin(), tmp.end(), refState);
-		if (j != tmp.end()) {
-			for (std::vector<size_t>::iterator k = joinStates.begin(); k != joinStates.end(); ++k) {
+		if (j != tmp.end())
+		{
+			for (std::vector<size_t>::iterator k = joinStates.begin();
+				k != joinStates.end(); ++k)
+			{
 				*j = *k;
 				ta->addTransition(tmp, i->label(), i->rhs());
 			}
@@ -175,7 +179,8 @@ void Normalization::normalizeRoot(
 	normalized[root] = true;
 
 	// we need a copy here!
-	auto signature = this->fae.connectionGraph.data[root].signature;
+	ConnectionGraph::CutpointSignature signature =
+		this->fae.connectionGraph.data[root].signature;
 
 	for (auto& cutpoint : signature)
 	{
