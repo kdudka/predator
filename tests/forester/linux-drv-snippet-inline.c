@@ -5,8 +5,7 @@
  */
 
 #include <stdlib.h>
-
-int __nondet();
+#include <verifier-builtins.h>
 
 struct node {
     int             value;
@@ -32,14 +31,14 @@ int main()
     // seq_read(&data);
     // static void seq_read(struct list **data)
     {
-      while (__nondet())
+      while (__VERIFIER_nondet_int())
         // seq_insert(data, value);
         // static void seq_insert(struct list **data, int value)
         {
           struct node *node = malloc(sizeof *node);
 
           node->next = NULL;
-          node->value = __nondet();
+          node->value = __VERIFIER_nondet_int();
 
           struct list *item = malloc(sizeof *item);
 
@@ -155,7 +154,7 @@ int main()
               struct node ***pdst = &dst;
               struct node **pdata;
 //              if (!sub2 || (sub1 && sub1->value < sub2->value)) 
-              if (!sub2 || (sub1 && __nondet()))
+              if (!sub2 || (sub1 && __VERIFIER_nondet_int()))
                 pdata = &sub1;
               else
                 pdata = &sub2;

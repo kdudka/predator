@@ -5,8 +5,7 @@
  */
 
 #include <stdlib.h>
-
-int __nondet();
+#include <verifier-builtins.h>
 
 int main() {
 
@@ -24,20 +23,20 @@ int main() {
 	root->left = NULL;
 	root->right = NULL;
 
-	while (__nondet()) {
+	while (__VERIFIER_nondet_int()) {
 		n = root;
 		while (n->left && n->right) {
-			if (__nondet())
+			if (__VERIFIER_nondet_int())
 				n = n->left;
 			else
 				n = n->right;
 		}
-		if (!n->left && __nondet()) {
+		if (!n->left && __VERIFIER_nondet_int()) {
 			n->left = malloc(sizeof(*n));
 			n->left->left = NULL;
 			n->left->right = NULL;
 		}
-		if (!n->right && __nondet()) {
+		if (!n->right && __VERIFIER_nondet_int()) {
 			n->right = malloc(sizeof(*n));
 			n->right->left = NULL;
 			n->right->right = NULL;
@@ -92,5 +91,4 @@ int main() {
 	}
 
 	return 0;
-
 }

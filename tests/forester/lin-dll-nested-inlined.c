@@ -5,6 +5,7 @@
  */
 
 #include <stdlib.h>
+#include <verifier-builtins.h>
 
 struct list_head {
     struct list_head *next, *prev;
@@ -103,7 +104,7 @@ struct master_item {
     append_one(dll);\
     append_one(dll);\
     append_one(dll);\
-    while (__nondet())\
+    while (__VERIFIER_nondet_int())\
         append_one(dll);\
 \
 }
@@ -143,7 +144,7 @@ int main()
     create_sll_item(sll);
     create_sll_item(sll);
  
-    while (__nondet())
+    while (__VERIFIER_nondet_int())
         create_sll_item(sll);
 
     while (sll)

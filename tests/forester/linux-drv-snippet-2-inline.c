@@ -5,8 +5,7 @@
  */
 
 #include <stdlib.h>
-
-int __nondet();
+#include <verifier-builtins.h>
 
 struct node_top {
     struct node_top *next;
@@ -23,18 +22,18 @@ int main()
     struct node_top *now = top;
     top->next = NULL;
     top->data = NULL;
-    if (__nondet()) {
+    if (__VERIFIER_nondet_int()) {
         struct node_low *ptr = malloc(sizeof *ptr);
         ptr->next = NULL;
         top->data = ptr;
     }
 
-    while (__nondet()) {
+    while (__VERIFIER_nondet_int()) {
         struct node_top *pi = malloc(sizeof *pi);
         pi->next = NULL;
         pi->data = NULL;
 
-      if (__nondet()) {
+      if (__VERIFIER_nondet_int()) {
         struct node_low *ptr = malloc(sizeof *ptr);
         ptr->next = NULL;
         pi->data = ptr;

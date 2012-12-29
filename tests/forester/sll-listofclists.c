@@ -5,8 +5,7 @@
  */
 
 #include <stdlib.h>
-
-int __nondet();
+#include <verifier-builtins.h>
 
 int main() {
 
@@ -23,7 +22,7 @@ int main() {
 	struct T2* first = NULL;
 	struct T2* last = NULL;
 
-	while (__nondet()) {
+	while (__VERIFIER_nondet_int()) {
 
 		struct T2* x = malloc(sizeof(struct T2));
 		x->next = NULL;
@@ -32,7 +31,7 @@ int main() {
 
 		struct T* y = NULL;
 
-		while (__nondet()) {
+		while (__VERIFIER_nondet_int()) {
 			y = malloc(sizeof(struct T));
 			y->next = x->head.next;
 			y->data = 0;

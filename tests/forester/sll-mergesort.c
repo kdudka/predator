@@ -5,8 +5,7 @@
  */
 
 #include <stdlib.h>
-
-int __nondet();
+#include <verifier-builtins.h>
 
 struct DItem {
 	struct DItem* next;
@@ -25,11 +24,11 @@ int main() {
 	struct TLItem *lItem;
 
 	// fill top level list with single data items
-	while (__nondet()) {
+	while (__VERIFIER_nondet_int()) {
 
 		item = malloc(sizeof *item);
 		item->next = NULL;
-		item->value = __nondet();
+		item->value = __VERIFIER_nondet_int();
 
 		lItem = malloc(sizeof *lItem);
 		if (data) {

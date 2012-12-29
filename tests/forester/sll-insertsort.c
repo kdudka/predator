@@ -4,8 +4,7 @@
  * boxes:
  */
 #include <stdlib.h>
-
-int __nondet();
+#include <verifier-builtins.h>
 
 int main() {
 
@@ -16,7 +15,7 @@ int main() {
 	struct T* x = NULL;
 	struct T* y = NULL;
 
-	while (__nondet()) {
+	while (__VERIFIER_nondet_int()) {
 		y = malloc(sizeof(*y));
 		y->next = x;
 		x = y;
@@ -32,7 +31,7 @@ int main() {
 		pred = NULL;
 		z = sorted;
 
-		while (z && __nondet()) {
+		while (z && __VERIFIER_nondet_int()) {
 			pred = z;
 			z = z->next;
 		}

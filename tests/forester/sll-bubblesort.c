@@ -6,8 +6,7 @@
 
 #include <stdlib.h>
 #include <stdbool.h>
-
-int __nondet();
+#include <verifier-builtins.h>
 
 int main() {
 
@@ -18,7 +17,7 @@ int main() {
 	struct T* x = NULL;
 	struct T* y = NULL;
 
-	while (__nondet()) {
+	while (__VERIFIER_nondet_int()) {
 		y = malloc(sizeof(*y));
 		y->next = x;
 		x = y;
@@ -36,7 +35,7 @@ int main() {
 		y = x;
 		pred = NULL;
 		while (y && y->next) {
-			if (__nondet()) {
+			if (__VERIFIER_nondet_int()) {
 				succ = y->next;
 				if (pred) pred->next = succ;
 				else x = succ;

@@ -4,6 +4,7 @@
  */
 
 #include <stdlib.h>
+#include <verifier-builtins.h>
 
 int main() {
 
@@ -21,7 +22,7 @@ int main() {
 	x->prev = NULL;
 
 	// ``normal'' DLL
-	while (__nondet()) {
+	while (__VERIFIER_nondet_int()) {
 		y = malloc(sizeof(struct T));
 		y->next = x;
 		x->prev = y;
@@ -36,7 +37,7 @@ int main() {
 	y->prev = NULL;
 
 	// ``reversed'' DLL
-	while (__nondet()) {
+	while (__VERIFIER_nondet_int()) {
 		z = malloc(sizeof(struct T));
 		z->prev = y;
 		y->next = z;
@@ -62,14 +63,10 @@ int main() {
 	xEnd->next = y;
 	y->prev = xEnd;
 
-	___fa_plot("dll-two-way-constr-0001");
-
 	y = x;
 	while (y) {
 		y = y->next;
 	}
-
-	___fa_plot("dll-two-way-constr-0002");
 
 	while (x) {
 		y = x->next;

@@ -5,8 +5,7 @@
  */
 
 #include <stdlib.h>
-
-int __nondet();
+#include <verifier-builtins.h>
 
 struct list_head {
 	struct list_head *next;
@@ -52,7 +51,7 @@ int main()
 	ptr->link.next = my_list.next;
 	my_list.next = &ptr->link;
 
-	while (__nondet()) {
+	while (__VERIFIER_nondet_int()) {
 		ptr = malloc(sizeof *ptr);
 		ptr->data = ((void *)0);
 		ptr->link.next = my_list.next;

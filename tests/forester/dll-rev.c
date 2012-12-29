@@ -4,6 +4,7 @@
  * boxes: genericdll.boxes
  */
 #include <stdlib.h>
+#include <verifier-builtins.h>
 
 int main() {
 
@@ -16,7 +17,7 @@ int main() {
 	struct T* x = NULL;
 	struct T* y = NULL;
 
-	while (__nondet()) {
+	while (__VERIFIER_nondet_int()) {
 		y = malloc(sizeof(struct T));
 		y->next = x;
 		y->prev = NULL;

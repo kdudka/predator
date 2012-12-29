@@ -368,14 +368,14 @@ public:
 	BuiltinTable() :
 		_table{}
 	{
-		this->_table["malloc"]        = builtin_e::biMalloc;
-		this->_table["free"]          = builtin_e::biFree;
-		this->_table["__nondet"]      = builtin_e::biNondet;
-		this->_table["__fix"]         = builtin_e::biFix;
-		this->_table["__print_heap"]  = builtin_e::biPrintHeap;
-		this->_table["___fa_plot"]    = builtin_e::biPlotHeap;
-		this->_table["abort"]         = builtin_e::biAbort;
-		this->_table["___fa_error"]   = builtin_e::biError;
+		this->_table["malloc"]                  = builtin_e::biMalloc;
+		this->_table["free"]                    = builtin_e::biFree;
+		this->_table["abort"]                   = builtin_e::biAbort;
+		this->_table["___fa_get_nondet_int"]    = builtin_e::biNondet;
+		this->_table["___fa_error"]             = builtin_e::biError;
+		this->_table["___fa_plot"]              = builtin_e::biPlotHeap;
+		this->_table["___fa_fix"]               = builtin_e::biFix;
+		this->_table["___fa_print_heap"]        = builtin_e::biPrintHeap;
 	}
 
 	/**

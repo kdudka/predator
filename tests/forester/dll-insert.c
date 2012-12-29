@@ -1,30 +1,31 @@
 #include <stdlib.h>
+#include <verifier-builtins.h>
 
 int main() {
 
-    struct T {
-        struct T* next;
-	struct T* prev;
-	int data;
-    };
+	struct T {
+		struct T* next;
+		struct T* prev;
+		int data;
+	};
 
-    struct T* x = NULL;
-    struct T* y = NULL;
+	struct T* x = NULL;
+	struct T* y = NULL;
 
-    while (__nondet()) {
-	y = malloc(sizeof(struct T));
-	y->next = x;
-	y->prev = NULL;
-	y->data = 0;
-	if (x)
-	    x->prev = y;
-	x = y;
-    }
+	while (__VERIFIER_nondet_int()) {
+		y = malloc(sizeof(struct T));
+		y->next = x;
+		y->prev = NULL;
+		y->data = 0;
+		if (x)
+		    x->prev = y;
+		x = y;
+	}
 
-    y = x;
+	y = x;
 
-    while (y != NULL) {
-	if (__nondet()) {
+	while (y != NULL) {
+		if (__VERIFIER_nondet_int()) {
 	    struct T* z = malloc(sizeof(struct T));
 	    z->next = y->next;
 	    z->prev = y;

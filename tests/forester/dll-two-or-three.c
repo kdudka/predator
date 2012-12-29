@@ -3,6 +3,7 @@
  */
 
 #include <stdlib.h>
+#include <verifier-builtins.h>
 
 int main() {
 
@@ -27,7 +28,7 @@ int main() {
 	y->prev = NULL;
 	x = y;
 
-	if (__nondet())
+	if (__VERIFIER_nondet_int())
 	{	// the third element
 		y = malloc(sizeof(struct T));
 		y->next = x;
