@@ -19,29 +19,30 @@
 
 // Forester headers
 #include "connection_graph.hh"
+#include "forestaut.hh"
+
 
 void ConnectionGraph::updateStateSignature(
-	StateToCutpointSignatureMap& stateMap, size_t state,
-	const CutpointSignature& v)
+	StateToCutpointSignatureMap&    stateMap,
+	size_t                          state,
+	const CutpointSignature&        v)
 {
-	auto p = stateMap.insert(std::make_pair(state, v));
+	auto itBoolPair = stateMap.insert(std::make_pair(state, v));
 
-	if (!p.second)
-	{
-		// Assertions
-		assert(v.size() == p.first->second.size());
+	if (!itBoolPair.second)
+	{	// in case the state is already mapped to something
+		CutpointSignature& oldSig = itBoolPair.first->second;
+		assert(v.size() == oldSig.size());
 
 		for (size_t i = 0; i < v.size(); ++i)
 		{
 			// Assertions
-			assert(v[i].root == p.first->second[i].root);
-			assert(v[i].defines == p.first->second[i].defines);
+			assert(v[i].root == oldSig[i].root);
+			assert(v[i].defines == oldSig[i].defines);
 
-			p.first->second[i].refCount =
-				std::max(p.first->second[i].refCount, v[i].refCount);
-			p.first->second[i].selCount =
-				std::max(p.first->second[i].selCount, v[i].selCount);
-			p.first->second[i].fwdSelectors.insert(v[i].fwdSelectors.begin(),
+			oldSig[i].refCount = std::max(oldSig[i].refCount, v[i].refCount);
+			oldSig[i].selCount = std::max(oldSig[i].selCount, v[i].selCount);
+			oldSig[i].fwdSelectors.insert(v[i].fwdSelectors.begin(),
 				v[i].fwdSelectors.end());
 		}
 	}
@@ -49,76 +50,86 @@ void ConnectionGraph::updateStateSignature(
 
 
 void ConnectionGraph::computeSignatures(
-	StateToCutpointSignatureMap& stateMap, const TreeAut& ta)
+	StateToCutpointSignatureMap&     stateMap,
+	const TreeAut&                   ta)
 {
 	stateMap.clear();
 
+	// the workset of transitions
 	std::list<const TT<label_type>*> transitions;
 
 	CutpointSignature v(1);
 
-	for (TreeAut::iterator i = ta.begin(); i != ta.end(); ++i)
-	{
+	// compute the initial signatures for leaves, other signatures are cleared
+	for (const TreeAut::Transition& trans : ta)
+	{	// traverse transitions of the TA
 		const Data* data;
 
-		if (i->label()->isData(data))
-		{
+		if (trans.label()->isData(data))
+		{	// for data transitions
 			if (data->isRef())
-			{
+			{	// for references, add the referenced root
 				v[0] = CutpointInfo(data->d_ref.root);
-
-				ConnectionGraph::updateStateSignature(stateMap, i->rhs(), v);
+				ConnectionGraph::updateStateSignature(stateMap, trans.rhs(), v);
 			} else
-			{
-				assert(stateMap.find(i->rhs()) == stateMap.end());
-
-				ConnectionGraph::updateStateSignature(stateMap, i->rhs(), CutpointSignature());
+			{	// for non-reference data states
+				assert(stateMap.find(trans.rhs()) == stateMap.end());
+				ConnectionGraph::updateStateSignature(stateMap, trans.rhs(),
+					CutpointSignature());
 			}
 		} else
-		{
-			transitions.push_back(&*i);
+		{	// for non-data states
+			transitions.push_back(&trans);
 		}
 	}
 
-	bool changed = true;
+	// Now we propagate the computed signatures upward in the tree structure.
+	// 'transitions' contains transitions that are to be processed. The following
+	// loop looks at all remaining transitions in 'transitions' and in the case
+	// all downward predecessors of the transition are processed, it updates
+	// information about the transition and removes it from 'transitions'. This
+	// is repeated until 'transitions' is empty.
 
+	bool changed = true;
 	while (transitions.size()/* && changed*/)
-	{
+	{	// while there are still some transitions to be processed
 		if (!changed)
 			assert(false);      // fail gracefully
 
 		changed = false;
-
 		for (auto i = transitions.begin(); i != transitions.end(); )
 		{
 			const TT<label_type>& t = **i;
-
 			assert(t.label()->isNode());
 
 			v.clear();
-
 			if (!processNode(v, t.lhs(), t.label(), stateMap))
-			{
+			{	// in case this transition cannot be processed because of some downward
+				// states with missing cutpoint information
 				++i;
 				continue;
 			}
 
 			ConnectionGraph::normalizeSignature(v);
-
 			ConnectionGraph::updateStateSignature(stateMap, t.rhs(), v);
 
 			changed = true;
-
 			i = transitions.erase(i);
 		}
 	}
 }
 
 
-void ConnectionGraph::fixSignatures(TreeAut& dst, const TreeAut& ta, size_t& offset)
+void ConnectionGraph::fixSignatures(
+	TreeAut&         dst,
+	const TreeAut&   ta,
+	size_t&          offset)
 {
 	typedef std::pair<size_t, CutpointSignature> StateCutpointSignaturePair;
-	typedef std::unordered_map<StateCutpointSignaturePair, size_t, boost::hash<StateCutpointSignaturePair>> StateCutpointSignatureToStateMap;
+	typedef std::unordered_map<
+		StateCutpointSignaturePair,
+		size_t,
+		boost::hash<StateCutpointSignaturePair>> StateCutpointSignatureToStateMap;
 
 	StateToCutpointSignatureMap stateMap;
 
@@ -143,10 +154,13 @@ void ConnectionGraph::fixSignatures(TreeAut& dst, const TreeAut& ta, size_t& off
 
 	typedef std::vector<ChoiceElement> ChoiceType;
 
-	struct NextChoice {
-		bool operator()(ChoiceType& choice) const {
+	struct NextChoice
+	{
+		bool operator()(ChoiceType& choice) const
+		{
 			auto iter = choice.begin();
-			for (; (iter != choice.end()) && (++(iter->iter) == iter->end); ++iter) {
+			for (; (iter != choice.end()) && (++(iter->iter) == iter->end); ++iter)
+			{
 				iter->iter = iter->begin;
 			}
 			return iter != choice.end();
@@ -279,14 +293,18 @@ void ConnectionGraph::fixSignatures(TreeAut& dst, const TreeAut& ta, size_t& off
 	}
 }
 
-void ConnectionGraph::processStateSignature(CutpointSignature& result,
-	const StructuralBox* box, size_t input, size_t state,
-	const CutpointSignature& signature)
+void ConnectionGraph::processStateSignature(
+	CutpointSignature&          result,
+	const StructuralBox*        box,
+	size_t                      input,
+	size_t                      state,
+	const CutpointSignature&    signature)
 {
+	// TODO: write dox,  .. -1 otherwise
 	size_t selector = box->outputReachable(input);
 
 	if (ConnectionGraph::isData(state))
-	{
+	{	// for a data state
 		if (signature.empty())
 			return;
 
@@ -303,47 +321,54 @@ void ConnectionGraph::processStateSignature(CutpointSignature& result,
 			result.back().bwdSelector = selector;
 
 		result.back().defines.insert(
-			box->inputCoverage(input).begin(), box->inputCoverage(input).end()
-		);
-
-		return;
+			box->inputCoverage(input).begin(), box->inputCoverage(input).end());
 	}
+	else
+	{	// for a non-data state
+		for (const CutpointInfo& cutpoint : signature)
+		{
+			result.push_back(cutpoint);
+			result.back().selCount = cutpoint.selCount?box->getSelCount(input):(0);
+			result.back().fwdSelectors.clear();
+			result.back().fwdSelectors.insert(box->selectorToInput(input));
 
-	for (auto& cutpoint : signature)
-	{
-		result.push_back(cutpoint);
-		result.back().selCount = cutpoint.selCount?box->getSelCount(input):(0);
-		result.back().fwdSelectors.clear();
-		result.back().fwdSelectors.insert(box->selectorToInput(input));
-
-		if (selector == static_cast<size_t>(-1))
-			result.back().bwdSelector = static_cast<size_t>(-1);
+			if (selector == static_cast<size_t>(-1))
+				result.back().bwdSelector = static_cast<size_t>(-1);
+		}
 	}
 }
 
-bool ConnectionGraph::processNode(CutpointSignature& result,
-	const std::vector<size_t>& lhs, const label_type& label,
-	const StateToCutpointSignatureMap& stateMap)
+
+bool ConnectionGraph::processNode(
+	CutpointSignature&                  result,
+	const std::vector<size_t>&          lhs,
+	const label_type&                   label,
+	const StateToCutpointSignatureMap&  stateMap)
 {
 	size_t lhsOffset = 0;
 
 	for (const AbstractBox* box : label->getNode())
-	{
+	{	// for all boxes in the label
+		assert(nullptr != box);
 		if (!box->isStructural())
 			continue;
 
 		const StructuralBox* sBox = static_cast<const StructuralBox*>(box);
-
 		for (size_t j = 0; j < sBox->getArity(); ++j)
-		{
-			auto k = stateMap.find(lhs[lhsOffset + j]);
+		{	// process selectors in the box and merge the information together
+			auto it = stateMap.find(lhs[lhsOffset + j]);
 
-			if (k == stateMap.end())
-				return false;
+			if (it == stateMap.end())
+			{	// in case there is not cutpoint information for the selector
+				return false;     // do not process this node now
+			}
 
 			ConnectionGraph::processStateSignature(
-				result, sBox, j, lhs[lhsOffset + j], k->second
-				);
+				/* output cutpoint signature */ result,
+				/* the box */ sBox,
+				/* port of the box */ j,
+				/* the state */ lhs[lhsOffset + j],
+				/* previously computed cutpoint signature */ it->second);
 		}
 
 		lhsOffset += sBox->getArity();
@@ -457,6 +482,7 @@ void ConnectionGraph::mergeCutpoint(size_t dst, size_t src)
 	std::swap(this->data[dst].signature, signature);
 }
 
+
 void ConnectionGraph::normalizeSignature(CutpointSignature& signature)
 {
 	std::unordered_map<size_t, CutpointInfo*> m;
@@ -464,54 +490,53 @@ void ConnectionGraph::normalizeSignature(CutpointSignature& signature)
 	size_t offset = 0;
 
 	for (size_t i = 0; i < signature.size(); ++i)
-	{
-		auto p = m.insert(std::make_pair(signature[i].root, &signature[offset]));
+	{	// for each CutpointInfo
+		auto itBoolPair = m.insert(
+			std::make_pair(signature[i].root, &signature[offset]));
 
-		if (p.second)
-		{
+		if (itBoolPair.second)
+		{	// in case there is no record for the given root in 'm'
 			signature[offset] = signature[i];
 			signature[offset].refInherited = signature[offset].refCount > 1;
 
 			++offset;
 		} else
-		{
-			assert(p.first->second);
+		{	// in case there already is a record for the given root in 'm'
+			assert(nullptr != itBoolPair.first->second);
+			CutpointInfo& cutpoint = *itBoolPair.first->second;
 
-			p.first->second->refCount = std::min(
-				p.first->second->refCount + signature[i].refCount,
-				static_cast<size_t>(FA_REF_CNT_TRESHOLD)
-			);
-			p.first->second->selCount = p.first->second->selCount + signature[i].selCount;
-			p.first->second->refInherited = false;
-			p.first->second->fwdSelectors.insert(
-					signature[i].fwdSelectors.begin(), signature[i].fwdSelectors.end()
-			);
+			cutpoint.refCount = std::min(cutpoint.refCount + signature[i].refCount,
+				static_cast<size_t>(FA_REF_CNT_TRESHOLD));
+			cutpoint.selCount = cutpoint.selCount + signature[i].selCount;
+			cutpoint.refInherited = false;
+			cutpoint.fwdSelectors.insert(
+					signature[i].fwdSelectors.begin(), signature[i].fwdSelectors.end());
 
-			if (p.first->second->bwdSelector > signature[i].bwdSelector)
-				p.first->second->bwdSelector = signature[i].bwdSelector;
+			if (cutpoint.bwdSelector > signature[i].bwdSelector)
+				cutpoint.bwdSelector = signature[i].bwdSelector;
 
 			assert(
-				ConnectionGraph::areDisjoint(p.first->second->defines, signature[i].defines)
-			);
+				ConnectionGraph::areDisjoint(cutpoint.defines, signature[i].defines));
 
-			p.first->second->defines.insert(
-				signature[i].defines.begin(), signature[i].defines.end()
-			);
+			cutpoint.defines.insert(
+				signature[i].defines.begin(), signature[i].defines.end());
 		}
 	}
 
 	signature.resize(offset);
 }
 
-std::ostream& operator<<(std::ostream& os,
-	const ConnectionGraph::CutpointInfo& info)
+
+std::ostream& operator<<(
+	std::ostream&                           os,
+	const ConnectionGraph::CutpointInfo&    info)
 {
 	// Assertions
 	assert(info.refCount <= FA_REF_CNT_TRESHOLD);
 
 	os << info.root << "x" << info.refCount << ':' << info.selCount << "({";
 
-	for (auto& s : info.fwdSelectors)
+	for (size_t s : info.fwdSelectors)
 	{
 		if (s == static_cast<size_t>(-1))
 			continue;
@@ -528,7 +553,7 @@ std::ostream& operator<<(std::ostream& os,
 
 	os << ", {";
 
-	for (auto& s : info.defines)
+	for (size_t s : info.defines)
 		os << " +" << s;
 
 	return os << " })";
@@ -683,19 +708,20 @@ void ConnectionGraph::finishNormalization(size_t size, const std::vector<size_t>
 }
 
 
-void ConnectionGraph::updateRoot(size_t root, const TreeAut& ta)
+void ConnectionGraph::updateRoot(
+	size_t           root,
+	const TreeAut&   ta)
 {
 	// Assertions
 	assert(root < this->data.size());
 	assert(!this->data[root].valid);
-	assert(ta.getFinalStates().size());
+	assert(ta.getFinalStates().size() > 0);
 
 	StateToCutpointSignatureMap stateMap;
 
 	ConnectionGraph::computeSignatures(stateMap, ta);
 
 	auto iter = ta.getFinalStates().begin();
-
 	assert(stateMap.find(*iter) != stateMap.end());
 
 	this->data[root].signature = stateMap[*iter];
@@ -761,7 +787,8 @@ void ConnectionGraph::invalidate(size_t root)
 }
 
 
-void ConnectionGraph::updateIfNeeded(const std::vector<std::shared_ptr<TreeAut>>& roots)
+void ConnectionGraph::updateIfNeeded(
+	const std::vector<std::shared_ptr<TreeAut>>&    roots)
 {
 	// Assertions
 	assert(this->data.size() == roots.size());
@@ -771,10 +798,9 @@ void ConnectionGraph::updateIfNeeded(const std::vector<std::shared_ptr<TreeAut>>
 		if (this->data[i].valid)
 			continue;
 
-		if (!roots[i])
+		if (nullptr == roots[i])
 		{
 			this->data[i].valid = true;
-
 			continue;
 		}
 

@@ -137,7 +137,9 @@ public:
 
 	typedef std::vector<CutpointInfo> CutpointSignature;
 
-	friend bool operator%(const CutpointSignature& lhs, const CutpointSignature& rhs)
+	friend bool operator%(
+		const CutpointSignature&     lhs,
+		const CutpointSignature&     rhs)
 	{
 		if (lhs.size() != rhs.size())
 			return false;
@@ -153,7 +155,9 @@ public:
 
 	typedef std::unordered_map<size_t, CutpointSignature> StateToCutpointSignatureMap;
 
-	friend std::ostream& operator<<(std::ostream& os, const CutpointSignature& signature)
+	friend std::ostream& operator<<(
+		std::ostream&               os,
+		const CutpointSignature&    signature)
 	{
 		for (auto& cutpoint : signature)
 			os << cutpoint;
@@ -161,13 +165,17 @@ public:
 		return os;
 	}
 
-	struct RootInfo {
-
+	struct RootInfo
+	{
 		bool valid;
 		CutpointSignature signature;
 		std::map<size_t, size_t> bwdMap;
 
-		RootInfo() : valid(), signature(), bwdMap() {}
+		RootInfo() :
+			valid(),
+			signature(),
+			bwdMap()
+		{ }
 
 		size_t backwardLookup(size_t selector) const
 		{
@@ -195,9 +203,11 @@ public:
 
 	static bool isData(size_t state) { return _MSB_TEST(state); }
 
-	static bool containsCutpoint(const CutpointSignature& signature, size_t target)
+	static bool containsCutpoint(
+		const CutpointSignature&      signature,
+		size_t                        target)
 	{
-		for (auto& cutpoint : signature)
+		for (const CutpointInfo& cutpoint : signature)
 		{
 			if (cutpoint.root == target)
 				return true;
@@ -206,7 +216,9 @@ public:
 		return false;
 	}
 
-	static size_t getSelectorToTarget(const CutpointSignature& signature, size_t target)
+	static size_t getSelectorToTarget(
+		const CutpointSignature&     signature,
+		size_t                       target)
 	{
 		for (auto& cutpoint : signature)
 		{
@@ -221,10 +233,11 @@ public:
 		return static_cast<size_t>(-1);
 	}
 
-	static void renameSignature(CutpointSignature& signature,
-		const std::vector<size_t>& index)
+	static void renameSignature(
+		CutpointSignature&           signature,
+		const std::vector<size_t>&   index)
 	{
-		for (auto& cutpoint : signature)
+		for (CutpointInfo& cutpoint : signature)
 		{
 			assert(cutpoint.root < index.size());
 
@@ -232,7 +245,9 @@ public:
 		}
 	}
 
-	static bool areDisjoint(const std::set<size_t>& s1, const std::set<size_t>& s2)
+	static bool areDisjoint(
+		const std::set<size_t>&    s1,
+		const std::set<size_t>&    s2)
 	{
 		std::vector<size_t> v(s1.size());
 
@@ -245,24 +260,93 @@ public:
 		return std::includes(s1.begin(), s1.end(), s2.begin(), s2.end());
 	}
 
+
+	/**
+	 * @brief  Normalizes a signature by merging a root's records
+	 *
+	 * This function normalizes @p signature, i.e. it takes a look at all
+	 * cutpoint information present and in case there are more elements for
+	 * a single root, it merges them together into one record.
+	 *
+	 * @param[in,out]  signature  The signature to be normalized
+	 */
 	static void normalizeSignature(CutpointSignature& signature);
 
-	static void updateStateSignature(StateToCutpointSignatureMap& stateMap, size_t state,
-		const CutpointSignature& v);
 
-	static void processStateSignature(CutpointSignature& result,
-		const StructuralBox* box, size_t input, size_t state,
-		const CutpointSignature& signature);
+	/**
+	 * @brief  Updates a state's signature
+	 *
+	 * This function updates a @p state's signature in the @p stateMap with the
+	 * cutpoint signature given in @p v. In case @p state is not mapped to
+	 * anything, the sole signature is inserted in the map, in the other case
+	 * (there is already a signature for the state), the existing signature is
+	 * altered.
+	 *
+	 * @param[in,out]  stateMap  The map of states to signatures
+	 * @param[in]      state     The state the signature of which is to be
+	 *                           updated
+	 * @param[in]      v         The signature to be added to the state
+	 */
+	static void updateStateSignature(
+		StateToCutpointSignatureMap&      stateMap,
+		size_t                            state,
+		const CutpointSignature&          v);
 
-	static bool processNode(CutpointSignature& result, const std::vector<size_t>& lhs,
-		const label_type& label, const StateToCutpointSignatureMap& stateMap);
+
+	/**
+	 * @brief  Processes signature of a state
+	 *
+	 * This function processes signature of @p state. 
+	 *
+	 * @param[out]  result     Output signature of the state
+	 * @param[in]   box        The box where the state is the @p input's selector
+	 * @param[in]   input      The selector of the box corresponding to @p state
+	 * @param[in]   state      The state
+	 * @param[in]   signature  Previously computed signature
+	 */
+	static void processStateSignature(
+		CutpointSignature&          result,
+		const StructuralBox*        box,
+		size_t                      input,
+		size_t                      state,
+		const CutpointSignature&    signature);
+
+
+	/**
+	 * @brief  Processes a label, i.e. a memory node
+	 *
+	 * This function processes @p label (a memory node in the heap terminology).
+	 * It merges information stored in @p stateMap from downward states given in
+	 * @p lhs into @p result. In case there is a state in @p lhs such that it has
+	 * no corresponding record in @p stateMap, the function returns @p false,
+	 * otherwise (everything was OK) it returns @p true. Note that the content of
+	 * @p result is undefined for the case when the function returns @p false.
+	 *
+	 * @param[out]  result    Signature of the label
+	 * @param[in]   lhs       The tuple of downward states
+	 * @param[in]   label     The label
+	 * @param[in]   stateMap  Mapping of states to cutpoint signatures
+	 *
+	 * @returns  @p true if the update was OK (and @p result is valid), @p false
+	 *           in the case some downward state signature is missing (@p result
+	 *           is invalid in this case)
+	 */
+	static bool processNode(
+		CutpointSignature&                    result,
+		const std::vector<size_t>&            lhs,
+		const label_type&                     label,
+		const StateToCutpointSignatureMap&    stateMap);
 
 	// computes signature for all states of ta
-	static void computeSignatures(StateToCutpointSignatureMap& stateMap,
-		const TreeAut& ta);
+	static void computeSignatures(
+		StateToCutpointSignatureMap&    stateMap,
+		const TreeAut&                  ta);
 
 	// computes signature for all states of ta
-	static void fixSignatures(TreeAut& dst, const TreeAut& ta, size_t& offset);
+	static void fixSignatures(
+		TreeAut&           dst,
+		const TreeAut&     ta,
+		size_t&            offset);
 
 public:
 
@@ -270,7 +354,7 @@ public:
 
 	bool isValid() const
 	{
-		for (auto& root : this->data)
+		for (const RootInfo& root : this->data)
 		{
 			if (!root.valid)
 				return false;
@@ -279,7 +363,18 @@ public:
 		return true;
 	}
 
-	void updateIfNeeded(const std::vector<std::shared_ptr<TreeAut>>& roots);
+
+	/**
+	 * @brief  Updates the needed components of the connection graph
+	 *
+	 * This method updates the components of the connection graph that need an
+	 * update.
+	 *
+	 * @param[in]  roots  The tree automata from the forest automaton
+	 */
+	void updateIfNeeded(
+		const std::vector<std::shared_ptr<TreeAut>>& roots);
+
 
 	void clear()
 	{
@@ -290,7 +385,17 @@ public:
 
 	void updateBackwardData(size_t root);
 
-	void updateRoot(size_t root, const TreeAut& ta);
+	/**
+	 * @brief  Updates the info about a single root
+	 *
+	 * This method updates information about a single root of the forest.
+	 *
+	 * @param[in]  root  Index of the tree automaton in the forest automaton
+	 * @param[in]  ta    The tree automaton at the index @p root
+	 */
+	void updateRoot(
+		size_t              root,
+		const TreeAut&      ta);
 
 	void newRoot()
 	{
@@ -343,14 +448,17 @@ public:   // methods
 		std::vector<bool>&           visited) const;
 
 
-	ConnectionGraph(size_t size = 0) : data(size) {}
+	ConnectionGraph(size_t size = 0) :
+		data(size)
+	{ }
 
-	void getRelativeSignature(std::vector<std::pair<int, size_t>>& signature,
-		size_t root) const
+	void getRelativeSignature(
+		std::vector<std::pair<int, size_t>>&    signature,
+		size_t                                  root) const
 	{
 		signature.clear();
 
-		for (auto& tmp : this->data[root].signature)
+		for (const CutpointInfo& tmp : this->data[root].signature)
 			signature.push_back(std::make_pair(tmp.root - root, tmp.refCount));
 	}
 };
