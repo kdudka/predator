@@ -107,76 +107,107 @@ public:
 
 	static bool subseteq(const FAE& lhs, const FAE& rhs);
 
+
+	/**
+	 * @brief  Loads compatible FA from a wrapping TA
+	 *
+	 * This method takes a wrapping TA @p src and breaks it into FA. Then it
+	 * takes those FA which are compatible with @p fae and returns them in @p
+	 * dst.
+	 *
+	 * @param[out]  dst          The result vector where the FA will be filled
+	 * @param[in]   src          The wrapping TA which contains the FA
+	 * @param[in]   backend      The TA backend
+	 * @param[in]   boxMan       The used box manager
+	 * @param[in]   fae          The FA with which the loaded FA are supposed to
+	 *                           be compatible
+	 * @param[in]   stateOffset  The offset for renaming states
+	 * @param[in]   funcCompat   The functor that checks additional compatibility
+	 *                           restraints
+	 */
 	template <class F>
 	static void loadCompatibleFAs(
 		std::vector<FAE*>&              dst,
 		const TreeAut&                  src,
 		TreeAut::Backend&               backend,
 		BoxMan&                         boxMan,
-		const FAE*                      fae,
+		const FAE&                      fae,
 		size_t                          stateOffset,
-		F                               f)
+		F                               funcCompat)
 	{
 		// build TD cache and insert empty set of root transitions (if not present)
 		TreeAut::td_cache_type cache = src.buildTDCache();
-		std::vector<const TT<label_type>*>& v = cache.insert(
-			std::make_pair(0, std::vector<const TT<label_type>*>())).first->second;
+		std::vector<const Transition*>& v = cache.insert(
+			std::make_pair(0, std::vector<const Transition*>())).first->second;
 
-		// iterate over all "synthetic" transitions and constuct new FAE for each
-		for (const TT<label_type>* trans : v)
-		{
-			if (trans->lhs().size() != fae->getRootCount())
+		for (const Transition* trans : v)
+		{ // iterate over all "synthetic" transitions and constuct new FAE for each
+			assert(nullptr != trans);
+
+			const size_t& numRoots = trans->lhs().size();
+			if ((fae.getRootCount() != numRoots) ||
+				(fae.GetVariables() != trans->label()->getVData()))
+			{	// in case the number of components or global variables does not match
 				continue;
-			if (trans->label()->getVData() != fae->GetVariables())
-				continue;
+			}
 
 			std::vector<std::shared_ptr<TreeAut>> roots;
 			size_t j;
-			for (j = 0; j != trans->lhs().size(); ++j)
-			{
+			for (j = 0; j != numRoots; ++j)
+			{	// for all TA in the FA
+				assert(roots.size() == j);
+
 				TreeAut* ta = new TreeAut(backend);
 				roots.push_back(std::shared_ptr<TreeAut>(ta));
 
-				// add reachable transitions
-				for (TreeAut::td_iterator k = src.tdStart(cache, {trans->lhs()[j]});
+				const size_t& rootState = trans->lhs()[j];
+
+				for (TreeAut::td_iterator k = src.tdStart(cache, {rootState});
 					k.isValid();
 					k.next())
-				{
+				{ // copy reachable transitions
 					ta->addTransition(*k);
 				}
 
-				ta->addFinalState(trans->lhs()[j]);
+				ta->addFinalState(rootState);
 
 				// compute signatures
 				ConnectionGraph::StateToCutpointSignatureMap stateMap;
-
 				ConnectionGraph::computeSignatures(stateMap, *ta);
 
-				auto k = stateMap.find(trans->lhs()[j]);
-
+				auto k = stateMap.find(rootState);
 				if (k == stateMap.end())
-				{
-					if (!fae->connectionGraph.data[roots.size() - 1].signature.empty())
-						break;
+				{	// in case the 'j'-th root has no cutpoint info
+					if (!fae.connectionGraph.data[j].signature.empty())
+					{	// in case the 'j'-th root in FA has some cutpoint info
+						break;      // the FA are not compatible
+					}
 				}
 				else
-				{
-					if (k->second != fae->connectionGraph.data[roots.size() - 1].signature)
-						break;
+				{	// in case the 'j'-th root has some cutpoint info
+					if (k->second != fae.connectionGraph.data[j].signature)
+					{	// in case the info is not compatible to the one in FA
+						break;      // the FA are not compatible
+					}
 				}
 
-				if (!f(*fae, j, *fae->getRoot(j), *ta))
-					break;
+				if (!funcCompat(fae, j, *fae.getRoot(j), *ta))
+				{	// in case additional compatibility chack failed
+					break;        // the FA are not compatible
+				}
 			}
 
-			if (j < trans->lhs().size())
-				continue;
+			if (numRoots!= j)
+			{	// in case the previous loop was interrupted at some point
+				continue;   // try another FA
+			}
 
+			// build the FA
 			FAE* tmp = new FAE(backend, boxMan);
 			dst.push_back(tmp);
-			tmp->loadVars(fae->GetVariables());
+			tmp->loadVars(fae.GetVariables());
 			tmp->roots_ = roots;
-			tmp->connectionGraph = fae->connectionGraph;
+			tmp->connectionGraph = fae.connectionGraph;
 			tmp->stateOffset = stateOffset;
 		}
 	}

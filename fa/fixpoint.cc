@@ -322,7 +322,13 @@ void abstract(
 	ContainerGuard<std::vector<FAE*>> g(tmp);
 
 	FAE::loadCompatibleFAs(
-		tmp, fwdConf, backend, boxMan, &fae, 0, CompareVariablesF()
+		/* the result */ tmp,
+		fwdConf,
+		backend,
+		boxMan,
+		fae,
+		0,
+		CompareVariablesF()
 	);
 
 	for (size_t i = 0; i < tmp.size(); ++i)
