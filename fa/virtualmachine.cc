@@ -38,7 +38,7 @@ void VirtualMachine::transitionLookup(
 		const Data* tmp = nullptr;
 		if (!fae_.isData(transition.lhs()[ni.offset], tmp))
 		{
-			throw ProgramError("transitionLookup(): destination is not a leaf!");
+			throw std::runtime_error("transitionLookup(): destination is not a leaf!");
 		}
 		data.d_struct->push_back(Data::item_info(off, *tmp));
 		VirtualMachine::displToData(VirtualMachine::readSelector(ni.aBox),
@@ -60,7 +60,7 @@ void VirtualMachine::transitionLookup(
 	const Data* tmp = nullptr;
 	if (!fae_.isData(transition.lhs()[ni.offset], tmp))
 	{
-		throw ProgramError("transitionLookup(): destination is not a leaf!");
+		throw std::runtime_error("transitionLookup(): destination is not a leaf!");
 	}
 
 	data = *tmp;
@@ -90,7 +90,7 @@ void VirtualMachine::transitionModify(
 	const Data* tmp = nullptr;
 	if (!fae_.isData(transition.lhs()[ni.offset], tmp))
 	{
-		throw ProgramError("transitionModify(): destination is not a leaf!");
+		throw std::runtime_error("transitionModify(): destination is not a leaf!");
 	}
 
 	out = *tmp;
@@ -132,7 +132,7 @@ void VirtualMachine::transitionModify(
 		const Data* tmp = nullptr;
 		if (!fae_.isData(transition.lhs()[ni.offset], tmp))
 		{
-			throw ProgramError("transitionModify(): destination is not a leaf!");
+			throw std::runtime_error("transitionModify(): destination is not a leaf!");
 		}
 
 		out.d_struct->push_back(Data::item_info(sel.first, *tmp));
