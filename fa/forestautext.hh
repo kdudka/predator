@@ -49,14 +49,19 @@ private:  // data members
 
 public:
 
-	struct RenameNonleafF
+	class RenameNonleafF
 	{
-		Index<size_t>& index;
+	private:  // data members
 
-		size_t offset;
+		Index<size_t>& index_;
 
-		RenameNonleafF(Index<size_t>& index, size_t offset = 0)
-			: index(index), offset(offset)
+		size_t offset_;
+
+	public:   // methods
+
+		RenameNonleafF(Index<size_t>& index, size_t offset = 0) :
+			index_(index),
+			offset_(offset)
 		{ }
 
 		size_t operator()(size_t s)
