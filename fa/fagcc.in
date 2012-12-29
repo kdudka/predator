@@ -72,6 +72,18 @@ remove_gcc_varnames() {
 	{print}'"
 }
 
+check_present() {
+  if [ "$1" == "" ] ; then
+    echo "Invalid call of check_present()"
+    exit 1
+  fi
+
+  if [ "$2" == "" ] ; then
+    echo "Parameter '$1' needs an attribute! See '${SELF} -h' for help."
+    exit 1
+  fi
+}
+
 FILENAME=
 FA_ARGS=
 FA_VERBOSE=0
@@ -89,16 +101,20 @@ while [ "$1" != "" ]; do
                                     ;;
     -tu  | --print-trace-ucode )    FA_ARGS="${FA_ARGS};print-ucode-trace"
                                     ;;
-    -op  | --output-ucode )         shift
+    -op  | --output-ucode )         check_present $1 $2
+                                    shift
                                     OUT_UCODE=$1
                                     ;;
-    -opo | --output-orig-code )     shift
+    -opo | --output-orig-code )     check_present $1 $2
+                                    shift
                                     OUT_ORIG_CODE=$1
                                     ;;
-    -ot  | --output-trace )         shift
+    -ot  | --output-trace )         check_present $1 $2
+                                    shift
                                     OUT_TRACE=$1
                                     ;;
-    -otu | --output-trace-ucode )   shift
+    -otu | --output-trace-ucode )   check_present $1 $2
+                                    shift
                                     OUT_TRACE_UCODE=$1
                                     ;;
     -d   | --dry-run )              DRY_RUN=1
@@ -136,7 +152,7 @@ source "$topdir/build-aux/xgcclib.sh"
 export SINK="/dev/null"
 export FA_PLUG="$topdir/fa_build/libfa.so"
 export GCC_HOST='@GCC_HOST@'
-export GCC_OPTS="-S -o $SINK -O0 -m32 -I$topdir/include/predator-builtins -DFORESTER"
+export GCC_OPTS="-S -o $SINK -O0 -m32 -I$topdir/include/forester-builtins -DFORESTER"
 
 # initial checks
 find_gcc_host

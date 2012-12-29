@@ -39,7 +39,7 @@ test -z "$FA_OPTS" && FA_OPTS="-fplugin-arg-libfa-dump-pp \
 # prepare the command line
 RUN="LD_PRELOAD=/lib/x86_64-linux-gnu/libpthread.so.0 \
     $GDB --quiet --args $CC1_HOST \"$1\" \
-    -I$topdir/include/predator-builtins -DFORESTER \
+    -I$topdir/include/forester-builtins -DFORESTER \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \
     -fplugin=$FA_PLUG \
