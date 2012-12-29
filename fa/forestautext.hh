@@ -61,10 +61,14 @@ public:
 
 		size_t operator()(size_t s)
 		{
-			if (_MSB_TEST(s))
+			if (FA::isData(s))
+			{	// for data states
 				return s;
-
-			return this->index.translateOTF(s) + this->offset;
+			}
+			else
+			{	// for internal states
+				return index_.translateOTF(s) + offset_;
+			}
 		}
 	};
 
@@ -212,6 +216,7 @@ public:
 		}
 	}
 
+
 	template <class F>
 	void fuse(
 		const std::vector<FAE*>&       src,
@@ -229,29 +234,14 @@ public:
 				if (!f(j, fae))
 					continue;
 				index.clear();
-				TreeAut::rename(*roots_[j], *fae->getRoot(j),
-					RenameNonleafF(index, this->nextState()), false);
+				TreeAut::rename(
+					/* destination */ *roots_[j],
+					/* src */ *fae->getRoot(j),
+					/* renaming fctor */ RenameNonleafF(index, this->nextState()),
+					/* copy final states? */ false);
+
 				this->incrementStateOffset(index.size());
 			}
-		}
-	}
-
-	template <class F, class G>
-	void fuse(
-		const TreeAut&       src,
-		F                    f,
-		G                    g)
-	{
-		Index<size_t> index;
-		TreeAut tmp2(src, g);
-		TreeAut tmp(*this->backend);
-		TreeAut::rename(tmp, tmp2, RenameNonleafF(index, this->nextState()), false);
-		this->incrementStateOffset(index.size());
-		for (size_t i = 0; i < this->getRootCount(); ++i)
-		{
-			if (!f(i, nullptr))
-				continue;
-			tmp.copyTransitions(*roots_[i]);
 		}
 	}
 

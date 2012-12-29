@@ -156,7 +156,7 @@ void FAE::freePosition(size_t root)
 	for (size_t i = 0; i < index.size(); ++i)
 	{	// create the index
 		index[i] = i;
-	}	
+	}
 
 	index[root] = pos;
 	index[pos] = static_cast<size_t>(-1);
