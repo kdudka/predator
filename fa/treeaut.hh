@@ -962,6 +962,13 @@ public:
 	}
 
 
+	/**
+	 * @brief  Determines whether two transitions match
+	 *
+	 * This function determines whether two transitions match (and can therefore
+	 * e.g. be merged during abstraction). First, the @p funcMatch functor is used
+	 * to determine whether the transitions are to be checked at all.
+	 */
 	template <class F>
 	static bool transMatch(
 		const Transition*                         t1,
@@ -1341,11 +1348,34 @@ public:
 
 	static bool subseteq(const TA<T>& a, const TA<T>& b);
 
-	template <class F>
+
+	/**
+	 * @brief  Creates a new TA with renamed states
+	 *
+	 * This method takes the TA @p src and copies its states and transitions
+	 * (while renaming them on the way) into the TA @p dst, which may or may not
+	 * be empty. The renaming is given by the @p funcRename functor and the
+	 * transitions to be copied are given by the @p funcCopyTrans functor. In
+	 * case * @p addFinalStates is @p true, the final states of @p src will also
+	 * be set as final in @p dst.
+	 *
+	 * @param[out]     dst             The output TA
+	 * @param[in]      src             The input TA
+	 * @param[in,out]  funcRename      The functor that performs the renaming
+	 * @param[in,out]  funcCopyTrans   The functor serving as the predicate
+	 *                                 determining which transitions are to be
+	 *                                 copied
+	 * @param[in]      addFinalStates  Should the copied states which are final
+	 *                                 in @p src be final also in @p dst?
+	 *
+	 * @returns  The output TA (same as @p dst)
+	 */
+	template <class F, class G>
 	static TA<T>& rename(
 		TA<T>&                   dst,
 		const TA<T>&             src,
 		F                        funcRename,
+		G                        funcCopyTrans,
 		bool                     addFinalStates = true)
 	{
 		std::vector<size_t> lhs;
@@ -1357,13 +1387,58 @@ public:
 
 		for (const TransIDPair* transID : src.transitions)
 		{
-			lhs.resize(transID->first.lhs().size());
-			for (size_t j = 0; j < transID->first.lhs().size(); ++j)
-				lhs[j] = funcRename(transID->first.lhs()[j]);
-			dst.addTransition(lhs, transID->first.label(), funcRename(transID->first.rhs()));
+			assert(nullptr != transID);
+			const Transition& trans = transID->first;
+
+			if (funcCopyTrans(trans))
+			{	// in case the transition is to be copied
+				lhs.resize(trans.lhs().size());
+				for (size_t j = 0; j < trans.lhs().size(); ++j)
+				{
+					lhs[j] = funcRename(trans.lhs()[j]);
+				}
+
+				dst.addTransition(lhs, trans.label(), funcRename(trans.rhs()));
+			}
 		}
+
 		return dst;
 	}
+
+
+	/**
+	 * @brief  Creates a new TA with renamed states
+	 *
+	 * This method takes the TA @p src and copies its states and transitions
+	 * (while renaming them on the way) into the TA @p dst, which may or may not
+	 * be empty. The renaming is given by the @p funcRename functor. In case @p
+	 * addFinalStates is @p true, the final states of @p src will also be set as
+	 * final in @p dst.
+	 *
+	 * @param[out]     dst             The output TA
+	 * @param[in]      src             The input TA
+	 * @param[in,out]  funcRename      The functor that performs the renaming
+	 * @param[in]      addFinalStates  Should the copied states which are final
+	 *                                 in @p src be final also in @p dst?
+	 *
+	 * @returns  The output TA (same as @p dst)
+	 */
+	template <class F>
+	static TA<T>& rename(
+		TA<T>&                   dst,
+		const TA<T>&             src,
+		F                        funcRename,
+		bool                     addFinalStates = true)
+	{
+		return rename(
+			dst,
+			src,
+			funcRename,
+			/* predicate over transitions to be copied */
+			[](const Transition&){ return true; },
+			addFinalStates);
+	}
+
 
 	static TA<T>& reduce(
 		TA<T>&                       dst,
