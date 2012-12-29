@@ -100,7 +100,7 @@ public:
 protected:
 
 	virtual void newLabel(const std::string&, size_t, size_t) {}
-	
+
 	virtual void beginModel(const std::string& name) {
 		this->automata.push_back(TA<std::string>(this->backend));
 		this->names.push_back(name);

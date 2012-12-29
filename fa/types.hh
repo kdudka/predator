@@ -159,7 +159,7 @@ enum class data_type_e
 {
 	t_undef,          ///< undefined value
 	t_unknw,          ///< unknown value
-	t_native_ptr,     ///< native memory pointer for pointers to CFG
+	t_native_ptr,     ///< native memory pointer for pointers to CFG (e.g. return address)
 	t_void_ptr,       ///< void pointer (only has a size)
 	t_ref,            ///< reference to a tree automaton
 	t_int,            ///< integer

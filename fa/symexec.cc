@@ -57,6 +57,7 @@ void reportErrorNoLocation(const char* errMsg)
 #include "forestautext.hh"
 #include "memplot.hh"
 #include "programconfig.hh"
+#include "programerror.hh"
 #include "restart_request.hh"
 #include "symctx.hh"
 #include "symexec.hh"
@@ -106,11 +107,12 @@ std::ostream& printTrace(
 			std::ostringstream oss;
 			oss << *origInsn;
 
-			std::string filename = MemPlotter::plotHeap(state);
+			std::string filename = MemPlotter::plotHeap(state, "trace", &origInsn->loc);
 			lastInsn = origInsn;
-			os << origInsn->loc.file << ":" << std::setw(4) << std::left
-				<< origInsn->loc.line << ":  "
-				<< std::setw(50) << std::left << oss.str() << " // " << filename << "\n";
+			os << std::setw(50) << std::left
+				<< Compiler::Assembly::insnToString(*origInsn) << " // "
+				<< origInsn->loc.file << ":" << std::setw(4) << std::left
+				<< origInsn->loc.line << "|  " << filename << "\n";
 		}
 	}
 
@@ -138,17 +140,40 @@ std::ostream& printUcodeTrace(
 
 		assert(state.GetInstr());
 		const AbstractInstruction& instr = *state.GetInstr();
+		const CodeStorage::Insn* clInsn = instr.insn();
 
-		std::ostringstream oss;
-		oss << instr;
+		os << &state;
 
-		os << "            " << std::setw(50) << std::left << oss.str();
-
-		const CodeStorage::Insn* origInsn = instr.insn();
-		if ((nullptr != origInsn) && (lastInsn != origInsn))
+		os << std::setw(18);
+		if (instr.isTarget())
 		{
-			lastInsn = origInsn;
-			os << "; " << origInsn->loc.line << ": " << *origInsn;
+			std::ostringstream addrStream;
+			addrStream << &instr;
+
+			if ((nullptr != clInsn) && (clInsn != lastInsn)
+				&& (clInsn->bb->front() == clInsn))
+			{
+				addrStream << " (" << clInsn->bb->name() << ")";
+			}
+
+			addrStream << ":";
+
+			os << std::left << addrStream.str();
+		}
+		else
+		{
+			os << "";
+		}
+
+		std::ostringstream osInstr;
+		osInstr << instr;
+
+		os << std::setw(40) << std::left << osInstr.str();
+
+		if ((nullptr != clInsn) && (lastInsn != clInsn))
+		{
+			lastInsn = clInsn;
+			os << "; " << clInsn->loc.line << ": " << *clInsn;
 		}
 
 		os << "\n";
@@ -475,13 +500,13 @@ public:   // methods
 		}
 
 		// ************ infer functions' stackframes ************
-		for (auto fnc : stor.fncs)
+		for (const CodeStorage::Fnc* fnc : stor.fncs)
 		{	// for each function in the storage, create a data structure representing
 			// its stackframe
 			std::vector<size_t> v;
 
 			const SymCtx ctx(*fnc);
-			for (auto sel : ctx.GetStackFrameLayout())
+			for (const SelData& sel : ctx.GetStackFrameLayout())
 			{	// create the stackframe
 				v.push_back(sel.offset);
 			}
@@ -571,10 +596,12 @@ public:   // methods
 					continue;
 				}
 
-				if (instr->insn()) {
+				if (instr->insn())
+				{
 					FA_DEBUG_AT(1, "fixpoint at " << instr->insn()->loc << std::endl
 						<< (static_cast<FixpointInstruction*>(instr))->getFixPoint());
-				} else {
+				} else
+				{
 					FA_DEBUG_AT(1, "fixpoint at unknown location" << std::endl
 						<< (static_cast<FixpointInstruction*>(instr))->getFixPoint());
 				}
