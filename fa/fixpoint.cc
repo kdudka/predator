@@ -315,31 +315,31 @@ void abstract(
 
 	FA_DEBUG_AT(3, "before abstraction: " << std::endl << fae);
 
-#if FA_FUSION_ENABLED
-	// merge fixpoint
-	std::vector<FAE*> tmp;
-
-	ContainerGuard<std::vector<FAE*>> g(tmp);
-
-	FAE::loadCompatibleFAs(
-		/* the result */ tmp,
-		fwdConf,
-		backend,
-		boxMan,
-		fae,
-		0,
-		CompareVariablesF()
-	);
-
-	for (size_t i = 0; i < tmp.size(); ++i)
+	if (FA_FUSION_ENABLED)
 	{
-		FA_DEBUG_AT(3, "accelerator " << std::endl << *tmp[i]);
+		// merge fixpoint
+		std::vector<FAE*> tmp;
+
+		ContainerGuard<std::vector<FAE*>> g(tmp);
+
+		FAE::loadCompatibleFAs(
+			/* the result */ tmp,
+			fwdConf,
+			backend,
+			boxMan,
+			fae,
+			0,
+			CompareVariablesF()
+		);
+
+		for (size_t i = 0; i < tmp.size(); ++i)
+		{
+			FA_DEBUG_AT(3, "accelerator " << std::endl << *tmp[i]);
+		}
+
+		fae.fuse(tmp, FuseNonFixedF());
+		FA_DEBUG_AT(3, "fused " << std::endl << fae);
 	}
-
-	fae.fuse(tmp, FuseNonFixedF());
-
-	FA_DEBUG_AT(3, "fused " << std::endl << fae);
-#endif
 
 	// abstract
 	Abstraction abstraction(fae);

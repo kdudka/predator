@@ -221,7 +221,7 @@ public:
 			return;
 
 		Index<size_t> index;
-		for (FAE* fae : src)
+		for (const FAE* fae : src)
 		{
 			assert(this->getRootCount() == fae->getRootCount());
 			for (size_t j = 0; j < this->getRootCount(); ++j)
@@ -300,7 +300,7 @@ public:
 		++this->stateOffset;
 	}
 
-	size_t nextState()
+	size_t nextState() const
 	{
 		return this->stateOffset;
 	}
