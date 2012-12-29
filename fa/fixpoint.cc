@@ -150,10 +150,13 @@ struct CompareVariablesF
 	}
 };
 
-struct FuseNonZeroF
+struct FuseNonFixedF
 {
-	bool operator()(size_t root, FAE* fae)
+	bool operator()(size_t root, const FAE* fae)
 	{
+		// Preconditions
+		assert(nullptr != fae);
+
 		VirtualMachine vm(*fae);
 
 		for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
@@ -327,8 +330,7 @@ void abstract(
 		FA_DEBUG_AT(3, "accelerator " << std::endl << *tmp[i]);
 	}
 
-	fae.fuse(tmp, FuseNonZeroF());
-//	fae.fuse(fwdConf, FuseNonZeroF(), CopyNonZeroRhsF());
+	fae.fuse(tmp, FuseNonFixedF());
 
 	FA_DEBUG_AT(3, "fused " << std::endl << fae);
 #endif
