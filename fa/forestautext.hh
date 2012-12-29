@@ -117,8 +117,8 @@ public:
 		size_t                          stateOffset,
 		F                               f)
 	{
-		TreeAut::td_cache_type cache;
-		src.buildTDCache(cache);
+		// build TD cache and insert empty set of root transitions (if not present)
+		TreeAut::td_cache_type cache = src.buildTDCache();
 		std::vector<const TT<label_type>*>& v = cache.insert(
 			std::make_pair(0, std::vector<const TT<label_type>*>())).first->second;
 

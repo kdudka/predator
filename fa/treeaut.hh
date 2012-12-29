@@ -644,12 +644,28 @@ public:
 		}
 	}
 
-	void buildTDCache(td_cache_type& cache) const
+
+	/**
+	 * @brief  Creates a top-down cache for transitions of the TA
+	 *
+	 * This method creates a top-down cache of transitions of the TA, i.e.
+	 * a mapping where for each state @e q there is a list of transitions such
+	 * that @e q is the parent state of the transition.
+	 *
+	 * @returns  Top-down cache of transitions of the TA
+	 */
+	td_cache_type buildTDCache() const
 	{
+		td_cache_type cache;
 		for (const TransIDPair* trans : this->transitions)
-		{
-			cache.insert(std::make_pair(trans->first._rhs, std::vector<const Transition*>())).first->second.push_back(&trans->first);
+		{	// insert all transitions
+			std::vector<const Transition*>& vec = cache.insert(std::make_pair(
+				trans->first.rhs(),
+				std::vector<const Transition*>())).first->second;
+			vec.push_back(&trans->first);
 		}
+
+		return cache;
 	}
 
 	void buildBUCache(bu_cache_type& cache) const
@@ -983,8 +999,7 @@ public:
 		F                                          f,
 		const Index<size_t>&                       stateIndex) const
 	{
-		td_cache_type cache;
-		this->buildTDCache(cache);
+		td_cache_type cache = this->buildTDCache();
 
 		std::vector<std::vector<bool>> tmp;
 
@@ -1255,8 +1270,7 @@ public:
 		const std::vector<std::vector<bool>>&     cons,
 		const Index<size_t>&                      stateIndex) const
 	{
-		td_cache_type cache;
-		this->buildTDCache(cache);
+		td_cache_type cache = this->buildTDCache();
 
 		for (size_t state : finalStates_)
 			dst.addFinalState(state);
