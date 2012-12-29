@@ -607,13 +607,6 @@ public:   // methods
 				}
 			}
 
-			// print out boxes
-			FA_DEBUG_AT(1, "boxes:");
-			for (const Box& box : boxMan_.boxDatabase())
-			{
-				FA_DEBUG_AT(1, box);
-			}
-
 			// print out stats
 			FA_DEBUG_AT(1, "forester has generated " << execMan_.statesEvaluated()
 				<< " symbolic configuration(s) in " << execMan_.pathsEvaluated()
