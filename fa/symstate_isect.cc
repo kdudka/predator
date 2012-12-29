@@ -371,6 +371,7 @@ void SymState::SubstituteRefs(
 
 	FAE* fae = new FAE(*thisFAE);
 	fae->clear();
+	fae->setStateOffset(thisFAE->nextState());
 	this->SetFAE(std::shared_ptr<FAE>(fae));
 
 	// engine that handles creation of new states etc.
@@ -544,7 +545,10 @@ void SymState::SubstituteRefs(
 							// This is the second easiest case, when both states are real data
 							// (i.e. no references). In this case, we are simply doing
 							// intersection of the data.
-							assert(*thisData == *srcData);
+
+							// Ignore if it is not compatible... we will detect it at
+							// intersection
+							//assert(*thisData == *srcData);
 
 							lhs.push_back(fae->addData(
 								*fae->getRoot(thisRoot).get(), *thisData));
@@ -670,6 +674,7 @@ void SymState::Intersect(
 
 	FAE* fae = new FAE(*thisFAE);
 	fae->clear();
+	fae->setStateOffset(thisFAE->nextState());
 	this->SetFAE(std::shared_ptr<FAE>(fae));
 
 	// engine that handles creation of new states etc.
@@ -842,10 +847,15 @@ void SymState::Intersect(
 							// This is the second easiest case, when both states are real data
 							// (i.e. no references). In this case, we are simply doing
 							// intersection of the data.
-							assert(*thisData == *fwdData);
-
-							lhs.push_back(fae->addData(
-								*fae->getRoot(curNewState.root).get(), *thisData));
+							if (*thisData == *fwdData)
+							{	// in case the data match
+								lhs.push_back(fae->addData(
+									*fae->getRoot(curNewState.root).get(), *thisData));
+							}
+							else
+							{	// in case the data are different
+								break;        // cut this branch of the intersection
+							}
 						}
 						else if (fwdIsData && thisIsData &&
 							fwdData->isRef() && thisData->isRef())
@@ -969,7 +979,7 @@ void SymState::Intersect(
 
 	// set new root # for components that do not correspond to components in the
 	// forward run
-	
+
 
 	std::ostringstream os;
 	utils::printCont(os, index);
@@ -1111,7 +1121,10 @@ void FAE::makeProduct(
 							// This is the second easiest case, when both states are real data
 							// (i.e. no references). In this case, we are simply doing
 							// intersection of the data.
-							assert(*lhsData == *rhsData);
+							if (*lhsData != *rhsData)
+							{	// if data don't match
+								break;        // cut this branch of the product
+							}
 						}
 						else if (lhsIsData && rhsIsData &&
 							lhsData->isRef() && rhsData->isRef())
