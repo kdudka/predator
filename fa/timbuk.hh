@@ -483,7 +483,8 @@ public:
 		this->out << "Transitions";
 	}
 
-	void writeTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs) {
+	void writeTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs)
+	{
 		this->out << 'l' << label;
 		if (lhs.size() > 0) {
 			this->out << "(s" << lhs[0];

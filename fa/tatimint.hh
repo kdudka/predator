@@ -41,31 +41,31 @@ private:  // methods
 protected:
 
 	virtual void newLabel(const std::string&, size_t, size_t) {}
-	
+
 	virtual void beginModel(const std::string& name) {
 		this->dst->clear();
 		this->name = name;
 	}
-	
+
 	virtual void newState(const std::string&, size_t) {}
-	
+
 	virtual void newFinalState(size_t id) {
 		this->dst->addFinalState(id);
 	}
-	
+
 	virtual void endDeclaration() {}
 
 	virtual void newTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs) {
 		this->dst->addTransition(lhs, this->getLabelName(label), rhs);
 	}
-	
+
 	virtual void endModel() {}
-	
+
 public:
 
 	TAReader(std::istream& input = std::cin, const std::string& name = "")
 		: TimbukReader(input, name), dst(nullptr), name{} {}
-	
+
 	TA<std::string>& read(TA<std::string>& dst) {
 		this->dst = &dst;
 		this->readOne();
@@ -105,21 +105,21 @@ protected:
 		this->automata.push_back(TA<std::string>(this->backend));
 		this->names.push_back(name);
 	}
-	
+
 	virtual void newState(const std::string&, size_t) {}
-	
+
 	virtual void newFinalState(size_t id) {
 		this->automata.back().addFinalState(id);
 	}
-	
+
 	virtual void endDeclaration() {}
 
 	virtual void newTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs) {
 		this->automata.back().addTransition(lhs, this->getLabelName(label), rhs);
 	}
-	
+
 	virtual void endModel() {}
-	
+
 public:
 
 	TAMultiReader(TA<std::string>::Backend& backend, std::istream& input = std::cin, const std::string& name = "")
@@ -139,14 +139,14 @@ public:
 template <class T>
 class TAWriter : public TimbukWriter {
 
-	struct StdF {
-
-		std::string operator()(size_t s) {
+	struct StdF
+	{
+		std::string operator()(size_t s)
+		{
 			std::ostringstream ss;
 			ss << 'q' << s;
 			return ss.str();
 		}
-
 	};
 
 public:
@@ -206,8 +206,9 @@ public:
 		this->endl();
 		this->writeTransitions(aut, f);
 	}
-	
-	void writeOne(const TA<T>& aut, const std::string& name = "TreeAutomaton") {
+
+	void writeOne(const TA<T>& aut, const std::string& name = "TreeAutomaton")
+	{
 		std::map<std::string, size_t> labels;
 		std::set<size_t> states;
 		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
