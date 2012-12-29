@@ -752,8 +752,11 @@ protected:
 	 * @returns  @p true if the target is accessed using dereference, @p false
 	 *           otherwise
 	 */
-	bool cStoreReg(const cl_operand& op, size_t src, size_t tmp,
-		const CodeStorage::Insn& insn)
+	bool cStoreReg(
+		const cl_operand&           op,
+		size_t                      src,
+		size_t                      tmp,
+		const CodeStorage::Insn&    insn)
 	{
 		const cl_accessor* acc = op.accessor;    // the initial accessor
 		int offset = 0;                          // the initial offset
@@ -1048,8 +1051,11 @@ protected:
 	 * @returns  @p true if the value is stored into a variable, @p false if it is
 	 *           stored into a register
 	 */
-	bool cStoreOperand(const cl_operand& op, size_t src, size_t tmp,
-		const CodeStorage::Insn& insn)
+	bool cStoreOperand(
+		const cl_operand&           op,
+		size_t                      src,
+		size_t                      tmp,
+		const CodeStorage::Insn&    insn)
 	{
 		switch (op.code)
 		{	// according to the type of the operand
@@ -1284,12 +1290,12 @@ protected:
 		size_t dstReg = lookupStoreReg(dst, 0);
 		size_t srcReg = cLoadOperand(dstReg, src, insn);
 
-		if (
-			src.type->code == cl_type_e::CL_TYPE_PTR &&
+		if (src.type->code == cl_type_e::CL_TYPE_PTR &&
 			src.type->items[0].type->code == cl_type_e::CL_TYPE_VOID &&
-			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID
-		)
-		{	// in case the source is a void pointer and the destination is not
+			dst.type->items[0].type->code != cl_type_e::CL_TYPE_VOID)
+		{	// in case the source is a void pointer and the destination is not;
+			// this happens for example at the call of malloc, when conversion from
+			// a void pointer to a typed pointer is done
 
 			// build a node according to the destination type
 			std::vector<SelData> sels;
