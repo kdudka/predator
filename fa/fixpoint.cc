@@ -304,73 +304,6 @@ struct CopyNonZeroRhsF
 	}
 };
 
-void abstract(
-	FAE&                                fae,
-	TreeAut&                            fwdConf,
-	TreeAut::Backend&                   backend,
-	BoxMan&                             boxMan,
-	const std::shared_ptr<const FAE>&   predicate)
-{
-	fae.unreachableFree();
-
-	FA_DEBUG_AT(3, "before abstraction: " << std::endl << fae);
-
-	if (FA_FUSION_ENABLED)
-	{
-		// merge fixpoint
-		std::vector<FAE*> tmp;
-
-		ContainerGuard<std::vector<FAE*>> g(tmp);
-
-		FAE::loadCompatibleFAs(
-			/* the result */ tmp,
-			fwdConf,
-			backend,
-			boxMan,
-			fae,
-			0,
-			CompareVariablesF()
-		);
-
-		for (size_t i = 0; i < tmp.size(); ++i)
-		{
-			FA_DEBUG_AT(3, "accelerator " << std::endl << *tmp[i]);
-		}
-
-		fae.fuse(tmp, FuseNonFixedF());
-		FA_DEBUG_AT(3, "fused " << std::endl << fae);
-	}
-
-	// abstract
-	Abstraction abstraction(fae);
-
-	if (FA_USE_PREDICATE_ABSTRACTION)
-	{	// for predicate abstraction
-		abstraction.predicateAbstraction(predicate);
-	}
-	else
-	{	// for finite height abstraction
-
-		// the roots that will be excluded from abstraction
-		std::vector<bool> excludedRoots(fae.getRootCount(), false);
-		for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
-		{
-			excludedRoots[VirtualMachine(fae).varGet(i).d_ref.root] = true;
-		}
-
-		for (size_t i = 0; i < fae.getRootCount(); ++i)
-		{
-			if (!excludedRoots[i])
-			{
-				abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmartTMatchF());
-//				abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmarterTMatchF(fae));
-			}
-		}
-	}
-
-	FA_DEBUG_AT(3, "after abstraction: " << std::endl << fae);
-}
-
 
 void getCandidates(
 	std::set<size_t>&               candidates,
@@ -460,6 +393,71 @@ SymState* FixpointBase::reverseAndIsect(
 	return tmpState;
 }
 
+
+void FI_abs::abstract(
+	FAE&                 fae)
+{
+	fae.unreachableFree();
+
+	FA_DEBUG_AT(3, "before abstraction: " << std::endl << fae);
+
+	if (FA_FUSION_ENABLED)
+	{
+		// merge fixpoint
+		std::vector<FAE*> tmp;
+
+		ContainerGuard<std::vector<FAE*>> g(tmp);
+
+		FAE::loadCompatibleFAs(
+			/* the result */ tmp,
+			fwdConf_,
+			taBackend_,
+			boxMan_,
+			fae,
+			0,
+			CompareVariablesF()
+		);
+
+		for (size_t i = 0; i < tmp.size(); ++i)
+		{
+			FA_DEBUG_AT(3, "accelerator " << std::endl << *tmp[i]);
+		}
+
+		fae.fuse(tmp, FuseNonFixedF());
+		FA_DEBUG_AT(3, "fused " << std::endl << fae);
+	}
+
+	// abstract
+	Abstraction abstraction(fae);
+
+	if (FA_USE_PREDICATE_ABSTRACTION)
+	{	// for predicate abstraction
+		abstraction.predicateAbstraction(this->getPredicates());
+	}
+	else
+	{	// for finite height abstraction
+
+		// the roots that will be excluded from abstraction
+		std::vector<bool> excludedRoots(fae.getRootCount(), false);
+		for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+		{
+			excludedRoots[VirtualMachine(fae).varGet(i).d_ref.root] = true;
+		}
+
+		for (size_t i = 0; i < fae.getRootCount(); ++i)
+		{
+			if (!excludedRoots[i])
+			{
+				abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmartTMatchF());
+//				abstraction.heightAbstraction(i, FA_ABS_HEIGHT, SmarterTMatchF(fae));
+			}
+		}
+	}
+
+	FA_DEBUG_AT(3, "after abstraction: " << std::endl << fae);
+}
+
+
 // FI_abs
 void FI_abs::execute(ExecutionManager& execMan, SymState& state)
 {
@@ -489,7 +487,7 @@ void FI_abs::execute(ExecutionManager& execMan, SymState& state)
 
 	normalize(*fae, &state, forbidden, true);
 
-	abstract(*fae, fwdConf_, taBackend_, boxMan_, this->getPredicate());
+	abstract(*fae);
 #if FA_ALLOW_FOLDING
 	learn1(*fae, boxMan_);
 
@@ -504,7 +502,7 @@ void FI_abs::execute(ExecutionManager& execMan, SymState& state)
 
 			normalize(*fae, &state, forbidden, true);
 
-			abstract(*fae, fwdConf_, taBackend_, boxMan_, this->getPredicate());
+			abstract(*fae);
 
 			forbidden.clear();
 			for (size_t i = 0; i < FIXED_REG_COUNT; ++i)

@@ -122,10 +122,23 @@ class FI_abs : public FixpointBase
 {
 private:  // data members
 
-	/// The predicate FA used for the predicate abstraction
-	std::shared_ptr<const FAE> predicate_;
+	/// The set of FA used for the predicate abstraction
+	std::vector<std::shared_ptr<const FAE>> predicates_;
 
-public:
+private:  // methods
+
+	/**
+	 * @brief  Performs abstraction on the given automaton
+	 *
+	 * This method performs abstraction on the given forest automaton.
+	 *
+	 * @param[in,out]  fae  The forest  automaton on which the abstraction is to
+	 *                      be performed
+	 */
+	void abstract(
+		FAE&             fae);
+
+public:   // methods
 
 	FI_abs(
 		const CodeStorage::Insn*       insn,
@@ -133,17 +146,32 @@ public:
 		TreeAut::Backend&              taBackend,
 		BoxMan&                        boxMan) :
 		FixpointBase(insn, fixpointBackend, taBackend, boxMan),
-		predicate_(nullptr)
+		predicates_()
 	{ }
 
-	void setPredicate(const std::shared_ptr<const FAE>& predicate)
+	/**
+	 * @brief  Adds a new predicate to abstraction
+	 *
+	 * This method adds a new predicate to the abstrastion performed at this
+	 * instruction.
+	 *
+	 * @param[in]  predicate  The predicate to be added
+	 */
+	void addPredicate(const std::shared_ptr<const FAE>& predicate)
 	{
-		predicate_ = predicate;
+		predicates_.push_back(predicate);
 	}
 
-	const std::shared_ptr<const FAE>& getPredicate() const
+	/**
+	 * @brief  Retrieves the predicates
+	 *
+	 * This method returns the container with predicate forest automata.
+	 *
+	 * @returns  Container with predicate forest automata
+	 */
+	const std::vector<std::shared_ptr<const FAE>>& getPredicates() const
 	{
-		return this->predicate_;
+		return predicates_;
 	}
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);
@@ -166,8 +194,8 @@ public:
 		const CodeStorage::Insn*           insn,
 		TreeAut::Backend&                  fixpointBackend,
 		TreeAut::Backend&                  taBackend,
-		BoxMan&                            boxMan)
-		: FixpointBase(insn, fixpointBackend, taBackend, boxMan)
+		BoxMan&                            boxMan) :
+		FixpointBase(insn, fixpointBackend, taBackend, boxMan)
 	{ }
 
 	virtual void execute(ExecutionManager& execMan, SymState& state);

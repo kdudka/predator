@@ -267,23 +267,26 @@ protected:
 				if (fi_type_e::fiFix == instr->getType())
 				{
 					const FI_abs* absInstr = dynamic_cast<const FI_abs*>(instr);
-					if ((nullptr != absInstr) && (nullptr != absInstr->getPredicate()))
+					if (nullptr != absInstr)
 					{
-						std::ostringstream os;
-						os << "\n---------------------------------------------------\n"
-							<< *absInstr << absInstr->insn();
-
-						const CodeStorage::Insn* clInsn = absInstr->insn();
-						assert(nullptr != clInsn);
-						assert(nullptr != clInsn->bb);
-						if (clInsn->bb->front() == clInsn)
+						for (const std::shared_ptr<const FAE>& pred : absInstr->getPredicates())
 						{
-							os << " (" << clInsn->bb->name() << ")";
+							std::ostringstream os;
+							os << "\n---------------------------------------------------\n"
+								<< *absInstr << absInstr->insn();
+
+							const CodeStorage::Insn* clInsn = absInstr->insn();
+							assert(nullptr != clInsn);
+							assert(nullptr != clInsn->bb);
+							if (clInsn->bb->front() == clInsn)
+							{
+								os << " (" << clInsn->bb->name() << ")";
+							}
+
+							os << ": " << *absInstr->insn() << "\n" << *pred;
+
+							FA_DEBUG_AT(0, os.str());
 						}
-
-						os << ": " << *absInstr->insn() << "\n" << *absInstr->getPredicate();
-
-						FA_DEBUG_AT(0, os.str());
 					}
 				}
 			}
@@ -404,7 +407,7 @@ protected:
 					}
 
 					// set the new predicate for abstraction
-					absInstr->setPredicate(predicate);
+					absInstr->addPredicate(predicate);
 
 					clearFixpoints();
 

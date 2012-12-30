@@ -94,12 +94,10 @@ public:   // methods
 	 * This method performs predicate abstraction of a forest automaton using
 	 * a set of predicates (currently only one predicate).
 	 *
-	 * @param[in]  predicate  The predicate used for the abstraction
-	 *
-	 * @todo change a single predicate for a set
+	 * @param[in]  predicates  The predicates used for the abstraction
 	 */
 	void predicateAbstraction(
-		const std::shared_ptr<const FAE>&    predicate)
+		const std::vector<std::shared_ptr<const FAE>>&    predicates)
 	{
 		FA_NOTE("Predicate abstraction input: " << fae_);
 
@@ -118,12 +116,12 @@ public:   // methods
 		// TODO: use boost::dynamic_bitset
 		std::vector<std::vector<bool>> rel;
 
-		if (nullptr != predicate)
+		if (!predicates.empty())
 		{
-			FA_NOTE("Predicate: " << *predicate);
+			FA_NOTE("Predicate: " << *predicates.back());
 
 			std::set<std::pair<size_t, size_t>> product;
-			FAE::makeProduct(fae_, *predicate, product);
+			FAE::makeProduct(fae_, *predicates.back(), product);
 
 			// create a map of states of 'fae_' on sets of states of 'predicate'
 			std::vector<std::set<size_t>> matchWith(numStates, std::set<size_t>());
