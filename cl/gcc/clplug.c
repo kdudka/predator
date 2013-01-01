@@ -998,17 +998,40 @@ static void read_cst_int(struct cl_operand *op, tree t)
 
 static void read_cst_real(struct cl_operand *op, tree t)
 {
-    // TODO: a proper implementation of this
+    // TODO: make this a compile-time assertion
+    if (8 != sizeof(double))
+        CL_BREAK_IF("unsupported sizeof(double) detected in read_cst_int()");
+
+    // the float encoder in gcc writes floats to arrays of longs
     union {
-        float       f;
-        long        l[1];
+        double              d;
+        long                l[2];
+        unsigned long       ul[2];
     } u;
 
-    real_to_target_fmt(u.l, TREE_REAL_CST_PTR(t), &ieee_single_format);
+    // convert gcc's internal representation of real to build-arch native format
+    real_to_target_fmt(u.l, TREE_REAL_CST_PTR(t), &ieee_double_format);
+
+    // compile-time switch
+    switch (sizeof(long)) {
+        case 4:
+            // already encoded as build-arch native format
+            break;
+
+        case 8:
+            // 4 bytes of each long are valid --> we need to pack the chunks
+            u.ul[0] &= (1UL << 32) - 1UL;
+            u.ul[0] |= (u.ul[1] << 32);
+            break;
+
+        default:
+            // TODO: make this a compile-time assertion
+            CL_BREAK_IF("build architecture not supported by read_cst_int()");
+    }
 
     op->code                            = CL_OPERAND_CST;
     op->data.cst.code                   = CL_TYPE_REAL;
-    op->data.cst.data.cst_real.value    = (double) u.f;
+    op->data.cst.data.cst_real.value    = u.d;
 }
 
 static void read_raw_operand(struct cl_operand *op, tree t)
