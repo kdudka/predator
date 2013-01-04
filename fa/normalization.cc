@@ -24,7 +24,9 @@
 #include "abstractinstruction.hh"
 #include "normalization.hh"
 #include "programerror.hh"
+#include "regdef.hh"
 #include "symstate.hh"
+#include "virtualmachine.hh"
 
 
 TreeAut* Normalization::mergeRoot(
@@ -335,4 +337,29 @@ bool Normalization::normalize(
 	this->fae.UpdateVarsRootRefs(index);
 
 	return merged;
+}
+
+
+std::set<size_t> Normalization::computeForbiddenSet(FAE& fae)
+{
+	// Assertions
+	assert(fae.getRootCount() == fae.connectionGraph.data.size());
+	assert(fae.getRootCount() >= FIXED_REG_COUNT);
+
+	std::set<size_t> forbidden;
+
+	VirtualMachine vm(fae);
+
+	for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+	{
+		assert(fae.getRoot(vm.varGet(i).d_ref.root));
+		forbidden.insert(vm.varGet(i).d_ref.root);
+	}
+
+	for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
+	{
+		vm.getNearbyReferences(vm.varGet(i).d_ref.root, forbidden);
+	}
+
+	return forbidden;
 }

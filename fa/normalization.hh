@@ -28,6 +28,7 @@
 #include "forestautext.hh"
 #include "abstractbox.hh"
 #include "streams.hh"
+#include "symstate.hh"
 #include "utils.hh"
 
 class Normalization
@@ -132,6 +133,18 @@ public:
 		const std::vector<bool>&          marked,
 		const std::vector<size_t>&        order);
 
+
+	/**
+	 * @brief  Computes the indices of components which are not to be merged
+	 *
+	 * This function computes the set of indices of components of the forest
+	 * automaton @p fae which are not to be merged.
+	 *
+	 * @param[in]  fae  The forest automaton
+	 *
+	 * @returns  The set with indices of components not to be merged
+	 */
+	static std::set<size_t> computeForbiddenSet(FAE& fae);
 
 public:   // methods
 

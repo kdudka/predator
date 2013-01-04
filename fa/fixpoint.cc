@@ -171,27 +171,6 @@ struct FuseNonFixedF
 	}
 };
 
-void computeForbiddenSet(
-	std::set<size_t>&               forbidden,
-	FAE&                            fae)
-{
-	// Assertions
-	assert(fae.getRootCount() == fae.connectionGraph.data.size());
-	assert(fae.getRootCount() >= FIXED_REG_COUNT);
-
-	VirtualMachine vm(fae);
-
-	for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
-	{
-		assert(fae.getRoot(vm.varGet(i).d_ref.root));
-		forbidden.insert(vm.varGet(i).d_ref.root);
-	}
-
-	for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
-	{
-		vm.getNearbyReferences(vm.varGet(i).d_ref.root, forbidden);
-	}
-}
 
 bool normalize(
 	FAE&                      fae,
@@ -337,11 +316,9 @@ void learn1(FAE& fae, BoxMan& boxMan)
 {
 	fae.unreachableFree();
 
-	std::set<size_t> forbidden;
+	std::set<size_t> forbidden = Normalization::computeForbiddenSet(fae);
 
 	Folding folding(fae, boxMan);
-
-	computeForbiddenSet(forbidden, fae);
 
 	for (size_t i = 0; i < fae.getRootCount(); ++i)
 	{
@@ -359,11 +336,9 @@ void learn2(FAE& fae, BoxMan& boxMan)
 {
 	fae.unreachableFree();
 
-	std::set<size_t> forbidden;
+	std::set<size_t> forbidden = Normalization::computeForbiddenSet(fae);
 
 	Folding folding(fae, boxMan);
-
-	computeForbiddenSet(forbidden, fae);
 
 	for (size_t i = 0; i < fae.getRootCount(); ++i)
 	{
@@ -477,13 +452,11 @@ void FI_abs::execute(ExecutionManager& execMan, SymState& state)
 		}
 
 		fold(*fae, boxMan_, forbidden);
-
-		forbidden.clear();
 	}
 
 	learn2(*fae, boxMan_);
 #endif
-	computeForbiddenSet(forbidden, *fae);
+	forbidden = Normalization::computeForbiddenSet(*fae);
 
 	normalize(*fae, &state, forbidden, true);
 
@@ -497,8 +470,7 @@ void FI_abs::execute(ExecutionManager& execMan, SymState& state)
 
 		do
 		{
-			forbidden.clear();
-			computeForbiddenSet(forbidden, *fae);
+			forbidden = Normalization::computeForbiddenSet(*fae);
 
 			normalize(*fae, &state, forbidden, true);
 
@@ -552,11 +524,9 @@ void FI_fix::execute(ExecutionManager& execMan, SymState& state)
 		}
 
 		fold(*fae, boxMan_, forbidden);
-
-		forbidden.clear();
 	}
 #endif
-	computeForbiddenSet(forbidden, *fae);
+	forbidden = Normalization::computeForbiddenSet(*fae);
 
 	normalize(*fae, &state, forbidden, true);
 #if FA_ALLOW_FOLDING
@@ -571,9 +541,7 @@ void FI_fix::execute(ExecutionManager& execMan, SymState& state)
 
 		while (fold(*fae, boxMan_, forbidden))
 		{
-			forbidden.clear();
-
-			computeForbiddenSet(forbidden, *fae);
+			forbidden = Normalization::computeForbiddenSet(*fae);
 
 			normalize(*fae, &state, forbidden, true);
 
