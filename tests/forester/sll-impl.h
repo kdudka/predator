@@ -10,6 +10,36 @@ typedef struct SLLType
 	Data             data;
 } SLL;
 
+#if 0
+#define push_front(list, dt) do     \
+{                                   \
+	__VERIFIER_assert(NULL != list);  \
+	                                  \
+	SLL* elem = malloc(sizeof(SLL));  \
+	__VERIFIER_assert(NULL != elem);  \
+	                                  \
+	elem->next = NULL;                \
+	elem->data = dt;                  \
+	                                  \
+	elem->next = *list;               \
+	*list = elem;                     \
+} while (0)
+
+#define pop_front(list) do          \
+{                                   \
+	__VERIFIER_assert(NULL != list);  \
+	                                  \
+	SLL* tmp = *list;                 \
+	*list = (*list)->next;            \
+	free(tmp);                        \
+} while (0)
+#endif
+
+#define empty(list) (NULL == (list))
+
+// commented out due to Forester bug in processing function calls and performing
+// too rough abstraction
+#if 0
 inline void push_front(SLL** list, Data data)
 {
 	// Preconditions
@@ -42,3 +72,4 @@ inline int empty(const SLL* list)
 
 	return 0;
 }
+#endif

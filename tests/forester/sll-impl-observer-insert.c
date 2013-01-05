@@ -11,21 +11,36 @@
 int main()
 {
 	SLL* x = NULL;
+	SLL* y = NULL;
 
 	// create a list with a single marked element
 	while (__VERIFIER_nondet_int())
 	{
-		push_front(&x, 0);
+		// inlined push_front
+		y = malloc(sizeof(SLL));
+		y->next = x;
+		y->data = 0;
+		x = y;
 	}
 
-	push_front(&x, 1);
+	// inlined push_front
+	y = malloc(sizeof(SLL));
+	y->next = x;
+	y->data = 1;
+	x = y;
 
 	while (__VERIFIER_nondet_int())
 	{
-		push_front(&x, 0);
+		// inlined push_front
+		y = malloc(sizeof(SLL));
+		y->next = x;
+		y->data = 0;
+		x = y;
 	}
 
-	SLL* y = x;
+	___fa_plot("observer-0001");
+
+	y = x;
 
 	bool found = false;
 
@@ -47,7 +62,10 @@ int main()
 	// delete the list
 	while (!empty(x))
 	{
-		pop_front(&x);
+		// inlined pop_front
+		y = x;
+		x = x->next;
+		free(y);
 	}
 
 	return 0;
