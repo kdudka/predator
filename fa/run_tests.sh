@@ -28,7 +28,9 @@ function die {
 function runone {
   ulimit -St "${timeout}";
   ${SCRIPTPATH}/ver_wrapper.sh "$1" "$2" > "$3"
-  return $?
+  local ret=$?
+
+  return $ret
 }
 
 # Function that runs all tests for one source file
@@ -51,16 +53,24 @@ function runall {
     wait ${pid[$i]};
     local ret=$?;
     pid[$i]=0;
-    if [ "$ret" != "0" ]; then
+    [ "$ret" == "0" ] || die "verification failed! ($ret)";
+
+    local running_time=`cat "${tmpTime[$i]}"`;
+    local time_diff=`echo "$timeout - $running_time" | bc | xargs printf "%1.0f"`
+
+    if [ "$time_diff" == "0" ] ; then
       printcolumn "-"
     else
-      local running_time=`cat "${tmpTime[$i]}"`;
-      [ "$ret" == "0" ] || die "verification failed! ($ret)"; 
       num=$(printf "%.3f" "${running_time}")
       printcolumn "${num}";
-    fi;
+    fi
   done;
   printf "\n"
+}
+
+# Prints a file column into the result table
+function printfilecolumn {
+  printf "%-30s;" "$1"
 }
 
 # Prints a column into the result table
@@ -105,7 +115,7 @@ for (( i=0; i < ${#METHODS[*]}; i++ )); do
 done;
 
 echo "-----------------------------------------------"
-printcolumn "file"
+printfilecolumn "file"
 
 for (( i=0; i < ${#METHODS[*]}; i++ )); do
   printcolumn "${METHODS[$i]}"
@@ -114,7 +124,7 @@ done;
 printf "\n"
 
 for i in ${VER_DIR}/* ; do
-  printcolumn "${i}"
+  printfilecolumn "`basename ${i}`"
   runall "${i}"
 done;
 
