@@ -253,8 +253,6 @@ run_gcc() {
     fi
 }
 
-RETURN=1
-
 run_gcc ${FILENAME} |                                                          \
         stdbuf --output=L sed -re 's| \[-fplugin=libfa\.so\]$||'               \
         -e "s|(^.*) \[internal location\]\$|$S\1$N|"                           \
