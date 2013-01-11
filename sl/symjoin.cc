@@ -725,7 +725,6 @@ bool joinValuesByCode(
     return true;
 }
 
-
 bool bumpNestingLevel(const FldHandle &fld)
 {
     if (!fld.isValidHandle())
@@ -1557,11 +1556,28 @@ bool offRangeFallback(
     return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
+bool isLongObject(const EObjKind kind)
+{
+    switch (kind) {
+        case OK_REGION:
+        case OK_OBJ_OR_NULL:
+        case OK_SEE_THROUGH:
+        case OK_SEE_THROUGH_2N:
+            return false;
+
+        case OK_SLS:
+        case OK_DLS:
+            return true;
+    }
+
+    CL_BREAK_IF("isLongObject() got something special");
+    return false;
+}
+
 bool mapTargetAddress(
         SymJoinCtx              &ctx,
         const SchedItem         &item,
-        const TObjId             objDst,
-        const bool               preserveValMap = false)
+        const TObjId             objDst)
 {
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
@@ -1581,8 +1597,19 @@ bool mapTargetAddress(
     if (!joinTargetSpec(&tsDst, ctx, v1, v2))
         return false;
 
+    const EObjKind kind1 = ctx.sh1.objKind(ctx.sh1.objByAddr(v1));
+    const EObjKind kind2 = ctx.sh2.objKind(ctx.sh2.objByAddr(v2));
+
+    TValId v1ToMap = v1;
+    if (!isLongObject(kind1) && isLongObject(kind2))
+        v1ToMap = VAL_INVALID;
+
+    TValId v2ToMap = v2;
+    if (!isLongObject(kind2) && isLongObject(kind1))
+        v2ToMap = VAL_INVALID;
+
     const TValId vDst = ctx.dst.addrOfTarget(objDst, tsDst, off1 /* = off2 */);
-    if (/* XXX */ !preserveValMap && !defineValueMapping(ctx, vDst, v1, v2))
+    if (!defineValueMapping(ctx, vDst, v1ToMap, v2ToMap))
         return false;
 
     // write the resulting value to item.fldDst
@@ -2171,7 +2198,7 @@ bool joinValuePair(SymJoinCtx &ctx, const SchedItem &item)
     if (haveAbs) {
         if (objMatchLookAhead(ctx, obj1, obj2, item.ldiff))
             return joinObjects(&objDst, ctx, obj1, obj2, item.ldiff)
-                && mapTargetAddress(ctx, item, objDst, /* XXX */true);
+                && mapTargetAddress(ctx, item, objDst);
 
         if (segInsertionFallback(&result, ctx, item))
             return result;

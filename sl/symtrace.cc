@@ -385,7 +385,7 @@ bool plotTrace(Node *endPoint, const std::string &name)
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// implementation of Trace::plotTrace()
+// implementation of Trace::printTrace()
 Node* /* selected predecessor */ TransientNode::printNode() const
 {
     CL_BREAK_IF("please implement");
