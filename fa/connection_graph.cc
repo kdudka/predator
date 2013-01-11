@@ -512,6 +512,9 @@ void ConnectionGraph::normalizeSignature(CutpointSignature& signature)
 			cutpoint.fwdSelectors.insert(
 					signature[i].fwdSelectors.begin(), signature[i].fwdSelectors.end());
 
+			// fwdSelectors always contains -1 which we need to subtract
+			cutpoint.selCount = cutpoint.fwdSelectors.size() - 1;
+
 			if (cutpoint.bwdSelector > signature[i].bwdSelector)
 				cutpoint.bwdSelector = signature[i].bwdSelector;
 
