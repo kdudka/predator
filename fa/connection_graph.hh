@@ -87,7 +87,6 @@ public:
 			this->fwdSelectors.insert(static_cast<size_t>(-1));
 		}
 
-
 		bool operator==(const CutpointInfo& rhs) const
 		{
 			// Assertions
@@ -106,7 +105,7 @@ public:
 		{
 			return this->root == rhs.root &&
 				this->refCount == rhs.refCount &&
-#ifdef FA_TRACK_SELECTORS
+#if FA_TRACK_SELECTORS
 				this->selCount == rhs.selCount &&
 #endif
 //				this->fwdSelectors == rhs.fwdSelectors &&
