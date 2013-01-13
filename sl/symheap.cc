@@ -613,7 +613,7 @@ struct SymHeapCore::Private {
     bool valsEqual(TValId, TValId);
 
     TFldId fldCreate(TObjId obj, TOffset off, TObjType clt);
-    TValId objInit(TFldId fld);
+    TValId fldInit(TFldId fld);
     void fldDestroy(TFldId, bool removeVal, bool detach);
 
     TFldId copySingleLiveBlock(
@@ -1459,8 +1459,6 @@ void SymHeapCore::Private::transferBlock(
     }
 }
 
-
-
 SymHeapCore::Private::Private(Trace::Node *trace):
     traceHandle (trace),
     liveObjs    (new TObjSetWrapper),
@@ -1500,7 +1498,7 @@ SymHeapCore::Private::~Private()
     RefCntLib<RCO_NON_VIRT>::leave(this->neqDb);
 }
 
-TValId SymHeapCore::Private::objInit(TFldId fld)
+TValId SymHeapCore::Private::fldInit(TFldId fld)
 {
     FieldOfObj *fldData;
     this->ents.getEntRW(&fldData, fld);
@@ -1576,7 +1574,7 @@ TValId SymHeapCore::valueOf(TFldId fld)
 
     TValId val = objData->value;
     if (VAL_INVALID != val)
-        // the object has a value
+        // the field has a value
         return val;
 
     const TObjType clt = objData->clt;
@@ -1597,8 +1595,8 @@ TValId SymHeapCore::valueOf(TFldId fld)
         return val;
     }
 
-    // delayed object initialization
-    return d->objInit(fld);
+    // delayed field initialization
+    return d->fldInit(fld);
 }
 
 void SymHeapCore::usedBy(FldList &dst, TValId val, bool liveOnly) const
