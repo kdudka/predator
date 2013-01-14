@@ -323,6 +323,8 @@ void Box::initialize()
 
 	this->enumerateSelectorsAtLeaves(selCoverage_, *output_);
 
+	selfReference_ = ConnectionGraph::containsCutpoint(outputSignature_, 0);
+
 	if (!input_)
 		return;
 
@@ -331,8 +333,6 @@ void Box::initialize()
 	Box::getDownwardCoverage(selCoverage_[inputIndex_ + 1], *input_);
 
 	this->enumerateSelectorsAtLeaves(selCoverage_, *input_);
-
-	selfReference_ = ConnectionGraph::containsCutpoint(outputSignature_, 0);
 }
 
 
