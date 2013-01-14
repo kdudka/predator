@@ -785,6 +785,20 @@ public:
 		return this->getRhsIterator(this->getFinalState());
 	}
 */
+	size_t getAcceptingTransitionCount() const
+	{
+		// Assertions
+		assert(this->accBegin() != this->accEnd());
+
+		size_t cnt = 1;
+
+		auto iter = this->accBegin();
+
+		while (++iter != this->accEnd()) ++cnt;
+
+		return cnt;
+	}
+
 	const Transition& getAcceptingTransition() const
 	{
 		// Assertions
