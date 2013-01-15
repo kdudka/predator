@@ -29,9 +29,9 @@ extern "C" {
     ___fa_error("assertion failed: " #cond);                                \
 } while (0)
 
-#ifdef FORESTER
-
 #define __VERIFIER_nondet_int()  ___fa_get_nondet_int()
+
+#ifdef FORESTER
 
 /* declare built-ins */
 void ___fa_error(const char *msg);

@@ -36,39 +36,43 @@
 #include "restart_request.hh"
 #include "streams.hh"
 
-class Folding {
-
+class Folding
+{
 protected:
 
-	static void copyBox(std::vector<size_t>& lhs, std::vector<const AbstractBox*>& label,
-		const AbstractBox* box, const std::vector<size_t>& srcLhs, const size_t& srcOffset) {
-
+	static void copyBox(
+		std::vector<size_t>&                lhs,
+		std::vector<const AbstractBox*>&    label,
+		const AbstractBox*                  box,
+		const std::vector<size_t>&          srcLhs,
+		const size_t&                       srcOffset)
+	{
 		for (size_t i = 0; i < box->getArity(); ++i)
 			lhs.push_back(srcLhs[srcOffset + i]);
 
 		label.push_back(box);
-
 	}
 
-	static const ConnectionGraph::CutpointSignature& getSignature(size_t state,
-		const ConnectionGraph::StateToCutpointSignatureMap& signatures) {
-
+	static const ConnectionGraph::CutpointSignature& getSignature(
+		size_t                                                 state,
+		const ConnectionGraph::StateToCutpointSignatureMap&    signatures)
+	{
 		auto iter = signatures.find(state);
 
 		assert(iter != signatures.end());
 
 		return iter->second;
-
 	}
 
-	static bool isSignaturesCompatible(const ConnectionGraph::CutpointSignature& s1,
-		const ConnectionGraph::CutpointSignature& s2) {
-
+	static bool isSignaturesCompatible(
+		const ConnectionGraph::CutpointSignature&    s1,
+		const ConnectionGraph::CutpointSignature&    s2)
+	{
 		if (s1.size() != s2.size())
 			return false;
 
-		for (size_t i = 0; i < s1.size(); ++i) {
-
+		for (size_t i = 0; i < s1.size(); ++i)
+		{
 			if (s1[i].root != s2[i].root)
 				return false;
 /*
@@ -80,11 +84,9 @@ protected:
 
 			if (s1[i].defines != s2[i].defines)
 				return false;
-
 		}
 
 		return true;
-
 	}
 
 	const ConnectionGraph::StateToCutpointSignatureMap& getSignatures(size_t root)
@@ -407,7 +409,7 @@ protected:
 
 	void computeSelectorMap(
 		std::unordered_map<size_t, size_t>&      selectorMap,
-		size_t                                   root, 
+		size_t                                   root,
 		size_t                                   state)
 	{
 		assert(root < this->fae.getRootCount());
