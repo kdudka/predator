@@ -61,7 +61,7 @@ function runall {
     if [ "$time_diff" == "0" ] ; then
       printcolumn "-"
     else
-      num=$(printf "%.3f" "${running_time}")
+      num=$(printf "%.2f" "${running_time}")
       printcolumn "${num}";
     fi
   done;
