@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2013 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -534,23 +534,16 @@ bool handleUnknownValues(
         const SchedItem        &item,
         const TValId            vDst)
 {
-    const TValId v1 = item.fld1.value();
-    const TValId v2 = item.fld2.value();
+    TValId v1 = item.fld1.value();
+    if (VAL_NULL == v1)
+        v1 = VAL_INVALID;
 
-    const bool isNull1 = (VAL_NULL == v1);
-    const bool isNull2 = (VAL_NULL == v2);
-    if (isNull1 != isNull2) {
-        const TValId valGt = (isNull2) ? v1 : v2;
-        TValMapBidir &vMap = (isNull2) ? ctx.valMap1 : ctx.valMap2;
-        if (!mapBidir(vMap, valGt, vDst))
-            return false;
-    }
-    else {
-        if (!defineValueMapping(ctx, vDst, v1, v2))
-            return false;
-    }
+    TValId v2 = item.fld2.value();
+    if (VAL_NULL == v2)
+        v2 = VAL_INVALID;
 
-    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
+    return defineValueMapping(ctx, vDst, v1, v2)
+        && writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
 bool joinCustomValues(
