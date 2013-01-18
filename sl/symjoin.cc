@@ -1621,16 +1621,21 @@ bool mapAsymTarget(
     const TValId v1 = item.fld1.value();
     const TValId v2 = item.fld2.value();
 
+    TValId v1ToMap = VAL_INVALID;
+    TValId v2ToMap = VAL_INVALID;
+
     IR::Range offDst;
     ETargetSpecifier tsDst;
 
     switch (action) {
         case JS_USE_SH1:
+            v1ToMap = v1;
             offDst = ctx.sh1.valOffsetRange(v1);
             tsDst = ctx.sh1.targetSpec(v1);
             break;
 
         case JS_USE_SH2:
+            v2ToMap = v2;
             offDst = ctx.sh2.valOffsetRange(v2);
             tsDst = ctx.sh2.targetSpec(v2);
             break;
@@ -1643,7 +1648,8 @@ bool mapAsymTarget(
     // write the resulting value to item.fldDst
     const TValId vDstBase = ctx.dst.addrOfTarget(objDst, tsDst);
     const TValId vDst = ctx.dst.valByRange(vDstBase, offDst);
-    return writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
+    return defineValueMapping(ctx, vDst, v1ToMap, v2ToMap)
+        && writeJoinedValue(ctx, item.fldDst, vDst, v1, v2);
 }
 
 bool cloneSpecialValue(
@@ -1691,6 +1697,7 @@ bool cloneSpecialValue(
 
         default:
             vDst = ctx.dst.valCreate(code, vo);
+            // TODO: define value mapping?
             return writeJoinedValue(ctx, itemToClone.fldDst, vDst, v1, v2);
     }
 
@@ -1698,6 +1705,7 @@ bool cloneSpecialValue(
     const TValId rootDst = roMapLookup(valMapGt[DIR_LTR], rootGt);
     const IR::Range range = shGt.valOffsetRange(valGt);
     vDst = ctx.dst.valByRange(rootDst, range);
+    // TODO: define value mapping?
     *pResult = writeJoinedValue(ctx, itemToClone.fldDst, vDst, v1, v2);
     return true;
 }
