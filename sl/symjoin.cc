@@ -831,6 +831,26 @@ bool ObjMatchVisitor::operator()(const FldHandle item[2])
     return checkValueMapping(ctx, v1, v2);
 }
 
+bool delayedJoinIfNeeded(
+        SymJoinCtx              &ctx,
+        const TObjId            objDst,
+        const TObjId            obj1,
+        const TObjId            obj2)
+{
+    const TObjId objDst1 = roMapLookup(ctx.objMap1[DIR_LTR], obj1);
+    const TObjId objDst2 = roMapLookup(ctx.objMap2[DIR_LTR], obj2);
+    if (OBJ_INVALID == objDst1 && OBJ_INVALID == objDst2)
+        // we have a pair of fresh objects, no delayed join is necessary
+        return true;
+
+    if (debuggingSymJoin)
+        CL_BREAK_IF("please implement");
+
+    // TODO
+    (void) objDst;
+    return false;
+}
+
 bool joinFields(
         SymJoinCtx             &ctx,
         const TObjId            objDst,
@@ -839,6 +859,10 @@ bool joinFields(
         const TProtoLevel       ldiff = 0,
         const BindingOff       *offBlackList = 0)
 {
+    // consider dealyed join of sub-SMGs
+    if (!delayedJoinIfNeeded(ctx, objDst, obj1, obj2))
+        return false;
+
     if (!defineObjectMapping(ctx, objDst, obj1, obj2))
         return false;
 
