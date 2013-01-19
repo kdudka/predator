@@ -464,6 +464,8 @@ bool checkObjectMapping(
         const bool              allowUnknownMapping,
         TObjId                 *pDst = 0)
 {
+    CL_BREAK_IF(allowUnknownMapping && pDst);
+
     if (!checkNonPosValues(obj1, obj2))
         return false;
 
@@ -482,15 +484,22 @@ bool checkObjectMapping(
     const TObjId objDst1 = (hasMapping1) ? i1->second : OBJ_INVALID;
     const TObjId objDst2 = (hasMapping2) ? i2->second : OBJ_INVALID;
 
-    if (hasMapping1 && hasMapping2 && (objDst1 == objDst2)) {
-        // mapping already known and known to be consistent
-        if (pDst)
-            *pDst = objDst1 /* = objDst2 */;
+    if (!hasMapping1)
+        return allowUnknownMapping && !hasKey(ctx.objMap1[DIR_RTL], objDst2);
 
-        return true;
-    }
+    if (!hasMapping2)
+        return allowUnknownMapping && !hasKey(ctx.objMap2[DIR_RTL], objDst1);
 
-    return false;
+    CL_BREAK_IF(OBJ_INVALID == objDst1 || OBJ_INVALID == objDst2);
+
+    if (objDst1 != objDst2)
+        return false;
+
+    // mapping already known and known to be consistent
+    if (pDst)
+        *pDst = objDst1 /* = objDst2 */;
+
+    return true;
 }
 
 /// read-only (in)consistency check among value pair (v1, v2)
