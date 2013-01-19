@@ -1731,7 +1731,8 @@ bool cloneSpecialValue(
         default:
             vDst = ctx.dst.valCreate(code, vo);
             // TODO: define value mapping?
-            return writeJoinedValue(ctx, itemToClone.fldDst, vDst, v1, v2);
+            *pResult = writeJoinedValue(ctx, itemToClone.fldDst, vDst, v1, v2);
+            return true;
     }
 
     // VT_RANGE
