@@ -1749,6 +1749,7 @@ bool segmentCloneCore(
         TCloneWorkList             &wl,
         const SchedItem            &item,
         const EJoinStatus           action,
+        const bool                  parentIsMayExist,
         const BindingOff           *off = 0,
         TObjId                     *pObjDst = 0)
 {
@@ -1762,8 +1763,12 @@ bool segmentCloneCore(
     const TValId valGt = (isGt1) ? v1 : v2;
 
     bool result;
-    if (cloneSpecialValue(&result, ctx, shGt, valGt, item, action))
+    if (cloneSpecialValue(&result, ctx, shGt, valGt, item, action)) {
+        if (pObjDst)
+            *pObjDst = OBJ_INVALID;
+
         return result;
+    }
 
     const TObjId obj1 = (isGt1) ? ctx.sh1.objByAddr(v1) : OBJ_INVALID;
     const TObjId obj2 = (isGt2) ? ctx.sh2.objByAddr(v2) : OBJ_INVALID;
@@ -1813,6 +1818,11 @@ bool segmentCloneCore(
     if (!mapAsymTarget(ctx, item, objDst, action))
         return false;
 
+    if (parentIsMayExist) {
+        SJ_DEBUG("bumping level of an object nested under 0..1 object");
+        objIncrementProtoLevel(ctx.dst, objDst);
+    }
+
     if (pObjDst)
         *pObjDst = objDst;
     return true;
@@ -1848,7 +1858,7 @@ bool clonePendingValues(
         const FldHandle fld2 = (JS_USE_SH2 == action) ? fldGt : fldInval;
 
         const SchedItem sItem(fldDst, fld1, fld2, /* ldiff */ 0);
-        if (!segmentCloneCore(ctx, wl, sItem, action))
+        if (!segmentCloneCore(ctx, wl, sItem, action, isMayExist))
             return false;
     }
 
@@ -1917,7 +1927,7 @@ bool insertSegmentClone(
 
     TCloneWorkList wl;
     TObjId objDst;
-    if (!segmentCloneCore(ctx, wl, item, action, off, &objDst)) {
+    if (!segmentCloneCore(ctx, wl, item, action, false, off, &objDst)) {
         *pResult = false;
         return true;
     }
@@ -2322,85 +2332,6 @@ bool joinCVars(SymJoinCtx &ctx, const JoinVarVisitor::EMode mode)
              /* allowRecovery */ JoinVarVisitor::JVM_LIVE_OBJS == mode);
 }
 
-// FIXME: the implementation is not going to work well in certain cases
-bool isFreshProto(SymJoinCtx &ctx, const TObjId objDst, bool *wasMayExist = 0)
-{
-    const TObjId obj1 = roMapLookup(ctx.objMap1[DIR_RTL], objDst);
-    const TObjId obj2 = roMapLookup(ctx.objMap2[DIR_RTL], objDst);
-
-    const bool isValid1 = (OBJ_INVALID != obj1);
-    const bool isValid2 = (OBJ_INVALID != obj2);
-    if (isValid1 == isValid2)
-        return false;
-
-    if (wasMayExist) {
-        const EObjKind kind = (isValid1)
-            ? ctx.sh1.objKind(obj1)
-            : ctx.sh2.objKind(obj2);
-
-        *wasMayExist = isMayExistObj(kind);
-    }
-
-    return true;
-}
-
-struct MayExistLevelUpdater {
-    SymJoinCtx         &ctx;
-    const TObjId        objDst;
-    TFldSet             ignoreList;
-
-    MayExistLevelUpdater(SymJoinCtx &ctx_, const TObjId objDst_):
-        ctx(ctx_),
-        objDst(objDst_)
-    {
-        buildIgnoreList(ignoreList, ctx.dst, objDst);
-    }
-
-    bool operator()(const FldHandle &sub) const {
-        if (hasKey(this->ignoreList, sub))
-            return /* continue */ true;
-
-        const TObjId proto = ctx.dst.objByAddr(sub.value());
-        if (OBJ_INVALID == proto)
-            return /* continue */ true;
-
-        if (objDst == proto)
-            // self loop
-            return /* continue */ true;
-
-        if (!isFreshProto(ctx, proto))
-            // not a newly introduced one
-            return /* continue */ true;
-
-        // this object became a prototype, increment its level
-        objIncrementProtoLevel(ctx.dst, proto);
-        return /* continue */ true;
-    }
-};
-
-bool updateMayExistLevels(SymJoinCtx &ctx)
-{
-    TObjList dstRoots;
-    ctx.dst.gatherObjects(dstRoots, isOnHeap);
-    BOOST_FOREACH(const TObjId objDst, dstRoots) {
-        const EObjKind kind = ctx.dst.objKind(objDst);
-        if (!isMayExistObj(kind))
-            // we are interested only in 0..1 objects here
-            continue;
-
-        bool wasMayExist;
-        if (!isFreshProto(ctx, objDst, &wasMayExist) || wasMayExist)
-            // not a newly introduced one
-            continue;
-
-        const MayExistLevelUpdater visitor(ctx, objDst);
-        if (!traverseLivePtrs(ctx.dst, objDst, visitor))
-            return false;
-    }
-
-    return true;
-}
-
 bool handleDstPreds(SymJoinCtx &ctx)
 {
     if (!ctx.joiningData()) {
@@ -2494,9 +2425,6 @@ bool joinSymHeaps(
 
     // join uniform blocks
     if (!joinCVars(ctx, JoinVarVisitor::JVM_UNI_BLOCKS))
-        goto fail;
-
-    if (!updateMayExistLevels(ctx))
         goto fail;
 
     // go through shared Neq predicates and set minimal segment lengths
@@ -2636,11 +2564,6 @@ bool joinData(
     // if the result is three-way join, check if it is a good idea
     if (!validateStatus(ctx))
         return false;
-
-    if (!updateMayExistLevels(ctx)) {
-        CL_BREAK_IF("updateMayExistLevels() has failed in joinData()");
-        return false;
-    }
 
     if (pDst) {
         recoverPointersToDst(ctx.dst, objDst, ctx.protos);
