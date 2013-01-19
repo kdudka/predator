@@ -16,6 +16,7 @@ printf "GCC_PLUG = %s\n\n" "$GCC_PLUG"
 if "$GCC_HOST" --version >/dev/null 2>&1; then
     if test -r "$GCC_PLUG"; then
         test -x "$GCC_HOST" && PATH="`dirname "$GCC_HOST"`:$PATH"
+        PATH="`dirname "$GCC_PLUG"`:$PATH"
         LD_LIBRARY_PATH="`dirname "$GCC_PLUG"`:$LD_LIBRARY_PATH"
         export PATH LD_LIBRARY_PATH
 
