@@ -29,6 +29,13 @@
 
 #include <boost/foreach.hpp>
 
+#define REQUIRE_GC_ACTIVITY(sh, obj, fnc) do {                                 \
+    if (collectJunk(sh, obj))                                                  \
+        break;                                                                 \
+    CL_ERROR(#fnc "() failed to collect garbage, " #obj " still referenced");  \
+    CL_BREAK_IF("REQUIRE_GC_ACTIVITY has not been successful");                \
+} while (0)
+
 /// collect and remove all junk reachable from the given object
 bool /* found */ collectJunk(SymHeap &sh, TObjId obj, TObjSet *leakObjs = 0);
 

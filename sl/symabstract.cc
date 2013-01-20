@@ -53,13 +53,6 @@ void debugSymAbstract(const bool enable)
     __ldp_enabled_symabstract = enable;
 }
 
-#define REQUIRE_GC_ACTIVITY(sh, obj, fnc) do {                                 \
-    if (collectJunk(sh, obj))                                                  \
-        break;                                                                 \
-    CL_ERROR(#fnc "() failed to collect garbage, " #obj " still referenced");  \
-    CL_BREAK_IF("REQUIRE_GC_ACTIVITY has not been successful");                \
-} while (0)
-
 // visitor
 struct UnknownValuesDuplicator {
     TFldSet ignoreList;

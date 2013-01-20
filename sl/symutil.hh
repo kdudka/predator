@@ -389,6 +389,11 @@ void redirectRefsNotFrom(
         const ETargetSpecifier  redirectWith,
         bool                  (*tsFilter)(ETargetSpecifier) = 0);
 
+void transferOutgoingEdges(
+        SymHeap                &sh,
+        const TObjId            ofObj,
+        const TObjId            toObj);
+
 /// take the given visitor through all live program variables in all heaps
 template <unsigned N_DST, unsigned N_SRC, class THeap, class TVisitor>
 bool /* complete */ traverseProgramVarsGeneric(

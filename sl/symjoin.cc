@@ -831,8 +831,78 @@ bool ObjMatchVisitor::operator()(const FldHandle item[2])
     return checkValueMapping(ctx, v1, v2);
 }
 
+// FIXME: suboptimal implementation
+bool isScheduled(TWorkList wl, const TObjId obj)
+{
+    SchedItem item;
+    while (wl.next(item)) {
+        const FldHandle &fldDst = item.fldDst;
+        if (fldDst.obj() == obj)
+            return true;
+    }
+
+    return false;
+}
+
+bool rejoinObj(
+        SymJoinCtx             &ctx,
+        const TObjId            objDstNew,
+        const TObjId            objDstOld,
+        const EJoinStatus       action)
+{
+    if (isScheduled(ctx.wl, objDstOld))
+        // a field of the object to be rejoined is still scheduled for join
+        return false;
+
+    SJ_DEBUG("rejoinObj(objDstOld = #" << objDstOld
+            << ", objDstNew = #" << objDstNew
+            << ", action = " << action << ")");
+
+    CL_BREAK_IF(!ctx.dst.isValid(objDstNew));
+
+    // which object map contained the asymmetric object mapping?
+    TObjMapBidir &oMap = (JS_USE_SH1 == action)
+        ? ctx.objMap1
+        : ctx.objMap2;
+    CL_BREAK_IF(hasKey(oMap[DIR_RTL], objDstNew));
+
+    // look up the origin (could be optimized out)
+    const TObjId objSrc = roMapLookup(oMap[DIR_RTL], objDstOld);
+    CL_BREAK_IF(OBJ_INVALID == objSrc);
+    CL_BREAK_IF(!hasKey(oMap[DIR_LTR], objSrc));
+
+    // rewrite the current object mapping
+    oMap[DIR_LTR][objSrc] = objDstNew;
+    oMap[DIR_RTL][objDstNew] = objSrc;
+    if (!oMap[DIR_RTL].erase(objDstOld))
+        CL_BREAK_IF("internal error detected in rejoinObj()");
+
+    // FIXME: we should reuse the addresses, otherwise we invalidate the valMap
+    redirectRefs(ctx.dst,
+            /* pointingFrom     */ OBJ_INVALID,
+            /* pointingTo       */ objDstOld,
+            /* pointingWith     */ TS_INVALID,
+            /* redirectTo       */ objDstNew,
+            /* redirectWith     */ TS_INVALID);
+
+    // transfer outgoing edges
+    transferOutgoingEdges(ctx.dst, objDstOld, objDstNew);
+
+    // destroy the previously allocated object
+    REQUIRE_GC_ACTIVITY(ctx.dst, objDstOld, rejoinObj);
+
+    if (!ctx.dst.isValid(objDstNew)) {
+        // removal of objDstOld caused removing objDstNew
+        SJ_DEBUG("rejoinObj() has failed");
+        return false;
+    }
+
+    CL_BREAK_IF(debuggingSymJoin);
+    return true;
+}
+
 bool delayedJoinIfNeeded(
-        SymJoinCtx              &ctx,
+        SymJoinCtx             &ctx,
         const TObjId            objDst,
         const TObjId            obj1,
         const TObjId            obj2)
@@ -843,12 +913,15 @@ bool delayedJoinIfNeeded(
         // we have a pair of fresh objects, no delayed join is necessary
         return true;
 
-    if (debuggingSymJoin)
-        CL_BREAK_IF("please implement");
+    if (OBJ_INVALID != objDst1 && OBJ_INVALID != objDst2) {
+        CL_BREAK_IF(objDst1 == objDst2);
+        return false;
+    }
 
-    // TODO
-    (void) objDst;
-    return false;
+    if (OBJ_INVALID == objDst2)
+        return rejoinObj(ctx, objDst, objDst1, JS_USE_SH1);
+    else /* if (OBJ_INVALID == objDst1) */
+        return rejoinObj(ctx, objDst, objDst2, JS_USE_SH2);
 }
 
 bool joinFields(

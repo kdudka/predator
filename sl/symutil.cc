@@ -467,6 +467,22 @@ void redirectRefsNotFrom(
     }
 }
 
+void transferOutgoingEdges(
+        SymHeap                &sh,
+        const TObjId            ofObj,
+        const TObjId            toObj)
+{
+    CL_BREAK_IF(sh.objSize(ofObj) != sh.objSize(toObj));
+
+    FldList fields;
+    sh.gatherLivePointers(fields, ofObj);
+    BOOST_FOREACH(const FldHandle &fldOld, fields) {
+        const TValId val = fldOld.value();
+        const FldHandle fldNew(sh, toObj, fldOld.type(), fldOld.offset());
+        fldNew.setValue(val);
+    }
+}
+
 bool proveNeq(const SymHeap &sh, TValId ref, TValId val)
 {
     // check for invalid values
