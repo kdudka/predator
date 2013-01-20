@@ -1,0 +1,1 @@
+../slayer/callback_remove_entry_list.c
