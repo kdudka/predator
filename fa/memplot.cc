@@ -52,6 +52,22 @@ std::string stateToString(const size_t state)
 	return os.str();
 }
 
+struct Pointer
+{
+	std::string src;      ///< Source of the pointer
+	std::string dst;      ///< Destination of the pointer
+	int offset;           ///< Offset into the destination
+
+	Pointer(
+		const std::string&    pSrc,
+		const std::string&    pDst,
+		int                   pOffset) :
+		src(pSrc),
+		dst(pDst),
+		offset(pOffset)
+	{ }
+};
+
 /// class for a memory node
 class MemNode
 {
@@ -100,15 +116,16 @@ public:   // data members
 	/// data fields for a block
 	struct
 	{
-		/// the name of the memory node
-		std::string name;
-
-		/// vector of selectors inside a memory node
-		SelectorVec selVec;
+		std::string name;        ///< the name of the memory node
+		SelectorVec selVec;      ///< vector of selectors inside a memory node
 	} block_;
 
 	/// data fields for a tree reference
-	size_t treeref_;
+	struct
+	{
+		size_t root;             ///< the index of the root
+		int offset;              ///< the offset from the base of the root
+	} treeref_;
 
 	/// the string of the data field
 	std::string dataField_;
@@ -122,7 +139,7 @@ private:  // methods
 		id_{id},
 		type_{type},
 		block_{std::string(), SelectorVec()},
-		treeref_{},
+		treeref_{0, 0},
 		dataField_{}
 	{ }
 
@@ -132,7 +149,7 @@ public:   // methods
 		id_{node.id_},
 		type_{node.type_},
 		block_(node.block_),
-		treeref_{node.treeref_},
+		treeref_(node.treeref_),
 		dataField_{node.dataField_}
 	{ }
 
@@ -152,10 +169,11 @@ public:   // methods
 		return node;
 	}
 
-	static MemNode createTreeRef(size_t nodeId, size_t treeref)
+	static MemNode createTreeRef(size_t nodeId, size_t root, int offset)
 	{
 		MemNode node(nodeId, mem_type::t_treeref);
-		node.treeref_ = treeref;
+		node.treeref_.root   = root;
+		node.treeref_.offset = offset;
 
 		return node;
 	}
@@ -287,16 +305,16 @@ private:  // data members
 	std::vector<TreeAutHeap> vecTreeAut_;
 
 	/// vector of pointers
-	std::vector<std::pair<std::string /* src */, std::string /* dst */>> pointers_;
+	std::vector<Pointer> pointers_;
 
 private:  // methods
 
 	DotPlotVisitor(const DotPlotVisitor&);
 	DotPlotVisitor& operator=(const DotPlotVisitor&);
 
-	void addPointer(const std::string& src, const std::string& dst)
+	void addPointer(const std::string& src, const std::string& dst, int offset)
 	{
-		pointers_.push_back(std::make_pair(src, dst));
+		pointers_.push_back(Pointer(src, dst, offset));
 	}
 
 	void addStateToMemNodeLink(size_t state, const MemNode& node)
@@ -335,7 +353,7 @@ private:  // methods
 
 			case data_type_e::t_ref:
 			{
-				return MemNode::createTreeRef(transID, data.d_ref.root);
+				return MemNode::createTreeRef(transID, data.d_ref.root, data.d_ref.displ);
 			}
 
 			case data_type_e::t_struct:
@@ -520,8 +538,8 @@ public:   // methods
 	}
 
 	void plotMemNode(
-		const MemNode& node,
-		const TreeAutHeap::StateToMemNodeMap& stateMap)
+		const MemNode&                          node,
+		const TreeAutHeap::StateToMemNodeMap&   stateMap)
 	{
 		switch (node.type_)
 		{
@@ -584,7 +602,7 @@ public:   // methods
 
 				if (MemNode::mem_type::t_treeref == tmpNode.type_)
 				{	// if the node is a tree automaton reference
-					const TreeAutHeap& taHeap = vecTreeAut_[tmpNode.treeref_];
+					const TreeAutHeap& taHeap = vecTreeAut_[tmpNode.treeref_.root];
 
 					if (!taHeap.valid())
 					{
@@ -596,14 +614,14 @@ public:   // methods
 					{
 						std::ostringstream tmpOs;
 						tmpOs << *it;
-						this->addPointer(selId, tmpOs.str());
+						this->addPointer(selId, tmpOs.str(), tmpNode.treeref_.offset);
 					}
 				}
 				else
 				{	// in case the node is anything but the tree automaton reference
 					std::ostringstream tmpOs;
 					tmpOs << tmpNode.id_;
-					this->addPointer(selId, tmpOs.str());
+					this->addPointer(selId, tmpOs.str(), 0);
 				}
 			}
 		}
@@ -640,11 +658,19 @@ public:   // methods
 
 	void plotPointers() const
 	{
-		for (const auto& srcDstPair : pointers_)
+		for (const auto& ptr : pointers_)
 		{
-			os_ << "  " << FA_QUOTE(srcDstPair.first)
-				<< " -> " << FA_QUOTE(srcDstPair.second)
-				<< ";\n";
+			os_ << "  " << FA_QUOTE(ptr.src)
+				<< " -> " << FA_QUOTE(ptr.dst);
+
+			if (0 != ptr.offset)
+			{
+				os_ << " [label="
+				<< FA_QUOTE("[" << ((ptr.offset > 0)? "+" : "") << ptr.offset << "]")
+				<< "]";
+			}
+
+			os_ << ";\n";
 		}
 	}
 
