@@ -112,6 +112,14 @@ public:
 		return dst;
 	}
 
+	void makeDisjoint(size_t root)
+	{
+		// Preconditions
+		assert(root < roots_.size());
+
+		roots_[root] = std::shared_ptr<TreeAut>(&this->unique(*this->allocTA(), *roots_[root]));
+	}
+
 public:
 
 	static bool subseteq(const FAE& lhs, const FAE& rhs);
