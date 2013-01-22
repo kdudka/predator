@@ -381,6 +381,7 @@ void Splitting::isolateAtLeaf(
 		fae.appendRoot(&ta2.uselessAndUnreachableFree(*fae.allocTA()));
 
 		fae.connectionGraph.newRoot();
+		fae.makeDisjoint(fae.getRootCount() - 1);
 		fae.connectionGraph.invalidate(root);
 
 		for (const size_t& f : ta3.getFinalStates())
@@ -479,8 +480,9 @@ void Splitting::isolateAtRoot(
 			tmp.addFinalState(t.lhs()[lhsOffset]);
 			TreeAut* tmp2 = fae_.allocTA();
 			tmp.unreachableFree(*tmp2);
-			// update 'o'
 			fae_.appendRoot(tmp2);
+			fae_.makeDisjoint(fae_.getRootCount() - 1);
+			// update 'o'
 			fae_.connectionGraph.newRoot();
 		}
 
