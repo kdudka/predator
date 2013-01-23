@@ -70,9 +70,6 @@
 #include <limits.h>
 #include <stdlib.h>
 
-// required by basename(3)
-#include <libgen.h>
-
 #ifndef STREQ
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
 #endif

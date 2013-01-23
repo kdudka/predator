@@ -21,6 +21,7 @@
 #define H_GUARD_MEM_DEBUG_H
 
 #include <string>
+#include <sys/types.h>
 
 /**
  * @file memdebug.hh

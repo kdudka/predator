@@ -21,7 +21,6 @@
 #define H_GUARD_UTIL_H
 
 #include <cstring>
-#include <tuple>
 
 #ifndef STREQ
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
