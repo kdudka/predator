@@ -2,7 +2,7 @@
 
 #include <verifier-builtins.h>
 
-#include <linux/stddef.h>
+/* #include <linux/stddef.h> */
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
