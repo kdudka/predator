@@ -167,6 +167,16 @@ static struct plugin_info cl_info = {
 "    -fplugin-arg-%s-verbose[=VERBOSITY_LEVEL]      turn on verbose mode\n"
 };
 
+// works on Darwin without allocating extra memory, but will not work on Windows
+const char* safe_basename(const char *path)
+{
+    const char *slash = strrchr((char *) path, '/');
+    if (slash && slash[1])
+        return slash + 1;
+    else
+        return path;
+}
+
 static void init_plugin_name(const struct plugin_name_args *info)
 {
     if (!STREQ("[uninitialized]", plugin_name)) {
@@ -183,7 +193,7 @@ static void init_plugin_name(const struct plugin_name_args *info)
     if (plugin_name_alloc)
         plugin_name = plugin_name_alloc;
 
-    plugin_base_name = basename((char *) plugin_name);
+    plugin_base_name = safe_basename((char *) plugin_name);
 
     // read plug-in base name
     const char *name = info->base_name;
@@ -1234,7 +1244,8 @@ static void handle_operand(struct cl_operand *op, tree t)
     op->type = add_type_if_needed(t);
 
     // read accessor
-    while (handle_accessor(&op->accessor, &t));
+    while (handle_accessor(&op->accessor, &t))
+        ;
 
     CL_BREAK_IF(NULL_TREE == t);
     read_raw_operand(op, t);
