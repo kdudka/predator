@@ -630,7 +630,7 @@ TValId ptrObjectEncoderCore(
         const EPointerKind          code)
 {
     SymHeap &sh = proc.sh();
-    TStorRef &stor = sh.stor();
+    TStorRef stor = sh.stor();
 
     // read pointer's sizeof from Code Storage
     TSizeOf ptrSize = 0;

@@ -2867,7 +2867,7 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
 
     // go through CoincidenceDb
     const CoincidenceDb &coinDb = *d->coinDb;
-    BOOST_FOREACH(CoincidenceDb::const_reference &ref, coinDb) {
+    BOOST_FOREACH(CoincidenceDb::const_reference ref, coinDb) {
         TValId valLt = ref/* key */.first/* lt */.first;
         TValId valGt = ref/* key */.first/* gt */.second;
 
@@ -2917,7 +2917,7 @@ bool SymHeapCore::matchPreds(
 
     // go through CoincidenceDb
     const CoincidenceDb &coinDb = *d->coinDb;
-    BOOST_FOREACH(CoincidenceDb::const_reference &ref, coinDb) {
+    BOOST_FOREACH(CoincidenceDb::const_reference ref, coinDb) {
         TValId valLt = ref/* key */.first/* lt */.first;
         TValId valGt = ref/* key */.first/* gt */.second;
 
