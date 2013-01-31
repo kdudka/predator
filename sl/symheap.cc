@@ -3672,7 +3672,6 @@ void SymHeap::objSetConcrete(TObjId obj)
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // unregister an abstract object
-    // FIXME: suboptimal code of EntStore::releaseEnt() with SH_REUSE_FREE_IDS
     d->absRoots.releaseEnt(obj);
 }
 
@@ -3694,7 +3693,6 @@ void SymHeap::objInvalidate(TObjId obj)
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d);
 
     // unregister an abstract object
-    // FIXME: suboptimal code of EntStore::releaseEnt() with SH_REUSE_FREE_IDS
     d->absRoots.releaseEnt(obj);
 }
 

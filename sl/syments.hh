@@ -26,10 +26,6 @@
 
 #include <boost/foreach.hpp>
 
-#if SH_REUSE_FREE_IDS
-#   include <queue>
-#endif
-
 #ifdef NDEBUG
     // aggressive optimization
 #   define DCAST static_cast
@@ -200,10 +196,6 @@ class EntStore {
         EntStore& operator=(const EntStore &);
 
         std::vector<TBaseEnt *>                 ents_;
-
-#if SH_REUSE_FREE_IDS
-        std::queue<unsigned>                    freeIds_;
-#endif
 };
 
 
@@ -214,17 +206,6 @@ template <typename TId>
 TId EntStore<TBaseEnt>::assignId(TBaseEnt *ptr)
 {
     CL_BREAK_IF(ptr->refCnt.isShared());
-
-#if SH_REUSE_FREE_IDS
-    if (!this->freeIds_.empty()) {
-        const TId id = static_cast<TId>(this->freeIds_.front());
-        this->freeIds_.pop();
-        this->ents_[id] = ptr;
-        CL_DEBUG("reusing heap ID #" << id 
-                << " (heap size is " << this->ents_.size() << ")");
-        return id;
-    }
-#endif
     this->ents_.push_back(ptr);
     return this->lastId<TId>();
 }
@@ -251,9 +232,6 @@ template <class TBaseEnt>
 template <typename TId>
 void EntStore<TBaseEnt>::releaseEnt(const TId id)
 {
-#if SH_REUSE_FREE_IDS
-    freeIds_.push(id);
-#endif
     RefCntLib<RCO_VIRTUAL>::leave(ents_[id]);
 }
 

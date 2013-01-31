@@ -299,11 +299,6 @@
 #define SH_DELAYED_FIELDS_DESTRUCTION       1
 
 /**
- * if 1, allow to assign unused heap IDs to newly created heap entities
- */
-#define SH_REUSE_FREE_IDS                   0
-
-/**
  * if more than zero, jump to debugger as soon as N graph of the same name has
  * been plotted
  */
