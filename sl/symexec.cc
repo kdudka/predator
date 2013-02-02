@@ -1228,7 +1228,7 @@ void SymExec::execFnc(
         }
 
         // create a new engine and push it to the exec stack
-        this->enterCall(ctx, item.eng->callResults());
+        this->enterCall(ctx, engine->callResults());
     }
 }
 
