@@ -112,7 +112,7 @@ set(GCC_HOST "${def_gcc_host}" CACHE STRING "absolute path to host gcc(1)")
 if("$ENV{GCC_HOST}" STREQUAL "")
 else()
     execute_process(COMMAND "${GCC_HOST}" "-print-file-name=plugin"
-        RESULT_VARIABLE GCC_HOST_STATUS)
+        RESULT_VARIABLE GCC_HOST_STATUS OUTPUT_QUIET)
     if (NOT "${GCC_HOST_STATUS}" EQUAL 0)
 
         # the current GCC_HOST does not work, try to fall-back to $ENV{GCC_HOST}

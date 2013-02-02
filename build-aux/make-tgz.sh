@@ -148,10 +148,7 @@ esac
 rm -rf $PRUNE_ALWAYS
 test xyes = "x$drop_fwnull" && rm -rf fwnull
 test xyes = "x$drop_fa" && rm -rf fa
-test xyes = "x$drop_sl" && rm -rf sl    \
-    "README-sv-comp-TACAS-2012"         \
-    "chk-error-label-reachability.sh"   \
-    "register-paths.sh"
+test xyes = "x$drop_sl" && rm -rf sl "README-sv-comp-TACAS-2013"
 
 # make a tarball
 cd ..
