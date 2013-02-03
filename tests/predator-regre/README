@@ -756,6 +756,8 @@ Tests taken from Forester
                 - Predator response was unsound when comparing freed pointers
                 - contributed by Ondra Lengal
 
+    test-0240.c - test-case once used for debugging of rejoinObj()
+
 
 Data reinterpretation
 =====================

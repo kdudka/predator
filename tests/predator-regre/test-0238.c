@@ -34,7 +34,6 @@ int main() {
  * - Predator response was unsound when comparing freed pointers
  * - contributed by Ondra Lengal
  *
- *
  * @attention
  * This description is automatically imported from tests/predator-regre/README.
  * Any changes made to this comment will be thrown away on the next import.
