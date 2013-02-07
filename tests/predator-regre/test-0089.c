@@ -1,5 +1,5 @@
 #include <verifier-builtins.h>
-#include <linux/stddef.h>
+/* #include <linux/stddef.h> */
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdlib.h>

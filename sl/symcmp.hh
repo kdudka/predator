@@ -73,23 +73,4 @@ bool mapBidir(
     return true;
 }
 
-bool matchPlainValues(
-        TValMapBidir            valMapping,
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        const TValId            v1,
-        const TValId            v2);
-
-bool matchOffsets(
-        const SymHeapCore       &sh1,
-        const SymHeapCore       &sh2,
-        const TValId            v1,
-        const TValId            v2);
-
-bool matchUniBlocks(
-        const SymHeap           &sh1,
-        const SymHeap           &sh2,
-        const TObjId            root1,
-        const TObjId            root2);
-
 #endif /* H_GUARD_SYM_CMP_H */

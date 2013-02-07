@@ -14,5 +14,3 @@ test-0314.c:92:25: error: dereference of NULL value
 test-0314.c:45:25: error: dereference of NULL value
 test-0314.c:92:25: error: dereference of NULL value
 test-0314.c:45:25: error: dereference of NULL value
-test-0314.c:92:25: error: dereference of NULL value
-test-0314.c:45:25: error: dereference of NULL value

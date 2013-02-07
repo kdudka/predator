@@ -34,14 +34,21 @@
 bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
-        const struct cl_loc             *loc = 0);
+        const struct cl_loc             *loc = 0,
+        std::string                     *pName = 0);
 
 /// create a plot named "name-NNNN.dot", starting from the given starting points
 bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
         const struct cl_loc             *loc,
-        const TValList                  &startingPoints,
-        const bool                      digForward = true);
+        const TValList                  &startingPoints);
+
+/// create a plot named "name-NNNN.dot", containing @b only the given objects
+bool plotHeap(
+        const SymHeap                   &sh,
+        const std::string               &name,
+        const struct cl_loc             *loc,
+        const TObjSet                   &objs);
 
 #endif /* H_GUARD_SYM_PLOT_H */

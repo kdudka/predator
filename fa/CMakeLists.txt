@@ -86,6 +86,10 @@ set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 find_library(CL_LIB cl ../cl_build)
 target_link_libraries(fa ${CL_LIB})
 
+# get the full path of libfa.so
+get_property(GCC_PLUG TARGET fa PROPERTY LOCATION)
+message (STATUS "GCC_PLUG: ${GCC_PLUG}")
+
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
 set(GCC_EXEC_PREFIX "timeout 120"

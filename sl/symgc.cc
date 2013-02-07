@@ -81,11 +81,8 @@ bool gcCore(SymHeap &sh, TObjId obj, TObjSet *leakObjs, bool sharedOnly)
     bool detected = false;
 
     std::set<TObjId> whiteList;
-    if (sharedOnly) {
+    if (sharedOnly)
         whiteList.insert(obj);
-        if (OK_DLS == sh.objKind(obj))
-            whiteList.insert(dlSegPeer(sh, obj));
-    }
 
     WorkList<TObjId> wl(obj);
     while (wl.next(obj)) {
@@ -178,11 +175,7 @@ void LeakMonitor::leave()
     if (!::debuggingGarbageCollector || leakObjs_.empty())
         return;
 
-    TValList addrs;
-    BOOST_FOREACH(const TObjId obj, leakObjs_)
-        addrs.push_back(snap_.legacyAddrOfAny_XXX(obj));
-
-    plotHeap(snap_, "memleak", /* loc */ 0, addrs, /* digForward */ false);
+    plotHeap(snap_, "memleak", /* loc */ 0, leakObjs_);
 }
 
 bool /* leaking */ LeakMonitor::importLeakObjs(TObjSet *leakObjs)

@@ -440,6 +440,9 @@ class SymHeapCore {
         /// classify where the given value originates from
         EValueOrigin valOrigin(TValId) const;
 
+        /// return the target specifier of the given address
+        ETargetSpecifier targetSpec(TValId addr) const;
+
         /// return the object that the given address points to
         TObjId objByAddr(TValId addr) const;
 
@@ -451,9 +454,6 @@ class SymHeapCore {
 
         /// target address at the given object with target specifier and offset
         virtual TValId addrOfTarget(TObjId, ETargetSpecifier, TOffset off = 0);
-
-        /// TODO: drop this!
-        TValId legacyAddrOfAny_XXX(TObjId) const;
 
     public:
         /// return the address of the root which the given value is binded to
@@ -477,8 +477,8 @@ class SymHeapCore {
         /// return the region corresponding to the given program variable
         TObjId regionByVar(CVar, bool createIfNeeded);
 
-        /// clone of the given value (deep copy)
-        virtual TValId valClone(TValId);
+        /// clone the given object, including the outgoing has-value edges
+        virtual TObjId objClone(TObjId);
 
     public:
         /// replace all occurrences of val by replaceBy
@@ -514,7 +514,7 @@ class SymHeapCore {
 
     public:
         /// allocate a chunk of stack of known size from the select call stack
-        TValId stackAlloc(const TSizeRange &size, const CallInst &from);
+        TObjId stackAlloc(const TSizeRange &size, const CallInst &from);
 
         /// clear the list of anonymous stack objects of the given call instance
         void clearAnonStackObjects(TObjList &dst, const CallInst &of);
@@ -605,17 +605,6 @@ class FldHandle {
             id_(special)
         {
             CL_BREAK_IF(0 < special);
-        }
-
-        /// TODO: drop this constructor!
-        FldHandle(SymHeapCore &sh, TValId addr, TObjType clt):
-            sh_(&sh)
-        {
-            const TObjId obj = sh.objByAddr(addr);
-            const TOffset off = sh.valOffset(addr);
-            id_ = sh.fldLookup(obj, off, clt);
-            if (0 < id_)
-                sh_->fldEnter(id_);
         }
 
         FldHandle(const FldHandle &tpl):
@@ -732,20 +721,9 @@ inline bool operator!=(const FldHandle &a, const FldHandle &b)
 
 class PtrHandle: public FldHandle {
     public:
-        PtrHandle(SymHeapCore &sh, const TObjId obj, const TOffset off):
+        PtrHandle(SymHeapCore &sh, const TObjId obj, const TOffset off = 0):
             FldHandle(sh, sh.ptrLookup(obj, off))
         {
-            if (0 < id_)
-                sh_->fldEnter(id_);
-        }
-
-        /// TODO: drop this constructor!
-        PtrHandle(SymHeapCore &sh, TValId addr):
-            FldHandle(sh, FLD_INVALID)
-        {
-            const TObjId obj = sh.objByAddr(addr);
-            const TOffset off = sh.valOffset(addr);
-            id_ = sh.ptrLookup(obj, off);
             if (0 < id_)
                 sh_->fldEnter(id_);
         }
@@ -863,7 +841,7 @@ class SymHeap: public SymHeapCore {
         // just overrides (inherits the dox)
         virtual TValId addrOfTarget(TObjId, ETargetSpecifier, TOffset off = 0);
         virtual void objInvalidate(TObjId);
-        virtual TValId valClone(TValId);
+        virtual TObjId objClone(TObjId);
 
     private:
         struct Private;

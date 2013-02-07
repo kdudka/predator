@@ -2,53 +2,38 @@ test-0186.c:3:1: error: error label "ERROR" has been reached
 test-0186.c:34:14: note: from call of error ()
 test-0186.c:33:8: note: _ = (i != (int)1) ... evaluated as TRUE
 test-0186.c:28:8: note: _ = (i == (int)0) ... evaluated as FALSE
-test-0186.c:51:13: note: from call of gl_write (gl_num.34, (int)65)
-test-0186.c:46:8: note: _ = (gl_mloop.32 <= gl_cnt.33) ... evaluated as FALSE
+test-0186.c:51:13: note: from call of gl_write (gl_num_, (int)65)
+test-0186.c:46:8: note: _ = (gl_mloop_ <= gl_cnt_) ... evaluated as FALSE
 test-0186.c:123:21: note: from call of gl_proc1 ()
 test-0186.c:121:21: note: _ = (_ != (int)0) ... assuming TRUE
-test-0186.c:121:12: note: _ = (gl_st1.2 == (int)0) ... evaluated as TRUE
+test-0186.c:121:12: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
 test-0186.c:120:11: note: _ = (_ != (int)0) ... evaluated as TRUE
-test-0186.c:115:9: note: _ = (gl_st1.5 == (int)0) ... evaluated as TRUE
-test-0186.c:183:23: note: from call of _ = gl_runnable ()
-test-0186.c:144:8: note: _ = (gl_ev2.1 == (int)1) ... evaluated as TRUE
-test-0186.c:141:8: note: _ = (gl_ev1.0 == (int)1) ... evaluated as TRUE
-test-0186.c:179:21: note: from call of gl_reset ()
-test-0186.c:153:8: note: _ = (_ != (int)0) ... evaluated as FALSE
-test-0186.c:96:9: note: _ = (gl_pc2.12 == (int)2) ... evaluated as FALSE
-test-0186.c:95:25: note: _ = (gl_zero.11 == (int)1) ... evaluated as FALSE
-test-0186.c:96:9: note: _ = (gl_pc2.10 == (int)1) ... evaluated as TRUE
-test-0186.c:153:17: note: from call of _ = gl_trig2 ()
-test-0186.c:150:8: note: _ = (_ != (int)0) ... evaluated as TRUE
-test-0186.c:60:9: note: _ = (gl_ev1.31 == (int)1) ... evaluated as TRUE
-test-0186.c:60:9: note: _ = (gl_pc1.30 == (int)1) ... evaluated as TRUE
-test-0186.c:150:17: note: from call of _ = gl_trig1 ()
-test-0186.c:178:24: note: from call of gl_activate ()
-test-0186.c:177:20: note: from call of gl_fire ()
-test-0186.c:176:12: note: _ = (_ == (int)0) ... evaluated as TRUE
-test-0186.c:115:9: note: _ = (gl_st2.6 == (int)0) ... evaluated as FALSE
-test-0186.c:115:9: note: _ = (gl_st1.5 == (int)0) ... evaluated as FALSE
+test-0186.c:115:9: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
 test-0186.c:120:23: note: from call of _ = gl_runnable ()
-test-0186.c:126:12: note: _ = (gl_st2.3 == (int)0) ... evaluated as FALSE
-test-0186.c:28:8: note: _ = (i == (int)0) ... evaluated as TRUE
-test-0186.c:51:13: note: from call of gl_write (gl_num.34, (int)65)
-test-0186.c:46:8: note: _ = (gl_mloop.32 <= gl_cnt.33) ... evaluated as FALSE
-test-0186.c:123:21: note: from call of gl_proc1 ()
-test-0186.c:121:21: note: _ = (_ != (int)0) ... assuming TRUE
-test-0186.c:121:12: note: _ = (gl_st1.2 == (int)0) ... evaluated as TRUE
+test-0186.c:82:27: note: _ = (gl_num_ == (int)0) ... evaluated as TRUE
+test-0186.c:82:8: note: _ = (gl_cnt_ < gl_mloop_) ... evaluated as TRUE
+test-0186.c:70:43: note: _ = (gl_num_ != (int)0) ... evaluated as FALSE
+test-0186.c:70:21: note: _ = (gl_cnt_ < gl_mloop_) ... evaluated as TRUE
+test-0186.c:70:8: note: _ = (gl_pc2_ == (int)1) ... evaluated as FALSE
+test-0186.c:128:21: note: from call of gl_proc2 ()
+test-0186.c:126:21: note: _ = (_ != (int)0) ... assuming TRUE
+test-0186.c:126:12: note: _ = (gl_st2_ == (int)0) ... evaluated as TRUE
+test-0186.c:121:21: note: _ = (_ != (int)0) ... assuming FALSE
+test-0186.c:121:12: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
 test-0186.c:120:11: note: _ = (_ != (int)0) ... evaluated as TRUE
-test-0186.c:115:9: note: _ = (gl_st1.5 == (int)0) ... evaluated as TRUE
+test-0186.c:115:9: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
 test-0186.c:120:23: note: from call of _ = gl_runnable ()
 test-0186.c:172:16: note: from call of gl_eval ()
 test-0186.c:153:8: note: _ = (_ != (int)0) ... evaluated as FALSE
-test-0186.c:96:9: note: _ = (gl_pc2.12 == (int)2) ... evaluated as FALSE
-test-0186.c:96:9: note: _ = (gl_pc2.10 == (int)1) ... evaluated as FALSE
+test-0186.c:96:9: note: _ = (gl_pc2_ == (int)2) ... evaluated as FALSE
+test-0186.c:96:9: note: _ = (gl_pc2_ == (int)1) ... evaluated as FALSE
 test-0186.c:153:17: note: from call of _ = gl_trig2 ()
 test-0186.c:150:8: note: _ = (_ != (int)0) ... evaluated as FALSE
-test-0186.c:60:9: note: _ = (gl_pc1.30 == (int)1) ... evaluated as FALSE
+test-0186.c:60:9: note: _ = (gl_pc1_ == (int)1) ... evaluated as FALSE
 test-0186.c:150:17: note: from call of _ = gl_trig1 ()
 test-0186.c:169:16: note: from call of gl_activate ()
-test-0186.c:106:8: note: _ = (gl_i2.8 == (int)1) ... evaluated as TRUE
-test-0186.c:101:8: note: _ = (gl_i1.7 == (int)1) ... evaluated as TRUE
+test-0186.c:106:8: note: _ = (gl_i2_ == (int)1) ... evaluated as TRUE
+test-0186.c:101:8: note: _ = (gl_i1_ == (int)1) ... evaluated as TRUE
 test-0186.c:168:12: note: from call of gl_init ()
 test-0186.c:157:5: note: from call of main ()
 test-0186.c:157:5: warning: symbolic execution terminates prematurely

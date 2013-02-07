@@ -25,6 +25,7 @@
 #include <cl/clutil.hh>
 #include <cl/storage.hh>
 
+#include "pointsto.hh"
 #include "builtins.hh"
 #include "stopwatch.hh"
 #include "util.hh"
@@ -51,8 +52,11 @@ namespace CodeStorage {
 namespace VarKiller {
 
 typedef CodeStorage::Storage               &TStorRef;
+typedef const CodeStorage::PointsTo::Graph &TPTGraph;
 typedef const struct cl_loc                *TLoc;
 typedef int                                 TVar;
+typedef const CodeStorage::Var             *TStorVar;
+typedef const CodeStorage::Fnc             *TFnc;
 typedef std::set<TVar>                      TSet;
 typedef const Block                        *TBlock;
 typedef std::set<TBlock>                    TBlockSet;
@@ -66,11 +70,15 @@ struct BlockData {
 
 typedef std::map<TBlock, BlockData>         TMap;
 
+typedef std::map<int, int>                  TAliasMap;
+
 /// shared data
 struct Data {
     TStorRef                                stor;
     TBlockSet                               todo;
     TMap                                    blocks;
+    TFnc                                    fnc;
+    TAliasMap                               derefAliases;
 
     Data(TStorRef stor_):
         stor(stor_)
@@ -78,11 +86,112 @@ struct Data {
     }
 };
 
-void scanOperand(BlockData &bData, const cl_operand &op, bool dst)
-{
-    VK_DEBUG(4, "scanOperand: " << op << ((dst) ? " [dst]" : " [src]"));
+struct VarData {
+    const Var  *v;
+    bool        dst;
+    bool        fieldOfComp;
+};
 
-    bool fieldOfComp = false;
+/**
+ * this is used just to make some statistics of how many variables is killed
+ * with help of PointsTo analysis.
+ */
+class PTStats {
+    static PTStats *inst;
+
+    public:
+        int count;
+        int fullCount;
+
+    public:
+        static PTStats *getInstance() {
+            if (!inst)
+                inst = new PTStats();
+            return inst;
+        }
+
+
+
+    private:
+        // singleton
+        PTStats() :
+            count(0),
+            fullCount(0)
+        {
+        }
+};
+// initialize
+PTStats *PTStats::inst = 0;
+
+void countPtStat(Data &data, int uid)
+{
+    PTStats *stats = PTStats::getInstance();
+    stats->fullCount++;
+
+    if (hasKey(data.fnc->vars, uid))
+        // is local uid
+        return;
+
+    stats->count ++;
+
+    // killing pointer target
+    VK_DEBUG(0, "killling " << uid << " by its pointer!");
+}
+
+bool isLcVar(const Var *v)
+{
+    return (v->code != VAR_GL);
+}
+
+void scanVar(BlockData &bData, const Var *var, bool dst, bool fieldOfComp)
+{
+    if (!isLcVar(var))
+        // not a local variable
+        return;
+
+    if (dst && fieldOfComp)
+        // if we are writing to a field of a composite type, it yet does not
+        // mean we are killing the whole composite variable
+        return;
+
+    if (hasKey(bData.kill, var->uid))
+        // already killed
+        return;
+
+    if (dst) {
+        VK_DEBUG(3, "kill(" << var->name << ")");
+        bData.kill.insert(var->uid);
+        return;
+    }
+
+    // we see the operand as [src]
+    if (insertOnce(bData.gen, var->uid))
+        VK_DEBUG(3, "gen(" << var->name << ")");
+}
+
+void scanTarget(Data &data, BlockData &bData, const Var *origin, bool dst)
+{
+    // find target variable of origin pointer 
+    if (!hasKey(data.derefAliases, origin->uid))
+        return;
+    int uidAlias = data.derefAliases[origin->uid];;
+
+    // scan the target
+    const Var *tgtVar = &data.stor.vars[uidAlias];
+    scanVar(bData, tgtVar, dst, false /* always non-field-of-composite */);
+}
+
+void scanOperand(
+        Data                           &data,
+        BlockData                      &bData,
+        const cl_operand               &op,
+        bool                            upDst)
+{
+    VK_DEBUG(4, "scanOperand: " << op << ((upDst) ? " [dst]" : " [src]"));
+
+    bool fieldOfComp    = false;
+    bool dst            = upDst;
+    bool deref          = false;
 
     for (const cl_accessor *ac = op.accessor; ac; ac = ac->next) {
         CL_BREAK_IF(dst && seekRefAccessor(ac));
@@ -91,12 +200,15 @@ void scanOperand(BlockData &bData, const cl_operand &op, bool dst)
         switch (code) {
             case CL_ACCESSOR_DEREF_ARRAY:
                 // FIXME: unguarded recursion
-                scanOperand(bData, *(ac->data.array.index), /* dst */ false);
+                scanOperand(data, bData, *(ac->data.array.index), false);
                 // fall through!
 
             case CL_ACCESSOR_DEREF:
                 // see whatever operand with CL_ACCESSOR_DEREF as [src]
                 dst = false;
+
+                // check the target of this operand later on!
+                deref = true;
                 break;
 
             case CL_ACCESSOR_ITEM:
@@ -109,33 +221,21 @@ void scanOperand(BlockData &bData, const cl_operand &op, bool dst)
         }
     }
 
-    if (dst && fieldOfComp)
-        // if we are writing to a field of a composite type, it yet does not
-        // mean we are killing the whole composite variable
-        return;
-
     if (!isLcVar(op))
-        // not a local variable
+        // even non-locals could have been handled ^^^^ before!
         return;
 
-    const char *name = NULL;
-    const int uid = varIdFromOperand(&op, &name);
-    if (hasKey(bData.kill, uid))
-        // already killed
+    const Var *var  = &data.stor.vars[varIdFromOperand(&op)];
+    scanVar(bData, var, dst, fieldOfComp);
+
+    if (!deref)
         return;
 
-    if (dst) {
-        VK_DEBUG(3, "kill(" << name << ")");
-        bData.kill.insert(uid);
-        return;
-    }
-
-    // we see the operand as [src]
-    if (insertOnce(bData.gen, uid))
-        VK_DEBUG(3, "gen(" << name << ")");
+    if (!fieldOfComp)
+        scanTarget(data, bData, var, upDst /* from origin! */ );
 }
 
-void scanInsn(BlockData &bData, const Insn &insn)
+void scanInsn(Data &data, BlockData &bData, const Insn &insn)
 {
     VK_DEBUG_MSG(3, &insn.loc, "scanInsn: " << insn);
     const TOperandList opList = insn.operands;
@@ -152,15 +252,17 @@ void scanInsn(BlockData &bData, const Insn &insn)
         case CL_INSN_BINOP:
             // go backwards!
             CL_BREAK_IF(opList.empty());
-            for (int i = opList.size() - 1; 0 <= i; --i)
-                scanOperand(bData, opList[i], /* dst */ !i);
+            for (int i = opList.size() - 1; 0 <= i; --i) {
+                const cl_operand &op = opList[i];
+                scanOperand(data, bData, op, /* dst */ !i);
+            }
             return;
 
         case CL_INSN_RET:
         case CL_INSN_COND:
         case CL_INSN_SWITCH:
             // exactly one operand
-            scanOperand(bData, opList[/* src */ 0], /* dst */ false);
+            scanOperand(data, bData, opList[/* src */ 0], /* dst */ false);
             return;
 
         case CL_INSN_JMP:
@@ -220,16 +322,26 @@ void computeFixPoint(Data &data)
     VK_DEBUG(2, "fixed-point reached in " << cntSteps << " steps");
 }
 
+inline bool isPointedUid(Data &data, int uid)
+{
+    BOOST_FOREACH(TAliasMap::const_reference item, data.derefAliases)
+        if (item.second == uid)
+            return false;
+
+    return data.stor.vars[uid].mayBePointed;
+}
+
 // this just finishes the killing-per-target work (with some debug output)
 void killVariablePerTarget(
-        TStorRef                 stor,
+        Data                    &data,
         const TBlock            &bb,
         int                      target,
         int                      uid)
 {
+    TStorRef stor = data.stor;
     const TTargetList &targets = bb->targets();
     Insn &term = *const_cast<Insn *>(bb->back());
-    const bool isPointed = stor.vars[uid].mayBePointed;
+    const bool isPointed = isPointedUid(data, uid);
 
     VK_DEBUG_MSG(1, &term.loc, "killing variable "
             << varToString(stor, uid)
@@ -238,6 +350,7 @@ void killVariablePerTarget(
 
     const KillVar kv(uid, isPointed);
     term.killPerTarget[target].insert(kv);
+    countPtStat(data, uid);
 }
 
 void commitInsn(
@@ -258,7 +371,7 @@ void commitInsn(
     // instruction 'insn' could be precomputed already (in analyzeFnc() - before
     // computeFixPoint() call).
     BlockData arena;
-    scanInsn(arena, insn);
+    scanInsn(data, arena, insn);
 
     // handle killed variables same way as generated (make an union)
     TSet touched = arena.kill;
@@ -266,7 +379,7 @@ void commitInsn(
 
     // go through variables generated by the current instruction
     BOOST_FOREACH(TVar vKill, touched) {
-        const bool isPointed = stor.vars[vKill].mayBePointed;
+        const bool isPointed = isPointedUid(data, vKill);
 
         if (insertOnce(live, vKill)) {
             // variable was marked as dead in following instruction -- may be
@@ -277,6 +390,7 @@ void commitInsn(
 
             const KillVar kv(vKill, isPointed);
             insn.varsToKill.insert(kv);
+            countPtStat(data, vKill);
 
             if (multipleTargets) {
                 // we need to mark this as "live" for all target blocks -- just
@@ -289,7 +403,7 @@ void commitInsn(
 
         if (!hasKey(arena.gen, vKill)) {
             // this variable is killed by this instruction && is _not_ generated
-            // here - it must be switched to dead status
+            // by following instructions.  Therefore it must be marked as dead.
             live.erase(vKill);
             // NOTE: It is not possible to re-kill the 'vKill' for particular
             // targets *only* because:
@@ -297,7 +411,7 @@ void commitInsn(
             //      previous instructions => if it will be ever killed in this
             //      BasicBlock, it MUST be done for all targets together
             //   b) actual turn: it may be killed per particular target only if
-            //      it was not killed for all targets (No double kill).
+            //      it was not killed for all targets (no double kill).
         }
 
         if (!multipleTargets)
@@ -311,7 +425,7 @@ void commitInsn(
             if (!insertOnce(livePerTarget[i], vKill))
                 continue;
 
-            killVariablePerTarget(stor, bb, i, vKill);
+            killVariablePerTarget(data, bb, i, vKill);
         }
     }
 }
@@ -321,7 +435,6 @@ void commitBlock(Data &data, TBlock bb)
     const TTargetList &targets = bb->targets();
     const unsigned cntTargets = targets.size();
     const bool multipleTargets = (1 < cntTargets);
-    TStorRef stor = data.stor;
 
     TLivePerTarget livePerTarget;
     if (multipleTargets)
@@ -336,6 +449,12 @@ void commitBlock(Data &data, TBlock bb)
             if (multipleTargets)
                 livePerTarget[i].insert(vLive);
         }
+    }
+
+    if (cntTargets == 0) {
+        // make sure those variables are left *live* when going out of function
+        BOOST_FOREACH(TAliasMap::const_reference ref, data.derefAliases)
+            live.insert(ref.second);
     }
 
     // go backwards through the instructions
@@ -380,30 +499,125 @@ void commitBlock(Data &data, TBlock bb)
             }
 
             // OK, now we have untouched variable 'uidLive'
-            killVariablePerTarget(stor, bb, target, uidLive);
+            killVariablePerTarget(data, bb, target, uidLive);
             ++liveIt;
         }
     }
+}
+
+// pre-compute aliases
+int alias(Data &data, int uid)
+{
+    TFnc fnc = data.fnc;
+    const PointsTo::Graph &ptg = fnc->ptg;
+    const CallGraph::Graph &cg = data.stor.callGraph;
+    const CallGraph::Node *cgn = fnc->cgNode;
+
+    if (hasKey(data.derefAliases, uid))
+        return data.derefAliases[uid];
+
+    // not computed yet
+    const Var *v = &data.stor.vars[uid];
+
+    if (!cgn || cg.hasIndirectCall || cg.hasCallback || isDead(data.stor.ptd))
+        return 0;
+
+    if (cgn->callers.size() != 1)
+        // we require at most one calling function because we must be sure that
+        // the found variable alias comes from parent in CallGraph and there may
+        // not exist any ambiguity.
+        return 0;
+
+    const TInsnListByFnc::const_reference &insnList = *cgn->callers.begin();
+    if (insnList.second /* calls */ .size() != 1)
+        return 0;
+
+    const Fnc *caller = insnList.first;
+
+    const PointsTo::Node *target = existsVar(ptg, v);
+    if (!target)
+        return 0;
+    target = hasOutputS(target);
+    if (!target)
+        return 0;
+
+    if (target->variables.size() != 1)
+        return 0;
+
+    const PointsTo::Item *item = *target->variables.begin();
+    const Var *tgtVar = item->var();
+    if (!tgtVar)
+        return 0;
+
+    // on the variable target resides _single_ variable.
+    if (!isLcVar(tgtVar))
+        return 0;
+
+    // it is local variable, lets see if it comes from parent in CallGraph
+    if (!hasKey(caller->vars, tgtVar->uid))
+        return 0;
+
+    data.derefAliases[uid] = tgtVar->uid;
+    return tgtVar->uid;
+}
+
+inline void hitAlias(Data &data, const cl_operand &op)
+{
+    if (!op.accessor
+            || op.accessor->code != CL_ACCESSOR_DEREF
+            || op.code != CL_OPERAND_VAR)
+        return;
+
+    alias(data, varIdFromOperand(&op));
+}
+
+void findAliases(Data &data, Fnc &fnc)
+{
+    BOOST_FOREACH(const TBlock bb, fnc.cfg)
+        BOOST_FOREACH(const Insn *insn, *bb)
+            BOOST_FOREACH(const cl_operand &op, insn->operands)
+                hitAlias(data, op);
+}
+
+void presetLive(Data &data, const TBlock bb)
+{
+    BlockData &bData = data.blocks[bb];
+
+    int size = bb->targets().size();
+    if (size != 0)
+        return;
+
+    // those uids must stay alive after processing of this ending block
+    BOOST_FOREACH(TAliasMap::const_reference pair, data.derefAliases)
+        if (!hasKey(bData.kill, pair.second))
+            bData.gen.insert(pair.second);
 }
 
 void analyzeFnc(Fnc &fnc)
 {
     // shared state info
     Data data(*fnc.stor);
+    data.fnc = &fnc;
 
     TLoc loc = &fnc.def.data.cst.data.cst_fnc.loc;
     VK_DEBUG_MSG(2, loc, ">>> entering " << nameOf(fnc) << "()");
     CL_BREAK_IF(!data.todo.empty());
+
+    // pre-compute dereferences
+    findAliases(data, fnc);
 
     // go through basic blocks
     BOOST_FOREACH(const TBlock bb, fnc.cfg) {
         // go through instructions in forward direction
         VK_DEBUG(3, "in block " << bb->name());
 
+        BlockData &bData = data.blocks[bb];
         BOOST_FOREACH(const Insn *insn, *bb) {
-            BlockData &bData = data.blocks[bb];
-            scanInsn(bData, *insn);
+            scanInsn(data, bData, *insn);
         }
+
+        // guarantee to distribute pointer-targests exist when function finishes
+        presetLive(data, bb);
 
         data.todo.insert(bb);
     }
@@ -433,6 +647,12 @@ void killLocalVariables(Storage &stor)
 
         // analyze a single function
         VarKiller::analyzeFnc(fnc);
+    }
+
+    VarKiller::PTStats *stats = VarKiller::PTStats::getInstance();
+    if (stats->count > 0) {
+        VK_DEBUG(0, "there was killed " << stats->count 
+                << "/" << stats->fullCount << " variables by PointsTo");
     }
 
     CL_DEBUG("killLocalVariables() took " << watch);

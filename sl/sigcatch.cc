@@ -30,9 +30,12 @@
 #   define _NSIG 0x100
 #endif
 
+// we define our own TSigHandler because sighandler_t is missing on Darwin
+typedef void (*TSigHandler)(int);
+
 static volatile sig_atomic_t sig_flags[_NSIG];
 
-typedef std::map<int /* signum */, sighandler_t> TBackup;
+typedef std::map<int /* signum */, TSigHandler> TBackup;
 static TBackup backup;
 
 static void generic_signal_handler(int signum)
@@ -45,7 +48,7 @@ bool SignalCatcher::install(int signum)
     if (hasKey(backup, signum))
         return false;
 
-    const sighandler_t old = signal(signum, generic_signal_handler);
+    const TSigHandler old = signal(signum, generic_signal_handler);
     if (SIG_ERR == old)
         return false;
 

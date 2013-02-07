@@ -22,6 +22,7 @@ seek_input_file() {
 seek_input_file "$@" || usage
 
 # include common code base
+# FIXME: 'readlink -f' does not work on Darwin
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
 source "$topdir/build-aux/xgcclib.sh"
 
@@ -43,7 +44,7 @@ if test x1 = "x$SL_PLOT"; then
     rm -f *.dot *.svg
 fi
 
-pidfile="$(mktemp)"
+pidfile="$(mktemp /tmp/slgcc.XXXXXX)"
 test -w "$pidfile" || die "mktemp failed"
 export pidfile
 trap "rm -f '$pidfile'" EXIT
@@ -63,7 +64,7 @@ fi
 # run the gcc
 run_gcc() {
     printf "Trying to compile \033[1;37m%s\033[0m ... " "$*" >&2
-    tmp="$(mktemp)"
+    tmp="$(mktemp /tmp/slgcc.XXXXXX)"
     test -w "$tmp" || die "mktemp failed"
     trap "rm -f '$tmp'" RETURN
 
@@ -77,6 +78,7 @@ run_gcc() {
         return 1
     fi
 
+    # FIXME: 'stdbuf' is not available on Darwin
     "$GCC_HOST" $GCC_OPTS                                           \
         -fplugin="$GCC_PLUG" -fplugin-arg-libsl-pid-file="$pidfile" \
         -fplugin-arg-libsl-args=error_label:ERROR $SL_OPTS "$@"     \
@@ -95,6 +97,8 @@ forward_signal() {
 }
 
 # colorize the output
+# FIXME: 'stdbuf' is not available on Darwin
+# FIXME: 'sed -r' does not work on Darwin
 run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin=libsl\.so\]$||'        \
         -e "s|^/.*/predator[^/]*/||"                                           \
         -e "s|(^.*) \[internal location\]\$|$S\1$N|"                           \
@@ -117,13 +121,16 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin=libsl\.so\]$||'        \
         -e "s/(CL_BREAK_IF|INT3|SIGTRAP)/$R\1$N/"                              \
         -e "s/(importGlVar\\(\\))/$R\1$N/"                                     \
         -e "s/(: debug: *) ([<>!]J[<>!]|AAA)/\1 $R\2$N/"                       \
-        -e "s/(: debug: SymHeap::)(valTargetSetConcrete)/\1$Y\2$N/"            \
+        -e "s/(: debug: SymHeap::)(objSetConcrete)/\1$Y\2$N/"                  \
         -e "s/(: debug:) \\(x\\) (.*)\$/\1 $Y(x)$N \2/"                        \
         -e "s/(: debug:) (spliceOutListSegment)/\1 $B\2$N/"                    \
         -e "s/(: debug:) (spliceOutAbstractPathCore)/\1 $B\2$N/"               \
         -e "s/(: debug:) (<<<|>>>)/\1 $B\2$N/"                                 \
         -e "s/(: debug:) (XXX)/\1 $Y\2$N/"                                     \
         -e "s/(: debug: ___) (entering|we are)/\1 $G___$N \2/"                 \
+        -e "s/(PT: )(ERROR:)/\1$R\2$S/"                                        \
+        -e "s/(PT:)/$W\1$S/"                                                   \
+        -e "s/(> phase [0-9] <)/$G\1$S/"                                       \
         &
 
 # redirect terminating signals to our plug-in

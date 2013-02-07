@@ -192,7 +192,8 @@ class SymExecEngine: public IStatsProvider {
         void processPendingSignals();
         void pruneOrigin();
 
-        void dumpStateMap();
+        /// @param flags see DEBUG_SE_FIXED_POINT in config.h
+        void dumpStateMap(int flags);
 
         void printStatsHelper(const BlockScheduler::TBlock bb) const;
 };
@@ -264,8 +265,9 @@ void SymExecEngine::execReturn()
             const TSizeOf size = fncReturnType_->size;
             const CustomValue cv(IR::rngFromNum(size));
             const TValId valSize = sh.valWrapCustom(cv);
+            const TValId retAddr = sh.addrOfTarget(OBJ_RETURN, TS_REGION);
             const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_STACK);
-            executeMemset(proc, VAL_ADDR_OF_RET, valUnknown, valSize);
+            executeMemset(proc, retAddr, valUnknown, valSize);
         }
         else {
             const TValId val = proc.valFromOperand(src);
@@ -327,8 +329,11 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
 
 bool isAnyAbstractOf(const SymHeap &sh, const TValId v1, const TValId v2)
 {
-    return isAbstractValue(sh, v1)
-        || isAbstractValue(sh, v2);
+    const TObjId obj1 = sh.objByAddr(v1);
+    const TObjId obj2 = sh.objByAddr(v2);
+
+    return isAbstractObject(sh, obj1)
+        || isAbstractObject(sh, obj2);
 }
 
 void SymExecEngine::updateStateInBranch(
@@ -348,6 +353,9 @@ void SymExecEngine::updateStateInBranch(
     Trace::Node *trCond = new Trace::CondNode(shOrig.traceNode(),
                 &insnCmp, &insnCnd, /* det */ false, branch);
 
+#if DEBUG_SE_NONDET_COND < 2
+    const bool hasAbstract = isAnyAbstractOf(shOrig, v1, v2);
+#endif
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insnCmp.subCode);
     if (!reflectCmpResult(dst, procOrig, code, branch, v1, v2))
         CL_DEBUG_MSG(lw_, "XXX unable to reflect comparison result");
@@ -356,8 +364,8 @@ void SymExecEngine::updateStateInBranch(
 
     BOOST_FOREACH(SymHeap *sh, dst) {
         sh->traceUpdate(trCond);
-#if DEBUG_SE_END_NOT_REACHED < 2
-        if (isAnyAbstractOf(shOrig, v1, v2))
+#if DEBUG_SE_NONDET_COND < 2
+        if (hasAbstract)
 #endif
             LDP_PLOT(nondetCond, *sh);
 
@@ -512,7 +520,7 @@ void SymExecEngine::execCondInsn()
         proc.printBackTrace(ML_WARN);
     }
 
-#if DEBUG_SE_END_NOT_REACHED < 2
+#if DEBUG_SE_NONDET_COND < 2
     if (isAnyAbstractOf(sh, v1, v2))
 #endif
     {
@@ -795,13 +803,15 @@ bool /* complete */ SymExecEngine::run()
             return false;
     }
 
+    int debugFixedPoint = (DEBUG_SE_FIXED_POINT);
+
     const struct cl_loc *loc = locationOf(fnc);
     if (!endReached_) {
         CL_WARN_MSG(loc, "end of function "
                 << nameOf(fnc) << "() has not been reached");
 #if DEBUG_SE_END_NOT_REACHED
         sched_.printStats();
-        this->dumpStateMap();
+        debugFixedPoint |= /* plot heaps */ 0x2;
 #endif
         bt_.printBackTrace();
     }
@@ -809,6 +819,9 @@ bool /* complete */ SymExecEngine::run()
     // we are done with this function
     CL_DEBUG_MSG(loc, "<<< leaving " << nameOf(fnc) << "()");
     waiting_ = false;
+
+    this->dumpStateMap(debugFixedPoint);
+
     return true;
 }
 
@@ -868,15 +881,53 @@ void SymExecEngine::printStats() const
 #endif
 }
 
-void SymExecEngine::dumpStateMap()
+void SymExecEngine::dumpStateMap(int flags)
 {
-    const BlockScheduler::TBlockList bbs(sched_.done());
+    if (!flags)
+        return;
+
+    if (SE_STATE_PRUNING_MODE) {
+        CL_WARN("fixed-point dump poisoned by SE_STATE_PRUNING_MODE = "
+                << (SE_STATE_PRUNING_MODE));
+    }
+
+    // obtain the list of visisted blocks
+    const BlockScheduler::TBlockList &bbs = sched_.done();
+
     BOOST_FOREACH(const BlockScheduler::TBlock block, bbs) {
         const std::string name = block->name();
 
-        const SymState &state = stateMap_[block];
-        BOOST_FOREACH(const SymHeap *sh, state)
-            plotHeap(*sh, name);
+        SymStateWithJoin state(stateMap_[block]);
+
+        for (unsigned idx = 0; idx < block->size(); ++idx) {
+            const CodeStorage::Insn *insn = block->operator[](idx);
+            const struct cl_loc *loc = &insn->loc;
+
+            if (flags & /* print size */ 0x1) {
+                CL_NOTE_MSG(loc, "block " << name << ", insn #" << idx
+                        << ": count of heaps is " << state.size());
+            }
+
+            if (flags & /* plot heaps */ 0x2) {
+                std::ostringstream str;
+                str << "block-" << name << "-insn-" << idx << "-heap";
+                BOOST_FOREACH(const SymHeap *sh, state)
+                    plotHeap(*sh, str.str(), loc);
+            }
+
+            if (!(flags & /* per insn */ 0x4) || cl_is_term_insn(insn->code))
+                break;
+
+            SymStateWithJoin result;
+            BOOST_FOREACH(const SymHeap *pHeap, state) {
+                SymHeap sh(*pHeap);
+                SymExecCore core(sh, &bt_ /* TODO: propagate params_ */);
+                if (!core.exec(result, *insn))
+                    CL_BREAK_IF("replay of CL_INSN_CALL not supported for now");
+            }
+
+            state.swap(result);
+        }
     }
 }
 

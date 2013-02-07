@@ -29,6 +29,8 @@
 #include "symstate.hh"
 #include "util.hh"
 
+#include <algorithm>                /* for std::find() */
+
 #include <boost/foreach.hpp>
 
 bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val)
@@ -248,8 +250,31 @@ bool compareIntRanges(
     return false;
 }
 
+bool isKnownObjectAt(
+        const SymHeap              &sh,
+        const TValId                val,
+        const bool                  allowInvalid = false)
+{
+    const EValueTarget code = sh.valTarget(val);
+    if (VT_RANGE == code)
+        // address with offset ranges are not allowed to be dreferenced for now
+        return false;
+
+    const TObjId obj = sh.objByAddr(val);
+    if (allowInvalid) {
+        if (OBJ_INVALID == obj)
+            return false;
+    }
+    else {
+        if (!isPossibleToDeref(sh, val))
+            return false;
+    }
+
+    return !isAbstractObject(sh, obj);
+}
+
 void moveKnownValueToLeft(
-        const SymHeapCore           &sh,
+        const SymHeap               &sh,
         TValId                      &valA,
         TValId                      &valB)
 {
@@ -265,7 +290,7 @@ void moveKnownValueToLeft(
     valB = tmp;
 }
 
-bool valInsideSafeRange(const SymHeapCore &sh, TValId val)
+bool valInsideSafeRange(const SymHeap &sh, TValId val)
 {
     if (!isKnownObjectAt(sh, val))
         return false;
@@ -319,8 +344,8 @@ bool translateValId(
 }
 
 TValId translateValProto(
-        SymHeap                 &dst,
-        const SymHeap           &src,
+        SymHeapCore             &dst,
+        const SymHeapCore       &src,
         const TValId             valProto)
 {
     if (valProto <= 0)
@@ -343,46 +368,59 @@ void initGlVar(SymHeap &sh, const CVar &cv)
 
     SymBackTrace dummyBt(sh.stor());
     SymProc proc(sh, &dummyBt);
-    (void) proc.varAt(cv);
+    (void) proc.objByVar(cv);
 }
 
 bool /* anyChange */ redirectRefs(
-        SymHeap                 &sh,
-        const TValId            pointingFrom,
-        const TValId            pointingTo,
-        const TValId            redirectTo,
-        const TOffset           offHead)
+        SymHeap                &sh,
+        const TObjId            pointingFrom,
+        const TObjId            pointingTo,
+        const ETargetSpecifier  pointingWith,
+        const TObjId            redirectTo,
+        const ETargetSpecifier  redirectWith,
+        const TOffset           shiftBy)
 {
     bool anyChange = false;
 
     // go through all objects pointing at/inside pointingTo
     FldList refs;
-    const TObjId obj = sh.objByAddr(pointingTo);
-    sh.pointedBy(refs, obj);
+    sh.pointedBy(refs, pointingTo);
     BOOST_FOREACH(const FldHandle &fld, refs) {
-        if (VAL_INVALID != pointingFrom) {
-            const TValId referrerAt = sh.valRoot(fld.placedAt());
-            if (pointingFrom != referrerAt)
+        if (OBJ_INVALID != pointingFrom) {
+            const TObjId refObj = fld.obj();
+            if (pointingFrom != refObj)
                 // pointed from elsewhere, keep going
                 continue;
         }
 
         // check the current link
         const TValId nowAt = fld.value();
+
+        ETargetSpecifier ts = sh.targetSpec(nowAt);
+        if (TS_INVALID != pointingWith && pointingWith != ts)
+            // target specifier mismatch
+            continue;
+
+        if (TS_INVALID != redirectWith)
+            // use the given target specifier
+            ts = redirectWith;
+
+        // first redirect the target
+        const TValId baseAddr = sh.addrOfTarget(redirectTo, ts);
         TValId result;
 
         const EValueTarget code = sh.valTarget(nowAt);
         if (VT_RANGE == code) {
-            // redirect a value with range offset
+            // shift the base address by range offset
             IR::Range offRange = sh.valOffsetRange(nowAt);
-            offRange.lo -= offHead;
-            offRange.hi -= offHead;
-            result = sh.valByRange(redirectTo, offRange);
+            offRange.lo += shiftBy;
+            offRange.hi += shiftBy;
+            result = sh.valByRange(baseAddr, offRange);
         }
         else {
-            // redirect a value with scalar offset
+            // shift the base address by calar offset
             const TOffset offToRoot = sh.valOffset(nowAt);
-            result = sh.valByOffset(redirectTo, offToRoot - offHead);
+            result = sh.valByOffset(baseAddr, offToRoot + shiftBy);
         }
 
         // store the redirected value
@@ -393,7 +431,59 @@ bool /* anyChange */ redirectRefs(
     return anyChange;
 }
 
-bool proveNeq(const SymHeapCore &sh, TValId ref, TValId val)
+void redirectRefsNotFrom(
+        SymHeap                &sh,
+        const TObjSet          &pointingNotFrom,
+        const TObjId            pointingTo,
+        const TObjId            redirectTo,
+        const ETargetSpecifier  redirectWith,
+        bool                  (*tsFilter)(ETargetSpecifier))
+{
+    // go through all objects pointing at/inside pointingTo
+    FldList refs;
+    sh.pointedBy(refs, pointingTo);
+    BOOST_FOREACH(const FldHandle &fld, refs) {
+        const TObjId refObj = fld.obj();
+        if (hasKey(pointingNotFrom, refObj))
+            continue;
+
+        const TValId nowAt = fld.value();
+
+        if (tsFilter) {
+            const ETargetSpecifier ts = sh.targetSpec(nowAt);
+            if (!tsFilter(ts))
+                continue;
+        }
+
+        // resolve the base address
+        const TValId baseAddr = sh.addrOfTarget(redirectTo, redirectWith);
+
+        // shift the base address by the offset range (if any)
+        const IR::Range off = sh.valOffsetRange(nowAt);
+        const TValId result = sh.valByRange(baseAddr, off);
+
+        // store the redirected value
+        fld.setValue(result);
+    }
+}
+
+void transferOutgoingEdges(
+        SymHeap                &sh,
+        const TObjId            ofObj,
+        const TObjId            toObj)
+{
+    CL_BREAK_IF(sh.objSize(ofObj) != sh.objSize(toObj));
+
+    FldList fields;
+    sh.gatherLivePointers(fields, ofObj);
+    BOOST_FOREACH(const FldHandle &fldOld, fields) {
+        const TValId val = fldOld.value();
+        const FldHandle fldNew(sh, toObj, fldOld.type(), fldOld.offset());
+        fldNew.setValue(val);
+    }
+}
+
+bool proveNeq(const SymHeap &sh, TValId ref, TValId val)
 {
     // check for invalid values
     if (VAL_INVALID == ref || VAL_INVALID == val)

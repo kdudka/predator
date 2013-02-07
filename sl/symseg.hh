@@ -51,104 +51,57 @@ bool haveSeg(
  */
 bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr);
 
-/// return 'next' pointer in the given segment (given by root)
-inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TValId seg)
+/// return 'next' pointer in the given segment
+inline PtrHandle nextPtrFromSeg(const SymHeap &sh, TObjId seg)
 {
-    CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(!isAbstractValue(sh, seg));
+    CL_BREAK_IF(OK_REGION == sh.objKind(seg));
 
-    const BindingOff &off = sh.segBinding(sh.objByAddr(seg));
-    const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.next);
-    return PtrHandle(const_cast<SymHeap &>(sh), addr);
+    const BindingOff &off = sh.segBinding(seg);
+    return PtrHandle(const_cast<SymHeap &>(sh), seg, off.next);
 }
 
-/// return 'prev' pointer in the given segment (given by root)
-inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TValId seg)
+/// return 'prev' pointer in the given segment
+inline PtrHandle prevPtrFromSeg(const SymHeap &sh, TObjId seg)
 {
-    CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(!isAbstractValue(sh, seg));
+    CL_BREAK_IF(OK_REGION == sh.objKind(seg));
 
-    const BindingOff &off = sh.segBinding(sh.objByAddr(seg));
-    const TValId addr = const_cast<SymHeap &>(sh).valByOffset(seg, off.prev);
-    return PtrHandle(const_cast<SymHeap &>(sh), addr);
+    const BindingOff &off = sh.segBinding(seg);
+    return PtrHandle(const_cast<SymHeap &>(sh), seg, off.prev);
 }
 
-/// return the value of 'next' in the given segment (given by root)
-inline TValId nextValFromSeg(const SymHeap &sh, TValId seg)
+/// return the value of 'next' in the given segment
+inline TValId nextValFromSeg(const SymHeap &sh, TObjId seg)
 {
-    if (OK_OBJ_OR_NULL == sh.objKind(sh.objByAddr(seg)))
+    if (OK_OBJ_OR_NULL == sh.objKind(seg))
         return VAL_NULL;
 
     const FldHandle ptrNext = nextPtrFromSeg(sh, seg);
     return ptrNext.value();
 }
 
-/// TODO: drop this!
-inline TValId dlSegPeer(const SymHeap &sh, TValId dlsAt)
-{
-    CL_BREAK_IF(sh.valOffset(dlsAt));
+TValId nextValFromSegAddr(const SymHeap &sh, const TValId addr);
 
-    const TObjId dls = sh.objByAddr(dlsAt);
-    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
+TValId prevValFromSegAddr(const SymHeap &sh, const TValId addr);
 
-    const BindingOff &off = sh.segBinding(dls);
-    const TValId peer = valOfPtrAt(const_cast<SymHeap &>(sh), dlsAt, off.prev);
-    return sh.valRoot(peer);
-}
-
-/// TODO: drop this!
-inline TObjId dlSegPeer(const SymHeap &sh, TObjId dls)
-{
-    CL_BREAK_IF(OK_DLS != sh.objKind(dls));
-
-    const BindingOff &off = sh.segBinding(dls);
-    const TValId prev = valOfPtr(const_cast<SymHeap &>(sh), dls, off.prev);
-    return sh.objByAddr(prev);
-}
-
-/// TODO: drop this!
-inline TObjId segPeer(const SymHeap &sh, TObjId seg)
+inline TOffset headOffset(const SymHeap &sh, const TObjId seg)
 {
     const EObjKind kind = sh.objKind(seg);
     CL_BREAK_IF(OK_REGION == kind);
 
-    return (OK_DLS == kind)
-        ? dlSegPeer(sh, seg)
-        : seg;
-}
-
-/// TODO: drop this!
-inline TValId segPeer(const SymHeap &sh, TValId segAt)
-{
-    CL_BREAK_IF(sh.valOffset(segAt));
-
-    const TObjId seg = sh.objByAddr(segAt);
-    const EObjKind kind = sh.objKind(seg);
-    CL_BREAK_IF(OK_REGION == kind);
-
-    return (OK_DLS == kind)
-        ? dlSegPeer(sh, segAt)
-        : segAt;
+    return (OK_OBJ_OR_NULL == kind)
+        ? 0
+        : sh.segBinding(seg).head;
 }
 
 /// return address of segment's head (useful mainly for Linux lists)
-inline TValId segHeadAt(const SymHeap &sh, TValId seg)
+inline TValId segHeadAt(SymHeap &sh, TObjId seg, ETargetSpecifier ts)
 {
-    CL_BREAK_IF(sh.valOffset(seg));
-    CL_BREAK_IF(!isAbstractValue(sh, seg));
+    CL_BREAK_IF(OK_REGION == sh.objKind(seg));
 
-    const BindingOff &off = sh.segBinding(sh.objByAddr(seg));
-    return const_cast<SymHeap &>(sh).valByOffset(seg, off.head);
-}
+    const BindingOff &off = sh.segBinding(seg);
 
-/// we do NOT require obj to be an abstract object
-inline TObjId segNextObj(SymHeap &sh, TObjId obj, TOffset offNext)
-{
-    if (OK_DLS == sh.objKind(obj))
-        // jump to peer in case of DLS
-        obj = dlSegPeer(sh, obj);
-
-    return nextObj(sh, obj, offNext);
+    SymHeap &shWritable = const_cast<SymHeap &>(sh);
+    return shWritable.addrOfTarget(seg, ts, off.head);
 }
 
 /// we require obj to be an abstract object
@@ -156,62 +109,14 @@ inline TObjId segNextObj(SymHeap &sh, TObjId obj)
 {
     const EObjKind kind = sh.objKind(obj);
     if (OK_OBJ_OR_NULL == kind)
-        return OBJ_INVALID;
+        return OBJ_NULL;
 
     const BindingOff off = sh.segBinding(obj);
     const TOffset offNext = (OK_DLS == kind)
         ? off.prev
         : off.next;
 
-    return segNextObj(sh, obj, offNext);
-}
-
-/// TODO: drop this!
-inline TValId segNextRootObj(SymHeap &sh, TValId at, TOffset offNext)
-{
-    CL_BREAK_IF(sh.valOffset(at));
-    if (OK_DLS == sh.objKind(sh.objByAddr(at)))
-        // jump to peer in case of DLS
-        at = dlSegPeer(sh, at);
-
-    return nextRootObj(sh, at, offNext);
-}
-
-/// TODO: drop this!
-inline TValId segNextRootObj(SymHeap &sh, TValId root)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-
-    const TObjId obj = sh.objByAddr(root);
-    const EObjKind kind = sh.objKind(obj);
-    if (OK_OBJ_OR_NULL == kind)
-        return VAL_NULL;
-
-    const BindingOff off = sh.segBinding(obj);
-    const TOffset offNext = (OK_DLS == kind)
-        ? off.prev
-        : off.next;
-
-    return segNextRootObj(sh, root, offNext);
-}
-
-/// true if the given object is a DLS with bf.prev < bf.next
-inline bool isDlSegPeer(const SymHeap &sh, const TObjId obj)
-{
-    if (OK_DLS != sh.objKind(obj))
-        // not a DLS
-        return false;
-
-    const BindingOff &bf = sh.segBinding(obj);
-    return (bf.prev < bf.next);
-}
-
-/// TODO: drop this!
-inline bool isDlSegPeer(const SymHeap &sh, const TValId root)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-    const TObjId obj = sh.objByAddr(root);
-    return isDlSegPeer(sh, obj);
+    return nextObj(sh, obj, offNext);
 }
 
 inline TMinLen objMinLength(const SymHeap &sh, TObjId obj)
@@ -226,57 +131,37 @@ inline TMinLen objMinLength(const SymHeap &sh, TObjId obj)
     return sh.segMinLength(obj);
 }
 
-/// TODO: drop this!
-inline TMinLen objMinLength(const SymHeap &sh, TValId root)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-
-    if (isAbstractValue(sh, root))
-        // abstract target
-        return sh.segMinLength(sh.objByAddr(root));
-
-    if (isPossibleToDeref(sh, root))
-        // concrete target
-        return 1;
-
-    else
-        // no target here
-        return 0;
-}
-
 /// return true if the given pair of values is proven to be non-equal
 bool segProveNeq(const SymHeap &sh, TValId v1, TValId v2);
 
 /// if the current segment min length is lower than the given one, update it!
-inline void segIncreaseMinLength(SymHeap &sh, const TValId segAt, TMinLen len)
+inline void segIncreaseMinLength(SymHeap &sh, const TObjId seg, TMinLen len)
 {
     CL_BREAK_IF(!len);
 
-    const TObjId seg = sh.objByAddr(segAt);
-
-    if (sh.segMinLength(seg) < len) {
+    if (sh.segMinLength(seg) < len)
         sh.segSetMinLength(seg, len);
-        sh.segSetMinLength(sh.objByAddr(segPeer(sh, segAt)), len);
-    }
 }
 
 /// we know (v1 != v2), update related segments in the given heap accordingly!
 bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2);
 
-inline bool objWithBinding(const SymHeap &sh, const TValId root)
+inline bool isObjWithBinding(const EObjKind kind)
 {
-    CL_BREAK_IF(sh.valOffset(root));
+    switch (kind) {
+        case OK_REGION:
+        case OK_OBJ_OR_NULL:
+            return false;
 
-    if (!isAbstractValue(sh, root))
-        // not even an abstract object
-        return false;
+        case OK_SLS:
+        case OK_DLS:
+        case OK_SEE_THROUGH:
+        case OK_SEE_THROUGH_2N:
+            break;
+    }
 
-    const EObjKind kind = sh.objKind(sh.objByAddr(root));
-    return (OK_OBJ_OR_NULL != kind);
+    return true;
 }
-
-/// clone a root object; in case of DLS, clone both parts of it
-TValId segClone(SymHeap &sh, const TValId root);
 
 inline void buildIgnoreList(
         TFldSet                 &ignoreList,
@@ -310,16 +195,6 @@ inline void buildIgnoreList(
     }
 }
 
-/// TODO: drop this!
-inline void buildIgnoreList(
-        TFldSet                 &ignoreList,
-        const SymHeap           &sh,
-        const TValId            at)
-{
-    const TObjId obj = sh.objByAddr(at);
-    return buildIgnoreList(ignoreList, sh, obj);
-}
-
 inline void buildIgnoreList(
         TFldSet                 &ignoreList,
         SymHeap                 &sh,
@@ -335,24 +210,10 @@ inline void buildIgnoreList(
         ignoreList.insert(prev);
 }
 
-/// TODO: drop this!
-inline void buildIgnoreList(
-        TFldSet                 &ignoreList,
-        SymHeap                 &sh,
-        const TValId            at,
-        const BindingOff        &bf)
-{
-    const TObjId obj = sh.objByAddr(at);
-    buildIgnoreList(ignoreList, sh, obj, bf);
-}
-
 /// look through possibly empty objects and return the value seen
 TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen = 0);
 
-/**
- * returns true if all DLS in the given symbolic heap are consistent
- * @note this runs in debug build only
- */
-bool dlSegCheckConsistency(const SymHeap &sh);
+/// true if all segments have populated next/prev pointers
+bool segCheckConsistency(const SymHeap &sh);
 
 #endif /* H_GUARD_SYMSEG_H */

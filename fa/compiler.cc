@@ -32,6 +32,7 @@
 #include <unordered_set>
 
 // Code Listener headers
+#include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
 
 // Forester headers

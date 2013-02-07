@@ -1,0 +1,6 @@
+test-0605.c:44:21: warning: memory leak detected while assigning a heap object
+test-0605.c:66:10: note: from call of Q_get()
+test-0605.c:60:5: note: from call of main()
+test-0605.c:56:11: warning: memory leak detected while destroying a variable on stack
+test-0605.c:67:14: note: from call of Q_destroy()
+test-0605.c:60:5: note: from call of main()

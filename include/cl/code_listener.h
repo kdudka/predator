@@ -599,8 +599,14 @@ enum cl_unop_e {
      */
     CL_UNOP_MINUS,
 
-    /* undocumented for now */
+    /**
+     * absolute value, applicable on numbers only
+     */
     CL_UNOP_ABS,
+
+    /**
+     * conversion of an integer to a real
+     */
     CL_UNOP_FLOAT
 
     /* TODO */

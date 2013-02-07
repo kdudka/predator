@@ -15,6 +15,12 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
+# uncomment this on Darwin if linking the plug-ins fails on undefined references
+#set(CMAKE_SHARED_LINKER_FLAGS "-flat_namespace -undefined suppress")
+
+# CMake on Darwin would otherwise use .dylib suffix, which breaks GCC arg parser
+set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+
 # Check Boost availability
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_ADDITIONAL_VERSIONS "1.46" "1.47" "1.48" "1.49")

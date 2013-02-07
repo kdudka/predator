@@ -114,10 +114,15 @@ public:   // data members
 //{
 
 	/// data fields for a block
-	struct
+	struct BlockFields
 	{
 		std::string name;        ///< the name of the memory node
 		SelectorVec selVec;      ///< vector of selectors inside a memory node
+
+		BlockFields(const std::string& pName, const SelectorVec& pSelVec) :
+			name(pName),
+			selVec(pSelVec)
+		{ }
 	} block_;
 
 	/// data fields for a tree reference

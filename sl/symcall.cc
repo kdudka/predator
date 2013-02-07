@@ -206,7 +206,7 @@ struct SymCallCache::Private {
     SymBackTrace                bt;
 
     void importGlVar(SymHeap &sh, const CVar &cv);
-    void resolveHeapCut(TCVarList &cut, SymHeap &sh, TFncRef &fnc);
+    void resolveHeapCut(TCVarList &cut, SymHeap &sh, TFncRef fnc);
     SymCallCtx* getCallCtx(const SymHeap &entry, TFncRef fnc);
 
     Private(TStorRef stor):
@@ -560,6 +560,9 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv)
     std::string varString = varToString(stor, cv.uid, &loc);
     CL_DEBUG_MSG(loc, "<G> importGlVar() imports variable " << varString);
 
+    // create a trace node for this call of importGlVar()
+    entry.traceUpdate(new Trace::ImportGlVarNode(entry.traceNode(), varString));
+
     // seek the gl var going through the ctx stack backward
     int idx;
     for (idx = cnt - 1; 0 < idx; --idx) {
@@ -601,7 +604,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv)
 void SymCallCache::Private::resolveHeapCut(
         TCVarList                       &cut,
         SymHeap                         &sh,
-        TFncRef                         &fnc)
+        TFncRef                          fnc)
 {
     const TFncVarSet &fncVars = fnc.vars;
     const int nestLevel = bt.countOccurrencesOfTopFnc();

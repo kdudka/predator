@@ -10,8 +10,6 @@
 - allow to represent arrays of fixed lengths in the same way as list segments
   are represented (it would allow to create hash tables of fixed length)
 
-- get test-0707 from slayer working more efficient (we need to improve the join)
-
 - trees in various forms that appear in real code
 
 - choose some parts of applications and target them (for example drivers)
@@ -64,3 +62,6 @@
 - As for the block operations, what about realloc?
 
 ------------------------------------------------------------------------------
+
+- allow to use #pragma to control certain Predator options at run-time (by PP)
+  <http://gcc.gnu.org/onlinedocs/cpp/Pragmas.html>

@@ -1,0 +1,44 @@
+#!/bin/bash
+export SELF="$0"
+
+if test -z "$1" || test ! -e "$1"; then
+    echo Usage: $0 foo.c
+    exit 1
+fi
+
+# include common code base
+topdir="`dirname "$(readlink -f "$SELF")"`/../.."
+source "$topdir/build-aux/xgcclib.sh"
+
+# basic setup
+CL_DIR="$topdir/cl"
+GCC_PLUG='@GCC_PT_PLUG@'
+GCC_HOST='@GCC_HOST@'
+PRED_INCL_DIR='@PRED_INCL_DIR@'
+
+# attempt to make
+make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D CL_DEBUG=ON' || exit $?
+
+# initial checks
+find_gcc_host
+find_cc1_host
+find_gcc_plug chk_pt chk_pt
+
+# use gdb by default
+test -z "$GDB" && GDB=gdb
+
+# prepare the command line
+RUN="$GDB --quiet --args $CC1_HOST \"$1\" \
+    -I$topdir/include/predator-builtins \
+    -I$topdir/cl \
+    -I$PRED_INCL_DIR \
+    -dumpbase test.c -quiet -o /dev/null \
+    -m32 -O0 -Wall -Wextra \
+    -fplugin=$GCC_PLUG \
+    -fplugin-arg-libchk_pt-dump-pp \
+    -fplugin-arg-libchk_pt-args=$ARGS \
+    -fplugin-arg-libchk_pt-verbose=1"
+
+RUN="`printf "%s\n" "$RUN" | tr --squeeze-repeats ' '`"
+printf "\n\n%s\n\n" "$RUN"
+eval "$RUN"

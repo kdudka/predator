@@ -178,7 +178,7 @@ namespace {
 void operandToStreamCstInt(std::ostream &str, const struct cl_operand &op)
 {
     const struct cl_cst &cst = op.data.cst;
-    const int val = cst.data.cst_int.value;
+    const long val = cst.data.cst_int.value;
 
     const enum cl_type_e code = op.type->code;
     switch (code) {

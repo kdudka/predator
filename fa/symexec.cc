@@ -43,9 +43,10 @@ void reportErrorNoLocation(const char* errMsg)
 #include <algorithm>
 
 // Code Listener headers
-#include <cl/code_listener.h>
+#include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
+#include <cl/code_listener.h>
 #include <cl/storage.hh>
 #include "../cl/ssd.h"
 

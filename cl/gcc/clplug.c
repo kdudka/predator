@@ -70,9 +70,6 @@
 #include <limits.h>
 #include <stdlib.h>
 
-// required by basename(3)
-#include <libgen.h>
-
 #ifndef STREQ
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
 #endif
@@ -170,6 +167,16 @@ static struct plugin_info cl_info = {
 "    -fplugin-arg-%s-verbose[=VERBOSITY_LEVEL]      turn on verbose mode\n"
 };
 
+// works on Darwin without allocating extra memory, but will not work on Windows
+const char* safe_basename(const char *path)
+{
+    const char *slash = strrchr((char *) path, '/');
+    if (slash && slash[1])
+        return slash + 1;
+    else
+        return path;
+}
+
 static void init_plugin_name(const struct plugin_name_args *info)
 {
     if (!STREQ("[uninitialized]", plugin_name)) {
@@ -186,7 +193,7 @@ static void init_plugin_name(const struct plugin_name_args *info)
     if (plugin_name_alloc)
         plugin_name = plugin_name_alloc;
 
-    plugin_base_name = basename((char *) plugin_name);
+    plugin_base_name = safe_basename((char *) plugin_name);
 
     // read plug-in base name
     const char *name = info->base_name;
@@ -998,17 +1005,40 @@ static void read_cst_int(struct cl_operand *op, tree t)
 
 static void read_cst_real(struct cl_operand *op, tree t)
 {
-    // TODO: a proper implementation of this
+    // TODO: make this a compile-time assertion
+    if (8 != sizeof(double))
+        CL_BREAK_IF("unsupported sizeof(double) detected in read_cst_int()");
+
+    // the float encoder in gcc writes floats to arrays of longs
     union {
-        float       f;
-        long        l[1];
+        double              d;
+        long                l[2];
+        unsigned long       ul[2];
     } u;
 
-    real_to_target_fmt(u.l, TREE_REAL_CST_PTR(t), &ieee_single_format);
+    // convert gcc's internal representation of real to build-arch native format
+    real_to_target_fmt(u.l, TREE_REAL_CST_PTR(t), &ieee_double_format);
+
+    // compile-time switch
+    switch (sizeof(long)) {
+        case 4:
+            // already encoded as build-arch native format
+            break;
+
+        case 8:
+            // 4 bytes of each long are valid --> we need to pack the chunks
+            u.ul[0] &= (1UL << 32) - 1UL;
+            u.ul[0] |= (u.ul[1] << 32);
+            break;
+
+        default:
+            // TODO: make this a compile-time assertion
+            CL_BREAK_IF("build architecture not supported by read_cst_int()");
+    }
 
     op->code                            = CL_OPERAND_CST;
     op->data.cst.code                   = CL_TYPE_REAL;
-    op->data.cst.data.cst_real.value    = (double) u.f;
+    op->data.cst.data.cst_real.value    = u.d;
 }
 
 static void read_raw_operand(struct cl_operand *op, tree t)
@@ -1214,7 +1244,8 @@ static void handle_operand(struct cl_operand *op, tree t)
     op->type = add_type_if_needed(t);
 
     // read accessor
-    while (handle_accessor(&op->accessor, &t));
+    while (handle_accessor(&op->accessor, &t))
+        ;
 
     CL_BREAK_IF(NULL_TREE == t);
     read_raw_operand(op, t);

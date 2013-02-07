@@ -247,7 +247,7 @@ namespace {
 void ClPrettyPrint::printIntegralCst(const struct cl_operand *op)
 {
     const struct cl_type *type = op->type;
-    const int value = op->data.cst.data.cst_int.value;
+    const long value = op->data.cst.data.cst_int.value;
 
     enum cl_type_e code = type->code;
     switch (code) {

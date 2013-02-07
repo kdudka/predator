@@ -58,14 +58,14 @@ bool anyRangeFromVal(IR::Range *pDst, const SymHeap &, const TValId);
 /// extract string literal from the given value if possible, fail otherwise
 bool stringFromVal(const char **pDst, const SymHeap &, const TValId);
 
-void moveKnownValueToLeft(const SymHeapCore &sh, TValId &valA, TValId &valB);
+void moveKnownValueToLeft(const SymHeap &sh, TValId &valA, TValId &valB);
 
 bool valInsideSafeRange(const SymHeapCore &sh, TValId val);
 
 bool canWriteDataPtrAt(const SymHeapCore &sh, TValId val);
 
 /// true if the given values are proven to be non-equal in non-abstract world
-bool proveNeq(const SymHeapCore &sh, TValId v1, TValId v2);
+bool proveNeq(const SymHeap &sh, TValId v1, TValId v2);
 
 /// extract an integral range from an unwrapped CV_INT/CV_INT_RANGE custom value
 const IR::Range& rngFromCustom(const CustomValue &);
@@ -101,42 +101,21 @@ bool translateValId(
         const TValMap           &valMap);
 
 TValId translateValProto(
-        SymHeap                 &dst,
-        const SymHeap           &src,
+        SymHeapCore             &dst,
+        const SymHeapCore       &src,
         const TValId             valProto);
 
-inline FldHandle translateObjId(
+inline FldHandle translateFldHandle(
         SymHeap                 &dst,
-        SymHeap                 &src,
-        const TValId            dstRootAt,
+        const TObjId             dstObj,
         const FldHandle         &srcField)
 {
-    CL_BREAK_IF(&src != srcField.sh());
-    (void) src;
-
     // gather properties of the field in 'src'
     const TOffset  off = srcField.offset();
     const TObjType clt = srcField.type();
 
     // use them to obtain the corresponding object in 'dst'
-    const TValId dstAt = dst.valByOffset(dstRootAt, off);
-    return FldHandle(dst, dstAt, clt);
-}
-
-/// TODO: drop this!
-inline TValId valOfPtrAt(SymHeap &sh, TValId at)
-{
-    CL_BREAK_IF(!canWriteDataPtrAt(sh, at));
-
-    const PtrHandle ptr(sh, at);
-    return ptr.value();
-}
-
-/// TODO: drop this!
-inline TValId valOfPtrAt(SymHeap &sh, TValId at, TOffset off)
-{
-    const TValId ptrAt = sh.valByOffset(at, off);
-    return valOfPtrAt(sh, ptrAt);
+    return FldHandle(dst, dstObj, clt, off);
 }
 
 inline TValId valOfPtr(SymHeap &sh, TObjId obj, TOffset off)
@@ -145,9 +124,8 @@ inline TValId valOfPtr(SymHeap &sh, TObjId obj, TOffset off)
     return ptr.value();
 }
 
-inline bool isAbstractValue(const SymHeap &sh, const TValId val)
+inline bool isAbstractObject(const SymHeap &sh, const TObjId obj)
 {
-    const TObjId obj = sh.objByAddr(val);
     const EObjKind kind = sh.objKind(obj);
     return (OK_REGION != kind);
 }
@@ -161,37 +139,6 @@ inline bool isPossibleToDeref(const SymHeapCore &sh, const TValId val)
 
     const TObjId obj = sh.objByAddr(val);
     return sh.isValid(obj);
-}
-
-inline bool isKnownObjectAt(
-        const SymHeapCore          &sh,
-        const TValId                val,
-        const bool                  allowInvalid = false)
-{
-    const EValueTarget code = sh.valTarget(val);
-    if (VT_RANGE == code)
-        // address with offset ranges are not allowed to be dreferenced for now
-        return false;
-
-    if (allowInvalid) {
-        if (OBJ_INVALID == sh.objByAddr(val))
-            return false;
-    }
-    else {
-        if (!isPossibleToDeref(sh, val))
-            return false;
-    }
-
-    return !isAbstractValue(/* XXX */dynamic_cast<const SymHeap &>(sh), val);
-}
-
-inline bool isAddressToFreedObj(SymHeapCore &sh, const TValId val)
-{
-    const TObjId obj = sh.objByAddr(val);
-    if (OBJ_INVALID == obj)
-        return false;
-
-    return !sh.isValid(obj);
 }
 
 inline bool isVarAlive(SymHeap &sh, const CVar &cv)
@@ -209,14 +156,6 @@ inline TObjId nextObj(SymHeap &sh, TObjId obj, TOffset offNext)
 
     const TValId valNext = valOfPtr(sh, obj, offNext);
     return sh.objByAddr(valNext);
-}
-
-/// TODO: drop this!
-inline TValId nextRootObj(SymHeap &sh, TValId root, TOffset offNext)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-    const TValId valNext = valOfPtrAt(sh, root, offNext);
-    return sh.valRoot(valNext);
 }
 
 inline bool areValProtosEqual(
@@ -432,24 +371,28 @@ bool /* complete */ traverseLiveFields(
     return traverseLiveFieldsGeneric<N>(heaps, objs, visitor);
 }
 
-/// (VAL_INVALID != pointingFrom) means 'pointing from anywhere'
+/// (OBJ_INVALID != pointingFrom) means 'pointing from anywhere'
 bool redirectRefs(
-        SymHeap                 &sh,
-        const TValId            pointingFrom,
-        const TValId            pointingTo,
-        const TValId            redirectTo,
+        SymHeap                &sh,
+        const TObjId            pointingFrom,
+        const TObjId            pointingTo,
+        const ETargetSpecifier  pointingWith,
+        const TObjId            redirectTo,
+        const ETargetSpecifier  redirectWith,
         const TOffset           offHead = 0);
 
-inline TValId objClone(SymHeap &sh, const TValId root)
-{
-    CL_BREAK_IF(sh.valOffset(root));
-    const TValId dup = sh.valClone(root);
+void redirectRefsNotFrom(
+        SymHeap                &sh,
+        const TObjSet          &pointingNotFrom,
+        const TObjId            pointingTo,
+        const TObjId            redirectTo,
+        const ETargetSpecifier  redirectWith,
+        bool                  (*tsFilter)(ETargetSpecifier) = 0);
 
-    // if there was "a pointer to self", it should remain "a pointer to self";
-    // however "self" has been changed, so that a redirection is necessary
-    redirectRefs(sh, dup, root, dup);
-    return dup;
-}
+void transferOutgoingEdges(
+        SymHeap                &sh,
+        const TObjId            ofObj,
+        const TObjId            toObj);
 
 /// take the given visitor through all live program variables in all heaps
 template <unsigned N_DST, unsigned N_SRC, class THeap, class TVisitor>

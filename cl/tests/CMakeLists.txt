@@ -22,16 +22,27 @@ add_definitions("-I../../include -fPIC")
 add_library(chk_var_killer SHARED chk_var_killer.cc)
 target_link_libraries(chk_var_killer cl)
 
+# compile libchk_pt.so
+add_library(chk_pt SHARED chk_pt.cc)
+target_link_libraries(chk_pt cl)
+
 # compile libcl_smoke_test.so
 add_library(cl_smoke_test SHARED cl_smoke_test.cc)
 target_link_libraries(cl_smoke_test cl)
 
-# get the full path of libchk_var_killer.so
-get_property(GCC_PLUG TARGET chk_var_killer PROPERTY LOCATION)
-message (STATUS "GCC_PLUG: ${GCC_PLUG}")
+# get the full paths of plugins
+get_property(GCC_VK_PLUG TARGET chk_var_killer PROPERTY LOCATION)
+get_property(GCC_PT_PLUG TARGET chk_pt         PROPERTY LOCATION)
+set(GCC_PLUG "${GCC_VK_PLUG}")
+
+message(STATUS "GCC_VK_PLUG: ${GCC_VK_PLUG}")
+message(STATUS "GCC_PT_PLUG: ${GCC_PT_PLUG}")
+
+set(PRED_INCL_DIR "${cl_SOURCE_DIR}/../include/predator-builtins/")
 
 macro(add_test_wrap test_name cmd)
-    add_test("${test_name}" sh -c "LC_ALL=C CCACHE_DISABLE=1 ${cmd}")
+    add_test("${test_name}" sh -c
+        "LC_ALL=C CCACHE_DISABLE=1 MALLOC_PERTURB_=170 ${cmd}")
 endmacro()
 
 # basic set of the options to compile gcc/clplug.c with libc_test.so loaded
@@ -77,14 +88,83 @@ endif()
 macro(add_vk_test id)
     set(cmd "${GCC_HOST} -c ${cl_SOURCE_DIR}/tests/data/vk-${id}.c")
     set(cmd "${cmd} -o /dev/null")
-    set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/tests/libchk_var_killer.so")
+    set(cmd "${cmd} -I${PRED_INCL_DIR}")
+    set(cmd "${cmd} -fplugin=${GCC_VK_PLUG}")
     add_test_wrap("var-killer-${id}" "${cmd}")
 endmacro()
 
-# append test-cases for var-killer
+macro(add_pt_test id)
+    set(cmd "${GCC_HOST} -c ${cl_SOURCE_DIR}/tests/data/pt-${id}.c")
+    set(cmd "${cmd} -o /dev/null")
+    set(cmd "${cmd} -I${cl_SOURCE_DIR}")
+    set(cmd "${cmd} -DNDEBUG")
+    set(cmd "${cmd} -I${PRED_INCL_DIR}")
+    set(cmd "${cmd} -fplugin=${GCC_PT_PLUG}")
+
+    add_test_wrap("points-to-${id}" "${cmd}")
+endmacro()
+
+####################################
+# append test-cases for var-killer #
+####################################
+
 add_vk_test(0001)
 add_vk_test(0002)
 add_vk_test(0003)
+
+add_vk_test(0100)  # show mayBePointed breakage
+add_vk_test(0101)
+
+################################
+# append tests points-to graph #
+################################
+
+# -> basic pointer operations
+add_pt_test(0001)
+add_pt_test(0002)
+add_pt_test(0003)
+
+# -> struct pointer operations
+add_pt_test(0201)
+add_pt_test(0202)
+add_pt_test(0203)
+
+# -> void pointer tricks
+add_pt_test(0401)
+add_pt_test(0402)
+add_pt_test(0490) # regr. test
+add_pt_test(0491) # regr. test
+
+# -> global variables
+add_pt_test(0801)
+add_pt_test(0802)
+add_pt_test(0803)
+add_pt_test(0804)
+add_pt_test(0850) # BindLoc
+add_pt_test(0851)
+
+# -> function parameters
+add_pt_test(0901)
+add_pt_test(0902)
+add_pt_test(0903)
+add_pt_test(0904)
+add_pt_test(0905) # passing structs as parameters
+add_pt_test(0906)
+add_pt_test(0907) # binding return value
+add_pt_test(0950) # ugly hacks // checks are disabled
+
+add_pt_test(1100) # external function -> black hole
+add_pt_test(1101) # whitelisted fnc -> no-black hole!
+
+# -> more complicated examples
+add_pt_test(1200) # PT-info downward propagation
+add_pt_test(1201) # ^^^ + check for non-propagation with returning operand
+add_pt_test(1202) # recursive loop in call-graph
+add_pt_test(1203) # simple tail recuresion (from forester-regre/test-f0019.c)
+add_pt_test(1204) # caught a USE_AFTER_FREE (from predator-regre/test-0221.c)
+
+add_pt_test(1300) # predator-regre test-0167.c
+
 
 # headers sanity #0
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
@@ -106,7 +186,15 @@ add_test("headers_sanity-3" make -j
     -C ${cl_SOURCE_DIR}
     -f ${cl_SOURCE_DIR}/Makefile.chk)
 
-# a debugging helper
+# debugging helpers
 configure_file(${cl_SOURCE_DIR}/tests/vkdebug.sh.in
                ${cl_BINARY_DIR}/tests/vkdebug.sh
+               @ONLY)
+
+configure_file(${cl_SOURCE_DIR}/tests/ptgccv.in
+               ${cl_BINARY_DIR}/tests/ptgccv
+               @ONLY)
+
+configure_file(${cl_SOURCE_DIR}/tests/ptgdb.in
+               ${cl_BINARY_DIR}/tests/ptgdb
                @ONLY)

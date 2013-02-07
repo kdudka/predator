@@ -264,16 +264,19 @@ class CondNode: public Node {
 /// a trace graph node that represents a @b single abstraction step
 class AbstractionNode: public Node {
     private:
-        const EObjKind kind_;
+        const EObjKind              kind_;
+        const std::string           name_;
 
     public:
         /**
          * @param ref a trace leading to this abstraction step
          * @param kind the kind of abstraction step being performed
+         * @param name name of the corresponding debug plot (empty if unused)
          */
-        AbstractionNode(Node *ref, EObjKind kind):
+        AbstractionNode(Node *ref, EObjKind kind, const std::string &name):
             Node(ref),
-            kind_(kind)
+            kind_(kind),
+            name_(name)
         {
         }
 
@@ -284,16 +287,19 @@ class AbstractionNode: public Node {
 /// a trace graph node that represents a @b single concretization step
 class ConcretizationNode: public Node {
     private:
-        const EObjKind kind_;
+        const EObjKind              kind_;
+        const std::string           name_;
 
     public:
         /**
          * @param ref a trace leading to this concretization step
          * @param kind the kind of concretization step being performed
+         * @param name name of the corresponding debug plot (empty if unused)
          */
-        ConcretizationNode(Node *ref, EObjKind kind):
+        ConcretizationNode(Node *ref, EObjKind kind, const std::string &name):
             Node(ref),
-            kind_(kind)
+            kind_(kind),
+            name_(name)
         {
         }
 
@@ -316,8 +322,6 @@ class SpliceOutNode: public Node {
             len_(len)
         {
         }
-
-        virtual Node* printNode() const;
 
     protected:
         void virtual plotNode(TracePlotter &) const;
@@ -447,6 +451,26 @@ class CallDoneNode: public Node {
         }
 
         virtual Node* printNode() const;
+
+    protected:
+        void virtual plotNode(TracePlotter &) const;
+};
+
+/// a trace graph node that represents a @b single call of importGlVar()
+class ImportGlVarNode: public Node {
+    private:
+        const std::string           varString_;
+
+    public:
+        /**
+         * @param ref a trace leading to this concretization step
+         * @param string describing the global variable being imported
+         */
+        ImportGlVarNode(Node *ref, const std::string &varString):
+            Node(ref),
+            varString_(varString)
+        {
+        }
 
     protected:
         void virtual plotNode(TracePlotter &) const;

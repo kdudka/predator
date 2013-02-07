@@ -2,6 +2,14 @@ test-0182.c:149:9: warning: conditional jump depends on uninitialized value
 test-0182.c:149:9: note: the value being used is an untouched contents of heap
 test-0182.c:178:17: note: from call of inspect_full()
 test-0182.c:175:5: note: from call of main()
+test-0182.c:149:9: warning: conditional jump depends on uninitialized value
+test-0182.c:149:9: note: the value being used is an untouched contents of heap
+test-0182.c:178:17: note: from call of inspect_full()
+test-0182.c:175:5: note: from call of main()
+test-0182.c:149:9: warning: conditional jump depends on uninitialized value
+test-0182.c:149:9: note: the value being used is an untouched contents of heap
+test-0182.c:178:17: note: from call of inspect_full()
+test-0182.c:175:5: note: from call of main()
 test-0182.c:5:13: warning: end of function fail() has not been reached
 test-0182.c:149:9: note: from call of fail()
 test-0182.c:178:17: note: from call of inspect_full()

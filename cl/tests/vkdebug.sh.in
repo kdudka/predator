@@ -12,12 +12,11 @@ source "$topdir/build-aux/xgcclib.sh"
 
 # basic setup
 CL_DIR="$topdir/cl"
-GCC_PLUG='@GCC_PLUG@'
+GCC_PLUG='@GCC_VK_PLUG@'
 GCC_HOST='@GCC_HOST@'
 
 # attempt to make
-make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D USE_INT3_AS_BRK=ON -D CL_DEBUG=ON' \
-    || exit 1
+make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D CL_DEBUG=ON' || exit $?
 
 # initial checks
 find_gcc_host

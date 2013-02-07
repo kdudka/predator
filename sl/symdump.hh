@@ -46,4 +46,7 @@ void dump_plot(const SymHeapCore &sh, const char *name);
 /// plot a trace graph with the given end-point
 void dump_trace(Trace::Node *endPoint);
 
+/// plot the corresponding trace graph
+void dump_trace(const SymHeapCore &);
+
 #endif /* H_GUARD_SYM_DUMP_H */

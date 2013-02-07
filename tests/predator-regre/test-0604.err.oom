@@ -1,0 +1,8 @@
+test-0604.c:24:32: error: dereference of NULL value
+test-0604.c:30:25: error: dereference of NULL value
+test-0604.c:49:25: error: dereference of NULL value
+test-0604.c:30:25: error: dereference of NULL value
+test-0604.c:49:25: error: dereference of NULL value
+test-0604.c:24:32: error: dereference of NULL value
+test-0604.c:30:25: error: dereference of NULL value
+test-0604.c:49:25: error: dereference of NULL value

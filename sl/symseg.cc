@@ -28,6 +28,37 @@
 
 #include <boost/foreach.hpp>
 
+TValId valFromSegAddr(
+        const SymHeap              &sh,
+        const TValId                addr,
+        const bool                  backward)
+{
+    const TObjId seg = sh.objByAddr(addr);
+    if (OK_OBJ_OR_NULL == sh.objKind(seg)) {
+        CL_BREAK_IF(backward);
+        return VAL_NULL;
+    }
+
+    const ETargetSpecifier ts = sh.targetSpec(addr);
+    const bool isLast = (TS_LAST == ts);
+
+    const PtrHandle ptr = (backward == isLast)
+        ? nextPtrFromSeg(sh, seg)
+        : prevPtrFromSeg(sh, seg);
+
+    return ptr.value();
+}
+
+TValId nextValFromSegAddr(const SymHeap &sh, const TValId addr)
+{
+    return valFromSegAddr(sh, addr, /* backward */ false);
+}
+
+TValId prevValFromSegAddr(const SymHeap &sh, const TValId addr)
+{
+    return valFromSegAddr(sh, addr, /* backward */ true);
+}
+
 bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
 {
     if (proveNeq(sh, ref, val))
@@ -59,8 +90,8 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
         // oops, we cannot prove the address is safely allocated, giving up
         return false;
 
-    const TValId root2 = sh.valRoot(val);
-    const TMinLen len2 = objMinLength(sh, root2);
+    const TObjId obj2 = sh.objByAddr(val);
+    const TMinLen len2 = objMinLength(sh, obj2);
     if (!len2)
         // one of the targets is possibly empty, giving up
         return false;
@@ -74,17 +105,18 @@ bool segProveNeq(const SymHeap &sh, TValId ref, TValId val)
         // oops, we cannot prove the address is safely allocated, giving up
         return false;
 
-    const TValId root1 = sh.valRoot(ref);
-    const TMinLen len1 = objMinLength(sh, root1);
+    const TObjId obj1 = sh.objByAddr(ref);
+    const TMinLen len1 = objMinLength(sh, obj1);
     if (!len1)
         // both targets are possibly empty, giving up
         return false;
 
-    if (!isAbstractValue(sh, ref))
+    const EObjKind kind1 = sh.objKind(obj1);
+    if (OK_REGION == kind1)
         // non-empty abstract object vs. concrete object
         return true;
 
-    if (root2 != segPeer(sh, root1))
+    if (obj2 != obj1)
         // a pair of non-empty abstract objects
         return true;
 
@@ -99,66 +131,64 @@ bool haveSeg(
         const TValId                 pointingTo,
         const EObjKind               kind)
 {
-    if (!isAbstractValue(sh, atAddr))
-        // not an abstract object
-        return false;
-
-    TValId seg = sh.valRoot(atAddr);
-    if (kind != sh.objKind(sh.objByAddr(seg)))
+    const TObjId seg = sh.objByAddr(atAddr);
+    if (kind != sh.objKind(seg))
         // kind mismatch
         return false;
 
-    if (OK_DLS == kind) {
-        seg = dlSegPeer(sh, seg);
-        if (OK_DLS != sh.objKind(sh.objByAddr(seg)))
-            // invalid peer
-            return false;
-    }
-
     // compare the end-points
-    SymHeap &writable = const_cast<SymHeap &>(sh);
-    const TValId valNext = nextValFromSeg(writable, seg);
+    const TValId valNext = nextValFromSegAddr(sh, atAddr);
     return (valNext == pointingTo);
 }
 
 bool haveDlSegAt(const SymHeap &sh, TValId atAddr, TValId peerAddr)
 {
-    if (atAddr <= 0 || peerAddr <= 0)
-        // no valid targets
+    if (VT_RANGE == sh.valTarget(atAddr) || VT_RANGE == sh.valTarget(peerAddr))
+        // VT_RANGE not supported for now
         return false;
 
-    if (!isAbstractValue(sh, atAddr) || !isAbstractValue(sh, peerAddr))
-        // not abstract objects
-        return false;
-
-    const TValId seg = sh.valRoot(atAddr);
-    if (OK_DLS != sh.objKind(sh.objByAddr(seg)))
+    const TObjId seg = sh.objByAddr(atAddr);
+    if (OK_DLS != sh.objKind(seg))
         // not a DLS
         return false;
 
-    const TValId peer = dlSegPeer(sh, seg);
-    if (OK_DLS != sh.objKind(sh.objByAddr(peer)))
+    const TObjId peer = sh.objByAddr(peerAddr);
+    if (OK_DLS != sh.objKind(peer))
         // invalid peer
         return false;
 
-    // compare the end-points
-    return (segHeadAt(sh, peer) == peerAddr);
+    const TOffset off1 = sh.valOffset(atAddr);
+    const TOffset off2 = sh.valOffset(peerAddr);
+    if (off1 != off2)
+        // offset mismatch
+        return false;
+
+    if (peer != seg)
+        // not in a relation
+        return false;
+
+    const ETargetSpecifier ts1 = sh.targetSpec(atAddr);
+    const ETargetSpecifier ts2 = sh.targetSpec(peerAddr);
+    CL_BREAK_IF(TS_ALL == ts1 || TS_ALL == ts2);
+    CL_BREAK_IF(ts1 == ts2);
+    return (TS_FIRST == ts1 && TS_LAST == ts2)
+        || (TS_LAST == ts1 && TS_FIRST == ts2);
 }
 
 bool haveSegBidir(
-        TValId                     *pDst,
+        TObjId                     *pDst,
         const SymHeap              &sh,
         const EObjKind              kind,
         const TValId                v1,
         const TValId                v2)
 {
     if (haveSeg(sh, v1, v2, kind)) {
-        *pDst = sh.valRoot(v1);
+        *pDst = sh.objByAddr(v1);
         return true;
     }
 
     if (haveSeg(sh, v2, v1, kind)) {
-        *pDst = sh.valRoot(v2);
+        *pDst = sh.objByAddr(v2);
         return true;
     }
 
@@ -168,24 +198,27 @@ bool haveSegBidir(
 
 bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
 {
-    if (!isAbstractValue(sh, v1) && !isAbstractValue(sh, v2))
+    const TObjId obj1 = sh.objByAddr(v1);
+    const TObjId obj2 = sh.objByAddr(v2);
+
+    if (!isAbstractObject(sh, obj1) && !isAbstractObject(sh, obj2))
         // no abstract objects involved
         return false;
 
-    if (VAL_NULL == v1 && !sh.valOffset(v2))
-        v1 = segNextRootObj(sh, v2);
-    if (VAL_NULL == v2 && !sh.valOffset(v1))
-        v2 = segNextRootObj(sh, v1);
+    if (VAL_NULL == v1 && sh.valOffset(v2) == headOffset(sh, obj2))
+        v1 = nextValFromSegAddr(sh, v2);
 
-    TValId seg;
+    if (VAL_NULL == v2 && sh.valOffset(v1) == headOffset(sh, obj1))
+        v2 = nextValFromSegAddr(sh, v1);
+
+    TObjId seg;
     if (haveSegBidir(&seg, sh, OK_OBJ_OR_NULL, v1, v2)
             || haveSegBidir(&seg, sh, OK_SEE_THROUGH, v1, v2)
             || haveSegBidir(&seg, sh, OK_SEE_THROUGH_2N, v1, v2))
     {
         // replace OK_SEE_THROUGH/OK_OBJ_OR_NULL by OK_CONCRETE
-        const TObjId obj = sh.objByAddr(seg);
-        decrementProtoLevel(sh, obj);
-        sh.objSetConcrete(obj);
+        decrementProtoLevel(sh, seg);
+        sh.objSetConcrete(seg);
         return true;
     }
 
@@ -200,37 +233,13 @@ bool segApplyNeq(SymHeap &sh, TValId v1, TValId v2)
     }
 
     if (haveDlSegAt(sh, v1, v2)) {
-        segIncreaseMinLength(sh, v1, /* DLS 2+ */ 2);
+        seg = sh.objByAddr(v1);
+        segIncreaseMinLength(sh, seg, /* DLS 2+ */ 2);
         return true;
     }
 
     // fallback to explicit Neq predicate
     return false;
-}
-
-TValId segClone(SymHeap &sh, const TValId root)
-{
-    const TValId dup = objClone(sh, root);
-
-    if (OK_DLS == sh.objKind(sh.objByAddr(root))) {
-        // we need to clone the peer as well
-        const TValId peer = dlSegPeer(sh, root);
-        const TValId dupPeer = sh.valClone(peer);
-
-        // dig the 'peer' selectors of the cloned objects
-        const TOffset offpSeg  = sh.segBinding(sh.objByAddr(dup)).prev;
-        const TOffset offpPeer = sh.segBinding(sh.objByAddr(dupPeer)).prev;
-
-        // resolve selectors -> sub-objects
-        const PtrHandle ppSeg (sh, sh.valByOffset(dup, offpSeg));
-        const PtrHandle ppPeer(sh, sh.valByOffset(dupPeer, offpPeer));
-
-        // now cross the 'peer' pointers
-        ppSeg .setValue(segHeadAt(sh, dupPeer));
-        ppPeer.setValue(segHeadAt(sh, dup));
-    }
-
-    return dup;
 }
 
 TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
@@ -246,13 +255,10 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
             // an already seen value
             break;
 
-        if (!isAbstractValue(sh, val))
+        const TObjId seg = sh.objByAddr(val);
+        if (!isAbstractObject(sh, seg))
             // a non-abstract object reached
             break;
-
-        const TValId root = sh.valRoot(val);
-        const TValId segAt = segPeer(sh, root);
-        const TObjId seg = sh.objByAddr(segAt);
 
         if (sh.segMinLength(seg))
             // non-empty abstract object reached
@@ -269,47 +275,55 @@ TValId lookThrough(const SymHeap &sh, TValId val, TValSet *pSeen)
         const BindingOff &bOff = sh.segBinding(seg);
         const TOffset shiftBy = off - bOff.head;
 
-        if (root != segAt) {
-            // put the shifted address of DLS peer to the list of seen values
-            const FldHandle ptrPrev = prevPtrFromSeg(sh, root);
-            const TValId valPrev = ptrPrev.value();
-            val = const_cast<SymHeap &>(sh).valByOffset(valPrev, shiftBy);
-        }
-
         // jump to next value
-        const TValId valNext = nextValFromSeg(sh, segAt);
+        const TValId valNext = nextValFromSegAddr(sh, val);
         val = const_cast<SymHeap &>(sh).valByOffset(valNext, shiftBy);
     }
 
     return val;
 }
 
-bool dlSegCheckConsistency(const SymHeap &sh)
+bool segCheckConsistency(const SymHeap &sh)
 {
     TObjList objs;
     sh.gatherObjects(objs, isOnHeap);
     BOOST_FOREACH(const TObjId seg, objs) {
-        if (OK_DLS != sh.objKind(seg))
-            // we are interested in OK_DLS here
-            continue;
+        bool hasNext = false;
+        bool hasPrev = false;
 
-        const TObjId peer = dlSegPeer(sh, seg);
-        if (OBJ_INVALID == peer) {
-            CL_ERROR("OK_DLS with invalid peer detected");
-            return false;
+        const EObjKind kind = sh.objKind(seg);
+        switch (kind) {
+            case OK_REGION:
+            case OK_OBJ_OR_NULL:
+                break;
+
+            case OK_DLS:
+            case OK_SEE_THROUGH_2N:
+                hasPrev = true;
+                // fall through!
+
+            case OK_SLS:
+            case OK_SEE_THROUGH:
+                hasNext = true;
         }
 
-        if (OK_DLS != sh.objKind(peer)) {
-            CL_ERROR("DLS peer not a DLS");
-            return false;
+        if (hasNext) {
+            const TValId valNext = nextValFromSeg(sh, seg);
+            const EValueTarget code = sh.valTarget(valNext);
+            if (VT_OBJECT != code) {
+                CL_ERROR("valNext of #" << seg << " has no target object");
+                return false;
+            }
         }
 
-        // check the consistency of Neq predicates
-        const TMinLen len1 = sh.segMinLength(seg);
-        const TMinLen len2 = sh.segMinLength(peer);
-        if (len1 != len2) {
-            CL_ERROR("peer of a DLS " << len1 << "+ is a DLS" << len2 << "+");
-            return false;
+        if (hasPrev) {
+            const PtrHandle prevPtr = prevPtrFromSeg(sh, seg);
+            const TValId valPrev = prevPtr.value();
+            const EValueTarget code = sh.valTarget(valPrev);
+            if (VT_OBJECT != code) {
+                CL_ERROR("valPrev of #" << seg << " has no target object");
+                return false;
+            }
         }
     }
 

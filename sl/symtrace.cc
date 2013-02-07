@@ -183,7 +183,8 @@ void AbstractionNode::plotNode(TracePlotter &tplot) const
 
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=ellipse, color=red, fontcolor=red, label="
-        << SL_QUOTE(label) << "];\n";
+        << SL_QUOTE(label) << ", tooltip="
+        << SL_QUOTE(name_) << "];\n";
 }
 
 void ConcretizationNode::plotNode(TracePlotter &tplot) const
@@ -191,7 +192,8 @@ void ConcretizationNode::plotNode(TracePlotter &tplot) const
     // TODO: kind_
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=ellipse, color=red, fontcolor=blue, label="
-        << SL_QUOTE("concretizeObj()") << "];\n";
+        << SL_QUOTE("concretizeObj()") << ", tooltip="
+        << SL_QUOTE(name_) << "];\n";
 }
 
 void SpliceOutNode::plotNode(TracePlotter &tplot) const
@@ -244,6 +246,12 @@ void CallDoneNode::plotNode(TracePlotter &tplot) const
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
         ", penwidth=3.0, label=\"<-- call done: "
         << (nameOf(*fnc_)) << "()\"];\n";
+}
+
+void ImportGlVarNode::plotNode(TracePlotter &tplot) const
+{
+    tplot.out << "\t" << SL_QUOTE(this) << " [shape=ellipse, color=red"
+        ", fontcolor=red, label=\"importGlVar(" << varString_ << ")\"];\n";
 }
 
 void CondNode::plotNode(TracePlotter &tplot) const
@@ -377,7 +385,7 @@ bool plotTrace(Node *endPoint, const std::string &name)
 }
 
 // /////////////////////////////////////////////////////////////////////////////
-// implementation of Trace::plotTrace()
+// implementation of Trace::printTrace()
 Node* /* selected predecessor */ TransientNode::printNode() const
 {
     CL_BREAK_IF("please implement");
@@ -393,12 +401,6 @@ Node* /* selected predecessor */ RootNode::printNode() const
 Node* /* selected predecessor */ InsnNode::printNode() const
 {
     // TODO: handle selected instructions here?
-    return this->parent();
-}
-
-Node* /* selected predecessor */ SpliceOutNode::printNode() const
-{
-    CL_BREAK_IF("please implement");
     return this->parent();
 }
 

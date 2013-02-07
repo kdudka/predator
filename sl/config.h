@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2012 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -32,6 +32,14 @@
  * if 1, print block scheduler statistics whenever end of a fnc is not reached
  */
 #define DEBUG_SE_END_NOT_REACHED            0
+
+/**
+ * bit mask of fixed-point debugging flags, zero means no debugging
+ * - 0x1 ... print the counts of heaps per each unit
+ * - 0x2 ... dump the fixed point as a set of plots per each unit
+ * - 0x4 ... use a single instruction as the unit (basic block otherwise)
+ */
+#define DEBUG_SE_FIXED_POINT                0
 
 /**
  * - 0 ... do not debug branching by non-deterministic conditions
@@ -226,6 +234,11 @@
 #define SE_PLOT_ERROR_STATES                0
 
 /**
+ * preserve heaps with different DLS minimum lengths up to the specified number
+ */
+#define SE_PRESERVE_DLS_MINLEN              2
+
+/**
  * upper bound of DLS minimal length (zero means unlimited)
  */
 #define SE_RESTRICT_DLS_MINLEN              2
@@ -284,16 +297,6 @@
  * if 1, do not destroy fields immediately as they become unused
  */
 #define SH_DELAYED_FIELDS_DESTRUCTION       1
-
-/**
- * if 1, allow to assign unused heap IDs to newly created heap entities
- */
-#define SH_REUSE_FREE_IDS                   0
-
-/**
- * if 1, write the contents of both parts of a DLS pair
- */
-#define SYMPLOT_DEBUG_DLS                   0
 
 /**
  * if more than zero, jump to debugger as soon as N graph of the same name has

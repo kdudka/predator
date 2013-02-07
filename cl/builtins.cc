@@ -41,6 +41,9 @@ bool isBuiltInFnc(const struct cl_operand &op)
 
 bool isBuiltInCall(const Insn &insn)
 {
+    if (insn.code != CL_INSN_CALL)
+        return false;
+
     return isBuiltInFnc(insn.operands[/* fnc */ 1]);
 }
 

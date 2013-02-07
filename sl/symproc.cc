@@ -251,7 +251,8 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
         return true;
     }
 
-    if (VAL_NULL == sh_.valRoot(val)) {
+    const TObjId obj = sh_.objByAddr(val);
+    if (OBJ_NULL == obj) {
         const TOffset off = sh_.valOffset(val);
         CL_ERROR_MSG(lw_, "dereference of NULL value with offset "
                 << off << "B");
@@ -280,7 +281,6 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
             break;
     }
 
-    const TObjId obj = sh_.objByAddr(val);
     if (!sh_.isValid(obj)) {
         const EStorageClass sc = sh_.objStorClass(obj);
         switch (sc) {
@@ -312,9 +312,8 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
     return false;
 }
 
-void SymProc::varInit(TValId at)
+void SymProc::varInit(TObjId obj)
 {
-    const TObjId obj = sh_.objByAddr(at);
     const CVar cv = sh_.cVarByObject(obj);
     const CodeStorage::Storage &stor = sh_.stor();
     const CodeStorage::Var &var = stor.vars[cv.uid];
@@ -339,17 +338,15 @@ void SymProc::varInit(TValId at)
     }
 }
 
-TValId SymProc::varAt(const CVar &cv)
+TObjId SymProc::objByVar(const CVar &cv)
 {
     TObjId reg = sh_.regionByVar(cv, /* createIfNeeded */ false);
-    TValId at = sh_.addrOfTarget(reg, TS_REGION);
-    if (0 < at)
+    if (OBJ_INVALID != reg)
         // var already alive
-        return at;
+        return reg;
 
     // lazy var creation
     reg = sh_.regionByVar(cv, /* createIfNeeded */ true);
-    at = sh_.addrOfTarget(reg, TS_REGION);
 
     // resolve Var
     const CodeStorage::Storage &stor = sh_.stor();
@@ -385,18 +382,18 @@ TValId SymProc::varAt(const CVar &cv)
 
     if (needInit)
         // go through explicit initializers
-        this->varInit(at);
+        this->varInit(reg);
 
-    return at;
+    return reg;
 }
 
-TValId SymProc::varAt(const struct cl_operand &op)
+TObjId SymProc::objByVar(const struct cl_operand &op)
 {
     // resolve CVar
     const int uid = varIdFromOperand(&op);
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
     const CVar cv(uid, nestLevel);
-    return this->varAt(cv);
+    return this->objByVar(cv);
 }
 
 bool addOffDerefArray(SymProc &proc, TOffset &off, const struct cl_accessor *ac)
@@ -428,7 +425,9 @@ TOffset offItem(const struct cl_accessor *ac)
 TValId SymProc::targetAt(const struct cl_operand &op)
 {
     // resolve program variable
-    TValId addr = this->varAt(op);
+    const TObjId obj = this->objByVar(op);
+    TValId addr = sh_.addrOfTarget(obj, TS_REGION);
+
     const struct cl_accessor *ac = op.accessor;
     if (!ac)
         // no accessors, we're done
@@ -479,7 +478,7 @@ TValId SymProc::targetAt(const struct cl_operand &op)
 
     if (isDeref) {
         // read the value inside the pointer
-        const PtrHandle ptr(sh_, addr);
+        const PtrHandle ptr(sh_, obj);
         addr = ptr.value();
     }
 
@@ -506,7 +505,9 @@ FldHandle SymProc::fldByOperand(const struct cl_operand &op)
     }
 
     // resolve the target object
-    const FldHandle fld(sh_, at, op.type);
+    const TObjId obj = sh_.objByAddr(at);
+    const TOffset off = sh_.valOffset(at);
+    const FldHandle fld(sh_, obj, op.type, off);
     if (!fld.isValidHandle())
         CL_BREAK_IF("SymProc::fldByOperand() failed to resolve an object");
 
@@ -629,7 +630,7 @@ TValId ptrObjectEncoderCore(
         const EPointerKind          code)
 {
     SymHeap &sh = proc.sh();
-    TStorRef &stor = sh.stor();
+    TStorRef stor = sh.stor();
 
     // read pointer's sizeof from Code Storage
     TSizeOf ptrSize = 0;
@@ -1168,12 +1169,10 @@ void executeMemmove(
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
-void SymExecCore::varInit(TValId at)
+void SymExecCore::varInit(TObjId obj)
 {
     if (!ep_.trackUninit)
         return;
-
-    const TObjId obj = sh_.objByAddr(at);
 
     const EStorageClass code = sh_.objStorClass(obj);
     if (SC_ON_STACK == code) {
@@ -1191,7 +1190,7 @@ void SymExecCore::varInit(TValId at)
         sh_.writeUniformBlock(obj, ub);
     }
 
-    SymProc::varInit(at);
+    SymProc::varInit(obj);
 }
 
 void SymExecCore::execFree(TValId val)
@@ -1317,11 +1316,10 @@ void SymExecCore::execStackAlloc(
 
     // now create an annonymous stack object
     const CallInst callInst(this->bt_);
-    const TValId val = sh_.stackAlloc(size, callInst);
+    const TObjId obj = sh_.stackAlloc(size, callInst);
 
     if (ep_.trackUninit) {
         // uninitialized heap block
-        const TObjId obj = sh_.objByAddr(val);
         const TValId tplValue = sh_.valCreate(VT_UNKNOWN, VO_STACK);
         const UniformBlock ub = {
             /* off      */  0,
@@ -1331,8 +1329,9 @@ void SymExecCore::execStackAlloc(
         sh_.writeUniformBlock(obj, ub);
     }
 
-    // store the result of malloc
-    this->setValueOf(lhs, val);
+    // store the address returned by alloca()
+    const TValId addr = sh_.addrOfTarget(obj, TS_REGION);
+    this->setValueOf(lhs, addr);
 }
 
 void SymExecCore::execHeapAlloc(
@@ -1605,7 +1604,7 @@ bool trimRangesIfPossible(
 
 bool spliceOutAbstractPathCore(
         SymProc                &proc,
-        const TValId            beg,
+        const TValId            addrFirst,
         const TValId            endPoint,
         const bool              readOnlyMode = false)
 {
@@ -1619,28 +1618,27 @@ bool spliceOutAbstractPathCore(
     // loop indefinitely.  However, the basic list segment axiom guarantees that
     // there is no such cycle.
 
-    TValId seg = beg;
+    TValId addr = addrFirst;
     int len = 1;
 
     for (;;) {
-        if (!isAbstractValue(sh, seg) || objMinLength(sh, seg)) {
+        const TObjId seg = sh.objByAddr(addr);
+        if (OK_REGION == sh.objKind(seg) || objMinLength(sh, seg)) {
             // we are on a wrong way already...
             CL_BREAK_IF(!readOnlyMode);
             return false;
         }
 
-        const TValId peer = segPeer(sh, seg);
-        const TValId valNext = nextValFromSeg(sh, peer);
-        const TValId segNext = sh.valRoot(valNext);
+        const TValId valNext = nextValFromSegAddr(sh, addr);
 
         if (!readOnlyMode)
-            spliceOutListSegment(sh, seg, peer, valNext, &leakObjs);
+            spliceOutListSegment(sh, seg, &leakObjs);
 
         if (valNext == endPoint)
             // we have the chain we are looking for
             break;
 
-        seg = segNext;
+        addr = valNext;
         ++len;
     }
 
@@ -1670,8 +1668,8 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2);
 bool dlSegMergeAddressesOfEmpty(
         SymState                    &dst,
         SymProc                     &procTpl,
-        const TValId                 root1,
-        const TValId                 root2)
+        const TValId                 addr1,
+        const TValId                 addr2)
 {
     // we need to clone the SymHeap and SymProc objects
     SymHeap sh(procTpl.sh());
@@ -1679,10 +1677,10 @@ bool dlSegMergeAddressesOfEmpty(
     SymProc proc(sh, procTpl.bt());
     proc.setLocation(procTpl.lw());
 
-    const TValId valNext1 = nextValFromSeg(sh, root1);
-    const TValId valNext2 = nextValFromSeg(sh, root2);
+    const TValId valNext1 = prevValFromSegAddr(sh, addr1);
+    const TValId valNext2 = prevValFromSegAddr(sh, addr2);
 
-    if (!spliceOutAbstractPathCore(proc, root1, valNext2))
+    if (!spliceOutAbstractPathCore(proc, addr1, valNext2))
         CL_BREAK_IF("dlSegMergeAddressesOfEmpty() failed to remove a DLS");
 
     if (valNext1 == valNext2) {
@@ -1703,7 +1701,10 @@ bool dlSegMergeAddressesIfNeeded(
         const TValId                 v2)
 {
     SymHeap &sh = proc.sh();
-    if (!isAbstractValue(sh, v1) || !isAbstractValue(sh, v2))
+    const TObjId obj1 = sh.objByAddr(v1);
+    const TObjId obj2 = sh.objByAddr(v2);
+
+    if (!isAbstractObject(sh, obj1) || !isAbstractObject(sh, obj2))
         // not a pair of abstract values
         return false;
 
@@ -1713,19 +1714,17 @@ bool dlSegMergeAddressesIfNeeded(
         // the given value differ in target offset
         return false;
 
-    const TValId root1 = sh.valRoot(v1);
-    const TValId root2 = sh.valRoot(v2);
-    if (root1 == root2 || root1 != segPeer(sh, root2))
+    const ETargetSpecifier ts1 = sh.targetSpec(v1);
+    const ETargetSpecifier ts2 = sh.targetSpec(v2);
+    if (ts1 == ts2 || obj1 != obj2)
         // apparently not the case we are looking for
         return false;
 
-    CL_BREAK_IF(root2 != segPeer(sh, root1));
-
-    if (!sh.segMinLength(sh.objByAddr(root1)))
+    if (!sh.segMinLength(obj1))
         // 0+ DLS --> we have to look through!
-        dlSegMergeAddressesOfEmpty(dst, proc, root1, root2);
+        dlSegMergeAddressesOfEmpty(dst, proc, v1, v2);
 
-    dlSegReplaceByConcrete(sh, root1, root2);
+    dlSegReplaceByConcrete(sh, obj1, obj2);
     sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), /* len */ 1));
     dst.insert(sh);
     return true;
@@ -1750,13 +1749,11 @@ bool spliceOutAbstractPath(
         endPoint = sh.valByOffset(pointingTo, off);
     }
 
-    const TValId segAt = sh.valRoot(atAddr);
-
-    if (!spliceOutAbstractPathCore(proc, segAt, endPoint, /* RO */ true))
+    if (!spliceOutAbstractPathCore(proc, atAddr, endPoint, /* RO */ true))
         // read-only attempt failed
         return false;
 
-    if (readOnlyMode || spliceOutAbstractPathCore(proc, segAt, endPoint))
+    if (readOnlyMode || spliceOutAbstractPathCore(proc, atAddr, endPoint))
         return true;
 
     CL_BREAK_IF("failed to splice-out a single list segment");
@@ -1770,8 +1767,8 @@ bool valMerge(SymState &dst, SymProc &proc, TValId v1, TValId v2)
     moveKnownValueToLeft(sh, v1, v2);
 
     // check that at least one value is unknown
-    const bool isAbstract1 = isAbstractValue(sh, v1);
-    const bool isAbstract2 = isAbstractValue(sh, v2);
+    const bool isAbstract1 = isAbstractObject(sh, sh.objByAddr(v1));
+    const bool isAbstract2 = isAbstractObject(sh, sh.objByAddr(v2));
     if (!isAbstract1 && !isAbstract2) {
         // no abstract objects involved
         sh.valReplace(v2, v1);
@@ -2458,31 +2455,42 @@ bool SymExecCore::concretizeLoop(
                 // literals cannot be abstract
                 continue;
 
-            const TValId at = slave.varAt(op);
-            if (!canWriteDataPtrAt(sh, at))
+            // we expect a pointer at this point
+            const TObjId ptr = slave.objByVar(op);
+            CL_BREAK_IF(!sh.isValid(ptr));
+
+            // read the value inside the pointer
+            const TValId addr = valOfPtr(sh, ptr, /* off */ 0);
+            if (!canWriteDataPtrAt(sh, addr))
                 continue;
 
-            // we expect a pointer at this point
-            const TValId val = valOfPtrAt(sh, at);
-            if (isAbstractValue(sh, val)) {
+            // resolve the target object of the address
+            const TObjId obj = sh.objByAddr(addr);
+            CL_BREAK_IF(!sh.isValid(obj));
+
+            // check whether the target is an abstract object
+            const EObjKind kind = sh.objKind(obj);
+            if (OK_REGION == kind)
+                continue;
+
+            const ETargetSpecifier ts = sh.targetSpec(addr);
 #ifndef NDEBUG
-                CL_BREAK_IF(hitLocal);
-                hitLocal = true;
-                hit = true;
+            CL_BREAK_IF(hitLocal);
+            hitLocal = true;
+            hit = true;
 #endif
-                LeakMonitor lm(sh);
-                lm.enter();
+            LeakMonitor lm(sh);
+            lm.enter();
 
-                TObjSet leakObjs;
-                concretizeObj(sh, val, todo, &leakObjs);
+            TObjSet leakObjs;
+            concretizeObj(sh, todo, obj, ts, &leakObjs);
 
-                if (lm.importLeakObjs(&leakObjs)) {
-                    CL_WARN_MSG(lw_, "memory leak detected while unfolding");
-                    this->printBackTrace(ML_WARN);
-                }
-
-                lm.leave();
+            if (lm.importLeakObjs(&leakObjs)) {
+                CL_WARN_MSG(lw_, "memory leak detected while unfolding");
+                this->printBackTrace(ML_WARN);
             }
+
+            lm.leave();
         }
 
         // process the current heap and move to the next one (if any)

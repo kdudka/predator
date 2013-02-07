@@ -24,7 +24,7 @@ do_sync() {
             | grep -v 'note: .*\[internal location\]' \
             | sed 's| \[-fplugin=libsl\.so\]$||' \
             | sed 's|^[^:]*/||' \
-            | sed -r -e 's|#[0-9]+:||g' -e 's|#[0-9]+|_|g' \
+            | sed -r -e 's|#[0-9]+:||g' -e 's|[#.][0-9]+|_|g' \
             > "$err"
 
         rm -f "$raw" "${i}-bare-gcc.err"

@@ -6,12 +6,12 @@ test-0184.c:97:9: note: _ = (beg == NULL) ... assuming TRUE
 test-0184.c:96:5: note: _ = (end != beg) ... evaluated as TRUE
 test-0184.c:94:5: note: _ = (end == NULL) ... evaluated as FALSE
 test-0184.c:93:5: note: _ = (beg == NULL) ... evaluated as FALSE
-test-0184.c:114:19: note: from call of check_seq_next (p1.2, p2.1)
+test-0184.c:114:19: note: from call of check_seq_next (p1_, p2_)
 test-0184.c:59:5: note: _ = (_ != (int)0) ... assuming FALSE
 test-0184.c:27:8: note: _ = (ptr == NULL) ... evaluated as FALSE
 test-0184.c:37:18: note: from call of node = alloc_node ()
 test-0184.c:47:19: note: from call of chain_node (&list)
-test-0184.c:112:35: note: from call of list.0 = create_sll (&p1, &p2)
+test-0184.c:112:35: note: from call of list_ = create_sll (&p1, &p2)
 test-0184.c:108:5: note: from call of main ()
 test-0184.c:108:5: warning: symbolic execution terminates prematurely
 test-0184.c:108:5: note: an error label has been reached

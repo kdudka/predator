@@ -79,9 +79,6 @@ enum TValId {
      */
     VAL_NULL          =  0,
 
-    /// TODO: drop this
-    VAL_ADDR_OF_RET   =  1,
-
     /**
      * special enumeration value denoting a failure of a method which may return
      * a value ID.  VAL_INVALID can @b never denote a valid value.  @n @n
@@ -96,10 +93,9 @@ enum TValId {
     VAL_FALSE         = VAL_NULL,
 
     /**
-     * special enumeration value denoting a Boolean true value.
-     * @n @n
+     * special enumeration value denoting a Boolean true value or (int) 1.
      */
-    VAL_TRUE          = (FLD_UNKNOWN - 1),
+    VAL_TRUE          = 1,
 
     /**
      * @copydoc symid.hh::FLD_MAX_ID
@@ -118,8 +114,11 @@ enum TObjId {
     /// for signalling error states only
     OBJ_INVALID       = -1,
 
+    /// target of VAL_NULL (a.k.a. NULL object)
+    OBJ_NULL          = (VAL_TRUE + 1),
+
     /// return value of the function currently being executed
-    OBJ_RETURN        = 2,
+    OBJ_RETURN        = (OBJ_NULL + 1),
 
     /// @copydoc symid.hh::FLD_MAX_ID
     OBJ_MAX_ID        = /* XXX */ UINT_MAX

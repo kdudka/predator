@@ -2,24 +2,16 @@ test-0187.c:3:1: error: error label "ERROR" has been reached
 test-0187.c:19:18: note: from call of error ()
 test-0187.c:14:9: note: _ = (i == (int)1) ... evaluated as FALSE
 test-0187.c:14:9: note: _ = (i == (int)0) ... evaluated as FALSE
-test-0187.c:25:13: note: from call of gl_write (gl_num.4)
+test-0187.c:25:13: note: from call of gl_write (gl_num_)
 test-0187.c:32:17: note: from call of gl_proc1 ()
-test-0187.c:31:8: note: _ = (gl_st1.1 == (int)0) ... evaluated as TRUE
+test-0187.c:31:8: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
 test-0187.c:51:12: note: from call of gl_eval ()
-test-0187.c:37:8: note: _ = (gl_ev1.0 == (int)1) ... evaluated as TRUE
-test-0187.c:49:16: note: from call of gl_activate ()
-test-0187.c:14:9: note: _ = (i == (int)1) ... evaluated as TRUE
-test-0187.c:14:9: note: _ = (i == (int)0) ... evaluated as FALSE
-test-0187.c:25:13: note: from call of gl_write (gl_num.4)
-test-0187.c:32:17: note: from call of gl_proc1 ()
-test-0187.c:31:8: note: _ = (gl_st1.1 == (int)0) ... evaluated as TRUE
-test-0187.c:48:12: note: from call of gl_eval ()
-test-0187.c:37:8: note: _ = (gl_ev1.0 == (int)1) ... evaluated as TRUE
+test-0187.c:37:8: note: _ = (gl_ev1_ == (int)1) ... evaluated as TRUE
 test-0187.c:46:16: note: from call of gl_activate ()
 test-0187.c:14:9: note: _ = (i == (int)0) ... evaluated as TRUE
-test-0187.c:25:13: note: from call of gl_write (gl_num.4)
+test-0187.c:25:13: note: from call of gl_write (gl_num_)
 test-0187.c:32:17: note: from call of gl_proc1 ()
-test-0187.c:31:8: note: _ = (gl_st1.1 == (int)0) ... evaluated as TRUE
+test-0187.c:31:8: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
 test-0187.c:45:12: note: from call of gl_eval ()
 test-0187.c:41:5: note: from call of main ()
 test-0187.c:41:5: warning: symbolic execution terminates prematurely

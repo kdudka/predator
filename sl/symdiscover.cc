@@ -99,15 +99,15 @@ bool matchSegBinding(
     // OK_DLS
     switch (kind) {
         case OK_SEE_THROUGH_2N:
-            if ((offObj.next == offPath.next) && (offObj.prev == offPath.prev))
+            if ((offObj.next == offPath.prev) && (offObj.prev == offPath.next))
                 // both fields are equal
                 return true;
 
             // fall through!
 
         case OK_DLS:
-            return (offObj.next == offPath.prev)
-                && (offObj.prev == offPath.next);
+            return (offObj.next == offPath.next)
+                && (offObj.prev == offPath.prev);
 
         default:
             return false;
@@ -119,25 +119,12 @@ bool validatePointingObjects(
         SymHeap                    &sh,
         const BindingOff           &off,
         const TObjId                obj,
-        TObjId                      prev,
+        const TObjId                prev,
         const TObjId                next,
         TObjSet                     allowedReferers,
-        const bool                  allowHeadPtr = false)
+        const ETargetSpecifier      tsEntry = TS_INVALID)
 {
-    // we allow pointers to self at this point, but we require them to be
-    // absolutely uniform along the abstraction path -- joinDataReadOnly()
-    // is responsible for that
-    allowedReferers.insert(obj);
-    if (OK_DLS == sh.objKind(obj))
-        allowedReferers.insert(dlSegPeer(sh, obj));
-
-    if (OK_DLS == sh.objKind(prev))
-        // jump to peer in case of DLS
-        prev = dlSegPeer(sh, prev);
-
-    // we allow pointers to self at this point, but we require them to be
-    // absolutely uniform along the abstraction path -- matchData() should
-    // later take care of that
+    // allow pointers to self
     allowedReferers.insert(obj);
 
     // collect all objects pointing at/inside the object
@@ -166,12 +153,13 @@ bool validatePointingObjects(
         if (hasKey(whiteList, fld))
             continue;
 
-        if (allowHeadPtr) {
+        if (TS_INVALID != tsEntry) {
             const TValId val = fld.value();
-            if (VT_OBJECT == sh.valTarget(val)
-                    && sh.objByAddr(val) == obj
-                    && sh.valOffset(val) == off.head)
-                continue;
+            if (VT_OBJECT == sh.valTarget(val) && sh.valOffset(val) == off.head) {
+                const ETargetSpecifier ts = sh.targetSpec(val);
+                if (TS_REGION == ts || ts == tsEntry)
+                    continue;
+            }
         }
 
         if (hasKey(allowedReferers, fld.obj()))
@@ -185,29 +173,18 @@ bool validatePointingObjects(
     return true;
 }
 
-// FIXME: suboptimal implementation
 bool validatePrototypes(
         SymHeap                    &sh,
         const BindingOff           &off,
         const TObjId                obj,
-        TObjSet                     protos)
+        const TObjSet              &protos)
 {
-    TObjId peer = OBJ_INVALID;
-    protos.insert(obj);
-    if (OK_DLS == sh.objKind(obj)) {
-        peer = dlSegPeer(sh, obj);
-        protos.insert(peer);
-    }
+    TObjSet allowedReferers(protos);
+    allowedReferers.insert(obj);
 
     BOOST_FOREACH(const TObjId proto, protos) {
-        if (proto == obj || proto == peer)
-            // we have inserted root/peer into protos, in order to get them on
-            // the list of allowed referrers, but it does not mean that they are
-            // prototypes
-            continue;
-
         if (!validatePointingObjects(sh, off, proto, OBJ_INVALID, OBJ_INVALID,
-                                     protos))
+                                     allowedReferers))
             return false;
     }
 
@@ -221,11 +198,11 @@ bool validateSegEntry(
         const TObjId                obj,
         const TObjId                prev,
         const TObjId                next,
-        const TObjSet               &protos)
+        const TObjSet              &protos,
+        const ETargetSpecifier      tsEntry)
 {
     // first validate 'root' itself
-    if (!validatePointingObjects(sh, off, obj, prev, next, protos,
-                                 /* allowHeadPtr */ true))
+    if (!validatePointingObjects(sh, off, obj, prev, next, protos, tsEntry))
         return false;
 
     return validatePrototypes(sh, off, obj, protos);
@@ -234,20 +211,11 @@ bool validateSegEntry(
 TObjId jumpToNextObj(
         SymHeap                    &sh,
         const BindingOff           &off,
-        TObjSet                    &haveSeen,
-        const TObjSet              &protos,
         TObjId                      obj)
 {
     if (!matchSegBinding(sh, obj, off))
         // binding mismatch
         return OBJ_INVALID;
-
-    const bool dlSegOnPath = (OK_DLS == sh.objKind(obj));
-    if (dlSegOnPath) {
-        // jump to peer in case of DLS
-        obj = dlSegPeer(sh, obj);
-        haveSeen.insert(obj);
-    }
 
     const TValId nextHead = valOfPtr(sh, obj, off.next);
     if (nextHead <= 0 || off.head != sh.valOffset(nextHead))
@@ -271,44 +239,36 @@ TObjId jumpToNextObj(
     if (clt) {
         const TObjType cltNext = sh.objEstimatedType(next);
         if (cltNext && *cltNext != *clt)
-            // both roots are (kind of) type-aware, but the types differ
+            // both objects have estimated types assigned, but the types differ
             return OBJ_INVALID;
     }
 
-    const bool isDls = isDlsBinding(off);
-    if (isDls) {
-        // check DLS back-link
+    if (isDlsBinding(off)) {
         const TValId valPrev = valOfPtr(sh, next, off.prev);
         if (sh.objByAddr(valPrev) != obj || sh.valOffset(valPrev) != off.head)
             // DLS back-link mismatch
             return OBJ_INVALID;
+
+        const ETargetSpecifier ts = sh.targetSpec(valPrev);
+        if (TS_REGION != ts && TS_LAST != ts)
+            // DLS back-link mismatch
+            return OBJ_INVALID;
     }
 
-    if (dlSegOnPath && !validatePointingObjects(sh, off,
-                /* root */ obj,
-                /* prev */ obj,
-                /* next */ next,
-                protos))
-        // never step over a peer object that is pointed from outside!
-        return OBJ_INVALID;
-
-    // check if valNext inside the 'next' object is at least VAL_NULL
-    // (otherwise we are not able to construct Neq edges to express its length)
-    if (valOfPtr(sh, next, off.next) < 0)
+    if (OBJ_INVALID == nextObj(sh, next, off.next))
+        // valNext has no target
         return OBJ_INVALID;
 
     return next;
 }
 
-bool isPointedByVar(SymHeap &sh, const TValId root)
+bool isPointedByVar(SymHeap &sh, const TObjId obj)
 {
-    const TObjId obj = sh.objByAddr(root);
-
     FldList refs;
     sh.pointedBy(refs, obj);
     BOOST_FOREACH(const FldHandle fld, refs) {
-        const TObjId sub = fld.obj();
-        const EStorageClass code = sh.objStorClass(sub);
+        const TObjId refObj = fld.obj();
+        const EStorageClass code = sh.objStorClass(refObj);
         if (isProgramVar(code))
             return true;
     }
@@ -320,22 +280,20 @@ bool isPointedByVar(SymHeap &sh, const TValId root)
 typedef TObjSet TProtoPairs[2];
 
 bool matchData(
-        SymHeap                     &sh,
+        SymHeap                      sh,
         const BindingOff            &off,
         const TObjId                obj1,
         const TObjId                obj2,
         TProtoPairs                 *protoPairs,
         int                         *pCost)
 {
-    const TValId at1 = sh.legacyAddrOfAny_XXX(obj1);
-    const TValId at2 = sh.legacyAddrOfAny_XXX(obj2);
-    if (!isDlsBinding(off) && isPointedByVar(sh, at2))
+    if (!isDlsBinding(off) && isPointedByVar(sh, obj2))
         // only first node of an SLS can be pointed by a program var, giving up
         return false;
 
     EJoinStatus status;
-    if (!joinDataReadOnly(&status, sh, off, at1, at2, protoPairs)) {
-        CL_DEBUG("    joinDataReadOnly() refuses to create a segment!");
+    if (!joinData(sh, off, obj1, obj2, /* pDst */ 0, protoPairs, &status)) {
+        CL_DEBUG("    joinData() refuses to create a segment!");
         return false;
     }
 
@@ -369,6 +327,10 @@ void segDiscover(
 {
     CL_BREAK_IF(!dst.empty());
 
+    if (isDlsBinding(off) && (OBJ_INVALID == nextObj(sh, entry, off.prev)))
+        // valPrev has no target
+        return;
+
     // we use std::set to detect loops
     TObjSet haveSeen;
     haveSeen.insert(entry);
@@ -376,15 +338,11 @@ void segDiscover(
 
     // the entry can already have some prototypes we should take into account
     TObjSet initialProtos;
-    if (OK_DLS == sh.objKind(entry)) {
-        TObjList protoList;
-        collectPrototypesOf(protoList, sh, entry, /* skipDlsPeers */ false);
-        BOOST_FOREACH(const TObjId proto, protoList)
-            initialProtos.insert(proto);
-    }
+    if (OK_DLS == sh.objKind(entry))
+        collectPrototypesOf(initialProtos, sh, entry);
 
     // jump to the immediate successor
-    TObjId obj = jumpToNextObj(sh, off, haveSeen, initialProtos, entry);
+    TObjId obj = jumpToNextObj(sh, off, entry);
     if (!insertOnce(haveSeen, obj))
         // loop detected
         return;
@@ -404,11 +362,11 @@ void segDiscover(
             break;
 
         if (prev == entry && !validateSegEntry(sh, off, entry, OBJ_INVALID, obj,
-                                               protoPairs[0]))
+                                               protoPairs[0], TS_FIRST))
             // invalid entry
             break;
 
-        if (!insertOnce(haveSeen, segNextObj(sh, obj, off.next)))
+        if (!insertOnce(haveSeen, nextObj(sh, obj, off.next)))
             // loop detected
             break;
 
@@ -419,16 +377,19 @@ void segDiscover(
         bool leaving = false;
 
         // look ahead
-        TObjId next = jumpToNextObj(sh, off, haveSeen, protoPairs[1], obj);
+        TObjId next = jumpToNextObj(sh, off, obj);
         if (!validatePointingObjects(sh, off, obj, prev, next, protoPairs[1])) {
             // someone points at/inside who should not
 
             leaving = /* looking for a DLS */ isDlsBinding(off)
-                && /* got a DLS */ OK_DLS != sh.objKind(obj)
                 && validateSegEntry(sh, off, obj, prev, OBJ_INVALID,
-                                    protoPairs[1]);
+                                    protoPairs[1], TS_LAST);
 
             if (!leaving)
+                break;
+
+            if (OBJ_INVALID == nextObj(sh, obj, off.next))
+                // valNext has no target
                 break;
         }
 
@@ -493,6 +454,7 @@ class PtrFinder {
 };
 
 bool digBackLink(
+        bool                       *pSkip,
         BindingOff                 *pOff,
         SymHeap                    &sh,
         const TObjId                obj,
@@ -507,6 +469,9 @@ bool digBackLink(
 
     // got a back-link!
     pOff->prev = visitor.offFound();
+
+    // we require offNext < offPrev (symmetry breaking rule)
+    *pSkip = (pOff->prev < pOff->next);
     return true;
 }
 
@@ -542,7 +507,10 @@ class ProbeEntryVisitor {
             off.next = fld.offset();
             off.prev = off.next;
 #if !SE_DISABLE_DLS
-            digBackLink(&off, sh, obj_, nextObj);
+            bool skip;
+            if (digBackLink(&skip, &off, sh, obj_, nextObj) && skip)
+                // looks like an oppositely oriented OK_DLS, keep going
+                return /* continue */ true;
 #endif
 
 #if SE_DISABLE_SLS
@@ -568,7 +536,7 @@ bool segOnPath(
         if (OK_REGION != sh.objKind(cursor))
             return true;
 
-        cursor = segNextObj(sh, cursor, off.next);
+        cursor = nextObj(sh, cursor, off.next);
     }
 
     return false;

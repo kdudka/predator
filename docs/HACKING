@@ -165,6 +165,8 @@ T                       typedef (or template argument)
 
 tpl                     template
 
+ts                      Target Specifier
+
 uid                     Unique ID
 
 uni                     uniform

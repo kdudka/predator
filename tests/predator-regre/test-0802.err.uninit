@@ -34,3 +34,11 @@ test-0802.c:7:7: warning: conditional jump depends on uninitialized value
 test-0802.c:7:7: note: the value being used is an untouched contents of heap
 test-0802.c:21:9: note: from call of filter()
 test-0802.c:16:6: note: from call of main()
+test-0802.c:7:7: warning: conditional jump depends on uninitialized value
+test-0802.c:7:7: note: the value being used is an untouched contents of heap
+test-0802.c:21:9: note: from call of filter()
+test-0802.c:16:6: note: from call of main()
+test-0802.c:7:7: warning: conditional jump depends on uninitialized value
+test-0802.c:7:7: note: the value being used is an untouched contents of heap
+test-0802.c:21:9: note: from call of filter()
+test-0802.c:16:6: note: from call of main()
