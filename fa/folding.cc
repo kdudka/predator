@@ -97,7 +97,9 @@ bool Folding::discover1(
 	assert(nullptr != fae_.getRoot(root));
 
 	if (forbidden.count(root))
+	{
 		return nullptr;
+	}
 
 	bool found = false;
 dis1_start:
@@ -109,7 +111,9 @@ dis1_start:
 	for (auto& cutpoint : fae_.connectionGraph.data[root].signature)
 	{
 		if (cutpoint.root != root)
+		{
 			continue;
+		}
 
 		FA_DEBUG_AT(3, "type 1 cutpoint detected at root " << root);
 
@@ -141,7 +145,9 @@ bool Folding::discover2(
 	assert(nullptr != fae_.getRoot(root));
 
 	if (forbidden.count(root))
+	{
 		return nullptr;
+	}
 
 	bool found = false;
 dis2_start:
@@ -162,7 +168,9 @@ dis2_start:
 			for (auto& tmp : stateSignaturePair.second)
 			{
 				if ((tmp.refCount < 2) || tmp.refInherited || (tmp.root != cutpoint.root))
+				{
 					continue;
+				}
 
 				FA_DEBUG_AT(3, "type 2 cutpoint detected inside component " << root
 					<< " at state q" << stateSignaturePair.first);
@@ -197,7 +205,9 @@ bool Folding::discover3(
 	assert(nullptr != fae_.getRoot(root));
 
 	if (forbidden.count(root))
+	{
 		return nullptr;
+	}
 
 	bool found = false;
 dis3_start:
@@ -209,14 +219,18 @@ dis3_start:
 	for (auto& cutpoint : fae_.connectionGraph.data[root].signature)
 	{
 		if (forbidden.count(cutpoint.root)/* || cutpoint.joint*/)
+		{
 			continue;
+		}
 
 		size_t selectorToRoot = ConnectionGraph::getSelectorToTarget(
 			fae_.connectionGraph.data[cutpoint.root].signature, root
 		);
 
 		if (selectorToRoot == static_cast<size_t>(-1))
+		{
 			continue;
+		}
 /*
 		if (selectorToRoot == cutpoint.forwardSelector)
 			continue;
@@ -225,7 +239,9 @@ dis3_start:
 
 		if (/*(selectorToRoot < *cutpoint.fwdSelectors.begin()) ||*/
 			this->makeType2Box(cutpoint.root, root, forbidden, true, true))
-				continue;
+		{
+			continue;
+		}
 
 		FA_DEBUG_AT(3, "type 3 cutpoint detected at roots " << root << " and "
 			<< cutpoint.root);
@@ -425,10 +441,14 @@ const Box* Folding::makeType1Box(
 	auto boxPtr = this->getBox(*box, conditional);
 
 	if (test)
+	{
 		return boxPtr;
+	}
 
 	if (!boxPtr)
+	{
 		return nullptr;
+	}
 
 	FA_DEBUG_AT(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
 
@@ -474,15 +494,21 @@ const Box* Folding::makeType2Box(
 		assert(cutpoint.root != root);
 */
 		if (cutpoint.root == root)
+		{
 			return nullptr;
+		}
 
 		if (forbidden.count(cutpoint.root))
+		{
 			return nullptr;
+		}
 
 		assert(cutpoint.root < index.size());
 
 		if (cutpoint.root != root)
+		{
 			index[cutpoint.root] = start++;
+		}
 	}
 
 	if (!Folding::computeSelectorMap(selectorMap, root, finalState))
@@ -504,10 +530,14 @@ const Box* Folding::makeType2Box(
 	for (auto& cutpoint : inputSignature)
 	{
 		if (cutpoint.refCount > 1)
+		{
 			return nullptr;
+		}
 
 		if (forbidden.count(cutpoint.root))
+		{
 			return nullptr;
+		}
 
 		assert(cutpoint.root < index.size());
 
@@ -550,15 +580,21 @@ const Box* Folding::makeType2Box(
 	auto boxPtr = this->getBox(*box, conditional);
 
 	if (test)
+	{
 		return boxPtr;
+	}
 
 	if (!boxPtr)
+	{
 		return nullptr;
+	}
 
 	FA_DEBUG_AT(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
 
 	for (auto& cutpoint : tmpSignature)
+	{
 		outputSignature.push_back(cutpoint);
+	}
 
 	fae_.setRoot(root, this->joinBox(*p.first, finalState, root, boxPtr, outputSignature));
 	fae_.connectionGraph.invalidate(root);
@@ -602,7 +638,9 @@ std::shared_ptr<TreeAut> Folding::joinBox(
 		for (auto& cutpoint : signature)
 		{
 			if ((cutpoint.root == root) && (src.getFinalStates().count(state)))
+			{
 				continue;
+			}
 
 			lhs.push_back(
 				fae_.addData(*ta, Data::createRef(cutpoint.root))
@@ -690,7 +728,9 @@ bool Folding::checkSelectorMap(
 		Folding::computeSelectorMap(m, *i, signatures);
 
 		if (m != selectorMap)
+		{
 			return false;
+		}
 	}
 
 	return true;
