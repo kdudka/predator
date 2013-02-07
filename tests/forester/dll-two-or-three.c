@@ -37,8 +37,6 @@ int main() {
 		x = y;
 	}
 
-	___fa_plot("dll-two-or-three-0001");
-
 	while (x) {
 		y = x->next;
 		free(x);
