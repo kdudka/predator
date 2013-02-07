@@ -149,7 +149,7 @@ set(tests-failing-due-to-abstraction
                                               f0017
                                   f0035             f0038
                       f0043             f0046             f0049
-    f0050 f0051       f0053
+    f0050 f0051       f0053 f0054
     f0060
                                               p0507
 )
