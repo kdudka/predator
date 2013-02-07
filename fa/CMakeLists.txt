@@ -57,6 +57,7 @@ add_library(fa SHARED
 	compiler.cc
   connection_graph.cc
 	fixpoint.cc
+  folding.cc
 	forestaut.cc
   forestautext.cc
 	integrity.cc
