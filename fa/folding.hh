@@ -44,10 +44,10 @@ private:  // data types
 
 private:  // data members
 
-	FAE& fae;
-	BoxMan& boxMan;
+	FAE& fae_;
+	BoxMan& boxMan_;
 
-	std::vector<std::pair<bool, ConnectionGraph::StateToCutpointSignatureMap>> signatureMap;
+	std::vector<std::pair<bool, ConnectionGraph::StateToCutpointSignatureMap>> signatureMap_;
 
 protected:
 
@@ -85,9 +85,9 @@ protected:
 	void invalidateSignatures(size_t root)
 	{
 		// Preconditions
-		assert(root < this->signatureMap.size());
+		assert(root < signatureMap_.size());
 
-		this->signatureMap[root].first = false;
+		signatureMap_[root].first = false;
 	}
 
 	void componentCut(
@@ -108,9 +108,9 @@ protected:
 		const                              TreeAut& ta,
 		std::vector<size_t>&               index)
 	{
-		auto tmp = std::shared_ptr<TreeAut>(this->fae.allocTA());
+		auto tmp = std::shared_ptr<TreeAut>(fae_.allocTA());
 
-		this->fae.relabelReferences(*tmp, ta, index);
+		fae_.relabelReferences(*tmp, ta, index);
 
 		return tmp;
 	}
@@ -174,48 +174,9 @@ protected:
 		size_t                                       root,
 		const std::vector<size_t>&                   index);
 
-/*
-	static bool checkSingular(const TreeAut& ta, bool result,
-		const ConnectionGraph::StateToCutpointSignatureMap& stateMap) {
-
-		for (auto& state : ta.getFinalStates()) {
-
-			auto iter = stateMap.find(state);
-
-			assert(iter != stateMap.end());
-
-			if (iter->second.empty() != result)
-				return false;
-
-		}
-
-		return true;
-
-	}
-
-	static bool isSingular(const TreeAut& ta) {
-
-		ConnectionGraph::StateToCutpointSignatureMap stateMap;
-
-		ConnectionGraph::computeSignatures(stateMap, ta);
-
-		assert(ta.getFinalStates().size());
-
-		auto iter = stateMap.find(*ta.getFinalStates().begin());
-
-		assert(iter != stateMap.end());
-
-		bool result = iter->second.empty();
-
-		assert(Folding::checkSingular(ta, result, stateMap));
-
-		return result;
-
-	}
-*/
 	const Box* getBox(const Box& box, bool conditional)
 	{
-		return (conditional)?(this->boxMan.lookupBox(box)):(this->boxMan.getBox(box));
+		return (conditional)?(boxMan_.lookupBox(box)):(boxMan_.getBox(box));
 	}
 
 	const Box* makeType1Box(
@@ -250,126 +211,14 @@ public:
 		const std::set<size_t>&     forbidden,
 		bool                        conditional);
 
-/*
-	bool discover(size_t root, const std::set<size_t>& forbidden) {
-
-		assert(this->fae.connectionGraph.isValid());
-		assert(this->fae.roots.size() == this->fae.connectionGraph.data.size());
-		assert(root < this->fae.roots.size());
-		assert(this->fae.roots[root]);
-
-		if (forbidden.count(root))
-			return false;
-
-		const Box* boxPtr;
-
-		FA_DEBUG_AT(3, "analysing: " << this->fae);
-
-		// save state offset
-		this->fae.pushStateOffset();
-
-		bool found = false;
-
-		size_t selectorToRoot;
-start:
-		this->fae.updateConnectionGraph();
-
-		for (auto& cutpoint : this->fae.connectionGraph.data[root].signature) {
-
-			if (cutpoint.root == root) {
-
-				FA_DEBUG_AT(3, "type 1 cutpoint detected at root " << root);
-
-				boxPtr = this->makeType1Box(
-					root, this->fae.roots[root]->getFinalState(), root, forbidden, true
-				);
-
-				if (boxPtr)
-					goto box_found;
-
-				this->fae.popStateOffset();
-
-				continue;
-
-			}
-
-			if (cutpoint.joint) {
-
-				auto& signatures = this->getSignatures(root);
-
-				for (auto& stateSignaturePair : signatures) {
-
-					for (auto& tmp : stateSignaturePair.second) {
-
-						if (!tmp.joint || tmp.joinInherited || (tmp.root != cutpoint.root))
-							continue;
-
-						FA_DEBUG_AT(3, "type 2 cutpoint detected inside component " << root << " at state q" << stateSignaturePair.first);
-
-						boxPtr = this->makeType1Box(
-							root, stateSignaturePair.first, cutpoint.root, forbidden, true
-						);
-
-						if (boxPtr)
-							goto box_found;
-
-						this->fae.popStateOffset();
-
-					}
-
-				}
-
-				continue;
-
-			}
-
-			if (forbidden.count(cutpoint.root))
-				continue;
-
-			selectorToRoot = ConnectionGraph::getSelectorToTarget(
-				this->fae.connectionGraph.data[cutpoint.root].signature, root
-			);
-
-			if (selectorToRoot == (size_t)(-1))
-				continue;
-*//*
-			if (selectorToRoot == cutpoint.forwardSelector)
-				continue;
-*//*
-			assert(!cutpoint.fwdSelectors.empty());
-
-			FA_DEBUG_AT(3, "type 3 cutpoint detected at roots " << root << " and " << cutpoint.root);
-
-			boxPtr = this->makeType2Box(root, cutpoint.root, forbidden, true);
-
-			if (boxPtr)
-				goto box_found;
-
-			this->fae.popStateOffset();
-
-			continue;
-box_found:
-			FA_DEBUG_AT(3, (AbstractBox*)boxPtr << " found");
-
-			found = true;
-
-			if (!this->fae.connectionGraph.data[root].valid)
-				goto start;
-
-		}
-
-		return found;
-
-	}
-*/
 public:
 
 	Folding(
 		FAE&           fae,
 		BoxMan&        boxMan) :
-		fae(fae),
-		boxMan(boxMan),
-		signatureMap(fae.getRootCount())
+		fae_(fae),
+		boxMan_(boxMan),
+		signatureMap_(fae.getRootCount())
 	{ }
 };
 
