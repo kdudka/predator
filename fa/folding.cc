@@ -288,17 +288,17 @@ void Folding::componentCut(
 	{
 		size_t lhsOffset = 0;
 
-		const Transition& t = *i;
+		const Transition& trans = *i;
 
-		for (auto& box : t.label()->getNode())
+		for (auto& box : trans.label()->getNode())
 		{
 			// look for target cutpoint
 			for (size_t j = 0; j < box->getArity(); ++j)
 			{
-				assert(lhsOffset + j < t.lhs().size());
+				assert(lhsOffset + j < trans.lhs().size());
 
 				if (ConnectionGraph::containsCutpoint(
-					Folding::getSignature(t.lhs()[lhsOffset + j], signatures), target))
+					Folding::getSignature(trans.lhs()[lhsOffset + j], signatures), target))
 				{
 					boxes.insert(box);
 					break;
@@ -311,14 +311,12 @@ void Folding::componentCut(
 
 	ConnectionGraph::CutpointSignature tmp;
 
-	for (auto i = src.begin(); i != src.end(); ++i)
+	for (const Transition& trans : src)
 	{
-		const Transition& t = *i;
-
-		if (t.rhs() != state)
+		if (trans.rhs() != state)
 		{
-			res.addTransition(t);
-			complement.addTransition(t);
+			res.addTransition(trans);
+			complement.addTransition(trans);
 
 			continue;
 		}
@@ -331,27 +329,27 @@ void Folding::componentCut(
 		tmp.clear();
 
 		// split transition
-		for (auto& box : t.label()->getNode())
+		for (auto& box : trans.label()->getNode())
 		{
 			if (boxes.count(box) == 0)
 			{
-				Folding::copyBox(lhs, label, box, t.lhs(), lhsOffset);
+				Folding::copyBox(lhs, label, box, trans.lhs(), lhsOffset);
 			} else
 			{
 				for (size_t j = 0; j < box->getArity(); ++j)
 				{
-					assert(lhsOffset + j < t.lhs().size());
+					assert(lhsOffset + j < trans.lhs().size());
 
 					ConnectionGraph::processStateSignature(
 						tmp,
 						static_cast<const StructuralBox*>(box),
 						j,
-						t.lhs()[lhsOffset + j],
-						Folding::getSignature(t.lhs()[lhsOffset + j], signatures)
+						trans.lhs()[lhsOffset + j],
+						Folding::getSignature(trans.lhs()[lhsOffset + j], signatures)
 					);
 				}
 
-				Folding::copyBox(cLhs, cLabel, box, t.lhs(), lhsOffset);
+				Folding::copyBox(cLhs, cLabel, box, trans.lhs(), lhsOffset);
 			}
 
 			lhsOffset += box->getArity();
@@ -621,17 +619,17 @@ std::shared_ptr<TreeAut> Folding::joinBox(
 
 	ta->addFinalStates(src.getFinalStates());
 
-	for (auto i = src.begin(); i != src.end(); ++i)
+	for (const Transition& trans : src)
 	{
-		if (i->rhs() != state)
+		if (trans.rhs() != state)
 		{
-			ta->addTransition(*i);
+			ta->addTransition(trans);
 
 			continue;
 		}
 
-		std::vector<const AbstractBox*> label(i->label()->getNode());
-		std::vector<size_t> lhs(i->lhs());
+		std::vector<const AbstractBox*> label(trans.label()->getNode());
+		std::vector<size_t> lhs(trans.lhs());
 
 		label.push_back(box);
 
