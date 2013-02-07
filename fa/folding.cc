@@ -179,7 +179,7 @@ dis2_start:
 					root, stateSignaturePair.first, cutpoint.root, forbidden, conditional
 				);
 
-				if (boxPtr)
+				if (nullptr != boxPtr)
 				{
 					found = true;
 
@@ -248,7 +248,7 @@ dis3_start:
 
 		auto boxPtr = this->makeType2Box(root, cutpoint.root, forbidden, conditional);
 
-		if (boxPtr)
+		if (nullptr != boxPtr)
 		{
 			found = true;
 
@@ -443,7 +443,7 @@ const Box* Folding::makeType1Box(
 		return boxPtr;
 	}
 
-	if (!boxPtr)
+	if (nullptr == boxPtr)
 	{
 		return nullptr;
 	}
@@ -582,7 +582,7 @@ const Box* Folding::makeType2Box(
 		return boxPtr;
 	}
 
-	if (!boxPtr)
+	if (nullptr == boxPtr)
 	{
 		return nullptr;
 	}
