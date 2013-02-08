@@ -80,6 +80,20 @@ void FA::reorderBoxes(
 }
 
 
+std::string FA::writeTransition(const Transition& trans)
+{
+	std::ostringstream oss;
+	TimbukWriter writer(oss);
+
+	std::ostringstream tmp;
+	tmp << trans.label();
+
+	writer.writeTransition(trans.lhs(), tmp.str(), trans.rhs(), FA::writeState);
+
+	return oss.str();
+}
+
+
 std::ostream& operator<<(std::ostream& os, const TreeAut& ta)
 {
 	TAWriter<label_type> writer(os);

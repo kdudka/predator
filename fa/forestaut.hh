@@ -304,6 +304,7 @@ public:   // methods
 		return ss.str();
 	}
 
+	static std::string writeTransition(const Transition& trans);
 
 	friend std::ostream& operator<<(std::ostream& os, const FA& fa);
 
