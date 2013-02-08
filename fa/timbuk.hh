@@ -483,6 +483,10 @@ public:
 		this->out << "Transitions";
 	}
 
+	// WHICH IDIOT WROTE THE FOLLOWING 4 FUNCTIONS? DOES HE HAVE _NO_ SELF-RESPECT???
+	// TODO: please rewrite it in some nicer way... and lets do something with the
+	// whole screwed-up scanner/writer infrastructure
+
 	void writeTransition(const std::vector<size_t>& lhs, size_t label, size_t rhs)
 	{
 		this->out << 'l' << label;

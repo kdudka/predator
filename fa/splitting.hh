@@ -116,6 +116,11 @@ private:  // methods
 		size_t                                        root,
 		const std::vector<size_t>&                    offsets) const;
 
+	/**
+	 * @brief  TODO
+	 *
+	 * TODO
+	 */
 	// adds redundant root points to allow further manipulation
 	void isolateAtLeaf(
 		std::vector<FAE*>&                  dst,

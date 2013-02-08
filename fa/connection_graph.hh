@@ -47,6 +47,9 @@
 
 class ConnectionGraph
 {
+private:  // data type
+
+	typedef TreeAut::Transition Transition;
 
 public:
 
@@ -341,7 +344,8 @@ public:
 		StateToCutpointSignatureMap&    stateMap,
 		const TreeAut&                  ta);
 
-	// computes signature for all states of ta
+	// TODO: I don't know what this method does
+	// (computes signature for all states of ta) ???
 	static void fixSignatures(
 		TreeAut&           dst,
 		const TreeAut&     ta,
@@ -356,7 +360,9 @@ public:
 		for (const RootInfo& root : this->data)
 		{
 			if (!root.valid)
+			{
 				return false;
+			}
 		}
 
 		return true;

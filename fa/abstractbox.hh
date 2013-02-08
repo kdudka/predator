@@ -25,7 +25,12 @@
 #include <set>
 
 
-enum class box_type_e { bBox, bTypeInfo, bSel };
+enum class box_type_e
+{
+	bBox,       ///< type of box encapsulating nested forest automaton
+	bTypeInfo,  ///< type of box encapsulating type info
+	bSel        ///< type of box used for selectors
+};
 
 
 class AbstractBox

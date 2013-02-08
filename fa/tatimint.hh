@@ -20,15 +20,19 @@
 #ifndef TA_TIM_INT_H
 #define TA_TIM_INT_H
 
+// Standard library headers
 #include <string>
 #include <sstream>
 #include <map>
 
+// Forester headers
 #include "timbuk.hh"
 #include "treeaut.hh"
 #include "utils.hh"
 
-class TAReader : public TimbukReader {
+class TAReader : public TimbukReader
+{
+private:  // data members
 
 	TA<std::string>* dst;
 	std::string name;
@@ -167,8 +171,10 @@ public:
 		}
 	}
 
-	void writeTransitions(const TA<T>& aut) {
-		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i) {
+	void writeTransitions(const TA<T>& aut)
+	{
+		for (typename TA<T>::iterator i = aut.begin(); i != aut.end(); ++i)
+		{
 			std::ostringstream ss;
 			ss << i->label();
 			this->writeTransition(i->lhs(), ss.str(), i->rhs());
