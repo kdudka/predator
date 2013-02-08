@@ -56,12 +56,12 @@ void ConnectionGraph::computeSignatures(
 	stateMap.clear();
 
 	// the workset of transitions
-	std::list<const TT<label_type>*> transitions;
+	std::list<const Transition*> transitions;
 
 	CutpointSignature v(1);
 
 	// compute the initial signatures for leaves, other signatures are cleared
-	for (const TreeAut::Transition& trans : ta)
+	for (const Transition& trans : ta)
 	{	// traverse transitions of the TA
 		const Data* data;
 
@@ -99,7 +99,7 @@ void ConnectionGraph::computeSignatures(
 		changed = false;
 		for (auto i = transitions.begin(); i != transitions.end(); )
 		{
-			const TT<label_type>& t = **i;
+			const Transition& t = **i;
 			assert(t.label()->isNode());
 
 			v.clear();
@@ -131,16 +131,10 @@ void ConnectionGraph::fixSignatures(
 		size_t,
 		boost::hash<StateCutpointSignaturePair>> StateCutpointSignatureToStateMap;
 
-	StateToCutpointSignatureMap stateMap;
-
-	StateCutpointSignatureToStateMap signatureMap;
-
 	typedef std::vector<CutpointSignature> CutpointSignatureList;
 
-	std::unordered_map<size_t, CutpointSignatureList> invSignatureMap;
-
-	struct ChoiceElement {
-
+	struct ChoiceElement
+	{
 		CutpointSignatureList::const_iterator begin;
 		CutpointSignatureList::const_iterator end;
 		CutpointSignatureList::const_iterator iter;
@@ -149,7 +143,6 @@ void ConnectionGraph::fixSignatures(
 				CutpointSignatureList::const_iterator begin,
 				CutpointSignatureList::const_iterator end
 				) : begin(begin), end(end), iter(begin) {}
-
 	};
 
 	typedef std::vector<ChoiceElement> ChoiceType;
@@ -163,20 +156,25 @@ void ConnectionGraph::fixSignatures(
 			{
 				iter->iter = iter->begin;
 			}
+
 			return iter != choice.end();
 		}
 	};
 
-	std::vector<const TT<label_type>*> transitions;
+	StateToCutpointSignatureMap stateMap;
+	StateCutpointSignatureToStateMap signatureMap;
+	std::unordered_map<size_t, CutpointSignatureList> invSignatureMap;
+	std::vector<const Transition*> transitions;
 
 	CutpointSignature v;
 
-	for (TreeAut::iterator i = ta.begin(); i != ta.end(); ++i)
+	for (const Transition& trans : ta)
 	{
-		const Data* data;
+		const Data* data = nullptr;
 
-		if (i->label()->isData(data))
+		if (trans.label()->isData(data))
 		{
+			assert(nullptr != data);
 			if (data->isRef())
 			{
 				v = { CutpointInfo(data->d_ref.root) };
@@ -185,7 +183,7 @@ void ConnectionGraph::fixSignatures(
 				v.clear();
 			}
 
-			auto p = signatureMap.insert(std::make_pair(std::make_pair(i->rhs(), v), i->rhs()));
+			auto p = signatureMap.insert(std::make_pair(std::make_pair(trans.rhs(), v), trans.rhs()));
 
 			if (!p.second)
 			{
@@ -193,16 +191,16 @@ void ConnectionGraph::fixSignatures(
 			}
 
 			invSignatureMap.insert(
-					std::make_pair(i->rhs(), std::vector<CutpointSignature>())
-					).first->second.push_back(v);
+				std::make_pair(trans.rhs(), std::vector<CutpointSignature>())
+				).first->second.push_back(v);
 
-			ConnectionGraph::updateStateSignature(stateMap, i->rhs(), v);
+			ConnectionGraph::updateStateSignature(stateMap, trans.rhs(), v);
 
-			dst.addTransition(*i);
-
-		} else
+			dst.addTransition(trans);
+		}
+		else
 		{
-			transitions.push_back(&*i);
+			transitions.push_back(&trans);
 		}
 	}
 
@@ -212,42 +210,46 @@ void ConnectionGraph::fixSignatures(
 	{
 		changed = false;
 
-		for (auto it = transitions.begin(); it != transitions.end(); ++it)
+		for (const Transition*& t : transitions)
 		{
-			const TT<label_type>& t = **it;
+			const Transition& trans = *t;
 
-			assert(t.label()->isNode());
+			assert(trans.label()->isNode());
 
 			ChoiceType choice;
 
 			size_t i;
 
-			for (i = 0; i < t.lhs().size(); ++i)
+			for (i = 0; i < trans.lhs().size(); ++i)
 			{
-				auto iter = invSignatureMap.find(t.lhs()[i]);
+				auto iter = invSignatureMap.find(trans.lhs()[i]);
 
 				if (iter == invSignatureMap.end())
+				{
 					break;
+				}
 
 				assert(iter->second.begin() != iter->second.end());
 
 				choice.push_back(ChoiceElement(iter->second.begin(), iter->second.end()));
 			}
 
-			if (i < t.lhs().size())
+			if (i < trans.lhs().size())
+			{
 				continue;
+			}
 
 			std::vector<std::pair<size_t, CutpointSignature>> buffer;
 
 			do
 			{
-				std::vector<size_t> lhs(t.lhs().size());
+				std::vector<size_t> lhs(trans.lhs().size());
 
-				for (size_t i = 0; i < t.lhs().size(); ++i)
+				for (size_t i = 0; i < trans.lhs().size(); ++i)
 				{
 					assert(i < choice.size());
 
-					auto iter = signatureMap.find(std::make_pair(t.lhs()[i], *choice[i].iter));
+					auto iter = signatureMap.find(std::make_pair(trans.lhs()[i], *choice[i].iter));
 
 					assert(iter != signatureMap.end());
 
@@ -256,36 +258,38 @@ void ConnectionGraph::fixSignatures(
 
 				v.clear();
 
-				if (!processNode(v, lhs, t.label(), stateMap))
+				if (!processNode(v, lhs, trans.label(), stateMap))
 				{
 					assert(false);
 				}
 
 				ConnectionGraph::normalizeSignature(v);
 
-				auto p = signatureMap.insert(std::make_pair(std::make_pair(t.rhs(), v), offset));
+				auto p = signatureMap.insert(std::make_pair(std::make_pair(trans.rhs(), v), offset));
 
 				if (p.second)
 				{
 					++offset;
 
-					if (ta.isFinalState(t.rhs()))
+					if (ta.isFinalState(trans.rhs()))
+					{
 						dst.addFinalState(p.first->second);
+					}
 
 					ConnectionGraph::updateStateSignature(stateMap, p.first->second, v);
 
-					buffer.push_back(std::make_pair(t.rhs(), v));
+					buffer.push_back(std::make_pair(trans.rhs(), v));
 				}
 
-				dst.addTransition(lhs, t.label(), p.first->second);
+				dst.addTransition(lhs, trans.label(), p.first->second);
 
 			} while (NextChoice()(choice));
 
 			for (auto& item : buffer)
 			{
 				invSignatureMap.insert(
-						std::make_pair(item.first, std::vector<CutpointSignature>())
-						).first->second.push_back(item.second);
+					std::make_pair(item.first, std::vector<CutpointSignature>())
+					).first->second.push_back(item.second);
 			}
 
 			changed = changed || buffer.size();
@@ -306,7 +310,9 @@ void ConnectionGraph::processStateSignature(
 	if (ConnectionGraph::isData(state))
 	{	// for a data state
 		if (signature.empty())
+		{
 			return;
+		}
 
 		// Assertions
 		assert(signature.size() == 1);
@@ -318,7 +324,9 @@ void ConnectionGraph::processStateSignature(
 		result.back().fwdSelectors.insert(box->selectorToInput(input));
 
 		if (selector != static_cast<size_t>(-1))
+		{
 			result.back().bwdSelector = selector;
+		}
 
 		result.back().defines.insert(
 			box->inputCoverage(input).begin(), box->inputCoverage(input).end());
@@ -333,7 +341,9 @@ void ConnectionGraph::processStateSignature(
 			result.back().fwdSelectors.insert(box->selectorToInput(input));
 
 			if (selector == static_cast<size_t>(-1))
+			{
 				result.back().bwdSelector = static_cast<size_t>(-1);
+			}
 		}
 	}
 }
@@ -351,7 +361,9 @@ bool ConnectionGraph::processNode(
 	{	// for all boxes in the label
 		assert(nullptr != box);
 		if (!box->isStructural())
+		{
 			continue;
+		}
 
 		const StructuralBox* sBox = static_cast<const StructuralBox*>(box);
 		for (size_t j = 0; j < sBox->getArity(); ++j)
@@ -389,12 +401,12 @@ void ConnectionGraph::mergeCutpoint(size_t dst, size_t src)
 	const CutpointSignature& srcSignature = this->data[src].signature;
 
 	assert(
-			std::find_if(
-				dstSignature.begin(),
-				dstSignature.end(),
-				[&src](const CutpointInfo& cutpoint) { return cutpoint.root == src; }
-				) != dstSignature.end()
-			);
+		std::find_if(
+			dstSignature.begin(),
+			dstSignature.end(),
+			[&src](const CutpointInfo& cutpoint) { return cutpoint.root == src; }
+			) != dstSignature.end()
+		);
 
 	CutpointSignature signature;
 
@@ -417,7 +429,9 @@ void ConnectionGraph::mergeCutpoint(size_t dst, size_t src)
 				signature.back().fwdSelectors = cutpoint.fwdSelectors;
 
 				if (tmp.bwdSelector == static_cast<size_t>(-1))
+				{
 					continue;
+				}
 
 				signature.back().bwdSelector = static_cast<size_t>(-1);
 
@@ -439,7 +453,9 @@ void ConnectionGraph::mergeCutpoint(size_t dst, size_t src)
 				signature.back().fwdSelectors = cutpoint.fwdSelectors;
 
 				if (tmp.bwdSelector == static_cast<size_t>(-1))
+				{
 					continue;
+				}
 
 				assert(tmp.root < this->data.size());
 
@@ -453,7 +469,9 @@ void ConnectionGraph::mergeCutpoint(size_t dst, size_t src)
 				for (; i != this->data[tmp.root].bwdMap.end(); ++i)
 				{
 					if (i->second == dst)
+					{
 						break;
+					}
 				}
 
 				if (i == this->data[tmp.root].bwdMap.end())
@@ -516,7 +534,9 @@ void ConnectionGraph::normalizeSignature(CutpointSignature& signature)
 			cutpoint.selCount = cutpoint.fwdSelectors.size() - 1;
 
 			if (cutpoint.bwdSelector > signature[i].bwdSelector)
+			{
 				cutpoint.bwdSelector = signature[i].bwdSelector;
+			}
 
 			assert(
 				ConnectionGraph::areDisjoint(cutpoint.defines, signature[i].defines));
@@ -542,7 +562,9 @@ std::ostream& operator<<(
 	for (size_t s : info.fwdSelectors)
 	{
 		if (s == static_cast<size_t>(-1))
+		{
 			continue;
+		}
 
 		os << ' ' << s;
 	}
@@ -550,14 +572,20 @@ std::ostream& operator<<(
 	os << " }, ";
 
 	if (info.bwdSelector == static_cast<size_t>(-1))
+	{
 		os << '-';
+	}
 	else
+	{
 		os << info.bwdSelector;
+	}
 
 	os << ", {";
 
 	for (size_t s : info.defines)
+	{
 		os << " +" << s;
+	}
 
 	return os << " })";
 }
@@ -587,13 +615,17 @@ void ConnectionGraph::visit(
 		this->visit(cutpoint.root, visited, order, marked);
 
 		if (cutpoint.refCount > 1)
+		{
 			marked[cutpoint.root] = true;
+		}
 	}
 
 	for (auto& selectorCutpointPair : this->data[c].bwdMap)
 	{	// for every cutpoint reachable backward
 		if (visited[selectorCutpointPair.second])
+		{
 			continue;
+		}
 
 		std::vector<bool> mask(this->data.size(), false);
 
@@ -619,7 +651,9 @@ void ConnectionGraph::visit(size_t c, std::vector<bool>& visited) const
 	assert(c < visited.size());
 
 	if (visited[c])
+	{
 		return;
+	}
 
 	visited[c] = true;
 
@@ -631,7 +665,9 @@ void ConnectionGraph::visit(size_t c, std::vector<bool>& visited) const
 	for (auto& selectorCutpointPair : this->data[c].bwdMap)
 	{
 		if (visited[selectorCutpointPair.second])
+		{
 			continue;
+		}
 
 		std::vector<bool> mask(this->data.size(), false);
 
@@ -640,7 +676,9 @@ void ConnectionGraph::visit(size_t c, std::vector<bool>& visited) const
 		size_t tmp = this->climb(selectorCutpointPair.second, visited, mask);
 
 		if (tmp == c)
+		{
 			continue;
+		}
 
 		this->visit(tmp, visited);
 	}
@@ -655,10 +693,14 @@ size_t ConnectionGraph::climb(
 	assert(c < this->data.size());
 
 	if (mask[c])
+	{
 		return c;
+	}
 
 	if (this->data[c].bwdMap.empty())
+	{
 		return c;
+	}
 
 	mask[c] = true;
 
@@ -667,7 +709,9 @@ size_t ConnectionGraph::climb(
 		assert(selectorCutpointPair.second < visited.size());
 
 		if (!visited[selectorCutpointPair.second])
+		{
 			return this->climb(selectorCutpointPair.second, visited, mask);
+		}
 	}
 
 	return c;
