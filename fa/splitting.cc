@@ -374,7 +374,7 @@ void Splitting::isolateAtLeaf(
 
 		ta2.addFinalState(state);
 
-		const Transition& t = ta2.addTransition(transBox.first->lhs(), transBox.first->label(), state)->first;
+		ta2.addTransition(transBox.first->lhs(), transBox.first->label(), state)->first;
 
 		ta.copyTransitions(ta2);
 
@@ -383,6 +383,11 @@ void Splitting::isolateAtLeaf(
 		fae.connectionGraph.newRoot();
 		fae.makeDisjoint(fae.getRootCount() - 1);
 		fae.connectionGraph.invalidate(root);
+
+		// reload the transition after making the automata disjoint
+		const std::shared_ptr<TreeAut> pTa = fae.getRoot(fae.getRootCount() - 1);
+		const Transition& t = pTa->getAcceptingTransition();
+
 
 		for (const size_t& f : ta3.getFinalStates())
 		{
