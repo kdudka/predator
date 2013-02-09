@@ -611,4 +611,11 @@ const Fnc* FncDb::operator[](int uid) const
     return dbConstLookup(d->db, fncs_, uid);
 }
 
+const Fnc* fncByCfg(const ControlFlow *pCfg)
+{
+    const char *ptr = reinterpret_cast<const char *>(pCfg);
+    ptr -= offsetof(Fnc, cfg);
+    return reinterpret_cast<const Fnc *>(ptr);
+}
+
 } // namespace CodeStorage
