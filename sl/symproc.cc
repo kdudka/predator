@@ -1691,7 +1691,7 @@ bool dlSegMergeAddressesOfEmpty(
     CL_DEBUG_MSG(proc.lw(),
             "dlSegMergeAddressesIfNeeded() calls valMerge() recursively");
 
-   return valMerge(dst, proc, valNext1, valNext2);
+    return valMerge(dst, proc, valNext1, valNext2);
 }
 
 bool dlSegMergeAddressesIfNeeded(
