@@ -20,8 +20,6 @@
 #ifndef H_GUARD_SYM_EXEC_H
 #define H_GUARD_SYM_EXEC_H
 
-#include <string>
-
 /**
  * @file symexec.hh
  * SymExec - top level algorithm of the @b symbolic @b execution
@@ -35,24 +33,9 @@ namespace CodeStorage {
     struct Storage;
 }
 
-struct SymExecParams {
-    bool trackUninit;       ///< enable/disable @b track_uninit @b mode
-    bool oomSimulation;     ///< enable/disable @b oom @b simulation mode
-    bool skipPlot;          ///< simply ignore all ___sl_plot* calls
-    std::string errLabel;   ///< if not empty, treat reaching the label as error
-
-    SymExecParams():
-        trackUninit(false),
-        oomSimulation(false),
-        skipPlot(false)
-    {
-    }
-};
-
 void execute(
         SymState                        &results,
         const SymHeap                   &entry,
-        const CodeStorage::Fnc          &fnc,
-        const SymExecParams             &ep);
+        const CodeStorage::Fnc          &fnc);
 
 #endif /* H_GUARD_SYM_EXEC_H */

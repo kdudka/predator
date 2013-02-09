@@ -254,6 +254,4 @@ class SymExecCore: public SymProc {
         const SymExecCoreParams ep_;
 };
 
-void setErrorRecoveryMode(int mode);
-
 #endif /* H_GUARD_SYM_PROC_H */

@@ -26,6 +26,7 @@
 #include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
+#include "glconf.hh"
 #include "prototype.hh"
 #include "symabstract.hh"
 #include "symbin.hh"
@@ -45,13 +46,6 @@
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
-
-static int errorRecoveryMode = (SE_ERROR_RECOVERY_MODE);
-
-void setErrorRecoveryMode(int mode)
-{
-    ::errorRecoveryMode = mode;
-}
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
@@ -86,7 +80,7 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace)
     plotHeap(sh_, "error-state", lw_);
 #endif
 
-    if (::errorRecoveryMode)
+    if (GlConf::data.errorRecoveryMode)
         errorDetected_ = true;
     else
         throw std::runtime_error("error recovery is disabled");
@@ -94,7 +88,7 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace)
 
 bool SymProc::hasFatalError() const
 {
-    return (::errorRecoveryMode < 2)
+    return (GlConf::data.errorRecoveryMode < 2)
         && errorDetected_;
 }
 

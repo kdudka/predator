@@ -33,6 +33,7 @@ endif()
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
+    glconf.cc
     intrange.cc
     plotenum.cc
     prototype.cc
