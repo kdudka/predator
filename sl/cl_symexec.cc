@@ -25,6 +25,7 @@
 #include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
+#include "fixed_point.hh"
 #include "glconf.hh"
 #include "symbt.hh"
 #include "symdump.hh"
@@ -152,6 +153,14 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *configString)
 
     // run symbolic execution
     launchSymExec(stor);
+
+    FixedPoint::StateByInsn *const fixedPoint = GlConf::data.fixedPoint;
+    if (fixedPoint) {
+        // plot fixed-point
+        fixedPoint->plotAll();
+        delete fixedPoint;
+        printMemUsage("FixedPoint::StateByInsn::~StateByInsn");
+    }
 
     if (Trace::Globals::alive()) {
         // plot all pending trace graphs

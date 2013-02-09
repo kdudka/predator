@@ -20,6 +20,8 @@
 #include "config.h"
 #include "glconf.hh"
 
+#include "fixed_point.hh"
+
 #include <cl/cl_msg.hh>
 
 #include <algorithm>
@@ -52,6 +54,15 @@ void assumeNoValue(const string &name, const string &value)
         return;
 
     CL_WARN("option \"" << name << "\" takes no value");
+}
+
+void handleDumpFixedPoint(const string &name, const string &value)
+{
+    assumeNoValue(name, value);
+    if (data.fixedPoint)
+        CL_BREAK_IF("we are leaking an instance of FixedPoint::StateByInsn");
+
+    data.fixedPoint = new FixedPoint::StateByInsn;
 }
 
 void handleErrorLabel(const string &name, const string &value)
@@ -90,6 +101,7 @@ void handleTrackUninit(const string &name, const string &value)
 
 ConfigStringParser::ConfigStringParser()
 {
+    tbl_["dump_fixed_point"]        = handleDumpFixedPoint;
     tbl_["error_label"]             = handleErrorLabel;
     tbl_["no_error_recovery"]       = handleNoErrorRecovery;
     tbl_["no_plot"]                 = handleNoPlot;

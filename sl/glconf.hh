@@ -24,6 +24,10 @@
 
 #include <string>
 
+namespace FixedPoint {
+    class StateByInsn;
+}
+
 namespace GlConf {
 
 struct Options {
@@ -32,12 +36,14 @@ struct Options {
     bool skipUserPlots;     ///< ignore all ___sl_plot*() calls
     int errorRecoveryMode;  ///< @copydoc config.h::SE_ERROR_RECOVERY_MODE
     std::string errLabel;   ///< if not empty, treat reaching the label as error
+    FixedPoint::StateByInsn *fixedPoint;  ///< fixed-point plotter (0 if unused)
 
     Options():
         trackUninit(false),
         oomSimulation(false),
         skipUserPlots(false),
-        errorRecoveryMode(SE_ERROR_RECOVERY_MODE)
+        errorRecoveryMode(SE_ERROR_RECOVERY_MODE),
+        fixedPoint(0)
     {
     }
 };

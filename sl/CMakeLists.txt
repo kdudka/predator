@@ -1,4 +1,4 @@
-# Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2010-2013 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -33,6 +33,7 @@ endif()
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
+    fixed_point.cc
     glconf.cc
     intrange.cc
     plotenum.cc

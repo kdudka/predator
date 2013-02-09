@@ -26,6 +26,7 @@
 #include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
+#include "fixed_point.hh"
 #include "glconf.hh"
 #include "sigcatch.hh"
 #include "symabstract.hh"
@@ -638,6 +639,10 @@ bool /* complete */ SymExecEngine::execInsn()
             // mark as processed now since it can be re-scheduled right away
             origin.setDone(heapIdx_);
         }
+
+        // capture fixed-point for plotting if configured to do so
+        if (GlConf::data.fixedPoint)
+            GlConf::data.fixedPoint->insert(insn, localState_[heapIdx_]);
 
         if (nextInsnIsCond)
             // this is going to be handled in execCondInsn() right away
