@@ -466,6 +466,11 @@ static void read_base_type(struct cl_type *clt, tree type)
     if (NULL_TREE == name)
         return;
 
+    if (TYPE_DECL == TREE_CODE(type)) {
+        CL_WARN_UNHANDLED_EXPR(type, "TYPE_DECL");
+        return;
+    }
+
     // TODO: scope
     if (IDENTIFIER_NODE == TREE_CODE(name)) {
         clt->name = IDENTIFIER_POINTER(name);
@@ -526,6 +531,11 @@ static int dig_field_offset(tree t)
 static void dig_record_type(struct cl_type *clt, tree t)
 {
     for (t = TYPE_FIELDS(t); t; t = TREE_CHAIN(t)) {
+        if (TYPE_DECL == TREE_CODE(t)) {
+            CL_WARN_UNHANDLED_EXPR(t, "TYPE_DECL");
+            continue;
+        }
+
         // TODO: chunk allocation ?
         clt->items = CL_RESIZEVEC(struct cl_type_item, clt->items,
                                   clt->item_cnt + 1);
@@ -636,6 +646,10 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->code = CL_TYPE_REAL;
             break;
 
+        case METHOD_TYPE:
+            CL_WARN_UNHANDLED_EXPR(type, "METHOD_TYPE");
+            break;
+
         default:
             CL_BREAK_IF("read_specific_type() got something special");
     };
@@ -677,6 +691,10 @@ static enum cl_scope_e get_decl_scope(tree t)
 
             case TRANSLATION_UNIT_DECL:
                 break;
+
+            case RECORD_TYPE:
+                CL_WARN_UNHANDLED_EXPR(ctx, "RECORD_TYPE)");
+                return CL_SCOPE_STATIC;
 
             default:
                 CL_BREAK_IF("unhandled declaration context");
@@ -722,9 +740,13 @@ static int bitfield_lookup(tree op)
 
     tree t = TYPE_FIELDS(type);
     int i;
-    for (i = 0; t; t = TREE_CHAIN(t), ++i)
+    for (i = 0; t; t = TREE_CHAIN(t), ++i) {
+        if (TYPE_DECL == TREE_CODE(t))
+            continue;
+
         if (offset == dig_field_offset(t))
             return i;
+    }
 
     // not found
     CL_WARN_UNHANDLED_EXPR(op, "BIT_FIELD_REF");
@@ -1251,6 +1273,10 @@ static void handle_operand(struct cl_operand *op, tree t)
     read_raw_operand(op, t);
 }
 
+struct gimple_walk_data {
+    bool abort_sent;
+};
+
 static void handle_stmt_unop(gimple stmt, enum tree_code code,
                              struct cl_operand *dst, tree src_tree)
 {
@@ -1353,7 +1379,7 @@ static void handle_stmt_call_args(gimple stmt)
     }
 }
 
-static void handle_stmt_call(gimple stmt)
+static void handle_stmt_call(gimple stmt, struct gimple_walk_data *data)
 {
     tree op0 = gimple_call_fn(stmt);
 
@@ -1390,6 +1416,7 @@ static void handle_stmt_call(gimple stmt)
         cli.loc     = loc;
 
         cl->insn(cl, &cli);
+        data->abort_sent = true;
     }
 }
 
@@ -1579,6 +1606,18 @@ static void handle_stmt_label(gimple stmt)
     cl->insn(cl, &cli);
 }
 
+static void handle_stmt_resx(gimple stmt, struct gimple_walk_data *data)
+{
+    CL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_RESX");
+    if (data->abort_sent)
+        return;
+
+    static struct cl_insn cli;
+    cli.code    = CL_INSN_ABORT;
+    cl->insn(cl, &cli);
+    data->abort_sent = true;
+}
+
 // callback of walk_gimple_seq declared in <gimple.h>
 static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
                                 bool *subtree_done,
@@ -1586,7 +1625,8 @@ static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
 {
     gimple stmt = gsi_stmt(*iter);
     (void) subtree_done;
-    (void) info;
+
+    struct gimple_walk_data *data = (struct gimple_walk_data *) info->info;
 
 #if CL_DEBUG_GCC_GIMPLE
     printf("\n\t\t");
@@ -1604,7 +1644,7 @@ static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
             break;
 
         case GIMPLE_CALL:
-            handle_stmt_call(stmt);
+            handle_stmt_call(stmt, data);
             break;
 
         case GIMPLE_RETURN:
@@ -1619,8 +1659,16 @@ static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
             handle_stmt_label(stmt);
             break;
 
+        case GIMPLE_RESX:
+            handle_stmt_resx(stmt, data);
+            break;
+
         case GIMPLE_ASM:
             CL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_ASM");
+            break;
+
+        case GIMPLE_NOP:
+            CL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_NOP");
             break;
 
         case GIMPLE_PREDICT:
@@ -1644,12 +1692,14 @@ static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
 }
 
 // walk through gimple BODY using <gimple.h> API
-static void handle_bb_gimple(struct basic_block_def *bb)
+static void handle_bb_gimple(struct basic_block_def *bb, void *data)
 {
     const gimple_seq seq = bb_seq(bb);
 
     struct walk_stmt_info info;
     memset(&info, 0, sizeof(info));
+    info.info = data;
+
     walk_gimple_seq(seq, cb_walk_gimple_stmt, NULL, &info);
 }
 
@@ -1704,14 +1754,25 @@ static void handle_fnc_bb(struct basic_block_def *bb)
     free(label);
 
     // go through the bb's content
-    handle_bb_gimple(bb);
+    struct gimple_walk_data data = { false };
+    handle_bb_gimple(bb, &data);
 
     // check for a fallthru successor
     edge e;
     edge_iterator ei = ei_start(bb->succs);
-    if (ei_cond(ei, &e) && e->dest && (e->flags & EDGE_FALLTHRU)) {
-        handle_jmp_edge(e);
-        return;
+    if (ei_cond(ei, &e)) {
+        if (e->dest && (e->flags & EDGE_FALLTHRU))
+            handle_jmp_edge(e);
+
+        if (e->flags & EDGE_EH) {
+            CL_WARN_UNHANDLED("EDGE_EH (exception edge)");
+            if (data.abort_sent)
+                return;
+
+            static struct cl_insn cli;
+            cli.code    = CL_INSN_ABORT;
+            cl->insn(cl, &cli);
+        }
     }
 }
 

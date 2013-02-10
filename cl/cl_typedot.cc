@@ -261,6 +261,10 @@ deref_done:
             glOut_ << "void";
             break;
 
+        case CL_TYPE_UNKNOWN:
+            glOut_ << "unknown";
+            break;
+
         case CL_TYPE_STRUCT:
             glOut_ << "struct" << " " << typeName(clt);
             break;
@@ -297,7 +301,7 @@ deref_done:
             break;
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("base type not supported by ClTypeDotGenerator");
     }
 
     if (!str.empty())
