@@ -464,7 +464,7 @@ class ImportGlVarNode: public Node {
     public:
         /**
          * @param ref a trace leading to this concretization step
-         * @param string describing the global variable being imported
+         * @param varString describing the global variable being imported
          */
         ImportGlVarNode(Node *ref, const std::string &varString):
             Node(ref),
