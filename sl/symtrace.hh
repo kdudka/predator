@@ -525,7 +525,7 @@ class UserNode: public Node {
 };
 
 /// plot a trace graph named "name-NNNN.dot" leading to the given node
-bool plotTrace(Node *endPoint, const std::string &name);
+bool plotTrace(Node *endPoint, const std::string &name, std::string *pName = 0);
 
 /// print a human-readable trace using the Code Listener messaging API
 void printTrace(Node *endPoint);

@@ -22,6 +22,7 @@
 
 #include "symplot.hh"
 #include "symstate.hh"
+#include "symtrace.hh"
 #include "worklist.hh"
 
 #include <cl/cl_msg.hh>
@@ -111,12 +112,26 @@ void plotInsn(PlotData &plot, const TInsn insn)
 
         // plot the shape graph
         std::string shapeName;
-        plotHeap(sh, plot.name, /* loc */ 0, &shapeName);
+        plotHeap(sh, plot.name + "-sh", /* loc */ 0, &shapeName);
 
-        // plot the link node
-        plot.out << QUOT(shapeName) << "[label=\"sh #"
-            << i << "\", URL=" << DOT_LINK(shapeName)
-            << "];\n";
+        // plot the trace graph
+        std::string traceName;
+        plotTrace(sh.traceNode(), plot.name + "-tr", &traceName);
+
+        // open cluster
+        plot.out << "subgraph \"cluster" << shapeName
+            << "\" {\n\tlabel=\"#" << i << "\"\n";
+
+        // plot the link to shape
+        plot.out << QUOT(shapeName)
+            << "[label=\"sh\", URL=" << DOT_LINK(shapeName) << "];\n";
+
+        // plot the link to trace
+        plot.out << QUOT(traceName)
+            << "[label=\"tr\", URL=" << DOT_LINK(traceName) << "];\n";
+
+        // close cluster
+        plot.out << "}\n";
     }
 
     // close cluster
