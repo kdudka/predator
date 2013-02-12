@@ -11,7 +11,7 @@ void trigger_null_dereference(void)
 void test__cond_reasoning__with_zero_lookback_level() {
     // obtain an unknown value
     void *who_knows = &who_knows;
-    if (___sl_get_nondet_int())
+    if (__VERIFIER_nondet_int())
         who_knows = NULL;
 
     // who_knows is UNKNOWN at this point

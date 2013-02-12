@@ -23,7 +23,7 @@ int main()
     struct item *list = NULL;
     append(&list, data);
     append(&list, data);
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         append(&list, data);
 
     // var-killer kills 'data' at this point

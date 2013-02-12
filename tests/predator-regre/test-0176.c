@@ -5,7 +5,7 @@ void create_nonsense(void ***pptr)
 {
     *pptr = NULL;
 
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         void **data = *pptr;
         *pptr = malloc(sizeof **pptr);
         **pptr = data;

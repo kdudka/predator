@@ -113,13 +113,13 @@ void seq_sort(struct list **ptr_to_seq)
 int main()
 {
     struct list *seq = NULL;
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         struct node *node = malloc(sizeof *node);
         if (!node)
             abort();
 
         node->next = NULL;
-        node->value = ___sl_get_nondet_int();
+        node->value = __VERIFIER_nondet_int();
 
         struct list *item = malloc(sizeof *item);
         if (!item)

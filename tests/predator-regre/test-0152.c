@@ -32,7 +32,7 @@ static void create_list_of_length(struct list_head *head, unsigned length)
     insert_node(head, length);
     insert_node(head, length);
 
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         insert_node(head, length);
 }
 

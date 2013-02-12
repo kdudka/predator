@@ -252,20 +252,20 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
 
 void torture_arena(PLArenaPool *pool)
 {
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         PL_ArenaAllocate(pool, 0x100);
 
-        while (___sl_get_nondet_int())
+        while (__VERIFIER_nondet_int())
             PL_FreeArenaPool(pool);
     }
 }
 
 int main()
 {
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         PLArenaPool pool;
 
-        while (___sl_get_nondet_int()) {
+        while (__VERIFIER_nondet_int()) {
             // initialize arena pool
             PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
 

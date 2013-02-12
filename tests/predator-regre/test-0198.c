@@ -2,7 +2,7 @@
 
 int main()
 {
-    int i = ___sl_get_nondet_int();
+    int i = __VERIFIER_nondet_int();
     if (i < 0)
         ___sl_plot("less-than-zero", &i);
     else if (0 < i)

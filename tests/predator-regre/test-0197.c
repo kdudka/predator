@@ -34,7 +34,7 @@ int main()
 {
     char *ptr;
 
-    switch (___sl_get_nondet_int()) {
+    switch (__VERIFIER_nondet_int()) {
         case 0:
             // SAFE (without alignment)
             ptr = do_memset(

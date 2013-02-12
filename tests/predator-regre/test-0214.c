@@ -102,10 +102,10 @@ void remove_one(list_p list, end_point_t from)
     free(item);
 }
 
-/* FIXME: !!___sl_get_nondet_int() should work without such a wrapper */
+/* FIXME: !!__VERIFIER_nondet_int() should work without such a wrapper */
 end_point_t rand_end_point(void)
 {
-    if (___sl_get_nondet_int())
+    if (__VERIFIER_nondet_int())
         return LIST_BEG;
     else
         return LIST_END;
@@ -115,18 +115,18 @@ int main()
 {
     static list_t list;
 
-    while (___sl_get_nondet_int()) {
-        while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int()) {
+        while (__VERIFIER_nondet_int())
             append_one(&list, rand_end_point());
 
-        while (___sl_get_nondet_int())
+        while (__VERIFIER_nondet_int())
             remove_one(&list, rand_end_point());
     }
 
     end_point_t end_point;
     direction_t direction;
 
-    if (___sl_get_nondet_int()) {
+    if (__VERIFIER_nondet_int()) {
         /* destroy the list from begin to end */
         end_point = LIST_BEG;
         direction = ITEM_NEXT;

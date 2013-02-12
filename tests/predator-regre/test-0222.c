@@ -35,15 +35,15 @@ int main()
 
     do
         list_add((item = malloc(sizeof *item)), &list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
-    if (___sl_get_nondet_int())
+    if (__VERIFIER_nondet_int())
         /* XXX: misuse of list_add() */
         list_add(item, &list);
 
     do
         list_add((item = malloc(sizeof *item)), &list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     struct list_head *const beg = list.next;
     struct list_head *const end = list.prev;
@@ -55,7 +55,7 @@ int main()
     }
 
     /* FIXME: why are beg/end still alive at this point?? */
-    destroy(!!___sl_get_nondet_int());
+    destroy(!!__VERIFIER_nondet_int());
     return 0;
 }
 

@@ -4021,13 +4021,13 @@ int cdrom_get_last_written(struct cdrom_device_info *cdi , long *last_written )
     }
     ret = cdrom_get_disc_info(cdi, & di);
 
-    if (___sl_get_nondet_int()) {
+    if (__VERIFIER_nondet_int()) {
         goto use_toc;
     }
     last_track = (unsigned int )(((int )di.last_track_msb << 8) | (int )di.last_track_lsb);
     ti_size = cdrom_get_track_info(cdi, (unsigned short )last_track, (unsigned char)1, & ti);
 
-    if (___sl_get_nondet_int()) {
+    if (__VERIFIER_nondet_int()) {
         goto use_toc;
     }
     if (ti.blank) {
@@ -4038,12 +4038,12 @@ int cdrom_get_last_written(struct cdrom_device_info *cdi , long *last_written )
         ti_size = cdrom_get_track_info(cdi, (unsigned short )last_track, (unsigned char)1, & ti);
     }
 
-    if (___sl_get_nondet_int()) {
+    if (__VERIFIER_nondet_int()) {
         goto use_toc;
     }
     if (ti.lra_v) {
 
-        if (___sl_get_nondet_int()) {
+        if (__VERIFIER_nondet_int()) {
             (*last_written) = (long )__fswab32(ti.last_rec_address);
         } else {
             goto _L;
@@ -6117,14 +6117,14 @@ void HsInitialize(void)
     initialized = 0;
 
     cdrom_root_table = HsCreateCtlTable(0);
-    while(___sl_get_nondet_int()) {
+    while(__VERIFIER_nondet_int()) {
         tbl = HsCreateCtlTable(1);
         tbl->child = cdrom_root_table->child;
         cdrom_root_table->child = tbl;
     }
 
     topCdromPtr = 0;
-    while(___sl_get_nondet_int()) {
+    while(__VERIFIER_nondet_int()) {
         cdi = HsCreateCdromDeviceInfo();
         cdi->next = topCdromPtr;
         topCdromPtr = cdi;
@@ -6157,12 +6157,12 @@ int main_sub(void)
         return(tmp);
     }
 
-    while (___sl_get_nondet_int()) {
-        if (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
+        if (__VERIFIER_nondet_int()) {
             med = get_nondet_ptr();
             tmp = cdrom_get_media_event(cdi, med);
         }
-        else if (___sl_get_nondet_int()) {
+        else if (__VERIFIER_nondet_int()) {
             fp = (struct file *)malloc(sizeof(struct file));
             ip = (struct inode *)malloc(sizeof(struct inode));
             ip->i_bdev = (struct block_device *)malloc(sizeof(struct block_device));
@@ -6171,20 +6171,20 @@ int main_sub(void)
             free(fp);
             free(ip);
         }
-        else if (___sl_get_nondet_int()) {
+        else if (__VERIFIER_nondet_int()) {
             fp = (struct file *)malloc(sizeof(struct file));
             cdrom_release(cdi, fp);
             free(fp);
         }
-        else if (___sl_get_nondet_int()) {
+        else if (__VERIFIER_nondet_int()) {
             tmp = cdrom_number_of_slots(cdi);
         }
-        else if (___sl_get_nondet_int()) {
+        else if (__VERIFIER_nondet_int()) {
             cmd = get_nondet_int();
             arg = get_nondet_int();
             tmp = mmc_ioctl(cdi, cmd, arg);
         }
-        else if (___sl_get_nondet_int()) {
+        else if (__VERIFIER_nondet_int()) {
             fp = (struct file *)malloc(sizeof(struct file));
             ip = (struct inode *)malloc(sizeof(struct inode));
             ip->i_bdev = (struct block_device *)malloc(sizeof(struct block_device));
@@ -6195,7 +6195,7 @@ int main_sub(void)
             free(ip);
             free(fp);
         }
-        else if (___sl_get_nondet_int()) {
+        else if (__VERIFIER_nondet_int()) {
             tmp = cdrom_media_changed(cdi);
         }
     }

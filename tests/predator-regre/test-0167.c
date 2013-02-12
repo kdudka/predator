@@ -31,7 +31,7 @@ static void merge_pair(struct node **dst,
 {
     // merge two sorted sub-lists into one
     while (sub1 || sub2) {
-        if (!sub2 || (sub1 && ___sl_get_nondet_int()))
+        if (!sub2 || (sub1 && __VERIFIER_nondet_int()))
             merge_single_node(&dst, &sub1);
         else
             merge_single_node(&dst, &sub2);
@@ -83,7 +83,7 @@ static void seq_sort(struct list **data)
 int main()
 {
     struct list *data = NULL;
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         struct node *node = malloc(sizeof *node);
         if (!node)
             abort();

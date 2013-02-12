@@ -43,7 +43,7 @@ int main()
     ___sl_plot("01");
 
     // this should be out of range --> stack smashing
-    if (___sl_get_nondet_int()) {
+    if (__VERIFIER_nondet_int()) {
         pgi->h0.next = NULL;
         ___sl_plot("02");
     }

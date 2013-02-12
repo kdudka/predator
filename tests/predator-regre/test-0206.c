@@ -2,7 +2,7 @@
 
 int main()
 {
-    unsigned i = ___sl_get_nondet_int();
+    unsigned i = __VERIFIER_nondet_int();
     if (i < 1) {
         ___sl_plot("less-than-one", &i);
         ___SL_ASSERT(i < 1);

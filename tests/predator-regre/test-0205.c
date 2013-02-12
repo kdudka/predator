@@ -4,7 +4,7 @@
 
 int main()
 {
-    size_t size = ___sl_get_nondet_int();
+    size_t size = __VERIFIER_nondet_int();
     if (size < 0x10)
         abort();
     if (0x1000 < size)

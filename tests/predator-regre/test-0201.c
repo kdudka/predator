@@ -2,7 +2,7 @@
 
 int main()
 {
-    int i = ___sl_get_nondet_int();
+    int i = __VERIFIER_nondet_int();
     if (i < 0x100 || 0x1000 < i)
         return 1;
 
@@ -18,7 +18,7 @@ int main()
     ___SL_ASSERT(!(k & 0xFF));
 
     // now trigger some assertion failures
-    switch (___sl_get_nondet_int()) {
+    switch (__VERIFIER_nondet_int()) {
         case -3:
             ___SL_ASSERT(!(i & 0x1));
             break;
@@ -45,7 +45,7 @@ int main()
     ___SL_ASSERT(!(j & 0xF));
     ___SL_ASSERT(!(k & 0xF));
 
-    if (___sl_get_nondet_int())
+    if (__VERIFIER_nondet_int())
         ___SL_ASSERT(!(k & 0xFF));
 
     ++i, ++j, ++k;

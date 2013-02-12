@@ -39,20 +39,20 @@ int strncmp (__const char *__s1, __const char *__s2, size_t __n)
     strlen(__s1);
     strlen(__s2);
     (void) __n;
-    return ___sl_get_nondet_int();
+    return __VERIFIER_nondet_int();
 }
 
 int strcmp (__const char *__s1, __const char *__s2)
 {
     strlen(__s1);
     strlen(__s2);
-    return ___sl_get_nondet_int();
+    return __VERIFIER_nondet_int();
 }
 
 int is_orphan_vg(const char *vg_name)
 {
     strlen(vg_name);
-    return ___sl_get_nondet_int();
+    return __VERIFIER_nondet_int();
 }
 
 /* verbatim copy from uuid-prep.c */
@@ -155,7 +155,7 @@ void *dm_hash_lookup(struct dm_hash_table *t, const char *key)
 
     /* return either random list node or NULL */
     for (pos = head->n; head != pos; pos = pos->n)
-        if (___sl_get_nondet_int())
+        if (__VERIFIER_nondet_int())
             return dm_list_item(pos, struct ht_node)->data;
 
     return NULL;
@@ -169,10 +169,10 @@ int dm_hash_insert(struct dm_hash_table *t, const char *key, void *data)
     (void) key;
 
     /* seek random list position */
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         pos = pos->p;
 
-    if (head != pos && ___sl_get_nondet_int())
+    if (head != pos && __VERIFIER_nondet_int())
         /* simulate lookup success if we have at least one node in the list */
         return 0;
 
@@ -197,7 +197,7 @@ void dm_hash_remove(struct dm_hash_table *t, const char *key)
     (void) key;
 
     /* seek random list position */
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         pos = pos->p;
 
     if (head == pos)
@@ -337,7 +337,7 @@ static int _get_block_size(struct device *dev, unsigned int *size)
     const char *name = dev_name(dev);
 
     if (dev->block_size == -1) {
-        if (___sl_get_nondet_int() < 0) {
+        if (__VERIFIER_nondet_int() < 0) {
             print_log(3, "device/dev-io.c", 131 , -1,"%s: %s failed: %s", name, "ioctl BLKBSZGET", strerror((*__errno_location ())));
             return 0;
         }
@@ -365,7 +365,7 @@ static int _aligned_io(struct device_area *where, char *buffer,
     /* TODO */
 #if 0
     if (!block_size)
-        block_size = lvm_getpagesize() ___sl_get_nondet_int();
+        block_size = lvm_getpagesize() __VERIFIER_nondet_int();
 
     _widen_region(block_size, where, &widened);
 
@@ -435,7 +435,7 @@ static void _dev_inc_error_count(struct device *dev)
 
 int dev_open(struct device *dev)
 {
-    if (___sl_get_nondet_int())
+    if (__VERIFIER_nondet_int())
         return 0;
 
     dev->open_count ++;

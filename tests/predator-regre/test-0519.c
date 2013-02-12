@@ -6,7 +6,7 @@ struct node {
     struct node *r;
 };
 
-#define __nondet ___sl_get_nondet_int
+#define __nondet __VERIFIER_nondet_int
 
 int main()
 {

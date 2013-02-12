@@ -2,7 +2,7 @@
 
 int main()
 {
-    int i = ___sl_get_nondet_int();
+    int i = __VERIFIER_nondet_int();
     if (i < 0x7 || 0x213 < i)
         return 1;
 

@@ -283,7 +283,7 @@ int main()
 {
     do
         add_pool();
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     ___sl_plot("01-empty");
 
@@ -292,7 +292,7 @@ int main()
         alloc_one(node);
         do
             alloc_one(node);
-        while (___sl_get_nondet_int());
+        while (__VERIFIER_nondet_int());
     }
 
     ___sl_plot("02-allocated");

@@ -24,11 +24,11 @@ static void* create_shape(bool simple)
         *next = root;
         root  = node;
 
-        *node = (simple || ___sl_get_nondet_int())
+        *node = (simple || __VERIFIER_nondet_int())
             ? next
             : node;
     }
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     return root;
 }

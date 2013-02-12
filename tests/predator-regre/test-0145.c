@@ -86,7 +86,7 @@ void add_item(struct hlist_head *hhead) {
 int main() {
     HLIST_HEAD(my_hlist_head);
 
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         add_item(&my_hlist_head);
 
     ___sl_plot(NULL);

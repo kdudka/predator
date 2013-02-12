@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-extern int ___sl_get_nondet_int(void);
+extern int __VERIFIER_nondet_int(void);
 
 struct node {
     struct node *next;
@@ -21,7 +21,7 @@ void create_list(struct node **list, void *data)
 {
     append_node(list, data);
     append_node(list, data);
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         append_node(list, data);
 }
 
@@ -30,7 +30,7 @@ void create_shape(struct node **px, struct node **py)
     struct node *x = NULL;
     struct node *y = NULL;
 
-    if (___sl_get_nondet_int()) {
+    if (__VERIFIER_nondet_int()) {
         create_list(&x, NULL);
         create_list(&y, x);
     }

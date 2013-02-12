@@ -47,7 +47,7 @@ static void l1_insert(struct L1 **list)
 
     do
         l2_insert(&item->l2);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     item->next = *list;
     *list = item;
@@ -59,7 +59,7 @@ int main()
 
     do
         l1_insert(&list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     ___sl_plot("01-ready");
 

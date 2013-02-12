@@ -37,7 +37,7 @@ int main()
         // something went wrong, yell
         null->next = pd;
 
-    if (___sl_get_nondet_int())
+    if (__VERIFIER_nondet_int())
         // this is always bad idea
         free(i1);
 

@@ -34,7 +34,7 @@ struct topLevel* add_top(struct topLevel *t)
     if (!tt)
         abort();
 
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         add_sub(tt);
 
     tt->next = t;
@@ -44,7 +44,7 @@ struct topLevel* add_top(struct topLevel *t)
 struct topLevel* create_top(void)
 {
     struct topLevel *t = NULL;
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         t = add_top(t);
 
     return t;

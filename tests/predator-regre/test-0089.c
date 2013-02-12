@@ -42,7 +42,7 @@ static struct outer* create(void)
     (type *) ((char *)addr - offsetof(type, field))
 
 #define CHK_CORE(neg, e1, e2) do {                      \
-    if (___sl_get_nondet_int())                         \
+    if (__VERIFIER_nondet_int())                         \
         break;                                          \
                                                         \
     struct outer *_data = create();                     \
@@ -57,7 +57,7 @@ static struct outer* create(void)
 #define CHK_NEQ(e1, e2) CHK_CORE(true, e1, e2)
 
 #define TRY_FREE_BY(item) do {                          \
-    if (___sl_get_nondet_int())                         \
+    if (__VERIFIER_nondet_int())                         \
         break;                                          \
                                                         \
     struct outer *_data = create();                     \

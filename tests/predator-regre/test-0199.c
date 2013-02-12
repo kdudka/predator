@@ -98,7 +98,7 @@ int main(void)
     printf("%d ", stack_top(&stack));
   }
 
-  if (___sl_get_nondet_int()) {
+  if (__VERIFIER_nondet_int()) {
     printf("\nPoping items: ");
     while (!stack_empty(&stack)){
       printf("%d ", stack_top(&stack));
