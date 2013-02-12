@@ -35,7 +35,7 @@ int main()
         if (!next)
             free(list->data);
 #endif
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 
         free(list);
         list = next;

@@ -48,32 +48,32 @@ struct item* create_sll(void)
 
 void sll_to_dll(struct item *dll)
 {
-    ___sl_plot("b00");
+    __VERIFIER_plot("b00");
     while (dll && dll->next) {
-        ___sl_plot("b01");
+        __VERIFIER_plot("b01");
         struct item *prev = dll;
-        ___sl_plot("b02");
+        __VERIFIER_plot("b02");
         dll = dll->next;
-        ___sl_plot("b03");
+        __VERIFIER_plot("b03");
         dll->prev = prev;
-        ___sl_plot("b04");
+        __VERIFIER_plot("b04");
     }
-    ___sl_plot("b05");
+    __VERIFIER_plot("b05");
 }
 
 struct item* dll_to_sll(struct item *dll)
 {
-    ___sl_plot("n00");
+    __VERIFIER_plot("n00");
     while (dll && dll->next) {
-        ___sl_plot("n01");
+        __VERIFIER_plot("n01");
         struct item *next = dll->next;
-        ___sl_plot("n02");
+        __VERIFIER_plot("n02");
         dll->next = NULL;
-        ___sl_plot("n03");
+        __VERIFIER_plot("n03");
         dll = next;
-        ___sl_plot("n04");
+        __VERIFIER_plot("n04");
     }
-    ___sl_plot("n05");
+    __VERIFIER_plot("n05");
     return dll;
 }
 
@@ -81,15 +81,15 @@ int main()
 {
     // create a SLL
     struct item *dll = create_sll();
-    ___sl_plot("01-sll-ready");
+    __VERIFIER_plot("01-sll-ready");
 
     // convert the SLL to DLL by completing the 'prev' field
     sll_to_dll(dll);
-    ___sl_plot("02-dll-got-from-sll");
+    __VERIFIER_plot("02-dll-got-from-sll");
 
     // convert the DLL to SLL by zeroing the 'next' field
     dll = dll_to_sll(dll);
-    ___sl_plot("03-sll-got-from-dll");
+    __VERIFIER_plot("03-sll-got-from-dll");
 
     // finally just destroy the list to silence our garbage collector
     while (dll) {
@@ -98,7 +98,7 @@ int main()
         dll = prev;
     }
 
-    ___sl_plot("04-done");
+    __VERIFIER_plot("04-done");
 
     return 0;
 }

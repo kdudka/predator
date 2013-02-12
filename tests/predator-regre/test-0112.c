@@ -33,7 +33,7 @@ struct item* create_sll(void)
 int main()
 {
     struct item *sll = create_sll();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     (void) sll;
 
     return 0;

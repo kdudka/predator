@@ -93,19 +93,19 @@ struct master_item* create_sane_shape(void)
 struct item* demo(void) {
     struct master_item *shape = create_sane_shape();
     struct item *all = create_slseg(shape);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     return all;
 }
 
 int main()
 {
     struct item *shape = demo();
-    ___sl_plot("00-shape");
+    __VERIFIER_plot("00-shape");
 
     // trigger a memory leak
     free(shape);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     return 0;
 }
 

@@ -19,7 +19,7 @@ static void insert_node(struct node **pn)
     node->list = pn;
 
     *pn = node;
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 }
 
 int main()
@@ -28,7 +28,7 @@ int main()
     insert_node(&list);
     insert_node(&list);
 
-    ___sl_plot(NULL, &list);
+    __VERIFIER_plot(NULL, &list);
 
     while (list) {
         struct node *next = list->next;

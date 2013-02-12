@@ -22,10 +22,10 @@ void* do_memset(
 
     ssize_t size = (limit - addr);
     size += shift_end;
-    ___sl_plot("00-before-memset");
+    __VERIFIER_plot("00-before-memset");
 
     memset((void *) addr, 0, size);
-    ___sl_plot("01-after-memset");
+    __VERIFIER_plot("01-after-memset");
 
     return beg;
 }
@@ -114,7 +114,7 @@ int main()
     // NOTE: this triggers some false positives if join is enabled
     ___SL_ASSERT(!ptr[sizeof(double) - 1]);
     ___SL_ASSERT(!ptr[N - sizeof(double)]);
-    ___sl_plot("end-of-main-reached", &ptr);
+    __VERIFIER_plot("end-of-main-reached", &ptr);
 
     return 0;
 }

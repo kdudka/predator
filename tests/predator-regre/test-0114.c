@@ -118,7 +118,7 @@ int main()
     LIST_HEAD(top);
 
     create_top(&top);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     destroy_top(&top);
 

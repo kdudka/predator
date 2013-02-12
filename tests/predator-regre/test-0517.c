@@ -67,7 +67,7 @@ int main()
                 (char *)now->link.next - __builtin_offsetof (struct my_item, link)
                 );
 
-        ___sl_plot(NULL, &now);
+        __VERIFIER_plot(NULL, &now);
         free(ptr);
     }
 

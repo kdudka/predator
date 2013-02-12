@@ -9,8 +9,8 @@ int main()
         return 1;
 
     // check if Neq predicates are still traversed and plotted correctly
-    ___sl_plot("test-0046-a");
-    ___sl_plot("test-0046-b");
+    __VERIFIER_plot("test-0046-a");
+    __VERIFIER_plot("test-0046-b");
 
     return 0;
 }

@@ -144,7 +144,7 @@ int main()
     while (__nondet())
         create_sll_item(sll);
 
-    ___sl_plot(NULL, &sll);
+    __VERIFIER_plot(NULL, &sll);
 
     while (sll)
         destroy_sll_item(sll);

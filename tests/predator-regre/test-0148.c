@@ -9,6 +9,6 @@ static void *ptrs[8] = {
 };
 
 int main() {
-    ___sl_plot(NULL, ptrs);
+    __VERIFIER_plot(NULL, ptrs);
     return !!ptrs[2];
 }

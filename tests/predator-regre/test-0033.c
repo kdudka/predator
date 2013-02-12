@@ -89,7 +89,7 @@ static void destroy_h_list(struct h_list_item *item)
         struct h_list_item *self = (struct h_list_item *) bind->self;
         struct v_list_item *sub = self->sub_list;
         if (sub) {
-            ___sl_plot("test-0033");
+            __VERIFIER_plot("test-0033");
             destroy_list(&sub->binder);
         }
         bind = prev;

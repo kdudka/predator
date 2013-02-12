@@ -11,7 +11,7 @@ int main()
         abort();
 
     void *ptr = malloc(size);
-    ___sl_plot(NULL, &ptr);
+    __VERIFIER_plot(NULL, &ptr);
 
     return 0;
 }

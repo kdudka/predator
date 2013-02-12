@@ -73,15 +73,15 @@ void destroy(struct list_head *head)
             (char *)head->next - __builtin_offsetof (struct my_item, link)
             );
 
-    ___sl_plot("00");
+    __VERIFIER_plot("00");
     while (&now->link != (head)) {
         struct my_item *next = (struct my_item *)(
                 (char *)now->link.next - __builtin_offsetof (struct my_item, link)
                 );
 
-        ___sl_plot("01");
+        __VERIFIER_plot("01");
         free(now);
-        ___sl_plot("02");
+        __VERIFIER_plot("02");
         now = next;
     }
 }
@@ -146,7 +146,7 @@ struct master_item* create_sll_of_dll(void *end)
 int main()
 {
     struct master_item *sll = create_sll_of_dll(NULL);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     //___sl_break();
     return 0;
 }

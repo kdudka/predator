@@ -54,18 +54,18 @@ int main()
 {
     if (__VERIFIER_nondet_int()) {
         create_vlist(/* real_nested_list */ true);
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
     }
     else {
         create_vlist(/* real_nested_list */ false);
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 #if I_WANT_TO_DEBUG_JOIN
         ___sl_enable_debugging_of(___SL_SYMJOIN, /* enable */ true);
         ___sl_break("joinSymHeaps() demo");
 #endif
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     return 0;
 }
 

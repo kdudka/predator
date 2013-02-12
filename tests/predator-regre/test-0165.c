@@ -71,7 +71,7 @@ void prune(struct topLevel *t) {
                 free(cursor);
             }
 
-            //___sl_plot(NULL);
+            //__VERIFIER_plot(NULL);
             cursor = next;
             //___sl_enable_debugging_of(___SL_SYMABSTRACT, 1);
         }
@@ -85,10 +85,10 @@ void prune(struct topLevel *t) {
 int main()
 {
     struct topLevel *top = create_top();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     prune(top);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     inspect(top);
 

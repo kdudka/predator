@@ -40,7 +40,7 @@ int main()
     }
 
     // shared data is already freed when entering the loop
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     while (list) {
         struct item *next = list->next;

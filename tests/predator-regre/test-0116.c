@@ -83,7 +83,7 @@ struct node_top* create_sll(void)
 int main()
 {
     struct node_top *sll = create_sll();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

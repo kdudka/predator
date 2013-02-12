@@ -167,7 +167,7 @@ int main()
     rv = EXIT_SUCCESS;
 
 fail:
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     list->vtab.destroy(list);
     return rv;
 }

@@ -25,9 +25,9 @@ int main()
 
     struct node *pos;
     list_for_each_entry(pos, &list, embedded_head)
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // insane -- better to use list_for_each_entry_safe()
     while (&list != list.prev) {

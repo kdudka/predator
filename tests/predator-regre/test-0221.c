@@ -55,7 +55,7 @@ int main()
 {
     LIST_HEAD(list);
     create_all_levels(&list);
-    ___sl_plot("01-ready", &list);
+    __VERIFIER_plot("01-ready", &list);
 }
 
 /**

@@ -109,7 +109,7 @@ int main()
     }
 
     // ------------------------------------------------------------------------
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // seq_sort(&data);
     // static void seq_sort(struct list **data)
@@ -190,7 +190,7 @@ int main()
     }
 
     // ------------------------------------------------------------------------
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // seq_write(data);
     // static void seq_write(struct list *data)

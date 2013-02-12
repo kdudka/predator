@@ -8,7 +8,7 @@ LIST_HEAD(list);
 void destroy(int dir)
 {
     struct list_head *pos;
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     if (dir) {
         pos = list.next;

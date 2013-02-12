@@ -89,13 +89,13 @@ int main()
     create_list_far(1, 1);
     create_list_far(2, 2);
     create_list_far(3, 3);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     destroy_list_no(3);
     destroy_list_no(2);
     destroy_list_no(1);
     destroy_list_no(0);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

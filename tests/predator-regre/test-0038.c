@@ -32,17 +32,17 @@ static void append_item(sll_t *list)
 
 int main()
 {
-    ___sl_plot("test38-00");
+    __VERIFIER_plot("test38-00");
     sll_t list;
     list.head = NULL;
     list.last = &list.head;
-    ___sl_plot("test38-01");    // print empty list state
+    __VERIFIER_plot("test38-01");    // print empty list state
 
     int i;
     for(i=0; i<100; i++)
         append_item(&list);
 
-    ___sl_plot("test38-02");
+    __VERIFIER_plot("test38-02");
     {
         // delete first
         sll_item_t *next = list.head->next;
@@ -50,17 +50,17 @@ int main()
         list.head = next;
     }
 
-    ___sl_plot("test38-03");
+    __VERIFIER_plot("test38-03");
 
     while (list.head) {
         sll_item_t *next = list.head->next;
         if (!next)
-            ___sl_plot("test38-04");    // print if single item
+            __VERIFIER_plot("test38-04");    // print if single item
         free(list.head);
         list.head = next;
     }
 
-    ___sl_plot("test38-05");            // print final state
+    __VERIFIER_plot("test38-05");            // print final state
     return 0;
 }
 

@@ -296,16 +296,16 @@ int main()
         add_pool();
     while (__VERIFIER_nondet_int());
 
-    ___sl_plot("01-empty");
+    __VERIFIER_plot("01-empty");
 
     allocate_everything();
-    ___sl_plot("02-allocated");
+    __VERIFIER_plot("02-allocated");
 
     struct pool_node *node;
     list_for_each_entry(node, &plist, head)
         PL_FreeArenaPool(&node->pool);
 
-    ___sl_plot("03-freed");
+    __VERIFIER_plot("03-freed");
 
     struct list_head *head = plist.next;
     while (&plist != head) {
@@ -316,7 +316,7 @@ int main()
         head = next;
     }
 
-    ___sl_plot("04-finished");
+    __VERIFIER_plot("04-finished");
 
     PL_ArenaFinish();
 

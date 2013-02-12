@@ -11,7 +11,7 @@ int main()
     mem = malloc(sizeof(char));
     void **err = mem;
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     *err = NULL;
 
     return 0;

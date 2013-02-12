@@ -40,7 +40,7 @@ int main() {
             if (z->next)
                 z->next->prev = z;
 
-            ___sl_plot(NULL, &z);
+            __VERIFIER_plot(NULL, &z);
             break;
         }
         y = y->next;

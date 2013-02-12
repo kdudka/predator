@@ -16,7 +16,7 @@ int main()
 {
     void **ptr;
     create_nonsense(&ptr);
-    ___sl_plot(NULL, &ptr);
+    __VERIFIER_plot(NULL, &ptr);
 
     while (ptr) {
         void *next = *ptr;

@@ -36,7 +36,7 @@ int main() {
     }
     y = x->next;
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     while (y != x) {
         struct T* z = y;

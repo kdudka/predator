@@ -291,7 +291,7 @@ int main()
     chk_dll_size(&list, 0);
 #endif
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

@@ -13,7 +13,7 @@ end_point_t rand_end_point(void)
 int main()
 {
     const end_point_t ep = rand_end_point();
-    ___sl_plot((void *) 0);
+    __VERIFIER_plot((void *) 0);
 
     switch (ep) {
         case LIST_BEG:

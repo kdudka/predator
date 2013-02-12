@@ -4,11 +4,11 @@ int main()
 {
     int i = __VERIFIER_nondet_int();
     if (i < 0)
-        ___sl_plot("less-than-zero", &i);
+        __VERIFIER_plot("less-than-zero", &i);
     else if (0 < i)
-        ___sl_plot("more-than-zero", &i);
+        __VERIFIER_plot("more-than-zero", &i);
     else {
-        ___sl_plot("equal-to-zero", &i);
+        __VERIFIER_plot("equal-to-zero", &i);
         ___SL_ASSERT(!i);
     }
 

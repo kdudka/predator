@@ -55,7 +55,7 @@ item_p create_item(end_point_t at, item_p *cursor)
     (*item)[link_field] = link;
     (*item)[term_field] = link ? (*link)[term_field] : NULL;
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     if (link)
         (*link)[term_field] = item;

@@ -28,19 +28,19 @@ void append_one(struct list_head *head)
 
 void traverse(struct list_head *head)
 {
-    ___sl_plot("00");
+    __VERIFIER_plot("00");
     struct my_item *now = (struct my_item *)(
             (char *)head->next - __builtin_offsetof (struct my_item, link)
             );
 
     while (&now->link != (head)) {
-        ___sl_plot("01");
+        __VERIFIER_plot("01");
         now = (struct my_item *)(
             (char *)now->link.next - __builtin_offsetof (struct my_item, link)
             );
     }
 
-    ___sl_plot("02");
+    __VERIFIER_plot("02");
 }
 
 int main()

@@ -61,7 +61,7 @@ int main()
         l1_insert(&list);
     while (__VERIFIER_nondet_int());
 
-    ___sl_plot("01-ready");
+    __VERIFIER_plot("01-ready");
 
     do {
         struct L1 *next = list->next;

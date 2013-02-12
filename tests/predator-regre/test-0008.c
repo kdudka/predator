@@ -12,7 +12,7 @@ static void dispose_list_using_while(TItem *list) {
 }
 
 static void dispose_list_recursively(TItem *list) {
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     if (list) {
         dispose_list_recursively((TItem *) *list);
         free(list);

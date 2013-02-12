@@ -41,7 +41,7 @@ int main() {
         if (x)
             x->prev = z;
 
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
         x = z;
     }
 

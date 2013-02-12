@@ -124,7 +124,7 @@ int main()
 
     create_top(&top);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     destroy_top(&top);
 
     return 0;

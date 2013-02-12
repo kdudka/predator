@@ -27,12 +27,12 @@ int main() {
     }
 
     while (y != NULL) {
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
         x = y;
         y = y->next;
         free(x);
 
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
         x = y;
         y = y->next;
         free(x);

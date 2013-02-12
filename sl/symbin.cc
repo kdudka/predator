@@ -1010,7 +1010,7 @@ BuiltInTable::BuiltInTable()
     tbl_["___sl_break"]                             = handleBreak;
     tbl_["___sl_error"]                             = handleError;
     tbl_["___sl_get_nondet_int"]                    = handleNondetInt;
-    tbl_["___sl_plot"]                              = handlePlot;
+    tbl_["__VERIFIER_plot"]                         = handlePlot;
     tbl_["___sl_plot_trace_now"]                    = handlePlotTraceNow;
     tbl_["___sl_plot_trace_once"]                   = handlePlotTraceOnce;
     tbl_["___sl_enable_debugging_of"]               = handleDebuggingOf;

@@ -140,7 +140,7 @@ int main()
 #endif
 
     // destroy all
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     destroy_h_list(h_list);
 
     return 0;

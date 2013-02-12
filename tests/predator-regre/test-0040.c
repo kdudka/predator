@@ -49,7 +49,7 @@ int main()
         t = tt;
     }
 
-    ___sl_plot(NULL, &t);
+    __VERIFIER_plot(NULL, &t);
     tt = t->next;
     l = tt->low;
 

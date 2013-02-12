@@ -34,11 +34,11 @@ static void append_item(sll_t *list)
 
 int main()
 {
-    ___sl_plot("test24-00");
+    __VERIFIER_plot("test24-00");
     sll_t list;
     list.head = NULL;
     list.last = &list.head;
-    ___sl_plot("test24-01");
+    __VERIFIER_plot("test24-01");
 
     append_item(&list);
     append_item(&list);
@@ -49,7 +49,7 @@ int main()
     append_item(&list);
     append_item(&list);
     
-    ___sl_plot("test24-02");
+    __VERIFIER_plot("test24-02");
     {
         sll_item_t *next = list.head->next;
         free(list.head);
@@ -57,17 +57,17 @@ int main()
     }
 
     append_item(&list);
-    ___sl_plot("test24-03");
+    __VERIFIER_plot("test24-03");
 
     while (list.head) {
         sll_item_t *next = list.head->next;
         if (!next)
-            ___sl_plot("test24-04");
+            __VERIFIER_plot("test24-04");
         free(list.head);
         list.head = next;
     }
 
-    ___sl_plot("test24-05");
+    __VERIFIER_plot("test24-05");
     return 0;
 }
 

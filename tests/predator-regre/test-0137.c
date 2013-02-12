@@ -113,14 +113,14 @@ int main()
 {
     gl_read();
     gl_write();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     gl_sort();
     gl_write();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     gl_destroy();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

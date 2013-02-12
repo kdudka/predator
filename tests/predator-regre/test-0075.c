@@ -39,7 +39,7 @@ int main()
     struct gitem *pgi0 = ROOT(struct gitem, h0, gh0);
     struct gitem *pgi1 = ROOT(struct gitem, h1, gh1);
     struct litem *pli = ROOT(struct litem, lhead, lh);
-    ___sl_plot("01");
+    __VERIFIER_plot("01");
 
     if (pgi1 != &gi)
         free(pgi1);

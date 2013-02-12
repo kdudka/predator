@@ -22,7 +22,7 @@ char *strrev(const char *str)
     char *beg = rev;
     char *end = beg + strlen(rev) - 1;
     while (beg < end) {
-        ___sl_plot("single-step", &beg, &end);
+        __VERIFIER_plot("single-step", &beg, &end);
         char c = *beg;
         *beg++ = *end;
         *end-- = c;
@@ -55,7 +55,7 @@ int main()
     if (!rev)
         return 1;
 
-    ___sl_plot("strrev-done", &str, &rev);
+    __VERIFIER_plot("strrev-done", &str, &rev);
     ___SL_ASSERT(!rev[sizeof str - 1]);
 
     exercise(str, rev);

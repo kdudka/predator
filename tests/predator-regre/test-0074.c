@@ -44,7 +44,7 @@ int main()
     struct list_head *h3 = &s.h3;
     struct s *ps = (struct s *) ((char *)h3 - offsetof(struct s, h3));
 
-    ___sl_plot("01");
+    __VERIFIER_plot("01");
 
     if (ps != &s)
         free(ps);

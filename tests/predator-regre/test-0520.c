@@ -48,7 +48,7 @@ int main()
         now = now->next;
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     while (top) {
         now = top;

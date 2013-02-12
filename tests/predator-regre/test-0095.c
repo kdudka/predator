@@ -30,10 +30,10 @@ int main()
     union data d = {
         .number = 0L
     };
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     d.u0.s0.b = true;
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // infinite loop to detect malfunction
     while (!d.number || !d.u0.s1.i || d.u1.s0.c || d.u1.s1.p)

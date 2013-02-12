@@ -46,7 +46,7 @@ int main() {
     if (!data)
         return 0;
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // merge subsequent pairs
     while (data->next != data) {
@@ -85,7 +85,7 @@ int main() {
         data = data->next;
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // release the list
     item = data->data;

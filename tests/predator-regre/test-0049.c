@@ -29,7 +29,7 @@ struct item* create_sll(void)
 {
     struct item *head = create_sll_head();
     struct item *sll = head;
-    ___sl_plot("00-sll-head-ready");
+    __VERIFIER_plot("00-sll-head-ready");
 
     // NOTE: running this on bare metal may cause the machine to swap a bit
     int i;
@@ -39,7 +39,7 @@ struct item* create_sll(void)
         sll->next->next = NULL;
 
         sll = sll->next;
-        ___sl_plot("01-sll-append-done");
+        __VERIFIER_plot("01-sll-append-done");
     }
 
     return sll;
@@ -48,7 +48,7 @@ struct item* create_sll(void)
 int main()
 {
     struct item *sll = create_sll();
-    ___sl_plot("02-sll-ready");
+    __VERIFIER_plot("02-sll-ready");
     return 0;
 }
 

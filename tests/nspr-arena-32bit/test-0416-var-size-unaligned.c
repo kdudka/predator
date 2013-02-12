@@ -261,7 +261,7 @@ void torture_arena(PLArenaPool *pool)
 
         size &= ~0x7;
 
-        ___sl_plot("01-torture_arena", &pool, &size, &arena_freelist);
+        __VERIFIER_plot("01-torture_arena", &pool, &size, &arena_freelist);
 
         PL_ArenaAllocate(pool, size);
 

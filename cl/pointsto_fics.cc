@@ -235,7 +235,7 @@ bool isWhiteListedName(const char *name)
     return STREQ(name, "malloc")
         || STREQ(name, "free")
         || STREQ(name, "___sl_error")
-        || STREQ(name, "___sl_plot");
+        || STREQ(name, "__VERIFIER_plot");
 }
 
 bool isWhiteListed(const Insn *insn)

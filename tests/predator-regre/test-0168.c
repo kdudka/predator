@@ -87,11 +87,11 @@ int main()
         return EXIT_SUCCESS;
 
     // do O(log N) iterations
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     while (data->next)
         data = seq_sort_core(data);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     struct node *node = data->slist;
     free(data);
 

@@ -27,7 +27,7 @@ int main()
     int i;
     for(i = 1; i; ++i) {
         insert_item(&list);
-        ___sl_plot("snapshot-01");
+        __VERIFIER_plot("snapshot-01");
     }
 
     return 0;

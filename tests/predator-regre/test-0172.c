@@ -23,6 +23,6 @@ int main()
     append(&head);
     append(&head);
 
-    ___sl_plot(NULL, &head);
+    __VERIFIER_plot(NULL, &head);
     return 0;
 }

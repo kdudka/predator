@@ -480,7 +480,7 @@ nssArena_Shutdown(void)
 int main()
 {
     NSSArena *arena = NSSArena_Create();
-    ___sl_plot("NSSArena_Create", &arena);
+    __VERIFIER_plot("NSSArena_Create", &arena);
 
     return 0;
 }

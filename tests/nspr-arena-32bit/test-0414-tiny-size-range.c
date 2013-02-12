@@ -278,19 +278,19 @@ int main()
             PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
 
             torture_arena(&pool);
-            ___sl_plot("01-torture_arena");
+            __VERIFIER_plot("01-torture_arena");
 
             PL_FreeArenaPool(&pool);
-            ___sl_plot("02-PL_FreeArenaPool");
+            __VERIFIER_plot("02-PL_FreeArenaPool");
 
             PL_FinishArenaPool(&pool);
-            ___sl_plot("03-PL_FinishArenaPool");
+            __VERIFIER_plot("03-PL_FinishArenaPool");
         }
 
-        ___sl_plot("04-done");
+        __VERIFIER_plot("04-done");
 
         PL_ArenaFinish();
-        ___sl_plot("05-PL_ArenaFinish");
+        __VERIFIER_plot("05-PL_ArenaFinish");
     }
 
     return 0;

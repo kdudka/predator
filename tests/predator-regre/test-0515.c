@@ -28,7 +28,7 @@ int main() {
         x = x->next;
         y->next = z;
 
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
         z = y;
     }
 

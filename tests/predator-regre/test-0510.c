@@ -30,7 +30,7 @@ int main() {
     x = head;
 
     while (x != NULL) {
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
         x = x->next;
     }
 

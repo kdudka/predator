@@ -6,11 +6,11 @@ int main()
     if (i < 0x100 || 0x1000 < i)
         return 1;
 
-    ___sl_plot("01-continuous-range");
+    __VERIFIER_plot("01-continuous-range");
 
     int j = 0x10 * i;
     int k = ~0xFF & i;
-    ___sl_plot("02-with-aligment", &i, &j, &k);
+    __VERIFIER_plot("02-with-aligment", &i, &j, &k);
 
     // this should be OK
     ___SL_ASSERT(!(i & 0x0));
@@ -38,7 +38,7 @@ int main()
     i += 16;
     j += 16;
     k += 16;
-    ___sl_plot("03-shifted", &i, &j, &k);
+    __VERIFIER_plot("03-shifted", &i, &j, &k);
 
     // this should be OK
     ___SL_ASSERT(!(i & 0x0));
@@ -49,7 +49,7 @@ int main()
         ___SL_ASSERT(!(k & 0xFF));
 
     ++i, ++j, ++k;
-    ___sl_plot("04-badly-shifted", &i, &j, &k);
+    __VERIFIER_plot("04-badly-shifted", &i, &j, &k);
 
     return 0;
 }

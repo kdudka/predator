@@ -14,7 +14,7 @@ int main() {
             return -1;
 
         ptr->next = data;
-        ___sl_plot("test-0001-snapshot");
+        __VERIFIER_plot("test-0001-snapshot");
     }
 
     return 0;

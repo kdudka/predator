@@ -45,7 +45,7 @@ struct list_head {
  */
 static inline int list_empty(const struct list_head *head)
 {
-    //___sl_plot(NULL);
+    //__VERIFIER_plot(NULL);
 	return head->next == head;
 }
 
@@ -120,7 +120,7 @@ void traverse(struct list_head *head)
 #endif
     {
         now->data = NULL;
-        ___sl_plot("now");
+        __VERIFIER_plot("now");
     }
 }
 

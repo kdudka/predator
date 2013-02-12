@@ -42,10 +42,10 @@ struct item* create_dll(void)
 
 struct item* fast_forward_core(struct item *dll)
 {
-    ___sl_plot("00-ff-begin");
+    __VERIFIER_plot("00-ff-begin");
     struct item *next;
     while ((next = dll->next)) {
-        ___sl_plot("01-ff-one-step");
+        __VERIFIER_plot("01-ff-one-step");
         dll = next;
     }
 
@@ -61,7 +61,7 @@ int main()
 {
     struct item *dll = create_dll();
     fast_forward(&dll);
-    ___sl_plot("03-ff-done");
+    __VERIFIER_plot("03-ff-done");
 
     return 0;
 }

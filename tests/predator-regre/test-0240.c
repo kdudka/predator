@@ -49,7 +49,7 @@ int main()
 
     create_shape(&x, &y);
 
-    ___sl_plot(NULL, &x, &y);
+    __VERIFIER_plot(NULL, &x, &y);
 }
 
 /**

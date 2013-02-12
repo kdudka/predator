@@ -70,7 +70,7 @@ static void seq_sort(struct list **data)
 
     // do O(log N) iterations
     while (list && list->next) {
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
         list = seq_sort_core(list);
 #if I_WANT_TO_SEE_5X_SPEEDUP
         *data = list;

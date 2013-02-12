@@ -86,7 +86,7 @@ void remove_one(list_p list, end_point_t from)
     if ((*list)[LIST_BEG] == (*list)[LIST_END]) {
         free((*list)[LIST_BEG]);
         memset(*list, 0, sizeof *list);
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
         return;
     }
 
@@ -98,7 +98,7 @@ void remove_one(list_p list, end_point_t from)
     (*next)[term_field] = NULL;
     (*list)[from] = next;
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     free(item);
 }
 

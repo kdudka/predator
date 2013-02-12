@@ -62,7 +62,7 @@ static struct node* create_shape(void)
 
 int main() {
     struct node *shape = create_shape();
-    ___sl_plot(NULL, &shape);
+    __VERIFIER_plot(NULL, &shape);
 
     while (shape) {
         struct node *next = shape->next;

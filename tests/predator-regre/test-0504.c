@@ -58,7 +58,7 @@ int main() {
 
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     while (first) {
 

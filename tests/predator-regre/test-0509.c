@@ -30,7 +30,7 @@ int main() {
             else
                 y = y->next;
 
-            ___sl_plot(NULL);
+            __VERIFIER_plot(NULL);
             free(x);
             break;
         }

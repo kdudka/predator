@@ -64,7 +64,7 @@ item_p create_item(end_point_t at, item_p *cursor)
 
     item_p head = &item->head;
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     if (link)
         (*link)[term_field] = head;

@@ -36,10 +36,10 @@ static void* create_shape(bool simple)
 int main()
 {
     void *simple = create_shape(/* simple */ true);
-    ___sl_plot("01-simple", &simple);
+    __VERIFIER_plot("01-simple", &simple);
 
     void *tricky = create_shape(/* simple */ false);
-    ___sl_plot("02-tricky", &tricky);
+    __VERIFIER_plot("02-tricky", &tricky);
 
     return 0;
 }

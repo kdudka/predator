@@ -35,31 +35,31 @@ int main()
         &list.head
     };
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     int i;
     for(i = 1; i; ++i)
         append_item(&list);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // delete first
     sll_item_t *next = list.head->next;
     free(list.head);
     list.head = next;
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     while (list.head) {
         sll_item_t *next = list.head->next;
         if (!next)
-            ___sl_plot(NULL);
+            __VERIFIER_plot(NULL);
 
         free(list.head);
         list.head = next;
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     return 0;
 }
 

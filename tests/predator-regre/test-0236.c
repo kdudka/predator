@@ -172,7 +172,7 @@ int main()
         l0_insert(&list);
     while (__VERIFIER_nondet_int());
 
-    ___sl_plot("01-ready");
+    __VERIFIER_plot("01-ready");
 
     l0_destroy(list);
 }

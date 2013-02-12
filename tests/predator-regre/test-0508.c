@@ -35,7 +35,7 @@ int main() {
         pred = NULL;
         while (y && y->next) {
             if (!y->next) {
-                ___sl_plot(NULL);
+                __VERIFIER_plot(NULL);
                 ___sl_error("this should not have happened");
             }
 

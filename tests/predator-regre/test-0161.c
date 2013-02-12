@@ -57,7 +57,7 @@ struct topLevel* create_top(void)
 int main()
 {
     struct topLevel *t = create_top();
-    ___sl_plot(NULL, &t);
+    __VERIFIER_plot(NULL, &t);
 
     return 0;
 }

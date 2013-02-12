@@ -1,11 +1,11 @@
-test-0089.c:99:15: note: writing heap graph to 'test-0089.c-99-0000.dot'...
+test-0089.c:99:20: note: writing heap graph to 'test-0089.c-99-0000.dot'...
 test-0089.c:122:5: error: free() called with offset 16B
 test-0089.c:122:5: warning: memory leak detected while destroying a variable on stack
 test-0089.c:123:5: error: free() called with offset 8B
 test-0089.c:123:5: warning: memory leak detected while destroying a variable on stack
 test-0089.c:124:5: error: free() called with offset 4B
 test-0089.c:124:5: warning: memory leak detected while destroying a variable on stack
-test-0089.c:79:15: note: writing heap graph to 'test-0089.c-79-0000.dot'...
+test-0089.c:79:20: note: writing heap graph to 'test-0089.c-79-0000.dot'...
 test-0089.c:87:9: error: free() called with offset -16B
 test-0089.c:127:24: note: from call of chk_offval_handling()
 test-0089.c:96:5: note: from call of main()

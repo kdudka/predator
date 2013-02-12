@@ -66,7 +66,7 @@ struct list_head* create_shape(void)
 int main()
 {
     struct list_head *shape = create_shape();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     //___sl_break();
     return 0;
 }

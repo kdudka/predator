@@ -33,7 +33,7 @@ int main() {
             break;
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     return !!buf;
 }
 

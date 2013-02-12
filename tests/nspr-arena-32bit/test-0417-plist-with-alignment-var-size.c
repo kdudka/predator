@@ -271,7 +271,7 @@ static void alloc_one(struct pool_node *node)
 
     size *= sizeof(double);
 
-    ___sl_plot("01-alloc_one");
+    __VERIFIER_plot("01-alloc_one");
 
     void *const ptr = PL_ArenaAllocate(&node->pool, size);
     if (!ptr)

@@ -50,7 +50,7 @@ struct item* fast_forward_core(struct item *dll)
 {
     struct item *next;
     while ((next = dll->next)) {
-        //___sl_plot("00-ff-one-step");
+        //__VERIFIER_plot("00-ff-one-step");
         dll = next;
     }
 
@@ -65,10 +65,10 @@ void fast_forward(struct item **pDll)
 int main()
 {
     struct item *dll = create_dll();
-    ___sl_plot("01-before-fast-forward");
+    __VERIFIER_plot("01-before-fast-forward");
 
     fast_forward(&dll);
-    ___sl_plot("02-after-fast-forward");
+    __VERIFIER_plot("02-after-fast-forward");
 
     return 0;
 }

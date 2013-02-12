@@ -104,7 +104,7 @@ int main() {
     while (__VERIFIER_nondet_int())
         add_item(&my_list_head);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

@@ -35,7 +35,7 @@ int main() {
         z = sorted;
         pred = NULL;
 
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 
         while (z && __nondet()) {
             pred = z;

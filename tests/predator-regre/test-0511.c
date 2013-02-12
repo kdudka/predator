@@ -36,7 +36,7 @@ int main() {
             z = z->next;
         }
 
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 
         y->next = z;
         if (pred) pred->next = y;

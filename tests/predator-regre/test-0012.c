@@ -41,7 +41,7 @@ int main()
     append_item(&list);
     append_item(&list);
     append_item(&list);
-    ___sl_plot("test-0012.c");
+    __VERIFIER_plot("test-0012.c");
     append_item(&list);
     append_item(&list);
     append_item(&list);

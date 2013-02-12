@@ -4,7 +4,7 @@
 
 static void *malloc_wrap(unsigned size)
 {
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     void *ptr = malloc(size);
     if (ptr)
         return ptr;
@@ -265,7 +265,7 @@ struct ctl_table *HsCreateCtlTable(int name)
 
 int get_nondet_int(void)
 {
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     int a;
     return a;
 }

@@ -68,7 +68,7 @@ int main() {
         add_item(&my_list);
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     while (my_list) {
         struct list_head *head = my_list->nested.next;

@@ -82,11 +82,11 @@ int main(void) {
 
 	print_list(the_list);
 
-        ___sl_plot("01");
+        __VERIFIER_plot("01");
 	
 	delete_list(the_list);
 
-        ___sl_plot("02");
+        __VERIFIER_plot("02");
 	
 	return EXIT_SUCCESS;
 }

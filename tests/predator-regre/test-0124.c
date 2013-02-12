@@ -210,15 +210,15 @@ int main()
     struct list *data = NULL;
     seq_read(&data);
     seq_write(data);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // NOTE: you may mix seq_insert/seq_sort as you like, we'll take care of it
     seq_sort(&data);
     seq_write(data);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     seq_destroy(data);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

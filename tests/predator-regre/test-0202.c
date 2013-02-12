@@ -6,14 +6,14 @@ int main()
     if (i < 0x7 || 0x213 < i)
         return 1;
 
-    ___sl_plot("01-continuous-range", &i);
+    __VERIFIER_plot("01-continuous-range", &i);
 
     i &= ~(sizeof(double) - 1);
-    ___sl_plot("02-aligned", &i);
+    __VERIFIER_plot("02-aligned", &i);
     ___SL_ASSERT(!(i & (sizeof(double) - 1)));
 
     i &= ~0x6;
-    ___sl_plot("03-pseudo-aligned", &i);
+    __VERIFIER_plot("03-pseudo-aligned", &i);
     ___SL_ASSERT(!(i & 0x6));
 
     return 0;

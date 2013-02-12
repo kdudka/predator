@@ -21,7 +21,7 @@ int main() {
     // out of bounds
     *pos2 = '\0';
 
-    ___sl_plot((char *) 0);
+    __VERIFIER_plot((char *) 0);
     return !!buf;
 }
 

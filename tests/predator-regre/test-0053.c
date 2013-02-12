@@ -62,13 +62,13 @@ int main()
         insert_item(insert_item(&list));
     }
 
-    ___sl_plot("01-cyclic-sll-ready");
+    __VERIFIER_plot("01-cyclic-sll-ready");
 
     for (i = 1; i; ++i) {
         destroy_cyclic_sll(&list);
     }
 
-    ___sl_plot("02-cyclic-sll-gone");
+    __VERIFIER_plot("02-cyclic-sll-gone");
 
     return 0;
 }

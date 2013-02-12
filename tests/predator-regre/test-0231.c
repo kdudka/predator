@@ -35,7 +35,7 @@ int main()
         list = next;
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // a memleak is reported while traversing the loop condition
     while (list) {
