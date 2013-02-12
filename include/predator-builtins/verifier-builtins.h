@@ -37,6 +37,8 @@ enum ___sl_module_id {
     ___SL_GARBAGE_COLLECTOR
 };
 
+#define __VERIFIER_assert(cond)  ___SL_ASSERT(cond)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
