@@ -10,7 +10,7 @@ int main()
     if (x != z)
         y = z;
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

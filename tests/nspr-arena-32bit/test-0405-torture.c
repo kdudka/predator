@@ -252,37 +252,37 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
 
 void torture_arena(PLArenaPool *pool)
 {
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         PL_ArenaAllocate(pool, 0x100);
 
-        while (___sl_get_nondet_int())
+        while (__VERIFIER_nondet_int())
             PL_FreeArenaPool(pool);
     }
 }
 
 int main()
 {
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         PLArenaPool pool;
 
-        while (___sl_get_nondet_int()) {
+        while (__VERIFIER_nondet_int()) {
             // initialize arena pool
             PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
 
             torture_arena(&pool);
-            ___sl_plot("01-torture_arena");
+            __VERIFIER_plot("01-torture_arena");
 
             PL_FreeArenaPool(&pool);
-            ___sl_plot("02-PL_FreeArenaPool");
+            __VERIFIER_plot("02-PL_FreeArenaPool");
 
             PL_FinishArenaPool(&pool);
-            ___sl_plot("03-PL_FinishArenaPool");
+            __VERIFIER_plot("03-PL_FinishArenaPool");
         }
 
-        ___sl_plot("04-done");
+        __VERIFIER_plot("04-done");
 
         PL_ArenaFinish();
-        ___sl_plot("05-PL_ArenaFinish");
+        __VERIFIER_plot("05-PL_ArenaFinish");
     }
 
     return 0;

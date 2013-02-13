@@ -20,7 +20,7 @@ void DLInitList (struct TList *L) {
 }
 
 void DLDisposeList (struct TList *L) {
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     struct TNode * ptr = L->First;
     struct TNode * next;
@@ -31,7 +31,7 @@ void DLDisposeList (struct TList *L) {
         ptr = next;
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     L->First = ((void *)0);
     L->Act = ((void *)0);
     L->Last = ((void *)0);

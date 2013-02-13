@@ -844,6 +844,28 @@ bool isScheduled(TWorkList wl, const TObjId obj)
     return false;
 }
 
+void redirectAddrs(
+        SymHeap                &sh,
+        const TObjId            pointingTo,
+        const TObjId            redirectTo)
+{
+    // gather all objects pointing at/inside pointingTo
+    FldList refs;
+    sh.pointedBy(refs, pointingTo);
+
+    // gather all base addresses
+    TValSet baseAddrs;
+    BOOST_FOREACH(const FldHandle &fld, refs) {
+        const TValId addr = fld.value();
+        const TValId base = sh.valRoot(addr);
+        baseAddrs.insert(base);
+    }
+
+    // rewrite all base addresses
+    BOOST_FOREACH(const TValId addr, baseAddrs)
+        sh.rewriteTargetOfBase(addr, redirectTo);
+}
+
 bool rejoinObj(
         SymJoinCtx             &ctx,
         const TObjId            objDstNew,
@@ -853,6 +875,13 @@ bool rejoinObj(
     if (isScheduled(ctx.wl, objDstOld))
         // a field of the object to be rejoined is still scheduled for join
         return false;
+
+    const EObjKind kindNew = ctx.dst.objKind(objDstNew);
+    const EObjKind kindOld = ctx.dst.objKind(objDstOld);
+    if (kindNew != kindOld) {
+        SJ_DEBUG("rejoinObj() detected object kind mismatch, giving up...");
+        return false;
+    }
 
     SJ_DEBUG("rejoinObj(objDstOld = #" << objDstOld
             << ", objDstNew = #" << objDstNew
@@ -877,13 +906,8 @@ bool rejoinObj(
     if (!oMap[DIR_RTL].erase(objDstOld))
         CL_BREAK_IF("internal error detected in rejoinObj()");
 
-    // FIXME: we should reuse the addresses, otherwise we invalidate the valMap
-    redirectRefs(ctx.dst,
-            /* pointingFrom     */ OBJ_INVALID,
-            /* pointingTo       */ objDstOld,
-            /* pointingWith     */ TS_INVALID,
-            /* redirectTo       */ objDstNew,
-            /* redirectWith     */ TS_INVALID);
+    // we need to reuse the addresses in order not to invalidate the valMap
+    redirectAddrs(ctx.dst, objDstOld, objDstNew);
 
     // transfer outgoing edges
     transferOutgoingEdges(ctx.dst, objDstOld, objDstNew);

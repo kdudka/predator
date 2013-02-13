@@ -1,11 +1,11 @@
  tests/predator-regre/test-0056.err        |  2 +-
  tests/predator-regre/test-0056.err.oom    |  2 +-
  tests/predator-regre/test-0056.err.uninit |  2 +-
- tests/predator-regre/test-0186.err        | 14 +++++++-------
+ tests/predator-regre/test-0186.err        |  8 ++++----
  tests/predator-regre/test-0226.err        |  2 +-
  tests/predator-regre/test-0226.err.oom    |  2 +-
  tests/predator-regre/test-0226.err.uninit |  2 +-
- 7 files changed, 13 insertions(+), 13 deletions(-)
+ 7 files changed, 10 insertions(+), 10 deletions(-)
 
 diff --git a/tests/predator-regre/test-0056.err b/tests/predator-regre/test-0056.err
 index 5939af6..8d14815 100644
@@ -43,53 +43,32 @@ index 77391c1..16055f9 100644
 +++ b/tests/predator-regre/test-0186.err
 @@ -8,7 +8,7 @@ test-0186.c:123:21: note: from call of gl_proc1 ()
  test-0186.c:121:21: note: _ = (_ != (int)0) ... assuming TRUE
- test-0186.c:121:12: note: _ = (gl_st1.2 == (int)0) ... evaluated as TRUE
+ test-0186.c:121:12: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
  test-0186.c:120:11: note: _ = (_ != (int)0) ... evaluated as TRUE
--test-0186.c:115:9: note: _ = (gl_st1.5 == (int)0) ... evaluated as TRUE
-+test-0186.c:114:5: note: _ = (gl_st1.5 == (int)0) ... evaluated as TRUE
- test-0186.c:183:23: note: from call of _ = gl_runnable ()
- test-0186.c:144:8: note: _ = (gl_ev2.1 == (int)1) ... evaluated as TRUE
- test-0186.c:141:8: note: _ = (gl_ev1.0 == (int)1) ... evaluated as TRUE
-@@ -16,17 +16,17 @@ test-0186.c:179:21: note: from call of gl_reset ()
- test-0186.c:153:8: note: _ = (_ != (int)0) ... evaluated as FALSE
- test-0186.c:96:9: note: _ = (gl_pc2.12 == (int)2) ... evaluated as FALSE
- test-0186.c:95:25: note: _ = (gl_zero.11 == (int)1) ... evaluated as FALSE
--test-0186.c:96:9: note: _ = (gl_pc2.10 == (int)1) ... evaluated as TRUE
-+test-0186.c:95:5: note: _ = (gl_pc2.10 == (int)1) ... evaluated as TRUE
- test-0186.c:153:17: note: from call of _ = gl_trig2 ()
- test-0186.c:150:8: note: _ = (_ != (int)0) ... evaluated as TRUE
- test-0186.c:60:9: note: _ = (gl_ev1.31 == (int)1) ... evaluated as TRUE
--test-0186.c:60:9: note: _ = (gl_pc1.30 == (int)1) ... evaluated as TRUE
-+test-0186.c:59:5: note: _ = (gl_pc1.30 == (int)1) ... evaluated as TRUE
- test-0186.c:150:17: note: from call of _ = gl_trig1 ()
- test-0186.c:178:24: note: from call of gl_activate ()
- test-0186.c:177:20: note: from call of gl_fire ()
- test-0186.c:176:12: note: _ = (_ == (int)0) ... evaluated as TRUE
- test-0186.c:115:9: note: _ = (gl_st2.6 == (int)0) ... evaluated as FALSE
--test-0186.c:115:9: note: _ = (gl_st1.5 == (int)0) ... evaluated as FALSE
-+test-0186.c:114:5: note: _ = (gl_st1.5 == (int)0) ... evaluated as FALSE
+-test-0186.c:115:9: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
++test-0186.c:114:5: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
  test-0186.c:120:23: note: from call of _ = gl_runnable ()
- test-0186.c:126:12: note: _ = (gl_st2.3 == (int)0) ... evaluated as FALSE
- test-0186.c:28:8: note: _ = (i == (int)0) ... evaluated as TRUE
-@@ -36,15 +36,15 @@ test-0186.c:123:21: note: from call of gl_proc1 ()
- test-0186.c:121:21: note: _ = (_ != (int)0) ... assuming TRUE
- test-0186.c:121:12: note: _ = (gl_st1.2 == (int)0) ... evaluated as TRUE
+ test-0186.c:82:27: note: _ = (gl_num_ == (int)0) ... evaluated as TRUE
+ test-0186.c:82:8: note: _ = (gl_cnt_ < gl_mloop_) ... evaluated as TRUE
+@@ -21,15 +21,15 @@ test-0186.c:126:12: note: _ = (gl_st2_ == (int)0) ... evaluated as TRUE
+ test-0186.c:121:21: note: _ = (_ != (int)0) ... assuming FALSE
+ test-0186.c:121:12: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
  test-0186.c:120:11: note: _ = (_ != (int)0) ... evaluated as TRUE
--test-0186.c:115:9: note: _ = (gl_st1.5 == (int)0) ... evaluated as TRUE
-+test-0186.c:114:5: note: _ = (gl_st1.5 == (int)0) ... evaluated as TRUE
+-test-0186.c:115:9: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
++test-0186.c:114:5: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
  test-0186.c:120:23: note: from call of _ = gl_runnable ()
  test-0186.c:172:16: note: from call of gl_eval ()
  test-0186.c:153:8: note: _ = (_ != (int)0) ... evaluated as FALSE
- test-0186.c:96:9: note: _ = (gl_pc2.12 == (int)2) ... evaluated as FALSE
--test-0186.c:96:9: note: _ = (gl_pc2.10 == (int)1) ... evaluated as FALSE
-+test-0186.c:95:5: note: _ = (gl_pc2.10 == (int)1) ... evaluated as FALSE
+ test-0186.c:96:9: note: _ = (gl_pc2_ == (int)2) ... evaluated as FALSE
+-test-0186.c:96:9: note: _ = (gl_pc2_ == (int)1) ... evaluated as FALSE
++test-0186.c:95:5: note: _ = (gl_pc2_ == (int)1) ... evaluated as FALSE
  test-0186.c:153:17: note: from call of _ = gl_trig2 ()
  test-0186.c:150:8: note: _ = (_ != (int)0) ... evaluated as FALSE
--test-0186.c:60:9: note: _ = (gl_pc1.30 == (int)1) ... evaluated as FALSE
-+test-0186.c:59:5: note: _ = (gl_pc1.30 == (int)1) ... evaluated as FALSE
+-test-0186.c:60:9: note: _ = (gl_pc1_ == (int)1) ... evaluated as FALSE
++test-0186.c:59:5: note: _ = (gl_pc1_ == (int)1) ... evaluated as FALSE
  test-0186.c:150:17: note: from call of _ = gl_trig1 ()
  test-0186.c:169:16: note: from call of gl_activate ()
- test-0186.c:106:8: note: _ = (gl_i2.8 == (int)1) ... evaluated as TRUE
+ test-0186.c:106:8: note: _ = (gl_i2_ == (int)1) ... evaluated as TRUE
 diff --git a/tests/predator-regre/test-0226.err b/tests/predator-regre/test-0226.err
 index 6d55202..ce50571 100644
 --- a/tests/predator-regre/test-0226.err

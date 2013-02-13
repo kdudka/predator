@@ -277,11 +277,6 @@ struct NameDb {
     TFileMap        lcNames;
 };
 
-// TODO: implement?
-int /* uid */ lookup(const NameDb &db,
-                     const std::string &file,
-                     const std::string &name);
-
 class Block;
 class ControlFlow;
 struct Storage;
@@ -618,7 +613,7 @@ namespace CallGraph {
     struct Node;
 }
 
-class Fnc;
+struct Fnc;
 
 namespace PointsTo {
 
@@ -875,6 +870,9 @@ struct Storage {
     CallGraph::Graph            callGraph;  ///< call graph globals
     PointsTo::GlobalData        ptd;        ///< global PT-info
 };
+
+/// return the pointer to the Fnc object that the cfg instance is @b wrapped by
+const Fnc* fncByCfg(const ControlFlow *cfg);
 
 } // namespace CodeStorage
 

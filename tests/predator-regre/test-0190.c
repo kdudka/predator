@@ -29,9 +29,9 @@ int main(void)
 {
     gl_mloop = 2;
 
-    ___sl_plot((void *) 0);
+    __VERIFIER_plot((void *) 0);
     gl_eval();
-    ___sl_plot((void *) 0);
+    __VERIFIER_plot((void *) 0);
 
     gl_eval();
 

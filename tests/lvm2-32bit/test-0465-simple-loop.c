@@ -13,7 +13,7 @@ int main()
 {
     static char vgname[32];
     static struct format_type fmt;
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         lvmcache_add_orphan_vginfo(/* FIXME */ vgname, &fmt);
 
     return 0;

@@ -26,7 +26,7 @@ int main()
     // create SLS 1+
     do
         append(&list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     // create SLS 0+
     if (list) {
@@ -40,7 +40,7 @@ int main()
     }
 
     // shared data is already freed when entering the loop
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     while (list) {
         struct item *next = list->next;

@@ -13,7 +13,7 @@ int* max_core(int *pa, int *pb)
 
 int max(int **ppa, int **ppb) {
     const int *pmax = max_core(*ppa, *ppb);
-    ___sl_plot("test-0045-fnc");
+    __VERIFIER_plot("test-0045-fnc");
     return *pmax;
 }
 
@@ -42,7 +42,7 @@ int main()
     const int result = (&x == &y);
 
     // dump all possibilities of the resulting state
-    ___sl_plot("test-0045-end");
+    __VERIFIER_plot("test-0045-end");
     return result;
 }
 

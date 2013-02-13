@@ -143,14 +143,14 @@ struct master_item* create_sll_of_dll(void *end)
 void destroy_master(struct master_item **pList) {
     while (*pList) {
         struct master_item *sll = *pList;
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 
         struct master_item *next = sll->next;
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 
         destroy(&sll->dll);
         free(sll);
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 
         *pList = next;
     }
@@ -160,7 +160,7 @@ int main()
 {
     struct master_item *sll = create_sll_of_dll(NULL);
     destroy_master(&sll);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

@@ -31,19 +31,19 @@ int main()
     my_list.prev = &ptr->link;
     ptr->link.next = head;
     ptr->link.prev = head;
-    ___sl_plot("00");
+    __VERIFIER_plot("00");
 
     // initialize Linux list traversal
     struct my_item *now = (struct my_item *)(
             (char *)head->next - __builtin_offsetof (struct my_item, link)
             );
-    ___sl_plot("01-now");
+    __VERIFIER_plot("01-now");
 
     // compute next pointer
     struct my_item *next = (struct my_item *)(
             (char *)now->link.next - __builtin_offsetof (struct my_item, link)
             );
-    ___sl_plot("02-next");
+    __VERIFIER_plot("02-next");
 
     return 0;
 }

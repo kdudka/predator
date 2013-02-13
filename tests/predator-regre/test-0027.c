@@ -10,7 +10,7 @@ void* fnc(void) {
 int main()
 {
     void *ptr = fnc();
-    if (___sl_get_nondet_int())
+    if (__VERIFIER_nondet_int())
         free(ptr);
 
     struct { void *v1; void *v2; } *s = malloc(sizeof(*s));

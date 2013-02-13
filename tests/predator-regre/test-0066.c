@@ -58,7 +58,7 @@ struct item* create_dll(void)
     for (i = 1; i; ++i)
         dll = create_dll_item(dll);
 
-    //___sl_plot(NULL);
+    //__VERIFIER_plot(NULL);
     return dll;
 }
 
@@ -72,9 +72,9 @@ struct master_item* create_sll_item(struct master_item *next) {
 struct master_item* create_sll_of_dll(void *end)
 {
     struct master_item *sll = create_sll_item(end);
-    ___sl_plot("00");
+    __VERIFIER_plot("00");
     sll = create_sll_item(sll);
-    ___sl_plot("01");
+    __VERIFIER_plot("01");
     sll = create_sll_item(sll);
 
     // NOTE: running this on bare metal may cause the machine to swap a bit
@@ -89,7 +89,7 @@ struct master_item* create_sll_of_dll(void *end)
 int main()
 {
     struct master_item *sll = create_sll_of_dll(NULL);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     return 0;
 }
 

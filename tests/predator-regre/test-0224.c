@@ -8,7 +8,7 @@ LIST_HEAD(list);
 void destroy(int dir)
 {
     struct list_head *pos;
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     if (dir) {
         pos = list.next;
@@ -36,7 +36,7 @@ int main()
 
     do
         list_add((item = malloc(sizeof *item)), &list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     if (!item)
         /* XXX: _unreachable_ misuse of list_add() */
@@ -44,9 +44,9 @@ int main()
 
     do
         list_add((item = malloc(sizeof *item)), &list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
-    destroy(!!___sl_get_nondet_int());
+    destroy(!!__VERIFIER_nondet_int());
     return 0;
 }
 

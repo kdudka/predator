@@ -253,15 +253,15 @@ int main()
 {
     PLArenaPool pool;
     PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
-    ___sl_plot("PL_InitArenaPool");
+    __VERIFIER_plot("PL_InitArenaPool");
 
     // this should be OK
     PL_FreeArenaPool(&pool);
-    ___sl_plot("PL_FreeArenaPool-01");
+    __VERIFIER_plot("PL_FreeArenaPool-01");
     PL_FreeArenaPool(&pool);
-    ___sl_plot("PL_FreeArenaPool-02");
+    __VERIFIER_plot("PL_FreeArenaPool-02");
     PL_FinishArenaPool(&pool);
-    ___sl_plot("PL_FinishArenaPool-00");
+    __VERIFIER_plot("PL_FinishArenaPool-00");
 
     PL_ArenaFinish();
     return 0;

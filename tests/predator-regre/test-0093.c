@@ -79,7 +79,7 @@ STACK_HEAD(gl_stack);
 
 void test(void)
 {
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     struct data data;
     push(&gl_stack, &data);
@@ -91,7 +91,7 @@ void test(void)
     push(&gl_stack, &data);
 
     do {
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
     }
     while(pop(&data, &gl_stack));
 }
@@ -100,16 +100,16 @@ void misuse_of_union(void)
 {
     // should be OK
     gl_stack.data.p1 = &gl_stack.data.p0;
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // ugly, but we should be silent
     gl_stack.data.p0 = gl_stack.head;
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // ugly, but we should be silent
     gl_stack.data.p0 = malloc(80);
     free(gl_stack.head);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 }
 
 int main()

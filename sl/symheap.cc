@@ -2659,6 +2659,50 @@ ETargetSpecifier SymHeapCore::targetSpec(TValId addr) const
     return rootData->ts;
 }
 
+void SymHeapCore::rewriteTargetOfBase(TValId root, TObjId objNew)
+{
+    BaseAddress *rootData;
+    d->ents.getEntRW(&rootData, root);
+    const TObjId objOld = rootData->obj;
+
+    // rewrite the target object
+    CL_BREAK_IF(objOld == objNew);
+    rootData->obj = objNew;
+
+    // resolve old/new object data
+    Region *regDataOld, *regDataNew;
+    d->ents.getEntRW(&regDataOld, objOld);
+    d->ents.getEntRW(&regDataNew, objNew);
+
+    // move the address from objOld to objNew
+    const ETargetSpecifier ts = rootData->ts;
+    CL_BREAK_IF(hasKey(regDataNew->addrByTS, ts));
+    if (!regDataOld->addrByTS.erase(ts))
+        CL_BREAK_IF("internal error in rewriteTargetOfBase");
+    regDataNew->addrByTS[ts] = root;
+
+    // go through fields pointing to objOld
+    TFldIdSet unrelatedFlds;
+    BOOST_FOREACH(const TFldId fld, regDataOld->usedByGl) {
+        // read value of the field
+        const FieldOfObj *fldData;
+        d->ents.getEntRO(&fldData, fld);
+        const TValId val = fldData->value;
+
+        // resolve base address
+        const BaseValue *valData;
+        d->ents.getEntRO(&valData, val);
+        if (valData->valRoot == root)
+            // reference moved
+            regDataNew->usedByGl.insert(fld);
+        else
+            unrelatedFlds.insert(fld);
+    }
+
+    // write unmoved field IDs
+    regDataOld->usedByGl.swap(unrelatedFlds);
+}
+
 bool isUninitialized(EValueOrigin code)
 {
     switch (code) {
@@ -3673,13 +3717,6 @@ void SymHeap::objSetConcrete(TObjId obj)
 
     // unregister an abstract object
     d->absRoots.releaseEnt(obj);
-}
-
-/// overridden just to catch possible misuse of the method
-TValId SymHeap::addrOfTarget(TObjId obj, ETargetSpecifier ts, TOffset off)
-{
-    // TODO: check possible misuse once we actually start to use it correctly
-    return SymHeapCore::addrOfTarget(obj, ts, off);
 }
 
 void SymHeap::objInvalidate(TObjId obj)

@@ -8,18 +8,18 @@ int main(int argc, char *argv[])
 {
     TMain *const ptr = malloc(sizeof *ptr);
     if (!*ptr)
-        ___sl_plot("00-null", &ptr);
+        __VERIFIER_plot("00-null", &ptr);
     else
-        ___sl_plot("01-not-null", &ptr);
+        __VERIFIER_plot("01-not-null", &ptr);
 
-    ___sl_plot("02-joint", &ptr);
+    __VERIFIER_plot("02-joint", &ptr);
 
     if (*ptr == &main)
-        ___sl_plot("03-main", &ptr);
+        __VERIFIER_plot("03-main", &ptr);
     else
-        ___sl_plot("04-not-main", &ptr);
+        __VERIFIER_plot("04-not-main", &ptr);
 
-    ___sl_plot("05-joint", &ptr);
+    __VERIFIER_plot("05-joint", &ptr);
 
     free(ptr);
     return 0;

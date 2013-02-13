@@ -91,15 +91,15 @@ void destroy(struct list_head *head)
             (char *)head->next - __builtin_offsetof (struct my_item, link)
             );
 
-    ___sl_plot("00");
+    __VERIFIER_plot("00");
     while (&now->link != (head)) {
         struct my_item *next = (struct my_item *)(
                 (char *)now->link.next - __builtin_offsetof (struct my_item, link)
                 );
 
-        ___sl_plot("01");
+        __VERIFIER_plot("01");
         list_del(&now->link);
-        ___sl_plot("02");
+        __VERIFIER_plot("02");
         free(now);
         now = next;
     }
@@ -122,7 +122,7 @@ int main()
     traverse(&my_list);
 
     destroy(&my_list);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

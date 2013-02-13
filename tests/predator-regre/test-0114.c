@@ -105,7 +105,7 @@ void insert_top(struct list_head *head)
 
 void create_top(struct list_head *top)
 {
-    int i = ___sl_get_nondet_int();
+    int i = __VERIFIER_nondet_int();
     if (i) {
         insert_top(top);
         insert_top(top);
@@ -118,7 +118,7 @@ int main()
     LIST_HEAD(top);
 
     create_top(&top);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     destroy_top(&top);
 

@@ -33,14 +33,14 @@ int main()
         b[i] = dup[i];
     }
 
-    ___sl_plot("loop_done");
+    __VERIFIER_plot("loop_done");
     for (i = 0; i < sizeof b; ++i) {
         ___SL_ASSERT(a[i] == b[i]);
         ___SL_ASSERT(a[i] == dup[i]);
         ___SL_ASSERT(b[i] == str[i]);
     }
 
-    ___sl_plot("all_done");
+    __VERIFIER_plot("all_done");
     free(dup);
     return 0;
 }

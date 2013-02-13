@@ -6,11 +6,11 @@ The below steps were successfully tested on a fresh installation of Ubuntu
 sudo apt-get install \
     cmake curl g++ gcc-4.6-multilib gcc-4.6-plugin-dev libboost-dev make
 
-curl http://www.fit.vutbr.cz/~idudka/download/predator-2012-10-20-f13c949.tar.gz \
+curl http://www.fit.vutbr.cz/~idudka/download/predator-2013-02-02-8d3ea3d.tar.gz \
     | gzip -cd \
     | tar x
 
-cd predator-2012-10-20-f13c949
+cd predator-2013-02-02-8d3ea3d
 
 patch -p1 < build-aux/gcc-4.6.3.patch
 

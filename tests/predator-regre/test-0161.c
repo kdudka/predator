@@ -30,7 +30,7 @@ void add_sub(struct topLevel *t)
 
 struct topLevel* add_top(struct topLevel *t)
 {
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         add_sub(t);
 
     struct topLevel *tt = calloc(1, sizeof *tt);
@@ -57,7 +57,7 @@ struct topLevel* create_top(void)
 int main()
 {
     struct topLevel *t = create_top();
-    ___sl_plot(NULL, &t);
+    __VERIFIER_plot(NULL, &t);
 
     return 0;
 }

@@ -1,7 +1,7 @@
 #include <verifier-builtins.h>
 #include <stdlib.h>
 
-#define __nondet ___sl_get_nondet_int
+#define __nondet __VERIFIER_nondet_int
 
 struct DItem {
     struct DItem* next;
@@ -46,7 +46,7 @@ int main() {
     if (!data)
         return 0;
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // merge subsequent pairs
     while (data->next != data) {
@@ -85,7 +85,7 @@ int main() {
         data = data->next;
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // release the list
     item = data->data;

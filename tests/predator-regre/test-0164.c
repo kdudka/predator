@@ -37,7 +37,7 @@ struct topLevel* add_top(struct topLevel *t)
     do {
         add_sub(tt);
     }
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     tt->next = t;
     return tt;
@@ -46,7 +46,7 @@ struct topLevel* add_top(struct topLevel *t)
 struct topLevel* create_top(void)
 {
     struct topLevel *t = NULL;
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         t = add_top(t);
 
     return t;
@@ -73,7 +73,7 @@ void prune(struct topLevel *t) {
                 free(cursor);
             }
 
-            //___sl_plot(NULL);
+            //__VERIFIER_plot(NULL);
             cursor = next;
             //___sl_enable_debugging_of(___SL_SYMABSTRACT, 1);
         }
@@ -91,7 +91,7 @@ int main()
     prune(top);
     inspect(top);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     while (top) {
         struct topLevel *next = top->next;
         free(top->low);
@@ -100,6 +100,6 @@ int main()
         top = next;
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     return !!top;
 }

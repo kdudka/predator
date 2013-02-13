@@ -263,7 +263,7 @@ LIST_HEAD(plist);
 static void alloc_one(struct pool_node *node)
 {
     PLArenaPool *const pool = &node->pool;
-    size_t size = ___sl_get_nondet_int();
+    size_t size = __VERIFIER_nondet_int();
     if (size < 0x100)
         abort();
     if (0x1000 < size)
@@ -271,7 +271,7 @@ static void alloc_one(struct pool_node *node)
 
     size *= sizeof(double);
 
-    ___sl_plot("01-alloc_one");
+    __VERIFIER_plot("01-alloc_one");
 
     void *const ptr = PL_ArenaAllocate(&node->pool, size);
     if (!ptr)
@@ -296,7 +296,7 @@ static void allocate_everything(void)
         alloc_one(node);
         do
             alloc_one(node);
-        while (___sl_get_nondet_int());
+        while (__VERIFIER_nondet_int());
     }
 }
 
@@ -304,7 +304,7 @@ int main()
 {
     do
         add_pool();
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     allocate_everything();
 

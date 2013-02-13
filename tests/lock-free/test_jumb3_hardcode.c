@@ -59,7 +59,7 @@
              }
 
              if(pc1 == 5){
-               // ___sl_plot("problema");
+               // __VERIFIER_plot("problema");
                if (S == t1) 
                  { S = x1;
                    pc1 = 1;

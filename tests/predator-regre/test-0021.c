@@ -7,7 +7,7 @@ void** synthesize_unknown_ptr_value(void)
     int a = 1, b = 2;
     void *pa = &a, *pb = &b;
 
-    return (___sl_get_nondet_int())
+    return (__VERIFIER_nondet_int())
         ? &pa
         : &pb;
 }

@@ -21,7 +21,7 @@ static struct hlist* create_hlist(void)
         node->next = list;
         list = node;
     }
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     return list;
 }
@@ -46,26 +46,26 @@ static void create_vlist(const bool real_nested_list)
 {
     insert_vlist_node(real_nested_list);
     insert_vlist_node(real_nested_list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
         insert_vlist_node(real_nested_list);
 }
 
 int main()
 {
-    if (___sl_get_nondet_int()) {
+    if (__VERIFIER_nondet_int()) {
         create_vlist(/* real_nested_list */ true);
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
     }
     else {
         create_vlist(/* real_nested_list */ false);
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 #if I_WANT_TO_DEBUG_JOIN
         ___sl_enable_debugging_of(___SL_SYMJOIN, /* enable */ true);
         ___sl_break("joinSymHeaps() demo");
 #endif
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     return 0;
 }
 

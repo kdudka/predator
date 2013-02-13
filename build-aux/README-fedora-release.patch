@@ -6,10 +6,10 @@ index fae4c88..7d89179 100644
  sudo yum install \
      boost-devel cmake gcc-c++ glibc-devel glibc-devel.i686 gcc-plugin-devel make
  
--curl http://www.fit.vutbr.cz/~idudka/download/predator-2012-10-20-f13c949.tar.gz \
+-curl http://www.fit.vutbr.cz/~idudka/download/predator-2013-02-02-8d3ea3d.tar.gz \
 -    | gzip -cd \
 -    | tar x
 -
--cd predator-2012-10-20-f13c949
+-cd predator-2013-02-02-8d3ea3d
 -
  ./switch-host-gcc.sh /usr/bin/gcc

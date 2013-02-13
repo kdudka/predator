@@ -25,7 +25,7 @@ struct item* create_sll(void)
         now->next = alloc_or_die();
         now->next->next = NULL;
         now = now->next;
-        ___sl_plot("01-sll-append-done");
+        __VERIFIER_plot("01-sll-append-done");
     }
 
     return sll;
@@ -34,7 +34,7 @@ struct item* create_sll(void)
 int main()
 {
     struct item *sll = create_sll();
-    ___sl_plot("02-sll-ready");
+    __VERIFIER_plot("02-sll-ready");
     return 0;
 }
 

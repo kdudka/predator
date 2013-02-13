@@ -38,6 +38,11 @@ class FixPoint: public WorkList<T, std::queue<T> >
         int accessCounter_;
 
     public:
+        FixPoint():
+            accessCounter_(0)
+        {
+        }
+
         bool next(T &dst) {
             if (!TBase::next(dst))
                 return false;
@@ -230,7 +235,7 @@ bool isWhiteListedName(const char *name)
     return STREQ(name, "malloc")
         || STREQ(name, "free")
         || STREQ(name, "___sl_error")
-        || STREQ(name, "___sl_plot");
+        || STREQ(name, "__VERIFIER_plot");
 }
 
 bool isWhiteListed(const Insn *insn)
@@ -1215,6 +1220,32 @@ fallback:
     return false;
 }
 
+template <class TWl>
+void scheduleToplogically(TWl &dst, Storage &stor)
+{
+    using CallGraph::Node;
+
+    typedef std::queue<const Node *> TSched;
+    WorkList<const Node *, TSched> wl;
+
+    BOOST_FOREACH(const Node *rootNode, stor.callGraph.roots)
+        wl.schedule(rootNode);
+
+    const Node *node;
+    while (wl.next(node)) {
+        BOOST_FOREACH(TInsnListByFnc::const_reference item, node->calls) {
+            const Fnc *callee = item.first;
+            wl.schedule(callee->cgNode);
+        }
+
+        Fnc *fnc = node->fnc;
+        if (isBuiltInFnc(fnc->def) || isWhiteListed(fnc))
+            continue;
+
+        dst.schedule(fnc);
+    }
+}
+
 bool ficsPhase3(BuildCtx &ctx)
 {
     TStorRef stor = ctx.stor;
@@ -1227,11 +1258,7 @@ bool ficsPhase3(BuildCtx &ctx)
     }
 
     // plan to explore all functions we are interested in
-    BOOST_FOREACH(Fnc *fnc, stor.fncs) {
-        if (isBuiltInFnc(fnc->def) || isWhiteListed(fnc))
-            continue;
-        fp.schedule(fnc);
-    }
+    scheduleToplogically(fp, stor);
 
     Fnc *callee;
     while (!stor.ptd.dead && fp.next(callee)) {

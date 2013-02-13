@@ -45,7 +45,7 @@ struct list_head {
  */
 static inline int list_empty(const struct list_head *head)
 {
-    //___sl_plot(NULL);
+    //__VERIFIER_plot(NULL);
 	return head->next == head;
 }
 
@@ -108,8 +108,8 @@ void append_one(struct list_head *head)
     struct my_item *ptr = my_alloc();
     list_add_tail(&ptr->link, head);
 #if 0
-    ___sl_plot( "01-ptr");
-    ___sl_plot("01-head");
+    __VERIFIER_plot( "01-ptr");
+    __VERIFIER_plot("01-head");
 #endif
 }
 
@@ -117,7 +117,7 @@ void traverse(struct list_head *head)
 {
     struct my_item *now;
     list_for_each_entry_reverse(now, head, link) {
-        ___sl_plot("now");
+        __VERIFIER_plot("now");
     }
 }
 
@@ -128,10 +128,10 @@ int main()
         return 1;
 
     append_one(&my_list);
-    ___sl_plot("01");
+    __VERIFIER_plot("01");
 
     append_one(&my_list);
-    ___sl_plot("02");
+    __VERIFIER_plot("02");
 
     traverse(&my_list);
 

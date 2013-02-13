@@ -65,16 +65,16 @@ void append_many(struct list_head *head)
 int main()
 {
     LIST_HEAD(my_list);
-    ___sl_plot("00");
+    __VERIFIER_plot("00");
 
     append_many(&my_list);
-    ___sl_plot("01");
+    __VERIFIER_plot("01");
 
     append_many(&my_list);
-    ___sl_plot("02");
+    __VERIFIER_plot("02");
 
     append_many(&my_list);
-    ___sl_plot("03");
+    __VERIFIER_plot("03");
 
     return 0;
 }

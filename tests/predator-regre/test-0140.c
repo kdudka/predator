@@ -28,10 +28,10 @@ int main()
     // plot heap in each iteration
     struct node *pos;
     list_for_each_entry(pos, &list, embedded_head)
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 
     // plot heap after list_for_each_entry() -- an off-value should be there
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // use list_entry()
     free(list_entry(list.next, struct node, embedded_head));

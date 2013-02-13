@@ -341,11 +341,15 @@ void plotTraceCore(TracePlotter &tplot)
 }
 
 // FIXME: copy-pasted from symplot.cc
-bool plotTrace(const std::string &name, TWorkList &wl)
+bool plotTrace(const std::string &name, TWorkList &wl, std::string *pName = 0)
 {
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string plotName(pe->decorate(name));
     std::string fileName(plotName + ".dot");
+
+    if (pName)
+        // propagate the resulting name back to the caller
+        *pName = plotName;
 
     // create a dot file
     std::fstream out(fileName.c_str(), std::ios::out);
@@ -377,11 +381,11 @@ bool plotTrace(const std::string &name, TWorkList &wl)
     return !!out;
 }
 
-bool plotTrace(Node *endPoint, const std::string &name)
+bool plotTrace(Node *endPoint, const std::string &name, std::string *pName)
 {
     const TNodePair item(/* from */ endPoint, /* to */ nullNode);
     TWorkList wl(item);
-    return plotTrace(name, wl);
+    return plotTrace(name, wl, pName);
 }
 
 // /////////////////////////////////////////////////////////////////////////////

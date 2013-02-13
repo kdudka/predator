@@ -18,12 +18,12 @@ int main()
 
     int i;
     for (i = 0; i < sizeof str; ++i) {
-        ___sl_plot("loop_body");
+        __VERIFIER_plot("loop_body");
         a[i] = str[i];
         b[i] = dup[i];
     }
 
-    ___sl_plot("loop_done", &str, &dup, &a, &b);
+    __VERIFIER_plot("loop_done", &str, &dup, &a, &b);
     return 0;
 }
 

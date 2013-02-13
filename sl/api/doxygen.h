@@ -16,9 +16,9 @@
  *
  * - symbolic heap: symid.hh, SymHeapCore, SymHeap
  *
- * - garbage collector: collectJunk(), destroyRootAndCollectJunk(), LeakMonitor
+ * - garbage collector: collectJunk(), destroyObjectAndCollectJunk(), LeakMonitor
  *
- * - generic join algorithm: joinSymHeaps(), joinDataReadOnly(), joinData()
+ * - generic join algorithm: joinSymHeaps(), joinData()
  *
  * - list segment discovery: discoverBestAbstraction()
  *

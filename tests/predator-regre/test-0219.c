@@ -28,13 +28,13 @@ static void l2_insert(struct L2 **list)
 
 static void l2_inspect(struct L2 *list)
 {
-    ___sl_plot("02-inspect");
+    __VERIFIER_plot("02-inspect");
 
     void *last = list->proto;
     struct L2 *next = list->next;
 
     while ((list = next)) {
-        ___sl_plot("03-inspect-loop");
+        __VERIFIER_plot("03-inspect-loop");
         ___SL_ASSERT(list->proto != last);
 
         last = list->proto;
@@ -61,7 +61,7 @@ static void l1_insert(struct L1 **list)
 
     do
         l2_insert(&item->l2);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     item->next = *list;
     *list = item;
@@ -73,9 +73,9 @@ int main()
 
     do
         l1_insert(&list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
-    ___sl_plot("01-ready");
+    __VERIFIER_plot("01-ready");
 
     do {
         struct L1 *next = list->next;

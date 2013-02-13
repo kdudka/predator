@@ -36,7 +36,7 @@ struct list_head {
  */
 static inline int list_empty(const struct list_head *head)
 {
-    //___sl_plot(NULL);
+    //__VERIFIER_plot(NULL);
 	return head->next == head;
 }
 
@@ -62,7 +62,7 @@ int main()
         // this should not happen as long as gl initializers work
         main();
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return !!foo(&local);
 }

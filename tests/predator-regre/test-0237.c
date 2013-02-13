@@ -57,7 +57,7 @@ static void l3_insert(struct L3 **list)
 
     do
         l4_insert(&item->down, list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     item->owner = list;
     item->next = *list;
@@ -70,7 +70,7 @@ static void l2_insert(struct L2 **list, void *owner)
 
     do
         l3_insert(&item->down);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     item->owner = owner;
     item->next = *list;
@@ -83,7 +83,7 @@ static void l1_insert(struct L1 **list)
 
     do
         l2_insert(&item->down, list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     item->owner = list;
     item->next = *list;
@@ -96,7 +96,7 @@ static void l0_insert(struct L0 **list)
 
     do
         l1_insert(&item->down);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     item->next = *list;
     *list = item;
@@ -168,9 +168,9 @@ int main()
 
     do
         l0_insert(&list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
-    ___sl_plot("01-ready");
+    __VERIFIER_plot("01-ready");
 
     l0_destroy(list);
 }

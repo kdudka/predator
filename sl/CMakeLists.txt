@@ -1,4 +1,4 @@
-# Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2010-2013 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -33,6 +33,8 @@ endif()
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
+    fixed_point.cc
+    glconf.cc
     intrange.cc
     plotenum.cc
     prototype.cc
@@ -113,6 +115,7 @@ set(tests
     0210      0212      0214 0215      0217 0218 0219
     0220 0221 0222 0223 0224 0225 0226 0227 0228 0229
     0230 0231 0232 0233 0234      0236 0237 0238 0239
+    0240
     0300      0302
                                   0316
     0400 0401 0402 0403 0404      0406      0408

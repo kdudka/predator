@@ -87,7 +87,7 @@ int main()
     // wrong use of union
     const char *name = tree->leaf_name;
     const int rv = *name;
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     destroy_tree(tree);
     return rv;

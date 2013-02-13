@@ -37,7 +37,7 @@ struct topLevel* add_top(struct topLevel *t)
     do {
         add_sub(tt);
     }
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     tt->next = t;
     return tt;
@@ -69,14 +69,14 @@ void prune(struct topLevel *t) {
             struct lowLevel *next = cursor->next;
             if (cursor == cursor->head) {
                 cursor->next = NULL;
-                //___sl_plot(NULL);
+                //__VERIFIER_plot(NULL);
             }
             else {
-                //___sl_plot(NULL);
+                //__VERIFIER_plot(NULL);
                 free(cursor);
             }
 
-            //___sl_plot(NULL);
+            //__VERIFIER_plot(NULL);
             cursor = next;
         }
 
@@ -87,16 +87,16 @@ void prune(struct topLevel *t) {
 int main()
 {
     struct topLevel *top = create_top();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     //___sl_enable_debugging_of(___SL_SYMABSTRACT, 1);
     prune(top);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     ___sl_enable_debugging_of(___SL_SYMABSTRACT, 0);
     inspect(top);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     while (top) {
         struct topLevel *next = top->next;
         free(top->low);
@@ -105,6 +105,6 @@ int main()
         top = next;
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     return !!top;
 }

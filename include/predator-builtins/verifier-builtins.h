@@ -37,6 +37,8 @@ enum ___sl_module_id {
     ___SL_GARBAGE_COLLECTOR
 };
 
+#define __VERIFIER_assert(cond)  ___SL_ASSERT(cond)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,7 +47,7 @@ extern "C" {
 /* declare built-ins */
 void ___sl_break(const char *msg);
 void ___sl_error(const char *msg);
-void ___sl_plot(const char *name, ...);
+void __VERIFIER_plot(const char *name, ...);
 void ___sl_plot_trace_now(const char *plot_name, const char *node_name);
 void ___sl_plot_trace_once(const char *plot_name, const char *node_name);
 void ___sl_enable_debugging_of(enum ___sl_module_id module, int enable);
@@ -77,7 +79,7 @@ static /* inline */ void ___sl_error(const char *msg)
     (void) msg;
 }
 
-static /* inline */ void ___sl_plot(const char *name, ...)
+static /* inline */ void __VERIFIER_plot(const char *name, ...)
 {
     (void) name;
 }

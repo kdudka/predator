@@ -41,7 +41,7 @@ int main() {
                pc1 = 4;
                continue;
             case 4:
-               // ___sl_plot("problema");
+               // __VERIFIER_plot("problema");
                if (S == t1) {
                   S = x1;
                   pc1 = 1;

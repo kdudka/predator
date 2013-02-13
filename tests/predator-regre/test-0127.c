@@ -35,7 +35,7 @@ struct node_low* create_low(void)
 
 int get_nondet()
 {
-    int i = ___sl_get_nondet_int();
+    int i = __VERIFIER_nondet_int();
     return i;
 }
 
@@ -74,7 +74,7 @@ struct node_top* create_sll(void)
 int main()
 {
     struct node_top *sll = create_sll();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

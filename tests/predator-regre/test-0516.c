@@ -6,7 +6,7 @@ struct item {
     struct item *prev;
 };
 
-#define __nondet ___sl_get_nondet_int
+#define __nondet __VERIFIER_nondet_int
 
 int main()
 {
@@ -31,7 +31,7 @@ int main()
         pos = pos->next;
         pos->prev = prev;
 
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
     }
 
     // convert the DLL to SLL by zeroing the 'next' field
@@ -40,7 +40,7 @@ int main()
         list->next = NULL;
         list = next;
 
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
     }
 
     // finally just destroy the list to silence our garbage collector

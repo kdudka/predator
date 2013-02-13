@@ -1,7 +1,7 @@
 #include <verifier-builtins.h>
 #include <stdlib.h>
 
-#define __nondet ___sl_get_nondet_int
+#define __nondet __VERIFIER_nondet_int
 
 struct list_head {
     struct list_head *next, *prev;
@@ -144,7 +144,7 @@ int main()
     while (__nondet())
         create_sll_item(sll);
 
-    ___sl_plot(NULL, &sll);
+    __VERIFIER_plot(NULL, &sll);
 
     while (sll)
         destroy_sll_item(sll);

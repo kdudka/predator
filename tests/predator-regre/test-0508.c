@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#define __nondet ___sl_get_nondet_int
+#define __nondet __VERIFIER_nondet_int
 
 int main() {
 
@@ -35,7 +35,7 @@ int main() {
         pred = NULL;
         while (y && y->next) {
             if (!y->next) {
-                ___sl_plot(NULL);
+                __VERIFIER_plot(NULL);
                 ___sl_error("this should not have happened");
             }
 

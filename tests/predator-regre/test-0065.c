@@ -86,11 +86,11 @@ int main()
     sll->data1 = sll; // mark the first selected node
     sll = create_slseg(sll);
 
-    ___sl_plot("main1");
+    __VERIFIER_plot("main1");
 
     sll = reverse_sll(sll);
 
-    ___sl_plot("main2");
+    __VERIFIER_plot("main2");
 
     destroy_sll(sll);
 

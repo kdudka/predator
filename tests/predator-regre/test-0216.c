@@ -7,13 +7,13 @@ typedef enum {
 
 end_point_t rand_end_point(void)
 {
-    return !!___sl_get_nondet_int();
+    return !!__VERIFIER_nondet_int();
 }
 
 int main()
 {
     const end_point_t ep = rand_end_point();
-    ___sl_plot((void *) 0);
+    __VERIFIER_plot((void *) 0);
 
     switch (ep) {
         case LIST_BEG:

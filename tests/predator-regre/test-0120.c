@@ -60,7 +60,7 @@ int main() {
     if (hlist_empty(&my_hlist_head))
         abort();
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     free(item);
     return EXIT_SUCCESS;
 }

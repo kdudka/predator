@@ -22,7 +22,7 @@ int main()
     t->next = 0;
     t->low = 0;
 
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         do {
             struct lowLevel *l = calloc(1, sizeof *l);
             if (!l)
@@ -41,7 +41,7 @@ int main()
                 t->low->next = l;
             }
         }
-        while (___sl_get_nondet_int());
+        while (__VERIFIER_nondet_int());
 
         tt = malloc(sizeof(struct topLevel));
         tt->next = t;
@@ -49,7 +49,7 @@ int main()
         t = tt;
     }
 
-    ___sl_plot(NULL, &t);
+    __VERIFIER_plot(NULL, &t);
     tt = t->next;
     l = tt->low;
 

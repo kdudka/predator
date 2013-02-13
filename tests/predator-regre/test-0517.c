@@ -1,7 +1,7 @@
 #include <verifier-builtins.h>
 #include <stdlib.h>
 
-#define __nondet ___sl_get_nondet_int
+#define __nondet __VERIFIER_nondet_int
 
 struct list_head {
     struct list_head *next;
@@ -67,7 +67,7 @@ int main()
                 (char *)now->link.next - __builtin_offsetof (struct my_item, link)
                 );
 
-        ___sl_plot(NULL, &now);
+        __VERIFIER_plot(NULL, &now);
         free(ptr);
     }
 

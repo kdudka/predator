@@ -10,10 +10,10 @@
     static void dummy_printf(void) { }
     static int dymmy_scanf(int *ptr)
     {
-        if (___sl_get_nondet_int())
+        if (__VERIFIER_nondet_int())
             return 0;
 
-        *ptr = ___sl_get_nondet_int();
+        *ptr = __VERIFIER_nondet_int();
         return 1;
     }
 #   define printf(...)      dummy_printf()
@@ -105,14 +105,14 @@ int main()
 {
     gl_read();
     gl_write();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     gl_sort();
     gl_write();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     gl_destroy();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

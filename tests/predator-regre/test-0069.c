@@ -55,14 +55,14 @@ int main()
     create_dll(&beg, &end);
     cut_dll(&beg, &end);
 
-    ___sl_plot("00");
+    __VERIFIER_plot("00");
     free(beg);
-    ___sl_plot("01");
+    __VERIFIER_plot("01");
 
     if (end != beg) {
-        ___sl_plot("02");
+        __VERIFIER_plot("02");
         free(end);
-        ___sl_plot("03");
+        __VERIFIER_plot("03");
     }
 
     return 0;

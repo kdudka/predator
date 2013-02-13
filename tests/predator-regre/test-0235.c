@@ -51,7 +51,7 @@ static void l3_insert(struct L3 **list)
 
     do
         l4_insert(&item->down);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     item->next = *list;
     *list = item;
@@ -63,7 +63,7 @@ static void l2_insert(struct L2 **list)
 
     do
         l3_insert(&item->down);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     item->next = *list;
     *list = item;
@@ -75,7 +75,7 @@ static void l1_insert(struct L1 **list)
 
     do
         l2_insert(&item->down);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     item->next = *list;
     *list = item;
@@ -87,7 +87,7 @@ static void l0_insert(struct L0 **list)
 
     do
         l1_insert(&item->down);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     item->next = *list;
     *list = item;
@@ -174,27 +174,27 @@ int main()
 
     do
         l0_insert(&list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
-    ___sl_plot("00-ready");
+    __VERIFIER_plot("00-ready");
 
     l0_destroy(list, /* level */ 5);
-    ___sl_plot("01-removed-l5");
+    __VERIFIER_plot("01-removed-l5");
 
     l0_destroy(list, /* level */ 4);
-    ___sl_plot("02-removed-l4");
+    __VERIFIER_plot("02-removed-l4");
 
     l0_destroy(list, /* level */ 3);
-    ___sl_plot("03-removed-l3");
+    __VERIFIER_plot("03-removed-l3");
 
     l0_destroy(list, /* level */ 2);
-    ___sl_plot("04-removed-l2");
+    __VERIFIER_plot("04-removed-l2");
 
     l0_destroy(list, /* level */ 1);
-    ___sl_plot("05-removed-l1");
+    __VERIFIER_plot("05-removed-l1");
 
     l0_destroy(list, /* level */ 0);
-    ___sl_plot("06-removed-l0");
+    __VERIFIER_plot("06-removed-l0");
 
     return !!list;
 }

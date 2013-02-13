@@ -148,7 +148,7 @@ int main()
     if (!list)
         return EXIT_FAILURE;
 
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         struct data_item *num_item = data_item_from_num(0L);
         if (!num_item)
             goto fail;
@@ -156,7 +156,7 @@ int main()
         data_list_append(list, num_item);
     }
 
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         struct data_item *str_item = data_item_from_str(text);
         if (!str_item)
             goto fail;
@@ -167,7 +167,7 @@ int main()
     rv = EXIT_SUCCESS;
 
 fail:
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     list->vtab.destroy(list);
     return rv;
 }

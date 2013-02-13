@@ -37,7 +37,7 @@ struct item* create_dll(void)
         now->next = alloc_and_zero();
         now->next->prev = now;
         now = now->next;
-        ___sl_plot("01-dll-append-done");
+        __VERIFIER_plot("01-dll-append-done");
     }
 
     return dll;
@@ -46,7 +46,7 @@ struct item* create_dll(void)
 int main()
 {
     struct item *dll = create_dll();
-    ___sl_plot("02-dll-ready");
+    __VERIFIER_plot("02-dll-ready");
     return 0;
 }
 

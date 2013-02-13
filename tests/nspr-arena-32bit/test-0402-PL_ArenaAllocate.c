@@ -254,11 +254,11 @@ int main()
 {
     PLArenaPool pool;
     PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
-    ___sl_plot("PL_InitArenaPool");
+    __VERIFIER_plot("PL_InitArenaPool");
 
     // this should be OK
     PL_ArenaAllocate(&pool, 0x100);
-    ___sl_plot("PL_ArenaAllocate");
+    __VERIFIER_plot("PL_ArenaAllocate");
 
     PL_ArenaFinish();
     return 0;

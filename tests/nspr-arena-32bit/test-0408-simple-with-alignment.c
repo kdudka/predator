@@ -265,29 +265,29 @@ int main()
     // free the arena pool twice
     PL_FreeArenaPool(&pool);
     PL_FreeArenaPool(&pool);
-    ___sl_plot("01-PL_FreeArenaPool");
+    __VERIFIER_plot("01-PL_FreeArenaPool");
 
     ptr1 = PL_ArenaAllocate(&pool, 0x100);
     ptr2 = PL_ArenaAllocate(&pool, 0x100);
-    ___sl_plot("02-PL_ArenaAllocate");
+    __VERIFIER_plot("02-PL_ArenaAllocate");
 
     // free the arena pool
     PL_FreeArenaPool(&pool);
-    ___sl_plot("04-PL_FreeArenaPool", &ptr1, &ptr2);
+    __VERIFIER_plot("04-PL_FreeArenaPool", &ptr1, &ptr2);
 
     PL_ArenaFinish();
-    ___sl_plot("05-PL_ArenaFinish");
+    __VERIFIER_plot("05-PL_ArenaFinish");
 
     // XXX: this is misuse of the NSPR API
     void *ptr0 = PL_ArenaAllocate(&pool, 0x100);
-    ___sl_plot("06-PL_ArenaAllocate");
+    __VERIFIER_plot("06-PL_ArenaAllocate");
 
     // free the arena pool
     PL_FreeArenaPool(&pool);
-    ___sl_plot("07-PL_FreeArenaPool");
+    __VERIFIER_plot("07-PL_FreeArenaPool");
 
     PL_ArenaFinish();
-    ___sl_plot("08-PL_ArenaFinish");
+    __VERIFIER_plot("08-PL_ArenaFinish");
 
     return 0;
 }

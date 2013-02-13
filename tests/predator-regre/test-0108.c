@@ -119,7 +119,7 @@ struct master_item* create_sll_of_dll(void *end)
 int main()
 {
     struct master_item *sll = create_sll_of_dll(NULL);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     //___sl_break();
 
     while (sll) {

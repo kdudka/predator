@@ -40,7 +40,7 @@ static void l1_insert(struct list_head *list)
 
     do
         l2_insert(&item->l2);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 }
 
 static void create_all_levels(struct list_head *list)
@@ -48,14 +48,14 @@ static void create_all_levels(struct list_head *list)
     l1_insert(list);
     do
         l1_insert(list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 }
 
 int main()
 {
     LIST_HEAD(list);
     create_all_levels(&list);
-    ___sl_plot("01-ready", &list);
+    __VERIFIER_plot("01-ready", &list);
 }
 
 /**

@@ -101,7 +101,7 @@ void insert_top(struct list_head *head)
     top->sub.prev = &top->sub;
     top->sub.next = &top->sub;
 
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         insert_sub(&top->sub);
 
     list_add_tail(&top->link, head);
@@ -113,7 +113,7 @@ void create_top(struct list_head *top)
     insert_top(top);
     insert_top(top);
 
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         insert_top(top);
 }
 
@@ -123,7 +123,7 @@ int main()
 
     create_top(&top);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     destroy_top(&top);
 
     return 0;

@@ -26,7 +26,7 @@ int main()
     // create SLS 1+
     do
         append(&list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     while (list) {
         struct item *next = list->next;
@@ -35,7 +35,7 @@ int main()
         if (!next)
             free(list->data);
 #endif
-        ___sl_plot(NULL);
+        __VERIFIER_plot(NULL);
 
         free(list);
         list = next;

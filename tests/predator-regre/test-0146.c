@@ -94,17 +94,17 @@ void add_item(struct list_head *head) {
     // TODO: support for 0+ nested lists
     add_nested(&item->nested);
     add_nested(&item->nested);
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         add_nested(&item->nested);
 }
 
 int main() {
     LIST_HEAD(my_list_head);
 
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
         add_item(&my_list_head);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

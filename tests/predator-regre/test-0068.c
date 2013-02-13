@@ -57,12 +57,12 @@ int main()
     struct item *beg, *end;
     create_dll(&beg, &end);
     cut_dll(&beg, &end);
-    ___sl_plot("00");
+    __VERIFIER_plot("00");
 
     if (beg == end)
-        ___sl_plot("01");
+        __VERIFIER_plot("01");
     else
-        ___sl_plot("02");
+        __VERIFIER_plot("02");
 
     return 0;
 }

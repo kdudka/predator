@@ -466,6 +466,11 @@ static void read_base_type(struct cl_type *clt, tree type)
     if (NULL_TREE == name)
         return;
 
+    if (TYPE_DECL == TREE_CODE(type)) {
+        CL_WARN_UNHANDLED_EXPR(type, "TYPE_DECL");
+        return;
+    }
+
     // TODO: scope
     if (IDENTIFIER_NODE == TREE_CODE(name)) {
         clt->name = IDENTIFIER_POINTER(name);
@@ -526,6 +531,11 @@ static int dig_field_offset(tree t)
 static void dig_record_type(struct cl_type *clt, tree t)
 {
     for (t = TYPE_FIELDS(t); t; t = TREE_CHAIN(t)) {
+        if (TYPE_DECL == TREE_CODE(t)) {
+            CL_WARN_UNHANDLED_EXPR(t, "TYPE_DECL");
+            continue;
+        }
+
         // TODO: chunk allocation ?
         clt->items = CL_RESIZEVEC(struct cl_type_item, clt->items,
                                   clt->item_cnt + 1);
@@ -636,6 +646,10 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->code = CL_TYPE_REAL;
             break;
 
+        case METHOD_TYPE:
+            CL_WARN_UNHANDLED_EXPR(type, "METHOD_TYPE");
+            break;
+
         default:
             CL_BREAK_IF("read_specific_type() got something special");
     };
@@ -677,6 +691,10 @@ static enum cl_scope_e get_decl_scope(tree t)
 
             case TRANSLATION_UNIT_DECL:
                 break;
+
+            case RECORD_TYPE:
+                CL_WARN_UNHANDLED_EXPR(ctx, "RECORD_TYPE)");
+                return CL_SCOPE_STATIC;
 
             default:
                 CL_BREAK_IF("unhandled declaration context");
@@ -722,9 +740,13 @@ static int bitfield_lookup(tree op)
 
     tree t = TYPE_FIELDS(type);
     int i;
-    for (i = 0; t; t = TREE_CHAIN(t), ++i)
+    for (i = 0; t; t = TREE_CHAIN(t), ++i) {
+        if (TYPE_DECL == TREE_CODE(t))
+            continue;
+
         if (offset == dig_field_offset(t))
             return i;
+    }
 
     // not found
     CL_WARN_UNHANDLED_EXPR(op, "BIT_FIELD_REF");
@@ -1251,6 +1273,10 @@ static void handle_operand(struct cl_operand *op, tree t)
     read_raw_operand(op, t);
 }
 
+struct gimple_walk_data {
+    bool abort_sent;
+};
+
 static void handle_stmt_unop(gimple stmt, enum tree_code code,
                              struct cl_operand *dst, tree src_tree)
 {
@@ -1353,7 +1379,7 @@ static void handle_stmt_call_args(gimple stmt)
     }
 }
 
-static void handle_stmt_call(gimple stmt)
+static void handle_stmt_call(gimple stmt, struct gimple_walk_data *data)
 {
     tree op0 = gimple_call_fn(stmt);
 
@@ -1390,6 +1416,7 @@ static void handle_stmt_call(gimple stmt)
         cli.loc     = loc;
 
         cl->insn(cl, &cli);
+        data->abort_sent = true;
     }
 }
 
@@ -1495,14 +1522,11 @@ static unsigned find_case_label_target(gimple stmt, int label_decl_uid)
         // FIXME: treat e->flags somehow?
 
         struct basic_block_def *bb = e->dest;
-        CL_BREAK_IF(!bb);
-
-        // obtain gimple
-        struct gimple_bb_info *bb_info = bb->il.gimple;
-        CL_BREAK_IF(!bb_info || ! bb_info->seq || !bb_info->seq->first);
+        gimple_seq gs = bb_seq(e->dest);
+        const gimple_stmt_iterator stmt_it = gsi_start(gs);
 
         // check whether first statement in BB is GIMPLE_LABEL
-        gimple bb_stmt = bb_info->seq->first->stmt;
+        const gimple bb_stmt = gsi_stmt(stmt_it);
         if (!bb_stmt || GIMPLE_LABEL != bb_stmt->gsbase.code)
             continue;
 
@@ -1582,6 +1606,18 @@ static void handle_stmt_label(gimple stmt)
     cl->insn(cl, &cli);
 }
 
+static void handle_stmt_resx(gimple stmt, struct gimple_walk_data *data)
+{
+    CL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_RESX");
+    if (data->abort_sent)
+        return;
+
+    static struct cl_insn cli;
+    cli.code    = CL_INSN_ABORT;
+    cl->insn(cl, &cli);
+    data->abort_sent = true;
+}
+
 // callback of walk_gimple_seq declared in <gimple.h>
 static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
                                 bool *subtree_done,
@@ -1589,7 +1625,8 @@ static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
 {
     gimple stmt = gsi_stmt(*iter);
     (void) subtree_done;
-    (void) info;
+
+    struct gimple_walk_data *data = (struct gimple_walk_data *) info->info;
 
 #if CL_DEBUG_GCC_GIMPLE
     printf("\n\t\t");
@@ -1607,7 +1644,7 @@ static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
             break;
 
         case GIMPLE_CALL:
-            handle_stmt_call(stmt);
+            handle_stmt_call(stmt, data);
             break;
 
         case GIMPLE_RETURN:
@@ -1622,8 +1659,16 @@ static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
             handle_stmt_label(stmt);
             break;
 
+        case GIMPLE_RESX:
+            handle_stmt_resx(stmt, data);
+            break;
+
         case GIMPLE_ASM:
             CL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_ASM");
+            break;
+
+        case GIMPLE_NOP:
+            CL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_NOP");
             break;
 
         case GIMPLE_PREDICT:
@@ -1647,27 +1692,31 @@ static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
 }
 
 // walk through gimple BODY using <gimple.h> API
-static void handle_bb_gimple(gimple_seq body)
+static void handle_bb_gimple(struct basic_block_def *bb, void *data)
 {
+    const gimple_seq seq = bb_seq(bb);
+
     struct walk_stmt_info info;
     memset(&info, 0, sizeof(info));
-    walk_gimple_seq(body, cb_walk_gimple_stmt, NULL, &info);
+    info.info = data;
+
+    walk_gimple_seq(seq, cb_walk_gimple_stmt, NULL, &info);
 }
 
 static bool dig_edge_location(struct cl_loc *loc, const edge e)
 {
-    const struct gimple_bb_info *bb_gimple = e->src->il.gimple;
-    if (bb_gimple) {
+    const gimple_seq src_seq = bb_seq(e->src);
+    if (src_seq) {
         // use the last statement of the source bb
-        const gimple last_stmt = gimple_seq_last_stmt(bb_gimple->seq);
+        const gimple last_stmt = gimple_seq_last_stmt(src_seq);
         if (last_stmt && read_gimple_location(loc, last_stmt))
             return true;
     }
 
-    bb_gimple = e->dest->il.gimple;
-    if (bb_gimple) {
+    gimple_seq dst_seq = bb_seq(e->dest);
+    if (dst_seq) {
         // use the 1st statement of the destination bb with valid location info
-        gimple_stmt_iterator iter = gsi_start(bb_gimple->seq);
+        gimple_stmt_iterator iter = gsi_start(dst_seq);
         for (; !gsi_end_p(iter); gsi_next(&iter))
             if (read_gimple_location(loc, gsi_stmt(iter)))
                 return true;
@@ -1705,19 +1754,25 @@ static void handle_fnc_bb(struct basic_block_def *bb)
     free(label);
 
     // go through the bb's content
-    struct gimple_bb_info *gimple = bb->il.gimple;
-    if (NULL == gimple) {
-        CL_BREAK_IF("gimple not found");
-        return;
-    }
-    handle_bb_gimple(gimple->seq);
+    struct gimple_walk_data data = { false };
+    handle_bb_gimple(bb, &data);
 
     // check for a fallthru successor
     edge e;
     edge_iterator ei = ei_start(bb->succs);
-    if (ei_cond(ei, &e) && e->dest && (e->flags & EDGE_FALLTHRU)) {
-        handle_jmp_edge(e);
-        return;
+    if (ei_cond(ei, &e)) {
+        if (e->dest && (e->flags & EDGE_FALLTHRU))
+            handle_jmp_edge(e);
+
+        if (e->flags & EDGE_EH) {
+            CL_WARN_UNHANDLED("EDGE_EH (exception edge)");
+            if (data.abort_sent)
+                return;
+
+            static struct cl_insn cli;
+            cli.code    = CL_INSN_ABORT;
+            cl->insn(cl, &cli);
+        }
     }
 }
 
@@ -1805,22 +1860,8 @@ static unsigned int cl_pass_execute(void)
     return 0;
 }
 
-// pass description according to <tree-pass.h> API
-static struct opt_pass cl_pass = {
-    C99_FIELD(type                ) GIMPLE_PASS,
-    C99_FIELD(name                ) "clplug",
-    C99_FIELD(gate                ) NULL,
-    C99_FIELD(execute             ) cl_pass_execute,
-    C99_FIELD(sub                 ) NULL,
-    C99_FIELD(next                ) NULL,
-    C99_FIELD(static_pass_number  ) 0,
-    C99_FIELD(tv_id               ) TV_NONE,
-    C99_FIELD(properties_required ) PROP_cfg | PROP_gimple_any,
-    C99_FIELD(properties_provided ) 0,
-    C99_FIELD(properties_destroyed) 0,
-    C99_FIELD(todo_flags_start    ) 0,
-    C99_FIELD(todo_flags_finish   ) 0
-};
+// will be initialized in cl_regcb()
+static struct opt_pass cl_pass;
 
 // definition of a new pass provided by the plug-in
 static struct register_pass_info cl_plugin_pass = {
@@ -1884,6 +1925,12 @@ static void cb_finish_unit(void *gcc_data, void *user_data)
 
 // register callbacks for plug-in NAME
 static void cl_regcb(const char *name) {
+    // the structure changes between versions of GCCs, so we do not use initials
+    cl_pass.type = GIMPLE_PASS;
+    cl_pass.name = "clplug";
+    cl_pass.execute = cl_pass_execute;
+    cl_pass.properties_required = PROP_cfg | PROP_gimple_any;
+
     // passing NULL as CALLBACK to register_callback stands for virtual callback
 
     // register new pass provided by the plug-in

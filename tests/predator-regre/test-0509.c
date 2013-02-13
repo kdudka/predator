@@ -1,7 +1,7 @@
 #include <verifier-builtins.h>
 #include <stdlib.h>
 
-#define __nondet ___sl_get_nondet_int
+#define __nondet __VERIFIER_nondet_int
 
 int main() {
 
@@ -30,7 +30,7 @@ int main() {
             else
                 y = y->next;
 
-            ___sl_plot(NULL);
+            __VERIFIER_plot(NULL);
             free(x);
             break;
         }

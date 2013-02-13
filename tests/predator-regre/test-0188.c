@@ -10,7 +10,7 @@ int main()
         NULL
     };
 
-    switch (___sl_get_nondet_int()) {
+    switch (__VERIFIER_nondet_int()) {
         case 0:
             return printf("%s\n", szMsg[0], szMsg[1]);
 

@@ -85,17 +85,17 @@ static void destroy_list_no(unsigned no)
 int main()
 {
     create_list_of_length(&list0, 0);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     create_list_no(1);
     create_list_no(2);
     create_list_no(3);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     destroy_list_no(3);
     destroy_list_no(2);
     destroy_list_no(1);
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     return 0;
 }

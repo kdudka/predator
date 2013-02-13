@@ -252,8 +252,8 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
 
 void torture_arena(PLArenaPool *pool)
 {
-    while (___sl_get_nondet_int()) {
-        ssize_t size = ___sl_get_nondet_int();
+    while (__VERIFIER_nondet_int()) {
+        ssize_t size = __VERIFIER_nondet_int();
         if (size < sizeof(double))
             abort();
         if (0x1000 + sizeof(double) < size)
@@ -261,21 +261,21 @@ void torture_arena(PLArenaPool *pool)
 
         size &= ~(sizeof(double) - 1);
 
-        ___sl_plot("01-torture_arena", &pool, &size, &arena_freelist);
+        __VERIFIER_plot("01-torture_arena", &pool, &size, &arena_freelist);
 
         PL_ArenaAllocate(pool, size);
 
-        while (___sl_get_nondet_int())
+        while (__VERIFIER_nondet_int())
             PL_FreeArenaPool(pool);
     }
 }
 
 int main()
 {
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         PLArenaPool pool;
 
-        while (___sl_get_nondet_int()) {
+        while (__VERIFIER_nondet_int()) {
             // initialize arena pool
             PL_InitArenaPool(&pool, "cool pool", 0x1000, sizeof(double));
 

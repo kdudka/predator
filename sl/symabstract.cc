@@ -250,20 +250,20 @@ bool segAbstractionStep(
     const TObjId obj0 = *pCursor;
     const TObjId obj1 = nextObj(sh, obj0, off.next);
 
-    // check whether the upcoming abstraction step is still doable
+    // use a sand box since we do not know whether the join is still doable
     SymHeap sandBox(sh);
-    if (!joinData(sandBox, off, obj0, obj1)) {
-        CL_DEBUG("segAbstractionStep() forces segment re-discoverty");
-        return false;
-    }
+    Trace::waiveCloneOperation(sandBox);
 
     // join data
     TObjId seg;
     TObjSet protos[2];
-    if (!joinData(sh, off, obj0, obj1, &seg, &protos)) {
-        CL_BREAK_IF("call of joinData() failed in segAbstractionStep()");
-        return OBJ_INVALID;
+    if (!joinData(sandBox, off, obj0, obj1, &seg, &protos)) {
+        CL_DEBUG("segAbstractionStep() forces segment re-discoverty");
+        return false;
     }
+
+    // data joined successfully, pick the resulting heap
+    sandBox.swap(sh);
 
     // add obj0/obj1 to the set of allowed bottom-up referrers
     protos[0].insert(obj0);

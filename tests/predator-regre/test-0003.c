@@ -6,7 +6,7 @@ int main() {
     void *val = NULL;
     void *ptr = &val;
 
-    switch (___sl_get_nondet_int()) {
+    switch (__VERIFIER_nondet_int()) {
         case 0:
             free(undef);
             return 0;

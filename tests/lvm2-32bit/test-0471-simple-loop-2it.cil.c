@@ -804,7 +804,7 @@ long __builtin_expect(long  , long  ) ;
 #line 1
 int __builtin_va_arg_pack(void) ;
 #line 52 "../../include/predator-builtins/verifier-builtins.h"
-extern int ___sl_get_nondet_int(void) ;
+extern int __VERIFIER_nondet_int(void) ;
 #line 168 "lvmcache-prep.c"
 __inline extern  __attribute__((__nothrow__)) intmax_t strtoimax(char const   * __restrict  nptr ,
                                                                  char ** __restrict  endptr ,
@@ -12420,7 +12420,7 @@ int strncmp(char const   *__s1 , char const   *__s2 , size_t __n )
 #line 40
   strlen(__s2);
 #line 42
-  tmp = ___sl_get_nondet_int();
+  tmp = __VERIFIER_nondet_int();
   }
 #line 42
   return (tmp);
@@ -12441,7 +12441,7 @@ int strcmp(char const   *__s1 , char const   *__s2 )
 #line 48
   strlen(__s2);
 #line 49
-  tmp = ___sl_get_nondet_int();
+  tmp = __VERIFIER_nondet_int();
   }
 #line 49
   return (tmp);
@@ -12457,7 +12457,7 @@ int is_orphan_vg(char const   *vg_name )
 #line 54
   strlen(vg_name);
 #line 55
-  tmp = ___sl_get_nondet_int();
+  tmp = __VERIFIER_nondet_int();
   }
 #line 55
   return (tmp);
@@ -12623,7 +12623,7 @@ void *dm_hash_lookup(struct dm_hash_table *t , char const   *key )
     }
     {
 #line 158
-    tmp = ___sl_get_nondet_int();
+    tmp = __VERIFIER_nondet_int();
     }
 #line 158
     if (tmp) {
@@ -12680,7 +12680,7 @@ int dm_hash_insert(struct dm_hash_table *t , char const   *key , void *data )
     while_continue: /* CIL Label */ ;
     {
 #line 172
-    tmp = ___sl_get_nondet_int();
+    tmp = __VERIFIER_nondet_int();
     }
 #line 172
     if (tmp) {
@@ -12703,7 +12703,7 @@ int dm_hash_insert(struct dm_hash_table *t , char const   *key , void *data )
   if (__cil_tmp11 != __cil_tmp10) {
     {
 #line 175
-    tmp___0 = ___sl_get_nondet_int();
+    tmp___0 = __VERIFIER_nondet_int();
     }
 #line 175
     if (tmp___0) {
@@ -12772,7 +12772,7 @@ void dm_hash_remove(struct dm_hash_table *t , char const   *key )
     while_continue: /* CIL Label */ ;
     {
 #line 200
-    tmp = ___sl_get_nondet_int();
+    tmp = __VERIFIER_nondet_int();
     }
 #line 200
     if (tmp) {
@@ -13218,7 +13218,7 @@ static int _get_block_size(struct device *dev , unsigned int *size )
   if (__cil_tmp7 == -1) {
     {
 #line 314
-    tmp___0 = ___sl_get_nondet_int();
+    tmp___0 = __VERIFIER_nondet_int();
     }
 #line 314
     if (tmp___0 < 0) {
@@ -13317,7 +13317,7 @@ int dev_open(struct device *dev )
   {
   {
 #line 412
-  tmp = ___sl_get_nondet_int();
+  tmp = __VERIFIER_nondet_int();
   }
 #line 412
   if (tmp) {

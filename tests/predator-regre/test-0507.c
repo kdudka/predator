@@ -28,7 +28,7 @@ int main() {
     y = y->next;
     free(x);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     if (y) {
         x = y;

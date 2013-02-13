@@ -258,14 +258,14 @@ int main()
 
     // trigger allocation of one arena
     void *ptr = PL_ArenaAllocate(&pool, 0x100);
-    ___sl_plot("01-PL_ArenaAllocate", &ptr);
+    __VERIFIER_plot("01-PL_ArenaAllocate", &ptr);
 
     // free the arena pool
     PL_FreeArenaPool(&pool);
-    ___sl_plot("02-PL_FreeArenaPool");
+    __VERIFIER_plot("02-PL_FreeArenaPool");
 
     PL_ArenaFinish();
-    ___sl_plot("03-PL_ArenaFinish");
+    __VERIFIER_plot("03-PL_ArenaFinish");
 
     return 0;
 }

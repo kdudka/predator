@@ -63,32 +63,32 @@ void fast_forward(struct item **pDll)
 
 void destroy_from_beg(struct item *dll)
 {
-    ___sl_plot("f00");
+    __VERIFIER_plot("f00");
     while (dll) {
-        ___sl_plot("f01");
+        __VERIFIER_plot("f01");
         struct item *next = dll->next;
-        ___sl_plot("f02");
+        __VERIFIER_plot("f02");
         free(dll);
-        ___sl_plot("f03");
+        __VERIFIER_plot("f03");
         dll = next;
-        ___sl_plot("f04");
+        __VERIFIER_plot("f04");
     }
-    ___sl_plot("f05");
+    __VERIFIER_plot("f05");
 }
 
 void destroy_from_end(struct item *dll)
 {
-    ___sl_plot("r00");
+    __VERIFIER_plot("r00");
     while (dll) {
-        ___sl_plot("r01");
+        __VERIFIER_plot("r01");
         struct item *prev = dll->prev;
-        ___sl_plot("r02");
+        __VERIFIER_plot("r02");
         free(dll);
-        ___sl_plot("r03");
+        __VERIFIER_plot("r03");
         dll = prev;
-        ___sl_plot("r04");
+        __VERIFIER_plot("r04");
     }
-    ___sl_plot("r05");
+    __VERIFIER_plot("r05");
 }
 
 int main()

@@ -48,7 +48,7 @@ void add_item(struct my_list **my_list) {
 
     INIT_LIST_HEAD(&item->nested);
 
-    while (___sl_get_nondet_int())
+    while (__VERIFIER_nondet_int())
     {
         struct my_nested_list *nested = malloc(sizeof *nested);
         if (!nested)
@@ -64,11 +64,11 @@ void add_item(struct my_list **my_list) {
 int main() {
     struct my_list *my_list = NULL;
 
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         add_item(&my_list);
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     while (my_list) {
         struct list_head *head = my_list->nested.next;

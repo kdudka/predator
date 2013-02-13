@@ -62,7 +62,7 @@ bool destroy_by_any(struct item *node)
 int main()
 {
     struct item *sll = create_sll();
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     if (!destroy_by_any(sll->next))
         // we have only head --> destroy the head

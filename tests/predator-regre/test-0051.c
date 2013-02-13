@@ -56,10 +56,10 @@ void destroy_sll(struct item **pSll)
 int main()
 {
     struct item *sll = create_sll();
-    ___sl_plot("01-sll-ready");
+    __VERIFIER_plot("01-sll-ready");
 
     destroy_sll(&sll);
-    ___sl_plot("03-sll-gone");
+    __VERIFIER_plot("03-sll-gone");
 
     if (sll) {
         // assertion failed, yell now

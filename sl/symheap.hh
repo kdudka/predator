@@ -338,6 +338,7 @@ inline bool operator<(const CVar &a, const CVar &b)
 }
 
 class FldList;
+class SymHeap;
 
 /// SymHeapCore - the elementary representation of the state of program memory
 class SymHeapCore {
@@ -453,7 +454,12 @@ class SymHeapCore {
         TSizeRange objSize(TObjId) const;
 
         /// target address at the given object with target specifier and offset
-        virtual TValId addrOfTarget(TObjId, ETargetSpecifier, TOffset off = 0);
+        TValId addrOfTarget(TObjId, ETargetSpecifier, TOffset off = 0);
+
+    private:
+        /// experimental implementation helper of rejoinObj(), do not use!
+        void rewriteTargetOfBase(TValId addr, TObjId target);
+        friend void redirectAddrs(SymHeap &, const TObjId, const TObjId);
 
     public:
         /// return the address of the root which the given value is binded to
@@ -839,7 +845,6 @@ class SymHeap: public SymHeapCore {
 
     public:
         // just overrides (inherits the dox)
-        virtual TValId addrOfTarget(TObjId, ETargetSpecifier, TOffset off = 0);
         virtual void objInvalidate(TObjId);
         virtual TObjId objClone(TObjId);
 

@@ -66,13 +66,13 @@ static struct list* seq_sort_core(struct list *data)
 int main()
 {
     struct list *data = NULL;
-    while (___sl_get_nondet_int()) {
+    while (__VERIFIER_nondet_int()) {
         struct node *node = malloc(sizeof *node);
         if (!node)
             abort();
 
         node->next = NULL;
-        node->value = ___sl_get_nondet_int();
+        node->value = __VERIFIER_nondet_int();
 
         struct list *item = malloc(sizeof *item);
         if (!item)
@@ -87,11 +87,11 @@ int main()
         return EXIT_SUCCESS;
 
     // do O(log N) iterations
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     while (data->next)
         data = seq_sort_core(data);
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
     struct node *node = data->slist;
     free(data);
 

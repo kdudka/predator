@@ -199,8 +199,8 @@ struct SymExecCoreParams {
 class SymExecCore: public SymProc {
     public:
         /**
-         * @copydoc SymProc::SymProc
          * @param ep execution parameters - see SymExecCoreParams for details
+         * @copydoc SymProc::SymProc
          */
         SymExecCore(SymHeap &heap, const SymBackTrace *bt,
                     const SymExecCoreParams &ep = SymExecCoreParams()):
@@ -253,7 +253,5 @@ class SymExecCore: public SymProc {
     private:
         const SymExecCoreParams ep_;
 };
-
-void setErrorRecoveryMode(int mode);
 
 #endif /* H_GUARD_SYM_PROC_H */

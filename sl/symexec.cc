@@ -26,6 +26,8 @@
 #include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
+#include "fixed_point.hh"
+#include "glconf.hh"
 #include "sigcatch.hh"
 #include "symabstract.hh"
 #include "symcall.hh"
@@ -69,9 +71,8 @@ typedef std::deque<ExecStackItem> TExecStack;
 // SymExec
 class SymExec: public IStatsProvider {
     public:
-        SymExec(const CodeStorage::Storage &stor, const SymExecParams &ep):
+        SymExec(const CodeStorage::Storage &stor):
             stor_(stor),
-            params_(ep),
             callCache_(stor)
         {
         }
@@ -96,7 +97,6 @@ class SymExec: public IStatsProvider {
 
     private:
         const CodeStorage::Storage              &stor_;
-        SymExecParams                           params_;
         SymCallCache                            callCache_;
         TExecStack                              execStack_;
 };
@@ -109,10 +109,8 @@ class SymExecEngine: public IStatsProvider {
                 SymState                &results,
                 const SymHeap           &entry,
                 const IStatsProvider    &stats,
-                const SymExecParams     &ep,
                 SymBackTrace            &bt):
             stor_(entry.stor()),
-            params_(ep),
             bt_(bt),
             dst_(results),
             stats_(stats),
@@ -140,7 +138,6 @@ class SymExecEngine: public IStatsProvider {
 
     private:
         const CodeStorage::Storage      &stor_;
-        SymExecParams                   params_;
         SymBackTrace                    &bt_;
         SymState                        &dst_;
         const IStatsProvider            &stats_;
@@ -571,10 +568,10 @@ bool /* handled */ SymExecEngine::execNontermInsn()
 
     // set some properties of the execution
     SymExecCoreParams ep;
-    ep.trackUninit      = params_.trackUninit;
-    ep.oomSimulation    = params_.oomSimulation;
-    ep.skipPlot         = params_.skipPlot;
-    ep.errLabel         = params_.errLabel;
+    ep.trackUninit      = GlConf::data.trackUninit;
+    ep.oomSimulation    = GlConf::data.oomSimulation;
+    ep.skipPlot         = GlConf::data.skipUserPlots;
+    ep.errLabel         = GlConf::data.errLabel;
 
     // working area for non-terminal instructions
     const SymHeap &origin = localState_[heapIdx_];
@@ -642,6 +639,10 @@ bool /* complete */ SymExecEngine::execInsn()
             // mark as processed now since it can be re-scheduled right away
             origin.setDone(heapIdx_);
         }
+
+        // capture fixed-point for plotting if configured to do so
+        if (GlConf::data.fixedPoint)
+            GlConf::data.fixedPoint->insert(insn, localState_[heapIdx_]);
 
         if (nextInsnIsCond)
             // this is going to be handled in execCondInsn() right away
@@ -1138,7 +1139,6 @@ void SymExec::enterCall(SymCallCtx *ctx, SymState &results)
             ctx->rawResults(),
             ctx->entry(),
             /* IStatsProvider */ *this,
-            params_,
             callCache_.bt());
 
     // initialize a stack item
@@ -1228,7 +1228,7 @@ void SymExec::execFnc(
         }
 
         // create a new engine and push it to the exec stack
-        this->enterCall(ctx, item.eng->callResults());
+        this->enterCall(ctx, engine->callResults());
     }
 }
 
@@ -1246,14 +1246,13 @@ void execTopCall(
         SymState                        &results,
         const SymHeap                   &entry,
         const CodeStorage::Insn         &insn,
-        const CodeStorage::Fnc          &fnc,
-        const SymExecParams             &ep)
+        const CodeStorage::Fnc          &fnc)
 {
     // do not include the memory allocated by Code Listener into our statistics
     initMemDrift();
 
     try {
-        SymExec se(entry.stor(), ep);
+        SymExec se(entry.stor());
         se.execFnc(results, entry, insn, fnc);
         // SymExec::~SymExec() is going to be executed as leaving this block
     }
@@ -1267,8 +1266,7 @@ void execTopCall(
 void execute(
         SymState                        &results,
         const SymHeap                   &entry,
-        const CodeStorage::Fnc          &fnc,
-        const SymExecParams             &ep)
+        const CodeStorage::Fnc          &fnc)
 {
     if (!installSignalHandlers())
         CL_WARN("unable to install signal handlers");
@@ -1283,7 +1281,7 @@ void execute(
     insn.operands[1] = fnc.def;
 
     // run the symbolic execution
-    execTopCall(results, entry, insn, fnc, ep);
+    execTopCall(results, entry, insn, fnc);
     printMemUsage("SymExec::~SymExec");
 
     // uninstall signal handlers

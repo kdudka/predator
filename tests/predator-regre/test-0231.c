@@ -26,7 +26,7 @@ int main()
     // create SLS 1+
     do
         append(&list);
-    while (___sl_get_nondet_int());
+    while (__VERIFIER_nondet_int());
 
     // create SLS 0+
     if (list) {
@@ -35,7 +35,7 @@ int main()
         list = next;
     }
 
-    ___sl_plot(NULL);
+    __VERIFIER_plot(NULL);
 
     // a memleak is reported while traversing the loop condition
     while (list) {

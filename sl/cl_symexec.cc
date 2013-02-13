@@ -25,6 +25,8 @@
 #include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
+#include "fixed_point.hh"
+#include "glconf.hh"
 #include "symbt.hh"
 #include "symdump.hh"
 #include "symexec.hh"
@@ -39,53 +41,6 @@
 
 // required by the gcc plug-in API
 extern "C" { int plugin_is_GPL_compatible; }
-
-// FIXME: the implementation is amusing
-void parseConfigString(SymExecParams &sep, std::string cnf)
-{
-    using std::string;
-    if (cnf.empty())
-        return;
-
-    if (string("no_error_recovery") == cnf) {
-        CL_DEBUG("parseConfigString: \"no_error_recovery\" mode requested");
-        setErrorRecoveryMode(/* no_error_recovery */ 0);
-        return;
-    }
-
-    if (string("oom") == cnf) {
-        CL_DEBUG("parseConfigString: \"OOM simulation\" mode requested");
-        sep.oomSimulation = true;
-        return;
-    }
-
-    if (string("track_uninit") == cnf) {
-        CL_DEBUG("parseConfigString: \"track_uninit\" mode requested");
-        sep.trackUninit = true;
-        return;
-    }
-
-    // TODO: make it possible to handle both parameters together (comma
-    // separated list or whatever)
-    // TODO: document all the parameters somewhere
-    if (string("noplot") == cnf) {
-        CL_DEBUG("parseConfigString: \"noplot\" mode requested");
-        sep.skipPlot = true;
-        return;
-    }
-
-    const char *cstr = cnf.c_str();
-    const char *elPrefix = "error_label:";
-    const size_t elPrefixLen = strlen(elPrefix);
-    if (!strncmp(cstr, elPrefix, elPrefixLen)) {
-        cstr += elPrefixLen;
-        CL_DEBUG("parseConfigString: error label is \"" << cstr << "\"");
-        sep.errLabel = cstr;
-        return;
-    }
-
-    CL_WARN("unhandled config string: \"" << cnf << "\"");
-}
 
 void digGlJunk(SymHeap &sh)
 {
@@ -112,8 +67,7 @@ void digGlJunk(SymHeap &sh)
     }
 }
 
-void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
-             bool lookForGlJunk = false)
+void execFnc(const CodeStorage::Fnc &fnc, bool lookForGlJunk = false)
 {
     const CodeStorage::Storage &stor = *fnc.stor;
     const struct cl_loc *lw = locationOf(fnc);
@@ -124,7 +78,7 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
 
     // run the symbolic execution
     SymStateWithJoin results;
-    execute(results, SymHeap(stor, traceRoot), fnc, ep);
+    execute(results, SymHeap(stor, traceRoot), fnc);
     if (!lookForGlJunk)
         return;
 
@@ -142,7 +96,7 @@ void execFnc(const CodeStorage::Fnc &fnc, const SymExecParams &ep,
     }
 }
 
-void execVirtualRoots(const CodeStorage::Storage &stor, const SymExecParams &ep)
+void execVirtualRoots(const CodeStorage::Storage &stor)
 {
     namespace CG = CodeStorage::CallGraph;
 
@@ -157,12 +111,12 @@ void execVirtualRoots(const CodeStorage::Storage &stor, const SymExecParams &ep)
                 << "() is defined, but not called from anywhere");
 
         // perform symbolic execution for a virtual root
-        execFnc(fnc, ep);
+        execFnc(fnc);
         printMemUsage("execFnc");
     }
 }
 
-void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep)
+void launchSymExec(const CodeStorage::Storage &stor)
 {
     using namespace CodeStorage;
 
@@ -172,7 +126,7 @@ void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep)
     const NameDb::TNameMap::const_iterator iter = glNames.find("main");
     if (glNames.end() == iter) {
         CL_WARN("main() not found at global scope");
-        execVirtualRoots(stor, ep);
+        execVirtualRoots(stor);
         return;
     }
 
@@ -181,12 +135,12 @@ void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep)
     const Fnc *main = fncs[iter->second];
     if (!main || !isDefined(*main)) {
         CL_WARN("main() not defined");
-        execVirtualRoots(stor, ep);
+        execVirtualRoots(stor);
         return;
     }
 
     // just execute the main() function
-    execFnc(*main, ep, /* lookForGlJunk */ true);
+    execFnc(*main, /* lookForGlJunk */ true);
     printMemUsage("execFnc");
 }
 
@@ -195,11 +149,18 @@ void launchSymExec(const CodeStorage::Storage &stor, const SymExecParams &ep)
 void clEasyRun(const CodeStorage::Storage &stor, const char *configString)
 {
     // read parameters of symbolic execution
-    SymExecParams ep;
-    parseConfigString(ep, configString);
+    GlConf::loadConfigString(configString);
 
     // run symbolic execution
-    launchSymExec(stor, ep);
+    launchSymExec(stor);
+
+    FixedPoint::StateByInsn *const fixedPoint = GlConf::data.fixedPoint;
+    if (fixedPoint) {
+        // plot fixed-point
+        fixedPoint->plotAll();
+        delete fixedPoint;
+        printMemUsage("FixedPoint::StateByInsn::~StateByInsn");
+    }
 
     if (Trace::Globals::alive()) {
         // plot all pending trace graphs
