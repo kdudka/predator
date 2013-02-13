@@ -48,34 +48,34 @@ configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
 
 # libfa.so
 add_library(fa SHARED
-  backward_run.cc
+	backward_run.cc
 	box.cc
 	boxman.cc
 	call.cc
 	cl_fa.cc
 	comparison.cc
 	compiler.cc
-  connection_graph.cc
+	connection_graph.cc
 	fixpoint.cc
-  folding.cc
+	folding.cc
 	forestaut.cc
-  forestautext.cc
+	forestautext.cc
 	integrity.cc
 	jump.cc
 	label.cc
 	memplot.cc
 	microcode.cc
-  microcode_rev.cc
-  normalization.cc
+	microcode_rev.cc
+	normalization.cc
 	plotenum.cc
 	programconfig.cc
 	sequentialinstruction.cc
-  splitting.cc
+	splitting.cc
 	streams.cc
 	symctx.cc
 	symexec.cc
 	symstate.cc
-  symstate_isect.cc
+	symstate_isect.cc
 	timbuk.cc
 	treeaut.cc
 	virtualmachine.cc
