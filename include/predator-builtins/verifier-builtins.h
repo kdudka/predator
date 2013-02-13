@@ -49,7 +49,7 @@ void __VERIFIER_plot(const char *name, ...);
 void ___sl_plot_trace_now(const char *plot_name, const char *node_name);
 void ___sl_plot_trace_once(const char *plot_name, const char *node_name);
 void ___sl_enable_debugging_of(enum ___sl_module_id module, int enable);
-int ___sl_get_nondet_int(void);
+int __VERIFIER_nondet_int(void);
 
 #else
 /*
@@ -58,13 +58,13 @@ int ___sl_get_nondet_int(void);
  * NOTE: the use of 'inline' is tricky -- if used, it breaks some C parsers that
  * are not C99 compliant; if not used, gcc give us the following list of errors:
  *
- * sl.h: In function ‘int ___sl_get_nondet_int()’:
+ * sl.h: In function ‘int __VERIFIER_nondet_int()’:
  * sl.h:66:12: error: ‘i’ is used uninitialized in this function
  * sl.h: At global scope:
  * sl.h:47:27: error: ‘void ___sl_break(const char*)’ defined but not used
  * sl.h:52:26: error: ‘void ___sl_error(const char*)’ defined but not used
  * sl.h:57:26: error: ‘void ___sl_plot(const char*, ...)’ defined but not used
- * sl.h:62:25: error: ‘int ___sl_get_nondet_int()’ defined but not used
+ * sl.h:62:25: error: ‘int __VERIFIER_nondet_int()’ defined but not used
  */
 
 static /* inline */  void ___sl_break(const char *msg)
@@ -105,7 +105,7 @@ ___sl_enable_debugging_of(enum ___sl_module_id module, int enable)
     (void) enable;
 }
 
-static /* inline */ int ___sl_get_nondet_int(void)
+static /* inline */ int __VERIFIER_nondet_int(void)
 {
     int i;
 
