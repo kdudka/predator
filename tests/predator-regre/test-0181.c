@@ -7,7 +7,7 @@ ERROR:
     goto ERROR;
 }
 
-#define ___SL_ASSERT(cond) do {     \
+#define __VERIFIER_assert(cond) do {     \
     if (!(cond))                    \
         fail();                     \
 } while (0)
@@ -127,14 +127,14 @@ struct master_item* dll_create_master(void)
 
 void inspect_base(struct master_item *dll)
 {
-    ___SL_ASSERT(dll);
-    ___SL_ASSERT(dll->next);
-    ___SL_ASSERT(!dll->prev);
+    __VERIFIER_assert(dll);
+    __VERIFIER_assert(dll->next);
+    __VERIFIER_assert(!dll->prev);
 
     for (dll = dll->next; dll; dll = dll->next) {
-        ___SL_ASSERT(dll->prev);
-        ___SL_ASSERT(dll->prev->next);
-        ___SL_ASSERT(dll->prev->next == dll);
+        __VERIFIER_assert(dll->prev);
+        __VERIFIER_assert(dll->prev->next);
+        __VERIFIER_assert(dll->prev->next == dll);
     }
 }
 
@@ -144,14 +144,14 @@ void inspect_full(struct master_item *dll)
 
     for (; dll; dll = dll->next) {
         struct slave_item *pos = dll->slave;
-        ___SL_ASSERT(pos);
-        ___SL_ASSERT(pos->next);
-        ___SL_ASSERT(!pos->prev);
+        __VERIFIER_assert(pos);
+        __VERIFIER_assert(pos->next);
+        __VERIFIER_assert(!pos->prev);
 
         for (pos = pos->next; pos; pos = pos->next) {
-            ___SL_ASSERT(pos->prev);
-            ___SL_ASSERT(pos->prev->next);
-            ___SL_ASSERT(pos->prev->next == pos);
+            __VERIFIER_assert(pos->prev);
+            __VERIFIER_assert(pos->prev->next);
+            __VERIFIER_assert(pos->prev->next == pos);
         }
     }
 }
@@ -161,7 +161,7 @@ void inspect_dangling(struct master_item *dll)
     inspect_base(dll);
 
     for (; dll; dll = dll->next)
-        ___SL_ASSERT(dll->slave);
+        __VERIFIER_assert(dll->slave);
 }
 
 void inspect_init(struct master_item *dll)
@@ -169,7 +169,7 @@ void inspect_init(struct master_item *dll)
     inspect_base(dll);
 
     for (; dll; dll = dll->next)
-        ___SL_ASSERT(!dll->slave);
+        __VERIFIER_assert(!dll->slave);
 }
 
 int main()

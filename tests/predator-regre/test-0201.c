@@ -13,26 +13,26 @@ int main()
     __VERIFIER_plot("02-with-aligment", &i, &j, &k);
 
     // this should be OK
-    ___SL_ASSERT(!(i & 0x0));
-    ___SL_ASSERT(!(j & 0xF));
-    ___SL_ASSERT(!(k & 0xFF));
+    __VERIFIER_assert(!(i & 0x0));
+    __VERIFIER_assert(!(j & 0xF));
+    __VERIFIER_assert(!(k & 0xFF));
 
     // now trigger some assertion failures
     switch (__VERIFIER_nondet_int()) {
         case -3:
-            ___SL_ASSERT(!(i & 0x1));
+            __VERIFIER_assert(!(i & 0x1));
             break;
 
         case -2:
-            ___SL_ASSERT(!(j & 0x10));
+            __VERIFIER_assert(!(j & 0x10));
             break;
 
         case -1:
-            ___SL_ASSERT(!(k & 0x100));
+            __VERIFIER_assert(!(k & 0x100));
             break;
 
         case 0:
-            ___SL_ASSERT(!(k & ~0xFF));
+            __VERIFIER_assert(!(k & ~0xFF));
     }
 
     i += 16;
@@ -41,12 +41,12 @@ int main()
     __VERIFIER_plot("03-shifted", &i, &j, &k);
 
     // this should be OK
-    ___SL_ASSERT(!(i & 0x0));
-    ___SL_ASSERT(!(j & 0xF));
-    ___SL_ASSERT(!(k & 0xF));
+    __VERIFIER_assert(!(i & 0x0));
+    __VERIFIER_assert(!(j & 0xF));
+    __VERIFIER_assert(!(k & 0xF));
 
     if (__VERIFIER_nondet_int())
-        ___SL_ASSERT(!(k & 0xFF));
+        __VERIFIER_assert(!(k & 0xFF));
 
     ++i, ++j, ++k;
     __VERIFIER_plot("04-badly-shifted", &i, &j, &k);

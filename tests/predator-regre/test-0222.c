@@ -50,8 +50,8 @@ int main()
 
     struct list_head *now;
     for (now = list.prev; &list != now; now = now->prev) {
-        ___SL_ASSERT(now == end || now->next != &list);
-        ___SL_ASSERT(now == beg || now->prev != &list);
+        __VERIFIER_assert(now == end || now->next != &list);
+        __VERIFIER_assert(now == beg || now->prev != &list);
     }
 
     /* FIXME: why are beg/end still alive at this point?? */

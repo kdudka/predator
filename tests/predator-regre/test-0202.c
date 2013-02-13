@@ -10,11 +10,11 @@ int main()
 
     i &= ~(sizeof(double) - 1);
     __VERIFIER_plot("02-aligned", &i);
-    ___SL_ASSERT(!(i & (sizeof(double) - 1)));
+    __VERIFIER_assert(!(i & (sizeof(double) - 1)));
 
     i &= ~0x6;
     __VERIFIER_plot("03-pseudo-aligned", &i);
-    ___SL_ASSERT(!(i & 0x6));
+    __VERIFIER_assert(!(i & 0x6));
 
     return 0;
 }

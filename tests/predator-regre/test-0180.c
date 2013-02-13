@@ -9,7 +9,7 @@ ERROR:
     goto ERROR;
 }
 
-#define ___SL_ASSERT(cond) do {     \
+#define __VERIFIER_assert(cond) do {     \
     if (!(cond))                    \
         fail();                     \
 } while (0)
@@ -41,34 +41,34 @@ LIST_HEAD(gl_list);
 static void inspect(const struct list_head *head)
 {
     // check the head
-    ___SL_ASSERT(head);
-    ___SL_ASSERT(head->next != head);
-    ___SL_ASSERT(head->prev != head);
+    __VERIFIER_assert(head);
+    __VERIFIER_assert(head->next != head);
+    __VERIFIER_assert(head->prev != head);
 
     // go one step backward
     head = head->prev;
-    ___SL_ASSERT(head);
-    ___SL_ASSERT(head->next != head);
-    ___SL_ASSERT(head->prev != head);
+    __VERIFIER_assert(head);
+    __VERIFIER_assert(head->next != head);
+    __VERIFIER_assert(head->prev != head);
 
     // resolve root
     const struct node *node = list_entry(head, struct node, linkage);
-    ___SL_ASSERT(node);
-    ___SL_ASSERT(node->nested.next == &node->nested);
-    ___SL_ASSERT(node->nested.prev == &node->nested);
-    ___SL_ASSERT(node->nested.next != &node->linkage);
-    ___SL_ASSERT(node->nested.prev != &node->linkage);
+    __VERIFIER_assert(node);
+    __VERIFIER_assert(node->nested.next == &node->nested);
+    __VERIFIER_assert(node->nested.prev == &node->nested);
+    __VERIFIER_assert(node->nested.next != &node->linkage);
+    __VERIFIER_assert(node->nested.prev != &node->linkage);
 
     // check some properties
-    ___SL_ASSERT(node != (const struct node *)head);
-    ___SL_ASSERT(node != (const struct node *)&node->linkage);
-    ___SL_ASSERT(node == (const struct node *)&node->value);
-    ___SL_ASSERT(head == node->linkage.next->prev);
-    ___SL_ASSERT(head == node->linkage.prev->next);
+    __VERIFIER_assert(node != (const struct node *)head);
+    __VERIFIER_assert(node != (const struct node *)&node->linkage);
+    __VERIFIER_assert(node == (const struct node *)&node->value);
+    __VERIFIER_assert(head == node->linkage.next->prev);
+    __VERIFIER_assert(head == node->linkage.prev->next);
 
     // check traversal
     for (head = head->next; &node->linkage != head; head = head->next);
-    ___SL_ASSERT(list_entry(head, struct node, linkage) == node);
+    __VERIFIER_assert(list_entry(head, struct node, linkage) == node);
 }
 
 static inline void __list_add(struct list_head *new,

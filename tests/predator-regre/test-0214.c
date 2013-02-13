@@ -28,7 +28,7 @@ bool is_empty(list_p list)
     bool no_beg = !(*list)[LIST_BEG];
     bool no_end = !(*list)[LIST_END];
 
-    ___SL_ASSERT(no_beg == no_end);
+    __VERIFIER_assert(no_beg == no_end);
 
     return no_beg;
 }

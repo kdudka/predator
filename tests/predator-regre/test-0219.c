@@ -35,7 +35,7 @@ static void l2_inspect(struct L2 *list)
 
     while ((list = next)) {
         __VERIFIER_plot("03-inspect-loop");
-        ___SL_ASSERT(list->proto != last);
+        __VERIFIER_assert(list->proto != last);
 
         last = list->proto;
         next = list->next;

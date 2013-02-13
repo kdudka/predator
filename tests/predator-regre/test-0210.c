@@ -16,14 +16,14 @@ char *strdup(const char *str)
 int main()
 {
     char str[] = "string", a[sizeof str], b[sizeof str];
-    ___SL_ASSERT(a != b);
-    ___SL_ASSERT(a != str);
-    ___SL_ASSERT(b != str);
+    __VERIFIER_assert(a != b);
+    __VERIFIER_assert(a != str);
+    __VERIFIER_assert(b != str);
 
     char *dup = strdup(str);
-    ___SL_ASSERT(dup != str);
-    ___SL_ASSERT(dup != a);
-    ___SL_ASSERT(dup != b);
+    __VERIFIER_assert(dup != str);
+    __VERIFIER_assert(dup != a);
+    __VERIFIER_assert(dup != b);
     if (!dup)
         abort();
 
@@ -35,9 +35,9 @@ int main()
 
     __VERIFIER_plot("loop_done");
     for (i = 0; i < sizeof b; ++i) {
-        ___SL_ASSERT(a[i] == b[i]);
-        ___SL_ASSERT(a[i] == dup[i]);
-        ___SL_ASSERT(b[i] == str[i]);
+        __VERIFIER_assert(a[i] == b[i]);
+        __VERIFIER_assert(a[i] == dup[i]);
+        __VERIFIER_assert(b[i] == str[i]);
     }
 
     __VERIFIER_plot("all_done");

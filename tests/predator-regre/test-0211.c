@@ -44,7 +44,7 @@ void seek_last_char(const char **ppos)
 void exercise(const char *a, const char *b)
 {
     for(seek_last_char(&b); *a; ++a, --b)
-        ___SL_ASSERT(*a == *b);
+        __VERIFIER_assert(*a == *b);
 }
 
 int main()
@@ -56,7 +56,7 @@ int main()
         return 1;
 
     __VERIFIER_plot("strrev-done", &str, &rev);
-    ___SL_ASSERT(!rev[sizeof str - 1]);
+    __VERIFIER_assert(!rev[sizeof str - 1]);
 
     exercise(str, rev);
     exercise(rev, str);

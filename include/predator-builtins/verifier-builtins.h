@@ -20,7 +20,7 @@
 #ifndef H_GUARD_PREDATOR_BUILTINS_H
 #define H_GUARD_PREDATOR_BUILTINS_H
 
-#define ___SL_ASSERT(cond) do {                                             \
+#define __VERIFIER_assert(cond) do {                                        \
     if (!(cond))                                                            \
         ___sl_error("assertion failed: " #cond);                            \
 } while (0)
@@ -36,8 +36,6 @@ enum ___sl_module_id {
     ___SL_SYMJOIN,
     ___SL_GARBAGE_COLLECTOR
 };
-
-#define __VERIFIER_assert(cond)  ___SL_ASSERT(cond)
 
 #ifdef __cplusplus
 extern "C" {

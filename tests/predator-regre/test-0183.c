@@ -7,7 +7,7 @@ ERROR:
     goto ERROR;
 }
 
-#define ___SL_ASSERT(cond) do {     \
+#define __VERIFIER_assert(cond) do {     \
     if (!(cond))                    \
         fail();                     \
 } while (0)
@@ -91,19 +91,19 @@ void remove_fw_link(struct node *list) {
 }
 
 void check_seq_next(const struct node *beg, const struct node *const end) {
-    ___SL_ASSERT(beg);
-    ___SL_ASSERT(end);
+    __VERIFIER_assert(beg);
+    __VERIFIER_assert(end);
 
     for (beg = beg->next; end != beg; beg = beg->next)
-        ___SL_ASSERT(beg);
+        __VERIFIER_assert(beg);
 }
 
 void check_seq_prev(const struct node *beg, const struct node *const end) {
-    ___SL_ASSERT(beg);
-    ___SL_ASSERT(end);
+    __VERIFIER_assert(beg);
+    __VERIFIER_assert(end);
 
     for (beg = beg->prev; end != beg; beg = beg->prev)
-        ___SL_ASSERT(beg);
+        __VERIFIER_assert(beg);
 }
 
 int main()
@@ -113,8 +113,8 @@ int main()
     struct node *list = create_sll(&p1, &p2);
     __VERIFIER_plot(NULL, &list, &p1, &p2);
     check_seq_next(p1, p2);
-    ___SL_ASSERT(!p1->prev);
-    ___SL_ASSERT(!p2->prev);
+    __VERIFIER_assert(!p1->prev);
+    __VERIFIER_assert(!p2->prev);
 
     init_back_link(list);
     __VERIFIER_plot(NULL, &list, &p1, &p2);

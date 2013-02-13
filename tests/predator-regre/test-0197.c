@@ -112,8 +112,8 @@ int main()
     }
 
     // NOTE: this triggers some false positives if join is enabled
-    ___SL_ASSERT(!ptr[sizeof(double) - 1]);
-    ___SL_ASSERT(!ptr[N - sizeof(double)]);
+    __VERIFIER_assert(!ptr[sizeof(double) - 1]);
+    __VERIFIER_assert(!ptr[N - sizeof(double)]);
     __VERIFIER_plot("end-of-main-reached", &ptr);
 
     return 0;

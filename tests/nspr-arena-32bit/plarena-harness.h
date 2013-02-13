@@ -62,7 +62,7 @@ __attribute__((visibility("default"))) void PR_DestroyLock(PRLock *lock)
 /* ATTENTION: do not use this simplified model for concurrency analyzers */
 __attribute__((visibility("default"))) void PR_Lock(PRLock *lock)
 {
-    ___SL_ASSERT(!lock->locked);
+    __VERIFIER_assert(!lock->locked);
     lock->locked = 1;
 }
 

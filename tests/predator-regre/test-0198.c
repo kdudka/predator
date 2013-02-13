@@ -9,7 +9,7 @@ int main()
         __VERIFIER_plot("more-than-zero", &i);
     else {
         __VERIFIER_plot("equal-to-zero", &i);
-        ___SL_ASSERT(!i);
+        __VERIFIER_assert(!i);
     }
 
     return 0;
