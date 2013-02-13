@@ -21,7 +21,7 @@ CTEST ?= ctest
 .PHONY: all check clean distclean distcheck version.h
 
 all:
-	$(MAKE) -C ../cl_build # make sure the libcl.so is up2date
+	$(MAKE) -C ../cl_build # make sure that libcl.a is up2date
 	mkdir -p ../fa_build
 	cd ../fa_build && $(CMAKE) ../fa
 	$(MAKE) -C ../fa_build

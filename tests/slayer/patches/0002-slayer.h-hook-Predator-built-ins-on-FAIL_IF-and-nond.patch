@@ -43,8 +43,8 @@ index d57325f..d934247 100644
  void TerminationIgnore(void) {}
 +#else
 +
-+int ___sl_get_nondet_int(void);
-+#define nondet ___sl_get_nondet_int
++int __VERIFIER_nondet_int(void);
++#define nondet __VERIFIER_nondet_int
 +
  #endif
  
