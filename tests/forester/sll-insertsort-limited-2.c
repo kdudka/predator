@@ -28,7 +28,7 @@ int main() {
 	struct T* pred = NULL;
 	struct T* z = NULL;
 
-//	___fa_plot("sll-insertsort-limited-0001");
+//	__VERIFIER_plot("sll-insertsort-limited-0001");
 
 	while (x) {
 		y = x;
@@ -41,15 +41,15 @@ int main() {
 			z = z->next;
 		}
 
-//		___fa_plot(NULL);
+//		__VERIFIER_plot(NULL);
 
 		y->next = z;
-//		___fa_plot("sll-insertsort-limited-0003");
+//		__VERIFIER_plot("sll-insertsort-limited-0003");
 		if (pred) pred->next = y;
 		else sorted = y;
 	}
 
-//	___fa_plot("sll-insertsort-limited-0002");
+//	__VERIFIER_plot("sll-insertsort-limited-0002");
 
 	while (sorted != NULL) {
 		x = sorted;

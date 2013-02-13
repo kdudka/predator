@@ -54,14 +54,14 @@ int main() {
 	y = NULL;
 	z = NULL;
 
-	___fa_plot("dll-concat-lists-0001");
+	__VERIFIER_plot("dll-concat-lists-0001");
 
 	y = x;
 	while (y) {
 		y = y->next;
 	}
 
-	___fa_plot("dll-concat-lists-0002");
+	__VERIFIER_plot("dll-concat-lists-0002");
 
 	// delete
 	while (x->next) {

@@ -38,7 +38,7 @@ int main()
 		x = y;
 	}
 
-	___fa_plot("observer-0001");
+	__VERIFIER_plot("observer-0001");
 
 	y = x;
 

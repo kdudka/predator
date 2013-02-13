@@ -374,7 +374,7 @@ public:
 		this->_table["abort"]                   = builtin_e::biAbort;
 		this->_table["___fa_get_nondet_int"]    = builtin_e::biNondet;
 		this->_table["___fa_error"]             = builtin_e::biError;
-		this->_table["___fa_plot"]              = builtin_e::biPlotHeap;
+		this->_table["__VERIFIER_plot"]         = builtin_e::biPlotHeap;
 		this->_table["___fa_fix"]               = builtin_e::biFix;
 		this->_table["___fa_print_heap"]        = builtin_e::biPrintHeap;
 	}

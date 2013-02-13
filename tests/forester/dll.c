@@ -28,7 +28,7 @@ int main() {
 		x = y;
 	}
 
-	___fa_plot("test-f0028-fixpoint");
+	__VERIFIER_plot("test-f0028-fixpoint");
 
 	while (x) {
 		y = x->next;

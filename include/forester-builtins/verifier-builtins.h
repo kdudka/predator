@@ -35,7 +35,7 @@ extern "C" {
 
 /* declare built-ins */
 void ___fa_error(const char *msg);
-void ___fa_plot(const char *name, ...);
+void __VERIFIER_plot(const char *name, ...);
 void ___fa_plot_trace_now(const char *plot_name, const char *node_name);
 void ___fa_plot_trace_once(const char *plot_name, const char *node_name);
 int ___fa_get_nondet_int(void);
@@ -62,7 +62,7 @@ static /* inline */ void ___fa_error(const char *msg)
 	(void) msg;
 }
 
-static /* inline */ void ___fa_plot(const char *name, ...)
+static /* inline */ void __VERIFIER_plot(const char *name, ...)
 {
 	(void) name;
 }
