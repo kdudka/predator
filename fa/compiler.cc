@@ -1094,6 +1094,7 @@ protected:
 					else
 					{
 						assert(false);         // fail gracefully
+						offset = 0;            // avoid using an uninitialized value in case assert(false) is noop
 					}
 
 					bool needsAcc = false;
