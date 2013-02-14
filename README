@@ -22,8 +22,73 @@ You can find the latest news on the following project page:
 
 Predator, Code Listener, and Forester are licensed as GPLv3+, see COPYING for details.
 
-Building from sources against a local build of GCC [recommended for end users]
-==============================================================================
+
+Building from sources against the system GCC
+============================================
+This method requires a build of GCC with plug-in support compiled in (not
+necessarily the system one).  The currently supported version of GCC is 4.7.2
+and the test-suite is guaranteed to fully succeed only against this version of
+GCC.  However, the Predator plug-in itself is known to work with GCC 4.5.x and
+GCC 4.6.x equally well.
+
+(1) Install all dependences of Predator and Forester
+----------------------------------------------------
+   * CMake 2.8+
+     - available at http://www.cmake.org
+     - the executable is called 'cmake'
+     - usually provided by a package called 'cmake'
+
+   * Boost libraries 1.37+
+     - available at http://www.boost.org/
+     - package is usually called 'boost'
+     - on binary distros you may need also the 'boost-devel' sub-package
+
+   * 32bit system headers, especially in case of 64bit OS
+     - on Ubuntu/Debian provided by a package called 'libc6-dev-i386'
+     - you can try to check their presence
+       by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
+
+(2) Build Code Listener, Predator and Forester from sources
+-----------------------------------------------------------
+You can use the 'switch-host-gcc.sh' script to rebuild Code Listener, Predator,
+and Forester against a GCC build of your choice.  For details, please run
+'switch-host-gcc.sh' without any arguments.  The script needs to be run in the
+same directory as this README is.  If it fails, make sure your environment is
+sane.  Especially check the PATH and LD_LIBRARY_PATH environment variables.
+On recent Linux distributions, you can simply use the following command:
+
+    ./switch-host-gcc.sh /usr/bin/gcc
+
+(3) Prepare environment for running Predator/Forester transparently [optional]
+------------------------------------------------------------------------------
+To employ the Predator plug-in in a build of an arbitrary project fully
+transparently, it is recommended to set certain environment variables.  You can
+use the script register-paths.sh to do this automatically.
+
+    . sl_build/register-paths.sh
+
+Then you can simply use the '-fplugin' option of GCC as documented in the gcc(1)
+man page:
+
+    gcc -fplugin=libsl.so ...
+
+This will show you the available options of the Predator plug-in itself:
+
+    echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
+
+Analogically to Predator you can also set up the environment for Forester by
+running the following script:
+
+    . fa_build/register-paths.sh
+
+... and show the available options of the Forester plug-in by:
+
+    echo please help | gcc -fplugin=libfa.so -fplugin-arg-libfa-help -xc -
+
+
+Building GCC from sources [emergency solution]
+==============================================
+Use this if your system GCC does not support loading (or building) GCC plug-ins.
 
 (1) Install all dependences of GCC
 ----------------------------------
@@ -42,28 +107,7 @@ Building from sources against a local build of GCC [recommended for end users]
      - package is usually called 'mpfr'
      - on binary distros you may need also the 'mpfr-devel' sub-package
 
-(2) Install all dependences of Predator and Forester
-----------------------------------------------------
-   * CMake 2.8+
-     - available at http://www.cmake.org
-     - the executable is called 'cmake'
-     - usually provided by a package called 'cmake'
-     - though minimal required version of CMake is 2.6, known to work is 2.8+,
-       please report any issues with other CMake versions
-
-   * Boost libraries 1.37+
-     - available at http://www.boost.org/
-     - package is usually called 'boost'
-     - on binary distros you may need also the 'boost-devel' sub-package
-     - if you are not able to install a new enough version of Boost on your
-       system, try to unpack a local instance of it by typing 'make build_boost'
-
-   * 32bit system headers, especially in case of 64bit OS
-     - on Ubuntu/Debian provided by a package called 'libc6-dev-i386'
-     - you can try to check their presence
-       by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
-
-(3) Build the GCC compiler from sources
+(2) Build the GCC compiler from sources
 ---------------------------------------
 This step requires approximately 2 GB of free disk space.  The following command
 downloads the sources of a stable GCC release, builds them in a minimalistic way
@@ -78,70 +122,3 @@ a closer mirror to download GCC from.  The build step can be accelerated by
 giving the option '-jN' to 'make', where N is the number of CPU cores plus one
 (a commonly used heuristic, there exist several others).  But first make sure
 that your machine has enough resources for building GCC in parallel.
-
-(4) Build Code Listener, Predator and Forester from sources
------------------------------------------------------------
-The following command builds Code Listener, Predator and Forester from sources:
-
-    make
-
-Again, the build can be accelerated using the '-j' option of 'make', as stated
-above.  After a successful build of Predator (or Forester), it is suggested (but
-not required) to run the test-suite shipped with Predator (or Forester) to ensure
-the plug-in works as the authors intended to.  The test-suite for Predator consists
-of more than 200 regression tests that can be run using the following command:
-
-    make check
-
-As well as the build, the test-suite can run in parallel in order to boost the
-performance.  Now the '-jN' parameter needs to go to 'ctest' instead of make:
-
-    make check CTEST="ctest -j9"
-
-(5) Prepare environment for running Predator transparently [optional]
----------------------------------------------------------------------
-To employ the Predator plug-in in a build of an arbitrary project fully
-transparently, it is recommended to set certain environment variables.  You can
-use the script register-paths.sh to do this automatically.
-
-    . sl_build/register-paths.sh
-
-Then you can simply use the '-fplugin' option of GCC as documented in the gcc(1)
-man page:
-
-    gcc -fplugin=libsl.so ...
-
-This will show you the available options of the Predator plug-in itself:
-
-    echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
-
-
-(6) Prepare environment for running Forester transparently [optional]
----------------------------------------------------------------------
-Analogically to Predator you can also set up the environment for Forester by
-running the following script:
-
-    . fa_build/register-paths.sh
-
-Then you can again use the '-fplugin' option of GCC as documented in the gcc(1)
-man page:
-
-    gcc -fplugin=libfa.so ...
-
-This will show you the available options of the Forester plug-in itself:
-
-    echo please help | gcc -fplugin=libfa.so -fplugin-arg-libfa-help -xc -
-
-Building from sources against the system GCC
-============================================
-This method requires a build of GCC with plug-in support compiled in (not
-necessarily the system one).  The currently supported version of GCC is 4.7.2
-and the test-suite is guaranteed to fully succeed only against this version of
-GCC.  However, the Predator plug-in itself is known to work with GCC 4.5.x and
-GCC 4.6.x equally well.
-
-You can use the 'switch-host-gcc.sh' script to rebuild Code Listener, Predator,
-and Forester against a GCC build of your choice.  For details, please run
-'switch-host-gcc.sh' without any arguments.  The script needs to be run in the
-same directory as this README is.  If it fails, make sure your environment is
-sane.  Especially check the PATH and LD_LIBRARY_PATH environment variables.
