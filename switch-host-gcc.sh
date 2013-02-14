@@ -62,6 +62,8 @@ $MAKE -C cl check \
     || die "Code Listener does not work"
 
 build_analyzer() {
+    test -d $1 || return 0
+
     status_update "Trying to build $2"
     $MAKE -C $1 CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
         || return $?

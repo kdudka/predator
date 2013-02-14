@@ -17,9 +17,6 @@ PRUNE_ALWAYS=".git tests/linux-drivers \
 build-aux/make-tgz.sh \
 build-aux/README-fedora-release.patch \
 build-aux/README-ubuntu-release.patch \
-build-aux/cl-config.patch \
-build-aux/cl-switch-host.patch \
-build-aux/sl-switch-host.patch \
 build-aux/make-srpm.sh \
 build-aux/update-comments-in-tests.sh \
 sl/rank.sh"
@@ -28,8 +25,6 @@ chlog_watch=
 drop_fwnull=no
 drop_fa=no
 drop_sl=no
-readme_cl=no
-readme_sl=no
 
 PROJECT="$1"
 case "$PROJECT" in
@@ -37,7 +32,6 @@ case "$PROJECT" in
         chlog_watch="cl fwnull"
         drop_fa=yes
         drop_sl=yes
-        readme_cl=yes
         ;;
 
     forester)
@@ -49,7 +43,6 @@ case "$PROJECT" in
     predator)
         chlog_watch="sl"
         drop_fa=yes
-        readme_sl=yes
         ;;
 
     *)
@@ -104,14 +97,6 @@ make ChangeLog "CHLOG_WATCH=$chlog_watch" \
 # adapt README-{fedora,ubuntu}
 patch docs/README-fedora < "build-aux/README-fedora-release.patch"
 patch docs/README-ubuntu < "build-aux/README-ubuntu-release.patch"
-
-# adapt switch-host-gcc.sh
-if test xyes = "x$readme_cl"; then
-    patch "switch-host-gcc.sh" < "build-aux/cl-switch-host.patch"
-fi
-if test xyes = "x$readme_sl"; then
-    patch "switch-host-gcc.sh" < "build-aux/sl-switch-host.patch"
-fi
 
 # adapt Makefile
 case "$PROJECT" in
