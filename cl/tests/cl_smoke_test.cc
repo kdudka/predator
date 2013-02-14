@@ -21,7 +21,9 @@
 #include <iostream>
 
 // required by the gcc plug-in API
-extern "C" { int plugin_is_GPL_compatible; }
+extern "C" {
+    __attribute__ ((__visibility__ ("default"))) int plugin_is_GPL_compatible;
+}
 
 void clEasyRun(const CodeStorage::Storage &, const char *) {
     std::cout << "cl_smoke_test is up and running..." << std::endl;

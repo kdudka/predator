@@ -31,7 +31,9 @@
 #include <boost/foreach.hpp>
 
 // required by the gcc plug-in API
-extern "C" { int plugin_is_GPL_compatible; }
+extern "C" {
+    __attribute__ ((__visibility__ ("default"))) int plugin_is_GPL_compatible;
+}
 
 /// variable state enumeration
 enum EVarState {

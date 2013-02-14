@@ -2163,6 +2163,7 @@ static bool write_pid_file(const char *pid_file)
 }
 
 // plug-in initialization according to gcc plug-in API
+__attribute__ ((__visibility__ ("default")))
 int plugin_init(struct plugin_name_args *plugin_info,
                 struct plugin_gcc_version *version)
 {
