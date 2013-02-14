@@ -816,6 +816,7 @@ class FncDb {
         Private *d;
 };
 
+typedef std::vector<const Fnc *>                    TFncList;
 typedef std::vector<const Insn *>                   TInsnList;
 typedef std::map<Fnc *, TInsnList>                  TInsnListByFnc;
 
@@ -848,6 +849,8 @@ namespace CallGraph {
 
         bool                        hasIndirectCall;
         bool                        hasCallback;
+
+        TFncList                    topOrder;
 
         Graph():
             hasIndirectCall(false),
