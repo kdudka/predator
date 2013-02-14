@@ -676,7 +676,7 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *)
 {
     using namespace CodeStorage;
 
-    BOOST_FOREACH(const Fnc *pFnc, stor.fncs) {
+    BOOST_FOREACH(const Fnc *pFnc, stor.callGraph.topOrder) {
         const Fnc &fnc = *pFnc;
         if (!isDefined(fnc))
             continue;

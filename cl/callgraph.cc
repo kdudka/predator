@@ -119,24 +119,42 @@ void handleFnc(Fnc *const fnc)
     }
 }
 
+typedef std::pair<std::string /* file */, int /* line */>       TLocKey;
+typedef std::map<TLocKey, const Fnc *>                          TLocMap;
+
+void insertFnc(TLocMap &lm, const Fnc *fnc)
+{
+    const struct cl_loc *loc = locationOf(*fnc);
+    const TLocKey key(loc->file, loc->line);
+    lm[key] = fnc;
+}
+
 void buildTopList(Graph &cg)
 {
     typedef std::queue<const Node *> TSched;
     WorkList<const Node *, TSched> wl;
 
+    TLocMap lmRoots;
     BOOST_FOREACH(const Node *rootNode, cg.roots)
-        wl.schedule(rootNode);
+        insertFnc(lmRoots, rootNode->fnc);
+
+    BOOST_FOREACH(TLocMap::const_reference item, lmRoots)
+        wl.schedule(item./* fnc */second->cgNode);
 
     const Node *node;
     while (wl.next(node)) {
+        TLocMap lm;
         BOOST_FOREACH(TInsnListByFnc::const_reference item, node->calls) {
             const Fnc *callee = item.first;
             if (!callee)
                 // ignore indirect calls
                 continue;
 
-            wl.schedule(callee->cgNode);
+            insertFnc(lm, callee);
         }
+
+        BOOST_FOREACH(TLocMap::const_reference item, lm)
+            wl.schedule(item./* fnc */second->cgNode);
 
         const Fnc *fnc = node->fnc;
         cg.topOrder.push_back(fnc);
