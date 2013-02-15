@@ -26,6 +26,7 @@
 
 #include <algorithm>
 #include <map>
+#include <vector>
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>

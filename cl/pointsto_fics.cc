@@ -888,26 +888,30 @@ RetVal bind(
     return change ? PTFICS_RET_CHANGE : PTFICS_RET_NO_CHANGE;
 }
 
+struct NodeData {
+    /// node to start traversal from
+    const Node                     *startFrom;
+
+    /// how far we should go from startFrom
+    int                             steps;
+
+    /// caller's item (if we know it)
+    const Item                     *clrItem;
+
+    NodeData() :
+        startFrom(0),
+        steps(0),
+        clrItem(0)
+    {
+    }
+};
+
 /**
  * shape the global graph (ctx.stor.ptd.gptg) based on actually handled
  * function's graph (ctx.ptg).
  */
 RetVal bindGlobal(BuildCtx &ctx)
 {
-    struct NodeData {
-        // node to start traversal from
-        const Node                     *startFrom;
-        // how far we should go from startFrom
-        int                             steps;
-        // caller's item (if we know it)
-        const Item                     *clrItem;
-        NodeData() :
-            startFrom(0),
-            steps(0),
-            clrItem(0)
-        {
-        }
-    };
     typedef DataManager<NodeData>   TDM;
     TDM dm;
     bool change = false;
