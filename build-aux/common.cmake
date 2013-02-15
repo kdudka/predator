@@ -57,6 +57,10 @@ endmacro()
 # treat Code Listener headers as system headers when scanning dependencies
 include_directories(SYSTEM ../include)
 
+# make sure the linking works appropriately
+ADD_C_FLAG(       "fPIC"                 "-fPIC")
+ADD_C_FLAG(       "hidden_visibility"    "-fvisibility=hidden")
+
 # we use c99 to compile *.c and c++0x to compile *.cc
 ADD_C_ONLY_FLAG(  "STD_C99"         "-std=c99")
 ADD_CXX_ONLY_FLAG("STD_CXX_0X"      "-std=c++0x")
@@ -64,7 +68,6 @@ ADD_CXX_ONLY_FLAG("STD_CXX_0X"      "-std=c++0x")
 # tweak warnings
 ADD_C_FLAG(       "PEDANTIC"             "-pedantic")
 ADD_C_FLAG(       "W_ALL"                "-Wall")
-ADD_C_FLAG(       "fPIC"                 "-fPIC")
 ADD_C_FLAG(       "W_FLOAT_EQUAL"        "-Wfloat-equal")
 ADD_C_ONLY_FLAG(  "W_UNDEF"              "-Wundef")
 ADD_CXX_ONLY_FLAG("W_NO_DEPRECATED"      "-Wno-deprecated")

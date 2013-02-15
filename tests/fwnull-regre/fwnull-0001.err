@@ -1,6 +1,6 @@
+fwnull-0001.c:12:10: warning: dereference of a value that might be NULL
+fwnull-0001.c:9:8: note: the same value was compared with NULL here
 fwnull-0001.c:18:8: warning: comparing pointer with NULL
 fwnull-0001.c:16:10: note: the pointer was already dereferenced here
 fwnull-0001.c:5:8: error: dereference of NULL value
 fwnull-0001.c:4:12: note: the NULL value comes from here
-fwnull-0001.c:12:10: warning: dereference of a value that might be NULL
-fwnull-0001.c:9:8: note: the same value was compared with NULL here

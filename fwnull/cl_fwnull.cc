@@ -31,7 +31,9 @@
 #include <boost/foreach.hpp>
 
 // required by the gcc plug-in API
-extern "C" { int plugin_is_GPL_compatible; }
+extern "C" {
+    __attribute__ ((__visibility__ ("default"))) int plugin_is_GPL_compatible;
+}
 
 /// variable state enumeration
 enum EVarState {
@@ -674,7 +676,7 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *)
 {
     using namespace CodeStorage;
 
-    BOOST_FOREACH(const Fnc *pFnc, stor.fncs) {
+    BOOST_FOREACH(const Fnc *pFnc, stor.callGraph.topOrder) {
         const Fnc &fnc = *pFnc;
         if (!isDefined(fnc))
             continue;

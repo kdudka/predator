@@ -25,6 +25,7 @@
 #include <cl/storage.hh>
 
 #include "stopwatch.hh"
+#include "worklist.hh"
 
 #include <boost/foreach.hpp>
 
@@ -118,6 +119,48 @@ void handleFnc(Fnc *const fnc)
     }
 }
 
+typedef std::pair<std::string /* file */, int /* line */>       TLocKey;
+typedef std::map<TLocKey, const Fnc *>                          TLocMap;
+
+void insertFnc(TLocMap &lm, const Fnc *fnc)
+{
+    const struct cl_loc *loc = locationOf(*fnc);
+    const TLocKey key(loc->file, loc->line);
+    lm[key] = fnc;
+}
+
+void buildTopList(Graph &cg)
+{
+    typedef std::queue<const Node *> TSched;
+    WorkList<const Node *, TSched> wl;
+
+    TLocMap lmRoots;
+    BOOST_FOREACH(const Node *rootNode, cg.roots)
+        insertFnc(lmRoots, rootNode->fnc);
+
+    BOOST_FOREACH(TLocMap::const_reference item, lmRoots)
+        wl.schedule(item./* fnc */second->cgNode);
+
+    const Node *node;
+    while (wl.next(node)) {
+        TLocMap lm;
+        BOOST_FOREACH(TInsnListByFnc::const_reference item, node->calls) {
+            const Fnc *callee = item.first;
+            if (!callee)
+                // ignore indirect calls
+                continue;
+
+            insertFnc(lm, callee);
+        }
+
+        BOOST_FOREACH(TLocMap::const_reference item, lm)
+            wl.schedule(item./* fnc */second->cgNode);
+
+        const Fnc *fnc = node->fnc;
+        cg.topOrder.push_back(fnc);
+    }
+}
+
 void buildCallGraph(const Storage &stor)
 {
     StopWatch watch;
@@ -127,10 +170,14 @@ void buildCallGraph(const Storage &stor)
 
     Graph &cg = const_cast<Graph &>(stor.callGraph);
 
+    // dig callbacks from var initializers
     BOOST_FOREACH(const Var &var, stor.vars)
         BOOST_FOREACH(const TInsn insn, var.initials)
             BOOST_FOREACH(const TOp op, insn->operands)
                 handleCallback(cg, /* node */ 0, insn, op);
+
+    // construct topological order
+    buildTopList(cg);
 
     CL_DEBUG("buildCallGraph() took " << watch);
 }

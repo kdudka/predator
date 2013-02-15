@@ -492,8 +492,8 @@ bool ficsPhase1(BuildCtx &ctx)
         return true;
     }
 
-    BOOST_FOREACH(Fnc *pFnc, stor.fncs) {
-        Fnc &fnc = *pFnc;
+    BOOST_FOREACH(const Fnc *pFnc, stor.callGraph.topOrder) {
+        Fnc &fnc = *const_cast<Fnc *>(pFnc);
         ctx.ptg = &fnc.ptg;
         if (isBuiltInFnc(fnc.def))
             // just skip built-ins
@@ -1142,6 +1142,17 @@ bool bindLocationsGlob(
     return bindLocations(ctx, bindData, srcPtg, tgtPtg);
 }
 
+template <class TWl>
+void scheduleTopologically(TWl &dst, const CallGraph::Graph &cg)
+{
+    BOOST_FOREACH(const Fnc *fnc, cg.topOrder) {
+        if (isBuiltInFnc(fnc->def) || isWhiteListed(fnc))
+            continue;
+
+        dst.schedule(const_cast<Fnc *>(fnc));
+    }
+}
+
 bool ficsPhase2(BuildCtx &ctx)
 {
     TStorRef stor = ctx.stor;
@@ -1154,11 +1165,7 @@ bool ficsPhase2(BuildCtx &ctx)
     }
 
     // pre-plan to explore all functions
-    BOOST_FOREACH(Fnc *fnc, stor.fncs) {
-        if (isBuiltInFnc(fnc->def) || isWhiteListed(fnc))
-            continue;
-        fp.schedule(fnc);
-    }
+    scheduleTopologically(fp, stor.callGraph);
 
     Fnc *caller;
     while (fp.next(caller)) {
@@ -1220,32 +1227,6 @@ fallback:
     return false;
 }
 
-template <class TWl>
-void scheduleToplogically(TWl &dst, Storage &stor)
-{
-    using CallGraph::Node;
-
-    typedef std::queue<const Node *> TSched;
-    WorkList<const Node *, TSched> wl;
-
-    BOOST_FOREACH(const Node *rootNode, stor.callGraph.roots)
-        wl.schedule(rootNode);
-
-    const Node *node;
-    while (wl.next(node)) {
-        BOOST_FOREACH(TInsnListByFnc::const_reference item, node->calls) {
-            const Fnc *callee = item.first;
-            wl.schedule(callee->cgNode);
-        }
-
-        Fnc *fnc = node->fnc;
-        if (isBuiltInFnc(fnc->def) || isWhiteListed(fnc))
-            continue;
-
-        dst.schedule(fnc);
-    }
-}
-
 bool ficsPhase3(BuildCtx &ctx)
 {
     TStorRef stor = ctx.stor;
@@ -1258,7 +1239,7 @@ bool ficsPhase3(BuildCtx &ctx)
     }
 
     // plan to explore all functions we are interested in
-    scheduleToplogically(fp, stor);
+    scheduleTopologically(fp, stor.callGraph);
 
     Fnc *callee;
     while (!stor.ptd.dead && fp.next(callee)) {
