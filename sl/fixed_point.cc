@@ -20,6 +20,7 @@
 #include "config.h"
 #include "fixed_point.hh"
 
+#include "cont_shape.hh"
 #include "symplot.hh"
 #include "symstate.hh"
 #include "symtrace.hh"
@@ -106,6 +107,11 @@ void plotInsn(PlotData &plot, const TInsn insn)
     plot.out << INSN(insn) << "[label=" << QUOT(*insn) << ", shape=box];\n";
 
     const SymState &state = plot.stateByInsn[insn];
+
+    // XXX: detect container shapes
+    ContShape::TShapeListByHeapIdx contShapes;
+    detectContShapes(&contShapes, state);
+
     const unsigned cntHeaps = state.size();
     for (unsigned i = 0; i < cntHeaps; ++i) {
         const SymHeap &sh = state[i];
