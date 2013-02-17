@@ -205,9 +205,11 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
 
 bool segAbstractionStep(
         SymHeap                     &sh,
-        const BindingOff            &off,
+        const ShapeProps            &props,
         TObjId                      *pCursor)
 {
+    const BindingOff &off = props.bOff;
+
     // resolve the pair of objects to be merged
     const TObjId obj0 = *pCursor;
     const TObjId obj1 = nextObj(sh, obj0, off.next);
@@ -219,7 +221,7 @@ bool segAbstractionStep(
     // join data
     TObjId seg;
     TObjSet protos[2];
-    if (!joinData(sandBox, off, obj0, obj1, &seg, &protos)) {
+    if (!joinData(sandBox, props, obj0, obj1, &seg, &protos)) {
         CL_DEBUG("segAbstractionStep() forces segment re-discoverty");
         return false;
     }
@@ -239,7 +241,7 @@ bool segAbstractionStep(
     const PtrHandle nextPtr(sh, seg, off.next);
     nextPtr.setValue(valNext);
 
-    if (isDlsBinding(off)) {
+    if (OK_DLS == props.kind) {
         // redirect pointers going to 'obj1' from right to 'seg'
         redirectRefsNotFrom(sh, protos[1], obj1, seg, TS_LAST, canPointToBack);
 
@@ -291,7 +293,7 @@ bool applyAbstraction(
     for (unsigned i = 0; i < len; ++i) {
         CL_BREAK_IF(!protoCheckConsistency(sh));
 
-        if (!segAbstractionStep(sh, shape.props.bOff, &cursor)) {
+        if (!segAbstractionStep(sh, shape.props, &cursor)) {
             CL_DEBUG("<-- validity of next " << (len - i - 1)
                     << " abstraction step(s) broken, forcing re-discovery...");
 

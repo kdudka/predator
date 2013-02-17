@@ -29,6 +29,8 @@
 
 #include <iostream>
 
+struct ShapeProps;
+
 /// @todo some dox
 enum EJoinStatus {
     JS_USE_ANY = 0,
@@ -52,7 +54,7 @@ inline std::ostream& operator<<(std::ostream &str, const EJoinStatus status)
 /// @todo some dox
 bool joinData(
         SymHeap                 &sh,
-        const BindingOff        &bf,
+        const ShapeProps        &props,
         const TObjId             obj1,
         const TObjId             obj2,
         TObjId                  *pDst            = 0,

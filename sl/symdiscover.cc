@@ -60,6 +60,12 @@ int minLengthByCost(int cost)
     return minLength;
 }
 
+// TODO: drop this!
+inline bool isDlsBinding(const BindingOff &off)
+{
+    return (off.next != off.prev);
+}
+
 bool matchSegBinding(
         const SymHeap              &sh,
         const TObjId                seg,
@@ -291,8 +297,14 @@ bool matchData(
         // only first node of an SLS can be pointed by a program var, giving up
         return false;
 
+    ShapeProps props;
+    props.bOff = off;
+    props.kind = (isDlsBinding(off))
+        ? OK_DLS
+        : OK_SLS;
+
     EJoinStatus status;
-    if (!joinData(sh, off, obj1, obj2, /* pDst */ 0, protoPairs, &status)) {
+    if (!joinData(sh, props, obj1, obj2, /* pDst */ 0, protoPairs, &status)) {
         CL_DEBUG("    joinData() refuses to create a segment!");
         return false;
     }

@@ -25,6 +25,7 @@
 #include <cl/clutil.hh>
 
 #include "prototype.hh"
+#include "shape.hh"
 #include "symcmp.hh"
 #include "symdiscover.hh"
 #include "symgc.hh"
@@ -2598,7 +2599,7 @@ void recoverPointersToDst(
 
 bool joinData(
         SymHeap                 &sh,
-        const BindingOff        &bf,
+        const ShapeProps        &props,
         const TObjId             obj1,
         const TObjId             obj2,
         TObjId                  *pDst,
@@ -2619,13 +2620,10 @@ bool joinData(
     if (!joinObjType(&clt, ctx, obj1, obj2))
         return false;
 
-    const EObjKind kind = (isDlsBinding(bf))
-        ? OK_DLS
-        : OK_SLS;
-
     // create an image in ctx.dst
+    const BindingOff &bf = props.bOff;
     const TObjId objDst = ctx.dst.heapAlloc(size);
-    ctx.dst.objSetAbstract(objDst, kind, bf);
+    ctx.dst.objSetAbstract(objDst, props.kind, bf);
 
     // intialize the minimum segment length
     const TMinLen lenDst = objMinLength(sh, obj1) + objMinLength(sh, obj2);

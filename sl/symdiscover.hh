@@ -28,12 +28,6 @@
 #include "config.h"
 #include "shape.hh"
 
-/// return true if the given binding is a DLS binding
-inline bool isDlsBinding(const BindingOff &off)
-{
-    return (off.next != off.prev);
-}
-
 /**
  * Take the given symbolic heap and look for the best possible abstraction in
  * there.  If nothing is found, zero is returned.  Otherwise it returns total
