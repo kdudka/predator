@@ -28,6 +28,13 @@
 #include "config.h"
 #include "shape.hh"
 
+/// true if we can merge a pair of subsequent objects according to shape props
+bool canMergeObjWithNextObj(
+        SymHeap                    &sh,
+        const TObjId                obj,
+        const ShapeProps           &props,
+        TObjId                     *pNextObj = 0);
+
 /**
  * Take the given symbolic heap and look for the best possible abstraction in
  * there.  If nothing is found, zero is returned.  Otherwise it returns total

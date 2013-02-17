@@ -212,59 +212,84 @@ bool validateSegEntry(
     return validatePrototypes(sh, props, obj, protos);
 }
 
-TObjId jumpToNextObj(
+bool canMergeObjWithNextObj(
         SymHeap                    &sh,
         const TObjId                obj,
-        const ShapeProps           &props)
+        const ShapeProps           &props,
+        TObjId                     *pNextObj)
 {
     if (!matchSegBinding(sh, obj, props))
         // binding mismatch
-        return OBJ_INVALID;
+        return false;
 
     const BindingOff &off = props.bOff;
-    const TValId nextHead = valOfPtr(sh, obj, off.next);
-    if (nextHead <= 0 || off.head != sh.valOffset(nextHead))
-        // no valid head pointed by nextPtr
-        return OBJ_INVALID;
+    const TValId valNext = valOfPtr(sh, obj, off.next);
+    if (off.head != sh.valOffset(valNext))
+        // head offset mismatch in forward direction
+        return false;
 
-    const TObjId next = sh.objByAddr(nextHead);
+    if (!canPointToFront(sh.targetSpec(valNext)))
+        // target specifier mismatch in forward direction
+        return false;
+
+    const TObjId next = sh.objByAddr(valNext);
     if (!sh.isValid(next) || !isOnHeap(sh.objStorClass(next)))
         // only objects on heap can be abstracted for now
-        return OBJ_INVALID;
+        return false;
 
     if (!matchSegBinding(sh, next, props))
         // binding mismatch
-        return OBJ_INVALID;
+        return false;
 
     if (sh.objSize(obj) != sh.objSize(next))
         // mismatch in size of targets
-        return OBJ_INVALID;
+        return false;
 
     const TObjType clt = sh.objEstimatedType(obj);
     if (clt) {
         const TObjType cltNext = sh.objEstimatedType(next);
         if (cltNext && *cltNext != *clt)
             // both objects have estimated types assigned, but the types differ
-            return OBJ_INVALID;
+            return false;
     }
 
     if (OK_DLS == props.kind) {
         const TValId valPrev = valOfPtr(sh, next, off.prev);
-        if (sh.objByAddr(valPrev) != obj || sh.valOffset(valPrev) != off.head)
+        if (sh.objByAddr(valPrev) != obj)
             // DLS back-link mismatch
-            return OBJ_INVALID;
+            return false;
 
-        const ETargetSpecifier ts = sh.targetSpec(valPrev);
-        if (TS_REGION != ts && TS_LAST != ts)
-            // DLS back-link mismatch
-            return OBJ_INVALID;
+        if (off.head != sh.valOffset(valNext))
+            // head offset mismatch in backward direction
+            return false;
+
+        if (!canPointToBack(sh.targetSpec(valPrev)))
+            // target specifier mismatch in backward direction
+            return false;
     }
 
     if (OBJ_INVALID == nextObj(sh, next, off.next))
         // valNext has no target
-        return OBJ_INVALID;
+        return false;
 
-    return next;
+    // all OK
+    if (pNextObj)
+        *pNextObj = next;
+
+    return true;
+}
+
+TObjId jumpToNextObj(
+        SymHeap                    &sh,
+        const TObjId                obj,
+        const ShapeProps           &props)
+{
+    TObjId next;
+    if (canMergeObjWithNextObj(sh, obj, props, &next))
+        return next;
+
+    // unable to jump (broken binding, objects incompatible, ...)
+    return OBJ_INVALID;
 }
 
 bool isPointedByVar(SymHeap &sh, const TObjId obj)
