@@ -260,27 +260,30 @@ bool segAbstractionStep(
 }
 
 bool applyAbstraction(
-        SymHeap                     &sh,
-        const BindingOff            &off,
-        const TObjId                entry,
-        const unsigned              len)
+        SymHeap                    &sh,
+        const Shape                &shape)
 {
-    EObjKind kind;
-    const char *name;
+    const char *name = "[unhandled kind of abstract object]";
 
-    if (isDlsBinding(off)) {
-        kind = OK_DLS;
-        name = "DLS";
-    }
-    else {
-        kind = OK_SLS;
-        name = "SLS";
+    const EObjKind kind = shape.props.kind;
+    switch (kind) {
+        case OK_SLS:
+            name = "SLS";
+            break;
+
+        case OK_DLS:
+            name = "DLS";
+            break;
+
+        default:
+            CL_BREAK_IF("applyAbstraction() got something special");
     }
 
+    const unsigned len = shape.length;
     CL_DEBUG("    AAA initiating " << name << " abstraction of length " << len);
 
     // cursor
-    TObjId cursor = entry;
+    TObjId cursor = shape.entry;
 
     LDP_INIT(symabstract, name);
     LDP_PLOT(symabstract, sh);
@@ -288,7 +291,7 @@ bool applyAbstraction(
     for (unsigned i = 0; i < len; ++i) {
         CL_BREAK_IF(!protoCheckConsistency(sh));
 
-        if (!segAbstractionStep(sh, off, &cursor)) {
+        if (!segAbstractionStep(sh, shape.props.bOff, &cursor)) {
             CL_DEBUG("<-- validity of next " << (len - i - 1)
                     << " abstraction step(s) broken, forcing re-discovery...");
 
@@ -431,12 +434,9 @@ void abstractIfNeeded(SymHeap &sh)
 #if SE_DISABLE_SLS && SE_DISABLE_DLS
     return;
 #endif
-    BindingOff          off;
-    TObjId              entry;
-    unsigned            len;
-
-    while ((len = discoverBestAbstraction(sh, &off, &entry))) {
-        if (!applyAbstraction(sh, off, entry, len))
+    Shape shape;
+    while (discoverBestAbstraction(&shape, sh)) {
+        if (!applyAbstraction(sh, shape))
             // the best abstraction given is unfortunately not good enough
             break;
 

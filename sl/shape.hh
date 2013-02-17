@@ -17,20 +17,25 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CONT_SHAPE_H
-#define H_GUARD_CONT_SHAPE_H
+#ifndef H_GUARD_SHAPE_H
+#define H_GUARD_SHAPE_H
 
-#include "shape.hh"
+#include "symheap.hh"
 
-class SymState;
+/// describe how the shape looks like
+struct ShapeProps {
+    EObjKind            kind;
+    BindingOff          bOff;
+};
 
-namespace ContShape {
+/// inductive definition of a container shape
+struct Shape {
+    TObjId              entry;
+    ShapeProps          props;
+    unsigned            length; ///< count of objects (both regions or abstract)
+};
 
-/// list of container shapes grouped by heap index they occur in
-typedef std::vector<TShapeList>             TShapeListByHeapIdx;
+/// list of container shapes given by their inductive definition
+typedef std::vector<Shape>                  TShapeList;
 
-void detectContShapes(TShapeListByHeapIdx *pDst, const SymState &);
-
-} // namespace ContShape
-
-#endif /* H_GUARD_CONT_SHAPE_H */
+#endif /* H_GUARD_SHAPE_H */

@@ -549,16 +549,15 @@ struct SegCandidate {
 
 typedef std::vector<SegCandidate> TSegCandidateList;
 
-unsigned /* len */ selectBestAbstraction(
-        SymHeap                     &sh,
-        const TSegCandidateList     &candidates,
-        BindingOff                  *pOff,
-        TObjId                      *entry)
+bool selectBestAbstraction(
+        Shape                      *pDst,
+        SymHeap                    &sh,
+        const TSegCandidateList    &candidates)
 {
     const unsigned cnt = candidates.size();
     if (!cnt)
         // no candidates given
-        return 0;
+        return false;
 
     CL_DEBUG("--> initiating segment discovery, "
             << cnt << " entry candidate(s) given");
@@ -612,19 +611,21 @@ unsigned /* len */ selectBestAbstraction(
 
     if (!bestLen) {
         CL_DEBUG("<-- no new segment found");
-        return 0;
+        return false;
     }
 
     // pick up the best candidate
-    *pOff = bestBinding;
-    *entry = candidates[bestIdx].entry;
-    return bestLen;
+    pDst->entry = candidates[bestIdx].entry;
+    pDst->length = bestLen;
+    pDst->props.bOff = bestBinding;
+    pDst->props.kind = (bestBinding.next == bestBinding.prev)
+        ? OK_SLS
+        : OK_DLS;
+
+    return true;
 }
 
-unsigned /* len */ discoverBestAbstraction(
-        SymHeap             &sh,
-        BindingOff          *off,
-        TObjId              *entry)
+bool discoverBestAbstraction(Shape *pDst, SymHeap &sh)
 {
     TSegCandidateList candidates;
 
@@ -645,5 +646,5 @@ unsigned /* len */ discoverBestAbstraction(
         candidates.push_back(segc);
     }
 
-    return selectBestAbstraction(sh, candidates, off, entry);
+    return selectBestAbstraction(pDst, sh, candidates);
 }

@@ -110,7 +110,7 @@ void plotInsn(PlotData &plot, const TInsn insn)
 
     // XXX: detect container shapes
     ContShape::TShapeListByHeapIdx contShapes;
-    detectContShapes(&contShapes, state);
+    ContShape::detectContShapes(&contShapes, state);
 
     const unsigned cntHeaps = state.size();
     for (unsigned i = 0; i < cntHeaps; ++i) {
