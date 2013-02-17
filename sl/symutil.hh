@@ -73,6 +73,12 @@ const IR::Range& rngFromCustom(const CustomValue &);
 /// return size (in bytes) that we can safely write at the given addr
 TSizeRange valSizeOfTarget(const SymHeapCore &, const TValId at);
 
+/// true for TS_REGION and TS_FIRST
+bool canPointToFront(const ETargetSpecifier);
+
+/// true for TS_REGION and TS_LAST
+bool canPointToBack(const ETargetSpecifier);
+
 bool compareIntRanges(
         bool                                *pDst,
         const enum cl_binop_e               code,

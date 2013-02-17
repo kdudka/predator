@@ -169,6 +169,44 @@ TSizeRange valSizeOfTarget(const SymHeapCore &sh, const TValId at)
     return size - off;
 }
 
+bool canPointToFront(const ETargetSpecifier ts)
+{
+    switch (ts) {
+        case TS_INVALID:
+            CL_BREAK_IF("invalid call of filterFront()");
+            break;
+
+        case TS_REGION:
+        case TS_FIRST:
+            return true;
+
+        case TS_LAST:
+        case TS_ALL:
+            break;
+    }
+
+    return false;
+}
+
+bool canPointToBack(const ETargetSpecifier ts)
+{
+    switch (ts) {
+        case TS_INVALID:
+            CL_BREAK_IF("invalid call of filterBack()");
+            break;
+
+        case TS_REGION:
+        case TS_LAST:
+            return true;
+
+        case TS_FIRST:
+        case TS_ALL:
+            break;
+    }
+
+    return false;
+}
+
 bool compareIntRanges(
         bool                        *pDst,
         const enum cl_binop_e       code,

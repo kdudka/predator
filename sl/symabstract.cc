@@ -203,44 +203,6 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
     return reg;
 }
 
-bool filterFront(ETargetSpecifier ts)
-{
-    switch (ts) {
-        case TS_INVALID:
-            CL_BREAK_IF("invalid call of filterFront()");
-            break;
-
-        case TS_REGION:
-        case TS_FIRST:
-            return true;
-
-        case TS_LAST:
-        case TS_ALL:
-            break;
-    }
-
-    return false;
-}
-
-bool filterBack(ETargetSpecifier ts)
-{
-    switch (ts) {
-        case TS_INVALID:
-            CL_BREAK_IF("invalid call of filterBack()");
-            break;
-
-        case TS_REGION:
-        case TS_LAST:
-            return true;
-
-        case TS_FIRST:
-        case TS_ALL:
-            break;
-    }
-
-    return false;
-}
-
 bool segAbstractionStep(
         SymHeap                     &sh,
         const BindingOff            &off,
@@ -270,7 +232,7 @@ bool segAbstractionStep(
     protos[1].insert(obj1);
 
     // redirect pointers going to 'obj0' from left to 'seg'
-    redirectRefsNotFrom(sh, protos[0], obj0, seg, TS_FIRST, filterFront);
+    redirectRefsNotFrom(sh, protos[0], obj0, seg, TS_FIRST, canPointToFront);
 
     // preserve valNext
     const TValId valNext = valOfPtr(sh, obj1, off.next);
@@ -279,7 +241,7 @@ bool segAbstractionStep(
 
     if (isDlsBinding(off)) {
         // redirect pointers going to 'obj1' from right to 'seg'
-        redirectRefsNotFrom(sh, protos[1], obj1, seg, TS_LAST, filterBack);
+        redirectRefsNotFrom(sh, protos[1], obj1, seg, TS_LAST, canPointToBack);
 
         // preserve valPrev
         const TValId valPrev = valOfPtr(sh, obj0, off.prev);
