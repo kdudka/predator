@@ -1,27 +1,31 @@
 Predator and Forester
 =====================
-Predator is a practical tool for checking manipulation of dynamic data
-structures using *separation logic*.  It can be loaded directly into *GCC* as a
-*plug-in*.  This way you can easily analyse C code sources, using the existing
-build system, without any manual preprocessing of them etc.  The analysis itself
-is, however, not ready for complex projects yet.  The plug-in is based on Code
-Listener infrastructure (included).  Although Predator is intended to be as
-portable as GCC is, we support only Linux for now.  You can find the latest news
-on the following project page:
+Predator is a tool for automated formal verification of sequential C programs
+operating with pointers and linked lists. The core algorithms of Predator were
+originally inspired by works on *separation logic* with higher-order list
+predicates, but they are now purely graph-based and significantly extended to
+support various forms of low-level memory manipulation used in system-level
+code.  Such operations include pointer arithmetic, safe usage of invalid
+pointers, block operations with memory, reinterpretation of the memory contents,
+address alignment, etc.  The tool can be loaded into *GCC* as a *plug-in*.  This
+way you can easily analyse C code sources, using the existing build system,
+without manually preprocessing them first.  The analysis itself is, however, not
+ready for complex projects yet.  You can find the latest news on the following
+project page:
 
     http://www.fit.vutbr.cz/research/groups/verifit/tools/predator
 
 Forester is an experimental tool for checking manipulation of dynamic data
 structures using *forest automata*.  As in case of Predator, it can be loaded
-directly into *GCC* as a *plug-in* to analyse C code sources.  However, the analysis
-itself is not yet mature enough to be able to verify ordinary programs.  Although
-Forester is intended to be as portable as GCC is, we support only Linux for now.
+directly into *GCC* as a *plug-in* to analyse C code sources.  However, the
+analysis itself is not yet mature enough to be able to verify ordinary programs.
 You can find the latest news on the following project page:
 
     http://www.fit.vutbr.cz/research/groups/verifit/tools/forester
 
-Predator, Code Listener, and Forester are licensed as GPLv3+, see COPYING for details.
-
+Predator and Forester are licensed as GPLv3+, see COPYING for details.  The GCC
+plug-ins are based on Code Listener infrastructure (included).  Although the
+tools are intended to be as portable as GCC is, we support only Linux for now.
 
 Building from sources against the system GCC
 ============================================
@@ -48,8 +52,8 @@ GCC 4.6.x equally well.
      - you can try to check their presence
        by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
 
-(2) Build Code Listener, Predator and Forester from sources
------------------------------------------------------------
+(2) Build Predator and Forester from sources
+--------------------------------------------
 You can use the 'switch-host-gcc.sh' script to rebuild Code Listener, Predator,
 and Forester against a GCC build of your choice.  For details, please run
 'switch-host-gcc.sh' without any arguments.  The script needs to be run in the
