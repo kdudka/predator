@@ -27,7 +27,6 @@
 #include "prototype.hh"
 #include "shape.hh"
 #include "symcmp.hh"
-#include "symdiscover.hh"
 #include "symgc.hh"
 #include "symplot.hh"
 #include "symseg.hh"

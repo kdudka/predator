@@ -506,16 +506,14 @@ bool digBackLink(
     return true;
 }
 
-typedef std::vector<ShapeProps> TPropsList;
-
 class ProbeEntryVisitor {
     private:
-        TPropsList              &dst_;
+        TShapePropsList         &dst_;
         const TObjId            obj_;
 
     public:
         ProbeEntryVisitor(
-                TPropsList                 &dst,
+                TShapePropsList            &dst,
                 const TObjId                obj):
             dst_(dst),
             obj_(obj)
@@ -578,9 +576,19 @@ bool segOnPath(
     return false;
 }
 
+void digShapePropsCandidates(
+        TShapePropsList            *pDst,
+        SymHeap                    &sh,
+        const TObjId                obj)
+{
+    CL_BREAK_IF(!pDst->empty());
+    const ProbeEntryVisitor visitor(*pDst, obj);
+   traverseLivePtrs(sh, obj, visitor);
+}
+
 struct SegCandidate {
     TObjId                      entry;
-    TPropsList                  propsList;
+    TShapePropsList             propsList;
 };
 
 typedef std::vector<SegCandidate> TSegCandidateList;
@@ -665,10 +673,9 @@ bool discoverBestAbstraction(Shape *pDst, SymHeap &sh)
     TObjList heapObjs;
     sh.gatherObjects(heapObjs, isOnHeap);
     BOOST_FOREACH(const TObjId obj, heapObjs) {
-        // use ProbeEntryVisitor visitor to validate the potential segment entry
+        /// probe neighbouring objects
         SegCandidate segc;
-        const ProbeEntryVisitor visitor(segc.propsList, obj);
-        traverseLivePtrs(sh, obj, visitor);
+        digShapePropsCandidates(&segc.propsList, sh, obj);
         if (segc.propsList.empty())
             // found nothing
             continue;

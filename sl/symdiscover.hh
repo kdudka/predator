@@ -28,6 +28,12 @@
 #include "config.h"
 #include "shape.hh"
 
+/// probe neighbouring objects and return a list of shape properties candidates
+void digShapePropsCandidates(
+        TShapePropsList            *pDst,
+        SymHeap                    &sh,
+        const TObjId                obj);
+
 /// true if we can merge a pair of subsequent objects according to shape props
 bool canMergeObjWithNextObj(
         SymHeap                    &sh,

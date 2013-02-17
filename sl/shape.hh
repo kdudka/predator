@@ -35,7 +35,10 @@ struct Shape {
     unsigned            length; ///< count of objects (both regions or abstract)
 };
 
-/// list of container shapes given by their inductive definition
+/// list of shape properties (kind, binding offsets) candidates
+typedef std::vector<ShapeProps>             TShapePropsList;
+
+/// list of shapes given by their inductive definition
 typedef std::vector<Shape>                  TShapeList;
 
 #endif /* H_GUARD_SHAPE_H */
