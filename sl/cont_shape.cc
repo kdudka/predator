@@ -27,9 +27,9 @@
 
 namespace ContShape {
 
-class AparentShapeDetector {
+class ApparentShapeDetector {
     public:
-        AparentShapeDetector(SymHeap &sh, TShapeList &dstArray):
+        ApparentShapeDetector(SymHeap &sh, TShapeList &dstArray):
             sh_(sh),
             dstArray_(dstArray)
         {
@@ -47,7 +47,7 @@ class AparentShapeDetector {
         bool isFreeEnt(const TObjId obj, const ShapeProps &props);
 };
 
-bool AparentShapeDetector::isFreeEnt(const TObjId obj, const ShapeProps &props)
+bool ApparentShapeDetector::isFreeEnt(const TObjId obj, const ShapeProps &props)
 {
     const TObjsByProps::const_iterator it = objsByProps_.find(props);
     if (it == objsByProps_.end())
@@ -57,7 +57,7 @@ bool AparentShapeDetector::isFreeEnt(const TObjId obj, const ShapeProps &props)
     return !hasKey(taken, obj);
 }
 
-bool AparentShapeDetector::probeEntry(const TObjId obj, const ShapeProps &props)
+bool ApparentShapeDetector::probeEntry(const TObjId obj, const ShapeProps &props)
 {
     if (!this->isFreeEnt(obj, props))
         return false;
@@ -102,11 +102,11 @@ bool AparentShapeDetector::probeEntry(const TObjId obj, const ShapeProps &props)
         return false;
 
     if (VAL_NULL != valNext)
-        CL_WARN("AparentShapeDetector uses a non-NULL terminator");
+        CL_WARN("ApparentShapeDetector uses a non-NULL terminator");
 
     // check the length
     const unsigned len = seen.size();
-    CL_DEBUG("AparentShapeDetector found a new container shape, len = " << len);
+    CL_DEBUG("ApparentShapeDetector found a new container shape, len = "<< len);
 
     // mark all used objects as taken
     TObjSet &taken = objsByProps_[props];
@@ -133,7 +133,7 @@ bool AparentShapeDetector::probeEntry(const TObjId obj, const ShapeProps &props)
 void detectApparentShapes(TShapeList &dst, SymHeap &sh)
 {
     CL_BREAK_IF(!dst.empty());
-    AparentShapeDetector shapeDetector(sh, dst);
+    ApparentShapeDetector shapeDetector(sh, dst);
 
     // go through all potential shape container entries
     TObjList heapObjs;
