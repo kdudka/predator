@@ -39,6 +39,7 @@ add_library(sl SHARED
     intrange.cc
     plotenum.cc
     prototype.cc
+    shape.cc
     sigcatch.cc
     symabstract.cc
     symbin.cc
