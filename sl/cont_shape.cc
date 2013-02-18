@@ -41,14 +41,27 @@ class AparentShapeDetector {
         SymHeap                    &sh_;
         TShapeList                 &dstArray_;
         TObjsByProps                objsByProps_;
+
+        bool isFreeEnt(const TObjId obj, const ShapeProps &props);
 };
+
+bool AparentShapeDetector::isFreeEnt(const TObjId obj, const ShapeProps &props)
+{
+    const TObjsByProps::const_iterator it = objsByProps_.find(props);
+    if (it == objsByProps_.end())
+        return true;
+
+    const TObjSet &taken = it->second;
+    return !hasKey(taken, obj);
+}
 
 bool AparentShapeDetector::probeEntry(const TObjId obj, const ShapeProps &props)
 {
+    if (!this->isFreeEnt(obj, props))
+        return false;
+
     // TODO
     CL_BREAK_IF("please implement");
-    (void) obj;
-    (void) props;
     return false;
 }
 

@@ -804,6 +804,20 @@ inline bool operator!=(const BindingOff &off1, const BindingOff &off2)
     return !operator==(off1, off2);
 }
 
+/// lexicographical comparison of BindingOff, need for std::map
+inline bool operator<(const BindingOff &off1, const BindingOff &off2)
+{
+    if (off1.next < off2.next)
+        return true;
+    if (off2.next < off1.next)
+        return false;
+    if (off1.prev < off2.prev)
+        return true;
+    if (off2.prev < off1.prev)
+        return false;
+    return (off1.head < off2.head);
+}
+
 /// extension of SymHeapCore dealing with abstract objects (list segments etc.)
 class SymHeap: public SymHeapCore {
     public:

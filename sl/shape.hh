@@ -28,6 +28,16 @@ struct ShapeProps {
     BindingOff          bOff;
 };
 
+inline bool operator<(const ShapeProps &a, const ShapeProps &b)
+{
+    if (a.kind < b.kind)
+        return true;
+    if (b.kind < a.kind)
+        return false;
+
+    return a.bOff < b.bOff;
+}
+
 /// inductive definition of a container shape
 struct Shape {
     TObjId              entry;
