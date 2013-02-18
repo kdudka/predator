@@ -133,6 +133,7 @@ struct PlotData {
     std::ostream                       &out;
     const TObjSet                      &objs;
     const TValSet                      &values;
+    const TIdSet                       *pHighlight;
     int                                 last;
     TLiveFields                         liveFields;
     TFldSet                             lonelyFields;
@@ -142,15 +143,25 @@ struct PlotData {
             const SymHeap              &sh_,
             std::ostream               &out_,
             const TObjSet              &objs_,
-            const TValSet              &values_):
+            const TValSet              &values_,
+            const TIdSet               *pHighlight_):
         sh(const_cast<SymHeap &>(sh_)),
         out(out_),
         objs(objs_),
         values(values_),
+        pHighlight(pHighlight_),
         last(0)
     {
     }
 };
+
+template <typename TId>
+bool isHighlighted(const PlotData &plot, const TId id)
+{
+    const TIdSet *pSet = plot.pHighlight;
+    return pSet
+        && hasKey(pSet, static_cast<int>(id));
+}
 
 #define GEN_labelByCode(cst) case cst: return #cst
 
@@ -705,6 +716,10 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
             break;
     }
 
+    const char *bgColor = (isHighlighted(plot, obj))
+        ? "azure"
+        : "gray98";
+
     const std::string label = labelOfCompObj(sh, obj, /* showProps */ true);
 
     // open cluster
@@ -713,9 +728,9 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
         << "\" {\n\trank=same;\n\tlabel=" << SL_QUOTE(label)
         << ";\n\tcolor=" << color
         << ";\n\tfontcolor=" << color
-        << ";\n\tbgcolor=gray98;\n\tstyle=dashed;"
-        << "\n\tpenwidth=" << pw
-        << ";\n";
+        << ";\n\tbgcolor=" << bgColor
+        << ";\n\tpenwidth=" << pw
+        << ";\n\tstyle=dashed;\n";
 
     plotRawObject(plot, obj, color);
 
@@ -1251,7 +1266,8 @@ bool plotHeapCore(
         const struct cl_loc             *loc,
         const TObjSet                   &objs,
         const TValSet                   &vals,
-        std::string                     *pName = 0)
+        std::string                     *pName = 0,
+        const TIdSet                    *pHighlight = 0)
 {
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string plotName(pe->decorate(name));
@@ -1286,7 +1302,7 @@ bool plotHeapCore(
         CL_DEBUG("writing heap graph to '" << fileName << "'...");
 
     // initialize an instance of PlotData
-    PlotData plot(sh, out, objs, vals);
+    PlotData plot(sh, out, objs, vals, pHighlight);
 
     // do our stuff
     plotEverything(plot);
@@ -1318,7 +1334,8 @@ bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
         const struct cl_loc             *loc,
-        std::string                     *pName)
+        std::string                     *pName,
+        const TIdSet                    *pHighlight)
 {
     HeapCrawler crawler(sh);
 
@@ -1327,7 +1344,10 @@ bool plotHeap(
     BOOST_FOREACH(const TObjId obj, allObjs)
         crawler.digObj(obj);
 
-    return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals(), pName);
+    const TObjSet objs = crawler.objs();
+    const TValSet vals = crawler.vals();
+
+    return plotHeapCore(sh, name, loc, objs, vals, pName, pHighlight);
 }
 
 bool plotHeap(

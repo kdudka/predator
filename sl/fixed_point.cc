@@ -115,10 +115,19 @@ void plotInsn(PlotData &plot, const TInsn insn)
     const int cntHeaps = state.size();
     for (int i = cntHeaps - 1; 0 <= i; --i) {
         const SymHeap &sh = state[i];
+        const TShapeList &shapeList = contShapes[i];
+
+        TIdSet contShapeIds;
+        BOOST_FOREACH(const Shape &shape, shapeList) {
+            TObjSet contShapeObjs;
+            objSetByShape(&contShapeObjs, sh, shape);
+            BOOST_FOREACH(const TObjId obj, contShapeObjs)
+                contShapeIds.insert(static_cast<int>(obj));
+        }
 
         // plot the shape graph
         std::string shapeName;
-        plotHeap(sh, plot.name + "-sh", /* loc */ 0, &shapeName);
+        plotHeap(sh, plot.name + "-sh", /* loc */ 0, &shapeName, &contShapeIds);
 
         // plot the trace graph
         std::string traceName;
@@ -128,7 +137,7 @@ void plotInsn(PlotData &plot, const TInsn insn)
         plot.out << "subgraph \"cluster" << shapeName
             << "\" {\n\tlabel=\"#" << i << "\"\n";
 
-        if (!contShapes[i].empty())
+        if (!shapeList.empty())
             plot.out << "\tcolor=red\n\tpenwidth=3.0\n";
 
         // plot the link to shape
