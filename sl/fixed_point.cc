@@ -112,8 +112,8 @@ void plotInsn(PlotData &plot, const TInsn insn)
     ContShape::TShapeListByHeapIdx contShapes;
     ContShape::detectContShapes(&contShapes, state);
 
-    const unsigned cntHeaps = state.size();
-    for (unsigned i = 0; i < cntHeaps; ++i) {
+    const int cntHeaps = state.size();
+    for (int i = cntHeaps - 1; 0 <= i; --i) {
         const SymHeap &sh = state[i];
 
         // plot the shape graph
@@ -127,6 +127,9 @@ void plotInsn(PlotData &plot, const TInsn insn)
         // open cluster
         plot.out << "subgraph \"cluster" << shapeName
             << "\" {\n\tlabel=\"#" << i << "\"\n";
+
+        if (!contShapes[i].empty())
+            plot.out << "\tcolor=red\n\tpenwidth=3.0\n";
 
         // plot the link to shape
         plot.out << QUOT(shapeName)

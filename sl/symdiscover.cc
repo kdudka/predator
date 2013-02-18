@@ -218,6 +218,10 @@ bool canMergeObjWithNextObj(
         const ShapeProps           &props,
         TObjId                     *pNextObj)
 {
+    if (!sh.isValid(obj) || !isOnHeap(sh.objStorClass(obj)))
+        // neither the starting point is valid
+        return false;
+
     if (!matchSegBinding(sh, obj, props))
         // binding mismatch
         return false;

@@ -23,6 +23,8 @@
 #include "symstate.hh"
 #include "symutil.hh"
 
+#include <cl/cl_msg.hh>
+
 namespace ContShape {
 
 class AparentShapeDetector {
@@ -60,9 +62,72 @@ bool AparentShapeDetector::probeEntry(const TObjId obj, const ShapeProps &props)
     if (!this->isFreeEnt(obj, props))
         return false;
 
-    // TODO
-    CL_BREAK_IF("please implement");
-    return false;
+    TObjSet seen;
+
+    // seek beg
+    TObjId beg = obj;
+    for (;;) {
+        seen.insert(beg);
+        TObjId prev = nextObj(sh_, beg, props.bOff.prev);
+        if (!canMergeObjWithNextObj(sh_, prev, props))
+            break;
+
+        if (hasKey(seen, prev))
+            // loop detected (we intentionally do not use insertOnce() here)
+            break;
+
+        beg = prev;
+    }
+
+    // seek end
+    TObjId end = obj;
+    for (;;) {
+        TObjId next = nextObj(sh_, end, props.bOff.next);
+        if (!canMergeObjWithNextObj(sh_, end, props))
+            break;
+
+        if (hasKey(seen, next))
+            // loop detected (we intentionally do not use insertOnce() here)
+            break;
+
+        end = next;
+        seen.insert(end);
+    }
+
+    // check the end-points
+    const TValId valPrev = valOfPtr(sh_, beg, props.bOff.prev);
+    const TValId valNext = valOfPtr(sh_, end, props.bOff.next);
+    if (valPrev != valNext)
+        // terminator mismatch
+        return false;
+
+    if (VAL_NULL != valNext)
+        CL_WARN("AparentShapeDetector uses a non-NULL terminator");
+
+    // check the length
+    const unsigned len = seen.size();
+    CL_DEBUG("AparentShapeDetector found a new container shape, len = " << len);
+
+    // mark all used objects as taken
+    TObjSet &taken = objsByProps_[props];
+    if (taken.empty())
+        taken.swap(seen);
+    else {
+        CL_BREAK_IF("please check this branch with a debugger");
+        BOOST_FOREACH(const TObjId seenObj, seen)
+            taken.insert(seenObj);
+    }
+
+    // insert the shape in the destination array
+    const Shape shape = {
+        /* entry  */ beg,
+        /* props  */ props,
+        /* length */ len
+    };
+    dstArray_.push_back(shape);
+
+    // found a new container shape
+    return true;
 }
 
 void detectApparentShapes(TShapeList &dst, SymHeap &sh)
