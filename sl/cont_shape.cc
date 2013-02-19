@@ -252,12 +252,92 @@ bool ImpliedShapeDetector::indexShape(SymHeap &sh, const Shape &shape)
     return true;
 }
 
+bool detectImpliedSingleNode(
+        Shape                      *pDst,
+        SymHeap                    &sh,
+        const ShapePattern         &sp,
+        const TValId                valHead)
+{
+    const TOffset offHead = sh.valOffset(valHead);
+    if (offHead != sp.props.bOff.head)
+        // head offset mismatch
+        return false;
+
+    const TObjId obj = sh.objByAddr(valHead);
+    if (!sh.isValid(obj) || !isOnHeap(sh.objStorClass(obj)))
+        // not a valid heap object
+        return false;
+
+    const TSizeRange size = sh.objSize(obj);
+    if (size != sp.size)
+        // size mismatch
+        return false;
+
+    const TObjType type = sh.objEstimatedType(obj);
+    if (type && sp.type && (*type != *sp.type))
+        // type mismatch
+        return false;
+
+    const TValId valNext = valOfPtr(sh, obj, sp.props.bOff.next);
+    if (VAL_NULL != valNext)
+        // next pointer mismatch
+        return false;
+
+    const TValId valPrev = valOfPtr(sh, obj, sp.props.bOff.prev);
+    if (VAL_NULL != valPrev)
+        // prev pointer mismatch
+        return false;
+
+    pDst->entry  = obj;
+    pDst->props  = sp.props;
+    pDst->length = 1U;
+
+    CL_DEBUG("ImpliedShapeDetector matches a region as container shape");
+    return true;
+}
+
+bool detectImpliedShape(Shape *pDst, SymHeap &sh, const ShapePattern &sp)
+{
+    TValId valHead = VAL_INVALID;
+
+    BOOST_FOREACH(const TPointer &ptr, sp.headPtrs) {
+        const CVar &var = ptr.first;
+        const TOffset off = ptr.second;
+
+        const TObjId obj = sh.regionByVar(var, /* createIfNeeded */ false);
+        if (OBJ_INVALID == obj)
+            // missing program variable
+            return false;
+
+        const TValId val = valOfPtr(sh, obj, off);
+        CL_BREAK_IF(VAL_INVALID == val);
+
+        if (VAL_INVALID == valHead)
+            valHead = val;
+        else if (val != valHead)
+            // head value mismatch
+            return false;
+    }
+
+    if (VAL_NULL != valHead)
+        return detectImpliedSingleNode(pDst, sh, sp, valHead);
+
+    // empty list
+    pDst->entry  = OBJ_INVALID;
+    pDst->props  = sp.props;
+    pDst->length = 0U;
+
+    CL_DEBUG("ImpliedShapeDetector matches an empty list as container shape");
+    return true;
+}
+
 void ImpliedShapeDetector::appendImpliedShapes(TShapeList *pDst, SymHeap &sh)
 {
-    // TODO
-    CL_BREAK_IF("please implement");
-    (void) pDst;
-    (void) sh;
+    BOOST_FOREACH(const ShapePattern &sp, plist_) {
+        Shape shape;
+        if (detectImpliedShape(&shape, sh, sp))
+            pDst->push_back(shape);
+    }
 }
 
 struct DetectionCtx {
