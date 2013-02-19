@@ -43,3 +43,26 @@ void objSetByShape(TObjSet *pDst, const SymHeap &sh, const Shape &shape)
         obj = nextObj(shWritable, obj, offNext);
     }
 }
+
+TObjId lastObjOfShape(const SymHeap &sh, const Shape &shape)
+{
+    const ShapeProps &props = shape.props;
+    const EObjKind kind = props.kind;
+    switch (kind) {
+        case OK_SLS:
+        case OK_DLS:
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of lastObjOfShape()");
+    }
+
+    const TOffset offNext = props.bOff.next;
+    SymHeap &shWritable = const_cast<SymHeap &>(sh);
+
+    TObjId obj = shape.entry;
+    for (unsigned i = 1U; i < shape.length; ++i)
+        obj = nextObj(shWritable, obj, offNext);
+
+    return obj;
+}

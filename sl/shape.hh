@@ -54,4 +54,7 @@ typedef std::vector<Shape>                  TShapeList;
 /// return the set of objects that the given shape consists of
 void objSetByShape(TObjSet *pDst, const SymHeap &sh, const Shape &shape);
 
+/// return the last object (the opposite of entry) of the given shape
+TObjId lastObjOfShape(const SymHeap &sh, const Shape &shape);
+
 #endif /* H_GUARD_SHAPE_H */
