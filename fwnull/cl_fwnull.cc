@@ -53,15 +53,19 @@ enum EVarState {
     VS_NOT_NULL_IFF             ///< if true, peer is not-NULL and vice versa
 };
 
+typedef int                                             TVar;
 typedef const struct cl_loc                            *TLoc;
 typedef const struct cl_operand                         TOperand;
+typedef const CodeStorage::TOperandList                 TOperandList;
 typedef const CodeStorage::TTargetList                  TTargetList;
+typedef const CodeStorage::Block                       *TBlock;
+typedef const CodeStorage::Insn                        *TInsn;
 
 /// state of variable (scope of its validity is basic block)
 struct VarState {
     EVarState           code;   ///< current state (valid per current block)
     TLoc                loc;    ///< location where the state became valid
-    int /* uid */       peer;   ///< used only for VS_NULL_IFF, VS_NOT_NULL_IFF
+    TVar                peer;   ///< used only for VS_NULL_IFF, VS_NOT_NULL_IFF
 
     VarState():
         code(VS_UNDEF),
@@ -71,12 +75,12 @@ struct VarState {
     }
 };
 
+typedef std::map<TVar, VarState>                        TState;
+
 /// state of computation at function level
 struct Data {
-    typedef const CodeStorage::Block                   *TBlock;
     typedef std::queue<TBlock>                          TSched;
     typedef std::set<TBlock>                            TSchedLookup;
-    typedef std::map<int /* var uid */, VarState>       TState;
     typedef std::map<TBlock, TState>                    TStateMap;
 
     TSched          todo;       ///< block scheduled for processing
@@ -90,11 +94,11 @@ struct Data {
  * @param loc location info of the current instruction
  */
 void handleVarDeref(
-        Data::TState               &state,
+        TState                     &state,
         TOperand                   *op,
         const TLoc                  loc)
 {
-    const int uid = varIdFromOperand(op);
+    const TVar uid = varIdFromOperand(op);
     VarState &vs = state[uid];
     const EVarState code = vs.code;
     switch (code) {
@@ -133,7 +137,7 @@ void handleVarDeref(
  * @param state state valid per current instruction
  * @param insn instruction you want to look into
  */
-void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
+void handleDerefs(TState &state, const TInsn insn)
 {
     // for each operand
     BOOST_FOREACH(TOperand &op, insn->operands) {
@@ -208,7 +212,7 @@ bool mergeValues(VarState &dst, const VarState &src)
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
+void handleInsnUnop(TState &state, const TInsn insn)
 {
     handleDerefs(state, insn);
 
@@ -218,7 +222,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
         return;
 
     // resolve state of the variable
-    const int uid = varIdFromOperand(&dst);
+    const TVar uid = varIdFromOperand(&dst);
     VarState &vs = state[uid];
 
     const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn->subCode);
@@ -258,7 +262,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
     }
 
     // single assignment ... let's just propagate the value
-    const int uidSrc = varIdFromOperand(&src);
+    const TVar uidSrc = varIdFromOperand(&src);
     mergeValues(vs, state[uidSrc]);
 }
 
@@ -271,7 +275,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
  * @param neg if true, we deal with !=; == otherwise
  */
 bool handleInsnCmpNull(
-        Data::TState               &state,
+        TState                     &state,
         VarState                   &vsDst,
         TOperand                   *src,
         const TLoc                  loc,
@@ -285,7 +289,7 @@ bool handleInsnCmpNull(
         // we're interested only in pointers comparison here
         return false;
 
-    const int uidSrc = varIdFromOperand(src);
+    const TVar uidSrc = varIdFromOperand(src);
     const VarState &vsSrc = state[uidSrc];
     const EVarState code = vsSrc.code;
     switch (code) {
@@ -336,9 +340,9 @@ we_know:
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn)
+void handleInsnBinop(TState &state, const TInsn insn)
 {
-    const CodeStorage::TOperandList &opList = insn->operands;
+    const TOperandList &opList = insn->operands;
 
 #ifndef NDEBUG
     // binary instructions are said to have no dereferences
@@ -353,7 +357,7 @@ void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn)
     // resolve operands
     TOperand &dst = opList[0];
     CL_BREAK_IF(dst.accessor);
-    const int uidDst = varIdFromOperand(&dst);
+    const TVar uidDst = varIdFromOperand(&dst);
     VarState &vs = state[uidDst];
 
     TOperand &src1 = opList[1];
@@ -404,7 +408,7 @@ who_knows:
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn)
+void handleInsnCall(TState &state, const TInsn insn)
 {
     TOperand &dst = insn->operands[0];
     if (dst.accessor)
@@ -415,7 +419,7 @@ void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn)
         return;
 
     // abstract out the return value
-    const int uid = varIdFromOperand(&dst);
+    const TVar uid = varIdFromOperand(&dst);
     VarState &vs = state[uid];
     vs.code = VS_UNKNOWN;
 }
@@ -425,8 +429,9 @@ void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn)
  * @param state state valid per current instruction
  * @param opList list of operands to check for direct references
  */
-void treatRefAsSideEffect(Data::TState                          &state,
-                          const CodeStorage::TOperandList       &opList)
+void treatRefAsSideEffect(
+        TState                     &state,
+        TOperandList               &opList)
 {
     // for each operand
     BOOST_FOREACH(TOperand &op, opList) {
@@ -440,7 +445,7 @@ void treatRefAsSideEffect(Data::TState                          &state,
             continue;
 
         // kill any up to now reasoning about the variable
-        const int uid = varIdFromOperand(&op);
+        const TVar uid = varIdFromOperand(&op);
         state[uid].code = VS_UNKNOWN;
     }
 }
@@ -450,7 +455,7 @@ void treatRefAsSideEffect(Data::TState                          &state,
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn)
+void handleInsnNonterm(TState &state, const TInsn insn)
 {
     treatRefAsSideEffect(state, insn->operands);
 
@@ -484,12 +489,12 @@ void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn)
  * @param block block that determines the target state that is about to be
  * updated
  */
-void updateState(Data                           &data,
-                 const Data::TState             &state,
-                 const CodeStorage::Block       *block)
+void updateState(
+        Data                       &data,
+        const TState               &state,
+        const TBlock                block)
 {
     // target state
-    typedef Data::TState TState;
     TState &dstState = data.stateMap[block];
 
     // for each variable
@@ -510,7 +515,7 @@ void updateState(Data                           &data,
  * @param uid CodeStorage uid of the branch-by variable
  * @param val true in 'then' branch, false in 'else' branch
  */
-void replaceInBranch(Data::TState &state, int uid, bool val)
+void replaceInBranch(TState &state, const TVar uid, bool val)
 {
     VarState &vs = state[uid];
     bool isNull;
@@ -554,16 +559,16 @@ void replaceInBranch(Data::TState &state, int uid, bool val)
  */
 void handleInsnCondNondet(
         Data                       &data,
-        const Data::TState         &state,
+        const TState               &state,
         TOperand                   &cond,
         TTargetList                &targets)
 {
     // local copies of the state
-    Data::TState stateThen(state);
-    Data::TState stateElse(state);
+    TState stateThen(state);
+    TState stateElse(state);
 
     // reflect the value of branch-by variable (if possible)
-    int uid = varIdFromOperand(&cond);
+    const TVar uid = varIdFromOperand(&cond);
     replaceInBranch(stateThen, uid, true);
     replaceInBranch(stateElse, uid, false);
 
@@ -577,14 +582,15 @@ void handleInsnCondNondet(
  * @param state state valid per current instruction
  * @param insn conditional instruction you want to process
  */
-void handleInsnCond(Data                                    &data,
-                    const Data::TState                      &state,
-                    const CodeStorage::Insn                 *insn)
+void handleInsnCond(
+        Data                       &data,
+        const TState               &state,
+        const TInsn                 insn)
 {
     // resolve branch-by operand
     TOperand &cond = insn->operands[0];
-    const int uid = varIdFromOperand(&cond);
-    Data::TState::const_iterator it = state.find(uid);
+    const TVar uid = varIdFromOperand(&cond);
+    TState::const_iterator it = state.find(uid);
     CL_BREAK_IF(state.end() == it);
     const VarState &vs = it->second;
 
@@ -611,9 +617,10 @@ void handleInsnCond(Data                                    &data,
  * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnTerm(Data                            &data,
-                    const Data::TState              &state,
-                    const CodeStorage::Insn         *insn)
+void handleInsnTerm(
+        Data                       &data,
+        const TState               &state,
+        const TInsn                 insn)
 {
     const enum cl_insn_e code = insn->code;
     switch (code) {
@@ -636,11 +643,11 @@ void handleInsnTerm(Data                            &data,
     }
 }
 
-void handleBlock(Data &data, Data::TBlock bb)
+void handleBlock(Data &data, const TBlock bb)
 {
     // go through the sequence of instructions of the current basic block
-    Data::TState next = data.stateMap[bb];
-    BOOST_FOREACH(const CodeStorage::Insn *insn, *bb) {
+    TState next = data.stateMap[bb];
+    BOOST_FOREACH(const TInsn insn, *bb) {
         if (cl_is_term_insn(insn->code))
             // terminal instruction
             handleInsnTerm(data, next, insn);
@@ -660,11 +667,11 @@ void handleFnc(const CodeStorage::Fnc &fnc)
     const ControlFlow &cfg = fnc.cfg;
 
     // block-level scheduler
-    Data::TBlock bb = cfg.entry();
+    TBlock bb = cfg.entry();
     todo.push(bb);
     data.todoLookup.insert(bb);
     while (!todo.empty()) {
-        Data::TBlock bb = todo.front();
+        bb = todo.front();
         todo.pop();
         if (1 != data.todoLookup.erase(bb))
             CL_BREAK_IF("BlockScheduler malfunction");
