@@ -232,7 +232,7 @@ bool ImpliedShapeDetector::indexShape(SymHeap &sh, const Shape &shape)
             continue;
 
         const CVar var = sh.cVarByObject(obj);
-        const TPointer ptr(var, off);
+        const TPointer ptr(var, fld.offset());
         headPtrs.insert(ptr);
     }
 
