@@ -53,15 +53,17 @@ enum EVarState {
     VS_NOT_NULL_IFF             ///< if true, peer is not-NULL and vice versa
 };
 
+typedef const struct cl_loc                            *TLoc;
+
 /// state of variable (scope of its validity is basic block)
 struct VarState {
     EVarState           code;   ///< current state (valid per current block)
-    const struct cl_loc *lw;    ///< location where the state became valid
+    TLoc                loc;    ///< location where the state became valid
     int /* uid */       peer;   ///< used only for VS_NULL_IFF, VS_NOT_NULL_IFF
 
     VarState():
         code(VS_UNDEF),
-        lw(0),
+        loc(0),
         peer(-1)
     {
     }
@@ -83,11 +85,12 @@ struct Data {
 /**
  * @param state state valid per current (dereference) instruction
  * @param op either source or destination operand that contains a dereference
- * @param lw location info of the current instruction
+ * @param loc location info of the current instruction
  */
-void handleVarDeref(Data::TState                        &state,
-                    const struct cl_operand             &op,
-                    const struct cl_loc                 *lw)
+void handleVarDeref(
+        Data::TState               &state,
+        const struct cl_operand    &op,
+        const TLoc                  loc)
 {
     const int uid = varIdFromOperand(&op);
     VarState &vs = state[uid];
@@ -96,7 +99,7 @@ void handleVarDeref(Data::TState                        &state,
         case VS_UNDEF:
         case VS_UNKNOWN:
             vs.code = VS_DEREF;
-            vs.lw   = lw;
+            vs.loc  = loc;
             // fall through!
 
         case VS_NOT_NULL:
@@ -105,17 +108,17 @@ void handleVarDeref(Data::TState                        &state,
             return;
 
         case VS_NULL:
-            CL_ERROR_MSG(lw, "dereference of NULL value");
-            CL_NOTE_MSG(vs.lw, "the NULL value comes from here");
+            CL_ERROR_MSG(loc, "dereference of NULL value");
+            CL_NOTE_MSG(vs.loc, "the NULL value comes from here");
             return;
 
         case VS_NULL_DEDUCED:
-            CL_ERROR_MSG(lw, "dereference of NULL value");
-            CL_NOTE_MSG(vs.lw, "the condition seems to be used incorrectly");
+            CL_ERROR_MSG(loc, "dereference of NULL value");
+            CL_NOTE_MSG(vs.loc, "the condition seems to be used incorrectly");
 
         case VS_MIGHT_BE_NULL:
-            CL_WARN_MSG(lw, "dereference of a value that might be NULL");
-            CL_NOTE_MSG(vs.lw, "the same value was compared with NULL here");
+            CL_WARN_MSG(loc, "dereference of a value that might be NULL");
+            CL_NOTE_MSG(vs.loc, "the same value was compared with NULL here");
             return;
 
         default:
@@ -230,7 +233,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
     if (seekRefAccessor(ac)) {
         // assignment of address of an object implies not-NULL value
         vs.code = VS_NOT_NULL;
-        vs.lw   = &insn->loc;
+        vs.loc  = &insn->loc;
         return;
     }
 
@@ -248,7 +251,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
 
         // looks like assignment of NULL to a variable
         vs.code = VS_NULL;
-        vs.lw   = &insn->loc;
+        vs.loc  = &insn->loc;
         return;
     }
 
@@ -262,14 +265,15 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
  * @param state state valid per current instruction
  * @param vsDst reference to state of destination variable
  * @param src the operand that is not NULL
- * @param lw location info of the current instruction
+ * @param loc location info of the current instruction
  * @param neg if true, we deal with !=; == otherwise
  */
-bool handleInsnCmpNull(Data::TState                 &state,
-                       VarState                     &vsDst,
-                       const struct cl_operand      *src,
-                       const struct cl_loc          *lw,
-                       bool                         neg)
+bool handleInsnCmpNull(
+        Data::TState               &state,
+        VarState                   &vsDst,
+        const struct cl_operand    *src,
+        const TLoc                  loc,
+        bool                        neg)
 {
     if (src->accessor)
         // we're interested only in direct manipulation of variables here
@@ -298,8 +302,8 @@ bool handleInsnCmpNull(Data::TState                 &state,
             break;
 
         case VS_DEREF:
-            CL_WARN_MSG(lw, "comparing pointer with NULL");
-            CL_NOTE_MSG(vsSrc.lw, "the pointer was already dereferenced here");
+            CL_WARN_MSG(loc, "comparing pointer with NULL");
+            CL_NOTE_MSG(vsSrc.loc, "the pointer was already dereferenced here");
             break;
 
         default:
@@ -312,7 +316,7 @@ bool handleInsnCmpNull(Data::TState                 &state,
         : VS_NULL_IFF;
 
     vsDst.peer = uidSrc;
-    vsDst.lw   = lw;
+    vsDst.loc  = loc;
     return true;
 
 we_know:
@@ -321,7 +325,7 @@ we_know:
         ? VS_TRUE
         : VS_FALSE;
 
-    vsDst.lw = lw;
+    vsDst.loc = loc;
     return true;
 }
 
@@ -533,7 +537,7 @@ void replaceInBranch(Data::TState &state, int uid, bool val)
 
     // update state of the pointer accordingly
     VarState &vsPeer = state[vs.peer];
-    vsPeer.lw = vs.lw;
+    vsPeer.loc = vs.loc;
     vsPeer.code = (isNull)
         ? VS_NULL_DEDUCED
         : VS_NOT_NULL_DEDUCED;
@@ -681,8 +685,8 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *)
         if (!isDefined(fnc))
             continue;
 
-        CL_DEBUG_MSG(&fnc.def.data.cst.data.cst_fnc.loc, "analyzing function "
-                << nameOf(fnc) << "()...");
+        const struct cl_loc *loc = locationOf(fnc);
+        CL_DEBUG_MSG(loc, "analyzing function " << nameOf(fnc) << "()...");
 
         handleFnc(fnc);
     }
