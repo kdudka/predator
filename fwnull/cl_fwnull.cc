@@ -54,6 +54,8 @@ enum EVarState {
 };
 
 typedef const struct cl_loc                            *TLoc;
+typedef const struct cl_operand                         TOperand;
+typedef const CodeStorage::TTargetList                  TTargetList;
 
 /// state of variable (scope of its validity is basic block)
 struct VarState {
@@ -89,10 +91,10 @@ struct Data {
  */
 void handleVarDeref(
         Data::TState               &state,
-        const struct cl_operand    &op,
+        TOperand                   *op,
         const TLoc                  loc)
 {
-    const int uid = varIdFromOperand(&op);
+    const int uid = varIdFromOperand(op);
     VarState &vs = state[uid];
     const EVarState code = vs.code;
     switch (code) {
@@ -134,14 +136,14 @@ void handleVarDeref(
 void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
 {
     // for each operand
-    BOOST_FOREACH(const struct cl_operand &op, insn->operands) {
+    BOOST_FOREACH(TOperand &op, insn->operands) {
         const struct cl_accessor *ac = op.accessor;
         if (!ac || ac->code != CL_ACCESSOR_DEREF || seekRefAccessor(ac))
             // no dereference here
             continue;
 
         CL_BREAK_IF(CL_OPERAND_VAR != op.code);
-        handleVarDeref(state, op, &insn->loc);
+        handleVarDeref(state, &op, &insn->loc);
     }
 }
 
@@ -210,7 +212,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
 {
     handleDerefs(state, insn);
 
-    const struct cl_operand &dst = insn->operands[0];
+    TOperand &dst = insn->operands[0];
     if (CL_OPERAND_VOID == dst.code || dst.accessor)
         // we're interested only in direct manipulation of variables here
         return;
@@ -227,7 +229,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
     }
 
     // resolve source operand of the instruction
-    const struct cl_operand &src = insn->operands[1];
+    TOperand &src = insn->operands[1];
     const struct cl_accessor *ac = src.accessor;
 
     if (seekRefAccessor(ac)) {
@@ -271,7 +273,7 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
 bool handleInsnCmpNull(
         Data::TState               &state,
         VarState                   &vsDst,
-        const struct cl_operand    *src,
+        TOperand                   *src,
         const TLoc                  loc,
         bool                        neg)
 {
@@ -341,7 +343,7 @@ void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn)
 #ifndef NDEBUG
     // binary instructions are said to have no dereferences
     // (better to check anyway)
-    BOOST_FOREACH(const struct cl_operand &op, opList) {
+    BOOST_FOREACH(TOperand &op, opList) {
         const struct cl_accessor *ac = op.accessor;
         if (ac && ac->code == CL_ACCESSOR_DEREF)
             CL_TRAP;
@@ -349,14 +351,14 @@ void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn)
 #endif
 
     // resolve operands
-    const struct cl_operand &dst = opList[0];
+    TOperand &dst = opList[0];
     CL_BREAK_IF(dst.accessor);
     const int uidDst = varIdFromOperand(&dst);
     VarState &vs = state[uidDst];
 
-    const struct cl_operand &src1 = opList[1];
-    const struct cl_operand &src2 = opList[2];
-    const struct cl_operand *src;
+    TOperand &src1 = opList[1];
+    TOperand &src2 = opList[2];
+    TOperand *src;
 
     // now check the actual type of the binary instruction
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insn->subCode);
@@ -404,7 +406,7 @@ who_knows:
  */
 void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn)
 {
-    const struct cl_operand &dst = insn->operands[0];
+    TOperand &dst = insn->operands[0];
     if (dst.accessor)
         // we're interested only in direct manipulation of variables here
         return;
@@ -427,7 +429,7 @@ void treatRefAsSideEffect(Data::TState                          &state,
                           const CodeStorage::TOperandList       &opList)
 {
     // for each operand
-    BOOST_FOREACH(const struct cl_operand &op, opList) {
+    BOOST_FOREACH(TOperand &op, opList) {
         if (CL_OPERAND_VAR != op.code)
             // not a variable
             continue;
@@ -550,10 +552,11 @@ void replaceInBranch(Data::TState &state, int uid, bool val)
  * @param cond branch-by variable given as operand
  * @param targets then/else targets of the condition
  */
-void handleInsnCondNondet(Data                              &data,
-                          const Data::TState                &state,
-                          const struct cl_operand           &cond,
-                          const CodeStorage::TTargetList    &targets)
+void handleInsnCondNondet(
+        Data                       &data,
+        const Data::TState         &state,
+        TOperand                   &cond,
+        TTargetList                &targets)
 {
     // local copies of the state
     Data::TState stateThen(state);
@@ -579,7 +582,7 @@ void handleInsnCond(Data                                    &data,
                     const CodeStorage::Insn                 *insn)
 {
     // resolve branch-by operand
-    const struct cl_operand &cond = insn->operands[0];
+    TOperand &cond = insn->operands[0];
     const int uid = varIdFromOperand(&cond);
     Data::TState::const_iterator it = state.find(uid);
     CL_BREAK_IF(state.end() == it);
