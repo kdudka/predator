@@ -87,6 +87,12 @@ struct Data {
     TSchedLookup    todoLookup; ///< block scheduled for processing
     TStateMap       stateMap;   ///< holds states of all vars per each block
     TState          localState; ///< holds intermediate state between insns
+    bool            silent;     ///< if true, do not print diagnostic messages
+
+    Data():
+        silent(true)
+    {
+    }
 };
 
 /**
@@ -114,6 +120,14 @@ void handleVarDeref(
         case VS_DEREF:
             return;
 
+        default:
+            break;
+    }
+
+    if (data.silent)
+        return;
+
+    switch (code) {
         case VS_NULL:
             CL_ERROR_MSG(loc, "dereference of NULL value");
             CL_NOTE_MSG(vs.loc, "the NULL value comes from here");
@@ -129,7 +143,7 @@ void handleVarDeref(
             return;
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("invalid call of handleVarDeref()");
     }
 }
 
@@ -309,12 +323,14 @@ bool handleInsnCmpNull(
             break;
 
         case VS_DEREF:
+            if (data.silent)
+                break;
             CL_WARN_MSG(loc, "comparing pointer with NULL");
             CL_NOTE_MSG(vsSrc.loc, "the pointer was already dereferenced here");
             break;
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("invalid call of handleInsnCmpNull()");
     }
 
     // now store the relation among the pointer and the result of the comparison
@@ -655,11 +671,9 @@ void handleBlock(Data &data, const TBlock bb)
 
 void handleFnc(const CodeStorage::Fnc &fnc)
 {
-    using namespace CodeStorage;
-
     Data data;
     Data::TSched &todo = data.todo;
-    const ControlFlow &cfg = fnc.cfg;
+    const CodeStorage::ControlFlow &cfg = fnc.cfg;
 
     // block-level scheduler
     TBlock bb = cfg.entry();
@@ -673,10 +687,15 @@ void handleFnc(const CodeStorage::Fnc &fnc)
 
         // process one basic block
         CL_BREAK_IF(!bb || !bb->size());
-        const Insn *insn = bb->operator[](0);
+        const TInsn insn = bb->front();
         CL_DEBUG_MSG(&insn->loc, "analyzing block " << bb->name() << "...");
         handleBlock(data, bb);
     }
+
+    // finally report all errors/warning over the already computed fixed-point
+    data.silent = false;
+    BOOST_FOREACH(const TBlock bb, cfg)
+        handleBlock(data, bb);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
