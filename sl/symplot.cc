@@ -717,7 +717,7 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
     }
 
     const char *bgColor = (isHighlighted(plot, obj))
-        ? "azure"
+        ? "azure2"
         : "gray98";
 
     const std::string label = labelOfCompObj(sh, obj, /* showProps */ true);

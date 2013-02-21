@@ -322,6 +322,7 @@ bool detectImpliedShape(Shape *pDst, SymHeap &sh, const ShapePattern &sp)
     if (VAL_NULL != valHead)
         return detectImpliedSingleNode(pDst, sh, sp, valHead);
 
+#if 0
     // empty list
     pDst->entry  = OBJ_INVALID;
     pDst->props  = sp.props;
@@ -329,6 +330,9 @@ bool detectImpliedShape(Shape *pDst, SymHeap &sh, const ShapePattern &sp)
 
     CL_DEBUG("ImpliedShapeDetector matches an empty list as container shape");
     return true;
+#else
+    return false;
+#endif
 }
 
 void ImpliedShapeDetector::appendImpliedShapes(TShapeList *pDst, SymHeap &sh)
