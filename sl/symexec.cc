@@ -1260,6 +1260,7 @@ void execTopCall(
         const struct cl_loc *loc = locationOf(fnc);
         CL_WARN_MSG(loc, "symbolic execution terminates prematurely");
         CL_NOTE_MSG(loc, e.what());
+        throw;
     }
 }
 

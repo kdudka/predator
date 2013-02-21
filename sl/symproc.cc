@@ -354,7 +354,7 @@ TObjId SymProc::objByVar(const CVar &cv)
         nullify = true;
 #else
         // do not initialize static variables
-        return at;
+        return reg;
 #endif
 
     bool needInit = !var.initials.empty();
