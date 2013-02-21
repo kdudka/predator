@@ -104,7 +104,7 @@ void plotInsn(PlotData &plot, const TInsn insn)
     plot.out << "subgraph \"cluster" << insn << "\" {\n\tlabel=\"\"\n";
 
     // plot the root node
-    plot.out << INSN(insn) << "[label=" << QUOT(*insn) << ", shape=box];\n";
+    plot.out << INSN(insn) << " [label=" << QUOT(*insn) << ", shape=box];\n";
 
     const SymState &state = plot.stateByInsn[insn];
 
@@ -129,27 +129,14 @@ void plotInsn(PlotData &plot, const TInsn insn)
         std::string shapeName;
         plotHeap(sh, plot.name + "-sh", /* loc */ 0, &shapeName, &contShapeIds);
 
-        // plot the trace graph
-        std::string traceName;
-        plotTrace(sh.traceNode(), plot.name + "-tr", &traceName);
-
-        // open cluster
-        plot.out << "subgraph \"cluster" << shapeName
-            << "\" {\n\tlabel=\"#" << i << "\"\n";
+        // plot the link to shape
+        plot.out << QUOT("sh" << &sh) << " [label=\"sh #" << i
+            << "\", URL=" << DOT_LINK(shapeName);
 
         if (!shapeList.empty())
-            plot.out << "\tcolor=red\n\tpenwidth=3.0\n";
+            plot.out << ", color=red, penwidth=3.0";
 
-        // plot the link to shape
-        plot.out << QUOT(shapeName)
-            << "[label=\"sh\", URL=" << DOT_LINK(shapeName) << "];\n";
-
-        // plot the link to trace
-        plot.out << QUOT(traceName)
-            << "[label=\"tr\", URL=" << DOT_LINK(traceName) << "];\n";
-
-        // close cluster
-        plot.out << "}\n";
+        plot.out << "];\n";
     }
 
     // close cluster
@@ -165,7 +152,7 @@ void plotInsn(PlotData &plot, const TInsn insn)
             label = (!i) ? "T" : "F";
 
         plot.out << INSN(insn) << " -> " << INSN(bb->front())
-            << "[label=" << QUOT(label) << "];\n";
+            << " [label=" << QUOT(label) << "];\n";
     }
 }
 
