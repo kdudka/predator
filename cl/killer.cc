@@ -81,15 +81,14 @@ struct Data {
     TAliasMap                               derefAliases;
 
     Data(TStorRef stor_):
-        stor(stor_)
+        stor(stor_),
+        fnc(0)
     {
     }
 };
 
 struct VarData {
     const Var  *v;
-    bool        dst;
-    bool        fieldOfComp;
 };
 
 /**

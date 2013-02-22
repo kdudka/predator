@@ -231,6 +231,7 @@ struct SymCallCtx::Private {
     void assignReturnValue(SymHeap &sh);
     void destroyStackFrame(SymHeap &sh);
 
+    // cppcheck-suppress uninitMemberVar
     Private(SymCallCache::Private *cd_):
         cd(cd_),
         fnc(0),

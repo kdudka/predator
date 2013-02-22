@@ -46,10 +46,6 @@ typedef const struct cl_operand            &TOp;
 
 
 struct PTCheckCtx {
-    struct {
-        int FICSPhases;
-    } config;
-
     bool                expect_death;
     TStorage            stor;
     TFnc                fnc;
@@ -59,7 +55,6 @@ struct PTCheckCtx {
         stor(stor_),
         fnc(0)
     {
-        memset(&config, 0, sizeof(config));
     }
 };
 

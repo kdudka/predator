@@ -22,6 +22,9 @@ enable_testing()
 
 include("../build-aux/common.cmake")
 
+# suppress an unnecessary warning with gcc-4.4.x
+ADD_CXX_ONLY_FLAG("W_NO_INVALID_OFFSETOF" "-Wno-invalid-offsetof")
+
 option(CL_DEBUG "Set to ON to enable debugging support" OFF)
 if(CL_DEBUG)
     add_definitions("-O0 -g")

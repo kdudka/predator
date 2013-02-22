@@ -18,10 +18,10 @@
  */
 
 #include "util.hh"
-#include "cl/clutil.hh"
 #include "worklist.hh"
 #include "builtins.hh"
 
+#include <cl/clutil.hh>
 #include <cl/storage.hh>
 
 #include "clplot.hh"
@@ -652,7 +652,7 @@ bool joinTgtVisited(
 
 RetVal bindHeap(BuildCtx &ctx, Graph &ptg, TBindPairs &pairs)
 {
-    CL_BREAK_IF(pairs.size() == 0);
+    CL_BREAK_IF(pairs.empty());
     TBindPair &p = pairs[0];
     CL_BREAK_IF(p.code != BINDPAIR_HEAP);
 
@@ -1000,8 +1000,9 @@ struct TBindLocItem {
         bool                            referenced;
     } src;
 
-    struct {
+    struct Dst {
         const Var                      *v;
+        Dst (): v(0) { }
     } dst;
 
     TBindLocItem() {

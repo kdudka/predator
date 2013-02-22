@@ -469,7 +469,6 @@ bool plotField(PlotData &plot, const FieldWrapper &fw, const bool lonely)
             break;
 
         case FC_PREV:
-            // cppcheck-suppress unreachableCode
             color = "gold";
             break;
 
@@ -1209,7 +1208,6 @@ class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
 
 void plotNeqEdges(PlotData &plot)
 {
-    // cppcheck-suppress unreachableCode
     SymHeap &sh = plot.sh;
 
     // gather relevant "neq" edges

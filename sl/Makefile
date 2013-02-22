@@ -37,8 +37,9 @@ check: all
 	cd ../sl_build && $(CTEST) --output-on-failure
 
 cppcheck: all
-	cppcheck --enable=style,performance,portability,information,missingInclude \
-		--template gcc -j5 --inline-suppr .
+	cppcheck -j5 --inline-suppr \
+		--enable=style,performance,portability,information,missingInclude \
+		--template '{file}:{line}: {severity}: {id}: {message}' .
 
 version.h:
 	@if test -e ../.git; then \

@@ -50,7 +50,7 @@ int graphUniqueId(const std::string &baseName)
     return 0;
 }
 
-const std::string graphUniqueName(const std::string baseName)
+const std::string graphUniqueName(const std::string &baseName)
 {
     int id = graphUniqueId(baseName);
     std::stringstream fileName;
@@ -133,8 +133,8 @@ struct PlotCtx {
 
 int dotAssignId(PlotCtx &ctx, const Node *node)
 {
-    static int nodeCounter = 0;
     if (!hasKey(ctx.nodeMap, node)) {
+        static int nodeCounter = 0;
         ctx.nodeMap[node] = nodeCounter++;
     }
 
