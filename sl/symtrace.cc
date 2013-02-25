@@ -79,8 +79,12 @@ void Node::notifyDeath(NodeBase *child)
 
 void NodeHandle::reset(Node *node)
 {
-    // release the old node
     Node *&ref = parents_.front();
+    if (ref == node)
+        // if the node is already in, protect it against accidental deallocation
+        return;
+
+    // release the old node
     ref->notifyDeath(this);
 
     // register the new node
