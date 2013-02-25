@@ -46,8 +46,49 @@ typedef const CodeStorage::ControlFlow             &TControlFlow;
 typedef const CodeStorage::Block                   *TBlock;
 typedef WorkList<TBlock>                            TWorkList;
 
-typedef std::vector<TInsn>                          TInsnList;
 typedef std::map<TInsn, SymStateWithJoin>           TStateMap;
+
+class TraceIndex {
+    public:
+        void indexTraceOf(const SymHeap *sh);
+        const SymHeap* nearestPredecessorOf(const SymHeap *sh) const;
+
+    private:
+        typedef std::map<const Trace::Node *, const SymHeap *> TLookup;
+        TLookup lookup_;
+};
+
+void TraceIndex::indexTraceOf(const SymHeap *sh)
+{
+    const Trace::Node *tr = sh->traceNode();
+
+    // we should never change the target heap of an already indexed trace node
+    CL_BREAK_IF(hasKey(lookup_, tr) && lookup_[tr] != sh);
+
+    lookup_[tr] = sh;
+}
+
+const SymHeap* TraceIndex::nearestPredecessorOf(const SymHeap *sh) const
+{
+    const Trace::Node *tr = sh->traceNode();
+
+    while (0U < tr->parents().size()) {
+        // TODO: handle trace nodes with more than one parent!
+        tr = tr->parent();
+
+        // check the current trace node
+        const TLookup::const_iterator it = lookup_.find(tr);
+        if (it == lookup_.end())
+            continue;
+
+        // found!
+        const SymHeap *shPred = it->second;
+        CL_BREAK_IF(shPred->traceNode() != tr);
+        return shPred;
+    }
+
+    return /* not found */ 0;
+}
 
 struct StateByInsn::Private {
     TFncMap             visitedFncs;
@@ -96,6 +137,7 @@ struct PlotData {
 
 #define QUOT(what) "\"" << what << "\""
 #define INSN(insn) QUOT("ins" << insn)
+#define SHID(sh) QUOT("sh" << sh)
 #define DOT_LINK(to) "\"" << to << ".svg\""
 
 void plotInsn(PlotData &plot, const TInsn insn)
@@ -130,7 +172,7 @@ void plotInsn(PlotData &plot, const TInsn insn)
         plotHeap(sh, plot.name + "-sh", /* loc */ 0, &shapeName, &contShapeIds);
 
         // plot the link to shape
-        plot.out << QUOT("sh" << &sh) << " [label=\"sh #" << i
+        plot.out << SHID(&sh) << " [label=\"sh #" << i
             << "\", URL=" << DOT_LINK(shapeName);
 
         if (!shapeList.empty())
@@ -184,7 +226,7 @@ void plotCfg(PlotData &plot, const TControlFlow cfg)
     }
 }
 
-void plotFnc(const TFnc fnc, TStateMap &stateByInsn)
+void plotFnc(const TFnc fnc, TStateMap &stateByInsn, const TraceIndex &trIndex)
 {
     const std::string fncName = nameOf(*fnc);
     std::string plotName("fp-");
@@ -207,6 +249,15 @@ void plotFnc(const TFnc fnc, TStateMap &stateByInsn)
     PlotData plot(out, stateByInsn, plotName);
     plotCfg(plot, fnc->cfg);
 
+    // plot trace edges
+    BOOST_FOREACH(TStateMap::const_reference insItem, stateByInsn) {
+        BOOST_FOREACH(const SymHeap *sh, /* SymState */ insItem.second) {
+            const SymHeap *shPred = trIndex.nearestPredecessorOf(sh);
+            if (shPred)
+                plot.out << SHID(shPred) << " -> " << SHID(sh) << ";\n";
+        }
+    }
+
     // close graph
     out << "}\n";
     if (!out)
@@ -216,12 +267,19 @@ void plotFnc(const TFnc fnc, TStateMap &stateByInsn)
 
 void StateByInsn::plotAll()
 {
+    // build trace index
+    TraceIndex trIndex;
+    BOOST_FOREACH(TStateMap::const_reference insItem, d->stateByInsn) {
+        BOOST_FOREACH(const SymHeap *sh, /* SymState */ insItem.second)
+            trIndex.indexTraceOf(sh);
+    }
+
     BOOST_FOREACH(TFncMap::const_reference fncItem, d->visitedFncs) {
         const TFnc fnc = fncItem.second;
         const TLoc loc = locationOf(*fnc);
         CL_NOTE_MSG(loc, "plotting fixed-point of " << nameOf(*fnc) << "()...");
 
-        plotFnc(fnc, d->stateByInsn);
+        plotFnc(fnc, d->stateByInsn, trIndex);
     }
 }
 
