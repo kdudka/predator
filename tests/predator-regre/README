@@ -758,6 +758,8 @@ Tests taken from Forester
 
     test-0240.c - test-case once used for debugging of rejoinObj()
 
+    test-0241.c - a regression test for leaking memory pointed by int variables
+
 
 Data reinterpretation
 =====================

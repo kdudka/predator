@@ -496,9 +496,6 @@ class SymHeapCore {
         /// list of live fields (including ptrs) inside the given object
         void gatherLiveFields(FldList &dst, TObjId) const;
 
-        /// list of live pointers inside the give object
-        void gatherLivePointers(FldList &dst, TObjId) const;
-
         /// list of uninitialized and nullified uniform blocks of the given obj
         void gatherUniformBlocks(TUniBlockMap &dst, TObjId) const;
 

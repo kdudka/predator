@@ -513,7 +513,7 @@ void transferOutgoingEdges(
     CL_BREAK_IF(sh.objSize(ofObj) != sh.objSize(toObj));
 
     FldList fields;
-    sh.gatherLivePointers(fields, ofObj);
+    sh.gatherLiveFields(fields, ofObj);
     BOOST_FOREACH(const FldHandle &fldOld, fields) {
         const TValId val = fldOld.value();
         const FldHandle fldNew(sh, toObj, fldOld.type(), fldOld.offset());

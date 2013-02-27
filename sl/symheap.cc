@@ -1743,21 +1743,6 @@ TObjId SymHeapCore::objClone(TObjId obj)
     return dup;
 }
 
-void SymHeapCore::gatherLivePointers(FldList &dst, TObjId obj) const
-{
-    const Region *rootData;
-    d->ents.getEntRO(&rootData, obj);
-
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveFields) {
-        const EBlockKind code = item.second;
-        if (BK_DATA_PTR != code)
-            continue;
-
-        const TFldId fld = item.first;
-        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
-    }
-}
-
 void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TObjId obj) const
 {
     const Region *regData;
