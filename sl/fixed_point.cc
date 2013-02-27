@@ -159,7 +159,8 @@ void plotInsn(PlotData &plot, const TInsn insn)
     plot.out << "subgraph \"cluster" << insn << "\" {\n\tlabel=\"\"\n";
 
     // plot the root node
-    plot.out << INSN(insn) << " [label=" << QUOT(*insn) << ", shape=box];\n";
+    plot.out << INSN(insn) << " [label=" << QUOT(*insn)
+        << ", shape=box, color=blue, fontcolor=blue];\n";
 
     const SymState &state = plot.stateByInsn[insn];
 
@@ -168,7 +169,7 @@ void plotInsn(PlotData &plot, const TInsn insn)
     ContShape::detectContShapes(&contShapes, state);
 
     const int cntHeaps = state.size();
-    for (int i = cntHeaps - 1; 0 <= i; --i) {
+    for (int i = 0; i < cntHeaps; ++i) {
         const SymHeap &sh = state[i];
         const TShapeList &shapeList = contShapes[i];
 
@@ -217,7 +218,7 @@ void plotInsnWrap(PlotData &plot, const TInsn insn, const TInsn last)
             label = (!i) ? "T" : "F";
 
         plot.out << INSN(src) << " -> " << INSN(bb->front())
-            << " [label=" << QUOT(label) << "];\n";
+            << " [label=" << QUOT(label) << ", color=blue, fontcolor=blue];\n";
     }
 }
 
@@ -226,7 +227,7 @@ void plotInnerEdge(PlotData &plot, const TInsn last, const TInsn insn)
     if (isTransparentInsn(insn))
         return;
 
-    plot.out << INSN(last) << " -> " << INSN(insn) << ";\n";
+    plot.out << INSN(last) << " -> " << INSN(insn) << " [color=blue];\n";
 }
 
 /// traverse all basic blocks of the control-flow in a predictable order
