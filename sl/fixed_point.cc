@@ -48,6 +48,19 @@ typedef WorkList<TBlock>                            TWorkList;
 
 typedef std::map<TInsn, SymStateWithJoin>           TStateMap;
 
+inline bool isTransparentInsn(const TInsn insn)
+{
+    const enum cl_insn_e code = insn->code;
+    switch (code) {
+        case CL_INSN_COND:
+        case CL_INSN_JMP:
+            return true;
+
+        default:
+            return false;
+    }
+}
+
 class TraceIndex {
     public:
         void indexTraceOf(const SymHeap *sh);
@@ -183,6 +196,16 @@ void plotInsn(PlotData &plot, const TInsn insn)
 
     // close cluster
     plot.out << "}\n";
+}
+
+void plotInsnWrap(PlotData &plot, const TInsn insn, const TInsn last)
+{
+    TInsn src = insn;
+    if (isTransparentInsn(insn))
+        // look through!
+        src = last;
+    else
+        plotInsn(plot, insn);
 
     // for terminal instructions, plot the outgoing edges
     const unsigned cntTargets = insn->targets.size();
@@ -193,13 +216,16 @@ void plotInsn(PlotData &plot, const TInsn insn)
         if (CL_INSN_COND == insn->code)
             label = (!i) ? "T" : "F";
 
-        plot.out << INSN(insn) << " -> " << INSN(bb->front())
+        plot.out << INSN(src) << " -> " << INSN(bb->front())
             << " [label=" << QUOT(label) << "];\n";
     }
 }
 
 void plotInnerEdge(PlotData &plot, const TInsn last, const TInsn insn)
 {
+    if (isTransparentInsn(insn))
+        return;
+
     plot.out << INSN(last) << " -> " << INSN(insn) << ";\n";
 }
 
@@ -213,7 +239,7 @@ void plotCfg(PlotData &plot, const TControlFlow cfg)
         TInsn last = entry;
 
         BOOST_FOREACH(const TInsn insn, *bb) {
-            plotInsn(plot, insn);
+            plotInsnWrap(plot, insn, last);
 
             if (insn != entry)
                 plotInnerEdge(plot, last, insn);
@@ -251,6 +277,10 @@ void plotFnc(const TFnc fnc, TStateMap &stateByInsn, const TraceIndex &trIndex)
 
     // plot trace edges
     BOOST_FOREACH(TStateMap::const_reference insItem, stateByInsn) {
+        const TInsn insn = insItem.first;
+        if (isTransparentInsn(insn))
+            continue;
+
         BOOST_FOREACH(const SymHeap *sh, /* SymState */ insItem.second) {
             const SymHeap *shPred = trIndex.nearestPredecessorOf(sh);
             if (shPred)
@@ -270,7 +300,12 @@ void StateByInsn::plotAll()
     // build trace index
     TraceIndex trIndex;
     BOOST_FOREACH(TStateMap::const_reference insItem, d->stateByInsn) {
-        BOOST_FOREACH(const SymHeap *sh, /* SymState */ insItem.second)
+        const TInsn insn = insItem.first;
+        if (isTransparentInsn(insn))
+            continue;
+
+        const SymState &state = insItem.second;
+        BOOST_FOREACH(const SymHeap *sh, state)
             trIndex.indexTraceOf(sh);
     }
 
