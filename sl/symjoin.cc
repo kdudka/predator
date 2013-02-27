@@ -2154,6 +2154,9 @@ bool MayExistVisitor::operator()(const FldHandle &fld)
 
     for (;;) {
         const TObjId seg = sh.objByAddr(val);
+        if (OBJ_INVALID == seg)
+            return /* continue */ true;
+
         if (seg == obj_)
             // refuse referencing the MayExist candidate itself
             return /* continue */ true;
@@ -2276,12 +2279,12 @@ bool mayExistFallback(
     else {
         // look for next pointer(s) of OK_SEE_THROUGH/OK_SEE_THROUGH_2N
         MayExistVisitor visitor(ctx, action, refVal, obj);
-        traverseLivePtrs(sh, obj, visitor);
+        traverseLiveFields(sh, obj, visitor);
         if (!visitor.found()) {
             // reference value not matched directly, try to look through in
             // order to allow insert chains of possibly empty abstract objects
             visitor.enableLookThroughMode();
-            traverseLivePtrs(sh, obj, visitor);
+            traverseLiveFields(sh, obj, visitor);
             if (visitor.found())
                 // e.g. test-0124 and test-167 use this code path
                 SJ_DEBUG("MayExistVisitor::enableLookThroughMode() in use!");

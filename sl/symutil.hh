@@ -250,20 +250,19 @@ inline void gatherProgramVars(
     gatherProgramVarsCore(dst, sh, ins);
 }
 
-/// take the given visitor through all live pointers
-template <class THeap, class TVisitor, typename TMethod>
-bool /* complete */ traverseCore(
+/// take the given visitor through all live objects
+template <class THeap, class TVisitor>
+bool /* complete */ traverseLiveFields(
         THeap                      &sh,
         const TObjId                obj,
-        TVisitor                   &visitor,
-        TMethod                     method)
+        TVisitor                   &visitor)
 {
     // check that we got a valid object
     CL_BREAK_IF(OBJ_INVALID == obj);
 
-    // gather live fields using the requested method
+    // gather live fields
     FldList fields;
-    (sh.*method)(fields, obj);
+    sh.gatherLiveFields(fields, obj);
 
     // guide the visitor through the fields
     BOOST_FOREACH(const FldHandle &fld, fields)
@@ -272,26 +271,6 @@ bool /* complete */ traverseCore(
 
     // all fields traversed successfully
     return true;
-}
-
-/// take the given visitor through all live pointers
-template <class THeap, class TVisitor>
-bool /* complete */ traverseLivePtrs(
-        THeap                      &sh,
-        const TObjId                obj,
-        TVisitor                   &visitor)
-{
-    return traverseCore(sh, obj, visitor, &SymHeap::gatherLivePointers);
-}
-
-/// take the given visitor through all live objects
-template <class THeap, class TVisitor>
-bool /* complete */ traverseLiveFields(
-        THeap                      &sh,
-        const TObjId                obj,
-        TVisitor                   &visitor)
-{
-    return traverseCore(sh, obj, visitor, &SymHeap::gatherLiveFields);
 }
 
 /// take the given visitor through all uniform blocks

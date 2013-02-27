@@ -499,7 +499,7 @@ bool digBackLink(
     PtrFinder visitor(obj, pOff->head);
 
     // guide it through the next object
-    if (/* found nothing */ traverseLivePtrs(sh, next, visitor))
+    if (/* found nothing */ traverseLiveFields(sh, next, visitor))
         return false;
 
     // got a back-link!
@@ -587,7 +587,7 @@ void digShapePropsCandidates(
 {
     CL_BREAK_IF(!pDst->empty());
     const ProbeEntryVisitor visitor(*pDst, obj);
-   traverseLivePtrs(sh, obj, visitor);
+    traverseLiveFields(sh, obj, visitor);
 }
 
 struct SegCandidate {
