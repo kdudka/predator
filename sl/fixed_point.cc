@@ -213,12 +213,19 @@ void plotInsnWrap(PlotData &plot, const TInsn insn, const TInsn last)
     for (unsigned i = 0; i < cntTargets; ++i) {
         const TBlock bb = insn->targets[i];
 
+        const char *color = "blue";
+        if (hasItem(insn->loopClosingTargets, i))
+            // loop-closing edge
+            color = "green";
+
         const char *label = "";
         if (CL_INSN_COND == insn->code)
             label = (!i) ? "T" : "F";
 
         plot.out << INSN(src) << " -> " << INSN(bb->front())
-            << " [label=" << QUOT(label) << ", color=blue, fontcolor=blue];\n";
+            << " [label=" << QUOT(label)
+            << ", color=" << color
+            << ", fontcolor=" << color << "];\n";
     }
 }
 

@@ -113,7 +113,6 @@ bool ApparentShapeDetector::probeEntry(const TObjId obj, const ShapeProps &props
     if (taken.empty())
         taken.swap(seen);
     else {
-        CL_BREAK_IF("please check this branch with a debugger");
         BOOST_FOREACH(const TObjId seenObj, seen)
             taken.insert(seenObj);
     }
