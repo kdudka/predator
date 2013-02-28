@@ -324,8 +324,7 @@ inline TMemChunk createChunk(const TOffset off, const TObjType clt)
 
 enum EBlockKind {
     BK_INVALID,
-    BK_DATA_PTR,
-    BK_DATA_OBJ,
+    BK_FIELD,
     BK_COMPOSITE,
     BK_UNIFORM
 };
@@ -334,12 +333,9 @@ typedef std::map<TFldId, EBlockKind>                    TLiveObjs;
 
 inline EBlockKind bkFromClt(const TObjType clt)
 {
-    if (isComposite(clt, /* includingArray */ false))
-        return BK_COMPOSITE;
-
-    return (isDataPtr(clt))
-        ? BK_DATA_PTR
-        : BK_DATA_OBJ;
+    return (isComposite(clt, /* includingArray */ false))
+        ? BK_COMPOSITE
+        : BK_FIELD;
 }
 
 class AbstractHeapEntity {
@@ -894,8 +890,7 @@ void SymHeapCore::Private::splitBlockByObject(
 
     const EBlockKind code = hbData->code;
     switch (code) {
-        case BK_DATA_PTR:
-        case BK_DATA_OBJ:
+        case BK_FIELD:
             if (this->valsEqual(blData->value, hbData->value))
                 // preserve non-conflicting uniform blocks
                 return;
@@ -1075,14 +1070,9 @@ bool SymHeapCore::Private::reinterpretSingleObj(
     CL_BREAK_IF(srcData->obj != dstData->obj);
 
     const EBlockKind code = srcData->code;
-    switch (code) {
-        case BK_DATA_OBJ:
-            break;
-
-        default:
-            // TODO: hook various reinterpretation drivers here
-            return false;
-    }
+    if (BK_FIELD != code)
+        // TODO: hook various reinterpretation drivers here
+        return false;
 
     const FieldOfObj *fldData = DCAST<const FieldOfObj *>(srcData);
     const TValId valSrc = fldData->value;
@@ -1128,8 +1118,7 @@ void SymHeapCore::Private::reinterpretObjData(
 
     EBlockKind code = blData->code;
     switch (code) {
-        case BK_DATA_PTR:
-        case BK_DATA_OBJ:
+        case BK_FIELD:
             break;
 
         case BK_COMPOSITE:
@@ -1170,8 +1159,7 @@ void SymHeapCore::Private::reinterpretObjData(
             }
             // fall through!
 
-        case BK_DATA_PTR:
-        case BK_DATA_OBJ:
+        case BK_FIELD:
             if (this->reinterpretSingleObj(oldData, blData))
                 goto data_restored;
 
@@ -1537,12 +1525,7 @@ TValId SymHeapCore::Private::fldInit(TFldId fld)
     fldData->value = val;
 
     // mark the object as live
-    if (isDataPtr(clt))
-        rootData->liveFields[fld] = BK_DATA_PTR;
-#if SE_TRACK_NON_POINTER_VALUES
-    else
-        rootData->liveFields[fld] = BK_DATA_OBJ;
-#endif
+    rootData->liveFields[fld] = BK_FIELD;
 
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
@@ -1691,7 +1674,7 @@ TFldId SymHeapCore::Private::copySingleLiveBlock(
     }
     else {
         // duplicate a regular object
-        CL_BREAK_IF(BK_DATA_PTR != code && BK_DATA_OBJ != code);
+        CL_BREAK_IF(BK_FIELD != code);
         CL_BREAK_IF(sizeLimit);
 
         const FieldOfObj *fldDataSrc;
@@ -1778,8 +1761,7 @@ void SymHeapCore::gatherLiveFields(FldList &dst, TObjId obj) const
             case BK_UNIFORM:
                 continue;
 
-            case BK_DATA_PTR:
-            case BK_DATA_OBJ:
+            case BK_FIELD:
                 break;
 
             case BK_INVALID:
@@ -2070,23 +2052,18 @@ bool SymHeapCore::Private::findZeroInBlock(
     const BlockEntity *blData;
     this->ents.getEntRO(&blData, fld);
 
+    if (VAL_NULL == blData->value) {
+        // a block full of zeros
+        *offDst = blData->off;
+        return true;
+    }
+
     const EBlockKind code = blData->code;
-    switch (code) {
-        case BK_DATA_OBJ:
-            break;
-
-        case BK_DATA_PTR:
-        case BK_UNIFORM:
-            if (VAL_NULL != blData->value)
-                return false;
-
-            // a uniform block full of zeros
-            *offDst = blData->off;
-            return true;
-
-        default:
+    if (BK_FIELD != code) {
+        if (BK_UNIFORM != code)
             CL_BREAK_IF("findZeroInBlock() got something special");
-            return false;
+
+        return false;
     }
 
     const FieldOfObj *fldData = DCAST<const FieldOfObj *>(blData);
@@ -3046,8 +3023,7 @@ TFldId SymHeapCore::Private::fldLookup(
 
         const EBlockKind code = blData->code;
         switch (code) {
-            case BK_DATA_PTR:
-            case BK_DATA_OBJ:
+            case BK_FIELD:
             case BK_COMPOSITE:
                 break;
 
