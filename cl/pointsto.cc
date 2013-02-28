@@ -42,11 +42,6 @@ namespace CodeStorage {
 
 namespace PointsTo {
 
-inline bool hasItem(const TItemList &il, const Item *key)
-{
-    return il.end() != std::find(il.begin(), il.end(), key);
-}
-
 // there may occur multiple out-edges
 void addEdge(Node *from, Node *to)
 {

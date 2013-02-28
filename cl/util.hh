@@ -20,6 +20,7 @@
 #ifndef H_GUARD_UTIL_H
 #define H_GUARD_UTIL_H
 
+#include <algorithm>                // for std::find()
 #include <cstring>
 
 #ifndef STREQ
@@ -42,6 +43,12 @@ void sortValues(T &a, T &b)
 {
     if (b < a)
         swapValues(a, b);
+}
+
+template <typename TCont>
+bool hasItem(const TCont &cont, const typename TCont::value_type &key)
+{
+    return cont.end() != std::find(cont.begin(), cont.end(), key);
 }
 
 template <typename TCont>
