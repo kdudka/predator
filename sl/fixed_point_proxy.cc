@@ -46,20 +46,9 @@ typedef const CodeStorage::ControlFlow             &TControlFlow;
 typedef const CodeStorage::Block                   *TBlock;
 typedef WorkList<TBlock>                            TWorkList;
 
-typedef std::map<TInsn, SymStateWithJoin>           TStateMap;
-
-inline bool isTransparentInsn(const TInsn insn)
-{
-    const enum cl_insn_e code = insn->code;
-    switch (code) {
-        case CL_INSN_COND:
-        case CL_INSN_JMP:
-            return true;
-
-        default:
-            return false;
-    }
-}
+// TODO: drop this!
+typedef StateByInsn::TStateMap                      TStateMap;
+bool isTransparentInsn(const TInsn insn);
 
 class TraceIndex {
     public:
@@ -130,6 +119,11 @@ bool /* any change */ StateByInsn::insert(const TInsn insn, const SymHeap &sh)
     }
 
     return state.insert(sh, /* allowThreeWay */ false);
+}
+
+const TStateMap& StateByInsn::stateMap() const
+{
+    return d->stateByInsn;
 }
 
 struct PlotData {
@@ -329,6 +323,9 @@ void StateByInsn::plotAll()
         const TFnc fnc = fncItem.second;
         const TLoc loc = locationOf(*fnc);
         CL_NOTE_MSG(loc, "plotting fixed-point of " << nameOf(*fnc) << "()...");
+
+        // XXX
+        delete computeStateOf(fnc, d->stateByInsn);
 
         plotFnc(fnc, d->stateByInsn, trIndex);
     }
