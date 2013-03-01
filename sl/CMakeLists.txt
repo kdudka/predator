@@ -35,6 +35,7 @@ add_library(sl SHARED
     cl_symexec.cc
     cont_shape.cc
     fixed_point.cc
+    fixed_point_proxy.cc
     glconf.cc
     intrange.cc
     plotenum.cc

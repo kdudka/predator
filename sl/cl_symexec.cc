@@ -25,7 +25,7 @@
 #include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
-#include "fixed_point.hh"
+#include "fixed_point_proxy.hh"
 #include "glconf.hh"
 #include "symbt.hh"
 #include "symdump.hh"

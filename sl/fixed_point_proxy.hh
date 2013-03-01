@@ -17,9 +17,33 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "config.h"
-#include "fixed_point.hh"
+#ifndef H_GUARD_FIXED_POINT_PROXY_H
+#define H_GUARD_FIXED_POINT_PROXY_H
+
+class SymHeap;
+
+namespace CodeStorage {
+    struct Insn;
+}
 
 namespace FixedPoint {
 
+    typedef const CodeStorage::Insn        *TInsn;
+
+    class StateByInsn {
+        public:
+            StateByInsn();
+            ~StateByInsn();
+
+            bool /* any change */ insert(const TInsn insn, const SymHeap &sh);
+
+            void plotAll();
+
+        private:
+            struct Private;
+            Private *d;
+    };
+
 } // namespace FixedPoint
+
+#endif /* H_GUARD_FIXED_POINT_PROXY_H */

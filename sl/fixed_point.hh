@@ -20,29 +20,9 @@
 #ifndef H_GUARD_FIXED_POINT_H
 #define H_GUARD_FIXED_POINT_H
 
-class SymHeap;
-
-namespace CodeStorage {
-    struct Insn;
-}
+#include "fixed_point_proxy.hh"
 
 namespace FixedPoint {
-
-    typedef const CodeStorage::Insn        *TInsn;
-
-    class StateByInsn {
-        public:
-            StateByInsn();
-            ~StateByInsn();
-
-            bool /* any change */ insert(const TInsn insn, const SymHeap &sh);
-
-            void plotAll();
-
-        private:
-            struct Private;
-            Private *d;
-    };
 
 } // namespace FixedPoint
 
