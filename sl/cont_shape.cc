@@ -374,9 +374,13 @@ void detectImpliedShapes(DetectionCtx &ctx)
     }
 }
 
+} // namespace ContShape
+
 void detectContShapes(TShapeListByHeapIdx *pDst, const SymState &state)
 {
     CL_BREAK_IF(!pDst->empty());
+
+    using namespace ContShape;
 
     const unsigned cnt = state.size();
     pDst->resize(cnt);
@@ -402,5 +406,3 @@ void detectContShapes(TShapeListByHeapIdx *pDst, const SymState &state)
 
     detectImpliedShapes(ctx);
 }
-
-} // namespace ContShape

@@ -51,6 +51,9 @@ typedef std::vector<ShapeProps>             TShapePropsList;
 /// list of shapes given by their inductive definition
 typedef std::vector<Shape>                  TShapeList;
 
+/// list of shapes grouped by heap index they occur in
+typedef std::vector<TShapeList>             TShapeListByHeapIdx;
+
 /// return the set of objects that the given shape consists of
 void objSetByShape(TObjSet *pDst, const SymHeap &sh, const Shape &shape);
 

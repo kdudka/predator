@@ -22,4 +22,6 @@
 
 namespace FixedPoint {
 
+const THeapIdent InvalidHeap(-1, -1);
+
 } // namespace FixedPoint

@@ -17,13 +17,11 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef H_GUARD_CONT_SHAPE_H
-#define H_GUARD_CONT_SHAPE_H
+#ifndef H_GUARD_ID_MAPPER_H
+#define H_GUARD_ID_MAPPER_H
 
-#include "shape.hh"
+template <typename TId>
+class IdMapper {
+};
 
-class SymState;
-
-void detectContShapes(TShapeListByHeapIdx *pDst, const SymState &);
-
-#endif /* H_GUARD_CONT_SHAPE_H */
+#endif /* H_GUARD_ID_MAPPER_H */

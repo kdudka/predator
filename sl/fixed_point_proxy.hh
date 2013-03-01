@@ -20,7 +20,9 @@
 #ifndef H_GUARD_FIXED_POINT_PROXY_H
 #define H_GUARD_FIXED_POINT_PROXY_H
 
-class SymHeap;
+#include "symstate.hh"
+
+#include <map>
 
 namespace CodeStorage {
     struct Insn;
@@ -32,10 +34,14 @@ namespace FixedPoint {
 
     class StateByInsn {
         public:
+            typedef std::map<TInsn, SymStateWithJoin> TStateMap;
+
             StateByInsn();
             ~StateByInsn();
 
             bool /* any change */ insert(const TInsn insn, const SymHeap &sh);
+
+            const TStateMap& stateMap() const;
 
             void plotAll();
 

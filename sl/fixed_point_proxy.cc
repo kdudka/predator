@@ -39,7 +39,6 @@
 namespace FixedPoint {
 
 typedef const struct cl_loc                        *TLoc;
-typedef const CodeStorage::Fnc                     *TFnc;
 typedef int                                         TFncUid;
 typedef std::map<TFncUid, TFnc>                     TFncMap;
 
@@ -166,8 +165,8 @@ void plotInsn(PlotData &plot, const TInsn insn)
     const SymState &state = plot.stateByInsn[insn];
 
     // XXX: detect container shapes
-    ContShape::TShapeListByHeapIdx contShapes;
-    ContShape::detectContShapes(&contShapes, state);
+    TShapeListByHeapIdx contShapes;
+    detectContShapes(&contShapes, state);
 
     const int cntHeaps = state.size();
     for (int i = 0; i < cntHeaps; ++i) {
