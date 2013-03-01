@@ -201,6 +201,10 @@ void plotInsn(PlotData &plot, const TInsn insn)
 
 void plotInsnWrap(PlotData &plot, const TInsn insn, const TInsn last)
 {
+    if (CL_INSN_JMP == insn->code && 1U == insn->bb->size())
+        // skip trivial basic blocks containing only single goto instruction
+        return;
+
     TInsn src = insn;
     if (isTransparentInsn(insn))
         // look through!
@@ -211,7 +215,11 @@ void plotInsnWrap(PlotData &plot, const TInsn insn, const TInsn last)
     // for terminal instructions, plot the outgoing edges
     const unsigned cntTargets = insn->targets.size();
     for (unsigned i = 0; i < cntTargets; ++i) {
-        const TBlock bb = insn->targets[i];
+        TInsn dst = insn->targets[i]->front();
+
+        // skip trivial basic blocks containing only single goto instruction
+        while (1U == dst->targets.size())
+            dst = dst->targets.front()->front();
 
         const char *color = "blue";
         if (hasItem(insn->loopClosingTargets, i))
@@ -222,7 +230,7 @@ void plotInsnWrap(PlotData &plot, const TInsn insn, const TInsn last)
         if (CL_INSN_COND == insn->code)
             label = (!i) ? "T" : "F";
 
-        plot.out << INSN(src) << " -> " << INSN(bb->front())
+        plot.out << INSN(src) << " -> " << INSN(dst)
             << " [label=" << QUOT(label)
             << ", color=" << color
             << ", fontcolor=" << color << "];\n";
