@@ -108,6 +108,55 @@ void loadHeaps(StateBuilderCtx &ctx, const TStateMap &stateMap)
     }
 }
 
+void finalizeFlow(StateBuilderCtx &ctx)
+{
+    const TLocIdx locCnt = ctx.stateList.size();
+    for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
+        LocalState *locState = ctx.stateList[locIdx];
+        const TInsn insn = locState->insn;
+
+        if (!locState->cfgOutEdges.empty()) {
+            // non-terminal instructions are already handled in loadHeaps()
+            CL_BREAK_IF(cl_is_term_insn(insn->code));
+            continue;
+        }
+
+        // jump to terminal instruction (in most cases insn == term here)
+        const TInsn term = insn->bb->back();
+        CL_BREAK_IF(!cl_is_term_insn(term->code));
+
+        BOOST_FOREACH(TBlock bb, term->targets) {
+            TInsn dst = bb->front();
+
+            // skip trivial basic blocks containing only single goto instruction
+            while (1U == dst->targets.size()) {
+                bb = dst->targets.front();
+                dst = bb->front();
+            }
+
+            // create a new control-flow edge (originally block-level edge)
+            CL_BREAK_IF(!hasKey(ctx.insnLookup, dst));
+            const TLocIdx dstIdx = ctx.insnLookup[dst];
+            locState->cfgOutEdges.push_back(dstIdx);
+        }
+
+        // tag loop-closing edges using the info provided by Code Listener
+        BOOST_FOREACH(const unsigned tgIdx, term->loopClosingTargets)
+            locState->cfgOutEdges[tgIdx].closesLoop = true;
+    }
+
+    // initialize backward control-flow edges
+    for (TLocIdx srcIdx = 0; srcIdx < locCnt; ++srcIdx) {
+        const LocalState *srcState = ctx.stateList[srcIdx];
+        BOOST_FOREACH(CfgEdge oe, srcState->cfgOutEdges) {
+            const TLocIdx dstIdx = oe.targetLoc;
+            LocalState *dstState = ctx.stateList[dstIdx];
+            oe.targetLoc = srcIdx;
+            dstState->cfgInEdges.push_back(oe);
+        }
+    }
+}
+
 GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
 {
     GlobalState *glState = new GlobalState;
@@ -115,6 +164,8 @@ GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
     StateBuilderCtx ctx(fnc, glState->stateList_);
 
     loadHeaps(ctx, stateByInsn);
+
+    finalizeFlow(ctx);
 
     return glState;
 }
