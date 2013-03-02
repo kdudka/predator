@@ -376,7 +376,7 @@ void detectImpliedShapes(DetectionCtx &ctx)
 
 } // namespace ContShape
 
-void detectContShapes(TShapeListByHeapIdx *pDst, const SymState &state)
+void detectLocalContShapes(TShapeListByHeapIdx *pDst, const SymState &state)
 {
     CL_BREAK_IF(!pDst->empty());
 

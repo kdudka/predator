@@ -20,6 +20,7 @@
 #include "config.h"
 #include "fixed_point.hh"
 
+#include "cont_shape.hh"
 #include "symtrace.hh"
 #include "worklist.hh"
 
@@ -260,6 +261,16 @@ void createTraceEdges(GlobalState &glState, TTraceList &traceList)
     }
 }
 
+void detectContShapes(GlobalState &glState)
+{
+    const TLocIdx locCnt = glState.size();
+    for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
+        LocalState &locState = glState[locIdx];
+        const SymState &state = locState.heapList;
+        detectLocalContShapes(&locState.shapeListByHeapIdx, state);
+    }
+}
+
 GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
 {
     GlobalState *glState = new GlobalState;
@@ -271,6 +282,8 @@ GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
     finalizeFlow(ctx);
 
     createTraceEdges(*glState, glState->traceList_);
+
+    detectContShapes(*glState);
 
     return glState;
 }

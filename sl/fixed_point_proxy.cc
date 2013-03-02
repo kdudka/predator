@@ -20,17 +20,15 @@
 #include "config.h"
 #include "fixed_point_proxy.hh"
 
-#include "cont_shape.hh"
 #include "fixed_point.hh"
 #include "symplot.hh"
-#include "symstate.hh"
-#include "symtrace.hh"
 
 #include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
 #include <cl/storage.hh>
 
 #include <fstream>
+#include <iomanip>
 #include <map>
 
 #include <boost/foreach.hpp>
@@ -42,9 +40,6 @@ typedef int                                         TFncUid;
 typedef std::map<TFncUid, TFnc>                     TFncMap;
 
 typedef const CodeStorage::Block                   *TBlock;
-
-// TODO: drop this!
-typedef StateByInsn::TStateMap                      TStateMap;
 
 struct StateByInsn::Private {
     TFncMap             visitedFncs;
@@ -75,19 +70,19 @@ bool /* any change */ StateByInsn::insert(const TInsn insn, const SymHeap &sh)
     return state.insert(sh, /* allowThreeWay */ false);
 }
 
-const TStateMap& StateByInsn::stateMap() const
+const StateByInsn::TStateMap& StateByInsn::stateMap() const
 {
     return d->stateByInsn;
 }
 
 struct PlotData {
-    std::ostream       &out;
-    TStateMap          &stateByInsn;
-    std::string         name;
+    std::ostream                   &out;
+    StateByInsn::TStateMap         &stateByInsn;
+    std::string                     name;
 
     PlotData(
             std::ostream           &out_,
-            TStateMap              &stateByInsn_,
+            StateByInsn::TStateMap &stateByInsn_,
             const std::string      &name_):
         out(out_),
         stateByInsn(stateByInsn_),
@@ -100,27 +95,28 @@ struct PlotData {
 #define LOC_NODE(locIdx) QUOT("loc" << locIdx)
 #define SH_NODE(sh) QUOT("loc" << (sh.first) << "-sh" << (sh.second))
 #define DOT_LINK(to) "\"" << to << ".svg\""
+#define STD_SETW(n) std::fixed << std::setfill('0') << std::setw(n)
 
 void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
 {
+    const TInsn insn = locState.insn;
+
     // open cluster
-    plot.out << "subgraph \"cluster" << locIdx << "\" {\n\tlabel=\"\"\n";
+    plot.out << "subgraph \"cluster" << locIdx
+        << "\" {\n\tlabel=\"loc #" << locIdx << "\";\n";
 
     // plot the root node
-    plot.out << LOC_NODE(locIdx) << " [label=" << QUOT(*locState.insn)
+    plot.out << LOC_NODE(locIdx) << " [label=" << QUOT(*insn)
+        << ", tooltip=" << QUOT(insn->loc)
         << ", shape=box, color=blue, fontcolor=blue];\n";
 
     const SymState &state = locState.heapList;
-
-    // XXX: detect container shapes
-    TShapeListByHeapIdx contShapes;
-    detectContShapes(&contShapes, state);
 
     const THeapIdx cntHeaps = state.size();
     for (THeapIdx shIdx = 0; shIdx < cntHeaps; ++shIdx) {
         const THeapIdent shIdent(locIdx, shIdx);
         const SymHeap &sh = state[shIdx];
-        const TShapeList &shapeList = contShapes[shIdx];
+        const TShapeList &shapeList = locState.shapeListByHeapIdx[shIdx];
 
         TIdSet contShapeIds;
         BOOST_FOREACH(const Shape &shape, shapeList) {
@@ -130,9 +126,14 @@ void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
                 contShapeIds.insert(static_cast<int>(obj));
         }
 
+        std::ostringstream nameStr;
+        nameStr << plot.name
+            << "-loc" << STD_SETW(4) << locIdx
+            << "-sh" << STD_SETW(4) << shIdx;
+
         // plot the shape graph
         std::string shapeName;
-        plotHeap(sh, plot.name + "-sh", /* loc */ 0, &shapeName, &contShapeIds);
+        plotHeap(sh, nameStr.str(), /* loc */ 0, &shapeName, &contShapeIds);
 
         // plot the link to shape
         plot.out << SH_NODE(shIdent) << " [label=\"sh #" << shIdx
@@ -181,7 +182,7 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     }
 }
 
-void plotFnc(const TFnc fnc, TStateMap &stateByInsn)
+void plotFnc(const TFnc fnc, StateByInsn::TStateMap &stateByInsn)
 {
     const std::string fncName = nameOf(*fnc);
     std::string plotName("fp-");

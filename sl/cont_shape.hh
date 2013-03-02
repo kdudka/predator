@@ -24,6 +24,6 @@
 
 class SymState;
 
-void detectContShapes(TShapeListByHeapIdx *pDst, const SymState &);
+void detectLocalContShapes(TShapeListByHeapIdx *pDst, const SymState &);
 
 #endif /* H_GUARD_CONT_SHAPE_H */
