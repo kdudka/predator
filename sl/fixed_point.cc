@@ -102,8 +102,10 @@ void loadHeaps(StateBuilderCtx &ctx, const TStateMap &stateMap)
 
             // load heaps if a non-empty fixed-point is available for this loc
             const TStateMap::const_iterator it = stateMap.find(insn);
-            if (it != stateMap.end())
+            if (it != stateMap.end()) {
                 locState->heapList = it->second;
+                Trace::waiveCloneOperation(locState->heapList);
+            }
         }
     }
 }

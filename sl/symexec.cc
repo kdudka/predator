@@ -699,8 +699,7 @@ bool /* complete */ SymExecEngine::execBlock()
         localState_ = origin;
 
         // eliminate the unneeded Trace::CloneNode instances
-        BOOST_FOREACH(SymHeap *sh, localState_)
-            Trace::waiveCloneOperation(*sh);
+        Trace::waiveCloneOperation(localState_);
     }
 
     // go through the remainder of BB insns

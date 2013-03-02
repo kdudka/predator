@@ -24,6 +24,7 @@
 #include <cl/storage.hh>
 
 #include "plotenum.hh"
+#include "symstate.hh"
 #include "worklist.hh"
 
 #include <algorithm>
@@ -652,5 +653,10 @@ void waiveCloneOperation(SymHeap &sh)
     sh.traceUpdate(cnode->parent());
 }
 
+void waiveCloneOperation(SymState &state)
+{
+    BOOST_FOREACH(SymHeap *sh, state)
+        Trace::waiveCloneOperation(*sh);
+}
 
 } // namespace Trace

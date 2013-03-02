@@ -35,6 +35,8 @@
 
 struct cl_loc;
 
+class SymState;
+
 namespace CodeStorage {
     struct Fnc;
     struct Insn;
@@ -610,6 +612,8 @@ class Globals {
 /// mark the just completed @b clone operation as @b intended and unimportant
 void waiveCloneOperation(SymHeap &sh);
 
+/// mark the just completed @b clone operation as @b intended and unimportant
+void waiveCloneOperation(SymState &);
 
 } // namespace Trace
 

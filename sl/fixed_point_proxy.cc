@@ -25,7 +25,6 @@
 #include "symplot.hh"
 #include "symstate.hh"
 #include "symtrace.hh"
-#include "worklist.hh"
 
 #include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
@@ -42,9 +41,7 @@ typedef const struct cl_loc                        *TLoc;
 typedef int                                         TFncUid;
 typedef std::map<TFncUid, TFnc>                     TFncMap;
 
-typedef const CodeStorage::ControlFlow             &TControlFlow;
 typedef const CodeStorage::Block                   *TBlock;
-typedef WorkList<TBlock>                            TWorkList;
 
 // TODO: drop this!
 typedef StateByInsn::TStateMap                      TStateMap;
@@ -143,20 +140,20 @@ struct PlotData {
 };
 
 #define QUOT(what) "\"" << what << "\""
-#define INSN(insn) QUOT("ins" << insn)
+#define LOC_NODE(locIdx) QUOT("loc" << locIdx)
 #define SHID(sh) QUOT("sh" << sh)
 #define DOT_LINK(to) "\"" << to << ".svg\""
 
-void plotInsn(PlotData &plot, const TInsn insn)
+void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
 {
     // open cluster
-    plot.out << "subgraph \"cluster" << insn << "\" {\n\tlabel=\"\"\n";
+    plot.out << "subgraph \"cluster" << locIdx << "\" {\n\tlabel=\"\"\n";
 
     // plot the root node
-    plot.out << INSN(insn) << " [label=" << QUOT(*insn)
+    plot.out << LOC_NODE(locIdx) << " [label=" << QUOT(*locState.insn)
         << ", shape=box, color=blue, fontcolor=blue];\n";
 
-    const SymState &state = plot.stateByInsn[insn];
+    const SymState &state = locState.heapList;
 
     // XXX: detect container shapes
     TShapeListByHeapIdx contShapes;
@@ -193,76 +190,36 @@ void plotInsn(PlotData &plot, const TInsn insn)
     plot.out << "}\n";
 }
 
-void plotInsnWrap(PlotData &plot, const TInsn insn, const TInsn last)
+void plotFncCore(PlotData &plot, const GlobalState &fncState)
 {
-    if (CL_INSN_JMP == insn->code && 1U == insn->bb->size())
-        // skip trivial basic blocks containing only single goto instruction
-        return;
+    const TLocIdx locCnt = fncState.size();
+    for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
+        const LocalState &locState = fncState[locIdx];
+        plotInsn(plot, locIdx, locState);
 
-    TInsn src = insn;
-    if (isTransparentInsn(insn))
-        // look through!
-        src = last;
-    else
-        plotInsn(plot, insn);
+        const unsigned cntTargets = locState.cfgOutEdges.size();
+        for (unsigned i = 0; i < cntTargets; ++i) {
+            const CfgEdge &edge = locState.cfgOutEdges[i];
 
-    // for terminal instructions, plot the outgoing edges
-    const unsigned cntTargets = insn->targets.size();
-    for (unsigned i = 0; i < cntTargets; ++i) {
-        TInsn dst = insn->targets[i]->front();
+            const char *color = "blue";
+            if (edge.closesLoop)
+                // loop-closing edge
+                color = "green";
 
-        // skip trivial basic blocks containing only single goto instruction
-        while (1U == dst->targets.size())
-            dst = dst->targets.front()->front();
+            const char *label = "";
+            if (2U == cntTargets)
+                // assume CL_INSN_COND
+                label = (!i) ? "T" : "F";
 
-        const char *color = "blue";
-        if (hasItem(insn->loopClosingTargets, i))
-            // loop-closing edge
-            color = "green";
-
-        const char *label = "";
-        if (CL_INSN_COND == insn->code)
-            label = (!i) ? "T" : "F";
-
-        plot.out << INSN(src) << " -> " << INSN(dst)
-            << " [label=" << QUOT(label)
-            << ", color=" << color
-            << ", fontcolor=" << color << "];\n";
-    }
-}
-
-void plotInnerEdge(PlotData &plot, const TInsn last, const TInsn insn)
-{
-    if (isTransparentInsn(insn))
-        return;
-
-    plot.out << INSN(last) << " -> " << INSN(insn) << " [color=blue];\n";
-}
-
-/// traverse all basic blocks of the control-flow in a predictable order
-void plotCfg(PlotData &plot, const TControlFlow cfg)
-{
-    TBlock bb = cfg.entry();
-    TWorkList wl(bb);
-    while (wl.next(bb)) {
-        const TInsn entry = bb->front();
-        TInsn last = entry;
-
-        BOOST_FOREACH(const TInsn insn, *bb) {
-            plotInsnWrap(plot, insn, last);
-
-            if (insn != entry)
-                plotInnerEdge(plot, last, insn);
-
-            last = insn;
+            plot.out << LOC_NODE(locIdx) << " -> " << LOC_NODE(edge.targetLoc)
+                << " [label=" << QUOT(label)
+                << ", color=" << color
+                << ", fontcolor=" << color << "];\n";
         }
-
-        BOOST_FOREACH(const TBlock bbNext, bb->back()->targets)
-            wl.schedule(bbNext);
     }
 }
 
-void plotFnc(const TFnc fnc, TStateMap &stateByInsn, const TraceIndex &trIndex)
+void plotFnc(const TFnc fnc, TStateMap &stateByInsn)
 {
     const std::string fncName = nameOf(*fnc);
     std::string plotName("fp-");
@@ -283,20 +240,28 @@ void plotFnc(const TFnc fnc, TStateMap &stateByInsn, const TraceIndex &trIndex)
 
     // plot the body
     PlotData plot(out, stateByInsn, plotName);
-    plotCfg(plot, fnc->cfg);
+    const GlobalState *fncState = computeStateOf(fnc, stateByInsn);
+    plotFncCore(plot, *fncState);
+
+    // build trace index
+    TraceIndex trIndex;
+    for (TLocIdx locIdx = 0; locIdx < fncState->size(); ++locIdx) {
+        const SymState &state = (*fncState)[locIdx].heapList;
+        BOOST_FOREACH(const SymHeap *sh, state)
+            trIndex.indexTraceOf(sh);
+    }
 
     // plot trace edges
-    BOOST_FOREACH(TStateMap::const_reference insItem, stateByInsn) {
-        const TInsn insn = insItem.first;
-        if (isTransparentInsn(insn))
-            continue;
-
-        BOOST_FOREACH(const SymHeap *sh, /* SymState */ insItem.second) {
+    for (TLocIdx locIdx = 0; locIdx < fncState->size(); ++locIdx) {
+        const SymState &state = (*fncState)[locIdx].heapList;
+        BOOST_FOREACH(const SymHeap *sh, state) {
             const SymHeap *shPred = trIndex.nearestPredecessorOf(sh);
             if (shPred)
                 plot.out << SHID(shPred) << " -> " << SHID(sh) << ";\n";
         }
     }
+
+    delete fncState;
 
     // close graph
     out << "}\n";
@@ -307,27 +272,12 @@ void plotFnc(const TFnc fnc, TStateMap &stateByInsn, const TraceIndex &trIndex)
 
 void StateByInsn::plotAll()
 {
-    // build trace index
-    TraceIndex trIndex;
-    BOOST_FOREACH(TStateMap::const_reference insItem, d->stateByInsn) {
-        const TInsn insn = insItem.first;
-        if (isTransparentInsn(insn))
-            continue;
-
-        const SymState &state = insItem.second;
-        BOOST_FOREACH(const SymHeap *sh, state)
-            trIndex.indexTraceOf(sh);
-    }
-
     BOOST_FOREACH(TFncMap::const_reference fncItem, d->visitedFncs) {
         const TFnc fnc = fncItem.second;
         const TLoc loc = locationOf(*fnc);
         CL_NOTE_MSG(loc, "plotting fixed-point of " << nameOf(*fnc) << "()...");
 
-        // XXX
-        delete computeStateOf(fnc, d->stateByInsn);
-
-        plotFnc(fnc, d->stateByInsn, trIndex);
+        plotFnc(fnc, d->stateByInsn);
     }
 }
 
