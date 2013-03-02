@@ -45,49 +45,6 @@ typedef const CodeStorage::Block                   *TBlock;
 
 // TODO: drop this!
 typedef StateByInsn::TStateMap                      TStateMap;
-bool isTransparentInsn(const TInsn insn);
-
-class TraceIndex {
-    public:
-        void indexTraceOf(const SymHeap *sh);
-        const SymHeap* nearestPredecessorOf(const SymHeap *sh) const;
-
-    private:
-        typedef std::map<const Trace::Node *, const SymHeap *> TLookup;
-        TLookup lookup_;
-};
-
-void TraceIndex::indexTraceOf(const SymHeap *sh)
-{
-    const Trace::Node *tr = sh->traceNode();
-
-    // we should never change the target heap of an already indexed trace node
-    CL_BREAK_IF(hasKey(lookup_, tr) && lookup_[tr] != sh);
-
-    lookup_[tr] = sh;
-}
-
-const SymHeap* TraceIndex::nearestPredecessorOf(const SymHeap *sh) const
-{
-    const Trace::Node *tr = sh->traceNode();
-
-    while (0U < tr->parents().size()) {
-        // TODO: handle trace nodes with more than one parent!
-        tr = tr->parent();
-
-        // check the current trace node
-        const TLookup::const_iterator it = lookup_.find(tr);
-        if (it == lookup_.end())
-            continue;
-
-        // found!
-        const SymHeap *shPred = it->second;
-        CL_BREAK_IF(shPred->traceNode() != tr);
-        return shPred;
-    }
-
-    return /* not found */ 0;
-}
 
 struct StateByInsn::Private {
     TFncMap             visitedFncs;
@@ -141,7 +98,7 @@ struct PlotData {
 
 #define QUOT(what) "\"" << what << "\""
 #define LOC_NODE(locIdx) QUOT("loc" << locIdx)
-#define SHID(sh) QUOT("sh" << sh)
+#define SH_NODE(sh) QUOT("loc" << (sh.first) << "-sh" << (sh.second))
 #define DOT_LINK(to) "\"" << to << ".svg\""
 
 void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
@@ -159,10 +116,11 @@ void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
     TShapeListByHeapIdx contShapes;
     detectContShapes(&contShapes, state);
 
-    const int cntHeaps = state.size();
-    for (int i = 0; i < cntHeaps; ++i) {
-        const SymHeap &sh = state[i];
-        const TShapeList &shapeList = contShapes[i];
+    const THeapIdx cntHeaps = state.size();
+    for (THeapIdx shIdx = 0; shIdx < cntHeaps; ++shIdx) {
+        const THeapIdent shIdent(locIdx, shIdx);
+        const SymHeap &sh = state[shIdx];
+        const TShapeList &shapeList = contShapes[shIdx];
 
         TIdSet contShapeIds;
         BOOST_FOREACH(const Shape &shape, shapeList) {
@@ -177,7 +135,7 @@ void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
         plotHeap(sh, plot.name + "-sh", /* loc */ 0, &shapeName, &contShapeIds);
 
         // plot the link to shape
-        plot.out << SHID(&sh) << " [label=\"sh #" << i
+        plot.out << SH_NODE(shIdent) << " [label=\"sh #" << shIdx
             << "\", URL=" << DOT_LINK(shapeName);
 
         if (!shapeList.empty())
@@ -196,6 +154,10 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         const LocalState &locState = fncState[locIdx];
         plotInsn(plot, locIdx, locState);
+
+        // plot trace edges
+        BOOST_FOREACH(const TraceEdge *te, locState.traceOutEdges)
+            plot.out << SH_NODE(te->src) << " -> " << SH_NODE(te->dst) << ";\n";
 
         const unsigned cntTargets = locState.cfgOutEdges.size();
         for (unsigned i = 0; i < cntTargets; ++i) {
@@ -242,25 +204,6 @@ void plotFnc(const TFnc fnc, TStateMap &stateByInsn)
     PlotData plot(out, stateByInsn, plotName);
     const GlobalState *fncState = computeStateOf(fnc, stateByInsn);
     plotFncCore(plot, *fncState);
-
-    // build trace index
-    TraceIndex trIndex;
-    for (TLocIdx locIdx = 0; locIdx < fncState->size(); ++locIdx) {
-        const SymState &state = (*fncState)[locIdx].heapList;
-        BOOST_FOREACH(const SymHeap *sh, state)
-            trIndex.indexTraceOf(sh);
-    }
-
-    // plot trace edges
-    for (TLocIdx locIdx = 0; locIdx < fncState->size(); ++locIdx) {
-        const SymState &state = (*fncState)[locIdx].heapList;
-        BOOST_FOREACH(const SymHeap *sh, state) {
-            const SymHeap *shPred = trIndex.nearestPredecessorOf(sh);
-            if (shPred)
-                plot.out << SHID(shPred) << " -> " << SHID(sh) << ";\n";
-        }
-    }
-
     delete fncState;
 
     // close graph

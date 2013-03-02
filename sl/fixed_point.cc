@@ -33,6 +33,16 @@ typedef const CodeStorage::Block                   *TBlock;
 
 const THeapIdent InvalidHeap(-1, -1);
 
+const SymHeap *heapByIdent(const GlobalState &glState, const THeapIdent shIdent)
+{
+    const TLocIdx locIdx = shIdent.first;
+    const LocalState &locState = glState[locIdx];
+
+    const THeapIdx shIdx = shIdent.second;
+    const SymHeap &sh = locState.heapList[shIdx];
+    return &sh;
+}
+
 bool isTransparentInsn(const TInsn insn)
 {
     const enum cl_insn_e code = insn->code;
@@ -44,6 +54,63 @@ bool isTransparentInsn(const TInsn insn)
         default:
             return false;
     }
+}
+
+class TraceIndex {
+    public:
+        TraceIndex(const GlobalState &glState):
+            glState_(glState)
+        {
+        }
+
+        void indexTraceOf(const TLocIdx);
+
+        /// return InvalidHeap if not found
+        THeapIdent nearestPredecessorOf(const THeapIdent) const;
+
+    private:
+        typedef std::map<const Trace::Node *, THeapIdent> TLookup;
+        const GlobalState          &glState_;
+        TLookup                     lookup_;
+};
+
+void TraceIndex::indexTraceOf(const TLocIdx locIdx)
+{
+    const SymState &state = glState_[locIdx].heapList;
+    const THeapIdx shCnt = state.size();
+    for (THeapIdx shIdx = 0; shIdx < shCnt; ++shIdx) {
+        const THeapIdent shIdent(locIdx, shIdx);
+        const SymHeap &sh = state[shIdx];
+        const Trace::Node *tr = sh.traceNode();
+
+        // we should never change the target heap of an already indexed trace node
+        CL_BREAK_IF(hasKey(lookup_, tr) && lookup_[tr] != shIdent);
+
+        lookup_[tr] = shIdent;
+    }
+}
+
+THeapIdent TraceIndex::nearestPredecessorOf(const THeapIdent shIdent) const
+{
+    const SymHeap *const sh = heapByIdent(glState_, shIdent);
+    const Trace::Node *tr = sh->traceNode();
+
+    while (0U < tr->parents().size()) {
+        // TODO: handle trace nodes with more than one parent!
+        tr = tr->parent();
+
+        // check the current trace node
+        const TLookup::const_iterator it = lookup_.find(tr);
+        if (it == lookup_.end())
+            continue;
+
+        // found!
+        const THeapIdent shPred = it->second;
+        CL_BREAK_IF(heapByIdent(glState_, shPred)->traceNode() != tr);
+        return shPred;
+    }
+
+    return /* not found */ InvalidHeap;
 }
 
 typedef StateByInsn::TStateMap                      TStateMap;
@@ -159,6 +226,40 @@ void finalizeFlow(StateBuilderCtx &ctx)
     }
 }
 
+void createTraceEdges(GlobalState &glState, TTraceList &traceList)
+{
+    const TLocIdx locCnt = glState.size();
+    for (TLocIdx dstLocIdx = 0; dstLocIdx < locCnt; ++dstLocIdx) {
+        LocalState &dstState = glState[dstLocIdx];
+
+        // build trace index
+        TraceIndex trIndex(glState);
+        BOOST_FOREACH(const CfgEdge &ie, dstState.cfgInEdges)
+            trIndex.indexTraceOf(ie.targetLoc);
+
+        // try to find a predecessor for each local heap
+        const THeapIdx heapCnt = dstState.heapList.size();
+        for (THeapIdx dstHeapIdx = 0; dstHeapIdx < heapCnt; ++ dstHeapIdx) {
+            const THeapIdent dstHeap(dstLocIdx, dstHeapIdx);
+            const THeapIdent srcHeap = trIndex.nearestPredecessorOf(dstHeap);
+
+            if (srcHeap == InvalidHeap)
+                // predecessor not found
+                continue;
+
+            // allocate a new trace edge
+            TraceEdge *te = new TraceEdge(srcHeap, dstHeap);
+            traceList.append(te);
+            dstState.traceInEdges.push_back(te);
+
+            // store backward reference
+            const TLocIdx srcLocIdx = srcHeap.first;
+            LocalState &srcState = glState[srcLocIdx];
+            srcState.traceOutEdges.push_back(te);
+        }
+    }
+}
+
 GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
 {
     GlobalState *glState = new GlobalState;
@@ -168,6 +269,8 @@ GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
     loadHeaps(ctx, stateByInsn);
 
     finalizeFlow(ctx);
+
+    createTraceEdges(*glState, glState->traceList_);
 
     return glState;
 }
