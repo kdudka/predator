@@ -108,7 +108,7 @@ void plotGraph(const Storage &stor, const std::string &baseName)
 
     std::string fileName = graphUniqueName(baseName);
     PT_DEBUG(0, "writing call graph to '" << fileName << "'");
-    std::ofstream file(fileName);
+    std::ofstream file(fileName.c_str());
     file << dot.str();
 }
 
@@ -283,7 +283,7 @@ void plotGraph(const Storage &stor, const std::string &baseName)
 
     const std::string fileName = graphUniqueName(baseName);
     PT_DEBUG(0, "writing points-to graph into '" << fileName << "'");
-    std::ofstream outfile(fileName);
+    std::ofstream outfile(fileName.c_str());
     outfile << out.str();
 }
 

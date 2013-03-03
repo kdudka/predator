@@ -3596,6 +3596,10 @@ SymHeap& SymHeap::operator=(const SymHeap &ref)
     RefCntLib<RCO_NON_VIRT>::leave(d);
 
     d = ref.d;
+#if defined(__GNUC_MINOR__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 1)
+    // work around optimization bug <https://bugzilla.redhat.com/917378>
+    asm volatile("" ::: "memory");
+#endif
     RefCntLib<RCO_NON_VIRT>::enter(d);
 
     return *this;
