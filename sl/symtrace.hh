@@ -27,6 +27,7 @@
 
 #include "config.h"
 
+#include "id_mapper.hh"
 #include "symbt.hh"                 // needed for EMsgLevel
 #include "symheap.hh"               // needed for EObjKind
 
@@ -130,10 +131,20 @@ class Node: public NodeBase {
             return this->parent();
         }
 
+    public:
+        // TODO: should we use a more generic ID type?
+        typedef IdMapper<TObjId>                    TIdMapper;
+
+        /// return the ID mapping describing the operation behind the trace node
+        const TIdMapper& idMapper() const { return idMapper_; }
+
     private:
         // copying NOT allowed
         Node(const Node &);
         Node& operator=(const Node &);
+
+    protected:
+        TIdMapper idMapper_;
 
     private:
         TBaseList children_;
@@ -224,6 +235,7 @@ class InsnNode: public Node {
             insn_(insn),
             isBuiltin_(isBuiltin)
         {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
         virtual Node* printNode() const;
@@ -255,6 +267,7 @@ class CondNode: public Node {
             determ_(determ),
             branch_(branch)
         {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
         virtual Node* printNode() const;
@@ -323,6 +336,7 @@ class SpliceOutNode: public Node {
             Node(ref),
             len_(len)
         {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
     protected:
@@ -495,6 +509,7 @@ class MsgNode: public Node {
             level_(level),
             loc_(loc)
         {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
     protected:
@@ -518,6 +533,7 @@ class UserNode: public Node {
             insn_(insn),
             label_(label)
         {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
         virtual Node* printNode() const;

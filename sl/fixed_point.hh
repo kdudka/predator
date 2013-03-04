@@ -39,7 +39,7 @@ typedef const CodeStorage::Fnc                     *TFnc;
 typedef int                                         TLocIdx;
 typedef int                                         THeapIdx;
 typedef int                                         TShapeIdx;
-typedef int                                         TObjectIdx;
+typedef TObjId                                      TObjectIdx;
 
 /// heap (in our case represented by SMG) identity
 typedef std::pair<TLocIdx, THeapIdx>                THeapIdent;
