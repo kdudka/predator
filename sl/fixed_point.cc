@@ -227,6 +227,22 @@ void finalizeFlow(StateBuilderCtx &ctx)
     }
 }
 
+void initIdMapping(const GlobalState &glState, TraceEdge *te)
+{
+    const SymHeap *const shSrc = heapByIdent(glState, te->src);
+    const SymHeap *const shDst = heapByIdent(glState, te->dst);
+
+    const Trace::Node *const trSrc = shSrc->traceNode();
+    const Trace::Node *const trDst = shDst->traceNode();
+
+    // start with identity, then go through the trace and construct composition
+    te->objMap.setNotFoundAction(TObjectMapper::NFA_RETURN_IDENTITY);
+
+    // TODO: handle trace nodes with more than one parent!
+    for(const Trace::Node *tr = trDst; trSrc != tr; tr = tr->parent())
+        te->objMap.composite<D_RIGHT_TO_LEFT>(tr->idMapper());
+}
+
 void createTraceEdges(GlobalState &glState, TTraceList &traceList)
 {
     const TLocIdx locCnt = glState.size();
@@ -257,6 +273,9 @@ void createTraceEdges(GlobalState &glState, TTraceList &traceList)
             const TLocIdx srcLocIdx = srcHeap.first;
             LocalState &srcState = glState[srcLocIdx];
             srcState.traceOutEdges.push_back(te);
+
+            // initialize object IDs mapping
+            initIdMapping(glState, te);
         }
     }
 }

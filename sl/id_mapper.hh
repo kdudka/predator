@@ -27,6 +27,7 @@
 #include <boost/bimap.hpp>
 #include <boost/bimap/bimap.hpp>
 #include <boost/bimap/multiset_of.hpp>
+#include <boost/foreach.hpp>
 
 enum EDirection {
     D_LEFT_TO_RIGHT,
@@ -38,6 +39,7 @@ class IdMapper {
     public:
         typedef std::vector<TId> TVector;
 
+        /// do not change the order, composite() relies on it
         enum ENotFoundAction {
             NFA_TRAP_TO_DEBUGGER,
             NFA_RETURN_NOTHING,
@@ -65,6 +67,9 @@ class IdMapper {
         template <EDirection>
         void query(TVector *pDst, const TId id) const;
 
+        template <EDirection>
+        void composite(const IdMapper &by);
+
     private:
         typedef boost::bimaps::multiset_of<TId>     TMulti;
         typedef boost::bimap<TMulti, TMulti>        TBiMap;
@@ -91,6 +96,12 @@ struct IdMapperLib<TBiMap, D_LEFT_TO_RIGHT> {
     static TMap& mapFromBiMap(TBiMap &bm)             { return bm.left; }
 
     static const TMap& mapFromBiMap(const TBiMap &bm) { return bm.left; }
+
+    template <typename TId>
+    static void insertTo(TBiMap *pBiMap, const TId a, const TId b) {
+        const typename TBiMap::value_type item(a, b);
+        pBiMap->insert(item);
+    }
 };
 
 template <class TBiMap>
@@ -100,6 +111,12 @@ struct IdMapperLib<TBiMap, D_RIGHT_TO_LEFT> {
     static TMap& mapFromBiMap(TBiMap &bm)             { return bm.right; }
 
     static const TMap& mapFromBiMap(const TBiMap &bm) { return bm.right; }
+
+    template <typename TId>
+    static void insertTo(TBiMap *pBiMap, const TId a, const TId b) {
+        const typename TBiMap::value_type item(b, a);
+        pBiMap->insert(item);
+    }
 };
 
 template <typename TId>
@@ -139,6 +156,53 @@ void IdMapper<TId>::query(TVector *pDst, const TId id) const
         CL_BREAK_IF(id != it->first);
         pDst->push_back(it->second);
     }
+}
+
+template <typename TId>
+template <EDirection DIR>
+void IdMapper<TId>::composite(const IdMapper<TId> &by)
+{
+    if (by.nfa_ < nfa_)
+        nfa_ = by.nfa_;
+
+    TBiMap result;
+
+    // resolve types according to DIR
+    typedef IdMapperLib<TBiMap, DIR>                TLib;
+    typedef typename TLib::TMap                     TMap;
+
+    // iterate through the mapping of 'this'
+    const TMap &m = TLib::mapFromBiMap(biMap_);
+    BOOST_FOREACH(typename TMap::const_reference item, m) {
+        const TId a = item.first;
+        const TId b = item.second;
+        TVector cList;
+        this->query<DIR>(&cList, b);
+        BOOST_FOREACH(const TId c, cList)
+            TLib::insertTo(&result, a, c);
+    }
+
+    if (NFA_RETURN_IDENTITY == nfa_) {
+        // iterate through the mapping of 'by'
+        const TMap &mBy = TLib::mapFromBiMap(by.biMap_);
+        BOOST_FOREACH(typename TMap::const_reference item, mBy) {
+            const TId b = item.first;
+            const TId c = item.second;
+
+            // reverse lookup
+            TVector aList;
+            if (D_LEFT_TO_RIGHT == DIR)
+                by.query<D_RIGHT_TO_LEFT>(&aList, b);
+            else
+                by.query<D_LEFT_TO_RIGHT>(&aList, b);
+
+            BOOST_FOREACH(const TId a, aList)
+                TLib::insertTo(&result, a, c);
+        }
+    }
+
+    // finally replace the mapping of 'this' by the result
+    biMap_.swap(result);
 }
 
 #endif /* H_GUARD_ID_MAPPER_H */
