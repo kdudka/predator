@@ -147,7 +147,8 @@ void clonePrototypes(
         SymHeap                &sh,
         const TObjId            objDst,
         const TObjId            objSrc,
-        const TObjSet          &protos)
+        const TObjSet          &protos,
+        Trace::TIdMapper       &idMapper)
 {
     // allocate lists for object IDs
     const unsigned cnt = protos.size();
@@ -165,6 +166,10 @@ void clonePrototypes(
         const TObjId cloneI = protoClone(sh, protoList[i]);
         cloneList[i] = cloneI;
 
+        // update object IDs mapping
+        idMapper.insert(protoI, protoI);
+        idMapper.insert(protoI, cloneI);
+
         reconnectProto(sh, protoI, cloneI, objSrc, objDst, TS_REGION);
 
         for (unsigned j = 0; j < i; ++j) {
@@ -176,7 +181,7 @@ void clonePrototypes(
 }
 
 // clone a segment including its prototypes and decrement their nesting level
-TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
+TObjId regFromSegDeep(SymHeap &sh, TObjId seg, Trace::TIdMapper &idMapper)
 {
     // collect the list of prototypes
     TObjSet protoList;
@@ -185,6 +190,10 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
     // clone the object itself
     const TObjId reg = sh.objClone(seg);
     sh.objSetConcrete(reg);
+
+    // update object IDs mapping
+    idMapper.insert(seg, seg);
+    idMapper.insert(seg, reg);
 
     // recover pointers to self
     redirectRefs(sh,
@@ -198,7 +207,7 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
     duplicateUnknownValues(sh, reg);
 
     // clone all prototypes originally owned by seg
-    clonePrototypes(sh, reg, seg, protoList);
+    clonePrototypes(sh, reg, seg, protoList, idMapper);
 
     return reg;
 }
@@ -477,7 +486,15 @@ void concretizeObj(
     LDP_PLOTN(symabstract, sh, &pName);
 
     const EObjKind kind = sh.objKind(seg);
-    sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind, pName));
+
+    // append a trace node for this operation
+    Trace::Node *trOrig = sh.traceNode();
+    Trace::Node *trNode = new Trace::ConcretizationNode(trOrig, kind, pName);
+    sh.traceUpdate(trNode);
+
+    // set default ID mapping to identity
+    Trace::TIdMapper &idMapper = trNode->idMapper();
+    idMapper.setNotFoundAction(Trace::TIdMapper::NFA_RETURN_IDENTITY);
 
     if (isMayExistObj(kind)) {
         // these kinds are much easier than regular list segments
@@ -489,7 +506,7 @@ void concretizeObj(
     }
 
     // duplicate seg (including all prototypes) and convert to OK_REGION
-    const TObjId reg = regFromSegDeep(sh, seg);
+    const TObjId reg = regFromSegDeep(sh, seg, idMapper);
 
     // redirect all TS_FIRST/TS_LAST addresses to the region
     redirectRefs(sh,
