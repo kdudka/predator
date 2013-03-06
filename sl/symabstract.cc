@@ -206,7 +206,8 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
 bool segAbstractionStep(
         SymHeap                     &sh,
         const ShapeProps            &props,
-        TObjId                      *pCursor)
+        TObjId                      *pCursor,
+        Trace::TIdMapper            &idMapper)
 {
     const BindingOff &off = props.bOff;
 
@@ -221,13 +222,18 @@ bool segAbstractionStep(
     // join data
     TObjId seg;
     TObjSet protos[2];
-    if (!joinData(sandBox, props, obj0, obj1, &seg, &protos)) {
-        CL_DEBUG("segAbstractionStep() forces segment re-discoverty");
+    if (!joinData(sandBox, props, obj0, obj1, &seg, &protos, 0, &idMapper)) {
+        CL_DEBUG("segAbstractionStep() forces segment re-discovery");
         return false;
     }
 
     // data joined successfully, pick the resulting heap
     sandBox.swap(sh);
+
+    // store ID mapping of the roots and allow identity for all but prototypes
+    idMapper.insert(obj0, seg);
+    idMapper.insert(obj1, seg);
+    idMapper.setNotFoundAction(Trace::TIdMapper::NFA_RETURN_IDENTITY);
 
     // add obj0/obj1 to the set of allowed bottom-up referrers
     protos[0].insert(obj0);
@@ -293,7 +299,12 @@ bool applyAbstraction(
     for (unsigned i = 0; i < len; ++i) {
         CL_BREAK_IF(!protoCheckConsistency(sh));
 
-        if (!segAbstractionStep(sh, shape.props, &cursor)) {
+        // create the trace node in advance, so that we can capture ID mapping
+        using namespace Trace;
+        AbstractionNode *trAbs = new AbstractionNode(sh.traceNode(), kind);
+        NodeHandle trAbsHandle(trAbs);
+
+        if (!segAbstractionStep(sh, shape.props, &cursor, trAbs->idMapper())) {
             CL_DEBUG("<-- validity of next " << (len - i - 1)
                     << " abstraction step(s) broken, forcing re-discovery...");
 
@@ -304,11 +315,12 @@ bool applyAbstraction(
             return false;
         }
 
+        // dump a shape graph if debugging
         std::string pName;
         LDP_PLOTN(symabstract, sh, &pName);
 
-        Trace::Node *trAbs =
-            new Trace::AbstractionNode(sh.traceNode(), kind, pName);
+        // abstraction step has succeeded, update the trace graph!
+        trAbs->setPlotName(pName);
         sh.traceUpdate(trAbs);
 
         CL_BREAK_IF(!protoCheckConsistency(sh));

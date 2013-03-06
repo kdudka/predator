@@ -2606,7 +2606,8 @@ bool joinData(
         const TObjId             obj2,
         TObjId                  *pDst,
         TObjSet                  protoObjs[1][2],
-        EJoinStatus             *pStatus)
+        EJoinStatus             *pStatus,
+        Trace::TIdMapper        *pIdMapper)
 {
     SJ_DEBUG("--> joinData" << SJ_OBJP(obj1, obj2));
 
@@ -2680,12 +2681,18 @@ bool joinData(
             ++cntProto1;
             if (protoObjs)
                 (*protoObjs)[0].insert(proto1);
+
+            if (pIdMapper)
+                pIdMapper->insert(proto1, protoDst);
         }
 
         if (OBJ_INVALID != proto2) {
             ++cntProto2;
             if (protoObjs)
                 (*protoObjs)[1].insert(proto2);
+
+            if (pIdMapper)
+                pIdMapper->insert(proto2, protoDst);
         }
     }
 

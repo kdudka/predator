@@ -56,6 +56,9 @@ typedef const CodeStorage::Insn                    *TInsn;
 
 typedef std::vector<Node *>                         TNodeList;
 
+// TODO: should we use a more generic ID type?
+typedef IdMapper<TObjId>                            TIdMapper;
+
 /// an abstract base for Node and NodeHandle (externally not much useful)
 class NodeBase {
     protected:
@@ -132,8 +135,8 @@ class Node: public NodeBase {
         }
 
     public:
-        // TODO: should we use a more generic ID type?
-        typedef IdMapper<TObjId>                    TIdMapper;
+        /// return the ID mapping describing the operation behind the trace node
+        TIdMapper& idMapper()             { return idMapper_; }
 
         /// return the ID mapping describing the operation behind the trace node
         const TIdMapper& idMapper() const { return idMapper_; }
@@ -280,19 +283,22 @@ class CondNode: public Node {
 class AbstractionNode: public Node {
     private:
         const EObjKind              kind_;
-        const std::string           name_;
+        std::string                 name_;
 
     public:
         /**
          * @param ref a trace leading to this abstraction step
          * @param kind the kind of abstraction step being performed
-         * @param name name of the corresponding debug plot (empty if unused)
          */
-        AbstractionNode(Node *ref, EObjKind kind, const std::string &name):
+        AbstractionNode(Node *ref, EObjKind kind):
             Node(ref),
-            kind_(kind),
-            name_(name)
+            kind_(kind)
         {
+        }
+
+        /// @param name name of the corresponding debug plot (empty if unused)
+        void setPlotName(const std::string &name) {
+            name_ = name;
         }
 
     protected:

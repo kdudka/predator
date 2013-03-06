@@ -26,6 +26,7 @@
  */
 
 #include "symheap.hh"
+#include "symtrace.hh"              // for Trace::TIdMapper
 
 #include <iostream>
 
@@ -59,7 +60,8 @@ bool joinData(
         const TObjId             obj2,
         TObjId                  *pDst            = 0,
         TObjSet                  protoObjs[1][2] = 0,
-        EJoinStatus             *pStatus         = 0);
+        EJoinStatus             *pStatus         = 0,
+        Trace::TIdMapper        *pIdMapper       = 0);
 
 /// @todo some dox
 bool joinSymHeaps(
