@@ -339,31 +339,32 @@ bool applyAbstraction(
     return true;
 }
 
-void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
+void dlSegReplaceByConcrete(SymHeap &sh, const TObjId obj)
 {
+    CL_BREAK_IF(OK_DLS != sh.objKind(obj));
+
     std::string pName;
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOTN(symabstract, sh, &pName);
     CL_BREAK_IF(!segCheckConsistency(sh));
     CL_BREAK_IF(!protoCheckConsistency(sh));
 
+    // append a trace node for this operation (object IDs preserved 1:1)
     Trace::Node *trOrig = sh.traceNode();
-    sh.traceUpdate(new Trace::ConcretizationNode(trOrig, OK_DLS, pName));
+    Trace::Node *trNode = new Trace::ConcretizationNode(trOrig, OK_DLS, pName);
+    trNode->idMapper().setNotFoundAction(Trace::TIdMapper::NFA_RETURN_IDENTITY);
+    sh.traceUpdate(trNode);
 
-    CL_BREAK_IF(seg != peer);
-    CL_BREAK_IF(OK_DLS != sh.objKind(seg));
-    (void) peer;
-
-    // redirect all references originally pointing to seg
+    // redirect all references originally pointing to obj
     redirectRefs(sh,
             /* pointingFrom */ OBJ_INVALID,
-            /* pointingTo   */ seg,
+            /* pointingTo   */ obj,
             /* pointingWith */ TS_INVALID,
-            /* redirectTo   */ seg,
+            /* redirectTo   */ obj,
             /* redirectWith */ TS_REGION);
 
     // convert OK_DLS to OK_REGION
-    sh.objSetConcrete(seg);
+    sh.objSetConcrete(obj);
 
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!segCheckConsistency(sh));
