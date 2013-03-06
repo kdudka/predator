@@ -160,9 +160,14 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
         BOOST_FOREACH(const TraceEdge *te, locState.traceOutEdges) {
             plot.out << SH_NODE(te->src) << " -> " << SH_NODE(te->dst);
 
-            if (!te->csMap.empty())
+            const unsigned cnt = te->csMap.size();
+            if (cnt) {
                 // we have non-empty container shape mapping for this edge
-                plot.out << " [color=red]";
+                plot.out << " [color=red, fontcolor=red";
+                if (1U < cnt)
+                    plot.out << ", label=" << cnt << ", penwidth=" << cnt;
+                plot.out << "]";
+            }
 
             plot.out << ";\n";
         }

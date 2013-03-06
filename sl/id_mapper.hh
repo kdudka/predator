@@ -67,6 +67,11 @@ class IdMapper {
             return biMap_.empty();
         }
 
+        unsigned size() const
+        {
+            return biMap_.size();
+        }
+
         bool /* changed */ insert(const TId left, const TId right);
 
         template <EDirection>
