@@ -157,8 +157,15 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
         plotInsn(plot, locIdx, locState);
 
         // plot trace edges
-        BOOST_FOREACH(const TraceEdge *te, locState.traceOutEdges)
-            plot.out << SH_NODE(te->src) << " -> " << SH_NODE(te->dst) << ";\n";
+        BOOST_FOREACH(const TraceEdge *te, locState.traceOutEdges) {
+            plot.out << SH_NODE(te->src) << " -> " << SH_NODE(te->dst);
+
+            if (!te->csMap.empty())
+                // we have non-empty container shape mapping for this edge
+                plot.out << " [color=red]";
+
+            plot.out << ";\n";
+        }
 
         const unsigned cntTargets = locState.cfgOutEdges.size();
         for (unsigned i = 0; i < cntTargets; ++i) {

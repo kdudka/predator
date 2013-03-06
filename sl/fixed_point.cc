@@ -280,6 +280,46 @@ void createTraceEdges(GlobalState &glState, TTraceList &traceList)
     }
 }
 
+void detectShapeMapping(
+        TraceEdge                  *te,
+        const SymHeap              &shSrc,
+        const SymHeap              &shDst,
+        const TShapeList           &srcShapes,
+        const TShapeList           &dstShapes)
+{
+    typedef std::map<TObjSet, TShapeIdx> TIndex;
+    TIndex index;
+
+    const TShapeIdx srcCnt = srcShapes.size();
+    for (TShapeIdx srcIdx = 0; srcIdx < srcCnt; ++srcIdx) {
+        TObjSet keySrc;
+        objSetByShape(&keySrc, shSrc, srcShapes[srcIdx]);
+
+        // translate the object IDs using the mapping stored in the edge
+        TObjSet key;
+        project<D_LEFT_TO_RIGHT>(te->objMap, &key, keySrc);
+
+        // there should be no redefinitions
+        CL_BREAK_IF(hasKey(index, key));
+
+        index[key] = srcIdx;
+    }
+
+    const TShapeIdx dstCnt = dstShapes.size();
+    for (TShapeIdx dstIdx = 0; dstIdx < dstCnt; ++dstIdx) {
+        TObjSet key;
+        objSetByShape(&key, shDst, dstShapes[dstIdx]);
+
+        const TIndex::const_iterator it = index.find(key);
+        if (it == index.end())
+            // not found
+            continue;
+
+        const TShapeIdx srcIdx = it->second;
+        te->csMap.insert(srcIdx, dstIdx);
+    }
+}
+
 void detectContShapes(GlobalState &glState)
 {
     const TLocIdx locCnt = glState.size();
@@ -287,6 +327,25 @@ void detectContShapes(GlobalState &glState)
         LocalState &locState = glState[locIdx];
         const SymState &state = locState.heapList;
         detectLocalContShapes(&locState.shapeListByHeapIdx, state);
+    }
+
+    for (TLocIdx dstLocIdx = 0; dstLocIdx < locCnt; ++dstLocIdx) {
+        const LocalState &dstState = glState[dstLocIdx];
+        BOOST_FOREACH(TraceEdge *te, dstState.traceInEdges) {
+            const TLocIdx srcLocIdx = te->src.first;
+            const LocalState &srcState = glState[srcLocIdx];
+
+            const THeapIdx srcShIdx = te->src.second;
+            const THeapIdx dstShIdx = te->dst.second;
+
+            const SymHeap &shSrc = srcState.heapList[srcShIdx];
+            const SymHeap &shDst = dstState.heapList[dstShIdx];
+
+            const TShapeList &srcShapes = srcState.shapeListByHeapIdx[srcShIdx];
+            const TShapeList &dstShapes = dstState.shapeListByHeapIdx[dstShIdx];
+
+            detectShapeMapping(te, shSrc, shDst, srcShapes, dstShapes);
+        }
     }
 }
 

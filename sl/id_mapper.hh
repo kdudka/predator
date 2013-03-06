@@ -62,6 +62,11 @@ class IdMapper {
             nfa_ = nfa;
         }
 
+        bool empty() const
+        {
+            return biMap_.empty();
+        }
+
         bool /* changed */ insert(const TId left, const TId right);
 
         template <EDirection>
@@ -78,6 +83,20 @@ class IdMapper {
         ENotFoundAction             nfa_;
         TBiMap                      biMap_;
 };
+
+template <EDirection DIR, typename TBiMap, class TDst, class TSrc>
+void project(
+        const TBiMap               &biMap,
+        TDst                       *pDstCont,
+        const TSrc                 &srcCont)
+{
+    BOOST_FOREACH(typename TSrc::value_type src, srcCont) {
+        typename TBiMap::TVector dstVect;
+        biMap.template query<DIR>(&dstVect, src);
+        BOOST_FOREACH(const typename TDst::value_type dst, dstVect)
+            pDstCont->insert(dst);
+    }
+}
 
 template <typename TId>
 bool /* changed */ IdMapper<TId>::insert(const TId left, const TId right)
