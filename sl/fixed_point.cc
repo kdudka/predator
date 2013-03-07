@@ -366,4 +366,14 @@ GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
     return glState;
 }
 
+void sl_dump(const TShapeMapper &m)
+{
+    m.prettyPrint(std::cout);
+}
+
+void sl_dump(const TObjectMapper &m)
+{
+    m.prettyPrint(std::cout);
+}
+
 } // namespace FixedPoint

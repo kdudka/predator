@@ -128,6 +128,12 @@ const SymHeap *heapByIdent(const GlobalState &, const THeapIdent);
 /// caller is responsible to destroy the returned instance
 GlobalState* computeStateOf(const TFnc, const StateByInsn::TStateMap &);
 
+/// pretty print the given ID mapping
+void sl_dump(const TShapeMapper &);
+
+/// pretty print the given ID mapping
+void sl_dump(const TObjectMapper &);
+
 } // namespace FixedPoint
 
 #endif /* H_GUARD_FIXED_POINT_H */

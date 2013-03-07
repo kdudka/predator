@@ -22,6 +22,7 @@
 
 #include "config.h"
 
+#include <iostream>
 #include <vector>
 
 #include <boost/bimap.hpp>
@@ -79,6 +80,8 @@ class IdMapper {
 
         template <EDirection>
         void composite(const IdMapper &by);
+
+        void prettyPrint(std::ostream &) const;
 
     private:
         typedef boost::bimaps::multiset_of<TId>     TMulti;
@@ -227,6 +230,18 @@ void IdMapper<TId>::composite(const IdMapper<TId> &by)
 
     // finally replace the mapping of 'this' by the result
     biMap_.swap(result);
+}
+
+template <typename TId>
+void IdMapper<TId>::prettyPrint(std::ostream &str) const
+{
+    unsigned i = 0U;
+    BOOST_FOREACH(typename TBiMap::left_const_reference item, biMap_.left) {
+        if (i++)
+            str << ", ";
+
+        str << item.first << " -> " << item.second;
+    }
 }
 
 #endif /* H_GUARD_ID_MAPPER_H */
