@@ -104,16 +104,8 @@ struct SchedItem {
 // needed by std::set
 inline bool operator<(const SchedItem &a, const SchedItem &b)
 {
-    if (a.fld1 < b.fld1)
-        return true;
-    if (b.fld1 < a.fld1)
-        return false;
-
-    if (a.fld2 < b.fld2)
-        return true;
-    if (b.fld2 < a.fld2)
-        return false;
-
+    RETURN_IF_COMPARED(a, b, fld1);
+    RETURN_IF_COMPARED(a, b, fld2);
     return (a.ldiff < b.ldiff);
 }
 

@@ -29,6 +29,13 @@
 
 #define FIXW(w) std::fixed << std::setfill('0') << std::setw(w)
 
+#define RETURN_IF_COMPARED(a, b, member) do {   \
+    if (a.member < b.member)                    \
+        return true;                            \
+    if (b.member < a.member)                    \
+        return false;                           \
+} while (0)
+
 template <typename T>
 void swapValues(T &a, T &b)
 {

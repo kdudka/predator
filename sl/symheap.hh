@@ -297,13 +297,11 @@ struct CallInst {
  */
 inline bool operator<(const CallInst &a, const CallInst &b)
 {
-    if (a.uid < b.uid)
-        return true;
-    else if (b.uid < a.uid)
-        return false;
-    else
-        // we know (a.uid == b.uid) at this point, let's compare .inst
-        return a.inst < b.inst;
+    // first compare uid
+    RETURN_IF_COMPARED(a, b, uid);
+
+    // then compare inst
+    return a.inst < b.inst;
 }
 
 /// a list of _program_ variables
@@ -328,13 +326,11 @@ typedef std::map<TOffset, UniformBlock>                 TUniBlockMap;
  */
 inline bool operator<(const CVar &a, const CVar &b)
 {
-    if (a.uid < b.uid)
-        return true;
-    else if (b.uid < a.uid)
-        return false;
-    else
-        // we know (a.uid == b.uid) at this point, let's compare .inst
-        return a.inst < b.inst;
+    // first compare uid
+    RETURN_IF_COMPARED(a, b, uid);
+
+    // then compare inst
+    return a.inst < b.inst;
 }
 
 class FldList;
@@ -702,12 +698,10 @@ class FldHandle {
 /// this allows to insert FldHandle instances into std::set
 inline bool operator<(const FldHandle &a, const FldHandle &b)
 {
-    if (a.sh() < b.sh())
-        return true;
+    // first compare heap addresses
+    RETURN_IF_COMPARED(a, b, sh());
 
-    if (b.sh() < a.sh())
-        return false;
-
+    // then compare field IDs
     return (a.fieldId() < b.fieldId());
 }
 
@@ -804,14 +798,8 @@ inline bool operator!=(const BindingOff &off1, const BindingOff &off2)
 /// lexicographical comparison of BindingOff, need for std::map
 inline bool operator<(const BindingOff &off1, const BindingOff &off2)
 {
-    if (off1.next < off2.next)
-        return true;
-    if (off2.next < off1.next)
-        return false;
-    if (off1.prev < off2.prev)
-        return true;
-    if (off2.prev < off1.prev)
-        return false;
+    RETURN_IF_COMPARED(off1, off2, next);
+    RETURN_IF_COMPARED(off1, off2, prev);
     return (off1.head < off2.head);
 }
 

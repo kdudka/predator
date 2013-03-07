@@ -21,6 +21,7 @@
 #define H_GUARD_SHAPE_H
 
 #include "symheap.hh"
+#include "util.hh"                  // for RETURN_IF_COMPARED
 
 /// describe how the shape looks like
 struct ShapeProps {
@@ -30,11 +31,10 @@ struct ShapeProps {
 
 inline bool operator<(const ShapeProps &a, const ShapeProps &b)
 {
-    if (a.kind < b.kind)
-        return true;
-    if (b.kind < a.kind)
-        return false;
+    // compare kind of shape
+    RETURN_IF_COMPARED(a, b, kind);
 
+    // the compare offsets
     return a.bOff < b.bOff;
 }
 
