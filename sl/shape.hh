@@ -45,8 +45,18 @@ struct Shape {
     unsigned            length; ///< count of objects (both regions or abstract)
 };
 
+inline bool operator<(const Shape &a, const Shape &b)
+{
+    RETURN_IF_COMPARED(a, b, entry);
+    RETURN_IF_COMPARED(a, b, props);
+    return a.length < b.length;
+}
+
 /// list of shape properties (kind, binding offsets) candidates
 typedef std::vector<ShapeProps>             TShapePropsList;
+
+/// set of shapes given by their inductive definition
+typedef std::set<Shape>                     TShapeSet;
 
 /// list of shapes given by their inductive definition
 typedef std::vector<Shape>                  TShapeList;

@@ -336,9 +336,15 @@ bool detectImpliedShape(Shape *pDst, SymHeap &sh, const ShapePattern &sp)
 
 void ImpliedShapeDetector::appendImpliedShapes(TShapeList *pDst, SymHeap &sh)
 {
+    // eliminate duplicates (one container shape can be implied by many)
+    TShapeSet found;
+
     BOOST_FOREACH(const ShapePattern &sp, plist_) {
         Shape shape;
-        if (detectImpliedShape(&shape, sh, sp))
+        if (!detectImpliedShape(&shape, sh, sp))
+            continue;
+
+        if (insertOnce(found, shape))
             pDst->push_back(shape);
     }
 }
