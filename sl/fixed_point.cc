@@ -174,6 +174,13 @@ void loadHeaps(StateBuilderCtx &ctx, const TStateMap &stateMap)
                 locState->heapList = it->second;
                 Trace::waiveCloneOperation(locState->heapList);
             }
+
+            // enlarge trace edges vectors
+            const THeapIdx shCnt = locState->heapList.size();
+            if (shCnt) {
+                locState->traceInEdges.resize(shCnt);
+                locState->traceOutEdges.resize(shCnt);
+            }
         }
     }
 }
@@ -267,12 +274,12 @@ void createTraceEdges(GlobalState &glState, TTraceList &traceList)
             // allocate a new trace edge
             TraceEdge *te = new TraceEdge(srcHeap, dstHeap);
             traceList.append(te);
-            dstState.traceInEdges.push_back(te);
+            dstState.traceInEdges[dstHeapIdx].push_back(te);
 
             // store backward reference
             const TLocIdx srcLocIdx = srcHeap.first;
             LocalState &srcState = glState[srcLocIdx];
-            srcState.traceOutEdges.push_back(te);
+            srcState.traceOutEdges[srcHeap./* heap idx */second].push_back(te);
 
             // initialize object IDs mapping
             initIdMapping(glState, te);
@@ -331,20 +338,26 @@ void detectContShapes(GlobalState &glState)
 
     for (TLocIdx dstLocIdx = 0; dstLocIdx < locCnt; ++dstLocIdx) {
         const LocalState &dstState = glState[dstLocIdx];
-        BOOST_FOREACH(TraceEdge *te, dstState.traceInEdges) {
-            const TLocIdx srcLocIdx = te->src.first;
-            const LocalState &srcState = glState[srcLocIdx];
+        const THeapIdx shCnt = dstState.heapList.size();
+        for (THeapIdx dstShIdx = 0; dstShIdx < shCnt; ++dstShIdx) {
+            const TTraceEdgeList &tList = dstState.traceInEdges[dstShIdx];
+            BOOST_FOREACH(TraceEdge *te, tList) {
+                const TLocIdx srcLocIdx = te->src.first;
+                const LocalState &srcState = glState[srcLocIdx];
 
-            const THeapIdx srcShIdx = te->src.second;
-            const THeapIdx dstShIdx = te->dst.second;
+                const THeapIdx srcShIdx = te->src.second;
+                CL_BREAK_IF(dstShIdx != te->dst.second);
 
-            const SymHeap &shSrc = srcState.heapList[srcShIdx];
-            const SymHeap &shDst = dstState.heapList[dstShIdx];
+                const SymHeap &shSrc = srcState.heapList[srcShIdx];
+                const SymHeap &shDst = dstState.heapList[dstShIdx];
 
-            const TShapeList &srcShapes = srcState.shapeListByHeapIdx[srcShIdx];
-            const TShapeList &dstShapes = dstState.shapeListByHeapIdx[dstShIdx];
+                const TShapeList &srcShapes =
+                    srcState.shapeListByHeapIdx[srcShIdx];
+                const TShapeList &dstShapes =
+                    dstState.shapeListByHeapIdx[dstShIdx];
 
-            detectShapeMapping(te, shSrc, shDst, srcShapes, dstShapes);
+                detectShapeMapping(te, shSrc, shDst, srcShapes, dstShapes);
+            }
         }
     }
 }

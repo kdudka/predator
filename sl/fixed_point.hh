@@ -69,6 +69,7 @@ struct TraceEdge {
 };
 
 typedef std::vector<TraceEdge *>                    TTraceEdgeList;
+typedef std::vector<TTraceEdgeList>                 TEdgeListByHeapIdx;
 
 /// single control-flow edge connecting instructions (no basic blocks here)
 struct CfgEdge {
@@ -91,8 +92,8 @@ struct LocalState {
     TShapeListByHeapIdx     shapeListByHeapIdx; /// container shapes per heap
     TCfgEdgeList            cfgInEdges;     /// ingoing control-flow edges
     TCfgEdgeList            cfgOutEdges;    /// outgoing control-flow edges
-    TTraceEdgeList          traceInEdges;   /// ingoing heap-level trace edges
-    TTraceEdgeList          traceOutEdges;  /// outgoing heap-level trace edges
+    TEdgeListByHeapIdx      traceInEdges;   /// ingoing heap-level trace edges
+    TEdgeListByHeapIdx      traceOutEdges;  /// outgoing heap-level trace edges
 };
 
 /// annotated fixed-point of a program (or its part, e.g. a function)
