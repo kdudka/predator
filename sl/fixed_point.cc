@@ -287,7 +287,17 @@ void createTraceEdges(GlobalState &glState, TTraceList &traceList)
     }
 }
 
-void detectShapeMapping(
+void detectContShapes(GlobalState &glState)
+{
+    const TLocIdx locCnt = glState.size();
+    for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
+        LocalState &locState = glState[locIdx];
+        const SymState &state = locState.heapList;
+        detectLocalContShapes(&locState.shapeListByHeapIdx, state);
+    }
+}
+
+void detectShapeMappingCore(
         TraceEdge                  *te,
         const SymHeap              &shSrc,
         const SymHeap              &shDst,
@@ -327,15 +337,9 @@ void detectShapeMapping(
     }
 }
 
-void detectContShapes(GlobalState &glState)
+void detectShapeMapping(GlobalState &glState)
 {
     const TLocIdx locCnt = glState.size();
-    for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
-        LocalState &locState = glState[locIdx];
-        const SymState &state = locState.heapList;
-        detectLocalContShapes(&locState.shapeListByHeapIdx, state);
-    }
-
     for (TLocIdx dstLocIdx = 0; dstLocIdx < locCnt; ++dstLocIdx) {
         const LocalState &dstState = glState[dstLocIdx];
         const THeapIdx shCnt = dstState.heapList.size();
@@ -356,10 +360,58 @@ void detectContShapes(GlobalState &glState)
                 const TShapeList &dstShapes =
                     dstState.shapeListByHeapIdx[dstShIdx];
 
-                detectShapeMapping(te, shSrc, shDst, srcShapes, dstShapes);
+                te->csMap.setNotFoundAction(TShapeMapper::NFA_RETURN_NOTHING);
+                detectShapeMappingCore(te, shSrc, shDst, srcShapes, dstShapes);
             }
         }
     }
+}
+
+bool /* found any */ detectPrevShapes(
+        GlobalState                &glState,
+        const TLocIdx               dstLocIdx,
+        const THeapIdx              dstShIdx,
+        const TShapeIdx             dstCsIdx)
+{
+    CL_BREAK_IF("please implement");
+    return false;
+}
+
+bool /* found any */ implyContShapesFromTrace(GlobalState &glState)
+{
+    bool foundAny = false;
+
+    // for each location
+    const TLocIdx locCnt = glState.size();
+    for (TLocIdx dstLocIdx = 0; dstLocIdx < locCnt; ++dstLocIdx) {
+        const LocalState &dstState = glState[dstLocIdx];
+
+        // for each heap
+        const THeapIdx shCnt = dstState.heapList.size();
+        for (THeapIdx dstShIdx = 0; dstShIdx < shCnt; ++dstShIdx) {
+            const TShapeList &shapes = dstState.shapeListByHeapIdx[dstShIdx];
+
+            // for each container shape
+            const TShapeIdx csCnt = shapes.size();
+            for (TShapeIdx dstCsIdx = 0; dstCsIdx < csCnt; ++dstCsIdx) {
+                TShapeMapper::TVector inbound;
+
+                // for each ingoing trace edge
+                const TTraceEdgeList &tList = dstState.traceInEdges[dstShIdx];
+                BOOST_FOREACH(const TraceEdge *te, tList)
+                    te->csMap.query<D_RIGHT_TO_LEFT>(&inbound, dstCsIdx);
+
+                if (!inbound.empty())
+                    // a predecessor already mapped
+                    continue;
+
+                if (detectPrevShapes(glState, dstLocIdx, dstShIdx, dstCsIdx))
+                    foundAny = true;
+            }
+        }
+    }
+
+    return foundAny;
 }
 
 GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
@@ -376,17 +428,27 @@ GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
 
     detectContShapes(*glState);
 
+    detectShapeMapping(*glState);
+
+    if (implyContShapesFromTrace(*glState))
+        // new container shapes detected, chances are we will find new mapping
+        detectShapeMapping(*glState);
+
     return glState;
 }
 
 void sl_dump(const TShapeMapper &m)
 {
+    std::cout << "TShapeMapper: ";
     m.prettyPrint(std::cout);
+    std::cout << "\n";
 }
 
 void sl_dump(const TObjectMapper &m)
 {
+    std::cout << "TObjectMapper: ";
     m.prettyPrint(std::cout);
+    std::cout << "\n";
 }
 
 } // namespace FixedPoint
