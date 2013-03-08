@@ -22,8 +22,10 @@
 
 #include "cont_shape.hh"
 #include "symtrace.hh"
+#include "symutil.hh"
 #include "worklist.hh"
 
+#include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
 #include <boost/foreach.hpp>
@@ -42,6 +44,12 @@ const SymHeap *heapByIdent(const GlobalState &glState, const THeapIdent shIdent)
     const THeapIdx shIdx = shIdent.second;
     const SymHeap &sh = locState.heapList[shIdx];
     return &sh;
+}
+
+SymHeap *heapByIdent(GlobalState &glStateWr, const THeapIdent shIdent)
+{
+    const GlobalState &glState = const_cast<const GlobalState &>(glStateWr);
+    return const_cast<SymHeap *>(heapByIdent(glState, shIdent));
 }
 
 bool isTransparentInsn(const TInsn insn)
@@ -367,14 +375,106 @@ void detectShapeMapping(GlobalState &glState)
     }
 }
 
+bool /* found */ detectSinglePrevShape(
+        Shape                      *pShape,
+        SymHeap                    &shDst,
+        SymHeap                    &shSrc,
+        TObjId                      objDst,
+        TObjId                      objSrc)
+{
+    CL_BREAK_IF(1U != pShape->length);
+
+    const BindingOff bOff = pShape->props.bOff;
+    const TValId valNextSrc = valOfPtr(shSrc, objSrc, bOff.next);
+    const TValId valPrevSrc = valOfPtr(shSrc, objSrc, bOff.prev);
+    if (VAL_NULL != valNextSrc || VAL_NULL != valPrevSrc)
+        // NULL terminator missing
+        return false;
+
+    const TSizeRange sizeDst = shDst.objSize(objDst);
+    const TSizeRange sizeSrc = shSrc.objSize(objSrc);
+    if (sizeDst != sizeSrc)
+        // object size mismatch
+        return false;
+
+    const TObjType cltDst = shDst.objEstimatedType(objDst);
+    const TObjType cltSrc = shSrc.objEstimatedType(objSrc);
+    if (cltDst && cltSrc && (*cltDst != *cltSrc))
+        // estimated type-info mismatch
+        return false;
+
+    // all OK
+    pShape->entry = objSrc;
+    return true;
+}
+
 bool /* found any */ detectPrevShapes(
         GlobalState                &glState,
         const TLocIdx               dstLocIdx,
         const THeapIdx              dstShIdx,
         const TShapeIdx             dstCsIdx)
 {
-    CL_BREAK_IF("please implement");
-    return false;
+    const LocalState &dstState = glState[dstLocIdx];
+    const Shape &dstShape = dstState.shapeListByHeapIdx[dstShIdx][dstCsIdx];
+    if (1U != dstShape.length)
+        // only shapes consisting of exactly one object are supported for now
+        return false;
+
+    SymHeap &shDst = const_cast<SymHeap &>(dstState.heapList[dstShIdx]);
+    const TObjId entry = dstShape.entry;
+    TObjId obj = entry;
+
+    const BindingOff bOff = dstShape.props.bOff;
+    const TValId valNextDst = valOfPtr(shDst, obj, bOff.next);
+    const TValId valPrevDst = valOfPtr(shDst, obj, bOff.prev);
+    if (VAL_NULL != valNextDst || VAL_NULL != valPrevDst)
+        // only shapes terminated by NULL are supported for now
+        return false;
+
+    bool foundAny = false;
+
+    THeapIdent src(dstLocIdx, dstShIdx);
+    for (;;) {
+        LocalState &srcState = glState[src./* loc */first];
+        const TTraceEdgeList &inEdges = srcState.traceInEdges[src.second];
+        if (1U != inEdges.size())
+            // only heaps with exactly one predecessor are supported for now
+            break;
+
+        const TraceEdge *te = inEdges.front();
+        TObjectMapper::TVector mappedObjs;
+        te->objMap.query<D_RIGHT_TO_LEFT>(&mappedObjs, obj);
+        if (1U != mappedObjs.size())
+            // only bijective object mapping is supported for now
+            break;
+
+        obj = mappedObjs.front();
+        SymHeap *shSrc = heapByIdent(glState, te->src);
+        if (!shSrc->isValid(obj))
+            // the traced object no longer exists in the predecessor heap
+            break;
+
+        // jump to the predecessor
+        src = te->src;
+        LocalState &srcStatePrev = glState[src./* loc */first];
+
+        Shape shape(dstShape);
+        if (!detectSinglePrevShape(&shape, shDst, *shSrc, entry, obj))
+            // not found in this step
+            continue;
+
+        TShapeList &shapeList = srcStatePrev.shapeListByHeapIdx[src.second];
+        if (hasItem(shapeList, shape))
+            // the shape has already been detected before
+            continue;
+
+        foundAny = true;
+        shapeList.push_back(shape);
+        CL_DEBUG("detectPrevShapes() appends a new container shape at loc #"
+                << src./* loc */first);
+    }
+
+    return foundAny;
 }
 
 bool /* found any */ implyContShapesFromTrace(GlobalState &glState)

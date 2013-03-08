@@ -3326,7 +3326,7 @@ TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
 }
 
 bool SymHeapCore::isValid(TObjId obj) const {
-    if (OBJ_INVALID == obj)
+    if (!d->ents.isValidEnt(obj))
         return false;
 
     const Region *regData;

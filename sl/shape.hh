@@ -38,6 +38,17 @@ inline bool operator<(const ShapeProps &a, const ShapeProps &b)
     return a.bOff < b.bOff;
 }
 
+inline bool operator==(const ShapeProps &a, const ShapeProps &b)
+{
+    return a.kind == b.kind
+        && a.bOff == b.bOff;
+}
+
+inline bool operator!=(const ShapeProps &a, const ShapeProps &b)
+{
+    return !operator==(a, b);
+}
+
 /// inductive definition of a container shape
 struct Shape {
     TObjId              entry;
@@ -50,6 +61,18 @@ inline bool operator<(const Shape &a, const Shape &b)
     RETURN_IF_COMPARED(a, b, entry);
     RETURN_IF_COMPARED(a, b, props);
     return a.length < b.length;
+}
+
+inline bool operator==(const Shape &a, const Shape &b)
+{
+    return a.entry == b.entry
+        && a.props == b.props
+        && a.length == b.length;
+}
+
+inline bool operator!=(const Shape &a, const Shape &b)
+{
+    return !operator==(a, b);
 }
 
 /// list of shape properties (kind, binding offsets) candidates

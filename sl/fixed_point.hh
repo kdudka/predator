@@ -124,8 +124,11 @@ class GlobalState {
                 const StateByInsn::TStateMap &);
 };
 
-/// return heap of the given state by its identity (const-only for now)
+/// return heap of the given state by its identity
 const SymHeap *heapByIdent(const GlobalState &, const THeapIdent);
+
+/// return heap of the given state by its identity
+SymHeap *heapByIdent(GlobalState &, const THeapIdent);
 
 /// caller is responsible to destroy the returned instance
 GlobalState* computeStateOf(const TFnc, const StateByInsn::TStateMap &);

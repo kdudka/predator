@@ -139,8 +139,9 @@ void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
         plot.out << SH_NODE(shIdent) << " [label=\"sh #" << shIdx
             << "\", URL=" << DOT_LINK(shapeName);
 
-        if (!shapeList.empty())
-            plot.out << ", color=red, penwidth=3.0";
+        const unsigned csCnt = shapeList.size();
+        if (csCnt)
+            plot.out << ", color=red, penwidth=" << (2U * csCnt);
 
         plot.out << "];\n";
     }
