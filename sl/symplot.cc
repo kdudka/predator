@@ -469,7 +469,7 @@ bool plotField(PlotData &plot, const FieldWrapper &fw, const bool lonely)
             break;
 
         case FC_PREV:
-            color = "gold";
+            color = "orange";
             break;
 
         case FC_DATA:
@@ -700,7 +700,7 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
         case OK_OBJ_OR_NULL:
         case OK_SEE_THROUGH:
         case OK_SEE_THROUGH_2N:
-            color = "green";
+            color = "chartreuse2";
             pw = "3.0";
             break;
 
@@ -710,14 +710,14 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
             break;
 
         case OK_DLS:
-            color = "gold";
+            color = "orange";
             pw = "3.0";
             break;
     }
 
     const char *bgColor = (isHighlighted(plot, obj))
         ? "azure2"
-        : "gray98";
+        : "white";
 
     const std::string label = labelOfCompObj(sh, obj, /* showProps */ true);
 
@@ -856,7 +856,7 @@ void describeFnc(PlotData &plot, const int uid, const TValId val)
     CL_BREAK_IF(!fnc);
 
     const std::string name = nameOf(*fnc);
-    plot.out << ", fontcolor=green, label=\""
+    plot.out << ", fontcolor=chartreuse2, label=\""
         << name << "() (#"
         << val << ")\"";
 }
@@ -971,7 +971,7 @@ preserve_suffix:
 
     const ETargetSpecifier ts = sh.targetSpec(val);
     if (TS_REGION != ts)
-        color = "green";
+        color = "chartreuse2";
 
     const float pw = static_cast<float>(1U + sh.usedByCount(val));
     plot.out << "\t" << SL_QUOTE(val)
@@ -1001,7 +1001,7 @@ void plotPointsTo(PlotData &plot, const TValId val, const TFldId target)
 {
     plot.out << "\t" << SL_QUOTE(val)
         << " -> " << SL_QUOTE(target)
-        << " [color=green, fontcolor=green];\n";
+        << " [color=chartreuse2, fontcolor=chartreuse2];\n";
 }
 
 void plotRangePtr(PlotData &plot, TValId val, TObjId obj)
@@ -1101,7 +1101,7 @@ void plotAuxValue(
             break;
 
         case VAL_TRUE:
-            color = "gold";
+            color = "orange";
             label = "TRUE";
             break;
 
@@ -1161,7 +1161,7 @@ void plotNeqZero(PlotData &plot, const TValId val)
 
     plot.out << "\t" << SL_QUOTE(val)
         << " -> " << SL_QUOTE("lonely" << id)
-        << " [color=red, fontcolor=gold, label=neq style=dashed"
+        << " [color=red, fontcolor=orange, label=neq style=dashed"
         ", penwidth=2.0];\n";
 }
 
@@ -1175,7 +1175,7 @@ void plotNeqCustom(PlotData &plot, const TValId val, const TValId valCustom)
 
     plot.out << "];\n\t" << SL_QUOTE(val)
         << " -> " << SL_QUOTE("lonely" << id)
-        << " [color=red, fontcolor=gold, label=neq style=dashed"
+        << " [color=red, fontcolor=orange, label=neq style=dashed"
         ", penwidth=2.0];\n";
 }
 
@@ -1184,7 +1184,7 @@ void plotNeq(std::ostream &out, const TValId v1, const TValId v2)
     out << "\t" << SL_QUOTE(v1)
         << " -> " << SL_QUOTE(v2)
         << " [color=red, style=dashed, penwidth=2.0, arrowhead=none"
-        ", label=neq, fontcolor=gold, constraint=false];\n";
+        ", label=neq, fontcolor=orange, constraint=false];\n";
 }
 
 class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
