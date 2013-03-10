@@ -26,6 +26,7 @@
 #include "shape.hh"
 #include "symstate.hh"
 
+#include <climits>                  // for INT_MIN/INT_MAX
 #include <utility>
 
 namespace CodeStorage {
@@ -39,7 +40,6 @@ typedef const CodeStorage::Fnc                     *TFnc;
 typedef int                                         TLocIdx;
 typedef int                                         THeapIdx;
 typedef int                                         TShapeIdx;
-typedef TObjId                                      TObjectIdx;
 
 /// heap (in our case represented by SMG) identity
 typedef std::pair<TLocIdx, THeapIdx>                THeapIdent;
@@ -50,8 +50,9 @@ typedef std::pair<THeapIdent, TShapeIdx>            TShapeIdent;
 /// fixed heap ID for signalling failures where ID is expected
 extern const THeapIdent InvalidHeap;
 
-typedef IdMapper<TShapeIdx>                         TShapeMapper;
-typedef IdMapper<TObjectIdx>                        TObjectMapper;
+/// NOTE: we can omit specifying INT_MIN/INT_MAX when compiling as C++11
+typedef IdMapper<TShapeIdx, INT_MIN, INT_MAX>       TShapeMapper;
+typedef IdMapper<TObjId, OBJ_INVALID, OBJ_MAX_ID>   TObjectMapper;
 
 /// single heap-level trace edge holding inner ID mappings inside
 struct TraceEdge {

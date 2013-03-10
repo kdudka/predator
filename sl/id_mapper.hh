@@ -23,19 +23,21 @@
 #include "config.h"
 
 #include <iostream>
+#include <limits>
+#include <set>
 #include <vector>
 
-#include <boost/bimap.hpp>
-#include <boost/bimap/bimap.hpp>
-#include <boost/bimap/multiset_of.hpp>
 #include <boost/foreach.hpp>
+#include <boost/static_assert.hpp>
 
 enum EDirection {
     D_LEFT_TO_RIGHT,
     D_RIGHT_TO_LEFT
 };
 
-template <typename TId>
+template <typename TId,
+         TId MIN = std::numeric_limits<TId>::min(),
+         TId MAX = std::numeric_limits<TId>::max()>
 class IdMapper {
     public:
         typedef std::vector<TId> TVector;
@@ -65,12 +67,14 @@ class IdMapper {
 
         bool empty() const
         {
-            return biMap_.empty();
+            CL_BREAK_IF(biSearch_[0].empty() != biSearch_[1].empty());
+            return biSearch_[D_LEFT_TO_RIGHT].empty();
         }
 
         unsigned size() const
         {
-            return biMap_.size();
+            CL_BREAK_IF(biSearch_[0].size() != biSearch_[1].size());
+            return biSearch_[D_LEFT_TO_RIGHT].size();
         }
 
         bool /* changed */ insert(const TId left, const TId right);
@@ -84,12 +88,13 @@ class IdMapper {
         void prettyPrint(std::ostream &) const;
 
     private:
-        typedef boost::bimaps::multiset_of<TId>     TMulti;
-        typedef boost::bimap<TMulti, TMulti>        TBiMap;
-        typedef typename TBiMap::value_type         TPair;
+        typedef std::pair<TId, TId>                 TPair;
+        typedef std::set<TPair>                     TSearch;
+        typedef TSearch                             TBidirSearch[2];
+        typedef typename TSearch::const_iterator    TIter;
 
         ENotFoundAction             nfa_;
-        TBiMap                      biMap_;
+        TBidirSearch                biSearch_;
 };
 
 template <EDirection DIR, typename TBiMap, class TDst, class TSrc>
@@ -106,59 +111,32 @@ void project(
     }
 }
 
-template <typename TId>
-bool /* changed */ IdMapper<TId>::insert(const TId left, const TId right)
+template <typename TId, TId MIN, TId MAX>
+bool IdMapper<TId, MIN, MAX>::insert(const TId left, const TId right)
 {
-    const TPair item(left, right);
-    return biMap_.insert(item)./* changed */second;
+    const TPair itemL(left, right);
+    const TPair itemR(right, left);
+    CL_BREAK_IF(hasKey(biSearch_[0], itemL) != hasKey(biSearch_[1], itemR));
+
+    const bool changed = biSearch_[D_LEFT_TO_RIGHT].insert(itemL).second;
+    if (!changed)
+        return false;
+
+    biSearch_[D_RIGHT_TO_LEFT].insert(itemR);
+    return true;
 }
 
-template <class TBiMap, EDirection>
-struct IdMapperLib { };
-
-template <class TBiMap>
-struct IdMapperLib<TBiMap, D_LEFT_TO_RIGHT> {
-    typedef typename TBiMap::left_map TMap;
-
-    static TMap& mapFromBiMap(TBiMap &bm)             { return bm.left; }
-
-    static const TMap& mapFromBiMap(const TBiMap &bm) { return bm.left; }
-
-    template <typename TId>
-    static void insertTo(TBiMap *pBiMap, const TId a, const TId b) {
-        const typename TBiMap::value_type item(a, b);
-        pBiMap->insert(item);
-    }
-};
-
-template <class TBiMap>
-struct IdMapperLib<TBiMap, D_RIGHT_TO_LEFT> {
-    typedef typename TBiMap::right_map TMap;
-
-    static TMap& mapFromBiMap(TBiMap &bm)             { return bm.right; }
-
-    static const TMap& mapFromBiMap(const TBiMap &bm) { return bm.right; }
-
-    template <typename TId>
-    static void insertTo(TBiMap *pBiMap, const TId a, const TId b) {
-        const typename TBiMap::value_type item(b, a);
-        pBiMap->insert(item);
-    }
-};
-
-template <typename TId>
+template <typename TId, TId MIN, TId MAX>
 template <EDirection DIR>
-void IdMapper<TId>::query(TVector *pDst, const TId id) const
+void IdMapper<TId, MIN, MAX>::query(TVector *pDst, const TId id) const
 {
-    // resolve types according to DIR
-    typedef IdMapperLib<TBiMap, DIR>                TLib;
-    typedef typename TLib::TMap                     TMap;
-    typedef typename TMap::const_iterator           TIter;
+    BOOST_STATIC_ASSERT(MIN < MAX);
 
-    // find first
-    const TMap &m = TLib::mapFromBiMap(biMap_);
-    const TIter beg = m.find(id);
-    if (beg == m.end()) {
+    const TSearch &search = biSearch_[DIR];
+
+    const TPair begItem(id, MIN);
+    const TIter beg = search.lower_bound(begItem);
+    if (beg == search.end() || beg->first != id) {
         // not found
         switch (nfa_) {
             case NFA_TRAP_TO_DEBUGGER:
@@ -175,7 +153,8 @@ void IdMapper<TId>::query(TVector *pDst, const TId id) const
     }
 
     // find last (end points one item _beyond_ the last one)
-    const TIter end = m.upper_bound(id);
+    const TPair endItem(id, MAX);
+    const TIter end = search.upper_bound(endItem);
     CL_BREAK_IF(beg == end);
 
     // copy the image to the given vector
@@ -185,34 +164,30 @@ void IdMapper<TId>::query(TVector *pDst, const TId id) const
     }
 }
 
-template <typename TId>
+template <typename TId, TId MIN, TId MAX>
 template <EDirection DIR>
-void IdMapper<TId>::composite(const IdMapper<TId> &by)
+void IdMapper<TId, MIN, MAX>::composite(const IdMapper<TId, MIN, MAX> &by)
 {
     if (by.nfa_ < nfa_)
         nfa_ = by.nfa_;
 
-    TBiMap result;
-
-    // resolve types according to DIR
-    typedef IdMapperLib<TBiMap, DIR>                TLib;
-    typedef typename TLib::TMap                     TMap;
+    IdMapper<TId, MIN, MAX> result;
 
     // iterate through the mapping of 'this'
-    const TMap &m = TLib::mapFromBiMap(biMap_);
-    BOOST_FOREACH(typename TMap::const_reference item, m) {
+    const TSearch &m = biSearch_[DIR];
+    BOOST_FOREACH(typename TSearch::const_reference item, m) {
         const TId a = item.first;
         const TId b = item.second;
         TVector cList;
         this->query<DIR>(&cList, b);
         BOOST_FOREACH(const TId c, cList)
-            TLib::insertTo(&result, a, c);
+            result.insert(a, c);
     }
 
     if (NFA_RETURN_IDENTITY == nfa_) {
         // iterate through the mapping of 'by'
-        const TMap &mBy = TLib::mapFromBiMap(by.biMap_);
-        BOOST_FOREACH(typename TMap::const_reference item, mBy) {
+        const TSearch &mBy = by.biSearch_[DIR];
+        BOOST_FOREACH(typename TSearch::const_reference item, mBy) {
             const TId b = item.first;
             const TId c = item.second;
 
@@ -224,19 +199,21 @@ void IdMapper<TId>::composite(const IdMapper<TId> &by)
                 by.query<D_LEFT_TO_RIGHT>(&aList, b);
 
             BOOST_FOREACH(const TId a, aList)
-                TLib::insertTo(&result, a, c);
+                result.insert(a, c);
         }
     }
 
     // finally replace the mapping of 'this' by the result
-    biMap_.swap(result);
+    biSearch_[0].swap(result.biSearch_[D_RIGHT_TO_LEFT == DIR]);
+    biSearch_[1].swap(result.biSearch_[D_LEFT_TO_RIGHT == DIR]);
 }
 
-template <typename TId>
-void IdMapper<TId>::prettyPrint(std::ostream &str) const
+template <typename TId, TId MIN, TId MAX>
+void IdMapper<TId, MIN, MAX>::prettyPrint(std::ostream &str) const
 {
     unsigned i = 0U;
-    BOOST_FOREACH(typename TBiMap::left_const_reference item, biMap_.left) {
+    const TSearch &m = biSearch_[D_LEFT_TO_RIGHT];
+    BOOST_FOREACH(typename TSearch::const_reference item, m) {
         if (i++)
             str << ", ";
 

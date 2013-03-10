@@ -57,7 +57,7 @@ typedef const CodeStorage::Insn                    *TInsn;
 typedef std::vector<Node *>                         TNodeList;
 
 // TODO: should we use a more generic ID type?
-typedef IdMapper<TObjId>                            TIdMapper;
+typedef IdMapper<TObjId, OBJ_INVALID, OBJ_MAX_ID>   TIdMapper;
 
 /// an abstract base for Node and NodeHandle (externally not much useful)
 class NodeBase {
