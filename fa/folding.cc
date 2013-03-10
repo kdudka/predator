@@ -46,18 +46,18 @@ bool Folding::isSignaturesCompatible(
 }
 
 
-std::pair<std::shared_ptr<TreeAut>, std::shared_ptr<TreeAut>> Folding::separateCutpoint(
+std::pair<Folding::TreeAutShPtr, Folding::TreeAutShPtr> Folding::separateCutpoint(
 	ConnectionGraph::CutpointSignature&            boxSignature,
 	size_t                                         root,
 	size_t                                         state,
 	size_t                                         cutpoint)
 {
-	auto ta = std::shared_ptr<TreeAut>(fae_.allocTA());
-	auto tmp = std::shared_ptr<TreeAut>(fae_.allocTA());
+	TreeAutShPtr ta  = TreeAutShPtr(fae_.allocTA());
+	TreeAutShPtr tmp = TreeAutShPtr(fae_.allocTA());
 
 	this->componentCut(*ta, *tmp, boxSignature, root, state, cutpoint);
 
-	auto tmp2 = std::shared_ptr<TreeAut>(fae_.allocTA());
+	TreeAutShPtr tmp2 = TreeAutShPtr(fae_.allocTA());
 
 	tmp->unreachableFree(*tmp2);
 
@@ -72,7 +72,7 @@ const ConnectionGraph::StateToCutpointSignatureMap& Folding::getSignatures(
 	assert(root < signatureMap_.size());
 
 	if (!signatureMap_[root].first)
-	{
+	{	// if the signature is not valid, recompute it
 		ConnectionGraph::computeSignatures(
 			signatureMap_[root].second, *fae_.getRoot(root)
 		);
@@ -279,7 +279,7 @@ void Folding::componentCut(
 
 	complement.addFinalState(state);
 
-	auto& signatures = this->getSignatures(root);
+	const ConnectionGraph::StateToCutpointSignatureMap& signatures = this->getSignatures(root);
 
 	std::unordered_set<const AbstractBox*> boxes;
 
@@ -361,7 +361,9 @@ void Folding::componentCut(
 
 		// did we arrive here for the first time?
 		if (complementSignature.empty())
+		{
 			complementSignature = tmp;
+		}
 
 		// a bit hacky but who cares
 		assert(Folding::isSignaturesCompatible(complementSignature, tmp));
@@ -398,13 +400,15 @@ const Box* Folding::makeType1Box(
 	assert(root < fae_.getRootCount());
 	assert(fae_.getRoot(root));
 
-	std::vector<size_t> index(fae_.getRootCount(), static_cast<size_t>(-1)), inputMap;
+	std::vector<size_t> index(fae_.getRootCount(), static_cast<size_t>(-1));
+	std::vector<size_t> inputMap;
+
 	std::unordered_map<size_t, size_t> selectorMap;
 	ConnectionGraph::CutpointSignature outputSignature;
 
 	size_t start = 0;
 
-	auto p = this->separateCutpoint(outputSignature, root, state, aux);
+	std::pair<TreeAutShPtr, TreeAutShPtr> p = this->separateCutpoint(outputSignature, root, state, aux);
 
 	index[root] = start++;
 

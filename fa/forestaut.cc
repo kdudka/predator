@@ -24,19 +24,6 @@
 // anonymous namespace
 namespace
 {
-struct BoxCmpF
-{
-	bool operator()(
-		const std::pair<const AbstractBox*, std::vector<size_t>>& v1,
-		const std::pair<const AbstractBox*, std::vector<size_t>>& v2)
-	{
-		if (v1.first->isType(box_type_e::bTypeInfo))
-			return !v2.first->isType(box_type_e::bTypeInfo);
-
-		return v1.first->getOrder() < v2.first->getOrder();
-	}
-};
-
 size_t getLabelArity(std::vector<const AbstractBox*>& label)
 {
 	size_t arity = 0;
@@ -48,31 +35,50 @@ size_t getLabelArity(std::vector<const AbstractBox*>& label)
 }
 } // namespace
 
+
 void FA::reorderBoxes(
-	std::vector<const AbstractBox*>& label,
-	std::vector<size_t>& lhs)
+	std::vector<const AbstractBox*>&     label,
+	std::vector<size_t>&                 lhs)
 {
+	// local structure
+	struct BoxCmpF
+	{
+		bool operator()(
+			const std::pair<const AbstractBox*, std::vector<size_t>>& v1,
+			const std::pair<const AbstractBox*, std::vector<size_t>>& v2)
+		{
+			if (v1.first->isType(box_type_e::bTypeInfo))
+				return !v2.first->isType(box_type_e::bTypeInfo);
+
+			return v1.first->getOrder() < v2.first->getOrder();
+		}
+	};
+
 	// Assertions
 	assert(getLabelArity(label) == lhs.size());
 
+	// vector for holding pairs <box, vector of corresponding states>
 	std::vector<std::pair<const AbstractBox*, std::vector<size_t>>> tmp;
-	std::vector<size_t>::iterator lhsBegin = lhs.end(), lhsEnd = lhs.begin();
+
+	std::vector<size_t>::iterator lhsBegin;
+	std::vector<size_t>::iterator lhsEnd = lhs.begin();
 
 	for (size_t i = 0; i < label.size(); ++i)
-	{
-		lhsBegin = lhsEnd;
+	{	// fill the 'tmp' vector
+		lhsBegin = lhsEnd;  // beginning is the end from the last iteration
 
 		lhsEnd += label[i]->getArity();
 
 		tmp.push_back(std::make_pair(label[i], std::vector<size_t>(lhsBegin, lhsEnd)));
 	}
 
+	// sort the boxes into a normal form
 	std::sort(tmp.begin(), tmp.end(), BoxCmpF());
 
 	lhs.clear();
 
 	for (size_t i = 0; i < tmp.size(); ++i)
-	{
+	{	// reorder the vectors according to the normal form
 		label[i] = tmp[i].first;
 
 		lhs.insert(lhs.end(), tmp[i].second.begin(), tmp[i].second.end());

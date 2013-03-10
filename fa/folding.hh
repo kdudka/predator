@@ -41,6 +41,7 @@ class Folding
 private:  // data types
 
 	typedef TreeAut::Transition Transition;
+	typedef std::shared_ptr<TreeAut> TreeAutShPtr;
 
 private:  // data members
 
@@ -51,6 +52,21 @@ private:  // data members
 
 protected:
 
+	/**
+	 * @brief  Copies a box and corresponding states into a label
+	 *
+	 * This static method copies a desired box into an output label, together with
+	 * corresponding states.
+	 *
+	 * @param[out]  lhs       The target vector where the states that correspond
+	 *                        to the box are to be appended
+	 * @param[out]  label     The label into which the box is to be copied
+	 * @param[in]   box       The box to be copied
+	 * @param[in]   srcLhs    The source vector of states from which the relevant
+	 *                        one will be picked to be put into @p lhs
+	 * @param[in]   srcOffset The offset of the first state in @p srcLhs
+	 *                        corresponding to @p box
+	 */
 	static void copyBox(
 		std::vector<size_t>&                lhs,
 		std::vector<const AbstractBox*>&    label,
@@ -64,6 +80,17 @@ protected:
 		label.push_back(box);
 	}
 
+	/**
+	 * @brief  Given a map of signatures, gets the signature of a particular state
+	 *
+	 * This static method is given a map of signatures and it returns the
+	 * signature of a particular state.
+	 *
+	 * @param[in]  state       The state the signature of which is desired
+	 * @param[in]  signatures  The map of signatures
+	 *
+	 * @returns  The signature of @p state
+	 */
 	static const ConnectionGraph::CutpointSignature& getSignature(
 		size_t                                                 state,
 		const ConnectionGraph::StateToCutpointSignatureMap&    signatures)
@@ -79,9 +106,25 @@ protected:
 		const ConnectionGraph::CutpointSignature&    s1,
 		const ConnectionGraph::CutpointSignature&    s2);
 
+	/**
+	 * @brief  Returns valid signatures for given root
+	 *
+	 * This method returns valid signatures for given root.
+	 *
+	 * @param[in]  root  The root the signatures of which are to be obtained
+	 *
+	 * @returns  Signatures of @p root
+	 */
 	const ConnectionGraph::StateToCutpointSignatureMap& getSignatures(
 		size_t        root);
 
+	/**
+	 * @brief  Invalidates the signature of given root
+	 *
+	 * Invalidates the signature of given root.
+	 *
+	 * @param[in]  root  Index of the root to be invalidated
+	 */
 	void invalidateSignatures(size_t root)
 	{
 		// Preconditions
@@ -98,7 +141,7 @@ protected:
 		size_t                                   state,
 		size_t                                   target);
 
-	std::pair<std::shared_ptr<TreeAut>, std::shared_ptr<TreeAut>> separateCutpoint(
+	std::pair<TreeAutShPtr, TreeAutShPtr> separateCutpoint(
 		ConnectionGraph::CutpointSignature&            boxSignature,
 		size_t                                         root,
 		size_t                                         state,
