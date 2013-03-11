@@ -174,6 +174,7 @@ protected:
 	 *                            splitting will occur
 	 * @param[in]   cutpoint      Index of the component such that the split path
 	 *                            goes to the reference to this component
+	 *
 	 * @returns  The pair of tree automata such that the first tree automaton is
 	 *           the TA at index @p root in the FA without the split part and the
 	 *           second automaton is the split part. Together, they represent the
@@ -221,36 +222,47 @@ protected:
 		const ConnectionGraph::CutpointSignature&    signature);
 
 
-	static void updateSelectorMap(
-		std::unordered_map<size_t, size_t>&          m,
-		size_t                                       selector,
-		const ConnectionGraph::CutpointSignature&    signature)
-	{
-		for (auto& cutpoint : signature)
-		{
-			auto p = m.insert(std::make_pair(cutpoint.root, selector));
-
-			if (!p.second && p.first->second > selector)
-				p.first->second = selector;
-		}
-	}
-
-	// compute cutpoint-to-selector mapping, i.e. tell which selector one needs to take
-	// in order to reach a given cutpoint
-	static void computeSelectorMap(
-		std::unordered_map<size_t, size_t>&                    selectorMap,
-		const Transition&                                      t,
-		const ConnectionGraph::StateToCutpointSignatureMap&    stateMap);
-
+	/**
+	 * @brief  Checks whether a selector map is correct for a state
+	 *
+	 * This method checks whether the provided cutpoint-to-selector map @p
+	 * selectorMap is correct for the @p state in the tree automaton at the index
+	 * @p root in the FA, i.e. whether all transitions respect this map.
+	 *
+	 * @param[in]  selectorMap  The cutpoint-to-selector map
+	 * @param[in]  root         The index of the tree automaton in FA
+	 * @param[in]  state        The state in the tree automaton at index @p root
+	 *
+	 * @returns  @p true if all transition from @p state respect the
+	 *           cutpoint-to-selector map @p selectorMap, @p false otherwise
+	 */
 	bool checkSelectorMap(
 		const std::unordered_map<size_t, size_t>&     selectorMap,
 		size_t                                        root,
 		size_t                                        state);
 
+
+	/**
+	 * @brief  Computes cutpoint-to-selector mapping
+	 *
+	 * This function computes for a @p state in the tree automaton at index @p
+	 * root in the FA the cutpoint-to-selector mapping, i.e. a map telling for
+	 * a given cutpoint which selector (or, more precisely, the selector at which
+	 * @e offset) one needs to take in order to reach the cutpoint.
+	 *
+	 * @param[out]  selectorMap  The resulting cutpoint-to-selector map
+	 * @param[in]   root         The index of the tree automaton in the FA
+	 * @param[in]   state        The state in the automaton at index @p root for
+	 *                           which the selector map is to be obtained
+	 *
+	 * @returns  @p true if all transitions from @p state respect the output
+	 *           cutpoint-to-selector map @p selectorMap, @p false otherwise
+	 */
 	bool computeSelectorMap(
 		std::unordered_map<size_t, size_t>&      selectorMap,
 		size_t                                   root,
 		size_t                                   state);
+
 
 	static size_t extractSelector(
 		const std::unordered_map<size_t, size_t>&    selectorMap,

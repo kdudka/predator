@@ -20,6 +20,113 @@
 // Forester headers
 #include "folding.hh"
 
+namespace
+{	// anonymous namespace
+
+/**
+ * @brief  Adds a mapping of a cutpoint to selector into a map
+ *
+ * This function updates a selector map, which maps a cutpoint number to the
+ * offset of the lowest selector that leads to the given cutpoint, with a new
+ * pair of a cutpoint and a selector offset (or updates the image of an
+ * already existing cutpoint).
+ *
+ * @param[in,out]  m          The cutpoint to selector offset map that is to
+ *                            be updated
+ * @param[in]      selector   The selector offset
+ * @param[in]      signature  Signature of the output of the selector
+ */
+void updateSelectorMap(
+	std::unordered_map<size_t, size_t>&          m,
+	size_t                                       selector,
+	const ConnectionGraph::CutpointSignature&    signature)
+{
+	for (const ConnectionGraph::CutpointInfo& cutpoint : signature)
+	{	// for all cutpoints in the signature
+
+		// insert the mapping 'cutpoint' -> 'selector offset'
+		auto p = m.insert(std::make_pair(cutpoint.root, selector));
+
+		if (!p.second && (p.first->second > selector))
+		{	// in case the mapping is there and the original 'selector offset' is
+			// bigger than the new one, set the new (smaller) one as the image of
+			// 'cutpoint'
+			p.first->second = selector;
+		}
+	}
+}
+
+
+/**
+ * @brief  Computes cutpoint-to-selector mapping
+ *
+ * This function computes for a given transition @p t the cutpoint-to-selector
+ * mapping, i.e. a map telling for a given cutpoint which selector (or, more
+ * precisely, the selector at which @e offset) one needs to take in order to
+ * reach the cutpoint.
+ *
+ * @param[out]  selectorMap  The resulting cutpoint-to-selector map
+ * @param[in]   t            The transition
+ * @param[in]   stateMap     The mapping of states to their signatures
+ */
+void computeSelectorMapTrans(
+	std::unordered_map<size_t, size_t>&                    selectorMap,
+	const TreeAut::Transition&                             t,
+	const ConnectionGraph::StateToCutpointSignatureMap&    stateMap)
+{
+	size_t lhsOffset = 0;
+
+	for (const AbstractBox* absBox : t.label()->getNode())
+	{	// for all boxes in the transition
+		switch (absBox->getType())
+		{
+			case box_type_e::bSel:
+			{	// for ordinary selectors 
+
+				// find the cutpoint signature of the state at position 'lhsOffset' in
+				// the transition
+				auto iter = stateMap.find(t.lhs()[lhsOffset]);
+
+				assert(iter != stateMap.end());
+
+				updateSelectorMap(
+					selectorMap,
+					(static_cast<const SelBox*>(absBox))->getData().offset,
+					iter->second
+				);
+
+				break;
+			}
+
+			case box_type_e::bBox:
+			{	// for nested FA
+				const Box* box = static_cast<const Box*>(absBox);
+
+				for (size_t i = 0; i < box->getArity(); ++i)
+				{
+					auto iter = stateMap.find(t.lhs()[lhsOffset + i]);
+
+					assert(iter != stateMap.end());
+
+					updateSelectorMap(
+						selectorMap, box->getSelector(i), iter->second
+					);
+				}
+
+				break;
+			}
+
+			default: break;
+		}
+
+		lhsOffset += absBox->getArity();
+	}
+}
+
+
+} // namespace
+
+
 bool Folding::isSignaturesCompatible(
 	const ConnectionGraph::CutpointSignature&    s1,
 	const ConnectionGraph::CutpointSignature&    s2)
@@ -671,58 +778,6 @@ Folding::TreeAutShPtr Folding::joinBox(
 }
 
 
-void Folding::computeSelectorMap(
-	std::unordered_map<size_t, size_t>&                    selectorMap,
-	const Transition&                                      t,
-	const ConnectionGraph::StateToCutpointSignatureMap&    stateMap)
-{
-	size_t lhsOffset = 0;
-
-	for (auto& absBox : t.label()->getNode())
-	{
-		switch (absBox->getType())
-		{
-			case box_type_e::bSel:
-			{
-				auto iter = stateMap.find(t.lhs()[lhsOffset]);
-
-				assert(iter != stateMap.end());
-
-				Folding::updateSelectorMap(
-					selectorMap,
-					(static_cast<const SelBox*>(absBox))->getData().offset,
-					iter->second
-				);
-
-				break;
-			}
-
-			case box_type_e::bBox:
-			{
-				const Box* box = static_cast<const Box*>(absBox);
-
-				for (size_t i = 0; i < box->getArity(); ++i)
-				{
-					auto iter = stateMap.find(t.lhs()[lhsOffset + i]);
-
-					assert(iter != stateMap.end());
-
-					Folding::updateSelectorMap(
-						selectorMap, box->getSelector(i), iter->second
-					);
-				}
-
-				break;
-			}
-
-			default: break;
-		}
-
-		lhsOffset += absBox->getArity();
-	}
-}
-
-
 bool Folding::checkSelectorMap(
 	const std::unordered_map<size_t, size_t>&     selectorMap,
 	size_t                                        root,
@@ -732,15 +787,16 @@ bool Folding::checkSelectorMap(
 	assert(root < fae_.getRootCount());
 	assert(nullptr != fae_.getRoot(root));
 
-	auto& signatures = this->getSignatures(root);
+	const ConnectionGraph::StateToCutpointSignatureMap& signatures =
+		this->getSignatures(root);
 
-	auto& ta = *fae_.getRoot(root);
+	const TreeAut& ta = *fae_.getRoot(root);
 
 	for (TreeAut::iterator i = ta.begin(state); i != ta.end(state, i); ++i)
 	{
 		std::unordered_map<size_t, size_t> m;
 
-		Folding::computeSelectorMap(m, *i, signatures);
+		computeSelectorMapTrans(m, *i, signatures);
 
 		if (m != selectorMap)
 		{
@@ -761,17 +817,18 @@ bool Folding::computeSelectorMap(
 	assert(root < fae_.getRootCount());
 	assert(nullptr != fae_.getRoot(root));
 
-	auto& ta = *fae_.getRoot(root);
+	const TreeAut& ta = *fae_.getRoot(root);
 
+	// check there are some transitions from 'state'
 	assert(ta.begin(state) != ta.end(state));
-/*
-	for (TreeAut::iterator i = ta.accBegin(); i != ta.accEnd(i); ++i)
-		Folding::computeSelectorMap(selectorMap, *i, stateMap);
-*/
-	auto& signatures = this->getSignatures(root);
 
-	Folding::computeSelectorMap(selectorMap, *ta.begin(state), signatures);
+	const ConnectionGraph::StateToCutpointSignatureMap& signatures =
+		this->getSignatures(root);
 
+	computeSelectorMapTrans(selectorMap, *ta.begin(state), signatures);
+
+	// check whether the computed selector map is the same for all transitions
+	// leaving 'state'
 	return this->checkSelectorMap(selectorMap, root, state);
 }
 
