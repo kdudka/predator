@@ -124,10 +124,17 @@ void computeSelectorMapTrans(
 }
 
 
-} // namespace
-
-
-bool Folding::isSignaturesCompatible(
+/**
+ * @brief  Checks whether two cutpoint signatures are compatible
+ *
+ * Checks whether two cutpoint signatures are compatible.
+ *
+ * @param[in]  s1  The LHS cutpoint signature
+ * @param[in]  s2  The RHS cutpoint signature
+ *
+ * @returns  @p true of @p s1 and @p s2 are compatible, @p false otherwise
+ */
+bool isSignaturesCompatible(
 	const ConnectionGraph::CutpointSignature&    s1,
 	const ConnectionGraph::CutpointSignature&    s2)
 {
@@ -151,6 +158,8 @@ bool Folding::isSignaturesCompatible(
 
 	return true;
 }
+
+} // namespace
 
 
 std::pair<Folding::TreeAutShPtr, Folding::TreeAutShPtr> Folding::separateCutpoint(
@@ -484,7 +493,7 @@ void Folding::componentCut(
 		}
 
 		// a bit hacky but who cares
-		assert(Folding::isSignaturesCompatible(complementSignature, tmp));
+		assert(isSignaturesCompatible(complementSignature, tmp));
 
 		for (size_t i = 0; i < tmp.size(); ++i)
 		{

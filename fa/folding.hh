@@ -102,9 +102,6 @@ protected:
 		return iter->second;
 	}
 
-	static bool isSignaturesCompatible(
-		const ConnectionGraph::CutpointSignature&    s1,
-		const ConnectionGraph::CutpointSignature&    s2);
 
 	/**
 	 * @brief  Returns valid signatures for given root
@@ -117,6 +114,7 @@ protected:
 	 */
 	const ConnectionGraph::StateToCutpointSignatureMap& getSignatures(
 		size_t        root);
+
 
 	/**
 	 * @brief  Invalidates the signature of given root
@@ -132,6 +130,7 @@ protected:
 
 		signatureMap_[root].first = false;
 	}
+
 
 	/**
 	 * @brief  Splits a tree automaton into two tree automata
