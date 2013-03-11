@@ -263,17 +263,6 @@ protected:
 		size_t                                   state);
 
 
-	static size_t extractSelector(
-		const std::unordered_map<size_t, size_t>&    selectorMap,
-		size_t                                       target)
-	{
-		auto iter = selectorMap.find(target);
-
-		assert(iter != selectorMap.end());
-
-		return iter->second;
-	}
-
 	// transform
 	static void extractInputMap(
 		std::vector<size_t>&                         inputMap,

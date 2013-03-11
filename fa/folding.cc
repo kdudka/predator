@@ -159,6 +159,29 @@ bool isSignaturesCompatible(
 	return true;
 }
 
+
+/**
+ * @brief  Extracts a selector leading to given cutpoint
+ *
+ * This method checks a cutpoint-to-selector map @p selectorMap to find the
+ * (lowest offset) selector leading to the cutpoint @p target
+ *
+ * @param[in]  selectorMap  The cutpoint-to-selector map
+ * @param[in]  target       Index of the target cutpoint
+ *
+ * @returns  Offset of the lowest selector leading to cutpoint @p target
+ */
+size_t extractSelector(
+	const std::unordered_map<size_t, size_t>&    selectorMap,
+	size_t                                       target)
+{
+	auto iter = selectorMap.find(target);
+
+	assert(iter != selectorMap.end());
+
+	return iter->second;
+}
+
 } // namespace
 
 
@@ -497,7 +520,8 @@ void Folding::componentCut(
 
 		for (size_t i = 0; i < tmp.size(); ++i)
 		{
-			complementSignature[i].refCount = std::max(complementSignature[i].refCount, tmp[i].refCount);
+			complementSignature[i].refCount =
+				std::max(complementSignature[i].refCount, tmp[i].refCount);
 
 			complementSignature[i].fwdSelectors.insert(
 				tmp[i].fwdSelectors.begin(), tmp[i].fwdSelectors.end()
@@ -692,7 +716,7 @@ const Box* Folding::makeType2Box(
 		assert(false);           // fail gracefully
 	}
 
-	size_t selector = Folding::extractSelector(selectorMap, root);
+	size_t selector = extractSelector(selectorMap, root);
 
 	auto box = std::unique_ptr<Box>(
 		boxMan_.createType2Box(
