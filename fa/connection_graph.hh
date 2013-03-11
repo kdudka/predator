@@ -38,11 +38,11 @@
 #include "config.h"
 
 
-#define _MSBM			((~static_cast<size_t>(0)) >> 1)
-#define _MSB			(~_MSBM)
-#define _MSB_TEST(x)	(x & _MSB)
-#define _MSB_GET(x)		(x & _MSBM)
-#define _MSB_ADD(x)		(x | _MSB)
+#define _MSBM         ((~static_cast<size_t>(0)) >> 1)
+#define _MSB          (~_MSBM)
+#define _MSB_TEST(x)  (x & _MSB)
+#define _MSB_GET(x)   (x & _MSBM)
+#define _MSB_ADD(x)   (x | _MSB)
 
 
 class ConnectionGraph

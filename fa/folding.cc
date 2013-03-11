@@ -279,27 +279,31 @@ void Folding::componentCut(
 
 	complement.addFinalState(state);
 
+	// signatures of states in the tree aut at index 'root'
 	const ConnectionGraph::StateToCutpointSignatureMap& signatures = this->getSignatures(root);
 
+	// a set of boxes that leave the state where we wish to perform the cut and
+	// contain the target cutpoint in their signature
 	std::unordered_set<const AbstractBox*> boxes;
 
-	// enumerate which boxes to fold
+	// first, we enumerate all boxes that we wish to fold
 	for (auto i = src.begin(state); i != src.end(state, i); ++i)
-	{
-		size_t lhsOffset = 0;
-
+	{	// traverse all transitions from 'state'
 		const Transition& trans = *i;
 
-		for (auto& box : trans.label()->getNode())
-		{
+		size_t lhsOffset = 0;
+
+		for (const AbstractBox* box : trans.label()->getNode())
+		{	// go over all boxes in the transition
+
 			// look for target cutpoint
 			for (size_t j = 0; j < box->getArity(); ++j)
-			{
+			{	// try all states outgoing from the box
 				assert(lhsOffset + j < trans.lhs().size());
 
 				if (ConnectionGraph::containsCutpoint(
 					Folding::getSignature(trans.lhs()[lhsOffset + j], signatures), target))
-				{
+				{	// in case the signature of the box contains the searched cutpoint
 					boxes.insert(box);
 					break;
 				}
@@ -309,35 +313,41 @@ void Folding::componentCut(
 		}
 	}
 
-	ConnectionGraph::CutpointSignature tmp;
-
 	for (const Transition& trans : src)
-	{
+	{	// now traverse all transitions in the source tree aut
 		if (trans.rhs() != state)
-		{
+		{	// if the transition does not leave 'state', simply copy it
 			res.addTransition(trans);
 			complement.addTransition(trans);
 
 			continue;
 		}
 
-		std::vector<size_t> lhs, cLhs;
-		std::vector<const AbstractBox*> label, cLabel;
+		// otherwise, i.e. the transition leaves 'state'
+
+		// new LHS and label for the transition in the source automaton
+		std::vector<size_t> lhs;
+		std::vector<const AbstractBox*> label;
+
+		// new LHS and label for the transition in the complement automaton
+		std::vector<size_t> cLhs;
+		std::vector<const AbstractBox*> cLabel;
+
+		ConnectionGraph::CutpointSignature tmp;
 
 		size_t lhsOffset = 0;
 
-		tmp.clear();
-
 		// split transition
-		for (auto& box : trans.label()->getNode())
-		{
+		for (const AbstractBox* box : trans.label()->getNode())
+		{	// traverse all boxes in the transition
 			if (boxes.count(box) == 0)
-			{
+			{	// in case this box does not lead to the target cutpoint, just copy it
 				Folding::copyBox(lhs, label, box, trans.lhs(), lhsOffset);
-			} else
-			{
+			}
+			else
+			{	// in case the box _leads_ to the target cutpoint
 				for (size_t j = 0; j < box->getArity(); ++j)
-				{
+				{	// for each output of the box
 					assert(lhsOffset + j < trans.lhs().size());
 
 					ConnectionGraph::processStateSignature(
@@ -349,6 +359,7 @@ void Folding::componentCut(
 					);
 				}
 
+				// copy the box into the complement
 				Folding::copyBox(cLhs, cLabel, box, trans.lhs(), lhsOffset);
 			}
 
@@ -377,10 +388,12 @@ void Folding::componentCut(
 			);
 		}
 
+		// add the new transition to the source automaton
 		assert(label.size());
 		FAE::reorderBoxes(label, lhs);
 		res.addTransition(lhs, fae_.boxMan->lookupLabel(label), state);
 
+		// add the new transition to the complement automaton
 		assert(cLabel.size());
 		FAE::reorderBoxes(cLabel, cLhs);
 		complement.addTransition(cLhs, fae_.boxMan->lookupLabel(cLabel), state);
@@ -612,14 +625,14 @@ const Box* Folding::makeType2Box(
 }
 
 
-std::shared_ptr<TreeAut> Folding::joinBox(
+Folding::TreeAutShPtr Folding::joinBox(
 	const TreeAut&                               src,
 	size_t                                       state,
 	size_t                                       root,
 	const Box*                                   box,
 	const ConnectionGraph::CutpointSignature&    signature)
 {
-	auto ta = std::shared_ptr<TreeAut>(fae_.allocTA());
+	TreeAutShPtr ta = TreeAutShPtr(fae_.allocTA());
 
 	ta->addFinalStates(src.getFinalStates());
 

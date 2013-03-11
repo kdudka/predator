@@ -133,6 +133,24 @@ protected:
 		signatureMap_[root].first = false;
 	}
 
+	/**
+	 * @brief  Splits a tree automaton into two tree automata
+	 *
+	 * This method splits a tree automaton at index @p root in the FA into two
+	 * tree automata at given @p state at the selectors that have the @p target
+	 * component in their signature.
+	 *
+	 * @param[out]  res                  The resulting automaton @p root without
+	 *                                   the part under @p state going to
+	 *                                   reference @p target
+	 * @param[out]  complement           The tree automaton for the part under
+	 *                                   @p state going to reference @p target
+	 * @param[out]  complementSignature  Signature of @p complement
+	 * @param[in]   root                 Index of the source tree automaton
+	 * @param[in]   state                State in the tree automaton at @p root
+	 * @param[in]   target               Index of the target tree automaton, the
+	 *                                   references to which are to be found
+	 */
 	void componentCut(
 		TreeAut&                                 res,
 		TreeAut&                                 complement,
@@ -141,32 +159,67 @@ protected:
 		size_t                                   state,
 		size_t                                   target);
 
+
+	/**
+	 * @brief  Splits a tree automaton under given state leading to a cutpoint
+	 *
+	 * This method splits a tree automaton at index @p root at the FA under @p state
+	 * in the path leading to the @p cutpoint and returns the split part together
+	 * with the original automaton without the split part.
+	 *
+	 * @param[out]  boxSignature  Signature of the split part
+	 * @param[in]   root          Index of the tree automaton where the splitting
+	 *                            will occur
+	 * @param[in]   state         State in the TA at @p root under which the
+	 *                            splitting will occur
+	 * @param[in]   cutpoint      Index of the component such that the split path
+	 *                            goes to the reference to this component
+	 * @returns  The pair of tree automata such that the first tree automaton is
+	 *           the TA at index @p root in the FA without the split part and the
+	 *           second automaton is the split part. Together, they represent the
+	 *           original TA
+	 */
 	std::pair<TreeAutShPtr, TreeAutShPtr> separateCutpoint(
 		ConnectionGraph::CutpointSignature&            boxSignature,
 		size_t                                         root,
 		size_t                                         state,
 		size_t                                         cutpoint);
 
-	std::shared_ptr<TreeAut> relabelReferences(
-		const                              TreeAut& ta,
+
+	/**
+	 * @brief  Relabels references in given tree automaton
+	 *
+	 * Relabels references in the tree automaton @p ta according to the @p index.
+	 *
+	 * @param[in]  ta     The tree automaton where the references are to be
+	 *                    relabelled 
+	 * @param[in]  index  The index according to which the references are to be
+	 *                    relabelled
+	 *
+	 * @returns  The tree automaton with relabelled references
+	 */
+	TreeAutShPtr relabelReferences(
+		const TreeAut&                     ta,
 		std::vector<size_t>&               index)
 	{
-		auto tmp = std::shared_ptr<TreeAut>(fae_.allocTA());
+		TreeAutShPtr tmp = TreeAutShPtr(fae_.allocTA());
 
 		fae_.relabelReferences(*tmp, ta, index);
 
 		return tmp;
 	}
 
+
 	/**
 	 * @brief  @todo
 	 */
-	std::shared_ptr<TreeAut> joinBox(
+	TreeAutShPtr joinBox(
 		const TreeAut&                               src,
 		size_t                                       state,
 		size_t                                       root,
 		const Box*                                   box,
 		const ConnectionGraph::CutpointSignature&    signature);
+
 
 	static void updateSelectorMap(
 		std::unordered_map<size_t, size_t>&          m,
