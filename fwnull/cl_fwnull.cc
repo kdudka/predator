@@ -53,50 +53,66 @@ enum EVarState {
     VS_NOT_NULL_IFF             ///< if true, peer is not-NULL and vice versa
 };
 
+typedef int                                             TVar;
+typedef const struct cl_loc                            *TLoc;
+typedef const struct cl_operand                         TOperand;
+typedef const CodeStorage::TOperandList                 TOperandList;
+typedef const CodeStorage::TTargetList                  TTargetList;
+typedef const CodeStorage::Block                       *TBlock;
+typedef const CodeStorage::Insn                        *TInsn;
+
 /// state of variable (scope of its validity is basic block)
 struct VarState {
     EVarState           code;   ///< current state (valid per current block)
-    const struct cl_loc *lw;    ///< location where the state became valid
-    int /* uid */       peer;   ///< used only for VS_NULL_IFF, VS_NOT_NULL_IFF
+    TLoc                loc;    ///< location where the state became valid
+    TVar                peer;   ///< used only for VS_NULL_IFF, VS_NOT_NULL_IFF
 
     VarState():
         code(VS_UNDEF),
-        lw(0),
+        loc(0),
         peer(-1)
     {
     }
 };
 
+typedef std::map<TVar, VarState>                        TState;
+
 /// state of computation at function level
 struct Data {
-    typedef const CodeStorage::Block                   *TBlock;
     typedef std::queue<TBlock>                          TSched;
     typedef std::set<TBlock>                            TSchedLookup;
-    typedef std::map<int /* var uid */, VarState>       TState;
     typedef std::map<TBlock, TState>                    TStateMap;
 
     TSched          todo;       ///< block scheduled for processing
     TSchedLookup    todoLookup; ///< block scheduled for processing
     TStateMap       stateMap;   ///< holds states of all vars per each block
+    TState          localState; ///< holds intermediate state between insns
+    bool            silent;     ///< if true, do not print diagnostic messages
+
+    Data():
+        silent(true)
+    {
+    }
 };
 
 /**
- * @param state state valid per current (dereference) instruction
+ * @param data state of computation per current function
  * @param op either source or destination operand that contains a dereference
- * @param lw location info of the current instruction
+ * @param loc location info of the current instruction
  */
-void handleVarDeref(Data::TState                        &state,
-                    const struct cl_operand             &op,
-                    const struct cl_loc                 *lw)
+void handleVarDeref(
+        Data                       &data,
+        TOperand                   *op,
+        const TLoc                  loc)
 {
-    const int uid = varIdFromOperand(&op);
-    VarState &vs = state[uid];
+    const TVar uid = varIdFromOperand(op);
+    VarState &vs = data.localState[uid];
     const EVarState code = vs.code;
     switch (code) {
         case VS_UNDEF:
         case VS_UNKNOWN:
             vs.code = VS_DEREF;
-            vs.lw   = lw;
+            vs.loc  = loc;
             // fall through!
 
         case VS_NOT_NULL:
@@ -104,41 +120,49 @@ void handleVarDeref(Data::TState                        &state,
         case VS_DEREF:
             return;
 
+        default:
+            break;
+    }
+
+    if (data.silent)
+        return;
+
+    switch (code) {
         case VS_NULL:
-            CL_ERROR_MSG(lw, "dereference of NULL value");
-            CL_NOTE_MSG(vs.lw, "the NULL value comes from here");
+            CL_ERROR_MSG(loc, "dereference of NULL value");
+            CL_NOTE_MSG(vs.loc, "the NULL value comes from here");
             return;
 
         case VS_NULL_DEDUCED:
-            CL_ERROR_MSG(lw, "dereference of NULL value");
-            CL_NOTE_MSG(vs.lw, "the condition seems to be used incorrectly");
+            CL_ERROR_MSG(loc, "dereference of NULL value");
+            CL_NOTE_MSG(vs.loc, "the condition seems to be used incorrectly");
 
         case VS_MIGHT_BE_NULL:
-            CL_WARN_MSG(lw, "dereference of a value that might be NULL");
-            CL_NOTE_MSG(vs.lw, "the same value was compared with NULL here");
+            CL_WARN_MSG(loc, "dereference of a value that might be NULL");
+            CL_NOTE_MSG(vs.loc, "the same value was compared with NULL here");
             return;
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("invalid call of handleVarDeref()");
     }
 }
 
 /**
  * scan the given instruction for any dereferences and handle the eventually
- * @param state state valid per current instruction
+ * @param data state of computation per current function
  * @param insn instruction you want to look into
  */
-void handleDerefs(Data::TState &state, const CodeStorage::Insn *insn)
+void handleDerefs(Data &data, const TInsn insn)
 {
     // for each operand
-    BOOST_FOREACH(const struct cl_operand &op, insn->operands) {
+    BOOST_FOREACH(TOperand &op, insn->operands) {
         const struct cl_accessor *ac = op.accessor;
         if (!ac || ac->code != CL_ACCESSOR_DEREF || seekRefAccessor(ac))
             // no dereference here
             continue;
 
         CL_BREAK_IF(CL_OPERAND_VAR != op.code);
-        handleVarDeref(state, op, &insn->loc);
+        handleVarDeref(data, &op, &insn->loc);
     }
 }
 
@@ -200,21 +224,21 @@ bool mergeValues(VarState &dst, const VarState &src)
 
 /**
  * process unary instruction
- * @param state state valid per current instruction
+ * @param data state of computation per current function
  * @param insn instruction you want to process
  */
-void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
+void handleInsnUnop(Data &data, const TInsn insn)
 {
-    handleDerefs(state, insn);
+    handleDerefs(data, insn);
 
-    const struct cl_operand &dst = insn->operands[0];
+    TOperand &dst = insn->operands[0];
     if (CL_OPERAND_VOID == dst.code || dst.accessor)
         // we're interested only in direct manipulation of variables here
         return;
 
     // resolve state of the variable
-    const int uid = varIdFromOperand(&dst);
-    VarState &vs = state[uid];
+    const TVar uid = varIdFromOperand(&dst);
+    VarState &vs = data.localState[uid];
 
     const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn->subCode);
     if (CL_UNOP_ASSIGN != code) {
@@ -224,13 +248,13 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
     }
 
     // resolve source operand of the instruction
-    const struct cl_operand &src = insn->operands[1];
+    TOperand &src = insn->operands[1];
     const struct cl_accessor *ac = src.accessor;
 
     if (seekRefAccessor(ac)) {
         // assignment of address of an object implies not-NULL value
         vs.code = VS_NOT_NULL;
-        vs.lw   = &insn->loc;
+        vs.loc  = &insn->loc;
         return;
     }
 
@@ -248,28 +272,29 @@ void handleInsnUnop(Data::TState &state, const CodeStorage::Insn *insn)
 
         // looks like assignment of NULL to a variable
         vs.code = VS_NULL;
-        vs.lw   = &insn->loc;
+        vs.loc  = &insn->loc;
         return;
     }
 
     // single assignment ... let's just propagate the value
-    const int uidSrc = varIdFromOperand(&src);
-    mergeValues(vs, state[uidSrc]);
+    const TVar uidSrc = varIdFromOperand(&src);
+    mergeValues(vs, data.localState[uidSrc]);
 }
 
 /**
  * handle comparison of a pointer with NULL
- * @param state state valid per current instruction
+ * @param data state of computation per current function
  * @param vsDst reference to state of destination variable
  * @param src the operand that is not NULL
- * @param lw location info of the current instruction
+ * @param loc location info of the current instruction
  * @param neg if true, we deal with !=; == otherwise
  */
-bool handleInsnCmpNull(Data::TState                 &state,
-                       VarState                     &vsDst,
-                       const struct cl_operand      *src,
-                       const struct cl_loc          *lw,
-                       bool                         neg)
+bool handleInsnCmpNull(
+        Data                       &data,
+        VarState                   &vsDst,
+        TOperand                   *src,
+        const TLoc                  loc,
+        bool                        neg)
 {
     if (src->accessor)
         // we're interested only in direct manipulation of variables here
@@ -279,8 +304,8 @@ bool handleInsnCmpNull(Data::TState                 &state,
         // we're interested only in pointers comparison here
         return false;
 
-    const int uidSrc = varIdFromOperand(src);
-    const VarState &vsSrc = state[uidSrc];
+    const TVar uidSrc = varIdFromOperand(src);
+    const VarState &vsSrc = data.localState[uidSrc];
     const EVarState code = vsSrc.code;
     switch (code) {
         case VS_NULL:
@@ -298,12 +323,14 @@ bool handleInsnCmpNull(Data::TState                 &state,
             break;
 
         case VS_DEREF:
-            CL_WARN_MSG(lw, "comparing pointer with NULL");
-            CL_NOTE_MSG(vsSrc.lw, "the pointer was already dereferenced here");
+            if (data.silent)
+                break;
+            CL_WARN_MSG(loc, "comparing pointer with NULL");
+            CL_NOTE_MSG(vsSrc.loc, "the pointer was already dereferenced here");
             break;
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("invalid call of handleInsnCmpNull()");
     }
 
     // now store the relation among the pointer and the result of the comparison
@@ -312,7 +339,7 @@ bool handleInsnCmpNull(Data::TState                 &state,
         : VS_NULL_IFF;
 
     vsDst.peer = uidSrc;
-    vsDst.lw   = lw;
+    vsDst.loc  = loc;
     return true;
 
 we_know:
@@ -321,38 +348,37 @@ we_know:
         ? VS_TRUE
         : VS_FALSE;
 
-    vsDst.lw = lw;
+    vsDst.loc = loc;
     return true;
 }
 
 /**
  * process binary instruction
- * @param state state valid per current instruction
+ * @param data state of computation per current function
  * @param insn instruction you want to process
  */
-void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn)
+void handleInsnBinop(Data &data, const TInsn insn)
 {
-    const CodeStorage::TOperandList &opList = insn->operands;
+    const TOperandList &opList = insn->operands;
 
 #ifndef NDEBUG
     // binary instructions are said to have no dereferences
     // (better to check anyway)
-    BOOST_FOREACH(const struct cl_operand &op, opList) {
+    BOOST_FOREACH(TOperand &op, opList) {
         const struct cl_accessor *ac = op.accessor;
-        if (ac && ac->code == CL_ACCESSOR_DEREF)
-            CL_TRAP;
+        CL_BREAK_IF(ac && ac->code == CL_ACCESSOR_DEREF);
     }
 #endif
 
     // resolve operands
-    const struct cl_operand &dst = opList[0];
+    TOperand &dst = opList[0];
     CL_BREAK_IF(dst.accessor);
-    const int uidDst = varIdFromOperand(&dst);
-    VarState &vs = state[uidDst];
+    const TVar uidDst = varIdFromOperand(&dst);
+    VarState &vs = data.localState[uidDst];
 
-    const struct cl_operand &src1 = opList[1];
-    const struct cl_operand &src2 = opList[2];
-    const struct cl_operand *src;
+    TOperand &src1 = opList[1];
+    TOperand &src2 = opList[2];
+    TOperand *src;
 
     // now check the actual type of the binary instruction
     const enum cl_binop_e code = static_cast<enum cl_binop_e>(insn->subCode);
@@ -385,7 +411,7 @@ void handleInsnBinop(Data::TState &state, const CodeStorage::Insn *insn)
         src = &src1;
     }
 
-    if (handleInsnCmpNull(state, vs, src, &insn->loc, (CL_BINOP_NE == code)))
+    if (handleInsnCmpNull(data, vs, src, &insn->loc, (CL_BINOP_NE == code)))
         // properly handled pointer comparison with NULL
         return;
 
@@ -395,12 +421,12 @@ who_knows:
 
 /**
  * process call instruction
- * @param state state valid per current instruction
+ * @param data state of computation per current function
  * @param insn instruction you want to process
  */
-void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn)
+void handleInsnCall(Data &data, const TInsn insn)
 {
-    const struct cl_operand &dst = insn->operands[0];
+    TOperand &dst = insn->operands[0];
     if (dst.accessor)
         // we're interested only in direct manipulation of variables here
         return;
@@ -409,8 +435,8 @@ void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn)
         return;
 
     // abstract out the return value
-    const int uid = varIdFromOperand(&dst);
-    VarState &vs = state[uid];
+    const TVar uid = varIdFromOperand(&dst);
+    VarState &vs = data.localState[uid];
     vs.code = VS_UNKNOWN;
 }
 
@@ -419,11 +445,12 @@ void handleInsnCall(Data::TState &state, const CodeStorage::Insn *insn)
  * @param state state valid per current instruction
  * @param opList list of operands to check for direct references
  */
-void treatRefAsSideEffect(Data::TState                          &state,
-                          const CodeStorage::TOperandList       &opList)
+void treatRefAsSideEffect(
+        TState                     &state,
+        TOperandList               &opList)
 {
     // for each operand
-    BOOST_FOREACH(const struct cl_operand &op, opList) {
+    BOOST_FOREACH(TOperand &op, opList) {
         if (CL_OPERAND_VAR != op.code)
             // not a variable
             continue;
@@ -434,32 +461,32 @@ void treatRefAsSideEffect(Data::TState                          &state,
             continue;
 
         // kill any up to now reasoning about the variable
-        const int uid = varIdFromOperand(&op);
+        const TVar uid = varIdFromOperand(&op);
         state[uid].code = VS_UNKNOWN;
     }
 }
 
 /**
  * process a nonterminal instruction
- * @param state state valid per current instruction
+ * @param data state of computation per current function
  * @param insn instruction you want to process
  */
-void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn)
+void handleInsnNonterm(Data &data, const TInsn insn)
 {
-    treatRefAsSideEffect(state, insn->operands);
+    treatRefAsSideEffect(data.localState, insn->operands);
 
     const enum cl_insn_e code = insn->code;
     switch (code) {
         case CL_INSN_UNOP:
-            handleInsnUnop(state, insn);
+            handleInsnUnop(data, insn);
             return;
 
         case CL_INSN_BINOP:
-            handleInsnBinop(state, insn);
+            handleInsnBinop(data, insn);
             return;
 
         case CL_INSN_CALL:
-            handleInsnCall(state, insn);
+            handleInsnCall(data, insn);
             break;
 
         case CL_INSN_LABEL:
@@ -478,12 +505,12 @@ void handleInsnNonterm(Data::TState &state, const CodeStorage::Insn *insn)
  * @param block block that determines the target state that is about to be
  * updated
  */
-void updateState(Data                           &data,
-                 const Data::TState             &state,
-                 const CodeStorage::Block       *block)
+void updateState(
+        Data                       &data,
+        const TState               &state,
+        const TBlock                block)
 {
     // target state
-    typedef Data::TState TState;
     TState &dstState = data.stateMap[block];
 
     // for each variable
@@ -504,7 +531,7 @@ void updateState(Data                           &data,
  * @param uid CodeStorage uid of the branch-by variable
  * @param val true in 'then' branch, false in 'else' branch
  */
-void replaceInBranch(Data::TState &state, int uid, bool val)
+void replaceInBranch(TState &state, const TVar uid, bool val)
 {
     VarState &vs = state[uid];
     bool isNull;
@@ -524,7 +551,7 @@ void replaceInBranch(Data::TState &state, int uid, bool val)
             return;
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("invalid call of replaceInBranch()");
             return;
     }
 
@@ -533,7 +560,7 @@ void replaceInBranch(Data::TState &state, int uid, bool val)
 
     // update state of the pointer accordingly
     VarState &vsPeer = state[vs.peer];
-    vsPeer.lw = vs.lw;
+    vsPeer.loc = vs.loc;
     vsPeer.code = (isNull)
         ? VS_NULL_DEDUCED
         : VS_NOT_NULL_DEDUCED;
@@ -546,17 +573,18 @@ void replaceInBranch(Data::TState &state, int uid, bool val)
  * @param cond branch-by variable given as operand
  * @param targets then/else targets of the condition
  */
-void handleInsnCondNondet(Data                              &data,
-                          const Data::TState                &state,
-                          const struct cl_operand           &cond,
-                          const CodeStorage::TTargetList    &targets)
+void handleInsnCondNondet(
+        Data                       &data,
+        const TState               &state,
+        TOperand                   &cond,
+        TTargetList                &targets)
 {
     // local copies of the state
-    Data::TState stateThen(state);
-    Data::TState stateElse(state);
+    TState stateThen(state);
+    TState stateElse(state);
 
     // reflect the value of branch-by variable (if possible)
-    int uid = varIdFromOperand(&cond);
+    const TVar uid = varIdFromOperand(&cond);
     replaceInBranch(stateThen, uid, true);
     replaceInBranch(stateElse, uid, false);
 
@@ -567,19 +595,17 @@ void handleInsnCondNondet(Data                              &data,
 
 /**
  * @param data state of computation per current function
- * @param state state valid per current instruction
  * @param insn conditional instruction you want to process
  */
-void handleInsnCond(Data                                    &data,
-                    const Data::TState                      &state,
-                    const CodeStorage::Insn                 *insn)
+void handleInsnCond(
+        Data                       &data,
+        const TInsn                 insn)
 {
     // resolve branch-by operand
-    const struct cl_operand &cond = insn->operands[0];
-    const int uid = varIdFromOperand(&cond);
-    Data::TState::const_iterator it = state.find(uid);
-    CL_BREAK_IF(state.end() == it);
-    const VarState &vs = it->second;
+    TOperand &cond = insn->operands[0];
+    TState &state = data.localState;
+    const TVar uid = varIdFromOperand(&cond);
+    const VarState &vs = state[uid];
 
     // now check if we know the value
     const EVarState code = vs.code;
@@ -601,22 +627,21 @@ void handleInsnCond(Data                                    &data,
 /**
  * process a terminal instruction
  * @param data state of computation per current function
- * @param state state valid per current instruction
  * @param insn instruction you want to process
  */
-void handleInsnTerm(Data                            &data,
-                    const Data::TState              &state,
-                    const CodeStorage::Insn         *insn)
+void handleInsnTerm(
+        Data                       &data,
+        const TInsn                 insn)
 {
     const enum cl_insn_e code = insn->code;
     switch (code) {
         case CL_INSN_COND:
-            handleInsnCond(data, state, insn);
+            handleInsnCond(data, insn);
             return;
 
         case CL_INSN_JMP:
             // just update the target state and check if anything has changed
-            updateState(data, state, insn->targets[0]);
+            updateState(data, data.localState, insn->targets[0]);
             return;
 
         case CL_INSN_RET:
@@ -625,49 +650,52 @@ void handleInsnTerm(Data                            &data,
             return;
 
         default:
-            CL_TRAP;
+            CL_BREAK_IF("invalid call of handleInsnTerm()");
     }
 }
 
-void handleBlock(Data &data, Data::TBlock bb)
+void handleBlock(Data &data, const TBlock bb)
 {
     // go through the sequence of instructions of the current basic block
-    Data::TState next = data.stateMap[bb];
-    BOOST_FOREACH(const CodeStorage::Insn *insn, *bb) {
+    data.localState = data.stateMap[bb];
+    BOOST_FOREACH(const TInsn insn, *bb) {
         if (cl_is_term_insn(insn->code))
             // terminal instruction
-            handleInsnTerm(data, next, insn);
+            handleInsnTerm(data, insn);
 
         else
             // nonterminal instruction
-            handleInsnNonterm(next, insn);
+            handleInsnNonterm(data, insn);
     }
 }
 
 void handleFnc(const CodeStorage::Fnc &fnc)
 {
-    using namespace CodeStorage;
-
     Data data;
     Data::TSched &todo = data.todo;
-    const ControlFlow &cfg = fnc.cfg;
+    const CodeStorage::ControlFlow &cfg = fnc.cfg;
 
     // block-level scheduler
-    Data::TBlock bb = cfg.entry();
+    TBlock bb = cfg.entry();
     todo.push(bb);
     data.todoLookup.insert(bb);
     while (!todo.empty()) {
-        Data::TBlock bb = todo.front();
+        bb = todo.front();
         todo.pop();
         if (1 != data.todoLookup.erase(bb))
             CL_BREAK_IF("BlockScheduler malfunction");
 
         // process one basic block
         CL_BREAK_IF(!bb || !bb->size());
-        const Insn *insn = bb->operator[](0);
+        const TInsn insn = bb->front();
         CL_DEBUG_MSG(&insn->loc, "analyzing block " << bb->name() << "...");
         handleBlock(data, bb);
     }
+
+    // finally report all errors/warning over the already computed fixed-point
+    data.silent = false;
+    BOOST_FOREACH(const TBlock bb, cfg)
+        handleBlock(data, bb);
 }
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -681,8 +709,8 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *)
         if (!isDefined(fnc))
             continue;
 
-        CL_DEBUG_MSG(&fnc.def.data.cst.data.cst_fnc.loc, "analyzing function "
-                << nameOf(fnc) << "()...");
+        const struct cl_loc *loc = locationOf(fnc);
+        CL_DEBUG_MSG(loc, "analyzing function " << nameOf(fnc) << "()...");
 
         handleFnc(fnc);
     }

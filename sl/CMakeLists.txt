@@ -33,11 +33,14 @@ endif()
 # libsl.so
 add_library(sl SHARED
     cl_symexec.cc
+    cont_shape.cc
     fixed_point.cc
+    fixed_point_proxy.cc
     glconf.cc
     intrange.cc
     plotenum.cc
     prototype.cc
+    shape.cc
     sigcatch.cc
     symabstract.cc
     symbin.cc
@@ -84,8 +87,8 @@ install(TARGETS sl DESTINATION lib)
 
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
-set(GCC_EXEC_PREFIX "timeout 6000"
-    CACHE STRING "Set to empty string if not sure")
+set(GCC_EXEC_PREFIX "" CACHE STRING
+    "Set to \"timeout N\" to limit each test to run at most N seconds.")
 
 set(testdir "${sl_SOURCE_DIR}/../tests/predator-regre")
 
@@ -115,7 +118,7 @@ set(tests
     0210      0212      0214 0215      0217 0218 0219
     0220 0221 0222 0223 0224 0225 0226 0227 0228 0229
     0230 0231 0232 0233 0234      0236 0237 0238 0239
-    0240
+    0240 0241
     0300      0302
                                   0316
     0400 0401 0402 0403 0404      0406      0408

@@ -18,10 +18,10 @@
  */
 
 #include "util.hh"
-#include "cl/clutil.hh"
 #include "worklist.hh"
 #include "builtins.hh"
 
+#include <cl/clutil.hh>
 #include <cl/storage.hh>
 
 #include "clplot.hh"
@@ -652,7 +652,7 @@ bool joinTgtVisited(
 
 RetVal bindHeap(BuildCtx &ctx, Graph &ptg, TBindPairs &pairs)
 {
-    CL_BREAK_IF(pairs.size() == 0);
+    CL_BREAK_IF(pairs.empty());
     TBindPair &p = pairs[0];
     CL_BREAK_IF(p.code != BINDPAIR_HEAP);
 
@@ -888,26 +888,30 @@ RetVal bind(
     return change ? PTFICS_RET_CHANGE : PTFICS_RET_NO_CHANGE;
 }
 
+struct NodeData {
+    /// node to start traversal from
+    const Node                     *startFrom;
+
+    /// how far we should go from startFrom
+    int                             steps;
+
+    /// caller's item (if we know it)
+    const Item                     *clrItem;
+
+    NodeData() :
+        startFrom(0),
+        steps(0),
+        clrItem(0)
+    {
+    }
+};
+
 /**
  * shape the global graph (ctx.stor.ptd.gptg) based on actually handled
  * function's graph (ctx.ptg).
  */
 RetVal bindGlobal(BuildCtx &ctx)
 {
-    struct NodeData {
-        // node to start traversal from
-        const Node                     *startFrom;
-        // how far we should go from startFrom
-        int                             steps;
-        // caller's item (if we know it)
-        const Item                     *clrItem;
-        NodeData() :
-            startFrom(0),
-            steps(0),
-            clrItem(0)
-        {
-        }
-    };
     typedef DataManager<NodeData>   TDM;
     TDM dm;
     bool change = false;
@@ -996,8 +1000,9 @@ struct TBindLocItem {
         bool                            referenced;
     } src;
 
-    struct {
+    struct Dst {
         const Var                      *v;
+        Dst (): v(0) { }
     } dst;
 
     TBindLocItem() {

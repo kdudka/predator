@@ -52,4 +52,5 @@ distclean: clean
 	rm -rf ../fwnull_build
 
 distcheck: distclean
-	$(MAKE) check
+	$(MAKE) check CMAKE='cmake -D FWNULL_DEBUG=ON'
+	$(MAKE) check CMAKE='cmake -D FWNULL_DEBUG=OFF'

@@ -39,7 +39,7 @@
  * - 0x2 ... dump the fixed point as a set of plots per each unit
  * - 0x4 ... use a single instruction as the unit (basic block otherwise)
  */
-#define DEBUG_SE_FIXED_POINT                7
+#define DEBUG_SE_FIXED_POINT                0
 
 /**
  * - 0 ... do not debug branching by non-deterministic conditions
@@ -91,7 +91,7 @@
 /**
  * if 1, do not perform abstraction on each end of BB, but only when looping
  */
-#define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      0
+#define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
 
 /*
  * if non-zero, allow incomplete discovery paths with lower costs to apply
@@ -121,7 +121,7 @@
  * - 2 ... also when joining states if the three-way join is considered useful
  * - 3 ... do not restrict the usage of three-way join at the level of symjoin
  */
-#define SE_ALLOW_THREE_WAY_JOIN             3
+#define SE_ALLOW_THREE_WAY_JOIN             1
 
 /**
  * if 1, assume that the contents of static data is initialized on first access
@@ -221,7 +221,7 @@
  * - 2 ... join only when traversing a loop-closing edge, isomorphism otherwise
  * - 3 ... same as 2 but skips the isomorphism check when considered redundant
  */
-#define SE_JOIN_ON_LOOP_EDGES_ONLY          0
+#define SE_JOIN_ON_LOOP_EDGES_ONLY          1
 
 /**
  * maximal call depth
@@ -236,7 +236,7 @@
 /**
  * preserve heaps with different DLS minimum lengths up to the specified number
  */
-#define SE_PRESERVE_DLS_MINLEN              0
+#define SE_PRESERVE_DLS_MINLEN              2
 
 /**
  * upper bound of DLS minimal length (zero means unlimited)
@@ -253,7 +253,7 @@
  * - 1 ... reorder heaps in SymStateWithJoin based on hit ratio
  * - 2 ... reorder heaps also in SymHeapUnion based on hit ratio [experimental]
  */
-#define SE_STATE_ON_THE_FLY_ORDERING        0
+#define SE_STATE_ON_THE_FLY_ORDERING        1
 
 /**
  * - 0 ... keep state info for all basic blocks of a function
@@ -261,7 +261,7 @@
  * - 2 ... keep state info for all basic blocks with more than one ingoing edge
  * - 3 ... keep state info for all basic blocks that a CFG loop starts with
  */
-#define SE_STATE_PRUNING_MODE               0
+#define SE_STATE_PRUNING_MODE               1
 
 /**
  * prune non-loop blocks on reaching the count of join misses (0 means disabled)

@@ -297,13 +297,11 @@ struct CallInst {
  */
 inline bool operator<(const CallInst &a, const CallInst &b)
 {
-    if (a.uid < b.uid)
-        return true;
-    else if (b.uid < a.uid)
-        return false;
-    else
-        // we know (a.uid == b.uid) at this point, let's compare .inst
-        return a.inst < b.inst;
+    // first compare uid
+    RETURN_IF_COMPARED(a, b, uid);
+
+    // then compare inst
+    return a.inst < b.inst;
 }
 
 /// a list of _program_ variables
@@ -328,13 +326,11 @@ typedef std::map<TOffset, UniformBlock>                 TUniBlockMap;
  */
 inline bool operator<(const CVar &a, const CVar &b)
 {
-    if (a.uid < b.uid)
-        return true;
-    else if (b.uid < a.uid)
-        return false;
-    else
-        // we know (a.uid == b.uid) at this point, let's compare .inst
-        return a.inst < b.inst;
+    // first compare uid
+    RETURN_IF_COMPARED(a, b, uid);
+
+    // then compare inst
+    return a.inst < b.inst;
 }
 
 class FldList;
@@ -495,9 +491,6 @@ class SymHeapCore {
 
         /// list of live fields (including ptrs) inside the given object
         void gatherLiveFields(FldList &dst, TObjId) const;
-
-        /// list of live pointers inside the give object
-        void gatherLivePointers(FldList &dst, TObjId) const;
 
         /// list of uninitialized and nullified uniform blocks of the given obj
         void gatherUniformBlocks(TUniBlockMap &dst, TObjId) const;
@@ -705,12 +698,10 @@ class FldHandle {
 /// this allows to insert FldHandle instances into std::set
 inline bool operator<(const FldHandle &a, const FldHandle &b)
 {
-    if (a.sh() < b.sh())
-        return true;
+    // first compare heap addresses
+    RETURN_IF_COMPARED(a, b, sh());
 
-    if (b.sh() < a.sh())
-        return false;
-
+    // then compare field IDs
     return (a.fieldId() < b.fieldId());
 }
 
@@ -802,6 +793,14 @@ inline bool operator==(const BindingOff &off1, const BindingOff &off2)
 inline bool operator!=(const BindingOff &off1, const BindingOff &off2)
 {
     return !operator==(off1, off2);
+}
+
+/// lexicographical comparison of BindingOff, need for std::map
+inline bool operator<(const BindingOff &off1, const BindingOff &off2)
+{
+    RETURN_IF_COMPARED(off1, off2, next);
+    RETURN_IF_COMPARED(off1, off2, prev);
+    return (off1.head < off2.head);
 }
 
 /// extension of SymHeapCore dealing with abstract objects (list segments etc.)

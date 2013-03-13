@@ -24,6 +24,7 @@
 #include <cl/storage.hh>
 
 #include "plotenum.hh"
+#include "symstate.hh"
 #include "worklist.hh"
 
 #include <algorithm>
@@ -79,8 +80,12 @@ void Node::notifyDeath(NodeBase *child)
 
 void NodeHandle::reset(Node *node)
 {
-    // release the old node
     Node *&ref = parents_.front();
+    if (ref == node)
+        // if the node is already in, protect it against accidental deallocation
+        return;
+
+    // release the old node
     ref->notifyDeath(this);
 
     // register the new node
@@ -648,5 +653,10 @@ void waiveCloneOperation(SymHeap &sh)
     sh.traceUpdate(cnode->parent());
 }
 
+void waiveCloneOperation(SymState &state)
+{
+    BOOST_FOREACH(SymHeap *sh, state)
+        Trace::waiveCloneOperation(*sh);
+}
 
 } // namespace Trace

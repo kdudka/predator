@@ -354,7 +354,7 @@ TObjId SymProc::objByVar(const CVar &cv)
         nullify = true;
 #else
         // do not initialize static variables
-        return at;
+        return reg;
 #endif
 
     bool needInit = !var.initials.empty();
@@ -1718,7 +1718,7 @@ bool dlSegMergeAddressesIfNeeded(
         // 0+ DLS --> we have to look through!
         dlSegMergeAddressesOfEmpty(dst, proc, v1, v2);
 
-    dlSegReplaceByConcrete(sh, obj1, obj2);
+    dlSegReplaceByConcrete(sh, obj1 /* = obj2 */);
     sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), /* len */ 1));
     dst.insert(sh);
     return true;

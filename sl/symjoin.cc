@@ -25,8 +25,8 @@
 #include <cl/clutil.hh>
 
 #include "prototype.hh"
+#include "shape.hh"
 #include "symcmp.hh"
-#include "symdiscover.hh"
 #include "symgc.hh"
 #include "symplot.hh"
 #include "symseg.hh"
@@ -104,16 +104,8 @@ struct SchedItem {
 // needed by std::set
 inline bool operator<(const SchedItem &a, const SchedItem &b)
 {
-    if (a.fld1 < b.fld1)
-        return true;
-    if (b.fld1 < a.fld1)
-        return false;
-
-    if (a.fld2 < b.fld2)
-        return true;
-    if (b.fld2 < a.fld2)
-        return false;
-
+    RETURN_IF_COMPARED(a, b, fld1);
+    RETURN_IF_COMPARED(a, b, fld2);
     return (a.ldiff < b.ldiff);
 }
 
@@ -2154,6 +2146,9 @@ bool MayExistVisitor::operator()(const FldHandle &fld)
 
     for (;;) {
         const TObjId seg = sh.objByAddr(val);
+        if (OBJ_INVALID == seg)
+            return /* continue */ true;
+
         if (seg == obj_)
             // refuse referencing the MayExist candidate itself
             return /* continue */ true;
@@ -2276,12 +2271,12 @@ bool mayExistFallback(
     else {
         // look for next pointer(s) of OK_SEE_THROUGH/OK_SEE_THROUGH_2N
         MayExistVisitor visitor(ctx, action, refVal, obj);
-        traverseLivePtrs(sh, obj, visitor);
+        traverseLiveFields(sh, obj, visitor);
         if (!visitor.found()) {
             // reference value not matched directly, try to look through in
             // order to allow insert chains of possibly empty abstract objects
             visitor.enableLookThroughMode();
-            traverseLivePtrs(sh, obj, visitor);
+            traverseLiveFields(sh, obj, visitor);
             if (visitor.found())
                 // e.g. test-0124 and test-167 use this code path
                 SJ_DEBUG("MayExistVisitor::enableLookThroughMode() in use!");
@@ -2598,12 +2593,13 @@ void recoverPointersToDst(
 
 bool joinData(
         SymHeap                 &sh,
-        const BindingOff        &bf,
+        const ShapeProps        &props,
         const TObjId             obj1,
         const TObjId             obj2,
         TObjId                  *pDst,
         TObjSet                  protoObjs[1][2],
-        EJoinStatus             *pStatus)
+        EJoinStatus             *pStatus,
+        Trace::TIdMapper        *pIdMapper)
 {
     SJ_DEBUG("--> joinData" << SJ_OBJP(obj1, obj2));
 
@@ -2619,13 +2615,10 @@ bool joinData(
     if (!joinObjType(&clt, ctx, obj1, obj2))
         return false;
 
-    const EObjKind kind = (isDlsBinding(bf))
-        ? OK_DLS
-        : OK_SLS;
-
     // create an image in ctx.dst
+    const BindingOff &bf = props.bOff;
     const TObjId objDst = ctx.dst.heapAlloc(size);
-    ctx.dst.objSetAbstract(objDst, kind, bf);
+    ctx.dst.objSetAbstract(objDst, props.kind, bf);
 
     // intialize the minimum segment length
     const TMinLen lenDst = objMinLength(sh, obj1) + objMinLength(sh, obj2);
@@ -2680,12 +2673,18 @@ bool joinData(
             ++cntProto1;
             if (protoObjs)
                 (*protoObjs)[0].insert(proto1);
+
+            if (pIdMapper)
+                pIdMapper->insert(proto1, protoDst);
         }
 
         if (OBJ_INVALID != proto2) {
             ++cntProto2;
             if (protoObjs)
                 (*protoObjs)[1].insert(proto2);
+
+            if (pIdMapper)
+                pIdMapper->insert(proto2, protoDst);
         }
     }
 

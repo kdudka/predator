@@ -324,8 +324,7 @@ inline TMemChunk createChunk(const TOffset off, const TObjType clt)
 
 enum EBlockKind {
     BK_INVALID,
-    BK_DATA_PTR,
-    BK_DATA_OBJ,
+    BK_FIELD,
     BK_COMPOSITE,
     BK_UNIFORM
 };
@@ -334,12 +333,9 @@ typedef std::map<TFldId, EBlockKind>                    TLiveObjs;
 
 inline EBlockKind bkFromClt(const TObjType clt)
 {
-    if (isComposite(clt, /* includingArray */ false))
-        return BK_COMPOSITE;
-
-    return (isDataPtr(clt))
-        ? BK_DATA_PTR
-        : BK_DATA_OBJ;
+    return (isComposite(clt, /* includingArray */ false))
+        ? BK_COMPOSITE
+        : BK_FIELD;
 }
 
 class AbstractHeapEntity {
@@ -894,8 +890,7 @@ void SymHeapCore::Private::splitBlockByObject(
 
     const EBlockKind code = hbData->code;
     switch (code) {
-        case BK_DATA_PTR:
-        case BK_DATA_OBJ:
+        case BK_FIELD:
             if (this->valsEqual(blData->value, hbData->value))
                 // preserve non-conflicting uniform blocks
                 return;
@@ -982,16 +977,16 @@ void SymHeapCore::Private::splitBlockByObject(
 }
 
 bool isCoveredByBlock(
-        const FieldOfObj           *objData,
+        const FieldOfObj           *fldData,
         const BlockEntity          *blData)
 {
-    const TOffset beg1 = objData->off;
+    const TOffset beg1 = fldData->off;
     const TOffset beg2 = blData->off;
     if (beg1 < beg2)
         // the object starts above the block
         return false;
 
-    const TOffset end1 = beg1 + objData->clt->size;
+    const TOffset end1 = beg1 + fldData->clt->size;
     const TOffset end2 = beg2 + blData->size;
     return (end1 <= end2);
 }
@@ -1075,22 +1070,17 @@ bool SymHeapCore::Private::reinterpretSingleObj(
     CL_BREAK_IF(srcData->obj != dstData->obj);
 
     const EBlockKind code = srcData->code;
-    switch (code) {
-        case BK_DATA_OBJ:
-            break;
+    if (BK_FIELD != code)
+        // TODO: hook various reinterpretation drivers here
+        return false;
 
-        default:
-            // TODO: hook various reinterpretation drivers here
-            return false;
-    }
-
-    const FieldOfObj *objData = DCAST<const FieldOfObj *>(srcData);
-    const TValId valSrc = objData->value;
+    const FieldOfObj *fldData = DCAST<const FieldOfObj *>(srcData);
+    const TValId valSrc = fldData->value;
     if (VAL_INVALID == valSrc)
         // invalid source
         return false;
 
-    const TObjType cltSrc = objData->clt;
+    const TObjType cltSrc = fldData->clt;
     const TObjType cltDst = dstData->clt;
 
     if (isString(cltSrc) && isChar(cltDst)) {
@@ -1128,8 +1118,7 @@ void SymHeapCore::Private::reinterpretObjData(
 
     EBlockKind code = blData->code;
     switch (code) {
-        case BK_DATA_PTR:
-        case BK_DATA_OBJ:
+        case BK_FIELD:
             break;
 
         case BK_COMPOSITE:
@@ -1170,8 +1159,7 @@ void SymHeapCore::Private::reinterpretObjData(
             }
             // fall through!
 
-        case BK_DATA_PTR:
-        case BK_DATA_OBJ:
+        case BK_FIELD:
             if (this->reinterpretSingleObj(oldData, blData))
                 goto data_restored;
 
@@ -1206,10 +1194,10 @@ void SymHeapCore::Private::setValueOf(
         TValSet                    *killedPtrs)
 {
     // release old value
-    FieldOfObj *objData;
-    this->ents.getEntRW(&objData, fld);
+    FieldOfObj *fldData;
+    this->ents.getEntRW(&fldData, fld);
 
-    const TValId valOld = objData->value;
+    const TValId valOld = fldData->value;
     if (valOld == val)
         // we are asked to write a value which is already there, skip it!
         return;
@@ -1218,18 +1206,18 @@ void SymHeapCore::Private::setValueOf(
         killedPtrs->insert(valOld);
 
     // store new value
-    objData->value = val;
+    fldData->value = val;
     this->registerValueOf(fld, val);
 
     // read object data
-    const TObjId obj = objData->obj;
+    const TObjId obj = fldData->obj;
     Region *rootData;
     this->ents.getEntRW(&rootData, obj);
 
     // (re)insert self into the arena if not there
     TArena &arena = rootData->arena;
-    const TOffset off = objData->off;
-    const TObjType clt = objData->clt;
+    const TOffset off = fldData->off;
+    const TObjType clt = fldData->clt;
     arena += createArenaItem(off, clt->size, fld);
 
     // invalidate contents of the objects we are overwriting
@@ -1248,8 +1236,8 @@ TFldId SymHeapCore::Private::fldCreate(
         TObjType                    clt)
 {
     // acquire object ID
-    FieldOfObj *objData = new FieldOfObj(obj, off, clt);
-    const TFldId fld = this->assignId(objData);
+    FieldOfObj *fldData = new FieldOfObj(obj, off, clt);
+    const TFldId fld = this->assignId(fldData);
 
     // read object data
     Region *rootData;
@@ -1537,12 +1525,7 @@ TValId SymHeapCore::Private::fldInit(TFldId fld)
     fldData->value = val;
 
     // mark the object as live
-    if (isDataPtr(clt))
-        rootData->liveFields[fld] = BK_DATA_PTR;
-#if SE_TRACK_NON_POINTER_VALUES
-    else
-        rootData->liveFields[fld] = BK_DATA_OBJ;
-#endif
+    rootData->liveFields[fld] = BK_FIELD;
 
     CL_BREAK_IF(!this->chkArenaConsistency(rootData));
 
@@ -1569,15 +1552,15 @@ TValId SymHeapCore::valueOf(TFldId fld)
             break;
     }
 
-    const FieldOfObj *objData;
-    d->ents.getEntRO(&objData, fld);
+    const FieldOfObj *fldData;
+    d->ents.getEntRO(&fldData, fld);
 
-    TValId val = objData->value;
+    TValId val = fldData->value;
     if (VAL_INVALID != val)
         // the field has a value
         return val;
 
-    const TObjType clt = objData->clt;
+    const TObjType clt = fldData->clt;
     if (isComposite(clt)) {
         // deleayed creation of a composite value
         val = d->valCreate(VT_COMPOSITE, VO_INVALID);
@@ -1586,9 +1569,9 @@ TValId SymHeapCore::valueOf(TFldId fld)
         compData->compObj = fld;
 
         // store the value
-        FieldOfObj *objDataRW;
-        d->ents.getEntRW(&objDataRW, fld);
-        objDataRW->value = val;
+        FieldOfObj *fldDataRW;
+        d->ents.getEntRW(&fldDataRW, fld);
+        fldDataRW->value = val;
 
         // store backward reference
         compData->usedBy.insert(fld);
@@ -1691,7 +1674,7 @@ TFldId SymHeapCore::Private::copySingleLiveBlock(
     }
     else {
         // duplicate a regular object
-        CL_BREAK_IF(BK_DATA_PTR != code && BK_DATA_OBJ != code);
+        CL_BREAK_IF(BK_FIELD != code);
         CL_BREAK_IF(sizeLimit);
 
         const FieldOfObj *fldDataSrc;
@@ -1743,21 +1726,6 @@ TObjId SymHeapCore::objClone(TObjId obj)
     return dup;
 }
 
-void SymHeapCore::gatherLivePointers(FldList &dst, TObjId obj) const
-{
-    const Region *rootData;
-    d->ents.getEntRO(&rootData, obj);
-
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveFields) {
-        const EBlockKind code = item.second;
-        if (BK_DATA_PTR != code)
-            continue;
-
-        const TFldId fld = item.first;
-        dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
-    }
-}
-
 void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TObjId obj) const
 {
     const Region *regData;
@@ -1793,8 +1761,7 @@ void SymHeapCore::gatherLiveFields(FldList &dst, TObjId obj) const
             case BK_UNIFORM:
                 continue;
 
-            case BK_DATA_PTR:
-            case BK_DATA_OBJ:
+            case BK_FIELD:
                 break;
 
             case BK_INVALID:
@@ -2085,30 +2052,25 @@ bool SymHeapCore::Private::findZeroInBlock(
     const BlockEntity *blData;
     this->ents.getEntRO(&blData, fld);
 
-    const EBlockKind code = blData->code;
-    switch (code) {
-        case BK_DATA_OBJ:
-            break;
-
-        case BK_DATA_PTR:
-        case BK_UNIFORM:
-            if (VAL_NULL != blData->value)
-                return false;
-
-            // a uniform block full of zeros
-            *offDst = blData->off;
-            return true;
-
-        default:
-            CL_BREAK_IF("findZeroInBlock() got something special");
-            return false;
+    if (VAL_NULL == blData->value) {
+        // a block full of zeros
+        *offDst = blData->off;
+        return true;
     }
 
-    const FieldOfObj *objData = DCAST<const FieldOfObj *>(blData);
-    if (CL_TYPE_ARRAY == objData->clt->code) {
+    const EBlockKind code = blData->code;
+    if (BK_FIELD != code) {
+        if (BK_UNIFORM != code)
+            CL_BREAK_IF("findZeroInBlock() got something special");
+
+        return false;
+    }
+
+    const FieldOfObj *fldData = DCAST<const FieldOfObj *>(blData);
+    if (CL_TYPE_ARRAY == fldData->clt->code) {
         // assume zero-terminated string
         const InternalCustomValue *valData;
-        this->ents.getEntRO(&valData, objData->value);
+        this->ents.getEntRO(&valData, fldData->value);
 
         // check whether the prefix is proven to be non-zero
         const TOffset off = blData->off;
@@ -2191,9 +2153,9 @@ TObjType SymHeapCore::fieldType(TFldId fld) const
     if (fld < 0)
         return 0;
 
-    const FieldOfObj *objData;
-    d->ents.getEntRO(&objData, fld);
-    return objData->clt;
+    const FieldOfObj *fldData;
+    d->ents.getEntRO(&fldData, fld);
+    return fldData->clt;
 }
 
 TValId SymHeapCore::Private::shiftCustomValue(TValId ref, TOffset shift)
@@ -3061,8 +3023,7 @@ TFldId SymHeapCore::Private::fldLookup(
 
         const EBlockKind code = blData->code;
         switch (code) {
-            case BK_DATA_PTR:
-            case BK_DATA_OBJ:
+            case BK_FIELD:
             case BK_COMPOSITE:
                 break;
 
@@ -3071,8 +3032,8 @@ TFldId SymHeapCore::Private::fldLookup(
         }
 
         const bool isLive = hasKey(rootData->liveFields, fld);
-        const FieldOfObj *objData = DCAST<const FieldOfObj *>(blData);
-        if (!/* continue */policy->matchBlock(fld, objData, isLive))
+        const FieldOfObj *fldData = DCAST<const FieldOfObj *>(blData);
+        if (!/* continue */policy->matchBlock(fld, fldData, isLive))
             break;
     }
 
@@ -3147,10 +3108,10 @@ class FieldMatchPolicy: public IMatchPolicy {
 
 bool FieldMatchPolicy::matchBlock(
         TFldId                      fld,
-        const FieldOfObj           *objData,
+        const FieldOfObj           *fldData,
         bool                        isLive)
 {
-    const TObjType cltNow = objData->clt;
+    const TObjType cltNow = fldData->clt;
     if (cltNow == cltToMatch_) {
         // exact match
         cltExactMatch_ = true;
@@ -3365,7 +3326,7 @@ TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
 }
 
 bool SymHeapCore::isValid(TObjId obj) const {
-    if (OBJ_INVALID == obj)
+    if (!d->ents.isValidEnt(obj))
         return false;
 
     const Region *regData;
@@ -3635,6 +3596,10 @@ SymHeap& SymHeap::operator=(const SymHeap &ref)
     RefCntLib<RCO_NON_VIRT>::leave(d);
 
     d = ref.d;
+#if defined(__GNUC_MINOR__) && (__GNUC__ == 4) && (__GNUC_MINOR__ == 1)
+    // work around optimization bug <https://bugzilla.redhat.com/917378>
+    asm volatile("" ::: "memory");
+#endif
     RefCntLib<RCO_NON_VIRT>::enter(d);
 
     return *this;

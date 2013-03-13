@@ -25,7 +25,7 @@
 #include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
-#include "fixed_point.hh"
+#include "fixed_point_proxy.hh"
 #include "glconf.hh"
 #include "symbt.hh"
 #include "symdump.hh"
@@ -35,6 +35,7 @@
 #include "symtrace.hh"
 #include "util.hh"
 
+#include <stdexcept>
 #include <string>
 
 #include <boost/foreach.hpp>
@@ -154,7 +155,12 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *configString)
     GlConf::loadConfigString(configString);
 
     // run symbolic execution
-    launchSymExec(stor);
+    try {
+        launchSymExec(stor);
+    }
+    catch (const std::runtime_error &e) {
+        CL_DEBUG("clEasyRun() caught a run-time exception: " << e.what());
+    }
 
     FixedPoint::StateByInsn *const fixedPoint = GlConf::data.fixedPoint;
     if (fixedPoint) {

@@ -133,6 +133,7 @@ struct PlotData {
     std::ostream                       &out;
     const TObjSet                      &objs;
     const TValSet                      &values;
+    const TIdSet                       *pHighlight;
     int                                 last;
     TLiveFields                         liveFields;
     TFldSet                             lonelyFields;
@@ -142,15 +143,25 @@ struct PlotData {
             const SymHeap              &sh_,
             std::ostream               &out_,
             const TObjSet              &objs_,
-            const TValSet              &values_):
+            const TValSet              &values_,
+            const TIdSet               *pHighlight_):
         sh(const_cast<SymHeap &>(sh_)),
         out(out_),
         objs(objs_),
         values(values_),
+        pHighlight(pHighlight_),
         last(0)
     {
     }
 };
+
+template <typename TId>
+bool isHighlighted(const PlotData &plot, const TId id)
+{
+    const TIdSet *pSet = plot.pHighlight;
+    return pSet
+        && hasKey(pSet, static_cast<int>(id));
+}
 
 #define GEN_labelByCode(cst) case cst: return #cst
 
@@ -458,8 +469,7 @@ bool plotField(PlotData &plot, const FieldWrapper &fw, const bool lonely)
             break;
 
         case FC_PREV:
-            // cppcheck-suppress unreachableCode
-            color = "gold";
+            color = "orange";
             break;
 
         case FC_DATA:
@@ -690,7 +700,7 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
         case OK_OBJ_OR_NULL:
         case OK_SEE_THROUGH:
         case OK_SEE_THROUGH_2N:
-            color = "green";
+            color = "chartreuse2";
             pw = "3.0";
             break;
 
@@ -700,10 +710,14 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
             break;
 
         case OK_DLS:
-            color = "gold";
+            color = "orange";
             pw = "3.0";
             break;
     }
+
+    const char *bgColor = (isHighlighted(plot, obj))
+        ? "azure2"
+        : "white";
 
     const std::string label = labelOfCompObj(sh, obj, /* showProps */ true);
 
@@ -713,9 +727,9 @@ void plotCompositeObj(PlotData &plot, const TObjId obj, const TCont &liveFields)
         << "\" {\n\trank=same;\n\tlabel=" << SL_QUOTE(label)
         << ";\n\tcolor=" << color
         << ";\n\tfontcolor=" << color
-        << ";\n\tbgcolor=gray98;\n\tstyle=dashed;"
-        << "\n\tpenwidth=" << pw
-        << ";\n";
+        << ";\n\tbgcolor=" << bgColor
+        << ";\n\tpenwidth=" << pw
+        << ";\n\tstyle=dashed;\n";
 
     plotRawObject(plot, obj, color);
 
@@ -842,7 +856,7 @@ void describeFnc(PlotData &plot, const int uid, const TValId val)
     CL_BREAK_IF(!fnc);
 
     const std::string name = nameOf(*fnc);
-    plot.out << ", fontcolor=green, label=\""
+    plot.out << ", fontcolor=chartreuse2, label=\""
         << name << "() (#"
         << val << ")\"";
 }
@@ -957,7 +971,7 @@ preserve_suffix:
 
     const ETargetSpecifier ts = sh.targetSpec(val);
     if (TS_REGION != ts)
-        color = "green";
+        color = "chartreuse2";
 
     const float pw = static_cast<float>(1U + sh.usedByCount(val));
     plot.out << "\t" << SL_QUOTE(val)
@@ -987,7 +1001,7 @@ void plotPointsTo(PlotData &plot, const TValId val, const TFldId target)
 {
     plot.out << "\t" << SL_QUOTE(val)
         << " -> " << SL_QUOTE(target)
-        << " [color=green, fontcolor=green];\n";
+        << " [color=chartreuse2, fontcolor=chartreuse2];\n";
 }
 
 void plotRangePtr(PlotData &plot, TValId val, TObjId obj)
@@ -1087,7 +1101,7 @@ void plotAuxValue(
             break;
 
         case VAL_TRUE:
-            color = "gold";
+            color = "orange";
             label = "TRUE";
             break;
 
@@ -1147,7 +1161,7 @@ void plotNeqZero(PlotData &plot, const TValId val)
 
     plot.out << "\t" << SL_QUOTE(val)
         << " -> " << SL_QUOTE("lonely" << id)
-        << " [color=red, fontcolor=gold, label=neq style=dashed"
+        << " [color=red, fontcolor=orange, label=neq style=dashed"
         ", penwidth=2.0];\n";
 }
 
@@ -1161,7 +1175,7 @@ void plotNeqCustom(PlotData &plot, const TValId val, const TValId valCustom)
 
     plot.out << "];\n\t" << SL_QUOTE(val)
         << " -> " << SL_QUOTE("lonely" << id)
-        << " [color=red, fontcolor=gold, label=neq style=dashed"
+        << " [color=red, fontcolor=orange, label=neq style=dashed"
         ", penwidth=2.0];\n";
 }
 
@@ -1170,7 +1184,7 @@ void plotNeq(std::ostream &out, const TValId v1, const TValId v2)
     out << "\t" << SL_QUOTE(v1)
         << " -> " << SL_QUOTE(v2)
         << " [color=red, style=dashed, penwidth=2.0, arrowhead=none"
-        ", label=neq, fontcolor=gold, constraint=false];\n";
+        ", label=neq, fontcolor=orange, constraint=false];\n";
 }
 
 class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
@@ -1194,7 +1208,6 @@ class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
 
 void plotNeqEdges(PlotData &plot)
 {
-    // cppcheck-suppress unreachableCode
     SymHeap &sh = plot.sh;
 
     // gather relevant "neq" edges
@@ -1251,7 +1264,8 @@ bool plotHeapCore(
         const struct cl_loc             *loc,
         const TObjSet                   &objs,
         const TValSet                   &vals,
-        std::string                     *pName = 0)
+        std::string                     *pName = 0,
+        const TIdSet                    *pHighlight = 0)
 {
     PlotEnumerator *pe = PlotEnumerator::instance();
     std::string plotName(pe->decorate(name));
@@ -1286,7 +1300,7 @@ bool plotHeapCore(
         CL_DEBUG("writing heap graph to '" << fileName << "'...");
 
     // initialize an instance of PlotData
-    PlotData plot(sh, out, objs, vals);
+    PlotData plot(sh, out, objs, vals, pHighlight);
 
     // do our stuff
     plotEverything(plot);
@@ -1318,7 +1332,8 @@ bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
         const struct cl_loc             *loc,
-        std::string                     *pName)
+        std::string                     *pName,
+        const TIdSet                    *pHighlight)
 {
     HeapCrawler crawler(sh);
 
@@ -1327,7 +1342,10 @@ bool plotHeap(
     BOOST_FOREACH(const TObjId obj, allObjs)
         crawler.digObj(obj);
 
-    return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals(), pName);
+    const TObjSet objs = crawler.objs();
+    const TValSet vals = crawler.vals();
+
+    return plotHeapCore(sh, name, loc, objs, vals, pName, pHighlight);
 }
 
 bool plotHeap(

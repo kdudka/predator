@@ -63,7 +63,7 @@ int minLengthByCost(int cost)
 bool matchSegBinding(
         const SymHeap              &sh,
         const TObjId                seg,
-        const BindingOff           &offPath)
+        const ShapeProps           &props)
 {
     const EObjKind kind = sh.objKind(seg);
     switch (kind) {
@@ -80,11 +80,13 @@ bool matchSegBinding(
     }
 
     const BindingOff offObj = sh.segBinding(seg);
+    const BindingOff offPath = props.bOff;
+
     if (offObj.head != offPath.head)
         // head mismatch
         return false;
 
-    if (!isDlsBinding(offPath)) {
+    if (OK_SLS == props.kind) {
         // OK_SLS
         switch (kind) {
             case OK_SEE_THROUGH:
@@ -117,7 +119,7 @@ bool matchSegBinding(
 /// (VAL_INVALID == prev && VAL_INVALID == next) denotes prototype validation
 bool validatePointingObjects(
         SymHeap                    &sh,
-        const BindingOff           &off,
+        const ShapeProps           &props,
         const TObjId                obj,
         const TObjId                prev,
         const TObjId                next,
@@ -131,6 +133,8 @@ bool validatePointingObjects(
     FldList refs;
     sh.pointedBy(refs, obj);
 
+    const BindingOff &off = props.bOff;
+
     // unless this is a prototype, disallow self loops from _binding_ pointers
     TFldSet blackList;
     if (OBJ_INVALID != prev || OBJ_INVALID != next)
@@ -141,7 +145,7 @@ bool validatePointingObjects(
         const PtrHandle prevNext(sh, prev, off.next);
         whiteList.insert(prevNext);
     }
-    if (OBJ_INVALID != next && isDlsBinding(off)) {
+    if (OBJ_INVALID != next && OK_DLS == props.kind) {
         const PtrHandle nextPrev(sh, next, off.prev);
         whiteList.insert(nextPrev);
     }
@@ -175,7 +179,7 @@ bool validatePointingObjects(
 
 bool validatePrototypes(
         SymHeap                    &sh,
-        const BindingOff           &off,
+        const ShapeProps           &props,
         const TObjId                obj,
         const TObjSet              &protos)
 {
@@ -183,7 +187,7 @@ bool validatePrototypes(
     allowedReferers.insert(obj);
 
     BOOST_FOREACH(const TObjId proto, protos) {
-        if (!validatePointingObjects(sh, off, proto, OBJ_INVALID, OBJ_INVALID,
+        if (!validatePointingObjects(sh, props, proto, OBJ_INVALID, OBJ_INVALID,
                                      allowedReferers))
             return false;
     }
@@ -194,7 +198,7 @@ bool validatePrototypes(
 
 bool validateSegEntry(
         SymHeap                    &sh,
-        const BindingOff           &off,
+        const ShapeProps           &props,
         const TObjId                obj,
         const TObjId                prev,
         const TObjId                next,
@@ -202,64 +206,94 @@ bool validateSegEntry(
         const ETargetSpecifier      tsEntry)
 {
     // first validate 'root' itself
-    if (!validatePointingObjects(sh, off, obj, prev, next, protos, tsEntry))
+    if (!validatePointingObjects(sh, props, obj, prev, next, protos, tsEntry))
         return false;
 
-    return validatePrototypes(sh, off, obj, protos);
+    return validatePrototypes(sh, props, obj, protos);
 }
 
-TObjId jumpToNextObj(
+bool canMergeObjWithNextObj(
         SymHeap                    &sh,
-        const BindingOff           &off,
-        TObjId                      obj)
+        const TObjId                obj,
+        const ShapeProps           &props,
+        TObjId                     *pNextObj)
 {
-    if (!matchSegBinding(sh, obj, off))
+    if (!sh.isValid(obj) || !isOnHeap(sh.objStorClass(obj)))
+        // neither the starting point is valid
+        return false;
+
+    if (!matchSegBinding(sh, obj, props))
         // binding mismatch
-        return OBJ_INVALID;
+        return false;
 
-    const TValId nextHead = valOfPtr(sh, obj, off.next);
-    if (nextHead <= 0 || off.head != sh.valOffset(nextHead))
-        // no valid head pointed by nextPtr
-        return OBJ_INVALID;
+    const BindingOff &off = props.bOff;
+    const TValId valNext = valOfPtr(sh, obj, off.next);
+    if (off.head != sh.valOffset(valNext))
+        // head offset mismatch in forward direction
+        return false;
 
-    const TObjId next = sh.objByAddr(nextHead);
+    if (!canPointToFront(sh.targetSpec(valNext)))
+        // target specifier mismatch in forward direction
+        return false;
+
+    const TObjId next = sh.objByAddr(valNext);
     if (!sh.isValid(next) || !isOnHeap(sh.objStorClass(next)))
         // only objects on heap can be abstracted for now
-        return OBJ_INVALID;
+        return false;
 
-    if (!matchSegBinding(sh, next, off))
+    if (!matchSegBinding(sh, next, props))
         // binding mismatch
-        return OBJ_INVALID;
+        return false;
 
     if (sh.objSize(obj) != sh.objSize(next))
         // mismatch in size of targets
-        return OBJ_INVALID;
+        return false;
 
     const TObjType clt = sh.objEstimatedType(obj);
     if (clt) {
         const TObjType cltNext = sh.objEstimatedType(next);
         if (cltNext && *cltNext != *clt)
             // both objects have estimated types assigned, but the types differ
-            return OBJ_INVALID;
+            return false;
     }
 
-    if (isDlsBinding(off)) {
+    if (OK_DLS == props.kind) {
         const TValId valPrev = valOfPtr(sh, next, off.prev);
-        if (sh.objByAddr(valPrev) != obj || sh.valOffset(valPrev) != off.head)
+        if (sh.objByAddr(valPrev) != obj)
             // DLS back-link mismatch
-            return OBJ_INVALID;
+            return false;
 
-        const ETargetSpecifier ts = sh.targetSpec(valPrev);
-        if (TS_REGION != ts && TS_LAST != ts)
-            // DLS back-link mismatch
-            return OBJ_INVALID;
+        if (off.head != sh.valOffset(valNext))
+            // head offset mismatch in backward direction
+            return false;
+
+        if (!canPointToBack(sh.targetSpec(valPrev)))
+            // target specifier mismatch in backward direction
+            return false;
     }
 
     if (OBJ_INVALID == nextObj(sh, next, off.next))
         // valNext has no target
-        return OBJ_INVALID;
+        return false;
 
-    return next;
+    // all OK
+    if (pNextObj)
+        *pNextObj = next;
+
+    return true;
+}
+
+TObjId jumpToNextObj(
+        SymHeap                    &sh,
+        const TObjId                obj,
+        const ShapeProps           &props)
+{
+    TObjId next;
+    if (canMergeObjWithNextObj(sh, obj, props, &next))
+        return next;
+
+    // unable to jump (broken binding, objects incompatible, ...)
+    return OBJ_INVALID;
 }
 
 bool isPointedByVar(SymHeap &sh, const TObjId obj)
@@ -281,18 +315,18 @@ typedef TObjSet TProtoPairs[2];
 
 bool matchData(
         SymHeap                      sh,
-        const BindingOff            &off,
-        const TObjId                obj1,
-        const TObjId                obj2,
+        const ShapeProps            &props,
+        const TObjId                 obj1,
+        const TObjId                 obj2,
         TProtoPairs                 *protoPairs,
         int                         *pCost)
 {
-    if (!isDlsBinding(off) && isPointedByVar(sh, obj2))
+    if (OK_SLS == props.kind && isPointedByVar(sh, obj2))
         // only first node of an SLS can be pointed by a program var, giving up
         return false;
 
     EJoinStatus status;
-    if (!joinData(sh, off, obj1, obj2, /* pDst */ 0, protoPairs, &status)) {
+    if (!joinData(sh, props, obj1, obj2, /* pDst */ 0, protoPairs, &status)) {
         CL_DEBUG("    joinData() refuses to create a segment!");
         return false;
     }
@@ -320,14 +354,15 @@ bool matchData(
 typedef std::map<int /* cost */, int /* length */> TRankMap;
 
 void segDiscover(
-        TRankMap                    &dst,
-        SymHeap                     &sh,
-        const BindingOff            &off,
+        TRankMap                   &dst,
+        SymHeap                    &sh,
+        const ShapeProps           &props,
         const TObjId                entry)
 {
     CL_BREAK_IF(!dst.empty());
 
-    if (isDlsBinding(off) && (OBJ_INVALID == nextObj(sh, entry, off.prev)))
+    const BindingOff &off = props.bOff;
+    if (OK_DLS == props.kind && (OBJ_INVALID == nextObj(sh, entry, off.prev)))
         // valPrev has no target
         return;
 
@@ -342,7 +377,7 @@ void segDiscover(
         collectPrototypesOf(initialProtos, sh, entry);
 
     // jump to the immediate successor
-    TObjId obj = jumpToNextObj(sh, off, entry);
+    TObjId obj = jumpToNextObj(sh, entry, props);
     if (!insertOnce(haveSeen, obj))
         // loop detected
         return;
@@ -358,11 +393,11 @@ void segDiscover(
         int cost = 0;
 
         // join data of the current pair of objects
-        if (!matchData(sh, off, prev, obj, &protoPairs, &cost))
+        if (!matchData(sh, props, prev, obj, &protoPairs, &cost))
             break;
 
-        if (prev == entry && !validateSegEntry(sh, off, entry, OBJ_INVALID, obj,
-                                               protoPairs[0], TS_FIRST))
+        if (prev == entry && !validateSegEntry(sh, props, entry, OBJ_INVALID,
+                                               obj, protoPairs[0], TS_FIRST))
             // invalid entry
             break;
 
@@ -370,20 +405,20 @@ void segDiscover(
             // loop detected
             break;
 
-        if (!validatePrototypes(sh, off, obj, protoPairs[1]))
+        if (!validatePrototypes(sh, props, obj, protoPairs[1]))
             // someone points to a prototype
             break;
 
         bool leaving = false;
 
         // look ahead
-        TObjId next = jumpToNextObj(sh, off, obj);
-        if (!validatePointingObjects(sh, off, obj, prev, next, protoPairs[1])) {
+        TObjId next = jumpToNextObj(sh, obj, props);
+        if (!validatePointingObjects(sh, props, obj, prev, next, protoPairs[1]))
+        {
             // someone points at/inside who should not
 
-            leaving = /* looking for a DLS */ isDlsBinding(off)
-                && validateSegEntry(sh, off, obj, prev, OBJ_INVALID,
-                                    protoPairs[1], TS_LAST);
+            leaving = (OK_DLS == props.kind) && validateSegEntry(sh, props, obj,
+                    prev, OBJ_INVALID, protoPairs[1], TS_LAST);
 
             if (!leaving)
                 break;
@@ -464,7 +499,7 @@ bool digBackLink(
     PtrFinder visitor(obj, pOff->head);
 
     // guide it through the next object
-    if (/* found nothing */ traverseLivePtrs(sh, next, visitor))
+    if (/* found nothing */ traverseLiveFields(sh, next, visitor))
         return false;
 
     // got a back-link!
@@ -475,16 +510,14 @@ bool digBackLink(
     return true;
 }
 
-typedef std::vector<BindingOff> TBindingCandidateList;
-
 class ProbeEntryVisitor {
     private:
-        TBindingCandidateList   &dst_;
+        TShapePropsList         &dst_;
         const TObjId            obj_;
 
     public:
         ProbeEntryVisitor(
-                TBindingCandidateList      &dst,
+                TShapePropsList            &dst,
                 const TObjId                obj):
             dst_(dst),
             obj_(obj)
@@ -500,7 +533,8 @@ class ProbeEntryVisitor {
                 return /* continue */ true;
 
             // read head offset
-            BindingOff off;
+            ShapeProps props;
+            BindingOff &off = props.bOff;
             off.head = sh.valOffset(nextVal);
 
             // entry candidate found, check the back-link in case of DLL
@@ -513,13 +547,17 @@ class ProbeEntryVisitor {
                 return /* continue */ true;
 #endif
 
+            props.kind = (off.next == off.prev)
+                ? OK_SLS
+                : OK_DLS;
+
 #if SE_DISABLE_SLS
             // allow only DLS abstraction
-            if (!isDlsBinding(off))
+            if (OK_SLS == props.kind)
                 return /* continue */ true;
 #endif
             // append a candidate
-            dst_.push_back(off);
+            dst_.push_back(props);
             return /* continue */ true;
         }
 };
@@ -542,23 +580,32 @@ bool segOnPath(
     return false;
 }
 
+void digShapePropsCandidates(
+        TShapePropsList            *pDst,
+        SymHeap                    &sh,
+        const TObjId                obj)
+{
+    CL_BREAK_IF(!pDst->empty());
+    const ProbeEntryVisitor visitor(*pDst, obj);
+    traverseLiveFields(sh, obj, visitor);
+}
+
 struct SegCandidate {
     TObjId                      entry;
-    TBindingCandidateList       offList;
+    TShapePropsList             propsList;
 };
 
 typedef std::vector<SegCandidate> TSegCandidateList;
 
-unsigned /* len */ selectBestAbstraction(
-        SymHeap                     &sh,
-        const TSegCandidateList     &candidates,
-        BindingOff                  *pOff,
-        TObjId                      *entry)
+bool selectBestAbstraction(
+        Shape                      *pDst,
+        SymHeap                    &sh,
+        const TSegCandidateList    &candidates)
 {
     const unsigned cnt = candidates.size();
     if (!cnt)
         // no candidates given
-        return 0;
+        return false;
 
     CL_DEBUG("--> initiating segment discovery, "
             << cnt << " entry candidate(s) given");
@@ -567,15 +614,15 @@ unsigned /* len */ selectBestAbstraction(
     int                 bestLen     = 0;
     int                 bestCost    = INT_MAX;
     unsigned            bestIdx     = 0;
-    BindingOff          bestBinding;
+    ShapeProps          bestProps;
 
     for (unsigned idx = 0; idx < cnt; ++idx) {
 
         // go through binding candidates
         const SegCandidate &segc = candidates[idx];
-        BOOST_FOREACH(const BindingOff &off, segc.offList) {
+        BOOST_FOREACH(const ShapeProps &props, segc.propsList) {
             TRankMap rMap;
-            segDiscover(rMap, sh, off, segc.entry);
+            segDiscover(rMap, sh, props, segc.entry);
 
             // go through all cost/length pairs
             BOOST_FOREACH(TRankMap::const_reference rank, rMap) {
@@ -585,7 +632,7 @@ unsigned /* len */ selectBestAbstraction(
 
                 int cost = rank.first;
 #if SE_COST_OF_SEG_INTRODUCTION
-                if (!segOnPath(sh, off, segc.entry, len))
+                if (!segOnPath(sh, props.bOff, segc.entry, len))
                     cost += (SE_COST_OF_SEG_INTRODUCTION);
 #endif
 
@@ -605,26 +652,24 @@ unsigned /* len */ selectBestAbstraction(
                 bestIdx = idx;
                 bestLen = len;
                 bestCost = cost;
-                bestBinding = off;
+                bestProps = props;
             }
         }
     }
 
     if (!bestLen) {
         CL_DEBUG("<-- no new segment found");
-        return 0;
+        return false;
     }
 
     // pick up the best candidate
-    *pOff = bestBinding;
-    *entry = candidates[bestIdx].entry;
-    return bestLen;
+    pDst->entry = candidates[bestIdx].entry;
+    pDst->props = bestProps;
+    pDst->length = bestLen;
+    return true;
 }
 
-unsigned /* len */ discoverBestAbstraction(
-        SymHeap             &sh,
-        BindingOff          *off,
-        TObjId              *entry)
+bool discoverBestAbstraction(Shape *pDst, SymHeap &sh)
 {
     TSegCandidateList candidates;
 
@@ -632,11 +677,10 @@ unsigned /* len */ discoverBestAbstraction(
     TObjList heapObjs;
     sh.gatherObjects(heapObjs, isOnHeap);
     BOOST_FOREACH(const TObjId obj, heapObjs) {
-        // use ProbeEntryVisitor visitor to validate the potential segment entry
+        /// probe neighbouring objects
         SegCandidate segc;
-        const ProbeEntryVisitor visitor(segc.offList, obj);
-        traverseLivePtrs(sh, obj, visitor);
-        if (segc.offList.empty())
+        digShapePropsCandidates(&segc.propsList, sh, obj);
+        if (segc.propsList.empty())
             // found nothing
             continue;
 
@@ -645,5 +689,5 @@ unsigned /* len */ discoverBestAbstraction(
         candidates.push_back(segc);
     }
 
-    return selectBestAbstraction(sh, candidates, off, entry);
+    return selectBestAbstraction(pDst, sh, candidates);
 }

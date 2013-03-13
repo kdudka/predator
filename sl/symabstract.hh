@@ -61,7 +61,7 @@ void spliceOutListSegment(
         TObjSet                *leakObjs);
 
 /// replace a DLS by a single concrete object
-void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer);
+void dlSegReplaceByConcrete(SymHeap &sh, const TObjId seg);
 
 /**
  * analyze the given symbolic heap and consider abstraction of some shapes that

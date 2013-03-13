@@ -15,12 +15,11 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
-MIRROR          ?= http://ftp.fi.muni.cz/pub/linux/gentoo
 GCC_MIRROR      ?= http://ftp.fi.muni.cz/pub/gnu/gnu/gcc
 
 BOOST_STABLE    ?= boost_1_46_1#            # released Boost
 BOOST_STABLE_TGZ?= $(BOOST_STABLE).tar.bz2# # tarball of released Boost
-BOOST_STABLE_URL?= $(MIRROR)/distfiles/$(BOOST_STABLE_TGZ)
+BOOST_STABLE_URL?= http://sourceforge.net/projects/boost/files/boost/1.46.1/boost_1_46_1.tar.bz2/download
 
 GCC_STABLE      ?= gcc-4.7.2#               # released gcc
 GCC_STABLE_TGZ  ?= $(GCC_STABLE).tar.bz2#   # tarball of released gcc
@@ -147,7 +146,7 @@ $(INVADER):
 
 # fetch a stable release of Boost
 $(BOOST_STABLE_TGZ):
-	$(CURL) -Lo $@ '$(BOOST_STABLE_URL)'
+	$(CURL) -o $@ '$(BOOST_STABLE_URL)'
 
 # fetch a stable release of gcc
 $(GCC_STABLE_TGZ):

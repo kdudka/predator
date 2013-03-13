@@ -537,7 +537,6 @@ inline const struct cl_cst& cstFromFnc(const Fnc &fnc)
     const struct cl_cst &cst = op.data.cst;
     CL_BREAK_IF(CL_TYPE_FNC != cst.code);
 
-    // cppcheck-suppress returnReference
     return cst;
 }
 

@@ -30,8 +30,10 @@ def predator_lookup_fnc(val):
     if re.compile('^FldHandle|PtrHandle$').match(lookup_tag):
         return pp_FldHandle(val)
 
-    if re.compile('^SymHeap(Core)?$').match(lookup_tag):
-        return pp_SymHeap(val)
+# commented-out to prevent gdb from crashing
+# <http://www.sourceware.org/bugzilla/show_bug.cgi?id=10344>
+#    if re.compile('^SymHeap(Core)?$').match(lookup_tag):
+#        return pp_SymHeap(val)
 
     return None
 

@@ -27,6 +27,7 @@
 
 #include "config.h"
 
+#include "id_mapper.hh"
 #include "symbt.hh"                 // needed for EMsgLevel
 #include "symheap.hh"               // needed for EObjKind
 
@@ -34,6 +35,8 @@
 #include <string>
 
 struct cl_loc;
+
+class SymState;
 
 namespace CodeStorage {
     struct Fnc;
@@ -52,6 +55,9 @@ typedef const CodeStorage::Fnc                     *TFnc;
 typedef const CodeStorage::Insn                    *TInsn;
 
 typedef std::vector<Node *>                         TNodeList;
+
+// TODO: should we use a more generic ID type?
+typedef IdMapper<TObjId, OBJ_INVALID, OBJ_MAX_ID>   TIdMapper;
 
 /// an abstract base for Node and NodeHandle (externally not much useful)
 class NodeBase {
@@ -128,10 +134,20 @@ class Node: public NodeBase {
             return this->parent();
         }
 
+    public:
+        /// return the ID mapping describing the operation behind the trace node
+        TIdMapper& idMapper()             { return idMapper_; }
+
+        /// return the ID mapping describing the operation behind the trace node
+        const TIdMapper& idMapper() const { return idMapper_; }
+
     private:
         // copying NOT allowed
         Node(const Node &);
         Node& operator=(const Node &);
+
+    protected:
+        TIdMapper idMapper_;
 
     private:
         TBaseList children_;
@@ -222,6 +238,7 @@ class InsnNode: public Node {
             insn_(insn),
             isBuiltin_(isBuiltin)
         {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
         virtual Node* printNode() const;
@@ -253,6 +270,7 @@ class CondNode: public Node {
             determ_(determ),
             branch_(branch)
         {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
         virtual Node* printNode() const;
@@ -265,19 +283,22 @@ class CondNode: public Node {
 class AbstractionNode: public Node {
     private:
         const EObjKind              kind_;
-        const std::string           name_;
+        std::string                 name_;
 
     public:
         /**
          * @param ref a trace leading to this abstraction step
          * @param kind the kind of abstraction step being performed
-         * @param name name of the corresponding debug plot (empty if unused)
          */
-        AbstractionNode(Node *ref, EObjKind kind, const std::string &name):
+        AbstractionNode(Node *ref, EObjKind kind):
             Node(ref),
-            kind_(kind),
-            name_(name)
+            kind_(kind)
         {
+        }
+
+        /// @param name name of the corresponding debug plot (empty if unused)
+        void setPlotName(const std::string &name) {
+            name_ = name;
         }
 
     protected:
@@ -321,6 +342,7 @@ class SpliceOutNode: public Node {
             Node(ref),
             len_(len)
         {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
     protected:
@@ -493,6 +515,7 @@ class MsgNode: public Node {
             level_(level),
             loc_(loc)
         {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
     protected:
@@ -516,6 +539,7 @@ class UserNode: public Node {
             insn_(insn),
             label_(label)
         {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
         virtual Node* printNode() const;
@@ -610,6 +634,8 @@ class Globals {
 /// mark the just completed @b clone operation as @b intended and unimportant
 void waiveCloneOperation(SymHeap &sh);
 
+/// mark the just completed @b clone operation as @b intended and unimportant
+void waiveCloneOperation(SymState &);
 
 } // namespace Trace
 

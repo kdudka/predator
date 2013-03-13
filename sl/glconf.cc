@@ -20,12 +20,13 @@
 #include "config.h"
 #include "glconf.hh"
 
-#include "fixed_point.hh"
+#include "fixed_point_proxy.hh"
 
 #include <cl/cl_msg.hh>
 
 #include <algorithm>
 #include <map>
+#include <vector>
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>

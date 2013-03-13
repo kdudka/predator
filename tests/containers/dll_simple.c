@@ -1,37 +1,37 @@
 #include <stdlib.h>
 
-struct DLL {
-    int data;
-    struct DLL* next;
-    struct DLL* prev;
+struct Node {
+    int d;
+    struct Node* n;
+    struct Node* b;
 };
 
 #define NEW(type) (type *) malloc(sizeof(type))
 
 int main()
 {
-    struct DLL* head = NULL;
-    struct DLL* tail = NULL;
-    int i = 2;
+    struct Node* h = NULL;
+    struct Node* t = NULL;
+    int i = 0;
 
-    while (i < 12) {
-        if (NULL == head) {
-            tail = NEW(struct DLL);
-            head = tail;
-            head->data = i;
-            head->prev = NULL;
-            head->next = head->prev;
+    while (i < 10) {
+        if (NULL == h) {
+            t = NEW(struct Node);
+            t->d = i;
+            t->n = NULL;
+            t->b = NULL;
+            h = t;
         }
         else {
-            struct DLL *p = NEW(struct DLL);
-            p->data = i;
-            p->next = tail->next;
-            p->prev = tail;
-            tail->next = p;
-            tail = p;
+            struct Node *p = NEW(struct Node);
+            p->d = i;
+            p->n = NULL;
+            p->b = t;
+            t->n = p;
+            t = p;
         }
 
-        ++i;
+        // ++i;
     }
 
     return 0;

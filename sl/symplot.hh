@@ -30,12 +30,15 @@
 
 #include <string>
 
+typedef std::set<int>                   TIdSet;
+
 /// create a plot named "name-NNNN.dot", starting from all live objects
 bool plotHeap(
         const SymHeap                   &sh,
         const std::string               &name,
         const struct cl_loc             *loc = 0,
-        std::string                     *pName = 0);
+        std::string                     *pName = 0,
+        const TIdSet                    *pHighlight = 0);
 
 /// create a plot named "name-NNNN.dot", starting from the given starting points
 bool plotHeap(

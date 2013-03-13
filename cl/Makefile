@@ -17,7 +17,6 @@
 
 CMAKE           ?= cmake
 CTEST           ?= ctest
-CHK             ?= .
 
 .PHONY: all check clean cppcheck distclean distcheck fast version_cl.h
 
@@ -33,8 +32,9 @@ check: all
 	cd ../cl_build && $(CTEST) --output-on-failure
 
 cppcheck: all
-	cppcheck --enable=style,performance,portability,information,missingInclude \
-		--template gcc -j5 --inline-suppr $(CHK)
+	cppcheck -j5 --inline-suppr \
+		--enable=style,performance,portability,information,missingInclude \
+		--template '{file}:{line}: {severity}: {id}: {message}' -i tests .
 
 version_cl.h:
 	@if test -e ../.git; then \
@@ -54,4 +54,4 @@ distclean: clean
 
 distcheck: distclean
 	$(MAKE) check CMAKE='cmake -D CL_DEBUG=ON'
-	$(MAKE) all CMAKE='cmake -D CL_DEBUG=OFF'
+	$(MAKE) check CMAKE='cmake -D CL_DEBUG=OFF'

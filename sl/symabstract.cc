@@ -147,7 +147,8 @@ void clonePrototypes(
         SymHeap                &sh,
         const TObjId            objDst,
         const TObjId            objSrc,
-        const TObjSet          &protos)
+        const TObjSet          &protos,
+        Trace::TIdMapper       &idMapper)
 {
     // allocate lists for object IDs
     const unsigned cnt = protos.size();
@@ -165,6 +166,10 @@ void clonePrototypes(
         const TObjId cloneI = protoClone(sh, protoList[i]);
         cloneList[i] = cloneI;
 
+        // update object IDs mapping
+        idMapper.insert(protoI, protoI);
+        idMapper.insert(protoI, cloneI);
+
         reconnectProto(sh, protoI, cloneI, objSrc, objDst, TS_REGION);
 
         for (unsigned j = 0; j < i; ++j) {
@@ -176,7 +181,7 @@ void clonePrototypes(
 }
 
 // clone a segment including its prototypes and decrement their nesting level
-TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
+TObjId regFromSegDeep(SymHeap &sh, TObjId seg, Trace::TIdMapper &idMapper)
 {
     // collect the list of prototypes
     TObjSet protoList;
@@ -185,6 +190,10 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
     // clone the object itself
     const TObjId reg = sh.objClone(seg);
     sh.objSetConcrete(reg);
+
+    // update object IDs mapping
+    idMapper.insert(seg, seg);
+    idMapper.insert(seg, reg);
 
     // recover pointers to self
     redirectRefs(sh,
@@ -198,54 +207,19 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg)
     duplicateUnknownValues(sh, reg);
 
     // clone all prototypes originally owned by seg
-    clonePrototypes(sh, reg, seg, protoList);
+    clonePrototypes(sh, reg, seg, protoList, idMapper);
 
     return reg;
 }
 
-bool filterFront(ETargetSpecifier ts)
-{
-    switch (ts) {
-        case TS_INVALID:
-            CL_BREAK_IF("invalid call of filterFront()");
-            break;
-
-        case TS_REGION:
-        case TS_FIRST:
-            return true;
-
-        case TS_LAST:
-        case TS_ALL:
-            break;
-    }
-
-    return false;
-}
-
-bool filterBack(ETargetSpecifier ts)
-{
-    switch (ts) {
-        case TS_INVALID:
-            CL_BREAK_IF("invalid call of filterBack()");
-            break;
-
-        case TS_REGION:
-        case TS_LAST:
-            return true;
-
-        case TS_FIRST:
-        case TS_ALL:
-            break;
-    }
-
-    return false;
-}
-
 bool segAbstractionStep(
         SymHeap                     &sh,
-        const BindingOff            &off,
-        TObjId                      *pCursor)
+        const ShapeProps            &props,
+        TObjId                      *pCursor,
+        Trace::TIdMapper            &idMapper)
 {
+    const BindingOff &off = props.bOff;
+
     // resolve the pair of objects to be merged
     const TObjId obj0 = *pCursor;
     const TObjId obj1 = nextObj(sh, obj0, off.next);
@@ -257,29 +231,34 @@ bool segAbstractionStep(
     // join data
     TObjId seg;
     TObjSet protos[2];
-    if (!joinData(sandBox, off, obj0, obj1, &seg, &protos)) {
-        CL_DEBUG("segAbstractionStep() forces segment re-discoverty");
+    if (!joinData(sandBox, props, obj0, obj1, &seg, &protos, 0, &idMapper)) {
+        CL_DEBUG("segAbstractionStep() forces segment re-discovery");
         return false;
     }
 
     // data joined successfully, pick the resulting heap
     sandBox.swap(sh);
 
+    // store ID mapping of the roots and allow identity for all but prototypes
+    idMapper.insert(obj0, seg);
+    idMapper.insert(obj1, seg);
+    idMapper.setNotFoundAction(Trace::TIdMapper::NFA_RETURN_IDENTITY);
+
     // add obj0/obj1 to the set of allowed bottom-up referrers
     protos[0].insert(obj0);
     protos[1].insert(obj1);
 
     // redirect pointers going to 'obj0' from left to 'seg'
-    redirectRefsNotFrom(sh, protos[0], obj0, seg, TS_FIRST, filterFront);
+    redirectRefsNotFrom(sh, protos[0], obj0, seg, TS_FIRST, canPointToFront);
 
     // preserve valNext
     const TValId valNext = valOfPtr(sh, obj1, off.next);
     const PtrHandle nextPtr(sh, seg, off.next);
     nextPtr.setValue(valNext);
 
-    if (isDlsBinding(off)) {
+    if (OK_DLS == props.kind) {
         // redirect pointers going to 'obj1' from right to 'seg'
-        redirectRefsNotFrom(sh, protos[1], obj1, seg, TS_LAST, filterBack);
+        redirectRefsNotFrom(sh, protos[1], obj1, seg, TS_LAST, canPointToBack);
 
         // preserve valPrev
         const TValId valPrev = valOfPtr(sh, obj0, off.prev);
@@ -298,27 +277,30 @@ bool segAbstractionStep(
 }
 
 bool applyAbstraction(
-        SymHeap                     &sh,
-        const BindingOff            &off,
-        const TObjId                entry,
-        const unsigned              len)
+        SymHeap                    &sh,
+        const Shape                &shape)
 {
-    EObjKind kind;
-    const char *name;
+    const char *name = "[unhandled kind of abstract object]";
 
-    if (isDlsBinding(off)) {
-        kind = OK_DLS;
-        name = "DLS";
-    }
-    else {
-        kind = OK_SLS;
-        name = "SLS";
+    const EObjKind kind = shape.props.kind;
+    switch (kind) {
+        case OK_SLS:
+            name = "SLS";
+            break;
+
+        case OK_DLS:
+            name = "DLS";
+            break;
+
+        default:
+            CL_BREAK_IF("applyAbstraction() got something special");
     }
 
+    const unsigned len = shape.length;
     CL_DEBUG("    AAA initiating " << name << " abstraction of length " << len);
 
     // cursor
-    TObjId cursor = entry;
+    TObjId cursor = shape.entry;
 
     LDP_INIT(symabstract, name);
     LDP_PLOT(symabstract, sh);
@@ -326,7 +308,12 @@ bool applyAbstraction(
     for (unsigned i = 0; i < len; ++i) {
         CL_BREAK_IF(!protoCheckConsistency(sh));
 
-        if (!segAbstractionStep(sh, off, &cursor)) {
+        // create the trace node in advance, so that we can capture ID mapping
+        using namespace Trace;
+        AbstractionNode *trAbs = new AbstractionNode(sh.traceNode(), kind);
+        NodeHandle trAbsHandle(trAbs);
+
+        if (!segAbstractionStep(sh, shape.props, &cursor, trAbs->idMapper())) {
             CL_DEBUG("<-- validity of next " << (len - i - 1)
                     << " abstraction step(s) broken, forcing re-discovery...");
 
@@ -337,11 +324,12 @@ bool applyAbstraction(
             return false;
         }
 
+        // dump a shape graph if debugging
         std::string pName;
         LDP_PLOTN(symabstract, sh, &pName);
 
-        Trace::Node *trAbs =
-            new Trace::AbstractionNode(sh.traceNode(), kind, pName);
+        // abstraction step has succeeded, update the trace graph!
+        trAbs->setPlotName(pName);
         sh.traceUpdate(trAbs);
 
         CL_BREAK_IF(!protoCheckConsistency(sh));
@@ -351,31 +339,32 @@ bool applyAbstraction(
     return true;
 }
 
-void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg, TObjId peer)
+void dlSegReplaceByConcrete(SymHeap &sh, const TObjId obj)
 {
+    CL_BREAK_IF(OK_DLS != sh.objKind(obj));
+
     std::string pName;
     LDP_INIT(symabstract, "dlSegReplaceByConcrete");
     LDP_PLOTN(symabstract, sh, &pName);
     CL_BREAK_IF(!segCheckConsistency(sh));
     CL_BREAK_IF(!protoCheckConsistency(sh));
 
+    // append a trace node for this operation (object IDs preserved 1:1)
     Trace::Node *trOrig = sh.traceNode();
-    sh.traceUpdate(new Trace::ConcretizationNode(trOrig, OK_DLS, pName));
+    Trace::Node *trNode = new Trace::ConcretizationNode(trOrig, OK_DLS, pName);
+    trNode->idMapper().setNotFoundAction(Trace::TIdMapper::NFA_RETURN_IDENTITY);
+    sh.traceUpdate(trNode);
 
-    CL_BREAK_IF(seg != peer);
-    CL_BREAK_IF(OK_DLS != sh.objKind(seg));
-    (void) peer;
-
-    // redirect all references originally pointing to seg
+    // redirect all references originally pointing to obj
     redirectRefs(sh,
             /* pointingFrom */ OBJ_INVALID,
-            /* pointingTo   */ seg,
+            /* pointingTo   */ obj,
             /* pointingWith */ TS_INVALID,
-            /* redirectTo   */ seg,
+            /* redirectTo   */ obj,
             /* redirectWith */ TS_REGION);
 
     // convert OK_DLS to OK_REGION
-    sh.objSetConcrete(seg);
+    sh.objSetConcrete(obj);
 
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(!segCheckConsistency(sh));
@@ -469,12 +458,9 @@ void abstractIfNeeded(SymHeap &sh)
 #if SE_DISABLE_SLS && SE_DISABLE_DLS
     return;
 #endif
-    BindingOff          off;
-    TObjId              entry;
-    unsigned            len;
-
-    while ((len = discoverBestAbstraction(sh, &off, &entry))) {
-        if (!applyAbstraction(sh, off, entry, len))
+    Shape shape;
+    while (discoverBestAbstraction(&shape, sh)) {
+        if (!applyAbstraction(sh, shape))
             // the best abstraction given is unfortunately not good enough
             break;
 
@@ -501,7 +487,15 @@ void concretizeObj(
     LDP_PLOTN(symabstract, sh, &pName);
 
     const EObjKind kind = sh.objKind(seg);
-    sh.traceUpdate(new Trace::ConcretizationNode(sh.traceNode(), kind, pName));
+
+    // append a trace node for this operation
+    Trace::Node *trOrig = sh.traceNode();
+    Trace::Node *trNode = new Trace::ConcretizationNode(trOrig, kind, pName);
+    sh.traceUpdate(trNode);
+
+    // set default ID mapping to identity
+    Trace::TIdMapper &idMapper = trNode->idMapper();
+    idMapper.setNotFoundAction(Trace::TIdMapper::NFA_RETURN_IDENTITY);
 
     if (isMayExistObj(kind)) {
         // these kinds are much easier than regular list segments
@@ -513,7 +507,7 @@ void concretizeObj(
     }
 
     // duplicate seg (including all prototypes) and convert to OK_REGION
-    const TObjId reg = regFromSegDeep(sh, seg);
+    const TObjId reg = regFromSegDeep(sh, seg, idMapper);
 
     // redirect all TS_FIRST/TS_LAST addresses to the region
     redirectRefs(sh,

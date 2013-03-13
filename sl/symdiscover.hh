@@ -26,31 +26,26 @@
  */
 
 #include "config.h"
-#include "symheap.hh"
+#include "shape.hh"
 
-/// return true if the given binding is a DLS binding
-inline bool isDlsBinding(const BindingOff &off)
-{
-    return (off.next != off.prev);
-}
+/// probe neighbouring objects and return a list of shape properties candidates
+void digShapePropsCandidates(
+        TShapePropsList            *pDst,
+        SymHeap                    &sh,
+        const TObjId                obj);
+
+/// true if we can merge a pair of subsequent objects according to shape props
+bool canMergeObjWithNextObj(
+        SymHeap                    &sh,
+        const TObjId                obj,
+        const ShapeProps           &props,
+        TObjId                     *pNextObj = 0);
 
 /**
  * Take the given symbolic heap and look for the best possible abstraction in
  * there.  If nothing is found, zero is returned.  Otherwise it returns total
- * length of the best possible abstraction.  In that case, *bf is set to the
- * corresponding binding fields (head, next, peer) and *entry is set to the
- * corresponding starting point of the abstraction.
- *
- * In case of success (non-zero return value), you can determine the type of the
- * detected abstraction by *bf.  If bf->peer is equal to bf->next, it means a
- * SLS abstraction;  DLS otherwise.  If bf->head is zero, it means a regular
- * list segment abstraction;  Linux list segment otherwise.
- *
- * In case of failure (zero return value), *bf and *entry are undefined.
+ * length of the best possible abstraction.
  */
-unsigned /* len */ discoverBestAbstraction(
-        SymHeap                 &sh,
-        BindingOff              *bf,
-        TObjId                  *entry);
+bool discoverBestAbstraction(Shape *pDst, SymHeap &sh);
 
 #endif /* H_GUARD_SYMDISCOVER_H */

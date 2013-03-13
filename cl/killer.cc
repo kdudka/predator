@@ -81,15 +81,14 @@ struct Data {
     TAliasMap                               derefAliases;
 
     Data(TStorRef stor_):
-        stor(stor_)
+        stor(stor_),
+        fnc(0)
     {
     }
 };
 
 struct VarData {
     const Var  *v;
-    bool        dst;
-    bool        fieldOfComp;
 };
 
 /**
@@ -528,7 +527,7 @@ int alias(Data &data, int uid)
         // not exist any ambiguity.
         return 0;
 
-    const TInsnListByFnc::const_reference &insnList = *cgn->callers.begin();
+    const TInsnListByFnc::const_reference insnList = *cgn->callers.begin();
     if (insnList.second /* calls */ .size() != 1)
         return 0;
 

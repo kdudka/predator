@@ -26,7 +26,7 @@
 #include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
-#include "fixed_point.hh"
+#include "fixed_point_proxy.hh"
 #include "glconf.hh"
 #include "sigcatch.hh"
 #include "symabstract.hh"
@@ -699,8 +699,7 @@ bool /* complete */ SymExecEngine::execBlock()
         localState_ = origin;
 
         // eliminate the unneeded Trace::CloneNode instances
-        BOOST_FOREACH(SymHeap *sh, localState_)
-            Trace::waiveCloneOperation(*sh);
+        Trace::waiveCloneOperation(localState_);
     }
 
     // go through the remainder of BB insns
@@ -1260,6 +1259,7 @@ void execTopCall(
         const struct cl_loc *loc = locationOf(fnc);
         CL_WARN_MSG(loc, "symbolic execution terminates prematurely");
         CL_NOTE_MSG(loc, e.what());
+        throw;
     }
 }
 

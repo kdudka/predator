@@ -35,7 +35,7 @@
 void gatherReferredRoots(TObjSet &dst, SymHeap &sh, TObjId obj)
 {
     FldList ptrs;
-    sh.gatherLivePointers(ptrs, obj);
+    sh.gatherLiveFields(ptrs, obj);
     BOOST_FOREACH(const FldHandle &fld, ptrs) {
         const TValId val = fld.value();
         if (val <= 0)

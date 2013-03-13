@@ -50,7 +50,7 @@ int graphUniqueId(const std::string &baseName)
     return 0;
 }
 
-const std::string graphUniqueName(const std::string baseName)
+const std::string graphUniqueName(const std::string &baseName)
 {
     int id = graphUniqueId(baseName);
     std::stringstream fileName;
@@ -108,7 +108,7 @@ void plotGraph(const Storage &stor, const std::string &baseName)
 
     std::string fileName = graphUniqueName(baseName);
     PT_DEBUG(0, "writing call graph to '" << fileName << "'");
-    std::ofstream file(fileName);
+    std::ofstream file(fileName.c_str());
     file << dot.str();
 }
 
@@ -133,8 +133,8 @@ struct PlotCtx {
 
 int dotAssignId(PlotCtx &ctx, const Node *node)
 {
-    static int nodeCounter = 0;
     if (!hasKey(ctx.nodeMap, node)) {
+        static int nodeCounter = 0;
         ctx.nodeMap[node] = nodeCounter++;
     }
 
@@ -283,7 +283,7 @@ void plotGraph(const Storage &stor, const std::string &baseName)
 
     const std::string fileName = graphUniqueName(baseName);
     PT_DEBUG(0, "writing points-to graph into '" << fileName << "'");
-    std::ofstream outfile(fileName);
+    std::ofstream outfile(fileName.c_str());
     outfile << out.str();
 }
 

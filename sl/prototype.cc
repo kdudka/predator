@@ -83,7 +83,7 @@ bool ProtoCollector::operator()(const FldHandle &fld)
     wl_.schedule(proto);
     while (wl_.next(proto)) {
         ProtoFinder visitor;
-        traverseLivePtrs(sh, proto, visitor);
+        traverseLiveFields(sh, proto, visitor);
         BOOST_FOREACH(const TObjId proto, visitor.protos)
             wl_.schedule(proto);
 
@@ -104,7 +104,7 @@ bool collectPrototypesOf(
 
     ProtoCollector collector(dst);
     buildIgnoreList(collector.ignoreList(), sh, obj);
-    return traverseLivePtrs(sh, obj, collector);
+    return traverseLiveFields(sh, obj, collector);
 }
 
 void objIncrementProtoLevel(SymHeap &sh, TObjId obj)
@@ -138,9 +138,12 @@ bool protoCheckConsistency(const SymHeap &sh)
         const TProtoLevel rootLevel = sh.objProtoLevel(obj);
 
         FldList ptrs;
-        sh.gatherLivePointers(ptrs, obj);
+        sh.gatherLiveFields(ptrs, obj);
         BOOST_FOREACH(const FldHandle &fld, ptrs) {
             const TObjId sub = sh.objByAddr(fld.value());
+            if (OBJ_INVALID == sub)
+                continue;
+
             const TProtoLevel level = sh.objProtoLevel(sub);
             if (level <= rootLevel)
                 continue;

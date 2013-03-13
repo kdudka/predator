@@ -26,8 +26,11 @@
  */
 
 #include "symheap.hh"
+#include "symtrace.hh"              // for Trace::TIdMapper
 
 #include <iostream>
+
+struct ShapeProps;
 
 /// @todo some dox
 enum EJoinStatus {
@@ -52,12 +55,13 @@ inline std::ostream& operator<<(std::ostream &str, const EJoinStatus status)
 /// @todo some dox
 bool joinData(
         SymHeap                 &sh,
-        const BindingOff        &bf,
+        const ShapeProps        &props,
         const TObjId             obj1,
         const TObjId             obj2,
         TObjId                  *pDst            = 0,
         TObjSet                  protoObjs[1][2] = 0,
-        EJoinStatus             *pStatus         = 0);
+        EJoinStatus             *pStatus         = 0,
+        Trace::TIdMapper        *pIdMapper       = 0);
 
 /// @todo some dox
 bool joinSymHeaps(
