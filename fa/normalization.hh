@@ -138,11 +138,11 @@ public:
 	 * @brief  Computes the indices of components which are not to be merged
 	 *
 	 * This function computes the set of indices of components of the forest
-	 * automaton @p fae which are not to be merged.
+	 * automaton @p fae which are not to be merged or folded
 	 *
 	 * @param[in]  fae  The forest automaton
 	 *
-	 * @returns  The set with indices of components not to be merged
+	 * @returns  The set with indices of components not to be merged or folded
 	 */
 	static std::set<size_t> computeForbiddenSet(FAE& fae);
 

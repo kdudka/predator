@@ -263,13 +263,6 @@ protected:
 		size_t                                   state);
 
 
-	// transform
-	static void extractInputMap(
-		std::vector<size_t>&                         inputMap,
-		const std::unordered_map<size_t, size_t>&    selectorMap,
-		size_t                                       root,
-		const std::vector<size_t>&                   index);
-
 	const Box* getBox(const Box& box, bool conditional)
 	{
 		return (conditional)?(boxMan_.lookupBox(box)):(boxMan_.getBox(box));

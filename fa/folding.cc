@@ -182,6 +182,63 @@ size_t extractSelector(
 	return iter->second;
 }
 
+
+/**
+ * @brief  Creates the mapping of indices of components in the box to selectors
+ *
+ * This function creates the mapping of indices of components in the box to
+ * selectors, i.e. it maps a component number to offset of the selector that
+ * maps to the component.
+ *
+ * @param[in]  selectorMap  The cutpoint-to-selector map
+ * @param[in]  root         Index of the input tree automaton
+ * @param[in]  index        The map of each cutpoint to the order in which it is
+ *                          referenced in the box (or to -1 if it is not referenced)
+ *
+ * @returns  The map of indices of components to offsets of corresponding selectors
+ */
+std::vector<size_t> extractInputMap(
+	const std::unordered_map<size_t, size_t>&    selectorMap,
+	size_t                                       root,
+	const std::vector<size_t>&                   index)
+{
+	// Preconditions
+	assert(0 == index[root]);
+
+	std::vector<size_t> inputMap(selectorMap.size());
+
+	size_t count = 0;
+
+	for (const std::pair<size_t, size_t>& cutpointSelectorPair : selectorMap)
+	{	// for all cutpoint-to-selector pairs
+		if (cutpointSelectorPair.first == root)
+		{ // reference to root does not appear in the box interface
+			continue;
+		}
+
+		// make sure that the cutpoint has a valid number
+		assert(cutpointSelectorPair.first < index.size());
+
+		if (index[cutpointSelectorPair.first] == static_cast<size_t>(-1))
+		{	// in the case the cutpoint is not referenced in the box
+			continue;
+		}
+
+		assert(index[cutpointSelectorPair.first] >= 1);
+		assert(index[cutpointSelectorPair.first] < inputMap.size() + 1);
+
+		// we now say that the output component at given index is mapped to the
+		// given selector
+		inputMap[index[cutpointSelectorPair.first] - 1] = cutpointSelectorPair.second;
+
+		++count;
+	}
+
+	inputMap.resize(count);
+
+	return inputMap;
+}
+
 } // namespace
 
 
@@ -551,40 +608,54 @@ const Box* Folding::makeType1Box(
 {
 	// Preconditions
 	assert(root < fae_.getRootCount());
-	assert(fae_.getRoot(root));
+	assert(nullptr != fae_.getRoot(root));
 
+	// 'index' maintains for each cutpoint of the FA either '-1' which means that
+	// the box does not reference it, or the order in which it is referenced in
+	// the box
 	std::vector<size_t> index(fae_.getRootCount(), static_cast<size_t>(-1));
-	std::vector<size_t> inputMap;
 
 	std::unordered_map<size_t, size_t> selectorMap;
 	ConnectionGraph::CutpointSignature outputSignature;
 
 	size_t start = 0;
 
-	std::pair<TreeAutShPtr, TreeAutShPtr> p = this->separateCutpoint(outputSignature, root, state, aux);
+	// split the given tree automaton at the desired location
+	std::pair<TreeAutShPtr, TreeAutShPtr> p =
+		this->separateCutpoint(outputSignature, root, state, aux);
 
 	index[root] = start++;
 
-	for (auto& cutpoint : outputSignature)
-	{
+	for (const ConnectionGraph::CutpointInfo& cutpoint : outputSignature)
+	{	// for all cutpoints in the signature of the split automaton
 		if (forbidden.count(cutpoint.root))
-			return nullptr;
+		{	// in the case the cutpoint is forbidden to be folded
+			return nullptr;         // stop the folding procedure
+		}
 
 		assert(cutpoint.root < index.size());
 
 		if (cutpoint.root != root)
-			index[cutpoint.root] = start++;
+		{	// in the case the cutpoint is other than the root
+
+			// check that the signature does not contain duplicit references
+			assert(static_cast<size_t>(-1) == index[cutpoint.root]);
+
+			index[cutpoint.root] = start++;  // set the order in which it is referenced
+		}
 	}
 
 	if (!Folding::computeSelectorMap(selectorMap, root, state))
-	{
+	{	// in the case the box cannot be created (not all transitions from 'state'
+		// have the same signature)
 		return nullptr;
 	}
 
-	Folding::extractInputMap(inputMap, selectorMap, root, index);
+	// get the input mapping of components to selector offsets
+	std::vector<size_t> inputMap = extractInputMap(selectorMap, root, index);
 
-	auto box = std::unique_ptr<Box>(
-		boxMan_.createType1Box(
+	std::unique_ptr<Box> box = std::unique_ptr<Box>(
+		BoxMan::createType1Box(
 			root,
 			this->relabelReferences(*p.second, index),
 			outputSignature,
@@ -631,7 +702,7 @@ const Box* Folding::makeType2Box(
 
 	size_t finalState = fae_.getRoot(root)->getFinalState();
 
-	std::vector<size_t> index(fae_.getRootCount(), static_cast<size_t>(-1)), index2, inputMap;
+	std::vector<size_t> index(fae_.getRootCount(), static_cast<size_t>(-1)), index2;
 	std::vector<bool> rootMask(fae_.getRootCount(), false);
 	std::unordered_map<size_t, size_t> selectorMap;
 	ConnectionGraph::CutpointSignature outputSignature, inputSignature, tmpSignature;
@@ -671,7 +742,7 @@ const Box* Folding::makeType2Box(
 		return nullptr;
 	}
 
-	Folding::extractInputMap(inputMap, selectorMap, root, index);
+	std::vector<size_t> inputMap = extractInputMap(selectorMap, root, index);
 
 	auto auxP = this->separateCutpoint(
 		inputSignature, aux, fae_.getRoot(aux)->getFinalState(), root
@@ -719,7 +790,7 @@ const Box* Folding::makeType2Box(
 	size_t selector = extractSelector(selectorMap, root);
 
 	auto box = std::unique_ptr<Box>(
-		boxMan_.createType2Box(
+		BoxMan::createType2Box(
 			root,
 			this->relabelReferences(*p.second, index),
 			outputSignature,
@@ -863,42 +934,4 @@ bool Folding::computeSelectorMap(
 	// check whether the computed selector map is the same for all transitions
 	// leaving 'state'
 	return this->checkSelectorMap(selectorMap, root, state);
-}
-
-
-void Folding::extractInputMap(
-	std::vector<size_t>&                         inputMap,
-	const std::unordered_map<size_t, size_t>&    selectorMap,
-	size_t                                       root,
-	const std::vector<size_t>&                   index)
-{
-	// Preconditions
-	assert(index[root] == 0);
-
-	inputMap.resize(selectorMap.size());
-
-	size_t count = 0;
-
-	for (auto& cutpointSelectorPair : selectorMap)
-	{
-		if (cutpointSelectorPair.first == root)
-		{
-			// reference to root does not appear in the box interface
-			continue;
-		}
-
-		assert(cutpointSelectorPair.first < index.size());
-
-		if (index[cutpointSelectorPair.first] == static_cast<size_t>(-1))
-			continue;
-
-		assert(index[cutpointSelectorPair.first] >= 1);
-		assert(index[cutpointSelectorPair.first] < inputMap.size() + 1);
-
-		inputMap[index[cutpointSelectorPair.first] - 1] = cutpointSelectorPair.second;
-
-		++count;
-	}
-
-	inputMap.resize(count);
 }
