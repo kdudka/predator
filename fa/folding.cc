@@ -292,8 +292,11 @@ bool Folding::discover1(
 	assert(root < fae_.getRootCount());
 	assert(nullptr != fae_.getRoot(root));
 
+	const ConnectionGraph::CutpointSignature& signature =
+		fae_.connectionGraph.data[root].signature;
+
 	if (forbidden.count(root))
-	{
+	{	// in the case the root is not to be folded
 		return nullptr;
 	}
 
@@ -304,7 +307,7 @@ dis1_start:
 
 	fae_.updateConnectionGraph();
 
-	for (auto& cutpoint : fae_.connectionGraph.data[root].signature)
+	for (const ConnectionGraph::CutpointInfo& cutpoint : signature)
 	{
 		if (cutpoint.root != root)
 		{
@@ -313,12 +316,16 @@ dis1_start:
 
 		FA_DEBUG_AT(3, "type 1 cutpoint detected at root " << root);
 
-		auto boxPtr = this->makeType1Box(
-			root, fae_.getRoot(root)->getFinalState(), root, forbidden, conditional
+		const Box* boxPtr = this->makeType1Box(
+			/* index of the TA to be folded */ root,
+			/* the state where to fold */ fae_.getRoot(root)->getFinalState(),
+			/* index of the other TA to be folded */ root,
+			/* set of cutpoints with forbidden folding */ forbidden,
+			/* if true do not create the box if not present */ conditional
 		);
 
-		if (boxPtr)
-		{
+		if (nullptr != boxPtr)
+		{	// in the case folding was successful
 			found = true;
 
 			goto dis1_start;
@@ -330,6 +337,7 @@ dis1_start:
 	return found;
 }
 
+
 bool Folding::discover2(
 	size_t                       root,
 	const std::set<size_t>&      forbidden,
@@ -340,8 +348,11 @@ bool Folding::discover2(
 	assert(root < fae_.getRootCount());
 	assert(nullptr != fae_.getRoot(root));
 
+	const ConnectionGraph::CutpointSignature& sign =
+		fae_.connectionGraph.data[root].signature;
+
 	if (forbidden.count(root))
-	{
+	{	// in the case the root is not to be folded
 		return nullptr;
 	}
 
@@ -352,16 +363,20 @@ dis2_start:
 
 	fae_.updateConnectionGraph();
 
-	for (auto& cutpoint : fae_.connectionGraph.data[root].signature)
+	for (const ConnectionGraph::CutpointInfo& cutpoint : sign)
 	{
 		if (cutpoint.refCount < 2)
+		{	// in the case the cutpoint is referenced less than twice
 			continue;
+		}
 
-		auto& signatures = this->getSignatures(root);
+		const ConnectionGraph::StateToCutpointSignatureMap& signatures =
+			this->getSignatures(root);
 
-		for (auto& stateSignaturePair : signatures)
+		for (const std::pair<size_t, ConnectionGraph::CutpointSignature>&
+			stateSignaturePair : signatures)
 		{
-			for (auto& tmp : stateSignaturePair.second)
+			for (const ConnectionGraph::CutpointInfo& tmp : stateSignaturePair.second)
 			{
 				if ((tmp.refCount < 2) || tmp.refInherited || (tmp.root != cutpoint.root))
 				{
@@ -371,12 +386,16 @@ dis2_start:
 				FA_DEBUG_AT(3, "type 2 cutpoint detected inside component " << root
 					<< " at state q" << stateSignaturePair.first);
 
-				auto boxPtr = this->makeType1Box(
-					root, stateSignaturePair.first, cutpoint.root, forbidden, conditional
+				const Box* boxPtr = this->makeType1Box(
+					root,
+					stateSignaturePair.first,
+					cutpoint.root,
+					forbidden,
+					conditional
 				);
 
 				if (nullptr != boxPtr)
-				{
+				{	// in the case folding was successful
 					found = true;
 
 					goto dis2_start;
@@ -615,6 +634,7 @@ const Box* Folding::makeType1Box(
 	// the box
 	std::vector<size_t> index(fae_.getRootCount(), static_cast<size_t>(-1));
 
+	// maps cutpoints to selectors
 	std::unordered_map<size_t, size_t> selectorMap;
 	ConnectionGraph::CutpointSignature outputSignature;
 
@@ -722,35 +742,40 @@ const Box* Folding::makeType2Box(
 
 	std::vector<size_t> index(fae_.getRootCount(), static_cast<size_t>(-1)), index2;
 	std::vector<bool> rootMask(fae_.getRootCount(), false);
+
+	// maps cutpoints to selectors
 	std::unordered_map<size_t, size_t> selectorMap;
 	ConnectionGraph::CutpointSignature outputSignature, inputSignature, tmpSignature;
 
 	size_t start = 0;
 
-	auto p = this->separateCutpoint(outputSignature, root, finalState, aux);
+	// split the given tree automaton at the desired location, obtain the pair of
+	// the residuum and the kernel
+	std::pair<TreeAutShPtr, TreeAutShPtr> resKerPair =
+		this->separateCutpoint(outputSignature, root, finalState, aux);
 
 	index[root] = start++;
 
-	for (auto& cutpoint : outputSignature)
+	for (const ConnectionGraph::CutpointInfo& cutpoint : outputSignature)
 	{
-/*
-		// we assume type 1 box is not present
-		assert(cutpoint.root != root);
-*/
 		if (cutpoint.root == root)
-		{
+		{	// if this procedure cannot fold the sub-structure
 			return nullptr;
 		}
 
 		if (forbidden.count(cutpoint.root))
-		{
-			return nullptr;
+		{	// in the case the cutpoint is forbidden to be folded
+			return nullptr;         // stop the folding procedure
 		}
 
 		assert(cutpoint.root < index.size());
 
 		if (cutpoint.root != root)
-		{
+		{	// in the case the cutpoint is other than the root
+
+			// check that the signature does not contain duplicit references
+			assert(static_cast<size_t>(-1) == index[cutpoint.root]);
+
 			index[cutpoint.root] = start++;
 		}
 	}
@@ -765,13 +790,15 @@ const Box* Folding::makeType2Box(
 	auto auxP = this->separateCutpoint(
 		inputSignature, aux, fae_.getRoot(aux)->getFinalState(), root
 	);
+
 /*
 	if (Folding::isSingular(*auxP.first))
 		return false;
 */
+
 	index2 = index;
 
-	for (auto& cutpoint : inputSignature)
+	for (const ConnectionGraph::CutpointInfo& cutpoint : inputSignature)
 	{
 		if (cutpoint.refCount > 1)
 		{
@@ -785,9 +812,9 @@ const Box* Folding::makeType2Box(
 
 		assert(cutpoint.root < index.size());
 
-		if (index[cutpoint.root] == static_cast<size_t>(-1))
+		if (static_cast<size_t>(-1) == index[cutpoint.root])
 		{
-			assert(index2[cutpoint.root] == static_cast<size_t>(-1));
+			assert(static_cast<size_t>(-1) == index2[cutpoint.root]);
 
 			index2[cutpoint.root] = start++;
 
@@ -807,10 +834,10 @@ const Box* Folding::makeType2Box(
 
 	size_t selector = extractSelector(selectorMap, root);
 
-	auto box = std::unique_ptr<Box>(
+	std::unique_ptr<Box> box = std::unique_ptr<Box>(
 		BoxMan::createType2Box(
 			root,
-			this->relabelReferences(*p.second, index),
+			this->relabelReferences(*resKerPair.second, index),
 			outputSignature,
 			inputMap,
 			aux,
@@ -835,12 +862,20 @@ const Box* Folding::makeType2Box(
 
 	FA_DEBUG_AT(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
 
-	for (auto& cutpoint : tmpSignature)
+	for (const ConnectionGraph::CutpointInfo& cutpoint : tmpSignature)
 	{
 		outputSignature.push_back(cutpoint);
 	}
 
-	fae_.setRoot(root, this->joinBox(*p.first, finalState, root, boxPtr, outputSignature));
+	fae_.setRoot(root,
+		this->joinBox(
+			*resKerPair.first,
+			finalState,
+			root,
+			boxPtr,
+			outputSignature)
+		);
+
 	fae_.connectionGraph.invalidate(root);
 
 	this->invalidateSignatures(root);

@@ -299,6 +299,7 @@ protected:
 		return (conditional)? boxMan_.lookupBox(box) : boxMan_.getBox(box);
 	}
 
+
 	/**
 	 * @brief  Creates a box with a single component in a tree automaton
 	 *
@@ -328,6 +329,11 @@ protected:
 		bool                          conditional = true,
 		bool                          test = false);
 
+	/**
+	 * @brief  Creates a box with two components in a tree automaton
+	 *
+	 * @todo !!!!!!!!!!!!!!!!!!!!!!!!!!
+	 */
 	const Box* makeType2Box(
 		size_t                      root,
 		size_t                      aux,
@@ -337,6 +343,24 @@ protected:
 
 public:
 
+	/**
+	 * @brief  Discovers and folds a Type 1 cutpoint
+	 *
+	 * This method discovers and (in the case it is possible) folds a Type
+	 * 1 cutpoint, i.e., a cutpoint that references itself without passing
+	 * through other cutpoints.
+	 *
+	 * @param[in]  root         Index of the tree automaton in the FA which is to
+	 *                          be checked whether it is a Type 1 cutpoint
+	 * @param[in]  forbidden    The set of cutpoints for which folding is not
+	 *                          allowed
+	 * @param[in]  conditional  If @p true, does not create the box if it is not
+	 *                          in the box database, if @p false, creates the box
+	 *                          in the case it is not in the box database
+	 *
+	 * @returns  @p true in the case a box has been both found and applied, @p
+	 *           false otherwise
+	 */
 	bool discover1(
 		size_t                       root,
 		const std::set<size_t>&      forbidden,
