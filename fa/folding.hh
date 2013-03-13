@@ -212,7 +212,19 @@ protected:
 
 
 	/**
-	 * @brief  @todo
+	 * @brief  Inserts a box into a tree automaton
+	 *
+	 * Inserts the box @p box into the tree automaton @p src under the state @p
+	 * state.
+	 *
+	 * @param[in]  src        The tree automaton into which @p box is to be
+	 *                        inserted
+	 * @param[in]  state      The state under which @p box is to be inserted   
+	 * @param[in]  root       The first component inside @p box
+	 * @param[in]  box        The box to be inserted into @p src
+	 * @param[in]  signature  The signature of @p box
+	 *
+	 * @returns  The automaton from @p src with inserted @p box
 	 */
 	TreeAutShPtr joinBox(
 		const TreeAut&                               src,
@@ -287,6 +299,27 @@ protected:
 		return (conditional)? boxMan_.lookupBox(box) : boxMan_.getBox(box);
 	}
 
+	/**
+	 * @brief  Creates a box with a single component in a tree automaton
+	 *
+	 * This method substitutes the transition in the tree automaton at index @p
+	 * root under the state @p state with a single-component box.
+	 *
+	 * @param[in]  root         Index of the tree automaton where the box is to be
+	 *                          created
+	 * @param[in]  state        The state under which the box is to be created
+	 * @param[in]  aux          Index of another component
+	 * @param[in]  forbidden    The set of indices of cutpoints which are not
+	 *                          allowed to be folded
+	 * @param[in]  conditional  If @p false, inserts the box into the box database
+	 *                          if it is not already there, if @p true returns @p
+	 *                          nullptr in such a case
+	 * @param[in]  test         If @p true, then we are only testing if it is
+	 *                          possible to create the box and 
+	 * 
+	 * @returns  The created box (or @p nullptr if it is not in the box database
+	 *           and @p conditional is set to @p true or something bad happened)
+	 */
 	const Box* makeType1Box(
 		size_t                        root,
 		size_t                        state,

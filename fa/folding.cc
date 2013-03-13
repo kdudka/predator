@@ -666,27 +666,35 @@ const Box* Folding::makeType1Box(
 		)
 	);
 
-	const Box* boxPtr = this->getBox(*box, conditional);
+	// find the box in the database
+	const Box* boxPtr = this->getBox(
+		/* the box */ *box,
+		/* false if we wish to insert the box if not present */ conditional);
 
 	if (test)
-	{
+	{	// in the case we are only testing
 		return boxPtr;
 	}
 
 	if (nullptr == boxPtr)
-	{
+	{	// if the box is not in the database
+
+		// check that something ugly has not happened
+		assert(conditional);
+
 		return nullptr;
 	}
 
 	FA_DEBUG_AT(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
 
-	fae_.setRoot( root,
+	// insert the box into the tree automaton
+	fae_.setRoot(root,
 		this->joinBox(
-			*resKerPair.first,
-			state,
-			root,
-			boxPtr,
-			outputSignature)
+			/* the TA into which the box will be inserted */ *resKerPair.first,
+			/* the state under which the box will go */ state,
+			/* index of the first component in the box */ root,
+			/* the box */ boxPtr,
+			/* signature of the box */ outputSignature)
 		);
 
 	fae_.connectionGraph.invalidate(root);
@@ -853,14 +861,14 @@ Folding::TreeAutShPtr Folding::joinBox(
 	const Box*                                   box,
 	const ConnectionGraph::CutpointSignature&    signature)
 {
+	// allocate a new TA and insert final states
 	TreeAutShPtr ta = TreeAutShPtr(fae_.allocTA());
-
 	ta->addFinalStates(src.getFinalStates());
 
 	for (const Transition& trans : src)
-	{
+	{	// for every transition in the source
 		if (trans.rhs() != state)
-		{
+		{	// in the case the state is not important, simply copy the transition
 			ta->addTransition(trans);
 
 			continue;
@@ -869,12 +877,16 @@ Folding::TreeAutShPtr Folding::joinBox(
 		std::vector<const AbstractBox*> label(trans.label()->getNode());
 		std::vector<size_t> lhs(trans.lhs());
 
+		// append the box
 		label.push_back(box);
 
-		for (auto& cutpoint : signature)
-		{
+		for (const ConnectionGraph::CutpointInfo& cutpoint : signature)
+		{	// for all cutpoints in the signature (with the exception of those that
+			// are inside the box), append references to other (redundant) cutpoints
+			// the 'lhs'
 			if ((cutpoint.root == root) && (src.getFinalStates().count(state)))
-			{
+			{	// in the case the cutpoint is the box in the joined automaton or
+				// 'state' is final
 				continue;
 			}
 
@@ -883,6 +895,7 @@ Folding::TreeAutShPtr Folding::joinBox(
 			);
 		}
 
+		// reorder the boxes in 'label' and states in 'lhs' so that it is ordered 
 		FA::reorderBoxes(label, lhs);
 
 		ta->addTransition(lhs, fae_.boxMan->lookupLabel(label), state);
