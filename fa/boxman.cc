@@ -118,7 +118,8 @@ const Box* BoxAntichain::get(const Box& box)
 				obsolete_.splice(obsolete_.end(), p.first->second, tmp);
 
 				modified_ = true;
-			} else
+			}
+			else
 			{
 				++iter;
 			}
@@ -137,6 +138,7 @@ const Box* BoxAntichain::get(const Box& box)
 
 const Box* BoxAntichain::lookup(const Box& box) const
 {
+	// find the box according to the signature
 	auto iter = boxes_.find(box.getSignature());
 
 	if (iter != boxes_.end())
@@ -144,7 +146,9 @@ const Box* BoxAntichain::lookup(const Box& box) const
 		for (auto& box2 : iter->second)
 		{
 			if (box.simplifiedLessThan(box2))
+			{
 				return &box2;
+			}
 		}
 	}
 
@@ -409,12 +413,15 @@ Box* BoxMan::createType2Box(
 
 const Box* BoxMan::getBox(const Box& box)
 {
-	auto cpBox = boxes_.get(box);
+	// insert the box into the manager
+	const Box* cpBox = boxes_.get(box);
+	assert(nullptr != cpBox);
 
 	if (boxes_.modified())
-	{
+	{	// in the case a new box was inserted
 		Box* pBox = const_cast<Box*>(cpBox);
 
+		// perform initialization
 		pBox->name_ = this->getBoxName();
 		pBox->initialize();
 

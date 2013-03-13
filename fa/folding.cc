@@ -620,8 +620,9 @@ const Box* Folding::makeType1Box(
 
 	size_t start = 0;
 
-	// split the given tree automaton at the desired location
-	std::pair<TreeAutShPtr, TreeAutShPtr> p =
+	// split the given tree automaton at the desired location, obtain the pair of
+	// the residuum and the kernel
+	std::pair<TreeAutShPtr, TreeAutShPtr> resKerPair =
 		this->separateCutpoint(outputSignature, root, state, aux);
 
 	index[root] = start++;
@@ -654,17 +655,18 @@ const Box* Folding::makeType1Box(
 	// get the input mapping of components to selector offsets
 	std::vector<size_t> inputMap = extractInputMap(selectorMap, root, index);
 
+	// create a box with a single TA
 	std::unique_ptr<Box> box = std::unique_ptr<Box>(
 		BoxMan::createType1Box(
-			root,
-			this->relabelReferences(*p.second, index),
-			outputSignature,
-			inputMap,
-			index
+			/* index of the TA put in the box */ root,
+			/* the TA */ this->relabelReferences(*resKerPair.second, index),
+			/* signature of the TA */ outputSignature,
+			/* mapping of cutpoints to selectos */ inputMap,
+			/* index renaming cutpoints */ index
 		)
 	);
 
-	auto boxPtr = this->getBox(*box, conditional);
+	const Box* boxPtr = this->getBox(*box, conditional);
 
 	if (test)
 	{
@@ -678,7 +680,15 @@ const Box* Folding::makeType1Box(
 
 	FA_DEBUG_AT(2, *static_cast<const AbstractBox*>(boxPtr) << " found");
 
-	fae_.setRoot(root, this->joinBox(*p.first, state, root, boxPtr, outputSignature));
+	fae_.setRoot( root,
+		this->joinBox(
+			*resKerPair.first,
+			state,
+			root,
+			boxPtr,
+			outputSignature)
+		);
+
 	fae_.connectionGraph.invalidate(root);
 
 	this->invalidateSignatures(root);

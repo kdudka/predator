@@ -56,14 +56,47 @@ public:
 		size_(0)
 	{ }
 
+
+	/**
+	 * @brief  Retrieves a box from the antichain (may insert it)
+	 *
+	 * This method retrieves the unique pointer to @p box from the antichain (in
+	 * the case it is not present it inserts it).
+	 *
+	 * @param[in]  box  The box to be retrieved
+	 *
+	 * @returns  The unique pointer to @p box
+	 */
 	const Box* get(const Box& box);
 
+
+	/**
+	 * @brief  Retrievse a box from the antichain
+	 *
+	 * This method retrieves the unique pointer to @p box (or @p nullptr if not
+	 * present) from the antichain.
+	 *
+	 * @param[in]  box  The box to be retrieved
+	 *
+	 * @returns  The unique pointer to @p box or @p nullptr
+	 */
 	const Box* lookup(const Box& box) const;
 
+
+	/**
+	 * @brief  Has the antichain been modified?
+	 *
+	 * This method returns @p true in the case the antichain has been modified
+	 * during the last BoxAntichain::get() operation (the operation resets it at
+	 * the beginning).
+	 *
+	 * @returns  Has the antichain been modified?
+	 */
 	bool modified() const
 	{
 		return modified_;
 	}
+
 
 	size_t size() const
 	{
@@ -110,13 +143,34 @@ public:
 		modified_(false)
 	{ }
 
+	/**
+	 * @brief  Retrieves a box from the set (may insert it)
+	 *
+	 * This method retrieves the unique pointer to @p box from the set (in
+	 * the case it is not present it inserts it).
+	 *
+	 * @param[in]  box  The box to be retrieved
+	 *
+	 * @returns  The unique pointer to @p box
+	 */
 	const Box* get(const Box& box)
 	{
-		auto p = boxes_.insert(box);
-		modified_ = p.second;
-		return &*p.first;
+		auto iterBoolPair = boxes_.insert(box);
+		modified_ = iterBoolPair.second;
+		return &*iterBoolPair.first;
 	}
 
+
+	/**
+	 * @brief  Retrievse a box from the set
+	 *
+	 * This method retrieves the unique pointer to @p box (or @p nullptr if not
+	 * present) from the set.
+	 *
+	 * @param[in]  box  The box to be retrieved
+	 *
+	 * @returns  The unique pointer to @p box or @p nullptr
+	 */
 	const Box* lookup(const Box& box) const
 	{
 		auto iter = boxes_.find(box);
@@ -197,7 +251,16 @@ private:  // methods
 
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data);
 
+
+	/**
+	 * @brief  Retrieves the name of a new box
+	 *
+	 * This method retrieves the name of a new box.
+	 *
+	 * @returns  The name of a new box
+	 */
 	std::string getBoxName() const;
+
 
 public:
 
@@ -326,7 +389,20 @@ public:
 		size_t                                       inputSelector,
 		std::vector<size_t>&                         index);
 
+
+	/**
+	 * @brief  Retrieves a desired box from the database (may insert it)
+	 *
+	 * This method searches the database of boxes for the @p box and returns
+	 * a unique pointer to it. In the case a new box is inserted, it is
+	 * initialized.
+	 *
+	 * @param[in]  box  The box to be found (or inserted) in the database
+	 *
+	 * @returns  Unique pointer to the box
+	 */
 	const Box* getBox(const Box& box);
+
 
 	const Box* lookupBox(const Box& box) const
 	{

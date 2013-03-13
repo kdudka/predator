@@ -164,7 +164,8 @@ protected:
 	 *
 	 * This method splits a tree automaton at index @p root at the FA under @p state
 	 * in the path leading to the @p cutpoint and returns the split part together
-	 * with the original automaton without the split part.
+	 * with the original automaton without the split part. These parts are called
+	 * the @e kernel and the @e residuum respectively.
 	 *
 	 * @param[out]  boxSignature  Signature of the split part
 	 * @param[in]   root          Index of the tree automaton where the splitting
@@ -263,9 +264,27 @@ protected:
 		size_t                                   state);
 
 
+	/**
+	 * @brief  Retrieve a box from the database
+	 *
+	 * This method retrieves @p box from the database. If @p conditional is @p
+	 * false, then if @p box is not in the database, it is initialized and
+	 * inserted.
+	 *
+	 * @param[in]  box          The box to be retrieved
+	 * @param[in]  conditional  If @p false, then @p box is inserted into the
+	 *                          database if it is not present there, if @p true
+	 *                          and @p box is not in the database, returns @p
+	 *                          nullptr
+	 *
+	 * @returns  If @p box is in the database, return the pointer to it,
+	 *           otherwise, if @p conditional is @p true, return @p nullptr, if @p
+	 *           conditional is @p false, insert the box and return the pointer to
+	 *           it
+	 */
 	const Box* getBox(const Box& box, bool conditional)
 	{
-		return (conditional)?(boxMan_.lookupBox(box)):(boxMan_.getBox(box));
+		return (conditional)? boxMan_.lookupBox(box) : boxMan_.getBox(box);
 	}
 
 	const Box* makeType1Box(
