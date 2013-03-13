@@ -271,26 +271,55 @@ public:
 		const std::string&                           name,
 		const std::vector<size_t>&                   selectors);
 
-	static size_t translateSignature(
-		ConnectionGraph::CutpointSignature&          result,
-		std::vector<std::pair<size_t, size_t>>&      selectors,
-		size_t                                       root,
-		const ConnectionGraph::CutpointSignature&    signature,
-		size_t                                       aux,
-		const std::vector<size_t>&                   index);
+	/**
+	 * @brief  Creates a box with a single component
+	 *
+	 * This static method creates a new box with a single (output) component.
+	 *
+	 * @param[in]  root       Index of the tree automaton which is to be put in
+	 *                        the box
+	 * @param[in]  output     The tree automaton to be put into the box
+	 * @param[in]  signature  The signature of @p output
+	 * @param[in]  inputMap   The mapping of cutpoints to selectors
+	 * @param[in]  index      Index for renaming cutpoints
+	 *
+	 * @returns  The created box with the @p output tree automaton inside
+	 */
+	static Box* createType1Box(
+		size_t                                      root,
+		const std::shared_ptr<TreeAut>&             output,
+		const ConnectionGraph::CutpointSignature&   signature,
+		const std::vector<size_t>&                  inputMap,
+		const std::vector<size_t>&                  index);
 
-	Box* createType1Box(
+
+	/**
+	 * @brief  Creates a box with a pair of components
+	 *
+	 * This static method creates a new box that contains a pair of components:
+	 * the @p output component (the starts in the first tree), and the @p input
+	 * component (that may go backwards).
+	 *
+	 * @param[in]      root           The index of the @p output tree automaton
+	 * @param[in]      output         The output tree automaton to be put in the
+	 *                                box
+	 * @param[in]      signature      Signature of the @p output tree automaton
+	 * @param[in]      inputMap       The mapping of cutpoints to selectors
+	 * @param[in]      aux            The index of the @p input tree automaton
+	 * @param[in]      input          The input tree automaton to be put in the
+	 *                                box
+	 * @param[in]      signature2     Signature of the @p input tree automaton
+	 * @param[in]      inputSelector  Offset of the lowest selector in the box
+	 * @param[in,out]  index          Index for renaming cutpoints (may change)
+	 *
+	 * @returns  The created box with the @p output and @p input tree automata
+	 *           inside
+	 */
+	static Box* createType2Box(
 		size_t                                       root,
 		const std::shared_ptr<TreeAut>&              output,
 		const ConnectionGraph::CutpointSignature&    signature,
-		std::vector<size_t>&                         inputMap,
-		const std::vector<size_t>&                   index);
-
-	Box* createType2Box(
-		size_t                                       root,
-		const std::shared_ptr<TreeAut>&              output,
-		const ConnectionGraph::CutpointSignature&    signature,
-		std::vector<size_t>&                         inputMap,
+		const std::vector<size_t>&                   inputMap,
 		size_t                                       aux,
 		const std::shared_ptr<TreeAut>&              input,
 		const ConnectionGraph::CutpointSignature&    signature2,

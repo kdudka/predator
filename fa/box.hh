@@ -164,6 +164,14 @@ public:   // methods
 };
 
 
+/**
+ * @brief  The box containing a nested forest automaton
+ *
+ * This box contains a nested forest automaton with 1 or 2 components.
+ *
+ * @note  This is a simplification of the theoretic box which may have an
+ * arbitrary number of components!
+ */
 class Box : public StructuralBox
 {
 private:  // data types
@@ -242,15 +250,7 @@ protected:
 		std::vector<label_type>&                   labels,
 		const TreeAut&                             ta);
 
-	Box(
-		const std::string&                               name,
-		const std::shared_ptr<TreeAut>&                  output,
-		ConnectionGraph::CutpointSignature               outputSignature,
-		const std::vector<size_t>&                       inputMap,
-		const std::shared_ptr<TreeAut>&                  input,
-		size_t                                           inputIndex,
-		ConnectionGraph::CutpointSignature               inputSignature,
-		const std::vector<std::pair<size_t,size_t>>&     selectors);
+
 
 	struct LeafEnumF
 	{
@@ -375,6 +375,36 @@ public:
 	}
 
 public:
+
+
+	/**
+	 * @brief  Constructor
+	 *
+	 * Construct a box of the name @p name with the output direction tree
+	 * automaton @p output with the signature @p outputSignature and the map @p
+	 * inputMap of components to selectors and with the input direction tree
+	 * automaton @p input with the index of the input automaton @p inputIndex.
+	 *
+	 * @param[in]  name             The name of the box
+	 * @param[in]  output           The tree automaton for the output
+	 * @param[in]  outputSignature  The signature of the output component
+	 * @param[in]  inputMap         The map of components to selectors
+	 * @param[in]  input            The tree automaton for the input
+	 * @param[in]  inputIndex       Index of the input tree automaton
+	 * @param[in]  inputSignature   The signature of the input component
+	 * @param[in]  selectors        The vector of pairs of forward and backward
+	 *                              selectors
+	 */
+	Box(
+		const std::string&                               name,
+		const std::shared_ptr<TreeAut>&                  output,
+		ConnectionGraph::CutpointSignature               outputSignature,
+		const std::vector<size_t>&                       inputMap,
+		const std::shared_ptr<TreeAut>&                  input,
+		size_t                                           inputIndex,
+		ConnectionGraph::CutpointSignature               inputSignature,
+		const std::vector<std::pair<size_t,size_t>>&     selectors);
+
 
 	virtual void toStream(std::ostream& os) const;
 
