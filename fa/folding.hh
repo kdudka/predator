@@ -301,7 +301,7 @@ protected:
 
 
 	/**
-	 * @brief  Creates a box with a single component in a tree automaton
+	 * @brief  Creates a box with a single component
 	 *
 	 * This method substitutes the transition in the tree automaton at index @p
 	 * root under the state @p state with a single-component box.
@@ -329,10 +329,23 @@ protected:
 		bool                          conditional = true,
 		bool                          test = false);
 
+
 	/**
-	 * @brief  Creates a box with two components in a tree automaton
+	 * @brief  Creates a box with two components
 	 *
-	 * @todo !!!!!!!!!!!!!!!!!!!!!!!!!!
+	 * @param[in]  root         Index of the first tree automaton that is to be
+	 *                          put into a box
+	 * @param[in]  aux          Index of the other tree automaton
+	 * @param[in]  forbidden    The set of indices of cutpoints which are not
+	 *                          allowed to be folded
+	 * @param[in]  conditional  If @p false, inserts the box into the box database
+	 *                          if it is not already there, if @p true returns @p
+	 *                          nullptr in such a case
+	 * @param[in]  test         If @p true, then we are only testing if it is
+	 *                          possible to create the box and 
+	 *
+	 * @returns  The created box (or @p nullptr if it is not in the box database
+	 *           and @p conditional is set to @p true or something bad happened)
 	 */
 	const Box* makeType2Box(
 		size_t                      root,
@@ -340,6 +353,7 @@ protected:
 		const std::set<size_t>&     forbidden,
 		bool                        conditional = true,
 		bool                        test = false);
+
 
 public:
 
@@ -366,6 +380,25 @@ public:
 		const std::set<size_t>&      forbidden,
 		bool                         conditional);
 
+
+	/**
+	 * @brief  Discovers and folds a Type 2 cutpoint
+	 *
+	 * This method discovers and (in the case it is possible) folds a Type
+	 * 2 cutpoint, i.e., a cutpoint that references another cutpoint more than
+	 * once without passing through other cutpoints.
+	 *
+	 * @param[in]  root         Index of the tree automaton in the FA which is to
+	 *                          be checked whether it is a Type 2 cutpoint
+	 * @param[in]  forbidden    The set of cutpoints for which folding is not
+	 *                          allowed
+	 * @param[in]  conditional  If @p true, does not create the box if it is not
+	 *                          in the box database, if @p false, creates the box
+	 *                          in the case it is not in the box database
+	 *
+	 * @returns  @p true in the case a box has been both found and applied, @p
+	 *           false otherwise
+	 */
 	bool discover2(
 		size_t                       root,
 		const std::set<size_t>&      forbidden,

@@ -218,11 +218,24 @@ public:
 		return false;
 	}
 
+
+	/**
+	 * @brief  Retrieves the selector going to a target
+	 *
+	 * Given a @p signature and a @p target cutpoint, this static method retrieves
+	 * @p signature the offset of the lowest forward selector leading to @p target.
+	 *
+	 * @param[in]  signature  The signature of a state
+	 * @param[in]  target     Index of the target cutpoint
+	 *
+	 * @returns  Offset of the lowest forward selector to @p target if there is
+	 *           some, -1 otherwise
+	 */
 	static size_t getSelectorToTarget(
 		const CutpointSignature&     signature,
 		size_t                       target)
 	{
-		for (auto& cutpoint : signature)
+		for (const CutpointInfo& cutpoint : signature)
 		{
 			if (cutpoint.root == target)
 			{
@@ -234,6 +247,7 @@ public:
 
 		return static_cast<size_t>(-1);
 	}
+
 
 	static void renameSignature(
 		CutpointSignature&           signature,

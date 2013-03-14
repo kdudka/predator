@@ -370,16 +370,19 @@ dis2_start:
 			continue;
 		}
 
+		// the signatures of all states in the automaton
 		const ConnectionGraph::StateToCutpointSignatureMap& signatures =
 			this->getSignatures(root);
 
 		for (const std::pair<size_t, ConnectionGraph::CutpointSignature>&
 			stateSignaturePair : signatures)
-		{
+		{	// for all states 's'
 			for (const ConnectionGraph::CutpointInfo& tmp : stateSignaturePair.second)
-			{
-				if ((tmp.refCount < 2) || tmp.refInherited || (tmp.root != cutpoint.root))
-				{
+			{	// for all cutpoints in the signature of state 's'
+				if ((tmp.refCount < 2) /* the cutpoint is not referenced enough times from 's' */
+					|| tmp.refInherited /* 's' is not a fork */
+					|| (tmp.root != cutpoint.root)) /* the cutpoint is a different one */
+				{	// go to the next cutpoint in the signature
 					continue;
 				}
 
@@ -387,11 +390,11 @@ dis2_start:
 					<< " at state q" << stateSignaturePair.first);
 
 				const Box* boxPtr = this->makeType1Box(
-					root,
-					stateSignaturePair.first,
-					cutpoint.root,
-					forbidden,
-					conditional
+					/* index of the TA to be folded */ root,
+					/* the state where to fold */ stateSignaturePair.first,
+					/* index of the other TA to be folded */ cutpoint.root,
+					/* set of cutpoints with forbidden folding */ forbidden,
+					/* if true do not create the box if not present */ conditional
 				);
 
 				if (nullptr != boxPtr)
@@ -409,6 +412,7 @@ dis2_start:
 	return found;
 }
 
+
 bool Folding::discover3(
 	size_t                      root,
 	const std::set<size_t>&     forbidden,
@@ -419,8 +423,11 @@ bool Folding::discover3(
 	assert(root < fae_.getRootCount());
 	assert(nullptr != fae_.getRoot(root));
 
+	const ConnectionGraph::CutpointSignature& signature =
+		fae_.connectionGraph.data[root].signature;
+
 	if (forbidden.count(root))
-	{
+	{	// in the case the root is not to be folded
 		return nullptr;
 	}
 
@@ -431,40 +438,47 @@ dis3_start:
 
 	fae_.updateConnectionGraph();
 
-	for (auto& cutpoint : fae_.connectionGraph.data[root].signature)
-	{
-		if (forbidden.count(cutpoint.root)/* || cutpoint.joint*/)
-		{
+	for (const ConnectionGraph::CutpointInfo& cutpoint : signature)
+	{	// now we search for the other cutpoint to be folded
+		if (forbidden.count(cutpoint.root))
+		{	// in the case the other cutpoint is not allowed to be folded
 			continue;
 		}
 
+		// retrieve the selector from 'cutpoint.root' that reaches 'root'
 		size_t selectorToRoot = ConnectionGraph::getSelectorToTarget(
 			fae_.connectionGraph.data[cutpoint.root].signature, root
 		);
 
 		if (selectorToRoot == static_cast<size_t>(-1))
-		{
+		{	// in the case 'root' is not reachable from 'cutpoint.root'
 			continue;
 		}
-/*
-		if (selectorToRoot == cutpoint.forwardSelector)
-			continue;
-*/
+
 		assert(!cutpoint.fwdSelectors.empty());
 
-		if (/*(selectorToRoot < *cutpoint.fwdSelectors.begin()) ||*/
-			this->makeType2Box(cutpoint.root, root, forbidden, true, true))
-		{
+		if (this->makeType2Box(
+			/* index of the TA to be folded */ cutpoint.root,
+			/* index of the other TA to be folded */ root,
+			/* set of cutpoints with forbidden folding */ forbidden,
+			/* if true do not create the box if not present */ true,
+			/* only testing that we can make the box? */ true))
+		{	// in the case the box can be created in the reverse way
 			continue;
 		}
 
 		FA_DEBUG_AT(3, "type 3 cutpoint detected at roots " << root << " and "
 			<< cutpoint.root);
 
-		auto boxPtr = this->makeType2Box(root, cutpoint.root, forbidden, conditional);
+		const Box* boxPtr = this->makeType2Box(
+			/* index of the TA to be folded */ root,
+			/* index of the other TA to be folded */ cutpoint.root,
+			/* set of cutpoints with forbidden folding */ forbidden,
+			/* if true do not create the box if not present */ conditional
+		);
 
 		if (nullptr != boxPtr)
-		{
+		{	// in the case folding was successful
 			found = true;
 
 			goto dis3_start;
