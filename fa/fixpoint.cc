@@ -192,6 +192,20 @@ bool normalize(
 	return result;
 }
 
+
+/**
+ * @brief  Folds a FA without learning
+ *
+ * This function folds a FA @p fae using boxes in the box manager @p boxMan, but
+ * avoiding the folding of cutpoints from @p forbidden. Note than no new boxes
+ * are learnt, only boxes already in @p boxMan are applied.
+ *
+ * @param[in]  fae        The forest automaton to be folded
+ * @param[in]  boxMan     The database of boxes
+ * @param[in]  forbidden  The set of cutpoints not allowed for folding
+ *
+ * @returns  @p true in the case something has been folded, @p false otherwise
+ */
 bool fold(
 	FAE&                         fae,
 	BoxMan&                      boxMan,
@@ -206,19 +220,31 @@ bool fold(
 
 	for (size_t i = 0; i < fae.getRootCount(); ++i)
 	{
-		if (forbidden.count(i))
+		if (forbidden.end() != forbidden.find(i))
+		{	// in the case the cutpoint is not allowed for folding
 			continue;
+		}
 
-		assert(fae.getRoot(i));
+		assert(nullptr != fae.getRoot(i));
+
+		// Try to fold the 3 types of cutpoints starting from cutpoint 'i', but
+		// _ONLY_ using boxes which are _ALREADY_ in 'boxMan'. No learning of new
+		// boxes is allowed
 
 		if (folding.discover1(i, forbidden, true))
+		{
 			matched = true;
+		}
 
 		if (folding.discover2(i, forbidden, true))
+		{
 			matched = true;
+		}
 
 		if (folding.discover3(i, forbidden, true))
+		{
 			matched = true;
+		}
 	}
 
 	if (matched)
@@ -229,6 +255,16 @@ bool fold(
 	return matched;
 }
 
+
+/**
+ * @brief  Reorders components into the canonical order
+ *
+ * This function reorders the components of the FA @p fae @e without @e merging
+ * them together.
+ *
+ * @param[in]      state  The state of the symbolic execution
+ * @param[in,out]  fae    The forest automaton to be reordered
+ */
 void reorder(
 	const SymState*   state,
 	FAE&              fae)
@@ -242,8 +278,9 @@ void reorder(
 
 	norm.scan(marked, order, std::set<size_t>());
 
+	// normalize without merging (we say that all components are referred more
+	// than once), i.e. only reorder
 	std::fill(marked.begin(), marked.end(), true);
-
 	norm.normalize(marked, order);
 
 	FA_DEBUG_AT(3, "after reordering: " << std::endl << fae);
@@ -332,7 +369,9 @@ void learn1(FAE& fae, BoxMan& boxMan)
 	}
 }
 
-void learn2(FAE& fae, BoxMan& boxMan)
+void learn2(
+	FAE&       fae,
+	BoxMan&    boxMan)
 {
 	fae.unreachableFree();
 
@@ -351,6 +390,7 @@ void learn2(FAE& fae, BoxMan& boxMan)
 	}
 }
 } // namespace
+
 
 SymState* FixpointBase::reverseAndIsect(
 	ExecutionManager&                      execMan,
@@ -442,15 +482,18 @@ void FI_abs::execute(ExecutionManager& execMan, SymState& state)
 
 	std::set<size_t> forbidden;
 #if FA_ALLOW_FOLDING
+	// reorder components into the canonical form (no merging!)
 	reorder(&state, *fae);
 
-	if (boxMan_.boxDatabase().size())
-	{
+	if (!boxMan_.boxDatabase().empty())
+	{	// in the case there are some boxes, try to fold immediately before
+		// normalization
 		for (size_t i = 0; i < FIXED_REG_COUNT; ++i)
 		{
 			forbidden.insert(VirtualMachine(*fae).varGet(i).d_ref.root);
 		}
 
+		// fold already discovered boxes
 		fold(*fae, boxMan_, forbidden);
 	}
 

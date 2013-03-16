@@ -98,10 +98,32 @@ public:
 	}
 
 
+	/**
+	 * @brief  The count of active elements
+	 *
+	 * Returns the count of active elements (obsolete are not counted).
+	 *
+	 * @returns  The count of active elements
+	 */
 	size_t size() const
 	{
 		return size_ - obsolete_.size();
 	}
+
+
+	/**
+	 * @brief  Is the antichain empty?
+	 *
+	 * Returns @p true in the case the antichain is empty, not taking into account
+	 * obsolete elements, @p false otherwise.
+	 *
+	 * @returns @p true in the case the antichain is empty, @p false otherwise
+	 */
+	bool empty() const
+	{
+		return this->size() == 0;
+	}
+
 
 	void clear()
 	{
@@ -187,10 +209,32 @@ public:
 		boxes_.clear();
 	}
 
+
+	/**
+	 * @brief  The count of active elements
+	 *
+	 * Returns the count of active elements.
+	 *
+	 * @returns  The count of active elements
+	 */
 	size_t size() const
 	{
 		return boxes_.size();
 	}
+
+
+	/**
+	 * @brief  Is the set empty?
+	 *
+	 * Returns @p true in the case the set is empty, @p false otherwise.
+	 *
+	 * @returns @p true in the case the set is empty, @p false otherwise
+	 */
+	bool empty() const
+	{
+		return boxes_.empty();
+	}
+
 
 	const_iterator begin() const
 	{
