@@ -130,12 +130,14 @@ option(TEST_WITH_VALGRIND "Set to ON to enable valgrind tests" OFF)
 macro(CL_LINK_GCC_PLUGIN PLUGIN_NAME LIBCL_PATH)
     if("${LIBCL_PATH}" STREQUAL "")
         set(CL_LIB cl)
+        set(CLGCC_LIB clgcc)
     else()
         find_library(CL_LIB cl PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
+        find_library(CLGCC_LIB clgcc PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
     endif()
 
     # link the Code Listener static library
-    target_link_libraries(${PLUGIN_NAME} ${CL_LIB})
+    target_link_libraries(${PLUGIN_NAME} ${CLGCC_LIB} ${CL_LIB})
 
     # this will recursively pull all needed symbols from the static libraries
     set_target_properties(${PLUGIN_NAME} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
