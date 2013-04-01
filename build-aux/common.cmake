@@ -136,4 +136,7 @@ macro(CL_LINK_GCC_PLUGIN PLUGIN_NAME LIBCL_PATH)
 
     # link the Code Listener static library
     target_link_libraries(${PLUGIN_NAME} ${CL_LIB})
+
+    # this will recursively pull all needed symbols from the static libraries
+    set_target_properties(${PLUGIN_NAME} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
 endmacro()
