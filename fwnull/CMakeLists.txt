@@ -34,9 +34,8 @@ add_library(fwnull SHARED
     cl_fwnull.cc
     version.c)
 
-# link with code_listener
-find_library(CL_LIB cl ../cl_build)
-target_link_libraries(fwnull ${CL_LIB})
+# link with Code Listener
+CL_LINK_GCC_PLUGIN(fwnull ../cl_build)
 
 # make install
 install(TARGETS fwnull DESTINATION lib)

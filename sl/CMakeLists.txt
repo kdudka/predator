@@ -62,9 +62,8 @@ add_library(sl SHARED
     symutil.cc
     version.c)
 
-# link with code_listener
-find_library(CL_LIB cl ../cl_build)
-target_link_libraries(sl ${CL_LIB})
+# link with Code Listener
+CL_LINK_GCC_PLUGIN(sl ../cl_build)
 
 # get the full path of libsl.so
 get_property(GCC_PLUG TARGET sl PROPERTY LOCATION)

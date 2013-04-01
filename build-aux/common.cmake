@@ -62,8 +62,8 @@ ADD_C_FLAG(       "fPIC"                 "-fPIC")
 ADD_C_FLAG(       "hidden_visibility"    "-fvisibility=hidden")
 
 # we use c99 to compile *.c and c++0x to compile *.cc
-ADD_C_ONLY_FLAG(  "STD_C99"         "-std=c99")
-ADD_CXX_ONLY_FLAG("STD_CXX_0X"      "-std=c++0x")
+ADD_C_ONLY_FLAG(  "STD_C99"              "-std=c99")
+ADD_CXX_ONLY_FLAG("STD_CXX_0X"           "-std=c++0x")
 
 # tweak warnings
 ADD_C_FLAG(       "PEDANTIC"             "-pedantic")
@@ -125,3 +125,15 @@ else()
 endif()
 
 option(TEST_WITH_VALGRIND "Set to ON to enable valgrind tests" OFF)
+
+# link PLUGIN_NAME with Code Listener build located in LIBCL_PATH
+macro(CL_LINK_GCC_PLUGIN PLUGIN_NAME LIBCL_PATH)
+    if("${LIBCL_PATH}" STREQUAL "")
+        set(CL_LIB cl)
+    else()
+        find_library(CL_LIB cl PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
+    endif()
+
+    # link the Code Listener static library
+    target_link_libraries(${PLUGIN_NAME} ${CL_LIB})
+endmacro()
