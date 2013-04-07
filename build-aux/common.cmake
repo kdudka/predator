@@ -142,3 +142,17 @@ macro(CL_LINK_GCC_PLUGIN PLUGIN_NAME LIBCL_PATH)
     # this will recursively pull all needed symbols from the static libraries
     set_target_properties(${PLUGIN_NAME} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
 endmacro()
+
+# CMake cannot build shared libraries consisting of static libraries only
+set(EMPTY_C_FILE ${PROJECT_BINARY_DIR}/empty.c)
+if (NOT EXISTS ${EMPTY_C_FILE})
+    file(WRITE ${EMPTY_C_FILE} "extern int foo;\n")
+endif()
+
+# build GCC plug-in PLUGIN from static lib ANALYZER using CL from LIBCL_PATH
+macro(CL_BUILD_GCC_PLUGIN PLUGIN ANALYZER LIBCL_PATH)
+    # build GCC plug-in named lib${PLUGIN}.so
+    add_library(${PLUGIN} SHARED ${EMPTY_C_FILE})
+    CL_LINK_GCC_PLUGIN(${PLUGIN} ${LIBCL_PATH})
+    target_link_libraries(${PLUGIN} ${ANALYZER})
+endmacro()

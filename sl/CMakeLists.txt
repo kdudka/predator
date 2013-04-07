@@ -30,8 +30,8 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
-# libsl.so
-add_library(sl SHARED
+# libpredator.a
+add_library(predator STATIC
     cl_symexec.cc
     cont_shape.cc
     fixed_point.cc
@@ -62,8 +62,9 @@ add_library(sl SHARED
     symutil.cc
     version.c)
 
-# link with Code Listener
-CL_LINK_GCC_PLUGIN(sl ../cl_build)
+
+# build GCC plug-in (libsl.so)
+CL_BUILD_GCC_PLUGIN(sl predator ../cl_build)
 
 # get the full path of libsl.so
 get_property(GCC_PLUG TARGET sl PROPERTY LOCATION)
