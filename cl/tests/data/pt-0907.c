@@ -1,6 +1,7 @@
 #include "include/pt.h"
+#include <stdlib.h>
 
-int **connect(int **param)
+static int **connect(int **param)
 {
     int **copy = malloc(sizeof(int **));
     copy = param;
