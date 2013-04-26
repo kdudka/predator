@@ -354,6 +354,8 @@ bool isNeutralInsnPhase1(const Insn &insn)
                 case CL_BINOP_LE:
                 case CL_BINOP_GT:
                 case CL_BINOP_GE:
+                case CL_BINOP_TRUTH_OR:
+                case CL_BINOP_TRUTH_AND:
                     return true;
                 default:
                     return false;
