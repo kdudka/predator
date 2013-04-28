@@ -1,0 +1,6 @@
+/MemoryPlaceTest
+/NumberTest
+/OperandToMemoryPlaceTest
+/RangeTest
+/UtilityTest
+/gtest/libgtest.a

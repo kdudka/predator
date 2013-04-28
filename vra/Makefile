@@ -17,7 +17,8 @@
 CMAKE           ?= cmake
 CTEST           ?= ctest
 
-.PHONY: all check clean cppcheck doc distclean distcheck pack version.h
+.PHONY: all check check-unit check-overall clean cppcheck doc \
+	distclean distcheck pack version.h
 
 all: version.h
 	$(MAKE) -C ../cl_build # make sure the libcl.so is up2date
@@ -25,8 +26,16 @@ all: version.h
 	cd ../vra_build && $(CMAKE) -DCMAKE_BUILD_TYPE=Debug ../vra
 	$(MAKE) -C ../vra_build
 
+check-unit:
+	$(MAKE) -C tests-unit
+	cd tests-unit && ./run-all-unit-tests.sh
+
+check-overall:
+	$(MAKE) -C tests-overall
+	cd tests-overall && ./tests-run.sh
+
 check: all
-	cd ../vra_build && $(CTEST) --output-on-failure
+	$(MAKE) check-unit check-overall
 
 cppcheck: all
 	cppcheck --enable=style,performance,portability,information,missingInclude \
