@@ -2567,7 +2567,7 @@ std::ostream& operator<<(std::ostream& os, const Range& r)
 {
 	os << "{ ";
 	for (Range::const_iterator it = r.begin(); it != r.end(); it++) {
-		os << "(" << it->first << ", " << it->second << ")";
+		os << "<" << it->first << ", " << it->second << ">";
 		if (it + 1 != r.end())
 			os << ", ";
 	}
