@@ -23,7 +23,6 @@
 * all C-language types and can simulate the behaviour of these types. It also takes
 * care of integral promotions and type extensions according to the C rules.
 */
-
 class Number {
 	private:
 		/// Enumeration is used to distinguish the type of the stored number.

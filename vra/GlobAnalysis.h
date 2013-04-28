@@ -26,7 +26,6 @@
 *        If variable cannot be modified by functions, initializers of the global
 *        variable are used. Otherwise, it is over-approximated.
 */
-
 class GlobAnalysis {
 	public:
 		/// Type used for storing initialization info about global variables.

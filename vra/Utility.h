@@ -16,7 +16,6 @@
 /**
 * @brief Class implements help functions for value-range analysis.
 */
-
 class Utility {
 	private:
 		/// Just for assurance that nobody will try to use it.
@@ -29,4 +28,3 @@ class Utility {
 };
 
 #endif
-

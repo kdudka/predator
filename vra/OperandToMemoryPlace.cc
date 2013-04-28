@@ -103,7 +103,7 @@ MemoryPlace* OperandToMemoryPlace::convertSimpleOperand(const cl_operand *operan
 		}
 	}
 
-	assert(!"Memory places does not created for provided cl_operand.");
+	assert(!"Memory place cannot be created for the provided cl_operand.");
 	return new MemoryPlace("", true);
 
 }
@@ -197,4 +197,3 @@ void OperandToMemoryPlace::init()
 {
 	OperandToMemoryPlace::memoryPlaceMap.clear();
 }
-

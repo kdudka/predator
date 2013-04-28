@@ -1434,5 +1434,3 @@ ostream& operator<<(ostream &os, const Number &n)
 	}
 	return os;
 }
-
-// TODO: pointer plus

@@ -16,7 +16,6 @@
 * This class represents the memory place, such as variable, item in a structure
 * or element in an array.
 */
-
 class MemoryPlace {
 	private:
 		std::string name;

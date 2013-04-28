@@ -21,7 +21,6 @@
 * This class converts the given @c cl_operand to the @c MemoryPlace class according
 * to the type of @c cl_operand.
 */
-
 class OperandToMemoryPlace {
 	private:
 		/// Just for assurance that nobody will try to use it.
