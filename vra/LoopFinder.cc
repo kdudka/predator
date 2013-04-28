@@ -1,6 +1,6 @@
 /**
 * @author Daniela Ďuričeková, xduric00@stud.fit.vutbr.cz
-* @file   LoopFounder.cc
+* @file   LoopFinder.cc
 * @brief  Implementation of the class that computes for every block the upper
 *         limit that represents how many times loops will be entered.
 * @date   2013
@@ -14,7 +14,7 @@
 #include <cassert>
 
 #include <boost/foreach.hpp>
-#include "LoopFounder.h"
+#include "LoopFinder.h"
 #include "Utility.h"
 
 using CodeStorage::Block;
@@ -29,7 +29,7 @@ using std::stack;
 using std::set;
 using std::vector;
 
-const unsigned long LoopFounder::MaxTripCountOfTheLoopBeforeStop = 1000;
+const unsigned long LoopFinder::MaxTripCountOfTheLoopBeforeStop = 1000;
 
 namespace {
 	bool lt(const Number &n1, const Number &n2)
@@ -53,13 +53,13 @@ namespace {
 	}
 }
 
-LoopFounder::BlockToUpperLimit LoopFounder::blockToUpperLimit;
+LoopFinder::BlockToUpperLimit LoopFinder::blockToUpperLimit;
 
 /**
 * @brief Checks if instruction @a insn modifies variable @a variable in the way
 *        we are able to used to compute loop trip count.
 */
-bool LoopFounder::addUnopInsn(const Insn *insn, const cl_operand *variable,
+bool LoopFinder::addUnopInsn(const Insn *insn, const cl_operand *variable,
 	vector<const Insn*> &insns)
 {
 	// There are two operands for unary operations.
@@ -87,7 +87,7 @@ bool LoopFounder::addUnopInsn(const Insn *insn, const cl_operand *variable,
 * @brief Checks if instruction @a insn modifies variable @a variable in the way
 *        we are able to used to compute loop trip count.
 */
-bool LoopFounder::addBinopInsn(const Insn *insn, const cl_operand *variable,
+bool LoopFinder::addBinopInsn(const Insn *insn, const cl_operand *variable,
 	vector<const Insn*> &insns)
 {
 	// There are three operands for unary operations.
@@ -121,7 +121,7 @@ bool LoopFounder::addBinopInsn(const Insn *insn, const cl_operand *variable,
 *        gets the value from calling function. So, we only check if this calling
 *        instruction modifies our variable.
 */
-bool LoopFounder::addCallInsn(const Insn *insn, const cl_operand *variable)
+bool LoopFinder::addCallInsn(const Insn *insn, const cl_operand *variable)
 {
 	const TOperandList &opList = insn->operands;
 	const struct cl_operand &dst = opList[0]; // [0] - destination
@@ -133,7 +133,7 @@ bool LoopFounder::addCallInsn(const Insn *insn, const cl_operand *variable)
 *        that we can compute trip count of the loop that is representable by @a
 *        block. Relevant instructions has as a destination @a variable.
 */
-bool LoopFounder::findRelevantInsns(const Block *block, const cl_operand *variable,
+bool LoopFinder::findRelevantInsns(const Block *block, const cl_operand *variable,
 	vector<const Insn*> &insns)
 {
 	BOOST_REVERSE_FOREACH(const Insn *insn, *block) {
@@ -149,7 +149,7 @@ bool LoopFounder::findRelevantInsns(const Block *block, const cl_operand *variab
 				break;
 
 			case CL_INSN_UNOP:
-				if (!LoopFounder::addUnopInsn(insn, variable, insns)) {
+				if (!LoopFinder::addUnopInsn(insn, variable, insns)) {
 					// If this instruction modifies our variable but in the way
 					// we are not able to use.
 					return false;
@@ -157,7 +157,7 @@ bool LoopFounder::findRelevantInsns(const Block *block, const cl_operand *variab
 				break;
 
 			case CL_INSN_BINOP:
-				if (!LoopFounder::addBinopInsn(insn, variable, insns)) {
+				if (!LoopFinder::addBinopInsn(insn, variable, insns)) {
 					// If this instruction modifies our variable but in the way
 					// we are not able to use.
 					return false;
@@ -165,7 +165,7 @@ bool LoopFounder::findRelevantInsns(const Block *block, const cl_operand *variab
 				break;
 
 			case CL_INSN_CALL:
-				if (!LoopFounder::addCallInsn(insn, variable)) {
+				if (!LoopFinder::addCallInsn(insn, variable)) {
 					// If this instruction modifies our variable but in the way
 					// we are not able to use.
 					return false;
@@ -184,7 +184,7 @@ bool LoopFounder::findRelevantInsns(const Block *block, const cl_operand *variab
 * @brief Computes how unary instruction @a insn affects the loop variable that
 *        starts on @a initialNum.
 */
-void LoopFounder::processUnop(const Insn *insn, Number &initialNum)
+void LoopFinder::processUnop(const Insn *insn, Number &initialNum)
 {
 	const enum cl_unop_e code = static_cast<enum cl_unop_e>(insn->subCode);
 
@@ -244,7 +244,7 @@ void LoopFounder::processUnop(const Insn *insn, Number &initialNum)
 * @brief Computes how binary instruction @a insn affects the loop variable that
 *        starts on @a initialNum.
 */
-bool LoopFounder::processBinop(const Insn *insn, Number &initialNum)
+bool LoopFinder::processBinop(const Insn *insn, Number &initialNum)
 {
 	const enum cl_binop_e code = static_cast<enum cl_binop_e>(insn->subCode);
 
@@ -419,7 +419,7 @@ bool LoopFounder::processBinop(const Insn *insn, Number &initialNum)
 *        with @a constant. In the vector @a insns, instructions from the loop body
 *        are stored.
 */
-unsigned long LoopFounder::computeTripCountOfLoop(const cl_operand *variable,
+unsigned long LoopFinder::computeTripCountOfLoop(const cl_operand *variable,
 	const cl_operand *constant, const cl_operand *initial, const enum cl_binop_e type,
 	const vector<const Insn*> &insns)
 {
@@ -462,7 +462,7 @@ unsigned long LoopFounder::computeTripCountOfLoop(const cl_operand *variable,
 
 	while (compare(initialNum, constantNum)) {
 		// We can afford compute this because it is really ambitious.
-		if (tripCount > LoopFounder::MaxTripCountOfTheLoopBeforeStop) {
+		if (tripCount > LoopFinder::MaxTripCountOfTheLoopBeforeStop) {
 			return 0;
 		}
 
@@ -475,11 +475,11 @@ unsigned long LoopFounder::computeTripCountOfLoop(const cl_operand *variable,
 
 			switch (code) {
 				case CL_INSN_UNOP:
-					LoopFounder::processUnop(insn, initialNum);
+					LoopFinder::processUnop(insn, initialNum);
 					break;
 
 				case CL_INSN_BINOP:
-					if (!LoopFounder::processBinop(insn, initialNum)) {
+					if (!LoopFinder::processBinop(insn, initialNum)) {
 						// The operation was bit rotate. We are not able to handle it.
 						return 0;
 					}
@@ -511,7 +511,7 @@ unsigned long LoopFounder::computeTripCountOfLoop(const cl_operand *variable,
 * @return If initial value was found, @c true is returned. Otherwise, @c false is
 *         returned.
 */
-bool LoopFounder::findInitialValueForCondVar(const Block *block,
+bool LoopFinder::findInitialValueForCondVar(const Block *block,
 	const cl_operand* variable, const cl_operand **initial)
 {
 	BOOST_REVERSE_FOREACH(const Insn *insn, *block) {
@@ -553,7 +553,7 @@ bool LoopFounder::findInitialValueForCondVar(const Block *block,
 * @return If we were able to process the instruction @a prevInsn, then @c true
 *         is returned. Otherwise, @c false is returned.
 */
-bool LoopFounder::processPreviousInsn(const Insn *insn, const Insn *prevInsn,
+bool LoopFinder::processPreviousInsn(const Insn *insn, const Insn *prevInsn,
 	const cl_operand **variable, const cl_operand **constant, enum cl_binop_e &type)
 {
 	if (prevInsn == NULL) {
@@ -620,14 +620,14 @@ bool LoopFounder::processPreviousInsn(const Insn *insn, const Insn *prevInsn,
 * @return If condition is found, it returns @c true and appropriate variables are set.
 *         Otherwise, @c false is returned.
 */
-bool LoopFounder::checkCondition(const Block *block, const cl_operand **variable,
+bool LoopFinder::checkCondition(const Block *block, const cl_operand **variable,
 	const cl_operand **constant, enum cl_binop_e &type)
 {
 	const Insn *prevInsn = NULL;
 	BOOST_FOREACH(const Insn *insn, *block) {
 		if (CL_INSN_COND == insn->code) {
 			// We are not able to process previous instruction.
-			if (!LoopFounder::processPreviousInsn(insn, prevInsn, variable,
+			if (!LoopFinder::processPreviousInsn(insn, prevInsn, variable,
 				constant, type)) {
 				return false;
 			}
@@ -648,9 +648,9 @@ bool LoopFounder::checkCondition(const Block *block, const cl_operand **variable
 /**
 * @brief Sets the given value @a value for the given block @a block.
 */
-void LoopFounder::setValueForBlock(const Block *block, unsigned long value)
+void LoopFinder::setValueForBlock(const Block *block, unsigned long value)
 {
-	LoopFounder::blockToUpperLimit[block] = value;
+	LoopFinder::blockToUpperLimit[block] = value;
 }
 
 /**
@@ -658,10 +658,10 @@ void LoopFounder::setValueForBlock(const Block *block, unsigned long value)
 *        is stored in @a block. If this condition is evaluated as @c true, then
 *        the next block will be @a thenBlock.
 */
-void LoopFounder::computeLoopAnalysisForPatternWhile(const Block *block,
+void LoopFinder::computeLoopAnalysisForPatternWhile(const Block *block,
 	const Block *thenBlock)
 {
-	LoopFounder::setValueForBlock(block, 0);
+	LoopFinder::setValueForBlock(block, 0);
 
 	// Finds the previous block. We need to find that predecessor that is not
 	// block's successor.
@@ -678,30 +678,30 @@ void LoopFounder::computeLoopAnalysisForPatternWhile(const Block *block,
 	const cl_operand* variable = NULL;
 	const cl_operand* constant = NULL;
 	enum cl_binop_e type;
-	if (!LoopFounder::checkCondition(block, &variable, &constant, type)) {
-		LoopFounder::setValueForBlock(thenBlock, 0);
+	if (!LoopFinder::checkCondition(block, &variable, &constant, type)) {
+		LoopFinder::setValueForBlock(thenBlock, 0);
 		return;
 	}
 
 	// Finds the initial value for the variable.
 	const cl_operand* initial = NULL;
-	if (!LoopFounder::findInitialValueForCondVar(prevBlock, variable, &initial)) {
-		LoopFounder::setValueForBlock(thenBlock, 0);
+	if (!LoopFinder::findInitialValueForCondVar(prevBlock, variable, &initial)) {
+		LoopFinder::setValueForBlock(thenBlock, 0);
 		return;
 	}
 
 	// Finds if the instructions from thenBlock working with loop variable are
 	// computable for us. If they are, it creates an vector of relevant instructions.
 	vector<const Insn*> insns;
-	if (!LoopFounder::findRelevantInsns(thenBlock, variable, insns)) {
-		LoopFounder::setValueForBlock(thenBlock, 0);
+	if (!LoopFinder::findRelevantInsns(thenBlock, variable, insns)) {
+		LoopFinder::setValueForBlock(thenBlock, 0);
 		return;
 	}
 
 	// Computes how many times loop will be executed.
-	unsigned long value = LoopFounder::computeTripCountOfLoop(
+	unsigned long value = LoopFinder::computeTripCountOfLoop(
 		variable, constant, initial, type, insns);
-	LoopFounder::setValueForBlock(thenBlock, value);
+	LoopFinder::setValueForBlock(thenBlock, value);
 }
 
 /**
@@ -709,10 +709,10 @@ void LoopFounder::computeLoopAnalysisForPatternWhile(const Block *block,
 *        is stored in @a block. If this condition is evaluated as @c true, then
 *        the next block will be @a ifBlock.
 */
-void LoopFounder::computeLoopAnalysisForPatternWhileIf(const Block *block,
+void LoopFinder::computeLoopAnalysisForPatternWhileIf(const Block *block,
 	const Block *ifBlock)
 {
-	LoopFounder::setValueForBlock(block, 0);
+	LoopFinder::setValueForBlock(block, 0);
 
 	const TTargetList &succsIf = ifBlock->targets();
 	const Block *thenBlock = succsIf[0];
@@ -733,28 +733,28 @@ void LoopFounder::computeLoopAnalysisForPatternWhileIf(const Block *block,
 	enum cl_binop_e type;
 	const cl_operand* initial = NULL;
 	vector<const Insn*> insns;
-	if (!LoopFounder::checkCondition(block, &variable, &constant, type) ||
+	if (!LoopFinder::checkCondition(block, &variable, &constant, type) ||
 		// Checks if we can handle the condition in the given block.
-		!LoopFounder::findInitialValueForCondVar(prevBlock, variable, &initial) ||
+		!LoopFinder::findInitialValueForCondVar(prevBlock, variable, &initial) ||
 		// Finds the initial value for the variable.
-		LoopFounder::blockModifiesVar(thenBlock, variable) ||
+		LoopFinder::blockModifiesVar(thenBlock, variable) ||
 		// Checks if there is instruction modifying condition variable.
-		!LoopFounder::findRelevantInsns(ifBlock, variable, insns) ||
-		!LoopFounder::findRelevantInsns(elseBlock, variable, insns)
+		!LoopFinder::findRelevantInsns(ifBlock, variable, insns) ||
+		!LoopFinder::findRelevantInsns(elseBlock, variable, insns)
 		// Finds if instructions working with loop variable are computable for us
 		) {
-		LoopFounder::setValueForBlock(ifBlock, 0);
-		LoopFounder::setValueForBlock(thenBlock, 0);
-		LoopFounder::setValueForBlock(elseBlock, 0);
+		LoopFinder::setValueForBlock(ifBlock, 0);
+		LoopFinder::setValueForBlock(thenBlock, 0);
+		LoopFinder::setValueForBlock(elseBlock, 0);
 		return;
 	}
 
 	// Computes how many times loop will be executed.
-	unsigned long value = LoopFounder::computeTripCountOfLoop(
+	unsigned long value = LoopFinder::computeTripCountOfLoop(
 		variable, constant, initial, type, insns);
-	LoopFounder::setValueForBlock(ifBlock, value);
-	LoopFounder::setValueForBlock(thenBlock, value);
-	LoopFounder::setValueForBlock(elseBlock, value);
+	LoopFinder::setValueForBlock(ifBlock, value);
+	LoopFinder::setValueForBlock(thenBlock, value);
+	LoopFinder::setValueForBlock(elseBlock, value);
 }
 
 /**
@@ -762,10 +762,10 @@ void LoopFounder::computeLoopAnalysisForPatternWhileIf(const Block *block,
 *        is stored in @a block. If this condition is evaluated as @c true, then
 *        the next block will be @a ifBlock.
 */
-void LoopFounder::computeLoopAnalysisForPatternWhileIfElse(const Block *block,
+void LoopFinder::computeLoopAnalysisForPatternWhileIfElse(const Block *block,
 	const Block *ifBlock)
 {
-	LoopFounder::setValueForBlock(block, 0);
+	LoopFinder::setValueForBlock(block, 0);
 
 	const TTargetList &succsIf = ifBlock->targets();
 	const Block *thenBlock = succsIf[0];
@@ -787,38 +787,38 @@ void LoopFounder::computeLoopAnalysisForPatternWhileIfElse(const Block *block,
 	enum cl_binop_e type;
 	const cl_operand* initial = NULL;
 	vector<const Insn*> insns;
-	if (!LoopFounder::checkCondition(block, &variable, &constant, type) ||
+	if (!LoopFinder::checkCondition(block, &variable, &constant, type) ||
 		// Checks if we can handle the condition in the given block.
-		!LoopFounder::findInitialValueForCondVar(prevBlock, variable, &initial) ||
+		!LoopFinder::findInitialValueForCondVar(prevBlock, variable, &initial) ||
 		// Finds the initial value for the variable.
-		LoopFounder::blockModifiesVar(thenBlock, variable) ||
-		LoopFounder::blockModifiesVar(elseBlock, variable) ||
+		LoopFinder::blockModifiesVar(thenBlock, variable) ||
+		LoopFinder::blockModifiesVar(elseBlock, variable) ||
 		// Checks if there is instruction modifying condition variable.
-		!LoopFounder::findRelevantInsns(ifBlock, variable, insns) ||
-		!LoopFounder::findRelevantInsns(gotoBlock, variable, insns)
+		!LoopFinder::findRelevantInsns(ifBlock, variable, insns) ||
+		!LoopFinder::findRelevantInsns(gotoBlock, variable, insns)
 		// Finds if instructions working with loop variable are computable for us
 		) {
-		LoopFounder::setValueForBlock(ifBlock, 0);
-		LoopFounder::setValueForBlock(thenBlock, 0);
-		LoopFounder::setValueForBlock(elseBlock, 0);
-		LoopFounder::setValueForBlock(gotoBlock, 0);
+		LoopFinder::setValueForBlock(ifBlock, 0);
+		LoopFinder::setValueForBlock(thenBlock, 0);
+		LoopFinder::setValueForBlock(elseBlock, 0);
+		LoopFinder::setValueForBlock(gotoBlock, 0);
 		return;
 	}
 
 	// Computes how many times loop will be executed.
-	unsigned long value = LoopFounder::computeTripCountOfLoop(
+	unsigned long value = LoopFinder::computeTripCountOfLoop(
 		variable, constant, initial, type, insns);
-	LoopFounder::setValueForBlock(ifBlock, value);
-	LoopFounder::setValueForBlock(thenBlock, value);
-	LoopFounder::setValueForBlock(elseBlock, value);
-	LoopFounder::setValueForBlock(gotoBlock, value);
+	LoopFinder::setValueForBlock(ifBlock, value);
+	LoopFinder::setValueForBlock(thenBlock, value);
+	LoopFinder::setValueForBlock(elseBlock, value);
+	LoopFinder::setValueForBlock(gotoBlock, value);
 }
 
 /**
 * @brief Returns @c true if block @a block modifies variable @a variable. Otherwise,
 *        it return @c false.
 */
-bool LoopFounder::blockModifiesVar(const Block *block, const cl_operand *variable)
+bool LoopFinder::blockModifiesVar(const Block *block, const cl_operand *variable)
 {
 	BOOST_FOREACH(const Insn *insn, *block) {
 		// Checks if this instruction can modify variable.
@@ -842,7 +842,7 @@ bool LoopFounder::blockModifiesVar(const Block *block, const cl_operand *variabl
 *        represents the entry point to the simple "while" loop. Otherwise,
 *        it return @c false.
 */
-bool LoopFounder::isPatternWhile(const Block *block, const Block *thenBlock)
+bool LoopFinder::isPatternWhile(const Block *block, const Block *thenBlock)
 {
 	// Gets the predecessors and successors of the processed block.
 	const TTargetList &preds = block->inbound();
@@ -877,7 +877,7 @@ bool LoopFounder::isPatternWhile(const Block *block, const Block *thenBlock)
 *        the condition for simple @c if statement. The last block of the
 *        @c if statement will be stored in @a gotoBlock.
 */
-bool LoopFounder::isPatternIf(const Block *block, const Block **gotoBlock)
+bool LoopFinder::isPatternIf(const Block *block, const Block **gotoBlock)
 {
 	const Block *thenBlock = NULL;
 	const Block *elseBlock = NULL;
@@ -930,7 +930,7 @@ bool LoopFounder::isPatternIf(const Block *block, const Block **gotoBlock)
 *        the condition for simple @c if-else statement. The last block of the
 *        @c if-else statement will be stored in @a gotoBlock.
 */
-bool LoopFounder::isPatternIfElse(const Block *block, const Block **gotoBlock)
+bool LoopFinder::isPatternIfElse(const Block *block, const Block **gotoBlock)
 {
 	const Block *thenBlock = NULL;
 	const Block *elseBlock = NULL;
@@ -995,7 +995,7 @@ bool LoopFounder::isPatternIfElse(const Block *block, const Block **gotoBlock)
 *        represents the entry point to the simple "while" loop with if statement.
 *        Otherwise, it return @c false.
 */
-bool LoopFounder::isPatternWhileIf(const Block *block, const Block *thenBlock)
+bool LoopFinder::isPatternWhileIf(const Block *block, const Block *thenBlock)
 {
 	// Gets the predecessors and successors of the processed block.
 	const TTargetList &preds = block->inbound();
@@ -1008,7 +1008,7 @@ bool LoopFounder::isPatternWhileIf(const Block *block, const Block *thenBlock)
 	}
 
 	const Block *gotoBlock;
-	if (!LoopFounder::isPatternIf(thenBlock, &gotoBlock)) {
+	if (!LoopFinder::isPatternIf(thenBlock, &gotoBlock)) {
 		return false;
 	}
 
@@ -1025,7 +1025,7 @@ bool LoopFounder::isPatternWhileIf(const Block *block, const Block *thenBlock)
 *        represents the entry point to the simple "while" loop with if-else statement.
 *        Otherwise, it return @c false.
 */
-bool LoopFounder::isPatternWhileIfElse(const Block *block, const Block *thenBlock)
+bool LoopFinder::isPatternWhileIfElse(const Block *block, const Block *thenBlock)
 {
 	// Gets the predecessors and successors of the processed block.
 	const TTargetList &preds = block->inbound();
@@ -1038,7 +1038,7 @@ bool LoopFounder::isPatternWhileIfElse(const Block *block, const Block *thenBloc
 	}
 
 	const Block *gotoBlock;
-	if (!LoopFounder::isPatternIfElse(thenBlock, &gotoBlock)) {
+	if (!LoopFinder::isPatternIfElse(thenBlock, &gotoBlock)) {
 		return false;
 	}
 
@@ -1054,7 +1054,7 @@ bool LoopFounder::isPatternWhileIfElse(const Block *block, const Block *thenBloc
 *        return the pointer to the block that will be executed after this condition
 *        is evaluated as @c true. Otherwise, it returns @c NULL.
 */
-const Block* LoopFounder::getThenBlock(const Block *block)
+const Block* LoopFinder::getThenBlock(const Block *block)
 {
 	BOOST_FOREACH(const Insn *insn, *block) {
 		if (CL_INSN_COND == insn->code) {
@@ -1073,36 +1073,36 @@ const Block* LoopFounder::getThenBlock(const Block *block)
 *        loops set the upper limit to zero which means that we do not know and
 *        this heuristic could not be used.
 */
-void LoopFounder::computeLoopAnalysisForBlock(const Block *block)
+void LoopFinder::computeLoopAnalysisForBlock(const Block *block)
 {
 	const Block *thenBlock = getThenBlock(block);
 	if (thenBlock == NULL) {
 		// If this block does not contain condition, we are not interested in
 		// processing this block.
-		if (LoopFounder::blockToUpperLimit.find(block) ==
-			LoopFounder::blockToUpperLimit.end()) {
-			LoopFounder::blockToUpperLimit[block] = 0;
+		if (LoopFinder::blockToUpperLimit.find(block) ==
+			LoopFinder::blockToUpperLimit.end()) {
+			LoopFinder::blockToUpperLimit[block] = 0;
 		}
 		return;
 	}
 
-	if (LoopFounder::isPatternWhile(block, thenBlock)) {
-		LoopFounder::computeLoopAnalysisForPatternWhile(block, thenBlock);
+	if (LoopFinder::isPatternWhile(block, thenBlock)) {
+		LoopFinder::computeLoopAnalysisForPatternWhile(block, thenBlock);
 	}
 
-	if (LoopFounder::isPatternWhileIf(block, thenBlock)) {
-		LoopFounder::computeLoopAnalysisForPatternWhileIf(block, thenBlock);
+	if (LoopFinder::isPatternWhileIf(block, thenBlock)) {
+		LoopFinder::computeLoopAnalysisForPatternWhileIf(block, thenBlock);
 	}
 
-	if (LoopFounder::isPatternWhileIfElse(block, thenBlock)) {
-		LoopFounder::computeLoopAnalysisForPatternWhileIfElse(block, thenBlock);
+	if (LoopFinder::isPatternWhileIfElse(block, thenBlock)) {
+		LoopFinder::computeLoopAnalysisForPatternWhileIfElse(block, thenBlock);
 	}
 }
 
 /**
 * @brief Computes the loops' analysis for the given function @a fnc.
 */
-void LoopFounder::computeLoopAnalysisForFnc(const Fnc &fnc)
+void LoopFinder::computeLoopAnalysisForFnc(const Fnc &fnc)
 {
 	// Schedulers.
 	stack<const Block *> todoStack;
@@ -1114,7 +1114,7 @@ void LoopFounder::computeLoopAnalysisForFnc(const Fnc &fnc)
 	while (!todoStack.empty()) {
 		const Block *block = todoStack.top();
 		todoStack.pop();
-		LoopFounder::computeLoopAnalysisForBlock(block);
+		LoopFinder::computeLoopAnalysisForBlock(block);
 		doneSet.insert(block);
 
 		// Gets the successors of the processed block.
@@ -1133,7 +1133,7 @@ void LoopFounder::computeLoopAnalysisForFnc(const Fnc &fnc)
 * @brief Computes the loops' upper limits for the given representation of analysed
 *        program stored in @a stor.
 */
-void LoopFounder::computeLoopAnalysis(const CodeStorage::Storage &stor)
+void LoopFinder::computeLoopAnalysis(const CodeStorage::Storage &stor)
 {
 	BOOST_FOREACH(const Fnc* pFnc, stor.fncs) {
 		const Fnc &fnc = *pFnc;
@@ -1141,25 +1141,25 @@ void LoopFounder::computeLoopAnalysis(const CodeStorage::Storage &stor)
 		if (!isDefined(fnc))
 			continue;
 
-		LoopFounder::computeLoopAnalysisForFnc(fnc);
+		LoopFinder::computeLoopAnalysisForFnc(fnc);
 	}
 }
 
 /**
 * @brief Returns upper limit for the given @a block.
 */
-unsigned long LoopFounder::getUpperLimit(const Block *block)
+unsigned long LoopFinder::getUpperLimit(const Block *block)
 {
-	return LoopFounder::blockToUpperLimit[block];
+	return LoopFinder::blockToUpperLimit[block];
 }
 
 /**
 * @brief Emits the computed upper limits for each block into @a os.
 */
-ostream& LoopFounder::printLoopAnalysis(std::ostream &os)
+ostream& LoopFinder::printLoopAnalysis(std::ostream &os)
 {
 	BOOST_FOREACH(const BlockToUpperLimit::value_type &b,
-		LoopFounder::blockToUpperLimit) {
+		LoopFinder::blockToUpperLimit) {
 
 		// Prints information for each block.
 		os << b.first->name() << ": " << b.second

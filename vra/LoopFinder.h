@@ -1,6 +1,6 @@
 /**
 * @author Daniela Ďuričeková, xduric00@stud.fit.vutbr.cz
-* @file   LoopFounder.h
+* @file   LoopFinder.h
 * @brief  Class computes for every block the upper limit that represents how many
 *         times loops will be entered.
 * @date   2013
@@ -27,8 +27,7 @@
 * limit is set to zero. So, zero represents that we do not know how many times the
 * block will be traversed or the block is not part of any loops.
 */
-
-class LoopFounder {
+class LoopFinder {
 	public:
 		/// Type for storing upper limits for each block;
 		typedef std::map<const CodeStorage::Block *, unsigned long> BlockToUpperLimit;
@@ -43,7 +42,7 @@ class LoopFounder {
 		static const unsigned long MaxTripCountOfTheLoopBeforeStop;
 
 		/// Just for assurance that nobody will try to use it.
-		LoopFounder() { }
+		LoopFinder() { }
 
 		/// For every block stores the upper limit.
 		static BlockToUpperLimit blockToUpperLimit;
@@ -122,4 +121,3 @@ class LoopFounder {
 };
 
 #endif
-

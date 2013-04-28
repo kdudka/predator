@@ -20,7 +20,7 @@
 
 #include "Range.h"
 #include "MemoryPlace.h"
-#include "LoopFounder.h"
+#include "LoopFinder.h"
 
 /**
 * @brief Class performs the value-range analysis and stores the result.
@@ -30,7 +30,6 @@
 * analysis per each function of the program. For each memory place in every block,
 * the final range is stored. Class is also responsible for printing tabular output.
 */
-
 class ValueAnalysis {
 	public:
 		/// Type of the data stored per each block.
@@ -45,7 +44,7 @@ class ValueAnalysis {
 
 		/// Stores maximal number of passes through the block or zero if we do
 		/// not know.
-		static LoopFounder::BlockToUpperLimit tripCountOfBlockMap;
+		static LoopFinder::BlockToUpperLimit tripCountOfBlockMap;
 
 		/// Type for representing key into map that stores trimmed ranges.
 		struct TrimmedKey {

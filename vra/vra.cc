@@ -12,7 +12,7 @@
 #include <cl/easy.hh>
 
 #include "ValueAnalysis.h"
-#include "LoopFounder.h"
+#include "LoopFinder.h"
 #include "GlobAnalysis.h"
 
 // required by the gcc plug-in API
@@ -25,8 +25,8 @@ using CodeStorage::Storage;
 
 void clEasyRun(const Storage &stor, const char *)
 {
-	LoopFounder::computeLoopAnalysis(stor);
-	// LoopFounder::printLoopAnalysis(std::cout);
+	LoopFinder::computeLoopAnalysis(stor);
+	// LoopFinder::printLoopAnalysis(std::cout);
 
 	GlobAnalysis::computeGlobAnalysis(stor);
 	// GlobAnalysis::printGlobAnalysis(std::cout);

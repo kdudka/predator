@@ -41,7 +41,7 @@ ValueAnalysis::BlockToResultMap ValueAnalysis::blockToOutputRangesMap;
 ValueAnalysis::SchedulerQueue ValueAnalysis::todoQueue;
 ValueAnalysis::SchedulerSet ValueAnalysis::todoSet;
 ValueAnalysis::BlockToCounterMap ValueAnalysis::blockToCounterMap;
-LoopFounder::BlockToUpperLimit ValueAnalysis::tripCountOfBlockMap;
+LoopFinder::BlockToUpperLimit ValueAnalysis::tripCountOfBlockMap;
 
 const unsigned ValueAnalysis::NumberOfPassesBeforeExpand = 1000;
 
@@ -417,7 +417,7 @@ void ValueAnalysis::computeAnalysisForFnc(const Fnc &fnc)
 		MemoryPlaceToRangeMap oldResult = ValueAnalysis::getRanges(block,
 			blockToOutputRangesMap);
 
-		unsigned long tripCount = LoopFounder::getUpperLimit(block);
+		unsigned long tripCount = LoopFinder::getUpperLimit(block);
 		if ((tripCount != 0) &&
 			(tripCount == ValueAnalysis::tripCountOfBlockMap[block]) ) {
 			// This block was processed enough times.

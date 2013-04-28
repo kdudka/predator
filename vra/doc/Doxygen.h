@@ -20,7 +20,7 @@
  *
  * - additional analyses:
  *      - GlobAnalysis - analyze global variables which may be modified
- *      - LoopFounder - computes the trip count of loops
+ *      - LoopFinder - computes the trip count of loops
  *
  * - supplementary classes:
  *      - Number - a unified representation of integral and floating-point numbers

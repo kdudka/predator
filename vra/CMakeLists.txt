@@ -41,7 +41,7 @@ add_library(vra_core STATIC
     OperandToMemoryPlace.cc
     ValueAnalysis.cc
     Utility.cc
-    LoopFounder.cc
+    LoopFinder.cc
     GlobAnalysis.cc
     version.c)
 
