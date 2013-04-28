@@ -18,3 +18,4 @@ tags
 *-bare-gcc.err
 *-predator.err
 cscope.out
+/vra_build
