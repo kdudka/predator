@@ -253,7 +253,7 @@
  * - 1 ... reorder heaps in SymStateWithJoin based on hit ratio
  * - 2 ... reorder heaps also in SymHeapUnion based on hit ratio [experimental]
  */
-#define SE_STATE_ON_THE_FLY_ORDERING        1
+#define SE_STATE_ON_THE_FLY_ORDERING        0
 
 /**
  * - 0 ... keep state info for all basic blocks of a function

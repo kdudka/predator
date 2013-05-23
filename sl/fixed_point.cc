@@ -128,24 +128,16 @@ typedef CleanList<LocalState>                       TStateList;
 typedef CleanList<TraceEdge>                        TTraceList;
 typedef std::map<TInsn, TLocIdx>                    TInsnLookup;
 
-struct StateBuilderCtx {
-    const TFnc          fnc;
-    TStateList         &stateList;
-    TInsnLookup         insnLookup;
-
-    StateBuilderCtx(const TFnc fnc_, TStateList &stateList_):
-        fnc(fnc_),
-        stateList(stateList_)
-    {
-    }
-};
-
-void loadHeaps(StateBuilderCtx &ctx, const TStateMap &stateMap)
+void loadHeaps(
+        TStateList                 *pStateList,
+        TInsnLookup                *pInsnLookup,
+        const TFnc                  fnc,
+        const TStateMap            &stateMap)
 {
     typedef WorkList<TBlock> TWorkList;
 
     // traverse the original (block-oriented) control-flow graph
-    TBlock bb = ctx.fnc->cfg.entry();
+    TBlock bb = fnc->cfg.entry();
     TWorkList wl(bb);
     while (wl.next(bb)) {
         LocalState *locState;
@@ -163,7 +155,7 @@ void loadHeaps(StateBuilderCtx &ctx, const TStateMap &stateMap)
                 // skip instruction we do not want in the result
                 continue;
 
-            const TLocIdx locIdx = ctx.stateList.size();
+            const TLocIdx locIdx = pStateList->size();
             if (insnIdx)
                 // update successor location of the _previous_ instruction
                 locState->cfgOutEdges.push_back(locIdx);
@@ -171,10 +163,10 @@ void loadHeaps(StateBuilderCtx &ctx, const TStateMap &stateMap)
             // allocate a new location for the current instruction
             locState = new LocalState;
             locState->insn = insn;
-            ctx.stateList.append(locState);
+            pStateList->append(locState);
 
             // store the reverse mapping from instructions to locations
-            ctx.insnLookup[insn] = locIdx;
+            (*pInsnLookup)[insn] = locIdx;
 
             // load heaps if a non-empty fixed-point is available for this loc
             const TStateMap::const_iterator it = stateMap.find(insn);
@@ -193,11 +185,11 @@ void loadHeaps(StateBuilderCtx &ctx, const TStateMap &stateMap)
     }
 }
 
-void finalizeFlow(StateBuilderCtx &ctx)
+void finalizeFlow(TStateList &stateList, const TInsnLookup &insnLookup)
 {
-    const TLocIdx locCnt = ctx.stateList.size();
+    const TLocIdx locCnt = stateList.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
-        LocalState *locState = ctx.stateList[locIdx];
+        LocalState *locState = stateList[locIdx];
         const TInsn insn = locState->insn;
 
         if (!locState->cfgOutEdges.empty()) {
@@ -220,8 +212,7 @@ void finalizeFlow(StateBuilderCtx &ctx)
             }
 
             // create a new control-flow edge (originally block-level edge)
-            CL_BREAK_IF(!hasKey(ctx.insnLookup, dst));
-            const TLocIdx dstIdx = ctx.insnLookup[dst];
+            const TLocIdx dstIdx = /* RO lookup */ insnLookup.find(dst)->second;
             locState->cfgOutEdges.push_back(dstIdx);
         }
 
@@ -232,10 +223,10 @@ void finalizeFlow(StateBuilderCtx &ctx)
 
     // initialize backward control-flow edges
     for (TLocIdx srcIdx = 0; srcIdx < locCnt; ++srcIdx) {
-        const LocalState *srcState = ctx.stateList[srcIdx];
+        const LocalState *srcState = stateList[srcIdx];
         BOOST_FOREACH(CfgEdge oe, srcState->cfgOutEdges) {
             const TLocIdx dstIdx = oe.targetLoc;
-            LocalState *dstState = ctx.stateList[dstIdx];
+            LocalState *dstState = stateList[dstIdx];
             oe.targetLoc = srcIdx;
             dstState->cfgInEdges.push_back(oe);
         }
@@ -518,11 +509,10 @@ GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
 {
     GlobalState *glState = new GlobalState;
 
-    StateBuilderCtx ctx(fnc, glState->stateList_);
-
-    loadHeaps(ctx, stateByInsn);
-
-    finalizeFlow(ctx);
+    // build the skeleton (CFG nodes/edges, list of heaps per each node)
+    TInsnLookup insnLookup;
+    loadHeaps(&glState->stateList_, &insnLookup, fnc, stateByInsn);
+    finalizeFlow(glState->stateList_, insnLookup);
 
     createTraceEdges(*glState, glState->traceList_);
 
