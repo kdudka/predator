@@ -51,12 +51,14 @@ void gatherReferredRoots(TObjSet &dst, SymHeap &sh, TObjId obj)
 
 bool isJunk(SymHeap &sh, TObjId obj)
 {
+    if (!sh.isValid(obj))
+        // this object is already freed
+        return false;
+
     WorkList<TObjId> wl(obj);
 
     while (wl.next(obj)) {
-        if (!sh.isValid(obj))
-            // this object is already freed
-            return false;
+        CL_BREAK_IF(!sh.isValid(obj));
 
         const EStorageClass code = sh.objStorClass(obj);
         if (!isOnHeap(code))
