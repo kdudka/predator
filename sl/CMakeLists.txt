@@ -32,6 +32,7 @@ endif()
 
 # libpredator.a
 add_library(predator STATIC
+    adt_op.cc
     cl_symexec.cc
     cont_shape.cc
     fixed_point.cc
