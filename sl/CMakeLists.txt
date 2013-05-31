@@ -33,6 +33,7 @@ endif()
 # libpredator.a
 add_library(predator STATIC
     adt_op.cc
+    adt_op_def.cc
     adt_op_meta.cc
     cl_symexec.cc
     cont_shape.cc
