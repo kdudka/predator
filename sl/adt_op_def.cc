@@ -32,7 +32,8 @@ class TplFactory {
         TplFactory(const CodeStorage::Storage &stor):
             stor_(stor),
             node_(new Trace::TransientNode("TplFactory")),
-            ptrSize_(stor.types.dataPtrSizeof())
+            ptrSize_(stor.types.dataPtrSizeof()),
+            objSize_(IR::rngFromNum(2 * ptrSize_))
         {
             bOff_.head = 0;
             bOff_.next = 0;
@@ -57,21 +58,36 @@ class TplFactory {
 
         TObjId createObj(SymHeap *pSh, const EObjKind kind) const;
 
+        void dropFieldsOfObj(SymHeap *pSh, const TObjId obj) const;
+
     private:
         const CodeStorage::Storage         &stor_;
         const Trace::NodeHandle             node_;
         const TSizeOf                       ptrSize_;
+        const TSizeRange                    objSize_;
         BindingOff                          bOff_;
 };
 
 TObjId TplFactory::createObj(SymHeap *pSh, const EObjKind kind) const
 {
-    const TSizeRange size = IR::rngFromNum(2 * ptrSize_);
-    const TObjId obj = pSh->heapAlloc(size);
+    const TObjId obj = pSh->heapAlloc(objSize_);
     if (OK_REGION != kind)
         pSh->objSetAbstract(obj, kind, bOff_);
 
     return obj;
+}
+
+void TplFactory::dropFieldsOfObj(SymHeap *pSh, const TObjId obj) const
+{
+    const TValId valUnknown = pSh->valCreate(VT_UNKNOWN, VO_ASSIGNED);
+
+    const UniformBlock ubAll = {
+        /* off      */  0,
+        /* size     */  objSize_.lo,
+        /* tplValue */  valUnknown
+    };
+
+    pSh->writeUniformBlock(obj, ubAll);
 }
 
 OpTemplate* createPushBack(TplFactory &fact)
@@ -98,10 +114,13 @@ OpTemplate* createPushBack(TplFactory &fact)
     Trace::waiveCloneOperation(output);
     tpl->addFootprint(new OpFootprint(input, output));
 
+    // drop the nullified fields of 'reg'
+    fact.dropFieldsOfObj(&sh, reg);
+
     // allocate a DLS that will represent a container shape in our template
     const TObjId dls = fact.createObj(&sh, OK_DLS);
-    const PtrHandle begPtr(sh, dls, fact.nextAt());
-    const PtrHandle endPtr(sh, dls, fact.prevAt());
+    const PtrHandle begPtr(sh, dls, fact.prevAt());
+    const PtrHandle endPtr(sh, dls, fact.nextAt());
     begPtr.setValue(VAL_NULL);
     endPtr.setValue(VAL_NULL);
     input = sh;
@@ -111,6 +130,7 @@ OpTemplate* createPushBack(TplFactory &fact)
     const TValId endAt = sh.addrOfTarget(dls, TS_LAST,   fact.headAt());
     endPtr.setValue(regAt);
     prevPtr.setValue(endAt);
+    nextPtr.setValue(VAL_NULL);
     output = sh;
 
     // register pre/post pair for push_back() to a non-empty list

@@ -39,7 +39,6 @@ struct MetaOperation {
     EMetaOperation      code;               /// kind of meta-operation
     TObjId              obj;                /// object ID we operate on
     TOffset             off;                /// offset we write at (set/unset)
-    ETargetSpecifier    ts;                 /// target specifier we use to write
     TObjId              tgtObj;             /// object we take address of (set)
     TValId              tgtOff;             /// tgt offset of the address (set)
     ETargetSpecifier    tgtTs;              /// tgt specifier of the addr (set)
@@ -52,7 +51,6 @@ inline bool operator<(const MetaOperation &a, const MetaOperation &b)
     RETURN_IF_COMPARED(a, b, code);
     RETURN_IF_COMPARED(a, b, obj);
     RETURN_IF_COMPARED(a, b, off);
-    RETURN_IF_COMPARED(a, b, ts);
     RETURN_IF_COMPARED(a, b, tgtObj);
     RETURN_IF_COMPARED(a, b, tgtOff);
     RETURN_IF_COMPARED(a, b, tgtTs);
