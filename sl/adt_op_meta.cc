@@ -20,14 +20,25 @@
 #include "config.h"
 #include "adt_op_meta.hh"
 
+#include "fixed_point.hh"
+
 using FixedPoint::TObjectMapper;
 
 namespace AdtOp {
 
 template <EDirection dir>
-bool projectMetaOperation(MetaOperation &mo, FixedPoint::TObjectMapper idMap)
+bool projectMetaOperation(MetaOperation &mo, TObjectMapper idMap)
 {
     // TODO
+    return false;
+}
+
+bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
+{
+    // TODO
+    (void) pDst;
+    (void) sh1;
+    (void) sh2;
     return false;
 }
 

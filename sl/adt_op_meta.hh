@@ -20,8 +20,8 @@
 #ifndef H_GUARD_ADT_OP_META_H
 #define H_GUARD_ADT_OP_META_H
 
-#include "fixed_point.hh"
 #include "util.hh"                          // for RETURN_IF_COMPARED
+#include "symheap.hh"
 
 namespace AdtOp {
 
