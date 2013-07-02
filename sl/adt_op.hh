@@ -50,24 +50,43 @@ class OpTemplate {
     public:
         /// @name a human-readable name of the operation
         OpTemplate(const std::string &name):
-            name_(name)
+            name_(name),
+            dirty_(false)
         {
         }
 
         /// takes ownership of *footprint and will release it on destruction
         void addFootprint(OpFootprint *footprint) {
             fList_.append(footprint);
+            dirty_ = true;
         }
 
-        ESearchDirection searchDirection() const;
+        const TShapeListByHeapIdx& inShapes() const {
+            this->updateMetaIfNeeded();
+            return inShapes_;
+        }
 
-        TShapeListByHeapIdx shapeListByIdx() const;
+        const TShapeListByHeapIdx& outShapes() const {
+            this->updateMetaIfNeeded();
+            return outShapes_;
+        }
+
+        ESearchDirection searchDirection() const {
+            this->updateMetaIfNeeded();
+            return searchDirection_;
+        }
 
         void plot() const;
 
     private:
-        const std::string       name_;
-        CleanList<OpFootprint>  fList_;
+        const std::string               name_;
+        CleanList<OpFootprint>          fList_;
+        mutable bool                    dirty_;
+        mutable TShapeListByHeapIdx     inShapes_;
+        mutable TShapeListByHeapIdx     outShapes_;
+        mutable ESearchDirection        searchDirection_;
+
+        void updateMetaIfNeeded() const;
 };
 
 /// collection of operation templates

@@ -20,7 +20,9 @@
 #include "config.h"
 #include "adt_op.hh"
 
+#include "cont_shape.hh"
 #include "symplot.hh"
+#include "symstate.hh"
 
 #include <iomanip>
 #include <sstream>
@@ -31,6 +33,42 @@ namespace AdtOp {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of OpTemplate
+void OpTemplate::updateMetaIfNeeded() const
+{
+    if (this->dirty_)
+        this->dirty_ = false;
+    else
+        return;
+
+    // get the lists of input/output heaps from all footprints
+    SymHeapList inState, outState;
+    BOOST_FOREACH(const OpFootprint *fp, fList_) {
+        inState.insert(fp->input);
+        outState.insert(fp->output);
+    }
+
+    // detect container shapes in the input/output heaps
+    detectLocalContShapes(&inShapes_, inState);
+    detectLocalContShapes(&outShapes_, outState);
+
+    // TODO: implement a heuristic for searchDirection_
+    searchDirection_ = SD_INVALID;
+}
+
+/// FIXME: copy-pasted from fixed_point_proxy.cc
+void contShapeIdsByShapeList(
+        TIdSet                     *pDst,
+        const SymHeap              &sh,
+        const TShapeList           &shapeList)
+{
+    BOOST_FOREACH(const Shape &shape, shapeList) {
+        TObjSet contShapeObjs;
+        objSetByShape(&contShapeObjs, sh, shape);
+        BOOST_FOREACH(const TObjId obj, contShapeObjs)
+            pDst->insert(static_cast<int>(obj));
+    }
+}
+
 void OpTemplate::plot() const
 {
     unsigned idx = 0U;
@@ -42,10 +80,16 @@ void OpTemplate::plot() const
             << std::fixed
             << std::setfill('0')
             << std::setw(/* width of the idx suffix */ 2)
-            << (idx++);
+            << idx;
 
-        plotHeap(fprint->input, str.str() + "-in");
-        plotHeap(fprint->output, str.str() + "-out");
+        TIdSet inIds, outIds;
+        contShapeIdsByShapeList(&inIds,  fprint->input, this->inShapes()[idx]);
+        contShapeIdsByShapeList(&outIds, fprint->output,this->outShapes()[idx]);
+
+        plotHeap(fprint->input, str.str() + "-in", /* loc */ 0, 0, &inIds);
+        plotHeap(fprint->output, str.str() + "-out", /* loc */ 0, 0, &outIds);
+
+        ++idx;
     }
 }
 
