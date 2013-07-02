@@ -30,14 +30,6 @@
 namespace AdtOp {
 
 // /////////////////////////////////////////////////////////////////////////////
-// implementation of OpFootprint
-OpFootprint::OpFootprint(const SymHeap &input, const SymHeap &output):
-    input_(input),
-    output_(output)
-{
-}
-
-// /////////////////////////////////////////////////////////////////////////////
 // implementation of OpTemplate
 void OpTemplate::plot() const
 {
@@ -52,8 +44,8 @@ void OpTemplate::plot() const
             << std::setw(/* width of the idx suffix */ 2)
             << (idx++);
 
-        plotHeap(fprint->input(), str.str() + "-in");
-        plotHeap(fprint->output(), str.str() + "-out");
+        plotHeap(fprint->input, str.str() + "-in");
+        plotHeap(fprint->output, str.str() + "-out");
     }
 }
 

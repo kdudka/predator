@@ -22,6 +22,7 @@
 
 #include "clean_list.hh"
 #include "symheap.hh"
+#include "shape.hh"
 
 namespace AdtOp {
 
@@ -33,26 +34,15 @@ enum ESearchDirection {
 };
 
 /// operation footprint given by an input/output template pair
-class OpFootprint {
-    public:
-        OpFootprint(const SymHeap &input, const SymHeap &output);
+struct OpFootprint {
+    SymHeap                     input;
+    SymHeap                     output;
 
-        const SymHeap& input() const {
-            return input_;
-        }
-
-        const SymHeap& output() const {
-            return output_;
-        }
-
-        ESearchDirection searchDirection() const {
-            return searchDirection_;
-        }
-
-    private:
-        SymHeap                 input_;
-        SymHeap                 output_;
-        ESearchDirection        searchDirection_;
+    OpFootprint(const SymHeap &input_, const SymHeap &output_):
+        input(input_),
+        output(output_)
+    {
+    }
 };
 
 /// an operation (push_back, erase, ...) template we can match by footprints
@@ -68,6 +58,10 @@ class OpTemplate {
         void addFootprint(OpFootprint *footprint) {
             fList_.append(footprint);
         }
+
+        ESearchDirection searchDirection() const;
+
+        TShapeListByHeapIdx shapeListByIdx() const;
 
         void plot() const;
 
