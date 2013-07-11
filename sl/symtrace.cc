@@ -93,6 +93,19 @@ void NodeHandle::reset(Node *node)
     ref->notifyBirth(this);
 }
 
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of Trace::resolveIdMapping()
+void resolveIdMapping(TIdMapper *pDst, const Node *trSrc, const Node *trDst)
+{
+    CL_BREAK_IF(!pDst->empty());
+
+    // start with identity, then go through the trace and construct composition
+    pDst->setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
+
+    // TODO: handle trace nodes with more than one parent!
+    for(const Trace::Node *tr = trDst; trSrc != tr; tr = tr->parent())
+        pDst->composite<D_RIGHT_TO_LEFT>(tr->idMapper());
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::plotTrace()
