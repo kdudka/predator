@@ -22,6 +22,7 @@
 
 #include "adt_op.hh"
 #include "adt_op_def.hh"
+#include "cont_shape_seq.hh"
 #include "fixed_point.hh"
 #include "symplot.hh"
 
@@ -154,6 +155,11 @@ void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
 
 void plotFncCore(PlotData &plot, const GlobalState &fncState)
 {
+    // XXX
+    TShapeSeqList ssList;
+    collectShapeSequences(&ssList, fncState);
+    CL_BREAK_IF(!ssList.empty());
+
     const TLocIdx locCnt = fncState.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         const LocalState &locState = fncState[locIdx];
