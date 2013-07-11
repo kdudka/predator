@@ -31,6 +31,16 @@
 
 namespace AdtOp {
 
+int countObjsInContShapes(const TShapeListByHeapIdx &slistByHeap)
+{
+    int cnt = 0;
+    BOOST_FOREACH(const TShapeList &slist, slistByHeap)
+        BOOST_FOREACH(const Shape &shape, slist)
+            cnt += shape.length;
+
+    return cnt;
+}
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of OpTemplate
 void OpTemplate::updateMetaIfNeeded() const
@@ -39,6 +49,10 @@ void OpTemplate::updateMetaIfNeeded() const
         this->dirty_ = false;
     else
         return;
+
+    // wipe out all meta data
+    inShapes_.clear();
+    outShapes_.clear();
 
     // get the lists of input/output heaps from all footprints
     SymHeapList inState, outState;
@@ -51,8 +65,12 @@ void OpTemplate::updateMetaIfNeeded() const
     detectLocalContShapes(&inShapes_, inState);
     detectLocalContShapes(&outShapes_, outState);
 
-    // TODO: implement a heuristic for searchDirection_
-    searchDirection_ = SD_INVALID;
+    // pick the side with more objects included in container shapes
+    const int cntIn  = countObjsInContShapes(inShapes_);
+    const int cntOut = countObjsInContShapes(outShapes_);
+    searchDirection_ = (cntIn < cntOut)
+        ? SD_BACKWARD
+        : SD_FORWARD;
 }
 
 /// FIXME: copy-pasted from fixed_point_proxy.cc
