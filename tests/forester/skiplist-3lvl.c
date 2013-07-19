@@ -15,6 +15,7 @@
  */
 
 #include <stdlib.h>
+#include <verifier-builtins.h>
 
 // a skip list node with three next pointers
 struct sl_item {
@@ -56,17 +57,17 @@ void sl_random_insert(struct sl *sl)
 
 	// moving randomly on the 3rd level
 	a3 = sl->head;
-	while (a3->n3 != sl->tail && __nondet())
+	while (a3->n3 != sl->tail && __VERIFIER_nondet_int())
 		a3 = a3->n3;
 
 	// moving randomly on the 2nd level, not going behind a3->n3
 	a2 = a3;
-	while (a2->n2 != a3->n3 && __nondet())
+	while (a2->n2 != a3->n3 && __VERIFIER_nondet_int())
 		a2 = a2->n2;
 
 	// moving randomly on the 1st level, not going behind a2->n2
 	a1 = a2;
-	while (a1->n1 != a2->n2 && __nondet())
+	while (a1->n1 != a2->n2 && __VERIFIER_nondet_int())
 		a1 = a1->n1;
 
 	// allocation and insertion of a new node
@@ -76,11 +77,11 @@ void sl_random_insert(struct sl *sl)
 	a1->n1 = new;
 
 	// choose whether to insert at level 2
-	if (__nondet()) {
+	if (__VERIFIER_nondet_int()) {
 		new->n2 = a2->n2;
 		a2->n2 = new;
 		// choose whether to insert at level 3
-		if (__nondet()) {
+		if (__VERIFIER_nondet_int()) {
 			new->n3 = a3->n3;
 			a3->n3 = new;
 		}
@@ -103,7 +104,7 @@ int main()
 {
 	struct sl *sl = create_sl_with_head_and_tail();
 
-	while (__nondet())
+	while (__VERIFIER_nondet_int())
 		sl_random_insert(sl);
 
 	destroy_sl(sl);
