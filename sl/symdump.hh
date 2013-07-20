@@ -34,19 +34,19 @@ namespace Trace {
     class Node;
 }
 
-/// plot the given heap to file "symdump-NNNN.dot"
-void dump_plot(const SymHeapCore *sh);
+/// dummy function to pull all symbols from a static library
+void initSymDump();
 
 /// plot the given heap to file "symdump-NNNN.dot"
-void dump_plot(const SymHeapCore &sh);
+void sl_dump(const SymHeapCore *sh);
+
+/// plot the given heap to file "symdump-NNNN.dot"
+void sl_dump(const SymHeapCore &sh);
 
 /// plot the given heap to file "NAME-NNNN.dot"
-void dump_plot(const SymHeapCore &sh, const char *name);
+void sl_dump(const SymHeapCore &sh, const char *name);
 
 /// plot a trace graph with the given end-point
-void dump_trace(Trace::Node *endPoint);
-
-/// plot the corresponding trace graph
-void dump_trace(const SymHeapCore &);
+void sl_dump(Trace::Node *endPoint);
 
 #endif /* H_GUARD_SYM_DUMP_H */
