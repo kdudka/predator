@@ -1155,15 +1155,14 @@ void SymHeapCore::Private::reinterpretObjData(
             if (isCoveredByBlock(oldData, blData)) {
                 // object fully covered by the overlapping uniform block
                 oldData->value = this->valDup(blData->value);
-                goto data_restored;
+                break;
             }
             // fall through!
 
         case BK_FIELD:
-            if (this->reinterpretSingleObj(oldData, blData))
-                goto data_restored;
+            if (!this->reinterpretSingleObj(oldData, blData))
+                oldData->value = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
 
-            oldData->value = this->valCreate(VT_UNKNOWN, VO_REINTERPRET);
             break;
 
         case BK_COMPOSITE:
@@ -1183,7 +1182,6 @@ void SymHeapCore::Private::reinterpretObjData(
         return;
     }
 
-data_restored:
     // register the newly assigned value of the _old_ object
     this->registerValueOf(old, oldData->value);
 }
