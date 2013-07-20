@@ -22,6 +22,7 @@
 
 #include "adt_op.hh"
 #include "adt_op_def.hh"
+#include "adt_op_match.hh"
 #include "cont_shape_seq.hh"
 #include "fixed_point.hh"
 #include "symplot.hh"
@@ -153,12 +154,15 @@ void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
     plot.out << "}\n";
 }
 
+// XXX
+AdtOp::OpCollection adtOps;
+
 void plotFncCore(PlotData &plot, const GlobalState &fncState)
 {
     // XXX
-    TShapeSeqList ssList;
-    collectShapeSequences(&ssList, fncState);
-    CL_BREAK_IF(!ssList.empty());
+    AdtOp::TMatchList matchList;
+    matchFootprints(&matchList, adtOps, fncState);
+    CL_BREAK_IF(!matchList.empty());
 
     const TLocIdx locCnt = fncState.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
@@ -247,7 +251,6 @@ void StateByInsn::plotAll()
     TStorRef stor = *d->visitedFncs.begin()->second->stor;
 
     // XXX
-    AdtOp::OpCollection adtOps;
     AdtOp::loadDefaultOperations(&adtOps, stor);
     adtOps.plot();
 

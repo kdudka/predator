@@ -24,6 +24,8 @@
 #include "symheap.hh"
 #include "shape.hh"
 
+#include <utility>                          // for std::pair
+
 namespace AdtOp {
 
 /// (preferred) search direction
@@ -32,6 +34,10 @@ enum ESearchDirection {
     SD_FORWARD,                             /// search forward along the CFG
     SD_BACKWARD                             /// search backward along the CFG
 };
+
+typedef int                                         TTemplateIdx;
+typedef int                                         TFootprintIdx;
+typedef std::pair<TTemplateIdx, TFootprintIdx>      TFootprintIdent;
 
 /// operation footprint given by an input/output template pair
 struct OpFootprint {
@@ -53,6 +59,10 @@ class OpTemplate {
             name_(name),
             dirty_(false)
         {
+        }
+
+        const OpFootprint& operator[](TFootprintIdx idx) const {
+            return *fList_[idx];
         }
 
         /// takes ownership of *footprint and will release it on destruction
@@ -92,6 +102,10 @@ class OpTemplate {
 /// collection of operation templates
 class OpCollection {
     public:
+        const OpTemplate& operator[](TTemplateIdx idx) const {
+            return *tList_[idx];
+        }
+
         /// takes ownership of *tpl and will release it on destruction
         void addTemplate(OpTemplate *tpl) {
             tList_.append(tpl);
