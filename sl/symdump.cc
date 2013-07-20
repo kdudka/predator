@@ -53,28 +53,39 @@ void dump_plot_core(const SymHeapCore *core, const char *name)
         cout << "dump_plot: warning: call of SymPlot::plot() has failed\n";
 }
 
-void dump_plot(const SymHeapCore *sh)
+void sl_dump(const SymHeapCore *sh)
 {
     dump_plot_core(sh, "dump_plot");
 }
 
-void dump_plot(const SymHeapCore &sh, const char *name)
+void sl_dump(const SymHeapCore &sh, const char *name)
 {
     dump_plot_core(&sh, name);
 }
 
-void dump_plot(const SymHeapCore &sh)
+void sl_dump(const SymHeapCore &sh)
 {
-    dump_plot(&sh);
+    sl_dump(&sh);
 }
 
-void dump_trace(Trace::Node *endPoint)
+void sl_dump(Trace::Node *endPoint)
 {
     Trace::plotTrace(endPoint, "dump_trace");
 }
 
-void dump_trace(const SymHeapCore &sh)
+/// dummy function to pull all symbols from a static library
+void initSymDump(int i)
 {
-    Trace::Node *tr = sh.traceNode();
-    dump_trace(tr);
+    if (!i)
+        return;
+
+    sl_dump((const SymHeapCore *) 0);
+    sl_dump(*(const SymHeapCore *) 0);
+    sl_dump(*(const SymHeapCore *) 0, (const char *) 0);
+    sl_dump((Trace::Node *) 0);
+}
+
+void initSymDump()
+{
+    initSymDump(0);
 }

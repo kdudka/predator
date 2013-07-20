@@ -46,8 +46,8 @@ configure_file( ${PROJECT_SOURCE_DIR}/fagdb.in     ${PROJECT_BINARY_DIR}/fagdb  
 configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
     ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
 
-# libfa.so
-add_library(fa SHARED
+# libforester.a
+add_library(forester STATIC
 	backward_run.cc
 	box.cc
 	boxman.cc
@@ -80,11 +80,10 @@ add_library(fa SHARED
 	treeaut.cc
 	virtualmachine.cc
 )
-set_target_properties(fa PROPERTIES LINK_FLAGS -lrt)
 
-# link with code_listener
-find_library(CL_LIB cl ../cl_build)
-target_link_libraries(fa ${CL_LIB})
+# build GCC plug-in (libfa.so)
+CL_BUILD_GCC_PLUGIN(fa forester ../cl_build)
+target_link_libraries(fa rt)
 
 # get the full path of libfa.so
 get_property(GCC_PLUG TARGET fa PROPERTY LOCATION)

@@ -32,6 +32,11 @@ class CleanList {
         TList cl_;
 
     public:
+        // required by BOOST_FOREACH
+        typedef typename TList::const_iterator          const_iterator;
+        typedef typename TList::iterator                iterator;
+
+    public:
         CleanList() { }
 
         ~CleanList() {
@@ -57,6 +62,16 @@ class CleanList {
         template <typename TIdx>
         const T* operator[](const TIdx idx) const {
             return const_cast<CleanList *>(this)->operator[](idx);
+        }
+
+        /// return STL-like iterator to go through the container
+        const_iterator begin() const {
+            return cl_.begin();
+        }
+
+        /// return STL-like iterator to go through the container
+        const_iterator end() const {
+            return cl_.end();
         }
 
     private:

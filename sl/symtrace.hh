@@ -548,6 +548,9 @@ class UserNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// resolve composite ID mapping from trSrc to trDst
+void resolveIdMapping(TIdMapper *pDst, const Node *trSrc, const Node *trDst);
+
 /// plot a trace graph named "name-NNNN.dot" leading to the given node
 bool plotTrace(Node *endPoint, const std::string &name, std::string *pName = 0);
 

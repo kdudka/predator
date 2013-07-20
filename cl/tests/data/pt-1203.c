@@ -1,6 +1,6 @@
 /* taken from tests/forester-regre/test-f0019.c */
 #include "include/pt.h"
-
+#include <verifier-builtins.h>
 /*
  * Simple tail recursion
  *
@@ -21,7 +21,7 @@ struct list_type* build_list() {
 
 	struct list_type* x = NULL, *y;
 
-	while (__nondet()) {
+	while (__VERIFIER_nondet_int()) {
 		y = malloc(sizeof(*y));
 		y->next = x;
 		x = y;
@@ -50,7 +50,7 @@ struct list_type* lookup_list(struct list_type* list) {
 	if (!list)
 		return NULL;
 
-	return (__nondet())?(list):(lookup_list(list->next));
+	return (__VERIFIER_nondet_int())?(list):(lookup_list(list->next));
 
 }
 

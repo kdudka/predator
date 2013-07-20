@@ -29,14 +29,13 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
-# libfwnull.so
-add_library(fwnull SHARED
+# libfwnull_core.a
+add_library(fwnull_core STATIC
     cl_fwnull.cc
     version.c)
 
-# link with code_listener
-find_library(CL_LIB cl ../cl_build)
-target_link_libraries(fwnull ${CL_LIB})
+# build GCC plug-in (libfwnull.so)
+CL_BUILD_GCC_PLUGIN(fwnull fwnull_core ../cl_build)
 
 # make install
 install(TARGETS fwnull DESTINATION lib)

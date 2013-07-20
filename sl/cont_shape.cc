@@ -184,37 +184,32 @@ typedef std::vector<ShapePattern>           TShapePatternList;
 
 class ImpliedShapeDetector {
     public:
+        ImpliedShapeDetector(bool useHeadChk):
+            useHeadChk_(useHeadChk)
+        {
+        }
+
         bool indexShape(SymHeap &sh, const Shape &shape);
         void appendImpliedShapes(TShapeList *pDst, SymHeap &sh);
 
     private:
-        TShapePatternList plist_;
-        TPointerSetLookup index_;
+        const bool                  useHeadChk_;
+        TShapePatternList           plist_;
+        TPointerSetLookup           index_;
 };
 
-bool ImpliedShapeDetector::indexShape(SymHeap &sh, const Shape &shape)
+void digHeadPtrs(
+        TPointerSet                *pDst,
+        SymHeap                    &sh,
+        const TObjId                beg,
+        const TObjId                end,
+        const TOffset               offHead)
 {
-    const TObjId beg = shape.entry;
-    const TObjId end = lastObjOfShape(sh, shape);
-
-    if (OK_DLS != shape.props.kind)
-        // FIXME: only OK_DLS supported for now
-        return false;
-
-    const TValId valPrev = valOfPtr(sh, beg, shape.props.bOff.prev);
-    const TValId valNext = valOfPtr(sh, end, shape.props.bOff.next);
-    if (VAL_NULL != valPrev || VAL_NULL != valNext)
-        // FIXME: only NULL-terminated lists supported for now
-        return false;
-
     // gather all references of the boundary objects
     FldList refs;
     sh.pointedBy(refs, beg);
     if (beg != end)
         sh.pointedBy(refs, end);
-
-    const TOffset offHead = shape.props.bOff.head;
-    TPointerSet headPtrs;
 
     // go through the list of references
     BOOST_FOREACH(const FldHandle &fld, refs) {
@@ -232,12 +227,34 @@ bool ImpliedShapeDetector::indexShape(SymHeap &sh, const Shape &shape)
 
         const CVar var = sh.cVarByObject(obj);
         const TPointer ptr(var, fld.offset());
-        headPtrs.insert(ptr);
+        pDst->insert(ptr);
     }
+}
 
-    if (!insertOnce(index_, headPtrs))
-        // already indexed
+bool ImpliedShapeDetector::indexShape(SymHeap &sh, const Shape &shape)
+{
+    const TObjId beg = shape.entry;
+    const TObjId end = lastObjOfShape(sh, shape);
+
+    if (OK_DLS != shape.props.kind)
+        // FIXME: only OK_DLS supported for now
         return false;
+
+    const TValId valPrev = valOfPtr(sh, beg, shape.props.bOff.prev);
+    const TValId valNext = valOfPtr(sh, end, shape.props.bOff.next);
+    if (VAL_NULL != valPrev || VAL_NULL != valNext)
+        // FIXME: only NULL-terminated lists supported for now
+        return false;
+
+    TPointerSet headPtrs;
+    if (useHeadChk_) {
+        const TOffset offHead = shape.props.bOff.head;
+        digHeadPtrs(&headPtrs, sh, beg, end, offHead);
+
+        if (!insertOnce(index_, headPtrs))
+            // already indexed
+            return false;
+    }
 
     ShapePattern sp = {
         /* props    */ shape.props,
@@ -334,6 +351,43 @@ bool detectImpliedShape(Shape *pDst, SymHeap &sh, const ShapePattern &sp)
 #endif
 }
 
+bool detectImpliedShapeBlindly(
+        Shape                      *pDst,
+        SymHeap                    &sh,
+        const ShapePattern         &sp,
+        const TObjId                obj)
+{
+    if (!sh.isValid(obj) || !isOnHeap(sh.objStorClass(obj)))
+        // not a valid heap object
+        return false;
+
+    const TSizeRange size = sh.objSize(obj);
+    if (size != sp.size)
+        // size mismatch
+        return false;
+
+    const TObjType type = sh.objEstimatedType(obj);
+    if (type && sp.type && (*type != *sp.type))
+        // type mismatch
+        return false;
+
+    const TValId valNext = valOfPtr(sh, obj, sp.props.bOff.next);
+    if (VAL_NULL != valNext)
+        // next pointer mismatch
+        return false;
+
+    const TValId valPrev = valOfPtr(sh, obj, sp.props.bOff.prev);
+    if (VAL_NULL != valPrev)
+        // prev pointer mismatch
+        return false;
+
+    CL_DEBUG("ImpliedShapeDetector matches a region as container shape");
+    pDst->entry  = obj;
+    pDst->props  = sp.props;
+    pDst->length = 1U;
+    return true;
+}
+
 void ImpliedShapeDetector::appendImpliedShapes(TShapeList *pDst, SymHeap &sh)
 {
     // eliminate duplicates (one container shape can be implied by many)
@@ -341,12 +395,25 @@ void ImpliedShapeDetector::appendImpliedShapes(TShapeList *pDst, SymHeap &sh)
 
     BOOST_FOREACH(const ShapePattern &sp, plist_) {
         Shape shape;
-        if (!detectImpliedShape(&shape, sh, sp))
-            continue;
 
-        if (insertOnce(found, shape))
-            pDst->push_back(shape);
+        if (useHeadChk_) {
+            if (detectImpliedShape(&shape, sh, sp))
+                found.insert(shape);
+
+            continue;
+        }
+
+        TObjList allObjs;
+        sh.gatherObjects(allObjs);
+        BOOST_FOREACH(const TObjId obj, allObjs) {
+            if (detectImpliedShapeBlindly(&shape, sh, sp, obj))
+                found.insert(shape);
+        }
     }
+
+    // append each of the found shapes exactly once
+    BOOST_FOREACH(const Shape &fs, found)
+        pDst->push_back(fs);
 }
 
 struct DetectionCtx {
@@ -362,9 +429,24 @@ struct DetectionCtx {
     }
 };
 
+bool hasAnyProgramVar(const SymState &state)
+{
+    BOOST_FOREACH(const SymHeap *pSh, state) {
+        TObjList vars;
+        pSh->gatherObjects(vars, isProgramVar);
+        if (!vars.empty())
+            return true;
+    }
+
+    // found nothing
+    return false;
+}
+
 void detectImpliedShapes(DetectionCtx &ctx)
 {
-    ImpliedShapeDetector shapeDetector;
+    // if there are no variables, we are likely dealing with templates
+    const bool anyVars = hasAnyProgramVar(ctx.srcState);
+    ImpliedShapeDetector shapeDetector(/* useHeadChk */ anyVars);
 
     for (unsigned i = 0U; i < ctx.cntHeaps; ++i) {
         SymHeap &sh = const_cast<SymHeap &>(ctx.srcState[i]);

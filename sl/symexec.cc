@@ -1196,10 +1196,10 @@ void SymExec::execFnc(
 
         // function call requested
         // --> we need to nest unless the computed result is already available
-        SymState &results = engine->callResults();
+        SymState &dst = engine->callResults();
         const SymHeap &entry = engine->callEntry();
         const CodeStorage::Insn &insn = engine->callInsn();
-        const CodeStorage::Fnc *fnc = this->resolveCallInsn(results, entry, insn);
+        const CodeStorage::Fnc *fnc = this->resolveCallInsn(dst, entry, insn);
 
         SymCallCtx *ctx = 0;
         if (fnc)
@@ -1220,14 +1220,14 @@ void SymExec::execFnc(
                     "(x) call of function optimized out: " << name << "()");
 
             // use the cached result
-            ctx->flushCallResults(engine->callResults());
+            ctx->flushCallResults(dst);
 
             // wake up the caller
             continue;
         }
 
         // create a new engine and push it to the exec stack
-        this->enterCall(ctx, engine->callResults());
+        this->enterCall(ctx, dst);
     }
 }
 

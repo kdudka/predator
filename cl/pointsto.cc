@@ -183,8 +183,11 @@ void joinNodesS(
 
     // FIXME: this causes a USE_AFTER_FREE in bindVarList() on the line where
     //        we check hasKey(target->variables, i) in case we are called from
-    //        there via joinFixPointS(), see pt-1204.c for a reproducer
+    //        there via joinFixPointS(), see tests/predator-regre/test-0701.c
+    //        (attach_buffer_insert_head_list.c from SLAyer) for a reproducer
+#if 0
     delete nodeRight;
+#endif
 
     // the graph should be OK again
     CL_BREAK_IF(existsError(ctx.stor));

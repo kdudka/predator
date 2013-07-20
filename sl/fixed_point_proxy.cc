@@ -20,6 +20,10 @@
 #include "config.h"
 #include "fixed_point_proxy.hh"
 
+#include "adt_op.hh"
+#include "adt_op_def.hh"
+#include "adt_op_match.hh"
+#include "cont_shape_seq.hh"
 #include "fixed_point.hh"
 #include "symplot.hh"
 
@@ -150,8 +154,16 @@ void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
     plot.out << "}\n";
 }
 
+// XXX
+AdtOp::OpCollection adtOps;
+
 void plotFncCore(PlotData &plot, const GlobalState &fncState)
 {
+    // XXX
+    AdtOp::TMatchList matchList;
+    matchFootprints(&matchList, adtOps, fncState);
+    CL_BREAK_IF(!matchList.empty());
+
     const TLocIdx locCnt = fncState.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         const LocalState &locState = fncState[locIdx];
@@ -231,6 +243,17 @@ void plotFnc(const TFnc fnc, StateByInsn::TStateMap &stateByInsn)
 
 void StateByInsn::plotAll()
 {
+    if (d->visitedFncs.empty())
+        // nothing to plot
+        return;
+
+    // obtain a reference to CodeStorage::Storage
+    TStorRef stor = *d->visitedFncs.begin()->second->stor;
+
+    // XXX
+    AdtOp::loadDefaultOperations(&adtOps, stor);
+    adtOps.plot();
+
     BOOST_FOREACH(TFncMap::const_reference fncItem, d->visitedFncs) {
         const TFnc fnc = fncItem.second;
         const TLoc loc = locationOf(*fnc);

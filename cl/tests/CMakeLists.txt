@@ -20,15 +20,15 @@ add_definitions("-I../../include -fPIC")
 
 # compile libchk_var_killer.so
 add_library(chk_var_killer SHARED chk_var_killer.cc)
-target_link_libraries(chk_var_killer cl)
+CL_LINK_GCC_PLUGIN(chk_var_killer "")
 
 # compile libchk_pt.so
 add_library(chk_pt SHARED chk_pt.cc)
-target_link_libraries(chk_pt cl)
+CL_LINK_GCC_PLUGIN(chk_pt "")
 
 # compile libcl_smoke_test.so
 add_library(cl_smoke_test SHARED cl_smoke_test.cc)
-target_link_libraries(cl_smoke_test cl)
+CL_LINK_GCC_PLUGIN(cl_smoke_test "")
 
 # get the full paths of plugins
 get_property(GCC_VK_PLUG TARGET chk_var_killer PROPERTY LOCATION)

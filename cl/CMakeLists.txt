@@ -123,7 +123,7 @@ endif()
 set_source_files_properties(gcc/clplug.c PROPERTIES
     COMPILE_FLAGS "-I${GCC_INC_DIR}")
 
-# libcl.so
+# libcl.a
 add_library(cl STATIC
     builtins.cc
     callgraph.cc
@@ -143,7 +143,6 @@ add_library(cl STATIC
     clutil.cc
     clplot.cc
     code_listener.cc
-    gcc/clplug.c
     killer.cc
     loopscan.cc
     memdebug.cc
@@ -153,6 +152,9 @@ add_library(cl STATIC
     stopwatch.cc
     storage.cc
     version.c)
+
+# libclgcc.a
+add_library(clgcc STATIC gcc/clplug.c)
 
 # load regression tests
 add_subdirectory(tests)

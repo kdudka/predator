@@ -431,7 +431,7 @@ static bool read_gimple_location(struct cl_loc *loc, const_gimple g)
 {
     location_t gcc_loc = g->gsbase.location;
     read_gcc_location(loc, gcc_loc);
-    return !!gcc_loc;
+    return !!gcc_loc && loc->file;
 }
 
 static char* index_to_label(unsigned idx) {
