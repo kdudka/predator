@@ -22,21 +22,70 @@
 
 #include "cont_shape_seq.hh"
 
+#include <cl/cl_msg.hh>
+
 namespace AdtOp {
+
+struct MatchCtx {
+    TMatchList                     &matchList;
+    const OpCollection             &opCollection;
+    const TProgState               &progState;
+    FixedPoint::TShapeSeqList       shapeSeqs;
+
+    MatchCtx(
+            TMatchList             &matchList_,
+            const OpCollection     &opCollection_,
+            const TProgState       &progState_):
+        matchList(matchList_),
+        opCollection(opCollection_),
+        progState(progState_)
+    {
+        FixedPoint::collectShapeSequences(&shapeSeqs, progState);
+    }
+};
+
+void matchSingleFootprint(
+        MatchCtx                   &ctx,
+        const OpTemplate           &tpl,
+        const OpFootprint          &fp,
+        const TFootprintIdent      &fpIdent)
+{
+    // TODO
+    (void) ctx;
+    (void) tpl;
+    (void) fp;
+    (void) fpIdent;
+    CL_BREAK_IF("please implement");
+}
+
+void matchTemplate(
+        MatchCtx                   &ctx,
+        const OpTemplate           &tpl,
+        const TTemplateIdx          tplIdx)
+{
+    const TFootprintIdx fpCnt = tpl.size();
+    for (TFootprintIdx fpIdx = 0; fpIdx < fpCnt; ++fpIdx) {
+        const OpFootprint &fp = tpl[fpIdx];
+        const TFootprintIdent fpIdent(tplIdx, fpIdx);
+        matchSingleFootprint(ctx, tpl, fp, fpIdent);
+    }
+}
 
 void matchFootprints(
         TMatchList                 *pDst,
-        const OpCollection         &coll,
+        const OpCollection         &opCollection,
         const TProgState           &progState)
 {
-    FixedPoint::TShapeSeqList ssList;
-    FixedPoint::collectShapeSequences(&ssList, progState);
+    MatchCtx ctx(*pDst, opCollection, progState);
+    CL_DEBUG("[ADT] found " << ctx.shapeSeqs.size()
+            << " container shape sequences");
 
-    // TODO
-    (void) pDst;
-    (void) coll;
-    (void) progState;
-    CL_BREAK_IF("please implement");
+    const TTemplateIdx tplCnt = opCollection.size();
+    for (TTemplateIdx tplIdx = 0; tplIdx < tplCnt; ++tplIdx) {
+        const OpTemplate &tpl = ctx.opCollection[tplIdx];
+        CL_DEBUG("[ADT] trying to match template: " << tpl.name());
+        matchTemplate(ctx, tpl, tplIdx);
+    }
 }
 
 } // namespace AdtOp

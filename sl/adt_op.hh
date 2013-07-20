@@ -61,6 +61,14 @@ class OpTemplate {
         {
         }
 
+        const std::string& name() const {
+            return name_;
+        }
+
+        TFootprintIdx size() const {
+            return fList_.size();
+        }
+
         const OpFootprint& operator[](TFootprintIdx idx) const {
             return *fList_[idx];
         }
@@ -102,6 +110,10 @@ class OpTemplate {
 /// collection of operation templates
 class OpCollection {
     public:
+        TTemplateIdx size() const {
+            return tList_.size();
+        }
+
         const OpTemplate& operator[](TTemplateIdx idx) const {
             return *tList_[idx];
         }
