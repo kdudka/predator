@@ -48,6 +48,10 @@ add_library(vra_core STATIC
 # build GCC plug-in (libvra.so)
 CL_BUILD_GCC_PLUGIN(vra vra_core ../cl_build)
 
+# helping scripts
+configure_file( ${PROJECT_SOURCE_DIR}/tests-overall/tests-config.sh.in
+  ${PROJECT_BINARY_DIR}/tests-config.sh     @ONLY)
+
 # link with gmp
 find_library(GMP_LIB gmp)
 if(NOT GMP_LIB)
