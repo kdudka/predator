@@ -56,19 +56,74 @@ public:
 		size_(0)
 	{ }
 
+
+	/**
+	 * @brief  Retrieves a box from the antichain (may insert it)
+	 *
+	 * This method retrieves the unique pointer to @p box from the antichain (in
+	 * the case it is not present it inserts it).
+	 *
+	 * @param[in]  box  The box to be retrieved
+	 *
+	 * @returns  The unique pointer to @p box
+	 */
 	const Box* get(const Box& box);
 
+
+	/**
+	 * @brief  Retrievse a box from the antichain
+	 *
+	 * This method retrieves the unique pointer to @p box (or @p nullptr if not
+	 * present) from the antichain.
+	 *
+	 * @param[in]  box  The box to be retrieved
+	 *
+	 * @returns  The unique pointer to @p box or @p nullptr
+	 */
 	const Box* lookup(const Box& box) const;
 
+
+	/**
+	 * @brief  Has the antichain been modified?
+	 *
+	 * This method returns @p true in the case the antichain has been modified
+	 * during the last BoxAntichain::get() operation (the operation resets it at
+	 * the beginning).
+	 *
+	 * @returns  Has the antichain been modified?
+	 */
 	bool modified() const
 	{
 		return modified_;
 	}
 
+
+	/**
+	 * @brief  The count of active elements
+	 *
+	 * Returns the count of active elements (obsolete are not counted).
+	 *
+	 * @returns  The count of active elements
+	 */
 	size_t size() const
 	{
 		return size_ - obsolete_.size();
 	}
+
+
+	/**
+	 * @brief  Is the antichain empty?
+	 *
+	 * Returns @p true in the case the antichain is empty, not taking into account
+	 * obsolete elements, @p false otherwise.
+	 *
+	 * @returns @p true in the case the antichain is empty, @p false otherwise
+	 */
+	bool empty() const
+	{
+		return this->size() == 0;
+	}
+
 
 	void clear()
 	{
@@ -110,13 +165,34 @@ public:
 		modified_(false)
 	{ }
 
+	/**
+	 * @brief  Retrieves a box from the set (may insert it)
+	 *
+	 * This method retrieves the unique pointer to @p box from the set (in
+	 * the case it is not present it inserts it).
+	 *
+	 * @param[in]  box  The box to be retrieved
+	 *
+	 * @returns  The unique pointer to @p box
+	 */
 	const Box* get(const Box& box)
 	{
-		auto p = boxes_.insert(box);
-		modified_ = p.second;
-		return &*p.first;
+		auto iterBoolPair = boxes_.insert(box);
+		modified_ = iterBoolPair.second;
+		return &*iterBoolPair.first;
 	}
 
+
+	/**
+	 * @brief  Retrievse a box from the set
+	 *
+	 * This method retrieves the unique pointer to @p box (or @p nullptr if not
+	 * present) from the set.
+	 *
+	 * @param[in]  box  The box to be retrieved
+	 *
+	 * @returns  The unique pointer to @p box or @p nullptr
+	 */
 	const Box* lookup(const Box& box) const
 	{
 		auto iter = boxes_.find(box);
@@ -133,10 +209,32 @@ public:
 		boxes_.clear();
 	}
 
+
+	/**
+	 * @brief  The count of active elements
+	 *
+	 * Returns the count of active elements.
+	 *
+	 * @returns  The count of active elements
+	 */
 	size_t size() const
 	{
 		return boxes_.size();
 	}
+
+
+	/**
+	 * @brief  Is the set empty?
+	 *
+	 * Returns @p true in the case the set is empty, @p false otherwise.
+	 *
+	 * @returns @p true in the case the set is empty, @p false otherwise
+	 */
+	bool empty() const
+	{
+		return boxes_.empty();
+	}
+
 
 	const_iterator begin() const
 	{
@@ -197,7 +295,16 @@ private:  // methods
 
 	const std::pair<const Data, NodeLabel*>& insertData(const Data& data);
 
+
+	/**
+	 * @brief  Retrieves the name of a new box
+	 *
+	 * This method retrieves the name of a new box.
+	 *
+	 * @returns  The name of a new box
+	 */
 	std::string getBoxName() const;
+
 
 public:
 
@@ -271,33 +378,75 @@ public:
 		const std::string&                           name,
 		const std::vector<size_t>&                   selectors);
 
-	static size_t translateSignature(
-		ConnectionGraph::CutpointSignature&          result,
-		std::vector<std::pair<size_t, size_t>>&      selectors,
-		size_t                                       root,
-		const ConnectionGraph::CutpointSignature&    signature,
-		size_t                                       aux,
-		const std::vector<size_t>&                   index);
+	/**
+	 * @brief  Creates a box with a single component
+	 *
+	 * This static method creates a new box with a single (output) component.
+	 *
+	 * @param[in]  root       Index of the tree automaton which is to be put in
+	 *                        the box
+	 * @param[in]  output     The tree automaton to be put into the box
+	 * @param[in]  signature  The signature of @p output
+	 * @param[in]  inputMap   The mapping of cutpoints to selectors
+	 * @param[in]  index      Index for renaming cutpoints
+	 *
+	 * @returns  The created box with the @p output tree automaton inside
+	 */
+	static Box* createType1Box(
+		size_t                                      root,
+		const std::shared_ptr<TreeAut>&             output,
+		const ConnectionGraph::CutpointSignature&   signature,
+		const std::vector<size_t>&                  inputMap,
+		const std::vector<size_t>&                  index);
 
-	Box* createType1Box(
+
+	/**
+	 * @brief  Creates a box with a pair of components
+	 *
+	 * This static method creates a new box that contains a pair of components:
+	 * the @p output component (the starts in the first tree), and the @p input
+	 * component (that may go backwards).
+	 *
+	 * @param[in]      root           The index of the @p output tree automaton
+	 * @param[in]      output         The output tree automaton to be put in the
+	 *                                box
+	 * @param[in]      signature      Signature of the @p output tree automaton
+	 * @param[in]      inputMap       The mapping of cutpoints to selectors
+	 * @param[in]      aux            The index of the @p input tree automaton
+	 * @param[in]      input          The input tree automaton to be put in the
+	 *                                box
+	 * @param[in]      signature2     Signature of the @p input tree automaton
+	 * @param[in]      inputSelector  Offset of the lowest selector in the box
+	 * @param[in,out]  index          Index for renaming cutpoints (may change)
+	 *
+	 * @returns  The created box with the @p output and @p input tree automata
+	 *           inside
+	 */
+	static Box* createType2Box(
 		size_t                                       root,
 		const std::shared_ptr<TreeAut>&              output,
 		const ConnectionGraph::CutpointSignature&    signature,
-		std::vector<size_t>&                         inputMap,
-		const std::vector<size_t>&                   index);
-
-	Box* createType2Box(
-		size_t                                       root,
-		const std::shared_ptr<TreeAut>&              output,
-		const ConnectionGraph::CutpointSignature&    signature,
-		std::vector<size_t>&                         inputMap,
+		const std::vector<size_t>&                   inputMap,
 		size_t                                       aux,
 		const std::shared_ptr<TreeAut>&              input,
 		const ConnectionGraph::CutpointSignature&    signature2,
 		size_t                                       inputSelector,
 		std::vector<size_t>&                         index);
 
+
+	/**
+	 * @brief  Retrieves a desired box from the database (may insert it)
+	 *
+	 * This method searches the database of boxes for the @p box and returns
+	 * a unique pointer to it. In the case a new box is inserted, it is
+	 * initialized.
+	 *
+	 * @param[in]  box  The box to be found (or inserted) in the database
+	 *
+	 * @returns  Unique pointer to the box
+	 */
 	const Box* getBox(const Box& box);
+
 
 	const Box* lookupBox(const Box& box) const
 	{

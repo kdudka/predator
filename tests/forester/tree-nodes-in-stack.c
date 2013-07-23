@@ -5,6 +5,7 @@
  */
 
 #include <stdlib.h>
+#include <verifier-builtins.h>
 
 int main() {
 
@@ -31,7 +32,7 @@ int main() {
 		s = s->next;
 		n = st->node;
 		free(st);
-		if (__nondet()) {
+		if (__VERIFIER_nondet_int()) {
 			nt = malloc(sizeof(*nt));
 			nt->left = NULL;
 			nt->right = NULL;
@@ -41,7 +42,7 @@ int main() {
 			st->node = nt;
 			s = st;
 		}
-		if (__nondet()) {
+		if (__VERIFIER_nondet_int()) {
 			nt = malloc(sizeof(*nt));
 			nt->left = NULL;
 			nt->right = NULL;

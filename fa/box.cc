@@ -50,7 +50,7 @@ void Box::getDownwardCoverage(
 	std::vector<size_t>&                          v,
 	const std::vector<const AbstractBox*>&        label)
 {
-	for (auto& absBox : label)
+	for (const AbstractBox* absBox : label)
 	{	// for all boxes in the label
 		switch (absBox->getType())
 		{	// according to the type of the box

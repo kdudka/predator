@@ -63,14 +63,33 @@ public:   // data members
 
 public:   // methods
 
+
+	/**
+	 * @brief  Reorder boxes into the normal form
+	 *
+	 * This method reorders the passed vector of boxes (as well as the vector of
+	 * states that are target states of the boxes) into the @e normal form.
+	 *
+	 * @param[in,out]  label  Vector of boxes to be reordered
+	 * @param[in,out]  lhs    Vector of states corresponding to @p label
+	 */
 	static void reorderBoxes(
 		std::vector<const AbstractBox*>&     label,
 		std::vector<size_t>&                 lhs);
 
+
+	/**
+	 * @brief  Allocates a new TreeAut
+	 *
+	 * Allocates a new TreeAut using the backend of the FA.
+	 *
+	 * @returns  Pointer to a new TreeAut
+	 */
 	TreeAut* allocTA()
 	{
 		return new TreeAut(*this->backend);
 	}
+
 
 protected:// methods
 
