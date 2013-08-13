@@ -77,6 +77,12 @@ class IdMapper {
             return biSearch_[D_LEFT_TO_RIGHT].size();
         }
 
+        bool isTrivial() const
+        {
+            return this->empty()
+                && NFA_RETURN_IDENTITY == nfa_;
+        }
+
         bool /* changed */ insert(const TId left, const TId right);
 
         template <EDirection>

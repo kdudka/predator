@@ -23,6 +23,7 @@
 #include "cont_shape.hh"
 #include "symplot.hh"
 #include "symstate.hh"
+#include "symtrace.hh"
 
 #include <iomanip>
 #include <sstream>
@@ -40,6 +41,17 @@ int countObjsInContShapes(const TShapeListByHeapIdx &slistByHeap)
 
     return cnt;
 }
+
+// /////////////////////////////////////////////////////////////////////////////
+// implementation of OpFootprint
+OpFootprint::OpFootprint(const SymHeap &input_, const SymHeap &output_):
+    input(input_),
+    output(output_)
+{
+    Trace::waiveCloneOperation(input);
+    Trace::waiveCloneOperation(output);
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of OpTemplate

@@ -44,11 +44,7 @@ struct OpFootprint {
     SymHeap                     input;
     SymHeap                     output;
 
-    OpFootprint(const SymHeap &input_, const SymHeap &output_):
-        input(input_),
-        output(output_)
-    {
-    }
+    OpFootprint(const SymHeap &input_, const SymHeap &output_);
 };
 
 /// an operation (push_back, erase, ...) template we can match by footprints

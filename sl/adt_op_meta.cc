@@ -21,6 +21,7 @@
 #include "adt_op_meta.hh"
 
 #include "fixed_point.hh"
+#include "symtrace.hh"
 
 using FixedPoint::TObjectMapper;
 
@@ -33,12 +34,28 @@ bool projectMetaOperation(MetaOperation &mo, TObjectMapper idMap)
     return false;
 }
 
+struct DiffHeapsCtx {
+    TMetaOpSet                     &opSet;
+    const SymHeap                  &sh1;
+    const SymHeap                  &sh2;
+    Trace::TIdMapper                idMap;
+
+    DiffHeapsCtx(TMetaOpSet *pOpSet, const SymHeap &sh1_, const SymHeap &sh2_):
+        opSet(*pOpSet),
+        sh1(sh1_),
+        sh2(sh2_)
+    {
+        resolveIdMapping(&idMap, sh1.traceNode(), sh2.traceNode());
+        CL_BREAK_IF(!idMap.isTrivial());
+    }
+};
+
 bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
 {
+    DiffHeapsCtx ctx(pDst, sh1, sh2);
+
     // TODO
-    (void) pDst;
-    (void) sh1;
-    (void) sh2;
+    CL_BREAK_IF("please implement");
     return false;
 }
 

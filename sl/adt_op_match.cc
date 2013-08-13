@@ -20,6 +20,7 @@
 #include "config.h"
 #include "adt_op_match.hh"
 
+#include "adt_op_meta.hh"
 #include "cont_shape_seq.hh"
 
 #include <cl/cl_msg.hh>
@@ -50,6 +51,12 @@ void matchSingleFootprint(
         const OpFootprint          &fp,
         const TFootprintIdent      &fpIdent)
 {
+    TMetaOpSet metaOps;
+    if (!diffHeaps(&metaOps, fp.input, fp.output)) {
+        CL_BREAK_IF("AdtOp::diffHeaps() has failed");
+        return;
+    }
+
     // TODO
     (void) ctx;
     (void) tpl;
