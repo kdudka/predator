@@ -40,8 +40,24 @@ struct MetaOperation {
     TObjId              obj;                /// object ID we operate on
     TOffset             off;                /// offset we write at (set/unset)
     TObjId              tgtObj;             /// object we take address of (set)
-    TValId              tgtOff;             /// tgt offset of the address (set)
+    TOffset             tgtOff;             /// tgt offset of the address (set)
     ETargetSpecifier    tgtTs;              /// tgt specifier of the addr (set)
+
+    MetaOperation(
+            const EMetaOperation    code_   = MO_INVALID,
+            const TObjId            obj_    = OBJ_INVALID,
+            const TOffset           off_    = 0,
+            const TObjId            tgtObj_ = OBJ_INVALID,
+            const TOffset           tgtOff_ = 0,
+            const ETargetSpecifier  tgtTs_  = TS_INVALID):
+        code    (code_),
+        obj     (obj_),
+        off     (off_),
+        tgtObj  (tgtObj_),
+        tgtOff  (tgtOff_),
+        tgtTs   (tgtTs_)
+    {
+    }
 };
 
 /// required to be defined by the implementation of std::set
