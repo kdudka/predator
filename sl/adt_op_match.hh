@@ -35,6 +35,11 @@ struct FootprintMatch {
     TFootprintIdent                 footprint;
     FixedPoint::THeapIdent          heap            [FP_TOTAL];
     FixedPoint::TObjectMapper       objMap          [FP_TOTAL];
+
+    FootprintMatch(const TFootprintIdent footprint_):
+        footprint(footprint_)
+    {
+    }
 };
 
 typedef std::vector<FootprintMatch>                 TMatchList;

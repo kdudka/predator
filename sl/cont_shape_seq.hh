@@ -30,8 +30,15 @@ struct ShapeSeq {
 };
 
 typedef std::vector<ShapeSeq>                       TShapeSeqList;
+typedef std::vector<TShapeIdent>                    TShapeIdentList;
 
 void collectShapeSequences(TShapeSeqList *pDst, const GlobalState &glState);
+
+/// expand all shapes in the closed interval <beg,end>
+void expandShapeSequence(
+        TShapeIdentList            *pDst,
+        const ShapeSeq             &seq,
+        const GlobalState          &glState);
 
 } // namespace FixedPoint
 

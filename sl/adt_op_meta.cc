@@ -119,7 +119,7 @@ bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
     const TValId val1 = fld1.value();
     const EValueTarget vt1 = ctx.sh1.valTarget(val1);
     if (VT_OBJECT != vt1) {
-        CL_BREAK_IF("diffSetField() does not support non-pointer fieleds yet");
+        CL_BREAK_IF("diffSetField() does not support non-pointer fields yet");
         return false;
     }
 

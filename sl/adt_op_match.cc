@@ -25,7 +25,13 @@
 
 #include <cl/cl_msg.hh>
 
+#include <algorithm>                // for std::reverse
+
+#include <boost/foreach.hpp>
+
 namespace AdtOp {
+
+typedef FixedPoint::TShapeIdent                     TShapeIdent;
 
 struct MatchCtx {
     TMatchList                     &matchList;
@@ -45,12 +51,55 @@ struct MatchCtx {
     }
 };
 
+bool matchAnchorHeap(
+        FootprintMatch             *pDst,
+        MatchCtx                   &ctx,
+        const OpTemplate           &tpl,
+        const OpFootprint          &fp,
+        const TShapeIdent          &shIdent)
+{
+    // TODO
+    (void) pDst;
+    (void) ctx;
+    (void) tpl;
+    (void) fp;
+    (void) shIdent;
+    CL_BREAK_IF("please implement");
+    return false;
+}
+
 void matchSingleFootprint(
         MatchCtx                   &ctx,
         const OpTemplate           &tpl,
         const OpFootprint          &fp,
         const TFootprintIdent      &fpIdent)
 {
+    BOOST_FOREACH(const FixedPoint::ShapeSeq seq, ctx.shapeSeqs) {
+        // resolve shape sequence to search through
+        FixedPoint::TShapeIdentList shapes;
+        expandShapeSequence(&shapes, seq, ctx.progState);
+        if (SD_BACKWARD == tpl.searchDirection())
+            std::reverse(shapes.begin(), shapes.end());
+
+        // allocate a structure for the match result
+        FootprintMatch fm(fpIdent);
+
+        // search anchor heap
+        bool found = false;
+        BOOST_FOREACH(const TShapeIdent &shIdent, shapes) {
+            if (matchAnchorHeap(&fm, ctx, tpl, fp, shIdent)) {
+                found = true;
+                break;
+            }
+        }
+        if (!found)
+            // no anchor heap found
+            continue;
+
+        // TODO
+        CL_BREAK_IF("please implement");
+    }
+
     TMetaOpSet metaOps;
     if (!diffHeaps(&metaOps, fp.input, fp.output)) {
         CL_BREAK_IF("AdtOp::diffHeaps() has failed");
@@ -58,10 +107,6 @@ void matchSingleFootprint(
     }
 
     // TODO
-    (void) ctx;
-    (void) tpl;
-    (void) fp;
-    (void) fpIdent;
     CL_BREAK_IF("please implement");
 }
 
