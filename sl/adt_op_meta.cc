@@ -36,11 +36,11 @@ bool projectMetaOperation(MetaOperation &mo, TObjectMapper idMap)
 
 struct DiffHeapsCtx {
     TMetaOpSet                     &opSet;
-    const SymHeap                  &sh1;
-    const SymHeap                  &sh2;
+    SymHeap                        &sh1;
+    SymHeap                        &sh2;
     Trace::TIdMapper                idMap;
 
-    DiffHeapsCtx(TMetaOpSet *pOpSet, const SymHeap &sh1_, const SymHeap &sh2_):
+    DiffHeapsCtx(TMetaOpSet *pOpSet, SymHeap &sh1_, SymHeap &sh2_):
         opSet(*pOpSet),
         sh1(sh1_),
         sh2(sh2_)
@@ -52,12 +52,65 @@ struct DiffHeapsCtx {
 
 bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
 {
-    // TODO
-    (void) ctx;
-    (void) obj1;
-    (void) fld2;
-    CL_BREAK_IF("please implement");
-    return false;
+    // resolve val2
+    const TValId val2 = fld2.value();
+    const EValueTarget vt2 = ctx.sh2.valTarget(val2);
+    if (VT_OBJECT != vt2) {
+        CL_BREAK_IF("diffSetField() does not support value invalidation yet");
+        return false;
+    }
+
+    // resolve val1
+    const TObjType clt = fld2.type();
+    const TOffset off = fld2.offset();
+    const FldHandle fld1(ctx.sh1, obj1, clt, off);
+    const TValId val1 = fld1.value();
+
+    // check object mapping
+    const TObjId obj2 = fld2.obj();
+    if (obj1 != obj2) {
+        CL_BREAK_IF("diffSetField() does not support non-trivial map of objs");
+        return false;
+    }
+
+    // resolve target
+    const TObjId tgtObj2 = ctx.sh2.objByAddr(val2);
+    const TOffset tgtOff2 = ctx.sh2.valOffset(val2);
+    const ETargetSpecifier tgtTs2 = ctx.sh2.targetSpec(val2);
+
+    // check target object mapping
+    TObjList tgtObjList1;
+    ctx.idMap.query<D_RIGHT_TO_LEFT>(&tgtObjList1, tgtObj2);
+    if (1U != tgtObjList1.size()) {
+        CL_BREAK_IF("diffSetField() does not support non-trivial map of objs");
+        return false;
+    }
+
+    const EValueTarget vt1 = ctx.sh1.valTarget(val1);
+    switch (vt1) {
+        case VT_UNKNOWN:
+            break;
+
+        case VT_OBJECT:
+            if (ctx.sh1.objByAddr(val1) != tgtObjList1.front())
+                break;
+            if (ctx.sh1.valOffset(val1) != tgtOff2)
+                break;
+            if (ctx.sh1.targetSpec(val1) != tgtTs2)
+                break;
+
+            // nothing changed actually
+            return true;
+
+        default:
+            CL_BREAK_IF("unhandled value target in diffSetField()");
+            return false;
+    }
+
+    // insert meta-operation
+    const MetaOperation moSet(MO_SET, obj1, off, tgtObj2, tgtOff2, tgtTs2);
+    ctx.opSet.insert(moSet);
+    return true;
 }
 
 bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
@@ -106,7 +159,9 @@ bool diffFields(DiffHeapsCtx &ctx, const TObjId obj1, const TObjId obj2)
 
 bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
 {
-    DiffHeapsCtx ctx(pDst, sh1, sh2);
+    DiffHeapsCtx ctx(pDst,
+            const_cast<SymHeap &>(sh1),
+            const_cast<SymHeap &>(sh2));
 
     TObjList objList2;
     ctx.sh2.gatherObjects(objList2);
