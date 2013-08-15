@@ -134,6 +134,8 @@ OpTemplate* createPushBack(TplFactory &fact)
     output = sh;
 
     // register pre/post pair for push_back() to a non-empty list
+    Trace::waiveCloneOperation(input);
+    Trace::waiveCloneOperation(output);
     tpl->addFootprint(new OpFootprint(input, output));
 
     return tpl;

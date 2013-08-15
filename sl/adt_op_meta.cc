@@ -115,12 +115,35 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
 
 bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
 {
-    // TODO
-    (void) ctx;
-    (void) fld1;
-    (void) obj2;
-    CL_BREAK_IF("please implement");
-    return false;
+    // resolve val1
+    const TValId val1 = fld1.value();
+    const EValueTarget vt1 = ctx.sh1.valTarget(val1);
+    if (VT_OBJECT != vt1) {
+        CL_BREAK_IF("diffSetField() does not support non-pointer fieleds yet");
+        return false;
+    }
+
+    // resolve val2
+    const TObjType clt = fld1.type();
+    const TOffset off = fld1.offset();
+    const FldHandle fld2(ctx.sh2, obj2, clt, off);
+    const TValId val2 = fld2.value();
+    const EValueTarget vt2 = ctx.sh2.valTarget(val2);
+    if (VT_UNKNOWN != vt2)
+        // this is NOT an "unset" operation
+        return true;
+
+    // check object mapping
+    const TObjId obj1 = fld1.obj();
+    if (obj1 != obj2) {
+        CL_BREAK_IF("diffSetField() does not support non-trivial map of objs");
+        return false;
+    }
+
+    // insert meta-operation
+    const MetaOperation moUnset(MO_UNSET, obj1, off);
+    ctx.opSet.insert(moUnset);
+    return true;
 }
 
 bool diffFields(DiffHeapsCtx &ctx, const TObjId obj1, const TObjId obj2)
