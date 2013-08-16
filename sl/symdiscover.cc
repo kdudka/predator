@@ -532,8 +532,14 @@ class ProbeEntryVisitor {
             if (!canWriteDataPtrAt(sh, nextVal))
                 return /* continue */ true;
 
+            // read size of node (if known)
+            TSizeRange size = sh.objSize(obj_);
+            if (size != sh.objSize(nextObj) || !IR::isSingular(size))
+                size = IR::rngFromNum(IR::Int0);
+
             // read head offset
             ShapeProps props;
+            props.size = size.lo;
             BindingOff &off = props.bOff;
             off.head = sh.valOffset(nextVal);
 

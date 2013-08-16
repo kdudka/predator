@@ -27,6 +27,21 @@
 struct ShapeProps {
     EObjKind            kind;
     BindingOff          bOff;
+    TSizeOf             size;
+
+    ShapeProps():
+        kind(/* just for tracking uses of uninitialized values */ OK_REGION),
+        size(0)
+    {
+    }
+
+    /// @param size_ zero means unknown size
+    ShapeProps(EObjKind kind_, BindingOff bOff_, TSizeOf size_ = 0):
+        kind(kind_),
+        bOff(bOff_),
+        size(size_)
+    {
+    }
 };
 
 inline bool operator<(const ShapeProps &a, const ShapeProps &b)
@@ -34,13 +49,17 @@ inline bool operator<(const ShapeProps &a, const ShapeProps &b)
     // compare kind of shape
     RETURN_IF_COMPARED(a, b, kind);
 
-    // the compare offsets
+    // compare size of nodes
+    RETURN_IF_COMPARED(a, b, size);
+
+    // compare the offsets
     return a.bOff < b.bOff;
 }
 
 inline bool operator==(const ShapeProps &a, const ShapeProps &b)
 {
     return a.kind == b.kind
+        && a.size == b.size
         && a.bOff == b.bOff;
 }
 
@@ -54,6 +73,20 @@ struct Shape {
     TObjId              entry;
     ShapeProps          props;
     unsigned            length; ///< count of objects (both regions or abstract)
+
+    /// just to track uses of uninitialized values
+    Shape():
+        entry(OBJ_INVALID),
+        length(0)
+    {
+    }
+
+    Shape(TObjId entry_, const ShapeProps &props_, unsigned length_):
+        entry(entry_),
+        props(props_),
+        length(length_)
+    {
+    }
 };
 
 inline bool operator<(const Shape &a, const Shape &b)

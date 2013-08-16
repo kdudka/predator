@@ -118,11 +118,10 @@ bool ApparentShapeDetector::probeEntry(const TObjId obj, const ShapeProps &props
     }
 
     // insert the shape in the destination array
-    const Shape shape = {
+    const Shape shape(
         /* entry  */ beg,
         /* props  */ props,
-        /* length */ len
-    };
+        /* length */ len);
     dstArray_.push_back(shape);
 
     // found a new container shape
@@ -144,12 +143,14 @@ void detectApparentShapes(TShapeList &dst, SymHeap &sh)
 
         const EObjKind kind = sh.objKind(obj);
         if (OK_DLS == kind) {
+            const TSizeRange size = sh.objSize(obj);
+            CL_BREAK_IF(!IR::isSingular(size));
+
             // OK_DLS can be seen as list on its own
             // FIXME: we support only OK_DLS for now
-            const ShapeProps dlsProps = {
-                OK_DLS, 
-                sh.segBinding(obj)
-            };
+            const ShapeProps dlsProps(OK_DLS,
+                    sh.segBinding(obj),
+                    size.lo);
 
             shapeDetector.probeEntry(obj, dlsProps);
             continue;
