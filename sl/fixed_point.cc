@@ -52,6 +52,14 @@ SymHeap *heapByIdent(GlobalState &glStateWr, const THeapIdent shIdent)
     return const_cast<SymHeap *>(heapByIdent(glState, shIdent));
 }
 
+const Shape *shapeByIdent(const GlobalState &glState, const TShapeIdent &shIdent)
+{
+    const THeapIdent heapIdent(shIdent.first);
+    const LocalState &locState = glState[heapIdent.first];
+    const TShapeList &shList = locState.shapeListByHeapIdx[heapIdent.second];
+    return &shList[shIdent.second];
+}
+
 bool isTransparentInsn(const TInsn insn)
 {
     const enum cl_insn_e code = insn->code;

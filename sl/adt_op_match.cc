@@ -51,21 +51,70 @@ struct MatchCtx {
     }
 };
 
+bool matchAnchorHeapCore(
+        FootprintMatch             *pDst,
+        MatchCtx                   &ctx,
+        const SymHeap              &shProg,
+        const SymHeap              &shTpl,
+        const Shape                &csProg,
+        const Shape                &csTpl)
+{
+    // TODO
+    (void) pDst;
+    (void) ctx;
+    (void) shProg;
+    (void) shTpl;
+    (void) csProg;
+    (void) csTpl;
+    CL_BREAK_IF("please implement");
+    return false;
+}
+
 bool matchAnchorHeap(
         FootprintMatch             *pDst,
         MatchCtx                   &ctx,
         const OpTemplate           &tpl,
         const OpFootprint          &fp,
+        const TFootprintIdent      &fpIdent,
         const TShapeIdent          &shIdent)
 {
-    // TODO
-    (void) pDst;
-    (void) ctx;
-    (void) tpl;
-    (void) fp;
-    (void) shIdent;
-    CL_BREAK_IF("please implement");
-    return false;
+    // resolve program state and shape
+    using namespace FixedPoint;
+    const SymHeap &shProg = *heapByIdent(ctx.progState, shIdent.first);
+    const Shape &csProg = *shapeByIdent(ctx.progState, shIdent);
+
+    // check search direction
+    bool reverse = false;
+    const ESearchDirection sd = tpl.searchDirection();
+    switch (sd) {
+        case SD_FORWARD:
+            break;
+
+        case SD_BACKWARD:
+            reverse = true;
+            break;
+
+        default:
+            CL_BREAK_IF("matchAnchorHeap() got invalid search direction");
+    }
+
+    // resolve tamplate state and shape list
+    const SymHeap &shTpl = (reverse)
+        ? fp.output
+        : fp.input;
+    const TShapeListByHeapIdx &csTplListByIdx = (reverse)
+        ? tpl.outShapes()
+        : tpl.inShapes();
+
+    // check the count of container shapes in the template
+    const TShapeList &csTplList = csTplListByIdx[fpIdent./* footprint */second];
+    if (1U != csTplList.size()) {
+        CL_BREAK_IF("unsupported count of shapes in matchAnchorHeap()");
+        return false;
+    }
+
+    const Shape &csTpl = csTplList.front();
+    return matchAnchorHeapCore(pDst, ctx, shProg, shTpl, csProg, csTpl);
 }
 
 void matchSingleFootprint(
@@ -87,7 +136,7 @@ void matchSingleFootprint(
         // search anchor heap
         bool found = false;
         BOOST_FOREACH(const TShapeIdent &shIdent, shapes) {
-            if (matchAnchorHeap(&fm, ctx, tpl, fp, shIdent)) {
+            if (matchAnchorHeap(&fm, ctx, tpl, fp, fpIdent, shIdent)) {
                 found = true;
                 break;
             }
