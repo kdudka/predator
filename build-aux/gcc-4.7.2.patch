@@ -1,7 +1,7 @@
  vra/tests-overall/test-0062.c.ref | 12 +++---------
  vra/tests-overall/test-0071.c.ref | 12 +++---------
- vra/tests-overall/test-0072.c.ref | 36 ++++++++++++++++++------------------
- 3 files changed, 24 insertions(+), 36 deletions(-)
+ vra/tests-overall/test-0072.c.ref | 28 ++++++++++++++--------------
+ 3 files changed, 20 insertions(+), 32 deletions(-)
 
 diff --git a/vra/tests-overall/test-0062.c.ref b/vra/tests-overall/test-0062.c.ref
 index 21f404a..943dd94 100644
@@ -64,14 +64,18 @@ index 686e5d1..0f831f9 100644
 --- a/vra/tests-overall/test-0072.c.ref
 +++ b/vra/tests-overall/test-0072.c.ref
 @@ -1,34 +1,34 @@
------------ Function main() ----------
+ ---------- Function main() ----------
 -Block L1[IN] at lines from 13 to 14:
 -Block L1[OUT]:
--	c = { <0, 1> }
++Block L6[IN] at lines from 13 to 14:
++Block L6[OUT]:
+ 	c = { <0, 1> }
 -Block L2[IN] at lines from 14 to 15:
--	c = { <0, 1> }
++Block L7[IN] at lines from 14 to 15:
+ 	c = { <0, 1> }
 -Block L2[OUT]:
--	c = { <0, 1> }
++Block L7[OUT]:
+ 	c = { <0, 1> }
  ---------- Function isMax() ----------
 -Block L3[IN] at lines from 20 to 20:
 -Block L3[OUT]:
@@ -108,11 +112,3 @@ index 686e5d1..0f831f9 100644
 +Block L5[OUT]:
  	a = { <0, 1> }
  	c = { <-128, 127> }
-+---------- Function main() ----------
-+Block L6[IN] at lines from 13 to 14:
-+Block L6[OUT]:
-+	c = { <0, 1> }
-+Block L7[IN] at lines from 14 to 15:
-+	c = { <0, 1> }
-+Block L7[OUT]:
-+	c = { <0, 1> }

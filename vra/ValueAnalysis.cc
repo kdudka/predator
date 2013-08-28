@@ -1044,7 +1044,7 @@ void ValueAnalysis::computeAnalysisForBinop(const Insn *insn,
 */
 ostream& ValueAnalysis::printRanges(ostream &os, const Storage &stor)
 {
-	BOOST_FOREACH(const Fnc* pFnc, stor.fncs) {
+	BOOST_FOREACH(const Fnc* pFnc, stor.callGraph.topOrder) {
 		// Iterates over all functions.
 		const Fnc &fnc = *pFnc;
 		if (!isDefined(fnc))
