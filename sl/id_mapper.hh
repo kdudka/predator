@@ -65,6 +65,13 @@ class IdMapper {
             nfa_ = nfa;
         }
 
+        void clear()
+        {
+            nfa_ = NFA_TRAP_TO_DEBUGGER;
+            biSearch_[0].clear();
+            biSearch_[1].clear();
+        }
+
         bool empty() const
         {
             CL_BREAK_IF(biSearch_[0].empty() != biSearch_[1].empty());

@@ -22,6 +22,7 @@
 
 #include "adt_op_meta.hh"
 #include "cont_shape_seq.hh"
+#include "symseg.hh"                // for objMinLength()
 
 #include <cl/cl_msg.hh>
 
@@ -51,23 +52,67 @@ struct MatchCtx {
     }
 };
 
+unsigned countObjects(const SymHeap &sh)
+{
+    TObjList objs;
+    sh.gatherObjects(objs);
+    return objs.size();
+}
+
 bool matchAnchorHeapCore(
-        FootprintMatch             *pDst,
-        MatchCtx                   &ctx,
+        FixedPoint::TObjectMapper  *pMap,
         const SymHeap              &shProg,
         const SymHeap              &shTpl,
         const Shape                &csProg,
         const Shape                &csTpl)
 {
-    // TODO
-    (void) pDst;
-    (void) ctx;
-    (void) shProg;
-    (void) shTpl;
-    (void) csProg;
-    (void) csTpl;
-    CL_BREAK_IF("please implement");
-    return false;
+    if (2U < csTpl.length || csTpl.length != countObjects(shTpl)) {
+        CL_BREAK_IF("unsupported anchor heap in a template");
+        return false;
+    }
+
+    if (csProg.length != csTpl.length) {
+        CL_BREAK_IF("only 1:1 mapping is supported by matchAnchorHeapCore()");
+        return false;
+    }
+
+    // clear the destination object map (if not already)
+    pMap->clear();
+
+    // resolve list of objects belonging to containers shapes
+    TObjList tplObjs, progObjs;
+    objListByShape(&tplObjs,  shTpl,  csTpl);
+    objListByShape(&progObjs, shProg, csProg);
+
+    // count the objects
+    const unsigned objsCnt = tplObjs.size();
+    CL_BREAK_IF(objsCnt != progObjs.size());
+
+    // iterate object-wise
+    for (unsigned idx = 0U; idx < objsCnt; ++idx) {
+        const TObjId objTpl  = tplObjs [idx];
+        const TObjId objProg = progObjs[idx];
+
+        const EObjKind kindTpl  = shTpl .objKind(objTpl);
+        const EObjKind kindProg = shProg.objKind(objProg);
+        if (kindTpl != kindProg) {
+            CL_BREAK_IF("kind mismatch not supported by matchAnchorHeap()");
+            return false;
+        }
+
+        const TMinLen lenTpl  = objMinLength(shTpl,  objTpl);
+        const TMinLen lenProg = objMinLength(shProg, objProg);
+        if (lenTpl != lenProg) {
+            CL_BREAK_IF("minLen mismatch not supported by matchAnchorHeap()");
+            return false;
+        }
+
+        // remember the mapping of objects
+        pMap->insert(objTpl, objProg);
+    }
+
+    // successfully matched!
+    return true;
 }
 
 bool matchAnchorHeap(
@@ -113,8 +158,19 @@ bool matchAnchorHeap(
         return false;
     }
 
+    // resolve objMap by search direction
+    const EFootprintPort port = (reverse)
+        ? FP_DST
+        : FP_SRC;
+
+    // perform an object-wise match
     const Shape &csTpl = csTplList.front();
-    return matchAnchorHeapCore(pDst, ctx, shProg, shTpl, csProg, csTpl);
+    if (!matchAnchorHeapCore(&pDst->objMap[port], shProg, shTpl, csProg, csTpl))
+        return false;
+
+    // successful match!
+    pDst->heap[port] = shIdent.first;
+    return true;
 }
 
 void matchSingleFootprint(
