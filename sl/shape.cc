@@ -49,6 +49,28 @@ bool traverseShape(const SymHeap &sh, const Shape &shape, TVisitor &visitor)
     return /* done */ true;
 }
 
+class ObjListCollector {
+    public:
+        ObjListCollector(TObjList *pDst):
+            pDst_(pDst)
+        {
+        }
+
+        bool operator()(const TObjId obj) {
+            pDst_->push_back(obj);
+            return /* continue */ true;
+        }
+
+    private:
+        TObjList       *pDst_;
+};
+
+void objListByShape(TObjList *pDst, const SymHeap &sh, const Shape &shape)
+{
+    ObjListCollector visitor(pDst);
+    traverseShape(sh, shape, visitor);
+}
+
 class ObjSetCollector {
     public:
         ObjSetCollector(TObjSet *pDst):

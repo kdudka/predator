@@ -120,6 +120,9 @@ typedef std::vector<Shape>                  TShapeList;
 /// list of shapes grouped by heap index they occur in
 typedef std::vector<TShapeList>             TShapeListByHeapIdx;
 
+/// return the list of objects that the given shape consists of
+void objListByShape(TObjList *pDst, const SymHeap &sh, const Shape &shape);
+
 /// return the set of objects that the given shape consists of
 void objSetByShape(TObjSet *pDst, const SymHeap &sh, const Shape &shape);
 
