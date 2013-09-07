@@ -21,7 +21,8 @@
 
 #include "symutil.hh"
 
-void objSetByShape(TObjSet *pDst, const SymHeap &sh, const Shape &shape)
+template <class TVisitor>
+bool traverseShape(const SymHeap &sh, const Shape &shape, TVisitor &visitor)
 {
     const ShapeProps &props = shape.props;
     const EObjKind kind = props.kind;
@@ -39,30 +40,55 @@ void objSetByShape(TObjSet *pDst, const SymHeap &sh, const Shape &shape)
     TObjId obj = shape.entry;
 
     for (unsigned i = 0; i < shape.length; ++i) {
-        pDst->insert(obj);
+        if (!/* continue */ visitor(obj))
+            return false;
+
         obj = nextObj(shWritable, obj, offNext);
     }
+
+    return /* done */ true;
 }
+
+class ObjSetCollector {
+    public:
+        ObjSetCollector(TObjSet *pDst):
+            pDst_(pDst)
+        {
+        }
+
+        bool operator()(const TObjId obj) {
+            CL_BREAK_IF(hasKey(pDst_, obj));
+            pDst_->insert(obj);
+            return /* continue */ true;
+        }
+
+    private:
+        TObjSet        *pDst_;
+};
+
+void objSetByShape(TObjSet *pDst, const SymHeap &sh, const Shape &shape)
+{
+    ObjSetCollector visitor(pDst);
+    traverseShape(sh, shape, visitor);
+}
+
+struct LastObjCollector {
+    TObjId lastObj;
+
+    LastObjCollector():
+        lastObj(OBJ_INVALID)
+    {
+    }
+
+    bool operator()(const TObjId obj) {
+        lastObj = obj;
+        return /* continue */ true;
+    }
+};
 
 TObjId lastObjOfShape(const SymHeap &sh, const Shape &shape)
 {
-    const ShapeProps &props = shape.props;
-    const EObjKind kind = props.kind;
-    switch (kind) {
-        case OK_SLS:
-        case OK_DLS:
-            break;
-
-        default:
-            CL_BREAK_IF("invalid call of lastObjOfShape()");
-    }
-
-    const TOffset offNext = props.bOff.next;
-    SymHeap &shWritable = const_cast<SymHeap &>(sh);
-
-    TObjId obj = shape.entry;
-    for (unsigned i = 1U; i < shape.length; ++i)
-        obj = nextObj(shWritable, obj, offNext);
-
-    return obj;
+    LastObjCollector visitor;
+    traverseShape(sh, shape, visitor);
+    return visitor.lastObj;
 }
