@@ -169,8 +169,24 @@ bool matchAnchorHeap(
         return false;
 
     // successful match!
+    pDst->props = csProg.props;
     pDst->heap[port] = shIdent.first;
     return true;
+}
+
+bool seekTemplateMatch(
+        FootprintMatch             *pMatch,
+        TMetaOpSet                 *pMetaOps,
+        MatchCtx                   &ctx,
+        const OpTemplate           &tpl)
+{
+    // TODO
+    (void) pMatch;
+    (void) pMetaOps;
+    (void) ctx;
+    (void) tpl;
+    CL_BREAK_IF("please implement");
+    return false;
 }
 
 void matchSingleFootprint(
@@ -179,6 +195,9 @@ void matchSingleFootprint(
         const OpFootprint          &fp,
         const TFootprintIdent      &fpIdent)
 {
+    TMetaOpSet metaOps;
+    bool diffComputed = false;
+
     BOOST_FOREACH(const FixedPoint::ShapeSeq seq, ctx.shapeSeqs) {
         // resolve shape sequence to search through
         FixedPoint::TShapeIdentList shapes;
@@ -201,18 +220,22 @@ void matchSingleFootprint(
             // no anchor heap found
             continue;
 
-        // TODO
-        CL_BREAK_IF("please implement");
-    }
+        if (!diffComputed) {
+            // time to diff the template
+            if (!diffHeaps(&metaOps, fp.input, fp.output)) {
+                CL_BREAK_IF("AdtOp::diffHeaps() has failed");
+                return;
+            }
+            diffComputed = true;
+        }
 
-    TMetaOpSet metaOps;
-    if (!diffHeaps(&metaOps, fp.input, fp.output)) {
-        CL_BREAK_IF("AdtOp::diffHeaps() has failed");
-        return;
-    }
+        if (!seekTemplateMatch(&fm, &metaOps, ctx, tpl))
+            // failed to match the template
+            continue;
 
-    // TODO
-    CL_BREAK_IF("please implement");
+        // append the match on the list
+        ctx.matchList.push_back(fm);
+    }
 }
 
 void matchTemplate(
