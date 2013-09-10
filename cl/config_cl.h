@@ -93,11 +93,6 @@
 #define CL_MSG_SQUEEZE_REPEATS          1
 
 /**
- * if 1, do not check for unused local variables and registers
- */
-#define CLF_BYPASS_USAGE_CHK            1
-
-/**
  * if 1, suppress warnings about unhandled code constructs
  */
 #define CLPLUG_SILENT                   0

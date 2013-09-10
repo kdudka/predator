@@ -20,17 +20,14 @@
 #include "config_cl.h"
 #include "clf_intchk.hh"
 
+#include <cl/cl_msg.hh>
+
 #include "cl_filter.hh"
 #include "cl_private.hh"
 #include "clf_opchk.hh"
-#include "usagechk.hh"
 
 #include <map>
 #include <string>
-
-#ifndef CLF_BYPASS_USAGE_CHK
-#   define CLF_BYPASS_USAGE_CHK 0
-#endif
 
 class ClfCbSeqChk: public ClFilterBase {
     public:
@@ -313,77 +310,6 @@ class ClfLabelChk: public ClFilterBase {
         void emitWarnings();
 };
 
-class ClfRegUsageChk: public ClfOpCheckerBase {
-    public:
-        ClfRegUsageChk(ICodeListener *slave):
-            ClfOpCheckerBase(slave),
-            usageChecker_("register %r")
-        {
-        }
-
-        virtual void fnc_close() {
-            usageChecker_.emitPendingMessages(ClfOpCheckerBase::lastLocation());
-            usageChecker_.reset();
-            ClfOpCheckerBase::fnc_close();
-        }
-
-    protected:
-        virtual void checkDstOperand(const struct cl_operand *op) {
-            if (CL_OPERAND_VAR != op->code)
-                return;
-
-            int id = op->data.var->uid;
-            usageChecker_.write(id, id, ClfOpCheckerBase::lastLocation());
-        }
-
-        virtual void checkSrcOperand(const struct cl_operand *op) {
-            if (CL_OPERAND_VAR != op->code)
-                return;
-
-            int id = op->data.var->uid;
-            usageChecker_.read(id, id, ClfOpCheckerBase::lastLocation());
-        }
-
-    private:
-        UsageChecker<int, int> usageChecker_;
-};
-
-class ClfLcVarUsageChk: public ClfOpCheckerBase {
-    public:
-        ClfLcVarUsageChk(ICodeListener *slave):
-            ClfOpCheckerBase(slave),
-            usageChecker_("local variable ")
-        {
-        }
-
-        virtual void fnc_close() {
-            usageChecker_.emitPendingMessages(ClfOpCheckerBase::lastLocation());
-            usageChecker_.reset();
-            ClfOpCheckerBase::fnc_close();
-        }
-
-    protected:
-        virtual void checkDstOperand(const struct cl_operand *op) {
-            if (CL_OPERAND_VAR != op->code || CL_SCOPE_FUNCTION != op->scope)
-                return;
-
-            usageChecker_.write(op->data.var->uid,
-                                std::string("'") + op->data.var->name +"'",
-                                ClfOpCheckerBase::lastLocation());
-        }
-
-        virtual void checkSrcOperand(const struct cl_operand *op) {
-            if (CL_OPERAND_VAR != op->code || CL_SCOPE_FUNCTION != op->scope)
-                return;
-
-            usageChecker_.read(op->data.var->uid,
-                               std::string("'") + op->data.var->name +"'",
-                               ClfOpCheckerBase::lastLocation());
-        }
-
-    private:
-        UsageChecker<int, std::string> usageChecker_;
-};
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClfCbSeqChk implementation
@@ -638,24 +564,12 @@ void ClfLabelChk::emitWarnings()
     }
 }
 
-namespace {
-    ICodeListener* usageChk(ICodeListener *slave) {
-#if CLF_BYPASS_USAGE_CHK
-        return slave;
-#else
-        return
-            new ClfLcVarUsageChk(
-            new ClfRegUsageChk(slave));
-#endif
-    }
-} // namespace
-
 
 // /////////////////////////////////////////////////////////////////////////////
 // public interface, see clf_intchk.hh for more details
 ICodeListener* createClfIntegrityChk(ICodeListener *slave)
 {
-    return usageChk(
+    return
         new ClfLabelChk(
-        new ClfCbSeqChk(slave)));
+        new ClfCbSeqChk(slave));
 }
