@@ -33,8 +33,8 @@
 
 class ClPrettyPrint: public ICodeListener {
     public:
-        ClPrettyPrint(bool showTypes);
         ClPrettyPrint(const char *fileName, bool showTypes);
+
         virtual ~ClPrettyPrint();
 
         virtual void file_open(
@@ -83,7 +83,6 @@ class ClPrettyPrint: public ICodeListener {
         virtual void acknowledge() { }
 
     private:
-        const char              *fname_;
         std::fstream            fstr_;
         std::ostream            &out_;
         struct cl_loc           loc_;
@@ -117,30 +116,25 @@ using std::string;
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClPrettyPrint implementation
-ClPrettyPrint::ClPrettyPrint(bool showTypes):
-    fname_(0),
-    out_(std::cout),
-    showTypes_(showTypes),
-    printingArgDecls_(false)
-{
-    // FIXME: static variable
-    ColorConsole::enableForTerm(STDOUT_FILENO);
-}
-
 ClPrettyPrint::ClPrettyPrint(const char *fileName, bool showTypes):
-    fname_(fileName),
-    fstr_(fileName, std::fstream::out),
-    out_(fstr_),
+    out_((fileName && fileName[0]) ? fstr_ : std::cout),
     showTypes_(showTypes),
     printingArgDecls_(false)
 {
+    if (&out_ == &std::cout) {
+        ColorConsole::enableForTerm(STDOUT_FILENO);
+        return;
+    }
+
+    fstr_.open(fileName, std::fstream::out);
+
     if (!fstr_)
         CL_ERROR("unable to create file '" << fileName << "'");
 }
 
 ClPrettyPrint::~ClPrettyPrint()
 {
-    if (fname_)
+    if (fstr_)
         fstr_.close();
 }
 
@@ -1033,8 +1027,5 @@ void ClPrettyPrint::insn_switch_close()
 // public interface, see cl_pp.hh for more details
 ICodeListener* createClPrettyPrint(const char *args, bool showTypes)
 {
-    // check whether a file name is given
-    return (args && *args)
-        ? new ClPrettyPrint(/* file name */ args, showTypes)
-        : new ClPrettyPrint(showTypes);
+    return new ClPrettyPrint(/* file name */ args, showTypes);
 }
