@@ -32,6 +32,7 @@
 
 namespace AdtOp {
 
+typedef FixedPoint::TObjectMapper                   TObjectMapper;
 typedef FixedPoint::TShapeIdent                     TShapeIdent;
 
 struct MatchCtx {
@@ -60,7 +61,7 @@ unsigned countObjects(const SymHeap &sh)
 }
 
 bool matchAnchorHeapCore(
-        FixedPoint::TObjectMapper  *pMap,
+        TObjectMapper              *pMap,
         const SymHeap              &shProg,
         const SymHeap              &shTpl,
         const Shape                &csProg,
@@ -174,19 +175,84 @@ bool matchAnchorHeap(
     return true;
 }
 
-bool seekTemplateMatch(
-        FootprintMatch             *pMatch,
-        TMetaOpSet                 *pMetaOps,
-        MatchCtx                   &ctx,
-        const OpTemplate           &tpl)
+TObjId relocSingleObj(const TObjId obj, const TObjectMapper &objMap)
 {
+    // do not relocate ID of special objects
+    switch (obj) {
+        case OBJ_INVALID:
+            CL_BREAK_IF("relocSingleObj() got OBJ_INVALID");
+            // fall through!
+        case OBJ_NULL:
+            return obj;
+
+        default:
+            break;
+    }
+
+    // query the object map to obtain the resulting object ID
+    TObjList objList;
+    objMap.query<D_LEFT_TO_RIGHT>(&objList, obj);
+    if (1U != objList.size()) {
+        CL_BREAK_IF("unsupported ID mapping in relocSingleObj()");
+        return OBJ_INVALID;
+    }
+
+    // an unambiguous ID has been found!
+    return objList.front();
+}
+
+void relocObjsInMetaOps(TMetaOpSet *pMetaOps, const TObjectMapper &objMap)
+{
+    const TMetaOpSet &src = *pMetaOps;
+    TMetaOpSet dst;
+
+    BOOST_FOREACH(MetaOperation mo, src) {
+        mo.obj = relocSingleObj(mo.obj, objMap);
+        if (MO_SET == mo.code)
+            mo.tgtObj = relocSingleObj(mo.tgtObj, objMap);
+
+        dst.insert(mo);
+    }
+
+    pMetaOps->swap(dst);
+}
+
+void seekTemplateMatchInstances(
+        MatchCtx                   &ctx,
+        const OpTemplate           &tpl,
+        FootprintMatch              fm,
+        TMetaOpSet                  metaOpsToLookFor)
+{
+    EDirection mapDirection;
+    EFootprintPort beg, end;
+    const ESearchDirection sd = tpl.searchDirection();
+    switch (sd) {
+        case SD_FORWARD:
+            beg = FP_SRC;
+            end = FP_DST;
+            mapDirection = D_LEFT_TO_RIGHT;
+            break;
+
+        case SD_BACKWARD:
+            beg = FP_DST;
+            end = FP_SRC;
+            mapDirection = D_RIGHT_TO_LEFT;
+            break;
+
+        default:
+            CL_BREAK_IF("seekTemplateMatchInstances() got invalid direction");
+            return;
+    }
+
+    const TObjectMapper &objMap = fm.objMap[beg];
+    relocObjsInMetaOps(&metaOpsToLookFor, objMap);
+
     // TODO
-    (void) pMatch;
-    (void) pMetaOps;
     (void) ctx;
-    (void) tpl;
+    (void) metaOpsToLookFor;
+    (void) mapDirection;
+    (void) end;
     CL_BREAK_IF("please implement");
-    return false;
 }
 
 void matchSingleFootprint(
@@ -229,12 +295,7 @@ void matchSingleFootprint(
             diffComputed = true;
         }
 
-        if (!seekTemplateMatch(&fm, &metaOps, ctx, tpl))
-            // failed to match the template
-            continue;
-
-        // append the match on the list
-        ctx.matchList.push_back(fm);
+        seekTemplateMatchInstances(ctx, tpl, fm, metaOps);
     }
 }
 
