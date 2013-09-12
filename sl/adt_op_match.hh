@@ -34,6 +34,7 @@ enum EFootprintPort {
 struct FootprintMatch {
     TFootprintIdent                 footprint;
     ShapeProps                      props;
+    ShapeProps                      tplProps;
     FixedPoint::THeapIdent          heap            [FP_TOTAL];
     FixedPoint::TObjectMapper       objMap          [FP_TOTAL];
 

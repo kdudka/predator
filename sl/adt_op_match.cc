@@ -171,6 +171,7 @@ bool matchAnchorHeap(
 
     // successful match!
     pDst->props = csProg.props;
+    pDst->tplProps = csTpl.props;
     pDst->heap[port] = shIdent.first;
     return true;
 }
@@ -210,6 +211,43 @@ void relocObjsInMetaOps(TMetaOpSet *pMetaOps, const TObjectMapper &objMap)
         mo.obj = relocSingleObj(mo.obj, objMap);
         if (MO_SET == mo.code)
             mo.tgtObj = relocSingleObj(mo.tgtObj, objMap);
+
+        dst.insert(mo);
+    }
+
+    pMetaOps->swap(dst);
+}
+
+void relocFieldOffset(MetaOperation *pMetaOp, const FootprintMatch &fm)
+{
+    const BindingOff &bfTpl = fm.tplProps.bOff;
+    const BindingOff &bfProg = fm.props.bOff;
+    TOffset &off = pMetaOp->off;
+
+    CL_BREAK_IF(bfTpl.next == bfTpl.prev);
+
+    if (off == bfTpl.next)
+        off = bfProg.next;
+    else if (off == bfTpl.prev)
+        off = bfProg.prev;
+}
+
+void relocOffsetsInMetaOps(TMetaOpSet *pMetaOps, const FootprintMatch &fm)
+{
+    const TMetaOpSet &src = *pMetaOps;
+    TMetaOpSet dst;
+
+    BOOST_FOREACH(MetaOperation mo, src) {
+        switch (mo.code) {
+            case MO_SET:
+                // TODO: relocate target offset according to head offset
+                // fall through!
+            case MO_UNSET:
+                relocFieldOffset(&mo, fm);
+                // fall through!
+            default:
+                break;
+        }
 
         dst.insert(mo);
     }
@@ -292,6 +330,8 @@ void matchSingleFootprint(
                 CL_BREAK_IF("AdtOp::diffHeaps() has failed");
                 return;
             }
+
+            relocOffsetsInMetaOps(&metaOps, fm);
             diffComputed = true;
         }
 
