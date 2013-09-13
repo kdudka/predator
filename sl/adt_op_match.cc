@@ -144,7 +144,7 @@ bool matchAnchorHeap(
             CL_BREAK_IF("matchAnchorHeap() got invalid search direction");
     }
 
-    // resolve tamplate state and shape list
+    // resolve template state and shape list
     const SymHeap &shTpl = (reverse)
         ? fp.output
         : fp.input;
@@ -306,7 +306,8 @@ void matchSingleFootprint(
         // resolve shape sequence to search through
         FixedPoint::TShapeIdentList shapes;
         expandShapeSequence(&shapes, seq, ctx.progState);
-        if (SD_BACKWARD == tpl.searchDirection())
+        if (SD_FORWARD == tpl.searchDirection())
+            // reverse the sequence if searching _forward_
             std::reverse(shapes.begin(), shapes.end());
 
         // allocate a structure for the match result
