@@ -54,17 +54,8 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
 {
     // resolve val2
     const TValId val2 = fld2.value();
-    const EValueTarget vt2 = ctx.sh2.valTarget(val2);
-    if (VT_OBJECT != vt2) {
-        CL_BREAK_IF("diffSetField() does not support value invalidation yet");
-        return false;
-    }
-
-    // resolve val1
     const TObjType clt = fld2.type();
     const TOffset off = fld2.offset();
-    const FldHandle fld1(ctx.sh1, obj1, clt, off);
-    const TValId val1 = fld1.value();
 
     // check object mapping
     const TObjId obj2 = fld2.obj();
@@ -86,24 +77,45 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
         return false;
     }
 
-    const EValueTarget vt1 = ctx.sh1.valTarget(val1);
-    switch (vt1) {
-        case VT_UNKNOWN:
+    if (ctx.sh1.isValid(obj1)) {
+        // resolve val1
+        const FldHandle fld1(ctx.sh1, obj1, clt, off);
+        const TValId val1 = fld1.value();
+        if (val1 == val2)
+            return true;
+
+        const EValueTarget vt1 = ctx.sh1.valTarget(val1);
+        switch (vt1) {
+            case VT_UNKNOWN:
+                break;
+
+            case VT_OBJECT:
+                if (ctx.sh1.objByAddr(val1) != tgtObjList1.front())
+                    break;
+                if (ctx.sh1.valOffset(val1) != tgtOff2)
+                    break;
+                if (ctx.sh1.targetSpec(val1) != tgtTs2)
+                    break;
+
+                // nothing changed actually
+                return true;
+
+            default:
+                CL_BREAK_IF("unhandled value target in diffSetField()");
+                return false;
+        }
+    }
+
+    const EValueTarget vt2 = ctx.sh2.valTarget(val2);
+    switch (vt2) {
+        case VT_OBJECT:
             break;
 
-        case VT_OBJECT:
-            if (ctx.sh1.objByAddr(val1) != tgtObjList1.front())
-                break;
-            if (ctx.sh1.valOffset(val1) != tgtOff2)
-                break;
-            if (ctx.sh1.targetSpec(val1) != tgtTs2)
-                break;
-
-            // nothing changed actually
+        case VT_UNKNOWN:
             return true;
 
         default:
-            CL_BREAK_IF("unhandled value target in diffSetField()");
+            CL_BREAK_IF("diffSetField() does not support non-pointer fields yet");
             return false;
     }
 
@@ -118,9 +130,16 @@ bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
     // resolve val1
     const TValId val1 = fld1.value();
     const EValueTarget vt1 = ctx.sh1.valTarget(val1);
-    if (VT_OBJECT != vt1) {
-        CL_BREAK_IF("diffSetField() does not support non-pointer fields yet");
-        return false;
+    switch (vt1) {
+        case VT_OBJECT:
+            break;
+
+        case VT_UNKNOWN:
+            return true;
+
+        default:
+            CL_BREAK_IF("diffSetField() does not support non-pointer fields yet");
+            return false;
     }
 
     // resolve val2
