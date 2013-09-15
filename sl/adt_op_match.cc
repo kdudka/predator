@@ -33,6 +33,7 @@
 namespace AdtOp {
 
 typedef FixedPoint::TObjectMapper                   TObjectMapper;
+typedef FixedPoint::THeapIdent                      THeapIdent;
 typedef FixedPoint::TShapeIdent                     TShapeIdent;
 
 struct MatchCtx {
@@ -255,6 +256,51 @@ void relocOffsetsInMetaOps(TMetaOpSet *pMetaOps, const FootprintMatch &fm)
     pMetaOps->swap(dst);
 }
 
+bool jumpToNextHeap(
+        THeapIdent                 *pNext,
+        const THeapIdent            heapCurrent,
+        const TProgState           &progState,
+        const ESearchDirection      sd)
+{
+    using namespace FixedPoint;
+    const LocalState &locState = progState[heapCurrent./* loc */first];
+
+    // check search direction
+    bool reverse = false;
+    switch (sd) {
+        case SD_FORWARD:
+            break;
+
+        case SD_BACKWARD:
+            reverse = true;
+            break;
+
+        default:
+            CL_BREAK_IF("jumpToNextHeap() got invalid search direction");
+    }
+
+    const TEdgeListByHeapIdx &eListByHeapIdx = (reverse)
+        ? locState.traceInEdges
+        : locState.traceOutEdges;
+
+    const TTraceEdgeList &edgeList = eListByHeapIdx[heapCurrent./* sh */second];
+    if (edgeList.empty())
+        // no successor/predecessor
+        return false;
+
+    if (1U != edgeList.size()) {
+        CL_BREAK_IF("jumpToNextHeap() would have ambiguous result");
+        return false;
+    }
+
+    const TraceEdge *te = edgeList.front();
+    *pNext = (reverse)
+        ? te->src
+        : te->dst;
+
+    return true;
+}
+
 void seekTemplateMatchInstances(
         MatchCtx                   &ctx,
         const OpTemplate           &tpl,
@@ -285,8 +331,35 @@ void seekTemplateMatchInstances(
     const TObjectMapper &objMap = fm.objMap[beg];
     relocObjsInMetaOps(&metaOpsToLookFor, objMap);
 
+    // crawl the fixed-point
+    THeapIdent heapCurrent = fm.heap[beg];
+    std::set<THeapIdent> seen;
+    seen.insert(heapCurrent);
+
+    THeapIdent heapNext;
+    while (jumpToNextHeap(&heapNext, heapCurrent, ctx.progState, sd)
+            && insertOnce(seen, heapNext))
+    {
+        // resolve the pair of heaps in program configuration
+        const SymHeap *shCurrnet = heapByIdent(ctx.progState, heapCurrent);
+        const SymHeap *shNext = heapByIdent(ctx.progState, heapNext);
+        const SymHeap &sh0 = (SD_FORWARD  == sd) ? *shCurrnet : *shNext;
+        const SymHeap &sh1 = (SD_BACKWARD == sd) ? *shCurrnet : *shNext;
+
+        // compute the difference of the pair of heaps
+        TMetaOpSet metaOpsNow;
+        if (!diffHeaps(&metaOpsNow, sh0, sh1)) {
+            CL_BREAK_IF("diffHeaps() has failed");
+            return;
+        }
+
+        // TODO
+
+        // move to the next one
+        heapCurrent = heapNext;
+    }
+
     // TODO
-    (void) ctx;
     (void) metaOpsToLookFor;
     (void) mapDirection;
     (void) end;
