@@ -258,6 +258,7 @@ void relocOffsetsInMetaOps(TMetaOpSet *pMetaOps, const FootprintMatch &fm)
 
 bool jumpToNextHeap(
         THeapIdent                 *pNext,
+        TObjectMapper              *pObjmap,
         const THeapIdent            heapCurrent,
         const TProgState           &progState,
         const ESearchDirection      sd)
@@ -298,6 +299,10 @@ bool jumpToNextHeap(
         ? te->src
         : te->dst;
 
+    *pObjmap = te->objMap;
+    if (reverse)
+        pObjmap->flip();
+
     return true;
 }
 
@@ -307,20 +312,17 @@ void seekTemplateMatchInstances(
         FootprintMatch              fm,
         TMetaOpSet                  metaOpsToLookFor)
 {
-    EDirection mapDirection;
     EFootprintPort beg, end;
     const ESearchDirection sd = tpl.searchDirection();
     switch (sd) {
         case SD_FORWARD:
             beg = FP_SRC;
             end = FP_DST;
-            mapDirection = D_LEFT_TO_RIGHT;
             break;
 
         case SD_BACKWARD:
             beg = FP_DST;
             end = FP_SRC;
-            mapDirection = D_RIGHT_TO_LEFT;
             break;
 
         default:
@@ -328,8 +330,9 @@ void seekTemplateMatchInstances(
             return;
     }
 
-    const TObjectMapper &objMap = fm.objMap[beg];
+    TObjectMapper objMap = fm.objMap[beg];
     relocObjsInMetaOps(&metaOpsToLookFor, objMap);
+    CL_BREAK_IF(metaOpsToLookFor.empty());
 
     // crawl the fixed-point
     THeapIdent heapCurrent = fm.heap[beg];
@@ -337,14 +340,23 @@ void seekTemplateMatchInstances(
     seen.insert(heapCurrent);
 
     THeapIdent heapNext;
-    while (jumpToNextHeap(&heapNext, heapCurrent, ctx.progState, sd)
-            && insertOnce(seen, heapNext))
-    {
+    while (!metaOpsToLookFor.empty()) {
+        if (!jumpToNextHeap(&heapNext, &objMap, heapCurrent, ctx.progState, sd))
+            return;
+
+        if (!insertOnce(seen, heapNext)) {
+            CL_BREAK_IF("loop detected in seekTemplateMatchInstances()");
+            return;
+        }
+
         // resolve the pair of heaps in program configuration
         const SymHeap *shCurrnet = heapByIdent(ctx.progState, heapCurrent);
         const SymHeap *shNext = heapByIdent(ctx.progState, heapNext);
         const SymHeap &sh0 = (SD_FORWARD  == sd) ? *shCurrnet : *shNext;
         const SymHeap &sh1 = (SD_BACKWARD == sd) ? *shCurrnet : *shNext;
+
+        if (SD_BACKWARD == sd)
+            relocObjsInMetaOps(&metaOpsToLookFor, objMap);
 
         // compute the difference of the pair of heaps
         TMetaOpSet metaOpsNow;
@@ -353,17 +365,23 @@ void seekTemplateMatchInstances(
             return;
         }
 
-        // TODO
+        BOOST_FOREACH(const MetaOperation &mo, metaOpsNow) {
+            if (1U == metaOpsToLookFor.erase(mo))
+                continue;
+
+            CL_BREAK_IF("please implement independency checking");
+            return;
+        }
 
         // move to the next one
         heapCurrent = heapNext;
+        if (SD_FORWARD == sd)
+            relocObjsInMetaOps(&metaOpsToLookFor, objMap);
     }
 
-    // TODO
-    (void) metaOpsToLookFor;
-    (void) mapDirection;
-    (void) end;
-    CL_BREAK_IF("please implement");
+    fm.heap[end] = heapNext;
+    // TODO: initialize fm.objMap[end]
+    ctx.matchList.push_back(fm);
 }
 
 void matchSingleFootprint(

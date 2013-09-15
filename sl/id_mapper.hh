@@ -72,6 +72,11 @@ class IdMapper {
             biSearch_[1].clear();
         }
 
+        void flip()
+        {
+            biSearch_[0].swap(biSearch_[1]);
+        }
+
         bool empty() const
         {
             CL_BREAK_IF(biSearch_[0].empty() != biSearch_[1].empty());
