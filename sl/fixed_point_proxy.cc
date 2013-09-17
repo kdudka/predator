@@ -252,7 +252,6 @@ void StateByInsn::plotAll()
 
     // XXX
     AdtOp::loadDefaultOperations(&adtOps, stor);
-    adtOps.plot();
 
     BOOST_FOREACH(TFncMap::const_reference fncItem, d->visitedFncs) {
         const TFnc fnc = fncItem.second;

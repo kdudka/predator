@@ -61,6 +61,46 @@ unsigned countObjects(const SymHeap &sh)
     return objs.size();
 }
 
+enum EContext {
+    C_TEMPLATE,
+    C_PROGRAM,
+    C_TOTAL
+};
+
+void processRegSuffix(
+        TObjectMapper              *pMap,
+        TObjList                    pObjLists[1][C_TOTAL],
+        const SymHeap              &shTpl,
+        const SymHeap              &shProg)
+{
+    TObjList &list0 = (*pObjLists)[0];
+    TObjList &list1 = (*pObjLists)[1];
+
+    while (!list0.empty() && !list1.empty()) {
+        const TObjId obj0 = list0.back();
+        const TObjId obj1 = list1.back();
+
+        // check that both objects are regions
+        if (OK_REGION !=  shTpl.objKind(obj0))
+            break;
+        if (OK_REGION != shProg.objKind(obj1))
+            break;
+
+        // remember the mapping and remove the pair of regions
+        pMap->insert(obj0, obj1);
+        list0.pop_back();
+        list1.pop_back();
+    }
+}
+
+void swapObjLists(TObjList pObjLists[1][C_TOTAL])
+{
+    for (unsigned u = 0U; u < C_TOTAL; ++u) {
+        TObjList &objList = (*pObjLists)[u];
+        std::reverse(objList.begin(), objList.end());
+    }
+}
+
 bool matchAnchorHeapCore(
         TObjectMapper              *pMap,
         const SymHeap              &shProg,
@@ -73,45 +113,53 @@ bool matchAnchorHeapCore(
         return false;
     }
 
-    if (csProg.length != csTpl.length) {
-        CL_BREAK_IF("only 1:1 mapping is supported by matchAnchorHeapCore()");
-        return false;
-    }
-
     // clear the destination object map (if not already)
     pMap->clear();
 
     // resolve list of objects belonging to containers shapes
-    TObjList tplObjs, progObjs;
-    objListByShape(&tplObjs,  shTpl,  csTpl);
-    objListByShape(&progObjs, shProg, csProg);
+    TObjList objLists[C_TOTAL];
+    objListByShape(&objLists[C_TEMPLATE], shTpl, csTpl);
+    objListByShape(&objLists[C_PROGRAM], shProg, csProg);
+    CL_BREAK_IF(objLists[C_TEMPLATE].empty());
 
-    // count the objects
-    const unsigned objsCnt = tplObjs.size();
-    CL_BREAK_IF(objsCnt != progObjs.size());
-
-    // iterate object-wise
-    for (unsigned idx = 0U; idx < objsCnt; ++idx) {
-        const TObjId objTpl  = tplObjs [idx];
-        const TObjId objProg = progObjs[idx];
-
-        const EObjKind kindTpl  = shTpl .objKind(objTpl);
-        const EObjKind kindProg = shProg.objKind(objProg);
-        if (kindTpl != kindProg) {
-            CL_BREAK_IF("kind mismatch not supported by matchAnchorHeap()");
-            return false;
-        }
-
-        const TMinLen lenTpl  = objMinLength(shTpl,  objTpl);
-        const TMinLen lenProg = objMinLength(shProg, objProg);
-        if (lenTpl != lenProg) {
-            CL_BREAK_IF("minLen mismatch not supported by matchAnchorHeap()");
-            return false;
-        }
-
-        // remember the mapping of objects
-        pMap->insert(objTpl, objProg);
+    // handle matching regions at both end-points
+    for (unsigned u = 0; u < 2; ++u) {
+        swapObjLists(&objLists);
+        processRegSuffix(pMap, &objLists, shTpl, shProg);
     }
+
+    if (objLists[C_TEMPLATE].empty() && objLists[C_PROGRAM].empty())
+        // all regions were mapped and nothing remains
+        return true;
+
+    if (objLists[C_TEMPLATE].empty() || objLists[C_PROGRAM].empty())
+        // we are no longer able to map the remaining objects
+        return false;
+
+    if (1U < objLists[C_TEMPLATE].size()) {
+        CL_BREAK_IF("unsupported match of the anchor heap");
+        return false;
+    }
+
+    // check the kind of the (only) remaining object in the template
+    const TObjId tplObj = objLists[C_TEMPLATE].front();
+    const EObjKind tplObjKind = shTpl.objKind(tplObj);
+    switch (tplObjKind) {
+        case OK_REGION:
+            // unmatched region in the template
+            return false;
+
+        case OK_DLS:
+            break;
+
+        default:
+            CL_BREAK_IF("unsupported object kind in matchAnchorHeapCore()");
+            return false;
+    }
+
+    // map the remaining DLS in the template with the remaining program objects
+    BOOST_FOREACH(const TObjId progObj, objLists[C_PROGRAM])
+        pMap->insert(tplObj, progObj);
 
     // successfully matched!
     return true;
@@ -381,6 +429,9 @@ void seekTemplateMatchInstances(
 
     fm.heap[end] = heapNext;
     // TODO: initialize fm.objMap[end]
+    CL_DEBUG("[ADT] template instance matched: tpl = " << tpl.name()
+            << ", beg = " << fm.heap[beg].first << "/" << fm.heap[beg].second
+            << ", end = " << fm.heap[end].first << "/" << fm.heap[end].second);
     ctx.matchList.push_back(fm);
 }
 
