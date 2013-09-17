@@ -413,9 +413,25 @@ void seekTemplateMatchInstances(
             return;
         }
 
-        BOOST_FOREACH(const MetaOperation &mo, metaOpsNow) {
+        BOOST_FOREACH(MetaOperation mo, metaOpsNow) {
+            const EStorageClass code = sh0.objStorClass(mo.obj);
+            if (isProgramVar(code))
+                // we are not interested in changing non-heap variables
+                continue;
+
             if (1U == metaOpsToLookFor.erase(mo))
                 continue;
+
+            if (MO_SET == mo.code && OK_REGION ==  sh0.objKind(mo.tgtObj)) {
+                // translate TS_REGION to TS_{FIRST,LAST} if appropriate
+                mo.tgtTs = TS_FIRST;
+                if (1U == metaOpsToLookFor.erase(mo))
+                    continue;
+                mo.tgtTs = TS_LAST;
+                if (1U == metaOpsToLookFor.erase(mo))
+                    continue;
+                mo.tgtTs = TS_REGION;
+            }
 
             CL_BREAK_IF("please implement independency checking");
             return;
