@@ -445,10 +445,14 @@ void seekTemplateMatchInstances(
 
     fm.heap[end] = heapNext;
     // TODO: initialize fm.objMap[end]
-    CL_DEBUG("[ADT] template instance matched: tpl = " << tpl.name()
-            << ", beg = " << fm.heap[beg].first << "/" << fm.heap[beg].second
-            << ", end = " << fm.heap[end].first << "/" << fm.heap[end].second);
     ctx.matchList.push_back(fm);
+
+    const THeapIdent src = fm.heap[FP_SRC];
+    const THeapIdent dst = fm.heap[FP_DST];
+    CL_DEBUG("[ADT] template instance matched: tpl = " << tpl.name()
+            << "[" << fm.footprint.second << "]"
+            << ", src = " << src.first << "/" << src.second
+            << ", dst = " << dst.first << "/" << dst.second);
 }
 
 void matchSingleFootprint(
