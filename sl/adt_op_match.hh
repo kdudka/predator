@@ -23,6 +23,8 @@
 #include "adt_op.hh"
 #include "fixed_point.hh"
 
+#include <list>
+
 namespace AdtOp {
 
 enum EFootprintPort {
@@ -31,11 +33,16 @@ enum EFootprintPort {
     FP_TOTAL
 };
 
+typedef std::list<FixedPoint::THeapIdent>           THeapIdentList;
+
 struct FootprintMatch {
     TFootprintIdent                 footprint;
     ShapeProps                      props;
     ShapeProps                      tplProps;
-    FixedPoint::THeapIdent          heap            [FP_TOTAL];
+
+    /// list of locations (instructions) matched by the template + dst location
+    THeapIdentList                  matchedHeaps;
+
     FixedPoint::TObjectMapper       objMap          [FP_TOTAL];
 
     FootprintMatch(const TFootprintIdent footprint_):

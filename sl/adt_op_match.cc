@@ -221,7 +221,7 @@ bool matchAnchorHeap(
     // successful match!
     pDst->props = csProg.props;
     pDst->tplProps = csTpl.props;
-    pDst->heap[port] = shIdent.first;
+    pDst->matchedHeaps.push_back(shIdent.first);
     return true;
 }
 
@@ -382,11 +382,14 @@ void seekTemplateMatchInstances(
     relocObjsInMetaOps(&metaOpsToLookFor, objMap);
     CL_BREAK_IF(metaOpsToLookFor.empty());
 
-    // crawl the fixed-point
-    THeapIdent heapCurrent = fm.heap[beg];
+    // pick the starting position and clear the list of matched heaps
+    CL_BREAK_IF(1U != fm.matchedHeaps.size());
+    THeapIdent heapCurrent = fm.matchedHeaps.front();
     std::set<THeapIdent> seen;
     seen.insert(heapCurrent);
+    fm.matchedHeaps.clear();
 
+    // crawl the fixed-point
     THeapIdent heapNext;
     while (!metaOpsToLookFor.empty()) {
         if (!jumpToNextHeap(&heapNext, &objMap, heapCurrent, ctx.progState, sd))
@@ -398,10 +401,10 @@ void seekTemplateMatchInstances(
         }
 
         // resolve the pair of heaps in program configuration
-        const SymHeap *shCurrnet = heapByIdent(ctx.progState, heapCurrent);
-        const SymHeap *shNext = heapByIdent(ctx.progState, heapNext);
-        const SymHeap &sh0 = (SD_FORWARD  == sd) ? *shCurrnet : *shNext;
-        const SymHeap &sh1 = (SD_BACKWARD == sd) ? *shCurrnet : *shNext;
+        const THeapIdent heap0 = (SD_FORWARD  == sd) ? heapCurrent : heapNext;
+        const THeapIdent heap1 = (SD_BACKWARD == sd) ? heapCurrent : heapNext;
+        const SymHeap &sh0 = *heapByIdent(ctx.progState, heap0);
+        const SymHeap &sh1 = *heapByIdent(ctx.progState, heap1);
 
         if (SD_BACKWARD == sd)
             relocObjsInMetaOps(&metaOpsToLookFor, objMap);
@@ -420,21 +423,34 @@ void seekTemplateMatchInstances(
                 continue;
 
             if (1U == metaOpsToLookFor.erase(mo))
-                continue;
+                goto adt_meta_op_matched;
 
             if (MO_SET == mo.code && OK_REGION ==  sh0.objKind(mo.tgtObj)) {
                 // translate TS_REGION to TS_{FIRST,LAST} if appropriate
                 mo.tgtTs = TS_FIRST;
                 if (1U == metaOpsToLookFor.erase(mo))
-                    continue;
+                    goto adt_meta_op_matched;
                 mo.tgtTs = TS_LAST;
                 if (1U == metaOpsToLookFor.erase(mo))
-                    continue;
+                    goto adt_meta_op_matched;
                 mo.tgtTs = TS_REGION;
             }
 
             CL_BREAK_IF("please implement independency checking");
             return;
+
+adt_meta_op_matched:
+            if (SD_FORWARD == sd) {
+                fm.matchedHeaps.pop_back();
+                fm.matchedHeaps.push_back(heap0);
+                fm.matchedHeaps.push_back(heap1);
+            }
+            else /* SD_BACKWARD */ {
+                if (fm.matchedHeaps.empty())
+                    fm.matchedHeaps.push_back(heap1);
+
+                fm.matchedHeaps.push_front(heap0);
+            }
         }
 
         // move to the next one
@@ -443,12 +459,11 @@ void seekTemplateMatchInstances(
             relocObjsInMetaOps(&metaOpsToLookFor, objMap);
     }
 
-    fm.heap[end] = heapNext;
     // TODO: initialize fm.objMap[end]
     ctx.matchList.push_back(fm);
 
-    const THeapIdent src = fm.heap[FP_SRC];
-    const THeapIdent dst = fm.heap[FP_DST];
+    const THeapIdent src = fm.matchedHeaps.front();
+    const THeapIdent dst = fm.matchedHeaps.back();
     CL_DEBUG("[ADT] template instance matched: tpl = " << tpl.name()
             << "[" << fm.footprint.second << "]"
             << ", src = " << src.first << "/" << src.second
