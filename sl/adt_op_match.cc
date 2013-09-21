@@ -251,15 +251,22 @@ TObjId relocSingleObj(const TObjId obj, const TObjectMapper &objMap)
     return objList.front();
 }
 
-void relocObjsInMetaOps(TMetaOpSet *pMetaOps, const TObjectMapper &objMap)
+void relocObjsInMetaOps(
+        TMetaOpSet                 *pMetaOps,
+        const TObjectMapper        &objMap,
+        const SymHeap              &shTarget)
 {
     const TMetaOpSet &src = *pMetaOps;
     TMetaOpSet dst;
 
     BOOST_FOREACH(MetaOperation mo, src) {
         mo.obj = relocSingleObj(mo.obj, objMap);
-        if (MO_SET == mo.code)
+        if (MO_SET == mo.code) {
             mo.tgtObj = relocSingleObj(mo.tgtObj, objMap);
+            if (OK_REGION == shTarget.objKind(mo.tgtObj))
+                // target object is now a region
+                mo.tgtTs = TS_REGION;
+        }
 
         dst.insert(mo);
     }
@@ -378,16 +385,18 @@ void seekTemplateMatchInstances(
             return;
     }
 
-    TObjectMapper objMapFromTpl = fm.objMap[beg];
-    relocObjsInMetaOps(&metaOpsToLookFor, objMapFromTpl);
-    CL_BREAK_IF(metaOpsToLookFor.empty());
-
     // pick the starting position and clear the list of matched heaps
     CL_BREAK_IF(1U != fm.matchedHeaps.size());
     THeapIdent heapCurrent = fm.matchedHeaps.front();
     std::set<THeapIdent> seen;
     seen.insert(heapCurrent);
     fm.matchedHeaps.clear();
+
+    // relocate object IDs
+    TObjectMapper objMapFromTpl = fm.objMap[beg];
+    const SymHeap &shAnchor = *heapByIdent(ctx.progState, heapCurrent);
+    relocObjsInMetaOps(&metaOpsToLookFor, objMapFromTpl, shAnchor);
+    CL_BREAK_IF(metaOpsToLookFor.empty());
 
     // crawl the fixed-point
     THeapIdent heapNext;
@@ -408,7 +417,7 @@ void seekTemplateMatchInstances(
         const SymHeap &sh1 = *heapByIdent(ctx.progState, heap1);
 
         if (SD_BACKWARD == sd)
-            relocObjsInMetaOps(&metaOpsToLookFor, objMap);
+            relocObjsInMetaOps(&metaOpsToLookFor, objMap, sh0);
 
         // compute the difference of the pair of heaps
         TMetaOpSet metaOpsNow;
@@ -425,17 +434,6 @@ void seekTemplateMatchInstances(
 
             if (1U == metaOpsToLookFor.erase(mo))
                 goto adt_meta_op_matched;
-
-            if (MO_SET == mo.code && OK_REGION ==  sh0.objKind(mo.tgtObj)) {
-                // translate TS_REGION to TS_{FIRST,LAST} if appropriate
-                mo.tgtTs = TS_FIRST;
-                if (1U == metaOpsToLookFor.erase(mo))
-                    goto adt_meta_op_matched;
-                mo.tgtTs = TS_LAST;
-                if (1U == metaOpsToLookFor.erase(mo))
-                    goto adt_meta_op_matched;
-                mo.tgtTs = TS_REGION;
-            }
 
             CL_BREAK_IF("please implement independency checking");
             return;
@@ -457,7 +455,7 @@ adt_meta_op_matched:
         // move to the next one
         heapCurrent = heapNext;
         if (SD_FORWARD == sd)
-            relocObjsInMetaOps(&metaOpsToLookFor, objMap);
+            relocObjsInMetaOps(&metaOpsToLookFor, objMap, sh0);
         else
             // TODO: check the direction!
             objMap.flip();
