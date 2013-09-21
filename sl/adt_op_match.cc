@@ -378,8 +378,8 @@ void seekTemplateMatchInstances(
             return;
     }
 
-    TObjectMapper objMap = fm.objMap[beg];
-    relocObjsInMetaOps(&metaOpsToLookFor, objMap);
+    TObjectMapper objMapFromTpl = fm.objMap[beg];
+    relocObjsInMetaOps(&metaOpsToLookFor, objMapFromTpl);
     CL_BREAK_IF(metaOpsToLookFor.empty());
 
     // pick the starting position and clear the list of matched heaps
@@ -392,6 +392,7 @@ void seekTemplateMatchInstances(
     // crawl the fixed-point
     THeapIdent heapNext;
     while (!metaOpsToLookFor.empty()) {
+        TObjectMapper objMap;
         if (!jumpToNextHeap(&heapNext, &objMap, heapCurrent, ctx.progState, sd))
             return;
 
@@ -457,9 +458,14 @@ adt_meta_op_matched:
         heapCurrent = heapNext;
         if (SD_FORWARD == sd)
             relocObjsInMetaOps(&metaOpsToLookFor, objMap);
+        else
+            // TODO: check the direction!
+            objMap.flip();
+
+        objMapFromTpl.composite<D_LEFT_TO_RIGHT>(objMap);
     }
 
-    // TODO: initialize fm.objMap[end]
+    fm.objMap[end] = objMapFromTpl;
     ctx.matchList.push_back(fm);
 
     const THeapIdent src = fm.matchedHeaps.front();
