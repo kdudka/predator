@@ -197,7 +197,7 @@ void IdMapper<TId, MIN, MAX>::composite(const IdMapper<TId, MIN, MAX> &by)
         const TId a = item.first;
         const TId b = item.second;
         TVector cList;
-        this->query<DIR>(&cList, b);
+        by.query<DIR>(&cList, b);
         BOOST_FOREACH(const TId c, cList)
             result.insert(a, c);
     }
@@ -212,9 +212,9 @@ void IdMapper<TId, MIN, MAX>::composite(const IdMapper<TId, MIN, MAX> &by)
             // reverse lookup
             TVector aList;
             if (D_LEFT_TO_RIGHT == DIR)
-                by.query<D_RIGHT_TO_LEFT>(&aList, b);
+                this->query<D_RIGHT_TO_LEFT>(&aList, b);
             else
-                by.query<D_LEFT_TO_RIGHT>(&aList, b);
+                this->query<D_LEFT_TO_RIGHT>(&aList, b);
 
             BOOST_FOREACH(const TId a, aList)
                 result.insert(a, c);
