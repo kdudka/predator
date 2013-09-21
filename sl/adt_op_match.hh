@@ -34,6 +34,7 @@ enum EFootprintPort {
 };
 
 typedef std::list<FixedPoint::THeapIdent>           THeapIdentList;
+typedef std::map<TObjId /* tplObj */, TObjList>     TMapOrder;
 
 struct FootprintMatch {
     TFootprintIdent                 footprint;
@@ -44,6 +45,9 @@ struct FootprintMatch {
     THeapIdentList                  matchedHeaps;
 
     FixedPoint::TObjectMapper       objMap          [FP_TOTAL];
+
+    /// relative order of ambiguously mapped object IDs
+    TMapOrder                       objMapOrder;
 
     FootprintMatch(const TFootprintIdent footprint_):
         footprint(footprint_)

@@ -103,6 +103,7 @@ void swapObjLists(TObjList pObjLists[1][C_TOTAL])
 
 bool matchAnchorHeapCore(
         TObjectMapper              *pMap,
+        TMapOrder                  *pObjOrder,
         const SymHeap              &shProg,
         const SymHeap              &shTpl,
         const Shape                &csProg,
@@ -157,9 +158,15 @@ bool matchAnchorHeapCore(
             return false;
     }
 
+    bool ambiguousMapping = (1U < objLists[C_PROGRAM].size());
+
     // map the remaining DLS in the template with the remaining program objects
-    BOOST_FOREACH(const TObjId progObj, objLists[C_PROGRAM])
+    BOOST_FOREACH(const TObjId progObj, objLists[C_PROGRAM]) {
         pMap->insert(tplObj, progObj);
+
+        if (ambiguousMapping)
+            (*pObjOrder)[tplObj].push_back(progObj);
+    }
 
     // successfully matched!
     return true;
@@ -215,7 +222,9 @@ bool matchAnchorHeap(
 
     // perform an object-wise match
     const Shape &csTpl = csTplList.front();
-    if (!matchAnchorHeapCore(&pDst->objMap[port], shProg, shTpl, csProg, csTpl))
+    TObjectMapper *pObjMap = &pDst->objMap[port];
+    TMapOrder *pObjOrder = &pDst->objMapOrder;
+    if (!matchAnchorHeapCore(pObjMap, pObjOrder, shProg, shTpl, csProg, csTpl))
         return false;
 
     // successful match!
@@ -225,7 +234,50 @@ bool matchAnchorHeap(
     return true;
 }
 
-TObjId relocSingleObj(const TObjId obj, const TObjectMapper &objMap)
+TObjId relocAmbiguousObj(
+        const TObjId                tplObj,
+        const ETargetSpecifier      tplTs,
+        const TObjList             &objList,
+        const TMapOrder            *pObjOrder)
+{
+    if (!pObjOrder) {
+        CL_BREAK_IF("relocAmbiguousObj() got pObjOrder == NULL");
+        return OBJ_INVALID;
+    }
+
+    const TMapOrder::const_iterator it = pObjOrder->find(tplObj);
+    if (it == pObjOrder->end()) {
+        CL_BREAK_IF("relocAmbiguousObj() failed to lookup template object");
+        return OBJ_INVALID;
+    }
+
+    const TObjList objOrder = it->second;
+    BOOST_FOREACH(const TObjId obj, objList) {
+        if (objOrder.end() != std::find(objOrder.begin(), objOrder.end(), obj))
+            continue;
+
+        CL_BREAK_IF("unsupported ID mapping in relocAmbiguousObj()");
+        return OBJ_INVALID;
+    }
+
+    switch (tplTs) {
+        case TS_FIRST:
+            return objOrder.front();
+
+        case TS_LAST:
+            return objOrder.back();
+
+        default:
+            CL_BREAK_IF("invalid call of relocAmbiguousObj()");
+            return OBJ_INVALID;
+    }
+}
+
+TObjId relocSingleObj(
+        const TObjId                obj,
+        const ETargetSpecifier      ts,
+        const TObjectMapper        &objMap,
+        const TMapOrder            *pObjOrder)
 {
     // do not relocate ID of special objects
     switch (obj) {
@@ -242,27 +294,45 @@ TObjId relocSingleObj(const TObjId obj, const TObjectMapper &objMap)
     // query the object map to obtain the resulting object ID
     TObjList objList;
     objMap.query<D_LEFT_TO_RIGHT>(&objList, obj);
-    if (1U != objList.size()) {
-        CL_BREAK_IF("unsupported ID mapping in relocSingleObj()");
-        return OBJ_INVALID;
-    }
+    if (1U == objList.size())
+        // an unambiguous ID has been found!
+        return objList.front();
 
-    // an unambiguous ID has been found!
-    return objList.front();
+    return relocAmbiguousObj(obj, ts, objList, pObjOrder);
+}
+
+ETargetSpecifier tsByOffset(const TOffset off, const ShapeProps *pProps)
+{
+    if (!pProps)
+        // no data to proceed
+        return TS_INVALID;
+
+    const BindingOff &bf = pProps->bOff;
+    if (off == bf.next)
+        return TS_LAST;
+
+    if (off == bf.prev)
+        return TS_FIRST;
+
+    CL_BREAK_IF("tsByOffset() failed to resolve target specifier");
+    return TS_INVALID;
 }
 
 void relocObjsInMetaOps(
         TMetaOpSet                 *pMetaOps,
         const TObjectMapper        &objMap,
-        const SymHeap              &shTarget)
+        const SymHeap              &shTarget,
+        const ShapeProps           *pProps      = 0,
+        const TMapOrder            *pObjOrder   = 0)
 {
     const TMetaOpSet &src = *pMetaOps;
     TMetaOpSet dst;
 
     BOOST_FOREACH(MetaOperation mo, src) {
-        mo.obj = relocSingleObj(mo.obj, objMap);
+        const ETargetSpecifier ts = tsByOffset(mo.off, pProps);
+        mo.obj = relocSingleObj(mo.obj, ts, objMap, pObjOrder);
         if (MO_SET == mo.code) {
-            mo.tgtObj = relocSingleObj(mo.tgtObj, objMap);
+            mo.tgtObj = relocSingleObj(mo.tgtObj, mo.tgtTs, objMap, pObjOrder);
             if (OK_REGION == shTarget.objKind(mo.tgtObj))
                 // target object is now a region
                 mo.tgtTs = TS_REGION;
@@ -395,7 +465,8 @@ void seekTemplateMatchInstances(
     // relocate object IDs
     TObjectMapper objMapFromTpl = fm.objMap[beg];
     const SymHeap &shAnchor = *heapByIdent(ctx.progState, heapCurrent);
-    relocObjsInMetaOps(&metaOpsToLookFor, objMapFromTpl, shAnchor);
+    relocObjsInMetaOps(&metaOpsToLookFor, objMapFromTpl, shAnchor,
+            /* to resolve ambiguous ID mapping */ &fm.props, &fm.objMapOrder);
     CL_BREAK_IF(metaOpsToLookFor.empty());
 
     // crawl the fixed-point
