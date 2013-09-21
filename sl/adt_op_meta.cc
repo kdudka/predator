@@ -23,6 +23,8 @@
 #include "fixed_point.hh"
 #include "symtrace.hh"
 
+#include <cl/cl_msg.hh>
+
 using FixedPoint::TObjectMapper;
 
 namespace AdtOp {
@@ -46,7 +48,8 @@ struct DiffHeapsCtx {
         sh2(sh2_)
     {
         resolveIdMapping(&idMap, sh1.traceNode(), sh2.traceNode());
-        CL_BREAK_IF(!idMap.isTrivial());
+        if (!idMap.isTrivial())
+            CL_DEBUG("diffHeaps() operates on non-trivial map of object IDs");
     }
 };
 
@@ -60,8 +63,9 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
     // check object mapping
     const TObjId obj2 = fld2.obj();
     if (obj1 != obj2) {
-        CL_BREAK_IF("diffSetField() does not support non-trivial map of objs");
-        return false;
+        CL_DEBUG("diffSetField() operates on non-trivially mapped objects"
+                << ", obj1 = #" << obj1
+                << ", obj2 = #" << obj2);
     }
 
     // resolve target
@@ -120,7 +124,7 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
     }
 
     // insert meta-operation
-    const MetaOperation moSet(MO_SET, obj1, off, tgtObj2, tgtOff2, tgtTs2);
+    const MetaOperation moSet(MO_SET, obj2, off, tgtObj2, tgtOff2, tgtTs2);
     ctx.opSet.insert(moSet);
     return true;
 }
@@ -171,8 +175,9 @@ bool diffFields(DiffHeapsCtx &ctx, const TObjId obj1, const TObjId obj2)
         const EObjKind kind1 = ctx.sh1.objKind(obj1);
         const EObjKind kind2 = ctx.sh2.objKind(obj2);
         if (kind1 != kind2) {
-            CL_BREAK_IF("object kind mismatch in diffFields()");
-            return false;
+            CL_DEBUG("diffFields() detected mismatch of kind of objects"
+                    << ", obj1 = #" << obj1
+                    << ", obj2 = #" << obj2);
         }
 
         const TSizeRange size1 = ctx.sh1.objSize(obj1);
@@ -233,18 +238,14 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
     BOOST_FOREACH(const TObjId obj1, objList1) {
         TObjList objList2;
         ctx.idMap.query<D_LEFT_TO_RIGHT>(&objList2, obj1);
-        if (1U < objList2.size()) {
-            CL_BREAK_IF("diffHeaps() does not support ambiguous ID mapping");
-            return false;
-        }
-
         if (objList2.empty())
             objList2.push_back(OBJ_INVALID);
 
-        const TObjId obj2 = objList2.front();
-        if (!ctx.sh2.isValid(obj2)) {
-            const MetaOperation moFree(MO_FREE, obj2);
-            ctx.opSet.insert(moFree);
+        BOOST_FOREACH(const TObjId obj2, objList2) {
+            if (!ctx.sh2.isValid(obj2)) {
+                const MetaOperation moFree(MO_FREE, obj2);
+                ctx.opSet.insert(moFree);
+            }
         }
     }
 
