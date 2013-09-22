@@ -486,10 +486,10 @@ void seekTemplateMatchInstances(
         const THeapIdent heap1 = (SD_BACKWARD == sd) ? heapCurrent : heapNext;
         const SymHeap &sh0 = *heapByIdent(ctx.progState, heap0);
         const SymHeap &sh1 = *heapByIdent(ctx.progState, heap1);
-
+#if 0
         if (SD_BACKWARD == sd)
             relocObjsInMetaOps(&metaOpsToLookFor, objMap, sh0);
-
+#endif
         // compute the difference of the pair of heaps
         TMetaOpSet metaOpsNow;
         if (!diffHeaps(&metaOpsNow, sh0, sh1)) {
@@ -498,11 +498,17 @@ void seekTemplateMatchInstances(
         }
 
         BOOST_FOREACH(MetaOperation mo, metaOpsNow) {
-            const EStorageClass code = sh0.objStorClass(mo.obj);
+            const SymHeap &sh = (MO_FREE == mo.code) ? sh0 : sh1;
+            const EStorageClass code = sh.objStorClass(mo.obj);
             if (isProgramVar(code))
                 // we are not interested in changing non-heap variables
                 continue;
 
+            if (1U == metaOpsToLookFor.erase(mo))
+                goto adt_meta_op_matched;
+
+            // XXX
+            mo.tgtTs = TS_REGION;
             if (1U == metaOpsToLookFor.erase(mo))
                 goto adt_meta_op_matched;
 
@@ -525,9 +531,14 @@ adt_meta_op_matched:
 
         // move to the next one
         heapCurrent = heapNext;
+#if 0
         if (SD_FORWARD == sd)
             relocObjsInMetaOps(&metaOpsToLookFor, objMap, sh0);
         else
+#else
+        relocObjsInMetaOps(&metaOpsToLookFor, objMap, sh0);
+        if (SD_BACKWARD == sd)
+#endif
             // TODO: check the direction!
             objMap.flip();
 

@@ -87,11 +87,12 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
                 break;
 
             case VT_OBJECT:
-                if (ctx.sh1.objByAddr(val1) != tgtObjList1.front())
+                if (ctx.sh1.objByAddr(val1) != /* XXX */ tgtObjList1.front())
                     break;
                 if (ctx.sh1.valOffset(val1) != tgtOff2)
                     break;
-                if (ctx.sh1.targetSpec(val1) != tgtTs2)
+                if (/* XXX */ TS_REGION != tgtTs2
+                        && ctx.sh1.targetSpec(val1) != tgtTs2)
                     break;
 
                 // nothing changed actually
@@ -197,6 +198,103 @@ bool diffFields(DiffHeapsCtx &ctx, const TObjId obj1, const TObjId obj2)
     return true;
 }
 
+bool findSingleDls(BindingOff *pDst, const SymHeap &sh, const TObjList &objList)
+{
+    unsigned dlsCount = 0U;
+
+    BOOST_FOREACH(const TObjId obj, objList) {
+        const EObjKind kind = sh.objKind(obj);
+        switch (kind) {
+            case OK_REGION:
+                continue;
+
+            case OK_DLS:
+                break;
+
+            default:
+                CL_BREAK_IF("unexpected kind of object in findSingleDls()");
+                return false;
+        }
+
+        ++dlsCount;
+        *pDst = sh.segBinding(obj);
+    }
+
+    return (1U == dlsCount);
+}
+
+bool isConcretizationOp(DiffHeapsCtx &ctx, const MetaOperation &mo)
+{
+    if (MO_SET != mo.code)
+        // only MO_SET ops are handled for now
+        return false;
+
+    TObjList objList1;
+    ctx.idMap.query<D_RIGHT_TO_LEFT>(&objList1, mo.obj);
+    if (1U != objList1.size())
+        // not a concretization (at least not the simple case)
+        return false;
+
+    TObjList objList2;
+    const TObjId obj1 = objList1.front();
+    ctx.idMap.query<D_LEFT_TO_RIGHT>(&objList2, obj1);
+    if (2U != objList2.size())
+        // not a concretization (at least not the simple case)
+        return false;
+
+    const TObjList::const_iterator beg2 = objList2.begin();
+    const TObjList::const_iterator end2 = objList2.end();
+
+    if (end2 == std::find(beg2, end2, mo.obj))
+        // mo.obj not on the list of original objects
+        return false;
+
+    if (end2 == std::find(beg2, end2, mo.tgtObj))
+        // mo.tgtObj not on the list of original objects
+        return false;
+
+    CL_BREAK_IF(mo.obj == mo.tgtObj);
+
+    BindingOff bOff;
+    if (!findSingleDls(&bOff, ctx.sh2, objList2))
+        // not a DLS + REG pair of objects
+        return false;
+
+    if (mo.tgtOff != bOff.head)
+        // target offset mismatch
+        return false;
+
+    switch (mo.tgtTs) {
+        case TS_FIRST:
+            return mo.off == bOff.next;
+
+        case TS_LAST:
+            return mo.off == bOff.prev;
+
+        case TS_REGION:
+            return mo.off == bOff.next
+                || mo.off == bOff.prev;
+
+        default:
+            CL_BREAK_IF("invalid target specifier in isConcretizationOp()");
+            return false;
+    }
+}
+
+void dropConcretizationOps(DiffHeapsCtx &ctx)
+{
+    TMetaOpSet result;
+
+    BOOST_FOREACH(const MetaOperation &mo, ctx.opSet) {
+        if (isConcretizationOp(ctx, mo))
+            continue;
+
+        result.insert(mo);
+    }
+
+    ctx.opSet.swap(result);
+}
+
 bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
 {
     DiffHeapsCtx ctx(pDst,
@@ -241,6 +339,9 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
             }
         }
     }
+
+    if (!ctx.idMap.isTrivial())
+        dropConcretizationOps(ctx);
 
     // heaps diffed successfully!
     return true;
