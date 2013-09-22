@@ -29,13 +29,6 @@ using FixedPoint::TObjectMapper;
 
 namespace AdtOp {
 
-template <EDirection dir>
-bool projectMetaOperation(MetaOperation &mo, TObjectMapper idMap)
-{
-    // TODO
-    return false;
-}
-
 struct DiffHeapsCtx {
     TMetaOpSet                     &opSet;
     SymHeap                        &sh1;
@@ -119,7 +112,7 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
             return true;
 
         default:
-            CL_BREAK_IF("diffSetField() does not support non-pointer fields yet");
+            CL_BREAK_IF("diffSetField() does not support non-pointer fields");
             return false;
     }
 
@@ -142,7 +135,7 @@ bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
             return true;
 
         default:
-            CL_BREAK_IF("diffSetField() does not support non-pointer fields yet");
+            CL_BREAK_IF("diffUnsetField() does not support non-pointer fields");
             return false;
     }
 
@@ -159,7 +152,7 @@ bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
     // check object mapping
     const TObjId obj1 = fld1.obj();
     if (obj1 != obj2) {
-        CL_BREAK_IF("diffSetField() does not support non-trivial map of objs");
+        CL_BREAK_IF("diffUnsetField() does not support non-trivial object map");
         return false;
     }
 
