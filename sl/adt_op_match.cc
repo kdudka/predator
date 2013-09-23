@@ -426,6 +426,75 @@ bool jumpToNextHeap(
     return true;
 }
 
+bool removeOpFrom(TMetaOpSet *pLookup, const SymHeap &sh0, MetaOperation mo)
+{
+    if (1U == pLookup->erase(mo))
+        return true;
+
+    if (MO_SET != mo.code)
+        return false;
+    
+    const EObjKind kind = sh0.objKind(mo.tgtObj);
+    if (OK_REGION != kind)
+        return false;
+
+    // translate TS_REGION to TS_{FIRST,LAST} if appropriate
+    mo.tgtTs = TS_FIRST;
+    if (1U == pLookup->erase(mo))
+        return true;
+    mo.tgtTs = TS_LAST;
+    if (1U == pLookup->erase(mo))
+        return true;
+
+    return false;
+}
+        
+bool processDiffOf(
+        THeapIdentList             *pDst,
+        TMetaOpSet                 *pLookup,
+        const TProgState           &progState,
+        const THeapIdent            heap0,
+        const THeapIdent            heap1,
+        const ESearchDirection      sd)
+{
+    const SymHeap &sh0 = *heapByIdent(progState, heap0);
+    const SymHeap &sh1 = *heapByIdent(progState, heap1);
+
+    // compute the difference of the pair of heaps
+    TMetaOpSet metaOpsNow;
+    if (!diffHeaps(&metaOpsNow, sh0, sh1)) {
+        CL_BREAK_IF("diffHeaps() has failed");
+        return false;
+    }
+
+    BOOST_FOREACH(const MetaOperation &mo, metaOpsNow) {
+        const SymHeap &sh = (MO_FREE == mo.code) ? sh0 : sh1;
+        const EStorageClass code = sh.objStorClass(mo.obj);
+        if (isProgramVar(code))
+            // we are not interested in changing non-heap variables
+            continue;
+
+        if (!removeOpFrom(pLookup, sh0, mo)) {
+            CL_BREAK_IF("please implement independency checking");
+            return false;
+        }
+
+        if (SD_FORWARD == sd) {
+            pDst->pop_back();
+            pDst->push_back(heap0);
+            pDst->push_back(heap1);
+        }
+        else /* SD_BACKWARD */ {
+            if (pDst->empty())
+                pDst->push_back(heap1);
+
+            pDst->push_front(heap0);
+        }
+    }
+
+    return true;
+}
+
 void seekTemplateMatchInstances(
         MatchCtx                   &ctx,
         const OpTemplate           &tpl,
@@ -478,56 +547,14 @@ void seekTemplateMatchInstances(
         // resolve the pair of heaps in program configuration
         const THeapIdent heap0 = (SD_FORWARD  == sd) ? heapCurrent : heapNext;
         const THeapIdent heap1 = (SD_BACKWARD == sd) ? heapCurrent : heapNext;
-        const SymHeap &sh0 = *heapByIdent(ctx.progState, heap0);
-        const SymHeap &sh1 = *heapByIdent(ctx.progState, heap1);
 
         if (SD_BACKWARD == sd)
             relocObjsInMetaOps(&metaOpsToLookFor, objMap);
 
-        // compute the difference of the pair of heaps
-        TMetaOpSet metaOpsNow;
-        if (!diffHeaps(&metaOpsNow, sh0, sh1)) {
-            CL_BREAK_IF("diffHeaps() has failed");
+        if (!processDiffOf(&fm.matchedHeaps, &metaOpsToLookFor, ctx.progState,
+                    heap0, heap1, sd))
+            // failed to process the difference of the neighbouring heaps
             return;
-        }
-
-        BOOST_FOREACH(MetaOperation mo, metaOpsNow) {
-            const SymHeap &sh = (MO_FREE == mo.code) ? sh0 : sh1;
-            const EStorageClass code = sh.objStorClass(mo.obj);
-            if (isProgramVar(code))
-                // we are not interested in changing non-heap variables
-                continue;
-
-            if (1U == metaOpsToLookFor.erase(mo))
-                goto adt_meta_op_matched;
-
-            if (MO_SET == mo.code && OK_REGION ==  sh0.objKind(mo.tgtObj)) {
-                // translate TS_REGION to TS_{FIRST,LAST} if appropriate
-                mo.tgtTs = TS_FIRST;
-                if (1U == metaOpsToLookFor.erase(mo))
-                    goto adt_meta_op_matched;
-                mo.tgtTs = TS_LAST;
-                if (1U == metaOpsToLookFor.erase(mo))
-                    goto adt_meta_op_matched;
-                mo.tgtTs = TS_REGION;
-            }
-
-            CL_BREAK_IF("please implement independency checking");
-            return;
-
-adt_meta_op_matched:
-            if (SD_FORWARD == sd) {
-                fm.matchedHeaps.pop_back();
-                fm.matchedHeaps.push_back(heap0);
-                fm.matchedHeaps.push_back(heap1);
-            }
-            else /* SD_BACKWARD */ {
-                if (fm.matchedHeaps.empty())
-                    fm.matchedHeaps.push_back(heap1);
-
-                fm.matchedHeaps.push_front(heap0);
-            }
-        }
 
         // move to the next one
         heapCurrent = heapNext;
