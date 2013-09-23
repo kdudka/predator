@@ -486,10 +486,10 @@ void seekTemplateMatchInstances(
         const THeapIdent heap1 = (SD_BACKWARD == sd) ? heapCurrent : heapNext;
         const SymHeap &sh0 = *heapByIdent(ctx.progState, heap0);
         const SymHeap &sh1 = *heapByIdent(ctx.progState, heap1);
-#if 0
+
         if (SD_BACKWARD == sd)
             relocObjsInMetaOps(&metaOpsToLookFor, objMap, sh0);
-#endif
+
         // compute the difference of the pair of heaps
         TMetaOpSet metaOpsNow;
         if (!diffHeaps(&metaOpsNow, sh0, sh1)) {
@@ -531,15 +531,9 @@ adt_meta_op_matched:
 
         // move to the next one
         heapCurrent = heapNext;
-#if 0
         if (SD_FORWARD == sd)
             relocObjsInMetaOps(&metaOpsToLookFor, objMap, sh0);
         else
-#else
-        relocObjsInMetaOps(&metaOpsToLookFor, objMap, sh0);
-        if (SD_BACKWARD == sd)
-#endif
-            // TODO: check the direction!
             objMap.flip();
 
         objMapFromTpl.composite<D_LEFT_TO_RIGHT>(objMap);

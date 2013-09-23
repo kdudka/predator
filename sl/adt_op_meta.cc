@@ -118,7 +118,7 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
     }
 
     // insert meta-operation
-    const MetaOperation moSet(MO_SET, obj2, off, tgtObj2, tgtOff2, tgtTs2);
+    const MetaOperation moSet(MO_SET, obj1, off, tgtObj2, tgtOff2, tgtTs2);
     ctx.opSet.insert(moSet);
     return true;
 }
@@ -252,8 +252,6 @@ bool isConcretizationOp(DiffHeapsCtx &ctx, const MetaOperation &mo)
     if (end2 == std::find(beg2, end2, mo.tgtObj))
         // mo.tgtObj not on the list of original objects
         return false;
-
-    CL_BREAK_IF(mo.obj == mo.tgtObj);
 
     BindingOff bOff;
     if (!findSingleDls(&bOff, ctx.sh2, objList2))
