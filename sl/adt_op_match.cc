@@ -25,6 +25,7 @@
 #include "symseg.hh"                // for objMinLength()
 
 #include <cl/cl_msg.hh>
+#include <cl/storage.hh>            // for CodeStorage::TypeDb::dataPtrSizeof()
 
 #include <algorithm>                // for std::reverse
 
@@ -448,9 +449,43 @@ bool removeOpFrom(TMetaOpSet *pLookup, const SymHeap &sh0, MetaOperation mo)
 
     return false;
 }
+
+bool isIndependentOp(
+        FootprintMatch             *pMatch,
+        const SymHeap              &sh,
+        const MetaOperation        &mo)
+{
+    if (MO_SET != mo.code)
+        return false;
+
+    // FIXME: we assume that all fields in MetaOperation have sizeof(void *)
+    const TStorRef stor = sh.stor();
+    const TSizeOf psize = stor.types.dataPtrSizeof();
+    const TOffset winLo = mo.off;
+    const TOffset winHi = winLo + psize;
+
+    const BindingOff &bOff = pMatch->props.bOff;
+    std::set<TOffset> offs;
+    offs.insert(bOff.next);
+    offs.insert(bOff.prev);
+    BOOST_FOREACH(const TOffset lo, offs) {
+        const TOffset hi = lo + psize;
+        if (winHi <= lo)
+            continue;
+
+        if (hi <= winLo)
+            continue;
+
+        // field clash detected!
+        return false;
+    }
+
+    // proven independent
+    return true;
+}
         
 bool processDiffOf(
-        THeapIdentList             *pDst,
+        FootprintMatch             *pMatch,
         TMetaOpSet                 *pLookup,
         const TProgState           &progState,
         const THeapIdent            heap0,
@@ -474,22 +509,29 @@ bool processDiffOf(
             // we are not interested in changing non-heap variables
             continue;
 
-        if (!removeOpFrom(pLookup, sh0, mo)) {
-            CL_BREAK_IF("please implement independency checking");
-            return false;
-        }
+        if (removeOpFrom(pLookup, sh0, mo)) {
+            THeapIdentList *pDst = &pMatch->matchedHeaps;
 
-        if (SD_FORWARD == sd) {
-            pDst->pop_back();
-            pDst->push_back(heap0);
-            pDst->push_back(heap1);
-        }
-        else /* SD_BACKWARD */ {
-            if (pDst->empty())
+            if (SD_FORWARD == sd) {
+                pDst->pop_back();
+                pDst->push_back(heap0);
                 pDst->push_back(heap1);
+            }
+            else /* SD_BACKWARD */ {
+                if (pDst->empty())
+                    pDst->push_back(heap1);
 
-            pDst->push_front(heap0);
+                pDst->push_front(heap0);
+            }
+
+            continue;
         }
+
+        if (isIndependentOp(pMatch, sh0, mo))
+            continue;
+
+        CL_BREAK_IF("please improve independency checking");
+        return false;
     }
 
     return true;
@@ -551,7 +593,7 @@ void seekTemplateMatchInstances(
         if (SD_BACKWARD == sd)
             relocObjsInMetaOps(&metaOpsToLookFor, objMap);
 
-        if (!processDiffOf(&fm.matchedHeaps, &metaOpsToLookFor, ctx.progState,
+        if (!processDiffOf(&fm, &metaOpsToLookFor, ctx.progState,
                     heap0, heap1, sd))
             // failed to process the difference of the neighbouring heaps
             return;
