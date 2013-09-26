@@ -393,13 +393,15 @@ void ImpliedShapeDetector::appendImpliedShapes(TShapeList *pDst, SymHeap &sh)
 {
     // eliminate duplicates (one container shape can be implied by many)
     TShapeSet found;
+    BOOST_FOREACH(const Shape &shape, *pDst)
+        found.insert(shape);
 
     BOOST_FOREACH(const ShapePattern &sp, plist_) {
         Shape shape;
 
         if (useHeadChk_) {
-            if (detectImpliedShape(&shape, sh, sp))
-                found.insert(shape);
+            if (detectImpliedShape(&shape, sh, sp) && insertOnce(found, shape))
+                pDst->push_back(shape);
 
             continue;
         }
@@ -407,14 +409,11 @@ void ImpliedShapeDetector::appendImpliedShapes(TShapeList *pDst, SymHeap &sh)
         TObjList allObjs;
         sh.gatherObjects(allObjs);
         BOOST_FOREACH(const TObjId obj, allObjs) {
-            if (detectImpliedShapeBlindly(&shape, sh, sp, obj))
-                found.insert(shape);
+            if (detectImpliedShapeBlindly(&shape, sh, sp, obj)
+                    && insertOnce(found, shape))
+                pDst->push_back(shape);
         }
     }
-
-    // append each of the found shapes exactly once
-    BOOST_FOREACH(const Shape &fs, found)
-        pDst->push_back(fs);
 }
 
 struct DetectionCtx {
