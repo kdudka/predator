@@ -340,7 +340,12 @@ inline EBlockKind bkFromClt(const TObjType clt)
 
 class AbstractHeapEntity {
     public:
-        virtual AbstractHeapEntity* clone() const = 0;
+        // NVI to catch missing/incorrect overrides of doClone()
+        AbstractHeapEntity* clone() const;
+
+    private:
+        // see Herb Sutter: C++ Coding Standards (rules #39 and #54) for details
+        virtual AbstractHeapEntity* doClone() const = 0;
 
     protected:
         virtual ~AbstractHeapEntity() { }
@@ -354,6 +359,16 @@ class AbstractHeapEntity {
         // intentionally not implemented
         AbstractHeapEntity& operator=(const AbstractHeapEntity &);
 };
+
+AbstractHeapEntity* AbstractHeapEntity::clone() const
+{
+    AbstractHeapEntity *ent = this->doClone();
+
+    // this will stop if doClone() is not correctly overridden
+    CL_BREAK_IF(typeid(*ent) != typeid(*this));
+
+    return ent;
+}
 
 struct BlockEntity: public AbstractHeapEntity {
     EBlockKind                  code;
@@ -376,8 +391,14 @@ struct BlockEntity: public AbstractHeapEntity {
     {
     }
 
-    virtual BlockEntity* clone() const {
+    virtual AbstractHeapEntity* doClone() const {
         return new BlockEntity(*this);
+    }
+
+    /// overridden in order to return a more specific type of class
+    BlockEntity* clone() const {
+        AbstractHeapEntity *ent = AbstractHeapEntity::clone();
+        return DCAST<BlockEntity *>(ent);
     }
 };
 
@@ -392,7 +413,7 @@ struct FieldOfObj: public BlockEntity {
     {
     }
 
-    virtual FieldOfObj* clone() const {
+    virtual AbstractHeapEntity* doClone() const {
         return new FieldOfObj(*this);
     }
 };
@@ -413,8 +434,14 @@ struct BaseValue: public AbstractHeapEntity {
     {
     }
 
-    virtual BaseValue* clone() const {
+    virtual AbstractHeapEntity* doClone() const {
         return new BaseValue(*this);
+    }
+
+    /// overridden in order to return a more specific type of class
+    BaseValue* clone() const {
+        AbstractHeapEntity *ent = AbstractHeapEntity::clone();
+        return DCAST<BaseValue *>(ent);
     }
 };
 
@@ -422,7 +449,7 @@ struct BaseValue: public AbstractHeapEntity {
 struct ReferableValue: public BaseValue {
     TValList                        dependentValues;
 
-    // unless clone() is properly overridden, the constructor cannot be public
+    // unless doClone() is properly overridden, the constructor cannot be public
     protected:
     ReferableValue(EValueTarget code_, EValueOrigin origin_):
         BaseValue(code_, origin_)
@@ -433,7 +460,7 @@ struct ReferableValue: public BaseValue {
 struct AnchorValue: public ReferableValue {
     TOffMap                         offMap;
 
-    // unless clone() is properly overridden, the constructor cannot be public
+    // unless doClone() is properly overridden, the constructor cannot be public
     protected:
     AnchorValue(EValueTarget code_, EValueOrigin origin_):
         ReferableValue(code_, origin_)
@@ -450,7 +477,7 @@ struct RangeValue: public AnchorValue {
     {
     }
 
-    virtual RangeValue* clone() const {
+    virtual AbstractHeapEntity* doClone() const {
         return new RangeValue(*this);
     }
 };
@@ -464,7 +491,7 @@ struct CompValue: public BaseValue {
     {
     }
 
-    virtual BaseValue* clone() const {
+    virtual AbstractHeapEntity* doClone() const {
         return new CompValue(*this);
     }
 };
@@ -477,7 +504,7 @@ struct InternalCustomValue: public ReferableValue {
     {
     }
 
-    virtual InternalCustomValue* clone() const {
+    virtual AbstractHeapEntity* doClone() const {
         return new InternalCustomValue(*this);
     }
 };
@@ -503,7 +530,7 @@ struct Region: public AbstractHeapEntity {
     {
     }
 
-    virtual Region* clone() const {
+    virtual AbstractHeapEntity* doClone() const {
         return new Region(*this);
     }
 };
@@ -519,7 +546,7 @@ struct BaseAddress: public AnchorValue {
     {
     }
 
-    virtual BaseAddress* clone() const {
+    virtual AbstractHeapEntity* doClone() const {
         return new BaseAddress(*this);
     }
 };
