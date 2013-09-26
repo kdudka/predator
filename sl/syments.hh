@@ -109,6 +109,11 @@ class RefCounter {
             return true;
         }
 };
+
+#if SH_PREVENT_AMBIGUOUS_ENT_ID
+#error SH_PREVENT_AMBIGUOUS_ENT_ID requires SH_COPY_ON_WRITE to be enabled
+#endif
+
 #endif // SH_COPY_ON_WRITE
 
 
@@ -159,11 +164,22 @@ struct RefCntLib<RCO_NON_VIRT>: public RefCntLibBase {
     }
 };
 
+struct EntCounter {
+#if SH_PREVENT_AMBIGUOUS_ENT_ID
+    long                entCnt;
+    RefCounter          refCnt;
+
+    EntCounter():
+        entCnt(0L)
+    {
+    }
+#endif
+};
 
 template <class TBaseEnt>
 class EntStore {
     public:
-        EntStore() { }
+        EntStore();
         inline EntStore(const EntStore &);
         inline ~EntStore();
 
@@ -196,6 +212,7 @@ class EntStore {
         EntStore& operator=(const EntStore &);
 
         std::vector<TBaseEnt *>                 ents_;
+        EntCounter                             *entCnt_;
 };
 
 
@@ -206,8 +223,14 @@ template <typename TId>
 TId EntStore<TBaseEnt>::assignId(TBaseEnt *ptr)
 {
     CL_BREAK_IF(ptr->refCnt.isShared());
+#if SH_PREVENT_AMBIGUOUS_ENT_ID
+    const TId id = static_cast<TId>(entCnt_->entCnt);
+    this->assignId(id, ptr);
+    return id;
+#else
     this->ents_.push_back(ptr);
     return this->lastId<TId>();
+#endif
 }
 
 template <class TBaseEnt>
@@ -226,6 +249,11 @@ void EntStore<TBaseEnt>::assignId(const TId id, TBaseEnt *ptr)
     CL_BREAK_IF(ref);
 
     ref = ptr;
+#if SH_PREVENT_AMBIGUOUS_ENT_ID
+    const long cntNow = 1L + id;
+    if (entCnt_->entCnt < cntNow)
+        entCnt_->entCnt = cntNow;
+#endif
 }
 
 template <class TBaseEnt>
@@ -246,9 +274,23 @@ bool EntStore<TBaseEnt>::isValidEnt(const TId id) const
 }
 
 template <class TBaseEnt>
+EntStore<TBaseEnt>::EntStore()
+#if SH_PREVENT_AMBIGUOUS_ENT_ID
+    : entCnt_(new EntCounter)
+#endif
+{
+}
+
+template <class TBaseEnt>
 EntStore<TBaseEnt>::EntStore(const EntStore &ref):
     ents_(ref.ents_)
+#if SH_PREVENT_AMBIGUOUS_ENT_ID
+    , entCnt_(ref.entCnt_)
+#endif
 {
+#if SH_PREVENT_AMBIGUOUS_ENT_ID
+    RefCntLib<RCO_NON_VIRT>::enter(entCnt_);
+#endif
     BOOST_FOREACH(TBaseEnt *&ent, ents_)
         if (ent)
             RefCntLib<RCO_VIRTUAL>::enter(ent);
@@ -257,6 +299,9 @@ EntStore<TBaseEnt>::EntStore(const EntStore &ref):
 template <class TBaseEnt>
 EntStore<TBaseEnt>::~EntStore()
 {
+#if SH_PREVENT_AMBIGUOUS_ENT_ID
+    RefCntLib<RCO_NON_VIRT>::leave(entCnt_);
+#endif
     BOOST_FOREACH(TBaseEnt *ent, ents_)
         if (ent)
             RefCntLib<RCO_VIRTUAL>::leave(ent);

@@ -299,6 +299,11 @@
 #define SH_DELAYED_FIELDS_DESTRUCTION       1
 
 /**
+ * if 1, prevent collisions on entity IDs with descendants heaps
+ */
+#define SH_PREVENT_AMBIGUOUS_ENT_ID         0
+
+/**
  * if more than zero, jump to debugger as soon as N graph of the same name has
  * been plotted
  */
