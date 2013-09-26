@@ -101,7 +101,13 @@ struct PlotData {
 #define DOT_LINK(to) "\"" << to << ".svg\""
 #define STD_SETW(n) std::fixed << std::setfill('0') << std::setw(n)
 
-void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
+typedef std::set<THeapIdent>                        THeapSet;
+
+void plotInsn(
+        THeapSet                   *pHeapSet,
+        PlotData                   &plot,
+        const TLocIdx               locIdx,
+        const LocalState           &locState)
 {
     const TInsn insn = locState.insn;
 
@@ -143,9 +149,14 @@ void plotInsn(PlotData &plot, const TLocIdx locIdx, const LocalState &locState)
         plot.out << SH_NODE(shIdent) << " [label=\"sh #" << shIdx
             << "\", URL=" << DOT_LINK(shapeName);
 
-        const unsigned csCnt = shapeList.size();
-        if (csCnt)
-            plot.out << ", color=red, penwidth=" << (2U * csCnt);
+        if (1U == pHeapSet->erase(shIdent))
+            // template instance mached on this heap!
+            plot.out << ", color=chartreuse2, penwidth=4";
+        else {
+            const unsigned csCnt = shapeList.size();
+            if (csCnt)
+                plot.out << ", color=red, penwidth=" << (2U * csCnt);
+        }
 
         plot.out << "];\n";
     }
@@ -159,15 +170,27 @@ AdtOp::OpCollection adtOps;
 
 void plotFncCore(PlotData &plot, const GlobalState &fncState)
 {
-    // XXX
-    AdtOp::TMatchList matchList;
+    // match templates
+    using namespace AdtOp;
+    TMatchList matchList;
     matchFootprints(&matchList, adtOps, fncState);
-    CL_BREAK_IF(!matchList.empty());
+    BOOST_FOREACH(FootprintMatch &fm, matchList) {
+        CL_BREAK_IF(fm.matchedHeaps.empty());
+        fm.matchedHeaps.pop_back();
+    }
+
+    // compute set of matched heaps
+    THeapSet heapSet;
+    BOOST_FOREACH(FootprintMatch &fm, matchList) {
+        CL_BREAK_IF(fm.matchedHeaps.empty());
+        BOOST_FOREACH(const THeapIdent heap, fm.matchedHeaps)
+            heapSet.insert(heap);
+    }
 
     const TLocIdx locCnt = fncState.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         const LocalState &locState = fncState[locIdx];
-        plotInsn(plot, locIdx, locState);
+        plotInsn(&heapSet, plot, locIdx, locState);
 
         // plot trace edges
         BOOST_FOREACH(const TTraceEdgeList &tList, locState.traceOutEdges) {
@@ -194,7 +217,7 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
             const char *color = "blue";
             if (edge.closesLoop)
                 // loop-closing edge
-                color = "green";
+                color = "chartreuse2";
 
             const char *label = "";
             if (2U == cntTargets)
