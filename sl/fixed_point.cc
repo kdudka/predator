@@ -73,6 +73,8 @@ bool isTransparentInsn(const TInsn insn)
     }
 }
 
+typedef std::set<THeapIdent>                        THeapIdentSet;
+
 class TraceIndex {
     public:
         TraceIndex(const GlobalState &glState):
@@ -82,8 +84,7 @@ class TraceIndex {
 
         void indexTraceOf(const TLocIdx);
 
-        /// return InvalidHeap if not found
-        THeapIdent nearestPredecessorOf(const THeapIdent) const;
+        void nearestPredecessorOf(THeapIdentSet *pDst, const THeapIdent) const;
 
     private:
         typedef std::map<const Trace::Node *, THeapIdent> TLookup;
@@ -107,27 +108,30 @@ void TraceIndex::indexTraceOf(const TLocIdx locIdx)
     }
 }
 
-THeapIdent TraceIndex::nearestPredecessorOf(const THeapIdent shIdent) const
+void TraceIndex::nearestPredecessorOf(
+        THeapIdentSet              *pDst,
+        const THeapIdent            shIdent)
+    const
 {
     const SymHeap *const sh = heapByIdent(glState_, shIdent);
     const Trace::Node *tr = sh->traceNode();
 
-    while (0U < tr->parents().size()) {
-        // TODO: handle trace nodes with more than one parent!
-        tr = tr->parent();
-
+    WorkList<const Trace::Node *> wl(tr);
+    while (wl.next(tr)) {
         // check the current trace node
         const TLookup::const_iterator it = lookup_.find(tr);
-        if (it == lookup_.end())
+        if (it == lookup_.end()) {
+            BOOST_FOREACH(const Trace::Node *trParent, tr->parents())
+                wl.schedule(trParent);
+
             continue;
+        }
 
         // found!
         const THeapIdent shPred = it->second;
         CL_BREAK_IF(heapByIdent(glState_, shPred)->traceNode() != tr);
-        return shPred;
+        pDst->insert(shPred);
     }
-
-    return /* not found */ InvalidHeap;
 }
 
 typedef StateByInsn::TStateMap                      TStateMap;
@@ -267,24 +271,23 @@ void createTraceEdges(GlobalState &glState, TTraceList &traceList)
         const THeapIdx heapCnt = dstState.heapList.size();
         for (THeapIdx dstHeapIdx = 0; dstHeapIdx < heapCnt; ++ dstHeapIdx) {
             const THeapIdent dstHeap(dstLocIdx, dstHeapIdx);
-            const THeapIdent srcHeap = trIndex.nearestPredecessorOf(dstHeap);
 
-            if (srcHeap == InvalidHeap)
-                // predecessor not found
-                continue;
+            THeapIdentSet heapSet;
+            trIndex.nearestPredecessorOf(&heapSet, dstHeap);
+            BOOST_FOREACH(const THeapIdent &srcHeap, heapSet) {
+                // allocate a new trace edge
+                TraceEdge *te = new TraceEdge(srcHeap, dstHeap);
+                traceList.append(te);
+                dstState.traceInEdges[dstHeapIdx].push_back(te);
 
-            // allocate a new trace edge
-            TraceEdge *te = new TraceEdge(srcHeap, dstHeap);
-            traceList.append(te);
-            dstState.traceInEdges[dstHeapIdx].push_back(te);
+                // store backward reference
+                const TLocIdx srcLocIdx = srcHeap.first;
+                LocalState &srcState = glState[srcLocIdx];
+                srcState.traceOutEdges[srcHeap./* heap idx */second].push_back(te);
 
-            // store backward reference
-            const TLocIdx srcLocIdx = srcHeap.first;
-            LocalState &srcState = glState[srcLocIdx];
-            srcState.traceOutEdges[srcHeap./* heap idx */second].push_back(te);
-
-            // initialize object IDs mapping
-            initIdMapping(glState, te);
+                // initialize object IDs mapping
+                initIdMapping(glState, te);
+            }
         }
     }
 }

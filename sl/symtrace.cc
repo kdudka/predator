@@ -468,6 +468,11 @@ Node* /* selected predecessor */ JoinNode::printNode() const
     return this->parents().front();
 }
 
+Node* EntailmentNode::parent() const
+{
+    return /* gt */ this->parents().front();
+}
+
 Node* /* selected predecessor */ EntailmentNode::printNode() const
 {
     return /* gt */ this->parents().front();

@@ -79,7 +79,7 @@ class NodeBase {
         virtual ~NodeBase();
 
         /// this can be called only on nodes with exactly one parent
-        Node* parent() const;
+        virtual Node* parent() const;
 
         /// reference to list of parents (containing 0..n pointers)
         const TNodeList& parents() const { return parents_; }
@@ -376,6 +376,9 @@ class EntailmentNode: public Node {
         }
 
         virtual Node* printNode() const;
+
+        /// FIXME: overridden to keep some ADT algorithms working
+        virtual Node* parent() const;
 
     protected:
         void virtual plotNode(TracePlotter &) const;
