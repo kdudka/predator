@@ -2482,6 +2482,32 @@ bool validateStatus(const SymJoinCtx &ctx)
     return false;
 }
 
+void initTrace(SymJoinCtx &ctx)
+{
+    Trace::Node *tr1 = ctx.sh1.traceNode();
+    Trace::Node *tr2 = ctx.sh2.traceNode();
+    Trace::Node *tr;
+
+    switch (ctx.status) {
+        case JS_USE_SH1:
+            tr = new Trace::EntailmentNode(tr1, tr2, /* leftOneWasLt */ false);
+            break;
+
+        case JS_USE_SH2:
+            tr = new Trace::EntailmentNode(tr2, tr1, /* leftOneWasLt */ true);
+            break;
+
+        case JS_THREE_WAY:
+            tr = new Trace::JoinNode(tr1, tr2);
+            break;
+
+        default:
+            return;
+    }
+
+    ctx.dst.traceUpdate(tr);
+}
+
 bool joinSymHeaps(
         EJoinStatus             *pStatus,
         SymHeap                 *pDst,
@@ -2533,12 +2559,7 @@ bool joinSymHeaps(
     CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh1, ctx.dst));
     CL_BREAK_IF((JS_THREE_WAY == ctx.status) && areEqual(sh2, ctx.dst));
 
-    if (JS_THREE_WAY == ctx.status) {
-        // create a new trace graph node for JS_THREE_WAY
-        Trace::Node *tr1 = sh1.traceNode();
-        Trace::Node *tr2 = sh2.traceNode();
-        pDst->traceUpdate(new Trace::JoinNode(tr1, tr2));
-    }
+    initTrace(ctx);
 
     // all OK
     *pStatus = ctx.status;

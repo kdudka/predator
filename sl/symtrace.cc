@@ -228,6 +228,17 @@ void JoinNode::plotNode(TracePlotter &tplot) const
         << " [shape=circle, color=red, fontcolor=red, label=\"join\"];\n";
 }
 
+void EntailmentNode::plotNode(TracePlotter &tplot) const
+{
+    tplot.out << "\t" << SL_QUOTE(this)
+        << " [shape=circle, color=red, fontcolor=red, label=\"entailment";
+    if (leftOneWasLt_)
+        tplot.out << "(sh1 < sh2)";
+    else
+        tplot.out << "(sh1 > sh2)";
+    tplot.out << "\"];\n";
+}
+
 void CloneNode::plotNode(TracePlotter &tplot) const
 {
     tplot.out << "\t" << SL_QUOTE(this) << " [shape=doubleoctagon, color=black"
@@ -430,6 +441,11 @@ Node* /* selected predecessor */ JoinNode::printNode() const
 {
     // FIXME: deal better with join nodes
     return this->parents().front();
+}
+
+Node* /* selected predecessor */ EntailmentNode::printNode() const
+{
+    return /* gt */ this->parents().front();
 }
 
 Node* /* selected predecessor */ CloneNode::printNode() const

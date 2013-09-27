@@ -364,6 +364,26 @@ class JoinNode: public Node {
         void virtual plotNode(TracePlotter &) const;
 };
 
+/// a trace graph node that represents a @b single entailment operation
+class EntailmentNode: public Node {
+    public:
+        /// gt is trace node of the more generic heap than lt
+        EntailmentNode(Node *gt, Node *lt, bool leftOneWasLt):
+            Node(gt, lt),
+            leftOneWasLt_(leftOneWasLt)
+        {
+            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
+        }
+
+        virtual Node* printNode() const;
+
+    protected:
+        void virtual plotNode(TracePlotter &) const;
+
+    private:
+        bool leftOneWasLt_;
+};
+
 /// trace graph nodes inserted automatically per each SymHeap clone operation
 class CloneNode: public Node {
     public:
