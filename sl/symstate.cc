@@ -124,6 +124,11 @@ void SymState::rotateExisting(const int idxA, const int idxB)
     rotate(itA, itB, heaps_.end());
 }
 
+void SymState::updateTraceOf(const int idx, Trace::Node *tr)
+{
+    heaps_[idx]->traceUpdate(tr);
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymHeapUnion implementation
@@ -191,11 +196,18 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay)
 
         switch (status) {
             case JS_USE_ANY:
+                break;
+
             case JS_USE_SH2:
+                // pick the resulting tr node while preserving the heap itself
+                this->updateTraceOf(idxNew, result.traceNode());
                 break;
 
             case JS_USE_SH1:
                 this->swapExisting(idxNew, shOld);
+
+                // pick the resulting tr node while preserving the heap itself
+                this->updateTraceOf(idxNew, result.traceNode());
                 break;
 
             case JS_THREE_WAY:
@@ -262,6 +274,9 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
                     << this->size() << " heaps in total");
             debugPlot("join", 0, shNew);
             debugPlot("join", 1, this->operator[](idx));
+
+            // pick the resulting trace node while preserving the heap itself
+            this->updateTraceOf(idx, result.traceNode());
             break;
 
         case JS_USE_SH2:
@@ -271,10 +286,14 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
             debugPlot("join", 0, this->operator[](idx));
             debugPlot("join", 1, shNew);
 
-            result = shNew;
-            Trace::waiveCloneOperation(result);
-            this->swapExisting(idx, result);
+            // pick the resulting trace node while preserving the heap itself
+            {
+                Trace::NodeHandle tr(result.traceNode());
+                result = shNew;
+                result.traceUpdate(tr.node());
+            }
 
+            this->swapExisting(idx, result);
             this->packState(idx, allowThreeWay);
             return true;
 

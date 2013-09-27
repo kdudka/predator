@@ -100,6 +100,8 @@ class SymState {
 
         virtual void rotateExisting(const int idxA, const int idxB);
 
+        void updateTraceOf(const int idx, Trace::Node *tr);
+
         /// lookup/insert optimization in SymCallCache implementation
         friend class PerFncCache;
 
