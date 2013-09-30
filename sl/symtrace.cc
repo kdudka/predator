@@ -103,8 +103,13 @@ void resolveIdMapping(TIdMapper *pDst, const Node *trSrc, const Node *trDst)
     pDst->setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
 
     // TODO: handle trace nodes with more than one parent!
-    for(const Trace::Node *tr = trDst; trSrc != tr; tr = tr->parent())
+    for(const Trace::Node *tr = trDst; trSrc != tr; tr = tr->parent()) {
         pDst->composite<D_RIGHT_TO_LEFT>(tr->idMapper());
+        if (tr->parents().empty()) {
+            CL_BREAK_IF("resolveIdMapping() reached a node with no parents");
+            return;
+        }
+    }
 }
 
 // /////////////////////////////////////////////////////////////////////////////

@@ -3356,6 +3356,10 @@ bool SymHeapCore::isValid(TObjId obj) const {
 
     const Region *regData;
     d->ents.getEntRO(&regData, obj);
+    if (!regData)
+        // caller of this method does something wrong, hide it in production
+        return false;
+
     return regData->isValid;
 }
 
