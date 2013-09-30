@@ -111,10 +111,30 @@ void resolveIdMapping(TIdMapper *pDst, const Node *trSrc, const Node *trDst)
 // implementation of Trace::plotTrace()
 
 typedef const Node                     *TNode;
-typedef std::pair<TNode, TNode>         TNodePair;
-typedef WorkList<TNodePair>             TWorkList;
-
 static Node *const nullNode = 0;
+
+struct TraceEdge {
+    TNode               src;
+    TNode               dst;
+    int                 idx;
+
+    TraceEdge():
+        src(nullNode),
+        dst(nullNode),
+        idx(0)
+    {
+    }
+};
+
+inline bool operator<(const TraceEdge &a, const TraceEdge &b)
+{
+    RETURN_IF_COMPARED(a, b, src);
+    RETURN_IF_COMPARED(a, b, dst);
+    RETURN_IF_COMPARED(a, b, idx);
+    return false;
+}
+
+typedef WorkList<TraceEdge>             TWorkList;
 
 struct TracePlotter {
     std::ostream                        &out;
@@ -348,24 +368,28 @@ void plotTraceCore(TracePlotter &tplot)
 {
     CL_DEBUG("plotTraceCore() is traversing a trace graph...");
 
-    TNodePair item;
+    TraceEdge item;
     while (tplot.wl.next(item)) {
-        const TNode now = /* from */ item.first;
-        const TNode to  = /* to   */ item.second;
-        item.second = now;
+        const TNode src = item.src;
+        const TNode dst = item.dst;
+        const int   idx = item.idx;
+        item.dst = src;
 
-        BOOST_FOREACH(TNode from, now->parents()) {
-            item.first = from;
+        const TNodeList &parents = src->parents();
+        const int cntParents = parents.size();
+        for (item.idx = 0; item.idx < cntParents; ++item.idx) {
+            item.src = parents[item.idx];
             tplot.wl.schedule(item);
         }
 
-        now->plotNode(tplot);
-        if (!to)
+        src->plotNode(tplot);
+        if (!dst)
             continue;
 
-        tplot.out << "\t" << SL_QUOTE(now)
-            << " -> " << SL_QUOTE(to)
-            << " [color=black, fontcolor=black];\n";
+        tplot.out << "\t" << SL_QUOTE(src)
+            << " -> " << SL_QUOTE(dst)
+            << " [color=" << ((!idx) ? "blue" : "black")
+            << "];\n";
     }
 }
 
@@ -412,7 +436,8 @@ bool plotTrace(const std::string &name, TWorkList &wl, std::string *pName = 0)
 
 bool plotTrace(Node *endPoint, const std::string &name, std::string *pName)
 {
-    const TNodePair item(/* from */ endPoint, /* to */ nullNode);
+    TraceEdge item;
+    item.src = endPoint;
     TWorkList wl(item);
     return plotTrace(name, wl, pName);
 }
@@ -598,8 +623,9 @@ bool EndPointConsolidator::plotAll(const std::string &name)
 
     // schedule all end-points
     TWorkList wl;
+    TraceEdge item;
     BOOST_FOREACH(Node *endPoint, d->nset) {
-        const TNodePair item(/* from */ endPoint, /* to */ nullNode);
+        item.src = endPoint;
         wl.schedule(item);
     }
 
