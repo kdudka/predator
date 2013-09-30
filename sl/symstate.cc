@@ -185,6 +185,10 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay)
         EJoinStatus     status;
         SymHeap         result(stor, new Trace::TransientNode("packState()"));
         if (!joinSymHeaps(&status, &result, shOld, shNew, allowThreeWay)) {
+#if SE_FORBID_HEAP_REPLACE
+            if (JS_USE_SH2 == status)
+                continue;
+#endif
             ++idxOld;
             continue;
         }
@@ -250,9 +254,14 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
     ++::cntLookups;
     for(idx = 0; idx < cnt; ++idx) {
         const SymHeap &shOld = this->operator[](idx);
-        if (joinSymHeaps(&status, &result, shOld, shNew, allowThreeWay))
-            // join succeeded
-            break;
+        if (!joinSymHeaps(&status, &result, shOld, shNew, allowThreeWay))
+            continue;
+#if SE_FORBID_HEAP_REPLACE
+        if (JS_USE_SH2 == status)
+            continue;
+#endif
+        // join succeeded
+        break;
     }
 
     if (idx == cnt) {

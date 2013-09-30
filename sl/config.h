@@ -211,6 +211,11 @@
 #define SE_ERROR_RECOVERY_MODE              1
 
 /**
+ * if non-zero, do not replace a previously tracked if entailed by a new one
+ */
+#define SE_FORBID_HEAP_REPLACE              0
+
+/**
  * the highest integral number we can count to (only partial implementation atm)
  */
 #define SE_INT_ARITHMETIC_LIMIT             10
