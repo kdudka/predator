@@ -141,10 +141,65 @@ OpTemplate* createPushBack(TplFactory &fact)
     return tpl;
 }
 
+OpTemplate* createPopBack(TplFactory &fact)
+{
+    OpTemplate *tpl = new OpTemplate("pop_back");
+
+    // allocate a region
+    SymHeap sh(fact.createHeap());
+    const TObjId reg = fact.createObj(&sh, OK_REGION);
+
+    // nullify the next/prev fields
+    const PtrHandle nextPtr(sh, reg, fact.nextAt());
+    const PtrHandle prevPtr(sh, reg, fact.prevAt());
+    nextPtr.setValue(VAL_NULL);
+    prevPtr.setValue(VAL_NULL);
+
+    // store the input heap
+    SymHeap input(sh);
+    Trace::waiveCloneOperation(input);
+
+    // free the region
+    sh.objInvalidate(reg);
+
+    // register pre/post pair for pop_back() on a singleton list
+    tpl->addFootprint(new OpFootprint(input, /* output */ sh));
+
+    // roll-back the "free" operation
+    sh.swap(input);
+
+    // allocate a DLS that will represent a container shape in our template
+    const TObjId dls = fact.createObj(&sh, OK_DLS);
+    const PtrHandle dlsNext(sh, dls, fact.nextAt());
+    const PtrHandle dlsPrev(sh, dls, fact.prevAt());
+    const PtrHandle regPrev(sh, reg, fact.prevAt());
+
+    // chain both objects together such that they represent a linked list
+    const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
+    const TValId endAt = sh.addrOfTarget(dls, TS_LAST,   fact.headAt());
+    dlsPrev.setValue(VAL_NULL);
+    regPrev.setValue(endAt);
+    dlsNext.setValue(regAt);
+
+    // store the input heap
+    input = sh;
+    Trace::waiveCloneOperation(input);
+
+    // free the region and re-terminate the remainder of the list
+    sh.objInvalidate(reg);
+    dlsNext.setValue(VAL_NULL);
+
+    // register pre/post pair for pop_back() on a 2+ list
+    tpl->addFootprint(new OpFootprint(input, /* output */ sh));
+
+    return tpl;
+}
+
 void loadDefaultOperations(OpCollection *pDst, const CodeStorage::Storage &stor)
 {
     TplFactory fact(stor);
     pDst->addTemplate(createPushBack(fact));
+    pDst->addTemplate(createPopBack(fact));
 }
 
 } // namespace AdtOp

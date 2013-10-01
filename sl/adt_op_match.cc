@@ -513,7 +513,9 @@ bool processDiffOf(
             THeapIdentList *pDst = &pMatch->matchedHeaps;
 
             if (SD_FORWARD == sd) {
-                pDst->pop_back();
+                if (!pDst->empty())
+                    pDst->pop_back();
+
                 pDst->push_back(heap0);
                 pDst->push_back(heap1);
             }
