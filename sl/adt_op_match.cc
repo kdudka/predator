@@ -139,7 +139,7 @@ bool matchAnchorHeapCore(
         return false;
 
     if (1U < objLists[C_TEMPLATE].size()) {
-        CL_BREAK_IF("unsupported match of the anchor heap");
+        CL_DEBUG("matchAnchorHeapCore() might be insufficiently implemented");
         return false;
     }
 
@@ -529,6 +529,11 @@ bool processDiffOf(
 
         if (isIndependentOp(pMatch, sh0, mo))
             continue;
+
+        if (MO_FREE == mo.code) {
+            CL_DEBUG("unexpected MO_FREE meta-operation in processDiffOf()");
+            return false;
+        }
 
         CL_BREAK_IF("please improve independency checking");
         return false;
