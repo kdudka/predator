@@ -658,6 +658,16 @@ bool joinValuesByCode(
     const TObjId obj1 = ctx.sh1.objByAddr(v1);
     const TObjId obj2 = ctx.sh2.objByAddr(v2);
 
+    // do not join addresses of NULL with different offsets
+    if (OBJ_NULL == obj1 && OBJ_NULL == obj2) {
+        const TOffset off1 = ctx.sh1.valOffset(v1);
+        const TOffset off2 = ctx.sh2.valOffset(v2);
+        if (off1 != off2) {
+            *pResult = false;
+            return true;
+        }
+    }
+
     // check target's validity
     if (VAL_NULL != v1 && VAL_NULL != v2) {
         const bool haveTarget1 = ctx.sh1.isValid(obj1);
