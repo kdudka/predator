@@ -226,7 +226,7 @@
  * - 2 ... join only when traversing a loop-closing edge, isomorphism otherwise
  * - 3 ... same as 2 but skips the isomorphism check when considered redundant
  */
-#define SE_JOIN_ON_LOOP_EDGES_ONLY          1
+#define SE_JOIN_ON_LOOP_EDGES_ONLY          3
 
 /**
  * maximal call depth
@@ -271,7 +271,7 @@
 /**
  * prune non-loop blocks on reaching the count of join misses (0 means disabled)
  */
-#define SE_STATE_PRUNING_MISS_THR           0x20
+#define SE_STATE_PRUNING_MISS_THR           0x8
 
 /**
  * prune non-loop blocks on reaching the count of states (0 means disabled)

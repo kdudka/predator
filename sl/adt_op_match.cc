@@ -329,11 +329,13 @@ void relocObjsInMetaOps(
     TMetaOpSet dst;
 
     BOOST_FOREACH(MetaOperation mo, src) {
-        const ETargetSpecifier ts = tsByOffset(mo.off, pProps);
-        mo.obj = relocSingleObj(mo.obj, ts, objMap, pObjOrder);
-        if (MO_SET == mo.code)
+        ETargetSpecifier ts = TS_INVALID;
+        if (MO_SET == mo.code) {
             mo.tgtObj = relocSingleObj(mo.tgtObj, mo.tgtTs, objMap, pObjOrder);
+            ts = tsByOffset(mo.off, pProps);
+        }
 
+        mo.obj = relocSingleObj(mo.obj, ts, objMap, pObjOrder);
         dst.insert(mo);
     }
 
