@@ -232,7 +232,7 @@ bool handlePlotTraceGeneric(
     return true;
 }
 
-bool handleAbort(
+bool handleNoOp(
         SymState                                    &dst,
         SymExecCore                                 &core,
         const CodeStorage::Insn                     &insn,
@@ -244,7 +244,9 @@ bool handleAbort(
         return false;
     }
 
-    // do nothing for abort()
+    CL_DEBUG_MSG(core.lw(), "ignoring call to " << name << "()");
+
+    // do not change anything in the program configuration
     insertCoreHeap(dst, core, insn);
     return true;
 }
@@ -991,7 +993,7 @@ BuiltInTable::BuiltInTable()
     tbl_["__builtin_stack_save"]                    = handleStackSave;
 
     // C run-time
-    tbl_["abort"]                                   = handleAbort;
+    tbl_["abort"]                                   = handleNoOp;
     tbl_["calloc"]                                  = handleCalloc;
     tbl_["free"]                                    = handleFree;
     tbl_["malloc"]                                  = handleMalloc;
@@ -1005,6 +1007,7 @@ BuiltInTable::BuiltInTable()
 
     // Linux kernel
     tbl_["kzalloc"]                                 = handleKzalloc;
+    tbl_["printk"]                                  = handlePrintf;
 
     // Predator-specific
     tbl_["___sl_break"]                             = handleBreak;
@@ -1021,6 +1024,8 @@ BuiltInTable::BuiltInTable()
 
     // just to make life easier to our competitors (TODO: check for collisions)
     tbl_["__nondet"]                                = handleNondetInt;
+    tbl_["ldv_initialize"]                          = handleNoOp;
+    tbl_["ldv_undefined_int"]                       = handleNondetInt;
     tbl_["nondet_int"]                              = handleNondetInt;
     tbl_["undef_int"]                               = handleNondetInt;
 
