@@ -91,7 +91,6 @@ class PerFncCache {
 
         void updateCacheEntry(const SymHeap &of, SymHeap by) {
 #if !SE_ENABLE_CALL_CACHE
-            CL_BREAK_IF("invalid call of PerFncCache::updateCacheEntry()");
             return;
 #endif
             const int idx = this->lookupCore(of);
@@ -612,7 +611,6 @@ void SymCallCache::Private::resolveHeapCut(
 {
     const TFncVarSet &fncVars = fnc.vars;
     const int nestLevel = bt.countOccurrencesOfTopFnc();
-#if SE_ENABLE_CALL_CACHE
     TStorRef stor = sh.stor();
 
     // start with all gl variables that are accessible from this function
@@ -628,7 +626,6 @@ void SymCallCache::Private::resolveHeapCut(
 
         cut.push_back(cv);
     }
-#endif
 
     TObjList live;
     sh.gatherObjects(live, isProgramVar);
@@ -636,12 +633,8 @@ void SymCallCache::Private::resolveHeapCut(
         const CVar cv(sh.cVarByObject(obj));
 
         const EStorageClass code = sh.objStorClass(obj);
-        if (SC_STATIC == code) {
-#if !SE_ENABLE_CALL_CACHE
-            cut.push_back(cv);
-#endif
+        if (SC_STATIC == code)
             continue;
-        }
 
         if (hasKey(fncVars, cv.uid) && cv.inst == nestLevel)
             cut.push_back(cv);
