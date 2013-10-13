@@ -200,24 +200,21 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay)
 
         switch (status) {
             case JS_USE_ANY:
-                break;
-
             case JS_USE_SH2:
-                // pick the resulting tr node while preserving the heap itself
-                this->updateTraceOf(idxNew, result.traceNode());
                 break;
 
             case JS_USE_SH1:
                 this->swapExisting(idxNew, shOld);
-
-                // pick the resulting tr node while preserving the heap itself
-                this->updateTraceOf(idxNew, result.traceNode());
                 break;
 
             case JS_THREE_WAY:
                 this->swapExisting(idxNew, result);
                 break;
         }
+
+        if (JS_THREE_WAY != status)
+            // pick the resulting tr node while preserving the heap itself
+            this->updateTraceOf(idxNew, result.traceNode());
 
         if (idxOld < idxNew)
             --idxNew;
@@ -276,6 +273,9 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
         case JS_USE_ANY:
             CL_DEBUG("<I> sh #" << idx << " is equal to the given one, "
                     << cnt << " heaps in total");
+
+            // pick the resulting trace node while preserving the heap itself
+            this->updateTraceOf(idx, result.traceNode());
             break;
 
         case JS_USE_SH1:
