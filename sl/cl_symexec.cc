@@ -33,6 +33,7 @@
 #include "symproc.hh"
 #include "symstate.hh"
 #include "symtrace.hh"
+#include "symutil.hh"
 #include "util.hh"
 
 #include <stdexcept>
@@ -43,6 +44,23 @@
 // required by the gcc plug-in API
 extern "C" {
     __attribute__ ((__visibility__ ("default"))) int plugin_is_GPL_compatible;
+}
+
+void initGlVars(SymHeap &sh)
+{
+    using namespace CodeStorage;
+    TStorRef stor = sh.stor();
+
+    BOOST_FOREACH(const Var &var, stor.vars) {
+        if (VAR_GL != var.code)
+            continue;
+
+        const std::string varString = varToString(stor, var.uid);
+        CL_DEBUG_MSG(&var.loc, "(g) initializing gl variable: " << varString);
+
+        const CVar cv(var.uid, /* gl var */ 0);
+        initGlVar(sh, cv);
+    }
 }
 
 void digGlJunk(SymHeap &sh)
@@ -77,11 +95,17 @@ void execFnc(const CodeStorage::Fnc &fnc, bool lookForGlJunk = false)
     CL_DEBUG_MSG(lw, "creating fresh initial state for "
             << nameOf(fnc) << "()...");
 
+    // create the initial configuration
     Trace::RootNode *traceRoot = new Trace::RootNode(&fnc);
+    SymHeap entry(stor, traceRoot);
+#if SE_DISABLE_SYMCUT
+    // we have to init gl variables now because they cannot be imported later on
+    initGlVars(entry);
+#endif
 
     // run the symbolic execution
     SymStateWithJoin results;
-    execute(results, SymHeap(stor, traceRoot), fnc);
+    execute(results, entry, fnc);
     if (!lookForGlJunk)
         return;
 
