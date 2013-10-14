@@ -93,11 +93,13 @@ class PerFncCache {
 #if !SE_ENABLE_CALL_CACHE
             return;
 #endif
+            const int missCnt = 1 + missCntSinceLastHit_;
             const int idx = this->lookupCore(of);
             CL_BREAK_IF(!areEqual(of, huni_[idx]));
 
             Trace::waiveCloneOperation(by);
             huni_.swapExisting(idx, by);
+            missCntSinceLastHit_ = missCnt;
         }
 
         /**
