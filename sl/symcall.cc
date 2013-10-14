@@ -463,15 +463,17 @@ void SymCallCtx::flushCallResults(SymState &dst)
 
 void SymCallCtx::invalidate()
 {
-#if SE_ENABLE_CALL_CACHE
-#   if SE_CALL_CACHE_MISS_THR
     typedef SymCallCache::Private::TCache TCache;
     TCache &cache = d->cd->cache;
     const CodeStorage::Fnc &fnc = *d->fnc;
     const int uid = uidOf(fnc);
     const TCache::iterator it = cache.find(uid);
-    CL_BREAK_IF(it == cache.end());
+    if (it == cache.end()) {
+        delete this;
+        return;
+    }
 
+#if SE_CALL_CACHE_MISS_THR
     const PerFncCache &pfc = it->second;
     const int missCnt = pfc.missCntSinceLastHit();
     if (missCnt < (SE_CALL_CACHE_MISS_THR))
@@ -487,9 +489,6 @@ void SymCallCtx::invalidate()
     }
 
     cache.erase(it);
-#   endif
-#else
-    delete this;
 #endif
 }
 
