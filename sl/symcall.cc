@@ -224,7 +224,7 @@ struct SymCallCtx::Private {
     SymHeap                     entry;
     SymHeap                     callFrame;
     const struct cl_operand     *dst;
-    SymHeapUnion                rawResults;
+    SymHeapList                 rawResults;
     int                         nestLevel;
     bool                        computed;
     bool                        flushed;

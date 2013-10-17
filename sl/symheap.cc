@@ -1162,7 +1162,6 @@ void SymHeapCore::Private::reinterpretObjData(
             return;
     }
 
-    CL_DEBUG("reinterpretObjData() is taking place...");
     FieldOfObj *oldData = DCAST<FieldOfObj *>(blData);
     const TValId valOld = oldData->value;
     if (/* wasPtr */ this->releaseValueOf(old, valOld) && killedPtrs)
