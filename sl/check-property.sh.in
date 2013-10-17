@@ -236,6 +236,6 @@ esac
 "$GCC_HOST"                                             \
     -fplugin="${GCC_PLUG}"                              \
     -fplugin-arg-libsl-args="$ARGS"                     \
-    -o /dev/null -O0 -S "$@" 2>&1                       \
+    -o /dev/null -O0 -S -xc "$@" 2>&1                   \
     | tee /dev/fd/2                                     \
     | parse_gcc_output

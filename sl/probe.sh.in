@@ -220,7 +220,7 @@ try_one() {
 
 while test -n "$1"; do
     short_name="`basename "$(dirname "$1")"`/`basename "$1"`"
-    printf '%s\t%-48s\t' "`date +'%Y-%m-%d %H:%M:%S'`" "$short_name"
+    printf '%s\t%-64s\t' "`date +'%Y-%m-%d %H:%M:%S'`" "$short_name"
     try_one "$1" "$1-bare-gcc.err" "$1-predator.err"
     shift
 done
