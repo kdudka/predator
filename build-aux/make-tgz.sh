@@ -17,12 +17,11 @@ PRUNE_ALWAYS=".git tests/linux-drivers \
 build-aux/make-tgz.sh \
 build-aux/README-fedora-release.patch \
 build-aux/README-ubuntu-release.patch \
-build-aux/make-srpm.sh \
 build-aux/update-comments-in-tests.sh \
 sl/rank.sh"
 
 chlog_watch=
-drop_fwnull=no
+drop_static=no
 drop_fa=no
 drop_sl=no
 
@@ -36,12 +35,13 @@ case "$PROJECT" in
 
     forester)
         chlog_watch="fa fa_analysis"
-        drop_fwnull=yes
+        drop_static=yes
         drop_sl=yes
         ;;
 
     predator)
         chlog_watch="sl"
+        drop_static=yes
         drop_fa=yes
         ;;
 
@@ -89,6 +89,7 @@ cd "$NAME"                  || die "git clone failed"
 make version_cl.h -C cl     || die "failed to create cl/version_cl.h"
 make version.h -C fwnull    || die "failed to create fwnull/version.h"
 make version.h -C sl        || die "failed to create sl/version.h"
+make version.h -C vra       || die "failed to create vra/version.h"
 
 # generate ChangeLog
 make ChangeLog "CHLOG_WATCH=$chlog_watch" \
@@ -102,21 +103,21 @@ patch docs/README-ubuntu < "build-aux/README-ubuntu-release.patch"
 case "$PROJECT" in
     code-listener)
         sed -i Makefile                         \
-            -e 's|fwnull sl fa$|fwnull|'        \
+            -e 's|fwnull sl fa vra$|fwnull vra|'\
             -e 's|cl/api sl/api|cl/api|'        \
             || die "failed to adapt Makefile"
         ;;
 
     forester)
         sed -i Makefile                         \
-            -e 's|fwnull sl fa$|fa|'            \
+            -e 's|fwnull sl fa vra$|fa|'        \
             -e 's|cl/api sl/api|cl/api|'        \
             || die "failed to adapt Makefile"
         ;;
 
     predator)
         sed -i Makefile                         \
-            -e 's|fwnull sl fa$|fwnull sl|'     \
+            -e 's|fwnull sl fa vra$|sl|'        \
             || die "failed to adapt Makefile"
         ;;
 
@@ -127,9 +128,9 @@ esac
 
 # remove all directories and files we do not want to distribute
 rm -rf $PRUNE_ALWAYS
-test xyes = "x$drop_fwnull" && rm -rf fwnull
-test xyes = "x$drop_fa" && rm -rf fa
-test xyes = "x$drop_sl" && rm -rf sl "README-sv-comp-TACAS-2013"
+test xyes = "x$drop_static" && rm -rf fwnull vra
+test xyes = "x$drop_fa"     && rm -rf fa
+test xyes = "x$drop_sl"     && rm -rf sl "README-sv-comp-TACAS-2013"
 
 # make a tarball
 cd ..
