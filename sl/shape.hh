@@ -35,7 +35,7 @@ struct ShapeProps {
     {
     }
 
-    /// @param size_ zero means unknown size
+    /// if the size_ argument is zero, it means unknown size
     ShapeProps(EObjKind kind_, BindingOff bOff_, TSizeOf size_ = 0):
         kind(kind_),
         bOff(bOff_),

@@ -125,6 +125,9 @@ namespace PointsTo {
      * Find or create node of graph based on whole information provided by some
      * operand.  Dereferences, field accesses, etc. are taken into account.
      *
+     * @param stor reference to the related intermediate code representation
+     * @param ptg reference to the points-to graph being built
+     * @param op an operand to take the information from
      * @param referenced is set to true when the '&' reference operator was
      * detected in operand.
      */
