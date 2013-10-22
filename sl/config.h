@@ -231,7 +231,7 @@
 /**
  * maximal call depth
  */
-#define SE_MAX_CALL_DEPTH                   0x10
+#define SE_MAX_CALL_DEPTH                   0x40
 
 /**
  * if non-zero, plot each state that caused an error to be reported
