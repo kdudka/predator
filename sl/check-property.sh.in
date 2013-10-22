@@ -8,6 +8,7 @@ export MSG_LABEL_FOUND=': error: error label "ERROR" has been reached'
 export MSG_OUR_WARNINGS=': warning: .*\[-fplugin=libsl.so\]$'
 export MSG_TIME_ELAPSED=': note: clEasyRun\(\) took '
 export MSG_UNHANDLED_CALL=': warning: ignoring call of undefined function: '
+export MSG_INT_OVERFLOW=': warning: possible .*flow of .* integer'
 
 export MSG_MEMLEAK=': warning: memory leak detected'
 
@@ -47,8 +48,6 @@ export MSG_FREE_NONPOINTER=': error: free() called on non-pointer value'
 #"call depth exceeds SE_MAX_CALL_DEPTH" - probably not
 
 # Predator warnings we need to handle
-#"possible underflow of " << sig << " integer" - not
-#"possible overflow of " << sig << " integer" - not
 #"ignoring call of memset() with size == 0" - not
 #"ignoring call of " << fnc << " with size == 0" - not
 #"incorrectly called " - not
@@ -163,6 +162,10 @@ parse_gcc_output() {
     while read line; do
         if match "$line" "$MSG_UNHANDLED_CALL"; then
             # call of an external function we have no model for, we have to fail
+            fail "$line"
+
+        elif match "$line" "$MSG_INT_OVERFLOW"; then
+            # unhandled integer overflow, we have to fail
             fail "$line"
 
         elif match "$line" "$MSG_LABEL_FOUND"; then
