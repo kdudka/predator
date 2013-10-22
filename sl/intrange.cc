@@ -342,6 +342,20 @@ TInt maskToAlignment(TInt mask)
     return alignment;
 }
 
+TInt extendSignedIntFromLeft(TInt num)
+{
+    TUInt singleOne = static_cast<TUInt>(Int1);
+    singleOne <<= (sizeof(TUInt) << 3) - 1U;
+    for (;;) {
+        const TInt oldNum = num;
+        num |= singleOne;
+        if (oldNum == num)
+            return num;
+
+        singleOne >>= 1;
+    }
+}
+
 Range& operator&=(Range &rng, TInt mask)
 {
     if (isZeroIntersection(rng.alignment, mask))
@@ -349,8 +363,8 @@ Range& operator&=(Range &rng, TInt mask)
         return (rng = rngFromNum(Int0));
 
     if (Int0 < mask)
-        // TODO
-        return (rng = FullRange);
+        // reconstruct a signed integer
+        mask = extendSignedIntFromLeft(mask);
 
     // include all possible scenarios into consideration
     rng.lo       &= mask;

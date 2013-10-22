@@ -54,6 +54,9 @@ inline Range rngFromNum(TInt num)
 
 extern const Range FullRange;
 
+/// insert ones as padding from left
+TInt extendSignedIntFromLeft(TInt num);
+
 /// this does nothing unless running a debug build
 void chkRange(const Range &rng);
 
