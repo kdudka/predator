@@ -152,6 +152,9 @@ bool isSingular(const Range &);
 /// return true if the range is non-trivially aligned
 bool isAligned(const Range &);
 
+/// adjust the alignment so that the bounds are aligned
+void adjustAlignment(Range *);
+
 /// return the count of integral numbers that the given range represents
 TUInt widthOf(const Range &);
 

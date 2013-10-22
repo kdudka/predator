@@ -143,6 +143,17 @@ bool isAligned(const Range &range)
     return (Int1 < range.alignment);
 }
 
+void adjustAlignment(Range *pRange)
+{
+    if (IntMin != pRange->lo)
+        pRange->alignment = approxGCD(pRange->alignment, pRange->lo);
+
+    if (IntMax != pRange->hi)
+        pRange->alignment = approxGCD(pRange->alignment, pRange->hi);
+
+    chkRange(*pRange);
+}
+
 TUInt widthOf(const Range &range)
 {
     chkRange(range);

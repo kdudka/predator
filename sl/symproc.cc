@@ -1592,6 +1592,7 @@ bool trimRangesIfPossible(
         win.hi = limit - isOpen;
 
     // trim the designated VT_RANGE value
+    IR::adjustAlignment(&win);
     sh.valRestrictRange(valRange, win);
     return true;
 }
