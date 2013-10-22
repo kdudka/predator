@@ -684,17 +684,28 @@ TValId integralEncoder(
     const TSizeOf limitWidth = (size << 3) /* sign bit */ - !isUnsigned;
 
     if (IR::IntMin != rng.lo && rng.lo < IR::Int0) {
-        const IR::TInt loLimit = IR::Int1 << limitWidth;
+        IR::TInt loLimit = IR::Int1 << limitWidth;
+        if (isUnsigned) {
+            CL_DEBUG_MSG(loc, "converting negative number to unsigned");
+            rng += IR::rngFromNum(loLimit);
+            loLimit = IR::Int0;
+        }
         if (rng.lo < -loLimit) {
             CL_WARN_MSG(loc, "possible underflow of " << sig << " integer");
+            proc.printBackTrace(ML_WARN);
             rng = IR::FullRange;
         }
     }
 
-    if (IR::IntMax != rng.hi) {
-        const IR::TInt hiLimit = IR::Int1 << limitWidth;
+    const IR::TInt hiLimit = IR::Int1 << limitWidth;
+    if (IR::IntMax != rng.hi && hiLimit <= rng.hi) {
+        if (isUnsigned) {
+            CL_DEBUG_MSG(loc, "wrapping an unsigned number");
+            rng -= IR::rngFromNum(hiLimit);
+        }
         if (hiLimit <= rng.hi) {
             CL_WARN_MSG(loc, "possible overflow of " << sig << " integer");
+            proc.printBackTrace(ML_WARN);
             rng = IR::FullRange;
         }
     }
@@ -702,9 +713,6 @@ TValId integralEncoder(
     if (rngOrig == rng)
         // do not create a fresh value to prevent unnecessary information lost
         return val;
-
-    // something has changed, print the backtrace!
-    proc.printBackTrace(ML_WARN);
 
     // wrap the resulting range as a fresh heap value
     const CustomValue cv(rng);
@@ -2128,13 +2136,17 @@ TValId handlePtrBitAnd(
         const TValId                vInt)
 {
     IR::TInt mask;
-    if (!numFromVal(&mask, sh, vInt) || 0 < mask)
+    if (!numFromVal(&mask, sh, vInt))
         // giving up
         return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 
     if (!mask)
         // the whole pointer has been masked
         return VAL_NULL;
+
+    if (0 < mask)
+        // reconstruct a signed integer
+        mask = IR::extendSignedIntFromLeft(mask);
 
     // include all possible scenarios into consideration
     IR::Range range;
