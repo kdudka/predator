@@ -3330,6 +3330,37 @@ TObjId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
     return reg;
 }
 
+bool SymHeapCore::isAnonStackObj(const TObjId obj, CallInst *pFrom)
+{
+    const Region *regData;
+    d->ents.getEntRO(&regData, obj);
+    if (SC_ON_STACK != regData->code)
+        return false;
+
+    if (-1 != regData->cVar.uid)
+        return false;
+
+    // at this point we know that 'obj' is anonymous stack object
+    if (!pFrom)
+        // ... but the caller does not need to know the owning frame
+        return true;
+
+    typedef TAnonStackMapWrapper::const_reference TConstRef; 
+    BOOST_FOREACH(TConstRef item, *d->anonStackMap) {
+        const CallInst &from = item.first;
+        BOOST_FOREACH(const TObjId objNow, item.second) {
+            if (objNow != obj)
+                continue;
+
+            *pFrom = from;
+            return true;
+        }
+    }
+
+    CL_BREAK_IF("isAnonStackObj() detected SymHeapCore inconsistency");
+    return false;
+}
+
 TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
 {
     CL_BREAK_IF(size.lo < IR::Int0);
