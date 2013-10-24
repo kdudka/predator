@@ -117,6 +117,36 @@ void digFields(DeepCopyData &dc, const TObjId objSrc, const TObjId objDst)
     traverseLiveFieldsGeneric<2>(heaps, objs, objVisitor);
 }
 
+TObjId /* objDst */ transferProgramVar(
+        DeepCopyData               &dc,
+        const TObjId                objSrc,
+        const bool                  valid)
+{
+    TObjId objDst;
+
+    // regular program variable
+    CVar cv = dc.src.cVarByObject(objSrc);
+#if DEBUG_SYMCUT
+    const size_t orig = dc.cut.size();
+#endif
+    // enlarge the cut if needed
+    if (valid) {
+        dc.cut.insert(cv);
+#if DEBUG_SYMCUT
+        if (dc.cut.size() != orig)
+            CL_DEBUG("addObjectIfNeeded() is enlarging the cut by cVar #"
+                    << cv.uid << ", nestlevel = " << cv.inst);
+#endif
+    }
+
+    objDst = dc.dst.regionByVar(cv, /* createIfNeeded */ true);
+
+    if (!valid)
+        dc.dst.objInvalidate(objDst);
+
+    return objDst;
+}
+
 TObjId /* objDst */ addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc)
 {
     TObjMap &objMap = dc.objMap;
@@ -131,27 +161,9 @@ TObjId /* objDst */ addObjectIfNeeded(DeepCopyData &dc, TObjId objSrc)
 
     const bool valid = src.isValid(objSrc);
 
-    CVar cv;
     if (isProgramVar(src.objStorClass(objSrc))) {
         // program variable
-        cv = src.cVarByObject(objSrc);
-#if DEBUG_SYMCUT
-        const size_t orig = dc.cut.size();
-#endif
-        // enlarge the cut if needed
-        if (valid) {
-            dc.cut.insert(cv);
-#if DEBUG_SYMCUT
-            if (dc.cut.size() != orig)
-                CL_DEBUG("addObjectIfNeeded() is enlarging the cut by cVar #"
-                        << cv.uid << ", nestlevel = " << cv.inst);
-#endif
-        }
-
-        const TObjId objDst = dst.regionByVar(cv, /* createIfNeeded */ true);
-        if (!valid)
-            dst.objInvalidate(objDst);
-
+        const TObjId objDst = transferProgramVar(dc, objSrc, valid);
         dc.objMap[objSrc] = objDst;
         digFields(dc, objSrc, objDst);
         return objDst;
