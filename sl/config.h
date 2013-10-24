@@ -271,7 +271,7 @@
 /**
  * prune non-loop blocks on reaching the count of join misses (0 means disabled)
  */
-#define SE_STATE_PRUNING_MISS_THR           0x20
+#define SE_STATE_PRUNING_MISS_THR           0x8
 
 /**
  * prune non-loop blocks on reaching the count of states (0 means disabled)
