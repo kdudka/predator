@@ -241,7 +241,7 @@ void TypeDb::Private::digPtrSizeof(const struct cl_type *clt)
     if (isCodePtr)
         return;
 
-    if (!this->genericDataPtr || CL_TYPE_VOID == clt->code)
+    if (!this->genericDataPtr || CL_TYPE_VOID == next->code)
         this->genericDataPtr = clt;
 }
 
