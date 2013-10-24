@@ -123,23 +123,30 @@ TObjId /* objDst */ transferProgramVar(
         const bool                  valid)
 {
     TObjId objDst;
-
-    // regular program variable
-    CVar cv = dc.src.cVarByObject(objSrc);
-#if DEBUG_SYMCUT
-    const size_t orig = dc.cut.size();
-#endif
-    // enlarge the cut if needed
-    if (valid) {
-        dc.cut.insert(cv);
-#if DEBUG_SYMCUT
-        if (dc.cut.size() != orig)
-            CL_DEBUG("addObjectIfNeeded() is enlarging the cut by cVar #"
-                    << cv.uid << ", nestlevel = " << cv.inst);
-#endif
+    CallInst from(-1, -1);
+    if (dc.src.isAnonStackObj(objSrc, &from)) {
+        // anonymous stack object (used for C99 variadic arrays)
+        const TSizeRange size = dc.src.objSize(objSrc);
+        objDst = dc.dst.stackAlloc(size, from);
     }
+    else {
+        // regular program variable
+        CVar cv = dc.src.cVarByObject(objSrc);
+#if DEBUG_SYMCUT
+        const size_t orig = dc.cut.size();
+#endif
+        // enlarge the cut if needed
+        if (valid) {
+            dc.cut.insert(cv);
+#if DEBUG_SYMCUT
+            if (dc.cut.size() != orig)
+                CL_DEBUG("addObjectIfNeeded() is enlarging the cut by cVar #"
+                        << cv.uid << ", nestlevel = " << cv.inst);
+#endif
+        }
 
-    objDst = dc.dst.regionByVar(cv, /* createIfNeeded */ true);
+        objDst = dc.dst.regionByVar(cv, /* createIfNeeded */ true);
+    }
 
     if (!valid)
         dc.dst.objInvalidate(objDst);
