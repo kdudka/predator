@@ -151,7 +151,15 @@ void SymState::updateTraceOf(const int idx, Trace::Node *tr, EJoinStatus status)
     idMaps[i1].composite<D_LEFT_TO_RIGHT>(idMaps[i0]);
     idMaps[i0] = identity;
 
+#if SE_ALLOW_CYCLIC_TRACE_GRAPH
+    Trace::Node *const trOld = heaps_[idx]->traceNode();
+    CL_BREAK_IF(trOld == tr);
+
+    Trace::replaceNode(trOld, tr);
+    CL_BREAK_IF(tr != heaps_[idx]->traceNode());
+#else
     heaps_[idx]->traceUpdate(tr);
+#endif
 }
 
 

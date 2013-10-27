@@ -93,10 +93,10 @@
  */
 #define SE_ABSTRACT_ON_LOOP_EDGES_ONLY      1
 
-/*
- * if non-zero, allow incomplete discovery paths with lower costs to apply
+/**
+ * if 1, allow to replace already referenced trace graph nodes (creates cycles)
  */
-#define SE_ALLOW_SUBPATH_RANKING            0
+#define SE_ALLOW_CYCLIC_TRACE_GRAPH         1
 
 /**
  * bit mask of allowed operations on integral ranges
@@ -113,6 +113,11 @@
  * - 0x4 ... allow widening of the upper lower of values with offset ranges
  */
 #define SE_ALLOW_OFF_RANGES                 0x1
+
+/*
+ * if non-zero, allow incomplete discovery paths with lower costs to apply
+ */
+#define SE_ALLOW_SUBPATH_RANKING            0
 
 /**
  * how much do we allow to use three-way join
@@ -226,7 +231,7 @@
  * - 2 ... join only when traversing a loop-closing edge, isomorphism otherwise
  * - 3 ... same as 2 but skips the isomorphism check when considered redundant
  */
-#define SE_JOIN_ON_LOOP_EDGES_ONLY          3
+#define SE_JOIN_ON_LOOP_EDGES_ONLY          1
 
 /**
  * maximal call depth

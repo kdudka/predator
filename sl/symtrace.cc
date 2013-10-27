@@ -56,6 +56,16 @@ Node* NodeBase::parent() const
     return parents_.front();
 }
 
+void NodeBase::replaceParent(Node *parentOld, Node *parentNew)
+{
+    typedef TNodeList::iterator TIt;
+    const TIt itToRepl = std::find(parents_.begin(), parents_.end(), parentOld);
+    CL_BREAK_IF(itToRepl == parents_.end());
+
+    parentOld->notifyDeath(this);
+    *itToRepl = parentNew;
+    parentNew->notifyBirth(this);
+}
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::Node
@@ -104,6 +114,19 @@ const TIdMapper& Node::idMapper() const
 {
     CL_BREAK_IF(1U != this->idMapperList().size());
     return idMapperList_.front();
+}
+
+void replaceNode(Node *tr, Node *by)
+{
+    // we intentionally deep-copy the list int order to allow its safe traversal
+    const Node::TBaseList children = tr->children();
+    BOOST_FOREACH(NodeBase *const child, children) {
+        if (child == by)
+            // avoid creating a self-loop
+            continue;
+
+        child->replaceParent(tr, by);
+    }
 }
 
 

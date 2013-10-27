@@ -85,6 +85,10 @@ class NodeBase {
 
         /// reference to list of parents (containing 0..n pointers)
         const TNodeList& parents() const { return parents_; }
+
+    private:
+        virtual void replaceParent(Node *parentOld, Node *parentNew);
+        friend void replaceNode(Node *tr, Node *by);
 };
 
 /// an abstract node of the symbolic execution trace graph
@@ -170,6 +174,8 @@ class Node: public NodeBase {
         TBaseList children_;
         bool alive_;
 };
+
+void replaceNode(Node *tr, Node *by);
 
 /// useful to prevent a trace sub-graph from being destroyed too early
 class NodeHandle: public NodeBase {
