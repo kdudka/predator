@@ -33,6 +33,7 @@ namespace GlConf {
 struct Options {
     bool trackUninit;       ///< enable/disable @b track_uninit @b mode
     bool oomSimulation;     ///< enable/disable @b oom @b simulation mode
+    bool memLeakIsError;    ///< treat memory leak as an error
     bool skipUserPlots;     ///< ignore all ___sl_plot*() calls
     int errorRecoveryMode;  ///< @copydoc config.h::SE_ERROR_RECOVERY_MODE
     std::string errLabel;   ///< if not empty, treat reaching the label as error
@@ -41,6 +42,7 @@ struct Options {
     Options():
         trackUninit(false),
         oomSimulation(false),
+        memLeakIsError(false),
         skipUserPlots(false),
         errorRecoveryMode(SE_ERROR_RECOVERY_MODE),
         fixedPoint(0)

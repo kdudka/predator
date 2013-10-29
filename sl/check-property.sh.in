@@ -10,7 +10,7 @@ export MSG_TIME_ELAPSED=': note: clEasyRun\(\) took '
 export MSG_UNHANDLED_CALL=': warning: ignoring call of undefined function: '
 export MSG_INT_OVERFLOW=': warning: possible .*flow of .* integer'
 
-export MSG_MEMLEAK=': warning: memory leak detected'
+export MSG_MEMLEAK=': (error|warning): memory leak detected'
 
 export MSG_DEREF_FREED=': error: dereference of already deleted heap object'
 export MSG_DEREF_OUT=': error: dereferencing object of size [0-9]*B out of bounds'
@@ -233,7 +233,7 @@ parse_gcc_output() {
 
 case "$TASK" in
     label)  ARGS="error_label:ERROR";;
-    memory) ARGS="no_error_recovery";;
+    memory) ARGS="no_error_recovery,memleak_is_error";;
 esac
 
 "$GCC_HOST"                                             \

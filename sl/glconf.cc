@@ -76,6 +76,12 @@ void handleErrorLabel(const string &name, const string &value)
     data.errLabel = value;
 }
 
+void handleMemLeakIsError(const string &name, const string &value)
+{
+    assumeNoValue(name, value);
+    data.memLeakIsError = true;
+}
+
 void handleNoErrorRecovery(const string &name, const string &value)
 {
     assumeNoValue(name, value);
@@ -104,6 +110,7 @@ ConfigStringParser::ConfigStringParser()
 {
     tbl_["dump_fixed_point"]        = handleDumpFixedPoint;
     tbl_["error_label"]             = handleErrorLabel;
+    tbl_["memleak_is_error"]        = handleMemLeakIsError;
     tbl_["no_error_recovery"]       = handleNoErrorRecovery;
     tbl_["no_plot"]                 = handleNoPlot;
     tbl_["oom"]                     = handleOOM;

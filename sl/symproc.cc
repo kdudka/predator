@@ -606,8 +606,16 @@ void reportMemLeak(SymProc &proc, const EStorageClass code, const char *reason)
 {
     const struct cl_loc *loc = proc.lw();
     const char *const what = describeObj(code);
-    CL_WARN_MSG(loc, "memory leak detected while " << reason << "ing " << what);
-    proc.printBackTrace(ML_WARN);
+#define REPORT_MEMLEAK "memory leak detected while " << reason << "ing " << what
+    if (GlConf::data.memLeakIsError) {
+        CL_ERROR_MSG(loc, REPORT_MEMLEAK);
+        proc.printBackTrace(ML_ERROR);
+    }
+    else {
+        CL_WARN_MSG(loc, REPORT_MEMLEAK);
+        proc.printBackTrace(ML_WARN);
+    }
+#undef REPORT_MEMLEAK
 }
 
 /// pointer kind classification
