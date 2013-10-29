@@ -61,7 +61,7 @@ export MSG_FREE_NONPOINTER=': error: free() called on non-pointer value'
 #"caught signal " - not
 
 usage() {
-    printf "Usage: %s --task TASK [--trace FILE] -- path/to/test-case.c \
+    printf "Usage: %s [--task TASK] [--trace FILE] -- path/to/test-case.c \
 [-m32|-m64] [CFLAGS]\n\n" "$SELF" >&2
     cat >&2 << EOF
 
@@ -89,9 +89,15 @@ usage() {
     For memory safety category, the FALSE result is further clarified as
     FALSE(p) where p is the property for which the Predator judges the
     program to be unsatisfactory.
+
+    If the verification property is not specified by the --task option, it is
+    assumed to be specified either in a file with the name "path/filename.prp"
+    or in a file "ALL.prp" in directory "path/" for a program "path/filename" 
 EOF
     exit 1
 }
+
+TASK=
 
 # write trace to stderr by default
 TRACE="/dev/fd/2"
@@ -117,7 +123,31 @@ while true; do
 done
 
 test -r "$1" || usage
-test "$TASK" == "label" || test "$TASK" == "memory" || usage
+
+# load the property to be verified (if not specified explicitly)
+if test -z "$TASK"; then
+    PRP_FILE="${1}.prp"
+    test -r "$PRP_FILE" || PRP_FILE="$(dirname "${1}")/ALL.prp"
+    if test -r "$PRP_FILE"; then
+        if grep "ERROR" "$PRP_FILE" >/dev/null; then
+            TASK="label"
+        elif grep "valid-memtrack" "$PRP_FILE" >/dev/null; then
+            TASK="memory"
+        else
+            printf "%s: error: failed to classify verification property: %s\n" \
+                "$SELF" "$PRP_FILE" >&2
+            exit 1
+        fi
+    fi
+fi
+
+case "$TASK" in
+    label|memory)
+        ;;
+    *)
+        printf "%s: error: verification propery not specified\n" "$SELF" >&2
+        exit 1
+esac
 
 # include common code base
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
