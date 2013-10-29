@@ -56,8 +56,8 @@ void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace)
     sh_.traceUpdate(trMsg);
     CL_BREAK_IF(!chkTraceGraphConsistency(trMsg));
 
-    // print the backtrace
-    if (forcePtrace) {
+    // print the backtrace (or full trace if error recovery is disabled)
+    if (forcePtrace || !GlConf::data.errorRecoveryMode) {
         Trace::printTrace(trMsg);
         printMemUsage("Trace::printTrace");
     }
