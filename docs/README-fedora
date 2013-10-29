@@ -1,6 +1,6 @@
 Building Predator on Fedora
 ===========================
-The below steps were successfully tested on a fresh installation of Fedora 17:
+The below steps were successfully tested on a fresh installation of Fedora 19:
 
 sudo yum install \
     boost-devel cmake gcc-c++ glibc-devel glibc-devel.i686 gcc-plugin-devel make
