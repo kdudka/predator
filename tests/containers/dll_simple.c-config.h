@@ -188,7 +188,7 @@
  * - 1 ... dump a single trace graph for all errors/warnings (may be huge)
  * - 2 ... dump a single trace graph for each error/warning
  */
-#define SE_DUMP_TRACE_GRAPHS                1
+#define SE_DUMP_TRACE_GRAPHS                0
 
 /**
  * - 0 ... kill local variables only on stack frame destruction
