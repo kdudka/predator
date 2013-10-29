@@ -47,6 +47,18 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+/// report a memory leak as either error or warning based on the configuration
+#define REPORT_MEMLEAK(proc, msg) do {      \
+    if (GlConf::data.memLeakIsError) {      \
+        CL_ERROR_MSG((proc).lw(), msg);     \
+        (proc).printBackTrace(ML_ERROR);    \
+    }                                       \
+    else {                                  \
+        CL_WARN_MSG((proc).lw(), msg);      \
+        (proc).printBackTrace(ML_WARN);     \
+    }                                       \
+} while (0)
+
 // /////////////////////////////////////////////////////////////////////////////
 // SymProc implementation
 void SymProc::printBackTrace(EMsgLevel level, bool forcePtrace)
@@ -604,18 +616,9 @@ void digRootTypeInfo(SymHeap &sh, const FldHandle &lhs, TValId rhs)
 
 void reportMemLeak(SymProc &proc, const EStorageClass code, const char *reason)
 {
-    const struct cl_loc *loc = proc.lw();
     const char *const what = describeObj(code);
-#define REPORT_MEMLEAK "memory leak detected while " << reason << "ing " << what
-    if (GlConf::data.memLeakIsError) {
-        CL_ERROR_MSG(loc, REPORT_MEMLEAK);
-        proc.printBackTrace(ML_ERROR);
-    }
-    else {
-        CL_WARN_MSG(loc, REPORT_MEMLEAK);
-        proc.printBackTrace(ML_WARN);
-    }
-#undef REPORT_MEMLEAK
+    REPORT_MEMLEAK(proc,
+            "memory leak detected while " << reason << "ing " << what);
 }
 
 /// pointer kind classification
@@ -912,9 +915,8 @@ void SymProc::killVar(const CodeStorage::KillVar &kv)
 
     // check for memory leaks
     if (lm.collectJunkFrom(killedPtrs)) {
-        CL_WARN_MSG(lw_,
+        REPORT_MEMLEAK(*this, 
                 "memory leak detected while invalidating a dead variable");
-        this->printBackTrace(ML_WARN);
     }
 
     // leave leak monitor
@@ -1104,10 +1106,8 @@ void executeMemset(
             &killedPtrs);
 
     // check for memory leaks
-    if (lm.collectJunkFrom(killedPtrs)) {
-        CL_WARN_MSG(lw, "memory leak detected while executing memset()");
-        proc.printBackTrace(ML_WARN);
-    }
+    if (lm.collectJunkFrom(killedPtrs))
+        REPORT_MEMLEAK(proc, "memory leak detected while executing memset()");
 
     // leave leak monitor
     lm.leave();
@@ -1172,10 +1172,8 @@ void executeMemmove(
         sh.writeUniformBlock(objDst, ubSuffix, &killedPtrs);
     }
 
-    if (lm.collectJunkFrom(killedPtrs)) {
-        CL_WARN_MSG(loc, "memory leak detected while executing " << fnc);
-        proc.printBackTrace(ML_WARN);
-    }
+    if (lm.collectJunkFrom(killedPtrs))
+        REPORT_MEMLEAK(proc, "memory leak detected while executing " << fnc);
 
     lm.leave();
 }
@@ -1668,13 +1666,11 @@ bool spliceOutAbstractPathCore(
     // append a trace node for this operation
     sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), len));
 
-    if (lm.importLeakObjs(&leakObjs)) {
+    if (lm.importLeakObjs(&leakObjs))
         // [L0] leakage during splice-out
-        CL_WARN_MSG(loc, "memory leak detected while removing a segment");
-        proc.printBackTrace(ML_WARN);
-        lm.leave();
-    }
+        REPORT_MEMLEAK(proc, "memory leak detected while removing a segment");
 
+    lm.leave();
     return true;
 }
 
@@ -2533,10 +2529,8 @@ bool SymExecCore::concretizeLoop(
             TObjSet leakObjs;
             concretizeObj(sh, todo, obj, ts, &leakObjs);
 
-            if (lm.importLeakObjs(&leakObjs)) {
-                CL_WARN_MSG(lw_, "memory leak detected while unfolding");
-                this->printBackTrace(ML_WARN);
-            }
+            if (lm.importLeakObjs(&leakObjs))
+                REPORT_MEMLEAK(*this, "memory leak detected while unfolding");
 
             lm.leave();
         }
