@@ -30,6 +30,15 @@ else()
     add_definitions("-O3 -DNDEBUG")
 endif()
 
+# check whether the long long type is available and greater than long
+include(CheckTypeSize)
+check_type_size("long"      SIZEOF_LONG)
+check_type_size("long long" SIZEOF_LONG_LONG)
+if("${SIZEOF_LONG_LONG}" AND "${SIZEOF_LONG_LONG}" GREATER "${SIZEOF_LONG}")
+    add_definitions("-DUSE_LONG_LONG")
+    message (STATUS "Use of long long enabled...")
+endif()
+
 # libpredator.a
 add_library(predator STATIC
     adt_op.cc

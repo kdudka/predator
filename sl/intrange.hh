@@ -24,8 +24,13 @@
 
 namespace IR {
 
+#ifdef USE_LONG_LONG
+typedef signed long long            TInt;
+typedef unsigned long long          TUInt;
+#else
 typedef signed long                 TInt;
 typedef unsigned long               TUInt;
+#endif
 
 extern const TInt Int0;
 extern const TInt Int1;
