@@ -675,6 +675,10 @@ TValId integralEncoder(
 
     // read type-info of the target object
     const TObjType clt = dst.type();
+    if (CL_TYPE_BOOL == clt->code)
+        // conversion to bool
+        return compareValues(proc.sh(), CL_BINOP_NE, VAL_FALSE, val);
+
     const TSizeOf size = clt->size;
     CL_BREAK_IF(isComposite(clt) || !size);
 
