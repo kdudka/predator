@@ -10,7 +10,7 @@ die() {
 }
 
 usage() {
-    printf "Usage: %s path/to/check-property.sh \
+    printf "Usage: %s path/to/check-property.sh property_file.prp \
 [file1 [file2 [...]]]\n" "$SELF" >&2
     exit 1
 }
@@ -22,6 +22,10 @@ match() {
 
 export RUNNER="$1"
 test -x "$1" || usage
+shift
+
+export PRP_FILE="$1"
+test -r "$PRP_FILE" || usage
 shift
 
 GRAND_TOTAL=0
@@ -43,7 +47,8 @@ rank_files() {
 
         printf "%-72s\t" "$i"
 
-        RESULT="$($TIMEOUT $RUNNER --verbose -- $i -m32 2>/dev/null)"
+        RESULT="$($TIMEOUT $RUNNER --verbose \
+--propertyfile $PRP_FILE -- $i -m32 2>/dev/null)"
         case "$( echo $RESULT | grep -E -o "(TRUE)|(FALSE)" )" in
             TRUE)
                 if test xyes = "x$HAS_BUG" ; then
