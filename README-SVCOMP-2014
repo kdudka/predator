@@ -1,5 +1,5 @@
-Instructions for TACAS 2013 Competition on Software Verification
-================================================================
+Instructions for SV-COMP'14
+===========================
 
 (1) Build Predator from sources.  On Ubuntu 12.04, please follow the
     instructions in docs/README-ubuntu.

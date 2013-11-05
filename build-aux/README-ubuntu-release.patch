@@ -6,11 +6,11 @@ index e8dc24d..904618a 100644
  sudo apt-get install \
      cmake curl g++ gcc-4.6-multilib gcc-4.6-plugin-dev libboost-dev make
  
--curl http://www.fit.vutbr.cz/~idudka/download/predator-2013-02-02-8d3ea3d.tar.gz \
+-curl http://www.fit.vutbr.cz/~idudka/download/predator-2013-10-30-d1bd405.tar.gz \
 -    | gzip -cd \
 -    | tar x
 -
--cd predator-2013-02-02-8d3ea3d
+-cd predator-2013-10-30-d1bd405
 -
  patch -p1 < build-aux/gcc-4.6.3.patch
  
