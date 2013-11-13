@@ -2494,27 +2494,9 @@ bool validateStatus(const SymJoinCtx &ctx)
 
 void initTrace(SymJoinCtx &ctx)
 {
-    Trace::Node *tr1 = ctx.sh1.traceNode();
-    Trace::Node *tr2 = ctx.sh2.traceNode();
-    Trace::Node *tr;
-
-    switch (ctx.status) {
-        case JS_USE_SH1:
-            tr = new Trace::EntailmentNode(tr1, tr2, /* leftOneWasLt */ false);
-            break;
-
-        case JS_USE_SH2:
-            tr = new Trace::EntailmentNode(tr2, tr1, /* leftOneWasLt */ true);
-            break;
-
-        case JS_THREE_WAY:
-            tr = new Trace::JoinNode(tr1, tr2);
-            break;
-
-        default:
-            return;
-    }
-
+    Trace::Node *const tr1 = ctx.sh1.traceNode();
+    Trace::Node *const tr2 = ctx.sh2.traceNode();
+    Trace::Node *const tr = new Trace::JoinNode(tr1, tr2, ctx.status);
     ctx.dst.traceUpdate(tr);
 }
 

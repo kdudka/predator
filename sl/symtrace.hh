@@ -28,6 +28,7 @@
 #include "config.h"
 
 #include "id_mapper.hh"
+#include "join_status.hh"
 #include "symbt.hh"                 // needed for EMsgLevel
 #include "symheap.hh"               // needed for EObjKind
 
@@ -353,38 +354,21 @@ class SpliceOutNode: public Node {
 class JoinNode: public Node {
     public:
         /// takes references to both traces being joined by this operation
-        JoinNode(Node *ref1, Node *ref2):
-            Node(ref1, ref2)
+        JoinNode(Node *ref1, Node *ref2, const EJoinStatus status):
+            Node(ref1, ref2),
+            status_(status)
         {
         }
 
-        virtual Node* printNode() const;
-
-    protected:
-        void virtual plotNode(TracePlotter &) const;
-};
-
-/// a trace graph node that represents a @b single entailment operation
-class EntailmentNode: public Node {
-    public:
-        /// gt is trace node of the more generic heap than lt
-        EntailmentNode(Node *gt, Node *lt, bool leftOneWasLt):
-            Node(gt, lt),
-            leftOneWasLt_(leftOneWasLt)
-        {
-            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
-        }
-
-        virtual Node* printNode() const;
-
-        /// FIXME: overridden to keep some ADT algorithms working
         virtual Node* parent() const;
+
+        virtual Node* printNode() const;
 
     protected:
         void virtual plotNode(TracePlotter &) const;
 
     private:
-        bool leftOneWasLt_;
+        const EJoinStatus status_;
 };
 
 /// trace graph nodes inserted automatically per each SymHeap clone operation

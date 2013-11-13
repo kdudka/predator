@@ -249,19 +249,32 @@ void SpliceOutNode::plotNode(TracePlotter &tplot) const
 
 void JoinNode::plotNode(TracePlotter &tplot) const
 {
-    tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=circle, color=red, fontcolor=red, label=\"join\"];\n";
-}
+    const char *color = "red";
+    const char *label = "XXX";
 
-void EntailmentNode::plotNode(TracePlotter &tplot) const
-{
+    switch (status_) {
+        case JS_USE_ANY:
+            color = "black";
+            label = "sh1 = sh2";
+            break;
+
+        case JS_USE_SH1:
+            label = "sh1 < sh2";
+            break;
+
+        case JS_USE_SH2:
+            label = "sh1 > sh2";
+            break;
+
+        case JS_THREE_WAY:
+            label = "join";
+            break;
+    }
+
     tplot.out << "\t" << SL_QUOTE(this)
-        << " [shape=circle, color=red, fontcolor=red, label=\"entailment";
-    if (leftOneWasLt_)
-        tplot.out << "(sh1 < sh2)";
-    else
-        tplot.out << "(sh1 > sh2)";
-    tplot.out << "\"];\n";
+        << " [shape=circle, color=" << color
+        << ", fontcolor=" << color
+        << ", label=\"" << label << "\"];\n";
 }
 
 void CloneNode::plotNode(TracePlotter &tplot) const
@@ -473,14 +486,18 @@ Node* /* selected predecessor */ JoinNode::printNode() const
     return this->parents().front();
 }
 
-Node* EntailmentNode::parent() const
+Node* JoinNode::parent() const
 {
-    return /* gt */ this->parents().front();
-}
+    switch (status_) {
+        case JS_USE_SH1:
+            return this->parents()[/* tr1 */ 0];
 
-Node* /* selected predecessor */ EntailmentNode::printNode() const
-{
-    return /* gt */ this->parents().front();
+        case JS_USE_SH2:
+            return this->parents()[/* tr2 */ 1];
+
+        default:
+            return Node::parent();
+    }
 }
 
 Node* /* selected predecessor */ CloneNode::printNode() const
