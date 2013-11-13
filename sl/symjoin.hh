@@ -25,32 +25,11 @@
  * @todo some dox
  */
 
+#include "join_status.hh"
 #include "symheap.hh"
 #include "symtrace.hh"              // for Trace::TIdMapper
 
-#include <iostream>
-
 struct ShapeProps;
-
-/// @todo some dox
-enum EJoinStatus {
-    JS_USE_ANY = 0,
-    JS_USE_SH1,
-    JS_USE_SH2,
-    JS_THREE_WAY
-};
-
-inline std::ostream& operator<<(std::ostream &str, const EJoinStatus status)
-{
-    switch (status) {
-        case JS_USE_ANY:        return (str << "JS_USE_ANY"  );
-        case JS_USE_SH1:        return (str << "JS_USE_SH1"  );
-        case JS_USE_SH2:        return (str << "JS_USE_SH2"  );
-        case JS_THREE_WAY:      return (str << "JS_THREE_WAY");
-        default:
-            return (str << static_cast<int>(status));
-    }
-}
 
 /// @todo some dox
 bool joinData(
