@@ -119,6 +119,36 @@ void NodeHandle::reset(Node *node)
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::resolveIdMapping()
+bool seekAncestor(const Node *tr, const Node *const trAncestor)
+{
+    WorkList<const Node *> wl(tr);
+    while (wl.next(tr)) {
+        if (trAncestor == tr)
+            // found!
+            return true;
+
+        BOOST_FOREACH(const Node *trParent, tr->parents())
+            wl.schedule(trParent);
+    }
+
+    // not found
+    return false;
+}
+
+int parentIdxByAncestor(const Node *tr, const Node *const trAncestor)
+{
+    const TNodeList &parents = tr->parents();
+    const int cnt = parents.size();
+    if (cnt <= 1)
+        return cnt - 1;
+
+    for (int i = 0; i < cnt; ++i)
+        if (seekAncestor(parents[i], trAncestor))
+            return i;
+
+    return /* not found */ -1;
+}
+
 void resolveIdMapping(TIdMapper *pDst, const Node *trSrc, const Node *trDst)
 {
     CL_BREAK_IF(!pDst->empty());
@@ -126,13 +156,17 @@ void resolveIdMapping(TIdMapper *pDst, const Node *trSrc, const Node *trDst)
     // start with identity, then go through the trace and construct composition
     pDst->setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
 
-    // TODO: handle trace nodes with more than one parent!
-    for(const Trace::Node *tr = trDst; trSrc != tr; tr = tr->parent()) {
-        pDst->composite<D_RIGHT_TO_LEFT>(tr->idMapper());
-        if (tr->parents().empty()) {
-            CL_BREAK_IF("resolveIdMapping() reached a node with no parents");
-            return;
+    const Trace::Node *tr = trDst;
+    while (trSrc != tr) {
+        const int idx = parentIdxByAncestor(tr, trSrc);
+        if (idx < 0) {
+            CL_BREAK_IF("resolveIdMapping() routing failure");
+            break;
         }
+
+        pDst->composite<D_RIGHT_TO_LEFT>(tr->idMapperList()[idx]);
+
+        tr = tr->parents()[idx];
     }
 }
 
