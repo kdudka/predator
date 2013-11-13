@@ -2497,6 +2497,13 @@ void initTrace(SymJoinCtx &ctx)
     Trace::Node *const tr1 = ctx.sh1.traceNode();
     Trace::Node *const tr2 = ctx.sh2.traceNode();
     Trace::Node *const tr = new Trace::JoinNode(tr1, tr2, ctx.status);
+
+    // export the captured ID mapping
+    BOOST_FOREACH(TObjMap::const_reference item, ctx.objMap1[DIR_LTR])
+        tr->idMapperList()[/* tr1 */ 0].insert(item.first, item.second);
+    BOOST_FOREACH(TObjMap::const_reference item, ctx.objMap2[DIR_LTR])
+        tr->idMapperList()[/* tr2 */ 1].insert(item.first, item.second);
+
     ctx.dst.traceUpdate(tr);
 }
 
