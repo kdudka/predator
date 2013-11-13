@@ -74,6 +74,30 @@ void Node::notifyDeath(NodeBase *child)
         delete this;
 }
 
+TIdMapperList& Node::idMapperList()
+{
+    CL_BREAK_IF(parents_.size() != idMapperList_.size());
+    return idMapperList_;
+}
+
+const TIdMapperList& Node::idMapperList() const
+{
+    CL_BREAK_IF(parents_.size() != idMapperList_.size());
+    return idMapperList_;
+}
+
+TIdMapper& Node::idMapper()
+{
+    CL_BREAK_IF(1U != this->idMapperList().size());
+    return idMapperList_.front();
+}
+
+const TIdMapper& Node::idMapper() const
+{
+    CL_BREAK_IF(1U != this->idMapperList().size());
+    return idMapperList_.front();
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::NodeHandle

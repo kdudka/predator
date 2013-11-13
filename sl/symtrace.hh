@@ -59,6 +59,7 @@ typedef std::vector<Node *>                         TNodeList;
 
 // TODO: should we use a more generic ID type?
 typedef IdMapper<TObjId, OBJ_INVALID, OBJ_MAX_ID>   TIdMapper;
+typedef std::vector<TIdMapper>                      TIdMapperList;
 
 /// an abstract base for Node and NodeHandle (externally not much useful)
 class NodeBase {
@@ -106,6 +107,7 @@ class Node: public NodeBase {
         Node(Node *ref):
             NodeBase(ref)
         {
+            idMapperList_.resize(1U);
             ref->notifyBirth(this);
         }
 
@@ -114,6 +116,7 @@ class Node: public NodeBase {
             NodeBase(ref1)
         {
             parents_.push_back(ref2);
+            idMapperList_.resize(2U);
             ref1->notifyBirth(this);
             ref2->notifyBirth(this);
         }
@@ -137,10 +140,16 @@ class Node: public NodeBase {
 
     public:
         /// return the ID mapping describing the operation behind the trace node
-        TIdMapper& idMapper()             { return idMapper_; }
+        TIdMapperList& idMapperList();
 
         /// return the ID mapping describing the operation behind the trace node
-        const TIdMapper& idMapper() const { return idMapper_; }
+        const TIdMapperList& idMapperList() const;
+
+        /// return the ID mapping describing the operation behind the trace node
+        TIdMapper& idMapper();
+
+        /// return the ID mapping describing the operation behind the trace node
+        const TIdMapper& idMapper() const;
 
     private:
         // copying NOT allowed
@@ -148,7 +157,7 @@ class Node: public NodeBase {
         Node& operator=(const Node &);
 
     protected:
-        TIdMapper idMapper_;
+        TIdMapperList idMapperList_;
 
     private:
         TBaseList children_;
@@ -239,7 +248,7 @@ class InsnNode: public Node {
             insn_(insn),
             isBuiltin_(isBuiltin)
         {
-            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
+            this->idMapper().setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
         virtual Node* printNode() const;
@@ -271,7 +280,7 @@ class CondNode: public Node {
             determ_(determ),
             branch_(branch)
         {
-            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
+            this->idMapper().setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
         virtual Node* printNode() const;
@@ -343,7 +352,7 @@ class SpliceOutNode: public Node {
             Node(ref),
             len_(len)
         {
-            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
+            this->idMapper().setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
     protected:
@@ -522,7 +531,7 @@ class MsgNode: public Node {
             level_(level),
             loc_(loc)
         {
-            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
+            this->idMapper().setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
     protected:
@@ -546,7 +555,7 @@ class UserNode: public Node {
             insn_(insn),
             label_(label)
         {
-            idMapper_.setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
+            this->idMapper().setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
         }
 
         virtual Node* printNode() const;
