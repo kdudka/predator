@@ -317,11 +317,11 @@ void JoinNode::plotNode(TracePlotter &tplot) const
             break;
 
         case JS_USE_SH1:
-            label = "sh1 < sh2";
+            label = "sh1 > sh2";
             break;
 
         case JS_USE_SH2:
-            label = "sh1 > sh2";
+            label = "sh1 < sh2";
             break;
 
         case JS_THREE_WAY:

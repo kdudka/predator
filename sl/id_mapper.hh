@@ -186,9 +186,6 @@ template <typename TId, TId MIN, TId MAX>
 template <EDirection DIR>
 void IdMapper<TId, MIN, MAX>::composite(const IdMapper<TId, MIN, MAX> &by)
 {
-    if (by.nfa_ < nfa_)
-        nfa_ = by.nfa_;
-
     IdMapper<TId, MIN, MAX> result;
 
     // iterate through the mapping of 'this'
@@ -220,6 +217,9 @@ void IdMapper<TId, MIN, MAX>::composite(const IdMapper<TId, MIN, MAX> &by)
                 result.insert(a, c);
         }
     }
+
+    if (by.nfa_ < nfa_)
+        nfa_ = by.nfa_;
 
     // finally replace the mapping of 'this' by the result
     biSearch_[0].swap(result.biSearch_[D_RIGHT_TO_LEFT == DIR]);
