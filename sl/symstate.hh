@@ -28,6 +28,7 @@
 #include <set>
 #include <vector>
 
+#include "join_status.hh"
 #include "symheap.hh"
 
 namespace CodeStorage {
@@ -100,7 +101,7 @@ class SymState {
 
         virtual void rotateExisting(const int idxA, const int idxB);
 
-        void updateTraceOf(const int idx, Trace::Node *tr);
+        void updateTraceOf(const int idx, Trace::Node *tr, EJoinStatus status);
 
         /// lookup/insert optimization in SymCallCache implementation
         friend class PerFncCache;

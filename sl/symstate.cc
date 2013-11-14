@@ -124,8 +124,33 @@ void SymState::rotateExisting(const int idxA, const int idxB)
     rotate(itA, itB, heaps_.end());
 }
 
-void SymState::updateTraceOf(const int idx, Trace::Node *tr)
+void SymState::updateTraceOf(const int idx, Trace::Node *tr, EJoinStatus status)
 {
+    int i0 = 0;
+    int i1 = 1;
+
+    switch (status) {
+        case JS_USE_ANY:
+        case JS_USE_SH1:
+            break;
+
+        case JS_USE_SH2:
+            i0 = 1;
+            i1 = 0;
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of SymState::updateTraceOf()");
+    }
+
+    using namespace Trace;
+    const TIdMapper identity(TIdMapper::NFA_RETURN_IDENTITY);
+    TIdMapperList &idMaps = tr->idMapperList();
+
+    idMaps[i0].flip();
+    idMaps[i1].composite<D_LEFT_TO_RIGHT>(idMaps[i0]);
+    idMaps[i0] = identity;
+
     heaps_[idx]->traceUpdate(tr);
 }
 
@@ -214,7 +239,7 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay)
 
         if (JS_THREE_WAY != status)
             // pick the resulting tr node while preserving the heap itself
-            this->updateTraceOf(idxNew, result.traceNode());
+            this->updateTraceOf(idxNew, result.traceNode(), status);
 
         if (idxOld < idxNew)
             --idxNew;
@@ -273,9 +298,6 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
         case JS_USE_ANY:
             CL_DEBUG("<I> sh #" << idx << " is equal to the given one, "
                     << cnt << " heaps in total");
-
-            // pick the resulting trace node while preserving the heap itself
-            this->updateTraceOf(idx, result.traceNode());
             break;
 
         case JS_USE_SH1:
@@ -283,9 +305,6 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
                     << this->size() << " heaps in total");
             debugPlot("join", 0, shNew);
             debugPlot("join", 1, this->operator[](idx));
-
-            // pick the resulting trace node while preserving the heap itself
-            this->updateTraceOf(idx, result.traceNode());
             break;
 
         case JS_USE_SH2:
@@ -319,6 +338,9 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
             this->packState(idx, allowThreeWay);
             return true;
     }
+
+    // pick the resulting trace node while preserving the heap itself
+    this->updateTraceOf(idx, result.traceNode(), status);
 
 #if SE_STATE_ON_THE_FLY_ORDERING
     // put the matched heap at the beginning of the list [optimization]
