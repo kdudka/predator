@@ -38,6 +38,9 @@
 
 namespace Trace {
 
+typedef const Node                                     *TNode;
+typedef std::set<TNode>                                 TNodeSet;
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::NodeBase
 
@@ -122,15 +125,21 @@ void NodeHandle::reset(Node *node)
     ref->notifyBirth(this);
 }
 
+
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::resolveIdMapping()
-bool seekAncestor(const Node *tr, const Node *const trAncestor)
+
+bool seekAncestor(TNode tr, const TNode trAncestor, const TNodeSet &blackList)
 {
-    WorkList<const Node *> wl(tr);
+    WorkList<TNode> wl(tr);
     while (wl.next(tr)) {
         if (trAncestor == tr)
             // found!
             return true;
+
+        if (hasKey(blackList, tr))
+            // loop detected!
+            return false;
 
         BOOST_FOREACH(const Node *trParent, tr->parents())
             wl.schedule(trParent);
@@ -140,7 +149,10 @@ bool seekAncestor(const Node *tr, const Node *const trAncestor)
     return false;
 }
 
-int parentIdxByAncestor(const Node *tr, const Node *const trAncestor)
+bool parentIdxByAncestor(
+        const TNode                 tr,
+        const TNode                 trAncestor,
+        const TNodeSet             &blackList)
 {
     const TNodeList &parents = tr->parents();
     const int cnt = parents.size();
@@ -148,7 +160,7 @@ int parentIdxByAncestor(const Node *tr, const Node *const trAncestor)
         return cnt - 1;
 
     for (int i = 0; i < cnt; ++i)
-        if (seekAncestor(parents[i], trAncestor))
+        if (seekAncestor(parents[i], trAncestor, blackList))
             return i;
 
     return /* not found */ -1;
@@ -161,9 +173,10 @@ void resolveIdMapping(TIdMapper *pDst, const Node *trSrc, const Node *trDst)
     // start with identity, then go through the trace and construct composition
     pDst->setNotFoundAction(TIdMapper::NFA_RETURN_IDENTITY);
 
-    const Trace::Node *tr = trDst;
-    while (trSrc != tr) {
-        const int idx = parentIdxByAncestor(tr, trSrc);
+    TNodeSet seen;
+    TNode tr = trDst;
+    while (trSrc != tr && insertOnce(seen, tr)) {
+        const int idx = parentIdxByAncestor(tr, trSrc, seen);
         if (idx < 0) {
             CL_BREAK_IF("resolveIdMapping() routing failure");
             break;

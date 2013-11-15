@@ -375,6 +375,8 @@ class JoinNode: public Node {
             Node(ref1, ref2),
             status_(status)
         {
+            idMapperList_[0].setNotFoundAction(TIdMapper::NFA_RETURN_NOTHING);
+            idMapperList_[1].setNotFoundAction(TIdMapper::NFA_RETURN_NOTHING);
         }
 
         virtual Node* parent() const;
