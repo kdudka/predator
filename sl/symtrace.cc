@@ -255,7 +255,8 @@ std::string insnToBlock(const TInsn insn)
 // FIXME: copy-pasted from symplot.cc
 #define SL_QUOTE(what) "\"" << what << "\""
 
-#define INSN_LOC_AND_BB(insn) SL_QUOTE((insn)->loc << insnToBlock(insn))
+#define INSN_LOC_AND_BB(insn, ptr) SL_QUOTE((insn)->loc << insnToBlock(insn) \
+        << " (" << (ptr) << ")")
 
 void TransientNode::plotNode(TracePlotter &tplot) const
 {
@@ -279,7 +280,7 @@ void InsnNode::plotNode(TracePlotter &tplot) const
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=plaintext, fontname=monospace, fontcolor=" << color
         << ", label=" << SL_QUOTE(insnToLabel(insn_))
-        << ", tooltip=" << INSN_LOC_AND_BB(insn_)
+        << ", tooltip=" << INSN_LOC_AND_BB(insn_, this)
         << "];\n";
 }
 
@@ -380,7 +381,7 @@ void CallFrameNode::plotNode(TracePlotter &tplot) const
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=box, fontname=monospace, color=blue, fontcolor=blue"
         ", label=\"--- call frame: " << (insnToLabel(insn_))
-        << "\", tooltip=" << INSN_LOC_AND_BB(insn_) << "];\n";
+        << "\", tooltip=" << INSN_LOC_AND_BB(insn_, this) << "];\n";
 }
 
 void CallDoneNode::plotNode(TracePlotter &tplot) const
@@ -400,7 +401,7 @@ void ImportGlVarNode::plotNode(TracePlotter &tplot) const
 void CondNode::plotNode(TracePlotter &tplot) const
 {
     tplot.out << "\t" << SL_QUOTE(this) << " [shape=box, fontname=monospace"
-        ", tooltip=" << INSN_LOC_AND_BB(inCnd_);
+        ", tooltip=" << INSN_LOC_AND_BB(inCnd_, this);
 
     if (determ_)
         tplot.out << ", color=green";
