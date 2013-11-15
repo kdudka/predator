@@ -57,6 +57,11 @@ Node* NodeBase::parent() const
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::Node
 
+Node::~Node()
+{
+    alive_ = false;
+}
+
 void Node::notifyBirth(NodeBase *child)
 {
     children_.push_back(child);
@@ -69,7 +74,7 @@ void Node::notifyDeath(NodeBase *child)
             std::remove(children_.begin(), children_.end(), child),
             children_.end());
 
-    if (children_.empty())
+    if (alive_ && children_.empty())
         // FIXME: this may cause stack overflow on complex trace graphs
         delete this;
 }

@@ -101,11 +101,15 @@ class Node: public NodeBase {
 
     protected:
         /// this is an abstract class, its instantiation is @b not allowed
-        Node() { }
+        Node():
+            alive_(true)
+        {
+        }
 
         /// constructor for nodes with exactly one parent
         Node(Node *ref):
-            NodeBase(ref)
+            NodeBase(ref),
+            alive_(true)
         {
             idMapperList_.resize(1U);
             ref->notifyBirth(this);
@@ -113,13 +117,16 @@ class Node: public NodeBase {
 
         /// constructor for nodes with exactly two parents
         Node(Node *ref1, Node *ref2):
-            NodeBase(ref1)
+            NodeBase(ref1),
+            alive_(true)
         {
             parents_.push_back(ref2);
             idMapperList_.resize(2U);
             ref1->notifyBirth(this);
             ref2->notifyBirth(this);
         }
+
+        virtual ~Node();
 
         /// serialize this node to the given plot (externally not much useful)
         void virtual plotNode(TracePlotter &) const = 0;
@@ -161,6 +168,7 @@ class Node: public NodeBase {
 
     private:
         TBaseList children_;
+        bool alive_;
 };
 
 /// useful to prevent a trace sub-graph from being destroyed too early
