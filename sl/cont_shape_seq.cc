@@ -19,9 +19,13 @@
 
 #include "cont_shape_seq.hh"
 
+#include "worklist.hh"
+
 #include <algorithm>                // for std::reverse
 
 namespace FixedPoint {
+
+typedef std::vector<TShapeIdent>                    TShapeIdentList;
 
 bool hasSuccessorShape(const TTraceEdgeList &outEdges, const TShapeIdx csIdx)
 {
@@ -36,10 +40,15 @@ bool hasSuccessorShape(const TTraceEdgeList &outEdges, const TShapeIdx csIdx)
     return false;
 }
 
-bool jumpToPredecessor(TShapeIdent *pCsIdent, const GlobalState &glState)
+void findPredecessors(
+        TShapeIdentList            *pDst,
+        const TShapeIdent           csIdent,
+        const GlobalState           &glState)
 {
-    const THeapIdent dstShIdent = pCsIdent->first;
-    const TShapeIdx dstCsIdx = pCsIdent->second;
+    CL_BREAK_IF(!pDst->empty());
+
+    const THeapIdent dstShIdent = csIdent.first;
+    const TShapeIdx dstCsIdx = csIdent.second;
     const TLocIdx dstLocIdx = dstShIdent.first;
     const THeapIdx dstShIdx = dstShIdent.second;
 
@@ -56,12 +65,8 @@ bool jumpToPredecessor(TShapeIdent *pCsIdent, const GlobalState &glState)
             continue;
 
         const TShapeIdent srcCsIdent(e->src, inbound.front());
-        *pCsIdent = srcCsIdent;
-        return true;
+        pDst->push_back(srcCsIdent);
     }
-
-    // no preceding shape found
-    return false;
 }
 
 void collectShapeSequences(TShapeSeqList *pDst, const GlobalState &glState)
@@ -87,15 +92,30 @@ void collectShapeSequences(TShapeSeqList *pDst, const GlobalState &glState)
                 const THeapIdent dstShIdent(dstLocIdx, dstShIdx);
                 TShapeIdent dstCsIdent(dstShIdent, dstCsIdx);
 
-                // resolve begin of the sequence
+                // resolve begin(s) of the sequence
                 TShapeSeq seq;
-                do {
-                    seq.push_front(dstCsIdent);
-                }
-                while (jumpToPredecessor(&dstCsIdent, glState));
+                seq.push_front(dstCsIdent);
 
-                // append a new sequence
-                pDst->push_back(seq);
+                typedef std::queue<TShapeSeq> TQueue;
+                WorkList<TShapeSeq, TQueue> wl(seq);
+                while (wl.next(seq)) {
+                    TShapeIdentList srcIdents;
+                    findPredecessors(&srcIdents, seq.front(), glState);
+
+                    const unsigned cnt = srcIdents.size();
+                    if (!cnt) {
+                        // no predecessor found --> append a new sequence
+                        pDst->push_back(seq);
+                        continue;
+                    }
+
+                    for (unsigned i = 0U; i < cnt; ++i) {
+                        seq.push_front(srcIdents[i]);
+                        wl.schedule(seq);
+                        if (i + 1U < cnt)
+                            seq.pop_front();
+                    }
+                }
             }
         }
     }
