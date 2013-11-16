@@ -379,9 +379,11 @@ void relocOffsetsInMetaOps(TMetaOpSet *pMetaOps, const FootprintMatch &fm)
     pMetaOps->swap(dst);
 }
 
-bool jumpToNextHeap(
-        THeapIdent                 *pNext,
-        TObjectMapper              *pObjmap,
+typedef std::list<TObjectMapper>                    TObjectMapperList;
+
+void collectNextHeaps(
+        THeapIdentList             *pHeapList,
+        TObjectMapperList          *pObjMapList,
         const THeapIdent            heapCurrent,
         const TProgState           &progState,
         const ESearchDirection      sd)
@@ -408,25 +410,19 @@ bool jumpToNextHeap(
         : locState.traceOutEdges;
 
     const TTraceEdgeList &edgeList = eListByHeapIdx[heapCurrent./* sh */second];
-    if (edgeList.empty())
-        // no successor/predecessor
-        return false;
+    typedef const TraceEdge *TEdgePtr;
+    BOOST_FOREACH(const TEdgePtr te, edgeList) {
+        const THeapIdent heapNext = (reverse)
+            ? te->src
+            : te->dst;
 
-    if (1U != edgeList.size()) {
-        CL_BREAK_IF("jumpToNextHeap() would have ambiguous result");
-        return false;
+        TObjectMapper objMap = te->objMap;
+        if (reverse)
+            objMap.flip();
+
+        pHeapList->push_back(heapNext);
+        pObjMapList->push_back(objMap);
     }
-
-    const TraceEdge *te = edgeList.front();
-    *pNext = (reverse)
-        ? te->src
-        : te->dst;
-
-    *pObjmap = te->objMap;
-    if (reverse)
-        pObjmap->flip();
-
-    return true;
 }
 
 bool removeOpFrom(TMetaOpSet *pLookup, const SymHeap &sh0, MetaOperation mo)
@@ -584,11 +580,18 @@ void seekTemplateMatchInstances(
     CL_BREAK_IF(metaOpsToLookFor.empty());
 
     // crawl the fixed-point
-    THeapIdent heapNext;
     while (!metaOpsToLookFor.empty()) {
-        TObjectMapper objMap;
-        if (!jumpToNextHeap(&heapNext, &objMap, heapCurrent, ctx.progState, sd))
+        THeapIdentList heapList;
+        TObjectMapperList objMapList;
+        collectNextHeaps(&heapList, &objMapList, heapCurrent, ctx.progState, sd);
+        CL_BREAK_IF(heapList.size() != objMapList.size());
+        if (heapList.empty())
+            // no next heap
             return;
+
+        CL_BREAK_IF(1U < heapList.size());
+        TObjectMapper objMap = objMapList.back();
+        const THeapIdent heapNext = heapList.back();
 
         if (!insertOnce(seen, heapNext)) {
             CL_BREAK_IF("loop detected in seekTemplateMatchInstances()");
