@@ -379,7 +379,8 @@ void relocOffsetsInMetaOps(TMetaOpSet *pMetaOps, const FootprintMatch &fm)
     pMetaOps->swap(dst);
 }
 
-typedef std::list<TObjectMapper>                    TObjectMapperList;
+typedef std::vector<THeapIdent>                     THeapIdentList;
+typedef std::vector<TObjectMapper>                  TObjectMapperList;
 
 void collectNextHeaps(
         THeapIdentList             *pHeapList,
@@ -508,7 +509,7 @@ bool processDiffOf(
             continue;
 
         if (removeOpFrom(pLookup, sh0, mo)) {
-            THeapIdentList *pDst = &pMatch->matchedHeaps;
+            THeapIdentSeq *pDst = &pMatch->matchedHeaps;
 
             if (SD_FORWARD == sd) {
                 if (!pDst->empty())

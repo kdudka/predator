@@ -33,7 +33,7 @@ enum EFootprintPort {
     FP_TOTAL
 };
 
-typedef std::list<FixedPoint::THeapIdent>           THeapIdentList;
+typedef std::list<FixedPoint::THeapIdent>           THeapIdentSeq;
 typedef std::map<TObjId /* tplObj */, TObjList>     TMapOrder;
 
 struct FootprintMatch {
@@ -42,7 +42,7 @@ struct FootprintMatch {
     ShapeProps                      tplProps;
 
     /// list of locations (instructions) matched by the template + dst location
-    THeapIdentList                  matchedHeaps;
+    THeapIdentSeq                   matchedHeaps;
 
     FixedPoint::TObjectMapper       objMap          [FP_TOTAL];
 
