@@ -542,41 +542,44 @@ bool processDiffOf(
     return true;
 }
 
+struct SeekContext {
+    FootprintMatch                  fm;
+    TMetaOpSet                      metaOpsToLookFor;
+    TObjectMapper                   objMapFromTpl;
+    THeapIdent                      heapCurrent;
+    std::set<THeapIdent>            seen;
+
+    SeekContext(
+            const FootprintMatch   &fm_,
+            const TMetaOpSet       &metaOpsToLookFor_,
+            const ESearchDirection  sd):
+        fm(fm_),
+        metaOpsToLookFor(metaOpsToLookFor_),
+        objMapFromTpl(fm_.objMap[(SD_FORWARD == sd) ? FP_SRC : FP_DST]),
+        heapCurrent(fm_.matchedHeaps.front())
+    {
+        // pick the starting position and clear the list of matched heaps
+        CL_BREAK_IF(1U != fm.matchedHeaps.size());
+        seen.insert(heapCurrent);
+        fm.matchedHeaps.clear();
+
+        // relocate object IDs
+        relocObjsInMetaOps(&metaOpsToLookFor, objMapFromTpl,
+                /* to resolve ambiguous mapping */ &fm.props, &fm.objMapOrder);
+    }
+};
+
 void seekTemplateMatchInstances(
         MatchCtx                   &ctx,
         const OpTemplate           &tpl,
-        FootprintMatch              fm,
-        TMetaOpSet                  metaOpsToLookFor)
+        const FootprintMatch       &fmInit,
+        const TMetaOpSet           &metaOps)
 {
-    EFootprintPort beg, end;
     const ESearchDirection sd = tpl.searchDirection();
-    switch (sd) {
-        case SD_FORWARD:
-            beg = FP_SRC;
-            end = FP_DST;
-            break;
-
-        case SD_BACKWARD:
-            beg = FP_DST;
-            end = FP_SRC;
-            break;
-
-        default:
-            CL_BREAK_IF("seekTemplateMatchInstances() got invalid direction");
-            return;
-    }
-
-    // pick the starting position and clear the list of matched heaps
-    CL_BREAK_IF(1U != fm.matchedHeaps.size());
-    THeapIdent heapCurrent = fm.matchedHeaps.front();
-    std::set<THeapIdent> seen;
-    seen.insert(heapCurrent);
-    fm.matchedHeaps.clear();
-
-    // relocate object IDs
-    TObjectMapper objMapFromTpl = fm.objMap[beg];
-    relocObjsInMetaOps(&metaOpsToLookFor, objMapFromTpl,
-            /* to resolve ambiguous ID mapping */ &fm.props, &fm.objMapOrder);
+    SeekContext seekCtx(fmInit, metaOps, sd);
+    FootprintMatch &fm = seekCtx.fm;
+    THeapIdent &heapCurrent = seekCtx.heapCurrent;
+    TMetaOpSet &metaOpsToLookFor = seekCtx.metaOpsToLookFor;
     CL_BREAK_IF(metaOpsToLookFor.empty());
 
     // crawl the fixed-point
@@ -593,7 +596,7 @@ void seekTemplateMatchInstances(
         TObjectMapper objMap = objMapList.back();
         const THeapIdent heapNext = heapList.back();
 
-        if (!insertOnce(seen, heapNext)) {
+        if (!insertOnce(seekCtx.seen, heapNext)) {
             CL_BREAK_IF("loop detected in seekTemplateMatchInstances()");
             return;
         }
@@ -617,10 +620,11 @@ void seekTemplateMatchInstances(
         else
             objMap.flip();
 
-        objMapFromTpl.composite<D_LEFT_TO_RIGHT>(objMap);
+        seekCtx.objMapFromTpl.composite<D_LEFT_TO_RIGHT>(objMap);
     }
 
-    fm.objMap[end] = objMapFromTpl;
+    const EFootprintPort end = (SD_FORWARD == sd) ? FP_SRC : FP_DST;
+    fm.objMap[end] = seekCtx.objMapFromTpl;
     ctx.matchList.push_back(fm);
 
     const THeapIdent src = fm.matchedHeaps.front();
