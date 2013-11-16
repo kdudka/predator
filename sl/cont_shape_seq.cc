@@ -88,39 +88,17 @@ void collectShapeSequences(TShapeSeqList *pDst, const GlobalState &glState)
                 TShapeIdent dstCsIdent(dstShIdent, dstCsIdx);
 
                 // resolve begin of the sequence
-                ShapeSeq seq;
-                seq.end = dstCsIdent;
-                seq.beg = dstCsIdent;
-                while (jumpToPredecessor(&seq.beg, glState))
-                    ;
+                TShapeSeq seq;
+                do {
+                    seq.push_front(dstCsIdent);
+                }
+                while (jumpToPredecessor(&dstCsIdent, glState));
 
                 // append a new sequence
                 pDst->push_back(seq);
             }
         }
     }
-}
-
-void expandShapeSequence(
-        TShapeIdentList            *pDst,
-        const ShapeSeq             &seq,
-        const GlobalState          &glState)
-{
-    CL_BREAK_IF(!pDst->empty());
-
-    TShapeIdent now = seq.end;
-    for (;;) {
-        pDst->push_back(now);
-        if (seq.beg == now)
-            break;
-
-        if (!jumpToPredecessor(&now, glState)) {
-            CL_BREAK_IF("expandShapeSequence() got invalid ShapeSeq");
-            break;
-        }
-    }
-
-    std::reverse(pDst->begin(), pDst->end());
 }
 
 } // namespace FixedPoint

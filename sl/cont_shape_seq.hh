@@ -22,23 +22,14 @@
 
 #include "fixed_point.hh"
 
+#include <list>
+
 namespace FixedPoint {
 
-struct ShapeSeq {
-    TShapeIdent             beg;            /// first shape in the sequence
-    TShapeIdent             end;            /// last shape in the sequence
-};
-
-typedef std::vector<ShapeSeq>                       TShapeSeqList;
-typedef std::vector<TShapeIdent>                    TShapeIdentList;
+typedef std::list<TShapeIdent>                      TShapeSeq;
+typedef std::vector<TShapeSeq>                      TShapeSeqList;
 
 void collectShapeSequences(TShapeSeqList *pDst, const GlobalState &glState);
-
-/// expand all shapes in the closed interval <beg,end>
-void expandShapeSequence(
-        TShapeIdentList            *pDst,
-        const ShapeSeq             &seq,
-        const GlobalState          &glState);
 
 } // namespace FixedPoint
 

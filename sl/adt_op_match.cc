@@ -637,20 +637,18 @@ void matchSingleFootprint(
     TMetaOpSet metaOps;
     bool diffComputed = false;
 
-    BOOST_FOREACH(const FixedPoint::ShapeSeq seq, ctx.shapeSeqs) {
+    BOOST_FOREACH(FixedPoint::TShapeSeq seq, ctx.shapeSeqs) {
         // resolve shape sequence to search through
-        FixedPoint::TShapeIdentList shapes;
-        expandShapeSequence(&shapes, seq, ctx.progState);
         if (SD_FORWARD == tpl.searchDirection())
             // reverse the sequence if searching _forward_
-            std::reverse(shapes.begin(), shapes.end());
+            std::reverse(seq.begin(), seq.end());
 
         // allocate a structure for the match result
         FootprintMatch fm(fpIdent);
 
         // search anchor heap
         bool found = false;
-        BOOST_FOREACH(const TShapeIdent &shIdent, shapes) {
+        BOOST_FOREACH(const TShapeIdent &shIdent, seq) {
             if (matchAnchorHeap(&fm, ctx, tpl, fp, fpIdent, shIdent)) {
                 found = true;
                 break;
