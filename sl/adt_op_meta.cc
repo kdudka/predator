@@ -66,11 +66,24 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
     const TOffset tgtOff2 = ctx.sh2.valOffset(val2);
     const ETargetSpecifier tgtTs2 = ctx.sh2.targetSpec(val2);
 
+    const EValueTarget vt2 = ctx.sh2.valTarget(val2);
+    switch (vt2) {
+        case VT_OBJECT:
+            break;
+
+        case VT_UNKNOWN:
+            return true;
+
+        default:
+            CL_BREAK_IF("diffSetField() does not support non-pointer fields");
+            return false;
+    }
+
     // check target object mapping
     TObjList tgtObjList1;
     ctx.idMap.query<D_RIGHT_TO_LEFT>(&tgtObjList1, tgtObj2);
     if (1U != tgtObjList1.size()) {
-        CL_BREAK_IF("diffSetField() does not support non-trivial map of objs");
+        CL_DEBUG("diffSetField() does not support non-trivial map of objs");
         return false;
     }
 
@@ -102,19 +115,6 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
                 CL_BREAK_IF("unhandled value target in diffSetField()");
                 return false;
         }
-    }
-
-    const EValueTarget vt2 = ctx.sh2.valTarget(val2);
-    switch (vt2) {
-        case VT_OBJECT:
-            break;
-
-        case VT_UNKNOWN:
-            return true;
-
-        default:
-            CL_BREAK_IF("diffSetField() does not support non-pointer fields");
-            return false;
     }
 
     // insert meta-operation

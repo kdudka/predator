@@ -500,7 +500,7 @@ bool processDiffOf(
     // compute the difference of the pair of heaps
     TMetaOpSet metaOpsNow;
     if (!diffHeaps(&metaOpsNow, sh0, sh1)) {
-        CL_BREAK_IF("diffHeaps() has failed");
+        CL_DEBUG("diffHeaps() has failed");
         return false;
     }
 
@@ -539,7 +539,7 @@ bool processDiffOf(
             return false;
         }
 
-        CL_BREAK_IF("please improve independency checking");
+        CL_DEBUG("failed to prove independency of a meta-operation");
         return false;
     }
 
