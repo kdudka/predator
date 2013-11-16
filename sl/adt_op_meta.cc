@@ -305,7 +305,7 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
         TObjList objList1;
         ctx.idMap.query<D_RIGHT_TO_LEFT>(&objList1, obj2);
         if (1U < objList1.size()) {
-            CL_BREAK_IF("diffHeaps() does not support ambiguous ID mapping");
+            CL_DEBUG("diffHeaps() does not support ambiguous ID mapping");
             return false;
         }
 

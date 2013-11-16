@@ -577,63 +577,75 @@ void seekTemplateMatchInstances(
         const TMetaOpSet           &metaOps)
 {
     const ESearchDirection sd = tpl.searchDirection();
-    SeekContext seekCtx(fmInit, metaOps, sd);
-    FootprintMatch &fm = seekCtx.fm;
-    THeapIdent &heapCurrent = seekCtx.heapCurrent;
-    TMetaOpSet &metaOpsToLookFor = seekCtx.metaOpsToLookFor;
-    CL_BREAK_IF(metaOpsToLookFor.empty());
+    const SeekContext seekCtxInit(fmInit, metaOps, sd);
+    CL_BREAK_IF(seekCtxInit.metaOpsToLookFor.empty());
 
     // crawl the fixed-point
-    while (!metaOpsToLookFor.empty()) {
+    // TODO: optimize to skip push/pack when traversing linear graphs
+    std::stack<SeekContext> seekStack;
+    seekStack.push(seekCtxInit);
+    while (!seekStack.empty()) {
+        SeekContext seekCtx = seekStack.top();
+        seekStack.pop();
+
+        FootprintMatch &fm = seekCtx.fm;
+        const THeapIdent heapCurr= seekCtx.heapCurrent;
+        TMetaOpSet &metaOpsToLookFor = seekCtx.metaOpsToLookFor;
+
+        // collect the list of successor heaps (together with object mapping)
         THeapIdentList heapList;
         TObjectMapperList objMapList;
-        collectNextHeaps(&heapList, &objMapList, heapCurrent, ctx.progState, sd);
-        CL_BREAK_IF(heapList.size() != objMapList.size());
-        if (heapList.empty())
-            // no next heap
-            return;
+        collectNextHeaps(&heapList, &objMapList, heapCurr, ctx.progState, sd);
+        const unsigned cnt = heapList.size();
+        CL_BREAK_IF(cnt != objMapList.size());
 
-        CL_BREAK_IF(1U < heapList.size());
-        TObjectMapper objMap = objMapList.back();
-        const THeapIdent heapNext = heapList.back();
+        // iterate through successors
+        for (unsigned idx = 0U; idx < cnt; ++idx) {
+            const THeapIdent heapNext = heapList[idx];
+            if (!insertOnce(seekCtx.seen, heapNext))
+                // loop detected
+                continue;
 
-        if (!insertOnce(seekCtx.seen, heapNext)) {
-            CL_BREAK_IF("loop detected in seekTemplateMatchInstances()");
-            return;
+            // resolve the pair of heaps in program configuration
+            const THeapIdent heap0 = (SD_FORWARD  == sd) ? heapCurr : heapNext;
+            const THeapIdent heap1 = (SD_BACKWARD == sd) ? heapCurr : heapNext;
+
+            TObjectMapper &objMap = objMapList[idx];
+            if (SD_BACKWARD == sd)
+                relocObjsInMetaOps(&metaOpsToLookFor, objMap);
+
+            if (!processDiffOf(&fm, &metaOpsToLookFor, ctx.progState,
+                        heap0, heap1, sd))
+                // failed to process the difference of the neighbouring heaps
+                continue;
+
+            if (metaOpsToLookFor.empty()) {
+                // matched!
+                const EFootprintPort end = (SD_FORWARD == sd) ? FP_SRC : FP_DST;
+                fm.objMap[end] = seekCtx.objMapFromTpl;
+                ctx.matchList.push_back(fm);
+
+                const THeapIdent src = fm.matchedHeaps.front();
+                const THeapIdent dst = fm.matchedHeaps.back();
+                CL_DEBUG("[ADT] template instance matched: tpl = " << tpl.name()
+                        << "[" << fm.footprint.second << "]"
+                        << ", src = " << src.first << "/" << src.second
+                        << ", dst = " << dst.first << "/" << dst.second);
+                continue;
+            }
+
+            // reflect the current traversal step in over-all mapping of objects
+            if (SD_FORWARD == sd)
+                relocObjsInMetaOps(&metaOpsToLookFor, objMap);
+            else
+                objMap.flip();
+
+            // schedule the successor heap
+            seekCtx.heapCurrent = heapNext;
+            seekCtx.objMapFromTpl.composite<D_LEFT_TO_RIGHT>(objMap);
+            seekStack.push(seekCtx);
         }
-
-        // resolve the pair of heaps in program configuration
-        const THeapIdent heap0 = (SD_FORWARD  == sd) ? heapCurrent : heapNext;
-        const THeapIdent heap1 = (SD_BACKWARD == sd) ? heapCurrent : heapNext;
-
-        if (SD_BACKWARD == sd)
-            relocObjsInMetaOps(&metaOpsToLookFor, objMap);
-
-        if (!processDiffOf(&fm, &metaOpsToLookFor, ctx.progState,
-                    heap0, heap1, sd))
-            // failed to process the difference of the neighbouring heaps
-            return;
-
-        // move to the next one
-        heapCurrent = heapNext;
-        if (SD_FORWARD == sd)
-            relocObjsInMetaOps(&metaOpsToLookFor, objMap);
-        else
-            objMap.flip();
-
-        seekCtx.objMapFromTpl.composite<D_LEFT_TO_RIGHT>(objMap);
     }
-
-    const EFootprintPort end = (SD_FORWARD == sd) ? FP_SRC : FP_DST;
-    fm.objMap[end] = seekCtx.objMapFromTpl;
-    ctx.matchList.push_back(fm);
-
-    const THeapIdent src = fm.matchedHeaps.front();
-    const THeapIdent dst = fm.matchedHeaps.back();
-    CL_DEBUG("[ADT] template instance matched: tpl = " << tpl.name()
-            << "[" << fm.footprint.second << "]"
-            << ", src = " << src.first << "/" << src.second
-            << ", dst = " << dst.first << "/" << dst.second);
 }
 
 void matchSingleFootprint(
