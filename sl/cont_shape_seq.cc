@@ -69,6 +69,36 @@ void findPredecessors(
     }
 }
 
+void collectShapeSequencesCore(
+        TShapeSeqList              *pDst,
+        const GlobalState          &glState,
+        const TShapeIdent          &dstCsIdent)
+{
+    TShapeSeq seq;
+    seq.push_front(dstCsIdent);
+
+    typedef std::queue<TShapeSeq> TQueue;
+    WorkList<TShapeSeq, TQueue> wl(seq);
+    while (wl.next(seq)) {
+        TShapeIdentList srcIdents;
+        findPredecessors(&srcIdents, seq.front(), glState);
+
+        const unsigned cnt = srcIdents.size();
+        if (!cnt) {
+            // no predecessor found --> append a new sequence
+            pDst->push_back(seq);
+            continue;
+        }
+
+        for (unsigned i = 0U; i < cnt; ++i) {
+            seq.push_front(srcIdents[i]);
+            wl.schedule(seq);
+            if (i + 1U < cnt)
+                seq.pop_front();
+        }
+    }
+}
+
 void collectShapeSequences(TShapeSeqList *pDst, const GlobalState &glState)
 {
     // for each location
@@ -90,32 +120,10 @@ void collectShapeSequences(TShapeSeqList *pDst, const GlobalState &glState)
 
                 // resolve end of the sequence
                 const THeapIdent dstShIdent(dstLocIdx, dstShIdx);
-                TShapeIdent dstCsIdent(dstShIdent, dstCsIdx);
+                const TShapeIdent dstCsIdent(dstShIdent, dstCsIdx);
 
-                // resolve begin(s) of the sequence
-                TShapeSeq seq;
-                seq.push_front(dstCsIdent);
-
-                typedef std::queue<TShapeSeq> TQueue;
-                WorkList<TShapeSeq, TQueue> wl(seq);
-                while (wl.next(seq)) {
-                    TShapeIdentList srcIdents;
-                    findPredecessors(&srcIdents, seq.front(), glState);
-
-                    const unsigned cnt = srcIdents.size();
-                    if (!cnt) {
-                        // no predecessor found --> append a new sequence
-                        pDst->push_back(seq);
-                        continue;
-                    }
-
-                    for (unsigned i = 0U; i < cnt; ++i) {
-                        seq.push_front(srcIdents[i]);
-                        wl.schedule(seq);
-                        if (i + 1U < cnt)
-                            seq.pop_front();
-                    }
-                }
+                // find all shape sequences ending with dstCsIdent
+                collectShapeSequencesCore(pDst, glState, dstCsIdent);
             }
         }
     }
