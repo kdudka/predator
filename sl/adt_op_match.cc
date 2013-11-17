@@ -648,6 +648,31 @@ void seekTemplateMatchInstances(
     }
 }
 
+bool diffHeapsIfNeeded(
+        TMetaOpSet                 *pMetaOps,
+        const OpFootprint          &fp,
+        const FootprintMatch       &fm)
+{
+    if (!pMetaOps->empty())
+        // diff already computed
+        return true;
+
+    // time to diff the template
+    if (!diffHeaps(pMetaOps, fp.input, fp.output)) {
+        CL_BREAK_IF("AdtOp::diffHeaps() has failed");
+        return false;
+    }
+
+    relocOffsetsInMetaOps(pMetaOps, fm);
+    if (pMetaOps->empty()) {
+        CL_BREAK_IF("AdtOp::diffHeaps() returned an empty set");
+        return false;
+    }
+
+    // diff successfully computed
+    return true;
+}
+
 void matchSingleFootprint(
         MatchCtx                   &ctx,
         const OpTemplate           &tpl,
@@ -655,7 +680,6 @@ void matchSingleFootprint(
         const TFootprintIdent      &fpIdent)
 {
     TMetaOpSet metaOps;
-    bool diffComputed = false;
     std::set<TShapeIdent> checkedShapes;
 
     BOOST_FOREACH(FixedPoint::TShapeSeq seq, ctx.shapeSeqs) {
@@ -677,16 +701,9 @@ void matchSingleFootprint(
                 // already checked as part of different shape sequence
                 break;
 
-            if (!diffComputed) {
-                // time to diff the template
-                if (!diffHeaps(&metaOps, fp.input, fp.output)) {
-                    CL_BREAK_IF("AdtOp::diffHeaps() has failed");
-                    return;
-                }
-
-                relocOffsetsInMetaOps(&metaOps, fm);
-                diffComputed = true;
-            }
+            if (!diffHeapsIfNeeded(&metaOps, fp, fm))
+                // non-recoverable error while computing diff of the footprint
+                return;
 
             // find all template match instances using this anchor heap
             seekTemplateMatchInstances(ctx, tpl, fm, metaOps);
