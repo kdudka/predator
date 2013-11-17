@@ -162,7 +162,7 @@ bool seekAncestor(TNode tr, const TNode trAncestor, const TNodeSet &blackList)
 
         if (hasKey(blackList, tr))
             // loop detected!
-            return false;
+            continue;
 
         BOOST_FOREACH(const Node *trParent, tr->parents())
             wl.schedule(trParent);

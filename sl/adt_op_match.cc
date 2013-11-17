@@ -589,7 +589,7 @@ void seekTemplateMatchInstances(
         seekStack.pop();
 
         FootprintMatch &fm = seekCtx.fm;
-        const THeapIdent heapCurr= seekCtx.heapCurrent;
+        const THeapIdent heapCurr = seekCtx.heapCurrent;
         TMetaOpSet &metaOpsToLookFor = seekCtx.metaOpsToLookFor;
 
         // collect the list of successor heaps (together with object mapping)
