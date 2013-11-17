@@ -19,9 +19,8 @@
 
 #include "cont_shape_seq.hh"
 
-#include "worklist.hh"
-
 #include <algorithm>                // for std::reverse
+#include <stack>
 
 namespace FixedPoint {
 
@@ -69,34 +68,79 @@ void findPredecessors(
     }
 }
 
+class CollectStackItem {
+    private:
+        TShapeSeq                   seq_;
+        std::set<TShapeIdent>       seen_;
+
+    public:
+        CollectStackItem(const TShapeIdent &si) {
+            seq_.push_front(si);
+            seen_.insert(si);
+        }
+
+        const TShapeSeq& seq() const {
+            return seq_;
+        }
+
+        const TShapeIdent& front() const {
+            return seq_.front();
+        }
+
+        bool pushFrontOnce(const TShapeIdent &si) {
+            if (!insertOnce(seen_, si))
+                return false;
+
+            seq_.push_front(si);
+            return true;
+        }
+};
+
 void collectShapeSequencesCore(
         TShapeSeqList              *pDst,
         const GlobalState          &glState,
         const TShapeIdent          &dstCsIdent)
 {
-    TShapeSeq seq;
-    seq.push_front(dstCsIdent);
+    std::stack<CollectStackItem> cStack;
+    const CollectStackItem entry(dstCsIdent);
+    cStack.push(entry);
 
-    typedef std::queue<TShapeSeq> TQueue;
-    WorkList<TShapeSeq, TQueue> wl(seq);
-    while (wl.next(seq)) {
+    do {
+        CollectStackItem &now = cStack.top();
+
+        // find predecessor container shapes
         TShapeIdentList srcIdents;
-        findPredecessors(&srcIdents, seq.front(), glState);
+        findPredecessors(&srcIdents, now.front(), glState);
 
         const unsigned cnt = srcIdents.size();
-        if (!cnt) {
-            // no predecessor found --> append a new sequence
-            pDst->push_back(seq);
-            continue;
+        switch (cnt) {
+            case 0:
+                // no predecessor found --> append a new sequence
+                pDst->push_back(now.seq());
+                cStack.pop();
+                continue;
+
+            case 1:
+                // optimized variant for the most common case
+                if (now.pushFrontOnce(srcIdents.front()))
+                    continue;
+
+            default:
+                break;
         }
 
-        for (unsigned i = 0U; i < cnt; ++i) {
-            seq.push_front(srcIdents[i]);
-            wl.schedule(seq);
-            if (i + 1U < cnt)
-                seq.pop_front();
+        // move the top of the stack out of the structure
+        const CollectStackItem snap(now);
+        cStack.pop();
+
+        // schedule all predecessor (not closing a loop) for processing
+        BOOST_FOREACH(const TShapeIdent &si, srcIdents) {
+            CollectStackItem next(snap);
+            if (next.pushFrontOnce(si))
+                cStack.push(next);
         }
     }
+    while (!cStack.empty());
 }
 
 void collectShapeSequences(TShapeSeqList *pDst, const GlobalState &glState)
