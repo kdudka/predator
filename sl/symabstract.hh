@@ -48,20 +48,20 @@ typedef std::list<SymHeap> TSymHeapList;
  * @note the first result is always stored into sh, the use of dst is optional
  */
 void concretizeObj(
-        SymHeap                     &sh,
-        TSymHeapList                &dst,
-        const TObjId                 obj,
-        const ETargetSpecifier       ts,
-        TObjSet                     *leakObjs = 0);
+        SymHeap                    &sh,
+        TSymHeapList               &dst,
+        TObjId                      obj,
+        ETargetSpecifier            ts,
+        TObjSet                    *leakObjs = 0);
 
 /// splice out a possibly empty list segment
 void spliceOutListSegment(
-        SymHeap                &sh,
-        const TObjId            seg,
-        TObjSet                *leakObjs);
+        SymHeap                    &sh,
+        TObjId                      seg,
+        TObjSet                    *leakObjs);
 
 /// replace a DLS by a single concrete object
-void dlSegReplaceByConcrete(SymHeap &sh, const TObjId seg);
+void dlSegReplaceByConcrete(SymHeap &sh, TObjId seg);
 
 /**
  * analyze the given symbolic heap and consider abstraction of some shapes that
@@ -71,6 +71,6 @@ void dlSegReplaceByConcrete(SymHeap &sh, const TObjId seg);
 void abstractIfNeeded(SymHeap &sh);
 
 /// enable/disable debugging of symabstract
-void debugSymAbstract(const bool enable);
+void debugSymAbstract(bool enable);
 
 #endif /* H_GUARD_SYMABSTRACT_H */

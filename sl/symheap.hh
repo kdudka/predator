@@ -387,15 +387,15 @@ class SymHeapCore {
 
         /// write an uninitialized or nullified block of memory
         void writeUniformBlock(
-                const TObjId                obj,
+                TObjId                      obj,
                 const UniformBlock         &ub,
                 TValSet                    *killedPtrs = 0);
 
         /// copy 'size' bytes of raw memory from 'src' to 'dst'
         void copyBlockOfRawMemory(
-                const TValId                dst,
-                const TValId                src,
-                const TSizeOf               size,
+                TValId                      dst,
+                TValId                      src,
+                TSizeOf                     size,
                 TValSet                    *killedPtrs = 0);
 
     public:
@@ -418,7 +418,7 @@ class SymHeapCore {
         bool matchPreds(
                 const SymHeapCore           &ref,
                 const TValMap               &valMap,
-                const bool                  nonZeroOnly = false)
+                bool                         nonZeroOnly = false)
             const;
 
     public:
@@ -455,7 +455,7 @@ class SymHeapCore {
     private:
         /// experimental implementation helper of rejoinObj(), do not use!
         void rewriteTargetOfBase(TValId addr, TObjId target);
-        friend void redirectAddrs(SymHeap &, const TObjId, const TObjId);
+        friend void redirectAddrs(SymHeap &, TObjId, TObjId);
 
     public:
         /// return the address of the root which the given value is binded to
@@ -471,7 +471,7 @@ class SymHeapCore {
         void valRestrictRange(TValId, IR::Range win);
 
         /// difference between two pointers (makes sense only for shared roots)
-        TValId diffPointers(const TValId v1, const TValId v2);
+        TValId diffPointers(TValId v1, TValId v2);
 
         /// return count of bytes (including NULL) we can safely read as string
         TSizeRange valSizeOfString(TValId) const;
@@ -498,7 +498,7 @@ class SymHeapCore {
         /// experimental optimization of joinUniBlocksCore()
         bool findCoveringUniBlocks(
                 TUniBlockMap               *pCovered,
-                const TObjId                root,
+                TObjId                      root,
                 UniformBlock                block)
             const;
 
@@ -516,7 +516,7 @@ class SymHeapCore {
         TObjId stackAlloc(const TSizeRange &size, const CallInst &from);
 
         /// return true if the given object was allocated by stackAlloc()
-        bool isAnonStackObj(const TObjId, CallInst *pFrom = 0);
+        bool isAnonStackObj(TObjId, CallInst *pFrom = 0);
 
         /// clear the list of anonymous stack objects of the given call instance
         void clearAnonStackObjects(TObjList &dst, const CallInst &of);
@@ -691,7 +691,7 @@ class FldHandle {
         friend class SymProc;
 
         // TODO: remove this
-        friend const char* valNullLabel(const SymHeapCore &, const TFldId);
+        friend const char* valNullLabel(const SymHeapCore &, TFldId);
 
     protected:
         SymHeapCore     *sh_;

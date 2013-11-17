@@ -125,16 +125,16 @@ class GlobalState {
 };
 
 /// return heap of the given state by its identity
-const SymHeap *heapByIdent(const GlobalState &, const THeapIdent);
+const SymHeap *heapByIdent(const GlobalState &, THeapIdent);
 
 /// return heap of the given state by its identity
-SymHeap *heapByIdent(GlobalState &, const THeapIdent);
+SymHeap *heapByIdent(GlobalState &, THeapIdent);
 
 /// return shape of the given state by its identity
 const Shape *shapeByIdent(const GlobalState &, const TShapeIdent &);
 
 /// caller is responsible to destroy the returned instance
-GlobalState* computeStateOf(const TFnc, const StateByInsn::TStateMap &);
+GlobalState* computeStateOf(TFnc, const StateByInsn::TStateMap &);
 
 /// pretty print the given ID mapping
 void sl_dump(const TShapeMapper &);

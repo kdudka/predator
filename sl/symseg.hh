@@ -37,10 +37,10 @@
  * @param kind kind of list segment to look for
  */
 bool haveSeg(
-        const SymHeap               &sh,
-        const TValId                 atAddr,
-        const TValId                 pointingTo,
-        const EObjKind               kind);
+        const SymHeap              &sh,
+        TValId                      atAddr,
+        TValId                      pointingTo,
+        EObjKind                    kind);
 
 /**
  * return true if there is a DLS (Doubly-linked List Segment) among the given
@@ -79,9 +79,9 @@ inline TValId nextValFromSeg(const SymHeap &sh, TObjId seg)
     return ptrNext.value();
 }
 
-TValId nextValFromSegAddr(const SymHeap &sh, const TValId addr);
+TValId nextValFromSegAddr(const SymHeap &sh, TValId addr);
 
-TValId prevValFromSegAddr(const SymHeap &sh, const TValId addr);
+TValId prevValFromSegAddr(const SymHeap &sh, TValId addr);
 
 inline TOffset headOffset(const SymHeap &sh, const TObjId seg)
 {

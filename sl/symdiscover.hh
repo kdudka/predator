@@ -32,12 +32,12 @@
 void digShapePropsCandidates(
         TShapePropsList            *pDst,
         SymHeap                    &sh,
-        const TObjId                obj);
+        TObjId                      obj);
 
 /// true if we can merge a pair of subsequent objects according to shape props
 bool canMergeObjWithNextObj(
         SymHeap                    &sh,
-        const TObjId                obj,
+        TObjId                      obj,
         const ShapeProps           &props,
         TObjId                     *pNextObj = 0);
 

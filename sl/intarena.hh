@@ -49,13 +49,13 @@ class IntervalArena {
         TCont                                       cont_;
 
     public:
-        void add(const key_type &, const TFld);
-        void sub(const key_type &, const TFld);
+        void add(const key_type &, TFld);
+        void sub(const key_type &, TFld);
         void intersects(TSet &dst, const key_type &key) const;
         void exactMatch(TSet &dst, const key_type &key) const;
 
         /// return the set of all keys that map to this object
-        void reverseLookup(TKeySet &dst, const TFld) const;
+        void reverseLookup(TKeySet &dst, TFld) const;
 
         void clear() {
             cont_.clear();

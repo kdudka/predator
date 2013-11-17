@@ -184,9 +184,9 @@ class EntStore {
         inline ~EntStore();
 
         template <typename TId> inline TId assignId(TBaseEnt *);
-        template <typename TId> inline void assignId(const TId id, TBaseEnt *);
-        template <typename TId> inline void releaseEnt(const TId id);
-        template <typename TId> inline bool isValidEnt(const TId id) const;
+        template <typename TId> inline void assignId(TId id, TBaseEnt *);
+        template <typename TId> inline void releaseEnt(TId id);
+        template <typename TId> inline bool isValidEnt(TId id) const;
 
         template <typename TId> TId lastId() const {
             // we need to be careful with integral arithmetic on enums
@@ -198,14 +198,14 @@ class EntStore {
             return (this->lastId<TId>() < id) || (id < 0);
         }
 
-        template <typename TId> inline const TBaseEnt* getEntRO(const TId id);
-        template <typename TId> inline TBaseEnt* getEntRW(const TId id);
+        template <typename TId> inline const TBaseEnt* getEntRO(TId id);
+        template <typename TId> inline TBaseEnt* getEntRW(TId id);
 
         template <class TEnt, typename TId>
-        inline void getEntRO(const TEnt **, const TId id);
+        inline void getEntRO(const TEnt **, TId id);
 
         template <class TEnt, typename TId>
-        inline void getEntRW(TEnt **, const TId id);
+        inline void getEntRW(TEnt **, TId id);
 
     private:
         // intentionally not implemented

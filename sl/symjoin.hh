@@ -35,8 +35,8 @@ struct ShapeProps;
 bool joinData(
         SymHeap                 &sh,
         const ShapeProps        &props,
-        const TObjId             obj1,
-        const TObjId             obj2,
+        TObjId                   obj1,
+        TObjId                   obj2,
         TObjId                  *pDst            = 0,
         TObjSet                  protoObjs[1][2] = 0,
         EJoinStatus             *pStatus         = 0,
@@ -48,9 +48,9 @@ bool joinSymHeaps(
         SymHeap                 *dst,
         SymHeap                  sh1,
         SymHeap                  sh2,
-        const bool               allowThreeWay = true);
+        bool                     allowThreeWay = true);
 
 /// enable/disable debugging of symjoin
-void debugSymJoin(const bool enable);
+void debugSymJoin(bool enable);
 
 #endif /* H_GUARD_SYM_JOIN_H */

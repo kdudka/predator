@@ -99,9 +99,9 @@ class SymState {
             existing.swap(sh);
         }
 
-        virtual void rotateExisting(const int idxA, const int idxB);
+        virtual void rotateExisting(int idxA, int idxB);
 
-        void updateTraceOf(const int idx, Trace::Node *tr, EJoinStatus status);
+        void updateTraceOf(int idx, Trace::Node *tr, EJoinStatus status);
 
         /// lookup/insert optimization in SymCallCache implementation
         friend class PerFncCache;
@@ -220,7 +220,7 @@ class SymStateMarked: public SymStateWithJoin {
             ++cntPending_;
         }
 
-        virtual void rotateExisting(const int idxA, const int idxB);
+        virtual void rotateExisting(int idxA, int idxB);
 
         friend class SymStateMap;
 
@@ -274,10 +274,9 @@ class SymStateMap: public IPendingCountProvider {
          * @param sh an instance of symbolic heap that should be inserted
          * @param allowThreeWay if true, three-way join is allowed
          */
-        bool insert(const CodeStorage::Block                *dst,
-                    const SymHeap                           &sh,
-                    const bool                              allowThreeWay = true
-                    );
+        bool insert(const CodeStorage::Block       *dst,
+                    const SymHeap                  &sh,
+                    bool                            allowThreeWay = true);
 
         /// true if the specified block has ever joined/entailed any given state
         bool anyReuseHappened(const CodeStorage::Block *) const;
@@ -319,7 +318,7 @@ class BlockScheduler: public IStatsProvider {
 
         unsigned cntWaiting() const;
 
-        bool schedule(const TBlock bb);
+        bool schedule(TBlock bb);
 
         bool getNext(TBlock *dst);
 

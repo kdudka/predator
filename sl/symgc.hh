@@ -44,7 +44,7 @@ bool collectSharedJunk(SymHeap &sh, TObjId obj, TObjSet *leakObjs = 0);
 
 bool destroyObjectAndCollectJunk(
         SymHeap                 &sh,
-        const TObjId             obj,
+        TObjId                  obj,
         TObjSet                *leakObjs = 0);
 
 /// @todo some dox
@@ -85,6 +85,6 @@ class LeakMonitor {
 };
 
 /// enable/disable debugging of the garbage collector
-void debugGarbageCollector(const bool enable);
+void debugGarbageCollector(bool enable);
 
 #endif /* H_GUARD_SYMGC_H */

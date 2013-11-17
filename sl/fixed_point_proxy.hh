@@ -39,7 +39,7 @@ namespace FixedPoint {
             StateByInsn();
             ~StateByInsn();
 
-            bool /* any change */ insert(const TInsn insn, const SymHeap &sh);
+            bool /* any change */ insert(TInsn insn, const SymHeap &sh);
 
             const TStateMap& stateMap() const;
 

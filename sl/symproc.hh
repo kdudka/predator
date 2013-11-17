@@ -44,7 +44,7 @@ struct CmpOpTraits {
     bool rightToLeft;
 };
 
-bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code);
+bool describeCmpOp(CmpOpTraits *pTraits, enum cl_binop_e code);
 
 inline bool areComparableTypes(const TObjType clt1, const TObjType clt2)
 {
@@ -72,17 +72,17 @@ inline bool areComparableTypes(const TObjType clt1, const TObjType clt2)
 
 TValId compareValues(
         SymHeap                    &sh,
-        const enum cl_binop_e       code,
-        const TValId                v1,
-        const TValId                v2);
+        enum cl_binop_e             code,
+        TValId                      v1,
+        TValId                      v2);
 
 bool reflectCmpResult(
         SymState                   &dst,
         SymProc                    &proc,
-        const enum cl_binop_e       code,
-        const bool                  branch,
-        const TValId                v1,
-        const TValId                v2);
+        enum cl_binop_e             code,
+        bool                        branch,
+        TValId                      v1,
+        TValId                      v2);
 
 /**
  * a layer on top of SymHeap, providing some higher-level operations
@@ -141,7 +141,7 @@ class SymProc {
         void killPerTarget(const CodeStorage::Insn &, unsigned target);
 
         /// check whether we can safely access sizeOfTarget at the given address
-        bool checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget);
+        bool checkForInvalidDeref(TValId val, TSizeOf sizeOfTarget);
 
         /// print backtrace and update the current error level correspondingly
         void printBackTrace(EMsgLevel level, bool forcePtrace = false);
@@ -170,22 +170,22 @@ class SymProc {
 
 /// @todo make the API more generic and better documented
 void describeUnknownVal(
-        SymProc                     &proc,
-        const TValId                 val,
-        const char                  *action);
+        SymProc                    &proc,
+        TValId                      val,
+        const char                 *action);
 
 void executeMemmove(
-        SymProc                     &proc,
-        const TValId                 valDst,
-        const TValId                 valSrc,
-        const TValId                 valSize,
-        const bool                   allowOverlap);
+        SymProc                    &proc,
+        TValId                      valDst,
+        TValId                      valSrc,
+        TValId                      valSize,
+        bool                        allowOverlap);
 
 void executeMemset(
-        SymProc                     &proc,
-        const TValId                 addr,
-        const TValId                 valToWrite,
-        const TValId                 valSize);
+        SymProc                    &proc,
+        TValId                      addr,
+        TValId                      valToWrite,
+        TValId                      valSize);
 
 struct SymExecCoreParams {
     bool trackUninit;       ///< enable/disable @b track_uninit @b mode
@@ -236,8 +236,11 @@ class SymExecCore: public SymProc {
 
         void execStackRestore();
 
-        void execHeapAlloc(SymState &dst, const CodeStorage::Insn &,
-                           const TSizeRange size, const bool nullified);
+        void execHeapAlloc(
+                SymState                   &dst,
+                const CodeStorage::Insn    &insn,
+                TSizeRange                  size,
+                bool                        nullified);
 
         void execFree(TValId val);
 

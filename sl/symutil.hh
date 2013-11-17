@@ -47,16 +47,16 @@ inline TValId boolToVal(const bool b)
 }
 
 /// extract integral constant from the given value if possible, fail otherwise
-bool numFromVal(IR::TInt *pDst, const SymHeapCore &, const TValId);
+bool numFromVal(IR::TInt *pDst, const SymHeapCore &, TValId);
 
 /// extract integral range from the given value if possible, fail otherwise
-bool rngFromVal(IR::Range *pDst, const SymHeapCore &, const TValId);
+bool rngFromVal(IR::Range *pDst, const SymHeapCore &, TValId);
 
 /// extract either offset range, or integral range from the given value
-bool anyRangeFromVal(IR::Range *pDst, const SymHeap &, const TValId);
+bool anyRangeFromVal(IR::Range *pDst, const SymHeap &, TValId);
 
 /// extract string literal from the given value if possible, fail otherwise
-bool stringFromVal(const char **pDst, const SymHeap &, const TValId);
+bool stringFromVal(const char **pDst, const SymHeap &, TValId);
 
 void moveKnownValueToLeft(const SymHeap &sh, TValId &valA, TValId &valB);
 
@@ -71,7 +71,7 @@ bool proveNeq(const SymHeap &sh, TValId v1, TValId v2);
 const IR::Range& rngFromCustom(const CustomValue &);
 
 /// return size (in bytes) that we can safely write at the given addr
-TSizeRange valSizeOfTarget(const SymHeapCore &, const TValId at);
+TSizeRange valSizeOfTarget(const SymHeapCore &, TValId at);
 
 /// true for TS_REGION and TS_FIRST
 bool canPointToFront(const ETargetSpecifier);
@@ -81,7 +81,7 @@ bool canPointToBack(const ETargetSpecifier);
 
 bool compareIntRanges(
         bool                                *pDst,
-        const enum cl_binop_e               code,
+        enum cl_binop_e                      code,
         const IR::Range                     &range1,
         const IR::Range                     &range2);
 
@@ -109,7 +109,7 @@ bool translateValId(
 TValId translateValProto(
         SymHeapCore             &dst,
         const SymHeapCore       &src,
-        const TValId             valProto);
+        TValId                   valProto);
 
 inline FldHandle translateFldHandle(
         SymHeap                 &dst,
@@ -359,25 +359,25 @@ bool /* complete */ traverseLiveFields(
 /// (OBJ_INVALID != pointingFrom) means 'pointing from anywhere'
 bool redirectRefs(
         SymHeap                &sh,
-        const TObjId            pointingFrom,
-        const TObjId            pointingTo,
-        const ETargetSpecifier  pointingWith,
-        const TObjId            redirectTo,
-        const ETargetSpecifier  redirectWith,
-        const TOffset           offHead = 0);
+        TObjId                  pointingFrom,
+        TObjId                  pointingTo,
+        ETargetSpecifier        pointingWith,
+        TObjId                  redirectTo,
+        ETargetSpecifier        redirectWith,
+        TOffset                 offHead = 0);
 
 void redirectRefsNotFrom(
         SymHeap                &sh,
         const TObjSet          &pointingNotFrom,
-        const TObjId            pointingTo,
-        const TObjId            redirectTo,
-        const ETargetSpecifier  redirectWith,
+        TObjId                  pointingTo,
+        TObjId                  redirectTo,
+        ETargetSpecifier        redirectWith,
         bool                  (*tsFilter)(ETargetSpecifier) = 0);
 
 void transferOutgoingEdges(
         SymHeap                &sh,
-        const TObjId            ofObj,
-        const TObjId            toObj);
+        TObjId                  ofObj,
+        TObjId                  toObj);
 
 /// take the given visitor through all live program variables in all heaps
 template <unsigned N_DST, unsigned N_SRC, class THeap, class TVisitor>

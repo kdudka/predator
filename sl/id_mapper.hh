@@ -95,10 +95,10 @@ class IdMapper {
                 && NFA_RETURN_IDENTITY == nfa_;
         }
 
-        bool /* changed */ insert(const TId left, const TId right);
+        bool /* changed */ insert(TId left, TId right);
 
         template <EDirection>
-        void query(TVector *pDst, const TId id) const;
+        void query(TVector *pDst, TId id) const;
 
         template <EDirection>
         void composite(const IdMapper &by);

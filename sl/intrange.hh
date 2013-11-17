@@ -78,7 +78,7 @@ inline bool operator!=(const Range &a, const Range &b)
 }
 
 /// invert polarity of the number
-TInt invertInt(const TInt);
+TInt invertInt(TInt);
 
 /// invert polarity of the range
 inline Range operator-(Range rng)
@@ -99,8 +99,8 @@ Range& operator*=(Range &rng, const Range &other);
 /// bitwise AND on range where the bitmask is a single number
 Range& operator&=(Range &rng, TInt mask);
 
-Range& operator<<=(Range &rng, const TUInt);
-Range& operator>>=(Range &rng, const TUInt);
+Range& operator<<=(Range &rng, TUInt);
+Range& operator>>=(Range &rng, TUInt);
 
 /// subtract another range, but preserve boundary values if already reached
 inline Range& operator-=(Range &rng, const Range &other)
@@ -127,19 +127,19 @@ inline Range operator-(Range rng, const Range &other)
     return rng;
 }
 
-inline Range operator&(Range rng, const TInt mask)
+inline Range operator&(Range rng, TInt mask)
 {
     rng &= mask;
     return rng;
 }
 
-inline Range operator<<(Range rng, const TUInt n)
+inline Range operator<<(Range rng, TUInt n)
 {
     rng <<= n;
     return rng;
 }
 
-inline Range operator>>(Range rng, const TUInt n)
+inline Range operator>>(Range rng, TUInt n)
 {
     rng >>= n;
     return rng;

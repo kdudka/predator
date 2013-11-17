@@ -62,9 +62,7 @@ class SymBackTrace {
          * @param loc location of the call related to the caller (definitely @b
          * not location of the called function)
          */
-        void pushCall(
-                const int               fncId,
-                const struct cl_loc     *loc);
+        void pushCall(int fncId, const struct cl_loc *loc);
 
         /**
          * leave the call of function on top of the backtrace

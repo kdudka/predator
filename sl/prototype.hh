@@ -27,7 +27,7 @@
 bool collectPrototypesOf(
         TObjSet                    &dst,
         SymHeap                    &sh,
-        const TObjId                obj);
+        TObjId                      obj);
 
 /// increment prototype level of a single object while taking care of DLS peers
 void objIncrementProtoLevel(SymHeap &sh, TObjId);
@@ -36,7 +36,7 @@ void objIncrementProtoLevel(SymHeap &sh, TObjId);
 void objDecrementProtoLevel(SymHeap &sh, TObjId);
 
 /// decrement prototype level of owned prototype objects
-void decrementProtoLevel(SymHeap &sh, const TObjId obj);
+void decrementProtoLevel(SymHeap &sh, TObjId obj);
 
 /**
  * returns true if no concrete object points to another object of a higher level
