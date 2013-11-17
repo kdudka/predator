@@ -656,6 +656,7 @@ void matchSingleFootprint(
 {
     TMetaOpSet metaOps;
     bool diffComputed = false;
+    std::set<TShapeIdent> checkedShapes;
 
     BOOST_FOREACH(FixedPoint::TShapeSeq seq, ctx.shapeSeqs) {
         // resolve shape sequence to search through
@@ -663,33 +664,36 @@ void matchSingleFootprint(
             // reverse the sequence if searching _forward_
             std::reverse(seq.begin(), seq.end());
 
-        // allocate a structure for the match result
-        FootprintMatch fm(fpIdent);
-
         // search anchor heap
-        bool found = false;
         BOOST_FOREACH(const TShapeIdent &shIdent, seq) {
-            if (matchAnchorHeap(&fm, ctx, tpl, fp, fpIdent, shIdent)) {
-                found = true;
+            // allocate a structure for the match result
+            FootprintMatch fm(fpIdent);
+
+            if (!matchAnchorHeap(&fm, ctx, tpl, fp, fpIdent, shIdent))
+                // failed to match anchor heap
+                continue;
+
+            if (!insertOnce(checkedShapes, shIdent))
+                // already checked as part of different shape sequence
                 break;
+
+            if (!diffComputed) {
+                // time to diff the template
+                if (!diffHeaps(&metaOps, fp.input, fp.output)) {
+                    CL_BREAK_IF("AdtOp::diffHeaps() has failed");
+                    return;
+                }
+
+                relocOffsetsInMetaOps(&metaOps, fm);
+                diffComputed = true;
             }
+
+            // find all template match instances using this anchor heap
+            seekTemplateMatchInstances(ctx, tpl, fm, metaOps);
+
+            // now please continue with _another_ shape sequence!
+            break;
         }
-        if (!found)
-            // no anchor heap found
-            continue;
-
-        if (!diffComputed) {
-            // time to diff the template
-            if (!diffHeaps(&metaOps, fp.input, fp.output)) {
-                CL_BREAK_IF("AdtOp::diffHeaps() has failed");
-                return;
-            }
-
-            relocOffsetsInMetaOps(&metaOps, fm);
-            diffComputed = true;
-        }
-
-        seekTemplateMatchInstances(ctx, tpl, fm, metaOps);
     }
 }
 
