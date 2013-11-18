@@ -610,7 +610,8 @@ void seekTemplateMatchInstances(
             const THeapIdent heap0 = (SD_FORWARD  == sd) ? heapCurr : heapNext;
             const THeapIdent heap1 = (SD_BACKWARD == sd) ? heapCurr : heapNext;
 
-            TObjectMapper &objMap = objMapList[idx];
+            // resolve the current ID map
+            const TObjectMapper &objMap = objMapList[idx];
             if (SD_BACKWARD == sd)
                 relocObjsInMetaOps(&metaOpsToLookFor, objMap);
 
@@ -618,6 +619,9 @@ void seekTemplateMatchInstances(
                         heap0, heap1, sd))
                 // failed to process the difference of the neighbouring heaps
                 continue;
+
+            // reflect the current traversal step in over-all mapping of objects
+            seekCtx.objMapFromTpl.composite<D_LEFT_TO_RIGHT>(objMap);
 
             if (metaOpsToLookFor.empty()) {
                 // matched!
@@ -636,15 +640,10 @@ void seekTemplateMatchInstances(
                 continue;
             }
 
-            // reflect the current traversal step in over-all mapping of objects
+            // schedule the successor heap
             if (SD_FORWARD == sd)
                 relocObjsInMetaOps(&metaOpsToLookFor, objMap);
-            else
-                objMap.flip();
-
-            // schedule the successor heap
             seekCtx.heapCurrent = heapNext;
-            seekCtx.objMapFromTpl.composite<D_LEFT_TO_RIGHT>(objMap);
             seekStack.push(seekCtx);
         }
     }
