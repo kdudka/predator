@@ -202,13 +202,13 @@ parse_gcc_output() {
              match "$line" "$MSG_DEREF_LVAL" ; then
             case "$TASK" in
               label) fail "$line";;
-              memory) report_unsafe "p_valid-deref" "$line";;
+              memory) report_unsafe "valid-deref" "$line";;
             esac
 
         elif match "$line" "$MSG_MEMLEAK"; then
             case "$TASK" in
               label) continue;;
-              memory) report_unsafe "p_valid-memtrack" "$line";;
+              memory) report_unsafe "valid-memtrack" "$line";;
             esac
 
         elif match "$line" "$MSG_FREE_OFFSET" || \
@@ -217,10 +217,10 @@ parse_gcc_output() {
              match "$line" "$MSG_FREE_NENH" || \
              match "$line" "$MSG_FREE_NONHEAP" || \
              match "$line" "$MSG_FREE_NONPOINTER"; then
-            # free called with offset: p_valid_free
+            # free called with offset: valid_free
             case "$TASK" in
               label) fail "$line";;
-              memory) report_unsafe "p_valid-free" "$line";;
+              memory) report_unsafe "valid-free" "$line";;
             esac
 
         elif match "$line" ": error: "; then

@@ -61,7 +61,7 @@ rank_files() {
                 ;;
 
             FALSE)
-              if test xyes = "x$HAS_BUG" && ( test -z "$MEMBUG" || test "FALSE(p_$MEMBUG)" = "$( echo $RESULT | grep -E -o 'FALSE\(p_[a-z_-]*\)')" )  ; then
+              if test xyes = "x$HAS_BUG" && ( test -z "$MEMBUG" || test "FALSE($MEMBUG)" = "$( echo $RESULT | grep -E -o 'FALSE\([a-z_-]*\)')" )  ; then
                     printf "\033[1;32mFALSE\t[+1 with luck]\033[0m\n"
                     CORRECT_FALSE=$(expr 1 + $CORRECT_FALSE)
                 else
