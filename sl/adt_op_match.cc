@@ -621,7 +621,9 @@ void seekTemplateMatchInstances(
 
             if (metaOpsToLookFor.empty()) {
                 // matched!
-                const EFootprintPort end = (SD_FORWARD == sd) ? FP_SRC : FP_DST;
+                const EFootprintPort end = (SD_BACKWARD == sd)
+                    ? FP_SRC
+                    : FP_DST;
                 fm.objMap[end] = seekCtx.objMapFromTpl;
                 ctx.matchList.push_back(fm);
 
