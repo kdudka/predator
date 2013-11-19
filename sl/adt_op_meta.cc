@@ -29,6 +29,14 @@ using FixedPoint::TObjectMapper;
 
 namespace AdtOp {
 
+bool debuggingHeapDiff;
+
+#define MO_DEBUG(msg) do {              \
+    if (!AdtOp::debuggingHeapDiff)      \
+        break;                          \
+    CL_DEBUG(msg);                      \
+} while (0)
+
 struct DiffHeapsCtx {
     TMetaOpSet                     &opSet;
     SymHeap                        &sh1;
@@ -42,7 +50,7 @@ struct DiffHeapsCtx {
     {
         resolveIdMapping(&idMap, sh1.traceNode(), sh2.traceNode());
         if (!idMap.isTrivial())
-            CL_DEBUG("diffHeaps() operates on non-trivial map of object IDs");
+            MO_DEBUG("diffHeaps() operates on non-trivial map of object IDs");
     }
 };
 
@@ -56,7 +64,7 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
     // check object mapping
     const TObjId obj2 = fld2.obj();
     if (obj1 != obj2) {
-        CL_DEBUG("diffSetField() operates on non-trivially mapped objects"
+        MO_DEBUG("diffSetField() operates on non-trivially mapped objects"
                 << ", obj1 = #" << obj1
                 << ", obj2 = #" << obj2);
     }
@@ -83,7 +91,7 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
     TObjList tgtObjList1;
     ctx.idMap.query<D_RIGHT_TO_LEFT>(&tgtObjList1, tgtObj2);
     if (1U != tgtObjList1.size()) {
-        CL_DEBUG("diffSetField() does not support non-trivial map of objs");
+        MO_DEBUG("diffSetField() does not support non-trivial map of objs");
         return false;
     }
 
@@ -169,7 +177,7 @@ bool diffFields(DiffHeapsCtx &ctx, const TObjId obj1, const TObjId obj2)
         const EObjKind kind1 = ctx.sh1.objKind(obj1);
         const EObjKind kind2 = ctx.sh2.objKind(obj2);
         if (kind1 != kind2) {
-            CL_DEBUG("diffFields() detected mismatch of kind of objects"
+            MO_DEBUG("diffFields() detected mismatch of kind of objects"
                     << ", obj1 = #" << obj1
                     << ", obj2 = #" << obj2);
         }
@@ -305,7 +313,7 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
         TObjList objList1;
         ctx.idMap.query<D_RIGHT_TO_LEFT>(&objList1, obj2);
         if (1U < objList1.size()) {
-            CL_DEBUG("diffHeaps() does not support ambiguous ID mapping");
+            MO_DEBUG("diffHeaps() does not support ambiguous ID mapping");
             return false;
         }
 
