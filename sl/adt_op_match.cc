@@ -33,6 +33,14 @@
 
 namespace AdtOp {
 
+bool debuggingTplMatch;
+
+#define TM_DEBUG(msg) do {              \
+    if (!AdtOp::debuggingTplMatch)      \
+        break;                          \
+    CL_DEBUG(msg);                      \
+} while (0)
+
 typedef FixedPoint::TObjectMapper                   TObjectMapper;
 typedef FixedPoint::THeapIdent                      THeapIdent;
 typedef FixedPoint::TShapeIdent                     TShapeIdent;
@@ -139,7 +147,7 @@ bool matchAnchorHeapCore(
         return false;
 
     if (1U < objLists[C_TEMPLATE].size()) {
-        CL_DEBUG("matchAnchorHeapCore() might be insufficiently implemented");
+        TM_DEBUG("matchAnchorHeapCore() might be insufficiently implemented");
         return false;
     }
 
@@ -497,7 +505,7 @@ bool processDiffOf(
     // compute the difference of the pair of heaps
     TMetaOpSet metaOpsNow;
     if (!diffHeaps(&metaOpsNow, sh0, sh1)) {
-        CL_DEBUG("diffHeaps() has failed");
+        TM_DEBUG("diffHeaps() has failed");
         return false;
     }
 
@@ -532,11 +540,11 @@ bool processDiffOf(
             continue;
 
         if (MO_FREE == mo.code) {
-            CL_DEBUG("unexpected MO_FREE meta-operation in processDiffOf()");
+            TM_DEBUG("unexpected MO_FREE meta-operation in processDiffOf()");
             return false;
         }
 
-        CL_DEBUG("failed to prove independency of a meta-operation");
+        TM_DEBUG("failed to prove independency of a meta-operation");
         return false;
     }
 
@@ -740,7 +748,7 @@ void matchFootprints(
     const TTemplateIdx tplCnt = opCollection.size();
     for (TTemplateIdx tplIdx = 0; tplIdx < tplCnt; ++tplIdx) {
         const OpTemplate &tpl = ctx.opCollection[tplIdx];
-        CL_DEBUG("[ADT] trying to match template: " << tpl.name());
+        TM_DEBUG("[ADT] trying to match template: " << tpl.name());
         matchTemplate(ctx, tpl, tplIdx);
     }
 }
