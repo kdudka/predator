@@ -20,7 +20,7 @@
 #include "cont_shape_seq.hh"
 
 #include <algorithm>                // for std::reverse
-#include <stack>
+#include <queue>
 
 namespace FixedPoint {
 
@@ -68,13 +68,13 @@ void findPredecessors(
     }
 }
 
-class CollectStackItem {
+class CollectQueueItem {
     private:
         TShapeSeq                   seq_;
         std::set<TShapeIdent>       seen_;
 
     public:
-        CollectStackItem(const TShapeIdent &si) {
+        CollectQueueItem(const TShapeIdent &si) {
             seq_.push_front(si);
             seen_.insert(si);
         }
@@ -101,12 +101,12 @@ void collectShapeSequencesCore(
         const GlobalState          &glState,
         const TShapeIdent          &dstCsIdent)
 {
-    std::stack<CollectStackItem> cStack;
-    const CollectStackItem entry(dstCsIdent);
-    cStack.push(entry);
+    std::queue<CollectQueueItem> cQueue;
+    const CollectQueueItem entry(dstCsIdent);
+    cQueue.push(entry);
 
     do {
-        CollectStackItem &now = cStack.top();
+        CollectQueueItem &now = cQueue.front();
 
         // find predecessor container shapes
         TShapeIdentList srcIdents;
@@ -117,7 +117,7 @@ void collectShapeSequencesCore(
             case 0:
                 // no predecessor found --> append a new sequence
                 pDst->push_back(now.seq());
-                cStack.pop();
+                cQueue.pop();
                 continue;
 
             case 1:
@@ -129,18 +129,18 @@ void collectShapeSequencesCore(
                 break;
         }
 
-        // move the top of the stack out of the structure
-        const CollectStackItem snap(now);
-        cStack.pop();
+        // move the top of the queue out of the structure
+        const CollectQueueItem snap(now);
+        cQueue.pop();
 
         // schedule all predecessor (not closing a loop) for processing
         BOOST_FOREACH(const TShapeIdent &si, srcIdents) {
-            CollectStackItem next(snap);
+            CollectQueueItem next(snap);
             if (next.pushFrontOnce(si))
-                cStack.push(next);
+                cQueue.push(next);
         }
     }
-    while (!cStack.empty());
+    while (!cQueue.empty());
 }
 
 void collectShapeSequences(TShapeSeqList *pDst, const GlobalState &glState)
