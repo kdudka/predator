@@ -25,7 +25,6 @@
 #include "symutil.hh"
 #include "worklist.hh"
 
-#include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
 #include <boost/foreach.hpp>
@@ -467,7 +466,7 @@ bool /* found any */ detectPrevShapes(
 
         foundAny = true;
         shapeList.push_back(shape);
-        CL_DEBUG("detectPrevShapes() appends a new container shape at loc #"
+        CS_DEBUG("detectPrevShapes() appends a new container shape at loc #"
                 << src./* loc */first);
     }
 

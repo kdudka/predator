@@ -22,7 +22,19 @@
 
 #include "shape.hh"
 
+#include <cl/cl_msg.hh>
+
 class SymState;
+
+namespace ContShape {
+    extern bool debuggingEnabled;
+}
+
+#define CS_DEBUG(msg) do {              \
+    if (!ContShape::debuggingEnabled)   \
+        break;                          \
+    CL_DEBUG(msg);                      \
+} while (0)
 
 void detectLocalContShapes(TShapeListByHeapIdx *pDst, const SymState &);
 

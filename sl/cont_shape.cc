@@ -23,9 +23,9 @@
 #include "symstate.hh"
 #include "symutil.hh"
 
-#include <cl/cl_msg.hh>
-
 namespace ContShape {
+
+bool debuggingEnabled;
 
 class ApparentShapeDetector {
     public:
@@ -106,7 +106,7 @@ bool ApparentShapeDetector::probeEntry(const TObjId obj, const ShapeProps &props
 
     // check the length
     const unsigned len = seen.size();
-    CL_DEBUG("ApparentShapeDetector found a new container shape, len = "<< len);
+    CS_DEBUG("ApparentShapeDetector found a new container shape, len = "<< len);
 
     // mark all used objects as taken
     TObjSet &taken = objsByProps_[props];
@@ -309,7 +309,7 @@ bool detectImpliedSingleNode(
     pDst->props  = sp.props;
     pDst->length = 1U;
 
-    CL_DEBUG("ImpliedShapeDetector matches a region as container shape");
+    CS_DEBUG("ImpliedShapeDetector matches a region as container shape");
     return true;
 }
 
@@ -345,7 +345,7 @@ bool detectImpliedShape(Shape *pDst, SymHeap &sh, const ShapePattern &sp)
     pDst->props  = sp.props;
     pDst->length = 0U;
 
-    CL_DEBUG("ImpliedShapeDetector matches an empty list as container shape");
+    CS_DEBUG("ImpliedShapeDetector matches an empty list as container shape");
     return true;
 #else
     return false;
@@ -382,7 +382,7 @@ bool detectImpliedShapeBlindly(
         // prev pointer mismatch
         return false;
 
-    CL_DEBUG("ImpliedShapeDetector matches a region as container shape");
+    CS_DEBUG("ImpliedShapeDetector matches a region as container shape");
     pDst->entry  = obj;
     pDst->props  = sp.props;
     pDst->length = 1U;
