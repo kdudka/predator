@@ -830,8 +830,102 @@ void collectReplacedInsn(
 
     // collect the set of replaced insns for each template
     TInsnListByTplIdx &dst = *pDst;
-    for (TTemplateIdx tpl = 0U; tpl < tplCnt; ++tpl)
+    for (TTemplateIdx tpl = 0; tpl < tplCnt; ++tpl)
         collectReplacedInsnCore(&dst[tpl], heapSetByTpl[tpl], progState);
+}
+
+bool applyMatch(THeapSet *pHeapPool, const FootprintMatch &fm, const bool ro)
+{
+    // remove the last heap as it does not represent an insn to be replaced
+    THeapIdentSeq matchedHeaps = fm.matchedHeaps;
+    CL_BREAK_IF(matchedHeaps.size() < 2U);
+    matchedHeaps.pop_back();
+
+    if (ro) {
+        // try it read-only
+        BOOST_FOREACH(const THeapIdent &heap, matchedHeaps)
+            if (!hasKey(pHeapPool, heap))
+                // incomplete match!
+                return false;
+    }
+    else {
+        // remove all heaps used by this match
+        BOOST_FOREACH(const THeapIdent &heap, matchedHeaps)
+            pHeapPool->erase(heap);
+    }
+
+    // all OK!
+    return true;
+}
+
+void selectApplicableMatches(
+        TMatchList                 *pMatchList,
+        const TProgState           &progState)
+{
+    // collect instructions to be replaced
+    const TMatchList &mlOrig = *pMatchList;
+    TInsnListByTplIdx insnsToBeReplaced;
+    collectReplacedInsn(&insnsToBeReplaced, mlOrig, progState);
+
+    // collect heaps to be replaced
+    THeapSet toReplace;
+    BOOST_FOREACH(const TInsnList &insns, insnsToBeReplaced) {
+        BOOST_FOREACH(const TLocIdx locIdx, insns) {
+            const THeapIdx cntHeaps = progState[locIdx].heapList.size();
+            for (THeapIdx heapIdx = 0; heapIdx < cntHeaps; ++heapIdx) {
+                const THeapIdent heap(locIdx, heapIdx);
+                toReplace.insert(heap);
+            }
+        }
+    }
+
+    // sort templates by the number of instructions they would replace
+    typedef std::map<int /* prio */, TTemplateIdx> TTplIdxByPrio;
+    TTplIdxByPrio tplIdxByPrio;
+    const TTemplateIdx tplCnt = insnsToBeReplaced.size();
+    for (TTemplateIdx tpl = 0; tpl < tplCnt; ++tpl) {
+        const unsigned replCnt = insnsToBeReplaced[tpl].size();
+        if (!replCnt)
+            continue;
+
+        const int prio = -replCnt;
+        tplIdxByPrio[prio] = tpl;
+    }
+
+    const unsigned matchCnt = mlOrig.size();
+
+    // go through matches ordered by prio and select a set of applicable ones
+    TMatchList mlSelected;
+    BOOST_FOREACH(const TTplIdxByPrio::const_reference item, tplIdxByPrio) {
+        const TTemplateIdx tpl = item.second;
+
+        // first check with matches are applicable
+        std::vector<unsigned /* match idx */> picked;
+        for (unsigned matchIdx = 0U; matchIdx < matchCnt; ++matchIdx) {
+            const FootprintMatch &fm = mlOrig[matchIdx];
+            if (fm.footprint./* tpl idx */first != tpl)
+                continue;
+
+            if (applyMatch(&toReplace, fm, /* ro */ true))
+                picked.push_back(matchIdx);
+        }
+
+        // then remove the replaced heaps from the set and append the result
+        BOOST_FOREACH(const unsigned matchIdx, picked) {
+            const FootprintMatch &fm = mlOrig[matchIdx];
+            applyMatch(&toReplace, fm, /* ro */ false);
+            mlSelected.push_back(fm);
+        }
+    }
+
+    if (!toReplace.empty()) {
+        CL_BREAK_IF("unhandled parital match in selectApplicableMatches()");
+        mlSelected.clear();
+    }
+
+    pMatchList->swap(mlSelected);
+    CL_DEBUG("[ADT] count of applicable template match instances: "
+            << pMatchList->size());
 }
 
 } // namespace AdtOp

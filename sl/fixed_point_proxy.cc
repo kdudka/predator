@@ -174,6 +174,7 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     using namespace AdtOp;
     TMatchList matchList;
     matchFootprints(&matchList, adtOps, fncState);
+    selectApplicableMatches(&matchList, fncState);
 
     // collect instructions to be replaced
     TInsnListByTplIdx insnsToBeReplaced;

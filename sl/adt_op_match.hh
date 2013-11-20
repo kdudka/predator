@@ -71,6 +71,10 @@ void collectReplacedInsn(
         const TMatchList           &matchList,
         const TProgState           &progState);
 
+void selectApplicableMatches(
+        TMatchList                 *pMatchList,
+        const TProgState           &progState);
+
 } // namespace AdtOp
 
 #endif /* H_GUARD_ADT_OP_MATCH_H */
