@@ -42,6 +42,8 @@ bool debuggingTplMatch;
 } while (0)
 
 typedef FixedPoint::TObjectMapper                   TObjectMapper;
+typedef FixedPoint::TLocIdx                         TLocIdx;
+typedef FixedPoint::THeapIdx                        THeapIdx;
 typedef FixedPoint::THeapIdent                      THeapIdent;
 typedef FixedPoint::TShapeIdent                     TShapeIdent;
 
@@ -751,6 +753,85 @@ void matchFootprints(
         TM_DEBUG("[ADT] trying to match template: " << tpl.name());
         matchTemplate(ctx, tpl, tplIdx);
     }
+}
+
+/// if lastHeap is the last heap at location lastLoc, push lastLoc to *pDst
+void pushBackIfLast(
+        TInsnList                  *pDst,
+        const TLocIdx               lastLoc,
+        const THeapIdx              lastHeap,
+        const TProgState           &progState)
+{
+    if (1U + lastHeap == progState[lastLoc].heapList.size())
+        pDst->push_back(lastLoc);
+}
+
+typedef std::set<THeapIdent>                        THeapSet;
+
+/// this assumes heapSet to be sorted by location idx, then by heap idx
+void collectReplacedInsnCore(
+        TInsnList                  *pDst,
+        const THeapSet             &heapSet,
+        const TProgState           &progState)
+{
+    TLocIdx lastLoc = -1;
+    THeapIdx lastHeap = -1;
+
+    BOOST_FOREACH(const THeapIdent &heap, heapSet) {
+        const TLocIdx currLoc = heap.first;
+        if (-1 != lastLoc && lastLoc != currLoc) {
+            // we have reached next location ==> was the last sequence correct?
+            pushBackIfLast(pDst, lastLoc, lastHeap, progState);
+            lastHeap = -1;
+        }
+
+        // check whether the current heap follows right after the previous one
+        const THeapIdx currHeap = heap.second;
+        lastLoc = (lastHeap + 1 == currHeap)
+            ? currLoc
+            : -1;
+
+        // move to the next loc/heap pair
+        lastHeap = currHeap;
+    }
+
+    if (-1 != lastLoc)
+        // finally check the very last sequence
+        pushBackIfLast(pDst, lastLoc, lastHeap, progState);
+}
+
+void collectReplacedInsn(
+        TInsnListByTplIdx          *pDst,
+        const TMatchList           &matchList,
+        const TProgState           &progState)
+{
+    CL_BREAK_IF(!pDst->empty());
+
+    // set of matched heaps per each template
+    typedef std::vector<THeapSet>                   THeapSetByTpl;
+    THeapSetByTpl heapSetByTpl;
+
+    // go through all matched footprints and populate heapSetByTpl
+    BOOST_FOREACH(const FootprintMatch &fm, matchList) {
+        const THeapIdentSeq &heapList = fm.matchedHeaps;
+        const TTemplateIdx tpl = fm.footprint./* tpl idx */first;
+        if (heapSetByTpl.size() <= static_cast<unsigned>(tpl))
+            heapSetByTpl.resize(1U + tpl);
+
+        // skip the last element of the list while collecting the set
+        THeapSet &heapSet = heapSetByTpl[tpl];
+        std::copy(heapList.begin(), std::prev(heapList.end()),
+                std::inserter(heapSet, heapSet.begin()));
+    }
+
+    // allocate space required for the result
+    const TTemplateIdx tplCnt = heapSetByTpl.size();
+    pDst->resize(tplCnt);
+
+    // collect the set of replaced insns for each template
+    TInsnListByTplIdx &dst = *pDst;
+    for (TTemplateIdx tpl = 0U; tpl < tplCnt; ++tpl)
+        collectReplacedInsnCore(&dst[tpl], heapSetByTpl[tpl], progState);
 }
 
 } // namespace AdtOp

@@ -63,6 +63,14 @@ void matchFootprints(
         const OpCollection         &coll,
         const TProgState           &progState);
 
+typedef std::vector<FixedPoint::TLocIdx>            TInsnList;
+typedef std::vector<TInsnList>                      TInsnListByTplIdx;
+
+void collectReplacedInsn(
+        TInsnListByTplIdx          *pDst,
+        const TMatchList           &matchList,
+        const TProgState           &progState);
+
 } // namespace AdtOp
 
 #endif /* H_GUARD_ADT_OP_MATCH_H */

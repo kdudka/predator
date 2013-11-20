@@ -174,6 +174,12 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     using namespace AdtOp;
     TMatchList matchList;
     matchFootprints(&matchList, adtOps, fncState);
+
+    // collect instructions to be replaced
+    TInsnListByTplIdx insnsToBeReplaced;
+    collectReplacedInsn(&insnsToBeReplaced, matchList, fncState);
+
+    // remove matched heaps not representing any instructions to be replaced
     BOOST_FOREACH(FootprintMatch &fm, matchList) {
         CL_BREAK_IF(fm.matchedHeaps.empty());
         fm.matchedHeaps.pop_back();
