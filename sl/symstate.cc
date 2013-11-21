@@ -218,14 +218,15 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay)
         EJoinStatus     status;
         SymHeap         result(stor, new Trace::TransientNode("packState()"));
         if (!joinSymHeaps(&status, &result, shOld, shNew, allowThreeWay)) {
-#if SE_FORBID_HEAP_REPLACE
-            if (JS_USE_SH2 == status)
-                continue;
-#endif
             ++idxOld;
             continue;
         }
-
+#if SE_FORBID_HEAP_REPLACE
+        if (JS_USE_SH2 == status) {
+            ++idxOld;
+            continue;
+        }
+#endif
         CL_DEBUG("<J> packState(): idxOld = #" << idxOld
                 << ", idxNew = #" << idxNew
                 << ", action = " << status
