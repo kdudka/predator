@@ -2496,6 +2496,13 @@ void initTrace(SymJoinCtx &ctx)
 {
     Trace::Node *const tr1 = ctx.sh1.traceNode();
     Trace::Node *const tr2 = ctx.sh2.traceNode();
+    if (tr1 == tr2) {
+        // detected isomorphism of identical heaps, skip the trace node creation
+        CL_BREAK_IF(JS_USE_ANY != ctx.status);
+        ctx.dst.traceUpdate(tr1 /* == tr2 */);
+        return;
+    }
+
     Trace::Node *const tr = new Trace::JoinNode(tr1, tr2, ctx.status);
 
     // export the captured ID mapping
