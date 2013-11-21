@@ -70,6 +70,17 @@ void NodeBase::replaceParent(Node *parentOld, Node *parentNew)
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::Node
 
+/// this runs in the debug build only
+bool hasDupChildren(const Node *node)
+{
+    std::set<const NodeBase *> seen;
+    BOOST_FOREACH(const NodeBase *child, node->children())
+        if (!insertOnce(seen, child))
+            return true;
+
+    return false;
+}
+
 Node::~Node()
 {
     alive_ = false;
@@ -77,11 +88,15 @@ Node::~Node()
 
 void Node::notifyBirth(NodeBase *child)
 {
+    CL_BREAK_IF(hasDupChildren(this));
     children_.push_back(child);
+    CL_BREAK_IF(hasDupChildren(this));
 }
 
 void Node::notifyDeath(NodeBase *child)
 {
+    CL_BREAK_IF(hasDupChildren(this));
+
     // remove the dead child from the list
     children_.erase(
             std::remove(children_.begin(), children_.end(), child),
@@ -118,6 +133,9 @@ const TIdMapper& Node::idMapper() const
 
 void replaceNode(Node *tr, Node *by)
 {
+    CL_BREAK_IF(hasDupChildren(tr));
+    CL_BREAK_IF(hasDupChildren(by));
+
     // we intentionally deep-copy the list int order to allow its safe traversal
     const Node::TBaseList children = tr->children();
     BOOST_FOREACH(NodeBase *const child, children) {
@@ -127,6 +145,9 @@ void replaceNode(Node *tr, Node *by)
 
         child->replaceParent(tr, by);
     }
+
+    CL_BREAK_IF(hasDupChildren(tr));
+    CL_BREAK_IF(hasDupChildren(by));
 }
 
 
