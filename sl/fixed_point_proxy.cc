@@ -168,6 +168,33 @@ void plotInsn(
 // XXX
 AdtOp::OpCollection adtOps;
 
+void summarizeInsnReplace(
+        const AdtOp::TMatchList    &matchList,
+        const GlobalState          &progState)
+{
+    using namespace AdtOp;
+
+    // collect instructions to be replaced
+    TInsnListByTplIdx insnsToBeReplaced;
+    collectReplacedInsn(&insnsToBeReplaced, matchList, progState);
+
+    const TTemplateIdx tplCnt = insnsToBeReplaced.size();
+    for (TTemplateIdx tplIdx = 0; tplIdx < tplCnt; ++tplIdx) {
+        const TInsnList &toReplace = insnsToBeReplaced[tplIdx];
+        if (toReplace.empty())
+            continue;
+
+        const OpTemplate &tpl = adtOps[tplIdx];
+        std::ostringstream str;
+        str << "template " << tpl.name() << "() would replace locations:";
+        BOOST_FOREACH(const TLocIdx insn, toReplace)
+            str << " #" << insn;
+
+        const std::string msg = str.str();
+        CL_NOTE("[ADT] " << msg);
+    }
+}
+
 void plotFncCore(PlotData &plot, const GlobalState &fncState)
 {
     // match templates
@@ -175,10 +202,7 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     TMatchList matchList;
     matchFootprints(&matchList, adtOps, fncState);
     selectApplicableMatches(&matchList, fncState);
-
-    // collect instructions to be replaced
-    TInsnListByTplIdx insnsToBeReplaced;
-    collectReplacedInsn(&insnsToBeReplaced, matchList, fncState);
+    summarizeInsnReplace(matchList, fncState);
 
     // remove matched heaps not representing any instructions to be replaced
     BOOST_FOREACH(FootprintMatch &fm, matchList) {
