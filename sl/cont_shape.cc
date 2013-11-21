@@ -444,8 +444,13 @@ bool hasAnyProgramVar(const SymState &state)
 
 void detectImpliedShapes(DetectionCtx &ctx)
 {
+#if 0
     // if there are no variables, we are likely dealing with templates
     const bool anyVars = hasAnyProgramVar(ctx.srcState);
+#else
+    // FIXME: temporarily disabled in order to find more container shapes
+    const bool anyVars = false;
+#endif
     ImpliedShapeDetector shapeDetector(/* useHeadChk */ anyVars);
 
     for (unsigned i = 0U; i < ctx.cntHeaps; ++i) {
