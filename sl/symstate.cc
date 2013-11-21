@@ -126,6 +126,11 @@ void SymState::rotateExisting(const int idxA, const int idxB)
 
 void SymState::updateTraceOf(const int idx, Trace::Node *tr, EJoinStatus status)
 {
+    Trace::Node *const trOld = heaps_[idx]->traceNode();
+    if (trOld == tr)
+        // we are alreade up2date
+        return;
+
     int i0 = 0;
     int i1 = 1;
 
@@ -152,9 +157,6 @@ void SymState::updateTraceOf(const int idx, Trace::Node *tr, EJoinStatus status)
     idMaps[i0] = identity;
 
 #if SE_ALLOW_CYCLIC_TRACE_GRAPH
-    Trace::Node *const trOld = heaps_[idx]->traceNode();
-    CL_BREAK_IF(trOld == tr);
-
     Trace::replaceNode(trOld, tr);
     CL_BREAK_IF(tr != heaps_[idx]->traceNode());
 #else
