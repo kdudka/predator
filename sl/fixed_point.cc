@@ -301,6 +301,27 @@ void detectContShapes(GlobalState &glState)
     }
 }
 
+bool checkShapeMapping(
+        const TObjSet              &srcObjs,
+        const TObjSet              &dstObjs,
+        const TObjectMapper        &objMap)
+{
+    // check whether objMap maps srcObjs _onto_ dstObjs
+    TObjSet srcObjsImg;
+    project<D_LEFT_TO_RIGHT>(objMap, &srcObjsImg, srcObjs);
+    if (dstObjs != srcObjsImg)
+        return false;
+
+    // check whether objMap maps dstObjs _onto_ srcObjs
+    TObjSet dstObjsImg;
+    project<D_RIGHT_TO_LEFT>(objMap, &dstObjsImg, dstObjs);
+    if (srcObjs != dstObjsImg)
+        return false;
+
+    // all OK!
+    return true;
+}
+
 void detectShapeMappingCore(
         TraceEdge                  *te,
         const SymHeap              &shSrc,
@@ -328,15 +349,22 @@ void detectShapeMappingCore(
 
     const TShapeIdx dstCnt = dstShapes.size();
     for (TShapeIdx dstIdx = 0; dstIdx < dstCnt; ++dstIdx) {
-        TObjSet key;
-        objSetByShape(&key, shDst, dstShapes[dstIdx]);
+        TObjSet keyDst;
+        objSetByShape(&keyDst, shDst, dstShapes[dstIdx]);
 
-        const TIndex::const_iterator it = index.find(key);
+        const TIndex::const_iterator it = index.find(keyDst);
         if (it == index.end())
             // not found
             continue;
 
         const TShapeIdx srcIdx = it->second;
+
+        TObjSet keySrc;
+        objSetByShape(&keySrc, shSrc, srcShapes[srcIdx]);
+        if (!checkShapeMapping(keySrc, keyDst, te->objMap))
+            // failed to check the mapping of shapes
+            continue;
+
         te->csMap.insert(srcIdx, dstIdx);
     }
 }
