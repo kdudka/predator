@@ -248,40 +248,39 @@ bool matchAnchorHeap(
 TObjId relocAmbiguousObj(
         const ETargetSpecifier      tplTs,
         const TObjList             &objList,
-        const TMapOrder            *pObjOrder)
+        TMapOrder                   objOrder)
 {
-    if (!pObjOrder) {
-        CL_BREAK_IF("relocAmbiguousObj() got pObjOrder == NULL");
-        return OBJ_INVALID;
-    }
-
-    const TMapOrder &objOrder = *pObjOrder;
-    BOOST_FOREACH(const TObjId obj, objList) {
-        if (objOrder.end() != std::find(objOrder.begin(), objOrder.end(), obj))
-            continue;
-
-        CL_BREAK_IF("unsupported ID mapping in relocAmbiguousObj()");
-        return OBJ_INVALID;
-    }
-
     switch (tplTs) {
         case TS_FIRST:
-            return objOrder.front();
+            std::reverse(objOrder.begin(), objOrder.end());
+            break;
 
         case TS_LAST:
-            return objOrder.back();
+            break;
 
         default:
             CL_BREAK_IF("invalid call of relocAmbiguousObj()");
             return OBJ_INVALID;
     }
+
+    while (!objOrder.empty()) {
+        const TObjId obj1 = objOrder.back();
+        objOrder.pop_back();
+
+        BOOST_FOREACH(const TObjId obj2, objList)
+            if (obj1 == obj2)
+                return obj1;
+    }
+
+    CL_BREAK_IF("unsupported ID mapping in relocAmbiguousObj()");
+    return OBJ_INVALID;
 }
 
 TObjId relocSingleObj(
         const TObjId                obj,
         const ETargetSpecifier      ts,
         const TObjectMapper        &objMap,
-        const TMapOrder            *pObjOrder)
+        const TMapOrder            &objOrder)
 {
     // do not relocate ID of special objects
     switch (obj) {
@@ -302,16 +301,12 @@ TObjId relocSingleObj(
         // an unambiguous ID has been found!
         return objList.front();
 
-    return relocAmbiguousObj(ts, objList, pObjOrder);
+    return relocAmbiguousObj(ts, objList, objOrder);
 }
 
-ETargetSpecifier tsByOffset(const TOffset off, const ShapeProps *pProps)
+ETargetSpecifier tsByOffset(const TOffset off, const ShapeProps &props)
 {
-    if (!pProps)
-        // no data to proceed
-        return TS_INVALID;
-
-    const BindingOff &bf = pProps->bOff;
+    const BindingOff &bf = props.bOff;
     if (off == bf.next)
         return TS_LAST;
 
@@ -325,8 +320,8 @@ ETargetSpecifier tsByOffset(const TOffset off, const ShapeProps *pProps)
 void relocObjsInMetaOps(
         TMetaOpSet                 *pMetaOps,
         const TObjectMapper        &objMap,
-        const ShapeProps           *pProps      = 0,
-        const TMapOrder            *pObjOrder   = 0)
+        const ShapeProps           &props,
+        const TMapOrder            &objOrder)
 {
     const TMetaOpSet &src = *pMetaOps;
     TMetaOpSet dst;
@@ -334,11 +329,11 @@ void relocObjsInMetaOps(
     BOOST_FOREACH(MetaOperation mo, src) {
         ETargetSpecifier ts = TS_INVALID;
         if (MO_SET == mo.code) {
-            mo.tgtObj = relocSingleObj(mo.tgtObj, mo.tgtTs, objMap, pObjOrder);
-            ts = tsByOffset(mo.off, pProps);
+            mo.tgtObj = relocSingleObj(mo.tgtObj, mo.tgtTs, objMap, objOrder);
+            ts = tsByOffset(mo.off, props);
         }
 
-        mo.obj = relocSingleObj(mo.obj, ts, objMap, pObjOrder);
+        mo.obj = relocSingleObj(mo.obj, ts, objMap, objOrder);
         dst.insert(mo);
     }
 
@@ -382,12 +377,52 @@ void relocOffsetsInMetaOps(TMetaOpSet *pMetaOps, const FootprintMatch &fm)
     pMetaOps->swap(dst);
 }
 
+typedef const FixedPoint::TraceEdge                *TEdgePtr;
+
+void digObjOrder(
+        TMapOrder                  *pObjOrder,
+        const TProgState           &progState,
+        const TEdgePtr              te,
+        const ESearchDirection      sd)
+{
+    using namespace FixedPoint;
+
+    BOOST_FOREACH(TShapeMapper::const_reference item, te->csMap) {
+        if (item.first || item.second) {
+            CL_BREAK_IF("digObjOrder is not yet fully implemented");
+            return;
+        }
+
+        THeapIdent shIdent;
+        TShapeIdx csIdx;
+        if (sd == SD_FORWARD) {
+            shIdent = te->dst;
+            csIdx = item.second;
+        }
+        else /* SD_BACKWARD */ {
+            shIdent = te->src;
+            csIdx = item.first;
+        }
+
+        const TShapeIdent csIdent(shIdent, csIdx);
+        const SymHeap &sh = *heapByIdent(progState, shIdent);
+        const Shape &cs = *shapeByIdent(progState, csIdent);
+
+        TObjList objList;
+        objListByShape(&objList, sh, cs);
+        BOOST_FOREACH(const TObjId obj, objList)
+            pObjOrder->push_back(obj);
+    }
+}
+
 typedef std::vector<THeapIdent>                     THeapIdentList;
 typedef std::vector<TObjectMapper>                  TObjectMapperList;
+typedef std::vector<TMapOrder>                      TMapOrderList;
 
 void collectNextHeaps(
         THeapIdentList             *pHeapList,
         TObjectMapperList          *pObjMapList,
+        TMapOrderList              *pObjOrderList,
         const THeapIdent            heapCurrent,
         const TProgState           &progState,
         const ESearchDirection      sd)
@@ -414,7 +449,6 @@ void collectNextHeaps(
         : locState.traceOutEdges;
 
     const TTraceEdgeList &edgeList = eListByHeapIdx[heapCurrent./* sh */second];
-    typedef const TraceEdge *TEdgePtr;
     BOOST_FOREACH(const TEdgePtr te, edgeList) {
         const THeapIdent heapNext = (reverse)
             ? te->src
@@ -424,8 +458,12 @@ void collectNextHeaps(
         if (reverse)
             objMap.flip();
 
+        TMapOrder objOrder;
+        digObjOrder(&objOrder, progState, te, sd);
+
         pHeapList->push_back(heapNext);
         pObjMapList->push_back(objMap);
+        pObjOrderList->push_back(objOrder);
     }
 }
 
@@ -569,7 +607,7 @@ struct SeekContext {
 
         // relocate object IDs
         relocObjsInMetaOps(&metaOpsToLookFor, objMapFromTpl,
-                /* to resolve ambiguous mapping */ &fm.props, &fm.objMapOrder);
+                /* to resolve ambiguous mapping */ fm.props, fm.objMapOrder);
     }
 };
 
@@ -598,7 +636,9 @@ void seekTemplateMatchInstances(
         // collect the list of successor heaps (together with object mapping)
         THeapIdentList heapList;
         TObjectMapperList objMapList;
-        collectNextHeaps(&heapList, &objMapList, heapCurr, ctx.progState, sd);
+        TMapOrderList objOrderList;
+        collectNextHeaps(&heapList, &objMapList, &objOrderList,
+                heapCurr, ctx.progState, sd);
         const unsigned cnt = heapList.size();
         CL_BREAK_IF(cnt != objMapList.size());
 
@@ -615,8 +655,10 @@ void seekTemplateMatchInstances(
 
             // resolve the current ID map
             const TObjectMapper &objMap = objMapList[idx];
+            const TMapOrder &objOrder = objOrderList[idx];
             if (SD_BACKWARD == sd)
-                relocObjsInMetaOps(&metaOpsToLookFor, objMap);
+                relocObjsInMetaOps(&metaOpsToLookFor, objMap, fmInit.props,
+                        objOrder);
 
             if (!processDiffOf(&fm, &metaOpsToLookFor, ctx.progState,
                         heap0, heap1, sd))
@@ -645,7 +687,8 @@ void seekTemplateMatchInstances(
 
             // schedule the successor heap
             if (SD_FORWARD == sd)
-                relocObjsInMetaOps(&metaOpsToLookFor, objMap);
+                relocObjsInMetaOps(&metaOpsToLookFor, objMap, fmInit.props,
+                        objOrder);
             seekCtx.heapCurrent = heapNext;
             seekStack.push(seekCtx);
         }
