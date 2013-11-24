@@ -176,7 +176,7 @@ bool matchAnchorHeapCore(
         pMap->insert(tplObj, progObj);
 
         if (ambiguousMapping)
-            (*pObjOrder)[tplObj].push_back(progObj);
+            pObjOrder->push_back(progObj);
     }
 
     // successfully matched!
@@ -246,7 +246,6 @@ bool matchAnchorHeap(
 }
 
 TObjId relocAmbiguousObj(
-        const TObjId                tplObj,
         const ETargetSpecifier      tplTs,
         const TObjList             &objList,
         const TMapOrder            *pObjOrder)
@@ -256,13 +255,7 @@ TObjId relocAmbiguousObj(
         return OBJ_INVALID;
     }
 
-    const TMapOrder::const_iterator it = pObjOrder->find(tplObj);
-    if (it == pObjOrder->end()) {
-        CL_BREAK_IF("relocAmbiguousObj() failed to lookup template object");
-        return OBJ_INVALID;
-    }
-
-    const TObjList objOrder = it->second;
+    const TMapOrder &objOrder = *pObjOrder;
     BOOST_FOREACH(const TObjId obj, objList) {
         if (objOrder.end() != std::find(objOrder.begin(), objOrder.end(), obj))
             continue;
@@ -309,7 +302,7 @@ TObjId relocSingleObj(
         // an unambiguous ID has been found!
         return objList.front();
 
-    return relocAmbiguousObj(obj, ts, objList, pObjOrder);
+    return relocAmbiguousObj(ts, objList, pObjOrder);
 }
 
 ETargetSpecifier tsByOffset(const TOffset off, const ShapeProps *pProps)

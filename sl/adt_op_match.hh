@@ -34,7 +34,7 @@ enum EFootprintPort {
 };
 
 typedef std::list<FixedPoint::THeapIdent>           THeapIdentSeq;
-typedef std::map<TObjId /* tplObj */, TObjList>     TMapOrder;
+typedef std::list<TObjId>                           TMapOrder;
 
 struct FootprintMatch {
     TFootprintIdent                 footprint;
