@@ -114,7 +114,6 @@ void swapObjLists(TObjList pObjLists[1][C_TOTAL])
 
 bool matchAnchorHeapCore(
         TObjectMapper              *pMap,
-        TMapOrder                  *pObjOrder,
         const SymHeap              &shProg,
         const SymHeap              &shTpl,
         const Shape                &csProg,
@@ -169,15 +168,9 @@ bool matchAnchorHeapCore(
             return false;
     }
 
-    bool ambiguousMapping = (1U < objLists[C_PROGRAM].size());
-
     // map the remaining DLS in the template with the remaining program objects
-    BOOST_FOREACH(const TObjId progObj, objLists[C_PROGRAM]) {
+    BOOST_FOREACH(const TObjId progObj, objLists[C_PROGRAM])
         pMap->insert(tplObj, progObj);
-
-        if (ambiguousMapping)
-            pObjOrder->push_back(progObj);
-    }
 
     // successfully matched!
     return true;
@@ -234,8 +227,7 @@ bool matchAnchorHeap(
     // perform an object-wise match
     const Shape &csTpl = csTplList.front();
     TObjectMapper *pObjMap = &pDst->objMap[port];
-    TMapOrder *pObjOrder = &pDst->objMapOrder;
-    if (!matchAnchorHeapCore(pObjMap, pObjOrder, shProg, shTpl, csProg, csTpl))
+    if (!matchAnchorHeapCore(pObjMap, shProg, shTpl, csProg, csTpl))
         return false;
 
     // successful match!
@@ -604,10 +596,6 @@ struct SeekContext {
         CL_BREAK_IF(1U != fm.matchedHeaps.size());
         seen.insert(heapCurrent);
         fm.matchedHeaps.clear();
-
-        // relocate object IDs
-        relocObjsInMetaOps(&metaOpsToLookFor, objMapFromTpl,
-                /* to resolve ambiguous mapping */ fm.props, fm.objMapOrder);
     }
 };
 
@@ -615,10 +603,22 @@ void seekTemplateMatchInstances(
         MatchCtx                   &ctx,
         const OpTemplate           &tpl,
         const FootprintMatch       &fmInit,
-        const TMetaOpSet           &metaOps)
+        const TMetaOpSet           &metaOps,
+        const TShapeIdent          &shIdent)
 {
     const ESearchDirection sd = tpl.searchDirection();
-    const SeekContext seekCtxInit(fmInit, metaOps, sd);
+    SeekContext seekCtxInit(fmInit, metaOps, sd);
+
+    // relocate object IDs
+    const SymHeap &sh = *heapByIdent(ctx.progState, shIdent.first);
+    const Shape &cs = *shapeByIdent(ctx.progState, shIdent);
+    TObjList objList;
+    objListByShape(&objList, sh,cs);
+    TMapOrder objOrder;
+    BOOST_FOREACH(const TObjId obj, objList)
+        objOrder.push_back(obj);
+    relocObjsInMetaOps(&seekCtxInit.metaOpsToLookFor, seekCtxInit.objMapFromTpl,
+            fmInit.props, objOrder);
     CL_BREAK_IF(seekCtxInit.metaOpsToLookFor.empty());
 
     // crawl the fixed-point
@@ -753,7 +753,7 @@ void matchSingleFootprint(
                 return;
 
             // find all template match instances using this anchor heap
-            seekTemplateMatchInstances(ctx, tpl, fm, metaOps);
+            seekTemplateMatchInstances(ctx, tpl, fm, metaOps, shIdent);
 
             // now please continue with _another_ shape sequence!
             break;

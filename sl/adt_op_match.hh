@@ -46,9 +46,6 @@ struct FootprintMatch {
 
     FixedPoint::TObjectMapper       objMap          [FP_TOTAL];
 
-    /// relative order of ambiguously mapped object IDs
-    TMapOrder                       objMapOrder;
-
     FootprintMatch(const TFootprintIdent footprint_):
         footprint(footprint_)
     {
