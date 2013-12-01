@@ -147,30 +147,24 @@ bool matchAnchorHeapCore(
         // we are no longer able to map the remaining objects
         return false;
 
-    if (1U < objLists[C_TEMPLATE].size()) {
-        TM_DEBUG("matchAnchorHeapCore() might be insufficiently implemented");
+    // compute total minimal length of the remaining template objects
+    TMinLen lenTpl = 0;
+    BOOST_FOREACH(const TObjId objTpl, objLists[C_TEMPLATE])
+        lenTpl += objMinLength(shTpl, objTpl);
+
+    // compute total minimal length of the remaining program objects
+    TMinLen lenProg = 0;
+    BOOST_FOREACH(const TObjId objProg, objLists[C_PROGRAM])
+        lenProg += objMinLength(shProg, objProg);
+
+    if (lenProg < lenTpl)
+        // the program configuration does not guarantee sufficient list length
         return false;
-    }
 
-    // check the kind of the (only) remaining object in the template
-    const TObjId tplObj = objLists[C_TEMPLATE].front();
-    const EObjKind tplObjKind = shTpl.objKind(tplObj);
-    switch (tplObjKind) {
-        case OK_REGION:
-            // unmatched region in the template
-            return false;
-
-        case OK_DLS:
-            break;
-
-        default:
-            CL_BREAK_IF("unsupported object kind in matchAnchorHeapCore()");
-            return false;
-    }
-
-    // map the remaining DLS in the template with the remaining program objects
-    BOOST_FOREACH(const TObjId progObj, objLists[C_PROGRAM])
-        pMap->insert(tplObj, progObj);
+    // map the remaining objects from both sets with each oder
+    BOOST_FOREACH(const TObjId objTpl, objLists[C_TEMPLATE])
+        BOOST_FOREACH(const TObjId objProg, objLists[C_PROGRAM])
+            pMap->insert(objTpl, objProg);
 
     // successfully matched!
     return true;
