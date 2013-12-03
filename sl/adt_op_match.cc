@@ -620,12 +620,10 @@ void seekTemplateMatchInstances(
     std::stack<SeekContext> seekStack;
     seekStack.push(seekCtxInit);
     while (!seekStack.empty()) {
-        SeekContext seekCtx = seekStack.top();
+        const SeekContext seekCtxOrig = seekStack.top();
         seekStack.pop();
 
-        FootprintMatch &fm = seekCtx.fm;
-        const THeapIdent heapCurr = seekCtx.heapCurrent;
-        TMetaOpSet &metaOpsToLookFor = seekCtx.metaOpsToLookFor;
+        const THeapIdent heapCurr = seekCtxOrig.heapCurrent;
 
         // collect the list of successor heaps (together with object mapping)
         THeapIdentList heapList;
@@ -638,6 +636,10 @@ void seekTemplateMatchInstances(
 
         // iterate through successors
         for (unsigned idx = 0U; idx < cnt; ++idx) {
+            SeekContext seekCtx = seekCtxOrig;
+            TMetaOpSet &metaOpsToLookFor = seekCtx.metaOpsToLookFor;
+            FootprintMatch &fm = seekCtx.fm;
+
             const THeapIdent heapNext = heapList[idx];
             if (!insertOnce(seekCtx.seen, heapNext))
                 // loop detected
