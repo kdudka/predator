@@ -232,15 +232,13 @@ bool matchAnchorHeap(
 }
 
 TObjId relocAmbiguousObj(
-        const ETargetSpecifier      tplTs,
+        const ETargetSpecifier      ts,
         const TObjList             &objList,
-        TMapOrder                   objOrder)
+        const ShapeProps           &props,
+        const SymHeap              &sh)
 {
-    switch (tplTs) {
+    switch (ts) {
         case TS_FIRST:
-            std::reverse(objOrder.begin(), objOrder.end());
-            break;
-
         case TS_LAST:
             break;
 
@@ -249,24 +247,42 @@ TObjId relocAmbiguousObj(
             return OBJ_INVALID;
     }
 
-    while (!objOrder.empty()) {
-        const TObjId obj1 = objOrder.back();
-        objOrder.pop_back();
-
-        BOOST_FOREACH(const TObjId obj2, objList)
-            if (obj1 == obj2)
-                return obj1;
+    // start with all objects as candidates for fst/lst
+    TObjSet allObjs, cObjs;
+    BOOST_FOREACH(const TObjId obj, objList) {
+        allObjs.insert(obj);
+        cObjs.insert(obj);
     }
 
-    CL_BREAK_IF("unsupported ID mapping in relocAmbiguousObj()");
-    return OBJ_INVALID;
+    const BindingOff bOff = props.bOff;
+    const TOffset offNext = (TS_FIRST == ts) ? bOff.next : bOff.prev;
+    const TOffset offPrev = (TS_LAST  == ts) ? bOff.next : bOff.prev;
+
+    SymHeap &shWritable = const_cast<SymHeap &>(sh);
+
+    BOOST_FOREACH(const TObjId obj, objList) {
+        const TObjId objNext = nextObj(shWritable, obj, offNext);
+        cObjs.erase(objNext);
+
+        const TObjId objPrev = nextObj(shWritable, obj, offPrev);
+        if (hasKey(allObjs, objPrev))
+            cObjs.erase(obj);
+    }
+
+    if (1U != cObjs.size()) {
+        CL_BREAK_IF("unsupported ID mapping in relocAmbiguousObj()");
+        return OBJ_INVALID;
+    }
+
+    return *cObjs.begin();
 }
 
 TObjId relocSingleObj(
         const TObjId                obj,
         const ETargetSpecifier      ts,
         const TObjectMapper        &objMap,
-        const TMapOrder            &objOrder)
+        const ShapeProps           &props,
+        const SymHeap              &sh)
 {
     // do not relocate ID of special objects
     switch (obj) {
@@ -287,7 +303,7 @@ TObjId relocSingleObj(
         // an unambiguous ID has been found!
         return objList.front();
 
-    return relocAmbiguousObj(ts, objList, objOrder);
+    return relocAmbiguousObj(ts, objList, props, sh);
 }
 
 ETargetSpecifier tsByOffset(const TOffset off, const ShapeProps &props)
@@ -307,7 +323,7 @@ void relocObjsInMetaOps(
         TMetaOpSet                 *pMetaOps,
         const TObjectMapper        &objMap,
         const ShapeProps           &props,
-        const TMapOrder            &objOrder)
+        const SymHeap              &sh)
 {
     const TMetaOpSet &src = *pMetaOps;
     TMetaOpSet dst;
@@ -315,11 +331,11 @@ void relocObjsInMetaOps(
     BOOST_FOREACH(MetaOperation mo, src) {
         ETargetSpecifier ts = TS_INVALID;
         if (MO_SET == mo.code) {
-            mo.tgtObj = relocSingleObj(mo.tgtObj, mo.tgtTs, objMap, objOrder);
+            mo.tgtObj = relocSingleObj(mo.tgtObj, mo.tgtTs, objMap, props, sh);
             ts = tsByOffset(mo.off, props);
         }
 
-        mo.obj = relocSingleObj(mo.obj, ts, objMap, objOrder);
+        mo.obj = relocSingleObj(mo.obj, ts, objMap, props, sh);
         dst.insert(mo);
     }
 
@@ -605,14 +621,8 @@ void seekTemplateMatchInstances(
 
     // relocate object IDs
     const SymHeap &sh = *heapByIdent(ctx.progState, shIdent.first);
-    const Shape &cs = *shapeByIdent(ctx.progState, shIdent);
-    TObjList objList;
-    objListByShape(&objList, sh,cs);
-    TMapOrder objOrder;
-    BOOST_FOREACH(const TObjId obj, objList)
-        objOrder.push_back(obj);
     relocObjsInMetaOps(&seekCtxInit.metaOpsToLookFor, seekCtxInit.objMapFromTpl,
-            fmInit.props, objOrder);
+            fmInit.props, sh);
     CL_BREAK_IF(seekCtxInit.metaOpsToLookFor.empty());
 
     // crawl the fixed-point
@@ -651,10 +661,9 @@ void seekTemplateMatchInstances(
 
             // resolve the current ID map
             const TObjectMapper &objMap = objMapList[idx];
-            const TMapOrder &objOrder = objOrderList[idx];
+            const SymHeap &sh = *heapByIdent(ctx.progState, heapNext);
             if (SD_BACKWARD == sd)
-                relocObjsInMetaOps(&metaOpsToLookFor, objMap, fmInit.props,
-                        objOrder);
+                relocObjsInMetaOps(&metaOpsToLookFor, objMap, fmInit.props, sh);
 
             if (!processDiffOf(&fm, &metaOpsToLookFor, ctx.progState,
                         heap0, heap1, sd))
@@ -683,8 +692,7 @@ void seekTemplateMatchInstances(
 
             // schedule the successor heap
             if (SD_FORWARD == sd)
-                relocObjsInMetaOps(&metaOpsToLookFor, objMap, fmInit.props,
-                        objOrder);
+                relocObjsInMetaOps(&metaOpsToLookFor, objMap, fmInit.props, sh);
             seekCtx.heapCurrent = heapNext;
             seekStack.push(seekCtx);
         }
