@@ -277,6 +277,19 @@ TObjId relocAmbiguousObj(
     return *cObjs.begin();
 }
 
+ETargetSpecifier tsByOffset(const TOffset off, const ShapeProps &props)
+{
+    const BindingOff &bf = props.bOff;
+    if (off == bf.next)
+        return TS_LAST;
+
+    if (off == bf.prev)
+        return TS_FIRST;
+
+    CL_BREAK_IF("tsByOffset() failed to resolve target specifier");
+    return TS_INVALID;
+}
+
 TObjId relocSingleObj(
         const TObjId                obj,
         const ETargetSpecifier      ts,
@@ -306,19 +319,6 @@ TObjId relocSingleObj(
     return relocAmbiguousObj(ts, objList, props, sh);
 }
 
-ETargetSpecifier tsByOffset(const TOffset off, const ShapeProps &props)
-{
-    const BindingOff &bf = props.bOff;
-    if (off == bf.next)
-        return TS_LAST;
-
-    if (off == bf.prev)
-        return TS_FIRST;
-
-    CL_BREAK_IF("tsByOffset() failed to resolve target specifier");
-    return TS_INVALID;
-}
-
 void relocObjsInMetaOps(
         TMetaOpSet                 *pMetaOps,
         const TObjectMapper        &objMap,
@@ -331,8 +331,11 @@ void relocObjsInMetaOps(
     BOOST_FOREACH(MetaOperation mo, src) {
         ETargetSpecifier ts = TS_INVALID;
         if (MO_SET == mo.code) {
-            mo.tgtObj = relocSingleObj(mo.tgtObj, mo.tgtTs, objMap, props, sh);
             ts = tsByOffset(mo.off, props);
+            const ETargetSpecifier tgtTs = (TS_REGION == mo.tgtTs)
+                ? ts
+                : mo.tgtTs;
+            mo.tgtObj = relocSingleObj(mo.tgtObj, tgtTs, objMap, props, sh);
         }
 
         mo.obj = relocSingleObj(mo.obj, ts, objMap, props, sh);
