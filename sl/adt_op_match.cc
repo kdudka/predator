@@ -384,50 +384,12 @@ void relocOffsetsInMetaOps(TMetaOpSet *pMetaOps, const FootprintMatch &fm)
 
 typedef const FixedPoint::TraceEdge                *TEdgePtr;
 
-void digObjOrder(
-        TMapOrder                  *pObjOrder,
-        const TProgState           &progState,
-        const TEdgePtr              te,
-        const ESearchDirection      sd)
-{
-    using namespace FixedPoint;
-
-    BOOST_FOREACH(TShapeMapper::const_reference item, te->csMap) {
-        if (item.first || item.second) {
-            CL_BREAK_IF("digObjOrder is not yet fully implemented");
-            return;
-        }
-
-        THeapIdent shIdent;
-        TShapeIdx csIdx;
-        if (sd == SD_FORWARD) {
-            shIdent = te->dst;
-            csIdx = item.second;
-        }
-        else /* SD_BACKWARD */ {
-            shIdent = te->src;
-            csIdx = item.first;
-        }
-
-        const TShapeIdent csIdent(shIdent, csIdx);
-        const SymHeap &sh = *heapByIdent(progState, shIdent);
-        const Shape &cs = *shapeByIdent(progState, csIdent);
-
-        TObjList objList;
-        objListByShape(&objList, sh, cs);
-        BOOST_FOREACH(const TObjId obj, objList)
-            pObjOrder->push_back(obj);
-    }
-}
-
 typedef std::vector<THeapIdent>                     THeapIdentList;
 typedef std::vector<TObjectMapper>                  TObjectMapperList;
-typedef std::vector<TMapOrder>                      TMapOrderList;
 
 void collectNextHeaps(
         THeapIdentList             *pHeapList,
         TObjectMapperList          *pObjMapList,
-        TMapOrderList              *pObjOrderList,
         const THeapIdent            heapCurrent,
         const TProgState           &progState,
         const ESearchDirection      sd)
@@ -463,12 +425,8 @@ void collectNextHeaps(
         if (reverse)
             objMap.flip();
 
-        TMapOrder objOrder;
-        digObjOrder(&objOrder, progState, te, sd);
-
         pHeapList->push_back(heapNext);
         pObjMapList->push_back(objMap);
-        pObjOrderList->push_back(objOrder);
     }
 }
 
@@ -641,9 +599,7 @@ void seekTemplateMatchInstances(
         // collect the list of successor heaps (together with object mapping)
         THeapIdentList heapList;
         TObjectMapperList objMapList;
-        TMapOrderList objOrderList;
-        collectNextHeaps(&heapList, &objMapList, &objOrderList,
-                heapCurr, ctx.progState, sd);
+        collectNextHeaps(&heapList, &objMapList, heapCurr, ctx.progState, sd);
         const unsigned cnt = heapList.size();
         CL_BREAK_IF(cnt != objMapList.size());
 
