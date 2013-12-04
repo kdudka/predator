@@ -24,6 +24,10 @@
 #include "fixed_point.hh"
 #include "symtrace.hh"
 
+#ifndef NDEBUG
+#   include "symplot.hh"
+#endif
+
 #include <cl/cl_msg.hh>
 
 using FixedPoint::TObjectMapper;
@@ -392,3 +396,11 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
 }
 
 } // namespace AdtOp
+
+#ifndef NDEBUG
+void sl_dump(const AdtOp::DiffHeapsCtx &ctx)
+{
+    plotHeap(ctx.sh1, "diffHeaps");
+    plotHeap(ctx.sh2, "diffHeaps");
+}
+#endif
