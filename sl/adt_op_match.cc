@@ -231,11 +231,11 @@ bool matchAnchorHeap(
     return true;
 }
 
-TObjId relocAmbiguousObj(
-        const ETargetSpecifier      ts,
+TObjId selectMappedObjByTs(
+        const SymHeap              &sh,
+        const BindingOff           &bOff,
         const TObjList             &objList,
-        const ShapeProps           &props,
-        const SymHeap              &sh)
+        const ETargetSpecifier      ts)
 {
     switch (ts) {
         case TS_FIRST:
@@ -243,7 +243,7 @@ TObjId relocAmbiguousObj(
             break;
 
         default:
-            CL_BREAK_IF("invalid call of relocAmbiguousObj()");
+            CL_BREAK_IF("invalid call of selectMappedObjByTs()");
             return OBJ_INVALID;
     }
 
@@ -254,7 +254,6 @@ TObjId relocAmbiguousObj(
         cObjs.insert(obj);
     }
 
-    const BindingOff bOff = props.bOff;
     const TOffset offNext = (TS_FIRST == ts) ? bOff.next : bOff.prev;
     const TOffset offPrev = (TS_LAST  == ts) ? bOff.next : bOff.prev;
 
@@ -270,7 +269,7 @@ TObjId relocAmbiguousObj(
     }
 
     if (1U != cObjs.size()) {
-        CL_BREAK_IF("unsupported ID mapping in relocAmbiguousObj()");
+        CL_BREAK_IF("unsupported ID mapping in selectMappedObjByTs()");
         return OBJ_INVALID;
     }
 
@@ -316,7 +315,7 @@ TObjId relocSingleObj(
         // an unambiguous ID has been found!
         return objList.front();
 
-    return relocAmbiguousObj(ts, objList, props, sh);
+    return selectMappedObjByTs(sh, props.bOff, objList, ts);
 }
 
 void relocObjsInMetaOps(

@@ -71,6 +71,12 @@ void selectApplicableMatches(
         TMatchList                 *pMatchList,
         const TProgState           &progState);
 
+TObjId selectMappedObjByTs(
+        const SymHeap              &sh,
+        const BindingOff           &bOff,
+        const TObjList             &objList,
+        ETargetSpecifier            ts);
+
 } // namespace AdtOp
 
 #endif /* H_GUARD_ADT_OP_MATCH_H */
