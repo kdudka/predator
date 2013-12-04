@@ -243,7 +243,7 @@ TObjId selectMappedObjByTs(
             break;
 
         default:
-            CL_BREAK_IF("invalid call of selectMappedObjByTs()");
+            TM_DEBUG("selectMappedObjByTs() got invalid target specifier");
             return OBJ_INVALID;
     }
 
@@ -289,20 +289,22 @@ ETargetSpecifier tsByOffset(const TOffset off, const ShapeProps &props)
     return TS_INVALID;
 }
 
-TObjId relocSingleObj(
-        const TObjId                obj,
+bool relocSingleObj(
+        TObjId                     *pObj,
         const ETargetSpecifier      ts,
         const TObjectMapper        &objMap,
         const ShapeProps           &props,
         const SymHeap              &sh)
 {
     // do not relocate ID of special objects
+    TObjId obj = *pObj;
     switch (obj) {
         case OBJ_INVALID:
             CL_BREAK_IF("relocSingleObj() got OBJ_INVALID");
-            // fall through!
+            return false;
+
         case OBJ_NULL:
-            return obj;
+            return true;
 
         default:
             break;
@@ -311,14 +313,18 @@ TObjId relocSingleObj(
     // query the object map to obtain the resulting object ID
     TObjList objList;
     objMap.query<D_LEFT_TO_RIGHT>(&objList, obj);
-    if (1U == objList.size())
-        // an unambiguous ID has been found!
-        return objList.front();
+    obj = (1U == objList.size())
+        ? /* unambiguous ID mapping */ objList.front()
+        : selectMappedObjByTs(sh, props.bOff, objList, ts);
 
-    return selectMappedObjByTs(sh, props.bOff, objList, ts);
+    if (OBJ_INVALID == obj)
+        return false;
+
+    *pObj = obj;
+    return true;
 }
 
-void relocObjsInMetaOps(
+bool relocObjsInMetaOps(
         TMetaOpSet                 *pMetaOps,
         const TObjectMapper        &objMap,
         const ShapeProps           &props,
@@ -334,14 +340,18 @@ void relocObjsInMetaOps(
             const ETargetSpecifier tgtTs = (TS_REGION == mo.tgtTs)
                 ? ts
                 : mo.tgtTs;
-            mo.tgtObj = relocSingleObj(mo.tgtObj, tgtTs, objMap, props, sh);
+            if (!relocSingleObj(&mo.tgtObj, tgtTs, objMap, props, sh))
+                return false;
         }
 
-        mo.obj = relocSingleObj(mo.obj, ts, objMap, props, sh);
+        if (!relocSingleObj(&mo.obj, ts, objMap, props, sh))
+            return false;
+
         dst.insert(mo);
     }
 
     pMetaOps->swap(dst);
+    return true;
 }
 
 void relocFieldOffset(MetaOperation *pMetaOp, const FootprintMatch &fm)
@@ -581,9 +591,9 @@ void seekTemplateMatchInstances(
 
     // relocate object IDs
     const SymHeap &sh = *heapByIdent(ctx.progState, shIdent.first);
-    relocObjsInMetaOps(&seekCtxInit.metaOpsToLookFor, seekCtxInit.objMapFromTpl,
-            fmInit.props, sh);
-    CL_BREAK_IF(seekCtxInit.metaOpsToLookFor.empty());
+    if (!relocObjsInMetaOps(&seekCtxInit.metaOpsToLookFor,
+                seekCtxInit.objMapFromTpl, fmInit.props, sh))
+        return;
 
     // crawl the fixed-point
     // TODO: optimize to skip push/pack when traversing linear graphs
@@ -620,8 +630,9 @@ void seekTemplateMatchInstances(
             // resolve the current ID map
             const TObjectMapper &objMap = objMapList[idx];
             const SymHeap &sh = *heapByIdent(ctx.progState, heapNext);
-            if (SD_BACKWARD == sd)
-                relocObjsInMetaOps(&metaOpsToLookFor, objMap, fmInit.props, sh);
+            if (SD_BACKWARD == sd && !relocObjsInMetaOps(&metaOpsToLookFor,
+                        objMap, fmInit.props, sh))
+                continue;
 
             if (!processDiffOf(&fm, &metaOpsToLookFor, ctx.progState,
                         heap0, heap1, sd))
@@ -648,9 +659,11 @@ void seekTemplateMatchInstances(
                 continue;
             }
 
+            if (SD_FORWARD == sd && !relocObjsInMetaOps(&metaOpsToLookFor,
+                        objMap, fmInit.props, sh))
+                continue;
+
             // schedule the successor heap
-            if (SD_FORWARD == sd)
-                relocObjsInMetaOps(&metaOpsToLookFor, objMap, fmInit.props, sh);
             seekCtx.heapCurrent = heapNext;
             seekStack.push(seekCtx);
         }
