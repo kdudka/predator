@@ -96,6 +96,43 @@ bool selectTargetObj(
     return true;
 }
 
+bool selectObjsToCompare(
+        TObjList                   *pObjList1,
+        DiffHeapsCtx               &ctx,
+        const FldHandle             fld2)
+{
+    const unsigned cnt = pObjList1->size();
+    switch (cnt) {
+        case 0:
+            return false;
+
+        case 1:
+            return true;
+
+        default:
+            break;
+    }
+
+    const TObjId obj2 = fld2.obj();
+    CL_BREAK_IF(!ctx.sh2.isValid(obj2));
+
+    const EObjKind kind2 = ctx.sh2.objKind(obj2);
+    if (OK_DLS != kind2) {
+        MO_DEBUG("selectObjsToCompare() got unsupported kind of object");
+        return false;
+    }
+
+    const TOffset off = fld2.offset();
+    const BindingOff bOff = ctx.sh2.segBinding(obj2);
+    if (off != bOff.next && off != bOff.prev)
+        // we require non-poiner values to match along the path
+        return true;
+
+    // TODO
+    MO_DEBUG("selectObjsToCompare() is not implemented yet");
+    return false;
+}
+
 bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
 {
     // resolve val2
@@ -142,7 +179,7 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
                 break;
 
             case VT_OBJECT:
-                if (ctx.sh1.objByAddr(val1) != /* XXX */ tgtObjList1.front())
+                if (ctx.sh1.objByAddr(val1) != tgtObjList1.front())
                     break;
                 if (ctx.sh1.valOffset(val1) != tgtOff2)
                     break;
@@ -206,16 +243,11 @@ bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
     return true;
 }
 
-bool diffFields(DiffHeapsCtx &ctx, const TObjId obj1, const TObjId obj2)
+bool diffFields(DiffHeapsCtx &ctx, const TObjList &objList1, const TObjId obj2)
 {
-    if (ctx.sh1.isValid(obj1)) {
-        const EObjKind kind1 = ctx.sh1.objKind(obj1);
-        const EObjKind kind2 = ctx.sh2.objKind(obj2);
-        if (kind1 != kind2) {
-            MO_DEBUG("diffFields() detected mismatch of kind of objects"
-                    << ", obj1 = #" << obj1
-                    << ", obj2 = #" << obj2);
-        }
+    BOOST_FOREACH(const TObjId obj1, objList1) {
+        if (!ctx.sh1.isValid(obj1))
+            continue;
 
         const TSizeRange size1 = ctx.sh1.objSize(obj1);
         const TSizeRange size2 = ctx.sh2.objSize(obj2);
@@ -233,9 +265,17 @@ bool diffFields(DiffHeapsCtx &ctx, const TObjId obj1, const TObjId obj2)
 
     FldList fldList2;
     ctx.sh2.gatherLiveFields(fldList2, obj2);
-    BOOST_FOREACH(const FldHandle &fld2, fldList2)
-        if (!diffSetField(ctx, obj1, fld2))
+    BOOST_FOREACH(const FldHandle &fld2, fldList2) {
+        TObjList selectedObjs1(objList1);
+        if (!selectObjsToCompare(&selectedObjs1, ctx, fld2)) {
+            MO_DEBUG("selectObjsToCompare() has failed");
             return false;
+        }
+
+        BOOST_FOREACH(const TObjId obj1, selectedObjs1)
+            if (!diffSetField(ctx, obj1, fld2))
+                return false;
+    }
 
     // fields diffed successfully!
     return true;
@@ -347,21 +387,13 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
     BOOST_FOREACH(const TObjId obj2, objList2) {
         TObjList objList1;
         ctx.idMap.query<D_RIGHT_TO_LEFT>(&objList1, obj2);
-        if (1U < objList1.size()) {
-            MO_DEBUG("diffHeaps() does not support ambiguous ID mapping");
-            return false;
-        }
 
-        if (objList1.empty())
-            objList1.push_back(OBJ_INVALID);
-
-        const TObjId obj1 = objList1.front();
-        if (!ctx.sh1.isValid(obj1)) {
+        if (objList1.empty() || !ctx.sh1.isValid(objList1.front())) {
             const MetaOperation moAlloc(MO_ALLOC, obj2);
             ctx.opSet.insert(moAlloc);
         }
 
-        if (!diffFields(ctx, obj1, obj2))
+        if (!diffFields(ctx, objList1, obj2))
             return false;
     }
 
