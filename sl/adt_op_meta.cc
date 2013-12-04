@@ -20,6 +20,7 @@
 #include "config.h"
 #include "adt_op_meta.hh"
 
+#include "adt_op_match.hh"          // for selectMappedObjByTs()
 #include "fixed_point.hh"
 #include "symtrace.hh"
 
@@ -53,6 +54,43 @@ struct DiffHeapsCtx {
             MO_DEBUG("diffHeaps() operates on non-trivial map of object IDs");
     }
 };
+
+bool selectTargetObj(
+        TObjList                   *pObjList1,
+        DiffHeapsCtx               &ctx,
+        const TObjId                obj2,
+        const ETargetSpecifier      ts2)
+{
+    const unsigned cnt = pObjList1->size();
+    switch (cnt) {
+        case 0:
+            // got no objects to select from
+            return false;
+
+        case 1:
+            // unambiguous ID mapping, we are done
+            return true;
+
+        default:
+            break;
+    }
+
+    const EObjKind kind2 = ctx.sh2.objKind(obj2);
+    if (kind2 != OK_DLS)
+        // we only support OK_DLS for now
+        return false;
+
+    const BindingOff bOff = ctx.sh2.segBinding(obj2);
+    const TObjId obj1 = selectMappedObjByTs(ctx.sh1, bOff, *pObjList1, ts2);
+    if (OBJ_INVALID == obj1) {
+        MO_DEBUG("selectMappedObjByTs() failed to resolve ambiguous mapping");
+        return false;
+    }
+
+    pObjList1->clear();
+    pObjList1->push_back(obj1);
+    return true;
+}
 
 bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
 {
@@ -90,8 +128,8 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
     // check target object mapping
     TObjList tgtObjList1;
     ctx.idMap.query<D_RIGHT_TO_LEFT>(&tgtObjList1, tgtObj2);
-    if (1U != tgtObjList1.size()) {
-        MO_DEBUG("diffSetField() does not support non-trivial map of objs");
+    if (!selectTargetObj(&tgtObjList1, ctx, tgtObj2, tgtTs2)) {
+        MO_DEBUG("selectTargetObj() failed to resolve ambiguous ID mapping");
         return false;
     }
 
