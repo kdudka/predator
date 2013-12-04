@@ -364,7 +364,7 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
 
         const TObjId obj1 = objList1.front();
         if (!ctx.sh1.isValid(obj1)) {
-            const MetaOperation moAlloc(MO_ALLOC, obj1);
+            const MetaOperation moAlloc(MO_ALLOC, obj2);
             ctx.opSet.insert(moAlloc);
         }
 
@@ -382,7 +382,7 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
 
         BOOST_FOREACH(const TObjId obj2, objList2) {
             if (!ctx.sh2.isValid(obj2)) {
-                const MetaOperation moFree(MO_FREE, obj2);
+                const MetaOperation moFree(MO_FREE, obj1);
                 ctx.opSet.insert(moFree);
             }
         }
