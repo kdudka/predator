@@ -23,6 +23,7 @@
 #include "adt_op_match.hh"          // for selectMappedObjByTs()
 #include "fixed_point.hh"
 #include "symtrace.hh"
+#include "symutil.hh"               // for nextObj()
 
 #ifndef NDEBUG
 #   include "symplot.hh"
@@ -128,9 +129,45 @@ bool selectObjsToCompare(
         // we require non-poiner values to match along the path
         return true;
 
-    // TODO
-    MO_DEBUG("selectObjsToCompare() is not implemented yet");
-    return false;
+    // get begin/end of the chain
+    const TObjId beg = selectMappedObjByTs(ctx.sh1, bOff, *pObjList1, TS_FIRST);
+    const TObjId end = selectMappedObjByTs(ctx.sh1, bOff, *pObjList1, TS_LAST);
+
+    // gather the set of all objects in *pObjList1
+    TObjSet objSet1;
+    BOOST_FOREACH(const TObjId obj1, *pObjList1)
+        objSet1.insert(obj1);
+
+    TObjId curr = beg;
+    while (1U == objSet1.erase(curr) && !objSet1.empty()) {
+        const TObjId next = nextObj(ctx.sh1, curr, bOff.next);
+        if (!isOnHeap(ctx.sh1.objStorClass(next))) {
+            // next object not on heap
+            CL_DEBUG("diffFields() needs to be improved");
+            return false;
+        }
+
+        const TObjId prev = nextObj(ctx.sh1, next, bOff.prev);
+        if (curr != prev)
+            // wrong back-link
+            return false;
+
+        curr = next;
+    }
+    if (end != curr)
+        return false;
+
+    TObjId obj1;
+    if (off == bOff.prev)
+        obj1 = beg;
+    else if (off == bOff.next)
+        obj1 = end;
+    else
+        return false;
+
+    pObjList1->clear();
+    pObjList1->push_back(obj1);
+    return true;
 }
 
 bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
