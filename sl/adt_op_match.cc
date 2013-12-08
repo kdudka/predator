@@ -896,7 +896,8 @@ void selectApplicableMatches(
     }
 
     // sort templates by the number of instructions they would replace
-    typedef std::map<int /* prio */, TTemplateIdx> TTplIdxByPrio;
+    typedef std::vector<TTemplateIdx>               TTplIdxList;
+    typedef std::map<int /* prio */, TTplIdxList>   TTplIdxByPrio;
     TTplIdxByPrio tplIdxByPrio;
     const TTemplateIdx tplCnt = insnsToBeReplaced.size();
     for (TTemplateIdx tpl = 0; tpl < tplCnt; ++tpl) {
@@ -905,16 +906,15 @@ void selectApplicableMatches(
             continue;
 
         const int prio = -replCnt;
-        tplIdxByPrio[prio] = tpl;
+        tplIdxByPrio[prio].push_back(tpl);
     }
 
     const unsigned matchCnt = mlOrig.size();
 
     // go through matches ordered by prio and select a set of applicable ones
     TMatchList mlSelected;
-    BOOST_FOREACH(const TTplIdxByPrio::const_reference item, tplIdxByPrio) {
-        const TTemplateIdx tpl = item.second;
-
+    BOOST_FOREACH(const TTplIdxByPrio::const_reference item, tplIdxByPrio)
+    BOOST_FOREACH(const TTemplateIdx tpl, item.second) {
         // first check with matches are applicable
         std::vector<unsigned /* match idx */> picked;
         for (unsigned matchIdx = 0U; matchIdx < matchCnt; ++matchIdx) {
