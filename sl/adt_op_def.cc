@@ -150,10 +150,10 @@ OpTemplate* createPopBack(TplFactory &fact)
     const TObjId reg = fact.createObj(&sh, OK_REGION);
 
     // nullify the next/prev fields
-    const PtrHandle nextPtr(sh, reg, fact.nextAt());
-    const PtrHandle prevPtr(sh, reg, fact.prevAt());
-    nextPtr.setValue(VAL_NULL);
-    prevPtr.setValue(VAL_NULL);
+    const PtrHandle regNext(sh, reg, fact.nextAt());
+    const PtrHandle regPrev(sh, reg, fact.prevAt());
+    regNext.setValue(VAL_NULL);
+    regPrev.setValue(VAL_NULL);
 
     // store the input heap
     SymHeap input(sh);
@@ -172,7 +172,6 @@ OpTemplate* createPopBack(TplFactory &fact)
     const TObjId dls = fact.createObj(&sh, OK_DLS);
     const PtrHandle dlsNext(sh, dls, fact.nextAt());
     const PtrHandle dlsPrev(sh, dls, fact.prevAt());
-    const PtrHandle regPrev(sh, reg, fact.prevAt());
 
     // chain both objects together such that they represent a linked list
     const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
@@ -195,11 +194,42 @@ OpTemplate* createPopBack(TplFactory &fact)
     return tpl;
 }
 
+OpTemplate* createClear2(TplFactory &fact)
+{
+    OpTemplate *tpl = new OpTemplate("clear2");
+
+    // create an empty heap as the output
+    SymHeap sh(fact.createHeap());
+    SymHeap output(sh);
+    Trace::waiveCloneOperation(output);
+
+    // allocate a pair of regions
+    const TObjId reg1 = fact.createObj(&sh, OK_REGION);
+    const TObjId reg2 = fact.createObj(&sh, OK_REGION);
+
+    // acquire handles to their prev/next fields
+    const PtrHandle reg1Prev(sh, reg1, fact.prevAt());
+    const PtrHandle reg1Next(sh, reg1, fact.nextAt());
+    const PtrHandle reg2Prev(sh, reg2, fact.prevAt());
+    const PtrHandle reg2Next(sh, reg2, fact.nextAt());
+
+    // connect them as a list
+    reg1Prev.setValue(VAL_NULL);
+    reg1Next.setValue(sh.addrOfTarget(reg2, TS_REGION, fact.headAt()));
+    reg2Prev.setValue(sh.addrOfTarget(reg1, TS_REGION, fact.headAt()));
+    reg2Next.setValue(VAL_NULL);
+
+    // register pre/post pair for clear2()
+    tpl->addFootprint(new OpFootprint(/* input */ sh, output));
+    return tpl;
+}
+
 void loadDefaultOperations(OpCollection *pDst, const CodeStorage::Storage &stor)
 {
     TplFactory fact(stor);
     pDst->addTemplate(createPushBack(fact));
     pDst->addTemplate(createPopBack(fact));
+    pDst->addTemplate(createClear2(fact));
 }
 
 } // namespace AdtOp
