@@ -103,14 +103,6 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
     const TObjType clt = fld2.type();
     const TOffset off = fld2.offset();
 
-    // check object mapping
-    const TObjId obj2 = fld2.obj();
-    if (obj1 != obj2) {
-        MO_DEBUG("diffSetField() operates on non-trivially mapped objects"
-                << ", obj1 = #" << obj1
-                << ", obj2 = #" << obj2);
-    }
-
     // resolve target
     const TObjId tgtObj2 = ctx.sh2.objByAddr(val2);
     const TOffset tgtOff2 = ctx.sh2.valOffset(val2);
@@ -168,7 +160,8 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
     }
 
     // insert meta-operation
-    const MetaOperation moSet(MO_SET, obj1, off, tgtObj2, tgtOff2, tgtTs2);
+    const TObjId obj = (ctx.sh1.isValid(obj1)) ? obj1 : fld2.obj();
+    const MetaOperation moSet(MO_SET, obj, off, tgtObj2, tgtOff2, tgtTs2);
     ctx.opSet.insert(moSet);
     return true;
 }

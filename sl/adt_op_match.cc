@@ -514,8 +514,13 @@ bool processDiffOf(
         return false;
     }
 
+    TObjSet freshObjs;
+    BOOST_FOREACH(const MetaOperation &mo, metaOpsNow)
+        if (MO_ALLOC == mo.code)
+            freshObjs.insert(mo.obj);
+
     BOOST_FOREACH(const MetaOperation &mo, metaOpsNow) {
-        const SymHeap &sh = (MO_FREE == mo.code) ? sh0 : sh1;
+        const SymHeap &sh = (hasKey(freshObjs, mo.obj)) ? sh1 : sh0;
         const EStorageClass code = sh.objStorClass(mo.obj);
         if (isProgramVar(code))
             // we are not interested in changing non-heap variables
