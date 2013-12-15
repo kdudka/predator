@@ -200,7 +200,7 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     // match templates
     using namespace AdtOp;
     TMatchList matchList;
-    matchFootprints(&matchList, adtOps, fncState);
+    matchTemplates(&matchList, adtOps, fncState);
     selectApplicableMatches(&matchList, fncState);
     summarizeInsnReplace(matchList, fncState);
 

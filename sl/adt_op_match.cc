@@ -741,20 +741,7 @@ void matchSingleFootprint(
     }
 }
 
-void matchTemplate(
-        MatchCtx                   &ctx,
-        const OpTemplate           &tpl,
-        const TTemplateIdx          tplIdx)
-{
-    const TFootprintIdx fpCnt = tpl.size();
-    for (TFootprintIdx fpIdx = 0; fpIdx < fpCnt; ++fpIdx) {
-        const OpFootprint &fp = tpl[fpIdx];
-        const TFootprintIdent fpIdent(tplIdx, fpIdx);
-        matchSingleFootprint(ctx, tpl, fp, fpIdent);
-    }
-}
-
-void matchFootprints(
+void matchTemplates(
         TMatchList                 *pDst,
         const OpCollection         &opCollection,
         const TProgState           &progState)
@@ -766,8 +753,14 @@ void matchFootprints(
     const TTemplateIdx tplCnt = opCollection.size();
     for (TTemplateIdx tplIdx = 0; tplIdx < tplCnt; ++tplIdx) {
         const OpTemplate &tpl = ctx.opCollection[tplIdx];
-        TM_DEBUG("[ADT] trying to match template: " << tpl.name());
-        matchTemplate(ctx, tpl, tplIdx);
+        const TFootprintIdx fpCnt = tpl.size();
+        for (TFootprintIdx fpIdx = 0; fpIdx < fpCnt; ++fpIdx) {
+            const OpFootprint &fp = tpl[fpIdx];
+            const TFootprintIdent fpIdent(tplIdx, fpIdx);
+            TM_DEBUG("[ADT] trying to match template: " << tpl.name()
+                    << "[" << fpIdx << "]");
+            matchSingleFootprint(ctx, tpl, fp, fpIdent);
+        }
     }
 }
 

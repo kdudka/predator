@@ -54,7 +54,7 @@ struct FootprintMatch {
 typedef std::vector<FootprintMatch>                 TMatchList;
 typedef FixedPoint::GlobalState                     TProgState;
 
-void matchFootprints(
+void matchTemplates(
         TMatchList                 *pDst,
         const OpCollection         &coll,
         const TProgState           &progState);
