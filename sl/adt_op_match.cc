@@ -33,7 +33,7 @@
 
 namespace AdtOp {
 
-bool debuggingTplMatch;
+bool debuggingTplMatch = true;
 
 #define TM_DEBUG(msg) do {              \
     if (!AdtOp::debuggingTplMatch)      \
@@ -549,12 +549,9 @@ bool processDiffOf(
         if (isIndependentOp(pMatch, sh0, mo))
             continue;
 
-        if (MO_FREE == mo.code) {
-            TM_DEBUG("unexpected MO_FREE meta-operation in processDiffOf()");
-            return false;
-        }
-
-        TM_DEBUG("failed to prove independency of a meta-operation");
+        TM_DEBUG("failed to prove independency of a meta-operation"
+                ", src=" << heap0.first << "/" << heap0.second <<
+                ", dst=" << heap1.first << "/" << heap1.second);
         return false;
     }
 
@@ -711,7 +708,8 @@ void matchSingleFootprint(
 
     BOOST_FOREACH(FixedPoint::TShapeSeq seq, ctx.shapeSeqs) {
         // resolve shape sequence to search through
-        if (SD_FORWARD == tpl.searchDirection())
+        const ESearchDirection sd = tpl.searchDirection();
+        if (SD_FORWARD == sd)
             // reverse the sequence if searching _forward_
             std::reverse(seq.begin(), seq.end());
 
@@ -731,6 +729,13 @@ void matchSingleFootprint(
             if (!diffHeapsIfNeeded(&metaOps, fp, fm))
                 // non-recoverable error while computing diff of the footprint
                 return;
+
+            const THeapIdent heapIdent = shIdent.first;
+            TM_DEBUG("found anchor heap: " << heapIdent.first
+                    << "/" << heapIdent.second << ", seeking "
+                    << tpl.name() << "[" << fpIdent.second << "] "
+                    << ((SD_FORWARD == sd) ? "forward" : "backward")
+                    << "...");
 
             // find all template match instances using this anchor heap
             seekTemplateMatchInstances(ctx, tpl, fm, metaOps, shIdent);
@@ -757,8 +762,8 @@ void matchTemplates(
         for (TFootprintIdx fpIdx = 0; fpIdx < fpCnt; ++fpIdx) {
             const OpFootprint &fp = tpl[fpIdx];
             const TFootprintIdent fpIdent(tplIdx, fpIdx);
-            TM_DEBUG("[ADT] trying to match template: " << tpl.name()
-                    << "[" << fpIdx << "]");
+            TM_DEBUG("tpl = " << tpl.name() << "[" << fpIdx << "]"
+                    ", looking for anchor heaps...");
             matchSingleFootprint(ctx, tpl, fp, fpIdent);
         }
     }
