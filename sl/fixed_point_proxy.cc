@@ -176,7 +176,7 @@ void summarizeInsnReplace(
 
     // collect instructions to be replaced
     TInsnListByTplIdx insnsToBeReplaced;
-    collectReplacedInsn(&insnsToBeReplaced, matchList, progState);
+    collectReplacedInsns(&insnsToBeReplaced, matchList, progState);
 
     const TTemplateIdx tplCnt = insnsToBeReplaced.size();
     for (TTemplateIdx tplIdx = 0; tplIdx < tplCnt; ++tplIdx) {

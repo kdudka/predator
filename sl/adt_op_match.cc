@@ -785,7 +785,7 @@ void pushBackIfLast(
 typedef std::set<THeapIdent>                        THeapSet;
 
 /// this assumes heapSet to be sorted by location idx, then by heap idx
-void collectReplacedInsnCore(
+void collectReplacedInsnsCore(
         TInsnList                  *pDst,
         const THeapSet             &heapSet,
         const TProgState           &progState)
@@ -816,7 +816,7 @@ void collectReplacedInsnCore(
         pushBackIfLast(pDst, lastLoc, lastHeap, progState);
 }
 
-void collectReplacedInsn(
+void collectReplacedInsns(
         TInsnListByTplIdx          *pDst,
         const TMatchList           &matchList,
         const TProgState           &progState)
@@ -847,7 +847,7 @@ void collectReplacedInsn(
     // collect the set of replaced insns for each template
     TInsnListByTplIdx &dst = *pDst;
     for (TTemplateIdx tpl = 0; tpl < tplCnt; ++tpl)
-        collectReplacedInsnCore(&dst[tpl], heapSetByTpl[tpl], progState);
+        collectReplacedInsnsCore(&dst[tpl], heapSetByTpl[tpl], progState);
 }
 
 bool applyMatch(THeapSet *pHeapPool, const FootprintMatch &fm, const bool ro)
@@ -881,7 +881,7 @@ void selectApplicableMatches(
     // collect instructions to be replaced
     const TMatchList &mlOrig = *pMatchList;
     TInsnListByTplIdx insnsToBeReplaced;
-    collectReplacedInsn(&insnsToBeReplaced, mlOrig, progState);
+    collectReplacedInsns(&insnsToBeReplaced, mlOrig, progState);
 
     // collect heaps to be replaced
     THeapSet toReplace;
@@ -935,7 +935,7 @@ void selectApplicableMatches(
     }
 
     if (!toReplace.empty()) {
-        CL_BREAK_IF("unhandled parital match in selectApplicableMatches()");
+        CL_BREAK_IF("unhandled partial match in selectApplicableMatches()");
         mlSelected.clear();
     }
 

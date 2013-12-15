@@ -62,7 +62,7 @@ void matchFootprints(
 typedef std::vector<FixedPoint::TLocIdx>            TInsnList;
 typedef std::vector<TInsnList>                      TInsnListByTplIdx;
 
-void collectReplacedInsn(
+void collectReplacedInsns(
         TInsnListByTplIdx          *pDst,
         const TMatchList           &matchList,
         const TProgState           &progState);
