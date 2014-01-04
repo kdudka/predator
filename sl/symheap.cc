@@ -2246,6 +2246,17 @@ void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData)
     TFldIdSet usedBy = valData->usedBy;
     BOOST_FOREACH(const TFldId fld, usedBy)
         this->setValueOf(fld, replaceBy);
+
+    const TValId anchor = valData->anchor;
+    const TValId val = valData->valRoot;
+    if (anchor == val)
+        return;
+
+    // int value cannot depend on another value any more, remove the dependency!
+    ReferableValue *anchorData;
+    this->ents.getEntRW(&anchorData, anchor);
+    TValList &deps = anchorData->dependentValues;
+    deps.erase(std::remove(deps.begin(), deps.end(), val), deps.end());
 }
 
 void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win)
