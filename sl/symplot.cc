@@ -281,13 +281,24 @@ void describeVar(PlotData &plot, const TObjId obj)
     SymHeap &sh = plot.sh;
     TStorRef stor = sh.stor();
 
-    // var lookup
-    const CVar cv = sh.cVarByObject(obj);
+    int inst;
+    CallInst ci(-1, -1);
+    if (sh.isAnonStackObj(obj, &ci)) {
+        // anonymous stack object
+        const CodeStorage::Fnc *fnc = stor.fncs[ci.uid];
+        plot.out << "STACK of " << nameOf(*fnc) << "()";
+        inst = ci.inst;
+    }
+    else {
+        // var lookup
+        const CVar cv = sh.cVarByObject(obj);
+        plot.out << "CL" << varToString(stor, cv.uid);
+        inst = cv.inst;
+    }
 
-    // write identity of the var
-    plot.out << "CL" << varToString(stor, cv.uid) << " [obj = #" << obj;
-    if (1 < cv.inst)
-        plot.out << ", inst = " << cv.inst;
+    plot.out << " [obj = #" << obj;
+    if (1 < inst)
+        plot.out << ", inst = " << inst;
     plot.out << "]";
 }
 
