@@ -282,6 +282,12 @@ struct CallInst {
     int uid;        ///< uid of the function
     int inst;       ///< how many instances of the fnc we have on the stack
 
+    CallInst():
+        uid(-1),
+        inst(-1)
+    {
+    }
+
     CallInst(const SymBackTrace *);
 
     CallInst(int uid_, int inst_):
@@ -290,6 +296,17 @@ struct CallInst {
     {
     }
 };
+
+inline bool operator==(const CallInst &a, const CallInst &b)
+{
+    return (a.uid  == b.uid)
+        && (a.inst == b.inst);
+}
+
+inline bool operator!=(const CallInst &a, const CallInst &b)
+{
+    return !operator==(a, b);
+}
 
 /**
  * lexicographical comparison of CallInst objects

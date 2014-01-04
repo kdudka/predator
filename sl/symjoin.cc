@@ -1472,6 +1472,34 @@ bool joinUniBlocks(
     return true;
 }
 
+bool joinAnonStackObjs(
+        bool                   *pAnon,
+        CallInst               *pFrom,
+        SymJoinCtx             &ctx,
+        const TObjId            obj1,
+        const TObjId            obj2)
+{
+    CallInst from1, from2;
+    const bool anon1 = ctx.sh1.isAnonStackObj(obj1, &from1);
+    const bool anon2 = ctx.sh2.isAnonStackObj(obj2, &from2);
+    if (anon1 != anon2)
+        // storage class mismatch!
+        return false;
+
+    *pAnon = anon1 /* = anon2 */;
+    if (!anon1)
+        // none of them is an anonymous stack object
+        return true;
+
+    if (from1 != from2)
+        // call instance mismatch!
+        return false;
+
+    // join of anonymous stack objects
+    *pFrom = from1 /* = from2 */;
+    return true;
+}
+
 static const BindingOff ObjOrNull(OK_OBJ_OR_NULL);
 
 /// (NULL == pObjDst) means dry-run
@@ -1510,12 +1538,19 @@ bool joinObjects(
     if (!joinObjType(&clt, ctx, obj1, obj2))
         return false;
 
+    bool anon;
+    CallInst from;
+    if (!joinAnonStackObjs(&anon, &from, ctx, obj1, obj2))
+        return false;
+
     if (!pObjDst)
         // do not create the object
         return true;;
 
     // create an image in ctx.dst
-    const TObjId objDst = ctx.dst.heapAlloc(size);
+    const TObjId objDst = (anon)
+        ? ctx.dst.stackAlloc(size, from)
+        : ctx.dst.heapAlloc(size);
 
     if (!joinUniBlocks(ctx, objDst, obj1, obj2))
         // failed to complement uniform blocks
