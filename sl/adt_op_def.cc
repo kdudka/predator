@@ -224,12 +224,18 @@ OpTemplate* createClear2(TplFactory &fact)
     return tpl;
 }
 
-void loadDefaultOperations(OpCollection *pDst, const CodeStorage::Storage &stor)
+bool loadDefaultOperations(OpCollection *pDst, const CodeStorage::Storage &stor)
 {
+    if (stor.types.dataPtrSizeof() <= 0) {
+        CL_BREAK_IF("loadDefaultOperations() failed to resolve sizeof(void *)");
+        return false;
+    }
+
     TplFactory fact(stor);
     pDst->addTemplate(createPushBack(fact));
     pDst->addTemplate(createPopBack(fact));
     pDst->addTemplate(createClear2(fact));
+    return true;
 }
 
 } // namespace AdtOp

@@ -28,7 +28,7 @@ namespace AdtOp {
 
 class OpCollection;
 
-void loadDefaultOperations(OpCollection *pDst, const CodeStorage::Storage &);
+bool loadDefaultOperations(OpCollection *pDst, const CodeStorage::Storage &);
 
 } // namespace AdtOp
 
