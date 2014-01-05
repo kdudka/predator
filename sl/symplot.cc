@@ -271,6 +271,29 @@ bool digIcByOffset(
     return true;
 }
 
+void describeVarCore(int *pInst, PlotData &plot, const TObjId obj)
+{
+    SymHeap &sh = plot.sh;
+    TStorRef stor = sh.stor();
+
+    CallInst ci(-1, -1);
+    if (sh.isAnonStackObj(obj, &ci)) {
+        // anonymous stack object
+        plot.out << "STACK of ";
+        if (-1 == ci.uid)
+            plot.out << "FNC_INVALID";
+        else
+            plot.out << nameOf(*stor.fncs[ci.uid]) << "()";
+        *pInst = ci.inst;
+    }
+    else {
+        // var lookup
+        const CVar cv = sh.cVarByObject(obj);
+        plot.out << "CL" << varToString(stor, cv.uid);
+        *pInst = cv.inst;
+    }
+}
+
 void describeVar(PlotData &plot, const TObjId obj)
 {
     if (OBJ_RETURN == obj) {
@@ -278,23 +301,11 @@ void describeVar(PlotData &plot, const TObjId obj)
         return;
     }
 
-    SymHeap &sh = plot.sh;
-    TStorRef stor = sh.stor();
-
     int inst;
-    CallInst ci(-1, -1);
-    if (sh.isAnonStackObj(obj, &ci)) {
-        // anonymous stack object
-        const CodeStorage::Fnc *fnc = stor.fncs[ci.uid];
-        plot.out << "STACK of " << nameOf(*fnc) << "()";
-        inst = ci.inst;
-    }
-    else {
-        // var lookup
-        const CVar cv = sh.cVarByObject(obj);
-        plot.out << "CL" << varToString(stor, cv.uid);
-        inst = cv.inst;
-    }
+    if (plot.sh.isValid(obj))
+        describeVarCore(&inst, plot, obj);
+    else
+        inst = -1;
 
     plot.out << " [obj = #" << obj;
     if (1 < inst)

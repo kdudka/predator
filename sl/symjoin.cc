@@ -198,6 +198,9 @@ void dump_ctx(const SymJoinCtx &ctx)
 {
     using std::cout;
 
+    // paralyze SymHeap self-checks while plotting from a debugger
+    ProtectionIntrusion intrudor;
+
     // plot heaps
     if (!ctx.joiningData()) {
         cout << "    plotting ctx.sh1...\n";

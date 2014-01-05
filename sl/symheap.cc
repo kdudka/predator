@@ -3371,6 +3371,12 @@ bool SymHeapCore::isAnonStackObj(const TObjId obj, CallInst *pFrom)
         }
     }
 
+    if (::bypassSelfChecks) {
+        // hide the failure while dumping plots for debugging purposes
+        *pFrom = CallInst();
+        return true;
+    }
+
     CL_BREAK_IF("isAnonStackObj() detected SymHeapCore inconsistency");
     return false;
 }
