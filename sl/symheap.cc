@@ -3298,17 +3298,20 @@ void SymHeapCore::gatherObjects(TObjList &dst, bool (*filter)(EStorageClass))
 void SymHeapCore::clearAnonStackObjects(TObjList &dst, const CallInst &of)
 {
     CL_BREAK_IF(!dst.empty());
+    if (!hasKey(d->anonStackMap, of))
+        return;
+
+    // we need a RW access to the map because we are going to remove objs
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->anonStackMap);
 
     TAnonStackMap &sMap = *d->anonStackMap;
     const TAnonStackMap::iterator it = sMap.find(of);
-    if (sMap.end() == it)
-        return;
+    CL_BREAK_IF(sMap.end() == it);
 
     // return the list of anonymous stack objects
     dst = it->second;
 
     // clear the list of anonymous stack objects
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->anonStackMap);
     sMap.erase(it);
 }
 
