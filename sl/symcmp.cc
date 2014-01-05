@@ -206,9 +206,7 @@ bool cmpValues(
         return (cVal1 == cVal2);
     }
 
-    CL_BREAK_IF(isPossibleToDeref(sh1, v1) != isPossibleToDeref(sh2, v2));
-
-    if (isPossibleToDeref(sh1, v1))
+    if (isAnyDataArea(code))
         *pNeedFollow = true;
     else
         // no valid target
