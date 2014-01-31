@@ -345,10 +345,10 @@ void SymExecEngine::updateStateInBranch(
     SymProc procOrig(shOrig, &bt_);
     procOrig.setLocation(lw_);
 
-    // prepare trace node for a non-deterministic condition
+    // append trace node for a non-deterministic condition
     Trace::waiveCloneOperation(shOrig);
-    Trace::Node *trCond = new Trace::CondNode(shOrig.traceNode(),
-                &insnCmp, &insnCnd, /* det */ false, branch);
+    shOrig.traceUpdate(new Trace::CondNode(shOrig.traceNode(),
+                &insnCmp, &insnCnd, /* det */ false, branch));
 
 #if DEBUG_SE_NONDET_COND < 2
     const bool hasAbstract = isAnyAbstractOf(shOrig, v1, v2);
@@ -360,7 +360,6 @@ void SymExecEngine::updateStateInBranch(
     CL_BREAK_IF(!dst.size());
 
     BOOST_FOREACH(SymHeap *sh, dst) {
-        sh->traceUpdate(trCond);
 #if DEBUG_SE_NONDET_COND < 2
         if (hasAbstract)
 #endif
