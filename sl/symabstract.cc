@@ -380,6 +380,10 @@ void spliceOutListSegment(
     LDP_PLOT(symabstract, sh);
     CL_BREAK_IF(objMinLength(sh, seg));
 
+    // append a trace node representing this operation
+    Trace::Node *const trNode = new Trace::SpliceOutNode(sh.traceNode());
+    sh.traceUpdate(trNode);
+
     const TValId valNext = nextValFromSeg(sh, seg);
     const TOffset offHead = headOffset(sh, seg);
 
@@ -443,7 +447,7 @@ TMinLen spliceOutSegmentIfNeeded(
 
     // possibly empty LS
     SymHeap sh0(sh);
-    sh0.traceUpdate(new Trace::SpliceOutNode(sh.traceNode()));
+    Trace::waiveCloneOperation(sh0);
     spliceOutListSegment(sh0, seg, leakObjs);
     todo.push_back(sh0);
     Trace::waiveCloneOperation(todo.back());

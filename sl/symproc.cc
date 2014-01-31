@@ -1663,9 +1663,6 @@ bool spliceOutAbstractPathCore(
     CL_DEBUG_MSG(loc, "spliceOutAbstractPathCore() removed "
             << len << " possibly empty abstract objects");
 
-    // append a trace node for this operation
-    sh.traceUpdate(new Trace::SpliceOutNode(sh.traceNode(), len));
-
     if (lm.importLeakObjs(&leakObjs))
         // [L0] leakage during splice-out
         REPORT_MEMLEAK(proc, "memory leak detected while removing a segment");
