@@ -385,19 +385,34 @@ void spliceOutListSegment(
     sh.traceUpdate(trNode);
 
     const TValId valNext = nextValFromSeg(sh, seg);
+    const TObjId objNext = sh.objByAddr(valNext);
     const TOffset offHead = headOffset(sh, seg);
+
+    Trace::TIdMapper &idMap = trNode->idMapper();
+    if (sh.isValid(objNext)) {
+        // map the next object as continuation of the empty variant of 0+ DLS
+        idMap.insert(seg, objNext);
+        idMap.insert(objNext, objNext);
+    }
 
     const EObjKind kind = sh.objKind(seg);
     if (OK_DLS == kind) {
         const PtrHandle prevPtr = prevPtrFromSeg(sh, seg);
         const TValId valPrev = prevPtr.value();
+        const TObjId objPrev = sh.objByAddr(valPrev);
         redirectRefs(sh,
                 /* pointingFrom */ OBJ_INVALID,
                 /* pointingTo   */ seg,
                 /* pointingWith */ TS_LAST,
-                /* redirectTo   */ sh.objByAddr(valPrev),
+                /* redirectTo   */ objPrev,
                 /* redirectWith */ sh.targetSpec(valPrev),
                 /* offHead      */ sh.valOffset(valPrev) - offHead);
+
+        if (sh.isValid(objPrev)) {
+            // map prev object as continuation of the empty variant of 0+ DLS
+            idMap.insert(seg, objPrev);
+            idMap.insert(objPrev, objPrev);
+        }
     }
 
     ETargetSpecifier ts = TS_INVALID;
@@ -422,7 +437,7 @@ void spliceOutListSegment(
             /* pointingFrom */ OBJ_INVALID,
             /* pointingTo   */ seg,
             /* pointingWith */ ts,
-            /* redirectTo   */ sh.objByAddr(valNext),
+            /* redirectTo   */ objNext,
             /* redirectWith */ sh.targetSpec(valNext),
             /* offHead      */ sh.valOffset(valNext) - offHead);
 
