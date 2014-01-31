@@ -104,21 +104,6 @@ inline TValId segHeadAt(SymHeap &sh, TObjId seg, ETargetSpecifier ts)
     return shWritable.addrOfTarget(seg, ts, off.head);
 }
 
-/// we require obj to be an abstract object
-inline TObjId segNextObj(SymHeap &sh, TObjId obj)
-{
-    const EObjKind kind = sh.objKind(obj);
-    if (OK_OBJ_OR_NULL == kind)
-        return OBJ_NULL;
-
-    const BindingOff off = sh.segBinding(obj);
-    const TOffset offNext = (OK_DLS == kind)
-        ? off.prev
-        : off.next;
-
-    return nextObj(sh, obj, offNext);
-}
-
 inline TMinLen objMinLength(const SymHeap &sh, TObjId obj)
 {
     if (!sh.isValid(obj))
