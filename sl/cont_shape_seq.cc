@@ -29,6 +29,9 @@ typedef std::vector<TShapeIdent>                    TShapeIdentList;
 bool hasSuccessorShape(const TTraceEdgeList &outEdges, const TShapeIdx csIdx)
 {
     BOOST_FOREACH(const TraceEdge *e, outEdges) {
+        if (e->csMap.empty())
+            continue;
+
         TShapeMapper::TVector succs;
         e->csMap.query<D_LEFT_TO_RIGHT>(&succs, csIdx);
         if (!succs.empty())
@@ -55,6 +58,9 @@ void findPredecessors(
     const TTraceEdgeList &inEdges = dstState.traceInEdges[dstShIdx];
 
     BOOST_FOREACH(const TraceEdge *e, inEdges) {
+        if (e->csMap.empty())
+            continue;
+
         TShapeMapper::TVector inbound;
         e->csMap.query<D_RIGHT_TO_LEFT>(&inbound, dstCsIdx);
         if (1U < inbound.size())
