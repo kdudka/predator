@@ -24,6 +24,7 @@
 #include "adt_op_def.hh"
 #include "adt_op_match.hh"
 #include "cont_shape_seq.hh"
+#include "cont_shape_var.hh"
 #include "fixed_point.hh"
 #include "symplot.hh"
 
@@ -203,6 +204,15 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     matchTemplates(&matchList, adtOps, fncState);
     selectApplicableMatches(&matchList, fncState);
     summarizeInsnReplace(matchList, fncState);
+
+    // assign shape variables
+    TShapeVarByShape varByShape;
+    if (assignShapeVariables(&varByShape, matchList, adtOps, fncState)) {
+        CL_DEBUG("[ADT] shape variables assigned successfully");
+        // TODO
+    }
+    else
+        CL_WARN("[ADT] failed to assign shape variables");
 
     // remove matched heaps not representing any instructions to be replaced
     BOOST_FOREACH(FootprintMatch &fm, matchList) {

@@ -48,6 +48,7 @@ add_library(predator STATIC
     cl_symexec.cc
     cont_shape.cc
     cont_shape_seq.cc
+    cont_shape_var.cc
     fixed_point.cc
     fixed_point_proxy.cc
     glconf.cc
