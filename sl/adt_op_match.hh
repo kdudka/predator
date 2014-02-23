@@ -77,6 +77,15 @@ TObjId selectMappedObjByTs(
         const TObjList             &objList,
         ETargetSpecifier            ts);
 
+typedef int                                         TOpIdx;
+typedef int                                         TMatchIdx;
+typedef std::vector<TMatchIdx>                      TMatchIdxList;
+typedef std::vector<TMatchIdxList>                  TOpList;
+
+bool collectOpList(
+        TOpList                    *pDst,
+        const TMatchList           &matchList);
+
 } // namespace AdtOp
 
 #endif /* H_GUARD_ADT_OP_MATCH_H */

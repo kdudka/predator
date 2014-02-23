@@ -33,9 +33,12 @@ bool assignShapeVariables(
         const OpCollection         &coll,
         const TProgState           &progState)
 {
+    TOpList opList;
+    if (!collectOpList(&opList, matchList))
+        return false;
+
     // TODO
     (void) pDst;
-    (void) matchList;
     (void) coll;
     (void) progState;
     return false;

@@ -971,4 +971,64 @@ void selectApplicableMatches(
             << pMatchList->size());
 }
 
+bool collectOpList(
+        TOpList                    *pDst,
+        const TMatchList           &matchList)
+{
+    CL_BREAK_IF(!pDst->empty());
+
+    typedef std::map<TLocIdx, TOpIdx>               TIdxMap;
+    TIdxMap idxMap;
+
+    // go through matchList
+    const TMatchIdx matchCnt = matchList.size();
+    for (TMatchIdx matchIdx = 0; matchIdx < matchCnt; ++matchIdx) {
+        const FootprintMatch &fm = matchList[matchIdx];
+
+        // remove the last heap from fm.matchedHeaps (dst location vs. insn)
+        THeapIdentSeq heapList(fm.matchedHeaps);
+        CL_BREAK_IF(heapList.size() < 2);
+        heapList.pop_back();
+
+        // go through all locations (instructions to replace by this match)
+        TOpIdx opIdx = -1;
+        BOOST_FOREACH(const THeapIdent &heap, heapList) {
+            const TLocIdx loc = heap.first;
+            const TIdxMap::const_iterator it = idxMap.find(loc);
+
+            if (idxMap.end() == it)
+                continue;
+
+            if (-1 != opIdx && opIdx != it->second) {
+                TM_DEBUG("match collision detected by collectOpList()");
+                return false;
+            }
+
+            // operation already assigned for this match
+            opIdx = it->second;
+        }
+
+        if (-1 == opIdx) {
+            // acquire a fresh operation idx for this match
+            opIdx = pDst->size();
+            pDst->push_back(TMatchIdxList());
+        }
+
+        // go through all locations (instructions to replace by this match)
+        BOOST_FOREACH(const THeapIdent &heap, heapList) {
+            const TLocIdx loc = heap.first;
+            if (hasKey(idxMap, loc) && idxMap[loc] != opIdx)
+                CL_BREAK_IF("internal error detected in collectOpList()");
+
+            // remember the mapping for next operation
+            idxMap[loc] = opIdx;
+        }
+
+        // append the current template match to the selected operation
+        pDst->at(opIdx).push_back(matchIdx);
+    }
+
+    return /* success */ true;
+}
+
 } // namespace AdtOp
