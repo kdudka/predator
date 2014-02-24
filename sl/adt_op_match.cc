@@ -581,7 +581,33 @@ struct SeekContext {
     }
 };
 
+typedef std::set<TShapeIdent>                       TShapeIdentSet;
+
+void insertInitShape(
+        TShapeIdentSet             *pInitShapes,
+        const OpTemplate           &tpl,
+        const FootprintMatch       &fm)
+{
+    const ESearchDirection sd = tpl.searchDirection();
+#ifndef NDEBUG
+    const TShapeListByHeapIdx &shapeListByHeapIdx = (SD_FORWARD == sd)
+        ? tpl.inShapes()
+        : tpl.outShapes();
+
+    const TShapeList &shapeList = shapeListByHeapIdx[fm.footprint.second];
+    CL_BREAK_IF(1U != shapeList.size());
+#endif
+
+    const THeapIdent initHeap = (SD_FORWARD == sd)
+        ? fm.matchedHeaps.front()
+        : fm.matchedHeaps.back();
+
+    const TShapeIdent initShape(initHeap, /* TODO */ 0);
+    pInitShapes->insert(initShape);
+}
+
 void seekTemplateMatchInstances(
+        TShapeIdentSet             *pInitShapes,
         MatchCtx                   &ctx,
         const OpTemplate           &tpl,
         const FootprintMatch       &fmInit,
@@ -652,6 +678,8 @@ void seekTemplateMatchInstances(
                 fm.objMap[end] = seekCtx.objMapFromTpl;
                 ctx.matchList.push_back(fm);
 
+                insertInitShape(pInitShapes, tpl, fm);
+
                 const THeapIdent src = fm.matchedHeaps.front();
                 const THeapIdent dst = fm.matchedHeaps.back();
                 CL_DEBUG("[ADT] template instance matched: tpl = " << tpl.name()
@@ -704,7 +732,7 @@ void matchSingleFootprint(
         const TFootprintIdent      &fpIdent)
 {
     TMetaOpSet metaOps;
-    std::set<TShapeIdent> checkedShapes;
+    TShapeIdentSet checkedShapes;
 
     BOOST_FOREACH(FixedPoint::TShapeSeq seq, ctx.shapeSeqs) {
         // resolve shape sequence to search through
@@ -738,7 +766,8 @@ void matchSingleFootprint(
                     << "...");
 
             // find all template match instances using this anchor heap
-            seekTemplateMatchInstances(ctx, tpl, fm, metaOps, shIdent);
+            seekTemplateMatchInstances(&checkedShapes, ctx, tpl, fm, metaOps,
+                    shIdent);
 
             // now please continue with _another_ shape sequence!
             break;
