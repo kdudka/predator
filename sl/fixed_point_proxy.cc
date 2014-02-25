@@ -103,10 +103,12 @@ struct PlotData {
 #define STD_SETW(n) std::fixed << std::setfill('0') << std::setw(n)
 
 typedef std::set<THeapIdent>                        THeapSet;
+typedef AdtOp::TShapeVarByShape                     TVarMap;
 
 void plotInsn(
         THeapSet                   *pHeapSet,
         PlotData                   &plot,
+        const TVarMap              &varMap,
         const TLocIdx               locIdx,
         const LocalState           &locState)
 {
@@ -147,8 +149,12 @@ void plotInsn(
         plotHeap(sh, nameStr.str(), /* loc */ 0, &shapeName, &contShapeIds);
 
         // plot the link to shape
-        plot.out << SH_NODE(shIdent) << " [label=\"sh #" << shIdx
-            << "\", URL=" << DOT_LINK(shapeName);
+        plot.out << SH_NODE(shIdent) << " [label=\"sh #" << shIdx;
+        const TShapeIdent csIdent(shIdent, /* XXX */ 0);
+        const TVarMap::const_iterator it = varMap.find(csIdent);
+        if (varMap.end() != it)
+            plot.out << " C" << it->second;
+        plot.out << "\", URL=" << DOT_LINK(shapeName);
 
         if (1U == pHeapSet->erase(shIdent))
             // template instance mached on this heap!
@@ -231,7 +237,7 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     const TLocIdx locCnt = fncState.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         const LocalState &locState = fncState[locIdx];
-        plotInsn(&heapSet, plot, locIdx, locState);
+        plotInsn(&heapSet, plot, varByShape, locIdx, locState);
 
         // plot trace edges
         BOOST_FOREACH(const TTraceEdgeList &tList, locState.traceOutEdges) {
