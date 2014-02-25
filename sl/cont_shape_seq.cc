@@ -24,8 +24,6 @@
 
 namespace FixedPoint {
 
-typedef std::vector<TShapeIdent>                    TShapeIdentList;
-
 bool hasSuccessorShape(const TTraceEdgeList &outEdges, const TShapeIdx csIdx)
 {
     BOOST_FOREACH(const TraceEdge *e, outEdges) {

@@ -19,6 +19,10 @@
 
 #include "cont_shape_var.hh"
 
+#include "cont_shape_seq.hh"
+
+#include <stack>
+
 namespace AdtOp {
 
 const TShapeVarId InvalidShapeVar = -1;
@@ -121,6 +125,75 @@ bool assignOpPorts(
     return /* success */ true;
 }
 
+bool propagateVars(
+        TShapeVarByShape           *pMap,
+        const TMatchList           &matchList,
+        const OpCollection         &coll,
+        const TProgState           &progState)
+{
+    using namespace FixedPoint;
+
+    std::stack<TShapeIdent> todo;
+
+    // iterate through template matches
+    BOOST_FOREACH(const FootprintMatch &fm, matchList) {
+        const TTemplateIdx tplIdx = fm.footprint.first;
+        const TFootprintIdx fpIdx = fm.footprint.second;
+
+        // count in/out shapes according to the matched template
+        const OpTemplate &tpl = coll[tplIdx];
+        const unsigned cntIn = tpl.inShapes()[fpIdx].size();
+        if (!cntIn)
+            continue;
+
+        // assign variable for the input container shape
+        const THeapIdent inHeap = fm.matchedHeaps.front();
+        TShapeIdent inShape;
+        if (!singleShapeByHeapIdent(&inShape, inHeap, progState))
+            return false;
+
+        todo.push(inShape);
+    }
+
+    // traverse container shape edges
+    while (!todo.empty()) {
+        const TShapeIdent now = todo.top();
+        todo.pop();
+
+        // find predecessor shapes
+        TShapeIdentList prevShapes;
+        findPredecessors(&prevShapes, now, progState);
+        const unsigned prevShapesCnt = prevShapes.size();
+        if (!prevShapesCnt)
+            // no predecessor shapes!
+            return false;
+
+        const THeapIdent &heap = now.first;
+        const TLocIdx locNow = heap.first;
+        const LocalState &locState = progState[locNow];
+        const TTraceEdgeList &inEdgeList = locState.traceInEdges[heap.second];
+        if (prevShapesCnt != inEdgeList.size())
+            // incomplete shape mapping along trace edges!
+            return false;
+
+        CL_BREAK_IF(!hasKey(pMap, now));
+        const TShapeVarId var = (*pMap)[now];
+
+        // propagate current var backwards
+        BOOST_FOREACH(const TShapeIdent &prev, prevShapes) {
+            if (hasKey(pMap, prev))
+                // var already assigned to prev
+                continue;
+
+            // propagate and schedule for processing
+            (*pMap)[prev] = var;
+            todo.push(prev);
+        }
+    }
+
+    return /* success */ true;
+}
+
 bool assignShapeVariables(
         TShapeVarByShape           *pDst,
         const TMatchList           &matchList,
@@ -132,6 +205,9 @@ bool assignShapeVariables(
         return false;
 
     if (!assignOpPorts(pDst, matchList, coll, progState, opList))
+        return false;
+
+    if (!propagateVars(pDst, matchList, coll, progState))
         return false;
 
     // TODO

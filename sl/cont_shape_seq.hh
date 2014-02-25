@@ -28,6 +28,12 @@ namespace FixedPoint {
 
 typedef std::list<TShapeIdent>                      TShapeSeq;
 typedef std::vector<TShapeSeq>                      TShapeSeqList;
+typedef std::vector<TShapeIdent>                    TShapeIdentList;
+
+void findPredecessors(
+        TShapeIdentList            *pDst,
+        const TShapeIdent           csIdent,
+        const GlobalState          &glState);
 
 void collectShapeSequences(TShapeSeqList *pDst, const GlobalState &glState);
 
