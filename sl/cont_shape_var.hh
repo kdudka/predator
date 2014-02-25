@@ -27,6 +27,8 @@ namespace AdtOp {
 
 typedef int                                         TShapeVarId;
 
+extern const TShapeVarId InvalidShapeVar;
+
 /// return a (globally) unique shape var ID
 TShapeVarId acquireFreshShapeVar(void);
 
