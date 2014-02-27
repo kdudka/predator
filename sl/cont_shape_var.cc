@@ -27,6 +27,7 @@ namespace AdtOp {
 
 const TShapeVarId InvalidShapeVar = -1;
 
+typedef FixedPoint::TLocIdx                         TLocIdx;
 typedef FixedPoint::THeapIdent                      THeapIdent;
 typedef FixedPoint::TShapeIdent                     TShapeIdent;
 
@@ -125,6 +126,51 @@ bool assignOpPorts(
     return /* success */ true;
 }
 
+typedef std::map<TLocIdx, TShapeVarId>              TShapeVarByLoc;
+
+void propagateVarsLookAhead(
+        TShapeVarByLoc             *pDst,
+        const TShapeVarByShape     &varMap,
+        const TShapeVarId           varNow,
+        const TLocIdx               locNow,
+        const TProgState           &progState)
+{
+    using namespace FixedPoint;
+
+    TShapeIdentList siblingShapeList;
+    BOOST_FOREACH(TShapeVarByShape::const_reference item, varMap) {
+        const TShapeIdent &shape = item.first;
+        const TShapeVarId var = item.second;
+        if (var != varNow)
+            continue;
+
+        const TLocIdx loc = shape./* heap */first./* loc */first;
+        if (loc != locNow)
+            continue;
+
+        siblingShapeList.push_back(shape);
+    }
+
+    BOOST_FOREACH(const TShapeIdent siblingShape, siblingShapeList) {
+        TShapeIdentList prevShapes;
+        findPredecessors(&prevShapes, siblingShape, progState);
+        BOOST_FOREACH(const TShapeIdent &prev, prevShapes) {
+            const TShapeVarByShape::const_iterator it = varMap.find(prev);
+            if (varMap.end() == it)
+                // previous shape has no shape var assigned yet
+                continue;
+
+            const TShapeVarId prevVar = it->second;
+            const THeapIdent prevHeap = prev.first;
+            const TLocIdx prevLoc = prevHeap.first;
+            if (hasKey(pDst, prevLoc))
+                CL_BREAK_IF((*pDst)[prevLoc] != prevVar);
+
+            (*pDst)[prevLoc] = prevVar;
+        }
+    }
+}
+
 bool propagateVars(
         TShapeVarByShape           *pMap,
         const TMatchList           &matchList,
@@ -177,13 +223,24 @@ bool propagateVars(
             return false;
 
         CL_BREAK_IF(!hasKey(pMap, now));
-        const TShapeVarId var = (*pMap)[now];
+        const TShapeVarId varNow = (*pMap)[now];
+
+        // look ahead
+        TShapeVarByLoc varByLoc;
+        propagateVarsLookAhead(&varByLoc, *pMap, varNow, locNow, progState);
 
         // propagate current var backwards
         BOOST_FOREACH(const TShapeIdent &prev, prevShapes) {
             if (hasKey(pMap, prev))
                 // var already assigned to prev
                 continue;
+
+            const THeapIdent prevHeap = prev.first;
+            const TLocIdx prevLoc = prevHeap.first;
+            const TShapeVarByLoc::const_iterator it = varByLoc.find(prevLoc);
+            const TShapeVarId var = (varByLoc.end() == it)
+                ? varNow
+                : it->second;
 
             // propagate and schedule for processing
             (*pMap)[prev] = var;
