@@ -320,6 +320,12 @@ bool validateTransitions(
         const LocalState &dstState = progState[dstLocIdx];
         const THeapIdx dstHeapCnt = dstState.heapList.size();
         for (THeapIdx dstHeapIdx = 0; dstHeapIdx < dstHeapCnt; ++dstHeapIdx) {
+            const THeapIdent dstHeap(dstLocIdx, dstHeapIdx);
+            const TShapeIdent dstShape(dstHeap, /* TODO: shape idx */ 0);
+            if (!hasKey(dstVarMap, dstShape))
+                // no shape var associated with the shape, assume operation
+                continue;
+
             const TShapeIdx dstShapeCnt =
                 dstState.shapeListByHeapIdx[dstHeapIdx].size();
 
@@ -336,9 +342,6 @@ bool validateTransitions(
                     CL_BREAK_IF("too many shapes in validateTransitions()");
                     return false;
             }
-
-            const THeapIdent dstHeap(dstLocIdx, dstHeapIdx);
-            const TShapeIdent dstShape(dstHeap, /* TODO: shape idx */ 0);
 
             const TTraceEdgeList &edgeList = dstState.traceInEdges[dstHeapIdx];
             BOOST_FOREACH(const TraceEdge *const te, edgeList) {
