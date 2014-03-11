@@ -21,6 +21,8 @@
 
 #include "cont_shape_seq.hh"
 
+#include <cl/cl_msg.hh>
+
 #include <stack>
 
 namespace AdtOp {
@@ -251,6 +253,134 @@ bool propagateVars(
     return /* success */ true;
 }
 
+class ShapeVarTransMap {
+    public:
+        bool /* success */ defineAssignment(
+                TLocIdx             dstLoc,
+                TLocIdx             srcLoc,
+                TShapeVarId         dstVar,
+                TShapeVarId         srcVar);
+
+    private:
+        typedef std::pair<TLocIdx, TLocIdx>         TProgTrans;
+        typedef std::map<TShapeVarId, TShapeVarId>  TVarAssign;
+        typedef std::map<TProgTrans, TVarAssign>    TAssignMap;
+        TAssignMap assignMap_;
+};
+
+bool ShapeVarTransMap::defineAssignment(
+        const TLocIdx               dstLoc,
+        const TLocIdx               srcLoc,
+        const TShapeVarId           dstVar,
+        const TShapeVarId           srcVar)
+{
+    const TProgTrans progTrans(srcLoc, dstLoc);
+    TVarAssign &varAssign = assignMap_[progTrans];
+
+    const TVarAssign::const_iterator it = varAssign.find(dstVar);
+    if (varAssign.end() != it)
+        // already defined --> check for a collision
+        return (it->second == srcVar);
+
+    // define new assignment
+    varAssign[dstVar] = srcVar;
+    if (dstVar == srcVar)
+        // trivial assignment (identity)
+        return true;
+
+    // non-trivial fresh assignment
+    CL_NOTE("[ADT] would insert C" << dstVar << " := C" << srcVar
+            << " between locations #" << srcLoc << " -> #" << dstLoc);
+
+    return true;
+}
+
+bool validateTransitions(
+        TShapeVarByShape           *pMap,
+        const TProgState           &progState)
+{
+    using namespace FixedPoint;
+
+    // index shape var assignment by location
+    typedef std::map<TLocIdx, TShapeVarByShape>     TIndex;
+    TIndex index;
+    BOOST_FOREACH(TShapeVarByShape::const_reference item, *pMap) {
+        const TShapeIdent shape = item.first;
+        const TShapeVarId var = item.second;
+        const TLocIdx loc = shape./* heap */first./* loc */first;
+        index[loc][shape] = var;
+    }
+
+    ShapeVarTransMap vMap;
+
+    BOOST_FOREACH(TIndex::reference item, index) {
+        const TLocIdx dstLocIdx = item.first;
+        TShapeVarByShape &dstVarMap = item.second;
+
+        const LocalState &dstState = progState[dstLocIdx];
+        const THeapIdx dstHeapCnt = dstState.heapList.size();
+        for (THeapIdx dstHeapIdx = 0; dstHeapIdx < dstHeapCnt; ++dstHeapIdx) {
+            const TShapeIdx dstShapeCnt =
+                dstState.shapeListByHeapIdx[dstHeapIdx].size();
+
+            switch (dstShapeCnt) {
+                case 0:
+                    // nothing to track here
+                    continue;
+
+                case 1:
+                    // currently we only support one shape per heap
+                    break;
+
+                default:
+                    CL_BREAK_IF("too many shapes in validateTransitions()");
+                    return false;
+            }
+
+            const THeapIdent dstHeap(dstLocIdx, dstHeapIdx);
+            const TShapeIdent dstShape(dstHeap, /* TODO: shape idx */ 0);
+
+            const TTraceEdgeList &edgeList = dstState.traceInEdges[dstHeapIdx];
+            BOOST_FOREACH(const TraceEdge *const te, edgeList) {
+                const TLocIdx srcLocIdx = te->src./* loc */first;
+                const THeapIdx srcHeapIdx = te->src./* heap */second;
+                CL_BREAK_IF(dstLocIdx != te->dst./* loc */first);
+                CL_BREAK_IF(dstHeapIdx != te->dst./* heap */second);
+
+                TShapeVarByShape &srcVarMap = index[srcLocIdx];
+
+                const THeapIdent srcHeap(srcLocIdx, srcHeapIdx);
+                const TShapeIdent srcShape(srcHeap, /* TODO: shape idx */ 0);
+                if (!hasKey(srcVarMap, srcShape))
+                    // no shape var associated with the shape, assume operation
+                    continue;
+
+                if (te->csMap.empty()) {
+                    CL_DEBUG("shape variable with no mapping to origin");
+                    return false;
+                }
+
+                TShapeMapper::TVector prevShapes;
+                te->csMap.query<D_RIGHT_TO_LEFT>(&prevShapes, 0);
+                if (1U != prevShapes.size() || 0 != prevShapes.front()) {
+                    CL_DEBUG("failing due to unsupported shape mapping");
+                    return false;
+                }
+
+                const TShapeVarId dstVar = dstVarMap[dstShape];
+                const TShapeVarId srcVar = srcVarMap[srcShape];
+                if (vMap.defineAssignment(dstLocIdx, srcLocIdx, dstVar, srcVar))
+                    continue;
+
+                CL_DEBUG("validateTransitions() detected var assignment clash");
+                return false;
+            }
+        }
+    }
+
+    return /* success */ true;
+}
+
 bool assignShapeVariables(
         TShapeVarByShape           *pDst,
         const TMatchList           &matchList,
@@ -267,8 +397,10 @@ bool assignShapeVariables(
     if (!propagateVars(pDst, matchList, coll, progState))
         return false;
 
-    // TODO
-    return false;
+    if (!validateTransitions(pDst, progState))
+        return false;
+
+    return /* success */ true;
 }
 
 } // namespace AdtOp

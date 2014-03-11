@@ -118,13 +118,13 @@ class IdMapper {
         /// STL iterator, always D_LEFT_TO_RIGHT
         typedef typename TSearch::const_iterator const_iterator;
 
-        /// needeed for BOOST_FOREACH
+        /// needed for BOOST_FOREACH
         typedef typename TSearch::const_reference const_reference;
 
-        /// needeed for BOOST_FOREACH
+        /// needed for BOOST_FOREACH
         const_iterator begin() const        { return biSearch_[0].begin(); }
 
-        /// needeed for BOOST_FOREACH
+        /// needed for BOOST_FOREACH
         const_iterator end() const          { return biSearch_[0].end();   }
 };
 
