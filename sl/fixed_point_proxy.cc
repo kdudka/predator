@@ -211,14 +211,14 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     selectApplicableMatches(&matchList, fncState);
     summarizeInsnReplace(matchList, fncState);
 
+    TOpList opList;
+    if (!collectOpList(&opList, matchList))
+        CL_ERROR("[ADT] failed to detect container operations");
+
     // assign shape variables
     TShapeVarByShape varByShape;
-    if (assignShapeVariables(&varByShape, matchList, adtOps, fncState)) {
-        CL_DEBUG("[ADT] shape variables assigned successfully");
-        // TODO
-    }
-    else
-        CL_WARN("[ADT] failed to assign shape variables");
+    if (!assignShapeVariables(&varByShape, matchList, opList, adtOps, fncState))
+        CL_ERROR("[ADT] failed to assign shape variables");
 
     // remove matched heaps not representing any instructions to be replaced
     BOOST_FOREACH(FootprintMatch &fm, matchList) {

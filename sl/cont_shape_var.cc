@@ -387,13 +387,10 @@ bool validateTransitions(
 bool assignShapeVariables(
         TShapeVarByShape           *pDst,
         const TMatchList           &matchList,
+        const TOpList              &opList,
         const OpCollection         &coll,
         const TProgState           &progState)
 {
-    TOpList opList;
-    if (!collectOpList(&opList, matchList))
-        return false;
-
     if (!assignOpPorts(pDst, matchList, coll, progState, opList))
         return false;
 
