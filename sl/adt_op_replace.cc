@@ -19,7 +19,89 @@
 
 #include "adt_op_replace.hh"
 
+#include "symproc.hh"
+#include "symtrace.hh"
+
+#include <cl/storage.hh>
+#include <cl/cl_msg.hh>
+
+#include <boost/foreach.hpp>
+
 namespace AdtOp {
+
+bool checkIndependency(
+        const FootprintMatch       &fm,
+        const TProgState           &progState)
+{
+    using namespace FixedPoint;
+
+    const BindingOff &bOff = fm.props.bOff;
+    std::vector<TOffset> offs;
+    offs.push_back(bOff.next);
+    offs.push_back(bOff.prev);
+
+    BOOST_FOREACH(const THeapIdent heap, fm.skippedHeaps) {
+        const LocalState &locState = progState[heap.first];
+        const TInsn insn = locState.insn;
+        SymHeap sh = locState.heapList[heap.second];
+        Trace::waiveCloneOperation(sh);
+
+        const TStorRef stor = sh.stor();
+        const TSizeOf psize = stor.types.dataPtrSizeof();
+
+        // XXX: assume main() as the only fnc
+        SymBackTrace bt(stor);
+        using namespace CodeStorage;
+        const NameDb::TNameMap &glNames = stor.fncNames.glNames;
+        const NameDb::TNameMap::const_iterator iter = glNames.find("main");
+        if (glNames.end() != iter)
+            bt.pushCall(iter->second, /* loc */ 0);
+
+        SymProc proc(sh, &bt);
+        proc.setLocation(&insn->loc);
+
+        BOOST_FOREACH(const struct cl_operand &op, insn->operands) {
+            if (CL_OPERAND_VAR != op.code)
+                continue;
+
+            const FldHandle fld = proc.fldByOperand(op);
+            if (!fld.isValidHandle())
+                continue;
+
+            const TOffset winLo = fld.offset();
+            const TOffset winHi = winLo + fld.type()->size;
+
+            BOOST_FOREACH(const TOffset lo, offs) {
+                const TOffset hi = lo + psize;
+                if (winHi <= lo)
+                    continue;
+
+                if (hi <= winLo)
+                    continue;
+
+                CL_WARN("[ADT] field clash detected in checkIndependency()");
+                return false;
+            }
+        }
+    }
+
+    return /* success */ true;
+}
+
+bool replaceSingleOp(
+        const TMatchList           &matchList,
+        const TMatchIdxList        &idxList,
+        const TShapeVarByShape     &varMap,
+        const TProgState           &progState)
+{
+    BOOST_FOREACH(const TMatchIdx idx, idxList)
+        if (!checkIndependency(matchList[idx], progState))
+            return false;
+
+    // TODO
+
+    return /* success */ true;
+}
 
 bool replaceAdtOps(
         const TMatchList           &matchList,
@@ -27,8 +109,11 @@ bool replaceAdtOps(
         const TShapeVarByShape     &varMap,
         const TProgState           &progState)
 {
-    // TODO
-    return false;
+    BOOST_FOREACH(const TMatchIdxList &idxList, opList)
+        if (!replaceSingleOp(matchList, idxList, varMap, progState))
+            return false;
+
+    return /* success */ true;
 }
 
 } // namespace AdtOp

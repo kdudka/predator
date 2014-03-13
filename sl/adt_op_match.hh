@@ -43,6 +43,9 @@ struct FootprintMatch {
     /// list of locations (instructions) matched by the template + dst location
     THeapIdentSeq                   matchedHeaps;
 
+    /// list of instructions included as not implementing the operation
+    THeapIdentSeq                   skippedHeaps;
+
     FixedPoint::TObjectMapper       objMap          [FP_TOTAL];
 
     FootprintMatch(const TFootprintIdent footprint_):

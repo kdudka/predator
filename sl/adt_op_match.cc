@@ -519,6 +519,8 @@ bool processDiffOf(
         if (MO_ALLOC == mo.code)
             freshObjs.insert(mo.obj);
 
+    bool found = false;
+
     BOOST_FOREACH(const MetaOperation &mo, metaOpsNow) {
         const SymHeap &sh = (hasKey(freshObjs, mo.obj)) ? sh1 : sh0;
         const EStorageClass code = sh.objStorClass(mo.obj);
@@ -543,6 +545,7 @@ bool processDiffOf(
                 pDst->push_front(heap0);
             }
 
+            found = true;
             continue;
         }
 
@@ -554,6 +557,10 @@ bool processDiffOf(
                 ", dst=" << heap1.first << "/" << heap1.second);
         return false;
     }
+
+    if (1U < pMatch->matchedHeaps.size() && !found)
+        // mark the current instruction as (successfully) skipped
+        pMatch->skippedHeaps.push_back(heap0);
 
     return true;
 }
