@@ -45,6 +45,7 @@ add_library(predator STATIC
     adt_op_def.cc
     adt_op_match.cc
     adt_op_meta.cc
+    adt_op_replace.cc
     cl_symexec.cc
     cont_shape.cc
     cont_shape_seq.cc

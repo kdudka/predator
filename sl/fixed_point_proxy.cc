@@ -23,6 +23,7 @@
 #include "adt_op.hh"
 #include "adt_op_def.hh"
 #include "adt_op_match.hh"
+#include "adt_op_replace.hh"
 #include "cont_shape_seq.hh"
 #include "cont_shape_var.hh"
 #include "fixed_point.hh"
@@ -219,6 +220,10 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     TShapeVarByShape varByShape;
     if (!assignShapeVariables(&varByShape, matchList, opList, adtOps, fncState))
         CL_ERROR("[ADT] failed to assign shape variables");
+
+    // replace container operations
+    if (!replaceAdtOps(matchList, opList, varByShape, fncState))
+        CL_ERROR("[ADT] failed to replace container operations");
 
     // remove matched heaps not representing any instructions to be replaced
     BOOST_FOREACH(FootprintMatch &fm, matchList) {
