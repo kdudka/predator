@@ -29,6 +29,8 @@
 
 namespace AdtOp {
 
+using FixedPoint::TLocIdx;
+
 bool checkIndependency(
         const FootprintMatch       &fm,
         const TProgState           &progState)
@@ -88,6 +90,40 @@ bool checkIndependency(
     return /* success */ true;
 }
 
+bool findLocToReplace(
+        TLocIdx                    *pDst,
+        const TMatchList           &matchList,
+        const TMatchIdxList        &idxList)
+{
+    const int idxCnt = idxList.size();
+    CL_BREAK_IF(!idxCnt);
+
+    const TMatchIdx refMatchIdx = idxList[0];
+    const THeapIdentSeq &refHeaps = matchList[refMatchIdx].matchedHeaps;
+    const TLocIdx srcLoc = refHeaps.front().first;
+    for (int idx = 1; idx < idxCnt; ++idx) {
+        const TMatchIdx matchIdx = idxList[idx];
+        const THeapIdentSeq &curHeaps = matchList[matchIdx].matchedHeaps;
+        if (srcLoc != curHeaps.front().first)
+            goto src_port_mismatch;
+    }
+
+    *pDst = srcLoc;
+    return true;
+
+src_port_mismatch:
+    const TLocIdx dstLoc = (++refHeaps.rbegin())->first;
+    for (int idx = 1; idx < idxCnt; ++idx) {
+        const TMatchIdx matchIdx = idxList[idx];
+        const THeapIdentSeq &curHeaps = matchList[matchIdx].matchedHeaps;
+        if (dstLoc != (++curHeaps.rbegin())->first)
+            return false;
+    }
+
+    *pDst = dstLoc;
+    return true;
+}
+
 bool replaceSingleOp(
         const TMatchList           &matchList,
         const TMatchIdxList        &idxList,
@@ -97,6 +133,12 @@ bool replaceSingleOp(
     BOOST_FOREACH(const TMatchIdx idx, idxList)
         if (!checkIndependency(matchList[idx], progState))
             return false;
+
+    TLocIdx locToReplace;
+    if (!findLocToReplace(&locToReplace, matchList, idxList))
+        return false;
+
+    CL_NOTE("[ADT] would replace insn #" << locToReplace);
 
     // TODO
 
