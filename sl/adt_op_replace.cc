@@ -32,6 +32,9 @@ namespace AdtOp {
 using FixedPoint::TLocIdx;
 using FixedPoint::THeapIdent;
 
+typedef std::vector<TShapeVarId>                    TShapeVarList;
+typedef std::set<TShapeVarId>                       TShapeVarSet;
+
 bool checkIndependency(
         const FootprintMatch       &fm,
         const TProgState           &progState)
@@ -125,6 +128,74 @@ src_port_mismatch:
     return true;
 }
 
+void findShapeVarsInUseCore(
+        TShapeVarList              *pDst,
+        TShapeVarSet               *pSet,
+        const THeapIdent           &heap,
+        const TShapeVarByShape     &varMap)
+{
+    const TShapeIdent shape(heap, /* TODO */ 0);
+    const TShapeVarByShape::const_iterator it = varMap.find(shape);
+    if (it == varMap.end())
+        // no shape var found for this shape
+        return;
+
+    const TShapeVarId var = it->second;
+    if (insertOnce(*pSet, var))
+        pDst->push_back(var);
+}
+
+
+bool findShapeVarsInUse(
+        TShapeVarList              *pIn,
+        TShapeVarList              *pOut,
+        const TMatchList           &matchList,
+        const TMatchIdxList        &idxList,
+        const TShapeVarByShape     &varMap)
+{
+    TShapeVarSet inSet, outSet;
+
+    BOOST_FOREACH(const TMatchIdx idx, idxList) {
+        const FootprintMatch &fm = matchList[idx];
+        const THeapIdentSeq &heaps = fm.matchedHeaps;
+
+        findShapeVarsInUseCore(pIn,  &inSet,  heaps.front(), varMap);
+        findShapeVarsInUseCore(pOut, &outSet, heaps.back(),  varMap);
+    }
+
+    return /* success */ true;
+}
+
+std::string varsToString(const TShapeVarList &vars)
+{
+    const unsigned cnt = vars.size();
+    if (!cnt)
+        return "";
+
+    std::ostringstream str;
+    str << "C" << vars.front();
+
+    for (unsigned i = 1U; i < cnt; ++i)
+        str << ", C" << vars[i];
+
+    return str.str();
+}
+
+std::string destToString(const TShapeVarList &vars)
+{
+    const unsigned cnt = vars.size();
+    switch (cnt) {
+        case 0:
+            return "";
+
+        case 1:
+            return varsToString(vars) + " := ";
+
+        default:
+            return std::string("(") + varsToString(vars) + ") := ";
+    }
+}
+
 bool replaceSingleOp(
         const TMatchList           &matchList,
         const TMatchIdxList        &idxList,
@@ -140,8 +211,13 @@ bool replaceSingleOp(
     if (!findLocToReplace(&locToReplace, matchList, idxList))
         return false;
 
+    TShapeVarList cIn, cOut;
+    if (!findShapeVarsInUse(&cIn, &cOut, matchList, idxList, varMap))
+        return false;
+
     CL_NOTE("[ADT] would replace insn #" << locToReplace
-            << " by " << tpl.name() << "(...)");
+            << " by " << destToString(cOut) << tpl.name()
+            << "(" << varsToString(cIn) << ")");
 
     // TODO
 
