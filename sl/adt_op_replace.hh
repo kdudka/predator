@@ -28,6 +28,7 @@ namespace AdtOp {
 bool replaceAdtOps(
         const TMatchList           &matchList,
         const TOpList              &opList,
+        const OpCollection         &adtOps,
         const TShapeVarByShape     &varMap,
         const TProgState           &progState);
 

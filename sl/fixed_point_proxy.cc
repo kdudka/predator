@@ -222,7 +222,7 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
         CL_ERROR("[ADT] failed to assign shape variables");
 
     // replace container operations
-    if (!replaceAdtOps(matchList, opList, varByShape, fncState))
+    if (!replaceAdtOps(matchList, opList, adtOps, varByShape, fncState))
         CL_ERROR("[ADT] failed to replace container operations");
 
     // remove matched heaps not representing any instructions to be replaced

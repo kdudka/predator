@@ -128,6 +128,7 @@ bool replaceSingleOp(
         const TMatchList           &matchList,
         const TMatchIdxList        &idxList,
         const TShapeVarByShape     &varMap,
+        const OpTemplate           &tpl,
         const TProgState           &progState)
 {
     BOOST_FOREACH(const TMatchIdx idx, idxList)
@@ -138,7 +139,8 @@ bool replaceSingleOp(
     if (!findLocToReplace(&locToReplace, matchList, idxList))
         return false;
 
-    CL_NOTE("[ADT] would replace insn #" << locToReplace);
+    CL_NOTE("[ADT] would replace insn #" << locToReplace
+            << " by " << tpl.name() << "(...)");
 
     // TODO
 
@@ -148,12 +150,18 @@ bool replaceSingleOp(
 bool replaceAdtOps(
         const TMatchList           &matchList,
         const TOpList              &opList,
+        const OpCollection         &adtOps,
         const TShapeVarByShape     &varMap,
         const TProgState           &progState)
 {
-    BOOST_FOREACH(const TMatchIdxList &idxList, opList)
-        if (!replaceSingleOp(matchList, idxList, varMap, progState))
+    BOOST_FOREACH(const TMatchIdxList &idxList, opList) {
+        const FootprintMatch &fm0 = matchList[idxList.front()];
+        const TFootprintIdent &fp = fm0.footprint;
+        const OpTemplate &tpl = adtOps[fp.first];
+
+        if (!replaceSingleOp(matchList, idxList, varMap, tpl, progState))
             return false;
+    }
 
     return /* success */ true;
 }
