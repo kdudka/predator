@@ -23,6 +23,7 @@
 #include "symtrace.hh"
 
 #include <cl/storage.hh>
+#include <cl/clutil.hh>
 #include <cl/cl_msg.hh>
 
 #include <boost/foreach.hpp>
@@ -32,6 +33,7 @@ namespace AdtOp {
 using FixedPoint::TLocIdx;
 using FixedPoint::THeapIdent;
 
+typedef std::vector<int /* uid */>                  TPtrVarList;
 typedef std::vector<TShapeVarId>                    TShapeVarList;
 typedef std::set<TShapeVarId>                       TShapeVarSet;
 
@@ -196,6 +198,127 @@ std::string destToString(const TShapeVarList &vars)
     }
 }
 
+void collectNonShapeSrcObjs(
+        TObjList                   *pObjList,
+        const FootprintMatch       &fm,
+        const OpTemplate           &tpl)
+{
+    const TFootprintIdx fpIdx = fm.footprint.second;
+    const SymHeap &shTpl = tpl[fpIdx].input;
+
+    TObjSet shapeObjs;
+    BOOST_FOREACH(const Shape shape, tpl.inShapes()[fpIdx])
+        objSetByShape(&shapeObjs, shTpl, shape);
+
+    TObjList allObjs, nonShapeObjs;
+    shTpl.gatherObjects(allObjs);
+    BOOST_FOREACH(const TObjId obj, allObjs)
+        if (!hasKey(shapeObjs, obj))
+            nonShapeObjs.push_back(obj);
+
+    TObjSet progObjs;
+    project<D_LEFT_TO_RIGHT>(fm.objMap[FP_SRC], &progObjs, nonShapeObjs);
+    BOOST_FOREACH(const TObjId obj, progObjs)
+        pObjList->push_back(obj);
+}
+
+void collectPtrVarsCore(
+        TPtrVarList                *pDst,
+        const FootprintMatch       &fm,
+        const OpTemplate           &tpl,
+        const TProgState           &progState)
+{
+    TObjList objList;
+    collectNonShapeSrcObjs(&objList, fm, tpl);
+    if (1U != objList.size())
+        // unsupported number of objects not in container shape
+        return;
+
+    const SymHeap *shOrig = heapByIdent(progState, fm.matchedHeaps.front());
+    SymHeap sh(*shOrig);
+    Trace::waiveCloneOperation(sh);
+
+    BOOST_FOREACH(const TObjId obj, objList) {
+        FldList refs;
+        sh.pointedBy(refs, obj);
+        BOOST_FOREACH(const FldHandle &fld, refs) {
+            const TObjId refObj = fld.obj();
+            const TSizeRange size = sh.objSize(refObj);
+            if (size.hi != fld.type()->size)
+                // not an atomic variable
+                continue;
+
+            const EStorageClass sc = sh.objStorClass(refObj);
+            if (!isProgramVar(sc))
+                // the referee is not a program variable
+                continue;
+
+            const CVar cv = sh.cVarByObject(refObj);
+            pDst->push_back(cv.uid);
+        }
+    }
+}
+
+void collectPtrVars(
+        TPtrVarList                *pDst,
+        const TMatchList           &matchList,
+        const TMatchIdxList        &idxList,
+        const OpTemplate           &tpl,
+        const TProgState           &progState)
+{
+    CL_BREAK_IF(!pDst->empty());
+    collectPtrVarsCore(pDst, matchList[idxList.front()], tpl, progState);
+
+    const int idxCnt = idxList.size();
+    for (int idx = 1; idx < idxCnt; ++idx) {
+        if (pDst->empty())
+            // empty intersection already
+            return;
+
+        const TMatchIdx matchIdx = idxList[idx];
+        const FootprintMatch &fm = matchList[matchIdx];
+        TPtrVarList varsNow, intersect;
+
+        collectPtrVarsCore(&varsNow, fm, tpl, progState);
+        BOOST_FOREACH(const int uid, *pDst) {
+            if (varsNow.end() == std::find(varsNow.begin(), varsNow.end(), uid))
+                // uid not in the intersection
+                continue;
+
+            intersect.push_back(uid);
+        }
+
+        pDst->swap(intersect);
+    }
+
+    if (1U < pDst->size())
+        pDst->resize(1U);
+}
+
+std::string ptrVarsToString(
+        const TMatchList           &matchList,
+        const TMatchIdxList        &idxList,
+        const OpTemplate           &tpl,
+        const TProgState           &progState)
+{
+    TPtrVarList ptrVarList;
+    collectPtrVars(&ptrVarList, matchList, idxList, tpl, progState);
+    if (ptrVarList.empty())
+        return "";
+
+    const THeapIdent &anyHeapIdent = matchList[0].matchedHeaps.front();
+    const SymHeap *anySymHeap = heapByIdent(progState, anyHeapIdent);
+    const TStorRef stor = anySymHeap->stor();
+    std::string str;
+
+    BOOST_FOREACH(const int uid, ptrVarList) {
+        str += ", ";
+        str += varToString(stor, uid);
+    }
+
+    return str;
+}
+
 bool replaceSingleOp(
         const TMatchList           &matchList,
         const TMatchIdxList        &idxList,
@@ -217,9 +340,8 @@ bool replaceSingleOp(
 
     CL_NOTE("[ADT] would replace insn #" << locToReplace
             << " by " << destToString(cOut) << tpl.name()
-            << "(" << varsToString(cIn) << ")");
-
-    // TODO
+            << "(" << varsToString(cIn)
+            << ptrVarsToString(matchList, idxList, tpl, progState) << ")");
 
     std::set<TLocIdx> removed;
     BOOST_FOREACH(const TMatchIdx idx, idxList) {
