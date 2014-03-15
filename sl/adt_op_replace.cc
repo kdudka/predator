@@ -30,6 +30,7 @@
 namespace AdtOp {
 
 using FixedPoint::TLocIdx;
+using FixedPoint::THeapIdent;
 
 bool checkIndependency(
         const FootprintMatch       &fm,
@@ -143,6 +144,27 @@ bool replaceSingleOp(
             << " by " << tpl.name() << "(...)");
 
     // TODO
+
+    std::set<TLocIdx> removed;
+    BOOST_FOREACH(const TMatchIdx idx, idxList) {
+        const FootprintMatch &fm = matchList[idx];
+
+        // skip the last heap that does not represent any insn
+        const THeapIdentSeq &hList = fm.matchedHeaps;
+        typedef THeapIdentSeq::const_reverse_iterator TIter;
+        for (TIter it = ++hList.rbegin(); it != hList.rend(); ++it) {
+            const TLocIdx loc = it->first;
+            if (loc == locToReplace)
+                // already replaced by the container operation
+                continue;
+
+            if (!insertOnce(removed, loc))
+                // already removed
+                continue;
+
+            CL_NOTE("[ADT] would drop insn #" << loc);
+        }
+    }
 
     return /* success */ true;
 }
