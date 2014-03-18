@@ -84,6 +84,7 @@ const StateByInsn::TStateMap& StateByInsn::stateMap() const
 }
 
 struct PlotData {
+    int                             subGraphIdx;
     std::ostream                   &out;
     StateByInsn::TStateMap         &stateByInsn;
     std::string                     name;
@@ -92,6 +93,7 @@ struct PlotData {
             std::ostream           &out_,
             StateByInsn::TStateMap &stateByInsn_,
             const std::string      &name_):
+        subGraphIdx(0),
         out(out_),
         stateByInsn(stateByInsn_),
         name(name_)
@@ -100,7 +102,7 @@ struct PlotData {
 };
 
 #define QUOT(what) "\"" << what << "\""
-#define LOC_NODE(locIdx) QUOT("loc" << locIdx)
+#define LOC_NODE(plot, locIdx) QUOT("loc" << plot.subGraphIdx << "." << locIdx)
 #define SH_NODE(sh) QUOT("loc" << (sh.first) << "-sh" << (sh.second))
 #define DOT_LINK(to) "\"" << to << ".svg\""
 #define STD_SETW(n) std::fixed << std::setfill('0') << std::setw(n)
@@ -118,11 +120,11 @@ void plotInsn(
     const TInsn insn = locState.insn;
 
     // open cluster
-    plot.out << "subgraph \"cluster" << locIdx
+    plot.out << "subgraph \"cluster" << plot.subGraphIdx << "." << locIdx
         << "\" {\n\tlabel=\"loc #" << locIdx << "\";\n";
 
     // plot the root node
-    plot.out << LOC_NODE(locIdx) << " [label=" << QUOT(*insn)
+    plot.out << LOC_NODE(plot, locIdx) << " [label=" << QUOT(*insn)
         << ", tooltip=" << QUOT(insn->loc)
         << ", shape=box, color=blue, fontcolor=blue];\n";
 
@@ -218,7 +220,8 @@ void plotFncCore(
                 // assume CL_INSN_COND
                 label = (!i) ? "T" : "F";
 
-            plot.out << LOC_NODE(locIdx) << " -> " << LOC_NODE(edge.targetLoc)
+            plot.out << LOC_NODE(plot, locIdx)
+                << " -> " << LOC_NODE(plot, edge.targetLoc)
                 << " [label=" << QUOT(label)
                 << ", color=" << color
                 << ", fontcolor=" << color << "];\n";
@@ -265,6 +268,12 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
     }
 
     plotFncCore(plot, fncState, varByShape, heapSet);
+
+    // plot an additional CFG-only subgraph
+    GlobalState cfgOnly;
+    exportControlFlow(&cfgOnly, fncState);
+    ++plot.subGraphIdx;
+    plotFncCore(plot, cfgOnly, varByShape, heapSet);
 }
 
 void plotFnc(const TFnc fnc, StateByInsn::TStateMap &stateByInsn)
