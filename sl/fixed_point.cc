@@ -596,8 +596,35 @@ void StateRewriter::replaceInsn(const TLocIdx at, const std::string &insn)
 
 void StateRewriter::dropInsn(const TLocIdx at)
 {
-    // TODO
-    CL_NOTE("[ADT] would drop insn #" << at);
+    CL_NOTE("[ADT] removing insn #" << at);
+    LocalState &locState = state_[at];
+    locState.insn = 0;
+    locState.insnText.clear();
+
+    // iterate through all incoming edges
+    BOOST_FOREACH(const CfgEdge &ie, locState.cfgInEdges) {
+        CL_BREAK_IF(ie.closesLoop);
+        LocalState &inState = state_[ie.targetLoc];
+        TCfgEdgeList outEdges;
+
+        BOOST_FOREACH(const CfgEdge &be, inState.cfgOutEdges) {
+            if (at != be.targetLoc) {
+                // keep unrelated CFG edges as they are
+                outEdges.push_back(be);
+                continue;
+            }
+
+            // redirect all edges previously going to 'at'
+            BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges)
+                outEdges.push_back(oe);
+        }
+
+        outEdges.swap(inState.cfgOutEdges);
+    }
+
+    // finally detach 'at' from the graph completely
+    locState.cfgInEdges.clear();
+    locState.cfgOutEdges.clear();
 }
 
 

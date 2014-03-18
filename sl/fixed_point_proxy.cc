@@ -118,6 +118,9 @@ void plotInsn(
         const LocalState           &locState)
 {
     const TInsn insn = locState.insn;
+    if (!insn && locState.insnText.empty())
+        // an already removed insn
+        return;
 
     // open cluster
     plot.out << "subgraph \"cluster" << plot.subGraphIdx << "." << locIdx
