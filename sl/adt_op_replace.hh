@@ -26,6 +26,7 @@
 namespace AdtOp {
 
 bool replaceAdtOps(
+        TInsnWriter                *pInsnWriter,
         const TMatchList           &matchList,
         const TOpList              &opList,
         const OpCollection         &adtOps,

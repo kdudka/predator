@@ -234,6 +234,12 @@ AdtOp::OpCollection adtOps;
 
 void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
 {
+    // back up the original CFG and create a writer for the resulting one
+    GlobalState cfgOrig, cfgResult;
+    exportControlFlow(&cfgOrig, fncState);
+    exportControlFlow(&cfgResult, fncState);
+    StateRewriter writer(&cfgResult);
+
     // match templates
     using namespace AdtOp;
     TMatchList matchList;
@@ -246,11 +252,13 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
 
     // assign shape variables
     TShapeVarByShape varByShape;
-    if (!assignShapeVariables(&varByShape, matchList, opList, adtOps, fncState))
+    if (!assignShapeVariables(&varByShape, &writer, matchList, opList, adtOps,
+                fncState))
         CL_ERROR("[ADT] failed to assign shape variables");
 
     // replace container operations
-    if (!replaceAdtOps(matchList, opList, adtOps, varByShape, fncState))
+    if (!replaceAdtOps(&writer, matchList, opList, adtOps, varByShape,
+                fncState))
         CL_ERROR("[ADT] failed to replace container operations");
 
     // remove matched heaps not representing any instructions to be replaced
@@ -267,13 +275,16 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
             heapSet.insert(heap);
     }
 
+    // plot the annotated input CFG
     plotFncCore(plot, fncState, varByShape, heapSet);
 
-    // plot an additional CFG-only subgraph
-    GlobalState cfgOnly;
-    exportControlFlow(&cfgOnly, fncState);
+    // plot the original CFG-only subgraph
     ++plot.subGraphIdx;
-    plotFncCore(plot, cfgOnly, varByShape, heapSet);
+    plotFncCore(plot, cfgOrig);
+
+    // plot the resulting CFG
+    ++plot.subGraphIdx;
+    plotFncCore(plot, cfgResult);
 }
 
 void plotFnc(const TFnc fnc, StateByInsn::TStateMap &stateByInsn)

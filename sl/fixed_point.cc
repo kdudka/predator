@@ -576,6 +576,29 @@ void exportControlFlow(GlobalState *pDst, const GlobalState &glState)
     }
 }
 
+void StateRewriter::insertInsn(
+        const TLocIdx               src,
+        const TLocIdx               dst,
+        const std::string          &insn)
+{
+    // TODO
+    CL_NOTE("[ADT] would insert " << insn
+            << " between locations #" << src << " -> #" << dst);
+}
+
+void StateRewriter::replaceInsn(const TLocIdx at, const std::string &insn)
+{
+    // TODO
+    CL_NOTE("[ADT] would replace insn #" << at << " by " << insn);
+}
+
+void StateRewriter::dropInsn(const TLocIdx at)
+{
+    // TODO
+    CL_NOTE("[ADT] would drop insn #" << at);
+}
+
+
 void sl_dump(const TShapeMapper &m)
 {
     std::cout << "TShapeMapper: ";

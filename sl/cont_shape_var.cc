@@ -255,6 +255,11 @@ bool propagateVars(
 
 class ShapeVarTransMap {
     public:
+        ShapeVarTransMap(TInsnWriter *pInsnWriter):
+            insnWriter_(*pInsnWriter)
+        {
+        }
+
         bool /* success */ defineAssignment(
                 TLocIdx             dstLoc,
                 TLocIdx             srcLoc,
@@ -265,7 +270,8 @@ class ShapeVarTransMap {
         typedef std::pair<TLocIdx, TLocIdx>         TProgTrans;
         typedef std::map<TShapeVarId, TShapeVarId>  TVarAssign;
         typedef std::map<TProgTrans, TVarAssign>    TAssignMap;
-        TAssignMap assignMap_;
+        TAssignMap                  assignMap_;
+        TInsnWriter                &insnWriter_;
 };
 
 bool ShapeVarTransMap::defineAssignment(
@@ -289,14 +295,15 @@ bool ShapeVarTransMap::defineAssignment(
         return true;
 
     // non-trivial fresh assignment
-    CL_NOTE("[ADT] would insert C" << dstVar << " := C" << srcVar
-            << " between locations #" << srcLoc << " -> #" << dstLoc);
-
+    std::ostringstream str;
+    str << "C" << dstVar << " := C" << srcVar;
+    insnWriter_.insertInsn(srcLoc, dstLoc, str.str());
     return true;
 }
 
 bool validateTransitions(
         TShapeVarByShape           *pMap,
+        TInsnWriter                *pInsnWriter,
         const TProgState           &progState)
 {
     using namespace FixedPoint;
@@ -311,7 +318,7 @@ bool validateTransitions(
         index[loc][shape] = var;
     }
 
-    ShapeVarTransMap vMap;
+    ShapeVarTransMap vMap(pInsnWriter);
 
     BOOST_FOREACH(TIndex::reference item, index) {
         const TLocIdx dstLocIdx = item.first;
@@ -386,6 +393,7 @@ bool validateTransitions(
 
 bool assignShapeVariables(
         TShapeVarByShape           *pDst,
+        TInsnWriter                *pInsnWriter,
         const TMatchList           &matchList,
         const TOpList              &opList,
         const OpCollection         &coll,
@@ -397,7 +405,7 @@ bool assignShapeVariables(
     if (!propagateVars(pDst, matchList, coll, progState))
         return false;
 
-    if (!validateTransitions(pDst, progState))
+    if (!validateTransitions(pDst, pInsnWriter, progState))
         return false;
 
     return /* success */ true;

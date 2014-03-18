@@ -320,6 +320,7 @@ std::string ptrVarsToString(
 }
 
 bool replaceSingleOp(
+        TInsnWriter                *pInsnWriter,
         const TMatchList           &matchList,
         const TMatchIdxList        &idxList,
         const TShapeVarByShape     &varMap,
@@ -338,10 +339,10 @@ bool replaceSingleOp(
     if (!findShapeVarsInUse(&cIn, &cOut, matchList, idxList, varMap))
         return false;
 
-    CL_NOTE("[ADT] would replace insn #" << locToReplace
-            << " by " << destToString(cOut) << tpl.name()
-            << "(" << varsToString(cIn)
-            << ptrVarsToString(matchList, idxList, tpl, progState) << ")");
+    std::ostringstream str;
+    str << destToString(cOut) << tpl.name() << "(" << varsToString(cIn)
+            << ptrVarsToString(matchList, idxList, tpl, progState) << ")";
+    pInsnWriter->replaceInsn(locToReplace, str.str());
 
     std::set<TLocIdx> removed;
     BOOST_FOREACH(const TMatchIdx idx, idxList) {
@@ -360,7 +361,7 @@ bool replaceSingleOp(
                 // already removed
                 continue;
 
-            CL_NOTE("[ADT] would drop insn #" << loc);
+            pInsnWriter->dropInsn(loc);
         }
     }
 
@@ -368,6 +369,7 @@ bool replaceSingleOp(
 }
 
 bool replaceAdtOps(
+        TInsnWriter                *pInsnWriter,
         const TMatchList           &matchList,
         const TOpList              &opList,
         const OpCollection         &adtOps,
@@ -379,7 +381,8 @@ bool replaceAdtOps(
         const TFootprintIdent &fp = fm0.footprint;
         const OpTemplate &tpl = adtOps[fp.first];
 
-        if (!replaceSingleOp(matchList, idxList, varMap, tpl, progState))
+        if (!replaceSingleOp(pInsnWriter, matchList, idxList, varMap, tpl,
+                    progState))
             return false;
     }
 

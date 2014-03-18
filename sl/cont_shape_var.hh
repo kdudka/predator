@@ -37,6 +37,7 @@ typedef std::map<TShapeIdent, TShapeVarId>          TShapeVarByShape;
 
 bool assignShapeVariables(
         TShapeVarByShape           *pDst,
+        TInsnWriter                *pInsnWriter,
         const TMatchList           &matchList,
         const TOpList              &opList,
         const OpCollection         &coll,

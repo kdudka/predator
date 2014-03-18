@@ -132,6 +132,22 @@ class GlobalState {
                 const GlobalState &glState);
 };
 
+class StateRewriter {
+    public:
+        /// *pState has to be valid till the destruction of StateRewriter
+        StateRewriter(GlobalState *pState):
+            state_(*pState)
+        {
+        }
+
+        void insertInsn(TLocIdx src, TLocIdx dst, const std::string &insn);
+        void replaceInsn(TLocIdx at, const std::string &insn);
+        void dropInsn(TLocIdx at);
+
+    private:
+        GlobalState                &state_;
+};
+
 /// return heap of the given state by its identity
 const SymHeap *heapByIdent(const GlobalState &, THeapIdent);
 

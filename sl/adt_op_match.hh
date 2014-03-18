@@ -27,6 +27,8 @@
 
 namespace AdtOp {
 
+typedef FixedPoint::StateRewriter                   TInsnWriter;
+
 enum EFootprintPort {
     FP_SRC,
     FP_DST,
