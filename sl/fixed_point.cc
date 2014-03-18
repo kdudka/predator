@@ -581,9 +581,45 @@ void StateRewriter::insertInsn(
         const TLocIdx               dst,
         const std::string          &insn)
 {
-    // TODO
-    CL_NOTE("[ADT] would insert " << insn
+    CL_NOTE("[ADT] inserting " << insn
             << " between locations #" << src << " -> #" << dst);
+
+    // allocate a new instruction
+    LocalState *locState = new LocalState;
+    locState->insn = 0;
+    locState->insnText = insn;
+
+    // append the instruction to the list
+    const TLocIdx at = state_.size();
+    state_.stateList_.append(locState);
+
+    // resolve src/dst instructions
+    LocalState &srcState = state_[src];
+    LocalState &dstState = state_[dst];
+
+    bool closesLoop = false;
+    BOOST_FOREACH(CfgEdge &oe, srcState.cfgOutEdges) {
+        if (dst != oe.targetLoc)
+            continue;
+
+        closesLoop = oe.closesLoop;
+        oe.targetLoc = at;
+        oe.closesLoop = false;
+    }
+
+    BOOST_FOREACH(CfgEdge &ie, dstState.cfgInEdges) {
+        if (src != ie.targetLoc)
+            continue;
+
+        CL_BREAK_IF(closesLoop != ie.closesLoop);
+        ie.targetLoc = at;
+    }
+
+    const CfgEdge ie(src);
+    locState->cfgInEdges.push_back(ie);
+
+    const CfgEdge oe(dst, closesLoop);
+    locState->cfgOutEdges.push_back(oe);
 }
 
 void StateRewriter::replaceInsn(const TLocIdx at, const std::string &insn)

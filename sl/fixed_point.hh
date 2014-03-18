@@ -131,6 +131,8 @@ class GlobalState {
 
         friend void exportControlFlow(GlobalState *pDst,
                 const GlobalState &glState);
+
+        friend class StateRewriter;
 };
 
 class StateRewriter {
