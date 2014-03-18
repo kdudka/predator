@@ -41,6 +41,8 @@
 
 namespace FixedPoint {
 
+using AdtOp::TShapeVarByShape;
+
 typedef const struct cl_loc                        *TLoc;
 typedef int                                         TFncUid;
 typedef std::map<TFncUid, TFnc>                     TFncMap;
@@ -173,44 +175,12 @@ void plotInsn(
     plot.out << "}\n";
 }
 
-// XXX
-AdtOp::OpCollection adtOps;
-
-void plotFncCore(PlotData &plot, const GlobalState &fncState)
+void plotFncCore(
+        PlotData                   &plot,
+        const GlobalState          &fncState,
+        const TShapeVarByShape     &varByShape  = TShapeVarByShape(),
+        THeapSet                    heapSet     = THeapSet())
 {
-    // match templates
-    using namespace AdtOp;
-    TMatchList matchList;
-    matchTemplates(&matchList, adtOps, fncState);
-    selectApplicableMatches(&matchList, fncState);
-
-    TOpList opList;
-    if (!collectOpList(&opList, matchList))
-        CL_ERROR("[ADT] failed to detect container operations");
-
-    // assign shape variables
-    TShapeVarByShape varByShape;
-    if (!assignShapeVariables(&varByShape, matchList, opList, adtOps, fncState))
-        CL_ERROR("[ADT] failed to assign shape variables");
-
-    // replace container operations
-    if (!replaceAdtOps(matchList, opList, adtOps, varByShape, fncState))
-        CL_ERROR("[ADT] failed to replace container operations");
-
-    // remove matched heaps not representing any instructions to be replaced
-    BOOST_FOREACH(FootprintMatch &fm, matchList) {
-        CL_BREAK_IF(fm.matchedHeaps.empty());
-        fm.matchedHeaps.pop_back();
-    }
-
-    // compute set of matched heaps
-    THeapSet heapSet;
-    BOOST_FOREACH(FootprintMatch &fm, matchList) {
-        CL_BREAK_IF(fm.matchedHeaps.empty());
-        BOOST_FOREACH(const THeapIdent heap, fm.matchedHeaps)
-            heapSet.insert(heap);
-    }
-
     const TLocIdx locCnt = fncState.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         const LocalState &locState = fncState[locIdx];
@@ -256,6 +226,47 @@ void plotFncCore(PlotData &plot, const GlobalState &fncState)
     }
 }
 
+// XXX
+AdtOp::OpCollection adtOps;
+
+void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
+{
+    // match templates
+    using namespace AdtOp;
+    TMatchList matchList;
+    matchTemplates(&matchList, adtOps, fncState);
+    selectApplicableMatches(&matchList, fncState);
+
+    TOpList opList;
+    if (!collectOpList(&opList, matchList))
+        CL_ERROR("[ADT] failed to detect container operations");
+
+    // assign shape variables
+    TShapeVarByShape varByShape;
+    if (!assignShapeVariables(&varByShape, matchList, opList, adtOps, fncState))
+        CL_ERROR("[ADT] failed to assign shape variables");
+
+    // replace container operations
+    if (!replaceAdtOps(matchList, opList, adtOps, varByShape, fncState))
+        CL_ERROR("[ADT] failed to replace container operations");
+
+    // remove matched heaps not representing any instructions to be replaced
+    BOOST_FOREACH(FootprintMatch &fm, matchList) {
+        CL_BREAK_IF(fm.matchedHeaps.empty());
+        fm.matchedHeaps.pop_back();
+    }
+
+    // compute set of matched heaps
+    THeapSet heapSet;
+    BOOST_FOREACH(FootprintMatch &fm, matchList) {
+        CL_BREAK_IF(fm.matchedHeaps.empty());
+        BOOST_FOREACH(const THeapIdent heap, fm.matchedHeaps)
+            heapSet.insert(heap);
+    }
+
+    plotFncCore(plot, fncState, varByShape, heapSet);
+}
+
 void plotFnc(const TFnc fnc, StateByInsn::TStateMap &stateByInsn)
 {
     const std::string fncName = nameOf(*fnc);
@@ -278,7 +289,7 @@ void plotFnc(const TFnc fnc, StateByInsn::TStateMap &stateByInsn)
     // plot the body
     PlotData plot(out, stateByInsn, plotName);
     const GlobalState *fncState = computeStateOf(fnc, stateByInsn);
-    plotFncCore(plot, *fncState);
+    plotFixedPointOfFnc(plot, *fncState);
     delete fncState;
 
     // close graph
