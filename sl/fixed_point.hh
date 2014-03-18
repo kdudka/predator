@@ -88,6 +88,7 @@ typedef std::vector<CfgEdge>                        TCfgEdgeList;
 /// state summary for a single location (preceding a single instruction)
 struct LocalState {
     TInsn                   insn;           /// instruction using the state
+    std::string             insnText;       /// meaningful only if (insn == 0)
     SymHeapList             heapList;       /// union of heaps giving the state
     TShapeListByHeapIdx     shapeListByHeapIdx; /// container shapes per heap
     TCfgEdgeList            cfgInEdges;     /// ingoing control-flow edges

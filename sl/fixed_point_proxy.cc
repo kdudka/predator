@@ -124,9 +124,14 @@ void plotInsn(
         << "\" {\n\tlabel=\"loc #" << locIdx << "\";\n";
 
     // plot the root node
-    plot.out << LOC_NODE(plot, locIdx) << " [label=" << QUOT(*insn)
-        << ", tooltip=" << QUOT(insn->loc)
-        << ", shape=box, color=blue, fontcolor=blue];\n";
+    if (insn)
+        plot.out << LOC_NODE(plot, locIdx) << " [label=" << QUOT(*insn)
+            << ", tooltip=" << QUOT(insn->loc)
+            << ", shape=box, color=blue, fontcolor=blue];\n";
+    else
+        plot.out << LOC_NODE(plot, locIdx)
+            << " [label=" << QUOT(locState.insnText)
+            << ", shape=box, color=blue, fontcolor=red];\n";
 
     const SymState &state = locState.heapList;
 

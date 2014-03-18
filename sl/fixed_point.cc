@@ -588,8 +588,10 @@ void StateRewriter::insertInsn(
 
 void StateRewriter::replaceInsn(const TLocIdx at, const std::string &insn)
 {
-    // TODO
-    CL_NOTE("[ADT] would replace insn #" << at << " by " << insn);
+    CL_NOTE("[ADT] replacing insn #" << at << " by " << insn);
+    LocalState &locState = state_[at];
+    locState.insn = 0;
+    locState.insnText = insn;
 }
 
 void StateRewriter::dropInsn(const TLocIdx at)
