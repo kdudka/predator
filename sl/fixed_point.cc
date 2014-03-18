@@ -560,6 +560,22 @@ GlobalState* computeStateOf(const TFnc fnc, const TStateMap &stateByInsn)
     return glState;
 }
 
+void exportControlFlow(GlobalState *pDst, const GlobalState &glState)
+{
+    CL_BREAK_IF(!pDst->stateList_.empty());
+    CL_BREAK_IF(!pDst->traceList_.empty());
+
+    BOOST_FOREACH(const LocalState *locState, glState.stateList_) {
+        LocalState *dupState = new LocalState;
+
+        dupState->insn          = locState->insn;
+        dupState->cfgInEdges    = locState->cfgInEdges;
+        dupState->cfgOutEdges   = locState->cfgOutEdges;
+
+        pDst->stateList_.append(dupState);
+    }
+}
+
 void sl_dump(const TShapeMapper &m)
 {
     std::cout << "TShapeMapper: ";

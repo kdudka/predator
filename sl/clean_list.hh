@@ -49,6 +49,10 @@ class CleanList {
             cl_.push_back(ptr);
         }
 
+        bool empty() const {
+            return cl_.empty();
+        }
+
         unsigned size() const {
             return cl_.size();
         }

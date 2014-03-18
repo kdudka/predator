@@ -99,6 +99,8 @@ struct LocalState {
 /// annotated fixed-point of a program (or its part, e.g. a function)
 class GlobalState {
     public:
+        GlobalState() { }
+
         /// return state summary local to the given location
         LocalState& operator[](const TLocIdx loc) {
             return *stateList_[loc];
@@ -119,9 +121,15 @@ class GlobalState {
         CleanList<TraceEdge>        traceList_;
 
     private:
-        GlobalState() { }
+        // intentionally not implemented
+        GlobalState(const GlobalState &);
+        GlobalState& operator=(const GlobalState &);
+
         friend GlobalState* computeStateOf(const TFnc,
                 const StateByInsn::TStateMap &);
+
+        friend void exportControlFlow(GlobalState *pDst,
+                const GlobalState &glState);
 };
 
 /// return heap of the given state by its identity
@@ -135,6 +143,9 @@ const Shape *shapeByIdent(const GlobalState &, const TShapeIdent &);
 
 /// caller is responsible to destroy the returned instance
 GlobalState* computeStateOf(TFnc, const StateByInsn::TStateMap &);
+
+/// write the CFG-only skeleton fo glState into *pDst
+void exportControlFlow(GlobalState *pDst, const GlobalState &glState);
 
 /// pretty print the given ID mapping
 void sl_dump(const TShapeMapper &);
