@@ -18,7 +18,7 @@
  */
 
 #include "config_cl.h"
-#include "killer.hh"
+#include <cl/killer.hh>
 
 #include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
@@ -54,23 +54,13 @@ namespace VarKiller {
 typedef CodeStorage::Storage               &TStorRef;
 typedef const CodeStorage::PointsTo::Graph &TPTGraph;
 typedef const struct cl_loc                *TLoc;
-typedef int                                 TVar;
 typedef const CodeStorage::Var             *TStorVar;
 typedef const CodeStorage::Fnc             *TFnc;
-typedef std::set<TVar>                      TSet;
 typedef const Block                        *TBlock;
 typedef std::set<TBlock>                    TBlockSet;
 typedef std::vector<TSet>                   TLivePerTarget;
 
-/// per-block data
-struct BlockData {
-    TSet                                    gen;
-    TSet                                    kill;
-};
-
 typedef std::map<TBlock, BlockData>         TMap;
-
-typedef std::map<int, int>                  TAliasMap;
 
 /// shared data
 struct Data {
@@ -242,16 +232,18 @@ void scanOperand(
         scanTarget(stor, bData, pAliasMap, var, upDst);
 }
 
-void scanInsn(BlockData &bData, const Insn &insn, TAliasMap *pAliasMap)
+void scanInsn(BlockData *pDst, const Insn *insn, TAliasMap *pAliasMap)
 {
-    VK_DEBUG_MSG(3, &insn.loc, "scanInsn: " << insn);
-    const TOperandList opList = insn.operands;
-    TStorRef stor = *insn.stor;
+    BlockData &bData = *pDst;
 
-    const enum cl_insn_e code = insn.code;
+    VK_DEBUG_MSG(3, &insn->loc, "scanInsn: " << *insn);
+    const TOperandList opList = insn->operands;
+    TStorRef stor = *insn->stor;
+
+    const enum cl_insn_e code = insn->code;
     switch (code) {
         case CL_INSN_CALL:
-            if (isBuiltInCall(insn))
+            if (isBuiltInCall(*insn))
                 // just pretend there is no insn
                 return;
             // fall through!
@@ -380,7 +372,7 @@ void commitInsn(
     // instruction 'insn' could be precomputed already (in analyzeFnc() - before
     // computeFixPoint() call).
     BlockData arena;
-    scanInsn(arena, insn, &data.derefAliases);
+    scanInsn(&arena, &insn, &data.derefAliases);
 
     // handle killed variables same way as generated (make an union)
     TSet touched = arena.kill;
@@ -622,7 +614,7 @@ void analyzeFnc(Fnc &fnc)
 
         BlockData &bData = data.blocks[bb];
         BOOST_FOREACH(const Insn *insn, *bb) {
-            scanInsn(bData, *insn, &data.derefAliases);
+            scanInsn(&bData, insn, &data.derefAliases);
         }
 
         // guarantee to distribute pointer-targests exist when function finishes

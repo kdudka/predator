@@ -22,12 +22,12 @@
 
 #include <cl/cl_msg.hh>
 #include <cl/easy.hh>
+#include <cl/killer.hh>
 #include <cl/memdebug.hh>
 #include <cl/storage.hh>
 
 #include "callgraph.hh"
 #include "cl_storage.hh"
-#include "killer.hh"
 #include "loopscan.hh"
 #include "pointsto.hh"
 #include "stopwatch.hh"

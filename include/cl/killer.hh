@@ -25,10 +25,34 @@
  * @todo some dox
  */
 
+#include <map>
+#include <set>
+
 namespace CodeStorage {
+    struct Insn;
     struct Storage;
 
     void killLocalVariables(Storage &stor);
-}
+
+    namespace VarKiller {
+        typedef int                                 TVar;
+        typedef std::set<TVar>                      TSet;
+        typedef std::map<TVar, TVar>                TAliasMap;
+
+
+        /// per-block data
+        struct BlockData {
+            TSet                                    gen;
+            TSet                                    kill;
+        };
+
+        void scanInsn(
+                BlockData          *pDst,
+                const Insn         *insn,
+                TAliasMap          *pAliasMap = 0);
+
+    } // namespace VarKiller
+
+} // namespace CodeStorage
 
 #endif /* H_GUARD_KILLER_H */
