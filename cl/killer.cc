@@ -187,9 +187,10 @@ void scanTarget(
 }
 
 void scanOperand(
-        Data                           &data,
+        TStorRef                       &stor,
         BlockData                      &bData,
         const cl_operand               &op,
+        TAliasMap                      *pAliasMap,
         bool                            upDst)
 {
     VK_DEBUG(4, "scanOperand: " << op << ((upDst) ? " [dst]" : " [src]"));
@@ -205,7 +206,8 @@ void scanOperand(
         switch (code) {
             case CL_ACCESSOR_DEREF_ARRAY:
                 // FIXME: unguarded recursion
-                scanOperand(data, bData, *(ac->data.array.index), false);
+                scanOperand(stor, bData, *(ac->data.array.index), pAliasMap,
+                        /* dst */ false);
                 // fall through!
 
             case CL_ACCESSOR_DEREF:
@@ -230,20 +232,21 @@ void scanOperand(
         // even non-locals could have been handled ^^^^ before!
         return;
 
-    const Var *var  = &data.stor.vars[varIdFromOperand(&op)];
+    const Var *var  = &stor.vars[varIdFromOperand(&op)];
     scanVar(bData, var, dst, fieldOfComp);
 
     if (!deref)
         return;
 
     if (!fieldOfComp)
-        scanTarget(data.stor, bData, &data.derefAliases, var, upDst);
+        scanTarget(stor, bData, pAliasMap, var, upDst);
 }
 
-void scanInsn(Data &data, BlockData &bData, const Insn &insn)
+void scanInsn(BlockData &bData, const Insn &insn, TAliasMap *pAliasMap)
 {
     VK_DEBUG_MSG(3, &insn.loc, "scanInsn: " << insn);
     const TOperandList opList = insn.operands;
+    TStorRef stor = *insn.stor;
 
     const enum cl_insn_e code = insn.code;
     switch (code) {
@@ -259,7 +262,7 @@ void scanInsn(Data &data, BlockData &bData, const Insn &insn)
             CL_BREAK_IF(opList.empty());
             for (int i = opList.size() - 1; 0 <= i; --i) {
                 const cl_operand &op = opList[i];
-                scanOperand(data, bData, op, /* dst */ !i);
+                scanOperand(stor, bData, op, pAliasMap, /* dst */ !i);
             }
             return;
 
@@ -267,7 +270,8 @@ void scanInsn(Data &data, BlockData &bData, const Insn &insn)
         case CL_INSN_COND:
         case CL_INSN_SWITCH:
             // exactly one operand
-            scanOperand(data, bData, opList[/* src */ 0], /* dst */ false);
+            scanOperand(stor, bData, opList[/* src */ 0], pAliasMap,
+                    /* dst */ false);
             return;
 
         case CL_INSN_JMP:
@@ -376,7 +380,7 @@ void commitInsn(
     // instruction 'insn' could be precomputed already (in analyzeFnc() - before
     // computeFixPoint() call).
     BlockData arena;
-    scanInsn(data, arena, insn);
+    scanInsn(arena, insn, &data.derefAliases);
 
     // handle killed variables same way as generated (make an union)
     TSet touched = arena.kill;
@@ -618,7 +622,7 @@ void analyzeFnc(Fnc &fnc)
 
         BlockData &bData = data.blocks[bb];
         BOOST_FOREACH(const Insn *insn, *bb) {
-            scanInsn(data, bData, *insn);
+            scanInsn(bData, *insn, &data.derefAliases);
         }
 
         // guarantee to distribute pointer-targests exist when function finishes
