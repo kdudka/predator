@@ -168,16 +168,22 @@ void scanVar(BlockData &bData, const Var *var, bool dst, bool fieldOfComp)
         VK_DEBUG(3, "gen(" << var->name << ")");
 }
 
-void scanTarget(Data &data, BlockData &bData, const Var *origin, bool dst)
+void scanTarget(
+        TStorRef                       &stor,
+        BlockData                      &bData,
+        TAliasMap                      *pAliasMap,
+        const Var                      *origin,
+        const bool                      dst)
 {
     // find target variable of origin pointer 
-    if (!hasKey(data.derefAliases, origin->uid))
+    if (!pAliasMap || !hasKey(pAliasMap, origin->uid))
         return;
-    int uidAlias = data.derefAliases[origin->uid];;
+
+    const TVar uidAlias = (*pAliasMap)[origin->uid];;
 
     // scan the target
-    const Var *tgtVar = &data.stor.vars[uidAlias];
-    scanVar(bData, tgtVar, dst, false /* always non-field-of-composite */);
+    const Var *tgtVar = &stor.vars[uidAlias];
+    scanVar(bData, tgtVar, dst, /* never field-of-composite */ false);
 }
 
 void scanOperand(
@@ -231,7 +237,7 @@ void scanOperand(
         return;
 
     if (!fieldOfComp)
-        scanTarget(data, bData, var, upDst /* from origin! */ );
+        scanTarget(data.stor, bData, &data.derefAliases, var, upDst);
 }
 
 void scanInsn(Data &data, BlockData &bData, const Insn &insn)
