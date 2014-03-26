@@ -686,6 +686,49 @@ void StateRewriter::dropInsn(const TLocIdx at)
     locState.cfgOutEdges.clear();
 }
 
+bool StateRewriter::dedupOutgoingEdges(const TLocIdx at)
+{
+    LocalState &locState = state_[at];
+    bool anyChange = false;
+
+    // iterate through all outgoing edges
+    BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges) {
+        LocalState &outState = state_[oe.targetLoc];
+        TCfgEdgeList inEdges;
+        std::set<TLocIdx> inSet;
+
+        BOOST_FOREACH(const CfgEdge &be, outState.cfgInEdges) {
+            const TLocIdx dst = be.targetLoc;
+            if (dst == at && !insertOnce(inSet, dst)) {
+                // duplicate edge detected
+                anyChange = true;
+                continue;
+            }
+
+            // keep other CFG edges as they are
+            inEdges.push_back(be);
+        }
+
+        inEdges.swap(outState.cfgInEdges);
+    }
+
+    if (!anyChange)
+        // nothing changed actually
+        return false;
+
+    TCfgEdgeList outEdges;
+    std::set<TLocIdx> outSet;
+
+    // iterate through all outgoing edges
+    BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges) {
+        if (insertOnce(outSet, oe.targetLoc))
+            outEdges.push_back(oe);
+    }
+
+    outEdges.swap(locState.cfgOutEdges);
+    return true;
+}
+
 typedef CodeStorage::VarKiller::TVar                TVar;
 typedef CodeStorage::VarKiller::TSet                TVarSet;
 typedef std::vector<TVarSet>                        TVarSetByLoc;
@@ -783,8 +826,20 @@ void analyzeLiveVars(
 
 bool removeRedundantBranching(GlobalState *pState)
 {
-    // TODO
-    return false;
+    StateRewriter writer(pState);
+    bool anyChange = false;
+
+    const TLocIdx locCnt = pState->size();
+    for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
+        if (!writer.dedupOutgoingEdges(locIdx))
+            continue;
+
+        // XXX: assume redundant branch condition with no side effect
+        writer.dropInsn(locIdx);
+        anyChange = true;
+    }
+
+    return anyChange;
 }
 
 void removeDeadCode(GlobalState *pState)

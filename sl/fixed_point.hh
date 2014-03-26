@@ -146,6 +146,7 @@ class StateRewriter {
         void insertInsn(TLocIdx src, TLocIdx dst, const std::string &insn);
         void replaceInsn(TLocIdx at, const std::string &insn);
         void dropInsn(TLocIdx at);
+        bool /* any change */ dedupOutgoingEdges(TLocIdx at);
 
     private:
         GlobalState                &state_;
