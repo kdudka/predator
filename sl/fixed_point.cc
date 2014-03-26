@@ -658,6 +658,27 @@ void StateRewriter::dropInsn(const TLocIdx at)
         outEdges.swap(inState.cfgOutEdges);
     }
 
+    // iterate through all outgoing edges
+    BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges) {
+        CL_BREAK_IF(oe.closesLoop);
+        LocalState &outState = state_[oe.targetLoc];
+        TCfgEdgeList inEdges;
+
+        BOOST_FOREACH(const CfgEdge &be, outState.cfgInEdges) {
+            if (at != be.targetLoc) {
+                // keep unrelated CFG edges as they are
+                inEdges.push_back(be);
+                continue;
+            }
+
+            // redirect all edges previously coming from 'at'
+            BOOST_FOREACH(const CfgEdge &ie, locState.cfgInEdges)
+                inEdges.push_back(ie);
+        }
+
+        inEdges.swap(outState.cfgInEdges);
+    }
+
     // finally detach 'at' from the graph completely
     locState.cfgInEdges.clear();
     locState.cfgOutEdges.clear();
