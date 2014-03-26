@@ -163,8 +163,11 @@ const Shape *shapeByIdent(const GlobalState &, const TShapeIdent &);
 /// caller is responsible to destroy the returned instance
 GlobalState* computeStateOf(TFnc, const StateByInsn::TStateMap &);
 
-/// write the CFG-only skeleton fo glState into *pDst
+/// write the CFG-only skeleton of glState into *pDst
 void exportControlFlow(GlobalState *pDst, const GlobalState &glState);
+
+/// remove instructions assigning values to dead variables
+void removeDeadCode(GlobalState *pState);
 
 /// pretty print the given ID mapping
 void sl_dump(const TShapeMapper &);

@@ -293,6 +293,11 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
     // plot the resulting CFG
     ++plot.subGraphIdx;
     plotFncCore(plot, cfgResult);
+
+    // plot the resulting CFG after removing dead code
+    ++plot.subGraphIdx;
+    removeDeadCode(&cfgResult);
+    plotFncCore(plot, cfgResult);
 }
 
 void plotFnc(const TFnc fnc, StateByInsn::TStateMap &stateByInsn)
