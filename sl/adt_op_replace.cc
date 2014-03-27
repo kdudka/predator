@@ -19,6 +19,7 @@
 
 #include "adt_op_replace.hh"
 
+#include "fixed_point_rewrite.hh"
 #include "symproc.hh"
 #include "symtrace.hh"
 
@@ -32,6 +33,7 @@ namespace AdtOp {
 
 using FixedPoint::TLocIdx;
 using FixedPoint::THeapIdent;
+using FixedPoint::TextInsn;
 
 typedef std::vector<int /* uid */>                  TPtrVarList;
 typedef std::vector<TShapeVarId>                    TShapeVarList;
@@ -342,7 +344,7 @@ bool replaceSingleOp(
     std::ostringstream str;
     str << destToString(cOut) << tpl.name() << "(" << varsToString(cIn)
             << ptrVarsToString(matchList, idxList, tpl, progState) << ")";
-    pInsnWriter->replaceInsn(locToReplace, str.str());
+    pInsnWriter->replaceInsn(locToReplace, new TextInsn(str.str()));
 
     std::set<TLocIdx> removed;
     BOOST_FOREACH(const TMatchIdx idx, idxList) {

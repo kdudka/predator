@@ -32,9 +32,14 @@ class StateRewriter {
         {
         }
 
-        void insertInsn(TLocIdx src, TLocIdx dst, const std::string &insn);
-        void replaceInsn(TLocIdx at, const std::string &insn);
+        /// takes ownership of *insn
+        void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn);
+
+        /// takes ownership of *insn
+        void replaceInsn(TLocIdx at, GenericInsn *insn);
+
         void dropInsn(TLocIdx at);
+
         bool /* any change */ dedupOutgoingEdges(TLocIdx at);
 
     private:

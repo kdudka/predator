@@ -27,14 +27,14 @@ namespace FixedPoint {
 void StateRewriter::insertInsn(
         const TLocIdx               src,
         const TLocIdx               dst,
-        const std::string          &insn)
+        GenericInsn                *insn)
 {
-    CL_NOTE("[ADT] inserting " << insn
+    CL_NOTE("[ADT] inserting " << *insn
             << " between locations #" << src << " -> #" << dst);
 
     // allocate a new instruction
     LocalState *locState = new LocalState;
-    locState->insn = new TextInsn(insn);
+    locState->insn = insn;
 
     // append the instruction to the list
     const TLocIdx at = state_.size();
@@ -69,12 +69,12 @@ void StateRewriter::insertInsn(
     locState->cfgOutEdges.push_back(oe);
 }
 
-void StateRewriter::replaceInsn(const TLocIdx at, const std::string &insn)
+void StateRewriter::replaceInsn(const TLocIdx at, GenericInsn *insn)
 {
-    CL_NOTE("[ADT] replacing insn #" << at << " by " << insn);
+    CL_NOTE("[ADT] replacing insn #" << at << " by " << *insn);
     LocalState &locState = state_[at];
     delete locState.insn;
-    locState.insn = new TextInsn(insn);
+    locState.insn = insn;
 }
 
 void StateRewriter::dropInsn(const TLocIdx at)

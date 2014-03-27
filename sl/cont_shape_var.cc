@@ -19,6 +19,7 @@
 
 #include "cont_shape_var.hh"
 
+#include "fixed_point_rewrite.hh"
 #include "cont_shape_seq.hh"
 
 #include <cl/cl_msg.hh>
@@ -28,6 +29,8 @@
 namespace AdtOp {
 
 const TShapeVarId InvalidShapeVar = -1;
+
+using FixedPoint::TextInsn;
 
 typedef FixedPoint::TLocIdx                         TLocIdx;
 typedef FixedPoint::THeapIdent                      THeapIdent;
@@ -297,7 +300,7 @@ bool ShapeVarTransMap::defineAssignment(
     // non-trivial fresh assignment
     std::ostringstream str;
     str << "C" << dstVar << " := C" << srcVar;
-    insnWriter_.insertInsn(srcLoc, dstLoc, str.str());
+    insnWriter_.insertInsn(srcLoc, dstLoc, new TextInsn(str.str()));
     return true;
 }
 
