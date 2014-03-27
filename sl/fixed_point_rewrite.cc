@@ -21,6 +21,7 @@
 
 #include <cl/cldebug.hh>
 #include <cl/cl_msg.hh>
+#include <cl/killer.hh>
 
 namespace FixedPoint {
 
@@ -174,6 +175,36 @@ bool StateRewriter::dedupOutgoingEdges(const TLocIdx at)
 
     outEdges.swap(locState.cfgOutEdges);
     return true;
+}
+
+void ClInsn::lazyInit() const
+{
+    using namespace CodeStorage::VarKiller;
+
+    if (done_)
+        return;
+    done_ = true;
+
+    BlockData data;
+    scanInsn(&data, insn_);
+
+    BOOST_FOREACH(const TVar var, data.gen)
+        live_.insert(GenericVar(VL_CODE_LISTENER, var));
+
+    BOOST_FOREACH(const TVar var, data.kill)
+        kill_.insert(GenericVar(VL_CODE_LISTENER, var));
+}
+
+const TGenericVarSet& ClInsn::liveVars() const
+{
+    this->lazyInit();
+    return live_;
+}
+
+const TGenericVarSet& ClInsn::killVars() const
+{
+    this->lazyInit();
+    return kill_;
 }
 
 void ClInsn::writeToStream(std::ostream &str) const

@@ -46,14 +46,57 @@ class StateRewriter {
         GlobalState                &state_;
 };
 
-class ClInsn: public GenericInsn {
+enum EVarLevel {
+    VL_NONE,
+    VL_CODE_LISTENER,
+    VL_CONTAINER_VAR
+};
+
+struct GenericVar {
+    EVarLevel           code;
+    int                 uid;
+
+    GenericVar():
+        code(VL_NONE),
+        uid(0)
+    {
+    }
+
+    GenericVar(const EVarLevel code_, const int uid_):
+        code(code_),
+        uid(uid_)
+    {
+    }
+};
+
+/// required by std::set<GenericVar>
+inline bool operator<(const GenericVar &a, const GenericVar &b)
+{
+    RETURN_IF_COMPARED(a, b, code);
+    RETURN_IF_COMPARED(a, b, uid);
+    return false;
+}
+
+typedef std::set<GenericVar>                        TGenericVarSet;
+
+class AnnotatedInsn: public GenericInsn {
+    public:
+        virtual const TGenericVarSet& liveVars() const = 0;
+        virtual const TGenericVarSet& killVars() const = 0;
+};
+
+class ClInsn: public AnnotatedInsn {
     public:
         ClInsn(TInsn insn):
-            insn_(insn)
+            insn_(insn),
+            done_(false)
         {
         }
 
         virtual void writeToStream(std::ostream &str) const;
+
+        virtual const TGenericVarSet& liveVars() const;
+        virtual const TGenericVarSet& killVars() const;
 
         virtual TInsn clInsn() const
         {
@@ -61,15 +104,20 @@ class ClInsn: public GenericInsn {
         }
 
     private:
-        TInsn insn_;
+        TInsn                       insn_;
+        mutable TGenericVarSet      live_;
+        mutable TGenericVarSet      kill_;
+        mutable bool                done_;
 
         virtual GenericInsn* doClone() const
         {
             return new ClInsn(*this);
         }
+
+        void lazyInit() const;
 };
 
-class TextInsn: public GenericInsn {
+class TextInsn: public AnnotatedInsn {
     public:
         TextInsn(const std::string &text):
             text_(text)
@@ -78,13 +126,25 @@ class TextInsn: public GenericInsn {
 
         virtual void writeToStream(std::ostream &str) const;
 
+        virtual const TGenericVarSet& liveVars() const
+        {
+            return live_;
+        }
+
+        virtual const TGenericVarSet& killVars() const
+        {
+            return kill_;
+        }
+
         virtual TInsn clInsn() const
         {
             return 0;
         }
 
     private:
-        std::string text_;
+        std::string                 text_;
+        TGenericVarSet              live_;
+        TGenericVarSet              kill_;
 
         virtual GenericInsn *doClone() const
         {
