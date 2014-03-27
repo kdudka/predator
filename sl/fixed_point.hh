@@ -163,23 +163,6 @@ class GlobalState {
         friend class StateRewriter;
 };
 
-class StateRewriter {
-    public:
-        /// *pState has to be valid till the destruction of StateRewriter
-        StateRewriter(GlobalState *pState):
-            state_(*pState)
-        {
-        }
-
-        void insertInsn(TLocIdx src, TLocIdx dst, const std::string &insn);
-        void replaceInsn(TLocIdx at, const std::string &insn);
-        void dropInsn(TLocIdx at);
-        bool /* any change */ dedupOutgoingEdges(TLocIdx at);
-
-    private:
-        GlobalState                &state_;
-};
-
 /// return heap of the given state by its identity
 const SymHeap *heapByIdent(const GlobalState &, THeapIdent);
 

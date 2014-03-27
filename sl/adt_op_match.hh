@@ -22,6 +22,7 @@
 
 #include "adt_op.hh"
 #include "fixed_point.hh"
+#include "fixed_point_rewrite.hh"   // for FixedPoint::StateRewriter
 
 #include <list>
 

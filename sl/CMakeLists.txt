@@ -52,6 +52,7 @@ add_library(predator STATIC
     cont_shape_var.cc
     fixed_point.cc
     fixed_point_proxy.cc
+    fixed_point_rewrite.cc
     glconf.cc
     intrange.cc
     plotenum.cc
