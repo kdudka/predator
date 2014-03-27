@@ -53,10 +53,14 @@ inline std::ostream& operator<<(std::ostream &str, const struct cl_operand &op)
     return str;
 }
 
-inline std::ostream& operator<<(std::ostream &str, const CodeStorage::Insn &in)
+namespace CodeStorage {
+
+inline std::ostream& operator<<(std::ostream &str, const Insn &in)
 {
     insnToStream(str, in);
     return str;
 }
+
+} // namespace CodeStorage
 
 #endif /* H_GUARD_CLDEBUG_H */
