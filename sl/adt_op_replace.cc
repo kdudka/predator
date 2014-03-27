@@ -50,7 +50,7 @@ bool checkIndependency(
 
     BOOST_FOREACH(const THeapIdent heap, fm.skippedHeaps) {
         const LocalState &locState = progState[heap.first];
-        const TInsn insn = locState.insn;
+        const TInsn insn = locState.insn->clInsn();
         SymHeap sh = locState.heapList[heap.second];
         Trace::waiveCloneOperation(sh);
 

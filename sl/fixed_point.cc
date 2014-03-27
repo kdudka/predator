@@ -37,6 +37,68 @@ typedef const CodeStorage::Block                   *TBlock;
 
 const THeapIdent InvalidHeap(-1, -1);
 
+GenericInsn* GenericInsn::clone() const
+{
+    GenericInsn *insn = this->doClone();
+
+    // this will stop if doClone() is not correctly overridden
+    CL_BREAK_IF(typeid(*insn) != typeid(*this));
+
+    return insn;
+}
+
+class ClInsn: public GenericInsn {
+    public:
+        ClInsn(TInsn insn):
+            insn_(insn)
+        {
+        }
+
+        virtual void writeToStream(std::ostream &str) const
+        {
+            str << *insn_;
+        }
+
+        virtual TInsn clInsn() const
+        {
+            return insn_;
+        }
+
+    private:
+        TInsn insn_;
+
+        virtual GenericInsn* doClone() const
+        {
+            return new ClInsn(*this);
+        }
+};
+
+class TextInsn: public GenericInsn {
+    public:
+        TextInsn(const std::string &text):
+            text_(text)
+        {
+        }
+
+        virtual void writeToStream(std::ostream &str) const
+        {
+            str << text_;
+        }
+
+        virtual TInsn clInsn() const
+        {
+            return 0;
+        }
+
+    private:
+        std::string text_;
+
+        virtual GenericInsn *doClone() const
+        {
+            return new TextInsn(*this);
+        }
+};
+
 const SymHeap *heapByIdent(const GlobalState &glState, const THeapIdent shIdent)
 {
     const TLocIdx locIdx = shIdent.first;
@@ -175,7 +237,7 @@ void loadHeaps(
 
             // allocate a new location for the current instruction
             locState = new LocalState;
-            locState->insn = insn;
+            locState->insn = new ClInsn(insn);
             pStateList->append(locState);
 
             // store the reverse mapping from instructions to locations
@@ -203,7 +265,7 @@ void finalizeFlow(TStateList &stateList, const TInsnLookup &insnLookup)
     const TLocIdx locCnt = stateList.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         LocalState *locState = stateList[locIdx];
-        const TInsn insn = locState->insn;
+        const TInsn insn = locState->insn->clInsn();
 
         if (!locState->cfgOutEdges.empty()) {
             // non-terminal instructions are already handled in loadHeaps()
@@ -570,7 +632,7 @@ void exportControlFlow(GlobalState *pDst, const GlobalState &glState)
     BOOST_FOREACH(const LocalState *locState, glState.stateList_) {
         LocalState *dupState = new LocalState;
 
-        dupState->insn          = locState->insn;
+        dupState->insn          = locState->insn->clone();
         dupState->cfgInEdges    = locState->cfgInEdges;
         dupState->cfgOutEdges   = locState->cfgOutEdges;
 
@@ -588,8 +650,7 @@ void StateRewriter::insertInsn(
 
     // allocate a new instruction
     LocalState *locState = new LocalState;
-    locState->insn = 0;
-    locState->insnText = insn;
+    locState->insn = new TextInsn(insn);
 
     // append the instruction to the list
     const TLocIdx at = state_.size();
@@ -628,16 +689,16 @@ void StateRewriter::replaceInsn(const TLocIdx at, const std::string &insn)
 {
     CL_NOTE("[ADT] replacing insn #" << at << " by " << insn);
     LocalState &locState = state_[at];
-    locState.insn = 0;
-    locState.insnText = insn;
+    delete locState.insn;
+    locState.insn = new TextInsn(insn);
 }
 
 void StateRewriter::dropInsn(const TLocIdx at)
 {
     CL_NOTE("[ADT] removing insn #" << at);
     LocalState &locState = state_[at];
+    delete locState.insn;
     locState.insn = 0;
-    locState.insnText.clear();
 
     // iterate through all incoming edges
     BOOST_FOREACH(const CfgEdge &ie, locState.cfgInEdges) {
@@ -760,9 +821,14 @@ void analyzeLiveVars(
         TLocData &locData = data[locIdx];
         TVarSet &killSet = locData.kill;
 
-        if (locNode.insn) {
+        if (!locNode.insn)
+            // an already removed instruction
+            continue;
+
+        const TInsn insn = locNode.insn->clInsn();
+        if (insn) {
             // compute gen/kill sets for regular CL instruction
-            scanInsn(&locData, locNode.insn);
+            scanInsn(&locData, insn);
 
             if (1U < locNode.cfgOutEdges.size()) {
                 // assume branch instruction
@@ -771,11 +837,7 @@ void analyzeLiveVars(
             }
         }
         else {
-            if (locNode.insnText.empty())
-                // an already removed instruction
-                continue;
-
-            CL_WARN("removeDeadCode() ignores " << locNode.insnText);
+            CL_WARN("removeDeadCode() ignores " << *locNode.insn);
         }
 
         // write killed variables as the set is already final
@@ -856,9 +918,13 @@ void removeDeadCode(GlobalState *pState)
         const TLocIdx locCnt = pState->size();
         for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
             const LocalState &locState = (*pState)[locIdx];
-            const TInsn insn = locState.insn;
-            if (!insn)
+            if (!locState.insn)
                 // there is no instruction to be removed
+                continue;
+
+            const TInsn insn = locState.insn->clInsn();
+            if (!insn)
+                // we remove only Code Listener instructions for now
                 continue;
 
             const TVarSet &killSet = killVarsPerLoc[locIdx];

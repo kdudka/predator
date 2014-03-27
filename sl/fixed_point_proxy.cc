@@ -117,8 +117,7 @@ void plotInsn(
         const TLocIdx               locIdx,
         const LocalState           &locState)
 {
-    const TInsn insn = locState.insn;
-    if (!insn && locState.insnText.empty())
+    if (!locState.insn)
         // an already removed insn
         return;
 
@@ -127,13 +126,14 @@ void plotInsn(
         << "\" {\n\tlabel=\"loc #" << locIdx << "\";\n";
 
     // plot the root node
+    const TInsn insn = locState.insn->clInsn();
     if (insn)
         plot.out << LOC_NODE(plot, locIdx) << " [label=" << QUOT(*insn)
             << ", tooltip=" << QUOT(insn->loc)
             << ", shape=box, color=blue, fontcolor=blue];\n";
     else
         plot.out << LOC_NODE(plot, locIdx)
-            << " [label=" << QUOT(locState.insnText)
+            << " [label=" << QUOT(*locState.insn)
             << ", shape=box, color=blue, fontcolor=red];\n";
 
     const SymState &state = locState.heapList;

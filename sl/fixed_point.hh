@@ -54,6 +54,30 @@ extern const THeapIdent InvalidHeap;
 typedef IdMapper<TShapeIdx, INT_MIN, INT_MAX>       TShapeMapper;
 typedef IdMapper<TObjId, OBJ_INVALID, OBJ_MAX_ID>   TObjectMapper;
 
+class GenericInsn {
+    public:
+        virtual ~GenericInsn() { }
+
+        // NVI to catch missing/incorrect overrides of doClone()
+        GenericInsn* clone() const;
+
+        /// write human-readable representation of the insn to an output stream
+        virtual void writeToStream(std::ostream &) const = 0;
+
+        /// return CL representation of the insn if exists; 0 otherwise
+        virtual TInsn clInsn() const = 0;
+
+    private:
+        /// see Herb Sutter: C++ Coding Standards (rules #39 and #54) for details
+        virtual GenericInsn* doClone() const = 0;
+};
+
+inline std::ostream& operator<<(std::ostream &str, const GenericInsn &insn)
+{
+    insn.writeToStream(str);
+    return str;
+}
+
 /// single heap-level trace edge holding inner ID mappings inside
 struct TraceEdge {
     THeapIdent              src;            /// source heap
@@ -87,14 +111,18 @@ typedef std::vector<CfgEdge>                        TCfgEdgeList;
 
 /// state summary for a single location (preceding a single instruction)
 struct LocalState {
-    TInsn                   insn;           /// instruction using the state
-    std::string             insnText;       /// meaningful only if (insn == 0)
+    GenericInsn            *insn;           /// insn using the state as input
     SymHeapList             heapList;       /// union of heaps giving the state
     TShapeListByHeapIdx     shapeListByHeapIdx; /// container shapes per heap
     TCfgEdgeList            cfgInEdges;     /// ingoing control-flow edges
     TCfgEdgeList            cfgOutEdges;    /// outgoing control-flow edges
     TEdgeListByHeapIdx      traceInEdges;   /// ingoing heap-level trace edges
     TEdgeListByHeapIdx      traceOutEdges;  /// outgoing heap-level trace edges
+
+    LocalState(): insn(0) { }
+    ~LocalState() { delete insn; }
+    LocalState(const LocalState &);
+    LocalState& operator=(const LocalState &);
 };
 
 /// annotated fixed-point of a program (or its part, e.g. a function)
