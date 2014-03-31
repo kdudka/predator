@@ -86,7 +86,6 @@ void StateRewriter::dropInsn(const TLocIdx at)
 
     // iterate through all incoming edges
     BOOST_FOREACH(const CfgEdge &ie, locState.cfgInEdges) {
-        CL_BREAK_IF(ie.closesLoop);
         LocalState &inState = state_[ie.targetLoc];
         TCfgEdgeList outEdges;
 
@@ -98,8 +97,10 @@ void StateRewriter::dropInsn(const TLocIdx at)
             }
 
             // redirect all edges previously going to 'at'
-            BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges)
+            BOOST_FOREACH(CfgEdge oe, locState.cfgOutEdges) {
+                oe.closesLoop |= ie.closesLoop;
                 outEdges.push_back(oe);
+            }
         }
 
         outEdges.swap(inState.cfgOutEdges);
@@ -107,7 +108,6 @@ void StateRewriter::dropInsn(const TLocIdx at)
 
     // iterate through all outgoing edges
     BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges) {
-        CL_BREAK_IF(oe.closesLoop);
         LocalState &outState = state_[oe.targetLoc];
         TCfgEdgeList inEdges;
 
@@ -119,8 +119,10 @@ void StateRewriter::dropInsn(const TLocIdx at)
             }
 
             // redirect all edges previously coming from 'at'
-            BOOST_FOREACH(const CfgEdge &ie, locState.cfgInEdges)
+            BOOST_FOREACH(CfgEdge ie, locState.cfgInEdges) {
+                ie.closesLoop |= oe.closesLoop;
                 inEdges.push_back(ie);
+            }
         }
 
         inEdges.swap(outState.cfgInEdges);
