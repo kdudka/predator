@@ -27,7 +27,6 @@
 #include "worklist.hh"
 
 #include <cl/cldebug.hh>
-#include <cl/killer.hh>
 #include <cl/storage.hh>
 
 #include <boost/foreach.hpp>
@@ -589,9 +588,14 @@ void exportControlFlow(GlobalState *pDst, const GlobalState &glState)
     }
 }
 
-typedef CodeStorage::VarKiller::TVar                TVar;
-typedef CodeStorage::VarKiller::TSet                TVarSet;
+typedef GenericVar                                  TVar;
+typedef TGenericVarSet                              TVarSet;
 typedef std::vector<TVarSet>                        TVarSetByLoc;
+
+typedef struct LocData {
+    TVarSet                         gen;
+    TVarSet                         kill;
+} TLocData;
 
 void analyzeLiveVars(
         TVarSetByLoc               *pLive,
@@ -607,7 +611,6 @@ void analyzeLiveVars(
     pKill->resize(locCnt);
 
     // per-location data
-    typedef CodeStorage::VarKiller::BlockData       TLocData;
     std::vector<TLocData> data(locCnt);
 
     // fixed-point computation scheduler
@@ -620,23 +623,18 @@ void analyzeLiveVars(
         TLocData &locData = data[locIdx];
         TVarSet &killSet = locData.kill;
 
-        if (!locNode.insn)
+        const AnnotatedInsn *insn = dynamic_cast<AnnotatedInsn *>(locNode.insn);
+        if (!insn)
             // an already removed instruction
             continue;
 
-        const TInsn insn = locNode.insn->clInsn();
-        if (insn) {
-            // compute gen/kill sets for regular CL instruction
-            scanInsn(&locData, insn);
+        locData.gen = insn->liveVars();
+        locData.kill = insn->killVars();
 
-            if (1U < locNode.cfgOutEdges.size()) {
-                // assume branch instruction
-                CL_BREAK_IF(1U != killSet.size());
-                locData.gen.insert(*killSet.begin());
-            }
-        }
-        else {
-            CL_WARN("removeDeadCode() ignores " << *locNode.insn);
+        if (1U < locNode.cfgOutEdges.size()) {
+            // assume branch instruction
+            CL_BREAK_IF(1U != killSet.size());
+            locData.gen.insert(*killSet.begin());
         }
 
         // write killed variables as the set is already final
@@ -721,11 +719,6 @@ void removeDeadCode(GlobalState *pState)
                 // there is no instruction to be removed
                 continue;
 
-            const TInsn insn = locState.insn->clInsn();
-            if (!insn)
-                // we remove only Code Listener instructions for now
-                continue;
-
             const TVarSet &killSet = killVarsPerLoc[locIdx];
             const unsigned cntKill = killSet.size();
             if (!cntKill)
@@ -733,20 +726,23 @@ void removeDeadCode(GlobalState *pState)
                 continue;
 
             CL_BREAK_IF(1U < cntKill);
-            const CodeStorage::VarKiller::TVar var = *killSet.begin();
+            const TVar var = *killSet.begin();
             if (hasKey(liveVarsPerLoc[locIdx], var))
                 // var alive
                 continue;
 
-            const enum cl_insn_e code = insn->code;
-            switch (code) {
-                case CL_INSN_UNOP:
-                case CL_INSN_BINOP:
-                    break;
+            const TInsn insn = locState.insn->clInsn();
+            if (insn) {
+                const enum cl_insn_e code = insn->code;
+                switch (code) {
+                    case CL_INSN_UNOP:
+                    case CL_INSN_BINOP:
+                        break;
 
-                default:
-                    CL_WARN("removeDeadCode() refuses to remove: " << *insn);
-                    continue;
+                    default:
+                        CL_WARN("removeDeadCode() refuses to remove: "<< *insn);
+                        continue;
+                }
             }
 
             // remove the current location from the CFG
