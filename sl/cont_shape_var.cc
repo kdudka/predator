@@ -30,8 +30,6 @@ namespace AdtOp {
 
 const TShapeVarId InvalidShapeVar = -1;
 
-using FixedPoint::TextInsn;
-
 typedef FixedPoint::TLocIdx                         TLocIdx;
 typedef FixedPoint::THeapIdent                      THeapIdent;
 typedef FixedPoint::TShapeIdent                     TShapeIdent;
@@ -300,7 +298,14 @@ bool ShapeVarTransMap::defineAssignment(
     // non-trivial fresh assignment
     std::ostringstream str;
     str << "C" << dstVar << " := C" << srcVar;
-    insnWriter_.insertInsn(srcLoc, dstLoc, new TextInsn(str.str()));
+
+    using namespace FixedPoint;
+    TGenericVarSet live, kill;
+    live.insert(GenericVar(VL_CONTAINER_VAR, srcVar));
+    kill.insert(GenericVar(VL_CONTAINER_VAR, dstVar));
+
+    GenericInsn *insn = new TextInsn(str.str(), live, kill);
+    insnWriter_.insertInsn(srcLoc, dstLoc, insn);
     return true;
 }
 

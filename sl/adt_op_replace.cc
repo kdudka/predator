@@ -31,8 +31,10 @@
 
 namespace AdtOp {
 
-using FixedPoint::TLocIdx;
+using FixedPoint::GenericInsn;
+using FixedPoint::TGenericVarSet;
 using FixedPoint::THeapIdent;
+using FixedPoint::TLocIdx;
 using FixedPoint::TextInsn;
 
 typedef std::vector<int /* uid */>                  TPtrVarList;
@@ -170,22 +172,28 @@ bool findShapeVarsInUse(
     return /* success */ true;
 }
 
-std::string varsToString(const TShapeVarList &vars)
+std::string varsToString(const TShapeVarList &vars, TGenericVarSet *pSet)
 {
     const unsigned cnt = vars.size();
     if (!cnt)
         return "";
 
+    using namespace FixedPoint;
     std::ostringstream str;
-    str << "C" << vars.front();
+    TShapeVarId var = vars.front();
+    pSet->insert(GenericVar(VL_CONTAINER_VAR, var));
+    str << "C" << var;
 
-    for (unsigned i = 1U; i < cnt; ++i)
-        str << ", C" << vars[i];
+    for (unsigned i = 1U; i < cnt; ++i) {
+        var = vars[i];
+        pSet->insert(GenericVar(VL_CONTAINER_VAR, var));
+        str << ", C" << var;
+    }
 
     return str.str();
 }
 
-std::string destToString(const TShapeVarList &vars)
+std::string destToString(const TShapeVarList &vars, TGenericVarSet *pKill)
 {
     const unsigned cnt = vars.size();
     switch (cnt) {
@@ -193,10 +201,10 @@ std::string destToString(const TShapeVarList &vars)
             return "";
 
         case 1:
-            return varsToString(vars) + " := ";
+            return varsToString(vars, pKill) + " := ";
 
         default:
-            return std::string("(") + varsToString(vars) + ") := ";
+            return std::string("(") + varsToString(vars, pKill) + ") := ";
     }
 }
 
@@ -301,8 +309,11 @@ std::string ptrVarsToString(
         const TMatchList           &matchList,
         const TMatchIdxList        &idxList,
         const OpTemplate           &tpl,
-        const TProgState           &progState)
+        const TProgState           &progState,
+        TGenericVarSet             *pSet)
 {
+    using namespace FixedPoint;
+
     TPtrVarList ptrVarList;
     collectPtrVars(&ptrVarList, matchList, idxList, tpl, progState);
     if (ptrVarList.empty())
@@ -316,6 +327,7 @@ std::string ptrVarsToString(
     BOOST_FOREACH(const int uid, ptrVarList) {
         str += ", ";
         str += varToString(stor, uid);
+        pSet->insert(GenericVar(VL_CODE_LISTENER, uid));
     }
 
     return str;
@@ -342,9 +354,14 @@ bool replaceSingleOp(
         return false;
 
     std::ostringstream str;
-    str << destToString(cOut) << tpl.name() << "(" << varsToString(cIn)
-            << ptrVarsToString(matchList, idxList, tpl, progState) << ")";
-    pInsnWriter->replaceInsn(locToReplace, new TextInsn(str.str()));
+    TGenericVarSet live, kill;
+    str << destToString(cOut, &kill) << tpl.name()
+        << "(" << varsToString(cIn, &live)
+        << ptrVarsToString(matchList, idxList, tpl, progState, &live)
+        << ")";
+
+    GenericInsn *insn = new TextInsn(str.str(), live, kill);
+    pInsnWriter->replaceInsn(locToReplace, insn);
 
     std::set<TLocIdx> removed;
     BOOST_FOREACH(const TMatchIdx idx, idxList) {

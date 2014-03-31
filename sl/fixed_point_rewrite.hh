@@ -119,8 +119,13 @@ class ClInsn: public AnnotatedInsn {
 
 class TextInsn: public AnnotatedInsn {
     public:
-        TextInsn(const std::string &text):
-            text_(text)
+        TextInsn(
+                const std::string      &text,
+                const TGenericVarSet   &live,
+                const TGenericVarSet   &kill):
+            text_(text),
+            live_(live),
+            kill_(kill)
         {
         }
 
@@ -142,9 +147,9 @@ class TextInsn: public AnnotatedInsn {
         }
 
     private:
-        std::string                 text_;
-        TGenericVarSet              live_;
-        TGenericVarSet              kill_;
+        const std::string           text_;
+        const TGenericVarSet        live_;
+        const TGenericVarSet        kill_;
 
         virtual GenericInsn *doClone() const
         {
