@@ -695,6 +695,11 @@ void seekTemplateMatchInstances(
                         << ", dst = " << dst.first << "/" << dst.second);
                 continue;
             }
+            else if (fm.matchedHeaps.empty()) {
+                // we have not yet found the 1st insn implementing an operation
+                const EFootprintPort beg = (SD_FORWARD == sd) ? FP_SRC : FP_DST;
+                fm.objMap[beg] = seekCtx.objMapFromTpl;
+            }
 
             if (SD_FORWARD == sd && !relocObjsInMetaOps(&metaOpsToLookFor,
                         objMap, fmInit.props, sh))
