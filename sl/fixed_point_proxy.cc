@@ -359,13 +359,15 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
     // plot the annotated input CFG
     plotFncCore(plot, fncState, varByShape, capture, heapSet);
 
-    // plot the original CFG-only subgraph
-    ++plot.subGraphIdx;
-    plotFncCore(plot, cfgOrig);
+    if (cfgOrig.size() < 16) {
+        // plot the original CFG-only subgraph
+        ++plot.subGraphIdx;
+        plotFncCore(plot, cfgOrig);
 
-    // plot the resulting CFG
-    ++plot.subGraphIdx;
-    plotFncCore(plot, cfgResult);
+        // plot the resulting CFG
+        ++plot.subGraphIdx;
+        plotFncCore(plot, cfgResult);
+    }
 
     // plot the resulting CFG after removing dead code
     ++plot.subGraphIdx;
