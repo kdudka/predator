@@ -22,13 +22,13 @@
 
 #include "adt_op.hh"
 #include "fixed_point.hh"
-#include "fixed_point_rewrite.hh"   // for FixedPoint::StateRewriter
+#include "fixed_point_rewrite.hh"   // for FixedPoint::IStateRewriter
 
 #include <list>
 
 namespace AdtOp {
 
-typedef FixedPoint::StateRewriter                   TInsnWriter;
+typedef FixedPoint::IStateRewriter                  TInsnWriter;
 
 enum EFootprintPort {
     FP_SRC,

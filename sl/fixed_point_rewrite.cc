@@ -25,6 +25,29 @@
 
 namespace FixedPoint {
 
+void MultiRewriter::insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn)
+{
+    BOOST_FOREACH(IStateRewriter *slave, slaveList_)
+        slave->insertInsn(src, dst, insn);
+}
+
+void MultiRewriter::replaceInsn(TLocIdx at, GenericInsn *insn)
+{
+    BOOST_FOREACH(IStateRewriter *slave, slaveList_)
+        slave->replaceInsn(at, insn);
+}
+
+void MultiRewriter::dropInsn(TLocIdx at)
+{
+    BOOST_FOREACH(IStateRewriter *slave, slaveList_)
+        slave->dropInsn(at);
+}
+
+void MultiRewriter::appendWriter(IStateRewriter &slave)
+{
+    slaveList_.push_back(&slave);
+}
+
 void StateRewriter::insertInsn(
         const TLocIdx               src,
         const TLocIdx               dst,

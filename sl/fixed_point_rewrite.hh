@@ -24,7 +24,28 @@
 
 namespace FixedPoint {
 
-class StateRewriter {
+class IStateRewriter {
+    public:
+        virtual ~IStateRewriter() { }
+        virtual void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *) = 0;
+        virtual void replaceInsn(TLocIdx at, GenericInsn *insn) = 0;
+        virtual void dropInsn(TLocIdx at) = 0;
+};
+
+class MultiRewriter: public IStateRewriter {
+    public:
+        virtual void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn);
+        virtual void replaceInsn(TLocIdx at, GenericInsn *insn);
+        virtual void dropInsn(TLocIdx at);
+
+        /// does NOT take ownership of writer
+        void appendWriter(IStateRewriter &slave);
+
+    private:
+        std::vector<IStateRewriter *> slaveList_;
+};
+
+class StateRewriter: public IStateRewriter {
     public:
         /// *pState has to be valid till the destruction of StateRewriter
         StateRewriter(GlobalState *pState):
@@ -33,12 +54,12 @@ class StateRewriter {
         }
 
         /// takes ownership of *insn
-        void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn);
+        virtual void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn);
 
         /// takes ownership of *insn
-        void replaceInsn(TLocIdx at, GenericInsn *insn);
+        virtual void replaceInsn(TLocIdx at, GenericInsn *insn);
 
-        void dropInsn(TLocIdx at);
+        virtual void dropInsn(TLocIdx at);
 
         bool /* any change */ dedupOutgoingEdges(TLocIdx at);
 

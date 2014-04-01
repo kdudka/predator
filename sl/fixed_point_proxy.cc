@@ -246,7 +246,9 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
     GlobalState cfgOrig, cfgResult;
     exportControlFlow(&cfgOrig, fncState);
     exportControlFlow(&cfgResult, fncState);
-    StateRewriter writer(&cfgResult);
+    StateRewriter rewriter(&cfgResult);
+    MultiRewriter writer;
+    writer.appendWriter(rewriter);
 
     // match templates
     using namespace AdtOp;
