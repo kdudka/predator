@@ -198,21 +198,6 @@ std::string varsToString(const TShapeVarList &vars, TGenericVarSet *pSet)
     return str.str();
 }
 
-std::string destToString(const TShapeVarList &vars, TGenericVarSet *pKill)
-{
-    const unsigned cnt = vars.size();
-    switch (cnt) {
-        case 0:
-            return "";
-
-        case 1:
-            return varsToString(vars, pKill) + " := ";
-
-        default:
-            return std::string("(") + varsToString(vars, pKill) + ") := ";
-    }
-}
-
 void collectArgObjs(
         TObjList                   *pObjList,
         const FootprintMatch       &fm,
@@ -369,7 +354,9 @@ bool replaceSingleOp(
 
     std::ostringstream str;
     TGenericVarSet live, kill;
-    str << destToString(cOut, &kill) << tpl.name()
+    str << "(" << varsToString(cOut, &kill)
+        << ptrVarsToString(matchList, idxList, tpl, progState, FP_DST, &kill)
+        << ") := " << tpl.name()
         << "(" << varsToString(cIn, &live)
         << ptrVarsToString(matchList, idxList, tpl, progState, FP_SRC, &live)
         << ")";
