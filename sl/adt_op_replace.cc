@@ -213,7 +213,7 @@ std::string destToString(const TShapeVarList &vars, TGenericVarSet *pKill)
     }
 }
 
-void collectNonShapeSrcObjs(
+void collectArgObjs(
         TObjList                   *pObjList,
         const FootprintMatch       &fm,
         const OpTemplate           &tpl)
@@ -221,14 +221,10 @@ void collectNonShapeSrcObjs(
     const TFootprintIdx fpIdx = fm.footprint.second;
     const SymHeap &shTpl = tpl[fpIdx].input;
 
-    TObjSet shapeObjs;
-    BOOST_FOREACH(const Shape shape, tpl.inShapes()[fpIdx])
-        objSetByShape(&shapeObjs, shTpl, shape);
-
     TObjList allObjs, nonShapeObjs;
-    shTpl.gatherObjects(allObjs);
+    shTpl.gatherObjects(allObjs, isOnHeap);
     BOOST_FOREACH(const TObjId obj, allObjs)
-        if (!hasKey(shapeObjs, obj))
+        if (OK_REGION == shTpl.objKind(obj))
             nonShapeObjs.push_back(obj);
 
     TObjSet progObjs;
@@ -244,7 +240,7 @@ void collectPtrVarsCore(
         const TProgState           &progState)
 {
     TObjList objList;
-    collectNonShapeSrcObjs(&objList, fm, tpl);
+    collectArgObjs(&objList, fm, tpl);
     if (1U != objList.size())
         // unsupported number of objects not in container shape
         return;
