@@ -701,6 +701,15 @@ bool removeRedundantBranching(GlobalState *pState)
     return anyChange;
 }
 
+bool varAlive(const TVarSet &live, const TVarSet &kill)
+{
+    BOOST_FOREACH(const TVar &var, kill)
+        if (hasKey(live, var))
+            return true;
+
+    return false;
+}
+
 void removeDeadCode(GlobalState *pState)
 {
     do {
@@ -720,14 +729,11 @@ void removeDeadCode(GlobalState *pState)
                 continue;
 
             const TVarSet &killSet = killVarsPerLoc[locIdx];
-            const unsigned cntKill = killSet.size();
-            if (!cntKill)
+            if (killSet.empty())
                 // there is no variable being written
                 continue;
 
-            CL_BREAK_IF(1U < cntKill);
-            const TVar var = *killSet.begin();
-            if (hasKey(liveVarsPerLoc[locIdx], var))
+            if (varAlive(liveVarsPerLoc[locIdx], killSet))
                 // var alive
                 continue;
 
