@@ -80,6 +80,11 @@ bool checkIndependency(
             if (!fld.isValidHandle())
                 continue;
 
+            const EStorageClass sc = sh.objStorClass(fld.obj());
+            if (isProgramVar(sc) && !op.accessor)
+                // access to program variable with no dereference
+                continue;
+
             const TOffset winLo = fld.offset();
             const TOffset winHi = winLo + fld.type()->size;
 
