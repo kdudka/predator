@@ -216,10 +216,14 @@ std::string destToString(const TShapeVarList &vars, TGenericVarSet *pKill)
 void collectArgObjs(
         TObjList                   *pObjList,
         const FootprintMatch       &fm,
-        const OpTemplate           &tpl)
+        const OpTemplate           &tpl,
+        const EFootprintPort        port)
 {
     const TFootprintIdx fpIdx = fm.footprint.second;
-    const SymHeap &shTpl = tpl[fpIdx].input;
+    const OpFootprint &fp = tpl[fpIdx];
+    const SymHeap &shTpl = (FP_SRC == port)
+        ? fp.input
+        : fp.output;
 
     TObjList allObjs, nonShapeObjs;
     shTpl.gatherObjects(allObjs, isOnHeap);
@@ -228,7 +232,7 @@ void collectArgObjs(
             nonShapeObjs.push_back(obj);
 
     TObjSet progObjs;
-    project<D_LEFT_TO_RIGHT>(fm.objMap[FP_SRC], &progObjs, nonShapeObjs);
+    project<D_LEFT_TO_RIGHT>(fm.objMap[port], &progObjs, nonShapeObjs);
     BOOST_FOREACH(const TObjId obj, progObjs)
         pObjList->push_back(obj);
 }
@@ -237,15 +241,19 @@ void collectPtrVarsCore(
         TPtrVarList                *pDst,
         const FootprintMatch       &fm,
         const OpTemplate           &tpl,
-        const TProgState           &progState)
+        const TProgState           &progState,
+        const EFootprintPort        port)
 {
     TObjList objList;
-    collectArgObjs(&objList, fm, tpl);
+    collectArgObjs(&objList, fm, tpl, port);
     if (1U != objList.size())
         // unsupported number of objects not in container shape
         return;
 
-    const SymHeap *shOrig = heapByIdent(progState, fm.matchedHeaps.front());
+    const THeapIdent &heap = (FP_SRC == port)
+        ? fm.matchedHeaps.front()
+        : fm.matchedHeaps.back();
+    const SymHeap *shOrig = heapByIdent(progState, heap);
     SymHeap sh(*shOrig);
     Trace::waiveCloneOperation(sh);
 
@@ -275,10 +283,11 @@ void collectPtrVars(
         const TMatchList           &matchList,
         const TMatchIdxList        &idxList,
         const OpTemplate           &tpl,
-        const TProgState           &progState)
+        const TProgState           &progState,
+        const EFootprintPort        port)
 {
     CL_BREAK_IF(!pDst->empty());
-    collectPtrVarsCore(pDst, matchList[idxList.front()], tpl, progState);
+    collectPtrVarsCore(pDst, matchList[idxList.front()], tpl, progState, port);
 
     const int idxCnt = idxList.size();
     for (int idx = 1; idx < idxCnt; ++idx) {
@@ -290,7 +299,7 @@ void collectPtrVars(
         const FootprintMatch &fm = matchList[matchIdx];
         TPtrVarList varsNow, intersect;
 
-        collectPtrVarsCore(&varsNow, fm, tpl, progState);
+        collectPtrVarsCore(&varsNow, fm, tpl, progState, port);
         BOOST_FOREACH(const int uid, *pDst) {
             if (varsNow.end() == std::find(varsNow.begin(), varsNow.end(), uid))
                 // uid not in the intersection
@@ -311,16 +320,20 @@ std::string ptrVarsToString(
         const TMatchIdxList        &idxList,
         const OpTemplate           &tpl,
         const TProgState           &progState,
+        const EFootprintPort        port,
         TGenericVarSet             *pSet)
 {
     using namespace FixedPoint;
 
     TPtrVarList ptrVarList;
-    collectPtrVars(&ptrVarList, matchList, idxList, tpl, progState);
+    collectPtrVars(&ptrVarList, matchList, idxList, tpl, progState, port);
     if (ptrVarList.empty())
         return "";
 
-    const THeapIdent &anyHeapIdent = matchList[0].matchedHeaps.front();
+    const THeapIdentSeq &heapSeq = matchList[0].matchedHeaps;
+    const THeapIdent &anyHeapIdent = (FP_SRC == port)
+        ? heapSeq.front()
+        : heapSeq.back();
     const SymHeap *anySymHeap = heapByIdent(progState, anyHeapIdent);
     const TStorRef stor = anySymHeap->stor();
     std::string str;
@@ -358,7 +371,7 @@ bool replaceSingleOp(
     TGenericVarSet live, kill;
     str << destToString(cOut, &kill) << tpl.name()
         << "(" << varsToString(cIn, &live)
-        << ptrVarsToString(matchList, idxList, tpl, progState, &live)
+        << ptrVarsToString(matchList, idxList, tpl, progState, FP_SRC, &live)
         << ")";
 
     GenericInsn *insn = new TextInsn(str.str(), live, kill);
