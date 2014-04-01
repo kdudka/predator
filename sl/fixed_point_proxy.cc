@@ -110,20 +110,80 @@ struct PlotData {
 typedef std::set<THeapIdent>                        THeapSet;
 typedef AdtOp::TShapeVarByShape                     TVarMap;
 
+class RewriteCapture: public IStateRewriter {
+    public:
+        virtual void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn);
+        virtual void replaceInsn(TLocIdx at, GenericInsn *insn);
+        virtual void dropInsn(TLocIdx at);
+
+    public:
+        std::string locLabel(TLocIdx loc) const;
+        std::string edgeLabel(TLocIdx from, TLocIdx to) const;
+
+    private:
+        typedef std::pair<TLocIdx, TLocIdx>         TEdge;
+        typedef std::map<TLocIdx, std::string>      TLocLabels;
+        typedef std::map<TEdge, std::string>        TEdgeLabels;
+
+        TLocLabels                  locLabels_;
+        TEdgeLabels                 edgeLabels_;
+};
+
+void RewriteCapture::insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn)
+{
+    std::ostringstream str;
+    str << *insn;
+
+    const TEdge edge(src, dst);
+    edgeLabels_[edge] = str.str();
+}
+
+void RewriteCapture::replaceInsn(TLocIdx at, GenericInsn *insn)
+{
+    std::ostringstream str;
+    str << " ... " << *insn;
+    locLabels_[at] = str.str();
+}
+
+void RewriteCapture::dropInsn(TLocIdx at)
+{
+    locLabels_[at] = " ... to be removed";
+}
+
+std::string RewriteCapture::locLabel(TLocIdx loc) const
+{
+    const TLocLabels::const_iterator it = locLabels_.find(loc);
+    return (it == locLabels_.end()) ? "" : it->second;
+}
+
+std::string RewriteCapture::edgeLabel(TLocIdx from, TLocIdx to) const
+{
+    const TEdge edge(from, to);
+    const TEdgeLabels::const_iterator it = edgeLabels_.find(edge);
+    return (it == edgeLabels_.end()) ? "" : it->second;
+}
+
+
 void plotInsn(
         THeapSet                   *pHeapSet,
         PlotData                   &plot,
         const TVarMap              &varMap,
         const TLocIdx               locIdx,
+        const std::string          &locLabelSuffix,
         const LocalState           &locState)
 {
     if (!locState.insn)
         // an already removed insn
         return;
 
+    const char *color = (locLabelSuffix.empty())
+        ? "black"
+        : "chartreuse2";
+
     // open cluster
     plot.out << "subgraph \"cluster" << plot.subGraphIdx << "." << locIdx
-        << "\" {\n\tlabel=\"loc #" << locIdx << "\";\n";
+        << "\" {\n\tlabel=\"loc #" << locIdx << locLabelSuffix
+        << "\";\n\tfontcolor=" << color << ";\n";
 
     // plot the root node
     const TInsn insn = locState.insn->clInsn();
@@ -189,12 +249,14 @@ void plotFncCore(
         PlotData                   &plot,
         const GlobalState          &fncState,
         const TShapeVarByShape     &varByShape  = TShapeVarByShape(),
+        const RewriteCapture       &capture     = RewriteCapture(),
         THeapSet                    heapSet     = THeapSet())
 {
     const TLocIdx locCnt = fncState.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         const LocalState &locState = fncState[locIdx];
-        plotInsn(&heapSet, plot, varByShape, locIdx, locState);
+        const std::string locLabelSuffix = capture.locLabel(locIdx);
+        plotInsn(&heapSet, plot, varByShape, locIdx, locLabelSuffix, locState);
 
         // plot trace edges
         BOOST_FOREACH(const TTraceEdgeList &tList, locState.traceOutEdges) {
@@ -217,20 +279,25 @@ void plotFncCore(
         const unsigned cntTargets = locState.cfgOutEdges.size();
         for (unsigned i = 0; i < cntTargets; ++i) {
             const CfgEdge &edge = locState.cfgOutEdges[i];
+            const TLocIdx tgt = edge.targetLoc;
+            const std::string edgeLabelSuffix = capture.edgeLabel(locIdx, tgt);
 
             const char *color = "blue";
             if (edge.closesLoop)
                 // loop-closing edge
                 color = "chartreuse2";
 
-            const char *label = "";
-            if (2U == cntTargets)
+            std::string label;
+            if (2U == cntTargets) {
                 // assume CL_INSN_COND
                 label = (!i) ? "T" : "F";
+                if (!edgeLabelSuffix.empty())
+                    label += " ... ";
+            }
 
             plot.out << LOC_NODE(plot, locIdx)
-                << " -> " << LOC_NODE(plot, edge.targetLoc)
-                << " [label=" << QUOT(label)
+                << " -> " << LOC_NODE(plot, tgt)
+                << " [label=" << QUOT(label + edgeLabelSuffix)
                 << ", color=" << color
                 << ", fontcolor=" << color << "];\n";
         }
@@ -247,8 +314,12 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
     exportControlFlow(&cfgOrig, fncState);
     exportControlFlow(&cfgResult, fncState);
     StateRewriter rewriter(&cfgResult);
+
     MultiRewriter writer;
     writer.appendWriter(rewriter);
+
+    RewriteCapture capture;
+    writer.appendWriter(capture);
 
     // match templates
     using namespace AdtOp;
@@ -286,7 +357,7 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
     }
 
     // plot the annotated input CFG
-    plotFncCore(plot, fncState, varByShape, heapSet);
+    plotFncCore(plot, fncState, varByShape, capture, heapSet);
 
     // plot the original CFG-only subgraph
     ++plot.subGraphIdx;
