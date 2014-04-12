@@ -112,7 +112,9 @@ OpTemplate* createPushBack(TplFactory &fact)
     // register pre/post pair for push_back() to an empty list
     SymHeap output(sh);
     Trace::waiveCloneOperation(output);
-    tpl->addFootprint(new OpFootprint(input, output));
+    OpFootprint *fp = new OpFootprint(input, output);
+    fp->inArgs.push_back(reg);
+    tpl->addFootprint(fp);
 
     // drop the nullified fields of 'reg'
     fact.dropFieldsOfObj(&sh, reg);
@@ -136,7 +138,9 @@ OpTemplate* createPushBack(TplFactory &fact)
     // register pre/post pair for push_back() to a non-empty list
     Trace::waiveCloneOperation(input);
     Trace::waiveCloneOperation(output);
-    tpl->addFootprint(new OpFootprint(input, output));
+    fp = new OpFootprint(input, output);
+    fp->inArgs.push_back(reg);
+    tpl->addFootprint(fp);
 
     return tpl;
 }

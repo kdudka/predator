@@ -69,8 +69,16 @@ void OpTemplate::updateMetaIfNeeded() const
     // get the lists of input/output heaps from all footprints
     SymHeapList inState, outState;
     BOOST_FOREACH(const OpFootprint *fp, fList_) {
-        inState.insert(fp->input);
-        outState.insert(fp->output);
+        const SymHeap &in = fp->input;
+        const SymHeap &out = fp->output;
+        inState.insert(in);
+        outState.insert(out);
+#ifndef NDEBUG
+        BOOST_FOREACH(const TObjId obj, fp->inArgs)
+            CL_BREAK_IF(!in.isValid(obj) || OK_REGION != in.objKind(obj));
+        BOOST_FOREACH(const TObjId obj, fp->outArgs)
+            CL_BREAK_IF(!out.isValid(obj) || OK_REGION != out.objKind(obj));
+#endif
     }
 
     // detect container shapes in the input/output heaps

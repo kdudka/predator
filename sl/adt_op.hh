@@ -44,6 +44,9 @@ struct OpFootprint {
     SymHeap                     input;
     SymHeap                     output;
 
+    TObjList                    inArgs;
+    TObjList                    outArgs;
+
     OpFootprint(const SymHeap &input_, const SymHeap &output_);
 };
 

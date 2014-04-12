@@ -206,18 +206,12 @@ void collectArgObjs(
 {
     const TFootprintIdx fpIdx = fm.footprint.second;
     const OpFootprint &fp = tpl[fpIdx];
-    const SymHeap &shTpl = (FP_SRC == port)
-        ? fp.input
-        : fp.output;
-
-    TObjList allObjs, nonShapeObjs;
-    shTpl.gatherObjects(allObjs, isOnHeap);
-    BOOST_FOREACH(const TObjId obj, allObjs)
-        if (OK_REGION == shTpl.objKind(obj))
-            nonShapeObjs.push_back(obj);
+    const TObjList tplObjs = (FP_SRC == port)
+        ? fp.inArgs
+        : fp.outArgs;
 
     TObjSet progObjs;
-    project<D_LEFT_TO_RIGHT>(fm.objMap[port], &progObjs, nonShapeObjs);
+    project<D_LEFT_TO_RIGHT>(fm.objMap[port], &progObjs, tplObjs);
     BOOST_FOREACH(const TObjId obj, progObjs)
         pObjList->push_back(obj);
 }
