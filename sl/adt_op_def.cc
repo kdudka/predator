@@ -90,9 +90,9 @@ void TplFactory::dropFieldsOfObj(SymHeap *pSh, const TObjId obj) const
     pSh->writeUniformBlock(obj, ubAll);
 }
 
-OpTemplate* createPushBack(TplFactory &fact)
+OpTemplate* createPushBackByRef(TplFactory &fact)
 {
-    OpTemplate *tpl = new OpTemplate("push_back");
+    OpTemplate *tpl = new OpTemplate("push_back_by_ref");
 
     SymHeap sh(fact.createHeap());
 
@@ -140,6 +140,66 @@ OpTemplate* createPushBack(TplFactory &fact)
     Trace::waiveCloneOperation(output);
     fp = new OpFootprint(input, output);
     fp->inArgs.push_back(reg);
+    tpl->addFootprint(fp);
+
+    return tpl;
+}
+
+OpTemplate* createPushBackByVal(TplFactory &fact)
+{
+    OpTemplate *tpl = new OpTemplate("push_back_by_val");
+
+    SymHeap sh(fact.createHeap());
+    SymHeap input(sh);
+    Trace::waiveCloneOperation(input);
+
+    // allocate an uninitialized region
+    TObjId reg = fact.createObj(&sh, OK_REGION);
+
+    // obtain handles for next/prev fields
+    PtrHandle nextPtr(sh, reg, fact.nextAt());
+    PtrHandle prevPtr(sh, reg, fact.prevAt());
+
+    // nullify the next/prev fields
+    nextPtr.setValue(VAL_NULL);
+    prevPtr.setValue(VAL_NULL);
+
+    // register pre/post pair for push_back() to an empty list
+    SymHeap output(sh);
+    Trace::waiveCloneOperation(output);
+    OpFootprint *fp = new OpFootprint(input, output);
+    fp->outArgs.push_back(reg);
+    tpl->addFootprint(fp);
+
+    sh = fact.createHeap();
+    Trace::waiveCloneOperation(sh);
+
+    // allocate a DLS that will represent a container shape in our template
+    const TObjId dls = fact.createObj(&sh, OK_DLS);
+    const PtrHandle begPtr(sh, dls, fact.prevAt());
+    const PtrHandle endPtr(sh, dls, fact.nextAt());
+    begPtr.setValue(VAL_NULL);
+    endPtr.setValue(VAL_NULL);
+    input = sh;
+
+    // allocate an uninitialized region
+    reg = fact.createObj(&sh, OK_REGION);
+    nextPtr = PtrHandle(sh, reg, fact.nextAt());
+    prevPtr = PtrHandle(sh, reg, fact.prevAt());
+
+    // chain both objects together such that they represent a linked list
+    const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
+    const TValId endAt = sh.addrOfTarget(dls, TS_LAST,   fact.headAt());
+    endPtr.setValue(regAt);
+    prevPtr.setValue(endAt);
+    nextPtr.setValue(VAL_NULL);
+    output = sh;
+
+    // register pre/post pair for push_back() to a non-empty list
+    Trace::waiveCloneOperation(input);
+    Trace::waiveCloneOperation(output);
+    fp = new OpFootprint(input, output);
+    fp->outArgs.push_back(reg);
     tpl->addFootprint(fp);
 
     return tpl;
@@ -236,7 +296,8 @@ bool loadDefaultOperations(OpCollection *pDst, const CodeStorage::Storage &stor)
     }
 
     TplFactory fact(stor);
-    pDst->addTemplate(createPushBack(fact));
+    pDst->addTemplate(createPushBackByRef(fact));
+    pDst->addTemplate(createPushBackByVal(fact));
     pDst->addTemplate(createPopBack(fact));
     pDst->addTemplate(createClear2(fact));
     return true;
