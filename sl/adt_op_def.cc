@@ -56,9 +56,11 @@ class TplFactory {
             return SymHeap(stor_, node_.node());
         }
 
-        TObjId createObj(SymHeap *pSh, const EObjKind kind) const;
+        TObjId createObj(SymHeap *pSh, EObjKind kind) const;
 
-        void dropFieldsOfObj(SymHeap *pSh, const TObjId obj) const;
+        void nullFieldsOfObj(SymHeap *pSh, TObjId obj) const;
+
+        void dropFieldsOfObj(SymHeap *pSh, TObjId obj) const;
 
     private:
         const CodeStorage::Storage         &stor_;
@@ -75,6 +77,17 @@ TObjId TplFactory::createObj(SymHeap *pSh, const EObjKind kind) const
         pSh->objSetAbstract(obj, kind, bOff_);
 
     return obj;
+}
+
+void TplFactory::nullFieldsOfObj(SymHeap *pSh, const TObjId obj) const
+{
+    // obtain handles for next/prev fields
+    const PtrHandle nextPtr(*pSh, obj, this->nextAt());
+    const PtrHandle prevPtr(*pSh, obj, this->prevAt());
+
+    // nullify the next/prev fields
+    nextPtr.setValue(VAL_NULL);
+    prevPtr.setValue(VAL_NULL);
 }
 
 void TplFactory::dropFieldsOfObj(SymHeap *pSh, const TObjId obj) const
@@ -101,13 +114,8 @@ OpTemplate* createPushBackByRef(TplFactory &fact)
     SymHeap input(sh);
     Trace::waiveCloneOperation(input);
 
-    // obtain handles for next/prev fields
-    const PtrHandle nextPtr(sh, reg, fact.nextAt());
-    const PtrHandle prevPtr(sh, reg, fact.prevAt());
-
     // nullify the next/prev fields
-    nextPtr.setValue(VAL_NULL);
-    prevPtr.setValue(VAL_NULL);
+    fact.nullFieldsOfObj(&sh, reg);
 
     // register pre/post pair for push_back() to an empty list
     SymHeap output(sh);
@@ -121,11 +129,13 @@ OpTemplate* createPushBackByRef(TplFactory &fact)
 
     // allocate a DLS that will represent a container shape in our template
     const TObjId dls = fact.createObj(&sh, OK_DLS);
-    const PtrHandle begPtr(sh, dls, fact.prevAt());
-    const PtrHandle endPtr(sh, dls, fact.nextAt());
-    begPtr.setValue(VAL_NULL);
-    endPtr.setValue(VAL_NULL);
+    fact.nullFieldsOfObj(&sh, dls);
     input = sh;
+
+    // obtain handles for next/prev fields
+    const PtrHandle nextPtr(sh, reg, fact.nextAt());
+    const PtrHandle prevPtr(sh, reg, fact.prevAt());
+    const PtrHandle endPtr(sh, dls, fact.nextAt());
 
     // chain both objects together such that they represent a linked list
     const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
@@ -156,13 +166,8 @@ OpTemplate* createPushBackByVal(TplFactory &fact)
     // allocate an uninitialized region
     TObjId reg = fact.createObj(&sh, OK_REGION);
 
-    // obtain handles for next/prev fields
-    PtrHandle nextPtr(sh, reg, fact.nextAt());
-    PtrHandle prevPtr(sh, reg, fact.prevAt());
-
     // nullify the next/prev fields
-    nextPtr.setValue(VAL_NULL);
-    prevPtr.setValue(VAL_NULL);
+    fact.nullFieldsOfObj(&sh, reg);
 
     // register pre/post pair for push_back() to an empty list
     SymHeap output(sh);
@@ -171,21 +176,22 @@ OpTemplate* createPushBackByVal(TplFactory &fact)
     fp->outArgs.push_back(reg);
     tpl->addFootprint(fp);
 
+    // start with a fresh heap
     sh = fact.createHeap();
     Trace::waiveCloneOperation(sh);
 
     // allocate a DLS that will represent a container shape in our template
     const TObjId dls = fact.createObj(&sh, OK_DLS);
-    const PtrHandle begPtr(sh, dls, fact.prevAt());
-    const PtrHandle endPtr(sh, dls, fact.nextAt());
-    begPtr.setValue(VAL_NULL);
-    endPtr.setValue(VAL_NULL);
+    fact.nullFieldsOfObj(&sh, dls);
     input = sh;
 
     // allocate an uninitialized region
     reg = fact.createObj(&sh, OK_REGION);
-    nextPtr = PtrHandle(sh, reg, fact.nextAt());
-    prevPtr = PtrHandle(sh, reg, fact.prevAt());
+
+    // obtain handles for next/prev fields
+    const PtrHandle nextPtr(sh, reg, fact.nextAt());
+    const PtrHandle prevPtr(sh, reg, fact.prevAt());
+    const PtrHandle endPtr(sh, dls, fact.nextAt());
 
     // chain both objects together such that they represent a linked list
     const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
