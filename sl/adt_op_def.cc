@@ -103,6 +103,25 @@ void TplFactory::dropFieldsOfObj(SymHeap *pSh, const TObjId obj) const
     pSh->writeUniformBlock(obj, ubAll);
 }
 
+void connectPushBack(
+        SymHeap                    &sh,
+        const TplFactory           &fact,
+        const TObjId                dls,
+        const TObjId                reg)
+{
+    // obtain handles for next/prev fields
+    const PtrHandle nextPtr(sh, reg, fact.nextAt());
+    const PtrHandle prevPtr(sh, reg, fact.prevAt());
+    const PtrHandle endPtr(sh, dls, fact.nextAt());
+
+    // chain both objects together such that they represent a linked list
+    const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
+    const TValId endAt = sh.addrOfTarget(dls, TS_LAST,   fact.headAt());
+    endPtr.setValue(regAt);
+    prevPtr.setValue(endAt);
+    nextPtr.setValue(VAL_NULL);
+}
+
 OpTemplate* createPushBackByRef(TplFactory &fact)
 {
     OpTemplate *tpl = new OpTemplate("push_back_by_ref");
@@ -132,17 +151,8 @@ OpTemplate* createPushBackByRef(TplFactory &fact)
     fact.nullFieldsOfObj(&sh, dls);
     input = sh;
 
-    // obtain handles for next/prev fields
-    const PtrHandle nextPtr(sh, reg, fact.nextAt());
-    const PtrHandle prevPtr(sh, reg, fact.prevAt());
-    const PtrHandle endPtr(sh, dls, fact.nextAt());
-
     // chain both objects together such that they represent a linked list
-    const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
-    const TValId endAt = sh.addrOfTarget(dls, TS_LAST,   fact.headAt());
-    endPtr.setValue(regAt);
-    prevPtr.setValue(endAt);
-    nextPtr.setValue(VAL_NULL);
+    connectPushBack(sh, fact, dls, reg);
     output = sh;
 
     // register pre/post pair for push_back() to a non-empty list
@@ -188,17 +198,8 @@ OpTemplate* createPushBackByVal(TplFactory &fact)
     // allocate an uninitialized region
     reg = fact.createObj(&sh, OK_REGION);
 
-    // obtain handles for next/prev fields
-    const PtrHandle nextPtr(sh, reg, fact.nextAt());
-    const PtrHandle prevPtr(sh, reg, fact.prevAt());
-    const PtrHandle endPtr(sh, dls, fact.nextAt());
-
     // chain both objects together such that they represent a linked list
-    const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
-    const TValId endAt = sh.addrOfTarget(dls, TS_LAST,   fact.headAt());
-    endPtr.setValue(regAt);
-    prevPtr.setValue(endAt);
-    nextPtr.setValue(VAL_NULL);
+    connectPushBack(sh, fact, dls, reg);
     output = sh;
 
     // register pre/post pair for push_back() to a non-empty list
