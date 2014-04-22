@@ -39,12 +39,33 @@ status_update() {
     tty >/dev/null && printf "\033]0;%s\a" "$*"
 }
 
-# check the given GCC_HOST
-GCC_HOST="$1"
-test "/" == "${GCC_HOST:0:1}" \
-    || die "GCC_HOST is not an absolute path: $GCC_HOST"
+# Completing the path of given GCC, if necessary:
+GCC="$1"
+
+if [[ "${GCC:0:1}" == "/" ]]; then
+  # Absolute path can also lead to symlink:
+  if [[ -L "$GCC" ]]; then
+    GCC_HOST="$(readlink -f $GCC)"
+  else
+    GCC_HOST="$GCC"
+  fi
+else
+  # Testing if the given GCC can be located via $PATH:
+  WHICH_RESULT="$(which $GCC)"
+
+  # Not in $PATH:
+  if [[ "$WHICH_RESULT" == "" || "${WHICH_RESULT:0:1}" == "." ]]; then
+    GCC_HOST="$(realpath $GCC)"
+  # Possible symlink used by many sys-admins:
+  elif [[ -L "$WHICH_RESULT" ]]; then
+    GCC_HOST="$(readlink -f $WHICH_RESULT)"
+  else
+    GCC_HOST="$WHICH_RESULT"
+  fi
+fi
+
 test -x "$GCC_HOST" \
-    || die "GCC_HOST is not an absolute path to an executable file: $GCC_HOST"
+    || die "GCC_HOST is not an executable file: $GCC"
 
 # try to run GCC_HOST
 "$GCC_HOST" --version || die "unable to run gcc: $GCC_HOST --version"
