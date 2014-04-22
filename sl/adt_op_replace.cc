@@ -32,14 +32,24 @@
 namespace AdtOp {
 
 using FixedPoint::GenericInsn;
+using FixedPoint::LocalState;
+using FixedPoint::RecordRewriter;
+using FixedPoint::TBoolVarId;
 using FixedPoint::TGenericVarSet;
 using FixedPoint::THeapIdent;
+using FixedPoint::TInsn;
 using FixedPoint::TLocIdx;
 using FixedPoint::TextInsn;
 
 typedef std::vector<int /* uid */>                  TPtrVarList;
 typedef std::vector<TShapeVarId>                    TShapeVarList;
 typedef std::set<TShapeVarId>                       TShapeVarSet;
+
+TBoolVarId acquireFreshBoolVar(void)
+{
+    static TBoolVarId last;
+    return ++last;
+}
 
 bool checkIndependency(
         const FootprintMatch       &fm,
@@ -382,6 +392,212 @@ bool replaceSingleOp(
     return /* success */ true;
 }
 
+typedef std::set<THeapIdent>                        THeapIdentSet;
+
+enum ECondBranch {
+    CB_TRUE,                        ///< true branch
+    CB_FALSE,                       ///< false branch
+    CB_TOTAL
+};
+
+struct TCondData {
+    TLocIdx                         dstLoc;
+    THeapIdentSet                   heapsByBranch[CB_TOTAL];
+};
+
+typedef std::map<TLocIdx /* dst */, TCondData>      TCondDataMap;
+typedef std::stack<TLocIdx>                         TLocStack;
+
+struct CondReplaceCtx {
+    const TProgState               &progState;
+    TBoolVarId                      condVar;
+    TCondDataMap                    data;
+    TLocStack                       todo;
+    RecordRewriter                  writer;
+
+    CondReplaceCtx(const TProgState &progState_, const TBoolVarId condVar_):
+        progState(progState_),
+        condVar(condVar_)
+    {
+    }
+};
+
+/// return true if the sets are disjoint and their union contains all heaps
+bool crHeapsCovered(
+        const TCondData            &locData,
+        const LocalState           &locState,
+        const TLocIdx               loc)
+{
+    using namespace FixedPoint;
+
+    // collect all heaps at location 'loc'
+    THeapIdentSet all;
+    const THeapIdx cnt = locState.heapList.size();
+    for (THeapIdx idx = 0; idx < cnt; ++idx) {
+        const THeapIdent heap(loc, idx);
+        all.insert(heap);
+    }
+
+    // remove them one by one while checking for dupes
+    for (unsigned br = CB_TRUE; br < CB_TOTAL; ++br) {
+        BOOST_FOREACH(const THeapIdent &heap, locData.heapsByBranch[br])
+            if (1U != all.erase(heap))
+                return false;
+    }
+
+    // in case of success, there should be no uncovered heaps
+    return all.empty();
+}
+
+bool crExpandLoc(
+        CondReplaceCtx             &ctx,
+        const LocalState           &locState,
+        const TLocIdx               loc)
+{
+    using namespace FixedPoint;
+
+    const TCfgEdgeList &cfgEdges = locState.cfgInEdges;
+    if (cfgEdges.empty())
+        // no predecessor, something went wrong
+        return false;
+
+    BOOST_FOREACH(const CfgEdge &ce, cfgEdges) {
+        const TLocIdx srcLoc = ce.targetLoc;
+        if (hasKey(ctx.data, srcLoc))
+            // location already processed, something went wrong
+            return false;
+
+        // schedule the predecessor location for processing
+        ctx.data[srcLoc].dstLoc = loc;
+        ctx.todo.push(srcLoc);
+    }
+
+    const TCondData &dstData = ctx.data[loc];
+
+    // go through incoming trace edges
+    BOOST_FOREACH(const TTraceEdgeList &trEdges, locState.traceInEdges) {
+        BOOST_FOREACH(const TraceEdge *te, trEdges) {
+            const THeapIdent &src = te->src;
+            const THeapIdent &dst = te->dst;
+
+            TCondData &srcData = ctx.data[src.first];
+
+            // propagate the sets of heaps heading to the true/false branch
+            for (unsigned br = CB_TRUE; br < CB_TOTAL; ++br) {
+                if (hasKey(dstData.heapsByBranch[br], dst))
+                    srcData.heapsByBranch[br].insert(src);
+            }
+        }
+    }
+
+    return true;
+}
+
+bool crHandleLoc(
+        CondReplaceCtx             &ctx,
+        const TLocIdx               loc)
+{
+    using namespace FixedPoint;
+
+    TCondData &locData = ctx.data[loc];
+    const LocalState &locState = ctx.progState[loc];
+    if (!crHeapsCovered(locData, locState, loc))
+        // we have already failed
+        return false;
+
+    for (unsigned br = CB_TRUE; br < CB_TOTAL; ++br) {
+        if (!locData.heapsByBranch[br].empty())
+            continue;
+
+        // no heaps heading to the true/false branch ==> resolved trivially
+        std::ostringstream str;
+        str << "cond" << ctx.condVar << " := ";
+        if (CB_TRUE == br)
+            str << "true";
+        else
+            str << "false";
+
+        // insert assignment of true/false to the condition variable
+        TGenericVarSet live, kill;
+        kill.insert(GenericVar(VL_COND_VAR, ctx.condVar));
+        GenericInsn *insn = new TextInsn(str.str(), live, kill);
+        ctx.writer.insertInsn(loc, locData.dstLoc, insn);
+        return true;
+    }
+
+    // TODO: insert other condition-replace hooks here
+
+    // expand predecessors
+    return crExpandLoc(ctx, locState, loc);
+}
+
+bool tryReplaceCond(
+        TInsnWriter                *pInsnWriter,
+        const TMatchList           &matchList,
+        const TOpList              &opList,
+        const TShapeVarByShape     &varMap,
+        const TProgState           &progState,
+        const LocalState           &locState,
+        const TLocIdx               loc)
+{
+    using namespace FixedPoint;
+
+    // initialize condition replacement context
+    const TBoolVarId condVar = acquireFreshBoolVar();
+    CondReplaceCtx ctx(progState, condVar);
+
+    // start with the location of the condition itself
+    TCondData &locData = ctx.data[loc];
+    locData.dstLoc = /* XXX */ -1;
+
+    // resolve locations of the true/false targets
+    const TCfgEdgeList &cfgEdges = locState.cfgOutEdges;
+    CL_BREAK_IF(2U != cfgEdges.size());
+    const TLocIdx tloc = cfgEdges[/* true  */ 0].targetLoc;
+    const TLocIdx floc = cfgEdges[/* false */ 1].targetLoc;
+
+    // check which heaps are heading to true/false branches
+    BOOST_FOREACH(const TTraceEdgeList &trEdges, locState.traceOutEdges) {
+        BOOST_FOREACH(const TraceEdge *te, trEdges) {
+            const THeapIdent &src = te->src;
+            const TLocIdx dstLoc = te->dst.first;
+            if (dstLoc == tloc)
+                locData.heapsByBranch[CB_TRUE].insert(src);
+            if (dstLoc == floc)
+                locData.heapsByBranch[CB_FALSE].insert(src);
+        }
+    }
+
+    // handle the location of the condition itself
+    if (!crHandleLoc(ctx, loc))
+        return false;
+
+    CL_BREAK_IF(ctx.todo.empty());
+
+    // traverse the CFG looking for a proper condition replacement
+    while (!ctx.todo.empty()) {
+        const TLocIdx locNow = ctx.todo.top();
+        ctx.todo.pop();
+        if (!crHandleLoc(ctx, locNow))
+            return false;
+    }
+
+    // no problem encountered ==> insert the assignments now!
+    CL_BREAK_IF(ctx.writer.empty());
+    ctx.writer.flush(pInsnWriter);
+
+    // replace the original condition by the newly introduced bool variable
+    std::ostringstream str;
+    str << "?cond" << ctx.condVar;
+    TGenericVarSet live;
+    live.insert(GenericVar(VL_COND_VAR, condVar));
+    AnnotatedInsn *oldInsn = dynamic_cast<AnnotatedInsn *>(locState.insn);
+    GenericInsn *insn = new TextInsn(str.str(), live, oldInsn->killVars());
+    pInsnWriter->replaceInsn(loc, insn);
+
+    return /* success */ true;
+}
+
 bool replaceAdtOps(
         TInsnWriter                *pInsnWriter,
         const TMatchList           &matchList,
@@ -398,6 +614,15 @@ bool replaceAdtOps(
         if (!replaceSingleOp(pInsnWriter, matchList, idxList, varMap, tpl,
                     progState))
             return false;
+    }
+
+    const TLocIdx locCnt = progState.size();
+    for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
+        const LocalState &locState = progState[locIdx];
+        if (2U == locState.cfgOutEdges.size())
+            // assume CL_INSN_COND
+            tryReplaceCond(pInsnWriter, matchList, opList, varMap, progState,
+                    locState, locIdx);
     }
 
     return /* success */ true;

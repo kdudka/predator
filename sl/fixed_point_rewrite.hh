@@ -93,8 +93,11 @@ class StateRewriter: public IStateRewriter {
 enum EVarLevel {
     VL_NONE,
     VL_CODE_LISTENER,
-    VL_CONTAINER_VAR
+    VL_CONTAINER_VAR,
+    VL_COND_VAR
 };
+
+typedef int                                         TBoolVarId;
 
 struct GenericVar {
     EVarLevel           code;
