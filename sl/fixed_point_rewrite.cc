@@ -48,6 +48,132 @@ void MultiRewriter::appendWriter(IStateRewriter &slave)
     slaveList_.push_back(&slave);
 }
 
+class IRewriteAction {
+    public:
+        virtual ~IRewriteAction() { }
+        virtual void apply(IStateRewriter &writer) const = 0;
+};
+
+struct RecordRewriter::Private {
+    std::vector<const IRewriteAction *> actionList;
+
+    ~Private()
+    {
+        BOOST_FOREACH(const IRewriteAction *action, actionList)
+            delete action;
+    }
+};
+
+RecordRewriter::RecordRewriter():
+    d(new Private)
+{
+}
+
+RecordRewriter::~RecordRewriter()
+{
+    delete d;
+}
+
+class InsertInsnAction: public IRewriteAction {
+    public:
+        InsertInsnAction(TLocIdx src, TLocIdx dst, GenericInsn *insn):
+            src_(src),
+            dst_(dst),
+            insn_(insn)
+        {
+        }
+
+        ~InsertInsnAction()
+        {
+            delete insn_;
+        }
+
+        virtual void apply(IStateRewriter &writer) const
+        {
+            GenericInsn *insn = insn_->clone();
+            writer.insertInsn(src_, dst_, insn);
+        }
+
+    private:
+        TLocIdx                     src_;
+        TLocIdx                     dst_;
+        GenericInsn                *insn_;
+};
+
+void RecordRewriter::insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn)
+{
+    const IRewriteAction *action = new InsertInsnAction(src, dst, insn);
+    d->actionList.push_back(action);
+}
+
+class ReplaceInsnAction: public IRewriteAction {
+    public:
+        ReplaceInsnAction(TLocIdx at, GenericInsn *insn):
+            at_(at),
+            insn_(insn)
+        {
+        }
+
+        ~ReplaceInsnAction()
+        {
+            delete insn_;
+        }
+
+        virtual void apply(IStateRewriter &writer) const
+        {
+            GenericInsn *insn = insn_->clone();
+            writer.replaceInsn(at_, insn);
+        }
+
+    private:
+        TLocIdx                     at_;
+        GenericInsn                *insn_;
+};
+
+void RecordRewriter::replaceInsn(TLocIdx at, GenericInsn *insn)
+{
+    const IRewriteAction *action = new ReplaceInsnAction(at, insn);
+    d->actionList.push_back(action);
+}
+
+class DropInsnAction: public IRewriteAction {
+    public:
+        DropInsnAction(TLocIdx at):
+            at_(at)
+        {
+        }
+
+        virtual void apply(IStateRewriter &writer) const
+        {
+            writer.dropInsn(at_);
+        }
+
+    private:
+        TLocIdx                     at_;
+};
+
+void RecordRewriter::dropInsn(TLocIdx at)
+{
+    const IRewriteAction *action = new DropInsnAction(at);
+    d->actionList.push_back(action);
+}
+
+/// UNSAFE wrt. exceptions falling through IRewriteAction::apply(...)
+void RecordRewriter::flush(IStateRewriter *pConsumer)
+{
+    BOOST_FOREACH(const IRewriteAction *action, d->actionList) {
+        action->apply(*pConsumer);
+        delete action;
+    }
+
+    d->actionList.clear();
+}
+
+bool RecordRewriter::empty() const
+{
+    return d->actionList.empty();
+}
+
 void StateRewriter::insertInsn(
         const TLocIdx               src,
         const TLocIdx               dst,
@@ -67,6 +193,8 @@ void StateRewriter::insertInsn(
     // resolve src/dst instructions
     LocalState &srcState = state_[src];
     LocalState &dstState = state_[dst];
+    if (!srcState.insn || !dstState.insn)
+        CL_BREAK_IF("invalid neighbour detected in insertInsn()");
 
     bool closesLoop = false;
     BOOST_FOREACH(CfgEdge &oe, srcState.cfgOutEdges) {

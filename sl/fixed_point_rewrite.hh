@@ -45,6 +45,29 @@ class MultiRewriter: public IStateRewriter {
         std::vector<IStateRewriter *> slaveList_;
 };
 
+class RecordRewriter: public IStateRewriter {
+    public:
+        RecordRewriter();
+        virtual ~RecordRewriter();
+
+        virtual void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn);
+        virtual void replaceInsn(TLocIdx at, GenericInsn *insn);
+        virtual void dropInsn(TLocIdx at);
+
+        // apply the changes in the same order as they came; and drop them
+        void flush(IStateRewriter *pConsumer);
+
+        bool empty() const;
+
+    private:
+        RecordRewriter(const RecordRewriter &);
+        RecordRewriter& operator=(const RecordRewriter &);
+
+    private:
+        struct Private;
+        Private *d;
+};
+
 class StateRewriter: public IStateRewriter {
     public:
         /// *pState has to be valid till the destruction of StateRewriter
