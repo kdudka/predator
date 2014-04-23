@@ -174,6 +174,25 @@ bool RecordRewriter::empty() const
     return d->actionList.empty();
 }
 
+struct StateRewriter::Private {
+    GlobalState                    &state;
+
+    Private(GlobalState *pState):
+        state(*pState)
+    {
+    }
+};
+
+StateRewriter::StateRewriter(GlobalState *pState):
+    d(new Private(pState))
+{
+}
+
+StateRewriter::~StateRewriter()
+{
+    delete d;
+}
+
 void StateRewriter::insertInsn(
         const TLocIdx               src,
         const TLocIdx               dst,
@@ -187,12 +206,12 @@ void StateRewriter::insertInsn(
     locState->insn = insn;
 
     // append the instruction to the list
-    const TLocIdx at = state_.size();
-    state_.stateList_.append(locState);
+    const TLocIdx at = d->state.size();
+    d->state.stateList_.append(locState);
 
     // resolve src/dst instructions
-    LocalState &srcState = state_[src];
-    LocalState &dstState = state_[dst];
+    LocalState &srcState = d->state[src];
+    LocalState &dstState = d->state[dst];
     if (!srcState.insn || !dstState.insn)
         CL_BREAK_IF("invalid neighbour detected in insertInsn()");
 
@@ -224,7 +243,7 @@ void StateRewriter::insertInsn(
 void StateRewriter::replaceInsn(const TLocIdx at, GenericInsn *insn)
 {
     CL_NOTE("[ADT] replacing insn #" << at << " by " << *insn);
-    LocalState &locState = state_[at];
+    LocalState &locState = d->state[at];
     delete locState.insn;
     locState.insn = insn;
 }
@@ -232,13 +251,13 @@ void StateRewriter::replaceInsn(const TLocIdx at, GenericInsn *insn)
 void StateRewriter::dropInsn(const TLocIdx at)
 {
     CL_NOTE("[ADT] removing insn #" << at);
-    LocalState &locState = state_[at];
+    LocalState &locState = d->state[at];
     delete locState.insn;
     locState.insn = 0;
 
     // iterate through all incoming edges
     BOOST_FOREACH(const CfgEdge &ie, locState.cfgInEdges) {
-        LocalState &inState = state_[ie.targetLoc];
+        LocalState &inState = d->state[ie.targetLoc];
         TCfgEdgeList outEdges;
 
         BOOST_FOREACH(const CfgEdge &be, inState.cfgOutEdges) {
@@ -260,7 +279,7 @@ void StateRewriter::dropInsn(const TLocIdx at)
 
     // iterate through all outgoing edges
     BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges) {
-        LocalState &outState = state_[oe.targetLoc];
+        LocalState &outState = d->state[oe.targetLoc];
         TCfgEdgeList inEdges;
 
         BOOST_FOREACH(const CfgEdge &be, outState.cfgInEdges) {
@@ -287,12 +306,12 @@ void StateRewriter::dropInsn(const TLocIdx at)
 
 bool StateRewriter::dedupOutgoingEdges(const TLocIdx at)
 {
-    LocalState &locState = state_[at];
+    LocalState &locState = d->state[at];
     bool anyChange = false;
 
     // iterate through all outgoing edges
     BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges) {
-        LocalState &outState = state_[oe.targetLoc];
+        LocalState &outState = d->state[oe.targetLoc];
         TCfgEdgeList inEdges;
         std::set<TLocIdx> inSet;
 

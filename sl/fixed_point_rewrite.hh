@@ -71,10 +71,9 @@ class RecordRewriter: public IStateRewriter {
 class StateRewriter: public IStateRewriter {
     public:
         /// *pState has to be valid till the destruction of StateRewriter
-        StateRewriter(GlobalState *pState):
-            state_(*pState)
-        {
-        }
+        StateRewriter(GlobalState *pState);
+
+        ~StateRewriter();
 
         /// takes ownership of *insn
         virtual void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn);
@@ -87,7 +86,8 @@ class StateRewriter: public IStateRewriter {
         bool /* any change */ dedupOutgoingEdges(TLocIdx at);
 
     private:
-        GlobalState                &state_;
+        struct Private;
+        Private *d;
 };
 
 enum EVarLevel {
