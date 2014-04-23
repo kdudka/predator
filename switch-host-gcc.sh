@@ -17,7 +17,7 @@ usage() {
     plug-ins.  The currently supported version of host GCC is 4.8.2, but feel
     free to use any other version of GCC at your own responsibility.
 
-    GCC_HOST is the absolute path to gcc(1) that is built with the support for
+    GCC_HOST is a gcc(1) executable file that is built with the support for
     GCC plug-ins.  The most common location of the system GCC is /usr/bin/gcc.
     If you have multiple versions of gcc installed on the system, it can be
     something like /usr/bin/gcc-4.8.2.  You can also provide a local build of
@@ -41,10 +41,16 @@ status_update() {
 
 # check the given GCC_HOST
 GCC_HOST="$1"
-test "/" == "${GCC_HOST:0:1}" \
-    || die "GCC_HOST is not an absolute path: $GCC_HOST"
-test -x "$GCC_HOST" \
-    || die "GCC_HOST is not an absolute path to an executable file: $GCC_HOST"
+if test "/" != "${GCC_HOST:0:1}"; then
+    if echo "$GCC_HOST" | grep / >/dev/null; then
+        # assume a relative path to GCC_HOST
+        GCC_HOST="$(readlink -f "$GCC_HOST")"
+    else
+        # assume an executable in $PATH
+        GCC_HOST="$(command -v "$GCC_HOST")"
+    fi
+fi
+test -x "$GCC_HOST" || die "GCC_HOST is not an executable file: $1"
 
 # try to run GCC_HOST
 "$GCC_HOST" --version || die "unable to run gcc: $GCC_HOST --version"
