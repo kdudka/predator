@@ -310,13 +310,12 @@ AdtOp::OpCollection adtOps;
 void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
 {
     // back up the original CFG and create a writer for the resulting one
-    GlobalState cfgOrig, cfgResult;
+    GlobalState cfgOrig;
     exportControlFlow(&cfgOrig, fncState);
-    exportControlFlow(&cfgResult, fncState);
-    StateRewriter rewriter(&cfgResult);
+    RecordRewriter recorder;
 
     MultiRewriter writer;
-    writer.appendWriter(rewriter);
+    writer.appendWriter(recorder);
 
     RewriteCapture capture;
     writer.appendWriter(capture);
@@ -355,6 +354,11 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
         BOOST_FOREACH(const THeapIdent heap, fm.matchedHeaps)
             heapSet.insert(heap);
     }
+
+    GlobalState cfgResult;
+    exportControlFlow(&cfgResult, fncState);
+    StateRewriter rewriter(&cfgResult);
+    recorder.flush(&rewriter);
 
     // plot the annotated input CFG
     plotFncCore(plot, fncState, varByShape, capture, heapSet);
