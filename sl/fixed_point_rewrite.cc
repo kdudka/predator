@@ -54,13 +54,22 @@ class IRewriteAction {
         virtual void apply(IStateRewriter &writer) const = 0;
 };
 
+typedef std::vector<const IRewriteAction *>                 TActionList;
+
+enum EActionKind {
+    AK_BASIC,
+    AK_REMOVE,
+    AK_TOTAL
+};
+
 struct RecordRewriter::Private {
-    std::vector<const IRewriteAction *> actionList;
+    TActionList actionLists[AK_TOTAL];
 
     ~Private()
     {
-        BOOST_FOREACH(const IRewriteAction *action, actionList)
-            delete action;
+        for (int i = 0; i < AK_TOTAL; ++i)
+            BOOST_FOREACH(const IRewriteAction *action, this->actionLists[i])
+                delete action;
     }
 };
 
@@ -103,7 +112,7 @@ class InsertInsnAction: public IRewriteAction {
 void RecordRewriter::insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn)
 {
     const IRewriteAction *action = new InsertInsnAction(src, dst, insn);
-    d->actionList.push_back(action);
+    d->actionLists[AK_BASIC].push_back(action);
 }
 
 class ReplaceInsnAction: public IRewriteAction {
@@ -133,7 +142,7 @@ class ReplaceInsnAction: public IRewriteAction {
 void RecordRewriter::replaceInsn(TLocIdx at, GenericInsn *insn)
 {
     const IRewriteAction *action = new ReplaceInsnAction(at, insn);
-    d->actionList.push_back(action);
+    d->actionLists[AK_BASIC].push_back(action);
 }
 
 class DropInsnAction: public IRewriteAction {
@@ -155,23 +164,31 @@ class DropInsnAction: public IRewriteAction {
 void RecordRewriter::dropInsn(TLocIdx at)
 {
     const IRewriteAction *action = new DropInsnAction(at);
-    d->actionList.push_back(action);
+    d->actionLists[AK_REMOVE].push_back(action);
 }
 
 /// UNSAFE wrt. exceptions falling through IRewriteAction::apply(...)
 void RecordRewriter::flush(IStateRewriter *pConsumer)
 {
-    BOOST_FOREACH(const IRewriteAction *action, d->actionList) {
-        action->apply(*pConsumer);
-        delete action;
-    }
+    for (int i = 0; i < AK_TOTAL; ++i) {
+        TActionList &actionList = d->actionLists[i];
 
-    d->actionList.clear();
+        BOOST_FOREACH(const IRewriteAction *action, actionList) {
+            action->apply(*pConsumer);
+            delete action;
+        }
+
+        actionList.clear();
+    }
 }
 
 bool RecordRewriter::empty() const
 {
-    return d->actionList.empty();
+    for (int i = 0; i < AK_TOTAL; ++i)
+        if (!d->actionLists[i].empty())
+            return false;
+
+    return true;
 }
 
 typedef std::pair<TLocIdx /* src */, TLocIdx /* dst */>     TEdge;
