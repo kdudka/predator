@@ -174,8 +174,12 @@ bool RecordRewriter::empty() const
     return d->actionList.empty();
 }
 
+typedef std::pair<TLocIdx /* src */, TLocIdx /* dst */>     TEdge;
+typedef std::map<TEdge, TLocIdx /* src */>                  TInsMap;
+
 struct StateRewriter::Private {
     GlobalState                    &state;
+    TInsMap                         insMap;
 
     Private(GlobalState *pState):
         state(*pState)
@@ -194,10 +198,18 @@ StateRewriter::~StateRewriter()
 }
 
 void StateRewriter::insertInsn(
-        const TLocIdx               src,
+        TLocIdx                     src,
         const TLocIdx               dst,
         GenericInsn                *insn)
 {
+    const TEdge edge(src, dst);
+    const TInsMap::iterator it = d->insMap.find(edge);
+    if (it == d->insMap.end())
+        d->insMap[edge] = /* new loc */ d->state.stateList_.size();
+    else
+        // inserting multiple locations --> we have to chain them
+        std::swap(it->second, src);
+
     CL_NOTE("[ADT] inserting " << *insn
             << " between locations #" << src << " -> #" << dst);
 

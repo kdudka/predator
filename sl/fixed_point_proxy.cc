@@ -131,11 +131,14 @@ class RewriteCapture: public IStateRewriter {
 
 void RewriteCapture::insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn)
 {
+    const TEdge edge(src, dst);
+
     std::ostringstream str;
+    if (hasKey(edgeLabels_, edge))
+        str << "; ";
     str << *insn;
 
-    const TEdge edge(src, dst);
-    edgeLabels_[edge] = str.str();
+    edgeLabels_[edge] += str.str();
 }
 
 void RewriteCapture::replaceInsn(TLocIdx at, GenericInsn *insn)
