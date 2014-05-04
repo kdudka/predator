@@ -393,6 +393,7 @@ bool replaceSingleOp(
 }
 
 typedef std::set<THeapIdent>                        THeapIdentSet;
+typedef std::set<TLocIdx>                           TLocSet;
 
 enum ECondBranch {
     CB_TRUE,                        ///< true branch
@@ -410,13 +411,18 @@ typedef std::stack<TLocIdx>                         TLocStack;
 
 struct CondReplaceCtx {
     const TProgState               &progState;
+    const TLocSet                  &locsInOps;
     TBoolVarId                      condVar;
     TCondDataMap                    data;
     TLocStack                       todo;
     RecordRewriter                  writer;
 
-    CondReplaceCtx(const TProgState &progState_, const TBoolVarId condVar_):
+    CondReplaceCtx(
+            const TProgState       &progState_,
+            const TLocSet          &locsInOps_,
+            const TBoolVarId        condVar_):
         progState(progState_),
+        locsInOps(locsInOps_),
         condVar(condVar_)
     {
     }
@@ -493,6 +499,24 @@ bool crExpandLoc(
     return true;
 }
 
+bool crResolveLoc(
+        CondReplaceCtx             &ctx,
+        TCondData                  &locData,
+        const TLocIdx               srcLoc)
+{
+    const TLocIdx dstLoc = locData.dstLoc;
+    if (-1 == dstLoc)
+        return false;
+
+    if (hasKey(ctx.locsInOps, srcLoc) && hasKey(ctx.locsInOps, dstLoc))
+        // we are in the middle of an operation
+        return false;
+
+    // TODO: insert other condition-replace hooks here
+
+    return false;
+}
+
 bool crHandleLoc(
         CondReplaceCtx             &ctx,
         const TLocIdx               loc)
@@ -504,6 +528,10 @@ bool crHandleLoc(
     if (!crHeapsCovered(locData, locState, loc))
         // we have already failed
         return false;
+
+    if (crResolveLoc(ctx, locData, loc))
+        // already resolved
+        return true;
 
     for (unsigned br = CB_TRUE; br < CB_TOTAL; ++br) {
         if (!locData.heapsByBranch[br].empty())
@@ -525,18 +553,15 @@ bool crHandleLoc(
         return true;
     }
 
-    // TODO: insert other condition-replace hooks here
-
     // expand predecessors
     return crExpandLoc(ctx, locState, loc);
 }
 
 bool tryReplaceCond(
         TInsnWriter                *pInsnWriter,
-        const TMatchList           &matchList,
-        const TOpList              &opList,
         const TShapeVarByShape     &varMap,
         const TProgState           &progState,
+        const TLocSet              &locsInOps,
         const LocalState           &locState,
         const TLocIdx               loc)
 {
@@ -544,7 +569,7 @@ bool tryReplaceCond(
 
     // initialize condition replacement context
     const TBoolVarId condVar = acquireFreshBoolVar();
-    CondReplaceCtx ctx(progState, condVar);
+    CondReplaceCtx ctx(progState, locsInOps, condVar);
 
     // start with the location of the condition itself
     TCondData &locData = ctx.data[loc];
@@ -598,6 +623,25 @@ bool tryReplaceCond(
     return /* success */ true;
 }
 
+void collectLocsInOps(
+        TLocSet                    *pDst,
+        const TMatchList           &matchList,
+        const TOpList              &opList)
+{
+    BOOST_FOREACH(const TMatchIdxList &idxList, opList) {
+        BOOST_FOREACH(const TMatchIdx idx, idxList) {
+            const FootprintMatch &fm = matchList[idx];
+            const THeapIdentSeq &hList = fm.matchedHeaps;
+            typedef THeapIdentSeq::const_reverse_iterator TIter;
+            for (TIter it = ++hList.rbegin(); it != hList.rend(); ++it)
+                pDst->insert(it->/* loc */first);
+
+            BOOST_FOREACH(const THeapIdent &heap, fm.skippedHeaps)
+                pDst->insert(heap./* loc */first);
+        }
+    }
+}
+
 bool replaceAdtOps(
         TInsnWriter                *pInsnWriter,
         const TMatchList           &matchList,
@@ -616,12 +660,15 @@ bool replaceAdtOps(
             return false;
     }
 
+    TLocSet locsInOps;
+    collectLocsInOps(&locsInOps, matchList, opList);
+
     const TLocIdx locCnt = progState.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         const LocalState &locState = progState[locIdx];
         if (2U == locState.cfgOutEdges.size())
             // assume CL_INSN_COND
-            tryReplaceCond(pInsnWriter, matchList, opList, varMap, progState,
+            tryReplaceCond(pInsnWriter, varMap, progState, locsInOps,
                     locState, locIdx);
     }
 
