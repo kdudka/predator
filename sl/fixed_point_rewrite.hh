@@ -85,6 +85,8 @@ class StateRewriter: public IStateRewriter {
 
         bool /* any change */ dedupOutgoingEdges(TLocIdx at);
 
+        void mergeInsns(TLocIdx locAt, TLocIdx locWith);
+
     private:
         struct Private;
         Private *d;
@@ -122,6 +124,17 @@ inline bool operator<(const GenericVar &a, const GenericVar &b)
     RETURN_IF_COMPARED(a, b, code);
     RETURN_IF_COMPARED(a, b, uid);
     return false;
+}
+
+/// required by operator== over std::set<GenericVar>
+inline bool operator==(const GenericVar &a, const GenericVar &b)
+{
+    return a.code == b.code
+        && a.uid  == b.uid;
+}
+inline bool operator!=(const GenericVar &a, const GenericVar &b)
+{
+    return !operator==(a, b);
 }
 
 typedef std::set<GenericVar>                        TGenericVarSet;

@@ -683,11 +683,85 @@ void analyzeLiveVars(
         (*pLive)[locIdx] = data[locIdx].gen;
 }
 
-bool removeRedundantBranching(GlobalState *pState)
+bool areEqualInsns(const GenericInsn *insn1, const GenericInsn *insn2)
+{
+    const TInsn cli = insn1->clInsn();
+    if (cli != insn2->clInsn())
+        // either two distinct CL insns, or two different kinds of insn
+        return false;
+
+    if (cli)
+        // a pair of identical CL insns
+        return true;
+
+    const TextInsn *ti1 = dynamic_cast<const TextInsn *>(insn1);
+    const TextInsn *ti2 = dynamic_cast<const TextInsn *>(insn2);
+    if (!ti1 || !ti2)
+        // we support only comparison of TextInsn for now
+        return false;
+
+    // compare sets of live/killed vars of both insns
+    if (ti1->liveVars() != ti2->liveVars())
+        return false;
+    if (ti1->killVars() != ti2->killVars())
+        return false;
+
+    // compare string representation of both insns
+    std::ostringstream str1, str2;
+    ti1->writeToStream(str1);
+    ti2->writeToStream(str2);
+    return (str1.str() == str2.str());
+}
+
+bool mergeEqLocations(
+        StateRewriter              *pWriter,
+        const GlobalState          &glState,
+        const TLocIdx               loc1,
+        const TLocIdx               loc2)
+{
+    const LocalState &locState1 = glState[loc1];
+    if (locState1.cfgOutEdges.size() != 1U)
+        return false;
+
+    const LocalState &locState2 = glState[loc2];
+    if (locState2.cfgOutEdges.size() != 1U)
+        return false;
+
+    if (!areEqualInsns(locState1.insn, locState2.insn))
+        return false;
+
+    pWriter->mergeInsns(loc1, loc2);
+    return true;
+}
+
+bool mergeEqPreds(
+        StateRewriter              *pWriter,
+        const GlobalState          &glState,
+        const TLocIdx               loc)
+{
+    const LocalState &locState = glState[loc];
+    const TCfgEdgeList &inEdges = locState.cfgInEdges;
+    const int cntPreds = inEdges.size();
+    if (cntPreds <= 1)
+        // nothing to merge
+        return false;
+
+    for (int i = 0; i < cntPreds; ++i)
+        for (int j = i + 1; j < cntPreds; ++j)
+            if (mergeEqLocations(pWriter, glState,
+                        inEdges[i].targetLoc,
+                        inEdges[j].targetLoc))
+                return /* anyChange */ true;
+
+    return /* anyChange */ false;
+}
+
+bool simplifyControlFlow(GlobalState *pState)
 {
     StateRewriter writer(pState);
     bool anyChange = false;
 
+    // eliminate redundant branching
     const TLocIdx locCnt = pState->size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         if (!writer.dedupOutgoingEdges(locIdx))
@@ -697,6 +771,11 @@ bool removeRedundantBranching(GlobalState *pState)
         writer.dropInsn(locIdx);
         anyChange = true;
     }
+
+    // merge equal locations
+    for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx)
+        while (mergeEqPreds(&writer, *pState, locIdx))
+            anyChange = true;
 
     return anyChange;
 }
@@ -755,7 +834,7 @@ void removeDeadCode(GlobalState *pState)
             writer.dropInsn(locIdx);
         }
     }
-    while (removeRedundantBranching(pState));
+    while (simplifyControlFlow(pState));
 }
 
 void sl_dump(const TShapeMapper &m)

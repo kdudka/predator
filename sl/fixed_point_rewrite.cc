@@ -376,6 +376,60 @@ bool StateRewriter::dedupOutgoingEdges(const TLocIdx at)
     return true;
 }
 
+void StateRewriter::mergeInsns(const TLocIdx locDst, const TLocIdx locSrc)
+{
+    CL_NOTE("[ADT] merging insn #" << locDst << " with insn #" << locSrc);
+
+    // make sure we have exactly one outgoing CFG edge from each location
+    LocalState &dstState = d->state[locDst];
+    LocalState &srcState = d->state[locSrc];
+    CL_BREAK_IF(dstState.cfgOutEdges.size() != 1U);
+    CL_BREAK_IF(srcState.cfgOutEdges.size() != 1U);
+
+    // make sure that both locations have the same successor location
+    CfgEdge &dstOutEdge = dstState.cfgOutEdges.front();
+    CfgEdge &srcOutEdge = srcState.cfgOutEdges.front();
+    const TLocIdx locOut = dstOutEdge.targetLoc;
+    CL_BREAK_IF(locOut != srcOutEdge.targetLoc);
+    LocalState &outState = d->state[locOut];
+
+    // redirect incoming edges of locSrc to locDst
+    BOOST_FOREACH(CfgEdge &ie, srcState.cfgInEdges) {
+        ie.closesLoop |= srcOutEdge.closesLoop;
+        dstState.cfgInEdges.push_back(ie);
+        BOOST_FOREACH(CfgEdge &oe, d->state[ie.targetLoc].cfgOutEdges) {
+            if (oe.targetLoc != locSrc)
+                continue;
+
+            oe.targetLoc = locDst;
+            oe.closesLoop = ie.closesLoop;
+        }
+    }
+
+    // preserve the loop-closing edge flag
+    if (dstOutEdge.closesLoop != srcOutEdge.closesLoop) {
+        dstOutEdge.closesLoop = false;
+        BOOST_FOREACH(CfgEdge &e, outState.cfgInEdges)
+            if (e.targetLoc == locDst)
+                e.closesLoop = false;
+
+        if (dstOutEdge.closesLoop) {
+            BOOST_FOREACH(CfgEdge &ie, dstState.cfgInEdges) {
+                ie.closesLoop |= dstOutEdge.closesLoop;
+                BOOST_FOREACH(CfgEdge &oe, d->state[ie.targetLoc].cfgOutEdges)
+                    if (oe.targetLoc == locSrc)
+                        oe.closesLoop = ie.closesLoop;
+            }
+        }
+    }
+
+    // finally remove locSrc from the CFG
+    srcState.cfgInEdges.clear();
+    srcState.cfgOutEdges.clear();
+    delete srcState.insn;
+    srcState.insn = 0;
+}
+
 void ClInsn::lazyInit() const
 {
     using namespace CodeStorage::VarKiller;
