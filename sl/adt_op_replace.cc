@@ -401,9 +401,11 @@ enum ECondBranch {
     CB_TOTAL
 };
 
+typedef THeapIdentSet                               THeapsByBranch[CB_TOTAL];
+
 struct TCondData {
     TLocIdx                         dstLoc;
-    THeapIdentSet                   heapsByBranch[CB_TOTAL];
+    THeapsByBranch                  heapsByBranch;
 };
 
 typedef std::map<TLocIdx /* dst */, TCondData>      TCondDataMap;
@@ -411,6 +413,7 @@ typedef std::stack<TLocIdx>                         TLocStack;
 
 struct CondReplaceCtx {
     const TProgState               &progState;
+    const TShapeVarByShape         &varMap;
     const TLocSet                  &locsInOps;
     TBoolVarId                      condVar;
     TCondDataMap                    data;
@@ -419,9 +422,11 @@ struct CondReplaceCtx {
 
     CondReplaceCtx(
             const TProgState       &progState_,
+            const TShapeVarByShape &varMap_,
             const TLocSet          &locsInOps_,
             const TBoolVarId        condVar_):
         progState(progState_),
+        varMap(varMap_),
         locsInOps(locsInOps_),
         condVar(condVar_)
     {
@@ -499,6 +504,80 @@ bool crExpandLoc(
     return true;
 }
 
+bool inferNonEmpty(
+        TShapeVarId                *pShapeVar,
+        CondReplaceCtx             &ctx,
+        const THeapIdentSet        &heapSet)
+{
+    TShapeVarId var = -1;
+
+    BOOST_FOREACH(const THeapIdent &heap, heapSet) {
+        const TShapeIdent shape(heap, /* XXX */ 0);
+        const TShapeVarByShape::const_iterator it = ctx.varMap.find(shape);
+        if (it == ctx.varMap.end())
+            return false;
+
+        if (-1 == var)
+            var = it->second;
+        else if (var != it->second)
+            return false;
+    }
+
+    *pShapeVar = var;
+    return true;
+}
+
+bool inferEmpty(
+        CondReplaceCtx             &ctx,
+        const THeapIdentSet        &heapSet)
+{
+    BOOST_FOREACH(const THeapIdent &heap, heapSet) {
+        const TShapeIdent shape(heap, /* XXX */ 0);
+        if (hasKey(ctx.varMap, shape))
+            return false;
+    }
+
+    return true;
+}
+
+bool insertEmpChk(
+        CondReplaceCtx             &ctx,
+        const THeapsByBranch       &heapsByBranch,
+        const TLocIdx               srcLoc,
+        const TLocIdx               dstLoc)
+{
+    using namespace FixedPoint;
+
+    TShapeVarId var;
+    bool neg;
+
+    if (inferNonEmpty(&var, ctx, heapsByBranch[CB_TRUE]) && -1 != var)
+        neg = true;
+    else if (inferNonEmpty(&var, ctx, heapsByBranch[CB_FALSE]))
+        neg = false;
+    else if (inferNonEmpty(&var, ctx, heapsByBranch[CB_TRUE]))
+        neg = true;
+    else
+        return false;
+
+    const THeapIdentSet &emptySet = heapsByBranch[(neg) ? CB_FALSE : CB_TRUE];
+    if (!inferEmpty(ctx, emptySet))
+        return false;
+
+    std::ostringstream str;
+    str << "cond" << ctx.condVar << " := ";
+    if (neg)
+        str << "!";
+    str << "empty(C" << var << ")";
+
+    // insert assignment of true/false to the condition variable
+    TGenericVarSet live, kill;
+    kill.insert(GenericVar(VL_COND_VAR, ctx.condVar));
+    GenericInsn *insn = new TextInsn(str.str(), live, kill);
+    ctx.writer.insertInsn(srcLoc, dstLoc, insn);
+    return true;
+}
+
 bool crResolveLoc(
         CondReplaceCtx             &ctx,
         TCondData                  &locData,
@@ -511,6 +590,9 @@ bool crResolveLoc(
     if (hasKey(ctx.locsInOps, srcLoc) && hasKey(ctx.locsInOps, dstLoc))
         // we are in the middle of an operation
         return false;
+
+    if (insertEmpChk(ctx, ctx.data[dstLoc].heapsByBranch, srcLoc, dstLoc))
+        return true;
 
     // TODO: insert other condition-replace hooks here
 
@@ -569,7 +651,7 @@ bool tryReplaceCond(
 
     // initialize condition replacement context
     const TBoolVarId condVar = acquireFreshBoolVar();
-    CondReplaceCtx ctx(progState, locsInOps, condVar);
+    CondReplaceCtx ctx(progState, varMap, locsInOps, condVar);
 
     // start with the location of the condition itself
     TCondData &locData = ctx.data[loc];
