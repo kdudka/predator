@@ -23,6 +23,10 @@
 #include <gcc-plugin.h>
 #include <plugin-version.h>
 
+#if defined(GCCPLUGIN_VERSION_MAJOR) && (GCCPLUGIN_VERSION_MAJOR == 4) && (GCCPLUGIN_VERSION_MINOR >= 9)
+#   define GCC_HOST_4_9_OR_NEWER
+#endif
+
 #include <cl/code_listener.h>
 
 #include "../config_cl.h"
@@ -47,12 +51,31 @@
 // this include has to be before <gcc/function.h>; otherwise it will NOT compile
 #include <tm.h>
 
+#ifdef GCC_HOST_4_9_OR_NEWER
+    // required by <gimple.h> when compiling against gcc-4.9.0 plug-in headers
+#   include <alias.h>
+#   include <basic-block.h>
+#   include <internal-fn.h>
+#   include <is-a.h>
+#   include <predict.h>
+#   include <tree.h>
+#   include <tree-core.h>
+#   include <tree-ssa-alias.h>
+#   include <gimple-expr.h> // required by <gimple.h> but requires <tree-core.h>
+#endif
+
 #include <function.h>
 #include <gimple.h>
 #include <input.h>
 #include <real.h>
 #include <toplev.h>
 #include <tree-pass.h>
+
+#ifdef GCC_HOST_4_9_OR_NEWER
+    // required when compiling against gcc-4.9.0 plug-in headers
+#   include <gimple-iterator.h>
+#   include <gimple-walk.h>
+#endif
 
 #ifdef __cplusplus
 #   define C99_FIELD(field)
