@@ -1883,8 +1883,30 @@ static unsigned int cl_pass_execute(void)
     return 0;
 }
 
+#ifdef GCC_HOST_4_9_OR_NEWER
+static struct pass_data cl_pass_data;
+struct cl_pass_str: public opt_pass {
+    cl_pass_str():
+        opt_pass(cl_pass_data, 0)
+    {
+        this->has_execute = true;
+    }
+
+    virtual opt_pass *clone()
+    {
+        return new cl_pass_str(*this);
+    }
+
+    virtual unsigned int execute()
+    {
+        return cl_pass_execute();
+    }
+};
+static struct cl_pass_str cl_pass;
+#else
 // will be initialized in cl_regcb()
 static struct opt_pass cl_pass;
+#endif
 
 // definition of a new pass provided by the plug-in
 static struct register_pass_info cl_plugin_pass = {
@@ -1951,7 +1973,9 @@ static void cl_regcb(const char *name) {
     // the structure changes between versions of GCCs, so we do not use initials
     cl_pass.type = GIMPLE_PASS;
     cl_pass.name = "clplug";
+#ifndef GCC_HOST_4_9_OR_NEWER
     cl_pass.execute = cl_pass_execute;
+#endif
     cl_pass.properties_required = PROP_cfg | PROP_gimple_any;
 
     // passing NULL as CALLBACK to register_callback stands for virtual callback
