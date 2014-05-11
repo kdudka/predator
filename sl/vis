@@ -10,4 +10,9 @@ printf "graph visualization in progress ... "
 make $MAKEOPTS -s -f "$topdir/tests/predator-regre/Makefile.in" \
     TIMEOUT="timeout 2" || exit $?
 printf "done\n"
-"$SVG_VIEWER" *.svg &
+
+if test -r fp-main.svg; then
+    "$SVG_VIEWER" fp-main.svg
+else
+    "$SVG_VIEWER" *.svg
+fi 2>/dev/null &

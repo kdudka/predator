@@ -189,11 +189,28 @@ void handleTrackUninit(const string &name, const string &value)
     data.trackUninit = true;
 }
 
+void handleDetectContainers(const string &name, const string &value)
+{
+#if !SH_PREVENT_AMBIGUOUS_ENT_ID
+    CL_ERROR("option \"" << name << "\" requires SH_PREVENT_AMBIGUOUS_ENT_ID");
+    return;
+#endif
+    data.allowCyclicTraceGraph      = true;
+    data.forbidHeapReplace          = true;
+    data.detectContainers           = true;
+    data.joinOnLoopEdgesOnly        = 1;
+    data.intArithmeticLimit         = /* disabled */ 0;
+    data.stateLiveOrdering          = /* disabled */ 0;
+    data.allowThreeWayJoin          = /* for prototypes only */ 1;
+    handleDumpFixedPoint(name, value);
+}
+
 ConfigStringParser::ConfigStringParser()
 {
     tbl_["allow_cyclic_trace_graph"]= handleAllowCyclicTraceGraph;
     tbl_["allow_three_way_join"]    = handleAllowThreeWayJoin;
     tbl_["dump_fixed_point"]        = handleDumpFixedPoint;
+    tbl_["detect_containers"]       = handleDetectContainers;
     tbl_["error_label"]             = handleErrorLabel;
     tbl_["forbid_heap_replace"]     = handleForbidHeapReplace;
     tbl_["int_arithmetic_limit"]    = handleIntArithmeticLimit;

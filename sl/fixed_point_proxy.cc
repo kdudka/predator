@@ -27,6 +27,7 @@
 #include "cont_shape_seq.hh"
 #include "cont_shape_var.hh"
 #include "fixed_point.hh"
+#include "glconf.hh"
 #include "symplot.hh"
 
 #include <cl/cl_msg.hh>
@@ -366,6 +367,9 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
     // plot the annotated input CFG
     plotFncCore(plot, fncState, varByShape, capture, heapSet);
 
+    if (!GlConf::data.detectContainers)
+        return;
+
     if (cfgOrig.size() < 16) {
         // plot the original CFG-only subgraph
         ++plot.subGraphIdx;
@@ -423,8 +427,8 @@ void StateByInsn::plotAll()
     // obtain a reference to CodeStorage::Storage
     TStorRef stor = *d->visitedFncs.begin()->second->stor;
 
-    // XXX
-    AdtOp::loadDefaultOperations(&adtOps, stor);
+    if (GlConf::data.detectContainers)
+        AdtOp::loadDefaultOperations(&adtOps, stor);
 
     BOOST_FOREACH(TFncMap::const_reference fncItem, d->visitedFncs) {
         const TFnc fnc = fncItem.second;
