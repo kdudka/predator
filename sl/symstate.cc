@@ -23,6 +23,7 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "glconf.hh"
 #include "symcmp.hh"
 #include "symjoin.hh"
 #include "symplot.hh"
@@ -156,12 +157,12 @@ void SymState::updateTraceOf(const int idx, Trace::Node *tr, EJoinStatus status)
     idMaps[i1].composite<D_LEFT_TO_RIGHT>(idMaps[i0]);
     idMaps[i0] = identity;
 
-#if SE_ALLOW_CYCLIC_TRACE_GRAPH
-    Trace::replaceNode(trOld, tr);
-    CL_BREAK_IF(tr != heaps_[idx]->traceNode());
-#else
-    heaps_[idx]->traceUpdate(tr);
-#endif
+    if (GlConf::data.allowCyclicTraceGraph) {
+        Trace::replaceNode(trOld, tr);
+        CL_BREAK_IF(tr != heaps_[idx]->traceNode());
+    }
+    else
+        heaps_[idx]->traceUpdate(tr);
 }
 
 

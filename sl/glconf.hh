@@ -37,6 +37,7 @@ struct Options {
     bool skipUserPlots;     ///< ignore all ___sl_plot*() calls
     int errorRecoveryMode;  ///< @copydoc config.h::SE_ERROR_RECOVERY_MODE
     std::string errLabel;   ///< if not empty, treat reaching the label as error
+    bool allowCyclicTraceGraph; ///< create node with two parents on entailment
     FixedPoint::StateByInsn *fixedPoint;  ///< fixed-point plotter (0 if unused)
 
     Options():
@@ -45,6 +46,7 @@ struct Options {
         memLeakIsError(false),
         skipUserPlots(false),
         errorRecoveryMode(SE_ERROR_RECOVERY_MODE),
+        allowCyclicTraceGraph(SE_ALLOW_CYCLIC_TRACE_GRAPH),
         fixedPoint(0)
     {
     }

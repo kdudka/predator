@@ -76,6 +76,12 @@ void handleErrorLabel(const string &name, const string &value)
     data.errLabel = value;
 }
 
+void handleAllowCyclicTraceGraph(const string &name, const string &value)
+{
+    assumeNoValue(name, value);
+    data.allowCyclicTraceGraph = true;
+}
+
 void handleMemLeakIsError(const string &name, const string &value)
 {
     assumeNoValue(name, value);
@@ -108,6 +114,7 @@ void handleTrackUninit(const string &name, const string &value)
 
 ConfigStringParser::ConfigStringParser()
 {
+    tbl_["allow_cyclic_trace_graph"]= handleAllowCyclicTraceGraph;
     tbl_["dump_fixed_point"]        = handleDumpFixedPoint;
     tbl_["error_label"]             = handleErrorLabel;
     tbl_["memleak_is_error"]        = handleMemLeakIsError;
