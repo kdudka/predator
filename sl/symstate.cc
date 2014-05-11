@@ -188,10 +188,10 @@ int SymHeapUnion::lookup(const SymHeap &lookFor) const
             CL_DEBUG("<I> sh #" << idx << " is equal to the given one, "
                     << cnt << " heaps in total");
 
-#if 1 < SE_STATE_ON_THE_FLY_ORDERING
-            // put the matched heap at the beginning of the list [optimization]
-            const_cast<SymHeapUnion *>(this)->rotateExisting(0U, idx);
-#endif
+            if (1 < GlConf::data.stateLiveOrdering)
+                // put the matched heap at beginning of the list [optimization]
+                const_cast<SymHeapUnion *>(this)->rotateExisting(0U, idx);
+
             return idx;
         }
     }
@@ -259,10 +259,9 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay)
         this->eraseExisting(idxOld);
     }
 
-#if SE_STATE_ON_THE_FLY_ORDERING
-    // put the matched heap at the beginning of the list [optimization]
-    this->rotateExisting(0U, idxNew);
-#endif
+    if (GlConf::data.stateLiveOrdering)
+        // put the matched heap at the beginning of the list [optimization]
+        this->rotateExisting(0U, idxNew);
 }
 
 bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
@@ -352,10 +351,9 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
     // pick the resulting trace node while preserving the heap itself
     this->updateTraceOf(idx, result.traceNode(), status);
 
-#if SE_STATE_ON_THE_FLY_ORDERING
-    // put the matched heap at the beginning of the list [optimization]
-    this->rotateExisting(0U, idx);
-#endif
+    if (GlConf::data.stateLiveOrdering)
+        // put the matched heap at the beginning of the list [optimization]
+        this->rotateExisting(0U, idx);
 
     // nothing changed actually
     return false;

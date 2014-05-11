@@ -23,6 +23,7 @@
 #include <cl/cl_msg.hh>
 #include <cl/storage.hh>
 
+#include "glconf.hh"
 #include "symabstract.hh"
 #include "symbt.hh"
 #include "symcmp.hh"
@@ -119,9 +120,10 @@ class PerFncCache {
 int PerFncCache::lookupCore(const SymHeap &sh)
 {
 #if 1 < SE_ENABLE_CALL_CACHE
-#if SE_STATE_ON_THE_FLY_ORDERING
-#error "SE_STATE_ON_THE_FLY_ORDERING is incompatible with join-based call cache"
-#endif
+    if (GlConf::data.stateLiveOrdering)
+        CL_DIE("SE_STATE_ON_THE_FLY_ORDERING"
+               " is incompatible with join-based call cache");
+
     EJoinStatus     status;
     SymHeap         result(sh.stor(), new Trace::TransientNode("PerFncCache"));
     const int       cnt = huni_.size();
@@ -174,12 +176,13 @@ int PerFncCache::lookupCore(const SymHeap &sh)
     int idx = huni_.lookup(sh);
     if (-1 != idx) {
         this->cacheHit();
-#   if 1 < SE_STATE_ON_THE_FLY_ORDERING
-        rotate(ctxMap_.begin(), ctxMap_.begin() + idx, ctxMap_.end());
-        return 0;
-#   else
+
+        if (1 < GlConf::data.stateLiveOrdering) {
+            rotate(ctxMap_.begin(), ctxMap_.begin() + idx, ctxMap_.end());
+            idx = 0;
+        }
+
         return idx;
-#   endif
     }
 #endif
 

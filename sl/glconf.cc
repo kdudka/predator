@@ -117,6 +117,26 @@ void handleJoinOnLoopEdgesOnly(const string &name, const string &value)
     }
 }
 
+void handleStateLiveOrdering(const string &name, const string &value)
+{
+    if (value.empty()) {
+        data.stateLiveOrdering = /* reorder heaps also in SymHeapUnion */ 2;
+        return;
+    }
+
+    try {
+        data.stateLiveOrdering = boost::lexical_cast<int>(value);
+        if (data.stateLiveOrdering < 0)
+            data.stateLiveOrdering = 0;
+        if (data.stateLiveOrdering > 2)
+            data.stateLiveOrdering = 2;
+    }
+    catch (...) {
+        CL_WARN("ignoring option \"" << name << "\" with invalid value");
+        return;
+    }
+}
+
 void handleIntArithmeticLimit(const string &name, const string &value)
 {
     try {
@@ -182,6 +202,7 @@ ConfigStringParser::ConfigStringParser()
     tbl_["no_error_recovery"]       = handleNoErrorRecovery;
     tbl_["no_plot"]                 = handleNoPlot;
     tbl_["oom"]                     = handleOOM;
+    tbl_["state_live_ordering"]     = handleStateLiveOrdering;
     tbl_["track_uninit"]            = handleTrackUninit;
 }
 

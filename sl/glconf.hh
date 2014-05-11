@@ -42,6 +42,7 @@ struct Options {
     bool forbidHeapReplace; ///< @copydoc config.h::SE_FORBID_HEAP_REPLACE
     int intArithmeticLimit; ///< @copydoc config.h::SE_INT_ARITHMETIC_LIMIT
     int joinOnLoopEdgesOnly;///< @copydoc config.h::SE_JOIN_ON_LOOP_EDGES_ONLY
+    int stateLiveOrdering;  ///< @copydoc config.h::SE_STATE_ON_THE_FLY_ORDERING
     FixedPoint::StateByInsn *fixedPoint;  ///< fixed-point plotter (0 if unused)
 
     Options():
@@ -55,6 +56,7 @@ struct Options {
         forbidHeapReplace(SE_FORBID_HEAP_REPLACE),
         intArithmeticLimit(SE_INT_ARITHMETIC_LIMIT),
         joinOnLoopEdgesOnly(SE_JOIN_ON_LOOP_EDGES_ONLY),
+        stateLiveOrdering(SE_STATE_ON_THE_FLY_ORDERING),
         fixedPoint(0)
     {
     }
