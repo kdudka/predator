@@ -41,6 +41,7 @@ struct Options {
     int allowThreeWayJoin;  ///< @copydoc config.h::SE_ALLOW_THREE_WAY_JOIN
     bool forbidHeapReplace; ///< @copydoc config.h::SE_FORBID_HEAP_REPLACE
     int intArithmeticLimit; ///< @copydoc config.h::SE_INT_ARITHMETIC_LIMIT
+    int joinOnLoopEdgesOnly;///< @copydoc config.h::SE_JOIN_ON_LOOP_EDGES_ONLY
     FixedPoint::StateByInsn *fixedPoint;  ///< fixed-point plotter (0 if unused)
 
     Options():
@@ -53,6 +54,7 @@ struct Options {
         allowThreeWayJoin(SE_ALLOW_THREE_WAY_JOIN),
         forbidHeapReplace(SE_FORBID_HEAP_REPLACE),
         intArithmeticLimit(SE_INT_ARITHMETIC_LIMIT),
+        joinOnLoopEdgesOnly(SE_JOIN_ON_LOOP_EDGES_ONLY),
         fixedPoint(0)
     {
     }

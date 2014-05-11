@@ -97,6 +97,26 @@ void handleAllowThreeWayJoin(const string &name, const string &value)
     }
 }
 
+void handleJoinOnLoopEdgesOnly(const string &name, const string &value)
+{
+    if (value.empty()) {
+        data.joinOnLoopEdgesOnly = /* skip isomorphism check if possible */ 3;
+        return;
+    }
+
+    try {
+        data.joinOnLoopEdgesOnly = boost::lexical_cast<int>(value);
+        if (data.joinOnLoopEdgesOnly < 0)
+            data.joinOnLoopEdgesOnly = 0;
+        if (data.joinOnLoopEdgesOnly > 3)
+            data.joinOnLoopEdgesOnly = 3;
+    }
+    catch (...) {
+        CL_WARN("ignoring option \"" << name << "\" with invalid value");
+        return;
+    }
+}
+
 void handleIntArithmeticLimit(const string &name, const string &value)
 {
     try {
@@ -157,6 +177,7 @@ ConfigStringParser::ConfigStringParser()
     tbl_["error_label"]             = handleErrorLabel;
     tbl_["forbid_heap_replace"]     = handleForbidHeapReplace;
     tbl_["int_arithmetic_limit"]    = handleIntArithmeticLimit;
+    tbl_["join_on_loop_edges_only"] = handleJoinOnLoopEdgesOnly;
     tbl_["memleak_is_error"]        = handleMemLeakIsError;
     tbl_["no_error_recovery"]       = handleNoErrorRecovery;
     tbl_["no_plot"]                 = handleNoPlot;

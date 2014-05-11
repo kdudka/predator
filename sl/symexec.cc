@@ -304,9 +304,8 @@ void SymExecEngine::updateState(SymHeap &sh, const CodeStorage::Block *ofBlock)
 #endif
         abstractIfNeeded(sh);
 
-#if !SE_JOIN_ON_LOOP_EDGES_ONLY
-    closingLoop = true;
-#endif
+    if (!GlConf::data.joinOnLoopEdgesOnly)
+        closingLoop = true;
 
     // update _target_ state and check if anything has changed
     if (stateMap_.insert(ofBlock, sh, closingLoop)) {

@@ -267,11 +267,9 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay)
 
 bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
 {
-#if 1 < SE_JOIN_ON_LOOP_EDGES_ONLY
-    if (!allowThreeWay)
+    if ((1 < GlConf::data.joinOnLoopEdgesOnly) && !allowThreeWay)
         // we are asked not to check for entailment, only isomorphism
         return SymHeapUnion::insert(shNew, allowThreeWay);
-#endif
 
     const int cnt = this->size();
     if (!cnt) {
@@ -603,15 +601,14 @@ bool SymStateMap::insert(
 
     // insert the given symbolic heap
     bool changed = true;
-#if 2 < SE_JOIN_ON_LOOP_EDGES_ONLY
-    if (1 == dst->inbound().size() && (cl_is_term_insn(dst->front()->code)
-                || (CL_INSN_COND == dst->back()->code && 2 == dst->size())))
+    if ((2 < GlConf::data.joinOnLoopEdgesOnly)
+        && (1 == dst->inbound().size() && (cl_is_term_insn(dst->front()->code)
+                || (CL_INSN_COND == dst->back()->code && 2 == dst->size()))))
     {
         CL_DEBUG("SymStateMap::insert() bypasses even the isomorphism check");
         ref.state.insertNew(sh);
     }
     else
-#endif
         changed = ref.state.insert(sh, allowThreeWay);
 
     if (ref.state.size() <= size)
