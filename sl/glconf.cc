@@ -97,6 +97,16 @@ void handleAllowThreeWayJoin(const string &name, const string &value)
     }
 }
 
+void handleIntArithmeticLimit(const string &name, const string &value)
+{
+    try {
+        data.intArithmeticLimit = boost::lexical_cast<int>(value);
+    }
+    catch (...) {
+        CL_WARN("ignoring option \"" << name << "\" with invalid value");
+    }
+}
+
 void handleAllowCyclicTraceGraph(const string &name, const string &value)
 {
     assumeNoValue(name, value);
@@ -146,6 +156,7 @@ ConfigStringParser::ConfigStringParser()
     tbl_["dump_fixed_point"]        = handleDumpFixedPoint;
     tbl_["error_label"]             = handleErrorLabel;
     tbl_["forbid_heap_replace"]     = handleForbidHeapReplace;
+    tbl_["int_arithmetic_limit"]    = handleIntArithmeticLimit;
     tbl_["memleak_is_error"]        = handleMemLeakIsError;
     tbl_["no_error_recovery"]       = handleNoErrorRecovery;
     tbl_["no_plot"]                 = handleNoPlot;

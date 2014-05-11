@@ -40,6 +40,7 @@ struct Options {
     bool allowCyclicTraceGraph; ///< create node with two parents on entailment
     int allowThreeWayJoin;  ///< @copydoc config.h::SE_ALLOW_THREE_WAY_JOIN
     bool forbidHeapReplace; ///< @copydoc config.h::SE_FORBID_HEAP_REPLACE
+    int intArithmeticLimit; ///< @copydoc config.h::SE_INT_ARITHMETIC_LIMIT
     FixedPoint::StateByInsn *fixedPoint;  ///< fixed-point plotter (0 if unused)
 
     Options():
@@ -51,6 +52,7 @@ struct Options {
         allowCyclicTraceGraph(SE_ALLOW_CYCLIC_TRACE_GRAPH),
         allowThreeWayJoin(SE_ALLOW_THREE_WAY_JOIN),
         forbidHeapReplace(SE_FORBID_HEAP_REPLACE),
+        intArithmeticLimit(SE_INT_ARITHMETIC_LIMIT),
         fixedPoint(0)
     {
     }
