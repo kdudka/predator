@@ -24,6 +24,7 @@
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 
+#include "glconf.hh"
 #include "prototype.hh"
 #include "shape.hh"
 #include "symcmp.hh"
@@ -168,7 +169,7 @@ struct SymJoinCtx {
         l2Drift(0),
         status(JS_USE_ANY),
         forceThreeWay(false),
-        allowThreeWay((1 < (SE_ALLOW_THREE_WAY_JOIN)) && allowThreeWay_)
+        allowThreeWay((1 < GlConf::data.allowThreeWayJoin) && allowThreeWay_)
     {
         initValMaps();
     }
@@ -182,7 +183,7 @@ struct SymJoinCtx {
         l2Drift(l2Drift_),
         status(JS_USE_ANY),
         forceThreeWay(false),
-        allowThreeWay(0 < (SE_ALLOW_THREE_WAY_JOIN))
+        allowThreeWay(0 < GlConf::data.allowThreeWayJoin)
     {
         initValMaps();
     }
@@ -1044,10 +1045,8 @@ bool CloneVisitor::operator()(const FldHandle item[2])
         }
     }
 
-#if SE_ALLOW_THREE_WAY_JOIN < 3
-    if (!ctx_.joiningData())
+    if ((GlConf::data.allowThreeWayJoin < 3) && !ctx_.joiningData())
         return false;
-#endif
 
     const TCloneItem sItem(fldDst, fldGt);
     if (wl_.schedule(sItem))
@@ -2047,11 +2046,11 @@ bool insertSegmentClone(
 
     SJ_DEBUG(">>> insertSegmentClone" << SJ_VALP(v1, v2));
 
-#if SE_ALLOW_THREE_WAY_JOIN < 3
-    if (!ctx.joiningData() && objMinLength(shGt, objGt))
+    if ((GlConf::data.allowThreeWayJoin < 3)
+            && !ctx.joiningData()
+            && objMinLength(shGt, objGt))
         // on the way from joinSymHeaps(), some three way joins are destructive
         ctx.allowThreeWay = false;
-#endif
 
     EJoinStatus status = action;
     if (objMinLength(shGt, objGt))

@@ -31,6 +31,7 @@
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/foreach.hpp>
+#include <boost/lexical_cast.hpp>
 
 namespace GlConf {
 
@@ -76,6 +77,26 @@ void handleErrorLabel(const string &name, const string &value)
     data.errLabel = value;
 }
 
+void handleAllowThreeWayJoin(const string &name, const string &value)
+{
+    if (value.empty()) {
+        data.allowThreeWayJoin = /* allow everything */ 3;
+        return;
+    }
+
+    try {
+        data.allowThreeWayJoin = boost::lexical_cast<int>(value);
+        if (data.allowThreeWayJoin < 0)
+            data.allowThreeWayJoin = 0;
+        if (data.allowThreeWayJoin > 3)
+            data.allowThreeWayJoin = 3;
+    }
+    catch (...) {
+        CL_WARN("ignoring option \"" << name << "\" with invalid value");
+        return;
+    }
+}
+
 void handleAllowCyclicTraceGraph(const string &name, const string &value)
 {
     assumeNoValue(name, value);
@@ -115,6 +136,7 @@ void handleTrackUninit(const string &name, const string &value)
 ConfigStringParser::ConfigStringParser()
 {
     tbl_["allow_cyclic_trace_graph"]= handleAllowCyclicTraceGraph;
+    tbl_["allow_three_way_join"]    = handleAllowThreeWayJoin;
     tbl_["dump_fixed_point"]        = handleDumpFixedPoint;
     tbl_["error_label"]             = handleErrorLabel;
     tbl_["memleak_is_error"]        = handleMemLeakIsError;
