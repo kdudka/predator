@@ -148,7 +148,7 @@ extern void print_gimple_stmt(FILE *, gimple, int, int);
 #endif // CLPLUG_SILENT
 
 #define CL_WARN_UNHANDLED_GIMPLE(stmt, what) \
-    CL_WARN_UNHANDLED_WITH_LOC((stmt)->gsbase.location, "unhandled " what)
+    CL_WARN_UNHANDLED_WITH_LOC(gimple_location(stmt), "unhandled " what)
 
 #if CL_DEBUG_GCC_TREE
 #   define CL_DEBUG_TREE(expr) debug_tree(expr)
@@ -452,7 +452,7 @@ static void read_gcc_location(struct cl_loc *loc, location_t gcc_loc)
 
 static bool read_gimple_location(struct cl_loc *loc, const_gimple g)
 {
-    location_t gcc_loc = g->gsbase.location;
+    location_t gcc_loc = gimple_location(g);
     read_gcc_location(loc, gcc_loc);
     return !!gcc_loc && loc->file;
 }
@@ -1515,7 +1515,7 @@ static void handle_stmt_cond(gimple stmt)
 
     edge e;
     edge_iterator ei;
-    struct basic_block_def *bb = stmt->gsbase.bb;
+    struct basic_block_def *bb = gimple_bb(stmt);
     FOR_EACH_EDGE(e, ei, bb->succs) {
         if (e->flags & EDGE_TRUE_VALUE) {
             struct basic_block_def *next = e->dest;
@@ -1540,7 +1540,7 @@ static unsigned find_case_label_target(gimple stmt, int label_decl_uid)
 
     edge e;
     edge_iterator ei;
-    struct basic_block_def *switch_bb = stmt->gsbase.bb;
+    struct basic_block_def *switch_bb = gimple_bb(stmt);
     FOR_EACH_EDGE(e, ei, switch_bb->succs) {
         // FIXME: treat e->flags somehow?
 
@@ -1550,7 +1550,7 @@ static unsigned find_case_label_target(gimple stmt, int label_decl_uid)
 
         // check whether first statement in BB is GIMPLE_LABEL
         const gimple bb_stmt = gsi_stmt(stmt_it);
-        if (!bb_stmt || GIMPLE_LABEL != bb_stmt->gsbase.code)
+        if (!bb_stmt || GIMPLE_LABEL != gimple_code(bb_stmt))
             continue;
 
         // get label declaration
@@ -1656,7 +1656,7 @@ static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
     print_gimple_stmt(stdout, stmt, /* indentation */ 0, TDF_LINENO);
 #endif
 
-    enum gimple_code code = stmt->gsbase.code;
+    enum gimple_code code = gimple_code(stmt);
     switch (code) {
         case GIMPLE_COND:
             handle_stmt_cond(stmt);
@@ -1935,7 +1935,7 @@ static void cb_start_unit(void *gcc_data, void *user_data)
     (void) gcc_data;
     (void) user_data;
 
-    cl->file_open(cl, input_filename);
+    cl->file_open(cl, LOCATION_FILE(input_location));
 }
 
 static void cb_finish_unit(void *gcc_data, void *user_data)
