@@ -102,6 +102,9 @@ else()
     endif()
 endif()
 
+# libclgcc.a
+add_library(clgcc STATIC gcc/clplug.c)
+
 # if we have readelf or nm, check whether cc1 symbols are mangled
 if (DEFINED SYM_LISTER)
     message(STATUS "checking whether fancy_abort() in ${CC1_HOST} is mangled")
@@ -112,6 +115,7 @@ if (DEFINED SYM_LISTER)
         message(STATUS "GCC plug-ins will be built with C++ linkage")
         remove_definitions("-pedantic")
         set_source_files_properties(gcc/clplug.c PROPERTIES LANGUAGE CXX)
+        set_target_properties(clgcc PROPERTIES COMPILE_FLAGS "-fno-rtti")
     else()
         message(STATUS "GCC plug-ins will be built with C linkage")
     endif()
@@ -152,9 +156,6 @@ add_library(cl STATIC
     stopwatch.cc
     storage.cc
     version.c)
-
-# libclgcc.a
-add_library(clgcc STATIC gcc/clplug.c)
 
 # load regression tests
 add_subdirectory(tests)
