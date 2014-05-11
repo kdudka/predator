@@ -39,6 +39,7 @@ struct Options {
     std::string errLabel;   ///< if not empty, treat reaching the label as error
     bool allowCyclicTraceGraph; ///< create node with two parents on entailment
     int allowThreeWayJoin;  ///< @copydoc config.h::SE_ALLOW_THREE_WAY_JOIN
+    bool forbidHeapReplace; ///< @copydoc config.h::SE_FORBID_HEAP_REPLACE
     FixedPoint::StateByInsn *fixedPoint;  ///< fixed-point plotter (0 if unused)
 
     Options():
@@ -49,6 +50,7 @@ struct Options {
         errorRecoveryMode(SE_ERROR_RECOVERY_MODE),
         allowCyclicTraceGraph(SE_ALLOW_CYCLIC_TRACE_GRAPH),
         allowThreeWayJoin(SE_ALLOW_THREE_WAY_JOIN),
+        forbidHeapReplace(SE_FORBID_HEAP_REPLACE),
         fixedPoint(0)
     {
     }

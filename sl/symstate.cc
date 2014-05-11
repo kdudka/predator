@@ -224,12 +224,12 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay)
             ++idxOld;
             continue;
         }
-#if SE_FORBID_HEAP_REPLACE
-        if (JS_USE_SH2 == status) {
+
+        if (GlConf::data.forbidHeapReplace && (JS_USE_SH2 == status)) {
             ++idxOld;
             continue;
         }
-#endif
+
         CL_DEBUG("<J> packState(): idxOld = #" << idxOld
                 << ", idxNew = #" << idxNew
                 << ", action = " << status
@@ -290,10 +290,10 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
         const SymHeap &shOld = this->operator[](idx);
         if (!joinSymHeaps(&status, &result, shOld, shNew, allowThreeWay))
             continue;
-#if SE_FORBID_HEAP_REPLACE
-        if (JS_USE_SH2 == status)
+
+        if (GlConf::data.forbidHeapReplace && (JS_USE_SH2 == status))
             continue;
-#endif
+
         // join succeeded
         break;
     }

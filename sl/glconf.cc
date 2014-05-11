@@ -103,6 +103,12 @@ void handleAllowCyclicTraceGraph(const string &name, const string &value)
     data.allowCyclicTraceGraph = true;
 }
 
+void handleForbidHeapReplace(const string &name, const string &value)
+{
+    assumeNoValue(name, value);
+    data.forbidHeapReplace = true;
+}
+
 void handleMemLeakIsError(const string &name, const string &value)
 {
     assumeNoValue(name, value);
@@ -139,6 +145,7 @@ ConfigStringParser::ConfigStringParser()
     tbl_["allow_three_way_join"]    = handleAllowThreeWayJoin;
     tbl_["dump_fixed_point"]        = handleDumpFixedPoint;
     tbl_["error_label"]             = handleErrorLabel;
+    tbl_["forbid_heap_replace"]     = handleForbidHeapReplace;
     tbl_["memleak_is_error"]        = handleMemLeakIsError;
     tbl_["no_error_recovery"]       = handleNoErrorRecovery;
     tbl_["no_plot"]                 = handleNoPlot;
