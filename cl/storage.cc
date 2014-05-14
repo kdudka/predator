@@ -561,6 +561,7 @@ int uidOf(const Fnc &fnc)
 bool isDefined(const Fnc &fnc)
 {
     return CL_OPERAND_CST == fnc.def.code
+        && CL_TYPE_FNC == fnc.def.type->code
         && !cstFromFnc(fnc).data.cst_fnc.is_extern;
 }
 

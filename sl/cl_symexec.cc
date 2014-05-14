@@ -131,7 +131,8 @@ void execVirtualRoots(const CodeStorage::Storage &stor)
     const CG::Graph &cg = stor.callGraph;
     BOOST_FOREACH(const CG::Node *node, cg.roots) {
         const CodeStorage::Fnc &fnc = *node->fnc;
-        CL_BREAK_IF(!isDefined(fnc));
+        if (!isDefined(fnc))
+            continue;
 
         const struct cl_loc *lw = locationOf(fnc);
         CL_DEBUG_MSG(lw, nameOf(fnc)
