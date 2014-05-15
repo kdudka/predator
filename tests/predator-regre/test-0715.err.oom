@@ -1,26 +1,26 @@
-test-0715.c:107:41: warning: ignoring call of undefined function: WdfDeviceInitSetPnpPowerEventCallbacks()
-harness.h:2120:10: warning: memory leak detected while destroying a variable on stack
-test-0715.c:119:10: note: from call of WdfDeviceCreate()
-test-0715.c:83:5: note: from call of main()
-harness.h:2120:10: warning: memory leak detected while destroying a variable on stack
-test-0715.c:119:10: note: from call of WdfDeviceCreate()
-test-0715.c:83:5: note: from call of main()
-harness.h:2120:10: warning: memory leak detected while destroying a variable on stack
-test-0715.c:119:10: note: from call of WdfDeviceCreate()
-test-0715.c:83:5: note: from call of main()
-harness.h:2120:10: warning: memory leak detected while destroying a variable on stack
-test-0715.c:119:10: note: from call of WdfDeviceCreate()
-test-0715.c:83:5: note: from call of main()
-test-0715.c:120:6: warning: conditional jump depends on uninitialized value
-test-0715.c:120:6: note: the value being used is an untouched contents of stack
-test-0715.c:120:6: warning: conditional jump depends on uninitialized value
-test-0715.c:120:6: note: the value being used is an untouched contents of stack
-test-0715.c:120:6: warning: conditional jump depends on uninitialized value
-test-0715.c:120:6: note: the value being used is an untouched contents of stack
-test-0715.c:120:6: warning: conditional jump depends on uninitialized value
-test-0715.c:120:6: note: the value being used is an untouched contents of stack
-test-0715.c:90:36: warning: memory leak detected while destroying a variable on stack
-test-0715.c:107:41: warning: memory leak detected while destroying a variable on stack
-test-0715.c:90:36: warning: memory leak detected while destroying a variable on stack
-test-0715.c:107:41: warning: memory leak detected while destroying a variable on stack
-test-0715.c:90:36: warning: memory leak detected while destroying a variable on stack
+test-0715.c:107: warning: ignoring call of undefined function: WdfDeviceInitSetPnpPowerEventCallbacks()
+harness.h:2120: warning: memory leak detected while destroying a variable on stack
+test-0715.c:119: note: from call of WdfDeviceCreate()
+test-0715.c:83: note: from call of main()
+harness.h:2120: warning: memory leak detected while destroying a variable on stack
+test-0715.c:119: note: from call of WdfDeviceCreate()
+test-0715.c:83: note: from call of main()
+harness.h:2120: warning: memory leak detected while destroying a variable on stack
+test-0715.c:119: note: from call of WdfDeviceCreate()
+test-0715.c:83: note: from call of main()
+harness.h:2120: warning: memory leak detected while destroying a variable on stack
+test-0715.c:119: note: from call of WdfDeviceCreate()
+test-0715.c:83: note: from call of main()
+test-0715.c:120: warning: conditional jump depends on uninitialized value
+test-0715.c:120: note: the value being used is an untouched contents of stack
+test-0715.c:120: warning: conditional jump depends on uninitialized value
+test-0715.c:120: note: the value being used is an untouched contents of stack
+test-0715.c:120: warning: conditional jump depends on uninitialized value
+test-0715.c:120: note: the value being used is an untouched contents of stack
+test-0715.c:120: warning: conditional jump depends on uninitialized value
+test-0715.c:120: note: the value being used is an untouched contents of stack
+test-0715.c:90: warning: memory leak detected while destroying a variable on stack
+test-0715.c:107: warning: memory leak detected while destroying a variable on stack
+test-0715.c:90: warning: memory leak detected while destroying a variable on stack
+test-0715.c:107: warning: memory leak detected while destroying a variable on stack
+test-0715.c:90: warning: memory leak detected while destroying a variable on stack

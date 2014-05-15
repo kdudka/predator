@@ -1,1 +1,1 @@
-harness.h:2012:11: warning: memory leak detected while destroying a static variable
+harness.h:2012: warning: memory leak detected while destroying a static variable

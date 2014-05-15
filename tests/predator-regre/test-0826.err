@@ -1,1 +1,1 @@
-test-0826.c:8:14: warning: memory leak detected while destroying a variable on stack
+test-0826.c:8: warning: memory leak detected while destroying a variable on stack

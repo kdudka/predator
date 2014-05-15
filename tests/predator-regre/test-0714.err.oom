@@ -1,84 +1,84 @@
-test-0714.c:174:21: warning: ignoring call of undefined function: WdfSpinLockAcquire()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:198:22: warning: ignoring call of undefined function: WdfSpinLockRelease()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:232:31: error: dereference of NULL value with offset 8B
-test-0714.c:174:21: warning: ignoring call of undefined function: WdfSpinLockAcquire()
-test-0714.c:235:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:175:12: warning: memory leak detected while destroying a variable on stack
-test-0714.c:235:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:198:22: warning: ignoring call of undefined function: WdfSpinLockRelease()
-test-0714.c:235:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:221:27: error: dereference of NULL value with offset 8B
-test-0714.c:174:21: warning: ignoring call of undefined function: WdfSpinLockAcquire()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:179:22: warning: ignoring call of undefined function: WdfSpinLockRelease()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:52:28: warning: memory leak detected while destroying a variable on stack
-test-0714.c:192:35: note: from call of t1394_IsochCleanup()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:232:31: error: dereference of NULL value with offset 8B
-test-0714.c:221:27: error: dereference of NULL value with offset 8B
-test-0714.c:174:21: warning: ignoring call of undefined function: WdfSpinLockAcquire()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:179:22: warning: ignoring call of undefined function: WdfSpinLockRelease()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:52:28: warning: memory leak detected while destroying a variable on stack
-test-0714.c:192:35: note: from call of t1394_IsochCleanup()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:232:31: error: dereference of NULL value with offset 8B
-test-0714.c:174:21: warning: ignoring call of undefined function: WdfSpinLockAcquire()
-test-0714.c:235:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:175:12: warning: memory leak detected while destroying a variable on stack
-test-0714.c:235:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:198:22: warning: ignoring call of undefined function: WdfSpinLockRelease()
-test-0714.c:235:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:221:27: error: dereference of NULL value with offset 8B
-test-0714.c:174:21: warning: ignoring call of undefined function: WdfSpinLockAcquire()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:179:22: warning: ignoring call of undefined function: WdfSpinLockRelease()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:52:28: warning: memory leak detected while destroying a variable on stack
-test-0714.c:192:35: note: from call of t1394_IsochCleanup()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:232:31: error: dereference of NULL value with offset 8B
-test-0714.c:221:27: error: dereference of NULL value with offset 8B
-test-0714.c:174:21: warning: ignoring call of undefined function: WdfSpinLockAcquire()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:179:22: warning: ignoring call of undefined function: WdfSpinLockRelease()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:52:28: warning: memory leak detected while destroying a variable on stack
-test-0714.c:192:35: note: from call of t1394_IsochCleanup()
-test-0714.c:228:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:232:31: error: dereference of NULL value with offset 8B
-test-0714.c:174:21: warning: ignoring call of undefined function: WdfSpinLockAcquire()
-test-0714.c:235:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:175:12: warning: memory leak detected while destroying a variable on stack
-test-0714.c:235:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:198:22: warning: ignoring call of undefined function: WdfSpinLockRelease()
-test-0714.c:235:21: note: from call of t1394_IsochTimeout()
-test-0714.c:207:10: note: from call of main()
-test-0714.c:221:27: error: dereference of NULL value with offset 8B
-harness.h:2471:1: warning: memory leak detected while destroying a static variable
+test-0714.c:174: warning: ignoring call of undefined function: WdfSpinLockAcquire()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:198: warning: ignoring call of undefined function: WdfSpinLockRelease()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:232: error: dereference of NULL value with offset 8B
+test-0714.c:174: warning: ignoring call of undefined function: WdfSpinLockAcquire()
+test-0714.c:235: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:175: warning: memory leak detected while destroying a variable on stack
+test-0714.c:235: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:198: warning: ignoring call of undefined function: WdfSpinLockRelease()
+test-0714.c:235: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:221: error: dereference of NULL value with offset 8B
+test-0714.c:174: warning: ignoring call of undefined function: WdfSpinLockAcquire()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:179: warning: ignoring call of undefined function: WdfSpinLockRelease()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:52: warning: memory leak detected while destroying a variable on stack
+test-0714.c:192: note: from call of t1394_IsochCleanup()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:232: error: dereference of NULL value with offset 8B
+test-0714.c:221: error: dereference of NULL value with offset 8B
+test-0714.c:174: warning: ignoring call of undefined function: WdfSpinLockAcquire()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:179: warning: ignoring call of undefined function: WdfSpinLockRelease()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:52: warning: memory leak detected while destroying a variable on stack
+test-0714.c:192: note: from call of t1394_IsochCleanup()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:232: error: dereference of NULL value with offset 8B
+test-0714.c:174: warning: ignoring call of undefined function: WdfSpinLockAcquire()
+test-0714.c:235: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:175: warning: memory leak detected while destroying a variable on stack
+test-0714.c:235: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:198: warning: ignoring call of undefined function: WdfSpinLockRelease()
+test-0714.c:235: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:221: error: dereference of NULL value with offset 8B
+test-0714.c:174: warning: ignoring call of undefined function: WdfSpinLockAcquire()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:179: warning: ignoring call of undefined function: WdfSpinLockRelease()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:52: warning: memory leak detected while destroying a variable on stack
+test-0714.c:192: note: from call of t1394_IsochCleanup()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:232: error: dereference of NULL value with offset 8B
+test-0714.c:221: error: dereference of NULL value with offset 8B
+test-0714.c:174: warning: ignoring call of undefined function: WdfSpinLockAcquire()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:179: warning: ignoring call of undefined function: WdfSpinLockRelease()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:52: warning: memory leak detected while destroying a variable on stack
+test-0714.c:192: note: from call of t1394_IsochCleanup()
+test-0714.c:228: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:232: error: dereference of NULL value with offset 8B
+test-0714.c:174: warning: ignoring call of undefined function: WdfSpinLockAcquire()
+test-0714.c:235: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:175: warning: memory leak detected while destroying a variable on stack
+test-0714.c:235: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:198: warning: ignoring call of undefined function: WdfSpinLockRelease()
+test-0714.c:235: note: from call of t1394_IsochTimeout()
+test-0714.c:207: note: from call of main()
+test-0714.c:221: error: dereference of NULL value with offset 8B
+harness.h:2471: warning: memory leak detected while destroying a static variable

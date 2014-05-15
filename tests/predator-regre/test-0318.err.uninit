@@ -1,1 +1,1 @@
-test-0318.c:69:5: warning: end of function main() has not been reached
+test-0318.c:69: warning: end of function main() has not been reached

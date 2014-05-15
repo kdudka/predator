@@ -1,10 +1,10 @@
-test-0808.c:16:10: warning: conditional jump depends on uninitialized value
-test-0808.c:16:10: note: the value being used is an untouched contents of heap
-test-0808.c:16:10: warning: conditional jump depends on uninitialized value
-test-0808.c:16:10: note: the value being used is an untouched contents of heap
-test-0808.c:16:10: warning: conditional jump depends on uninitialized value
-test-0808.c:16:10: note: the value being used is an untouched contents of heap
-test-0808.c:16:10: warning: conditional jump depends on uninitialized value
-test-0808.c:16:10: note: the value being used is an untouched contents of heap
-test-0808.c:16:10: warning: conditional jump depends on uninitialized value
-test-0808.c:16:10: note: the value being used is an untouched contents of heap
+test-0808.c:16: warning: conditional jump depends on uninitialized value
+test-0808.c:16: note: the value being used is an untouched contents of heap
+test-0808.c:16: warning: conditional jump depends on uninitialized value
+test-0808.c:16: note: the value being used is an untouched contents of heap
+test-0808.c:16: warning: conditional jump depends on uninitialized value
+test-0808.c:16: note: the value being used is an untouched contents of heap
+test-0808.c:16: warning: conditional jump depends on uninitialized value
+test-0808.c:16: note: the value being used is an untouched contents of heap
+test-0808.c:16: warning: conditional jump depends on uninitialized value
+test-0808.c:16: note: the value being used is an untouched contents of heap

@@ -221,6 +221,9 @@ macro(test_predator_regre name_suff ext arg1)
         # drop absolute paths
         set(cmd "${cmd} | sed 's|^[^:]*/||'")
 
+        # drop column numbers
+        set(cmd "${cmd} | sed -r 's|^([^:]+:[0-9]+:)[0-9]+:|\\\\1|'")
+
         # drop var UIDs that are not guaranteed to be fixed among runs
         set(cmd "${cmd} | sed -r -e 's|#[0-9]+:||g' -e 's|[#.][0-9]+|_|g'")
 

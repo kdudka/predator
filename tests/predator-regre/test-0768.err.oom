@@ -1,4 +1,4 @@
-test-0768.c:6:6: error: dereference of NULL value
-test-0768.c:6:6: warning: memory leak detected while destroying a variable on stack
-test-0768.c:7:6: error: dereference of NULL value
-test-0768.c:7:6: warning: memory leak detected while destroying a variable on stack
+test-0768.c:6: error: dereference of NULL value
+test-0768.c:6: warning: memory leak detected while destroying a variable on stack
+test-0768.c:7: error: dereference of NULL value
+test-0768.c:7: warning: memory leak detected while destroying a variable on stack

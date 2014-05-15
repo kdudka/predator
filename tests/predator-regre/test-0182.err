@@ -1,33 +1,33 @@
-test-0182.c:6:1: error: error label "ERROR" has been reached
-test-0182.c:149:9: note: from call of fail ()
-test-0182.c:149:9: note: _ = (_ != NULL) ... assuming TRUE
-test-0182.c:148:9: note: _ = (_ == NULL) ... evaluated as FALSE
-test-0182.c:147:9: note: _ = (pos == NULL) ... evaluated as FALSE
-test-0182.c:145:5: note: _ = (dll != NULL) ... evaluated as TRUE
-test-0182.c:134:5: note: _ = (dll != NULL) ... assuming FALSE
-test-0182.c:137:9: note: _ = (_ != dll) ... evaluated as FALSE
-test-0182.c:136:9: note: _ = (_ == NULL) ... evaluated as FALSE
-test-0182.c:135:9: note: _ = (_ == NULL) ... evaluated as FALSE
-test-0182.c:134:5: note: _ = (dll != NULL) ... evaluated as TRUE
-test-0182.c:132:5: note: _ = (_ != NULL) ... evaluated as FALSE
-test-0182.c:131:5: note: _ = (_ == NULL) ... evaluated as FALSE
-test-0182.c:130:5: note: _ = (dll == NULL) ... evaluated as FALSE
-test-0182.c:143:17: note: from call of inspect_base (dll)
-test-0182.c:178:17: note: from call of inspect_full (dll)
-test-0182.c:66:11: note: _ = (_ != (int)0) ... assuming FALSE
-test-0182.c:66:11: note: _ = (_ != (int)0) ... assuming FALSE
-test-0182.c:54:8: note: _ = (next != NULL) ... evaluated as TRUE
-test-0182.c:23:8: note: _ = (ptr == NULL) ... evaluated as FALSE
-test-0182.c:51:24: note: from call of item = alloc_or_die_slave ()
-test-0182.c:63:15: note: from call of insert_fnc (&dll)
-test-0182.c:74:5: note: from call of _ = dll_create_generic (dll_insert_slave)
-test-0182.c:119:35: note: from call of _ = dll_create_slave ()
-test-0182.c:116:8: note: _ = (next != NULL) ... evaluated as FALSE
-test-0182.c:40:8: note: _ = (ptr == NULL) ... evaluated as FALSE
-test-0182.c:113:25: note: from call of item = alloc_or_die_master ()
-test-0182.c:63:15: note: from call of insert_fnc (&dll)
-test-0182.c:125:5: note: from call of _ = dll_create_generic (dll_insert_master)
-test-0182.c:177:25: note: from call of dll = dll_create_master ()
-test-0182.c:175:5: note: from call of main ()
-test-0182.c:175:5: warning: symbolic execution terminates prematurely
-test-0182.c:175:5: note: an error label has been reached
+test-0182.c:6: error: error label "ERROR" has been reached
+test-0182.c:149: note: from call of fail ()
+test-0182.c:149: note: _ = (_ != NULL) ... assuming TRUE
+test-0182.c:148: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:147: note: _ = (pos == NULL) ... evaluated as FALSE
+test-0182.c:145: note: _ = (dll != NULL) ... evaluated as TRUE
+test-0182.c:134: note: _ = (dll != NULL) ... assuming FALSE
+test-0182.c:137: note: _ = (_ != dll) ... evaluated as FALSE
+test-0182.c:136: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:135: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:134: note: _ = (dll != NULL) ... evaluated as TRUE
+test-0182.c:132: note: _ = (_ != NULL) ... evaluated as FALSE
+test-0182.c:131: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0182.c:130: note: _ = (dll == NULL) ... evaluated as FALSE
+test-0182.c:143: note: from call of inspect_base (dll)
+test-0182.c:178: note: from call of inspect_full (dll)
+test-0182.c:66: note: _ = (_ != (int)0) ... assuming FALSE
+test-0182.c:66: note: _ = (_ != (int)0) ... assuming FALSE
+test-0182.c:54: note: _ = (next != NULL) ... evaluated as TRUE
+test-0182.c:23: note: _ = (ptr == NULL) ... evaluated as FALSE
+test-0182.c:51: note: from call of item = alloc_or_die_slave ()
+test-0182.c:63: note: from call of insert_fnc (&dll)
+test-0182.c:74: note: from call of _ = dll_create_generic (dll_insert_slave)
+test-0182.c:119: note: from call of _ = dll_create_slave ()
+test-0182.c:116: note: _ = (next != NULL) ... evaluated as FALSE
+test-0182.c:40: note: _ = (ptr == NULL) ... evaluated as FALSE
+test-0182.c:113: note: from call of item = alloc_or_die_master ()
+test-0182.c:63: note: from call of insert_fnc (&dll)
+test-0182.c:125: note: from call of _ = dll_create_generic (dll_insert_master)
+test-0182.c:177: note: from call of dll = dll_create_master ()
+test-0182.c:175: note: from call of main ()
+test-0182.c:175: warning: symbolic execution terminates prematurely
+test-0182.c:175: note: an error label has been reached

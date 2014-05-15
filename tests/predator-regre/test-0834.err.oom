@@ -1,36 +1,36 @@
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0834.c:16:8: note: from call of SLL_create()
-test-0834.c:13:6: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0834.c:16: note: from call of SLL_create()
+test-0834.c:13: note: from call of main()

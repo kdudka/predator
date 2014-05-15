@@ -1,18 +1,18 @@
-sll.h:19:11: error: dereference of NULL value
-test-0812.c:5:5: note: from call of cons()
-test-0812.c:3:6: note: from call of main()
-sll.h:19:11: error: dereference of NULL value
-test-0812.c:6:5: note: from call of cons()
-test-0812.c:3:6: note: from call of main()
-sll.h:19:11: error: dereference of NULL value
-test-0812.c:7:5: note: from call of cons()
-test-0812.c:3:6: note: from call of main()
-sll.h:19:11: error: dereference of NULL value
-test-0812.c:8:5: note: from call of cons()
-test-0812.c:3:6: note: from call of main()
-sll.h:114:9: warning: ignoring call of undefined function: __builtin_putchar()
-test-0812.c:9:13: note: from call of print_list()
-test-0812.c:3:6: note: from call of main()
-sll.h:124:9: warning: ignoring call of undefined function: __builtin_putchar()
-test-0812.c:9:13: note: from call of print_list()
-test-0812.c:3:6: note: from call of main()
+sll.h:19: error: dereference of NULL value
+test-0812.c:5: note: from call of cons()
+test-0812.c:3: note: from call of main()
+sll.h:19: error: dereference of NULL value
+test-0812.c:6: note: from call of cons()
+test-0812.c:3: note: from call of main()
+sll.h:19: error: dereference of NULL value
+test-0812.c:7: note: from call of cons()
+test-0812.c:3: note: from call of main()
+sll.h:19: error: dereference of NULL value
+test-0812.c:8: note: from call of cons()
+test-0812.c:3: note: from call of main()
+sll.h:114: warning: ignoring call of undefined function: __builtin_putchar()
+test-0812.c:9: note: from call of print_list()
+test-0812.c:3: note: from call of main()
+sll.h:124: warning: ignoring call of undefined function: __builtin_putchar()
+test-0812.c:9: note: from call of print_list()
+test-0812.c:3: note: from call of main()

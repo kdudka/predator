@@ -1,75 +1,11 @@
- tests/forester-regre/test-p0028.err       |    2 +-
- tests/predator-regre/test-0002.err        |    4 ++--
- tests/predator-regre/test-0002.err.oom    |    4 ++--
- tests/predator-regre/test-0002.err.uninit |    6 +++---
- tests/predator-regre/test-0182.err        |    4 ++--
- tests/predator-regre/test-0209.err.oom    |    2 +-
- 6 files changed, 11 insertions(+), 11 deletions(-)
+ tests/forester-regre/test-p0028.err | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
 
 diff --git a/tests/forester-regre/test-p0028.err b/tests/forester-regre/test-p0028.err
 index f31b844..8cb6bf3 100644
 --- a/tests/forester-regre/test-p0028.err
 +++ b/tests/forester-regre/test-p0028.err
 @@ -1,2 +1,2 @@
--test-p0028.c:24:13: note: item = malloc ((int)4U)
-+test-p0028.c:24:13: note: item = _
- test-p0028.c:24:13: error: allocated block size mismatch
-diff --git a/tests/predator-regre/test-0002.err b/tests/predator-regre/test-0002.err
-index a6f8c4d..4fe6ef3 100644
---- a/tests/predator-regre/test-0002.err
-+++ b/tests/predator-regre/test-0002.err
-@@ -1,2 +1,2 @@
--test-0002.c:11:12: error: dereference of NULL value
--test-0002.c:9:20: error: invalid dereference
-+test-0002.c:11:18: error: dereference of NULL value
-+test-0002.c:9:22: error: invalid dereference
-diff --git a/tests/predator-regre/test-0002.err.oom b/tests/predator-regre/test-0002.err.oom
-index a6f8c4d..4fe6ef3 100644
---- a/tests/predator-regre/test-0002.err.oom
-+++ b/tests/predator-regre/test-0002.err.oom
-@@ -1,2 +1,2 @@
--test-0002.c:11:12: error: dereference of NULL value
--test-0002.c:9:20: error: invalid dereference
-+test-0002.c:11:18: error: dereference of NULL value
-+test-0002.c:9:22: error: invalid dereference
-diff --git a/tests/predator-regre/test-0002.err.uninit b/tests/predator-regre/test-0002.err.uninit
-index e773401..b8c0c09 100644
---- a/tests/predator-regre/test-0002.err.uninit
-+++ b/tests/predator-regre/test-0002.err.uninit
-@@ -1,3 +1,3 @@
--test-0002.c:11:12: error: dereference of NULL value
--test-0002.c:9:20: error: invalid dereference
--test-0002.c:9:20: note: the value being dereferenced is an untouched contents of stack
-+test-0002.c:11:18: error: dereference of NULL value
-+test-0002.c:9:22: error: invalid dereference
-+test-0002.c:9:22: note: the value being dereferenced is an untouched contents of stack
-diff --git a/tests/predator-regre/test-0182.err b/tests/predator-regre/test-0182.err
-index c5aa4ff..ca4c0f2 100644
---- a/tests/predator-regre/test-0182.err
-+++ b/tests/predator-regre/test-0182.err
-@@ -20,13 +20,13 @@ test-0182.c:54:8: note: _ = (next != NULL) ... evaluated as TRUE
- test-0182.c:23:8: note: _ = (ptr == NULL) ... evaluated as FALSE
- test-0182.c:51:24: note: from call of item = alloc_or_die_slave ()
- test-0182.c:63:15: note: from call of insert_fnc (&dll)
--test-0182.c:74:5: note: from call of _ = dll_create_generic (dll_insert_slave)
-+test-0182.c:74:30: note: from call of _ = dll_create_generic (dll_insert_slave)
- test-0182.c:119:35: note: from call of _ = dll_create_slave ()
- test-0182.c:116:8: note: _ = (next != NULL) ... evaluated as FALSE
- test-0182.c:40:8: note: _ = (ptr == NULL) ... evaluated as FALSE
- test-0182.c:113:25: note: from call of item = alloc_or_die_master ()
- test-0182.c:63:15: note: from call of insert_fnc (&dll)
--test-0182.c:125:5: note: from call of _ = dll_create_generic (dll_insert_master)
-+test-0182.c:125:30: note: from call of _ = dll_create_generic (dll_insert_master)
- test-0182.c:177:25: note: from call of dll = dll_create_master ()
- test-0182.c:175:5: note: from call of main ()
- test-0182.c:175:5: warning: symbolic execution terminates prematurely
-diff --git a/tests/predator-regre/test-0209.err.oom b/tests/predator-regre/test-0209.err.oom
-index f653228..d5200ca 100644
---- a/tests/predator-regre/test-0209.err.oom
-+++ b/tests/predator-regre/test-0209.err.oom
-@@ -1,4 +1,4 @@
--test-0209.c:10:5: error: dereference of NULL value
-+test-0209.c:10:18: error: dereference of NULL value
- test-0209.c:16:23: note: from call of strdup()
- test-0209.c:13:5: note: from call of main()
- test-0209.c:21:24: note: writing heap graph to 'loop_body-0000.dot'...
+-test-p0028.c:24: note: item = malloc ((int)4U)
++test-p0028.c:24: note: item = _
+ test-p0028.c:24: error: allocated block size mismatch

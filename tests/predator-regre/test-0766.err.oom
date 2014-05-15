@@ -1,2 +1,2 @@
-test-0766.c:6:6: error: dereference of NULL value
-test-0766.c:8:6: error: dereference of NULL value
+test-0766.c:6: error: dereference of NULL value
+test-0766.c:8: error: dereference of NULL value

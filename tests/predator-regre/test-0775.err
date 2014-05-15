@@ -1,1 +1,1 @@
-test-0775.c:7:5: error: dereference of NULL value
+test-0775.c:7: error: dereference of NULL value

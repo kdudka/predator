@@ -1,1 +1,1 @@
-test-0754.c:5:7: error: attempt to free a non-heap object
+test-0754.c:5: error: attempt to free a non-heap object

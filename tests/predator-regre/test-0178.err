@@ -1,17 +1,17 @@
-test-0178.c:6:1: error: error label "ERROR" has been reached
-test-0178.c:93:5: note: from call of fail ()
-test-0178.c:93:5: note: _ = (_ != NULL) ... evaluated as TRUE
-test-0178.c:92:5: note: _ = (_ == NULL) ... evaluated as FALSE
-test-0178.c:91:5: note: _ = (_ != NULL) ... evaluated as FALSE
-test-0178.c:90:5: note: _ = (shape == NULL) ... evaluated as FALSE
-test-0178.c:82:5: note: _ = (_ != NULL) ... evaluated as FALSE
-test-0178.c:80:5: note: _ = (shape == NULL) ... evaluated as FALSE
-test-0178.c:132:19: note: from call of inspect_before (data)
-test-0178.c:129:8: note: _ = (data == NULL) ... evaluated as FALSE
-test-0178.c:112:11: note: _ = (_ != (int)0) ... assuming FALSE
-test-0178.c:121:12: note: _ = (item == NULL) ... evaluated as FALSE
-test-0178.c:114:12: note: _ = (node == NULL) ... evaluated as FALSE
-test-0178.c:112:11: note: _ = (_ != (int)0) ... assuming TRUE
-test-0178.c:109:5: note: from call of main ()
-test-0178.c:109:5: warning: symbolic execution terminates prematurely
-test-0178.c:109:5: note: an error label has been reached
+test-0178.c:6: error: error label "ERROR" has been reached
+test-0178.c:93: note: from call of fail ()
+test-0178.c:93: note: _ = (_ != NULL) ... evaluated as TRUE
+test-0178.c:92: note: _ = (_ == NULL) ... evaluated as FALSE
+test-0178.c:91: note: _ = (_ != NULL) ... evaluated as FALSE
+test-0178.c:90: note: _ = (shape == NULL) ... evaluated as FALSE
+test-0178.c:82: note: _ = (_ != NULL) ... evaluated as FALSE
+test-0178.c:80: note: _ = (shape == NULL) ... evaluated as FALSE
+test-0178.c:132: note: from call of inspect_before (data)
+test-0178.c:129: note: _ = (data == NULL) ... evaluated as FALSE
+test-0178.c:112: note: _ = (_ != (int)0) ... assuming FALSE
+test-0178.c:121: note: _ = (item == NULL) ... evaluated as FALSE
+test-0178.c:114: note: _ = (node == NULL) ... evaluated as FALSE
+test-0178.c:112: note: _ = (_ != (int)0) ... assuming TRUE
+test-0178.c:109: note: from call of main ()
+test-0178.c:109: warning: symbolic execution terminates prematurely
+test-0178.c:109: note: an error label has been reached

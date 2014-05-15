@@ -75,7 +75,7 @@ build_analyzer() {
         || return $?
 
     status_update "Checking whether $2 works"
-    $MAKE -C $1 check
+    $MAKE -C $1 check CTEST='ctest -j9'
 }
 
 build_analyzer fwnull fwnull

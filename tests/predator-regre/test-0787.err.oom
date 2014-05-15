@@ -1,21 +1,21 @@
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0787.c:14:17: note: from call of SLL_create()
-test-0787.c:12:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0787.c:14:17: note: from call of SLL_create()
-test-0787.c:12:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0787.c:14:17: note: from call of SLL_create()
-test-0787.c:12:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0787.c:14:17: note: from call of SLL_create()
-test-0787.c:12:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0787.c:15:5: note: from call of SLL_create()
-test-0787.c:12:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0787.c:15:5: note: from call of SLL_create()
-test-0787.c:12:6: note: from call of main()
-sll.h:44:16: error: dereference of NULL value with offset 4B
-test-0787.c:15:5: note: from call of SLL_create()
-test-0787.c:12:6: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0787.c:14: note: from call of SLL_create()
+test-0787.c:12: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0787.c:14: note: from call of SLL_create()
+test-0787.c:12: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0787.c:14: note: from call of SLL_create()
+test-0787.c:12: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0787.c:14: note: from call of SLL_create()
+test-0787.c:12: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0787.c:15: note: from call of SLL_create()
+test-0787.c:12: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0787.c:15: note: from call of SLL_create()
+test-0787.c:12: note: from call of main()
+sll.h:44: error: dereference of NULL value with offset 4B
+test-0787.c:15: note: from call of SLL_create()
+test-0787.c:12: note: from call of main()

@@ -1,1 +1,1 @@
-harness.h:2471:1: warning: memory leak detected while destroying a static variable
+harness.h:2471: warning: memory leak detected while destroying a static variable

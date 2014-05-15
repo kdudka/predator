@@ -1,2 +1,2 @@
-test-p0143.c:22:21: note: insert_list_item (_, item)
-test-p0143.c:22:21: error: garbage detected
+test-p0143.c:22: note: insert_list_item (_, item)
+test-p0143.c:22: error: garbage detected

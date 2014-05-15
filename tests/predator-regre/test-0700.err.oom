@@ -1,7 +1,7 @@
-harness.h:239:37: error: dereference of NULL value with offset 76B
-test-0700.c:40:21: note: from call of InitializeListHead()
-test-0700.c:32:5: note: from call of main()
-harness.h:239:37: error: dereferencing object of size 4B out of bounds
-harness.h:239:37: note: the pointer being dereferenced points 72B beyond a heap object of size 4B
-test-0700.c:40:21: note: from call of InitializeListHead()
-test-0700.c:32:5: note: from call of main()
+harness.h:239: error: dereference of NULL value with offset 76B
+test-0700.c:40: note: from call of InitializeListHead()
+test-0700.c:32: note: from call of main()
+harness.h:239: error: dereferencing object of size 4B out of bounds
+harness.h:239: note: the pointer being dereferenced points 72B beyond a heap object of size 4B
+test-0700.c:40: note: from call of InitializeListHead()
+test-0700.c:32: note: from call of main()

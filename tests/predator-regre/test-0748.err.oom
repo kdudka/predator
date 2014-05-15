@@ -1,1 +1,1 @@
-test-0748.c:45:7: warning: ignoring call of undefined function: SLAyer_malloc()
+test-0748.c:45: warning: ignoring call of undefined function: SLAyer_malloc()

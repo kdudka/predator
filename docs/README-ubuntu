@@ -12,6 +12,6 @@ curl http://www.fit.vutbr.cz/~idudka/download/predator-2013-10-30-d1bd405.tar.gz
 
 cd predator-2013-10-30-d1bd405
 
-patch -p1 < build-aux/gcc-4.6.3.patch
+patch -p1 < build-aux/gcc-4.6.4.patch
 
 ./switch-host-gcc.sh /usr/bin/gcc-4.6

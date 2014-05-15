@@ -1,42 +1,42 @@
-test-0800.c:14:5: warning: conditional jump depends on uninitialized value
-test-0800.c:14:5: note: the value being used is an untouched contents of heap
-test-0800.c:14:5: warning: conditional jump depends on uninitialized value
-test-0800.c:14:5: note: the value being used is an untouched contents of heap
-sll.h:62:8: warning: conditional jump depends on uninitialized value
-sll.h:62:8: note: the value being used is an untouched contents of heap
-test-0800.c:17:20: note: from call of SLL_destroy_seg()
-test-0800.c:10:6: note: from call of main()
-sll.h:62:8: warning: memory leak detected while destroying a variable on stack
-test-0800.c:17:20: note: from call of SLL_destroy_seg()
-test-0800.c:10:6: note: from call of main()
-sll.h:62:8: warning: conditional jump depends on uninitialized value
-sll.h:62:8: note: the value being used is an untouched contents of heap
-test-0800.c:17:20: note: from call of SLL_destroy_seg()
-test-0800.c:10:6: note: from call of main()
-sll.h:62:8: warning: memory leak detected while destroying a variable on stack
-test-0800.c:17:20: note: from call of SLL_destroy_seg()
-test-0800.c:10:6: note: from call of main()
-sll.h:62:8: warning: conditional jump depends on uninitialized value
-sll.h:62:8: note: the value being used is an untouched contents of heap
-test-0800.c:17:20: note: from call of SLL_destroy_seg()
-test-0800.c:10:6: note: from call of main()
-sll.h:64:7: error: invalid dereference
-sll.h:64:7: note: the value being dereferenced is an untouched contents of heap
-test-0800.c:17:20: note: from call of SLL_destroy_seg()
-test-0800.c:10:6: note: from call of main()
-sll.h:62:8: warning: conditional jump depends on uninitialized value
-sll.h:62:8: note: the value being used is an untouched contents of heap
-test-0800.c:17:20: note: from call of SLL_destroy_seg()
-test-0800.c:10:6: note: from call of main()
-sll.h:62:8: warning: memory leak detected while destroying a variable on stack
-test-0800.c:17:20: note: from call of SLL_destroy_seg()
-test-0800.c:10:6: note: from call of main()
-sll.h:62:8: warning: conditional jump depends on uninitialized value
-sll.h:62:8: note: the value being used is an untouched contents of heap
-test-0800.c:17:20: note: from call of SLL_destroy_seg()
-test-0800.c:10:6: note: from call of main()
-sll.h:64:7: error: invalid dereference
-sll.h:64:7: note: the value being dereferenced is an untouched contents of heap
-test-0800.c:17:20: note: from call of SLL_destroy_seg()
-test-0800.c:10:6: note: from call of main()
-test-0800.c:15:9: warning: memory leak detected while destroying a heap object
+test-0800.c:14: warning: conditional jump depends on uninitialized value
+test-0800.c:14: note: the value being used is an untouched contents of heap
+test-0800.c:14: warning: conditional jump depends on uninitialized value
+test-0800.c:14: note: the value being used is an untouched contents of heap
+sll.h:62: warning: conditional jump depends on uninitialized value
+sll.h:62: note: the value being used is an untouched contents of heap
+test-0800.c:17: note: from call of SLL_destroy_seg()
+test-0800.c:10: note: from call of main()
+sll.h:62: warning: memory leak detected while destroying a variable on stack
+test-0800.c:17: note: from call of SLL_destroy_seg()
+test-0800.c:10: note: from call of main()
+sll.h:62: warning: conditional jump depends on uninitialized value
+sll.h:62: note: the value being used is an untouched contents of heap
+test-0800.c:17: note: from call of SLL_destroy_seg()
+test-0800.c:10: note: from call of main()
+sll.h:62: warning: memory leak detected while destroying a variable on stack
+test-0800.c:17: note: from call of SLL_destroy_seg()
+test-0800.c:10: note: from call of main()
+sll.h:62: warning: conditional jump depends on uninitialized value
+sll.h:62: note: the value being used is an untouched contents of heap
+test-0800.c:17: note: from call of SLL_destroy_seg()
+test-0800.c:10: note: from call of main()
+sll.h:64: error: invalid dereference
+sll.h:64: note: the value being dereferenced is an untouched contents of heap
+test-0800.c:17: note: from call of SLL_destroy_seg()
+test-0800.c:10: note: from call of main()
+sll.h:62: warning: conditional jump depends on uninitialized value
+sll.h:62: note: the value being used is an untouched contents of heap
+test-0800.c:17: note: from call of SLL_destroy_seg()
+test-0800.c:10: note: from call of main()
+sll.h:62: warning: memory leak detected while destroying a variable on stack
+test-0800.c:17: note: from call of SLL_destroy_seg()
+test-0800.c:10: note: from call of main()
+sll.h:62: warning: conditional jump depends on uninitialized value
+sll.h:62: note: the value being used is an untouched contents of heap
+test-0800.c:17: note: from call of SLL_destroy_seg()
+test-0800.c:10: note: from call of main()
+sll.h:64: error: invalid dereference
+sll.h:64: note: the value being dereferenced is an untouched contents of heap
+test-0800.c:17: note: from call of SLL_destroy_seg()
+test-0800.c:10: note: from call of main()
+test-0800.c:15: warning: memory leak detected while destroying a heap object

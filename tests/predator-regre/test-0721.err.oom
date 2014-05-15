@@ -1,1 +1,1 @@
-test-0721.c:19:8: error: dereference of NULL value
+test-0721.c:19: error: dereference of NULL value

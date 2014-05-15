@@ -1,1 +1,1 @@
-test-0745.c:47:3: warning: memory leak detected while destroying a variable on stack
+test-0745.c:47: warning: memory leak detected while destroying a variable on stack
