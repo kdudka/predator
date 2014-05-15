@@ -111,6 +111,8 @@ class InsertInsnAction: public IRewriteAction {
 
 void RecordRewriter::insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn)
 {
+    CL_BREAK_IF(src < 0);
+    CL_BREAK_IF(dst < 0);
     const IRewriteAction *action = new InsertInsnAction(src, dst, insn);
     d->actionLists[AK_BASIC].push_back(action);
 }
@@ -141,6 +143,7 @@ class ReplaceInsnAction: public IRewriteAction {
 
 void RecordRewriter::replaceInsn(TLocIdx at, GenericInsn *insn)
 {
+    CL_BREAK_IF(at < 0);
     const IRewriteAction *action = new ReplaceInsnAction(at, insn);
     d->actionLists[AK_BASIC].push_back(action);
 }
@@ -163,6 +166,7 @@ class DropInsnAction: public IRewriteAction {
 
 void RecordRewriter::dropInsn(TLocIdx at)
 {
+    CL_BREAK_IF(at < 0);
     const IRewriteAction *action = new DropInsnAction(at);
     d->actionLists[AK_REMOVE].push_back(action);
 }

@@ -611,6 +611,10 @@ bool crHandleLoc(
         // we have already failed
         return false;
 
+    const TLocIdx dst = locData.dstLoc;
+    if (-1 == dst)
+        goto skip_replace;
+
     if (crResolveLoc(ctx, locData, loc))
         // already resolved
         return true;
@@ -631,10 +635,11 @@ bool crHandleLoc(
         TGenericVarSet live, kill;
         kill.insert(GenericVar(VL_COND_VAR, ctx.condVar));
         GenericInsn *insn = new TextInsn(str.str(), live, kill);
-        ctx.writer.insertInsn(loc, locData.dstLoc, insn);
+        ctx.writer.insertInsn(loc, dst, insn);
         return true;
     }
 
+skip_replace:
     // expand predecessors
     return crExpandLoc(ctx, locState, loc);
 }
