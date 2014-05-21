@@ -652,9 +652,12 @@ enum cl_binop_e {
     CL_BINOP_LSHIFT,
     CL_BINOP_RSHIFT,
     CL_BINOP_LROTATE,
-    CL_BINOP_RROTATE
+    CL_BINOP_RROTATE,
 
     /* TODO */
+
+    /* not support operation */
+    CL_BINOP_BAD
 };
 
 /**

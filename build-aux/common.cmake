@@ -63,7 +63,11 @@ ADD_C_FLAG(       "hidden_visibility"    "-fvisibility=hidden")
 
 # we use c99 to compile *.c and c++0x to compile *.cc
 ADD_C_ONLY_FLAG(  "STD_C99"              "-std=c99")
+if(ENABLE_LLVM)
+ADD_CXX_ONLY_FLAG("STD_CXX_11"           "-std=c++11")
+else()
 ADD_CXX_ONLY_FLAG("STD_CXX_0X"           "-std=c++0x")
+endif()
 
 # tweak warnings
 ADD_C_FLAG(       "PEDANTIC"             "-pedantic")
@@ -103,6 +107,23 @@ else()
     message(STATUS "raise(SIGTRAP) will be used for trigerring breakpoints")
 endif()
 
+if(ENABLE_LLVM)
+    if("$ENV{CLANG_HOST}" STREQUAL "")
+        get_filename_component(def_clang_host "/usr/bin/clang" ABSOLUTE)
+    else()
+        set(def_clang_host "$ENV{CLANG_HOST}")
+    endif()
+
+    set(CLANG_HOST "${def_clang_host}" CACHE STRING "absolute path to host clang(1)")
+
+    if("$ENV{OPT_HOST}" STREQUAL "")
+        get_filename_component(def_opt_host "/usr/bin/opt" ABSOLUTE)
+    else()
+        set(def_opt_host "$ENV{OPT_HOST}")
+    endif()
+
+    set(OPT_HOST "${def_opt_host}" CACHE STRING "absolute path to host opt/LLVM")
+else()
 # FIXME: the use of $GCC_HOST from the environment should be better documented
 if("$ENV{GCC_HOST}" STREQUAL "")
     get_filename_component(def_gcc_host "../gcc-install/bin/gcc" ABSOLUTE)
@@ -123,31 +144,50 @@ else()
             CACHE STRING "absolute path to host gcc(1)" FORCE)
     endif()
 endif()
+endif()
 
 option(TEST_WITH_VALGRIND "Set to ON to enable valgrind tests" OFF)
 
+if(ENABLE_LLVM)
+else()
 # CMake cannot build shared libraries consisting of static libraries only
 set(EMPTY_C_FILE ${PROJECT_BINARY_DIR}/empty.c)
 if (NOT EXISTS ${EMPTY_C_FILE})
     file(WRITE ${EMPTY_C_FILE} "extern int foo;\n")
 endif()
+endif()
 
 # build compiler plug-in PLUGIN from static lib ANALYZER using CL from LIBCL_PATH
 macro(CL_BUILD_COMPILER_PLUGIN PLUGIN ANALYZER LIBCL_PATH)
-    # build GCC plug-in named lib${PLUGIN}.so
-    add_library(${PLUGIN} SHARED ${EMPTY_C_FILE})
+    if(ENABLE_LLVM)
+        # CMake cannot build shared libraries consisting of static libraries only
+        # and we need set correct name for opt
+        set(NAME_CC_FILE "${PROJECT_BINARY_DIR}/${PLUGIN}_name.cc")
+        file(WRITE ${NAME_CC_FILE} "#include<string>\nstd::string plugName = \"${PLUGIN}\";\n")
+        add_library(${PLUGIN} SHARED ${NAME_CC_FILE})
+    else()
+        # build GCC plug-in named lib${PLUGIN}.so
+        add_library(${PLUGIN} SHARED ${EMPTY_C_FILE})
+    endif()
 
     if("${LIBCL_PATH}" STREQUAL "")
         set(CL_LIB cl)
         set(CLGCC_LIB clgcc)
+        set(CLLLVM_LIB clllvm)
     else()
         find_library(CL_LIB cl PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
         find_library(CLGCC_LIB clgcc PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
+        find_library(CLLLVM_LIB clllvm PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
     endif()
 
     # this will recursively pull all needed symbols from the static libraries
     set_target_properties(${PLUGIN} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
 
     # link the static libraries all together
-    target_link_libraries(${PLUGIN} ${CLGCC_LIB} ${CL_LIB} ${ANALYZER})
+    if(ENABLE_LLVM)
+        target_link_libraries(${PLUGIN} ${CLLLVM_LIB})
+    else()
+        target_link_libraries(${PLUGIN} ${CLGCC_LIB})
+    endif()
+    target_link_libraries(${PLUGIN} ${CL_LIB} ${ANALYZER})
 endmacro()

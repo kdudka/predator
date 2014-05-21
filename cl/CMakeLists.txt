@@ -43,6 +43,14 @@ else()
         COMPILE_FLAGS "-DHAVE_ISATTY=0")
 endif()
 
+if(ENABLE_LLVM)
+    # libclllvm.a
+    add_library(clllvm STATIC
+#        llvm/clname.cc
+        llvm/clplug.cc
+    )
+else()  # --------------------------------------------------------------begin
+
 # query GCC_INC_DIR using GCC_HOST
 message(STATUS "GCC_HOST: ${GCC_HOST}")
 execute_process(COMMAND "${GCC_HOST}" "-print-file-name=plugin"
@@ -126,6 +134,8 @@ endif()
 # set the path to GCC headers for building plug-ins
 set_source_files_properties(gcc/clplug.c PROPERTIES
     COMPILE_FLAGS "-I${GCC_INC_DIR}")
+
+endif() # ----------------------------------------------------------------end
 
 # libcl.a
 add_library(cl STATIC

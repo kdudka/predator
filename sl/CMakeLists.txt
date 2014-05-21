@@ -179,6 +179,74 @@ endif()
 
 set(cost 1)
 
+if(ENABLE_LLVM) # -----------------------------------------------------------
+set(cmd_cc1 "-S -emit-llvm")
+
+# FIXME: define this macro more generically, in particular the count of args
+macro(test_predator_regre name_suff ext arg1)
+    foreach (num ${tests})
+        set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_EXEC_PREFIX} ${CLANG_HOST}")
+
+        # we use the following flag to avoid differences on 32bit vs 64bit archs
+        # in the error output, which is checked for exact match
+        set(cmd "${cmd} -w -m32 ${cmd_cc1}")
+        set(cmd "${cmd} -I../include/predator-builtins -DPREDATOR")
+        set(cmd "${cmd} ${testdir}/test-${num}.c -o - | ")
+        set(cmd "${cmd} ${GCC_EXEC_PREFIX} ${OPT_HOST} -o /dev/null -lowerswitch")
+        set(cmd "${cmd} -load ${sl_BINARY_DIR}/libsl.so -sl")
+        set(cmd "${cmd} ${arg1}")
+        set(cmd "${cmd} -preserve-ec")
+        set(cmd "${cmd} 2>&1")
+
+        # filter out messages that are unrelated to our plug-in
+        set(cmd "${cmd} | (grep -E '\\\\[-sl\\\\]\$|compiler error|undefined symbol|CL_BREAK_IF'; true)")
+        set(cmd "${cmd} | sed 's/ \\\\[-sl\\\\]\$//'")
+
+        # filter out NOTE messages with internal location
+        set(cmd "${cmd} | (grep -v 'note: .*\\\\[internal location\\\\]'; true)")
+
+        # drop absolute paths and file and location
+        set(cmd "${cmd} | sed 's|^[^ ]* ||'")
+
+        # drop var UIDs that are not guaranteed to be fixed among runs
+        set(cmd "${cmd} | sed -r -e 's|#[0-9]+:||g' -e 's|[#.][0-9]+|_|g'")
+
+        # ... and finally diff with the expected output (without location)
+        set(cmd "${cmd} | diff -up <(cat ${testdir}/test-${num}.err${ext} | sed 's|^[^ ]* ||') -")
+        set(test_name "test-${num}.c${name_suff}")
+        add_test(${test_name} bash -o pipefail -c "${cmd}")
+
+        SET_TESTS_PROPERTIES(${test_name} PROPERTIES COST ${cost})
+        MATH(EXPR cost "${cost} + 1")
+    endforeach()
+endmacro(test_predator_regre)
+
+# default mode
+test_predator_regre("" "" "-args=error_label:ERROR")
+#test_predator_regre("" "" "-print-module")
+
+# track_uninit mode
+test_predator_regre("-TRACK_UNINIT" ".uninit"
+    "-args=track_uninit")
+
+# OOM simulation mode
+test_predator_regre("-OOM" ".oom" "-args=oom")
+
+
+
+if(TEST_ONLY_FAST)
+else()
+    add_test("headers_sanity-0" ${CMAKE_CXX_COMPILER} -ansi -Wall -Wextra -Werror -pedantic
+        -o /dev/null
+        -c ${sl_SOURCE_DIR}/config.h)
+
+    add_test("headers_sanity-1" make -j
+        -C ${sl_SOURCE_DIR}
+        -f ${sl_SOURCE_DIR}/Makefile.chk)
+endif()
+
+
+else() # --------------------------------------------------------------------
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_predator_smoke label tool arg1 arg2 arg3)
     foreach (num ${tests})
@@ -265,3 +333,5 @@ else()
         -C ${sl_SOURCE_DIR}
         -f ${sl_SOURCE_DIR}/Makefile.chk)
 endif()
+
+endif() #--------------------------------------------------------------------

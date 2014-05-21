@@ -45,6 +45,70 @@ macro(add_test_wrap test_name cmd)
         "LC_ALL=C CCACHE_DISABLE=1 MALLOC_PERTURB_=170 ${cmd}")
 endmacro()
 
+if(ENABLE_LLVM)
+set(cmd_cc1 "-S -emit-llvm")
+#set(cmd_cc1 "${cmd_cc1} -femit-all-decls")
+set(CFLAGS "-std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS")
+
+# basic set of the options to compile llvm/clplug.cc with libc_test.so loaded
+set(cmd "${CLANG_HOST} ${CFLAGS} ${cmd_cc1}")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}")
+set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
+set(cmd "${cmd} ${cl_SOURCE_DIR}/llvm/clplug.cc")
+set(cmd "${cmd} -o - | ${OPT_HOST} -o /dev/null -lowerswitch")
+set(cmd "${cmd} -load ${cl_BINARY_DIR}/tests/libcl_smoke_test.so -cl")
+set(cmd_base "${cmd}")
+
+# smoke test #1
+set(cmd "${cmd_base} -dry-run")
+#add_test_wrap("smoke-test-01" "${cmd}")
+
+# smoke test #2
+set(cmd "${cmd_base} | diff -up ${cl_SOURCE_DIR}/tests/cl_smoke_test.out -")
+#add_test_wrap("smoke-test-02" "${cmd}")
+
+# compile self #1
+set(cmd "${cmd_base}")
+set(cmd "${cmd} -dump-pp=/dev/null")
+set(cmd "${cmd} -dump-types")
+set(cmd "${cmd} -gen-dot=/dev/null")
+set(cmd "${cmd} -type-dot=/dev/null")
+set(cmd "${cmd} -verbose=2")
+set(cmd "${cmd} -dry-run")
+set(cmd_all "${cmd}")
+#add_test_wrap("compile-self-01-dry-run" "${cmd}")
+
+# compile self #2
+set(cmd "${cmd_base} -load ${cl_BINARY_DIR}/tests/libchk_var_killer.so -cl")
+#add_test_wrap("compile-self-02-var-killer" "${cmd}")
+
+# compile self #3 runs both plug-ins through valgrind and it is optional
+if(TEST_WITH_VALGRIND)
+    set(cmd "valgrind --trace-children=yes --error-exitcode=7 ${cmd}")
+#    add_test_wrap("compile-self-03-valgrind" "${cmd}")
+endif()
+
+# generic template for var-killer tests
+macro(add_vk_test id)
+    set(cmd "${CLANG_HOST} ${cmd_cc1}")
+    set(cmd "${cmd} -I${PRED_INCL_DIR}")
+    set(cmd "${cmd} ${cl_SOURCE_DIR}/tests/data/vk-${id}.c")
+    set(cmd "${cmd} -o - | ${OPT_HOST} -o /dev/null -lowerswitch")
+    set(cmd "${cmd} -load ${VK_PLUG} -chk_var_killer")
+    add_test_wrap("var-killer-${id}" "${cmd}")
+endmacro()
+
+macro(add_pt_test id)
+    set(cmd "${CLANG_HOST} ${cmd_cc1} ${cl_SOURCE_DIR}/tests/data/pt-${id}.c")
+    set(cmd "${cmd} -I${cl_SOURCE_DIR}")
+    set(cmd "${cmd} -DNDEBUG")
+    set(cmd "${cmd} -I${PRED_INCL_DIR}")
+    set(cmd "${cmd} -o - | ${OPT_HOST} -o /dev/null -lowerswitch")
+    set(cmd "${cmd} -load ${PT_PLUG} -chk_pt")
+
+    add_test_wrap("points-to-${id}" "${cmd}")
+endmacro()
+else()
 # basic set of the options to compile gcc/clplug.c with libc_test.so loaded
 set(cmd "${GCC_HOST} ${CFLAGS}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}")
@@ -103,6 +167,7 @@ macro(add_pt_test id)
 
     add_test_wrap("points-to-${id}" "${cmd}")
 endmacro()
+endif()
 
 ####################################
 # append test-cases for var-killer #
@@ -185,6 +250,14 @@ add_test("headers_sanity-2" make -j
 add_test("headers_sanity-3" make -j
     -C ${cl_SOURCE_DIR}
     -f ${cl_SOURCE_DIR}/Makefile.chk)
+
+if(ENABLE_LLVM)
+# headers sanity #4
+add_test("headers_sanity-4" ${CMAKE_CXX_COMPILER} -x c++ -std=c++11 -Wall -Wextra -Werror -pedantic
+    -o /dev/null
+    -I${cl_SOURCE_DIR}/../include
+    -c ${cl_SOURCE_DIR}/llvm/clplug.hh)
+endif()
 
 # debugging helpers
 configure_file(${cl_SOURCE_DIR}/tests/vkdebug.sh.in
