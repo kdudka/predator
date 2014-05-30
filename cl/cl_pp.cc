@@ -875,7 +875,9 @@ void ClPrettyPrint::printInsnBinop(const struct cl_insn *cli)
             SSD_COLORIZE(out_, C_RED) << "R-ROTATE-BY";
             break;
 
-        default: return;
+        case CL_BINOP_UNKNOWN:
+            SSD_COLORIZE(out_, C_RED) << "(?)";
+            break;
     }
 
     out_ << " ";

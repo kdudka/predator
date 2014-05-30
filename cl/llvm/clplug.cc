@@ -1348,7 +1348,7 @@ enum cl_binop_e CLPass::getCLCode(Instruction *I) {
             return CL_BINOP_BIT_XOR;
 
         default:
-            return CL_BINOP_BAD; // something
+            return CL_BINOP_UNKNOWN;
     }
 }
 
@@ -1359,7 +1359,7 @@ void CLPass::handleBinInstruction(Instruction *I) {
     i.code = CL_INSN_BINOP;
     i.loc = cl_loc_known; //FIXME
     i.data.insn_binop.code = getCLCode(I);
-    if (i.data.insn_binop.code == CL_BINOP_BAD) {
+    if (i.data.insn_binop.code == CL_BINOP_UNKNOWN) {
         CL_WARN("unknown binary operator");
         return;
     }
@@ -1414,7 +1414,7 @@ enum cl_binop_e CLPass::getCLCodePredic(enum CmpInst::Predicate p) {
             return CL_BINOP_LE;
 
         default:
-            return CL_BINOP_BAD; // something
+            return CL_BINOP_UNKNOWN;
     }
 }
 
@@ -1425,7 +1425,7 @@ void CLPass::handleCmpInstruction(Instruction *I) {
     i.code = CL_INSN_BINOP;
     i.loc = cl_loc_known; //FIXME
     i.data.insn_binop.code = getCLCodePredic(cast<CmpInst>(I)->getPredicate());
-    if (i.data.insn_binop.code == CL_BINOP_BAD) {
+    if (i.data.insn_binop.code == CL_BINOP_UNKNOWN) {
         CL_WARN("unknown compare operator");
         return;
     }

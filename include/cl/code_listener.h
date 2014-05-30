@@ -656,8 +656,8 @@ enum cl_binop_e {
 
     /* TODO */
 
-    /* not support operation */
-    CL_BINOP_BAD
+    /* unknown binary operation */
+    CL_BINOP_UNKNOWN
 };
 
 /**
