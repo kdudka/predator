@@ -47,11 +47,6 @@ test -x "$HOST" \
 # try to run CLANG_HOST
 "$HOST" --version || die "unable to run clang: $HOST --version"
 
-export CC="$HOST"
-export CXX="$HOST"
-
-echo $CXX
-
 status_update "Trying to build Code Listener"
 $MAKE -C cl CMAKE="cmake -D CLANG_HOST='$HOST' -D ENABLE_LLVM=ON" \
     || die "failed to build Code Listener"
