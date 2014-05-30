@@ -995,7 +995,6 @@ BuiltInTable::BuiltInTable()
     // C run-time
     tbl_["__builtin_puts"]                          = handlePuts;
     tbl_["abort"]                                   = handleNoOp;
-    tbl_["__alloca"]                                = handleAlloca;
     tbl_["calloc"]                                  = handleCalloc;
     tbl_["free"]                                    = handleFree;
     tbl_["malloc"]                                  = handleMalloc;

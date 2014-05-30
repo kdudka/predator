@@ -1033,7 +1033,7 @@ void CLPass::handleInstruction(Instruction *I) {
 }
 
 /// alocation on stack
-/// create own function __alloca and call it with argumets:
+/// create own function __builtin_alloca_with_align and call it with argumets:
 /// allocated size (N*typeSize) and align
 void CLPass::handleAllocaInstruction(AllocaInst *I) {
 
@@ -1075,7 +1075,7 @@ void CLPass::handleAllocaInstruction(AllocaInst *I) {
     fnc.data.cst.data.cst_fnc.uid = -1;
     fnc.data.cst.data.cst_fnc.is_extern = true;
     fnc.data.cst.data.cst_fnc.loc = cl_loc_known; //FIXME
-    fnc.data.cst.data.cst_fnc.name = "__alloca";
+    fnc.data.cst.data.cst_fnc.name = "__builtin_alloca_with_align";
 
     cl->insn_call_open(cl, &cl_loc_known, &dst, &fnc);
 
