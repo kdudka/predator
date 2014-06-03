@@ -126,23 +126,6 @@ endif()
 
 option(TEST_WITH_VALGRIND "Set to ON to enable valgrind tests" OFF)
 
-# link PLUGIN_NAME with Code Listener build located in LIBCL_PATH
-macro(CL_LINK_GCC_PLUGIN PLUGIN_NAME LIBCL_PATH)
-    if("${LIBCL_PATH}" STREQUAL "")
-        set(CL_LIB cl)
-        set(CLGCC_LIB clgcc)
-    else()
-        find_library(CL_LIB cl PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
-        find_library(CLGCC_LIB clgcc PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
-    endif()
-
-    # link the Code Listener static library
-    target_link_libraries(${PLUGIN_NAME} ${CLGCC_LIB} ${CL_LIB})
-
-    # this will recursively pull all needed symbols from the static libraries
-    set_target_properties(${PLUGIN_NAME} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
-endmacro()
-
 # CMake cannot build shared libraries consisting of static libraries only
 set(EMPTY_C_FILE ${PROJECT_BINARY_DIR}/empty.c)
 if (NOT EXISTS ${EMPTY_C_FILE})
@@ -153,6 +136,18 @@ endif()
 macro(CL_BUILD_GCC_PLUGIN PLUGIN ANALYZER LIBCL_PATH)
     # build GCC plug-in named lib${PLUGIN}.so
     add_library(${PLUGIN} SHARED ${EMPTY_C_FILE})
-    CL_LINK_GCC_PLUGIN(${PLUGIN} ${LIBCL_PATH})
-    target_link_libraries(${PLUGIN} ${ANALYZER})
+
+    if("${LIBCL_PATH}" STREQUAL "")
+        set(CL_LIB cl)
+        set(CLGCC_LIB clgcc)
+    else()
+        find_library(CL_LIB cl PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
+        find_library(CLGCC_LIB clgcc PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
+    endif()
+
+    # this will recursively pull all needed symbols from the static libraries
+    set_target_properties(${PLUGIN} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
+
+    # link the static libraries all together
+    target_link_libraries(${PLUGIN} ${CLGCC_LIB} ${CL_LIB} ${ANALYZER})
 endmacro()
