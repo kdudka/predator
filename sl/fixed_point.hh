@@ -30,7 +30,7 @@
 #include <utility>
 
 namespace CodeStorage {
-    class Fnc;
+    struct Fnc;
 }
 
 namespace FixedPoint {

@@ -1003,14 +1003,12 @@ class CloneVisitor {
         SymJoinCtx             &ctx_;
         TCloneWorkList         &wl_;
         const bool              isGt1_;
-        const bool              isGt2_;
 
     public:
         CloneVisitor(SymJoinCtx &ctx, TCloneWorkList &wl, EJoinStatus action):
             ctx_(ctx),
             wl_(wl),
-            isGt1_(JS_USE_SH1 == action),
-            isGt2_(JS_USE_SH2 == action)
+            isGt1_(JS_USE_SH1 == action)
         {
         }
 

@@ -28,8 +28,6 @@
 
 class ClLocator: public ICodeListener {
     public:
-        ClLocator();
-
         virtual void file_open(const char *file_name) {
             CL_LOC_SET_FILE(lastLoc_, file_name);
         }
@@ -84,7 +82,6 @@ class ClLocator: public ICodeListener {
         virtual void acknowledge() { }
 
     private:
-        std::ostream            &out_;
         struct cl_loc           lastLoc_;
 
     private:
@@ -93,11 +90,6 @@ class ClLocator: public ICodeListener {
 
 // /////////////////////////////////////////////////////////////////////////////
 // ClLocator implementation
-ClLocator::ClLocator():
-    out_(std::cout)
-{
-}
-
 void ClLocator::printLocation(const struct cl_loc *loc)
 {
     CL_DEBUG_MSG(cl_loc_fallback(loc, &lastLoc_),

@@ -311,6 +311,9 @@ void TransientNode::plotNode(TracePlotter &tplot) const
 
 void RootNode::plotNode(TracePlotter &tplot) const
 {
+    // TODO
+    (void) rootFnc_;
+
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=circle, color=black, fontcolor=black, label=\"start\"];\n";
 }
@@ -353,7 +356,9 @@ void AbstractionNode::plotNode(TracePlotter &tplot) const
 
 void ConcretizationNode::plotNode(TracePlotter &tplot) const
 {
-    // TODO: kind_
+    // TODO
+    (void) kind_;
+
     tplot.out << "\t" << SL_QUOTE(this)
         << " [shape=ellipse, color=red, fontcolor=blue, label="
         << SL_QUOTE("concretizeObj()") << ", tooltip="
@@ -499,6 +504,9 @@ void MsgNode::plotNode(TracePlotter &tplot) const
 
 void UserNode::plotNode(TracePlotter &tplot) const
 {
+    // TODO
+    (void) insn_;
+
     tplot.out << "\t" << SL_QUOTE(this) << " [shape=octagon, penwidth=3.0"
         ", color=green, fontcolor=black, label=\"" << label_ << "\"];\n";
 }
