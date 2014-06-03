@@ -45,10 +45,7 @@ endif()
 
 if(ENABLE_LLVM)
     # libclllvm.a
-    add_library(clllvm STATIC
-#        llvm/clname.cc
-        llvm/clplug.cc
-    )
+    add_library(clllvm STATIC llvm/clplug.cc)
 else()  # --------------------------------------------------------------begin
 
 # query GCC_INC_DIR using GCC_HOST
