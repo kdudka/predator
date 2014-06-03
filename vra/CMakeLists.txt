@@ -45,8 +45,8 @@ add_library(vra_core STATIC
     GlobAnalysis.cc
     version.c)
 
-# build GCC plug-in (libvra.so)
-CL_BUILD_GCC_PLUGIN(vra vra_core ../cl_build)
+# build compiler plug-in (libvra.so)
+CL_BUILD_COMPILER_PLUGIN(vra vra_core ../cl_build)
 
 # helping scripts
 configure_file( ${PROJECT_SOURCE_DIR}/tests-overall/tests-config.sh.in

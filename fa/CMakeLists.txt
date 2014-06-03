@@ -81,8 +81,8 @@ add_library(forester STATIC
 	virtualmachine.cc
 )
 
-# build GCC plug-in (libfa.so)
-CL_BUILD_GCC_PLUGIN(fa forester ../cl_build)
+# build compiler plug-in (libfa.so)
+CL_BUILD_COMPILER_PLUGIN(fa forester ../cl_build)
 target_link_libraries(fa rt)
 
 # get the full path of libfa.so

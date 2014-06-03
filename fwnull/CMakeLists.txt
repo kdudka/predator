@@ -34,8 +34,8 @@ add_library(fwnull_core STATIC
     cl_fwnull.cc
     version.c)
 
-# build GCC plug-in (libfwnull.so)
-CL_BUILD_GCC_PLUGIN(fwnull fwnull_core ../cl_build)
+# build compiler plug-in (libfwnull.so)
+CL_BUILD_COMPILER_PLUGIN(fwnull fwnull_core ../cl_build)
 
 # make install
 install(TARGETS fwnull DESTINATION lib)

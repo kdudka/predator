@@ -20,23 +20,23 @@ add_definitions("-I../../include -fPIC")
 
 # compile libchk_var_killer.so
 add_library(chk_var_killer_core STATIC chk_var_killer.cc)
-CL_BUILD_GCC_PLUGIN(chk_var_killer chk_var_killer_core "")
+CL_BUILD_COMPILER_PLUGIN(chk_var_killer chk_var_killer_core "")
 
 # compile libchk_pt.so
 add_library(chk_pt_core STATIC chk_pt.cc)
-CL_BUILD_GCC_PLUGIN(chk_pt chk_pt_core "")
+CL_BUILD_COMPILER_PLUGIN(chk_pt chk_pt_core "")
 
 # compile libcl_smoke_test.so
 add_library(cl_smoke_test_core STATIC cl_smoke_test.cc)
-CL_BUILD_GCC_PLUGIN(cl_smoke_test cl_smoke_test_core "")
+CL_BUILD_COMPILER_PLUGIN(cl_smoke_test cl_smoke_test_core "")
 
 # get the full paths of plugins
-get_property(GCC_VK_PLUG TARGET chk_var_killer PROPERTY LOCATION)
-get_property(GCC_PT_PLUG TARGET chk_pt         PROPERTY LOCATION)
-set(GCC_PLUG "${GCC_VK_PLUG}")
+get_property(VK_PLUG TARGET chk_var_killer PROPERTY LOCATION)
+get_property(PT_PLUG TARGET chk_pt         PROPERTY LOCATION)
+set(PLUG "${VK_PLUG}")
 
-message(STATUS "GCC_VK_PLUG: ${GCC_VK_PLUG}")
-message(STATUS "GCC_PT_PLUG: ${GCC_PT_PLUG}")
+message(STATUS "VK_PLUG: ${VK_PLUG}")
+message(STATUS "PT_PLUG: ${PT_PLUG}")
 
 set(PRED_INCL_DIR "${cl_SOURCE_DIR}/../include/predator-builtins/")
 
@@ -89,7 +89,7 @@ macro(add_vk_test id)
     set(cmd "${GCC_HOST} -c ${cl_SOURCE_DIR}/tests/data/vk-${id}.c")
     set(cmd "${cmd} -o /dev/null")
     set(cmd "${cmd} -I${PRED_INCL_DIR}")
-    set(cmd "${cmd} -fplugin=${GCC_VK_PLUG}")
+    set(cmd "${cmd} -fplugin=${VK_PLUG}")
     add_test_wrap("var-killer-${id}" "${cmd}")
 endmacro()
 
@@ -99,7 +99,7 @@ macro(add_pt_test id)
     set(cmd "${cmd} -I${cl_SOURCE_DIR}")
     set(cmd "${cmd} -DNDEBUG")
     set(cmd "${cmd} -I${PRED_INCL_DIR}")
-    set(cmd "${cmd} -fplugin=${GCC_PT_PLUG}")
+    set(cmd "${cmd} -fplugin=${PT_PLUG}")
 
     add_test_wrap("points-to-${id}" "${cmd}")
 endmacro()

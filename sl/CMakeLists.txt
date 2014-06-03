@@ -80,8 +80,8 @@ add_library(predator STATIC
     version.c)
 
 
-# build GCC plug-in (libsl.so)
-CL_BUILD_GCC_PLUGIN(sl predator ../cl_build)
+# build compiler plug-in (libsl.so)
+CL_BUILD_COMPILER_PLUGIN(sl predator ../cl_build)
 
 # get the full path of libsl.so
 get_property(GCC_PLUG TARGET sl PROPERTY LOCATION)

@@ -132,8 +132,8 @@ if (NOT EXISTS ${EMPTY_C_FILE})
     file(WRITE ${EMPTY_C_FILE} "extern int foo;\n")
 endif()
 
-# build GCC plug-in PLUGIN from static lib ANALYZER using CL from LIBCL_PATH
-macro(CL_BUILD_GCC_PLUGIN PLUGIN ANALYZER LIBCL_PATH)
+# build compiler plug-in PLUGIN from static lib ANALYZER using CL from LIBCL_PATH
+macro(CL_BUILD_COMPILER_PLUGIN PLUGIN ANALYZER LIBCL_PATH)
     # build GCC plug-in named lib${PLUGIN}.so
     add_library(${PLUGIN} SHARED ${EMPTY_C_FILE})
 
