@@ -41,7 +41,7 @@ message(STATUS "PT_PLUG: ${PT_PLUG}")
 set(PRED_INCL_DIR "${cl_SOURCE_DIR}/../include/predator-builtins/")
 
 macro(add_test_wrap test_name cmd)
-    add_test("${test_name}" sh -c
+    add_test("${test_name}" bash -o pipefail -c
         "LC_ALL=C CCACHE_DISABLE=1 MALLOC_PERTURB_=170 ${cmd}")
 endmacro()
 
