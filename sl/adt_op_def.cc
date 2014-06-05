@@ -103,28 +103,58 @@ void TplFactory::dropFieldsOfObj(SymHeap *pSh, const TObjId obj) const
     pSh->writeUniformBlock(obj, ubAll);
 }
 
-void connectPushBack(
+enum EListSide {
+    LS_INVALID,
+    LS_FRONT,
+    LS_BACK
+};
+
+void connectPush(
         SymHeap                    &sh,
         const TplFactory           &fact,
         const TObjId                dls,
-        const TObjId                reg)
+        const TObjId                reg,
+        const EListSide             side)
 {
+    TOffset offNext;
+    TOffset offPrev;
+    ETargetSpecifier ts;
+    switch (side) {
+        case LS_FRONT:
+            offNext = fact.prevAt();
+            offPrev = fact.nextAt();
+            ts = TS_FIRST;
+            break;
+
+        case LS_BACK:
+            offNext = fact.nextAt();
+            offPrev = fact.prevAt();
+            ts = TS_LAST;
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of connectPush()");
+            return;
+    }
+
     // obtain handles for next/prev fields
-    const PtrHandle nextPtr(sh, reg, fact.nextAt());
-    const PtrHandle prevPtr(sh, reg, fact.prevAt());
-    const PtrHandle endPtr(sh, dls, fact.nextAt());
+    const PtrHandle nextPtr(sh, reg, offNext);
+    const PtrHandle prevPtr(sh, reg, offPrev);
+    const PtrHandle endPtr (sh, dls, offNext);
 
     // chain both objects together such that they represent a linked list
     const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
-    const TValId endAt = sh.addrOfTarget(dls, TS_LAST,   fact.headAt());
+    const TValId endAt = sh.addrOfTarget(dls, ts,        fact.headAt());
     endPtr.setValue(regAt);
     prevPtr.setValue(endAt);
     nextPtr.setValue(VAL_NULL);
 }
 
-OpTemplate* createPushBackByRef(TplFactory &fact)
+OpTemplate* createPushByRef(TplFactory &fact, const EListSide side)
 {
-    OpTemplate *tpl = new OpTemplate("push_back_by_ref");
+    OpTemplate *tpl = new OpTemplate((side == LS_FRONT)
+            ? "push_front_by_ref"
+            : "push_back_by_ref");
 
     SymHeap sh(fact.createHeap());
 
@@ -152,7 +182,7 @@ OpTemplate* createPushBackByRef(TplFactory &fact)
     input = sh;
 
     // chain both objects together such that they represent a linked list
-    connectPushBack(sh, fact, dls, reg);
+    connectPush(sh, fact, dls, reg, side);
     output = sh;
 
     // register pre/post pair for push_back() to a non-empty list
@@ -165,9 +195,11 @@ OpTemplate* createPushBackByRef(TplFactory &fact)
     return tpl;
 }
 
-OpTemplate* createPushBackByVal(TplFactory &fact)
+OpTemplate* createPushByVal(TplFactory &fact, const EListSide side)
 {
-    OpTemplate *tpl = new OpTemplate("push_back_by_val");
+    OpTemplate *tpl = new OpTemplate((side == LS_FRONT)
+            ? "push_front_by_val"
+            : "push_back_by_val");
 
     SymHeap sh(fact.createHeap());
     SymHeap input(sh);
@@ -199,7 +231,7 @@ OpTemplate* createPushBackByVal(TplFactory &fact)
     reg = fact.createObj(&sh, OK_REGION);
 
     // chain both objects together such that they represent a linked list
-    connectPushBack(sh, fact, dls, reg);
+    connectPush(sh, fact, dls, reg, side);
     output = sh;
 
     // register pre/post pair for push_back() to a non-empty list
@@ -212,17 +244,40 @@ OpTemplate* createPushBackByVal(TplFactory &fact)
     return tpl;
 }
 
-OpTemplate* createPopBack(TplFactory &fact)
+OpTemplate* createPop(TplFactory &fact, const EListSide side)
 {
-    OpTemplate *tpl = new OpTemplate("pop_back");
+    TOffset offNext;
+    TOffset offPrev;
+    ETargetSpecifier ts;
+    OpTemplate *tpl;
+
+    switch (side) {
+        case LS_FRONT:
+            offNext = fact.prevAt();
+            offPrev = fact.nextAt();
+            ts = TS_FIRST;
+            tpl = new OpTemplate("pop_front");
+            break;
+
+        case LS_BACK:
+            offNext = fact.nextAt();
+            offPrev = fact.prevAt();
+            ts = TS_LAST;
+            tpl = new OpTemplate("pop_back");
+            break;
+
+        default:
+            CL_BREAK_IF("invalid call of createPop()");
+            return new OpTemplate("pop_invalid");
+    }
 
     // allocate a region
     SymHeap sh(fact.createHeap());
     const TObjId reg = fact.createObj(&sh, OK_REGION);
 
     // nullify the next/prev fields
-    const PtrHandle regNext(sh, reg, fact.nextAt());
-    const PtrHandle regPrev(sh, reg, fact.prevAt());
+    const PtrHandle regNext(sh, reg, offNext);
+    const PtrHandle regPrev(sh, reg, offPrev);
     regNext.setValue(VAL_NULL);
     regPrev.setValue(VAL_NULL);
 
@@ -246,7 +301,7 @@ OpTemplate* createPopBack(TplFactory &fact)
 
     // chain both objects together such that they represent a linked list
     const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
-    const TValId endAt = sh.addrOfTarget(dls, TS_LAST,   fact.headAt());
+    const TValId endAt = sh.addrOfTarget(dls, ts,        fact.headAt());
     dlsPrev.setValue(VAL_NULL);
     regPrev.setValue(endAt);
     dlsNext.setValue(regAt);
@@ -303,9 +358,12 @@ bool loadDefaultOperations(OpCollection *pDst, const CodeStorage::Storage &stor)
     }
 
     TplFactory fact(stor);
-    pDst->addTemplate(createPushBackByRef(fact));
-    pDst->addTemplate(createPushBackByVal(fact));
-    pDst->addTemplate(createPopBack(fact));
+    for (int i = LS_FRONT; i <= LS_BACK; ++i) {
+        const EListSide side = static_cast<EListSide>(i);
+        pDst->addTemplate(createPushByRef(fact, side));
+        pDst->addTemplate(createPushByVal(fact, side));
+        pDst->addTemplate(createPop(fact, side));
+    }
     pDst->addTemplate(createClear2(fact));
     return true;
 }
