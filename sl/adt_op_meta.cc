@@ -185,6 +185,7 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
     const EValueTarget vt2 = ctx.sh2.valTarget(val2);
     switch (vt2) {
         case VT_OBJECT:
+        case VT_CUSTOM:
             break;
 
         case VT_UNKNOWN:
@@ -247,6 +248,7 @@ bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
     const EValueTarget vt1 = ctx.sh1.valTarget(val1);
     switch (vt1) {
         case VT_OBJECT:
+        case VT_CUSTOM:
             break;
 
         case VT_UNKNOWN:
@@ -262,6 +264,10 @@ bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
     const TOffset off = fld1.offset();
     const FldHandle fld2(ctx.sh2, obj2, clt, off);
     const TValId val2 = fld2.value();
+    if (val1 == val2)
+        // identical values
+        return true;
+
     const EValueTarget vt2 = ctx.sh2.valTarget(val2);
     if (VT_UNKNOWN != vt2)
         // this is NOT an "unset" operation
