@@ -509,6 +509,10 @@ bool inferNonEmpty(
         CondReplaceCtx             &ctx,
         const THeapIdentSet        &heapSet)
 {
+    if (heapSet.empty())
+        // if the set of heaps is empty, we cannot determine the shape var
+        return false;
+
     TShapeVarId var = -1;
 
     BOOST_FOREACH(const THeapIdent &heap, heapSet) {
@@ -551,12 +555,10 @@ bool insertEmpChk(
     TShapeVarId var;
     bool neg;
 
-    if (inferNonEmpty(&var, ctx, heapsByBranch[CB_TRUE]) && -1 != var)
+    if (inferNonEmpty(&var, ctx, heapsByBranch[CB_TRUE]))
         neg = true;
     else if (inferNonEmpty(&var, ctx, heapsByBranch[CB_FALSE]))
         neg = false;
-    else if (inferNonEmpty(&var, ctx, heapsByBranch[CB_TRUE]))
-        neg = true;
     else
         return false;
 
