@@ -1546,20 +1546,15 @@ void CLPass::handleCallInstruction(CallInst *I) {
     if (fnc.data.cst.data.cst_fnc.name == nullptr)
         return;
 
-    unsigned args = I->getNumArgOperands();
-    struct cl_operand argumets[args];
-    unsigned idx = 0;
-
-    while (args != idx) {
-        handleOperand(I->getArgOperand(idx), &argumets[idx]);
-        ++idx;
-    }
-
     cl->insn_call_open(cl, &cl_loc_known, &dst, &fnc);
     delete [] fnc.data.cst.data.cst_fnc.name;
 
-    for(unsigned i=0; i < args; ++i)
-        cl->insn_call_arg(cl, i, &argumets[i]);
+    const int cnt_args = I->getNumArgOperands();
+    for (int idx = 0; idx < cnt_args; ++idx) {
+        struct cl_operand op_arg;
+        handleOperand(I->getArgOperand(idx), &op_arg);
+        cl->insn_call_arg(cl, idx, &op_arg);
+    }
 
     cl->insn_call_close(cl);
 }
