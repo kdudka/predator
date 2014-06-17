@@ -12,7 +12,7 @@ source "$topdir/build-aux/xgcclib.sh"
 
 # basic setup
 CL_DIR="$topdir/cl"
-GCC_PLUG='@GCC_PT_PLUG@'
+GCC_PLUG='@PT_PLUG@'
 GCC_HOST='@GCC_HOST@'
 PRED_INCL_DIR='@PRED_INCL_DIR@'
 
