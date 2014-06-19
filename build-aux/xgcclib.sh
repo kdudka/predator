@@ -22,7 +22,7 @@ find_gcc_plug() {
 }
 
 find_cc1_host() {
-    CC1_HOST="$("$GCC_HOST" -print-prog-name=cc1)"
+    CC1_HOST="$("$GCC_HOST" -print-prog-name="${GCC_PROG_NAME-cc1}")"
     test -x "$CC1_HOST" && return 0
-    die "unable to find cc1: $GCC_HOST -print-prog-name=cc1"
+    die "unable to find ${GCC_PROG_NAME-cc1}: $GCC_HOST -print-prog-name=${GCC_PROG_NAME-cc1}"
 }
