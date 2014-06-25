@@ -3,14 +3,19 @@
 # Simple wrapping script for running Code-Listener with a C compiler.
 # Author: Dee'Kej (deekej@linuxmail.org)
 
-if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 source-file" >&2
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 source-file [gcc-options]" >&2
   exit 1
 fi
 
+SOURCE_FILE="$1"
+
+shift 1
+
 #export GCC_PROG_NAME="cc1"     # C compiler is used by default.
 #export GCC_PARAMS="-fno-rtti -fno-exceptions"  # Irrelevant flags for C lang.
+export GCC_PARAMS="$*"
 
-./vkdebug.sh "$1"
+./vkdebug.sh "$SOURCE_FILE"
 
 exit $?
