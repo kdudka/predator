@@ -3,14 +3,24 @@
 # Simple wrapping script for running Code-Listener with a C++ compiler.
 # Author: Dee'Kej (deekej@linuxmail.org)
 
-if [[ $# -ne 1 ]]; then
-  echo "Usage: $0 source-file" >&2
+if [[ $# -lt 1 ]]; then
+  echo "Usage: $0 source-file [gcc-options]" >&2
   exit 1
 fi
 
-export GCC_PROG_NAME="cc1plus"      # Internal naming of g++ inside the gcc.
-export GCC_PARAMS="-fno-rtti -fno-exceptions"
+SOURCE_FILE="$1"
 
-./vkdebug.sh "$1"
+shift 1
+
+echo "$SOURCE_FILE" | grep ".*\.cc$"
+
+if [[ $? -eq 0 ]]; then
+  GCC_PARAMS="-std=c++98"
+fi
+
+export GCC_PROG_NAME="cc1plus"      # Internal naming of g++ inside the gcc.
+export GCC_PARAMS="$GCC_PARAMS $* -fno-rtti -fno-exceptions"
+
+./vkdebug.sh "$SOURCE_FILE"
 
 exit $?
