@@ -14,8 +14,10 @@ usage() {
 
     Use this script to (re)build Predator and/or Forester against an arbitrary
     build of host GCC.  The host GCC needs to be built with the support for GCC
-    plug-ins.  The currently supported version of host GCC is 4.9.0, but feel
-    free to use any other version of GCC at your own responsibility.
+    plug-ins.  The recommended version of host GCC is 4.9.0 but Predator can be
+    loaded also into older versions of GCC (plug-ins are supported since 4.5.0).
+    For host GCC 4.6.x and older, please use the compatibility patches in the
+    build-aux directory.
 
     GCC_HOST is a gcc(1) executable file that is built with the support for
     GCC plug-ins.  The most common location of the system GCC is /usr/bin/gcc.

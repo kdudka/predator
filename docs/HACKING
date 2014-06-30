@@ -155,6 +155,8 @@ slSeg, sls              Singly-linked List Segment
 
 src                     source
 
+stmt                    statement
+
 stor                    instance of (or reference to) CodeStorage::Storage
 
 str                     stream (or string)
