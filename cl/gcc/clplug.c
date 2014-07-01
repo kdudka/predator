@@ -58,6 +58,7 @@
 #   include <internal-fn.h>
 #   include <is-a.h>
 #   include <predict.h>
+#   include <print-tree.h>
 #   include <tree.h>
 #   include <tree-core.h>
 #   include <tree-ssa-alias.h>
@@ -554,9 +555,19 @@ static int dig_field_offset(tree t)
 static void dig_record_type(struct cl_type *clt, tree t)
 {
     for (t = TYPE_FIELDS(t); t; t = TREE_CHAIN(t)) {
-        if (TYPE_DECL == TREE_CODE(t)) {
-            CL_WARN_UNHANDLED_EXPR(t, "TYPE_DECL");
-            continue;
+        const enum tree_code code = TREE_CODE(t);
+        switch (code) {
+            case FIELD_DECL:
+                break;
+
+            case TYPE_DECL:
+                // nested type declaration (g++ automatically declares
+                // 'typedef struct S S' inside a struct named S)
+                continue;
+
+            default:
+                CL_WARN_UNHANDLED_EXPR(t, "node in dig_record_type()");
+                continue;
         }
 
         // TODO: chunk allocation ?
