@@ -234,6 +234,8 @@ bool isWhiteListedName(const char *name)
 {
     return STREQ(name, "___sl_error")
         || STREQ(name, "__VERIFIER_plot")
+        || STREQ(name, "__cxa_guard_acquire")
+        || STREQ(name, "__cxa_guard_release")
         || STREQ(name, "free")
         || STREQ(name, "malloc");
 }
