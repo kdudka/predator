@@ -232,10 +232,10 @@ bool isKnownModel(const Insn *insn, TBindPairs &pairs)
 
 bool isWhiteListedName(const char *name)
 {
-    return STREQ(name, "malloc")
+    return STREQ(name, "___sl_error")
+        || STREQ(name, "__VERIFIER_plot")
         || STREQ(name, "free")
-        || STREQ(name, "___sl_error")
-        || STREQ(name, "__VERIFIER_plot");
+        || STREQ(name, "malloc");
 }
 
 bool isWhiteListed(const Insn *insn)
@@ -289,6 +289,11 @@ bool bindPairs(const Insn *insn, TBindPairs &pairs)
 
     if (isWhiteListed(insn))
         return false;
+
+    if (!isDefined(*callee)) {
+        PT_DEBUG(1, "unhandled external function: " << nameOf(*callee) << "()");
+        return /* report success */ false;
+    }
 
     if (opList.size() - 2 > callee->args.size()) {
         FALLBACK("TODO: bad number of parameters: " << *insn
