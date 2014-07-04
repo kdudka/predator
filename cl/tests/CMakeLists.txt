@@ -168,43 +168,120 @@ macro(add_pt_test id)
     add_test_wrap("points-to-${id}" "${cmd}")
 endmacro()
 
-set(ENABLE_CC1_PLUS FALSE CACHE BOOL "Enables the use of C++ compiler for GCC adapter tests.")
+# Get the command to call right version of g++ and store it in CXX_HOST:
+execute_process(COMMAND "basename" "${GCC_HOST}" COMMAND "tr" "c" "+"
+    OUTPUT_VARIABLE CXX_HOST OUTPUT_STRIP_TRAILING_WHITESPACE)
+if ("${CXX_HOST}" STREQUAL "")
+    message(FATAL_ERROR "failed to obtain CXX_HOST")
+endif()
 
-macro(add_gcc_adapt_test dir id name)
-    set(cmd "${GCC_HOST}")
+# Get the directory of the g++:
+execute_process(COMMAND "dirname" "${GCC_HOST}"
+    OUTPUT_VARIABLE CXX_HOST_DIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+if ("${CXX_HOST}" STREQUAL "")
+    message(FATAL_ERROR "failed to obtain directory of CXX_HOST")
+endif()
 
-    # gcc choses the correct compiler automatically because of file extension.
-    set(cmd "${cmd} -c ${cl_SOURCE_DIR}/tests/gcc-adapter/${dir}/${id}-${name}.c")
-    
-    # Correct the file extension if needed:
-    if (${dir} MATCHES "C\+\+")
-        set(cmd "${cmd}c")
+# Create the full path for the g++:
+set(CXX_HOST "${CXX_HOST_DIR}/${CXX_HOST}")
+
+macro(add_gcc_adapt_test compiler dir id name)
+    # Use the correct command for invoking the requested compiler:
+    if ("${compiler}" STREQUAL "cc1plus")
+        set(cmd "${CXX_HOST}")    # g++
+    else()
+        set(cmd "${GCC_HOST}")    # gcc
+    endif()
+
+    set(cmd "${cmd} -c ${cl_SOURCE_DIR}/tests/gcc-adapter/${dir}/${id}-${name}")
+
+    # Add the file extension corresponding to the test folder:
+    if ("${dir}" STREQUAL "C++")
+        set(cmd "${cmd}.cc")
+    else()
+        set(cmd "${cmd}.c")
     endif()
 
     set(cmd "${cmd} -o /dev/null")
     set(cmd "${cmd} -I${cl_SOURCE_DIR}")
-    #set(cmd "${cmd} -DNDEBUG") ->> FIXME: Use this flag for final releases.
+
     set(cmd "${cmd} -DPREDATOR")
+    set(cmd "${cmd} -DNDEBUG")
     set(cmd "${cmd} -m32 -O0 -Wall -Wextra")
 
-    # ISO C++98 is the minimum standard support required.
-    if (ENABLE_CC1_PLUS AND ${dir} MATCHES "C\+\+")
-        set(cmd "${cmd} -std=c++98 -pedantic")
-    endif()
-
-    # Temporary condition, until RTTI & Exceptions handling is implemented.
-    # FIXME: Remove the condition below after the support is added.
-    if (ENABLE_CC1_PLUS AND ${dir} MATCHES "C\+\+")
-        set(cmd "${cmd} -fno-rtti -fno-exceptions")
+    # Request the minimal supported standard by GCC adapter:
+    # NOTE: Since we're using both C and C++ language compiler and supporting
+    #       the GNU extension, the '-pedantic' flag is therefore undesirable.
+    if ("${compiler}" STREQUAL "cc1plus")
+        # FIXME: Remove the '-fno-rtti' & '-fno-exceptions' after the support
+        #        for these features was implemented.
+        set(cmd "${cmd} -std=c++98 -fno-rtti -fno-exceptions")
+    else()
+        set(cmd "${cmd} -std=gnu89")
     endif()
 
     set(cmd "${cmd} -fplugin=${VK_PLUG}")
     set(cmd "${cmd} -fplugin-arg-libchk_var_killer-dump-pp")
     set(cmd "${cmd} -fplugin-arg-libchk_var_killer-verbose=1")
-
-    add_test_wrap("gcc-adapter-test-${dir}/${id}" "${cmd}")
+    
+    
+    if ("${compiler}" STREQUAL "cc1plus")
+        add_test_wrap("g++-adapter-test-of-${dir}/${id}" "${cmd}")
+    else()
+        add_test_wrap("gcc-adapter-test-of-${dir}/${id}" "${cmd}")
+    endif()
 endmacro()
 endif()
+
+# Wrapping macro to reduce the number of lines:
+macro(add_gcc_adapt_C_tests compiler)
+  add_gcc_adapt_test(${compiler} C 00 Empty-main)
+  add_gcc_adapt_test(${compiler} C 01 Global-variable-without-initialization)
+  add_gcc_adapt_test(${compiler} C 02 Global-variable-with-initial-value)
+  add_gcc_adapt_test(${compiler} C 03 Global-variable-with-initialization)
+  add_gcc_adapt_test(${compiler} C 04 Local-variable-without-initialization)
+  add_gcc_adapt_test(${compiler} C 05 Local-variable-with-initialization)
+  add_gcc_adapt_test(${compiler} C 06 Types-char)
+  add_gcc_adapt_test(${compiler} C 07 Types-int)
+  add_gcc_adapt_test(${compiler} C 08 Types-real)
+  add_gcc_adapt_test(${compiler} C 09 Types-enum)
+  add_gcc_adapt_test(${compiler} C 10 Types-union)
+  add_gcc_adapt_test(${compiler} C 11 Types-struct)
+  add_gcc_adapt_test(${compiler} C 12 Operator-sizeof)
+  add_gcc_adapt_test(${compiler} C 13 Types-typedef)
+  add_gcc_adapt_test(${compiler} C 14 Types-pointers)
+  add_gcc_adapt_test(${compiler} C 15 Memory-class-modificators)
+  add_gcc_adapt_test(${compiler} C 16 Type-modificators)
+  add_gcc_adapt_test(${compiler} C 17 Pointers-reference-dereference)
+  add_gcc_adapt_test(${compiler} C 18 Type-casting)
+  add_gcc_adapt_test(${compiler} C 19 Operators-unary)
+  add_gcc_adapt_test(${compiler} C 20 Operators-binary)
+  add_gcc_adapt_test(${compiler} C 21 Operators-relational-and-equality)
+  add_gcc_adapt_test(${compiler} C 22 Operators-logical)
+  add_gcc_adapt_test(${compiler} C 23 Operators-bitwise)
+  add_gcc_adapt_test(${compiler} C 24 Operators-assignment)
+  add_gcc_adapt_test(${compiler} C 25 Operators-ternary-and-comma)
+  add_gcc_adapt_test(${compiler} C 26 Arrays-definitions)
+  add_gcc_adapt_test(${compiler} C 27 Functions-definitions)
+  add_gcc_adapt_test(${compiler} C 28 Operators-other-plus-calls-types)
+  add_gcc_adapt_test(${compiler} C 29 Declarations)
+  add_gcc_adapt_test(${compiler} C 30 String-literals)
+  add_gcc_adapt_test(${compiler} C 31 Bitfields)
+  add_gcc_adapt_test(${compiler} C 32 Pointer-arithmetics)
+  add_gcc_adapt_test(${compiler} C 33 Compound-literals)
+  add_gcc_adapt_test(${compiler} C 34 Control-flow-if-conditions)
+  add_gcc_adapt_test(${compiler} C 35 Control-flow-while-loop)
+  add_gcc_adapt_test(${compiler} C 36 Control-flow-do-while-loop)
+  add_gcc_adapt_test(${compiler} C 37 Control-flow-for-loop)
+  add_gcc_adapt_test(${compiler} C 38 Control-flow-switch-statement)
+  add_gcc_adapt_test(${compiler} C 39 Control-flow-break-and-continue)
+  add_gcc_adapt_test(${compiler} C 40 Control-flow-goto)
+  add_gcc_adapt_test(${compiler} C 41 Standard-header-files-C89)
+  add_gcc_adapt_test(${compiler} C 42 Header-setjmp)
+  add_gcc_adapt_test(${compiler} C 43 Standard-header-files-C99)
+  add_gcc_adapt_test(${compiler} C 44 Types-complex)
+  add_gcc_adapt_test(${compiler} C 45 Standard-header-files-C11)
+endmacro()
 
 ####################################
 # append test-cases for var-killer #
@@ -299,58 +376,12 @@ endif()
 # append test-cases for gcc-adapter #
 #####################################
 
-# C language test-cases:
-add_gcc_adapt_test(C 00 Empty-main)
-add_gcc_adapt_test(C 01 Global-variable-without-initialization)
-add_gcc_adapt_test(C 02 Global-variable-with-initial-value)
-add_gcc_adapt_test(C 03 Global-variable-with-initialization)
-add_gcc_adapt_test(C 04 Local-variable-without-initialization)
-add_gcc_adapt_test(C 05 Local-variable-with-initialization)
-add_gcc_adapt_test(C 06 Types-char)
-add_gcc_adapt_test(C 07 Types-int)
-add_gcc_adapt_test(C 08 Types-real)
-add_gcc_adapt_test(C 09 Types-enum)
-add_gcc_adapt_test(C 10 Types-union)
-add_gcc_adapt_test(C 11 Types-struct)
-add_gcc_adapt_test(C 12 Operator-sizeof)
-add_gcc_adapt_test(C 13 Types-typedef)
-add_gcc_adapt_test(C 14 Types-pointers)
-add_gcc_adapt_test(C 15 Memory-class-modificators)
-add_gcc_adapt_test(C 16 Type-modificators)
-add_gcc_adapt_test(C 17 Pointers-reference-dereference)
-add_gcc_adapt_test(C 18 Type-casting)
-add_gcc_adapt_test(C 19 Operators-unary)
-add_gcc_adapt_test(C 20 Operators-binary)
-add_gcc_adapt_test(C 21 Operators-relational-and-equality)
-add_gcc_adapt_test(C 22 Operators-logical)
-add_gcc_adapt_test(C 23 Operators-bitwise)
-add_gcc_adapt_test(C 24 Operators-assignment)
-add_gcc_adapt_test(C 25 Operators-ternary-and-comma)
-add_gcc_adapt_test(C 26 Arrays-definitions)
-add_gcc_adapt_test(C 27 Functions-definitions)
-add_gcc_adapt_test(C 28 Operators-other-plus-calls-types)
-add_gcc_adapt_test(C 29 Declarations)
-add_gcc_adapt_test(C 30 String-literals)
-add_gcc_adapt_test(C 31 Bitfields)
-add_gcc_adapt_test(C 32 Pointer-arithmetics)
-add_gcc_adapt_test(C 33 Compound-literals)
-add_gcc_adapt_test(C 34 Control-flow-if-conditions)
-add_gcc_adapt_test(C 35 Control-flow-while-loop)
-add_gcc_adapt_test(C 36 Control-flow-do-while-loop)
-add_gcc_adapt_test(C 37 Control-flow-for-loop)
-add_gcc_adapt_test(C 38 Control-flow-switch-statement)
-add_gcc_adapt_test(C 39 Control-flow-break-and-continue)
-add_gcc_adapt_test(C 40 Control-flow-goto)
-add_gcc_adapt_test(C 41 Standard-header-files-C89)
-add_gcc_adapt_test(C 42 Header-setjmp)
-add_gcc_adapt_test(C 43 Standard-header-files-C99)
-add_gcc_adapt_test(C 44 Types-complex)
-add_gcc_adapt_test(C 45 Standard-header-files-C11)
+# Adding C language test-cases with both C and C++ compiler:
+add_gcc_adapt_C_tests(cc1)
+add_gcc_adapt_C_tests(cc1plus)
 
-# Run the C++ language test-cases only for C++ compiler:
-if (ENABLE_CC1_PLUS)
-    add_gcc_adapt_test(C++ 00 Empty-main)
-endif()
+# Add the specific C++ test-cases only for the C++ compiler:
+add_gcc_adapt_test(cc1plus C++ 00 Empty-main)
 
 
 # debugging helpers
