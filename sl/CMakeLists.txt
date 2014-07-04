@@ -264,6 +264,8 @@ macro(test_predator_smoke label tool arg1 arg2 arg3)
     endforeach()
 endmacro()
 
+option(ENABLE_CC1_PLUS "Set to TRUE to use C++ compiler for the tests." FALSE)
+
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_predator_regre name_suff ext arg1)
     foreach (num ${tests})
@@ -272,6 +274,11 @@ macro(test_predator_regre name_suff ext arg1)
         # we use the following flag to avoid differences on 32bit vs 64bit archs
         # in the error output, which is checked for exact match
         set(cmd "${cmd} -m32")
+
+        # use C++ compiler if requested:
+        if (ENABLE_CC1_PLUS)
+            set(cmd "${cmd} -x c++")
+        endif()
 
         set(cmd "${cmd} -S ${testdir}/test-${num}.c -o /dev/null")
         set(cmd "${cmd} -I../include/predator-builtins -DPREDATOR")
