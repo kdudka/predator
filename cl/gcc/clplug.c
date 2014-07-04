@@ -661,7 +661,9 @@ static void read_specific_type(struct cl_type *clt, tree type)
 
         case REFERENCE_TYPE:
             // FIXME: it comes only on 32bit build of gcc (seems vararg related)
+            // NOTE:  This type of node will be most probably used for C++.
             clt->code = CL_TYPE_UNKNOWN;
+            CL_WARN_UNHANDLED_EXPR(type, "REFERENCE_TYPE");
             break;
 
         case INTEGER_TYPE:
@@ -681,10 +683,17 @@ static void read_specific_type(struct cl_type *clt, tree type)
             break;
 
         case METHOD_TYPE:
+            clt->code = CL_TYPE_UNKNOWN;
             CL_WARN_UNHANDLED_EXPR(type, "METHOD_TYPE");
             break;
 
+        case COMPLEX_TYPE:
+            clt->code = CL_TYPE_UNKNOWN;
+            CL_WARN_UNHANDLED_EXPR(type, "COMPLEX_TYPE");
+            break;
+
         default:
+            clt->code = CL_TYPE_UNKNOWN;
             CL_BREAK_IF("read_specific_type() got something special");
     };
 }
