@@ -1320,6 +1320,20 @@ struct gimple_walk_data {
     bool abort_sent;
 };
 
+static void emit_abort_once(struct gimple_walk_data *data, gimple stmt)
+{
+    if (data->abort_sent)
+        return;
+
+    static struct cl_insn cli;
+    cli.code = CL_INSN_ABORT;
+    if (stmt)
+        read_gimple_location(&cli.loc, stmt);
+
+    cl->insn(cl, &cli);
+    data->abort_sent = true;
+}
+
 static void handle_stmt_unop(gimple stmt, enum tree_code code,
                              struct cl_operand *dst, tree src_tree)
 {
@@ -1451,16 +1465,9 @@ static void handle_stmt_call(gimple stmt, struct gimple_walk_data *data)
     handle_stmt_call_args(stmt);
     cl->insn_call_close(cl);
 
-    if (ECF_NORETURN & gimple_call_flags(stmt)) {
+    if (ECF_NORETURN & gimple_call_flags(stmt))
         // this call never returns --> end of BB!!
-
-        struct cl_insn cli;
-        cli.code    = CL_INSN_ABORT;
-        cli.loc     = loc;
-
-        cl->insn(cl, &cli);
-        data->abort_sent = true;
-    }
+        emit_abort_once(data, stmt);
 }
 
 static void handle_stmt_return(gimple stmt)
@@ -1652,13 +1659,7 @@ static void handle_stmt_label(gimple stmt)
 static void handle_stmt_resx(gimple stmt, struct gimple_walk_data *data)
 {
     CL_WARN_UNHANDLED_GIMPLE(stmt, "GIMPLE_RESX");
-    if (data->abort_sent)
-        return;
-
-    static struct cl_insn cli;
-    cli.code    = CL_INSN_ABORT;
-    cl->insn(cl, &cli);
-    data->abort_sent = true;
+    emit_abort_once(data, stmt);
 }
 
 // callback of walk_gimple_seq declared in <gimple.h>
@@ -1809,12 +1810,7 @@ static void handle_fnc_bb(struct basic_block_def *bb)
 
         if (e->flags & EDGE_EH) {
             CL_WARN_UNHANDLED("EDGE_EH (exception edge)");
-            if (data.abort_sent)
-                return;
-
-            static struct cl_insn cli;
-            cli.code    = CL_INSN_ABORT;
-            cl->insn(cl, &cli);
+            emit_abort_once(&data, NULL);
         }
     }
 }
