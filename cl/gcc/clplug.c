@@ -1438,6 +1438,16 @@ static void handle_stmt_call_args(gimple stmt)
 
 static void handle_stmt_call(gimple stmt, struct gimple_walk_data *data)
 {
+#ifdef GCC_HOST_4_9_OR_NEWER
+    if (gimple_call_internal_p(stmt)) {
+        internal_fn code = gimple_call_internal_fn(stmt);
+        CL_WARN_UNHANDLED_WITH_LOC(gimple_location(stmt),
+                "unhandled call to GCC internal function: %s",
+                internal_fn_name(code));
+        emit_abort_once(data, stmt);
+        return;
+    }
+#endif
     tree op0 = gimple_call_fn(stmt);
 
     if (ADDR_EXPR == TREE_CODE(op0))
