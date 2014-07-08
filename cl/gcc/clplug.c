@@ -1138,6 +1138,18 @@ static void read_raw_operand(struct cl_operand *op, tree t)
             read_cst_real(op, t);
             break;
 
+        case COMPLEX_CST:
+            CL_WARN_UNHANDLED_EXPR(t, "COMPLEX_CST");
+            break;
+
+        case REALPART_EXPR:
+            CL_WARN_UNHANDLED_EXPR(t, "REALPART_EXPR");
+            break;
+
+        case IMAGPART_EXPR:
+            CL_WARN_UNHANDLED_EXPR(t, "IMAGPART_EXPR");
+            break;
+
         default:
             CL_BREAK_IF("read_raw_operand() got something special");
     }
