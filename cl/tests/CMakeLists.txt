@@ -381,7 +381,6 @@ add_gcc_adapt_C_tests(cc1)
 add_gcc_adapt_C_tests(cc1plus)
 
 # Add the specific C++ test-cases only for the C++ compiler:
-add_gcc_adapt_test(cc1plus C++ 00 Empty-main)
 
 
 # debugging helpers
