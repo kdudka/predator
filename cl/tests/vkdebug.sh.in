@@ -16,7 +16,7 @@ GCC_PLUG='@VK_PLUG@'
 GCC_HOST='@GCC_HOST@'
 
 # attempt to make
-make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D CL_DEBUG=ON' || exit $?
+make -C "$CL_DIR" -s -j 'CMAKE=cmake -D CL_DEBUG=ON' || exit $?
 
 # initial checks
 find_gcc_host
