@@ -760,11 +760,14 @@ static enum cl_scope_e get_decl_scope(tree t)
     tree ctx = DECL_CONTEXT(t);
     if (ctx) {
         enum tree_code code = TREE_CODE(ctx);
+        tree name;
+        char *name_ptr;
         switch (code) {
             case FUNCTION_DECL:
                 return CL_SCOPE_FUNCTION;
 
             case TRANSLATION_UNIT_DECL:
+            case NAMESPACE_DECL:
                 break;
 
             // Unnamed (anonymous) namespace ->> CL_SCOPE_STATIC
