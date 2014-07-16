@@ -733,6 +733,7 @@ static enum cl_scope_e get_decl_scope(tree t)
                 return CL_SCOPE_FUNCTION;
 
             case TRANSLATION_UNIT_DECL:
+            case NAMESPACE_DECL:
                 break;
 
             case RECORD_TYPE:
