@@ -35,6 +35,11 @@
 #endif
 
 /**
+ * If set to '1', uses colored terminal output for ClPrettyPrint() [cl_pp.cc].
+ */
+#define CL_DEBUG_COLORED_OUTPUT         0
+
+/**
  * if 1, check each code_listener filter by the integrity checker
  */
 #define CL_DEBUG_CLF                    0
