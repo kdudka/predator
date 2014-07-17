@@ -381,7 +381,20 @@ add_gcc_adapt_C_tests(cc1)
 add_gcc_adapt_C_tests(cc1plus)
 
 # Add the specific C++ test-cases only for the C++ compiler:
-add_gcc_adapt_test(cc1plus C++ 00 Empty-main)
+add_gcc_adapt_test($cc1plus C++ 00 Unnamed-namespace)
+add_gcc_adapt_test($cc1plus C++ 01 Named-namespace)
+add_gcc_adapt_test($cc1plus C++ 02 Global-namespace)
+add_gcc_adapt_test($cc1plus C++ 03 Extension-namespace-definition)
+add_gcc_adapt_test($cc1plus C++ 04 Nested-namespaces)
+add_gcc_adapt_test($cc1plus C++ 05 Namespace-functions-declarations-and-definitions)
+add_gcc_adapt_test($cc1plus C++ 06 Inline-namespaces) # Only dummy test for now.
+add_gcc_adapt_test($cc1plus C++ 07 Using-declaration-01)
+add_gcc_adapt_test($cc1plus C++ 08 Using-declaration-02)
+add_gcc_adapt_test($cc1plus C++ 09 Using-directive-01)
+add_gcc_adapt_test($cc1plus C++ 10 Using-directive-02)
+add_gcc_adapt_test($cc1plus C++ 11 Namespace-alias)
+add_gcc_adapt_test($cc1plus C++ 12 Basic-constructors-and-destructors)
+add_gcc_adapt_test($cc1plus C++ 13 Using-declaration-03)
 
 
 # debugging helpers
