@@ -682,10 +682,16 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
             clt->array_size = get_fixed_array_size(type);
             break;
-        
+
         // Separate case for debugging purposes only, will be probably merged
         // with FUNCTION_TYPE case later.
         case METHOD_TYPE:
+            clt->code = CL_TYPE_FNC;
+            clt->size = 0;
+            dig_fnc_type(clt, type);
+            break;
+
+        case FUNCTION_TYPE:
             clt->code = CL_TYPE_FNC;
             clt->size = 0;
             dig_fnc_type(clt, type);
