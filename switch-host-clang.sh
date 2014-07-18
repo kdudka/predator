@@ -32,13 +32,13 @@ usage() {
 
     Use this script to (re)build Predator and/or Forester against an arbitrary
     build of host Clang/LLVM. The host Clang/LLVM needs library and header files
-    for develop native programs that use the LLVM infrastructure. The currently 
-    supported version of host Clang/LLVM is 3.3, but feel free to use any other 
+    for develop native programs that use the LLVM infrastructure. The currently
+    supported version of host Clang/LLVM is 3.3, but feel free to use any other
     version of Clang at your own responsibility.
 
-    CLANG_HOST is the absolute path to clang(1). The most common location of the system 
-    Clang is /usr/bin/clang. If you have multiple versions of clang/llvm installed 
-    on the system, it can be something like /usr/bin/clang-3.3. You can also 
+    CLANG_HOST is the absolute path to clang(1). The most common location of the system
+    Clang is /usr/bin/clang. If you have multiple versions of clang/llvm installed
+    on the system, it can be something like /usr/bin/clang-3.3. You can also
     provide a local build of clang, e.g. /home/nika/clang+llvm-3.3-x86_64/bin/clang.
 
     On some Linux distributions you need to install an optional package (e.g.

@@ -30,15 +30,15 @@ usage() {
     printf "Usage: %s ANALYZER [CLANG_HOST OPT_HOST]\n" "$SELF" >&2
     cat >&2 << EOF
 
-    Use this script for checking plug-ins. 
+    Use this script for checking plug-ins.
 
     ANALYZER is analyzer cl Code Listener
                          sl Predator
-                         fa Forester 
+                         fa Forester
 
     CLANG_HOST is the absolute path to clang(1). Default is /usr/bin/clang.
-    If you have multiple versions of clang/llvm installed on the system, it 
-    can be something like /usr/bin/clang-3.3. You can also provide a local 
+    If you have multiple versions of clang/llvm installed on the system, it
+    can be something like /usr/bin/clang-3.3. You can also provide a local
     build of clang, e.g. /home/bob/clang+llvm-3.3-x86_64/bin/clang.
 
     OPT_HOST is the absolute path to opt. Mainly in the same folder as clang.
