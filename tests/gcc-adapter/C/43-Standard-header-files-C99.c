@@ -1,4 +1,18 @@
-/* Test case: #43 */
+/* Test case: #43
+ *
+ * Copyright NOTE: This file is part of predator's test suite.
+ *
+ * However, the example(s) below were taken from (and modified):
+ * <http://en.cppreference.com/>
+ *
+ * Because of it, this file is licensed under GFDL v1.3 and CC BY-SA 3.0
+ * licenses as requested at: <http://en.cppreference.com/w/Cppreference:FAQ>
+ *
+ * You should have receive copies of these licenses in the ~/predator/tests/
+ * folder with the predator itself. If not, please, see their online versions:
+ * <http://www.gnu.org/copyleft/fdl.html>
+ * <https://creativecommons.org/licenses/by-sa/3.0/legalcode>
+ */
 
 // #include <complex.h> - Tested via a separate test-case.
 #include <fenv.h>
@@ -13,11 +27,6 @@
 #include <float.h>
 #include <stdio.h>
 #include <stdlib.h>
-
-/*
- * NOTE - Many of the examples here were taken from:
- * http://en.cppreference.com/w/c/ *
- */
 
 double fenv_test(double a, double b) {
   const int range_problem = FE_OVERFLOW | FE_UNDERFLOW;
