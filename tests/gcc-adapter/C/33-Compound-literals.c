@@ -1,14 +1,19 @@
-/* Test case: #33 */
+/* Test case: #33
+ *
+ * Copyright NOTE - this file is part of predator's test suite.
+ *
+ * However, this example was taken (and modified) from:
+ * <https://gcc.gnu.org/onlinedocs/gcc-4.3.2/gcc/Compound-Literals.html>
+ *
+ * Therefore the copyright belongs to Free Software Foundation, Inc. (FSF):
+ * (c) Free Software Foundation, Inc. (FSF)
+ */
 
 struct test {
   unsigned x;
   char array[3];
 } GLOBAL_STRUCTURE;
 
-/* 
- * Taken from:
- * https://gcc.gnu.org/onlinedocs/gcc-4.3.2/gcc/Compound-Literals.html
- */
 struct foo {
   int a;
   char b[2];
