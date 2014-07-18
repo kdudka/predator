@@ -3,6 +3,24 @@ export SELF="$0"
 export LC_ALL=C
 MAKE="make -j5"
 
+# Config file used by the CL:
+# NOTE: Make sure the "$CL_CONFIG_FILE.default" exists!
+CL_CONFIG_FILE="./cl/config_cl.h"
+
+# Current supported settings of CL:
+CL_SETTINGS=(CL_DEBUG_COLORED_OUTPUT
+             CL_DEBUG_CLF
+             CL_DEBUG_GCC_GIMPLE
+             CL_DEBUG_GCC_TREE
+             CL_DEBUG_LOCATION
+             CL_DEBUG_LOOP_SCAN
+             CL_DEBUG_POINTS_TO
+             CL_DEBUG_VAR_KILLER
+             CL_EASY_TIMER
+             CL_MSG_SQUEEZE_REPEATS
+             CLPLUG_SILENT
+             DEBUG_CL_FACTORY)
+
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
     exit 1
@@ -30,6 +48,56 @@ EOF
     exit 1
 }
 
+# Tests if the option is set and updates the value if necessary:
+option_set() {
+  if [[ -z $1 ]]; then
+    return 1;             # Not set.
+  fi
+
+  # Obtaining the value of the option:
+  eval "OPTION_VALUE=\$$1"
+  OPTION_VALUE="$(echo $OPTION_VALUE | tr [:upper:] [:lower:])"
+
+  case $OPTION_VALUE in
+    "on" | "true")
+      OPTION_VALUE=1
+      return 0;;
+
+    "off" | "false")
+      OPTION_VALUE=0
+      return 0;;
+
+    # NOTE - maximum debug value currently supported is: 4
+    "0" | "1" | "2" | "3" | "4" )
+      return 0;;
+    
+    *)
+      return 1;;          # Something unknown ->> ignoring.
+  esac
+}
+
+# Prepares the CL in correspondence with user's environment settings:
+prepare_CL_environment() {
+  # Restores the default environment first:
+  if [[ -f "$CL_CONFIG_FILE.default" ]]; then
+    cp "$CL_CONFIG_FILE.default" "$CL_CONFIG_FILE"
+  else
+    return
+  fi
+
+  # Sets the new environment. If the user's environment is clear, than it does
+  # nothing...
+  # NOTE: Do not break the sed line below, the regular expression can be highly
+  #       error prone, thanks!
+  for option in "${CL_SETTINGS[@]}"; do
+    if option_set $option; then
+      sed -r -i -e 's/(#define[[:space:]]+)('$option')([[:space:]]+)([[:digit:]])/\1\2\3'$OPTION_VALUE'/g' "$CL_CONFIG_FILE"
+    fi
+  done
+
+  return 
+}
+
 test 1 = "$#" || usage
 
 status_update() {
@@ -47,8 +115,17 @@ test -x "$HOST" \
 # try to run CLANG_HOST
 "$HOST" --version || die "unable to run clang: $HOST --version"
 
+# Prepare the environment for the compilation:
+prepare_CL_environment
+
+# Turn the NDEBUG off if requested:
+# NOTE: '$' is intentionally missing before 'CL_DEBUG'
+if option_set CL_DEBUG && test $OPTION_VALUE -eq 1; then
+  CL_DEBUG_STRING="-D CL_DEBUG=ON";
+fi
+
 status_update "Trying to build Code Listener"
-$MAKE -C cl CMAKE="cmake -D CLANG_HOST='$HOST' -D ENABLE_LLVM=ON" \
+$MAKE -C cl CMAKE="cmake -D CLANG_HOST='$HOST' -D ENABLE_LLVM=ON $CL_DEBUG_STRING" \
     || die "failed to build Code Listener"
 
 build_analyzer() {

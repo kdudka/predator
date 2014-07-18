@@ -26,6 +26,32 @@ die() {
     exit 1
 }
 
+usage() {
+    printf "Usage: %s GCC_HOST\n" "$SELF" >&2
+    cat >&2 << EOF
+
+    Use this script to (re)build Predator and/or Forester against an arbitrary
+    build of host GCC.  The host GCC needs to be built with the support for GCC
+    plug-ins.  The recommended version of host GCC is 4.9.0 but Predator can be
+    loaded also into older versions of GCC (plug-ins are supported since 4.5.0).
+    For host GCC 4.6.x and older, please use the compatibility patches in the
+    build-aux directory.
+
+    GCC_HOST is a gcc(1) executable file that is built with the support for
+    GCC plug-ins.  The most common location of the system GCC is /usr/bin/gcc.
+    If you have multiple versions of gcc installed on the system, it can be
+    something like /usr/bin/gcc-4.9.0.  You can also provide a local build of
+    GCC, e.g.  /home/bob/gcc-4.9.0/bin/gcc.  Please avoid setting GCC_HOST to
+    a ccache, distcc, or another GCC wrapper.  Such setups are not supported
+    yet.
+
+    On some Linux distributions you need to install an optional package (e.g.
+    gcc-plugin-devel on Fedora) in order to be able to build GCC plug-ins.
+
+EOF
+    exit 1
+}
+
 # Tests if the option is set and updates the value if necessary:
 option_set() {
   if [[ -z $1 ]]; then
@@ -76,32 +102,6 @@ prepare_CL_environment() {
   return 
 }
 
-usage() {
-    printf "Usage: %s GCC_HOST\n" "$SELF" >&2
-    cat >&2 << EOF
-
-    Use this script to (re)build Predator and/or Forester against an arbitrary
-    build of host GCC.  The host GCC needs to be built with the support for GCC
-    plug-ins.  The recommended version of host GCC is 4.9.0 but Predator can be
-    loaded also into older versions of GCC (plug-ins are supported since 4.5.0).
-    For host GCC 4.6.x and older, please use the compatibility patches in the
-    build-aux directory.
-
-    GCC_HOST is a gcc(1) executable file that is built with the support for
-    GCC plug-ins.  The most common location of the system GCC is /usr/bin/gcc.
-    If you have multiple versions of gcc installed on the system, it can be
-    something like /usr/bin/gcc-4.9.0.  You can also provide a local build of
-    GCC, e.g.  /home/bob/gcc-4.9.0/bin/gcc.  Please avoid setting GCC_HOST to
-    a ccache, distcc, or another GCC wrapper.  Such setups are not supported
-    yet.
-
-    On some Linux distributions you need to install an optional package (e.g.
-    gcc-plugin-devel on Fedora) in order to be able to build GCC plug-ins.
-
-EOF
-    exit 1
-}
-
 test 1 = "$#" || usage
 
 status_update() {
@@ -129,7 +129,7 @@ status_update "Nuking working directory"
 $MAKE distclean \
     || die "'$MAKE distclean' has failed"
 
-# Prepare the environment for the compilation:
+# Prepare the CL environment for the compilation:
 prepare_CL_environment
 
 # Turn the NDEBUG off if requested:
