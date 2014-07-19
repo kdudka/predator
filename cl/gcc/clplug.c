@@ -67,6 +67,7 @@
 
 #include <function.h>
 #include <gimple.h>
+#include <cp/cp-tree.h>     // Has to be included before <toplev.h>
 #include <input.h>
 #include <real.h>
 #include <toplev.h>
@@ -636,6 +637,15 @@ static void read_specific_type(struct cl_type *clt, tree type)
             break;
 
         case RECORD_TYPE:
+            // FIXME: Handle the RECORD_TYPE for pointer to data member and
+            //        pointer to data member function!!
+            // FIXME: The API has change in some version of gcc above 4.5.0 to
+            //        'TYPE_PTRMEM_P(node)' ->> conditional compilation will be
+            //        needed.
+            if (TYPE_PTR_TO_MEMBER_P(type)) {
+                CL_BREAK_IF("RECORD_TYPE not correctly handled");
+            }
+
             clt->code = CL_TYPE_STRUCT;
             dig_record_type(clt, type);
             break;
