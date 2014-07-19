@@ -747,11 +747,8 @@ static enum cl_scope_e get_decl_scope(tree t)
 
             case TRANSLATION_UNIT_DECL:
             case NAMESPACE_DECL:
-                break;
-
             case RECORD_TYPE:
-                CL_WARN_UNHANDLED_EXPR(ctx, "RECORD_TYPE)");
-                return CL_SCOPE_STATIC;
+                break;
 
             default:
                 CL_BREAK_IF("unhandled declaration context");
