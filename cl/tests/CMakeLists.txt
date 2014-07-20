@@ -398,6 +398,8 @@ add_gcc_adapt_test($cc1plus C++ 13 Using-declaration-03)
 add_gcc_adapt_test($cc1plus C++ 23 Native-type-bool)
 add_gcc_adapt_test($cc1plus C++ 24 Functions-overloading)
 add_gcc_adapt_test($cc1plus C++ 25 Functions-arguments-default-values)
+add_gcc_adapt_test($cc1plus C++ 26 Constant-expressions)
+add_gcc_adapt_test($cc1plus C++ 27 Constant-function-arguments)
 
 
 # debugging helpers
