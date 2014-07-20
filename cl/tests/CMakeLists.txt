@@ -223,8 +223,8 @@ macro(add_gcc_adapt_test compiler dir id name)
     set(cmd "${cmd} -fplugin=${VK_PLUG}")
     set(cmd "${cmd} -fplugin-arg-libchk_var_killer-dump-pp")
     set(cmd "${cmd} -fplugin-arg-libchk_var_killer-verbose=1")
-    
-    
+
+
     if ("${compiler}" STREQUAL "cc1plus")
         add_test_wrap("g++-adapter-test-of-${dir}/${id}" "${cmd}")
     else()
@@ -400,6 +400,7 @@ add_gcc_adapt_test($cc1plus C++ 24 Functions-overloading)
 add_gcc_adapt_test($cc1plus C++ 25 Functions-arguments-default-values)
 add_gcc_adapt_test($cc1plus C++ 26 Constant-expressions)
 add_gcc_adapt_test($cc1plus C++ 27 Constant-function-arguments)
+add_gcc_adapt_test($cc1plus C++ 28 Default-initializations)
 
 
 # debugging helpers
