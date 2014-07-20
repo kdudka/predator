@@ -628,6 +628,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->code = CL_TYPE_VOID;
             break;
 
+        case REFERENCE_TYPE:
         case POINTER_TYPE:
             clt->code = CL_TYPE_PTR;
             clt->item_cnt = 1;
@@ -679,13 +680,6 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->code = CL_TYPE_FNC;
             clt->size = 0;
             dig_fnc_type(clt, type);
-            break;
-
-        case REFERENCE_TYPE:
-            // FIXME: it comes only on 32bit build of gcc (seems vararg related)
-            // NOTE:  This type of node will be most probably used for C++.
-            clt->code = CL_TYPE_UNKNOWN;
-            CL_WARN_UNHANDLED_EXPR(type, "REFERENCE_TYPE");
             break;
 
         case INTEGER_TYPE:
