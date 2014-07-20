@@ -43,8 +43,13 @@
 #   define ENABLE_CHECKING 0
 #endif
 
+#ifdef GCC_HOST_4_9_OR_NEWER
+  // Newer versions of gcc require this header file to be included before
+  // <toplev.h> and before <diagnostic.h>.
+  #include <cp/cp-tree.h>
+#endif
+
 #include <coretypes.h>
-#include <cp/cp-tree.h> // Has to be included before <toplev.h> & <diagnostic.h>
 #include <diagnostic.h>
 #include <ggc.h>
 #include <hashtab.h>
@@ -68,6 +73,12 @@
 
 #include <function.h>
 #include <gimple.h>
+
+#ifndef GCC_HOST_4_9_OR_NEWER
+  // Older versions of gcc require this header file to be included here -
+  // before <toplev.> and after previous header files.
+  #include <cp/cp-tree.h>
+#endif
 #include <input.h>
 #include <real.h>
 #include <toplev.h>
