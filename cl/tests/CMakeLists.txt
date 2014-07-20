@@ -402,6 +402,11 @@ add_gcc_adapt_test($cc1plus C++ 26 Constant-expressions)
 add_gcc_adapt_test($cc1plus C++ 27 Constant-function-arguments)
 add_gcc_adapt_test($cc1plus C++ 28 Default-initializations)
 add_gcc_adapt_test($cc1plus C++ 29 Zero-and-value-initializations)
+add_gcc_adapt_test($cc1plus C++ 30 Direct-initializations)
+add_gcc_adapt_test($cc1plus C++ 31 Copy-initializations)
+add_gcc_adapt_test($cc1plus C++ 32 List-initializations)
+add_gcc_adapt_test($cc1plus C++ 33 Aggregate-initializations)
+add_gcc_adapt_test($cc1plus C++ 34 Reference-initializations)
 
 
 # debugging helpers
