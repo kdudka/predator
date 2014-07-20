@@ -396,6 +396,8 @@ add_gcc_adapt_test($cc1plus C++ 11 Namespace-alias)
 add_gcc_adapt_test($cc1plus C++ 12 Basic-constructors-and-destructors)
 add_gcc_adapt_test($cc1plus C++ 13 Using-declaration-03)
 add_gcc_adapt_test($cc1plus C++ 23 Native-type-bool)
+add_gcc_adapt_test($cc1plus C++ 24 Functions-overloading)
+add_gcc_adapt_test($cc1plus C++ 25 Functions-arguments-default-values)
 
 
 # debugging helpers
