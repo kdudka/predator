@@ -23,8 +23,18 @@
 #include <gcc-plugin.h>
 #include <plugin-version.h>
 
-#if defined(GCCPLUGIN_VERSION_MAJOR) && (GCCPLUGIN_VERSION_MAJOR == 4) && (GCCPLUGIN_VERSION_MINOR >= 9)
-#   define GCC_HOST_4_9_OR_NEWER
+// Sets the GCC_PLUGIN_VERSION, which is similar to GCC's GCCPLUGIN_VERSION, but
+// we distinguishes between PATCHLEVELs also and do not redefine it, to avoid
+// some nasty preprocessing errors.
+// NOTE: GCC_VERSION macro is not suitable, because it currently indicates the
+//       version of GCC used to compile current GCC, which we're being compiled
+//       by. (Apparently, we need to go deeper... :))
+#ifndef GCCPLUGIN_VERSION
+#   define GCC_PLUGIN_VERSION 0
+#else
+#   define GCC_PLUGIN_VERSION (GCCPLUGIN_VERSION_MAJOR * 10000 \
+                               + GCCPLUGIN_VERSION_MINOR * 100 \
+                               + GCCPLUGIN_VERSION_PATCHLEVEL)
 #endif
 
 #include <cl/code_listener.h>
@@ -43,7 +53,8 @@
 #   define ENABLE_CHECKING 0
 #endif
 
-#ifdef GCC_HOST_4_9_OR_NEWER
+// FIXME: Find the correct version where the change occurred!
+#if GCC_PLUGIN_VERSION >= 40900
   // Newer versions of gcc require this header file to be included before
   // <toplev.h> and before <diagnostic.h>.
   #include <cp/cp-tree.h>
@@ -57,7 +68,8 @@
 // this include has to be before <gcc/function.h>; otherwise it will NOT compile
 #include <tm.h>
 
-#ifdef GCC_HOST_4_9_OR_NEWER
+// Test for GCC plugin of 4.9.0 version:
+#if GCC_PLUGIN_VERSION >= 40900
     // required by <gimple.h> when compiling against gcc-4.9.0 plug-in headers
 #   include <alias.h>
 #   include <basic-block.h>
@@ -74,17 +86,19 @@
 #include <function.h>
 #include <gimple.h>
 
-#ifndef GCC_HOST_4_9_OR_NEWER
+// FIXME: Find the correct version where the change occurred!
+#if GCC_PLUGIN_VERSION < 40900
   // Older versions of gcc require this header file to be included here -
   // before <toplev.> and after previous header files.
   #include <cp/cp-tree.h>
 #endif
+
 #include <input.h>
 #include <real.h>
 #include <toplev.h>
 #include <tree-pass.h>
 
-#ifdef GCC_HOST_4_9_OR_NEWER
+#if GCC_PLUGIN_VERSION >= 40900
     // required when compiling against gcc-4.9.0 plug-in headers
 #   include <gimple-iterator.h>
 #   include <gimple-walk.h>
@@ -663,14 +677,14 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
             break;
 
+        // FIXME: Handle the RECORD_TYPE for pointer to data member and
+        //        pointer to data member function!!
+        // FIXME: Find the correct version where the API was changed!
+        // NOTE:  Because the GCCPLUGIN_VERSION was introduced lately, it is
+        //        possible that other solution would have to be found.
+        //        Currently, this limits the usage to gcc 4.5.0 & 4.9.0 only!!
         case RECORD_TYPE:
-            // FIXME: Handle the RECORD_TYPE for pointer to data member and
-            //        pointer to data member function!!
-            // FIXME: The API has change in some version of gcc above 4.5.0 to
-            //        'TYPE_PTRMEM_P(node)' ->> conditional compilation will be
-            //        needed.
-            // FIXME: Use finer refinement and find the exact version of change.
-#ifdef GCC_HOST_4_9_OR_NEWER
+#if GCC_PLUGIN_VERSION >= 40900
             if (TYPE_PTRMEM_P(type)) {
                 CL_BREAK_IF("RECORD_TYPE not correctly handled");
             }
@@ -679,7 +693,6 @@ static void read_specific_type(struct cl_type *clt, tree type)
                 CL_BREAK_IF("RECORD_TYPE not correctly handled");
             }
 #endif
-
             clt->code = CL_TYPE_STRUCT;
             dig_record_type(clt, type);
             break;
@@ -699,6 +712,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
 
         // Separate case for debugging purposes only, will be probably merged
         // with FUNCTION_TYPE case later.
+        // FIXME: Merge with FUNCTION_TYPE!
         case METHOD_TYPE:
             clt->code = CL_TYPE_FNC;
             clt->size = 0;
@@ -1511,7 +1525,7 @@ static void handle_stmt_call_args(gimple stmt)
 
 static void handle_stmt_call(gimple stmt, struct gimple_walk_data *data)
 {
-#ifdef GCC_HOST_4_9_OR_NEWER
+#if GCC_PLUGIN_VERSION >= 40900
     if (gimple_call_internal_p(stmt)) {
         internal_fn code = gimple_call_internal_fn(stmt);
         CL_WARN_UNHANDLED_WITH_LOC(gimple_location(stmt),
@@ -1982,7 +1996,7 @@ static unsigned int cl_pass_execute(void)
     return 0;
 }
 
-#ifdef GCC_HOST_4_9_OR_NEWER
+#if GCC_PLUGIN_VERSION >= 40900
 static struct pass_data cl_pass_data;
 struct cl_pass_str: public opt_pass {
     cl_pass_str():
@@ -2072,7 +2086,7 @@ static void cl_regcb(const char *name) {
     // the structure changes between versions of GCCs, so we do not use initials
     cl_pass.type = GIMPLE_PASS;
     cl_pass.name = "clplug";
-#ifndef GCC_HOST_4_9_OR_NEWER
+#if GCC_PLUGIN_VERSION < 40900
     cl_pass.execute = cl_pass_execute;
 #endif
     cl_pass.properties_required = PROP_cfg | PROP_gimple_any;
