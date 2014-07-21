@@ -744,8 +744,18 @@ static enum cl_scope_e get_decl_scope(tree t)
                 return CL_SCOPE_FUNCTION;
 
             case TRANSLATION_UNIT_DECL:
+                break;
+
+            // Unnamed (anonymous) namespace ->> CL_SCOPE_STATIC
+            // Named namespace ->> CL_SCOPE_GLOBAL
             case NAMESPACE_DECL:
+                break;
+
+            // Used for context of function members declarations/definitions. By
+            // default, context is CL_SCOPE_GLOBAL, unless the composite type
+            // has been declared/defined inside an unnamed namespace:
             case RECORD_TYPE:
+            case UNION_TYPE:
                 break;
 
             default:
