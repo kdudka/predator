@@ -407,6 +407,7 @@ add_gcc_adapt_test($cc1plus C++ 31 Copy-initializations)
 add_gcc_adapt_test($cc1plus C++ 32 List-initializations)
 add_gcc_adapt_test($cc1plus C++ 33 Aggregate-initializations)
 add_gcc_adapt_test($cc1plus C++ 34 Reference-initializations)
+add_gcc_adapt_test($cc1plus C++ 35 Address-of-overloaded-function)
 
 
 # debugging helpers
