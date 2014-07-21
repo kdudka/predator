@@ -31,6 +31,7 @@ RUN="$GDB --quiet --args $CC1_HOST \"$1\" \
     -I$topdir/include/predator-builtins -DPREDATOR \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra $GCC_PARAMS \
+    -D_GNU_SOURCE \
     -fplugin=$GCC_PLUG \
     -fplugin-arg-libchk_var_killer-dump-pp \
     -fplugin-arg-libchk_var_killer-verbose=1"
