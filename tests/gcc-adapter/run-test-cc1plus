@@ -9,13 +9,17 @@ if [[ $# -lt 1 ]]; then
 fi
 
 SOURCE_FILE="$1"
-
 shift 1
 
-echo "$SOURCE_FILE" | grep ".*\.cc$"
+echo "$SOURCE_FILE" | grep -e ".*\.cc$"
 
 if [[ $? -eq 0 ]]; then
-  GCC_PARAMS="-std=c++98"
+  echo "$*" | grep -e "-std="
+
+  # Add the -std= parameter only if it would not conflict with 'gcc-options':
+  if [[ $? -ne 0 ]]; then
+    GCC_PARAMS="-std=c++98"
+  fi
 fi
 
 export GCC_PROG_NAME="cc1plus"      # Internal naming of g++ inside the gcc.
