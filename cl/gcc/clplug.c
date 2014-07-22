@@ -658,10 +658,10 @@ static void read_specific_type(struct cl_type *clt, tree type)
         // FIXME: Merge with POINTER_TYPE after we making sure the predicates
         //        below ALWAYS holds!
         case OFFSET_TYPE:
-#ifdef TYPE_PTR_TO_MEMBER_P
-            CL_BREAK_IF(!TYPE_PTR_TO_MEMBER_P(type));
-#else
+#if GCC_PLUGIN_VERSION >= 40900
             CL_BREAK_IF(!TYPE_PTRMEM_P(type));
+#else
+            CL_BREAK_IF(!TYPE_PTR_TO_MEMBER_P(type));
 #endif
             clt->code = CL_TYPE_PTR;
             clt->item_cnt = 1;
@@ -669,7 +669,6 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
             break;
 
-        case REFERENCE_TYPE:
         case POINTER_TYPE:
             clt->code = CL_TYPE_PTR;
             clt->item_cnt = 1;
@@ -794,7 +793,6 @@ static enum cl_scope_e get_decl_scope(tree t)
                 return CL_SCOPE_FUNCTION;
 
             case TRANSLATION_UNIT_DECL:
-            case NAMESPACE_DECL:
                 break;
 
             // Unnamed (anonymous) namespace ->> CL_SCOPE_STATIC
