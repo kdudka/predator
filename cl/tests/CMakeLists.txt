@@ -410,6 +410,9 @@ add_gcc_adapt_test($cc1plus C++ 34 Reference-initializations)
 add_gcc_adapt_test($cc1plus C++ 35 Address-of-overloaded-function)
 add_gcc_adapt_test($cc1plus C++ 36 Function-member-declaration-context)
 add_gcc_adapt_test($cc1plus C++ 37 Malloc-and-free)
+add_gcc_adapt_test($cc1plus C++ 38 New-and-delete-fundamental-types)
+add_gcc_adapt_test($cc1plus C++ 39 New-and-delete-arrays)
+add_gcc_adapt_test($cc1plus C++ 40 New-and-delete-composite-types)
 
 
 # debugging helpers
