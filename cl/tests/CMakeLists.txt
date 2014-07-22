@@ -413,6 +413,7 @@ add_gcc_adapt_test($cc1plus C++ 37 Malloc-and-free)
 add_gcc_adapt_test($cc1plus C++ 38 New-and-delete-fundamental-types)
 add_gcc_adapt_test($cc1plus C++ 39 New-and-delete-arrays)
 add_gcc_adapt_test($cc1plus C++ 40 New-and-delete-composite-types)
+add_gcc_adapt_test($cc1plus C++ 41 POD-class-types)
 
 
 # debugging helpers
