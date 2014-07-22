@@ -628,6 +628,21 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->code = CL_TYPE_VOID;
             break;
 
+        // Same as POINTER_TYPE for our purposes.
+        // FIXME: Merge with POINTER_TYPE after we making sure the predicates
+        //        below ALWAYS holds!
+        case OFFSET_TYPE:
+#ifdef TYPE_PTR_TO_MEMBER_P
+            CL_BREAK_IF(!TYPE_PTR_TO_MEMBER_P(type));
+#else
+            CL_BREAK_IF(!TYPE_PTRMEM_P(type));
+#endif
+            clt->code = CL_TYPE_PTR;
+            clt->item_cnt = 1;
+            clt->items = CL_ZNEW(struct cl_type_item);
+            clt->items[0].type = /* recursion */ add_type_if_needed(type);
+            break;
+
         case REFERENCE_TYPE:
         case POINTER_TYPE:
             clt->code = CL_TYPE_PTR;
