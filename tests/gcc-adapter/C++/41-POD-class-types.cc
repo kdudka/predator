@@ -49,7 +49,7 @@ struct POD_S {
   }
 };
 
-struct POD_U {
+union POD_U {
   char c;
   wchar_t wc;
   bool b;
@@ -61,11 +61,11 @@ struct POD_U {
   enum basic_enum e;
 
   void *void_ptr;
-  struct POD_U *this_ptr;
+  union POD_U *this_ptr;
   char POD_U::* c_ptr;
   void (*func_ptr)(...);
 
-  struct POD_U func()
+  union POD_U func()
   {
     return *this_ptr;
   }
