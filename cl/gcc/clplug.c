@@ -188,6 +188,20 @@ extern void print_gimple_stmt(FILE *, gimple, int, int);
     CL_DEBUG_TREE(expr); \
 } while (0)
 
+/*
+ * Compatibility section, which creates workarounds for the changing API of GCC
+ * plugins.
+ */
+
+// Either this macro is defined and therefore is the C++11 support for rvalues
+// or it is not and then every REFERENCE_TYPE is taken as lvalue reference.
+#ifndef TYPE_REF_IS_RVALUE
+  #define TYPE_REF_IS_RVALUE(NODE) false
+#endif
+
+// // // // // // // // // // // // // // // // // // // // // // // // // // //
+
+
 // name of the plug-in given by gcc during initialization
 static const char *plugin_base_name = "???";
 static const char *plugin_name = "[uninitialized]";
@@ -511,6 +525,7 @@ static void read_base_type(struct cl_type *clt, tree type)
     // store sizeof
     clt->size = get_type_sizeof(type);
     clt->is_unsigned = TYPE_UNSIGNED(type);
+    clt->is_const = TYPE_READONLY(type);
 
     tree name = TYPE_NAME(type);
     if (NULL_TREE == name)
@@ -646,6 +661,25 @@ static void dig_fnc_type(struct cl_type *clt, tree t)
     }
 }
 
+static inline enum cl_ptr_type_e get_ptr_type(enum tree_code code,
+                                              tree type)
+{
+  switch (code) {
+    case REFERENCE_TYPE:
+      if (TYPE_REF_IS_RVALUE(type))
+        return CL_PTR_TYPE_RVALUE_REF;
+      else
+        return CL_PTR_TYPE_LVALUE_REF;
+
+    case OFFSET_TYPE:
+    case POINTER_TYPE:
+      return CL_PTR_TYPE_BASIC;
+
+    default:
+      return CL_PTR_TYPE_NOT_PTR;
+  }
+}
+
 static void read_specific_type(struct cl_type *clt, tree type)
 {
     enum tree_code code = TREE_CODE(type);
@@ -669,8 +703,13 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
             break;
 
+        // FIXME: REFERENCE_TYPE comes only on 32bit build of gcc
+        //        (seems vararg related)
+        // NOTE:  Does this still needs fixing?
+        case REFERENCE_TYPE:
         case POINTER_TYPE:
             clt->code = CL_TYPE_PTR;
+            clt->ptr_type = get_ptr_type(code, type);
             clt->item_cnt = 1;
             clt->items = CL_ZNEW(struct cl_type_item);
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
@@ -713,12 +752,6 @@ static void read_specific_type(struct cl_type *clt, tree type)
         // with FUNCTION_TYPE case later.
         // FIXME: Merge with FUNCTION_TYPE!
         case METHOD_TYPE:
-            clt->code = CL_TYPE_FNC;
-            clt->size = 0;
-            dig_fnc_type(clt, type);
-            break;
-
-        case FUNCTION_TYPE:
             clt->code = CL_TYPE_FNC;
             clt->size = 0;
             dig_fnc_type(clt, type);
@@ -1592,7 +1625,9 @@ static /* const */ struct cl_type builtin_bool_type = {
     C99_FIELD(item_cnt   ) 0,
     C99_FIELD(items      ) NULL,
     C99_FIELD(array_size ) 0,
-    C99_FIELD(is_unsigned) false
+    C99_FIELD(is_unsigned) false,
+    C99_FIELD(is_const   ) false,
+    C99_FIELD(ptr_type   ) CL_PTR_TYPE_NOT_PTR
 };
 
 static void handle_stmt_cond_br(gimple stmt, const char *then_label,
