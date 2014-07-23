@@ -426,6 +426,7 @@ add_gcc_adapt_test(cc1plus C++ 41 New-and-delete-nothrow)
 add_gcc_adapt_test(cc1plus C++ 42 POD-class-types)
 add_gcc_adapt_test(cc1plus C++ 43 Pointer-to-data-member)
 add_gcc_adapt_test(cc1plus C++ 44 Lvalue-references-vs-constant-pointers)
+add_gcc_adapt_test(cc1plus C++ 45 Classes-and-access-specifiers)
 
 
 # debugging helpers
