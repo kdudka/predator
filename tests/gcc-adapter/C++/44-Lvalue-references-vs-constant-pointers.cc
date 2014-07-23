@@ -1,4 +1,4 @@
-/* Test case: #40
+/* Test case: #44
  *
  * Copyright NOTE: This file is part of predator's test suite.
  *
@@ -16,45 +16,16 @@
  * along with predator. If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <new>
-
-struct S {
-  char c;
-  char *p_c;
-
-  S() : c(42), p_c(&c)
-  {
-    (*p_c)++;
-    return;
-  }
-};
-
-union U {
-  int i;
-  int *p_i;
-
-  U() : p_i(NULL)
-  {
-    return;
-  }
-
-  U(int value) : i(value)
-  {
-    return;
-  }
-};
-
-// // // // // // // // // // // // // // // // // // // // // // // // // // //
-
 int main()
 {
-  struct S *p_s = new S();
-  union U *p_u1 = new U();
-  union U *p_u2 = new U(89);
+  int i = 42;
+  int &i_ref = i;
+  const int &const_i_ref = i;
+  i_ref = 89;
 
-  delete p_s;
-  delete p_u1;
-  delete p_u2;
+  int n = const_i_ref;
+  int *const p_n = &n;
+  *p_n = 90;
 
   return 0;
 }

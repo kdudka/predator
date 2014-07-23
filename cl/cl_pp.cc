@@ -122,7 +122,9 @@ ClPrettyPrint::ClPrettyPrint(const char *fileName, bool showTypes):
     printingArgDecls_(false)
 {
     if (&out_ == &std::cout) {
+#if CL_DEBUG_COLORED_OUTPUT
         ColorConsole::enableForTerm(STDOUT_FILENO);
+#endif
         return;
     }
 

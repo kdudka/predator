@@ -16,7 +16,7 @@ GCC_PLUG='@VK_PLUG@'
 GCC_HOST='@GCC_HOST@'
 
 # attempt to make
-make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D CL_DEBUG=ON' || exit $?
+make -C "$CL_DIR" -s -j 'CMAKE=cmake -D CL_DEBUG=ON' || exit $?
 
 # initial checks
 find_gcc_host
@@ -34,7 +34,8 @@ RUN="$GDB --quiet --args $CC1_HOST \"$1\" \
     -D_GNU_SOURCE \
     -fplugin=$GCC_PLUG \
     -fplugin-arg-libchk_var_killer-dump-pp \
-    -fplugin-arg-libchk_var_killer-verbose=1"
+    -fplugin-arg-libchk_var_killer-verbose=1 \
+    -fplugin-arg-libchk_var_killer-dump-types"
 
 RUN="`printf "%s\n" "$RUN" | tr --squeeze-repeats ' '`"
 printf "\n\n%s\n\n" "$RUN"

@@ -16,58 +16,31 @@
  * along with predator. If not, see <http://www.gnu.org/licenses/>.
  */
 
-// NOTE: Static data members are not covered in this test.
-
 #include <new>
 
-enum basic_enum {
-  ZERO = 0,
-  FIRST,
-  SECOND,
-  THIRD
-};
-
-struct POD_S {
+struct S {
   char c;
-  wchar_t wc;
-  bool b;
-  unsigned u;
-  long l;
-  double d;
-  double d_array[42];
+  char *p_c;
 
-  enum basic_enum e;
-
-  void *void_ptr;
-  struct POD_S *this_ptr;
-  char POD_S::* c_ptr;
-  void (*func_ptr)(...);
-
-  struct POD_S func()
+  S() : c(42), p_c(&c)
   {
-    return *this_ptr;
+    (*p_c)++;
+    return;
   }
 };
 
-struct POD_U {
-  char c;
-  wchar_t wc;
-  bool b;
-  unsigned u;
-  long l;
-  double d;
-  double d_array[42];
+union U {
+  int i;
+  int *p_i;
 
-  enum basic_enum e;
-
-  void *void_ptr;
-  struct POD_U *this_ptr;
-  char POD_U::* c_ptr;
-  void (*func_ptr)(...);
-
-  struct POD_U func()
+  U() : p_i(NULL)
   {
-    return *this_ptr;
+    return;
+  }
+
+  U(int value) : i(value)
+  {
+    return;
   }
 };
 
@@ -75,19 +48,25 @@ struct POD_U {
 
 int main()
 {
-  // Not initialized:
-  POD_S *S_ptr = new POD_S;
-  POD_U *U_ptr = new POD_U;
+  struct S *p_s = new (std::nothrow) S();
+  union U *p_u = new (std::nothrow) U(89);
 
-  delete S_ptr;
-  delete U_ptr;
+  if (p_s == NULL || p_u == NULL) {
+    return 1;       // We're ignoring memory leaks.
+  }
 
-  // Default-initialized:
-  S_ptr = new POD_S();
-  U_ptr = new POD_U();
+  struct S *p_s_array = new (std::nothrow) S[10];
+  union U *p_u_array = new (std::nothrow) U[5];
 
-  delete S_ptr;
-  delete U_ptr;
+  if (p_s_array == NULL || p_u_array == NULL) {
+    return 2;       // We're ignoring memory leaks.
+  }
+
+  delete p_s;
+  delete p_u;
+
+  delete[] p_s_array;
+  delete[] p_u_array;
 
   return 0;
 }

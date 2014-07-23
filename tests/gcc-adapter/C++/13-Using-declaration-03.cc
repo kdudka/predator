@@ -35,15 +35,15 @@ namespace B {
 void func() {
     int i;
     // using B::i;       // error: i declared twice
- 
+
     void f(char);
     using B::f;       // OK: f(char), f(int), f(double) are overloads
     f(3.5);           // calls B::f(double)
- 
+
     using B::g;
     g('a');           // calls B::g(char)
     struct g g1;      // declares g1 to have type struct B::g
- 
+
     using B::x;
     using A::x;       // OK: hides struct B::x
     x = 99;           // assigns to A::x

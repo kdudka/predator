@@ -23,7 +23,7 @@ const unsigned ARRAY_SIZE = 10;
 struct S {
   void *ptr;
 
-  S() : ptr(0)
+  S() : ptr(NULL)
   {
     return;
   }

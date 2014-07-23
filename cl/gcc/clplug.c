@@ -23,8 +23,18 @@
 #include <gcc-plugin.h>
 #include <plugin-version.h>
 
-#if defined(GCCPLUGIN_VERSION_MAJOR) && (GCCPLUGIN_VERSION_MAJOR == 4) && (GCCPLUGIN_VERSION_MINOR >= 9)
-#   define GCC_HOST_4_9_OR_NEWER
+// Sets the GCC_PLUGIN_VERSION, which is similar to GCC's GCCPLUGIN_VERSION, but
+// we distinguishes between PATCHLEVELs also and do not redefine it, to avoid
+// some nasty preprocessing errors.
+// NOTE: GCC_VERSION macro is not suitable, because it currently indicates the
+//       version of GCC used to compile current GCC, which we're being compiled
+//       by. (Apparently, we need to go deeper... :))
+#ifndef GCCPLUGIN_VERSION
+#   define GCC_PLUGIN_VERSION 0
+#else
+#   define GCC_PLUGIN_VERSION (GCCPLUGIN_VERSION_MAJOR * 10000 \
+                               + GCCPLUGIN_VERSION_MINOR * 100 \
+                               + GCCPLUGIN_VERSION_PATCHLEVEL)
 #endif
 
 #include <cl/code_listener.h>
@@ -43,14 +53,23 @@
 #   define ENABLE_CHECKING 0
 #endif
 
+// FIXME: Find the correct version where the change occurred!
+#if GCC_PLUGIN_VERSION >= 40900
+  // Newer versions of gcc require this header file to be included before
+  // <toplev.h> and before <diagnostic.h>.
+  #include <cp/cp-tree.h>
+#endif
+
 #include <coretypes.h>
+#include <diagnostic.h>
 #include <ggc.h>
 #include <hashtab.h>
 
 // this include has to be before <gcc/function.h>; otherwise it will NOT compile
 #include <tm.h>
 
-#ifdef GCC_HOST_4_9_OR_NEWER
+// Test for GCC plugin of 4.9.0 version:
+#if GCC_PLUGIN_VERSION >= 40900
     // required by <gimple.h> when compiling against gcc-4.9.0 plug-in headers
 #   include <alias.h>
 #   include <basic-block.h>
@@ -66,13 +85,20 @@
 
 #include <function.h>
 #include <gimple.h>
-#include <cp/cp-tree.h>
+
+// FIXME: Find the correct version where the change occurred!
+#if GCC_PLUGIN_VERSION < 40900
+  // Older versions of gcc require this header file to be included here -
+  // before <toplev.> and after previous header files.
+  #include <cp/cp-tree.h>
+#endif
+
 #include <input.h>
 #include <real.h>
 #include <toplev.h>
 #include <tree-pass.h>
 
-#ifdef GCC_HOST_4_9_OR_NEWER
+#if GCC_PLUGIN_VERSION >= 40900
     // required when compiling against gcc-4.9.0 plug-in headers
 #   include <gimple-iterator.h>
 #   include <gimple-walk.h>
@@ -161,6 +187,25 @@ extern void print_gimple_stmt(FILE *, gimple, int, int);
     CL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), "unhandled " what); \
     CL_DEBUG_TREE(expr); \
 } while (0)
+
+/*
+ * Compatibility section, which creates workarounds for the changing API of GCC
+ * plugins.
+ */
+
+// Either this macro is defined and therefore is the C++11 support for rvalues
+// or it is not and then every REFERENCE_TYPE is taken as lvalue reference.
+#ifndef TYPE_REF_IS_RVALUE
+  #define TYPE_REF_IS_RVALUE(NODE) false
+#endif
+
+// Name of the TYPE_PTR_TO_MEMBER_P has changed in newer versions of GCC.
+#ifndef TYPE_PTRMEM_P
+  #define TYPE_PTRMEM_P(NODE) TYPE_PTR_TO_MEMBER_P(NODE)
+#endif
+
+// // // // // // // // // // // // // // // // // // // // // // // // // // //
+
 
 // name of the plug-in given by gcc during initialization
 static const char *plugin_base_name = "???";
@@ -259,9 +304,9 @@ static bool preserve_ec;
 static int cnt_errors;
 static int cnt_warnings;
 
-static void dummy_printer(const char *msg)
+static void dummy_printer(const char *msg __attribute__((unused)))
 {
-    (void) msg;
+  return;
 }
 
 static void trivial_printer(const char *msg)
@@ -485,6 +530,7 @@ static void read_base_type(struct cl_type *clt, tree type)
     // store sizeof
     clt->size = get_type_sizeof(type);
     clt->is_unsigned = TYPE_UNSIGNED(type);
+    clt->is_const = TYPE_READONLY(type);
 
     tree name = TYPE_NAME(type);
     if (NULL_TREE == name)
@@ -620,6 +666,25 @@ static void dig_fnc_type(struct cl_type *clt, tree t)
     }
 }
 
+static inline enum cl_ptr_type_e get_ptr_type(enum tree_code code,
+                                              tree type)
+{
+  switch (code) {
+      case REFERENCE_TYPE:
+          if (TYPE_REF_IS_RVALUE(type))
+              return CL_PTR_TYPE_RVALUE_REF;
+          else
+              return CL_PTR_TYPE_LVALUE_REF;
+
+      case OFFSET_TYPE:
+      case POINTER_TYPE:
+          return CL_PTR_TYPE_BASIC;
+
+      default:
+          return CL_PTR_TYPE_NOT_PTR;
+  }
+}
+
 static void read_specific_type(struct cl_type *clt, tree type)
 {
     enum tree_code code = TREE_CODE(type);
@@ -629,23 +694,20 @@ static void read_specific_type(struct cl_type *clt, tree type)
             break;
 
         // Same as POINTER_TYPE for our purposes.
-        // FIXME: Merge with POINTER_TYPE after we making sure the predicates
-        //        below ALWAYS holds!
         case OFFSET_TYPE:
-#ifdef TYPE_PTR_TO_MEMBER_P
-            CL_BREAK_IF(!TYPE_PTR_TO_MEMBER_P(type));
-#else
             CL_BREAK_IF(!TYPE_PTRMEM_P(type));
-#endif
-            clt->code = CL_TYPE_PTR;
-            clt->item_cnt = 1;
-            clt->items = CL_ZNEW(struct cl_type_item);
-            clt->items[0].type = /* recursion */ add_type_if_needed(type);
-            break;
+            // Make sure the basetype is processed and added to Code Storage:
+            // (We're ignoring the return value, the type will be hashed.)
+            (void) add_bare_type_if_needed(TYPE_OFFSET_BASETYPE(type));
+            // NOTE: Fall through to POINTER_TYPE!
 
         case REFERENCE_TYPE:
+            // FIXME: REFERENCE_TYPE comes only on 32bit build of gcc
+            //        (seems vararg related)
+            // NOTE:  Does this still needs fixing?
         case POINTER_TYPE:
             clt->code = CL_TYPE_PTR;
+            clt->ptr_type = get_ptr_type(code, type);
             clt->item_cnt = 1;
             clt->items = CL_ZNEW(struct cl_type_item);
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
@@ -654,18 +716,12 @@ static void read_specific_type(struct cl_type *clt, tree type)
         case RECORD_TYPE:
             // FIXME: Handle the RECORD_TYPE for pointer to data member and
             //        pointer to data member function!!
-            // FIXME: The API has change in some version of gcc above 4.5.0 to
-            //        'TYPE_PTRMEM_P(node)' ->> conditional compilation will be
-            //        needed.
-            // FIXME: Use finer refinement and find the exact version of change.
-#ifdef TYPE_PTR_TO_MEMBER_P
-            if (TYPE_PTR_TO_MEMBER_P(type))
-                CL_BREAK_IF("RECORD_TYPE not correctly handled");
-#else
-            if (TYPE_PTRMEM_P(type))
-                CL_BREAK_IF("RECORD_TYPE not correctly handled");
+#ifndef NDEBUG
+            if (TYPE_PTRMEM_P(type)) {
+                CL_BREAK_IF("Pointer to member function not handled\n"
+                            "in RECORD_TYPE in 'read_specific_type()' !!");
+            }
 #endif
-
             clt->code = CL_TYPE_STRUCT;
             dig_record_type(clt, type);
             break;
@@ -682,9 +738,10 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
             clt->array_size = get_fixed_array_size(type);
             break;
-        
+
         // Separate case for debugging purposes only, will be probably merged
         // with FUNCTION_TYPE case later.
+        // FIXME: Merge with FUNCTION_TYPE!
         case METHOD_TYPE:
             clt->code = CL_TYPE_FNC;
             clt->size = 0;
@@ -720,7 +777,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
 
         default:
             clt->code = CL_TYPE_UNKNOWN;
-            CL_BREAK_IF("read_specific_type() got something special");
+            CL_BREAK_IF("'read_specific_type()' got something special");
     };
 }
 
@@ -754,6 +811,7 @@ static enum cl_scope_e get_decl_scope(tree t)
     tree ctx = DECL_CONTEXT(t);
     if (ctx) {
         enum tree_code code = TREE_CODE(ctx);
+
         switch (code) {
             case FUNCTION_DECL:
                 return CL_SCOPE_FUNCTION;
@@ -769,6 +827,8 @@ static enum cl_scope_e get_decl_scope(tree t)
             // Used for context of function members declarations/definitions. By
             // default, context is CL_SCOPE_GLOBAL, unless the composite type
             // has been declared/defined inside an unnamed namespace:
+            // FIXME: We need a finer approach for data member visibility in
+            //        C++, possibly orthogonal to the SCOPE.
             case RECORD_TYPE:
             case UNION_TYPE:
                 break;
@@ -1489,7 +1549,7 @@ static void handle_stmt_call_args(gimple stmt)
 
 static void handle_stmt_call(gimple stmt, struct gimple_walk_data *data)
 {
-#ifdef GCC_HOST_4_9_OR_NEWER
+#if GCC_PLUGIN_VERSION >= 40900
     if (gimple_call_internal_p(stmt)) {
         internal_fn code = gimple_call_internal_fn(stmt);
         CL_WARN_UNHANDLED_WITH_LOC(gimple_location(stmt),
@@ -1558,7 +1618,9 @@ static /* const */ struct cl_type builtin_bool_type = {
     C99_FIELD(item_cnt   ) 0,
     C99_FIELD(items      ) NULL,
     C99_FIELD(array_size ) 0,
-    C99_FIELD(is_unsigned) false
+    C99_FIELD(is_unsigned) false,
+    C99_FIELD(is_const   ) false,
+    C99_FIELD(ptr_type   ) CL_PTR_TYPE_NOT_PTR
 };
 
 static void handle_stmt_cond_br(gimple stmt, const char *then_label,
@@ -1725,11 +1787,10 @@ static void handle_stmt_resx(gimple stmt, struct gimple_walk_data *data)
 
 // callback of walk_gimple_seq declared in <gimple.h>
 static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
-                                bool *subtree_done,
+                                bool *subtree_done __attribute__((unused)),
                                 struct walk_stmt_info *info)
 {
     gimple stmt = gsi_stmt(*iter);
-    (void) subtree_done;
 
     struct gimple_walk_data *data = (struct gimple_walk_data *) info->info;
 
@@ -1960,7 +2021,7 @@ static unsigned int cl_pass_execute(void)
     return 0;
 }
 
-#ifdef GCC_HOST_4_9_OR_NEWER
+#if GCC_PLUGIN_VERSION >= 40900
 static struct pass_data cl_pass_data;
 struct cl_pass_str: public opt_pass {
     cl_pass_str():
@@ -1994,11 +2055,9 @@ static struct register_pass_info cl_plugin_pass = {
 };
 
 // callback called as last (if the plug-in does not crash before)
-static void cb_finish(void *gcc_data, void *user_data)
+static void cb_finish(void *gcc_data __attribute__((unused)),
+                      void *user_data __attribute__((unused)))
 {
-    (void) gcc_data;
-    (void) user_data;
-
     if (error_detected())
         CL_WARN("some errors already detected, "
                 "additional passes will be skipped");
@@ -2029,19 +2088,15 @@ static void cb_finish(void *gcc_data, void *user_data)
 }
 
 // callback called on start of input file processing
-static void cb_start_unit(void *gcc_data, void *user_data)
+static void cb_start_unit(void *gcc_data __attribute__((unused)),
+                          void *user_data __attribute__((unused)))
 {
-    (void) gcc_data;
-    (void) user_data;
-
     cl->file_open(cl, LOCATION_FILE(input_location));
 }
 
-static void cb_finish_unit(void *gcc_data, void *user_data)
+static void cb_finish_unit(void *gcc_data __attribute__((unused)),
+                           void *user_data __attribute__((unused)))
 {
-    (void) gcc_data;
-    (void) user_data;
-
     cl->file_close(cl);
 }
 
@@ -2050,7 +2105,7 @@ static void cl_regcb(const char *name) {
     // the structure changes between versions of GCCs, so we do not use initials
     cl_pass.type = GIMPLE_PASS;
     cl_pass.name = "clplug";
-#ifndef GCC_HOST_4_9_OR_NEWER
+#if GCC_PLUGIN_VERSION < 40900
     cl_pass.execute = cl_pass_execute;
 #endif
     cl_pass.properties_required = PROP_cfg | PROP_gimple_any;

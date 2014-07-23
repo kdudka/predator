@@ -1,4 +1,4 @@
-/* Test case: #40
+/* Test case: #43
  *
  * Copyright NOTE: This file is part of predator's test suite.
  *
@@ -19,26 +19,15 @@
 #include <new>
 
 struct S {
-  char c;
-  char *p_c;
-
-  S() : c(42), p_c(&c)
-  {
-    (*p_c)++;
-    return;
-  }
-};
-
-union U {
+  int S::* i_ptr;
   int i;
-  int *p_i;
 
-  U() : p_i(NULL)
+  S() : i_ptr(NULL), i('#')
   {
     return;
   }
 
-  U(int value) : i(value)
+  S(const int i) : i_ptr(NULL), i(i)
   {
     return;
   }
@@ -48,13 +37,18 @@ union U {
 
 int main()
 {
-  struct S *p_s = new S();
-  union U *p_u1 = new U();
-  union U *p_u2 = new U(89);
+  S s = S('$');               // C++98 initialization.
 
-  delete p_s;
-  delete p_u1;
-  delete p_u2;
+  s.i_ptr = &S::i;            // Set the pointer to have offset of 'i'.
 
-  return 0;
+  int &i_ref = s.*s.i_ptr;    // Try to get address of 'i' of object 's'.
+
+  // Pointer arithmetics should be now used to obtain the address of 'c' via
+  // 'x', so it can be changed. We're making sure 2 pointers are not added
+  // together, which is syntax error. If so, predator/forester should be able to
+  // catch this problem and OFFSET_TYPE handling would have to be fixed.
+  // FIXME: Find a way to test this possible issue right in the Code Listener.
+  i_ref = '@';
+
+  return i_ref;
 }
