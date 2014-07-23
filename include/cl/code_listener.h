@@ -206,6 +206,17 @@ struct cl_type_item {
 };
 
 /**
+ * used for specialization of CL_TYPE_PTR, which can also represent both C++
+ * lvalue and rvalue references.
+ */
+enum cl_ptr_type_e {
+    CL_PTR_TYPE_NOT_PTR,      /**< to avoid accidental misuse bugs */
+    CL_PTR_TYPE_BASIC,
+    CL_PTR_TYPE_LVALUE_REF,
+    CL_PTR_TYPE_RVALUE_REF    /**< used only when C++11 code is processed */
+};
+
+/**
  * type definition available for each operand.  It can be also returned
  * by cl_get_type_fnc_t function (useful to traverse type definition
  * recursively).
@@ -269,6 +280,18 @@ struct cl_type {
      * makes sense mainly for integral types, but should be always initialized
      */
     bool                                is_unsigned;
+
+    /**
+     * indicates if the type has a 'const' modificator set or not.
+     */
+    bool                                is_const;
+
+    /**
+     * type of pointer (enumeration) to represent possible usage of C++
+     * references ->> use makes sense only when C++ analysis is also supported
+     * and when 'code' == CL_TYPE_PTR
+     */
+    enum cl_ptr_type_e                  ptr_type;
 };
 
 /**
