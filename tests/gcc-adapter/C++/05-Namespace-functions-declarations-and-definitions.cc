@@ -57,7 +57,7 @@ char ns::bar()
 int main()
 {
   long l = ns::bar() + foobar();
-  
+
   l *= ns::func();
 
   return 0;
