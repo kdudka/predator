@@ -199,6 +199,11 @@ extern void print_gimple_stmt(FILE *, gimple, int, int);
   #define TYPE_REF_IS_RVALUE(NODE) false
 #endif
 
+// Name of the TYPE_PTR_TO_MEMBER_P has changed in newer versions of GCC.
+#ifndef TYPE_PTRMEM_P
+  #define TYPE_PTRMEM_P(NODE) TYPE_PTR_TO_MEMBER_P(NODE)
+#endif
+
 // // // // // // // // // // // // // // // // // // // // // // // // // // //
 
 
@@ -665,18 +670,18 @@ static inline enum cl_ptr_type_e get_ptr_type(enum tree_code code,
                                               tree type)
 {
   switch (code) {
-    case REFERENCE_TYPE:
-      if (TYPE_REF_IS_RVALUE(type))
-        return CL_PTR_TYPE_RVALUE_REF;
-      else
-        return CL_PTR_TYPE_LVALUE_REF;
+      case REFERENCE_TYPE:
+          if (TYPE_REF_IS_RVALUE(type))
+              return CL_PTR_TYPE_RVALUE_REF;
+          else
+              return CL_PTR_TYPE_LVALUE_REF;
 
-    case OFFSET_TYPE:
-    case POINTER_TYPE:
-      return CL_PTR_TYPE_BASIC;
+      case OFFSET_TYPE:
+      case POINTER_TYPE:
+          return CL_PTR_TYPE_BASIC;
 
-    default:
-      return CL_PTR_TYPE_NOT_PTR;
+      default:
+          return CL_PTR_TYPE_NOT_PTR;
   }
 }
 
@@ -689,24 +694,14 @@ static void read_specific_type(struct cl_type *clt, tree type)
             break;
 
         // Same as POINTER_TYPE for our purposes.
-        // FIXME: Merge with POINTER_TYPE after we making sure the predicates
-        //        below ALWAYS holds!
         case OFFSET_TYPE:
-#if GCC_PLUGIN_VERSION >= 40900
             CL_BREAK_IF(!TYPE_PTRMEM_P(type));
-#else
-            CL_BREAK_IF(!TYPE_PTR_TO_MEMBER_P(type));
-#endif
-            clt->code = CL_TYPE_PTR;
-            clt->item_cnt = 1;
-            clt->items = CL_ZNEW(struct cl_type_item);
-            clt->items[0].type = /* recursion */ add_type_if_needed(type);
-            break;
+            // NOTE: Fall through to POINTER_TYPE!
 
-        // FIXME: REFERENCE_TYPE comes only on 32bit build of gcc
-        //        (seems vararg related)
-        // NOTE:  Does this still needs fixing?
         case REFERENCE_TYPE:
+            // FIXME: REFERENCE_TYPE comes only on 32bit build of gcc
+            //        (seems vararg related)
+            // NOTE:  Does this still needs fixing?
         case POINTER_TYPE:
             clt->code = CL_TYPE_PTR;
             clt->ptr_type = get_ptr_type(code, type);
@@ -715,20 +710,13 @@ static void read_specific_type(struct cl_type *clt, tree type)
             clt->items[0].type = /* recursion */ add_type_if_needed(type);
             break;
 
-        // FIXME: Handle the RECORD_TYPE for pointer to data member and
-        //        pointer to data member function!!
-        // FIXME: Find the correct version where the API was changed!
-        // NOTE:  Because the GCCPLUGIN_VERSION was introduced lately, it is
-        //        possible that other solution would have to be found.
-        //        Currently, this limits the usage to gcc 4.5.0 & 4.9.0 only!!
         case RECORD_TYPE:
-#if GCC_PLUGIN_VERSION >= 40900
+            // FIXME: Handle the RECORD_TYPE for pointer to data member and
+            //        pointer to data member function!!
+#ifndef NDEBUG
             if (TYPE_PTRMEM_P(type)) {
-                CL_BREAK_IF("RECORD_TYPE not correctly handled");
-            }
-#else
-            if (TYPE_PTR_TO_MEMBER_P(type)) {
-                CL_BREAK_IF("RECORD_TYPE not correctly handled");
+                CL_BREAK_IF("Pointer to member function not handled\n"
+                            "in RECORD_TYPE in 'read_specific_type()' !!");
             }
 #endif
             clt->code = CL_TYPE_STRUCT;
@@ -786,7 +774,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
 
         default:
             clt->code = CL_TYPE_UNKNOWN;
-            CL_BREAK_IF("read_specific_type() got something special");
+            CL_BREAK_IF("'read_specific_type()' got something special");
     };
 }
 
@@ -836,6 +824,8 @@ static enum cl_scope_e get_decl_scope(tree t)
             // Used for context of function members declarations/definitions. By
             // default, context is CL_SCOPE_GLOBAL, unless the composite type
             // has been declared/defined inside an unnamed namespace:
+            // FIXME: We need a finer approach for data member visibility in
+            //        C++, possibly orthogonal to the SCOPE.
             case RECORD_TYPE:
             case UNION_TYPE:
                 break;
