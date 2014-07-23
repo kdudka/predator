@@ -304,9 +304,9 @@ static bool preserve_ec;
 static int cnt_errors;
 static int cnt_warnings;
 
-static void dummy_printer(const char *msg)
+static void dummy_printer(const char *msg __attribute__((unused)))
 {
-    (void) msg;
+  return;
 }
 
 static void trivial_printer(const char *msg)
@@ -1784,11 +1784,10 @@ static void handle_stmt_resx(gimple stmt, struct gimple_walk_data *data)
 
 // callback of walk_gimple_seq declared in <gimple.h>
 static tree cb_walk_gimple_stmt(gimple_stmt_iterator *iter,
-                                bool *subtree_done,
+                                bool *subtree_done __attribute__((unused)),
                                 struct walk_stmt_info *info)
 {
     gimple stmt = gsi_stmt(*iter);
-    (void) subtree_done;
 
     struct gimple_walk_data *data = (struct gimple_walk_data *) info->info;
 
@@ -2053,11 +2052,9 @@ static struct register_pass_info cl_plugin_pass = {
 };
 
 // callback called as last (if the plug-in does not crash before)
-static void cb_finish(void *gcc_data, void *user_data)
+static void cb_finish(void *gcc_data __attribute__((unused)),
+                      void *user_data __attribute__((unused)))
 {
-    (void) gcc_data;
-    (void) user_data;
-
     if (error_detected())
         CL_WARN("some errors already detected, "
                 "additional passes will be skipped");
@@ -2088,19 +2085,15 @@ static void cb_finish(void *gcc_data, void *user_data)
 }
 
 // callback called on start of input file processing
-static void cb_start_unit(void *gcc_data, void *user_data)
+static void cb_start_unit(void *gcc_data __attribute__((unused)),
+                          void *user_data __attribute__((unused)))
 {
-    (void) gcc_data;
-    (void) user_data;
-
     cl->file_open(cl, LOCATION_FILE(input_location));
 }
 
-static void cb_finish_unit(void *gcc_data, void *user_data)
+static void cb_finish_unit(void *gcc_data __attribute__((unused)),
+                           void *user_data __attribute__((unused)))
 {
-    (void) gcc_data;
-    (void) user_data;
-
     cl->file_close(cl);
 }
 
