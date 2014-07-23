@@ -661,6 +661,9 @@ static void read_specific_type(struct cl_type *clt, tree type)
         // Same as POINTER_TYPE for our purposes.
         case OFFSET_TYPE:
             CL_BREAK_IF(!TYPE_PTRMEM_P(type));
+            // Make sure the basetype is processed and added to Code Storage:
+            // (We're ignoring the return value, the type will be hashed.)
+            (void) add_bare_type_if_needed(TYPE_OFFSET_BASETYPE(type));
             // NOTE: Fall through to POINTER_TYPE!
 
         case REFERENCE_TYPE:
