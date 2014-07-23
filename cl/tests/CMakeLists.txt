@@ -428,6 +428,7 @@ add_gcc_adapt_test(cc1plus C++ 43 Pointer-to-data-member)
 add_gcc_adapt_test(cc1plus C++ 44 Lvalue-references-vs-constant-pointers)
 add_gcc_adapt_test(cc1plus C++ 45 Classes-and-access-specifiers)
 add_gcc_adapt_test(cc1plus C++ 46 Classes-this-pointer)
+add_gcc_adapt_test(cc1plus C++ 47 Nested-classes-and-nested-typedefs)
 
 
 # debugging helpers
