@@ -1,4 +1,4 @@
-/* Test case: #42
+/* Test case: #43
  *
  * Copyright NOTE: This file is part of predator's test suite.
  *
