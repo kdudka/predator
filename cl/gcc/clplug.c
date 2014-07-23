@@ -168,6 +168,11 @@ extern void print_gimple_stmt(FILE *, gimple, int, int);
 #   define TYPE_REF_IS_RVALUE(NODE) false
 #endif
 
+// Name of the TYPE_PTR_TO_MEMBER_P has changed in newer versions of GCC.
+#ifndef TYPE_PTRMEM_P
+  #define TYPE_PTRMEM_P(NODE) TYPE_PTR_TO_MEMBER_P(NODE)
+#endif
+
 // name of the plug-in given by gcc during initialization
 static const char *plugin_base_name = "???";
 static const char *plugin_name = "[uninitialized]";
@@ -654,19 +659,9 @@ static void read_specific_type(struct cl_type *clt, tree type)
             break;
 
         // Same as POINTER_TYPE for our purposes.
-        // FIXME: Merge with POINTER_TYPE after we making sure the predicates
-        //        below ALWAYS holds!
         case OFFSET_TYPE:
-#ifdef TYPE_PTR_TO_MEMBER_P
-            CL_BREAK_IF(!TYPE_PTR_TO_MEMBER_P(type));
-#else
             CL_BREAK_IF(!TYPE_PTRMEM_P(type));
-#endif
-            clt->code = CL_TYPE_PTR;
-            clt->item_cnt = 1;
-            clt->items = CL_ZNEW(struct cl_type_item);
-            clt->items[0].type = /* recursion */ add_type_if_needed(type);
-            break;
+            // NOTE: Fall through to POINTER_TYPE!
 
         case REFERENCE_TYPE:
             // FIXME: REFERENCE_TYPE comes only on 32bit build of gcc
@@ -683,18 +678,11 @@ static void read_specific_type(struct cl_type *clt, tree type)
         case RECORD_TYPE:
             // FIXME: Handle the RECORD_TYPE for pointer to data member and
             //        pointer to data member function!!
-            // FIXME: The API has change in some version of gcc above 4.5.0 to
-            //        'TYPE_PTRMEM_P(node)' ->> conditional compilation will be
-            //        needed.
-            // FIXME: Use finer refinement and find the exact version of change.
-#ifdef TYPE_PTR_TO_MEMBER_P
-            if (TYPE_PTR_TO_MEMBER_P(type))
-                CL_BREAK_IF("RECORD_TYPE not correctly handled");
-#else
+#ifndef NDEBUG
             if (TYPE_PTRMEM_P(type))
-                CL_BREAK_IF("RECORD_TYPE not correctly handled");
+                CL_BREAK_IF("pointer to member function not handled"
+                            "in RECORD_TYPE in read_specific_type()");
 #endif
-
             clt->code = CL_TYPE_STRUCT;
             dig_record_type(clt, type);
             break;
