@@ -422,9 +422,10 @@ add_gcc_adapt_test(cc1plus C++ 37 Malloc-and-free)
 add_gcc_adapt_test(cc1plus C++ 38 New-and-delete-fundamental-types)
 add_gcc_adapt_test(cc1plus C++ 39 New-and-delete-arrays)
 add_gcc_adapt_test(cc1plus C++ 40 New-and-delete-composite-types)
-add_gcc_adapt_test(cc1plus C++ 41 POD-class-types)
-add_gcc_adapt_test(cc1plus C++ 42 Pointer-to-data-member)
-add_gcc_adapt_test(cc1plus C++ 43 Lvalue-references-vs-constant-pointers)
+add_gcc_adapt_test(cc1plus C++ 41 New-and-delete-nothrow)
+add_gcc_adapt_test(cc1plus C++ 42 POD-class-types)
+add_gcc_adapt_test(cc1plus C++ 43 Pointer-to-data-member)
+add_gcc_adapt_test(cc1plus C++ 44 Lvalue-references-vs-constant-pointers)
 
 
 # debugging helpers

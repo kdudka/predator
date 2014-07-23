@@ -1,4 +1,4 @@
-/* Test case: #42
+/* Test case: #41
  *
  * Copyright NOTE: This file is part of predator's test suite.
  *
@@ -19,15 +19,26 @@
 #include <new>
 
 struct S {
-  int S::* i_ptr;
-  int i;
+  char c;
+  char *p_c;
 
-  S() : i_ptr(NULL), i('#')
+  S() : c(42), p_c(&c)
+  {
+    (*p_c)++;
+    return;
+  }
+};
+
+union U {
+  int i;
+  int *p_i;
+
+  U() : p_i(NULL)
   {
     return;
   }
 
-  S(const int i) : i_ptr(NULL), i(i)
+  U(int value) : i(value)
   {
     return;
   }
@@ -37,18 +48,25 @@ struct S {
 
 int main()
 {
-  S s = S('$');               // C++98 initialization.
+  struct S *p_s = new (std::nothrow) S();
+  union U *p_u = new (std::nothrow) U(89);
 
-  s.i_ptr = &S::i;            // Set the pointer to have offset of 'i'.
+  if (p_s == NULL || p_u == NULL) {
+    return 1;       // We're ignoring memory leaks.
+  }
 
-  int &i_ref = s.*s.i_ptr;    // Try to get address of 'i' of object 's'.
+  struct S *p_s_array = new (std::nothrow) S[10];
+  union U *p_u_array = new (std::nothrow) U[5];
 
-  // Pointer arithmetics should be now used to obtain the address of 'c' via
-  // 'x', so it can be changed. We're making sure 2 pointers are not added
-  // together, which is syntax error. If so, predator/forester should be able to
-  // catch this problem and OFFSET_TYPE handling would have to be fixed.
-  // FIXME: Find a way to test this possible issue right in the Code Listener.
-  i_ref = '@';
+  if (p_s_array == NULL || p_u_array == NULL) {
+    return 2;       // We're ignoring memory leaks.
+  }
 
-  return i_ref;
+  delete p_s;
+  delete p_u;
+
+  delete[] p_s_array;
+  delete[] p_u_array;
+
+  return 0;
 }
