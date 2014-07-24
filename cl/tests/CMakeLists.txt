@@ -426,6 +426,14 @@ add_gcc_adapt_test(cc1plus C++ 41 New-and-delete-nothrow)
 add_gcc_adapt_test(cc1plus C++ 42 POD-class-types)
 add_gcc_adapt_test(cc1plus C++ 43 Pointer-to-data-member)
 add_gcc_adapt_test(cc1plus C++ 44 Lvalue-references-vs-constant-pointers)
+add_gcc_adapt_test(cc1plus C++ 45 Classes-and-access-specifiers)
+add_gcc_adapt_test(cc1plus C++ 46 Classes-this-pointer)
+add_gcc_adapt_test(cc1plus C++ 47 Nested-classes-and-nested-typedefs)
+add_gcc_adapt_test(cc1plus C++ 48 Cv-qualifiers-with-classes-and-methods)
+add_gcc_adapt_test(cc1plus C++ 49 Static-specifiers-with-classes)
+add_gcc_adapt_test(cc1plus C++ 50 Copy-constructors)
+add_gcc_adapt_test(cc1plus C++ 51 Conversion-constructors)
+add_gcc_adapt_test(cc1plus C++ 52 Data-members-access)
 
 
 # debugging helpers
