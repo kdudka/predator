@@ -431,6 +431,7 @@ add_gcc_adapt_test(cc1plus C++ 46 Classes-this-pointer)
 add_gcc_adapt_test(cc1plus C++ 47 Nested-classes-and-nested-typedefs)
 add_gcc_adapt_test(cc1plus C++ 48 Cv-qualifiers-with-classes-and-methods)
 add_gcc_adapt_test(cc1plus C++ 49 Static-specifiers-with-classes)
+add_gcc_adapt_test(cc1plus C++ 50 Copy-constructors)
 
 
 # debugging helpers
