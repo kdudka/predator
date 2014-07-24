@@ -203,7 +203,7 @@ macro(add_gcc_adapt_test compiler dir id name)
     endif()
 
     set(cmd "${cmd} -o /dev/null")
-    set(cmd "${cmd} -I${cl_SOURCE_DIR}")
+    set(cmd "${cmd} -I${PRED_INCL_DIR}")
 
     set(cmd "${cmd} -DPREDATOR")
     set(cmd "${cmd} -DNDEBUG")
