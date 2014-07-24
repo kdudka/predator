@@ -74,7 +74,7 @@ int main()
   std::free((void *) p_S2);
 
   std::free((void *) p_long);
-  p_long = NULL;
+  p_long = 0x0;
 
   return 0;
 }

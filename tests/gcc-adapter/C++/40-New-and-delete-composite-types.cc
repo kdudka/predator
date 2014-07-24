@@ -33,7 +33,7 @@ union U {
   int i;
   int *p_i;
 
-  U() : p_i(NULL)
+  U() : p_i(0x0)
   {
     return;
   }

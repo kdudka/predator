@@ -22,12 +22,12 @@ struct S {
   int S::* i_ptr;
   int i;
 
-  S() : i_ptr(NULL), i('#')
+  S() : i_ptr(0x0), i('#')
   {
     return;
   }
 
-  S(const int i) : i_ptr(NULL), i(i)
+  S(const int i) : i_ptr(0x0), i(i)
   {
     return;
   }

@@ -33,7 +33,7 @@ union U {
   int i;
   int *p_i;
 
-  U() : p_i(NULL)
+  U() : p_i(0x0)
   {
     return;
   }
@@ -51,14 +51,14 @@ int main()
   struct S *p_s = new (std::nothrow) S();
   union U *p_u = new (std::nothrow) U(89);
 
-  if (p_s == NULL || p_u == NULL) {
+  if (p_s == 0x0 || p_u == 0x0) {
     return 1;       // We're ignoring memory leaks.
   }
 
   struct S *p_s_array = new (std::nothrow) S[10];
   union U *p_u_array = new (std::nothrow) U[5];
 
-  if (p_s_array == NULL || p_u_array == NULL) {
+  if (p_s_array == 0x0 || p_u_array == 0x0) {
     return 2;       // We're ignoring memory leaks.
   }
 
