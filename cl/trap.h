@@ -68,3 +68,17 @@ extern const char *GIT_SHA1;
 #else /* NDEBUG */
 #   define CL_BREAK_IF(cond) do { } while (0)
 #endif
+
+/**
+ * specialized version of CL_BREAK_IF that does not stops the execution of the
+ * compilation, it only prints a Code Listener warning to the user
+ * @note the macro has exactly opposite semantic than std::assert
+ * @note for comfortable source code browsing, it's recommended to tweak your
+ * editor, in order to highlight CL_WARN_IF as as keyword
+ */
+#   define CL_WARN_IF(cond, warning) do {                                   \
+        if (!(cond))                                                        \
+            break;                                                          \
+                                                                            \
+        fprintf(stderr, "%s: warning: %s\n", __FILE__, (warning));          \
+    } while (0)
