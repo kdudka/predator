@@ -433,6 +433,7 @@ add_gcc_adapt_test(cc1plus C++ 48 Cv-qualifiers-with-classes-and-methods)
 add_gcc_adapt_test(cc1plus C++ 49 Static-specifiers-with-classes)
 add_gcc_adapt_test(cc1plus C++ 50 Copy-constructors)
 add_gcc_adapt_test(cc1plus C++ 51 Conversion-constructors)
+add_gcc_adapt_test(cc1plus C++ 52 Data-members-access)
 
 
 # debugging helpers
