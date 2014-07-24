@@ -570,11 +570,27 @@ static void dig_record_type(struct cl_type *clt, tree t)
         const enum tree_code code = TREE_CODE(t);
         switch (code) {
             case FIELD_DECL:
+                // non-static data members
                 break;
 
+            case VAR_DECL:
+                // Static data members are not part of the structural type itself.
+                // They will be processed when they are accessed somewhere in the
+                // source code (lazy-evaluation) ->> skip them for now
+                continue;
+
             case TYPE_DECL:
-                // nested type declaration (g++ automatically declares
-                // 'typedef struct S S' inside a struct named S)
+                // 1) g++ implicitly declares the typedef for any class/struct
+                //    or union, like this:
+                //    --------------------
+                //    struct S {};
+                //    typedef struct S S;
+                //    --------------------
+                //    However, this typedef is part of the structural type
+                //    itself.
+                // 2) We're ignoring other typedefs also, they have no usage
+                //    right now, because we process the typedef-ed types
+                //    directly.
                 continue;
 
             default:
@@ -820,9 +836,13 @@ static int field_lookup(tree op, tree field)
 
     tree t = TYPE_FIELDS(type);
     int i;
-    for (i = 0; t; t = TREE_CHAIN(t), ++i)
+    for (i = 0; t; t = TREE_CHAIN(t)) {
         if (t == field)
             return i;
+
+        if (FIELD_DECL == TREE_CODE(t))
+            ++i;
+    }
 
     // not found
     CL_BREAK_IF("field_lookup() has failed");
