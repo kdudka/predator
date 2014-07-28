@@ -873,9 +873,13 @@ static int field_lookup(tree op, tree field)
 
     tree t = TYPE_FIELDS(type);
     int i;
-    for (i = 0; t; t = TREE_CHAIN(t), ++i)
+    for (i = 0; t; t = TREE_CHAIN(t)) {
         if (t == field)
             return i;
+
+        if (FIELD_DECL == TREE_CODE(t))
+          i++;
+    }
 
     // not found
     CL_BREAK_IF("field_lookup() has failed");
