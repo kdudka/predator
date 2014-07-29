@@ -25,6 +25,61 @@
 #   define HAVE_ISATTY 1
 #endif
 
+#if HAVE_ISATTY
+#include <fstream>
+#include <sstream>
+namespace {
+
+int readTracerPid()
+{
+    int tracerPid = 0;
+
+    std::fstream inStr("/proc/self/status", std::ios::in);
+    if (inStr) {
+        // find the corresponding line in the table
+        std::string token;
+        while (inStr >> token && (token != "TracerPid:"))
+            ;
+
+        inStr >> tracerPid;
+        inStr.close();
+    }
+
+    return tracerPid;
+}
+
+bool cgdbAttached()
+{
+    const int tracerPid = readTracerPid();
+    if (!tracerPid)
+        // we are not being traced
+        return false;
+
+    // read the command-line arguments of the process that traces us
+    std::ostringstream ss;
+    ss << "/proc/" << tracerPid << "/cmdline";
+    std::fstream inStr(ss.str(), std::ios::in);
+    if (!inStr)
+        return false;
+
+    // match the pattern that cgdb uses to run gdb
+    const char pattern[] = "gdb\0--nw";
+    for (unsigned i = 0U; i < sizeof pattern; ++i) {
+        char c;
+        if (inStr >> c && (c == pattern[i]))
+            continue;
+
+        // pattern mismatch
+        inStr.close();
+        return false;
+    }
+
+    inStr.close();
+    return /* found */ true;
+}
+} // namespace
+#endif
+
 namespace ssd {
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -44,7 +99,7 @@ bool ColorConsole::isEnabled()
 void ColorConsole::enableForTerm(int fd)
 {
 #if HAVE_ISATTY
-    enabled_ = isatty(fd);
+    enabled_ = isatty(fd) && !cgdbAttached();
 #endif
 }
 
