@@ -41,13 +41,6 @@ bool ColorConsole::isEnabled()
     return enabled_;
 }
 
-void ColorConsole::enableForTerm()
-{
-#if HAVE_ISATTY
-    enabled_ = isatty(STDOUT_FILENO) && isatty(STDERR_FILENO);
-#endif
-}
-
 void ColorConsole::enableForTerm(int fd)
 {
 #if HAVE_ISATTY
@@ -57,16 +50,19 @@ void ColorConsole::enableForTerm(int fd)
 
 void ColorConsole::enableIfCoutIsTerm()
 {
-#if HAVE_ISATTY
-    enabled_ = isatty(STDOUT_FILENO);
-#endif
+    ColorConsole::enableForTerm(STDOUT_FILENO);
 }
 
 void ColorConsole::enableIfCerrIsTerm()
 {
-#if HAVE_ISATTY
-    enabled_ = isatty(STDERR_FILENO);
-#endif
+    ColorConsole::enableForTerm(STDERR_FILENO);
+}
+
+void ColorConsole::enableForTerm()
+{
+    ColorConsole::enableIfCoutIsTerm();
+    if (enabled_)
+        ColorConsole::enableIfCerrIsTerm();
 }
 
 // /////////////////////////////////////////////////////////////////////////////
