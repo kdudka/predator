@@ -61,6 +61,8 @@ typedef std::vector<Node *>                         TNodeList;
 typedef IdMapper<TObjId, OBJ_INVALID, OBJ_MAX_ID>   TIdMapper;
 typedef std::vector<TIdMapper>                      TIdMapperList;
 
+std::string insnToLabel(const TInsn insn);
+
 /// an abstract base for Node and NodeHandle (externally not much useful)
 class NodeBase {
     protected:

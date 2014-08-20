@@ -29,6 +29,7 @@
 #include "fixed_point.hh"
 #include "glconf.hh"
 #include "symplot.hh"
+#include "symtrace.hh"
 
 #include <cl/cl_msg.hh>
 #include <cl/cldebug.hh>
@@ -192,7 +193,8 @@ void plotInsn(
     // plot the root node
     const TInsn insn = locState.insn->clInsn();
     if (insn)
-        plot.out << LOC_NODE(plot, locIdx) << " [label=" << QUOT(*insn)
+        plot.out << LOC_NODE(plot, locIdx)
+            << " [label=" << QUOT(Trace::insnToLabel(insn))
             << ", tooltip=" << QUOT(insn->loc)
             << ", shape=box, color=blue, fontcolor=blue];\n";
     else
