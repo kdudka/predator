@@ -39,6 +39,7 @@ using FixedPoint::TGenericVarSet;
 using FixedPoint::THeapIdent;
 using FixedPoint::TInsn;
 using FixedPoint::TLocIdx;
+using FixedPoint::TShapeIdx;
 using FixedPoint::TextInsn;
 
 typedef std::vector<int /* uid */>                  TPtrVarList;
@@ -712,6 +713,101 @@ bool tryReplaceCond(
     return /* success */ true;
 }
 
+bool shapeByIter(
+        TShapeIdx                  *pShapeIdx,
+        ShapeProps                 *pProps,
+        const SymHeap              &shOrig,
+        const struct cl_operand    &opDst,
+        const TShapeList           &shapeList)
+{
+    // TODO
+    CL_BREAK_IF("please implement");
+    (void) pShapeIdx;
+    (void) pProps;
+    (void) shOrig;
+    (void) opDst;
+    (void) shapeList;
+    return false;
+}
+
+bool tryReplaceIter(
+        TInsnWriter                *pInsnWriter,
+        const TShapeVarByShape     &varMap,
+        const TLocSet              &locsInOps,
+        const LocalState           &locState,
+        const TLocIdx               loc)
+{
+    using namespace FixedPoint;
+    if (hasKey(locsInOps, loc))
+        // cannot iterate in the "middle" of an operation
+        return false;
+
+    const TInsn insn = locState.insn->clInsn();
+    CL_BREAK_IF(insn->code != CL_INSN_UNOP);
+
+    const struct cl_operand &opDst = insn->operands[0];
+    if (CL_OPERAND_VAR != opDst.code || !isDataPtr(opDst.type))
+        return false;
+
+    const struct cl_operand &opSrc = insn->operands[1];
+    if (CL_OPERAND_VAR != opSrc.code || !isDataPtr(opSrc.type))
+        return false;
+
+    const int varDst = varIdFromOperand(&opDst);
+    const int varSrc = varIdFromOperand(&opSrc);
+    if (varDst != varSrc)
+        // not an in-place iteration on a single variable
+        return false;
+
+    const struct cl_accessor *acSrc = opSrc.accessor;
+    if (opDst.accessor || !acSrc || CL_ACCESSOR_DEREF != acSrc->code)
+        // unsupported use of accessors
+        return false;
+
+    acSrc = acSrc->next;
+    if (CL_ACCESSOR_ITEM != acSrc->code)
+        // unsupported access to member
+        return false;
+
+    const TOffset off = acSrc->type->items[acSrc->data.item.id].offset;
+    TShapeVarId var = -1;
+    ShapeProps props;
+
+    const THeapIdx heapCnt = locState.heapList.size();
+    if (!heapCnt)
+        // no program configurations captured for this location
+        return false;
+
+    for (THeapIdx heapIdx = 0; heapIdx < heapCnt; ++heapIdx) {
+        const SymHeap &sh = locState.heapList[heapIdx];
+        const TShapeList &csList = locState.shapeListByHeapIdx[heapIdx];
+        TShapeIdx shapeIdx;
+        ShapeProps propsNow;
+        if (!shapeByIter(&shapeIdx, &propsNow, sh, opDst, csList))
+            return false;
+
+        const TShapeIdent shapeNow(THeapIdent(loc, heapIdx), shapeIdx);
+
+        const TShapeVarByShape::const_iterator it = varMap.find(shapeNow);
+        if (it == varMap.end())
+            return false;
+
+        const TShapeVarId varNow = it->second;
+        if (!heapIdx) {
+            var = varNow;
+            props = propsNow;
+        }
+        else if (var != varNow || props != propsNow)
+            return false;
+    }
+
+    // TODO
+    (void) off;
+    (void) pInsnWriter;
+    CL_BREAK_IF("please implement");
+    return /* success */ true;
+}
+
 void collectLocsInOps(
         TLocSet                    *pDst,
         const TMatchList           &matchList,
@@ -755,10 +851,26 @@ bool replaceAdtOps(
     const TLocIdx locCnt = progState.size();
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx) {
         const LocalState &locState = progState[locIdx];
-        if (2U == locState.cfgOutEdges.size())
-            // assume CL_INSN_COND
-            tryReplaceCond(pInsnWriter, varMap, progState, locsInOps,
-                    locState, locIdx);
+        const unsigned outEdgesCnt = locState.cfgOutEdges.size();
+        switch (outEdgesCnt) {
+            case 1U:
+                if (locState.insn) {
+                    const TInsn insn = locState.insn->clInsn();
+                    if (insn && CL_INSN_UNOP == insn->code)
+                        tryReplaceIter(pInsnWriter, varMap, locsInOps,
+                                locState, locIdx);
+                }
+                continue;
+
+            case 2U:
+                // assume CL_INSN_COND
+                tryReplaceCond(pInsnWriter, varMap, progState, locsInOps,
+                        locState, locIdx);
+                continue;
+
+            default:
+                continue;
+        }
     }
 
     return /* success */ true;
