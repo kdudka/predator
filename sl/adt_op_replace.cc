@@ -24,6 +24,7 @@
 #include "symtrace.hh"
 
 #include <cl/storage.hh>
+#include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 #include <cl/cl_msg.hh>
 
@@ -52,6 +53,16 @@ TBoolVarId acquireFreshBoolVar(void)
     return ++last;
 }
 
+void initBackTrace(SymBackTrace *bt, TStorRef stor)
+{
+    // XXX: assume main() as the only fnc
+    using namespace CodeStorage;
+    const NameDb::TNameMap &glNames = stor.fncNames.glNames;
+    const NameDb::TNameMap::const_iterator iter = glNames.find("main");
+    if (glNames.end() != iter)
+        bt->pushCall(iter->second, /* loc */ 0);
+}
+
 bool checkIndependency(
         const FootprintMatch       &fm,
         const TProgState           &progState)
@@ -72,13 +83,8 @@ bool checkIndependency(
         const TStorRef stor = sh.stor();
         const TSizeOf psize = stor.types.dataPtrSizeof();
 
-        // XXX: assume main() as the only fnc
         SymBackTrace bt(stor);
-        using namespace CodeStorage;
-        const NameDb::TNameMap &glNames = stor.fncNames.glNames;
-        const NameDb::TNameMap::const_iterator iter = glNames.find("main");
-        if (glNames.end() != iter)
-            bt.pushCall(iter->second, /* loc */ 0);
+        initBackTrace(&bt, stor);
 
         SymProc proc(sh, &bt);
         proc.setLocation(&insn->loc);
@@ -720,14 +726,49 @@ bool shapeByIter(
         const struct cl_operand    &opDst,
         const TShapeList           &shapeList)
 {
-    // TODO
-    CL_BREAK_IF("please implement");
-    (void) pShapeIdx;
-    (void) pProps;
-    (void) shOrig;
-    (void) opDst;
-    (void) shapeList;
-    return false;
+    // resolve the target object
+    SymHeap sh(shOrig);
+    SymBackTrace bt(sh.stor());
+    initBackTrace(&bt, sh.stor());
+    SymProc proc(sh, &bt);
+    const TValId val = proc.valFromOperand(opDst);
+    const TObjId obj = sh.objByAddr(val);
+    CL_BREAK_IF(!sh.isValid(obj));
+
+    const TShapeIdx shapeCnt = shapeList.size();
+    for (TShapeIdx shapeIdx = 0; shapeIdx < shapeCnt; ++shapeIdx) {
+        const Shape &shape = shapeList[shapeIdx];
+        TObjSet shapeObjs;
+        objSetByShape(&shapeObjs, sh, shape);
+        if (!hasKey(shapeObjs, obj))
+            continue;
+
+        *pShapeIdx = shapeIdx;
+        *pProps = shape.props;
+        return true;
+    }
+
+    return /* not found */ false;
+}
+
+void replaceIter(
+        TInsnWriter                *pInsnWriter,
+        const TLocIdx               loc,
+        const char                 *name,
+        const TShapeVarId           var,
+        const struct cl_operand    &opDst)
+{
+    using namespace FixedPoint;
+    std::ostringstream str;
+    str << opDst << " := " << name << "(C" << var << ", " << opDst << ")";
+
+    TGenericVarSet live, kill;
+    live.insert(GenericVar(VL_CONTAINER_VAR, var));
+    const GenericVar varDst(VL_CODE_LISTENER, varIdFromOperand(&opDst));
+    live.insert(varDst);
+    kill.insert(varDst);
+    GenericInsn *insn = new TextInsn(str.str(), live, kill);
+    pInsnWriter->replaceInsn(loc, insn);
 }
 
 bool tryReplaceIter(
@@ -801,10 +842,16 @@ bool tryReplaceIter(
             return false;
     }
 
-    // TODO
-    (void) off;
-    (void) pInsnWriter;
-    CL_BREAK_IF("please implement");
+    const char *name;
+    if (off == props.bOff.next)
+        name = "next";
+    else if (off == props.bOff.prev)
+        name = "prev";
+    else
+        // offset does not match next/prev pointer
+        return false;
+
+    replaceIter(pInsnWriter, loc, name, var, opDst);
     return /* success */ true;
 }
 

@@ -61,7 +61,7 @@ inline bool areComparableTypes(const TObjType clt1, const TObjType clt2)
     if (CL_TYPE_ENUM == code2)
         code2 = CL_TYPE_INT;
 
-    // neeeded for CLSP
+    // needed for CLSP
     if (CL_TYPE_BOOL == code1)
         code1 = CL_TYPE_INT;
     if (CL_TYPE_BOOL == code2)
