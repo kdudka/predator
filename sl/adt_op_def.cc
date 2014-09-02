@@ -296,8 +296,8 @@ OpTemplate* createPop(TplFactory &fact, const EListSide side)
 
     // allocate a DLS that will represent a container shape in our template
     const TObjId dls = fact.createObj(&sh, OK_DLS);
-    const PtrHandle dlsNext(sh, dls, fact.nextAt());
-    const PtrHandle dlsPrev(sh, dls, fact.prevAt());
+    const PtrHandle dlsNext(sh, dls, offNext);
+    const PtrHandle dlsPrev(sh, dls, offPrev);
 
     // chain both objects together such that they represent a linked list
     const TValId regAt = sh.addrOfTarget(reg, TS_REGION, fact.headAt());
