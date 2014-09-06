@@ -22,6 +22,7 @@
 #include "fixed_point_rewrite.hh"
 #include "symproc.hh"
 #include "symtrace.hh"
+#include "symutil.hh"
 
 #include <cl/storage.hh>
 #include <cl/cldebug.hh>
@@ -38,6 +39,7 @@ using FixedPoint::RecordRewriter;
 using FixedPoint::TBoolVarId;
 using FixedPoint::TGenericVarSet;
 using FixedPoint::THeapIdent;
+using FixedPoint::THeapIdx;
 using FixedPoint::TInsn;
 using FixedPoint::TLocIdx;
 using FixedPoint::TShapeIdx;
@@ -851,6 +853,159 @@ bool tryReplaceIter(
     return /* success */ true;
 }
 
+bool checkBound(
+        TShapeIdx                  *pShapeIdx,
+        ETargetSpecifier           *pTs,
+        const SymHeap              &shOrig,
+        const struct cl_operand    &opSrc,
+        const TShapeList           &shapeList)
+{
+    // resolve the value of opSrc
+    SymHeap sh(shOrig);
+    SymBackTrace bt(sh.stor());
+    initBackTrace(&bt, sh.stor());
+    SymProc proc(sh, &bt);
+    const TValId val = proc.valFromOperand(opSrc);
+    if (val == VAL_NULL) {
+        // possibly the empty variant where first()/last() is NULL
+        *pShapeIdx = -1;
+        *pTs = TS_REGION;
+        return true;
+    }
+
+    const ETargetSpecifier ts = sh.targetSpec(val);
+    const TObjId obj = sh.objByAddr(val);
+    CL_BREAK_IF(!sh.isValid(obj));
+
+    const TShapeIdx shapeCnt = shapeList.size();
+    for (TShapeIdx shapeIdx = 0; shapeIdx < shapeCnt; ++shapeIdx) {
+        const Shape &shape = shapeList[shapeIdx];
+        TObjList shapeObjs;
+        objListByShape(&shapeObjs, sh, shape);
+
+        const unsigned objCnt = shapeObjs.size();
+        switch (objCnt) {
+            case 0:
+                CL_BREAK_IF("no objects in container shape");
+                return false;
+
+            case 1:
+                if (obj == shapeObjs.front() && TS_REGION == ts) {
+                    *pTs = TS_REGION;
+                    break;
+                }
+                // fall through!
+
+            default:
+                if (obj == shapeObjs.front() && canPointToFront(ts))
+                    *pTs = TS_FIRST;
+                else if (obj == shapeObjs.back() && canPointToBack(ts))
+                    *pTs = TS_LAST;
+                else
+                    continue;
+        }
+
+        *pShapeIdx = shapeIdx;
+        return true;
+    }
+
+    return /* not found */ false;
+}
+
+void replaceBound(
+        TInsnWriter                *pInsnWriter,
+        const TLocIdx               loc,
+        const char                 *name,
+        const TShapeVarId           var,
+        const struct cl_operand    &opDst)
+{
+    using namespace FixedPoint;
+    std::ostringstream str;
+    str << opDst << " := " << name << "(C" << var << ")";
+
+    // TODO
+    CL_BREAK_IF(opDst.accessor);
+
+    TGenericVarSet live, kill;
+    live.insert(GenericVar(VL_CONTAINER_VAR, var));
+    const GenericVar varDst(VL_CODE_LISTENER, varIdFromOperand(&opDst));
+    kill.insert(varDst);
+    GenericInsn *insn = new TextInsn(str.str(), live, kill);
+    pInsnWriter->replaceInsn(loc, insn);
+}
+
+bool tryReplaceBound(
+        TInsnWriter                *pInsnWriter,
+        const TShapeVarByShape     &varMap,
+        const LocalState           &locState,
+        const TLocIdx               loc)
+{
+    const TInsn insn = locState.insn->clInsn();
+    CL_BREAK_IF(insn->code != CL_INSN_UNOP || insn->subCode != CL_UNOP_ASSIGN);
+
+    const struct cl_operand &opDst = insn->operands[0];
+    const struct cl_operand &opSrc = insn->operands[1];
+    if (!isDataPtr(opDst.type) || !isDataPtr(opSrc.type))
+        // not a pointer assignment
+        return false;
+
+    TShapeVarId var = -1;
+    ETargetSpecifier ts = TS_INVALID;
+    const THeapIdx heapCnt = locState.heapList.size();
+    for (THeapIdx heapIdx = 0; heapIdx < heapCnt; ++heapIdx) {
+        const SymHeap &sh = locState.heapList[heapIdx];
+        const TShapeList &csList = locState.shapeListByHeapIdx[heapIdx];
+        TShapeIdx shapeIdx;
+        ETargetSpecifier tsNow;
+        if (!checkBound(&shapeIdx, &tsNow, sh, opSrc, csList))
+            return false;
+
+        if (TS_REGION == tsNow && -1 == shapeIdx && csList.empty())
+            // the empty variant where first()/last() is NULL
+            continue;
+
+        const TShapeIdent shapeNow(THeapIdent(loc, heapIdx), shapeIdx);
+
+        const TShapeVarByShape::const_iterator it = varMap.find(shapeNow);
+        if (it == varMap.end())
+            return false;
+
+        const TShapeVarId varNow = it->second;
+        if (-1 == var)
+            var = varNow;
+        else if (var != varNow)
+            // container varibale mismatch
+            return false;
+
+        if (TS_REGION == tsNow)
+            // so far it could be either begin() or end()
+            continue;
+
+        if (TS_INVALID == ts)
+            ts = tsNow;
+        else if (ts != tsNow)
+            // begin() vs. end()
+            return false;
+    }
+
+    const char *name;
+    switch (ts) {
+        case TS_FIRST:
+            name = "first";
+            break;
+
+        case TS_LAST:
+            name = "last";
+            break;
+
+        default:
+            return false;
+    }
+
+    replaceBound(pInsnWriter, loc, name, var, opDst);
+    return /* success */ true;
+}
+
 void collectLocsInOps(
         TLocSet                    *pDst,
         const TMatchList           &matchList,
@@ -912,7 +1067,7 @@ bool replaceAdtOps(
                         continue;
 
                     if (!tryReplaceIter(pInsnWriter, varMap, locState, locIdx))
-                        continue;
+                        tryReplaceBound(pInsnWriter, varMap, locState, locIdx);
                 }
                 continue;
 
