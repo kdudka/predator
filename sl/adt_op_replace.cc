@@ -774,14 +774,10 @@ void replaceIter(
 bool tryReplaceIter(
         TInsnWriter                *pInsnWriter,
         const TShapeVarByShape     &varMap,
-        const TLocSet              &locsInOps,
         const LocalState           &locState,
         const TLocIdx               loc)
 {
     using namespace FixedPoint;
-    if (hasKey(locsInOps, loc))
-        // cannot iterate in the "middle" of an operation
-        return false;
 
     const TInsn insn = locState.insn->clInsn();
     CL_BREAK_IF(insn->code != CL_INSN_UNOP);
@@ -903,9 +899,20 @@ bool replaceAdtOps(
             case 1U:
                 if (locState.insn) {
                     const TInsn insn = locState.insn->clInsn();
-                    if (insn && CL_INSN_UNOP == insn->code)
-                        tryReplaceIter(pInsnWriter, varMap, locsInOps,
-                                locState, locIdx);
+                    if (!insn || CL_INSN_UNOP != insn->code)
+                        // not a native unary operation
+                        continue;
+
+                    if (CL_UNOP_ASSIGN != insn->subCode)
+                        // not an assignment instruction
+                        continue;
+
+                    if (hasKey(locsInOps, locIdx))
+                        // cannot iterate in the "middle" of an operation
+                        continue;
+
+                    if (!tryReplaceIter(pInsnWriter, varMap, locState, locIdx))
+                        continue;
                 }
                 continue;
 
