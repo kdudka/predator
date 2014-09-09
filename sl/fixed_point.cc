@@ -791,7 +791,10 @@ bool varAlive(const TVarSet &live, const TVarSet &kill)
 
 void removeDeadCode(GlobalState *pState)
 {
+    bool anyChange;
     do {
+        anyChange = false;
+
         // compute sets live and killed vars per location
         TVarSetByLoc liveVarsPerLoc;
         TVarSetByLoc killVarsPerLoc;
@@ -832,9 +835,10 @@ void removeDeadCode(GlobalState *pState)
 
             // remove the current location from the CFG
             writer.dropInsn(locIdx);
+            anyChange = true;
         }
     }
-    while (simplifyControlFlow(pState));
+    while (anyChange || simplifyControlFlow(pState));
 }
 
 void sl_dump(const TShapeMapper &m)
