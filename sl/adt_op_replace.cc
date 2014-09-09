@@ -445,17 +445,32 @@ struct CondReplaceCtx {
 /// return true if the sets are disjoint and their union contains all heaps
 bool crHeapsCovered(
         const TCondData            &locData,
-        const LocalState           &locState,
+        const TProgState           &progState,
         const TLocIdx               loc)
 {
     using namespace FixedPoint;
 
-    // collect all heaps at location 'loc'
     THeapIdentSet all;
-    const THeapIdx cnt = locState.heapList.size();
-    for (THeapIdx idx = 0; idx < cnt; ++idx) {
-        const THeapIdent heap(loc, idx);
-        all.insert(heap);
+    const TLocIdx locDst = locData.dstLoc;
+    if (-1 == locDst) {
+        // collect all heaps at location 'loc'
+        const LocalState &locStateSrc = progState[loc];
+        const THeapIdx cnt = locStateSrc.heapList.size();
+        for (THeapIdx idx = 0; idx < cnt; ++idx) {
+            const THeapIdent heap(loc, idx);
+            all.insert(heap);
+        }
+    }
+    else {
+        // follow all trace edges going to from loc to locDst
+        const LocalState &locStateDst = progState[locDst];
+        BOOST_FOREACH(const TTraceEdgeList &trEdges, locStateDst.traceInEdges) {
+            BOOST_FOREACH(const TraceEdge *te, trEdges) {
+                const THeapIdent &src = te->src;
+                if (src./* loc */first == loc)
+                    all.insert(src);
+                }
+        }
     }
 
     // remove them one by one while checking for dupes
@@ -617,8 +632,7 @@ bool crHandleLoc(
     using namespace FixedPoint;
 
     TCondData &locData = ctx.data[loc];
-    const LocalState &locState = ctx.progState[loc];
-    if (!crHeapsCovered(locData, locState, loc))
+    if (!crHeapsCovered(locData, ctx.progState, loc))
         // we have already failed
         return false;
 
@@ -652,6 +666,7 @@ bool crHandleLoc(
 
 skip_replace:
     // expand predecessors
+    const LocalState &locState = ctx.progState[loc];
     return crExpandLoc(ctx, locState, loc);
 }
 
