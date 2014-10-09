@@ -115,8 +115,11 @@ bool checkIndependency(
                 if (hi <= winLo)
                     continue;
 
-                CL_WARN("[ADT] field clash detected in checkIndependency()");
+                CL_WARN("[ADT] possible field clash detected in checkIndependency()");
+                // TODO
+#if 0
                 return false;
+#endif
             }
         }
     }
