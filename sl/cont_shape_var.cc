@@ -399,6 +399,79 @@ bool validateTransitions(
     return /* success */ true;
 }
 
+void propagateVarsForward(
+        TShapeVarByShape           *pMap,
+        const TMatchList           &matchList,
+        const OpCollection         &coll,
+        const TProgState           &progState)
+{
+    using namespace FixedPoint;
+
+    std::stack<TShapeIdent> todo;
+
+    // iterate through template matches
+    BOOST_FOREACH(const FootprintMatch &fm, matchList) {
+        const TTemplateIdx tplIdx = fm.footprint.first;
+        const TFootprintIdx fpIdx = fm.footprint.second;
+        const unsigned cntOut = coll[tplIdx].outShapes()[fpIdx].size();
+        if (1U != cntOut)
+            // we only propage singe container shape
+            continue;
+
+        const THeapIdent outHeap = fm.matchedHeaps.back();
+        const TShapeIdent cs(outHeap, /* TODO */ 0);
+        todo.push(cs);
+    }
+
+    // traverse container shape edges
+    while (!todo.empty()) {
+        const TShapeIdent srcCs = todo.top();
+        todo.pop();
+
+        TShapeVarByShape::const_iterator it = pMap->find(srcCs);
+        if (pMap->end() == it)
+            // no mapping found for srcCs
+            continue;
+
+        const TShapeVarId var = it->second;
+
+        // go through successor shapes
+        const THeapIdent srcHeap = srcCs.first;
+        const TLocIdx srcLoc = srcHeap.first;
+        const LocalState &srcState = progState[srcLoc];
+        const TTraceEdgeList &outEdges = srcState.traceOutEdges[srcHeap.second];
+        BOOST_FOREACH(const TraceEdge *oe, outEdges) {
+            const THeapIdent &dstHeap = oe->dst;
+            const TLocIdx dstLoc = dstHeap.first;
+            const LocalState &dstState = progState[dstLoc];
+            if (1U != dstState.traceInEdges[dstHeap.second].size())
+                // not a successor with exactly one incoming edge
+                continue;
+
+            if (oe->csMap.empty())
+                // no shape mapping for this trace edge
+                continue;
+
+            TShapeMapper::TVector succs;
+            oe->csMap.query<D_LEFT_TO_RIGHT>(&succs, srcCs.second);
+            if (1U != succs.size())
+                // not a 1:1 shape mapping by this edge
+                continue;
+
+            // resolve dst shape of this trace edge
+            const TShapeIdx dstCsIdx = succs.front();
+            const TShapeIdent dstCs(dstHeap, dstCsIdx);
+            if (hasKey(pMap, dstCs))
+                // already mapped
+                continue;
+
+            // propagate the var and schedule the successor for processing
+            (*pMap)[dstCs] = var;
+            todo.push(dstCs);
+        }
+    }
+}
+
 bool assignShapeVariables(
         TShapeVarByShape           *pDst,
         TInsnWriter                *pInsnWriter,
@@ -416,6 +489,7 @@ bool assignShapeVariables(
     if (!validateTransitions(pDst, pInsnWriter, progState))
         return false;
 
+    propagateVarsForward(pDst, matchList, coll, progState);
     return /* success */ true;
 }
 
