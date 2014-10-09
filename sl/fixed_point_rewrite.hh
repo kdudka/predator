@@ -30,6 +30,7 @@ class IStateRewriter {
         virtual void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *) = 0;
         virtual void replaceInsn(TLocIdx at, GenericInsn *insn) = 0;
         virtual void dropInsn(TLocIdx at) = 0;
+        virtual void dropEdge(TLocIdx src, TLocIdx dst) = 0;
 };
 
 class MultiRewriter: public IStateRewriter {
@@ -37,6 +38,7 @@ class MultiRewriter: public IStateRewriter {
         virtual void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn);
         virtual void replaceInsn(TLocIdx at, GenericInsn *insn);
         virtual void dropInsn(TLocIdx at);
+        virtual void dropEdge(TLocIdx src, TLocIdx dst);
 
         /// does NOT take ownership of writer
         void appendWriter(IStateRewriter &slave);
@@ -53,6 +55,7 @@ class RecordRewriter: public IStateRewriter {
         virtual void insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn);
         virtual void replaceInsn(TLocIdx at, GenericInsn *insn);
         virtual void dropInsn(TLocIdx at);
+        virtual void dropEdge(TLocIdx src, TLocIdx dst);
 
         // apply the changes in the same order as they came; and drop them
         void flush(IStateRewriter *pConsumer);
@@ -82,6 +85,8 @@ class StateRewriter: public IStateRewriter {
         virtual void replaceInsn(TLocIdx at, GenericInsn *insn);
 
         virtual void dropInsn(TLocIdx at);
+
+        virtual void dropEdge(TLocIdx src, TLocIdx dst);
 
         bool /* any change */ dedupOutgoingEdges(TLocIdx at);
 

@@ -794,9 +794,15 @@ bool /* anyChange */ removeDeadBranch(
         anyChange = true;
     }
 
-    // NOTE: the actual branch instruction at 'loc' is not removed by this pass
+    CL_BREAK_IF(2U != outEdges.size());
+    if (outEdges[0].targetLoc == outEdges[1].targetLoc)
+        // the branch instruction at 'loc' will be removed by another pass
+        return anyChange;
 
-    return anyChange;
+    // finally remove the branch instruction
+    pWriter->dropEdge(loc, /* dst */ outEdges.at(!branch).targetLoc);
+    pWriter->dropInsn(loc);
+    return /* anyChange */ true;
 }
 
 bool tryRemoveDeadBranches(

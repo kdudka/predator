@@ -43,6 +43,12 @@ void MultiRewriter::dropInsn(TLocIdx at)
         slave->dropInsn(at);
 }
 
+void MultiRewriter::dropEdge(TLocIdx src, TLocIdx dst)
+{
+    BOOST_FOREACH(IStateRewriter *slave, slaveList_)
+        slave->dropEdge(src, dst);
+}
+
 void MultiRewriter::appendWriter(IStateRewriter &slave)
 {
     slaveList_.push_back(&slave);
@@ -171,6 +177,14 @@ void RecordRewriter::dropInsn(TLocIdx at)
     d->actionLists[AK_REMOVE].push_back(action);
 }
 
+void RecordRewriter::dropEdge(TLocIdx src, TLocIdx dst)
+{
+    // TODO
+    (void) src;
+    (void) dst;
+    CL_BREAK_IF("please implement");
+}
+
 /// UNSAFE wrt. exceptions falling through IRewriteAction::apply(...)
 void RecordRewriter::flush(IStateRewriter *pConsumer)
 {
@@ -279,6 +293,28 @@ void StateRewriter::replaceInsn(const TLocIdx at, GenericInsn *insn)
     LocalState &locState = d->state[at];
     delete locState.insn;
     locState.insn = insn;
+}
+
+void StateRewriter::dropEdge(const TLocIdx src, const TLocIdx dst)
+{
+    CL_NOTE("[ADT] removing CFG edge #" << src << " -> #" << dst);
+
+    LocalState &srcState = d->state[src];
+    LocalState &dstState = d->state[dst];
+
+    // remove src -> dst edges
+    TCfgEdgeList outEdges;
+    BOOST_FOREACH(const CfgEdge &oe, srcState.cfgOutEdges)
+        if (dst != oe.targetLoc)
+            outEdges.push_back(oe);
+    outEdges.swap(srcState.cfgOutEdges);
+
+    // remove dst <- src edges
+    TCfgEdgeList inEdges;
+    BOOST_FOREACH(const CfgEdge &ie, dstState.cfgInEdges)
+        if (src != ie.targetLoc)
+            inEdges.push_back(ie);
+    inEdges.swap(dstState.cfgInEdges);
 }
 
 void StateRewriter::dropInsn(const TLocIdx at)
