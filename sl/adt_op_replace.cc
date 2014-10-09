@@ -652,9 +652,9 @@ bool crHandleLoc(
         std::ostringstream str;
         str << "cond" << ctx.condVar << " := ";
         if (CB_TRUE == br)
-            str << "true";
-        else
             str << "false";
+        else
+            str << "true";
 
         // insert assignment of true/false to the condition variable
         TGenericVarSet live, kill;
