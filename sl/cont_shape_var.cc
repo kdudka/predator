@@ -62,10 +62,8 @@ bool singleShapeByHeapIdent(
 
     const LocalState &locState = progState[heap.first];
     const TShapeList &shList = locState.shapeListByHeapIdx[heap.second];
-    if (1U != shList.size()) {
-        CL_BREAK_IF("invalid call of singleShapeByHeapIdent()");
+    if (1U != shList.size())
         return false;
-    }
 
     *pShape = TShapeIdent(heap, 0);
     return true;
@@ -114,7 +112,7 @@ bool assignOpPorts(
                 // assign variable for the input container shape
                 const THeapIdent inHeap = fm.matchedHeaps.front();
                 if (!assignSingleOpPort(pDst, progState, inHeap, inVar))
-                    return false;
+                    CL_WARN("failed to bind operation input (shape missing)");
             }
 
             if (!!cntOut) {
@@ -199,7 +197,7 @@ bool propagateVars(
         const THeapIdent inHeap = fm.matchedHeaps.front();
         TShapeIdent inShape;
         if (!singleShapeByHeapIdent(&inShape, inHeap, progState))
-            return false;
+            continue;
 
         todo.push(inShape);
     }
