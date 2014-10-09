@@ -756,6 +756,96 @@ bool mergeEqPreds(
     return /* anyChange */ false;
 }
 
+bool /* anyChange */ removeDeadBranch(
+        StateRewriter              *pWriter,
+        const GlobalState          &glState,
+        const TLocIdx               loc,
+        const bool                  branch)
+{
+    const LocalState &locState = glState[loc];
+    const TCfgEdgeList &outEdges = locState.cfgOutEdges;
+    CL_BREAK_IF(2U != outEdges.size());
+
+    bool anyChange = false;
+
+    CL_BREAK_IF("please implement");
+    return anyChange;
+}
+
+bool tryRemoveDeadBranches(
+        StateRewriter              *pWriter,
+        const GlobalState          &glState,
+        const TLocIdx               loc)
+{
+    const LocalState &locState = glState[loc];
+    if (2U != locState.cfgOutEdges.size())
+        // not a condition insn
+        return false;
+
+    const AnnotatedInsn *insn =
+        dynamic_cast<const AnnotatedInsn *>(locState.insn);
+    if (!insn || insn->clInsn())
+        // either native, or not an annotated insn
+        return false;
+
+    const TGenericVarSet &live = insn->liveVars();
+    if (1U != live.size())
+        // not a simple check of condition variable
+        return false;
+
+    const GenericVar &gVar = *live.begin();
+    if (VL_COND_VAR != gVar.code)
+        // not a condition variable
+        return false;
+
+    const /* TShapeVarId */ int var = gVar.uid;
+    std::ostringstream strIn, strExp;
+    strIn << *insn;
+    strExp << "?cond" << var;
+    if (strIn.str() != strExp.str())
+        // not the instruction we are looking for
+        return false;
+
+    const TCfgEdgeList &inEdges = locState.cfgInEdges;
+    if (1U != inEdges.size())
+        // we support only the trivial case for now
+        return false;
+
+    const TLocIdx srcLoc = inEdges.front().targetLoc;
+    const LocalState &srcState = glState[srcLoc];
+    const AnnotatedInsn *srcInsn =
+        dynamic_cast<const AnnotatedInsn *>(srcState.insn);
+    if (!srcInsn || srcInsn->clInsn())
+        // either native, or not an annotated insn
+        return false;
+
+    const TGenericVarSet &kill = srcInsn->killVars();
+    if (1U != kill.size() || !srcInsn->liveVars().empty())
+        // not a simple assignment of true/false
+        return false;
+
+    const GenericVar &srcVar = *kill.begin();
+    if (VL_COND_VAR != srcVar.code || var != srcVar.uid)
+        // mismatch in src/dst variable
+        return false;
+
+    std::ostringstream strAssignIn, strAssignExp;
+    strAssignIn << *srcInsn;
+    strAssignExp << "cond" << var << " := ";
+
+    const std::string inText = strAssignIn.str();
+    const std::string expText = strAssignExp.str();
+
+    if (inText == (expText + "true"))
+        return removeDeadBranch(pWriter, glState, loc, /* dead branch */ false);
+
+    if (inText == (expText + "false"))
+        return removeDeadBranch(pWriter, glState, loc, /* dead branch */ true);
+
+    // no simple assignment matched
+    return /* anyChange */ false;
+}
+
 bool simplifyControlFlow(GlobalState *pState)
 {
     StateRewriter writer(pState);
@@ -775,6 +865,11 @@ bool simplifyControlFlow(GlobalState *pState)
     // merge equal locations
     for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx)
         while (mergeEqPreds(&writer, *pState, locIdx))
+            anyChange = true;
+
+    // remove dead branches
+    for (TLocIdx locIdx = 0; locIdx < locCnt; ++locIdx)
+        if (tryRemoveDeadBranches(&writer, *pState, locIdx))
             anyChange = true;
 
     return anyChange;
