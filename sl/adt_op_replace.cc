@@ -941,13 +941,16 @@ void replaceBound(
     std::ostringstream str;
     str << opDst << " := " << name << "(C" << var << ")";
 
-    // TODO
-    CL_BREAK_IF(opDst.accessor);
-
     TGenericVarSet live, kill;
     live.insert(GenericVar(VL_CONTAINER_VAR, var));
     const GenericVar varDst(VL_CODE_LISTENER, varIdFromOperand(&opDst));
-    kill.insert(varDst);
+    if (opDst.accessor)
+        // safe over-approximation (we ignore the way how varDst is used)
+        live.insert(varDst);
+    else
+        // trivial access to a variable (safe to notify dead code killer)
+        kill.insert(varDst);
+
     GenericInsn *insn = new TextInsn(str.str(), live, kill);
     pInsnWriter->replaceInsn(loc, insn);
 }
