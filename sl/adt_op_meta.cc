@@ -276,8 +276,9 @@ bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
     // check object mapping
     const TObjId obj1 = fld1.obj();
     if (obj1 != obj2) {
-        CL_BREAK_IF("diffUnsetField() does not support non-trivial object map");
-        return false;
+        // FIXME: we blindly assume that our abstraction threw away the value
+        MO_DEBUG("diffUnsetField() does not support non-trivial object map");
+        return true;
     }
 
     // insert meta-operation
