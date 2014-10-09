@@ -766,9 +766,36 @@ bool /* anyChange */ removeDeadBranch(
     const TCfgEdgeList &outEdges = locState.cfgOutEdges;
     CL_BREAK_IF(2U != outEdges.size());
 
-    bool anyChange = false;
+    // take the first edge in the branch to remove
+    typedef std::pair<TLocIdx /* src */, TLocIdx /* dst */> TItem;
+    TItem item(/* src */ loc, /* dst */ outEdges.at(!branch).targetLoc);
 
-    CL_BREAK_IF("please implement");
+    // traverse outgoing edges
+    bool anyChange = false;
+    WorkList<TItem> wl(item);
+    while (wl.next(item)) {
+        const TLocIdx dst = item.second;
+        const LocalState &dstState = glState[dst];
+        const TCfgEdgeList inEdges = dstState.cfgInEdges;
+        if (1U != inEdges.size())
+            // not exactly one ingoing CFG edge
+            continue;
+
+        CL_BREAK_IF(inEdges.front().targetLoc != loc);
+
+        // schedule outgoing edges of dst for processing
+        BOOST_FOREACH(const CfgEdge &oe, dstState.cfgOutEdges) {
+            const TItem next(/* src */ dst, /* dst */ oe.targetLoc);
+            wl.schedule(next);
+        }
+
+        // drop the current instruction
+        pWriter->dropInsn(dst);
+        anyChange = true;
+    }
+
+    // NOTE: the actual branch instruction at 'loc' is not removed by this pass
+
     return anyChange;
 }
 
