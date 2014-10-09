@@ -410,6 +410,19 @@ void StateRewriter::mergeInsns(const TLocIdx locDst, const TLocIdx locSrc)
         }
     }
 
+    // remove all backward references to src
+    BOOST_FOREACH(const CfgEdge &oe, dstState.cfgOutEdges) {
+        LocalState &outState = d->state[oe.targetLoc];
+        TCfgEdgeList inEdges;
+
+        BOOST_FOREACH(const CfgEdge &be, outState.cfgInEdges)
+            if (locSrc != be.targetLoc)
+                // keep only CFG edges NOT going to src
+                inEdges.push_back(be);
+
+        inEdges.swap(outState.cfgInEdges);
+    }
+
     // preserve the loop-closing edge flag
     if (dstOutEdge.closesLoop != srcOutEdge.closesLoop) {
         dstOutEdge.closesLoop = false;
