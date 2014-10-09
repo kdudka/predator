@@ -743,17 +743,19 @@ bool shapeByIter(
         TShapeIdx                  *pShapeIdx,
         ShapeProps                 *pProps,
         const SymHeap              &shOrig,
-        const struct cl_operand    &opDst,
+        const struct cl_operand    &opSrc,
         const TShapeList           &shapeList)
 {
     // resolve the target object
     SymHeap sh(shOrig);
-    SymBackTrace bt(sh.stor());
-    initBackTrace(&bt, sh.stor());
-    SymProc proc(sh, &bt);
-    const TValId val = proc.valFromOperand(opDst);
+    const int varSrc = varIdFromOperand(&opSrc);
+    const CVar cvSrc(varSrc, /* assume main() */ 1);
+    const TObjId var = sh.regionByVar(cvSrc, /* createIfNeeded */ false);
+    const TValId val = valOfPtr(sh, var, /* off */ 0);
     const TObjId obj = sh.objByAddr(val);
-    CL_BREAK_IF(!sh.isValid(obj));
+    if (!sh.isValid(obj))
+        // invalid target
+        return false;
 
     const TShapeIdx shapeCnt = shapeList.size();
     for (TShapeIdx shapeIdx = 0; shapeIdx < shapeCnt; ++shapeIdx) {
@@ -773,20 +775,32 @@ bool shapeByIter(
 
 void replaceIter(
         TInsnWriter                *pInsnWriter,
+        TStorRef                    stor,
         const TLocIdx               loc,
         const char                 *name,
         const TShapeVarId           var,
+        const struct cl_operand    &opSrc,
         const struct cl_operand    &opDst)
 {
     using namespace FixedPoint;
+
+    const int varSrc = varIdFromOperand(&opSrc);
+    const GenericVar varDst(VL_CODE_LISTENER, varIdFromOperand(&opDst));
+
     std::ostringstream str;
-    str << opDst << " := " << name << "(C" << var << ", " << opDst << ")";
+    str << opDst << " := " << name << "(C" << var << ", "
+        << varToString(stor, varSrc) << ")";
 
     TGenericVarSet live, kill;
     live.insert(GenericVar(VL_CONTAINER_VAR, var));
-    const GenericVar varDst(VL_CODE_LISTENER, varIdFromOperand(&opDst));
-    live.insert(varDst);
-    kill.insert(varDst);
+    live.insert(GenericVar(VL_CODE_LISTENER, varSrc));
+    if (opDst.accessor)
+        // safe over-approximation (we ignore the way how varDst is used)
+        live.insert(varDst);
+    else
+        // trivial access to a variable (safe to notify dead code killer)
+        kill.insert(varDst);
+
     GenericInsn *insn = new TextInsn(str.str(), live, kill);
     pInsnWriter->replaceInsn(loc, insn);
 }
@@ -810,14 +824,8 @@ bool tryReplaceIter(
     if (CL_OPERAND_VAR != opSrc.code || !isDataPtr(opSrc.type))
         return false;
 
-    const int varDst = varIdFromOperand(&opDst);
-    const int varSrc = varIdFromOperand(&opSrc);
-    if (varDst != varSrc)
-        // not an in-place iteration on a single variable
-        return false;
-
     const struct cl_accessor *acSrc = opSrc.accessor;
-    if (opDst.accessor || !acSrc || CL_ACCESSOR_DEREF != acSrc->code)
+    if (!acSrc || CL_ACCESSOR_DEREF != acSrc->code)
         // unsupported use of accessors
         return false;
 
@@ -835,12 +843,18 @@ bool tryReplaceIter(
         // no program configurations captured for this location
         return false;
 
+    const CodeStorage::Storage *pStor = 0;
+
     for (THeapIdx heapIdx = 0; heapIdx < heapCnt; ++heapIdx) {
         const SymHeap &sh = locState.heapList[heapIdx];
+        if (!pStor)
+            // store a point to CodeStorage::Storage
+            pStor = &sh.stor();
+
         const TShapeList &csList = locState.shapeListByHeapIdx[heapIdx];
         TShapeIdx shapeIdx;
         ShapeProps propsNow;
-        if (!shapeByIter(&shapeIdx, &propsNow, sh, opDst, csList))
+        if (!shapeByIter(&shapeIdx, &propsNow, sh, opSrc, csList))
             return false;
 
         const TShapeIdent shapeNow(THeapIdent(loc, heapIdx), shapeIdx);
@@ -867,7 +881,7 @@ bool tryReplaceIter(
         // offset does not match next/prev pointer
         return false;
 
-    replaceIter(pInsnWriter, loc, name, var, opDst);
+    replaceIter(pInsnWriter, *pStor, loc, name, var, opSrc, opDst);
     return /* success */ true;
 }
 
