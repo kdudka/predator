@@ -366,9 +366,17 @@ TObjId selectMappedObjByTs(
             cObjs.erase(obj);
     }
 
-    if (1U != cObjs.size()) {
-        CL_BREAK_IF("unsupported ID mapping in selectMappedObjByTs()");
-        return OBJ_INVALID;
+    switch (cObjs.size()) {
+        case 0U:
+            // we lost trace of the object we have been looking for
+            return OBJ_INVALID;
+
+        case 1U:
+            return *cObjs.begin();
+
+        default:
+            CL_BREAK_IF("unsupported ID mapping in selectMappedObjByTs()");
+            return OBJ_INVALID;
     }
 
     return *cObjs.begin();
