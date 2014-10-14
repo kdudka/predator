@@ -375,6 +375,60 @@ OpTemplate* createInsert(TplFactory &fact)
     fp->inArgs.push_back(regMiddle);
     fp->outArgs.push_back(regBefore);
     tpl->addFootprint(fp);
+
+    // special variant for inserting the first node and/or before last
+    OpFootprint *fpNoPrefix = new OpFootprint(*fp);
+    OpFootprint *fpNoSuffix = new OpFootprint(*fp);
+    OpFootprint *fpToSingle = new OpFootprint(*fp);
+
+    // inserting first (output)
+    sh.objInvalidate(dlsPrefix);
+    regBeforeBack.setValue(VAL_NULL);
+    fpNoPrefix->output = sh;
+    Trace::waiveCloneOperation(fpNoPrefix->output);
+
+    // inserting first (input)
+    sh.objInvalidate(regBefore);
+    regMiddleBack.setValue(VAL_NULL);
+    fpNoPrefix->input = sh;
+    Trace::waiveCloneOperation(fpNoPrefix->input);
+
+    sh = fp->output;
+    Trace::waiveCloneOperation(sh);
+
+    // inserting before last (output)
+    sh.objInvalidate(dlsSuffix);
+    PtrHandle(sh, regMiddle, offNext).setValue(VAL_NULL);
+    fpNoSuffix->output = sh;
+    Trace::waiveCloneOperation(fpNoSuffix->output);
+
+    // inserting before last (input)
+    sh.objInvalidate(regBefore);
+    PtrHandle(sh, regMiddle, offPrev).setValue(dlsPrefixEnd);
+    PtrHandle(sh, dlsPrefix, offNext).setValue(regMiddleAt);
+    fpNoSuffix->input = sh;
+    Trace::waiveCloneOperation(fpNoSuffix->input);
+
+    sh = fp->output;
+    Trace::waiveCloneOperation(sh);
+
+    // inserting into singleton list (output)
+    sh.objInvalidate(dlsPrefix);
+    sh.objInvalidate(dlsSuffix);
+    PtrHandle(sh, regBefore, offPrev).setValue(VAL_NULL);
+    PtrHandle(sh, regMiddle, offNext).setValue(VAL_NULL);
+    fpToSingle->output = sh;
+    Trace::waiveCloneOperation(fpToSingle->output);
+
+    // inserting into singleton list (input)
+    sh.objInvalidate(regBefore);
+    PtrHandle(sh, regMiddle, offPrev).setValue(VAL_NULL);
+    fpToSingle->input = sh;
+    Trace::waiveCloneOperation(fpToSingle->input);
+
+    tpl->addFootprint(fpNoPrefix);
+    tpl->addFootprint(fpNoSuffix);
+    tpl->addFootprint(fpToSingle);
     return tpl;
 }
 

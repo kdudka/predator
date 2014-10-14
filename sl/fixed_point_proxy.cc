@@ -347,7 +347,7 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
     TShapeVarByShape varByShape;
     if (!assignShapeVariables(&varByShape, &writer, matchList, opList, adtOps,
                 fncState))
-        CL_ERROR("[ADT] failed to assign shape variables");
+        CL_WARN("[ADT] failed to assign shape variables");
 
     // replace container operations
     if (!replaceAdtOps(&writer, matchList, opList, adtOps, varByShape,
