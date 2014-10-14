@@ -377,6 +377,10 @@ bool replaceSingleOp(
         << ptrVarsToString(matchList, idxList, tpl, progState, FP_SRC, &live)
         << ")";
 
+    // XXX: protect destructive container operations from being removed as dead
+    // code in case their result consists of dead variables only
+    (void) varsToString(cOut, &live);
+
     GenericInsn *insn = new TextInsn(str.str(), live, kill);
     pInsnWriter->replaceInsn(locToReplace, insn);
 
