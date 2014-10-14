@@ -399,27 +399,14 @@ bool validateTransitions(
 
 void propagateVarsForward(
         TShapeVarByShape           *pMap,
-        const TMatchList           &matchList,
-        const OpCollection         &coll,
         const TProgState           &progState)
 {
     using namespace FixedPoint;
 
+    // start with all shapes that have been assigned a variable
     std::stack<TShapeIdent> todo;
-
-    // iterate through template matches
-    BOOST_FOREACH(const FootprintMatch &fm, matchList) {
-        const TTemplateIdx tplIdx = fm.footprint.first;
-        const TFootprintIdx fpIdx = fm.footprint.second;
-        const unsigned cntOut = coll[tplIdx].outShapes()[fpIdx].size();
-        if (1U != cntOut)
-            // we only propage singe container shape
-            continue;
-
-        const THeapIdent outHeap = fm.matchedHeaps.back();
-        const TShapeIdent cs(outHeap, /* TODO */ 0);
-        todo.push(cs);
-    }
+    BOOST_FOREACH(TShapeVarByShape::const_reference item, *pMap)
+        todo.push(item.first);
 
     // traverse container shape edges
     while (!todo.empty()) {
@@ -427,9 +414,10 @@ void propagateVarsForward(
         todo.pop();
 
         TShapeVarByShape::const_iterator it = pMap->find(srcCs);
-        if (pMap->end() == it)
-            // no mapping found for srcCs
+        if (pMap->end() == it) {
+            CL_BREAK_IF("internal failure of propagateVarsForward()");
             continue;
+        }
 
         const TShapeVarId var = it->second;
 
@@ -487,7 +475,7 @@ bool assignShapeVariables(
     if (!validateTransitions(pDst, pInsnWriter, progState))
         return false;
 
-    propagateVarsForward(pDst, matchList, coll, progState);
+    propagateVarsForward(pDst, progState);
     return /* success */ true;
 }
 
