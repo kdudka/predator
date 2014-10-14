@@ -113,6 +113,96 @@ void swapObjLists(TObjList pObjLists[1][C_TOTAL])
 }
 
 typedef std::vector<TObjectMapper>                  TObjMapList;
+typedef TObjList                                    TObjListArray[C_TOTAL];
+
+void insertToObjMap(
+        TObjectMapper              *pObjMap,
+        const TObjListArray        &objLists,
+        const int                   tplObjIdx,
+        const int                   progObjIdx)
+{
+    const TObjId objTpl = objLists[C_TEMPLATE].at(tplObjIdx);
+    const TObjId objProg = objLists[C_PROGRAM].at(progObjIdx);
+    pObjMap->insert(objTpl, objProg);
+}
+
+bool resolveObjectMapping(
+        TObjMapList                *pDst,
+        const TObjectMapper        &objMapOrig,
+        const SymHeap              &shProg,
+        const SymHeap              &shTpl,
+        const TObjListArray        &objLists)
+{
+    const int tplObjCnt = objLists[C_TEMPLATE].size();
+    const int progObjCnt = objLists[C_PROGRAM].size();
+    CL_BREAK_IF(!tplObjCnt);
+    if (tplObjCnt == 1) {
+        const TObjId objTpl = objLists[C_TEMPLATE].front();
+        const EObjKind kind = shTpl.objKind(objTpl);
+        if (kind == OK_DLS || progObjCnt == 1) {
+            // map objTpl (the only tpl object) to the remaining shProg objects
+            TObjectMapper objMap(objMapOrig);
+            BOOST_FOREACH(const TObjId objProg, objLists[C_PROGRAM])
+                objMap.insert(objTpl, objProg);
+            pDst->push_back(objMap);
+            return true;
+        }
+    }
+
+    bool dlsAtBeg = false;
+    bool dlsAtEnd = false;
+    for (int i = 0; i < tplObjCnt; ++i) {
+        const TObjId objTpl = objLists[C_TEMPLATE][i];
+        if (shTpl.objKind(objTpl) != OK_DLS)
+            continue;
+
+        if (!i)
+            dlsAtBeg = true;
+        else if (i + 1 == tplObjCnt)
+            dlsAtEnd = true;
+        else
+            // template DLS in the middle not supported for now
+            return false;
+    }
+
+    for (int i = 1; i < progObjCnt - 1; ++i) {
+        const TObjId objProg = objLists[C_PROGRAM][i];
+        if (shProg.objKind(objProg) == OK_DLS)
+            // program DLS in the middle not supported for now
+            return false;
+    }
+
+    const int cntDiff = progObjCnt - tplObjCnt;
+    if (!cntDiff && !dlsAtBeg && !dlsAtEnd)
+        // nothing to merge here
+        return false;
+
+    CL_BREAK_IF(cntDiff < 0);
+    const int mergeLeftMax = (dlsAtBeg) ? cntDiff : 0;
+    const int mergeLeftMin = (dlsAtEnd) ? 0 : cntDiff;
+
+    for (int mergeLeft = mergeLeftMin; mergeLeft <= mergeLeftMax; ++mergeLeft) {
+        TObjectMapper objMap(objMapOrig);
+        int idxTpl = 0;
+        int idxProg = 0;
+
+        // merge DLS in the left with the prefix
+        for (; idxProg <= mergeLeft; ++idxProg)
+            insertToObjMap(&objMap, objLists, idxTpl, idxProg);
+
+        // map the inner regions 1:1
+        for (++idxTpl; idxTpl < (tplObjCnt - 1); ++idxTpl, ++idxProg)
+            insertToObjMap(&objMap, objLists, idxTpl, idxProg);
+
+        // merge DLS in the right with the prefix
+        for (; idxProg < progObjCnt; ++idxProg)
+            insertToObjMap(&objMap, objLists, idxTpl, idxProg);
+
+        pDst->push_back(objMap);
+    }
+
+    return !pDst->empty();
+}
 
 bool matchAnchorHeapCore(
         TObjMapList                *pDst,
@@ -126,9 +216,6 @@ bool matchAnchorHeapCore(
         return false;
     }
 
-    pDst->push_back(TObjectMapper());
-    TObjectMapper *pMap = &pDst->back();
-
     // resolve list of objects belonging to containers shapes
     TObjList objLists[C_TOTAL];
     objListByShape(&objLists[C_TEMPLATE], shTpl, csTpl);
@@ -136,16 +223,20 @@ bool matchAnchorHeapCore(
     CL_BREAK_IF(objLists[C_TEMPLATE].empty());
 
     // handle matching regions at both end-points
+    TObjectMapper objMap;
     for (unsigned u = 0; u < 2; ++u) {
         swapObjLists(&objLists);
-        processRegSuffix(pMap, &objLists, shTpl, shProg);
+        processRegSuffix(&objMap, &objLists, shTpl, shProg);
     }
 
-    if (objLists[C_TEMPLATE].empty() && objLists[C_PROGRAM].empty())
+    if (objLists[C_TEMPLATE].empty() && objLists[C_PROGRAM].empty()) {
         // all regions were mapped and nothing remains
+        pDst->push_back(objMap);
         return true;
+    }
 
-    if (objLists[C_TEMPLATE].empty() || objLists[C_PROGRAM].empty())
+    const unsigned tplObjectCount = objLists[C_TEMPLATE].size();
+    if (!tplObjectCount || objLists[C_PROGRAM].size() < tplObjectCount)
         // we are no longer able to map the remaining objects
         return false;
 
@@ -163,13 +254,8 @@ bool matchAnchorHeapCore(
         // the program configuration does not guarantee sufficient list length
         return false;
 
-    // map the remaining objects from both sets with each oder
-    BOOST_FOREACH(const TObjId objTpl, objLists[C_TEMPLATE])
-        BOOST_FOREACH(const TObjId objProg, objLists[C_PROGRAM])
-            pMap->insert(objTpl, objProg);
-
-    // successfully matched!
-    return true;
+    resolveObjectMapping(pDst, objMap, shProg, shTpl, objLists);
+    return !pDst->empty();
 }
 
 bool matchAnchorHeap(
