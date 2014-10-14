@@ -171,7 +171,7 @@ bool matchAnchorHeapCore(
 }
 
 bool matchAnchorHeap(
-        FootprintMatch             *pDst,
+        TMatchList                 *pMatchList,
         MatchCtx                   &ctx,
         const OpTemplate           &tpl,
         const OpFootprint          &fp,
@@ -217,6 +217,9 @@ bool matchAnchorHeap(
     const EFootprintPort port = (reverse)
         ? FP_DST
         : FP_SRC;
+
+    pMatchList->push_back(FootprintMatch(fpIdent));
+    FootprintMatch *pDst = &pMatchList->back();
 
     // perform an object-wise match
     const Shape &csTpl = csTplList.front();
@@ -755,20 +758,14 @@ void matchSingleFootprint(
 
         // search anchor heap
         BOOST_FOREACH(const TShapeIdent &shIdent, seq) {
-            // allocate a structure for the match result
-            FootprintMatch fm(fpIdent);
-
-            if (!matchAnchorHeap(&fm, ctx, tpl, fp, fpIdent, shIdent))
+            TMatchList matchList;
+            if (!matchAnchorHeap(&matchList, ctx, tpl, fp, fpIdent, shIdent))
                 // failed to match anchor heap
                 continue;
 
             if (!insertOnce(checkedShapes, shIdent))
                 // already checked as part of different shape sequence
                 break;
-
-            if (!diffHeapsIfNeeded(&metaOps, fp, fm))
-                // non-recoverable error while computing diff of the footprint
-                return;
 
             const THeapIdent heapIdent = shIdent.first;
             TM_DEBUG("found anchor heap: " << heapIdent.first
@@ -777,9 +774,15 @@ void matchSingleFootprint(
                     << ((SD_FORWARD == sd) ? "forward" : "backward")
                     << "...");
 
-            // find all template match instances using this anchor heap
-            seekTemplateMatchInstances(&checkedShapes, ctx, tpl, fm, metaOps,
-                    shIdent);
+            BOOST_FOREACH(const FootprintMatch &fm, matchList) {
+                if (!diffHeapsIfNeeded(&metaOps, fp, fm))
+                    // non-recoverable error while computing diff of the footprint
+                    return;
+
+                // find all template match instances using this anchor heap
+                seekTemplateMatchInstances(&checkedShapes, ctx, tpl, fm,
+                        metaOps, shIdent);
+            }
 
             // now please continue with _another_ shape sequence!
             break;
