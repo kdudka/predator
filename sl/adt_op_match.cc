@@ -119,7 +119,7 @@ bool matchAnchorHeapCore(
         const Shape                &csProg,
         const Shape                &csTpl)
 {
-    if (2U < csTpl.length || csTpl.length != countObjects(shTpl)) {
+    if (csTpl.length != countObjects(shTpl)) {
         CL_BREAK_IF("unsupported anchor heap in a template");
         return false;
     }

@@ -320,6 +320,64 @@ OpTemplate* createPop(TplFactory &fact, const EListSide side)
     return tpl;
 }
 
+OpTemplate* createInsert(TplFactory &fact)
+{
+    OpTemplate *tpl = new OpTemplate("insert_before");
+    SymHeap sh(fact.createHeap());
+    const TOffset offHead = fact.headAt();
+    const TOffset offNext = fact.nextAt();
+    const TOffset offPrev = fact.prevAt();
+
+    // allocate a pair of DLSs
+    const TObjId dlsPrefix = fact.createObj(&sh, OK_DLS);
+    const TObjId regMiddle = fact.createObj(&sh, OK_REGION);
+    const TObjId dlsSuffix = fact.createObj(&sh, OK_DLS);
+
+    // obtain handles to prev/next pointers
+    const PtrHandle dlsPrefixBack(sh, dlsPrefix, offPrev);
+    const PtrHandle dlsPrefixNext(sh, dlsPrefix, offNext);
+    const PtrHandle regMiddleBack(sh, regMiddle, offPrev);
+    const PtrHandle regMiddleNext(sh, regMiddle, offNext);
+    const PtrHandle dlsSuffixBack(sh, dlsSuffix, offPrev);
+    const PtrHandle dlsSuffixNext(sh, dlsSuffix, offNext);
+
+    // obtain addresses to the region and end/begin of DLS prefix/suffix
+    const TValId dlsPrefixEnd = sh.addrOfTarget(dlsPrefix, TS_LAST,   offHead);
+    const TValId regMiddleAt  = sh.addrOfTarget(regMiddle, TS_REGION, offHead);
+    const TValId dlsSuffixBeg = sh.addrOfTarget(dlsSuffix, TS_FIRST,  offHead);
+
+    // make a list of those DLSs
+    dlsPrefixBack.setValue(VAL_NULL);
+    dlsPrefixNext.setValue(regMiddleAt);
+    regMiddleBack.setValue(dlsPrefixEnd);
+    regMiddleNext.setValue(dlsSuffixBeg);
+    dlsSuffixBack.setValue(regMiddleAt);
+    dlsSuffixNext.setValue(VAL_NULL);
+
+    // take the current heap snapshot as an input of the template
+    SymHeap input(sh);
+    Trace::waiveCloneOperation(input);
+
+    // allocate a region to be inserted
+    const TObjId regBefore = fact.createObj(&sh, OK_REGION);
+    const TValId regBeforeAt = sh.addrOfTarget(regBefore, TS_REGION, offHead);
+    const PtrHandle regBeforeBack(sh, regBefore, offPrev);
+    const PtrHandle regBeforeNext(sh, regBefore, offNext);
+
+    // insert the region between prefix and suffix
+    dlsPrefixNext.setValue(regBeforeAt);
+    regMiddleBack.setValue(regBeforeAt);
+    regBeforeBack.setValue(dlsPrefixEnd);
+    regBeforeNext.setValue(regMiddleAt);
+
+    // finally define the insert_before() template!
+    OpFootprint *fp = new OpFootprint(input, /* output */ sh);
+    fp->inArgs.push_back(regMiddle);
+    fp->outArgs.push_back(regBefore);
+    tpl->addFootprint(fp);
+    return tpl;
+}
+
 OpTemplate* createClear2(TplFactory &fact)
 {
     OpTemplate *tpl = new OpTemplate("clear2");
@@ -364,7 +422,10 @@ bool loadDefaultOperations(OpCollection *pDst, const CodeStorage::Storage &stor)
         pDst->addTemplate(createPushByVal(fact, side));
         pDst->addTemplate(createPop(fact, side));
     }
+
     pDst->addTemplate(createClear2(fact));
+    pDst->addTemplate(createInsert(fact));
+
     return true;
 }
 
