@@ -285,7 +285,7 @@ bool ShapeVarTransMap::defineAssignment(
     const TVarAssign::const_iterator it = varAssign.find(dstVar);
     if (varAssign.end() != it)
         // already defined --> check for a collision
-        return (it->second == srcVar);
+        return (it->second == srcVar) || (dstVar == srcVar);
 
     // define new assignment
     varAssign[dstVar] = srcVar;
@@ -427,13 +427,6 @@ void propagateVarsForward(
         const LocalState &srcState = progState[srcLoc];
         const TTraceEdgeList &outEdges = srcState.traceOutEdges[srcHeap.second];
         BOOST_FOREACH(const TraceEdge *oe, outEdges) {
-            const THeapIdent &dstHeap = oe->dst;
-            const TLocIdx dstLoc = dstHeap.first;
-            const LocalState &dstState = progState[dstLoc];
-            if (1U != dstState.traceInEdges[dstHeap.second].size())
-                // not a successor with exactly one incoming edge
-                continue;
-
             if (oe->csMap.empty())
                 // no shape mapping for this trace edge
                 continue;
@@ -446,7 +439,7 @@ void propagateVarsForward(
 
             // resolve dst shape of this trace edge
             const TShapeIdx dstCsIdx = succs.front();
-            const TShapeIdent dstCs(dstHeap, dstCsIdx);
+            const TShapeIdent dstCs(/* dstHeap */ oe->dst, dstCsIdx);
             if (hasKey(pMap, dstCs))
                 // already mapped
                 continue;
@@ -476,6 +469,9 @@ bool assignShapeVariables(
         return false;
 
     propagateVarsForward(pDst, progState);
+    if (!validateTransitions(pDst, pInsnWriter, progState))
+        return false;
+
     return /* success */ true;
 }
 
