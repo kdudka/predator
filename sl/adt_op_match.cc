@@ -112,8 +112,10 @@ void swapObjLists(TObjList pObjLists[1][C_TOTAL])
     }
 }
 
+typedef std::vector<TObjectMapper>                  TObjMapList;
+
 bool matchAnchorHeapCore(
-        TObjectMapper              *pMap,
+        TObjMapList                *pDst,
         const SymHeap              &shProg,
         const SymHeap              &shTpl,
         const Shape                &csProg,
@@ -124,8 +126,8 @@ bool matchAnchorHeapCore(
         return false;
     }
 
-    // clear the destination object map (if not already)
-    pMap->clear();
+    pDst->push_back(TObjectMapper());
+    TObjectMapper *pMap = &pDst->back();
 
     // resolve list of objects belonging to containers shapes
     TObjList objLists[C_TOTAL];
@@ -218,19 +220,26 @@ bool matchAnchorHeap(
         ? FP_DST
         : FP_SRC;
 
-    pMatchList->push_back(FootprintMatch(fpIdent));
-    FootprintMatch *pDst = &pMatchList->back();
-
     // perform an object-wise match
     const Shape &csTpl = csTplList.front();
-    TObjectMapper *pObjMap = &pDst->objMap[port];
-    if (!matchAnchorHeapCore(pObjMap, shProg, shTpl, csProg, csTpl))
+    TObjMapList objMapList;
+    if (!matchAnchorHeapCore(&objMapList, shProg, shTpl, csProg, csTpl))
         return false;
 
+    CL_BREAK_IF(objMapList.empty());
+
     // successful match!
-    pDst->props = csProg.props;
-    pDst->tplProps = csTpl.props;
-    pDst->matchedHeaps.push_back(shIdent.first);
+    FootprintMatch fmProto(fpIdent);
+    fmProto.props = csProg.props;
+    fmProto.tplProps = csTpl.props;
+    fmProto.matchedHeaps.push_back(shIdent.first);
+
+    BOOST_FOREACH(const TObjectMapper &objMap, objMapList) {
+        FootprintMatch fm(fmProto);
+        fm.objMap[port] = objMap;
+        pMatchList->push_back(fm);
+    }
+
     return true;
 }
 
