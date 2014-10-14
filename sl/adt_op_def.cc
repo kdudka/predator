@@ -432,6 +432,109 @@ OpTemplate* createInsert(TplFactory &fact)
     return tpl;
 }
 
+// FIXME: createInsert() and createRemove() have a lot of identical code
+OpTemplate* createRemove(TplFactory &fact)
+{
+    OpTemplate *tpl = new OpTemplate("remove");
+    SymHeap sh(fact.createHeap());
+    const TOffset offHead = fact.headAt();
+    const TOffset offNext = fact.nextAt();
+    const TOffset offPrev = fact.prevAt();
+
+    // allocate a pair of DLSs
+    const TObjId dlsPrefix = fact.createObj(&sh, OK_DLS);
+    const TObjId regMiddle = fact.createObj(&sh, OK_REGION);
+    const TObjId dlsSuffix = fact.createObj(&sh, OK_DLS);
+
+    // obtain handles to prev/next pointers
+    const PtrHandle dlsPrefixBack(sh, dlsPrefix, offPrev);
+    const PtrHandle dlsPrefixNext(sh, dlsPrefix, offNext);
+    const PtrHandle regMiddleBack(sh, regMiddle, offPrev);
+    const PtrHandle regMiddleNext(sh, regMiddle, offNext);
+    const PtrHandle dlsSuffixBack(sh, dlsSuffix, offPrev);
+    const PtrHandle dlsSuffixNext(sh, dlsSuffix, offNext);
+
+    // obtain addresses to the region and end/begin of DLS prefix/suffix
+    const TValId dlsPrefixEnd = sh.addrOfTarget(dlsPrefix, TS_LAST,   offHead);
+    const TValId regMiddleAt  = sh.addrOfTarget(regMiddle, TS_REGION, offHead);
+    const TValId dlsSuffixBeg = sh.addrOfTarget(dlsSuffix, TS_FIRST,  offHead);
+
+    // make a list of those DLSs
+    dlsPrefixBack.setValue(VAL_NULL);
+    dlsPrefixNext.setValue(regMiddleAt);
+    regMiddleBack.setValue(dlsPrefixEnd);
+    regMiddleNext.setValue(dlsSuffixBeg);
+    dlsSuffixBack.setValue(regMiddleAt);
+    dlsSuffixNext.setValue(VAL_NULL);
+
+    // take the current heap snapshot as an input of the template
+    SymHeap input(sh);
+    Trace::waiveCloneOperation(input);
+
+    // remove regMiddle
+    sh.objInvalidate(regMiddle);
+    dlsPrefixNext.setValue(dlsSuffixBeg);
+    dlsSuffixBack.setValue(dlsPrefixEnd);
+
+    // finally define the remove() template!
+    OpFootprint *fp = new OpFootprint(input, /* output */ sh);
+    fp->inArgs.push_back(regMiddle);
+    tpl->addFootprint(fp);
+
+    // special cases
+    OpFootprint *fpNoPrefix = new OpFootprint(*fp);
+    OpFootprint *fpNoSuffix = new OpFootprint(*fp);
+    OpFootprint *fpOfSingle = new OpFootprint(*fp);
+
+    // removing first (input)
+    sh = fp->input;
+    Trace::waiveCloneOperation(sh);
+    sh.objInvalidate(dlsPrefix);
+    regMiddleBack.setValue(VAL_NULL);
+    fpNoPrefix->input = sh;
+    Trace::waiveCloneOperation(fpNoPrefix->input);
+
+    // removing first (output)
+    sh.objInvalidate(regMiddle);
+    dlsSuffixBack.setValue(VAL_NULL);
+    fpNoPrefix->output = sh;
+    Trace::waiveCloneOperation(fpNoPrefix->output);
+
+    // removing last (input)
+    sh = fp->input;
+    Trace::waiveCloneOperation(sh);
+    sh.objInvalidate(dlsSuffix);
+    regMiddleNext.setValue(VAL_NULL);
+    fpNoSuffix->input = sh;
+    Trace::waiveCloneOperation(fpNoSuffix->input);
+
+    // removing last (output)
+    sh.objInvalidate(regMiddle);
+    dlsPrefixNext.setValue(VAL_NULL);
+    fpNoSuffix->output = sh;
+    Trace::waiveCloneOperation(fpNoSuffix->output);
+
+    // removing singleton (input)
+    sh = fp->input;
+    Trace::waiveCloneOperation(sh);
+    sh.objInvalidate(dlsPrefix);
+    sh.objInvalidate(dlsSuffix);
+    regMiddleBack.setValue(VAL_NULL);
+    regMiddleNext.setValue(VAL_NULL);
+    fpOfSingle->input = sh;
+    Trace::waiveCloneOperation(fpOfSingle->input);
+
+    // removing last (output)
+    sh.objInvalidate(regMiddle);
+    fpOfSingle->output = sh;
+    Trace::waiveCloneOperation(fpOfSingle->output);
+
+    tpl->addFootprint(fpNoPrefix);
+    tpl->addFootprint(fpNoSuffix);
+    tpl->addFootprint(fpOfSingle);
+    return tpl;
+}
+
 OpTemplate* createClear2(TplFactory &fact)
 {
     OpTemplate *tpl = new OpTemplate("clear2");
@@ -479,6 +582,7 @@ bool loadDefaultOperations(OpCollection *pDst, const CodeStorage::Storage &stor)
 
     pDst->addTemplate(createClear2(fact));
     pDst->addTemplate(createInsert(fact));
+    pDst->addTemplate(createRemove(fact));
 
     return true;
 }

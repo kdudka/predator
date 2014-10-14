@@ -378,8 +378,6 @@ TObjId selectMappedObjByTs(
             CL_BREAK_IF("unsupported ID mapping in selectMappedObjByTs()");
             return OBJ_INVALID;
     }
-
-    return *cObjs.begin();
 }
 
 ETargetSpecifier tsByOffset(const TOffset off, const ShapeProps &props)
