@@ -157,7 +157,7 @@ void initGlVar(SymHeap &sh, const CVar &cv);
 
 inline TObjId nextObj(SymHeap &sh, TObjId obj, TOffset offNext)
 {
-    if (OBJ_INVALID == obj)
+    if (!sh.isValid(obj))
         return OBJ_INVALID;
 
     const TValId valNext = valOfPtr(sh, obj, offNext);
