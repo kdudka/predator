@@ -301,8 +301,6 @@ bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
         return true;
     }
 
-    CL_BREAK_IF(!allowThreeWay && JS_THREE_WAY == status);
-
     switch (status) {
         case JS_USE_ANY:
             CL_DEBUG("<I> sh #" << idx << " is equal to the given one, "
