@@ -172,14 +172,11 @@ TSizeRange valSizeOfTarget(const SymHeapCore &sh, const TValId at)
 bool canPointToFront(const ETargetSpecifier ts)
 {
     switch (ts) {
-        case TS_INVALID:
-            CL_BREAK_IF("invalid call of filterFront()");
-            break;
-
         case TS_REGION:
         case TS_FIRST:
             return true;
 
+        case TS_INVALID:
         case TS_LAST:
         case TS_ALL:
             break;
@@ -191,14 +188,11 @@ bool canPointToFront(const ETargetSpecifier ts)
 bool canPointToBack(const ETargetSpecifier ts)
 {
     switch (ts) {
-        case TS_INVALID:
-            CL_BREAK_IF("invalid call of filterBack()");
-            break;
-
         case TS_REGION:
         case TS_LAST:
             return true;
 
+        case TS_INVALID:
         case TS_FIRST:
         case TS_ALL:
             break;
