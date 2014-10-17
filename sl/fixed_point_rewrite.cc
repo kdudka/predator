@@ -319,8 +319,18 @@ void StateRewriter::dropEdge(const TLocIdx src, const TLocIdx dst)
 
 void StateRewriter::dropInsn(const TLocIdx at)
 {
-    CL_NOTE("[ADT] removing insn #" << at);
     LocalState &locState = d->state[at];
+
+    std::string insnText;
+    if (locState.insn) {
+        // display the insn being removed
+        std::ostringstream str;
+        locState.insn->writeToStream(str);
+        insnText = str.str();
+    }
+
+    CL_NOTE("[ADT] removing insn #" << at << " ... " << insnText);
+
     delete locState.insn;
     locState.insn = 0;
 
