@@ -228,6 +228,10 @@ bool diffSetField(DiffHeapsCtx &ctx, const TObjId obj1, const FldHandle &fld2)
                 // nothing changed actually
                 return true;
 
+            case VT_CUSTOM:
+                MO_DEBUG("diffSetField() ignores change of a non-pointer field");
+                return true;
+
             default:
                 CL_BREAK_IF("unhandled value target in diffSetField()");
                 return false;
