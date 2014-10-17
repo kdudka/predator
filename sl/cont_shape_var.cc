@@ -265,6 +265,12 @@ class ShapeVarTransMap {
                 TShapeVarId         dstVar,
                 TShapeVarId         srcVar);
 
+        bool /* success */ resolveDstVar(
+                TShapeVarId        *pDstVar,
+                TShapeVarId         srcVar,
+                TLocIdx             dstLoc,
+                TLocIdx             srcLoc);
+
     private:
         typedef std::pair<TLocIdx, TLocIdx>         TProgTrans;
         typedef std::map<TShapeVarId, TShapeVarId>  TVarAssign;
@@ -305,6 +311,28 @@ bool ShapeVarTransMap::defineAssignment(
     GenericInsn *insn = new TextInsn(str.str(), live, kill);
     insnWriter_.insertInsn(srcLoc, dstLoc, insn);
     return true;
+}
+
+bool ShapeVarTransMap::resolveDstVar(
+        TShapeVarId        *pDstVar,
+        TShapeVarId         srcVar,
+        TLocIdx             dstLoc,
+        TLocIdx             srcLoc)
+{
+    const TProgTrans progTrans(srcLoc, dstLoc);
+    const TVarAssign &varAssign = assignMap_[progTrans];
+
+    // TODO: keep reverse mapping to optimize lookup?
+    BOOST_FOREACH(TVarAssign::const_reference item, varAssign) {
+        if (item.second != srcVar)
+            continue;
+
+        *pDstVar = item.first;
+        return true;
+    }
+
+    // not found
+    return false;
 }
 
 bool validateTransitions(
@@ -369,10 +397,9 @@ bool validateTransitions(
                     // no shape var associated with the shape, assume operation
                     continue;
 
-                if (te->csMap.empty()) {
-                    CL_DEBUG("shape variable with no mapping to origin");
-                    return false;
-                }
+                if (te->csMap.empty())
+                    // no shape mapping for this edge (it is not the red edge)
+                    continue;
 
                 TShapeMapper::TVector prevShapes;
                 te->csMap.query<D_RIGHT_TO_LEFT>(&prevShapes, 0);
@@ -397,6 +424,7 @@ bool validateTransitions(
 
 void propagateVarsForward(
         TShapeVarByShape           *pMap,
+        ShapeVarTransMap           &vMap,
         const TProgState           &progState)
 {
     using namespace FixedPoint;
@@ -437,13 +465,18 @@ void propagateVarsForward(
 
             // resolve dst shape of this trace edge
             const TShapeIdx dstCsIdx = succs.front();
-            const TShapeIdent dstCs(/* dstHeap */ oe->dst, dstCsIdx);
+            const THeapIdent dstHeap = oe->dst;
+            const TShapeIdent dstCs(dstHeap, dstCsIdx);
             if (hasKey(pMap, dstCs))
                 // already mapped
                 continue;
 
+            TShapeVarId dstVar;
+            if (!vMap.resolveDstVar(&dstVar, var, dstHeap.first, srcLoc))
+                dstVar = var;
+
             // propagate the var and schedule the successor for processing
-            (*pMap)[dstCs] = var;
+            (*pMap)[dstCs] = dstVar;
             todo.push(dstCs);
         }
     }
@@ -467,7 +500,7 @@ bool assignShapeVariables(
     if (!validateTransitions(pDst, vMap, progState))
         return false;
 
-    propagateVarsForward(pDst, progState);
+    propagateVarsForward(pDst, vMap, progState);
     if (!validateTransitions(pDst, vMap, progState))
         return false;
 
