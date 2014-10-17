@@ -309,7 +309,7 @@ bool ShapeVarTransMap::defineAssignment(
 
 bool validateTransitions(
         TShapeVarByShape           *pMap,
-        TInsnWriter                *pInsnWriter,
+        ShapeVarTransMap           &vMap,
         const TProgState           &progState)
 {
     using namespace FixedPoint;
@@ -323,8 +323,6 @@ bool validateTransitions(
         const TLocIdx loc = shape./* heap */first./* loc */first;
         index[loc][shape] = var;
     }
-
-    ShapeVarTransMap vMap(pInsnWriter);
 
     BOOST_FOREACH(TIndex::reference item, index) {
         const TLocIdx dstLocIdx = item.first;
@@ -465,11 +463,12 @@ bool assignShapeVariables(
     if (!propagateVars(pDst, matchList, coll, progState))
         return false;
 
-    if (!validateTransitions(pDst, pInsnWriter, progState))
+    ShapeVarTransMap vMap(pInsnWriter);
+    if (!validateTransitions(pDst, vMap, progState))
         return false;
 
     propagateVarsForward(pDst, progState);
-    if (!validateTransitions(pDst, pInsnWriter, progState))
+    if (!validateTransitions(pDst, vMap, progState))
         return false;
 
     return /* success */ true;
