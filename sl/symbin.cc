@@ -239,7 +239,9 @@ bool handleNoOp(
         const char                                  *name)
 {
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (opList.size() != 2 || opList[0].code != CL_OPERAND_VOID) {
+
+    // this allows both abort() and exit()
+    if (opList.size() < 2 || 3 < opList.size()) {
         emitPrototypeError(&insn.loc, name);
         return false;
     }
@@ -996,6 +998,7 @@ BuiltInTable::BuiltInTable()
     tbl_["__builtin_puts"]                          = handlePuts;
     tbl_["abort"]                                   = handleNoOp;
     tbl_["calloc"]                                  = handleCalloc;
+    tbl_["exit"]                                    = handleNoOp;
     tbl_["free"]                                    = handleFree;
     tbl_["malloc"]                                  = handleMalloc;
     tbl_["memcpy"]                                  = handleMemcpy;
