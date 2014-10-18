@@ -133,6 +133,19 @@ bool matchRoots(
         // target size mismatch
         return false;
 
+    const TObjType clt1 = sh1.objEstimatedType(obj1);
+    const TObjType clt2 = sh2.objEstimatedType(obj2);
+    if (clt1 || clt2) {
+        // compare estimated type of the object
+        if (!clt1 || !clt2)
+            // type info missing for one of the objects
+            return false;
+
+        if (*clt1 != *clt2)
+            // type info mismatch
+            return false;
+    }
+
     const TProtoLevel level1 = sh1.objProtoLevel(obj1);
     const TProtoLevel level2 = sh2.objProtoLevel(obj2);
     if (level1 != level2)
