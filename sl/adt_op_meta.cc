@@ -437,6 +437,10 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
         ctx.idMap.query<D_RIGHT_TO_LEFT>(&objList1, obj2);
 
         if (objList1.empty() || !ctx.sh1.isValid(objList1.front())) {
+            if (OK_REGION != ctx.sh2.objKind(obj2))
+                // only regions are supported with MO_ALLOC for now
+                return false;
+
             const MetaOperation moAlloc(MO_ALLOC, obj2);
             ctx.opSet.insert(moAlloc);
         }
@@ -455,6 +459,10 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
 
         BOOST_FOREACH(const TObjId obj2, objList2) {
             if (!ctx.sh2.isValid(obj2)) {
+                if (OK_REGION != ctx.sh2.objKind(obj2))
+                    // only regions are supported with MO_FREE for now
+                    return false;
+
                 const MetaOperation moFree(MO_FREE, obj1);
                 ctx.opSet.insert(moFree);
             }
