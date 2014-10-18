@@ -545,6 +545,16 @@ void collectNextHeaps(
 
 bool removeOpFrom(TMetaOpSet *pLookup, const SymHeap &sh0, MetaOperation mo)
 {
+    switch (mo.code) {
+        case MO_ALLOC:
+        case MO_FREE:
+            if (OK_REGION != sh0.objKind(mo.obj))
+                // only regions can be allocated/freed in a single step
+                return false;
+        default:
+            break;
+    }
+
     if (1U == pLookup->erase(mo))
         return true;
 
