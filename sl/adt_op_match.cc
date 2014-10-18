@@ -375,7 +375,7 @@ TObjId selectMappedObjByTs(
             return *cObjs.begin();
 
         default:
-            CL_BREAK_IF("unsupported ID mapping in selectMappedObjByTs()");
+            TM_DEBUG("unsupported ID mapping in selectMappedObjByTs()");
             return OBJ_INVALID;
     }
 }
@@ -1027,7 +1027,8 @@ bool applyMatch(THeapSet *pHeapPool, const FootprintMatch &fm, const bool ro)
     return true;
 }
 
-void selectApplicableMatches(
+bool selectApplicableMatchesCore(
+        THeapSet                   *pFailedSet,
         TMatchList                 *pMatchList,
         const TProgState           &progState)
 {
@@ -1087,12 +1088,62 @@ void selectApplicableMatches(
         }
     }
 
-    if (!toReplace.empty()) {
-        CL_BREAK_IF("unhandled partial match in selectApplicableMatches()");
-        mlSelected.clear();
+    if (toReplace.empty()) {
+        // successful selection
+        pMatchList->swap(mlSelected);
+        return true;
+    }
+    else {
+        // orphan heaps remained
+        *pFailedSet = toReplace;
+        return false;
+    }
+}
+
+template <class TA, class TB>
+bool intersects(const TA &aset, const TB &bset)
+{
+    BOOST_FOREACH(typename TA::const_reference item, aset)
+        if (hasKey(bset, item))
+            return true;
+
+    // no intersection
+    return false;
+}
+
+bool filterMatchList(
+        TMatchList                 *pMatchList,
+        const THeapSet             &blackList)
+{
+    TMatchList mlSelected;
+    bool anyMatch = false;
+
+    // iterate through matches
+    BOOST_FOREACH(const FootprintMatch &fm, *pMatchList) {
+        if (intersects(fm.matchedHeaps, blackList))
+            anyMatch = true;
+        else 
+            mlSelected.push_back(fm);
     }
 
     pMatchList->swap(mlSelected);
+    return anyMatch;
+}
+
+void selectApplicableMatches(
+        TMatchList                 *pMatchList,
+        const TProgState           &progState)
+{
+    THeapSet failedSet;
+    while (!selectApplicableMatchesCore(&failedSet, pMatchList, progState)) {
+        // remove the template matches causing the failure and try it again
+        if (!filterMatchList(pMatchList, failedSet)) {
+            CL_BREAK_IF("internal error in selectApplicableMatchesCore()");
+            pMatchList->clear();
+            break;
+        }
+    }
+
     CL_DEBUG("[ADT] count of applicable template match instances: "
             << pMatchList->size());
 }
