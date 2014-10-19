@@ -818,6 +818,47 @@ bool /* anyChange */ removeDeadBranch(
     return /* anyChange */ true;
 }
 
+bool isTrivialAssignment(
+        const GlobalState          &glState,
+        const TLocIdx               loc,
+        const int /* condVar */     assignmentTo,
+        const bool                  assignemntOf)
+{
+    const LocalState &locState = glState[loc];
+    const AnnotatedInsn *srcInsn =
+        dynamic_cast<const AnnotatedInsn *>(locState.insn);
+    if (!srcInsn || srcInsn->clInsn())
+        // either native, or not an annotated insn
+        return false;
+
+    const TGenericVarSet &kill = srcInsn->killVars();
+    if (1U != kill.size() || !srcInsn->liveVars().empty())
+        // not a simple assignment of true/false
+        return false;
+
+    const GenericVar &srcVar = *kill.begin();
+    if (VL_COND_VAR != srcVar.code || assignmentTo != srcVar.uid)
+        // mismatch in src/dst variable
+        return false;
+
+    // resolve the actual instruction text;
+    std::ostringstream strAssignIn;
+    strAssignIn << *srcInsn;
+
+    // resolve the expected instruction text
+    std::ostringstream strAssignExp;
+    strAssignExp << "cond" << assignmentTo << " := ";
+    if (assignemntOf)
+        strAssignExp << "true";
+    else
+        strAssignExp << "false";
+
+    // compare the strings
+    const std::string inText = strAssignIn.str();
+    const std::string expText = strAssignExp.str();
+    return (inText == expText);
+}
+
 bool tryRemoveDeadBranches(
         StateRewriter              *pWriter,
         const GlobalState          &glState,
@@ -853,40 +894,16 @@ bool tryRemoveDeadBranches(
         return false;
 
     const TCfgEdgeList &inEdges = locState.cfgInEdges;
-    if (1U != inEdges.size())
-        // we support only the trivial case for now
-        return false;
+    if (1U == inEdges.size()) {
+        // we have a single predecessor
+        const TLocIdx srcLoc = inEdges.front().targetLoc;
 
-    const TLocIdx srcLoc = inEdges.front().targetLoc;
-    const LocalState &srcState = glState[srcLoc];
-    const AnnotatedInsn *srcInsn =
-        dynamic_cast<const AnnotatedInsn *>(srcState.insn);
-    if (!srcInsn || srcInsn->clInsn())
-        // either native, or not an annotated insn
-        return false;
+        if (isTrivialAssignment(glState, srcLoc, var, /* assignemntOf */ true))
+            return removeDeadBranch(pWriter, glState, loc, /* dead br */ false);
 
-    const TGenericVarSet &kill = srcInsn->killVars();
-    if (1U != kill.size() || !srcInsn->liveVars().empty())
-        // not a simple assignment of true/false
-        return false;
-
-    const GenericVar &srcVar = *kill.begin();
-    if (VL_COND_VAR != srcVar.code || var != srcVar.uid)
-        // mismatch in src/dst variable
-        return false;
-
-    std::ostringstream strAssignIn, strAssignExp;
-    strAssignIn << *srcInsn;
-    strAssignExp << "cond" << var << " := ";
-
-    const std::string inText = strAssignIn.str();
-    const std::string expText = strAssignExp.str();
-
-    if (inText == (expText + "true"))
-        return removeDeadBranch(pWriter, glState, loc, /* dead branch */ false);
-
-    if (inText == (expText + "false"))
-        return removeDeadBranch(pWriter, glState, loc, /* dead branch */ true);
+        if (isTrivialAssignment(glState, srcLoc, var, /* assignemntOf */ false))
+            return removeDeadBranch(pWriter, glState, loc, /* dead br */ true);
+    }
 
     // no simple assignment matched
     return /* anyChange */ false;
