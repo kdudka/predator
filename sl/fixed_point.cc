@@ -794,7 +794,20 @@ bool /* anyChange */ removeDeadBranch(
         anyChange = true;
     }
 
-    CL_BREAK_IF(2U != outEdges.size());
+    switch (outEdges.size()) {
+        case 1U:
+            // the branch has been removed completely!
+            pWriter->dropInsn(loc);
+            return /* anyChange */ true;
+
+        case 2U:
+            break;
+
+        default:
+            CL_BREAK_IF("CFG inconsistency detected in removeDeadBranch()");
+            return false;
+    }
+
     if (outEdges[0].targetLoc == outEdges[1].targetLoc)
         // the branch instruction at 'loc' will be removed by another pass
         return anyChange;
