@@ -118,6 +118,7 @@ class RewriteCapture: public IStateRewriter {
         virtual void replaceInsn(TLocIdx at, GenericInsn *insn);
         virtual void dropInsn(TLocIdx at);
         virtual void dropEdge(TLocIdx src, TLocIdx dst);
+        virtual void redirEdge(TLocIdx from, TLocIdx to, TLocIdx redirTo);
 
     public:
         std::string locLabel(TLocIdx loc) const;
@@ -160,6 +161,14 @@ void RewriteCapture::dropEdge(TLocIdx src, TLocIdx dst)
 {
     const TEdge edge(src, dst);
     edgeLabels_[edge] += " ... to be removed";
+}
+
+void RewriteCapture::redirEdge(TLocIdx from, TLocIdx to, TLocIdx redirTo)
+{
+    const TEdge edge(from, to);
+    std::stringstream str;
+    str << " ... to be redirected to #" << redirTo;
+    edgeLabels_[edge] += str.str();
 }
 
 std::string RewriteCapture::locLabel(TLocIdx loc) const

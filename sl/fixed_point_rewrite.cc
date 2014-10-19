@@ -49,6 +49,12 @@ void MultiRewriter::dropEdge(TLocIdx src, TLocIdx dst)
         slave->dropEdge(src, dst);
 }
 
+void MultiRewriter::redirEdge(TLocIdx from, TLocIdx to, TLocIdx redirTo)
+{
+    BOOST_FOREACH(IStateRewriter *slave, slaveList_)
+        slave->redirEdge(from, to, redirTo);
+}
+
 void MultiRewriter::appendWriter(IStateRewriter &slave)
 {
     slaveList_.push_back(&slave);
@@ -185,6 +191,15 @@ void RecordRewriter::dropEdge(TLocIdx src, TLocIdx dst)
     CL_BREAK_IF("please implement");
 }
 
+void RecordRewriter::redirEdge(TLocIdx from, TLocIdx to, TLocIdx redirTo)
+{
+    // TODO
+    (void) from;
+    (void) to;
+    (void) redirTo;
+    CL_BREAK_IF("please implement");
+}
+
 /// UNSAFE wrt. exceptions falling through IRewriteAction::apply(...)
 void RecordRewriter::flush(IStateRewriter *pConsumer)
 {
@@ -315,6 +330,34 @@ void StateRewriter::dropEdge(const TLocIdx src, const TLocIdx dst)
         if (src != ie.targetLoc)
             inEdges.push_back(ie);
     inEdges.swap(dstState.cfgInEdges);
+}
+
+void StateRewriter::redirEdge(
+        const TLocIdx               from,
+        const TLocIdx               to,
+        const TLocIdx               redirTo)
+{
+    // TODO: preserve loop-closing edge flag
+    CL_NOTE("[ADT] redirecting CFG edge #" << from << " -> #" << to
+            << " to #" << redirTo);
+
+    // update output edges of 'from'
+    LocalState &fromState = d->state[from];
+    BOOST_FOREACH(CfgEdge &oe, fromState.cfgOutEdges)
+        if (oe.targetLoc == to)
+            oe.targetLoc = redirTo;
+
+    // update input edges of 'to'
+    LocalState &toState = d->state[to];
+    TCfgEdgeList toInEdges;
+    BOOST_FOREACH(const CfgEdge &ie, toState.cfgInEdges)
+        if (from != ie.targetLoc)
+            toInEdges.push_back(ie);
+    toInEdges.swap(toState.cfgInEdges);
+
+    // update input edges of 'redirTo'
+    LocalState &redirToState = d->state[redirTo];
+    redirToState.cfgInEdges.push_back(CfgEdge(from));
 }
 
 void StateRewriter::dropInsn(const TLocIdx at)

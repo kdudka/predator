@@ -859,6 +859,29 @@ bool isTrivialAssignment(
     return (inText == expText);
 }
 
+bool removeTrivialCond(
+        StateRewriter              *pWriter,
+        const GlobalState          &glState,
+        const TLocIdx               locCond,
+        const TLocIdx               locPredTrue,
+        const TLocIdx               locPredFalse)
+{
+    const TCfgEdgeList &outEdges = glState[locCond].cfgOutEdges;
+    if (2U != outEdges.size())
+        // not a regular CL_INSN_COND
+        return false;
+ 
+    // resolve new edge targets
+    const TLocIdx locPostTrue  = outEdges[0].targetLoc;
+    const TLocIdx locPostFalse = outEdges[1].targetLoc;
+
+    // redirect the edges and remove the condition insn
+    pWriter->redirEdge(locPredTrue,  locCond, locPostTrue );
+    pWriter->redirEdge(locPredFalse, locCond, locPostFalse);
+    pWriter->dropInsn(locCond);
+    return true;
+}
+
 bool tryRemoveDeadBranches(
         StateRewriter              *pWriter,
         const GlobalState          &glState,
@@ -904,6 +927,21 @@ bool tryRemoveDeadBranches(
         if (isTrivialAssignment(glState, srcLoc, var, /* assignemntOf */ false))
             return removeDeadBranch(pWriter, glState, loc, /* dead br */ true);
     }
+
+    if (2U != inEdges.size())
+        // not exactly two predecessors, giving up for now!
+        return /* anyChange */ false;
+
+    const TLocIdx pred0 = inEdges[0].targetLoc;
+    const TLocIdx pred1 = inEdges[1].targetLoc;
+
+    if (isTrivialAssignment(glState, pred0, var, true)
+            && isTrivialAssignment(glState, pred1, var, false))
+        return removeTrivialCond(pWriter, glState, loc, pred0, pred1);
+
+    if (isTrivialAssignment(glState, pred1, var, true)
+            && isTrivialAssignment(glState, pred0, var, false))
+        return removeTrivialCond(pWriter, glState, loc, pred1, pred0);
 
     // no simple assignment matched
     return /* anyChange */ false;
