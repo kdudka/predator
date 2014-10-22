@@ -41,9 +41,9 @@
 
 static bool debuggingSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 
-#define SJ_DEBUG(...) do {                                                  \
+#define SJ_DEBUG(msg) do {                                                  \
     if (::debuggingSymJoin)                                                 \
-        CL_DEBUG("SymJoin: " << __VA_ARGS__);                               \
+        CL_DEBUG("SymJoin: " << msg);                                       \
 } while (0)
 
 void debugSymJoin(const bool enable)

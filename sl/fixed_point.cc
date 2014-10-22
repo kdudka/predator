@@ -163,7 +163,7 @@ void loadHeaps(
     TBlock bb = fnc->cfg.entry();
     TWorkList wl(bb);
     while (wl.next(bb)) {
-        LocalState *locState;
+        LocalState *locState = 0;
 
         // go through instructions of the current basic block
         const TLocIdx insnCnt = bb->size();

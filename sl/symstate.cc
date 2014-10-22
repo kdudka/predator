@@ -384,6 +384,7 @@ BlockScheduler::BlockScheduler(const IPendingCountProvider &pcp):
 }
 
 BlockScheduler::BlockScheduler(const BlockScheduler &tpl):
+    IStatsProvider(tpl),
     d(new Private(*tpl.d))
 {
 }

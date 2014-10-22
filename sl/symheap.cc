@@ -603,9 +603,10 @@ struct TAnonStackMapWrapper: public TAnonStackMap {
     RefCounter refCnt;
 };
 
-/// @note there is no virtual destructor for now (may be needed in the future)
 class IMatchPolicy {
     public:
+        virtual ~IMatchPolicy() { }
+
         /// return true if we should keep searching
         virtual bool matchBlock(TFldId, const FieldOfObj *data, bool alive) = 0;
 

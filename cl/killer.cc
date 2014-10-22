@@ -159,7 +159,7 @@ void scanVar(BlockData &bData, const Var *var, bool dst, bool fieldOfComp)
 }
 
 void scanTarget(
-        TStorRef                       &stor,
+        TStorRef                        stor,
         BlockData                      &bData,
         TAliasMap                      *pAliasMap,
         const Var                      *origin,
@@ -177,7 +177,7 @@ void scanTarget(
 }
 
 void scanOperand(
-        TStorRef                       &stor,
+        TStorRef                        stor,
         BlockData                      &bData,
         const cl_operand               &op,
         TAliasMap                      *pAliasMap,

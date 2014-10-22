@@ -989,7 +989,7 @@ void collectReplacedInsns(
 
         // skip the last element of the list while collecting the set
         THeapSet &heapSet = heapSetByTpl[tpl];
-        std::copy(heapList.begin(), std::prev(heapList.end()),
+        std::copy(heapList.begin(), --heapList.end(),
                 std::inserter(heapSet, heapSet.begin()));
     }
 

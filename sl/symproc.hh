@@ -104,6 +104,8 @@ class SymProc {
         {
         }
 
+        virtual ~SymProc() { }
+
         SymHeap&                    sh() { return sh_; }
         const SymBackTrace*         bt() { return bt_; }
         const struct cl_loc*        lw() { return lw_; }

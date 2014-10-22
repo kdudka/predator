@@ -58,7 +58,7 @@ bool cgdbAttached()
     // read the command-line arguments of the process that traces us
     std::ostringstream ss;
     ss << "/proc/" << tracerPid << "/cmdline";
-    std::fstream inStr(ss.str(), std::ios::in);
+    std::fstream inStr(ss.str().c_str(), std::ios::in);
     if (!inStr)
         return false;
 
