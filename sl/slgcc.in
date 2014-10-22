@@ -1,6 +1,8 @@
 #!/bin/bash
 export SELF="$0"
 
+set -o pipefail
+
 # this makes 7x speedup in case 'grep' was compiled with multi-byte support
 export LC_ALL=C
 
@@ -139,7 +141,8 @@ run_gcc "$@" | stdbuf --output=L sed -re 's| \[-fplugin=libsl\.so\]$||'        \
 # redirect terminating signals to our plug-in
 trap "forward_signal SIGTERM" SIGTERM
 trap "forward_signal SIGINT"  SIGINT
-wait
+wait "$!"
+EC="$?"
 
 if test x1 = "x$SL_PLOT"; then
     # visualize graphs
@@ -154,3 +157,5 @@ if test x1 = "x$SL_PLOT"; then
         "$SVG_VIEWER" *.svg
     fi 2>/dev/null &
 fi
+
+exit "$EC"
