@@ -37,6 +37,11 @@ equally well.
 
 (1) Install all dependences of Predator and Forester
 ----------------------------------------------------
+   * C/C++ compiler
+     - Predator currently supports GCC 4.1.2+ and Clang 3.2+
+     - the other analyzers are known to work with GCC 4.6.4+
+     - try to install 'g++' on Ubuntu, or 'gcc-c++' on Fedora, if missing
+
    * CMake 2.8+
      - available at http://www.cmake.org
      - the executable is called 'cmake'
