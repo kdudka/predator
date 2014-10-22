@@ -20,6 +20,12 @@ cmake_minimum_required(VERSION 2.6)
 project(cl C CXX)
 enable_testing()
 
+# fail immediately if no C++ compiler is found
+if("${CMAKE_CXX_COMPILER}" MATCHES ".*NOTFOUND")
+    message(FATAL_ERROR "
+Unable to find system C++ compiler!")
+endif()
+
 include("../build-aux/common.cmake")
 
 # suppress an unnecessary warning with gcc-4.4.x
