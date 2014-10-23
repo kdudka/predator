@@ -51,6 +51,8 @@
 #include <tm.h>
 
 #ifdef GCC_HOST_4_9_OR_NEWER
+    // <tree-core.h> needs to be included before <internal-fn.h> on Fedora 21
+#   include <tree-core.h>
     // required by <gimple.h> when compiling against gcc-4.9.0 plug-in headers
 #   include <alias.h>
 #   include <basic-block.h>
@@ -59,7 +61,6 @@
 #   include <predict.h>
 #   include <print-tree.h>
 #   include <tree.h>
-#   include <tree-core.h>
 #   include <tree-ssa-alias.h>
 #   include <gimple-expr.h> // required by <gimple.h> but requires <tree-core.h>
 #endif
