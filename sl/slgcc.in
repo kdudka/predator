@@ -143,6 +143,7 @@ trap "forward_signal SIGTERM" SIGTERM
 trap "forward_signal SIGINT"  SIGINT
 wait "$!"
 EC="$?"
+test 0 = "$EC" || exit $EC
 
 if test x1 = "x$SL_PLOT"; then
     # visualize graphs
