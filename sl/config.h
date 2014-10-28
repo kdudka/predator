@@ -226,6 +226,7 @@
 #define SE_INT_ARITHMETIC_LIMIT             10
 
 /**
+ * - -1 ... never join, never check for entailment, always check for isomorphism
  * - 0 ... join states on each basic block entry
  * - 1 ... join only when traversing a loop-closing edge, entailment otherwise
  * - 2 ... join only when traversing a loop-closing edge, isomorphism otherwise

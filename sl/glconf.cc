@@ -123,8 +123,8 @@ void handleJoinOnLoopEdgesOnly(const string &name, const string &value)
 
     try {
         data.joinOnLoopEdgesOnly = boost::lexical_cast<int>(value);
-        if (data.joinOnLoopEdgesOnly < 0)
-            data.joinOnLoopEdgesOnly = 0;
+        if (data.joinOnLoopEdgesOnly < -1)
+            data.joinOnLoopEdgesOnly = -1;
         if (data.joinOnLoopEdgesOnly > 3)
             data.joinOnLoopEdgesOnly = 3;
     }

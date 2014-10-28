@@ -264,9 +264,23 @@ void SymStateWithJoin::packState(unsigned idxNew, bool allowThreeWay)
         this->rotateExisting(0U, idxNew);
 }
 
+bool joinRequested(const bool allowThreeWay)
+{
+    if (GlConf::data.joinOnLoopEdgesOnly < 0)
+        // we are asked to never join
+        return false;
+
+    if (GlConf::data.joinOnLoopEdgesOnly < 2)
+        // at least entailment is enabled
+        return true;
+
+    // enable join only if the caller asks for it
+    return allowThreeWay;
+}
+
 bool SymStateWithJoin::insert(const SymHeap &shNew, bool allowThreeWay)
 {
-    if ((1 < GlConf::data.joinOnLoopEdgesOnly) && !allowThreeWay)
+    if (!joinRequested(allowThreeWay))
         // we are asked not to check for entailment, only isomorphism
         return SymHeapUnion::insert(shNew, allowThreeWay);
 
