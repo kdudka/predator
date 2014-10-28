@@ -37,6 +37,23 @@ namespace GlConf {
 
 Options data;
 
+Options::Options():
+    trackUninit(false),
+    oomSimulation(false),
+    memLeakIsError(false),
+    skipUserPlots(false),
+    errorRecoveryMode(SE_ERROR_RECOVERY_MODE),
+    allowCyclicTraceGraph(SE_ALLOW_CYCLIC_TRACE_GRAPH),
+    allowThreeWayJoin(SE_ALLOW_THREE_WAY_JOIN),
+    forbidHeapReplace(SE_FORBID_HEAP_REPLACE),
+    intArithmeticLimit(SE_INT_ARITHMETIC_LIMIT),
+    joinOnLoopEdgesOnly(SE_JOIN_ON_LOOP_EDGES_ONLY),
+    stateLiveOrdering(SE_STATE_ON_THE_FLY_ORDERING),
+    detectContainers(false),
+    fixedPoint(0)
+{
+}
+
 class ConfigStringParser {
     public:
         ConfigStringParser();
