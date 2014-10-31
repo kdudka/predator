@@ -2199,14 +2199,16 @@ bool reconstructPtrArithmetic(
         const TValId                v2,
         const enum cl_binop_e       code)
 {
-    // these are no-ops (and I would bet they come from CIL anyway)
-    if (VAL_NULL == v1) {
-        *pResult =  v2;
-        return true;
-    }
-    if (VAL_NULL == v2) {
-        *pResult =  v1;
-        return true;
+    if (CL_BINOP_PLUS == code) {
+        // these are no-ops (and I would bet they come from CIL anyway)
+        if (VAL_NULL == v1) {
+            *pResult =  v2;
+            return true;
+        }
+        if (VAL_NULL == v2) {
+            *pResult =  v1;
+            return true;
+        }
     }
 
     if (isAnyDataArea(sh.valTarget(v1)) && isAnyIntValue(sh, v2)) {
