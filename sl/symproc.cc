@@ -2024,6 +2024,10 @@ bool handleRangeBitMask(
         CL_BREAK_IF("handleRangeBitMask() malfunction");
 
     IR::Range rng = (isRange1) ? rng1 : rng2;
+    if (IR::IntMin == rng.lo || rng.hi == IR::IntMax)
+        // unbounded interval, we cannot safely compute the result
+        return false;
+
     rng &= mask;
 
     const CustomValue cv(rng);
