@@ -30,7 +30,7 @@ tools are intended to be as portable as GCC is, we support only Linux for now.
 Building from sources against the system GCC
 ============================================
 This method requires a build of GCC with plug-in support compiled in (not
-necessarily the system one).  The currently supported version of GCC is 4.9.1
+necessarily the system one).  The currently supported version of GCC is 4.9.2
 and the test-suite is guaranteed to fully succeed only against this version of
 GCC.  However, the Predator plug-in itself is known to work with GCC 4.[5-8].x
 equally well.

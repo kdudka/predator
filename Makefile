@@ -21,7 +21,7 @@ BOOST_STABLE    ?= boost_1_46_1#            # released Boost
 BOOST_STABLE_TGZ?= $(BOOST_STABLE).tar.bz2# # tarball of released Boost
 BOOST_STABLE_URL?= http://sourceforge.net/projects/boost/files/boost/1.46.1/boost_1_46_1.tar.bz2/download
 
-GCC_STABLE      ?= gcc-4.9.1#               # released gcc
+GCC_STABLE      ?= gcc-4.9.2#               # released gcc
 GCC_STABLE_TGZ  ?= $(GCC_STABLE).tar.bz2#   # tarball of released gcc
 GCC_STABLE_URL  ?= $(GCC_MIRROR)/$(GCC_STABLE)/$(GCC_STABLE_TGZ)
 
