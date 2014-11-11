@@ -609,12 +609,6 @@ Node* /* selected predecessor */ InsnNode::printNode() const
     return this->parent();
 }
 
-Node* /* selected predecessor */ JoinNode::printNode() const
-{
-    // FIXME: deal better with join nodes
-    return this->parents().front();
-}
-
 Node* JoinNode::parent() const
 {
     switch (status_) {
@@ -627,6 +621,11 @@ Node* JoinNode::parent() const
         default:
             return Node::parent();
     }
+}
+
+Node* /* selected predecessor */ JoinNode::printNode() const
+{
+    return this->parent();
 }
 
 Node* /* selected predecessor */ CloneNode::printNode() const

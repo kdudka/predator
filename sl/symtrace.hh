@@ -135,7 +135,7 @@ class Node: public NodeBase {
         virtual ~Node();
 
         /// serialize this node to the given plot (externally not much useful)
-        void virtual plotNode(TracePlotter &) const = 0;
+        virtual void plotNode(TracePlotter &) const = 0;
 
         friend void plotTraceCore(TracePlotter &);
 
