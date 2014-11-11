@@ -625,7 +625,8 @@ Node* JoinNode::parent() const
 
 Node* /* selected predecessor */ JoinNode::printNode() const
 {
-    return this->parent();
+    // FIXME: deal better with join nodes
+    return this->parents().front();
 }
 
 Node* /* selected predecessor */ CloneNode::printNode() const
