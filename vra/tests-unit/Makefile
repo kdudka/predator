@@ -1,6 +1,7 @@
 .PHONY: all clean
 
-CC = g++ -O0 -g -std=c++98 -pedantic -W -Wall -Wextra \
+CXX ?= g++
+CXXFLAGS ?= -O0 -g -std=c++98 -pedantic -W -Wall -Wextra \
 	-Wno-variadic-macros -Wno-long-long \
 	-I../ -I../../include/ \
 	-pthread -lgmpxx -lgmp
@@ -11,20 +12,20 @@ gtest/libgtest.a:
 	make -C gtest
 
 NumberTest: NumberTest.cc ../Number.cc gtest/libgtest.a
-	${CC} NumberTest.cc ../Number.cc gtest/libgtest.a -o $@
+	$(CXX) NumberTest.cc ../Number.cc gtest/libgtest.a -o $@ $(CXXFLAGS)
 
 RangeTest: RangeTest.cc ../Range.cc ../Number.cc gtest/libgtest.a
-	${CC} RangeTest.cc ../Range.cc ../Number.cc gtest/libgtest.a -o $@
+	$(CXX) RangeTest.cc ../Range.cc ../Number.cc gtest/libgtest.a -o $@ $(CXXFLAGS)
 
 MemoryPlaceTest: MemoryPlaceTest.cc ../MemoryPlace.cc gtest/libgtest.a
-	${CC} MemoryPlaceTest.cc ../MemoryPlace.cc gtest/libgtest.a -o $@
+	$(CXX) MemoryPlaceTest.cc ../MemoryPlace.cc gtest/libgtest.a -o $@ $(CXXFLAGS)
 
 OperandToMemoryPlaceTest: OperandToMemoryPlaceTest.cc ../OperandToMemoryPlace.cc gtest/libgtest.a
-	${CC} OperandToMemoryPlaceTest.cc ../OperandToMemoryPlace.cc \
-		../MemoryPlace.cc gtest/libgtest.a -o $@
+	$(CXX) OperandToMemoryPlaceTest.cc ../OperandToMemoryPlace.cc \
+		../MemoryPlace.cc gtest/libgtest.a -o $@ $(CXXFLAGS)
 
 UtilityTest: UtilityTest.cc ../Utility.cc ../Number.cc ../Range.cc gtest/libgtest.a
-	${CC} UtilityTest.cc ../Utility.cc ../Number.cc ../Range.cc gtest/libgtest.a -o $@
+	$(CXX) UtilityTest.cc ../Utility.cc ../Number.cc ../Range.cc gtest/libgtest.a -o $@ $(CXXFLAGS)
 
 clean:
 	make -C gtest clean
