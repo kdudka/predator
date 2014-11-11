@@ -1,0 +1,12 @@
+language: cpp
+
+compiler:
+    - gcc
+
+install:
+    - sudo apt-get install cmake curl g++ gcc-4.6-multilib gcc-4.6-plugin-dev libboost-dev make
+
+before_script:
+    - patch -p1 < build-aux/gcc-4.6.4.patch
+
+script: ./switch-host-gcc.sh /usr/bin/gcc-4.6
