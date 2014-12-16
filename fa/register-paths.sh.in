@@ -1,5 +1,8 @@
 #!/bin/sh
-if test "register-paths.sh" = "`basename -- $0`"; then
+if test "register-paths.sh" = "`basename -- $0`" \
+    -a x$ZSH_EVAL_CONTEXT = x \
+    -o x$ZSH_EVAL_CONTEXT = xtoplevel
+then
     printf "%s\n" \
         "It makes no sense to run this script.  It needs to be sourced:
 
