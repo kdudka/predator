@@ -36,16 +36,6 @@ ADD_CXX_ONLY_FLAG("W_CTOR_DTOR_PRIVACY"  "-Wctor-dtor-privacy")
 ADD_CXX_ONLY_FLAG("W_OLD_STYLE_CAST"     "-Wold-style-cast")
 ADD_CXX_ONLY_FLAG("W_EFFCXX"             "-Weffc++")
 
-# helping scripts
-configure_file( ${PROJECT_SOURCE_DIR}/fagcc.in     ${PROJECT_BINARY_DIR}/fagcc     @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagccp.in    ${PROJECT_BINARY_DIR}/fagccp    @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagccv.in    ${PROJECT_BINARY_DIR}/fagccv    @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagccvf.in   ${PROJECT_BINARY_DIR}/fagccvf   @ONLY)
-configure_file( ${PROJECT_SOURCE_DIR}/fagdb.in     ${PROJECT_BINARY_DIR}/fagdb     @ONLY)
-
-configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
-    ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
-
 # libforester.a
 add_library(forester STATIC
 	backward_run.cc
@@ -88,6 +78,16 @@ target_link_libraries(fa rt)
 # get the full path of libfa.so
 get_property(GCC_PLUG TARGET fa PROPERTY LOCATION)
 message (STATUS "GCC_PLUG: ${GCC_PLUG}")
+
+# helping scripts
+configure_file(${PROJECT_SOURCE_DIR}/fagcc.in     ${PROJECT_BINARY_DIR}/fagcc     @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/fagccp.in    ${PROJECT_BINARY_DIR}/fagccp    @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/fagccv.in    ${PROJECT_BINARY_DIR}/fagccv    @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/fagccvf.in   ${PROJECT_BINARY_DIR}/fagccvf   @ONLY)
+configure_file(${PROJECT_SOURCE_DIR}/fagdb.in     ${PROJECT_BINARY_DIR}/fagdb     @ONLY)
+configure_file(
+    ${PROJECT_SOURCE_DIR}/register-paths.sh.in
+    ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
 
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 
