@@ -4,12 +4,18 @@ compiler:
     - gcc
 
 before_install:
+    - echo "deb https://kdudka.fedorapeople.org/csbuild precise contrib" | sudo tee -a /etc/apt/sources.list
+    - sudo apt-get install apt-transport-https
     - sudo apt-get update
 
 install:
     - sudo apt-get install cmake gcc-4.6-multilib gcc-4.6-plugin-dev libboost-dev
+    - sudo apt-get install -y --force-yes csbuild
 
 before_script:
     - patch -p1 < build-aux/gcc-4.6.4.patch
 
-script: ./switch-host-gcc.sh /usr/bin/gcc-4.6
+script:
+    - ./switch-host-gcc.sh /usr/bin/gcc-4.6
+    - make distclean
+    - GCC_HOST=/usr/bin/gcc-4.6 csbuild -g "$TRAVIS_COMMIT_RANGE" --git-bisect --added-exit-code=7 -c "make -j3"
