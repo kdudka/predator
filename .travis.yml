@@ -4,8 +4,9 @@ compiler:
     - gcc
 
 before_install:
-    - echo "deb https://kdudka.fedorapeople.org/csbuild precise contrib" | sudo tee -a /etc/apt/sources.list
+    - sudo apt-get update
     - sudo apt-get install apt-transport-https
+    - echo "deb https://kdudka.fedorapeople.org/csbuild precise contrib" | sudo tee -a /etc/apt/sources.list
     - sudo apt-get update
 
 install:
