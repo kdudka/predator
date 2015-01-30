@@ -29,6 +29,8 @@
 #include <cl/cldebug.hh>
 #include <cl/storage.hh>
 
+#include <typeinfo>
+
 #include <boost/foreach.hpp>
 
 namespace FixedPoint {

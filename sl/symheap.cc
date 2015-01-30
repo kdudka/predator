@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <map>
 #include <set>
+#include <typeinfo>
 
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
