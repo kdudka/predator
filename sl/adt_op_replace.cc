@@ -259,6 +259,10 @@ void collectPtrVarsCore(
     Trace::waiveCloneOperation(sh);
 
     BOOST_FOREACH(const TObjId obj, objList) {
+        if (!sh.isValid(obj))
+            // the object we are looking for does not exist (partial match?)
+            continue;
+
         FldList refs;
         sh.pointedBy(refs, obj);
         BOOST_FOREACH(const FldHandle &fld, refs) {
