@@ -838,11 +838,11 @@ bool tryReplaceIter(
         return false;
 
     acSrc = acSrc->next;
-    if (CL_ACCESSOR_ITEM != acSrc->code)
+    if (CL_ACCESSOR_ITEM != acSrc->code || acSrc->next)
         // unsupported access to member
         return false;
 
-    const TOffset off = acSrc->type->items[acSrc->data.item.id].offset;
+    TOffset off = acSrc->type->items[acSrc->data.item.id].offset;
     TShapeVarId var = -1;
     ShapeProps props;
 
@@ -879,6 +879,9 @@ bool tryReplaceIter(
         else if (var != varNow || props != propsNow)
             return false;
     }
+
+    // FIXME: we should first check that the HEAD is really an embedded struct
+    off += props.bOff.head;
 
     const char *name;
     if (off == props.bOff.next)
