@@ -470,6 +470,13 @@ void relocFieldOffset(MetaOperation *pMetaOp, const FootprintMatch &fm)
         off = bfProg.next;
     else if (off == bfTpl.prev)
         off = bfProg.prev;
+
+    if (MO_SET != pMetaOp->code || OBJ_NULL == pMetaOp->tgtObj)
+        return;
+
+    if (bfProg.head && (bfTpl.head == pMetaOp->tgtOff))
+        // relocate target offset according to head offset
+        pMetaOp->tgtOff = bfProg.head;
 }
 
 void relocOffsetsInMetaOps(TMetaOpSet *pMetaOps, const FootprintMatch &fm)
@@ -480,11 +487,10 @@ void relocOffsetsInMetaOps(TMetaOpSet *pMetaOps, const FootprintMatch &fm)
     BOOST_FOREACH(MetaOperation mo, src) {
         switch (mo.code) {
             case MO_SET:
-                // TODO: relocate target offset according to head offset
-                // fall through!
             case MO_UNSET:
                 relocFieldOffset(&mo, fm);
-                // fall through!
+                break;
+
             default:
                 break;
         }
