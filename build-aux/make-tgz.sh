@@ -9,7 +9,7 @@ die(){
 }
 
 usage(){
-    echo "Usage: $SH_NAME code-listener|forester|predator"
+    echo "Usage: GCC_HOST=/usr/bin/gcc $SH_NAME code-listener|forester|predator"
     exit 1
 }
 
