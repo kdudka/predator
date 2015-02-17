@@ -59,7 +59,7 @@ REPO="`git rev-parse --show-toplevel`" \
 printf "%s: considering release of %s using %s...\n" \
     "$SH_NAME" "$PROJECT" "$REPO"
 
-branch="`git status | head -1 | sed 's/^#.* //'`" \
+branch="`git rev-parse --abbrev-ref HEAD`" \
     || die "unable to read git branch"
 
 test xmaster = "x$branch" \
