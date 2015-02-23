@@ -1,22 +1,19 @@
 language: cpp
-
-compiler:
-    - gcc
+compiler: gcc
 
 before_install:
-    - sudo apt-get update
-    - sudo apt-get install apt-transport-https
+    - sudo apt-get update -qq
+    - sudo apt-get install -qq apt-transport-https
     - echo "deb https://kdudka.fedorapeople.org/csbuild precise contrib" | sudo tee -a /etc/apt/sources.list
-    - sudo apt-get update
+    - sudo apt-get update -qq
 
 install:
+    - sudo apt-get install -qq -y --force-yes csbuild
     - sudo apt-get install cmake gcc-4.6-multilib gcc-4.6-plugin-dev libboost-dev
-    - sudo apt-get install -y --force-yes csbuild
 
 before_script:
     - patch -p1 < build-aux/gcc-4.6.4.patch
 
 script:
     - ./switch-host-gcc.sh /usr/bin/gcc-4.6
-    - make distclean
-    - GCC_HOST=/usr/bin/gcc-4.6 csbuild -g "$TRAVIS_COMMIT_RANGE" --git-bisect --added-exit-code=7 -c "make -j3"
+    - test -z "$TRAVIS_COMMIT_RANGE" || GCC_HOST=/usr/bin/gcc-4.6 csbuild --git-commit-range "$TRAVIS_COMMIT_RANGE" -c "make distclean && make -j9" --git-bisect --print-current --print-fixed
