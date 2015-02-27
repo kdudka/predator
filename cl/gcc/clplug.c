@@ -23,6 +23,12 @@
 #include <gcc-plugin.h>
 #include <plugin-version.h>
 
+#if defined(GCCPLUGIN_VERSION_MAJOR) && (GCCPLUGIN_VERSION_MAJOR >= 5)
+#   define GCC_HOST_5_OR_NEWER
+// GCC_HOST_5_OR_NEWER implies GCC_HOST_4_9_OR_NEWER
+#   define GCC_HOST_4_9_OR_NEWER
+#endif
+
 #if defined(GCCPLUGIN_VERSION_MAJOR) && (GCCPLUGIN_VERSION_MAJOR == 4) && (GCCPLUGIN_VERSION_MINOR >= 9)
 #   define GCC_HOST_4_9_OR_NEWER
 #endif
@@ -172,6 +178,12 @@ extern void print_gimple_stmt(FILE *, gimple, int, int);
 // Name of the TYPE_PTR_TO_MEMBER_P has changed in newer versions of GCC.
 #ifndef TYPE_PTRMEM_P
   #define TYPE_PTRMEM_P(NODE) TYPE_PTR_TO_MEMBER_P(NODE)
+#endif
+
+#ifdef GCC_HOST_5_OR_NEWER
+typedef const gswitch *cl_gswitch;
+#else
+typedef gimple cl_gswitch;
 #endif
 
 // name of the plug-in given by gcc during initialization
@@ -487,8 +499,6 @@ static int get_type_sizeof(tree t)
         // C99 stack-allocated arrays of variable size not known at compile-time
         return 0;
 
-    CL_BREAK_IF(TREE_INT_CST_HIGH(size));
-
     return TREE_INT_CST_LOW(size);
 }
 
@@ -553,12 +563,12 @@ static int dig_field_offset(tree t)
 {
     // read byte offset
     tree node = DECL_FIELD_OFFSET(t);
-    CL_BREAK_IF(INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node));
+    CL_BREAK_IF(INTEGER_CST != TREE_CODE(node));
     int offset = TREE_INT_CST_LOW(node) << 3;
 
     // read bit offset
     node = DECL_FIELD_BIT_OFFSET(t);
-    CL_BREAK_IF(INTEGER_CST != TREE_CODE(node) || TREE_INT_CST_HIGH(node));
+    CL_BREAK_IF(INTEGER_CST != TREE_CODE(node));
     offset += TREE_INT_CST_LOW(node);
 
     // return total offset [in bits]
@@ -1140,10 +1150,6 @@ static void read_cst_fnc(struct cl_operand *op, tree t)
 
 static void read_cst_int(struct cl_operand *op, tree t)
 {
-    // I don't understand the following code, see gcc/print-tree.c
-    CL_BREAK_IF(TREE_INT_CST_HIGH(t) != 0 && (TREE_INT_CST_LOW(t) == 0
-                || TREE_INT_CST_HIGH(t) != -1));
-
     // FIXME: should we read unsigned types separately?
     op->code                            = CL_OPERAND_CST;
     op->data.cst.code                   = CL_TYPE_INT;
@@ -1577,7 +1583,7 @@ static void handle_stmt_call(gimple stmt, struct gimple_walk_data *data)
 static void handle_stmt_return(gimple stmt)
 {
     struct cl_operand src;
-    handle_operand(&src, gimple_return_retval(stmt));
+    handle_operand(&src, gimple_op(stmt, /* return value */ 0));
 
     struct cl_insn cli;
     cli.code                    = CL_INSN_RET;
@@ -1687,7 +1693,7 @@ static unsigned find_case_label_target(gimple stmt, int label_decl_uid)
             continue;
 
         // get label declaration
-        tree label = gimple_label_label(bb_stmt);
+        tree label = gimple_op(bb_stmt, /* label */ 0);
         CL_BREAK_IF(!label);
 
         if (label_decl_uid == LABEL_DECL_UID(label))
@@ -1704,7 +1710,7 @@ static unsigned find_case_label_target(gimple stmt, int label_decl_uid)
 static void handle_stmt_switch(gimple stmt)
 {
     struct cl_operand src;
-    handle_operand(&src, gimple_switch_index(stmt));
+    handle_operand(&src, gimple_op(stmt, /* switch index */ 0));
 
     // emit insn_switch_open
     struct cl_loc loc;
@@ -1713,8 +1719,8 @@ static void handle_stmt_switch(gimple stmt)
     free_cl_operand_data(&src);
 
     unsigned i;
-    for (i = 0; i < gimple_switch_num_labels(stmt); ++i) {
-        tree case_decl = gimple_switch_label(stmt, i);
+    for (i = 0; i < gimple_switch_num_labels((cl_gswitch) stmt); ++i) {
+        tree case_decl = gimple_switch_label((cl_gswitch) stmt, i);
         CL_BREAK_IF(!case_decl);
 
         // lowest case value with same label
@@ -1754,7 +1760,7 @@ static void handle_stmt_switch(gimple stmt)
 
 static void handle_stmt_label(gimple stmt)
 {
-    tree label = gimple_label_label(stmt);
+    tree label = gimple_op(stmt, /* label */ 0);
     struct cl_insn cli;
     cli.code = CL_INSN_LABEL;
     cli.data.insn_label.name = get_decl_name(label);
@@ -2011,7 +2017,9 @@ struct cl_pass_str: public opt_pass {
     cl_pass_str():
         opt_pass(cl_pass_data, 0)
     {
+#ifndef GCC_HOST_5_OR_NEWER
         this->has_execute = true;
+#endif
     }
 
     virtual opt_pass *clone()
@@ -2019,7 +2027,11 @@ struct cl_pass_str: public opt_pass {
         return new cl_pass_str(*this);
     }
 
+#ifdef GCC_HOST_5_OR_NEWER
+    virtual unsigned int execute(function *)
+#else
     virtual unsigned int execute()
+#endif
     {
         return cl_pass_execute();
     }
