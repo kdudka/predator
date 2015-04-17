@@ -56,7 +56,7 @@ bool rngFromVal(IR::Range *pDst, const SymHeapCore &, TValId);
 bool anyRangeFromVal(IR::Range *pDst, const SymHeap &, TValId);
 
 /// extract string literal from the given value if possible, fail otherwise
-bool stringFromVal(const char **pDst, const SymHeap &, TValId);
+bool stringFromVal(std::string *pDst, const SymHeap &, TValId);
 
 void moveKnownValueToLeft(const SymHeap &sh, TValId &valA, TValId &valB);
 

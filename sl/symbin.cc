@@ -135,7 +135,7 @@ void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
 {
     const TValId valMsg = proc.valFromOperand(opMsg);
 
-    const char *msg;
+    std::string msg;
     const SymHeap &sh = proc.sh();
     if (!stringFromVal(&msg, sh, valMsg))
         // no user message available
@@ -195,7 +195,7 @@ bool handlePlotTraceGeneric(
     }
 
     // resolve name of the user node
-    const char *nodeName;
+    std::string nodeName;
     const SymHeap &sh = core.sh();
     const TValId valNodeName = core.valFromOperand(opList[/* node_name */ 3]);
     if (!stringFromVal(&nodeName, sh, valNodeName)) {
@@ -213,7 +213,8 @@ bool handlePlotTraceGeneric(
 
     // create a user node with the specified label
     Trace::Node *trOrig = sh.traceNode();
-    Trace::NodeHandle trHandle(new Trace::UserNode(trOrig, &insn, nodeName));
+    Trace::NodeHandle trHandle(
+	    new Trace::UserNode(trOrig, &insn, nodeName.c_str()));
     CL_BREAK_IF(!chkTraceGraphConsistency(trOrig));
 
     if (now) {
@@ -557,8 +558,8 @@ bool handlePrintf(
     }
 
     const TValId valFmt = core.valFromOperand(opList[/* fmt */ 2]);
-    const char *fmt;
-    if (!stringFromVal(&fmt, sh, valFmt)) {
+    std::string fmtStr;
+    if (!stringFromVal(&fmtStr, sh, valFmt)) {
         CL_ERROR_MSG(lw, "fmt arg of printf() is not a string literal");
         core.printBackTrace(ML_ERROR);
         insertCoreHeap(dst, core, insn);
@@ -567,6 +568,8 @@ bool handlePrintf(
 
     unsigned opIdx = /* 1st vararg */ 3;
 
+    char *fmtAlloc = strdup(fmtStr.c_str());
+    const char *fmt = fmtAlloc;
     while (*fmt) {
         if ('%' != *(fmt++))
             continue;
@@ -616,10 +619,12 @@ bool handlePrintf(
         core.printBackTrace(ML_WARN);
     }
 
+    free(fmtAlloc);
     insertCoreHeap(dst, core, insn);
     return true;
 
 fail:
+    free(fmtAlloc);
     core.printBackTrace(ML_ERROR);
     insertCoreHeap(dst, core, insn);
     return true;

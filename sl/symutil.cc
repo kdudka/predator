@@ -119,7 +119,7 @@ bool anyRangeFromVal(
     return false;
 }
 
-bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val)
+bool stringFromVal(std::string *pDst, const SymHeap &sh, const TValId val)
 {
     if (VT_CUSTOM != sh.valTarget(val))
         // not a custom value
@@ -130,8 +130,7 @@ bool stringFromVal(const char **pDst, const SymHeap &sh, const TValId val)
         // not a string literal
         return false;
 
-    *pDst = cv.str().c_str();
-    CL_BREAK_IF(!*pDst);
+    *pDst = cv.str();
     return true;
 }
 
