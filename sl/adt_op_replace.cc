@@ -838,7 +838,7 @@ bool tryReplaceIter(
         return false;
 
     acSrc = acSrc->next;
-    if (CL_ACCESSOR_ITEM != acSrc->code || acSrc->next)
+    if (!acSrc || CL_ACCESSOR_ITEM != acSrc->code || acSrc->next)
         // unsupported access to member
         return false;
 
