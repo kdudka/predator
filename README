@@ -53,9 +53,9 @@ equally well.
      - on binary distros you may need also the 'boost-devel' sub-package
 
    * 32bit system headers, especially in case of 64bit OS
-     - on Ubuntu/Debian provided by a package called 'libc6-dev-i386'
+     - on Debian provided by a package called 'g++-4.9-multilib'
      - you can try to check their presence
-       by 'gcc -m32 -o /dev/null /usr/include/stdlib.h'
+       by 'echo "#include <new>" | gcc -m32 -c -xc++ -'
 
 (2) Build Predator and Forester from sources
 --------------------------------------------

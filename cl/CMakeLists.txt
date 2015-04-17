@@ -79,17 +79,18 @@ if (NOT EXISTS "${GCC_INC_DIR}/gcc-plugin.h")
 endif()
 
 # check for 32bit C standard header files
-execute_process(COMMAND "${GCC_HOST}" -m32 -o /dev/null /usr/include/stdlib.h
+set(GCC_M32_CMD "echo \"#include <new>\" | ${GCC_HOST} -m32 -c -xc++ -")
+execute_process(COMMAND sh -c "${GCC_M32_CMD}"
     RESULT_VARIABLE GCC_HOST_M32_STATUS)
 if ("${GCC_HOST_M32_STATUS}" EQUAL 0)
     message(STATUS
-    "'${GCC_HOST} -m32 -o /dev/null /usr/include/stdlib.h' works")
+    "'${GCC_M32_CMD}' works")
 else()
     message(FATAL_ERROR
-    "'${GCC_HOST} -m32 -o /dev/null /usr/include/stdlib.h' failed
+    "'${GCC_M32_CMD}' failed
 
     Please make sure you have 32bit standard header files installed.  You need
-    to install glibc-devel.i686 on Fedora, or gcc-4.6-multilib on Ubuntu.")
+    to install glibc-devel.i686 on Fedora, or g++-4.9-multilib on Debian.")
 endif()
 
 # query CC1_HOST using GCC_HOST

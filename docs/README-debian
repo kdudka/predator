@@ -1,0 +1,12 @@
+Building Predator on Debian
+===========================
+The below steps were successfully tested on a fresh installation of Debian 8:
+
+sudo apt-get install \
+    cmake curl g++ gcc-4.9-multilib gcc-4.9-plugin-dev git libboost-dev make
+
+git clone https://github.com/kdudka/predator.git
+
+cd predator
+
+./switch-host-gcc.sh /usr/bin/gcc
