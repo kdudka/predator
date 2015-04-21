@@ -199,7 +199,7 @@ TObjId regFromSegDeep(SymHeap &sh, TObjId seg, Trace::TIdMapper &idMapper)
     redirectRefs(sh,
             /* pointingFrom  */ reg,
             /* pointingTo    */ seg,
-            /* pointingWith  */ TS_INVALID,
+            /* pointingWith  */ TS_ALL,
             /* redirectTo    */ reg,
             /* redirectWith  */ TS_REGION);
 
