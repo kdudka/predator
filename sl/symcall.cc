@@ -618,6 +618,7 @@ void SymCallCache::Private::resolveHeapCut(
     TStorRef stor = sh.stor();
 
     // start with all gl variables that are accessible from this function
+    TCVarList fncVarsToImport;
     BOOST_FOREACH(const int uid, fncVars) {
         const CodeStorage::Var &var = stor.vars[uid];
         if (isOnStack(var))
@@ -626,10 +627,14 @@ void SymCallCache::Private::resolveHeapCut(
         const CVar cv(uid, /* gl var */ 0);
         if (!isVarAlive(sh, cv))
             // the var we need does not exist at this level yet --> lazy import
-            this->importGlVar(sh, cv);
+            fncVarsToImport.push_back(cv);
 
         cut.push_back(cv);
     }
+
+    // lazy import of gl variables in a batch (to avoid altering the list)
+    BOOST_FOREACH(const CVar &cv, fncVarsToImport)
+        this->importGlVar(sh, cv);
 
     TObjList live;
     sh.gatherObjects(live, isProgramVar);

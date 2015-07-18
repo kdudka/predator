@@ -471,6 +471,8 @@ Call cache
 
     test-0190.c - test-0189 narrowed down to a minimal example
 
+    test-0244.c - cyclic dependency of gl var initializers
+
 
 Tests taken from Forester
 =========================
