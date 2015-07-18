@@ -152,7 +152,7 @@ class SymProc {
         bool hasFatalError() const;
 
     protected:
-        TObjId objByVar(const CVar &cv);
+        TObjId objByVar(const CVar &cv, bool initOnly = false);
         TObjId objByVar(const struct cl_operand &op);
         TValId targetAt(const struct cl_operand &op);
         virtual void varInit(TObjId reg);

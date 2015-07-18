@@ -395,11 +395,12 @@ TValId translateValProto(
 void initGlVar(SymHeap &sh, const CVar &cv)
 {
     CL_BREAK_IF(cv.inst);
-    CL_BREAK_IF(isVarAlive(sh, cv));
+
+    const bool alreadyAlive = isVarAlive(sh, cv);
 
     SymBackTrace dummyBt(sh.stor());
     SymProc proc(sh, &dummyBt);
-    (void) proc.objByVar(cv);
+    (void) proc.objByVar(cv, /* initOnly */ alreadyAlive);
 }
 
 bool /* anyChange */ redirectRefs(

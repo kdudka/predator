@@ -344,15 +344,19 @@ void SymProc::varInit(TObjId obj)
     }
 }
 
-TObjId SymProc::objByVar(const CVar &cv)
+TObjId SymProc::objByVar(const CVar &cv, const bool initOnly)
 {
     TObjId reg = sh_.regionByVar(cv, /* createIfNeeded */ false);
-    if (OBJ_INVALID != reg)
-        // var already alive
-        return reg;
+    if (initOnly)
+        CL_BREAK_IF(OBJ_INVALID == reg);
+    else {
+        if (OBJ_INVALID != reg)
+            // var already alive
+            return reg;
 
-    // lazy var creation
-    reg = sh_.regionByVar(cv, /* createIfNeeded */ true);
+        // lazy var creation
+        reg = sh_.regionByVar(cv, /* createIfNeeded */ true);
+    }
 
     // resolve Var
     const CodeStorage::Storage &stor = sh_.stor();
