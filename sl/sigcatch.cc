@@ -38,13 +38,27 @@ static volatile sig_atomic_t sig_flags[_NSIG];
 typedef std::map<int /* signum */, TSigHandler> TBackup;
 static TBackup backup;
 
+/// check that signum is a signal known at compile time
+static bool isKnownSig(int signum)
+{
+    return (0 < signum)
+        && (signum < _NSIG);
+}
+
 static void generic_signal_handler(int signum)
 {
+    if (!isKnownSig(signum))
+        // out of range
+        return;
+
     sig_flags[signum] = static_cast<sig_atomic_t>(true);
 }
 
 bool SignalCatcher::install(int signum)
 {
+    if (!isKnownSig(signum))
+        return false;
+
     if (hasKey(backup, signum))
         return false;
 
