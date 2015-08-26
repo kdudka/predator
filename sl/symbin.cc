@@ -469,7 +469,9 @@ bool handleMemmoveCore(
 {
     const struct cl_loc *loc = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (5 != opList.size()) {
+    if (5 != opList.size()
+            && /* in LLVM + align + volatile */ 7 != opList.size())
+    {
         emitPrototypeError(loc, name);
         return false;
     }
@@ -519,7 +521,9 @@ bool handleMemset(
 {
     const struct cl_loc *lw = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (5 != opList.size()) {
+    if (5 != opList.size()
+            && /* in LLVM + align + volatile */ 7 != opList.size())
+    {
         emitPrototypeError(lw, name);
         return false;
     }
@@ -999,6 +1003,10 @@ BuiltInTable::BuiltInTable()
     tbl_["__builtin_stack_restore"]                 = handleStackRestore;
     tbl_["__builtin_stack_save"]                    = handleStackSave;
 
+    // LLVM built-in stack allocation
+    tbl_["llvm.stackrestore"]                       = handleStackRestore;
+    tbl_["llvm.stacksave"]                          = handleStackSave;
+
     // C run-time
     tbl_["__builtin_puts"]                          = handlePuts;
     tbl_["abort"]                                   = handleNoOp;
@@ -1013,6 +1021,11 @@ BuiltInTable::BuiltInTable()
     tbl_["puts"]                                    = handlePuts;
     tbl_["strlen"]                                  = handleStrlen;
     tbl_["strncpy"]                                 = handleStrncpy;
+
+    // LLVM-specific built-in functions
+    tbl_["llvm.memcpy"]                             = handleMemcpy;
+    tbl_["llvm.memmove"]                            = handleMemmove;
+    tbl_["llvm.memset"]                             = handleMemset;
 
     // Linux kernel
     tbl_["kzalloc"]                                 = handleKzalloc;
@@ -1045,6 +1058,11 @@ BuiltInTable::BuiltInTable()
     der_["memmove"]     .push_back(/* dst  */ 2);
     der_["memmove"]     .push_back(/* src  */ 3);
     der_["memset"]      .push_back(/* addr */ 2);
+    der_["llvm.memcpy"] .push_back(/* dst  */ 2);
+    der_["llvm.memcpy"] .push_back(/* src  */ 3);
+    der_["llvm.memmove"].push_back(/* dst  */ 2);
+    der_["llvm.memmove"].push_back(/* src  */ 3);
+    der_["llvm.memset"] .push_back(/* addr */ 2);
     // TODO: printf
     der_["puts"]        .push_back(/* s    */ 2);
     der_["strlen"]      .push_back(/* s    */ 2);
