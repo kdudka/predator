@@ -176,6 +176,9 @@ inline bool isPtrRelated(const cl_operand &op)
     if (op.code == CL_OPERAND_CST && op.data.cst.code == CL_TYPE_STRING)
         // we don't care about constant strings
         return false;
+    if (op.code == CL_OPERAND_CST && op.type->code == CL_TYPE_PTR)
+        // we don't care about constant null
+        return false;
 
     return isPtrRelatedType(op.type);
 }
