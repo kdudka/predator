@@ -307,7 +307,6 @@ void ClPrettyPrint::printCst(const struct cl_operand *op)
     enum cl_type_e code = op->data.cst.code;
     switch (code) {
         case CL_TYPE_INT:
-        case CL_TYPE_CHAR:
             this->printIntegralCst(op);
             break;
 

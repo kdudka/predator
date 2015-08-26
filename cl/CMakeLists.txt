@@ -52,6 +52,9 @@ endif()
 if(ENABLE_LLVM)
     # libclllvm.a
     add_library(clllvm STATIC llvm/clplug.cc)
+	if(NOT LLVM_ENABLE_RTTI)
+		target_compile_options(clllvm PUBLIC "-fno-rtti")
+	endif()
 else()  # --------------------------------------------------------------begin
 
 # query GCC_INC_DIR using GCC_HOST
