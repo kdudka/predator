@@ -30,6 +30,17 @@ if(Boost_FOUND)
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 endif()
 
+# Find llvm devel-headers and libs
+if(ENABLE_LLVM)
+    find_package(LLVM REQUIRED CONFIG)
+    if(LLVM_FOUND)
+        message(STATUS "LLVM version: ${LLVM_PACKAGE_VERSION}")
+        link_directories(${LLVM_LIBRARY_DIRS})
+        include_directories(${LLVM_INCLUDE_DIRS})
+        add_definitions(${LLVM_DEFINITIONS})
+    endif()
+endif()
+
 # Check for a C compiler flag
 include(CheckCCompilerFlag)
 macro(ADD_C_FLAG opt_name opt)
