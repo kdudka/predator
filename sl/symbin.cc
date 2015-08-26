@@ -469,7 +469,8 @@ bool handleMemmoveCore(
 {
     const struct cl_loc *loc = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (5 != opList.size()) {
+    // in LLVM + align + volatile
+    if (5 != opList.size() && 7 != opList.size()) {
         emitPrototypeError(loc, name);
         return false;
     }
@@ -519,7 +520,8 @@ bool handleMemset(
 {
     const struct cl_loc *lw = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (5 != opList.size()) {
+    // in LLVM + align + volatile
+    if (5 != opList.size() && 7 != opList.size()) {
         emitPrototypeError(lw, name);
         return false;
     }
@@ -1009,6 +1011,9 @@ BuiltInTable::BuiltInTable()
     tbl_["memcpy"]                                  = handleMemcpy;
     tbl_["memmove"]                                 = handleMemmove;
     tbl_["memset"]                                  = handleMemset;
+    tbl_["llvm.memcpy"]                             = handleMemcpy;
+    tbl_["llvm.memmove"]                            = handleMemmove;
+    tbl_["llvm.memset"]                             = handleMemset;
     tbl_["printf"]                                  = handlePrintf;
     tbl_["puts"]                                    = handlePuts;
     tbl_["strlen"]                                  = handleStrlen;
@@ -1045,6 +1050,11 @@ BuiltInTable::BuiltInTable()
     der_["memmove"]     .push_back(/* dst  */ 2);
     der_["memmove"]     .push_back(/* src  */ 3);
     der_["memset"]      .push_back(/* addr */ 2);
+    der_["llvm.memcpy"]      .push_back(/* dst  */ 2);
+    der_["llvm.memcpy"]      .push_back(/* src  */ 3);
+    der_["llvm.memmove"]     .push_back(/* dst  */ 2);
+    der_["llvm.memmove"]     .push_back(/* src  */ 3);
+    der_["llvm.memset"]      .push_back(/* addr */ 2);
     // TODO: printf
     der_["puts"]        .push_back(/* s    */ 2);
     der_["strlen"]      .push_back(/* s    */ 2);
