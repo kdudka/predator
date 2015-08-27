@@ -737,7 +737,7 @@ bool CLPass::isStringLiteral(Instruction *vi) {
 	if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(vi)) 
 		if (GlobalVariable *gv = dyn_cast<GlobalVariable>(gep->getPointerOperand())) 
 			if (ConstantDataSequential *c = dyn_cast<ConstantDataSequential>(gv->getInitializer())) 
-				if (gep->hasAllZeroIndices() && 
+				if (gep->hasAllZeroIndices() && // pointer alias
 					gv->isConstant() && 
 					gv->hasUnnamedAddr() && 
 					gv->hasPrivateLinkage() &&
@@ -780,13 +780,18 @@ struct cl_var *CLPass::handleVariable(Value *v) {
         clv = new struct cl_var;
         std::memset(clv, 0, sizeof(*clv));
         clv->uid = cntUID++;
-        VarTable.insert({v, clv});
+        
+        if (v != nullptr)
+			VarTable.insert({v, clv});
     }
     else { // exist
         return item->second;
     }
 
 	clv->loc = cl_loc_known;
+	
+	if (v == nullptr)
+		return clv; // artificial register;
     
     if (v->hasName()) { // named variable
         std::string tmp = v->getName().str();
@@ -1736,20 +1741,21 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
 	GetElementPtrInst *I = cast<GetElementPtrInst>(v);
 	bool notEmptyAcc = handleOperand(I->getPointerOperand(), src); // Operand(0)
 
-	struct cl_accessor **accPrev = (notEmptyAcc)? &(src->accessor->next) : &(src->accessor);
+	struct cl_accessor **addrNextAcc = (notEmptyAcc)? &(src->accessor->next) : &(src->accessor);
 	struct cl_accessor *acc;
 	   //GetElementPtrInst::op_iterator
 	for (auto op = I->idx_begin(), ope = I->idx_end(); op != ope; ++op) {
 		Value *v = *op;
 
 		acc = new struct cl_accessor;
-		*accPrev = acc;
+		*addrNextAcc = acc;
 
 		acc->type = src->type;
 
 		acc->next = nullptr;
 
 		switch (src->type->code) {
+			case CL_TYPE_UNION:
 			case CL_TYPE_STRUCT: {
 				//                errs() << "struct "; // must be constant
 				int num = cast<ConstantInt>(v)->getValue().getSExtValue();
@@ -1757,15 +1763,34 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
 				acc->code = CL_ACCESSOR_ITEM;
 				acc->data.item.id = num;
 			}
-			break;
+				break;
 
-			case CL_TYPE_PTR:
+			case CL_TYPE_PTR: {
 				//                errs() << "ptr ";
-				src->type = const_cast<struct cl_type *>(src->type->items[0].type);
-				acc->code = CL_ACCESSOR_DEREF;
+				// offset: constant, possible variable
+				int num = 0;
+				if (isa<ConstantInt>(v)) {
+					src->type = const_cast<struct cl_type *>(src->type->items[0].type);
+					acc->code = CL_ACCESSOR_DEREF;
+					num = cast<ConstantInt>(v)->getValue().getSExtValue();
+					if (num != 0) { // + constant offset
+						addrNextAcc = &(acc->next);
+						acc = new struct cl_accessor;
+						*addrNextAcc = acc;
+						acc->type = src->type;
+						acc->next = nullptr;
+						//src->type don't change
+						acc->code = CL_ACCESSOR_OFFSET;
+						acc->data.item.id = num * src->type->size;
+					}
+				} else { // + variable offset
+					// TODO: Code Listener offset as cl_operand
+					src = insertOffsetAcc(v, src); 
+					src->type = const_cast<struct cl_type *>(src->type->items[0].type);
+					acc->code = CL_ACCESSOR_DEREF;
+				}
 
-				// TODO if not 0 -> CL_ACCESSOR_OFFSET
-
+			}
 				break;
 
 			case CL_TYPE_ARRAY:
@@ -1775,24 +1800,64 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
 				acc->data.array.index = new struct cl_operand;
 				handleOperand(v, acc->data.array.index);
 				break;
-
-			case CL_TYPE_UNION: // never happend          
+       
 			default:
 				CL_ERROR("invalid type for accessor");
 				break;
 		}
-		accPrev = &(acc->next);
+		addrNextAcc = &(acc->next);
 	}
 
 	{ // is ...PtrInst, always return REF
-		*accPrev = new struct cl_accessor;
-		(*accPrev)->code = CL_ACCESSOR_REF; // &
-		(*accPrev)->type = src->type;
+		acc = new struct cl_accessor;
+		*addrNextAcc = acc;
+		acc->code = CL_ACCESSOR_REF; // &
+		acc->type = src->type;
 		src->type =  handleType(I->getType()); // result
-		(*accPrev)->next = nullptr;
+		acc->next = nullptr;
 	}
 	// acToStream(std::cerr, src->accessor, false);
 	return true;
+}
+
+/// support for offset ~ variable
+/// @return new source operand
+struct cl_operand *CLPass::insertOffsetAcc(Value *v, struct cl_operand *src) {
+
+	// off = CL_BINOP_MULT: idx * src->type->size
+	// ret = CL_BINOP_POINTER_PLUS: src + off
+	// src = ret
+	struct cl_insn i; 
+	i.code = CL_INSN_BINOP;
+	i.loc = cl_loc_known;
+
+	struct cl_operand off, idx, size, ret; // off, ret -> without accessor
+
+	handleOperand(v, &idx);
+	// size of item, not pointer
+	getIntOperand(src->type->items[0].type->size, &size);
+	off = idx;
+	off.data.var = handleVariable(nullptr); // register
+	i.data.insn_binop.code = CL_BINOP_MULT;
+	i.data.insn_binop.dst = &off;
+	i.data.insn_binop.src1 = &idx;
+	i.data.insn_binop.src2 = &size;
+	cl->insn(cl, &i);
+
+	struct cl_accessor *tmp = src->accessor;
+	src->accessor = nullptr;
+
+	ret = *src;
+	ret.data.var = handleVariable(nullptr); // register
+	i.data.insn_binop.code = CL_BINOP_POINTER_PLUS;
+	i.data.insn_binop.dst = &ret;
+	i.data.insn_binop.src1 = src;
+	i.data.insn_binop.src2 = &off;
+	cl->insn(cl, &i);
+
+	*src = ret;
+	src->accessor = tmp;
+	return src;
 }
 
 /// hanlde for call instruction

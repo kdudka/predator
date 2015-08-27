@@ -166,6 +166,7 @@ struct CLPass : public ModulePass {
         bool handleLoadOperand(Value *, struct cl_operand *);
         bool handleCastOperand(Value *, struct cl_operand *);
         bool handleGEPOperand(Value *, struct cl_operand *);
+        struct cl_operand *insertOffsetAcc(Value *, struct cl_operand *);
         void handleFncOperand(Function *, struct cl_operand *);
 
         /* Constants and Variables */
