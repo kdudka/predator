@@ -1365,16 +1365,27 @@ void CLPass::handleBranchInstruction(BranchInst *I) {
     struct cl_insn i;
     findLocation(I, &i.loc);
     std::string bbName1, bbName2;
+    BasicBlock *bb = nullptr;
 
     if (I->isConditional()) {
 
-        i.code = CL_INSN_COND;
         struct cl_operand src;
         handleOperand(I->getCondition(), &src);
+
+        if (src.code == CL_OPERAND_CST && src.data.cst.code == CL_TYPE_INT) {
+            // optimalization, if condition is constant
+            if (src.data.cst.data.cst_int.value == 0)
+                bb = I->getSuccessor(1); // false
+            else
+                bb = I->getSuccessor(0); // true
+            goto unconditional;
+        }
+
+        i.code = CL_INSN_COND;
         i.data.insn_cond.src = &src;
 
         //then
-        BasicBlock *bb = I->getSuccessor(0);
+        bb = I->getSuccessor(0);
         if (!bb->hasName()) {
             bbName1 = "<label"+ std::to_string(bbUID++) +">";
             bb->setName(bbName1);
@@ -1393,11 +1404,11 @@ void CLPass::handleBranchInstruction(BranchInst *I) {
         i.data.insn_cond.else_label = bbName2.c_str(); // LABEL NAME
 
     } else {
-
-        i.code = CL_INSN_JMP;
         // unconditional
-        BasicBlock *bb = I->getSuccessor(0);
+        bb = I->getSuccessor(0);
 
+unconditional:
+        i.code = CL_INSN_JMP;
         testPhi(I->getParent(), bb);
 
         if (!bb->hasName()) {
