@@ -1386,6 +1386,7 @@ void CLPass::handleBranchInstruction(BranchInst *I) {
 
         //then
         bb = I->getSuccessor(0);
+        testPhi(I->getParent(), bb);
         if (!bb->hasName()) {
             bbName1 = "<label"+ std::to_string(bbUID++) +">";
             bb->setName(bbName1);
@@ -1395,6 +1396,7 @@ void CLPass::handleBranchInstruction(BranchInst *I) {
         i.data.insn_cond.then_label = bbName1.c_str(); // LABEL NAME
         //else
         bb = I->getSuccessor(1);
+        testPhi(I->getParent(), bb);
         if (!bb->hasName()) {
             bbName2 = "<label"+ std::to_string(bbUID++) +">";
             bb->setName(bbName2);

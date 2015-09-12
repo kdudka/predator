@@ -7,7 +7,7 @@ Required
 
     * CMake 2.8+ (cmake)
     * Boost libraries 1.37+ (boost boost-devel)
-    * Clang/LLVM 3.5+ (llvm llvm-libs clang)
+    * Clang/LLVM 3.7+ (llvm llvm-libs clang)
     * LLVM develop library and header files (llvm-devel)
     * 32bit system headers, especially in case of 64bit OS (glibc glibc-devel)
     * GNU Core Utilities (coreutils)
