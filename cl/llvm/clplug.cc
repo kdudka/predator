@@ -1369,6 +1369,7 @@ void CLPass::handleBranchInstruction(BranchInst *I) {
 
     if (I->isConditional()) {
 
+        bool insert;
         struct cl_operand src;
         handleOperand(I->getCondition(), &src);
 
@@ -1386,7 +1387,7 @@ void CLPass::handleBranchInstruction(BranchInst *I) {
 
         //then
         bb = I->getSuccessor(0);
-        testPhi(I->getParent(), bb);
+        insert = testPhi(I->getParent(), bb);
         if (!bb->hasName()) {
             bbName1 = "<label"+ std::to_string(bbUID++) +">";
             bb->setName(bbName1);
@@ -1396,7 +1397,7 @@ void CLPass::handleBranchInstruction(BranchInst *I) {
         i.data.insn_cond.then_label = bbName1.c_str(); // LABEL NAME
         //else
         bb = I->getSuccessor(1);
-        testPhi(I->getParent(), bb);
+        insert |= testPhi(I->getParent(), bb);
         if (!bb->hasName()) {
             bbName2 = "<label"+ std::to_string(bbUID++) +">";
             bb->setName(bbName2);
@@ -1404,6 +1405,8 @@ void CLPass::handleBranchInstruction(BranchInst *I) {
             bbName2 = bb->getName().str();
         }
         i.data.insn_cond.else_label = bbName2.c_str(); // LABEL NAME
+
+        testCompareInst(I->getCondition(), insert, &src);
 
     } else {
         // unconditional
@@ -1425,15 +1428,50 @@ unconditional:
     cl->insn(cl, &i);
 }
 
+/// before conditional jump must be compare instruction
+/// support for bool assign
+/// @param cond result of compare instruction
+void CLPass::testCompareInst(Value *v, bool insert, struct cl_operand *cond) {
+
+	if (isa<CmpInst>(v) && !insert)
+		return;
+
+	// cmp = CL_BINOP_NE: cond != falseOp
+	struct cl_insn i; 
+	i.code = CL_INSN_BINOP;
+	findLocation(cast<Instruction>(v), &i.loc);
+
+	struct cl_operand cmp, falseOp;
+
+	// FALSE constant
+	falseOp.code = CL_OPERAND_CST;
+	falseOp.scope = CL_SCOPE_GLOBAL;
+	falseOp.type = cond->type;
+	falseOp.accessor = nullptr;
+	falseOp.data.cst.code = CL_TYPE_INT;
+	falseOp.data.cst.data.cst_int.value = 0;
+
+	cmp = *cond;
+	cmp.data.var = handleVariable(nullptr); // register
+
+	i.data.insn_binop.code = CL_BINOP_NE;
+	i.data.insn_binop.dst = &cmp;
+	i.data.insn_binop.src1 = cond;
+	i.data.insn_binop.src2 = &falseOp;
+	cl->insn(cl, &i);
+
+	*cond = cmp;
+}
+
 /// test, if instruction in next BasicBlock is phi
 /// if yes, into BasicBlock (fromBB, witch called this function) added assign instruction
 /// with value for fromBB
-void CLPass::testPhi(BasicBlock *fromBB, BasicBlock *phiBB) {
+bool CLPass::testPhi(BasicBlock *fromBB, BasicBlock *phiBB) {
 
     Instruction *I = phiBB->begin();
     //    errs() << "is phi? " << *I << "\n";
     if (!isa<PHINode>(I)) {
-        return;
+        return false;
     }
 
     struct cl_insn i;
@@ -1448,6 +1486,7 @@ void CLPass::testPhi(BasicBlock *fromBB, BasicBlock *phiBB) {
     i.data.insn_unop.src = &src;
 
     cl->insn(cl, &i);
+    return true;
 }
 
 /// decomposition of C ternar operand ()?:
@@ -1568,8 +1607,29 @@ void CLPass::handleBinInstruction(Instruction *I) {
     i.data.insn_binop.dst = &dst;
     i.data.insn_binop.src1 = &src1;
     i.data.insn_binop.src2 = &src2;
-    cl->insn(cl, &i);
 
+    if (src1.type->code == CL_TYPE_BOOL && 
+        src2.type->code == CL_TYPE_BOOL) {
+
+        switch(I->getOpcode()) {
+            case Instruction::And:
+                i.data.insn_binop.code = CL_BINOP_TRUTH_AND;
+                break;
+
+            case Instruction::Or:
+                i.data.insn_binop.code = CL_BINOP_TRUTH_OR;
+                break;
+
+            case Instruction::Xor:
+                i.data.insn_binop.code = CL_BINOP_TRUTH_XOR;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    cl->insn(cl, &i);
 }
 
 /// what kind of compare instruction it's
