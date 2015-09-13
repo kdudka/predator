@@ -2146,6 +2146,39 @@ TValId handleIntegralOp(
     return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
+TValId handleBitXor(SymHeapCore &sh, const TValId v1, const TValId v2)
+{
+    IR::TInt num1, num2;
+    if (!numFromVal(&num1, sh, v1) || !numFromVal(&num2, sh, v2))
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    // compute the integral result
+    const IR::TInt result = (num1 == -1)? ~num2
+        : (num2 == -1)? ~num1
+        : (num1 ^ num2);
+
+    // wrap the result as a heap value expressing a constant integer
+    CustomValue cv(IR::rngFromNum(result));
+    return sh.valWrapCustom(cv);
+
+}
+
+TValId handleTruthXor(SymHeapCore &sh, const TValId v1, const TValId v2)
+{
+    IR::TInt num1, num2;
+    if (!numFromVal(&num1, sh, v1) || !numFromVal(&num2, sh, v2))
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    // compute the integral result
+    const IR::TInt result = (num1 == -1)? !num2
+        : (num2 == -1)? !num1
+        : (num1 != num2);
+
+    // wrap the result as a heap value expressing a constant integer
+    CustomValue cv(IR::rngFromNum(result));
+    return sh.valWrapCustom(cv);
+}
+
 TValId handleBitNot(SymHeapCore &sh, const TValId val)
 {
     // check whether the value is an integral constant
@@ -2386,6 +2419,12 @@ struct OpHandler</* binary */ 2> {
             case CL_BINOP_RSHIFT:
             case CL_BINOP_TRUNC_DIV:
                 goto handle_int;
+
+            case CL_BINOP_TRUTH_XOR:
+                return handleTruthXor(sh, rhs[0], rhs[1]);
+
+            case CL_BINOP_BIT_XOR:
+                return handleBitXor(sh, rhs[0], rhs[1]);
 
             case CL_BINOP_BIT_AND:
                 if (VAL_NULL == rhs[0] || VAL_NULL == rhs[1])
