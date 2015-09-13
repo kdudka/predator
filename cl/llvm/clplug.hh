@@ -156,7 +156,8 @@ struct CLPass : public ModulePass {
         void handleCmpInstruction(Instruction *);
         enum cl_binop_e getCLCodePredic(enum CmpInst::Predicate);
         void handleBranchInstruction(BranchInst *);
-        void testPhi(BasicBlock *, BasicBlock *);
+        void testCompareInst(Value *, bool, struct cl_operand *);
+        bool testPhi(BasicBlock *, BasicBlock *);
         void handleSelectInstruction(SelectInst *);
         void handleUnaryInstruction(Instruction *);
         void handleCallInstruction(CallInst *);
