@@ -1365,75 +1365,85 @@ void CLPass::handleBranchInstruction(BranchInst *I) {
     struct cl_insn i;
     findLocation(I, &i.loc);
     std::string bbName1, bbName2;
-    BasicBlock *bb = nullptr;
+    BasicBlock *bb1 = nullptr;
 
     if (I->isConditional()) {
 
-        bool insert;
         struct cl_operand src;
         handleOperand(I->getCondition(), &src);
 
         if (src.code == CL_OPERAND_CST && src.data.cst.code == CL_TYPE_INT) {
             // optimalization, if condition is constant
             if (src.data.cst.data.cst_int.value == 0)
-                bb = I->getSuccessor(1); // false
+                bb1 = I->getSuccessor(1); // false
             else
-                bb = I->getSuccessor(0); // true
+                bb1 = I->getSuccessor(0); // true
             goto unconditional;
         }
+        BasicBlock *bb2;
+        bool insert1, insert2;
 
         i.code = CL_INSN_COND;
         i.data.insn_cond.src = &src;
 
         //then
-        bb = I->getSuccessor(0);
-        insert = testPhi(I->getParent(), bb);
-        if (!bb->hasName()) {
+        bb1 = I->getSuccessor(0);
+        if (!bb1->hasName()) {
             bbName1 = "<label"+ std::to_string(bbUID++) +">";
-            bb->setName(bbName1);
+            bb1->setName(bbName1);
         } else {
-            bbName1 = bb->getName().str();
+            bbName1 = bb1->getName().str();
         }
+        insert1 = testPhi(bb1);
+        if (insert1) // create new BB, must jump to new BB
+            bbName1 = "<label"+ std::to_string(bbUID++) +">";
         i.data.insn_cond.then_label = bbName1.c_str(); // LABEL NAME
         //else
-        bb = I->getSuccessor(1);
-        insert |= testPhi(I->getParent(), bb);
-        if (!bb->hasName()) {
+        bb2 = I->getSuccessor(1);
+        if (!bb2->hasName()) {
             bbName2 = "<label"+ std::to_string(bbUID++) +">";
-            bb->setName(bbName2);
+            bb2->setName(bbName2);
         } else {
-            bbName2 = bb->getName().str();
+            bbName2 = bb2->getName().str();
         }
+        insert2 = testPhi(bb2);
+        if (insert2) // create new BB, must jump to new BB
+            bbName2 = "<label"+ std::to_string(bbUID++) +">";
         i.data.insn_cond.else_label = bbName2.c_str(); // LABEL NAME
 
-        testCompareInst(I->getCondition(), insert, &src);
+        testCompareInst(I->getCondition(), &src);
+
+        cl->insn(cl, &i);
+        if (insert1) insertPhiAssign(I->getParent(), bb1, bbName1.c_str());
+        if (insert2) insertPhiAssign(I->getParent(), bb2, bbName2.c_str());
 
     } else {
         // unconditional
-        bb = I->getSuccessor(0);
+        bb1 = I->getSuccessor(0);
 
 unconditional:
         i.code = CL_INSN_JMP;
-        testPhi(I->getParent(), bb);
+        if (testPhi(bb1))
+            insertPhiAssign(I->getParent(), bb1, nullptr);
 
-        if (!bb->hasName()) {
+        if (!bb1->hasName()) {
             bbName1 = "<label"+ std::to_string(bbUID++) +">";
-            bb->setName(bbName1);
+            bb1->setName(bbName1);
         } else {
-            bbName1 = bb->getName().str();
+            bbName1 = bb1->getName().str();
         }
         i.data.insn_jmp.label = bbName1.c_str(); // LABEL NAME
-    }
 
-    cl->insn(cl, &i);
+        cl->insn(cl, &i);
+    }
 }
 
 /// before conditional jump must be compare instruction
 /// support for bool assign
 /// @param cond result of compare instruction
-void CLPass::testCompareInst(Value *v, bool insert, struct cl_operand *cond) {
+void CLPass::testCompareInst(Value *v, struct cl_operand *cond) {
 
-	if (isa<CmpInst>(v) && !insert)
+	if (isa<CmpInst>(v))
 		return;
 
 	// cmp = CL_BINOP_NE: cond != falseOp
@@ -1464,29 +1474,47 @@ void CLPass::testCompareInst(Value *v, bool insert, struct cl_operand *cond) {
 }
 
 /// test, if instruction in next BasicBlock is phi
-/// if yes, into BasicBlock (fromBB, witch called this function) added assign instruction
-/// with value for fromBB
-bool CLPass::testPhi(BasicBlock *fromBB, BasicBlock *phiBB) {
+inline bool CLPass::testPhi(BasicBlock *phiBB) {
+    return isa<PHINode>(phiBB->begin());
+}
 
-    Instruction *I = phiBB->begin();
-    //    errs() << "is phi? " << *I << "\n";
-    if (!isa<PHINode>(I)) {
-        return false;
+/// if !newBB, into BasicBlock (fromBB, witch called this function) 
+///            added assign instruction with value for fromBB
+/// else       this instruction is added into new BasicBlock
+void CLPass::insertPhiAssign(BasicBlock *fromBB, BasicBlock *phiBB, 
+                                                 const char *newBB) {
+
+    if (newBB) { // create new BB
+        cl->bb_open(cl, newBB); 
     }
+
+    BasicBlock::iterator I = phiBB->begin();
 
     struct cl_insn i;
     i.code = CL_INSN_UNOP;
-    findLocation(I, &i.loc); 
     i.data.insn_unop.code = CL_UNOP_ASSIGN;
-
     struct cl_operand dst, src;
-    handleOperand(cast<PHINode>(I)->getIncomingValueForBlock(fromBB), &src);
-    handleOperand(I, &dst);
     i.data.insn_unop.dst = &dst;
     i.data.insn_unop.src = &src;
 
-    cl->insn(cl, &i);
-    return true;
+    while (isa<PHINode>(I)) { // all phi nodes
+        findLocation(I, &i.loc); 
+
+        handleOperand(cast<PHINode>(I)->getIncomingValueForBlock(fromBB), &src);
+        handleOperand(I, &dst);
+
+        cl->insn(cl, &i);
+        ++I;
+    }
+    
+    if (newBB) { // jump to old BB
+        struct cl_insn j;
+        j.loc = cl_loc_known; // artificial instruction
+        j.code = CL_INSN_JMP;
+        std::string bbName = phiBB->getName().str();
+        j.data.insn_jmp.label = bbName.c_str();
+        cl->insn(cl, &j);
+    }
 }
 
 /// decomposition of C ternar operand ()?:
