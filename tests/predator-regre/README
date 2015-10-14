@@ -764,6 +764,8 @@ Tests taken from Forester
 
     test-0242.c - a regression test for joining shifted addresses of NULL
 
+    test-0245.c - a regression test for leaking memory pointed by alloca() obj
+
 
 Data reinterpretation
 =====================

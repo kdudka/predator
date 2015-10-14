@@ -274,6 +274,12 @@ void SymExecEngine::execReturn()
         }
     }
 
+    // make sure that anonymous stack objects are destroyed
+    const SymExecCoreParams ep(GlConf::data);
+    SymExecCore core(sh, &bt_, ep);
+    core.setLocation(lw_);
+    core.execStackRestore();
+
     // commit one of the function results
     dst_.insert(sh);
     endReached_ = true;
