@@ -36,6 +36,10 @@
 
 class SymState;
 
+namespace GlConf {
+    struct Options;
+}
+
 struct CmpOpTraits {
     bool negative;
     bool preserveEq;
@@ -201,6 +205,8 @@ struct SymExecCoreParams {
         skipPlot(false)
     {
     }
+
+    SymExecCoreParams(const GlConf::Options &);
 };
 
 /// extension of SymProc, now only used by SymExecEngine::execNontermInsn()

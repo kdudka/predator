@@ -564,12 +564,8 @@ bool /* handled */ SymExecEngine::execNontermInsn()
 {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
 
-    // set some properties of the execution
-    SymExecCoreParams ep;
-    ep.trackUninit      = GlConf::data.trackUninit;
-    ep.oomSimulation    = GlConf::data.oomSimulation;
-    ep.skipPlot         = GlConf::data.skipUserPlots;
-    ep.errLabel         = GlConf::data.errLabel;
+    // initialize execution properties based on the global configuration
+    const SymExecCoreParams ep(GlConf::data);
 
     // working area for non-terminal instructions
     const SymHeap &origin = localState_[heapIdx_];

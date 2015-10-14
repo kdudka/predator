@@ -1185,6 +1185,14 @@ void executeMemmove(
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
+SymExecCoreParams::SymExecCoreParams(const GlConf::Options &data):
+    trackUninit(data.trackUninit),
+    oomSimulation(data.oomSimulation),
+    skipPlot(data.skipUserPlots),
+    errLabel(data.errLabel)
+{
+}
+
 void SymExecCore::varInit(TObjId obj)
 {
     if (!ep_.trackUninit)
