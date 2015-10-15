@@ -14,21 +14,21 @@ test-0239.c:9: warning: POSIX says that, given zero size, the behavior of malloc
 test-0239.c:9: note: assuming NULL as the result
 test-0239.c:21: note: from call of foo()
 test-0239.c:15: note: from call of main()
-<unknown location>: warning: memory leak detected while destroying a variable on stack
+test-0239.c:11: warning: memory leak detected while destroying a variable on stack
 test-0239.c:21: note: from call of foo()
 test-0239.c:15: note: from call of main()
 test-0239.c:9: warning: POSIX says that, given zero size, the behavior of malloc/calloc is implementation-defined
 test-0239.c:9: note: assuming NULL as the result
 test-0239.c:22: note: from call of foo()
 test-0239.c:15: note: from call of main()
-<unknown location>: warning: memory leak detected while destroying a variable on stack
+test-0239.c:11: warning: memory leak detected while destroying a variable on stack
 test-0239.c:22: note: from call of foo()
 test-0239.c:15: note: from call of main()
 test-0239.c:9: warning: POSIX says that, given zero size, the behavior of malloc/calloc is implementation-defined
 test-0239.c:9: note: assuming NULL as the result
 test-0239.c:23: note: from call of foo()
 test-0239.c:15: note: from call of main()
-<unknown location>: warning: memory leak detected while destroying a variable on stack
+test-0239.c:11: warning: memory leak detected while destroying a variable on stack
 test-0239.c:23: note: from call of foo()
 test-0239.c:15: note: from call of main()
 test-0239.c:9: warning: POSIX says that, given zero size, the behavior of malloc/calloc is implementation-defined
