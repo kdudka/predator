@@ -61,8 +61,10 @@ bool isJunk(SymHeap &sh, TObjId obj)
         CL_BREAK_IF(!sh.isValid(obj));
 
         const EStorageClass code = sh.objStorClass(obj);
-        if (!isOnHeap(code))
+        if (!isOnHeap(code)
             // non-heap objects cannot be JUNK
+            // ... but anonymous stack objects need to be traversed!
+                && !sh.isAnonStackObj(obj))
             return false;
 
         // go through all referrers
@@ -103,6 +105,10 @@ bool gcCore(SymHeap &sh, TObjId obj, TObjSet *leakObjs, bool sharedOnly)
             if (0 < sh.objProtoLevel(obj))
                 goto skip_root;
         }
+
+        if (sh.isAnonStackObj(obj))
+            // leaking an anonymous stack object is not a real memory leak
+            goto skip_root;
 
         // leak detected
         detected = true;
