@@ -1245,11 +1245,11 @@ void CLPass::handleInstruction(Instruction *I) {
             bool notEmptyAcc = handleOperand(I->getOperand(1), &dst);
             if (dst.code == CL_OPERAND_VAR)
             {
-				/*if (notEmptyAcc && dst.accessor->code == CL_ACCESSOR_REF) {
+				if (notEmptyAcc && dst.accessor->code == CL_ACCESSOR_REF) {
 					dst.type = dst.accessor->type;
 					freeAccessor(dst.accessor);
 					dst.accessor = nullptr;
-				} else */{
+				} else {
 					struct cl_accessor **acc = (notEmptyAcc)? &(dst.accessor->next) : &(dst.accessor);
 					*acc = new struct cl_accessor;
 					(*acc)->code = CL_ACCESSOR_DEREF; // *
@@ -1766,12 +1766,12 @@ bool CLPass::handleLoadOperand(Value *v, struct cl_operand *src) {
 	bool notEmptyAcc = handleOperand(I->getOperand(0), src);
 
 	if (src->code == CL_OPERAND_VAR) {
-		/*if (notEmptyAcc && src->accessor->code == CL_ACCESSOR_REF) {
+		if (notEmptyAcc && src->accessor->code == CL_ACCESSOR_REF) {
 			src->type = src->accessor->type;
 			freeAccessor(src->accessor);
 			src->accessor = nullptr;
 			return false;
-		} else*/ {
+		} else {
 			struct cl_accessor **acc = (notEmptyAcc)? &(src->accessor->next) : &(src->accessor);
 			*acc = new struct cl_accessor;
 			(*acc)->code = CL_ACCESSOR_DEREF; // *
