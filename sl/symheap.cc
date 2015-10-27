@@ -751,6 +751,7 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TFldId fld, TValId val)
         this->neqDb->gatherRelatedValues(neqs, val);
         BOOST_FOREACH(const TValId valNeq, neqs) {
             CL_DEBUG("releaseValueOf() kills an orphan Neq predicate");
+            RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->neqDb);
             this->neqDb->del(valNeq, val);
         }
     }
