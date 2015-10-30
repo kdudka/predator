@@ -1,0 +1,5 @@
+test-0247.c:13: error: dereference of NULL value with offset 4294967296B
+test-0247.c:13: error: dereference of NULL value with offset 4B
+test-0247.c:13: error: dereference of NULL value with offset 8B
+test-0247.c:13: error: dereference of NULL value with offset 12B
+test-0247.c:13: error: dereference of NULL value with offset 16B

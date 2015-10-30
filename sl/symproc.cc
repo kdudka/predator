@@ -663,6 +663,34 @@ TValId ptrObjectEncoderCore(
         return sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
     }
 
+    // FIXME: remove this hack and fix the root cause!
+    const TObjType clt = dst.type();
+    if (isDataPtr(clt) && 4 == clt->size && 4 == ptrSize) {
+        // regular 32bit pointer ==> handle unsigned wrap-around to eliminate FP
+        const TSizeOf ptrWidthInBits = ptrSize << 3;
+        const IR::TInt hiLimit = IR::Int1 << ptrWidthInBits;
+        const IR::Range offRangeOrig = sh.valOffsetRange(val);
+        const IR::Range tgtSize = IR::rngFromNum(targetTypeOfPtr(clt)->size);
+
+        // check if adding size of the target object would cause a wrap-around
+        IR::Range offRange = offRangeOrig + tgtSize;
+        if (IR::IntMax != offRange.hi && hiLimit <= offRange.hi) {
+            // apply the unsigned wrap-around on the offset part of the pointer
+            offRange -= IR::rngFromNum(hiLimit);
+
+            // now subtract size of the target to obtain the resulting offset
+            offRange -= tgtSize;
+
+            // print a big warning because this is a hack really
+            CL_DEBUG_MSG(loc, "[EXPERIMENTAL !!!] pointer offset wrap-around: "
+                    << offRangeOrig.hi << " -> " << offRange.hi);
+
+            // replace the original value by the shifted one
+            const TValId root = sh.valRoot(val);
+            val = sh.valByRange(root, offRange);
+        }
+    }
+
     return val;
 }
 
