@@ -635,7 +635,7 @@ enum EPointerKind {
 TValId ptrObjectEncoderCore(
         SymProc                    &proc,
         const FldHandle            &dst,
-        const TValId                val,
+        TValId                      val,
         const EPointerKind          code)
 {
     SymHeap &sh = proc.sh();
@@ -653,16 +653,17 @@ TValId ptrObjectEncoderCore(
             break;
     }
 
-    const TSizeOf dstSize = dst.type()->size;
-    if (ptrSize <= dstSize)
-        return val;
-
     const struct cl_loc *loc = proc.lw();
-    CL_ERROR_MSG(loc, "not enough space to store value of a pointer");
-    CL_NOTE_MSG(loc, "dstSize: " << dstSize << " B");
-    CL_NOTE_MSG(loc, "ptrSize: " << ptrSize << " B");
-    proc.printBackTrace(ML_ERROR);
-    return sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
+    const TSizeOf dstSize = dst.type()->size;
+    if (dstSize < ptrSize) {
+        CL_ERROR_MSG(loc, "not enough space to store value of a pointer");
+        CL_NOTE_MSG(loc, "dstSize: " << dstSize << " B");
+        CL_NOTE_MSG(loc, "ptrSize: " << ptrSize << " B");
+        proc.printBackTrace(ML_ERROR);
+        return sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
+    }
+
+    return val;
 }
 
 TValId ptrObjectEncoder(SymProc &proc, const FldHandle &dst, TValId val)
