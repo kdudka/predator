@@ -42,7 +42,8 @@ CURL            ?= curl --location -v#      # URL grabber command-line
 GIT             ?= git#                     # use this to override git(1)
 SVN             ?= svn#                     # use this to override svn(1)
 
-ANALYZERS       ?= fwnull sl fa vra
+#ANALYZERS       ?= fwnull sl fa vra
+ANALYZERS       ?= sl
 DIRS_BUILD      ?= cl $(ANALYZERS)
 
 .PHONY: all llvm check clean distcheck distclean api cl/api sl/api ChangeLog \
