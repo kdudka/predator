@@ -82,4 +82,3 @@ build_analyzer() {
 
 build_analyzer fwnull fwnull                        || exit $?
 build_analyzer sl Predator                          || exit $?
-build_analyzer fa Forester                          || exit $?
