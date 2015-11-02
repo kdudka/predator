@@ -1,8 +1,19 @@
- vra/tests-overall/test-0062.c.ref | 12 +++---------
- vra/tests-overall/test-0071.c.ref | 12 +++---------
- vra/tests-overall/test-0072.c.ref | 28 ++++++++++++++--------------
- 3 files changed, 20 insertions(+), 32 deletions(-)
+ tests/predator-regre/test-0247.err.oom |  2 +-
+ vra/tests-overall/test-0062.c.ref      | 12 +++---------
+ vra/tests-overall/test-0071.c.ref      | 12 +++---------
+ vra/tests-overall/test-0072.c.ref      | 28 ++++++++++++++--------------
+ 4 files changed, 21 insertions(+), 33 deletions(-)
 
+diff --git a/tests/predator-regre/test-0247.err.oom b/tests/predator-regre/test-0247.err.oom
+index 333f328..32ceb5b 100644
+--- a/tests/predator-regre/test-0247.err.oom
++++ b/tests/predator-regre/test-0247.err.oom
+@@ -1,4 +1,4 @@
+-test-0247.c:13: error: dereference of NULL value with offset 4294967296B
++test-0247.c:13: error: dereference of NULL value
+ test-0247.c:13: error: dereference of NULL value with offset 4B
+ test-0247.c:13: error: dereference of NULL value with offset 8B
+ test-0247.c:13: error: dereference of NULL value with offset 12B
 diff --git a/vra/tests-overall/test-0062.c.ref b/vra/tests-overall/test-0062.c.ref
 index 21f404a..943dd94 100644
 --- a/vra/tests-overall/test-0062.c.ref

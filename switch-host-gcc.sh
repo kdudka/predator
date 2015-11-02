@@ -16,7 +16,7 @@ usage() {
     build of host GCC.  The host GCC needs to be built with the support for GCC
     plug-ins.  The recommended version of host GCC is 4.9.3 but Predator can be
     loaded also into older versions of GCC (plug-ins are supported since 4.5.0).
-    For host GCC 4.6.x and older, please use the compatibility patches in the
+    For host GCC 4.7.x and older, please use the compatibility patches in the
     build-aux directory.
 
     GCC_HOST is a gcc(1) executable file that is built with the support for

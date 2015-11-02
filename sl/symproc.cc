@@ -736,6 +736,13 @@ TValId integralEncoder(
         if (isUnsigned) {
             CL_DEBUG_MSG(loc, "converting negative number to unsigned");
             rng += IR::rngFromNum(loLimit);
+            if (rng.lo < IR::Int0) {
+                // more than one addition needed (we have to divide)
+                const IR::TInt num = IR::Int1 + (rng.lo / loLimit);
+                rng += IR::rngFromNum(num * loLimit);
+                CL_BREAK_IF(rng.lo < IR::Int0);
+            }
+
             loLimit = IR::Int0;
         }
         if (rng.lo < -loLimit) {
@@ -750,6 +757,12 @@ TValId integralEncoder(
         if (isUnsigned) {
             CL_DEBUG_MSG(loc, "wrapping an unsigned number");
             rng -= IR::rngFromNum(hiLimit);
+            if (hiLimit <= rng.hi) {
+                // more than one subtraction needed (we have to divide)
+                const IR::TInt num = IR::Int1 + (rng.hi / hiLimit);
+                rng -= IR::rngFromNum(num * hiLimit);
+                CL_BREAK_IF(hiLimit <= rng.hi);
+            }
         }
         if (hiLimit <= rng.hi) {
             CL_WARN_MSG(loc, "possible overflow of " << sig << " integer");
