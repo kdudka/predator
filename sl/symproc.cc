@@ -631,6 +631,24 @@ enum EPointerKind {
     PK_CODE                         ///< code pointer
 };
 
+void uintWrapAround(IR::Range *pRng, const IR::TInt hiLimit)
+{
+    IR::Range &rng = *pRng;
+
+    // make sure we are called correctly (an unsigned wrap-around is needed)
+    CL_BREAK_IF(rng.hi < hiLimit);
+
+    // perform single subtraction (covers the most common cases)
+    rng -= IR::rngFromNum(hiLimit);
+    if (rng.hi < hiLimit)
+        return;
+
+    // more than one subtraction needed (we have to divide)
+    const IR::TInt num = IR::Int1 + (rng.hi / hiLimit);
+    rng -= IR::rngFromNum(num * hiLimit);
+    CL_BREAK_IF(hiLimit <= rng.hi);
+}
+
 // if we are going to write a pointer, check whether we have enough space for it
 TValId ptrObjectEncoderCore(
         SymProc                    &proc,
@@ -676,7 +694,7 @@ TValId ptrObjectEncoderCore(
         IR::Range offRange = offRangeOrig + tgtSize;
         if (IR::IntMax != offRange.hi && hiLimit <= offRange.hi) {
             // apply the unsigned wrap-around on the offset part of the pointer
-            offRange -= IR::rngFromNum(hiLimit);
+            uintWrapAround(&offRange, hiLimit);
 
             // now subtract size of the target to obtain the resulting offset
             offRange -= tgtSize;
@@ -756,13 +774,7 @@ TValId integralEncoder(
     if (IR::IntMax != rng.hi && hiLimit <= rng.hi) {
         if (isUnsigned) {
             CL_DEBUG_MSG(loc, "wrapping an unsigned number");
-            rng -= IR::rngFromNum(hiLimit);
-            if (hiLimit <= rng.hi) {
-                // more than one subtraction needed (we have to divide)
-                const IR::TInt num = IR::Int1 + (rng.hi / hiLimit);
-                rng -= IR::rngFromNum(num * hiLimit);
-                CL_BREAK_IF(hiLimit <= rng.hi);
-            }
+            uintWrapAround(&rng, hiLimit);
         }
         if (hiLimit <= rng.hi) {
             CL_WARN_MSG(loc, "possible overflow of " << sig << " integer");

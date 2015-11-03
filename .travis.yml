@@ -12,6 +12,7 @@ install:
     - sudo apt-get install cmake gcc-4.6-multilib gcc-4.6-plugin-dev libboost-dev
 
 before_script:
+    - patch -p1 < build-aux/gcc-4.7.3.patch
     - patch -p1 < build-aux/gcc-4.6.4.patch
 
 script:
