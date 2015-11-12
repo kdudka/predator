@@ -1000,6 +1000,9 @@ BuiltInTable::BuiltInTable()
     tbl_["__builtin_alloca_with_align"]             = handleAlloca;
     tbl_["__builtin_stack_restore"]                 = handleStackRestore;
     tbl_["__builtin_stack_save"]                    = handleStackSave;
+    // LLVM
+    tbl_["llvm.stackrestore"]                       = handleStackRestore;
+    tbl_["llvm.stacksave"]                          = handleStackSave;
 
     // C run-time
     tbl_["__builtin_puts"]                          = handlePuts;
@@ -1044,22 +1047,22 @@ BuiltInTable::BuiltInTable()
     tbl_["undef_int"]                               = handleNondetInt;
 
     // initialize lookForDerefs() look-up table
-    der_["free"]        .push_back(/* addr */ 2);
-    der_["memcpy"]      .push_back(/* dst  */ 2);
-    der_["memcpy"]      .push_back(/* src  */ 3);
-    der_["memmove"]     .push_back(/* dst  */ 2);
-    der_["memmove"]     .push_back(/* src  */ 3);
-    der_["memset"]      .push_back(/* addr */ 2);
-    der_["llvm.memcpy"]      .push_back(/* dst  */ 2);
-    der_["llvm.memcpy"]      .push_back(/* src  */ 3);
-    der_["llvm.memmove"]     .push_back(/* dst  */ 2);
-    der_["llvm.memmove"]     .push_back(/* src  */ 3);
-    der_["llvm.memset"]      .push_back(/* addr */ 2);
+    der_["free"]         .push_back(/* addr */ 2);
+    der_["memcpy"]       .push_back(/* dst  */ 2);
+    der_["memcpy"]       .push_back(/* src  */ 3);
+    der_["memmove"]      .push_back(/* dst  */ 2);
+    der_["memmove"]      .push_back(/* src  */ 3);
+    der_["memset"]       .push_back(/* addr */ 2);
+    der_["llvm.memcpy"]  .push_back(/* dst  */ 2);
+    der_["llvm.memcpy"]  .push_back(/* src  */ 3);
+    der_["llvm.memmove"] .push_back(/* dst  */ 2);
+    der_["llvm.memmove"] .push_back(/* src  */ 3);
+    der_["llvm.memset"]  .push_back(/* addr */ 2);
     // TODO: printf
-    der_["puts"]        .push_back(/* s    */ 2);
-    der_["strlen"]      .push_back(/* s    */ 2);
-    der_["strncpy"]     .push_back(/* dst  */ 2);
-    der_["strncpy"]     .push_back(/* src  */ 3);
+    der_["puts"]         .push_back(/* s    */ 2);
+    der_["strlen"]       .push_back(/* s    */ 2);
+    der_["strncpy"]      .push_back(/* dst  */ 2);
+    der_["strncpy"]      .push_back(/* src  */ 3);
 }
 
 bool BuiltInTable::handleBuiltIn(
