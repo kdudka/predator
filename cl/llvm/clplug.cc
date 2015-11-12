@@ -30,17 +30,28 @@ extern "C" {
 #include <cl/cl_msg.hh>
 #include "clplug.hh"
 
-#include "llvm/Transforms/Scalar.h" // createLowerSwitchPass
-#include "llvm/IR/LegacyPassManager.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Config/llvm-config.h"
+
+#if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR == 3) && (LLVM_VERSION_MINOR >= 7)
+#   define LLVM_HOST_3_7_OR_NEWER
+#endif
+
+#ifdef LLVM_HOST_3_7_OR_NEWER
+#   include "llvm/Transforms/Scalar.h" // createLowerSwitchPass
+#   include "llvm/IR/LegacyPassManager.h"
+#   include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#endif
 
 #include "llvm/Support/CommandLine.h" // namespace cl
-#include "llvm/IR/DebugInfoMetadata.h"
+#ifdef LLVM_HOST_3_7_OR_NEWER
+#   include "llvm/IR/DebugInfoMetadata.h"
+#endif
 #include "llvm/IR/DebugInfo.h"
 
 #include <fstream>
 #include <cstring> // memcpy
 #include <queue>
+
 
 /**
  * @file clplug.cc
@@ -243,10 +254,26 @@ void CLPass::freeAccessor(struct cl_accessor *acc) {
 void CLPass::findLocation(Instruction *i, struct cl_loc *loc) {
 
 	*loc = cl_loc_known;
+
+#ifdef LLVM_HOST_3_7_OR_NEWER
 	if (DebugLoc dbg = i->getDebugLoc()) {
 		loc->line = dbg.getLine();
 		loc->column = dbg.getCol();
 	}
+#else
+	if (MDNode *N = i->getMetadata("dbg")) {
+        DILocation Loc(N);
+        std::string tmp = Loc.getFilename().str();
+        unsigned len = tmp.length() + 1;
+        char *tmpPtr = new char [len]; // delete into code listener
+        std::memcpy(tmpPtr, tmp.c_str(), len);
+        loc->file = tmpPtr;
+        loc->line = Loc.getLineNumber();
+        loc->column = Loc.getColumnNumber();
+
+        cl_loc_known.file = tmpPtr; // meybe
+    }
+#endif
 }
 
 /// get operand of intiger type
@@ -632,10 +659,13 @@ void CLPass::handleFncOperand(Function *F, struct cl_operand *fnc) {
     fnc->data.cst.data.cst_fnc.is_extern = F->isDeclaration();
 
     fnc->data.cst.data.cst_fnc.loc = cl_loc_known;
+
+#ifdef LLVM_HOST_3_7_OR_NEWER
     if (DISubprogram *DI = getDISubprogram(F)) {
 		// DISubprogram without column
 		fnc->data.cst.data.cst_fnc.loc.line = DI->getLine();
 	}
+#endif
 }
 
 /// handle for open function, when is call from Module, iterate argument list
@@ -801,12 +831,12 @@ struct cl_var *CLPass::handleVariable(Value *v) {
         clv->name = tmpPtr;
         clv->artificial = false;
 
-		if (v->isUsedByMetadata()) { //FIXME DIVariable
+	//	if (v->isUsedByMetadata()) { //FIXME DIVariable
 			//if (NamedMDNode *NMD = M.getNamedMetadata(tmp)) {
 				//if (dyn_cast<DIVariable>(NMD->getOperand(0)))
-					CL_DEBUG3(" \\--> have metadata\n");
+	//				CL_DEBUG3(" \\--> have metadata\n");
 			//} 
-		}
+	//	}
 //        if( DbgDeclareInst *ddi = FindAllocaDbgDeclare(v)) {
 //			getDebugLoc()
 //			getVariable()
@@ -1142,7 +1172,11 @@ bool CLPass::handleOperand(Value *v, struct cl_operand *clo) {
 
 			clo->accessor = new struct cl_accessor; // FIXME possible memory leak
 			clo->accessor->code = CL_ACCESSOR_REF; // &
+#ifdef LLVM_HOST_3_7_OR_NEWER
 			clo->accessor->type = handleType(cast<GlobalVariable>(v)->getValueType());
+#else
+			clo->accessor->type = handleType(cast<GlobalVariable>(v)->getType());
+#endif
 			clo->accessor->next = nullptr;
 			
 			return true;
@@ -2052,18 +2086,20 @@ bool CLPass::doFinalization (Module &) {
 char CLPass::ID;
 static RegisterPass<CLPass> X(plugName.c_str(), fullName.c_str());
 
-// registraction clang plug-in without cmd options
-static void registerCLPass(const PassManagerBuilder &pb,
-                           legacy::PassManagerBase &pm) 
-{
-	if (pb.OptLevel == 0 && pb.SizeLevel == 0) {
-		pm.add(createLowerSwitchPass()); // -lowerswitch
-		pm.add(new CLPass);
+#ifdef LLVM_HOST_3_7_OR_NEWER
+	// registraction clang plug-in without cmd options
+	static void registerCLPass(const PassManagerBuilder &pb,
+							   legacy::PassManagerBase &pm) 
+	{
+		if (pb.OptLevel == 0 && pb.SizeLevel == 0) {
+			pm.add(createLowerSwitchPass()); // -lowerswitch
+			pm.add(new CLPass);
+		}
 	}
-}
 
-static RegisterStandardPasses
-RegisterTestPass(PassManagerBuilder::EP_EnabledOnOptLevel0, registerCLPass);
+	static RegisterStandardPasses
+	RegisterTestPass(PassManagerBuilder::EP_EnabledOnOptLevel0, registerCLPass);
+#endif
 
 /// for load extern symbols another analyzer
 extern "C" { void plugin_init(void) { } }
