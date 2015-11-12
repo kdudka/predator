@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Veronika Sokova <xsokov00@stud.fit.vutbr.cz>
+ * Copyright (C) 2014-2015 Veronika Sokova <xsokov00@stud.fit.vutbr.cz>
  *
  * This file is part of llvm/predator.
  *
@@ -21,12 +21,7 @@
 #ifndef H_CLPLUG_H
 #define H_CLPLUG_H
 
-extern "C" {
 #include <cl/code_listener.h>
-}
-
-#define __STDC_LIMIT_MACROS
-#define __STDC_CONSTANT_MACROS
 
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Module.h"
@@ -49,7 +44,6 @@ using namespace llvm;
 ///
 struct CLPrint {
 
-//public:
     static int cntErrors;
     static int cntWarnings;
 
@@ -108,6 +102,14 @@ struct CLPass : public ModulePass {
         typedef std::unordered_map<Type *,struct cl_type *> TypeMap;
         /// The type for the table of variables.
         typedef std::unordered_map<Value *,struct cl_var *> VarMap;
+        /// wrapper for global initialization
+        typedef bool (CLPass::*funcSrc)(Value*, struct cl_operand *);
+        /// The type for FIFO item
+        typedef struct queueTrio {
+            Constant *elm;
+            struct cl_accessor *firstAcc;
+            struct cl_accessor **addrNextAcc;
+        } Ttrio;
 
     private:
         unsigned cntUID = 0; ///< generator unique id for variables and types
@@ -130,33 +132,59 @@ struct CLPass : public ModulePass {
         void writePID(void);
         void appendListener(const char *);
 
-        struct cl_loc findLoc(Instruction *);
+        void getIntOperand(int, struct cl_operand *);
+        void findLocation(Instruction *, struct cl_loc *);
 
+        void cleanAll(void);
         void freeTypeTable(void);
         void freeVarTable(void);
+        void freeOperand(const struct cl_operand *);
         void freeInitial(struct cl_initializer *);
         void freeAccessor(struct cl_accessor *);
 
+        struct cl_accessor *copyAccessor(struct cl_accessor *);
+        void depthCopyAccessor(struct cl_accessor **, 
+                               struct cl_accessor ***);
+
         void handleFunction(Function *);
 
+        /* Instructions */
         void handleInstruction(Instruction *);
         void handleAllocaInstruction(AllocaInst *);
         void handleBinInstruction(Instruction *);
         enum cl_binop_e getCLCode(Instruction *);
         void handleCmpInstruction(Instruction *);
-        void handleGEPInstruction(GetElementPtrInst *);
-        void handleCastInstruction(CastInst *);
         enum cl_binop_e getCLCodePredic(enum CmpInst::Predicate);
         void handleBranchInstruction(BranchInst *);
-        void testPhi(BasicBlock *, BasicBlock *);
+        void testCompareInst(Value *, struct cl_operand *);
+        inline bool testPhi(BasicBlock *);
+        void insertPhiAssign(BasicBlock *, BasicBlock *, const char *);
         void handleSelectInstruction(SelectInst *);
+        void handleUnaryInstruction(Instruction *);
         void handleCallInstruction(CallInst *);
 
-        void handleOperand(Value *, struct cl_operand *);
+        /* Operands */
+        bool handleOperand(Value *, struct cl_operand *);
+        bool handleLoadOperand(Value *, struct cl_operand *);
+        bool handleCastOperand(Value *, struct cl_operand *);
+        bool handleGEPOperand(Value *, struct cl_operand *);
+        struct cl_operand *insertOffsetAcc(Value *, struct cl_operand *);
         void handleFncOperand(Function *, struct cl_operand *);
-        void handleConstant(Value *, struct cl_operand *);
-        struct cl_var *handleVariable(Value *);
 
+        /* Constants and Variables */
+        bool handleBasicConstant(Value *, struct cl_operand *);
+        bool isStringLiteral(Instruction *);
+        void handleStringLiteral(ConstantDataSequential *, struct cl_operand *);
+        struct cl_var *handleVariable(Value *);
+        void handleGlobalVariable(GlobalVariable *, struct cl_var *);
+        void handleSimplyInitializer(Value *, struct cl_var *,
+                                     funcSrc);
+        void handleAggregateLiteralInitializer(Constant *, 
+                                               struct cl_var *);
+        void insertAssign(struct cl_initializer ***, 
+                          struct cl_operand *, struct cl_operand *);
+
+        /* Types */
         struct cl_type *handleType(Type *);
         void handleIntegerType(IntegerType *, struct cl_type *);
         void handleStructType(StructType *, struct cl_type *);

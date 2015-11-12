@@ -234,12 +234,13 @@ macro(test_forester_regre name_suff ext arg1)
         # we use the following flag to avoid differences on 32bit vs 64bit archs
         # in the error output, which is checked for exact match
         # -w ignore all warnings
-        set(cmd "${cmd} -w -m32 ${cmd_cc1}")
-
-
+        set(cmd "${cmd} -w -g -m32 ${cmd_cc1}")
         set(cmd "${cmd} -I../include/forester-builtins -DFORESTER")
         set(cmd "${cmd} ${testdir}/test-${num}.c -o - | ")
         set(cmd "${cmd} ${GCC_EXEC_PREFIX} ${OPT_HOST} -o /dev/null -lowerswitch")
+
+        # eliminate some alloca
+        set(cmd "${cmd} -mem2reg")
         set(cmd "${cmd} -load ${fa_BINARY_DIR}/libfa.so -fa")
         set(cmd "${cmd} ${arg1}")
         set(cmd "${cmd} -preserve-ec")
@@ -252,14 +253,20 @@ macro(test_forester_regre name_suff ext arg1)
         # filter out NOTE messages with internal location
         set(cmd "${cmd} | (grep -v 'note: .*\\\\[internal location\\\\]'; true)")
 
-        # drop absolute paths and file and location
-        set(cmd "${cmd} | sed 's|^[^ ]* ||'")
+     	# filter out Code Listener messages about unreachable labels
+		set(cmd "${cmd} | (grep -v 'warning: unreachable label .*'; true)")
+
+        # drop absolute paths
+        set(cmd "${cmd} | sed 's|^[^:]*/||'")
+
+        # drop column numbers
+        set(cmd "${cmd} | sed -r 's|^([^:]+:[0-9]+:)[0-9]+:|\\\\1|'")
 
         # drop var UIDs that are not guaranteed to be fixed among runs
         set(cmd "${cmd} | sed -r -e 's|#[0-9]+:||g' -e 's|#[0-9]+|_|g'")
 
-        # ... and finally diff with the expected output (without location)
-        set(cmd "${cmd} | diff -up <(cat ${testdir}/test-${num}.err${ext} | sed 's|^[^ ]* ||') -")
+        # ... and finally diff with the expected output
+        set(cmd "${cmd} | diff -up ${testdir}/test-${num}.err${ext} -")
         set(test_name "test-${num}.c${name_suff}")
         add_test(${test_name} bash -o pipefail -c "${cmd}")
 
