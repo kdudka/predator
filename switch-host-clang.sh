@@ -1,7 +1,7 @@
 #!/bin/bash
 export SELF="$0"
 export LC_ALL=C
-MAKE="make -j5"
+MAKE="make -j9"
 
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
@@ -15,13 +15,13 @@ usage() {
     Use this script to (re)build Predator and/or Forester against an arbitrary
     build of host Clang/LLVM. The host Clang/LLVM needs library and header files
     for develop native programs that use the LLVM infrastructure. The currently
-    supported version of host Clang/LLVM is 3.3, but feel free to use any other
-    version of Clang at your own responsibility.
+    supported version of host Clang/LLVM is 3.8-dev but Predator can be loaded also
+    into older versions of LLVM (3.5+, but correct output is guaranteed form 3.7).
 
     CLANG_HOST is the absolute path to clang(1). The most common location of the system
     Clang is /usr/bin/clang. If you have multiple versions of clang/llvm installed
-    on the system, it can be something like /usr/bin/clang-3.3. You can also
-    provide a local build of clang, e.g. /home/nika/clang+llvm-3.3-x86_64/bin/clang.
+    on the system, it can be something like /usr/bin/clang-3.8. You can also
+    provide a local build of clang, e.g. /home/nika/clang+llvm-3.8-x86_64/bin/clang.
 
     On some Linux distributions you need to install an optional package (e.g.
     llvm-devel on Fedora) in order to be able to build LLVM pass.
@@ -63,7 +63,5 @@ build_analyzer() {
 
 }
 
-build_analyzer fwnull fwnull
 build_analyzer sl Predator
-build_analyzer fa Forester
-build_analyzer vra "Value-Range Analyzer"
+#build_analyzer fa Forester

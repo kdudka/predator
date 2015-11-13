@@ -1,7 +1,7 @@
 #!/bin/bash
 export SELF="$0"
 export LC_ALL=C
-MAKE="make -j5"
+MAKE="make -j9"
 
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
@@ -20,8 +20,8 @@ usage() {
 
     CLANG_HOST is the absolute path to clang(1). Default is /usr/bin/clang.
     If you have multiple versions of clang/llvm installed on the system, it
-    can be something like /usr/bin/clang-3.3. You can also provide a local
-    build of clang, e.g. /home/bob/clang+llvm-3.3-x86_64/bin/clang.
+    can be something like /usr/bin/clang-3.8. You can also provide a local
+    build of clang, e.g. /home/bob/clang+llvm-3.8-x86_64/bin/clang.
 
     OPT_HOST is the absolute path to opt. Mainly in the same folder as clang.
     Default is /usr/bin/opt.
