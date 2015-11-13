@@ -110,6 +110,81 @@ set(GCC_EXEC_PREFIX "" CACHE STRING
 set(testdir "${sl_SOURCE_DIR}/../tests/predator-regre")
 
 # basic tests
+if(ENABLE_LLVM) # -----------------------------------------------------------
+
+option(LLVM_OK_TEST "" ON)
+if(LLVM_OK_TEST)
+set(tests
+              0002 0003 0004 0005 0006 0007 0008
+    0010      0012 0013      0015 0016 0017 0018 0019
+    0020           0023 0024           0027      0029
+    0030 0031 0032 0033 0034           0037 0038
+         0041 0042 0043 0044      0046      0048
+         0051 0052 0053           0056
+    0060      0062 0063 0064           0067 0068 0069
+         0071           0074 0075 0076 0077
+                   0083 0084 0085 0086 0087
+         0091 0092 0093                          0099
+    0100 0101 0102 0103 0104 0105      0107 0108 0109
+                        0114                0118 0119
+    0120           0123      0125
+         0131
+         0141      0143                     0148 0149
+                   0153 0154 0155           0158 0159
+    0160 0161 0162 0163 0164      0166
+         0171                0175
+                             0185           0188
+    0190           0193 0194           0197 0198
+         0201 0202 0203 0204 0205
+                        0214 0215      0217 0218 0219
+    0220                     0225 0226 0227 0228 0229
+    0230 0231 0232 0233 0234      0236 0237 0238
+         0241 0242      0244 0245
+
+
+    0400 0401      0403
+
+              0432
+
+    0500 0501           0504 0505                0509
+    0510      0512           0515           0518
+
+         0601 0602 0603 0604 0605 0606 0607 0608 0609
+    0610 0611 0612 0613 0614 0615)
+
+# test correct, but different output then gcc-plugin
+else()
+set(tests ${tests}
+# track uninit [conditional jump depends on uninitialized value]
+    0025 0026 0036 0047
+# opposite execution branch (inverted condition) or different cycles count or addr of local variable
+    0001 0022 0040 0045 0049 0050 0054 0055 0059 0065
+    0066 0070 0089 0096 0097 0098 0111 0115 0121 0122
+    0126 0127 0128 0129 0130 0156 0196 0199 0200 0247
+    0502 0503 0511 0517 0520
+    0176 0404 0408 0411
+# bad location info
+    0009 0011 0057 0058 0079 0080 0081 0088 0090 0112
+    0144 0145 0146 0147 0172 0173 0195 0208 0221 0223
+# incompletely location info
+    0035 0142 0191 0192 0224 0222 0402
+# incorrect output - need analysis
+    0014 0028 0039 0061 0072 0073 0078 0082
+    0094 0095
+    0110 0116 0117
+    0132 0133 0134 0135 0136 0137 0138 0139
+    0140 0150 0151 0152 0167 0168
+    0170 0174 0177 0178 0179
+    0180 0181 0182 0183 0184 0186 0187 0189
+    0207 0209 0210 0212
+    0239 0246 # stack.save .restore
+    0240 0243
+    0300 0302 0316
+    0406 0464 0466 0467
+    0508 0513 0514 0516)
+endif()
+
+else() # --------------------------------------------------------------------
 set(tests
          0001 0002 0003 0004 0005 0006 0007 0008 0009
     0010 0011 0012 0013 0014 0015 0016 0017 0018 0019
@@ -147,6 +222,7 @@ set(tests
     0520
          0601 0602 0603 0604 0605 0606 0607 0608 0609
     0610 0611 0612 0613 0614 0615)
+endif()
 
 option(TEST_INCLUDE_SLAYER "Include tests distributed with SLAyer" OFF)
 if(TEST_INCLUDE_SLAYER)
@@ -230,15 +306,15 @@ macro(test_predator_regre name_suff ext arg1)
     endforeach()
 endmacro(test_predator_regre)
 
-# default mode
-test_predator_regre("" "" "-args=error_label:ERROR")
+# default mode -> change error_label:ERROR to function __VERIFIER_error()
+test_predator_regre("" "" "")
 
 # track_uninit mode
-#test_predator_regre("-TRACK_UNINIT" ".uninit"
-#    "-args=track_uninit")
+test_predator_regre("-TRACK_UNINIT" ".uninit"
+    "-args=track_uninit")
 
 # OOM simulation mode
-#test_predator_regre("-OOM" ".oom" "-args=oom")
+test_predator_regre("-OOM" ".oom" "-args=oom")
 
 
 
