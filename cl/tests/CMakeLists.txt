@@ -370,7 +370,7 @@ add_test("headers_sanity-4" ${CMAKE_CXX_COMPILER} -x c++ -std=c++11 -Wall -Wextr
     -o /dev/null
     -I${cl_SOURCE_DIR}/../include
     -c ${cl_SOURCE_DIR}/llvm/clplug.hh)
-endif()
+else()
 
 #####################################
 # append test-cases for gcc-adapter #
@@ -435,7 +435,7 @@ add_gcc_adapt_test(cc1plus C++ 50 Copy-constructors)
 add_gcc_adapt_test(cc1plus C++ 51 Conversion-constructors)
 add_gcc_adapt_test(cc1plus C++ 52 Data-members-access)
 add_gcc_adapt_test(cc1plus C++ 53 Class-member-functions)
-
+endif()
 
 # debugging helpers
 configure_file(${cl_SOURCE_DIR}/tests/vkdebug.sh.in

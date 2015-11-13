@@ -30,6 +30,17 @@ if(Boost_FOUND)
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
 endif()
 
+# Find llvm devel-headers and libs
+if(ENABLE_LLVM)
+	find_package(LLVM REQUIRED CONFIG)
+	if(LLVM_FOUND)
+		message(STATUS "LLVM version: ${LLVM_PACKAGE_VERSION}")
+		link_directories(${LLVM_LIBRARY_DIRS})
+		include_directories(${LLVM_INCLUDE_DIRS})
+		add_definitions(${LLVM_DEFINITIONS})
+	endif()
+endif()
+
 # Check for a C compiler flag
 include(CheckCCompilerFlag)
 macro(ADD_C_FLAG opt_name opt)
@@ -64,9 +75,9 @@ ADD_C_FLAG(       "hidden_visibility"    "-fvisibility=hidden")
 # we use c99 to compile *.c and c++0x to compile *.cc
 ADD_C_ONLY_FLAG(  "STD_C99"              "-std=c99")
 if(ENABLE_LLVM)
-ADD_CXX_ONLY_FLAG("STD_CXX_11"           "-std=c++11")
+	ADD_CXX_ONLY_FLAG("STD_CXX_11"       "-std=c++11")
 else()
-ADD_CXX_ONLY_FLAG("STD_CXX_0X"           "-std=c++0x")
+	ADD_CXX_ONLY_FLAG("STD_CXX_0X"       "-std=c++0x")
 endif()
 
 # tweak warnings
@@ -124,37 +135,36 @@ if(ENABLE_LLVM)
 
     set(OPT_HOST "${def_opt_host}" CACHE STRING "absolute path to host opt/LLVM")
 else()
-# FIXME: the use of $GCC_HOST from the environment should be better documented
-if("$ENV{GCC_HOST}" STREQUAL "")
-    get_filename_component(def_gcc_host "../gcc-install/bin/gcc" ABSOLUTE)
-else()
-    set(def_gcc_host "$ENV{GCC_HOST}")
-endif()
+	# FIXME: the use of $GCC_HOST from the environment should be better documented
+	if("$ENV{GCC_HOST}" STREQUAL "")
+		get_filename_component(def_gcc_host "../gcc-install/bin/gcc" ABSOLUTE)
+	else()
+		set(def_gcc_host "$ENV{GCC_HOST}")
+	endif()
 
-set(GCC_HOST "${def_gcc_host}" CACHE STRING "absolute path to host gcc(1)")
+	set(GCC_HOST "${def_gcc_host}" CACHE STRING "absolute path to host gcc(1)")
 
-if("$ENV{GCC_HOST}" STREQUAL "")
-else()
-    execute_process(COMMAND "${GCC_HOST}" "-print-file-name=plugin"
-        RESULT_VARIABLE GCC_HOST_STATUS OUTPUT_QUIET)
-    if (NOT "${GCC_HOST_STATUS}" EQUAL 0)
+	if("$ENV{GCC_HOST}" STREQUAL "")
+	else()
+		execute_process(COMMAND "${GCC_HOST}" "-print-file-name=plugin"
+		    RESULT_VARIABLE GCC_HOST_STATUS OUTPUT_QUIET)
+		if (NOT "${GCC_HOST_STATUS}" EQUAL 0)
 
-        # the current GCC_HOST does not work, try to fall-back to $ENV{GCC_HOST}
-        set(GCC_HOST "$ENV{GCC_HOST}"
-            CACHE STRING "absolute path to host gcc(1)" FORCE)
-    endif()
-endif()
+		    # the current GCC_HOST does not work, try to fall-back to $ENV{GCC_HOST}
+		    set(GCC_HOST "$ENV{GCC_HOST}"
+		        CACHE STRING "absolute path to host gcc(1)" FORCE)
+		endif()
+	endif()
 endif()
 
 option(TEST_WITH_VALGRIND "Set to ON to enable valgrind tests" OFF)
 
-if(ENABLE_LLVM)
-else()
-# CMake cannot build shared libraries consisting of static libraries only
-set(EMPTY_C_FILE ${PROJECT_BINARY_DIR}/empty.c)
-if (NOT EXISTS ${EMPTY_C_FILE})
-    file(WRITE ${EMPTY_C_FILE} "extern int foo;\n")
-endif()
+if(NOT ENABLE_LLVM)
+	# CMake cannot build shared libraries consisting of static libraries only
+	set(EMPTY_C_FILE ${PROJECT_BINARY_DIR}/empty.c)
+	if (NOT EXISTS ${EMPTY_C_FILE})
+		file(WRITE ${EMPTY_C_FILE} "extern int foo;\n")
+	endif()
 endif()
 
 # build compiler plug-in PLUGIN from static lib ANALYZER using CL from LIBCL_PATH

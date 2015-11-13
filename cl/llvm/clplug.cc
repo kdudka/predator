@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Veronika Sokova <xsokov00@stud.fit.vutbr.cz>
+ * Copyright (C) 2014-2015 Veronika Sokova <xsokov00@stud.fit.vutbr.cz>
  *
  * This file is part of llvm/predator.
  *
@@ -17,9 +17,9 @@
  * along with predator.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-extern "C" {
 #include <cl/code_listener.h>
 
+extern "C" {
 #include "../config_cl.h"
 #include "../version_cl.h"
 
@@ -30,41 +30,27 @@ extern "C" {
 #include <cl/cl_msg.hh>
 #include "clplug.hh"
 
-//#include "llvm/PassRegistry.h"
-//#include "llvm/PassManager.h"
-//#include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#include "llvm/Config/llvm-config.h"
+
+#if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR == 3) && (LLVM_VERSION_MINOR >= 7)
+#   define LLVM_HOST_3_7_OR_NEWER
+#endif
+
+#ifdef LLVM_HOST_3_7_OR_NEWER
+#   include "llvm/Transforms/Scalar.h" // createLowerSwitchPass
+#   include "llvm/IR/LegacyPassManager.h"
+#   include "llvm/Transforms/IPO/PassManagerBuilder.h"
+#endif
 
 #include "llvm/Support/CommandLine.h" // namespace cl
-#include "llvm/DebugInfo.h" // loc
+#ifdef LLVM_HOST_3_7_OR_NEWER
+#   include "llvm/IR/DebugInfoMetadata.h"
+#endif
+#include "llvm/IR/DebugInfo.h"
 
 #include <fstream>
 #include <cstring> // memcpy
-
-/*
-FIXME location info
-
-    I->getDebugLoc() // const DebugLoc
-        DL->getLine() // riadok unsigned
-        DL->getCol() // stlpec unsigned
-        DL->getScope
-
-DebugLoc 
-loc.line = I->getDebugLoc().getLine()
-loc.column = I->getDebugLoc().getCol()
-loc.sysp =
-
-resp.
-
-    if (MDNode *N = I->getMetadata("dbg")) {
-        DILocation Loc(N);
-        loc.file = strdup(Loc.getFilename().str().c_str());
-        loc.line = Loc.getLineNumber();
-        loc.column = Loc.getColumnNumber();
-        loc.sysp = 0;
-    } else {
-            loc = cl_loc_known;
-    }
-*/
+#include <queue>
 
 /**
  * @file clplug.cc
@@ -83,40 +69,46 @@ static std::string sufix = ".so";
 /// for pass registration
 static std::string fullName = "Code Listener Analyzer";
 
-// FIXME unsupport loc
+// unsupport location
 struct cl_loc cl_loc_known = {
-    0,  // .file
-    0,  // .line
-    0,  // .column
-    0,  // .sysp
+    0,                             // .file
+    0,                             // .line
+    0,                             // .column
+    0,                             // .sysp
 };
 
 static struct cl_type builtinIntType = {
-    -1, // uid
-    CL_TYPE_INT, // code
-    cl_loc_known, // loc
-    CL_SCOPE_GLOBAL, // scope
-    "<builtin_int>",// *name
-    sizeof(int), // size
-    0, //item_cnt - return + size + align
-    nullptr, // *items
-    0, // array_size
-    false // is_unsigned
+    -1,                            // uid
+    CL_TYPE_INT,                   // code
+    cl_loc_known,                  // loc
+    CL_SCOPE_GLOBAL,               // scope
+    "<builtin_int>",               // *name
+    sizeof(int),                   // FIXME size
+    0,                             // item_cnt
+    nullptr,                       // *items
+    0,                             // array_size
+    false,                         // is_unsigned
+    false,                         // is_const
+    CL_PTR_TYPE_NOT_PTR            // ptr_type
 };
 
-struct cl_type_item allocaArg[3] = {{nullptr, nullptr, 0}, {&builtinIntType, nullptr, 0}, {&builtinIntType, nullptr, 0}};
+struct cl_type_item allocaArg[3] = {
+	{nullptr, nullptr, 0},         // return
+	{&builtinIntType, nullptr, 0}, // size
+	{&builtinIntType, nullptr, 0}  // align
+};
 
 static struct cl_type allocaFncType = {
-    -2, // uid
-    CL_TYPE_FNC, // code
-    cl_loc_known, // loc
-    CL_SCOPE_GLOBAL, // scope
-    "<builtin_alloca>",// *name
-    0, // size
-    3, //item_cnt - return + size + align
-    allocaArg, // *items
-    0, // array_size
-    false // is_unsigned
+    -2,                            // uid
+    CL_TYPE_FNC,                   // code
+    cl_loc_known,                  // loc
+    CL_SCOPE_GLOBAL,               // scope
+    "<builtin_alloca>",            // *name
+    0,                             // size
+    3,                             // item_cnt - return + size + align
+    allocaArg,                     // *items
+    0,                             // array_size
+    false                          // is_unsigned
 };
 
 static std::string description = "\n   "+ fullName + " [code listener SHA1 " + CL_GIT_SHA1 + "]\n"
@@ -178,6 +170,14 @@ static cl::opt<int> CLVerbose("verbose",
 
 //=========================================================================
 
+void CLPass::cleanAll() {
+
+	cl->destroy(cl);
+	cl_global_cleanup();
+	freeTypeTable();
+	freeVarTable();
+}
+
 void CLPass::freeTypeTable(void) {
 
     for (TypeMap::iterator t = TypeTable.begin(), te = TypeTable.end(); t != te; ++t) {
@@ -203,18 +203,30 @@ void CLPass::freeVarTable(void) {
     VarTable.clear();
 }
 
+void CLPass::freeOperand(const struct cl_operand *clo) {
+
+	freeAccessor(clo->accessor);
+	if (clo->code == CL_OPERAND_CST && clo->data.cst.code == CL_TYPE_STRING
+	    && clo->data.cst.data.cst_string.value != nullptr)
+		delete [] clo->data.cst.data.cst_string.value;
+	delete clo;
+}
+
 void CLPass::freeInitial(struct cl_initializer *init) {
+
     while (init) {
         struct cl_initializer *next = init->next;
 
         if (init->insn.code == CL_INSN_UNOP) {
-            struct cl_operand *clo = const_cast<struct cl_operand *>(init->insn.data.insn_unop.dst);
-            freeAccessor(clo->accessor);
-            delete clo;
-            clo = const_cast<struct cl_operand *>(init->insn.data.insn_unop.src);
-            freeAccessor(clo->accessor);
-            delete clo;
-        }
+            freeOperand(init->insn.data.insn_unop.dst);
+            freeOperand(init->insn.data.insn_unop.src);
+        } else if (init->insn.code == CL_INSN_BINOP) {
+            freeOperand(init->insn.data.insn_binop.dst);
+            freeOperand(init->insn.data.insn_binop.src1);
+            freeOperand(init->insn.data.insn_binop.src2);
+        } else {
+			CL_ERROR("free invalid operand.");
+		}
 
         delete init;
         init = next;
@@ -222,6 +234,7 @@ void CLPass::freeInitial(struct cl_initializer *init) {
 }
 
 void CLPass::freeAccessor(struct cl_accessor *acc) {
+
     while (acc) {
         struct cl_accessor *next = acc->next;
 
@@ -234,6 +247,42 @@ void CLPass::freeAccessor(struct cl_accessor *acc) {
         delete acc;
         acc = next;
     }
+}
+
+/// debug information for instruction
+void CLPass::findLocation(Instruction *i, struct cl_loc *loc) {
+
+	*loc = cl_loc_known;
+
+#ifdef LLVM_HOST_3_7_OR_NEWER
+	if (DebugLoc dbg = i->getDebugLoc()) {
+		loc->line = dbg.getLine();
+		loc->column = dbg.getCol();
+	}
+#else
+	if (MDNode *N = i->getMetadata("dbg")) {
+        DILocation Loc(N);
+        std::string tmp = Loc.getFilename().str();
+        unsigned len = tmp.length() + 1;
+        char *tmpPtr = new char [len]; // delete into code listener
+        std::memcpy(tmpPtr, tmp.c_str(), len);
+        loc->file = tmpPtr;
+        loc->line = Loc.getLineNumber();
+        loc->column = Loc.getColumnNumber();
+
+        cl_loc_known.file = tmpPtr; // meybe
+    }
+#endif
+}
+
+/// get operand of intiger type
+void CLPass::getIntOperand(int num, struct cl_operand *clo) {
+	clo->code = CL_OPERAND_CST;
+	clo->scope = CL_SCOPE_GLOBAL;
+	clo->type = &builtinIntType;
+	clo->accessor = nullptr;
+	clo->data.cst.code = clo->type->code;
+	clo->data.cst.data.cst_int.value = num;
 }
 
 /// create CL object for grouping another CL objects by command line options
@@ -251,7 +300,7 @@ void CLPass::setup(void) {
     appendListener("listener=\"locator\"");
 #endif
 
-    const char *cfg = ((CLDryRun)? "unfold_switch,unify_labels_gl" : "unify_labels_fnc");
+    std::string cfg = ((CLDryRun)? "unfold_switch,unify_labels_gl" : "unify_labels_fnc");
     std::string configCL;
 
     if (CLPPFilename != "-") {
@@ -276,14 +325,15 @@ void CLPass::setup(void) {
         configCL.clear();
     }
 
-
-    if (!CLArgs.empty()) {
-        configCL = "listener=\"easy\" listener_args=\""+ CLArgs
-            +"\" clf=\""+ cfg +"\"";
+    if (!CLDryRun) {
+        configCL = "listener=\"easy\"";
+        if (!CLArgs.empty()) {
+            configCL += " listener_args=\""+ CLArgs + "\"";
+        }
+        configCL += " clf=\""+ cfg +"\"";
         appendListener(configCL.c_str());
         configCL.clear();
     }
-
 
 }
 
@@ -322,11 +372,11 @@ bool CLPass::doInitialization(Module &) {
     // callbacks for messages
     struct cl_init_data data = {
         CLPrint::empty, // debug
-        CLPrint::warn, // warn
+        CLPrint::warn,  // warn
         CLPrint::error, // error
-        CLPrint::note, // note
-        CLPrint::die, // die
-        CLVerbose // debug_level
+        CLPrint::note,  // note
+        CLPrint::die,   // die
+        CLVerbose       // debug_level
     };
     if (data.debug_level) data.debug = CLPrint::debug;
 
@@ -349,22 +399,24 @@ bool CLPass::runOnModule(Module &M) {
 
     voidType = Type::getVoidTy(M.getContext());
 
-    cl_loc_known.file = M.getModuleIdentifier().c_str();
+	// name of source file
+	if (NamedMDNode *NMD = M.getNamedMetadata("llvm.dbg.cu")) {
+        std::string tmp = cast<DICompileUnit>(NMD->getOperand(0))->getFilename().str();
+        unsigned len = tmp.length() + 1;
+        char *tmpPtr = new char [len]; // delete into code listener
+        std::memcpy(tmpPtr, tmp.c_str(), len);
+        cl_loc_known.file = tmpPtr;
+	} else {
+		cl_loc_known.file = M.getModuleIdentifier().c_str();
+	}
 
     // one module for one source file
     cl->file_open(cl, cl_loc_known.file); // open source file
-    CL_DEBUG("start "<< __func__);
-
-    /*    errs() << "\nGlobal variables:\n";
-        for (Module::global_iterator GV = M.global_begin(), GVE = M.global_end(); GV != GVE; ++GV)
-        { // global variable
-        errs() << "ID<GV<<<<<" << M.getMDKindID(GV->getName()) << "\n";
-        handleGlobalVariable(GV, &var);
-        }*/
+    CL_DEBUG("start "<< __func__<<" for "<<cl_loc_known.file);
 
     for (Module::iterator F = M.begin(), FE = M.end(); F != FE; ++F)
     { // functions
-        //        int fncUID = M.getMDKindID(F->getName());
+
         CL_DEBUG("pass analyzes Function " << F->getName().str() << "()");
 
         if (F->isDeclaration()) continue;
@@ -373,10 +425,9 @@ bool CLPass::runOnModule(Module &M) {
         for (Function::iterator BB = F->begin(), BE = F->end(); BB != BE; ++BB)
         { // basic blocks
 
-            //            errs() << "ID<BB<<<<<" << M.getMDKindID(BB->getName()) << "\n";
-            CL_DEBUG("pass analyzes BasicBlock " << BB->getName().str() << " - "
-                    << BB->size() << " instructions");
-
+            CL_DEBUG("pass analyzes BasicBlock " << BB->getName().str() 
+                     << " - " << BB->size() << " instructions");
+            // LABEL NAME
             cl->bb_open(cl, BB->getName().str().c_str()); // open basic block
 
             for (BasicBlock::iterator I = BB->begin(), IE = BB->end(); I != IE; ++I)
@@ -390,7 +441,7 @@ bool CLPass::runOnModule(Module &M) {
     cl->file_close(cl); // close source file
 
     delete DL;
-    CL_DEBUG("end of analysis");
+    CL_DEBUG("end of convert");
     return false;
 }
 
@@ -412,7 +463,7 @@ struct cl_type *CLPass::handleType(Type *t) {
         return item->second;
     }
 
-    clt->loc = cl_loc_known; //FIXME
+    clt->loc = cl_loc_known; //FIXME MetaData -> DIType
 
     switch (t->getTypeID()) {
         case Type::VoidTyID:
@@ -471,19 +522,25 @@ struct cl_type *CLPass::handleType(Type *t) {
 
         case Type::FunctionTyID: {
             clt->code = CL_TYPE_FNC;
-            //            struct cl_type *tmp = clt;
             handleFunctionType(cast<FunctionType>(t), clt);
-            //            clt = tmp;
         }
             break;
 
         case Type::VectorTyID:
             CL_WARN("unsupport type VECTOR");
+            clt->code = CL_TYPE_UNKNOWN;
+            break;
+
         default: // MetadataTyID, X86_MMXTyID
+            CL_WARN("unknown type");
             clt->code = CL_TYPE_UNKNOWN;
             break;
     }
     //    errs() << "ID<TY<<<<<" << clt->uid << ">>>>>";
+	if (CLVerbose > 2) {
+		cltToStream(std::cerr, clt, /*depth*/ 0);
+		std::cerr<<"\n";
+	}
     return clt;
 }
 
@@ -501,7 +558,7 @@ void CLPass::handleIntegerType(IntegerType *t, struct cl_type *clt) {
     }    else {
         clt->size /= CHAR_BIT;
     }
-    clt->is_unsigned = !t->getSignBit(); //FIXME
+    clt->is_unsigned = !t->getSignBit(); //FIXME DIType
     //    errs() << (t->getBitMask() & t->getSignBit()) <<  ((t->getSignBit())? " sign" : " unsign") << " - ";
 }
 
@@ -524,6 +581,9 @@ void CLPass::handleFunctionType(FunctionType *ft, struct cl_type *clt) {
         item->name = nullptr;
         item->type = handleType(*p);
     }
+    // ret type
+    clt->items[0].name = nullptr; 
+    clt->items[0].type = handleType(ft->getReturnType());
 }
 // deklaruje pointer, ktoreho data nemozu byt menene pomocou ukazovatela
 // const int *p = &someInt;
@@ -562,10 +622,9 @@ void CLPass::handleStructType(StructType *st, struct cl_type *clt) {
         struct cl_type_item *item = &clt->items[clt->item_cnt];
         item->type = handleType(*e);
 
-        item->name = nullptr; //FIXME
+        item->name = nullptr; // FIXME DIDerivedType
 
         item->offset = SL->getElementOffset(clt->item_cnt ++);
-
     }
 
 }
@@ -586,22 +645,26 @@ void CLPass::handleFncOperand(Function *F, struct cl_operand *fnc) {
     }
 
     // find or create
+    //------------------------
     fnc->type = handleType(F->getFunctionType());
-    // return type
-    fnc->type->items[0].name = nullptr;
-    fnc->type->items[0].type = handleType(F->getReturnType());
+    fnc->accessor = nullptr;
 
     fnc->code = CL_OPERAND_CST;
     fnc->scope = ((F->hasInternalLinkage())? CL_SCOPE_STATIC : CL_SCOPE_GLOBAL);
-    fnc->accessor = nullptr;
     fnc->data.cst.code = CL_TYPE_FNC;
     fnc->data.cst.data.cst_fnc.uid = F->getContext().getMDKindID(F->getName());
     // I hope that is unique
 
     fnc->data.cst.data.cst_fnc.is_extern = F->isDeclaration();
-    fnc->data.cst.data.cst_fnc.loc = cl_loc_known; //FIXME
 
-    //"Allocsize = " << G->getDataLayout()->getTypeAllocSize(F->getType());
+    fnc->data.cst.data.cst_fnc.loc = cl_loc_known;
+
+#ifdef LLVM_HOST_3_7_OR_NEWER
+    if (DISubprogram *DI = getDISubprogram(F)) {
+		// DISubprogram without column
+		fnc->data.cst.data.cst_fnc.loc.line = DI->getLine();
+	}
+#endif
 }
 
 /// handle for open function, when is call from Module, iterate argument list
@@ -614,16 +677,11 @@ void CLPass::handleFunction(Function *F) {
     cl->fnc_open(cl, &fnc);
     delete [] fnc.data.cst.data.cst_fnc.name;
 
-    //        if (F->getFunctionType()->getNumParams() == 0)
-    //            errs() << "FUNCTION Argument VOID\n";
-    //        else
     for (Function::arg_iterator FA = F->arg_begin(), FAE = F->arg_end(); FA != FAE; ++FA)
     { // args
-        //                errs() << "  Argument no. " << FA->getArgNo();
         struct cl_operand arg;
         handleOperand(FA, &arg);
-        cl->fnc_arg_decl(cl, FA->getArgNo(), &arg);
-
+        cl->fnc_arg_decl(cl, FA->getArgNo()+1, &arg); // from 1->
     }
     // set entry label
     std::string name;
@@ -637,36 +695,41 @@ void CLPass::handleFunction(Function *F) {
 
     struct cl_insn i;
     i.code = CL_INSN_JMP;
-    i.loc = cl_loc_known; //FIXME
-    i.data.insn_jmp.label = name.c_str();
+    i.loc = cl_loc_known; // artificial instruction
+    i.data.insn_jmp.label = name.c_str(); // LABEL NAME
     cl->insn(cl, &i);
 }
 
 /// handle for constant, setup from cl_type in operand
 /// if is bool constant (TRUE, FALSE), type must be CL_TYPE_INT for access in union data
-void CLPass::handleConstant(Value *v, struct cl_operand *clo) {
+/// return true, if set up accesor
+bool CLPass::handleBasicConstant(Value *v, struct cl_operand *clo) {
 
     clo->code = CL_OPERAND_CST;
     clo->scope = CL_SCOPE_GLOBAL; // maybe?
     clo->type = handleType(v->getType());
     clo->data.cst.code = clo->type->code;
 
-    CL_DEBUG3(" CONSTANT [type=" << v->getType()->getTypeID() << "]\n");
+    CL_DEBUG3("  CONSTANT [type=" << v->getType()->getTypeID() << "/" 
+              << clo->type->code << "/"<<clo->data.cst.code <<"]\n");
 
-    if (isa<ConstantDataSequential>(v) && cast<ConstantDataSequential>(v)->isString()) {
-        clo->data.cst.code = CL_TYPE_STRING;
-        CL_DEBUG3("\\-> STRING CST\n");
-        std::string tmp = cast<ConstantDataSequential>(v)->getAsString().str();
-        unsigned len = tmp.length() + 1;
-        char * tmpPtr = new char [len]; // alloc string
-        std::memcpy(tmpPtr, tmp.c_str(), len);
-        clo->data.cst.data.cst_string.value = tmpPtr;
-    }
+	if (isa<ConstantArray>(v) || isa<ConstantStruct>(v) || 
+        isa<ConstantDataSequential>(v)) {
+		CL_ERROR("composite constant literals are not basic constant");
+		return false;
+	}
+	if (isa<UndefValue>(v)) {
+		clo->data.cst.data.cst_int.value = 0; // anything - is error
+		clo->data.cst.code = CL_TYPE_INT;
+		CL_ERROR("undefined constant");
+		return false;
+	}
 
     switch (clo->data.cst.code) {
+		// all ConstantInt
         case CL_TYPE_BOOL:
-            clo->data.cst.code = CL_TYPE_INT; // because ConstantInt
-        case CL_TYPE_CHAR: // best choice
+        case CL_TYPE_CHAR:
+            clo->data.cst.code = CL_TYPE_INT; // union type
         case CL_TYPE_INT:
             if (clo->type->is_unsigned)
                 clo->data.cst.data.cst_uint.value = dyn_cast<ConstantInt>(v)->getValue().getZExtValue();
@@ -685,22 +748,57 @@ void CLPass::handleConstant(Value *v, struct cl_operand *clo) {
             break;
 
         case CL_TYPE_PTR:
-            if (isa<ConstantPointerNull>(v)) {// nullptr or isa<ConstantAggregateZero>
+            if (isa<ConstantPointerNull>(v)) { // nullptr
                 clo->data.cst.data.cst_int.value = 0;
-                clo->data.cst.code = CL_TYPE_INT;
+                clo->data.cst.code = CL_TYPE_INT; // union type
+                break;
             }
 
-        case CL_TYPE_STRING: // not support
-            break;
-
         default:
-            CL_WARN("unkown constant");
+            CL_WARN("unknown constant");
             break;
     }
+	return false;
+}
+
+bool CLPass::isStringLiteral(Instruction *vi) {
+
+	if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(vi)) 
+		if (GlobalVariable *gv = dyn_cast<GlobalVariable>(gep->getPointerOperand())) 
+			if (ConstantDataSequential *c = dyn_cast<ConstantDataSequential>(gv->getInitializer())) 
+				if (gep->hasAllZeroIndices() && // pointer alias
+					gv->isConstant() && 
+					gv->hasUnnamedAddr() && 
+					gv->hasPrivateLinkage() &&
+					c->isCString() ) // is all necessary?
+					return true;
+	return false;
+}
+
+/// handle for @b CL_TYPE_STRING
+/// don't set operand's type (must called)
+void CLPass::handleStringLiteral(ConstantDataSequential *c, struct cl_operand *clo) {
+
+    if (!c->isCString()) {
+		CL_ERROR("not c-string literal");
+		return;
+	}
+    CL_DEBUG3("  STRING LITERAL\n");
+    clo->code = CL_OPERAND_CST;
+    clo->scope = CL_SCOPE_GLOBAL;
+    clo->type = nullptr;
+    clo->data.cst.code = CL_TYPE_STRING;
+
+    std::string tmp = c->getAsString().str();
+    unsigned len = tmp.length() + 1;
+    char * tmpPtr = new char [len]; // alloc string
+    std::memcpy(tmpPtr, tmp.c_str(), len);
+    clo->data.cst.data.cst_string.value = tmpPtr;
 
 }
 
-/// handle for local and global variables, return cl_var, which find in varTable, or create new
+/// handle for local and global/static variables, return cl_var, which 
+/// find in varTable, or create new
 /// variable don't have to name (register)
 struct cl_var *CLPass::handleVariable(Value *v) {
 
@@ -711,139 +809,349 @@ struct cl_var *CLPass::handleVariable(Value *v) {
         clv = new struct cl_var;
         std::memset(clv, 0, sizeof(*clv));
         clv->uid = cntUID++;
-        VarTable.insert({v, clv});
+        
+        if (v != nullptr)
+			VarTable.insert({v, clv});
     }
     else { // exist
         return item->second;
     }
 
-    clv->loc = cl_loc_known; //FIXME
-
-    if (v->hasName()) {
+	clv->loc = cl_loc_known;
+	
+	if (v == nullptr)
+		return clv; // artificial register;
+    
+    if (v->hasName()) { // named variable
         std::string tmp = v->getName().str();
         unsigned len = tmp.length() + 1;
         char * tmpPtr = new char [len];
         std::memcpy(tmpPtr, tmp.c_str(), len);
         clv->name = tmpPtr;
         clv->artificial = false;
-    }    else {
+
+	//	if (v->isUsedByMetadata()) { //FIXME DIVariable
+			//if (NamedMDNode *NMD = M.getNamedMetadata(tmp)) {
+				//if (dyn_cast<DIVariable>(NMD->getOperand(0)))
+	//				CL_DEBUG3(" \\--> have metadata\n");
+			//} 
+	//	}
+//        if( DbgDeclareInst *ddi = FindAllocaDbgDeclare(v)) {
+//			getDebugLoc()
+//			getVariable()
+//		}
+        
+    } else { // register
         clv->name = nullptr;
         clv->artificial = true;
     }
 
     if (isa<GlobalVariable>(v)) {
-        clv->artificial = false;
-        clv->is_extern = cast<GlobalVariable>(v)->hasExternalLinkage();
-        clv->initial =  nullptr; // or struct cl_initializer initial
-        clv->initialized = !clv->is_extern;
-        if (cast<GlobalVariable>(v)->isConstant()) {
-            struct cl_operand *src = new struct cl_operand;
-            struct cl_operand *dst = new struct cl_operand;
-            dst->code = CL_OPERAND_VAR;
-            dst->type = handleType(v->getType());
-            dst->data.var = clv;
-
-            clv->initial = new struct cl_initializer;
-            clv->initial->next = nullptr;
-
-            std::memset(src, 0, sizeof(*src));
-            handleConstant(v, src);
-            clv->initial->insn.code = CL_INSN_UNOP;
-            clv->initial->insn.data.insn_unop.code = CL_UNOP_ASSIGN;
-
-            dst->accessor = new struct cl_accessor;
-            dst->accessor->code = CL_ACCESSOR_DEREF; // *
-            dst->accessor->type = dst->type;
-            dst->type = src->type;
-            dst->accessor->next = nullptr;
-
-            clv->initial->insn.data.insn_unop.dst = dst;
-            clv->initial->insn.data.insn_unop.src = src;
-
-        } // else FIXME
-
+		handleGlobalVariable(cast<GlobalVariable>(v), clv);
     } else {
-        clv->initial =  nullptr; // or struct cl_initializer initial
+        clv->initial =  nullptr;
         clv->initialized = false;
         clv->is_extern = false;
     }
-
-    // for clang/llvm 3.5
-    //const StructLayout *getStructLayout (StructType *Ty) const
 
     return clv;
 }
 
 
+/// all global/static variables in LLVM are pointer type -> not 
+/// correspond with code listener, use as
+/// <ptrTy> "<globName>" := & <valueTy> constant
+void CLPass::handleGlobalVariable(GlobalVariable *gv, struct cl_var *clv) {
+
+	CL_DEBUG3("  GLOBAL VAR PTR\n");
+
+	clv->is_extern = gv->isDeclaration(); //hasExternalLinkage(); // ???
+	clv->initial =  nullptr; 
+	if ((clv->initialized = gv->hasUniqueInitializer()) == false)
+		return;
+
+	Constant *c = gv->getInitializer();
+
+	switch (c->getValueID()) {
+		case Value::GlobalAliasVal:
+		case Value::GlobalVariableVal:
+		case Value::FunctionVal:
+		case Value::ConstantIntVal:
+		case Value::ConstantFPVal:
+		case Value::ConstantPointerNullVal:
+			handleSimplyInitializer(c, clv, &CLPass::handleOperand);
+			break;
+
+		case Value::ConstantExprVal: {
+			Instruction *ci = cast<ConstantExpr>(c)->getAsInstruction();
+			if (isStringLiteral(ci)) {
+				// string literal
+				handleSimplyInitializer(c, clv, &CLPass::handleOperand);
+			} else if (isa<GetElementPtrInst>(ci)) { 
+				// GEP
+				handleSimplyInitializer(ci, clv, &CLPass::handleGEPOperand);
+			} else if (ci->isCast()) { 
+				// cast
+				handleSimplyInitializer(ci, clv, &CLPass::handleCastOperand);
+			} else {
+				CL_WARN("unsupported global initializer with expression: "
+				        << ci->getOpcodeName());
+				clv->initialized = false;
+			}
+			break;
+		}
+
+		case Value::ConstantDataArrayVal:
+			if (cast<ConstantDataArray>(c)->isCString()) {
+				handleSimplyInitializer(c, clv, &CLPass::handleOperand);
+				break;
+			} // else is array literal
+		case Value::ConstantArrayVal:
+		case Value::ConstantAggregateZeroVal:
+		case Value::ConstantStructVal:
+			handleAggregateLiteralInitializer(c, clv);
+			break;
+
+		case Value::UndefValueVal: // is possible ?
+			CL_DEBUG3("undef value global initializer");
+			clv->initialized = false;
+			break;
+
+		case Value::BlockAddressVal:
+		case Value::ConstantVectorVal:
+		case Value::ConstantDataVectorVal:
+		default:
+			CL_WARN("unsupported global initializer ["<<c->getValueID()<<"]");
+			clv->initialized = false;
+			break;
+	}
+
+}
+
+/// create assign initializer for global/static variables
+/// getSrcOperand -> from where is src taken FIXME > delete
+void CLPass::handleSimplyInitializer(Value *c, struct cl_var *clv,
+                                     funcSrc getSrcOperand) {
+
+	CL_DEBUG3("  GLOBAL CONSTANT ["<<c->getValueID()<<"]\n");
+
+	struct cl_operand *src = new struct cl_operand;
+	struct cl_operand *dst = new struct cl_operand;
+	dst->code = CL_OPERAND_VAR;
+	dst->scope = CL_SCOPE_STATIC;
+	dst->type = handleType(c->getType());
+	dst->accessor = nullptr;
+	dst->data.var = clv;
+
+	clv->initial = new struct cl_initializer;
+	clv->initial->next = nullptr;
+
+	(this->*getSrcOperand)(c, src);
+
+	if (CLVerbose > 2) {
+		std::cerr << "    initializer: ";
+		operandToStream(std::cerr, *src);
+		CL_DEBUG3("\n");
+	}
+	// assign instruction
+	clv->initial->insn.loc = clv->loc; // from variable
+	clv->initial->insn.code = CL_INSN_UNOP;
+	clv->initial->insn.data.insn_unop.code = CL_UNOP_ASSIGN;
+dst->type = src->type;
+	clv->initial->insn.data.insn_unop.dst = dst;
+	clv->initial->insn.data.insn_unop.src = src;
+}
+
+/// for global/static variables 
+/// splits initializer for structure / array literal into assignments
+void CLPass::handleAggregateLiteralInitializer(Constant *c, 
+                                               struct cl_var *clv) {
+
+	struct cl_operand *where = new struct cl_operand;
+	where->code = CL_OPERAND_VAR;
+	where->scope = CL_SCOPE_GLOBAL; // ?
+	where->type = handleType(c->getType());
+	where->accessor = nullptr;
+	where->data.var = clv;
+
+	struct cl_initializer **addrInit = &(clv->initial);
+	struct cl_operand *dst, *src;
+
+	std::queue< Ttrio > elmFIFO;
+	Ttrio act = {c, nullptr, nullptr}; // actual element
+	elmFIFO.push(act);
+
+	while (!elmFIFO.empty()) { // removing recursion
+
+		act = elmFIFO.front(); elmFIFO.pop();
+		Type *tt = (act.elm)->getType();
+
+		if (!tt->isAggregateType()) {
+			// elementary type -> insert assign
+
+			// source operand
+			src = new struct cl_operand;
+			if (isa<ConstantExpr>(act.elm)) {
+				Instruction *ci = dyn_cast<ConstantExpr>(act.elm)->getAsInstruction();
+				if (isStringLiteral(ci)) {
+					handleOperand(act.elm, src);
+				} else if (isa<GetElementPtrInst>(ci)) {
+					handleGEPOperand(ci, src);
+				} else if (ci->isCast()) {
+					handleCastOperand(ci, src);
+				} else {
+					CL_WARN("unsupported global initializer with expression: "
+							<< ci->getOpcodeName());
+					delete src; freeAccessor(act.firstAcc);
+					continue;
+				}
+			} else {
+				handleOperand(act.elm, src);
+			}
+
+			// destination operand
+			dst = new struct cl_operand;
+			memcpy(dst,where,sizeof(*dst));
+			dst->accessor = act.firstAcc;
+			dst->type = src->type;
+
+			if (CLVerbose > 2) {
+				std::cerr<<"/>>~~~~~~~~~~~~\\\n";
+				operandToStream(std::cerr, *src);
+				std::cerr << "\n";
+				acToStream(std::cerr, dst->accessor, false);
+				std::cerr<<"\\~~~~~~~~~~~~~~/\n";
+			}
+
+			insertAssign(&addrInit, dst, src);
+			continue;
+		}
+
+		// aggregate type -> push all elements
+		unsigned numElms;
+		if (isa<StructType>(tt))
+			numElms =  tt->getStructNumElements();
+		else if (isa<ArrayType>(tt))
+			numElms =  tt->getArrayNumElements();
+		else {
+			CL_ERROR("unsupported type for aggregate initializer");
+			continue;
+		}
+
+		for (unsigned i = 0; i < numElms; ++i) {
+
+			Ttrio nxt; // new element
+			nxt.elm = (act.elm)->getAggregateElement(i);
+
+			struct cl_accessor *tmp = new struct cl_accessor;
+			if (act.firstAcc == nullptr) {
+				nxt.firstAcc = tmp;
+				nxt.addrNextAcc = &tmp;
+			} else {
+				nxt.firstAcc = act.firstAcc;
+				nxt.addrNextAcc = act.addrNextAcc;
+				depthCopyAccessor(&nxt.firstAcc, &nxt.addrNextAcc);
+			}
+			
+			*(nxt.addrNextAcc) = tmp;
+			tmp->type = handleType(tt); 
+			tmp->next = nullptr;
+
+			switch (tmp->type->code) {
+				case CL_TYPE_STRUCT :
+					tmp->code = CL_ACCESSOR_ITEM;
+					tmp->data.item.id = i;
+					break;
+
+				case CL_TYPE_ARRAY :
+					tmp->code = CL_ACCESSOR_DEREF_ARRAY;
+					tmp->data.array.index = new struct cl_operand;
+					getIntOperand(i, tmp->data.array.index);
+					break;
+
+				default: break;
+			}
+
+			nxt.addrNextAcc = &(tmp->next);
+
+			elmFIFO.push(nxt);
+		}
+		freeAccessor(act.firstAcc); // prefix before copy
+	}
+
+}
+
+/// copy accessor structure
+struct cl_accessor *CLPass::copyAccessor(struct cl_accessor *acc) {
+
+	struct cl_accessor *tmp = new struct cl_accessor;
+	memcpy(tmp, acc, sizeof(*tmp));
+
+	if (CL_ACCESSOR_DEREF_ARRAY == acc->code) {
+		struct cl_operand *clo = new struct cl_operand;
+		memcpy(clo, acc->data.array.index, sizeof(*clo));
+		tmp->data.array.index = clo;
+	}
+	return tmp;
+}
+
+/// copy chained list of accessors
+/// @param ptrFirstAcc return first accessor
+/// @param ptrAddrNextAcc return address for next accessor
+void CLPass::depthCopyAccessor(struct cl_accessor **ptrFirstAcc, 
+                               struct cl_accessor ***ptrAddrNextAcc) {
+
+	*ptrAddrNextAcc = ptrFirstAcc;
+	struct cl_accessor *acc = *ptrFirstAcc;
+	if (!acc)
+		return;
+
+	struct cl_accessor *tmp = copyAccessor(acc);
+	*ptrFirstAcc = tmp;
+	*ptrAddrNextAcc = &(tmp->next);
+
+	for (acc = acc->next ; acc; acc = acc->next) {
+		tmp = copyAccessor(acc);
+		**ptrAddrNextAcc = tmp;
+		*ptrAddrNextAcc = &(tmp->next);
+	}
+
+}
+
+/// assignment instruction for global/static variable initializer
+/// @param ptrAddrInit return address for next initializer
+void CLPass::insertAssign(struct cl_initializer ***ptrAddrInit, 
+                          struct cl_operand *dst,
+                          struct cl_operand *src) {
+
+	struct cl_initializer *init = new struct cl_initializer;
+	**ptrAddrInit = init;
+
+	init->insn.loc = dst->data.var->loc; // from dst (always variable)
+	init->insn.code = CL_INSN_UNOP;
+	init->insn.data.insn_unop.code = CL_UNOP_ASSIGN;
+	init->insn.data.insn_unop.dst = dst;
+	init->insn.data.insn_unop.src = src;
+	init->next = nullptr;
+
+	*ptrAddrInit = &(init->next);
+}
+
 /// specifies concrete operand of instruction - most important function
 /// if is global alias or constant expression, this function is called recursively
 /// no operand if code == CL_OPERAND_VOID
-void CLPass::handleOperand(Value *v, struct cl_operand *clo) {
+/// return true, if insert one accessor
+bool CLPass::handleOperand(Value *v, struct cl_operand *clo) {
 
+	std::memset(clo, 0, sizeof(*clo));
     clo->code = CL_OPERAND_VOID;
 
-    if (v == nullptr) return;
+    if (v == nullptr) return false;
 
-    /*
-       switch (v->getValueID()) {
-       case Value::ArgumentVal:
-    //handleArgument(cast<Argument>(v));
-    break;
-
-    case Value::BasicBlockVal:
-    CLPrint::error("invalid operand BasickBlock");
-    break;
-
-    case Value::FunctionVal:                         // function
-    errs() << "\n FUNCTION \n";
-    handleFncOperand(cast<Function>(v), clo);
-    break;
-
-    case Value::GlobalAliasVal:
-    break;
-
-    case Value::GlobalVariableVal:                  // global variable
-    errs() << "\n GLOBAL VAR \n";
-    clo->code = CL_OPERAND_VAR;
-    clo->scope = CL_SCOPE_GLOBAL;
-    //handleGlobalVariable(cast<GlobalVariable>(v), clv);
-    break;
-
-    case Value::UndefValueVal:
-    break;
-
-    case Value::BlockAddressVal:                    // constant
-    case Value::ConstantExprVal:
-    case Value::ConstantAggregateZeroVal:
-    case Value::ConstantDataArrayVal:
-    case Value::ConstantDataVectorVal:
-    case Value::ConstantIntVal:
-    case Value::ConstantFPVal:
-    case Value::ConstantArrayVal:
-    case Value::ConstantStructVal:
-    case Value::ConstantVectorVal:
-
-    case Value::ConstantPointerNullVal:
-    handleConstant(v, clo);
-    break;
-
-    case Value::InstructionVal:                      // named variable or register
-    clo->code = CL_OPERAND_VAR;
-    clo->scope = CL_SCOPE_FUNCTION;
-    clo->data.var = handleVariable(v);
-
-    case Value::MDNodeVal:
-    case Value::MDStringVal:
-    case Value::InlineAsmVal:
-    default:
-    CLPrint::warn("unsupport operand");
-    break;
-    }
-    */
     clo->accessor = nullptr;
 
-    if (isa<Argument>(v)) {             // func. argument
-
+    if (isa<Argument>(v)) {               // func. argument
+                                          // FIXME same as variable ?
         CL_DEBUG3(" ARGUMENT\n");
         clo->code = CL_OPERAND_VAR;
         clo->scope = CL_SCOPE_FUNCTION;
@@ -852,30 +1160,56 @@ void CLPass::handleOperand(Value *v, struct cl_operand *clo) {
 
     } else if (isa<Constant>(v)) {
 
-        if (isa<GlobalVariable>(v)) {     // global variable
+        if (isa<GlobalVariable>(v)) {     // global/static variable
+
             CL_DEBUG3(" GLOBAL VAR\n");
             clo->code = CL_OPERAND_VAR;
-            clo->scope = CL_SCOPE_GLOBAL;
+            clo->scope = (cast<GlobalVariable>(v)->hasLocalLinkage())? 
+                          CL_SCOPE_STATIC : CL_SCOPE_GLOBAL;
             clo->type = handleType(v->getType());
             clo->data.var = handleVariable(v);
+
+			clo->accessor = new struct cl_accessor; // FIXME possible memory leak
+			clo->accessor->code = CL_ACCESSOR_REF; // &
+#ifdef LLVM_HOST_3_7_OR_NEWER
+			clo->accessor->type = handleType(cast<GlobalVariable>(v)->getValueType());
+#else
+			clo->accessor->type = handleType(cast<GlobalVariable>(v)->getType());
+#endif
+			clo->accessor->next = nullptr;
+			
+			return true;
+
         } else if (isa<Function>(v)) {    // function
             CL_DEBUG3(" FUNCTION\n");
             handleFncOperand(cast<Function>(v), clo);
+            // function is pointer, but function can be a pointer
+            // possible different type in ... store
+            // clo->type = handleType(v->getType());
+
         } else if (isa<GlobalAlias>(v)) {
             CL_DEBUG3(" GLOBAL ALIAS\n");
-            handleOperand(cast<GlobalAlias>(v)->getAliasee(), clo);
+            return handleOperand(cast<GlobalAlias>(v)->getAliasee(), clo);
         } else if (isa<ConstantExpr>(v)) {
 
-            CL_DEBUG3(" CONSTANT EXPR\n");
-            Instruction *vi = cast<ConstantExpr>(v)->getAsInstruction();
-            handleInstruction(vi); // recursion
-            handleOperand(vi, clo);
+			Instruction *vi = cast<ConstantExpr>(v)->getAsInstruction();
+			if (isStringLiteral(vi)) {    // constant literal
+				handleStringLiteral(cast<ConstantDataSequential>((
+				                     cast<GlobalVariable>(
+				                      vi->getOperand(0)))->getInitializer()),
+				                    clo);
+				clo->type = handleType(vi->getType());
+			} else {                      // constant expression
+				CL_DEBUG3("CONSTANT EXPR\n");
+				handleInstruction(vi); // recursion
+				return handleOperand(vi, clo);
+			}
 
         } else {                          // just constant
-            handleConstant(v, clo);
+            handleBasicConstant(v, clo);
         }
 
-    } else {                            // named variable or register
+    } else {                              // named variable or register
 
         CL_DEBUG3(" VARIABLE\n");
         clo->code = CL_OPERAND_VAR;
@@ -884,9 +1218,8 @@ void CLPass::handleOperand(Value *v, struct cl_operand *clo) {
         clo->data.var = handleVariable(v);
 
     }
-
+	return false;
 }
-
 
 /// handle of instruction, support just C-liked instruction
 /// not intrinsic
@@ -896,22 +1229,23 @@ void CLPass::handleInstruction(Instruction *I) {
     CL_DEBUG("Inst code = " << I->getOpcodeName() << " [" << I->getOpcode() << "]");
     CL_DEBUG3(*I<<"\n");
 
+	unsigned opcode = I->getOpcode();
+
     if (I->isBinaryOp()) { // BINOP
         handleBinInstruction(I);
         return;
-    } else if (I->isCast()) { // UNOP
-        handleCastInstruction(cast<CastInst>(I));
+    } else if (I->isCast() || opcode == Instruction::Load || 
+               opcode == Instruction::GetElementPtr) { // UNOP
+        handleUnaryInstruction(I);
         return;
     }
 
     struct cl_insn i;
     std::memset(&i, 0, sizeof(i));
-
-    i.loc = cl_loc_known; //FIXME
-
+    findLocation(I, &i.loc); 
     struct cl_operand dst, src;
 
-    switch (I->getOpcode()) {
+    switch (opcode) {
         // Terminator instruction
 
         case Instruction::Ret: // ReturnInst
@@ -919,117 +1253,101 @@ void CLPass::handleInstruction(Instruction *I) {
             handleOperand(cast<ReturnInst>(I)->getReturnValue(), &src);
             i.data.insn_ret.src = &src;
             cl->insn(cl, &i);
-            return; //docasne
             break;
 
         case Instruction::Br: // BranchInst
             handleBranchInstruction(cast<BranchInst>(I));
-            return;
+            break;
 
         case Instruction::Unreachable : // UnreachableInst
             i.code = CL_INSN_ABORT;
             cl->insn(cl, &i);
-            return;
             break;
 
-            //Memory operators
+        //Memory operators
+
         case Instruction::Alloca: {// AllocaInst - Stack management
             handleAllocaInstruction(cast<AllocaInst>(I));
-            //            struct cl_var *clv = handleVariable(I);
-            //            clv->initialized = true;
-            return;                 // nothing interesting for program
+            break;
         }
 
-        case Instruction::Load: // LoadInst
+        case Instruction::Store: {// StoreInst
             i.code = CL_INSN_UNOP;
             i.data.insn_unop.code = CL_UNOP_ASSIGN;
             handleOperand(I->getOperand(0), &src);
-
-            handleOperand(I, &dst);
-            if (src.code == CL_OPERAND_VAR)
-            {
-                src.accessor = new struct cl_accessor;
-                src.accessor->code = CL_ACCESSOR_DEREF; // *
-                src.accessor->type = src.type;
-                src.type = dst.type;
-                src.accessor->next = nullptr;
-            }
-            i.data.insn_unop.dst = &dst;
-            i.data.insn_unop.src = &src;
-            cl->insn(cl, &i); 
-            freeAccessor(src.accessor);
-            return; //docasne
-            break;
-
-        case Instruction::Store: // StoreInst
-            i.code = CL_INSN_UNOP;
-            i.data.insn_unop.code = CL_UNOP_ASSIGN;
-            handleOperand(I->getOperand(0), &src);
-            handleOperand(I->getOperand(1), &dst);
+            bool notEmptyAcc = handleOperand(I->getOperand(1), &dst);
             if (dst.code == CL_OPERAND_VAR)
             {
-                dst.accessor = new struct cl_accessor;
-                dst.accessor->code = CL_ACCESSOR_DEREF; // *
-                dst.accessor->type = dst.type;
-                dst.type = src.type;
-                dst.accessor->next = nullptr;
+				if (notEmptyAcc && dst.accessor->code == CL_ACCESSOR_REF) {
+					dst.type = dst.accessor->type;
+					freeAccessor(dst.accessor);
+					dst.accessor = nullptr;
+				} else {
+					struct cl_accessor **acc = (notEmptyAcc)? &(dst.accessor->next) : &(dst.accessor);
+					*acc = new struct cl_accessor;
+					(*acc)->code = CL_ACCESSOR_DEREF; // *
+					(*acc)->type = dst.type;
+					dst.type = const_cast<struct cl_type *>(dst.type->items[0].type); 
+					(*acc)->next = nullptr;
+				} // because *& -> empty accessor
             }
+            if (dst.type != src.type) { 
+				// must same (problem with type for CL_TYPE_FNC)
+				CL_DEBUG("different types in store instruction!");
+				src.type = dst.type;
+			}
             i.data.insn_unop.dst = &dst;
             i.data.insn_unop.src = &src;
             cl->insn(cl, &i);
             freeAccessor(dst.accessor);
-            return; //docasne
-            break;
+            break; }//docasne
 
-        case Instruction::GetElementPtr: // GetElementPtrInst - is accessor for struct
-            // and array, not "instruction"
-            handleGEPInstruction(cast<GetElementPtrInst>(I));
-            return;
+        // Comparison instructions
 
-        case Instruction::Fence: // FenceInst
-            i.code = CL_INSN_NOP;
-            break;
-
-            // Comparison instructions
         case Instruction::ICmp: // ICmpInst
         case Instruction::FCmp: // FCmpInst
             handleCmpInstruction(I);
-            return;
+            break;
+
+        // Other instructions
 
         case Instruction::Call: // CallInst
-            if (isa<IntrinsicInst>(I)) {
-                CL_WARN("intrinsic instructions are not support");
-            } else {
-                handleCallInstruction(cast<CallInst>(I));
+            if (isa<DbgInfoIntrinsic>(I)) { // not instruction
+                return;
             }
-            return;
+//            if (isa<IntrinsicInst>(I) && !isa<MemIntrinsic>(I)) {
+//                CL_WARN("intrinsic instructions are not supported");
+//            } else {
+                handleCallInstruction(cast<CallInst>(I));
+//            }
+            break;
 
         case Instruction::Select: // SelectInst
             handleSelectInstruction(cast<SelectInst>(I));
-            return;
+            break;
 
         case Instruction::PHI: // PHINode - is eliminated in terminal instructions
-            return;
+            break;
+
+        case Instruction::Switch: // SwitchInst : option opt -lowerswitch
+			CL_ERROR("instruction switch");
+			break;
 
         case Instruction::ExtractValue: // ExtractValueInst : extract from aggregate
         case Instruction::InsertValue: // InsertValueInst : insert into aggregate
 
-            // unsupport terminator instruction
-        case Instruction::Switch: // SwitchInst : option opt -lowerswitch
+        // unsupport terminator instruction
         case Instruction::IndirectBr: // IndirectBrInst
         case Instruction::Invoke: // InvokeInst
         case Instruction::Resume : // ResumeInst
-            // unsupport memory operators
+        // unsupport memory operators
+        case Instruction::Fence: // FenceInst
         case Instruction::AtomicCmpXchg: // AtomicCmpXchgInst
         case Instruction::AtomicRMW: // AtomicRMWInst
         default:
             CL_WARN("unsupport instruction "<< I->getOpcodeName());
-            return;
-
+            break;
     }
-
-    cl->insn(cl, &i);
-
 }
 
 /// alocation on stack
@@ -1045,28 +1363,16 @@ void CLPass::handleAllocaInstruction(AllocaInst *I) {
         handleOperand(I->getArraySize(), &size);
         size.data.cst.data.cst_int.value *= allocated->size;
     } else {
-        size.code = CL_OPERAND_CST;
-        size.scope = CL_SCOPE_GLOBAL;
-        size.type = &builtinIntType;
-        size.accessor = nullptr;
-        size.data.cst.code = size.type->code;
-        size.data.cst.data.cst_int.value = allocated->size;
+        getIntOperand(allocated->size, &size);
     }
-    align.code = CL_OPERAND_CST;
-    align.scope = CL_SCOPE_GLOBAL;
-    align.type = &builtinIntType;
-    align.accessor = nullptr;
-    align.data.cst.code = size.type->code;
-    align.data.cst.data.cst_int.value = I->getAlignment();
-
-    //    I->getType(); // pointer
+    getIntOperand(I->getAlignment(), &align);
 
     handleOperand(I, &dst);
 
     fnc.type = &allocaFncType;
     // return type
     fnc.type->items[0].name = nullptr;
-    fnc.type->items[0].type = handleType(I->getType());
+    fnc.type->items[0].type = handleType(I->getType()); // pointer
 
     fnc.code = CL_OPERAND_CST;
     fnc.scope = CL_SCOPE_GLOBAL;
@@ -1074,183 +1380,174 @@ void CLPass::handleAllocaInstruction(AllocaInst *I) {
     fnc.data.cst.code = CL_TYPE_FNC;
     fnc.data.cst.data.cst_fnc.uid = -1;
     fnc.data.cst.data.cst_fnc.is_extern = true;
-    fnc.data.cst.data.cst_fnc.loc = cl_loc_known; //FIXME
+    fnc.data.cst.data.cst_fnc.loc = cl_loc_known; // artificial function
     fnc.data.cst.data.cst_fnc.name = "__builtin_alloca_with_align";
 
-    cl->insn_call_open(cl, &cl_loc_known, &dst, &fnc);
+    // location from dst (always variable)
+    cl->insn_call_open(cl, &(dst.data.var->loc), &dst, &fnc);
 
-    cl->insn_call_arg(cl, 0, &size);
-    cl->insn_call_arg(cl, 1, &align);
+    cl->insn_call_arg(cl, 1, &size); // from 1->
+    cl->insn_call_arg(cl, 2, &align);
 
     cl->insn_call_close(cl);
-
-}
-
-/// in CL accessors for array and struct
-void CLPass::handleGEPInstruction(GetElementPtrInst *I) {
-
-    struct cl_insn i;
-    i.loc = cl_loc_known; //FIXME
-    i.code = CL_INSN_UNOP;
-    i.data.insn_unop.code = CL_UNOP_ASSIGN;
-
-    struct cl_operand src, dst;
-    handleOperand(I->getPointerOperand(), &src);
-    handleOperand(I, &dst);
-    i.data.insn_unop.dst = &dst;
-    i.data.insn_unop.src = &src;
-
-    struct cl_accessor **accPrev = &src.accessor;
-    struct cl_accessor *acc;
-    for (GetElementPtrInst::op_iterator op = I->idx_begin(), ope = I->idx_end(); op != ope; ++op) {
-        Value *v = *op;
-
-        acc = new struct cl_accessor;
-        *accPrev = acc;
-
-        acc->type = src.type;
-
-        acc->next = nullptr;
-
-        switch (src.type->code) {
-            case CL_TYPE_STRUCT: {
-                //                errs() << "struct "; // must be constant
-                int num = cast<ConstantInt>(v)->getValue().getSExtValue();
-                src.type = const_cast<struct cl_type *>(src.type->items[num].type); // must be const in cl_type_item ?
-                acc->code = CL_ACCESSOR_ITEM;
-                acc->data.item.id = num;
-            }
-            break;
-
-            case CL_TYPE_PTR:
-            //                errs() << "ptr ";
-            src.type = const_cast<struct cl_type *>(src.type->items[0].type);
-            acc->code = CL_ACCESSOR_DEREF;
-
-            // if not 0 -> CL_ACCESSOR_OFFSET
-
-            break;
-
-            case CL_TYPE_ARRAY:
-            //                errs() << "array ";
-            src.type = const_cast<struct cl_type *>(src.type->items[0].type);
-
-            acc->code = CL_ACCESSOR_DEREF_ARRAY;
-            acc->data.array.index = new struct cl_operand;
-            handleOperand(v, acc->data.array.index);
-            break;
-
-            case CL_TYPE_UNION: // never happend
-            default:
-            CL_ERROR("invalid type for accessor");
-            break;
-        }
-        accPrev = &(acc->next);
-    }
-
-
-    // is ...PtrInst, always return REF
-    {
-        *accPrev = new struct cl_accessor;
-        (*accPrev)->code = CL_ACCESSOR_REF; // &
-        (*accPrev)->type = src.type;
-        src.type = dst.type;
-        (*accPrev)->next = nullptr;
-    }
-
-
-    /*// it's the same thing
-      {
-      dst.accessor = new struct cl_accessor;
-      dst.accessor->code = CL_ACCESSOR_DEREF; // *
-      dst.accessor->type = dst.type;
-      dst.type = src.type;
-      dst.accessor->next = nullptr;
-      }
-      */
-    if (CLVerbose > 2)
-        acToStream(std::cerr, src.accessor, false);
-
-    cl->insn(cl, &i);
-    freeAccessor(src.accessor);
-    freeAccessor(dst.accessor);
 }
 
 /// branch for conditional and unconditional jump
 void CLPass::handleBranchInstruction(BranchInst *I) {
 
     struct cl_insn i;
-    i.loc = cl_loc_known; //FIXME
+    findLocation(I, &i.loc);
     std::string bbName1, bbName2;
+    BasicBlock *bb1 = nullptr;
 
     if (I->isConditional()) {
 
-        i.code = CL_INSN_COND;
         struct cl_operand src;
         handleOperand(I->getCondition(), &src);
+
+        if (src.code == CL_OPERAND_CST && src.data.cst.code == CL_TYPE_INT) {
+            // optimalization, if condition is constant
+            if (src.data.cst.data.cst_int.value == 0)
+                bb1 = I->getSuccessor(1); // false
+            else
+                bb1 = I->getSuccessor(0); // true
+            goto unconditional;
+        }
+        BasicBlock *bb2;
+        bool insert1, insert2;
+
+        i.code = CL_INSN_COND;
         i.data.insn_cond.src = &src;
 
         //then
-        BasicBlock *bb = I->getSuccessor(0);
-        if (!bb->hasName()) {
+        bb1 = I->getSuccessor(0);
+        if (!bb1->hasName()) {
             bbName1 = "<label"+ std::to_string(bbUID++) +">";
-            bb->setName(bbName1);
+            bb1->setName(bbName1);
         } else {
-            bbName1 = bb->getName().str();
+            bbName1 = bb1->getName().str();
         }
-        i.data.insn_cond.then_label = bbName1.c_str();
+        insert1 = testPhi(bb1);
+        if (insert1) // create new BB, must jump to new BB
+            bbName1 = "<label"+ std::to_string(bbUID++) +">";
+        i.data.insn_cond.then_label = bbName1.c_str(); // LABEL NAME
         //else
-        bb = I->getSuccessor(1);
-        if (!bb->hasName()) {
+        bb2 = I->getSuccessor(1);
+        if (!bb2->hasName()) {
             bbName2 = "<label"+ std::to_string(bbUID++) +">";
-            bb->setName(bbName2);
+            bb2->setName(bbName2);
         } else {
-            bbName2 = bb->getName().str();
+            bbName2 = bb2->getName().str();
         }
-        i.data.insn_cond.else_label = bbName2.c_str();
+        insert2 = testPhi(bb2);
+        if (insert2) // create new BB, must jump to new BB
+            bbName2 = "<label"+ std::to_string(bbUID++) +">";
+        i.data.insn_cond.else_label = bbName2.c_str(); // LABEL NAME
+
+        testCompareInst(I->getCondition(), &src);
+
+        cl->insn(cl, &i);
+        if (insert1) insertPhiAssign(I->getParent(), bb1, bbName1.c_str());
+        if (insert2) insertPhiAssign(I->getParent(), bb2, bbName2.c_str());
 
     } else {
-
-        i.code = CL_INSN_JMP;
         // unconditional
-        BasicBlock *bb = I->getSuccessor(0);
+        bb1 = I->getSuccessor(0);
 
-        testPhi(I->getParent(), bb);
+unconditional:
+        i.code = CL_INSN_JMP;
+        if (testPhi(bb1))
+            insertPhiAssign(I->getParent(), bb1, nullptr);
 
-        if (!bb->hasName()) {
+        if (!bb1->hasName()) {
             bbName1 = "<label"+ std::to_string(bbUID++) +">";
-            bb->setName(bbName1);
+            bb1->setName(bbName1);
         } else {
-            bbName1 = bb->getName().str();
+            bbName1 = bb1->getName().str();
         }
-        i.data.insn_jmp.label = bbName1.c_str();
-    }
+        i.data.insn_jmp.label = bbName1.c_str(); // LABEL NAME
 
-    cl->insn(cl, &i);
+        cl->insn(cl, &i);
+    }
+}
+
+/// before conditional jump must be compare instruction
+/// support for bool assign
+/// @param cond result of compare instruction
+void CLPass::testCompareInst(Value *v, struct cl_operand *cond) {
+
+	if (isa<CmpInst>(v))
+		return;
+
+	// cmp = CL_BINOP_NE: cond != falseOp
+	struct cl_insn i; 
+	i.code = CL_INSN_BINOP;
+	findLocation(cast<Instruction>(v), &i.loc);
+
+	struct cl_operand cmp, falseOp;
+
+	// FALSE constant
+	falseOp.code = CL_OPERAND_CST;
+	falseOp.scope = CL_SCOPE_GLOBAL;
+	falseOp.type = cond->type;
+	falseOp.accessor = nullptr;
+	falseOp.data.cst.code = CL_TYPE_INT;
+	falseOp.data.cst.data.cst_int.value = 0;
+
+	cmp = *cond;
+	cmp.data.var = handleVariable(nullptr); // register
+
+	i.data.insn_binop.code = CL_BINOP_NE;
+	i.data.insn_binop.dst = &cmp;
+	i.data.insn_binop.src1 = cond;
+	i.data.insn_binop.src2 = &falseOp;
+	cl->insn(cl, &i);
+
+	*cond = cmp;
 }
 
 /// test, if instruction in next BasicBlock is phi
-/// if yes, into BasicBlock (fromBB, witch called this function) added assign instruction
-/// with value for fromBB
-void CLPass::testPhi(BasicBlock *fromBB, BasicBlock *phiBB) {
-    Instruction *I = phiBB->begin();
-    //    errs() << "is phi? " << *I << "\n";
-    if (!isa<PHINode>(I)) {
-        return;
+inline bool CLPass::testPhi(BasicBlock *phiBB) {
+    return isa<PHINode>(phiBB->begin());
+}
+
+/// if !newBB, into BasicBlock (fromBB, witch called this function) 
+///            added assign instruction with value for fromBB
+/// else       this instruction is added into new BasicBlock
+void CLPass::insertPhiAssign(BasicBlock *fromBB, BasicBlock *phiBB, 
+                                                 const char *newBB) {
+
+    if (newBB) { // create new BB
+        cl->bb_open(cl, newBB); 
     }
+
+    BasicBlock::iterator I = phiBB->begin();
 
     struct cl_insn i;
     i.code = CL_INSN_UNOP;
-    i.loc = cl_loc_known; //FIXME
     i.data.insn_unop.code = CL_UNOP_ASSIGN;
-
     struct cl_operand dst, src;
-    handleOperand(cast<PHINode>(I)->getIncomingValueForBlock(fromBB), &src);
-    handleOperand(I, &dst);
     i.data.insn_unop.dst = &dst;
     i.data.insn_unop.src = &src;
 
-    cl->insn(cl, &i);
+    while (isa<PHINode>(I)) { // all phi nodes
+        findLocation(I, &i.loc); 
+
+        handleOperand(cast<PHINode>(I)->getIncomingValueForBlock(fromBB), &src);
+        handleOperand(I, &dst);
+
+        cl->insn(cl, &i);
+        ++I;
+    }
+    
+    if (newBB) { // jump to old BB
+        struct cl_insn j;
+        j.loc = cl_loc_known; // artificial instruction
+        j.code = CL_INSN_JMP;
+        std::string bbName = phiBB->getName().str();
+        j.data.insn_jmp.label = bbName.c_str();
+        cl->insn(cl, &j);
+    }
 }
 
 /// decomposition of C ternar operand ()?:
@@ -1258,8 +1555,8 @@ void CLPass::testPhi(BasicBlock *fromBB, BasicBlock *phiBB) {
 void CLPass::handleSelectInstruction(SelectInst *I) {
 
     struct cl_insn i, j;
-    i.loc = cl_loc_known; //FIXME
-    j.loc = cl_loc_known; //FIXME
+    findLocation(I, &i.loc); 
+    findLocation(I, &j.loc); 
 
     i.code = CL_INSN_COND;
     struct cl_operand src, opt, opf;
@@ -1357,7 +1654,7 @@ void CLPass::handleBinInstruction(Instruction *I) {
 
     struct cl_insn i;
     i.code = CL_INSN_BINOP;
-    i.loc = cl_loc_known; //FIXME
+    findLocation(I, &i.loc); 
     i.data.insn_binop.code = getCLCode(I);
     if (i.data.insn_binop.code == CL_BINOP_UNKNOWN) {
         CL_WARN("unknown binary operator");
@@ -1371,8 +1668,29 @@ void CLPass::handleBinInstruction(Instruction *I) {
     i.data.insn_binop.dst = &dst;
     i.data.insn_binop.src1 = &src1;
     i.data.insn_binop.src2 = &src2;
-    cl->insn(cl, &i);
 
+    if (src1.type->code == CL_TYPE_BOOL && 
+        src2.type->code == CL_TYPE_BOOL) {
+
+        switch(I->getOpcode()) {
+            case Instruction::And:
+                i.data.insn_binop.code = CL_BINOP_TRUTH_AND;
+                break;
+
+            case Instruction::Or:
+                i.data.insn_binop.code = CL_BINOP_TRUTH_OR;
+                break;
+
+            case Instruction::Xor:
+                i.data.insn_binop.code = CL_BINOP_TRUTH_XOR;
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    cl->insn(cl, &i);
 }
 
 /// what kind of compare instruction it's
@@ -1423,7 +1741,7 @@ void CLPass::handleCmpInstruction(Instruction *I) {
 
     struct cl_insn i;
     i.code = CL_INSN_BINOP;
-    i.loc = cl_loc_known; //FIXME
+    findLocation(I, &i.loc);
     i.data.insn_binop.code = getCLCodePredic(cast<CmpInst>(I)->getPredicate());
     if (i.data.insn_binop.code == CL_BINOP_UNKNOWN) {
         CL_WARN("unknown compare operator");
@@ -1440,99 +1758,244 @@ void CLPass::handleCmpInstruction(Instruction *I) {
     cl->insn(cl, &i);
 }
 
-/// create cast instruction, but if instruction is bitcast, it's possible
-/// that accessor for union type
-void CLPass::handleCastInstruction(CastInst *I) {
+/// create assign (floating cast) instruction
+void CLPass::handleUnaryInstruction(Instruction *I) {
 
-    struct cl_insn i;
-    i.code = CL_INSN_UNOP;
-    i.loc = cl_loc_known; //FIXME
-    i.data.insn_unop.code = CL_UNOP_ASSIGN;
+	struct cl_insn i;
+	std::memset(&i, 0, sizeof(i));
 
-    if ((I->getOpcode() == Instruction::UIToFP) ||
-            (I->getOpcode() == Instruction::SIToFP)) {
-        i.data.insn_unop.code = CL_UNOP_FLOAT;
-    }
+	i.code = CL_INSN_UNOP;
+	i.data.insn_unop.code = ((I->getOpcode() == Instruction::UIToFP) ||
+	                         (I->getOpcode() == Instruction::SIToFP))?
+	                         CL_UNOP_FLOAT :
+	                         CL_UNOP_ASSIGN;
+	findLocation(I, &i.loc);
 
-    struct cl_operand dst, src;
-    handleOperand(I->getOperand(0), &src);
-    handleOperand(I, &dst);
-    i.data.insn_unop.dst = &dst;
-    i.data.insn_unop.src = &src;
+	struct cl_operand dst, src;
+	handleOperand(I, &dst);
 
+	if (isa<LoadInst>(I))
+		handleLoadOperand(I, &src);
+	else if (isa<GetElementPtrInst>(I))
+		handleGEPOperand(I, &src);
+	else
+		handleCastOperand(I, &src);
 
-    if(dst.type->code == CL_TYPE_BOOL && src.code == CL_OPERAND_CST) {
-        src.type = dst.type;
-    }
+	i.data.insn_unop.dst = &dst;
+	i.data.insn_unop.src = &src;
 
+	if (CLVerbose > 2)
+		acToStream(std::cerr, src.accessor, false);
 
+	cl->insn(cl, &i); 
+	freeAccessor(src.accessor);
+}
 
-    if (isa<BitCastInst>(I) && src.type->code == CL_TYPE_PTR &&
-            src.type->items[0].type->code == CL_TYPE_UNION) {
-        // BitCastInst - is accessor for union not "instruction"
-        struct cl_accessor **accPrev = &src.accessor;
-        struct cl_accessor *acc;
+/// source operand for load instruction (always as pointer -> *)
+/// return true, if insert one accessor
+bool CLPass::handleLoadOperand(Value *v, struct cl_operand *src) {
 
-        acc = new struct cl_accessor;
-        *accPrev = acc;
+	LoadInst *I = cast<LoadInst>(v);
+	bool notEmptyAcc = handleOperand(I->getOperand(0), src);
 
-        acc->code = CL_ACCESSOR_DEREF; // *
-        acc->type = src.type;
-        src.type = const_cast<struct cl_type *>(src.type->items[0].type);
-        acc->next = new struct cl_accessor;
+	if (src->code == CL_OPERAND_VAR) {
+		if (notEmptyAcc && src->accessor->code == CL_ACCESSOR_REF) {
+			src->type = src->accessor->type;
+			freeAccessor(src->accessor);
+			src->accessor = nullptr;
+			return false;
+		} else {
+			struct cl_accessor **acc = (notEmptyAcc)? &(src->accessor->next) : &(src->accessor);
+			*acc = new struct cl_accessor;
+			(*acc)->code = CL_ACCESSOR_DEREF; // *
+			(*acc)->type = src->type;
+			src->type = const_cast<struct cl_type *>(src->type->items[0].type);// handleType(I->getType()); // result
+			(*acc)->next = nullptr;
+			return true;
+		} // because *& -> empty accessor
+	}
+	return notEmptyAcc;
+}
 
-        acc->next->code = CL_ACCESSOR_ITEM; // .
-        acc->next->type = src.type;
-        src.type = const_cast<struct cl_type *>(dst.type->items[0].type);
-        acc->next->data.item.id = 0;
-        acc->next->next = new struct cl_accessor;
+/// source operand for cast instructions, but if instruction is bitcast,
+/// it's possible that is accessor for union type
+/// TODO testing more situations
+/// return true, if insert accessor(s)
+bool CLPass::handleCastOperand(Value *v, struct cl_operand *src) {
 
-        acc->next->next->code = CL_ACCESSOR_REF; // &
-        acc->next->next->type = src.type;
-        src.type = dst.type;
-        acc->next->next->next = nullptr;
+	CastInst *I = cast<CastInst>(v);
+	bool notEmptyAcc = handleOperand(I->getOperand(0), src);
 
-        /* stupid! bitcast don't change memory
-           } else if (src.type->items[0].type->code == CL_TYPE_PTR) {
-        // bitcast i8** %ptr to i8*
-        struct cl_accessor **accPrev = &src.accessor;
-        struct cl_accessor *acc;
+	if (src->type->code == CL_TYPE_FNC) {
+		CL_ERROR("unsupport cast from function type"); 
+		return false;
+	}
+	
+	struct cl_type *resultType = handleType(I->getType());
 
-        acc = new struct cl_accessor;
-         *accPrev = acc;
+	if(resultType->code == CL_TYPE_BOOL && src->code == CL_OPERAND_CST) {
+		src->type = resultType;
+	}
 
-         acc->code = CL_ACCESSOR_DEREF; // *
-         acc->type = src.type;
-         src.type = const_cast<struct cl_type *>(src.type->items[0].type);
-         acc->next = nullptr;
+	if (isa<BitCastInst>(I) && src->type->code == CL_TYPE_PTR &&
+			src->type->items[0].type->code == CL_TYPE_UNION) {
+		// BitCastInst - is accessor for union, not "instruction"
+		struct cl_accessor **accPrev = (notEmptyAcc)? &(src->accessor->next) : &(src->accessor);
+		struct cl_accessor *acc;
 
-         } else if (dst.type->code == CL_TYPE_PTR &&
-         dst.type->items[0].type->code == CL_TYPE_PTR) {
-        // bitcast i8* %7 to i8**
-        struct cl_accessor **accPrev = &src.accessor;
-        struct cl_accessor *acc;
+		acc = new struct cl_accessor;
+		*accPrev = acc;
 
-        acc = new struct cl_accessor;
-         *accPrev = acc;
+		acc->code = CL_ACCESSOR_DEREF; // *
+		acc->type = src->type;
+		src->type = const_cast<struct cl_type *>(src->type->items[0].type);
+		acc->next = new struct cl_accessor;
 
-         acc->code = CL_ACCESSOR_REF; // &
-         acc->type = src.type;
-         src.type = const_cast<struct cl_type *>(dst.type);
-         acc->next = nullptr;
-         }*/
+		acc->next->code = CL_ACCESSOR_ITEM; // .
+		acc->next->type = src->type;
+//		src->type = const_cast<struct cl_type *>(resultType->items[0].type);
+		src->type = const_cast<struct cl_type *>(src->type->items[0].type);
+		acc->next->data.item.id = 0;
+		acc->next->next = new struct cl_accessor;
 
-        if (CLVerbose > 2)
-            acToStream(std::cerr, src.accessor, false);
+		acc->next->next->code = CL_ACCESSOR_REF; // &
+		acc->next->next->type = src->type;
+		src->type = resultType;
+		acc->next->next->next = nullptr;
+	}
+	return notEmptyAcc;
 }
 
 
-cl->insn(cl, &i);
-freeAccessor(src.accessor);
-//    freeAccessor(dst.accessor);
+/// source operand for GEP instruction
+/// in CL accessors for array and structure
+/// return true, if insert accessor(s)
+bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
+
+	GetElementPtrInst *I = cast<GetElementPtrInst>(v);
+	bool notEmptyAcc = handleOperand(I->getPointerOperand(), src); // Operand(0)
+
+	struct cl_accessor **addrNextAcc = (notEmptyAcc)? &(src->accessor->next) : &(src->accessor);
+	struct cl_accessor *acc;
+	   //GetElementPtrInst::op_iterator
+	for (auto op = I->idx_begin(), ope = I->idx_end(); op != ope; ++op) {
+		Value *v = *op;
+
+		acc = new struct cl_accessor;
+		*addrNextAcc = acc;
+
+		acc->type = src->type;
+
+		acc->next = nullptr;
+
+		switch (src->type->code) {
+			case CL_TYPE_UNION:
+			case CL_TYPE_STRUCT: {
+				//                errs() << "struct "; // must be constant
+				int num = cast<ConstantInt>(v)->getValue().getSExtValue();
+				src->type = const_cast<struct cl_type *>(src->type->items[num].type); // must be const in cl_type_item ?
+				acc->code = CL_ACCESSOR_ITEM;
+				acc->data.item.id = num;
+			}
+				break;
+
+			case CL_TYPE_PTR: {
+				//                errs() << "ptr ";
+				// offset: constant, possible variable
+				int num = 0;
+				if (isa<ConstantInt>(v)) {
+					src->type = const_cast<struct cl_type *>(src->type->items[0].type);
+					acc->code = CL_ACCESSOR_DEREF;
+					num = cast<ConstantInt>(v)->getValue().getSExtValue();
+					if (num != 0) { // + constant offset
+						addrNextAcc = &(acc->next);
+						acc = new struct cl_accessor;
+						*addrNextAcc = acc;
+						acc->type = src->type;
+						acc->next = nullptr;
+						//src->type don't change
+						acc->code = CL_ACCESSOR_OFFSET;
+						acc->data.item.id = num * src->type->size;
+					}
+				} else { // + variable offset
+					// TODO: Code Listener offset as cl_operand
+					src = insertOffsetAcc(v, src); 
+					src->type = const_cast<struct cl_type *>(src->type->items[0].type);
+					acc->code = CL_ACCESSOR_DEREF;
+				}
+
+			}
+				break;
+
+			case CL_TYPE_ARRAY:
+				//                errs() << "array ";
+				src->type = const_cast<struct cl_type *>(src->type->items[0].type);
+				acc->code = CL_ACCESSOR_DEREF_ARRAY;
+				acc->data.array.index = new struct cl_operand;
+				handleOperand(v, acc->data.array.index);
+				break;
+       
+			default:
+				CL_ERROR("invalid type for accessor");
+				break;
+		}
+		addrNextAcc = &(acc->next);
+	}
+
+	{ // is ...PtrInst, always return REF
+		acc = new struct cl_accessor;
+		*addrNextAcc = acc;
+		acc->code = CL_ACCESSOR_REF; // &
+		acc->type = src->type;
+		src->type =  handleType(I->getType()); // result
+		acc->next = nullptr;
+	}
+	// acToStream(std::cerr, src->accessor, false);
+	return true;
+}
+
+/// support for offset ~ variable
+/// @return new source operand
+struct cl_operand *CLPass::insertOffsetAcc(Value *v, struct cl_operand *src) {
+
+	// off = CL_BINOP_MULT: idx * src->type->size
+	// ret = CL_BINOP_POINTER_PLUS: src + off
+	// src = ret
+	struct cl_insn i; 
+	i.code = CL_INSN_BINOP;
+	i.loc = cl_loc_known;
+
+	struct cl_operand off, idx, size, ret; // off, ret -> without accessor
+
+	handleOperand(v, &idx);
+	// size of item, not pointer
+	getIntOperand(src->type->items[0].type->size, &size);
+	off = idx;
+	off.data.var = handleVariable(nullptr); // register
+	i.data.insn_binop.code = CL_BINOP_MULT;
+	i.data.insn_binop.dst = &off;
+	i.data.insn_binop.src1 = &idx;
+	i.data.insn_binop.src2 = &size;
+	cl->insn(cl, &i);
+
+	struct cl_accessor *tmp = src->accessor;
+	src->accessor = nullptr;
+
+	ret = *src;
+	ret.data.var = handleVariable(nullptr); // register
+	i.data.insn_binop.code = CL_BINOP_POINTER_PLUS;
+	i.data.insn_binop.dst = &ret;
+	i.data.insn_binop.src1 = src;
+	i.data.insn_binop.src2 = &off;
+	cl->insn(cl, &i);
+
+	*src = ret;
+	src->accessor = tmp;
+	return src;
 }
 
 /// hanlde for call instruction
-/// now with support for constant expression
+/// with support for constant expression
 void CLPass::handleCallInstruction(CallInst *I) {
 
     struct cl_operand dst, fnc;
@@ -1543,35 +2006,64 @@ void CLPass::handleCallInstruction(CallInst *I) {
 
     handleOperand(I->getCalledValue(), &fnc);
 
-    if (fnc.data.cst.data.cst_fnc.name == nullptr)
-        return;
+	if (isa<MemIntrinsic>(I)) { // cut architecture info
+		CL_DEBUG("memintrinsic");
 
-    cl->insn_call_open(cl, &cl_loc_known, &dst, &fnc);
-    delete [] fnc.data.cst.data.cst_fnc.name;
+		std::string tmp;
+		if (isa<MemSetInst>(I))
+			tmp = "llvm.memset";
+		else if (isa<MemCpyInst>(I))
+			tmp = "llvm.memcpy";
+		else // MemMoveInst
+			tmp = "llvm.memmove";
 
-    const int cnt_args = I->getNumArgOperands();
-    for (int idx = 0; idx < cnt_args; ++idx) {
-        struct cl_operand op_arg;
-        handleOperand(I->getArgOperand(idx), &op_arg);
-        cl->insn_call_arg(cl, idx, &op_arg);
+		unsigned len = tmp.length() + 1;
+		char * tmpPtr = new char [len];
+		std::memcpy(tmpPtr, tmp.c_str(), len);
+		delete [] fnc.data.cst.data.cst_fnc.name; // old name
+		fnc.data.cst.data.cst_fnc.name = tmpPtr;
+	} 
+
+	if (fnc.data.cst.data.cst_fnc.name == nullptr) {
+		CL_DEBUG("indirect call of function");
+	}
+
+    // because arguments meybe constant expression -> create new 
+    // instruction and argument is defacto new register ()
+    // if call is open, can't insert another instructions
+    const unsigned args = I->getNumArgOperands();
+    struct cl_operand *arguments = new struct cl_operand[args];
+    unsigned idx = 0;
+    while (args != idx) {
+        handleOperand(I->getArgOperand(idx), &arguments[idx]);
+        ++idx;
     }
 
+	struct cl_loc callLoc;
+	findLocation(I, &callLoc);
+    cl->insn_call_open(cl, &callLoc, &dst, &fnc);
+    if (fnc.data.cst.data.cst_fnc.name != nullptr)
+		delete [] fnc.data.cst.data.cst_fnc.name;
+
+    for(unsigned i=0; i < args; ++i)
+        cl->insn_call_arg(cl, i+1, &arguments[i]); // from 1->
+
     cl->insn_call_close(cl);
+    delete [] arguments;
 }
+
 
 /// last function, clean up after pass, set CL on valid and setup exit code
 bool CLPass::doFinalization (Module &) {
 
+    CL_DEBUG("start analysis");
+
     // CL is valid
     cl->acknowledge(cl);
 
-    cl->destroy(cl);
-    cl_global_cleanup();
-    freeTypeTable();
-    freeVarTable();
+    cleanAll();
 
     //used Dudka's code
-
     if (!CLPreserve) {
         if (CLPrint::cntErrors) {
             // this causes non-zero exit code
@@ -1588,31 +2080,25 @@ bool CLPass::doFinalization (Module &) {
     return true;
 }
 
-
-
+// registraction opt LLVM pass
 // with -help > Optimizations available:
 char CLPass::ID;
-RegisterPass<CLPass> X(plugName.c_str(), fullName.c_str());
+static RegisterPass<CLPass> X(plugName.c_str(), fullName.c_str());
+
+#ifdef LLVM_HOST_3_7_OR_NEWER
+// registraction clang plug-in without cmd options
+static void registerCLPass(const PassManagerBuilder &pb,
+                           legacy::PassManagerBase &pm) 
+{
+    if (pb.OptLevel == 0 && pb.SizeLevel == 0) {
+        pm.add(createLowerSwitchPass()); // -lowerswitch
+        pm.add(new CLPass);
+    }
+}
+
+static RegisterStandardPasses
+RegisterTestPass(PassManagerBuilder::EP_EnabledOnOptLevel0, registerCLPass);
+#endif
 
 /// for load extern symbols another analyzer
 extern "C" { void plugin_init(void) { } }
-
-/*
-   static void registerMyPass(const PassManagerBuilder &pb, PassManagerBase &pm)
-   {
-   if (pb.OptLevel == 0 && pb.SizeLevel == 0) 
-   pm.add(new CLPass);
-   }
-
-   static RegisterStandardPasses
-   RegisterMyPass(PassManagerBuilder::EP_EnabledOnOptLevel0 , registerMyPass);
-   */
-
-/*
-
-   clang -cc1 -emit-llvm -femit-all-decls  source.c -o - | opt -instnamer -mem2reg -print-module >/dev/null
-
-   option (--time-passes) > get information about the execution time of your pass
-   along with the other passes you queue up. 
-
-*/
