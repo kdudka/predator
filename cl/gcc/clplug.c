@@ -23,6 +23,10 @@
 #include <gcc-plugin.h>
 #include <plugin-version.h>
 
+#if defined(GCCPLUGIN_VERSION_MAJOR) && (GCCPLUGIN_VERSION_MAJOR >= 6)
+#   define GCC_HOST_6_OR_NEWER
+#endif
+
 #if defined(GCCPLUGIN_VERSION_MAJOR) && (GCCPLUGIN_VERSION_MAJOR >= 5)
 #   define GCC_HOST_5_OR_NEWER
 // GCC_HOST_5_OR_NEWER implies GCC_HOST_4_9_OR_NEWER
@@ -45,8 +49,10 @@
 #ifndef __NeXT__
 #   define __NeXT__ 0
 #endif
-#ifndef ENABLE_CHECKING
-#   define ENABLE_CHECKING 0
+#if !defined(GCC_HOST_6_OR_NEWER)       // problem with GCC 6+
+#   ifndef ENABLE_CHECKING
+#       define ENABLE_CHECKING 0
+#   endif
 #endif
 
 #include <coretypes.h>
@@ -103,6 +109,12 @@
 
 #ifndef STREQ
 #   define STREQ(s1, s2) (0 == strcmp(s1, s2))
+#endif
+
+#if defined(GCC_HOST_6_OR_NEWER)
+    // work around GCC 6 changes
+#   define gimple gimple*
+    typedef const gimple const_gimple;
 #endif
 
 // our alternative to GGC_CNEW, used prior to gcc 4.6.x
@@ -1170,7 +1182,11 @@ static void read_cst_real(struct cl_operand *op, tree t)
     } u;
 
     // convert gcc's internal representation of real to build-arch native format
+#if defined(GCC_HOST_6_OR_NEWER)
+    real_to_target(u.l, TREE_REAL_CST_PTR(t), format_helper(&ieee_double_format));
+#else
     real_to_target_fmt(u.l, TREE_REAL_CST_PTR(t), &ieee_double_format);
+#endif
 
     // compile-time switch
     switch (sizeof(long)) {
