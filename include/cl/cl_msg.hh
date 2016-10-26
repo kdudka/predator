@@ -143,7 +143,7 @@
 
 inline std::ostream& operator<<(std::ostream &str, const struct cl_loc &loc)
 {
-    if (!&loc || !loc.file) {
+    if (!loc.file) {
         str << "<unknown location>: ";
         return str;
     }
