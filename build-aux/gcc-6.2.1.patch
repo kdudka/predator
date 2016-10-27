@@ -1,0 +1,32 @@
+ tests/predator-regre/test-0208.err        | 2 +-
+ tests/predator-regre/test-0208.err.oom    | 2 +-
+ tests/predator-regre/test-0208.err.uninit | 2 +-
+ 3 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/tests/predator-regre/test-0208.err b/tests/predator-regre/test-0208.err
+index 0ae30ee..1416409 100644
+--- a/tests/predator-regre/test-0208.err
++++ b/tests/predator-regre/test-0208.err
+@@ -1,3 +1,3 @@
+-test-0208.c:30: error: invalid dereference
++test-0208.c:33: error: invalid dereference
+ test-0208.c:39: note: from call of dev_name()
+ test-0208.c:36: note: from call of main()
+diff --git a/tests/predator-regre/test-0208.err.oom b/tests/predator-regre/test-0208.err.oom
+index 0ae30ee..1416409 100644
+--- a/tests/predator-regre/test-0208.err.oom
++++ b/tests/predator-regre/test-0208.err.oom
+@@ -1,3 +1,3 @@
+-test-0208.c:30: error: invalid dereference
++test-0208.c:33: error: invalid dereference
+ test-0208.c:39: note: from call of dev_name()
+ test-0208.c:36: note: from call of main()
+diff --git a/tests/predator-regre/test-0208.err.uninit b/tests/predator-regre/test-0208.err.uninit
+index 0ae30ee..1416409 100644
+--- a/tests/predator-regre/test-0208.err.uninit
++++ b/tests/predator-regre/test-0208.err.uninit
+@@ -1,3 +1,3 @@
+-test-0208.c:30: error: invalid dereference
++test-0208.c:33: error: invalid dereference
+ test-0208.c:39: note: from call of dev_name()
+ test-0208.c:36: note: from call of main()
