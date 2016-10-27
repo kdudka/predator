@@ -1552,7 +1552,7 @@ static void handle_stmt_call_args(gimple stmt)
     }
 }
 
-static void handle_stmt_call(gimple stmt, struct gimple_walk_data *data)
+static bool fnc_from_call_stmt(struct cl_operand *fnc, gimple stmt)
 {
 #ifdef GCC_HOST_4_9_OR_NEWER
     if (gimple_call_internal_p(stmt)) {
@@ -1560,25 +1560,36 @@ static void handle_stmt_call(gimple stmt, struct gimple_walk_data *data)
         CL_WARN_UNHANDLED_WITH_LOC(gimple_location(stmt),
                 "unhandled call to GCC internal function: %s",
                 internal_fn_name(code));
-        emit_abort_once(data, stmt);
-        return;
+        return false;
     }
 #endif
-    tree op0 = gimple_call_fn(stmt);
 
+    tree op0 = gimple_call_fn(stmt);
     if (ADDR_EXPR == TREE_CODE(op0))
         // automagic dereference
         op0 = TREE_OPERAND(op0, 0);
 
-    CL_BREAK_IF(NULL_TREE == op0);
+    if (NULL_TREE == op0) {
+        CL_BREAK_IF("failed to resolve callee");
+        return false;
+    }
+
+    handle_operand(fnc, op0);
+    return true;
+}
+
+static void handle_stmt_call(gimple stmt, struct gimple_walk_data *data)
+{
+    // fnc is also operand (call through pointer, struct member, etc.)
+    struct cl_operand fnc;
+    if (!fnc_from_call_stmt(&fnc, stmt)) {
+        emit_abort_once(data, stmt);
+        return;
+    }
 
     // lhs
     struct cl_operand dst;
     handle_operand(&dst, gimple_call_lhs(stmt));
-
-    // fnc is also operand (call through pointer, struct member, etc.)
-    struct cl_operand fnc;
-    handle_operand(&fnc, op0);
 
     // emit CALL insn
     struct cl_loc loc;
