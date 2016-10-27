@@ -1557,10 +1557,24 @@ static bool fnc_from_call_stmt(struct cl_operand *fnc, gimple stmt)
 #ifdef GCC_HOST_4_9_OR_NEWER
     if (gimple_call_internal_p(stmt)) {
         internal_fn code = gimple_call_internal_fn(stmt);
-        CL_WARN_UNHANDLED_WITH_LOC(gimple_location(stmt),
-                "unhandled call to GCC internal function: %s",
-                internal_fn_name(code));
-        return false;
+
+        // placeholder for built-in fnc type
+        static struct cl_type builtin_fnc_type;
+        builtin_fnc_type.uid = /* FIXME */ -7;
+        builtin_fnc_type.code = CL_TYPE_FNC;
+        builtin_fnc_type.name = "<builtin_fnc_type>";
+
+        // emit built-in fnc as a special case of an external fnc
+        memset(fnc, 0, sizeof *fnc);
+        fnc->type = &builtin_fnc_type;
+        fnc->code = CL_OPERAND_CST;
+        fnc->scope = CL_SCOPE_GLOBAL;
+        fnc->data.cst.code = CL_TYPE_FNC;
+        fnc->data.cst.data.cst_fnc.uid = /* TODO: avoid UID clash */ code;
+        fnc->data.cst.data.cst_fnc.name = internal_fn_name(code);
+        fnc->data.cst.data.cst_fnc.loc.file = "<builtin_fnc>";
+        fnc->data.cst.data.cst_fnc.is_extern = true;
+        return true;
     }
 #endif
 
