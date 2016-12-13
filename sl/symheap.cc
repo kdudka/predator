@@ -1033,6 +1033,21 @@ inline bool isString(const TObjType clt)
         && isChar(targetTypeOfArray(clt));
 }
 
+inline int getSize(const TObjType clt)
+{
+    return clt->size;
+}
+
+inline bool isInt(const TObjType clt)
+{
+    return (CL_TYPE_INT == clt->code);
+}
+
+inline bool isPtr(const TObjType clt)
+{
+    return (CL_TYPE_PTR == clt->code);
+}
+
 bool SymHeapCore::Private::writeCharToString(
         TValId                     *pValDst,
         const TValId                valToWrite,
@@ -1132,6 +1147,28 @@ bool SymHeapCore::Private::reinterpretSingleObj(
         // write char to a zero-terminated string
         const TOffset off = srcData->off - dstData->off;
         return this->writeCharToString(&dstData->value, valSrc, off);
+    }
+
+    // PP experimental patch for ptr<->int etc
+    // FIXME Works only for the same size reinterpretation
+    if (isPtr(cltSrc) && isInt(cltDst) &&
+        (getSize(cltSrc)==getSize(cltDst))) {
+        // PTR-->INT, size OK
+        CL_DEBUG("Reinterpretation PTR->INT");
+        dstData->value = valSrc;        // use the same value
+        // registration postponed to reinterpretObjData()
+        return true;
+    }
+    if (isInt(cltSrc) && isPtr(cltDst) &&
+        (getSize(cltSrc)==getSize(cltDst))) {
+        // INT-->PTR, size OK
+        // the INT value can point to object if assigned from pointer
+        // FIXME: otherwise we can disable reinterpretation
+        // and return false (we get better error message)
+        CL_DEBUG("Reinterpretation INT->PTR");
+        dstData->value = valSrc;        // use the same value
+        // registration postponed to reinterpretObjData()
+        return true;
     }
 
     // TODO: hook various reinterpretation drivers here
