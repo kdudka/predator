@@ -1033,19 +1033,25 @@ inline bool isString(const TObjType clt)
         && isChar(targetTypeOfArray(clt));
 }
 
-inline int getSize(const TObjType clt)
+/// return true if pointer value can be preserved during data reinterpretation
+bool canReinterpretPtr(const TObjType cltDst, const TObjType cltSrc)
 {
-    return clt->size;
-}
+    if (cltDst->size != cltSrc->size)
+        // reinterpretation is allowed only for types of equal size
+        return false;
 
-inline bool isInt(const TObjType clt)
-{
-    return (CL_TYPE_INT == clt->code);
-}
+    if ((CL_TYPE_PTR == cltSrc->code) && (CL_TYPE_INT == cltDst->code)) {
+        CL_DEBUG("data reinterpretation: PTR->INT");
+        return true;
+    }
 
-inline bool isPtr(const TObjType clt)
-{
-    return (CL_TYPE_PTR == clt->code);
+    if ((CL_TYPE_INT == cltSrc->code) && (CL_TYPE_PTR == cltDst->code)) {
+        CL_DEBUG("data reinterpretation: INT->PTR");
+        return true;
+    }
+
+    // unsupported combination of types for data reinterpretation
+    return false;
 }
 
 bool SymHeapCore::Private::writeCharToString(
@@ -1125,16 +1131,19 @@ bool SymHeapCore::Private::reinterpretSingleObj(
         // invalid source
         return false;
 
+    const BaseValue *valData;
+    this->ents.getEntRO(&valData, valSrc);
+
     const TObjType cltSrc = fldData->clt;
     const TObjType cltDst = dstData->clt;
 
     if (isString(cltSrc) && isChar(cltDst)) {
         // read char from a zero-terminated string
-        const InternalCustomValue *valData;
-        this->ents.getEntRO(&valData, valSrc);
+        const InternalCustomValue *strData =
+            DCAST<const InternalCustomValue *>(valData);
 
         const TOffset off = dstData->off - srcData->off;
-        const std::string &str = valData->customData.str();
+        const std::string &str = strData->customData.str();
         CL_BREAK_IF(static_cast<TOffset>(str.size()) < off || off < 0);
 
         // byte-level access to zero-terminated strings
@@ -1149,24 +1158,13 @@ bool SymHeapCore::Private::reinterpretSingleObj(
         return this->writeCharToString(&dstData->value, valSrc, off);
     }
 
-    // PP experimental patch for ptr<->int etc
-    // FIXME Works only for the same size reinterpretation
-    if (isPtr(cltSrc) && isInt(cltDst) &&
-        (getSize(cltSrc)==getSize(cltDst))) {
-        // PTR-->INT, size OK
-        CL_DEBUG("Reinterpretation PTR->INT");
-        dstData->value = valSrc;        // use the same value
-        // registration postponed to reinterpretObjData()
-        return true;
-    }
-    if (isInt(cltSrc) && isPtr(cltDst) &&
-        (getSize(cltSrc)==getSize(cltDst))) {
-        // INT-->PTR, size OK
-        // the INT value can point to object if assigned from pointer
-        // FIXME: otherwise we can disable reinterpretation
-        // and return false (we get better error message)
-        CL_DEBUG("Reinterpretation INT->PTR");
-        dstData->value = valSrc;        // use the same value
+    if ((VT_OBJECT == valData->code)
+            // pointer value --> can be safely reinterpreted?
+            && canReinterpretPtr(cltDst, cltSrc))
+    {
+        // preserve pointer value
+        dstData->value = valSrc;
+
         // registration postponed to reinterpretObjData()
         return true;
     }
