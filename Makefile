@@ -25,9 +25,9 @@ GCC_STABLE      ?= gcc-4.9.3#               # released gcc
 GCC_STABLE_TGZ  ?= $(GCC_STABLE).tar.bz2#   # tarball of released gcc
 GCC_STABLE_URL  ?= $(GCC_MIRROR)/$(GCC_STABLE)/$(GCC_STABLE_TGZ)
 
-GCC_SRC         ?= gcc-src#                 # SVN working copy for gcc src
+GCC_SRC         ?= gcc-src#                 # directory with gcc source code
 GCC_BUILD       ?= gcc-build#               # working directory gcc build
-GCC_INSTALL     ?= gcc-install#             # where to install gcc from SVN
+GCC_INSTALL     ?= gcc-install#             # where to install gcc
 
 GCC_LIBS_PREFIX ?= /usr#                    # common prefix for gcc prereqs
 
@@ -35,20 +35,14 @@ GMP_LIB         ?= $(GCC_LIBS_PREFIX)#      # location of -lgmp
 MPC_LIB         ?= $(GCC_LIBS_PREFIX)#      # location of -lmpc
 MPFR_LIB        ?= $(GCC_LIBS_PREFIX)#      # location of -lmpfr
 
-INVADER         ?= invader.zip
-INVADER_DIR     ?= invader-1_1
-
 CURL            ?= curl --location -v#      # URL grabber command-line
-GIT             ?= git#                     # use this to override git(1)
-SVN             ?= svn#                     # use this to override svn(1)
 
 #ANALYZERS       ?= fwnull sl fa vra
 ANALYZERS       ?= sl
 DIRS_BUILD      ?= cl $(ANALYZERS)
 
 .PHONY: all llvm check clean distcheck distclean api cl/api sl/api ChangeLog \
-	build_boost \
-	build_gcc build_gcc_svn update_gcc update_gcc_src_only \
+	build_boost build_gcc \
 	$(DIRS_BUILD)
 
 all: cl
@@ -92,11 +86,7 @@ $(BOOST_STABLE): $(BOOST_STABLE_TGZ)
 $(GCC_STABLE): $(GCC_STABLE_TGZ)
 	test -d $(GCC_STABLE) || tar xf $(GCC_STABLE_TGZ)
 
-# upack the release of Invader
-$(INVADER_DIR): $(INVADER)
-	unzip -o $(INVADER)
-
-# build gcc from the released tarball, instead of the SVN sources
+# build gcc from the released tarball
 $(GCC_SRC):
 	@if test -d $(GCC_SRC); then \
 			echo "--- keeping '$(GCC_SRC)' as is"; \
@@ -136,20 +126,6 @@ build_gcc: $(GCC_SRC)
 	cd $(GCC_BUILD) && $(MAKE)
 	cd $(GCC_BUILD) && $(MAKE) -j1 install
 
-# updated SVN working directory of gcc
-update_gcc_src_only:
-	test -d $(GCC_SRC)
-	test -d $(GCC_SRC)/.svn
-	cd $(GCC_SRC) && $(SVN) up
-
-# fetch up2date sources of gcc and rebuild it
-update_gcc: update_gcc_src_only
-	$(MAKE) build_gcc
-
-# fetch Invader tarball
-$(INVADER):
-	$(CURL) -o $@ 'http://www.eastlondonmassive.org/invader-1_1.zip'
-
 # fetch a stable release of Boost
 $(BOOST_STABLE_TGZ):
 	$(CURL) -o $@ '$(BOOST_STABLE_URL)'
@@ -157,12 +133,6 @@ $(BOOST_STABLE_TGZ):
 # fetch a stable release of gcc
 $(GCC_STABLE_TGZ):
 	$(CURL) -o $@ '$(GCC_STABLE_URL)'
-
-# create SVN working copy for gcc sources
-build_gcc_svn:
-	if test -e "$(GCC_SRC)"; then exit 1; fi
-	$(SVN) co svn://gcc.gnu.org/svn/gcc/trunk $(GCC_SRC)
-	$(MAKE) build_gcc
 
 ChangeLog:
 	git log --pretty="format:%ad  %an%n%n%w(80,8,8)%B%n" --date=short -- \
