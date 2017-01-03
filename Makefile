@@ -51,7 +51,7 @@ all: cl
 llvm:
 	$(MAKE) -C cl CMAKE="cmake -D ENABLE_LLVM=ON"
 	$(MAKE) -C sl CMAKE="cmake -D ENABLE_LLVM=ON"
-	$(MAKE) -C fa CMAKE="cmake -D ENABLE_LLVM=ON"
+#	$(MAKE) -C fa CMAKE="cmake -D ENABLE_LLVM=ON"
 
 $(DIRS_BUILD):
 	$(MAKE) -C $@

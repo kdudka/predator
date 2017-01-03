@@ -1174,7 +1174,7 @@ bool CLPass::handleOperand(Value *v, struct cl_operand *clo) {
 #ifdef LLVM_HOST_3_7_OR_NEWER
 			clo->accessor->type = handleType(cast<GlobalVariable>(v)->getValueType());
 #else
-			clo->accessor->type = handleType(cast<GlobalVariable>(v)->getType());
+			clo->accessor->type = handleType(cast<GlobalVariable>(v)->getType()->getElementType());
 #endif
 			clo->accessor->next = nullptr;
 			
