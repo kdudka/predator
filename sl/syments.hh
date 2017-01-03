@@ -116,51 +116,44 @@ class RefCounter {
 
 #endif // SH_COPY_ON_WRITE
 
-
-struct RefCntLibBase {
-    template <class T> static void leave(T *&ptr) {
-        if (/* wasLast */ ptr->refCnt.leave())
-            delete ptr;
-
-        // mark the pointer accordingly (we have left, right?)
-        ptr = 0;
-    }
-
-    protected:
-        // library classes only, no instances can be created
-        RefCntLibBase();
-};
-
 enum ERefCntObjKind {
     RCO_VIRTUAL,
     RCO_NON_VIRT
 };
 
-template <enum ERefCntObjKind TKind> struct RefCntLib;
+template <enum ERefCntObjKind TKind> struct RefCntUtil;
 
 template <>
-struct RefCntLib<RCO_VIRTUAL>: public RefCntLibBase {
-    template <class T> static void enter(T *&ptr) {
-        if (/* needCloning */ ptr->refCnt.enter())
-            ptr = ptr->clone();
-    }
-
-    template <class T> static void requireExclusivity(T *&ptr) {
-        if (/* needCloning */ ptr->refCnt.requireExclusivity())
-            ptr = ptr->clone();
+struct RefCntUtil<RCO_VIRTUAL> {
+    template <class T> static void clone(T *&ptr) {
+        ptr = ptr->clone();
     }
 };
 
 template <>
-struct RefCntLib<RCO_NON_VIRT>: public RefCntLibBase {
+struct RefCntUtil<RCO_NON_VIRT> {
+    template <class T> static void clone(T *&ptr) {
+        ptr = new T(*ptr);
+    }
+};
+
+template <enum ERefCntObjKind TKind> struct RefCntLib {
     template <class T> static void enter(T *&ptr) {
         if (/* needCloning */ ptr->refCnt.enter())
-            ptr = new T(*ptr);
+            RefCntUtil<TKind>::clone(ptr);
+    }
+
+    template <class T> static void leave(T *&ptr) {
+        if (/* wasLast */ ptr->refCnt.leave())
+            delete ptr;
+
+        // avoid possible use after free at caller's side
+        ptr = 0;
     }
 
     template <class T> static void requireExclusivity(T *&ptr) {
         if (/* needCloning */ ptr->refCnt.requireExclusivity())
-            ptr = new T(*ptr);
+            RefCntUtil<TKind>::clone(ptr);
     }
 };
 
