@@ -1776,8 +1776,17 @@ void CLPass::handleUnaryInstruction(Instruction *I) {
 
     if (isa<LoadInst>(I))
         handleLoadOperand(I, &src);
-    else if (isa<GetElementPtrInst>(I))
-        handleGEPOperand(I, &src);
+    else if (isa<GetElementPtrInst>(I)) {
+        if (isStringLiteral(I)) { // string literal, just assignment
+            handleStringLiteral(cast<ConstantDataSequential>((
+                                cast<GlobalVariable>(
+                                I->getOperand(0)))->getInitializer()),
+                                &src);
+            src.type = handleType(I->getType());
+            src.accessor = nullptr;
+        } else // GEP
+            handleGEPOperand(I, &src);
+    }
     else
         handleCastOperand(I, &src);
 
