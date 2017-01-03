@@ -64,4 +64,3 @@ build_analyzer() {
 }
 
 build_analyzer sl Predator
-#build_analyzer fa Forester
