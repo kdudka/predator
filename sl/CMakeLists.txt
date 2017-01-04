@@ -84,20 +84,33 @@ add_library(predator STATIC
 CL_BUILD_COMPILER_PLUGIN(sl predator ../cl_build)
 
 # get the full path of libsl.so
-get_property(GCC_PLUG TARGET sl PROPERTY LOCATION)
-message (STATUS "GCC_PLUG: ${GCC_PLUG}")
+get_property(SL_PLUG TARGET sl PROPERTY LOCATION)
+message (STATUS "SL_PLUG: ${SL_PLUG}")
 
-# helping scripts
-configure_file(${PROJECT_SOURCE_DIR}/slgcc.in     ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/probe.sh.in  ${PROJECT_BINARY_DIR}/probe.sh  @ONLY)
+if(ENABLE_LLVM)
+    #get path of libpasses.so
+    if("${LIBPASSES_PATH}" STREQUAL "")
+        set(PASSES_LIB ${PROJECT_SOURCE_DIR}/../passes-src/passes_build/libpasses.so)
+    else()
+        find_library(PASSES_LIB passes PATHS ${LIBPASSES_PATH} NO_DEFAULT_PATH)
+    endif()
+    message (STATUS "PASSES_LIB: ${PASSES_LIB}")
 
-configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
-    ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
+    # helping scripts
+    configure_file(${PROJECT_SOURCE_DIR}/slscript.in  ${PROJECT_BINARY_DIR}/slllvm    @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/slllvmv.in   ${PROJECT_BINARY_DIR}/slllvmv   @ONLY)
+else()
+    # helping scripts
+    configure_file(${PROJECT_SOURCE_DIR}/slscript.in  ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/probe.sh.in  ${PROJECT_BINARY_DIR}/probe.sh  @ONLY)
 
+    configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
+        ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
+endif()
 configure_file(${PROJECT_SOURCE_DIR}/check-property.sh.in
-    ${PROJECT_BINARY_DIR}/check-property.sh                                       @ONLY)
+    ${PROJECT_BINARY_DIR}/check-property.sh                                           @ONLY)
 
 # make install
 install(TARGETS sl DESTINATION lib)

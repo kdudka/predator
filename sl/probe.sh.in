@@ -43,15 +43,15 @@ usage() {
 test -r "$1" || usage
 
 # include common code base
-source "$topdir/build-aux/xgcclib.sh"
+source "$topdir/build-aux/cclib.sh"
 
 # basic setup
-export GCC_PLUG='@GCC_PLUG@'
+export SL_PLUG='@SL_PLUG@'
 export GCC_HOST='@GCC_HOST@'
 
 # initial checks
 find_gcc_host
-find_gcc_plug sl Predator
+find_plug SL_PLUG sl Predator
 
 # try to run gcc
 $TIMEOUT "$GCC_HOST" --version >&2 \
@@ -190,7 +190,7 @@ try_one() {
         fi
 
         # turn on the plug-in
-        CMD="$CMD -fplugin=$GCC_PLUG -fplugin-arg-libsl-args=$PFLAGS"
+        CMD="$CMD -fplugin=$SL_PLUG -fplugin-arg-libsl-args=$PFLAGS"
 
         # run in background so that we can kill it easily
         CMD="$CMD -fplugin-arg-libsl-pid-file=$GCC_PID_FILE &"

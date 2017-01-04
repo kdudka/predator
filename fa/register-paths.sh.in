@@ -13,14 +13,14 @@ fi
 GCC_HOST='@GCC_HOST@'
 printf "GCC_HOST = %s\n" "$GCC_HOST"
 
-GCC_PLUG='@GCC_PLUG@'
-printf "GCC_PLUG = %s\n\n" "$GCC_PLUG"
+FA_PLUG='@FA_PLUG@'
+printf "FA_PLUG = %s\n\n" "$FA_PLUG"
 
 if "$GCC_HOST" --version >/dev/null 2>&1; then
-    if test -r "$GCC_PLUG"; then
+    if test -r "$FA_PLUG"; then
         test -x "$GCC_HOST" && PATH="`dirname "$GCC_HOST"`:$PATH"
-        PATH="`dirname "$GCC_PLUG"`:$PATH"
-        LD_LIBRARY_PATH="`dirname "$GCC_PLUG"`:$LD_LIBRARY_PATH"
+        PATH="`dirname "$FA_PLUG"`:$PATH"
+        LD_LIBRARY_PATH="`dirname "$FA_PLUG"`:$LD_LIBRARY_PATH"
         export PATH LD_LIBRARY_PATH
 
         printf "Paths registered!  Use this to run Forester:\n
@@ -34,13 +34,13 @@ Note that using GCC within this shell to build binaries is NOT recommended.
 Especially, do not try to build GCC, Code Listener, or Forester itself from
 this shell anymore unless you have restored the original \$PATH!\n" \
             "`basename "$GCC_HOST"`" \
-            "`basename "$GCC_PLUG"`" \
+            "`basename "$FA_PLUG"`" \
             "`basename "$GCC_HOST"`" \
-            "`basename "$GCC_PLUG"`" \
-            "`basename "$GCC_PLUG" .so`"
+            "`basename "$FA_PLUG"`" \
+            "`basename "$FA_PLUG" .so`"
     else
         printf "Forester GCC plug-in not found: %s, paths NOT registered!\n" \
-            "$GCC_PLUG" >&2
+            "$FA_PLUG" >&2
     fi
 else
     printf "unable to run gcc: %s --version, paths NOT registered!\n" \

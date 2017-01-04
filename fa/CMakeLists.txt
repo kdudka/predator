@@ -75,19 +75,21 @@ add_library(forester STATIC
 CL_BUILD_COMPILER_PLUGIN(fa forester ../cl_build)
 target_link_libraries(fa rt)
 
-# get the full path of libfa.so
-get_property(GCC_PLUG TARGET fa PROPERTY LOCATION)
-message (STATUS "GCC_PLUG: ${GCC_PLUG}")
+if(NOT ENABLE_LLVM)
+    # get the full path of libfa.so
+    get_property(FA_PLUG TARGET fa PROPERTY LOCATION)
+    message (STATUS "FA_PLUG: ${FA_PLUG}")
 
-# helping scripts
-configure_file(${PROJECT_SOURCE_DIR}/fagcc.in     ${PROJECT_BINARY_DIR}/fagcc     @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/fagccp.in    ${PROJECT_BINARY_DIR}/fagccp    @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/fagccv.in    ${PROJECT_BINARY_DIR}/fagccv    @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/fagccvf.in   ${PROJECT_BINARY_DIR}/fagccvf   @ONLY)
-configure_file(${PROJECT_SOURCE_DIR}/fagdb.in     ${PROJECT_BINARY_DIR}/fagdb     @ONLY)
-configure_file(
-    ${PROJECT_SOURCE_DIR}/register-paths.sh.in
-    ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
+    # helping scripts
+    configure_file(${PROJECT_SOURCE_DIR}/fagcc.in     ${PROJECT_BINARY_DIR}/fagcc     @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/fagccp.in    ${PROJECT_BINARY_DIR}/fagccp    @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/fagccv.in    ${PROJECT_BINARY_DIR}/fagccv    @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/fagccvf.in   ${PROJECT_BINARY_DIR}/fagccvf   @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/fagdb.in     ${PROJECT_BINARY_DIR}/fagdb     @ONLY)
+    configure_file(
+        ${PROJECT_SOURCE_DIR}/register-paths.sh.in
+        ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
+endif()
 
 option(TEST_ONLY_FAST "Set to OFF to boost test coverage" ON)
 

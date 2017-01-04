@@ -17,7 +17,7 @@ Install
 
     make llvm
 or
-    ./switch-host-clang.sh /usr/bin/clang
+    ./switch-host-llvm.sh /usr/share/llvm/cmake
 
 Testing
 -------

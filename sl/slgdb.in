@@ -8,12 +8,12 @@ fi
 
 # include common code base
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
-source "$topdir/build-aux/xgcclib.sh"
+source "$topdir/build-aux/cclib.sh"
 
 # basic setup
 CL_DIR="$topdir/cl"
 SL_DIR="$topdir/sl"
-GCC_PLUG='@GCC_PLUG@'
+SL_PLUG='@SL_PLUG@'
 GCC_HOST='@GCC_HOST@'
 
 # attempt to make
@@ -23,7 +23,7 @@ make -C "$SL_DIR" -s -j5 'CMAKE=cmake -D SL_DEBUG=ON' || exit $?
 # initial checks
 find_gcc_host
 find_cc1_host
-find_gcc_plug sl Predator
+find_plug SL_PLUG sl Predator
 
 # use gdb by default
 test -z "$GDB" && GDB=gdb
@@ -39,7 +39,7 @@ RUN="$GDB --quiet -x $topdir/sl/gdbpp-loader.gdb --args $CC1_HOST \"$1\" \
     -I$topdir/include/predator-builtins -DPREDATOR \
     -dumpbase test.c -quiet -o /dev/null \
     -m32 -O0 -Wall -Wextra \
-    -fplugin=$GCC_PLUG \
+    -fplugin=$SL_PLUG \
     -fplugin-arg-libsl-verbose=$SL_VERBOSE \
     $SL_OPTS"
 
