@@ -1,0 +1,9 @@
+#!/bin/sh
+SL_OPTS="-verbose=1 $SL_OPTS"
+SL_OPTS="-dump-pp $SL_OPTS"
+SL_OPTS="-dump-types $SL_OPTS"
+export SL_OPTS
+
+self="`readlink -f "$0"`"
+self_dir="`dirname "$self"`"
+"$self_dir/`basename "$self" | sed 's|slllvmv|slllvm|'`" "$@"
