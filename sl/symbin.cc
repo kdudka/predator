@@ -28,6 +28,7 @@
 #include "../include/predator-builtins/verifier-builtins.h"
 #undef PREDATOR
 
+#include "glconf.hh"
 #include "symabstract.hh"
 #include "symdump.hh"
 #include "symgc.hh"
@@ -934,18 +935,32 @@ bool handleError(
 {
     const struct cl_loc *loc = &insn.loc;
 
+    // unlike ___sl_error(), __VERIFIER_error() does not take any argument
+    const bool isVerifierError = STREQ(name, "__VERIFIER_error");
+    const unsigned opCntExpected = (isVerifierError) ? 2 : 3;
+
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (opList.size() != 3 || opList[0].code != CL_OPERAND_VOID) {
+    if (opList.size() != opCntExpected || opList[0].code != CL_OPERAND_VOID) {
         emitPrototypeError(loc, name);
         return false;
+    }
+
+    if (isVerifierError && !GlConf::data.verifierErrorIsError) {
+        // __VERIFIER_error() called but user does not treat it as error
+        CL_WARN_MSG(loc, name
+            << "() reached, analysis of this code path will not continue");
+        return true;
     }
 
     // print the error message
     CL_ERROR_MSG(loc, name
             << "() reached, analysis of this code path will not continue");
 
-    // print the user message and backtrace
-    printUserMessage(core, opList[/* msg */ 2]);
+    if (!isVerifierError)
+        // print the user message
+        printUserMessage(core, opList[/* msg */ 2]);
+
+    // print backtrace
     core.printBackTrace(ML_ERROR);
     return true;
 }
@@ -1042,6 +1057,7 @@ BuiltInTable::BuiltInTable()
 
     // used in the Competition on Software Verification held at TACAS
     tbl_["__VERIFIER_assume"]                       = handleAssume;
+    tbl_["__VERIFIER_error"]                        = handleError;
     //    __VERIFIER_nondet_*   functions are handled in the above layer
 
     // just to make life easier to our competitors (TODO: check for collisions)

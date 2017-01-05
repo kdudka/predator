@@ -43,6 +43,7 @@ Options::Options():
     memLeakIsError(false),
     skipUserPlots(false),
     errorRecoveryMode(SE_ERROR_RECOVERY_MODE),
+    verifierErrorIsError(false),
     allowCyclicTraceGraph(SE_ALLOW_CYCLIC_TRACE_GRAPH),
     allowThreeWayJoin(SE_ALLOW_THREE_WAY_JOIN),
     forbidHeapReplace(SE_FORBID_HEAP_REPLACE),
@@ -188,6 +189,12 @@ void handleNoErrorRecovery(const string &name, const string &value)
     data.errorRecoveryMode = /* no_error_recovery */ 0;
 }
 
+void handleVerifierErrorIsError(const string &name, const string &value)
+{
+    assumeNoValue(name, value);
+    data.verifierErrorIsError = true;
+}
+
 void handleNoPlot(const string &name, const string &value)
 {
     assumeNoValue(name, value);
@@ -238,6 +245,7 @@ ConfigStringParser::ConfigStringParser()
     tbl_["oom"]                     = handleOOM;
     tbl_["state_live_ordering"]     = handleStateLiveOrdering;
     tbl_["track_uninit"]            = handleTrackUninit;
+    tbl_["verifier_error_is_error"] = handleVerifierErrorIsError;
 }
 
 void ConfigStringParser::handleRawOption(const string &raw) const
