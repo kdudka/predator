@@ -50,6 +50,7 @@ void ___sl_plot_trace_now(const char *plot_name, const char *node_name);
 void ___sl_plot_trace_once(const char *plot_name, const char *node_name);
 void ___sl_enable_debugging_of(enum ___sl_module_id module, int enable);
 int __VERIFIER_nondet_int(void);
+void __VERIFIER_error() __attribute__ ((__noreturn__));
 
 #else
 /*
@@ -111,6 +112,11 @@ static /* inline */ int __VERIFIER_nondet_int(void)
 
     /* tools like valgrind will report a use of such value as a program error */
     return i;
+}
+
+static /* inline */ void __VERIFIER_error(void)
+{
+    abort();
 }
 
 #endif

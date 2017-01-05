@@ -37,12 +37,16 @@ MPFR_LIB        ?= $(GCC_LIBS_PREFIX)#      # location of -lmpfr
 
 CURL            ?= curl --location -v#      # URL grabber command-line
 
+GIT             ?= git#                     # use this to override git(1)
+PASSES_SRC      ?= passes-src#              # directory with lib llvm ir passes
+PASSES_BUILD    ?= passes-src/passes_build  # working directory passes build
+
 #ANALYZERS       ?= fwnull sl fa vra
 ANALYZERS       ?= sl
 DIRS_BUILD      ?= cl $(ANALYZERS)
 
 .PHONY: all llvm check clean distcheck distclean api cl/api sl/api ChangeLog \
-	build_boost build_gcc \
+	build_boost build_gcc build_passes \
 	$(DIRS_BUILD)
 
 all: cl
@@ -50,8 +54,9 @@ all: cl
 
 llvm:
 	$(MAKE) -C cl CMAKE="cmake -D ENABLE_LLVM=ON"
+	$(MAKE) build_passes
 	$(MAKE) -C sl CMAKE="cmake -D ENABLE_LLVM=ON"
-	$(MAKE) -C fa CMAKE="cmake -D ENABLE_LLVM=ON"
+#	$(MAKE) -C fa CMAKE="cmake -D ENABLE_LLVM=ON"
 
 $(DIRS_BUILD):
 	$(MAKE) -C $@
@@ -133,6 +138,22 @@ $(BOOST_STABLE_TGZ):
 # fetch a stable release of gcc
 $(GCC_STABLE_TGZ):
 	$(CURL) -o $@ '$(GCC_STABLE_URL)'
+
+$(PASSES_SRC):
+	if test -e "$(PASSES_SRC)"; then exit 1; fi
+	$(GIT) clone --depth 1 https://github.com/VeriFIT/ProStatA.git $(PASSES_SRC)
+	$(MAKE) build_passes
+
+# build libpasses from sources
+build_passes: $(PASSES_SRC)
+	@if test -d $(PASSES_BUILD); then \
+			echo; \
+			echo "--- directory '$(PASSES_BUILD)' exists"; \
+			echo "--- please run 'rm -rf $(PASSES_BUILD)' if the build fails"; \
+			echo; \
+		else \
+			cd $(PASSES_SRC)/passes && $(MAKE); \
+		fi
 
 ChangeLog:
 	git log --pretty="format:%ad  %an%n%n%w(80,8,8)%B%n" --date=short -- \

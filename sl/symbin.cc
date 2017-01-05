@@ -39,6 +39,8 @@
 #include "symtrace.hh"
 #include "util.hh"
 
+#include "glconf.hh"
+
 #include <cstring>
 #include <libgen.h>
 #include <map>
@@ -935,18 +937,28 @@ bool handleError(
     const struct cl_loc *loc = &insn.loc;
 
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (opList.size() != 3 || opList[0].code != CL_OPERAND_VOID) {
+    if ((opList.size() != 3 && /* __VERIFIER_error */ opList.size() != 2) || opList[0].code != CL_OPERAND_VOID) {
         emitPrototypeError(loc, name);
         return false;
+    }
+
+    bool isError = GlConf::data.verifierErrorIsError;
+    if (opList.size() == 2 && !isError) {
+        // we are not looking for calling __VERIFIER_error(), but is non-returned function
+        CL_WARN_MSG(loc, name
+            << "() reached, analysis of this code path will not continue");
+        return true;
     }
 
     // print the error message
     CL_ERROR_MSG(loc, name
             << "() reached, analysis of this code path will not continue");
 
-    // print the user message and backtrace
-    printUserMessage(core, opList[/* msg */ 2]);
-    core.printBackTrace(ML_ERROR);
+    if (opList.size() == 3)
+        // print the user message
+        printUserMessage(core, opList[/* msg */ 2]);
+    // print backtrace
+    core.printBackTrace(ML_ERROR); // forcePtrace ? true
     return true;
 }
 
@@ -1033,6 +1045,7 @@ BuiltInTable::BuiltInTable()
 
     // Predator-specific
     tbl_["___sl_break"]                             = handleBreak;
+    tbl_["__VERIFIER_error"]                        = handleError;
     tbl_["___sl_error"]                             = handleError;
     tbl_["___sl_get_nondet_int"]                    = handleNondetInt;
     tbl_["__VERIFIER_plot"]                         = handlePlot;

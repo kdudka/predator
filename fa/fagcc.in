@@ -146,7 +146,7 @@ seek_input_file "$FILENAME" || {
 
 # include common code base
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
-source "$topdir/build-aux/xgcclib.sh"
+source "$topdir/build-aux/xlib.sh"
 
 # basic setup
 export SINK="/dev/null"
@@ -156,7 +156,7 @@ export GCC_OPTS="-S -o $SINK -O0 -m32 -I$topdir/include/forester-builtins -DFORE
 
 # initial checks
 find_gcc_host
-find_gcc_plug fa Forester
+find_plug FA_PLUG fa Forester
 
 # use verbose level 0 by default
 test -z "$FA_VERBOSE" && FA_VERBOSE=0

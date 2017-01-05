@@ -3,12 +3,14 @@ export SELF="$0"
 export LC_ALL=C
 export CCACHE_DISABLE=1
 
-export MSG_INFLOOP=': warning: end of function .*() has not been reached'
+export MSG_INFLOOP=': warning: end of function .*\(\) has not been reached'
 export MSG_LABEL_FOUND=': error: error label "ERROR" has been reached'
+export MSG_VERIFIER_ERROR_FOUND=': (error|warning): __VERIFIER_error\(\) reached'
 export MSG_OUR_WARNINGS=': warning: .*\[-fplugin=libsl.so\]$'
 export MSG_TIME_ELAPSED=': note: clEasyRun\(\) took '
 export MSG_UNHANDLED_CALL=': warning: ignoring call of undefined function: '
 export MSG_INT_OVERFLOW=': warning: possible .*flow of .* integer'
+export MSG_COND_JUMP_UNINIT_VALUE=': warning: conditional jump depends on uninitialized value'
 
 export MSG_MEMLEAK=': (error|warning): memory leak detected'
 
@@ -25,7 +27,7 @@ export MSG_FREE_INVALID=': error: invalid free\(\)'
 export MSG_FREE_DOUBLE=': error: double free\(\)'
 export MSG_FREE_NENH=': error: attempt to free a non-existing non-heap object'
 export MSG_FREE_NONHEAP=': error: attempt to free a non-heap object'
-export MSG_FREE_NONPOINTER=': error: free() called on non-pointer value'
+export MSG_FREE_NONPOINTER=': error: free\(\) called on non-pointer value'
 
 # Predator error messages we need to handle:
 #"size arg of memset() is not a known integer" - no category
@@ -56,7 +58,6 @@ export MSG_FREE_NONPOINTER=': error: free() called on non-pointer value'
 #"() reached, stopping per user's request" - not
 #"too many arguments given to printf()" - not
 #"error while plotting '" << plotName << "'" - not
-#"conditional jump depends on uninitialized value" - not
 #"end of function " - not
 #"caught signal " - not
 
@@ -119,41 +120,57 @@ test -r "$1" || usage
 test -r "$PRP_FILE" || usage
 
 # classify the property to be verified
-if grep "label(ERROR)" "$PRP_FILE" >/dev/null; then
-    TASK="label"
-elif grep "valid-memtrack" "$PRP_FILE" >/dev/null; then
-    TASK="memory"
-else
-    printf "%s: error: failed to classify the property to verify: %s\n" \
+TASK=""
+if grep "call(__VERIFIER_error()" "$PRP_FILE" >/dev/null; then
+    TASK="$TASK VERIFIER_error"
+fi; if grep "valid-memtrack" "$PRP_FILE" >/dev/null; then
+    TASK="$TASK memtrack"
+fi; if grep "valid-deref" "$PRP_FILE" >/dev/null; then
+    TASK="$TASK deref"
+fi; if grep "valid-free" "$PRP_FILE" >/dev/null; then
+    TASK="$TASK free"
+fi; if grep "! overflow" "$PRP_FILE" >/dev/null; then
+    TASK="$TASK overflow"
+fi; if [ -z "$TASK" ]; then
+    printf "%s: error: failed to classify any properties to verify: %s\n" \
         "$SELF" "$PRP_FILE" >&2
     exit 1
 fi
 
 # include common code base
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
-source "$topdir/build-aux/xgcclib.sh"
+source "$topdir/build-aux/xlib.sh"
 
-# basic setup
-export GCC_PLUG='@GCC_PLUG@'
-export GCC_HOST='@GCC_HOST@'
+# basic setup & initial checks
+export SL_PLUG='@SL_PLUG@'
+export ENABLE_LLVM='@ENABLE_LLVM@'
+if [ -z $ENABLE_LLVM ]; then
+    export GCC_HOST='@GCC_HOST@'
+    find_gcc_host
+else
+    export PASSES_LIB='@PASSES_LIB@'
+    export OPT_HOST='@OPT_HOST@'
+    export CLANG_HOST='@CLANG_HOST@'
+    find_clang_host
+    find_opt_host
+    find_plug PASSES_LIB passes Passes
+fi
 
-# initial checks
-find_gcc_host
-find_gcc_plug sl Predator
+find_plug SL_PLUG sl Predator
 
 match() {
     line="$1"
     shift
-    printf "%s" "$line" | grep -E "$@" >/dev/null
+    [[ $line =~ $@ ]]
     return $?
 }
 
 report_result() {
-  if test -n "$VERBOSE"; then
-    printf "$1$2: $3\n"
-  else
-    printf "$1$2\n"
-  fi
+    if test -n "$VERBOSE"; then
+      printf "$1$2: $3\n"
+    else
+      printf "$1$2\n"
+    fi
 }
 
 fail() {
@@ -167,14 +184,14 @@ report_unsafe() {
     # drop the remainder of the output
     cat > /dev/null
     if test -z "$PROPERTY"; then
-      report_result "FALSE" "" "$2"
+        report_result "FALSE" "" "$2"
     else
-      report_result "FALSE" "($PROPERTY)" "$2"
+        report_result "FALSE" "($PROPERTY)" "$2"
     fi
     exit 0
 }
 
-parse_gcc_output() {
+parse_output() {
     ERROR_DETECTED=no
     ENDED_GRACEFULLY=no
 
@@ -183,16 +200,27 @@ parse_gcc_output() {
             # call of an external function we have no model for, we have to fail
             fail "$line"
 
-        elif match "$line" "$MSG_INT_OVERFLOW"; then
-            # unhandled integer overflow, we have to fail
+        elif match "$line" "$MSG_COND_JUMP_UNINIT_VALUE"; then
+            # on purpose for ldv-memsafety/memleaks_test12_
+            # conditional jump depends on uninitialized value
             fail "$line"
 
-        elif match "$line" "$MSG_LABEL_FOUND"; then
+        elif match "$line" "$MSG_INT_OVERFLOW"; then
+            # unhandled integer overflow, we have to fail
+            if match "$TASK" "overflow"; then
+              report_unsafe "" "$line"
+            else
+              fail "$line"
+            fi
+
+        #elif match "$line" "$MSG_LABEL_FOUND"; then
             # an ERROR label has been reached
-            case "$TASK" in
-              label) report_unsafe "" "$line";;
-              memory) continue;;
-            esac
+        elif match "$line" "$MSG_VERIFIER_ERROR_FOUND"; then
+            # an __VERIFIER_error() has been reached
+            if match "$TASK" "VERIFIER_error"; then
+              report_unsafe "" "$line"
+            fi
+
         elif match "$line" "$MSG_DEREF_FREED" || \
              match "$line" "$MSG_DEREF_OUT" || \
              match "$line" "$MSG_DEREF_NULL" || \
@@ -200,16 +228,14 @@ parse_gcc_output() {
              match "$line" "$MSG_DEREF_NENH" || \
              match "$line" "$MSG_DEREF_PTRSPACE" || \
              match "$line" "$MSG_DEREF_LVAL" ; then
-            case "$TASK" in
-              label) fail "$line";;
-              memory) report_unsafe "valid-deref" "$line";;
-            esac
+            if match "$TASK" "deref"; then
+              report_unsafe "valid-deref" "$line"
+            fi
 
         elif match "$line" "$MSG_MEMLEAK"; then
-            case "$TASK" in
-              label) continue;;
-              memory) report_unsafe "valid-memtrack" "$line";;
-            esac
+            if match "$TASK" "memtrack"; then
+              report_unsafe "valid-memtrack" "$line"
+            fi
 
         elif match "$line" "$MSG_FREE_OFFSET" || \
              match "$line" "$MSG_FREE_INVALID" || \
@@ -218,10 +244,9 @@ parse_gcc_output() {
              match "$line" "$MSG_FREE_NONHEAP" || \
              match "$line" "$MSG_FREE_NONPOINTER"; then
             # free called with offset: valid_free
-            case "$TASK" in
-              label) fail "$line";;
-              memory) report_unsafe "valid-free" "$line";;
-            esac
+            if match "$TASK" "free"; then
+              report_unsafe "valid-free" "$line"
+            fi
 
         elif match "$line" ": error: "; then
             # errors already reported, better to fail now
@@ -229,7 +254,7 @@ parse_gcc_output() {
 
         elif match "$line" "$MSG_INFLOOP"; then
             # infinite loop does not mean FALSE, ignore them
-            continue
+            continue #why continue in elif?
 
         elif match "$line" "$MSG_OUR_WARNINGS"; then
             # all other warnings treat as errors
@@ -250,14 +275,28 @@ parse_gcc_output() {
     fi
 }
 
-case "$TASK" in
-    label)  ARGS="error_label:ERROR";;
-    memory) ARGS="no_error_recovery,memleak_is_error";;
-esac
+if match "$TASK" "VERIFIER_error"; then
+#    ARGS="error_label:ERROR"
+    ARGS="verifier_error_is_error"
+elif match "$TASK" "memtrack"; then
+    ARGS="no_error_recovery,memleak_is_error"
+elif match "$TASK" "deref" || match "$TASK" "free" || match "$TASK" "overflow"; then
+    ARGS="no_error_recovery"
+fi
 
-"$GCC_HOST"                                             \
-    -fplugin="${GCC_PLUG}"                              \
-    -fplugin-arg-libsl-args="$ARGS"                     \
-    -o /dev/null -O0 -S -xc "$@" 2>&1                   \
-    | tee "$TRACE"                                      \
-    | parse_gcc_output
+if [ -z $ENABLE_LLVM ]; then
+    "$GCC_HOST"                                         \
+        -fplugin="${SL_PLUG}"                          \
+        -fplugin-arg-libsl-args="$ARGS"                 \
+        -o /dev/null -O0 -S -xc "$@" 2>&1               \
+        | tee "$TRACE"                                  \
+        | parse_output
+else
+    "$CLANG_HOST" -S -emit-llvm -O0 "$@" -g -o -        \
+        | "$OPT_HOST" -lowerswitch                      \
+        -load "$PASSES_LIB" -global-vars                \
+        -load "$SL_PLUG" -sl -args="$ARGS"              \
+        -o /dev/null 2>&1                               \
+        | tee "$TRACE"                                  \
+        | parse_output
+fi
