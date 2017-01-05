@@ -160,7 +160,7 @@ find_plug SL_PLUG sl Predator
 match() {
     line="$1"
     shift
-printf "%s" "$line" | grep -E "$@" >/dev/null
+    [[ $line =~ $@ ]]
     return $?
 }
 
