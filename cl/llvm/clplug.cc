@@ -2081,7 +2081,7 @@ bool CLPass::doFinalization (Module &) {
         }
         else if (CLPrint::cntWarnings) {
             // this causes non-zero exit code in case of -Werror
-            CL_ERROR("Pass has reported some warnings");
+            CL_WARN("Pass has reported some warnings");
             exit(EXIT_FAILURE);
         }
     }
