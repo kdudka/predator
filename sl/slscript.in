@@ -140,11 +140,11 @@ forward_signal() {
 }
 
 run_tool() {
-if [ -z $ENABLE_LLVM ]; then
-    run_gcc "$@"
-else
-    run_llvm "$@"
-fi
+    if [ -z $ENABLE_LLVM ]; then
+        run_gcc "$@"
+    else
+        run_llvm "$@"
+    fi
 }
 
 # colorize the output
