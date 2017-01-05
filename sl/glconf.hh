@@ -36,6 +36,7 @@ struct Options {
     bool memLeakIsError;    ///< treat memory leak as an error
     bool skipUserPlots;     ///< ignore all ___sl_plot*() calls
     int errorRecoveryMode;  ///< @copydoc config.h::SE_ERROR_RECOVERY_MODE
+    bool verifierErrorIsError; ///< @copydoc treat reaching __VERIFIER_error() as an error 
     std::string errLabel;   ///< if not empty, treat reaching the label as error
     bool allowCyclicTraceGraph; ///< create node with two parents on entailment
     int allowThreeWayJoin;  ///< @copydoc config.h::SE_ALLOW_THREE_WAY_JOIN

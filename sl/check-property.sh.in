@@ -5,6 +5,7 @@ export CCACHE_DISABLE=1
 
 export MSG_INFLOOP=': warning: end of function .*\(\) has not been reached'
 export MSG_LABEL_FOUND=': error: error label "ERROR" has been reached'
+export MSG_VERIFIER_ERROR_FOUND=': (error|warning): __VERIFIER_error\(\) reached'
 export MSG_OUR_WARNINGS=': warning: .*\[-fplugin=libsl.so\]$'
 export MSG_TIME_ELAPSED=': note: clEasyRun\(\) took '
 export MSG_UNHANDLED_CALL=': warning: ignoring call of undefined function: '
@@ -212,9 +213,9 @@ parse_output() {
               fail "$line"
             fi
 
-        elif match "$line" "$MSG_LABEL_FOUND"; then
+        #elif match "$line" "$MSG_LABEL_FOUND"; then
             # an ERROR label has been reached
-        #elif match "$line" "$MSG_VERIFIER_ERROR_FOUND"; then
+        elif match "$line" "$MSG_VERIFIER_ERROR_FOUND"; then
             # an __VERIFIER_error() has been reached
             if match "$TASK" "VERIFIER_error"; then
               report_unsafe "" "$line"
@@ -275,8 +276,8 @@ parse_output() {
 }
 
 if match "$TASK" "VERIFIER_error"; then
-    ARGS="error_label:ERROR"
-#    ARGS="verifier_error_is_error"
+#    ARGS="error_label:ERROR"
+    ARGS="verifier_error_is_error"
 elif match "$TASK" "memtrack"; then
     ARGS="no_error_recovery,memleak_is_error"
 elif match "$TASK" "deref" || match "$TASK" "free" || match "$TASK" "overflow"; then
@@ -285,7 +286,7 @@ fi
 
 if [ -z $ENABLE_LLVM ]; then
     "$GCC_HOST"                                         \
-        -fplugin="${SL_PLUG}"                           \
+        -fplugin="${SL_PLUG}"                          \
         -fplugin-arg-libsl-args="$ARGS"                 \
         -o /dev/null -O0 -S -xc "$@" 2>&1               \
         | tee "$TRACE"                                  \
