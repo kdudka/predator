@@ -139,7 +139,7 @@ fi
 
 # include common code base
 topdir="`dirname "$(readlink -f "$SELF")"`/.."
-source "$topdir/build-aux/xlib.sh"
+source "$topdir/build-aux/cclib.sh"
 
 # basic setup & initial checks
 export SL_PLUG='@SL_PLUG@'
