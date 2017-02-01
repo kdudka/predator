@@ -163,22 +163,27 @@ endif()
 
 option(TEST_WITH_VALGRIND "Set to ON to enable valgrind tests" OFF)
 
-if(NOT ENABLE_LLVM)
-    # CMake cannot build shared libraries consisting of static libraries only
-    set(EMPTY_C_FILE ${PROJECT_BINARY_DIR}/empty.c)
-    if (NOT EXISTS ${EMPTY_C_FILE})
-        file(WRITE ${EMPTY_C_FILE} "extern int foo;\n")
-    endif()
+# CMake cannot build shared libraries consisting of static libraries only
+set(EMPTY_C_FILE ${PROJECT_BINARY_DIR}/empty.c)
+if (NOT EXISTS ${EMPTY_C_FILE})
+    # this will recursively pull all needed symbols from the static libraries
+    file(WRITE ${EMPTY_C_FILE} "struct plugin_name;
+struct plugin_gcc_version;
+extern int plugin_init(struct plugin_name *, struct plugin_gcc_version *);\n
+void __cl_easy_stub(void)
+{
+    plugin_init((struct plugin_name *)0, (struct plugin_gcc_version *)0);
+}\n")
 endif()
 
 # build compiler plug-in PLUGIN from static lib ANALYZER using CL from LIBCL_PATH
 macro(CL_BUILD_COMPILER_PLUGIN PLUGIN ANALYZER LIBCL_PATH)
     if(ENABLE_LLVM)
-        # CMake cannot build shared libraries consisting of static libraries only
-        # and we need set correct name for opt
+        # CMake cannot build shared libraries consisting of static libraries
+        # only and we need set correct name for opt
         set(NAME_CC_FILE "${PROJECT_BINARY_DIR}/${PLUGIN}_name.cc")
         file(WRITE ${NAME_CC_FILE} "#include<string>\nstd::string plugName = \"${PLUGIN}\";\n")
-        add_library(${PLUGIN} SHARED ${NAME_CC_FILE})
+        add_library(${PLUGIN} SHARED ${EMPTY_C_FILE} ${NAME_CC_FILE})
     else()
         # build GCC plug-in named lib${PLUGIN}.so
         add_library(${PLUGIN} SHARED ${EMPTY_C_FILE})
@@ -193,9 +198,6 @@ macro(CL_BUILD_COMPILER_PLUGIN PLUGIN ANALYZER LIBCL_PATH)
         find_library(CLGCC_LIB clgcc PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
         find_library(CLLLVM_LIB clllvm PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
     endif()
-
-    # this will recursively pull all needed symbols from the static libraries
-    set_target_properties(${PLUGIN} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
 
     # link the static libraries all together
     if(ENABLE_LLVM)
