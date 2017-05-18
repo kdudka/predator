@@ -356,7 +356,7 @@ struct cl_accessor {
              * operand used as index to access array's item,
              * in the C language: array[index]
              */
-            struct cl_operand           *index;
+            const struct cl_operand     *index;
         } array; /**< valid only for @b CL_ACCESSOR_DEREF_ARRAY */
 
         /* CL_ACCESSOR_ITEM */
