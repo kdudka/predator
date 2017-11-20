@@ -450,6 +450,7 @@ void binOpToStream(std::ostream &str, int subCode,
         case CL_BINOP_RSHIFT:           str << " >> ";          break;
         case CL_BINOP_LROTATE:          str << " <o ";          break;
         case CL_BINOP_RROTATE:          str << " o> ";          break;
+        case CL_BINOP_UNKNOWN:          str << " ??? ";         break;
         default:
             str << " (unknown binary operator) ";
             CL_BREAK_IF("unknown binary operator");

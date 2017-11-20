@@ -960,6 +960,9 @@ static bool translate_binop_code(enum cl_binop_e *pDst, enum tree_code code) {
         case LROTATE_EXPR:          *pDst = CL_BINOP_LROTATE;          break;
         case RROTATE_EXPR:          *pDst = CL_BINOP_RROTATE;          break;
 
+        // TODO: introduce CL_BINOP_COMPLEX in CL API?
+        case COMPLEX_EXPR:          *pDst = CL_BINOP_UNKNOWN;          break;
+
         default:
             return false;
     }
@@ -1009,6 +1012,10 @@ static void read_initials(struct cl_var *var, struct cl_initializer **pinit,
 
     // dig target type
     struct cl_type *clt = add_type_if_needed(ctor);
+
+    // skip over NOP tree nodes
+    if (NOP_EXPR == TREE_CODE(ctor))
+        ctor = TREE_OPERAND(ctor, 0);
 
     const enum tree_code code = TREE_CODE(ctor);
     if (CONSTRUCTOR != code) {
