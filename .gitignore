@@ -2,10 +2,11 @@
 /cl_build/
 /fa_build/
 /fwnull_build/
-/boost_1_46_1.tar.bz2
-/boost_1_46_1/
-/gcc-4.[5-9].[0-9]/
-/gcc-4.[5-9].[0-9].tar.bz2
+/boost_1_56_0.tar.bz2
+/boost_1_56_0/
+/gcc-[4-7].[0-9].[0-9]/
+/gcc-[4-7].[0-9].[0-9].tar.bz2
+/gcc-[4-7].[0-9].[0-9].tar.xz
 /gcc-build/
 /gcc-install/
 /gcc-src
