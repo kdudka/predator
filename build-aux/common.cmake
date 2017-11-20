@@ -104,10 +104,12 @@ endif()
 if("${INT3_RESPONSE}" STREQUAL "")
     message(STATUS "checking whether INT3 raises SIGTRAP")
     set(INT3_SRC "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/CMakeTmp/int3.c")
+    set(INT3_BIN "${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/int3")
     file(WRITE "${INT3_SRC}" "int main(void) { __asm__(\"int3\"); }\n")
-    try_run(INT3_RUN_RESULT INT3_COMPILE_RESULT
-            "${CMAKE_BINARY_DIR}" "${INT3_SRC}"
-            RUN_OUTPUT_VARIABLE INT3)
+    try_compile(INT3_COMPILE "${CMAKE_BINARY_DIR}"
+        "${INT3_SRC}" COPY_FILE "${INT3_BIN}")
+    execute_process(COMMAND "${INT3_BIN}" RESULT_VARIABLE INT3)
+    file(REMOVE "${INT3_BIN}")
 
     # cache the result for next run
     set(INT3_RESPONSE "${INT3}" CACHE STRING "response to INT3")
