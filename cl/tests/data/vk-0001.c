@@ -18,6 +18,6 @@ int main() {
     }
 
     // block L4
-    VK_ASSERT(VK_DEAD, &i, &untouched);
+//    VK_ASSERT(VK_DEAD, &i, &untouched);
     return 0;
 }

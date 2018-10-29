@@ -178,6 +178,7 @@ bool cl_is_term_insn(enum cl_insn_e code)
         case CL_INSN_SWITCH:
             return true;
 
+        case CL_INSN_CLOBBER:
         case CL_INSN_NOP:
         case CL_INSN_UNOP:
         case CL_INSN_BINOP:

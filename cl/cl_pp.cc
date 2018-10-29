@@ -105,6 +105,7 @@ class ClPrettyPrint: public ICodeListener {
         void printInsnJmp       (const struct cl_insn *);
         void printInsnCond      (const struct cl_insn *);
         void printInsnRet       (const struct cl_insn *);
+        void printInsnClobber   (const struct cl_insn *);
         void printInsnAbort     (const struct cl_insn *);
         void printInsnUnop      (const struct cl_insn *);
         void printInsnBinop     (const struct cl_insn *);
@@ -715,6 +716,21 @@ void ClPrettyPrint::printInsnRet(const struct cl_insn *cli)
     out_ << std::endl;
 }
 
+void ClPrettyPrint::printInsnClobber(const struct cl_insn *cli)
+{
+    const struct cl_operand *var = cli->data.insn_clobber.var;
+
+    out_ << "\t\t"
+        << SSD_INLINE_COLOR(C_LIGHT_RED, "CLOBBER");
+
+    if (var && var->code != CL_OPERAND_VOID) {
+        out_ << " ";
+        this->printOperand(var);
+    }
+
+    out_ << std::endl;
+}
+
 void ClPrettyPrint::printInsnAbort(const struct cl_insn *)
 {
     out_ << "\t\t"
@@ -914,6 +930,10 @@ void ClPrettyPrint::insn(
 
         case CL_INSN_RET:
             this->printInsnRet(cli);
+            break;
+
+        case CL_INSN_CLOBBER:
+            this->printInsnClobber(cli);
             break;
 
         case CL_INSN_ABORT:

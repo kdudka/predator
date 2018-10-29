@@ -75,6 +75,10 @@ class ClTypeDotGenerator: public ICodeListener {
                     this->handleOperand(cli->data.insn_ret.src);
                     break;
 
+                case CL_INSN_CLOBBER:
+                    this->handleOperand(cli->data.insn_clobber.var);
+                    break;
+
                 case CL_INSN_UNOP:
                     this->handleOperand(cli->data.insn_unop.dst);
                     this->handleOperand(cli->data.insn_unop.src);

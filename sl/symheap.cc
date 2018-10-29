@@ -2755,6 +2755,11 @@ bool isOnHeap(EStorageClass code)
     return (SC_ON_HEAP == code);
 }
 
+bool isOnStack(EStorageClass code)
+{
+    return (SC_ON_STACK == code);
+}
+
 bool isProgramVar(EStorageClass code)
 {
     switch (code) {

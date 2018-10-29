@@ -1462,6 +1462,24 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
 {
     if (CONSTRUCTOR == TREE_CODE(src_tree)) {
         CL_BREAK_IF(dst->code != CL_OPERAND_VAR);
+
+        // GCC marks the end of variable scope by assignment v = {CLOBBER}
+        if (TREE_CLOBBER_P(src_tree)) {
+            // TREE_CLOBBER_P(NODE):
+            // True if NODE is a clobber right hand side, an expression of
+            // indeterminate value that clobbers the LHS in a copy instruction.
+            // We use a volatile empty CONSTRUCTOR for this, as it matches most
+            // of the necessary semantic.  In particular the volatile flag
+            // causes us to not prematurely remove such clobber instructions.
+            // (source: GCC/tree.h comment)
+            struct cl_insn cli;
+            cli.code                    = CL_INSN_CLOBBER;
+            cli.data.insn_clobber.var   = dst;
+            read_gimple_location(&cli.loc, stmt);
+            cl->insn(cl, &cli);         // add to instruction list
+            return;
+        }
+
         struct cl_var *var = dst->data.var;
         if (!var->initial)
             read_initials(var, &var->initial, src_tree, /* ac */ 0);

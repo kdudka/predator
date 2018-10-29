@@ -82,6 +82,9 @@ enum EStorageClass {
 /// true for SC_ON_HEAP
 bool isOnHeap(EStorageClass);
 
+/// true for SC_ON_STACK
+bool isOnStack(EStorageClass code);
+
 /// true for SC_STATIC and SC_ON_STACK
 bool isProgramVar(EStorageClass);
 

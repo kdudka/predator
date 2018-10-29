@@ -156,6 +156,8 @@ namespace {
                     else
                         return false;
 
+// FIXME: missing break; or fallthrough?
+
                 case S_READING_LQ:
                     if (isspaceWrap(*s))
                         break;

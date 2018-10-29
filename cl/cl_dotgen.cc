@@ -537,6 +537,7 @@ void ClDotGenerator::insn(const struct cl_insn *cli)
     switch (cli->code) {
         case CL_INSN_NOP:
         case CL_INSN_LABEL:
+        case CL_INSN_CLOBBER:   // FIXME: do not ignore
             // ignore
             return;
 

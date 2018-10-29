@@ -243,6 +243,11 @@ namespace CodeStorage {
                 targets[1] = cfg->operator[](cli->data.insn_cond.else_label);
                 break;
 
+            case CL_INSN_CLOBBER:
+                operands.resize(1);
+                storeOperand(operands[0], cli->data.insn_clobber.var);
+                break;
+
             case CL_INSN_RET:
                 operands.resize(1);
                 storeOperand(operands[0], cli->data.insn_ret.src);

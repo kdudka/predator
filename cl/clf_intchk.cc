@@ -100,6 +100,10 @@ class ClfCbSeqChk: public ClFilterBase {
                     this->chkInsnRet();
                     break;
 
+                case CL_INSN_CLOBBER:
+                    this->chkInsnClobber();
+                    break;
+
                 case CL_INSN_ABORT:
                     this->chkInsnAbort();
                     break;
@@ -210,6 +214,7 @@ class ClfCbSeqChk: public ClFilterBase {
         void chkInsnJmp();
         void chkInsnCond();
         void chkInsnRet();
+        void chkInsnClobber();
         void chkInsnAbort();
         void chkInsnUnop();
         void chkInsnBinop();
@@ -458,6 +463,12 @@ void ClfCbSeqChk::chkInsnRet()
         this->emitUnexpected("CL_INSN_RET");
 
     state_ = S_FNC_BODY;
+}
+
+void ClfCbSeqChk::chkInsnClobber()
+{
+    if (S_BLOCK_LEVEL != state_)
+        this->emitUnexpected("CL_INSN_CLOBBER");
 }
 
 void ClfCbSeqChk::chkInsnAbort()

@@ -563,6 +563,11 @@ enum cl_insn_e {
     CL_INSN_RET,
 
     /**
+     * GCC marks the end of variable scope by assignment v = { @b CLOBBER }
+     */
+    CL_INSN_CLOBBER,
+
+    /**
      * this follows each call of a function declared with attribute @b noreturn
      */
     CL_INSN_ABORT,
@@ -716,6 +721,11 @@ struct cl_insn {
         struct {
             const struct cl_operand     *src;
         } insn_ret; /**< valid only for @b CL_INSN_RET */
+
+        /* CL_INSN_CLOBBER */
+        struct {
+            const struct cl_operand     *var;
+        } insn_clobber; /**< valid only for @b CL_INSN_CLOBBER */
 
         /* CL_INSN_UNOP */
         struct {

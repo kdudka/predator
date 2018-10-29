@@ -2508,6 +2508,27 @@ already_alive:
     this->setValueOf(lhs, valResult);
 }
 
+// clobber the object bound to C variable going out of scope
+void SymExecCore::handleClobber(const CodeStorage::Insn &insn)
+{
+    const struct cl_operand &op = insn.operands[/* var */ 0];
+
+    // get C variable uid
+    const int uid = varIdFromOperand(&op);
+
+    // select level for recursive calls
+    const int nestLevel = bt_->countOccurrencesOfTopFnc();
+    const CVar cv(uid, nestLevel);
+    TObjId obj = this->objByVar(cv);    // object to invalidate
+    CL_BREAK_IF(!sh_.isValid(obj));     // should be valid variable
+    CL_BREAK_IF(!isOnStack(sh_.objStorClass(obj))); // automatic variable
+
+    CodeStorage::KillVar kv(uid, /* onlyIfNotPointed_ */ false);
+    const std::string varString = varToString(sh_.stor(), kv.uid);
+    CL_DEBUG_MSG(lw_, "FFF SymExecCore::handleClobber() destroys var " << varString);
+    this->objDestroy(obj);
+}
+
 void SymExecCore::handleLabel(const CodeStorage::Insn &insn)
 {
     const struct cl_operand &op = insn.operands[/* name */ 0];
@@ -2560,6 +2581,10 @@ bool SymExecCore::execCore(
         case CL_INSN_CALL:
             // the symbin module is now fully responsible for handling built-ins
             return handleBuiltIn(dst, *this, insn);
+
+        case CL_INSN_CLOBBER:
+            this->handleClobber(insn);
+            break;
 
         default:
             CL_BREAK_IF("SymExecCore::execCore() got an unexpected insn");

@@ -16,5 +16,5 @@ int main(void)
 
     x = 3;
 
-    VK_ASSERT(VK_DEAD, &x);
+//    VK_ASSERT(VK_DEAD, &x);
 }

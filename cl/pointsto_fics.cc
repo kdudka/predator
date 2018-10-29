@@ -387,6 +387,12 @@ RetVal phase1handleInsn(
         // this phase skips calls silently!
         return PTFICS_RET_NO_CHANGE;
 
+    /// HANDLE clobber instruction
+    if (insn.code == CL_INSN_CLOBBER) {
+        // FIXME: can be ignored?
+        return PTFICS_RET_NO_CHANGE;
+    }
+
     /// HANDLE return statement
     if (insn.code == CL_INSN_RET) {
         if (opList.size() != 1) {

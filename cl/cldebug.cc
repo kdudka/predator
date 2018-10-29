@@ -491,6 +491,17 @@ void retToStream(std::ostream &str, const struct cl_operand &src)
     operandToStream(str, src);
 }
 
+void clobberToStream(std::ostream &str, const struct cl_operand &var)
+{
+    str << "clobber";
+
+    if (CL_OPERAND_VOID == var.code)
+        return;
+
+    str << " ";
+    operandToStream(str, var);
+}
+
 } // namespace
 
 void insnToStream(std::ostream &str, const CodeStorage::Insn &insn)
@@ -514,6 +525,10 @@ void insnToStream(std::ostream &str, const CodeStorage::Insn &insn)
 
         case CL_INSN_RET:
             retToStream(str, opList[/* src */ 0]);
+            break;
+
+        case CL_INSN_CLOBBER:
+            clobberToStream(str, opList[/* var */ 0]);
             break;
 
         case CL_INSN_COND:

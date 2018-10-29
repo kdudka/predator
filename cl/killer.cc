@@ -258,6 +258,7 @@ void scanInsn(BlockData *pDst, const Insn *insn, TAliasMap *pAliasMap)
             }
             return;
 
+        case CL_INSN_CLOBBER:
         case CL_INSN_RET:
         case CL_INSN_COND:
         case CL_INSN_SWITCH:

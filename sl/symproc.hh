@@ -262,6 +262,8 @@ class SymExecCore: public SymProc {
 
         void handleLabel(const CodeStorage::Insn &);
 
+        void handleClobber(const CodeStorage::Insn &);
+
         bool execCore(SymState &dst, const CodeStorage::Insn &insn);
 
     protected:
