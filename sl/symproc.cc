@@ -2523,8 +2523,12 @@ void SymExecCore::handleClobber(const CodeStorage::Insn &insn)
     CL_BREAK_IF(!sh_.isValid(obj));     // should be valid variable
     CL_BREAK_IF(!isOnStack(sh_.objStorClass(obj))); // automatic variable
 
-    CodeStorage::KillVar kv(uid, /* onlyIfNotPointed_ */ false);
-    const std::string varString = varToString(sh_.stor(), kv.uid);
+    const struct cl_loc *varLoc;
+    const std::string varString = varToString(sh_.stor(), uid, &varLoc);
+    if (!lw_->file && varLoc->file)
+        // no location info available for this insn --> use location of var decl
+        this->setLocation(varLoc);
+
     CL_DEBUG_MSG(lw_, "FFF SymExecCore::handleClobber() destroys var " << varString);
     this->objDestroy(obj);
 }
