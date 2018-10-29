@@ -263,8 +263,8 @@ void scanInsn(BlockData *pDst, const Insn *insn, TAliasMap *pAliasMap)
         case CL_INSN_COND:
         case CL_INSN_SWITCH:
             // exactly one operand
-            scanOperand(stor, bData, opList[/* src */ 0], pAliasMap,
-                    /* dst */ false);
+            scanOperand(stor, bData, opList[0], pAliasMap,
+                    /* dst */ (CL_INSN_CLOBBER == code));
             return;
 
         case CL_INSN_JMP:
