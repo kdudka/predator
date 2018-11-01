@@ -772,6 +772,9 @@ Tests taken from Forester
 
     test-0248.c - reinterpretation PTR<-->INT of equal size
 
+    test-0249.c - a regression test for scope of automatic variables
+                - taken from https://sv-comp.sosy-lab.org/2019/results/sv-benchmarks/c/memsafety-ext3/scopes5_false-valid-deref.c
+
 
 Data reinterpretation
 =====================
