@@ -180,6 +180,7 @@ class SymExecEngine: public IStatsProvider {
                 const TValId                        v2);
 
         void execJump();
+        void execAbort();
         void execReturn();
         void execCondInsn();
         void execTermInsn();
@@ -538,6 +539,27 @@ void SymExecEngine::execCondInsn()
     this->updateStateInBranch(sh, false, *insnCmp, *insnCnd, v1, v2);
 }
 
+void SymExecEngine::execAbort()
+{
+    CL_DEBUG_MSG(lw_, "CL_INSN_ABORT reached");
+    endReached_ = true;
+
+    if (!GlConf::data.exitLeaks)
+        // drop the result of this path
+        return;
+
+    SymHeap sh = localState_[heapIdx_];
+    Trace::waiveCloneOperation(sh);
+
+    // report immediately visible memory leaks
+    SymProc proc(sh, &bt_);
+    destroyProgVars(proc);
+
+    // propagate the exit point back to the caller to catch leaks in context
+    sh.setExitPoint(&bt_);
+    dst_.insert(sh);
+}
+
 void SymExecEngine::execTermInsn()
 {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
@@ -557,8 +579,7 @@ void SymExecEngine::execTermInsn()
             break;
 
         case CL_INSN_ABORT:
-            CL_DEBUG_MSG(lw_, "CL_INSN_ABORT reached");
-            endReached_ = true;
+            this->execAbort();
             break;
 
         default:

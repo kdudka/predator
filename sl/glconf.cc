@@ -50,6 +50,7 @@ Options::Options():
     intArithmeticLimit(SE_INT_ARITHMETIC_LIMIT),
     joinOnLoopEdgesOnly(SE_JOIN_ON_LOOP_EDGES_ONLY),
     stateLiveOrdering(SE_STATE_ON_THE_FLY_ORDERING),
+    exitLeaks(SE_EXIT_LEAKS),
     detectContainers(false),
     fixedPoint(0)
 {
@@ -83,6 +84,12 @@ void handleDumpFixedPoint(const string &name, const string &value)
         CL_BREAK_IF("we are leaking an instance of FixedPoint::StateByInsn");
 
     data.fixedPoint = new FixedPoint::StateByInsn;
+}
+
+void handleExitLeaks(const string &name, const string &value)
+{
+    assumeNoValue(name, value);
+    data.exitLeaks = true;
 }
 
 void handleErrorLabel(const string &name, const string &value)
@@ -236,6 +243,7 @@ ConfigStringParser::ConfigStringParser()
     tbl_["dump_fixed_point"]        = handleDumpFixedPoint;
     tbl_["detect_containers"]       = handleDetectContainers;
     tbl_["error_label"]             = handleErrorLabel;
+    tbl_["exit_leaks"]              = handleExitLeaks;
     tbl_["forbid_heap_replace"]     = handleForbidHeapReplace;
     tbl_["int_arithmetic_limit"]    = handleIntArithmeticLimit;
     tbl_["join_on_loop_edges_only"] = handleJoinOnLoopEdgesOnly;

@@ -216,6 +216,12 @@
 #define SE_ERROR_RECOVERY_MODE              1
 
 /**
+ * if 1, report memory leaks while executing a no-return function
+ * @note This can be overridden by the exit_leaks run-time option
+ */
+#define SE_EXIT_LEAKS                       0
+
+/**
  * if non-zero, do not replace a previously tracked if entailed by a new one
  */
 #define SE_FORBID_HEAP_REPLACE              0
