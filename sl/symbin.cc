@@ -47,6 +47,34 @@
 typedef const struct cl_loc     *TLoc;
 typedef const struct cl_operand &TOp;
 
+/// temporarily create a function call on top of the backtrace
+class TempBackTraceTop {
+    public:
+        TempBackTraceTop(SymExecCore &core, TOp opFnc);
+        ~TempBackTraceTop();
+
+    private:
+        SymBackTrace       *bt_;
+};
+
+TempBackTraceTop::TempBackTraceTop(SymExecCore &core, TOp opFnc):
+    bt_(0)
+{
+    int uid;
+    if (!core.fncFromOperand(&uid, opFnc))
+        // failed to resolve opFnc
+        return;
+
+    bt_ = /* FIXME */ const_cast<SymBackTrace *>(core.bt());
+    bt_->pushCall(uid, core.lw());
+}
+
+TempBackTraceTop::~TempBackTraceTop()
+{
+    if (bt_)
+        bt_->popCall();
+}
+
 bool readPlotName(
         std::string                                 *dst,
         const CodeStorage::TOperandList             &opList,
@@ -270,6 +298,9 @@ bool handleExit(
     }
 
     if (GlConf::data.exitLeaks) {
+        // make the built-in eventually appear in the backtrace
+        TempBackTraceTop tempTop(core, opList[/* fnc */ 1]);
+
         // report immediately visible memory leaks
         destroyProgVars(core);
 
