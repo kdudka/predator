@@ -242,7 +242,7 @@ bool handleNoOp(
 {
     const CodeStorage::TOperandList &opList = insn.operands;
 
-    // this allows both abort() and exit()
+    // this allows functions with 0 or 1 parameters
     if (opList.size() < 2 || 3 < opList.size()) {
         emitPrototypeError(&insn.loc, name);
         return false;
@@ -251,6 +251,33 @@ bool handleNoOp(
     CL_DEBUG_MSG(core.lw(), "ignoring call to " << name << "()");
 
     // do not change anything in the program configuration
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
+bool handleExit(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const CodeStorage::TOperandList &opList = insn.operands;
+
+    // this allows both abort() and exit()
+    if (opList.size() < 2 || 3 < opList.size()) {
+        emitPrototypeError(&insn.loc, name);
+        return false;
+    }
+
+    if (GlConf::data.exitLeaks) {
+        // report immediately visible memory leaks
+        destroyProgVars(core);
+
+        // propagate the exit point back to the caller to catch leaks in context
+        core.sh().setExitPoint(core.bt());
+    }
+
+    // continue to CL_INSN_ABORT if exit() is annotated as no-return fnc
     insertCoreHeap(dst, core, insn);
     return true;
 }
@@ -1024,9 +1051,9 @@ BuiltInTable::BuiltInTable()
 
     // C run-time
     tbl_["__builtin_puts"]                          = handlePuts;
-    tbl_["abort"]                                   = handleNoOp;
+    tbl_["abort"]                                   = handleExit;
     tbl_["calloc"]                                  = handleCalloc;
-    tbl_["exit"]                                    = handleNoOp;
+    tbl_["exit"]                                    = handleExit;
     tbl_["free"]                                    = handleFree;
     tbl_["malloc"]                                  = handleMalloc;
     tbl_["memcpy"]                                  = handleMemcpy;
