@@ -193,6 +193,9 @@ void executeMemset(
         TValId                      valToWrite,
         TValId                      valSize);
 
+/// destroy all program variables and report memory leaks triggered by that
+void destroyProgVars(SymProc &proc);
+
 struct SymExecCoreParams {
     bool trackUninit;       ///< enable/disable @b track_uninit @b mode
     bool oomSimulation;     ///< enable/disable @b oom @b simulation mode

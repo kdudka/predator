@@ -65,27 +65,9 @@ void initGlVars(SymHeap &sh)
 
 void digGlJunk(SymHeap &sh)
 {
-    using namespace CodeStorage;
-    TStorRef stor = sh.stor();
-    SymBackTrace bt(stor);
+    SymBackTrace bt(sh.stor());
     SymProc proc(sh, &bt);
-
-    TObjList glVars;
-    sh.gatherObjects(glVars, isProgramVar);
-    BOOST_FOREACH(const TObjId obj, glVars) {
-        // ensure we are dealing with a gl variable
-        const CVar cv(sh.cVarByObject(obj));
-        CL_BREAK_IF(cv.inst);
-
-        // dig var identity and location info
-        const struct cl_loc *loc = 0;
-        std::string varString = varToString(stor, cv.uid, &loc);
-        CL_DEBUG_MSG(loc, "(g) destroying gl variable: " << varString);
-
-        // destroy the junk if needed
-        proc.setLocation(loc);
-        proc.objDestroy(obj);
-    }
+    destroyProgVars(proc);
 }
 
 void execFnc(const CodeStorage::Fnc &fnc, bool lookForGlJunk = false)

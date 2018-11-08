@@ -1236,6 +1236,25 @@ void executeMemmove(
     lm.leave();
 }
 
+void destroyProgVars(SymProc &proc)
+{
+    SymHeap &sh = proc.sh();
+
+    TObjList progVars;
+    sh.gatherObjects(progVars, isProgramVar);
+    BOOST_FOREACH(const TObjId obj, progVars) {
+        // dig var identity and location info
+        const struct cl_loc *loc = 0;
+        const CVar cv = sh.cVarByObject(obj);
+        std::string varString = varToString(sh.stor(), cv.uid, &loc);
+        CL_DEBUG_MSG(loc, "(g) destroying program variable: " << varString);
+
+        // destroy junk if needed
+        proc.setLocation(loc);
+        proc.objDestroy(obj);
+    }
+}
+
 
 // /////////////////////////////////////////////////////////////////////////////
 // SymExecCore implementation
