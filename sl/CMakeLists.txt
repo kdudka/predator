@@ -327,6 +327,8 @@ test_predator_regre("-TRACK_UNINIT" ".uninit"
 # OOM simulation mode
 test_predator_regre("-OOM" ".oom" "-args=oom")
 
+# exit_leaks enabled
+test_predator_regre("-EXIT_LEAKS" ".exit_leaks" "-args=exit_leaks")
 
 
 if(TEST_ONLY_FAST)
@@ -416,6 +418,9 @@ test_predator_regre("-TRACK_UNINIT" ".uninit"
 
 # OOM simulation mode
 test_predator_regre("-OOM" ".oom" "-fplugin-arg-libsl-args=oom")
+
+# exit_leaks enabled
+test_predator_regre("-EXIT_LEAKS" ".exit_leaks" "-fplugin-arg-libsl-args=exit_leaks")
 
 if(TEST_WITH_VALGRIND)
     message (STATUS "valgrind enabled for testing...")

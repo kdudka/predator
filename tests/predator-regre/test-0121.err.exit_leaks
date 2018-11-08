@@ -1,0 +1,6 @@
+test-0121.c:111: warning: memory leak detected while destroying a heap object
+test-0121.c:117: note: from call of create_sll_pe()
+test-0121.c:125: note: from call of create_shape()
+test-0121.c:123: note: from call of main()
+test-0121.c:126: note: writing heap graph to 'test-0121.c-126-0000.dot'...
+test-0121.c:125: warning: memory leak detected while destroying a variable on stack

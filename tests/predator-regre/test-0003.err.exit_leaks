@@ -1,0 +1,3 @@
+test-0003.c:28: error: double free()
+test-0003.c:19: error: attempt to free a non-heap object
+test-0003.c:11: error: invalid free()

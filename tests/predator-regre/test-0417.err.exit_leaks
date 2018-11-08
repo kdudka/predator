@@ -1,0 +1,1336 @@
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0000.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0001.dot'...
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0002.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0003.dot'...
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0004.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0005.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0006.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0007.dot'...
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0008.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0009.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0010.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0011.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0012.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0013.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0014.dot'...
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0015.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0016.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0017.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0018.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0019.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0020.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0021.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0022.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0023.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0024.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0025.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0026.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0027.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0028.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0029.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0030.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0031.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0032.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0033.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0034.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0035.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0036.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0037.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0038.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0039.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0040.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0041.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0042.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0043.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0044.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0045.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0046.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0047.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0048.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0049.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0050.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0051.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0052.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0053.dot'...
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0054.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0055.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0056.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0057.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0058.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0059.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:274: note: writing heap graph to '01-alloc_one-0060.dot'...
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:294: warning: memory leak detected while destroying a variable on stack
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:261: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:278: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:270: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:296: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()
+test-0417.c:11: warning: memory leak detected while destroying a static variable
+test-0417.c:268: note: from call of abort()
+test-0417.c:298: note: from call of alloc_one()
+test-0417.c:309: note: from call of allocate_everything()
+test-0417.c:303: note: from call of main()

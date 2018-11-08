@@ -1,0 +1,2 @@
+test-0027.c:19: error: double free()
+test-0027.c:14: error: attempt to free a non-existing non-heap object

@@ -1,0 +1,2 @@
+test-0085.c:48: error: double free()
+test-0085.c:42: error: free() called with offset 4B

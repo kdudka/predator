@@ -1,0 +1,2 @@
+test-0094.c:89: error: invalid dereference
+test-0094.c:89: note: the value being dereferenced is a result of an unsupported data reinterpretation

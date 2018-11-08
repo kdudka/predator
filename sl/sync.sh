@@ -44,3 +44,7 @@ do_sync "$*" .uninit
 printf "\n${Y}OOM simulation mode...${N}\n" >&2
 export PFLAGS="oom"
 do_sync "$*" .oom
+
+printf "\n${Y}exit_leaks enabled...${N}\n" >&2
+export PFLAGS="exit_leaks"
+do_sync "$*" .exit_leaks

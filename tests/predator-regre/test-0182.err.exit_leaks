@@ -1,0 +1,4 @@
+test-0182.c:5: warning: end of function fail() has not been reached
+test-0182.c:149: note: from call of fail()
+test-0182.c:178: note: from call of inspect_full()
+test-0182.c:175: note: from call of main()
