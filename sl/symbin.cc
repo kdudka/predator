@@ -986,7 +986,7 @@ bool handleDebuggingOf(
 }
 
 bool handleError(
-        SymState                                    & /* dst */,
+        SymState                                    &dst,
         SymExecCore                                 &core,
         const CodeStorage::Insn                     &insn,
         const char                                  *name)
@@ -1001,6 +1001,18 @@ bool handleError(
     if (opList.size() != opCntExpected || opList[0].code != CL_OPERAND_VOID) {
         emitPrototypeError(loc, name);
         return false;
+    }
+
+    if (isVerifierError && GlConf::data.exitLeaks) {
+        // make the built-in eventually appear in the backtrace
+        TempBackTraceTop tempTop(core, opList[/* fnc */ 1]);
+
+        // report immediately visible memory leaks
+        destroyProgVars(core);
+
+        // propagate the exit point back to the caller to catch leaks in context
+        core.sh().setExitPoint(core.bt());
+        insertCoreHeap(dst, core, insn);
     }
 
     if (isVerifierError && !GlConf::data.verifierErrorIsError) {
