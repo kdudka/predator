@@ -2560,6 +2560,9 @@ bool joinSymHeaps(
     TStorRef stor = sh1.stor();
     CL_BREAK_IF(&stor != &sh2.stor());
 
+    if (!areEqual(sh1.exitPoint(), sh2.exitPoint()))
+        return false;
+    
     // update trace
     Trace::waiveCloneOperation(sh1);
     Trace::waiveCloneOperation(sh2);
@@ -2567,6 +2570,7 @@ bool joinSymHeaps(
 
     // initialize symbolic join ctx
     SymJoinCtx ctx(*pDst, sh1, sh2, allowThreeWay);
+    ctx.dst.setExitPoint(sh1/* == sh2 */.exitPoint());
 
     CL_BREAK_IF(!protoCheckConsistency(ctx.sh1));
     CL_BREAK_IF(!protoCheckConsistency(ctx.sh2));

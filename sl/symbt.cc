@@ -35,20 +35,30 @@
 #include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
+struct BtStackItem {
+    const CodeStorage::Fnc          &fnc;
+    const struct cl_loc             *loc;
+
+    BtStackItem(
+            const CodeStorage::Fnc  *fnc_,
+            const struct cl_loc     *loc_):
+        fnc(*fnc_),
+        loc(loc_)
+    {
+    }
+};
+
+bool operator==(const BtStackItem &a, const BtStackItem &b)
+{
+    return (&a.fnc == &b.fnc) && (a.loc == b.loc);
+}
+
+bool operator!=(const BtStackItem &a, const BtStackItem &b)
+{
+    return !operator==(a, b);
+}
+
 struct SymBackTrace::Private {
-    struct BtStackItem {
-        const CodeStorage::Fnc              &fnc;
-        const struct cl_loc                 *loc;
-
-        BtStackItem(
-                const CodeStorage::Fnc      *fnc_,
-                const struct cl_loc         *loc_):
-            fnc(*fnc_),
-            loc(loc_)
-        {
-        }
-    };
-
     typedef std::deque<BtStackItem>                                 TStack;
     typedef std::map<const CodeStorage::Fnc *, int /* cnt */>       TMap;
 
@@ -157,7 +167,7 @@ bool SymBackTrace::printBackTrace() const
     if (ref.size() < 2)
         return false;
 
-    BOOST_FOREACH(const Private::BtStackItem &item, ref)
+    BOOST_FOREACH(const BtStackItem &item, ref)
         CL_NOTE_MSG(item.loc, "from call of " << nameOf(item.fnc) << "()");
 
     return true;
@@ -211,8 +221,28 @@ const CodeStorage::Fnc* SymBackTrace::topFnc() const
 const struct cl_loc* SymBackTrace::topCallLoc() const
 {
     CL_BREAK_IF(d->btStack.empty());
-    const Private::BtStackItem &top = d->btStack.front();
+    const BtStackItem &top = d->btStack.front();
     return top.loc;
+}
+
+bool areEqual(const SymBackTrace *btA, const SymBackTrace *btB)
+{
+    if (!btA && !btB)
+        // both NULL
+        return true;
+
+    if (!btA || !btB)
+        // NULL vs. non-NULL
+        return false;
+
+    if (btA->d->btStack != btB->d->btStack)
+        return false;
+
+    if (btA->d->nestMap != btB->d->nestMap)
+        return false;
+
+    // look equal
+    return true;
 }
 
 // /////////////////////////////////////////////////////////////////////////////

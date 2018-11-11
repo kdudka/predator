@@ -22,6 +22,7 @@
 
 #include <cl/cl_msg.hh>
 
+#include "symbt.hh"
 #include "symseg.hh"
 #include "symutil.hh"
 #include "util.hh"
@@ -327,6 +328,9 @@ bool areEqual(
         const SymHeap           &sh1,
         const SymHeap           &sh2)
 {
+    if (!areEqual(sh1.exitPoint(), sh2.exitPoint()))
+        return false;
+
     SymHeap &sh1Writable = const_cast<SymHeap &>(sh1);
     SymHeap &sh2Writable = const_cast<SymHeap &>(sh2);
 

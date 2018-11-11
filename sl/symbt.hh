@@ -105,6 +105,7 @@ class SymBackTrace {
         bool printBackTrace() const;
         friend class SymProc;
         friend class SymExecEngine;
+        friend bool areEqual(const SymBackTrace *, const SymBackTrace *);
 
     private:
         SymBackTrace& operator=(const SymBackTrace &);
@@ -112,5 +113,8 @@ class SymBackTrace {
         struct Private;
         Private *d;
 };
+
+/// true if the given back traces are equal (or both the pointers are NULL)
+bool areEqual(const SymBackTrace *, const SymBackTrace *);
 
 #endif /* H_GUARD_SYMBT_H */
