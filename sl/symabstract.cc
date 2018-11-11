@@ -419,6 +419,7 @@ void spliceOutListSegment(
     switch (kind) {
         case OK_REGION:
             CL_BREAK_IF("invalid call of spliceOutListSegment()");
+            // fall through!
 
         case OK_OBJ_OR_NULL:
         case OK_SEE_THROUGH:
