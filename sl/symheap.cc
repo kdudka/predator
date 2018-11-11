@@ -26,6 +26,7 @@
 #include <cl/storage.hh>
 
 #include "intarena.hh"
+#include "symbt.hh"
 #include "syments.hh"
 #include "sympred.hh"
 #include "symutil.hh"
@@ -621,6 +622,7 @@ struct SymHeapCore::Private {
     ~Private();
 
     Trace::NodeHandle               traceHandle;
+    SymBackTrace                   *exitPoint;
     EntStore<AbstractHeapEntity>    ents;
     TObjSetWrapper                 *liveObjs;
     TAnonStackMapWrapper           *anonStackMap;
@@ -1511,6 +1513,7 @@ void SymHeapCore::Private::transferBlock(
 
 SymHeapCore::Private::Private(Trace::Node *trace):
     traceHandle (trace),
+    exitPoint   (0),
     liveObjs    (new TObjSetWrapper),
     anonStackMap(new TAnonStackMapWrapper),
     cVarMap     (new CVarMap),
@@ -1522,6 +1525,7 @@ SymHeapCore::Private::Private(Trace::Node *trace):
 
 SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     traceHandle (new Trace::CloneNode(ref.traceHandle.node())),
+    exitPoint   (ref.exitPoint),
     ents        (ref.ents),
     liveObjs    (ref.liveObjs),
     anonStackMap(ref.anonStackMap),
@@ -1536,6 +1540,9 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     RefCntLib<RCO_NON_VIRT>::enter(this->cValueMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->coinDb);
     RefCntLib<RCO_NON_VIRT>::enter(this->neqDb);
+
+    if (this->exitPoint)
+        this->exitPoint = new SymBackTrace(*this->exitPoint);
 }
 
 SymHeapCore::Private::~Private()
@@ -1546,6 +1553,7 @@ SymHeapCore::Private::~Private()
     RefCntLib<RCO_NON_VIRT>::leave(this->cValueMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->coinDb);
     RefCntLib<RCO_NON_VIRT>::leave(this->neqDb);
+    delete exitPoint;
 }
 
 TValId SymHeapCore::Private::fldInit(TFldId fld)
@@ -1978,6 +1986,19 @@ Trace::Node* SymHeapCore::traceNode() const
 void SymHeapCore::traceUpdate(Trace::Node *node)
 {
     d->traceHandle.reset(node);
+}
+
+const SymBackTrace* SymHeapCore::exitPoint() const
+{
+    return d->exitPoint;
+}
+
+void SymHeapCore::setExitPoint(const SymBackTrace *exitPoint)
+{
+    delete d->exitPoint;
+    d->exitPoint = (exitPoint)
+        ? new SymBackTrace(*exitPoint)
+        : 0;
 }
 
 void SymHeapCore::setValOfField(TFldId fld, TValId val, TValSet *killedPtrs)

@@ -383,6 +383,19 @@ class SymHeapCore {
         /// update the current trace graph node that the heap is associated with
         void traceUpdate(Trace::Node *);
 
+        /**
+         * If non-zero, the heap represents state of a program that has already
+         * exited.  The SymBackTrace object that the returned pointer points to
+         * describes where a no-return function was called from.
+         */
+        const SymBackTrace* exitPoint() const;
+
+        /**
+         * @copydoc exitPoint()
+         * @note A new copy of the given SymBackTrace object is created.
+         */
+        void setExitPoint(const SymBackTrace *);
+
         /// the last assigned ID of a heap entity (not necessarily still valid)
         unsigned lastId() const;
 
