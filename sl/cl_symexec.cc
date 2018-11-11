@@ -65,8 +65,15 @@ void initGlVars(SymHeap &sh)
 
 void digGlJunk(SymHeap &sh)
 {
-    SymBackTrace bt(sh.stor());
-    SymProc proc(sh, &bt);
+    const SymBackTrace *bt = sh.exitPoint();
+    if (!bt) {
+        // regular program exit at the end of main() function
+        const SymBackTrace btEmpty(sh.stor());
+        sh.setExitPoint(&btEmpty);
+        bt = sh.exitPoint();
+    }
+
+    SymProc proc(sh, bt);
     destroyProgVars(proc);
 }
 

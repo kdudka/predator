@@ -657,6 +657,14 @@ bool /* complete */ SymExecEngine::execInsn()
         // time to respond to a single pending signal
         this->processPendingSignals();
 
+        const SymHeap &sh = localState_[heapIdx_];
+        if (sh.exitPoint()) {
+            // program exited on this execution path, go directly to the caller
+            endReached_ = true;
+            dst_.insert(sh);
+            continue;
+        }
+
         if (isTerm) {
             // terminal insn
             this->execTermInsn();
