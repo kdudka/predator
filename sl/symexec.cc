@@ -179,6 +179,8 @@ class SymExecEngine: public IStatsProvider {
                 const TValId                        v1,
                 const TValId                        v2);
 
+        bool handleExitPoint();
+
         void execJump();
         void execAbort();
         void execReturn();
@@ -617,6 +619,27 @@ bool /* handled */ SymExecEngine::execNontermInsn()
     return /* insn handled */ true;
 }
 
+bool /* handled */ SymExecEngine::handleExitPoint()
+{
+    const SymHeap &origin = localState_[heapIdx_];
+    const SymBackTrace *btExit = origin.exitPoint();
+    if (!btExit)
+        return false;
+
+    // clone the heap so that we can modify it (collect junk)
+    SymHeap sh(origin);
+    Trace::waiveCloneOperation(sh);
+
+    // report immediately visible memory leaks
+    SymProc proc(sh, btExit);
+    destroyProgVars(proc);
+
+    // program exited on this execution path, go directly to the caller
+    endReached_ = true;
+    dst_.insert(sh);
+    return true;
+}
+
 bool /* complete */ SymExecEngine::execInsn()
 {
     const CodeStorage::Insn *insn = block_->operator[](insnIdx_);
@@ -678,13 +701,9 @@ bool /* complete */ SymExecEngine::execInsn()
         // time to respond to a single pending signal
         this->processPendingSignals();
 
-        const SymHeap &sh = localState_[heapIdx_];
-        if (sh.exitPoint()) {
+        if (this->handleExitPoint())
             // program exited on this execution path, go directly to the caller
-            endReached_ = true;
-            dst_.insert(sh);
             continue;
-        }
 
         if (isTerm) {
             // terminal insn
