@@ -775,6 +775,18 @@ Tests taken from Forester
     test-0249.c - a regression test for scope of automatic variables
                 - taken from https://sv-comp.sosy-lab.org/2019/results/sv-benchmarks/c/memsafety-ext3/scopes5_false-valid-deref.c
 
+    test-0250.c - test for reporting leaks at exit() call
+
+    test-0251.c - test for reporting leaks at abort() call
+
+    test-0252.c - test for reporting leaks at exit() call
+
+    test-0253.c - test for reporting correct variables (name vs level)
+
+    test-0254.c - test for reporting leaks at exit() call
+
+    test-0255.c - test for reporting leaks at exit() call
+
 
 Data reinterpretation
 =====================

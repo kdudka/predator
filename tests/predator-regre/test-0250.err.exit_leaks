@@ -1,0 +1,3 @@
+test-0250.c:3: warning: memory leak detected while destroying a static variable
+test-0250.c:9: note: from call of exit()
+test-0250.c:5: note: from call of main()
