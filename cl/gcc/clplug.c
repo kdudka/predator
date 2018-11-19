@@ -703,12 +703,12 @@ static void read_specific_type(struct cl_type *clt, tree type)
             // Make sure the basetype is processed and added to Code Storage:
             // (We're ignoring the return value, the type will be hashed.)
             (void) add_bare_type_if_needed(TYPE_OFFSET_BASETYPE(type));
-            // NOTE: Fall through to POINTER_TYPE!
+            // fall through!
 
         case REFERENCE_TYPE:
             // FIXME: REFERENCE_TYPE comes only on 32bit build of gcc
             //        (seems vararg related)
-            // NOTE:  Does this still needs fixing?
+            // fall through!
         case POINTER_TYPE:
             clt->code = CL_TYPE_PTR;
             clt->ptr_type = get_ptr_type(code, type);
@@ -1383,8 +1383,8 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
 #ifdef MEM_REF_CHECK
         case MEM_REF:
             handle_accessor_offset(ac, t);
-            // fall through!
 #endif
+            // fall through!
         case INDIRECT_REF:
             handle_accessor_indirect_ref(ac, &t);
             break;

@@ -78,7 +78,7 @@ namespace {
                         continue;
 
                     state = S_READING_CLF;
-                    // go through!!
+                    // fall through!
 
                 case S_READING_CLF:
                     if ((',' == *s) || isspaceWrap(*s)) {
@@ -133,7 +133,7 @@ namespace {
                         continue;
 
                     state = S_READING_KEY;
-                    // go through!!
+                    // fall through!
 
                 case S_READING_KEY:
                     if (key.empty() && (('=' == *s) || isspaceWrap(*s)))
