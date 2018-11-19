@@ -75,7 +75,7 @@ namespace {
             switch (state) {
                 case S_INIT:
                     if (isspaceWrap(*s))
-                        break;
+                        continue;
 
                     state = S_READING_CLF;
                     // go through!!
@@ -95,11 +95,11 @@ namespace {
                         state = S_INIT;
                     else
                         clf.push_back(*s);
-                    break;
+                    continue;
 
                 case S_READING_COMMA:
                     if (isspaceWrap(*s))
-                        break;
+                        continue;
 
                     if (',' == *s)
                         state = S_INIT;
@@ -130,7 +130,7 @@ namespace {
             switch (state) {
                 case S_INIT:
                     if (isspaceWrap(*s))
-                        break;
+                        continue;
 
                     state = S_READING_KEY;
                     // go through!!
@@ -145,28 +145,27 @@ namespace {
                         state = S_READING_LQ;
                     else
                         key.push_back(*s);
-                    break;
+                    continue;
 
                 case S_READING_KEY_DONE:
                     if (isspaceWrap(*s))
-                        break;
+                        continue;
 
                     if ('=' == *s)
                         state = S_READING_LQ;
                     else
                         return false;
-
-// FIXME: missing break; or fallthrough?
+                    continue;
 
                 case S_READING_LQ:
                     if (isspaceWrap(*s))
-                        break;
+                        continue;
 
                     if ('"' == *s)
                         state = S_READING_VAL;
                     else
                         return false;
-                    break;
+                    continue;
 
                 case S_READING_VAL:
                     if ('"' == *s) {
@@ -180,7 +179,7 @@ namespace {
                     } else  {
                         value.push_back(*s);
                     }
-                    break;
+                    continue;
 
                 case S_READING_ESC:
                     if ('"' == *s)
@@ -190,8 +189,7 @@ namespace {
                     else
                         return false;
                     state = S_READING_VAL;
-                    break;
-
+                    continue;
             }
         }
         return (key.empty() && value.empty());
