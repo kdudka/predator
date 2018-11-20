@@ -1243,6 +1243,10 @@ void destroyProgVars(SymProc &proc)
     TObjList progVars;
     sh.gatherObjects(progVars, isProgramVar);
     BOOST_FOREACH(const TObjId obj, progVars) {
+        if (OBJ_RETURN == obj)
+            // this is going to be destroyed by SymCallCtx::flushCallResults()
+            continue;
+
         // dig var identity and location info
         const struct cl_loc *loc = 0;
         const CVar cv = sh.cVarByObject(obj);
