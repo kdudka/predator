@@ -1,19 +1,44 @@
 language: cpp
 compiler: gcc
 
-before_install:
-    - sudo apt-get update -qq
-    - sudo apt-get install -qq apt-transport-https
-    - echo "deb https://kdudka.fedorapeople.org/csbuild trusty contrib" | sudo tee -a /etc/apt/sources.list
-    - sudo apt-get update -qq
-
 install:
-    - sudo apt-get install -qq -y --force-yes csbuild
     - sudo apt-get install cmake g++-4.8-multilib gcc-4.8-plugin-dev libboost-dev
 
-before_script:
-    - patch -p1 < build-aux/gcc-5.4.0.patch
+env:
+    - GCC_HOST=/usr/bin/gcc-4.8
 
-script:
-    - ./switch-host-gcc.sh /usr/bin/gcc-4.8
-    - test -z "$TRAVIS_COMMIT_RANGE" || GCC_HOST=/usr/bin/gcc-4.8 csbuild --git-commit-range "$TRAVIS_COMMIT_RANGE" -c "make distclean && make -j9" --git-bisect --print-current --print-fixed
+matrix:
+    include:
+        - name: switch-host-gcc
+          script:
+              - patch -p1 < build-aux/gcc-5.4.0.patch
+              - PRIV_GCC_HOST=$GCC_HOST; unset GCC_HOST && ./switch-host-gcc.sh $PRIV_GCC_HOST
+
+
+        - name: debug build
+          script:
+              - patch -p1 < build-aux/gcc-5.4.0.patch
+              - make -C cl -s -j5 'CMAKE=cmake -D CL_DEBUG=ON' check
+              - make -C sl -s -j5 'CMAKE=cmake -D SL_DEBUG=ON' check
+
+
+        - name: expensive tests
+          script:
+              - patch -p1 < build-aux/gcc-5.4.0.patch
+              - make -C cl -s -j5
+              - make -C sl -s -j5 'CMAKE=cmake -D TEST_ONLY_FAST=OFF' check
+
+
+        - name: csbuild
+          before_install:
+              - sudo apt-get update -qq
+              - sudo apt-get install -qq apt-transport-https
+              - echo "deb https://kdudka.fedorapeople.org/csbuild trusty contrib" | sudo tee -a /etc/apt/sources.list
+              - sudo apt-get update -qq
+
+          install:
+              - sudo apt-get install -qq -y --force-yes csbuild
+              - sudo apt-get install cmake g++-4.8-multilib gcc-4.8-plugin-dev libboost-dev
+
+          script:
+              - if git diff "$TRAVIS_COMMIT_RANGE" >/dev/null; then csbuild --git-commit-range "$TRAVIS_COMMIT_RANGE" -c "make distclean && make -j9" --git-bisect --print-current --print-fixed; fi
