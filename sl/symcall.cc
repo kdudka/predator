@@ -290,6 +290,10 @@ void SymCallCtx::Private::assignReturnValue(SymHeap &sh)
         // we're done for a function returning void
         return;
 
+    if (sh.exitPoint())
+        // we got here from a call of no-return fnc --> no return value assigned
+        return;
+
     // wait, we're crossing stack frame boundaries here!  We need to use one
     // backtrace instance for source operands and another one for destination
     // operands.  The called function already appears on the given backtrace, so
