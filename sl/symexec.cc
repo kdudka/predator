@@ -80,13 +80,6 @@ class SymExec: public IStatsProvider {
         /// just to avoid memory leakage in case an exception falls through
         ~SymExec();
 
-        const CodeStorage::Fnc* resolveCallInsn(
-                SymState                    &results,
-                SymHeap                     entry,
-                const CodeStorage::Insn     &insn);
-
-        void enterCall(SymCallCtx *ctx, SymState &results);
-
         void execFnc(
                 SymState                    &results,
                 const SymHeap               &entry,
@@ -94,6 +87,14 @@ class SymExec: public IStatsProvider {
                 const CodeStorage::Fnc      &fnc);
 
         virtual void printStats() const;
+
+    private:
+        const CodeStorage::Fnc* resolveCallInsn(
+                SymState                    &results,
+                SymHeap                     entry,
+                const CodeStorage::Insn     &insn);
+
+        void enterCall(SymCallCtx *ctx, SymState &results);
 
     private:
         const CodeStorage::Storage              &stor_;
