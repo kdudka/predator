@@ -180,7 +180,7 @@ class SymExecEngine: public IStatsProvider {
                 const TValId                        v1,
                 const TValId                        v2);
 
-        bool handleExitPoint();
+        bool handleExitPoint(const SymHeap &);
 
         void execJump();
         void execAbort();
@@ -551,16 +551,11 @@ void SymExecEngine::execAbort()
         // drop the result of this path
         return;
 
+    // propagate the exit point back to the caller to catch leaks in context
     SymHeap sh = localState_[heapIdx_];
     Trace::waiveCloneOperation(sh);
-
-    // report immediately visible memory leaks
-    SymProc proc(sh, &bt_);
-    destroyProgVars(proc);
-
-    // propagate the exit point back to the caller to catch leaks in context
     sh.setExitPoint(&bt_);
-    dst_.insert(sh);
+    this->handleExitPoint(sh);
 }
 
 void SymExecEngine::execTermInsn()
@@ -620,9 +615,8 @@ bool /* handled */ SymExecEngine::execNontermInsn()
     return /* insn handled */ true;
 }
 
-bool /* handled */ SymExecEngine::handleExitPoint()
+bool /* handled */ SymExecEngine::handleExitPoint(const SymHeap &origin)
 {
-    const SymHeap &origin = localState_[heapIdx_];
     const SymBackTrace *btExit = origin.exitPoint();
     if (!btExit)
         return false;
@@ -702,7 +696,7 @@ bool /* complete */ SymExecEngine::execInsn()
         // time to respond to a single pending signal
         this->processPendingSignals();
 
-        if (this->handleExitPoint())
+        if (this->handleExitPoint(localState_[heapIdx_]))
             // program exited on this execution path, go directly to the caller
             continue;
 
