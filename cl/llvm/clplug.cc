@@ -32,7 +32,8 @@ extern "C" {
 
 #include "llvm/Config/llvm-config.h"
 
-#if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR == 3) && (LLVM_VERSION_MINOR >= 7)
+#if defined(LLVM_VERSION_MAJOR) && ((LLVM_VERSION_MAJOR > 3) || \
+                                    ((LLVM_VERSION_MAJOR == 3) && (LLVM_VERSION_MINOR >= 7)))
 #   define LLVM_HOST_3_7_OR_NEWER
 #endif
 
