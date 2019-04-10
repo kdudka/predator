@@ -46,10 +46,16 @@ extern "C" {
 #   define LLVM_HOST_4_OR_NEWER
 #endif
 
-
+#if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR >= 7)
+#   define LLVM_HOST_7_OR_NEWER
+#endif
 
 #ifdef LLVM_HOST_3_7_OR_NEWER
+#ifdef LLVM_HOST_7_OR_NEWER
+#   include "llvm/Transforms/Utils.h"  // createLowerSwitchPass
+#else
 #   include "llvm/Transforms/Scalar.h" // createLowerSwitchPass
+#endif // LLVM >= 7
 #   include "llvm/IR/LegacyPassManager.h"
 #   include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #endif
