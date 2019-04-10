@@ -37,6 +37,11 @@ extern "C" {
 #   define LLVM_HOST_3_7_OR_NEWER
 #endif
 
+#if defined(LLVM_VERSION_MAJOR) && ((LLVM_VERSION_MAJOR > 3) || \
+                                    ((LLVM_VERSION_MAJOR == 3) && (LLVM_VERSION_MINOR >= 9)))
+#   define LLVM_HOST_3_9_OR_NEWER
+#endif
+
 #if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR >= 4)
 #   define LLVM_HOST_4_OR_NEWER
 #endif
@@ -779,7 +784,11 @@ bool CLPass::isStringLiteral(Instruction *vi) {
             if (ConstantDataSequential *c = dyn_cast<ConstantDataSequential>(gv->getInitializer()))
                 if (gep->hasAllZeroIndices() && // pointer alias
                     gv->isConstant() &&
+#ifdef LLVM_HOST_3_9_OR_NEWER
+                    gv->hasGlobalUnnamedAddr() &&
+#else
                     gv->hasUnnamedAddr() &&
+#endif
                     gv->hasPrivateLinkage() &&
                     c->isCString() ) // is all necessary?
                     return true;
@@ -1532,7 +1541,6 @@ void CLPass::insertPhiAssign(BasicBlock *fromBB, BasicBlock *phiBB,
         cl->bb_open(cl, newBB); 
     }
 
-    BasicBlock::iterator I = phiBB->begin();
 
     struct cl_insn i;
     i.code = CL_INSN_UNOP;
@@ -1541,16 +1549,18 @@ void CLPass::insertPhiAssign(BasicBlock *fromBB, BasicBlock *phiBB,
     i.data.insn_unop.dst = &dst;
     i.data.insn_unop.src = &src;
 
-    while (isa<PHINode>(I)) { // all phi nodes
-        findLocation(I, &i.loc); 
+    for (auto& I : *phiBB) {
+        if (!isa<PHINode>(&I)) // all phi nodes
+            break;
 
-        handleOperand(cast<PHINode>(I)->getIncomingValueForBlock(fromBB), &src);
-        handleOperand(I, &dst);
+        findLocation(&I, &i.loc); 
+
+        handleOperand(cast<PHINode>(&I)->getIncomingValueForBlock(fromBB), &src);
+        handleOperand(&I, &dst);
 
         cl->insn(cl, &i);
-        ++I;
     }
-    
+
     if (newBB) { // jump to old BB
         struct cl_insn j;
         j.loc = cl_loc_known; // artificial instruction
