@@ -661,7 +661,7 @@ void CLPass::handleFncOperand(Function *F, struct cl_operand *fnc) {
     fnc->data.cst.data.cst_fnc.loc = cl_loc_known;
 
 #ifdef LLVM_HOST_3_7_OR_NEWER
-    if (DISubprogram *DI = getDISubprogram(F)) {
+    if (DISubprogram *DI = F->getSubprogram()) {
         // DISubprogram without column
         fnc->data.cst.data.cst_fnc.loc.line = DI->getLine();
     }
