@@ -415,25 +415,25 @@ bool CLPass::runOnModule(Module &M) {
     cl->file_open(cl, cl_loc_known.file); // open source file
     CL_DEBUG("start "<< __func__<<" for "<<cl_loc_known.file);
 
-    for (Module::iterator F = M.begin(), FE = M.end(); F != FE; ++F)
+    for (auto& F : M)
     { // functions
 
-        CL_DEBUG("pass analyzes Function " << F->getName().str() << "()");
+        CL_DEBUG("pass analyzes Function " << F.getName().str() << "()");
 
-        if (F->isDeclaration()) continue;
-        handleFunction(F); // open function
+        if (F.isDeclaration()) continue;
+            handleFunction(&F); // open function
 
-        for (Function::iterator BB = F->begin(), BE = F->end(); BB != BE; ++BB)
+        for (auto& BB : F)
         { // basic blocks
 
-            CL_DEBUG("pass analyzes BasicBlock " << BB->getName().str() 
-                     << " - " << BB->size() << " instructions");
+            CL_DEBUG("pass analyzes BasicBlock " << BB.getName().str() 
+                     << " - " << BB.size() << " instructions");
             // LABEL NAME
-            cl->bb_open(cl, BB->getName().str().c_str()); // open basic block
+            cl->bb_open(cl, BB.getName().str().c_str()); // open basic block
 
-            for (BasicBlock::iterator I = BB->begin(), IE = BB->end(); I != IE; ++I)
+            for (auto& I : BB)
             { // instructions
-                handleInstruction(I);
+                handleInstruction(&I);
             }
         }
         cl->fnc_close(cl); // close function
