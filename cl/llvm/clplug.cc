@@ -37,6 +37,12 @@ extern "C" {
 #   define LLVM_HOST_3_7_OR_NEWER
 #endif
 
+#if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR >= 4)
+#   define LLVM_HOST_4_OR_NEWER
+#endif
+
+
+
 #ifdef LLVM_HOST_3_7_OR_NEWER
 #   include "llvm/Transforms/Scalar.h" // createLowerSwitchPass
 #   include "llvm/IR/LegacyPassManager.h"
@@ -742,7 +748,11 @@ bool CLPass::handleBasicConstant(Value *v, struct cl_operand *clo) {
             llvm::APFloat tmp = dyn_cast<ConstantFP>(v)->getValueAPF();
             bool losesinfo;
             //enum llvm::APFloat::opStatus state
+#ifdef LLVM_HOST_4_OR_NEWER
+            if (APFloat::opOK != tmp.convert( APFloat::IEEEdouble(), APFloat::rmTowardZero , &losesinfo))
+#else
             if (APFloat::opOK != tmp.convert( APFloat::IEEEdouble, APFloat::rmTowardZero , &losesinfo))
+#endif
                 CL_WARN("FP constant don't convert to double");
             clo->data.cst.data.cst_real.value = tmp.convertToDouble();
         }
