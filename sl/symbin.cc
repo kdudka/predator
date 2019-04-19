@@ -270,8 +270,8 @@ bool handleNoOp(
 {
     const CodeStorage::TOperandList &opList = insn.operands;
 
-    // this allows functions with 0 or 1 parameters
-    if (opList.size() < 2 || 3 < opList.size()) {
+    // this allows functions with 0-2 parameters
+    if (opList.size() < 2 || 4 < opList.size()) {
         emitPrototypeError(&insn.loc, name);
         return false;
     }
@@ -529,6 +529,7 @@ bool handleMemmoveCore(
     const struct cl_loc *loc = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
     if (5 != opList.size()
+            && /* in GCC + check */ 6 != opList.size()
             && /* in LLVM + align + volatile */ 7 != opList.size())
     {
         emitPrototypeError(loc, name);
@@ -581,6 +582,7 @@ bool handleMemset(
     const struct cl_loc *lw = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
     if (5 != opList.size()
+            && /* in GCC + check */ 6 != opList.size()
             && /* in LLVM + align + volatile */ 7 != opList.size())
     {
         emitPrototypeError(lw, name);
@@ -751,7 +753,8 @@ bool handleStrncpy(
 {
     const TLoc loc = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (opList.size() != 5) {
+    if (opList.size() != 5
+            && /* in GCC + check */ 6 != opList.size()) {
         emitPrototypeError(loc, name);
         return false;
     }
@@ -798,6 +801,33 @@ bool handleStrncpy(
         executeMemset(core, valDst, valUnknown, valSize);
     }
 
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
+bool handleExpect(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    // exp = __builtin_expect (exp, c); test condition exp, expected value c
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (/* dst + fnc + exp + c */ 4 != opList.size())
+    {
+        emitPrototypeError(&insn.loc, name);
+        return false;
+    }
+
+    TValId val = core.valFromOperand(opList[/* condition given to test */2]);
+    CL_DEBUG_MSG(&insn.loc, "executing " << name << "()");
+
+    // set the returned value to a condition
+    const struct cl_operand &opDst = opList[0];
+    const FldHandle fldDst = core.fldByOperand(opDst);
+    core.setValueOf(fldDst, val);
+
+    // insert the resulting heap
     insertCoreHeap(dst, core, insn);
     return true;
 }
@@ -1093,8 +1123,8 @@ BuiltInTable::BuiltInTable()
     tbl_["llvm.stacksave"]                          = handleStackSave;
 
     // C run-time
-    tbl_["__builtin_puts"]                          = handlePuts;
     tbl_["abort"]                                   = handleExit;
+    tbl_["alloca"]                                  = handleAlloca;
     tbl_["calloc"]                                  = handleCalloc;
     tbl_["exit"]                                    = handleExit;
     tbl_["free"]                                    = handleFree;
@@ -1106,6 +1136,15 @@ BuiltInTable::BuiltInTable()
     tbl_["puts"]                                    = handlePuts;
     tbl_["strlen"]                                  = handleStrlen;
     tbl_["strncpy"]                                 = handleStrncpy;
+
+    // GCC-specific built-in functions
+    tbl_["__builtin_expect"]                        = handleExpect;
+    tbl_["__builtin_object_size"]                   = handleNoOp;
+    tbl_["__builtin___memcpy_chk"]                  = handleMemcpy;
+    tbl_["__builtin___memmove_chk"]                 = handleMemmove;
+    tbl_["__builtin___memset_chk"]                  = handleMemset;
+    tbl_["__builtin_puts"]                          = handlePuts;
+    tbl_["__builtin___strncpy_chk"]                 = handleStrncpy;
 
     // LLVM-specific built-in functions
     tbl_["llvm.memcpy"]                             = handleMemcpy;
@@ -1138,22 +1177,29 @@ BuiltInTable::BuiltInTable()
     tbl_["undef_int"]                               = handleNondetInt;
 
     // initialize lookForDerefs() look-up table
-    der_["free"]        .push_back(/* addr */ 2);
-    der_["memcpy"]      .push_back(/* dst  */ 2);
-    der_["memcpy"]      .push_back(/* src  */ 3);
-    der_["memmove"]     .push_back(/* dst  */ 2);
-    der_["memmove"]     .push_back(/* src  */ 3);
-    der_["memset"]      .push_back(/* addr */ 2);
-    der_["llvm.memcpy"] .push_back(/* dst  */ 2);
-    der_["llvm.memcpy"] .push_back(/* src  */ 3);
-    der_["llvm.memmove"].push_back(/* dst  */ 2);
-    der_["llvm.memmove"].push_back(/* src  */ 3);
-    der_["llvm.memset"] .push_back(/* addr */ 2);
+    der_["free"]                   .push_back(/* addr */ 2);
+    der_["memcpy"]                 .push_back(/* dst  */ 2);
+    der_["memcpy"]                 .push_back(/* src  */ 3);
+    der_["memmove"]                .push_back(/* dst  */ 2);
+    der_["memmove"]                .push_back(/* src  */ 3);
+    der_["memset"]                 .push_back(/* addr */ 2);
+    der_["__builtin___memcpy_chk"] .push_back(/* dst  */ 2);
+    der_["__builtin___memcpy_chk"] .push_back(/* src  */ 3);
+    der_["__builtin___memmove_chk"].push_back(/* dst  */ 2);
+    der_["__builtin___memmove_chk"].push_back(/* src  */ 3);
+    der_["__builtin___memset_chk"] .push_back(/* addr */ 2);
+    der_["llvm.memcpy"]            .push_back(/* dst  */ 2);
+    der_["llvm.memcpy"]            .push_back(/* src  */ 3);
+    der_["llvm.memmove"]           .push_back(/* dst  */ 2);
+    der_["llvm.memmove"]           .push_back(/* src  */ 3);
+    der_["llvm.memset"]            .push_back(/* addr */ 2);
     // TODO: printf
-    der_["puts"]        .push_back(/* s    */ 2);
-    der_["strlen"]      .push_back(/* s    */ 2);
-    der_["strncpy"]     .push_back(/* dst  */ 2);
-    der_["strncpy"]     .push_back(/* src  */ 3);
+    der_["puts"]                   .push_back(/* s    */ 2);
+    der_["strlen"]                 .push_back(/* s    */ 2);
+    der_["strncpy"]                .push_back(/* dst  */ 2);
+    der_["strncpy"]                .push_back(/* src  */ 3);
+    der_["__builtin___strncpy_chk"].push_back(/* dst  */ 2);
+    der_["__builtin___strncpy_chk"].push_back(/* src  */ 3);
 }
 
 bool BuiltInTable::handleBuiltIn(
