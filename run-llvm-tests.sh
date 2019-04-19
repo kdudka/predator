@@ -3,6 +3,12 @@ export SELF="$0"
 export LC_ALL=C
 MAKE="make -j9"
 
+if [ `uname` == Darwin ]; then
+	TIMEOUT='gtimeout 5'
+else
+	TIMEOUT='timeout 5'
+fi
+
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
     exit 1
@@ -57,7 +63,7 @@ if [ "$#" == 3 ]; then
         || die "OPT_HOST is not an absolute path to an executable file: $OPT_HOST"
 
     status_update "Checking whether $1 works"
-    $MAKE -C $1 check CMAKE="cmake -D CLANG_HOST='$HOST' -D OPT_HOST='$OPT_HOST' -D ENABLE_LLVM=ON -D GCC_EXEC_PREFIX='timeout 5'"
+    $MAKE -C $1 check CMAKE="cmake -D CLANG_HOST='$HOST' -D OPT_HOST='$OPT_HOST' -D ENABLE_LLVM=ON -D GCC_EXEC_PREFIX='${TIMEOUT}'"
 
 else
     test 1 = "$#" || usage
@@ -65,5 +71,5 @@ else
     test cl = "$1" || test sl = "$1" || test fa = "$1" || usage
 
     status_update "Checking whether $1 works"
-    $MAKE -C $1 check CMAKE="cmake -D ENABLE_LLVM=ON -D GCC_EXEC_PREFIX='timeout 5'"
+    $MAKE -C $1 check CMAKE="cmake -D ENABLE_LLVM=ON -D GCC_EXEC_PREFIX='${TIMEOUT}'"
 fi
