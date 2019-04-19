@@ -218,10 +218,7 @@ void cl_chain_append(
 {
     try {
         ICodeListener *listener = cl_obtain_from_wrap(self);
-        ClChain *chain = dynamic_cast<ClChain *>(listener);
-        if (!chain)
-            CL_DIE("failed to downcast ICodeListener to ClChain");
-
+        ClChain *chain = static_cast<ClChain *>(listener);
         chain->append(item);
     }
     catch (...) {
