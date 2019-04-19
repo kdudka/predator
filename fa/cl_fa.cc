@@ -24,7 +24,7 @@
 // Code Listener headers
 #include <cl/cl_msg.hh>
 #include <cl/easy.hh>
-#include "../cl/ssd.h"
+#include "../cl/ssd.hh"
 
 // Forester headers
 #include "notimpl_except.hh"

@@ -48,7 +48,7 @@ void reportErrorNoLocation(const char* errMsg)
 #include <cl/clutil.hh>
 #include <cl/code_listener.h>
 #include <cl/storage.hh>
-#include "../cl/ssd.h"
+#include "../cl/ssd.hh"
 
 // Forester headers
 #include "backward_run.hh"

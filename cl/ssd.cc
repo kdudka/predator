@@ -17,7 +17,7 @@
  * along with ssd.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include "ssd.h"
+#include "ssd.hh"
 #include <unistd.h>
 
 #ifndef HAVE_ISATTY
