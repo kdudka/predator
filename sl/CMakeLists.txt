@@ -80,27 +80,27 @@ add_library(predator STATIC
     version.c)
 
 
-# build compiler plug-in (libsl.so)
+# build compiler plug-in (libsl.so/.dylib)
 CL_BUILD_COMPILER_PLUGIN(sl predator ../cl_build)
 
-# get the full path of libsl.so
+# get the full path of libsl.so/.dylib
 get_property(SL_PLUG TARGET sl PROPERTY LOCATION)
 message (STATUS "SL_PLUG: ${SL_PLUG}")
 
 if(ENABLE_LLVM)
-    #get path of libpasses.so
+    #get path of libpasses.so/.dylib
     if("${LIBPASSES_PATH}" STREQUAL "")
-        set(PASSES_LIB ${PROJECT_SOURCE_DIR}/../passes-src/passes_build/libpasses.so)
+        set(PASSES_LIB ${PROJECT_SOURCE_DIR}/../passes-src/passes_build/libpasses${CMAKE_SHARED_LIBRARY_SUFFIX})
     else()
         find_library(PASSES_LIB passes PATHS ${LIBPASSES_PATH} NO_DEFAULT_PATH)
     endif()
     message (STATUS "PASSES_LIB: ${PASSES_LIB}")
 
-    # helping scripts
+    # helping scripts for llvm
     configure_file(${PROJECT_SOURCE_DIR}/slscript.in  ${PROJECT_BINARY_DIR}/slllvm    @ONLY)
     configure_file(${PROJECT_SOURCE_DIR}/slllvmv.in   ${PROJECT_BINARY_DIR}/slllvmv   @ONLY)
 else()
-    # helping scripts
+    # helping scripts for gcc
     configure_file(${PROJECT_SOURCE_DIR}/slscript.in  ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
     configure_file(${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
     configure_file(${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
@@ -284,7 +284,7 @@ macro(test_predator_regre name_suff ext arg1)
 
         # eliminate some alloca
 #        set(cmd "${cmd} -mem2reg")
-        set(cmd "${cmd} -load ${sl_BINARY_DIR}/libsl.so -sl")
+        set(cmd "${cmd} -load ${sl_BINARY_DIR}/libsl${CMAKE_SHARED_LIBRARY_SUFFIX} -sl")
         set(cmd "${cmd} ${arg1}")
         set(cmd "${cmd} -preserve-ec")
         set(cmd "${cmd} 2>&1")
@@ -303,10 +303,10 @@ macro(test_predator_regre name_suff ext arg1)
         set(cmd "${cmd} | sed 's|^[^:]*/||'")
 
         # drop column numbers
-        set(cmd "${cmd} | sed -r 's|^([^:]+:[0-9]+:)[0-9]+:|\\\\1|'")
+        set(cmd "${cmd} | sed -E 's|^([^:]+:[0-9]+:)[0-9]+:|\\\\1|'")
 
         # drop var UIDs that are not guaranteed to be fixed among runs
-        set(cmd "${cmd} | sed -r -e 's|#[0-9]+:||g' -e 's|[#.][0-9]+|_|g'")
+        set(cmd "${cmd} | sed -E -e 's|#[0-9]+:||g' -e 's|[#.][0-9]+|_|g'")
 
         # ... and finally diff with the expected output
         set(cmd "${cmd} | diff -up ${testdir}/test-${num}.err${ext} -")
@@ -395,10 +395,10 @@ macro(test_predator_regre name_suff ext arg1)
         set(cmd "${cmd} | sed 's|^[^:]*/||'")
 
         # drop column numbers
-        set(cmd "${cmd} | sed -r 's|^([^:]+:[0-9]+:)[0-9]+:|\\\\1|'")
+        set(cmd "${cmd} | sed -E 's|^([^:]+:[0-9]+:)[0-9]+:|\\\\1|'")
 
         # drop var UIDs that are not guaranteed to be fixed among runs
-        set(cmd "${cmd} | sed -r -e 's|#[0-9]+:||g' -e 's|[#.][0-9]+|_|g'")
+        set(cmd "${cmd} | sed -E -e 's|#[0-9]+:||g' -e 's|[#.][0-9]+|_|g'")
 
         # ... and finally diff with the expected output
         set(cmd "${cmd} | diff -up ${testdir}/test-${num}.err${ext} -")

@@ -15,11 +15,17 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
-# uncomment this on Darwin if linking the plug-ins fails on undefined references
-#set(CMAKE_SHARED_LINKER_FLAGS "-flat_namespace -undefined suppress")
+if(APPLE)
+    # on Darwin linking the plug-ins fails on undefined references
+    set(CMAKE_SHARED_LINKER_FLAGS "-flat_namespace -undefined suppress")
+    # or better used cmake >=3.0
+    set(CMAKE_MACOSX_RPATH 1)
+endif()
 
 # CMake on Darwin would otherwise use .dylib suffix, which breaks GCC arg parser
-set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+if(NOT ENABLE_LLVM)
+    set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
+endif()
 
 # Check Boost availability
 set(Boost_USE_STATIC_LIBS ON)
@@ -36,8 +42,10 @@ if(ENABLE_LLVM)
     if(LLVM_FOUND)
         message(STATUS "LLVM version: ${LLVM_PACKAGE_VERSION}")
         message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
+        message(STATUS "LLVM library directories: ${LLVM_LIBRARY_DIRS}")
         link_directories(${LLVM_LIBRARY_DIRS})
-        include_directories(${LLVM_INCLUDE_DIRS})
+        message(STATUS "Including LLVM directories: ${LLVM_INCLUDE_DIRS}")
+        include_directories(SYSTEM ${LLVM_INCLUDE_DIRS})
         add_definitions(${LLVM_DEFINITIONS})
         message(STATUS "LLVM binary dir: ${LLVM_TOOLS_BINARY_DIR}")
     endif()
@@ -174,8 +182,8 @@ endif()
 # build compiler plug-in PLUGIN from static lib ANALYZER using CL from LIBCL_PATH
 macro(CL_BUILD_COMPILER_PLUGIN PLUGIN ANALYZER LIBCL_PATH)
     if(ENABLE_LLVM)
-        # CMake cannot build shared libraries consisting of static libraries only
-        # and we need set correct name for opt
+        # CMake cannot build shared libraries consisting of static libraries
+        # only and we need set correct name for opt
         set(NAME_CC_FILE "${PROJECT_BINARY_DIR}/${PLUGIN}_name.cc")
         file(WRITE ${NAME_CC_FILE} "#include<string>\nstd::string plugName = \"${PLUGIN}\";\n")
         add_library(${PLUGIN} SHARED ${NAME_CC_FILE})
@@ -195,7 +203,12 @@ macro(CL_BUILD_COMPILER_PLUGIN PLUGIN ANALYZER LIBCL_PATH)
     endif()
 
     # this will recursively pull all needed symbols from the static libraries
-    set_target_properties(${PLUGIN} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
+    if(NOT APPLE)
+        set_target_properties(${PLUGIN} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
+    else()
+        # on Darwin entry symbol doesn't work properly, load everything
+        set_target_properties(${PLUGIN} PROPERTIES LINK_FLAGS -Wl,-all_load)
+    endif()
 
     # link the static libraries all together
     if(ENABLE_LLVM)

@@ -96,7 +96,14 @@ PRP_FILE=
 # write trace to stderr by default
 TRACE="/dev/fd/2"
 
-ARGS=$(getopt -o p:t:v -l "propertyfile:,trace:,verbose" -n "$SELF" -- "$@")
+if [ `uname` == Darwin ]; then
+  ABSPATH='realpath'
+  # mac os doesn't support long option names
+  ARGS=$(getopt p:t:v $*)
+else
+  ABSPATH='readlink -f'
+  ARGS=$(getopt -o p:t:v -l "propertyfile:,trace:,verbose" -n "$SELF" -- "$@")
+fi
 if test $? -ne 0; then
   usage; exit 1;
 fi
@@ -138,7 +145,7 @@ fi; if [ -z "$TASK" ]; then
 fi
 
 # include common code base
-topdir="`dirname "$(readlink -f "$SELF")"`/.."
+topdir="`dirname "$(${ABSPATH} "$SELF")"`/.."
 source "$topdir/build-aux/cclib.sh"
 
 # basic setup & initial checks
