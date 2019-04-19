@@ -15,15 +15,19 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
-HEADERS ?= *.h *.hh
+C_HEADERS ?= *.h
+CXX_HEADERS ?= *.hh
 
 SINK ?= /dev/null
 
 CXXFLAGS += -pedantic -Wall -Wextra -Wno-variadic-macros -Werror -I../include
 
-.PHONY: check $(HEADERS)
+.PHONY: check $(C_HEADERS) $(CXX_HEADERS)
 
 # check whether each header is self-compilable
-check: $(HEADERS)
-$(HEADERS):
+check: $(C_HEADERS) $(CXX_HEADERS)
+$(C_HEADERS):
+	$(CC) $(CFLAGS) -o $(SINK) -c $@
+	$(CXX) $(CFLAGS) -o $(SINK) -c $@
+$(CXX_HEADERS):
 	$(CXX) $(CXXFLAGS) -o $(SINK) -c $@

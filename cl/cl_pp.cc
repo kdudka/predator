@@ -24,7 +24,7 @@
 
 #include "cl.hh"
 #include "cl_private.hh"
-#include "ssd.h"
+#include "ssd.hh"
 
 #include <fstream>
 #include <iomanip>
