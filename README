@@ -24,8 +24,9 @@ You can find the latest news on the following project page:
     http://www.fit.vutbr.cz/research/groups/verifit/tools/forester
 
 Predator and Forester are licensed as GPLv3+, see COPYING for details.  The GCC
-plug-ins are based on Code Listener infrastructure (included).  Although the
-tools are intended to be as portable as GCC is, we support only Linux for now.
+and LLVM plug-ins are based on Code Listener infrastructure (included).
+Although the tools are intended to be as portable as GCC is, we support Darwin
+and Linux for now.
 
 Building from sources against the system GCC
 ============================================
@@ -38,7 +39,7 @@ GCC.  However, the Predator plug-in itself is known to work with GCC 4.[5-9].x,
 (1) Install all dependences of Predator and Forester
 ----------------------------------------------------
    * C/C++ compiler
-     - Predator currently supports GCC 4.1.2+ and Clang 3.2+
+     - Predator currently supports GCC 4.1.2+
      - the other analyzers are known to work with GCC 4.6.4+
      - try to install 'g++' on Ubuntu, or 'gcc-c++' on Fedora, if missing
 
@@ -94,6 +95,60 @@ running the following script:
 
     echo please help | gcc -fplugin=libfa.so -fplugin-arg-libfa-help -xc -
 
+Building from sources against the system LLVM [experimental]
+=============================================================
+The currently supported version of LLVM is 3.7 and the test-suite is guaranteed
+to fully succeed only against this version of LLVM.
+
+(1) Install all dependences of Predator
+---------------------------------------
+   * C/C++ compiler
+     - Predator currently supports Clang/LLVM 3.7+
+     - try to install 'llvm llvm-libs clang' on Fedora, if missing
+
+   * CMake 2.8+ and Boost libraries 1.37+
+     - same as for GCC
+
+   * LLVM develop library and header files
+     - on Fedora provided by a package called 'llvm-devel'
+
+(2) Build Predator from sources
+-------------------------------
+You can use the 'switch-host-llvm.sh' script to rebuild Code Listener and
+Predator against a LLVM build of your choice.  For details, please run
+'switch-host-llvm.sh' without any arguments.  The script needs to be run in the
+same directory as this README is.  If it fails, make sure your environment is
+sane.  Especially check the PATH and LD_LIBRARY_PATH environment variables.
+On recent Linux distributions, you can simply use the following command:
+
+    make llvm
+or
+    ./switch-host-llvm.sh /usr/share/llvm/cmake
+
+(3) Usage
+---------
+Create bitecode file:
+
+    clang -g -S -emit-llvm source.c -o source.bc
+
+Starting analysis:
+
+    opt source.bc -o /dev/null -lowerswitch -load ./sl_build/libsl.so -sl -help
+
+Or directly (without additional options) [only on Linux]:
+
+	clang -g source.c -Xclang -load -Xclang ./sl_build/libsl.so
+
+Dependencies for Darwin (MacOSX)
+================================
+GCC plug-in has .so suffix.  You can install some of these dependencies using
+Homebrew available at https://brew.sh/:
+
+    brew install cmake boost boost-build
+    brew install gcc@6                   # only for GCC plug-in
+    brew install coreutils               # only for scripts: gtimeout, gstdbuf
+
+The currently supported version of GCC is 6.5.0.
 
 Building GCC from sources [emergency solution]
 ==============================================
