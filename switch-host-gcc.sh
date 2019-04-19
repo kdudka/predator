@@ -41,6 +41,9 @@ status_update() {
     tty >/dev/null && printf "\033]0;%s\a" "$*"
 }
 
+# number of processor units
+NCPU="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+
 # check the given GCC_HOST
 GCC_HOST="$1"
 if test "/" != "${GCC_HOST:0:1}"; then
@@ -77,7 +80,7 @@ build_analyzer() {
         || return $?
 
     status_update "Checking whether $2 works"
-    $MAKE -C $1 check CTEST='ctest -j9'
+    $MAKE -C $1 check CTEST="ctest -j${NCPU}"
 }
 
 build_analyzer sl Predator                          || exit $?

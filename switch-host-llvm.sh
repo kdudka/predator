@@ -38,6 +38,9 @@ status_update() {
     tty >/dev/null && printf "\033]0;%s\a" "$*"
 }
 
+# number of processor units
+NCPU="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+
 # check the given LLVM_DIR
 LLVM_DIR="$1"
 test "/" == "${LLVM_DIR:0:1}" \
@@ -69,7 +72,7 @@ build_analyzer() {
         || return $?
 
     status_update "Checking whether $2 works"
-    $MAKE -C $1 check CMAKE="cmake -D ENABLE_LLVM=ON" CTEST="ctest -j9"
+    $MAKE -C $1 check CMAKE="cmake -D ENABLE_LLVM=ON" CTEST="ctest -j${NCPU}"
 }
 
 build_analyzer sl Predator                          || exit $?
