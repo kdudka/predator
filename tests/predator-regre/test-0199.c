@@ -10,20 +10,20 @@ typedef struct {
     int item;
     struct stack_item *next;
   } *head;
-} stack_t;
+} stack_type;
 
-void stack_init(stack_t * stack)
+void stack_init(stack_type * stack)
 {
   stack->head = NULL;
   stack->item_count = 0;
 }
 
-bool stack_empty(stack_t const * stack)
+bool stack_empty(stack_type const * stack)
 {
   return stack->item_count == 0;
 }
 
-bool stack_pop(stack_t * stack)
+bool stack_pop(stack_type * stack)
 {
   if (stack->item_count == 0){
       return false;
@@ -36,7 +36,7 @@ bool stack_pop(stack_t * stack)
   return true;
 }
 
-bool stack_push(stack_t * stack, int item)
+bool stack_push(stack_type * stack, int item)
 {
   if (stack->item_count == 0) {
     stack->head = malloc(sizeof(struct stack_item));
@@ -62,17 +62,17 @@ bool stack_push(stack_t * stack, int item)
   return true;
 }
 
-unsigned int stack_size(stack_t const *stack)
+unsigned int stack_size(stack_type const *stack)
 {
   return stack->item_count;
 }
 
-int stack_top(stack_t const * stack)
+int stack_top(stack_type const * stack)
 {
   return stack->head->item;
 }
 
-void stack_clear(stack_t *stack)
+void stack_clear(stack_type *stack)
 {
   struct stack_item *stack_item;
   while ((stack_item = stack->head) != NULL) {
@@ -85,7 +85,7 @@ void stack_clear(stack_t *stack)
 
 int main(void)
 {
-  stack_t stack;
+  stack_type stack;
   stack_init(&stack);
 
   printf("Pushing items: ");
