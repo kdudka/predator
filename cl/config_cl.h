@@ -27,8 +27,9 @@
 
 /**
  * if 1, print amount of allocated memory on certain places when in verbose mode
+ * malloc.h doesn't work properly on Darwin
  */
-#ifndef NDEBUG
+#if !defined NDEBUG && !defined (__APPLE__)
 #   define DEBUG_MEM_USAGE                  1
 #else
 #   define DEBUG_MEM_USAGE                  0
