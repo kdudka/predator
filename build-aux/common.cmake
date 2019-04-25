@@ -18,8 +18,6 @@
 if(APPLE)
     # on Darwin linking the plug-ins fails on undefined references
     set(CMAKE_SHARED_LINKER_FLAGS "-flat_namespace -undefined suppress")
-    # or better used cmake >=3.0
-    set(CMAKE_MACOSX_RPATH 1)
 endif()
 
 # CMake on Darwin would otherwise use .dylib suffix, which breaks GCC arg parser
@@ -175,7 +173,14 @@ if(NOT ENABLE_LLVM)
     # CMake cannot build shared libraries consisting of static libraries only
     set(EMPTY_C_FILE ${PROJECT_BINARY_DIR}/empty.c)
     if (NOT EXISTS ${EMPTY_C_FILE})
-        file(WRITE ${EMPTY_C_FILE} "extern int foo;\n")
+        # this will recursively pull all needed symbols from the static libraries
+        file(WRITE ${EMPTY_C_FILE} "struct plugin_name;
+    struct plugin_gcc_version;
+    extern int plugin_init(struct plugin_name *, struct plugin_gcc_version *);\n
+    void __cl_easy_stub(void)
+    {
+        plugin_init((struct plugin_name *)0, (struct plugin_gcc_version *)0);
+    }\n")
     endif()
 endif()
 
@@ -202,12 +207,14 @@ macro(CL_BUILD_COMPILER_PLUGIN PLUGIN ANALYZER LIBCL_PATH)
         find_library(CLLLVM_LIB clllvm PATHS ${LIBCL_PATH} NO_DEFAULT_PATH)
     endif()
 
-    # this will recursively pull all needed symbols from the static libraries
-    if(NOT APPLE)
-        set_target_properties(${PLUGIN} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
-    else()
-        # on Darwin entry symbol doesn't work properly, load everything
-        set_target_properties(${PLUGIN} PROPERTIES LINK_FLAGS -Wl,-all_load)
+    if(ENABLE_LLVM)
+        # this will recursively pull all needed symbols from the static libraries
+        if(NOT APPLE)
+            set_target_properties(${PLUGIN} PROPERTIES LINK_FLAGS -Wl,--entry=plugin_init)
+        else()
+            # on Darwin entry symbol doesn't work properly, load everything
+            set_target_properties(${PLUGIN} PROPERTIES LINK_FLAGS -Wl,-all_load)
+        endif()
     endif()
 
     # link the static libraries all together
