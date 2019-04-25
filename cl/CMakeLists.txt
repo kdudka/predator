@@ -16,7 +16,7 @@
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
 # project metadata
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 project(cl C CXX)
 enable_testing()
 

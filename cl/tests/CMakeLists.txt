@@ -30,9 +30,9 @@ CL_BUILD_COMPILER_PLUGIN(chk_pt chk_pt_core "")
 add_library(cl_smoke_test_core STATIC cl_smoke_test.cc)
 CL_BUILD_COMPILER_PLUGIN(cl_smoke_test cl_smoke_test_core "")
 
-# get the full paths of plugins
-get_property(VK_PLUG TARGET chk_var_killer PROPERTY LOCATION)
-get_property(PT_PLUG TARGET chk_pt         PROPERTY LOCATION)
+# set the full paths of plugins
+set(VK_PLUG ${cl_BINARY_DIR}/tests/libchk_var_killer${CMAKE_SHARED_LIBRARY_SUFFIX})
+set(PT_PLUG ${cl_BINARY_DIR}/tests/libchk_pt${CMAKE_SHARED_LIBRARY_SUFFIX})
 set(PLUG "${VK_PLUG}")
 
 message(STATUS "VK_PLUG: ${VK_PLUG}")

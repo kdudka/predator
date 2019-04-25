@@ -16,7 +16,7 @@
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
 # project metadata
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.0)
 project(sl C CXX)
 enable_testing()
 
@@ -83,8 +83,8 @@ add_library(predator STATIC
 # build compiler plug-in (libsl.so/.dylib)
 CL_BUILD_COMPILER_PLUGIN(sl predator ../cl_build)
 
-# get the full path of libsl.so/.dylib
-get_property(SL_PLUG TARGET sl PROPERTY LOCATION)
+# set the full path of libsl.so/.dylib
+set(SL_PLUG ${cl_BINARY_DIR}/tests/libsl${CMAKE_SHARED_LIBRARY_SUFFIX})
 message (STATUS "SL_PLUG: ${SL_PLUG}")
 
 if(ENABLE_LLVM)
