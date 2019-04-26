@@ -100,7 +100,6 @@ run_gcc() {
         return 1
     fi
 
-    # FIXME: 'stdbuf' is not available on Darwin
     "$GCC_HOST" $COMPILE_OPTS -o $SINK                              \
         -fplugin="$SL_PLUG" -fplugin-arg-libsl-pid-file="$pidfile"  \
         -fplugin-arg-libsl-args=error_label:ERROR $SL_OPTS "$@"     \
@@ -128,7 +127,6 @@ run_llvm() {
         return 1
     fi
 
-    # FIXME: 'stdbuf' is not available on Darwin
     "$CLANG_HOST" $COMPILE_OPTS -emit-llvm "$@" -g -o -    \
         | "$OPT_HOST" -o $SINK                             \
         -lowerswitch                                       \
@@ -157,7 +155,6 @@ run_tool() {
 }
 
 # colorize the output
-# FIXME: 'stdbuf' is not available on Darwin
 run_tool "$@" | ${STDBUF} --output=L sed -Ee 's| \['$PLUGPATTERN'\]$||'        \
         -e "s|^/.*/predator[^/]*/||"                                           \
         -e "s|(^.*) \[internal location\]\$|$S\1$N|"                           \
