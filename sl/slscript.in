@@ -202,7 +202,6 @@ wait "$!"
 EC="$?"
 test 0 = "$EC" || exit $EC
 
-# FIXME: 'timeout' is not available on Darwin
 if test x1 = "x$SL_PLOT"; then
     # visualize graphs
     printf "graph visualization in progress ... "
