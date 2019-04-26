@@ -16,7 +16,12 @@
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
 # project metadata
-cmake_minimum_required(VERSION 3.0)
+if(APPLE)
+    # because of MACOSX_RPATH
+    cmake_minimum_required(VERSION 3.0)
+else()
+    cmake_minimum_required(VERSION 2.6)
+endif()
 project(cl C CXX)
 enable_testing()
 
