@@ -28,5 +28,6 @@ CXXFLAGS += -pedantic -Wall -Wextra -Wno-variadic-macros -Werror -I../include
 check: $(C_HEADERS) $(CXX_HEADERS)
 $(C_HEADERS):
 	$(CC) $(CFLAGS) -o $(SINK) -c $@
+	$(CXX) $(CFLAGS) -o $(SINK) -c $@
 $(CXX_HEADERS):
 	$(CXX) $(CXXFLAGS) -o $(SINK) -c $@
