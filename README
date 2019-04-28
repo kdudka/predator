@@ -39,9 +39,10 @@ GCC.  However, the Predator plug-in itself is known to work with GCC 4.[5-9].x,
 (1) Install all dependences of Predator and Forester
 ----------------------------------------------------
    * C/C++ compiler
-     - Predator currently supports GCC 4.1.2+
+     - Predator currently supports GCC 4.1.2+ and Clang 3.2+
      - the other analyzers are known to work with GCC 4.6.4+
      - try to install 'g++' on Ubuntu, or 'gcc-c++' on Fedora, if missing
+     - or 'llvm llvm-libs clang' on Fedora, if missing
 
    * CMake 2.8+
      - available at http://www.cmake.org
@@ -102,11 +103,7 @@ to fully succeed only against this version of LLVM.
 
 (1) Install all dependences of Predator
 ---------------------------------------
-   * C/C++ compiler
-     - Predator currently supports Clang/LLVM 3.7+
-     - try to install 'llvm llvm-libs clang' on Fedora, if missing
-
-   * CMake 2.8+ and Boost libraries 1.37+
+   * C/C++ compiler, CMake 2.8+ and Boost libraries 1.37+
      - same as for GCC
 
    * LLVM develop library and header files
