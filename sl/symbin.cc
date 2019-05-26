@@ -270,8 +270,8 @@ bool handleNoOp(
 {
     const CodeStorage::TOperandList &opList = insn.operands;
 
-    // this allows functions with 0-2 parameters
-    if (opList.size() < 2 || 4 < opList.size()) {
+    // this allows functions with 0-3 parameters
+    if (opList.size() < 2 || 5 < opList.size()) {
         emitPrototypeError(&insn.loc, name);
         return false;
     }
@@ -1145,6 +1145,8 @@ BuiltInTable::BuiltInTable()
     tbl_["__builtin___memset_chk"]                  = handleMemset;
     tbl_["__builtin_puts"]                          = handlePuts;
     tbl_["__builtin___strncpy_chk"]                 = handleStrncpy;
+    tbl_["__memcpy_chk"]                            = handleMemcpy;
+    tbl_["__memset_chk"]                            = handleMemset;
 
     // LLVM-specific built-in functions
     tbl_["llvm.memcpy"]                             = handleMemcpy;
@@ -1188,6 +1190,9 @@ BuiltInTable::BuiltInTable()
     der_["__builtin___memmove_chk"].push_back(/* dst  */ 2);
     der_["__builtin___memmove_chk"].push_back(/* src  */ 3);
     der_["__builtin___memset_chk"] .push_back(/* addr */ 2);
+    der_["__memcpy_chk"]           .push_back(/* dst  */ 2);
+    der_["__memcpy_chk"]           .push_back(/* src  */ 3);
+    der_["__memset_chk"]           .push_back(/* addr */ 2);
     der_["llvm.memcpy"]            .push_back(/* dst  */ 2);
     der_["llvm.memcpy"]            .push_back(/* src  */ 3);
     der_["llvm.memmove"]           .push_back(/* dst  */ 2);
@@ -1213,7 +1218,8 @@ bool BuiltInTable::handleBuiltIn(
 
     TMap::const_iterator it = tbl_.find(name);
     if (tbl_.end() == it) {
-        static const char namePrefixNondet[] = "__VERIFIER_nondet_";
+        static const char namePrefixNondet[] = "__VERIFIER_nondet";
+        static const char namePrefixObjSize[] = "llvm.objectsize.i";
         static const size_t namePrefixLength = sizeof(namePrefixNondet) - 1U;
         std::string namePrefix(name);
         if (namePrefixLength < namePrefix.size())
@@ -1221,6 +1227,8 @@ bool BuiltInTable::handleBuiltIn(
 
         if (std::string(namePrefixNondet) == namePrefix)
             hdl = handleNondetInt;
+        else if (std::string(namePrefixObjSize) == namePrefix)
+            hdl = handleNoOp;
         else
             // no fnc name matched as built-in
             return false;
@@ -1253,7 +1261,7 @@ bool fncNameFromOp(
     if (!core.fncFromOperand(&uid, op))
         return false;
 
-    const TStorRef stor = core.sh().stor();
+    TStorRef stor = core.sh().stor();
     const CodeStorage::Fnc *fnc = stor.fncs[uid];
     if (!fnc->def.data.cst.data.cst_fnc.is_extern)
         // only external functions are candidates for built-in functions
