@@ -6,8 +6,16 @@ if test -z "$1" || test ! -e "$1"; then
     exit 1
 fi
 
+if [ `uname` == Darwin ]; then
+    ABSPATH='realpath'
+    TR='tr -s'
+else
+    ABSPATH='readlink -f'
+    TR='tr --squeeze-repeats'
+fi
+
 # include common code base
-topdir="`dirname "$(readlink -f "$SELF")"`/.."
+topdir="`dirname "$(${ABSPATH} "$SELF")"`/.."
 source "$topdir/build-aux/cclib.sh"
 
 # basic setup
@@ -16,33 +24,80 @@ SL_DIR="$topdir/sl"
 SL_PLUG='@SL_PLUG@'
 GCC_HOST='@GCC_HOST@'
 
+# number of processor units
+NCPU="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+
 # attempt to make
-make -C "$CL_DIR" -s -j5 'CMAKE=cmake -D CL_DEBUG=ON' || exit $?
-make -C "$SL_DIR" -s -j5 'CMAKE=cmake -D SL_DEBUG=ON' || exit $?
+export ENABLE_LLVM='@ENABLE_LLVM@'
+if [ -z "$ENABLE_LLVM" ]; then
+    make -C "$CL_DIR" -s -j${NCPU} 'CMAKE=cmake -D CL_DEBUG=ON' || exit $?
+    make -C "$SL_DIR" -s -j${NCPU} 'CMAKE=cmake -D SL_DEBUG=ON' || exit $?
 
-# initial checks
-find_gcc_host
-find_cc1_host
+    # initial checks
+    export ARG_BASE="-fplugin-arg-libsl"
+    export GCC_HOST='@GCC_HOST@'
+    find_gcc_host
+    find_cc1_host
+else
+    make -C "$CL_DIR" -s -j${NCPU} 'CMAKE=cmake -D CL_DEBUG=ON -D ENABLE_LLVM=ON' || exit $?
+    make -C "$SL_DIR" -s -j${NCPU} 'CMAKE=cmake -D SL_DEBUG=ON -D ENABLE_LLVM=ON' || exit $?
+
+    # initial checks
+    export SL_VERBOSE=3
+    export ARG_BASE=""
+    export OPT_HOST='@OPT_HOST@'
+    export CLANG_HOST='@CLANG_HOST@'
+    find_clang_host
+    find_opt_host
+fi
+
 find_plug SL_PLUG sl Predator
-
-# use gdb by default
-test -z "$GDB" && GDB=gdb
 
 # use verbose level 1 by default
 test -z "$SL_VERBOSE" && SL_VERBOSE=1
 
 # use pp code listener by default
-test -z "$SL_OPTS" && SL_OPTS="-fplugin-arg-libsl-dump-pp"
+test -z "$SL_OPTS" && SL_OPTS="${ARG_BASE}-dump-pp"
 
-# prepare the command line
-RUN="$GDB --quiet -x $topdir/sl/gdbpp-loader.gdb --args $CC1_HOST \"$1\" \
-    -I$topdir/include/predator-builtins -DPREDATOR \
-    -dumpbase test.c -quiet -o /dev/null \
-    -m32 -O0 -Wall -Wextra \
-    -fplugin=$SL_PLUG \
-    -fplugin-arg-libsl-verbose=$SL_VERBOSE \
-    $SL_OPTS"
+CMD_OPTS="-I$topdir/include/predator-builtins -DPREDATOR -o /dev/null \
+          -m32 -g -O0 -Wall -Wextra"
 
-RUN="`printf "%s\n" "$RUN" | tr --squeeze-repeats ' '`"
+if [ `uname` == Darwin ]; then
+    # use lldb by default
+	# for loading symbols: target modules add sl_build/libsl.so/dylib
+    test -z "$LLDB" && LLDB=lldb
+
+    if [ -z "$ENABLE_LLVM" ]; then
+        RUN="$LLDB -- $CC1_HOST \"$1\" \
+            $CMD_OPTS \
+            -fplugin=$SL_PLUG \
+            -fplugin-arg-libsl-verbose=$SL_VERBOSE \
+            $SL_OPTS"
+    else
+        RUN="$CLANG_HOST $CMD_OPTS -emit-llvm -c \"$1\" -o tmp.ll; \
+            $LLDB -- "$OPT_HOST" tmp.ll -o $SINK -lowerswitch \
+            -load "$SL_PLUG" -sl \
+            -verbose=$SL_VERBOSE $SL_OPTS"
+    fi
+else
+    # use gdb by default
+    test -z "$GDB" && GDB=gdb
+
+    # prepare the command line
+    RUN="$GDB --quiet -x $topdir/sl/gdbpp-loader.gdb --args $CC1_HOST \"$1\" \
+        -I$topdir/include/predator-builtins -DPREDATOR \
+        -dumpbase test.c -quiet -o /dev/null \
+        -m32 -O0 -Wall -Wextra \
+        -fplugin=$SL_PLUG \
+        -fplugin-arg-libsl-verbose=$SL_VERBOSE \
+        $SL_OPTS"
+fi
+
+RUN="`printf "%s\n" "$RUN" | ${TR} ' '`"
 printf "\n\n%s\n\n" "$RUN"
 eval "$RUN"
+
+if [ -z "$ENABLE_LLVM" ]; then
+    rm -f tmp.ll
+fi
+

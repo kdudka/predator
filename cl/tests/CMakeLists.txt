@@ -18,25 +18,27 @@
 # tweak include dirs, etc.
 add_definitions("-I../../include -fPIC")
 
-# compile libchk_var_killer.so
+# compile libchk_var_killer.so/.dylib
 add_library(chk_var_killer_core STATIC chk_var_killer.cc)
 CL_BUILD_COMPILER_PLUGIN(chk_var_killer chk_var_killer_core "")
 
-# compile libchk_pt.so
+# compile libchk_pt.so/.dylib
 add_library(chk_pt_core STATIC chk_pt.cc)
 CL_BUILD_COMPILER_PLUGIN(chk_pt chk_pt_core "")
 
-# compile libcl_smoke_test.so
+# compile libcl_smoke_test.so/.dylib
 add_library(cl_smoke_test_core STATIC cl_smoke_test.cc)
 CL_BUILD_COMPILER_PLUGIN(cl_smoke_test cl_smoke_test_core "")
 
 # get the full paths of plugins
-get_property(VK_PLUG TARGET chk_var_killer PROPERTY LOCATION)
-get_property(PT_PLUG TARGET chk_pt         PROPERTY LOCATION)
+get_property(VK_PLUG    TARGET chk_var_killer   PROPERTY LOCATION)
+get_property(PT_PLUG    TARGET chk_pt           PROPERTY LOCATION)
+get_property(SMOKE_PLUG TARGET cl_smoke_test    PROPERTY LOCATION)
 set(PLUG "${VK_PLUG}")
 
 message(STATUS "VK_PLUG: ${VK_PLUG}")
 message(STATUS "PT_PLUG: ${PT_PLUG}")
+message(STATUS "SMOKE_PLUG: ${SMOKE_PLUG}")
 
 set(PRED_INCL_DIR "${cl_SOURCE_DIR}/../include/predator-builtins/")
 
@@ -50,22 +52,23 @@ set(cmd_cc1 "-S -emit-llvm")
 #set(cmd_cc1 "${cmd_cc1} -femit-all-decls")
 set(CFLAGS "-std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS")
 
-# basic set of the options to compile llvm/clplug.cc with libc_test.so loaded
+# basic set of the options to compile llvm/clplug.cc with SMOKE_PLUG loaded
 set(cmd "${CLANG_HOST} ${CFLAGS} ${cmd_cc1}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
+set(cmd "${cmd} -I${LLVM_INCLUDE_DIRS}")
 set(cmd "${cmd} ${cl_SOURCE_DIR}/llvm/clplug.cc")
-set(cmd "${cmd} -o - | ${OPT_HOST} -o /dev/null -lowerswitch")
-set(cmd "${cmd} -load ${cl_BINARY_DIR}/tests/libcl_smoke_test.so -cl")
+set(cmd "${cmd} -g -o - | ${OPT_HOST} -o /dev/null -lowerswitch")
+set(cmd "${cmd} -load ${SMOKE_PLUG} -cl_smoke_test")
 set(cmd_base "${cmd}")
 
 # smoke test #1
 set(cmd "${cmd_base} -dry-run")
-#add_test_wrap("smoke-test-01" "${cmd}")
+add_test_wrap("smoke-test-01" "${cmd}")
 
 # smoke test #2
 set(cmd "${cmd_base} | diff -up ${cl_SOURCE_DIR}/tests/cl_smoke_test.out -")
-#add_test_wrap("smoke-test-02" "${cmd}")
+add_test_wrap("smoke-test-02" "${cmd}")
 
 # compile self #1
 set(cmd "${cmd_base}")
@@ -76,16 +79,16 @@ set(cmd "${cmd} -type-dot=/dev/null")
 set(cmd "${cmd} -verbose=2")
 set(cmd "${cmd} -dry-run")
 set(cmd_all "${cmd}")
-#add_test_wrap("compile-self-01-dry-run" "${cmd}")
+add_test_wrap("compile-self-01-dry-run" "${cmd}")
 
-# compile self #2
-set(cmd "${cmd_base} -load ${cl_BINARY_DIR}/tests/libchk_var_killer.so -cl")
+# compile self #2 doesn't load 2 almost the same cl plug-ins
+set(cmd "${cmd_base} -load ${VK_PLUG} -chk_var_killer")
 #add_test_wrap("compile-self-02-var-killer" "${cmd}")
 
 # compile self #3 runs both plug-ins through valgrind and it is optional
 if(TEST_WITH_VALGRIND)
     set(cmd "valgrind --trace-children=yes --error-exitcode=7 ${cmd}")
-#    add_test_wrap("compile-self-03-valgrind" "${cmd}")
+    add_test_wrap("compile-self-03-valgrind" "${cmd}")
 endif()
 
 # generic template for var-killer tests
@@ -93,7 +96,7 @@ macro(add_vk_test id)
     set(cmd "${CLANG_HOST} ${cmd_cc1}")
     set(cmd "${cmd} -I${PRED_INCL_DIR}")
     set(cmd "${cmd} ${cl_SOURCE_DIR}/tests/data/vk-${id}.c")
-    set(cmd "${cmd} -o - | ${OPT_HOST} -o /dev/null -lowerswitch")
+    set(cmd "${cmd} -g -o - | ${OPT_HOST} -o /dev/null -lowerswitch")
     set(cmd "${cmd} -load ${VK_PLUG} -chk_var_killer")
     add_test_wrap("var-killer-${id}" "${cmd}")
 endmacro()
@@ -103,20 +106,20 @@ macro(add_pt_test id)
     set(cmd "${cmd} -I${cl_SOURCE_DIR}")
     set(cmd "${cmd} -DNDEBUG")
     set(cmd "${cmd} -I${PRED_INCL_DIR}")
-    set(cmd "${cmd} -o - | ${OPT_HOST} -o /dev/null -lowerswitch")
+    set(cmd "${cmd} -g -o - | ${OPT_HOST} -o /dev/null -lowerswitch")
     set(cmd "${cmd} -load ${PT_PLUG} -chk_pt")
 
-    add_test_wrap("points-to-${id}" "${cmd}")
+#    add_test_wrap("points-to-${id}" "${cmd}")
 endmacro()
 else()
-# basic set of the options to compile gcc/clplug.c with libc_test.so loaded
+# basic set of the options to compile gcc/clplug.c with SMOKE_PLUG loaded
 set(cmd "${GCC_HOST} ${CFLAGS}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
 set(cmd "${cmd} -I${GCC_INC_DIR}")
 set(cmd "${cmd} -xc++ -c ${cl_SOURCE_DIR}/gcc/clplug.c")
 set(cmd "${cmd} -o /dev/null")
-set(cmd "${cmd} -fplugin=${cl_BINARY_DIR}/tests/libcl_smoke_test.so")
+set(cmd "${cmd} -fplugin=${SMOKE_PLUG}")
 set(cmd_base "${cmd}")
 
 # smoke test #1
@@ -139,7 +142,7 @@ set(cmd_all "${cmd}")
 add_test_wrap("compile-self-01-dry-run" "${cmd}")
 
 # compile self #2
-set(cmd "${cmd_base} -fplugin=${cl_BINARY_DIR}/tests/libchk_var_killer.so")
+set(cmd "${cmd_base} -fplugin=${VK_PLUG}")
 add_test_wrap("compile-self-02-var-killer" "${cmd}")
 
 # compile self #3 runs both plug-ins through valgrind and it is optional
