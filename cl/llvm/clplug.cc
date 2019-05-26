@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015 Veronika Sokova <xsokov00@stud.fit.vutbr.cz>
+ * Copyright (C) 2014-2019 Veronika Sokova <isokova@fit.vutbr.cz>
  *
  * This file is part of llvm/predator.
  *
@@ -44,6 +44,10 @@ extern "C" {
 
 #if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR >= 4)
 #   define LLVM_HOST_4_OR_NEWER
+#endif
+
+#if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR >= 6)
+#   define LLVM_HOST_6_OR_NEWER
 #endif
 
 #if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR >= 7)
@@ -126,7 +130,9 @@ static struct cl_type allocaFncType = {
     3,                             // item_cnt - return + size + align
     allocaArg,                     // *items
     0,                             // array_size
-    false                          // is_unsigned
+    false,                         // is_unsigned
+    false,                         // is_const
+    CL_PTR_TYPE_NOT_PTR            // ptr_type
 };
 
 static std::string description = "\n   "+ fullName + " [code listener SHA1 " + CL_GIT_SHA1 + "]\n"
@@ -182,7 +188,7 @@ static cl::opt<int> CLVerbose("verbose",
 /// just simple text, if verbose=3
 #define CL_DEBUG3(toStream) do {     \
     if (CLVerbose < 3)               \
-    break;                           \
+        break;                       \
     errs() << toStream;              \
 } while (0)
 
@@ -411,7 +417,7 @@ bool CLPass::doInitialization(Module &) {
 bool CLPass::runOnModule(Module &M) {
 
     if (CLVerbose > 2)
-        M.dump();
+        M.print(errs(), nullptr);
 
     DL = new DataLayout(&M);
 
@@ -460,7 +466,7 @@ bool CLPass::runOnModule(Module &M) {
 
     delete DL;
     CL_DEBUG("end of convert");
-    return false;
+    return true; // true if module has changed
 }
 
 
@@ -534,7 +540,8 @@ struct cl_type *CLPass::handleType(Type *t) {
             clt->item_cnt = 1;
 
             clt->items = new struct cl_type_item [1];
-            clt->items[0].type = handleType(t->getSequentialElementType());
+
+            clt->items[0].type = handleType(cast<PointerType>(t)->getElementType());
         }
             break;
 
@@ -698,7 +705,7 @@ void CLPass::handleFunction(Function *F) {
     for (Function::arg_iterator FA = F->arg_begin(), FAE = F->arg_end(); FA != FAE; ++FA)
     { // args
         struct cl_operand arg;
-        handleOperand(FA, &arg);
+        handleOperand(cast<Value>(FA), &arg);
         cl->fnc_arg_decl(cl, FA->getArgNo()+1, &arg); // from 1->
     }
     // set entry label
@@ -909,6 +916,7 @@ void CLPass::handleGlobalVariable(GlobalVariable *gv, struct cl_var *clv) {
             break;
 
         case Value::ConstantExprVal: {
+            // create instruction without parent - must remove
             Instruction *ci = cast<ConstantExpr>(c)->getAsInstruction();
             if (isStringLiteral(ci)) {
                 // string literal
@@ -924,6 +932,11 @@ void CLPass::handleGlobalVariable(GlobalVariable *gv, struct cl_var *clv) {
                         << ci->getOpcodeName());
                 clv->initialized = false;
             }
+#ifdef LLVM_HOST_6_OR_NEWER
+            ci->deleteValue();
+#else
+            delete ci;
+#endif
             break;
         }
 
@@ -1002,6 +1015,7 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
 
     struct cl_initializer **addrInit = &(clv->initial);
     struct cl_operand *dst, *src;
+    bool notEmptyAcc = false;
 
     std::queue< Ttrio > elmFIFO;
     Ttrio act = {c, nullptr, nullptr}; // actual element
@@ -1015,24 +1029,36 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
         if (!tt->isAggregateType()) {
             // elementary type -> insert assign
 
-            // source operand
+            // source operand and his accessor
             src = new struct cl_operand;
+            notEmptyAcc = false;
             if (isa<ConstantExpr>(act.elm)) {
+                // create instruction without parent - must remove
                 Instruction *ci = dyn_cast<ConstantExpr>(act.elm)->getAsInstruction();
                 if (isStringLiteral(ci)) {
-                    handleOperand(act.elm, src);
+                    notEmptyAcc = handleOperand(act.elm, src);
                 } else if (isa<GetElementPtrInst>(ci)) {
-                    handleGEPOperand(ci, src);
+                    notEmptyAcc = handleGEPOperand(ci, src);
                 } else if (ci->isCast()) {
-                    handleCastOperand(ci, src);
+                    notEmptyAcc = handleCastOperand(ci, src);
                 } else {
                     CL_WARN("unsupported global initializer with expression: "
                             << ci->getOpcodeName());
                     delete src; freeAccessor(act.firstAcc);
+#ifdef LLVM_HOST_6_OR_NEWER
+                    ci->deleteValue();
+#else
+                    delete ci;
+#endif
                     continue;
                 }
+#ifdef LLVM_HOST_6_OR_NEWER
+                ci->deleteValue();
+#else
+                delete ci;
+#endif
             } else {
-                handleOperand(act.elm, src);
+                notEmptyAcc = handleOperand(act.elm, src);
             }
 
             // destination operand
@@ -1077,6 +1103,8 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
                 nxt.firstAcc = act.firstAcc;
                 nxt.addrNextAcc = act.addrNextAcc;
                 depthCopyAccessor(&nxt.firstAcc, &nxt.addrNextAcc);
+                if (notEmptyAcc && act.firstAcc->code == CL_ACCESSOR_REF)
+                    CL_ERROR("accessor after &");
             }
 
             *(nxt.addrNextAcc) = tmp;
@@ -1095,7 +1123,9 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
                     getIntOperand(i, tmp->data.array.index);
                     break;
 
-                default: break;
+                default:
+                    CL_WARN("unsupport accessor for type "<< tmp->type->code);
+                    break;
             }
 
             nxt.addrNextAcc = &(tmp->next);
@@ -1218,18 +1248,30 @@ bool CLPass::handleOperand(Value *v, struct cl_operand *clo) {
             return handleOperand(cast<GlobalAlias>(v)->getAliasee(), clo);
         } else if (isa<ConstantExpr>(v)) {
 
+            // create instruction without parent - must remove
             Instruction *vi = cast<ConstantExpr>(v)->getAsInstruction();
             if (isStringLiteral(vi)) {    // constant literal
                 handleStringLiteral(cast<ConstantDataSequential>((
                                      cast<GlobalVariable>(
-                                      vi->getOperand(0)))->getInitializer()),
+                                      cast<User>(v)->getOperand(0)))->getInitializer()),
                                     clo);
-                clo->type = handleType(vi->getType());
+                clo->type = handleType(v->getType());
             } else {                      // constant expression
                 CL_DEBUG3("CONSTANT EXPR\n");
                 handleInstruction(vi); // recursion
-                return handleOperand(vi, clo);
+                bool retHO = handleOperand(vi, clo);
+#ifdef LLVM_HOST_6_OR_NEWER
+                vi->deleteValue();
+#else
+                delete vi;
+#endif
+                return retHO;
             }
+#ifdef LLVM_HOST_6_OR_NEWER
+            vi->deleteValue();
+#else
+            delete vi;
+#endif
 
         } else {                          // just constant
             handleBasicConstant(v, clo);
@@ -1910,6 +1952,7 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
 
     GetElementPtrInst *I = cast<GetElementPtrInst>(v);
     bool notEmptyAcc = handleOperand(I->getPointerOperand(), src); // Operand(0)
+    bool firstRefAcc = notEmptyAcc && src->accessor->code == CL_ACCESSOR_REF;
 
     struct cl_accessor **addrNextAcc = (notEmptyAcc)? &(src->accessor->next) : &(src->accessor);
     struct cl_accessor *acc;
@@ -1940,9 +1983,20 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
                 // offset: constant, possible variable
                 int num = 0;
                 if (isa<ConstantInt>(v)) {
-                    src->type = const_cast<struct cl_type *>(src->type->items[0].type);
-                    acc->code = CL_ACCESSOR_DEREF;
                     num = cast<ConstantInt>(v)->getValue().getSExtValue();
+                    src->type = const_cast<struct cl_type *>(src->type->items[0].type);
+
+                    if (firstRefAcc && num == 0) { // because *& -> empty accessor
+                        if (src->type != src->accessor->type) {
+                            src->type = src->accessor->type;
+                            CL_WARN("different types after removing the accessor *&");
+                        }
+                        freeAccessor(src->accessor); src->accessor = nullptr;
+                        addrNextAcc = &(src->accessor);
+                        continue;
+                    }
+                    acc->code = CL_ACCESSOR_DEREF;
+
                     if (num != 0) { // + constant offset
                         addrNextAcc = &(acc->next);
                         acc = new struct cl_accessor;
@@ -1976,6 +2030,7 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
                 break;
         }
         addrNextAcc = &(acc->next);
+        firstRefAcc = false; // after one cycle
     }
 
     { // is ...PtrInst, always return REF
@@ -2121,8 +2176,8 @@ bool CLPass::doFinalization (Module &) {
 char CLPass::ID;
 static RegisterPass<CLPass> X(plugName.c_str(), fullName.c_str());
 
-#ifdef LLVM_HOST_3_7_OR_NEWER
-// registraction clang plug-in without cmd options
+#if !defined LLVM_HOST_3_7_OR_NEWER && !defined (__APPLE__)
+// registraction clang plug-in without cmd options (not on Darwin)
 static void registerCLPass(const PassManagerBuilder &pb,
                            legacy::PassManagerBase &pm) 
 {

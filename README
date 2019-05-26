@@ -97,8 +97,9 @@ running the following script:
 
 Building from sources against the system LLVM [experimental]
 =============================================================
-The currently supported version of LLVM is 3.7 and the test-suite is guaranteed
-to fully succeed only against this version of LLVM.
+The currently supported version of LLVM is 7.0.1 and the test-suite is
+guaranteed to fully succeed only against this version of LLVM after applying
+the patch in 'build-aux'.
 
 (1) Install all dependences of Predator
 ---------------------------------------
@@ -137,14 +138,17 @@ Or directly (without additional options) [only on Linux]:
 
 Dependencies for Darwin (MacOSX)
 ================================
-GCC plug-in has .so suffix.  You can install some of these dependencies using
-Homebrew available at https://brew.sh/:
+GCC plug-in has .so suffix and LLVM plug-in has .dylib suffix as usual for
+Darwin.  You can install some of these dependencies using Homebrew available at
+https://brew.sh/:
 
     brew install cmake boost boost-build
     brew install gcc@6                   # only for GCC plug-in
+    brew install llvm@7                  # only for LLVM plug-in
     brew install coreutils               # only for scripts: gtimeout, gstdbuf
 
 The currently supported version of GCC is 6.5.0.
+The currently supported version of LLVM is 7.0.1.
 
 Building GCC from sources [emergency solution]
 ==============================================
