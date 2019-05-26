@@ -16,12 +16,7 @@
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
 # project metadata
-if(APPLE)
-    # because of MACOSX_RPATH
-    cmake_minimum_required(VERSION 3.0)
-else()
-    cmake_minimum_required(VERSION 2.6)
-endif()
+cmake_minimum_required(VERSION 2.6)
 project(sl C CXX)
 enable_testing()
 
@@ -104,11 +99,12 @@ if(ENABLE_LLVM)
     # helping scripts for llvm
     configure_file(${PROJECT_SOURCE_DIR}/slscript.in  ${PROJECT_BINARY_DIR}/slllvm    @ONLY)
     configure_file(${PROJECT_SOURCE_DIR}/slllvmv.in   ${PROJECT_BINARY_DIR}/slllvmv   @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/sldbg.in     ${PROJECT_BINARY_DIR}/sldbg     @ONLY)
 else()
     # helping scripts for gcc
     configure_file(${PROJECT_SOURCE_DIR}/slscript.in  ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
     configure_file(${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
-    configure_file(${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
+    configure_file(${PROJECT_SOURCE_DIR}/sldbg.in     ${PROJECT_BINARY_DIR}/sldbg     @ONLY)
     configure_file(${PROJECT_SOURCE_DIR}/probe.sh.in  ${PROJECT_BINARY_DIR}/probe.sh  @ONLY)
 
     configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
@@ -133,59 +129,58 @@ if(ENABLE_LLVM) # -----------------------------------------------------------
 option(LLVM_OK_TEST "" ON)
 if(LLVM_OK_TEST)
 set(tests
-              0002 0003 0004 0005 0006 0007 0008
+         0001 0002 0003 0004 0005 0006 0007 0008 0009
     0010      0012 0013      0015 0016 0017 0018 0019
-    0020           0023 0024           0027      0029
-    0030 0031 0032 0033 0034           0037 0038
-         0041 0042 0043 0044      0046      0048
-         0051 0052 0053           0056
-    0060      0062 0063 0064           0067 0068 0069
-         0071           0074 0075 0076 0077
-                   0083 0084 0085 0086 0087
-         0091 0092 0093                          0099
+    0020      0022 0023 0024 0025 0026 0027      0029
+    0030 0031 0032 0033 0034 0035 0036 0037 0038
+    0040 0041 0042 0043 0044 0045 0046 0047 0048 0049
+    0050 0051 0052 0053 0054 0055 0056 0057 0058 0059
+    0060      0062 0063 0064 0065 0066 0067 0068 0069
+    0070 0071           0074 0075 0076 0077      0079
+    0080 0081      0083 0084 0085 0086 0087 0088 0089
+         0091 0092                0096 0097 0098 0099
     0100 0101 0102 0103 0104 0105      0107 0108 0109
-                        0114                0118 0119
-    0120           0123      0125
-         0131
-         0141      0143                     0148 0149
-                   0153 0154 0155           0158 0159
+         0111 0112      0114 0115           0118 0119
+    0120 0121 0122 0123      0125 0126 0127 0128 0129
+    0130 0131
+         0141 0142 0143 0144 0145 0146 0147 0148 0149
+                   0153 0154 0155 0156      0158 0159
     0160 0161 0162 0163 0164      0166
-         0171                0175
+         0171 0172 0173      0175 0176
                              0185           0188
-    0190           0193 0194           0197 0198
+    0190 0191 0192 0193 0194 0195 0196 0197 0198 0199
          0201 0202 0203 0204 0205
-                        0214 0215      0217 0218 0219
+                             0215                0219
     0220                     0225 0226 0227 0228 0229
     0230 0231 0232 0233 0234      0236 0237 0238
-         0241 0242      0244 0245           0248
+         0241 0242      0244 0245      0247 0248
 
 
-    0400 0401      0403
+
 
               0432
 
-    0500 0501           0504 0505                0509
-    0510      0512           0515           0518
-
+    0500 0501 0502 0503 0504 0505                0509
+    0510 0511 0512           0515      0517
+    0520
          0601 0602 0603 0604 0605 0606 0607 0608 0609
     0610 0611 0612 0613 0614 0615)
 
-# test correct, but different output then gcc-plugin
+# test incorrect
 else()
 set(tests ${tests}
-# track uninit [conditional jump depends on uninitialized value]
-    0025 0026 0036 0047
-# opposite execution branch (inverted condition) or different cycles count or addr of local variable
-    0001 0022 0040 0045 0049 0050 0054 0055 0059 0065
-    0066 0070 0089 0096 0097 0098 0111 0115 0121 0122
-    0126 0127 0128 0129 0130 0156 0196 0199 0200 0247
-    0502 0503 0511 0517 0520
-    0176 0404 0408 0411
-# bad location info
-    0009 0011 0057 0058 0079 0080 0081 0088 0090 0112
-    0144 0145 0146 0147 0172 0173 0195 0208 0221 0223
-# incompletely location info
-    0035 0142 0191 0192 0224 0222 0402
+# unsupported cast function type
+    0200
+# unsupported union
+    0093
+# ok >4 sec -- ok incompletely location info 0035 0142 0191 0192
+    0518
+# preskupit instrukcie pred podmienkou
+    0214 0217 0218
+# sl: data reinterpretation
+    0090
+# sl: missing check overlap
+    0400 0401 0402 0403 0404 0408 0411
 # incorrect output - need analysis
     0014 0028 0039 0061 0072 0073 0078 0082
     0094 0095
@@ -194,7 +189,7 @@ set(tests ${tests}
     0140 0150 0151 0152 0167 0168
     0170 0174 0177 0178 0179
     0180 0181 0182 0183 0184 0186 0187 0189
-    0207 0209 0210 0212
+    0207 0208 0209 0210 0212 0221 0223 0224 0222 # cycles
     0239 0246 # stack.save .restore
     0240 0243
     0300 0302 0316
