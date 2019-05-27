@@ -794,17 +794,17 @@ bool CLPass::isStringLiteral(Instruction *vi) {
 
     if (GetElementPtrInst *gep = dyn_cast<GetElementPtrInst>(vi))
         if (GlobalVariable *gv = dyn_cast<GlobalVariable>(gep->getPointerOperand()))
-            if (ConstantDataSequential *c = dyn_cast<ConstantDataSequential>(gv->getInitializer()))
-                if (gep->hasAllZeroIndices() && // pointer alias
-                    gv->isConstant() &&
+            if (gep->hasAllZeroIndices() && // pointer alias
+                gv->isConstant() &&
 #ifdef LLVM_HOST_3_9_OR_NEWER
-                    gv->hasGlobalUnnamedAddr() &&
+                gv->hasGlobalUnnamedAddr() &&
 #else
-                    gv->hasUnnamedAddr() &&
+                gv->hasUnnamedAddr() &&
 #endif
-                    gv->hasPrivateLinkage() &&
-                    c->isCString() ) // is all necessary?
-                    return true;
+                gv->hasPrivateLinkage())
+                if (ConstantDataSequential *c = dyn_cast<ConstantDataSequential>(gv->getInitializer()))
+                    if (c->isCString())
+                        return true;
     return false;
 }
 
