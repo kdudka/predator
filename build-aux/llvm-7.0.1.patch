@@ -1543,37 +1543,37 @@ index fa5c1158..d45c00a4 100644
  test-0111.c:78: warning: memory leak detected while destroying a variable on stack
 +test-0111.c:79: note: writing heap graph to 'test-0111.c-79-0000.dot'...
 diff --git a/tests/predator-regre/test-0112.err b/tests/predator-regre/test-0112.err
-index 83e9d875..ff3bc5ca 100644
+index 83e9d875..bae1f66f 100644
 --- a/tests/predator-regre/test-0112.err
 +++ b/tests/predator-regre/test-0112.err
 @@ -1,2 +1,2 @@
- test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
--test-0112.c:35: warning: memory leak detected while destroying a variable on stack
-+test-0112.c:37: warning: memory leak detected while destroying a variable on stack
+-test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
+ test-0112.c:35: warning: memory leak detected while destroying a variable on stack
++test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
 diff --git a/tests/predator-regre/test-0112.err.exit_leaks b/tests/predator-regre/test-0112.err.exit_leaks
-index 83e9d875..ff3bc5ca 100644
+index 83e9d875..bae1f66f 100644
 --- a/tests/predator-regre/test-0112.err.exit_leaks
 +++ b/tests/predator-regre/test-0112.err.exit_leaks
 @@ -1,2 +1,2 @@
- test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
--test-0112.c:35: warning: memory leak detected while destroying a variable on stack
-+test-0112.c:37: warning: memory leak detected while destroying a variable on stack
+-test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
+ test-0112.c:35: warning: memory leak detected while destroying a variable on stack
++test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
 diff --git a/tests/predator-regre/test-0112.err.oom b/tests/predator-regre/test-0112.err.oom
-index 83e9d875..ff3bc5ca 100644
+index 83e9d875..bae1f66f 100644
 --- a/tests/predator-regre/test-0112.err.oom
 +++ b/tests/predator-regre/test-0112.err.oom
 @@ -1,2 +1,2 @@
- test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
--test-0112.c:35: warning: memory leak detected while destroying a variable on stack
-+test-0112.c:37: warning: memory leak detected while destroying a variable on stack
+-test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
+ test-0112.c:35: warning: memory leak detected while destroying a variable on stack
++test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
 diff --git a/tests/predator-regre/test-0112.err.uninit b/tests/predator-regre/test-0112.err.uninit
-index 83e9d875..ff3bc5ca 100644
+index 83e9d875..bae1f66f 100644
 --- a/tests/predator-regre/test-0112.err.uninit
 +++ b/tests/predator-regre/test-0112.err.uninit
 @@ -1,2 +1,2 @@
- test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
--test-0112.c:35: warning: memory leak detected while destroying a variable on stack
-+test-0112.c:37: warning: memory leak detected while destroying a variable on stack
+-test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
+ test-0112.c:35: warning: memory leak detected while destroying a variable on stack
++test-0112.c:36: note: writing heap graph to 'test-0112.c-36-0000.dot'...
 diff --git a/tests/predator-regre/test-0115.err b/tests/predator-regre/test-0115.err
 index e69e8433..c1a7835c 100644
 --- a/tests/predator-regre/test-0115.err
@@ -2371,16 +2371,311 @@ index 6f19d2b8..0d6c5e6b 100644
  test-0199.c:86: note: from call of main()
 -test-0199.c:107: warning: ignoring call of undefined function: __builtin_putchar()
 diff --git a/tests/predator-regre/test-0247.err.oom b/tests/predator-regre/test-0247.err.oom
-index 333f328f..19edd3db 100644
+index 333f328f..32ceb5b1 100644
 --- a/tests/predator-regre/test-0247.err.oom
 +++ b/tests/predator-regre/test-0247.err.oom
-@@ -1,5 +1 @@
+@@ -1,4 +1,4 @@
 -test-0247.c:13: error: dereference of NULL value with offset 4294967296B
--test-0247.c:13: error: dereference of NULL value with offset 4B
--test-0247.c:13: error: dereference of NULL value with offset 8B
--test-0247.c:13: error: dereference of NULL value with offset 12B
--test-0247.c:13: error: dereference of NULL value with offset 16B
-+test-0247.c:12: error: dereference of NULL value
++test-0247.c:13: error: dereference of NULL value
+ test-0247.c:13: error: dereference of NULL value with offset 4B
+ test-0247.c:13: error: dereference of NULL value with offset 8B
+ test-0247.c:13: error: dereference of NULL value with offset 12B
+diff --git a/tests/predator-regre/test-0300.err b/tests/predator-regre/test-0300.err
+index 3dc2aa34..1da84b3e 100644
+--- a/tests/predator-regre/test-0300.err
++++ b/tests/predator-regre/test-0300.err
+@@ -94,25 +94,4 @@ test-0300.c:266: note: from call of main()
+ test-0300.c:150: warning: memory leak detected while destroying a variable on stack
+ test-0300.c:282: note: from call of register_cdrom()
+ test-0300.c:266: note: from call of main()
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
++test-0300.c: warning: memory leak detected while destroying a static variable
+diff --git a/tests/predator-regre/test-0300.err.exit_leaks b/tests/predator-regre/test-0300.err.exit_leaks
+index 3dc2aa34..1da84b3e 100644
+--- a/tests/predator-regre/test-0300.err.exit_leaks
++++ b/tests/predator-regre/test-0300.err.exit_leaks
+@@ -94,25 +94,4 @@ test-0300.c:266: note: from call of main()
+ test-0300.c:150: warning: memory leak detected while destroying a variable on stack
+ test-0300.c:282: note: from call of register_cdrom()
+ test-0300.c:266: note: from call of main()
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
++test-0300.c: warning: memory leak detected while destroying a static variable
+diff --git a/tests/predator-regre/test-0300.err.oom b/tests/predator-regre/test-0300.err.oom
+index 3dc2aa34..1da84b3e 100644
+--- a/tests/predator-regre/test-0300.err.oom
++++ b/tests/predator-regre/test-0300.err.oom
+@@ -94,25 +94,4 @@ test-0300.c:266: note: from call of main()
+ test-0300.c:150: warning: memory leak detected while destroying a variable on stack
+ test-0300.c:282: note: from call of register_cdrom()
+ test-0300.c:266: note: from call of main()
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
++test-0300.c: warning: memory leak detected while destroying a static variable
+diff --git a/tests/predator-regre/test-0300.err.uninit b/tests/predator-regre/test-0300.err.uninit
+index e3ebd1cd..6fe9a829 100644
+--- a/tests/predator-regre/test-0300.err.uninit
++++ b/tests/predator-regre/test-0300.err.uninit
+@@ -180,49 +180,4 @@ test-0300.c:218: warning: conditional jump depends on uninitialized value
+ test-0300.c:218: note: the value being used is an untouched contents of heap
+ test-0300.c:282: note: from call of register_cdrom()
+ test-0300.c:266: note: from call of main()
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:82: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
+-test-0300.c:83: warning: memory leak detected while destroying a static variable
+-test-0300.c:86: warning: memory leak detected while destroying a static variable
++test-0300.c: warning: memory leak detected while destroying a static variable
+diff --git a/tests/predator-regre/test-0302.err b/tests/predator-regre/test-0302.err
+index 9dca7965..1be06e6c 100644
+--- a/tests/predator-regre/test-0302.err
++++ b/tests/predator-regre/test-0302.err
+@@ -94,25 +94,4 @@ test-0302.c:270: note: from call of main()
+ test-0302.c:154: warning: memory leak detected while destroying a variable on stack
+ test-0302.c:286: note: from call of register_cdrom()
+ test-0302.c:270: note: from call of main()
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
++test-0302.c: warning: memory leak detected while destroying a static variable
+diff --git a/tests/predator-regre/test-0302.err.exit_leaks b/tests/predator-regre/test-0302.err.exit_leaks
+index 9dca7965..1be06e6c 100644
+--- a/tests/predator-regre/test-0302.err.exit_leaks
++++ b/tests/predator-regre/test-0302.err.exit_leaks
+@@ -94,25 +94,4 @@ test-0302.c:270: note: from call of main()
+ test-0302.c:154: warning: memory leak detected while destroying a variable on stack
+ test-0302.c:286: note: from call of register_cdrom()
+ test-0302.c:270: note: from call of main()
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
++test-0302.c: warning: memory leak detected while destroying a static variable
+diff --git a/tests/predator-regre/test-0302.err.oom b/tests/predator-regre/test-0302.err.oom
+index 9dca7965..1be06e6c 100644
+--- a/tests/predator-regre/test-0302.err.oom
++++ b/tests/predator-regre/test-0302.err.oom
+@@ -94,25 +94,4 @@ test-0302.c:270: note: from call of main()
+ test-0302.c:154: warning: memory leak detected while destroying a variable on stack
+ test-0302.c:286: note: from call of register_cdrom()
+ test-0302.c:270: note: from call of main()
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
++test-0302.c: warning: memory leak detected while destroying a static variable
+diff --git a/tests/predator-regre/test-0302.err.uninit b/tests/predator-regre/test-0302.err.uninit
+index a3d3d5ba..1bf3420d 100644
+--- a/tests/predator-regre/test-0302.err.uninit
++++ b/tests/predator-regre/test-0302.err.uninit
+@@ -180,49 +180,4 @@ test-0302.c:222: warning: conditional jump depends on uninitialized value
+ test-0302.c:222: note: the value being used is an untouched contents of heap
+ test-0302.c:286: note: from call of register_cdrom()
+ test-0302.c:270: note: from call of main()
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:86: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
+-test-0302.c:87: warning: memory leak detected while destroying a static variable
+-test-0302.c:90: warning: memory leak detected while destroying a static variable
++test-0302.c: warning: memory leak detected while destroying a static variable
 diff --git a/tests/predator-regre/test-0502.err b/tests/predator-regre/test-0502.err
 index cad85f8b..08e2cedb 100644
 --- a/tests/predator-regre/test-0502.err
