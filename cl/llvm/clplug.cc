@@ -1830,6 +1830,12 @@ void CLPass::handleCmpInstruction(Instruction *I) {
 /// create assign (floating cast) instruction
 void CLPass::handleUnaryInstruction(Instruction *I) {
 
+    if (I->getParent() && I->getNumUses() == 0) { // TODO testing src for invalid-deref ?
+        // optimization, if dst is regular instruction and it is never used
+        CL_DEBUG("skip assignment '"<< I->getOpcodeName()<<"' without effect");
+        return;
+    }
+
     struct cl_insn i;
     std::memset(&i, 0, sizeof(i));
 
