@@ -472,7 +472,9 @@ void SymExecEngine::execCondInsn()
     // a working area in case of VAL_TRUE and VAL_FALSE
     SymHeap sh(localState_[heapIdx_]);
     Trace::waiveCloneOperation(sh);
-    SymProc proc(sh, &bt_);
+    // initialize execution properties based on the global configuration
+    const SymExecCoreParams ep(GlConf::data);
+    SymExecCore proc(sh, &bt_,ep);
     proc.setLocation(lw_);
 
     // compute the result of CL_INSN_BINOP

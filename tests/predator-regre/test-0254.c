@@ -1,10 +1,10 @@
+#include <verifier-builtins.h>
 #include <stdlib.h>     // exit(), malloc(), free()
 
 void f(int *p) {
-    int i;
     int *pp = p;
     *pp = 1;
-    if(i)
+    if(__VERIFIER_nondet_int())
       exit(1);          // end of program
     else
       f(pp);

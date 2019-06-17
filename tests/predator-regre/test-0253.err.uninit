@@ -1,0 +1,4 @@
+test-0253.c:6: warning: conditional jump depends on uninitialized value
+test-0253.c:6: note: the value being used is an untouched contents of stack
+test-0253.c:13: note: from call of f()
+test-0253.c:11: note: from call of main()

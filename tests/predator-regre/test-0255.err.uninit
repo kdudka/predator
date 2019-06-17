@@ -1,1 +1,5 @@
 test-0255.c:14: warning: memory leak detected while destroying a variable on stack
+test-0255.c:7: warning: conditional jump depends on uninitialized value
+test-0255.c:7: note: the value being used is an untouched contents of stack
+test-0255.c:15: note: from call of f()
+test-0255.c:12: note: from call of main()
