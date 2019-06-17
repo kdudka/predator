@@ -99,17 +99,16 @@ if(ENABLE_LLVM)
     # helping scripts for llvm
     configure_file(${PROJECT_SOURCE_DIR}/slscript.in  ${PROJECT_BINARY_DIR}/slllvm    @ONLY)
     configure_file(${PROJECT_SOURCE_DIR}/slllvmv.in   ${PROJECT_BINARY_DIR}/slllvmv   @ONLY)
-    configure_file(${PROJECT_SOURCE_DIR}/sldbg.in     ${PROJECT_BINARY_DIR}/sldbg     @ONLY)
 else()
     # helping scripts for gcc
     configure_file(${PROJECT_SOURCE_DIR}/slscript.in  ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
     configure_file(${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
-    configure_file(${PROJECT_SOURCE_DIR}/sldbg.in     ${PROJECT_BINARY_DIR}/sldbg     @ONLY)
     configure_file(${PROJECT_SOURCE_DIR}/probe.sh.in  ${PROJECT_BINARY_DIR}/probe.sh  @ONLY)
 
     configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
         ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
 endif()
+configure_file(${PROJECT_SOURCE_DIR}/sldbg.in         ${PROJECT_BINARY_DIR}/sldbg     @ONLY)
 configure_file(${PROJECT_SOURCE_DIR}/check-property.sh.in
     ${PROJECT_BINARY_DIR}/check-property.sh                                           @ONLY)
 
