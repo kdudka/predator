@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2015 Veronika Sokova <xsokov00@stud.fit.vutbr.cz>
+ * Copyright (C) 2014-2019 Veronika Sokova <isokova@fit.vutbr.cz>
  *
  * This file is part of llvm/predator.
  *
@@ -162,6 +162,7 @@ struct CLPass : public ModulePass {
         void handleSelectInstruction(SelectInst *);
         void handleUnaryInstruction(Instruction *);
         void handleCallInstruction(CallInst *);
+        void handleDbgInfoIntrinsic(DbgInfoIntrinsic *);
 
         /* Operands */
         bool handleOperand(Value *, struct cl_operand *);

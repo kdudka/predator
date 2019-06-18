@@ -54,6 +54,10 @@ extern "C" {
 #   define LLVM_HOST_7_OR_NEWER
 #endif
 
+#if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR >= 8)
+#   define LLVM_HOST_8_OR_NEWER
+#endif
+
 #ifdef LLVM_HOST_3_7_OR_NEWER
 #ifdef LLVM_HOST_7_OR_NEWER
 #   include "llvm/Transforms/Utils.h"  // createLowerSwitchPass
@@ -69,6 +73,7 @@ extern "C" {
 #   include "llvm/IR/DebugInfoMetadata.h"
 #endif
 #include "llvm/IR/DebugInfo.h"
+#include "llvm/Transforms/Utils/Local.h" // find dbg
 
 #include <fstream>
 #include <cstring> // memcpy
@@ -842,7 +847,7 @@ struct cl_var *CLPass::handleVariable(Value *v) {
         clv = new struct cl_var;
         std::memset(clv, 0, sizeof(*clv));
         clv->uid = cntUID++;
-        
+
         if (v != nullptr)
             VarTable.insert({v, clv});
     }
@@ -851,10 +856,11 @@ struct cl_var *CLPass::handleVariable(Value *v) {
     }
 
     clv->loc = cl_loc_known;
-
+    clv->name = nullptr;
+    clv->artificial = true;
     if (v == nullptr)
         return clv; // artificial register;
-    
+
     if (v->hasName()) { // named variable
         std::string tmp = v->getName().str();
         unsigned len = tmp.length() + 1;
@@ -862,21 +868,21 @@ struct cl_var *CLPass::handleVariable(Value *v) {
         std::memcpy(tmpPtr, tmp.c_str(), len);
         clv->name = tmpPtr;
         clv->artificial = false;
+    }
 
-    //  if (v->isUsedByMetadata()) { //FIXME DIVariable
-    //      if (NamedMDNode *NMD = M.getNamedMetadata(tmp)) {
-    //          if (dyn_cast<DIVariable>(NMD->getOperand(0)))
-    //              CL_DEBUG3(" \\--> have metadata\n");
-    //      }
-    //  }
-    //        if( DbgDeclareInst *ddi = FindAllocaDbgDeclare(v)) {
-    //          getDebugLoc()
-    //          getVariable()
-    //  }
-        
-    } else { // register
-        clv->name = nullptr;
-        clv->artificial = true;
+    // name and location of variable from declaration llvm.dbg.declare
+#ifdef LLVM_HOST_6_OR_NEWER
+    for (auto& DI : FindDbgAddrUses(v)) {
+#else
+    if (DbgDeclareInst *DI = FindAllocaDbgDeclare(v)) {
+#endif
+        std::string tmp = DI->getVariable()->getName().str();
+        unsigned len = tmp.length() + 1;
+        char * tmpPtr = new char [len];
+        std::memcpy(tmpPtr, tmp.c_str(), len);
+        clv->name = tmpPtr;
+        clv->artificial = false;
+        findLocation(DI, &(clv->loc));
     }
 
     if (isa<GlobalVariable>(v)) {
@@ -897,6 +903,18 @@ struct cl_var *CLPass::handleVariable(Value *v) {
 void CLPass::handleGlobalVariable(GlobalVariable *gv, struct cl_var *clv) {
 
     CL_DEBUG3("  GLOBAL VAR PTR\n");
+
+    SmallVector<DIGlobalVariableExpression *, 1> DIGVs;
+    gv->getDebugInfo(DIGVs); // location of declaration
+    for (auto *DIExp : DIGVs) {
+        DIGlobalVariable *DI = DIExp->getVariable();
+        std::string tmp = DI->getFilename().str();
+        unsigned len = tmp.length() + 1;
+        char *tmpPtr = new char [len]; // delete into code listener
+        std::memcpy(tmpPtr, tmp.c_str(), len);
+        clv->loc.file = tmpPtr;
+        clv->loc.line = DI->getLine();
+    }
 
     clv->is_extern = gv->isDeclaration(); //hasExternalLinkage(); // ???
     clv->initial =  nullptr;
@@ -1380,8 +1398,9 @@ void CLPass::handleInstruction(Instruction *I) {
         // Other instructions
 
         case Instruction::Call: // CallInst
-            if (isa<DbgInfoIntrinsic>(I)) { // not instruction
-                return;
+            if(isa<DbgInfoIntrinsic>(I)) {
+//                handleDbgInfoIntrinsic(cast<DbgInfoIntrinsic>(I));
+                return; // not instruction
             }
 //            if (isa<IntrinsicInst>(I) && !isa<MemIntrinsic>(I)) {
 //                CL_WARN("intrinsic instructions are not supported");
@@ -2030,7 +2049,7 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
                 acc->data.array.index = new struct cl_operand;
                 handleOperand(v, acc->data.array.index);
                 break;
-       
+
             default:
                 CL_ERROR("invalid type for accessor");
                 break;
@@ -2149,6 +2168,30 @@ void CLPass::handleCallInstruction(CallInst *I) {
     delete [] arguments;
 }
 
+/// hanlde for instruction with debug information for c variables
+void CLPass::handleDbgInfoIntrinsic(DbgInfoIntrinsic *DI) {
+
+    Value *v;
+    DILocalVariable *divar;
+
+    if (isa<DbgDeclareInst>(DI)) {
+        v = cast<DbgDeclareInst>(DI)->getAddress();
+        divar = cast<DbgDeclareInst>(DI)->getVariable();
+    } else if (isa<DbgValueInst>(DI)) { // inaccurate to CL
+        v = cast<DbgValueInst>(DI)->getValue();
+        divar = cast<DbgValueInst>(DI)->getVariable();
+    } else return; // not usefull
+    struct cl_var *clv = handleVariable(v);
+
+    if (!clv->name) {
+        std::string tmp =  divar->getName().str();
+        unsigned len = tmp.length() + 1;
+        char * tmpPtr = new char [len];
+        std::memcpy(tmpPtr, tmp.c_str(), len);
+        clv->name = tmpPtr;
+    }
+    findLocation(DI, &(clv->loc));
+}
 
 /// last function, clean up after pass, set CL on valid and setup exit code
 bool CLPass::doFinalization (Module &) {
