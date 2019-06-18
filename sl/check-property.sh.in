@@ -130,6 +130,8 @@ test -r "$PRP_FILE" || usage
 TASK=""
 if grep "call(__VERIFIER_error()" "$PRP_FILE" >/dev/null; then
     TASK="$TASK VERIFIER_error"
+fi; if grep "valid-memcleanup" "$PRP_FILE" >/dev/null; then
+    TASK="$TASK memcleanup"
 fi; if grep "valid-memtrack" "$PRP_FILE" >/dev/null; then
     TASK="$TASK memtrack"
 fi; if grep "valid-deref" "$PRP_FILE" >/dev/null; then
@@ -242,6 +244,8 @@ parse_output() {
         elif match "$line" "$MSG_MEMLEAK"; then
             if match "$TASK" "memtrack"; then
               report_unsafe "valid-memtrack" "$line"
+            elif match "$TASK" "memcleanup"; then
+              report_unsafe "valid-memcleanup" "$line"
             fi
 
         elif match "$line" "$MSG_FREE_OFFSET" || \
@@ -285,6 +289,8 @@ parse_output() {
 if match "$TASK" "VERIFIER_error"; then
 #    ARGS="error_label:ERROR"
     ARGS="verifier_error_is_error"
+elif match "$TASK" "memcleanup"; then
+    ARGS="no_error_recovery,memleak_is_error,exit_leaks"
 elif match "$TASK" "memtrack"; then
     ARGS="no_error_recovery,memleak_is_error"
 elif match "$TASK" "deref" || match "$TASK" "free" || match "$TASK" "overflow"; then

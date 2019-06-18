@@ -157,7 +157,7 @@ set(tests
     0220 0221           0214 0225 0226 0227 0228 0229
     0230 0231 0232 0233 0234      0236 0237 0238
          0241 0242      0244 0245      0247 0248
-
+    0250 0251 0252 0253 0254 0255
     0300      0302
 
 
@@ -177,7 +177,9 @@ set(tests ${tests}
     0170 0181 0182 0183 0184 0200 0240 0316
 # unsupported union
     0093
-# ok ERROR label -- >4 sec -- incompletely location info 0035 0142 0191 0192 0300 0302
+# scope variables
+    0249
+# ok ERROR label -- >4 sec
     0186 0187 0235
 # sl: data reinterpretation
     0090
