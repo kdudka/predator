@@ -1220,6 +1220,10 @@ bool BuiltInTable::handleBuiltIn(
     if (tbl_.end() == it) {
         static const char namePrefixNondet[] = "__VERIFIER_nondet";
         static const char namePrefixObjSize[] = "llvm.objectsize.i";
+
+        static_assert(sizeof(namePrefixNondet) == sizeof(namePrefixObjSize),
+            "Prefix names must be same length");
+
         static const size_t namePrefixLength = sizeof(namePrefixNondet) - 1U;
         std::string namePrefix(name);
         if (namePrefixLength < namePrefix.size())
