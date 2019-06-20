@@ -806,13 +806,23 @@ static struct cl_type* add_bare_type_if_needed(tree type)
 
 static enum cl_scope_e get_decl_scope(tree t)
 {
-    if (VAR_DECL == TREE_CODE(t) && TREE_STATIC(t))
-        // treat static variables as static, no matter where they're declared
-        return CL_SCOPE_STATIC;
+    enum tree_code code = TREE_CODE(t);
+    switch (TREE_CODE(t)) {
+        case SSA_NAME:
+            return CL_SCOPE_FUNCTION;
+
+        case VAR_DECL:
+            if (TREE_STATIC(t))
+                // treat static variables as static, no matter where they're declared
+                return CL_SCOPE_STATIC;
+
+        default:
+            break;
+    }
 
     tree ctx = DECL_CONTEXT(t);
     if (ctx) {
-        enum tree_code code = TREE_CODE(ctx);
+        code = TREE_CODE(ctx);
         switch (code) {
             case FUNCTION_DECL:
                 return CL_SCOPE_FUNCTION;
@@ -1109,10 +1119,28 @@ static void read_initials(struct cl_var *var, struct cl_initializer **pinit,
     free_cl_accessor(ac);
 }
 
+static cl_uid_t uid_from_ssa_name(tree t)
+{
+    // FIXME: we should find a more reliable way to enumerate SSA_NAME nodes
+    unsigned long uid = (unsigned long) SSA_NAME_DEF_STMT(t);
+
+    // avoid collision with regular tree node UIDs
+    uid <<= 16;
+
+    // make sure that the UID stays positive when converted to `long`
+    uid <<= 1;
+    uid >>= 1;
+    return uid;
+}
+
 static struct cl_var* add_var_if_needed(tree t)
 {
+    const bool is_ssa_name = (SSA_NAME == TREE_CODE(t));
+    const cl_uid_t uid = (is_ssa_name)
+        ? uid_from_ssa_name(t)
+        : DECL_UID(t);
+
     // hash table lookup
-    const cl_uid_t uid = DECL_UID(t);
     struct cl_var *var = var_db_lookup(var_db, uid);
     if (var)
         // var already hashed
@@ -1124,9 +1152,12 @@ static struct cl_var* add_var_if_needed(tree t)
     var_db_insert(var_db, var);
 
     // read meta-data
-    read_gcc_location(&var->loc, DECL_SOURCE_LOCATION(t));
+    if (is_ssa_name)
+        read_gimple_location(&var->loc, SSA_NAME_DEF_STMT(t));
+    else
+        read_gcc_location(&var->loc, DECL_SOURCE_LOCATION(t));
     var->artificial = DECL_ARTIFICIAL(t);
-    var->is_extern = DECL_EXTERNAL(t);
+    var->is_extern = !is_ssa_name && DECL_EXTERNAL(t);
     if (!var->is_extern) {
         const enum cl_scope_e code = get_decl_scope(t);
         switch (code) {
@@ -1226,6 +1257,7 @@ static void read_raw_operand(struct cl_operand *op, tree t)
         case VAR_DECL:
         case PARM_DECL:
         case RESULT_DECL:
+        case SSA_NAME:
             op->code                            = CL_OPERAND_VAR;
             op->scope                           = get_decl_scope(t);
             op->data.var                        = add_var_if_needed(t);
