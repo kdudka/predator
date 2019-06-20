@@ -98,7 +98,7 @@ static std::string fullName = "Code Listener Analyzer";
 
 // unsupport location
 struct cl_loc cl_loc_known = {
-    0,                             // .file
+    nullptr,                       // .file
     0,                             // .line
     0,                             // .column
     0,                             // .sysp
@@ -532,6 +532,7 @@ struct cl_type *CLPass::handleType(Type *t) {
             clt->array_size = t->getArrayNumElements(); //cast<ArrayType>(t)->getNumElements();
 
             clt->items = new struct cl_type_item [1];
+            clt->items[0].name = nullptr;
             clt->items[0].type = handleType(t->getSequentialElementType());
             //(cast<SequentialType>(t)->getElementType(), tmp);
 
@@ -545,7 +546,7 @@ struct cl_type *CLPass::handleType(Type *t) {
             clt->item_cnt = 1;
 
             clt->items = new struct cl_type_item [1];
-
+            clt->items[0].name = nullptr;
             clt->items[0].type = handleType(cast<PointerType>(t)->getElementType());
         }
             break;
@@ -1062,7 +1063,7 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
                 } else {
                     CL_WARN("unsupported global initializer with expression: "
                             << ci->getOpcodeName());
-                    delete src; freeAccessor(act.firstAcc);
+                    delete src; src = nullptr; freeAccessor(act.firstAcc);
 #ifdef LLVM_HOST_6_OR_NEWER
                     ci->deleteValue();
 #else
@@ -1400,7 +1401,7 @@ void CLPass::handleInstruction(Instruction *I) {
         case Instruction::Call: // CallInst
             if(isa<DbgInfoIntrinsic>(I)) {
 //                handleDbgInfoIntrinsic(cast<DbgInfoIntrinsic>(I));
-                return; // not instruction
+                break; // not instruction
             }
 //            if (isa<IntrinsicInst>(I) && !isa<MemIntrinsic>(I)) {
 //                CL_WARN("intrinsic instructions are not supported");
@@ -1975,12 +1976,13 @@ bool CLPass::handleCastOperand(Value *v, struct cl_operand *src) {
 /// return true, if insert accessor(s)
 bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
 
+    //TODO refactoring!
     GetElementPtrInst *I = cast<GetElementPtrInst>(v);
     bool notEmptyAcc = handleOperand(I->getPointerOperand(), src); // Operand(0)
     bool firstRefAcc = notEmptyAcc && src->accessor->code == CL_ACCESSOR_REF;
 
     struct cl_accessor **addrNextAcc = (notEmptyAcc)? &(src->accessor->next) : &(src->accessor);
-    struct cl_accessor *acc;
+    struct cl_accessor *acc = nullptr;
        //GetElementPtrInst::op_iterator
     for (auto op = I->idx_begin(), ope = I->idx_end(); op != ope; ++op) {
         Value *v = *op;
@@ -2018,7 +2020,7 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
                         }
                         freeAccessor(src->accessor); src->accessor = nullptr;
                         addrNextAcc = &(src->accessor);
-                        continue;
+                        continue; // no accessor
                     }
                     acc->code = CL_ACCESSOR_DEREF;
 
@@ -2058,7 +2060,17 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
         firstRefAcc = false; // after one cycle
     }
 
-    { // is ...PtrInst, always return REF
+    // is ...PtrInst, always return REF
+    if (src->accessor != nullptr && src->accessor->next == nullptr &&
+        src->accessor->code == CL_ACCESSOR_DEREF) {
+        // optimization, only * accessor  => because &* -> empty accessor
+        struct cl_type *dstTy = handleType(I->getType()); // result
+        if (acc->type != dstTy) {
+            CL_WARN("different types after removing the accessor &*");
+        }
+        src->type = dstTy;
+        freeAccessor(src->accessor); src->accessor = nullptr;
+    } else {
         acc = new struct cl_accessor;
         *addrNextAcc = acc;
         acc->code = CL_ACCESSOR_REF; // &
