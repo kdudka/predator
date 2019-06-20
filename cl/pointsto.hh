@@ -222,7 +222,7 @@ namespace PointsTo {
      * return the node pointer according to passed 'uid' of variable or
      * function.
      */
-    const Node *existsUid(const Graph &graph, int uid);
+    const Node *existsUid(const Graph &graph, cl_uid_t uid);
 
     /**
      * return pointer to node with given variable 'v'
@@ -236,7 +236,7 @@ namespace PointsTo {
      * return pointer to (modifiable) node object according to given variable or
      * node item pointer.  Return NULL when the node doesn't exist.
      */
-    Node *findNode(Graph &, int);
+    Node *findNode(Graph &, cl_uid_t);
     Node *findNode(Graph &, const Var *);
     Node *findNode(Graph &, const Item *);
 

@@ -210,7 +210,7 @@ CustomValue& CustomValue::operator=(const CustomValue &ref)
     return *this;
 }
 
-int CustomValue::uid() const
+cl_uid_t CustomValue::uid() const
 {
     CL_BREAK_IF(CV_FNC != code_);
     return data_.uid;
@@ -556,7 +556,7 @@ struct BaseAddress: public AnchorValue {
 // cppcheck-suppress noConstructor
 class CustomValueMapper {
     private:
-        typedef std::map<int /* uid */, TValId>                 TCustomByUid;
+        typedef std::map<cl_uid_t, TValId>                      TCustomByUid;
         typedef std::map<IR::TInt, TValId>                      TCustomByNum;
         typedef std::map<double, TValId>                        TCustomByReal;
         typedef std::map<std::string, TValId>                   TCustomByString;

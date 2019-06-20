@@ -1126,7 +1126,7 @@ const CodeStorage::Fnc* SymExec::resolveCallInsn(
 
     EMsgLevel ml = ML_ERROR;
 
-    int uid;
+    cl_uid_t uid;
     if (!proc.fncFromOperand(&uid, opFnc)) {
         CL_BREAK_IF(CL_OPERAND_CST == opFnc.code);
         CL_ERROR_MSG(lw, "failed to resolve indirect function call");

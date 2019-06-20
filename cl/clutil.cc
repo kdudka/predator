@@ -148,7 +148,7 @@ int intCstFromOperand(const struct cl_operand *op)
     return cst.data.cst_int.value;
 }
 
-int varIdFromOperand(const struct cl_operand *op, const char **pName)
+cl_uid_t varIdFromOperand(const struct cl_operand *op, const char **pName)
 {
     CL_BREAK_IF(CL_OPERAND_VAR != op->code);
     if (pName)
@@ -175,7 +175,7 @@ bool fncNameFromCst(const char **pName, const struct cl_operand *op)
     return !!fncName;
 }
 
-bool fncUidFromOperand(int *pUid, const struct cl_operand *op)
+bool fncUidFromOperand(cl_uid_t *pUid, const struct cl_operand *op)
 {
     if (CL_OPERAND_CST != op->code)
         return false;
@@ -190,7 +190,7 @@ bool fncUidFromOperand(int *pUid, const struct cl_operand *op)
 
 std::string varToString(
         const CodeStorage::Storage      &stor,
-        const int                       uid,
+        const cl_uid_t                  uid,
         const struct cl_loc             **pLoc)
 {
     const CodeStorage::Var &var = stor.vars[uid];

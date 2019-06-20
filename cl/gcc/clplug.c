@@ -443,7 +443,7 @@ static void var_db_destroy(var_db_t db)
     htab_delete(db);
 }
 
-static struct cl_type* type_db_lookup(type_db_t db, int uid)
+static struct cl_type* type_db_lookup(type_db_t db, cl_uid_t uid)
 {
     struct cl_type type;
     type.uid = uid;
@@ -451,7 +451,7 @@ static struct cl_type* type_db_lookup(type_db_t db, int uid)
     return (struct cl_type *) htab_find(db, &type);
 }
 
-static struct cl_var* var_db_lookup(var_db_t db, int uid)
+static struct cl_var* var_db_lookup(var_db_t db, cl_uid_t uid)
 {
     struct cl_var var;
     var.uid = uid;
@@ -786,7 +786,7 @@ static void read_specific_type(struct cl_type *clt, tree type)
 static struct cl_type* add_bare_type_if_needed(tree type)
 {
     // hashtab lookup
-    const int uid = TYPE_UID(type);
+    const cl_uid_t uid = TYPE_UID(type);
     struct cl_type *clt = type_db_lookup(type_db, uid);
     if (clt)
         // type already hashed
@@ -1112,7 +1112,7 @@ static void read_initials(struct cl_var *var, struct cl_initializer **pinit,
 static struct cl_var* add_var_if_needed(tree t)
 {
     // hash table lookup
-    const int uid = DECL_UID(t);
+    const cl_uid_t uid = DECL_UID(t);
     struct cl_var *var = var_db_lookup(var_db, uid);
     if (var)
         // var already hashed

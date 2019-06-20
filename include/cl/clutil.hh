@@ -118,13 +118,13 @@ bool seekRefAccessor(const struct cl_accessor *ac);
 int intCstFromOperand(const struct cl_operand *op);
 
 /// return unique ID of the variable/register given as operand
-int varIdFromOperand(const struct cl_operand *op, const char **pName = 0);
+cl_uid_t varIdFromOperand(const struct cl_operand *op, const char **pName = 0);
 
 /// get name of an @b external function given as CL_OPERAND_CST, true on success
 bool fncNameFromCst(const char **pName, const struct cl_operand *op);
 
 /// get uid of a function from the given operand if available, true on success
-bool fncUidFromOperand(int *pUid, const struct cl_operand *op);
+bool fncUidFromOperand(cl_uid_t *pUid, const struct cl_operand *op);
 
 typedef std::vector<int /* nth */> TFieldIdxChain;
 
@@ -144,7 +144,7 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
     assert(clt);
 
     // we use std::set to avoid an infinite loop
-    std::set<int /* uid */> done;
+    std::set<cl_uid_t> done;
     done.insert(clt->uid);
 
     // initialize DFS
@@ -187,7 +187,7 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
             continue;
         }
 
-        const int uid = item->type->uid;
+        const cl_uid_t uid = item->type->uid;
         if (done.end() == done.find(uid)) {
             done.insert(uid);
 
@@ -209,7 +209,7 @@ bool /* complete */ traverseTypeIc(const struct cl_type *clt, TVisitor &visitor,
 
 std::string varToString(
         const CodeStorage::Storage      &stor,
-        const int                       uid,
+        const cl_uid_t                  uid,
         const struct cl_loc             **pLoc = 0);
 
 #endif /* H_GUARD_CLUTIL_H */

@@ -159,7 +159,7 @@ bool isOnStack(const Var &var)
 // /////////////////////////////////////////////////////////////////////////////
 // VarDb implementation
 struct VarDb::Private {
-    typedef std::map<int, unsigned> TMap;
+    typedef std::map<cl_uid_t, unsigned> TMap;
     TMap db;
 };
 
@@ -177,12 +177,12 @@ VarDb::~VarDb()
     delete d;
 }
 
-Var& VarDb::operator[](int uid)
+Var& VarDb::operator[](cl_uid_t uid)
 {
     return dbLookup(d->db, vars_, uid);
 }
 
-const Var& VarDb::operator[](int uid) const
+const Var& VarDb::operator[](cl_uid_t uid) const
 {
     return dbConstLookup(d->db, vars_, uid);
 }
@@ -191,7 +191,7 @@ const Var& VarDb::operator[](int uid) const
 // /////////////////////////////////////////////////////////////////////////////
 // TypeDb implementation
 struct TypeDb::Private {
-    typedef std::map<int, const struct cl_type *> TMap;
+    typedef std::map<cl_uid_t, const struct cl_type *> TMap;
     TMap db;
 
     int codePtrSizeof;
@@ -251,7 +251,7 @@ bool TypeDb::insert(const struct cl_type *clt)
         CL_DEBUG("TypeDb::insert() got a NULL pointer");
         return false;
     }
-    const int uid = clt->uid;
+    const cl_uid_t uid = clt->uid;
 
     typedef Private::TMap TDb;
     TDb &db = d->db;
@@ -306,7 +306,7 @@ void readTypeTree(TypeDb &db, const struct cl_type *clt)
     }
 }
 
-const struct cl_type* TypeDb::operator[](int uid) const
+const struct cl_type* TypeDb::operator[](cl_uid_t uid) const
 {
     typedef Private::TMap TDb;
     TDb &db = d->db;
@@ -419,7 +419,7 @@ bool Item::isGlobal() const
     }
 }
 
-int Item::uid() const
+cl_uid_t Item::uid() const
 {
     switch (code) {
         case PT_ITEM_VAR:
@@ -552,7 +552,7 @@ const struct cl_loc* locationOf(const Fnc &fnc)
     return &cst.data.cst_fnc.loc;
 }
 
-int uidOf(const Fnc &fnc)
+cl_uid_t uidOf(const Fnc &fnc)
 {
     const struct cl_cst &cst = cstFromFnc(fnc);
     return cst.data.cst_fnc.uid;
@@ -568,7 +568,7 @@ bool isDefined(const Fnc &fnc)
 // /////////////////////////////////////////////////////////////////////////////
 // FncDb implementation
 struct FncDb::Private {
-    typedef std::map<int, unsigned> TMap;
+    typedef std::map<cl_uid_t, unsigned> TMap;
     TMap db;
 };
 
@@ -596,7 +596,7 @@ FncDb& FncDb::operator=(const FncDb &ref)
     return *this;
 }
 
-Fnc*& FncDb::operator[](int uid)
+Fnc*& FncDb::operator[](cl_uid_t uid)
 {
     Fnc* &ref = dbLookup(d->db, fncs_, uid, 0);
     if (!ref)
@@ -606,7 +606,7 @@ Fnc*& FncDb::operator[](int uid)
     return ref;
 }
 
-const Fnc* FncDb::operator[](int uid) const
+const Fnc* FncDb::operator[](cl_uid_t uid) const
 {
     return dbConstLookup(d->db, fncs_, uid);
 }

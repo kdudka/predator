@@ -404,7 +404,7 @@ EVar varCodeByScope(const enum cl_scope_e scope, const bool isArgDecl)
 
 bool ClStorageBuilder::Private::digOperandVar(const TOp *op, bool isArgDecl)
 {
-    const int id = varIdFromOperand(op);
+    const cl_uid_t id = varIdFromOperand(op);
 
     // mark as used in the current function
     this->fnc->vars.insert(id);
@@ -459,7 +459,7 @@ void ClStorageBuilder::Private::digOperandCst(const struct cl_operand *op)
     }
 
     // create a place-holder if needed
-    const int uid = cst.data.cst_fnc.uid;
+    const cl_uid_t uid = cst.data.cst_fnc.uid;
     Fnc *fnc = stor.fncs[uid];
     fnc->stor = &stor;
 
@@ -519,7 +519,7 @@ void ClStorageBuilder::Private::digOperand(const TOp *op)
             seekRefAccessor(ac))
     {
         // we are taking a reference to the variable by this operand!
-        const int id = varIdFromOperand(op);
+        const cl_uid_t id = varIdFromOperand(op);
         stor.vars[id].mayBePointed = true;
     }
 
@@ -591,7 +591,7 @@ void ClStorageBuilder::fnc_open(const struct cl_operand *op)
     d->file = file;
 
     // set current fnc
-    int uid = cst.data.cst_fnc.uid;
+    cl_uid_t uid = cst.data.cst_fnc.uid;
     Fnc *fnc = d->stor.fncs[uid];
     fnc->stor = &d->stor;
     d->fnc = fnc;
@@ -614,7 +614,7 @@ void ClStorageBuilder::fnc_arg_decl(int pos, const struct cl_operand *op)
     d->digOperandVar(op, /* isArgDecl */ true);
 
     TArgByPos &args = d->fnc->args;
-    const int uid = varIdFromOperand(op);
+    const cl_uid_t uid = varIdFromOperand(op);
     args.push_back(uid);
     CL_BREAK_IF(static_cast<int>(args.size()) != pos);
     (void) pos;

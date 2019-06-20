@@ -89,7 +89,7 @@ typedef struct {
     } caller;
     struct {
         // uid of fnc or parameter -- depends on 'code'
-        int                             uid;
+        cl_uid_t                        uid;
     } callee;
 } TBindPair;
 
@@ -191,7 +191,7 @@ const char *fncNameFromInsn(const Insn *insn)
     return name;
 }
 
-int generateMallocUid(const Insn *insn)
+cl_uid_t generateMallocUid(const Insn *insn)
 {
     static int i = 0;
     static std::map<const Insn *, int> ids;
@@ -276,7 +276,7 @@ bool bindPairs(const Insn *insn, TBindPairs &pairs)
     const cl_operand &retOp = opList[0];
     const cl_operand &calleeOp = opList[1];
 
-    int calleeUid;
+    cl_uid_t calleeUid;
     const Fnc *callee;
 
     if (!fncUidFromOperand(&calleeUid, &calleeOp))
@@ -480,7 +480,7 @@ void makeBlackHole(Fnc &fnc)
     addEdge(blackHole, blackHole); // self loop
 
     // all parameters are in one node
-    BOOST_FOREACH(int uid, fnc.args) {
+    BOOST_FOREACH(cl_uid_t uid, fnc.args) {
         const Var *v = &vars[uid];
         Item *i = new Item(v);
 
@@ -680,7 +680,7 @@ RetVal bindHeap(BuildCtx &ctx, Graph &ptg, TBindPairs &pairs)
         mallocNode = allocNodeForItem(ptg, it);
     }
 
-    int uid = varIdFromOperand(p.caller.operand);
+    cl_uid_t uid = varIdFromOperand(p.caller.operand);
     Node *parent = findNode(ptg, uid);
     if (!parent) {
          const Var *v = &ctx.stor.vars[uid];
@@ -831,7 +831,7 @@ RetVal bind(
             change = true;
     }
 
-    BOOST_FOREACH(int v_uid, callee->vars) {
+    BOOST_FOREACH(cl_uid_t v_uid, callee->vars) {
         const Var *v = &vars[v_uid];
         if (v->code != VAR_GL)
             // skip non-globals
@@ -1117,7 +1117,7 @@ bool bindLocationsArgs(
         const cl_operand &op = *pair.caller.operand;
         CL_BREAK_IF(op.code != CL_OPERAND_VAR);
 
-        const int srcUid = varIdFromOperand(&op);
+        const cl_uid_t srcUid = varIdFromOperand(&op);
         if (!hasKey(srcPtg->uidToItem, srcUid))
             // this may not be bound
             continue;

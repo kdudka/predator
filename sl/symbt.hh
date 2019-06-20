@@ -20,6 +20,8 @@
 #ifndef H_GUARD_SYMBT_H
 #define H_GUARD_SYMBT_H
 
+#include <cl/code_listener.h>
+
 /**
  * @file symbt.hh
  * SymBackTrace - backtrace management
@@ -82,7 +84,7 @@ class SymBackTrace {
          * to be as soon as we allow recursion.  We need the returned value to
          * distinguish among different instances of the same local variable.
          */
-        int countOccurrencesOfFnc(int fncId) const;
+        int countOccurrencesOfFnc(cl_uid_t fncId) const;
 
         /**
          * same as countOccurrencesOfFnc(), but operating on top of the

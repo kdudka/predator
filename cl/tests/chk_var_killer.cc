@@ -42,7 +42,7 @@ typedef const struct cl_loc                *TLoc;
 typedef const struct cl_operand            &TOp;
 typedef CodeStorage::TKillVarList           TKillList;
 typedef std::set<TBlock>                    TBlockSet;
-typedef std::set<int /* uid */>             TState;
+typedef std::set<cl_uid_t>                  TState;
 typedef std::map<TBlock, TState>            TStateMap;
 
 struct PerFncData {
@@ -79,7 +79,7 @@ bool chkAssert(
         }
 
         const char *varName;
-        const int uid = varIdFromOperand(&op, &varName);
+        const cl_uid_t uid = varIdFromOperand(&op, &varName);
         if (hasKey(state, uid) == live)
             // matched
             continue;
@@ -116,7 +116,7 @@ bool handleBuiltIn(
     return false;
 }
 
-bool isLocalUid(PerFncData &data, int uid) {
+bool isLocalUid(PerFncData &data, cl_uid_t uid) {
     if (!hasKey(data.fnc->vars, uid))
         return false;
     return (data.fnc->stor->vars[uid].code != CodeStorage::VAR_GL);
@@ -133,7 +133,7 @@ void killVars(
             // TODO: try all possibilities?
             continue;
 
-        const int uid = kv.uid;
+        const cl_uid_t uid = kv.uid;
         if (1 == state.erase(uid))
             // successfully killed a variable
             continue;
@@ -202,7 +202,7 @@ void chkFunction(const TFnc fnc) {
     // mark the function arguments as live for the entry block
     const CodeStorage::ControlFlow &cfg = fnc->cfg;
     TState &state = data.stateMap[cfg.entry()];
-    BOOST_FOREACH(const int uid, data.fnc->args)
+    BOOST_FOREACH(const cl_uid_t uid, data.fnc->args)
         state.insert(uid);
 
     // schedule all basic blocks for processing

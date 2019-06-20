@@ -871,7 +871,7 @@ void describeReal(PlotData &plot, const float fpn, const TValId val)
         << val << ")\"";
 }
 
-void describeFnc(PlotData &plot, const int uid, const TValId val)
+void describeFnc(PlotData &plot, const cl_uid_t uid, const TValId val)
 {
     TStorRef stor = plot.sh.stor();
     const CodeStorage::Fnc *fnc = stor.fncs[uid];

@@ -197,7 +197,7 @@ unsigned SymBackTrace::size() const
     return d->btStack.size();
 }
 
-int SymBackTrace::countOccurrencesOfFnc(int fncId) const
+int SymBackTrace::countOccurrencesOfFnc(cl_uid_t fncId) const
 {
     const CodeStorage::Fnc *fnc = d->fncById(fncId);
     return d->nestMap[fnc];

@@ -113,7 +113,7 @@ void bindItem(Graph &ptg, Node *n, const Item *i)
 {
     CL_BREAK_IF(!n || !i);
 
-    int uid = i->uid();
+    cl_uid_t uid = i->uid();
 
     if (!hasItem(n->variables, i))
         n->variables.push_back(i);
@@ -237,7 +237,7 @@ void joinNodesS(
     ctx.joinTodo.push_back(std::make_pair(leftTarget, rightTarget));
 }
 
-const Node *existsUid(const Graph &graph, int uid)
+const Node *existsUid(const Graph &graph, cl_uid_t uid)
 {
     const TMap &map = graph.map;
     TMap::const_iterator it = map.find(uid);
@@ -258,7 +258,7 @@ const Node *existsItem(const Graph &graph, const Item *i)
     return existsUid(graph, i->uid());
 }
 
-Node *findNode(Graph &ptg, int uid)
+Node *findNode(Graph &ptg, cl_uid_t uid)
 {
     if (existsUid(ptg, uid))
         return ptg.map[uid];
@@ -274,7 +274,7 @@ Node *findNode(Graph &ptg, const Var *v)
 
 Node *findNode(Graph &ptg, const Item *i)
 {
-    int uid = i->uid();
+    cl_uid_t uid = i->uid();
     if (existsUid(ptg, uid))
         return ptg.map[uid];
     return NULL;
@@ -282,7 +282,7 @@ Node *findNode(Graph &ptg, const Item *i)
 
 Node *allocNodeForItem(Graph &ptg, const Item *i)
 {
-    int uid = i->uid();
+    cl_uid_t uid = i->uid();
     CL_BREAK_IF(hasKey(ptg.uidToItem, uid));
 
     ptg.uidToItem[uid] = i;
@@ -296,7 +296,7 @@ Node *allocNodeForItem(Graph &ptg, const Item *i)
 // use this only for fnc. parameters
 Node *getNode(Graph &ptg, const cl_operand &opFnc)
 {
-    int fncUid;
+    cl_uid_t fncUid;
     if (!fncUidFromOperand(&fncUid, &opFnc))
         CL_BREAK_IF("bad operand");
 
@@ -323,7 +323,7 @@ Node *getNode(Graph &ptg, const Var *v)
 Node *getNode(Graph &ptg, const Item *i)
 {
     CL_BREAK_IF(!i);
-    int uid = i->uid();
+    cl_uid_t uid = i->uid();
     CL_BREAK_IF(!hasKey(ptg.map, i->uid()));
 
     return ptg.map[uid];
@@ -331,7 +331,7 @@ Node *getNode(Graph &ptg, const Item *i)
 
 Node *nodeFromForeign(Graph &ptg, const Item *ref)
 {
-    int uid = ref->uid();
+    cl_uid_t uid = ref->uid();
     Node *n = findNode(ptg, uid);
     if (n)
         return n;

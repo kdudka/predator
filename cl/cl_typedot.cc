@@ -30,7 +30,7 @@
 #include <stack>
 #include <vector>
 
-typedef int cl_type_uid_t;
+typedef cl_uid_t cl_type_uid_t;
 
 /// @todo rewrite to share code using the template method design pattern
 class ClTypeDotGenerator: public ICodeListener {

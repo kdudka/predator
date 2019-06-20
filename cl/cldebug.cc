@@ -356,7 +356,7 @@ void operandToStreamVar(std::ostream &str, const struct cl_operand &op)
 
     // obtain var ID and name (if any)
     const char *name = NULL;
-    const int uid = varIdFromOperand(&op, &name);
+    const cl_uid_t uid = varIdFromOperand(&op, &name);
 
     // print var itself
     str << "#" << uid;

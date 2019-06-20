@@ -112,7 +112,7 @@ class PTStats {
 // initialize
 PTStats *PTStats::inst = 0;
 
-void countPtStat(Data &data, int uid)
+void countPtStat(Data &data, cl_uid_t uid)
 {
     PTStats *stats = PTStats::getInstance();
     stats->fullCount++;
@@ -124,7 +124,7 @@ void countPtStat(Data &data, int uid)
     stats->count ++;
 
     // killing pointer target
-    VK_DEBUG(0, "killling " << uid << " by its pointer!");
+    VK_DEBUG(0, "killing " << uid << " by its pointer!");
 }
 
 bool isLcVar(const Var *v)
@@ -324,7 +324,7 @@ void computeFixPoint(Data &data)
     VK_DEBUG(2, "fixed-point reached in " << cntSteps << " steps");
 }
 
-inline bool isPointedUid(Data &data, int uid)
+inline bool isPointedUid(Data &data, cl_uid_t uid)
 {
     BOOST_FOREACH(TAliasMap::const_reference item, data.derefAliases)
         if (item.second == uid)
@@ -338,7 +338,7 @@ void killVariablePerTarget(
         Data                    &data,
         const TBlock            &bb,
         int                      target,
-        int                      uid)
+        cl_uid_t                 uid)
 {
     TStorRef stor = data.stor;
     const TTargetList &targets = bb->targets();
@@ -485,8 +485,8 @@ void commitBlock(Data &data, TBlock bb)
         // needs the 'live' and 'livePerTarget' lists to be sorted
         while (liveIt != live.end() && perTarget.end() != perTargetIt) {
 
-            int uidLive = *liveIt;
-            int uidPerTarget = *perTargetIt;
+            cl_uid_t uidLive = *liveIt;
+            cl_uid_t uidPerTarget = *perTargetIt;
 
             if (uidPerTarget < uidLive) {
                 // uidPerTarget is killed for particular target
@@ -508,7 +508,7 @@ void commitBlock(Data &data, TBlock bb)
 }
 
 // pre-compute aliases
-int alias(Data &data, int uid)
+cl_uid_t alias(Data &data, cl_uid_t uid)
 {
     TFnc fnc = data.fnc;
     const PointsTo::Graph &ptg = fnc->ptg;

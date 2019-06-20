@@ -74,7 +74,7 @@ struct Var {
      * unique ID of variable
      * @attention not guaranteed to be unique beyond the scope of variable
      */
-    int                         uid;
+    cl_uid_t                    uid;
 
     /**
      * name of the variable, empty string for anonymous variables
@@ -143,7 +143,7 @@ class VarDb {
          * @param uid ID of variable to look for
          * @return reference to either a found or just created Var object
          */
-        Var& operator[](int uid);
+        Var& operator[](cl_uid_t uid);
 
         /**
          * look for a Var object by ID, crash if not found
@@ -152,7 +152,7 @@ class VarDb {
          * @param uid ID of variable to look for
          * @return reference to the found Var object
          */
-        const Var& operator[](int uid) const;
+        const Var& operator[](cl_uid_t uid) const;
 
         /**
          * return STL-like iterator to go through the container
@@ -213,7 +213,7 @@ class TypeDb {
          * insert(). There is no cloning performed since it hasn't been
          * considered useful for now.
          */
-        const struct cl_type* operator[](int) const;
+        const struct cl_type* operator[](cl_uid_t) const;
 
         /**
          * return STL-like iterator to go through the container
@@ -270,7 +270,7 @@ void readTypeTree(TypeDb &db, const struct cl_type *clt);
  * name to UID mapping for global/static symbols
  */
 struct NameDb {
-    typedef std::map<std::string, int /* uid */>    TNameMap;
+    typedef std::map<std::string, cl_uid_t>         TNameMap;
     typedef std::map<std::string, TNameMap>         TFileMap;
 
     TNameMap        glNames;
@@ -298,12 +298,12 @@ typedef STD_VECTOR(const Block *) TTargetList;
  */
 struct KillVar {
     /// CodeStorage uid of the variable to kill
-    int             uid;
+    cl_uid_t        uid;
 
     /// if true, killing the variable is safe only if nobody points at/inside it
     bool            onlyIfNotPointed;
 
-    KillVar(int uid_, bool onlyIfNotPointed_):
+    KillVar(cl_uid_t uid_, bool onlyIfNotPointed_):
         uid(uid_),
         onlyIfNotPointed(onlyIfNotPointed_)
     {
@@ -607,7 +607,7 @@ class ControlFlow {
 };
 
 typedef std::vector<int>        TArgByPos;
-typedef std::set<int>           TVarSet;
+typedef std::set<cl_uid_t>      TVarSet;
 
 namespace CallGraph {
     struct Node;
@@ -631,7 +631,7 @@ class Item {
         Item(const Var *v);
 
         bool isGlobal() const;
-        int uid() const;
+        cl_uid_t uid() const;
         const char *name() const;
         /**
          * return CodeStorage::Var pointer if the item represents PT_ITEM_VAR
@@ -679,7 +679,7 @@ class Node {
 // structure -- actual implementation covers this situation.
 // FIXME: this should be generalized for graphs where the same variable may be
 //        placed in more than one node of points-to graph.
-typedef std::map<int, Node *> TMap;
+typedef std::map<cl_uid_t, Node *> TMap;
 
 class Graph {
     public:
@@ -691,7 +691,7 @@ class Graph {
 
     public:
         /// map variable uid to Item object
-        std::map<int, const Item *>     uidToItem;
+        std::map<cl_uid_t, const Item *> uidToItem;
         /// map item uid to concrete node
         TMap                            map;
         /// backward reference to FncDb (NULL for global graph)
@@ -754,7 +754,7 @@ const struct cl_loc* locationOf(const Fnc &);
 /**
  * return the uid of given Fnc object
  */
-int uidOf(const Fnc &);
+cl_uid_t uidOf(const Fnc &);
 
 /**
  * return true if the function is defined (means we have its CFG and the like)
@@ -784,7 +784,7 @@ class FncDb {
          * @return referenced pointer to either a found or just created Fnc obj
          * @attention created objects will @b not be destroyed automatically
          */
-        Fnc*& operator[](int uid);
+        Fnc*& operator[](cl_uid_t uid);
 
         /**
          * look for a function by ID, crash if not found
@@ -793,7 +793,7 @@ class FncDb {
          * @param uid ID of the function to look for
          * @return pointer to the found Fnc object
          */
-        const Fnc* operator[](int uid) const;
+        const Fnc* operator[](cl_uid_t uid) const;
 
         /**
          * return STL-like iterator to go through all functions inside
