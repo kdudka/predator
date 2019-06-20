@@ -202,7 +202,7 @@ int PerFncCache::lookupCore(const SymHeap &sh)
 struct SymCallCache::Private {
     typedef const CodeStorage::Fnc                     &TFncRef;
     typedef CodeStorage::TVarSet                        TFncVarSet;
-    typedef std::map<int /* uid */, PerFncCache>        TCache;
+    typedef std::map<cl_uid_t, PerFncCache>             TCache;
     typedef std::vector<SymCallCtx *>                   TCtxStack;
 
     TCache                      cache;
@@ -475,7 +475,7 @@ void SymCallCtx::invalidate()
     typedef SymCallCache::Private::TCache TCache;
     TCache &cache = d->cd->cache;
     const CodeStorage::Fnc &fnc = *d->fnc;
-    const int uid = uidOf(fnc);
+    const cl_uid_t uid = uidOf(fnc);
     const TCache::iterator it = cache.find(uid);
     if (it == cache.end()) {
         delete this;
@@ -601,7 +601,7 @@ void SymCallCache::Private::importGlVar(SymHeap &entry, const CVar &cv)
         pushGlVar(dst, glSubHeap, cv);
 
         // update the corresponding cache entry
-        const int uid = uidOf(*ctx->d->fnc);
+        const cl_uid_t uid = uidOf(*ctx->d->fnc);
         PerFncCache &pfc = this->cache[uid];
         pfc.updateCacheEntry(src, dst);
         CL_DEBUG_MSG(loc, "<G> importGlVar() updates a call cache entry for "
@@ -623,7 +623,7 @@ void SymCallCache::Private::resolveHeapCut(
 
     // start with all gl variables that are accessible from this function
     TCVarList fncVarsToImport;
-    BOOST_FOREACH(const int uid, fncVars) {
+    BOOST_FOREACH(const cl_uid_t uid, fncVars) {
         const CodeStorage::Var &var = stor.vars[uid];
         if (isOnStack(var))
             continue;
@@ -722,7 +722,7 @@ void setCallArgs(
 SymCallCtx* SymCallCache::Private::getCallCtx(const SymHeap &entry, TFncRef fnc)
 {
     // cache lookup
-    const int uid = uidOf(fnc);
+    const cl_uid_t uid = uidOf(fnc);
     PerFncCache &pfc = this->cache[uid];
     SymCallCtx *&ctx = pfc.lookup(entry);
     if (!ctx) {
@@ -775,7 +775,7 @@ SymCallCtx* SymCallCache::getCallCtx(
     Trace::Node *trFrame = new Trace::CallFrameNode(trCall, &insn);
 
     // enlarge the backtrace
-    const int uid = uidOf(fnc);
+    const cl_uid_t uid = uidOf(fnc);
     d->bt.pushCall(uid, loc);
 
     // create SymProc and update the location info

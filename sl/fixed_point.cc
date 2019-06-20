@@ -910,7 +910,7 @@ bool tryRemoveDeadBranches(
         // not a condition variable
         return false;
 
-    const /* TShapeVarId */ int var = gVar.uid;
+    const /* TShapeVarId */ cl_uid_t var = gVar.uid;
     std::ostringstream strIn, strExp;
     strIn << *insn;
     strExp << "?cond" << var;

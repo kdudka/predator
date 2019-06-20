@@ -132,7 +132,7 @@ class SymProc {
         TValId valFromOperand(const struct cl_operand &op);
 
         /// resolve Fnc uid from the given operand, return true on success
-        bool fncFromOperand(int *pUid, const struct cl_operand &op);
+        bool fncFromOperand(cl_uid_t *pUid, const struct cl_operand &op);
 
         /// high-level interface to FldHandle::setValue()
         void setValueOf(const FldHandle &lhs, TValId rhs);

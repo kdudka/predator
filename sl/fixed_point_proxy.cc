@@ -46,7 +46,7 @@ namespace FixedPoint {
 using AdtOp::TShapeVarByShape;
 
 typedef const struct cl_loc                        *TLoc;
-typedef int                                         TFncUid;
+typedef cl_uid_t                                    TFncUid;
 typedef std::map<TFncUid, TFnc>                     TFncMap;
 
 typedef const CodeStorage::Block                   *TBlock;

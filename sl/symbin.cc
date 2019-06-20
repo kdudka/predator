@@ -60,7 +60,7 @@ class TempBackTraceTop {
 TempBackTraceTop::TempBackTraceTop(SymExecCore &core, TOp opFnc):
     bt_(0)
 {
-    int uid;
+    cl_uid_t uid;
     if (!core.fncFromOperand(&uid, opFnc))
         // failed to resolve opFnc
         return;
@@ -1261,7 +1261,7 @@ bool fncNameFromOp(
         SymExecCore                                 &core,
         const struct cl_operand                     &op)
 {
-    int uid;
+    cl_uid_t uid;
     if (!core.fncFromOperand(&uid, op))
         return false;
 

@@ -50,7 +50,7 @@ Node* allocNodeIfNeeded(Graph &cg, Fnc *const fnc)
 
 void handleCallback(Graph &cg, Node *node, const TInsn insn, TOp op)
 {
-    int uid;
+    cl_uid_t uid;
     if (!fncUidFromOperand(&uid, &op))
         // not a function
         return;
@@ -78,7 +78,7 @@ void handleCall(Graph &cg, Node *node, const TInsn insn)
     // if there is a call, it is no longer a leaf node
     cg.leaves.erase(node);
 
-    int uid;
+    cl_uid_t uid;
     if (!fncUidFromOperand(&uid, &insn->operands[/* fnc */ 1])) {
         // indirect call
         node->calls[/* indirect calls */ 0].push_back(insn);

@@ -25,6 +25,8 @@
  * @todo some dox
  */
 
+#include "code_listener.h"
+
 #include <map>
 #include <set>
 
@@ -35,7 +37,7 @@ namespace CodeStorage {
     void killLocalVariables(Storage &stor);
 
     namespace VarKiller {
-        typedef int                                 TVar;
+        typedef cl_uid_t                            TVar;
         typedef std::set<TVar>                      TSet;
         typedef std::map<TVar, TVar>                TAliasMap;
 

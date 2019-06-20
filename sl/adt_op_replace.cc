@@ -45,7 +45,7 @@ using FixedPoint::TLocIdx;
 using FixedPoint::TShapeIdx;
 using FixedPoint::TextInsn;
 
-typedef std::vector<int /* uid */>                  TPtrVarList;
+typedef std::vector<cl_uid_t>                       TPtrVarList;
 typedef std::vector<TShapeVarId>                    TShapeVarList;
 typedef std::set<TShapeVarId>                       TShapeVarSet;
 
@@ -305,7 +305,7 @@ void collectPtrVars(
         TPtrVarList varsNow, intersect;
 
         collectPtrVarsCore(&varsNow, fm, tpl, progState, port);
-        BOOST_FOREACH(const int uid, *pDst) {
+        BOOST_FOREACH(const cl_uid_t uid, *pDst) {
             if (varsNow.end() == std::find(varsNow.begin(), varsNow.end(), uid))
                 // uid not in the intersection
                 continue;
@@ -343,7 +343,7 @@ std::string ptrVarsToString(
     const TStorRef stor = anySymHeap->stor();
     std::string str;
 
-    BOOST_FOREACH(const int uid, ptrVarList) {
+    BOOST_FOREACH(const cl_uid_t uid, ptrVarList) {
         str += ", ";
         str += varToString(stor, uid);
         pSet->insert(GenericVar(VL_CODE_LISTENER, uid));

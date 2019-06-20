@@ -80,7 +80,7 @@ TVar varLookup(TStorage stor, const char *name)
 {
     TVar result = NULL;
     BOOST_FOREACH(TFnc fnc, stor.fncs) {
-        BOOST_FOREACH(int vUid, fnc->vars) {
+        BOOST_FOREACH(cl_uid_t vUid, fnc->vars) {
             TVar v = &stor.vars[vUid];
             if (v->name != name)
                 continue;
@@ -192,7 +192,7 @@ void chkBlock(PTCheckCtx &ctx, const TBlock bb)
     BOOST_FOREACH(TInsn insn, *bb) {
         if (insn->code != CL_INSN_CALL)
             continue;
-        int fncId;
+        cl_uid_t fncId;
         if (!fncUidFromOperand(&fncId, &insn->operands[1])) {
             CL_BREAK_IF("indirect call");
         }

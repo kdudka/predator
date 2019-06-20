@@ -113,7 +113,7 @@ typedef int                                         TBoolVarId;
 
 struct GenericVar {
     EVarLevel           code;
-    int                 uid;
+    cl_uid_t            uid;
 
     GenericVar():
         code(VL_NONE),
@@ -121,7 +121,7 @@ struct GenericVar {
     {
     }
 
-    GenericVar(const EVarLevel code_, const int uid_):
+    GenericVar(const EVarLevel code_, const cl_uid_t uid_):
         code(code_),
         uid(uid_)
     {

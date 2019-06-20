@@ -400,7 +400,7 @@ TObjId SymProc::objByVar(const CVar &cv, const bool initOnly)
 TObjId SymProc::objByVar(const struct cl_operand &op)
 {
     // resolve CVar
-    const int uid = varIdFromOperand(&op);
+    const cl_uid_t uid = varIdFromOperand(&op);
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
     const CVar cv(uid, nestLevel);
     return this->objByVar(cv);
@@ -564,7 +564,7 @@ TValId SymProc::valFromOperand(const struct cl_operand &op)
     }
 }
 
-bool SymProc::fncFromOperand(int *pUid, const struct cl_operand &op)
+bool SymProc::fncFromOperand(cl_uid_t *pUid, const struct cl_operand &op)
 {
     if (fncUidFromOperand(pUid, &op))
         return true;
@@ -2537,7 +2537,7 @@ void SymExecCore::handleClobber(const CodeStorage::Insn &insn)
     const struct cl_operand &op = insn.operands[/* var */ 0];
 
     // get C variable uid
-    const int uid = varIdFromOperand(&op);
+    const cl_uid_t uid = varIdFromOperand(&op);
 
     // select level for recursive calls
     const int nestLevel = bt_->countOccurrencesOfTopFnc();

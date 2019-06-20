@@ -32,6 +32,11 @@ extern "C" {
  */
 
 /**
+ * type used for unique IDs of types, vars, fncs
+ */
+typedef long cl_uid_t;
+
+/**
  * generic location info.
  * @note taken from gcc's expanded_location defined in <gcc/input.h>
  */
@@ -225,7 +230,7 @@ struct cl_type {
     /**
      * type's unique ID
      */
-    int                                 uid;
+    cl_uid_t                            uid;
 
     /**
      * kind of type (enumeration)
@@ -395,7 +400,7 @@ struct cl_cst {
             /**
              * unique ID of function's declaration
              */
-            int                         uid;
+            cl_uid_t                    uid;
 
             /**
              * name of the function
@@ -440,7 +445,7 @@ struct cl_var {
     /**
      * unique ID, given by compiler (or any cl decorator on the way from there)
      */
-    int                                 uid;
+    cl_uid_t                            uid;
 
     /**
      * name of the variable, valid only for program variables (NULL for

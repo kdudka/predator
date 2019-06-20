@@ -107,7 +107,7 @@ enum ECustomValue {
 };
 
 union CustomValueData {
-    int             uid;    ///< unique ID as assigned by Code Listener
+    cl_uid_t        uid;    ///< unique ID as assigned by Code Listener
     double          fpn;    ///< floating-point number
     std::string    *str;    ///< string literal
     IR::Range       rng;    ///< closed interval over integral domain
@@ -126,7 +126,7 @@ class CustomValue {
         CustomValue(const CustomValue &);
         CustomValue& operator=(const CustomValue &);
 
-        explicit CustomValue(int uid):
+        explicit CustomValue(cl_uid_t uid):
             code_(CV_FNC)
         {
             data_.uid = uid;
@@ -156,7 +156,7 @@ class CustomValue {
         }
 
         /// unique ID as assigned by Code Listener (only for CV_FNC)
-        int uid() const;
+        cl_uid_t uid() const;
 
         /// closed interval over integral domain (only for CV_INT_RANGE)
         IR::Range& rng();
@@ -245,7 +245,7 @@ typedef short                                           TProtoLevel;
  */
 struct CVar {
     /// static identification of a variable
-    int uid;
+    cl_uid_t uid;
 
     /// zero for global/static variables, instance number 1..n otherwise
     int inst;
@@ -256,7 +256,7 @@ struct CVar {
     {
     }
 
-    CVar(int uid_, int inst_):
+    CVar(cl_uid_t uid_, int inst_):
         uid(uid_),
         inst(inst_)
     {
@@ -282,7 +282,7 @@ inline bool operator!=(const CVar &a, const CVar &b)
 
 /// bundles static identification of a function with its call instance number
 struct CallInst {
-    int uid;        ///< uid of the function
+    cl_uid_t uid;   ///< uid of the function
     int inst;       ///< how many instances of the fnc we have on the stack
 
     CallInst():
@@ -293,7 +293,7 @@ struct CallInst {
 
     CallInst(const SymBackTrace *);
 
-    CallInst(int uid_, int inst_):
+    CallInst(cl_uid_t uid_, int inst_):
         uid(uid_),
         inst(inst_)
     {
