@@ -8,7 +8,7 @@ fi
 
 # include common code base
 topdir="`dirname "$(readlink -f "$SELF")"`/../.."
-source "$topdir/build-aux/xgcclib.sh"
+source "$topdir/build-aux/cclib.sh"
 
 # basic setup
 CL_DIR="$topdir/cl"
