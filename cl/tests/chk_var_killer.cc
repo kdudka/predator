@@ -50,9 +50,11 @@ struct PerFncData {
     const TFnc                      fnc;
     TStateMap                       stateMap;
     TBlockSet                       todo;
+    bool                            done;
 
     PerFncData(const TFnc fnc_):
-        fnc(fnc_)
+        fnc(fnc_),
+        done(false)
     {
     }
 };
@@ -60,7 +62,8 @@ struct PerFncData {
 bool chkAssert(
         const TInsn                 insn,
         const TState               &state,
-        const char                 *name)
+        const char                 *name,
+        const bool                  done)
 {
     const TLoc loc = &insn->loc;
 
@@ -78,6 +81,10 @@ bool chkAssert(
             CL_ERROR_MSG(loc, name << ": invalid operand #" << (i - 2));
             continue;
         }
+
+        if (!done)
+            // fixed-point not yet computed
+            continue;
 
         const cl_uid_t uid = varIdFromOperand(&op);
         if (hasKey(state, uid) == live)
@@ -99,7 +106,8 @@ bool chkAssert(
 
 bool handleBuiltIn(
         const TInsn                 insn,
-        const TState               &state)
+        const TState               &state,
+        const bool                  done)
 {
     if (CL_INSN_CALL != insn->code)
         // not a function call
@@ -111,7 +119,7 @@ bool handleBuiltIn(
         return false;
 
     if (STREQ("VK_ASSERT", name))
-        return chkAssert(insn, state, name);
+        return chkAssert(insn, state, name, done);
 
     // no built-in matched
     return false;
@@ -183,7 +191,7 @@ void updateBlock(PerFncData &data, const TBlock bb) {
     TState state(data.stateMap[bb]);
 
     BOOST_FOREACH(const TInsn insn, *bb) {
-        if (handleBuiltIn(insn, state))
+        if (handleBuiltIn(insn, state, data.done))
             // handled as a built-in function
             continue;
 
@@ -239,6 +247,11 @@ void chkFunction(const TFnc fnc) {
 
     CL_DEBUG_MSG(loc, "<-- fixed-point for "
             << nameOf(*fnc) << "() reached in " << cntSteps << " steps");
+
+    // now finally report the errors
+    data.done = true;
+    BOOST_FOREACH(const TBlock bb, cfg)
+        updateBlock(data, bb);
 }
 
 void clEasyRun(const CodeStorage::Storage &stor, const char *) {
