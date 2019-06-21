@@ -854,8 +854,75 @@ static enum cl_scope_e get_decl_scope(tree t)
         : CL_SCOPE_STATIC;
 }
 
+static bool translate_unop_code(enum cl_unop_e *pDst, enum tree_code code);
+
+static tree follow_trivial_ssa(tree t)
+{
+    CL_BREAK_IF(SSA_NAME != TREE_CODE(t));
+    gimple stmt = SSA_NAME_DEF_STMT(t);
+    if (!stmt)
+        return NULL;
+
+    if (GIMPLE_ASSIGN != gimple_code(stmt))
+        // SSA_NAME value is not from an assignment insn
+        return NULL;
+
+    if (2 != gimple_num_ops(stmt))
+        // not a unary (lhs + 1) operator
+        return NULL;
+
+    if (gimple_assign_lhs(stmt) != t)
+        // not an assignment to this SSA_NAME node
+        return NULL;
+
+    cl_unop_e code;
+    if (!translate_unop_code(&code, gimple_assign_rhs_code(stmt)))
+        // unknown unary operation
+        return NULL;
+
+    if (CL_UNOP_ASSIGN != code)
+        // not a trivial assignment
+        return NULL;
+
+    // resolve rhs operand
+    return gimple_assign_rhs1(stmt);
+}
+
+static bool traverse_ssa_names(tree *pt, const int depth)
+{
+    for (int i = 0; i < depth; ++i) {
+        *pt = follow_trivial_ssa(*pt);
+        if (!*pt)
+            // not something we are able to follow
+            return false;
+
+        const enum tree_code code = TREE_CODE(*pt);
+        switch (code) {
+            case SSA_NAME:
+                // traverse SSA_NAME nodes until traverse depth is exceeded
+                continue;
+
+            case VAR_DECL:
+                // use name of the variable whose value is being assigned
+                return true;
+
+            default:
+                // unhandled rhs node
+                return false;
+        }
+    }
+
+    // traverse depth exceeded
+    return false;
+}
+
 static const char* get_decl_name(tree t)
 {
+    if (SSA_NAME == TREE_CODE(t)
+            // if SSA_NAME is alias of a regular variable, alias its name, too
+            && !traverse_ssa_names(&t, /* FIXME: do not hard-wire */ 4))
+        return NULL;
+
     tree name = DECL_NAME(t);
     return (name)
         ? IDENTIFIER_POINTER(name)
@@ -912,6 +979,7 @@ static bool translate_unop_code(enum cl_unop_e *pDst, enum tree_code code) {
         case CONVERT_EXPR:
         case NOP_EXPR:
         case VAR_DECL:
+        case SSA_NAME:
         case FIX_TRUNC_EXPR:
             *pDst = CL_UNOP_ASSIGN;
             return true;
