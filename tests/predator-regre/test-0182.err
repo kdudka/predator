@@ -5,7 +5,7 @@ test-0182.c:148: note: _ = (_ == NULL) ... evaluated as FALSE
 test-0182.c:147: note: _ = (pos == NULL) ... evaluated as FALSE
 test-0182.c:145: note: _ = (dll != NULL) ... evaluated as TRUE
 test-0182.c:134: note: _ = (dll != NULL) ... assuming FALSE
-test-0182.c:137: note: _ = (_ != dll) ... evaluated as FALSE
+test-0182.c:137: note: _ = (dll != _) ... evaluated as FALSE
 test-0182.c:136: note: _ = (_ == NULL) ... evaluated as FALSE
 test-0182.c:135: note: _ = (_ == NULL) ... evaluated as FALSE
 test-0182.c:134: note: _ = (dll != NULL) ... evaluated as TRUE
