@@ -21,6 +21,7 @@
 #include "../util.hh"
 
 #include <cl/cl_msg.hh>
+#include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 #include <cl/easy.hh>
 #include <cl/storage.hh>
@@ -78,8 +79,7 @@ bool chkAssert(
             continue;
         }
 
-        const char *varName;
-        const cl_uid_t uid = varIdFromOperand(&op, &varName);
+        const cl_uid_t uid = varIdFromOperand(&op);
         if (hasKey(state, uid) == live)
             // matched
             continue;
@@ -88,6 +88,7 @@ bool chkAssert(
             ? "VK_LIVE"
             : "VK_DEAD";
 
+        const std::string varName = varToString(*insn->stor, uid);
         CL_ERROR_MSG(loc, name << ": property violated: "
                 << status << ": " << varName);
     }
@@ -134,6 +135,9 @@ void killVars(
             continue;
 
         const cl_uid_t uid = kv.uid;
+        const std::string varName = varToString(*insn->stor, uid);
+        CL_DEBUG_MSG(&insn->loc, "DEAD: " << varName << " by " << *insn);
+
         if (1 == state.erase(uid))
             // successfully killed a variable
             continue;
@@ -184,9 +188,15 @@ void updateBlock(PerFncData &data, const TBlock bb) {
             continue;
 
         // first mark all local variables used by this insn as live
-        BOOST_FOREACH(TOp op, insn->operands)
-            if (isLcVar(op))
-                state.insert(varIdFromOperand(&op));
+        BOOST_FOREACH(TOp op, insn->operands) {
+            if (!isLcVar(op))
+                continue;
+
+            const cl_uid_t uid = varIdFromOperand(&op);
+            const std::string varName = varToString(*insn->stor, uid);
+            CL_DEBUG_MSG(&insn->loc, "LIVE: " << varName << " by " << *insn);
+            state.insert(uid);
+        }
 
         // then kill all variables suggested by varKiller
         killVars(state, data, insn, insn->varsToKill);

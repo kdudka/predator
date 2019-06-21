@@ -1,6 +1,6 @@
 #include "include/vk.h"
 
-void touch_somehow(int);
+void use_value(int);
 
 int main() {
     int i = 0;
@@ -12,7 +12,7 @@ int main() {
     while (i < 10) {
         // block L3
         VK_ASSERT(VK_LIVE, &i, &untouched);
-        touch_somehow(untouched);
+        use_value(untouched);
         i++;
         VK_ASSERT(VK_LIVE, &i, &untouched);
     }
