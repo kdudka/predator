@@ -1,0 +1,51 @@
+ tests/predator-regre/test-0180.err | 8 ++++----
+ tests/predator-regre/test-0182.err | 2 +-
+ tests/predator-regre/test-0184.err | 2 +-
+ 3 files changed, 6 insertions(+), 6 deletions(-)
+
+diff --git a/tests/predator-regre/test-0180.err b/tests/predator-regre/test-0180.err
+index e2f21862..2a03eb03 100644
+--- a/tests/predator-regre/test-0180.err
++++ b/tests/predator-regre/test-0180.err
+@@ -3,11 +3,11 @@ test-0180.c:58: note: from call of fail ()
+ test-0180.c:58: note: _ = (_ != _) ... assuming TRUE
+ test-0180.c:57: note: _ = (_ != _) ... evaluated as FALSE
+ test-0180.c:56: note: _ = (node == NULL) ... evaluated as FALSE
+-test-0180.c:52: note: _ = (head == _) ... evaluated as FALSE
+-test-0180.c:51: note: _ = (head == _) ... evaluated as FALSE
++test-0180.c:52: note: _ = (_ == head) ... evaluated as FALSE
++test-0180.c:51: note: _ = (_ == head) ... evaluated as FALSE
+ test-0180.c:50: note: _ = (head == NULL) ... evaluated as FALSE
+-test-0180.c:46: note: _ = (head == _) ... evaluated as FALSE
+-test-0180.c:45: note: _ = (head == _) ... evaluated as FALSE
++test-0180.c:46: note: _ = (_ == head) ... evaluated as FALSE
++test-0180.c:45: note: _ = (_ == head) ... evaluated as FALSE
+ test-0180.c:44: note: _ = (head == NULL) ... evaluated as FALSE
+ test-0180.c:165: note: from call of inspect (&gl_list)
+ test-0180.c:117: note: _ = (_ != (int)0) ... assuming FALSE
+diff --git a/tests/predator-regre/test-0182.err b/tests/predator-regre/test-0182.err
+index b48a0bb6..0a222f47 100644
+--- a/tests/predator-regre/test-0182.err
++++ b/tests/predator-regre/test-0182.err
+@@ -5,7 +5,7 @@ test-0182.c:148: note: _ = (_ == NULL) ... evaluated as FALSE
+ test-0182.c:147: note: _ = (pos == NULL) ... evaluated as FALSE
+ test-0182.c:145: note: _ = (dll != NULL) ... evaluated as TRUE
+ test-0182.c:134: note: _ = (dll != NULL) ... assuming FALSE
+-test-0182.c:137: note: _ = (dll != _) ... evaluated as FALSE
++test-0182.c:137: note: _ = (_ != dll) ... evaluated as FALSE
+ test-0182.c:136: note: _ = (_ == NULL) ... evaluated as FALSE
+ test-0182.c:135: note: _ = (_ == NULL) ... evaluated as FALSE
+ test-0182.c:134: note: _ = (dll != NULL) ... evaluated as TRUE
+diff --git a/tests/predator-regre/test-0184.err b/tests/predator-regre/test-0184.err
+index 730852ae..167d92b4 100644
+--- a/tests/predator-regre/test-0184.err
++++ b/tests/predator-regre/test-0184.err
+@@ -11,7 +11,7 @@ test-0184.c:59: note: _ = (_ != (int)0) ... assuming FALSE
+ test-0184.c:27: note: _ = (ptr == NULL) ... evaluated as FALSE
+ test-0184.c:37: note: from call of node = alloc_node ()
+ test-0184.c:47: note: from call of chain_node (&list)
+-test-0184.c:112: note: from call of _ = create_sll (&p1, &p2)
++test-0184.c:112: note: from call of list = create_sll (&p1, &p2)
+ test-0184.c:108: note: from call of main ()
+ test-0184.c:108: warning: symbolic execution terminates prematurely
+ test-0184.c:108: note: an error label has been reached

@@ -2,17 +2,17 @@ test-0189.c:3: error: error label "ERROR" has been reached
 test-0189.c:21: note: from call of error ()
 test-0189.c:16: note: _ = (i == (int)1) ... evaluated as FALSE
 test-0189.c:16: note: _ = (i == (int)0) ... evaluated as FALSE
-test-0189.c:30: note: from call of gl_write (gl_num_)
-test-0189.c:27: note: _ = (gl_mloop_ <= gl_cnt_) ... evaluated as FALSE
+test-0189.c:30: note: from call of gl_write (gl_num)
+test-0189.c:27: note: _ = (gl_mloop <= gl_cnt) ... evaluated as FALSE
 test-0189.c:41: note: from call of gl_proc1 ()
 test-0189.c:39: note: _ = (_ != (int)0) ... assuming TRUE
-test-0189.c:39: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
-test-0189.c:38: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
+test-0189.c:39: note: _ = (gl_st1 == (int)0) ... evaluated as TRUE
+test-0189.c:38: note: _ = (gl_st1 == (int)0) ... evaluated as TRUE
 test-0189.c:44: note: _ = (_ != (int)0) ... assuming TRUE
-test-0189.c:44: note: _ = (gl_st2_ == (int)0) ... evaluated as TRUE
+test-0189.c:44: note: _ = (gl_st2 == (int)0) ... evaluated as TRUE
 test-0189.c:39: note: _ = (_ != (int)0) ... assuming FALSE
-test-0189.c:39: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
-test-0189.c:38: note: _ = (gl_st1_ == (int)0) ... evaluated as TRUE
+test-0189.c:39: note: _ = (gl_st1 == (int)0) ... evaluated as TRUE
+test-0189.c:38: note: _ = (gl_st1 == (int)0) ... evaluated as TRUE
 test-0189.c:63: note: from call of gl_eval ()
 test-0189.c:58: note: from call of main ()
 test-0189.c:58: warning: symbolic execution terminates prematurely

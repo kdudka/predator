@@ -3,11 +3,11 @@ test-0180.c:58: note: from call of fail ()
 test-0180.c:58: note: _ = (_ != _) ... assuming TRUE
 test-0180.c:57: note: _ = (_ != _) ... evaluated as FALSE
 test-0180.c:56: note: _ = (node == NULL) ... evaluated as FALSE
-test-0180.c:52: note: _ = (_ == head) ... evaluated as FALSE
-test-0180.c:51: note: _ = (_ == head) ... evaluated as FALSE
+test-0180.c:52: note: _ = (head == _) ... evaluated as FALSE
+test-0180.c:51: note: _ = (head == _) ... evaluated as FALSE
 test-0180.c:50: note: _ = (head == NULL) ... evaluated as FALSE
-test-0180.c:46: note: _ = (_ == head) ... evaluated as FALSE
-test-0180.c:45: note: _ = (_ == head) ... evaluated as FALSE
+test-0180.c:46: note: _ = (head == _) ... evaluated as FALSE
+test-0180.c:45: note: _ = (head == _) ... evaluated as FALSE
 test-0180.c:44: note: _ = (head == NULL) ... evaluated as FALSE
 test-0180.c:165: note: from call of inspect (&gl_list)
 test-0180.c:117: note: _ = (_ != (int)0) ... assuming FALSE

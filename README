@@ -31,10 +31,10 @@ and Linux for now.
 Building from sources against the system GCC
 ============================================
 This method requires a build of GCC with plug-in support compiled in (not
-necessarily the system one).  The currently supported version of GCC is 6.5.0
+necessarily the system one).  The currently supported version of GCC is 7.4.0
 and the test-suite is guaranteed to fully succeed only against this version of
 GCC.  However, the Predator plug-in itself is known to work with GCC 4.[5-9].x,
-5.4.x, and 6.[1-4].x equally well.
+5.4.x, and 6.[1-5].x equally well.
 
 (1) Install all dependences of Predator and Forester
 ----------------------------------------------------
@@ -143,11 +143,11 @@ Darwin.  You can install some of these dependencies using Homebrew available at
 https://brew.sh/:
 
     brew install cmake boost boost-build
-    brew install gcc@6                   # only for GCC plug-in
+    brew install gcc@7                   # only for GCC plug-in
     brew install llvm@7                  # only for LLVM plug-in
     brew install coreutils               # only for scripts: gtimeout, gstdbuf
 
-The currently supported version of GCC is 6.5.0.
+The currently supported version of GCC is 7.4.0.
 The currently supported version of LLVM is 7.0.1.
 
 Building GCC from sources [emergency solution]
