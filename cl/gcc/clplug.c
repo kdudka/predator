@@ -929,6 +929,15 @@ static const char* get_decl_name(tree t)
         : NULL;
 }
 
+static void read_var_location(struct cl_loc *dst, const tree var)
+{
+    tree t = var;
+    if (SSA_NAME == TREE_CODE(t) && !traverse_ssa_names(&t, /* FIXME */ 4))
+        read_gimple_location(dst, SSA_NAME_DEF_STMT(var));
+    else
+        read_gcc_location(dst, DECL_SOURCE_LOCATION(t));
+}
+
 static int field_lookup(tree op, tree field)
 {
     tree type = TREE_TYPE(op);
@@ -1220,10 +1229,7 @@ static struct cl_var* add_var_if_needed(tree t)
     var_db_insert(var_db, var);
 
     // read meta-data
-    if (is_ssa_name)
-        read_gimple_location(&var->loc, SSA_NAME_DEF_STMT(t));
-    else
-        read_gcc_location(&var->loc, DECL_SOURCE_LOCATION(t));
+    read_var_location(&var->loc, t);
     var->artificial = DECL_ARTIFICIAL(t);
     var->is_extern = !is_ssa_name && DECL_EXTERNAL(t);
     if (!var->is_extern) {
