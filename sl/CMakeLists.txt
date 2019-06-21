@@ -108,7 +108,11 @@ else()
     configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
         ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
 endif()
-configure_file(${PROJECT_SOURCE_DIR}/sldbg.in         ${PROJECT_BINARY_DIR}/sldbg     @ONLY)
+if(APPLE)
+    configure_file(${PROJECT_SOURCE_DIR}/sldbg.in     ${PROJECT_BINARY_DIR}/sllldb    @ONLY)
+else()
+    configure_file(${PROJECT_SOURCE_DIR}/sldbg.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
+endif()
 configure_file(${PROJECT_SOURCE_DIR}/check-property.sh.in
     ${PROJECT_BINARY_DIR}/check-property.sh                                           @ONLY)
 
