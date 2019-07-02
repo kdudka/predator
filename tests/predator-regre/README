@@ -787,6 +787,8 @@ Tests taken from Forester
 
     test-0255.c - test for reporting leaks at exit() call
 
+    test-0256.c - test for handling of pointers to string literals
+
 
 Data reinterpretation
 =====================

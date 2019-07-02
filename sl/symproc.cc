@@ -835,7 +835,7 @@ TValId customValueEncoder(SymProc &proc, const FldHandle &dst, TValId val)
             // fall through!
 
         case CV_STRING:
-            return val;
+            return ptrObjectEncoderCore(proc, dst, val, PK_DATA);
 
         case CV_INVALID:
             break;
