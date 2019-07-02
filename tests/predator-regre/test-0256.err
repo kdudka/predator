@@ -1,3 +1,4 @@
-test-0256.c:5: error: not enough space to store value of a pointer
+test-0256.c:5: warning: not enough space to store value of a pointer
 test-0256.c:5: note: dstSize: 1 B
 test-0256.c:5: note: ptrSize: 4 B
+test-0256.c:6: note: writing heap graph to 'lost-0000.dot'...
