@@ -174,6 +174,7 @@ void printUserMessage(SymProc &proc, const struct cl_operand &opMsg)
     CL_NOTE_MSG(loc, "user message: " << msg);
 }
 
+/// expects a read-only operation
 bool validateStringOp(SymProc &proc, TOp op, TSizeRange *pSize = 0)
 {
     SymHeap &sh = proc.sh();
@@ -188,7 +189,7 @@ bool validateStringOp(SymProc &proc, TOp op, TSizeRange *pSize = 0)
         return true;
     }
 
-    if (!proc.checkForInvalidDeref(val, sizeof(char)))
+    if (!proc.checkForInvalidDeref(val, sizeof(char), /* ro */ true))
         CL_ERROR_MSG(loc, "failed to imply a zero-terminated string");
 
     return false;
@@ -779,7 +780,7 @@ bool handleStrncpy(
         ? strLen.hi
         : size.hi;
 
-    if (core.checkForInvalidDeref(valSrc, srcLimit)) {
+    if (core.checkForInvalidDeref(valSrc, srcLimit, /* ro */ true)) {
         // error message already printed out
         core.printBackTrace(ML_ERROR);
         insertCoreHeap(dst, core, insn);

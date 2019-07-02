@@ -125,7 +125,7 @@ class SymProc {
         }
 
     public:
-        /// obtain a heap object corresponding to the given operand
+        /// obtain a field corresponding to the given operand
         FldHandle fldByOperand(const struct cl_operand &op);
 
         /// obtain a heap value corresponding to the given operand
@@ -146,8 +146,8 @@ class SymProc {
         /// invalidate all variables killed by the given instruction per target
         void killPerTarget(const CodeStorage::Insn &, unsigned target);
 
-        /// check whether we can safely access sizeOfTarget at the given address
-        bool checkForInvalidDeref(TValId val, TSizeOf sizeOfTarget);
+        /// check whether we can safely access sizeOf bytes at addr
+        bool checkForInvalidDeref(TValId addr, TSizeOf sizeOf, bool ro = false);
 
         /// print backtrace and update the current error level correspondingly
         void printBackTrace(EMsgLevel level, bool forcePtrace = false);

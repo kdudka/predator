@@ -250,7 +250,28 @@ void reportDerefOutOfBounds(
     }
 }
 
-bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
+bool checkStringCstDeref(SymProc &proc, const TValId val, const TSizeOf fldSize)
+{
+    SymHeap &sh = proc.sh();
+    CustomValue cv = sh.valUnwrapCustom(val);
+    if (CV_STRING != cv.code())
+        // not a string literal
+        return false;
+
+    const TSizeRange cstSize = sh.valSizeOfString(val);
+    if (cstSize.lo < fldSize) {
+        // out of bounds access
+        CL_ERROR_MSG(proc.lw(), "access to string literal out of bounds");
+        return false;
+    }
+
+    return true;
+}
+
+bool SymProc::checkForInvalidDeref(
+        const TValId                    val,
+        const TSizeOf                   sizeOfTarget,
+        const bool                      ro)
 {
     if (VAL_NULL == val) {
         CL_ERROR_MSG(lw_, "dereference of NULL value");
@@ -278,6 +299,10 @@ bool SymProc::checkForInvalidDeref(TValId val, const TSizeOf sizeOfTarget)
             // fall through!
 
         case VT_CUSTOM:
+            if (ro && checkStringCstDeref(*this, val, sizeOfTarget))
+                return true;
+            // fall through!
+
         case VT_UNKNOWN:
             CL_ERROR_MSG(lw_, "invalid dereference");
             describeUnknownVal(*this, val, "dereference");
@@ -1199,7 +1224,7 @@ void executeMemmove(
     }
 
     if (proc.checkForInvalidDeref(valDst, size.hi)
-            || proc.checkForInvalidDeref(valSrc, size.hi))
+            || proc.checkForInvalidDeref(valSrc, size.hi, /* ro */ true))
     {
         // error message already printed out
         proc.printBackTrace(ML_ERROR);
