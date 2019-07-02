@@ -699,10 +699,10 @@ TValId ptrObjectEncoderCore(
     const struct cl_loc *loc = proc.lw();
     const TSizeOf dstSize = dst.type()->size;
     if (dstSize < ptrSize) {
-        CL_ERROR_MSG(loc, "not enough space to store value of a pointer");
+        CL_WARN_MSG(loc, "not enough space to store value of a pointer");
         CL_NOTE_MSG(loc, "dstSize: " << dstSize << " B");
         CL_NOTE_MSG(loc, "ptrSize: " << ptrSize << " B");
-        proc.printBackTrace(ML_ERROR);
+        proc.printBackTrace(ML_WARN);
         return sh.valCreate(VT_UNKNOWN, VO_REINTERPRET);
     }
 
