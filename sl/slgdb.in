@@ -74,7 +74,9 @@ if [ `uname` == Darwin ]; then
             -fplugin-arg-libsl-verbose=$SL_VERBOSE \
             $SL_OPTS"
     else
-        RUN="$CLANG_HOST $CMD_OPTS -emit-llvm -c \"$1\" -o tmp.ll; \
+        RUN="$CLANG_HOST $CMD_OPTS -emit-llvm \
+            -Xclang -fsanitize-address-use-after-scope \
+            -c \"$1\" -o tmp.ll; \
             $LLDB -- "$OPT_HOST" tmp.ll -o $SINK -lowerswitch \
             -load "$SL_PLUG" -sl \
             -verbose=$SL_VERBOSE $SL_OPTS"

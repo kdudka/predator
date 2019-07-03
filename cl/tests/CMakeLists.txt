@@ -48,7 +48,7 @@ macro(add_test_wrap test_name cmd)
 endmacro()
 
 if(ENABLE_LLVM)
-set(cmd_cc1 "-S -emit-llvm")
+set(cmd_cc1 "-S -emit-llvm -Xclang -fsanitize-address-use-after-scope")
 #set(cmd_cc1 "${cmd_cc1} -femit-all-decls")
 set(CFLAGS "-std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS")
 

@@ -305,7 +305,8 @@ if [ -z $ENABLE_LLVM ]; then
         | tee "$TRACE"                                  \
         | parse_output
 else
-    "$CLANG_HOST" -S -emit-llvm -O0 "$@" -g -o -        \
+    "$CLANG_HOST" -S -emit-llvm -O0 -g -o -             \
+        -Xclang -fsanitize-address-use-after-scope "$@" \
         | "$OPT_HOST" -lowerswitch                      \
         -load "$PASSES_LIB" -global-vars                \
         -load "$SL_PLUG" -sl -args="$ARGS"              \

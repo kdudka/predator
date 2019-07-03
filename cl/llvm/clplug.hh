@@ -119,6 +119,7 @@ struct CLPass : public ModulePass {
 
         VarMap VarTable;     ///< Table for values
         DataLayout *DL;
+        bool lifetimeCheck = false; ///< IR contains lifetime checks
         struct cl_code_listener *cl;///< Code Listener object
 
     public:
@@ -134,6 +135,7 @@ struct CLPass : public ModulePass {
 
         void getIntOperand(int, struct cl_operand *);
         void findLocation(Instruction *, struct cl_loc *);
+        bool isLocalScopeVar(Value *, bool);
 
         void cleanAll(void);
         void freeTypeTable(void);
@@ -163,10 +165,11 @@ struct CLPass : public ModulePass {
         void handleUnaryInstruction(Instruction *);
         void handleCallInstruction(CallInst *);
         void handleDbgInfoIntrinsic(DbgInfoIntrinsic *);
+        void handleLifetimeIntrinsic(Instruction *, bool);
 
         /* Operands */
         bool handleOperand(Value *, struct cl_operand *);
-        bool handleLoadOperand(Value *, struct cl_operand *);
+        bool handleValueOfPtrOperand(Value *, struct cl_operand *);
         bool handleCastOperand(Value *, struct cl_operand *);
         bool handleGEPOperand(Value *, struct cl_operand *);
         struct cl_operand *insertOffsetAcc(Value *, struct cl_operand *);
