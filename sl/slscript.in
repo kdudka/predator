@@ -127,7 +127,8 @@ run_llvm() {
         return 1
     fi
 
-    "$CLANG_HOST" $COMPILE_OPTS -emit-llvm "$@" -g -o -    \
+    "$CLANG_HOST" $COMPILE_OPTS -emit-llvm -g -o -         \
+        -Xclang -fsanitize-address-use-after-scope "$@"    \
         | "$OPT_HOST" -o $SINK                             \
         -lowerswitch                                       \
         -load "$PASSES_LIB" -global-vars                   \

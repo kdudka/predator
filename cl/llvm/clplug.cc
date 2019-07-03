@@ -67,6 +67,7 @@ extern "C" {
 #   include "llvm/IR/LegacyPassManager.h"
 #   include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #endif
+#include "llvm/Transforms/Instrumentation.h" // createAddressSanitizerFunctionPass
 
 #include "llvm/Support/CommandLine.h" // namespace cl
 #ifdef LLVM_HOST_3_7_OR_NEWER
@@ -304,6 +305,28 @@ void CLPass::findLocation(Instruction *i, struct cl_loc *loc) {
 #endif
 }
 
+/// check scope of allocated variable from declaration llvm.dbg.declare
+/// return true (lex is false), if variable was declared for entire function
+///             (lex is true), if variable was declared for lexical block
+bool CLPass::isLocalScopeVar(Value *var, bool lex) {
+
+    CL_BREAK_IF(!var);
+
+#ifdef LLVM_HOST_6_OR_NEWER
+    for (auto& DI : FindDbgAddrUses(var))
+#else
+    if (DbgDeclareInst *DI = FindAllocaDbgDeclare(var))
+#endif
+        if (DebugLoc dbg = DI->getDebugLoc()) {
+            MDNode *scope = dbg->getScope();
+            if (!lex && isa<DISubprogram>(scope)) // function scope
+                return true;
+            if (lex && isa<DILexicalBlockBase>(scope)) // lexical block of function
+                return true;
+        }
+    return false;
+}
+
 /// get operand of intiger type
 void CLPass::getIntOperand(int num, struct cl_operand *clo) {
     clo->code = CL_OPERAND_CST;
@@ -436,12 +459,17 @@ bool CLPass::runOnModule(Module &M) {
         std::memcpy(tmpPtr, tmp.c_str(), len);
         cl_loc_known.file = tmpPtr;
     } else {
+        CL_ERROR("missing debug information (missing clang argument: '-g')");
         cl_loc_known.file = M.getModuleIdentifier().c_str();
     }
 
     // one module for one source file
     cl->file_open(cl, cl_loc_known.file); // open source file
     CL_DEBUG("start "<< __func__<<" for "<<cl_loc_known.file);
+
+    if (M.getNamedValue("llvm.lifetime.end.p0i8") ||
+        M.getNamedValue("llvm.lifetime.end"))
+        lifetimeCheck = true;
 
     for (auto& F : M)
     { // functions
@@ -878,11 +906,13 @@ struct cl_var *CLPass::handleVariable(Value *v) {
     if (DbgDeclareInst *DI = FindAllocaDbgDeclare(v)) {
 #endif
         std::string tmp = DI->getVariable()->getName().str();
-        unsigned len = tmp.length() + 1;
-        char * tmpPtr = new char [len];
-        std::memcpy(tmpPtr, tmp.c_str(), len);
-        clv->name = tmpPtr;
-        clv->artificial = false;
+        if (!tmp.empty()) {
+            unsigned len = tmp.length() + 1;
+            char * tmpPtr = new char [len];
+            std::memcpy(tmpPtr, tmp.c_str(), len);
+            clv->name = tmpPtr;
+            clv->artificial = false;
+        }
         findLocation(DI, &(clv->loc));
     }
 
@@ -1354,7 +1384,13 @@ void CLPass::handleInstruction(Instruction *I) {
         //Memory operators
 
         case Instruction::Alloca: {// AllocaInst - Stack management
-            handleAllocaInstruction(cast<AllocaInst>(I));
+            // or check, if exists lifetime.start?
+            if (//lifetimeCheck &&
+                /* allocated in lexical block */isLocalScopeVar(I, true))
+                // handled in DbgDeclareInst as alloca
+                CL_DEBUG("ignoring alloca instruction");
+            else
+                handleAllocaInstruction(cast<AllocaInst>(I));
             break;
         }
 
@@ -1400,14 +1436,28 @@ void CLPass::handleInstruction(Instruction *I) {
 
         case Instruction::Call: // CallInst
             if(isa<DbgInfoIntrinsic>(I)) {
+                if (isa<DbgDeclareInst>(I)) {
+                    Value *var = cast<DbgDeclareInst>(I)->getAddress();
+                    if (var && isLocalScopeVar(var, true)) {
+                        handleAllocaInstruction(cast<AllocaInst>(var));
+                        CL_DEBUG("alloca from llvm built-in function llvm.dbg.declare");
+                    }
+                }
 //                handleDbgInfoIntrinsic(cast<DbgInfoIntrinsic>(I));
                 break; // not instruction
             }
-//            if (isa<IntrinsicInst>(I) && !isa<MemIntrinsic>(I)) {
-//                CL_WARN("intrinsic instructions are not supported");
-//            } else {
-                handleCallInstruction(cast<CallInst>(I));
-//            }
+            if (isa<IntrinsicInst>(I)) { // intrinsic instructions
+                auto iicode = cast<IntrinsicInst>(I)->getIntrinsicID();
+                if (iicode == Intrinsic::lifetime_start) {
+                    // handled in DbgDeclareInst as alloca
+//                    handleLifetimeIntrinsic(I,/* start */ true);
+                    break;
+                } else if (iicode == Intrinsic::lifetime_end) {
+                    handleLifetimeIntrinsic(I,/* start */ false);
+                    break;
+                }
+            }
+            handleCallInstruction(cast<CallInst>(I));
             break;
 
         case Instruction::Select: // SelectInst
@@ -1850,10 +1900,23 @@ void CLPass::handleCmpInstruction(Instruction *I) {
 /// create assign (floating cast) instruction
 void CLPass::handleUnaryInstruction(Instruction *I) {
 
-    if (I->getParent() && I->getNumUses() == 0) { // TODO testing src for invalid-deref ?
+    unsigned numUses = I->getNumUses();
+    if (I->getParent() && numUses == 0) { // TODO testing src for invalid-deref ?
         // optimization, if dst is regular instruction and it is never used
         CL_DEBUG("skip assignment '"<< I->getOpcodeName()<<"' without effect");
         return;
+    } else if (I->getParent() && numUses == 1 && isa<BitCastInst>(I)) {
+        for (auto u : I->users()) { // find only 1 user
+            if (isa<IntrinsicInst>(u)) {
+                auto iicode = cast<IntrinsicInst>(u)->getIntrinsicID();
+                if (iicode == Intrinsic::lifetime_start ||
+                    iicode == Intrinsic::lifetime_end) {
+                    // optimization, uses only in lifetime intrinsic inst
+                    CL_DEBUG("skip assignment '"<< I->getOpcodeName()<<"' without effect");
+                    return;
+                }
+            }
+        }
     }
 
     struct cl_insn i;
@@ -1870,7 +1933,7 @@ void CLPass::handleUnaryInstruction(Instruction *I) {
     handleOperand(I, &dst);
 
     if (isa<LoadInst>(I))
-        handleLoadOperand(I, &src);
+        handleValueOfPtrOperand(I->getOperand(0), &src);
     else if (isa<GetElementPtrInst>(I)) {
         if (isStringLiteral(I)) { // string literal, just assignment
             handleStringLiteral(cast<ConstantDataSequential>((
@@ -1895,12 +1958,11 @@ void CLPass::handleUnaryInstruction(Instruction *I) {
     freeAccessor(src.accessor);
 }
 
-/// source operand for load instruction (always as pointer -> *)
+/// given address of value as operand (always as pointer -> *)
 /// return true, if insert one accessor
-bool CLPass::handleLoadOperand(Value *v, struct cl_operand *src) {
+bool CLPass::handleValueOfPtrOperand(Value *v, struct cl_operand *src) {
 
-    LoadInst *I = cast<LoadInst>(v);
-    bool notEmptyAcc = handleOperand(I->getOperand(0), src);
+    bool notEmptyAcc = handleOperand(v, src);
 
     if (src->code == CL_OPERAND_VAR) {
         if (notEmptyAcc && src->accessor->code == CL_ACCESSOR_REF) {
@@ -1913,7 +1975,7 @@ bool CLPass::handleLoadOperand(Value *v, struct cl_operand *src) {
             *acc = new struct cl_accessor;
             (*acc)->code = CL_ACCESSOR_DEREF; // *
             (*acc)->type = src->type;
-            src->type = const_cast<struct cl_type *>(src->type->items[0].type);// handleType(I->getType()); // result
+            src->type = const_cast<struct cl_type *>(src->type->items[0].type); // result
             (*acc)->next = nullptr;
             return true;
         } // because *& -> empty accessor
@@ -1921,8 +1983,8 @@ bool CLPass::handleLoadOperand(Value *v, struct cl_operand *src) {
     return notEmptyAcc;
 }
 
-/// source operand for cast instructions, but if instruction is bitcast,
-/// it's possible that is accessor for union type
+/// source operand for cast instructions, but if bitcast (without changing
+/// any bits), it's possible that is accessor for union type
 /// TODO testing more situations
 /// return true, if insert accessor(s)
 bool CLPass::handleCastOperand(Value *v, struct cl_operand *src) {
@@ -2205,6 +2267,42 @@ void CLPass::handleDbgInfoIntrinsic(DbgInfoIntrinsic *DI) {
     findLocation(DI, &(clv->loc));
 }
 
+/// hanlde for instruction for lifetime detection of local variables
+void CLPass::handleLifetimeIntrinsic(Instruction *I, bool start) {
+
+    Value *var  = I->getOperand(1);
+    if (isa<BitCastInst>(var))
+        var = cast<CastInst>(var)->getOperand(0);
+    if (!isa<AllocaInst>(var)) {
+        // must be pointer to stack allocation
+        CL_ERROR("llvm.lifetime."<<((start)?"start":"end")<<" has unsupported argument");
+        return;
+    }
+    if (isLocalScopeVar(var, false)) {
+        // scope of allocated variable is func, not lexical block
+        CL_DEBUG("ignoring call of llvm built-in function llvm.lifetime."<<((start)?"start":"end")<<".*()");
+        return;
+    }
+
+    if (start) { // llvm.lifetime.start
+        // possible dublicity without debug info 'clang -g'
+        handleAllocaInstruction(cast<AllocaInst>(var));
+        CL_DEBUG("alloca from llvm built-in function llvm.lifetime.start.*()");
+    } else { // llvm.lifetime.end
+        struct cl_insn i;
+        std::memset(&i, 0, sizeof(i));
+        findLocation(I, &i.loc);
+        struct cl_operand src;
+        i.code = CL_INSN_CLOBBER;
+        // invalidating the allocated object, not the reference
+        handleValueOfPtrOperand(var, &src);
+        i.data.insn_clobber.var = &src;
+        cl->insn(cl, &i);
+        freeAccessor(src.accessor);
+        CL_DEBUG("clobber from llvm built-in function llvm.lifetime.end.*()");
+    }
+}
+
 /// last function, clean up after pass, set CL on valid and setup exit code
 bool CLPass::doFinalization (Module &) {
 
@@ -2243,6 +2341,8 @@ static void registerCLPass(const PassManagerBuilder &pb,
                            legacy::PassManagerBase &pm) 
 {
     if (pb.OptLevel == 0 && pb.SizeLevel == 0) {
+        pm.add(createAddressSanitizerFunctionPass(/*CompileKernel*/ false,
+           /*Recover*/ true, /*UseAfterScope*/ true)); // -fsanitize-address-use-after-scope
         pm.add(createLowerSwitchPass()); // -lowerswitch
         pm.add(new CLPass);
     }

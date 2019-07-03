@@ -2536,15 +2536,23 @@ void SymExecCore::handleClobber(const CodeStorage::Insn &insn)
 {
     const struct cl_operand &op = insn.operands[/* var */ 0];
 
-    // get C variable uid
-    const cl_uid_t uid = varIdFromOperand(&op);
-
-    // select level for recursive calls
-    const int nestLevel = bt_->countOccurrencesOfTopFnc();
-    const CVar cv(uid, nestLevel);
-    TObjId obj = this->objByVar(cv);    // object to invalidate
+    TValId val = this->targetAt(op);
+    TObjId obj = sh_.objByAddr(val);    // object to invalidate
     CL_BREAK_IF(!sh_.isValid(obj));     // should be valid variable
     CL_BREAK_IF(!isOnStack(sh_.objStorClass(obj))); // automatic variable
+
+    // get C variable uid
+    const cl_uid_t uid = varIdFromOperand(&op);
+    TObjId objVar;
+    if (sh_.isAnonStackObj(obj)) {
+        // if variable was allocated on stack via __builtin_alloca
+        // select level for recursive calls
+        const int nestLevel = bt_->countOccurrencesOfTopFnc();
+        const CVar cv(uid, nestLevel);
+        objVar = this->objByVar(cv);       // object to invalidate
+        CL_BREAK_IF(!sh_.isValid(objVar)); // should be valid variable
+        CL_BREAK_IF(!isOnStack(sh_.objStorClass(objVar))); // automatic variable
+    }
 
     const struct cl_loc *varLoc;
     const std::string varString = varToString(sh_.stor(), uid, &varLoc);
@@ -2553,6 +2561,8 @@ void SymExecCore::handleClobber(const CodeStorage::Insn &insn)
         this->setLocation(varLoc);
 
     CL_DEBUG_MSG(lw_, "FFF SymExecCore::handleClobber() destroys var " << varString);
+    if (sh_.isAnonStackObj(obj))
+        this->objDestroy(objVar);
     this->objDestroy(obj);
 }
 
