@@ -36,7 +36,7 @@ matrix:
           before_install:
               - sudo apt-get update -qq
               - sudo apt-get install -qq apt-transport-https
-              - echo "deb https://kdudka.fedorapeople.org/csbuild trusty contrib" | sudo tee -a /etc/apt/sources.list
+              - echo "deb [trusted=yes] https://kdudka.fedorapeople.org/csbuild trusty contrib" | sudo tee -a /etc/apt/sources.list
               - sudo apt-get update -qq
 
           install:
