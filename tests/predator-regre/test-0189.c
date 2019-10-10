@@ -13,7 +13,7 @@ int gl_cnt;
 static void gl_write(int i) 
 {
     switch (i) {
-        case 0:
+        case 0: i = 1;
         case 1:
             break;
 
