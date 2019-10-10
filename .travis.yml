@@ -1,5 +1,6 @@
 language: cpp
 compiler: gcc
+dist: trusty
 
 install:
     - sudo apt-get install cmake g++-4.8-multilib gcc-4.8-plugin-dev libboost-dev
