@@ -1,6 +1,6 @@
 test-0187.c:3: error: error label "ERROR" has been reached
 test-0187.c:19: note: from call of error ()
-test-0187.c:14: note: _ = (i == (int)1) ... evaluated as FALSE
+test-0187.c:15: note: _ = (i == (int)1) ... evaluated as FALSE
 test-0187.c:14: note: _ = (i == (int)0) ... evaluated as FALSE
 test-0187.c:25: note: from call of gl_write (gl_num)
 test-0187.c:32: note: from call of gl_proc1 ()
