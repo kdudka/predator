@@ -1263,7 +1263,9 @@ static void read_cst_fnc(struct cl_operand *op, tree t)
     // Temporary workaround to avoid SIGTRAP after handling METHOD_TYPE:
     op->data.cst.data.cst_fnc.is_extern = DECL_EXTERNAL(t)
         || !strcmp("__comp_ctor ", op->data.cst.data.cst_fnc.name)
-        || !strcmp("__comp_dtor ", op->data.cst.data.cst_fnc.name);
+        || !strcmp("__comp_dtor ", op->data.cst.data.cst_fnc.name)
+        || !strcmp("__ct_comp ",   op->data.cst.data.cst_fnc.name)
+        || !strcmp("__dt_comp ",   op->data.cst.data.cst_fnc.name);
 
     op->data.cst.data.cst_fnc.uid       = DECL_UID(t);
     read_gcc_location(&op->data.cst.data.cst_fnc.loc, DECL_SOURCE_LOCATION(t));
