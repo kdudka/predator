@@ -75,6 +75,7 @@
 #   include <tree.h>
 #   include <tree-ssa-alias.h>
 #   include <gimple-expr.h> // required by <gimple.h> but requires <tree-core.h>
+#   include <gimple-pretty-print.h>     // for print_gimple_stmt()
 #endif
 
 #include <function.h>
@@ -124,10 +125,6 @@
 
 // our alternative to GGC_RESIZEVEC, used prior to gcc 4.6.x
 #define CL_RESIZEVEC(type, p, cnt) (type *) xrealloc((p), sizeof(type) * (cnt))
-
-// somewhere after 4.5.0, the declaration has been moved to
-// gimple-pretty-print.h, which is no longer available for public
-extern void print_gimple_stmt(FILE *, gimple, int, int);
 
 // this in fact uses gcc's fancy_abort()
 #define CL_ASSERT(expr) \
