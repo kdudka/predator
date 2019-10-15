@@ -8,7 +8,7 @@ export LC_ALL=C
 
 export CCACHE_DISABLE=1
 
-if [ `uname` == Darwin ]; then
+if [ `uname` = Darwin ]; then
     STDBUF=gstdbuf
     TIMEOUT_P=gtimeout
     ABSPATH='realpath'

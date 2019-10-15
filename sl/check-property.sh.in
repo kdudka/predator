@@ -96,7 +96,7 @@ PRP_FILE=
 # write trace to stderr by default
 TRACE="/dev/fd/2"
 
-if [ `uname` == Darwin ]; then
+if [ `uname` = Darwin ]; then
   ABSPATH='realpath'
   # mac os doesn't support long option names
   ARGS=$(getopt p:t:v $*)

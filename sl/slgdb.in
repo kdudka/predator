@@ -6,7 +6,7 @@ if test -z "$1" || test ! -e "$1"; then
     exit 1
 fi
 
-if [ `uname` == Darwin ]; then
+if [ `uname` = Darwin ]; then
     ABSPATH='realpath'
     TR='tr -s'
 else
@@ -62,7 +62,7 @@ test -z "$SL_OPTS" && SL_OPTS="${ARG_BASE}-dump-pp"
 CMD_OPTS="-I$topdir/include/predator-builtins -DPREDATOR -o /dev/null \
           -m32 -g -O0 -Wall -Wextra"
 
-if [ `uname` == Darwin ]; then
+if [ `uname` = Darwin ]; then
     # use lldb by default
 	# for loading symbols: target modules add sl_build/libsl.so/dylib
     test -z "$LLDB" && LLDB=lldb

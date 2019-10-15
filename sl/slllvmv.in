@@ -4,7 +4,7 @@ SL_OPTS="-dump-pp $SL_OPTS"
 SL_OPTS="-dump-types $SL_OPTS"
 export SL_OPTS
 
-if [ `uname` == Darwin ]; then
+if [ `uname` = Darwin ]; then
     ABSPATH='realpath'
 else
     ABSPATH='readlink -f'
