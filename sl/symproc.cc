@@ -2545,7 +2545,7 @@ void SymExecCore::handleClobber(const CodeStorage::Insn &insn)
     const cl_uid_t uid = varIdFromOperand(&op);
     TObjId objVar;
     if (sh_.isAnonStackObj(obj)) {
-        // if variable was allocated on stack viac __builtin_alloca
+        // if variable was allocated on stack via __builtin_alloca
         // select level for recursive calls
         const int nestLevel = bt_->countOccurrencesOfTopFnc();
         const CVar cv(uid, nestLevel);
