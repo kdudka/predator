@@ -1500,6 +1500,7 @@ static bool handle_accessor(struct cl_accessor **ac, tree *pt)
 
         case BIT_FIELD_REF:
             handle_accessor_bitfield(ac, t);
+            CL_ERROR("incorrect handled bitfield");
             break;
 
         default:
