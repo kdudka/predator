@@ -2536,33 +2536,28 @@ void SymExecCore::handleClobber(const CodeStorage::Insn &insn)
 {
     const struct cl_operand &op = insn.operands[/* var */ 0];
 
-    TValId val = this->targetAt(op);
-    TObjId obj = sh_.objByAddr(val);    // object to invalidate
-    CL_BREAK_IF(!sh_.isValid(obj));     // should be valid variable
-    CL_BREAK_IF(!isOnStack(sh_.objStorClass(obj))); // automatic variable
+    // resolve target object to make this work with the llvm frontend,
+    // which emits insns like `clobber *#40:pi`
+    const TValId addr = this->targetAt(op);
+    const TObjId obj = sh_.objByAddr(addr);
+    CL_BREAK_IF(!sh_.isValid(obj));
+    CL_BREAK_IF(!isOnStack(sh_.objStorClass(obj)));
 
-    // get C variable uid
-    const cl_uid_t uid = varIdFromOperand(&op);
-    TObjId objVar;
-    if (sh_.isAnonStackObj(obj)) {
-        // if variable was allocated on stack via __builtin_alloca
-        // select level for recursive calls
-        const int nestLevel = bt_->countOccurrencesOfTopFnc();
-        const CVar cv(uid, nestLevel);
-        objVar = this->objByVar(cv);       // object to invalidate
-        CL_BREAK_IF(!sh_.isValid(objVar)); // should be valid variable
-        CL_BREAK_IF(!isOnStack(sh_.objStorClass(objVar))); // automatic variable
+    // needed only for more precise diagnostic messages
+    const CVar cv = sh_.cVarByObject(obj);
+    if (-1 != cv.uid) {
+        const struct cl_loc *varLoc;
+        const std::string varString = varToString(sh_.stor(), cv.uid, &varLoc);
+        if (!lw_->file && varLoc->file)
+            // no location info available for this insn
+            // --> use location of var decl
+            this->setLocation(varLoc);
+
+        CL_DEBUG_MSG(lw_, "FFF SymExecCore::handleClobber() destroys var "
+                << varString);
     }
 
-    const struct cl_loc *varLoc;
-    const std::string varString = varToString(sh_.stor(), uid, &varLoc);
-    if (!lw_->file && varLoc->file)
-        // no location info available for this insn --> use location of var decl
-        this->setLocation(varLoc);
-
-    CL_DEBUG_MSG(lw_, "FFF SymExecCore::handleClobber() destroys var " << varString);
-    if (sh_.isAnonStackObj(obj))
-        this->objDestroy(objVar);
+    // destroy the target and collect the junk
     this->objDestroy(obj);
 }
 
