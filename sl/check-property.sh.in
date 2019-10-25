@@ -22,14 +22,16 @@ export MSG_DEREF_NENH=': error: dereference of non-existing non-heap object'
 export MSG_DEREF_PTRSPACE=": error: not enough space to store value of a pointer"
 export MSG_DEREF_LVAL=": error: invalid L-value"
 
-export MSG_FREE_OFFSET=': error: free\(\) called with offset'
+export MSG_FREE_OFFSET=': error: (free|realloc)\(\) called with offset'
 export MSG_FREE_INVALID=': error: invalid free\(\)'
-export MSG_FREE_DOUBLE=': error: double free\(\)'
+export MSG_FREE_DOUBLE=': error: double free'
 export MSG_FREE_NENH=': error: attempt to free a non-existing non-heap object'
 export MSG_FREE_NONHEAP=': error: attempt to free a non-heap object'
-export MSG_FREE_NONPOINTER=': error: free\(\) called on non-pointer value'
+export MSG_FREE_NONPOINTER=': error: (free|realloc)\(\) called on non-pointer value'
 
 # Predator error messages we need to handle:
+#"invalid realloc()"
+#"new_size arg of realloc() is not a known integer" - probably not
 #"size arg of memset() is not a known integer" - no category
 #"size arg of " << fnc << " is not a known integer" - probably not
 #"source and destination overlap in call of " - not category
