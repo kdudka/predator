@@ -787,6 +787,9 @@ Tests taken from Forester
 
     test-0255.c - test for reporting leaks at exit() call
 
+    test-0256.c - a regression test for realloc()
+
+    test-0257.c - a regression test for uninitialized realloc()
 
 Data reinterpretation
 =====================
