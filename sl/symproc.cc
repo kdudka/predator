@@ -1294,17 +1294,21 @@ void SymExecCore::varInit(TObjId obj)
     SymProc::varInit(obj);
 }
 
-void SymExecCore::execFree(TValId val)
+void SymExecCore::execFree(TValId val, const bool reallocated)
 {
-    if (VAL_NULL == val) {
-        CL_DEBUG_MSG(lw_, "ignoring free() called with NULL value");
+    const char *fnc = (reallocated)
+        ? "realloc()"
+        : "free()";
+
+    if (VAL_NULL == val) { // never realloc
+        CL_DEBUG_MSG(lw_, "ignoring " << fnc << " called with NULL value");
         return;
     }
 
     const EValueTarget code = sh_.valTarget(val);
     switch (code) {
         case VT_CUSTOM:
-            CL_ERROR_MSG(lw_, "free() called on non-pointer value");
+            CL_ERROR_MSG(lw_, fnc << " called on non-pointer value");
             this->printBackTrace(ML_ERROR);
             return;
 
@@ -1321,7 +1325,7 @@ void SymExecCore::execFree(TValId val)
             if (VO_DEREF_FAILED == sh_.valOrigin(val))
                 return;
 
-            CL_ERROR_MSG(lw_, "invalid free()");
+            CL_ERROR_MSG(lw_, "invalid " << fnc);
             describeUnknownVal(*this, val, "free");
             this->printBackTrace(ML_ERROR);
             return;
@@ -1357,19 +1361,19 @@ void SymExecCore::execFree(TValId val)
     }
 
     if (!hasValidTarget) {
-        CL_ERROR_MSG(lw_, "double free()");
+        CL_ERROR_MSG(lw_, "double free by " << fnc);
         this->printBackTrace(ML_ERROR);
         return;
     }
 
     const TOffset off = sh_.valOffset(val);
     if (off) {
-        CL_ERROR_MSG(lw_, "free() called with offset " << off << "B");
+        CL_ERROR_MSG(lw_, fnc << " called with offset " << off << "B");
         this->printBackTrace(ML_ERROR);
         return;
     }
-
-    CL_DEBUG_MSG(lw_, "executing free()");
+    if (!reallocated)
+        CL_DEBUG_MSG(lw_, "executing free()");
     this->objDestroy(obj);
 }
 
@@ -1496,6 +1500,106 @@ malloc/calloc is implementation-defined");
     this->setValueOf(lhs, val);
     this->killInsn(insn);
     dst.insert(sh_);
+}
+
+void SymExecCore::execHeapRealloc(
+        SymState                        &dst,
+        const CodeStorage::Insn         &insn,
+        const TSizeRange                size)
+{
+    // resolve lhs
+    FldHandle lhs;
+    if (!lhsFromOperand(&lhs, *this, insn.operands[/* dst */ 0]))
+        // error alredy emitted
+        return;
+
+    const TValId valAddr = valFromOperand(insn.operands[/* addr */ 2]);
+    const TValId valSize = valFromOperand(insn.operands[/* new_size */ 3]);
+
+    if (size.hi) {
+
+        if (ep_.oomSimulation) {
+            // clone the heap and core
+            SymHeap oomHeap(sh_);
+            SymExecCore oomCore(oomHeap, bt_, ep_);
+            oomCore.setLocation(lw_);
+            Trace::waiveCloneOperation(oomHeap);
+
+            // OOM state simulation
+            const FldHandle oomLhs(oomHeap, lhs);
+            oomCore.setValueOf(oomLhs, VAL_NULL);
+            oomCore.killInsn(insn);
+            dst.insert(oomHeap);
+        }
+
+        // alloc memory to new ptr - create a heap object
+        const TObjId reg = sh_.heapAlloc(size);
+
+        // store the result of allocation
+        const TValId valDst = sh_.addrOfTarget(reg, TS_REGION);
+        this->setValueOf(lhs, valDst);
+
+        if (VAL_NULL == valAddr) {
+            // if addr is a null pointer, the realloc == malloc function
+            if (ep_.trackUninit) {
+                // uninitialized heap block
+                UniformBlock ub = {
+                    /* off      */  0,
+                    /* size     */  size.lo,
+                    /* tplValue */  VAL_NULL
+                };
+                ub.tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
+                sh_.writeUniformBlock(reg, ub);
+            }
+
+        }
+        else {
+            // TODO: clone the heap and core for resize actual allocated block
+            //       is it neccesery?
+
+            // copy memory from old ptr
+            TSizeRange sizeAddr = valSizeOfTarget(sh_, valAddr);
+            int diff = sizeAddr.lo - size.lo;
+
+            if (diff >= 0) {// expand block
+                executeMemmove(*this, valDst, valAddr, valSize, /* allowOverlap */ false);
+            } else { // reduce block
+                // wrap the size of the object being assigned as a heap value
+                const CustomValue cv(sizeAddr);
+                const TValId valSizeAddr = sh_.valWrapCustom(cv);
+                executeMemmove(*this, valDst, valAddr, valSizeAddr, /* allowOverlap */ false);
+
+                if (ep_.trackUninit) {
+                    // uninitialized rest of heap block
+                    UniformBlock ub = {
+                        /* off      */  sizeAddr.hi,
+                        /* size     */  -diff,
+                        /* tplValue */  VAL_NULL
+                    };
+                    ub.tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
+                    sh_.writeUniformBlock(reg, ub);
+            }
+            }
+            // free memory
+            this->execFree(valAddr, /* reallocated */ true);
+        }
+
+    }
+    else {
+        CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
+realloc is implementation-defined");
+        CL_DEBUG_MSG(lw_, "executing realloc with size == 0 as free, assuming \
+NULL as the result");
+        // free memory
+        this->execFree(valAddr, /* reallocated */ true);
+        this->printBackTrace(ML_WARN);
+        this->setValueOf(lhs, VAL_NULL);
+    }
+
+    this->killInsn(insn);
+
+    if (!this->hasFatalError())
+        dst.insert(sh_);
 }
 
 bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code)

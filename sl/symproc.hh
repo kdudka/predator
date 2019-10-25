@@ -253,7 +253,12 @@ class SymExecCore: public SymProc {
                 TSizeRange                  size,
                 bool                        nullified);
 
-        void execFree(TValId val);
+        void execHeapRealloc(
+                SymState                   &dst,
+                const CodeStorage::Insn    &insn,
+                TSizeRange                  size);
+
+        void execFree(TValId val, const bool reallocated = false);
 
     private:
         template <int ARITY>

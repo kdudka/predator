@@ -518,6 +518,39 @@ bool handleMalloc(
     return true;
 }
 
+bool handleRealloc(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const struct cl_loc *lw = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (/* dst + fnc + ptr + new_size */4 != opList.size() ||
+        CL_OPERAND_VOID == insn.operands[/* dst */ 0].code) {
+        emitPrototypeError(lw, name);
+        return false;
+    }
+
+    // amount of allocated memory must be known (TODO: relax this?)
+    const TValId valSize = core.valFromOperand(opList[/* new_size */ 3]);
+    IR::Range size;
+    if (!rngFromVal(&size, core.sh(), valSize) || size.lo < IR::Int0) {
+        CL_ERROR_MSG(lw, "new_size arg of realloc() is not a known integer");
+        core.printBackTrace(ML_ERROR);
+        return true;
+    }
+
+    if (isSingular(size))
+        CL_DEBUG_MSG(lw, "executing realloc(ptr, " << size.lo << ")");
+    else
+        CL_DEBUG_MSG(lw, "executing realloc(ptr, /* size given as int range */)");
+
+    core.execHeapRealloc(dst, insn, size);
+
+    return true;
+}
+
 /// common code-base for memcpy() and memmove() built-in handlers
 bool handleMemmoveCore(
         SymState                                    &dst,
@@ -1134,6 +1167,7 @@ BuiltInTable::BuiltInTable()
     tbl_["memset"]                                  = handleMemset;
     tbl_["printf"]                                  = handlePrintf;
     tbl_["puts"]                                    = handlePuts;
+    tbl_["realloc"]                                 = handleRealloc;
     tbl_["strlen"]                                  = handleStrlen;
     tbl_["strncpy"]                                 = handleStrncpy;
 
@@ -1200,6 +1234,7 @@ BuiltInTable::BuiltInTable()
     der_["llvm.memset"]            .push_back(/* addr */ 2);
     // TODO: printf
     der_["puts"]                   .push_back(/* s    */ 2);
+    der_["realloc"]                .push_back(/* addr */ 2);
     der_["strlen"]                 .push_back(/* s    */ 2);
     der_["strncpy"]                .push_back(/* dst  */ 2);
     der_["strncpy"]                .push_back(/* src  */ 3);
