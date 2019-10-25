@@ -399,6 +399,9 @@ TObjId SymProc::objByVar(const CVar &cv, const bool initOnly)
 
 TObjId SymProc::objByVar(const struct cl_operand &op)
 {
+    if (CL_OPERAND_VOID == op.code)
+        return OBJ_INVALID;
+
     // resolve CVar
     const cl_uid_t uid = varIdFromOperand(&op);
     const int nestLevel = bt_->countOccurrencesOfTopFnc();
@@ -436,6 +439,9 @@ TValId SymProc::targetAt(const struct cl_operand &op)
 {
     // resolve program variable
     const TObjId obj = this->objByVar(op);
+    if (OBJ_INVALID == obj)
+        return VAL_INVALID;
+
     TValId addr = sh_.addrOfTarget(obj, TS_REGION);
 
     const struct cl_accessor *ac = op.accessor;
@@ -502,6 +508,9 @@ FldHandle SymProc::fldByOperand(const struct cl_operand &op)
 
     // resolve address of the target object
     const TValId at = this->targetAt(op);
+    if (VAL_INVALID == at)
+        return FldHandle(FLD_UNKNOWN);
+
     const EValueOrigin origin = sh_.valOrigin(at);
     if (VO_DEREF_FAILED == origin)
         // we are already on the error path
