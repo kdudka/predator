@@ -3486,7 +3486,7 @@ TSizeRange SymHeapCore::objSize(TObjId obj) const
 
 void SymHeapCore::objSetSize(TObjId obj, const TSizeRange &newSize)
 {
-    CL_BREAK_IF(size.lo < IR::Int0);
+    CL_BREAK_IF(newSize.lo < IR::Int0);
     Region *regData;
     d->ents.getEntRW(&regData, obj);
     CL_BREAK_IF(!regData);
@@ -3499,10 +3499,10 @@ void SymHeapCore::objSetSize(TObjId obj, const TSizeRange &newSize)
         if (arenaLookup(&allObjs, regData->arena, chunk, FLD_INVALID)) {
             // destroy all inner objects
             BOOST_FOREACH(const TFldId fld, allObjs) {
-                d->fldDestroy(fld, /* removeVal */ true, /* detach */ true);
                 // mark the object as dead
                 if (regData->liveFields.erase(fld))
                     CL_DEBUG("objSetSize() kills a live object");
+                d->fldDestroy(fld, /* removeVal */ true, /* detach */ true);
             }
         }
     }
