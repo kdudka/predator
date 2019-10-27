@@ -791,6 +791,10 @@ Tests taken from Forester
 
     test-0257.c - a regression test for uninitialized realloc()
 
+    test-0258.c - a regression test for reused memory by realloc()
+
+    test-0259.c - a regression test for memory leaks in realloc()
+
 Data reinterpretation
 =====================
 

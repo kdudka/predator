@@ -1,6 +1,6 @@
 test-0256.c:10: error: invalid realloc()
-test-0256.c:10: note: the value being freed is an untouched contents of stack
+test-0256.c:10: note: the value being reallocated is an untouched contents of stack
+test-0256.c:38: error: dereference of already deleted heap object
 test-0256.c:46: warning: POSIX says that, given zero size, the behavior of realloc is implementation-defined
 test-0256.c:42: error: dereferencing object of size 4B out of bounds
 test-0256.c:42: note: the pointer being dereferenced points 0B beyond a heap object of size 8B
-test-0256.c:38: error: dereference of already deleted heap object

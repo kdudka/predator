@@ -1,0 +1,2 @@
+test-0259.c:15: warning: memory leak detected while executing realloc()
+test-0259.c:15: warning: memory leak detected while destroying a heap object
