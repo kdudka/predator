@@ -2094,6 +2094,137 @@ index 92606494..24c1f5d5 100644
  test-0255.c:15: note: from call of f()
  test-0255.c:12: note: from call of main()
 +test-0255.c:15: warning: memory leak detected while assigning a variable on stack
+diff --git a/tests/predator-regre/test-0256.err b/tests/predator-regre/test-0256.err
+index f796e55e..134d28c3 100644
+--- a/tests/predator-regre/test-0256.err
++++ b/tests/predator-regre/test-0256.err
+@@ -1,5 +1,7 @@
+ test-0256.c:10: error: invalid realloc()
+-test-0256.c:38: error: dereference of already deleted heap object
+ test-0256.c:46: warning: POSIX says that, given zero size, the behavior of realloc is implementation-defined
+ test-0256.c:42: error: dereferencing object of size 4B out of bounds
+ test-0256.c:42: note: the pointer being dereferenced points 0B beyond a heap object of size 8B
++test-0256.c:38: error: dereference of already deleted heap object
++test-0256.c:42: error: dereferencing object of size 4B out of bounds
++test-0256.c:42: note: the pointer being dereferenced points 0B beyond a heap object of size 8B
+diff --git a/tests/predator-regre/test-0256.err.exit_leaks b/tests/predator-regre/test-0256.err.exit_leaks
+index f796e55e..134d28c3 100644
+--- a/tests/predator-regre/test-0256.err.exit_leaks
++++ b/tests/predator-regre/test-0256.err.exit_leaks
+@@ -1,5 +1,7 @@
+ test-0256.c:10: error: invalid realloc()
+-test-0256.c:38: error: dereference of already deleted heap object
+ test-0256.c:46: warning: POSIX says that, given zero size, the behavior of realloc is implementation-defined
+ test-0256.c:42: error: dereferencing object of size 4B out of bounds
+ test-0256.c:42: note: the pointer being dereferenced points 0B beyond a heap object of size 8B
++test-0256.c:38: error: dereference of already deleted heap object
++test-0256.c:42: error: dereferencing object of size 4B out of bounds
++test-0256.c:42: note: the pointer being dereferenced points 0B beyond a heap object of size 8B
+diff --git a/tests/predator-regre/test-0256.err.oom b/tests/predator-regre/test-0256.err.oom
+index db74a923..f13255fb 100644
+--- a/tests/predator-regre/test-0256.err.oom
++++ b/tests/predator-regre/test-0256.err.oom
+@@ -1,7 +1,9 @@
+ test-0256.c:10: error: invalid realloc()
+-test-0256.c:22: warning: memory leak detected while destroying a variable on stack
+-test-0256.c:38: error: dereference of already deleted heap object
++test-0256.c:23: warning: memory leak detected while destroying a variable on stack
+ test-0256.c:46: warning: POSIX says that, given zero size, the behavior of realloc is implementation-defined
+ test-0256.c:42: error: dereferencing object of size 4B out of bounds
+ test-0256.c:42: note: the pointer being dereferenced points 0B beyond a heap object of size 8B
++test-0256.c:38: error: dereference of already deleted heap object
++test-0256.c:42: error: dereferencing object of size 4B out of bounds
++test-0256.c:42: note: the pointer being dereferenced points 0B beyond a heap object of size 8B
+ test-0256.c:46: warning: POSIX says that, given zero size, the behavior of realloc is implementation-defined
+diff --git a/tests/predator-regre/test-0256.err.uninit b/tests/predator-regre/test-0256.err.uninit
+index 6c047e7e..5cbc8a92 100644
+--- a/tests/predator-regre/test-0256.err.uninit
++++ b/tests/predator-regre/test-0256.err.uninit
+@@ -1,6 +1,8 @@
+ test-0256.c:10: error: invalid realloc()
+ test-0256.c:10: note: the value being reallocated is an untouched contents of stack
+-test-0256.c:38: error: dereference of already deleted heap object
+ test-0256.c:46: warning: POSIX says that, given zero size, the behavior of realloc is implementation-defined
+ test-0256.c:42: error: dereferencing object of size 4B out of bounds
+ test-0256.c:42: note: the pointer being dereferenced points 0B beyond a heap object of size 8B
++test-0256.c:38: error: dereference of already deleted heap object
++test-0256.c:42: error: dereferencing object of size 4B out of bounds
++test-0256.c:42: note: the pointer being dereferenced points 0B beyond a heap object of size 8B
+diff --git a/tests/predator-regre/test-0257.err b/tests/predator-regre/test-0257.err
+index 93ebd557..92f9f975 100644
+--- a/tests/predator-regre/test-0257.err
++++ b/tests/predator-regre/test-0257.err
+@@ -3,3 +3,7 @@ test-0257.c:22: note: writing heap graph to '2-realloc-0000.dot'...
+ test-0257.c:22: note: writing heap graph to '2-realloc-0001.dot'...
+ test-0257.c:22: note: writing heap graph to '2-realloc-0002.dot'...
+ test-0257.c:22: note: writing heap graph to '2-realloc-0003.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0004.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0005.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0006.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0007.dot'...
+diff --git a/tests/predator-regre/test-0257.err.exit_leaks b/tests/predator-regre/test-0257.err.exit_leaks
+index 93ebd557..92f9f975 100644
+--- a/tests/predator-regre/test-0257.err.exit_leaks
++++ b/tests/predator-regre/test-0257.err.exit_leaks
+@@ -3,3 +3,7 @@ test-0257.c:22: note: writing heap graph to '2-realloc-0000.dot'...
+ test-0257.c:22: note: writing heap graph to '2-realloc-0001.dot'...
+ test-0257.c:22: note: writing heap graph to '2-realloc-0002.dot'...
+ test-0257.c:22: note: writing heap graph to '2-realloc-0003.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0004.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0005.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0006.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0007.dot'...
+diff --git a/tests/predator-regre/test-0257.err.oom b/tests/predator-regre/test-0257.err.oom
+index 53774f14..086e16b5 100644
+--- a/tests/predator-regre/test-0257.err.oom
++++ b/tests/predator-regre/test-0257.err.oom
+@@ -1,9 +1,13 @@
+ test-0257.c:10: note: writing heap graph to '1-realloc-0000.dot'...
+-test-0257.c:17: warning: memory leak detected while destroying a variable on stack
++test-0257.c:18: warning: memory leak detected while destroying a variable on stack
+ test-0257.c:22: note: writing heap graph to '2-realloc-0000.dot'...
+-test-0257.c:17: warning: memory leak detected while destroying a variable on stack
+ test-0257.c:22: note: writing heap graph to '2-realloc-0001.dot'...
+-test-0257.c:17: warning: memory leak detected while destroying a variable on stack
++test-0257.c:18: warning: memory leak detected while destroying a variable on stack
+ test-0257.c:22: note: writing heap graph to '2-realloc-0002.dot'...
+-test-0257.c:17: warning: memory leak detected while destroying a variable on stack
+ test-0257.c:22: note: writing heap graph to '2-realloc-0003.dot'...
++test-0257.c:18: warning: memory leak detected while destroying a variable on stack
++test-0257.c:22: note: writing heap graph to '2-realloc-0004.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0005.dot'...
++test-0257.c:18: warning: memory leak detected while destroying a variable on stack
++test-0257.c:22: note: writing heap graph to '2-realloc-0006.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0007.dot'...
+diff --git a/tests/predator-regre/test-0257.err.uninit b/tests/predator-regre/test-0257.err.uninit
+index 8df9ab8c..5e4cccc7 100644
+--- a/tests/predator-regre/test-0257.err.uninit
++++ b/tests/predator-regre/test-0257.err.uninit
+@@ -2,13 +2,15 @@ test-0257.c:10: note: writing heap graph to '1-realloc-0000.dot'...
+ test-0257.c:12: warning: conditional jump depends on uninitialized value
+ test-0257.c:12: note: the value being used is an untouched contents of heap
+ test-0257.c:22: note: writing heap graph to '2-realloc-0000.dot'...
+-test-0257.c:27: warning: conditional jump depends on uninitialized value
+-test-0257.c:27: note: the value being used is an untouched contents of heap
+ test-0257.c:22: note: writing heap graph to '2-realloc-0001.dot'...
+ test-0257.c:27: warning: conditional jump depends on uninitialized value
+ test-0257.c:27: note: the value being used is an untouched contents of heap
+ test-0257.c:22: note: writing heap graph to '2-realloc-0002.dot'...
+ test-0257.c:22: note: writing heap graph to '2-realloc-0003.dot'...
++test-0257.c:27: warning: conditional jump depends on uninitialized value
++test-0257.c:27: note: the value being used is an untouched contents of heap
++test-0257.c:22: note: writing heap graph to '2-realloc-0004.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0005.dot'...
+ test-0257.c:24: warning: conditional jump depends on uninitialized value
+ test-0257.c:24: note: the value being used is an untouched contents of heap
+ test-0257.c:27: warning: conditional jump depends on uninitialized value
+@@ -17,4 +19,5 @@ test-0257.c:27: warning: conditional jump depends on uninitialized value
+ test-0257.c:27: note: the value being used is an untouched contents of heap
+ test-0257.c:27: warning: conditional jump depends on uninitialized value
+ test-0257.c:27: note: the value being used is an untouched contents of heap
+-test-0257.c:22: note: writing heap graph to '2-realloc-0004.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0006.dot'...
++test-0257.c:22: note: writing heap graph to '2-realloc-0007.dot'...
 diff --git a/tests/predator-regre/test-0300.err.uninit b/tests/predator-regre/test-0300.err.uninit
 index e3ebd1cd..edaa58c3 100644
 --- a/tests/predator-regre/test-0300.err.uninit
