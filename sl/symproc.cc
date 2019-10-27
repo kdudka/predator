@@ -1502,6 +1502,9 @@ malloc/calloc is implementation-defined");
     dst.insert(sh_);
 }
 
+// create 2 heaps:
+// 1. allocate new block, copy memory, free old block
+// 2. resize old block
 void SymExecCore::execHeapRealloc(
         SymState                        &dst,
         const CodeStorage::Insn         &insn,
@@ -1532,7 +1535,15 @@ void SymExecCore::execHeapRealloc(
             dst.insert(oomHeap);
         }
 
-        // alloc memory to new ptr - create a heap object
+        // clone the heap and core for resize actual allocated block
+        SymHeap resizeHeap(sh_);
+        SymExecCore resizeCore(resizeHeap, bt_, ep_);
+        resizeCore.setLocation(lw_);
+        Trace::waiveCloneOperation(resizeHeap);
+        const FldHandle resizeLhs(resizeHeap, lhs);
+        resizeCore.setValueOf(resizeLhs, valAddr);
+
+        // alloc memory to new block - create a new heap object
         const TObjId reg = sh_.heapAlloc(size);
 
         // store the result of allocation
@@ -1551,46 +1562,102 @@ void SymExecCore::execHeapRealloc(
                 ub.tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
                 sh_.writeUniformBlock(reg, ub);
             }
-
-        }
-        else {
-            // TODO: clone the heap and core for resize actual allocated block
-            //       is it neccesery?
-
-            // copy memory from old ptr
-            TSizeRange sizeAddr = valSizeOfTarget(sh_, valAddr);
-            int diff = sizeAddr.lo - size.lo;
-
-            if (diff >= 0) {// expand block
-                executeMemmove(*this, valDst, valAddr, valSize, /* allowOverlap */ false);
-            } else { // reduce block
-                // wrap the size of the object being assigned as a heap value
-                const CustomValue cv(sizeAddr);
-                const TValId valSizeAddr = sh_.valWrapCustom(cv);
-                executeMemmove(*this, valDst, valAddr, valSizeAddr, /* allowOverlap */ false);
-
-                if (ep_.trackUninit) {
-                    // uninitialized rest of heap block
-                    UniformBlock ub = {
-                        /* off      */  sizeAddr.hi,
-                        /* size     */  -diff,
-                        /* tplValue */  VAL_NULL
-                    };
-                    ub.tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
-                    sh_.writeUniformBlock(reg, ub);
-            }
-            }
-            // free memory
-            this->execFree(valAddr, /* reallocated */ true);
+            this->killInsn(insn);
+            dst.insert(sh_);
+            return;
         }
 
+        // TODO the new address is different from the old address: test-0258.c
+        //      need explicit neq edge
+        CL_BREAK_IF("please implement");
+
+        // reuse old object
+        const TObjId resizeObj = resizeHeap.objByAddr(valAddr);
+        if (!resizeHeap.isValid(resizeObj) ||
+            !isOnHeap(sh_.objStorClass(resizeObj))) {
+            CL_ERROR_MSG(lw_, "invalid realloc()");
+            describeUnknownVal(*this, valAddr, "reallocate");
+            this->printBackTrace(ML_ERROR);
+            return;
+        }
+
+        TSizeRange oldsize = valSizeOfTarget(sh_, valAddr);
+        int diff = oldsize.lo - size.lo;
+
+        if (diff >= 0) { // reduce block, check for memory leaks in invalid area
+            // <-oldsize-><-invalid->
+            // <--size--->
+
+            // copy memory from old allocated block
+            executeMemmove(*this, valDst, valAddr, valSize, /* allowOverlap */ false);
+
+            LeakMonitor lm(resizeHeap);
+            lm.enter();
+            TValSet killedPtrs;
+
+            // rest of block we _have_ to invalidate
+            CL_DEBUG_MSG(lw_, "realloc() invalidates memory");
+            const TValId valUnknown = resizeHeap.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+            const UniformBlock ubSuffix = {
+                /* off      */  size.lo,
+                /* size     */  diff,
+                /* tplValue */  valUnknown
+            };
+            resizeHeap.writeUniformBlock(resizeObj, ubSuffix, &killedPtrs);
+
+            if (lm.collectJunkFrom(killedPtrs))
+                REPORT_MEMLEAK(*this, "memory leak detected while executing realloc()");
+
+            lm.leave();
+
+            // change size of old block
+            resizeHeap.objSetSize(resizeObj, size);
+
+        } else { // expand block
+            // <-------oldsize------><-undef->
+            // <------------size------------->
+            // wrap the size of the object being assigned as a heap value
+            const CustomValue cv(oldsize);
+            const TValId valSizeAddr = sh_.valWrapCustom(cv);
+
+            // copy memory from old allocated block
+            executeMemmove(*this, valDst, valAddr, valSizeAddr, /* allowOverlap */ false);
+
+            // change size of old block
+            resizeHeap.objSetSize(resizeObj, size);
+
+            if (ep_.trackUninit) {
+                // uninitialized rest of heap block
+                UniformBlock ub = {
+                    /* off      */  oldsize.hi,
+                    /* size     */  -diff,
+                    /* tplValue */  VAL_NULL
+                };
+                ub.tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
+                sh_.writeUniformBlock(reg, ub);
+
+                // same for resizeHeap
+                UniformBlock resizeUb = ub;
+                resizeUb.tplValue = resizeHeap.valCreate(VT_UNKNOWN, VO_HEAP);
+                resizeHeap.writeUniformBlock(resizeObj, resizeUb);
+            }
+        }
+
+        // without free memory
+        CL_DEBUG_MSG(lw_, " +  cloning heap");
+        CL_DEBUG_MSG(lw_, "executing ptr = realloc(ptr, "<< size.lo <<")");
+        resizeCore.killInsn(insn);
+        dst.insert(resizeHeap);
+
+        // free memory after new allocation
+        this->execFree(valAddr, /* reallocated */ true);
     }
     else {
         CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
 realloc is implementation-defined");
         CL_DEBUG_MSG(lw_, "executing realloc with size == 0 as free, assuming \
 NULL as the result");
-        // free memory
+        // only free memory
         this->execFree(valAddr, /* reallocated */ true);
         this->printBackTrace(ML_WARN);
         this->setValueOf(lhs, VAL_NULL);

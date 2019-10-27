@@ -3484,6 +3484,35 @@ TSizeRange SymHeapCore::objSize(TObjId obj) const
     return regData->size;
 }
 
+void SymHeapCore::objSetSize(TObjId obj, const TSizeRange &newSize)
+{
+    CL_BREAK_IF(newSize.lo < IR::Int0);
+    Region *regData;
+    d->ents.getEntRW(&regData, obj);
+    CL_BREAK_IF(!regData);
+
+    const TSizeRange size = regData->size;
+    if (newSize.hi < size.hi) {
+        // reduce block, look for inner objects in invalid memory
+        const TMemChunk chunk(newSize.hi, size.hi);
+        TFldIdSet allObjs;
+        if (arenaLookup(&allObjs, regData->arena, chunk, FLD_INVALID)) {
+            // destroy all inner objects
+            BOOST_FOREACH(const TFldId fld, allObjs) {
+                // mark the object as dead
+                if (regData->liveFields.erase(fld))
+                    CL_DEBUG("objSetSize() kills a live object");
+                d->fldDestroy(fld, /* removeVal */ true, /* detach */ true);
+            }
+        }
+    }
+    CL_BREAK_IF(!d->chkArenaConsistency(regData, true));
+
+    regData->size = newSize;
+    return;
+}
+
+
 TSizeRange SymHeapCore::valSizeOfString(TValId addr) const
 {
     const BaseValue *valData;

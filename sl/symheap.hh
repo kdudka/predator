@@ -482,6 +482,9 @@ class SymHeapCore {
         /// return size (in bytes) of the given object
         TSizeRange objSize(TObjId) const;
 
+        /// set the new size of object
+        void objSetSize(TObjId obj, const TSizeRange &newSize);
+
         /// target address at the given object with target specifier and offset
         TValId addrOfTarget(TObjId, ETargetSpecifier, TOffset off = 0);
 
