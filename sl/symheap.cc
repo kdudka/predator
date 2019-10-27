@@ -2925,13 +2925,13 @@ void SymHeapCore::addNeq(TValId v1, TValId v2)
 {
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
 
-    const EValueTarget code1 = this->valTarget(v1);
-    const EValueTarget code2 = this->valTarget(v2);
-
-    if (VT_UNKNOWN != code1 && VT_UNKNOWN != code2) {
-        CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
-        return;
-    }
+//     const EValueTarget code1 = this->valTarget(v1);
+//     const EValueTarget code2 = this->valTarget(v2);
+//
+//     if (VT_UNKNOWN != code1 && VT_UNKNOWN != code2) {
+//         CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
+//         return;
+//     }
 
     d->neqDb->add(v1, v2);
 }
@@ -3483,6 +3483,35 @@ TSizeRange SymHeapCore::objSize(TObjId obj) const
     d->ents.getEntRO(&regData, obj);
     return regData->size;
 }
+
+void SymHeapCore::objSetSize(TObjId obj, const TSizeRange &newSize)
+{
+    CL_BREAK_IF(size.lo < IR::Int0);
+    Region *regData;
+    d->ents.getEntRW(&regData, obj);
+    CL_BREAK_IF(!regData);
+
+    const TSizeRange size = regData->size;
+    if (newSize.hi < size.hi) {
+        // reduce block, look for inner objects in invalid memory
+        const TMemChunk chunk(newSize.hi, size.hi);
+        TFldIdSet allObjs;
+        if (arenaLookup(&allObjs, regData->arena, chunk, FLD_INVALID)) {
+            // destroy all inner objects
+            BOOST_FOREACH(const TFldId fld, allObjs) {
+                d->fldDestroy(fld, /* removeVal */ true, /* detach */ true);
+                // mark the object as dead
+                if (regData->liveFields.erase(fld))
+                    CL_DEBUG("objSetSize() kills a live object");
+            }
+        }
+    }
+    CL_BREAK_IF(!d->chkArenaConsistency(regData, true));
+
+    regData->size = newSize;
+    return;
+}
+
 
 TSizeRange SymHeapCore::valSizeOfString(TValId addr) const
 {
