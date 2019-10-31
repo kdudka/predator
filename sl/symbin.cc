@@ -909,11 +909,32 @@ bool handleNondetInt(
 
     SymHeap &sh = core.sh();
     CL_DEBUG_MSG(&insn.loc, "executing " << name << "()");
+    TValId val;
 
-    // set the returned value to a new unknown value
+    static const char namePrefixUnsigned[] = "__VERIFIER_nondet_u";
+    static const size_t namePrefixLength = sizeof(namePrefixUnsigned) - 1U;
+    std::string namePrefix(name);
+    if (namePrefixLength < namePrefix.size())
+        namePrefix.resize(namePrefixLength);
+
+    if (std::string(namePrefixUnsigned) == namePrefix) {
+        // an unsigned value
+        const IR::Range unsignedRng = {
+            /* lo        */ 0,
+            /* hi        */ IR::IntMax,
+            /* alignment */ IR::Int1
+        };
+        const CustomValue cv(unsignedRng);
+        val = sh.valWrapCustom(cv);
+    }
+    else {
+        // an unknown value
+        val = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
+    }
+
+    // set the returned value to a new value
     const struct cl_operand &opDst = opList[0];
     const FldHandle fldDst = core.fldByOperand(opDst);
-    const TValId val = sh.valCreate(VT_UNKNOWN, VO_ASSIGNED);
     core.setValueOf(fldDst, val);
 
     // insert the resulting heap
