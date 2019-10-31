@@ -2240,6 +2240,29 @@ bool computeTruncDiv(
     return true;
 }
 
+bool computeTruncMod(
+        IR::Range                  *pResult,
+        const IR::Range             rng1,
+        const IR::Range             rng2)
+{
+    if (!isSingular(rng1) || !isSingular(rng2)) {
+        CL_DEBUG("computeTruncMod() does not support int ranges for now");
+        return false;
+    }
+
+    const IR::TInt i1 = rng1.lo;
+    const IR::TInt i2 = rng2.lo;
+    if (!i2) {
+        // TODO: provide the location info and backtrace for this
+        CL_ERROR("modulo by zero");
+        return false;
+    }
+
+    const IR::TInt result = i1 % i2;
+    *pResult = IR::rngFromNum(result);
+    return true;
+}
+
 bool computeIntRngResult(
         TValId                      *pDst,
         SymHeapCore                 &sh,
@@ -2287,6 +2310,11 @@ bool computeIntRngResult(
 
         case CL_BINOP_TRUNC_DIV:
             if (!computeTruncDiv(&result, rng1, rng2))
+                return false;
+            break;
+
+        case CL_BINOP_TRUNC_MOD:
+            if (!computeTruncMod(&result, rng1, rng2))
                 return false;
             break;
 
@@ -2678,6 +2706,7 @@ struct OpHandler</* binary */ 2> {
             case CL_BINOP_LSHIFT:
             case CL_BINOP_RSHIFT:
             case CL_BINOP_TRUNC_DIV:
+            case CL_BINOP_TRUNC_MOD:
                 goto handle_int;
 
             case CL_BINOP_TRUTH_XOR:
