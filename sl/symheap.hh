@@ -509,6 +509,9 @@ class SymHeapCore {
         /// difference between two pointers (makes sense only for shared roots)
         TValId diffPointers(TValId v1, TValId v2);
 
+        /// return true if is string on the given addr
+        bool valString(TValId addr, std::string &);
+
         /// return count of bytes (including NULL) we can safely read as string
         TSizeRange valSizeOfString(TValId) const;
 

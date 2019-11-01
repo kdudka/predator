@@ -777,6 +777,48 @@ bool handleStrlen(
     return true;
 }
 
+bool handleStrcmp(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const TLoc loc = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() != 4) {
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    const struct cl_operand &opDst = opList[/* ret */ 0];
+
+    // read the values of strcmp parameters
+    const TValId valStr1  = core.valFromOperand(opList[/* str1 */ 2]);
+    const TValId valStr2  = core.valFromOperand(opList[/* str2 */ 3]);
+
+    SymHeap &sh = core.sh();
+    std::string str1;
+    std::string str2;
+    if (!sh.valString(valStr1, str1) || !sh.valString(valStr2, str2)) {
+        CL_ERROR_MSG(loc, "args of " << name << "() are not string literals");
+        core.printBackTrace(ML_ERROR);
+        return true;
+    }
+
+    int code = std::strcmp(str1.c_str(),str2.c_str());
+
+    if (CL_OPERAND_VOID != opDst.code) {
+        // store the return value of strcmp()
+        const CustomValue cv(IR::rngFromNum(code));
+        const TValId valResult = sh.valWrapCustom(cv);
+        const FldHandle fldDst = core.fldByOperand(opDst);
+        core.setValueOf(fldDst, valResult);
+    }
+
+    insertCoreHeap(dst, core, insn);
+    return true;
+}
+
 bool handleStrncpy(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -1187,6 +1229,7 @@ BuiltInTable::BuiltInTable()
     tbl_["printf"]                                  = handlePrintf;
     tbl_["puts"]                                    = handlePuts;
     tbl_["realloc"]                                 = handleRealloc;
+    tbl_["strcmp"]                                  = handleStrcmp;
     tbl_["strlen"]                                  = handleStrlen;
     tbl_["strncpy"]                                 = handleStrncpy;
 
@@ -1254,6 +1297,8 @@ BuiltInTable::BuiltInTable()
     // TODO: printf
     der_["puts"]                   .push_back(/* s    */ 2);
     der_["realloc"]                .push_back(/* addr */ 2);
+    der_["strcmp"]                 .push_back(/* str1 */ 2);
+    der_["strcmp"]                 .push_back(/* str2 */ 3);
     der_["strlen"]                 .push_back(/* s    */ 2);
     der_["strncpy"]                .push_back(/* dst  */ 2);
     der_["strncpy"]                .push_back(/* src  */ 3);

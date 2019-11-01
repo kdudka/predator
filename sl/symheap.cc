@@ -3514,6 +3514,25 @@ void SymHeapCore::objSetSize(TObjId obj, const TSizeRange &newSize)
 }
 
 
+bool SymHeapCore::valString(TValId addr, std::string &str) {
+    const BaseValue *valData;
+    d->ents.getEntRO(&valData, addr);
+
+    const EValueTarget code = valData->code;
+    if (VT_CUSTOM == code) {
+        const InternalCustomValue *customData =
+            DCAST<const InternalCustomValue *>(valData);
+
+        const CustomValue &cv = customData->customData;
+        if (CV_STRING == cv.code()) { // string literal
+            str = cv.str();
+            return true;
+        }
+    }
+    // TODO: reinterpretation
+    return false;
+}
+
 TSizeRange SymHeapCore::valSizeOfString(TValId addr) const
 {
     const BaseValue *valData;
