@@ -13,7 +13,6 @@ export MSG_INT_OVERFLOW=': warning: possible .*flow of .* integer'
 export MSG_COND_JUMP_UNINIT_VALUE=': warning: conditional jump depends on uninitialized value'
 export MSG_CMP_INTRANGE=': note: compareIntRanges\(\) has something ambiguous'
 
-export MSG_MEMLEAK_STATIC='error: memory leak detected while destroying a static variable'
 export MSG_MEMLEAK=': (error|warning): memory leak detected'
 
 export MSG_DEREF_FREED=': error: dereference of already deleted heap object'
@@ -253,12 +252,6 @@ parse_output() {
              match "$line" "$MSG_DEREF_LVAL" ; then
             if match "$TASK" "deref"; then
               report_unsafe "valid-deref" "$line"
-            fi
-
-        elif match "$line" "$MSG_MEMLEAK_STATIC"; then
-            # still valid_memtrack
-            if match "$TASK" "memcleanup"; then
-              report_unsafe "valid-memcleanup" "$line"
             fi
 
         elif match "$line" "$MSG_MEMLEAK"; then
