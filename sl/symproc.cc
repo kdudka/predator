@@ -949,9 +949,14 @@ void SymProc::objDestroy(TObjId obj)
     lm.enter();
 
     const EStorageClass code = sh_.objStorClass(obj);
-    if (/* leaking */ lm.destroyObject(obj))
-        reportMemLeak(*this, code, "destroy");
+    if (/* leaking */ lm.destroyObject(obj)) {
+        if (code != SC_STATIC || GlConf::data.exitLeaks)
+            // static variable still reachable when not looking for exit leaks
+            reportMemLeak(*this, code, "destroy");
+    }
 
+    // FIXME: this will unconditionally plot heap of leaked memory shape
+    // with ::debuggingGarbageCollector without printing a warning first
     lm.leave();
 }
 
