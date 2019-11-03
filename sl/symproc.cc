@@ -936,7 +936,6 @@ void SymProc::setValueOf(const FldHandle &lhs, TValId rhs)
     const TValId valSize = sh_.valWrapCustom(cv);
 
     // C99 says that lhs and rhs cannot _partially_ overlap
-    // TODO: avoid reporting errors for full overlaps
     // TODO: check for overlaps when assigning atomic variables, too
     executeMemmove(*this, lhsAt, rhsAt, valSize, /* allowOverlap */ false);
 }
@@ -1134,9 +1133,15 @@ bool checkForOverlap(
         // the roots are proven to be two distinct roots
         return false;
 
+    const TSizeRange sizeSrc = sh.objSize(sh.objByAddr(valSrc));
+    const TSizeRange sizeDst = sh.objSize(sh.objByAddr(valDst));
+    if (isSingular(sizeSrc) && isSingular(sizeDst) &&
+        sizeSrc.lo == sizeDst.lo && sizeDst.lo == size) {
+        // full overlaps are allowed
+        return false;
+    }
     // TODO
     CL_BREAK_IF("please implement");
-    (void) size;
     return true;
 }
 
