@@ -2434,6 +2434,20 @@ TValId handleIntegralOp(
     return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
+TValId handleBitOr(SymHeapCore &sh, const TValId v1, const TValId v2)
+{
+    IR::TInt num1, num2;
+    if (!numFromVal(&num1, sh, v1) || !numFromVal(&num2, sh, v2))
+        return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+
+    // compute the integral result
+    const IR::TInt result = num1 | num2;
+
+    // wrap the result as a heap value expressing a constant integer
+    CustomValue cv(IR::rngFromNum(result));
+    return sh.valWrapCustom(cv);
+}
+
 TValId handleBitXor(SymHeapCore &sh, const TValId v1, const TValId v2)
 {
     IR::TInt num1, num2;
@@ -2714,6 +2728,9 @@ struct OpHandler</* binary */ 2> {
 
             case CL_BINOP_BIT_XOR:
                 return handleBitXor(sh, rhs[0], rhs[1]);
+
+            case CL_BINOP_BIT_IOR:
+                return handleBitOr(sh, rhs[0], rhs[1]);
 
             case CL_BINOP_BIT_AND:
                 if (VAL_NULL == rhs[0] || VAL_NULL == rhs[1])
