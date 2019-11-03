@@ -2092,7 +2092,8 @@ void SymHeapCore::copyBlockOfRawMemory(
     if (dstRoot == srcRoot) {
         // movement within a single root entity
         const TOffset diff = dstOff - srcOff;
-        d->shiftBlockAt(dstRoot, diff, size, killedPtrs);
+        if (diff != 0)
+            d->shiftBlockAt(dstRoot, diff, size, killedPtrs);
         return;
     }
 
