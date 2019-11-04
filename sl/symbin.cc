@@ -671,7 +671,7 @@ bool handlePrintf(
         if ('%' != *(fmt++))
             continue;
 
-        const char c = *fmt;
+        char c = *fmt;
         if ('%' == c) {
             // %% -> keep going...
             ++fmt;
@@ -683,10 +683,10 @@ bool handlePrintf(
             goto fail;
         }
 
-        // skip [0-9.l]+
-        while (isdigit(*fmt) || '.' == *fmt || 'l' == *fmt)
+        // skip [0-9.lz]+
+        while (isdigit(*fmt) || '.' == *fmt || 'l' == *fmt || 'z' == *fmt)
             ++fmt;
-
+        c = *fmt;
         switch (c) {
             case 'A': case 'E': case 'F': case 'G':
             case 'a': case 'c': case 'd': case 'e': case 'f': case 'g':
