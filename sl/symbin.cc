@@ -1115,6 +1115,7 @@ BuiltInTable::BuiltInTable()
     // GCC built-in stack allocation
     tbl_["__builtin_alloca"] /* before GCC 4.7.0 */ = handleAlloca;
     tbl_["__builtin_alloca_with_align"]             = handleAlloca;
+    tbl_["__builtin_malloc"]                        = handleMalloc;
     tbl_["__builtin_stack_restore"]                 = handleStackRestore;
     tbl_["__builtin_stack_save"]                    = handleStackSave;
 
