@@ -2925,13 +2925,13 @@ void SymHeapCore::addNeq(TValId v1, TValId v2)
 {
     RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->neqDb);
 
-//     const EValueTarget code1 = this->valTarget(v1);
-//     const EValueTarget code2 = this->valTarget(v2);
-//
-//     if (VT_UNKNOWN != code1 && VT_UNKNOWN != code2) {
-//         CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
-//         return;
-//     }
+    const EValueTarget code1 = this->valTarget(v1);
+    const EValueTarget code2 = this->valTarget(v2);
+
+    if (VT_UNKNOWN != code1 && VT_UNKNOWN != code2) {
+        CL_DEBUG("SymHeap::neqOp() refuses to add an extraordinary Neq predicate");
+        return;
+    }
 
     d->neqDb->add(v1, v2);
 }
