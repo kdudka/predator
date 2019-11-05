@@ -214,7 +214,9 @@ bool isKnownModel(const Insn *insn, TBindPairs &pairs)
         CL_BREAK_IF(opList.size() != 3);
         TBindPair pair;
 
-        CL_BREAK_IF(opList[0].code == CL_OPERAND_VOID);
+        if (opList[0].code == CL_OPERAND_VOID)
+            // return value of malloc() not used
+            return false;
 
         pair.code = BINDPAIR_HEAP;
         pair.callee.uid = -generateMallocUid(insn);
