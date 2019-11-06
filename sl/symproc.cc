@@ -1510,44 +1510,40 @@ malloc/calloc is implementation-defined");
     dst.insert(sh_);
 }
 
-
-bool SymExecCore::resizeObject(
-        SymHeap                        &sh,
-        const TValId                    valAddr,
-        const TSizeRange                size)
+bool SymExecCore::resizeObject(const TValId valAddr, const TSizeRange size)
 {
     if (!size.hi)
         return false;
 
     // reuse old object
-    const TObjId resizeObj = sh.objByAddr(valAddr);
-    if (!sh.isValid(resizeObj) ||
-        !isOnHeap(sh.objStorClass(resizeObj))) {
+    const TObjId resizeObj = sh_.objByAddr(valAddr);
+    if (!sh_.isValid(resizeObj) ||
+        !isOnHeap(sh_.objStorClass(resizeObj))) {
         CL_ERROR_MSG(lw_, "invalid realloc()");
         describeUnknownVal(*this, valAddr, "reallocate");
         this->printBackTrace(ML_ERROR);
         return false;
     }
 
-    TSizeRange oldsize = valSizeOfTarget(sh, valAddr);
+    TSizeRange oldsize = valSizeOfTarget(sh_, valAddr);
     int diff = oldsize.lo - size.lo;
 
     if (diff >= 0) { // reduce block, check for memory leaks in invalid area
         // <-------oldsize------>
         // <--size---><-invalid->
-        LeakMonitor lm(sh);
+        LeakMonitor lm(sh_);
         lm.enter();
         TValSet killedPtrs;
 
         // rest of block we _have_ to invalidate
         CL_DEBUG_MSG(lw_, "realloc() invalidates memory");
-        const TValId valUnknown = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+        const TValId valUnknown = sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN);
         const UniformBlock ubSuffix = {
              /* off      */  size.lo,
              /* size     */  diff,
              /* tplValue */  valUnknown
         };
-        sh.writeUniformBlock(resizeObj, ubSuffix, &killedPtrs);
+        sh_.writeUniformBlock(resizeObj, ubSuffix, &killedPtrs);
 
         if (lm.collectJunkFrom(killedPtrs))
             REPORT_MEMLEAK(*this, "memory leak detected while executing realloc()");
@@ -1555,13 +1551,13 @@ bool SymExecCore::resizeObject(
         lm.leave();
 
         // change size of old block
-        sh.objSetSize(resizeObj, size);
+        sh_.objSetSize(resizeObj, size);
 
     } else { // expand block
         // <-------oldsize------><-undef->
         // <------------size------------->
         // change size of old block
-        sh.objSetSize(resizeObj, size);
+        sh_.objSetSize(resizeObj, size);
 
         if (ep_.trackUninit) {
             // uninitialized rest of heap block
@@ -1570,8 +1566,8 @@ bool SymExecCore::resizeObject(
                  /* size     */  -diff,
                  /* tplValue */  VAL_NULL
              };
-             ub.tplValue = sh.valCreate(VT_UNKNOWN, VO_HEAP);
-             sh.writeUniformBlock(resizeObj, ub);
+             ub.tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
+             sh_.writeUniformBlock(resizeObj, ub);
         }
     }
     return true;
@@ -1622,7 +1618,7 @@ void SymExecCore::execHeapRealloc(
             CL_DEBUG_MSG(lw_, "executing ptr = realloc(ptr, "<< size.lo <<")");
 
             // change object size, if valid
-            if (!resizeObject(resizeHeap, valAddr, size))
+            if (!resizeCore.resizeObject(valAddr, size))
                 return;
 
             resizeCore.killInsn(insn);
@@ -1655,7 +1651,6 @@ void SymExecCore::execHeapRealloc(
 
         // TODO the new address is different from the old address: test-0258.c
         //      need explicit neq edge
-        CL_BREAK_IF("please implement");
 
         TSizeRange oldsize = valSizeOfTarget(sh_, valAddr);
         int diff = oldsize.lo - size.lo;

@@ -274,10 +274,7 @@ class SymExecCore: public SymProc {
 
         bool execCore(SymState &dst, const CodeStorage::Insn &insn);
 
-        bool resizeObject(
-                SymHeap                        &sh,
-                const TValId                    valAddr,
-                const TSizeRange                size);
+        bool resizeObject(const TValId valAddr, const TSizeRange size);
 
     protected:
         virtual void varInit(TObjId reg);
