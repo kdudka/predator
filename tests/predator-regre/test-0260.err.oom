@@ -1,0 +1,3 @@
+test-0260.c:5: warning: memory leak detected while trashing return value
+test-0260.c:6: warning: memory leak detected while trashing return value
+test-0260.c:7: warning: memory leak detected while destroying a variable on stack
