@@ -1639,8 +1639,6 @@ void SymExecCore::execHeapRealloc(
             SymExecCore resizeCore(resizeHeap, bt_, ep_);
             resizeCore.setLocation(lw_);
             Trace::waiveCloneOperation(resizeHeap);
-            const FldHandle resizeLhs(resizeHeap, lhs);
-            resizeCore.setValueOf(resizeLhs, valAddr);
             CL_DEBUG_MSG(lw_, " +  cloning heap");
             CL_DEBUG_MSG(lw_, "executing ptr = realloc(ptr, "<< size.lo <<")");
 
@@ -1648,6 +1646,8 @@ void SymExecCore::execHeapRealloc(
             if (!resizeCore.resizeObject(valAddr, size))
                 return;
 
+            const FldHandle resizeLhs(resizeHeap, lhs);
+            resizeCore.setValueOf(resizeLhs, valAddr);
             resizeCore.killInsn(insn);
             dst.insert(resizeHeap);
         }
@@ -1657,7 +1657,6 @@ void SymExecCore::execHeapRealloc(
 
         // store the result of allocation
         const TValId valDst = sh_.addrOfTarget(reg, TS_REGION);
-        this->setValueOf(lhs, valDst);
 
         if (VAL_NULL == valAddr) {
             // if addr is a null pointer, the realloc == malloc function
@@ -1671,6 +1670,7 @@ void SymExecCore::execHeapRealloc(
                 ub.tplValue = sh_.valCreate(VT_UNKNOWN, VO_HEAP);
                 sh_.writeUniformBlock(reg, ub);
             }
+            this->setValueOf(lhs, valDst);
             this->killInsn(insn);
             dst.insert(sh_);
             return;
@@ -1708,6 +1708,7 @@ void SymExecCore::execHeapRealloc(
 
         // free memory after new allocation
         this->execFree(valAddr, /* reallocated */ true);
+        this->setValueOf(lhs, valDst);
     }
     else {
         CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
