@@ -873,8 +873,29 @@ void objSetAtomicVal(SymProc &proc, const FldHandle &lhs, TValId rhs)
     lm.leave();
 }
 
+void trashValue(SymProc &proc, TValId val)
+{
+    LeakMonitor lm(proc.sh());
+    lm.enter();
+
+    TValSet trashSet;
+    trashSet.insert(val);
+
+    if (lm.collectJunkFrom(trashSet)) {
+        REPORT_MEMLEAK(proc,
+                "memory leak detected while trashing return value");
+    }
+
+    lm.leave();
+}
+
 void SymProc::setValueOf(const FldHandle &lhs, TValId rhs)
 {
+    if (!lhs.isValidHandle()) {
+        trashValue(*this, rhs);
+        return;
+    }
+
     const TValId lhsAt = lhs.placedAt();
     CL_BREAK_IF(!isPossibleToDeref(sh_, lhsAt));
 
@@ -1417,7 +1438,7 @@ void SymExecCore::execStackAlloc(
 {
     // resolve lhs
     FldHandle lhs;
-    if (!lhsFromOperand(&lhs, *this, opLhs))
+    if (CL_OPERAND_VOID != opLhs.code && !lhsFromOperand(&lhs, *this, opLhs))
         // error alredy emitted
         return;
 
@@ -1456,7 +1477,8 @@ void SymExecCore::execHeapAlloc(
 {
     // resolve lhs
     FldHandle lhs;
-    if (!lhsFromOperand(&lhs, *this, insn.operands[/* dst */ 0]))
+    const struct cl_operand &opLhs = insn.operands[/* dst */ 0];
+    if (CL_OPERAND_VOID != opLhs.code && !lhsFromOperand(&lhs, *this, opLhs))
         // error alredy emitted
         return;
 
@@ -1584,7 +1606,8 @@ void SymExecCore::execHeapRealloc(
 {
     // resolve lhs
     FldHandle lhs;
-    if (!lhsFromOperand(&lhs, *this, insn.operands[/* dst */ 0]))
+    const struct cl_operand &opLhs = insn.operands[/* dst */ 0];
+    if (CL_OPERAND_VOID != opLhs.code && !lhsFromOperand(&lhs, *this, opLhs))
         // error alredy emitted
         return;
 

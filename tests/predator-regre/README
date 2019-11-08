@@ -795,6 +795,8 @@ Tests taken from Forester
 
     test-0259.c - a regression test for memory leaks in realloc()
 
+    test-0260.c - report memory leak if return value of *alloc() is not used
+
 Data reinterpretation
 =====================
 

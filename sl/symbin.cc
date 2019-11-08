@@ -345,7 +345,7 @@ bool handleCalloc(
         const char                                  *name)
 {
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (4 != opList.size() || CL_OPERAND_VOID == opList[/* dst */ 0].code) {
+    if (4 != opList.size()) {
         emitPrototypeError(&insn.loc, name);
         return false;
     }
@@ -466,8 +466,7 @@ bool handleAlloca(
     const CodeStorage::TOperandList &opList = insn.operands;
 
     // this allows both __builtin_alloca(x) and __builtin_alloca_with_align(x,y)
-    if (opList.size() < 3 || 4 < opList.size() ||
-        CL_OPERAND_VOID == opList[/* dst */ 0].code) {
+    if (opList.size() < 3 || 4 < opList.size()) {
         emitPrototypeError(loc, name);
         return false;
     }
@@ -496,7 +495,7 @@ bool handleMalloc(
 {
     const struct cl_loc *lw = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (3 != opList.size() || CL_OPERAND_VOID == opList[/* dst */ 0].code) {
+    if (3 != opList.size()) {
         emitPrototypeError(lw, name);
         return false;
     }
@@ -527,8 +526,7 @@ bool handleRealloc(
 {
     const struct cl_loc *lw = &insn.loc;
     const CodeStorage::TOperandList &opList = insn.operands;
-    if (/* dst + fnc + ptr + new_size */4 != opList.size() ||
-        CL_OPERAND_VOID == opList[/* dst */ 0].code) {
+    if (/* dst + fnc + ptr + new_size */4 != opList.size()) {
         emitPrototypeError(lw, name);
         return false;
     }
