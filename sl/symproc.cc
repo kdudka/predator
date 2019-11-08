@@ -1550,6 +1550,9 @@ bool SymExecCore::resizeObject(const TValId valAddr, const TSizeRange size)
 
     TSizeRange oldsize = valSizeOfTarget(sh_, valAddr);
     int diff = oldsize.lo - size.lo;
+    if (!diff)
+        // resize to the same size is a no-op
+        return true;
 
     if (diff >= 0) { // reduce block, check for memory leaks in invalid area
         // <-------oldsize------>
@@ -1647,7 +1650,7 @@ void SymExecCore::execHeapRealloc(
 
             resizeCore.killInsn(insn);
             dst.insert(resizeHeap);
-       }
+        }
 
         // alloc memory to new block - create a new heap object
         const TObjId reg = sh_.heapAlloc(size);
