@@ -1257,7 +1257,6 @@ void SymHeapCore::Private::setValueOf(
         TValId                      val,
         TValSet                    *killedPtrs)
 {
-    // release old value
     FieldOfObj *fldData;
     this->ents.getEntRW(&fldData, fld);
 
@@ -1266,6 +1265,7 @@ void SymHeapCore::Private::setValueOf(
         // we are asked to write a value which is already there, skip it!
         return;
 
+    // release old value
     if (/* wasPtr */ this->releaseValueOf(fld, valOld) && killedPtrs)
         killedPtrs->insert(valOld);
 
