@@ -797,6 +797,8 @@ Tests taken from Forester
 
     test-0260.c - report memory leak if return value of *alloc() is not used
 
+    test-0261.c - avoid memory leak false positive with realloc()
+
 Data reinterpretation
 =====================
 

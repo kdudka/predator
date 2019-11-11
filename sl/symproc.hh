@@ -258,7 +258,10 @@ class SymExecCore: public SymProc {
                 const CodeStorage::Insn    &insn,
                 TSizeRange                  size);
 
-        void execFree(TValId val, const bool reallocated = false);
+        void execFree(
+                TValId                      val,
+                bool                        reallocated = false,
+                bool                        skipLeakCheck = false);
 
     private:
         template <int ARITY>

@@ -1324,7 +1324,10 @@ void SymExecCore::varInit(TObjId obj)
     SymProc::varInit(obj);
 }
 
-void SymExecCore::execFree(TValId val, const bool reallocated)
+void SymExecCore::execFree(
+        const TValId                    val,
+        const bool                      reallocated,
+        const bool                      skipLeakCheck)
 {
     const char *fnc = (reallocated)
         ? "realloc()"
@@ -1402,9 +1405,14 @@ void SymExecCore::execFree(TValId val, const bool reallocated)
         this->printBackTrace(ML_ERROR);
         return;
     }
+
     if (!reallocated)
         CL_DEBUG_MSG(lw_, "executing free()");
-    this->objDestroy(obj);
+
+    if (skipLeakCheck)
+        sh_.objInvalidate(obj);
+    else
+        this->objDestroy(obj);
 }
 
 void SymExecCore::execStackRestore()
@@ -1707,7 +1715,7 @@ void SymExecCore::execHeapRealloc(
         }
 
         // free memory after new allocation
-        this->execFree(valAddr, /* reallocated */ true);
+        this->execFree(valAddr, /* reallocated */ true, /* skipLeakCheck */ true);
         this->setValueOf(lhs, valDst);
     }
     else {
