@@ -236,6 +236,9 @@ bool compareIntRanges(
         }
 
         // we got something ambiguous
+#if DEBUG_SE_CMP_INT_RANGES
+        CL_NOTE("compareIntRanges() has something ambiguous");
+#endif
         return false;
     }
 
@@ -278,6 +281,9 @@ bool compareIntRanges(
     }
 
     // we got something ambiguous
+#if DEBUG_SE_CMP_INT_RANGES
+    CL_NOTE("compareIntRanges() has something ambiguous");
+#endif
     return false;
 }
 

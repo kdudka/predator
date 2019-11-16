@@ -54,6 +54,11 @@
 #define DEBUG_SE_STACK_FRAME                0
 
 /**
+ * if 1, print message when comparing overlapping ranges
+ */
+#define DEBUG_SE_CMP_INT_RANGES             0
+
+/**
  * if 1, plot each abstraction/concretization step to a separate heap graph
  */
 #define DEBUG_SYMABSTRACT                   0

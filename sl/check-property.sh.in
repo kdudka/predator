@@ -11,6 +11,7 @@ export MSG_TIME_ELAPSED=': note: clEasyRun\(\) took '
 export MSG_UNHANDLED_CALL=': warning: ignoring call of undefined function: '
 export MSG_INT_OVERFLOW=': warning: possible .*flow of .* integer'
 export MSG_COND_JUMP_UNINIT_VALUE=': warning: conditional jump depends on uninitialized value'
+export MSG_CMP_INTRANGE=': note: compareIntRanges\(\) has something ambiguous'
 
 export MSG_MEMLEAK=': (error|warning): memory leak detected'
 
@@ -191,6 +192,10 @@ fail() {
 }
 
 report_unsafe() {
+    if test xyes = "x$OVERAPPROX"; then
+        fail "warning: maybe false alarm"
+    fi
+
     PROPERTY="$1"
     # drop the remainder of the output
     cat > /dev/null
@@ -215,6 +220,12 @@ parse_output() {
             # on purpose for ldv-memsafety/memleaks_test12_
             # conditional jump depends on uninitialized value
             fail "$line"
+
+        elif match "$line" "$MSG_CMP_INTRANGE"; then
+            # on purpose for heap-data/*
+            # over-approximation condition due to ambiguous comparison of int
+            # ranges
+            OVERAPPROX=yes
 
         elif match "$line" "$MSG_INT_OVERFLOW"; then
             # unhandled integer overflow, we have to fail
