@@ -1493,17 +1493,40 @@ void CLPass::handleInstruction(Instruction *I) {
 /// allocated size (N*typeSize) and align
 void CLPass::handleAllocaInstruction(AllocaInst *I) {
 
-    struct cl_operand dst, fnc, size, align;
+    struct cl_operand dst, fnc, size, arraySize, typeSize, align;
 
     struct cl_type *allocated = handleType(I->getAllocatedType());
 
+    struct cl_insn mult;
+
     if (I->isArrayAllocation()) {
-        handleOperand(I->getArraySize(), &size);
-        size.data.cst.data.cst_int.value *= allocated->size;
+        handleOperand(I->getArraySize(), &arraySize);
+
+        if (!isa<Constant>(I->getArraySize())) {
+            getIntOperand(allocated->size, &typeSize);
+            std::memset(&size, 0, sizeof(size));
+            size.code = CL_OPERAND_VAR;
+            size.scope = CL_SCOPE_FUNCTION;
+            size.type = handleType(I->getArraySize()->getType());
+            size.data.var = handleVariable(nullptr);
+
+            mult.code = CL_INSN_BINOP;
+            mult.data.insn_binop.code = CL_BINOP_MULT;
+            mult.data.insn_binop.src1 = &typeSize;
+            mult.data.insn_binop.src2 = &arraySize;
+            mult.data.insn_binop.dst = &size;
+            cl->insn(cl, &mult);
+        } else {
+            handleOperand(I->getArraySize(), &size);
+            // this is just an optimization
+            size.data.cst.data.cst_int.value *= allocated->size;
+        }
     } else {
         getIntOperand(allocated->size, &size);
     }
     getIntOperand(I->getAlignment(), &align);
+    // recompute alignment to bits
+    align.data.cst.data.cst_int.value *= 8;
 
     handleOperand(I, &dst);
 
