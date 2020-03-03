@@ -6,7 +6,7 @@ export CCACHE_DISABLE=1
 export MSG_INFLOOP=': warning: end of function .*\(\) has not been reached'
 export MSG_LABEL_FOUND=': error: error label "ERROR" has been reached'
 export MSG_VERIFIER_ERROR_FOUND=': (error|warning): __VERIFIER_error\(\) reached'
-export MSG_OUR_WARNINGS=': warning: .*\[-fplugin=libsl.so\]$'
+export MSG_OUR_WARNINGS=': warning: .*(\[-fplugin=libsl.so\]|\[-sl\])$'
 export MSG_TIME_ELAPSED=': note: clEasyRun\(\) took '
 export MSG_UNHANDLED_CALL=': warning: ignoring call of undefined function: '
 export MSG_INT_OVERFLOW=': warning: possible .*flow of .* integer'
