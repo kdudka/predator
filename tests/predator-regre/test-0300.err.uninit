@@ -22,6 +22,14 @@ test-0300.c:218: warning: conditional jump depends on uninitialized value
 test-0300.c:218: note: the value being used is an untouched contents of heap
 test-0300.c:282: note: from call of register_cdrom()
 test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
 test-0300.c:275: warning: conditional jump depends on uninitialized value
 test-0300.c:275: note: the value being used is an untouched contents of stack
 test-0300.c:147: warning: memory leak detected while destroying a variable on stack
@@ -44,6 +52,14 @@ test-0300.c:218: warning: conditional jump depends on uninitialized value
 test-0300.c:218: note: the value being used is an untouched contents of heap
 test-0300.c:282: note: from call of register_cdrom()
 test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
 test-0300.c:275: warning: conditional jump depends on uninitialized value
 test-0300.c:275: note: the value being used is an untouched contents of stack
 test-0300.c:147: warning: memory leak detected while destroying a variable on stack
@@ -56,6 +72,14 @@ test-0300.c:150: warning: memory leak detected while destroying a variable on st
 test-0300.c:282: note: from call of register_cdrom()
 test-0300.c:266: note: from call of main()
 test-0300.c:150: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
 test-0300.c:282: note: from call of register_cdrom()
 test-0300.c:266: note: from call of main()
 test-0300.c:218: warning: conditional jump depends on uninitialized value
@@ -90,6 +114,14 @@ test-0300.c:218: warning: conditional jump depends on uninitialized value
 test-0300.c:218: note: the value being used is an untouched contents of heap
 test-0300.c:282: note: from call of register_cdrom()
 test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
 test-0300.c:275: warning: conditional jump depends on uninitialized value
 test-0300.c:275: note: the value being used is an untouched contents of stack
 test-0300.c:147: warning: memory leak detected while destroying a variable on stack
@@ -112,6 +144,14 @@ test-0300.c:218: warning: conditional jump depends on uninitialized value
 test-0300.c:218: note: the value being used is an untouched contents of heap
 test-0300.c:282: note: from call of register_cdrom()
 test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
 test-0300.c:275: warning: conditional jump depends on uninitialized value
 test-0300.c:275: note: the value being used is an untouched contents of stack
 test-0300.c:147: warning: memory leak detected while destroying a variable on stack
@@ -124,6 +164,14 @@ test-0300.c:150: warning: memory leak detected while destroying a variable on st
 test-0300.c:282: note: from call of register_cdrom()
 test-0300.c:266: note: from call of main()
 test-0300.c:150: warning: memory leak detected while destroying a variable on stack
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
 test-0300.c:282: note: from call of register_cdrom()
 test-0300.c:266: note: from call of main()
 test-0300.c:218: warning: conditional jump depends on uninitialized value
@@ -158,6 +206,14 @@ test-0300.c:218: warning: conditional jump depends on uninitialized value
 test-0300.c:218: note: the value being used is an untouched contents of heap
 test-0300.c:282: note: from call of register_cdrom()
 test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
 test-0300.c:275: warning: conditional jump depends on uninitialized value
 test-0300.c:275: note: the value being used is an untouched contents of stack
 test-0300.c:147: warning: memory leak detected while destroying a variable on stack
@@ -180,33 +236,18 @@ test-0300.c:218: warning: conditional jump depends on uninitialized value
 test-0300.c:218: note: the value being used is an untouched contents of heap
 test-0300.c:282: note: from call of register_cdrom()
 test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
+test-0300.c:218: warning: conditional jump depends on uninitialized value
+test-0300.c:218: note: the value being used is an untouched contents of heap
+test-0300.c:282: note: from call of register_cdrom()
+test-0300.c:266: note: from call of main()
 test-0300.c:86: warning: memory leak detected while destroying a static variable
 test-0300.c:82: warning: memory leak detected while destroying a static variable
 test-0300.c:86: warning: memory leak detected while destroying a static variable
 test-0300.c:82: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:82: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
 test-0300.c:83: warning: memory leak detected while destroying a static variable
 test-0300.c:86: warning: memory leak detected while destroying a static variable
 test-0300.c:83: warning: memory leak detected while destroying a static variable
@@ -220,8 +261,7 @@ test-0300.c:83: warning: memory leak detected while destroying a static variable
 test-0300.c:86: warning: memory leak detected while destroying a static variable
 test-0300.c:83: warning: memory leak detected while destroying a static variable
 test-0300.c:86: warning: memory leak detected while destroying a static variable
-test-0300.c:83: warning: memory leak detected while destroying a static variable
-test-0300.c:86: warning: memory leak detected while destroying a static variable
+test-0300.c:82: warning: memory leak detected while destroying a static variable
 test-0300.c:83: warning: memory leak detected while destroying a static variable
 test-0300.c:86: warning: memory leak detected while destroying a static variable
 test-0300.c:83: warning: memory leak detected while destroying a static variable
