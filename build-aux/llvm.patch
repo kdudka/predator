@@ -2225,6 +2225,43 @@ index 8df9ab8c..5e4cccc7 100644
 -test-0257.c:22: note: writing heap graph to '2-realloc-0004.dot'...
 +test-0257.c:22: note: writing heap graph to '2-realloc-0006.dot'...
 +test-0257.c:22: note: writing heap graph to '2-realloc-0007.dot'...
+diff --git a/tests/predator-regre/test-0260.err b/tests/predator-regre/test-0260.err
+index 7b6c5c6f..fd899c33 100644
+--- a/tests/predator-regre/test-0260.err
++++ b/tests/predator-regre/test-0260.err
+@@ -1,2 +1,2 @@
+-test-0260.c:5: warning: memory leak detected while trashing return value
+-test-0260.c:6: warning: memory leak detected while trashing return value
++test-0260.c:5: warning: memory leak detected while destroying a variable on stack
++test-0260.c:6: warning: memory leak detected while destroying a variable on stack
+diff --git a/tests/predator-regre/test-0260.err.exit_leaks b/tests/predator-regre/test-0260.err.exit_leaks
+index 7b6c5c6f..fd899c33 100644
+--- a/tests/predator-regre/test-0260.err.exit_leaks
++++ b/tests/predator-regre/test-0260.err.exit_leaks
+@@ -1,2 +1,2 @@
+-test-0260.c:5: warning: memory leak detected while trashing return value
+-test-0260.c:6: warning: memory leak detected while trashing return value
++test-0260.c:5: warning: memory leak detected while destroying a variable on stack
++test-0260.c:6: warning: memory leak detected while destroying a variable on stack
+diff --git a/tests/predator-regre/test-0260.err.oom b/tests/predator-regre/test-0260.err.oom
+index 424621f0..85aebdf9 100644
+--- a/tests/predator-regre/test-0260.err.oom
++++ b/tests/predator-regre/test-0260.err.oom
+@@ -1,3 +1,3 @@
+-test-0260.c:5: warning: memory leak detected while trashing return value
+-test-0260.c:6: warning: memory leak detected while trashing return value
++test-0260.c:5: warning: memory leak detected while destroying a variable on stack
++test-0260.c:6: warning: memory leak detected while destroying a variable on stack
+ test-0260.c:7: warning: memory leak detected while destroying a variable on stack
+diff --git a/tests/predator-regre/test-0260.err.uninit b/tests/predator-regre/test-0260.err.uninit
+index 7b6c5c6f..fd899c33 100644
+--- a/tests/predator-regre/test-0260.err.uninit
++++ b/tests/predator-regre/test-0260.err.uninit
+@@ -1,2 +1,2 @@
+-test-0260.c:5: warning: memory leak detected while trashing return value
+-test-0260.c:6: warning: memory leak detected while trashing return value
++test-0260.c:5: warning: memory leak detected while destroying a variable on stack
++test-0260.c:6: warning: memory leak detected while destroying a variable on stack
 diff --git a/tests/predator-regre/test-0300.err.uninit b/tests/predator-regre/test-0300.err.uninit
 index e3ebd1cd..edaa58c3 100644
 --- a/tests/predator-regre/test-0300.err.uninit
