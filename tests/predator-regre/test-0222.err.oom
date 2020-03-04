@@ -59,4 +59,3 @@ list.h:46: error: dereference of NULL value
 list.h:61: note: from call of __list_add()
 test-0222.c:45: note: from call of list_add()
 test-0222.c:32: note: from call of main()
-test-0222.c:5: warning: memory leak detected while destroying a static variable
