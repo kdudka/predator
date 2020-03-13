@@ -350,6 +350,8 @@ class AbstractHeapEntity {
         virtual AbstractHeapEntity* doClone() const = 0;
 
     protected:
+        AbstractHeapEntity() { }
+        AbstractHeapEntity(const AbstractHeapEntity &) { }
         virtual ~AbstractHeapEntity() { }
         friend class EntStore<AbstractHeapEntity>;
         friend struct RefCntLibBase;
