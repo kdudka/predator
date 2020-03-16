@@ -321,7 +321,7 @@ else
     "$CLANG_HOST" -S -emit-llvm -O0 -g -o -             \
         -Xclang -fsanitize-address-use-after-scope "$@" \
         | "$OPT_HOST" -lowerswitch                      \
-        -load "$PASSES_LIB" -global-vars                \
+        -load "$PASSES_LIB" -global-vars -nestedgep     \
         -load "$SL_PLUG" -sl -args="$ARGS"              \
         -o /dev/null 2>&1                               \
         | tee "$TRACE"                                  \
