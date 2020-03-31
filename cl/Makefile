@@ -15,7 +15,7 @@
 # You should have received a copy of the GNU General Public License
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
-CMAKE           ?= cmake
+CMAKE           ?= cmake -Wno-dev
 CTEST           ?= ctest
 
 .PHONY: all check clean cppcheck distclean distcheck fast version_cl.h
