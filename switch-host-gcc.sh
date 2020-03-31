@@ -42,7 +42,7 @@ status_update() {
 
 # number of processor units
 NCPU="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
-MAKE="make -j${NCPU}"
+MAKE="make -j${NCPU} -s"
 
 # check the given GCC_HOST
 GCC_HOST="$1"
@@ -65,7 +65,7 @@ $MAKE distclean \
     || die "'$MAKE distclean' has failed"
 
 status_update "Trying to build Code Listener"
-$MAKE -C cl CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
+$MAKE -C cl CMAKE="cmake -Wno-dev -D GCC_HOST='$GCC_HOST'" \
     || die "failed to build Code Listener"
 
 status_update "Checking whether Code Listener works"
@@ -76,11 +76,11 @@ build_analyzer() {
     test -d $1 || return 0
 
     status_update "Trying to build $2"
-    $MAKE -C $1 CMAKE="cmake -D GCC_HOST='$GCC_HOST'" \
+    $MAKE -C $1 CMAKE="cmake -Wno-dev -D GCC_HOST='$GCC_HOST'" \
         || return $?
 
     status_update "Checking whether $2 works"
-    $MAKE -C $1 check CTEST="ctest -j${NCPU}"
+    $MAKE -C $1 check
 }
 
 build_analyzer sl Predator                          || exit $?
