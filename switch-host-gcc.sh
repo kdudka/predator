@@ -1,7 +1,6 @@
 #!/bin/bash
 export SELF="$0"
 export LC_ALL=C
-MAKE="make -j5"
 
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
@@ -43,6 +42,7 @@ status_update() {
 
 # number of processor units
 NCPU="$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 1)"
+MAKE="make -j${NCPU}"
 
 # check the given GCC_HOST
 GCC_HOST="$1"
