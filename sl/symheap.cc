@@ -1147,11 +1147,17 @@ bool SymHeapCore::Private::reinterpretSingleObj(
             DCAST<const InternalCustomValue *>(valData);
 
         const TOffset off = dstData->off - srcData->off;
-        const std::string &str = strData->customData.str();
-        CL_BREAK_IF(static_cast<TOffset>(str.size()) < off || off < 0);
+        if (cltSrc->size <= off || off < 0) {
+            CL_BREAK_IF("out of range read from a string literal");
+            return false;
+        }
 
         // byte-level access to zero-terminated strings
-        const IR::TInt num = str[off];
+        const std::string &str = strData->customData.str();
+        const IR::TInt num = (off < static_cast<TOffset>(str.size()))
+            ? str[off]
+            : IR::Int0;
+
         dstData->value = this->wrapIntVal(num);
         return true;
     }
