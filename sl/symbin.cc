@@ -1110,6 +1110,52 @@ bool handleDebuggingOf(
     return true;
 }
 
+// void __assert_fail (
+//      const char     *cond,
+//      const char     *file,
+//      unsigned int    line,
+//      const char     *fnc);
+bool handleAssertFail(
+        SymState                                    &dst,
+        SymExecCore                                 &core,
+        const CodeStorage::Insn                     &insn,
+        const char                                  *name)
+{
+    const struct cl_loc *loc = &insn.loc;
+    const CodeStorage::TOperandList &opList = insn.operands;
+    if (opList.size() < 3) {
+        // no args given
+        emitPrototypeError(loc, name);
+        return false;
+    }
+
+    SymHeap &sh = core.sh();
+    if (GlConf::data.exitLeaks) {
+        // make the built-in eventually appear in the backtrace
+        TempBackTraceTop tempTop(core, opList[/* fnc */ 1]);
+
+        // report immediately visible memory leaks
+        destroyProgVars(core);
+
+        // propagate the exit point back to the caller to catch leaks in context
+        sh.setExitPoint(core.bt());
+        insertCoreHeap(dst, core, insn);
+    }
+
+    // obtain the condition string (hopefully given as string literal)
+    std::string strCond;
+    const TValId valCond = core.valFromOperand(opList[/* cond */ 2]);
+    if (!stringFromVal(&strCond, sh, valCond))
+        strCond = "<unknown>";
+
+    // print the error message
+    CL_ERROR_MSG(loc, "assertion failed: " << strCond);
+
+    // print backtrace
+    core.printBackTrace(ML_ERROR);
+    return true;
+}
+
 bool handleError(
         SymState                                    &dst,
         SymExecCore                                 &core,
@@ -1234,6 +1280,9 @@ BuiltInTable::BuiltInTable()
     tbl_["strcmp"]                                  = handleStrcmp;
     tbl_["strlen"]                                  = handleStrlen;
     tbl_["strncpy"]                                 = handleStrncpy;
+
+    // <assert.h>
+    tbl_["__assert_fail"]                           = handleAssertFail;
 
     // GCC-specific built-in functions
     tbl_["__builtin_expect"]                        = handleExpect;
