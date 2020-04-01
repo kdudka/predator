@@ -2961,6 +2961,9 @@ bool SymExecCore::concretizeLoop(
             // we expect a pointer at this point
             const TObjId ptr = slave.objByVar(op);
             CL_BREAK_IF(!sh.isValid(ptr));
+            if (sh.objSize(ptr).lo < sh_.stor().types.dataPtrSizeof())
+                // not enough space to hold a pointer to data
+                continue;
 
             // read the value inside the pointer
             const TValId addr = valOfPtr(sh, ptr, /* off */ 0);

@@ -799,6 +799,8 @@ Tests taken from Forester
 
     test-0261.c - avoid memory leak false positive with realloc()
 
+    test-0262.c - internal error while dereferencing a short string literal
+
 Data reinterpretation
 =====================
 
