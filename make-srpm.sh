@@ -60,6 +60,7 @@ cd "$TMP" >/dev/null || die "mktemp failed"
 # clone the repository
 git clone "$REPO" "$PKG"                || die "git clone failed"
 cd "$PKG"                               || die "git clone failed"
+patch -p1 < build-aux/distro-install.patch || die "failed to patch soource code"
 patch -p1 < build-aux/gcc-9.2.1.patch   || die "failed to patch test suite"
 ./switch-host-gcc.sh /usr/bin/gcc       || die "'make distcheck' has failed"
 mv -v cl/version_cl.h sl/version.h .    || dir "failed to export version file"
@@ -109,6 +110,7 @@ ready for complex projects yet.
 %setup -q
 install -pv %{SOURCE1} cl/
 install -pv %{SOURCE2} sl/
+patch -p1 < build-aux/distro-install.patch
 patch -p1 < build-aux/gcc-9.2.1.patch
 
 %build

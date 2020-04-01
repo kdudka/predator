@@ -1,0 +1,46 @@
+From 9028f567b27a8a3c07e184d0cfdafbf189160023 Mon Sep 17 00:00:00 2001
+From: Kamil Dudka <kdudka@redhat.com>
+Date: Wed, 1 Apr 2020 11:41:39 +0200
+Subject: [PATCH] cl,sl: use the [-fplugin=libsl] suffix in diagnostic messages
+
+... without the .so file extension.  If the plug-in is installed in the
+appropriate path, it has to be specified without the .so file extension.
+The appropriate path to install gcc plug-ins to can be obtained with:
+
+$ gcc --print-file-name plugin
+---
+ cl/gcc/clplug.c   | 2 +-
+ sl/CMakeLists.txt | 4 ++--
+ 2 files changed, 3 insertions(+), 3 deletions(-)
+
+diff --git a/cl/gcc/clplug.c b/cl/gcc/clplug.c
+index 7ef114ad..852d39e1 100644
+--- a/cl/gcc/clplug.c
++++ b/cl/gcc/clplug.c
+@@ -250,7 +250,7 @@ static void init_plugin_name(const struct plugin_name_args *info)
+     if (plugin_name_alloc)
+         plugin_name = plugin_name_alloc;
+ 
+-    plugin_base_name = safe_basename((char *) plugin_name);
++    plugin_base_name = info->base_name;
+ 
+     // read plug-in base name
+     const char *name = info->base_name;
+diff --git a/sl/CMakeLists.txt b/sl/CMakeLists.txt
+index 24278009..ee13355b 100644
+--- a/sl/CMakeLists.txt
++++ b/sl/CMakeLists.txt
+@@ -391,8 +391,8 @@ macro(test_predator_regre name_suff ext arg1)
+         set(cmd "${cmd} 2>&1")
+ 
+         # filter out messages that are unrelated to our plug-in
+-        set(cmd "${cmd} | (grep -E '\\\\[-fplugin=libsl.so\\\\]\$|compiler error|undefined symbol|CL_BREAK_IF'; true)")
+-        set(cmd "${cmd} | sed 's/ \\\\[-fplugin=libsl.so\\\\]\$//'")
++        set(cmd "${cmd} | (grep -E '\\\\[-fplugin=libsl\\\\]\$|compiler error|undefined symbol|CL_BREAK_IF'; true)")
++        set(cmd "${cmd} | sed 's/ \\\\[-fplugin=libsl\\\\]\$//'")
+ 
+         # filter out NOTE messages with internal location
+         set(cmd "${cmd} | (grep -v 'note: .*\\\\[internal location\\\\]'; true)")
+-- 
+2.24.1
+
