@@ -111,7 +111,9 @@ ready for complex projects yet.
 install -pv %{SOURCE1} cl/
 install -pv %{SOURCE2} sl/
 patch -p1 < build-aux/distro-install.patch
+%if 0%{?fedora} >= 30
 patch -p1 < build-aux/gcc-9.2.1.patch
+%endif
 
 %build
 mkdir cl_build
