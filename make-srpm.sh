@@ -114,6 +114,10 @@ patch -p1 < build-aux/distro-install.patch
 %if 0%{?fedora} >= 30
 patch -p1 < build-aux/gcc-9.2.1.patch
 %endif
+%if 0%{?rhel} == 7
+patch -p1 < build-aux/gcc-6.5.0.patch
+patch -p1 < build-aux/gcc-5.4.0.patch
+%endif
 
 %build
 mkdir cl_build
