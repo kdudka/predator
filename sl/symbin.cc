@@ -875,6 +875,13 @@ bool handleStrncpy(
         executeMemset(core, valDst, valUnknown, valSize);
     }
 
+    const struct cl_operand &opDst = opList[/* ret */ 0];
+    if (CL_OPERAND_VOID != opDst.code) {
+        // strncpy() returns the value of the first argument
+        const FldHandle fldDst = core.fldByOperand(opDst);
+        core.setValueOf(fldDst, valDst);
+    }
+
     insertCoreHeap(dst, core, insn);
     return true;
 }
