@@ -270,8 +270,8 @@ bool handleNoOp(
 {
     const CodeStorage::TOperandList &opList = insn.operands;
 
-    // this allows functions with 0-3 parameters
-    if (opList.size() < 2 || 5 < opList.size()) {
+    // this allows functions with 0-4 parameters
+    if (opList.size() < 2 || 6 < opList.size()) {
         emitPrototypeError(&insn.loc, name);
         return false;
     }
