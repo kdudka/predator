@@ -14,14 +14,14 @@ usage() {
     Use this script to (re)build Predator and/or Forester against an arbitrary
     build of host Clang/LLVM. The host Clang/LLVM needs library and header files
     for develop native programs that use the LLVM infrastructure. The currently
-    supported version of host Clang/LLVM is 8.0.1 but Predator can be loaded also
+    supported version of host Clang/LLVM is 10.0.0 but Predator can be loaded also
     into older versions of LLVM (3.5+, but correct output is guaranteed form 4).
 
     LLVM_DIR is the absolute path to the folder where LLVMConfig.cmake is found.
     Can be found using the command 'llvm-config –cmakedir'. The most common
     location is /usr/lib/cmake/llvm or /usr/local/share/llvm/cmake.
     If you have multiple versions of Clang/LLVM installed on the system, it can
-    be something like /usr/lib/cmake/llvm-8.0.1. You can also provide a local build,
+    be something like /usr/lib/cmake/llvm-10.0.0. You can also provide a local build,
     e.g. <INSTALL_PREFIX>/lib<LIB_SUFFIX>/cmake/llvm.
 
     On some Linux distributions you need to install an optional package (e.g.
