@@ -1299,6 +1299,7 @@ BuiltInTable::BuiltInTable()
     tbl_["__builtin___memset_chk"]                  = handleMemset;
     tbl_["__builtin_puts"]                          = handlePuts;
     tbl_["__builtin___strncpy_chk"]                 = handleStrncpy;
+    tbl_["__builtin_strncpy"]                       = handleStrncpy;
     tbl_["__memcpy_chk"]                            = handleMemcpy;
     tbl_["__memset_chk"]                            = handleMemset;
 
@@ -1362,6 +1363,8 @@ BuiltInTable::BuiltInTable()
     der_["strncpy"]                .push_back(/* src  */ 3);
     der_["__builtin___strncpy_chk"].push_back(/* dst  */ 2);
     der_["__builtin___strncpy_chk"].push_back(/* src  */ 3);
+    der_["__builtin_strncpy"]      .push_back(/* dst  */ 2);
+    der_["__builtin_strncpy"]      .push_back(/* src  */ 3);
 }
 
 bool BuiltInTable::handleBuiltIn(
