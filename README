@@ -143,11 +143,11 @@ Darwin.  You can install some of these dependencies using Homebrew available at
 https://brew.sh/:
 
     brew install cmake boost boost-build
-    brew install gcc@7                   # only for GCC plug-in
+    brew install gcc@8                   # only for GCC plug-in
     brew install llvm@8                  # only for LLVM plug-in
     brew install coreutils               # only for scripts: gtimeout, gstdbuf
 
-The currently supported version of GCC is 8.3.0.
+The currently supported version of GCC is 8.4.0.
 The currently supported version of LLVM is 8.0.1.
 
 Building GCC from sources [emergency solution]
