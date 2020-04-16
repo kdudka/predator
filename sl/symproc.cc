@@ -1501,18 +1501,7 @@ void SymExecCore::execHeapAlloc(
         // error alredy emitted
         return;
 
-    if (!size.hi) {
-        CL_WARN_MSG(lw_, "POSIX says that, given zero size, the behavior of \
-malloc/calloc is implementation-defined");
-        CL_NOTE_MSG(lw_, "assuming NULL as the result");
-        this->printBackTrace(ML_WARN);
-        this->setValueOf(lhs, VAL_NULL);
-        this->killInsn(insn);
-        dst.insert(sh_);
-        return;
-    }
-
-    if (ep_.oomSimulation) {
+    if (ep_.oomSimulation || /* malloc(0) may return NULL */ !size.hi) {
         // clone the heap and core
         SymHeap oomHeap(sh_);
         SymExecCore oomCore(oomHeap, bt_, ep_);
