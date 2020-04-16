@@ -2033,6 +2033,10 @@ TFldId SymHeapCore::Private::writeUniformBlock(
         const UniformBlock         &ub,
         TValSet                    *killedPtrs)
 {
+    if (!ub.size)
+        // writing block of zero size is a no-op
+        return FLD_INVALID;
+
     // acquire field ID
     BlockEntity *blData =
         new BlockEntity(BK_UNIFORM, obj, ub.off, ub.size, ub.tplValue);
