@@ -1307,6 +1307,7 @@ BuiltInTable::BuiltInTable()
     tbl_["llvm.memcpy"]                             = handleMemcpy;
     tbl_["llvm.memmove"]                            = handleMemmove;
     tbl_["llvm.memset"]                             = handleMemset;
+    tbl_["__strncpy_chk"]                           = handleStrncpy;
 
     // Linux kernel
     tbl_["kzalloc"]                                 = handleKzalloc;
@@ -1365,6 +1366,8 @@ BuiltInTable::BuiltInTable()
     der_["__builtin___strncpy_chk"].push_back(/* src  */ 3);
     der_["__builtin_strncpy"]      .push_back(/* dst  */ 2);
     der_["__builtin_strncpy"]      .push_back(/* src  */ 3);
+    der_["__strncpy_chk"]          .push_back(/* dst  */ 2);
+    der_["__strncpy_chk"]          .push_back(/* src  */ 3);
 }
 
 bool BuiltInTable::handleBuiltIn(
