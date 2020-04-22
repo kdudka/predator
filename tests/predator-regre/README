@@ -801,6 +801,14 @@ Tests taken from Forester
 
     test-0262.c - internal error while dereferencing a short string literal
 
+    test-0263.c - a test for bitfields
+                - based on https://sv-comp.sosy-lab.org/2020/results/sv-benchmarks/c/ldv-memsafety-bitfields/test-bitfields-1-1.c
+
+    test-0264.c - modified test-0263, unsound for gcc plugin
+
+    test-0265.c - a test for bitfields
+                - taken from https://sv-comp.sosy-lab.org/2020/results/sv-benchmarks/c/ldv-memsafety-bitfields/test-bitfields-3.1-1.c
+
 Data reinterpretation
 =====================
 
