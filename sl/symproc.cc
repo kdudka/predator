@@ -1239,6 +1239,13 @@ void executeMemmove(
         return;
     }
 
+    std::string strSrc;
+    if (stringFromVal(&strSrc, sh, valSrc))
+    {
+        CL_ERROR_MSG(loc, "unsupported source as string literal in call of " << fnc);
+        return;
+    }
+
     if (proc.checkForInvalidDeref(valDst, size.hi)
             || proc.checkForInvalidDeref(valSrc, size.hi))
     {
