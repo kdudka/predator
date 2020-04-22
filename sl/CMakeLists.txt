@@ -158,7 +158,7 @@ set(tests
     0230 0231 0232 0233 0234 0235 0236 0237 0238 0239
          0241 0242      0244 0245      0247 0248 0249
     0250 0251 0252 0253 0254 0255 0256 0257      0259
-    0260 0261
+    0260 0261      0263 0264
     0300      0302
 
 
@@ -174,6 +174,10 @@ set(tests
 # test incorrect
 else()
 set(tests ${tests}
+# sl:arena: not matching field (lower bound after nullifiled block)
+    0265
+# memcpy from string literal
+    0262
 # unsupported cast function type
     0170 0181 0182 0183 0184 0200 0240 0316
 # unsupported union
