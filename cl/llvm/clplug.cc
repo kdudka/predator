@@ -46,6 +46,10 @@ extern "C" {
 #   define LLVM_HOST_4_OR_NEWER
 #endif
 
+#if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR >= 5)
+#   define LLVM_HOST_5_OR_NEWER
+#endif
+
 #if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR >= 6)
 #   define LLVM_HOST_6_OR_NEWER
 #endif
@@ -981,7 +985,7 @@ void CLPass::handleGlobalVariable(GlobalVariable *gv, struct cl_var *clv) {
                         << ci->getOpcodeName());
                 clv->initialized = false;
             }
-#ifdef LLVM_HOST_6_OR_NEWER
+#ifdef LLVM_HOST_5_OR_NEWER
             ci->deleteValue();
 #else
             delete ci;
@@ -1094,14 +1098,14 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
                     CL_WARN("unsupported global initializer with expression: "
                             << ci->getOpcodeName());
                     delete src; src = nullptr; freeAccessor(act.firstAcc);
-#ifdef LLVM_HOST_6_OR_NEWER
+#ifdef LLVM_HOST_5_OR_NEWER
                     ci->deleteValue();
 #else
                     delete ci;
 #endif
                     continue;
                 }
-#ifdef LLVM_HOST_6_OR_NEWER
+#ifdef LLVM_HOST_5_OR_NEWER
                 ci->deleteValue();
 #else
                 delete ci;
@@ -1309,14 +1313,14 @@ bool CLPass::handleOperand(Value *v, struct cl_operand *clo) {
                 CL_DEBUG3("CONSTANT EXPR\n");
                 handleInstruction(vi); // recursion
                 bool retHO = handleOperand(vi, clo);
-#ifdef LLVM_HOST_6_OR_NEWER
+#ifdef LLVM_HOST_5_OR_NEWER
                 vi->deleteValue();
 #else
                 delete vi;
 #endif
                 return retHO;
             }
-#ifdef LLVM_HOST_6_OR_NEWER
+#ifdef LLVM_HOST_5_OR_NEWER
             vi->deleteValue();
 #else
             delete vi;
