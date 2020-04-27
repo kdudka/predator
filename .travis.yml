@@ -12,6 +12,7 @@ matrix:
     include:
         - name: switch-host-gcc
           script:
+              - patch -p1 < build-aux/gcc-8.3.0.patch
               - patch -p1 < build-aux/gcc-6.5.0.patch
               - patch -p1 < build-aux/gcc-5.4.0.patch
               - PRIV_GCC_HOST=$GCC_HOST; unset GCC_HOST && ./switch-host-gcc.sh $PRIV_GCC_HOST
@@ -19,6 +20,7 @@ matrix:
 
         - name: debug build
           script:
+              - patch -p1 < build-aux/gcc-8.3.0.patch
               - patch -p1 < build-aux/gcc-6.5.0.patch
               - patch -p1 < build-aux/gcc-5.4.0.patch
               - make -C cl -s -j5 'CMAKE=cmake -D CL_DEBUG=ON' check
@@ -27,6 +29,7 @@ matrix:
 
         - name: expensive tests
           script:
+              - patch -p1 < build-aux/gcc-8.3.0.patch
               - patch -p1 < build-aux/gcc-6.5.0.patch
               - patch -p1 < build-aux/gcc-5.4.0.patch
               - make -C cl -s -j5
