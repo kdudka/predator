@@ -5,6 +5,8 @@ export CCACHE_DISABLE=1
 
 export MSG_INFLOOP=': warning: end of function .*\(\) has not been reached'
 export MSG_LABEL_FOUND=': error: error label "ERROR" has been reached'
+export MSG_LABEL_UNREACHABLE=': warning: unreachable label .*'
+export MSG_WARNINGS_REPORTED=': warning: Pass has reported some warnings'
 export MSG_VERIFIER_ERROR_FOUND=': (error|warning): __VERIFIER_error\(\) reached'
 export MSG_OUR_WARNINGS=': warning: .*(\[-fplugin=libsl.so\]|\[-sl\])$'
 export MSG_TIME_ELAPSED=': note: clEasyRun\(\) took '
@@ -277,7 +279,11 @@ parse_output() {
             fail "$line"
 
         elif match "$line" "$MSG_INFLOOP"; then
+             match "$line" "$MSG_WARNINGS_REPORTED" || \
+             match "$line" "$MSG_LABEL_UNREACHABLE" || \
             # infinite loop does not mean FALSE, ignore them
+            # reported warnings could be one of the ignored
+            # unreachable label is not reason to fail
             continue #why continue in elif?
 
         elif match "$line" "$MSG_OUR_WARNINGS"; then
