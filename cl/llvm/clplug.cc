@@ -485,11 +485,18 @@ bool CLPass::runOnModule(Module &M) {
 
         for (auto& BB : F)
         { // basic blocks
+            std::string name;
+            if (!BB.hasName()) { // LABEL NAME
+                name = "<label"+ std::to_string(bbUID++) +">";
+                BB.setName(name);
+            } else {
+                name = BB.getName().str();
+            }
 
-            CL_DEBUG("pass analyzes BasicBlock " << BB.getName().str() 
+            CL_DEBUG("pass analyzes BasicBlock " << name
                      << " - " << BB.size() << " instructions");
-            // LABEL NAME
-            cl->bb_open(cl, BB.getName().str().c_str()); // open basic block
+
+            cl->bb_open(cl, name.c_str()); // open basic block
 
             for (auto& I : BB)
             { // instructions
