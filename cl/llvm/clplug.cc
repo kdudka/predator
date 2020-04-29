@@ -2027,6 +2027,22 @@ bool CLPass::handleCastOperand(Value *v, struct cl_operand *src) {
     bool notEmptyAcc = handleOperand(I->getOperand(0), src);
 
     if (src->type->code == CL_TYPE_FNC) {
+        auto* srcTy = dyn_cast_or_null<FunctionType>(I->getSrcTy()->getPointerElementType());
+        auto* destTy = dyn_cast_or_null<FunctionType>(I->getDestTy()->getPointerElementType());
+
+        if (srcTy && destTy) {
+            bool safe = (destTy->getNumParams() == srcTy->getNumParams());
+            for (auto i = 0; i < destTy->getNumParams() && safe; ++i) {
+                safe &= (destTy->getParamType(i) == srcTy->getParamType(i));
+            }
+
+            safe &= (destTy->getReturnType() == srcTy->getReturnType());
+
+            if (safe) {
+                return handleOperand(I->getOperand(0), src);
+            }
+        }
+
         CL_ERROR("unsupport cast from function type");
         return false;
     }
