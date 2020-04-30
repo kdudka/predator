@@ -2032,14 +2032,14 @@ bool CLPass::handleCastOperand(Value *v, struct cl_operand *src) {
 
         if (srcTy && destTy) {
             bool safe = (destTy->getNumParams() == srcTy->getNumParams());
-            for (auto i = 0; i < destTy->getNumParams() && safe; ++i) {
+            for (unsigned i = 0; i < destTy->getNumParams() && safe; ++i) {
                 safe &= (destTy->getParamType(i) == srcTy->getParamType(i));
             }
 
             safe &= (destTy->getReturnType() == srcTy->getReturnType());
 
             if (safe) {
-                return handleOperand(I->getOperand(0), src);
+                return notEmptyAcc;
             }
         }
 
