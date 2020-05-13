@@ -173,7 +173,7 @@ void buildCallGraph(const Storage &stor)
     // dig callbacks from var initializers
     BOOST_FOREACH(const Var &var, stor.vars)
         BOOST_FOREACH(const TInsn insn, var.initials)
-            BOOST_FOREACH(const TOp op, insn->operands)
+            BOOST_FOREACH(TOp op, insn->operands)
                 handleCallback(cg, /* node */ 0, insn, op);
 
     // construct topological order

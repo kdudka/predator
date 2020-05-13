@@ -361,7 +361,7 @@ void commitInsn(
         TSet                    &live,
         TLivePerTarget          &livePerTarget)
 {
-    const TStorRef stor = data.stor;
+    TStorRef stor = data.stor;
     const TBlock bb = insn.bb;
 
     const TTargetList &targets = bb->targets();
@@ -530,7 +530,7 @@ cl_uid_t alias(Data &data, cl_uid_t uid)
         // not exist any ambiguity.
         return 0;
 
-    const TInsnListByFnc::const_reference insnList = *cgn->callers.begin();
+    TInsnListByFnc::const_reference insnList = *cgn->callers.begin();
     if (insnList.second /* calls */ .size() != 1)
         return 0;
 

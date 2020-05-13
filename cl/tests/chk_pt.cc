@@ -188,7 +188,7 @@ void setExpectFailed(PTCheckCtx &ctx)
 
 void chkBlock(PTCheckCtx &ctx, const TBlock bb)
 {
-    const TStorage stor = ctx.stor;
+    TStorage stor = ctx.stor;
     BOOST_FOREACH(TInsn insn, *bb) {
         if (insn->code != CL_INSN_CALL)
             continue;
