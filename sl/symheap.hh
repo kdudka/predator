@@ -560,6 +560,9 @@ class SymHeapCore {
         /// clear the list of anonymous stack objects of the given call instance
         void clearAnonStackObjects(TObjList &dst, const CallInst &of);
 
+        /// remove anonymous stack object
+        void removeAnonStackObj(const TObjId obj, const CallInst &from);
+
         /// allocate a chunk of heap of known size
         TObjId heapAlloc(const TSizeRange &size);
 

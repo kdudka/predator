@@ -3458,6 +3458,20 @@ bool SymHeapCore::isAnonStackObj(const TObjId obj, CallInst *pFrom)
     return false;
 }
 
+void SymHeapCore::removeAnonStackObj(const TObjId obj, const CallInst &from)
+{
+    if (!hasKey(d->anonStackMap, from))
+        return;
+
+    // we need a RW access to the map because we are going to remove objs
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->anonStackMap);
+
+    TObjList & anonObjs = (*d->anonStackMap)[from];
+    auto position = std::find(anonObjs.begin(), anonObjs.end(), obj);
+    if (position != anonObjs.end())
+        anonObjs.erase(position);
+}
+
 TObjId SymHeapCore::heapAlloc(const TSizeRange &size)
 {
     CL_BREAK_IF(size.lo < IR::Int0);

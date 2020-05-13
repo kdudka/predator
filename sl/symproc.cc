@@ -1442,7 +1442,8 @@ void SymExecCore::execStackRestore()
     sh_.clearAnonStackObjects(anonStackObjs, callInst);
 
     BOOST_FOREACH(const TObjId obj, anonStackObjs) {
-        CL_DEBUG_MSG(lw_, "releasing an anonymous stack object");
+        CL_DEBUG_MSG(lw_, "releasing an anonymous stack object #"
+                << obj);
         this->objDestroy(obj);
     }
 }
@@ -2836,7 +2837,9 @@ void SymExecCore::handleClobber(const CodeStorage::Insn &insn)
     CL_BREAK_IF(!isOnStack(sh_.objStorClass(obj)));
 
     // needed only for more precise diagnostic messages
-    const CVar cv = sh_.cVarByObject(obj);
+    const cl_uid_t uid = varIdFromOperand(&op);
+    const int nestLevel = bt_->countOccurrencesOfTopFnc();
+    const CVar cv(uid, nestLevel);
     if (-1 != cv.uid) {
         const struct cl_loc *varLoc;
         const std::string varString = varToString(sh_.stor(), cv.uid, &varLoc);
@@ -2850,6 +2853,16 @@ void SymExecCore::handleClobber(const CodeStorage::Insn &insn)
     }
 
     // destroy the target and collect the junk
+    if (sh_.isAnonStackObj(obj)) {
+        // if variable was allocated on stack via __builtin_alloca
+        // need to be remove from AnonStackObjects
+        const CallInst callInst(this->bt_);
+        sh_.removeAnonStackObj(obj, callInst);
+    }
+
+    CL_DEBUG_MSG(lw_, "FFF SymExecCore::handleClobber() destroys object #"
+                << obj);
+
     this->objDestroy(obj);
 }
 
