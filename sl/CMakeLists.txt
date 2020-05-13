@@ -177,7 +177,7 @@ set(tests ${tests}
 # sl:arena: not matching field (lower bound after nullifiled block)
     0265
 # memcpy from string literal
-    0262
+    0209 0210 0262
 # unsupported cast function type
     0181 0182 0183 0184 0200 0240
 # unsupported union
@@ -198,7 +198,7 @@ set(tests ${tests}
     0167 0168
     0174 0177 0178
     0180 0189
-    0207 0209 0210 0212 0223 0224 0222 # cycles
+    0207 0212 0223 0224 0222 # cycles
     0246 # stack.save .restore
     0243
     0406
