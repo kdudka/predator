@@ -617,7 +617,7 @@ void digRootTypeInfo(SymHeap &sh, const FldHandle &lhs, TValId rhs)
 
     const TSizeRange rootSizeRange = sh.objSize(rhsTarget);
     const TSizeOf rootSize = rootSizeRange.lo;
-    CL_BREAK_IF(rootSize <= 0 && isOnHeap(sh.objStorClass(rhsTarget)));
+    CL_BREAK_IF(rootSize < 0 && isOnHeap(sh.objStorClass(rhsTarget)));
 
     if (cltLast && cltLast->size == rootSize && cltTarget->size != rootSize)
         // basically the same rule as above but now we check the size of target
