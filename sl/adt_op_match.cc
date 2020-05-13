@@ -591,7 +591,7 @@ bool isIndependentOp(
         return false;
 
     // FIXME: we assume that all fields in MetaOperation have sizeof(void *)
-    const TStorRef stor = sh.stor();
+    TStorRef stor = sh.stor();
     const TSizeOf psize = stor.types.dataPtrSizeof();
     const TOffset winLo = mo.off;
     const TOffset winHi = winLo + psize;
@@ -1073,7 +1073,7 @@ bool selectApplicableMatchesCore(
 
     // go through matches ordered by prio and select a set of applicable ones
     TMatchList mlSelected;
-    BOOST_FOREACH(const TTplIdxByPrio::const_reference item, tplIdxByPrio)
+    BOOST_FOREACH(TTplIdxByPrio::const_reference item, tplIdxByPrio)
     BOOST_FOREACH(const TTemplateIdx tpl, item.second) {
         // first check with matches are applicable
         std::vector<unsigned /* match idx */> picked;

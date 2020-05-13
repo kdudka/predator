@@ -82,7 +82,7 @@ bool checkIndependency(
         SymHeap sh = locState.heapList[heap.second];
         Trace::waiveCloneOperation(sh);
 
-        const TStorRef stor = sh.stor();
+        TStorRef stor = sh.stor();
         const TSizeOf psize = stor.types.dataPtrSizeof();
 
         SymBackTrace bt(stor);
@@ -340,7 +340,7 @@ std::string ptrVarsToString(
         ? heapSeq.front()
         : heapSeq.back();
     const SymHeap *anySymHeap = heapByIdent(progState, anyHeapIdent);
-    const TStorRef stor = anySymHeap->stor();
+    TStorRef stor = anySymHeap->stor();
     std::string str;
 
     BOOST_FOREACH(const cl_uid_t uid, ptrVarList) {
