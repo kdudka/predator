@@ -136,6 +136,7 @@ struct CLPass : public ModulePass {
         void getIntOperand(int, struct cl_operand *);
         void findLocation(Instruction *, struct cl_loc *);
         bool isLocalScopeVar(Value *, bool);
+        bool swapVar(Instruction *, Value *);
 
         void cleanAll(void);
         void freeTypeTable(void);

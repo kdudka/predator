@@ -875,6 +875,31 @@ void CLPass::handleStringLiteral(ConstantDataSequential *c, struct cl_operand *c
 
 }
 
+/// swap temporary instruction (and erase) for the original value
+/// (e.g. constant expression)
+/// return true, if success
+bool CLPass::swapVar(Instruction *from, Value *to) {
+
+    CL_BREAK_IF(!from);
+
+    bool found = false;
+    VarMap::const_iterator item = VarTable.find(from);
+    if (item != VarTable.end()) { // found
+        VarTable.insert({to, item->second});
+        // do not allow re-use of 'from' as it's no longer valid
+        VarTable.erase(from);
+        found = true;
+    }
+
+#ifdef LLVM_HOST_6_OR_NEWER
+    from->deleteValue();
+#else
+    delete from;
+#endif
+
+    return found;
+}
+
 /// handle for local and global/static variables, return cl_var, which 
 /// find in varTable, or create new
 /// variable don't have to name (register)
@@ -1308,7 +1333,7 @@ bool CLPass::handleOperand(Value *v, struct cl_operand *clo) {
             return handleOperand(cast<GlobalAlias>(v)->getAliasee(), clo);
         } else if (isa<ConstantExpr>(v)) {
 
-            // create instruction without parent - must remove
+            // create temporary instruction without parent - must remove
             Instruction *vi = cast<ConstantExpr>(v)->getAsInstruction();
             if (isStringLiteral(vi)) {    // constant literal
                 handleStringLiteral(cast<ConstantDataSequential>((
@@ -1320,18 +1345,12 @@ bool CLPass::handleOperand(Value *v, struct cl_operand *clo) {
                 CL_DEBUG3("CONSTANT EXPR\n");
                 handleInstruction(vi); // recursion
                 bool retHO = handleOperand(vi, clo);
-#ifdef LLVM_HOST_5_OR_NEWER
-                vi->deleteValue();
-#else
-                delete vi;
-#endif
+                if (!swapVar(/*from*/vi, /*to*/v))
+                    CL_ERROR("incorrectly handled constant expr.");
                 return retHO;
             }
-#ifdef LLVM_HOST_5_OR_NEWER
-            vi->deleteValue();
-#else
-            delete vi;
-#endif
+            if (swapVar(vi, v)) // string literal, not expected as a variable
+                    CL_ERROR("incorrectly handled string literal.");
 
         } else {                          // just constant
             handleBasicConstant(v, clo);
