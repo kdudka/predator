@@ -141,7 +141,7 @@ set(tests
     0060      0062 0063 0064 0065 0066 0067 0068 0069
     0070 0071           0074 0075 0076 0077      0079
     0080 0081      0083 0084 0085 0086 0087 0088 0089
-         0091 0092                0096 0097 0098 0099
+         0091 0092 0093           0096 0097 0098 0099
     0100 0101 0102 0103 0104 0105      0107 0108 0109
          0111 0112      0114 0115           0118 0119
     0120 0121 0122 0123      0125 0126 0127 0128 0129
@@ -174,14 +174,14 @@ set(tests
 # test incorrect
 else()
 set(tests ${tests}
+# cl:undef constant
+    0095
 # sl:arena: not matching field (lower bound after nullifiled block)
     0265
 # memcpy from string literal
     0209 0210 0262
 # unsupported cast function type
-    0181 0182 0183 0184 0200 0240
-# unsupported union
-    0093
+    0094 0181 0182 0183 0184 0200 0240
 # ok ERROR label -- >4 sec
     0186 0187
 # sl: data reinterpretation
@@ -192,7 +192,6 @@ set(tests ${tests}
     0400 0401 0403 0404 0408 0411
 # incorrect output - need analysis
     0014 0028 0061 0072 0073 0078 0082
-    0094 0095
     0110 0116 0117
     0135
     0167 0168
