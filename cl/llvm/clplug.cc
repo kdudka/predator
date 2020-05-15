@@ -687,6 +687,8 @@ void CLPass::handleStructType(StructType *st, struct cl_type *clt) {
     clt->size = SL->getSizeInBytes();
     clt->items = new struct cl_type_item [st->getNumElements()];
 
+    int maxSize = 0;
+
     for(StructType::element_iterator e = st->element_begin(), ee = st->element_end(); e != ee; ++e)
     {
         struct cl_type_item *item = &clt->items[clt->item_cnt];
@@ -694,9 +696,16 @@ void CLPass::handleStructType(StructType *st, struct cl_type *clt) {
 
         item->name = nullptr; // FIXME DIDerivedType
 
-        item->offset = SL->getElementOffset(clt->item_cnt ++);
+        if (clt->code == CL_TYPE_UNION) {
+            maxSize = std::max(maxSize, item->type->size);
+            item->offset = 0;
+            ++(clt->item_cnt);
+        } else
+            item->offset = SL->getElementOffset(clt->item_cnt ++);
     }
 
+    if (clt->code == CL_TYPE_UNION)
+        clt->size = maxSize;
 }
 
 
@@ -1191,6 +1200,7 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
 
             switch (tmp->type->code) {
                 case CL_TYPE_STRUCT :
+                case CL_TYPE_UNION :
                     tmp->code = CL_ACCESSOR_ITEM;
                     tmp->data.item.id = i;
                     break;
