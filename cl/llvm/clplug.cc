@@ -1182,6 +1182,9 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
             Ttrio nxt; // new element
             nxt.elm = (act.elm)->getAggregateElement(i);
 
+            if (nxt.elm->isNullValue()) // implicit initialization
+                continue;
+
             struct cl_accessor *tmp = new struct cl_accessor;
             if (act.firstAcc == nullptr) {
                 nxt.firstAcc = tmp;
