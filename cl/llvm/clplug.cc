@@ -890,13 +890,11 @@ bool CLPass::swapVar(Instruction *from, Value *to) {
         VarTable.erase(from);
         found = true;
     }
-
-#ifdef LLVM_HOST_6_OR_NEWER
+#ifdef LLVM_HOST_5_OR_NEWER
     from->deleteValue();
 #else
     delete from;
 #endif
-
     return found;
 }
 
@@ -1017,11 +1015,8 @@ void CLPass::handleGlobalVariable(GlobalVariable *gv, struct cl_var *clv) {
                         << ci->getOpcodeName());
                 clv->initialized = false;
             }
-#ifdef LLVM_HOST_5_OR_NEWER
-            ci->deleteValue();
-#else
-            delete ci;
-#endif
+            if (swapVar(ci, c)) // not expected as a variable
+                CL_ERROR("incorrectly handled constant expr.");
             break;
         }
 
@@ -1137,11 +1132,9 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
 #endif
                     continue;
                 }
-#ifdef LLVM_HOST_5_OR_NEWER
-                ci->deleteValue();
-#else
-                delete ci;
-#endif
+            if (swapVar(/*from*/ci, /*to*/act.elm))
+                // not expected as a variable
+                CL_ERROR("incorrectly handled constant expr.");
             } else {
                 notEmptyAcc = handleOperand(act.elm, src);
             }
@@ -1350,7 +1343,7 @@ bool CLPass::handleOperand(Value *v, struct cl_operand *clo) {
                 return retHO;
             }
             if (swapVar(vi, v)) // string literal, not expected as a variable
-                    CL_ERROR("incorrectly handled string literal.");
+                CL_ERROR("incorrectly handled string literal.");
 
         } else {                          // just constant
             handleBasicConstant(v, clo);
