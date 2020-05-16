@@ -1155,6 +1155,25 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
                 notEmptyAcc = handleOperand(act.elm, src);
             }
 
+            // in LLVM all global vars are pointers, in CL need to be
+            // referenced
+            struct cl_type *srcTy = handleType(tt);
+            if (srcTy != src->type) {
+                if (isa<GlobalObject>(act.elm) &&
+                    srcTy->code == CL_TYPE_PTR &&
+                    srcTy->items[0].type == src->type &&
+                    notEmptyAcc == false) {
+                    // glob var, src should be ptr
+                    struct cl_accessor *acc = new struct cl_accessor;
+                    acc->code = CL_ACCESSOR_REF; // &
+                    acc->type = src->type;
+                    src->type =  srcTy; // result
+                    acc->next = nullptr;
+                    src->accessor = acc;
+                } else
+                    CL_WARN("different types in initializer of global var");
+            }
+
             // destination operand
             dst = new struct cl_operand;
             memcpy(dst,where,sizeof(*dst));
@@ -1164,8 +1183,16 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
             if (CLVerbose > 2) {
                 std::cerr<<"/>>~~~~~~~~~~~~\\\n";
                 operandToStream(std::cerr, *src);
-                std::cerr << "\n";
-                acToStream(std::cerr, dst->accessor, false);
+                std::cerr << " ---> EXPECT_SRC_TYPE:";
+                cltToStream(std::cerr, srcTy, /*depth*/ 1);
+                if (src->type != nullptr) {
+                    std::cerr<<"\nSRC_TYPE:";cltToStream(std::cerr, src->type, /*depth*/ 1);
+                }
+                std::cerr<<"\nSRC_ACC:";acToStream(std::cerr, src->accessor, false);
+                if (dst->type != nullptr) {
+                    std::cerr<<"\nDST_TYPE:";cltToStream(std::cerr, dst->accessor->type, /*depth*/ 1);
+                }
+                std::cerr<<"\nDST_ACC:";acToStream(std::cerr, dst->accessor, false);
                 std::cerr<<"\\~~~~~~~~~~~~~~/\n";
             }
 
