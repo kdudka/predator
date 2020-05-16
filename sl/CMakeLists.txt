@@ -153,7 +153,7 @@ set(tests
                              0185           0188
     0190 0191 0192 0193 0194 0195 0196 0197 0198 0199
          0201 0202 0203 0204 0205           0208
-                             0215      0217 0218 0219
+              0212           0215      0217 0218 0219
     0220 0221           0214 0225 0226 0227 0228 0229
     0230 0231 0232 0233 0234 0235 0236 0237 0238 0239
          0241 0242      0244 0245      0247 0248 0249
@@ -197,7 +197,7 @@ set(tests ${tests}
     0167 0168
     0174 0177 0178
     0180 0189
-    0207 0212 0223 0224 0222 # cycles
+    0207 0223 0224 0222 # cycles
     0246 # stack.save .restore
     0243
     0406
@@ -293,7 +293,7 @@ macro(test_predator_regre name_suff ext arg1)
         set(cmd "${cmd} ${testdir}/test-${num}.c -o - | ")
         set(cmd "${cmd} ${GCC_EXEC_PREFIX} ${OPT_HOST} -o /dev/null -lowerswitch")
         # eliminate nested getelementptr
-        set(cmd "${cmd} -load ${PASSES_LIB} -nestedgep")
+        set(cmd "${cmd} -load ${PASSES_LIB} -global-vars -nestedgep")
 
         # eliminate some alloca
 #        set(cmd "${cmd} -mem2reg")
