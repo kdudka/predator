@@ -792,8 +792,15 @@ bool CLPass::handleBasicConstant(Value *v, struct cl_operand *clo) {
     CL_DEBUG3("  CONSTANT [type=" << v->getType()->getTypeID() << "/" 
               << clo->type->code << "/"<<clo->data.cst.code <<"]\n");
 
-    if (isa<ConstantArray>(v) || isa<ConstantStruct>(v) ||
-        isa<ConstantDataSequential>(v)) {
+    if (isa<ConstantDataSequential>(v)) {
+        if (cast<ConstantDataSequential>(v)->isCString())
+            handleStringLiteral(cast<ConstantDataSequential>(v), clo);
+        else
+            CL_ERROR("composite constant literals are not basic constant");
+        return false;
+    }
+
+    if (isa<ConstantArray>(v) || isa<ConstantStruct>(v)) {
         CL_ERROR("composite constant literals are not basic constant");
         return false;
     }
@@ -863,7 +870,7 @@ bool CLPass::isStringLiteral(Instruction *vi) {
 }
 
 /// handle for @b CL_TYPE_STRING
-/// don't set operand's type (must called)
+/// don't set operand's type (must called, otherwise uninitialized)
 void CLPass::handleStringLiteral(ConstantDataSequential *c, struct cl_operand *clo) {
 
     if (!c->isCString()) {
@@ -873,7 +880,7 @@ void CLPass::handleStringLiteral(ConstantDataSequential *c, struct cl_operand *c
     CL_DEBUG3("  STRING LITERAL\n");
     clo->code = CL_OPERAND_CST;
     clo->scope = CL_SCOPE_GLOBAL;
-    clo->type = nullptr;
+    //clo->type = nullptr;
     clo->data.cst.code = CL_TYPE_STRING;
 
     std::string tmp = c->getAsString().str();
