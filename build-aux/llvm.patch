@@ -1471,36 +1471,6 @@ index 89990d16..dd6f7a12 100644
 -test-0122.c:69: note: writing heap graph to 'test-0122.c-69-0000.dot'...
  test-0122.c:68: warning: memory leak detected while destroying a variable on stack
 +test-0122.c:69: note: writing heap graph to 'test-0122.c-69-0000.dot'...
-diff --git a/tests/predator-regre/test-0126.err b/tests/predator-regre/test-0126.err
-index 8c2e612d..04a85f6c 100644
---- a/tests/predator-regre/test-0126.err
-+++ b/tests/predator-regre/test-0126.err
-@@ -1 +1,2 @@
- test-0126.c:13: note: writing heap graph to 'test-0126.c-13-0000.dot'...
-+test-0126.c:13: note: writing heap graph to 'test-0126.c-13-0001.dot'...
-diff --git a/tests/predator-regre/test-0126.err.exit_leaks b/tests/predator-regre/test-0126.err.exit_leaks
-index 8c2e612d..04a85f6c 100644
---- a/tests/predator-regre/test-0126.err.exit_leaks
-+++ b/tests/predator-regre/test-0126.err.exit_leaks
-@@ -1 +1,2 @@
- test-0126.c:13: note: writing heap graph to 'test-0126.c-13-0000.dot'...
-+test-0126.c:13: note: writing heap graph to 'test-0126.c-13-0001.dot'...
-diff --git a/tests/predator-regre/test-0126.err.oom b/tests/predator-regre/test-0126.err.oom
-index 8c2e612d..04a85f6c 100644
---- a/tests/predator-regre/test-0126.err.oom
-+++ b/tests/predator-regre/test-0126.err.oom
-@@ -1 +1,2 @@
- test-0126.c:13: note: writing heap graph to 'test-0126.c-13-0000.dot'...
-+test-0126.c:13: note: writing heap graph to 'test-0126.c-13-0001.dot'...
-diff --git a/tests/predator-regre/test-0126.err.uninit b/tests/predator-regre/test-0126.err.uninit
-index 7cf7e74a..2747bc4d 100644
---- a/tests/predator-regre/test-0126.err.uninit
-+++ b/tests/predator-regre/test-0126.err.uninit
-@@ -1,3 +1,4 @@
- test-0126.c:10: warning: conditional jump depends on uninitialized value
- test-0126.c:10: note: the value being used is an untouched contents of stack
- test-0126.c:13: note: writing heap graph to 'test-0126.c-13-0000.dot'...
-+test-0126.c:13: note: writing heap graph to 'test-0126.c-13-0001.dot'...
 diff --git a/tests/predator-regre/test-0127.err b/tests/predator-regre/test-0127.err
 index 56d6f4be..a7b4c85b 100644
 --- a/tests/predator-regre/test-0127.err

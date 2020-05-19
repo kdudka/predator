@@ -280,7 +280,6 @@ typedef std::map<TOffset, TValId>                       TOffMap;
 typedef IntervalArena<TOffset, TFldId>                  TArena;
 typedef TArena::key_type                                TMemChunk;
 typedef TArena::value_type                              TMemItem;
-typedef std::map<CallInst, TObjList>                    TAnonStackMap;
 typedef std::map<ETargetSpecifier, TValId>              TAddrByTS;
 
 inline TMemItem createArenaItem(
@@ -516,6 +515,7 @@ struct InternalCustomValue: public ReferableValue {
 struct Region: public AbstractHeapEntity {
     EStorageClass                   code;
     CVar                            cVar;
+    CallInst                        anonStackOf;
     TSizeRange                      size;
     TLiveObjs                       liveFields;
     TFldIdSet                       usedByGl;
@@ -602,11 +602,6 @@ struct TObjSetWrapper: public TObjSet {
     RefCounter refCnt;
 };
 
-// FIXME: std::map is not a good candidate for base class
-struct TAnonStackMapWrapper: public TAnonStackMap {
-    RefCounter refCnt;
-};
-
 class IMatchPolicy {
     public:
         virtual ~IMatchPolicy() { }
@@ -627,7 +622,6 @@ struct SymHeapCore::Private {
     SymBackTrace                   *exitPoint;
     EntStore<AbstractHeapEntity>    ents;
     TObjSetWrapper                 *liveObjs;
-    TAnonStackMapWrapper           *anonStackMap;
     CVarMap                        *cVarMap;
     CustomValueMapper              *cValueMap;
     CoincidenceDb                  *coinDb;
@@ -1523,7 +1517,6 @@ SymHeapCore::Private::Private(Trace::Node *trace):
     traceHandle (trace),
     exitPoint   (0),
     liveObjs    (new TObjSetWrapper),
-    anonStackMap(new TAnonStackMapWrapper),
     cVarMap     (new CVarMap),
     cValueMap   (new CustomValueMapper),
     coinDb      (new CoincidenceDb),
@@ -1536,14 +1529,12 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
     exitPoint   (ref.exitPoint),
     ents        (ref.ents),
     liveObjs    (ref.liveObjs),
-    anonStackMap(ref.anonStackMap),
     cVarMap     (ref.cVarMap),
     cValueMap   (ref.cValueMap),
     coinDb      (ref.coinDb),
     neqDb       (ref.neqDb)
 {
     RefCntLib<RCO_NON_VIRT>::enter(this->liveObjs);
-    RefCntLib<RCO_NON_VIRT>::enter(this->anonStackMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->cValueMap);
     RefCntLib<RCO_NON_VIRT>::enter(this->coinDb);
@@ -1556,7 +1547,6 @@ SymHeapCore::Private::Private(const SymHeapCore::Private &ref):
 SymHeapCore::Private::~Private()
 {
     RefCntLib<RCO_NON_VIRT>::leave(this->liveObjs);
-    RefCntLib<RCO_NON_VIRT>::leave(this->anonStackMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cVarMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->cValueMap);
     RefCntLib<RCO_NON_VIRT>::leave(this->coinDb);
@@ -3372,26 +3362,6 @@ void SymHeapCore::gatherObjects(TObjList &dst, bool (*filter)(EStorageClass))
     }
 }
 
-void SymHeapCore::clearAnonStackObjects(TObjList &dst, const CallInst &of)
-{
-    CL_BREAK_IF(!dst.empty());
-    if (!hasKey(d->anonStackMap, of))
-        return;
-
-    // we need a RW access to the map because we are going to remove objs
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->anonStackMap);
-
-    TAnonStackMap &sMap = *d->anonStackMap;
-    const TAnonStackMap::iterator it = sMap.find(of);
-    CL_BREAK_IF(sMap.end() == it);
-
-    // return the list of anonymous stack objects
-    dst = it->second;
-
-    // clear the list of anonymous stack objects
-    sMap.erase(it);
-}
-
 TFldId SymHeapCore::valGetComposite(TValId val) const
 {
     const BaseValue *valData;
@@ -3405,6 +3375,7 @@ TFldId SymHeapCore::valGetComposite(TValId val) const
 TObjId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
 {
     CL_BREAK_IF(size.lo <= IR::Int0);
+    CL_BREAK_IF(from.uid < 0);
 
     // create an object
     const TObjId reg = d->assignId(new Region(SC_ON_STACK));
@@ -3412,17 +3383,22 @@ TObjId SymHeapCore::stackAlloc(const TSizeRange &size, const CallInst &from)
     d->ents.getEntRW(&rootData, reg);
 
     // initialize meta-data
+    rootData->anonStackOf = from;
     rootData->size = size;
 
-    // append the object on the list of anonymous stack objects of the call
-    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->anonStackMap);
-    (*d->anonStackMap)[from].push_back(reg);
+    // mark the object as live
+    RefCntLib<RCO_NON_VIRT>::requireExclusivity(d->liveObjs);
+    d->liveObjs->insert(reg);
 
     return reg;
 }
 
-bool SymHeapCore::isAnonStackObj(const TObjId obj, CallInst *pFrom)
+bool SymHeapCore::isAnonStackObj(const TObjId obj, CallInst *pFrom) const
 {
+    if (OBJ_RETURN == obj)
+        // OBJ_RETURN is not an (explicitly allocated) anon stack object
+        return false;
+
     const Region *regData;
     d->ents.getEntRO(&regData, obj);
     if (SC_ON_STACK != regData->code)
@@ -3431,31 +3407,12 @@ bool SymHeapCore::isAnonStackObj(const TObjId obj, CallInst *pFrom)
     if (-1 != regData->cVar.uid)
         return false;
 
-    // at this point we know that 'obj' is anonymous stack object
-    if (!pFrom)
-        // ... but the caller does not need to know the owning frame
-        return true;
+    CL_BREAK_IF(regData->anonStackOf.uid < 0);
 
-    typedef TAnonStackMapWrapper::const_reference TConstRef; 
-    BOOST_FOREACH(TConstRef item, *d->anonStackMap) {
-        const CallInst &from = item.first;
-        BOOST_FOREACH(const TObjId objNow, item.second) {
-            if (objNow != obj)
-                continue;
+    if (pFrom)
+        *pFrom = regData->anonStackOf;
 
-            *pFrom = from;
-            return true;
-        }
-    }
-
-    if (::bypassSelfChecks) {
-        // hide the failure while dumping plots for debugging purposes
-        *pFrom = CallInst();
-        return true;
-    }
-
-    CL_BREAK_IF("isAnonStackObj() detected SymHeapCore inconsistency");
-    return false;
+    return true;
 }
 
 TObjId SymHeapCore::heapAlloc(const TSizeRange &size)

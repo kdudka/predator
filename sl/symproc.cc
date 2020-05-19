@@ -1297,14 +1297,22 @@ void destroyProgVars(SymProc &proc)
             // this is going to be destroyed by SymCallCtx::flushCallResults()
             continue;
 
-        // dig var identity and location info
-        const struct cl_loc *loc = 0;
-        const CVar cv = sh.cVarByObject(obj);
-        std::string varString = varToString(sh.stor(), cv.uid, &loc);
-        CL_DEBUG_MSG(loc, "(g) destroying program variable: " << varString);
+        if (sh.isAnonStackObj(obj)) {
+            if (!sh.isValid(obj))
+                continue;
+
+            CL_DEBUG("destroyProgVars() destroys anon stack obj #" << obj);
+        }
+        else {
+            // dig var identity and location info
+            const struct cl_loc *loc = 0;
+            const CVar cv = sh.cVarByObject(obj);
+            std::string varString = varToString(sh.stor(), cv.uid, &loc);
+            CL_DEBUG_MSG(loc, "(g) destroying program variable: " << varString);
+            proc.setLocation(loc);
+        }
 
         // destroy junk if needed
-        proc.setLocation(loc);
         proc.objDestroy(obj);
     }
 }
@@ -1437,12 +1445,23 @@ void SymExecCore::execFree(
 
 void SymExecCore::execStackRestore()
 {
-    TObjList anonStackObjs;
-    const CallInst callInst(this->bt_);
-    sh_.clearAnonStackObjects(anonStackObjs, callInst);
+    TObjList stackObjs;
+    sh_.gatherObjects(stackObjs, isOnStack);
 
-    BOOST_FOREACH(const TObjId obj, anonStackObjs) {
-        CL_DEBUG_MSG(lw_, "releasing an anonymous stack object");
+    const CallInst callInst(this->bt_);
+    BOOST_FOREACH(const TObjId obj, stackObjs) {
+        CallInst from;
+        if (!sh_.isAnonStackObj(obj, &from))
+            continue;
+
+        if (callInst != from)
+            continue;
+
+        if (!sh_.isValid(obj))
+            // already removed via handleClobber() or killInsn()
+            continue;
+
+        CL_DEBUG_MSG(lw_, "releasing an anonymous stack object #" << obj);
         this->objDestroy(obj);
     }
 }
