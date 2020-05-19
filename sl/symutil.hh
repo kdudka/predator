@@ -224,6 +224,9 @@ void gatherProgramVarsCore(
         if (OBJ_RETURN == obj)
             continue;
 
+        if (sh.isAnonStackObj(obj))
+            continue;
+
         (dst.*ins)(sh.cVarByObject(obj));
     }
 }
@@ -401,11 +404,20 @@ bool /* complete */ traverseProgramVarsGeneric(
 
         TObjList live;
         sh.gatherObjects(live, isProgramVar);
+        size_t cntLive = live.size();
+
         BOOST_FOREACH(const TObjId obj, live) {
             if (OBJ_RETURN == obj)
                 continue;
 
-            const CVar cv(sh.cVarByObject(obj));
+            const CVar cv = sh.cVarByObject(obj);
+            if (-1 == cv.uid) {
+                // skip anonymous stack objects
+                CL_BREAK_IF(!sh.isAnonStackObj(obj));
+                --cntLive;
+                continue;
+            }
+
             if (!insertOnce(all, cv))
                 continue;
 
@@ -421,7 +433,7 @@ bool /* complete */ traverseProgramVarsGeneric(
 #endif
         }
 
-        if (live.size() == all.size())
+        if (all.size() == cntLive)
             continue;
 
         // variable mismatch in src heaps

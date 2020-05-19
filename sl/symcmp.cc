@@ -147,6 +147,19 @@ bool matchRoots(
             return false;
     }
 
+    CallInst from1, from2;
+    const bool isAnonStack1 = sh1.isAnonStackObj(obj1, &from1);
+    const bool isAnonStack2 = sh2.isAnonStackObj(obj2, &from2);
+    if (isAnonStack1 || isAnonStack2) {
+        // anonymous stack object(s)
+        if (!isAnonStack1 || !isAnonStack2)
+            return false;
+
+        if (from1 != from2)
+            // owning frame mismatch
+            return false;
+    }
+
     const TProtoLevel level1 = sh1.objProtoLevel(obj1);
     const TProtoLevel level2 = sh2.objProtoLevel(obj2);
     if (level1 != level2)

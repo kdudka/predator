@@ -106,15 +106,14 @@ bool gcCore(SymHeap &sh, TObjId obj, TObjSet *leakObjs, bool sharedOnly)
                 goto skip_root;
         }
 
-        if (sh.isAnonStackObj(obj))
-            // leaking an anonymous stack object is not a real memory leak
-            goto skip_root;
-
-        // leak detected
-        detected = true;
+        // leaking an anonymous stack object is not a real memory leak
+        if (!sh.isAnonStackObj(obj)) {
+            // leak detected
+            detected = true;
+            if (leakObjs)
+                leakObjs->insert(obj);
+        }
         sh.objInvalidate(obj);
-        if (leakObjs)
-            leakObjs->insert(obj);
 
 skip_root:
         // schedule just created junk candidates for next wheel
