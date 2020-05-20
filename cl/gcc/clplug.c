@@ -872,7 +872,7 @@ static tree follow_trivial_ssa(tree t)
         // not an assignment to this SSA_NAME node
         return NULL;
 
-    cl_unop_e code;
+    enum cl_unop_e code;
     if (!translate_unop_code(&code, gimple_assign_rhs_code(stmt)))
         // unknown unary operation
         return NULL;
@@ -1568,7 +1568,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
 {
     if (CONSTRUCTOR == TREE_CODE(src_tree)) {
         CL_BREAK_IF(dst->code != CL_OPERAND_VAR);
-
+#ifdef TREE_CLOBBER_P
         // GCC marks the end of variable scope by assignment v = {CLOBBER}
         if (TREE_CLOBBER_P(src_tree)) {
             // TREE_CLOBBER_P(NODE):
@@ -1585,7 +1585,7 @@ static void handle_stmt_unop(gimple stmt, enum tree_code code,
             cl->insn(cl, &cli);         // add to instruction list
             return;
         }
-
+#endif
         struct cl_var *var = dst->data.var;
         if (!var->initial)
             read_initials(var, &var->initial, src_tree, /* ac */ 0);
