@@ -809,6 +809,8 @@ Tests taken from Forester
     test-0265.c - a test for bitfields
                 - taken from https://sv-comp.sosy-lab.org/2020/results/sv-benchmarks/c/ldv-memsafety-bitfields/test-bitfields-3.1-1.c
 
+    test-0266.c - a regression test for simulation of realloc(ptr, 0)
+
 Data reinterpretation
 =====================
 

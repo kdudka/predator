@@ -1,0 +1,1 @@
+test-0266.c:13: error: double free by free()
