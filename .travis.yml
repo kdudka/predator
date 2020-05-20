@@ -1,42 +1,72 @@
 language: cpp
 compiler: gcc
-dist: trusty
-
-install:
-    - sudo apt-get install cmake g++-4.8-multilib gcc-4.8-plugin-dev libboost-dev
-
-env:
-    - GCC_HOST=/usr/bin/gcc-4.8
 
 matrix:
     include:
-        - name: switch-host-gcc
+        - name: switch-host-gcc/gcc-4.8
+          dist: trusty
+          install:
+              - sudo apt-get install cmake g++-4.8-multilib gcc-4.8-plugin-dev libboost-dev
           script:
               - patch -p1 < build-aux/gcc-8.3.0.patch
               - patch -p1 < build-aux/gcc-6.5.0.patch
               - patch -p1 < build-aux/gcc-5.4.0.patch
-              - PRIV_GCC_HOST=$GCC_HOST; unset GCC_HOST && ./switch-host-gcc.sh $PRIV_GCC_HOST
+              - ./switch-host-gcc.sh /usr/bin/gcc-4.8
 
 
-        - name: debug build
+        - name: switch-host-gcc/gcc-8
+          dist: bionic
+          install:
+              - sudo apt-get install cmake g++-8-multilib gcc-8-plugin-dev gcc-multilib libboost-dev
+          env:
+              - CC=/usr/bin/gcc-8
+              - CXX=/usr/bin/g++-8
           script:
               - patch -p1 < build-aux/gcc-8.3.0.patch
-              - patch -p1 < build-aux/gcc-6.5.0.patch
-              - patch -p1 < build-aux/gcc-5.4.0.patch
+              - ./switch-host-gcc.sh /usr/bin/gcc-8
+
+
+        - name: switch-host-llvm/llvm-8
+          dist: bionic
+          install:
+              - sudo apt-get install clang-8 cmake llvm-8-dev gcc-multilib libboost-dev
+          env:
+              - CC=/usr/bin/clang-8
+              - CXX=/usr/bin/clang++-8
+          script:
+              - ./switch-host-llvm.sh /usr/lib/llvm-8/cmake
+
+
+        - name: debug-build/gcc-7
+          dist: bionic
+          install:
+              - sudo apt-get install cmake g++-7-multilib gcc-7-plugin-dev gcc-multilib libboost-dev
+          env:
+              - CC=/usr/bin/gcc-7
+              - CXX=/usr/bin/g++-7
+              - GCC_HOST=/usr/bin/gcc-7
+          script:
+              - patch -p1 < build-aux/gcc-8.3.0.patch
               - make -C cl -s -j5 'CMAKE=cmake -D CL_DEBUG=ON' check
               - make -C sl -s -j5 'CMAKE=cmake -D SL_DEBUG=ON' check
 
 
-        - name: expensive tests
+        - name: expensive-tests/gcc-8
+          dist: bionic
+          install:
+              - sudo apt-get install cmake g++-8-multilib gcc-8-plugin-dev libboost-dev
+          env:
+              - CC=/usr/bin/gcc-8
+              - CXX=/usr/bin/g++-8
+              - GCC_HOST=/usr/bin/gcc-8
           script:
               - patch -p1 < build-aux/gcc-8.3.0.patch
-              - patch -p1 < build-aux/gcc-6.5.0.patch
-              - patch -p1 < build-aux/gcc-5.4.0.patch
               - make -C cl -s -j5
               - make -C sl -s -j5 'CMAKE=cmake -D TEST_ONLY_FAST=OFF' check
 
 
-        - name: csbuild
+        - name: csbuild/gcc-4.8
+          dist: trusty
           before_install:
               - sudo apt-get update -qq
               - sudo apt-get install -qq apt-transport-https
