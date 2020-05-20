@@ -53,6 +53,17 @@ matrix:
               - ./switch-host-gcc.sh /usr/bin/gcc-8
 
 
+        - name: switch-host-gcc/gcc-10
+          dist: focal
+          install:
+              - sudo apt-get install cmake g++-10-multilib gcc-10-plugin-dev gcc-multilib libboost-dev
+          env:
+              - CC=/usr/bin/gcc-10
+              - CXX=/usr/bin/g++-10
+          script:
+              - ./switch-host-gcc.sh /usr/bin/gcc-10
+
+
         - name: switch-host-llvm/llvm-6
           dist: xenial
           install:
@@ -75,6 +86,17 @@ matrix:
               - CXX=/usr/bin/clang++-8
           script:
               - ./switch-host-llvm.sh /usr/lib/llvm-8/cmake
+
+
+        - name: switch-host-llvm/llvm-10
+          dist: focal
+          install:
+              - sudo apt-get install clang-10 cmake llvm-10-dev gcc-multilib libboost-dev
+          env:
+              - CC=/usr/bin/clang-10
+              - CXX=/usr/bin/clang++-10
+          script:
+              - ./switch-host-llvm.sh /usr/lib/llvm-10/cmake
 
 
         - name: debug-build/gcc-7
