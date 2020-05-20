@@ -82,16 +82,12 @@ include_directories(SYSTEM ../include)
 ADD_C_FLAG(       "fPIC"                 "-fPIC")
 ADD_C_FLAG(       "hidden_visibility"    "-fvisibility=hidden")
 
-# we use c99 to compile *.c and c++0x to compile *.cc
+# we use c99 to compile *.c and c++11/c++14 to compile *.cc
 ADD_C_ONLY_FLAG(  "STD_C99"              "-std=c99")
 if(ENABLE_LLVM)
-    if(${LLVM_VERSION_MAJOR} VERSION_GREATER_EQUAL "10.0")
-        ADD_CXX_ONLY_FLAG("STD_CXX_14"       "-std=c++14")
-    else()
-        ADD_CXX_ONLY_FLAG("STD_CXX_11"       "-std=c++11")
-    endif()
+    ADD_CXX_ONLY_FLAG("STD_CXX_14"       "-std=c++14")
 else()
-    ADD_CXX_ONLY_FLAG("STD_CXX_0X"       "-std=c++0x")
+    ADD_CXX_ONLY_FLAG("STD_CXX_11"       "-std=c++11")
 endif()
 
 # tweak warnings

@@ -73,7 +73,7 @@ matrix:
               - CXX=/usr/bin/clang++-6.0
           script:
               - git clone --depth 1 https://github.com/VeriFIT/ProStatA.git passes-src
-              - sed -e 's|^ *if(.*VERSION_GREATER_EQUAL.*)$|if(FALSE)|' -i build-aux/common.cmake passes-src/passes/CMakeLists.txt
+              - sed -e 's|^ *if(.*VERSION_GREATER_EQUAL.*)$|if(FALSE)|' -i passes-src/passes/CMakeLists.txt
               - ./switch-host-llvm.sh /usr/lib/llvm-6.0/cmake
 
 
