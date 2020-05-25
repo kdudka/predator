@@ -2855,7 +2855,9 @@ void SymExecCore::handleClobber(const CodeStorage::Insn &insn)
     CL_BREAK_IF(!isOnStack(sh_.objStorClass(obj)));
 
     // needed only for more precise diagnostic messages
-    const CVar cv = sh_.cVarByObject(obj);
+    const cl_uid_t uid = varIdFromOperand(&op);
+    const int nestLevel = bt_->countOccurrencesOfTopFnc();
+    const CVar cv(uid, nestLevel);
     if (-1 != cv.uid) {
         const struct cl_loc *varLoc;
         const std::string varString = varToString(sh_.stor(), cv.uid, &varLoc);
