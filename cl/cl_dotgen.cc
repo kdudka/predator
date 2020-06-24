@@ -33,8 +33,6 @@
 #include <set>
 #include <sstream>
 
-#include <boost/algorithm/string/replace.hpp>
-
 class ClDotGenerator: public ICodeListener {
     public:
         ClDotGenerator(const char *glDotFile);
@@ -87,6 +85,7 @@ class ClDotGenerator: public ICodeListener {
 
     private:
         bool                    hasGlDotFile_;
+        std::string             glDotFile_;
         std::ofstream           glOut_;
         std::ofstream           perFileOut_;
         std::ofstream           perFncOut_;
@@ -215,9 +214,6 @@ const char *ClDotGenerator::EtColors[ClDotGenerator::CNT_ET] = {
 void ClDotGenerator::createDotFile(std::ofstream &str, std::string fileName,
                                    bool appendSuffix)
 {
-    // do not create dot files in /usr/include and the like
-    boost::algorithm::replace_all(fileName, "/", "-");
-
     if (appendSuffix)
         fileName += ".dot";
 
@@ -250,8 +246,16 @@ ClDotGenerator::ClDotGenerator(const char *glDotFile):
     nodeType_(NT_PLAIN)
 {
     if (hasGlDotFile_) {
-        ClDotGenerator::createDotFile(glOut_, glDotFile, false);
+        glDotFile_ = string(glDotFile);
+        ClDotGenerator::createDotFile(glOut_, glDotFile_, false);
         glOut_ << SL_GRAPH(glDotFile);
+
+        // for other files with the same prefix
+        std::size_t dot = glDotFile_.find_last_of(".");
+        if (dot != std::string::npos) {
+            if (glDotFile_.compare(dot+1,3,"dot") == 0)
+                glDotFile_ = glDotFile_.substr(0, dot);
+        }
     }
 }
 
@@ -463,7 +467,12 @@ void ClDotGenerator::checkForFncRef(const struct cl_operand *op)
 void ClDotGenerator::file_open(const char *file_name)
 {
     CL_LOC_SET_FILE(loc_, file_name);
-    ClDotGenerator::createDotFile(perFileOut_, file_name, true);
+    if (hasGlDotFile_)
+        ClDotGenerator::createDotFile(perFileOut_, glDotFile_ + ".all", true);
+    else
+        ClDotGenerator::createDotFile(perFileOut_,
+                                      basename((char*)file_name),
+                                      true);
     perFileOut_ << SL_GRAPH(file_name);
 
     glOut_ << SL_SUBGRAPH(file_name, file_name)
@@ -485,8 +494,11 @@ void ClDotGenerator::fnc_open(const struct cl_operand *fnc)
     fnc_ = cst.data.cst_fnc.name;
 
     ClDotGenerator::createDotFile(perFncOut_,
-                                  string(loc_.file) + "-" + fnc_,
-                                  true);
+                ((hasGlDotFile_)?
+                    glDotFile_ :
+                    string(basename((char *)loc_.file)))
+                + "-" + fnc_,
+                true);
     perFncOut_ << SL_GRAPH(fnc_ << "()"
             << " at " << loc_.file << ":" << loc_.line);
 
