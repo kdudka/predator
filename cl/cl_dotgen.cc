@@ -172,7 +172,9 @@ class ClDotGenerator: public ICodeListener {
 #define SL_DOT_SUFFIX ".svg"
 
 #define SL_QUOTE_PER_FILE_URL \
-    SL_QUOTE(basename((char *) loc_.file) << SL_DOT_SUFFIX)
+    SL_QUOTE(((glDotFile_.empty()) \
+        ? basename(const_cast<char *>(loc_.file)) \
+        : (glDotFile_ + ".all")) << SL_DOT_SUFFIX)
 
 #define SL_QUOTE_URL(fnc) \
     SL_QUOTE(this->dotFileByFnc(fnc) << SL_DOT_SUFFIX)
