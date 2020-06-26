@@ -253,7 +253,7 @@ ClDotGenerator::ClDotGenerator(const char *glDotFile):
         // for other files with the same prefix
         std::size_t dot = glDotFile_.find_last_of(".");
         if (dot != std::string::npos) {
-            if (glDotFile_.compare(dot+1,3,"dot") == 0)
+            if (glDotFile_.compare(dot + 1, 3, "dot") == 0)
                 glDotFile_ = glDotFile_.substr(0, dot);
         }
     }
@@ -467,12 +467,12 @@ void ClDotGenerator::checkForFncRef(const struct cl_operand *op)
 void ClDotGenerator::file_open(const char *file_name)
 {
     CL_LOC_SET_FILE(loc_, file_name);
-    if (hasGlDotFile_)
-        ClDotGenerator::createDotFile(perFileOut_, glDotFile_ + ".all", true);
-    else
-        ClDotGenerator::createDotFile(perFileOut_,
-                                      basename((char*)file_name),
-                                      true);
+    const string dotFileName = (hasGlDotFile_)
+        ? (glDotFile_ + ".all")
+        : (basename(const_cast<char*>(file_name)));
+
+    ClDotGenerator::createDotFile(perFileOut_, dotFileName, true);
+
     perFileOut_ << SL_GRAPH(file_name);
 
     glOut_ << SL_SUBGRAPH(file_name, file_name)
@@ -493,12 +493,13 @@ void ClDotGenerator::fnc_open(const struct cl_operand *fnc)
     loc_ = cst.data.cst_fnc.loc;
     fnc_ = cst.data.cst_fnc.name;
 
-    ClDotGenerator::createDotFile(perFncOut_,
-                ((hasGlDotFile_)?
-                    glDotFile_ :
-                    string(basename((char *)loc_.file)))
-                + "-" + fnc_,
-                true);
+    string dotFileName = glDotFile_;
+    if (!hasGlDotFile_)
+        dotFileName = string(basename(const_cast<char *>(loc_.file)))
+            + "-" + fnc_;
+
+    ClDotGenerator::createDotFile(perFncOut_, dotFileName, true);
+
     perFncOut_ << SL_GRAPH(fnc_ << "()"
             << " at " << loc_.file << ":" << loc_.line);
 
