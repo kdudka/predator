@@ -84,7 +84,6 @@ class ClDotGenerator: public ICodeListener {
         virtual void acknowledge();
 
     private:
-        bool                    hasGlDotFile_;
         std::string             glDotFile_;
         std::ofstream           glOut_;
         std::ofstream           perFileOut_;
@@ -240,12 +239,11 @@ void ClDotGenerator::closeDot(std::ofstream &str)
 }
 
 ClDotGenerator::ClDotGenerator(const char *glDotFile):
-    hasGlDotFile_(glDotFile && *glDotFile),
     loc_(cl_loc_unknown),
     bbPos_(0),
     nodeType_(NT_PLAIN)
 {
-    if (hasGlDotFile_) {
+    if (glDotFile && *glDotFile) {
         glDotFile_ = string(glDotFile);
         ClDotGenerator::createDotFile(glOut_, glDotFile_, false);
         glOut_ << SL_GRAPH(glDotFile);
@@ -261,7 +259,7 @@ ClDotGenerator::ClDotGenerator(const char *glDotFile):
 
 ClDotGenerator::~ClDotGenerator()
 {
-    if (hasGlDotFile_)
+    if (!glDotFile_.empty())
         this->closeDot(glOut_);
 }
 
@@ -467,7 +465,7 @@ void ClDotGenerator::checkForFncRef(const struct cl_operand *op)
 void ClDotGenerator::file_open(const char *file_name)
 {
     CL_LOC_SET_FILE(loc_, file_name);
-    const string dotFileName = (hasGlDotFile_)
+    const string dotFileName = (!glDotFile_.empty())
         ? (glDotFile_ + ".all")
         : (basename(const_cast<char*>(file_name)));
 
@@ -494,7 +492,7 @@ void ClDotGenerator::fnc_open(const struct cl_operand *fnc)
     fnc_ = cst.data.cst_fnc.name;
 
     string dotFileName = glDotFile_;
-    if (!hasGlDotFile_)
+    if (dotFileName.empty())
         dotFileName = string(basename(const_cast<char *>(loc_.file)))
             + "-" + fnc_;
 
