@@ -493,10 +493,9 @@ void ClDotGenerator::fnc_open(const struct cl_operand *fnc)
 
     string dotFileName = glDotFile_;
     if (dotFileName.empty())
-        dotFileName = string(basename(const_cast<char *>(loc_.file)))
-            + "-" + fnc_;
+        dotFileName = string(basename(const_cast<char *>(loc_.file)));
 
-    ClDotGenerator::createDotFile(perFncOut_, dotFileName, true);
+    ClDotGenerator::createDotFile(perFncOut_, dotFileName + "-" + fnc_, true);
 
     perFncOut_ << SL_GRAPH(fnc_ << "()"
             << " at " << loc_.file << ":" << loc_.line);
