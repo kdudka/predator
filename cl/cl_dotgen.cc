@@ -149,6 +149,7 @@ class ClDotGenerator: public ICodeListener {
         void emitOpIfNeeded();
         void emitInsnCall();
         void checkForFncRef(const struct cl_operand *op);
+        std::string dotFileByFnc(const std::string &) const;
 };
 
 // TODO: chain streams using boost::iostreams instead of the ugly macro
@@ -174,8 +175,7 @@ class ClDotGenerator: public ICodeListener {
     SL_QUOTE(basename((char *) loc_.file) << SL_DOT_SUFFIX)
 
 #define SL_QUOTE_URL(fnc) \
-    SL_QUOTE(basename((char *) loc_.file) \
-    << "-" << fnc << SL_DOT_SUFFIX)
+    SL_QUOTE(this->dotFileByFnc(fnc) << SL_DOT_SUFFIX)
 
 #define SL_GRAPH(name) \
     "digraph " << SL_QUOTE(name) << " {" << std::endl \
@@ -485,17 +485,23 @@ void ClDotGenerator::file_close()
     ClDotGenerator::closeSub(glOut_);
 }
 
+std::string ClDotGenerator::dotFileByFnc(const std::string &fnc) const
+{
+    string dotFileName = glDotFile_;
+    if (dotFileName.empty())
+        dotFileName = string(basename(const_cast<char *>(loc_.file)));
+
+    return dotFileName + "-" + fnc;
+}
+
 void ClDotGenerator::fnc_open(const struct cl_operand *fnc)
 {
     const struct cl_cst &cst = fnc->data.cst;
     loc_ = cst.data.cst_fnc.loc;
     fnc_ = cst.data.cst_fnc.name;
 
-    string dotFileName = glDotFile_;
-    if (dotFileName.empty())
-        dotFileName = string(basename(const_cast<char *>(loc_.file)));
-
-    ClDotGenerator::createDotFile(perFncOut_, dotFileName + "-" + fnc_, true);
+    const string dotFileName = this->dotFileByFnc(fnc_);
+    ClDotGenerator::createDotFile(perFncOut_, dotFileName, true);
 
     perFncOut_ << SL_GRAPH(fnc_ << "()"
             << " at " << loc_.file << ":" << loc_.line);
