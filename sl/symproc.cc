@@ -1753,12 +1753,16 @@ void SymExecCore::execHeapRealloc(
 
     // free memory after new allocation
     this->execFree(valAddr, /* reallocated */ true, /* skipLeakCheck */ true);
+    if (this->hasFatalError())
+        return;
+
+    // write the return value of realloc()
     this->setValueOf(lhs, valDst);
+    if (this->hasFatalError())
+        return;
 
     this->killInsn(insn);
-
-    if (!this->hasFatalError())
-        dst.insert(sh_);
+    dst.insert(sh_);
 }
 
 bool describeCmpOp(CmpOpTraits *pTraits, const enum cl_binop_e code)

@@ -1,0 +1,2 @@
+test-0267.c:10: error: invalid realloc()
+test-0267.c:10: error: double free by realloc()
