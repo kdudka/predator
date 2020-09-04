@@ -1020,6 +1020,7 @@ bool headingToAbort(const CodeStorage::Block *bb)
     const CodeStorage::Insn *term = bb->back();
     const cl_insn_e code = term->code;
 
+    // when the abort is below a label, an extra block may precede it
     if (CL_INSN_JMP == code) {
         const CodeStorage::TTargetList target = term->targets;
         const CodeStorage::Insn *targetTerm = target[0]->back();
