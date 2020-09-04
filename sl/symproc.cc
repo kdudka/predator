@@ -1019,6 +1019,14 @@ bool headingToAbort(const CodeStorage::Block *bb)
 {
     const CodeStorage::Insn *term = bb->back();
     const cl_insn_e code = term->code;
+
+    if (CL_INSN_JMP == code) {
+        const CodeStorage::TTargetList target = term->targets;
+        const CodeStorage::Insn *targetTerm = target[0]->back();
+
+        return (CL_INSN_ABORT == targetTerm->code);
+    }
+
     return (CL_INSN_ABORT == code);
 }
 
