@@ -813,6 +813,9 @@ Tests taken from Forester
 
     test-0267.c - a regression test for realloc of an invalid pointer
 
+    test-0268.c - regression test for emty block before aborted block
+                - contributed by Tomas Jasek
+
 Data reinterpretation
 =====================
 
