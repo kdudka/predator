@@ -151,6 +151,8 @@ std::string translTypeCode(const unsigned code)
 	}
 }
 
+} // namespace
+
 /**
  * @brief  Translates code of operand types to string
  */
@@ -164,8 +166,6 @@ std::string translOperandCode(const unsigned code)
 		default: throw std::runtime_error("Invalid operand code");
 	}
 }
-
-} // namespace
 
 
 /**

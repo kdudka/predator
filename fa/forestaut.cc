@@ -21,6 +21,7 @@
 #include "streams.hh"
 #include "tatimint.hh"
 
+#if 0
 // anonymous namespace
 namespace
 {
@@ -34,7 +35,7 @@ size_t getLabelArity(std::vector<const AbstractBox*>& label)
 	return arity;
 }
 } // namespace
-
+#endif
 
 void FA::reorderBoxes(
 	std::vector<const AbstractBox*>&     label,

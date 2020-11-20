@@ -320,7 +320,7 @@ struct CopyNonZeroRhsF
 	}
 };
 
-
+#if 0
 void getCandidates(
 	std::set<size_t>&               candidates,
 	const FAE&                      fae)
@@ -348,6 +348,7 @@ void getCandidates(
 			candidates.insert(tmp.second.begin(), tmp.second.end());
 	}
 }
+#endif
 
 void learn1(FAE& fae, BoxMan& boxMan)
 {

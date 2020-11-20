@@ -20,6 +20,9 @@
 #ifndef _PROGRAMCONFIG_HH_
 #define _PROGRAMCONFIG_HH_
 
+// C++ headers
+#include <vector>
+
 // Boost headers
 #include <boost/algorithm/string.hpp>
 

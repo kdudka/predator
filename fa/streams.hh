@@ -52,7 +52,7 @@
 	                                                            \
 	std::ostringstream strMsg;                                  \
 	strMsg << to_stream;                                        \
-	if (!(loc))                                                 \
+	if ((loc) == 0)                                             \
 	{                                                           \
 	  std::ostringstream strLoc;                                \
 	  strLoc << locStream;                                      \
