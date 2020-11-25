@@ -41,7 +41,6 @@ GIT             ?= git#                     # use this to override git(1)
 PASSES_SRC      ?= passes-src#              # directory with lib llvm ir passes
 PASSES_BUILD    ?= passes-src/passes_build  # working directory passes build
 
-#ANALYZERS       ?= fwnull sl fa vra
 ANALYZERS       ?= sl
 DIRS_BUILD      ?= cl $(ANALYZERS)
 
@@ -56,7 +55,6 @@ llvm:
 	$(MAKE) -C cl CMAKE="cmake -D ENABLE_LLVM=ON"
 	$(MAKE) build_passes
 	$(MAKE) -C sl CMAKE="cmake -D ENABLE_LLVM=ON"
-#	$(MAKE) -C fa CMAKE="cmake -D ENABLE_LLVM=ON"
 
 $(DIRS_BUILD):
 	$(MAKE) -C $@

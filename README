@@ -1,5 +1,5 @@
-Predator and Forester
-=====================
+Predator
+========
 Predator is a tool for automated formal verification of sequential C programs
 operating with pointers and linked lists. The core algorithms of Predator were
 originally inspired by works on *separation logic* with higher-order list
@@ -15,19 +15,6 @@ project page:
 
     http://www.fit.vutbr.cz/research/groups/verifit/tools/predator
 
-Forester is an experimental tool for checking manipulation of dynamic data
-structures using *forest automata*.  As in case of Predator, it can be loaded
-directly into *GCC* as a *plug-in* to analyse C code sources.  However, the
-analysis itself is not yet mature enough to be able to verify ordinary programs.
-You can find the latest news on the following project page:
-
-    http://www.fit.vutbr.cz/research/groups/verifit/tools/forester
-
-Predator and Forester are licensed as GPLv3+, see COPYING for details.  The GCC
-(or LLVM) plug-ins are based on Code Listener infrastructure (included).
-Although the tools are intended to be as portable as GCC is, we support Darwin
-and Linux for now.
-
 Building from sources against the system GCC
 ============================================
 This method requires a build of GCC with plug-in support compiled in (not
@@ -36,8 +23,8 @@ and the test-suite is guaranteed to fully succeed only against this version
 of GCC.  However, the Predator plug-in itself is known to work well also with
 other GCC versions ranging from 4.5.0 to 10.0.1.
 
-(1) Install all dependences of Predator and Forester
-----------------------------------------------------
+(1) Install all dependences of Predator
+---------------------------------------
    * C/C++ compiler
      - Predator currently supports GCC 4.1.2+ and Clang 3.2+
      - the other analyzers are known to work with GCC 4.6.4+
@@ -58,19 +45,19 @@ other GCC versions ranging from 4.5.0 to 10.0.1.
      - you can try to check their presence
        by 'echo "#include <new>" | gcc -m32 -c -xc++ -'
 
-(2) Build Predator and Forester from sources
---------------------------------------------
-You can use the 'switch-host-gcc.sh' script to rebuild Code Listener, Predator,
-and Forester against a GCC build of your choice.  For details, please run
-'switch-host-gcc.sh' without any arguments.  The script needs to be run in the
-same directory as this README is.  If it fails, make sure your environment is
-sane.  Especially check the PATH and LD_LIBRARY_PATH environment variables.
-On recent Linux distributions, you can simply use the following command:
+(2) Build Predator from sources
+-------------------------------
+You can use the 'switch-host-gcc.sh' script to rebuild Predator against a GCC
+build of your choice.  For details, please run 'switch-host-gcc.sh' without any
+arguments.  The script needs to be run in the same directory as this README is.
+If it fails, make sure your environment is sane.  Especially check the PATH and
+LD_LIBRARY_PATH environment variables.  On recent Linux distributions, you can
+simply use the following command:
 
     ./switch-host-gcc.sh /usr/bin/gcc
 
-(3) Prepare environment for running Predator/Forester transparently [optional]
-------------------------------------------------------------------------------
+(3) Prepare environment for running Predator transparently [optional]
+---------------------------------------------------------------------
 To employ the Predator plug-in in a build of an arbitrary project fully
 transparently, it is recommended to set certain environment variables.  You can
 use the script register-paths.sh to do this automatically.
@@ -85,15 +72,6 @@ man page:
 This will show you the available options of the Predator plug-in itself:
 
     echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
-
-Analogically to Predator you can also set up the environment for Forester by
-running the following script:
-
-    . fa_build/register-paths.sh
-
-... and show the available options of the Forester plug-in by:
-
-    echo please help | gcc -fplugin=libfa.so -fplugin-arg-libfa-help -xc -
 
 Building from sources against the system LLVM [experimental]
 =============================================================

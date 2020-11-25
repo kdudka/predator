@@ -11,11 +11,11 @@ usage() {
     printf "Usage: %s LLVM_DIR\n" "$SELF" >&2
     cat >&2 << EOF
 
-    Use this script to (re)build Predator and/or Forester against an arbitrary
-    build of host Clang/LLVM. The host Clang/LLVM needs library and header files
-    for develop native programs that use the LLVM infrastructure. The currently
-    supported version of host Clang/LLVM is 10.0.0 but Predator can be loaded also
-    into older versions of LLVM (3.5+, but correct output is guaranteed form 4).
+    Use this script to (re)build Predator against an arbitrary build of host
+    Clang/LLVM. The host Clang/LLVM needs library and header files for develop
+    native programs that use the LLVM infrastructure. The currently supported
+    version of host Clang/LLVM is 10.0.0 but Predator can be loaded also into
+    older versions of LLVM (3.5+, but correct output is guaranteed form 4).
 
     LLVM_DIR is the absolute path to the folder where LLVMConfig.cmake is found.
     Can be found using the command 'llvm-config –cmakedir'. The most common

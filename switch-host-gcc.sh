@@ -11,12 +11,12 @@ usage() {
     printf "Usage: %s GCC_HOST\n" "$SELF" >&2
     cat >&2 << EOF
 
-    Use this script to (re)build Predator and/or Forester against an arbitrary
-    build of host GCC.  The host GCC needs to be built with the support for GCC
-    plug-ins.  The recommended version of host GCC is 9.3.0 but Predator can be
-    loaded also into older versions of GCC (plug-ins are supported since 4.5.0).
-    For other versions of host GCC, please use the compatibility patches in the
-    build-aux directory.
+    Use this script to (re)build Predator against an arbitrary build of host
+    GCC.  The host GCC needs to be built with the support for GCC plug-ins.
+    The recommended version of host GCC is 9.3.0 but Predator can be loaded
+    also into older versions of GCC (plug-ins are supported since 4.5.0).
+    For other versions of host GCC, please use the compatibility patches in
+    the build-aux directory.
 
     GCC_HOST is a gcc(1) executable file that is built with the support for
     GCC plug-ins.  The most common location of the system GCC is /usr/bin/gcc.

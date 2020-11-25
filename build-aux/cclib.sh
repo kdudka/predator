@@ -1,4 +1,4 @@
-# common code base for fa_build/fa{gcc,db,llvm} and sl_build/sl{gcc,gdb,llvm}
+# common code base for sl_build/sl{gcc,gdb,llvm}
 
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2

@@ -9,7 +9,7 @@ die(){
 }
 
 usage(){
-    echo "Usage: GCC_HOST=/usr/bin/gcc $SH_NAME code-listener|forester|predator"
+    echo "Usage: GCC_HOST=/usr/bin/gcc $SH_NAME predator"
     exit 1
 }
 
@@ -22,27 +22,13 @@ sl/rank.sh"
 
 chlog_watch=
 drop_static=no
-drop_fa=no
 drop_sl=no
 
 PROJECT="$1"
 case "$PROJECT" in
-    code-listener)
-        chlog_watch="cl fwnull"
-        drop_fa=yes
-        drop_sl=yes
-        ;;
-
-    forester)
-        chlog_watch="fa fa_analysis"
-        drop_static=yes
-        drop_sl=yes
-        ;;
-
     predator)
         chlog_watch="sl"
         drop_static=yes
-        drop_fa=yes
         ;;
 
     *)
@@ -99,38 +85,9 @@ make ChangeLog "CHLOG_WATCH=$chlog_watch" \
 patch docs/README-fedora < "build-aux/README-fedora-release.patch"
 patch docs/README-ubuntu < "build-aux/README-ubuntu-release.patch"
 
-# adapt Makefile
-case "$PROJECT" in
-    code-listener)
-        sed -i Makefile                         \
-            -e 's|fwnull sl fa vra$|fwnull vra|'\
-            -e 's|cl/api sl/api|cl/api|'        \
-            || die "failed to adapt Makefile"
-        ;;
-
-    forester)
-        sed -i Makefile                         \
-            -e 's|fwnull sl fa vra$|fa|'        \
-            -e 's|cl/api sl/api|cl/api|'        \
-            || die "failed to adapt Makefile"
-        ;;
-
-    predator)
-        sed -i Makefile                         \
-            -e 's|fwnull sl fa vra$|sl|'        \
-            || die "failed to adapt Makefile"
-        ;;
-
-    *)
-        die "internal error"
-        ;;
-esac
-
 # remove all directories and files we do not want to distribute
 rm -rf $PRUNE_ALWAYS
 test xyes = "x$drop_static" && rm -rf fwnull vra
-test xyes = "x$drop_fa"     && rm -rf fa
-test xyes = "x$drop_sl"     && rm -rf sl "README-sv-comp-TACAS-2013"
 
 # make a tarball
 cd ..
