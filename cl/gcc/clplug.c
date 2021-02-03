@@ -23,6 +23,10 @@
 #include <gcc-plugin.h>
 #include <plugin-version.h>
 
+#if defined(GCCPLUGIN_VERSION_MAJOR) && (GCCPLUGIN_VERSION_MAJOR >= 8)
+#   define GCC_HOST_8_OR_NEWER
+#endif
+
 #if defined(GCCPLUGIN_VERSION_MAJOR) && (GCCPLUGIN_VERSION_MAJOR >= 6)
 #   define GCC_HOST_6_OR_NEWER
 #endif
@@ -1040,7 +1044,9 @@ static bool translate_binop_code(enum cl_binop_e *pDst, enum tree_code code) {
         case BIT_IOR_EXPR:          *pDst = CL_BINOP_BIT_IOR;          break;
         case BIT_XOR_EXPR:          *pDst = CL_BINOP_BIT_XOR;          break;
         case POINTER_PLUS_EXPR:     *pDst = CL_BINOP_POINTER_PLUS;     break;
+#ifdef GCC_HOST_8_OR_NEWER
         case POINTER_DIFF_EXPR:     *pDst = CL_BINOP_POINTER_MINUS;    break;
+#endif
         case LSHIFT_EXPR:           *pDst = CL_BINOP_LSHIFT;           break;
         case RSHIFT_EXPR:           *pDst = CL_BINOP_RSHIFT;           break;
         case LROTATE_EXPR:          *pDst = CL_BINOP_LROTATE;          break;
