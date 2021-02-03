@@ -4,7 +4,13 @@
 int main(void) {
 
 	int *array = malloc(sizeof(int)*10);
+	if (array == NULL)
+		return 1;
 	int *array2 = malloc(sizeof(int)*10);
+	if (array2 == NULL) {
+		free(array);
+		return 1;
+	}
 	int* p = array;
 	int* q = array2 + 5;
 
