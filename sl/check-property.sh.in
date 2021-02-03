@@ -101,11 +101,9 @@ PRP_FILE=
 TRACE="/dev/fd/2"
 
 if [ `uname` = Darwin ]; then
-  ABSPATH='realpath'
   # mac os doesn't support long option names
   ARGS=$(getopt p:t:v $*)
 else
-  ABSPATH='readlink -f'
   ARGS=$(getopt -o p:t:v -l "propertyfile:,trace:,verbose" -n "$SELF" -- "$@")
 fi
 if test $? -ne 0; then
@@ -151,7 +149,7 @@ fi; if [ -z "$TASK" ]; then
 fi
 
 # include common code base
-topdir="`dirname "$(${ABSPATH} "$SELF")"`/.."
+topdir="`dirname "$(realpath "$SELF")"`/.."
 source "$topdir/build-aux/cclib.sh"
 
 # basic setup & initial checks

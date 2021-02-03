@@ -11,11 +11,9 @@ export CCACHE_DISABLE=1
 if [ `uname` = Darwin ]; then
     STDBUF=gstdbuf
     TIMEOUT_P=gtimeout
-    ABSPATH='realpath'
 else
     STDBUF=stdbuf
     TIMEOUT_P=timeout
-    ABSPATH='readlink -f'
 fi
 
 usage() {
@@ -34,7 +32,7 @@ seek_input_file() {
 seek_input_file "$@" || usage
 
 # include common code base
-topdir="`dirname "$(${ABSPATH} "$SELF")"`/.."
+topdir="`dirname "$(realpath "$SELF")"`/.."
 source "$topdir/build-aux/cclib.sh"
 
 # basic setup & initial checks
