@@ -2,6 +2,12 @@
 export SELF="$0"
 export LC_ALL=C
 
+if [ `uname` = Darwin ]; then
+    ABSPATH='realpath'
+else
+    ABSPATH='readlink -f'
+fi
+
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
     exit 1
@@ -44,8 +50,15 @@ MAKE="make -j${NCPU}"
 
 # check the given LLVM_DIR
 LLVM_DIR="$1"
-test "/" == "${LLVM_DIR:0:1}" \
-    || die "LLVM_DIR is not an absolute path: $LLVM_DIR"
+if test "/" != "${LLVM_DIR:0:1}"; then
+    if echo "$LLVM_DIR" | grep / >/dev/null; then
+        # assume a relative path to LLVM_DIR
+        LLVM_DIR="$(${ABSPATH} "$LLVM_DIR")"
+    else
+        # assume an executable in $PATH
+        LLVM_DIR="$(command -v "$LLVM_DIR")"
+    fi
+fi
 test -r "$LLVM_DIR/LLVMConfig.cmake" \
     || die "LLVM_DIR is not an absolute path to an readable file: $LLVM_DIR/LLVMConfig.cmake"
 
@@ -73,7 +86,7 @@ build_analyzer() {
         || return $?
 
     status_update "Checking whether $2 works"
-    $MAKE -C $1 check CMAKE="cmake -D ENABLE_LLVM=ON" CTEST="ctest -j${NCPU}"
+    $MAKE -C $1 check CMAKE="cmake -D ENABLE_LLVM=ON" CTEST="ctest -j${NCPU}  --progress --output-on-failure"
 }
 
 # apply patch
