@@ -740,7 +740,7 @@ bool tryReplaceCond(
     str << "?cond" << ctx.condVar;
     TGenericVarSet live;
     live.insert(GenericVar(VL_COND_VAR, condVar));
-    AnnotatedInsn *oldInsn = dynamic_cast<AnnotatedInsn *>(locState.insn);
+    AnnotatedInsn *oldInsn = static_cast<AnnotatedInsn *>(locState.insn);
     GenericInsn *insn = new TextInsn(str.str(), live, oldInsn->killVars());
     pInsnWriter->replaceInsn(loc, insn);
 
