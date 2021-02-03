@@ -1170,8 +1170,10 @@ void CLPass::handleAggregateLiteralInitializer(Constant *c,
                     src->type =  srcTy; // result
                     acc->next = nullptr;
                     src->accessor = acc;
-                } else
-                    CL_WARN("different types in initializer of global var");
+                } else {
+                    CL_ERROR("different types in initializer of global var");
+                    continue;
+                }
             }
 
             // destination operand
