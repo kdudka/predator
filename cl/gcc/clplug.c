@@ -1635,6 +1635,7 @@ static void handle_stmt_binop(gimple stmt, enum tree_code code,
     read_gimple_location(&cli.loc, stmt);
 
     if (!translate_binop_code(&cli.data.insn_binop.code, code)) {
+        cli.data.insn_binop.code = CL_BINOP_UNKNOWN;
         CL_ERROR("unhandled binary operator");
         CL_BREAK_IF("please implement");
     }
