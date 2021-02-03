@@ -4,12 +4,6 @@ SL_OPTS="-fplugin-arg-libsl-dump-pp $SL_OPTS"
 SL_OPTS="-fplugin-arg-libsl-dump-types $SL_OPTS"
 export SL_OPTS
 
-if [ `uname` = Darwin ]; then
-    ABSPATH='realpath'
-else
-    ABSPATH='readlink -f'
-fi
-
-self="`${ABSPATH} "$0"`"
+self="`realpath "$0"`"
 self_dir="`dirname "$self"`"
 "$self_dir/`basename "$self" | sed 's|slgccv|slgcc|'`" "$@"

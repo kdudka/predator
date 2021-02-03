@@ -2,12 +2,6 @@
 export SELF="$0"
 export LC_ALL=C
 
-if [ `uname` = Darwin ]; then
-    ABSPATH='realpath'
-else
-    ABSPATH='readlink -f'
-fi
-
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
     exit 1
@@ -55,7 +49,7 @@ GCC_HOST="$1"
 if test "/" != "${GCC_HOST:0:1}"; then
     if echo "$GCC_HOST" | grep / >/dev/null; then
         # assume a relative path to GCC_HOST
-        GCC_HOST="$(${ABSPATH} "$GCC_HOST")"
+        GCC_HOST="$(realpath "$GCC_HOST")"
     else
         # assume an executable in $PATH
         GCC_HOST="$(command -v "$GCC_HOST")"

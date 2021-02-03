@@ -2,12 +2,6 @@
 export SELF="$0"
 export LC_ALL=C
 
-if [ `uname` = Darwin ]; then
-    ABSPATH='realpath'
-else
-    ABSPATH='readlink -f'
-fi
-
 die() {
     printf "%s: %s\n" "$SELF" "$*" >&2
     exit 1
@@ -53,7 +47,7 @@ LLVM_DIR="$1"
 if test "/" != "${LLVM_DIR:0:1}"; then
     if echo "$LLVM_DIR" | grep / >/dev/null; then
         # assume a relative path to LLVM_DIR
-        LLVM_DIR="$(${ABSPATH} "$LLVM_DIR")"
+        LLVM_DIR="$(realpath "$LLVM_DIR")"
     else
         # assume an executable in $PATH
         LLVM_DIR="$(command -v "$LLVM_DIR")"

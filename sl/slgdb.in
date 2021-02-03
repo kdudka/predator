@@ -7,15 +7,13 @@ if test -z "$1" || test ! -e "$1"; then
 fi
 
 if [ `uname` = Darwin ]; then
-    ABSPATH='realpath'
     TR='tr -s'
 else
-    ABSPATH='readlink -f'
     TR='tr --squeeze-repeats'
 fi
 
 # include common code base
-topdir="`dirname "$(${ABSPATH} "$SELF")"`/.."
+topdir="`dirname "$(realpath "$SELF")"`/.."
 source "$topdir/build-aux/cclib.sh"
 
 # basic setup
