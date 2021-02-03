@@ -1040,6 +1040,7 @@ static bool translate_binop_code(enum cl_binop_e *pDst, enum tree_code code) {
         case BIT_IOR_EXPR:          *pDst = CL_BINOP_BIT_IOR;          break;
         case BIT_XOR_EXPR:          *pDst = CL_BINOP_BIT_XOR;          break;
         case POINTER_PLUS_EXPR:     *pDst = CL_BINOP_POINTER_PLUS;     break;
+        case POINTER_DIFF_EXPR:     *pDst = CL_BINOP_POINTER_MINUS;    break;
         case LSHIFT_EXPR:           *pDst = CL_BINOP_LSHIFT;           break;
         case RSHIFT_EXPR:           *pDst = CL_BINOP_RSHIFT;           break;
         case LROTATE_EXPR:          *pDst = CL_BINOP_LROTATE;          break;
