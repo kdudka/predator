@@ -166,7 +166,7 @@
 #endif // CLPLUG_SILENT
 
 #define CL_WARN_UNHANDLED_GIMPLE(stmt, what) \
-    CL_WARN_UNHANDLED_WITH_LOC(gimple_location(stmt), "unhandled " what)
+    CL_WARN_UNHANDLED_WITH_LOC(gimple_location(stmt), "unhandled %s", what)
 
 #if CL_DEBUG_GCC_TREE
 #   define CL_DEBUG_TREE(expr) debug_tree(expr)
@@ -175,7 +175,7 @@
 #endif
 
 #define CL_WARN_UNHANDLED_EXPR(expr, what) do { \
-    CL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), "unhandled " what); \
+    CL_WARN_UNHANDLED_WITH_LOC(EXPR_LOCATION(expr), "unhandled %s", what); \
     CL_DEBUG_TREE(expr); \
 } while (0)
 
