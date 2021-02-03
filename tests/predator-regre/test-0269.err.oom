@@ -1,0 +1,6 @@
+symproc.cc:2809: warning: unsupported pointer subtraction [internal location]
+test-0269.c:11: error: subtraction of pointers pointing to different allocated blocks is undefined
+symproc.cc:2809: warning: unsupported pointer subtraction [internal location]
+test-0269.c:13: error: subtraction of pointers pointing to different allocated blocks is undefined
+test-0269.c:15: warning: memory leak detected while destroying a variable on stack
+test-0269.c:15: warning: memory leak detected while destroying a variable on stack

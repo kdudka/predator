@@ -17,7 +17,7 @@ label:
 /**
  * @file test-0268.c
  *
- * @brief regression test for emty block before aborted block
+ * @brief regression test for empty block before aborted block
  *
  * - contributed by Tomas Jasek
  *

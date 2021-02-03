@@ -675,6 +675,7 @@ enum cl_binop_e {
 
     /* pointer arithmetic */
     CL_BINOP_POINTER_PLUS,
+    CL_BINOP_POINTER_MINUS,
 
     /* bitwise */
     CL_BINOP_BIT_AND,

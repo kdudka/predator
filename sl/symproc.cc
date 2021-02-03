@@ -2631,6 +2631,21 @@ TValId handlePtrOperator(
     return sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
 }
 
+/// check, if values are pointers and if they point to same allocated block
+bool isSameBlock(
+        SymHeapCore                &sh,
+        const TValId                v1,
+        const TValId                v2)
+{
+    if (isAnyDataArea(sh.valTarget(v1)) && isAnyDataArea(sh.valTarget(v2))) {
+        const TObjId obj1 = sh.objByAddr(v1);
+        const TObjId obj2 = sh.objByAddr(v2);
+        if (obj1 == obj2)
+            return true;
+    }
+    return false;
+}
+
 /// ptr arithmetic is sometimes (with CIL always) masked as integral arithmetic
 bool reconstructPtrArithmetic(
         TValId                     *pResult,
@@ -2787,6 +2802,16 @@ struct OpHandler</* binary */ 2> {
 
             case CL_BINOP_POINTER_PLUS:
                 return sh.valShift(rhs[0], rhs[1]);
+
+            case CL_BINOP_POINTER_MINUS:
+                if (isSameBlock(sh, rhs[0], rhs[1]))
+                    // TODO
+                    CL_WARN("unsupported pointer subtraction");
+                else
+                    CL_ERROR_MSG((proc).lw(),
+                        "subtraction of pointers pointing to different "
+                        "allocated blocks is undefined");
+                // fall through!
 
             default:
                 // over-approximate anything else
