@@ -2649,7 +2649,7 @@ bool isSameBlock(
 /// ptr arithmetic is sometimes (with CIL always) masked as integral arithmetic
 bool reconstructPtrArithmetic(
         TValId                     *pResult,
-        SymHeapCore                &sh,
+        SymProc                    &proc,
         const TValId                v1,
         const TValId                v2,
         const enum cl_binop_e       code)
@@ -2665,14 +2665,29 @@ bool reconstructPtrArithmetic(
             return true;
         }
     }
+    SymHeap &sh = proc.sh();
+    const bool isPtr1 = isAnyDataArea(sh.valTarget(v1));
+    const bool isPtr2 = isAnyDataArea(sh.valTarget(v2));
 
-    if (isAnyDataArea(sh.valTarget(v1)) && isAnyIntValue(sh, v2)) {
+    if (isPtr1 && isPtr2 && CL_BINOP_MINUS == code) {
+        const TObjId obj1 = sh.objByAddr(v1);
+        const TObjId obj2 = sh.objByAddr(v2);
+        if (obj1 != obj2) {
+            CL_ERROR_MSG(proc.lw(),
+                "subtraction of pointers pointing to different allocated "
+                "blocks is undefined");
+            *pResult = sh.valCreate(VT_UNKNOWN, VO_UNKNOWN);
+            return true;
+        }
+    }
+
+    if (isPtr1 && isAnyIntValue(sh, v2)) {
         CL_DEBUG("integral operator applied on ptr handled as ptr operator...");
         *pResult = handlePtrOperator(sh, /* vPtr */ v1, /* vInt */ v2, code);
         return true;
     }
 
-    if (isAnyDataArea(sh.valTarget(v2)) && isAnyIntValue(sh, v1)) {
+    if (isPtr2 && isAnyIntValue(sh, v1)) {
         if (CL_BINOP_MINUS == code)
             // CL_BINOP_MINUS makes no sense here, it would mean e.g. (4 - &foo)
             return false;
@@ -2795,7 +2810,7 @@ struct OpHandler</* binary */ 2> {
 
             case CL_BINOP_PLUS:
             case CL_BINOP_MINUS:
-                if (reconstructPtrArithmetic(&vRes, sh, rhs[0], rhs[1], code))
+                if (reconstructPtrArithmetic(&vRes, proc, rhs[0], rhs[1], code))
                     return vRes;
                 else
                     goto handle_int;
