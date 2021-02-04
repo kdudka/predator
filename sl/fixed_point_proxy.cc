@@ -331,6 +331,11 @@ AdtOp::OpCollection adtOps;
 
 void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
 {
+    if (!GlConf::data.detectContainers) {
+        plotFncCore(plot, fncState);
+        return;
+    }
+
     // back up the original CFG and create a writer for the resulting one
     GlobalState cfgOrig;
     exportControlFlow(&cfgOrig, fncState);
@@ -384,9 +389,6 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
 
     // plot the annotated input CFG
     plotFncCore(plot, fncState, varByShape, capture, heapSet);
-
-    if (!GlConf::data.detectContainers)
-        return;
 
     if (cfgOrig.size() < 16) {
         // plot the original CFG-only subgraph
