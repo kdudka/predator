@@ -22,16 +22,11 @@
 
 #include "config.h"
 
+#include "util.hh"
+
 #include <vector>
 
 #include <boost/foreach.hpp>
-
-#ifdef NDEBUG
-    // aggressive optimization
-#   define DCAST static_cast
-#else
-#   define DCAST dynamic_cast
-#endif
 
 #if SH_COPY_ON_WRITE
 class RefCounter {
