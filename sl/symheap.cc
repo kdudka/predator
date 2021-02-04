@@ -808,7 +808,7 @@ bool SymHeapCore::Private::chkValueDeps(const TValId val)
         return true;
 
     const InternalCustomValue *customData =
-        dynamic_cast<const InternalCustomValue *>(valData);
+        DCAST<const InternalCustomValue *>(valData);
 
     if (CV_INT_RANGE != customData->customData.code())
         // we are interested only in CV_INT_RANGE here

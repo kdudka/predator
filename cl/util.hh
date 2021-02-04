@@ -36,6 +36,13 @@
         return false;                           \
 } while (0)
 
+#ifdef NDEBUG
+    // aggressive optimization
+#   define DCAST static_cast
+#else
+#   define DCAST dynamic_cast
+#endif
+
 template <typename T>
 void swapValues(T &a, T &b)
 {

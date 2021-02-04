@@ -625,11 +625,11 @@ void analyzeLiveVars(
         TLocData &locData = data[locIdx];
         TVarSet &killSet = locData.kill;
 
-        const AnnotatedInsn *insn = dynamic_cast<AnnotatedInsn *>(locNode.insn);
-        if (!insn)
+        if (!locNode.insn)
             // an already removed instruction
             continue;
 
+        const AnnotatedInsn *insn = DCAST<AnnotatedInsn *>(locNode.insn);
         locData.gen = insn->liveVars();
         locData.kill = insn->killVars();
 
