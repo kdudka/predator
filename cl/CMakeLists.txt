@@ -26,6 +26,20 @@ if("${CMAKE_CXX_COMPILER}" MATCHES ".*NOTFOUND")
 Unable to find system C++ compiler!")
 endif()
 
+if(APPLE)
+    if(ENABLE_LLVM)
+        if(NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
+            # for regular Clang or AppleClang
+            message(FATAL_ERROR "LLVM plug-in requires the use of "
+                "(Apple)Clang compiler!")
+        endif()
+    else()
+        if(NOT "${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU") # for GCC
+            message(FATAL_ERROR "GCC plug-in requires the use of GNU compiler!")
+        endif()
+    endif()
+endif()
+
 include("../build-aux/common.cmake")
 
 # suppress an unnecessary warning with gcc-4.4.x
