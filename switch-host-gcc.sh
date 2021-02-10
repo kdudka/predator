@@ -60,6 +60,16 @@ test -x "$GCC_HOST" || die "GCC_HOST is not an executable file: $1"
 # try to run GCC_HOST
 "$GCC_HOST" --version || die "unable to run gcc: $GCC_HOST --version"
 
+if [ `uname` = Darwin ] && [ -z "$CXX" ]; then
+	# no CXX compiler on macos, try substitue gcc for g++
+	base_gcc="${GCC_HOST##*/}"
+	gxx="${GCC_HOST%/*}/${base_gcc/gcc/g++}"
+	if [ "$GCC_HOST" != "$gxx" ] && [ -x "$gxx" ]; then
+		export CC="$GCC_HOST"
+		export CXX="$gxx"
+	fi
+fi
+
 status_update "Nuking working directory"
 $MAKE distclean \
     || die "'$MAKE distclean' has failed"
