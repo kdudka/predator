@@ -28,27 +28,27 @@ other GCC versions ranging from 4.5.0 to 10.0.1.
    * C/C++ compiler
      - Predator currently supports GCC 4.1.2+ and Clang 3.2+
      - the other analyzers are known to work with GCC 4.6.4+
-     - try to install 'g++' on Ubuntu, or 'gcc-c++' (or 'clang') on Fedora
+     - try to install `g++` on Ubuntu, or `gcc-c++` (or `clang`) on Fedora
 
    * CMake 2.8+
      - available at http://www.cmake.org
-     - the executable is called 'cmake'
-     - usually provided by a package called 'cmake'
+     - the executable is called `cmake`
+     - usually provided by a package called `cmake`
 
    * Boost libraries 1.37+
      - available at http://www.boost.org/
-     - package is usually called 'boost'
-     - on binary distros you may need also the 'boost-devel' sub-package
+     - package is usually called `boost`
+     - on binary distros you may need also the `boost-devel` sub-package
 
    * 32bit system headers, especially in case of 64bit OS
-     - on Debian provided by a package called 'g++-4.9-multilib'
+     - on Debian provided by a package called `g++-4.9-multilib`
      - you can try to check their presence
-       by 'echo "#include <new>" | gcc -m32 -c -xc++ -'
+       by `echo "#include <new>" | gcc -m32 -c -xc++ -`
 
 (2) Build Predator from sources
 -------------------------------
-You can use the 'switch-host-gcc.sh' script to rebuild Predator against a GCC
-build of your choice.  For details, please run 'switch-host-gcc.sh' without any
+You can use the `switch-host-gcc.sh` script to rebuild Predator against a GCC
+build of your choice.  For details, please run `switch-host-gcc.sh` without any
 arguments.  The script needs to be run in the same directory as this README is.
 If it fails, make sure your environment is sane.  Especially check the PATH and
 LD_LIBRARY_PATH environment variables.  On recent Linux distributions, you can
@@ -64,12 +64,13 @@ use the script register-paths.sh to do this automatically.
 
     . sl_build/register-paths.sh
 
-Then you can simply use the '-fplugin' option of GCC as documented in the gcc(1)
+Then you can simply use the `-fplugin` option of GCC as documented in the gcc(1)
 man page:
 
     gcc -fplugin=libsl.so ...
 
-This will show you the available options of the Predator plug-in itself:
+This will show you the available options of the Predator plug-in itself
+(detailed description [here](options.md)):
 
     echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
 
@@ -77,7 +78,7 @@ Building from sources against the system LLVM [experimental]
 =============================================================
 The currently supported version of LLVM is 10.0.0 and the test-suite is
 guaranteed to fully succeed only against this version of LLVM after applying
-the patch 'build-aux/llvm.patch'.
+the patch `build-aux/llvm.patch`.
 
 (1) Install all dependences of Predator
 ---------------------------------------
@@ -85,19 +86,21 @@ the patch 'build-aux/llvm.patch'.
      - same as for GCC
 
    * LLVM develop library and header files
-     - on Fedora provided by a package called 'llvm-devel'
+     - on Fedora provided by a package called `llvm-devel`
 
 (2) Build Predator from sources
 -------------------------------
-You can use the 'switch-host-llvm.sh' script to rebuild Code Listener and
+You can use the `switch-host-llvm.sh` script to rebuild Code Listener and
 Predator against a LLVM build of your choice.  For details, please run
-'switch-host-llvm.sh' without any arguments.  The script needs to be run in the
+`switch-host-llvm.sh` without any arguments.  The script needs to be run in the
 same directory as this README is.  If it fails, make sure your environment is
 sane.  Especially check the PATH and LD_LIBRARY_PATH environment variables.
 On recent Linux distributions, you can simply use the following command:
 
     make llvm
+
 or
+
     ./switch-host-llvm.sh /usr/share/llvm/cmake
 
 (3) Usage
@@ -106,7 +109,7 @@ Create bitecode file:
 
     clang -g -S -emit-llvm source.c -o source.bc
 
-Starting analysis:
+Starting analysis (detailed description for opt options [here](options.md)):
 
     opt source.bc -o /dev/null -lowerswitch -load ./sl_build/libsl.so -sl -help
 
@@ -136,18 +139,18 @@ Use this if your system GCC does not support loading (or building) GCC plug-ins.
 ----------------------------------
    * GMP library
      - available at http://gmplib.org/
-     - package is usually called 'gmp'
-     - on binary distros you may need also the 'gmp-devel' sub-package
+     - package is usually called `gmp`
+     - on binary distros you may need also the `gmp-devel` sub-package
 
    * MPC library
      - available at http://www.multiprecision.org/
-     - package is usually called 'mpc' or 'libmpc'
-     - on binary distros you may need also the 'libmpc-devel' sub-package
+     - package is usually called `mpc` or `libmpc`
+     - on binary distros you may need also the `libmpc-devel` sub-package
 
    * MPFR library
      - available at http://www.mpfr.org/
-     - package is usually called 'mpfr'
-     - on binary distros you may need also the 'mpfr-devel' sub-package
+     - package is usually called `mpfr`
+     - on binary distros you may need also the `mpfr-devel` sub-package
 
 (2) Build the GCC compiler from sources
 ---------------------------------------
@@ -161,6 +164,6 @@ The above step is the most time-consuming step, which can take from 5 minutes to
 several hours, depending on your network bandwidth, machine performance and the
 current load of the machine.  The download step can be accelerated by selecting
 a closer mirror to download GCC from.  The build step can be accelerated by
-giving the option '-jN' to 'make', where N is the number of CPU cores plus one
+giving the option `-jN` to `make`, where N is the number of CPU cores plus one
 (a commonly used heuristic, there exist several others).  But first make sure
 that your machine has enough resources for building GCC in parallel.
