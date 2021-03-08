@@ -17,7 +17,7 @@ diff --git a/cl/gcc/clplug.c b/cl/gcc/clplug.c
 index 7ef114ad..852d39e1 100644
 --- a/cl/gcc/clplug.c
 +++ b/cl/gcc/clplug.c
-@@ -250,7 +250,7 @@ static void init_plugin_name(const struct plugin_name_args *info)
+@@ -255,7 +255,7 @@ static void init_plugin_name(const struct plugin_name_args *info)
      if (plugin_name_alloc)
          plugin_name = plugin_name_alloc;
  
@@ -30,7 +30,7 @@ diff --git a/sl/CMakeLists.txt b/sl/CMakeLists.txt
 index 24278009..ee13355b 100644
 --- a/sl/CMakeLists.txt
 +++ b/sl/CMakeLists.txt
-@@ -391,8 +391,8 @@ macro(test_predator_regre name_suff ext arg1)
+@@ -398,8 +398,8 @@ macro(test_predator_regre name_suff ext arg1)
          set(cmd "${cmd} 2>&1")
  
          # filter out messages that are unrelated to our plug-in
