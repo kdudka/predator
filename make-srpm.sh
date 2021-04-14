@@ -75,7 +75,7 @@ SPEC="./$PKG.spec"
 cat > "$SPEC" << EOF
 Name:       $PKG
 Version:    $VER
-Release:    1%{?dist}
+Release:    ${1:-1}%{?dist}
 Summary:    A Shape Analyzer Based on Symbolic Memory Graphs
 
 License:    GPLv3+
