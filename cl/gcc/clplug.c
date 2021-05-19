@@ -2524,6 +2524,15 @@ static bool write_pid_file(const char *pid_file)
     return true;
 }
 
+static bool simplified_version_check(
+        const struct plugin_gcc_version *a,
+        const struct plugin_gcc_version *b)
+{
+    // compare only base GCC version, so that we do not need to rebuild
+    // predator on each update of GCC
+    return STREQ(a->basever, b->basever);
+}
+
 // plug-in initialization according to gcc plug-in API
 __attribute__ ((__visibility__ ("default")))
 int plugin_init(struct plugin_name_args *plugin_info,
@@ -2545,7 +2554,7 @@ int plugin_init(struct plugin_name_args *plugin_info,
     CL_DEBUG("initializing code listener [SHA1 %s]", CL_GIT_SHA1);
 
     // check for compatibility with host gcc's version
-    if (!plugin_default_version_check(version, &gcc_version)) {
+    if (!simplified_version_check(version, &gcc_version)) {
         CL_ERROR("refusing to be loaded into gcc-%s (%s), built at %s",
                version->basever, version->devphase, version->datestamp);
 
