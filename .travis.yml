@@ -56,6 +56,10 @@ matrix:
         - name: switch-host-gcc/gcc-10
           dist: focal
           install:
+              # work around broken Ubuntu 20 LTS images
+              # cause: https://travis-ci.community/t/build-suddenly-starting-to-error-out-unmet-package-dependencies/8182
+              # solution: https://github.com/OpenSC/OpenSC/pull/2331
+              - sudo apt-get install -yq --allow-downgrades libc6=2.31-0ubuntu9.2 libc6-dev=2.31-0ubuntu9.2
               - sudo apt-get install cmake g++-10-multilib gcc-10-plugin-dev gcc-multilib libboost-dev
           env:
               - CC=/usr/bin/gcc-10
@@ -89,7 +93,7 @@ matrix:
 
 
         - name: switch-host-llvm/llvm-10
-          dist: focal
+          dist: bionic
           install:
               - sudo apt-get install clang-10 cmake llvm-10-dev gcc-multilib libboost-dev
           env:
