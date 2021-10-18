@@ -74,18 +74,19 @@ void sl_dump(Trace::Node *endPoint)
 }
 
 /// dummy function to pull all symbols from a static library
-void initSymDump(int i)
+void initSymDump(TStorRef stor, int i)
 {
     if (!i)
         return;
 
-    sl_dump((const SymHeapCore *) 0);
-    sl_dump(*(const SymHeapCore *) 0);
-    sl_dump(*(const SymHeapCore *) 0, (const char *) 0);
-    sl_dump((Trace::Node *) 0);
+    const SymHeapCore sh(stor, 0);
+    sl_dump(&sh);
+    sl_dump(sh);
+    sl_dump(sh, static_cast<const char *>(0));
+    sl_dump(static_cast<Trace::Node *>(0));
 }
 
-void initSymDump()
+void initSymDump(TStorRef stor)
 {
-    initSymDump(0);
+    initSymDump(stor, 0);
 }

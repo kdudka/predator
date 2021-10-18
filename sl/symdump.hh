@@ -30,12 +30,16 @@
 class SymHeap;
 class SymHeapCore;
 
+namespace CodeStorage {
+    struct Storage;
+}
+
 namespace Trace {
     class Node;
 }
 
 /// dummy function to pull all symbols from a static library
-void initSymDump();
+void initSymDump(const CodeStorage::Storage &);
 
 /// plot the given heap to file "symdump-NNNN.dot"
 void sl_dump(const SymHeapCore *sh);

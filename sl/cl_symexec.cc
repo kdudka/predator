@@ -165,7 +165,7 @@ void launchSymExec(const CodeStorage::Storage &stor)
 // see easy.hh for details
 void clEasyRun(const CodeStorage::Storage &stor, const char *configString)
 {
-    initSymDump();
+    initSymDump(stor);
 
     // read parameters of symbolic execution
     GlConf::loadConfigString(configString);
