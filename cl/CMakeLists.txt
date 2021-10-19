@@ -154,7 +154,7 @@ endif()
 
 # set the path to GCC headers for building plug-ins
 set_source_files_properties(gcc/clplug.c PROPERTIES
-    COMPILE_FLAGS "-I${GCC_INC_DIR}")
+    COMPILE_FLAGS "-isystem ${GCC_INC_DIR}")
 
 endif() # ----------------------------------------------------------------end
 
