@@ -61,20 +61,20 @@ enum EVar {
  * high-level variable representation
  */
 struct Var {
-    EVar                        code;   ///< high-level kind of variable
-    struct cl_loc               loc;    ///< location of its declaration
+    EVar            code = VAR_VOID;        ///< high-level kind of variable
+    struct cl_loc   loc = cl_loc_unknown;   ///< location of its declaration
 
     /**
      * type of the variable
      * @note This often differs from type of the operand given to constructor!
      */
-    const struct cl_type        *type;
+    const struct cl_type        *type = nullptr;
 
     /**
      * unique ID of variable
      * @attention not guaranteed to be unique beyond the scope of variable
      */
-    cl_uid_t                    uid;
+    cl_uid_t                    uid = -1;
 
     /**
      * name of the variable, empty string for anonymous variables
@@ -93,25 +93,20 @@ struct Var {
      *
      * @todo a better API for initializers?
      */
-    bool                        initialized;
+    bool                        initialized = false;
 
     /**
      * true if the variable is external (defined in another module)
      */
-    bool                        isExtern;
+    bool                        isExtern = false;
 
     /**
      * true if there is at least one instruction in the program that takes an
      * address of the variable (or some part of it)
      */
-    bool                        mayBePointed;
+    bool                        mayBePointed = false;
 
-    /**
-     * dummy constructor
-     * @note known to be useful for internal purposes only
-     */
-    Var();
-    ~Var();
+    Var() = default;
 
     /**
      * wrap low-level operand to Var object

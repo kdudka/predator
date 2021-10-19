@@ -20,7 +20,7 @@ CXX_HEADERS ?= *.hh
 
 SINK ?= /dev/null
 
-CXXFLAGS += -pedantic -Wall -Wextra -Wno-variadic-macros -Werror -I../include
+CXXFLAGS += -std=c++11 -pedantic -Wall -Wextra -Wno-variadic-macros -Werror -I../include
 
 .PHONY: check $(C_HEADERS) $(CXX_HEADERS)
 

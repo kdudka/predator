@@ -90,15 +90,6 @@ namespace {
     }
 }
 
-Var::Var():
-    code(VAR_VOID)
-{
-}
-
-Var::~Var()
-{
-}
-
 Var::Var(EVar code_, const struct cl_operand *op):
     code(code_),
     loc(op->data.var->loc),
