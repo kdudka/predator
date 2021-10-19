@@ -588,7 +588,10 @@ bool joinCustomValues(
     // compute the resulting range that covers both
     IR::Range rng = join(rng1, rng2);
 
-    if (GlConf::data.intArithmeticLimit) {
+    if (GlConf::data.intArithmeticLimit
+            // avoid integer overflow on std::abs(IR::IntMin)
+            && (IR::IntMin != rng.lo) && (IR::IntMax != rng.hi))
+    {
         const IR::TInt max = std::max(std::abs(rng.lo), std::abs(rng.hi));
         if (max <= GlConf::data.intArithmeticLimit)
             // integral values preserved by SE_INT_ARITHMETIC_LIMIT
