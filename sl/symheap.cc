@@ -174,6 +174,12 @@ class CVarMap {
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of CustomValue
+CustomValue::CustomValue():
+    code_(CV_INVALID)
+{
+    std::memset(&data_, 0, sizeof data_);
+}
+
 CustomValue::~CustomValue()
 {
     if (CV_STRING != code_)

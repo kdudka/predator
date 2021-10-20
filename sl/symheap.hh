@@ -116,12 +116,7 @@ union CustomValueData {
 /// representation of a custom value, such as integer literal, or code pointer
 class CustomValue {
     public:
-        // cppcheck-suppress uninitVar
-        CustomValue():
-            code_(CV_INVALID)
-        {
-        }
-
+        CustomValue();
         ~CustomValue();
         CustomValue(const CustomValue &);
         CustomValue& operator=(const CustomValue &);
