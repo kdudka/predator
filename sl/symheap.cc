@@ -573,7 +573,7 @@ class CustomValueMapper {
         TCustomByNum        numMap;
         TCustomByReal       fpnMap;
         TCustomByString     strMap;
-        TValId              inval_;
+        TValId              inval_ = VAL_INVALID;
 
     public:
         RefCounter          refCnt;
