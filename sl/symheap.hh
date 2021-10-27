@@ -690,7 +690,11 @@ class FldHandle {
         TOffset         offset()        const { return sh_->fieldOffset(id_); }
 
         /// return the value inside the field (may trigger its initialization)
-        TValId          value()         const { return sh_->valueOf(id_); }
+        TValId          value()         const {
+            return (this->isValidHandle())
+                ? sh_->valueOf(id_)
+                : VAL_INVALID;
+        }
 
         /// return the address of the field (may trigger address instantiation)
         TValId          placedAt()      const { return sh_->placedAt(id_); }
