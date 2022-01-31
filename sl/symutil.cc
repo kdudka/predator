@@ -210,7 +210,9 @@ bool compareIntRanges(
     if (!describeCmpOp(&ct, code))
         return false;
 
-    if (isAligned(range1) || isAligned(range2)) {
+    if ((isAligned(range1) && !isSingular(range2))
+            || (isAligned(range2) && !isSingular(range1)))
+    {
         CL_DEBUG("compareIntRanges() does not support alignment yet");
         return false;
     }
