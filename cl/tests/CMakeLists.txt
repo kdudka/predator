@@ -349,23 +349,25 @@ add_pt_test(1300) # predator-regre test-0167.c
 
 # headers sanity #0
 add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
-    -o /dev/null
+    -o ${cl_BINARY_DIR}/config_cl.h.gch
     -c ${cl_SOURCE_DIR}/config_cl.h)
 
 # headers sanity #1
 add_test("headers_sanity-1" gcc -ansi -Wall -Wextra -Werror -pedantic
-    -o /dev/null
+    -o ${cl_BINARY_DIR}/code_lisitener.h.gch
     -c ${cl_SOURCE_DIR}/../include/cl/code_listener.h)
 
 # headers sanity #2
 add_test("headers_sanity-2" make -j
     -C ${cl_SOURCE_DIR}/../include/cl
-    -f ${cl_SOURCE_DIR}/Makefile.chk)
+    -f ${cl_SOURCE_DIR}/Makefile.chk
+    BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR})
 
 # headers sanity #3
 add_test("headers_sanity-3" make -j
     -C ${cl_SOURCE_DIR}
-    -f ${cl_SOURCE_DIR}/Makefile.chk)
+    -f ${cl_SOURCE_DIR}/Makefile.chk
+    BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR})
 
 if(ENABLE_LLVM)
 # headers sanity #4

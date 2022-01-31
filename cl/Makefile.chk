@@ -18,7 +18,7 @@
 C_HEADERS ?= *.h
 CXX_HEADERS ?= *.hh
 
-SINK ?= /dev/null
+BUILD_DIR ?= .
 
 CXXFLAGS += -std=c++11 -pedantic -Wall -Wextra -Wno-variadic-macros -Werror -I../include
 
@@ -27,7 +27,7 @@ CXXFLAGS += -std=c++11 -pedantic -Wall -Wextra -Wno-variadic-macros -Werror -I..
 # check whether each header is self-compilable
 check: $(C_HEADERS) $(CXX_HEADERS)
 $(C_HEADERS):
-	$(CC) $(CFLAGS) -o $(SINK) -c $@
-	$(CXX) $(CFLAGS) -o $(SINK) -c $@
+	$(CC) $(CFLAGS) -o $(BUILD_DIR)/$@.gch -c $@
+	$(CXX) $(CFLAGS) -o $(BUILD_DIR)/$@.gch -c $@
 $(CXX_HEADERS):
-	$(CXX) $(CXXFLAGS) -o $(SINK) -c $@
+	$(CXX) $(CXXFLAGS) -o $(BUILD_DIR)/$@.gch -c $@
