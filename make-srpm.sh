@@ -121,12 +121,12 @@ patch -p1 < build-aux/gcc-5.4.0.patch
 %build
 mkdir cl_build
 cd cl_build
-%cmake ../cl -DGCC_HOST=/usr/bin/gcc -Wno-dev -B.
+%cmake -S../cl ../cl -B. -DGCC_HOST=/usr/bin/gcc -Wno-dev
 make %{?_smp_mflags} VERBOSE=yes
 
 mkdir ../sl_build
 cd ../sl_build
-%cmake ../sl -DGCC_HOST=/usr/bin/gcc -Wno-dev -B.
+%cmake -S../sl ../sl -B. -DGCC_HOST=/usr/bin/gcc -Wno-dev
 make %{?_smp_mflags} VERBOSE=yes
 
 %install
