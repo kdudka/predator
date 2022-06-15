@@ -2344,7 +2344,11 @@ void CLPass::handleCallInstruction(CallInst *I) {
     // because arguments meybe constant expression -> create new 
     // instruction and argument is defacto new register ()
     // if call is open, can't insert another instructions
+#ifdef LLVM_HOST_8_OR_NEWER
+    const unsigned args = I->arg_size();
+#else
     const unsigned args = I->getNumArgOperands();
+#endif
     struct cl_operand *arguments = new struct cl_operand[args];
     unsigned idx = 0;
     while (args != idx) {
