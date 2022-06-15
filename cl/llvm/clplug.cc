@@ -62,6 +62,10 @@ extern "C" {
 #   define LLVM_HOST_8_OR_NEWER
 #endif
 
+#if defined(LLVM_VERSION_MAJOR) && (LLVM_VERSION_MAJOR >= 11)
+#   define LLVM_HOST_11_OR_NEWER
+#endif
+
 #ifdef LLVM_HOST_3_7_OR_NEWER
 #ifdef LLVM_HOST_7_OR_NEWER
 #   include "llvm/Transforms/Utils.h"  // createLowerSwitchPass
@@ -596,7 +600,12 @@ struct cl_type *CLPass::handleType(Type *t) {
         }
             break;
 
+#ifdef LLVM_HOST_11_OR_NEWER
+        case Type::FixedVectorTyID:
+        case Type::ScalableVectorTyID:
+#else
         case Type::VectorTyID:
+#endif
             CL_WARN("unsupport type VECTOR");
             clt->code = CL_TYPE_UNKNOWN;
             break;
