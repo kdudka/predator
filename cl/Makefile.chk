@@ -1,4 +1,4 @@
-# Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -28,6 +28,6 @@ CXXFLAGS += -std=c++11 -pedantic -Wall -Wextra -Wno-variadic-macros -Werror -I..
 check: $(C_HEADERS) $(CXX_HEADERS)
 $(C_HEADERS):
 	$(CC) $(CFLAGS) -o $(BUILD_DIR)/$@.gch -c $@
-	$(CXX) $(CFLAGS) -o $(BUILD_DIR)/$@.gch -c $@
+	$(CXX) $(CFLAGS) -x c-header -o $(BUILD_DIR)/$@.gch -c $@
 $(CXX_HEADERS):
 	$(CXX) $(CXXFLAGS) -o $(BUILD_DIR)/$@.gch -c $@
