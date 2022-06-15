@@ -1,6 +1,6 @@
-#/bin/bash
+#!/bin/bash
 
-# Copyright (C) 2020 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2020-2022 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
