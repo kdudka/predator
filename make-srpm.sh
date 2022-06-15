@@ -47,35 +47,44 @@ VER="`echo "$VER" | sed "s/-.*-/.$TIMESTAMP./"`"
 
 BRANCH="`git rev-parse --abbrev-ref HEAD`"
 test -n "$BRANCH" || die "failed to get current branch name"
-test master = "${BRANCH}" || VER="${VER}.${BRANCH//-/_}"
+test master = "${BRANCH}" || VER="${VER}.${BRANCH//[\/-]/_}"
 test -z "`git diff HEAD`" || VER="${VER}.dirty"
 
 NV="${PKG}-${VER}"
 printf "\n%s: preparing a release of \033[1;32m%s\033[0m\n\n" "$SELF" "$NV"
 
-TMP="`mktemp -d`"
-trap "rm -rf '$TMP'" EXIT
-cd "$TMP" >/dev/null || die "mktemp failed"
+if [[ "$1" != "--generate-spec" ]]; then
+    TMP="`mktemp -d`"
+    trap "rm -rf '$TMP'" EXIT
+    cd "$TMP" >/dev/null || die "mktemp failed"
 
-# clone the repository
-git clone "$REPO" "$PKG"                || die "git clone failed"
-cd "$PKG"                               || die "git clone failed"
-patch -p1 < build-aux/distro-install.patch || die "failed to patch soource code"
-./switch-host-gcc.sh /usr/bin/gcc       || die "'make distcheck' has failed"
-mv -v cl/version_cl.h sl/version.h .    || dir "failed to export version file"
+    # clone the repository
+    git clone "$REPO" "$PKG"                || die "git clone failed"
+    cd "$PKG"                               || die "git clone failed"
+    patch -p1 < build-aux/distro-install.patch || die "failed to patch soource code"
+    ./switch-host-gcc.sh /usr/bin/gcc       || die "'make distcheck' has failed"
+    mv -v cl/version_cl.h sl/version.h .    || dir "failed to export version file"
 
-SRC_TAR="${NV}.tar"
-SRC="${SRC_TAR}.xz"
-git archive --prefix="$NV/" --format="tar" HEAD -- . > "$SRC_TAR" \
-                                        || die "failed to export sources"
+    SRC_TAR="${NV}.tar"
+    SRC="${SRC_TAR}.xz"
+    git archive --prefix="$NV/" --format="tar" HEAD -- . > "$SRC_TAR" \
+                                            || die "failed to export sources"
 
-xz -c "$SRC_TAR" > "$SRC"               || die "failed to compress sources"
+    xz -c "$SRC_TAR" > "$SRC"               || die "failed to compress sources"
+
+    RELEASE="$1"
+else
+    make version_cl.h -C cl
+    make version.h -C sl
+    mv -v cl/version_cl.h sl/version.h .    || dir "failed to export version file"
+    RELEASE="$2"
+fi
 
 SPEC="./$PKG.spec"
 cat > "$SPEC" << EOF
 Name:       $PKG
 Version:    $VER
-Release:    ${1:-1}%{?dist}
+Release:    ${RELEASE:-1}%{?dist}
 Summary:    A Shape Analyzer Based on Symbolic Memory Graphs
 
 License:    GPLv3+
@@ -142,7 +151,9 @@ make check -C sl
 %{plugin_dir}/predator.so
 EOF
 
-rpmbuild -bs "$SPEC"                            \
-    --define "_sourcedir ."                     \
-    --define "_specdir ."                       \
-    --define "_srcrpmdir $DST"
+if [[ "$1" != "--generate-spec" ]]; then
+    rpmbuild -bs "$SPEC"                            \
+        --define "_sourcedir ."                     \
+        --define "_specdir ."                       \
+        --define "_srcrpmdir $DST"
+fi
