@@ -2317,7 +2317,11 @@ void CLPass::handleCallInstruction(CallInst *I) {
     if (dst.code != CL_OPERAND_VOID && dst.type->code == CL_TYPE_VOID)
         dst.code = CL_OPERAND_VOID;
 
+#ifdef LLVM_HOST_8_OR_NEWER
+    handleOperand(I->getCalledOperand(), &fnc);
+#else
     handleOperand(I->getCalledValue(), &fnc);
+#endif
 
     if (isa<MemIntrinsic>(I)) { // cut architecture info
         CL_DEBUG("memintrinsic");
