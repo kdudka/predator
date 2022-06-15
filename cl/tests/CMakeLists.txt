@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2012 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -50,7 +50,7 @@ endmacro()
 if(ENABLE_LLVM)
 set(cmd_cc1 "-S -emit-llvm -Xclang -fsanitize-address-use-after-scope")
 #set(cmd_cc1 "${cmd_cc1} -femit-all-decls")
-set(CFLAGS "-std=c++11 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS")
+set(CFLAGS "-std=c++14 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS")
 
 # basic set of the options to compile llvm/clplug.cc with SMOKE_PLUG loaded
 set(cmd "${CLANG_HOST} ${CFLAGS} ${cmd_cc1}")
@@ -371,7 +371,7 @@ add_test("headers_sanity-3" make -j
 
 if(ENABLE_LLVM)
 # headers sanity #4
-add_test("headers_sanity-4" ${CMAKE_CXX_COMPILER} -x c++ -std=c++11 -Wall -Wextra -Werror -pedantic
+add_test("headers_sanity-4" ${CMAKE_CXX_COMPILER} -x c++ -std=c++14 -Wall -Wextra -Werror -pedantic
     -o /dev/null
     -I${cl_SOURCE_DIR}/../include
     -c ${cl_SOURCE_DIR}/llvm/clplug.hh)
