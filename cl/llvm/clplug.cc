@@ -576,8 +576,8 @@ struct cl_type *CLPass::handleType(Type *t) {
 
             clt->items = new struct cl_type_item [1];
             clt->items[0].name = nullptr;
-            clt->items[0].type = handleType(t->getSequentialElementType());
-            //(cast<SequentialType>(t)->getElementType(), tmp);
+            clt->items[0].type = handleType(t->getArrayElementType());
+            //(cast<ArrayType>(t)->getElementType(), tmp);
 
             clt->size = clt->array_size * clt->items[0].type->size;
         }
