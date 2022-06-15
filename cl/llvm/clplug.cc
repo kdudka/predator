@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Veronika Sokova <isokova@fit.vutbr.cz>
+ * Copyright (C) 2014-2022 Veronika Sokova <isokova@fit.vutbr.cz>
  *
  * This file is part of llvm/predator.
  *
@@ -816,6 +816,7 @@ bool CLPass::handleBasicConstant(Value *v, struct cl_operand *clo) {
         case CL_TYPE_BOOL:
         case CL_TYPE_CHAR:
             clo->data.cst.code = CL_TYPE_INT; // union type
+            // fall through
         case CL_TYPE_INT:
             if (clo->type->is_unsigned)
                 clo->data.cst.data.cst_uint.value = dyn_cast<ConstantInt>(v)->getValue().getZExtValue();
@@ -843,6 +844,7 @@ bool CLPass::handleBasicConstant(Value *v, struct cl_operand *clo) {
                 clo->data.cst.code = CL_TYPE_INT; // union type
                 break;
             }
+            // fall through
 
         default:
             CL_WARN("unknown constant");
@@ -1040,7 +1042,9 @@ void CLPass::handleGlobalVariable(GlobalVariable *gv, struct cl_var *clv) {
             if (cast<ConstantDataArray>(c)->isCString()) {
                 handleSimplyInitializer(c, clv, &CLPass::handleOperand);
                 break;
-            } // else is array literal
+            }
+            // else array literal
+            // fall through
         case Value::ConstantArrayVal:
         case Value::ConstantAggregateZeroVal:
         case Value::ConstantStructVal:
