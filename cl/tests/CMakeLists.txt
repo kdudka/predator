@@ -52,6 +52,11 @@ set(cmd_cc1 "-S -emit-llvm -Xclang -fsanitize-address-use-after-scope")
 #set(cmd_cc1 "${cmd_cc1} -femit-all-decls")
 set(CFLAGS "-std=c++14 -D__STDC_LIMIT_MACROS -D__STDC_CONSTANT_MACROS")
 
+if(LLVM_VERSION VERSION_GREATER "12.0")
+    # disable new pass manager for LLVM 13+
+  set(OPT_HOST "${OPT_HOST} -enable-new-pm=0")
+endif()
+
 # basic set of the options to compile llvm/clplug.cc with SMOKE_PLUG loaded
 set(cmd "${CLANG_HOST} ${CFLAGS} ${cmd_cc1}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}")

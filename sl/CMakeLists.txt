@@ -281,6 +281,11 @@ set(cost 1)
 if(ENABLE_LLVM) # -----------------------------------------------------------
 set(cmd_cc1 "-S -emit-llvm -Xclang -fsanitize-address-use-after-scope")
 
+if(LLVM_VERSION VERSION_GREATER "12.0")
+    # disable new pass manager for LLVM 13+
+    set(OPT_HOST "${OPT_HOST} -enable-new-pm=0")
+endif()
+
 # FIXME: define this macro more generically, in particular the count of args
 macro(test_predator_regre name_suff ext arg1)
     foreach (num ${tests})
