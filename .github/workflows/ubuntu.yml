@@ -1,0 +1,218 @@
+---
+name: Ubuntu CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  ubuntu:
+    name: "Ubuntu ${{ matrix.version }} (compiler: ${{ matrix.compiler }}, host: ${{ matrix.host }}${{ matrix.variant }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        compiler: [clang, gcc]
+        host: [gcc, llvm]
+        version: [18.04, 20.04, 22.04]
+        include:
+          - variant: ', variant: expensive tests'
+            compiler: gcc
+            host: gcc-expensive
+            version: 22.04
+          - variant: ', variant: debug build'
+            compiler: gcc
+            host: gcc-debug
+            version: 22.04
+          # FIXME: expected results of expensive tests are not patched for LLVM
+          # - variant: ', variant: expensive tests'
+          #   compiler: clang
+          #   host: llvm-expensive
+          #   version: 22.04
+          - variant: ', variant: debug build'
+            compiler: clang
+            host: llvm-debug
+            version: 22.04
+
+    runs-on: ubuntu-${{ matrix.version }}
+    env:
+      CFLAGS: -Werror
+      CXXFLAGS: -Werror
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Determine default tool versions for Ubuntu ${{ matrix. version }}
+        run: |
+          case '${{ matrix.version }}' in
+            18.04)
+              GCC_HOST_VERSION=7
+              # LLVM 6 is the last release to use minor version
+              # in binary names.
+              LLVM_HOST_VERSION=6.0
+              ;;
+            20.04)
+              GCC_HOST_VERSION=9
+              LLVM_HOST_VERSION=10
+              ;;
+            22.04)
+              GCC_HOST_VERSION=11
+              LLVM_HOST_VERSION=14
+              ;;
+            *)
+              echo "Unknown Ubuntu version: ${{ matrix.version }}"
+              exit 1
+              ;;
+          esac
+
+          echo "GCC_HOST_VERSION=$GCC_HOST_VERSION" >> "$GITHUB_ENV"
+          echo "LLVM_HOST_VERSION=$LLVM_HOST_VERSION" >> "$GITHUB_ENV"
+
+      - name: '[clang] Install a default version for Ubuntu ${{ matrix.version }}'
+        if: matrix.compiler == 'clang'
+        run: |
+          sudo apt update
+          sudo apt install -y "clang-$LLVM_HOST_VERSION"
+
+      - name: Install dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y "gcc-$GCC_HOST_VERSION-multilib" libboost-dev
+
+      - name: '[GCC] Install dependencies for GCC host'
+        if: startsWith(matrix.host, 'gcc')
+        run: |
+          sudo apt install -y "g++-$GCC_HOST_VERSION-multilib" \
+                              "gcc-$GCC_HOST_VERSION-plugin-dev"
+          if [[ -n '${{ matrix.variant }}' ]]; then
+            echo "GCC_HOST=/usr/bin/gcc-$GCC_HOST_VERSION" >> "$GITHUB_ENV"
+          fi
+
+      - name: '[LLVM] Install dependencies for LLVM host'
+        if: startsWith(matrix.host, 'llvm')
+        run: |
+          sudo apt install -y "clang-$LLVM_HOST_VERSION" \
+                              "llvm-$LLVM_HOST_VERSION-dev"
+
+      # FIXME: workaround for a git clone hang on Ubuntu 22.04 machines
+      - name: '[Jammy + LLVM] Checkout passes repository'
+        if: startsWith(matrix.host, 'llvm') && matrix.version == '22.04'
+        uses: actions/checkout@v3
+        with:
+          path: passes-src
+          repository: VeriFIT/ProStatA
+
+      - name: Set compiler variables
+        run: |
+          if [[ '${{ matrix.compiler }}' == 'gcc' ]]; then
+            echo "CC=/usr/bin/gcc-$GCC_HOST_VERSION" >> "$GITHUB_ENV"
+            echo "CXX=/usr/bin/g++-$GCC_HOST_VERSION" >> "$GITHUB_ENV"
+          else
+            echo "CC=/usr/bin/clang-$LLVM_HOST_VERSION" >> "$GITHUB_ENV"
+            echo "CXX=/usr/bin/clang++-$LLVM_HOST_VERSION" >> "$GITHUB_ENV"
+          fi
+
+      - name: '[GCC 7] Apply GCC 7 only patch'
+        if: matrix.host == 'gcc' && env.GCC_HOST_VERSION == 7
+        run: patch -p1 < build-aux/gcc-8.3.0.patch
+
+      - name: '[Jammy] Add sanitizers to CXXFLAGS'
+        if: matrix.version >= 22.04
+        run: |
+          # Use ASAN and UBSAN
+          CFLAGS="$CFLAGS -fsanitize=address,undefined"
+          CXXFLAGS="$CXXFLAGS -fsanitize=address,undefined"
+
+          # Recommended for better error traces
+          CFLAGS="$CFLAGS -fno-omit-frame-pointer"
+          CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
+
+          # Make UBSAN reports fatal
+          CFLAGS="$CFLAGS -fno-sanitize-recover=all"
+          CXXFLAGS="$CXXFLAGS -fno-sanitize-recover=all"
+
+          # Use shared libasan for sanitization of shared libraries loaded
+          # by non-instrumented binaries.
+          # For details see https://systemd.io/TESTING_WITH_SANITIZERS/#clang.
+          if [[ '${{ matrix.compiler }}' == 'clang' ]]; then
+            CFLAGS="$CFLAGS -shared-libasan"
+            CXXFLAGS="$CXXFLAGS -shared-libasan"
+          fi
+
+          # Needed for testing of shared libraries loaded by non-instrumented
+          # binaries.
+          if [[ '${{ matrix.compiler }}' == 'clang' ]]; then
+            LD_PRELOAD="$(clang -print-file-name=libclang_rt.asan-x86_64.so)"
+          else
+            LD_PRELOAD="$(gcc -print-file-name=libasan.so)"
+          fi
+
+          # Due to LD_PRELOAD above, leak sanitizer was reporting leaks
+          # literally in everything that was executed, e.g. make, shell,
+          # python and other tools that are not under our control.
+          ASAN_OPTIONS="detect_leaks=0"
+
+          # Do not detect ODR violations as we can't easily fix this problem in
+          # CL's compile-self-02-var-killer test.
+          ASAN_OPTIONS="$ASAN_OPTIONS,detect_odr_violation=0"
+
+          # Make UBSAN print whole stack traces
+          UBSAN_OPTIONS="print_stacktrace=1"
+
+          # Store the env variables
+          echo "CFLAGS=$CFLAGS" >> "$GITHUB_ENV"
+          echo "CXXFLAGS=$CXXFLAGS" >> "$GITHUB_ENV"
+          echo "ASAN_OPTIONS=$ASAN_OPTIONS" >> "$GITHUB_ENV"
+          echo "UBSAN_OPTIONS=$UBSAN_OPTIONS" >> "$GITHUB_ENV"
+          echo "LD_PRELOAD=$LD_PRELOAD" >> "$GITHUB_ENV"
+
+      - name: Build and check
+        run: |
+          if [[ '${{ matrix.host }}' =~ llvm* ]]; then
+            LLVM_CMAKE_FLAGS="-D LLVM_DIR='/usr/lib/llvm-$LLVM_HOST_VERSION/cmake'"
+            LLVM_CMAKE_FLAGS="$LLVM_CMAKE_FLAGS -D ENABLE_LLVM=ON"
+          fi
+
+          case '${{ matrix.variant }}' in
+            *debug*)
+              if [[ '${{ matrix.host }}' =~ llvm* ]]; then
+                make build_passes -s -j$(nproc) "CMAKE=cmake $LLVM_CMAKE_FLAGS"
+                # FIXME: LLVM CL tests are broken
+                # merge with make call below when fixed
+                make -C cl -s -j$(nproc) \
+                    "CMAKE=cmake -D CL_DEBUG=ON $LLVM_CMAKE_FLAGS"
+                patch -p1 < build-aux/llvm.patch
+              else
+                make -C cl -s -j$(nproc) "CMAKE=cmake -D CL_DEBUG=ON" check
+              fi
+
+              make -C sl -s -j$(nproc) \
+                  "CMAKE=cmake -D SL_DEBUG=ON $LLVM_CMAKE_FLAGS" check
+              exit 0
+              ;;
+            *expensive*)
+              if [[ '${{ matrix.host }}' =~ llvm* ]]; then
+                make build_passes -s -j$(nproc) "CMAKE=cmake $LLVM_CMAKE_FLAGS"
+                # FIXME: LLVM CL tests are broken
+                # merge with make call below when fixed
+                make -C cl -s -j$(nproc) "CMAKE=cmake $LLVM_CMAKE_FLAGS"
+                patch -p1 < build-aux/llvm.patch
+              else
+                make -C cl -s -j$(nproc) "CMAKE=cmake" check
+              fi
+
+              make -C sl -s -j$(nproc) \
+                  "CMAKE=cmake -D TEST_ONLY_FAST=OFF $LLVM_CMAKE_FLAGS" check
+              exit 0
+              ;;
+            *)
+              ;;
+          esac
+
+          if [[ '${{ matrix.host }}' == gcc ]]; then
+            ./switch-host-gcc.sh "/usr/bin/gcc-$GCC_HOST_VERSION"
+          else
+            ./switch-host-llvm.sh "/usr/lib/llvm-$LLVM_HOST_VERSION/cmake"
+          fi

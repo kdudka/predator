@@ -1,0 +1,35 @@
+---
+name: Coverity
+
+on:
+  push:
+    branches: master
+
+jobs:
+  coverity:
+    name: Coverity Scan
+    runs-on: ubuntu-latest
+    env:
+      CC: /usr/bin/gcc
+      CXX: /usr/bin/g++
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: |
+          GCC_HOST_VERSION="$(/usr/bin/gcc --version | grep -oP '\d*' | head -n1)"
+          sudo apt update
+          sudo apt install -y "g++-$GCC_HOST_VERSION-multilib" \
+                              "gcc-$GCC_HOST_VERSION-multilib" \
+                              "gcc-$GCC_HOST_VERSION-plugin-dev" \
+                              libboost-dev
+
+      - name: Coverity scan
+        uses: vapier/coverity-scan-action@v1
+        with:
+          email: ${{ secrets.COVERITY_SCAN_EMAIL }}
+          token: ${{ secrets.COVERITY_SCAN_TOKEN }}
+          project: kdudka/predator
+          command: ./switch-host-gcc.sh "${{ env.CC }}"
