@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2013 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -348,7 +348,7 @@ test_predator_regre("-EXIT_LEAKS" ".exit_leaks" "-args=exit_leaks")
 if(TEST_ONLY_FAST)
 else()
     add_test("headers_sanity-0" ${CMAKE_CXX_COMPILER} -ansi -Wall -Wextra -Werror -pedantic
-        -o /dev/null
+        -o ${sl_BINARY_DIR}/config.h.gch
         -c ${sl_SOURCE_DIR}/config.h)
 
     add_test("headers_sanity-1" make -j
@@ -447,7 +447,7 @@ endif()
 if(TEST_ONLY_FAST)
 else()
     add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
-        -o /dev/null
+        -o ${sl_BINARY_DIR}/config.h.gch
         -c ${sl_SOURCE_DIR}/config.h)
 
     add_test("headers_sanity-1" make -j
