@@ -353,7 +353,8 @@ else()
 
     add_test("headers_sanity-1" make -j
         -C ${sl_SOURCE_DIR}
-        -f ${sl_SOURCE_DIR}/Makefile.chk)
+        -f ${sl_SOURCE_DIR}/Makefile.chk
+        BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 
@@ -452,7 +453,8 @@ else()
 
     add_test("headers_sanity-1" make -j
         -C ${sl_SOURCE_DIR}
-        -f ${sl_SOURCE_DIR}/Makefile.chk)
+        -f ${sl_SOURCE_DIR}/Makefile.chk
+        BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR})
 endif()
 
 endif() #--------------------------------------------------------------------
