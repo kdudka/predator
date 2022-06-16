@@ -1,4 +1,4 @@
-# Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -138,9 +138,8 @@ $(GCC_STABLE_TGZ):
 	$(CURL) -o $@ '$(GCC_STABLE_URL)'
 
 $(PASSES_SRC):
-	if test -e "$(PASSES_SRC)"; then exit 1; fi
-	$(GIT) clone --depth 1 https://github.com/VeriFIT/ProStatA.git $(PASSES_SRC)
-	$(MAKE) build_passes
+	test ! -e "$(PASSES_SRC)" && \
+		$(GIT) clone --depth 1 https://github.com/VeriFIT/ProStatA.git $(PASSES_SRC)
 
 # build libpasses from sources
 build_passes: $(PASSES_SRC)
@@ -149,9 +148,8 @@ build_passes: $(PASSES_SRC)
 			echo "--- directory '$(PASSES_BUILD)' exists"; \
 			echo "--- please run 'rm -rf $(PASSES_BUILD)' if the build fails"; \
 			echo; \
-		else \
-			cd $(PASSES_SRC)/passes && $(MAKE); \
-		fi
+	fi
+	cd $(PASSES_SRC)/passes && $(MAKE)
 
 ChangeLog:
 	git log --pretty="format:%ad  %an%n%n%w(80,8,8)%B%n" --date=short -- \
