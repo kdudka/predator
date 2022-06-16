@@ -27,22 +27,32 @@
 #if DEBUG_MEM_USAGE
 #   include <malloc.h>
 
+#ifndef HAVE_MALLINFO2
 static bool overflowDetected;
+#endif
+
 static ssize_t peak;
 
 bool rawMemUsage(ssize_t *pDst)
 {
+#ifndef HAVE_MALLINFO2
     if (::overflowDetected)
         return false;
 
     struct mallinfo info = mallinfo();
+#else
+    struct mallinfo2 info = mallinfo2();
+#endif
     const ssize_t raw = info.uordblks;
+
+#ifndef HAVE_MALLINFO2
     const unsigned mib = raw >> /* MiB */ 20;
     if (2048U < mib) {
         // mallinfo() is broken by design <https://bugzilla.redhat.com/173813>
         ::overflowDetected = true;
         return false;
     }
+#endif
 
     *pDst = raw;
     if (peak < raw)
@@ -121,8 +131,10 @@ bool printMemUsage(const char *fnc)
 
 bool printPeakMemUsage()
 {
+#ifndef HAVE_MALLINFO2
     if (::overflowDetected)
         return false;
+#endif
 
     const ssize_t diff = ::peak - ::memDrift;
     CL_NOTE("peak memory usage: " << AmountFormatter(diff,

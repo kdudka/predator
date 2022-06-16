@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2012 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -75,6 +75,16 @@ macro(ADD_CXX_ONLY_FLAG opt_name opt)
     endif()
 endmacro()
 
+# Check for a C symbol
+include(CheckSymbolExists)
+macro(CHECK_C_SYMBOL_AVAILABLE symbol headers)
+    string(TOUPPER ${symbol} symbol_name)
+    check_symbol_exists(${symbol} ${headers} HAVE_${symbol_name})
+    if(HAVE_${symbol_name})
+        add_definitions("-DHAVE_${symbol_name}")
+    endif()
+endmacro()
+
 # treat Code Listener headers as system headers when scanning dependencies
 include_directories(SYSTEM ../include)
 
@@ -107,6 +117,9 @@ option(USE_WERROR "Set to ON to use -Werror (recommended)" OFF)
 if(USE_WERROR)
     ADD_C_FLAG("W_ERROR" "-Werror")
 endif()
+
+# mallinfo2 support
+CHECK_C_SYMBOL_AVAILABLE(mallinfo2 "malloc.h")
 
 # if __asm__("int3") raises SIGTRAP, use it for breakpoints (SIGTRAP otherwise)
 if("${INT3_RESPONSE}" STREQUAL "")
