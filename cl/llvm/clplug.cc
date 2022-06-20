@@ -2181,6 +2181,7 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
             case CL_TYPE_PTR: {
                 //                errs() << "ptr ";
                 // offset: constant, possible variable
+                acc->code = CL_ACCESSOR_DEREF;
                 int num = 0;
                 if (isa<ConstantInt>(v)) {
                     num = cast<ConstantInt>(v)->getValue().getSExtValue();
@@ -2195,7 +2196,6 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
                         addrNextAcc = &(src->accessor);
                         continue; // no accessor
                     }
-                    acc->code = CL_ACCESSOR_DEREF;
 
                     if (num != 0) { // + constant offset
                         addrNextAcc = &(acc->next);
@@ -2211,7 +2211,6 @@ bool CLPass::handleGEPOperand(Value *v, struct cl_operand *src) {
                     // TODO: Code Listener offset as cl_operand
                     src = insertOffsetAcc(v, src);
                     src->type = const_cast<struct cl_type *>(src->type->items[0].type);
-                    acc->code = CL_ACCESSOR_DEREF;
                 }
 
             }
