@@ -189,6 +189,8 @@ class NodeHandle: public NodeBase {
             ref->notifyBirth(this);
         }
 
+        virtual ~NodeHandle();
+
         /// return the node stored within this handle
         Node* node() const {
             return this->parent();

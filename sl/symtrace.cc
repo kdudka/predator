@@ -46,8 +46,6 @@ typedef std::set<TNode>                                 TNodeSet;
 
 NodeBase::~NodeBase()
 {
-    BOOST_FOREACH(Node *parent, parents_)
-        parent->notifyDeath(this);
 }
 
 Node* NodeBase::parent() const
@@ -83,7 +81,39 @@ bool hasDupChildren(const Node *node)
 
 Node::~Node()
 {
+    if (!alive_)
+        // this node is already being destroyed
+        return;
+
     alive_ = false;
+
+    // visit all parents recursively and propagate death notification
+    Node *node;
+    WorkList<Node *> wl(this);
+    while (wl.next(node)) {
+        BOOST_FOREACH(Node *parent, node->parents()) {
+            // temporarily disable node deletion to avoid stack overflow
+            const bool wasAlive = parent->alive_;
+            parent->alive_ = false;
+
+            // propagate death notification
+            parent->notifyDeath(this);
+
+            // check whether this node was the last child of the parent
+            if (!parent->children_.empty()) {
+                parent->alive_ = wasAlive;
+                continue;
+            }
+
+            // schedule parents of our parent for traversal
+            BOOST_FOREACH(Node *next, parent->parents())
+                wl.schedule(next);
+
+            // delete the parent if it stopped being alive
+            if (wasAlive)
+                delete parent;
+        }
+    }
 }
 
 void Node::notifyBirth(NodeBase *child)
@@ -103,7 +133,6 @@ void Node::notifyDeath(NodeBase *child)
             children_.end());
 
     if (alive_ && children_.empty())
-        // FIXME: this may cause stack overflow on complex trace graphs
         delete this;
 }
 
@@ -153,6 +182,11 @@ void replaceNode(Node *tr, Node *by)
 
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::NodeHandle
+
+NodeHandle::~NodeHandle()
+{
+    this->parent()->notifyDeath(this);
+}
 
 void NodeHandle::reset(Node *node)
 {
