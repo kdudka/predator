@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -47,6 +47,20 @@ extern const char *GIT_SHA1;
 } while (0)
 
 #ifndef NDEBUG
+
+/* silence clang's -Wundefined-bool-conversion on pointers to references */
+#ifdef __clang__
+#   define _CL_BREAK_IF_SILENCE_CLANG_BEGIN do {                            \
+        _Pragma("clang diagnostic push");                                   \
+        _Pragma("clang diagnostic ignored \"-Wundefined-bool-conversion\"");\
+    } while (0)
+
+#   define _CL_BREAK_IF_SILENCE_CLANG_END _Pragma("clang diagnostic pop")
+#else
+#   define _CL_BREAK_IF_SILENCE_CLANG_BEGIN
+#   define _CL_BREAK_IF_SILENCE_CLANG_END
+#endif
+
 /**
  * conditional variant of CL_TRAP, do nothing as long as cond is not satisfied
  * @attention the macro suffer from the same flaw as std::assert - the given
@@ -56,8 +70,10 @@ extern const char *GIT_SHA1;
  * editor, in order to highlight CL_BREAK_IF as as keyword, as well as CL_TRAP
  */
 #   define CL_BREAK_IF(cond) do {                                           \
+        _CL_BREAK_IF_SILENCE_CLANG_BEGIN;                                   \
         if (!(cond))                                                        \
             break;                                                          \
+        _CL_BREAK_IF_SILENCE_CLANG_END;                                     \
                                                                             \
         fprintf(stderr, "%s:%d: conditional breakpoint fired: "             \
                 "CL_BREAK_IF(%s)\n", __FILE__, __LINE__, #cond);            \
