@@ -84,6 +84,11 @@ extern "C" {
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/Transforms/Utils/Local.h" // find dbg
 
+// for ParseEnvironmentOptions
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Process.h"
+#include "llvm/Support/StringSaver.h"
+
 #include <fstream>
 #include <cstring> // memcpy
 #include <queue>
@@ -345,10 +350,37 @@ void CLPass::getIntOperand(int num, struct cl_operand *clo) {
     clo->data.cst.data.cst_int.value = num;
 }
 
+/// This function was removed from LLVM 12 so let's implement it here instead.
+/// Taken from: https://github.com/llvm/llvm-project/commit/c068e9c8c123e7f8c8f3feb57245a012ccd09ccf
+static void ParseEnvironmentOptions(const char *progName, const char *envVar,
+                                    const char *Overview = "") {
+  // Check args.
+  assert(progName && "Program name not specified");
+  assert(envVar && "Environment variable name missing");
+
+  // Get the environment variable they want us to parse options out of.
+  Optional<std::string> envValue = sys::Process::GetEnv(StringRef(envVar));
+  if (!envValue)
+    return;
+
+  // Get program's "name", which we wouldn't know without the caller
+  // telling us.
+  SmallVector<const char *, 20> newArgv;
+  BumpPtrAllocator A;
+  StringSaver Saver(A);
+  newArgv.push_back(Saver.save(progName).data());
+
+  // Parse the value of the environment variable into a "command line"
+  // and hand it off to ParseCommandLineOptions().
+  cl::TokenizeGNUCommandLine(*envValue, Saver, newArgv);
+  int newArgc = static_cast<int>(newArgv.size());
+  cl::ParseCommandLineOptions(newArgc, &newArgv[0], StringRef(Overview));
+}
+
 /// create CL object for grouping another CL objects by command line options
 void CLPass::setup(void) {
 
-    /* void */ cl::ParseEnvironmentOptions("opt",plugName.c_str());
+    /* void */ ParseEnvironmentOptions("opt", plugName.c_str());
 
     writePID();
 
