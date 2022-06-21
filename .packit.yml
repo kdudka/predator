@@ -1,0 +1,31 @@
+# See the documentation for more information:
+# https://packit.dev/docs/configuration/
+
+specfile_path: predator.spec
+
+# add or remove files that should be synced
+files_to_sync:
+    - predator.spec
+    - .packit.yaml
+
+# name in upstream package repository or registry (e.g. in PyPI)
+upstream_package_name: predator
+
+release_suffix: ""
+actions:
+    post-upstream-clone: ./make-srpm.sh --generate-spec
+    get-current-version: "sed -n 's|^Version: *||p' predator.spec"
+
+jobs:
+    - &copr
+      job: copr_build
+      trigger: pull_request
+      targets:
+          - epel-all-x86_64
+          - fedora-all-x86_64
+
+    - <<: *copr
+      trigger: commit
+      owner: "@aufover"
+      project: "predator"
+      branch: main
