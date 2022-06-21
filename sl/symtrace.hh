@@ -175,6 +175,8 @@ class Node: public NodeBase {
     private:
         TBaseList children_;
         bool alive_;
+
+        template <class TNodeKind> friend bool isNodeKindReachble(Node *const);
 };
 
 void replaceNode(Node *tr, Node *by);

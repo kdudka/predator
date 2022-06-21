@@ -92,12 +92,14 @@ Node::~Node()
     WorkList<Node *> wl(this);
     while (wl.next(node)) {
         BOOST_FOREACH(Node *parent, node->parents()) {
+            CL_BREAK_IF(parent->children_.empty());
+
             // temporarily disable node deletion to avoid stack overflow
             const bool wasAlive = parent->alive_;
             parent->alive_ = false;
 
             // propagate death notification
-            parent->notifyDeath(this);
+            parent->notifyDeath(node);
 
             // check whether this node was the last child of the parent
             if (!parent->children_.empty()) {
@@ -105,13 +107,15 @@ Node::~Node()
                 continue;
             }
 
-            // schedule parents of our parent for traversal
-            BOOST_FOREACH(Node *next, parent->parents())
-                wl.schedule(next);
+            // schedule the parent with no children for deletion
+            wl.schedule(parent);
+        }
 
-            // delete the parent if it stopped being alive
-            if (wasAlive)
-                delete parent;
+        if (this != node) {
+            // delete a node that nobody points to any more
+            CL_BREAK_IF(!node->children_.empty());
+            CL_BREAK_IF(node->alive_);
+            delete node;
         }
     }
 }
@@ -183,8 +187,13 @@ void replaceNode(Node *tr, Node *by)
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::NodeHandle
 
+template <class TNodeKind> bool isNodeKindReachble(Node *const);
+
 NodeHandle::~NodeHandle()
 {
+#ifndef NDEBUG
+    (void) isNodeKindReachble<RootNode>(this->parent());
+#endif
     this->parent()->notifyDeath(this);
 }
 
@@ -728,6 +737,8 @@ bool isNodeKindReachble(Node *const from)
     Node *node = from;
     WorkList<Node *> wl(node);
     while (wl.next(node)) {
+        CL_BREAK_IF(!node->alive_);
+
         if (dynamic_cast<TNodeKind *>(node))
             return true;
 
