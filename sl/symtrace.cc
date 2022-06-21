@@ -187,12 +187,12 @@ void replaceNode(Node *tr, Node *by)
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::NodeHandle
 
-template <class TNodeKind> bool isNodeKindReachble(Node *const);
+template <class TNodeKind> bool isNodeKindReachable(Node *const);
 
 NodeHandle::~NodeHandle()
 {
 #ifndef NDEBUG
-    (void) isNodeKindReachble<RootNode>(this->parent());
+    (void) isNodeKindReachable<RootNode>(this->parent());
 #endif
     this->parent()->notifyDeath(this);
 }
@@ -732,7 +732,7 @@ void printTrace(Node *endPoint)
 // implementation of Trace::chkTraceGraphConsistency()
 
 template <class TNodeKind>
-bool isNodeKindReachble(Node *const from)
+bool isNodeKindReachable(Node *const from)
 {
     Node *node = from;
     WorkList<Node *> wl(node);
@@ -752,18 +752,18 @@ bool isNodeKindReachble(Node *const from)
 
 bool chkTraceGraphConsistency(Node *const from)
 {
-    if (isNodeKindReachble<CloneNode>(from)) {
+    if (isNodeKindReachable<CloneNode>(from)) {
         CL_WARN("CloneNode reachable from the given trace graph node");
         plotTrace(from, "symtrace-CloneNode-reachable");
     }
 
-    if (!isNodeKindReachble<RootNode>(from)) {
+    if (!isNodeKindReachable<RootNode>(from)) {
         CL_ERROR("RootNode not reachable from the given trace graph node");
         plotTrace(from, "symtrace-RootNode-not-reachable");
         return false;
     }
 
-    if (isNodeKindReachble<TransientNode>(from)) {
+    if (isNodeKindReachable<TransientNode>(from)) {
         CL_ERROR("TransientNode reachable from the given trace graph node");
         plotTrace(from, "symtrace-TransientNode-reachable");
         return false;
