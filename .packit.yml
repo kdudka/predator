@@ -28,4 +28,4 @@ jobs:
       trigger: commit
       owner: "@aufover"
       project: "predator"
-      branch: main
+      branch: master
