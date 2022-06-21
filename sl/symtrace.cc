@@ -236,7 +236,7 @@ bool seekAncestor(TNode tr, const TNode trAncestor, const TNodeSet &blackList)
     return false;
 }
 
-bool parentIdxByAncestor(
+int parentIdxByAncestor(
         const TNode                 tr,
         const TNode                 trAncestor,
         const TNodeSet             &blackList)
