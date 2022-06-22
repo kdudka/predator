@@ -13,15 +13,15 @@ without manually preprocessing them first.  The analysis itself is, however, not
 ready for complex projects yet.  You can find the latest news on the following
 project page:
 
-    http://www.fit.vutbr.cz/research/groups/verifit/tools/predator
+    https://www.fit.vutbr.cz/research/groups/verifit/tools/predator
 
 Building from sources against the system GCC
 ============================================
 This method requires a build of GCC with plug-in support compiled in (not
-necessarily the system one).  The currently supported version of GCC is 9.3.0
+necessarily the system one).  The currently supported version of GCC is 11.3.0
 and the test-suite is guaranteed to fully succeed only against this version
 of GCC.  However, the Predator plug-in itself is known to work well also with
-other GCC versions ranging from 4.5.0 to 10.0.1.
+other GCC versions ranging from 4.5.0 to 12.1.0.
 
 (1) Install all dependences of Predator
 ---------------------------------------
@@ -31,17 +31,17 @@ other GCC versions ranging from 4.5.0 to 10.0.1.
      - try to install `g++` on Ubuntu, or `gcc-c++` (or `clang`) on Fedora
 
    * CMake 2.8+
-     - available at http://www.cmake.org
+     - available at https://www.cmake.org
      - the executable is called `cmake`
      - usually provided by a package called `cmake`
 
    * Boost libraries 1.37+
-     - available at http://www.boost.org/
+     - available at https://www.boost.org/
      - package is usually called `boost`
      - on binary distros you may need also the `boost-devel` sub-package
 
    * 32bit system headers, especially in case of 64bit OS
-     - on Debian provided by a package called `g++-4.9-multilib`
+     - on Debian provided by a package called `g++-multilib`
      - you can try to check their presence
        by `echo "#include <new>" | gcc -m32 -c -xc++ -`
 
@@ -75,7 +75,7 @@ This will show you the available options of the Predator plug-in itself
     echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
 
 Building from sources against the system LLVM [experimental]
-=============================================================
+============================================================
 The currently supported version of LLVM is 10.0.0 and the test-suite is
 guaranteed to fully succeed only against this version of LLVM after applying
 the patch `build-aux/llvm.patch`.
@@ -105,7 +105,7 @@ or
 
 (3) Usage
 ---------
-Create bitecode file:
+Create bitcode file:
 
     clang -g -S -emit-llvm source.c -o source.bc
 
@@ -117,8 +117,8 @@ Or directly (without additional options) [only on Linux]:
 
     clang -g source.c -Xclang -load -Xclang ./sl_build/libsl.so
 
-Dependencies for Darwin (MacOSX)
-================================
+Dependencies for Darwin (macOS)
+===============================
 GCC plug-in has .so suffix and LLVM plug-in has .dylib suffix as usual for
 Darwin.  You can install some of these dependencies using Homebrew available at
 https://brew.sh/:
@@ -138,17 +138,17 @@ Use this if your system GCC does not support loading (or building) GCC plug-ins.
 (1) Install all dependences of GCC
 ----------------------------------
    * GMP library
-     - available at http://gmplib.org/
+     - available at https://gmplib.org/
      - package is usually called `gmp`
      - on binary distros you may need also the `gmp-devel` sub-package
 
    * MPC library
-     - available at http://www.multiprecision.org/
+     - available at https://www.multiprecision.org/
      - package is usually called `mpc` or `libmpc`
      - on binary distros you may need also the `libmpc-devel` sub-package
 
    * MPFR library
-     - available at http://www.mpfr.org/
+     - available at https://www.mpfr.org/
      - package is usually called `mpfr`
      - on binary distros you may need also the `mpfr-devel` sub-package
 
