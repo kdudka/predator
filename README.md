@@ -70,7 +70,7 @@ man page:
     gcc -fplugin=libsl.so ...
 
 This will show you the available options of the Predator plug-in itself
-(detailed description [here](options.md)):
+(detailed description [here](docs/options.md)):
 
     echo please help | gcc -fplugin=libsl.so -fplugin-arg-libsl-help -xc -
 
@@ -109,7 +109,7 @@ Create bitcode file:
 
     clang -g -S -emit-llvm source.c -o source.bc
 
-Starting analysis (detailed description for opt options [here](options.md)):
+Starting analysis (detailed description for opt options [here](docs/options.md)):
 
     opt source.bc -o /dev/null -lowerswitch -load ./sl_build/libsl.so -sl -help
 
