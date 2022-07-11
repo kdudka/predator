@@ -307,7 +307,7 @@ struct KillVar {
 
 /// FIXME: inserting <id,0> and <id,1> could break the consistency of std::set
 struct ltKillVar {
-    bool operator()(const KillVar &a, const KillVar &b) {
+    bool operator()(const KillVar &a, const KillVar &b) const {
         return a.uid < b.uid;
     }
 };
