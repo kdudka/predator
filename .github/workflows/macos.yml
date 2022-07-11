@@ -1,0 +1,157 @@
+---
+name: macOS CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  ubuntu:
+    name: "macOS (host: ${{ matrix.host }}${{ matrix.variant }})"
+    strategy:
+      fail-fast: false
+      matrix:
+        # FIXME: support gcc plugin on macOS
+        # FIXME: support gcc + llvm and clang + gcc combinations
+        host: [llvm] # [gcc, llvm]
+        include:
+          # FIXME: gcc plugin on macOS is broken at the moment
+          # - variant: ', variant: expensive tests'
+          #   host: gcc-expensive
+          # - variant: ', variant: debug build'
+          #   host: gcc-debug
+          # FIXME: expected results of expensive tests are not patched for LLVM
+          # - variant: ', variant: expensive tests'
+          #   host: llvm-expensive
+          - variant: ', variant: debug build'
+            host: llvm-debug
+
+    runs-on: macos-latest
+    env:
+      CFLAGS: -Werror
+      CXXFLAGS: -Werror
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Install dependencies
+        run: brew install boost boost-build gcc@10 gmp llvm
+
+      - name: Set compiler variables
+        run: |
+          GCC_PATH="$(brew --prefix gcc@10)"
+          GCC_HOST=("$GCC_PATH"/bin/gcc-1*)
+          echo "GCC_HOST=$GCC_HOST" >> "$GITHUB_ENV"
+
+          if [[ '${{ matrix.host }}' =~ gcc* ]]; then
+            GXX_HOST=("$GCC_PATH"/bin/g++-1*)
+            echo "CC=$GCC_HOST" >> "$GITHUB_ENV"
+            echo "CXX=$GXX_HOST" >> "$GITHUB_ENV"
+          else
+            echo "CC=clang" >> "$GITHUB_ENV"
+            echo "CXX=clang++" >> "$GITHUB_ENV"
+          fi
+
+      - name: 'Add sanitizers to CXXFLAGS'
+        run: |
+          # Use ASAN and UBSAN
+          # CFLAGS="$CFLAGS -fsanitize=address,undefined"
+          # CXXFLAGS="$CXXFLAGS -fsanitize=address,undefined"
+          CFLAGS="$CFLAGS -fsanitize=undefined"
+          # TODO: It looks like the C++standard library is built with
+          # -fvisibility=hidden and some base classes are not exported leading
+          # into false positives.
+          CXXFLAGS="$CXXFLAGS -fsanitize=undefined -fno-sanitize=vptr"
+
+          # Recommended for better error traces
+          CFLAGS="$CFLAGS -fno-omit-frame-pointer"
+          CXXFLAGS="$CXXFLAGS -fno-omit-frame-pointer"
+
+          # Make UBSAN reports fatal
+          CFLAGS="$CFLAGS -fno-sanitize-recover=all"
+          CXXFLAGS="$CXXFLAGS -fno-sanitize-recover=all"
+
+          # Use shared libasan for sanitization of shared libraries loaded
+          # by non-instrumented binaries.
+          # For details see https://systemd.io/TESTING_WITH_SANITIZERS/#clang.
+          if [[ '${{ matrix.compiler }}' == 'clang' ]]; then
+            CFLAGS="$CFLAGS -shared-libasan"
+            CXXFLAGS="$CXXFLAGS -shared-libasan"
+          fi
+
+          # Due to LD_PRELOAD above, leak sanitizer was reporting leaks
+          # literally in everything that was executed, e.g. make, shell,
+          # python and other tools that are not under our control.
+          ASAN_OPTIONS="detect_leaks=0"
+
+          # Do not detect ODR violations as we can't easily fix this problem in
+          # CL's compile-self-02-var-killer test.
+          ASAN_OPTIONS="$ASAN_OPTIONS,detect_odr_violation=0"
+
+          # Work-around for macOS System Integory Protection that prohibits
+          # the usage of DYLD_INSERT_LIBRARIES.
+          ASAN_OPTIONS="$ASAN_OPTIONS,verify_asan_link_order=0"
+
+          # Make UBSAN print whole stack traces
+          UBSAN_OPTIONS="print_stacktrace=1"
+
+          # Store the env variables
+          echo "CFLAGS=$CFLAGS" >> "$GITHUB_ENV"
+          echo "CXXFLAGS=$CXXFLAGS" >> "$GITHUB_ENV"
+          echo "ASAN_OPTIONS=$ASAN_OPTIONS" >> "$GITHUB_ENV"
+          echo "UBSAN_OPTIONS=$UBSAN_OPTIONS" >> "$GITHUB_ENV"
+
+      - name: Build and check
+        run: |
+          NPROC="$(sysctl -n hw.logicalcpu)"
+
+          if [[ '${{ matrix.host }}' =~ llvm* ]]; then
+            LLVM_CMAKE_PATH="$("$(brew --prefix llvm)/bin/llvm-config" --cmakedir)"
+            LLVM_CMAKE_FLAGS="-D LLVM_DIR='$LLVM_CMAKE_PATH'"
+            LLVM_CMAKE_FLAGS="$LLVM_CMAKE_FLAGS -D ENABLE_LLVM=ON"
+          fi
+
+          case '${{ matrix.variant }}' in
+            *debug*)
+              if [[ '${{ matrix.host }}' =~ llvm* ]]; then
+                make build_passes -s -j$NPROC "CMAKE=cmake $LLVM_CMAKE_FLAGS"
+                # FIXME: LLVM CL tests are broken
+                # merge with make call below when fixed
+                make -C cl -s -j$NPROC \
+                    "CMAKE=cmake -D CL_DEBUG=ON $LLVM_CMAKE_FLAGS"
+                patch -p1 < build-aux/llvm.patch
+              else
+                make -C cl -s -j$NPROC "CMAKE=cmake -D CL_DEBUG=ON" check
+              fi
+
+              make -C sl -s -j$NPROC \
+                    "CMAKE=cmake -D SL_DEBUG=ON $LLVM_CMAKE_FLAGS" check
+              exit 0
+              ;;
+            *expensive*)
+              if [[ '${{ matrix.host }}' =~ llvm* ]]; then
+                make build_passes -s -j$(nproc) "CMAKE=cmake $LLVM_CMAKE_FLAGS"
+                # FIXME: LLVM CL tests are broken
+                # merge with make call below when fixed
+                make -C cl -s -j$(nproc) "CMAKE=cmake $LLVM_CMAKE_FLAGS"
+                patch -p1 < build-aux/llvm.patch
+              else
+                make -C cl -s -j$(nproc) "CMAKE=cmake" check
+              fi
+
+              make -C sl -s -j$(nproc) \
+                  "CMAKE=cmake -D TEST_ONLY_FAST=OFF $LLVM_CMAKE_FLAGS" check
+              exit 0
+              ;;
+            *)
+              ;;
+          esac
+
+          if [[ '${{ matrix.host }}' == gcc ]]; then
+            ./switch-host-gcc.sh "$GCC_HOST"
+          else
+            ./switch-host-llvm.sh "$LLVM_CMAKE_PATH"
+          fi
