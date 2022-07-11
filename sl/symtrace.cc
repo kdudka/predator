@@ -192,7 +192,15 @@ template <class TNodeKind> bool isNodeKindReachable(Node *const);
 NodeHandle::~NodeHandle()
 {
 #ifndef NDEBUG
-    (void) isNodeKindReachable<RootNode>(this->parent());
+    // (void) isNodeKindReachable<RootNode>(this->parent());
+    Node *node = this->parent();
+    WorkList<Node *> wl(node);
+    while (wl.next(node)) {
+        CL_BREAK_IF(!node->alive_);
+
+        BOOST_FOREACH(Node *pred, node->parents())
+            wl.schedule(pred);
+    }
 #endif
     this->parent()->notifyDeath(this);
 }
