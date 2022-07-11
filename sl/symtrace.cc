@@ -187,13 +187,8 @@ void replaceNode(Node *tr, Node *by)
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of Trace::NodeHandle
 
-template <class TNodeKind> bool isNodeKindReachable(Node *const);
-
 NodeHandle::~NodeHandle()
 {
-#ifndef NDEBUG
-    (void) isNodeKindReachable<RootNode>(this->parent());
-#endif
     this->parent()->notifyDeath(this);
 }
 
