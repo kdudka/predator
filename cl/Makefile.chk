@@ -20,6 +20,11 @@ CXX_HEADERS ?= *.hh
 
 BUILD_DIR ?= .
 
+ifeq ($(shell uname -s),Darwin)
+	CFLAGS += -I/usr/local/include
+	CXXFLAGS += -I/usr/local/include
+endif
+
 CXXFLAGS += -std=c++11 -pedantic -Wall -Wextra -Wno-variadic-macros -Werror -I../include
 
 .PHONY: check $(C_HEADERS) $(CXX_HEADERS)
