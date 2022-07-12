@@ -219,7 +219,7 @@ macro(add_gcc_adapt_test compiler dir id name)
 
     set(cmd "${cmd} -DPREDATOR")
     set(cmd "${cmd} -DNDEBUG")
-    set(cmd "${cmd} -m32 -O0 -Wall -Wextra")
+    set(cmd "${cmd} -O0 -Wall -Wextra")
 
     # Request the minimal supported standard by GCC adapter:
     # NOTE: Since we're using both C and C++ language compiler and supporting
