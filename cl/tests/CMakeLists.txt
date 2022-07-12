@@ -119,6 +119,10 @@ endmacro()
 else()
 # basic set of the options to compile gcc/clplug.c with SMOKE_PLUG loaded
 set(cmd "${GCC_HOST} ${CFLAGS}")
+if (APPLE)
+    # add brew include directory
+    set(cmd "${cmd} -I/usr/local/include")
+endif()
 set(cmd "${cmd} -I${cl_SOURCE_DIR}")
 set(cmd "${cmd} -I${cl_SOURCE_DIR}/../include")
 set(cmd "${cmd} -I${GCC_INC_DIR}")
