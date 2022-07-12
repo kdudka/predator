@@ -362,7 +362,7 @@ add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
     -c ${cl_SOURCE_DIR}/config_cl.h)
 
 # headers sanity #1
-add_test("headers_sanity-1" gcc -ansi -Wall -Wextra -Werror -pedantic
+add_test("headers_sanity-1" gcc -std=c99 -Wall -Wextra -Werror -pedantic
     -o ${cl_BINARY_DIR}/code_lisitener.h.gch
     -c ${cl_SOURCE_DIR}/../include/cl/code_listener.h)
 
