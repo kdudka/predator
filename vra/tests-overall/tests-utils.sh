@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 #
 # Encoding: utf-8
 # Author:	Daniela Duricekova, xduric00@stud.fit.vutbr.cz

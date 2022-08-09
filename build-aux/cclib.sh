@@ -1,3 +1,4 @@
+# shellcheck shell=bash
 # common code base for sl_build/sl{gcc,gdb,llvm}
 
 die() {
