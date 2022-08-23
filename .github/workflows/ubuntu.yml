@@ -15,7 +15,7 @@ jobs:
       matrix:
         compiler: [clang, gcc]
         host: [gcc, llvm]
-        version: [18.04, 20.04, 22.04]
+        version: [20.04, 22.04]
         include:
           - variant: ', variant: expensive tests'
             compiler: gcc
@@ -47,12 +47,6 @@ jobs:
       - name: Determine default tool versions for Ubuntu ${{ matrix. version }}
         run: |
           case '${{ matrix.version }}' in
-            18.04)
-              GCC_HOST_VERSION=7
-              # LLVM 6 is the last release to use minor version
-              # in binary names.
-              LLVM_HOST_VERSION=6.0
-              ;;
             20.04)
               GCC_HOST_VERSION=9
               LLVM_HOST_VERSION=10
@@ -113,10 +107,6 @@ jobs:
             echo "CC=/usr/bin/clang-$LLVM_HOST_VERSION" >> "$GITHUB_ENV"
             echo "CXX=/usr/bin/clang++-$LLVM_HOST_VERSION" >> "$GITHUB_ENV"
           fi
-
-      - name: '[GCC 7] Apply GCC 7 only patch'
-        if: matrix.host == 'gcc' && env.GCC_HOST_VERSION == 7
-        run: patch -p1 < build-aux/gcc-8.3.0.patch
 
       - name: '[Jammy] Add sanitizers to CXXFLAGS'
         if: matrix.version >= 22.04
