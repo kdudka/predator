@@ -139,7 +139,7 @@ $(GCC_STABLE_TGZ):
 
 $(PASSES_SRC):
 	test ! -e "$(PASSES_SRC)" && \
-		$(GIT) clone --depth 1 https://github.com/VeriFIT/ProStatA.git $(PASSES_SRC)
+		$(GIT) clone --depth 1 https://github.com/lzaoral/ProStatA.git -b macos-linking $(PASSES_SRC)
 
 # build libpasses from sources
 build_passes: $(PASSES_SRC)
