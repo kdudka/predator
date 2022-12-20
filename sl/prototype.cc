@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2012-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -84,7 +84,7 @@ bool ProtoCollector::operator()(const FldHandle &fld)
     while (wl_.next(proto)) {
         ProtoFinder visitor;
         traverseLiveFields(sh, proto, visitor);
-        BOOST_FOREACH(const TObjId proto, visitor.protos)
+        for (const TObjId proto : visitor.protos)
             wl_.schedule(proto);
 
         protoList_.insert(proto);
@@ -123,7 +123,7 @@ void decrementProtoLevel(SymHeap &sh, const TObjId obj)
 {
     TObjSet protoList;
     collectPrototypesOf(protoList, sh, obj);
-    BOOST_FOREACH(const TObjId proto, protoList)
+    for (const TObjId proto : protoList)
         objDecrementProtoLevel(sh, proto);
 }
 
@@ -131,7 +131,7 @@ bool protoCheckConsistency(const SymHeap &sh)
 {
     TObjList allObjs;
     sh.gatherObjects(allObjs);
-    BOOST_FOREACH(const TObjId obj, allObjs) {
+    for (const TObjId obj : allObjs) {
         if (OK_REGION != sh.objKind(obj))
             continue;
 
@@ -139,7 +139,7 @@ bool protoCheckConsistency(const SymHeap &sh)
 
         FldList ptrs;
         sh.gatherLiveFields(ptrs, obj);
-        BOOST_FOREACH(const FldHandle &fld, ptrs) {
+        for (const FldHandle &fld : ptrs) {
             const TObjId sub = sh.objByAddr(fld.value());
             if (OBJ_INVALID == sub)
                 continue;

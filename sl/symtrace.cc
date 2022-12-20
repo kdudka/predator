@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2011-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -34,7 +34,6 @@
 #include <sstream>
 
 #include <boost/algorithm/string/replace.hpp>
-#include <boost/foreach.hpp>
 
 namespace Trace {
 
@@ -72,7 +71,7 @@ void NodeBase::replaceParent(Node *parentOld, Node *parentNew)
 bool hasDupChildren(const Node *node)
 {
     std::set<const NodeBase *> seen;
-    BOOST_FOREACH(const NodeBase *child, node->children())
+    for (const NodeBase *child : node->children())
         if (!insertOnce(seen, child))
             return true;
 
@@ -91,7 +90,7 @@ Node::~Node()
     Node *node;
     WorkList<Node *> wl(this);
     while (wl.next(node)) {
-        BOOST_FOREACH(Node *parent, node->parents()) {
+        for (Node *parent : node->parents()) {
             CL_BREAK_IF(parent->children_.empty());
 
             // temporarily disable node deletion to avoid stack overflow
@@ -171,7 +170,7 @@ void replaceNode(Node *tr, Node *by)
 
     // we intentionally deep-copy the list int order to allow its safe traversal
     const Node::TBaseList children = tr->children();
-    BOOST_FOREACH(NodeBase *const child, children) {
+    for (NodeBase *const child : children) {
         if (child == by)
             // avoid creating a self-loop
             continue;
@@ -223,7 +222,7 @@ bool seekAncestor(TNode tr, const TNode trAncestor, const TNodeSet &blackList)
             // loop detected!
             continue;
 
-        BOOST_FOREACH(const Node *trParent, tr->parents())
+        for (const Node *trParent : tr->parents())
             wl.schedule(trParent);
     }
 
@@ -737,7 +736,7 @@ bool isNodeKindReachable(Node *const from)
         if (dynamic_cast<TNodeKind *>(node))
             return true;
 
-        BOOST_FOREACH(Node *pred, node->parents())
+        for (Node *pred : node->parents())
             wl.schedule(pred);
     }
 
@@ -820,7 +819,7 @@ bool EndPointConsolidator::plotAll(const std::string &name)
     // schedule all end-points
     TWorkList wl;
     TraceEdge item;
-    BOOST_FOREACH(Node *endPoint, d->nset) {
+    for (Node *endPoint : d->nset) {
         item.src = endPoint;
         wl.schedule(item);
     }
@@ -845,7 +844,7 @@ GraphProxy::GraphProxy():
 
 GraphProxy::~GraphProxy()
 {
-    BOOST_FOREACH(Private::TMap::const_reference item, d->gmap)
+    for (Private::TMap::const_reference item : d->gmap)
         delete /* (EndPointConsolidator *) */ item.second;
 
     delete d;
@@ -873,7 +872,7 @@ bool GraphProxy::plotAll()
 {
     bool ok = true;
 
-    BOOST_FOREACH(Private::TMap::const_reference item, d->gmap) {
+    for (Private::TMap::const_reference item : d->gmap) {
         const std::string &name = item.first;
         EndPointConsolidator *const epc = item.second;
 
@@ -906,7 +905,7 @@ void waiveCloneOperation(SymHeap &sh)
 
 void waiveCloneOperation(SymState &state)
 {
-    BOOST_FOREACH(SymHeap *sh, state)
+    for (SymHeap *sh : state)
         Trace::waiveCloneOperation(*sh);
 }
 

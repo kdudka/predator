@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -35,7 +35,6 @@
 #include <map>
 #include <set>
 
-#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 class UniBlockWriter {
@@ -254,7 +253,7 @@ TValId handleCustomValue(DeepCopyData &dc, const TValId valSrc)
 
 void trackUsesCore(DeepCopyData &dc, const FldList &uses)
 {
-    BOOST_FOREACH(const FldHandle &fldSrc, uses) {
+    for (const FldHandle &fldSrc : uses) {
         const TObjId objSrc = fldSrc.obj();
         CL_BREAK_IF(!dc.src.isValid(objSrc));
         addObjectIfNeeded(dc, objSrc);
@@ -366,7 +365,7 @@ void prune(const SymHeap &src, SymHeap &dst,
     DeepCopyData::TCut snap(cut);
 
     // go through all program variables
-    BOOST_FOREACH(CVar cv, snap) {
+    for (CVar cv : snap) {
         const TObjId srcReg = dc.src.regionByVar(cv, /* createIfNeeded */ true);
         const TObjId dstReg = dc.dst.regionByVar(cv, /* createIfNeeded */ true);
         digFields(dc, srcReg, dstReg);
@@ -398,7 +397,7 @@ void splitHeapByCVars(
 
     // make an intersection with the cut
     DeepCopyData::TCut cset;
-    BOOST_FOREACH(const CVar &cv, cut) {
+    for (const CVar &cv : cut) {
         if (hasKey(live, cv))
             cset.insert(cv);
     }
@@ -425,7 +424,7 @@ void splitHeapByCVars(
     // compute set difference (we cannot use std::set_difference since 'all' is
     // not sorted, which would break the algorithm badly)
     DeepCopyData::TCut complement;
-    BOOST_FOREACH(const CVar &cv, all)
+    for (const CVar &cv : all)
         if (!hasKey(cset, cv))
             complement.insert(cv);
 

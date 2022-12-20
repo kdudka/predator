@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -27,8 +27,6 @@
 #include <sstream>
 #include <string>
 #include <vector>
-
-#include <boost/foreach.hpp>
 
 #define NULLIFY(what) \
     memset(&(what), 0, sizeof (what))
@@ -119,7 +117,7 @@ using std::string;
 
 ClfUnfoldSwitch::~ClfUnfoldSwitch()
 {
-    BOOST_FOREACH(struct cl_var *clv, ptrs_) {
+    for (struct cl_var *clv : ptrs_) {
         delete clv;
     }
 }

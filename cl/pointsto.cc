@@ -34,8 +34,6 @@
 
 #include <algorithm>
 
-#include <boost/foreach.hpp>
-
 int pt_dbg_level = CL_DEBUG_POINTS_TO;
 
 namespace CodeStorage {
@@ -69,7 +67,7 @@ bool bindVarList(
     CL_BREAK_IF(existsError(ctx.stor));
 
     bool changed = false;
-    BOOST_FOREACH(const Item *i, nl) {
+    for (const Item *i : nl) {
         if (!hasKey(ptg.map, i->uid())) {
             // this variable is still not in target graph
             bindItem(ptg, target, i);
@@ -159,7 +157,7 @@ void joinNodesS(
         // just skip -- do not fail
         return;
 
-    BOOST_FOREACH(const Item *i, nodeRight->variables)
+    for (const Item *i : nodeRight->variables)
         // re-map nodeB's variables to nodeA
         bindItem(ptg, nodeLeft, i);
 
@@ -193,7 +191,7 @@ void joinNodesS(
     CL_BREAK_IF(existsError(ctx.stor));
 
     rightTarget = NULL;
-    BOOST_FOREACH(TNodePair &p, pairs) {
+    for (TNodePair &p : pairs) {
         if (p.first != nodeRight) {
             // handle in-coming to nodeRight
             CL_BREAK_IF(p.second != nodeRight);
@@ -452,7 +450,7 @@ bool follows(const Node *a, const Node *b)
 
     const Node *processed;
     while (wl.next(processed)) {
-        BOOST_FOREACH(const Node *next, processed->outNodes) {
+        for (const Node *next : processed->outNodes) {
             if (next == b)
                 return true;
             wl.schedule(next);
@@ -477,7 +475,7 @@ bool followsGlobal(
         const Var                      *lVar,
         const Var                      *rVar)
 {
-    BOOST_FOREACH(Fnc *fnc, stor.fncs)
+    for (Fnc *fnc : stor.fncs)
         if (follows(fnc->ptg, lVar, rVar))
             return true;
 
@@ -491,11 +489,11 @@ bool isPointed(const Graph &ptg, const Var *v)
     if (!target)
         return false;
 
-    BOOST_FOREACH(const Node *pointer, target->inNodes) {
+    for (const Node *pointer : target->inNodes) {
         if (pointer == target) {
             // self loop on this node -- is there any other variable in this
             // node?
-            BOOST_FOREACH(const Item *other, pointer->variables) {
+            for (const Item *other : pointer->variables) {
                 switch (other->code) {
                     case PT_ITEM_RET:
                         return true;
@@ -520,7 +518,7 @@ bool isPointed(const Graph &ptg, const Var *v)
 
 bool isPointedGlob(const CodeStorage::Storage &stor, const Var *var)
 {
-    BOOST_FOREACH(const Fnc *fnc, stor.fncs)
+    for (const Fnc *fnc : stor.fncs)
         if (isPointed(fnc->ptg, var))
             return true;
     return isPointed(stor.ptd.gptg, var);
@@ -577,7 +575,7 @@ void chkOutNodes(const Graph &, const Node *n)
     CL_BREAK_IF(!outNode);
 
     bool found = false;
-    BOOST_FOREACH(const Node *inNode, outNode->inNodes) {
+    for (const Node *inNode : outNode->inNodes) {
         if (inNode != n)
             continue;
 
@@ -594,7 +592,7 @@ void chkInNodes(const Graph &, const Node *n)
 {
     const TNodeList &inNodes = n->inNodes;
 
-    BOOST_FOREACH(const Node *inNode, inNodes) {
+    for (const Node *inNode : inNodes) {
         assert(hasOutputS(inNode));
         assert(hasOutputS(inNode) == n);
         (void)inNode;
@@ -603,7 +601,7 @@ void chkInNodes(const Graph &, const Node *n)
 
 void chkVariables(const Graph &g, const TItemList &itemList, const Node *node)
 {
-    BOOST_FOREACH(const Item *it, itemList) {
+    for (const Item *it : itemList) {
         assert(hasKey(g.map, it->uid()));
         assert(existsUid(g, it->uid()) == node);
         (void)it;
@@ -618,7 +616,7 @@ void chkVariables(const Graph &g, const TItemList &itemList, const Node *node)
 void chkGraphS(const Graph &g)
 {
     WorkList<const Node *> wl;
-    BOOST_FOREACH(TMap::const_reference pair, g.map) {
+    for (TMap::const_reference pair : g.map) {
         wl.schedule(pair.second);
     }
 
@@ -642,7 +640,7 @@ void chkGraphS(const Graph &g)
  */
 bool existsError(const Storage &stor)
 {
-    BOOST_FOREACH(const Fnc *fnc, stor.fncs) {
+    for (const Fnc *fnc : stor.fncs) {
         chkGraphS(fnc->ptg);
     }
 

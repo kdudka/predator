@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -29,7 +29,6 @@
 #include <map>
 #include <stack>
 
-#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 namespace CodeStorage {
@@ -162,8 +161,8 @@ VarDb::VarDb():
 
 VarDb::~VarDb()
 {
-    BOOST_FOREACH(const Var &var, vars_)
-        BOOST_FOREACH(const Insn *insn, var.initials)
+    for (const Var &var : vars_)
+        for (const Insn *insn : var.initials)
             destroyInsn(const_cast<Insn *>(insn));
 
     delete d;
@@ -358,12 +357,12 @@ const TTargetList& Block::targets() const
 
 bool Block::isLoopEntry() const
 {
-    BOOST_FOREACH(const Block *ref, inbound_) {
+    for (const Block *ref : inbound_) {
         const Insn *term = ref->back();
         const TTargetList &tList = ref->targets();
 
         // go through loop closing edges and check their target
-        BOOST_FOREACH(const unsigned idx, term->loopClosingTargets)
+        for (const unsigned idx : term->loopClosingTargets)
             if (tList[idx] == this)
                 return true;
     }

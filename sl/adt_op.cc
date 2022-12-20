@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2013-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -28,15 +28,13 @@
 #include <iomanip>
 #include <sstream>
 
-#include <boost/foreach.hpp>
-
 namespace AdtOp {
 
 int countObjsInContShapes(const TShapeListByHeapIdx &slistByHeap)
 {
     int cnt = 0;
-    BOOST_FOREACH(const TShapeList &slist, slistByHeap)
-        BOOST_FOREACH(const Shape &shape, slist)
+    for (const TShapeList &slist : slistByHeap)
+        for (const Shape &shape : slist)
             cnt += shape.length;
 
     return cnt;
@@ -68,15 +66,15 @@ void OpTemplate::updateMetaIfNeeded() const
 
     // get the lists of input/output heaps from all footprints
     SymHeapList inState, outState;
-    BOOST_FOREACH(const OpFootprint *fp, fList_) {
+    for (const OpFootprint *fp : fList_) {
         const SymHeap &in = fp->input;
         const SymHeap &out = fp->output;
         inState.insert(in);
         outState.insert(out);
 #ifndef NDEBUG
-        BOOST_FOREACH(const TObjId obj, fp->inArgs)
+        for (const TObjId obj : fp->inArgs)
             CL_BREAK_IF(!in.isValid(obj) || OK_REGION != in.objKind(obj));
-        BOOST_FOREACH(const TObjId obj, fp->outArgs)
+        for (const TObjId obj : fp->outArgs)
             CL_BREAK_IF(!out.isValid(obj) || OK_REGION != out.objKind(obj));
 #endif
     }
@@ -99,10 +97,10 @@ void contShapeIdsByShapeList(
         const SymHeap              &sh,
         const TShapeList           &shapeList)
 {
-    BOOST_FOREACH(const Shape &shape, shapeList) {
+    for (const Shape &shape : shapeList) {
         TObjSet contShapeObjs;
         objSetByShape(&contShapeObjs, sh, shape);
-        BOOST_FOREACH(const TObjId obj, contShapeObjs)
+        for (const TObjId obj : contShapeObjs)
             pDst->insert(static_cast<int>(obj));
     }
 }
@@ -111,7 +109,7 @@ void OpTemplate::plot() const
 {
     unsigned idx = 0U;
 
-    BOOST_FOREACH(const OpFootprint *fprint, fList_) {
+    for (const OpFootprint *fprint : fList_) {
         // convert the ID to string
         std::ostringstream str;
         str << name_ << "-"
@@ -135,7 +133,7 @@ void OpTemplate::plot() const
 // implementation of OpCollection
 void OpCollection::plot() const
 {
-    BOOST_FOREACH(const OpTemplate *tpl, tList_)
+    for (const OpTemplate *tpl : tList_)
         tpl->plot();
 }
 

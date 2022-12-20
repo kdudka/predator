@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -33,8 +33,6 @@
 
 #include <algorithm>                // for std::copy()
 #include <set>
-
-#include <boost/foreach.hpp>
 
 // costs are now hard-wired in the paper, so they were removed from config.h
 #define SE_PROTO_COST_SYM           0
@@ -150,7 +148,7 @@ bool validatePointingObjects(
         whiteList.insert(nextPrev);
     }
 
-    BOOST_FOREACH(const FldHandle &fld, refs) {
+    for (const FldHandle &fld : refs) {
         if (hasKey(blackList, fld))
             return false;
 
@@ -186,7 +184,7 @@ bool validatePrototypes(
     TObjSet allowedReferers(protos);
     allowedReferers.insert(obj);
 
-    BOOST_FOREACH(const TObjId proto, protos) {
+    for (const TObjId proto : protos) {
         if (!validatePointingObjects(sh, props, proto, OBJ_INVALID, OBJ_INVALID,
                                      allowedReferers))
             return false;
@@ -300,7 +298,7 @@ bool isPointedByVar(SymHeap &sh, const TObjId obj)
 {
     FldList refs;
     sh.pointedBy(refs, obj);
-    BOOST_FOREACH(const FldHandle fld, refs) {
+    for (const FldHandle &fld : refs) {
         const TObjId refObj = fld.obj();
         const EStorageClass code = sh.objStorClass(refObj);
         if (isProgramVar(code))
@@ -626,12 +624,12 @@ bool selectBestAbstraction(
 
         // go through binding candidates
         const SegCandidate &segc = candidates[idx];
-        BOOST_FOREACH(const ShapeProps &props, segc.propsList) {
+        for (const ShapeProps &props : segc.propsList) {
             TRankMap rMap;
             segDiscover(rMap, sh, props, segc.entry);
 
             // go through all cost/length pairs
-            BOOST_FOREACH(TRankMap::const_reference rank, rMap) {
+            for (TRankMap::const_reference rank : rMap) {
                 const int len = rank.second;
                 if (len <= 0)
                     continue;
@@ -682,7 +680,7 @@ bool discoverBestAbstraction(Shape *pDst, SymHeap &sh)
     // go through all potential segment entries
     TObjList heapObjs;
     sh.gatherObjects(heapObjs, isOnHeap);
-    BOOST_FOREACH(const TObjId obj, heapObjs) {
+    for (const TObjId obj : heapObjs) {
         /// probe neighbouring objects
         SegCandidate segc;
         digShapePropsCandidates(&segc.propsList, sh, obj);

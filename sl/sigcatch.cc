@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2011-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -23,8 +23,6 @@
 #include "util.hh"
 
 #include <map>
-
-#include <boost/foreach.hpp>
 
 #ifndef _NSIG
 #   define _NSIG 0x100
@@ -75,7 +73,7 @@ bool SignalCatcher::cleanup()
     bool ok = true;
 
     // uninstall signal handler
-    BOOST_FOREACH(TBackup::const_reference item, ::backup) {
+    for (TBackup::const_reference item : ::backup) {
         if (SIG_ERR == signal(item.first, item.second))
             ok = false;
     }
@@ -103,7 +101,7 @@ bool SignalCatcher::caught(int signum)
 
 bool SignalCatcher::caught(int *pSignum)
 {
-    BOOST_FOREACH(TBackup::const_reference item, ::backup) {
+    for (TBackup::const_reference item : ::backup) {
         const int signum = item.first;
         if (!caught(signum))
             continue;

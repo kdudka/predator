@@ -19,8 +19,6 @@
 #include "Utility.h"
 #include "OperandToMemoryPlace.h"
 
-#include <boost/foreach.hpp>
-
 using std::cout;
 using std::endl;
 using std::iterator;
@@ -50,7 +48,7 @@ void GlobAnalysis::storeGlobVar(const CodeStorage::Storage &stor)
 {
 	const VarDb &vars = stor.vars;
 
-	BOOST_FOREACH(const Var& var, vars) {
+	for (const Var& var : vars) {
 		if (VAR_GL == var.code) {
 			GlobAnalysis::idOfGlobVarSet.insert(var.uid);
 		}
@@ -63,7 +61,7 @@ void GlobAnalysis::storeGlobVar(const CodeStorage::Storage &stor)
 */
 void GlobAnalysis::initGlobVar()
 {
-	BOOST_FOREACH(int uid, GlobAnalysis::idOfGlobVarSet) {
+	for (int uid : GlobAnalysis::idOfGlobVarSet) {
 		GlobAnalysis::globVarInit[uid] = false;
 	}
 }
@@ -122,7 +120,7 @@ void GlobAnalysis::computeGlobAnalysisForInsn(const Insn *insn)
 */
 void GlobAnalysis::computeGlobAnalysisForBlock(const Block *block)
 {
-	BOOST_FOREACH(const Insn *insn, *block) {
+	for (const Insn *insn : *block) {
 		GlobAnalysis::computeGlobAnalysisForInsn(insn);
 	}
 }
@@ -147,7 +145,7 @@ void GlobAnalysis::computeGlobAnalysisForFnc(const Fnc &fnc)
 
 		// Gets the successors of the processed block.
 		const TTargetList &succs = block->targets();
-		BOOST_FOREACH(const TTargetList::value_type &succ, succs) {
+		for (const TTargetList::value_type &succ : succs) {
 			if (doneSet.find(succ) == doneSet.end()) {
 				// We schedule successors of this block that were not processed
 				// before.
@@ -170,7 +168,7 @@ void GlobAnalysis::computeGlobAnalysis(const CodeStorage::Storage &stor)
 	// changed during analysis.
 	GlobAnalysis::initGlobVar();
 
-	BOOST_FOREACH(const Fnc* pFnc, stor.fncs) {
+	for (const Fnc* pFnc : stor.fncs) {
 		const Fnc &fnc = *pFnc;
 
 		if (!isDefined(fnc))
@@ -197,7 +195,7 @@ bool GlobAnalysis::isModified(int uid)
 */
 ostream& GlobAnalysis::printGlobAnalysis(std::ostream &os)
 {
-	BOOST_FOREACH(const ValueAnalysis::MemoryPlaceToRangeMap::value_type &g,
+	for (const ValueAnalysis::MemoryPlaceToRangeMap::value_type &g :
 		GlobAnalysis::globVarMap) {
 		os << g.first << ": " << g.second << endl;
 	}
@@ -473,7 +471,7 @@ void GlobAnalysis::processInitial(const Insn *insn)
 */
 void GlobAnalysis::initGlobVarMap(const Storage &stor)
 {
-	BOOST_FOREACH(int uid, GlobAnalysis::getGlobVar()) {
+	for (int uid : GlobAnalysis::getGlobVar()) {
 		if (GlobAnalysis::isModified(uid)) {
 			// The global variable can be modified. There is no need to set
 			// anything. In every function, first using of this variable causes
@@ -484,7 +482,7 @@ void GlobAnalysis::initGlobVarMap(const Storage &stor)
 			const VarDb &vars = stor.vars;
 			const Var &var = vars[uid];
 
-			BOOST_FOREACH(const Insn* insn, var.initials) {
+			for (const Insn* insn : var.initials) {
 				processInitial(insn);
 			}
 		}

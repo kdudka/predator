@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2013-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -135,7 +135,7 @@ bool selectObjsToCompare(
 
     // gather the set of all objects in *pObjList1
     TObjSet objSet1;
-    BOOST_FOREACH(const TObjId obj1, *pObjList1)
+    for (const TObjId obj1 : *pObjList1)
         objSet1.insert(obj1);
 
     TObjId curr = beg;
@@ -293,7 +293,7 @@ bool diffUnsetField(DiffHeapsCtx &ctx, const FldHandle &fld1, const TObjId obj2)
 
 bool diffFields(DiffHeapsCtx &ctx, const TObjList &objList1, const TObjId obj2)
 {
-    BOOST_FOREACH(const TObjId obj1, objList1) {
+    for (const TObjId obj1 : objList1) {
         if (!ctx.sh1.isValid(obj1))
             continue;
 
@@ -306,21 +306,21 @@ bool diffFields(DiffHeapsCtx &ctx, const TObjList &objList1, const TObjId obj2)
 
         FldList fldList1;
         ctx.sh1.gatherLiveFields(fldList1, obj1);
-        BOOST_FOREACH(const FldHandle &fld1, fldList1)
+        for (const FldHandle &fld1 : fldList1)
             if (!diffUnsetField(ctx, fld1, obj2))
                 return false;
     }
 
     FldList fldList2;
     ctx.sh2.gatherLiveFields(fldList2, obj2);
-    BOOST_FOREACH(const FldHandle &fld2, fldList2) {
+    for (const FldHandle &fld2 : fldList2) {
         TObjList selectedObjs1(objList1);
         if (!selectObjsToCompare(&selectedObjs1, ctx, fld2)) {
             MO_DEBUG("selectObjsToCompare() has failed");
             return false;
         }
 
-        BOOST_FOREACH(const TObjId obj1, selectedObjs1)
+        for (const TObjId obj1 : selectedObjs1)
             if (!diffSetField(ctx, obj1, fld2))
                 return false;
     }
@@ -333,7 +333,7 @@ bool findSingleDls(BindingOff *pDst, const SymHeap &sh, const TObjList &objList)
 {
     unsigned dlsCount = 0U;
 
-    BOOST_FOREACH(const TObjId obj, objList) {
+    for (const TObjId obj : objList) {
         const EObjKind kind = sh.objKind(obj);
         switch (kind) {
             case OK_REGION:
@@ -414,7 +414,7 @@ void dropConcretizationOps(DiffHeapsCtx &ctx)
 {
     TMetaOpSet result;
 
-    BOOST_FOREACH(const MetaOperation &mo, ctx.opSet) {
+    for (const MetaOperation &mo : ctx.opSet) {
         if (isConcretizationOp(ctx, mo))
             continue;
 
@@ -432,7 +432,7 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
 
     TObjList objList2;
     ctx.sh2.gatherObjects(objList2);
-    BOOST_FOREACH(const TObjId obj2, objList2) {
+    for (const TObjId obj2 : objList2) {
         TObjList objList1;
         ctx.idMap.query<D_RIGHT_TO_LEFT>(&objList1, obj2);
 
@@ -451,13 +451,13 @@ bool diffHeaps(TMetaOpSet *pDst, const SymHeap &sh1, const SymHeap &sh2)
 
     TObjList objList1;
     ctx.sh1.gatherObjects(objList1);
-    BOOST_FOREACH(const TObjId obj1, objList1) {
+    for (const TObjId obj1 : objList1) {
         TObjList objList2;
         ctx.idMap.query<D_LEFT_TO_RIGHT>(&objList2, obj1);
         if (objList2.empty())
             objList2.push_back(OBJ_INVALID);
 
-        BOOST_FOREACH(const TObjId obj2, objList2) {
+        for (const TObjId obj2 : objList2) {
             if (!ctx.sh2.isValid(obj2)) {
                 if (OK_REGION != ctx.sh2.objKind(obj2))
                     // only regions are supported with MO_FREE for now

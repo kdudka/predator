@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2011-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -28,8 +28,6 @@
 
 #include <set>
 #include <stack>
-
-#include <boost/foreach.hpp>
 
 static int debugLoopScan = CL_DEBUG_LOOP_SCAN;
 
@@ -148,7 +146,7 @@ void findLoopClosingEdges(Storage &stor)
     StopWatch watch;
 
     // go through all _defined_ functions
-    BOOST_FOREACH(Fnc *pFnc, stor.fncs) {
+    for (Fnc *pFnc : stor.fncs) {
         Fnc &fnc = *pFnc;
         if (!isDefined(fnc))
             continue;

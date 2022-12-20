@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -27,7 +27,6 @@
 
 #include <sstream>
 
-#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 bool operator==(const struct cl_type &a, const struct cl_type &b)
@@ -211,7 +210,7 @@ int offsetByIdxChain(const struct cl_type *clt, const TFieldIdxChain &ic)
 {
     int off = 0;
 
-    BOOST_FOREACH(const int idx, ic) {
+    for (const int idx : ic) {
         CL_BREAK_IF(clt->item_cnt <= idx);
         const struct cl_type_item *item = clt->items + idx;
         off += item->offset;

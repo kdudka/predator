@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -42,8 +42,6 @@
 #include <set>
 #include <sstream>
 #include <stdexcept>
-
-#include <boost/foreach.hpp>
 
 LOCAL_DEBUG_PLOTTER(nondetCond, DEBUG_SE_NONDET_COND)
 
@@ -293,7 +291,7 @@ bool isLoopClosingEdge(
         const CodeStorage::Insn     *term,
         const CodeStorage::Block    *ofBlock)
 {
-    BOOST_FOREACH(const unsigned idxTarget, term->loopClosingTargets)
+    for (const unsigned idxTarget : term->loopClosingTargets)
         if (term->targets[idxTarget] == ofBlock)
             return true;
 
@@ -368,7 +366,7 @@ void SymExecEngine::updateStateInBranch(
 
     CL_BREAK_IF(!dst.size());
 
-    BOOST_FOREACH(SymHeap *sh, dst) {
+    for (SymHeap *sh : dst) {
 #if DEBUG_SE_NONDET_COND < 2
         if (hasAbstract)
 #endif
@@ -914,7 +912,7 @@ void SymExecEngine::printStats() const
         this->printStatsHelper(block_);
 
     // go through scheduled basic blocks
-    BOOST_FOREACH(const BlockScheduler::TBlock bb, bset) {
+    for (const BlockScheduler::TBlock bb : bset) {
         if (bb == block_)
             // already handled
             continue;
@@ -942,7 +940,7 @@ void SymExecEngine::dumpStateMap(int flags)
     // obtain the list of visisted blocks
     const BlockScheduler::TBlockList &bbs = sched_.done();
 
-    BOOST_FOREACH(const BlockScheduler::TBlock block, bbs) {
+    for (const BlockScheduler::TBlock block : bbs) {
         const std::string name = block->name();
 
         SymStateWithJoin state(stateMap_[block]);
@@ -959,7 +957,7 @@ void SymExecEngine::dumpStateMap(int flags)
             if (flags & /* plot heaps */ 0x2) {
                 std::ostringstream str;
                 str << "block-" << name << "-insn-" << idx << "-heap";
-                BOOST_FOREACH(const SymHeap *sh, state)
+                for (const SymHeap *sh : state)
                     plotHeap(*sh, str.str(), loc);
             }
 
@@ -967,7 +965,7 @@ void SymExecEngine::dumpStateMap(int flags)
                 break;
 
             SymStateWithJoin result;
-            BOOST_FOREACH(const SymHeap *pHeap, state) {
+            for (const SymHeap *pHeap : state) {
                 SymHeap sh(*pHeap);
                 SymExecCore core(sh, &bt_ /* TODO: propagate params_ */);
                 if (!core.exec(result, *insn))
@@ -1096,7 +1094,7 @@ thr_reached:
 SymExec::~SymExec()
 {
     // NOTE this is actually the right direction (from top of the backtrace)
-    BOOST_FOREACH(const ExecStackItem &item, execStack_) {
+    for (const ExecStackItem &item : execStack_) {
 
         // invalidate call ctx
         item.ctx->invalidate();
@@ -1283,7 +1281,7 @@ void SymExec::printStats() const
 {
     // TODO: print SymCallCache stats here as soon as we have implemented some
 
-    BOOST_FOREACH(const ExecStackItem &item, execStack_) {
+    for (const ExecStackItem &item : execStack_) {
         const IStatsProvider *provider = item.eng;
         provider->printStats();
     }

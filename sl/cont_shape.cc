@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2013-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -113,7 +113,7 @@ bool ApparentShapeDetector::probeEntry(const TObjId obj, const ShapeProps &props
     if (taken.empty())
         taken.swap(seen);
     else {
-        BOOST_FOREACH(const TObjId seenObj, seen)
+        for (const TObjId seenObj : seen)
             taken.insert(seenObj);
     }
 
@@ -136,7 +136,7 @@ void detectApparentShapes(TShapeList &dst, SymHeap &sh)
     // go through all potential shape container entries
     TObjList heapObjs;
     sh.gatherObjects(heapObjs, isOnHeap);
-    BOOST_FOREACH(const TObjId obj, heapObjs) {
+    for (const TObjId obj : heapObjs) {
         if (sh.objProtoLevel(obj))
             // FIXME: we support only L0 data structures for now
             continue;
@@ -160,7 +160,7 @@ void detectApparentShapes(TShapeList &dst, SymHeap &sh)
         digShapePropsCandidates(&propList, sh, obj);
 
         // go through all potential shape properties candidates
-        BOOST_FOREACH(const ShapeProps &props, propList) {
+        for (const ShapeProps &props : propList) {
             if (OK_DLS != props.kind)
                 // FIXME: we support only OK_DLS for now
                 continue;
@@ -213,7 +213,7 @@ void digHeadPtrs(
         sh.pointedBy(refs, end);
 
     // go through the list of references
-    BOOST_FOREACH(const FldHandle &fld, refs) {
+    for (const FldHandle &fld : refs) {
         const TObjId obj = fld.obj();
         const EStorageClass code = sh.objStorClass(obj);
         if (!isProgramVar(code))
@@ -317,7 +317,7 @@ bool detectImpliedShape(Shape *pDst, SymHeap &sh, const ShapePattern &sp)
 {
     TValId valHead = VAL_INVALID;
 
-    BOOST_FOREACH(const TPointer &ptr, sp.headPtrs) {
+    for (const TPointer &ptr : sp.headPtrs) {
         const CVar &var = ptr.first;
         const TOffset off = ptr.second;
 
@@ -393,10 +393,10 @@ void ImpliedShapeDetector::appendImpliedShapes(TShapeList *pDst, SymHeap &sh)
 {
     // eliminate duplicates (one container shape can be implied by many)
     TShapeSet found;
-    BOOST_FOREACH(const Shape &shape, *pDst)
+    for (const Shape &shape : *pDst)
         found.insert(shape);
 
-    BOOST_FOREACH(const ShapePattern &sp, plist_) {
+    for (const ShapePattern &sp : plist_) {
         Shape shape;
 
         if (useHeadChk_) {
@@ -408,7 +408,7 @@ void ImpliedShapeDetector::appendImpliedShapes(TShapeList *pDst, SymHeap &sh)
 
         TObjList allObjs;
         sh.gatherObjects(allObjs);
-        BOOST_FOREACH(const TObjId obj, allObjs) {
+        for (const TObjId obj : allObjs) {
             if (detectImpliedShapeBlindly(&shape, sh, sp, obj)
                     && insertOnce(found, shape))
                 pDst->push_back(shape);
@@ -431,7 +431,7 @@ struct DetectionCtx {
 
 bool hasAnyProgramVar(const SymState &state)
 {
-    BOOST_FOREACH(const SymHeap *pSh, state) {
+    for (const SymHeap *pSh : state) {
         TObjList vars;
         pSh->gatherObjects(vars, isProgramVar);
         if (!vars.empty())
@@ -457,7 +457,7 @@ void detectImpliedShapes(DetectionCtx &ctx)
         SymHeap &sh = const_cast<SymHeap &>(ctx.srcState[i]);
         const TShapeList &apparentShapes = ctx.dstArray[i];
 
-        BOOST_FOREACH(const Shape &shape, apparentShapes)
+        for (const Shape &shape : apparentShapes)
             shapeDetector.indexShape(sh, shape);
     }
 

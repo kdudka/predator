@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2011-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -25,8 +25,6 @@
 #include <map>
 #include <set>
 #include <vector>
-
-#include <boost/foreach.hpp>
 
 #define IA_AGGRESSIVE_OPTIMIZATION          0
 
@@ -171,7 +169,7 @@ void IntervalArena<TInt, TFld>::sub(const key_type &key, const TFld fld)
     }
 
     // go through the recoverList and re-insert the missing parts
-    BOOST_FOREACH(const value_type &rItem, recoverList) {
+    for (const value_type &rItem : recoverList) {
         const key_type &key = rItem.first;
         const TFld fld = rItem.second;
         const TInt beg = key.first;
@@ -232,11 +230,11 @@ void IntervalArena<TInt, TFld>::reverseLookup(TKeySet &dst, const TFld fld)
 {
     key_type key;
 
-    BOOST_FOREACH(typename TCont::const_reference item, cont_) {
+    for (typename TCont::const_reference item : cont_) {
         key/* end */.second = item/* end */.first;
         const TLine &line = item.second;
 
-        BOOST_FOREACH(typename TLine::const_reference lineItem, line) {
+        for (typename TLine::const_reference lineItem : line) {
             const TLeaf &leaf = lineItem.second;
             if (!hasKey(leaf, fld))
                 continue;

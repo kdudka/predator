@@ -8,7 +8,6 @@
 #undef NDEBUG   // It is necessary for using assertions.
 
 #include <iostream>
-#include <boost/foreach.hpp>
 #include <cl/easy.hh>
 
 #include "ValueAnalysis.h"
@@ -31,7 +30,7 @@ void clEasyRun(const Storage &stor, const char *)
 	GlobAnalysis::computeGlobAnalysis(stor);
 	// GlobAnalysis::printGlobAnalysis(std::cout);
 
-	BOOST_FOREACH(const Fnc* pFnc, stor.fncs) {
+	for (const Fnc* pFnc : stor.fncs) {
 		const Fnc &fnc = *pFnc;
 
 		if (!isDefined(fnc))

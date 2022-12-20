@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2013-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -38,8 +38,6 @@
 #include <fstream>
 #include <iomanip>
 #include <map>
-
-#include <boost/foreach.hpp>
 
 namespace FixedPoint {
 
@@ -227,10 +225,10 @@ void plotInsn(
         const TShapeList &shapeList = locState.shapeListByHeapIdx[shIdx];
 
         TIdSet contShapeIds;
-        BOOST_FOREACH(const Shape &shape, shapeList) {
+        for (const Shape &shape : shapeList) {
             TObjSet contShapeObjs;
             objSetByShape(&contShapeObjs, sh, shape);
-            BOOST_FOREACH(const TObjId obj, contShapeObjs)
+            for (const TObjId obj : contShapeObjs)
                 contShapeIds.insert(static_cast<int>(obj));
         }
 
@@ -281,8 +279,8 @@ void plotFncCore(
         plotInsn(&heapSet, plot, varByShape, locIdx, locLabelSuffix, locState);
 
         // plot trace edges
-        BOOST_FOREACH(const TTraceEdgeList &tList, locState.traceOutEdges) {
-            BOOST_FOREACH(const TraceEdge *te, tList) {
+        for (const TTraceEdgeList &tList : locState.traceOutEdges) {
+            for (const TraceEdge *te : tList) {
                 plot.out << SH_NODE(te->src) << " -> " << SH_NODE(te->dst);
 
                 const unsigned cnt = te->csMap.size();
@@ -369,16 +367,16 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
         CL_ERROR("[ADT] failed to replace container operations");
 
     // remove matched heaps not representing any instructions to be replaced
-    BOOST_FOREACH(FootprintMatch &fm, matchList) {
+    for (FootprintMatch &fm : matchList) {
         CL_BREAK_IF(fm.matchedHeaps.empty());
         fm.matchedHeaps.pop_back();
     }
 
     // compute set of matched heaps
     THeapSet heapSet;
-    BOOST_FOREACH(FootprintMatch &fm, matchList) {
+    for (FootprintMatch &fm : matchList) {
         CL_BREAK_IF(fm.matchedHeaps.empty());
-        BOOST_FOREACH(const THeapIdent heap, fm.matchedHeaps)
+        for (const THeapIdent &heap : fm.matchedHeaps)
             heapSet.insert(heap);
     }
 
@@ -450,7 +448,7 @@ void StateByInsn::plotAll()
     if (GlConf::data.detectContainers)
         AdtOp::loadDefaultOperations(&adtOps, stor);
 
-    BOOST_FOREACH(TFncMap::const_reference fncItem, d->visitedFncs) {
+    for (TFncMap::const_reference fncItem : d->visitedFncs) {
         const TFnc fnc = fncItem.second;
         const TLoc loc = locationOf(*fnc);
         CL_NOTE_MSG(loc, "plotting fixed-point of " << nameOf(*fnc) << "()...");

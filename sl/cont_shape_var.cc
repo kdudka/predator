@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2014-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -88,13 +88,13 @@ bool assignOpPorts(
         const TOpList              &opList)
 {
     // iterate through container operations
-    BOOST_FOREACH(const TMatchIdxList &idxList, opList) {
+    for (const TMatchIdxList &idxList : opList) {
         // we always allocate a pair of vars (even if one would suffice)
         TShapeVarId inVar = acquireFreshShapeVar();
         TShapeVarId outVar = acquireFreshShapeVar();
 
         // iterate through template matches for this operation
-        BOOST_FOREACH(const TMatchIdx idx, idxList) {
+        for (const TMatchIdx idx : idxList) {
             const FootprintMatch &fm = matchList[idx];
             const TTemplateIdx tplIdx = fm.footprint.first;
             const TFootprintIdx fpIdx = fm.footprint.second;
@@ -139,7 +139,7 @@ void propagateVarsLookAhead(
     using namespace FixedPoint;
 
     TShapeIdentList siblingShapeList;
-    BOOST_FOREACH(TShapeVarByShape::const_reference item, varMap) {
+    for (TShapeVarByShape::const_reference item : varMap) {
         const TShapeIdent &shape = item.first;
         const TShapeVarId var = item.second;
         if (var != varNow)
@@ -152,10 +152,10 @@ void propagateVarsLookAhead(
         siblingShapeList.push_back(shape);
     }
 
-    BOOST_FOREACH(const TShapeIdent siblingShape, siblingShapeList) {
+    for (const TShapeIdent &siblingShape : siblingShapeList) {
         TShapeIdentList prevShapes;
         findPredecessors(&prevShapes, siblingShape, progState);
-        BOOST_FOREACH(const TShapeIdent &prev, prevShapes) {
+        for (const TShapeIdent &prev : prevShapes) {
             const TShapeVarByShape::const_iterator it = varMap.find(prev);
             if (varMap.end() == it)
                 // previous shape has no shape var assigned yet
@@ -183,7 +183,7 @@ bool propagateVars(
     std::stack<TShapeIdent> todo;
 
     // iterate through template matches
-    BOOST_FOREACH(const FootprintMatch &fm, matchList) {
+    for (const FootprintMatch &fm : matchList) {
         const TTemplateIdx tplIdx = fm.footprint.first;
         const TFootprintIdx fpIdx = fm.footprint.second;
 
@@ -231,7 +231,7 @@ bool propagateVars(
         propagateVarsLookAhead(&varByLoc, *pMap, varNow, locNow, progState);
 
         // propagate current var backwards
-        BOOST_FOREACH(const TShapeIdent &prev, prevShapes) {
+        for (const TShapeIdent &prev : prevShapes) {
             if (hasKey(pMap, prev))
                 // var already assigned to prev
                 continue;
@@ -323,7 +323,7 @@ bool ShapeVarTransMap::resolveDstVar(
     const TVarAssign &varAssign = assignMap_[progTrans];
 
     // TODO: keep reverse mapping to optimize lookup?
-    BOOST_FOREACH(TVarAssign::const_reference item, varAssign) {
+    for (TVarAssign::const_reference item : varAssign) {
         if (item.second != srcVar)
             continue;
 
@@ -345,14 +345,14 @@ bool validateTransitions(
     // index shape var assignment by location
     typedef std::map<TLocIdx, TShapeVarByShape>     TIndex;
     TIndex index;
-    BOOST_FOREACH(TShapeVarByShape::const_reference item, *pMap) {
+    for (TShapeVarByShape::const_reference item : *pMap) {
         const TShapeIdent shape = item.first;
         const TShapeVarId var = item.second;
         const TLocIdx loc = shape./* heap */first./* loc */first;
         index[loc][shape] = var;
     }
 
-    BOOST_FOREACH(TIndex::reference item, index) {
+    for (TIndex::reference item : index) {
         const TLocIdx dstLocIdx = item.first;
         TShapeVarByShape &dstVarMap = item.second;
 
@@ -383,7 +383,7 @@ bool validateTransitions(
             }
 
             const TTraceEdgeList &edgeList = dstState.traceInEdges[dstHeapIdx];
-            BOOST_FOREACH(const TraceEdge *const te, edgeList) {
+            for (const TraceEdge *const te : edgeList) {
                 const TLocIdx srcLocIdx = te->src./* loc */first;
                 const THeapIdx srcHeapIdx = te->src./* heap */second;
                 CL_BREAK_IF(dstLocIdx != te->dst./* loc */first);
@@ -431,7 +431,7 @@ void propagateVarsForward(
 
     // start with all shapes that have been assigned a variable
     std::stack<TShapeIdent> todo;
-    BOOST_FOREACH(TShapeVarByShape::const_reference item, *pMap)
+    for (TShapeVarByShape::const_reference item : *pMap)
         todo.push(item.first);
 
     // traverse container shape edges
@@ -452,7 +452,7 @@ void propagateVarsForward(
         const TLocIdx srcLoc = srcHeap.first;
         const LocalState &srcState = progState[srcLoc];
         const TTraceEdgeList &outEdges = srcState.traceOutEdges[srcHeap.second];
-        BOOST_FOREACH(const TraceEdge *oe, outEdges) {
+        for (const TraceEdge *oe : outEdges) {
             if (oe->csMap.empty())
                 // no shape mapping for this trace edge
                 continue;

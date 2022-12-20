@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2012-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -28,8 +28,6 @@
 
 #include <map>
 #include <set>
-
-#include <boost/foreach.hpp>
 
 // required by the gcc plug-in API
 extern "C" {
@@ -137,7 +135,7 @@ void killVars(
         const TInsn                     insn,
         const TKillList                &kList)
 {
-    BOOST_FOREACH(const CodeStorage::KillVar &kv, kList) {
+    for (const CodeStorage::KillVar &kv : kList) {
         if (kv.onlyIfNotPointed)
             // TODO: try all possibilities?
             continue;
@@ -190,13 +188,13 @@ void updateTargets(
 void updateBlock(PerFncData &data, const TBlock bb) {
     TState state(data.stateMap[bb]);
 
-    BOOST_FOREACH(const TInsn insn, *bb) {
+    for (const TInsn insn : *bb) {
         if (handleBuiltIn(insn, state, data.done))
             // handled as a built-in function
             continue;
 
         // first mark all local variables used by this insn as live
-        BOOST_FOREACH(TOp op, insn->operands) {
+        for (TOp op : insn->operands) {
             if (!isLcVar(op))
                 continue;
 
@@ -220,12 +218,12 @@ void chkFunction(const TFnc fnc) {
     // mark the function arguments as live for the entry block
     const CodeStorage::ControlFlow &cfg = fnc->cfg;
     TState &state = data.stateMap[cfg.entry()];
-    BOOST_FOREACH(const cl_uid_t uid, data.fnc->args)
+    for (const cl_uid_t uid : data.fnc->args)
         state.insert(uid);
 
     // schedule all basic blocks for processing
     TBlockSet &todo = data.todo;
-    BOOST_FOREACH(const TBlock bb, cfg)
+    for (const TBlock bb : cfg)
         todo.insert(bb);
 
     // read the location info to be used in the verbose output
@@ -250,7 +248,7 @@ void chkFunction(const TFnc fnc) {
 
     // now finally report the errors
     data.done = true;
-    BOOST_FOREACH(const TBlock bb, cfg)
+    for (const TBlock bb : cfg)
         updateBlock(data, bb);
 }
 
@@ -258,7 +256,7 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *) {
     CL_DEBUG("chk_var_killer started...");
 
     // go through all _defined_ functions
-    BOOST_FOREACH(const TFnc fnc, stor.fncs)
+    for (const TFnc fnc : stor.fncs)
         if (isDefined(*fnc))
             chkFunction(fnc);
 }

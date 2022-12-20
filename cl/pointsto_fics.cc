@@ -28,8 +28,6 @@
 #include "pointsto.hh"
 #include "pointsto_fics.hh"
 
-#include <boost/foreach.hpp>
-
 template <class T>
 class FixPoint: public WorkList<T, std::queue<T> >
 {
@@ -108,7 +106,7 @@ class DataManager {
         DataManager() { }
 
         ~DataManager() {
-            BOOST_FOREACH(TRef it, cont_)
+            for (TRef it : cont_)
                 delete it.second;
         }
 
@@ -131,7 +129,7 @@ class DataManager {
 
         template <class TDst>
         void getAll(TDst &dst) const {
-            BOOST_FOREACH(TRef it, cont_)
+            for (TRef it : cont_)
                 dst.push_back(it.second);
         }
         bool hasData(const Node *n) const {
@@ -260,7 +258,7 @@ bool isWhiteListed(const Fnc *fnc)
 
 void dumpPairs(const TBindPairs &pairs)
 {
-    BOOST_FOREACH(const TBindPair &pair, pairs) {
+    for (const TBindPair &pair : pairs) {
         PT_DEBUG(0, "paircode: " << pair.code);
     }
 }
@@ -482,14 +480,14 @@ void makeBlackHole(Fnc &fnc)
     addEdge(blackHole, blackHole); // self loop
 
     // all parameters are in one node
-    BOOST_FOREACH(cl_uid_t uid, fnc.args) {
+    for (cl_uid_t uid : fnc.args) {
         const Var *v = &vars[uid];
         Item *i = new Item(v);
 
         bindItem(ptg, blackHole, i);
     }
 
-    BOOST_FOREACH(const Var &v, vars) {
+    for (const Var &v : vars) {
         if (v.code != VAR_GL)
             continue;
         Item *i = new Item(&v);
@@ -509,7 +507,7 @@ bool ficsPhase1(BuildCtx &ctx)
         return true;
     }
 
-    BOOST_FOREACH(const Fnc *pFnc, stor.callGraph.topOrder) {
+    for (const Fnc *pFnc : stor.callGraph.topOrder) {
         Fnc &fnc = *const_cast<Fnc *>(pFnc);
         ctx.ptg = &fnc.ptg;
         if (isBuiltInFnc(fnc.def))
@@ -529,9 +527,9 @@ bool ficsPhase1(BuildCtx &ctx)
 
         PT_DEBUG(2, "function: '" << nameOf(fnc) << "'");
 
-        BOOST_FOREACH(const Block *bb, fnc.cfg) {
+        for (const Block *bb : fnc.cfg) {
             PT_DEBUG(3, "block: " << bb->name());
-            BOOST_FOREACH(const Insn *insn, *bb) {
+            for (const Insn *insn : *bb) {
 
                 int rc = phase1handleInsn(ctx, *insn);
                 if (PTFICS_RET_NO_CHANGE == rc)
@@ -738,7 +736,7 @@ RetVal bind(
         return PTFICS_RET_FAIL;
 
     //// schedule of processing all PT-related parameters of called function
-    BOOST_FOREACH(TBindPair &p, pairs) {
+    for (TBindPair &p : pairs) {
         const Node *argNode = existsUid(callee->ptg, p.callee.uid);
         if (!argNode)
             // this variable may not bee bound
@@ -833,7 +831,7 @@ RetVal bind(
             change = true;
     }
 
-    BOOST_FOREACH(cl_uid_t v_uid, callee->vars) {
+    for (cl_uid_t v_uid : callee->vars) {
         const Var *v = &vars[v_uid];
         if (v->code != VAR_GL)
             // skip non-globals
@@ -939,7 +937,7 @@ RetVal bindGlobal(BuildCtx &ctx)
     PT_DEBUG(2, "performing BindGlobal");
 
     WorkList<const Node *> wl;
-    BOOST_FOREACH(const Item *i, ptg.globals) {
+    for (const Item *i : ptg.globals) {
         CL_BREAK_IF(!i->isGlobal());
 
         const Node *node = existsItem(ptg, i);
@@ -1051,7 +1049,7 @@ bool bindLocations(
     PT_DEBUG(2, "processing BindLoc '" << nameA << "' to '" << nameB << "'");
 
     bool change = false;
-    BOOST_FOREACH(const TBindLocItem &item, bindData) {
+    for (const TBindLocItem &item : bindData) {
         const Node *startSrcNode = existsItem(*srcPtg, item.src.item);
         if (!startSrcNode)
             continue;
@@ -1112,7 +1110,7 @@ bool bindLocationsArgs(
         Graph                          *tgtPtg)
 {
     TBindLocData bindData;
-    BOOST_FOREACH(const TBindPair &pair, pairs) {
+    for (const TBindPair &pair : pairs) {
         if (pair.code == BINDPAIR_RET)
             continue;
 
@@ -1148,7 +1146,7 @@ bool bindLocationsGlob(
         Graph                          *tgtPtg)
 {
     TBindLocData bindData;
-    BOOST_FOREACH(const Item *item, srcPtg->globals) {
+    for (const Item *item : srcPtg->globals) {
         CL_BREAK_IF(!item->isGlobal());
 
         TBindLocItem li;
@@ -1167,7 +1165,7 @@ bool bindLocationsGlob(
 template <class TWl>
 void scheduleTopologically(TWl &dst, const CallGraph::Graph &cg)
 {
-    BOOST_FOREACH(const Fnc *fnc, cg.topOrder) {
+    for (const Fnc *fnc : cg.topOrder) {
         if (isBuiltInFnc(fnc->def) || isWhiteListed(fnc))
             continue;
 
@@ -1197,7 +1195,7 @@ bool ficsPhase2(BuildCtx &ctx)
         CallGraph::Node *cgNode = caller->cgNode;
 
         // all calling functions should be shaped based on 'caller' function
-        BOOST_FOREACH(TInsnListByFnc::const_reference item, cgNode->calls) {
+        for (TInsnListByFnc::const_reference item : cgNode->calls) {
             const Fnc *callee = item.first;
             if (!callee)
                 // indirect function call
@@ -1208,7 +1206,7 @@ bool ficsPhase2(BuildCtx &ctx)
 
             // all calls of 'callee' may change shape of callee's graph
             const TInsnList &calls = item.second;
-            BOOST_FOREACH(const Insn *insn, calls) {
+            for (const Insn *insn : calls) {
                 // so let's shape the graph of 'callee'
                 RetVal rc = bind(ctx, insn, caller, callee);
                 if (PTFICS_RET_FAIL == rc)
@@ -1233,7 +1231,7 @@ bool ficsPhase2(BuildCtx &ctx)
             continue;
 
         // plan successors to process again when something changed in caller
-        BOOST_FOREACH(TInsnListByFnc::reference item, cgNode->calls) {
+        for (TInsnListByFnc::reference item : cgNode->calls) {
             Fnc *cld = item.first;
             if (isBuiltInFnc(cld->def) || isWhiteListed(cld))
                 continue;
@@ -1272,10 +1270,10 @@ bool ficsPhase3(BuildCtx &ctx)
         CallGraph::Node *cgNode = callee->cgNode;
 
         // go through all functions calling the 'callee' one
-        BOOST_FOREACH(TInsnListByFnc::const_reference item, cgNode->callers) {
+        for (TInsnListByFnc::const_reference item : cgNode->callers) {
             Fnc *caller = item.first;
 
-            BOOST_FOREACH(const Insn *insn, item.second) {
+            for (const Insn *insn : item.second) {
                 TBindPairs pairs;
                 if (bindPairs(insn, pairs))
                     FALLBACK("binding operands -> parameters");
@@ -1287,7 +1285,7 @@ bool ficsPhase3(BuildCtx &ctx)
 
         if (change) {
             // plan to re-visit all successors
-            BOOST_FOREACH(TInsnListByFnc::reference item, cgNode->calls) {
+            for (TInsnListByFnc::reference item : cgNode->calls) {
                 Fnc *cld = item.first;
                 if (isBuiltInFnc(cld->def) || isWhiteListed(cld))
                     continue;

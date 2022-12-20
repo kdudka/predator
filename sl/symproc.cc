@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -44,7 +44,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 /// report a memory leak as either error or warning based on the configuration
@@ -328,7 +327,7 @@ void SymProc::varInit(TObjId obj)
         return;
 
     SymExecCore core(sh_, bt_);
-    BOOST_FOREACH(const CodeStorage::Insn *insn, var.initials) {
+    for (const CodeStorage::Insn *insn : var.initials) {
         const struct cl_loc *loc = &insn->loc;
         core.setLocation(loc);
         CL_DEBUG_MSG(loc,
@@ -1038,7 +1037,7 @@ void SymProc::killInsn(const CodeStorage::Insn &insn)
     return;
 #endif
     // kill variables
-    BOOST_FOREACH(const KillVar &kv, insn.varsToKill)
+    for (const KillVar &kv : insn.varsToKill)
         this->killVar(kv);
 }
 
@@ -1054,7 +1053,7 @@ void SymProc::killPerTarget(const CodeStorage::Insn &insn, unsigned target)
         return;
 
     const TKillVarList &kList = insn.killPerTarget[target];
-    BOOST_FOREACH(const KillVar &kv, kList)
+    for (const KillVar &kv : kList)
         this->killVar(kv);
 }
 
@@ -1301,7 +1300,7 @@ void destroyProgVars(SymProc &proc)
 
     TObjList progVars;
     sh.gatherObjects(progVars, isProgramVar);
-    BOOST_FOREACH(const TObjId obj, progVars) {
+    for (const TObjId obj : progVars) {
         if (OBJ_RETURN == obj)
             // this is going to be destroyed by SymCallCtx::flushCallResults()
             continue;
@@ -1458,7 +1457,7 @@ void SymExecCore::execStackRestore()
     sh_.gatherObjects(stackObjs, isOnStack);
 
     const CallInst callInst(this->bt_);
-    BOOST_FOREACH(const TObjId obj, stackObjs) {
+    for (const TObjId obj : stackObjs) {
         CallInst from;
         if (!sh_.isAnonStackObj(obj, &from))
             continue;
@@ -2881,7 +2880,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn)
 
         FldList liveObjs;
         sh_.gatherLiveFields(liveObjs, obj);
-        BOOST_FOREACH(const FldHandle &fld, liveObjs)
+        for (const FldHandle &fld : liveObjs)
             if (fld == lhs)
                 goto already_alive;
 
@@ -3022,7 +3021,7 @@ bool SymExecCore::concretizeLoop(
 #ifndef NDEBUG
         bool hitLocal = false;
 #endif
-        BOOST_FOREACH(unsigned idx, derefs) {
+        for (unsigned idx : derefs) {
             const struct cl_operand &op = insn.operands.at(idx);
             if (CL_OPERAND_VAR != op.code)
                 // literals cannot be abstract

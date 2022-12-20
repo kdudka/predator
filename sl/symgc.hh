@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -26,8 +26,6 @@
  */
 
 #include "symheap.hh"
-
-#include <boost/foreach.hpp>
 
 #define REQUIRE_GC_ACTIVITY(sh, obj, fnc) do {                                 \
     if (collectJunk(sh, obj))                                                  \
@@ -62,7 +60,7 @@ class LeakMonitor {
         template <class TCont>
         bool collectJunkFrom(const TCont &killedPtrs) {
             bool leaking = false;
-            BOOST_FOREACH(TValId val, killedPtrs) {
+            for (TValId val : killedPtrs) {
                 const TObjId obj = sh_.objByAddr(val);
                 if (collectJunk(sh_, obj, &leakObjs_))
                     leaking = true;

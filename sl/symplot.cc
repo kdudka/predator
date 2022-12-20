@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2012 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -38,8 +38,6 @@
 #include <set>
 #include <string>
 
-#include <boost/foreach.hpp>
-
 // /////////////////////////////////////////////////////////////////////////////
 // implementation of HeapCrawler
 class HeapCrawler {
@@ -73,7 +71,7 @@ void HeapCrawler::digFields(const TObjId obj)
     // traverse the outgoing has-value edges
     FldList fields;
     sh_.gatherLiveFields(fields, obj);
-    BOOST_FOREACH(const FldHandle &fld, fields)
+    for (const FldHandle &fld : fields)
         wl_.schedule(fld.value());
 }
 
@@ -329,7 +327,7 @@ void describeFieldPlacement(PlotData &plot, const FldHandle &fld, TObjType clt)
         return;
 
     // chain of indexes found!
-    BOOST_FOREACH(const int idx, ic) {
+    for (const int idx : ic) {
         CL_BREAK_IF(clt->item_cnt <= idx);
         const cl_type_item *item = clt->items + idx;
         const cl_type_e code = clt->code;
@@ -544,7 +542,7 @@ void plotUniformBlocks(PlotData &plot, const TObjId obj)
     sh.gatherUniformBlocks(bMap, obj);
 
     // plot all uniform blocks
-    BOOST_FOREACH(TUniBlockMap::const_reference item, bMap) {
+    for (TUniBlockMap::const_reference item : bMap) {
         const UniformBlock &bl = item.second;
 
         // plot block node
@@ -595,7 +593,7 @@ void plotFields(PlotData &plot, const TObjId obj, const TCont &liveFields)
     typedef std::vector<FieldWrapper>           TAtomList;
     typedef std::map<TOffset, TAtomList>        TAtomByOff;
     TAtomByOff objByOff;
-    BOOST_FOREACH(const FldHandle &fld, liveFields) {
+    for (const FldHandle &fld : liveFields) {
         EFieldClass code;
         if (fld == next)
             code = FC_NEXT;
@@ -612,9 +610,9 @@ void plotFields(PlotData &plot, const TObjId obj, const TCont &liveFields)
     }
 
     // plot all atomic objects inside
-    BOOST_FOREACH(TAtomByOff::const_reference item, objByOff) {
+    for (TAtomByOff::const_reference item : objByOff) {
         const TOffset off = item.first;
-        BOOST_FOREACH(const FieldWrapper &fw, /* TAtomList */ item.second) {
+        for (const FieldWrapper &fw : /* TAtomList */ item.second) {
             // plot a single object
             if (!plotField(plot, fw, /* lonely */ false))
                 continue;
@@ -800,7 +798,7 @@ void plotObjects(PlotData &plot)
     SymHeap &sh = plot.sh;
 
     // go through roots
-    BOOST_FOREACH(const TObjId obj, plot.objs) {
+    for (const TObjId obj : plot.objs) {
         // gather live objects
         FldList liveFields;
         sh.gatherLiveFields(liveFields, obj);
@@ -1037,7 +1035,7 @@ void plotAddrs(PlotData &plot)
 {
     SymHeap &sh = plot.sh;
 
-    BOOST_FOREACH(const TValId val, plot.values) {
+    for (const TValId val : plot.values) {
         // plot a value node
         plotSingleValue(plot, val);
 
@@ -1072,7 +1070,7 @@ void plotAddrs(PlotData &plot)
     }
 
     // go through value prototypes used in uniform blocks
-    BOOST_FOREACH(PlotData::TDangValues::const_reference item, plot.dangVals) {
+    for (PlotData::TDangValues::const_reference item : plot.dangVals) {
         const TValId val = item.second;
         if (val <= 0)
             continue;
@@ -1212,7 +1210,7 @@ void plotNeq(std::ostream &out, const TValId v1, const TValId v2)
 class NeqPlotter: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
     public:
         void plotNeqEdges(PlotData &plot) {
-            BOOST_FOREACH(const TItem &item, cont_) {
+            for (const TItem &item : cont_) {
                 const TValId v1 = item.first;
                 const TValId v2 = item.second;
 
@@ -1234,11 +1232,11 @@ void plotNeqEdges(PlotData &plot)
 
     // gather relevant "neq" edges
     NeqPlotter np;
-    BOOST_FOREACH(const TValId val, plot.values) {
+    for (const TValId val : plot.values) {
         // go through related values
         TValList relatedVals;
         sh.gatherRelatedValues(relatedVals, val);
-        BOOST_FOREACH(const TValId rel, relatedVals)
+        for (const TValId rel : relatedVals)
             if (VAL_NULL == rel
                     || hasKey(plot.values, rel)
                     || VT_CUSTOM == sh.valTarget(rel))
@@ -1252,12 +1250,12 @@ void plotNeqEdges(PlotData &plot)
 void plotHasValueEdges(PlotData &plot)
 {
     // plot "hasValue" edges
-    BOOST_FOREACH(PlotData::TLiveFields::const_reference item, plot.liveFields)
-        BOOST_FOREACH(const FldHandle &fld, /* FldList */ item.second)
+    for (PlotData::TLiveFields::const_reference item : plot.liveFields)
+        for (const FldHandle &fld : /* FldList */ item.second)
             plotHasValue(plot, fld);
 
     // plot "hasValue" edges for uniform block prototypes
-    BOOST_FOREACH(PlotData::TDangValues::const_reference item, plot.dangVals) {
+    for (PlotData::TDangValues::const_reference item : plot.dangVals) {
         const int id = item.first;
         const TValId val = item.second;
 
@@ -1344,7 +1342,7 @@ bool plotHeap(
 {
     HeapCrawler crawler(sh);
 
-    BOOST_FOREACH(const TValId val, startingPoints)
+    for (const TValId val : startingPoints)
         crawler.digVal(val);
 
     return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals());
@@ -1361,7 +1359,7 @@ bool plotHeap(
 
     TObjList allObjs;
     sh.gatherObjects(allObjs);
-    BOOST_FOREACH(const TObjId obj, allObjs)
+    for (const TObjId obj : allObjs)
         crawler.digObj(obj);
 
     const TObjSet objs = crawler.objs();
@@ -1378,7 +1376,7 @@ bool plotHeap(
 {
     HeapCrawler crawler(sh, /* digForward */ false);
 
-    BOOST_FOREACH(const TObjId obj, objs)
+    for (const TObjId obj : objs)
         crawler.digObj(obj);
 
     return plotHeapCore(sh, name, loc, crawler.objs(), crawler.vals());

@@ -8,7 +8,6 @@
 
 #undef NDEBUG   // It is necessary for using assertions.
 
-#include <boost/foreach.hpp>
 #include <iostream>
 #include <cassert>
 #include <iterator>
@@ -263,7 +262,7 @@ ValueAnalysis::MemoryPlaceToRangeMap ValueAnalysis::computePartialInputRanges(
 {
 	MemoryPlaceToRangeMap result;
 
-	BOOST_FOREACH(const TrimmedRangesMap::value_type &trim, trimmed) {
+	for (const TrimmedRangesMap::value_type &trim : trimmed) {
 		// Firstly, we choose all trimmed ranges that are valid for the given block
 		// and store them as result.
 		const struct TrimmedKey key = trim.first;
@@ -279,7 +278,7 @@ ValueAnalysis::MemoryPlaceToRangeMap ValueAnalysis::computePartialInputRanges(
 		}
 	}
 
-	BOOST_FOREACH(const MemoryPlaceToRangeMap::value_type &out, outs) {
+	for (const MemoryPlaceToRangeMap::value_type &out : outs) {
 		// Secondly, we choose the output ranges for variables that do not have
 		// trimmed ranges set.
 		const MemoryPlace *mp = out.first;
@@ -308,7 +307,7 @@ void ValueAnalysis::computeInputRanges(const CodeStorage::Block *current)
 	MemoryPlaceToRangeMapVector outputOfPreds;
 	outputOfPreds.push_back(ValueAnalysis::getRanges(current, blockToInputRangesMap));
 
-	BOOST_FOREACH(const TTargetList::value_type &pred, preds) {
+	for (const TTargetList::value_type &pred : preds) {
 		// Get the output ranges of the predecessor.
 		MemoryPlaceToRangeMap out = ValueAnalysis::getRanges(pred,
 										blockToOutputRangesMap);
@@ -442,7 +441,7 @@ void ValueAnalysis::computeAnalysisForFnc(const Fnc &fnc)
 		if ((newResult != oldResult) || (ValueAnalysis::containOnlyGotoInsn(block))) {
 			// Gets the successors of the processed block.
 			const TTargetList &succs = block->targets();
-			BOOST_FOREACH(const TTargetList::value_type &succ, succs) {
+			for (const TTargetList::value_type &succ : succs) {
 				ValueAnalysis::scheduleBlock(succ);
 			}
 		}
@@ -461,7 +460,7 @@ void ValueAnalysis::computeAnalysisForBlock(const Block *block)
 
 	// Starts to analyze the given block.
 	const Insn *prevInsn = NULL;
-	BOOST_FOREACH(const Insn *insn, *block) {
+	for (const Insn *insn : *block) {
 		ValueAnalysis::computeAnalysisForInsn(insn, prevInsn, outputFromBlock);
 		prevInsn = insn;
 	}
@@ -1044,7 +1043,7 @@ void ValueAnalysis::computeAnalysisForBinop(const Insn *insn,
 */
 ostream& ValueAnalysis::printRanges(ostream &os, const Storage &stor)
 {
-	BOOST_FOREACH(const Fnc* pFnc, stor.callGraph.topOrder) {
+	for (const Fnc* pFnc : stor.callGraph.topOrder) {
 		// Iterates over all functions.
 		const Fnc &fnc = *pFnc;
 		if (!isDefined(fnc))
@@ -1054,7 +1053,7 @@ ostream& ValueAnalysis::printRanges(ostream &os, const Storage &stor)
 		os << delimeter << " Function " << nameOf(fnc) << "() ";
 		os << delimeter << endl;
 
-		BOOST_FOREACH(const Block* pBlock, fnc.cfg) {
+		for (const Block* pBlock : fnc.cfg) {
 			// Iterates over all blocks.
 			const Block &block = *pBlock;
 			int firstLine = ((block.front())->loc).line;
@@ -1077,7 +1076,7 @@ ostream& ValueAnalysis::printRanges(ostream &os, const Storage &stor)
 			sort(sortedBlockInfo.begin(), sortedBlockInfo.end(),
 				sortBlockInfo);
 
-			BOOST_FOREACH(MemoryPlaceRangePair &mem, sortedBlockInfo) {
+			for (MemoryPlaceRangePair &mem : sortedBlockInfo) {
 				// Iterates over all memory places in the block.
 				if ((mem.first)->isArtificial())
 					continue;
@@ -1098,7 +1097,7 @@ ostream& ValueAnalysis::printRanges(ostream &os, const Storage &stor)
 			sort(sortedBlockInfoOut.begin(), sortedBlockInfoOut.end(),
 				sortBlockInfo);
 
-			BOOST_FOREACH(MemoryPlaceRangePair &mem, sortedBlockInfoOut) {
+			for (MemoryPlaceRangePair &mem : sortedBlockInfoOut) {
 				// Iterates over all memory places in the block.
 				if ((mem.first)->isArtificial())
 					continue;
@@ -1135,7 +1134,7 @@ ValueAnalysis::MemoryPlaceToRangeMap ValueAnalysis::join(const
 	result = vec[0];
 	for (MemoryPlaceToRangeMap::size_type i = 1; i != vec.size(); ++i) {
 		// Iterates over all data that was got from several blocks.
-		BOOST_FOREACH(MemoryPlaceToRangeMap::value_type item, vec[i]) {
+		for (MemoryPlaceToRangeMap::value_type item : vec[i]) {
 			// Iterates over all memory places.
 			result[item.first] = unite(result[item.first], item.second);
 		}

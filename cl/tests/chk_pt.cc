@@ -29,8 +29,6 @@
 #include <cl/easy.hh>
 #include <cl/storage.hh>
 
-#include <boost/foreach.hpp>
-
 // required by the gcc plug-in API
 extern "C" {
     __attribute__ ((__visibility__ ("default"))) int plugin_is_GPL_compatible;
@@ -79,8 +77,8 @@ const char * cstString(const cl_operand &op)
 TVar varLookup(TStorage stor, const char *name)
 {
     TVar result = NULL;
-    BOOST_FOREACH(TFnc fnc, stor.fncs) {
-        BOOST_FOREACH(cl_uid_t vUid, fnc->vars) {
+    for (TFnc fnc : stor.fncs) {
+        for (cl_uid_t vUid : fnc->vars) {
             TVar v = &stor.vars[vUid];
             if (v->name != name)
                 continue;
@@ -189,7 +187,7 @@ void setExpectFailed(PTCheckCtx &ctx)
 void chkBlock(PTCheckCtx &ctx, const TBlock bb)
 {
     TStorage stor = ctx.stor;
-    BOOST_FOREACH(TInsn insn, *bb) {
+    for (TInsn insn : *bb) {
         if (insn->code != CL_INSN_CALL)
             continue;
         cl_uid_t fncId;
@@ -262,14 +260,14 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *config)
     PTCheckCtx ctx(stor);
     parseConfig(ctx, config);
 
-    BOOST_FOREACH(TFnc fnc, stor.fncs) {
+    for (TFnc fnc : stor.fncs) {
         if (!isDefined(*fnc))
             continue;
 
         const CodeStorage::ControlFlow &cfg = fnc->cfg;
         ctx.fnc = fnc;
 
-        BOOST_FOREACH(const TBlock bb, cfg)
+        for (const TBlock bb : cfg)
             chkBlock(ctx, bb);
     }
 

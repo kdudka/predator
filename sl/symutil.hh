@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -36,7 +36,6 @@
 
 #include <set>
 
-#include <boost/foreach.hpp>
 #include <boost/static_assert.hpp>
 
 inline TValId boolToVal(const bool b)
@@ -220,7 +219,7 @@ void gatherProgramVarsCore(
     TObjList vars;
     sh.gatherObjects(vars, isProgramVar);
 
-    BOOST_FOREACH(const TObjId obj, vars) {
+    for (const TObjId obj : vars) {
         if (OBJ_RETURN == obj)
             continue;
 
@@ -268,7 +267,7 @@ bool /* complete */ traverseLiveFields(
     sh.gatherLiveFields(fields, obj);
 
     // guide the visitor through the fields
-    BOOST_FOREACH(const FldHandle &fld, fields)
+    for (const FldHandle &fld : fields)
         if (!/* continue */visitor(fld))
             return false;
 
@@ -288,7 +287,7 @@ bool /* complete */ traverseUniformBlocks(
 
     TUniBlockMap bMap;
     sh.gatherUniformBlocks(bMap, obj);
-    BOOST_FOREACH(TUniBlockMap::const_reference bItem, bMap) {
+    for (TUniBlockMap::const_reference bItem : bMap) {
         if (!visitor(sh, /* UniformBlock */ bItem.second))
             // traversal cancelled by visitor
             return false;
@@ -316,7 +315,7 @@ bool /* complete */ traverseLiveFieldsGeneric(
 
         FldList fields;
         sh.gatherLiveFields(fields, obj);
-        BOOST_FOREACH(const FldHandle &fld, fields) {
+        for (const FldHandle &fld : fields) {
             const TOffset off = fld.offset();
             const TObjType clt = fld.type();
             const TItem item(off, clt);
@@ -325,7 +324,7 @@ bool /* complete */ traverseLiveFieldsGeneric(
     }
 
     // go through all live objects
-    BOOST_FOREACH(const TItem &item, all) {
+    for (const TItem &item : all) {
         const TOffset  off = item.first;
         const TObjType clt = item.second;
 
@@ -406,7 +405,7 @@ bool /* complete */ traverseProgramVarsGeneric(
         sh.gatherObjects(live, isProgramVar);
         size_t cntLive = live.size();
 
-        BOOST_FOREACH(const TObjId obj, live) {
+        for (const TObjId obj : live) {
             if (OBJ_RETURN == obj)
                 continue;
 
@@ -445,7 +444,7 @@ bool /* complete */ traverseProgramVarsGeneric(
     }
 
     // go through all program variables
-    BOOST_FOREACH(const CVar &cv, all) {
+    for (const CVar &cv : all) {
         TObjId objs[N_TOTAL];
         for (signed i = 0; i < (signed)N_TOTAL; ++i) {
             SymHeap &sh = *heaps[i];

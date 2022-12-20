@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  * Copyright (C) 2010 Petr Peringer, FIT
  *
  * This file is part of predator.
@@ -44,7 +44,6 @@
 #include <set>
 #include <typeinfo>
 
-#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 template <class TCont> typename TCont::value_type::second_type&
@@ -76,7 +75,7 @@ class NeqDb: public SymPairSet<TValId, /* IREFLEXIVE */ true> {
         template <class TDst>
         void gatherRelatedValues(TDst &dst, TValId val) const {
             // FIXME: suboptimal due to performance
-            BOOST_FOREACH(const TItem &item, cont_) {
+            for (const TItem &item : cont_) {
                 if (item.first == val)
                     dst.push_back(item.second);
                 else if (item.second == val)
@@ -106,7 +105,7 @@ class CoincidenceDb: public SymPairMap</* v1, v2 */ TValId, TValId /* sum */> {
         template <class TDst>
         void gatherRelatedValues(TDst &dst, TValId val) const {
             // FIXME: suboptimal due to performance
-            BOOST_FOREACH(TMap::const_reference ref, db_) {
+            for (TMap::const_reference ref : db_) {
                 const TItem &item = ref.first;
                 if (item.first == val)
                     dst.push_back(item.second);
@@ -753,7 +752,7 @@ bool /* wasPtr */ SymHeapCore::Private::releaseValueOf(TFldId fld, TValId val)
         // kill all related Neq predicates
         TValList neqs;
         this->neqDb->gatherRelatedValues(neqs, val);
-        BOOST_FOREACH(const TValId valNeq, neqs) {
+        for (const TValId valNeq : neqs) {
             CL_DEBUG("releaseValueOf() kills an orphan Neq predicate");
             RefCntLib<RCO_NON_VIRT>::requireExclusivity(this->neqDb);
             this->neqDb->del(valNeq, val);
@@ -835,7 +834,7 @@ bool SymHeapCore::Private::chkValueDeps(const TValId val)
         : widthOf(rngAnchor);
 
     const TValList &deps = anchorData->dependentValues;
-    BOOST_FOREACH(const TValId depVal, deps) {
+    for (const TValId depVal : deps) {
         // get the range of the dependent value
         const InternalCustomValue *depData;
         this->ents.getEntRO(&depData, depVal);
@@ -877,7 +876,7 @@ bool SymHeapCore::Private::chkArenaConsistency(
         return rootData->liveFields.empty();
 
     std::set<TOffset> offs;
-    BOOST_FOREACH(TLiveObjs::const_reference item, rootData->liveFields) {
+    for (TLiveObjs::const_reference item : rootData->liveFields) {
         const BlockEntity *blData;
         this->ents.getEntRO(&blData, /* fld */ item.first);
         CL_BREAK_IF(!blData->size);
@@ -901,7 +900,7 @@ bool SymHeapCore::Private::chkArenaConsistency(
 
     TFldIdSet overlaps;
     if (arenaLookup(&overlaps, arena, chunk, FLD_INVALID)) {
-        BOOST_FOREACH(const TFldId fld, overlaps)
+        for (const TFldId fld : overlaps)
             all.erase(fld);
     }
 
@@ -1295,7 +1294,7 @@ void SymHeapCore::Private::setValueOf(
     // invalidate contents of the objects we are overwriting
     TFldIdSet overlaps;
     if (arenaLookup(&overlaps, arena, createChunk(off, clt), fld)) {
-        BOOST_FOREACH(const TFldId old, overlaps)
+        for (const TFldId old : overlaps)
             this->reinterpretObjData(old, fld, killedPtrs);
     }
 
@@ -1485,7 +1484,7 @@ void SymHeapCore::Private::transferBlock(
     this->ents.getEntRW(&objDataDst, objDst);
 
     // go through overlaps and copy the live ones
-    BOOST_FOREACH(const TFldId objSrc, overlaps) {
+    for (const TFldId objSrc : overlaps) {
         const BlockEntity *hbDataSrc;
         this->ents.getEntRO(&hbDataSrc, objSrc);
 
@@ -1579,7 +1578,7 @@ TValId SymHeapCore::Private::fldInit(TFldId fld)
     // first check for data reinterpretation
     TFldIdSet overlaps;
     if (arenaLookup(&overlaps, arena, createChunk(off, clt), fld)) {
-        BOOST_FOREACH(const TFldId other, overlaps) {
+        for (const TFldId other : overlaps) {
             const BlockEntity *blockData;
             this->ents.getEntRO(&blockData, other);
 
@@ -1667,13 +1666,13 @@ void SymHeapCore::usedBy(FldList &dst, TValId val, bool liveOnly) const
     const TFldIdSet &usedBy = valData->usedBy;
     if (!liveOnly) {
         // dump everything
-        BOOST_FOREACH(const TFldId fld, usedBy)
+        for (const TFldId fld : usedBy)
             dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
 
         return;
     }
 
-    BOOST_FOREACH(const TFldId fld, usedBy) {
+    for (const TFldId fld : usedBy) {
         // get field data
         const FieldOfObj *fldData;
         d->ents.getEntRO(&fldData, fld);
@@ -1704,7 +1703,7 @@ void SymHeapCore::pointedBy(FldList &dst, TObjId obj) const
     d->ents.getEntRO(&regData, obj);
 
     const TFldIdSet &usedBy = regData->usedByGl;
-    BOOST_FOREACH(const TFldId fld, usedBy)
+    for (const TFldId fld : usedBy)
         dst.push_back(FldHandle(*const_cast<SymHeapCore *>(this), fld));
 }
 
@@ -1791,7 +1790,7 @@ TObjId SymHeapCore::objClone(TObjId obj)
         d->liveObjs->insert(dup);
     }
 
-    BOOST_FOREACH(TLiveObjs::const_reference item, objDataSrc->liveFields)
+    for (TLiveObjs::const_reference item : objDataSrc->liveFields)
         d->copySingleLiveBlock(dup, objDataDst,
                 /* src  */ item.first,
                 /* code */ item.second);
@@ -1805,7 +1804,7 @@ void SymHeapCore::gatherUniformBlocks(TUniBlockMap &dst, TObjId obj) const
     const Region *regData;
     d->ents.getEntRO(&regData, obj);
 
-    BOOST_FOREACH(TLiveObjs::const_reference item, regData->liveFields) {
+    for (TLiveObjs::const_reference item : regData->liveFields) {
         const EBlockKind code = item.second;
         if (BK_UNIFORM != code)
             continue;
@@ -1828,7 +1827,7 @@ void SymHeapCore::gatherLiveFields(FldList &dst, TObjId obj) const
     const Region *regData;
     d->ents.getEntRO(&regData, obj);
 
-    BOOST_FOREACH(TLiveObjs::const_reference item, regData->liveFields) {
+    for (TLiveObjs::const_reference item : regData->liveFields) {
         const EBlockKind code = item.second;
 
         switch (code) {
@@ -1874,7 +1873,7 @@ bool SymHeapCore::findCoveringUniBlocks(
     coverage += TMemItem(chunk, /* XXX: misleading */ FLD_UNKNOWN);
 
     // go through overlaps and subtract the chunks that are covered
-    BOOST_FOREACH(const TFldId fld, overlaps) {
+    for (const TFldId fld : overlaps) {
         const BlockEntity *blData;
         d->ents.getEntRO(&blData, fld);
 
@@ -1908,13 +1907,13 @@ bool SymHeapCore::findCoveringUniBlocks(
     // TODO: rewrite the algorithm so that we do not compute complement twice
     coverage.clear();
     coverage += TMemItem(chunk, /* XXX: misleading */ FLD_UNKNOWN);
-    BOOST_FOREACH(TArena::TKeySet::const_reference item, gaps)
+    for (TArena::TKeySet::const_reference item : gaps)
         coverage -= TMemItem(item, FLD_UNKNOWN);
 
     // return partial coverage (if any)
     TArena::TKeySet covChunks;
     coverage.reverseLookup(covChunks, FLD_UNKNOWN);
-    BOOST_FOREACH(TArena::TKeySet::const_reference item, covChunks) {
+    for (TArena::TKeySet::const_reference item : covChunks) {
         const TOffset off = item.first;
         block.off = off;
         block.size = /* end */ item.second - off;
@@ -2055,7 +2054,7 @@ TFldId SymHeapCore::Private::writeUniformBlock(
     // invalidate contents of the objects we are overwriting
     TFldIdSet overlaps;
     if (arenaLookup(&overlaps, arena, chunk, fld)) {
-        BOOST_FOREACH(const TFldId old, overlaps)
+        for (const TFldId old : overlaps)
             this->reinterpretObjData(old, fld, killedPtrs);
     }
 
@@ -2204,7 +2203,7 @@ bool SymHeapCore::Private::findZeroAtOff(
 
     // go through all intersections and find the zero that is closest to offSrc
     TOffset first = limit;
-    BOOST_FOREACH(const TFldId fld, overlaps) {
+    for (const TFldId fld : overlaps) {
         TOffset beg;
         if (!this->findZeroInBlock(&beg, &provenPrefix, offSrc, fld))
             // failed to imply zero in this block entity
@@ -2312,7 +2311,7 @@ void SymHeapCore::Private::replaceRngByInt(const InternalCustomValue *valData)
 
     // we intentionally do not use a reference here (tight loop otherwise)
     TFldIdSet usedBy = valData->usedBy;
-    BOOST_FOREACH(const TFldId fld, usedBy)
+    for (const TFldId fld : usedBy)
         this->setValueOf(fld, replaceBy);
 
     const TValId anchor = valData->anchor;
@@ -2360,7 +2359,7 @@ void SymHeapCore::Private::trimCustomValue(TValId val, const IR::Range &win)
 
     // go through all dependent values including the anchor itself
     const TValList deps(anchorData->dependentValues);
-    BOOST_FOREACH(const TValId depVal, deps) {
+    for (const TValId depVal : deps) {
         InternalCustomValue *depData;
         this->ents.getEntRW(&depData, depVal);
 
@@ -2587,7 +2586,7 @@ void SymHeapCore::valRestrictRange(TValId val, IR::Range win)
     const TValId valSubst = this->valByOffset(valRoot, offRoot);
     this->valReplace(anchor, valSubst);
 
-    BOOST_FOREACH(TOffMap::const_reference item, rangeData->offMap) {
+    for (TOffMap::const_reference item : rangeData->offMap) {
         const TOffset offRel = item.first;
         const TValId valOld = item.second;
 
@@ -2748,7 +2747,7 @@ void SymHeapCore::rewriteTargetOfBase(TValId root, TObjId objNew)
 
     // go through fields pointing to objOld
     TFldIdSet unrelatedFlds;
-    BOOST_FOREACH(const TFldId fld, regDataOld->usedByGl) {
+    for (const TFldId fld : regDataOld->usedByGl) {
         // read value of the field
         const FieldOfObj *fldData;
         d->ents.getEntRO(&fldData, fld);
@@ -2919,14 +2918,14 @@ void SymHeapCore::valReplace(TValId val, TValId replaceBy)
     // kill all related Neq predicates
     TValList neqs;
     d->neqDb->gatherRelatedValues(neqs, val);
-    BOOST_FOREACH(const TValId valNeq, neqs) {
+    for (const TValId valNeq : neqs) {
         CL_BREAK_IF(valNeq == replaceBy);
         this->delNeq(valNeq, val);
     }
 
     // we intentionally do not use a reference here (tight loop otherwise)
     TFldIdSet usedBy = valData->usedBy;
-    BOOST_FOREACH(const TFldId fld, usedBy)
+    for (const TFldId fld : usedBy)
         this->setValOfField(fld, replaceBy);
 }
 
@@ -2963,7 +2962,7 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
     const
 {
     // go through NeqDb
-    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb->cont_) {
+    for (const NeqDb::TItem &item : d->neqDb->cont_) {
         TValId valLt = item.first;
         TValId valGt = item.second;
 
@@ -2981,7 +2980,7 @@ void SymHeapCore::copyRelevantPreds(SymHeapCore &dst, const TValMap &valMap)
 
     // go through CoincidenceDb
     const CoincidenceDb &coinDb = *d->coinDb;
-    BOOST_FOREACH(CoincidenceDb::const_reference ref, coinDb) {
+    for (CoincidenceDb::const_reference ref : coinDb) {
         TValId valLt = ref/* key */.first/* lt */.first;
         TValId valGt = ref/* key */.first/* gt */.second;
 
@@ -3009,7 +3008,7 @@ bool SymHeapCore::matchPreds(
     SymHeapCore &dst = const_cast<SymHeapCore &>(ref);
 
     // go through NeqDb
-    BOOST_FOREACH(const NeqDb::TItem &item, d->neqDb->cont_) {
+    for (const NeqDb::TItem &item : d->neqDb->cont_) {
         TValId valLt = item.first;
         TValId valGt = item.second;
 
@@ -3031,7 +3030,7 @@ bool SymHeapCore::matchPreds(
 
     // go through CoincidenceDb
     const CoincidenceDb &coinDb = *d->coinDb;
-    BOOST_FOREACH(CoincidenceDb::const_reference ref, coinDb) {
+    for (CoincidenceDb::const_reference ref : coinDb) {
         TValId valLt = ref/* key */.first/* lt */.first;
         TValId valGt = ref/* key */.first/* gt */.second;
 
@@ -3125,7 +3124,7 @@ TFldId SymHeapCore::Private::fldLookup(
     arenaLookForExactMatch(&candidates, arena, chunk);
 
     // go through fields in the given interval
-    BOOST_FOREACH(const TFldId fld, candidates) {
+    for (const TFldId fld : candidates) {
         const BlockEntity *blData;
         this->ents.getEntRO(&blData, fld);
 
@@ -3357,7 +3356,7 @@ void SymHeapCore::gatherObjects(TObjList &dst, bool (*filter)(EStorageClass))
         filter = dummyFilter;
 
     const TObjSetWrapper &liveObjs = *d->liveObjs;
-    BOOST_FOREACH(const TObjId obj, liveObjs) {
+    for (const TObjId obj : liveObjs) {
         CL_BREAK_IF(!this->isValid(obj));
 
         const EStorageClass code = this->objStorClass(obj);
@@ -3474,7 +3473,7 @@ void SymHeapCore::objSetSize(TObjId obj, const TSizeRange &newSize)
         TFldIdSet allObjs;
         if (arenaLookup(&allObjs, regData->arena, chunk, FLD_INVALID)) {
             // destroy all inner objects
-            BOOST_FOREACH(const TFldId fld, allObjs) {
+            for (const TFldId fld : allObjs) {
                 // mark the object as dead
                 if (regData->liveFields.erase(fld))
                     CL_DEBUG("objSetSize() kills a live object");
@@ -3602,7 +3601,7 @@ void SymHeapCore::objInvalidate(TObjId obj)
         TFldIdSet allObjs;
         if (arenaLookup(&allObjs, rootData->arena, chunk, FLD_INVALID)) {
             // destroy all inner objects
-            BOOST_FOREACH(const TFldId fld, allObjs)
+            for (const TFldId fld : allObjs)
                 d->fldDestroy(fld, /* removeVal */ true, /* detach */ false);
         }
     }

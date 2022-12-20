@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2013-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -26,7 +26,7 @@ namespace FixedPoint {
 
 bool hasSuccessorShape(const TTraceEdgeList &outEdges, const TShapeIdx csIdx)
 {
-    BOOST_FOREACH(const TraceEdge *e, outEdges) {
+    for (const TraceEdge *e : outEdges) {
         if (e->csMap.empty())
             continue;
 
@@ -55,7 +55,7 @@ void findPredecessors(
     const LocalState &dstState = glState[dstLocIdx];
     const TTraceEdgeList &inEdges = dstState.traceInEdges[dstShIdx];
 
-    BOOST_FOREACH(const TraceEdge *e, inEdges) {
+    for (const TraceEdge *e : inEdges) {
         if (e->csMap.empty())
             continue;
 
@@ -138,7 +138,7 @@ void collectShapeSequencesCore(
         cQueue.pop();
 
         // schedule all predecessor (not closing a loop) for processing
-        BOOST_FOREACH(const TShapeIdent &si, srcIdents) {
+        for (const TShapeIdent &si : srcIdents) {
             CollectQueueItem next(snap);
             if (next.pushFrontOnce(si))
                 cQueue.push(next);

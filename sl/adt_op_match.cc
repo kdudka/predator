@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2013-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -28,8 +28,6 @@
 #include <cl/storage.hh>            // for CodeStorage::TypeDb::dataPtrSizeof()
 
 #include <algorithm>                // for std::reverse
-
-#include <boost/foreach.hpp>
 
 namespace AdtOp {
 
@@ -142,7 +140,7 @@ bool resolveObjectMapping(
         if (kind == OK_DLS || progObjCnt == 1) {
             // map objTpl (the only tpl object) to the remaining shProg objects
             TObjectMapper objMap(objMapOrig);
-            BOOST_FOREACH(const TObjId objProg, objLists[C_PROGRAM])
+            for (const TObjId objProg : objLists[C_PROGRAM])
                 objMap.insert(objTpl, objProg);
             pDst->push_back(objMap);
             return true;
@@ -242,12 +240,12 @@ bool matchAnchorHeapCore(
 
     // compute total minimal length of the remaining template objects
     TMinLen lenTpl = 0;
-    BOOST_FOREACH(const TObjId objTpl, objLists[C_TEMPLATE])
+    for (const TObjId objTpl : objLists[C_TEMPLATE])
         lenTpl += objMinLength(shTpl, objTpl);
 
     // compute total minimal length of the remaining program objects
     TMinLen lenProg = 0;
-    BOOST_FOREACH(const TObjId objProg, objLists[C_PROGRAM])
+    for (const TObjId objProg : objLists[C_PROGRAM])
         lenProg += objMinLength(shProg, objProg);
 
     if (lenProg < lenTpl)
@@ -320,7 +318,7 @@ bool matchAnchorHeap(
     fmProto.tplProps = csTpl.props;
     fmProto.matchedHeaps.push_back(shIdent.first);
 
-    BOOST_FOREACH(const TObjectMapper &objMap, objMapList) {
+    for (const TObjectMapper &objMap : objMapList) {
         FootprintMatch fm(fmProto);
         fm.objMap[port] = objMap;
         pMatchList->push_back(fm);
@@ -347,7 +345,7 @@ TObjId selectMappedObjByTs(
 
     // start with all objects as candidates for fst/lst
     TObjSet allObjs, cObjs;
-    BOOST_FOREACH(const TObjId obj, objList) {
+    for (const TObjId obj : objList) {
         allObjs.insert(obj);
         cObjs.insert(obj);
     }
@@ -357,7 +355,7 @@ TObjId selectMappedObjByTs(
 
     SymHeap &shWritable = const_cast<SymHeap &>(sh);
 
-    BOOST_FOREACH(const TObjId obj, objList) {
+    for (const TObjId obj : objList) {
         const TObjId objNext = nextObj(shWritable, obj, offNext);
         cObjs.erase(objNext);
 
@@ -437,7 +435,7 @@ bool relocObjsInMetaOps(
     const TMetaOpSet &src = *pMetaOps;
     TMetaOpSet dst;
 
-    BOOST_FOREACH(MetaOperation mo, src) {
+    for (MetaOperation mo : src) {
         ETargetSpecifier ts = TS_INVALID;
         if (MO_SET == mo.code) {
             ts = tsByOffset(mo.off, props);
@@ -484,7 +482,7 @@ void relocOffsetsInMetaOps(TMetaOpSet *pMetaOps, const FootprintMatch &fm)
     const TMetaOpSet &src = *pMetaOps;
     TMetaOpSet dst;
 
-    BOOST_FOREACH(MetaOperation mo, src) {
+    for (MetaOperation mo : src) {
         switch (mo.code) {
             case MO_SET:
             case MO_UNSET:
@@ -535,7 +533,7 @@ void collectNextHeaps(
         : locState.traceOutEdges;
 
     const TTraceEdgeList &edgeList = eListByHeapIdx[heapCurrent./* sh */second];
-    BOOST_FOREACH(const TEdgePtr te, edgeList) {
+    for (const TEdgePtr te : edgeList) {
         const THeapIdent heapNext = (reverse)
             ? te->src
             : te->dst;
@@ -600,7 +598,7 @@ bool isIndependentOp(
     std::set<TOffset> offs;
     offs.insert(bOff.next);
     offs.insert(bOff.prev);
-    BOOST_FOREACH(const TOffset lo, offs) {
+    for (const TOffset lo : offs) {
         const TOffset hi = lo + psize;
         if (winHi <= lo)
             continue;
@@ -635,13 +633,13 @@ bool processDiffOf(
     }
 
     TObjSet freshObjs;
-    BOOST_FOREACH(const MetaOperation &mo, metaOpsNow)
+    for (const MetaOperation &mo : metaOpsNow)
         if (MO_ALLOC == mo.code)
             freshObjs.insert(mo.obj);
 
     bool found = false;
 
-    BOOST_FOREACH(const MetaOperation &mo, metaOpsNow) {
+    for (const MetaOperation &mo : metaOpsNow) {
         const SymHeap &sh = (hasKey(freshObjs, mo.obj)) ? sh1 : sh0;
         const EStorageClass code = sh.objStorClass(mo.obj);
         if (isProgramVar(code))
@@ -866,7 +864,7 @@ void matchSingleFootprint(
     TMetaOpSet metaOps;
     TShapeIdentSet checkedShapes;
 
-    BOOST_FOREACH(FixedPoint::TShapeSeq seq, ctx.shapeSeqs) {
+    for (FixedPoint::TShapeSeq seq : ctx.shapeSeqs) {
         // resolve shape sequence to search through
         const ESearchDirection sd = tpl.searchDirection();
         if (SD_FORWARD == sd)
@@ -874,7 +872,7 @@ void matchSingleFootprint(
             std::reverse(seq.begin(), seq.end());
 
         // search anchor heap
-        BOOST_FOREACH(const TShapeIdent &shIdent, seq) {
+        for (const TShapeIdent &shIdent : seq) {
             TMatchList matchList;
             if (!matchAnchorHeap(&matchList, ctx, tpl, fp, fpIdent, shIdent))
                 // failed to match anchor heap
@@ -891,7 +889,7 @@ void matchSingleFootprint(
                     << ((SD_FORWARD == sd) ? "forward" : "backward")
                     << "...");
 
-            BOOST_FOREACH(const FootprintMatch &fm, matchList) {
+            for (const FootprintMatch &fm : matchList) {
                 if (!diffHeapsIfNeeded(&metaOps, fp, fm))
                     // non-recoverable error while computing diff of the footprint
                     return;
@@ -952,7 +950,7 @@ void collectReplacedInsnsCore(
     TLocIdx lastLoc = -1;
     THeapIdx lastHeap = -1;
 
-    BOOST_FOREACH(const THeapIdent &heap, heapSet) {
+    for (const THeapIdent &heap : heapSet) {
         const TLocIdx currLoc = heap.first;
         if (-1 != lastLoc && lastLoc != currLoc) {
             // we have reached next location ==> was the last sequence correct?
@@ -987,7 +985,7 @@ void collectReplacedInsns(
     THeapSetByTpl heapSetByTpl;
 
     // go through all matched footprints and populate heapSetByTpl
-    BOOST_FOREACH(const FootprintMatch &fm, matchList) {
+    for (const FootprintMatch &fm : matchList) {
         const THeapIdentSeq &heapList = fm.matchedHeaps;
         const TTemplateIdx tpl = fm.footprint./* tpl idx */first;
         if (heapSetByTpl.size() <= static_cast<unsigned>(tpl))
@@ -1018,14 +1016,14 @@ bool applyMatch(THeapSet *pHeapPool, const FootprintMatch &fm, const bool ro)
 
     if (ro) {
         // try it read-only
-        BOOST_FOREACH(const THeapIdent &heap, matchedHeaps)
+        for (const THeapIdent &heap : matchedHeaps)
             if (!hasKey(pHeapPool, heap))
                 // incomplete match!
                 return false;
     }
     else {
         // remove all heaps used by this match
-        BOOST_FOREACH(const THeapIdent &heap, matchedHeaps)
+        for (const THeapIdent &heap : matchedHeaps)
             pHeapPool->erase(heap);
     }
 
@@ -1045,8 +1043,8 @@ bool selectApplicableMatchesCore(
 
     // collect heaps to be replaced
     THeapSet toReplace;
-    BOOST_FOREACH(const TInsnList &insns, insnsToBeReplaced) {
-        BOOST_FOREACH(const TLocIdx locIdx, insns) {
+    for (const TInsnList &insns : insnsToBeReplaced) {
+        for (const TLocIdx locIdx : insns) {
             const THeapIdx cntHeaps = progState[locIdx].heapList.size();
             for (THeapIdx heapIdx = 0; heapIdx < cntHeaps; ++heapIdx) {
                 const THeapIdent heap(locIdx, heapIdx);
@@ -1073,8 +1071,8 @@ bool selectApplicableMatchesCore(
 
     // go through matches ordered by prio and select a set of applicable ones
     TMatchList mlSelected;
-    BOOST_FOREACH(TTplIdxByPrio::const_reference item, tplIdxByPrio)
-    BOOST_FOREACH(const TTemplateIdx tpl, item.second) {
+    for (TTplIdxByPrio::const_reference item : tplIdxByPrio)
+    for (const TTemplateIdx tpl : item.second) {
         // first check with matches are applicable
         std::vector<unsigned /* match idx */> picked;
         for (unsigned matchIdx = 0U; matchIdx < matchCnt; ++matchIdx) {
@@ -1087,7 +1085,7 @@ bool selectApplicableMatchesCore(
         }
 
         // then remove the replaced heaps from the set and append the result
-        BOOST_FOREACH(const unsigned matchIdx, picked) {
+        for (const unsigned matchIdx : picked) {
             const FootprintMatch &fm = mlOrig[matchIdx];
             applyMatch(&toReplace, fm, /* ro */ false);
             mlSelected.push_back(fm);
@@ -1109,7 +1107,7 @@ bool selectApplicableMatchesCore(
 template <class TA, class TB>
 bool intersects(const TA &aset, const TB &bset)
 {
-    BOOST_FOREACH(typename TA::const_reference item, aset)
+    for (typename TA::const_reference item : aset)
         if (hasKey(bset, item))
             return true;
 
@@ -1125,7 +1123,7 @@ bool filterMatchList(
     bool anyMatch = false;
 
     // iterate through matches
-    BOOST_FOREACH(const FootprintMatch &fm, *pMatchList) {
+    for (const FootprintMatch &fm : *pMatchList) {
         if (intersects(fm.matchedHeaps, blackList))
             anyMatch = true;
         else 
@@ -1175,7 +1173,7 @@ bool collectOpList(
 
         // go through all locations (instructions to replace by this match)
         TOpIdx opIdx = -1;
-        BOOST_FOREACH(const THeapIdent &heap, heapList) {
+        for (const THeapIdent &heap : heapList) {
             const TLocIdx loc = heap.first;
             const TIdxMap::const_iterator it = idxMap.find(loc);
 
@@ -1198,7 +1196,7 @@ bool collectOpList(
         }
 
         // go through all locations (instructions to replace by this match)
-        BOOST_FOREACH(const THeapIdent &heap, heapList) {
+        for (const THeapIdent &heap : heapList) {
             const TLocIdx loc = heap.first;
             if (hasKey(idxMap, loc) && idxMap[loc] != opIdx)
                 CL_BREAK_IF("internal error detected in collectOpList()");

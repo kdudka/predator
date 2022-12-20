@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -40,8 +40,6 @@
 #include <algorithm>
 #include <vector>
 
-#include <boost/foreach.hpp>
-
 LOCAL_DEBUG_PLOTTER(symcall, DEBUG_SYMCALL)
 
 // /////////////////////////////////////////////////////////////////////////////
@@ -73,7 +71,7 @@ class PerFncCache {
         }
 
         ~PerFncCache() {
-            BOOST_FOREACH(SymCallCtx *ctx, ctxMap_) {
+            for (SymCallCtx *ctx : ctxMap_) {
                 delete ctx;
             }
         }
@@ -83,7 +81,7 @@ class PerFncCache {
         }
 
         bool inUse() const {
-            BOOST_FOREACH(const SymCallCtx *ctx, ctxMap_)
+            for (const SymCallCtx *ctx : ctxMap_)
                 if (ctx->inUse())
                     return true;
 
@@ -327,7 +325,7 @@ void SymCallCtx::Private::destroyStackFrame(SymHeap &sh)
 
     TObjList live;
     sh.gatherObjects(live, isProgramVar);
-    BOOST_FOREACH(const TObjId obj, live) {
+    for (const TObjId obj : live) {
         const EStorageClass code = sh.objStorClass(obj);
         if (SC_STATIC == code)
             // gl variable
@@ -378,7 +376,7 @@ void joinHeapsWithCare(
 
     TObjList liveGlVars;
     callFrame.gatherObjects(liveGlVars, isGlVar);
-    BOOST_FOREACH(const TObjId obj, liveGlVars) {
+    for (const TObjId obj : liveGlVars) {
         const CVar cv = callFrame.cVarByObject(obj);
         CL_BREAK_IF(cv.inst);
 
@@ -623,7 +621,7 @@ void SymCallCache::Private::resolveHeapCut(
 
     // start with all gl variables that are accessible from this function
     TCVarList fncVarsToImport;
-    BOOST_FOREACH(const cl_uid_t uid, fncVars) {
+    for (const cl_uid_t uid : fncVars) {
         const CodeStorage::Var &var = stor.vars[uid];
         if (isOnStack(var))
             continue;
@@ -637,12 +635,12 @@ void SymCallCache::Private::resolveHeapCut(
     }
 
     // lazy import of gl variables in a batch (to avoid altering the list)
-    BOOST_FOREACH(const CVar &cv, fncVarsToImport)
+    for (const CVar &cv : fncVarsToImport)
         this->importGlVar(sh, cv);
 
     TObjList live;
     sh.gatherObjects(live, isProgramVar);
-    BOOST_FOREACH(const TObjId obj, live) {
+    for (const TObjId obj : live) {
         const CVar cv(sh.cVarByObject(obj));
 
         const EStorageClass code = sh.objStorClass(obj);
@@ -687,7 +685,7 @@ void setCallArgs(
 
     // set args' values
     unsigned pos = /* dst + fnc */ 2;
-    BOOST_FOREACH(int arg, args) {
+    for (int arg : args) {
 
         // cVar lookup
         const int nestLevel = bt.countOccurrencesOfFnc(uidOf(fnc));

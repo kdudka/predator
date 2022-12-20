@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2014-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -28,8 +28,6 @@
 #include <cl/cldebug.hh>
 #include <cl/clutil.hh>
 #include <cl/cl_msg.hh>
-
-#include <boost/foreach.hpp>
 
 namespace AdtOp {
 
@@ -76,7 +74,7 @@ bool checkIndependency(
     offs.push_back(bOff.next);
     offs.push_back(bOff.prev);
 
-    BOOST_FOREACH(const THeapIdent heap, fm.skippedHeaps) {
+    for (const THeapIdent &heap : fm.skippedHeaps) {
         const LocalState &locState = progState[heap.first];
         const TInsn insn = locState.insn->clInsn();
         SymHeap sh = locState.heapList[heap.second];
@@ -91,7 +89,7 @@ bool checkIndependency(
         SymProc proc(sh, &bt);
         proc.setLocation(&insn->loc);
 
-        BOOST_FOREACH(const struct cl_operand &op, insn->operands) {
+        for (const struct cl_operand &op : insn->operands) {
             if (CL_OPERAND_VAR != op.code)
                 continue;
 
@@ -107,7 +105,7 @@ bool checkIndependency(
             const TOffset winLo = fld.offset();
             const TOffset winHi = winLo + fld.type()->size;
 
-            BOOST_FOREACH(const TOffset lo, offs) {
+            for (const TOffset lo : offs) {
                 const TOffset hi = lo + psize;
                 if (winHi <= lo)
                     continue;
@@ -188,7 +186,7 @@ bool findShapeVarsInUse(
 {
     TShapeVarSet inSet, outSet;
 
-    BOOST_FOREACH(const TMatchIdx idx, idxList) {
+    for (const TMatchIdx idx : idxList) {
         const FootprintMatch &fm = matchList[idx];
         const THeapIdentSeq &heaps = fm.matchedHeaps;
 
@@ -234,7 +232,7 @@ void collectArgObjs(
 
     TObjSet progObjs;
     project<D_LEFT_TO_RIGHT>(fm.objMap[port], &progObjs, tplObjs);
-    BOOST_FOREACH(const TObjId obj, progObjs)
+    for (const TObjId obj : progObjs)
         pObjList->push_back(obj);
 }
 
@@ -258,14 +256,14 @@ void collectPtrVarsCore(
     SymHeap sh(*shOrig);
     Trace::waiveCloneOperation(sh);
 
-    BOOST_FOREACH(const TObjId obj, objList) {
+    for (const TObjId obj : objList) {
         if (!sh.isValid(obj))
             // the object we are looking for does not exist (partial match?)
             continue;
 
         FldList refs;
         sh.pointedBy(refs, obj);
-        BOOST_FOREACH(const FldHandle &fld, refs) {
+        for (const FldHandle &fld : refs) {
             const TObjId refObj = fld.obj();
             const TSizeRange size = sh.objSize(refObj);
             if (size.hi != fld.type()->size)
@@ -305,7 +303,7 @@ void collectPtrVars(
         TPtrVarList varsNow, intersect;
 
         collectPtrVarsCore(&varsNow, fm, tpl, progState, port);
-        BOOST_FOREACH(const cl_uid_t uid, *pDst) {
+        for (const cl_uid_t uid : *pDst) {
             if (varsNow.end() == std::find(varsNow.begin(), varsNow.end(), uid))
                 // uid not in the intersection
                 continue;
@@ -343,7 +341,7 @@ std::string ptrVarsToString(
     TStorRef stor = anySymHeap->stor();
     std::string str;
 
-    BOOST_FOREACH(const cl_uid_t uid, ptrVarList) {
+    for (const cl_uid_t uid : ptrVarList) {
         str += ", ";
         str += varToString(stor, uid);
         pSet->insert(GenericVar(VL_CODE_LISTENER, uid));
@@ -360,7 +358,7 @@ bool replaceSingleOp(
         const OpTemplate           &tpl,
         const TProgState           &progState)
 {
-    BOOST_FOREACH(const TMatchIdx idx, idxList)
+    for (const TMatchIdx idx : idxList)
         if (!checkIndependency(matchList[idx], progState))
             return false;
 
@@ -389,7 +387,7 @@ bool replaceSingleOp(
     pInsnWriter->replaceInsn(locToReplace, insn);
 
     std::set<TLocIdx> removed;
-    BOOST_FOREACH(const TMatchIdx idx, idxList) {
+    for (const TMatchIdx idx : idxList) {
         const FootprintMatch &fm = matchList[idx];
 
         // skip the last heap that does not represent any insn
@@ -475,8 +473,8 @@ bool crHeapsCovered(
     else {
         // follow all trace edges going to from loc to locDst
         const LocalState &locStateDst = progState[locDst];
-        BOOST_FOREACH(const TTraceEdgeList &trEdges, locStateDst.traceInEdges) {
-            BOOST_FOREACH(const TraceEdge *te, trEdges) {
+        for (const TTraceEdgeList &trEdges : locStateDst.traceInEdges) {
+            for (const TraceEdge *te : trEdges) {
                 const THeapIdent &src = te->src;
                 if (src./* loc */first == loc)
                     all.insert(src);
@@ -486,7 +484,7 @@ bool crHeapsCovered(
 
     // remove them one by one while checking for dupes
     for (unsigned br = CB_TRUE; br < CB_TOTAL; ++br) {
-        BOOST_FOREACH(const THeapIdent &heap, locData.heapsByBranch[br])
+        for (const THeapIdent &heap : locData.heapsByBranch[br])
             if (1U != all.erase(heap))
                 return false;
     }
@@ -507,7 +505,7 @@ bool crExpandLoc(
         // no predecessor, something went wrong
         return false;
 
-    BOOST_FOREACH(const CfgEdge &ce, cfgEdges) {
+    for (const CfgEdge &ce : cfgEdges) {
         const TLocIdx srcLoc = ce.targetLoc;
         if (hasKey(ctx.data, srcLoc))
             // location already processed, something went wrong
@@ -521,8 +519,8 @@ bool crExpandLoc(
     const TCondData &dstData = ctx.data[loc];
 
     // go through incoming trace edges
-    BOOST_FOREACH(const TTraceEdgeList &trEdges, locState.traceInEdges) {
-        BOOST_FOREACH(const TraceEdge *te, trEdges) {
+    for (const TTraceEdgeList &trEdges : locState.traceInEdges) {
+        for (const TraceEdge *te : trEdges) {
             const THeapIdent &src = te->src;
             const THeapIdent &dst = te->dst;
 
@@ -550,7 +548,7 @@ bool inferNonEmpty(
 
     TShapeVarId var = -1;
 
-    BOOST_FOREACH(const THeapIdent &heap, heapSet) {
+    for (const THeapIdent &heap : heapSet) {
         const TShapeIdent shape(heap, /* XXX */ 0);
         const TShapeVarByShape::const_iterator it = ctx.varMap.find(shape);
         if (it == ctx.varMap.end())
@@ -570,7 +568,7 @@ bool inferEmpty(
         CondReplaceCtx             &ctx,
         const THeapIdentSet        &heapSet)
 {
-    BOOST_FOREACH(const THeapIdent &heap, heapSet) {
+    for (const THeapIdent &heap : heapSet) {
         const TShapeIdent shape(heap, /* XXX */ 0);
         if (hasKey(ctx.varMap, shape))
             return false;
@@ -706,8 +704,8 @@ bool tryReplaceCond(
     const TLocIdx floc = cfgEdges[/* false */ 1].targetLoc;
 
     // check which heaps are heading to true/false branches
-    BOOST_FOREACH(const TTraceEdgeList &trEdges, locState.traceOutEdges) {
-        BOOST_FOREACH(const TraceEdge *te, trEdges) {
+    for (const TTraceEdgeList &trEdges : locState.traceOutEdges) {
+        for (const TraceEdge *te : trEdges) {
             const THeapIdent &src = te->src;
             const TLocIdx dstLoc = te->dst.first;
             if (dstLoc == tloc)
@@ -1057,15 +1055,15 @@ void collectLocsInOps(
         const TMatchList           &matchList,
         const TOpList              &opList)
 {
-    BOOST_FOREACH(const TMatchIdxList &idxList, opList) {
-        BOOST_FOREACH(const TMatchIdx idx, idxList) {
+    for (const TMatchIdxList &idxList : opList) {
+        for (const TMatchIdx idx : idxList) {
             const FootprintMatch &fm = matchList[idx];
             const THeapIdentSeq &hList = fm.matchedHeaps;
             typedef THeapIdentSeq::const_reverse_iterator TIter;
             for (TIter it = ++hList.rbegin(); it != hList.rend(); ++it)
                 pDst->insert(it->/* loc */first);
 
-            BOOST_FOREACH(const THeapIdent &heap, fm.skippedHeaps)
+            for (const THeapIdent &heap : fm.skippedHeaps)
                 pDst->insert(heap./* loc */first);
         }
     }
@@ -1079,7 +1077,7 @@ bool replaceAdtOps(
         const TShapeVarByShape     &varMap,
         const TProgState           &progState)
 {
-    BOOST_FOREACH(const TMatchIdxList &idxList, opList) {
+    for (const TMatchIdxList &idxList : opList) {
         const FootprintMatch &fm0 = matchList[idxList.front()];
         const TFootprintIdent &fp = fm0.footprint;
         const OpTemplate &tpl = adtOps[fp.first];

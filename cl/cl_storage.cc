@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -30,7 +30,6 @@
 #include <set>
 #include <stack>
 
-#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 namespace CodeStorage {
@@ -289,14 +288,14 @@ namespace CodeStorage {
     }
 
     void destroyInsn(Insn *insn) {
-        BOOST_FOREACH(struct cl_operand &op, insn->operands) {
+        for (struct cl_operand &op : insn->operands) {
             releaseOperand(op);
         }
         delete insn;
     }
 
     void destroyBlock(Block *bb) {
-        BOOST_FOREACH(const Insn *insn, *bb) {
+        for (const Insn *insn : *bb) {
             destroyInsn(const_cast<Insn *>(insn));
         }
         delete bb;
@@ -304,7 +303,7 @@ namespace CodeStorage {
 
     void destroyFnc(Fnc *fnc) {
         releaseOperand(fnc->def);
-        BOOST_FOREACH(const Block *bb, fnc->cfg) {
+        for (const Block *bb : fnc->cfg) {
             destroyBlock(const_cast<Block *>(bb));
         }
         delete fnc->cgNode;
@@ -312,7 +311,7 @@ namespace CodeStorage {
     }
 
     void releaseStorage(Storage &stor) {
-        BOOST_FOREACH(const Fnc *fnc, stor.fncs) {
+        for (const Fnc *fnc : stor.fncs) {
             destroyFnc(const_cast<Fnc *>(fnc));
         }
     }
@@ -379,7 +378,7 @@ void ClStorageBuilder::Private::digInitials(const TOp *op)
         // NOTE: keeping a reference for this may cause a SIGSEGV or lockup
         stor.vars[id].initials.push_back(insn);
 
-        BOOST_FOREACH(const struct cl_operand &op, insn->operands)
+        for (const struct cl_operand &op : insn->operands)
             this->digOperand(&op);
     }
 }
@@ -545,12 +544,12 @@ void ClStorageBuilder::Private::openInsn(Insn *newInsn)
 void ClStorageBuilder::Private::closeInsn()
 {
     TOperandList &operands = insn->operands;
-    BOOST_FOREACH(const struct cl_operand &op, operands) {
+    for (const struct cl_operand &op : operands) {
         this->digOperand(&op);
     }
 
     TTargetList &tlist = insn->targets;
-    BOOST_FOREACH(const Block *target, tlist) {
+    for (const Block *target : tlist) {
         const_cast<Block *>(target)->appendPredecessor(this->bb);
     }
 

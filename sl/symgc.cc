@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2012 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -30,13 +30,11 @@
 
 #include <stack>
 
-#include <boost/foreach.hpp>
-
 void gatherReferredRoots(TObjSet &dst, SymHeap &sh, TObjId obj)
 {
     FldList ptrs;
     sh.gatherLiveFields(ptrs, obj);
-    BOOST_FOREACH(const FldHandle &fld, ptrs) {
+    for (const FldHandle &fld : ptrs) {
         const TValId val = fld.value();
         if (val <= 0)
             continue;
@@ -70,7 +68,7 @@ bool isJunk(SymHeap &sh, TObjId obj)
         // go through all referrers
         FldList refs;
         sh.pointedBy(refs, obj);
-        BOOST_FOREACH(const FldHandle &fld, refs)
+        for (const FldHandle &fld : refs)
             wl.schedule(fld.obj());
     }
 
@@ -117,7 +115,7 @@ bool gcCore(SymHeap &sh, TObjId obj, TObjSet *leakObjs, bool sharedOnly)
 
 skip_root:
         // schedule just created junk candidates for next wheel
-        BOOST_FOREACH(const TObjId refObj, refs)
+        for (const TObjId refObj : refs)
             wl.schedule(refObj);
     }
 
@@ -150,7 +148,7 @@ bool destroyObjectAndCollectJunk(
 
     // now check for memory leakage
     bool leaking = false;
-    BOOST_FOREACH(const TObjId obj, refs) {
+    for (const TObjId obj : refs) {
         if (collectJunk(sh, obj, leakObjs))
             leaking = true;
     }

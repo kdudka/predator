@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -32,7 +32,6 @@
 #include <stack>
 #include <utility>
 
-#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 struct BtStackItem {
@@ -167,7 +166,7 @@ bool SymBackTrace::printBackTrace() const
     if (ref.size() < 2)
         return false;
 
-    BOOST_FOREACH(const BtStackItem &item, ref)
+    for (const BtStackItem &item : ref)
         CL_NOTE_MSG(item.loc, "from call of " << nameOf(item.fnc) << "()");
 
     return true;

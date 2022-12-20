@@ -28,8 +28,6 @@
 #include <cl/storage.hh>
 #include <cl/cl_msg.hh>
 
-#include <boost/foreach.hpp>
-
 #include <sstream>
 #include <ostream>
 #include <fstream>
@@ -80,7 +78,7 @@ void plotGraph(const Storage &stor, const std::string &baseName)
 {
     std::stringstream dot;
     WorkList<const Fnc *> wl;
-    BOOST_FOREACH(const Fnc *fnc, stor.fncs) {
+    for (const Fnc *fnc : stor.fncs) {
         wl.schedule(fnc);
     }
 
@@ -91,10 +89,10 @@ void plotGraph(const Storage &stor, const std::string &baseName)
         dotNode(dot, plotted);
 
         const Node *clrNode = plotted->cgNode;
-        BOOST_FOREACH(TInsnListByFnc::const_reference item, clrNode->calls) {
+        for (TInsnListByFnc::const_reference item : clrNode->calls) {
             const Fnc *callee = item.first;
             if (callee) {
-                BOOST_FOREACH(const Insn *insn, item.second) {
+                for (const Insn *insn : item.second) {
                     dotEdge(dot, plotted, callee, insn);
                 }
                 wl.schedule(callee);
@@ -197,7 +195,7 @@ inline void dotPlotNodeLabel(PlotCtx &ctx, const Node *node)
 
     PLOT(out, 0, "{");
     int counter = 0;
-    BOOST_FOREACH(const Item *i, node->variables) {
+    for (const Item *i : node->variables) {
         if (counter)
             PLOT(out, 0, ", ");
         else
@@ -230,18 +228,18 @@ void ptPlotSubGraph(PlotCtx &ctx)
     const Graph &ptg = *ctx.ptg;
 
     WorkList<Node *> wl;
-    BOOST_FOREACH(const TMap::value_type &t, ptg.map) {
+    for (const TMap::value_type &t : ptg.map) {
         wl.schedule(t.second);
     }
 
     Node *plotNode;
     while (wl.next(plotNode)) {
         dotPlotNode(ctx, plotNode);
-        BOOST_FOREACH(Node *outNode, plotNode->outNodes) {
+        for (Node *outNode : plotNode->outNodes) {
             dotPlotEdge(ctx, plotNode, outNode);
             wl.schedule(outNode);
         }
-        BOOST_FOREACH(Node *inNode, plotNode->inNodes) {
+        for (Node *inNode : plotNode->inNodes) {
             wl.schedule(inNode);
         }
     }
@@ -254,7 +252,7 @@ void plotGraph(const Storage &stor, const std::string &baseName)
     std::stringstream &out = pctx.output;
     PLOTLINE(out, 0, "digraph pt_graph_fics {");
 
-    BOOST_FOREACH(const Fnc *fnc, stor.fncs) {
+    for (const Fnc *fnc : stor.fncs) {
         pctx.ptg = &fnc->ptg;
         pctx.nodeMap.clear();
 

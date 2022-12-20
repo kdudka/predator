@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2013-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -27,7 +27,6 @@
 #include <set>
 #include <vector>
 
-#include <boost/foreach.hpp>
 #include <boost/static_assert.hpp>
 
 enum EDirection {
@@ -134,10 +133,10 @@ void project(
         TDst                       *pDstCont,
         const TSrc                 &srcCont)
 {
-    BOOST_FOREACH(typename TSrc::value_type src, srcCont) {
+    for (typename TSrc::value_type src : srcCont) {
         typename TBiMap::TVector dstVect;
         biMap.template query<DIR>(&dstVect, src);
-        BOOST_FOREACH(const typename TDst::value_type dst, dstVect)
+        for (const typename TDst::value_type dst : dstVect)
             pDstCont->insert(dst);
     }
 }
@@ -203,19 +202,19 @@ void IdMapper<TId, MIN, MAX>::composite(const IdMapper<TId, MIN, MAX> &by)
 
     // iterate through the mapping of 'this'
     const TSearch &m = biSearch_[DIR];
-    BOOST_FOREACH(typename TSearch::const_reference item, m) {
+    for (typename TSearch::const_reference item : m) {
         const TId a = item.first;
         const TId b = item.second;
         TVector cList;
         by.query<DIR>(&cList, b);
-        BOOST_FOREACH(const TId c, cList)
+        for (const TId c : cList)
             result.insert(a, c);
     }
 
     if (NFA_RETURN_IDENTITY == nfa_) {
         // iterate through the mapping of 'by'
         const TSearch &mBy = by.biSearch_[DIR];
-        BOOST_FOREACH(typename TSearch::const_reference item, mBy) {
+        for (typename TSearch::const_reference item : mBy) {
             const TId b = item.first;
             const TId c = item.second;
 
@@ -226,7 +225,7 @@ void IdMapper<TId, MIN, MAX>::composite(const IdMapper<TId, MIN, MAX> &by)
             else
                 this->query<D_LEFT_TO_RIGHT>(&aList, b);
 
-            BOOST_FOREACH(const TId a, aList)
+            for (const TId a : aList)
                 result.insert(a, c);
         }
     }
@@ -244,7 +243,7 @@ void IdMapper<TId, MIN, MAX>::prettyPrint(std::ostream &str) const
 {
     unsigned i = 0U;
     const TSearch &m = biSearch_[D_LEFT_TO_RIGHT];
-    BOOST_FOREACH(typename TSearch::const_reference item, m) {
+    for (typename TSearch::const_reference item : m) {
         if (i++)
             str << ", ";
 

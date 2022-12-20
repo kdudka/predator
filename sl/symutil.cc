@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -30,8 +30,6 @@
 #include "util.hh"
 
 #include <algorithm>                /* for std::find() */
-
-#include <boost/foreach.hpp>
 
 bool numFromVal(IR::TInt *pDst, const SymHeapCore &sh, const TValId val)
 {
@@ -425,7 +423,7 @@ bool /* anyChange */ redirectRefs(
     // go through all objects pointing at/inside pointingTo
     FldList refs;
     sh.pointedBy(refs, pointingTo);
-    BOOST_FOREACH(const FldHandle &fld, refs) {
+    for (const FldHandle &fld : refs) {
         if (OBJ_INVALID != pointingFrom) {
             const TObjId refObj = fld.obj();
             if (pointingFrom != refObj)
@@ -482,7 +480,7 @@ void redirectRefsNotFrom(
     // go through all objects pointing at/inside pointingTo
     FldList refs;
     sh.pointedBy(refs, pointingTo);
-    BOOST_FOREACH(const FldHandle &fld, refs) {
+    for (const FldHandle &fld : refs) {
         const TObjId refObj = fld.obj();
         if (hasKey(pointingNotFrom, refObj))
             continue;
@@ -516,7 +514,7 @@ void transferOutgoingEdges(
 
     FldList fields;
     sh.gatherLiveFields(fields, ofObj);
-    BOOST_FOREACH(const FldHandle &fldOld, fields) {
+    for (const FldHandle &fldOld : fields) {
         const TValId val = fldOld.value();
         const FldHandle fldNew(sh, toObj, fldOld.type(), fldOld.offset());
         fldNew.setValue(val);

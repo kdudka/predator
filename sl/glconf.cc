@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2013-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -30,7 +30,6 @@
 
 #include <boost/algorithm/string/classification.hpp>
 #include <boost/algorithm/string/split.hpp>
-#include <boost/foreach.hpp>
 #include <boost/lexical_cast.hpp>
 
 namespace GlConf {
@@ -294,7 +293,7 @@ void loadConfigString(const string &cnf)
 
     // go through all options and parse them one by one
     ConfigStringParser parser;
-    BOOST_FOREACH(const string &str, opts)
+    for (const string &str : opts)
         parser.handleRawOption(str);
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -39,8 +39,6 @@
 #include <stdexcept>
 #include <string>
 
-#include <boost/foreach.hpp>
-
 // required by the gcc plug-in API
 extern "C" {
     __attribute__ ((__visibility__ ("default"))) int plugin_is_GPL_compatible;
@@ -51,7 +49,7 @@ void initGlVars(SymHeap &sh)
     using namespace CodeStorage;
     TStorRef stor = sh.stor();
 
-    BOOST_FOREACH(const Var &var, stor.vars) {
+    for (const Var &var : stor.vars) {
         if (VAR_GL != var.code)
             continue;
 
@@ -102,7 +100,7 @@ void execFnc(const CodeStorage::Fnc &fnc, bool lookForGlJunk = false)
     const unsigned cnt = results.size();
 
     unsigned i = 0;
-    BOOST_FOREACH(SymHeap *sh, results) {
+    for (SymHeap *sh : results) {
         if (1 < cnt) {
             CL_DEBUG("*** destroying gl variables in heap #"
                     << (i++) << " of " << cnt << " heaps total");
@@ -118,7 +116,7 @@ void execVirtualRoots(const CodeStorage::Storage &stor)
 
     // go through all root nodes
     const CG::Graph &cg = stor.callGraph;
-    BOOST_FOREACH(const CG::Node *node, cg.roots) {
+    for (const CG::Node *node : cg.roots) {
         const CodeStorage::Fnc &fnc = *node->fnc;
         if (!isDefined(fnc))
             continue;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2011-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -25,8 +25,6 @@
 #include "util.hh"
 
 #include <vector>
-
-#include <boost/foreach.hpp>
 
 #if SH_COPY_ON_WRITE
 class RefCounter {
@@ -279,7 +277,7 @@ EntStore<TBaseEnt>::EntStore(const EntStore &ref):
 #if SH_PREVENT_AMBIGUOUS_ENT_ID
     RefCntLib<RCO_NON_VIRT>::enter(entCnt_);
 #endif
-    BOOST_FOREACH(TBaseEnt *&ent, ents_)
+    for (TBaseEnt *&ent : ents_)
         if (ent)
             RefCntLib<RCO_VIRTUAL>::enter(ent);
 }
@@ -290,7 +288,7 @@ EntStore<TBaseEnt>::~EntStore()
 #if SH_PREVENT_AMBIGUOUS_ENT_ID
     RefCntLib<RCO_NON_VIRT>::leave(entCnt_);
 #endif
-    BOOST_FOREACH(TBaseEnt *ent, ents_)
+    for (TBaseEnt *ent : ents_)
         if (ent)
             RefCntLib<RCO_VIRTUAL>::leave(ent);
 }

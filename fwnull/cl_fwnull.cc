@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -27,8 +27,6 @@
 #include <map>
 #include <queue>
 #include <set>
-
-#include <boost/foreach.hpp>
 
 // required by the gcc plug-in API
 extern "C" {
@@ -155,7 +153,7 @@ void handleVarDeref(
 void handleDerefs(Data &data, const TInsn insn)
 {
     // for each operand
-    BOOST_FOREACH(TOperand &op, insn->operands) {
+    for (TOperand &op : insn->operands) {
         const struct cl_accessor *ac = op.accessor;
         if (!ac || ac->code != CL_ACCESSOR_DEREF || seekRefAccessor(ac))
             // no dereference here
@@ -364,7 +362,7 @@ void handleInsnBinop(Data &data, const TInsn insn)
 #ifndef NDEBUG
     // binary instructions are said to have no dereferences
     // (better to check anyway)
-    BOOST_FOREACH(TOperand &op, opList) {
+    for (TOperand &op : opList) {
         const struct cl_accessor *ac = op.accessor;
         CL_BREAK_IF(ac && ac->code == CL_ACCESSOR_DEREF);
     }
@@ -450,7 +448,7 @@ void treatRefAsSideEffect(
         TOperandList               &opList)
 {
     // for each operand
-    BOOST_FOREACH(TOperand &op, opList) {
+    for (TOperand &op : opList) {
         if (CL_OPERAND_VAR != op.code)
             // not a variable
             continue;
@@ -515,7 +513,7 @@ void updateState(
 
     // for each variable
     bool changed = false;
-    BOOST_FOREACH(TState::const_reference item, state) {
+    for (TState::const_reference item : state) {
         if (mergeValues(dstState[item.first], item.second))
             changed = true;
     }
@@ -658,7 +656,7 @@ void handleBlock(Data &data, const TBlock bb)
 {
     // go through the sequence of instructions of the current basic block
     data.localState = data.stateMap[bb];
-    BOOST_FOREACH(const TInsn insn, *bb) {
+    for (const TInsn insn : *bb) {
         if (cl_is_term_insn(insn->code))
             // terminal instruction
             handleInsnTerm(data, insn);
@@ -694,7 +692,7 @@ void handleFnc(const CodeStorage::Fnc &fnc)
 
     // finally report all errors/warning over the already computed fixed-point
     data.silent = false;
-    BOOST_FOREACH(const TBlock bb, cfg)
+    for (const TBlock bb : cfg)
         handleBlock(data, bb);
 }
 
@@ -704,7 +702,7 @@ void clEasyRun(const CodeStorage::Storage &stor, const char *)
 {
     using namespace CodeStorage;
 
-    BOOST_FOREACH(const Fnc *pFnc, stor.callGraph.topOrder) {
+    for (const Fnc *pFnc : stor.callGraph.topOrder) {
         const Fnc &fnc = *pFnc;
         if (!isDefined(fnc))
             continue;

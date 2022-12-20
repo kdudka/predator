@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -36,8 +36,6 @@
 #include <iomanip>
 #include <map>
 
-#include <boost/foreach.hpp>
-
 #if !SE_BLOCK_SCHEDULER_KIND
 #   include <queue>
 #endif
@@ -68,7 +66,7 @@ namespace {
 // SymState implementation
 void SymState::clear()
 {
-    BOOST_FOREACH(SymHeap *sh, heaps_)
+    for (SymHeap *sh : heaps_)
         delete sh;
 
     heaps_.clear();
@@ -85,7 +83,7 @@ SymState& SymState::operator=(const SymState &ref)
     this->clear();
 
     // clone all heaps one by one
-    BOOST_FOREACH(const SymHeap *sh, ref.heaps_)
+    for (const SymHeap *sh : ref.heaps_)
         heaps_.push_back(new SymHeap(*sh));
 
     return *this;
@@ -421,7 +419,7 @@ const BlockScheduler::TBlockSet& BlockScheduler::todo() const
 BlockScheduler::TBlockList BlockScheduler::done() const
 {
     TBlockList dst;
-    BOOST_FOREACH(Private::TDone::const_reference item, d->done)
+    for (Private::TDone::const_reference item : d->done)
         dst.push_back(/* bb */ item.first);
 
     return dst;
@@ -490,7 +488,7 @@ bool BlockScheduler::getNext(TBlock *dst)
     TLoad load;
 
     // this really needs to be sorted in getNext()
-    BOOST_FOREACH(const TBlock bbNow, d->todo) {
+    for (const TBlock bbNow : d->todo) {
         const int cntPending = d->pcp->cntPending(bbNow);
         load[cntPending] = bbNow;
     }
@@ -520,13 +518,13 @@ void BlockScheduler::printStats() const
 
     // sort d->todo by cnt
     TRMap rMap;
-    BOOST_FOREACH(Private::TDone::const_reference item, d->done) {
+    for (Private::TDone::const_reference item : d->done) {
         rMap[/* cnt */ item.second].push_back(/* bb */ item.first);
     }
 
-    BOOST_FOREACH(TRMap::const_reference item, rMap) {
+    for (TRMap::const_reference item : rMap) {
         const unsigned cnt = item.first;
-        BOOST_FOREACH(const TBlock bb, /* TBlockList */ item.second) {
+        for (const TBlock bb : /* TBlockList */ item.second) {
             const CodeStorage::Insn *first = bb->front();
             const std::string &name = bb->name();
 

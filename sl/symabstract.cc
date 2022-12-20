@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  * Copyright (C) 2010 Petr Peringer, FIT
  *
  * This file is part of predator.
@@ -39,8 +39,6 @@
 #include <iomanip>
 #include <set>
 #include <sstream>
-
-#include <boost/foreach.hpp>
 
 LOCAL_DEBUG_PLOTTER(symabstract, DEBUG_SYMABSTRACT)
 
@@ -157,7 +155,7 @@ void clonePrototypes(
 
     // export the 'protos' set to a vector
     unsigned i = 0;
-    BOOST_FOREACH(const TObjId obj, protos)
+    for (const TObjId obj : protos)
         protoList[i++] = obj;
 
     // clone the prototypes and reconnect them to the new owner and prototypes

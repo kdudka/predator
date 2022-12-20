@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009-2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -28,7 +28,6 @@
 #include "util.hh"
 #include "worklist.hh"
 
-#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 bool matchOffsets(
@@ -97,7 +96,7 @@ bool matchUniBlocks(
     SymHeap &sh1Writable = const_cast<SymHeap &>(sh1);
     SymHeap &sh2Writable = const_cast<SymHeap &>(sh2);
 
-    BOOST_FOREACH(TUniBlockMap::const_reference item, bMap1) {
+    for (TUniBlockMap::const_reference item : bMap1) {
         UniformBlock bl2(item.second);
         bl2.tplValue = translateValProto(sh2Writable, sh1, bl2.tplValue);
 
@@ -106,7 +105,7 @@ bool matchUniBlocks(
             return false;
     }
 
-    BOOST_FOREACH(TUniBlockMap::const_reference item, bMap2) {
+    for (TUniBlockMap::const_reference item : bMap2) {
         UniformBlock bl1(item.second);
         bl1.tplValue = translateValProto(sh1Writable, sh2, bl1.tplValue);
 

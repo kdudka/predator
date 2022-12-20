@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2009 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2009-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -27,8 +27,6 @@
 
 #include "cl.hh"
 #include "cl_private.hh"
-
-#include <boost/foreach.hpp>
 
 #include <vector>
 
@@ -92,13 +90,13 @@ class ClChain: public ICodeListener {
 // /////////////////////////////////////////////////////////////////////////////
 // ClChain implementation
 #define CL_CHAIN_FOREACH(fnc) do { \
-    BOOST_FOREACH(cl_code_listener *item, list_) { \
+    for (cl_code_listener *item : list_) { \
         item->fnc(item); \
     } \
 } while (0)
 
 #define CL_CHAIN_FOREACH_VA(fnc, ...) do { \
-    BOOST_FOREACH(cl_code_listener *item, list_) { \
+    for (cl_code_listener *item : list_) { \
         item->fnc(item, __VA_ARGS__); \
     } \
 } while (0)

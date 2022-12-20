@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2014-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -27,31 +27,31 @@ namespace FixedPoint {
 
 void MultiRewriter::insertInsn(TLocIdx src, TLocIdx dst, GenericInsn *insn)
 {
-    BOOST_FOREACH(IStateRewriter *slave, slaveList_)
+    for (IStateRewriter *slave : slaveList_)
         slave->insertInsn(src, dst, insn);
 }
 
 void MultiRewriter::replaceInsn(TLocIdx at, GenericInsn *insn)
 {
-    BOOST_FOREACH(IStateRewriter *slave, slaveList_)
+    for (IStateRewriter *slave : slaveList_)
         slave->replaceInsn(at, insn);
 }
 
 void MultiRewriter::dropInsn(TLocIdx at)
 {
-    BOOST_FOREACH(IStateRewriter *slave, slaveList_)
+    for (IStateRewriter *slave : slaveList_)
         slave->dropInsn(at);
 }
 
 void MultiRewriter::dropEdge(TLocIdx src, TLocIdx dst)
 {
-    BOOST_FOREACH(IStateRewriter *slave, slaveList_)
+    for (IStateRewriter *slave : slaveList_)
         slave->dropEdge(src, dst);
 }
 
 void MultiRewriter::redirEdge(TLocIdx from, TLocIdx to, TLocIdx redirTo)
 {
-    BOOST_FOREACH(IStateRewriter *slave, slaveList_)
+    for (IStateRewriter *slave : slaveList_)
         slave->redirEdge(from, to, redirTo);
 }
 
@@ -80,7 +80,7 @@ struct RecordRewriter::Private {
     ~Private()
     {
         for (int i = 0; i < AK_TOTAL; ++i)
-            BOOST_FOREACH(const IRewriteAction *action, this->actionLists[i])
+            for (const IRewriteAction *action : this->actionLists[i])
                 delete action;
     }
 };
@@ -206,7 +206,7 @@ void RecordRewriter::flush(IStateRewriter *pConsumer)
     for (int i = 0; i < AK_TOTAL; ++i) {
         TActionList &actionList = d->actionLists[i];
 
-        BOOST_FOREACH(const IRewriteAction *action, actionList) {
+        for (const IRewriteAction *action : actionList) {
             action->apply(*pConsumer);
             delete action;
         }
@@ -278,7 +278,7 @@ void StateRewriter::insertInsn(
         CL_BREAK_IF("invalid neighbour detected in insertInsn()");
 
     bool closesLoop = false;
-    BOOST_FOREACH(CfgEdge &oe, srcState.cfgOutEdges) {
+    for (CfgEdge &oe : srcState.cfgOutEdges) {
         if (dst != oe.targetLoc)
             continue;
 
@@ -287,7 +287,7 @@ void StateRewriter::insertInsn(
         oe.closesLoop = false;
     }
 
-    BOOST_FOREACH(CfgEdge &ie, dstState.cfgInEdges) {
+    for (CfgEdge &ie : dstState.cfgInEdges) {
         if (src != ie.targetLoc)
             continue;
 
@@ -319,14 +319,14 @@ void StateRewriter::dropEdge(const TLocIdx src, const TLocIdx dst)
 
     // remove src -> dst edges
     TCfgEdgeList outEdges;
-    BOOST_FOREACH(const CfgEdge &oe, srcState.cfgOutEdges)
+    for (const CfgEdge &oe : srcState.cfgOutEdges)
         if (dst != oe.targetLoc)
             outEdges.push_back(oe);
     outEdges.swap(srcState.cfgOutEdges);
 
     // remove dst <- src edges
     TCfgEdgeList inEdges;
-    BOOST_FOREACH(const CfgEdge &ie, dstState.cfgInEdges)
+    for (const CfgEdge &ie : dstState.cfgInEdges)
         if (src != ie.targetLoc)
             inEdges.push_back(ie);
     inEdges.swap(dstState.cfgInEdges);
@@ -343,14 +343,14 @@ void StateRewriter::redirEdge(
 
     // update output edges of 'from'
     LocalState &fromState = d->state[from];
-    BOOST_FOREACH(CfgEdge &oe, fromState.cfgOutEdges)
+    for (CfgEdge &oe : fromState.cfgOutEdges)
         if (oe.targetLoc == to)
             oe.targetLoc = redirTo;
 
     // update input edges of 'to'
     LocalState &toState = d->state[to];
     TCfgEdgeList toInEdges;
-    BOOST_FOREACH(const CfgEdge &ie, toState.cfgInEdges)
+    for (const CfgEdge &ie : toState.cfgInEdges)
         if (from != ie.targetLoc)
             toInEdges.push_back(ie);
     toInEdges.swap(toState.cfgInEdges);
@@ -378,11 +378,11 @@ void StateRewriter::dropInsn(const TLocIdx at)
     locState.insn = 0;
 
     // iterate through all incoming edges
-    BOOST_FOREACH(const CfgEdge &ie, locState.cfgInEdges) {
+    for (const CfgEdge &ie : locState.cfgInEdges) {
         LocalState &inState = d->state[ie.targetLoc];
         TCfgEdgeList outEdges;
 
-        BOOST_FOREACH(const CfgEdge &be, inState.cfgOutEdges) {
+        for (const CfgEdge &be : inState.cfgOutEdges) {
             if (at != be.targetLoc) {
                 // keep unrelated CFG edges as they are
                 outEdges.push_back(be);
@@ -390,7 +390,7 @@ void StateRewriter::dropInsn(const TLocIdx at)
             }
 
             // redirect all edges previously going to 'at'
-            BOOST_FOREACH(CfgEdge oe, locState.cfgOutEdges) {
+            for (CfgEdge oe : locState.cfgOutEdges) {
                 oe.closesLoop |= ie.closesLoop;
                 outEdges.push_back(oe);
             }
@@ -400,11 +400,11 @@ void StateRewriter::dropInsn(const TLocIdx at)
     }
 
     // iterate through all outgoing edges
-    BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges) {
+    for (const CfgEdge &oe : locState.cfgOutEdges) {
         LocalState &outState = d->state[oe.targetLoc];
         TCfgEdgeList inEdges;
 
-        BOOST_FOREACH(const CfgEdge &be, outState.cfgInEdges) {
+        for (const CfgEdge &be : outState.cfgInEdges) {
             if (at != be.targetLoc) {
                 // keep unrelated CFG edges as they are
                 inEdges.push_back(be);
@@ -412,7 +412,7 @@ void StateRewriter::dropInsn(const TLocIdx at)
             }
 
             // redirect all edges previously coming from 'at'
-            BOOST_FOREACH(CfgEdge ie, locState.cfgInEdges) {
+            for (CfgEdge ie : locState.cfgInEdges) {
                 ie.closesLoop |= oe.closesLoop;
                 inEdges.push_back(ie);
             }
@@ -432,12 +432,12 @@ bool StateRewriter::dedupOutgoingEdges(const TLocIdx at)
     bool anyChange = false;
 
     // iterate through all outgoing edges
-    BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges) {
+    for (const CfgEdge &oe : locState.cfgOutEdges) {
         LocalState &outState = d->state[oe.targetLoc];
         TCfgEdgeList inEdges;
         std::set<TLocIdx> inSet;
 
-        BOOST_FOREACH(const CfgEdge &be, outState.cfgInEdges) {
+        for (const CfgEdge &be : outState.cfgInEdges) {
             const TLocIdx dst = be.targetLoc;
             if (dst == at && !insertOnce(inSet, dst)) {
                 // duplicate edge detected
@@ -460,7 +460,7 @@ bool StateRewriter::dedupOutgoingEdges(const TLocIdx at)
     std::set<TLocIdx> outSet;
 
     // iterate through all outgoing edges
-    BOOST_FOREACH(const CfgEdge &oe, locState.cfgOutEdges) {
+    for (const CfgEdge &oe : locState.cfgOutEdges) {
         if (insertOnce(outSet, oe.targetLoc))
             outEdges.push_back(oe);
     }
@@ -487,10 +487,10 @@ void StateRewriter::mergeInsns(const TLocIdx locDst, const TLocIdx locSrc)
     LocalState &outState = d->state[locOut];
 
     // redirect incoming edges of locSrc to locDst
-    BOOST_FOREACH(CfgEdge &ie, srcState.cfgInEdges) {
+    for (CfgEdge &ie : srcState.cfgInEdges) {
         ie.closesLoop |= srcOutEdge.closesLoop;
         dstState.cfgInEdges.push_back(ie);
-        BOOST_FOREACH(CfgEdge &oe, d->state[ie.targetLoc].cfgOutEdges) {
+        for (CfgEdge &oe : d->state[ie.targetLoc].cfgOutEdges) {
             if (oe.targetLoc != locSrc)
                 continue;
 
@@ -500,11 +500,11 @@ void StateRewriter::mergeInsns(const TLocIdx locDst, const TLocIdx locSrc)
     }
 
     // remove all backward references to src
-    BOOST_FOREACH(const CfgEdge &oe, dstState.cfgOutEdges) {
+    for (const CfgEdge &oe : dstState.cfgOutEdges) {
         LocalState &outState = d->state[oe.targetLoc];
         TCfgEdgeList inEdges;
 
-        BOOST_FOREACH(const CfgEdge &be, outState.cfgInEdges)
+        for (const CfgEdge &be : outState.cfgInEdges)
             if (locSrc != be.targetLoc)
                 // keep only CFG edges NOT going to src
                 inEdges.push_back(be);
@@ -515,14 +515,14 @@ void StateRewriter::mergeInsns(const TLocIdx locDst, const TLocIdx locSrc)
     // preserve the loop-closing edge flag
     if (dstOutEdge.closesLoop != srcOutEdge.closesLoop) {
         dstOutEdge.closesLoop = false;
-        BOOST_FOREACH(CfgEdge &e, outState.cfgInEdges)
+        for (CfgEdge &e : outState.cfgInEdges)
             if (e.targetLoc == locDst)
                 e.closesLoop = false;
 
         if (dstOutEdge.closesLoop) {
-            BOOST_FOREACH(CfgEdge &ie, dstState.cfgInEdges) {
+            for (CfgEdge &ie : dstState.cfgInEdges) {
                 ie.closesLoop |= dstOutEdge.closesLoop;
-                BOOST_FOREACH(CfgEdge &oe, d->state[ie.targetLoc].cfgOutEdges)
+                for (CfgEdge &oe : d->state[ie.targetLoc].cfgOutEdges)
                     if (oe.targetLoc == locSrc)
                         oe.closesLoop = ie.closesLoop;
             }
@@ -547,10 +547,10 @@ void ClInsn::lazyInit() const
     BlockData data;
     scanInsn(&data, insn_);
 
-    BOOST_FOREACH(const TVar var, data.gen)
+    for (const TVar var : data.gen)
         live_.insert(GenericVar(VL_CODE_LISTENER, var));
 
-    BOOST_FOREACH(const TVar var, data.kill)
+    for (const TVar var : data.kill)
         kill_.insert(GenericVar(VL_CODE_LISTENER, var));
 }
 

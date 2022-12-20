@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2012 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2012-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -26,8 +26,6 @@
 
 #include "stopwatch.hh"
 #include "worklist.hh"
-
-#include <boost/foreach.hpp>
 
 namespace CodeStorage {
 
@@ -101,8 +99,8 @@ void handleFnc(Fnc *const fnc)
     Graph &cg = fnc->stor->callGraph;
     Node *const node = allocNodeIfNeeded(cg, fnc);
 
-    BOOST_FOREACH(const Block *bb, fnc->cfg) {
-        BOOST_FOREACH(const TInsn insn, *bb) {
+    for (const Block *bb : fnc->cfg) {
+        for (const TInsn insn : *bb) {
             const bool isCallInsn = (CL_INSN_CALL == insn->code);
             if (isCallInsn)
                 handleCall(cg, node, insn);
@@ -135,16 +133,16 @@ void buildTopList(Graph &cg)
     WorkList<const Node *, TSched> wl;
 
     TLocMap lmRoots;
-    BOOST_FOREACH(const Node *rootNode, cg.roots)
+    for (const Node *rootNode : cg.roots)
         insertFnc(lmRoots, rootNode->fnc);
 
-    BOOST_FOREACH(TLocMap::const_reference item, lmRoots)
+    for (TLocMap::const_reference item : lmRoots)
         wl.schedule(item./* fnc */second->cgNode);
 
     const Node *node;
     while (wl.next(node)) {
         TLocMap lm;
-        BOOST_FOREACH(TInsnListByFnc::const_reference item, node->calls) {
+        for (TInsnListByFnc::const_reference item : node->calls) {
             const Fnc *callee = item.first;
             if (!callee)
                 // ignore indirect calls
@@ -153,7 +151,7 @@ void buildTopList(Graph &cg)
             insertFnc(lm, callee);
         }
 
-        BOOST_FOREACH(TLocMap::const_reference item, lm)
+        for (TLocMap::const_reference item : lm)
             wl.schedule(item./* fnc */second->cgNode);
 
         const Fnc *fnc = node->fnc;
@@ -165,15 +163,15 @@ void buildCallGraph(const Storage &stor)
 {
     StopWatch watch;
 
-    BOOST_FOREACH(Fnc *fnc, stor.fncs)
+    for (Fnc *fnc : stor.fncs)
         handleFnc(fnc);
 
     Graph &cg = const_cast<Graph &>(stor.callGraph);
 
     // dig callbacks from var initializers
-    BOOST_FOREACH(const Var &var, stor.vars)
-        BOOST_FOREACH(const TInsn insn, var.initials)
-            BOOST_FOREACH(TOp op, insn->operands)
+    for (const Var &var : stor.vars)
+        for (const TInsn insn : var.initials)
+            for (TOp op : insn->operands)
                 handleCallback(cg, /* node */ 0, insn, op);
 
     // construct topological order

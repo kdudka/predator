@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -25,8 +25,6 @@
 #include "prototype.hh"
 #include "symheap.hh"
 #include "symutil.hh"
-
-#include <boost/foreach.hpp>
 
 TValId valFromSegAddr(
         const SymHeap              &sh,
@@ -287,7 +285,7 @@ bool segCheckConsistency(const SymHeap &sh)
 {
     TObjList objs;
     sh.gatherObjects(objs, isOnHeap);
-    BOOST_FOREACH(const TObjId seg, objs) {
+    for (const TObjId seg : objs) {
         bool hasNext = false;
         bool hasPrev = false;
 

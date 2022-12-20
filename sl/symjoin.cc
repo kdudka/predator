@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2013 Kamil Dudka <kdudka@redhat.com>
+ * Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
  *
  * This file is part of predator.
  *
@@ -36,7 +36,6 @@
 #include "worklist.hh"
 #include "util.hh"
 
-#include <boost/foreach.hpp>
 #include <boost/tuple/tuple.hpp>
 
 static bool debuggingSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
@@ -293,7 +292,7 @@ void preserveSharedNeqs(
     // look for shared Neq predicates
     TValList rVals1;
     ctx.sh1.gatherRelatedValues(rVals1, v1);
-    BOOST_FOREACH(const TValId rel1, rVals1) {
+    for (const TValId rel1 : rVals1) {
         if (!ctx.sh1.chkNeq(v1, rel1))
             // not a Neq in sh1
             continue;
@@ -864,14 +863,14 @@ void redirectAddrs(
 
     // gather all base addresses
     TValSet baseAddrs;
-    BOOST_FOREACH(const FldHandle &fld, refs) {
+    for (const FldHandle &fld : refs) {
         const TValId addr = fld.value();
         const TValId base = sh.valRoot(addr);
         baseAddrs.insert(base);
     }
 
     // rewrite all base addresses
-    BOOST_FOREACH(const TValId addr, baseAddrs)
+    for (const TValId addr : baseAddrs)
         sh.rewriteTargetOfBase(addr, redirectTo);
 }
 
@@ -1380,7 +1379,7 @@ void importBlockMap(
         SymHeap                 &dst,
         const SymHeap           &src)
 {
-    BOOST_FOREACH(TUniBlockMap::reference item, *pMap) {
+    for (TUniBlockMap::reference item : *pMap) {
         UniformBlock &bl = item.second;
         bl.tplValue = translateValProto(dst, src, bl.tplValue);
     }
@@ -1401,7 +1400,7 @@ void joinUniBlocksCore(
     sh1.gatherUniformBlocks(bMap1, root1);
     sh2.gatherUniformBlocks(bMap2, root2);
 
-    BOOST_FOREACH(TUniBlockMap::const_reference item, bMap1) {
+    for (TUniBlockMap::const_reference item : bMap1) {
         UniformBlock bl2(item.second);
         bl2.tplValue = translateValProto(sh2, sh1, bl2.tplValue);
 
@@ -1409,14 +1408,14 @@ void joinUniBlocksCore(
         if (!sh2.findCoveringUniBlocks(&cov2, root2, bl2))
             *pExtra1 = true;
 
-        BOOST_FOREACH(TUniBlockMap::const_reference cItem, cov2) {
+        for (TUniBlockMap::const_reference cItem : cov2) {
             UniformBlock blDst(cItem.second);
             blDst.tplValue = translateValProto(ctx.dst, sh2, blDst.tplValue);
             (*pMap)[blDst.off] = blDst;
         }
     }
 
-    BOOST_FOREACH(TUniBlockMap::const_reference item, bMap2) {
+    for (TUniBlockMap::const_reference item : bMap2) {
         UniformBlock bl1(item.second);
         bl1.tplValue = translateValProto(sh1, sh2, bl1.tplValue);
 
@@ -1424,7 +1423,7 @@ void joinUniBlocksCore(
         if (!sh1.findCoveringUniBlocks(&cov1, root1, bl1))
             *pExtra2 = true;
 
-        BOOST_FOREACH(TUniBlockMap::const_reference cItem, cov1) {
+        for (TUniBlockMap::const_reference cItem : cov1) {
             UniformBlock blDst(cItem.second);
             const TOffset off = blDst.off;
             if (hasKey(*pMap, off)) {
@@ -1464,7 +1463,7 @@ bool joinUniBlocks(
     if (hasExtra2 && !updateJoinStatus(ctx, JS_USE_SH1))
         return false;
 
-    BOOST_FOREACH(TUniBlockMap::const_reference item, bMapDst) {
+    for (TUniBlockMap::const_reference item : bMapDst) {
         const UniformBlock &bl = item.second;
         ctx.dst.writeUniformBlock(objDst, bl);
     }
@@ -1613,7 +1612,7 @@ TObjId /* objDst */ cloneObject(
         TUniBlockMap bMapDst;
         shGt.gatherUniformBlocks(bMapDst, objGt);
         importBlockMap(&bMapDst, ctx.dst, shGt);
-        BOOST_FOREACH(TUniBlockMap::const_reference item, bMapDst)
+        for (TUniBlockMap::const_reference item : bMapDst)
             ctx.dst.writeUniformBlock(objDst, item.second);
     }
     else
@@ -2234,7 +2233,7 @@ bool mayExistDigOffsets(
 
     typedef std::map<TValId, TOffList>              TOffsByVal;
     TOffsByVal offsByVal;
-    BOOST_FOREACH(const TOffset off, offList) {
+    for (const TOffset off : offList) {
         const TValId val = valOfPtr(sh, obj, off);
         offsByVal[val].push_back(off);
     }
@@ -2242,7 +2241,7 @@ bool mayExistDigOffsets(
     int maxCnt = 0;
     TValId maxVal = VAL_INVALID;
 
-    BOOST_FOREACH(TOffsByVal::const_reference item, offsByVal) {
+    for (TOffsByVal::const_reference item : offsByVal) {
         const int cnt = item.second.size();
         if (cnt < maxCnt)
             continue;
@@ -2497,7 +2496,7 @@ bool handleDstPreds(SymJoinCtx &ctx)
 
     // TODO: match generic Neq predicates also in prototypes;  for now we
     // consider only minimal segment lengths
-    BOOST_FOREACH(const TObjId protoDst, ctx.protos) {
+    for (const TObjId protoDst : ctx.protos) {
         const TObjId proto1 = roMapLookup(ctx.objMap1[DIR_RTL], protoDst);
         const TObjId proto2 = roMapLookup(ctx.objMap2[DIR_RTL], protoDst);
 
@@ -2544,9 +2543,9 @@ void initTrace(SymJoinCtx &ctx)
     Trace::Node *const tr = new Trace::JoinNode(tr1, tr2, ctx.status);
 
     // export the captured ID mapping
-    BOOST_FOREACH(TObjMap::const_reference item, ctx.objMap1[DIR_LTR])
+    for (TObjMap::const_reference item : ctx.objMap1[DIR_LTR])
         tr->idMapperList()[/* tr1 */ 0].insert(item.first, item.second);
-    BOOST_FOREACH(TObjMap::const_reference item, ctx.objMap2[DIR_LTR])
+    for (TObjMap::const_reference item : ctx.objMap2[DIR_LTR])
         tr->idMapperList()[/* tr2 */ 1].insert(item.first, item.second);
 
     ctx.dst.traceUpdate(tr);
@@ -2631,7 +2630,7 @@ void killUniBlocksUnderBindingPtrs(
     // go through next/prev pointers
     TFldSet blackList;
     buildIgnoreList(blackList, sh, obj, bf);
-    BOOST_FOREACH(const FldHandle &fld, blackList) {
+    for (const FldHandle &fld : blackList) {
         if (VAL_NULL != fld.value())
             continue;
 
@@ -2650,7 +2649,7 @@ void recoverPointersToDst(
     protos.insert(dst);
 
     // redirect pointers from prototypes to their parents
-    BOOST_FOREACH(const TObjId obj, protos) {
+    for (const TObjId obj : protos) {
         redirectRefs(sh,
                 /* pointingFrom */  obj,
                 /* pointingTo   */  dst,
@@ -2734,7 +2733,7 @@ bool joinData(
     unsigned cntProto2 = 0;
 
     // go through prototypes
-    BOOST_FOREACH(const TObjId protoDst, ctx.protos) {
+    for (const TObjId protoDst : ctx.protos) {
         const TObjId proto1 = roMapLookup(ctx.objMap1[DIR_RTL], protoDst);
         const TObjId proto2 = roMapLookup(ctx.objMap2[DIR_RTL], protoDst);
 

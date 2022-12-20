@@ -13,7 +13,6 @@
 #include <set>
 #include <cassert>
 
-#include <boost/foreach.hpp>
 #include "LoopFinder.h"
 #include "Utility.h"
 
@@ -466,7 +465,7 @@ unsigned long LoopFinder::computeTripCountOfLoop(const cl_operand *variable,
 			return 0;
 		}
 
-		BOOST_FOREACH(const Insn* insn, insns) {
+		for (const Insn* insn : insns) {
 			const enum cl_insn_e code = insn->code;
 
 			// If there is not change between previous computation an new computation
@@ -624,7 +623,7 @@ bool LoopFinder::checkCondition(const Block *block, const cl_operand **variable,
 	const cl_operand **constant, enum cl_binop_e &type)
 {
 	const Insn *prevInsn = NULL;
-	BOOST_FOREACH(const Insn *insn, *block) {
+	for (const Insn *insn : *block) {
 		if (CL_INSN_COND == insn->code) {
 			// We are not able to process previous instruction.
 			if (!LoopFinder::processPreviousInsn(insn, prevInsn, variable,
@@ -820,7 +819,7 @@ void LoopFinder::computeLoopAnalysisForPatternWhileIfElse(const Block *block,
 */
 bool LoopFinder::blockModifiesVar(const Block *block, const cl_operand *variable)
 {
-	BOOST_FOREACH(const Insn *insn, *block) {
+	for (const Insn *insn : *block) {
 		// Checks if this instruction can modify variable.
 		enum cl_insn_e code = insn->code;
 		if (CL_INSN_UNOP == code || CL_INSN_BINOP == code || CL_INSN_CALL == code) {
@@ -882,7 +881,7 @@ bool LoopFinder::isPatternIf(const Block *block, const Block **gotoBlock)
 	const Block *thenBlock = NULL;
 	const Block *elseBlock = NULL;
 
-	BOOST_FOREACH(const Insn *insn, *block) {
+	for (const Insn *insn : *block) {
 		if (CL_INSN_COND == insn->code) {
 			// This instruction represents condition. Gets the targets.
 			const TTargetList &targets = insn->targets;
@@ -935,7 +934,7 @@ bool LoopFinder::isPatternIfElse(const Block *block, const Block **gotoBlock)
 	const Block *thenBlock = NULL;
 	const Block *elseBlock = NULL;
 
-	BOOST_FOREACH(const Insn *insn, *block) {
+	for (const Insn *insn : *block) {
 		if (CL_INSN_COND == insn->code) {
 			// This instruction represents condition. Gets the targets.
 			const TTargetList &targets = insn->targets;
@@ -1056,7 +1055,7 @@ bool LoopFinder::isPatternWhileIfElse(const Block *block, const Block *thenBlock
 */
 const Block* LoopFinder::getThenBlock(const Block *block)
 {
-	BOOST_FOREACH(const Insn *insn, *block) {
+	for (const Insn *insn : *block) {
 		if (CL_INSN_COND == insn->code) {
 			// This instruction represents condition. Gets the targets.
 			const TTargetList &targets = insn->targets;
@@ -1119,7 +1118,7 @@ void LoopFinder::computeLoopAnalysisForFnc(const Fnc &fnc)
 
 		// Gets the successors of the processed block.
 		const TTargetList &succs = block->targets();
-		BOOST_FOREACH(const TTargetList::value_type &succ, succs) {
+		for (const TTargetList::value_type &succ : succs) {
 			if (doneSet.find(succ) == doneSet.end()) {
 				// We schedule successors of this block that were not processed
 				// before.
@@ -1135,7 +1134,7 @@ void LoopFinder::computeLoopAnalysisForFnc(const Fnc &fnc)
 */
 void LoopFinder::computeLoopAnalysis(const CodeStorage::Storage &stor)
 {
-	BOOST_FOREACH(const Fnc* pFnc, stor.fncs) {
+	for (const Fnc* pFnc : stor.fncs) {
 		const Fnc &fnc = *pFnc;
 
 		if (!isDefined(fnc))
@@ -1158,7 +1157,7 @@ unsigned long LoopFinder::getUpperLimit(const Block *block)
 */
 ostream& LoopFinder::printLoopAnalysis(std::ostream &os)
 {
-	BOOST_FOREACH(const BlockToUpperLimit::value_type &b,
+	for (const BlockToUpperLimit::value_type &b :
 		LoopFinder::blockToUpperLimit) {
 
 		// Prints information for each block.
