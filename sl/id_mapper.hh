@@ -27,8 +27,6 @@
 #include <set>
 #include <vector>
 
-#include <boost/static_assert.hpp>
-
 enum EDirection {
     D_LEFT_TO_RIGHT,
     D_RIGHT_TO_LEFT
@@ -160,7 +158,7 @@ template <typename TId, TId MIN, TId MAX>
 template <EDirection DIR>
 void IdMapper<TId, MIN, MAX>::query(TVector *pDst, const TId id) const
 {
-    BOOST_STATIC_ASSERT(MIN < MAX);
+    static_assert(MIN < MAX, "MIN must be less than MAX");
 
     const TSearch &search = biSearch_[DIR];
 

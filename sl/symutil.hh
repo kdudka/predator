@@ -36,8 +36,6 @@
 
 #include <set>
 
-#include <boost/static_assert.hpp>
-
 inline TValId boolToVal(const bool b)
 {
     return (b)
@@ -389,7 +387,7 @@ bool /* complete */ traverseProgramVarsGeneric(
         const bool                  allowRecovery = false)
 {
     const unsigned N_TOTAL = N_DST + N_SRC;
-    BOOST_STATIC_ASSERT(N_DST < N_TOTAL);
+    static_assert(N_DST < N_TOTAL, "N_DST must be less than N_TOTAL");
 
     // start with all program variables of the first SRC heap
     TCVarSet all;
