@@ -11,6 +11,8 @@ files_to_sync:
 # name in upstream package repository or registry (e.g. in PyPI)
 upstream_package_name: predator
 
+srpm_build_deps: [gcc]
+
 release_suffix: ""
 actions:
     post-upstream-clone: ./make-srpm.sh --generate-spec
