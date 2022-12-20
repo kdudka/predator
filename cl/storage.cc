@@ -25,6 +25,7 @@
 #include "cl_storage.hh"
 #include "util.hh"
 
+#include <cstddef>
 #include <map>
 #include <stack>
 
