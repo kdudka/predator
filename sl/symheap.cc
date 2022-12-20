@@ -44,8 +44,6 @@
 #include <set>
 #include <typeinfo>
 
-#include <boost/tuple/tuple.hpp>
-
 template <class TCont> typename TCont::value_type::second_type&
 assignInvalidIfNotFound(
         TCont                                           &cont,

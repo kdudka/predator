@@ -28,7 +28,7 @@
 #include "util.hh"
 #include "worklist.hh"
 
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 
 bool matchOffsets(
         const SymHeapCore       &sh1,
@@ -303,7 +303,7 @@ bool dfsCmp(
     TWorkList::value_type item;
     while (wl.next(item)) {
         TObjId obj1, obj2;
-        boost::tie(obj1, obj2) = item;
+        std::tie(obj1, obj2) = item;
 
         // set up a visitor
         SymHeap *const heaps[] = { &sh1, &sh2 };

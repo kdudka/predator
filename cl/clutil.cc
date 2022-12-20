@@ -26,8 +26,7 @@
 #include "worklist.hh"
 
 #include <sstream>
-
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 
 bool operator==(const struct cl_type &a, const struct cl_type &b)
 {
@@ -37,7 +36,7 @@ bool operator==(const struct cl_type &a, const struct cl_type &b)
     WorkList<TItem> wl(item);
     while (wl.next(item)) {
         const struct cl_type *cltA, *cltB;
-        boost::tie(cltA, cltB) = item;
+        std::tie(cltA, cltB) = item;
 
         if (cltA->uid == cltB->uid)
             // UID matched, go next

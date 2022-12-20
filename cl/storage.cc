@@ -29,8 +29,6 @@
 #include <map>
 #include <stack>
 
-#include <boost/tuple/tuple.hpp>
-
 namespace CodeStorage {
 
 namespace {

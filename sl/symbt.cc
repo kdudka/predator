@@ -32,8 +32,6 @@
 #include <stack>
 #include <utility>
 
-#include <boost/tuple/tuple.hpp>
-
 struct BtStackItem {
     const CodeStorage::Fnc          &fnc;
     const struct cl_loc             *loc;

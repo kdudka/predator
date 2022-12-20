@@ -35,8 +35,6 @@
 #include <map>
 #include <set>
 
-#include <boost/tuple/tuple.hpp>
-
 class UniBlockWriter {
     private:
         SymHeap         &dst_;

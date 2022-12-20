@@ -29,8 +29,7 @@
 #include <cstring>
 #include <set>
 #include <stack>
-
-#include <boost/tuple/tuple.hpp>
+#include <tuple>
 
 namespace CodeStorage {
     /**
@@ -143,7 +142,7 @@ namespace CodeStorage {
         while (!opStack.empty()) {
             struct cl_operand *cDst;
             struct cl_operand const *cSrc;
-            boost::tie(cDst, cSrc) = opStack.top();
+            std::tie(cDst, cSrc) = opStack.top();
             opStack.pop();
 
             if (CL_OPERAND_VOID == cSrc->code)

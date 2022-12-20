@@ -44,8 +44,6 @@
 #include <stdexcept>
 #include <vector>
 
-#include <boost/tuple/tuple.hpp>
-
 /// report a memory leak as either error or warning based on the configuration
 #define REPORT_MEMLEAK(proc, msg) do {      \
     if (GlConf::data.memLeakIsError) {      \

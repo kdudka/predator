@@ -36,8 +36,6 @@
 #include "worklist.hh"
 #include "util.hh"
 
-#include <boost/tuple/tuple.hpp>
-
 static bool debuggingSymJoin = static_cast<bool>(DEBUG_SYMJOIN);
 
 #define SJ_DEBUG(msg) do {                                                  \
