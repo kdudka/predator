@@ -13,7 +13,7 @@ upstream_package_name: predator
 
 srpm_build_deps: [gcc]
 
-release_suffix: ""
+update_release: false
 actions:
     post-upstream-clone: ./make-srpm.sh --generate-spec
     get-current-version: "sed -n 's|^Version: *||p' predator.spec"
