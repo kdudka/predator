@@ -85,6 +85,25 @@ macro(CHECK_C_SYMBOL_AVAILABLE symbol headers)
     endif()
 endmacro()
 
+# Check for default C++ standard
+include(CheckCXXSourceCompiles)
+macro(CHECK_CXX_DEFAULT_STD minstd)
+    string(SUBSTRING ${minstd} 2 2 CXX_STD)
+    check_cxx_source_compiles("int main() {
+    #if __cplusplus < ${minstd}
+        #error Default standard is too old.
+    #endif
+    }" CXX_HAVE_AT_LEAST_STD_${minstd}_BY_DEFAULT)
+    if(NOT CXX_HAVE_AT_LEAST_STD_${minstd}_BY_DEFAULT)
+        message(STATUS "Setting C++ standard explicitly to -std=c++${CXX_STD}")
+        ADD_CXX_ONLY_FLAG("STD_CXX_${CXX_STD}" "-std=c++${CXX_STD}")
+        if(NOT CXX_HAVE_STD_CXX_${CXX_STD})
+            message(FATAL_ERROR
+                "Project requires a compiler that supports at least C++${CXX_STD}")
+        endif()
+    endif()
+endmacro()
+
 # treat Code Listener headers as system headers when scanning dependencies
 include_directories(SYSTEM ../include)
 
@@ -92,13 +111,16 @@ include_directories(SYSTEM ../include)
 ADD_C_FLAG(       "fPIC"                 "-fPIC")
 ADD_C_FLAG(       "hidden_visibility"    "-fvisibility=hidden")
 
-# we use c99 to compile *.c and c++11/c++14 to compile *.cc
+# we use c99 to compile *.c and at least c++11/c++14 to compile *.cc
 ADD_C_ONLY_FLAG(  "STD_C99"              "-std=c99")
+
+# the value corresponds to the __cplusplus macro defined by the C++ standard
+# https://en.cppreference.com/w/cpp/preprocessor/replace#Predefined_macros
+set(MINIMAL_CXX_STD "201103L")
 if(ENABLE_LLVM)
-    ADD_CXX_ONLY_FLAG("STD_CXX_14"       "-std=c++14")
-else()
-    ADD_CXX_ONLY_FLAG("STD_CXX_11"       "-std=c++11")
+    set(MINIMAL_CXX_STD "201402L")
 endif()
+CHECK_CXX_DEFAULT_STD("${MINIMAL_CXX_STD}")
 
 # tweak warnings
 ADD_C_FLAG(       "PEDANTIC"             "-pedantic")
