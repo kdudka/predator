@@ -261,7 +261,7 @@ bool ImpliedShapeDetector::indexShape(SymHeap &sh, const Shape &shape)
         /* props    */ shape.props,
         /* type     */ sh.objEstimatedType(beg),
         /* size     */ sh.objSize(beg),
-        /* headPtrs */ headPtrs
+        /* headPtrs */ std::move(headPtrs)
     };
     plist_.push_back(sp);
 

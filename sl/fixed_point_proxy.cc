@@ -386,7 +386,7 @@ void plotFixedPointOfFnc(PlotData &plot, const GlobalState &fncState)
     recorder.flush(&rewriter);
 
     // plot the annotated input CFG
-    plotFncCore(plot, fncState, varByShape, capture, heapSet);
+    plotFncCore(plot, fncState, varByShape, capture, std::move(heapSet));
 
     if (cfgOrig.size() < 16) {
         // plot the original CFG-only subgraph
