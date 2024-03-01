@@ -36,7 +36,7 @@ void DLDisposeList (struct TList *L) {
     L->Act = ((void *)0);
     L->Last = ((void *)0);
 }
-
+void DLError(void);
 void DLInsertFirst (struct TList *L) {
     struct TNode * ptr = malloc(sizeof *ptr);
     if (((void *)0)==ptr) {

@@ -1,6 +1,6 @@
 #include <stdlib.h>
 
-extern int __VERIFIER_nondet_int(void);
+#include <verifier-builtins.h>
 
 struct node {
     struct node *next;
