@@ -477,7 +477,7 @@ static void var_db_insert(var_db_t db, struct cl_var *var)
 
 static bool error_detected(void)
 {
-    return global_dc && global_dc->diagnostic_count[DK_ERROR];
+    return global_dc && errorcount;
 }
 
 static void read_gcc_location(struct cl_loc *loc, location_t gcc_loc)
