@@ -68,6 +68,8 @@ void __VERIFIER_error() __attribute__ ((__noreturn__));
  * sl.h:62:25: error: ‘int __VERIFIER_nondet_int()’ defined but not used
  */
 
+#   include <stdlib.h>          // for abort()
+
 static /* inline */  void ___sl_break(const char *msg)
 {
     (void) msg;

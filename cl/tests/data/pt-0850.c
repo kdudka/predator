@@ -13,5 +13,5 @@ int *ptrA, *ptrB, *ptrC;
 int main()
 {
     ptrA = ptrB;
-    ptrB = &ptrC;
+    ptrB = (void *) &ptrC;
 }

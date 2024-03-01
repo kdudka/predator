@@ -10,7 +10,7 @@ int test(int *p)
     // Note that we are accessing local variable!  This is just for points-to
     // test purposes.
 
-    *p = &i;
+    *p = (long) &i;
 }
 
 
@@ -18,7 +18,7 @@ int main(int argc, char **argv)
 {
     int i, j;
 
-    i = &j;
+    i = (long) &j;
 
     // ___cl_pt_points_glob_y(i, j);
 
