@@ -28,7 +28,7 @@ jobs:
           - variant: ', variant: debug build'
             host: llvm-debug
 
-    runs-on: macos-latest
+    runs-on: macos-13
     env:
       CFLAGS: -Werror
       CXXFLAGS: -Werror
