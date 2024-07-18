@@ -1614,8 +1614,6 @@ void CLPass::handleAllocaInstruction(AllocaInst *I) {
 
     struct cl_type *allocated = handleType(I->getAllocatedType());
 
-    struct cl_insn mult;
-
     if (I->isArrayAllocation()) {
         handleOperand(I->getArraySize(), &arraySize);
 
@@ -1627,7 +1625,9 @@ void CLPass::handleAllocaInstruction(AllocaInst *I) {
             size.type = handleType(I->getArraySize()->getType());
             size.data.var = handleVariable(nullptr);
 
+            struct cl_insn mult;
             mult.code = CL_INSN_BINOP;
+            mult.loc = cl_loc_known;
             mult.data.insn_binop.code = CL_BINOP_MULT;
             mult.data.insn_binop.src1 = &typeSize;
             mult.data.insn_binop.src2 = &arraySize;
