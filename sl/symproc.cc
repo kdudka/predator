@@ -1485,6 +1485,21 @@ bool SymProc::lhsFromOperand(FldHandle *pLhs, const struct cl_operand &op)
         return true;
     }
 
+    if (2 <= GlConf::data.errorRecoveryMode) {
+        // if the dereference failed due to out of range (or unknown) offset,
+        // try to resolve the allocated object and invalidate its contents in
+        // order to detect more errors in one run with full error recovery
+        const TObjId obj = this->objByVar(op);
+        if (sh_.isValid(obj)) {
+            const UniformBlock ub = {
+                /* off      */  0,
+                /* size     */  sh_.objSize(obj).hi,
+                /* tplValue */  sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN)
+            };
+            sh_.writeUniformBlock(obj, ub);
+        }
+    }
+
     return false;
 }
 
