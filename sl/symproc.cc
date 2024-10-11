@@ -1473,17 +1473,19 @@ void SymExecCore::execStackRestore()
     }
 }
 
-bool lhsFromOperand(FldHandle *pLhs, SymProc &proc, const struct cl_operand &op)
+bool SymProc::lhsFromOperand(FldHandle *pLhs, const struct cl_operand &op)
 {
     if (seekRefAccessor(op.accessor))
         CL_BREAK_IF("lhs not an l-value");
 
-    *pLhs = proc.fldByOperand(op);
-    if (FLD_DEREF_FAILED == pLhs->fieldId())
-        return false;
+    *pLhs = this->fldByOperand(op);
+    if (FLD_DEREF_FAILED != pLhs->fieldId()) {
+        // propagate the field returned by fldByOperand()
+        CL_BREAK_IF(!pLhs->isValidHandle());
+        return true;
+    }
 
-    CL_BREAK_IF(!pLhs->isValidHandle());
-    return true;
+    return false;
 }
 
 void SymExecCore::execStackAlloc(
@@ -1492,7 +1494,7 @@ void SymExecCore::execStackAlloc(
 {
     // resolve lhs
     FldHandle lhs;
-    if (CL_OPERAND_VOID != opLhs.code && !lhsFromOperand(&lhs, *this, opLhs))
+    if (CL_OPERAND_VOID != opLhs.code && !this->lhsFromOperand(&lhs, opLhs))
         // error alredy emitted
         return;
 
@@ -1503,7 +1505,7 @@ void SymExecCore::execStackAlloc(
         return;
     }
 
-    // now create an annonymous stack object
+    // now create an anonymous stack object
     const CallInst callInst(this->bt_);
     const TObjId obj = sh_.stackAlloc(size, callInst);
 
@@ -1532,8 +1534,8 @@ void SymExecCore::execHeapAlloc(
     // resolve lhs
     FldHandle lhs;
     const struct cl_operand &opLhs = insn.operands[/* dst */ 0];
-    if (CL_OPERAND_VOID != opLhs.code && !lhsFromOperand(&lhs, *this, opLhs))
-        // error alredy emitted
+    if (CL_OPERAND_VOID != opLhs.code && !this->lhsFromOperand(&lhs, opLhs))
+        // error already emitted
         return;
 
     if (ep_.oomSimulation || /* malloc(0) may return NULL */ !size.hi) {
@@ -1650,7 +1652,7 @@ void SymExecCore::execHeapRealloc(
     // resolve lhs
     FldHandle lhs;
     const struct cl_operand &opLhs = insn.operands[/* dst */ 0];
-    if (CL_OPERAND_VOID != opLhs.code && !lhsFromOperand(&lhs, *this, opLhs))
+    if (CL_OPERAND_VOID != opLhs.code && !this->lhsFromOperand(&lhs, opLhs))
         // error alredy emitted
         return;
 
@@ -2842,7 +2844,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn)
     // resolve lhs
     FldHandle lhs;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
-    if (!lhsFromOperand(&lhs, *this, dst))
+    if (!this->lhsFromOperand(&lhs, dst))
         // error alredy emitted
         return;
 
