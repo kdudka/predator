@@ -512,7 +512,7 @@ void SymExecEngine::execCondInsn()
     }
 
     const EValueOrigin origin = sh.valOrigin(val);
-    if (VO_DEREF_FAILED == origin) {
+    if (GlConf::data.errorRecoveryMode < 2 && VO_DEREF_FAILED == origin) {
         // error should have been already emitted
         CL_DEBUG_MSG(lw_, "ignored VO_DEREF_FAILED");
         return;

@@ -195,6 +195,12 @@ void handleNoErrorRecovery(const string &name, const string &value)
     data.errorRecoveryMode = /* no_error_recovery */ 0;
 }
 
+void handleFullErrorRecovery(const string &name, const string &value)
+{
+    assumeNoValue(name, value);
+    data.errorRecoveryMode = /* full_error_recovery */ 2;
+}
+
 void handleVerifierErrorIsError(const string &name, const string &value)
 {
     assumeNoValue(name, value);
@@ -244,6 +250,7 @@ ConfigStringParser::ConfigStringParser()
     tbl_["error_label"]             = handleErrorLabel;
     tbl_["exit_leaks"]              = handleExitLeaks;
     tbl_["forbid_heap_replace"]     = handleForbidHeapReplace;
+    tbl_["full_error_recovery"]     = handleFullErrorRecovery;
     tbl_["int_arithmetic_limit"]    = handleIntArithmeticLimit;
     tbl_["join_on_loop_edges_only"] = handleJoinOnLoopEdgesOnly;
     tbl_["memleak_is_error"]        = handleMemLeakIsError;

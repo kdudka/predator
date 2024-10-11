@@ -643,7 +643,8 @@ EValueOrigin joinOrigin(const EValueOrigin vo1, const EValueOrigin vo2)
         // use any
         return vo2;
 
-    if (VO_DEREF_FAILED == vo1 || VO_DEREF_FAILED == vo2)
+    if (GlConf::data.errorRecoveryMode < 2
+            && (VO_DEREF_FAILED == vo1 || VO_DEREF_FAILED == vo2))
         // keep the error recovery as cheap as possible
         return VO_DEREF_FAILED;
 

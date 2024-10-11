@@ -1389,7 +1389,8 @@ void SymExecCore::execFree(
             // fall through!
 
         case VT_UNKNOWN:
-            if (VO_DEREF_FAILED == sh_.valOrigin(val))
+            if (GlConf::data.errorRecoveryMode < 2
+                    && VO_DEREF_FAILED == sh_.valOrigin(val))
                 return;
 
             CL_ERROR_MSG(lw_, "invalid " << fnc);
@@ -1472,17 +1473,34 @@ void SymExecCore::execStackRestore()
     }
 }
 
-bool lhsFromOperand(FldHandle *pLhs, SymProc &proc, const struct cl_operand &op)
+bool SymProc::lhsFromOperand(FldHandle *pLhs, const struct cl_operand &op)
 {
     if (seekRefAccessor(op.accessor))
         CL_BREAK_IF("lhs not an l-value");
 
-    *pLhs = proc.fldByOperand(op);
-    if (FLD_DEREF_FAILED == pLhs->fieldId())
-        return false;
+    *pLhs = this->fldByOperand(op);
+    if (FLD_DEREF_FAILED != pLhs->fieldId()) {
+        // propagate the field returned by fldByOperand()
+        CL_BREAK_IF(!pLhs->isValidHandle());
+        return true;
+    }
 
-    CL_BREAK_IF(!pLhs->isValidHandle());
-    return true;
+    if (2 <= GlConf::data.errorRecoveryMode) {
+        // if the dereference failed due to out of range (or unknown) offset,
+        // try to resolve the allocated object and invalidate its contents in
+        // order to detect more errors in one run with full error recovery
+        const TObjId obj = this->objByVar(op);
+        if (sh_.isValid(obj)) {
+            const UniformBlock ub = {
+                /* off      */  0,
+                /* size     */  sh_.objSize(obj).hi,
+                /* tplValue */  sh_.valCreate(VT_UNKNOWN, VO_UNKNOWN)
+            };
+            sh_.writeUniformBlock(obj, ub);
+        }
+    }
+
+    return false;
 }
 
 void SymExecCore::execStackAlloc(
@@ -1491,7 +1509,7 @@ void SymExecCore::execStackAlloc(
 {
     // resolve lhs
     FldHandle lhs;
-    if (CL_OPERAND_VOID != opLhs.code && !lhsFromOperand(&lhs, *this, opLhs))
+    if (CL_OPERAND_VOID != opLhs.code && !this->lhsFromOperand(&lhs, opLhs))
         // error alredy emitted
         return;
 
@@ -1502,7 +1520,7 @@ void SymExecCore::execStackAlloc(
         return;
     }
 
-    // now create an annonymous stack object
+    // now create an anonymous stack object
     const CallInst callInst(this->bt_);
     const TObjId obj = sh_.stackAlloc(size, callInst);
 
@@ -1531,8 +1549,8 @@ void SymExecCore::execHeapAlloc(
     // resolve lhs
     FldHandle lhs;
     const struct cl_operand &opLhs = insn.operands[/* dst */ 0];
-    if (CL_OPERAND_VOID != opLhs.code && !lhsFromOperand(&lhs, *this, opLhs))
-        // error alredy emitted
+    if (CL_OPERAND_VOID != opLhs.code && !this->lhsFromOperand(&lhs, opLhs))
+        // error already emitted
         return;
 
     if (ep_.oomSimulation || /* malloc(0) may return NULL */ !size.hi) {
@@ -1649,7 +1667,7 @@ void SymExecCore::execHeapRealloc(
     // resolve lhs
     FldHandle lhs;
     const struct cl_operand &opLhs = insn.operands[/* dst */ 0];
-    if (CL_OPERAND_VOID != opLhs.code && !lhsFromOperand(&lhs, *this, opLhs))
+    if (CL_OPERAND_VOID != opLhs.code && !this->lhsFromOperand(&lhs, opLhs))
         // error alredy emitted
         return;
 
@@ -2841,7 +2859,7 @@ void SymExecCore::execOp(const CodeStorage::Insn &insn)
     // resolve lhs
     FldHandle lhs;
     const struct cl_operand &dst = insn.operands[/* dst */ 0];
-    if (!lhsFromOperand(&lhs, *this, dst))
+    if (!this->lhsFromOperand(&lhs, dst))
         // error alredy emitted
         return;
 
