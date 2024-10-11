@@ -125,10 +125,13 @@ class SymProc {
         }
 
     public:
-        /// obtain a heap object corresponding to the given operand
+        /// obtain a field corresponding to the given operand
         FldHandle fldByOperand(const struct cl_operand &op);
 
-        /// obtain a heap value corresponding to the given operand
+        /// obtain a left-hand-side field corresponding to the given operand
+        bool lhsFromOperand(FldHandle *pLhs, const struct cl_operand &op);
+
+        /// obtain a SymHeap value corresponding to the given operand
         TValId valFromOperand(const struct cl_operand &op);
 
         /// resolve Fnc uid from the given operand, return true on success
