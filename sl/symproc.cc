@@ -1389,7 +1389,8 @@ void SymExecCore::execFree(
             // fall through!
 
         case VT_UNKNOWN:
-            if (VO_DEREF_FAILED == sh_.valOrigin(val))
+            if (GlConf::data.errorRecoveryMode < 2
+                    && VO_DEREF_FAILED == sh_.valOrigin(val))
                 return;
 
             CL_ERROR_MSG(lw_, "invalid " << fnc);
