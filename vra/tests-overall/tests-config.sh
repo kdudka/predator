@@ -1,1 +1,0 @@
-../../vra_build/tests-config.sh

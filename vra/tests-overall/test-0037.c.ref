@@ -1,8 +1,0 @@
----------- Function main() ----------
-Block L1[IN] at lines from 9 to 12:
-Block L1[OUT]:
-	a = { <1, 1> }
-Block L2[IN] at lines from 12 to 13:
-	a = { <1, 1> }
-Block L2[OUT]:
-	a = { <1, 1> }
