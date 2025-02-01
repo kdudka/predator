@@ -27,7 +27,7 @@ union data {
 
 int main()
 {
-    union data d = {
+    static union data d = {
         .number = 0L
     };
     __VERIFIER_plot(NULL);
