@@ -388,6 +388,9 @@ macro(test_predator_regre name_suff ext arg1)
     foreach (num ${tests})
         set(cmd "LC_ALL=C CCACHE_DISABLE=1 ${GCC_EXEC_PREFIX} ${GCC_HOST}")
 
+        # gcc-15 defaults to -std=gnu23 and the tests are not ready for that
+        set(cmd "${cmd} -std=gnu99")
+
         # we use the following flag to avoid differences on 32bit vs 64bit archs
         # in the error output, which is checked for exact match
         set(cmd "${cmd} -m32")
