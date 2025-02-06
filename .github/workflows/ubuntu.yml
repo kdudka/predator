@@ -15,25 +15,25 @@ jobs:
       matrix:
         compiler: [clang, gcc]
         host: [gcc, llvm]
-        version: [20.04, 22.04]
+        version: [20.04, 22.04, 24.04]
         include:
           - variant: ', variant: expensive tests'
             compiler: gcc
             host: gcc-expensive
-            version: 22.04
+            version: 24.04
           - variant: ', variant: debug build'
             compiler: gcc
             host: gcc-debug
-            version: 22.04
+            version: 24.04
           # FIXME: expected results of expensive tests are not patched for LLVM
           # - variant: ', variant: expensive tests'
           #   compiler: clang
           #   host: llvm-expensive
-          #   version: 22.04
+          #   version: 24.04
           - variant: ', variant: debug build'
             compiler: clang
             host: llvm-debug
-            version: 22.04
+            version: 24.04
 
     runs-on: ubuntu-${{ matrix.version }}
     env:
@@ -55,6 +55,11 @@ jobs:
               GCC_HOST_VERSION=11
               LLVM_HOST_VERSION=14
               ;;
+            24.04)
+              GCC_HOST_VERSION=13
+              # FIXME: increment when support for newer LLVM versions is introduced
+              LLVM_HOST_VERSION=14
+              ;;
             *)
               echo "Unknown Ubuntu version: ${{ matrix.version }}"
               exit 1
@@ -73,7 +78,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y "gcc-$GCC_HOST_VERSION-multilib" libboost-dev
+          sudo apt install -y cmake "gcc-$GCC_HOST_VERSION-multilib" libboost-dev
 
       - name: '[GCC] Install dependencies for GCC host'
         if: startsWith(matrix.host, 'gcc')
