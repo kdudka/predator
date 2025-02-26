@@ -15,25 +15,25 @@ jobs:
       matrix:
         compiler: [clang, gcc]
         host: [gcc, llvm]
-        version: [22.04]
+        version: [22.04, 24.04]
         include:
           - variant: ', variant: expensive tests'
             compiler: gcc
             host: gcc-expensive
-            version: 22.04
+            version: 24.04
           - variant: ', variant: debug build'
             compiler: gcc
             host: gcc-debug
-            version: 22.04
+            version: 24.04
           # FIXME: expected results of expensive tests are not patched for LLVM
           # - variant: ', variant: expensive tests'
           #   compiler: clang
           #   host: llvm-expensive
-          #   version: 22.04
+          #   version: 24.04
           - variant: ', variant: debug build'
             compiler: clang
             host: llvm-debug
-            version: 22.04
+            version: 24.04
 
     runs-on: ubuntu-${{ matrix.version }}
     env:
@@ -49,6 +49,11 @@ jobs:
           case '${{ matrix.version }}' in
             22.04)
               GCC_HOST_VERSION=11
+              LLVM_HOST_VERSION=14
+              ;;
+            24.04)
+              GCC_HOST_VERSION=13
+              # FIXME: increment when support for newer LLVM versions is introduced
               LLVM_HOST_VERSION=14
               ;;
             *)
