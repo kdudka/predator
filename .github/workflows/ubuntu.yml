@@ -15,7 +15,7 @@ jobs:
       matrix:
         compiler: [clang, gcc]
         host: [gcc, llvm]
-        version: [20.04, 22.04]
+        version: [22.04]
         include:
           - variant: ', variant: expensive tests'
             compiler: gcc
@@ -47,10 +47,6 @@ jobs:
       - name: Determine default tool versions for Ubuntu ${{ matrix. version }}
         run: |
           case '${{ matrix.version }}' in
-            20.04)
-              GCC_HOST_VERSION=9
-              LLVM_HOST_VERSION=10
-              ;;
             22.04)
               GCC_HOST_VERSION=11
               LLVM_HOST_VERSION=14
@@ -91,8 +87,8 @@ jobs:
                               "llvm-$LLVM_HOST_VERSION-dev"
 
       # FIXME: workaround for a git clone hang on Ubuntu 22.04 machines
-      - name: '[Jammy + LLVM] Checkout passes repository'
-        if: startsWith(matrix.host, 'llvm') && matrix.version == '22.04'
+      - name: '[LLVM] Checkout passes repository'
+        if: startsWith(matrix.host, 'llvm')
         uses: actions/checkout@v4
         with:
           path: passes-src
@@ -108,8 +104,7 @@ jobs:
             echo "CXX=/usr/bin/clang++-$LLVM_HOST_VERSION" >> "$GITHUB_ENV"
           fi
 
-      - name: '[Jammy] Add sanitizers to CXXFLAGS'
-        if: matrix.version >= 22.04
+      - name: 'Add sanitizers to CXXFLAGS'
         run: |
           # Use ASAN and UBSAN
           CFLAGS="$CFLAGS -fsanitize=address,undefined"
