@@ -27,10 +27,16 @@ if(NOT ENABLE_LLVM)
     set(CMAKE_SHARED_LIBRARY_SUFFIX ".so")
 endif()
 
+# Disable deprecated internal FindBoost module if possible.
+if(POLICY CMP0167)
+    cmake_policy(SET CMP0167 NEW)
+endif()
+
 # Check Boost availability
+set(Boost_VERBOSE ON)
 set(Boost_USE_STATIC_LIBS ON)
 set(Boost_ADDITIONAL_VERSIONS "1.46" "1.47" "1.48" "1.49")
-find_package(Boost 1.37)
+find_package(Boost 1.37 REQUIRED)
 if(Boost_FOUND)
     link_directories(${Boost_LIBRARY_DIRS})
     include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
