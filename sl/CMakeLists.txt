@@ -16,7 +16,7 @@
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
 # project metadata
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 3.3)
 project(sl C CXX)
 enable_testing()
 
@@ -84,11 +84,16 @@ add_library(predator STATIC
 CL_BUILD_COMPILER_PLUGIN(sl predator ../cl_build)
 
 # get the full path of libsl.so/.dylib
-get_property(SL_PLUG TARGET sl PROPERTY LOCATION)
-message (STATUS "SL_PLUG: ${SL_PLUG}")
+set(SL_PLUG $<TARGET_FILE:sl>)
+
+macro(sl_configure in out)
+    configure_file(${PROJECT_SOURCE_DIR}/${in} ${PROJECT_BINARY_DIR}/${in}.imd @ONLY)
+    file(GENERATE OUTPUT ${PROJECT_BINARY_DIR}/${out}
+                  INPUT  ${PROJECT_BINARY_DIR}/${in}.imd)
+endmacro()
 
 if(ENABLE_LLVM)
-    #get path of libpasses.so/.dylib
+    # get path of libpasses.so/.dylib
     if("${LIBPASSES_PATH}" STREQUAL "")
         set(PASSES_LIB ${PROJECT_SOURCE_DIR}/../passes-src/passes_build/libpasses${CMAKE_SHARED_LIBRARY_SUFFIX})
     else()
@@ -97,24 +102,22 @@ if(ENABLE_LLVM)
     message (STATUS "PASSES_LIB: ${PASSES_LIB}")
 
     # helping scripts for llvm
-    configure_file(${PROJECT_SOURCE_DIR}/slscript.in  ${PROJECT_BINARY_DIR}/slllvm    @ONLY)
-    configure_file(${PROJECT_SOURCE_DIR}/slllvmv.in   ${PROJECT_BINARY_DIR}/slllvmv   @ONLY)
+    sl_configure(slscript.in  slllvm)
+    sl_configure(slllvmv.in   slllvmv)
 else()
     # helping scripts for gcc
-    configure_file(${PROJECT_SOURCE_DIR}/slscript.in  ${PROJECT_BINARY_DIR}/slgcc     @ONLY)
-    configure_file(${PROJECT_SOURCE_DIR}/slgccv.in    ${PROJECT_BINARY_DIR}/slgccv    @ONLY)
-    configure_file(${PROJECT_SOURCE_DIR}/probe.sh.in  ${PROJECT_BINARY_DIR}/probe.sh  @ONLY)
+    sl_configure(slscript.in  slgcc)
+    sl_configure(slgccv.in    slgccv)
+    sl_configure(probe.sh.in  probe.sh)
 
-    configure_file(${PROJECT_SOURCE_DIR}/register-paths.sh.in
-        ${PROJECT_BINARY_DIR}/register-paths.sh                                       @ONLY)
+    sl_configure(register-paths.sh.in  register-paths.sh)
 endif()
 if(APPLE)
-    configure_file(${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/sllldb    @ONLY)
+    sl_configure(slgdb.in  sllldb)
 else()
-    configure_file(${PROJECT_SOURCE_DIR}/slgdb.in     ${PROJECT_BINARY_DIR}/slgdb     @ONLY)
+    sl_configure(slgdb.in  slgdb)
 endif()
-configure_file(${PROJECT_SOURCE_DIR}/check-property.sh.in
-    ${PROJECT_BINARY_DIR}/check-property.sh                                           @ONLY)
+sl_configure(check-property.sh.in  check-property.sh)
 
 # make install
 install(TARGETS sl DESTINATION lib)

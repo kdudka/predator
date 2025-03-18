@@ -31,19 +31,14 @@ add_library(cl_smoke_test_core STATIC cl_smoke_test.cc)
 CL_BUILD_COMPILER_PLUGIN(cl_smoke_test cl_smoke_test_core "")
 
 # get the full paths of plugins
-get_property(VK_PLUG    TARGET chk_var_killer   PROPERTY LOCATION)
-get_property(PT_PLUG    TARGET chk_pt           PROPERTY LOCATION)
-get_property(SMOKE_PLUG TARGET cl_smoke_test    PROPERTY LOCATION)
-set(PLUG "${VK_PLUG}")
-
-message(STATUS "VK_PLUG: ${VK_PLUG}")
-message(STATUS "PT_PLUG: ${PT_PLUG}")
-message(STATUS "SMOKE_PLUG: ${SMOKE_PLUG}")
+set(PT_PLUG    $<TARGET_FILE:chk_pt>)
+set(SMOKE_PLUG $<TARGET_FILE:cl_smoke_test>)
+set(VK_PLUG    $<TARGET_FILE:chk_var_killer>)
 
 set(PRED_INCL_DIR "${cl_SOURCE_DIR}/../include/predator-builtins/")
 
 macro(add_test_wrap test_name cmd)
-    add_test("${test_name}" bash -o pipefail -c
+    add_test(NAME "${test_name}" COMMAND bash -o pipefail -c
         "LC_ALL=C CCACHE_DISABLE=1 MALLOC_PERTURB_=170 ${cmd}")
 endmacro()
 
@@ -452,14 +447,9 @@ add_gcc_adapt_test(cc1plus C++ 53 Class-member-functions)
 endif()
 
 # debugging helpers
-configure_file(${cl_SOURCE_DIR}/tests/vkdebug.sh.in
-               ${cl_BINARY_DIR}/tests/vkdebug.sh
-               @ONLY)
-
-configure_file(${cl_SOURCE_DIR}/tests/ptgccv.in
-               ${cl_BINARY_DIR}/tests/ptgccv
-               @ONLY)
-
-configure_file(${cl_SOURCE_DIR}/tests/ptgdb.in
-               ${cl_BINARY_DIR}/tests/ptgdb
-               @ONLY)
+foreach(file "ptgdb" "ptgccv" "vkdebug.sh")
+    configure_file(${cl_SOURCE_DIR}/tests/${file}.in
+                   ${cl_BINARY_DIR}/tests/${file}.imd @ONLY)
+    file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${file}
+                  INPUT  ${CMAKE_CURRENT_BINARY_DIR}/${file}.imd)
+endforeach()
