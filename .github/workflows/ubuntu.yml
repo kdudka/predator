@@ -134,9 +134,9 @@ jobs:
           # Needed for testing of shared libraries loaded by non-instrumented
           # binaries.
           if [[ '${{ matrix.compiler }}' == 'clang' ]]; then
-            LD_PRELOAD="$(clang -print-file-name=libclang_rt.asan-x86_64.so)"
+            LD_PRELOAD="$("$CC" -print-file-name=libclang_rt.asan-x86_64.so)"
           else
-            LD_PRELOAD="$(gcc -print-file-name=libasan.so)"
+            LD_PRELOAD="$("$CC" -print-file-name=libasan.so)"
           fi
 
           # Due to LD_PRELOAD above, leak sanitizer was reporting leaks
