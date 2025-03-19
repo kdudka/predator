@@ -1,5 +1,5 @@
 test-0411.c:180: error: dereferencing object of size 4097B out of bounds
-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 test-0411.c:222: note: from call of FreeArenaList()
 test-0411.c:266: note: from call of PL_FreeArenaPool()
 test-0411.c:253: note: from call of main()
@@ -10,12 +10,12 @@ test-0411.c:272: note: writing heap graph to '02-PL_ArenaAllocate-0001.dot'...
 test-0411.c:272: note: writing heap graph to '02-PL_ArenaAllocate-0002.dot'...
 test-0411.c:272: note: writing heap graph to '02-PL_ArenaAllocate-0003.dot'...
 test-0411.c:180: error: dereferencing object of size 4097B out of bounds
-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 test-0411.c:222: note: from call of FreeArenaList()
 test-0411.c:275: note: from call of PL_FreeArenaPool()
 test-0411.c:253: note: from call of main()
 test-0411.c:180: error: dereferencing object of size 4097B out of bounds
-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 test-0411.c:222: note: from call of FreeArenaList()
 test-0411.c:275: note: from call of PL_FreeArenaPool()
 test-0411.c:253: note: from call of main()
@@ -26,7 +26,7 @@ test-0411.c:283: note: writing heap graph to '06-PL_ArenaAllocate-0000.dot'...
 test-0411.c:283: note: writing heap graph to '06-PL_ArenaAllocate-0001.dot'...
 test-0411.c:283: note: writing heap graph to '06-PL_ArenaAllocate-0002.dot'...
 test-0411.c:180: error: dereferencing object of size 4097B out of bounds
-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 test-0411.c:222: note: from call of FreeArenaList()
 test-0411.c:286: note: from call of PL_FreeArenaPool()
 test-0411.c:253: note: from call of main()

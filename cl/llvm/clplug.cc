@@ -643,7 +643,7 @@ struct cl_type *CLPass::handleType(Type *t) {
             break;
 
         default: // MetadataTyID, X86_MMXTyID
-            CL_WARN("unknown type");
+            CL_BREAK_IF("unknown type");
             clt->code = CL_TYPE_UNKNOWN;
             break;
     }

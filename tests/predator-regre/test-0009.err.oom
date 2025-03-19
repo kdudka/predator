@@ -9,14 +9,14 @@ test-0009.c:14: note: writing heap graph to 'test-0009.c-14-0005.dot'...
 test-0009.c:14: note: writing heap graph to 'test-0009.c-14-0006.dot'...
 test-0009.c:14: note: writing heap graph to 'test-0009.c-14-0007.dot'...
 test-0009.c:15: error: dereference of NULL value
-test-0009.c:15: error: dereferencing object of size 4B out of bounds
-test-0009.c:15: note: the target object ends 3B beyond a heap object of size 1B
+test-0009.c:15: error: dereferencing object of size 8B out of bounds
+test-0009.c:15: note: the target object ends 7B beyond a heap object of size 1B
 test-0009.c:15: error: dereference of NULL value
-test-0009.c:15: error: dereferencing object of size 4B out of bounds
-test-0009.c:15: note: the target object ends 3B beyond a heap object of size 1B
+test-0009.c:15: error: dereferencing object of size 8B out of bounds
+test-0009.c:15: note: the target object ends 7B beyond a heap object of size 1B
 test-0009.c:15: error: dereference of NULL value
-test-0009.c:15: error: dereferencing object of size 4B out of bounds
-test-0009.c:15: note: the target object ends 3B beyond a heap object of size 1B
+test-0009.c:15: error: dereferencing object of size 8B out of bounds
+test-0009.c:15: note: the target object ends 7B beyond a heap object of size 1B
 test-0009.c:15: error: dereference of NULL value
-test-0009.c:15: error: dereferencing object of size 4B out of bounds
-test-0009.c:15: note: the target object ends 3B beyond a heap object of size 1B
+test-0009.c:15: error: dereferencing object of size 8B out of bounds
+test-0009.c:15: note: the target object ends 7B beyond a heap object of size 1B

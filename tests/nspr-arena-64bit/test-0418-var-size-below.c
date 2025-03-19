@@ -1,4 +1,4 @@
-# 2 "test-0419.c"
+# 2 "test-0418.c"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
 #include <verifier-builtins.h>
@@ -58,7 +58,7 @@ __attribute__((visibility("default"))) void PL_InitArenaPool(
 
     pool->first.next = ((void *)0);
     pool->first.base = pool->first.avail = pool->first.limit =
-        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask) /* & ~(pool)->mask */);
+        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask)  & ~(pool)->mask);
     pool->current = &pool->first;
     pool->arenasize = size;
 
@@ -129,7 +129,7 @@ __attribute__((visibility("default"))) void * PL_ArenaAllocate(PLArenaPool *pool
         a = (PLArena*)(PR_Malloc((sz)));
         if ( ((void *)0) != a ) {
             a->limit = (PRUword)a + sz;
-            a->base = a->avail = (PRUword)(((PRUword)(a + 1) + (pool)->mask) /*& ~(pool)->mask*/);
+            a->base = a->avail = (PRUword)(((PRUword)(a + 1) + (pool)->mask) & ~(pool)->mask);
             rp = (char *)a->avail;
             a->avail += nb;
 
@@ -256,7 +256,7 @@ void torture_arena(PLArenaPool *pool)
         ssize_t size = __VERIFIER_nondet_int();
         if (size < sizeof(double))
             abort();
-        if (0x1000 + sizeof(double) < size)
+        if (0x1000 < size)
             abort();
 
         size &= ~(sizeof(double) - 1);
@@ -292,15 +292,16 @@ int main()
 }
 
 /**
- * @file test-0419-var-size-single-overlap.c
+ * @file test-0418-var-size-below.c
  *
- * @brief size range exceeding arena size
+ * @brief allocating full range alignment..asize in loop
  *
  *
- * - arena size is 0x1000, alignment is commented out
+ * - arena size is 0x1000, alignment is sizeof(double)
  *
- * - blocks in range (0..0x1000 & ~sizeof(double)) + sizeof(double)
+ * - allocating blocks sizeof(double)..0x1000 & ~sizeof(double)
+ *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

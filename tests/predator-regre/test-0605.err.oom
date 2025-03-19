@@ -1,4 +1,4 @@
-test-0605.c:18: error: dereference of NULL value with offset 4B
+test-0605.c:18: error: dereference of NULL value with offset 8B
 test-0605.c:62: note: from call of Q_make()
 test-0605.c:60: note: from call of main()
 test-0605.c:25: error: dereference of NULL value

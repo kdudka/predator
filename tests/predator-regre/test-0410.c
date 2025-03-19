@@ -1,1 +1,1 @@
-../nspr-arena-32bit/test-0410-plist-with-alignment.c
+../nspr-arena-64bit/test-0410-plist-with-alignment.c

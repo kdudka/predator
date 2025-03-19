@@ -40,11 +40,6 @@ other GCC versions ranging from 4.5.0 to 12.1.0.
      - package is usually called `boost`
      - on binary distros you may need also the `boost-devel` sub-package
 
-   * 32bit system headers, especially in case of 64bit OS
-     - on Debian provided by a package called `g++-multilib`
-     - you can try to check their presence
-       by `echo "#include <new>" | gcc -m32 -c -xc++ -`
-
 (2) Build Predator from sources
 -------------------------------
 You can use the `switch-host-gcc.sh` script to rebuild Predator against a GCC

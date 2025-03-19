@@ -1,6 +1,6 @@
 #include <verifier-builtins.h>
-#include "../nspr-arena-32bit/plarena-harness.h"
-#include "../nspr-arena-32bit/plarena-bare.c"
+#include "../nspr-arena-64bit/plarena-harness.h"
+#include "../nspr-arena-64bit/plarena-bare.c"
 
 void* nsslibc_memset(void *dest, PRUint8 byte, PRUint32 n)
 {

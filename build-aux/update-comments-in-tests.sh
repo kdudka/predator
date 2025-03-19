@@ -136,4 +136,4 @@ test -d build-aux || die "this script needs to be run from \$PREDATOR_ROOT"
 test -x build-aux/update-comments-in-tests.sh || die "unable to find self"
 
 process_test_dir predator-regre   || die "failed to process predator-regre"
-process_test_dir nspr-arena-32bit || die "failed to process nspr-arena-32bit"
+process_test_dir nspr-arena-64bit || die "failed to process nspr-arena-64bit"

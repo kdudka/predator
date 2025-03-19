@@ -1,4 +1,4 @@
-# 2 "test-0408.c"
+# 2 "test-0402.c"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
 #include <verifier-builtins.h>
@@ -252,52 +252,31 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
 
 int main()
 {
-    // initialize arena pool
     PLArenaPool pool;
     PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
+    __VERIFIER_plot("PL_InitArenaPool");
 
-    // trigger allocation of one arena
-    void *ptr1 = PL_ArenaAllocate(&pool, 0x100);
-
-    // attempt to reuse the existing arena
-    void *ptr2 = PL_ArenaAllocate(&pool, 0x100);
-
-    // free the arena pool twice
-    PL_FreeArenaPool(&pool);
-    PL_FreeArenaPool(&pool);
-    __VERIFIER_plot("01-PL_FreeArenaPool");
-
-    ptr1 = PL_ArenaAllocate(&pool, 0x100);
-    ptr2 = PL_ArenaAllocate(&pool, 0x100);
-    __VERIFIER_plot("02-PL_ArenaAllocate");
-
-    // free the arena pool
-    PL_FreeArenaPool(&pool);
-    __VERIFIER_plot("04-PL_FreeArenaPool", &ptr1, &ptr2);
+    // this should be OK
+    PL_ArenaAllocate(&pool, 0x100);
+    __VERIFIER_plot("PL_ArenaAllocate");
 
     PL_ArenaFinish();
-    __VERIFIER_plot("05-PL_ArenaFinish");
-
-    // XXX: this is misuse of the NSPR API
-    void *ptr0 = PL_ArenaAllocate(&pool, 0x100);
-    __VERIFIER_plot("06-PL_ArenaAllocate");
-
-    // free the arena pool
-    PL_FreeArenaPool(&pool);
-    __VERIFIER_plot("07-PL_FreeArenaPool");
-
-    PL_ArenaFinish();
-    __VERIFIER_plot("08-PL_ArenaFinish");
-
     return 0;
 }
 
 /**
- * @file test-0408-simple-with-alignment.c
+ * @file test-0402-PL_ArenaAllocate.c
  *
- * @brief aligned variant of test-0404-simple.c
+ * @brief single call of PL_ArenaAllocate()
+ *
+ *
+ * - arena size is 0x1000, alignment is 0x10
+ *
+ * - size of the allocated block is 0x100
+ *
+ * - leaks memory
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

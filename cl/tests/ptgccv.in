@@ -35,7 +35,7 @@ function run_gcc() {
     OPTS="$1 \
         -I$topdir/include/predator-builtins                                    \
         -I$topdir/cl                                                           \
-        -S -m32 -O0 -Wall -Wextra                                              \
+        -S -m64 -O0 -Wall -Wextra                                              \
         -o /dev/null                                                           \
         -fplugin=$GCC_PLUG                                                     \
         -fplugin-arg-libchk_pt-dump-pp                                         \

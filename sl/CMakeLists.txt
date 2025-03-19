@@ -293,7 +293,7 @@ macro(test_predator_regre name_suff ext arg1)
 
         # we use the following flag to avoid differences on 32bit vs 64bit archs
         # in the error output, which is checked for exact match
-        set(cmd "${cmd} -w -g -m32 ${cmd_cc1}")
+        set(cmd "${cmd} -w -g -m64 ${cmd_cc1}")
         set(cmd "${cmd} -I../include/predator-builtins -DPREDATOR")
         set(cmd "${cmd} ${testdir}/test-${num}.c -o - | ")
         set(cmd "${cmd} ${GCC_EXEC_PREFIX} ${OPT_HOST} -o /dev/null -lowerswitch")
@@ -393,7 +393,7 @@ macro(test_predator_regre name_suff ext arg1)
 
         # we use the following flag to avoid differences on 32bit vs 64bit archs
         # in the error output, which is checked for exact match
-        set(cmd "${cmd} -m32")
+        set(cmd "${cmd} -m64")
 
         # use C++ compiler if requested:
         if (ENABLE_CC1_PLUS)

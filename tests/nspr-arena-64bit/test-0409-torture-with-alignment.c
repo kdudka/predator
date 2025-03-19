@@ -294,6 +294,6 @@ int main()
  * @brief aligned variant of test-0405-torture.c
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

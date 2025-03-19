@@ -33,7 +33,7 @@ RUN="$GDB --quiet --args $CC1_HOST \"$1\" \
     -I$topdir/cl \
     -I$PRED_INCL_DIR \
     -dumpbase test.c -quiet -o /dev/null \
-    -m32 -O0 -Wall -Wextra \
+    -m64 -O0 -Wall -Wextra \
     -fplugin=$GCC_PLUG \
     -fplugin-arg-libchk_pt-dump-pp \
     -fplugin-arg-libchk_pt-args=$ARGS \

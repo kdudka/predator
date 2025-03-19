@@ -1,1 +1,1 @@
-../nss-arena-32bit/arena-decls.h
+../nss-arena-64bit/arena-decls.h

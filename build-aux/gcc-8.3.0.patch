@@ -20,9 +20,9 @@ index 4c215656..287165a1 100644
 +++ b/tests/predator-regre/test-0411.err
 @@ -1,5 +1,5 @@
 -test-0411.c:180: error: dereferencing object of size 4097B out of bounds
--test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 +test-0411.c:180: error: dereferencing object of size 4112B out of bounds
-+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4127B
++test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4143B
  test-0411.c:222: note: from call of FreeArenaList()
  test-0411.c:266: note: from call of PL_FreeArenaPool()
  test-0411.c:253: note: from call of main()
@@ -32,9 +32,9 @@ index 4c215656..287165a1 100644
 +++ b/tests/predator-regre/test-0411.err.exit_leaks
 @@ -1,5 +1,5 @@
 -test-0411.c:180: error: dereferencing object of size 4097B out of bounds
--test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 +test-0411.c:180: error: dereferencing object of size 4112B out of bounds
-+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4127B
++test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4143B
  test-0411.c:222: note: from call of FreeArenaList()
  test-0411.c:266: note: from call of PL_FreeArenaPool()
  test-0411.c:253: note: from call of main()
@@ -44,9 +44,9 @@ index 03b56d0d..d8ac8770 100644
 +++ b/tests/predator-regre/test-0411.err.oom
 @@ -1,5 +1,5 @@
 -test-0411.c:180: error: dereferencing object of size 4097B out of bounds
--test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 +test-0411.c:180: error: dereferencing object of size 4112B out of bounds
-+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4127B
++test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4143B
  test-0411.c:222: note: from call of FreeArenaList()
  test-0411.c:266: note: from call of PL_FreeArenaPool()
  test-0411.c:253: note: from call of main()
@@ -55,16 +55,16 @@ index 03b56d0d..d8ac8770 100644
  test-0411.c:272: note: writing heap graph to '02-PL_ArenaAllocate-0002.dot'...
  test-0411.c:272: note: writing heap graph to '02-PL_ArenaAllocate-0003.dot'...
 -test-0411.c:180: error: dereferencing object of size 4097B out of bounds
--test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 +test-0411.c:180: error: dereferencing object of size 4112B out of bounds
-+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4127B
++test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4143B
  test-0411.c:222: note: from call of FreeArenaList()
  test-0411.c:275: note: from call of PL_FreeArenaPool()
  test-0411.c:253: note: from call of main()
 -test-0411.c:180: error: dereferencing object of size 4097B out of bounds
--test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 +test-0411.c:180: error: dereferencing object of size 4112B out of bounds
-+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4127B
++test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4143B
  test-0411.c:222: note: from call of FreeArenaList()
  test-0411.c:275: note: from call of PL_FreeArenaPool()
  test-0411.c:253: note: from call of main()
@@ -73,9 +73,9 @@ index 03b56d0d..d8ac8770 100644
  test-0411.c:283: note: writing heap graph to '06-PL_ArenaAllocate-0001.dot'...
  test-0411.c:283: note: writing heap graph to '06-PL_ArenaAllocate-0002.dot'...
 -test-0411.c:180: error: dereferencing object of size 4097B out of bounds
--test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 +test-0411.c:180: error: dereferencing object of size 4112B out of bounds
-+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4127B
++test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4143B
  test-0411.c:222: note: from call of FreeArenaList()
  test-0411.c:286: note: from call of PL_FreeArenaPool()
  test-0411.c:253: note: from call of main()
@@ -85,9 +85,9 @@ index 4c215656..287165a1 100644
 +++ b/tests/predator-regre/test-0411.err.uninit
 @@ -1,5 +1,5 @@
 -test-0411.c:180: error: dereferencing object of size 4097B out of bounds
--test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4112B
+-test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4128B
 +test-0411.c:180: error: dereferencing object of size 4112B out of bounds
-+test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4127B
++test-0411.c:180: note: the target object ends 1B beyond a heap object of size 4143B
  test-0411.c:222: note: from call of FreeArenaList()
  test-0411.c:266: note: from call of PL_FreeArenaPool()
  test-0411.c:253: note: from call of main()

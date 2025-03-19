@@ -95,21 +95,6 @@ if (NOT EXISTS "${GCC_INC_DIR}/gcc-plugin.h")
     required for building GCC plug-ins.")
 endif()
 
-# check for 32bit C standard header files
-set(GCC_M32_CMD "echo \"#include <new>\" | ${GCC_HOST} -m32 -c -xc++ -")
-execute_process(COMMAND sh -c "${GCC_M32_CMD}"
-    RESULT_VARIABLE GCC_HOST_M32_STATUS)
-if ("${GCC_HOST_M32_STATUS}" EQUAL 0)
-    message(STATUS
-    "'${GCC_M32_CMD}' works")
-else()
-    message(FATAL_ERROR
-    "'${GCC_M32_CMD}' failed
-
-    Please make sure you have 32bit standard header files installed.  You need
-    to install glibc-devel.i686 on Fedora, or g++-4.9-multilib on Debian.")
-endif()
-
 # query CC1_HOST using GCC_HOST
 execute_process(COMMAND "${GCC_HOST}" "-print-prog-name=cc1"
     RESULT_VARIABLE CC1_HOST_STATUS

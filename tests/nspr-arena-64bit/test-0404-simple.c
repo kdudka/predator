@@ -1,4 +1,4 @@
-# 2 "test-0414.c"
+# 2 "test-0404.c"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
 #include <verifier-builtins.h>
@@ -250,65 +250,63 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
     once = pristineCallOnce;
 }
 
-void torture_arena(PLArenaPool *pool)
-{
-    size_t size = __VERIFIER_nondet_int();
-    if (size < 0x80)
-        abort();
-    if (0x81 < size)
-        abort();
-
-    size *= 0x10;
-
-    while (__VERIFIER_nondet_int()) {
-        PL_ArenaAllocate(pool, size);
-
-        while (__VERIFIER_nondet_int())
-            PL_FreeArenaPool(pool);
-    }
-}
-
 int main()
 {
-    while (__VERIFIER_nondet_int()) {
-        PLArenaPool pool;
+    // initialize arena pool
+    PLArenaPool pool;
+    PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
 
-        while (__VERIFIER_nondet_int()) {
-            // initialize arena pool
-            PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
+    // trigger allocation of one arena
+    void *ptr1 = PL_ArenaAllocate(&pool, 0x100);
 
-            torture_arena(&pool);
-            __VERIFIER_plot("01-torture_arena");
+    // attempt to reuse the existing arena
+    void *ptr2 = PL_ArenaAllocate(&pool, 0x100);
 
-            PL_FreeArenaPool(&pool);
-            __VERIFIER_plot("02-PL_FreeArenaPool");
+    // free the arena pool twice
+    PL_FreeArenaPool(&pool);
+    PL_FreeArenaPool(&pool);
+    __VERIFIER_plot("01-PL_FreeArenaPool");
 
-            PL_FinishArenaPool(&pool);
-            __VERIFIER_plot("03-PL_FinishArenaPool");
-        }
+    ptr1 = PL_ArenaAllocate(&pool, 0x100);
+    ptr2 = PL_ArenaAllocate(&pool, 0x100);
+    __VERIFIER_plot("02-PL_ArenaAllocate");
 
-        __VERIFIER_plot("04-done");
+    // free the arena pool
+    PL_FreeArenaPool(&pool);
+    __VERIFIER_plot("04-PL_FreeArenaPool", &ptr1, &ptr2);
 
-        PL_ArenaFinish();
-        __VERIFIER_plot("05-PL_ArenaFinish");
-    }
+    PL_ArenaFinish();
+    __VERIFIER_plot("05-PL_ArenaFinish");
+
+    // XXX: this is misuse of the NSPR API
+    void *ptr0 = PL_ArenaAllocate(&pool, 0x100);
+    __VERIFIER_plot("06-PL_ArenaAllocate");
+
+    // free the arena pool
+    PL_FreeArenaPool(&pool);
+    __VERIFIER_plot("07-PL_FreeArenaPool");
+
+    PL_ArenaFinish();
+    __VERIFIER_plot("08-PL_ArenaFinish");
 
     return 0;
 }
 
 /**
- * @file test-0414-tiny-size-range.c
+ * @file test-0404-simple.c
  *
- * @brief allocate aligned range consisting of size 2
+ * @brief simple use of the NSPR arena API without any loops
  *
- *
- * - based on test-0405-torture.c
  *
  * - arena size is 0x1000, alignment is commented out
  *
- * - allocating blocks of size 0x80..0x81 * 0x10
+ * - size of the allocated blocks is 0x100
+ *
+ * - there is probably a misuse of the API, but no assert for that
+ *
+ * - does NOT leak memory
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

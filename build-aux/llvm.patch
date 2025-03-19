@@ -19,8 +19,8 @@ index 9f17e54f..68d6449b 100644
 +test-0009.c:8: warning: memory leak detected while assigning a variable on stack
 +test-0009.c:11: warning: memory leak detected while assigning a variable on stack
  test-0009.c:14: note: writing heap graph to 'test-0009.c-14-0000.dot'...
- test-0009.c:15: error: dereferencing object of size 4B out of bounds
- test-0009.c:15: note: the target object ends 3B beyond a heap object of size 1B
+ test-0009.c:15: error: dereferencing object of size 8B out of bounds
+ test-0009.c:15: note: the target object ends 7B beyond a heap object of size 1B
 diff --git a/tests/predator-regre/test-0009.err.exit_leaks b/tests/predator-regre/test-0009.err.exit_leaks
 index 9f17e54f..68d6449b 100644
 --- a/tests/predator-regre/test-0009.err.exit_leaks
@@ -31,8 +31,8 @@ index 9f17e54f..68d6449b 100644
 +test-0009.c:8: warning: memory leak detected while assigning a variable on stack
 +test-0009.c:11: warning: memory leak detected while assigning a variable on stack
  test-0009.c:14: note: writing heap graph to 'test-0009.c-14-0000.dot'...
- test-0009.c:15: error: dereferencing object of size 4B out of bounds
- test-0009.c:15: note: the target object ends 3B beyond a heap object of size 1B
+ test-0009.c:15: error: dereferencing object of size 8B out of bounds
+ test-0009.c:15: note: the target object ends 7B beyond a heap object of size 1B
 diff --git a/tests/predator-regre/test-0009.err.oom b/tests/predator-regre/test-0009.err.oom
 index 046cafac..88196c9a 100644
 --- a/tests/predator-regre/test-0009.err.oom
@@ -55,8 +55,8 @@ index 9f17e54f..68d6449b 100644
 +test-0009.c:8: warning: memory leak detected while assigning a variable on stack
 +test-0009.c:11: warning: memory leak detected while assigning a variable on stack
  test-0009.c:14: note: writing heap graph to 'test-0009.c-14-0000.dot'...
- test-0009.c:15: error: dereferencing object of size 4B out of bounds
- test-0009.c:15: note: the target object ends 3B beyond a heap object of size 1B
+ test-0009.c:15: error: dereferencing object of size 8B out of bounds
+ test-0009.c:15: note: the target object ends 7B beyond a heap object of size 1B
 diff --git a/tests/predator-regre/test-0011.err b/tests/predator-regre/test-0011.err
 index e504e151..8dadc97e 100644
 --- a/tests/predator-regre/test-0011.err
@@ -169,7 +169,7 @@ index 00f1fcaf..b888f478 100644
 +++ b/tests/predator-regre/test-0040.err
 @@ -2,27 +2,34 @@ test-0040.c:52: note: writing heap graph to 'test-0040.c-52-0000.dot'...
  test-0040.c:53: warning: memory leak detected while destroying a variable on stack
- test-0040.c:54: error: dereference of NULL value with offset 4B
+ test-0040.c:54: error: dereference of NULL value with offset 8B
  test-0040.c:52: note: writing heap graph to 'test-0040.c-52-0001.dot'...
 -test-0040.c:53: warning: memory leak detected while destroying a variable on stack
 +test-0040.c:53: warning: memory leak detected while assigning a variable on stack
@@ -215,7 +215,7 @@ index 00f1fcaf..b888f478 100644
 +++ b/tests/predator-regre/test-0040.err.exit_leaks
 @@ -2,27 +2,34 @@ test-0040.c:52: note: writing heap graph to 'test-0040.c-52-0000.dot'...
  test-0040.c:53: warning: memory leak detected while destroying a variable on stack
- test-0040.c:54: error: dereference of NULL value with offset 4B
+ test-0040.c:54: error: dereference of NULL value with offset 8B
  test-0040.c:52: note: writing heap graph to 'test-0040.c-52-0001.dot'...
 -test-0040.c:53: warning: memory leak detected while destroying a variable on stack
 +test-0040.c:53: warning: memory leak detected while assigning a variable on stack
@@ -260,7 +260,7 @@ index e23c0110..0e1fa297 100644
 --- a/tests/predator-regre/test-0040.err.oom
 +++ b/tests/predator-regre/test-0040.err.oom
 @@ -4,34 +4,41 @@ test-0040.c:53: warning: memory leak detected while destroying a variable on sta
- test-0040.c:54: error: dereference of NULL value with offset 4B
+ test-0040.c:54: error: dereference of NULL value with offset 8B
  test-0040.c:47: error: dereference of NULL value
  test-0040.c:52: note: writing heap graph to 'test-0040.c-52-0001.dot'...
 -test-0040.c:53: warning: memory leak detected while destroying a variable on stack
@@ -314,7 +314,7 @@ index 00f1fcaf..b888f478 100644
 +++ b/tests/predator-regre/test-0040.err.uninit
 @@ -2,27 +2,34 @@ test-0040.c:52: note: writing heap graph to 'test-0040.c-52-0000.dot'...
  test-0040.c:53: warning: memory leak detected while destroying a variable on stack
- test-0040.c:54: error: dereference of NULL value with offset 4B
+ test-0040.c:54: error: dereference of NULL value with offset 8B
  test-0040.c:52: note: writing heap graph to 'test-0040.c-52-0001.dot'...
 -test-0040.c:53: warning: memory leak detected while destroying a variable on stack
 +test-0040.c:53: warning: memory leak detected while assigning a variable on stack
@@ -1141,17 +1141,17 @@ index 2bfda4b8..709ca10f 100644
 +++ b/tests/predator-regre/test-0089.err
 @@ -1,11 +1,11 @@
  test-0089.c:99: note: writing heap graph to 'test-0089.c-99-0000.dot'...
- test-0089.c:122: error: free() called with offset 16B
+ test-0089.c:122: error: free() called with offset 32B
 -test-0089.c:122: warning: memory leak detected while destroying a variable on stack
- test-0089.c:123: error: free() called with offset 8B
+ test-0089.c:123: error: free() called with offset 16B
 -test-0089.c:123: warning: memory leak detected while destroying a variable on stack
- test-0089.c:124: error: free() called with offset 4B
+ test-0089.c:124: error: free() called with offset 8B
 -test-0089.c:124: warning: memory leak detected while destroying a variable on stack
  test-0089.c:79: note: writing heap graph to 'test-0089.c-79-0000.dot'...
- test-0089.c:87: error: free() called with offset -16B
+ test-0089.c:87: error: free() called with offset -32B
  test-0089.c:127: note: from call of chk_offval_handling()
  test-0089.c:96: note: from call of main()
-+test-0089.c:87: error: free() called with offset -16B
++test-0089.c:87: error: free() called with offset -32B
 +test-0089.c:127: note: from call of chk_offval_handling()
 +test-0089.c:96: note: from call of main()
 diff --git a/tests/predator-regre/test-0089.err.exit_leaks b/tests/predator-regre/test-0089.err.exit_leaks
@@ -1160,17 +1160,17 @@ index 2bfda4b8..709ca10f 100644
 +++ b/tests/predator-regre/test-0089.err.exit_leaks
 @@ -1,11 +1,11 @@
  test-0089.c:99: note: writing heap graph to 'test-0089.c-99-0000.dot'...
- test-0089.c:122: error: free() called with offset 16B
+ test-0089.c:122: error: free() called with offset 32B
 -test-0089.c:122: warning: memory leak detected while destroying a variable on stack
- test-0089.c:123: error: free() called with offset 8B
+ test-0089.c:123: error: free() called with offset 16B
 -test-0089.c:123: warning: memory leak detected while destroying a variable on stack
- test-0089.c:124: error: free() called with offset 4B
+ test-0089.c:124: error: free() called with offset 8B
 -test-0089.c:124: warning: memory leak detected while destroying a variable on stack
  test-0089.c:79: note: writing heap graph to 'test-0089.c-79-0000.dot'...
- test-0089.c:87: error: free() called with offset -16B
+ test-0089.c:87: error: free() called with offset -32B
  test-0089.c:127: note: from call of chk_offval_handling()
  test-0089.c:96: note: from call of main()
-+test-0089.c:87: error: free() called with offset -16B
++test-0089.c:87: error: free() called with offset -32B
 +test-0089.c:127: note: from call of chk_offval_handling()
 +test-0089.c:96: note: from call of main()
 diff --git a/tests/predator-regre/test-0089.err.oom b/tests/predator-regre/test-0089.err.oom
@@ -1179,17 +1179,17 @@ index 2bfda4b8..709ca10f 100644
 +++ b/tests/predator-regre/test-0089.err.oom
 @@ -1,11 +1,11 @@
  test-0089.c:99: note: writing heap graph to 'test-0089.c-99-0000.dot'...
- test-0089.c:122: error: free() called with offset 16B
+ test-0089.c:122: error: free() called with offset 32B
 -test-0089.c:122: warning: memory leak detected while destroying a variable on stack
- test-0089.c:123: error: free() called with offset 8B
+ test-0089.c:123: error: free() called with offset 16B
 -test-0089.c:123: warning: memory leak detected while destroying a variable on stack
- test-0089.c:124: error: free() called with offset 4B
+ test-0089.c:124: error: free() called with offset 8B
 -test-0089.c:124: warning: memory leak detected while destroying a variable on stack
  test-0089.c:79: note: writing heap graph to 'test-0089.c-79-0000.dot'...
- test-0089.c:87: error: free() called with offset -16B
+ test-0089.c:87: error: free() called with offset -32B
  test-0089.c:127: note: from call of chk_offval_handling()
  test-0089.c:96: note: from call of main()
-+test-0089.c:87: error: free() called with offset -16B
++test-0089.c:87: error: free() called with offset -32B
 +test-0089.c:127: note: from call of chk_offval_handling()
 +test-0089.c:96: note: from call of main()
 diff --git a/tests/predator-regre/test-0089.err.uninit b/tests/predator-regre/test-0089.err.uninit
@@ -1198,17 +1198,17 @@ index 2bfda4b8..709ca10f 100644
 +++ b/tests/predator-regre/test-0089.err.uninit
 @@ -1,11 +1,11 @@
  test-0089.c:99: note: writing heap graph to 'test-0089.c-99-0000.dot'...
- test-0089.c:122: error: free() called with offset 16B
+ test-0089.c:122: error: free() called with offset 32B
 -test-0089.c:122: warning: memory leak detected while destroying a variable on stack
- test-0089.c:123: error: free() called with offset 8B
+ test-0089.c:123: error: free() called with offset 16B
 -test-0089.c:123: warning: memory leak detected while destroying a variable on stack
- test-0089.c:124: error: free() called with offset 4B
+ test-0089.c:124: error: free() called with offset 8B
 -test-0089.c:124: warning: memory leak detected while destroying a variable on stack
  test-0089.c:79: note: writing heap graph to 'test-0089.c-79-0000.dot'...
- test-0089.c:87: error: free() called with offset -16B
+ test-0089.c:87: error: free() called with offset -32B
  test-0089.c:127: note: from call of chk_offval_handling()
  test-0089.c:96: note: from call of main()
-+test-0089.c:87: error: free() called with offset -16B
++test-0089.c:87: error: free() called with offset -32B
 +test-0089.c:127: note: from call of chk_offval_handling()
 +test-0089.c:96: note: from call of main()
 diff --git a/tests/predator-regre/test-0096.err b/tests/predator-regre/test-0096.err
@@ -1968,16 +1968,6 @@ index 6f19d2b8..0d6c5e6b 100644
  test-0199.c:110: note: from call of stack_clear()
  test-0199.c:86: note: from call of main()
 -test-0199.c:107: warning: ignoring call of undefined function: __builtin_putchar()
-diff --git a/tests/predator-regre/test-0247.err.oom b/tests/predator-regre/test-0247.err.oom
-index 333f328f..32ceb5b1 100644
---- a/tests/predator-regre/test-0247.err.oom
-+++ b/tests/predator-regre/test-0247.err.oom
-@@ -1,4 +1,4 @@
--test-0247.c:13: error: dereference of NULL value with offset 4294967296B
-+test-0247.c:13: error: dereference of NULL value
- test-0247.c:13: error: dereference of NULL value with offset 4B
- test-0247.c:13: error: dereference of NULL value with offset 8B
- test-0247.c:13: error: dereference of NULL value with offset 12B
 diff --git a/tests/predator-regre/test-0253.err.exit_leaks b/tests/predator-regre/test-0253.err.exit_leaks
 index 9460ec6f..671ebc0e 100644
 --- a/tests/predator-regre/test-0253.err.exit_leaks
@@ -2080,7 +2070,7 @@ diff --git a/tests/predator-regre/test-0256.err.uninit b/tests/predator-regre/te
 index 6c047e7e..5cbc8a92 100644
 --- a/tests/predator-regre/test-0256.err.uninit
 +++ b/tests/predator-regre/test-0256.err.uninit
-@@ -2,7 +2,9 @@
+@@ -2,7 +2,9 @@ test-0256.c:10: error: invalid realloc()
  test-0256.c:10: note: the value being reallocated is an untouched contents of stack
  test-0256.c:10: error: invalid realloc()
  test-0256.c:10: note: the value being freed is an untouched contents of stack

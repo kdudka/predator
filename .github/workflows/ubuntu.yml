@@ -73,12 +73,12 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update
-          sudo apt install -y "gcc-$GCC_HOST_VERSION-multilib" libboost-dev
+          sudo apt install -y "gcc-$GCC_HOST_VERSION" libboost-dev
 
       - name: '[GCC] Install dependencies for GCC host'
         if: startsWith(matrix.host, 'gcc')
         run: |
-          sudo apt install -y "g++-$GCC_HOST_VERSION-multilib" \
+          sudo apt install -y "g++-$GCC_HOST_VERSION" \
                               "gcc-$GCC_HOST_VERSION-plugin-dev"
           if [[ -n '${{ matrix.variant }}' ]]; then
             echo "GCC_HOST=/usr/bin/gcc-$GCC_HOST_VERSION" >> "$GITHUB_ENV"

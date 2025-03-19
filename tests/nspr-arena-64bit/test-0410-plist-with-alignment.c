@@ -1,4 +1,4 @@
-# 2 "test-0413.c"
+# 2 "test-0410.c"
 #include "list.h"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
@@ -178,7 +178,7 @@ static void FreeArenaList(PLArenaPool *pool, PLArena *head, PRBool reallyFree)
 
 
     do {
-        ((a->base <= a->avail && a->avail < a->limit)?((void)0):PR_Assert("a->base <= a->avail && a->avail < a->limit","../../../mozilla/nsprpub/lib/ds/plarena.c",274));
+        ((a->base <= a->avail && a->avail <= a->limit)?((void)0):PR_Assert("a->base <= a->avail && a->avail <= a->limit","../../../mozilla/nsprpub/lib/ds/plarena.c",274));
         a->avail = a->base;
         ((((a)->avail <= (a)->limit)?((void)0):PR_Assert("(a)->avail <= (a)->limit","../../../mozilla/nsprpub/lib/ds/plarena.c",276)), memset((void*)(a)->avail, 0xDA, (a)->limit - (a)->avail));
     } while ((a = a->next) != 0);
@@ -324,11 +324,11 @@ int main()
 }
 
 /**
- * @file test-0413-plist-with-alignment-and-bug.c
+ * @file test-0410-plist-with-alignment.c
  *
- * @brief buggy variant of test-0410
+ * @brief aligned variant of test-0407-plist.c
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

@@ -31,7 +31,7 @@ chk_data_dir() {
     set -x
 
     test -d "$TEST_DIR"                     || return
-    test -d "$TEST_DIR/nspr-arena-32bit"    || return
+    test -d "$TEST_DIR/nspr-arena-64bit"    || return
     test -d "$TEST_DIR/predator-regre"      || return
     mkdir -p "$TEST_DIR/slayer"             || return
 

@@ -1,4 +1,4 @@
-# 2 "test-0410.c"
+# 2 "test-0406.c"
 #include "list.h"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
@@ -44,7 +44,7 @@ __attribute__((visibility("default"))) void PL_InitArenaPool(
 
 
 
-
+#if 0
     static const PRUint8 pmasks[33] = {
          0,
          0, 1, 3, 3, 7, 7, 7, 7,15,15,15,15,15,15,15,15,
@@ -57,11 +57,11 @@ __attribute__((visibility("default"))) void PL_InitArenaPool(
         pool->mask = pmasks[align];
     else
         pool->mask = (((PRUint32)1 << (PR_CeilingLog2(align))) - 1);
-
+#endif
 
     pool->first.next = ((void *)0);
     pool->first.base = pool->first.avail = pool->first.limit =
-        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask) & ~(pool)->mask);
+        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask) /* & ~(pool)->mask */);
     pool->current = &pool->first;
     pool->arenasize = size;
 
@@ -132,7 +132,7 @@ __attribute__((visibility("default"))) void * PL_ArenaAllocate(PLArenaPool *pool
         a = (PLArena*)(PR_Malloc((sz)));
         if ( ((void *)0) != a ) {
             a->limit = (PRUword)a + sz;
-            a->base = a->avail = (PRUword)(((PRUword)(a + 1) + (pool)->mask) & ~(pool)->mask);
+            a->base = a->avail = (PRUword)(((PRUword)(a + 1) + (pool)->mask) /*& ~(pool)->mask*/);
             rp = (char *)a->avail;
             a->avail += nb;
 
@@ -263,7 +263,7 @@ LIST_HEAD(plist);
 static void alloc_one(struct pool_node *node)
 {
     PLArenaPool *const pool = &node->pool;
-    void *const ptr = PL_ArenaAllocate(&node->pool, 0x90);
+    void *const ptr = PL_ArenaAllocate(&node->pool, 0x100);
     if (!ptr)
         abort();
 }
@@ -276,18 +276,7 @@ static void add_pool(void)
         abort();
 
     list_add(&node->head, &plist);
-    PL_InitArenaPool(&node->pool, "cool pool", 0x1000, 0x10);
-}
-
-static void allocate_everything(void)
-{
-    struct pool_node *node;
-    list_for_each_entry(node, &plist, head) {
-        alloc_one(node);
-        do
-            alloc_one(node);
-        while (__VERIFIER_nondet_int());
-    }
+    PL_InitArenaPool(&node->pool, "cool pool", 0x100, 0x10);
 }
 
 int main()
@@ -298,10 +287,16 @@ int main()
 
     __VERIFIER_plot("01-empty");
 
-    allocate_everything();
+    struct pool_node *node;
+    list_for_each_entry(node, &plist, head) {
+        alloc_one(node);
+        do
+            alloc_one(node);
+        while (__VERIFIER_nondet_int());
+    }
+
     __VERIFIER_plot("02-allocated");
 
-    struct pool_node *node;
     list_for_each_entry(node, &plist, head)
         PL_FreeArenaPool(&node->pool);
 
@@ -324,11 +319,20 @@ int main()
 }
 
 /**
- * @file test-0410-plist-with-alignment.c
+ * @file test-0406-plist-simplified.c
  *
- * @brief aligned variant of test-0407-plist.c
+ * @brief Linux list of uniform arena pools, unaligned
+ *
+ *
+ * - top-level Linux list
+ *
+ * - arena size is 0x100, alignment is commented out
+ *
+ * - size of the allocated blocks is 0x100
+ *
+ * - does NOT leak memory
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

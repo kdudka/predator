@@ -1,4 +1,4 @@
-# 2 "test-0402.c"
+# 2 "test-0415.c"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
 #include <verifier-builtins.h>
@@ -58,7 +58,7 @@ __attribute__((visibility("default"))) void PL_InitArenaPool(
 
     pool->first.next = ((void *)0);
     pool->first.base = pool->first.avail = pool->first.limit =
-        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask) & ~(pool)->mask);
+        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask) /* & ~(pool)->mask */);
     pool->current = &pool->first;
     pool->arenasize = size;
 
@@ -129,7 +129,7 @@ __attribute__((visibility("default"))) void * PL_ArenaAllocate(PLArenaPool *pool
         a = (PLArena*)(PR_Malloc((sz)));
         if ( ((void *)0) != a ) {
             a->limit = (PRUword)a + sz;
-            a->base = a->avail = (PRUword)(((PRUword)(a + 1) + (pool)->mask) & ~(pool)->mask);
+            a->base = a->avail = (PRUword)(((PRUword)(a + 1) + (pool)->mask) /*& ~(pool)->mask*/);
             rp = (char *)a->avail;
             a->avail += nb;
 
@@ -250,33 +250,60 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
     once = pristineCallOnce;
 }
 
+void torture_arena(PLArenaPool *pool)
+{
+    while (__VERIFIER_nondet_int()) {
+        size_t size = __VERIFIER_nondet_int();
+        if (size < 0x100)
+            abort();
+        if (0x1000 < size)
+            abort();
+
+        size &= ~0xF;
+
+        __VERIFIER_plot("01-torture_arena", &pool, &size, &arena_freelist);
+
+        PL_ArenaAllocate(pool, size);
+
+        while (__VERIFIER_nondet_int())
+            PL_FreeArenaPool(pool);
+    }
+}
+
 int main()
 {
-    PLArenaPool pool;
-    PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
-    __VERIFIER_plot("PL_InitArenaPool");
+    while (__VERIFIER_nondet_int()) {
+        PLArenaPool pool;
 
-    // this should be OK
-    PL_ArenaAllocate(&pool, 0x100);
-    __VERIFIER_plot("PL_ArenaAllocate");
+        while (__VERIFIER_nondet_int()) {
+            // initialize arena pool
+            PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
 
-    PL_ArenaFinish();
+            torture_arena(&pool);
+
+            PL_FreeArenaPool(&pool);
+            PL_FinishArenaPool(&pool);
+        }
+
+        PL_ArenaFinish();
+    }
+
     return 0;
 }
 
 /**
- * @file test-0402-PL_ArenaAllocate.c
+ * @file test-0415-var-size.c
  *
- * @brief single call of PL_ArenaAllocate()
+ * @brief allocate in range 0x100..0x1000 aligned by 0x10
  *
  *
- * - arena size is 0x1000, alignment is 0x10
+ * - based on test-0414-tiny-size-range.c
  *
- * - size of the allocated block is 0x100
+ * - arena size is 0x1000, alignment is commented out
  *
- * - leaks memory
+ * - allocating blocks of size 0x100..0x1000 & ~0xF
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

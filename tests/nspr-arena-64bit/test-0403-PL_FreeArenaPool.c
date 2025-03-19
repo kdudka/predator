@@ -1,5 +1,7 @@
-# 2 "test-0400.c"
+# 2 "test-0403.c"
 #include "plarena-decls.h"
+#include "plarena-harness.h"
+#include <verifier-builtins.h>
 
 /* # 52 "../../../mozilla/nsprpub/lib/ds/plarena.c" 2 */
 
@@ -56,7 +58,7 @@ __attribute__((visibility("default"))) void PL_InitArenaPool(
 
     pool->first.next = ((void *)0);
     pool->first.base = pool->first.avail = pool->first.limit =
-        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask) & ~(pool)->mask);
+        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask) /* & ~(pool)->mask */);
     pool->current = &pool->first;
     pool->arenasize = size;
 
@@ -127,7 +129,7 @@ __attribute__((visibility("default"))) void * PL_ArenaAllocate(PLArenaPool *pool
         a = (PLArena*)(PR_Malloc((sz)));
         if ( ((void *)0) != a ) {
             a->limit = (PRUword)a + sz;
-            a->base = a->avail = (PRUword)(((PRUword)(a + 1) + (pool)->mask) & ~(pool)->mask);
+            a->base = a->avail = (PRUword)(((PRUword)(a + 1) + (pool)->mask) /*& ~(pool)->mask*/);
             rp = (char *)a->avail;
             a->avail += nb;
 
@@ -250,16 +252,37 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
 
 int main()
 {
+    // initialize arena pool
+    PLArenaPool pool;
+    PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
+
+    // trigger allocation of one arena
+    void *ptr = PL_ArenaAllocate(&pool, 0x100);
+    __VERIFIER_plot("01-PL_ArenaAllocate", &ptr);
+
+    // free the arena pool
+    PL_FreeArenaPool(&pool);
+    __VERIFIER_plot("02-PL_FreeArenaPool");
+
     PL_ArenaFinish();
+    __VERIFIER_plot("03-PL_ArenaFinish");
+
     return 0;
 }
 
 /**
- * @file test-0400-PL_ArenaFinish.c
+ * @file test-0403-PL_FreeArenaPool.c
  *
- * @brief single call of PL_ArenaFinish()
+ * @brief single call of PL_FreeArenaPool()
+ *
+ *
+ * - arena size is 0x1000, alignment is commented out
+ *
+ * - size of the allocated block is 0x100
+ *
+ * - does NOT leak memory
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

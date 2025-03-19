@@ -1,1 +1,1 @@
-../nspr-arena-32bit/test-0400-PL_ArenaFinish.c
+../nspr-arena-64bit/test-0400-PL_ArenaFinish.c

@@ -68,7 +68,7 @@ test-0600.c:68: note: from call of main()
 test-0600.c:35: error: dereference of NULL value
 test-0600.c:83: note: from call of SLL_create()
 test-0600.c:68: note: from call of main()
-test-0600.c:88: error: dereference of NULL value with offset 12B
+test-0600.c:88: error: dereference of NULL value with offset 24B
 test-0600.c:47: error: dereference of NULL value
 test-0600.c:89: note: from call of SLL_xcopy()
 test-0600.c:68: note: from call of main()
@@ -118,7 +118,7 @@ test-0600.c:68: note: from call of main()
 test-0600.c:35: error: dereference of NULL value
 test-0600.c:83: note: from call of SLL_create()
 test-0600.c:68: note: from call of main()
-test-0600.c:88: error: dereference of NULL value with offset 12B
+test-0600.c:88: error: dereference of NULL value with offset 24B
 test-0600.c:47: error: dereference of NULL value
 test-0600.c:89: note: from call of SLL_xcopy()
 test-0600.c:68: note: from call of main()

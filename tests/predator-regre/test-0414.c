@@ -1,1 +1,1 @@
-../nspr-arena-32bit/test-0414-tiny-size-range.c
+../nspr-arena-64bit/test-0414-tiny-size-range.c

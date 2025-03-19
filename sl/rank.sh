@@ -48,7 +48,7 @@ rank_files() {
         printf "%-72s\t" "$i"
 
         RESULT="$($TIMEOUT $RUNNER --verbose \
---propertyfile $PRP_FILE -- $i -m32 2>/dev/null)"
+--propertyfile $PRP_FILE -- $i -m64 2>/dev/null)"
         case "$( echo $RESULT | grep -E -o "(TRUE)|(FALSE)" )" in
             TRUE)
                 if test xyes = "x$HAS_BUG" ; then

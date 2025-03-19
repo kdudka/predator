@@ -1,4 +1,4 @@
-# 2 "test-0404.c"
+# 2 "test-0408.c"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
 #include <verifier-builtins.h>
@@ -58,7 +58,7 @@ __attribute__((visibility("default"))) void PL_InitArenaPool(
 
     pool->first.next = ((void *)0);
     pool->first.base = pool->first.avail = pool->first.limit =
-        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask) /* & ~(pool)->mask */);
+        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask) & ~(pool)->mask);
     pool->current = &pool->first;
     pool->arenasize = size;
 
@@ -129,7 +129,7 @@ __attribute__((visibility("default"))) void * PL_ArenaAllocate(PLArenaPool *pool
         a = (PLArena*)(PR_Malloc((sz)));
         if ( ((void *)0) != a ) {
             a->limit = (PRUword)a + sz;
-            a->base = a->avail = (PRUword)(((PRUword)(a + 1) + (pool)->mask) /*& ~(pool)->mask*/);
+            a->base = a->avail = (PRUword)(((PRUword)(a + 1) + (pool)->mask) & ~(pool)->mask);
             rp = (char *)a->avail;
             a->avail += nb;
 
@@ -293,20 +293,11 @@ int main()
 }
 
 /**
- * @file test-0404-simple.c
+ * @file test-0408-simple-with-alignment.c
  *
- * @brief simple use of the NSPR arena API without any loops
- *
- *
- * - arena size is 0x1000, alignment is commented out
- *
- * - size of the allocated blocks is 0x100
- *
- * - there is probably a misuse of the API, but no assert for that
- *
- * - does NOT leak memory
+ * @brief aligned variant of test-0404-simple.c
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

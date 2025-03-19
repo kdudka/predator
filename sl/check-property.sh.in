@@ -67,7 +67,7 @@ export MSG_FREE_NONPOINTER=': error: (free|realloc)\(\) called on non-pointer va
 
 usage() {
     printf "Usage: %s --propertyfile FILE [--trace FILE] -- path/to/test-case.c \
-[-m32|-m64] [CFLAGS]\n\n" "$SELF" >&2
+[CFLAGS]\n\n" "$SELF" >&2
     cat >&2 << EOF
 
     -p, --propertyfile FILE
@@ -85,8 +85,7 @@ usage() {
     standard output.  All other information will be printed to standard error
     output (or the file specified by the --trace option).  There is no timeout
     or ulimit set by this script.  If these constraints are violated, it should
-    be treated as UNKNOWN result.  Do not forget to use the -m32 option when
-    compiling 32bit preprocessed code on a 64bit OS.
+    be treated as UNKNOWN result.
 
     For memory safety category, the FALSE result is further clarified as
     FALSE(p) where p is the property for which the Predator judges the

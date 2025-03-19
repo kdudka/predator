@@ -1,4 +1,4 @@
-# 2 "test-0416.c"
+# 2 "test-0405.c"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
 #include <verifier-builtins.h>
@@ -253,17 +253,7 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
 void torture_arena(PLArenaPool *pool)
 {
     while (__VERIFIER_nondet_int()) {
-        size_t size = __VERIFIER_nondet_int();
-        if (size < 0x100)
-            abort();
-        if (0x1000 < size)
-            abort();
-
-        size &= ~0x7;
-
-        __VERIFIER_plot("01-torture_arena", &pool, &size, &arena_freelist);
-
-        PL_ArenaAllocate(pool, size);
+        PL_ArenaAllocate(pool, 0x100);
 
         while (__VERIFIER_nondet_int())
             PL_FreeArenaPool(pool);
@@ -280,28 +270,39 @@ int main()
             PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
 
             torture_arena(&pool);
+            __VERIFIER_plot("01-torture_arena");
 
             PL_FreeArenaPool(&pool);
+            __VERIFIER_plot("02-PL_FreeArenaPool");
+
             PL_FinishArenaPool(&pool);
+            __VERIFIER_plot("03-PL_FinishArenaPool");
         }
 
+        __VERIFIER_plot("04-done");
+
         PL_ArenaFinish();
+        __VERIFIER_plot("05-PL_ArenaFinish");
     }
 
     return 0;
 }
 
 /**
- * @file test-0416-var-size-unaligned.c
+ * @file test-0405-torture.c
  *
- * @brief unaligned variant of test-0415-var-size.c
+ * @brief for loops nested in each other, one arena, unaligned
  *
  *
- * - unaligned allocation on aligned arena pool
+ * - arena size is 0x1000, alignment is commented out
  *
- * - assertion failure successfully caught by Predator
+ * - size of the allocated blocks is 0x100
+ *
+ * - computationally expensive test-case
+ *
+ * - does NOT leak memory
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

@@ -22,8 +22,8 @@ jobs:
         run: |
           GCC_HOST_VERSION="$(/usr/bin/gcc --version | grep -oP '\d*' | head -n1)"
           sudo apt update
-          sudo apt install -y "g++-$GCC_HOST_VERSION-multilib" \
-                              "gcc-$GCC_HOST_VERSION-multilib" \
+          sudo apt install -y "g++-$GCC_HOST_VERSION" \
+                              "gcc-$GCC_HOST_VERSION" \
                               "gcc-$GCC_HOST_VERSION-plugin-dev" \
                               libboost-dev
 

@@ -1,1 +1,1 @@
-../nspr-arena-32bit/test-0416-var-size-unaligned.c
+../nspr-arena-64bit/test-0416-var-size-unaligned.c

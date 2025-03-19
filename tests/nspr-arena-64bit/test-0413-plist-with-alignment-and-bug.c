@@ -1,4 +1,5 @@
-# 2 "test-0418.c"
+# 2 "test-0413.c"
+#include "list.h"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
 #include <verifier-builtins.h>
@@ -43,6 +44,7 @@ __attribute__((visibility("default"))) void PL_InitArenaPool(
 
 
 
+
     static const PRUint8 pmasks[33] = {
          0,
          0, 1, 3, 3, 7, 7, 7, 7,15,15,15,15,15,15,15,15,
@@ -56,9 +58,10 @@ __attribute__((visibility("default"))) void PL_InitArenaPool(
     else
         pool->mask = (((PRUint32)1 << (PR_CeilingLog2(align))) - 1);
 
+
     pool->first.next = ((void *)0);
     pool->first.base = pool->first.avail = pool->first.limit =
-        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask)  & ~(pool)->mask);
+        (PRUword)(((PRUword)(&pool->first + 1) + (pool)->mask) & ~(pool)->mask);
     pool->current = &pool->first;
     pool->arenasize = size;
 
@@ -175,7 +178,7 @@ static void FreeArenaList(PLArenaPool *pool, PLArena *head, PRBool reallyFree)
 
 
     do {
-        ((a->base <= a->avail && a->avail <= a->limit)?((void)0):PR_Assert("a->base <= a->avail && a->avail <= a->limit","../../../mozilla/nsprpub/lib/ds/plarena.c",274));
+        ((a->base <= a->avail && a->avail < a->limit)?((void)0):PR_Assert("a->base <= a->avail && a->avail < a->limit","../../../mozilla/nsprpub/lib/ds/plarena.c",274));
         a->avail = a->base;
         ((((a)->avail <= (a)->limit)?((void)0):PR_Assert("(a)->avail <= (a)->limit","../../../mozilla/nsprpub/lib/ds/plarena.c",276)), memset((void*)(a)->avail, 0xDA, (a)->limit - (a)->avail));
     } while ((a = a->next) != 0);
@@ -250,58 +253,82 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
     once = pristineCallOnce;
 }
 
-void torture_arena(PLArenaPool *pool)
+struct pool_node {
+    PLArenaPool                 pool;
+    struct list_head            head;
+};
+
+LIST_HEAD(plist);
+
+static void alloc_one(struct pool_node *node)
 {
-    while (__VERIFIER_nondet_int()) {
-        ssize_t size = __VERIFIER_nondet_int();
-        if (size < sizeof(double))
-            abort();
-        if (0x1000 < size)
-            abort();
+    PLArenaPool *const pool = &node->pool;
+    void *const ptr = PL_ArenaAllocate(&node->pool, 0x90);
+    if (!ptr)
+        abort();
+}
 
-        size &= ~(sizeof(double) - 1);
+static void add_pool(void)
+{
+    struct pool_node *node;
+    node = calloc(1, sizeof *node);
+    if (!node)
+        abort();
 
-        __VERIFIER_plot("01-torture_arena", &pool, &size, &arena_freelist);
+    list_add(&node->head, &plist);
+    PL_InitArenaPool(&node->pool, "cool pool", 0x1000, 0x10);
+}
 
-        PL_ArenaAllocate(pool, size);
-
-        while (__VERIFIER_nondet_int())
-            PL_FreeArenaPool(pool);
+static void allocate_everything(void)
+{
+    struct pool_node *node;
+    list_for_each_entry(node, &plist, head) {
+        alloc_one(node);
+        do
+            alloc_one(node);
+        while (__VERIFIER_nondet_int());
     }
 }
 
 int main()
 {
-    while (__VERIFIER_nondet_int()) {
-        PLArenaPool pool;
+    do
+        add_pool();
+    while (__VERIFIER_nondet_int());
 
-        while (__VERIFIER_nondet_int()) {
-            // initialize arena pool
-            PL_InitArenaPool(&pool, "cool pool", 0x1000, sizeof(double));
+    __VERIFIER_plot("01-empty");
 
-            torture_arena(&pool);
+    allocate_everything();
+    __VERIFIER_plot("02-allocated");
 
-            PL_FreeArenaPool(&pool);
-            PL_FinishArenaPool(&pool);
-        }
+    struct pool_node *node;
+    list_for_each_entry(node, &plist, head)
+        PL_FreeArenaPool(&node->pool);
 
-        PL_ArenaFinish();
+    __VERIFIER_plot("03-freed");
+
+    struct list_head *head = plist.next;
+    while (&plist != head) {
+        struct list_head *next = head->next;
+        node = list_entry(head, struct pool_node, head);
+        PL_FinishArenaPool(&node->pool);
+        free(node);
+        head = next;
     }
+
+    __VERIFIER_plot("04-finished");
+
+    PL_ArenaFinish();
 
     return 0;
 }
 
 /**
- * @file test-0418-var-size-below.c
+ * @file test-0413-plist-with-alignment-and-bug.c
  *
- * @brief allocating full range alignment..asize in loop
- *
- *
- * - arena size is 0x1000, alignment is sizeof(double)
- *
- * - allocating blocks sizeof(double)..0x1000 & ~sizeof(double)
+ * @brief buggy variant of test-0410
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

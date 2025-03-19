@@ -16,7 +16,7 @@ CFLAGS=	\
 -Wno-format-security			\
 -fno-delete-null-pointer-checks		\
 -O2					\
--m32					\
+-m64					\
 -msoft-float				\
 -mregparm=3				\
 -freg-struct-return			\

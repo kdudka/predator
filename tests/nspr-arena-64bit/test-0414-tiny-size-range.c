@@ -1,5 +1,4 @@
-# 2 "test-0407.c"
-#include "list.h"
+# 2 "test-0414.c"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
 #include <verifier-builtins.h>
@@ -44,7 +43,6 @@ __attribute__((visibility("default"))) void PL_InitArenaPool(
 
 
 
-#if 0
     static const PRUint8 pmasks[33] = {
          0,
          0, 1, 3, 3, 7, 7, 7, 7,15,15,15,15,15,15,15,15,
@@ -57,7 +55,6 @@ __attribute__((visibility("default"))) void PL_InitArenaPool(
         pool->mask = pmasks[align];
     else
         pool->mask = (((PRUint32)1 << (PR_CeilingLog2(align))) - 1);
-#endif
 
     pool->first.next = ((void *)0);
     pool->first.base = pool->first.avail = pool->first.limit =
@@ -253,93 +250,65 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
     once = pristineCallOnce;
 }
 
-struct pool_node {
-    PLArenaPool                 pool;
-    struct list_head            head;
-};
-
-LIST_HEAD(plist);
-
-static void alloc_one(struct pool_node *node)
+void torture_arena(PLArenaPool *pool)
 {
-    PLArenaPool *const pool = &node->pool;
-    void *const ptr = PL_ArenaAllocate(&node->pool, 0x90);
-    if (!ptr)
+    size_t size = __VERIFIER_nondet_int();
+    if (size < 0x80)
         abort();
-}
-
-static void add_pool(void)
-{
-    struct pool_node *node;
-    node = calloc(1, sizeof *node);
-    if (!node)
+    if (0x81 < size)
         abort();
 
-    list_add(&node->head, &plist);
-    PL_InitArenaPool(&node->pool, "cool pool", 0x1000, 0x10);
-}
+    size *= 0x10;
 
-static void allocate_everything(void)
-{
-    struct pool_node *node;
-    list_for_each_entry(node, &plist, head) {
-        alloc_one(node);
-        do
-            alloc_one(node);
-        while (__VERIFIER_nondet_int());
+    while (__VERIFIER_nondet_int()) {
+        PL_ArenaAllocate(pool, size);
+
+        while (__VERIFIER_nondet_int())
+            PL_FreeArenaPool(pool);
     }
 }
 
 int main()
 {
-    do
-        add_pool();
-    while (__VERIFIER_nondet_int());
+    while (__VERIFIER_nondet_int()) {
+        PLArenaPool pool;
 
-    __VERIFIER_plot("01-empty");
+        while (__VERIFIER_nondet_int()) {
+            // initialize arena pool
+            PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
 
-    allocate_everything();
-    __VERIFIER_plot("02-allocated");
+            torture_arena(&pool);
+            __VERIFIER_plot("01-torture_arena");
 
-    struct pool_node *node;
-    list_for_each_entry(node, &plist, head)
-        PL_FreeArenaPool(&node->pool);
+            PL_FreeArenaPool(&pool);
+            __VERIFIER_plot("02-PL_FreeArenaPool");
 
-    __VERIFIER_plot("03-freed");
+            PL_FinishArenaPool(&pool);
+            __VERIFIER_plot("03-PL_FinishArenaPool");
+        }
 
-    struct list_head *head = plist.next;
-    while (&plist != head) {
-        struct list_head *next = head->next;
-        node = list_entry(head, struct pool_node, head);
-        PL_FinishArenaPool(&node->pool);
-        free(node);
-        head = next;
+        __VERIFIER_plot("04-done");
+
+        PL_ArenaFinish();
+        __VERIFIER_plot("05-PL_ArenaFinish");
     }
-
-    __VERIFIER_plot("04-finished");
-
-    PL_ArenaFinish();
 
     return 0;
 }
 
 /**
- * @file test-0407-plist.c
+ * @file test-0414-tiny-size-range.c
  *
- * @brief Linux list of NSPR arena pools, unaligned
+ * @brief allocate aligned range consisting of size 2
  *
  *
- * - top-level Linux list
+ * - based on test-0405-torture.c
  *
  * - arena size is 0x1000, alignment is commented out
  *
- * - size of the allocated blocks is 0x90
- *
- * - computationally expensive test-case
- *
- * - does NOT leak memory
+ * - allocating blocks of size 0x80..0x81 * 0x10
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

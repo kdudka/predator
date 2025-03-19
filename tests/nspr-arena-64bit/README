@@ -1,4 +1,4 @@
-NSPR Arena 32bit
+NSPR Arena 64bit
 ================
 
     test-0400-PL_ArenaFinish.c - single call of PL_ArenaFinish()

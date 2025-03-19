@@ -1,1 +1,1 @@
-../nss-arena-32bit/arena-harness.h
+../nss-arena-64bit/arena-harness.h

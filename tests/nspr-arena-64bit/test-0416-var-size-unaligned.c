@@ -1,4 +1,4 @@
-# 2 "test-0415.c"
+# 2 "test-0416.c"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
 #include <verifier-builtins.h>
@@ -259,7 +259,7 @@ void torture_arena(PLArenaPool *pool)
         if (0x1000 < size)
             abort();
 
-        size &= ~0xF;
+        size &= ~0x7;
 
         __VERIFIER_plot("01-torture_arena", &pool, &size, &arena_freelist);
 
@@ -292,18 +292,16 @@ int main()
 }
 
 /**
- * @file test-0415-var-size.c
+ * @file test-0416-var-size-unaligned.c
  *
- * @brief allocate in range 0x100..0x1000 aligned by 0x10
+ * @brief unaligned variant of test-0415-var-size.c
  *
  *
- * - based on test-0414-tiny-size-range.c
+ * - unaligned allocation on aligned arena pool
  *
- * - arena size is 0x1000, alignment is commented out
- *
- * - allocating blocks of size 0x100..0x1000 & ~0xF
+ * - assertion failure successfully caught by Predator
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

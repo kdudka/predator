@@ -1,1 +1,1 @@
-../nspr-arena-32bit/test-0402-PL_ArenaAllocate.c
+../nspr-arena-64bit/test-0402-PL_ArenaAllocate.c

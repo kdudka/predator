@@ -1,4 +1,4 @@
-# 2 "test-0412.c"
+# 2 "test-0411.c"
 #include "plarena-decls.h"
 #include "plarena-harness.h"
 #include <verifier-builtins.h>
@@ -114,7 +114,7 @@ __attribute__((visibility("default"))) void * PL_ArenaAllocate(PLArenaPool *pool
                 a->next = pool->current->next;
                 pool->current->next = a;
                 pool->current = a;
-                if ( ((void *)0) != pool->first.next )
+                if ( ((void *)0) == pool->first.next )
                     pool->first.next = a;
                 return(rp);
             }
@@ -177,7 +177,7 @@ static void FreeArenaList(PLArenaPool *pool, PLArena *head, PRBool reallyFree)
     do {
         ((a->base <= a->avail && a->avail <= a->limit)?((void)0):PR_Assert("a->base <= a->avail && a->avail <= a->limit","../../../mozilla/nsprpub/lib/ds/plarena.c",274));
         a->avail = a->base;
-        ((((a)->avail <= (a)->limit)?((void)0):PR_Assert("(a)->avail <= (a)->limit","../../../mozilla/nsprpub/lib/ds/plarena.c",276)), memset((void*)(a)->avail, 0xDA, (a)->limit - (a)->avail));
+        ((((a)->avail <= (a)->limit)?((void)0):PR_Assert("(a)->avail <= (a)->limit","../../../mozilla/nsprpub/lib/ds/plarena.c",276)), memset((void*)(a)->avail, 0xDA, (a)->limit - (a)->avail + 1));
     } while ((a = a->next) != 0);
     a = *ap;
 
@@ -250,50 +250,54 @@ __attribute__((visibility("default"))) void PL_ArenaFinish(void)
     once = pristineCallOnce;
 }
 
-void torture_arena(PLArenaPool *pool)
-{
-    while (__VERIFIER_nondet_int()) {
-        PL_ArenaAllocate(pool, 0x100);
-
-        while (__VERIFIER_nondet_int())
-            PL_FreeArenaPool(pool);
-    }
-}
-
 int main()
 {
-    while (__VERIFIER_nondet_int()) {
-        PLArenaPool pool;
+    // initialize arena pool
+    PLArenaPool pool;
+    PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
 
-        while (__VERIFIER_nondet_int()) {
-            // initialize arena pool
-            PL_InitArenaPool(&pool, "cool pool", 0x1000, 0x10);
+    // trigger allocation of one arena
+    void *ptr1 = PL_ArenaAllocate(&pool, 0x100);
 
-            torture_arena(&pool);
-            __VERIFIER_plot("01-torture_arena");
+    // attempt to reuse the existing arena
+    void *ptr2 = PL_ArenaAllocate(&pool, 0x100);
 
-            PL_FreeArenaPool(&pool);
-            __VERIFIER_plot("02-PL_FreeArenaPool");
+    // free the arena pool twice
+    PL_FreeArenaPool(&pool);
+    PL_FreeArenaPool(&pool);
+    __VERIFIER_plot("01-PL_FreeArenaPool");
 
-            PL_FinishArenaPool(&pool);
-            __VERIFIER_plot("03-PL_FinishArenaPool");
-        }
+    ptr1 = PL_ArenaAllocate(&pool, 0x100);
+    ptr2 = PL_ArenaAllocate(&pool, 0x100);
+    __VERIFIER_plot("02-PL_ArenaAllocate");
 
-        __VERIFIER_plot("04-done");
+    // free the arena pool
+    PL_FreeArenaPool(&pool);
+    __VERIFIER_plot("04-PL_FreeArenaPool", &ptr1, &ptr2);
 
-        PL_ArenaFinish();
-        __VERIFIER_plot("05-PL_ArenaFinish");
-    }
+    PL_ArenaFinish();
+    __VERIFIER_plot("05-PL_ArenaFinish");
+
+    // XXX: this is misuse of the NSPR API
+    void *ptr0 = PL_ArenaAllocate(&pool, 0x100);
+    __VERIFIER_plot("06-PL_ArenaAllocate");
+
+    // free the arena pool
+    PL_FreeArenaPool(&pool);
+    __VERIFIER_plot("07-PL_FreeArenaPool");
+
+    PL_ArenaFinish();
+    __VERIFIER_plot("08-PL_ArenaFinish");
 
     return 0;
 }
 
 /**
- * @file test-0412-torture-with-alignment-and-bug.c
+ * @file test-0411-simple-with-alignment-and-bug.c
  *
- * @brief buggy variant of test-0409
+ * @brief buggy variant of test-0408
  *
  * @attention
- * This description is automatically imported from tests/nspr-arena-32bit/README.
+ * This description is automatically imported from tests/nspr-arena-64bit/README.
  * Any changes made to this comment will be thrown away on the next import.
  */

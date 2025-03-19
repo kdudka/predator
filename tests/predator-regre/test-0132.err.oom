@@ -1,12 +1,12 @@
-list.h:46: error: dereference of NULL value with offset 4B
+list.h:46: error: dereference of NULL value with offset 8B
 list.h:61: note: from call of __list_add()
 test-0132.c:50: note: from call of list_add()
 test-0132.c:23: note: from call of main()
-list.h:46: error: dereference of NULL value with offset 4B
+list.h:46: error: dereference of NULL value with offset 8B
 list.h:61: note: from call of __list_add()
 test-0132.c:50: note: from call of list_add()
 test-0132.c:23: note: from call of main()
-list.h:46: error: dereference of NULL value with offset 4B
+list.h:46: error: dereference of NULL value with offset 8B
 list.h:61: note: from call of __list_add()
 test-0132.c:50: note: from call of list_add()
 test-0132.c:23: note: from call of main()

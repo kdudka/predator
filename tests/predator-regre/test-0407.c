@@ -1,1 +1,1 @@
-../nspr-arena-32bit/test-0407-plist.c
+../nspr-arena-64bit/test-0407-plist.c

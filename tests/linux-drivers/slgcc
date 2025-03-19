@@ -42,7 +42,7 @@ KERNEL_CFLAGS="
 -Wno-format-security
 -fno-delete-null-pointer-checks
 -O0
--m32
+-m64
 -msoft-float
 -mregparm=3
 -freg-struct-return

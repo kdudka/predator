@@ -97,7 +97,6 @@ BuildRequires: boost-devel
 BuildRequires: cmake
 BuildRequires: gcc-c++
 BuildRequires: gcc-plugin-devel
-BuildRequires: glibc-devel%(tmp="%{_isa}" && echo "\${tmp/-64/-32}")
 
 Requires: gcc
 

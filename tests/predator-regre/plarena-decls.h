@@ -1,1 +1,1 @@
-../nspr-arena-32bit/plarena-decls.h
+../nspr-arena-64bit/plarena-decls.h

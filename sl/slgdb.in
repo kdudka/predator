@@ -58,7 +58,7 @@ test -z "$SL_VERBOSE" && SL_VERBOSE=1
 test -z "$SL_OPTS" && SL_OPTS="${ARG_BASE}-dump-pp"
 
 CMD_OPTS="-I$topdir/include/predator-builtins -DPREDATOR -o /dev/null \
-          -m32 -g -O0 -Wall -Wextra"
+          -m64 -g -O0 -Wall -Wextra"
 
 if [ `uname` = Darwin ]; then
     # use lldb by default
@@ -87,7 +87,7 @@ else
     RUN="$GDB --quiet -x $topdir/sl/gdbpp-loader.gdb --args $CC1_HOST \"$1\" \
         -I$topdir/include/predator-builtins -DPREDATOR \
         -dumpbase test.c -quiet -o /dev/null \
-        -m32 -O0 -Wall -Wextra \
+        -m64 -O0 -Wall -Wextra \
         -fplugin=$SL_PLUG \
         -fplugin-arg-libsl-verbose=$SL_VERBOSE \
         $SL_OPTS"
