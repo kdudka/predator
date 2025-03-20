@@ -666,6 +666,10 @@ bool handlePrintf(
     unsigned opIdx = /* 1st vararg */ 3;
 
     char *fmtAlloc = strdup(fmtStr.c_str());
+    if (!fmtAlloc)
+        // out of memory
+        throw std::bad_alloc();
+
     const char *fmt = fmtAlloc;
     while (*fmt) {
         if ('%' != *(fmt++))
