@@ -1,4 +1,4 @@
-# Copyright (C) 2010-2022 Kamil Dudka <kdudka@redhat.com>
+# Copyright (C) 2010-2025 Kamil Dudka <kdudka@redhat.com>
 #
 # This file is part of predator.
 #
@@ -16,7 +16,7 @@
 # along with predator.  If not, see <http://www.gnu.org/licenses/>.
 
 # project metadata
-cmake_minimum_required(VERSION 3.3)
+cmake_minimum_required(VERSION 3.5)
 project(sl C CXX)
 enable_testing()
 
