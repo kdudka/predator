@@ -356,12 +356,12 @@ add_pt_test(1204) # caught a USE_AFTER_FREE (from predator-regre/test-0221.c)
 add_pt_test(1300) # predator-regre test-0167.c
 
 # headers sanity #0
-add_test("headers_sanity-0" gcc -ansi -Wall -Wextra -Werror -pedantic
+add_test("headers_sanity-0" ${CMAKE_C_COMPILER} -ansi -Wall -Wextra -Werror -pedantic
     -o ${cl_BINARY_DIR}/config_cl.h.gch
     -c ${cl_SOURCE_DIR}/config_cl.h)
 
 # headers sanity #1
-add_test("headers_sanity-1" gcc -std=c99 -Wall -Wextra -Werror -pedantic
+add_test("headers_sanity-1" ${CMAKE_C_COMPILER} -std=c99 -Wall -Wextra -Werror -pedantic
     -o ${cl_BINARY_DIR}/code_lisitener.h.gch
     -c ${cl_SOURCE_DIR}/../include/cl/code_listener.h)
 
@@ -369,13 +369,17 @@ add_test("headers_sanity-1" gcc -std=c99 -Wall -Wextra -Werror -pedantic
 add_test("headers_sanity-2" make -j
     -C ${cl_SOURCE_DIR}/../include/cl
     -f ${cl_SOURCE_DIR}/Makefile.chk
-    BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR})
+    BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
+    CC=${CMAKE_C_COMPILER}
+    CXX=${CMAKE_CXX_COMPILER})
 
 # headers sanity #3
 add_test("headers_sanity-3" make -j
     -C ${cl_SOURCE_DIR}
     -f ${cl_SOURCE_DIR}/Makefile.chk
-    BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR})
+    BUILD_DIR=${CMAKE_CURRENT_BINARY_DIR}
+    CC=${CMAKE_C_COMPILER}
+    CXX=${CMAKE_CXX_COMPILER})
 
 if(ENABLE_LLVM)
 # headers sanity #4
