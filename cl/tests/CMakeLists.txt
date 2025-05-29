@@ -385,7 +385,8 @@ if(ENABLE_LLVM)
 # headers sanity #4
 add_test("headers_sanity-4" ${CMAKE_CXX_COMPILER} -x c++ -std=c++14 -Wall -Wextra -Werror -pedantic
     -o /dev/null
-    -I${cl_SOURCE_DIR}/../include
+    -I ${cl_SOURCE_DIR}/../include
+    -isystem ${LLVM_INCLUDE_DIRS}
     -c ${cl_SOURCE_DIR}/llvm/clplug.hh)
 else()
 
