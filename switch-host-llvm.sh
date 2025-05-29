@@ -61,8 +61,8 @@ $MAKE -C cl CMAKE="cmake -D LLVM_DIR='$LLVM_DIR' -D ENABLE_LLVM=ON" \
     || die "failed to build Code Listener"
 
 status_update "Checking whether Code Listener works"
-#$MAKE -C cl check CMAKE="cmake -D ENABLE_LLVM=ON" \
-#    || die "Code Listener does not work"
+$MAKE -C cl check CMAKE="cmake -D ENABLE_LLVM=ON" \
+    || die "Code Listener does not work"
 status_update "System hopes yes"
 
 status_update "Traying to build LLVM passes"
