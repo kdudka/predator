@@ -383,8 +383,8 @@ add_test("headers_sanity-3" make -j
 
 if(ENABLE_LLVM)
 # headers sanity #4
-add_test("headers_sanity-4" ${CMAKE_CXX_COMPILER} -x c++ -std=c++14 -Wall -Wextra -Werror -pedantic
-    -o /dev/null
+add_test("headers_sanity-4" ${CMAKE_CXX_COMPILER} -x c++-header -std=c++14 -Wall -Wextra -Werror -pedantic
+    -o ${cl_BINARY_DIR}/clplug.hh.gch
     -I ${cl_SOURCE_DIR}/../include
     -isystem ${LLVM_INCLUDE_DIRS}
     -c ${cl_SOURCE_DIR}/llvm/clplug.hh)
