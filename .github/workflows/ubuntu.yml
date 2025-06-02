@@ -169,15 +169,11 @@ jobs:
             *debug*)
               if [[ '${{ matrix.host }}' =~ llvm* ]]; then
                 make build_passes -s -j$(nproc) "CMAKE=cmake $LLVM_CMAKE_FLAGS"
-                # FIXME: LLVM CL tests are broken
-                # merge with make call below when fixed
-                make -C cl -s -j$(nproc) \
-                    "CMAKE=cmake -D CL_DEBUG=ON $LLVM_CMAKE_FLAGS"
                 patch -p1 < build-aux/llvm.patch
-              else
-                make -C cl -s -j$(nproc) "CMAKE=cmake -D CL_DEBUG=ON" check
               fi
 
+              make -C cl -s -j$(nproc) \
+                  "CMAKE=cmake -D CL_DEBUG=ON $LLVM_CMAKE_FLAGS" check
               make -C sl -s -j$(nproc) \
                   "CMAKE=cmake -D SL_DEBUG=ON $LLVM_CMAKE_FLAGS" check
               exit 0
@@ -185,14 +181,10 @@ jobs:
             *expensive*)
               if [[ '${{ matrix.host }}' =~ llvm* ]]; then
                 make build_passes -s -j$(nproc) "CMAKE=cmake $LLVM_CMAKE_FLAGS"
-                # FIXME: LLVM CL tests are broken
-                # merge with make call below when fixed
-                make -C cl -s -j$(nproc) "CMAKE=cmake $LLVM_CMAKE_FLAGS"
                 patch -p1 < build-aux/llvm.patch
-              else
-                make -C cl -s -j$(nproc) "CMAKE=cmake" check
               fi
 
+              make -C cl -s -j$(nproc) "CMAKE=cmake $LLVM_CMAKE_FLAGS" check
               make -C sl -s -j$(nproc) \
                   "CMAKE=cmake -D TEST_ONLY_FAST=OFF $LLVM_CMAKE_FLAGS" check
               exit 0
