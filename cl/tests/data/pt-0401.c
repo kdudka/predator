@@ -4,7 +4,7 @@
  * void 4-loop
  */
 
-int main(int argc, char *argv)
+int main(int argc, char **argv)
 {
     void *a, *b, *c, *d;
 

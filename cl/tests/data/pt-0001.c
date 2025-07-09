@@ -4,7 +4,7 @@
  * Basic operation --> take an address of a variable.
  */
 
-int main(int argc, char *argv)
+int main(int argc, char **argv)
 {
     int  **  pp;
     int   *   p;
