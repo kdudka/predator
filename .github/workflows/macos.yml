@@ -55,6 +55,9 @@ jobs:
             echo "CXX=clang++" >> "$GITHUB_ENV"
           fi
 
+          # Force usage of the default macOS SDK version
+          echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk" >> "$GITHUB_ENV"
+
       - name: 'Add sanitizers to CXXFLAGS'
         run: |
           # Use ASAN and UBSAN
