@@ -28,7 +28,9 @@ jobs:
           - variant: ', variant: debug build'
             host: llvm-debug
 
-    runs-on: macos-13
+    # last supported Intel macOS image:
+    # https://github.blog/changelog/2025-09-19-github-actions-macos-13-runner-image-is-closing-down/
+    runs-on: macos-15-intel
     env:
       CFLAGS: -Werror
       CXXFLAGS: -Werror
