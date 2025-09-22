@@ -13,15 +13,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # FIXME: support gcc plugin on macOS
         # FIXME: support gcc + llvm and clang + gcc combinations
-        host: [llvm] # [gcc, llvm]
+        host: [gcc, llvm]
         include:
-          # FIXME: gcc plugin on macOS is broken at the moment
-          # - variant: ', variant: expensive tests'
-          #   host: gcc-expensive
-          # - variant: ', variant: debug build'
-          #   host: gcc-debug
+          - variant: ', variant: expensive tests'
+            host: gcc-expensive
+          - variant: ', variant: debug build'
+            host: gcc-debug
           # FIXME: expected results of expensive tests are not patched for LLVM
           # - variant: ', variant: expensive tests'
           #   host: llvm-expensive
