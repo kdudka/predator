@@ -129,6 +129,7 @@ if (DEFINED SYM_LISTER)
         message(STATUS "GCC plug-ins will be built with C++ linkage")
         remove_definitions("-pedantic")
         set_source_files_properties(gcc/clplug.c PROPERTIES LANGUAGE CXX)
+        # plugins must be build without RTTI, see: https://gcc.gnu.org/legacy-ml/gcc-patches/2013-07/msg01258.html
         set_target_properties(clgcc PROPERTIES COMPILE_FLAGS "-fno-rtti")
     else()
         message(STATUS "GCC plug-ins will be built with C linkage")
