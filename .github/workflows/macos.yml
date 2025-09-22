@@ -60,7 +60,9 @@ jobs:
           # Force usage of the default macOS SDK version
           echo "SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk" >> "$GITHUB_ENV"
 
-      - name: 'Add sanitizers to CXXFLAGS'
+      - name: '[Clang] Add sanitizers to CXXFLAGS'
+        # GCC from Brew is not shipped with libubsan and friends.
+        if: startsWith(matrix.host, 'llvm')
         run: |
           # Use ASAN and UBSAN
           # CFLAGS="$CFLAGS -fsanitize=address,undefined"
