@@ -18,8 +18,6 @@
 if(APPLE)
     # do not fail with undefined references while linking the plug-ins on Darwin
     set(CMAKE_SHARED_LINKER_FLAGS "-undefined dynamic_lookup")
-    # because of MACOSX_RPATH or better used cmake >=3.0
-    set(CMAKE_MACOSX_RPATH 1)
 endif()
 
 # CMake on Darwin would otherwise use .dylib suffix, which breaks GCC arg parser
