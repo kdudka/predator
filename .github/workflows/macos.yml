@@ -40,11 +40,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install dependencies
-        run: brew install boost boost-build gcc@10 llvm@14
+        run: brew install boost boost-build gcc llvm@14
 
       - name: Set compiler variables
         run: |
-          GCC_PATH="$(brew --prefix gcc@10)"
+          GCC_PATH="$(brew --prefix gcc)"
           GCC_HOST=("$GCC_PATH"/bin/gcc-1*)
           echo "GCC_HOST=$GCC_HOST" >> "$GITHUB_ENV"
 
