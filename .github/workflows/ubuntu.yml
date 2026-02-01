@@ -42,7 +42,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
 
       - name: Determine default tool versions for Ubuntu ${{ matrix. version }}
         run: |
@@ -94,7 +94,7 @@ jobs:
       # FIXME: workaround for a git clone hang on Ubuntu 22.04 machines
       - name: '[LLVM] Checkout passes repository'
         if: startsWith(matrix.host, 'llvm')
-        uses: actions/checkout@v6
+        uses: actions/checkout@v6.0.2
         with:
           path: passes-src
           repository: VeriFIT/ProStatA
