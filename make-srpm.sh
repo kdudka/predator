@@ -113,6 +113,12 @@ way you can easily analyse C code sources, using the existing build system,
 without manually preprocessing them first.  The analysis itself is, however, not
 ready for complex projects yet.
 
+# temporarily disable LTO on Fedora 44 to avoid a crash while unwinding
+# the std::runtime_error exception
+%if 0%{?fedora} == 44
+%define _lto_cflags %{nil}
+%endif
+
 %prep
 %setup -q
 install -pv %{SOURCE1} cl/
