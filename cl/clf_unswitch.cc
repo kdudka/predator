@@ -31,7 +31,7 @@
 #define NULLIFY(what) \
     memset(&(what), 0, sizeof (what))
 
-int getCaseVal(const struct cl_operand *op)
+long getCaseVal(const struct cl_operand *op)
 {
     CL_BREAK_IF(!op || !op->type);
 
@@ -82,9 +82,9 @@ class ClfUnfoldSwitch: public ClFilterBase {
 
             loc_ = *loc;
 
-            const int lo = getCaseVal(val_lo);
-            const int hi = getCaseVal(val_hi);
-            for (int i = lo; i <= hi; ++i)
+            const long lo = getCaseVal(val_lo);
+            const long hi = getCaseVal(val_hi);
+            for (long i = lo; i <= hi; ++i)
                 this->emitCase(i, val_lo->type, label);
         }
 
@@ -109,7 +109,7 @@ class ClfUnfoldSwitch: public ClFilterBase {
         void cloneSwitchSrc(const struct cl_operand *);
         void freeClonedSwitchSrc();
         struct cl_var* acquireClVar();
-        void emitCase(int, struct cl_type *, const char *);
+        void emitCase(long, struct cl_type *, const char *);
         void emitDefault();
 };
 
@@ -167,7 +167,7 @@ struct cl_var* ClfUnfoldSwitch::acquireClVar()
     return clv;
 }
 
-void ClfUnfoldSwitch::emitCase(int cst, struct cl_type *type, const char *label)
+void ClfUnfoldSwitch::emitCase(long cst, struct cl_type *type, const char *label)
 {
     static struct cl_type btype;
     btype.uid                       = /* FIXME */ 0x200000;
