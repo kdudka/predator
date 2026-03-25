@@ -82,6 +82,9 @@ fi
 
 SPEC="./$PKG.spec"
 cat > "$SPEC" << EOF
+# Force out-of-source build on EPEL 8.
+%undefine __cmake_in_source_build
+
 Name:       $PKG
 Version:    $VER
 Release:    ${RELEASE:-1}%{?dist}
@@ -129,15 +132,13 @@ patch -p1 < build-aux/gcc-8.3.0.patch
 %endif
 
 %build
-mkdir cl_build
-cd cl_build
-%cmake -S../cl ../cl -B. -DGCC_HOST=/usr/bin/gcc -Wno-dev
-make %{?_smp_mflags} VERBOSE=yes
+%define _vpath_builddir cl_build
+%cmake -S cl -DGCC_HOST=/usr/bin/gcc -Wno-dev
+%cmake_build
 
-mkdir ../sl_build
-cd ../sl_build
-%cmake -S../sl ../sl -B. -DGCC_HOST=/usr/bin/gcc -Wno-dev
-make %{?_smp_mflags} VERBOSE=yes
+%define _vpath_builddir sl_build
+%cmake -S sl -DGCC_HOST=/usr/bin/gcc -Wno-dev
+%cmake_build
 
 %install
 %global plugin_dir %(gcc --print-file-name=plugin)
@@ -145,8 +146,10 @@ mkdir -p %{buildroot}%{plugin_dir}
 install -m0755 sl_build/libsl.so %{buildroot}%{plugin_dir}/predator.so
 
 %check
-make check -C cl
-make check -C sl
+%define _vpath_builddir cl_build
+%ctest
+%define _vpath_builddir sl_build
+%ctest
 
 %files
 %{plugin_dir}/predator.so
