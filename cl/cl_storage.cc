@@ -731,21 +731,21 @@ void ClStorageBuilder::insn_switch_case(
     if (CL_TYPE_INT != cst_lo.code || CL_TYPE_INT != cst_hi.code)
         CL_TRAP;
 
-    const int lo = cst_lo.data.cst_int.value;
-    const int hi = cst_hi.data.cst_int.value;
+    const long lo = cst_lo.data.cst_int.value;
+    const long hi = cst_hi.data.cst_int.value;
     CL_BREAK_IF(hi < lo);
 
     TOperandList &operands = d->insn->operands;
     struct cl_operand val = *val_lo;
 
     // FIXME: case ranges has not been tested yet
-    for (int i = lo; i <= hi; ++i) {
+    for (long i = lo; i <= hi; ++i) {
         val.data.cst.data.cst_int.value = i;
 
-        const unsigned idx = targets.size();
-        if (operands.size() != idx)
-            // something went wrong, offset detected
-            CL_TRAP;
+        const size_t idx = targets.size();
+
+        // integrity check in a debug build
+        CL_BREAK_IF(operands.size() != idx);
 
         // store case value
         operands.resize(idx + 1);
