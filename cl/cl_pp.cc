@@ -273,18 +273,20 @@ void ClPrettyPrint::printIntegralCst(const struct cl_operand *op)
             this->printVarType(op);
             // fall through!
 
-        case CL_TYPE_INT:
+        case CL_TYPE_INT: {
             if (value < 0)
                 out_ << SSD_INLINE_COLOR(C_LIGHT_RED, "(");
 
-            SSD_COLORIZE(out_, C_WHITE) << value << ((op->type->is_unsigned)
-                    ? "U"
-                    : "");
+            const bool is_unsigned = op->type->is_unsigned;
+            SSD_COLORIZE(out_, C_WHITE)
+                << (is_unsigned ? static_cast<unsigned long>(value) : value)
+                << (is_unsigned ? "U" : "");
 
             if (value < 0)
                 out_ << SSD_INLINE_COLOR(C_LIGHT_RED, ")");
 
             break;
+        }
 
         case CL_TYPE_BOOL:
             if (value)
